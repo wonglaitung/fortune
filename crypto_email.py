@@ -4,7 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def get_cryptocurrency_prices():
+def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
     # 注意：原 URL 末尾有空格，已修正
     url = "https://api.coingecko.com/api/v3/simple/price"
     
@@ -13,6 +13,12 @@ def get_cryptocurrency_prices():
         'vs_currencies': 'usd,hkd',
         'include_24hr_change': 'true'
     }
+    
+    # 添加新参数
+    if include_market_cap:
+        params['include_market_cap'] = 'true'
+    if include_24hr_vol:
+        params['include_24hr_vol'] = 'true'
     
     try:
         response = requests.get(url, params=params, timeout=10)
@@ -58,7 +64,8 @@ def send_email(to, subject, text, html):
 
 # === 主逻辑 ===
 if __name__ == "__main__":
-    prices = get_cryptocurrency_prices()
+    # 可以通过修改这里的参数来控制是否包含市值和24小时交易量
+    prices = get_cryptocurrency_prices(include_market_cap=True, include_24hr_vol=True)
 
     if prices is None:
         print("Failed to fetch prices. Exiting.")
@@ -75,11 +82,25 @@ if __name__ == "__main__":
         btc_usd = btc['usd']
         btc_hkd = btc['hkd']
         btc_change = btc.get('usd_24h_change', 0.0)
+        btc_market_cap = btc.get('usd_market_cap', 0.0) if 'usd_market_cap' in btc else 0.0
+        btc_24hr_vol = btc.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in btc else 0.0
+        
         text += f"Bitcoin price: ${btc_usd:,.2f} USD ({btc_change:.2f}% 24h)\n"
-        text += f"Bitcoin price: ${btc_hkd:,.2f} HKD\n\n"
+        text += f"Bitcoin price: ${btc_hkd:,.2f} HKD\n"
+        if btc_market_cap > 0:
+            text += f"Market Cap: ${btc_market_cap:,.2f} USD\n"
+        if btc_24hr_vol > 0:
+            text += f"24h Volume: ${btc_24hr_vol:,.2f} USD\n"
+        text += "\n"
+        
         html += f"<p><strong>Bitcoin</strong><br>"
         html += f"Price: ${btc_usd:,.2f} USD ({btc_change:.2f}% 24h)<br>"
-        html += f"Price: ${btc_hkd:,.2f} HKD</p>"
+        html += f"Price: ${btc_hkd:,.2f} HKD<br>"
+        if btc_market_cap > 0:
+            html += f"Market Cap: ${btc_market_cap:,.2f} USD<br>"
+        if btc_24hr_vol > 0:
+            html += f"24h Volume: ${btc_24hr_vol:,.2f} USD<br>"
+        html += "</p>"
 
     # Ethereum
     if 'ethereum' in prices:
@@ -87,11 +108,24 @@ if __name__ == "__main__":
         eth_usd = eth['usd']
         eth_hkd = eth['hkd']
         eth_change = eth.get('usd_24h_change', 0.0)
+        eth_market_cap = eth.get('usd_market_cap', 0.0) if 'usd_market_cap' in eth else 0.0
+        eth_24hr_vol = eth.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in eth else 0.0
+        
         text += f"Ethereum price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)\n"
         text += f"Ethereum price: ${eth_hkd:,.2f} HKD\n"
+        if eth_market_cap > 0:
+            text += f"Market Cap: ${eth_market_cap:,.2f} USD\n"
+        if eth_24hr_vol > 0:
+            text += f"24h Volume: ${eth_24hr_vol:,.2f} USD\n"
+        
         html += f"<p><strong>Ethereum</strong><br>"
         html += f"Price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)<br>"
-        html += f"Price: ${eth_hkd:,.2f} HKD</p>"
+        html += f"Price: ${eth_hkd:,.2f} HKD<br>"
+        if eth_market_cap > 0:
+            html += f"Market Cap: ${eth_market_cap:,.2f} USD<br>"
+        if eth_24hr_vol > 0:
+            html += f"24h Volume: ${eth_24hr_vol:,.2f} USD<br>"
+        html += "</p>"
 
     html += "</body></html>"
 
