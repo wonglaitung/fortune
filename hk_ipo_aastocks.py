@@ -63,8 +63,48 @@ def get_hk_ipo_info_from_aastocks():
                                         }
                                         upcoming_ipo_data.append(company_info)
             
+            # 查找IPO基本信息
+            ipo_basic_info = {}
+            
+            # 查找包含IPO基本信息的表格
+            for table in tables:
+                # 遍历表格行
+                rows = table.find_all('tr')
+                for row in rows:
+                    # 查找包含信息的行
+                    cells = row.find_all(['td', 'th'])
+                    cell_texts = [cell.get_text(strip=True) for cell in cells]
+                    
+                    # 提取关键信息
+                    if len(cell_texts) >= 2:
+                        key = cell_texts[0]
+                        value = cell_texts[1]
+                        
+                        if '招股日期' in key:
+                            ipo_basic_info['招股日期'] = value
+                        elif '每手股數' in key:
+                            ipo_basic_info['每手股数'] = value
+                        elif '招股價' in key:
+                            ipo_basic_info['招股价格'] = value
+                        elif '入場費' in key:
+                            ipo_basic_info['入场费'] = value
+                        elif '退票寄發日期' in key:
+                            ipo_basic_info['暗盘日期'] = value
+            
             # 创建存储IPO信息的列表
             result_data = []
+            
+            # 添加IPO基本信息
+            if ipo_basic_info:
+                result_data.append({
+                    '类别': 'IPO基本信息',
+                    '公司名称': '',
+                    '招股日期': ipo_basic_info.get('招股日期', ''),
+                    '每手股数': ipo_basic_info.get('每手股数', ''),
+                    '招股价格': ipo_basic_info.get('招股价格', ''),
+                    '入场费': ipo_basic_info.get('入场费', ''),
+                    '暗盘日期': ipo_basic_info.get('暗盘日期', '')
+                })
             
             # 添加同期新股部分的公司
             for info in upcoming_ipo_data:
