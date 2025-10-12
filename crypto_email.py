@@ -42,9 +42,13 @@ def send_email(to, subject, text, html):
         print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
         return False
 
+    # 如果to是字符串，转换为列表
+    if isinstance(to, str):
+        to = [to]
+
     msg = MIMEMultipart("alternative")
     msg['From'] = f'"wonglaitung" <{sender_email}>'
-    msg['To'] = to
+    msg['To'] = ", ".join(to)  # 将收件人列表转换为逗号分隔的字符串
     msg['Subject'] = subject
 
     msg.attach(MIMEText(text, "plain"))
@@ -131,12 +135,18 @@ if __name__ == "__main__":
     html += "</body></html>"
 
     # 获取收件人（默认 fallback）
-    recipient = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+    recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+    
+    # 如果环境变量中有多个收件人（用逗号分隔），则拆分为列表
+    if ',' in recipient_env:
+        recipients = [recipient.strip() for recipient in recipient_env.split(',')]
+    else:
+        recipients = [recipient_env]
 
-    print("📧 Sending email to:", recipient)
+    print("📧 Sending email to:", ", ".join(recipients))
     print("📝 Subject:", subject)
     print("📄 Text preview:\n", text)
 
-    success = send_email(recipient, subject, text, html)
+    success = send_email(recipients, subject, text, html)
     if not success:
         exit(1)
