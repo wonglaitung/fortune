@@ -71,10 +71,36 @@ if __name__ == "__main__":
         print("Failed to fetch prices. Exiting.")
         exit(1)
 
-    subject = "Bitcoin and Ethereum Price Update"
+    subject = "Ethereum and Bitcoin Price Update"
 
     text = ""
     html = "<html><body>"
+
+    # Ethereum (放在前面)
+    if 'ethereum' in prices:
+        eth = prices['ethereum']
+        eth_usd = eth['usd']
+        eth_hkd = eth['hkd']
+        eth_change = eth.get('usd_24h_change', 0.0)
+        eth_market_cap = eth.get('usd_market_cap', 0.0) if 'usd_market_cap' in eth else 0.0
+        eth_24hr_vol = eth.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in eth else 0.0
+        
+        text += f"Ethereum price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)\n"
+        text += f"Ethereum price: ${eth_hkd:,.2f} HKD\n"
+        if eth_market_cap > 0:
+            text += f"Market Cap: ${eth_market_cap:,.2f} USD\n"
+        if eth_24hr_vol > 0:
+            text += f"24h Volume: ${eth_24hr_vol:,.2f} USD\n"
+        text += "\n"
+        
+        html += f"<p><strong>Ethereum</strong><br>"
+        html += f"Price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)<br>"
+        html += f"Price: ${eth_hkd:,.2f} HKD<br>"
+        if eth_market_cap > 0:
+            html += f"Market Cap: ${eth_market_cap:,.2f} USD<br>"
+        if eth_24hr_vol > 0:
+            html += f"24h Volume: ${eth_24hr_vol:,.2f} USD<br>"
+        html += "</p>"
 
     # Bitcoin
     if 'bitcoin' in prices:
@@ -100,31 +126,6 @@ if __name__ == "__main__":
             html += f"Market Cap: ${btc_market_cap:,.2f} USD<br>"
         if btc_24hr_vol > 0:
             html += f"24h Volume: ${btc_24hr_vol:,.2f} USD<br>"
-        html += "</p>"
-
-    # Ethereum
-    if 'ethereum' in prices:
-        eth = prices['ethereum']
-        eth_usd = eth['usd']
-        eth_hkd = eth['hkd']
-        eth_change = eth.get('usd_24h_change', 0.0)
-        eth_market_cap = eth.get('usd_market_cap', 0.0) if 'usd_market_cap' in eth else 0.0
-        eth_24hr_vol = eth.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in eth else 0.0
-        
-        text += f"Ethereum price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)\n"
-        text += f"Ethereum price: ${eth_hkd:,.2f} HKD\n"
-        if eth_market_cap > 0:
-            text += f"Market Cap: ${eth_market_cap:,.2f} USD\n"
-        if eth_24hr_vol > 0:
-            text += f"24h Volume: ${eth_24hr_vol:,.2f} USD\n"
-        
-        html += f"<p><strong>Ethereum</strong><br>"
-        html += f"Price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)<br>"
-        html += f"Price: ${eth_hkd:,.2f} HKD<br>"
-        if eth_market_cap > 0:
-            html += f"Market Cap: ${eth_market_cap:,.2f} USD<br>"
-        if eth_24hr_vol > 0:
-            html += f"24h Volume: ${eth_24hr_vol:,.2f} USD<br>"
         html += "</p>"
 
     html += "</body></html>"
