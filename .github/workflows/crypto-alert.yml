@@ -3,7 +3,7 @@ name: Crypto Price Alert
 on:
   schedule:
     # 每天 UTC 时间 8:00 执行（即北京时间 16:00）
-    - cron: '0 0,8,16 * * *'
+    - cron: '0 0,16 * * *'
   # 可选：允许手动触发
   workflow_dispatch:
 
