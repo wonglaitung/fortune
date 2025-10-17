@@ -168,7 +168,7 @@ def send_ipo_email(data, to):
     """
     发送IPO信息邮件
     """
-    smtp_server = "smtp-relay.brevo.com"
+    smtp_server = "smtp.mailersend.net"
     smtp_port = 587
     smtp_user = os.environ.get("YAHOO_EMAIL")
     smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
