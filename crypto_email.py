@@ -32,7 +32,7 @@ def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
         return None
 
 def send_email(to, subject, text, html):
-    smtp_server = "smtp-relay.brevo.com"
+    smtp_server = "smtp.mailersend.net"
     smtp_port = 587
     smtp_user = os.environ.get("YAHOO_EMAIL")
     smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
