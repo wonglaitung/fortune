@@ -11,6 +11,11 @@
 
 import warnings
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 # 忽略所有警告
 warnings.filterwarnings("ignore")
@@ -368,5 +373,17 @@ else:
         print("\n💾 报告已保存: hk_smart_money_report.xlsx")
     except Exception as e:
         print(f"⚠️  Excel保存失败: {e}")
+
+    # 发送邮件
+    recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+    
+    # 如果环境变量中有多个收件人（用逗号分隔），则拆分为列表
+    if ',' in recipient_env:
+        recipients = [recipient.strip() for recipient in recipient_env.split(',')]
+    else:
+        recipients = [recipient_env]
+    
+    print("📧 发送邮件到:", ", ".join(recipients))
+    send_email_with_report(df, recipients)
 
 print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")

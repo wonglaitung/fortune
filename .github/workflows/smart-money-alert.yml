@@ -1,0 +1,32 @@
+name: HK Smart Money Alert
+
+on:
+  schedule:
+    # 每天 UTC 时间 0:00 执行（即北京时间 08:00）
+    - cron: '10 8 * * *'
+  # 可选：允许手动触发
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance akshare pandas matplotlib openpyxl
+
+      - name: Run smart money tracker script
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python hk_smart_money_tracker.py
