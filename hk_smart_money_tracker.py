@@ -178,14 +178,16 @@ def send_email_with_report(df, to):
     
     html += "</body></html>"
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart("mixed")
     msg['From'] = f'"wonglaitung" <{sender_email}>'
     msg['To'] = ", ".join(to)
     msg['Subject'] = subject
 
-    # 添加文本和HTML部分
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
+    # 创建邮件正文部分
+    body = MIMEMultipart("alternative")
+    body.attach(MIMEText(text, "plain"))
+    body.attach(MIMEText(html, "html"))
+    msg.attach(body)
 
     # 添加图表附件
     if os.path.exists(CHART_DIR):
