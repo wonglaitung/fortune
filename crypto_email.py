@@ -32,7 +32,7 @@ def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
         return None
 
 def send_email(to, subject, text, html):
-    smtp_server = os.environ.get("YAHOO_SMTP")
+    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
     smtp_port = 587
     smtp_user = os.environ.get("YAHOO_EMAIL")
     smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
