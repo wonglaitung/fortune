@@ -370,7 +370,8 @@ else:
     # 保存Excel
     try:
         df.to_excel("hk_smart_money_report.xlsx", index=False)
-        print("\n💾 报告已保存: hk_smart_money_report.xlsx")
+        print("
+💾 报告已保存: hk_smart_money_report.xlsx")
     except Exception as e:
         print(f"⚠️  Excel保存失败: {e}")
 
@@ -446,6 +447,7 @@ def send_email_with_report(df, to):
         print(f"❌ 发送邮件时出错: {e}")
         return False
 
+
     # 发送邮件
     recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
     
@@ -457,5 +459,7 @@ def send_email_with_report(df, to):
     
     print("📧 发送邮件到:", ", ".join(recipients))
     send_email_with_report(df, recipients)
+
+print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")
 
 print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")
