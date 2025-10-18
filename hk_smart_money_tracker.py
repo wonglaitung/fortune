@@ -114,7 +114,38 @@ def send_email_with_report(df, to):
         text += df.to_string(index=False) + "\n\n"
         
         # 添加HTML内容
-        html += df.to_html(index=False, escape=False)
+        # 创建带样式交替颜色的HTML表格
+        html_table = df.to_html(index=False, escape=False, table_id="stock-table")
+        # 添加CSS样式
+        styled_html = f'''
+        <style>
+        #stock-table {{
+            border-collapse: collapse;
+            width: 100%;
+            font-family: Arial, sans-serif;
+        }}
+        #stock-table th, #stock-table td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }}
+        #stock-table th {{
+            background-color: #4CAF50;
+            color: white;
+        }}
+        #stock-table tr:nth-child(even) {{
+            background-color: #f2f2f2;
+        }}
+        #stock-table tr:nth-child(odd) {{
+            background-color: #ffffff;
+        }}
+        #stock-table tr:hover {{
+            background-color: #ddd;
+        }}
+        </style>
+        {html_table}
+        '''
+        html += styled_html
         
         # 添加关键信号提醒
         buildup_stocks = df[df['建仓信号'] == True]
