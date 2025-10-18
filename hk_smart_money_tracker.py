@@ -146,7 +146,10 @@ def send_email_with_report(df, to):
         html += "<li><strong>建仓信号</strong>：低位 + 放量 + 南向流入 + 跑赢恒指 (出现建仓信号可能意味着主力资金开始买入)</li>"
         html += "<li><strong>出货信号</strong>：高位 + 巨量 + 南向流出 + 滞涨 (出现出货信号可能意味着主力资金开始卖出)</li>"
         html += "<li><strong>跑赢恒指</strong>：股票上涨且涨幅超过恒指，或者股票下跌但跌幅小于恒指且整体是正收益</li>"
+        html += "<li><strong>注意</strong>：当跑赢恒指为True且RS>0时，表示股票和恒指都上涨，且股票涨幅超过恒指</li>"
         html += "<li><strong>注意</strong>：当跑赢恒指为False但RS>1时，表示股票相对表现优于恒指，但股票本身可能为负收益</li>"
+        html += "<li><strong>注意</strong>：当跑赢恒指为True但RS<0时，表示股票和恒指都下跌，但股票跌幅小于恒指</li>"
+        html += "<li><strong>注意</strong>：当跑赢恒指为False但RS>0时，表示股票和恒指都上涨，但股票涨幅小于恒指</li>"
         html += "</ul>"
         
         html += "<h4>【技术指标】</h4>"
@@ -175,13 +178,29 @@ def send_email_with_report(df, to):
     
     html += "</body></html>"
 
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart()
     msg['From'] = f'"wonglaitung" <{sender_email}>'
     msg['To'] = ", ".join(to)
     msg['Subject'] = subject
 
+    # 添加文本和HTML部分
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
+
+    # 添加图表附件
+    if os.path.exists(CHART_DIR):
+        for filename in os.listdir(CHART_DIR):
+            if filename.endswith(".png"):
+                filepath = os.path.join(CHART_DIR, filename)
+                with open(filepath, "rb") as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename= {filename}',
+                )
+                msg.attach(part)
 
     try:
         server = smtplib.SMTP(smtp_server, smtp_port)
