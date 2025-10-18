@@ -370,8 +370,7 @@ else:
     # 保存Excel
     try:
         df.to_excel("hk_smart_money_report.xlsx", index=False)
-        print("
-💾 报告已保存: hk_smart_money_report.xlsx")
+        print("\n💾 报告已保存: hk_smart_money_report.xlsx")
     except Exception as e:
         print(f"⚠️  Excel保存失败: {e}")
 
