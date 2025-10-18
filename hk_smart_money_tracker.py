@@ -85,6 +85,78 @@ def get_hsi_return(start, end):
     except:
         return 0
 
+def send_email_with_report(df, to):
+    """
+    发送主力资金追踪报告邮件
+    """
+    smtp_server = "smtp.mailersend.net"
+    smtp_port = 587
+    smtp_user = os.environ.get("YAHOO_EMAIL")
+    smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+    sender_email = smtp_user
+
+    if not smtp_user or not smtp_pass:
+        print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
+        return False
+
+    # 如果to是字符串，转换为列表
+    if isinstance(to, str):
+        to = [to]
+
+    subject = "港股主力资金追踪报告"
+    
+    # 生成文本和HTML内容
+    text = "港股主力资金追踪报告:\n\n"
+    html = "<html><body><h2>港股主力资金追踪报告</h2>"
+    
+    if df is not None and not df.empty:
+        # 添加文本内容
+        text += df.to_string(index=False) + "\n\n"
+        
+        # 添加HTML内容
+        html += df.to_html(index=False, escape=False)
+        
+        # 添加关键信号提醒
+        buildup_stocks = df[df['建仓信号'] == True]
+        distribution_stocks = df[df['出货信号'] == True]
+        
+        if not distribution_stocks.empty:
+            html += "<h3 style='color: red;'>🔴 警惕！检测到大户出货信号：</h3><ul>"
+            for _, stock in distribution_stocks.iterrows():
+                html += f"<li>{stock['股票名称']}</li>"
+            html += "</ul>"
+        
+        if not buildup_stocks.empty:
+            html += "<h3 style='color: green;'>🟢 机会！检测到建仓信号：</h3><ul>"
+            for _, stock in buildup_stocks.iterrows():
+                html += f"<li>{stock['股票名称']}</li>"
+            html += "</ul>"
+    else:
+        text += "未能获取到数据\n\n"
+        html += "<p>未能获取到数据</p>"
+    
+    html += "</body></html>"
+
+    msg = MIMEMultipart("alternative")
+    msg['From'] = f'"wonglaitung" <{sender_email}>'
+    msg['To'] = ", ".join(to)
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(sender_email, to, msg.as_string())
+        server.quit()
+        print("✅ 主力资金追踪报告邮件发送成功!")
+        return True
+    except Exception as e:
+        print(f"❌ 发送邮件时出错: {e}")
+        return False
+
 # ==============================
 # 3. 单股分析函数
 # ==============================
@@ -387,75 +459,3 @@ else:
     send_email_with_report(df, recipients)
 
 print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")
-
-def send_email_with_report(df, to):
-    """
-    发送主力资金追踪报告邮件
-    """
-    smtp_server = "smtp.mailersend.net"
-    smtp_port = 587
-    smtp_user = os.environ.get("YAHOO_EMAIL")
-    smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
-    sender_email = smtp_user
-
-    if not smtp_user or not smtp_pass:
-        print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
-        return False
-
-    # 如果to是字符串，转换为列表
-    if isinstance(to, str):
-        to = [to]
-
-    subject = "港股主力资金追踪报告"
-    
-    # 生成文本和HTML内容
-    text = "港股主力资金追踪报告:\n\n"
-    html = "<html><body><h2>港股主力资金追踪报告</h2>"
-    
-    if df is not None and not df.empty:
-        # 添加文本内容
-        text += df.to_string(index=False) + "\n\n"
-        
-        # 添加HTML内容
-        html += df.to_html(index=False, escape=False)
-        
-        # 添加关键信号提醒
-        buildup_stocks = df[df['建仓信号'] == True]
-        distribution_stocks = df[df['出货信号'] == True]
-        
-        if not distribution_stocks.empty:
-            html += "<h3 style='color: red;'>🔴 警惕！检测到大户出货信号：</h3><ul>"
-            for _, stock in distribution_stocks.iterrows():
-                html += f"<li>{stock['股票名称']}</li>"
-            html += "</ul>"
-        
-        if not buildup_stocks.empty:
-            html += "<h3 style='color: green;'>🟢 机会！检测到建仓信号：</h3><ul>"
-            for _, stock in buildup_stocks.iterrows():
-                html += f"<li>{stock['股票名称']}</li>"
-            html += "</ul>"
-    else:
-        text += "未能获取到数据\n\n"
-        html += "<p>未能获取到数据</p>"
-    
-    html += "</body></html>"
-
-    msg = MIMEMultipart("alternative")
-    msg['From'] = f'"wonglaitung" <{sender_email}>'
-    msg['To'] = ", ".join(to)
-    msg['Subject'] = subject
-
-    msg.attach(MIMEText(text, "plain"))
-    msg.attach(MIMEText(html, "html"))
-
-    try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(sender_email, to, msg.as_string())
-        server.quit()
-        print("✅ 主力资金追踪报告邮件发送成功!")
-        return True
-    except Exception as e:
-        print(f"❌ 发送邮件时出错: {e}")
-        return False
