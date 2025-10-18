@@ -191,9 +191,12 @@ def send_email_with_report(df, to):
 
     # 添加图表附件
     if os.path.exists(CHART_DIR):
+        print(f"🔍 检查附件目录: {CHART_DIR}")
+        attachment_count = 0
         for filename in os.listdir(CHART_DIR):
             if filename.endswith(".png"):
                 filepath = os.path.join(CHART_DIR, filename)
+                print(f"📎 找到附件: {filename}")
                 with open(filepath, "rb") as attachment:
                     part = MIMEBase('application', 'octet-stream')
                     part.set_payload(attachment.read())
@@ -203,7 +206,14 @@ def send_email_with_report(df, to):
                     f'attachment; filename= {filename}',
                 )
                 msg.attach(part)
+                attachment_count += 1
+        print(f"📧 总共添加了 {attachment_count} 个附件")
+    else:
+        print(f"❌ 附件目录不存在: {CHART_DIR}")
 
+    # 打印邮件内容长度用于调试
+    print(f"✉️ 邮件内容长度: {len(msg.as_string())} 字符")
+    
     try:
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
