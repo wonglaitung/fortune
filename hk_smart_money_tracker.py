@@ -46,6 +46,7 @@ WATCHLIST = {
     "0939.HK": "建设银行",
     "1398.HK": "工商银行",
     "1288.HK": "农业银行",
+    "0005.HK": "汇丰银行",
     "6682.HK": "第四范式",
     "1347.HK": "华虹半导体",
     "0981.HK": "中芯国际",
@@ -55,6 +56,8 @@ WATCHLIST = {
     "3690.HK": "美团-W",
     "1810.HK": "小米集团-W",
     "9618.HK": "京东集团-SW",
+    "9660.HK": "地平线机器人",
+    "2533.HK": "黑芝麻智能",
 }
 
 # 分析参数
@@ -441,6 +444,7 @@ def analyze_stock(code, name):
             'change_pct': ((main_hist['Close'].iloc[-1] / main_hist['Close'].iloc[-2]) - 1) * 100 if len(main_hist) >= 2 else 0,
             'price_percentile': main_hist['Price_Percentile'].iloc[-1],
             'vol_ratio': main_hist['Vol_Ratio'].iloc[-1],
+            'volume': main_hist['Volume'].iloc[-1],
             'southbound': main_hist['Southbound_Net'].iloc[-1],
             'ma5_deviation': ((main_hist['Close'].iloc[-1] / main_hist['MA5'].iloc[-1]) - 1) * 100 if main_hist['MA5'].iloc[-1] > 0 else 0,
             'ma10_deviation': ((main_hist['Close'].iloc[-1] / main_hist['MA10'].iloc[-1]) - 1) * 100 if main_hist['MA10'].iloc[-1] > 0 else 0,
@@ -479,14 +483,14 @@ else:
     df = df[[
         'name', 'code', 'last_close', 'prev_close', 'change_pct',
         'has_buildup', 'has_distribution', 'outperforms_hsi',
-        'relative_strength', 'price_percentile', 'vol_ratio',
+        'relative_strength', 'price_percentile', 'vol_ratio', 'volume',
         'ma5_deviation', 'ma10_deviation', 'macd', 'rsi', 'volatility',
         'southbound'
     ]]
     df.columns = [
         '股票名称', '代码', '最新价', '前收市价', '涨跌幅(%)',
         '建仓信号', '出货信号', '跑赢恒指',
-        '相对强度(RS)', '位置(%)', '量比',
+        '相对强度(RS)', '位置(%)', '量比', '成交量',
         '5日均线偏离(%)', '10日均线偏离(%)', 'MACD', 'RSI', '波动率(%)',
         '南向资金(万)'
     ]
@@ -516,6 +520,7 @@ else:
     print("  • 相对强度(RS)：股票收益与恒生指数收益的比值 (RS>1表示表现优于恒生指数)")
     print("  • 位置(%)：当前价格在60日价格区间中的百分位 (数值越小表示相对位置越低，数值越大表示相对位置越高)")
     print("  • 量比：当前成交量与20日平均成交量的比值 (量比>1表示当日成交量高于20日均值)")
+    print("  • 成交量：股票当日的成交量")
     print("  • 5日均线偏离(%)：当前价格偏离5日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)")
     print("  • 10日均线偏离(%)：当前价格偏离10日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)")
     print("  • MACD：指数平滑异同移动平均线 (用于判断买卖时机的趋势指标)")
