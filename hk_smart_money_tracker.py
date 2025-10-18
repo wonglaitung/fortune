@@ -114,38 +114,43 @@ def send_email_with_report(df, to):
         text += df.to_string(index=False) + "\n\n"
         
         # 添加HTML内容
-        # 创建带样式交替颜色的HTML表格
-        html_table = df.to_html(index=False, escape=False, table_id="stock-table")
+        # 创建带样式交替颜色的HTML表格，按每5个股票分拆
         # 添加CSS样式
-        styled_html = f'''
+        html += '''
         <style>
-        #stock-table {{
+        .stock-table {
             border-collapse: collapse;
             width: 100%;
             font-family: Arial, sans-serif;
-        }}
-        #stock-table th, #stock-table td {{
+            margin-bottom: 20px;
+        }
+        .stock-table th, .stock-table td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: center;
-        }}
-        #stock-table th {{
+        }
+        .stock-table th {
             background-color: #4CAF50;
             color: white;
-        }}
-        #stock-table tr:nth-child(even) {{
+        }
+        .stock-table tr:nth-child(even) {
             background-color: #f2f2f2;
-        }}
-        #stock-table tr:nth-child(odd) {{
+        }
+        .stock-table tr:nth-child(odd) {
             background-color: #ffffff;
-        }}
-        #stock-table tr:hover {{
+        }
+        .stock-table tr:hover {
             background-color: #ddd;
-        }}
+        }
         </style>
-        {html_table}
         '''
-        html += styled_html
+        
+        # 按每5个股票分拆成多个表格
+        for i in range(0, len(df), 5):
+            chunk = df.iloc[i:i+5]
+            html_table = chunk.to_html(index=False, escape=False, table_id=f"stock-table-{i//5}")
+            html += f"<h3>股票数据 (第{i//5+1}页)</h3>"
+            html += html_table
         
         # 添加关键信号提醒
         buildup_stocks = df[df['建仓信号'] == True]
