@@ -28,5 +28,6 @@ jobs:
           YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
           YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
         run: |
           python crypto_email.py

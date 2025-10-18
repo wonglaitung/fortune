@@ -89,7 +89,7 @@ def send_email_with_report(df, to):
     """
     发送主力资金追踪报告邮件
     """
-    smtp_server = os.environ.get("YAHOO_SMTP")
+    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
     smtp_port = 587
     smtp_user = os.environ.get("YAHOO_EMAIL")
     smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
