@@ -583,10 +583,6 @@ else:
   • 数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致[...]
 ================================================================================
 """
-    print("\n" + "="*120)
-    print(FULL_INDICATOR_TEXT)
-    print("="*120)
-
     # 高亮信号
     distribution_stocks = [r for r in results if r['has_distribution']]
     buildup_stocks = [r for r in results if r['has_buildup']]
