@@ -651,43 +651,136 @@ else:
         <div style="font-size:0.9em; line-height:1.4;">
         <h4>基础信息</h4>
         <ul>
-          <li><b>最新价</b>：股票当前最新成交价格（港元）。</li>
+          <li><b>最新价</b>：股票当前最新成交价格（港元）。若当日存在盘中变动，建议结合成交量与盘口观察。</li>
           <li><b>前收市价</b>：前一个交易日的收盘价格（港元）。</li>
           <li><b>涨跌幅(%)</b>：按 (最新价 - 前收) / 前收 计算并乘以100表示百分比。</li>
         </ul>
-        <h4>相对表现 / 跑赢恒指</h4>
+        <h4>相对表现 / 跑赢恒指（用于衡量个股相对大盘的表现）</h4>
         <ul>
-          <li><b>RS_ratio</b>：(1+stock_ret)/(1+hsi_ret)-1，表示基于复合收益率的相对表现，>0 表示跑赢恒指。报告以百分比显示（RS_ratio_%）。</li>
-          <li><b>RS_diff</b>：stock_ret - hsi_ret，表示绝对收益差值，报告以百分比显示（RS_diff_%）。</li>
-          <li><b>跑赢恒指 (outperforms)</b>：脚本支持多种判定语义（详见脚本顶部配置）。</li>
+          <li><b>相对强度 (RS_ratio)</b>：
+            <ul>
+              <li>计算：RS_ratio = (1 + stock_ret) / (1 + hsi_ret) - 1</li>
+              <li>含义：基于复合收益（即把两个收益都视为复利因子）来度量个股相对恒指的表现。</li>
+              <li>RS_ratio > 0 表示个股在该区间的复合收益率高于恒指；RS_ratio < 0 则表示跑输。</li>
+              <li>优点：在收益率接近 -1 或波动较大时，更稳健地反映"相对复合回报"。</li>
+              <li>报告显示：以百分比列 RS_ratio_% 呈现（例如 5 表示 +5%）。</li>
+            </ul>
+          </li>
+          <li><b>相对强度差值 (RS_diff)</b>：
+            <ul>
+              <li>计算：RS_diff = stock_ret - hsi_ret（直接的收益差值）。</li>
+              <li>含义：更直观，表示绝对收益的差额（例如股票涨 6%，恒指涨 2%，则 RS_diff = 4%）。</li>
+              <li>报告显示：以百分比列 RS_diff_% 呈现。</li>
+            </ul>
+          </li>
+          <li><b>跑赢恒指 (outperforms_hsi)</b>：
+            <ul>
+              <li>脚本支持三种语义：
+                <ol>
+                  <li>要求股票为正收益并且收益 > 恒指（默认，保守）：OUTPERFORMS_REQUIRE_POSITIVE = True</li>
+                  <li>仅比较收益差值（无需股票为正）：OUTPERFORMS_REQUIRE_POSITIVE = False</li>
+                  <li>使用 RS_ratio（以复合收益判断）：OUTPERFORMS_USE_RS = True</li>
+                </ol>
+              </li>
+            </ul>
+          </li>
         </ul>
         <h4>价格与位置</h4>
         <ul>
-          <li><b>位置(%)</b>：当前价格在最近 60 日区间的百分位（0-100）。</li>
+          <li><b>位置(%)</b>：当前价格在最近 PRICE_WINDOW（默认 60 日）内的百分位位置。</li>
+          <li>计算：(当前价 - 最近N日最低) / (最高 - 最低) * 100，取 [0, 100]。</li>
+          <li>含义：接近 0 表示处于历史窗口低位，接近 100 表示高位。</li>
+          <li>用途：判断是否处于"相对低位"或"高位"，用于建仓/出货信号的价格条件。</li>
         </ul>
         <h4>成交量相关</h4>
         <ul>
-          <li><b>量比</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
-          <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元。</li>
+          <li><b>量比 (Vol_Ratio)</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
+          <li>含义：衡量当日成交是否显著放大。</li>
+          <li>建议：放量配合价格运动（如放量上涨或放量下跌）比单纯放量更具信号含义。</li>
+          <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
+        </ul>
+        <h4>均线偏离</h4>
+        <ul>
+          <li><b>5日/10日均线偏离(%)</b>：最新价相对于短期均线的偏离百分比（正值表示价高于均线）。</li>
+          <li>用途：短期动力判断；但对高波动或宽幅震荡个股需谨慎解读。</li>
         </ul>
         <h4>动量与震荡指标</h4>
         <ul>
-          <li><b>MACD</b>：EMA12 - EMA26，配合 9 日信号线判断动能变化。</li>
-          <li><b>RSI（Wilder）</b>：基于 14 日 Wilder 平滑，范围 0-100，常用于超买/超卖判断。</li>
-          <li><b>波动率(%)</b>：基于 20 日收益率样本的年化波动率。</li>
+          <li><b>MACD</b>：
+            <ul>
+              <li>计算：EMA12 - EMA26（MACD 线），并计算 9 日 EMA 作为 MACD Signal。</li>
+              <li>含义：衡量中短期动量，MACD 线上穿信号线通常被视为动能改善（反之则疲弱）。</li>
+              <li>注意：对剧烈震荡或极端股价数据（如停牌后复牌）可能失真。</li>
+            </ul>
+          </li>
+          <li><b>RSI（Wilder 平滑）</b>：
+            <ul>
+              <li>计算：基于 14 日 Wilder 指数平滑的涨跌幅比例，结果在 0-100。</li>
+              <li>含义：常用于判断超买/超卖（例如 RSI > 70 可能偏超买，RSI < 30 可能偏超卖）。</li>
+              <li>注意：单独使用 RSI 可能产生误导，建议与成交量和趋势指标结合。</li>
+            </ul>
+          </li>
+          <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
+          <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
         </ul>
-        <h4>南向资金（万）</h4>
+        <h4>OBV（On-Balance Volume）</h4>
         <ul>
-          <li>来自 akshare 的净买入字段，经除以 {unit} 转为“万”显示。单日流入/流出需结合量价与连续性判断。</li>
+          <li><b>OBV</b>：按照日涨跌累计成交量的方向（涨则加，跌则减）来累计。</li>
+          <li>含义：尝试用成交量的方向性累积来辅助判断资金是否在积累/分配。</li>
+          <li>注意：OBV 是累积序列，适合观察中长期趋势而非短期信号。</li>
         </ul>
-        <h4>信号定义（简述）</h4>
+        <h4>南向资金（沪港通/深港通南向）</h4>
         <ul>
-          <li><b>建仓信号</b>：位置 < {low}% 且量比 > {vr_build} 且南向资金净流入 > {sb}（万），连续至少 {bd} 日。</li>
-          <li><b>出货信号</b>：位置 > {high}% 且量比 > {vr_dist} 且南向资金净流出 < -{sb}（万）且当日收盘下行，连续至少 {dd} 日。</li>
+          <li>数据来源：使用 akshare 的 stock_hk_ggt_components_em 获取"净买入"字段，脚本假设原始单位为"元"并除以 SOUTHBOUND_UNIT_CONVERSION 转为"万"。</li>
+          <li>报告字段：南向资金(万) 表示当日或该交易日的净买入额（万元）。</li>
+          <li>用途：当南向资金显著流入时，通常被解读为北向/南向机构资金的买入兴趣；显著流出则表示机构抛售或撤出。</li>
+          <li>限制与谨慎：
+            <ul>
+              <li>ak 数据延迟或字段命名可能变化（脚本已做基本容错，但仍需关注源数据格式）。</li>
+              <li>单日南向资金异常需结合量价关系与连续性判断，避免被一次性大额交易误导。</li>
+            </ul>
+          </li>
+        </ul>
+        <h4>信号定义（本脚本采用的简化规则）</h4>
+        <ul>
+          <li><b>建仓信号（Buildup）</b>：
+            <ul>
+              <li>条件：位置 < PRICE_LOW_PCT（低位） AND 量比 > VOL_RATIO_BUILDUP（成交放大） AND 南向资金净流入 > SOUTHBOUND_THRESHOLD（万）。</li>
+              <li>连续性：要求连续或累计达到 BUILDUP_MIN_DAYS 才被标注为确认（避免孤立样本）。</li>
+              <li>语义：在低位出现放量且机构买入力度强时，可能代表主力建仓或底部吸筹。</li>
+            </ul>
+          </li>
+          <li><b>出货信号（Distribution）</b>：
+            <ul>
+              <li>条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前一日收盘价或开盘价）。</li>
+              <li>连续性：要求连续达到 DISTRIBUTION_MIN_DAYS 才标注为确认。</li>
+              <li>语义：高位放量且机构撤出，伴随价格下行，可能代表主力在高位分批出货/派发。</li>
+            </ul>
+          </li>
+          <li><b>重要提醒</b>：
+            <ul>
+              <li>本脚本规则为经验性启发式筛选，不构成投资建议。建议将信号作为筛选或复核工具，结合持仓风险管理、基本面与订单簿/资金面深度判断。</li>
+              <li>对于停牌、派息、拆股或其他公司事件，指标需特殊处理；脚本未一一覆盖这些事件。</li>
+            </ul>
+          </li>
+        </ul>
+        <h4>其他说明与实践建议</h4>
+        <ul>
+          <li>时间窗口与阈值（如 PRICE_WINDOW、VOL_WINDOW、阈值等）可根据策略偏好调整。更短窗口更灵敏但噪声更多，反之亦然。</li>
+          <li>建议：把信号与多因子（行业动量、估值、持仓集中度）结合，避免单一信号操作。</li>
+          <li>数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致性。</li>
         </ul>
         <p>注：以上为启发式规则，非交易建议。请结合基本面、盘口、资金面与风险管理。</p>
         </div>
         """.format(unit=int(SOUTHBOUND_UNIT_CONVERSION),
+                   low=int(PRICE_LOW_PCT),
+                   high=int(PRICE_HIGH_PCT),
+                   vr_build=VOL_RATIO_BUILDUP,
+                   vr_dist=VOL_RATIO_DISTRIBUTION,
+                   sb=int(SOUTHBOUND_THRESHOLD),
+                   bd=BUILDUP_MIN_DAYS,
+                   dd=DISTRIBUTION_MIN_DAYS)
+,
                    low=int(PRICE_LOW_PCT),
                    high=int(PRICE_HIGH_PCT),
                    vr_build=VOL_RATIO_BUILDUP,
