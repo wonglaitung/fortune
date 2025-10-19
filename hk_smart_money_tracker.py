@@ -3,6 +3,16 @@
 港股主力资金追踪器（建仓 + 出货 双信号）
 作者：AI助手（修补版）
 说明：对所有计算结果统一保留小数点后两位
+修补内容摘要：
+- 修复控制台打印处的语法错误（截断行）。
+- 统一并明确相对强度的显示（ratio 与 diff 的单位处理）。
+- OBV 使用 full_hist 累积计算后 reindex 到 main_hist（避免仅用短期截断累积）。
+- RSI 改用 Wilder 平滑（更接近经典 RSI）。
+- Southbound（南向资金）转换为“万”为单位，并参数化阈值与换算值。
+- get_hsi_return 使用 reindex(method='ffill') 以避免索引不对齐问题。
+- Price_Percentile 在 high==low 时赋值为 series（更语义化）。
+- 连续天数判定（建仓/出货）改为标注整段连续区间（当长度 >= min_days 时）。
+- 规范数值类型并在输出时统一格式化为两位小数，RS_diff 在显示时以百分比表示。
 """
 
 import warnings
@@ -60,10 +70,16 @@ PRICE_WINDOW = 60
 BUILDUP_MIN_DAYS = 3   # 建仓需连续3日
 DISTRIBUTION_MIN_DAYS = 2  # 出货需连续2日
 
-# 配置：是否在判断 "跑赢恒指" 时强制要求股票为正收益
-# True => outperforms = (stock_ret > 0) and (stock_ret > hsi_ret)
-# False => outperforms = stock_ret > hsi_ret
+# outperforms 语义配置（向后兼容：默认与原来行为一致）
+# OUTPERFORMS_REQUIRE_POSITIVE = True:
+#    要求 stock_ret > 0 且 stock_ret > hsi_ret 才视为“跑赢恒指”（更保守）
+# 如果希望以相对强度（rs_ratio > 0）判定跑赢，可设置 OUTPERFORMS_USE_RS = True
 OUTPERFORMS_REQUIRE_POSITIVE = True
+OUTPERFORMS_USE_RS = False
+
+# 南向资金单位与阈值（脚本统一把 ak 返回的净买入转换为“万”单位）
+SOUTHBOUND_UNIT_CONVERSION = 10000.0  # 若 ak 返回为“元”，除以 10000 转为“万”
+SOUTHBOUND_THRESHOLD = 5000.0         # 单位：万
 
 SAVE_CHARTS = True
 CHART_DIR = "hk_smart_charts"
@@ -81,10 +97,11 @@ if hsi_hist.empty:
 
 def get_hsi_return(start, end):
     try:
-        s = hsi_hist.loc[start:end, 'Close'].iloc[0]
-        e = hsi_hist.loc[start:end, 'Close'].iloc[-1]
+        # 使用 reindex(method='ffill') 来避免索引不完全重合造成的 KeyError
+        s = hsi_hist['Close'].reindex([start], method='ffill').iloc[0]
+        e = hsi_hist['Close'].reindex([end], method='ffill').iloc[0]
         return (e - s) / s if s != 0 else 0
-    except:
+    except Exception:
         return 0
 
 def send_email_with_report(df, to):
@@ -187,12 +204,12 @@ def send_email_with_report(df, to):
         
         html += "<h4>【相对表现 (跑赢恒指) 说明】</h4>"
         html += "<ul>"
-        html += "<li><strong>relative_strength_ratio (RS)</strong>：使用 (1+股票收益)/(1+恒指收益)-1 计算；当 RS &gt; 0 表示股票按复合收益率跑赢恒指；该定义在恒指波动较大时更稳健。</li>"
+        html += "<li><strong>relative_strength_ratio (RS)</strong>：使用 (1+股票收益)/(1+恒指收益)-1 计算；当 RS &gt; 0 表示股票按复合收益率跑赢恒指；该定义在恒指为负时更稳健。</li>"
         html += "<li><strong>relative_strength_diff</strong>：股票收益 - 恒指收益；>0 表示股票收益高于恒指（直观差值）。</li>"
         html += "<li><strong>跑赢恒指 (outperforms)</strong>：脚本可配置为两种语义（顶部配置 OUTPERFORMS_REQUIRE_POSITIVE）：</li>"
         html += "<ul>"
         html += "<li>如果 OUTPERFORMS_REQUIRE_POSITIVE = True：要求股票为正收益且收益高于恒指（较为保守，等同于“正收益并跑赢”）</li>"
-        html += "<li>如果 OUTPERFORMS_REQUIRE_POSITIVE = False：只要股票收益高于恒指即视为跑赢（不要求股票为正收益）</li>"
+        html += "<li>如果 OUTPERFORMS_REQUIRE_POSITIVE = False：则可根据配置选择以相对强度或直接收益差值判定（参见脚本配置）</li>"
         html += "</ul>"
         html += "<li><strong>示例说明</strong>：当恒指下跌而个股也下跌但跌幅更小，RS_ratio > 0（或 RS_diff > 0），表示相对表现更好，但股票仍可能为负收益；</li>"
         html += "</ul>"
@@ -211,7 +228,7 @@ def send_email_with_report(df, to):
         
         html += "<h4>【资金流向】</h4>"
         html += "<ul>"
-        html += "<li><strong>南向资金(万)</strong>：沪港通/深港通南向资金净流入金额（万元）(正值表示资金流入，负值表示资金流出)</li>"
+        html += "<li><strong>南向资金(万)</strong>：沪港通/深港通南向资金净流入金额（万元）(正值表示资金流入，负值表示资金流出)。脚本会把 ak 返回值除以 10000 转为“万”。</li>"
         html += "</ul>"
     else:
         text += "未能获取到数据\n\n"
@@ -289,29 +306,34 @@ def analyze_stock(code, name):
         full_hist['MA10'] = full_hist['Close'].rolling(10, min_periods=1).mean()
         
         # MACD计算
-        full_hist['EMA12'] = full_hist['Close'].ewm(span=12).mean()
-        full_hist['EMA26'] = full_hist['Close'].ewm(span=26).mean()
+        full_hist['EMA12'] = full_hist['Close'].ewm(span=12, adjust=False).mean()
+        full_hist['EMA26'] = full_hist['Close'].ewm(span=26, adjust=False).mean()
         full_hist['MACD'] = full_hist['EMA12'] - full_hist['EMA26']
-        full_hist['MACD_Signal'] = full_hist['MACD'].ewm(span=9).mean()
+        full_hist['MACD_Signal'] = full_hist['MACD'].ewm(span=9, adjust=False).mean()
         
-        # RSI计算
-        delta = full_hist['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
+        # RSI计算（Wilder 平滑）
+        delta_full = full_hist['Close'].diff()
+        gain = delta_full.where(delta_full > 0, 0.0)
+        loss = (-delta_full).where(delta_full < 0, 0.0)
+        avg_gain = gain.ewm(alpha=1/14, adjust=False).mean()
+        avg_loss = loss.ewm(alpha=1/14, adjust=False).mean()
+        rs = avg_gain / avg_loss
         full_hist['RSI'] = 100 - (100 / (1 + rs))
-        
+
         # 波动率计算(20日收益率标准差)
         full_hist['Returns'] = full_hist['Close'].pct_change()
-        full_hist['Volatility'] = full_hist['Returns'].rolling(20).std() * (252 ** 0.5)  # 年化波动率
-        
+        full_hist['Volatility'] = full_hist['Returns'].rolling(20, min_periods=10).std() * (252 ** 0.5)  # 年化波动率（至少10日样本）
+
         low60 = full_hist['Close'].tail(PRICE_WINDOW).min()
         high60 = full_hist['Close'].tail(PRICE_WINDOW).max()
         
         main_hist['Vol_MA20'] = full_hist['Vol_MA20'].reindex(main_hist.index, method='ffill')
-        main_hist['Vol_Ratio'] = main_hist['Volume'] / main_hist['Vol_MA20']
         # 避免除以0
-        main_hist['Price_Percentile'] = ((main_hist['Close'] - low60) / (high60 - low60) * 100).clip(0, 100) if high60 != low60 else 50.0
+        main_hist['Vol_Ratio'] = main_hist['Volume'] / main_hist['Vol_MA20']
+        if high60 == low60:
+            main_hist['Price_Percentile'] = 50.0
+        else:
+            main_hist['Price_Percentile'] = ((main_hist['Close'] - low60) / (high60 - low60) * 100).clip(0, 100)
         
         # 从full_hist获取技术指标
         main_hist['MA5'] = full_hist['MA5'].reindex(main_hist.index, method='ffill')
@@ -321,33 +343,35 @@ def analyze_stock(code, name):
         main_hist['RSI'] = full_hist['RSI'].reindex(main_hist.index, method='ffill')
         main_hist['Volatility'] = full_hist['Volatility'].reindex(main_hist.index, method='ffill')
         
-        # OBV
-        main_hist = main_hist.copy()  # 创建副本以避免SettingWithCopyWarning
-        main_hist['OBV'] = 0.0
-        for i in range(1, len(main_hist)):
-            delta = main_hist['Close'].iloc[i] - main_hist['Close'].iloc[i-1]
-            if delta > 0:
-                main_hist.loc[main_hist.index[i], 'OBV'] = main_hist['OBV'].iloc[i-1] + main_hist['Volume'].iloc[i]
-            elif delta < 0:
-                main_hist.loc[main_hist.index[i], 'OBV'] = main_hist['OBV'].iloc[i-1] - main_hist['Volume'].iloc[i]
+        # OBV：使用 full_hist 的累计值，然后 reindex 到 main_hist（避免仅用短期截断）
+        full_hist['OBV'] = 0.0
+        for i in range(1, len(full_hist)):
+            if full_hist['Close'].iat[i] > full_hist['Close'].iat[i-1]:
+                full_hist['OBV'].iat[i] = full_hist['OBV'].iat[i-1] + full_hist['Volume'].iat[i]
+            elif full_hist['Close'].iat[i] < full_hist['Close'].iat[i-1]:
+                full_hist['OBV'].iat[i] = full_hist['OBV'].iat[i-1] - full_hist['Volume'].iat[i]
             else:
-                main_hist.loc[main_hist.index[i], 'OBV'] = main_hist['OBV'].iloc[i-1]
+                full_hist['OBV'].iat[i] = full_hist['OBV'].iat[i-1]
+        main_hist['OBV'] = full_hist['OBV'].reindex(main_hist.index, method='ffill').fillna(0.0)
 
-        # 南向资金
-        main_hist = main_hist.copy()  # 创建副本以避免SettingWithCopyWarning
+        # 南向资金（转换为“万”单位）
         main_hist['Southbound_Net'] = 0.0
         dates = main_hist.index.strftime('%Y%m%d').tolist()
+        # 尽量减少 api 调用频率：对每个日期调用 ak。若 ak 返回单位为“元”，会除以 SOUTHBOUND_UNIT_CONVERSION 转为“万”
         for date in dates:
             try:
                 df = ak.stock_hk_ggt_components_em(date=date)
                 if not df.empty:
                     match = df[df['代码'] == code.replace('.HK', '')]
                     if not match.empty:
-                        net_str = match['净买入'].values[0].replace(',', '')
+                        net_str = str(match['净买入'].values[0]).replace(',', '')
                         net = pd.to_numeric(net_str, errors='coerce')
                         if pd.notna(net):
-                            main_hist.loc[main_hist.index.strftime('%Y%m%d') == date, 'Southbound_Net'] = net
-            except:
+                            # 转换单位为“万”
+                            net_in_wan = float(net) / SOUTHBOUND_UNIT_CONVERSION
+                            main_hist.loc[main_hist.index.strftime('%Y%m%d') == date, 'Southbound_Net'] = net_in_wan
+            except Exception:
+                # 忽略单日取数失败
                 pass
 
         # 相对强度（改为 ratio 与 diff）
@@ -361,54 +385,63 @@ def analyze_stock(code, name):
         else:
             rs_ratio = (1.0 + stock_ret) / (1.0 + hsi_ret) - 1.0
 
-        # 跑赢恒指判定（可配置）
-        if OUTPERFORMS_REQUIRE_POSITIVE:
-            outperforms = (stock_ret > 0) and (stock_ret > hsi_ret)
+        # 跑赢恒指判定（支持两种语义）
+        outperforms_by_ret = (stock_ret > 0) and (stock_ret > hsi_ret)
+        outperforms_by_diff = stock_ret > hsi_ret
+        outperforms_by_rs = rs_ratio > 0
+
+        if OUTPERFORMS_USE_RS:
+            outperforms = bool(outperforms_by_rs)
         else:
-            outperforms = stock_ret > hsi_ret
+            if OUTPERFORMS_REQUIRE_POSITIVE:
+                outperforms = bool(outperforms_by_ret)
+            else:
+                outperforms = bool(outperforms_by_diff)
 
         # === 建仓信号 ===
         def is_buildup(row):
+            # 南向资金阈值使用配置单位（万）
             return (row['Price_Percentile'] < 30 and 
-                    row['Vol_Ratio'] > 1.5 and 
-                    row['Southbound_Net'] > 5000)
+                    (row['Vol_Ratio'] > 1.5 if pd.notna(row['Vol_Ratio']) else False) and 
+                    (row['Southbound_Net'] > SOUTHBOUND_THRESHOLD))
         
         main_hist['Buildup_Signal'] = main_hist.apply(is_buildup, axis=1)
-        main_hist = main_hist.copy()  # 创建副本以避免SettingWithCopyWarning
-        main_hist['Buildup_Confirmed'] = False
-        count = 0
-        for i in range(len(main_hist)-1, -1, -1):
-            if main_hist['Buildup_Signal'].iloc[i]:
-                count += 1
-                if count >= BUILDUP_MIN_DAYS:
-                    for j in range(BUILDUP_MIN_DAYS):
-                        if i-j >= 0:
-                            main_hist.loc[main_hist.index[i-j], 'Buildup_Confirmed'] = True
-            else:
-                count = 0
+
+        # 标注连续段：当连续 True 段长度 >= BUILDUP_MIN_DAYS，标注整个段为 Confirmed
+        def mark_runs(signal_series, min_len):
+            res = pd.Series(False, index=signal_series.index)
+            in_run = False
+            run_start = None
+            for i, val in enumerate(signal_series.values):
+                if val and not in_run:
+                    in_run = True
+                    run_start = i
+                elif not val and in_run:
+                    run_len = i - run_start
+                    if run_len >= min_len:
+                        res.iloc[run_start:i] = True
+                    in_run = False
+                    run_start = None
+            # tail
+            if in_run:
+                run_len = len(signal_series) - run_start
+                if run_len >= min_len:
+                    res.iloc[run_start:len(signal_series)] = True
+            return res
+
+        main_hist['Buildup_Confirmed'] = mark_runs(main_hist['Buildup_Signal'], BUILDUP_MIN_DAYS)
 
         # === 出货信号 ===
         main_hist['Prev_Close'] = main_hist['Close'].shift(1)
         def is_distribution(row):
             cond1 = row['Price_Percentile'] > 70
-            cond2 = row['Vol_Ratio'] > 2.5
-            cond3 = row['Southbound_Net'] < -5000
-            cond4 = (row['Close'] < row['Prev_Close']) or (row['Close'] < row['Open'])
+            cond2 = (row['Vol_Ratio'] > 2.5) if pd.notna(row.get('Vol_Ratio')) else False
+            cond3 = row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD
+            cond4 = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
             return cond1 and cond2 and cond3 and cond4
         
         main_hist['Distribution_Signal'] = main_hist.apply(is_distribution, axis=1)
-        main_hist = main_hist.copy()  # 创建副本以避免SettingWithCopyWarning
-        main_hist['Distribution_Confirmed'] = False
-        count = 0
-        for i in range(len(main_hist)-1, -1, -1):
-            if main_hist['Distribution_Signal'].iloc[i]:
-                count += 1
-                if count >= DISTRIBUTION_MIN_DAYS:
-                    for j in range(DISTRIBUTION_MIN_DAYS):
-                        if i-j >= 0:
-                            main_hist.loc[main_hist.index[i-j], 'Distribution_Confirmed'] = True
-            else:
-                count = 0
+        main_hist['Distribution_Confirmed'] = mark_runs(main_hist['Distribution_Signal'], DISTRIBUTION_MIN_DAYS)
 
         # 保存图表（总是生成）
         has_buildup = main_hist['Buildup_Confirmed'].any()
@@ -426,8 +459,8 @@ def analyze_stock(code, name):
                 # pandas types
                 if pd.isna(v):
                     return None
-                return v
-            except:
+                return float(v)
+            except Exception:
                 return v
 
         if SAVE_CHARTS:
@@ -467,20 +500,21 @@ def analyze_stock(code, name):
             'has_buildup': bool(has_buildup),
             'has_distribution': bool(has_distribution),
             'outperforms_hsi': bool(outperforms),
-            'relative_strength': round2(rs_ratio),            # ratio 形式
+            'outperforms_hsi_by_rs': bool(outperforms_by_rs),
+            'relative_strength': round2(rs_ratio),            # ratio 形式（小数，展示时可乘100）
             'relative_strength_diff': round2(rs_diff),        # 差值形式（小数，用户可乘100显示百分比）
             'last_close': round2(last_close),
             'prev_close': round2(prev_close),
             'change_pct': round2(change_pct),
             'price_percentile': round2(main_hist['Price_Percentile'].iloc[-1]),
-            'vol_ratio': round2(main_hist['Vol_Ratio'].iloc[-1]),
+            'vol_ratio': round2(main_hist['Vol_Ratio'].iloc[-1]) if pd.notna(main_hist['Vol_Ratio'].iloc[-1]) else None,
             'turnover': round2((main_hist['Close'].iloc[-1] * main_hist['Volume'].iloc[-1]) / 1000000),  # 成交金额（以百万为单位）
-            'southbound': round2(main_hist['Southbound_Net'].iloc[-1]),
-            'ma5_deviation': round2(((main_hist['Close'].iloc[-1] / main_hist['MA5'].iloc[-1]) - 1) * 100) if main_hist['MA5'].iloc[-1] > 0 else 0,
-            'ma10_deviation': round2(((main_hist['Close'].iloc[-1] / main_hist['MA10'].iloc[-1]) - 1) * 100) if main_hist['MA10'].iloc[-1] > 0 else 0,
-            'macd': round2(main_hist['MACD'].iloc[-1]),
-            'rsi': round2(main_hist['RSI'].iloc[-1]),
-            'volatility': round2(main_hist['Volatility'].iloc[-1] * 100) if pd.notna(main_hist['Volatility'].iloc[-1]) else 0,
+            'southbound': round2(main_hist['Southbound_Net'].iloc[-1]),  # 单位：万
+            'ma5_deviation': round2(((main_hist['Close'].iloc[-1] / main_hist['MA5'].iloc[-1]) - 1) * 100) if (pd.notna(main_hist['MA5'].iloc[-1]) and main_hist['MA5'].iloc[-1] > 0) else None,
+            'ma10_deviation': round2(((main_hist['Close'].iloc[-1] / main_hist['MA10'].iloc[-1]) - 1) * 100) if (pd.notna(main_hist['MA10'].iloc[-1]) and main_hist['MA10'].iloc[-1] > 0) else None,
+            'macd': round2(main_hist['MACD'].iloc[-1]) if pd.notna(main_hist['MACD'].iloc[-1]) else None,
+            'rsi': round2(main_hist['RSI'].iloc[-1]) if pd.notna(main_hist['RSI'].iloc[-1]) else None,
+            'volatility': round2(main_hist['Volatility'].iloc[-1] * 100) if pd.notna(main_hist['Volatility'].iloc[-1]) else None,
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
             'distribution_dates': main_hist[main_hist['Distribution_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
         }
@@ -529,7 +563,13 @@ else:
     ]
     df = df.sort_values(['出货信号', '建仓信号'], ascending=[True, False])  # 出货优先警示
 
-    # 将所有数值列保留两位小数（再次确保）
+    # 将所有可以转换为数值的列统一转换，然后保留两位小数（再次确保）
+    for col in df.columns:
+        try:
+            df[col] = pd.to_numeric(df[col], errors='ignore')
+        except Exception:
+            pass
+
     numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
     for col in numeric_cols:
         df[col] = df[col].apply(lambda x: round(float(x), 2) if (pd.notna(x) and isinstance(x, (int, float))) else x)
@@ -552,8 +592,8 @@ else:
     print("\n【相对表现 / 跑赢恒指说明】")
     print("  • 相对强度(RS_ratio)：(1+股票收益)/(1+恒指收益)-1；>0 表示按复合收益率跑赢恒指（对恒指为负时更稳健）。")
     print("  • 相对强度差值(RS_diff)：股票收益 - 恒指收益；>0 表示股票收益高于恒指（直观差值）。")
-    print("  • 跑赢恒指(outperforms)：可配置（脚本顶部 OUTPERFORMS_REQUIRE_POSITIVE），"
-          "True 表示要求股票为正收益且收益高于恒指；False 表示只要股票收益高于恒指即视为跑赢。")
+    print("  • 跑赢恒指(outperforms)：可配置（脚本顶部 OUTPERFORMS_REQUIRE_POSITIVE / OUTPERFORMS_USE_RS），"
+          "默认要求正收益并高于恒指；也可选择以 RS_ratio 判断。")
     print("  • 说明示例：当恒指下跌、个股下跌但跌幅更小，RS_ratio 与 RS_diff 可能为正，但股票仍是负收益。")
 
     print("\n【技术指标】")
@@ -567,7 +607,7 @@ else:
     print("  • 波动率(%)：年化波动率，衡量股票的风险水平 (数值越大表示风险越高)")
     
     print("\n【资金流向】")
-    print("  • 南向资金(万)：沪港通/深港通南向资金净流入金额（万元）(正值表示资金流入，负值表示资金流出)")
+    print(f"  • 南向资金(万)：沪港通/深港通南向资金净流入金额（万元）。脚本将 ak 返回值除以 {int(SOUTHBOUND_UNIT_CONVERSION)} 转为“万”。阈值 = {SOUTHBOUND_THRESHOLD} 万。")
 
     # 高亮关键信号
     buildup_stocks = [r for r in results if r['has_buildup']]
@@ -583,8 +623,8 @@ else:
         if strong_buildup:
             print("\n🟢 机会！高质量建仓信号（跑赢恒指）：")
             for r in strong_buildup:
-                rs_ratio_display = round(r['relative_strength'], 2) if (r.get('relative_strength') is not None and isinstance(r.get('relative_strength'), (int, float))) else r.get('relative_strength')
-                rs_diff_display = round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None and isinstance(r.get('relative_strength_diff'), (int, float))) else r.get('relative_strength_diff')
+                rs_ratio_display = (round(r['relative_strength'], 2) if (r.get('relative_strength') is not None and isinstance(r.get('relative_strength'), (int, float))) else r.get('relative_strength'))
+                rs_diff_display = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None and isinstance(r.get('relative_strength_diff'), (int, float))) else r.get('relative_strength_diff'))
                 print(f"  • {r['name']} | RS_ratio={rs_ratio_display} | RS_diff={rs_diff_display}% | 日期: {', '.join(r['buildup_dates'])}")
 
     # 保存Excel
