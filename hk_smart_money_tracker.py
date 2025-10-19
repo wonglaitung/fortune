@@ -196,6 +196,10 @@ def analyze_stock(code, name):
             print(f"⚠️  {name} 主分析窗口数据不足")
             return None
 
+        # ====== 排除周六日（只保留交易日）======
+        main_hist = main_hist[main_hist.index.weekday < 5]
+        full_hist = full_hist[full_hist.index.weekday < 5]
+
         # 基础指标（在 full_hist 上计算）
         full_hist['Vol_MA20'] = full_hist['Volume'].rolling(VOL_WINDOW, min_periods=1).mean()
         full_hist['MA5'] = full_hist['Close'].rolling(5, min_periods=1).mean()
@@ -254,6 +258,9 @@ def analyze_stock(code, name):
         # 南向资金：按日期获取并缓存，转换为“万”
         main_hist['Southbound_Net'] = 0.0
         for ts in main_hist.index:
+            # ===== 排除周六日 =====
+            if ts.weekday() >= 5:
+                continue
             date_str = ts.strftime('%Y%m%d')
             df_ggt = fetch_ggt_components(date_str)
             if df_ggt is None:
@@ -509,7 +516,7 @@ else:
       - 连续性：要求连续或累计达到 BUILDUP_MIN_DAYS 才被标注为确认（避免孤立样本）。
       - 语义：在低位出现放量且机构买入力度强时，可能代表主力建仓或底部吸筹。
   • 出货信号（Distribution）：
-      - 条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前收或收盘低于开盘）。
+      - 条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前[...]
       - 连续性：要求连续达到 DISTRIBUTION_MIN_DAYS 才标注为确认。
       - 语义：高位放量且机构撤出，伴随价格下行，可能代表主力在高位分批出货/派发。
   • 重要提醒：
@@ -519,7 +526,7 @@ else:
 【其他说明与实践建议】
   • 时间窗口与阈值（如 PRICE_WINDOW、VOL_WINDOW、阈值等）可根据策略偏好调整。更短窗口更灵敏但噪声更多，反之亦然。
   • 建议：把信号与多因子（行业动量、估值、持仓集中度）结合，避免单一信号操作。
-  • 数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致性。
+  • 数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致[...]
 ================================================================================
 """
     print("\n" + "="*120)
