@@ -118,29 +118,80 @@ def get_hsi_return(start, end):
 # ==============================
 # 3. 辅助函数与缓存（包括南向资金缓存，避免重复调用 ak）
 # ==============================
-southbound_cache = {}  # cache[(date_str)] = DataFrame from ak
+southbound_cache = {}  # cache[(code, date_str)] = DataFrame from ak or cache[code] = full DataFrame
 
-def fetch_ggt_components(date_str):
+def fetch_ggt_components(code, date_str):
     """
-    从 ak 获取当日的港股南向资金成分（整表），并缓存。
+    从 ak 获取指定股票和日期的港股南向资金数据，并缓存。
     date_str 格式 YYYYMMDD
     返回 DataFrame 或 None
     """
-    if date_str in southbound_cache:
-        return southbound_cache[date_str]
+    cache_key = (code, date_str)
+    if cache_key in southbound_cache:
+        return southbound_cache[cache_key]
+    
     try:
-        df = ak.stock_hk_ggt_components_em(date=date_str)
-        # 有时 ak 返回空表或异常格式，做基本校验
-        if isinstance(df, pd.DataFrame) and not df.empty:
-            southbound_cache[date_str] = df
+        # 使用新的接口获取个股南向资金数据
+        # akshare要求股票代码为5位数字格式，不足5位的需要在前面补0
+        symbol = code.replace('.HK', '')
+        if len(symbol) < 5:
+            symbol = symbol.zfill(5)
+        
+        # 检查缓存中是否已有该股票的数据
+        stock_cache_key = symbol
+        if stock_cache_key in southbound_cache and southbound_cache[stock_cache_key] is not None:
+            df_individual = southbound_cache[stock_cache_key]
+        else:
+            # 获取个股南向资金数据
+            df_individual = ak.stock_hsgt_individual_em(symbol=symbol)
+            
+            if df_individual is None or df_individual.empty:
+                print(f"⚠️ 获取南向资金数据为空 {code}")
+                southbound_cache[stock_cache_key] = None
+                time.sleep(AK_CALL_SLEEP)
+                return None
+            
+            # 缓存该股票的所有数据
+            southbound_cache[stock_cache_key] = df_individual
+        
+        # 将日期字符串转换为pandas日期格式进行匹配
+        target_date = pd.to_datetime(date_str, format='%Y%m%d')
+        
+        # 筛选指定日期的数据
+        df_filtered = df_individual[df_individual['持股日期'] == target_date.date()]
+        
+        # 如果未找到指定日期的数据，使用最近的可用日期数据
+        if df_filtered.empty:
+            # 获取所有可用日期
+            available_dates = df_individual['持股日期']
+            # 找到最近的日期（小于或等于目标日期）
+            closest_date = available_dates[available_dates.dt.date() <= target_date.date()].max()
+            
+            if pd.notna(closest_date):
+                # 使用最近日期的数据
+                df_filtered = df_individual[df_individual['持股日期'] == closest_date]
+                print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}，使用最近日期 {closest_date.strftime('%Y%m%d')} 的数据")
+            else:
+                print(f"⚠️ 未找到指定日期及之前的南向资金数据 {code} {date_str}")
+                southbound_cache[cache_key] = None
+                time.sleep(AK_CALL_SLEEP)
+                return None
+        
+        if isinstance(df_filtered, pd.DataFrame) and not df_filtered.empty:
+            # 只返回需要的列以减少内存占用
+            result = df_filtered[['持股日期', '持股市值变化-1日']].copy()
+            southbound_cache[cache_key] = result
             # 略微延时以防被限流
             time.sleep(AK_CALL_SLEEP)
-            return df
-        southbound_cache[date_str] = None
-        time.sleep(AK_CALL_SLEEP)
-        return None
-    except Exception:
-        southbound_cache[date_str] = None
+            return result
+        else:
+            print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}")
+            southbound_cache[cache_key] = None
+            time.sleep(AK_CALL_SLEEP)
+            return None
+    except Exception as e:
+        print(f"⚠️ 获取南向资金数据失败 {code} {date_str}: {e}")
+        southbound_cache[cache_key] = None
         time.sleep(AK_CALL_SLEEP)
         return None
 
@@ -262,21 +313,23 @@ def analyze_stock(code, name):
             if ts.weekday() >= 5:
                 continue
             date_str = ts.strftime('%Y%m%d')
-            df_ggt = fetch_ggt_components(date_str)
+            df_ggt = fetch_ggt_components(code, date_str)
             if df_ggt is None:
                 continue
-            # 匹配代码（ak 返回 '代码' 可能没有后缀）
-            match = df_ggt[df_ggt.get('代码', '').astype(str) == code.replace('.HK', '')]
-            if not match.empty:
-                # 取第一个匹配
-                try:
-                    net_raw = str(match['净买入'].values[0]).replace(',', '')
-                    net_val = pd.to_numeric(net_raw, errors='coerce')
+            # 获取南向资金净买入数据（使用持股市值变化-1日作为近似值）
+            try:
+                # 取第一个匹配的记录
+                if '持股市值变化-1日' in df_ggt.columns:
+                    net_val = df_ggt['持股市值变化-1日'].iloc[0]
                     if pd.notna(net_val):
+                        # 转换为万元（原始数据单位可能是元）
                         main_hist.at[ts, 'Southbound_Net'] = float(net_val) / SOUTHBOUND_UNIT_CONVERSION
-                except Exception:
-                    # 忽略解析错误
-                    pass
+                else:
+                    print(f"⚠️ 南向资金数据缺少持股市值变化字段 {code} {date_str}")
+            except Exception as e:
+                # 忽略解析错误
+                print(f"⚠️ 解析南向资金数据失败 {code} {date_str}: {e}")
+                pass
 
         # 计算区间收益（main_hist 首尾）
         start_date, end_date = main_hist.index[0], main_hist.index[-1]
@@ -378,6 +431,7 @@ def analyze_stock(code, name):
             'macd': safe_round(main_hist['MACD'].iloc[-1], 4) if pd.notna(main_hist['MACD'].iloc[-1]) else None,
             'rsi': safe_round(main_hist['RSI'].iloc[-1], 2) if pd.notna(main_hist['RSI'].iloc[-1]) else None,
             'volatility': safe_round(main_hist['Volatility'].iloc[-1] * 100, 2) if pd.notna(main_hist['Volatility'].iloc[-1]) else None,  # 百分比
+            'obv': safe_round(main_hist['OBV'].iloc[-1], 2) if pd.notna(main_hist['OBV'].iloc[-1]) else None,  # OBV指标
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
             'distribution_dates': main_hist[main_hist['Distribution_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
         }
@@ -416,14 +470,14 @@ else:
         'has_buildup', 'has_distribution', 'outperforms_hsi',
         'RS_ratio_%', 'RS_diff_%', 'price_percentile', 'vol_ratio', 'turnover',
         'ma5_deviation', 'ma10_deviation', 'macd', 'rsi', 'volatility',
-        'southbound'
+        'southbound', 'obv'
     ]]
     df_report.columns = [
         '股票名称', '代码', '最新价', '前收市价', '涨跌幅(%)',
         '建仓信号', '出货信号', '跑赢恒指',
         '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '位置(%)', '量比', '成交金额(百万)',
         '5日均线偏离(%)', '10日均线偏离(%)', 'MACD', 'RSI', '波动率(%)',
-        '南向资金(万)'
+        '南向资金(万)', 'OBV'
     ]
 
     df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
