@@ -630,9 +630,9 @@ else:
         text = "港股主力资金追踪报告（改进版）\n\n"
         html = "<html><body><h2>港股主力资金追踪报告（改进版）</h2>"
 
-        # 添加表格（每 8 行分一页）
-        for i in range(0, len(df_report), 8):
-            chunk = df_report.iloc[i:i+8]
+        # 添加表格（每 5 行分一页）
+        for i in range(0, len(df_report), 5):
+            chunk = df_report.iloc[i:i+5]
             html += chunk.to_html(index=False, escape=False)
 
         # 添加简洁的信号摘要
