@@ -780,14 +780,6 @@ else:
                    sb=int(SOUTHBOUND_THRESHOLD),
                    bd=BUILDUP_MIN_DAYS,
                    dd=DISTRIBUTION_MIN_DAYS)
-,
-                   low=int(PRICE_LOW_PCT),
-                   high=int(PRICE_HIGH_PCT),
-                   vr_build=VOL_RATIO_BUILDUP,
-                   vr_dist=VOL_RATIO_DISTRIBUTION,
-                   sb=int(SOUTHBOUND_THRESHOLD),
-                   bd=BUILDUP_MIN_DAYS,
-                   dd=DISTRIBUTION_MIN_DAYS)
 
         html += FULL_INDICATOR_HTML
 
