@@ -466,18 +466,18 @@ else:
 
     # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
     df_report = df[[
-        'name', 'code', 'last_close', 'prev_close', 'change_pct',
-        'has_buildup', 'has_distribution', 'outperforms_hsi',
-        'RS_ratio_%', 'RS_diff_%', 'price_percentile', 'vol_ratio', 'turnover',
-        'ma5_deviation', 'ma10_deviation', 'macd', 'rsi', 'volatility',
-        'southbound', 'obv'
+        'name', 'code', 'last_close', 'change_pct', 'turnover',
+        'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
+        'rsi', 'macd', 'volatility', 'obv',
+        'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
+        'southbound', 'has_buildup', 'has_distribution'
     ]]
     df_report.columns = [
-        '股票名称', '代码', '最新价', '前收市价', '涨跌幅(%)',
-        '建仓信号', '出货信号', '跑赢恒指',
-        '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '位置(%)', '量比', '成交金额(百万)',
-        '5日均线偏离(%)', '10日均线偏离(%)', 'MACD', 'RSI', '波动率(%)',
-        '南向资金(万)', 'OBV'
+        '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)',
+        '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
+        'RSI', 'MACD', '波动率(%)', 'OBV',
+        '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
+        '南向资金(万)', '建仓信号', '出货信号'
     ]
 
     df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
