@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 港股主力资金追踪器（建仓 + 出货 双信号）
-作者：AI助手
+作者：AI助手（修补版）
 功能：
   - 批量扫描自选股
   - 识别「建仓信号」：低位 + 放量 + 南向流入 + 跑赢恒指
   - 识别「出货信号」：高位 + 巨量 + 南向流出 + 滞涨
   - 输出汇总报告 + 图表
+说明：
+  - 本次修补使相对强度(RS)的计算更稳健，新增两个明确指标：
+    1) relative_strength_ratio (基于 (1+stock_ret)/(1+hsi_ret)-1)
+    2) relative_strength_diff  (stock_ret - hsi_ret)
+  - 并增加配置 OUTPERFORMS_REQUIRE_POSITIVE，控制 "跑赢恒指" 的判定语义。
 """
 
 import warnings
@@ -28,10 +33,6 @@ import akshare as ak
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
-
-# 设置中文字体支持
-plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
-plt.rcParams['axes.unicode_minus'] = False
 
 # 设置中文字体支持
 plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
@@ -66,6 +67,11 @@ VOL_WINDOW = 20
 PRICE_WINDOW = 60
 BUILDUP_MIN_DAYS = 3   # 建仓需连续3日
 DISTRIBUTION_MIN_DAYS = 2  # 出货需连续2日
+
+# 配置：是否在判断 "跑赢恒指" 时强制要求股票为正收益
+# True => outperforms = (stock_ret > 0) and (stock_ret > hsi_ret)
+# False => outperforms = stock_ret > hsi_ret
+OUTPERFORMS_REQUIRE_POSITIVE = True
 
 SAVE_CHARTS = True
 CHART_DIR = "hk_smart_charts"
@@ -172,8 +178,8 @@ def send_email_with_report(df, to):
                 html += f"<li>{stock['股票名称']}</li>"
             html += "</ul>"
             
-        # 添加指标说明
-        html += "<h3>📋 指标说明：</h3>"
+        # 添加指标说明（已更新：使用 ratio 和 diff 两种 RS 表示）
+        html += "<h3>📋 指标说明（更新）：</h3>"
         html += "<h4>【基础信息】</h4>"
         html += "<ul>"
         html += "<li><strong>最新价</strong>：股票当前最新成交价格</li>"
@@ -185,27 +191,29 @@ def send_email_with_report(df, to):
         html += "<ul>"
         html += "<li><strong>建仓信号</strong>：低位 + 放量 + 南向流入 + 跑赢恒指 (出现建仓信号可能意味着主力资金开始买入)</li>"
         html += "<li><strong>出货信号</strong>：高位 + 巨量 + 南向流出 + 滞涨 (出现出货信号可能意味着主力资金开始卖出)</li>"
-        html += "<li><strong>跑赢恒指</strong>：股票上涨且涨幅超过恒指，或者股票下跌但跌幅小于恒指且整体是正收益</li>"
-        html += "<li><strong>注意</strong>：当跑赢恒指为True且RS>0时，表示股票和恒指都上涨，且股票涨幅超过恒指</li>"
-        html += "<li><strong>注意</strong>：当跑赢恒指为False但RS>1时，表示股票相对表现优于恒指，但股票本身可能为负收益</li>"
-        html += "<li><strong>注意</strong>：当跑赢恒指为True但RS<0时，表示股票和恒指都下跌，但股票跌幅小于恒指</li>"
-        html += "<li><strong>注意</strong>：当跑赢恒指为False但RS>0时，表示股票和恒指都上涨，但股票涨幅小于恒指</li>"
+        html += "</ul>"
+        
+        html += "<h4>【相对表现 (跑赢恒指) 说明】</h4>"
+        html += "<ul>"
+        html += "<li><strong>relative_strength_ratio (RS)</strong>：使用 (1+股票收益)/(1+恒指收益)-1 计算；当 RS &gt; 0 表示股票按复合收益率跑赢恒指；该定义在恒指为负时不会因为分母符号翻转而产生误导。</li>"
+        html += "<li><strong>relative_strength_diff</strong>：股票收益 - 恒指收益；>0 表示股票收益高于恒指（直观差值）。</li>"
+        html += "<li><strong>跑赢恒指 (outperforms)</strong>：脚本可配置为两种语义（顶部配置 OUTPERFORMS_REQUIRE_POSITIVE）：</li>"
+        html += "<ul>"
+        html += "<li>如果 OUTPERFORMS_REQUIRE_POSITIVE = True：要求股票为正收益且收益高于恒指（较为保守，等同于“正收益并跑赢”）</li>"
+        html += "<li>如果 OUTPERFORMS_REQUIRE_POSITIVE = False：只要股票收益高于恒指即视为跑赢（不要求股票为正收益）</li>"
+        html += "</ul>"
+        html += "<li><strong>示例说明</strong>：当恒指下跌而个股也下跌但跌幅更小，RS_ratio > 0（或 RS_diff > 0），表示相对表现更好，但股票仍可能为负收益；若你要建仓优先考虑正收益且跑赢，可开启 OUTPERFORMS_REQUIRE_POSITIVE = True。</li>"
         html += "</ul>"
         
         html += "<h4>【技术指标】</h4>"
         html += "<ul>"
-        html += "<li><strong>相对强度(RS)</strong>：股票收益与恒生指数收益的比值 (RS>1表示表现优于恒生指数)</li>"
         html += "<li><strong>位置(%)</strong>：当前价格在60日价格区间中的百分位 (数值越小表示相对位置越低，数值越大表示相对位置越高)</li>"
-        html += "<li><strong>量比</strong>：当前成交量与20日平均成交量的比值 (量比>1表示当日成交量高于20日均值)</li>"
+        html += "<li><strong>量比</strong>：当前成交量与20日平均成交量的比值 (量比&gt;1表示当日成交量高于20日均值)</li>"
         html += "<li><strong>成交金额(百万)</strong>：股票当日的成交金额，以百万为单位显示</li>"
         html += "<li><strong>5日均线偏离(%)</strong>：当前价格偏离5日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)</li>"
         html += "<li><strong>10日均线偏离(%)</strong>：当前价格偏离10日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)</li>"
         html += "<li><strong>MACD</strong>：指数平滑异同移动平均线 (用于判断买卖时机的趋势指标)</li>"
-        html += "<li><strong>MACD>0</strong>：短期均线在长期均线上方，市场可能处于多头状态</li>"
-        html += "<li><strong>MACD<0</strong>：短期均线在长期均线下方，市场可能处于空头状态</li>"
-        html += "<li><strong>MACD值增大</strong>：趋势加强</li>"
-        html += "<li><strong>MACD值减小</strong>：趋势减弱</li>"
-        html += "<li><strong>RSI</strong>：相对强弱指数 (衡量股票超买或超卖状态的指标，范围0-100，通常>70为超买，<30为超卖)</li>"
+        html += "<li><strong>RSI</strong>：相对强弱指数 (衡量股票超买或超卖状态的指标，范围0-100，通常&gt;70为超买，&lt;30为超卖)</li>"
         html += "<li><strong>波动率(%)</strong>：年化波动率，衡量股票的风险水平 (数值越大表示风险越高)</li>"
         html += "</ul>"
         
@@ -349,13 +357,22 @@ def analyze_stock(code, name):
             except:
                 pass
 
-        # 相对强度
+        # 相对强度（改为 ratio 与 diff，避免分母负号导致符号误导）
         start_date, end_date = main_hist.index[0], main_hist.index[-1]
         stock_ret = (main_hist['Close'].iloc[-1] - main_hist['Close'].iloc[0]) / main_hist['Close'].iloc[0]
         hsi_ret = get_hsi_return(start_date, end_date)
-        rs = stock_ret / hsi_ret if hsi_ret != 0 else (1.0 if stock_ret >= 0 else -1.0)
-        # 跑赢恒指 = True 需要同时满足：股票上涨且涨幅超过恒指，或者股票下跌但跌幅小于恒指且整体是正收益
-        outperforms = stock_ret > hsi_ret and stock_ret > 0
+        rs_diff = stock_ret - hsi_ret
+        # ratio 采用 (1+stock_ret)/(1+hsi_ret)-1（更稳健，不会因为 hsi_ret 为负而直接反转符号含义）
+        if (1.0 + hsi_ret) == 0:
+            rs_ratio = float('inf') if (1.0 + stock_ret) > 0 else float('-inf')
+        else:
+            rs_ratio = (1.0 + stock_ret) / (1.0 + hsi_ret) - 1.0
+
+        # 跑赢恒指判定（可配置）
+        if OUTPERFORMS_REQUIRE_POSITIVE:
+            outperforms = (stock_ret > 0) and (stock_ret > hsi_ret)
+        else:
+            outperforms = stock_ret > hsi_ret
 
         # === 建仓信号 ===
         def is_buildup(row):
@@ -404,14 +421,6 @@ def analyze_stock(code, name):
         has_buildup = main_hist['Buildup_Confirmed'].any()
         has_distribution = main_hist['Distribution_Confirmed'].any()
         
-        # 保存图表（总是生成）
-        has_buildup = main_hist['Buildup_Confirmed'].any()
-        has_distribution = main_hist['Distribution_Confirmed'].any()
-        
-        # 保存图表（总是生成）
-        has_buildup = main_hist['Buildup_Confirmed'].any()
-        has_distribution = main_hist['Distribution_Confirmed'].any()
-        
         if SAVE_CHARTS:
             hsi_plot = hsi_hist['Close'].reindex(main_hist.index, method='ffill')
             stock_plot = main_hist['Close']
@@ -419,7 +428,7 @@ def analyze_stock(code, name):
             plt.figure(figsize=(10, 6))
             plt.plot(stock_plot.index, stock_plot / stock_plot.iloc[0], 'b-o', label=f'{code} {name}')
             plt.plot(hsi_plot.index, hsi_plot / hsi_plot.iloc[0], 'orange', linestyle='--', label='恒生指数')
-            title = f"{code} {name} vs 恒指 | RS: {rs:.2f}"
+            title = f"{code} {name} vs 恒指 | RS_ratio: {rs_ratio:.4f} | RS_diff: {rs_diff:.2%}"
             if has_buildup:
                 title += " [建仓]"
             if has_distribution:
@@ -430,7 +439,8 @@ def analyze_stock(code, name):
             plt.xticks(rotation=45)
             plt.tight_layout()
             status = ("buildup" if has_buildup else "") + ("_distribution" if has_distribution else "")
-            plt.savefig(f"{CHART_DIR}/{code}_{name}{status}.png")
+            safe_name = name.replace('/', '_').replace(' ', '_')
+            plt.savefig(f"{CHART_DIR}/{code}_{safe_name}{status}.png")
             plt.close()
 
         return {
@@ -439,7 +449,8 @@ def analyze_stock(code, name):
             'has_buildup': has_buildup,
             'has_distribution': has_distribution,
             'outperforms_hsi': outperforms,
-            'relative_strength': rs,
+            'relative_strength': rs_ratio,            # 兼容旧字段：以 ratio 形式返回（>0 表示跑赢）
+            'relative_strength_diff': rs_diff,        # 新增字段：差值形式（>0 表示收益高于恒指）
             'last_close': main_hist['Close'].iloc[-1],
             'prev_close': main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None,
             'change_pct': ((main_hist['Close'].iloc[-1] / main_hist['Close'].iloc[-2]) - 1) * 100 if len(main_hist) >= 2 else 0,
@@ -481,17 +492,18 @@ if not results:
     print("❌ 无结果")
 else:
     df = pd.DataFrame(results)
+    # 保持向后兼容性：'relative_strength' 字段为 ratio（>0 表示跑赢），并新增 'relative_strength_diff' 用于直观差值
     df = df[[
         'name', 'code', 'last_close', 'prev_close', 'change_pct',
         'has_buildup', 'has_distribution', 'outperforms_hsi',
-        'relative_strength', 'price_percentile', 'vol_ratio', 'turnover',
+        'relative_strength', 'relative_strength_diff', 'price_percentile', 'vol_ratio', 'turnover',
         'ma5_deviation', 'ma10_deviation', 'macd', 'rsi', 'volatility',
         'southbound'
     ]]
     df.columns = [
         '股票名称', '代码', '最新价', '前收市价', '涨跌幅(%)',
         '建仓信号', '出货信号', '跑赢恒指',
-        '相对强度(RS)', '位置(%)', '量比', '成交金额(百万)',
+        '相对强度(RS_ratio)', '相对强度差值(RS_diff)', '位置(%)', '量比', '成交金额(百万)',
         '5日均线偏离(%)', '10日均线偏离(%)', 'MACD', 'RSI', '波动率(%)',
         '南向资金(万)'
     ]
@@ -502,33 +514,29 @@ else:
     print("="*110)
     print(df.to_string(index=False, float_format=lambda x: f"{x:.2f}" if isinstance(x, float) else x))
     
-    # 添加指标说明
+    # 添加指标说明（控制台版）
     print("\n" + "="*110)
-    print("📋 指标说明：")
+    print("📋 指标说明（已更新）:")
     print("="*110)
     print("【基础信息】")
     print("  • 最新价：股票当前最新成交价格")
     print("  • 前收市价：前一个交易日的收盘价格")
     print("  • 涨跌幅(%)：当前价格相对于前收市价的涨跌幅度 (正值表示上涨，负值表示下跌)")
     
-    print("\n【信号指标】")
-    print("  • 建仓信号：低位 + 放量 + 南向流入 + 跑赢恒指 (出现建仓信号可能意味着主力资金开始买入)")
-    print("  • 出货信号：高位 + 巨量 + 南向流出 + 滞涨 (出现出货信号可能意味着主力资金开始卖出)")
-    print("  • 跑赢恒指：股票上涨且涨幅超过恒指，或者股票下跌但跌幅小于恒指且整体是正收益")
-    print("      注意：当跑赢恒指为False但RS>1时，表示股票相对表现优于恒指，但股票本身可能为负收益")
-    
+    print("\n【相对表现 / 跑赢恒指说明】")
+    print("  • 相对强度(RS_ratio)：(1+股票收益)/(1+恒指收益)-1；>0 表示按复合收益率跑赢恒指（对恒指为负时更稳健）。")
+    print("  • 相对强度差值(RS_diff)：股票收益 - 恒指收益；>0 表示股票收益高于恒指（直观差值）。")
+    print("  • 跑赢恒指(outperforms)：可配置（脚本顶部 OUTPERFORMS_REQUIRE_POSITIVE），"
+          "True 表示要求股票为正收益且收益高于恒指；False 表示只要股票收益高于恒指即视为跑赢。")
+    print("  • 说明示例：当恒指下跌、个股下跌但跌幅更小，RS_ratio 与 RS_diff 可能为正，但股票仍是负收益。")
+
     print("\n【技术指标】")
-    print("  • 相对强度(RS)：股票收益与恒生指数收益的比值 (RS>1表示表现优于恒生指数)")
     print("  • 位置(%)：当前价格在60日价格区间中的百分位 (数值越小表示相对位置越低，数值越大表示相对位置越高)")
     print("  • 量比：当前成交量与20日平均成交量的比值 (量比>1表示当日成交量高于20日均值)")
     print("  • 成交金额(百万)：股票当日的成交金额，以百万为单位显示")
     print("  • 5日均线偏离(%)：当前价格偏离5日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)")
     print("  • 10日均线偏离(%)：当前价格偏离10日均线的程度 (正值表示价格在均线上方，负值表示价格在均线下方)")
     print("  • MACD：指数平滑异同移动平均线 (用于判断买卖时机的趋势指标)")
-    print("      MACD>0：短期均线在长期均线上方，市场可能处于多头状态")
-    print("      MACD<0：短期均线在长期均线下方，市场可能处于空头状态")
-    print("      MACD值增大：趋势加强")
-    print("      MACD值减小：趋势减弱")
     print("  • RSI：相对强弱指数 (衡量股票超买或超卖状态的指标，范围0-100，通常>70为超买，<30为超卖)")
     print("  • 波动率(%)：年化波动率，衡量股票的风险水平 (数值越大表示风险越高)")
     
@@ -549,7 +557,7 @@ else:
         if strong_buildup:
             print("\n🟢 机会！高质量建仓信号（跑赢恒指）：")
             for r in strong_buildup:
-                print(f"  • {r['name']} | RS={r['relative_strength']:.2f} | 日期: {', '.join(r['buildup_dates'])}")
+                print(f"  • {r['name']} | RS_ratio={r['relative_strength']:.4f} | RS_diff={r['relative_strength_diff']:.2%} | 日期: {', '.join(r['buildup_dates'])}")
 
     # 保存Excel
     try:
