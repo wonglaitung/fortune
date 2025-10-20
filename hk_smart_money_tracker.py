@@ -409,6 +409,26 @@ def analyze_stock(code, name):
             plt.savefig(f"{CHART_DIR}/{code}_{safe_name}{status}.png")
             plt.close()
 
+        # 计算换手率 (使用实际流通股本)
+        # 换手率 = 成交量 / 流通股本 * 100%
+        # 从 yfinance 获取流通股本数据
+        float_shares = None
+        try:
+            float_shares = ticker.info.get('floatShares', 0)
+            if float_shares is None or float_shares == 0:
+                # 如果没有流通股本数据，使用总股本数据
+                float_shares = ticker.info.get('sharesOutstanding', 0)
+            if float_shares is None or float_shares == 0:
+                # 如果都没有，设置为 None
+                float_shares = None
+                print(f"  ⚠️ 无法获取 {code} 的流通股本数据")
+        except Exception as e:
+            float_shares = None
+            print(f"  ⚠️ 获取 {code} 流通股本数据时出错: {e}")
+        
+        # 只有在有流通股本数据时才计算换手率
+        turnover_rate = (main_hist['Volume'].iloc[-1] / float_shares) * 100 if len(main_hist) > 0 and float_shares is not None and float_shares > 0 else None
+
         # 返回结构（保留原始数值：RS 为小数，RS_diff 小数；展示时再乘100）
         last_close = main_hist['Close'].iloc[-1]
         prev_close = main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None
@@ -428,6 +448,7 @@ def analyze_stock(code, name):
             'price_percentile': safe_round(main_hist['Price_Percentile'].iloc[-1], 2),
             'vol_ratio': safe_round(main_hist['Vol_Ratio'].iloc[-1], 2) if pd.notna(main_hist['Vol_Ratio'].iloc[-1]) else None,
             'turnover': safe_round((last_close * main_hist['Volume'].iloc[-1]) / 1_000_000, 2),  # 百万
+            'turnover_rate': safe_round(turnover_rate, 2) if turnover_rate is not None else None,  # 换手率 %
             'southbound': safe_round(main_hist['Southbound_Net'].iloc[-1], 2),  # 单位：万
             'ma5_deviation': safe_round(((last_close / main_hist['MA5'].iloc[-1]) - 1) * 100, 2) if pd.notna(main_hist['MA5'].iloc[-1]) and main_hist['MA5'].iloc[-1] > 0 else None,
             'ma10_deviation': safe_round(((last_close / main_hist['MA10'].iloc[-1]) - 1) * 100, 2) if pd.notna(main_hist['MA10'].iloc[-1]) and main_hist['MA10'].iloc[-1] > 0 else None,
@@ -469,14 +490,14 @@ else:
 
     # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
     df_report = df[[
-        'name', 'code', 'last_close', 'change_pct', 'turnover',
+        'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
         'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
         'rsi', 'macd', 'volatility', 'obv',
         'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
         'southbound', 'has_buildup', 'has_distribution'
     ]]
     df_report.columns = [
-        '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)',
+        '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
         '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
         'RSI', 'MACD', '波动率(%)', 'OBV',
         '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
