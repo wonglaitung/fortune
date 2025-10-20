@@ -136,6 +136,9 @@ def fetch_ggt_components(code, date_str):
         symbol = code.replace('.HK', '')
         if len(symbol) < 5:
             symbol = symbol.zfill(5)
+        elif len(symbol) > 5:
+            # 如果超过5位，取后5位（处理像 "00700.HK" 这样的格式）
+            symbol = symbol[-5:]
         
         # 检查缓存中是否已有该股票的数据
         stock_cache_key = symbol
