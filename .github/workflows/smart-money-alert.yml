@@ -2,13 +2,8 @@ name: HK Smart Money Alert
 
 on:
   schedule:
-<<<<<<< HEAD
-    # 每天香港时间上午8点执行（即UTC时间0点）
+  # 每天香港时间上午8点执行（即UTC时间0点）
     - cron: '0 0 * * *'
-=======
-    # 每天 UTC 时间 0:00 执行（即北京时间 08:00）
-    - cron: '0 15 * * *'
->>>>>>> a74532b7e40bfc0bbc97694853270845274cbc73
   # 可选：允许手动触发
   workflow_dispatch:
 
