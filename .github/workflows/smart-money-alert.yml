@@ -2,8 +2,8 @@ name: HK Smart Money Alert
 
 on:
   schedule:
-    # 每天 UTC 时间 0:00 执行（即北京时间 08:00）
-    - cron: '0 12 * * *'
+    # 每天香港时间上午8点执行（即UTC时间0点）
+    - cron: '0 0 * * *'
   # 可选：允许手动触发
   workflow_dispatch:
 
@@ -23,11 +23,15 @@ jobs:
         run: |
           pip install yfinance akshare pandas matplotlib openpyxl
 
-      - name: Run smart money tracker script
+      - name: Get yesterday's date
+        id: date
+        run: echo "YESTERDAY=$(date -d 'yesterday' +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Run smart money tracker script with yesterday's date
         env:
           YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
           YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
         run: |
-          python hk_smart_money_tracker.py
+          python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
