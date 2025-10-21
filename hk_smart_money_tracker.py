@@ -9,7 +9,7 @@
 - outperforms 判定支持三种语义：绝对正收益并跑赢、相对跑赢（收益差值）、基于 RS_ratio（复合收益比）。
 - RSI 使用 Wilder 平滑（更接近经典 RSI）。
 - OBV 使用 full history 的累计值，避免短期截断。
-- 南向资金（ak 返回）会被缓存并转换为“万”（可调整 SOUTHBOUND_UNIT_CONVERSION）。
+- 南向资金（ak 返回）会被缓存并转换为"万"（可调整 SOUTHBOUND_UNIT_CONVERSION）。
 - 连续天数判定（建仓/出货）采用显式的 run-length 标注整段满足条件的日期。
 - 输出：DataFrame 中保留原始数值（小数），显示及邮件中对 RS2 指标以百分比展示，并在说明中明确单位。
 """
@@ -379,7 +379,7 @@ def analyze_stock(code, name, run_date=None):
                 full_hist['OBV'].iat[i] = full_hist['OBV'].iat[i-1]
         main_hist['OBV'] = full_hist['OBV'].reindex(main_hist.index, method='ffill').fillna(0.0)
 
-        # 南向资金：按日期获取并缓存，转换为“万”
+        # 南向资金：按日期获取并缓存，转换为"万"
         main_hist['Southbound_Net'] = 0.0
         for ts in main_hist.index:
             # ===== 排除周六日 =====
@@ -547,6 +547,12 @@ def analyze_stock(code, name, run_date=None):
         prev_close = main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None
         change_pct = ((last_close / prev_close) - 1) * 100 if prev_close is not None and prev_close != 0 else None
 
+        # 计算放量上涨和缩量回调信号
+        # 放量上涨：收盘价 > 开盘价 且 Vol_Ratio > 1.5
+        main_hist['Strong_Volume_Up'] = (main_hist['Close'] > main_hist['Open']) & (main_hist['Vol_Ratio'] > 1.5)
+        # 缩量回调：收盘价 < 前一日收盘价 且 Vol_Ratio < 1.0 且跌幅 < 2%
+        main_hist['Weak_Volume_Down'] = (main_hist['Close'] < main_hist['Prev_Close']) & (main_hist['Vol_Ratio'] < 1.0) & ((main_hist['Prev_Close'] - main_hist['Close']) / main_hist['Prev_Close'] < 0.02)
+
         result = {
             'code': code,
             'name': name,
@@ -569,6 +575,8 @@ def analyze_stock(code, name, run_date=None):
             'rsi': safe_round(main_hist['RSI'].iloc[-1], 2) if pd.notna(main_hist['RSI'].iloc[-1]) else None,
             'volatility': safe_round(main_hist['Volatility'].iloc[-1] * 100, 2) if pd.notna(main_hist['Volatility'].iloc[-1]) else None,  # 百分比
             'obv': safe_round(main_hist['OBV'].iloc[-1], 2) if pd.notna(main_hist['OBV'].iloc[-1]) else None,  # OBV指标
+            'strong_volume_up': bool(main_hist['Strong_Volume_Up'].iloc[-1]),  # 放量上涨
+            'weak_volume_down': bool(main_hist['Weak_Volume_Down'].iloc[-1]),  # 缩量回调
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
             'distribution_dates': main_hist[main_hist['Distribution_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
         }
@@ -610,14 +618,16 @@ def main(run_date=None):
             'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
             'rsi', 'macd', 'volatility', 'obv',
             'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-            'southbound', 'has_buildup', 'has_distribution'
+            'southbound', 'has_buildup', 'has_distribution',
+            'strong_volume_up', 'weak_volume_down'
         ]]
         df_report.columns = [
             '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
             '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
             'RSI', 'MACD', '波动率(%)', 'OBV',
             '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-            '南向资金(万)', '建仓信号', '出货信号'
+            '南向资金(万)', '建仓信号', '出货信号',
+            '放量上涨', '缩量回调'
         ]
 
         df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
@@ -655,14 +665,16 @@ def main(run_date=None):
                 'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
                 'rsi', 'macd', 'volatility', 'obv',
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-                'southbound', 'has_buildup', 'has_distribution'
+                'southbound', 'has_buildup', 'has_distribution',
+                'strong_volume_up', 'weak_volume_down'
             ]]
             df_excel.columns = [
                 '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
                 '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
                 'RSI', 'MACD', '波动率(%)', 'OBV',
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-                '南向资金(万)', '建仓信号', '出货信号'
+                '南向资金(万)', '建仓信号', '出货信号',
+                '放量上涨', '缩量回调'
             ]
             
             # 排序与邮件报告一致

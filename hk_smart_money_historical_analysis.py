@@ -287,6 +287,12 @@ def analyze_stock_historical(code, name, start_date, end_date):
 
             main_hist['Distribution_Signal'] = main_hist.apply(is_distribution, axis=1)
             main_hist['Distribution_Confirmed'] = mark_runs(main_hist['Distribution_Signal'], DISTRIBUTION_MIN_DAYS)
+            
+            # === 放量上涨和缩量回调信号 ===
+            # 放量上涨：收盘价 > 开盘价 且 Vol_Ratio > 1.5
+            main_hist['Strong_Volume_Up'] = (main_hist['Close'] > main_hist['Open']) & (main_hist['Vol_Ratio'] > 1.5)
+            # 缩量回调：收盘价 < 前一日收盘价 且 Vol_Ratio < 1.0 且跌幅 < 2%
+            main_hist['Weak_Volume_Down'] = (main_hist['Close'] < main_hist['Prev_Close']) & (main_hist['Vol_Ratio'] < 1.0) & ((main_hist['Prev_Close'] - main_hist['Close']) / main_hist['Prev_Close'] < 0.02)
 
             # 只记录当前日期的数据，避免重复记录历史日期
             # 使用窗口内的最后一天作为当前日期
@@ -294,6 +300,8 @@ def analyze_stock_historical(code, name, start_date, end_date):
                 row = main_hist.iloc[-1]  # 取窗口内的最后一天数据
                 has_buildup = row['Buildup_Confirmed']
                 has_distribution = row['Distribution_Confirmed']
+                strong_volume_up = row['Strong_Volume_Up']  # 放量上涨信号
+                weak_volume_down = row['Weak_Volume_Down']  # 缩量回调信号
                 
                 # 计算换手率
                 float_shares = None
@@ -318,7 +326,9 @@ def analyze_stock_historical(code, name, start_date, end_date):
                     'relative_strength_diff': safe_round(rs_diff, 4),  # 保持小数形式
                     'turnover_rate': safe_round(turnover_rate, 2),
                     'has_buildup': has_buildup,
-                    'has_distribution': has_distribution
+                    'has_distribution': has_distribution,
+                    'strong_volume_up': strong_volume_up,  # 放量上涨信号
+                    'weak_volume_down': weak_volume_down   # 缩量回调信号
                 })
 
         return results
@@ -388,9 +398,11 @@ def main():
             print("❌ 无结果")
             # 即使没有信号数据，也生成一个空的报告文件
             df_empty = pd.DataFrame(columns=[
-                'date', 'code', 'name', 'last_close', 'price_percentile', 'vol_ratio', 
-                'southbound', 'relative_strength', 'relative_strength_diff', 'turnover_rate', 
-                'has_buildup', 'has_distribution'
+                '股票名称', '代码', '最新价', '换手率(%)',
+                '位置(%)', '量比',
+                '相对强度', '相对强度差值',
+                '南向资金(万)', '建仓信号', '出货信号',
+                '放量上涨', '缩量回调', '日期'
             ])
             with pd.ExcelWriter('hk_smart_money_historical_report.xlsx', engine='openpyxl') as writer:
                 df_empty.to_excel(writer, sheet_name='所有信号', index=False)
@@ -402,18 +414,22 @@ def main():
         print(f"📊 共收集到 {len(df)} 条信号数据")
         
         # 为展示方便，添加展示列（百分比形式）但保留原始数值列用于机器化处理
-        df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
-        df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        df['RS_ratio_%'] = df['相对强度'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        df['RS_diff_%'] = df['相对强度差值'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
         
-        # 分离建仓和出货信号
-        buildup_signals = df[df['has_buildup'] == True]
-        distribution_signals = df[df['has_distribution'] == True]
+        # 分离各种信号
+        buildup_signals = df[df['建仓信号'] == True]
+        distribution_signals = df[df['出货信号'] == True]
+        strong_volume_up_signals = df[df['放量上涨'] == True]
+        weak_volume_down_signals = df[df['缩量回调'] == True]
         
         # 保存结果到Excel
         with pd.ExcelWriter('hk_smart_money_historical_report.xlsx', engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name='所有信号', index=False)
             buildup_signals.to_excel(writer, sheet_name='建仓信号', index=False)
             distribution_signals.to_excel(writer, sheet_name='出货信号', index=False)
+            strong_volume_up_signals.to_excel(writer, sheet_name='放量上涨', index=False)
+            weak_volume_down_signals.to_excel(writer, sheet_name='缩量回调', index=False)
     
     print("\n" + "="*120)
     print("📊 历史信号分析结果")
@@ -421,31 +437,53 @@ def main():
     
     # 选择并重命名列用于最终报告
     df_report = df[[
-        'date', 'name', 'code', 'last_close', 'price_percentile', 'vol_ratio', 
-        'southbound', 'RS_ratio_%', 'RS_diff_%', 'turnover_rate', 'has_buildup', 'has_distribution'
+        'name', 'code', 'last_close', 'turnover_rate',
+        'price_percentile', 'vol_ratio',
+        'RS_ratio_%', 'RS_diff_%',
+        'southbound', 'has_buildup', 'has_distribution',
+        'strong_volume_up', 'weak_volume_down', 'date'
     ]]
     df_report.columns = [
-        '日期', '股票名称', '代码', '最新价', '位置(%)', '量比', 
-        '南向资金(万)', '相对强度(%)', '相对强度差值(%)', '换手率(%)', '建仓信号', '出货信号'
+        '股票名称', '代码', '最新价', '换手率(%)',
+        '位置(%)', '量比',
+        '相对强度(%)', '相对强度差值(%)',
+        '南向资金(万)', '建仓信号', '出货信号',
+        '放量上涨', '缩量回调', '日期'
     ]
     
     if not buildup_signals.empty:
         print("\n🟢 建仓信号:")
         buildup_summary = df_report[df_report['建仓信号'] == True][[
-            '日期', '股票名称', '代码', '最新价', '位置(%)', '量比', '南向资金(万)', '相对强度(%)'
+            '股票名称', '代码', '最新价', '位置(%)', '量比', '南向资金(万)', '相对强度(%)', '日期'
         ]].copy()
         print(buildup_summary.to_string(index=False))
     
     if not distribution_signals.empty:
         print("\n🔴 出货信号:")
         distribution_summary = df_report[df_report['出货信号'] == True][[
-            '日期', '股票名称', '代码', '最新价', '位置(%)', '量比', '南向资金(万)', '相对强度(%)'
+            '股票名称', '代码', '最新价', '位置(%)', '量比', '南向资金(万)', '相对强度(%)', '日期'
         ]].copy()
         print(distribution_summary.to_string(index=False))
+        
+    if not strong_volume_up_signals.empty:
+        print("\n📈 放量上涨信号:")
+        strong_volume_up_summary = df_report[df_report['放量上涨'] == True][[
+            '股票名称', '代码', '最新价', '量比', '南向资金(万)', '日期'
+        ]].copy()
+        print(strong_volume_up_summary.to_string(index=False))
+        
+    if not weak_volume_down_signals.empty:
+        print("\n📉 缩量回调信号:")
+        weak_volume_down_summary = df_report[df_report['缩量回调'] == True][[
+            '股票名称', '代码', '最新价', '量比', '南向资金(万)', '日期'
+        ]].copy()
+        print(weak_volume_down_summary.to_string(index=False))
     
     print(f"\n📈 总结:")
     print(f"  - 检测到建仓信号 {len(buildup_signals)} 次")
     print(f"  - 检测到出货信号 {len(distribution_signals)} 次")
+    print(f"  - 检测到放量上涨信号 {len(strong_volume_up_signals)} 次")
+    print(f"  - 检测到缩量回调信号 {len(weak_volume_down_signals)} 次")
     print(f"  - 详细报告已保存到: hk_smart_money_historical_report.xlsx")
     
     # 按日期统计信号
@@ -453,10 +491,15 @@ def main():
         df['date'] = pd.to_datetime(df['date'])
         daily_signals = df.groupby('date').agg({
             'has_buildup': 'sum',
-            'has_distribution': 'sum'
+            'has_distribution': 'sum',
+            'strong_volume_up': 'sum',
+            'weak_volume_down': 'sum'
         }).reset_index()
-        daily_signals.columns = ['日期', '建仓信号次数', '出货信号次数']
-        daily_signals = daily_signals[(daily_signals['建仓信号次数'] > 0) | (daily_signals['出货信号次数'] > 0)]
+        daily_signals.columns = ['日期', '建仓信号次数', '出货信号次数', '放量上涨次数', '缩量回调次数']
+        daily_signals = daily_signals[(daily_signals['建仓信号次数'] > 0) | 
+                                     (daily_signals['出货信号次数'] > 0) |
+                                     (daily_signals['放量上涨次数'] > 0) |
+                                     (daily_signals['缩量回调次数'] > 0)]
         
         if not daily_signals.empty:
             print("\n📅 按日期统计的信号:")
