@@ -568,7 +568,30 @@ def main(run_date=None):
 
         # 保存 Excel（包含 machine-friendly 原始列 + 展示列）
         try:
-            df.to_excel("hk_smart_money_report.xlsx", index=False)
+            # 创建用于Excel的报告数据框，与邮件报告保持一致的列顺序
+            df_excel = df[[
+                'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
+                'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
+                'rsi', 'macd', 'volatility', 'obv',
+                'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
+                'southbound', 'has_buildup', 'has_distribution'
+            ]]
+            df_excel.columns = [
+                '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
+                '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
+                'RSI', 'MACD', '波动率(%)', 'OBV',
+                '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
+                '南向资金(万)', '建仓信号', '出货信号'
+            ]
+            
+            # 排序与邮件报告一致
+            df_excel = df_excel.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
+            
+            # 确保数值列格式化为两位小数用于显示
+            for col in df_excel.select_dtypes(include=['float64', 'int64']).columns:
+                df_excel[col] = df_excel[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else x)
+            
+            df_excel.to_excel("hk_smart_money_report.xlsx", index=False)
             print("\n💾 报告已保存: hk_smart_money_report.xlsx")
         except Exception as e:
             print(f"⚠️  Excel保存失败: {e}")
