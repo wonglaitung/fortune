@@ -592,6 +592,11 @@ def main(run_date=None):
 
             text = "港股主力资金追踪报告\n\n"
             html = "<html><body><h2>港股主力资金追踪报告</h2>"
+            
+            # 添加分析日期和基本信息
+            if run_date:
+                html += f"<p><strong>分析日期:</strong> {run_date}</p>"
+            html += f"<p><strong>分析 {len(WATCHLIST)} 只股票</strong> | <strong>窗口:</strong> {DAYS_ANALYSIS} 日</p>"
 
             # 添加表格（每 5 行分一页）
             for i in range(0, len(df_report), 5):
