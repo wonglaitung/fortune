@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install yfinance akshare pandas matplotlib openpyxl
+          pip install yfinance akshare pandas matplotlib openpyxl scipy
 
       - name: Get yesterday's date
         id: date
