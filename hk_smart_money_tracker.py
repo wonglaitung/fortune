@@ -246,20 +246,35 @@ def analyze_stock(code, name, run_date=None):
         # 如果指定了运行日期，则获取该日期的历史数据
         if run_date:
             # 获取指定日期前 PRICE_WINDOW+30 天的数据
-            end_date = pd.to_datetime(run_date)
+            target_date = pd.to_datetime(run_date)
+            end_date = target_date + pd.Timedelta(days=1)  # 包含指定日期
             start_date = end_date - pd.Timedelta(days=PRICE_WINDOW + 30)
-            full_hist = ticker.history(start=start_date, end=end_date + pd.Timedelta(days=1))
+            full_hist = ticker.history(start=start_date, end=end_date, repair=True)
         else:
             # 默认行为：获取最近 PRICE_WINDOW+30 天的数据
-            full_hist = ticker.history(period=f"{PRICE_WINDOW + 30}d")
+            full_hist = ticker.history(period=f"{PRICE_WINDOW + 30}d", repair=True)
             
         if len(full_hist) < PRICE_WINDOW:
             print(f"⚠️  {name} 数据不足（需要至少 {PRICE_WINDOW} 日）")
             return None
 
-        # 如果指定了运行日期，使用指定日期的数据窗口
+        # 如果指定了运行日期，使用包含指定日期的数据窗口
         if run_date:
-            main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+            # 筛选出指定日期及之前的数据
+            target_date = pd.to_datetime(run_date)
+            # 确保时区一致
+            if full_hist.index.tz is not None:
+                target_date = target_date.tz_localize(full_hist.index.tz)
+            
+            # 筛选指定日期及之前的数据
+            filtered_hist = full_hist[full_hist.index <= target_date]
+            
+            # 如果没有数据，使用最接近的日期数据
+            if len(filtered_hist) == 0:
+                # 找到最接近指定日期的数据（包括之后的日期）
+                filtered_hist = full_hist[full_hist.index >= target_date]
+            
+            main_hist = filtered_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
         else:
             main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
             
