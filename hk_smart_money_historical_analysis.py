@@ -414,14 +414,14 @@ def main():
         print(f"📊 共收集到 {len(df)} 条信号数据")
         
         # 为展示方便，添加展示列（百分比形式）但保留原始数值列用于机器化处理
-        df['RS_ratio_%'] = df['相对强度'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
-        df['RS_diff_%'] = df['相对强度差值'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
         
         # 分离各种信号
-        buildup_signals = df[df['建仓信号'] == True]
-        distribution_signals = df[df['出货信号'] == True]
-        strong_volume_up_signals = df[df['放量上涨'] == True]
-        weak_volume_down_signals = df[df['缩量回调'] == True]
+        buildup_signals = df[df['has_buildup'] == True]
+        distribution_signals = df[df['has_distribution'] == True]
+        strong_volume_up_signals = df[df['strong_volume_up'] == True]
+        weak_volume_down_signals = df[df['weak_volume_down'] == True]
         
         # 保存结果到Excel
         with pd.ExcelWriter('hk_smart_money_historical_report.xlsx', engine='openpyxl') as writer:
