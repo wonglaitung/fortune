@@ -23,6 +23,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 import math
 import time
+import argparse
+from datetime import datetime
 
 warnings.filterwarnings("ignore")
 os.environ['MPLBACKEND'] = 'Agg'
@@ -236,16 +238,31 @@ def safe_round(v, ndigits=2):
 # ==============================
 # 4. 单股分析函数
 # ==============================
-def analyze_stock(code, name):
+def analyze_stock(code, name, run_date=None):
     try:
         print(f"\n🔍 分析 {name} ({code}) ...")
         ticker = yf.Ticker(code)
-        full_hist = ticker.history(period=f"{PRICE_WINDOW + 30}d")
+        
+        # 如果指定了运行日期，则获取该日期的历史数据
+        if run_date:
+            # 获取指定日期前 PRICE_WINDOW+30 天的数据
+            end_date = pd.to_datetime(run_date)
+            start_date = end_date - pd.Timedelta(days=PRICE_WINDOW + 30)
+            full_hist = ticker.history(start=start_date, end=end_date + pd.Timedelta(days=1))
+        else:
+            # 默认行为：获取最近 PRICE_WINDOW+30 天的数据
+            full_hist = ticker.history(period=f"{PRICE_WINDOW + 30}d")
+            
         if len(full_hist) < PRICE_WINDOW:
             print(f"⚠️  {name} 数据不足（需要至少 {PRICE_WINDOW} 日）")
             return None
 
-        main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+        # 如果指定了运行日期，使用指定日期的数据窗口
+        if run_date:
+            main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+        else:
+            main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+            
         if len(main_hist) < 5:
             print(f"⚠️  {name} 主分析窗口数据不足")
             return None
@@ -468,291 +485,303 @@ def analyze_stock(code, name):
 # ==============================
 # 5. 批量分析与报告生成
 # ==============================
-print("="*80)
-print("🚀 港股主力资金追踪器（建仓 + 出货 双信号）")
-print(f"分析 {len(WATCHLIST)} 只股票 | 窗口: {DAYS_ANALYSIS} 日")
-print("="*80)
+def main(run_date=None):
+    print("="*80)
+    print("🚀 港股主力资金追踪器（建仓 + 出货 双信号）")
+    if run_date:
+        print(f"分析日期: {run_date}")
+    print(f"分析 {len(WATCHLIST)} 只股票 | 窗口: {DAYS_ANALYSIS} 日")
+    print("="*80)
 
-results = []
-for code, name in WATCHLIST.items():
-    res = analyze_stock(code, name)
-    if res:
-        results.append(res)
+    results = []
+    for code, name in WATCHLIST.items():
+        res = analyze_stock(code, name, run_date)
+        if res:
+            results.append(res)
 
-if not results:
-    print("❌ 无结果")
-else:
-    df = pd.DataFrame(results)
+    if not results:
+        print("❌ 无结果")
+    else:
+        df = pd.DataFrame(results)
 
-    # 为展示方便，添加展示列（百分比形式）但保留原始数值列用于机器化处理
-    df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
-    df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        # 为展示方便，添加展示列（百分比形式）但保留原始数值列用于机器化处理
+        df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
+        df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
 
-    # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
-    df_report = df[[
-        'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
-        'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
-        'rsi', 'macd', 'volatility', 'obv',
-        'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-        'southbound', 'has_buildup', 'has_distribution'
-    ]]
-    df_report.columns = [
-        '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
-        '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
-        'RSI', 'MACD', '波动率(%)', 'OBV',
-        '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-        '南向资金(万)', '建仓信号', '出货信号'
-    ]
+        # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
+        df_report = df[[
+            'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
+            'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
+            'rsi', 'macd', 'volatility', 'obv',
+            'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
+            'southbound', 'has_buildup', 'has_distribution'
+        ]]
+        df_report.columns = [
+            '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
+            '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
+            'RSI', 'MACD', '波动率(%)', 'OBV',
+            '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
+            '南向资金(万)', '建仓信号', '出货信号'
+        ]
 
-    df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
+        df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
 
-    # 确保数值列格式化为两位小数用于显示
-    for col in df_report.select_dtypes(include=['float64', 'int64']).columns:
-        df_report[col] = df_report[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else x)
+        # 确保数值列格式化为两位小数用于显示
+        for col in df_report.select_dtypes(include=['float64', 'int64']).columns:
+            df_report[col] = df_report[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else x)
 
-    print("\n" + "="*120)
-    print("📊 主力资金信号汇总（🔴 出货 | 🟢 建仓）")
-    print("="*120)
-    print(df_report.to_string(index=False, float_format=lambda x: f"{x:.2f}" if isinstance(x, float) else x))
+        print("\n" + "="*120)
+        print("📊 主力资金信号汇总（🔴 出货 | 🟢 建仓）")
+        print("="*120)
+        print(df_report.to_string(index=False, float_format=lambda x: f"{x:.2f}" if isinstance(x, float) else x))
 
-    # 高亮信号
-    distribution_stocks = [r for r in results if r['has_distribution']]
-    buildup_stocks = [r for r in results if r['has_buildup']]
+        # 高亮信号
+        distribution_stocks = [r for r in results if r['has_distribution']]
+        buildup_stocks = [r for r in results if r['has_buildup']]
 
-    if distribution_stocks:
-        print("\n🔴 警惕！检测到大户出货信号：")
-        for r in distribution_stocks:
-            print(f"  • {r['name']} | 日期: {', '.join(r['distribution_dates'])}")
+        if distribution_stocks:
+            print("\n🔴 警惕！检测到大户出货信号：")
+            for r in distribution_stocks:
+                print(f"  • {r['name']} | 日期: {', '.join(r['distribution_dates'])}")
 
-    if buildup_stocks:
-        print("\n🟢 检测到建仓信号：")
-        for r in buildup_stocks:
-            rs_disp = (round(r['relative_strength'] * 100, 2) if (r.get('relative_strength') is not None) else None)
-            rsd_disp = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None) else None)
-            print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
+        if buildup_stocks:
+            print("\n🟢 检测到建仓信号：")
+            for r in buildup_stocks:
+                rs_disp = (round(r['relative_strength'] * 100, 2) if (r.get('relative_strength') is not None) else None)
+                rsd_disp = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None) else None)
+                print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
 
-    # 保存 Excel（包含 machine-friendly 原始列 + 展示列）
-    try:
-        df.to_excel("hk_smart_money_report.xlsx", index=False)
-        print("\n💾 报告已保存: hk_smart_money_report.xlsx")
-    except Exception as e:
-        print(f"⚠️  Excel保存失败: {e}")
+        # 保存 Excel（包含 machine-friendly 原始列 + 展示列）
+        try:
+            df.to_excel("hk_smart_money_report.xlsx", index=False)
+            print("\n💾 报告已保存: hk_smart_money_report.xlsx")
+        except Exception as e:
+            print(f"⚠️  Excel保存失败: {e}")
 
-    # 发送邮件（将表格分段为多个 HTML 表格并包含说明）
-    def send_email_with_report(df_report, to):
-        smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-        smtp_port = 587
-        smtp_user = os.environ.get("YAHOO_EMAIL")
-        smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
-        sender_email = smtp_user
+        # 发送邮件（将表格分段为多个 HTML 表格并包含说明）
+        def send_email_with_report(df_report, to):
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
+            smtp_port = 587
+            smtp_user = os.environ.get("YAHOO_EMAIL")
+            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            sender_email = smtp_user
 
-        if not smtp_user or not smtp_pass:
-            print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
-            return False
+            if not smtp_user or not smtp_pass:
+                print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
+                return False
 
-        if isinstance(to, str):
-            to = [to]
+            if isinstance(to, str):
+                to = [to]
 
-        subject = "港股主力资金追踪报告"
+            subject = "港股主力资金追踪报告"
 
-        text = "港股主力资金追踪报告\n\n"
-        html = "<html><body><h2>港股主力资金追踪报告</h2>"
+            text = "港股主力资金追踪报告\n\n"
+            html = "<html><body><h2>港股主力资金追踪报告</h2>"
 
-        # 添加表格（每 5 行分一页）
-        for i in range(0, len(df_report), 5):
-            chunk = df_report.iloc[i:i+5]
-            html += chunk.to_html(index=False, escape=False)
+            # 添加表格（每 5 行分一页）
+            for i in range(0, len(df_report), 5):
+                chunk = df_report.iloc[i:i+5]
+                html += chunk.to_html(index=False, escape=False)
 
-        # 添加简洁的信号摘要
-        dist = df_report[df_report['出货信号'] == True]
-        build = df_report[df_report['建仓信号'] == True]
-        if not dist.empty:
-            html += "<h3 style='color:red;'>🔴 出货信号：</h3><ul>"
-            for _, row in dist.iterrows():
-                html += f"<li>{row['股票名称']} ({row['代码']})</li>"
-            html += "</ul>"
-        if not build.empty:
-            html += "<h3 style='color:green;'>🟢 建仓信号：</h3><ul>"
-            for _, row in build.iterrows():
-                html += f"<li>{row['股票名称']} ({row['代码']})</li>"
-            html += "</ul>"
+            # 添加简洁的信号摘要
+            dist = df_report[df_report['出货信号'] == True]
+            build = df_report[df_report['建仓信号'] == True]
+            if not dist.empty:
+                html += "<h3 style='color:red;'>🔴 出货信号：</h3><ul>"
+                for _, row in dist.iterrows():
+                    html += f"<li>{row['股票名称']} ({row['代码']})</li>"
+                html += "</ul>"
+            if not build.empty:
+                html += "<h3 style='color:green;'>🟢 建仓信号：</h3><ul>"
+                for _, row in build.iterrows():
+                    html += f"<li>{row['股票名称']} ({row['代码']})</li>"
+                html += "</ul>"
 
-        # 指标说明（完整版 HTML 版本）
-        FULL_INDICATOR_HTML = """
-        <h3>📋 指标说明</h3>
-        <div style="font-size:0.9em; line-height:1.4;">
-        <h4>基础信息</h4>
-        <ul>
-          <li><b>最新价</b>：股票当前最新成交价格（港元）。若当日存在盘中变动，建议结合成交量与盘口观察。</li>
-          <li><b>前收市价</b>：前一个交易日的收盘价格（港元）。</li>
-          <li><b>涨跌幅(%)</b>：按 (最新价 - 前收) / 前收 计算并乘以100表示百分比。</li>
-        </ul>
-        <h4>相对表现 / 跑赢恒指（用于衡量个股相对大盘的表现）</h4>
-        <ul>
-          <li><b>相对强度 (RS_ratio)</b>：
+            # 指标说明（完整版 HTML 版本）
+            FULL_INDICATOR_HTML = """
+            <h3>📋 指标说明</h3>
+            <div style=\"font-size:0.9em; line-height:1.4;\">
+            <h4>基础信息</h4>
             <ul>
-              <li>计算：RS_ratio = (1 + stock_ret) / (1 + hsi_ret) - 1</li>
-              <li>含义：基于复合收益（即把两个收益都视为复利因子）来度量个股相对恒指的表现。</li>
-              <li>RS_ratio > 0 表示个股在该区间的复合收益率高于恒指；RS_ratio < 0 则表示跑输。</li>
-              <li>优点：在收益率接近 -1 或波动较大时，更稳健地反映"相对复合回报"。</li>
-              <li>报告显示：以百分比列 RS_ratio_% 呈现（例如 5 表示 +5%）。</li>
+              <li><b>最新价</b>：股票当前最新成交价格（港元）。若当日存在盘中变动，建议结合成交量与盘口观察。</li>
+              <li><b>前收市价</b>：前一个交易日的收盘价格（港元）。</li>
+              <li><b>涨跌幅(%)</b>：按 (最新价 - 前收) / 前收 计算并乘以100表示百分比。</li>
             </ul>
-          </li>
-          <li><b>相对强度差值 (RS_diff)</b>：
+            <h4>相对表现 / 跑赢恒指（用于衡量个股相对大盘的表现）</h4>
             <ul>
-              <li>计算：RS_diff = stock_ret - hsi_ret（直接的收益差值）。</li>
-              <li>含义：更直观，表示绝对收益的差额（例如股票涨 6%，恒指涨 2%，则 RS_diff = 4%）。</li>
-              <li>报告显示：以百分比列 RS_diff_% 呈现。</li>
-            </ul>
-          </li>
-          <li><b>跑赢恒指 (outperforms_hsi)</b>：
-            <ul>
-              <li>脚本支持三种语义：
-                <ol>
-                  <li>要求股票为正收益并且收益 > 恒指（默认，保守）：OUTPERFORMS_REQUIRE_POSITIVE = True</li>
-                  <li>仅比较收益差值（无需股票为正）：OUTPERFORMS_REQUIRE_POSITIVE = False</li>
-                  <li>使用 RS_ratio（以复合收益判断）：OUTPERFORMS_USE_RS = True</li>
-                </ol>
+              <li><b>相对强度 (RS_ratio)</b>：
+                <ul>
+                  <li>计算：RS_ratio = (1 + stock_ret) / (1 + hsi_ret) - 1</li>
+                  <li>含义：基于复合收益（即把两个收益都视为复利因子）来度量个股相对恒指的表现。</li>
+                  <li>RS_ratio > 0 表示个股在该区间的复合收益率高于恒指；RS_ratio < 0 则表示跑输。</li>
+                  <li>优点：在收益率接近 -1 或波动较大时，更稳健地反映\"相对复合回报\"。</li>
+                  <li>报告显示：以百分比列 RS_ratio_% 呈现（例如 5 表示 +5%）。</li>
+                </ul>
+              </li>
+              <li><b>相对强度差值 (RS_diff)</b>：
+                <ul>
+                  <li>计算：RS_diff = stock_ret - hsi_ret（直接的收益差值）。</li>
+                  <li>含义：更直观，表示绝对收益的差额（例如股票涨 6%，恒指涨 2%，则 RS_diff = 4%）。</li>
+                  <li>报告显示：以百分比列 RS_diff_% 呈现。</li>
+                </ul>
+              </li>
+              <li><b>跑赢恒指 (outperforms_hsi)</b>：
+                <ul>
+                  <li>脚本支持三种语义：
+                    <ol>
+                      <li>要求股票为正收益并且收益 > 恒指（默认，保守）：OUTPERFORMS_REQUIRE_POSITIVE = True</li>
+                      <li>仅比较收益差值（无需股票为正）：OUTPERFORMS_REQUIRE_POSITIVE = False</li>
+                      <li>使用 RS_ratio（以复合收益判断）：OUTPERFORMS_USE_RS = True</li>
+                    </ol>
+                  </li>
+                </ul>
               </li>
             </ul>
-          </li>
-        </ul>
-        <h4>价格与位置</h4>
-        <ul>
-          <li><b>位置(%)</b>：当前价格在最近 PRICE_WINDOW（默认 60 日）内的百分位位置。</li>
-          <li>计算：(当前价 - 最近N日最低) / (最高 - 最低) * 100，取 [0, 100]。</li>
-          <li>含义：接近 0 表示处于历史窗口低位，接近 100 表示高位。</li>
-          <li>用途：判断是否处于"相对低位"或"高位"，用于建仓/出货信号的价格条件。</li>
-        </ul>
-        <h4>成交量相关</h4>
-        <ul>
-          <li><b>量比 (Vol_Ratio)</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
-          <li>含义：衡量当日成交是否显著放大。</li>
-          <li>建议：放量配合价格运动（如放量上涨或放量下跌）比单纯放量更具信号含义。</li>
-          <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
-        </ul>
-        <h4>均线偏离</h4>
-        <ul>
-          <li><b>5日/10日均线偏离(%)</b>：最新价相对于短期均线的偏离百分比（正值表示价高于均线）。</li>
-          <li>用途：短期动力判断；但对高波动或宽幅震荡个股需谨慎解读。</li>
-        </ul>
-        <h4>动量与震荡指标</h4>
-        <ul>
-          <li><b>MACD</b>：
+            <h4>价格与位置</h4>
             <ul>
-              <li>计算：EMA12 - EMA26（MACD 线），并计算 9 日 EMA 作为 MACD Signal。</li>
-              <li>含义：衡量中短期动量，MACD 线上穿信号线通常被视为动能改善（反之则疲弱）。</li>
-              <li>注意：对剧烈震荡或极端股价数据（如停牌后复牌）可能失真。</li>
+              <li><b>位置(%)</b>：当前价格在最近 PRICE_WINDOW（默认 60 日）内的百分位位置。</li>
+              <li>计算：(当前价 - 最近N日最低) / (最高 - 最低) * 100，取 [0, 100]。</li>
+              <li>含义：接近 0 表示处于历史窗口低位，接近 100 表示高位。</li>
+              <li>用途：判断是否处于\"相对低位\"或\"高位\"，用于建仓/出货信号的价格条件。</li>
             </ul>
-          </li>
-          <li><b>RSI（Wilder 平滑）</b>：
+            <h4>成交量相关</h4>
             <ul>
-              <li>计算：基于 14 日 Wilder 指数平滑的涨跌幅比例，结果在 0-100。</li>
-              <li>含义：常用于判断超买/超卖（例如 RSI > 70 可能偏超买，RSI < 30 可能偏超卖）。</li>
-              <li>注意：单独使用 RSI 可能产生误导，建议与成交量和趋势指标结合。</li>
+              <li><b>量比 (Vol_Ratio)</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
+              <li>含义：衡量当日成交是否显著放大。</li>
+              <li>建议：放量配合价格运动（如放量上涨或放量下跌）比单纯放量更具信号含义。</li>
+              <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
             </ul>
-          </li>
-          <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
-          <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
-        </ul>
-        <h4>OBV（On-Balance Volume）</h4>
-        <ul>
-          <li><b>OBV</b>：按照日涨跌累计成交量的方向（涨则加，跌则减）来累计。</li>
-          <li>含义：尝试用成交量的方向性累积来辅助判断资金是否在积累/分配。</li>
-          <li>注意：OBV 是累积序列，适合观察中长期趋势而非短期信号。</li>
-        </ul>
-        <h4>南向资金（沪港通/深港通南向）</h4>
-        <ul>
-          <li>数据来源：使用 akshare 的 stock_hk_ggt_components_em 获取"净买入"字段，脚本假设原始单位为"元"并除以 SOUTHBOUND_UNIT_CONVERSION 转为"万"。</li>
-          <li>报告字段：南向资金(万) 表示当日或该交易日的净买入额（万元）。</li>
-          <li>用途：当南向资金显著流入时，通常被解读为北向/南向机构资金的买入兴趣；显著流出则表示机构抛售或撤出。</li>
-          <li>限制与谨慎：
+            <h4>均线偏离</h4>
             <ul>
-              <li>ak 数据延迟或字段命名可能变化（脚本已做基本容错，但仍需关注源数据格式）。</li>
-              <li>单日南向资金异常需结合量价关系与连续性判断，避免被一次性大额交易误导。</li>
+              <li><b>5日/10日均线偏离(%)</b>：最新价相对于短期均线的偏离百分比（正值表示价高于均线）。</li>
+              <li>用途：短期动力判断；但对高波动或宽幅震荡个股需谨慎解读。</li>
             </ul>
-          </li>
-        </ul>
-        <h4>信号定义（本脚本采用的简化规则）</h4>
-        <ul>
-          <li><b>建仓信号（Buildup）</b>：
+            <h4>动量与震荡指标</h4>
             <ul>
-              <li>条件：位置 < PRICE_LOW_PCT（低位） AND 量比 > VOL_RATIO_BUILDUP（成交放大） AND 南向资金净流入 > SOUTHBOUND_THRESHOLD（万）。</li>
-              <li>连续性：要求连续或累计达到 BUILDUP_MIN_DAYS 才被标注为确认（避免孤立样本）。</li>
-              <li>语义：在低位出现放量且机构买入力度强时，可能代表主力建仓或底部吸筹。</li>
+              <li><b>MACD</b>：
+                <ul>
+                  <li>计算：EMA12 - EMA26（MACD 线），并计算 9 日 EMA 作为 MACD Signal。</li>
+                  <li>含义：衡量中短期动量，MACD 线上穿信号线通常被视为动能改善（反之则疲弱）。</li>
+                  <li>注意：对剧烈震荡或极端股价数据（如停牌后复牌）可能失真。</li>
+                </ul>
+              </li>
+              <li><b>RSI（Wilder 平滑）</b>：
+                <ul>
+                  <li>计算：基于 14 日 Wilder 指数平滑的涨跌幅比例，结果在 0-100。</li>
+                  <li>含义：常用于判断超买/超卖（例如 RSI > 70 可能偏超买，RSI < 30 可能偏超卖）。</li>
+                  <li>注意：单独使用 RSI 可能产生误导，建议与成交量和趋势指标结合。</li>
+                </ul>
+              </li>
+              <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
+              <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
             </ul>
-          </li>
-          <li><b>出货信号（Distribution）</b>：
+            <h4>OBV（On-Balance Volume）</h4>
             <ul>
-              <li>条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前一日收盘价或开盘价）。</li>
-              <li>连续性：要求连续达到 DISTRIBUTION_MIN_DAYS 才标注为确认。</li>
-              <li>语义：高位放量且机构撤出，伴随价格下行，可能代表主力在高位分批出货/派发。</li>
+              <li><b>OBV</b>：按照日涨跌累计成交量的方向（涨则加，跌则减）来累计。</li>
+              <li>含义：尝试用成交量的方向性累积来辅助判断资金是否在积累/分配。</li>
+              <li>注意：OBV 是累积序列，适合观察中长期趋势而非短期信号。</li>
             </ul>
-          </li>
-          <li><b>重要提醒</b>：
+            <h4>南向资金（沪港通/深港通南向）</h4>
             <ul>
-              <li>本脚本规则为经验性启发式筛选，不构成投资建议。建议将信号作为筛选或复核工具，结合持仓风险管理、基本面与订单簿/资金面深度判断。</li>
-              <li>对于停牌、派息、拆股或其他公司事件，指标需特殊处理；脚本未一一覆盖这些事件。</li>
+              <li>数据来源：使用 akshare 的 stock_hk_ggt_components_em 获取\"净买入\"字段，脚本假设原始单位为\"元\"并除以 SOUTHBOUND_UNIT_CONVERSION 转为\"万\"。</li>
+              <li>报告字段：南向资金(万) 表示当日或该交易日的净买入额（万元）。</li>
+              <li>用途：当南向资金显著流入时，通常被解读为北向/南向机构资金的买入兴趣；显著流出则表示机构抛售或撤出。</li>
+              <li>限制与谨慎：
+                <ul>
+                  <li>ak 数据延迟或字段命名可能变化（脚本已做基本容错，但仍需关注源数据格式）。</li>
+                  <li>单日南向资金异常需结合量价关系与连续性判断，避免被一次性大额交易误导。</li>
+                </ul>
+              </li>
             </ul>
-          </li>
-        </ul>
-        <h4>其他说明与实践建议</h4>
-        <ul>
-          <li>时间窗口与阈值（如 PRICE_WINDOW、VOL_WINDOW、阈值等）可根据策略偏好调整。更短窗口更灵敏但噪声更多，反之亦然。</li>
-          <li>建议：把信号与多因子（行业动量、估值、持仓集中度）结合，避免单一信号操作。</li>
-          <li>数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致性。</li>
-        </ul>
-        <p>注：以上为启发式规则，非交易建议。请结合基本面、盘口、资金面与风险管理。</p>
-        </div>
-        """.format(unit=int(SOUTHBOUND_UNIT_CONVERSION),
-                   low=int(PRICE_LOW_PCT),
-                   high=int(PRICE_HIGH_PCT),
-                   vr_build=VOL_RATIO_BUILDUP,
-                   vr_dist=VOL_RATIO_DISTRIBUTION,
-                   sb=int(SOUTHBOUND_THRESHOLD),
-                   bd=BUILDUP_MIN_DAYS,
-                   dd=DISTRIBUTION_MIN_DAYS)
+            <h4>信号定义（本脚本采用的简化规则）</h4>
+            <ul>
+              <li><b>建仓信号（Buildup）</b>：
+                <ul>
+                  <li>条件：位置 < PRICE_LOW_PCT（低位） AND 量比 > VOL_RATIO_BUILDUP（成交放大） AND 南向资金净流入 > SOUTHBOUND_THRESHOLD（万）。</li>
+                  <li>连续性：要求连续或累计达到 BUILDUP_MIN_DAYS 才被标注为确认（避免孤立样本）。</li>
+                  <li>语义：在低位出现放量且机构买入力度强时，可能代表主力建仓或底部吸筹。</li>
+                </ul>
+              </li>
+              <li><b>出货信号（Distribution）</b>：
+                <ul>
+                  <li>条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前一日收盘价或开盘价）。</li>
+                  <li>连续性：要求连续达到 DISTRIBUTION_MIN_DAYS 才标注为确认。</li>
+                  <li>语义：高位放量且机构撤出，伴随价格下行，可能代表主力在高位分批出货/派发。</li>
+                </ul>
+              </li>
+              <li><b>重要提醒</b>：
+                <ul>
+                  <li>本脚本规则为经验性启发式筛选，不构成投资建议。建议将信号作为筛选或复核工具，结合持仓风险管理、基本面与订单簿/资金面深度判断。</li>
+                  <li>对于停牌、派息、拆股或其他公司事件，指标需特殊处理；脚本未一一覆盖这些事件。</li>
+                </ul>
+              </li>
+            </ul>
+            <h4>其他说明与实践建议</h4>
+            <ul>
+              <li>时间窗口与阈值（如 PRICE_WINDOW、VOL_WINDOW、阈值等）可根据策略偏好调整。更短窗口更灵敏但噪声更多，反之亦然。</li>
+              <li>建议：把信号与多因子（行业动量、估值、持仓集中度）结合，避免单一信号操作。</li>
+              <li>数据来源与一致性：本脚本结合 yfinance（行情）与 akshare（南向资金），两者更新频率与字段定义可能不同，使用时请确认数据来源的可用性与一致性。</li>
+            </ul>
+            <p>注：以上为启发式规则，非交易建议。请结合基本面、盘口、资金面与风险管理。</p>
+            </div>
+            """.format(unit=int(SOUTHBOUND_UNIT_CONVERSION),
+                       low=int(PRICE_LOW_PCT),
+                       high=int(PRICE_HIGH_PCT),
+                       vr_build=VOL_RATIO_BUILDUP,
+                       vr_dist=VOL_RATIO_DISTRIBUTION,
+                       sb=int(SOUTHBOUND_THRESHOLD),
+                       bd=BUILDUP_MIN_DAYS,
+                       dd=DISTRIBUTION_MIN_DAYS)
 
-        html += FULL_INDICATOR_HTML
+            html += FULL_INDICATOR_HTML
 
-        html += "</body></html>"
+            html += "</body></html>"
 
-        msg = MIMEMultipart("mixed")
-        msg['From'] = f'"wonglaitung" <{sender_email}>'
-        msg['To'] = ", ".join(to)
-        msg['Subject'] = subject
+            msg = MIMEMultipart("mixed")
+            msg['From'] = f'"wonglaitung" <{sender_email}>'
+            msg['To'] = ", ".join(to)
+            msg['Subject'] = subject
 
-        body = MIMEMultipart("alternative")
-        body.attach(MIMEText(text, "plain"))
-        body.attach(MIMEText(html, "html"))
-        msg.attach(body)
+            body = MIMEMultipart("alternative")
+            body.attach(MIMEText(text, "plain"))
+            body.attach(MIMEText(html, "html"))
+            msg.attach(body)
 
-        # 附件图表
-        if os.path.exists(CHART_DIR):
-            for filename in os.listdir(CHART_DIR):
-                if filename.endswith(".png"):
-                    with open(os.path.join(CHART_DIR, filename), "rb") as f:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(f.read())
-                    encoders.encode_base64(part)
-                    part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-                    msg.attach(part)
+            # 附件图表
+            if os.path.exists(CHART_DIR):
+                for filename in os.listdir(CHART_DIR):
+                    if filename.endswith(".png"):
+                        with open(os.path.join(CHART_DIR, filename), "rb") as f:
+                            part = MIMEBase('application', 'octet-stream')
+                            part.set_payload(f.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                        msg.attach(part)
 
-        try:
-            server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(sender_email, to, msg.as_string())
-            server.quit()
-            print("✅ 邮件发送成功")
-            return True
-        except Exception as e:
-            print(f"❌ 发送邮件失败: {e}")
-            return False
+            try:
+                server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, to, msg.as_string())
+                server.quit()
+                print("✅ 邮件发送成功")
+                return True
+            except Exception as e:
+                print(f"❌ 发送邮件失败: {e}")
+                return False
 
-    recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
-    recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
-    print("📧 发送邮件到:", ", ".join(recipients))
-    send_email_with_report(df_report, recipients)
+        recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+        recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
+        print("📧 发送邮件到:", ", ".join(recipients))
+        send_email_with_report(df_report, recipients)
 
-print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")
+    print(f"\n✅ 分析完成！图表保存至: {CHART_DIR}/")
+
+if __name__ == "__main__":
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='港股主力资金追踪器')
+    parser.add_argument('--date', type=str, help='运行日期 (YYYY-MM-DD 格式)')
+    args = parser.parse_args()
+    
+    # 调用主函数
+    main(args.date)
