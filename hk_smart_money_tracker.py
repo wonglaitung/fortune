@@ -69,14 +69,14 @@ BUILDUP_MIN_DAYS = 3
 DISTRIBUTION_MIN_DAYS = 2
 
 # 阈值（可调）
-PRICE_LOW_PCT = 30.0   # 价格百分位低于该值视为“低位”
-PRICE_HIGH_PCT = 70.0  # 高于该值视为“高位”
-VOL_RATIO_BUILDUP = 1.5
-VOL_RATIO_DISTRIBUTION = 2.5
+PRICE_LOW_PCT = 40.0   # 价格百分位低于该值视为"低位"
+PRICE_HIGH_PCT = 60.0  # 高于该值视为"高位"
+VOL_RATIO_BUILDUP = 1.3
+VOL_RATIO_DISTRIBUTION = 2.0
 
-# 南向资金：ak 返回的单位可能是“元”，将其除以此因子转换为“万”
+# 南向资金：ak 返回的单位可能是"元"，将其除以此因子转换为"万"
 SOUTHBOUND_UNIT_CONVERSION = 10000.0
-SOUTHBOUND_THRESHOLD = 5000.0  # 单位：万
+SOUTHBOUND_THRESHOLD = 3000.0  # 单位：万
 
 # outperforms 判定：三种语义选择
 # 默认行为保持向后兼容（要求正收益并高于恒指）
@@ -287,6 +287,36 @@ def analyze_stock(code, name, run_date=None):
         full_hist = full_hist[full_hist.index.weekday < 5]
 
         # 基础指标（在 full_hist 上计算）
+        # 数据质量检查
+        if full_hist.empty:
+            print(f"⚠️  {name} 数据为空")
+            return None
+            
+        # 检查是否有足够的数据点
+        if len(full_hist) < 5:
+            print(f"⚠️  {name} 数据不足")
+            return None
+            
+        # 检查数据是否包含必要的列
+        required_columns = ['Open', 'Close', 'Volume']
+        for col in required_columns:
+            if col not in full_hist.columns:
+                print(f"⚠️  {name} 缺少必要的列 {col}")
+                return None
+                
+        # 检查数据是否包含有效的数值
+        if full_hist['Close'].isna().all() or full_hist['Volume'].isna().all():
+            print(f"⚠️  {name} 数据包含大量缺失值")
+            return None
+            
+        # 移除包含异常值的行
+        full_hist = full_hist.dropna(subset=['Close', 'Volume'])
+        full_hist = full_hist[(full_hist['Close'] > 0) & (full_hist['Volume'] >= 0)]
+        
+        if len(full_hist) < 5:
+            print(f"⚠️  {name} 清理异常值后数据不足")
+            return None
+            
         full_hist['Vol_MA20'] = full_hist['Volume'].rolling(VOL_WINDOW, min_periods=1).mean()
         full_hist['MA5'] = full_hist['Close'].rolling(5, min_periods=1).mean()
         full_hist['MA10'] = full_hist['Close'].rolling(10, min_periods=1).mean()
@@ -393,9 +423,23 @@ def analyze_stock(code, name, run_date=None):
 
         # === 建仓信号 ===
         def is_buildup(row):
-            return ((row['Price_Percentile'] < PRICE_LOW_PCT) and
-                    (pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP) and
-                    (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] > SOUTHBOUND_THRESHOLD))
+            # 基本条件
+            price_cond = row['Price_Percentile'] < PRICE_LOW_PCT
+            vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP
+            sb_cond = pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] > SOUTHBOUND_THRESHOLD
+            
+            # 增加的辅助条件
+            # MACD线上穿信号线
+            macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] > row['MACD_Signal']
+            # RSI超卖
+            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 30
+            # OBV上升
+            obv_cond = pd.notna(row.get('OBV')) and row['OBV'] > 0
+            
+            # 至少满足一个辅助条件
+            aux_cond = macd_cond or rsi_cond or obv_cond
+            
+            return price_cond and vol_cond and sb_cond and aux_cond
 
         main_hist['Buildup_Signal'] = main_hist.apply(is_buildup, axis=1)
         main_hist['Buildup_Confirmed'] = mark_runs(main_hist['Buildup_Signal'], BUILDUP_MIN_DAYS)
@@ -403,11 +447,24 @@ def analyze_stock(code, name, run_date=None):
         # === 出货信号 ===
         main_hist['Prev_Close'] = main_hist['Close'].shift(1)
         def is_distribution(row):
-            cond1 = row['Price_Percentile'] > PRICE_HIGH_PCT
-            cond2 = (pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION)
-            cond3 = (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD)
-            cond4 = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
-            return cond1 and cond2 and cond3 and cond4
+            # 基本条件
+            price_cond = row['Price_Percentile'] > PRICE_HIGH_PCT
+            vol_cond = (pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION)
+            sb_cond = (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD)
+            price_down_cond = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
+            
+            # 增加的辅助条件
+            # MACD线下穿信号线
+            macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] < row['MACD_Signal']
+            # RSI超买
+            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 70
+            # OBV下降
+            obv_cond = pd.notna(row.get('OBV')) and row['OBV'] < 0
+            
+            # 至少满足一个辅助条件
+            aux_cond = macd_cond or rsi_cond or obv_cond
+            
+            return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
 
         main_hist['Distribution_Signal'] = main_hist.apply(is_distribution, axis=1)
         main_hist['Distribution_Confirmed'] = mark_runs(main_hist['Distribution_Signal'], DISTRIBUTION_MIN_DAYS)
@@ -640,7 +697,6 @@ def main(run_date=None):
                     html += f"<li>{row['股票名称']} ({row['代码']})</li>"
                 html += "</ul>"
 
-            # 指标说明（完整版 HTML 版本）
             FULL_INDICATOR_HTML = """
             <h3>📋 指标说明</h3>
             <div style=\"font-size:0.9em; line-height:1.4;\">
@@ -740,14 +796,14 @@ def main(run_date=None):
             <ul>
               <li><b>建仓信号（Buildup）</b>：
                 <ul>
-                  <li>条件：位置 < PRICE_LOW_PCT（低位） AND 量比 > VOL_RATIO_BUILDUP（成交放大） AND 南向资金净流入 > SOUTHBOUND_THRESHOLD（万）。</li>
+                  <li>条件：位置 < PRICE_LOW_PCT（低位） AND 量比 > VOL_RATIO_BUILDUP（成交放大） AND 南向资金净流入 > SOUTHBOUND_THRESHOLD（万） AND (MACD线上穿信号线 OR RSI<30 OR OBV>0)。</li>
                   <li>连续性：要求连续或累计达到 BUILDUP_MIN_DAYS 才被标注为确认（避免孤立样本）。</li>
                   <li>语义：在低位出现放量且机构买入力度强时，可能代表主力建仓或底部吸筹。</li>
                 </ul>
               </li>
               <li><b>出货信号（Distribution）</b>：
                 <ul>
-                  <li>条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前一日收盘价或开盘价）。</li>
+                  <li>条件：位置 > PRICE_HIGH_PCT（高位） AND 量比 > VOL_RATIO_DISTRIBUTION（剧烈放量） AND 南向资金净流出 < -SOUTHBOUND_THRESHOLD（万） AND 当日收盘下行（相对前一日收盘价或开盘价） AND (MACD线下穿信号线 OR RSI>70 OR OBV<0)。</li>
                   <li>连续性：要求连续达到 DISTRIBUTION_MIN_DAYS 才标注为确认。</li>
                   <li>语义：高位放量且机构撤出，伴随价格下行，可能代表主力在高位分批出货/派发。</li>
                 </ul>

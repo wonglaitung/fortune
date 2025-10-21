@@ -53,8 +53,34 @@ def analyze_stock_historical(code, name, start_date, end_date):
         # 保留交易日
         full_hist = full_hist[full_hist.index.weekday < 5]
         
+        # 数据质量检查
+        if full_hist.empty:
+            print(f"⚠️  {name} 数据为空")
+            return None
+            
+        # 检查是否有足够的数据点
         if len(full_hist) < 5:
             print(f"⚠️  {name} 数据不足")
+            return None
+            
+        # 检查数据是否包含必要的列
+        required_columns = ['Open', 'Close', 'Volume']
+        for col in required_columns:
+            if col not in full_hist.columns:
+                print(f"⚠️  {name} 缺少必要的列 {col}")
+                return None
+                
+        # 检查数据是否包含有效的数值
+        if full_hist['Close'].isna().all() or full_hist['Volume'].isna().all():
+            print(f"⚠️  {name} 数据包含大量缺失值")
+            return None
+            
+        # 移除包含异常值的行
+        full_hist = full_hist.dropna(subset=['Close', 'Volume'])
+        full_hist = full_hist[(full_hist['Close'] > 0) & (full_hist['Volume'] >= 0)]
+        
+        if len(full_hist) < 5:
+            print(f"⚠️  {name} 清理异常值后数据不足")
             return None
 
         # 基础指标（在 full_hist 上计算）
@@ -173,7 +199,7 @@ def analyze_stock_historical(code, name, start_date, end_date):
 
             # === 建仓信号 ===
             def is_buildup(row):
-                # 检查价格百分位和量比条件
+                # 基本条件
                 price_cond = row['Price_Percentile'] < PRICE_LOW_PCT
                 vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP
                 
@@ -184,7 +210,18 @@ def analyze_stock_historical(code, name, start_date, end_date):
                     # 如果南向资金数据不可用，我们仍然可以基于价格和量比发出信号
                     sb_cond = True
                 
-                return price_cond and vol_cond and sb_cond
+                # 增加的辅助条件
+                # MACD线上穿信号线
+                macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] > row['MACD_Signal']
+                # RSI超卖
+                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 30
+                # OBV上升
+                obv_cond = pd.notna(row.get('OBV')) and row['OBV'] > 0
+                
+                # 至少满足一个辅助条件
+                aux_cond = macd_cond or rsi_cond or obv_cond
+                
+                return price_cond and vol_cond and sb_cond and aux_cond
 
             main_hist['Buildup_Signal'] = main_hist.apply(is_buildup, axis=1)
             main_hist['Buildup_Confirmed'] = mark_runs(main_hist['Buildup_Signal'], BUILDUP_MIN_DAYS)
@@ -192,7 +229,7 @@ def analyze_stock_historical(code, name, start_date, end_date):
             # === 出货信号 ===
             main_hist['Prev_Close'] = main_hist['Close'].shift(1)
             def is_distribution(row):
-                # 检查价格百分位和量比条件
+                # 基本条件
                 price_cond = row['Price_Percentile'] > PRICE_HIGH_PCT
                 vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION
                 
@@ -206,7 +243,18 @@ def analyze_stock_historical(code, name, start_date, end_date):
                 # 检查价格下行条件
                 price_down_cond = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
                 
-                return price_cond and vol_cond and sb_cond and price_down_cond
+                # 增加的辅助条件
+                # MACD线下穿信号线
+                macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] < row['MACD_Signal']
+                # RSI超买
+                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 70
+                # OBV下降
+                obv_cond = pd.notna(row.get('OBV')) and row['OBV'] < 0
+                
+                # 至少满足一个辅助条件
+                aux_cond = macd_cond or rsi_cond or obv_cond
+                
+                return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
 
             main_hist['Distribution_Signal'] = main_hist.apply(is_distribution, axis=1)
             main_hist['Distribution_Confirmed'] = mark_runs(main_hist['Distribution_Signal'], DISTRIBUTION_MIN_DAYS)
