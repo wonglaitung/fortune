@@ -150,7 +150,8 @@ def fetch_ggt_components(code, date_str):
             # 获取个股南向资金数据
             df_individual = ak.stock_hsgt_individual_em(symbol=symbol)
             
-            if df_individual is None or df_individual.empty:
+            # 检查返回的数据是否有效
+            if df_individual is None or not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
                 print(f"⚠️ 获取南向资金数据为空 {code}")
                 southbound_cache[stock_cache_key] = None
                 time.sleep(AK_CALL_SLEEP)
@@ -158,6 +159,13 @@ def fetch_ggt_components(code, date_str):
             
             # 缓存该股票的所有数据
             southbound_cache[stock_cache_key] = df_individual
+        
+        # 检查DataFrame是否有效
+        if not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
+            print(f"⚠️ 南向资金数据无效 {code}")
+            southbound_cache[cache_key] = None
+            time.sleep(AK_CALL_SLEEP)
+            return None
         
         # 将日期字符串转换为pandas日期格式进行匹配
         target_date = pd.to_datetime(date_str, format='%Y%m%d')
@@ -428,16 +436,24 @@ def analyze_stock(code, name, run_date=None):
             vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP
             sb_cond = pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] > SOUTHBOUND_THRESHOLD
             
-            # 增加的辅助条件
+            # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线上穿信号线
             macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] > row['MACD_Signal']
-            # RSI超卖
-            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 30
+            # RSI超卖（调整阈值从30到35）
+            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 35
             # OBV上升
             obv_cond = pd.notna(row.get('OBV')) and row['OBV'] > 0
+            # 价格相对于5日均线位置（价格低于5日均线）
+            ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] < row['MA5']
+            # 价格相对于10日均线位置（价格低于10日均线）
+            ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] < row['MA10']
             
-            # 至少满足一个辅助条件
-            aux_cond = macd_cond or rsi_cond or obv_cond
+            # 计算满足的辅助条件数量
+            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+            satisfied_aux_count = sum(aux_conditions)
+            
+            # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+            aux_cond = satisfied_aux_count >= 1
             
             return price_cond and vol_cond and sb_cond and aux_cond
 
@@ -453,16 +469,24 @@ def analyze_stock(code, name, run_date=None):
             sb_cond = (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD)
             price_down_cond = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
             
-            # 增加的辅助条件
+            # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线下穿信号线
             macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] < row['MACD_Signal']
-            # RSI超买
-            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 70
+            # RSI超买（调整阈值从70到65）
+            rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 65
             # OBV下降
             obv_cond = pd.notna(row.get('OBV')) and row['OBV'] < 0
+            # 价格相对于5日均线位置（价格高于5日均线）
+            ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] > row['MA5']
+            # 价格相对于10日均线位置（价格高于10日均线）
+            ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] > row['MA10']
             
-            # 至少满足一个辅助条件
-            aux_cond = macd_cond or rsi_cond or obv_cond
+            # 计算满足的辅助条件数量
+            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+            satisfied_aux_count = sum(aux_conditions)
+            
+            # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+            aux_cond = satisfied_aux_count >= 1
             
             return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
 
