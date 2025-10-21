@@ -168,12 +168,12 @@ def analyze_stock_historical(code, name, start_date, end_date):
                 if ts.weekday() >= 5:
                     continue
                 date_str = ts.strftime('%Y%m%d')
-                df_ggt = fetch_ggt_components(code, date_str)
-                if df_ggt is None:
-                    continue
-                # 获取南向资金净买入数据
                 try:
-                    if '持股市值变化-1日' in df_ggt.columns:
+                    df_ggt = fetch_ggt_components(code, date_str)
+                    if df_ggt is None:
+                        continue
+                    # 获取南向资金净买入数据
+                    if '持股市值变化-1日' in df_ggt.columns and not df_ggt.empty:
                         net_val = df_ggt['持股市值变化-1日'].iloc[0]
                         if pd.notna(net_val):
                             # 转换为万元
@@ -202,24 +202,39 @@ def analyze_stock_historical(code, name, start_date, end_date):
                 # 基本条件
                 price_cond = row['Price_Percentile'] < PRICE_LOW_PCT
                 vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP
+                sb_cond = pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] > SOUTHBOUND_THRESHOLD
                 
-                # 检查南向资金条件（如果数据不可用，则忽略此条件）
-                if pd.notna(row.get('Southbound_Net')):
-                    sb_cond = row['Southbound_Net'] > SOUTHBOUND_THRESHOLD
-                else:
-                    # 如果南向资金数据不可用，我们仍然可以基于价格和量比发出信号
-                    sb_cond = True
-                
-                # 增加的辅助条件
+                # 辅助条件
                 # MACD线上穿信号线
                 macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] > row['MACD_Signal']
-                # RSI超卖
-                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 30
+                # RSI超卖（调整阈值从30到35）
+                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] < 35
                 # OBV上升
                 obv_cond = pd.notna(row.get('OBV')) and row['OBV'] > 0
+                # 价格相对于5日均线位置（价格低于5日均线）
+                ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] < row['MA5']
+                # 价格相对于10日均线位置（价格低于10日均线）
+                ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] < row['MA10']
                 
-                # 至少满足一个辅助条件
-                aux_cond = macd_cond or rsi_cond or obv_cond
+                # 计算满足的辅助条件数量
+                aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+                satisfied_aux_count = sum(aux_conditions)
+                
+                # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+                aux_cond = satisfied_aux_count >= 1
+                
+                # 调试信息
+                if price_cond and vol_cond and sb_cond and not aux_cond:
+                    print(f"  ⚠️  {code} {row.name.strftime('%Y-%m-%d')} 满足基本条件但不满足辅助条件")
+                    print(f"    价格百分位: {row['Price_Percentile']:.2f} (< {PRICE_LOW_PCT})")
+                    print(f"    量比: {row['Vol_Ratio']:.2f} (> {VOL_RATIO_BUILDUP})")
+                    print(f"    南向资金: {row.get('Southbound_Net', 'N/A')}")
+                    print(f"    MACD: {row.get('MACD', 'N/A')}, MACD信号线: {row.get('MACD_Signal', 'N/A')}, 条件: {macd_cond}")
+                    print(f"    RSI: {row.get('RSI', 'N/A')}, 条件: {rsi_cond}")
+                    print(f"    OBV: {row.get('OBV', 'N/A')}, 条件: {obv_cond}")
+                    print(f"    MA5: {row.get('Close', 'N/A')} < {row.get('MA5', 'N/A')}, 条件: {ma5_cond}")
+                    print(f"    MA10: {row.get('Close', 'N/A')} < {row.get('MA10', 'N/A')}, 条件: {ma10_cond}")
+                    print(f"    满足的辅助条件数: {satisfied_aux_count}")
                 
                 return price_cond and vol_cond and sb_cond and aux_cond
 
@@ -231,28 +246,42 @@ def analyze_stock_historical(code, name, start_date, end_date):
             def is_distribution(row):
                 # 基本条件
                 price_cond = row['Price_Percentile'] > PRICE_HIGH_PCT
-                vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION
-                
-                # 检查南向资金条件（如果数据不可用，则忽略此条件）
-                if pd.notna(row.get('Southbound_Net')):
-                    sb_cond = row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD
-                else:
-                    # 如果南向资金数据不可用，我们仍然可以基于价格和量比发出信号
-                    sb_cond = True
-                
-                # 检查价格下行条件
+                vol_cond = (pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION)
+                sb_cond = (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD)
                 price_down_cond = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
                 
-                # 增加的辅助条件
+                # 辅助条件
                 # MACD线下穿信号线
                 macd_cond = pd.notna(row.get('MACD')) and pd.notna(row.get('MACD_Signal')) and row['MACD'] < row['MACD_Signal']
-                # RSI超买
-                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 70
+                # RSI超买（调整阈值从70到65）
+                rsi_cond = pd.notna(row.get('RSI')) and row['RSI'] > 65
                 # OBV下降
                 obv_cond = pd.notna(row.get('OBV')) and row['OBV'] < 0
+                # 价格相对于5日均线位置（价格高于5日均线）
+                ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] > row['MA5']
+                # 价格相对于10日均线位置（价格高于10日均线）
+                ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] > row['MA10']
                 
-                # 至少满足一个辅助条件
-                aux_cond = macd_cond or rsi_cond or obv_cond
+                # 计算满足的辅助条件数量
+                aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+                satisfied_aux_count = sum(aux_conditions)
+                
+                # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+                aux_cond = satisfied_aux_count >= 1
+                
+                # 调试信息
+                if price_cond and vol_cond and sb_cond and price_down_cond and not aux_cond:
+                    print(f"  ⚠️  {code} {row.name.strftime('%Y-%m-%d')} 满足出货基本条件但不满足辅助条件")
+                    print(f"    价格百分位: {row['Price_Percentile']:.2f} (> {PRICE_HIGH_PCT})")
+                    print(f"    量比: {row['Vol_Ratio']:.2f} (> {VOL_RATIO_DISTRIBUTION})")
+                    print(f"    南向资金: {row.get('Southbound_Net', 'N/A')}")
+                    print(f"    价格下行: {price_down_cond}")
+                    print(f"    MACD: {row.get('MACD', 'N/A')}, MACD信号线: {row.get('MACD_Signal', 'N/A')}, 条件: {macd_cond}")
+                    print(f"    RSI: {row.get('RSI', 'N/A')}, 条件: {rsi_cond}")
+                    print(f"    OBV: {row.get('OBV', 'N/A')}, 条件: {obv_cond}")
+                    print(f"    MA5: {row.get('Close', 'N/A')} > {row.get('MA5', 'N/A')}, 条件: {ma5_cond}")
+                    print(f"    MA10: {row.get('Close', 'N/A')} > {row.get('MA10', 'N/A')}, 条件: {ma10_cond}")
+                    print(f"    满足的辅助条件数: {satisfied_aux_count}")
                 
                 return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
 
@@ -342,7 +371,7 @@ def main():
         for future in concurrent.futures.as_completed(future_to_stock):
             code, name = future_to_stock[future]
             try:
-                results = future.result(timeout=120)  # 设置超时时间
+                results = future.result(timeout=300)  # 设置超时时间为5分钟
                 if results:
                     all_results.extend(results)
             except concurrent.futures.TimeoutError:
