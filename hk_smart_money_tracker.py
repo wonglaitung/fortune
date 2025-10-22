@@ -306,7 +306,7 @@ def analyze_stock(code, name, run_date=None):
             return None
             
         # 检查数据是否包含必要的列
-        required_columns = ['Open', 'Close', 'Volume']
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         for col in required_columns:
             if col not in full_hist.columns:
                 print(f"⚠️  {name} 缺少必要的列 {col}")
@@ -318,7 +318,7 @@ def analyze_stock(code, name, run_date=None):
             return None
             
         # 移除包含异常值的行
-        full_hist = full_hist.dropna(subset=['Close', 'Volume'])
+        full_hist = full_hist.dropna(subset=['Open', 'High', 'Low', 'Close', 'Volume'])
         full_hist = full_hist[(full_hist['Close'] > 0) & (full_hist['Volume'] >= 0)]
         
         if len(full_hist) < 5:
@@ -328,6 +328,7 @@ def analyze_stock(code, name, run_date=None):
         full_hist['Vol_MA20'] = full_hist['Volume'].rolling(VOL_WINDOW, min_periods=1).mean()
         full_hist['MA5'] = full_hist['Close'].rolling(5, min_periods=1).mean()
         full_hist['MA10'] = full_hist['Close'].rolling(10, min_periods=1).mean()
+        full_hist['MA20'] = full_hist['Close'].rolling(20, min_periods=1).mean()
 
         # MACD
         full_hist['EMA12'] = full_hist['Close'].ewm(span=12, adjust=False).mean()
@@ -349,6 +350,59 @@ def analyze_stock(code, name, run_date=None):
         # 使用 min_periods=10 保证样本充足再年化
         full_hist['Volatility'] = full_hist['Returns'].rolling(20, min_periods=10).std() * math.sqrt(252)
 
+        # VWAP (使用 (High+Low+Close)/3 * Volume 的加权近似)
+        full_hist['TP'] = (full_hist['High'] + full_hist['Low'] + full_hist['Close']) / 3
+        full_hist['VWAP'] = (full_hist['TP'] * full_hist['Volume']).rolling(VOL_WINDOW, min_periods=1).sum() / full_hist['Volume'].rolling(VOL_WINDOW, min_periods=1).sum()
+        
+        # ATR (Average True Range)
+        full_hist['TR'] = np.maximum(
+            np.maximum(
+                full_hist['High'] - full_hist['Low'],
+                np.abs(full_hist['High'] - full_hist['Close'].shift(1))
+            ),
+            np.abs(full_hist['Low'] - full_hist['Close'].shift(1))
+        )
+        full_hist['ATR'] = full_hist['TR'].rolling(14, min_periods=1).mean()
+        
+        # Chaikin Money Flow (CMF)
+        full_hist['MF_Multiplier'] = ((full_hist['Close'] - full_hist['Low']) - (full_hist['High'] - full_hist['Close'])) / (full_hist['High'] - full_hist['Low'])
+        full_hist['MF_Volume'] = full_hist['MF_Multiplier'] * full_hist['Volume']
+        full_hist['CMF'] = full_hist['MF_Volume'].rolling(20, min_periods=1).sum() / full_hist['Volume'].rolling(20, min_periods=1).sum()
+        
+        # ADX (Average Directional Index)
+        # +DI and -DI
+        up_move = full_hist['High'].diff()
+        down_move = -full_hist['Low'].diff()
+        
+        # +DM and -DM
+        full_hist['+DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
+        full_hist['-DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+        
+        # Smoothed +DM, -DM and TR
+        full_hist['+DI'] = 100 * (full_hist['+DM'].ewm(alpha=1/14, adjust=False).mean() / full_hist['ATR'])
+        full_hist['-DI'] = 100 * (full_hist['-DM'].ewm(alpha=1/14, adjust=False).mean() / full_hist['ATR'])
+        
+        # ADX
+        dx = 100 * (np.abs(full_hist['+DI'] - full_hist['-DI']) / (full_hist['+DI'] + full_hist['-DI']))
+        full_hist['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
+        
+        # Bollinger Bands
+        full_hist['BB_Mid'] = full_hist['Close'].rolling(20, min_periods=1).mean()
+        full_hist['BB_Upper'] = full_hist['BB_Mid'] + 2 * full_hist['Close'].rolling(20, min_periods=1).std()
+        full_hist['BB_Lower'] = full_hist['BB_Mid'] - 2 * full_hist['Close'].rolling(20, min_periods=1).std()
+        full_hist['BB_Width'] = (full_hist['BB_Upper'] - full_hist['BB_Lower']) / full_hist['BB_Mid']
+        
+        # 成交量 z-score
+        full_hist['Vol_Mean_20'] = full_hist['Volume'].rolling(20, min_periods=1).mean()
+        full_hist['Vol_Std_20'] = full_hist['Volume'].rolling(20, min_periods=1).std()
+        full_hist['Vol_Z_Score'] = (full_hist['Volume'] - full_hist['Vol_Mean_20']) / full_hist['Vol_Std_20']
+        
+        # 成交额 z-score
+        full_hist['Turnover'] = full_hist['Close'] * full_hist['Volume']
+        full_hist['Turnover_Mean_20'] = full_hist['Turnover'].rolling(20, min_periods=1).mean()
+        full_hist['Turnover_Std_20'] = full_hist['Turnover'].rolling(20, min_periods=1).std()
+        full_hist['Turnover_Z_Score'] = (full_hist['Turnover'] - full_hist['Turnover_Mean_20']) / full_hist['Turnover_Std_20']
+
         # price percentile 基于 PRICE_WINDOW
         low60 = full_hist['Close'].tail(PRICE_WINDOW).min()
         high60 = full_hist['Close'].tail(PRICE_WINDOW).max()
@@ -363,10 +417,20 @@ def analyze_stock(code, name, run_date=None):
 
         main_hist['MA5'] = full_hist['MA5'].reindex(main_hist.index, method='ffill')
         main_hist['MA10'] = full_hist['MA10'].reindex(main_hist.index, method='ffill')
+        main_hist['MA20'] = full_hist['MA20'].reindex(main_hist.index, method='ffill')
         main_hist['MACD'] = full_hist['MACD'].reindex(main_hist.index, method='ffill')
         main_hist['MACD_Signal'] = full_hist['MACD_Signal'].reindex(main_hist.index, method='ffill')
         main_hist['RSI'] = full_hist['RSI'].reindex(main_hist.index, method='ffill')
         main_hist['Volatility'] = full_hist['Volatility'].reindex(main_hist.index, method='ffill')
+        main_hist['VWAP'] = full_hist['VWAP'].reindex(main_hist.index, method='ffill')
+        main_hist['ATR'] = full_hist['ATR'].reindex(main_hist.index, method='ffill')
+        main_hist['CMF'] = full_hist['CMF'].reindex(main_hist.index, method='ffill')
+        main_hist['ADX'] = full_hist['ADX'].reindex(main_hist.index, method='ffill')
+        main_hist['BB_Upper'] = full_hist['BB_Upper'].reindex(main_hist.index, method='ffill')
+        main_hist['BB_Lower'] = full_hist['BB_Lower'].reindex(main_hist.index, method='ffill')
+        main_hist['BB_Width'] = full_hist['BB_Width'].reindex(main_hist.index, method='ffill')
+        main_hist['Vol_Z_Score'] = full_hist['Vol_Z_Score'].reindex(main_hist.index, method='ffill')
+        main_hist['Turnover_Z_Score'] = full_hist['Turnover_Z_Score'].reindex(main_hist.index, method='ffill')
 
         # OBV 从 full_hist 累计后 reindex
         full_hist['OBV'] = 0.0
@@ -447,13 +511,25 @@ def analyze_stock(code, name, run_date=None):
             ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] < row['MA5']
             # 价格相对于10日均线位置（价格低于10日均线）
             ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] < row['MA10']
+            # 收盘价高于VWAP且放量 (VWAP条件)
+            vwap_cond = pd.notna(row.get('Close')) and pd.notna(row.get('VWAP')) and pd.notna(row.get('Vol_Ratio')) and row['Close'] > row['VWAP'] and row['Vol_Ratio'] > 1.5
+            # ATR放大 (ATR条件)
+            atr_cond = pd.notna(row.get('ATR')) and pd.notna(row.get('Close')) and row['ATR'] > full_hist['ATR'].rolling(14).mean().reindex([row.name], method='ffill').iloc[0] * 1.5
+            # CMF > 0.05 (资金流入)
+            cmf_cond = pd.notna(row.get('CMF')) and row['CMF'] > 0.05
+            # ADX > 25 (趋势明确)
+            adx_cond = pd.notna(row.get('ADX')) and row['ADX'] > 25
+            # 成交量z-score > 1.5 (异常放量)
+            vol_z_cond = pd.notna(row.get('Vol_Z_Score')) and row['Vol_Z_Score'] > 1.5
+            # 成交额z-score > 1.5 (异常成交额)
+            turnover_z_cond = pd.notna(row.get('Turnover_Z_Score')) and row['Turnover_Z_Score'] > 1.5
             
             # 计算满足的辅助条件数量
-            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond, vwap_cond, atr_cond, cmf_cond, adx_cond, vol_z_cond, turnover_z_cond]
             satisfied_aux_count = sum(aux_conditions)
             
-            # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
-            aux_cond = satisfied_aux_count >= 1
+            # 如果满足至少2个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+            aux_cond = satisfied_aux_count >= 2
             
             return price_cond and vol_cond and sb_cond and aux_cond
 
@@ -480,13 +556,25 @@ def analyze_stock(code, name, run_date=None):
             ma5_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA5')) and row['Close'] > row['MA5']
             # 价格相对于10日均线位置（价格高于10日均线）
             ma10_cond = pd.notna(row.get('Close')) and pd.notna(row.get('MA10')) and row['Close'] > row['MA10']
+            # 收盘价低于VWAP且放量 (VWAP条件)
+            vwap_cond = pd.notna(row.get('Close')) and pd.notna(row.get('VWAP')) and pd.notna(row.get('Vol_Ratio')) and row['Close'] < row['VWAP'] and row['Vol_Ratio'] > 1.5
+            # ATR放大 (ATR条件)
+            atr_cond = pd.notna(row.get('ATR')) and pd.notna(row.get('Close')) and row['ATR'] > full_hist['ATR'].rolling(14).mean().reindex([row.name], method='ffill').iloc[0] * 1.5
+            # CMF < -0.05 (资金流出)
+            cmf_cond = pd.notna(row.get('CMF')) and row['CMF'] < -0.05
+            # ADX > 25 (趋势明确)
+            adx_cond = pd.notna(row.get('ADX')) and row['ADX'] > 25
+            # 成交量z-score > 1.5 (异常放量)
+            vol_z_cond = pd.notna(row.get('Vol_Z_Score')) and row['Vol_Z_Score'] > 1.5
+            # 成交额z-score > 1.5 (异常成交额)
+            turnover_z_cond = pd.notna(row.get('Turnover_Z_Score')) and row['Turnover_Z_Score'] > 1.5
             
             # 计算满足的辅助条件数量
-            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond]
+            aux_conditions = [macd_cond, rsi_cond, obv_cond, ma5_cond, ma10_cond, vwap_cond, atr_cond, cmf_cond, adx_cond, vol_z_cond, turnover_z_cond]
             satisfied_aux_count = sum(aux_conditions)
             
-            # 如果满足至少1个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
-            aux_cond = satisfied_aux_count >= 1
+            # 如果满足至少2个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
+            aux_cond = satisfied_aux_count >= 2
             
             return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
 
@@ -575,6 +663,13 @@ def analyze_stock(code, name, run_date=None):
             'rsi': safe_round(main_hist['RSI'].iloc[-1], 2) if pd.notna(main_hist['RSI'].iloc[-1]) else None,
             'volatility': safe_round(main_hist['Volatility'].iloc[-1] * 100, 2) if pd.notna(main_hist['Volatility'].iloc[-1]) else None,  # 百分比
             'obv': safe_round(main_hist['OBV'].iloc[-1], 2) if pd.notna(main_hist['OBV'].iloc[-1]) else None,  # OBV指标
+            'vwap': safe_round(main_hist['VWAP'].iloc[-1], 2) if pd.notna(main_hist['VWAP'].iloc[-1]) else None,  # VWAP
+            'atr': safe_round(main_hist['ATR'].iloc[-1], 2) if pd.notna(main_hist['ATR'].iloc[-1]) else None,  # ATR
+            'cmf': safe_round(main_hist['CMF'].iloc[-1], 4) if pd.notna(main_hist['CMF'].iloc[-1]) else None,  # CMF
+            'adx': safe_round(main_hist['ADX'].iloc[-1], 2) if pd.notna(main_hist['ADX'].iloc[-1]) else None,  # ADX
+            'bb_width': safe_round(main_hist['BB_Width'].iloc[-1] * 100, 2) if pd.notna(main_hist['BB_Width'].iloc[-1]) else None,  # 布林带宽度
+            'vol_z_score': safe_round(main_hist['Vol_Z_Score'].iloc[-1], 2) if pd.notna(main_hist['Vol_Z_Score'].iloc[-1]) else None,  # 成交量z-score
+            'turnover_z_score': safe_round(main_hist['Turnover_Z_Score'].iloc[-1], 2) if pd.notna(main_hist['Turnover_Z_Score'].iloc[-1]) else None,  # 成交额z-score
             'strong_volume_up': bool(main_hist['Strong_Volume_Up'].iloc[-1]),  # 放量上涨
             'weak_volume_down': bool(main_hist['Weak_Volume_Down'].iloc[-1]),  # 缩量回调
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
@@ -614,17 +709,21 @@ def main(run_date=None):
 
         # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
         df_report = df[[
-            'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
-            'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
-            'rsi', 'macd', 'volatility', 'obv',
+            'name', 'code', 'last_close', 'change_pct', 'price_percentile',
+            'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate',
+            'vwap', 'atr', 'adx', 'bb_width',
+            'ma5_deviation', 'ma10_deviation',
+            'rsi', 'macd', 'volatility', 'obv', 'cmf',
             'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
             'southbound', 'has_buildup', 'has_distribution',
             'strong_volume_up', 'weak_volume_down'
         ]]
         df_report.columns = [
-            '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
-            '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
-            'RSI', 'MACD', '波动率(%)', 'OBV',
+            '股票名称', '代码', '最新价', '涨跌幅(%)', '位置(%)',
+            '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)',
+            'VWAP', 'ATR', 'ADX', '布林带宽度(%)',
+            '5日均线偏离(%)', '10日均线偏离(%)',
+            'RSI', 'MACD', '波动率(%)', 'OBV', 'CMF',
             '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
             '南向资金(万)', '建仓信号', '出货信号',
             '放量上涨', '缩量回调'
@@ -661,17 +760,21 @@ def main(run_date=None):
         try:
             # 创建用于Excel的报告数据框，与邮件报告保持一致的列顺序
             df_excel = df[[
-                'name', 'code', 'last_close', 'change_pct', 'turnover', 'turnover_rate',
-                'price_percentile', 'vol_ratio', 'ma5_deviation', 'ma10_deviation',
-                'rsi', 'macd', 'volatility', 'obv',
+                'name', 'code', 'last_close', 'change_pct', 'price_percentile',
+                'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate',
+                'vwap', 'atr', 'adx', 'bb_width',
+                'ma5_deviation', 'ma10_deviation',
+                'rsi', 'macd', 'volatility', 'obv', 'cmf',
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
                 'southbound', 'has_buildup', 'has_distribution',
                 'strong_volume_up', 'weak_volume_down'
             ]]
             df_excel.columns = [
-                '股票名称', '代码', '最新价', '涨跌幅(%)', '成交金额(百万)', '换手率(%)',
-                '位置(%)', '量比', '5日均线偏离(%)', '10日均线偏离(%)',
-                'RSI', 'MACD', '波动率(%)', 'OBV',
+                '股票名称', '代码', '最新价', '涨跌幅(%)', '位置(%)',
+                '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)',
+                'VWAP', 'ATR', 'ADX', '布林带宽度(%)',
+                '5日均线偏离(%)', '10日均线偏离(%)',
+                'RSI', 'MACD', '波动率(%)', 'OBV', 'CMF',
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
                 '南向资金(万)', '建仓信号', '出货信号',
                 '放量上涨', '缩量回调'
@@ -739,9 +842,200 @@ def main(run_date=None):
             <h4>基础信息</h4>
             <ul>
               <li><b>最新价</b>：股票当前最新成交价格（港元）。若当日存在盘中变动，建议结合成交量与盘口观察。</li>
-              <li><b>前收市价</b>：前一个交易日的收盘价格（港元）。</li>
               <li><b>涨跌幅(%)</b>：按 (最新价 - 前收) / 前收 计算并乘以100表示百分比。</li>
             </ul>
+            
+            <h4>价格位置</h4>
+            <ul>
+              <li><b>位置(%)</b>：当前价格在最近 PRICE_WINDOW（默认 60 日）内的百分位位置。</li>
+              <li>计算：(当前价 - 最近N日最低) / (最高 - 最低) * 100，取 [0, 100]。</li>
+              <li>含义：接近 0 表示处于历史窗口低位，接近 100 表示高位。</li>
+              <li>用途：判断是否处于\"相对低位\"或\"高位\"，用于建仓/出货信号的价格条件。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>位置 < 30%：相对低位，可能有支撑</li>
+                  <li>位置 > 70%：相对高位，可能有阻力</li>
+                  <li>位置在 30%-70%：震荡区间</li>
+                </ul>
+              </li>
+            </ul>
+            
+            <h4>成交量相关</h4>
+            <ul>
+              <li><b>量比 (Vol_Ratio)</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
+              <li>含义：衡量当日成交是否显著放大。</li>
+              <li>建议：放量配合价格运动（如放量上涨或放量下跌）比单纯放量更具信号含义。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>Vol_Ratio > 1.5：显著放量</li>
+                  <li>Vol_Ratio < 0.5：显著缩量</li>
+                  <li>Vol_Ratio 在 0.5-1.5：正常成交量</li>
+                </ul>
+              </li>
+              
+              <li><b>成交量z-score</b>：成交量相对于20日均值的标准差倍数。</li>
+              <li>含义：衡量成交量异常程度，比量比更考虑波动性。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>Vol_Z_Score > 2.0：极端放量</li>
+                  <li>Vol_Z_Score > 1.5：显著放量</li>
+                  <li>Vol_Z_Score < -1.5：显著缩量</li>
+                </ul>
+              </li>
+              
+              <li><b>成交额z-score</b>：成交额相对于20日均值的标准差倍数。</li>
+              <li>含义：衡量成交额异常程度，考虑了价格和成交量的综合影响。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>Turnover_Z_Score > 2.0：极端放量</li>
+                  <li>Turnover_Z_Score > 1.5：显著放量</li>
+                  <li>Turnover_Z_Score < -1.5：显著缩量</li>
+                </ul>
+              </li>
+              
+              <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
+              <li><b>换手率(%)</b>：当日成交量占总股本的比例。</li>
+              <li>含义：衡量股票的流动性，换手率高的股票通常流动性更好。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>换手率 > 5%：高流动性</li>
+                  <li>换手率 < 1%：低流动性</li>
+                </ul>
+              </li>
+            </ul>
+            
+            <h4>价格指标</h4>
+            <ul>
+              <li><b>VWAP（成交量加权平均价格）</b>：
+                <ul>
+                  <li>计算：(High+Low+Close)/3 * Volume 的加权平均</li>
+                  <li>含义：衡量当日资金的平均成本</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>收盘价 > VWAP：资金在高位买入</li>
+                      <li>收盘价 < VWAP：资金在低位卖出</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>ATR（平均真实波幅）</b>：
+                <ul>
+                  <li>计算：14日真实波幅的平均值</li>
+                  <li>含义：衡量市场波动性</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>ATR 升高：波动加剧，可能有趋势行情</li>
+                      <li>ATR 降低：波动收敛，可能有盘整行情</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>ADX（平均趋向指数）</b>：
+                <ul>
+                  <li>计算：基于+DI和-DI计算的趋势强度指标</li>
+                  <li>含义：衡量趋势强度</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>ADX > 25：趋势行情</li>
+                      <li>ADX < 20：盘整行情</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>布林带宽度(%)</b>：
+                <ul>
+                  <li>计算：(布林带上轨-布林带下轨)/布林带中轨 * 100</li>
+                  <li>含义：衡量布林带的收窄或扩张程度</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>宽度低：波动收敛，可能预示后续波动扩张</li>
+                      <li>宽度高：波动扩张</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            
+            <h4>均线偏离</h4>
+            <ul>
+              <li><b>5日/10日均线偏离(%)</b>：最新价相对于短期均线的偏离百分比（正值表示价高于均线）。</li>
+              <li>用途：短期动力判断；但对高波动或宽幅震荡个股需谨慎解读。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>偏离 > 5%：显著偏离均线</li>
+                  <li>偏离在 -5% 到 5%：正常范围</li>
+                  <li>偏离 < -5%：显著低于均线</li>
+                </ul>
+              </li>
+            </ul>
+            
+            <h4>技术指标</h4>
+            <ul>
+              <li><b>RSI（Wilder 平滑）</b>：
+                <ul>
+                  <li>计算：基于 14 日 Wilder 指数平滑的涨跌幅比例，结果在 0-100。</li>
+                  <li>含义：常用于判断超买/超卖（例如 RSI > 70 可能偏超买，RSI < 30 可能偏超卖）。</li>
+                  <li>注意：单独使用 RSI 可能产生误导，建议与成交量和趋势指标结合。</li>
+                  <li><b>评估方法</b>：
+                    <ul>
+                      <li>RSI > 70：超买</li>
+                      <li>RSI < 30：超卖</li>
+                      <li>RSI 在 30-70：正常</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>MACD</b>：
+                <ul>
+                  <li>计算：EMA12 - EMA26（MACD 线），并计算 9 日 EMA 作为 MACD Signal。</li>
+                  <li>含义：衡量中短期动量，MACD 线上穿信号线通常被视为动能改善（反之则疲弱）。</li>
+                  <li>注意：对剧烈震荡或极端股价数据（如停牌后复牌）可能失真。</li>
+                  <li><b>评估方法</b>：
+                    <ul>
+                      <li>MACD > MACD_Signal：动能增强</li>
+                      <li>MACD < MACD_Signal：动能减弱</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
+              <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>波动率 > 30%：高波动</li>
+                  <li>波动率 < 15%：低波动</li>
+                </ul>
+              </li>
+              
+              <li><b>OBV（On-Balance Volume）</b>：按照日涨跌累计成交量的方向（涨则加，跌则减）来累计。</li>
+              <li>含义：尝试用成交量的方向性累积来辅助判断资金是否在积累/分配。</li>
+              <li>注意：OBV 是累积序列，适合观察中长期趋势而非短期信号。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>OBV 上升：资金流入</li>
+                  <li>OBV 下降：资金流出</li>
+                </ul>
+              </li>
+              
+              <li><b>CMF（Chaikin Money Flow）</b>：
+                <ul>
+                  <li>计算：20日资金流量的累积</li>
+                  <li>含义：衡量资金流向</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>CMF > 0.05：资金流入</li>
+                      <li>CMF < -0.05：资金流出</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+            
             <h4>相对表现 / 跑赢恒指（用于衡量个股相对大盘的表现）</h4>
             <ul>
               <li><b>相对强度 (RS_ratio)</b>：
@@ -751,6 +1045,13 @@ def main(run_date=None):
                   <li>RS_ratio > 0 表示个股在该区间的复合收益率高于恒指；RS_ratio < 0 则表示跑输。</li>
                   <li>优点：在收益率接近 -1 或波动较大时，更稳健地反映\"相对复合回报\"。</li>
                   <li>报告显示：以百分比列 RS_ratio_% 呈现（例如 5 表示 +5%）。</li>
+                  <li><b>评估方法</b>：
+                    <ul>
+                      <li>RS_ratio > 5%：显著跑赢</li>
+                      <li>RS_ratio > 0%：跑赢</li>
+                      <li>RS_ratio < 0%：跑输</li>
+                    </ul>
+                  </li>
                 </ul>
               </li>
               <li><b>相对强度差值 (RS_diff)</b>：
@@ -758,6 +1059,13 @@ def main(run_date=None):
                   <li>计算：RS_diff = stock_ret - hsi_ret（直接的收益差值）。</li>
                   <li>含义：更直观，表示绝对收益的差额（例如股票涨 6%，恒指涨 2%，则 RS_diff = 4%）。</li>
                   <li>报告显示：以百分比列 RS_diff_% 呈现。</li>
+                  <li><b>评估方法</b>：
+                    <ul>
+                      <li>RS_diff > 3%：显著跑赢</li>
+                      <li>RS_diff > 0%：跑赢</li>
+                      <li>RS_diff < 0%：跑输</li>
+                    </ul>
+                  </li>
                 </ul>
               </li>
               <li><b>跑赢恒指 (outperforms_hsi)</b>：
@@ -772,55 +1080,20 @@ def main(run_date=None):
                 </ul>
               </li>
             </ul>
-            <h4>价格与位置</h4>
+            
+            <h4>资金流向</h4>
             <ul>
-              <li><b>位置(%)</b>：当前价格在最近 PRICE_WINDOW（默认 60 日）内的百分位位置。</li>
-              <li>计算：(当前价 - 最近N日最低) / (最高 - 最低) * 100，取 [0, 100]。</li>
-              <li>含义：接近 0 表示处于历史窗口低位，接近 100 表示高位。</li>
-              <li>用途：判断是否处于\"相对低位\"或\"高位\"，用于建仓/出货信号的价格条件。</li>
-            </ul>
-            <h4>成交量相关</h4>
-            <ul>
-              <li><b>量比 (Vol_Ratio)</b>：当日成交量 / 20 日平均成交量（VOL_WINDOW）。</li>
-              <li>含义：衡量当日成交是否显著放大。</li>
-              <li>建议：放量配合价格运动（如放量上涨或放量下跌）比单纯放量更具信号含义。</li>
-              <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
-            </ul>
-            <h4>均线偏离</h4>
-            <ul>
-              <li><b>5日/10日均线偏离(%)</b>：最新价相对于短期均线的偏离百分比（正值表示价高于均线）。</li>
-              <li>用途：短期动力判断；但对高波动或宽幅震荡个股需谨慎解读。</li>
-            </ul>
-            <h4>动量与震荡指标</h4>
-            <ul>
-              <li><b>MACD</b>：
-                <ul>
-                  <li>计算：EMA12 - EMA26（MACD 线），并计算 9 日 EMA 作为 MACD Signal。</li>
-                  <li>含义：衡量中短期动量，MACD 线上穿信号线通常被视为动能改善（反之则疲弱）。</li>
-                  <li>注意：对剧烈震荡或极端股价数据（如停牌后复牌）可能失真。</li>
-                </ul>
-              </li>
-              <li><b>RSI（Wilder 平滑）</b>：
-                <ul>
-                  <li>计算：基于 14 日 Wilder 指数平滑的涨跌幅比例，结果在 0-100。</li>
-                  <li>含义：常用于判断超买/超卖（例如 RSI > 70 可能偏超买，RSI < 30 可能偏超卖）。</li>
-                  <li>注意：单独使用 RSI 可能产生误导，建议与成交量和趋势指标结合。</li>
-                </ul>
-              </li>
-              <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
-              <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
-            </ul>
-            <h4>OBV（On-Balance Volume）</h4>
-            <ul>
-              <li><b>OBV</b>：按照日涨跌累计成交量的方向（涨则加，跌则减）来累计。</li>
-              <li>含义：尝试用成交量的方向性累积来辅助判断资金是否在积累/分配。</li>
-              <li>注意：OBV 是累积序列，适合观察中长期趋势而非短期信号。</li>
-            </ul>
-            <h4>南向资金（沪港通/深港通南向）</h4>
-            <ul>
+              <li><b>南向资金(万)</b>：通过沪港通/深港通流入该股的资金净额。</li>
               <li>数据来源：使用 akshare 的 stock_hk_ggt_components_em 获取\"净买入\"字段，脚本假设原始单位为\"元\"并除以 SOUTHBOUND_UNIT_CONVERSION 转为\"万\"。</li>
-              <li>报告字段：南向资金(万) 表示当日或该交易日的净买入额（万元）。</li>
               <li>用途：当南向资金显著流入时，通常被解读为北向/南向机构资金的买入兴趣；显著流出则表示机构抛售或撤出。</li>
+              <li><b>评估方法</b>：
+                <ul>
+                  <li>南向资金 > 3000万：显著流入</li>
+                  <li>南向资金 > 1000万：流入</li>
+                  <li>南向资金 < -3000万：显著流出</li>
+                  <li>南向资金 < -1000万：流出</li>
+                </ul>
+              </li>
               <li>限制与谨慎：
                 <ul>
                   <li>ak 数据延迟或字段命名可能变化（脚本已做基本容错，但仍需关注源数据格式）。</li>
@@ -828,6 +1101,7 @@ def main(run_date=None):
                 </ul>
               </li>
             </ul>
+            
             <h4>信号定义（本脚本采用的简化规则）</h4>
             <ul>
               <li><b>建仓信号（Buildup）</b>：
