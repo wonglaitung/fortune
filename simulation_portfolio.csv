@@ -1,1 +1,2 @@
-
+timestamp,capital,portfolio_value,positions
+2025-10-24T13:55:02.034792,595766.9876098633,1000000.0,"{'1288.HK': {'shares': 16600, 'avg_price': np.float64(6.010000228881836)}, '1347.HK': {'shares': 1100, 'avg_price': np.float64(79.6500015258789)}, '2533.HK': {'shares': 3500, 'avg_price': np.float64(23.040000915527344)}, '0981.HK': {'shares': 900, 'avg_price': np.float64(77.80000305175781)}, '0939.HK': {'shares': 8400, 'avg_price': np.float64(7.880000114440918)}}"
