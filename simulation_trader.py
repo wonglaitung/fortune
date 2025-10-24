@@ -569,8 +569,8 @@ def run_simulation(duration_days=30):
     # 创建模拟交易器
     trader = SimulationTrader(initial_capital=1000000)
     
-    # 计划每10分钟执行一次交易分析
-    schedule.every(10).minutes.do(trader.run_hourly_analysis)
+    # 计划每15分钟执行一次交易分析
+    schedule.every(15).minutes.do(trader.run_hourly_analysis)
     
     # 计划每天收盘后生成总结
     schedule.every().day.at("16:05").do(trader.run_daily_summary)
