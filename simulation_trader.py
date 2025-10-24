@@ -16,6 +16,9 @@ from datetime import datetime, timedelta
 import schedule
 import threading
 from collections import defaultdict
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -59,6 +62,51 @@ class SimulationTrader:
                 f.write(f"模拟交易日志 - 开始时间: {self.start_date}\n")
                 f.write(f"初始资金: HK${self.initial_capital:,.2f}\n")
                 f.write("="*50 + "\n")
+    
+    def send_email_notification(self, subject, content):
+        """
+        发送邮件通知
+        
+        Args:
+            subject (str): 邮件主题
+            content (str): 邮件内容
+        """
+        try:
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
+            smtp_port = 587
+            smtp_user = os.environ.get("YAHOO_EMAIL")
+            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            sender_email = smtp_user
+
+            if not smtp_user or not smtp_pass:
+                self.log_message("警告: 缺少 YAHOO_EMAIL 或 YAHOO_APP_PASSWORD 环境变量，无法发送邮件")
+                return False
+
+            recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+            recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
+
+            # 创建邮件
+            msg = MIMEMultipart("alternative")
+            msg['From'] = f'"港股模拟交易系统" <{sender_email}>'
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+
+            # 添加文本内容
+            text_part = MIMEText(content, "plain", "utf-8")
+            msg.attach(text_part)
+
+            # 发送邮件
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(sender_email, recipients, msg.as_string())
+            server.quit()
+            
+            self.log_message(f"邮件发送成功: {subject}")
+            return True
+        except Exception as e:
+            self.log_message(f"发送邮件失败: {e}")
+            return False
     
     def log_message(self, message):
         """记录交易日志"""
@@ -195,6 +243,9 @@ class SimulationTrader:
             self.log_message(f"资金不足买入 {shares} 股 {name} ({code})")
             return False
             
+        # 检查是否是新买入的股票
+        is_new_stock = code not in self.positions
+        
         # 执行买入
         self.capital -= actual_invest
         
@@ -230,6 +281,24 @@ class SimulationTrader:
         self.save_state()
         
         self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
+        
+        # 如果是新买入的股票，发送邮件通知
+        if is_new_stock:
+            subject = f"【买入通知】{name} ({code})"
+            content = f"""
+模拟交易系统买入通知：
+
+股票名称：{name}
+股票代码：{code}
+买入价格：HK${current_price:.2f}
+买入数量：{shares} 股
+买入金额：HK${actual_invest:.2f}
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前资金：HK${self.capital:,.2f}
+            """
+            self.send_email_notification(subject, content)
+        
         return True
     
     def sell_stock(self, code, name, percentage=1.0):
@@ -263,8 +332,10 @@ class SimulationTrader:
             self.log_message(f"卖出股数为0，跳过卖出 {name} ({code})")
             return False
             
-        # 执行卖出
+        # 计算卖出金额
         sell_amount = shares_to_sell * current_price
+        
+        # 执行卖出
         self.capital += sell_amount
         
         # 更新持仓
@@ -289,6 +360,23 @@ class SimulationTrader:
         self.save_state()
         
         self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}")
+        
+        # 发送卖出通知邮件
+        subject = f"【卖出通知】{name} ({code})"
+        content = f"""
+模拟交易系统卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+卖出价格：HK${current_price:.2f}
+卖出数量：{shares_to_sell} 股
+卖出金额：HK${sell_amount:.2f}
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前资金：HK${self.capital:,.2f}
+        """
+        self.send_email_notification(subject, content)
+        
         return True
     
     def is_trading_time(self):
@@ -589,6 +677,27 @@ class SimulationTrader:
         except Exception as e:
             self.log_message(f"保存投资组合历史失败: {e}")
 
+    def test_email_notification(self):
+        """测试邮件发送功能"""
+        self.log_message("测试邮件发送功能...")
+        subject = "港股模拟交易系统 - 邮件功能测试"
+        content = f"""
+这是港股模拟交易系统的邮件功能测试邮件。
+
+时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+系统状态：
+- 初始资金: HK${self.initial_capital:,.2f}
+- 当前资金: HK${self.capital:,.2f}
+- 持仓数量: {len(self.positions)}
+        """
+        
+        success = self.send_email_notification(subject, content)
+        if success:
+            self.log_message("邮件功能测试成功")
+        else:
+            self.log_message("邮件功能测试失败")
+        return success
+
 def run_simulation(duration_days=30, analysis_frequency=15):
     """
     运行模拟交易
@@ -602,6 +711,9 @@ def run_simulation(duration_days=30, analysis_frequency=15):
     
     # 创建模拟交易器
     trader = SimulationTrader(initial_capital=1000000, analysis_frequency=analysis_frequency)
+    
+    # 测试邮件功能
+    trader.test_email_notification()
     
     # 计划按指定频率执行交易分析
     schedule.every(analysis_frequency).minutes.do(trader.run_hourly_analysis)
