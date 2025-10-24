@@ -2,12 +2,13 @@
 
 ## 项目简介
 
-本项目是一个综合性的金融信息监控与模拟交易系统，旨在为投资者提供全面的市场分析和交易策略验证工具。系统包含四个核心组件：
+本项目是一个综合性的金融信息监控与模拟交易系统，旨在为投资者提供全面的市场分析和交易策略验证工具。系统包含五个核心组件：
 
 1. **加密货币价格监控器** - 实时获取主流加密货币的价格信息并通过邮件发送
 2. **港股IPO信息获取器** - 爬取AAStocks网站获取最新的港股IPO信息
 3. **港股主力资金追踪器** - 分析港股市场主力资金动向，识别建仓和出货信号
 4. **港股模拟交易系统** - 基于主力资金追踪器的分析结果和大模型判断进行模拟交易
+5. **黄金市场分析器** - 分析黄金市场价格趋势和技术指标
 
 ## 系统架构
 
@@ -18,7 +19,8 @@
 │   └── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
-│   └── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
+│   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
+│   └── 黄金市场分析器 (@gold_analyzer.py)
 └── 交易层
     └── 港股模拟交易系统 (@simulation_trader.py)
 ```
@@ -56,6 +58,9 @@ pip install yfinance akshare matplotlib numpy
 
 # 模拟交易系统依赖
 pip install schedule
+
+# 黄金分析器依赖
+pip install yfinance pandas numpy
 ```
 
 ### 环境变量配置
@@ -104,6 +109,13 @@ pip install schedule
 - 交易记录和状态自动保存，支持中断后继续
 - 完整的交易日志记录
 
+### 黄金市场分析器 (@gold_analyzer.py)
+- 实时获取COMEX黄金期货和黄金ETF价格数据
+- 计算技术指标（MACD、RSI、均线、布林带等）
+- 分析黄金价格趋势和支撑阻力位
+- 识别买卖信号
+- 生成详细的分析报告
+
 ## 使用方法
 
 ### 基础组件使用
@@ -120,6 +132,9 @@ python hk_smart_money_tracker.py
 
 # 港股主力资金历史数据分析
 python hk_smart_money_historical_analysis.py --start-date 2025-01-01 --end-date 2025-09-30
+
+# 黄金市场分析器
+python gold_analyzer_simple.py
 ```
 
 ### 模拟交易系统使用
