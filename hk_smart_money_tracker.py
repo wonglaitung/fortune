@@ -1236,10 +1236,12 @@ def main(run_date=None):
                 for filename in os.listdir(CHART_DIR):
                     if filename.endswith(".png"):
                         with open(os.path.join(CHART_DIR, filename), "rb") as f:
-                            part = MIMEBase('application', 'octet-stream')
+                            part = MIMEBase('image', 'png')
                             part.set_payload(f.read())
                         encoders.encode_base64(part)
+                        # 使用更安全的文件名编码方式
                         part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+                        part.add_header('Content-Type', 'image/png')
                         msg.attach(part)
 
             try:
