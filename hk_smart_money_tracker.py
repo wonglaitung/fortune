@@ -35,6 +35,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# 导入大模型服务
+from llm_services import qwen_engine
+
 plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -242,6 +245,49 @@ def safe_round(v, ndigits=2):
         return v
     except Exception:
         return v
+
+def build_llm_analysis_prompt(stock_data):
+    """
+    构建发送给大模型的股票数据分析提示词
+    
+    Args:
+        stock_data (list): 股票数据分析结果列表
+        
+    Returns:
+        str: 构建好的提示词
+    """
+    # 构建股票数据表格
+    table_header = "| 股票名称 | 代码 | 最新价 | 涨跌幅(%) | 位置(%) | 量比 | 南向资金(万) | 建仓信号 | 出货信号 | 跑赢恒指 |\n"
+    table_separator = "|----------|------|--------|-----------|---------|------|--------------|----------|----------|----------|\n"
+    
+    table_rows = []
+    for stock in stock_data:
+        row = f"| {stock['name']} | {stock['code']} | {stock['last_close'] or 'N/A'} | {stock['change_pct'] or 'N/A'} | {stock['price_percentile'] or 'N/A'} | {stock['vol_ratio'] or 'N/A'} | {stock['southbound'] or 'N/A'} | {'是' if stock['has_buildup'] else '否'} | {'是' if stock['has_distribution'] else '否'} | {'是' if stock['outperforms_hsi'] else '否'} |"
+        table_rows.append(row)
+    
+    stock_table = table_header + table_separator + "\n".join(table_rows)
+    
+    # 构建提示词
+    prompt = f"""
+你是一个专业的股票分析师，请根据以下港股主力资金追踪数据，分析并推荐最有价值的股票：
+
+{stock_table}
+
+请从以下几个维度分析股票：
+1. 建仓信号强烈的股票（建仓信号为"是"）
+2. 有南向资金流入且跑赢恒指的股票
+3. 位置较低但开始放量上涨的股票
+4. 技术指标良好的股票（如RSI、MACD等）
+
+请给出你的分析结论，包括：
+1. 最值得关注的3-5只股票及其理由
+2. 需要警惕的股票（出货信号强烈）
+3. 整体市场趋势判断
+
+请用中文回答，格式清晰易读。
+"""
+    
+    return prompt
 
 # ==============================
 # 4. 单股分析函数
@@ -657,6 +703,23 @@ def main(run_date=None):
                 rsd_disp = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None) else None)
                 print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
 
+        # 调用大模型分析股票数据
+        try:
+            print("\n🤖 正在调用大模型分析股票数据...")
+            llm_prompt = build_llm_analysis_prompt(results)
+            llm_analysis = qwen_engine.chat_with_llm(llm_prompt)
+            print("✅ 大模型分析完成")
+            # 将大模型分析结果打印到屏幕
+            if llm_analysis:
+                print("\n" + "="*50)
+                print("🤖 大模型分析结果:")
+                print("="*50)
+                print(llm_analysis)
+                print("="*50)
+        except Exception as e:
+            print(f"⚠️ 大模型分析失败: {e}")
+            llm_analysis = None
+
         # 保存 Excel（包含 machine-friendly 原始列 + 展示列）
         try:
             # 创建用于Excel的报告数据框，与邮件报告保持一致的列顺序
@@ -732,6 +795,18 @@ def main(run_date=None):
                 for _, row in build.iterrows():
                     html += f"<li>{row['股票名称']} ({row['代码']})</li>"
                 html += "</ul>"
+
+            # 添加大模型分析结果
+            if llm_analysis:
+                html += "<h3>🤖 大模型分析结果：</h3>"
+                html += "<div style='background-color: #f0f0f0; padding: 15px; border-radius: 5px;'>"
+                # 将大模型分析结果中的换行符转换为HTML换行标签
+                llm_analysis_html = llm_analysis.replace('\n', '<br>')
+                html += f"<p>{llm_analysis_html}</p>"
+                html += "</div>"
+            else:
+                html += "<h3>🤖 大模型分析结果：</h3>"
+                html += "<p>大模型分析暂不可用</p>"
 
             FULL_INDICATOR_HTML = """
             <h3>📋 指标说明</h3>
