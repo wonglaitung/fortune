@@ -371,6 +371,12 @@ class SimulationTrader:
             
         self.log_message("开始执行交易决策...")
         
+        # 设定投资者风险偏好
+        # 保守型：偏好低风险、稳定收益的股票
+        # 平衡型：平衡风险与收益
+        # 进取型：偏好高风险、高收益的股票
+        investor_type = "进取型"  # 可以根据需要调整为"保守型"或"平衡型"
+        
         # 运行股票分析
         try:
             self.log_message("正在分析股票...")
@@ -398,24 +404,30 @@ class SimulationTrader:
                 
                 # 再次调用大模型，要求以固定格式输出买卖信号
                 format_prompt = f"""
-                请分析以下港股分析报告，并严格按照以下JSON格式输出买卖信号：
-                
-                报告内容：
-                {llm_analysis}
-                
-                请严格按照以下格式输出：
-                {{
-                    \"buy\": [\"股票代码1\", \"股票代码2\", ...],
-                    \"sell\": [\"股票代码3\", \"股票代码4\", ...]
-                }}
-                
-                要求：
-                1. 只输出JSON格式，不要包含其他文字
-                2. \"buy\"字段包含建议买入的股票代码列表
-                3. \"sell\"字段包含建议卖出的股票代码列表
-                4. 如果没有明确的买卖建议，对应的字段为空数组
-                5. 只包含在自选股列表中的股票代码：{list(hk_smart_money_tracker.WATCHLIST.keys())}
-                """
+请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号：
+
+报告内容：
+{llm_analysis}
+
+投资者风险偏好：{investor_type}
+- 保守型：偏好低风险、稳定收益的股票，如高股息银行股
+- 平衡型：平衡风险与收益，兼顾价值与成长
+- 进取型：偏好高风险、高收益的股票，如科技成长股
+
+请严格按照以下格式输出：
+{{
+    \"buy\": [\"股票代码1\", \"股票代码2\", ...],
+    \"sell\": [\"股票代码3\", \"股票代码4\", ...]
+}}
+
+要求：
+1. 只输出JSON格式，不要包含其他文字
+2. \"buy\"字段包含建议买入的股票代码列表
+3. \"sell\"字段包含建议卖出的股票代码列表
+4. 如果没有明确的买卖建议，对应的字段为空数组
+5. 只包含在自选股列表中的股票代码：{list(hk_smart_money_tracker.WATCHLIST.keys())}
+6. 根据投资者风险偏好筛选适合的股票
+"""
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
                 formatted_output = qwen_engine.chat_with_llm(format_prompt)
@@ -449,8 +461,22 @@ class SimulationTrader:
         # 根据推荐的股票数量动态调整投资比例，确保不会超过总资金
         buy_count = len(recommendations['buy'])
         if buy_count > 0:
-            # 平均分配资金，但不超过总资金的50%
-            investment_pct = min(0.5 / buy_count, 0.1)
+            # 根据投资者类型调整风险偏好
+            # 保守型：总投资不超过30%，单只股票不超过5%
+            # 平衡型：总投资不超过50%，单只股票不超过10%
+            # 进取型：总投资不超过80%，单只股票不超过20%
+            if investor_type == "保守型":
+                max_total_pct = 0.3
+                max_single_pct = 0.05
+            elif investor_type == "平衡型":
+                max_total_pct = 0.5
+                max_single_pct = 0.1
+            else:  # 进取型
+                max_total_pct = 0.8
+                max_single_pct = 0.2
+            
+            # 平均分配资金
+            investment_pct = min(max_total_pct / buy_count, max_single_pct)
             for code in recommendations['buy']:
                 if code in hk_smart_money_tracker.WATCHLIST:
                     name = hk_smart_money_tracker.WATCHLIST[code]
