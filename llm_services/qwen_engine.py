@@ -3,7 +3,7 @@ import requests
 import json
 
 # Configuration
-api_key = os.getenv('QWEN_API_KEY', 'sk-xxx')  # 从环境变量读取API密钥，默认值为原硬编码值
+api_key = os.getenv('QWEN_API_KEY', '输入阿里百练平台API密钥')  # 从环境变量读取API密钥
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 max_tokens = int(os.getenv('MAX_TOKENS', 8192))
