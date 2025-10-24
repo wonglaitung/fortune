@@ -24,12 +24,13 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import hk_smart_money_tracker
 
 class SimulationTrader:
-    def __init__(self, initial_capital=1000000):
+    def __init__(self, initial_capital=1000000, analysis_frequency=15):
         """
         初始化模拟交易系统
         
         Args:
             initial_capital (float): 初始资金，默认100万港元
+            analysis_frequency (int): 分析频率（分钟），默认15分钟
         """
         self.initial_capital = initial_capital
         self.capital = initial_capital
@@ -38,10 +39,16 @@ class SimulationTrader:
         self.portfolio_history = []  # 投资组合价值历史
         self.start_date = datetime.now()
         self.is_trading_hours = True  # 模拟港股交易时间 (9:30-16:00)
+        self.analysis_frequency = analysis_frequency  # 分析频率（分钟）
+        
+        # 确保data目录存在
+        self.data_dir = "data"
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
         
         # 持久化文件
-        self.state_file = "simulation_state.json"
-        self.log_file = "simulation_trade_log.txt"
+        self.state_file = os.path.join(self.data_dir, "simulation_state.json")
+        self.log_file = os.path.join(self.data_dir, "simulation_trade_log.txt")
         
         # 尝试从文件恢复状态
         self.load_state()
@@ -512,8 +519,8 @@ class SimulationTrader:
         self.log_message(f"总收益率: {total_return:.2f}%")
     
     def run_hourly_analysis(self):
-        """每小时运行一次分析和交易"""
-        self.log_message("开始每小时分析...")
+        """按计划频率运行分析和交易"""
+        self.log_message(f"开始每{self.analysis_frequency}分钟分析...")
         self.execute_trades()
         
     def run_daily_summary(self):
@@ -569,34 +576,35 @@ class SimulationTrader:
         # 保存交易历史到文件
         try:
             df_transactions = pd.DataFrame(self.transaction_history)
-            df_transactions.to_csv("simulation_transactions.csv", index=False, encoding="utf-8")
-            self.log_message("交易历史已保存到 simulation_transactions.csv")
+            df_transactions.to_csv(os.path.join(self.data_dir, "simulation_transactions.csv"), index=False, encoding="utf-8")
+            self.log_message("交易历史已保存到 data/simulation_transactions.csv")
         except Exception as e:
             self.log_message(f"保存交易历史失败: {e}")
             
         # 保存投资组合历史到文件
         try:
             df_portfolio = pd.DataFrame(self.portfolio_history)
-            df_portfolio.to_csv("simulation_portfolio.csv", index=False, encoding="utf-8")
-            self.log_message("投资组合历史已保存到 simulation_portfolio.csv")
+            df_portfolio.to_csv(os.path.join(self.data_dir, "simulation_portfolio.csv"), index=False, encoding="utf-8")
+            self.log_message("投资组合历史已保存到 data/simulation_portfolio.csv")
         except Exception as e:
             self.log_message(f"保存投资组合历史失败: {e}")
 
-def run_simulation(duration_days=30):
+def run_simulation(duration_days=30, analysis_frequency=15):
     """
     运行模拟交易
     
     Args:
         duration_days (int): 模拟天数，默认30天
+        analysis_frequency (int): 分析频率（分钟），默认15分钟
     """
     print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
     print("初始资金: HK$1,000,000")
     
     # 创建模拟交易器
-    trader = SimulationTrader(initial_capital=1000000)
+    trader = SimulationTrader(initial_capital=1000000, analysis_frequency=analysis_frequency)
     
-    # 计划每15分钟执行一次交易分析
-    schedule.every(15).minutes.do(trader.run_hourly_analysis)
+    # 计划按指定频率执行交易分析
+    schedule.every(analysis_frequency).minutes.do(trader.run_hourly_analysis)
     
     # 计划每天收盘后生成总结
     schedule.every().day.at("16:05").do(trader.run_daily_summary)
@@ -620,5 +628,13 @@ def run_simulation(duration_days=30):
         print(f"模拟交易完成，详细日志请查看: {trader.log_file}")
 
 if __name__ == "__main__":
-    # 运行90天的模拟交易
-    run_simulation(duration_days=90)
+    import argparse
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='港股模拟交易系统')
+    parser.add_argument('--duration-days', type=int, default=90, help='模拟天数，默认90天')
+    parser.add_argument('--analysis-frequency', type=int, default=15, help='分析频率（分钟），默认15分钟')
+    args = parser.parse_args()
+    
+    # 运行模拟交易
+    run_simulation(duration_days=args.duration_days, analysis_frequency=args.analysis_frequency)
