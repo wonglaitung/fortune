@@ -256,13 +256,21 @@ def build_llm_analysis_prompt(stock_data):
     Returns:
         str: 构建好的提示词
     """
-    # 构建股票数据表格
-    table_header = "| 股票名称 | 代码 | 最新价 | 涨跌幅(%) | 位置(%) | 量比 | 南向资金(万) | 建仓信号 | 出货信号 | 跑赢恒指 |\n"
-    table_separator = "|----------|------|--------|-----------|---------|------|--------------|----------|----------|----------|\n"
+    # 构建股票数据表格 (与邮件报告列顺序一致)
+    table_header = "| 股票名称 | 代码 | 最新价 | 涨跌幅(%) | 位置(%) | 量比 | 成交量z-score | 成交额z-score | 成交金额(百万) | 换手率(%) | VWAP | ATR | ADX | 布林带宽度(%) | 5日均线偏离(%) | 10日均线偏离(%) | RSI | MACD | 波动率(%) | OBV | CMF | 相对强度(RS_ratio_%) | 相对强度差值(RS_diff_%) | 跑赢恒指 | 南向资金(万) | 建仓信号 | 出货信号 | 放量上涨 | 缩量回调 |\n"
+    table_separator = "|----------|------|--------|-----------|---------|------|----------------|----------------|----------------|-----------|------|-----|-----|----------------|----------------|----------------|-----|------|-----------|-----|-----|---------------------|-----------------------|----------|--------------|----------|----------|----------|----------|\n"
     
     table_rows = []
     for stock in stock_data:
-        row = f"| {stock['name']} | {stock['code']} | {stock['last_close'] or 'N/A'} | {stock['change_pct'] or 'N/A'} | {stock['price_percentile'] or 'N/A'} | {stock['vol_ratio'] or 'N/A'} | {stock['southbound'] or 'N/A'} | {'是' if stock['has_buildup'] else '否'} | {'是' if stock['has_distribution'] else '否'} | {'是' if stock['outperforms_hsi'] else '否'} |"
+        # 正确处理相对强度指标的转换
+        rs_ratio_value = stock.get('relative_strength')
+        rs_ratio_pct = round(rs_ratio_value * 100, 2) if rs_ratio_value is not None else 'N/A'
+        
+        rs_diff_value = stock.get('relative_strength_diff')
+        rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
+        
+        # 使用与邮件报告一致的字段名
+        row = f"| {stock['name']} | {stock['code']} | {stock['last_close'] or 'N/A'} | {stock['change_pct'] or 'N/A'} | {stock['price_percentile'] or 'N/A'} | {stock['vol_ratio'] or 'N/A'} | {stock['vol_z_score'] or 'N/A'} | {stock['turnover_z_score'] or 'N/A'} | {stock['turnover'] or 'N/A'} | {stock['turnover_rate'] or 'N/A'} | {stock['vwap'] or 'N/A'} | {stock['atr'] or 'N/A'} | {stock['adx'] or 'N/A'} | {stock['bb_width'] or 'N/A'} | {stock['ma5_deviation'] or 'N/A'} | {stock['ma10_deviation'] or 'N/A'} | {stock['rsi'] or 'N/A'} | {stock['macd'] or 'N/A'} | {stock['volatility'] or 'N/A'} | {stock['obv'] or 'N/A'} | {stock['cmf'] or 'N/A'} | {rs_ratio_pct} | {rs_diff_pct} | {'是' if stock['outperforms_hsi'] else '否'} | {stock['southbound'] or 'N/A'} | {'是' if stock['has_buildup'] else '否'} | {'是' if stock['has_distribution'] else '否'} | {'是' if stock['strong_volume_up'] else '否'} | {'是' if stock['weak_volume_down'] else '否'} |"
         table_rows.append(row)
     
     stock_table = table_header + table_separator + "\n".join(table_rows)
@@ -274,7 +282,7 @@ def build_llm_analysis_prompt(stock_data):
 {stock_table}
 
 请从以下几个维度分析股票：
-1. 建仓信号强烈的股票（建仓信号为"是"）
+1. 建仓信号强烈的股票（建仓信号为\"是\"）
 2. 有南向资金流入且跑赢恒指的股票
 3. 位置较低但开始放量上涨的股票
 4. 技术指标良好的股票（如RSI、MACD等）
@@ -288,6 +296,7 @@ def build_llm_analysis_prompt(stock_data):
 """
     
     return prompt
+
 
 # ==============================
 # 4. 单股分析函数
