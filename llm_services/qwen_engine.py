@@ -3,7 +3,7 @@ import requests
 import json
 
 # Configuration
-api_key = os.getenv('QWEN_API_KEY', '输入阿里百练平台API密钥')  # 从环境变量读取API密钥
+api_key = os.getenv('QWEN_API_KEY', '')  # 从环境变量读取API密钥
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 max_tokens = int(os.getenv('MAX_TOKENS', 8192))
@@ -22,17 +22,24 @@ def embed_with_llm(query):
         Exception: If the API request fails
     """
     try:
+        # 检查 API 密钥是否设置
+        if not api_key:
+            raise ValueError("QWEN_API_KEY 环境变量未设置")
+        
         headers = {
-            'Content-Type': 'application/json',
             'Authorization': f'Bearer {api_key}'
         }
+        
+        # 确保查询文本是 UTF-8 编码
+        if isinstance(query, str):
+            query = query.encode('utf-8').decode('utf-8')
         
         payload = {
             'model': 'text-embedding-v4',
             'input': query
         }
         
-        response = requests.post(embedding_url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+        response = requests.post(embedding_url, headers=headers, json=payload)
         response.raise_for_status()  # Raise an exception for bad status codes
         
         return response.json()['data'][0]  # Return the embedding vector
@@ -54,10 +61,17 @@ def chat_with_llm(query):
         Exception: If the API request fails
     """
     try:
+        # 检查 API 密钥是否设置
+        if not api_key:
+            raise ValueError("QWEN_API_KEY 环境变量未设置")
+        
         headers = {
-            'Content-Type': 'application/json',
             'Authorization': f'Bearer {api_key}'
         }
+        
+        # 确保查询文本是 UTF-8 编码
+        if isinstance(query, str):
+            query = query.encode('utf-8').decode('utf-8')
         
         payload = {
             'model': 'qwen-plus',
@@ -68,7 +82,7 @@ def chat_with_llm(query):
             'max_tokens': max_tokens
         }
         
-        response = requests.post(chat_url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+        response = requests.post(chat_url, headers=headers, json=payload)
         response.raise_for_status()  # Raise an exception for bad status codes
         
         return response.json()['choices'][0]['message']['content']  # Return the response text
