@@ -32,7 +32,7 @@ def embed_with_llm(query):
             'input': query
         }
         
-        response = requests.post(embedding_url, headers=headers, data=json.dumps(payload))
+        response = requests.post(embedding_url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         response.raise_for_status()  # Raise an exception for bad status codes
         
         return response.json()['data'][0]  # Return the embedding vector
@@ -68,7 +68,7 @@ def chat_with_llm(query):
             'max_tokens': max_tokens
         }
         
-        response = requests.post(chat_url, headers=headers, data=json.dumps(payload))
+        response = requests.post(chat_url, headers=headers, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         response.raise_for_status()  # Raise an exception for bad status codes
         
         return response.json()['choices'][0]['message']['content']  # Return the response text
