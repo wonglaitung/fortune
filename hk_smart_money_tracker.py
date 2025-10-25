@@ -275,17 +275,47 @@ def build_llm_analysis_prompt(stock_data):
     
     stock_table = table_header + table_separator + "\n".join(table_rows)
     
+    # 检查是否存在新闻数据文件
+    news_content = ""
+    news_file_path = "data/all_stock_news_records.csv"
+    if os.path.exists(news_file_path):
+        try:
+            # 读取CSV文件
+            news_df = pd.read_csv(news_file_path)
+            
+            # 构建新闻数据表格
+            news_table_header = "| 股票名称 | 股票代码 | 新闻时间 | 新闻标题 | 简要内容 |\n"
+            news_table_separator = "|----------|----------|----------|----------|----------|\n"
+            
+            news_table_rows = []
+            for _, row in news_df.iterrows():
+                news_row = f"| {row['股票名称']} | {row['股票代码']} | {row['新闻时间']} | {row['新闻标题']} | {row['简要内容']} |"
+                news_table_rows.append(news_row)
+            
+            news_table = news_table_header + news_table_separator + "\n".join(news_table_rows)
+            
+            news_content = f"""
+ additionally, here is recent news data for the stocks:
+
+{news_table}
+"""
+        except Exception as e:
+            print(f"⚠️ 读取新闻数据文件失败: {e}")
+            news_content = ""
+    
     # 构建提示词
     prompt = f"""
 你是一个专业的股票分析师，请根据以下港股主力资金追踪数据，分析并推荐最有价值的股票：
 
 {stock_table}
+{news_content}
 
 请从以下几个维度分析股票：
 1. 建仓信号强烈的股票（建仓信号为\"是\"）
 2. 有南向资金流入且跑赢恒指的股票
 3. 位置较低但开始放量上涨的股票
 4. 技术指标良好的股票（如RSI、MACD等）
+5. 结合新闻内容分析股票的市场关注度和潜在影响（如果提供了新闻数据）
 
 请给出你的分析结论，包括：
 1. 最值得关注的3-5只股票及其理由
