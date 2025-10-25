@@ -841,6 +841,27 @@ def main(run_date=None):
                 rsd_disp = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None) else None)
                 print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
 
+        # 显示相关新闻信息
+        news_file_path = "data/all_stock_news_records.csv"
+        if os.path.exists(news_file_path):
+            try:
+                news_df = pd.read_csv(news_file_path)
+                if not news_df.empty:
+                    print("\n" + "="*50)
+                    print("📰 相关新闻摘要")
+                    print("="*50)
+                    for _, row in news_df.iterrows():
+                        print(f"\n【{row['股票名称']} ({row['股票代码']})】")
+                        print(f"时间: {row['新闻时间']}")
+                        print(f"标题: {row['新闻标题']}")
+                        print(f"内容: {row['简要内容']}")
+                else:
+                    print("\n⚠️ 新闻文件为空")
+            except Exception as e:
+                print(f"\n⚠️ 读取新闻数据失败: {e}")
+        else:
+            print("\nℹ️ 未找到新闻数据文件")
+
         # 调用大模型分析股票数据
         try:
             print("\n🤖 正在调用大模型分析股票数据...")
@@ -1257,6 +1278,30 @@ def main(run_date=None):
                        dd=DISTRIBUTION_MIN_DAYS)
 
             html += FULL_INDICATOR_HTML
+
+            # 添加相关新闻信息到邮件末尾
+            news_file_path = "data/all_stock_news_records.csv"
+            if os.path.exists(news_file_path):
+                try:
+                    news_df = pd.read_csv(news_file_path)
+                    if not news_df.empty:
+                        html += "<h3>📰 相关新闻摘要</h3>"
+                        html += "<div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px;'>"
+                        
+                        # 按股票分组显示新闻
+                        for stock_name in news_df['股票名称'].unique():
+                            stock_news = news_df[news_df['股票名称'] == stock_name]
+                            html += f"<h4>{stock_name} ({stock_news.iloc[0]['股票代码']})</h4>"
+                            html += "<ul>"
+                            for _, row in stock_news.iterrows():
+                                html += f"<li><strong>{row['新闻时间']}</strong>: {row['新闻标题']}<br/>{row['简要内容']}</li>"
+                            html += "</ul>"
+                        
+                        html += "</div>"
+                except Exception as e:
+                    html += f"<p>⚠️ 读取新闻数据失败: {e}</p>"
+            else:
+                html += "<h3>ℹ️ 未找到新闻数据文件</h3>"
 
             html += "</body></html>"
 
