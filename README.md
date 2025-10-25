@@ -4,12 +4,13 @@
 
 本项目是一个综合性的金融信息监控与模拟交易系统，旨在为投资者提供全面的市场分析和交易策略验证工具。系统集成了多种金融数据源，利用技术分析、资金流向分析和大模型智能判断，帮助用户更好地理解市场动态并验证投资策略。
 
-系统包含五个核心组件：
+系统包含六个核心组件：
 1. **加密货币价格监控器** - 实时获取主流加密货币的价格信息并通过邮件发送
 2. **港股IPO信息获取器** - 爬取AAStocks网站获取最新的港股IPO信息
 3. **港股主力资金追踪器** - 分析港股市场主力资金动向，识别建仓和出货信号
 4. **港股模拟交易系统** - 基于主力资金追踪器的分析结果和大模型判断进行模拟交易
 5. **黄金市场分析器** - 分析黄金市场价格趋势和技术指标
+6. **个股新闻获取器** - 获取自选股相关的最新财经新闻
 
 ## 系统架构
 
@@ -17,7 +18,8 @@
 金融信息监控与模拟交易系统
 ├── 数据获取层
 │   ├── 加密货币价格监控器 (@crypto_email.py)
-│   └── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
+│   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
+│   └── 个股新闻获取器 (@stock_news_fetcher.py, @batch_stock_news_fetcher.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
@@ -31,6 +33,7 @@
 ### 1. 数据获取与监控
 - **实时数据获取**：获取加密货币和港股市场的实时价格数据
 - **网络爬虫**：从AAStocks等网站获取IPO信息
+- **新闻获取**：获取自选股相关的最新财经新闻
 - **自动邮件通知**：将重要信息通过邮件发送给用户
 
 ### 2. 智能分析
@@ -38,6 +41,7 @@
 - **资金流向分析**：沪港通/深港通南向资金数据获取与分析
 - **信号识别**：自动识别主力资金建仓和出货信号
 - **历史数据分析**：分析历史数据中的信号模式
+- **新闻分析**：利用大模型分析新闻与股票的相关性
 
 ### 3. 模拟交易
 - **大模型集成**：真实调用大模型进行股票分析和交易决策
@@ -62,6 +66,9 @@ pip install schedule
 
 # 黄金分析器依赖
 pip install yfinance pandas numpy
+
+# 新闻获取器依赖
+pip install akshare yfinance
 ```
 
 ### 环境变量配置
@@ -94,6 +101,7 @@ pip install yfinance pandas numpy
 - 识别主力资金建仓和出货信号
 - 生成可视化图表
 - 发送详细分析报告邮件
+- 结合个股相关新闻进行综合分析
 
 ### 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
 - 分析指定时间段内的历史数据
@@ -117,6 +125,14 @@ pip install yfinance pandas numpy
 - 识别买卖信号
 - 生成详细的分析报告
 
+### 个股新闻获取器 (@stock_news_fetcher.py, @batch_stock_news_fetcher.py)
+- 获取自选股相关的最新财经新闻
+- 使用AKShare获取个股新闻数据
+- 利用大模型分析新闻与股票的相关性
+- 按时间由近到远排列新闻
+- 将新闻数据持久化保存到CSV文件
+- 支持定时运行模式
+
 ## 使用方法
 
 ### 基础组件使用
@@ -136,6 +152,15 @@ python hk_smart_money_historical_analysis.py --start-date 2025-01-01 --end-date 
 
 # 黄金市场分析器
 python gold_analyzer.py
+
+# 个股新闻获取器（单个股票）
+python stock_news_fetcher.py
+
+# 个股新闻获取器（批量获取）
+python batch_stock_news_fetcher.py
+
+# 批量新闻获取器（定时运行模式）
+python batch_stock_news_fetcher.py --schedule
 ```
 
 ### 模拟交易系统使用
@@ -173,6 +198,12 @@ python simulation_trader.py --duration-days 30
 - `initial_capital`：初始资金（默认100万港元）
 - 执行频率：默认每15分钟执行一次交易分析
 
+### 个股新闻获取器参数
+在`batch_stock_news_fetcher.py`文件中可以使用以下参数：
+
+- `--schedule` 或 `-s`：启用定时任务模式（默认：单次运行）
+- 定时任务模式下，程序会在香港时间上午9点和下午1点半各运行一次
+
 ## 信号说明
 
 ### 建仓信号
@@ -186,11 +217,13 @@ python simulation_trader.py --duration-days 30
 ### 数据获取组件
 - 控制台输出：价格信息预览
 - 邮件报告：包含详细的价格信息和IPO信息
+- CSV文件：保存个股新闻数据
 
 ### 分析组件
 - Excel报告：详细的分析结果
 - 可视化图表：保存在hk_smart_charts目录下
 - 邮件报告：包含详细指标说明和分析结果
+- CSV文件：保存个股新闻数据
 
 ### 模拟交易系统
 - 状态文件：data/simulation_state.json（保存交易状态，支持中断后继续）
