@@ -204,6 +204,22 @@ class SimulationTrader:
         
         return total_value
     
+    def get_current_positions_list(self):
+        """
+        获取当前持仓的股票代码和名称清单
+        
+        Returns:
+            list: 包含股票代码和名称的字符串列表
+        """
+        positions_list = []
+        for code, position in self.positions.items():
+            # 从WATCHLIST获取股票名称，如果找不到则使用代码
+            name = hk_smart_money_tracker.WATCHLIST.get(code, code)
+            shares = position['shares']
+            avg_price = position['avg_price']
+            positions_list.append(f"{code} {name} ({shares}股 @ HK${avg_price:.2f})")
+        return positions_list
+    
     def buy_stock(self, code, name, amount_percentage=0.1):
         """
         买入股票
@@ -284,6 +300,10 @@ class SimulationTrader:
         
         # 如果是新买入的股票，发送邮件通知
         if is_new_stock:
+            # 获取当前持仓清单
+            positions_list = self.get_current_positions_list()
+            positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+            
             subject = f"【买入通知】{name} ({code})"
             content = f"""
 模拟交易系统买入通知：
@@ -296,6 +316,9 @@ class SimulationTrader:
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 当前资金：HK${self.capital:,.2f}
+
+当前持仓：
+{positions_text}
             """
             self.send_email_notification(subject, content)
         
@@ -362,6 +385,10 @@ class SimulationTrader:
         self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}")
         
         # 发送卖出通知邮件
+        # 获取当前持仓清单
+        positions_list = self.get_current_positions_list()
+        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+        
         subject = f"【卖出通知】{name} ({code})"
         content = f"""
 模拟交易系统卖出通知：
@@ -374,6 +401,9 @@ class SimulationTrader:
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 当前资金：HK${self.capital:,.2f}
+
+当前持仓：
+{positions_text}
         """
         self.send_email_notification(subject, content)
         
@@ -680,6 +710,10 @@ class SimulationTrader:
     def test_email_notification(self):
         """测试邮件发送功能"""
         self.log_message("测试邮件发送功能...")
+        # 获取当前持仓清单
+        positions_list = self.get_current_positions_list()
+        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+        
         subject = "港股模拟交易系统 - 邮件功能测试"
         content = f"""
 这是港股模拟交易系统的邮件功能测试邮件。
@@ -689,6 +723,9 @@ class SimulationTrader:
 - 初始资金: HK${self.initial_capital:,.2f}
 - 当前资金: HK${self.capital:,.2f}
 - 持仓数量: {len(self.positions)}
+
+当前持仓：
+{positions_text}
         """
         
         success = self.send_email_notification(subject, content)
