@@ -51,14 +51,15 @@ class SimulationTrader:
         
         # 持久化文件
         self.state_file = os.path.join(self.data_dir, "simulation_state.json")
-        self.log_file = os.path.join(self.data_dir, "simulation_trade_log.txt")
+        # 日志文件路径会在需要时动态生成
         
         # 尝试从文件恢复状态
         self.load_state()
         
-        # 如果是新开始，创建交易日志文件
+        # 如果是新开始，在当天的日志文件中记录初始信息
         if not self.transaction_history:
-            with open(self.log_file, "w", encoding="utf-8") as f:
+            today_log_file = self.get_daily_log_file()
+            with open(today_log_file, "w", encoding="utf-8") as f:
                 f.write(f"模拟交易日志 - 开始时间: {self.start_date}\n")
                 f.write(f"初始资金: HK${self.initial_capital:,.2f}\n")
                 f.write("="*50 + "\n")
@@ -138,14 +139,22 @@ class SimulationTrader:
             self.log_message(f"发送邮件失败: {e}")
             return False
     
+    def get_daily_log_file(self):
+        """获取当天的日志文件路径"""
+        today = datetime.now().strftime("%Y%m%d")
+        return os.path.join(self.data_dir, f"simulation_trade_log_{today}.txt")
+    
     def log_message(self, message):
         """记录交易日志"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
         print(log_entry)
         
+        # 获取当天的日志文件路径
+        today_log_file = self.get_daily_log_file()
+        
         # 写入日志文件
-        with open(self.log_file, "a", encoding="utf-8") as f:
+        with open(today_log_file, "a", encoding="utf-8") as f:
             f.write(log_entry + "\n")
     
     def save_state(self):
