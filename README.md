@@ -20,7 +20,7 @@
 ├── 数据获取层
 │   ├── 加密货币价格监控器 (@crypto_email.py)
 │   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
-│   └── 个股新闻获取器 (@stock_news_fetcher.py, @batch_stock_news_fetcher.py)
+│   └── 个股新闻获取器 (@batch_stock_news_fetcher.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
@@ -157,10 +157,10 @@ python hk_smart_money_historical_analysis.py --start-date 2025-01-01 --end-date 
 # 黄金市场分析器
 python gold_analyzer.py
 
-# 个股新闻获取器（批量获取）
+# 个股新闻获取器
 python batch_stock_news_fetcher.py
 
-# 批量新闻获取器（定时运行模式）
+# 个股新闻获取器（定时运行模式）
 python batch_stock_news_fetcher.py --schedule
 ```
 
