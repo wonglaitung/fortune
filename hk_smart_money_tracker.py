@@ -734,21 +734,42 @@ def analyze_stock(code, name, run_date=None):
 
         # 计算换手率 (使用实际流通股本)
         # 换手率 = 成交量 / 流通股本 * 100%
-        # 从腾讯财经接口获取流通股本数据
+        # 从 AKShare 获取已发行股本数据
         float_shares = None
         try:
-            stock_info = get_hk_stock_info_tencent(stock_code)
-            # 注意：腾讯财经接口可能不直接提供流通股本数据
-            # 这里我们暂时设置为 None，后续可以考虑其他方式获取
-            float_shares = None
-            if stock_info is None:
-                print(f"  ⚠️ 无法获取 {code} 的股票信息")
+            # 使用 AKShare 获取港股财务指标数据
+            financial_df = ak.stock_hk_financial_indicator_em(symbol=stock_code)
+            # 检查数据是否有效
+            if financial_df is not None:
+                # 检查是否是DataFrame且不为空
+                if isinstance(financial_df, pd.DataFrame) and not financial_df.empty:
+                    # 检查是否包含所需列
+                    if '已发行股本(股)' in financial_df.columns:
+                        # 获取已发行股本字段
+                        issued_shares = financial_df['已发行股本(股)'].iloc[0]
+                        # 检查值是否有效
+                        if issued_shares is not None and not (isinstance(issued_shares, float) and pd.isna(issued_shares)) and issued_shares > 0:
+                            float_shares = float(issued_shares)
+                            if float_shares <= 0:
+                                float_shares = None
+                        else:
+                            print(f"  ⚠️ {code} 的已发行股本数据无效")
+                    else:
+                        print(f"  ⚠️ {code} 的财务指标数据中未找到已发行股本字段")
+                else:
+                    print(f"  ⚠️ {code} 的财务指标数据为空或不是DataFrame")
+            else:
+                print(f"  ⚠️ 无法获取 {code} 的财务指标数据")
         except Exception as e:
             float_shares = None
-            print(f"  ⚠️ 获取 {code} 股票信息时出错: {e}")
+            print(f"  ⚠️ 获取 {code} 已发行股本数据时出错: {e}")
         
         # 只有在有流通股本数据时才计算换手率
         turnover_rate = (main_hist['Volume'].iloc[-1] / float_shares) * 100 if len(main_hist) > 0 and float_shares is not None and float_shares > 0 else None
+        
+        # 如果成功获取到换手率，显示调试信息
+        if turnover_rate is not None:
+            print(f"  ℹ️ {code} 换手率计算: 成交量={main_hist['Volume'].iloc[-1]}, 已发行股本={float_shares}, 换手率={turnover_rate:.4f}%")
 
         # 返回结构（保留原始数值：RS 为小数，RS_diff 小数；展示时再乘100）
         last_close = main_hist['Close'].iloc[-1]
