@@ -953,7 +953,6 @@ def main(run_date=None):
         # 发送邮件（将表格分段为多个 HTML 表格并包含说明）
         def send_email_with_report(df_report, to):
             smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-            smtp_port = 587
             smtp_user = os.environ.get("YAHOO_EMAIL")
             smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
             sender_email = smtp_user
@@ -1008,7 +1007,7 @@ def main(run_date=None):
 
             FULL_INDICATOR_HTML = """
             <h3>📋 指标说明</h3>
-            <div style=\"font-size:0.9em; line-height:1.4;\">
+            <div style="font-size:0.9em; line-height:1.4;">
             <h4>基础信息</h4>
             <ul>
               <li><b>最新价</b>：股票当前最新成交价格（港元）。若当日存在盘中变动，建议结合成交量与盘口观察。</li>
@@ -1346,8 +1345,8 @@ def main(run_date=None):
             msg['Subject'] = subject
 
             body = MIMEMultipart("alternative")
-            body.attach(MIMEText(text, "plain"))
-            body.attach(MIMEText(html, "html"))
+            body.attach(MIMEText(text, "plain", "utf-8"))
+            body.attach(MIMEText(html, "html", "utf-8"))
             msg.attach(body)
 
             # 附件图表
@@ -1363,17 +1362,46 @@ def main(run_date=None):
                         part.add_header('Content-Type', 'image/png')
                         msg.attach(part)
 
-            try:
-                server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(sender_email, to, msg.as_string())
-                server.quit()
-                print("✅ 邮件发送成功")
-                return True
-            except Exception as e:
-                print(f"❌ 发送邮件失败: {e}")
-                return False
+            # 根据SMTP服务器类型选择合适的端口和连接方式
+            if "163.com" in smtp_server:
+                # 163邮箱使用SSL连接，端口465
+                smtp_port = 465
+                use_ssl = True
+            elif "gmail.com" in smtp_server:
+                # Gmail使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+            else:
+                # 默认使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+
+            # 发送邮件（增加重试机制）
+            for attempt in range(3):
+                try:
+                    if use_ssl:
+                        # 使用SSL连接
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, to, msg.as_string())
+                        server.quit()
+                    else:
+                        # 使用TLS连接
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, to, msg.as_string())
+                        server.quit()
+                    
+                    print("✅ 邮件发送成功")
+                    return True
+                except Exception as e:
+                    print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
+                    if attempt < 2:  # 不是最后一次尝试，等待后重试
+                        time.sleep(5)
+            
+            print("❌ 发送邮件失败，已重试3次")
+            return False
 
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
         recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
