@@ -13,6 +13,10 @@ from datetime import datetime, timedelta
 import json
 import os
 import sys
+import smtplib
+import time
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -349,6 +353,9 @@ class GoldMarketAnalyzer:
         # 4. 生成报告
         self._generate_report(gold_data, technical_analysis, macro_data, llm_analysis)
         
+        # 5. 发送邮件报告
+        self.send_email_report(gold_data, technical_analysis, macro_data, llm_analysis)
+        
         return {
             'gold_data': gold_data,
             'technical_analysis': technical_analysis,
@@ -438,6 +445,278 @@ class GoldMarketAnalyzer:
         print("\n" + "="*60)
         print("分析完成！")
         print("="*60)
+    
+    def send_email_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
+        """发送邮件报告"""
+        try:
+            # 获取SMTP配置
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
+            smtp_user = os.environ.get("YAHOO_EMAIL")
+            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            sender_email = smtp_user
+            
+            if not smtp_user or not smtp_pass:
+                print("⚠️  邮件配置缺失，跳过发送邮件")
+                return False
+            
+            # 获取收件人
+            recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+            recipients = [r.strip() for r in recipient_env.split(",")] if "," in recipient_env else [recipient_env]
+            
+            print(f"📧 正在发送邮件到: {", ".join(recipients)}")
+            
+            # 创建邮件内容
+            subject = "黄金市场分析报告"
+            
+            # 纯文本版本
+            text_body = "黄金市场分析报告\n\n"
+            
+            # HTML版本
+            html_body = """
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    h2 { color: #333; }
+                    h3 { color: #555; }
+                    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .section { margin: 20px 0; }
+                    .highlight { background-color: #ffffcc; }
+                </style>
+            </head>
+            <body>
+                <h2>🥇 黄金市场综合分析报告</h2>
+                <p><strong>报告生成时间:</strong> {}</p>
+            """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            
+            # 1. 黄金价格概览
+            html_body += """
+                <div class="section">
+                    <h3>💰 黄金价格概览</h3>
+                    <table>
+                        <tr>
+                            <th>资产名称</th>
+                            <th>代码</th>
+                            <th>最新价格</th>
+                            <th>24小时变化</th>
+                            <th>5日变化</th>
+                            <th>20日变化</th>
+                        </tr>
+            """
+            
+            for symbol, data in gold_data.items():
+                if not data['data'].empty:
+                    df = data['data']
+                    latest = df.iloc[-1]
+                    prev = df.iloc[-2] if len(df) > 1 else latest
+                    
+                    price = latest['Close']
+                    change_1d = (price - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0
+                    change_5d = latest['Price_change_5d'] * 100 if 'Price_change_5d' in latest else 0
+                    change_20d = latest['Price_change_20d'] * 100 if 'Price_change_20d' in latest else 0
+                    
+                    html_body += """
+                        <tr>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>${:.2f}</td>
+                            <td>{:+.2f}%</td>
+                            <td>{:+.2f}%</td>
+                            <td>{:+.2f}%</td>
+                        </tr>
+                    """.format(data['name'], symbol, price, change_1d, change_5d, change_20d)
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 2. 技术分析
+            html_body += """
+                <div class="section">
+                    <h3>🔬 技术分析</h3>
+                    <table>
+                        <tr>
+                            <th>资产名称</th>
+                            <th>代码</th>
+                            <th>趋势</th>
+                            <th>RSI (14日)</th>
+                            <th>MACD</th>
+                            <th>MACD信号线</th>
+                            <th>支撑位</th>
+                            <th>阻力位</th>
+                            <th>20日均线</th>
+                            <th>50日均线</th>
+                        </tr>
+            """
+            
+            for symbol, data in technical_analysis.items():
+                if not data['indicators'].empty:
+                    latest = data['indicators'].iloc[-1]
+                    support = data['support_resistance']['support'] if data['support_resistance']['support'] else 'N/A'
+                    resistance = data['support_resistance']['resistance'] if data['support_resistance']['resistance'] else 'N/A'
+                    
+                    html_body += """
+                        <tr>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{:.1f}</td>
+                            <td>{:.2f}</td>
+                            <td>{:.2f}</td>
+                            <td>${}</td>
+                            <td>${}</td>
+                            <td>${:.2f}</td>
+                            <td>${:.2f}</td>
+                        </tr>
+                    """.format(
+                        data['name'], symbol, data['trend'], 
+                        latest['RSI'], latest['MACD'], latest['MACD_signal'],
+                        f"{support:.2f}" if isinstance(support, (int, float)) else support,
+                        f"{resistance:.2f}" if isinstance(resistance, (int, float)) else resistance,
+                        latest['MA20'], latest['MA50']
+                    )
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 3. 宏观经济环境
+            html_body += """
+                <div class="section">
+                    <h3>📊 宏观经济环境</h3>
+                    <table>
+                        <tr>
+                            <th>指标名称</th>
+                            <th>代码</th>
+                            <th>最新值</th>
+                        </tr>
+            """
+            
+            for symbol, data in macro_data.items():
+                if not data['data'].empty:
+                    latest = data['data'].iloc[-1]
+                    if 'Close' in latest:
+                        html_body += """
+                            <tr>
+                                <td>{}</td>
+                                <td>{}</td>
+                                <td>{:.2f}</td>
+                            </tr>
+                        """.format(data['name'], symbol, latest['Close'])
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 4. 大模型分析
+            if llm_analysis:
+                html_body += """
+                    <div class="section">
+                        <h3>🤖 大模型深度分析</h3>
+                        <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px;">
+                """
+                
+                try:
+                    # 尝试解析JSON格式的输出
+                    analysis_json = json.loads(llm_analysis)
+                    html_body += "<p><strong>趋势分析:</strong> {}</p>".format(analysis_json.get('trend_analysis', 'N/A'))
+                    html_body += "<p><strong>技术信号:</strong> {}</p>".format(analysis_json.get('technical_signals', 'N/A'))
+                    html_body += "<p><strong>宏观影响:</strong> {}</p>".format(analysis_json.get('macro_impact', 'N/A'))
+                    
+                    advice = analysis_json.get('investment_advice', {})
+                    html_body += "<p><strong>投资建议:</strong></p><ul>"
+                    html_body += "<li>短期: {}</li>".format(advice.get('short_term', 'N/A'))
+                    html_body += "<li>中期: {}</li>".format(advice.get('medium_term', 'N/A'))
+                    html_body += "<li>长期: {}</li>".format(advice.get('long_term', 'N/A'))
+                    html_body += "</ul>"
+                    html_body += "<p><strong>风险预警:</strong> {}</p>".format(analysis_json.get('risk_warning', 'N/A'))
+                except:
+                    # 如果不是JSON格式，直接输出
+                    # 将换行符转换为HTML换行标签
+                    llm_analysis_html = llm_analysis.replace('\n', '<br>')
+                    html_body += "<p>{}</p>".format(llm_analysis_html)
+                
+                html_body += """
+                        </div>
+                    </div>
+                """
+            else:
+                html_body += """
+                    <div class="section">
+                        <h3>🤖 大模型深度分析</h3>
+                        <p>⚠️ 大模型分析暂不可用<br>请检查大模型服务配置或API密钥</p>
+                    </div>
+                """
+            
+            # 结束HTML
+            html_body += """
+            </body>
+            </html>
+            """
+            
+            # 创建邮件消息
+            msg = MIMEMultipart("mixed")
+            msg['From'] = '"Gold Analyzer" <{}>'.format(sender_email)
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+            
+            # 添加文本和HTML版本
+            body = MIMEMultipart("alternative")
+            body.attach(MIMEText(text_body, "plain", "utf-8"))
+            body.attach(MIMEText(html_body, "html", "utf-8"))
+            msg.attach(body)
+            
+            # 根据SMTP服务器类型选择合适的端口和连接方式
+            if "163.com" in smtp_server:
+                # 163邮箱使用SSL连接，端口465
+                smtp_port = 465
+                use_ssl = True
+            elif "gmail.com" in smtp_server:
+                # Gmail使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+            else:
+                # 默认使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+            
+            # 发送邮件（增加重试机制）
+            for attempt in range(3):
+                try:
+                    if use_ssl:
+                        # 使用SSL连接
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    else:
+                        # 使用TLS连接
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    
+                    print("✅ 邮件发送成功")
+                    return True
+                except Exception as e:
+                    print("❌ 发送邮件失败 (尝试 {}/3): {}".format(attempt+1, e))
+                    if attempt < 2:  # 不是最后一次尝试，等待后重试
+                        time.sleep(5)
+            
+            print("❌ 发送邮件失败，已重试3次")
+            return False
+            
+        except Exception as e:
+            print("❌ 邮件发送过程中出现错误: {}".format(e))
+            return False
 
 def main():
     """主函数"""

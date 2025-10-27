@@ -1,0 +1,34 @@
+name: Gold Market Analyzer
+
+on:
+  schedule:
+    # 每天 UTC 时间 7:00 执行（即北京时间 15:00）
+    - cron: '0 7 * * *'
+  # 可选：允许手动触发
+  workflow_dispatch:
+
+jobs:
+  analyze-and-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance requests pandas numpy
+
+      - name: Run gold analyzer script
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        run: |
+          python gold_analyzer.py
