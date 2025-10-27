@@ -237,7 +237,7 @@ def run_scheduler():
     """设置定时任务"""
     # 设置香港时间上午9点和下午1点半运行
     schedule.every().day.at("09:00").do(fetch_all_stock_news)
-    schedule.every().day.at("13:30").do(fetch_all_stock_news)
+    #schedule.every().day.at("13:30").do(fetch_all_stock_news)
     
     print("⏰ 定时任务已设置完成")
     print("📌 每天香港时间上午9:00和下午13:30将自动运行")
