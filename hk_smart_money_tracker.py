@@ -29,11 +29,13 @@ from datetime import datetime
 warnings.filterwarnings("ignore")
 os.environ['MPLBACKEND'] = 'Agg'
 
-import yfinance as yf
 import akshare as ak
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# 导入腾讯财经接口
+from tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
 
 # 导入大模型服务
 from llm_services import qwen_engine
@@ -97,13 +99,13 @@ if SAVE_CHARTS and not os.path.exists(CHART_DIR):
 AK_CALL_SLEEP = 0.2  # 调用 ak 时的短暂停顿以避免限流
 
 # ==============================
-# 2. 获取恒生指数数据
+# 2. 获取恒生指数数据 (使用腾讯财经接口)
 # ==============================
-print("📈 获取恒生指数（^HSI）用于对比...")
-hsi_ticker = yf.Ticker("^HSI")
-hsi_hist = hsi_ticker.history(period=f"{PRICE_WINDOW + 30}d")  # 余量更大以防节假日
-if hsi_hist.empty:
-    raise RuntimeError("无法获取恒生指数数据")
+print("📈 获取恒生指数（HSI）用于对比...")
+from tencent_finance import get_hsi_data_tencent
+hsi_hist = get_hsi_data_tencent(period_days=PRICE_WINDOW + 30)  # 余量更大以防节假日
+# 注意：如果无法获取恒生指数数据，hsi_hist 可能为 None
+# 在这种情况下，相对强度计算将不可用
 
 def get_hsi_return(start, end):
     """
@@ -111,6 +113,10 @@ def get_hsi_return(start, end):
     start/end 为 Timestamp（来自股票索引）。
     若无法获取，则返回 np.nan。
     """
+    # 如果恒生指数数据不可用，返回 np.nan
+    if hsi_hist is None or hsi_hist.empty:
+        return np.nan
+        
     try:
         s = hsi_hist['Close'].reindex([start], method='ffill').iloc[0]
         e = hsi_hist['Close'].reindex([end], method='ffill').iloc[0]
@@ -334,18 +340,19 @@ def build_llm_analysis_prompt(stock_data):
 def analyze_stock(code, name, run_date=None):
     try:
         print(f"\n🔍 分析 {name} ({code}) ...")
-        ticker = yf.Ticker(code)
+        # 移除代码中的.HK后缀，腾讯财经接口不需要
+        stock_code = code.replace('.HK', '')
         
         # 如果指定了运行日期，则获取该日期的历史数据
         if run_date:
             # 获取指定日期前 PRICE_WINDOW+30 天的数据
             target_date = pd.to_datetime(run_date)
-            end_date = target_date + pd.Timedelta(days=1)  # 包含指定日期
-            start_date = end_date - pd.Timedelta(days=PRICE_WINDOW + 30)
-            full_hist = ticker.history(start=start_date, end=end_date, repair=True)
+            # 计算需要获取的天数
+            days_diff = (datetime.now() - target_date).days + PRICE_WINDOW + 30
+            full_hist = get_hk_stock_data_tencent(stock_code, period_days=days_diff)
         else:
             # 默认行为：获取最近 PRICE_WINDOW+30 天的数据
-            full_hist = ticker.history(period=f"{PRICE_WINDOW + 30}d", repair=True)
+            full_hist = get_hk_stock_data_tencent(stock_code, period_days=PRICE_WINDOW + 30)
             
         if len(full_hist) < PRICE_WINDOW:
             print(f"⚠️  {name} 数据不足（需要至少 {PRICE_WINDOW} 日）")
@@ -392,10 +399,15 @@ def analyze_stock(code, name, run_date=None):
             
         # 检查数据是否包含必要的列
         required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        # 从腾讯财经获取的数据可能不包含High和Low，需要处理
         for col in required_columns:
             if col not in full_hist.columns:
                 print(f"⚠️  {name} 缺少必要的列 {col}")
-                return None
+                # 如果缺少High或Low，使用Close作为近似值
+                if col in ['High', 'Low']:
+                    full_hist[col] = full_hist['Close']
+                else:
+                    return None
                 
         # 检查数据是否包含有效的数值
         if full_hist['Close'].isna().all() or full_hist['Volume'].isna().all():
@@ -570,13 +582,17 @@ def analyze_stock(code, name, run_date=None):
         outperforms_by_diff = stock_ret > hsi_ret
         outperforms_by_rs = rs_ratio > 0
 
-        if OUTPERFORMS_USE_RS:
-            outperforms = bool(outperforms_by_rs)
+        # 如果无法获取恒生指数数据，将 outperforms 设置为 False
+        if hsi_hist is None or hsi_hist.empty:
+            outperforms = False
         else:
-            if OUTPERFORMS_REQUIRE_POSITIVE:
-                outperforms = bool(outperforms_by_ret)
+            if OUTPERFORMS_USE_RS:
+                outperforms = bool(outperforms_by_rs)
             else:
-                outperforms = bool(outperforms_by_diff)
+                if OUTPERFORMS_REQUIRE_POSITIVE:
+                    outperforms = bool(outperforms_by_ret)
+                else:
+                    outperforms = bool(outperforms_by_diff)
 
         # === 建仓信号 ===
         def is_buildup(row):
@@ -672,45 +688,64 @@ def analyze_stock(code, name, run_date=None):
 
         # 保存图表
         if SAVE_CHARTS:
-            hsi_plot = hsi_hist['Close'].reindex(main_hist.index, method='ffill')
-            stock_plot = main_hist['Close']
-            rs_ratio_display = safe_round(rs_ratio * 100, 2)
-            rs_diff_display = safe_round(rs_diff * 100, 2)
-            plt.figure(figsize=(10, 6))
-            plt.plot(stock_plot.index, stock_plot / stock_plot.iloc[0], 'b-o', label=f'{code} {name}')
-            if not hsi_plot.isna().all():
-                plt.plot(hsi_plot.index, hsi_plot / hsi_plot.iloc[0], 'orange', linestyle='--', label='恒生指数')
-            title = f"{code} {name} vs 恒指 | RS_ratio: {rs_ratio_display if rs_ratio_display is not None else 'NA'}% | RS_diff: {rs_diff_display if rs_diff_display is not None else 'NA'}%"
-            if has_buildup:
-                title += " [建仓]"
-            if has_distribution:
-                title += " [出货]"
-            plt.title(title)
-            plt.legend()
-            plt.grid(True)
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            status = ("_buildup" if has_buildup else "") + ("_distribution" if has_distribution else "")
-            safe_name = name.replace('/', '_').replace(' ', '_')
-            plt.savefig(f"{CHART_DIR}/{code}_{safe_name}{status}.png")
-            plt.close()
+            # 如果有恒生指数数据，则绘制对比图
+            if hsi_hist is not None and not hsi_hist.empty:
+                hsi_plot = hsi_hist['Close'].reindex(main_hist.index, method='ffill')
+                stock_plot = main_hist['Close']
+                rs_ratio_display = safe_round(rs_ratio * 100, 2)
+                rs_diff_display = safe_round(rs_diff * 100, 2)
+                plt.figure(figsize=(10, 6))
+                plt.plot(stock_plot.index, stock_plot / stock_plot.iloc[0], 'b-o', label=f'{code} {name}')
+                if not hsi_plot.isna().all():
+                    plt.plot(hsi_plot.index, hsi_plot / hsi_plot.iloc[0], 'orange', linestyle='--', label='恒生指数')
+                title = f"{code} {name} vs 恒指 | RS_ratio: {rs_ratio_display if rs_ratio_display is not None else 'NA'}% | RS_diff: {rs_diff_display if rs_diff_display is not None else 'NA'}%"
+                if has_buildup:
+                    title += " [建仓]"
+                if has_distribution:
+                    title += " [出货]"
+                plt.title(title)
+                plt.legend()
+                plt.grid(True)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                status = ("_buildup" if has_buildup else "") + ("_distribution" if has_distribution else "")
+                safe_name = name.replace('/', '_').replace(' ', '_')
+                plt.savefig(f"{CHART_DIR}/{code}_{safe_name}{status}.png")
+                plt.close()
+            else:
+                # 如果没有恒生指数数据，只绘制股票价格图
+                stock_plot = main_hist['Close']
+                plt.figure(figsize=(10, 6))
+                plt.plot(stock_plot.index, stock_plot / stock_plot.iloc[0], 'b-o', label=f'{code} {name}')
+                title = f"{code} {name}"
+                if has_buildup:
+                    title += " [建仓]"
+                if has_distribution:
+                    title += " [出货]"
+                plt.title(title)
+                plt.legend()
+                plt.grid(True)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                status = ("_buildup" if has_buildup else "") + ("_distribution" if has_distribution else "")
+                safe_name = name.replace('/', '_').replace(' ', '_')
+                plt.savefig(f"{CHART_DIR}/{code}_{safe_name}{status}.png")
+                plt.close()
 
         # 计算换手率 (使用实际流通股本)
         # 换手率 = 成交量 / 流通股本 * 100%
-        # 从 yfinance 获取流通股本数据
+        # 从腾讯财经接口获取流通股本数据
         float_shares = None
         try:
-            float_shares = ticker.info.get('floatShares', 0)
-            if float_shares is None or float_shares == 0:
-                # 如果没有流通股本数据，使用总股本数据
-                float_shares = ticker.info.get('sharesOutstanding', 0)
-            if float_shares is None or float_shares == 0:
-                # 如果都没有，设置为 None
-                float_shares = None
-                print(f"  ⚠️ 无法获取 {code} 的流通股本数据")
+            stock_info = get_hk_stock_info_tencent(stock_code)
+            # 注意：腾讯财经接口可能不直接提供流通股本数据
+            # 这里我们暂时设置为 None，后续可以考虑其他方式获取
+            float_shares = None
+            if stock_info is None:
+                print(f"  ⚠️ 无法获取 {code} 的股票信息")
         except Exception as e:
             float_shares = None
-            print(f"  ⚠️ 获取 {code} 流通股本数据时出错: {e}")
+            print(f"  ⚠️ 获取 {code} 股票信息时出错: {e}")
         
         # 只有在有流通股本数据时才计算换手率
         turnover_rate = (main_hist['Volume'].iloc[-1] / float_shares) * 100 if len(main_hist) > 0 and float_shares is not None and float_shares > 0 else None
