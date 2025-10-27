@@ -86,7 +86,7 @@ class SimulationTrader:
 
             # 创建邮件
             msg = MIMEMultipart("alternative")
-            msg['From'] = f'"港股模拟交易系统" <{sender_email}>'
+            msg['From'] = sender_email
             msg['To'] = ", ".join(recipients)
             msg['Subject'] = subject
 
