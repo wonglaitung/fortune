@@ -73,7 +73,6 @@ class SimulationTrader:
         """
         try:
             smtp_server = os.environ.get("YAHOO_SMTP", "smtp.gmail.com")
-            smtp_port = 587  # TLS端口
             smtp_user = os.environ.get("YAHOO_EMAIL")
             smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
             sender_email = smtp_user
@@ -95,19 +94,33 @@ class SimulationTrader:
             text_part = MIMEText(content, "plain", "utf-8")
             msg.attach(text_part)
 
-            # 发送邮件（增加重试机制和SSL支持）
+            # 根据SMTP服务器类型选择合适的端口和连接方式
+            if "163.com" in smtp_server:
+                # 163邮箱使用SSL连接，端口465
+                smtp_port = 465
+                use_ssl = True
+            elif "gmail.com" in smtp_server:
+                # Gmail使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+            else:
+                # 默认使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+
+            # 发送邮件（增加重试机制）
             for attempt in range(3):
                 try:
-                    # 尝试使用TLS端口587
-                    if smtp_port == 587:
-                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-                        server.starttls()
+                    if use_ssl:
+                        # 使用SSL连接
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
                         server.login(smtp_user, smtp_pass)
                         server.sendmail(sender_email, recipients, msg.as_string())
                         server.quit()
                     else:
-                        # 使用SSL端口465
-                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        # 使用TLS连接
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
                         server.login(smtp_user, smtp_pass)
                         server.sendmail(sender_email, recipients, msg.as_string())
                         server.quit()
