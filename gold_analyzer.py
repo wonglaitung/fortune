@@ -477,15 +477,15 @@ class GoldMarketAnalyzer:
             <head>
                 <meta charset="utf-8">
                 <style>
-                    body { font-family: Arial, sans-serif; }
-                    h2 { color: #333; }
-                    h3 { color: #555; }
-                    table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; }
-                    tr:nth-child(even) { background-color: #f9f9f9; }
-                    .section { margin: 20px 0; }
-                    .highlight { background-color: #ffffcc; }
+                    body {{ font-family: Arial, sans-serif; }}
+                    h2 {{ color: #333; }}
+                    h3 {{ color: #555; }}
+                    table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                    th {{ background-color: #f2f2f2; }}
+                    tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                    .section {{ margin: 20px 0; }}
+                    .highlight {{ background-color: #ffffcc; }}
                 </style>
             </head>
             <body>
