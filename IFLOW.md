@@ -8,6 +8,8 @@
 3. 港股主力资金追踪器（识别建仓和出货信号）
 4. 港股主力资金历史数据分析
 5. 基于大模型的港股模拟交易系统
+6. 批量获取自选股新闻
+7. 黄金市场分析器
 
 ## 关键文件
 
@@ -15,9 +17,9 @@
 *   `hk_ipo_aastocks.py`: 通过爬取AAStocks网站获取香港股市IPO信息的脚本。
 *   `hk_smart_money_tracker.py`: 港股主力资金追踪器，分析股票的建仓和出货信号。
 *   `hk_smart_money_historical_analysis.py`: 港股主力资金历史数据分析器，分析指定时间范围内的历史信号。
-*   `hk_smart_money_report.xlsx`: 资金追踪器生成的Excel报告。
-*   `hk_smart_money_historical_report.xlsx`: 历史数据分析生成的Excel报告。
 *   `simulation_trader.py`: 基于大模型分析的港股模拟交易系统。
+*   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
+*   `gold_analyzer.py`: 黄金市场分析器。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
@@ -44,6 +46,7 @@
 1. 批量扫描自选股，分析股票的建仓和出货信号。
 2. 结合股价位置、成交量比率、南向资金流向和相对恒生指数的表现进行综合判断。
 3. 生成可视化图表和Excel报告。
+4. 集成大模型分析股票数据，提供投资建议。
 
 #### 港股主力资金历史数据分析
 1. 分析指定时间段内的历史数据。
@@ -57,6 +60,16 @@
 4. 支持保守型、平衡型、进取型投资者风险偏好设置。
 5. 严格按照大模型建议执行交易，无随机操作。
 6. 交易记录和状态自动保存，支持中断后继续。
+
+#### 批量获取自选股新闻
+1. 获取自选股的最新新闻。
+2. 使用大模型过滤相关新闻，评估新闻与股票的相关性。
+3. 按时间排序并保存相关新闻数据到CSV文件。
+
+#### 黄金市场分析器
+1. 获取黄金相关资产和宏观经济数据。
+2. 进行技术分析，计算各种技术指标。
+3. 使用大模型进行深度分析，提供投资建议。
 
 ### 运行和构建
 
@@ -126,21 +139,25 @@
 1. 确保已安装 Python 3.10 或更高版本。
 2. 安装依赖:
    ```bash
-   pip install yfinance akshare pandas matplotlib openpyxl scipy
+   pip install yfinance akshare pandas matplotlib openpyxl scipy schedule
    ```
 3. 修改 `WATCHLIST` 字典以包含你想要跟踪的股票。
 4. 运行脚本:
    ```bash
    python hk_smart_money_tracker.py
    ```
-5. 查看生成的Excel报告 `hk_smart_money_report.xlsx` 和图表 `hk_smart_charts/` 目录。
+5. 运行指定日期的分析:
+   ```bash
+   python hk_smart_money_tracker.py --date 2025-10-25
+   ```
+6. 查看生成的Excel报告 `hk_smart_money_report.xlsx` 和图表 `hk_smart_charts/` 目录。
 
 ##### GitHub Actions 自动化
 该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
 3. 设置 Python 3.10 环境。
-4. 安装 `yfinance`, `akshare`, `pandas`, `matplotlib`, `openpyxl`, `scipy` 依赖。
+4. 安装 `yfinance`, `akshare`, `pandas`, `matplotlib`, `openpyxl`, `scipy`, `schedule` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `hk_smart_money_tracker.py` 脚本。
    
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
@@ -191,16 +208,54 @@
    - `data/simulation_transactions.csv`: 交易历史记录
    - `data/simulation_portfolio.csv`: 投资组合价值变化记录
 
+#### 批量获取自选股新闻
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 安装依赖:
+   ```bash
+   pip install akshare yfinance
+   ```
+3. 运行脚本:
+   ```bash
+   python batch_stock_news_fetcher.py
+   ```
+4. 启用定时任务模式:
+   ```bash
+   python batch_stock_news_fetcher.py --schedule
+   ```
+5. 查看生成的新闻数据文件:
+   - `data/all_stock_news_records.csv`: 所有股票相关新闻记录
+
+#### 黄金市场分析器
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 安装依赖:
+   ```bash
+   pip install yfinance
+   ```
+3. 运行脚本:
+   ```bash
+   python gold_analyzer.py
+   ```
+4. 指定分析周期:
+   ```bash
+   python gold_analyzer.py --period 6mo
+   ```
+
 ### 项目架构
 
 ```
 金融信息监控与模拟交易系统
 ├── 数据获取层
 │   ├── 加密货币价格监控器 (@crypto_email.py)
-│   └── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
+│   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
+│   └── 黄金市场分析器 (@gold_analyzer.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
-│   └── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
+│   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
+│   └── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -214,6 +269,8 @@
 - 支持聊天和嵌入功能
 - 在 `hk_smart_money_tracker.py` 中使用大模型进行股票分析
 - 在 `simulation_trader.py` 中使用大模型进行交易决策
+- 在 `batch_stock_news_fetcher.py` 中使用大模型过滤相关新闻
+- 在 `gold_analyzer.py` 中使用大模型进行黄金市场深度分析
 
 ### 项目扩展性
 

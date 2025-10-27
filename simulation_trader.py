@@ -9,7 +9,6 @@ import os
 import sys
 import time
 import json
-import yfinance as yf
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -23,8 +22,9 @@ from email.mime.multipart import MIMEMultipart
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# 导入hk_smart_money_tracker模块
+# 导入hk_smart_money_tracker模块和腾讯财经接口
 import hk_smart_money_tracker
+from tencent_finance import get_hk_stock_data_tencent
 
 class SimulationTrader:
     def __init__(self, initial_capital=1000000, analysis_frequency=15):
@@ -72,8 +72,8 @@ class SimulationTrader:
             content (str): 邮件内容
         """
         try:
-            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-            smtp_port = 587
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.gmail.com")
+            smtp_port = 587  # TLS端口
             smtp_user = os.environ.get("YAHOO_EMAIL")
             smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
             sender_email = smtp_user
@@ -95,15 +95,32 @@ class SimulationTrader:
             text_part = MIMEText(content, "plain", "utf-8")
             msg.attach(text_part)
 
-            # 发送邮件
-            server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(sender_email, recipients, msg.as_string())
-            server.quit()
+            # 发送邮件（增加重试机制和SSL支持）
+            for attempt in range(3):
+                try:
+                    # 尝试使用TLS端口587
+                    if smtp_port == 587:
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    else:
+                        # 使用SSL端口465
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    
+                    self.log_message(f"邮件发送成功: {subject}")
+                    return True
+                except Exception as e:
+                    self.log_message(f"发送邮件失败 (尝试 {attempt+1}/3): {e}")
+                    if attempt < 2:  # 不是最后一次尝试，等待后重试
+                        time.sleep(5)
             
-            self.log_message(f"邮件发送成功: {subject}")
-            return True
+            self.log_message(f"发送邮件失败，已重试3次")
+            return False
         except Exception as e:
             self.log_message(f"发送邮件失败: {e}")
             return False
@@ -164,7 +181,7 @@ class SimulationTrader:
     
     def get_current_stock_price(self, code):
         """
-        获取股票当前价格
+        获取股票当前价格（使用腾讯财经接口）
         
         Args:
             code (str): 股票代码
@@ -173,15 +190,14 @@ class SimulationTrader:
             float: 当前价格，如果获取失败返回None
         """
         try:
-            ticker = yf.Ticker(code)
-            hist = ticker.history(period="1d", interval="1m")
-            if not hist.empty:
+            # 移除代码中的.HK后缀，腾讯财经接口不需要
+            stock_code = code.replace('.HK', '')
+            
+            # 获取最近3天的数据
+            hist = get_hk_stock_data_tencent(stock_code, period_days=3)
+            if hist is not None and not hist.empty:
+                # 返回最新的收盘价
                 return hist['Close'].iloc[-1]
-            else:
-                # 如果1分钟数据不可用，尝试获取日线数据
-                hist = ticker.history(period="2d")
-                if len(hist) >= 1:
-                    return hist['Close'].iloc[-1]
         except Exception as e:
             self.log_message(f"获取股票 {code} 价格失败: {e}")
         return None
