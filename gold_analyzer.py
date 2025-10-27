@@ -463,7 +463,7 @@ class GoldMarketAnalyzer:
             recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
             recipients = [r.strip() for r in recipient_env.split(",")] if "," in recipient_env else [recipient_env]
             
-            print(f"📧 正在发送邮件到: {", ".join(recipients)}")
+            print(f"📧 正在发送邮件到: {', '.join(recipients)}")
             
             # 创建邮件内容
             subject = "黄金市场分析报告"
