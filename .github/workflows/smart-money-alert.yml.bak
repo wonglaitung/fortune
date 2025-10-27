@@ -1,0 +1,39 @@
+name: HK Smart Money Alert
+
+on:
+  schedule:
+  # 每天香港时间上午8点执行（即UTC时间0点）
+    - cron: '8 0 * * *'
+  # 可选：允许手动触发
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance akshare pandas matplotlib openpyxl scipy schedule
+
+      - name: Get yesterday's date
+        id: date
+        run: echo "YESTERDAY=$(date -d 'yesterday' +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Run smart money tracker script with yesterday's date
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        run: |
+          python batch_stock_news_fetcher.py
+          python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
