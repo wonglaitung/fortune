@@ -3,7 +3,7 @@ name: Gold Market Analyzer
 on:
   schedule:
     # 每天 UTC 时间 7:00 执行（即北京时间 15:00）
-    - cron: '0 7 * * *'
+    - cron: '0 1 * * *'
   # 可选：允许手动触发
   workflow_dispatch:
 
