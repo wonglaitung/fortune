@@ -620,6 +620,14 @@ class SimulationTrader:
             self.log_message(f"解析大模型推荐失败: {e}")
             return
             
+        # 执行卖出操作（严格按照大模型建议）
+        for code in recommendations['sell']:
+            if code in hk_smart_money_tracker.WATCHLIST:
+                name = hk_smart_money_tracker.WATCHLIST[code]
+                # 卖出全部持仓
+                sell_pct = 1.0
+                self.sell_stock(code, name, sell_pct)
+                
         # 执行买入操作（严格按照大模型建议）
         # 根据推荐的股票数量动态调整投资比例，确保不会超过总资金
         buy_count = len(recommendations['buy'])
@@ -638,20 +646,19 @@ class SimulationTrader:
                 max_total_pct = 0.8
                 max_single_pct = 0.2
             
+            # 将买入股票分为两类：没有持仓的股票和已有持仓的股票
+            new_stocks = [code for code in recommendations['buy'] if code not in self.positions]
+            existing_stocks = [code for code in recommendations['buy'] if code in self.positions]
+            
+            # 优先买入没有持仓的股票
+            ordered_buy_list = new_stocks + existing_stocks
+            
             # 平均分配资金
             investment_pct = min(max_total_pct / buy_count, max_single_pct)
-            for code in recommendations['buy']:
+            for code in ordered_buy_list:
                 if code in hk_smart_money_tracker.WATCHLIST:
                     name = hk_smart_money_tracker.WATCHLIST[code]
                     self.buy_stock(code, name, investment_pct)
-                
-        # 执行卖出操作（严格按照大模型建议）
-        for code in recommendations['sell']:
-            if code in hk_smart_money_tracker.WATCHLIST:
-                name = hk_smart_money_tracker.WATCHLIST[code]
-                # 卖出全部持仓
-                sell_pct = 1.0
-                self.sell_stock(code, name, sell_pct)
                 
         # 记录投资组合价值
         portfolio_value = self.get_portfolio_value()
