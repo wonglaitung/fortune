@@ -624,9 +624,31 @@ class SimulationTrader:
         for code in recommendations['sell']:
             if code in hk_smart_money_tracker.WATCHLIST:
                 name = hk_smart_money_tracker.WATCHLIST[code]
-                # 卖出全部持仓
-                sell_pct = 1.0
-                self.sell_stock(code, name, sell_pct)
+                # 检查是否持有该股票
+                if code not in self.positions:
+                    # 没有持仓，无法卖出，发送邮件通知
+                    self.log_message(f"未持有 {name} ({code})，无法按大模型建议卖出")
+                    # 获取当前持仓清单
+                    positions_list = self.get_current_positions_list()
+                    positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+                    
+                    subject = f"【无法卖出通知】{name} ({code})"
+                    content = f"""
+模拟交易系统无法按大模型建议卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+无法卖出原因：未持有该股票
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前持仓：
+{positions_text}
+                    """
+                    self.send_email_notification(subject, content)
+                else:
+                    # 卖出全部持仓
+                    sell_pct = 1.0
+                    self.sell_stock(code, name, sell_pct)
                 
         # 执行买入操作（严格按照大模型建议）
         # 根据推荐的股票数量动态调整投资比例，确保不会超过总资金
@@ -658,7 +680,29 @@ class SimulationTrader:
             for code in ordered_buy_list:
                 if code in hk_smart_money_tracker.WATCHLIST:
                     name = hk_smart_money_tracker.WATCHLIST[code]
-                    self.buy_stock(code, name, investment_pct)
+                    # 尝试买入股票
+                    buy_result = self.buy_stock(code, name, investment_pct)
+                    # 如果买入失败，发送邮件通知
+                    if not buy_result:
+                        self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
+                        # 获取当前持仓清单
+                        positions_list = self.get_current_positions_list()
+                        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+                        
+                        subject = f"【无法买入通知】{name} ({code})"
+                        content = f"""
+模拟交易系统无法按大模型建议买入通知：
+
+股票名称：{name}
+股票代码：{code}
+无法买入原因：资金不足或其他原因
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前资金：HK${self.capital:,.2f}
+当前持仓：
+{positions_text}
+                        """
+                        self.send_email_notification(subject, content)
                 
         # 记录投资组合价值
         portfolio_value = self.get_portfolio_value()

@@ -10,6 +10,7 @@
 5. 基于大模型的港股模拟交易系统
 6. 批量获取自选股新闻
 7. 黄金市场分析器
+8. 通过腾讯财经接口获取港股数据
 
 ## 关键文件
 
@@ -20,10 +21,13 @@
 *   `simulation_trader.py`: 基于大模型分析的港股模拟交易系统。
 *   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
+*   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
+*   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪和黄金分析。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
-*   `.github/workflows/smart-money-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_smart_money_tracker.py` 脚本。
+*   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
+*   `.github/workflows/smart-money-alert.yml.bak`: 港股主力资金追踪器的GitHub Actions工作流备份文件。
 *   `IFLOW.md`: 此文件，提供 iFlow 代理的上下文信息。
 
 ## 项目类型
@@ -47,6 +51,8 @@
 2. 结合股价位置、成交量比率、南向资金流向和相对恒生指数的表现进行综合判断。
 3. 生成可视化图表和Excel报告。
 4. 集成大模型分析股票数据，提供投资建议。
+5. 使用腾讯财经接口获取更准确的港股和恒生指数数据。
+6. 支持本地定时执行脚本 `send_alert.sh`。
 
 #### 港股主力资金历史数据分析
 1. 分析指定时间段内的历史数据。
@@ -60,6 +66,7 @@
 4. 支持保守型、平衡型、进取型投资者风险偏好设置。
 5. 严格按照大模型建议执行交易，无随机操作。
 6. 交易记录和状态自动保存，支持中断后继续。
+7. 在无法按大模型建议执行交易时（如资金不足或无持仓），会发送邮件通知。
 
 #### 批量获取自选股新闻
 1. 获取自选股的最新新闻。
@@ -70,6 +77,13 @@
 1. 获取黄金相关资产和宏观经济数据。
 2. 进行技术分析，计算各种技术指标。
 3. 使用大模型进行深度分析，提供投资建议。
+4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 7:00，即北京时间 15:00）。
+5. 支持本地定时执行脚本 `send_alert.sh`。
+
+#### 腾讯财经数据接口
+1. 通过腾讯财经API获取港股股票数据。
+2. 通过腾讯财经API获取恒生指数数据。
+3. 提供更稳定和准确的港股数据源。
 
 ### 运行和构建
 
@@ -124,7 +138,7 @@
 该项目配置了 GitHub Actions 工作流 (`.github/workflows/ipo-alert.yml`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
-3. 设置 Python 3.10 环境。
+3. 设置 Python 3.10 玎境。
 4. 安装 `requests`, `beautifulsoup4`, `pandas` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`) 运行 `hk_ipo_aastocks.py` 脚本。
    
@@ -152,11 +166,21 @@
    ```
 6. 查看生成的Excel报告 `hk_smart_money_report.xlsx` 和图表 `hk_smart_charts/` 目录。
 
+##### 本地定时执行
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行:
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行以每天执行（请根据需要调整时间）
+0 6 * * * /data/fortune/send_alert.sh
+```
+
 ##### GitHub Actions 自动化
-该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml`)，它会:
+该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml.bak`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
-3. 设置 Python 3.10 环境。
+3. 设置 Python 3.10 玎境。
 4. 安装 `yfinance`, `akshare`, `pandas`, `matplotlib`, `openpyxl`, `scipy`, `schedule` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `hk_smart_money_tracker.py` 脚本。
    
@@ -204,9 +228,14 @@
    ```
 6. 查看生成的模拟交易文件:
    - `data/simulation_state.json`: 保存交易状态，支持中断后继续
-   - `data/simulation_trade_log.txt`: 详细交易日志记录
+   - `data/simulation_trade_log_*.txt`: 详细交易日志记录（按日期分割）
    - `data/simulation_transactions.csv`: 交易历史记录
    - `data/simulation_portfolio.csv`: 投资组合价值变化记录
+
+##### 交易执行逻辑
+1. 严格按照"先卖后买"的原则执行交易
+2. 买入时优先考虑没有持仓的股票
+3. 在无法按大模型建议执行交易时（如资金不足或无持仓），会发送邮件通知
 
 #### 批量获取自选股新闻
 
@@ -244,6 +273,35 @@
    python gold_analyzer.py --period 6mo
    ```
 
+##### 本地定时执行
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行:
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行以每天执行（请根据需要调整时间）
+0 6 * * * /data/fortune/send_alert.sh
+```
+
+##### GitHub Actions 自动化
+该项目配置了 GitHub Actions 工作流 (`.github/workflows/gold-analyzer.yml`)，它会:
+1. 在 Ubuntu 最新版本的 runner 上执行。
+2. 检出代码。
+3. 设置 Python 3.10 玎境。
+4. 安装 `yfinance`, `requests`, `pandas`, `numpy` 依赖。
+5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `gold_analyzer.py` 脚本。
+   
+需要在 GitHub 仓库的 secrets 中配置以下环境变量:
+- `YAHOO_EMAIL`
+- `YAHOO_APP_PASSWORD`
+- `RECIPIENT_EMAIL`
+- `QWEN_API_KEY`
+
+#### 腾讯财经数据接口
+
+##### 本地运行
+腾讯财经数据接口被其他脚本调用，无需单独运行。
+
 ### 项目架构
 
 ```
@@ -259,7 +317,8 @@
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
-    └── 大模型服务 (@llm_services/qwen_engine.py)
+    ├── 大模型服务 (@llm_services/qwen_engine.py)
+    └── 腾讯财经数据接口 (@tencent_finance.py)
 ```
 
 ### 大模型集成
@@ -281,3 +340,4 @@
 4. 构建 Web 界面展示信息
 5. 增加更多的技术分析指标和信号
 6. 集成更多大模型服务提供商
+7. 增加更多数据源接口（如其他财经网站API）
