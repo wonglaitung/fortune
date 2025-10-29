@@ -7,6 +7,13 @@
 # 进入项目根目录
 cd /data/fortune
 source set_key.sh
-python hk_smart_money_tracker.py
+
+# 获取昨天的日期
+YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
+
+# 调用 hk_smart_money_tracker.py 并传入昨天的日期
+python hk_smart_money_tracker.py --date $YESTERDAY
+
+# 调用 gold_analyzer.py
 python gold_analyzer.py
 
