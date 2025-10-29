@@ -871,7 +871,7 @@ if __name__ == "__main__":
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='港股模拟交易系统')
     parser.add_argument('--duration-days', type=int, default=90, help='模拟天数，默认90天')
-    parser.add_argument('--analysis-frequency', type=int, default=15, help='分析频率（分钟），默认15分钟')
+    parser.add_argument('--analysis-frequency', type=int, default=25, help='分析频率（分钟），默认15分钟')
     args = parser.parse_args()
     
     # 运行模拟交易
