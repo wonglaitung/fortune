@@ -3,6 +3,10 @@
 """
 港股模拟交易系统
 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易
+
+新增功能：
+1. 根据不同投资者类型（保守型、平衡型、进取型）自动进行盈亏比例交易
+2. 根据市场情况自动建议买入股票
 """
 
 import os
@@ -537,6 +541,9 @@ class SimulationTrader:
         # 进取型：偏好高风险、高收益的股票
         investor_type = "进取型"  # 可以根据需要调整为"保守型"或"平衡型"
         
+        # 检查持仓股票的盈亏情况，根据投资者类型决定是否自动卖出
+        self.check_positions_for_auto_trade(investor_type)
+        
         # 运行股票分析
         try:
             self.log_message("正在分析股票...")
@@ -587,6 +594,7 @@ class SimulationTrader:
 4. 如果没有明确的买卖建议，对应的字段为空数组
 5. 只包含在自选股列表中的股票代码：{list(hk_smart_money_tracker.WATCHLIST.keys())}
 6. 根据投资者风险偏好筛选适合的股票
+7. 注意：系统还会根据盈亏比例自动进行交易，无需在建议中包含已经达到盈亏阈值的股票
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -618,6 +626,7 @@ class SimulationTrader:
             return
             
         # 执行卖出操作（严格按照大模型建议）
+        # 注意：这里不包括自动卖出的股票，自动卖出在check_positions_for_auto_trade中处理
         for code in recommendations['sell']:
             if code in hk_smart_money_tracker.WATCHLIST:
                 name = hk_smart_money_tracker.WATCHLIST[code]
@@ -699,6 +708,49 @@ class SimulationTrader:
 {positions_detail}
                         """
                         self.send_email_notification(subject, content)
+        
+        # 根据投资者类型和市场情况，考虑自动买入建议的股票
+        auto_buy_suggestions = self.get_stock_allocation_suggestion(investor_type)
+        if auto_buy_suggestions:
+            self.log_message(f"根据{investor_type}投资者策略，建议关注以下股票: {auto_buy_suggestions}")
+            
+            # 为自动买入建议的股票分配资金
+            # 使用与大模型建议相同的资金分配逻辑
+            auto_buy_count = len(auto_buy_suggestions)
+            if auto_buy_count > 0:
+                # 平均分配资金给自动建议的股票
+                auto_investment_pct = min(max_total_pct / auto_buy_count, max_single_pct)
+                for code in auto_buy_suggestions:
+                    if code in hk_smart_money_tracker.WATCHLIST and code not in self.positions:
+                        name = hk_smart_money_tracker.WATCHLIST[code]
+                        # 尝试买入股票
+                        buy_result = self.buy_stock(code, name, auto_investment_pct)
+                        # 如果买入成功，发送自动买入通知邮件，明确说明是基于市场情况的自动交易
+                        if buy_result:
+                            self.send_auto_trade_notification(name, code, 'BUY', self.get_current_stock_price(code), 
+                                                             int(self.capital * auto_investment_pct / self.get_current_stock_price(code)), 
+                                                             f"基于{investor_type}投资者市场情况自动买入")
+                        # 如果买入失败，发送邮件通知
+                        elif not buy_result:
+                            self.log_message(f"无法按自动建议买入 {name} ({code})，发送邮件通知")
+                            # 发送无法买入通知邮件
+                            # 构建持仓详情文本
+                            positions_detail = self.build_positions_detail()
+                            
+                            subject = f"【无法买入通知】{name} ({code})"
+                            content = f"""
+模拟交易系统无法按自动建议买入通知：
+
+股票名称：{name}
+股票代码：{code}
+无法买入原因：资金不足或其他原因
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+                            """
+                            self.send_email_notification(subject, content)
                 
         # 记录投资组合价值
         portfolio_value = self.get_portfolio_value()
@@ -720,6 +772,169 @@ class SimulationTrader:
         # 计算收益率
         total_return = (portfolio_value - self.initial_capital) / self.initial_capital * 100
         self.log_message(f"总收益率: {total_return:.2f}%")
+    
+    def check_positions_for_auto_trade(self, investor_type):
+        """
+        根据投资者类型和盈亏比例检查持仓，决定是否自动买入或卖出
+        
+        Args:
+            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
+        """
+        # 定义不同投资者类型的盈亏比例阈值
+        if investor_type == "保守型":
+            # 保守型：亏损超过5%卖出，盈利超过10%卖出，股价下跌超过5%时考虑买入
+            loss_threshold = -0.05  # 亏损5%
+            profit_threshold = 0.10  # 盈利10%
+            buy_dip_threshold = -0.05  # 股价下跌5%
+        elif investor_type == "平衡型":
+            # 平衡型：亏损超过10%卖出，盈利超过15%卖出，股价下跌超过10%时考虑买入
+            loss_threshold = -0.10  # 亏损10%
+            profit_threshold = 0.15  # 盈利15%
+            buy_dip_threshold = -0.10  # 股价下跌10%
+        else:  # 进取型
+            # 进取型：亏损超过15%卖出，盈利超过20%卖出，股价下跌超过15%时考虑买入
+            loss_threshold = -0.15  # 亏损15%
+            profit_threshold = 0.20  # 盈利20%
+            buy_dip_threshold = -0.15  # 股价下跌15%
+        
+        # 检查持仓中的股票
+        for code, position in list(self.positions.items()):
+            # 获取当前价格
+            current_price = self.get_current_stock_price(code)
+            if current_price is None:
+                continue
+                
+            # 计算盈亏比例
+            avg_price = position['avg_price']
+            profit_loss_ratio = (current_price - avg_price) / avg_price
+            
+            # 检查是否达到卖出条件
+            if profit_loss_ratio <= loss_threshold or profit_loss_ratio >= profit_threshold:
+                name = hk_smart_money_tracker.WATCHLIST.get(code, code)
+                self.log_message(f"{name} ({code}) 盈亏比例: {profit_loss_ratio:.2%}，达到{investor_type}投资者的交易阈值")
+                
+                if profit_loss_ratio >= profit_threshold:
+                    # 盈利达到阈值，卖出获利
+                    self.log_message(f"自动卖出 {name} ({code}) - 盈利达到阈值 {profit_threshold:.2%}")
+                    # 发送自动卖出通知邮件，明确说明是基于盈亏比例的自动交易
+                    self.send_auto_trade_notification(name, code, 'SELL', current_price, position['shares'], 
+                                                     f"基于{investor_type}投资者盈亏比例策略自动卖出 - 盈利达到阈值 {profit_threshold:.2%}")
+                    self.sell_stock(code, name, 1.0)
+                elif profit_loss_ratio <= loss_threshold:
+                    # 亏损达到阈值，止损卖出
+                    self.log_message(f"自动卖出 {name} ({code}) - 亏损达到止损阈值 {loss_threshold:.2%}")
+                    # 发送自动卖出通知邮件，明确说明是基于盈亏比例的自动交易
+                    self.send_auto_trade_notification(name, code, 'SELL', current_price, position['shares'], 
+                                                     f"基于{investor_type}投资者盈亏比例策略自动卖出 - 亏损达到止损阈值 {loss_threshold:.2%}")
+                    self.sell_stock(code, name, 1.0)
+    
+    def get_stock_allocation_suggestion(self, investor_type):
+        """
+        根据投资者类型和当前市场情况建议买入的股票
+        
+        Args:
+            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
+            
+        Returns:
+            list: 建议买入的股票代码列表
+        """
+        suggestions = []
+        
+        # 定义不同投资者类型的买入策略
+        if investor_type == "保守型":
+            # 保守型：寻找稳定分红、低估值股票，或股价下跌超过5%的优质股票
+            buy_dip_threshold = -0.05  # 股价相对近期高点下跌5%时考虑买入
+        elif investor_type == "平衡型":
+            # 平衡型：寻找中等估值、有增长潜力股票，或股价下跌超过10%的股票
+            buy_dip_threshold = -0.10  # 股价相对近期高点下跌10%时考虑买入
+        else:  # 进取型
+            # 进取型：寻找高增长、高风险股票，或股价下跌超过15%的潜力股
+            buy_dip_threshold = -0.15  # 股价相对近期高点下跌15%时考虑买入
+        
+        # 检查WATCHLIST中的股票
+        for code, name in hk_smart_money_tracker.WATCHLIST.items():
+            # 跳过已持仓的股票
+            if code in self.positions:
+                continue
+                
+            # 获取当前价格
+            current_price = self.get_current_stock_price(code)
+            if current_price is None:
+                continue
+                
+            # 获取最近一段时间的价格数据以计算是否下跌
+            try:
+                stock_code = code.replace('.HK', '')
+                hist = get_hk_stock_data_tencent(stock_code, period_days=30)
+                if hist is not None and not hist.empty:
+                    # 计算近期最高价
+                    recent_high = hist['High'].rolling(window=20).max().iloc[-1]
+                    
+                    if recent_high > 0:
+                        # 计算当前价格相对于近期高点的跌幅
+                        price_ratio = (current_price - recent_high) / recent_high
+                        
+                        # 如果跌幅达到阈值，考虑买入
+                        if price_ratio <= buy_dip_threshold:
+                            self.log_message(f"{name} ({code}) 相对于近期高点下跌: {price_ratio:.2%}，达到{investor_type}投资者的买入阈值")
+                            suggestions.append(code)
+            except Exception as e:
+                self.log_message(f"分析股票 {name} ({code}) 价格趋势时出错: {e}")
+                continue
+        
+        return suggestions
+    
+    def send_auto_trade_notification(self, name, code, trade_type, price, shares, reason):
+        """
+        发送自动交易通知邮件
+        
+        Args:
+            name (str): 股票名称
+            code (str): 股票代码
+            trade_type (str): 交易类型 ('BUY' 或 'SELL')
+            price (float): 交易价格
+            shares (int): 交易股数
+            reason (str): 交易原因
+        """
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
+        
+        if trade_type == 'BUY':
+            subject = f"【自动买入通知】{name} ({code}) - {reason}"
+            content = f"""
+模拟交易系统自动买入通知：
+
+股票名称：{name}
+股票代码：{code}
+买入价格：HK${price:.2f}
+买入数量：{shares} 股
+买入金额：HK${price * shares:.2f}
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+交易原因：{reason}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
+        else:  # SELL
+            subject = f"【自动卖出通知】{name} ({code}) - {reason}"
+            content = f"""
+模拟交易系统自动卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+卖出价格：HK${price:.2f}
+卖出数量：{shares} 股
+卖出金额：HK${price * shares:.2f}
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+交易原因：{reason}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+        """
+        
+        self.send_email_notification(subject, content)
     
     def run_hourly_analysis(self):
         """按计划频率运行分析和交易"""
@@ -988,7 +1203,7 @@ if __name__ == "__main__":
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='港股模拟交易系统')
     parser.add_argument('--duration-days', type=int, default=90, help='模拟天数，默认90天')
-    parser.add_argument('--analysis-frequency', type=int, default=25, help='分析频率（分钟），默认15分钟')
+    parser.add_argument('--analysis-frequency', type=int, default=15, help='分析频率（分钟），默认15分钟')
     parser.add_argument('--manual-sell', type=str, help='手工卖出股票代码（例如：0700.HK）')
     parser.add_argument('--sell-percentage', type=float, default=1.0, help='卖出比例（0.0-1.0），默认1.0（100%）')
     args = parser.parse_args()
