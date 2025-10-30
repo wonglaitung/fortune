@@ -753,14 +753,15 @@ class SimulationTrader:
         if positions_info:
             self.log_message("")
             self.log_message("当前持仓详情:")
-            self.log_message("-" * 80)
-            self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15}")
-            self.log_message("-" * 80)
+            self.log_message("-" * 100)
+            self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15} {'盈亏金额':<15}")
+            self.log_message("-" * 100)
             
             for pos in positions_info:
-                self.log_message(f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f}")
+                profit_loss_str = f"{pos['profit_loss']:>+.2f}" if pos['profit_loss'] >= 0 else f"{pos['profit_loss']:>+.2f}"
+                self.log_message(f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f} {profit_loss_str:>15}")
             
-            self.log_message("-" * 80)
+            self.log_message("-" * 100)
         
         self.log_message(f"{'现金余额:':<65} {self.capital:>15,.2f}")
         self.log_message(f"{'股票总价值:':<65} {total_stock_value:>15,.2f}")
@@ -791,7 +792,7 @@ class SimulationTrader:
                 except:
                     current_prices[stock_code] = 0
             
-            # 计算每只股票的持有金额
+            # 计算每只股票的持有金额和盈亏
             positions_info = []
             for code, pos in self.positions.items():
                 shares = pos['shares']
@@ -805,6 +806,9 @@ class SimulationTrader:
                 position_value = shares * current_price
                 total_stock_value += position_value
                 
+                # 计算盈亏金额
+                profit_loss = (current_price - avg_price) * shares
+                
                 # 获取股票名称
                 name = hk_smart_money_tracker.WATCHLIST.get(code, code)
                 
@@ -814,7 +818,8 @@ class SimulationTrader:
                     'shares': shares,
                     'avg_price': avg_price,
                     'current_price': current_price,
-                    'position_value': position_value
+                    'position_value': position_value,
+                    'profit_loss': profit_loss
                 })
             
             return positions_info, total_stock_value
@@ -835,15 +840,16 @@ class SimulationTrader:
         # 构建持仓详情文本
         if positions_info:
             positions_detail = "当前持仓详情:\n"
-            positions_detail += "-" * 70 + "\n"
-            positions_detail += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15}\n"
-            positions_detail += "-" * 70 + "\n"
+            positions_detail += "-" * 85 + "\n"
+            positions_detail += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15} {'盈亏金额':<15}\n"
+            positions_detail += "-" * 85 + "\n"
             for pos in positions_info:
-                positions_detail += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f}\n"
-            positions_detail += "-" * 70 + "\n"
-            positions_detail += f"{'现金余额:':<55} {self.capital:>15,.2f}\n"
-            positions_detail += f"{'股票总价值:':<55} {total_stock_value:>15,.2f}\n"
-            positions_detail += f"{'投资组合总价值:':<55} {self.capital + total_stock_value:>15,.2f}\n"
+                profit_loss_str = f"{pos['profit_loss']:>+.2f}" if pos['profit_loss'] >= 0 else f"{pos['profit_loss']:>+.2f}"
+                positions_detail += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f} {profit_loss_str:>15}\n"
+            positions_detail += "-" * 85 + "\n"
+            positions_detail += f"{'现金余额:':<70} {self.capital:>15,.2f}\n"
+            positions_detail += f"{'股票总价值:':<70} {total_stock_value:>15,.2f}\n"
+            positions_detail += f"{'投资组合总价值:':<70} {self.capital + total_stock_value:>15,.2f}\n"
         else:
             positions_detail = "暂无持仓\n"
         
