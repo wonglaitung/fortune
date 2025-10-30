@@ -594,7 +594,6 @@ class SimulationTrader:
 4. 如果没有明确的买卖建议，对应的字段为空数组
 5. 只包含在自选股列表中的股票代码：{list(hk_smart_money_tracker.WATCHLIST.keys())}
 6. 根据投资者风险偏好筛选适合的股票
-7. 注意：系统还会根据盈亏比例自动进行交易，无需在建议中包含已经达到盈亏阈值的股票
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
