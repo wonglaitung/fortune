@@ -659,19 +659,8 @@ class SimulationTrader:
         # 根据推荐的股票数量动态调整投资比例，确保不会超过总资金
         buy_count = len(recommendations['buy'])
         if buy_count > 0:
-            # 根据投资者类型调整风险偏好
-            # 保守型：总投资不超过30%，单只股票不超过5%
-            # 平衡型：总投资不超过50%，单只股票不超过10%
-            # 进取型：总投资不超过80%，单只股票不超过20%
-            if investor_type == "保守型":
-                max_total_pct = 0.3
-                max_single_pct = 0.05
-            elif investor_type == "平衡型":
-                max_total_pct = 0.5
-                max_single_pct = 0.1
-            else:  # 进取型
-                max_total_pct = 0.8
-                max_single_pct = 0.2
+            # 计算每只股票的投资比例
+            investment_pct = self.calculate_investment_percentage(investor_type, buy_count)
             
             # 将买入股票分为两类：没有持仓的股票和已有持仓的股票
             new_stocks = [code for code in recommendations['buy'] if code not in self.positions]
@@ -680,8 +669,6 @@ class SimulationTrader:
             # 优先买入没有持仓的股票
             ordered_buy_list = new_stocks + existing_stocks
             
-            # 平均分配资金
-            investment_pct = min(max_total_pct / buy_count, max_single_pct)
             for code in ordered_buy_list:
                 if code in hk_smart_money_tracker.WATCHLIST:
                     name = hk_smart_money_tracker.WATCHLIST[code]
@@ -709,48 +696,7 @@ class SimulationTrader:
                         """
                         self.send_email_notification(subject, content)
         
-        # 根据投资者类型和市场情况，考虑自动买入建议的股票
-        auto_buy_suggestions = self.get_stock_allocation_suggestion(investor_type)
-        if auto_buy_suggestions:
-            self.log_message(f"根据{investor_type}投资者策略，建议关注以下股票: {auto_buy_suggestions}")
-            
-            # 为自动买入建议的股票分配资金
-            # 使用与大模型建议相同的资金分配逻辑
-            auto_buy_count = len(auto_buy_suggestions)
-            if auto_buy_count > 0:
-                # 平均分配资金给自动建议的股票
-                auto_investment_pct = min(max_total_pct / auto_buy_count, max_single_pct)
-                for code in auto_buy_suggestions:
-                    if code in hk_smart_money_tracker.WATCHLIST and code not in self.positions:
-                        name = hk_smart_money_tracker.WATCHLIST[code]
-                        # 尝试买入股票
-                        buy_result = self.buy_stock(code, name, auto_investment_pct)
-                        # 如果买入成功，发送自动买入通知邮件，明确说明是基于市场情况的自动交易
-                        if buy_result:
-                            self.send_auto_trade_notification(name, code, 'BUY', self.get_current_stock_price(code), 
-                                                             int(self.capital * auto_investment_pct / self.get_current_stock_price(code)), 
-                                                             f"基于{investor_type}投资者市场情况自动买入")
-                        # 如果买入失败，发送邮件通知
-                        elif not buy_result:
-                            self.log_message(f"无法按自动建议买入 {name} ({code})，发送邮件通知")
-                            # 发送无法买入通知邮件
-                            # 构建持仓详情文本
-                            positions_detail = self.build_positions_detail()
-                            
-                            subject = f"【无法买入通知】{name} ({code})"
-                            content = f"""
-模拟交易系统无法按自动建议买入通知：
-
-股票名称：{name}
-股票代码：{code}
-无法买入原因：资金不足或其他原因
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-                            """
-                            self.send_email_notification(subject, content)
+        
                 
         # 记录投资组合价值
         portfolio_value = self.get_portfolio_value()
@@ -773,6 +719,35 @@ class SimulationTrader:
         total_return = (portfolio_value - self.initial_capital) / self.initial_capital * 100
         self.log_message(f"总收益率: {total_return:.2f}%")
     
+    def calculate_investment_percentage(self, investor_type, buy_count):
+        """
+        根据投资者类型和推荐买入股票数量计算每只股票的投资比例
+        
+        Args:
+            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
+            buy_count (int): 推荐买入的股票数量
+            
+        Returns:
+            float: 每只股票的投资比例
+        """
+        # 根据投资者类型调整风险偏好
+        # 保守型：总投资不超过30%，单只股票不超过5%
+        # 平衡型：总投资不超过50%，单只股票不超过10%
+        # 进取型：总投资不超过80%，单只股票不超过20%
+        if investor_type == "保守型":
+            max_total_pct = 0.3
+            max_single_pct = 0.05
+        elif investor_type == "平衡型":
+            max_total_pct = 0.5
+            max_single_pct = 0.1
+        else:  # 进取型
+            max_total_pct = 0.8
+            max_single_pct = 0.2
+        
+        # 平均分配资金
+        investment_pct = min(max_total_pct / buy_count, max_single_pct) if buy_count > 0 else 0
+        return investment_pct
+    
     def check_positions_for_auto_trade(self, investor_type):
         """
         根据投资者类型和盈亏比例检查持仓，决定是否自动买入或卖出
@@ -782,20 +757,17 @@ class SimulationTrader:
         """
         # 定义不同投资者类型的盈亏比例阈值
         if investor_type == "保守型":
-            # 保守型：亏损超过5%卖出，盈利超过10%卖出，股价下跌超过5%时考虑买入
+            # 保守型：亏损超过5%卖出，盈利超过10%卖出
             loss_threshold = -0.05  # 亏损5%
             profit_threshold = 0.10  # 盈利10%
-            buy_dip_threshold = -0.05  # 股价下跌5%
         elif investor_type == "平衡型":
-            # 平衡型：亏损超过10%卖出，盈利超过15%卖出，股价下跌超过10%时考虑买入
+            # 平衡型：亏损超过10%卖出，盈利超过15%卖出
             loss_threshold = -0.10  # 亏损10%
             profit_threshold = 0.15  # 盈利15%
-            buy_dip_threshold = -0.10  # 股价下跌10%
         else:  # 进取型
-            # 进取型：亏损超过15%卖出，盈利超过20%卖出，股价下跌超过15%时考虑买入
+            # 进取型：亏损超过15%卖出，盈利超过20%卖出
             loss_threshold = -0.15  # 亏损15%
             profit_threshold = 0.20  # 盈利20%
-            buy_dip_threshold = -0.15  # 股价下跌15%
         
         # 检查持仓中的股票
         for code, position in list(self.positions.items()):
@@ -828,61 +800,7 @@ class SimulationTrader:
                                                      f"基于{investor_type}投资者盈亏比例策略自动卖出 - 亏损达到止损阈值 {loss_threshold:.2%}")
                     self.sell_stock(code, name, 1.0)
     
-    def get_stock_allocation_suggestion(self, investor_type):
-        """
-        根据投资者类型和当前市场情况建议买入的股票
-        
-        Args:
-            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
-            
-        Returns:
-            list: 建议买入的股票代码列表
-        """
-        suggestions = []
-        
-        # 定义不同投资者类型的买入策略
-        if investor_type == "保守型":
-            # 保守型：寻找稳定分红、低估值股票，或股价下跌超过5%的优质股票
-            buy_dip_threshold = -0.05  # 股价相对近期高点下跌5%时考虑买入
-        elif investor_type == "平衡型":
-            # 平衡型：寻找中等估值、有增长潜力股票，或股价下跌超过10%的股票
-            buy_dip_threshold = -0.10  # 股价相对近期高点下跌10%时考虑买入
-        else:  # 进取型
-            # 进取型：寻找高增长、高风险股票，或股价下跌超过15%的潜力股
-            buy_dip_threshold = -0.15  # 股价相对近期高点下跌15%时考虑买入
-        
-        # 检查WATCHLIST中的股票
-        for code, name in hk_smart_money_tracker.WATCHLIST.items():
-            # 跳过已持仓的股票
-            if code in self.positions:
-                continue
-                
-            # 获取当前价格
-            current_price = self.get_current_stock_price(code)
-            if current_price is None:
-                continue
-                
-            # 获取最近一段时间的价格数据以计算是否下跌
-            try:
-                stock_code = code.replace('.HK', '')
-                hist = get_hk_stock_data_tencent(stock_code, period_days=30)
-                if hist is not None and not hist.empty:
-                    # 计算近期最高价
-                    recent_high = hist['High'].rolling(window=20).max().iloc[-1]
-                    
-                    if recent_high > 0:
-                        # 计算当前价格相对于近期高点的跌幅
-                        price_ratio = (current_price - recent_high) / recent_high
-                        
-                        # 如果跌幅达到阈值，考虑买入
-                        if price_ratio <= buy_dip_threshold:
-                            self.log_message(f"{name} ({code}) 相对于近期高点下跌: {price_ratio:.2%}，达到{investor_type}投资者的买入阈值")
-                            suggestions.append(code)
-            except Exception as e:
-                self.log_message(f"分析股票 {name} ({code}) 价格趋势时出错: {e}")
-                continue
-        
-        return suggestions
+    
     
     def send_auto_trade_notification(self, name, code, trade_type, price, shares, reason):
         """
