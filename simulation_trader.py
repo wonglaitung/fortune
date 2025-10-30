@@ -338,9 +338,9 @@ class SimulationTrader:
         
         # 如果是新买入的股票，发送邮件通知
         if is_new_stock:
-            # 获取当前持仓清单
-            positions_list = self.get_current_positions_list()
-            positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+            # 发送买入通知邮件
+            # 构建持仓详情文本
+            positions_detail = self.build_positions_detail()
             
             subject = f"【买入通知】{name} ({code})"
             content = f"""
@@ -355,8 +355,7 @@ class SimulationTrader:
 
 当前资金：HK${self.capital:,.2f}
 
-当前持仓：
-{positions_text}
+{positions_detail}
             """
             self.send_email_notification(subject, content)
         
@@ -423,9 +422,8 @@ class SimulationTrader:
         self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}")
         
         # 发送卖出通知邮件
-        # 获取当前持仓清单
-        positions_list = self.get_current_positions_list()
-        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
         
         subject = f"【卖出通知】{name} ({code})"
         content = f"""
@@ -436,12 +434,11 @@ class SimulationTrader:
 卖出价格：HK${current_price:.2f}
 卖出数量：{shares_to_sell} 股
 卖出金额：HK${sell_amount:.2f}
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 当前资金：HK${self.capital:,.2f}
 
-当前持仓：
-{positions_text}
+{positions_detail}
         """
         self.send_email_notification(subject, content)
         
@@ -628,9 +625,9 @@ class SimulationTrader:
                 if code not in self.positions:
                     # 没有持仓，无法卖出，发送邮件通知
                     self.log_message(f"未持有 {name} ({code})，无法按大模型建议卖出")
-                    # 获取当前持仓清单
-                    positions_list = self.get_current_positions_list()
-                    positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+                    # 发送无法卖出通知邮件
+                    # 构建持仓详情文本
+                    positions_detail = self.build_positions_detail()
                     
                     subject = f"【无法卖出通知】{name} ({code})"
                     content = f"""
@@ -641,8 +638,7 @@ class SimulationTrader:
 无法卖出原因：未持有该股票
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-当前持仓：
-{positions_text}
+{positions_detail}
                     """
                     self.send_email_notification(subject, content)
                 else:
@@ -685,9 +681,9 @@ class SimulationTrader:
                     # 如果买入失败，发送邮件通知
                     if not buy_result:
                         self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
-                        # 获取当前持仓清单
-                        positions_list = self.get_current_positions_list()
-                        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+                        # 发送无法买入通知邮件
+                        # 构建持仓详情文本
+                        positions_detail = self.build_positions_detail()
                         
                         subject = f"【无法买入通知】{name} ({code})"
                         content = f"""
@@ -696,11 +692,11 @@ class SimulationTrader:
 股票名称：{name}
 股票代码：{code}
 无法买入原因：资金不足或其他原因
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 当前资金：HK${self.capital:,.2f}
-当前持仓：
-{positions_text}
+
+{positions_detail}
                         """
                         self.send_email_notification(subject, content)
                 
@@ -735,9 +731,9 @@ class SimulationTrader:
         if not self.portfolio_history:
             return
             
-        self.log_message("="*50)
+        self.log_message("="*80)
         self.log_message("每日交易总结")
-        self.log_message("="*50)
+        self.log_message("="*80)
         
         # 计算当日收益
         if len(self.portfolio_history) >= 2:
@@ -751,10 +747,108 @@ class SimulationTrader:
         total_return = (current_value - self.initial_capital) / self.initial_capital * 100
         self.log_message(f"总体收益率: {total_return:.2f}%")
         
-        # 持仓情况
-        self.log_message(f"当前持仓: {self.positions}")
-        self.log_message(f"可用资金: HK${self.capital:,.2f}")
+        # 持仓详情
+        positions_info, total_stock_value = self.get_detailed_positions_info()
         
+        if positions_info:
+            self.log_message("")
+            self.log_message("当前持仓详情:")
+            self.log_message("-" * 80)
+            self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15}")
+            self.log_message("-" * 80)
+            
+            for pos in positions_info:
+                self.log_message(f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f}")
+            
+            self.log_message("-" * 80)
+        
+        self.log_message(f"{'现金余额:':<65} {self.capital:>15,.2f}")
+        self.log_message(f"{'股票总价值:':<65} {total_stock_value:>15,.2f}")
+        self.log_message(f"{'投资组合总价值:':<65} {self.capital + total_stock_value:>15,.2f}")
+        self.log_message(f"{'可用资金:':<65} {self.capital:>15,.2f}")
+        
+    def get_detailed_positions_info(self):
+        """获取详细的持仓信息，包括当前价格和持有金额"""
+        try:
+            # 获取所有持仓股票的当前价格
+            current_prices = {}
+            total_stock_value = 0
+            
+            # 股票代码列表
+            stock_codes = []
+            for code in self.positions.keys():
+                stock_code = code.replace('.HK', '')
+                stock_codes.append(stock_code)
+                
+            # 获取所有股票的当前价格
+            for stock_code in stock_codes:
+                try:
+                    hist = get_hk_stock_data_tencent(stock_code, period_days=3)
+                    if hist is not None and not hist.empty:
+                        current_prices[stock_code] = hist['Close'].iloc[-1]
+                    else:
+                        current_prices[stock_code] = 0
+                except:
+                    current_prices[stock_code] = 0
+            
+            # 计算每只股票的持有金额
+            positions_info = []
+            for code, pos in self.positions.items():
+                shares = pos['shares']
+                avg_price = pos['avg_price']
+                
+                # 获取当前价格
+                stock_code = code.replace('.HK', '')
+                current_price = current_prices.get(stock_code, 0)
+                
+                # 计算持有金额
+                position_value = shares * current_price
+                total_stock_value += position_value
+                
+                # 获取股票名称
+                name = hk_smart_money_tracker.WATCHLIST.get(code, code)
+                
+                positions_info.append({
+                    'code': code,
+                    'name': name,
+                    'shares': shares,
+                    'avg_price': avg_price,
+                    'current_price': current_price,
+                    'position_value': position_value
+                })
+            
+            return positions_info, total_stock_value
+        except Exception as e:
+            self.log_message(f"获取持仓详情失败: {e}")
+            return [], 0
+
+    def build_positions_detail(self):
+        """
+        构建持仓详情文本
+        
+        Returns:
+            str: 格式化的持仓详情文本
+        """
+        # 获取详细的持仓信息
+        positions_info, total_stock_value = self.get_detailed_positions_info()
+        
+        # 构建持仓详情文本
+        if positions_info:
+            positions_detail = "当前持仓详情:\n"
+            positions_detail += "-" * 70 + "\n"
+            positions_detail += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15}\n"
+            positions_detail += "-" * 70 + "\n"
+            for pos in positions_info:
+                positions_detail += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f}\n"
+            positions_detail += "-" * 70 + "\n"
+            positions_detail += f"{'现金余额:':<55} {self.capital:>15,.2f}\n"
+            positions_detail += f"{'股票总价值:':<55} {total_stock_value:>15,.2f}\n"
+            positions_detail += f"{'投资组合总价值:':<55} {self.capital + total_stock_value:>15,.2f}\n"
+        else:
+            positions_detail = "暂无持仓\n"
+        
+        return positions_detail
+    
     def generate_final_report(self):
         """生成最终报告"""
         # 保存最终状态
@@ -796,12 +890,29 @@ class SimulationTrader:
         except Exception as e:
             self.log_message(f"保存投资组合历史失败: {e}")
 
+    def manual_sell_stock(self, code, percentage=1.0):
+        """
+        手工卖出股票
+        
+        Args:
+            code (str): 股票代码
+            percentage (float): 卖出比例，默认100%
+        """
+        # 从WATCHLIST获取股票名称，如果找不到则使用代码
+        name = hk_smart_money_tracker.WATCHLIST.get(code, code)
+        
+        # 检查是否有持仓
+        if code not in self.positions:
+            self.log_message(f"未持有 {name} ({code})，无法卖出")
+            return False
+        
+        return self.sell_stock(code, name, percentage)
+    
     def test_email_notification(self):
         """测试邮件发送功能"""
         self.log_message("测试邮件发送功能...")
-        # 获取当前持仓清单
-        positions_list = self.get_current_positions_list()
-        positions_text = "\n".join(positions_list) if positions_list else "暂无持仓"
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
         
         subject = "港股模拟交易系统 - 邮件功能测试"
         content = f"""
@@ -813,8 +924,8 @@ class SimulationTrader:
 - 当前资金: HK${self.capital:,.2f}
 - 持仓数量: {len(self.positions)}
 
-当前持仓：
-{positions_text}
+当前持仓详情：
+{positions_detail}
         """
         
         success = self.send_email_notification(subject, content)
@@ -872,7 +983,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='港股模拟交易系统')
     parser.add_argument('--duration-days', type=int, default=90, help='模拟天数，默认90天')
     parser.add_argument('--analysis-frequency', type=int, default=25, help='分析频率（分钟），默认15分钟')
+    parser.add_argument('--manual-sell', type=str, help='手工卖出股票代码（例如：0700.HK）')
+    parser.add_argument('--sell-percentage', type=float, default=1.0, help='卖出比例（0.0-1.0），默认1.0（100%）')
     args = parser.parse_args()
+    
+    # 如果指定了手工卖出股票，则执行手工卖出
+    if args.manual_sell:
+        # 创建模拟交易器
+        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=15)
+        
+        # 执行手工卖出
+        success = trader.manual_sell_stock(args.manual_sell, args.sell_percentage)
+        if success:
+            print(f"成功卖出 {args.manual_sell} ({args.sell_percentage*100:.1f}%)")
+        else:
+            print(f"卖出 {args.manual_sell} 失败")
+        exit(0)
     
     # 运行模拟交易
     run_simulation(duration_days=args.duration_days, analysis_frequency=args.analysis_frequency)
