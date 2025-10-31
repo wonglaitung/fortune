@@ -1045,6 +1045,22 @@ class SimulationTrader:
         # 检查是否有持仓
         if code not in self.positions:
             self.log_message(f"未持有 {name} ({code})，无法卖出")
+            # 发送无法卖出通知邮件
+            # 构建持仓详情文本
+            positions_detail = self.build_positions_detail()
+            
+            subject = f"【无法卖出通知】{name} ({code})"
+            content = f"""
+模拟交易系统无法按手动指令卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+无法卖出原因：未持有该股票
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+{positions_detail}
+            """
+            self.send_email_notification(subject, content)
             return False
         
         return self.sell_stock(code, name, percentage)
