@@ -340,14 +340,17 @@ class SimulationTrader:
         
         self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
         
-        # 如果是新买入的股票，发送邮件通知
+        # 发送买入通知邮件（无论是否为新股票）
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
+        
         if is_new_stock:
-            # 发送买入通知邮件
-            # 构建持仓详情文本
-            positions_detail = self.build_positions_detail()
+            subject_prefix = "【新买入通知】"
+        else:
+            subject_prefix = "【加仓通知】"
             
-            subject = f"【买入通知】{name} ({code})"
-            content = f"""
+        subject = f"{subject_prefix}{name} ({code})"
+        content = f"""
 模拟交易系统买入通知：
 
 股票名称：{name}
@@ -360,8 +363,8 @@ class SimulationTrader:
 当前资金：HK${self.capital:,.2f}
 
 {positions_detail}
-            """
-            self.send_email_notification(subject, content)
+        """
+        self.send_email_notification(subject, content)
         
         return True
     
