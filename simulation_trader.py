@@ -664,14 +664,8 @@ class SimulationTrader:
             # 计算每只股票的投资比例
             investment_pct = self.calculate_investment_percentage(investor_type, buy_count)
             
-            # 将买入股票分为两类：没有持仓的股票和已有持仓的股票
-            new_stocks = [code for code in recommendations['buy'] if code not in self.positions]
-            existing_stocks = [code for code in recommendations['buy'] if code in self.positions]
-            
-            # 优先买入没有持仓的股票
-            ordered_buy_list = new_stocks + existing_stocks
-            
-            for code in ordered_buy_list:
+            # 按照大模型推荐的顺序买入股票
+            for code in recommendations['buy']:
                 if code in hk_smart_money_tracker.WATCHLIST:
                     name = hk_smart_money_tracker.WATCHLIST[code]
                     # 尝试买入股票
