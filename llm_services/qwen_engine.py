@@ -74,12 +74,14 @@ def chat_with_llm(query):
             query = query.encode('utf-8').decode('utf-8')
         
         payload = {
-            'model': 'qwen-plus',
+            'model': 'qwen-plus-2025-07-28',
             'messages': [{'role': 'user', 'content': query}],
             'stream': False,
-            'top_p': 0.4,
-            'temperature': 0.1,
-            'max_tokens': max_tokens
+            'top_p': 0.2,
+            'temperature': 0.05,
+            'max_tokens': max_tokens,
+            'seed': 1368,
+            'enable_thinking': True
         }
         
         response = requests.post(chat_url, headers=headers, json=payload)
