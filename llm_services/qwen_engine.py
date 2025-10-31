@@ -6,7 +6,7 @@ import json
 api_key = os.getenv('QWEN_API_KEY', '')  # 从环境变量读取API密钥
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-max_tokens = int(os.getenv('MAX_TOKENS', 8192))
+max_tokens = int(os.getenv('MAX_TOKENS', 16384))
 
 def embed_with_llm(query):
     """
