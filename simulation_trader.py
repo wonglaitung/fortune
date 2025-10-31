@@ -31,13 +31,13 @@ import hk_smart_money_tracker
 from tencent_finance import get_hk_stock_data_tencent
 
 class SimulationTrader:
-    def __init__(self, initial_capital=1000000, analysis_frequency=15):
+    def __init__(self, initial_capital=1000000, analysis_frequency=60):
         """
         初始化模拟交易系统
         
         Args:
             initial_capital (float): 初始资金，默认100万港元
-            analysis_frequency (int): 分析频率（分钟），默认15分钟
+            analysis_frequency (int): 分析频率（分钟），默认60分钟
         """
         self.initial_capital = initial_capital
         self.capital = initial_capital
@@ -1092,13 +1092,13 @@ class SimulationTrader:
             self.log_message("邮件功能测试失败")
         return success
 
-def run_simulation(duration_days=30, analysis_frequency=15):
+def run_simulation(duration_days=30, analysis_frequency=60):
     """
     运行模拟交易
     
     Args:
         duration_days (int): 模拟天数，默认30天
-        analysis_frequency (int): 分析频率（分钟），默认15分钟
+        analysis_frequency (int): 分析频率（分钟），默认60分钟
     """
     print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
     print("初始资金: HK$1,000,000")
@@ -1147,7 +1147,7 @@ if __name__ == "__main__":
     # 如果指定了手工卖出股票，则执行手工卖出
     if args.manual_sell:
         # 创建模拟交易器
-        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=15)
+        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=60)
         
         # 执行手工卖出
         success = trader.manual_sell_stock(args.manual_sell, args.sell_percentage)
