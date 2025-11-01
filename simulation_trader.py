@@ -8,6 +8,9 @@
 1. 根据市场情况自动建议买入股票
 """
 
+# 全局参数配置
+DEFAULT_ANALYSIS_FREQUENCY = 60  # 默认分析频率（分钟）
+
 import os
 import sys
 import time
@@ -30,13 +33,13 @@ import hk_smart_money_tracker
 from tencent_finance import get_hk_stock_data_tencent
 
 class SimulationTrader:
-    def __init__(self, initial_capital=1000000, analysis_frequency=60):
+    def __init__(self, initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY):
         """
         初始化模拟交易系统
         
         Args:
             initial_capital (float): 初始资金，默认100万港元
-            analysis_frequency (int): 分析频率（分钟），默认60分钟
+            analysis_frequency (int): 分析频率（分钟），默认15分钟
         """
         self.initial_capital = initial_capital
         self.capital = initial_capital
@@ -1074,13 +1077,13 @@ class SimulationTrader:
             self.log_message("邮件功能测试失败")
         return success
 
-def run_simulation(duration_days=30, analysis_frequency=60):
+def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY):
     """
     运行模拟交易
     
     Args:
-        duration_days (int): 模拟天数，默认30天
-        analysis_frequency (int): 分析频率（分钟），默认60分钟
+        duration_days (int): 模�拟天数，默认30天
+        analysis_frequency (int): 分析频率（分钟），默认15分钟
     """
     print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
     print("初始资金: HK$1,000,000")
@@ -1121,7 +1124,7 @@ if __name__ == "__main__":
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='港股模拟交易系统')
     parser.add_argument('--duration-days', type=int, default=90, help='模拟天数，默认90天')
-    parser.add_argument('--analysis-frequency', type=int, default=15, help='分析频率（分钟），默认15分钟')
+    parser.add_argument('--analysis-frequency', type=int, default=DEFAULT_ANALYSIS_FREQUENCY, help=f'分析频率（分钟），默认{DEFAULT_ANALYSIS_FREQUENCY}分钟')
     parser.add_argument('--manual-sell', type=str, help='手工卖出股票代码（例如：0700.HK）')
     parser.add_argument('--sell-percentage', type=float, default=1.0, help='卖出比例（0.0-1.0），默认1.0（100%）')
     args = parser.parse_args()
@@ -1129,7 +1132,7 @@ if __name__ == "__main__":
     # 如果指定了手工卖出股票，则执行手工卖出
     if args.manual_sell:
         # 创建模拟交易器
-        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=60)
+        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY)
         
         # 执行手工卖出
         success = trader.manual_sell_stock(args.manual_sell, args.sell_percentage)
