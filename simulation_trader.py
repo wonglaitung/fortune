@@ -5,8 +5,7 @@
 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易
 
 新增功能：
-1. 根据不同投资者类型（保守型、平衡型、进取型）自动进行盈亏比例交易
-2. 根据市场情况自动建议买入股票
+1. 根据市场情况自动建议买入股票
 """
 
 import os
@@ -368,6 +367,100 @@ class SimulationTrader:
         
         return True
     
+    def buy_stock_by_shares(self, code, name, shares):
+        """
+        按指定股数买入股票
+        
+        Args:
+            code (str): 股票代码
+            name (str): 股票名称
+            shares (int): 买入股数
+        """
+        # 检查是否在交易时间
+        if not self.is_trading_hours:
+            self.log_message(f"非交易时间，跳过买入 {name} ({code})")
+            return False
+            
+        current_price = self.get_current_stock_price(code)
+        if current_price is None:
+            self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过买入")
+            return False
+            
+        # 计算实际投资金额
+        actual_invest = shares * current_price
+        
+        # 检查是否有足够资金
+        if actual_invest > self.capital:
+            self.log_message(f"资金不足买入 {shares} 股 {name} ({code})")
+            return False
+            
+        # 检查是否是新买入的股票
+        is_new_stock = code not in self.positions
+        
+        # 执行买入
+        self.capital -= actual_invest
+        
+        # 更新持仓
+        if code in self.positions:
+            # 如果已有持仓，更新平均买入价
+            existing_shares = self.positions[code]['shares']
+            existing_avg_price = self.positions[code]['avg_price']
+            new_avg_price = (existing_shares * existing_avg_price + shares * current_price) / (existing_shares + shares)
+            self.positions[code]['shares'] += shares
+            self.positions[code]['avg_price'] = new_avg_price
+        else:
+            # 新建持仓
+            self.positions[code] = {
+                'shares': shares,
+                'avg_price': current_price
+            }
+            
+        # 记录交易
+        transaction = {
+            'timestamp': datetime.now().isoformat(),
+            'type': 'BUY',
+            'code': code,
+            'name': name,
+            'shares': shares,
+            'price': current_price,
+            'amount': actual_invest,
+            'capital_after': self.capital
+        }
+        self.transaction_history.append(transaction)
+        
+        # 保存状态
+        self.save_state()
+        
+        self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
+        
+        # 发送买入通知邮件（无论是否为新股票）
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
+        
+        if is_new_stock:
+            subject_prefix = "【新买入通知】"
+        else:
+            subject_prefix = "【加仓通知】"
+            
+        subject = f"{subject_prefix}{name} ({code})"
+        content = f"""
+模拟交易系统买入通知：
+
+股票名称：{name}
+股票代码：{code}
+买入价格：HK${current_price:.2f}
+买入数量：{shares} 股
+买入金额：HK${actual_invest:.2f}
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+        """
+        self.send_email_notification(subject, content)
+        
+        return True
+    
     def sell_stock(self, code, name, percentage=1.0):
         """
         卖出股票
@@ -488,7 +581,7 @@ class SimulationTrader:
             llm_analysis (str): 大模型分析结果
             
         Returns:
-            dict: 解析后的推荐结果 {'buy': [股票代码列表], 'sell': [股票代码列表]}
+            dict: 解析后的推荐结果 {'buy': [股票信息列表], 'sell': [股票信息列表]}
         """
         recommendations = {
             'buy': [],
@@ -507,12 +600,22 @@ class SimulationTrader:
                 
                 # 验证JSON格式是否符合预期
                 if 'buy' in parsed_json and 'sell' in parsed_json:
-                    # 验证股票代码是否在自选股列表中
-                    buy_codes = [code for code in parsed_json['buy'] if code in hk_smart_money_tracker.WATCHLIST]
-                    sell_codes = [code for code in parsed_json['sell'] if code in hk_smart_money_tracker.WATCHLIST and code in self.positions]
+                    # 验证买入股票是否在自选股列表中
+                    buy_stocks = []
+                    for stock in parsed_json['buy']:
+                        if isinstance(stock, dict) and 'code' in stock:
+                            if stock['code'] in hk_smart_money_tracker.WATCHLIST:
+                                buy_stocks.append(stock)
                     
-                    recommendations['buy'] = buy_codes
-                    recommendations['sell'] = sell_codes
+                    # 验证卖出股票是否在自选股列表中且有持仓
+                    sell_stocks = []
+                    for stock in parsed_json['sell']:
+                        if isinstance(stock, dict) and 'code' in stock:
+                            if stock['code'] in hk_smart_money_tracker.WATCHLIST and stock['code'] in self.positions:
+                                sell_stocks.append(stock)
+                    
+                    recommendations['buy'] = buy_stocks
+                    recommendations['sell'] = sell_stocks
                     self.log_message("成功解析JSON格式的买卖信号")
                     return recommendations
                 else:
@@ -544,9 +647,6 @@ class SimulationTrader:
         # 进取型：偏好高风险、高收益的股票
         investor_type = "进取型"  # 可以根据需要调整为"保守型"或"平衡型"
         
-        # 检查持仓股票的盈亏情况，根据投资者类型决定是否自动卖出
-        self.check_positions_for_auto_trade(investor_type)
-        
         # 运行股票分析
         try:
             self.log_message("正在分析股票...")
@@ -572,12 +672,29 @@ class SimulationTrader:
                 self.log_message("大模型分析调用成功")
                 self.log_message(f"大模型分析结果:\n{llm_analysis}")
                 
-                # 再次调用大模型，要求以固定格式输出买卖信号
+                # 构建当前持仓信息
+                positions_info = self.get_detailed_positions_info()[0]
+                positions_text = ""
+                if positions_info:
+                    positions_text = "当前持仓情况：\n"
+                    for pos in positions_info:
+                        positions_text += f"- {pos['code']} {pos['name']}: {pos['shares']}股 @ 平均成本HK${pos['avg_price']:.2f}, 当前价格HK${pos['current_price']:.2f}\n"
+                else:
+                    positions_text = "当前无持仓\n"
+                
+                # 获取当前资金情况
+                portfolio_value = self.get_portfolio_value()
+                capital_info = f"当前资金: HK${self.capital:,.2f}\n投资组合总价值: HK${portfolio_value:,.2f}"
+                
+                # 再次调用大模型，要求以固定格式输出买卖信号和买入数量
                 format_prompt = f"""
-请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号：
+请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号和买入数量：
 
 报告内容：
 {llm_analysis}
+
+{positions_text}
+{capital_info}
 
 投资者风险偏好：{investor_type}
 - 保守型：偏好低风险、稳定收益的股票，如高股息银行股
@@ -586,17 +703,27 @@ class SimulationTrader:
 
 请严格按照以下格式输出：
 {{
-    \"buy\": [\"股票代码1\", \"股票代码2\", ...],
-    \"sell\": [\"股票代码3\", \"股票代码4\", ...]
+    \"buy\": [
+        {{\"code\": \"股票代码1\", \"name\": \"股票名称1\", \"shares\": 买入股数, \"reason\": \"买入理由\"}},
+        {{\"code\": \"股票代码2\", \"name\": \"股票名称2\", \"shares\": 买入股数, \"reason\": \"买入理由\"}}
+    ],
+    \"sell\": [
+        {{\"code\": \"股票代码3\", \"name\": \"股票名称3\", \"reason\": \"卖出理由\"}},
+        {{\"code\": \"股票代码4\", \"name\": \"股票名称4\", \"reason\": \"卖出理由\"}}
+    ]
 }}
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
-2. \"buy\"字段包含建议买入的股票代码列表，按最有价值的股票放在最前面排序
-3. \"sell\"字段包含建议卖出的股票代码列表
-4. 如果没有明确的买卖建议，对应的字段为空数组
-5. 根据投资者风险偏好筛选适合的股票
-6. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
+2. \"buy\"字段包含建议买入的股票信息列表，每项包含代码、名称、建议买入股数和理由
+3. \"sell\"字段包含建议卖出的股票信息列表，每项包含代码、名称和理由
+4. 买入股数请根据当前资金情况、股票价格和投资者风险偏好合理计算
+5. 如果没有明确的买卖建议，对应的字段为空数组
+6. 根据投资者风险偏好筛选适合的股票
+7. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
+8. 请避免重复买入已持有的股票
+9. 买入股数必须是100的整数倍（港股交易规则）
+10. 确保总买入金额不超过当前可用资金
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -628,10 +755,12 @@ class SimulationTrader:
             return
             
         # 执行卖出操作（严格按照大模型建议）
-        # 注意：这里不包括自动卖出的股票，自动卖出在check_positions_for_auto_trade中处理
-        for code in recommendations['sell']:
+        for stock in recommendations['sell']:
+            code = stock['code']
+            name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
+            reason = stock.get('reason', '未提供理由')
+            
             if code in hk_smart_money_tracker.WATCHLIST:
-                name = hk_smart_money_tracker.WATCHLIST[code]
                 # 检查是否持有该股票
                 if code not in self.positions:
                     # 没有持仓，无法卖出，发送邮件通知
@@ -655,42 +784,88 @@ class SimulationTrader:
                 else:
                     # 卖出全部持仓
                     sell_pct = 1.0
+                    self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}")
                     self.sell_stock(code, name, sell_pct)
                 
         # 执行买入操作（严格按照大模型建议）
-        # 根据推荐的股票数量动态调整投资比例，确保不会超过总资金
-        buy_count = len(recommendations['buy'])
-        if buy_count > 0:
-            # 计算每只股票的投资比例
-            investment_pct = self.calculate_investment_percentage(investor_type, buy_count)
+        for stock in recommendations['buy']:
+            code = stock['code']
+            name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
+            shares = stock.get('shares', 0)
+            reason = stock.get('reason', '未提供理由')
             
-            # 按照大模型推荐的顺序买入股票
-            for code in recommendations['buy']:
-                if code in hk_smart_money_tracker.WATCHLIST:
-                    name = hk_smart_money_tracker.WATCHLIST[code]
-                    # 尝试买入股票
-                    buy_result = self.buy_stock(code, name, investment_pct)
-                    # 如果买入失败，发送邮件通知
-                    if not buy_result:
-                        self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
-                        # 发送无法买入通知邮件
-                        # 构建持仓详情文本
-                        positions_detail = self.build_positions_detail()
-                        
-                        subject = f"【无法买入通知】{name} ({code})"
-                        content = f"""
+            if code in hk_smart_money_tracker.WATCHLIST:
+                # 检查是否已经持有该股票
+                if code in self.positions:
+                    self.log_message(f"已持有 {name} ({code})，跳过买入")
+                    continue
+                
+                # 检查买入股数是否有效
+                if shares <= 0:
+                    self.log_message(f"大模型建议买入 {name} ({code}) 股数无效: {shares}")
+                    continue
+                
+                # 检查是否是100的倍数
+                if shares % 100 != 0:
+                    self.log_message(f"大模型建议买入 {name} ({code}) 股数不是100的倍数: {shares}")
+                    continue
+                
+                # 获取当前价格
+                current_price = self.get_current_stock_price(code)
+                if current_price is None:
+                    self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过买入")
+                    continue
+                
+                # 检查是否有足够资金
+                required_amount = shares * current_price
+                if required_amount > self.capital:
+                    self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要HK${required_amount:.2f}，当前资金HK${self.capital:.2f}")
+                    # 发送资金不足通知邮件
+                    positions_detail = self.build_positions_detail()
+                    
+                    subject = f"【无法买入通知】{name} ({code})"
+                    content = f"""
 模拟交易系统无法按大模型建议买入通知：
 
 股票名称：{name}
 股票代码：{code}
-无法买入原因：资金不足或其他原因
+建议买入数量：{shares} 股
+建议买入金额：HK${required_amount:.2f}
+无法买入原因：资金不足
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 当前资金：HK${self.capital:,.2f}
 
 {positions_detail}
-                        """
-                        self.send_email_notification(subject, content)
+                    """
+                    self.send_email_notification(subject, content)
+                    continue
+                
+                # 执行买入
+                self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}")
+                buy_result = self.buy_stock_by_shares(code, name, shares)
+                
+                # 如果买入失败，发送邮件通知
+                if not buy_result:
+                    self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
+                    # 发送无法买入通知邮件
+                    positions_detail = self.build_positions_detail()
+                    
+                    subject = f"【无法买入通知】{name} ({code})"
+                    content = f"""
+模拟交易系统无法按大模型建议买入通知：
+
+股票名称：{name}
+股票代码：{code}
+建议买入数量：{shares} 股
+无法买入原因：交易执行失败
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+                    """
+                    self.send_email_notification(subject, content)
         
         
                 
@@ -744,111 +919,7 @@ class SimulationTrader:
         investment_pct = min(max_total_pct / buy_count, max_single_pct) if buy_count > 0 else 0
         return investment_pct
     
-    def check_positions_for_auto_trade(self, investor_type):
-        """
-        根据投资者类型和盈亏比例检查持仓，决定是否自动买入或卖出
-        
-        Args:
-            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
-        """
-        # 定义不同投资者类型的盈亏比例阈值
-        if investor_type == "保守型":
-            # 保守型：亏损超过5%卖出，盈利超过10%卖出
-            loss_threshold = -0.05  # 亏损5%
-            profit_threshold = 0.10  # 盈利10%
-        elif investor_type == "平衡型":
-            # 平衡型：亏损超过10%卖出，盈利超过15%卖出
-            loss_threshold = -0.10  # 亏损10%
-            profit_threshold = 0.15  # 盈利15%
-        else:  # 进取型
-            # 进取型：亏损超过15%卖出，盈利超过20%卖出
-            loss_threshold = -0.15  # 亏损15%
-            profit_threshold = 0.20  # 盈利20%
-        
-        # 检查持仓中的股票
-        for code, position in list(self.positions.items()):
-            # 获取当前价格
-            current_price = self.get_current_stock_price(code)
-            if current_price is None:
-                continue
-                
-            # 计算盈亏比例
-            avg_price = position['avg_price']
-            profit_loss_ratio = (current_price - avg_price) / avg_price
-            
-            # 检查是否达到卖出条件
-            if profit_loss_ratio <= loss_threshold or profit_loss_ratio >= profit_threshold:
-                name = hk_smart_money_tracker.WATCHLIST.get(code, code)
-                self.log_message(f"{name} ({code}) 盈亏比例: {profit_loss_ratio:.2%}，达到{investor_type}投资者的交易阈值")
-                
-                if profit_loss_ratio >= profit_threshold:
-                    # 盈利达到阈值，卖出获利
-                    self.log_message(f"自动卖出 {name} ({code}) - 盈利达到阈值 {profit_threshold:.2%}")
-                    # 发送自动卖出通知邮件，明确说明是基于盈亏比例的自动交易
-                    self.send_auto_trade_notification(name, code, 'SELL', current_price, position['shares'], 
-                                                     f"基于{investor_type}投资者盈亏比例策略自动卖出 - 盈利达到阈值 {profit_threshold:.2%}")
-                    self.sell_stock(code, name, 1.0)
-                elif profit_loss_ratio <= loss_threshold:
-                    # 亏损达到阈值，止损卖出
-                    self.log_message(f"自动卖出 {name} ({code}) - 亏损达到止损阈值 {loss_threshold:.2%}")
-                    # 发送自动卖出通知邮件，明确说明是基于盈亏比例的自动交易
-                    self.send_auto_trade_notification(name, code, 'SELL', current_price, position['shares'], 
-                                                     f"基于{investor_type}投资者盈亏比例策略自动卖出 - 亏损达到止损阈值 {loss_threshold:.2%}")
-                    self.sell_stock(code, name, 1.0)
     
-    
-    
-    def send_auto_trade_notification(self, name, code, trade_type, price, shares, reason):
-        """
-        发送自动交易通知邮件
-        
-        Args:
-            name (str): 股票名称
-            code (str): 股票代码
-            trade_type (str): 交易类型 ('BUY' 或 'SELL')
-            price (float): 交易价格
-            shares (int): 交易股数
-            reason (str): 交易原因
-        """
-        # 构建持仓详情文本
-        positions_detail = self.build_positions_detail()
-        
-        if trade_type == 'BUY':
-            subject = f"【自动买入通知】{name} ({code}) - {reason}"
-            content = f"""
-模拟交易系统自动买入通知：
-
-股票名称：{name}
-股票代码：{code}
-买入价格：HK${price:.2f}
-买入数量：{shares} 股
-买入金额：HK${price * shares:.2f}
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-交易原因：{reason}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-            """
-        else:  # SELL
-            subject = f"【自动卖出通知】{name} ({code}) - {reason}"
-            content = f"""
-模拟交易系统自动卖出通知：
-
-股票名称：{name}
-股票代码：{code}
-卖出价格：HK${price:.2f}
-卖出数量：{shares} 股
-卖出金额：HK${price * shares:.2f}
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-交易原因：{reason}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-        """
-        
-        self.send_email_notification(subject, content)
     
     def run_hourly_analysis(self):
         """按计划频率运行分析和交易"""
