@@ -261,113 +261,9 @@ class SimulationTrader:
             positions_list.append(f"{code} {name} ({shares}股 @ HK${avg_price:.2f})")
         return positions_list
     
-    def buy_stock(self, code, name, amount_percentage=0.1):
-        """
-        买入股票
-        
-        Args:
-            code (str): 股票代码
-            name (str): 股票名称
-            amount_percentage (float): 投资金额占可用资金的比例，默认10%
-        """
-        # 检查是否在交易时间
-        if not self.is_trading_hours:
-            self.log_message(f"非交易时间，跳过买入 {name} ({code})")
-            return False
-            
-        current_price = self.get_current_stock_price(code)
-        if current_price is None:
-            self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过买入")
-            return False
-            
-        # 计算可投资金额
-        invest_amount = self.capital * amount_percentage
-        if invest_amount <= 0:
-            self.log_message(f"资金不足，无法买入 {name} ({code})")
-            return False
-            
-        # 计算可买入股数（考虑手续费）
-        shares = int(invest_amount / current_price / 100) * 100  # 以100股为单位
-        if shares <= 0:
-            self.log_message(f"资金不足以买入100股 {name} ({code})")
-            return False
-            
-        # 计算实际投资金额
-        actual_invest = shares * current_price
-        
-        # 检查是否有足够资金
-        if actual_invest > self.capital:
-            self.log_message(f"资金不足买入 {shares} 股 {name} ({code})")
-            return False
-            
-        # 检查是否是新买入的股票
-        is_new_stock = code not in self.positions
-        
-        # 执行买入
-        self.capital -= actual_invest
-        
-        # 更新持仓
-        if code in self.positions:
-            # 如果已有持仓，更新平均买入价
-            existing_shares = self.positions[code]['shares']
-            existing_avg_price = self.positions[code]['avg_price']
-            new_avg_price = (existing_shares * existing_avg_price + shares * current_price) / (existing_shares + shares)
-            self.positions[code]['shares'] += shares
-            self.positions[code]['avg_price'] = new_avg_price
-        else:
-            # 新建持仓
-            self.positions[code] = {
-                'shares': shares,
-                'avg_price': current_price
-            }
-            
-        # 记录交易
-        transaction = {
-            'timestamp': datetime.now().isoformat(),
-            'type': 'BUY',
-            'code': code,
-            'name': name,
-            'shares': shares,
-            'price': current_price,
-            'amount': actual_invest,
-            'capital_after': self.capital
-        }
-        self.transaction_history.append(transaction)
-        
-        # 保存状态
-        self.save_state()
-        
-        self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
-        
-        # 发送买入通知邮件（无论是否为新股票）
-        # 构建持仓详情文本
-        positions_detail = self.build_positions_detail()
-        
-        if is_new_stock:
-            subject_prefix = "【新买入通知】"
-        else:
-            subject_prefix = "【加仓通知】"
-            
-        subject = f"{subject_prefix}{name} ({code})"
-        content = f"""
-模拟交易系统买入通知：
-
-股票名称：{name}
-股票代码：{code}
-买入价格：HK${current_price:.2f}
-买入数量：{shares} 股
-买入金额：HK${actual_invest:.2f}
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-        """
-        self.send_email_notification(subject, content)
-        
-        return True
     
-    def buy_stock_by_shares(self, code, name, shares):
+    
+    def buy_stock_by_shares(self, code, name, shares, reason=None):
         """
         按指定股数买入股票
         
@@ -375,6 +271,7 @@ class SimulationTrader:
             code (str): 股票代码
             name (str): 股票名称
             shares (int): 买入股数
+            reason (str): 买入原因
         """
         # 检查是否在交易时间
         if not self.is_trading_hours:
@@ -451,6 +348,7 @@ class SimulationTrader:
 买入价格：HK${current_price:.2f}
 买入数量：{shares} 股
 买入金额：HK${actual_invest:.2f}
+买入原因：{reason if reason else '未提供理由'}
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 当前资金：HK${self.capital:,.2f}
@@ -461,7 +359,7 @@ class SimulationTrader:
         
         return True
     
-    def sell_stock(self, code, name, percentage=1.0):
+    def sell_stock(self, code, name, percentage=1.0, reason=None):
         """
         卖出股票
         
@@ -469,6 +367,7 @@ class SimulationTrader:
             code (str): 股票代码
             name (str): 股票名称
             percentage (float): 卖出比例，默认100%
+            reason (str): 卖出原因
         """
         # 检查是否在交易时间
         if not self.is_trading_hours:
@@ -534,6 +433,7 @@ class SimulationTrader:
 卖出价格：HK${current_price:.2f}
 卖出数量：{shares_to_sell} 股
 卖出金额：HK${sell_amount:.2f}
+卖出原因：{reason if reason else '未提供理由'}
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 当前资金：HK${self.capital:,.2f}
@@ -775,6 +675,7 @@ class SimulationTrader:
 
 股票名称：{name}
 股票代码：{code}
+大模型建议卖出理由：{reason}
 无法卖出原因：未持有该股票
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
@@ -785,7 +686,7 @@ class SimulationTrader:
                     # 卖出全部持仓
                     sell_pct = 1.0
                     self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}")
-                    self.sell_stock(code, name, sell_pct)
+                    self.sell_stock(code, name, sell_pct, reason)
                 
         # 执行买入操作（严格按照大模型建议）
         for stock in recommendations['buy']:
@@ -829,6 +730,7 @@ class SimulationTrader:
 
 股票名称：{name}
 股票代码：{code}
+大模型建议买入理由：{reason}
 建议买入数量：{shares} 股
 建议买入金额：HK${required_amount:.2f}
 无法买入原因：资金不足
@@ -843,7 +745,7 @@ class SimulationTrader:
                 
                 # 执行买入
                 self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}")
-                buy_result = self.buy_stock_by_shares(code, name, shares)
+                buy_result = self.buy_stock_by_shares(code, name, shares, reason)
                 
                 # 如果买入失败，发送邮件通知
                 if not buy_result:
@@ -857,6 +759,7 @@ class SimulationTrader:
 
 股票名称：{name}
 股票代码：{code}
+大模型建议买入理由：{reason}
 建议买入数量：{shares} 股
 无法买入原因：交易执行失败
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -1128,7 +1031,7 @@ class SimulationTrader:
             self.send_email_notification(subject, content)
             return False
         
-        return self.sell_stock(code, name, percentage)
+        return self.sell_stock(code, name, percentage, None)
     
     def test_email_notification(self):
         """测试邮件发送功能"""
