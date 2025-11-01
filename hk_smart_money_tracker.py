@@ -266,8 +266,9 @@ def build_llm_analysis_prompt(stock_data):
         str: 构建好的提示词
     """
     # 构建股票数据表格 (与邮件报告列顺序一致)
-    table_header = "| 股票名称 | 代码 | 最新价 | 涨跌幅(%) | 位置(%) | 量比 | 成交量z-score | 成交额z-score | 成交金额(百万) | 换手率(%) | VWAP | ATR | ADX | 布林带宽度(%) | 5日均线偏离(%) | 10日均线偏离(%) | RSI | MACD | 波动率(%) | OBV | CMF | 相对强度(RS_ratio_%) | 相对强度差值(RS_diff_%) | 跑赢恒指 | 南向资金(万) | 建仓信号 | 出货信号 | 放量上涨 | 缩量回调 |\n"
-    table_separator = "|----------|------|--------|-----------|---------|------|----------------|----------------|----------------|-----------|------|-----|-----|----------------|----------------|----------------|-----|------|-----------|-----|-----|---------------------|-----------------------|----------|--------------|----------|----------|----------|----------|\n"
+    table_header = "| 基本信息 |  |  |  | 价格位置 | 成交量相关 |  |  |  |  |  |  |  | 波动性指标 |  |  |  |  |  | 均线偏离 |  | 技术指标 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 资金流向指标 | 相对表现 |  |  |  | 信号指标 |  |  |  |\n"
+    table_header2 = "| 股票名称 | 代码 | 最新价 | 涨跌幅(%) | 位置(%) | 量比 | 成交量z-score | 成交额z-score | 成交金额(百万) | 换手率(%) | VWAP | 成交量比率 | 成交量比率信号 | ATR | ATR比率 | ATR比率信号 | 布林带宽度(%) | 布林带突破 | 波动率(%) | 5日均线偏离(%) | 10日均线偏离(%) | RSI | RSI变化率 | RSI背离信号 | MACD | MACD柱状图 | MACD柱状图变化率 | MACD柱状图变化率信号 | OBV | CMF | CMF信号线 | CMF趋势信号 | 随机振荡器K | 随机振荡器D | 随机振荡器信号 | Williams %R | Williams %R信号 | 布林带突破信号 | 价格变化率信号 | 南向资金(万) | 相对强度(RS_ratio_%) | 相对强度差值(RS_diff_%) | 跑赢恒指 | 建仓信号 | 出货信号 | 放量上涨 | 缩量回调 |\n"
+    table_separator = "|----------|------|--------|-----------|---------|------|----------------|----------------|----------------|-----------|------|-----|---------|--------------|----------------|------------|----------------|-----|------|-----------|-----|-----|---------------------|-----------------------|----------|--------------|----------|----------|----------|----------|-------------|------------------|----------------------|-----------|--------------|-------------|-------------|----------------|------------|------------|----------------|-------------|------------------|----------------|\n"
     
     table_rows = []
     for stock in stock_data:
@@ -278,8 +279,8 @@ def build_llm_analysis_prompt(stock_data):
         rs_diff_value = stock.get('relative_strength_diff')
         rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
         
-        # 使用与邮件报告一致的字段名
-        row = f"| {stock['name']} | {stock['code']} | {stock['last_close'] or 'N/A'} | {stock['change_pct'] or 'N/A'} | {stock['price_percentile'] or 'N/A'} | {stock['vol_ratio'] or 'N/A'} | {stock['vol_z_score'] or 'N/A'} | {stock['turnover_z_score'] or 'N/A'} | {stock['turnover'] or 'N/A'} | {stock['turnover_rate'] or 'N/A'} | {stock['vwap'] or 'N/A'} | {stock['atr'] or 'N/A'} | {stock['adx'] or 'N/A'} | {stock['bb_width'] or 'N/A'} | {stock['ma5_deviation'] or 'N/A'} | {stock['ma10_deviation'] or 'N/A'} | {stock['rsi'] or 'N/A'} | {stock['macd'] or 'N/A'} | {stock['volatility'] or 'N/A'} | {stock['obv'] or 'N/A'} | {stock['cmf'] or 'N/A'} | {rs_ratio_pct} | {rs_diff_pct} | {'是' if stock['outperforms_hsi'] else '否'} | {stock['southbound'] or 'N/A'} | {'是' if stock['has_buildup'] else '否'} | {'是' if stock['has_distribution'] else '否'} | {'是' if stock['strong_volume_up'] else '否'} | {'是' if stock['weak_volume_down'] else '否'} |"
+        # 使用与邮件报告一致的字段名（按新的分类顺序排列）
+        row = f"| {stock['name']} | {stock['code']} | {stock['last_close'] or 'N/A'} | {stock['change_pct'] or 'N/A'} | {stock['price_percentile'] or 'N/A'} | {stock['vol_ratio'] or 'N/A'} | {stock['vol_z_score'] or 'N/A'} | {stock['turnover_z_score'] or 'N/A'} | {stock['turnover'] or 'N/A'} | {stock['turnover_rate'] or 'N/A'} | {stock['vwap'] or 'N/A'} | {stock['volume_ratio'] or 'N/A'} | {'是' if stock['volume_ratio_signal'] else '否'} | {stock['atr'] or 'N/A'} | {stock['atr_ratio'] or 'N/A'} | {'是' if stock['atr_ratio_signal'] else '否'} | {stock['bb_width'] or 'N/A'} | {stock['bb_breakout'] or 'N/A'} | {stock['volatility'] or 'N/A'} | {stock['ma5_deviation'] or 'N/A'} | {stock['ma10_deviation'] or 'N/A'} | {stock['rsi'] or 'N/A'} | {stock['rsi_roc'] or 'N/A'} | {'是' if stock['rsi_divergence'] else '否'} | {stock['macd'] or 'N/A'} | {stock['macd_hist'] or 'N/A'} | {stock['macd_hist_roc'] or 'N/A'} | {'是' if stock['macd_hist_roc_signal'] else '否'} | {stock['obv'] or 'N/A'} | {stock['cmf'] or 'N/A'} | {stock['cmf_signal'] or 'N/A'} | {'是' if stock['cmf_trend_signal'] else '否'} | {stock['stoch_k'] or 'N/A'} | {stock['stoch_d'] or 'N/A'} | {'是' if stock['stoch_signal'] else '否'} | {stock['williams_r'] or 'N/A'} | {'是' if stock['williams_r_signal'] else '否'} | {'是' if stock['bb_breakout_signal'] else '否'} | {stock['roc_signal'] or 'N/A'} | {stock['southbound'] or 'N/A'} | {rs_ratio_pct} | {rs_diff_pct} | {'是' if stock['outperforms_hsi'] else '否'} | {'是' if stock['has_buildup'] else '否'} | {'是' if stock['has_distribution'] else '否'} | {'是' if stock['strong_volume_up'] else '否'} | {'是' if stock['weak_volume_down'] else '否'} |"
         table_rows.append(row)
     
     stock_table = table_header + table_separator + "\n".join(table_rows)
@@ -492,6 +493,9 @@ def analyze_stock(code, name, run_date=None):
         full_hist['BB_Lower'] = full_hist['BB_Mid'] - 2 * full_hist['Close'].rolling(20, min_periods=1).std()
         full_hist['BB_Width'] = (full_hist['BB_Upper'] - full_hist['BB_Lower']) / full_hist['BB_Mid']
         
+        # Bollinger Band Breakout
+        full_hist['BB_Breakout'] = (full_hist['Close'] - full_hist['BB_Lower']) / (full_hist['BB_Upper'] - full_hist['BB_Lower'])
+        
         # 成交量 z-score
         full_hist['Vol_Mean_20'] = full_hist['Volume'].rolling(20, min_periods=1).mean()
         full_hist['Vol_Std_20'] = full_hist['Volume'].rolling(20, min_periods=1).std()
@@ -502,6 +506,41 @@ def analyze_stock(code, name, run_date=None):
         full_hist['Turnover_Mean_20'] = full_hist['Turnover'].rolling(20, min_periods=1).mean()
         full_hist['Turnover_Std_20'] = full_hist['Turnover'].rolling(20, min_periods=1).std()
         full_hist['Turnover_Z_Score'] = (full_hist['Turnover'] - full_hist['Turnover_Mean_20']) / full_hist['Turnover_Std_20']
+        
+        # VWAP (Volume Weighted Average Price)
+        full_hist['VWAP'] = (full_hist['TP'] * full_hist['Volume']).rolling(VOL_WINDOW, min_periods=1).sum() / full_hist['Volume'].rolling(VOL_WINDOW, min_periods=1).sum()
+        
+        # MACD Histogram and its rate of change
+        full_hist['MACD_Hist'] = full_hist['MACD'] - full_hist['MACD_Signal']
+        full_hist['MACD_Hist_ROC'] = full_hist['MACD_Hist'].pct_change()
+        
+        # RSI Divergence (Comparing RSI with price movements)
+        full_hist['RSI_ROC'] = full_hist['RSI'].pct_change()
+        
+        # CMF Trend
+        full_hist['CMF_Signal'] = full_hist['CMF'].rolling(5, min_periods=1).mean()
+        
+        # Dynamic ATR Threshold
+        full_hist['ATR_MA'] = full_hist['ATR'].rolling(10, min_periods=1).mean()
+        full_hist['ATR_Ratio'] = full_hist['ATR'] / full_hist['ATR_MA']
+        
+        # Stochastic Oscillator
+        K_Period = 14
+        D_Period = 3
+        full_hist['Low_Min'] = full_hist['Low'].rolling(window=K_Period, min_periods=1).min()
+        full_hist['High_Max'] = full_hist['High'].rolling(window=K_Period, min_periods=1).max()
+        full_hist['Stoch_K'] = 100 * (full_hist['Close'] - full_hist['Low_Min']) / (full_hist['High_Max'] - full_hist['Low_Min'])
+        full_hist['Stoch_D'] = full_hist['Stoch_K'].rolling(window=D_Period, min_periods=1).mean()
+        
+        # Williams %R
+        full_hist['Williams_R'] = (full_hist['High_Max'] - full_hist['Close']) / (full_hist['High_Max'] - full_hist['Low_Min']) * -100
+        
+        # Price Rate of Change
+        full_hist['ROC'] = full_hist['Close'].pct_change(periods=12)
+        
+        # Average Volume
+        full_hist['Avg_Vol_30'] = full_hist['Volume'].rolling(30, min_periods=1).mean()
+        full_hist['Volume_Ratio'] = full_hist['Volume'] / full_hist['Avg_Vol_30']
 
         # price percentile 基于 PRICE_WINDOW
         low60 = full_hist['Close'].tail(PRICE_WINDOW).min()
@@ -542,6 +581,19 @@ def analyze_stock(code, name, run_date=None):
             else:
                 full_hist['OBV'].iat[i] = full_hist['OBV'].iat[i-1]
         main_hist['OBV'] = full_hist['OBV'].reindex(main_hist.index, method='ffill').fillna(0.0)
+        
+        # 将新指标 reindex 到 main_hist
+        main_hist['BB_Breakout'] = full_hist['BB_Breakout'].reindex(main_hist.index, method='ffill')
+        main_hist['MACD_Hist'] = full_hist['MACD_Hist'].reindex(main_hist.index, method='ffill')
+        main_hist['MACD_Hist_ROC'] = full_hist['MACD_Hist_ROC'].reindex(main_hist.index, method='ffill')
+        main_hist['RSI_ROC'] = full_hist['RSI_ROC'].reindex(main_hist.index, method='ffill')
+        main_hist['CMF_Signal'] = full_hist['CMF_Signal'].reindex(main_hist.index, method='ffill')
+        main_hist['ATR_Ratio'] = full_hist['ATR_Ratio'].reindex(main_hist.index, method='ffill')
+        main_hist['Stoch_K'] = full_hist['Stoch_K'].reindex(main_hist.index, method='ffill')
+        main_hist['Stoch_D'] = full_hist['Stoch_D'].reindex(main_hist.index, method='ffill')
+        main_hist['Williams_R'] = full_hist['Williams_R'].reindex(main_hist.index, method='ffill')
+        main_hist['ROC'] = full_hist['ROC'].reindex(main_hist.index, method='ffill')
+        main_hist['Volume_Ratio'] = full_hist['Volume_Ratio'].reindex(main_hist.index, method='ffill')
 
         # 南向资金：按日期获取并缓存，转换为"万"
         main_hist['Southbound_Net'] = 0.0
@@ -751,7 +803,7 @@ def analyze_stock(code, name, run_date=None):
                         # 获取已发行股本字段
                         issued_shares = financial_df['已发行股本(股)'].iloc[0]
                         # 检查值是否有效
-                        if issued_shares is not None and not (isinstance(issued_shares, float) and pd.isna(issued_shares)) and issued_shares > 0:
+                        if issued_shares is not None and not (isinstance(issued_shares, float) and pd.notna(issued_shares)) and issued_shares > 0:
                             float_shares = float(issued_shares)
                             if float_shares <= 0:
                                 float_shares = None
@@ -784,6 +836,26 @@ def analyze_stock(code, name, run_date=None):
         main_hist['Strong_Volume_Up'] = (main_hist['Close'] > main_hist['Open']) & (main_hist['Vol_Ratio'] > 1.5)
         # 缩量回调：收盘价 < 前一日收盘价 且 Vol_Ratio < 1.0 且跌幅 < 2%
         main_hist['Weak_Volume_Down'] = (main_hist['Close'] < main_hist['Prev_Close']) & (main_hist['Vol_Ratio'] < 1.0) & ((main_hist['Prev_Close'] - main_hist['Close']) / main_hist['Prev_Close'] < 0.02)
+        
+        # 计算新增的技术指标信号
+        # 布林带突破信号
+        main_hist['BB_Breakout_Signal'] = (main_hist['BB_Breakout'] > 1.0) | (main_hist['BB_Breakout'] < 0.0)
+        # RSI背离信号
+        main_hist['RSI_Divergence'] = (main_hist['RSI_ROC'] < 0) & (main_hist['Close'].pct_change() > 0)
+        # MACD柱状图变化率信号
+        main_hist['MACD_Hist_ROC_Signal'] = main_hist['MACD_Hist_ROC'] > 0.1
+        # CMF趋势信号
+        main_hist['CMF_Trend_Signal'] = main_hist['CMF'] > main_hist['CMF_Signal']
+        # ATR动态阈值信号
+        main_hist['ATR_Ratio_Signal'] = main_hist['ATR_Ratio'] > 1.5
+        # 随机振荡器信号
+        main_hist['Stoch_Signal'] = (main_hist['Stoch_K'] < 20) | (main_hist['Stoch_K'] > 80)
+        # Williams %R信号
+        main_hist['Williams_R_Signal'] = (main_hist['Williams_R'] < -80) | (main_hist['Williams_R'] > -20)
+        # 价格变化率信号
+        main_hist['ROC_Signal'] = main_hist['ROC'] > 0.05
+        # 成交量比率信号
+        main_hist['Volume_Ratio_Signal'] = main_hist['Volume_Ratio'] > 1.5
 
         result = {
             'code': code,
@@ -812,10 +884,30 @@ def analyze_stock(code, name, run_date=None):
             'cmf': safe_round(main_hist['CMF'].iloc[-1], 4) if pd.notna(main_hist['CMF'].iloc[-1]) else None,  # CMF
             'adx': safe_round(main_hist['ADX'].iloc[-1], 2) if pd.notna(main_hist['ADX'].iloc[-1]) else None,  # ADX
             'bb_width': safe_round(main_hist['BB_Width'].iloc[-1] * 100, 2) if pd.notna(main_hist['BB_Width'].iloc[-1]) else None,  # 布林带宽度
+            'bb_breakout': safe_round(main_hist['BB_Breakout'].iloc[-1], 2) if pd.notna(main_hist['BB_Breakout'].iloc[-1]) else None,  # 布林带突破
             'vol_z_score': safe_round(main_hist['Vol_Z_Score'].iloc[-1], 2) if pd.notna(main_hist['Vol_Z_Score'].iloc[-1]) else None,  # 成交量z-score
             'turnover_z_score': safe_round(main_hist['Turnover_Z_Score'].iloc[-1], 2) if pd.notna(main_hist['Turnover_Z_Score'].iloc[-1]) else None,  # 成交额z-score
+            'macd_hist': safe_round(main_hist['MACD_Hist'].iloc[-1], 4) if pd.notna(main_hist['MACD_Hist'].iloc[-1]) else None,  # MACD柱状图
+            'macd_hist_roc': safe_round(main_hist['MACD_Hist_ROC'].iloc[-1], 4) if pd.notna(main_hist['MACD_Hist_ROC'].iloc[-1]) else None,  # MACD柱状图变化率
+            'rsi_roc': safe_round(main_hist['RSI_ROC'].iloc[-1], 4) if pd.notna(main_hist['RSI_ROC'].iloc[-1]) else None,  # RSI变化率
+            'cmf_signal': safe_round(main_hist['CMF_Signal'].iloc[-1], 4) if pd.notna(main_hist['CMF_Signal'].iloc[-1]) else None,  # CMF信号线
+            'atr_ratio': safe_round(main_hist['ATR_Ratio'].iloc[-1], 2) if pd.notna(main_hist['ATR_Ratio'].iloc[-1]) else None,  # ATR比率
+            'stoch_k': safe_round(main_hist['Stoch_K'].iloc[-1], 2) if pd.notna(main_hist['Stoch_K'].iloc[-1]) else None,  # 随机振荡器K值
+            'stoch_d': safe_round(main_hist['Stoch_D'].iloc[-1], 2) if pd.notna(main_hist['Stoch_D'].iloc[-1]) else None,  # 随机振荡器D值
+            'williams_r': safe_round(main_hist['Williams_R'].iloc[-1], 2) if pd.notna(main_hist['Williams_R'].iloc[-1]) else None,  # Williams %R
+            'roc': safe_round(main_hist['ROC'].iloc[-1], 4) if pd.notna(main_hist['ROC'].iloc[-1]) else None,  # 价格变化率
+            'volume_ratio': safe_round(main_hist['Volume_Ratio'].iloc[-1], 2) if pd.notna(main_hist['Volume_Ratio'].iloc[-1]) else None,  # 成交量比率
             'strong_volume_up': bool(main_hist['Strong_Volume_Up'].iloc[-1]),  # 放量上涨
             'weak_volume_down': bool(main_hist['Weak_Volume_Down'].iloc[-1]),  # 缩量回调
+            'bb_breakout_signal': bool(main_hist['BB_Breakout_Signal'].iloc[-1]),  # 布林带突破信号
+            'rsi_divergence': bool(main_hist['RSI_Divergence'].iloc[-1]),  # RSI背离信号
+            'macd_hist_roc_signal': bool(main_hist['MACD_Hist_ROC_Signal'].iloc[-1]),  # MACD柱状图变化率信号
+            'cmf_trend_signal': bool(main_hist['CMF_Trend_Signal'].iloc[-1]),  # CMF趋势信号
+            'atr_ratio_signal': bool(main_hist['ATR_Ratio_Signal'].iloc[-1]),  # ATR比率信号
+            'stoch_signal': bool(main_hist['Stoch_Signal'].iloc[-1]),  # 随机振荡器信号
+            'williams_r_signal': bool(main_hist['Williams_R_Signal'].iloc[-1]),  # Williams %R信号
+            'roc_signal': bool(main_hist['ROC_Signal'].iloc[-1]),  # 价格变化率信号
+            'volume_ratio_signal': bool(main_hist['Volume_Ratio_Signal'].iloc[-1]),  # 成交量比率信号
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
             'distribution_dates': main_hist[main_hist['Distribution_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
         }
@@ -853,24 +945,58 @@ def main(run_date=None):
 
         # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
         df_report = df[[
-            'name', 'code', 'last_close', 'change_pct', 'price_percentile',
-            'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate',
-            'vwap', 'atr', 'adx', 'bb_width',
+            # 基本信息
+            'name', 'code', 'last_close', 'change_pct',
+            # 价格位置
+            'price_percentile',
+            # 成交量相关
+            'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate', 'vwap', 'volume_ratio', 'volume_ratio_signal',
+            # 波动性指标
+            'atr', 'atr_ratio', 'atr_ratio_signal', 'bb_width', 'bb_breakout', 'volatility',
+            # 均线偏离
             'ma5_deviation', 'ma10_deviation',
-            'rsi', 'macd', 'volatility', 'obv', 'cmf',
+            # 技术指标
+            'rsi', 'rsi_roc', 'rsi_divergence', 
+            'macd', 'macd_hist', 'macd_hist_roc', 'macd_hist_roc_signal',
+            'obv', 
+            'cmf', 'cmf_signal', 'cmf_trend_signal',
+            'stoch_k', 'stoch_d', 'stoch_signal',
+            'williams_r', 'williams_r_signal',
+            'bb_breakout_signal',
+            'roc_signal',
+            # 资金流向指标
+            'southbound',
+            # 相对表现
             'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-            'southbound', 'has_buildup', 'has_distribution',
-            'strong_volume_up', 'weak_volume_down'
+            # 信号指标
+            'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down'
         ]]
         df_report.columns = [
-            '股票名称', '代码', '最新价', '涨跌幅(%)', '位置(%)',
-            '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)',
-            'VWAP', 'ATR', 'ADX', '布林带宽度(%)',
+            # 基本信息
+            '股票名称', '代码', '最新价', '涨跌幅(%)',
+            # 价格位置
+            '位置(%)',
+            # 成交量相关
+            '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)', 'VWAP', '成交量比率', '成交量比率信号',
+            # 波动性指标
+            'ATR', 'ATR比率', 'ATR比率信号', '布林带宽度(%)', '布林带突破', '波动率(%)',
+            # 均线偏离
             '5日均线偏离(%)', '10日均线偏离(%)',
-            'RSI', 'MACD', '波动率(%)', 'OBV', 'CMF',
+            # 技术指标
+            'RSI', 'RSI变化率', 'RSI背离信号',
+            'MACD', 'MACD柱状图', 'MACD柱状图变化率', 'MACD柱状图变化率信号',
+            'OBV',
+            'CMF', 'CMF信号线', 'CMF趋势信号',
+            '随机振荡器K', '随机振荡器D', '随机振荡器信号',
+            'Williams %R', 'Williams %R信号',
+            '布林带突破信号',
+            '价格变化率信号',
+            # 资金流向指标
+            '南向资金(万)',
+            # 相对表现
             '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-            '南向资金(万)', '建仓信号', '出货信号',
-            '放量上涨', '缩量回调'
+            # 信号指标
+            '建仓信号', '出货信号', '放量上涨', '缩量回调'
         ]
 
         df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
@@ -940,26 +1066,61 @@ def main(run_date=None):
 
         # 保存 Excel（包含 machine-friendly 原始列 + 展示列）
         try:
-            # 创建用于Excel的报告数据框，与邮件报告保持一致的列顺序
+            # 创建用于Excel的报告数据框，按常见分类和次序排列
             df_excel = df[[
-                'name', 'code', 'last_close', 'change_pct', 'price_percentile',
-                'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate',
-                'vwap', 'atr', 'adx', 'bb_width',
+                # 基本信息
+                'name', 'code', 'last_close', 'change_pct',
+                # 价格位置
+                'price_percentile',
+                # 成交量相关
+                'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate', 'vwap', 'volume_ratio', 'volume_ratio_signal',
+                # 波动性指标
+                'atr', 'atr_ratio', 'atr_ratio_signal', 'bb_width', 'bb_breakout', 'volatility',
+                # 均线偏离
                 'ma5_deviation', 'ma10_deviation',
-                'rsi', 'macd', 'volatility', 'obv', 'cmf',
+                # 技术指标
+                'rsi', 'rsi_roc', 'rsi_divergence', 
+                'macd', 'macd_hist', 'macd_hist_roc', 'macd_hist_roc_signal',
+                'obv', 
+                'cmf', 'cmf_signal', 'cmf_trend_signal',
+                'stoch_k', 'stoch_d', 'stoch_signal',
+                'williams_r', 'williams_r_signal',
+                'bb_breakout_signal',
+                'roc_signal',
+                # 资金流向指标
+                'southbound',
+                # 相对表现
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-                'southbound', 'has_buildup', 'has_distribution',
-                'strong_volume_up', 'weak_volume_down'
+                # 信号指标
+                'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down'
             ]]
+            
             df_excel.columns = [
-                '股票名称', '代码', '最新价', '涨跌幅(%)', '位置(%)',
-                '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)',
-                'VWAP', 'ATR', 'ADX', '布林带宽度(%)',
+                # 基本信息
+                '股票名称', '代码', '最新价', '涨跌幅(%)',
+                # 价格位置
+                '位置(%)',
+                # 成交量相关
+                '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)', 'VWAP', '成交量比率', '成交量比率信号',
+                # 波动性指标
+                'ATR', 'ATR比率', 'ATR比率信号', '布林带宽度(%)', '布林带突破', '波动率(%)',
+                # 均线偏离
                 '5日均线偏离(%)', '10日均线偏离(%)',
-                'RSI', 'MACD', '波动率(%)', 'OBV', 'CMF',
+                # 技术指标
+                'RSI', 'RSI变化率', 'RSI背离信号',
+                'MACD', 'MACD柱状图', 'MACD柱状图变化率', 'MACD柱状图变化率信号',
+                'OBV',
+                'CMF', 'CMF信号线', 'CMF趋势信号',
+                '随机振荡器K', '随机振荡器D', '随机振荡器信号',
+                'Williams %R', 'Williams %R信号',
+                '布林带突破信号',
+                '价格变化率信号',
+                # 资金流向指标
+                '南向资金(万)',
+                # 相对表现
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-                '南向资金(万)', '建仓信号', '出货信号',
-                '放量上涨', '缩量回调'
+                # 信号指标
+                '建仓信号', '出货信号', '放量上涨', '缩量回调'
             ]
             
             # 排序与邮件报告一致
@@ -968,6 +1129,37 @@ def main(run_date=None):
             # 确保数值列格式化为两位小数用于显示
             for col in df_excel.select_dtypes(include=['float64', 'int64']).columns:
                 df_excel[col] = df_excel[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else x)
+            
+            # 创建包含分类信息的DataFrame并保存到Excel
+            category_row = [
+                # 基本信息 (4列)
+                '基本信息', '', '', '',
+                # 价格位置 (1列)
+                '价格位置',
+                # 成交量相关 (8列)
+                '成交量相关', '', '', '', '', '', '', '',
+                # 波动性指标 (6列)
+                '波动性指标', '', '', '', '', '',
+                # 均线偏离 (2列)
+                '', '',
+                # 技术指标 (18列)
+                '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                # 资金流向指标 (1列)
+                '资金流向指标',
+                # 相对表现 (3列)
+                '相对表现', '', '',
+                # 信号指标 (4列)
+                '', '信号指标', '', ''
+            ]
+            
+            category_df = pd.DataFrame([category_row], columns=df_excel.columns)
+            
+            # 保存到Excel文件（包含分类行）
+            with pd.ExcelWriter("hk_smart_money_report.xlsx", engine='openpyxl') as writer:
+                # 将分类行写入Excel
+                category_df.to_excel(writer, index=False, header=True, startrow=0)
+                # 将实际数据写入Excel
+                df_excel.to_excel(writer, index=False, header=True, startrow=1)
             
             df_excel.to_excel("hk_smart_money_report.xlsx", index=False)
             print("\n💾 报告已保存: hk_smart_money_report.xlsx")
@@ -998,24 +1190,77 @@ def main(run_date=None):
                 html += f"<p><strong>分析日期:</strong> {run_date}</p>"
             html += f"<p><strong>分析 {len(WATCHLIST)} 只股票</strong> | <strong>窗口:</strong> {DAYS_ANALYSIS} 日</p>"
 
-            # 添加表格（每 5 行分一页）
+            # 添加表格（每 5 行分一页，分类行放在字段名称上面）
             for i in range(0, len(df_report), 5):
+                # 获取数据块
                 chunk = df_report.iloc[i:i+5]
-                html += chunk.to_html(index=False, escape=False)
+                
+                # 创建包含分类信息和字段名的完整表格
+                # 分类行
+                category_row = [
+                    # 基本信息 (4列)
+                    '基本信息', '', '', '',
+                    # 价格位置 (1列)
+                    '价格位置',
+                    # 成交量相关 (8列)
+                    '成交量相关', '', '', '', '', '', '', '',
+                    # 波动性指标 (6列)
+                    '波动性指标', '', '', '', '', '',
+                    # 均线偏离 (2列)
+                    '', '',
+                    # 技术指标 (18列)
+                    '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                    # 资金流向指标 (1列)
+                    '资金流向指标',
+                    # 相对表现 (3列)
+                    '相对表现', '', '',
+                    # 信号指标 (4列)
+                    '', '信号指标', '', ''
+                ]
+                
+                # 将分类行作为第一行，字段名作为第二行，数据作为后续行
+                all_data = [category_row] + [chunk.columns.tolist()] + chunk.values.tolist()
+                
+                # 创建临时DataFrame用于显示，但需要正确处理表头
+                temp_df = pd.DataFrame(all_data[2:])  # 数据部分
+                temp_df.columns = all_data[1]  # 使用字段名作为列名
+                
+                # 生成HTML表格
+                html_table = temp_df.to_html(index=False, escape=False)
+                
+                # 在HTML表格中插入分类行，将分类信息插入到<th>标签中
+                import re
+                # 首先提取表头部分（字段名称行）
+                field_names = chunk.columns.tolist()
+                
+                # 手动构建HTML表格以添加分类行
+                html += '<table border="1" class="dataframe">\n'
+                html += '  <thead>\n'
+                # 添加分类行
+                html += '    <tr>\n'
+                for cat in category_row:
+                    html += f'      <th>{cat}</th>\n'
+                html += '    </tr>\n'
+                # 添加字段名称行
+                html += '    <tr>\n'
+                for field in field_names:
+                    html += f'      <th>{field}</th>\n'
+                html += '    </tr>\n'
+                html += '  </thead>\n'
+                html += '  <tbody>\n'
+                # 添加数据行
+                for idx, row in chunk.iterrows():
+                    html += '    <tr>\n'
+                    for cell in row:
+                        if pd.isna(cell) or cell is None:
+                            html += f'      <td>None</td>\n'
+                        else:
+                            html += f'      <td>{cell}</td>\n'
+                    html += '    </tr>\n'
+                html += '  </tbody>\n'
+                html += '</table>\n'
 
-            # 添加简洁的信号摘要
-            dist = df_report[df_report['出货信号'] == True]
-            build = df_report[df_report['建仓信号'] == True]
-            if not dist.empty:
-                html += "<h3 style='color:red;'>🔴 出货信号：</h3><ul>"
-                for _, row in dist.iterrows():
-                    html += f"<li>{row['股票名称']} ({row['代码']})</li>"
-                html += "</ul>"
-            if not build.empty:
-                html += "<h3 style='color:green;'>🟢 建仓信号：</h3><ul>"
-                for _, row in build.iterrows():
-                    html += f"<li>{row['股票名称']} ({row['代码']})</li>"
-                html += "</ul>"
+            
 
             # 添加大模型分析结果
             if llm_analysis:
@@ -1087,6 +1332,33 @@ def main(run_date=None):
               </li>
               
               <li><b>成交金额(百万)</b>：当日成交金额，单位为百万港元（近似计算：最新价 * 成交量 / 1e6）。</li>
+              <li><b>成交量比率</b>：
+                <ul>
+                  <li>计算：当日成交量 / 30日平均成交量</li>
+                  <li>含义：衡量当日成交量相对于历史平均成交量的倍数</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>成交量比率 > 2.0：显著放量</li>
+                      <li>成交量比率 < 0.5：显著缩量</li>
+                      <li>成交量比率在0.5-2.0之间：正常成交量</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>成交量比率信号</b>：
+                <ul>
+                  <li>含义：基于成交量比率的放量信号</li>
+                  <li>条件：当成交量比率 > 1.5时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：出现显著放量，可能预示价格变动</li>
+                      <li>False：成交量正常或缩量</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
               <li><b>换手率(%)</b>：当日成交量占总股本的比例。</li>
               <li>含义：衡量股票的流动性，换手率高的股票通常流动性更好。</li>
               <li><b>评估方法</b>：
@@ -1125,6 +1397,32 @@ def main(run_date=None):
                 </ul>
               </li>
               
+              <li><b>ATR比率</b>：
+                <ul>
+                  <li>计算：ATR / ATR的移动平均值（默认10日）</li>
+                  <li>含义：衡量当前波动性相对于历史平均水平的程度</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>ATR比率 > 1：当前波动性高于历史平均水平</li>
+                      <li>ATR比率 < 1：当前波动性低于历史平均水平</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>ATR比率信号</b>：
+                <ul>
+                  <li>含义：基于ATR比率的波动性信号</li>
+                  <li>条件：当ATR比率 > 1.5时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：波动性显著放大，可能预示趋势行情</li>
+                      <li>False：波动性正常或收敛</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
               <li><b>ADX（平均趋向指数）</b>：
                 <ul>
                   <li>计算：基于+DI和-DI计算的趋势强度指标</li>
@@ -1146,6 +1444,33 @@ def main(run_date=None):
                     <ul>
                       <li>宽度低：波动收敛，可能预示后续波动扩张</li>
                       <li>宽度高：波动扩张</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>布林带突破</b>：
+                <ul>
+                  <li>计算：(收盘价 - 布林带下轨) / (布林带上轨 - 布林带下轨)</li>
+                  <li>含义：衡量价格相对于布林带的位置，判断是否突破布林带边界</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>布林带突破 > 1：价格突破布林带上轨</li>
+                      <li>布林带突破 < 0：价格跌破布林带下轨</li>
+                      <li>布林带突破在0-1之间：价格在布林带范围内</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>布林带突破信号</b>：
+                <ul>
+                  <li>含义：基于布林带突破的突破信号</li>
+                  <li>条件：当布林带突破 > 1.0 或 布林带突破 < 0.0 时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：价格突破布林带边界，可能预示趋势延续或反转</li>
+                      <li>False：价格在布林带范围内</li>
                     </ul>
                   </li>
                 </ul>
@@ -1196,6 +1521,138 @@ def main(run_date=None):
                 </ul>
               </li>
               
+              <li><b>MACD柱状图</b>：
+                <ul>
+                  <li>计算：MACD线 - MACD信号线</li>
+                  <li>含义：衡量MACD线与信号线之间的差距，反映动量的强弱</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>MACD柱状图 > 0：多头动能占优</li>
+                      <li>MACD柱状图 < 0：空头动能占优</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>MACD柱状图变化率</b>：
+                <ul>
+                  <li>计算：(当前MACD柱状图 - 前一期MACD柱状图) / 前一期MACD柱状图</li>
+                  <li>含义：衡量MACD柱状图的变化速度，反映动量变化的快慢</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>MACD柱状图变化率 > 0：动量加速</li>
+                      <li>MACD柱状图变化率 < 0：动量减速</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>MACD柱状图变化率信号</b>：
+                <ul>
+                  <li>含义：基于MACD柱状图变化率的信号</li>
+                  <li>条件：当MACD柱状图变化率 > 0.1时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：动量显著加速，可能预示趋势延续</li>
+                      <li>False：动量未显著加速</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>RSI变化率</b>：
+                <ul>
+                  <li>计算：(当前RSI - 前一期RSI) / 前一期RSI</li>
+                  <li>含义：衡量RSI的变化速度，反映超买超卖状态的变化快慢</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>RSI变化率 > 0：超买状态加剧或超卖状态缓解</li>
+                      <li>RSI变化率 < 0：超卖状态加剧或超买状态缓解</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>RSI背离信号</b>：
+                <ul>
+                  <li>含义：价格与RSI指标之间的背离信号</li>
+                  <li>条件：当RSI变化率 < 0 且价格涨幅 > 0时为True，表示顶背离；当RSI变化率 > 0 且价格跌幅 > 0时为True，表示底背离</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：出现价格与RSI背离，可能预示趋势反转</li>
+                      <li>False：价格与RSI同向运动</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>随机振荡器K</b>：
+                <ul>
+                  <li>计算：100 * (收盘价 - 最近N日最低价) / (最近N日最高价 - 最近N日最低价)，默认N=14</li>
+                  <li>含义：衡量收盘价在最近N日价格区间中的相对位置</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>随机振荡器K > 80：超买区域</li>
+                      <li>随机振荡器K < 20：超卖区域</li>
+                      <li>随机振荡器K在20-80之间：正常区域</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>随机振荡器D</b>：
+                <ul>
+                  <li>计算：随机振荡器K的移动平均线（默认3日）</li>
+                  <li>含义：随机振荡器K的平滑线，用于识别K值的趋势</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>随机振荡器D > 80：超买区域</li>
+                      <li>随机振荡器D < 20：超卖区域</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>随机振荡器信号</b>：
+                <ul>
+                  <li>含义：基于随机振荡器的超买超卖信号</li>
+                  <li>条件：当随机振荡器K < 20 或 随机振荡器K > 80时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：进入超买或超卖区域，可能预示价格反转</li>
+                      <li>False：未进入超买或超卖区域</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>Williams %R</b>：
+                <ul>
+                  <li>计算：(最近N日最高价 - 收盘价) / (最近N日最高价 - 最近N日最低价) * -100，默认N=14</li>
+                  <li>含义：衡量收盘价在最近N日价格区间中的相对位置，与随机振荡器相反</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>Williams %R > -20：超买区域</li>
+                      <li>Williams %R < -80：超卖区域</li>
+                      <li>Williams %R在-80到-20之间：正常区域</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>Williams %R信号</b>：
+                <ul>
+                  <li>含义：基于Williams %R的超买超卖信号</li>
+                  <li>条件：当Williams %R < -80 或 Williams %R > -20时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：进入超买或超卖区域，可能预示价格反转</li>
+                      <li>False：未进入超买或超卖区域</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
               <li><b>波动率(%)</b>：基于 20 日收益率样本的样本标准差年化后以百分比表示（std * sqrt(252)）。</li>
               <li>含义：衡量历史波动幅度，用于风险评估和头寸大小控制。</li>
               <li><b>评估方法</b>：
@@ -1223,6 +1680,32 @@ def main(run_date=None):
                     <ul>
                       <li>CMF > 0.05：资金流入</li>
                       <li>CMF < -0.05：资金流出</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>CMF信号线</b>：
+                <ul>
+                  <li>计算：CMF的移动平均线（默认5日）</li>
+                  <li>含义：CMF的平滑线，用于识别CMF的趋势</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>CMF > CMF信号线：资金流入加速</li>
+                      <li>CMF < CMF信号线：资金流出加速</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>CMF趋势信号</b>：
+                <ul>
+                  <li>含义：基于CMF与CMF信号线关系的趋势信号</li>
+                  <li>条件：当CMF > CMF信号线时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：资金流入趋势</li>
+                      <li>False：资金流出趋势或趋势不明显</li>
                     </ul>
                   </li>
                 </ul>
@@ -1261,6 +1744,19 @@ def main(run_date=None):
                   </li>
                 </ul>
               </li>
+              <li><b>价格变化率信号</b>：
+                <ul>
+                  <li>含义：基于价格变化率的动量信号</li>
+                  <li>条件：当12日价格变化率ROC > 0.05时为True，否则为False</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>True：价格在中长期呈现上涨趋势，动量为正</li>
+                      <li>False：价格在中长期未呈现明显上涨趋势</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
               <li><b>跑赢恒指 (outperforms_hsi)</b>：
                 <ul>
                   <li>脚本支持三种语义：
