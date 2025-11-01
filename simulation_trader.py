@@ -601,22 +601,26 @@ class SimulationTrader:
 - 平衡型：平衡风险与收益，兼顾价值与成长
 - 进取型：偏好高风险、高收益的股票，如科技成长股
 
+请特别关注以下风险管理要求：
+1. 资金分配策略优化：避免过度集中投资于单一股票或行业，建议合理的资金分配比例
+2. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
+
 请严格按照以下格式输出：
 {{
     \"buy\": [
-        {{\"code\": \"股票代码1\", \"name\": \"股票名称1\", \"shares\": 买入股数, \"reason\": \"买入理由\"}},
-        {{\"code\": \"股票代码2\", \"name\": \"股票名称2\", \"shares\": 买入股数, \"reason\": \"买入理由\"}}
+        {{\"code\": \"股票代码1\", \"name\": \"股票名称1\", \"shares\": 买入股数, \"reason\": \"买入理由\", \"allocation_pct\": \"资金分配比例\", \"stop_loss_price\": \"止损价格\"}},
+        {{\"code\": \"股票代码2\", \"name\": \"股票名称2\", \"shares\": 买入股数, \"reason\": \"买入理由\", \"allocation_pct\": \"资金分配比例\", \"stop_loss_price\": \"止损价格\"}}
     ],
     \"sell\": [
-        {{\"code\": \"股票代码3\", \"name\": \"股票名称3\", \"reason\": \"卖出理由\"}},
-        {{\"code\": \"股票代码4\", \"name\": \"股票名称4\", \"reason\": \"卖出理由\"}}
+        {{\"code\": \"股票代码3\", \"name\": \"股票名称3\", \"reason\": \"卖出理由\", \"stop_loss_triggered\": \"是否止损触发\"}},
+        {{\"code\": \"股票代码4\", \"name\": \"股票名称4\", \"reason\": \"卖出理由\", \"stop_loss_triggered\": \"是否止损触发\"}}
     ]
 }}
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
-2. \"buy\"字段包含建议买入的股票信息列表，每项包含代码、名称、建议买入股数和理由
-3. \"sell\"字段包含建议卖出的股票信息列表，每项包含代码、名称和理由
+2. \"buy\"字段包含建议买入的股票信息列表，每项包含代码、名称、建议买入股数、理由、资金分配比例和止损价格
+3. \"sell\"字段包含建议卖出的股票信息列表，每项包含代码、名称、理由和是否止损触发
 4. 买入股数请根据当前资金情况、股票价格和投资者风险偏好合理计算
 5. 如果没有明确的买卖建议，对应的字段为空数组
 6. 根据投资者风险偏好筛选适合的股票
@@ -624,6 +628,8 @@ class SimulationTrader:
 8. 请避免重复买入已持有的股票
 9. 买入股数必须是100的整数倍（港股交易规则）
 10. 确保总买入金额不超过当前可用资金
+11. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
+12. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -659,6 +665,7 @@ class SimulationTrader:
             code = stock['code']
             name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
             reason = stock.get('reason', '未提供理由')
+            stop_loss_triggered = stock.get('stop_loss_triggered', False)
             
             if code in hk_smart_money_tracker.WATCHLIST:
                 # 检查是否持有该股票
@@ -676,6 +683,7 @@ class SimulationTrader:
 股票名称：{name}
 股票代码：{code}
 大模型建议卖出理由：{reason}
+是否止损触发：{stop_loss_triggered}
 无法卖出原因：未持有该股票
 交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
@@ -685,7 +693,7 @@ class SimulationTrader:
                 else:
                     # 卖出全部持仓
                     sell_pct = 1.0
-                    self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}")
+                    self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}，止损触发: {stop_loss_triggered}")
                     self.sell_stock(code, name, sell_pct, reason)
                 
         # 执行买入操作（严格按照大模型建议）
@@ -694,6 +702,8 @@ class SimulationTrader:
             name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
             shares = stock.get('shares', 0)
             reason = stock.get('reason', '未提供理由')
+            allocation_pct = stock.get('allocation_pct', '未提供')
+            stop_loss_price = stock.get('stop_loss_price', '未提供')
             
             if code in hk_smart_money_tracker.WATCHLIST:
                 # 检查是否已经持有该股票
@@ -731,6 +741,8 @@ class SimulationTrader:
 股票名称：{name}
 股票代码：{code}
 大模型建议买入理由：{reason}
+资金分配比例：{allocation_pct}
+建议止损价格：{stop_loss_price}
 建议买入数量：{shares} 股
 建议买入金额：HK${required_amount:.2f}
 无法买入原因：资金不足
@@ -744,7 +756,7 @@ class SimulationTrader:
                     continue
                 
                 # 执行买入
-                self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}")
+                self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}，资金分配比例: {allocation_pct}，止损价格: {stop_loss_price}")
                 buy_result = self.buy_stock_by_shares(code, name, shares, reason)
                 
                 # 如果买入失败，发送邮件通知
@@ -760,6 +772,8 @@ class SimulationTrader:
 股票名称：{name}
 股票代码：{code}
 大模型建议买入理由：{reason}
+资金分配比例：{allocation_pct}
+建议止损价格：{stop_loss_price}
 建议买入数量：{shares} 股
 无法买入原因：交易执行失败
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
