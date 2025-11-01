@@ -248,21 +248,7 @@ class SimulationTrader:
         
         return total_value
     
-    def get_current_positions_list(self):
-        """
-        获取当前持仓的股票代码和名称清单
-        
-        Returns:
-            list: 包含股票代码和名称的字符串列表
-        """
-        positions_list = []
-        for code, position in self.positions.items():
-            # 从WATCHLIST获取股票名称，如果找不到则使用代码
-            name = hk_smart_money_tracker.WATCHLIST.get(code, code)
-            shares = position['shares']
-            avg_price = position['avg_price']
-            positions_list.append(f"{code} {name} ({shares}股 @ HK${avg_price:.2f})")
-        return positions_list
+    
     
     
     
@@ -606,9 +592,9 @@ class SimulationTrader:
                 portfolio_value = self.get_portfolio_value()
                 capital_info = f"当前资金: HK${self.capital:,.2f}\n投资组合总价值: HK${portfolio_value:,.2f}"
                 
-                # 再次调用大模型，要求以固定格式输出买卖信号和买入数量
+                # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
                 format_prompt = f"""
-请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号和买入数量：
+请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号和资金分配建议：
 
 报告内容：
 {llm_analysis}
@@ -617,9 +603,9 @@ class SimulationTrader:
 {capital_info}
 
 投资者风险偏好：{investor_type}
-- 保守型：偏好低风险、稳定收益的股票，如高股息银行股
-- 平衡型：平衡风险与收益，兼顾价值与成长
-- 进取型：偏好高风险、高收益的股票，如科技成长股
+- 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
+- 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
+- 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
 
 请特别关注以下风险管理要求：
 1. 资金分配策略优化：避免过度集中投资于单一股票或行业，建议合理的资金分配比例
@@ -632,24 +618,22 @@ class SimulationTrader:
         {"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"}
     ],
     "sell": [
-        {"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": "是否止损触发"},
-        {"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": "是否止损触发"}
+        {"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"},
+        {"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"}
     ]
 }
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
-2. \"buy\"字段包含建议买入的股票信息列表，每项包含代码、名称、建议买入股数、理由、资金分配比例和止损价格
-3. \"sell\"字段包含建议卖出的股票信息列表，每项包含代码、名称、理由和是否止损触发
-4. 买入股数请根据当前资金情况、股票价格和投资者风险偏好合理计算
+2. "buy"字段包含建议买入的股票信息列表，每项包含代码、名称、理由、资金分配比例和止损价格
+3. "sell"字段包含建议卖出的股票信息列表，每项包含代码、名称、理由和是否由止损机制触发
+4. 资金分配比例请根据当前资金情况、股票价格和投资者风险偏好合理计算
 5. 如果没有明确的买卖建议，对应的字段为空数组
 6. 根据投资者风险偏好筛选适合的股票
 7. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
 8. 请避免重复买入已持有的股票
-9. 买入股数必须是100的整数倍（港股交易规则）
-10. 确保总买入金额不超过当前可用资金
-11. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
-12. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
+9. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
+10. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -879,37 +863,6 @@ class SimulationTrader:
         # 计算收益率
         total_return = (portfolio_value - self.initial_capital) / self.initial_capital * 100
         self.log_message(f"总收益率: {total_return:.2f}%")
-    
-    def calculate_investment_percentage(self, investor_type, buy_count):
-        """
-        根据投资者类型和推荐买入股票数量计算每只股票的投资比例
-        
-        Args:
-            investor_type (str): 投资者类型 ("保守型", "平衡型", "进取型")
-            buy_count (int): 推荐买入的股票数量
-            
-        Returns:
-            float: 每只股票的投资比例
-        """
-        # 根据投资者类型调整风险偏好
-        # 保守型：总投资不超过30%，单只股票不超过5%
-        # 平衡型：总投资不超过50%，单只股票不超过10%
-        # 进取型：总投资不超过80%，单只股票不超过20%
-        if investor_type == "保守型":
-            max_total_pct = 0.3
-            max_single_pct = 0.05
-        elif investor_type == "平衡型":
-            max_total_pct = 0.5
-            max_single_pct = 0.1
-        else:  # 进取型
-            max_total_pct = 0.8
-            max_single_pct = 0.2
-        
-        # 平均分配资金
-        investment_pct = min(max_total_pct / buy_count, max_single_pct) if buy_count > 0 else 0
-        return investment_pct
-    
-    
     
     def run_hourly_analysis(self):
         """按计划频率运行分析和交易"""
