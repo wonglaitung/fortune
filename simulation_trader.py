@@ -43,7 +43,7 @@ class SimulationTrader:
         """
         self.initial_capital = initial_capital
         self.capital = initial_capital
-        self.positions = {}  # 持仓 {code: {'shares': 数量, 'avg_price': 平均买入价}}
+        self.positions = {}  # 持仓 {code: {'shares': 数量, 'avg_price': 平均买入价, 'stop_loss_price': 止损价格}}
         self.transaction_history = []  # 交易历史
         self.portfolio_history = []  # 投资组合价值历史
         self.start_date = datetime.now()
@@ -308,12 +308,29 @@ class SimulationTrader:
             new_avg_price = (existing_shares * existing_avg_price + shares * current_price) / (existing_shares + shares)
             self.positions[code]['shares'] += shares
             self.positions[code]['avg_price'] = new_avg_price
+            # 如果有新的止损价格建议，更新止损价格
+            if 'stop_loss_price' in locals() and stop_loss_price != '未提供' and stop_loss_price is not None:
+                try:
+                    stop_loss_price_float = float(stop_loss_price)
+                    self.positions[code]['stop_loss_price'] = stop_loss_price_float
+                except (ValueError, TypeError):
+                    # 如果无法转换为数字，忽略
+                    pass
         else:
             # 新建持仓
-            self.positions[code] = {
+            position_info = {
                 'shares': shares,
                 'avg_price': current_price
             }
+            # 添加止损价格（如果提供）
+            if 'stop_loss_price' in locals() and stop_loss_price != '未提供' and stop_loss_price is not None:
+                try:
+                    stop_loss_price_float = float(stop_loss_price)
+                    position_info['stop_loss_price'] = stop_loss_price_float
+                except (ValueError, TypeError):
+                    # 如果无法转换为数字，忽略
+                    pass
+            self.positions[code] = position_info
             
         # 记录交易
         transaction = {
@@ -609,16 +626,16 @@ class SimulationTrader:
 2. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
 
 请严格按照以下格式输出：
-{{
-    \"buy\": [
-        {{\"code\": \"股票代码1\", \"name\": \"股票名称1\", \"shares\": 买入股数, \"reason\": \"买入理由\", \"allocation_pct\": \"资金分配比例\", \"stop_loss_price\": \"止损价格\"}},
-        {{\"code\": \"股票代码2\", \"name\": \"股票名称2\", \"shares\": 买入股数, \"reason\": \"买入理由\", \"allocation_pct\": \"资金分配比例\", \"stop_loss_price\": \"止损价格\"}}
+{
+    "buy": [
+        {"code": "股票代码1", "name": "股票名称1", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"},
+        {"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"}
     ],
-    \"sell\": [
-        {{\"code\": \"股票代码3\", \"name\": \"股票名称3\", \"reason\": \"卖出理由\", \"stop_loss_triggered\": \"是否止损触发\"}},
-        {{\"code\": \"股票代码4\", \"name\": \"股票名称4\", \"reason\": \"卖出理由\", \"stop_loss_triggered\": \"是否止损触发\"}}
+    "sell": [
+        {"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": "是否止损触发"},
+        {"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": "是否止损触发"}
     ]
-}}
+}
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
@@ -699,11 +716,43 @@ class SimulationTrader:
                     self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}，止损触发: {stop_loss_triggered}")
                     self.sell_stock(code, name, sell_pct, reason)
                 
+        # 检查是否需要止损
+        positions_to_check = list(self.positions.items())  # 创建副本以避免修改时出错
+        for code, position in positions_to_check:
+            if code in hk_smart_money_tracker.WATCHLIST:
+                # 检查是否设置了止损价格
+                if 'stop_loss_price' in position and position['stop_loss_price'] is not None:
+                    current_price = self.get_current_stock_price(code)
+                    if current_price is not None:
+                        # 如果当前价格低于止损价格，则卖出
+                        if current_price < position['stop_loss_price']:
+                            name = hk_smart_money_tracker.WATCHLIST.get(code, code)
+                            self.log_message(f"触发止损: {name} ({code}) 当前价格 HK${current_price:.2f} < 止损价格 HK${position['stop_loss_price']:.2f}")
+                            # 发送止损通知邮件
+                            positions_detail = self.build_positions_detail()
+                            
+                            subject = f"【止损触发通知】{name} ({code})"
+                            content = f"""
+模拟交易系统止损触发通知：
+
+股票名称：{name}
+股票代码：{code}
+当前价格：HK${current_price:.2f}
+止损价格：HK${position['stop_loss_price']:.2f}
+触发原因：当前价格跌破止损价格
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{positions_detail}
+                            """
+                            self.send_email_notification(subject, content)
+                            
+                            # 执行止损卖出
+                            self.sell_stock(code, name, 1.0, f"止损触发: 当前价格HK${current_price:.2f} < 止损价格HK${position['stop_loss_price']:.2f}")
+        
         # 执行买入操作（严格按照大模型建议）
         for stock in recommendations['buy']:
             code = stock['code']
             name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
-            shares = stock.get('shares', 0)
             reason = stock.get('reason', '未提供理由')
             allocation_pct = stock.get('allocation_pct', '未提供')
             stop_loss_price = stock.get('stop_loss_price', '未提供')
@@ -714,14 +763,9 @@ class SimulationTrader:
                     self.log_message(f"已持有 {name} ({code})，跳过买入")
                     continue
                 
-                # 检查买入股数是否有效
-                if shares <= 0:
-                    self.log_message(f"大模型建议买入 {name} ({code}) 股数无效: {shares}")
-                    continue
-                
-                # 检查是否是100的倍数
-                if shares % 100 != 0:
-                    self.log_message(f"大模型建议买入 {name} ({code}) 股数不是100的倍数: {shares}")
+                # 检查是否提供了资金分配比例
+                if allocation_pct == '未提供' or allocation_pct is None:
+                    self.log_message(f"大模型未提供 {name} ({code}) 的资金分配比例，跳过买入")
                     continue
                 
                 # 获取当前价格
@@ -730,8 +774,31 @@ class SimulationTrader:
                     self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过买入")
                     continue
                 
+                # 根据大模型建议的资金分配比例计算应买入的股数
+                try:
+                    # 解析资金分配比例
+                    allocation_pct_value = 0
+                    if isinstance(allocation_pct, str):
+                        # 处理百分比格式，如"10%"或"0.1"
+                        if '%' in allocation_pct:
+                            allocation_pct_value = float(allocation_pct.replace('%', '')) / 100
+                        else:
+                            allocation_pct_value = float(allocation_pct)
+                    else:
+                        allocation_pct_value = float(allocation_pct)
+                    
+                    # 根据资金分配比例计算应买入的金额
+                    target_investment = self.capital * allocation_pct_value
+                    # 计算对应的股数（确保是100的倍数）
+                    shares = int(target_investment / current_price // 100) * 100
+                    
+                    if shares <= 0:
+                        self.log_message(f"根据资金分配比例计算的买入股数为0，跳过买入 {name} ({code})")
+                        continue
+                    
+                    required_amount = shares * current_price
+                
                 # 检查是否有足够资金
-                required_amount = shares * current_price
                 if required_amount > self.capital:
                     self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要HK${required_amount:.2f}，当前资金HK${self.capital:.2f}")
                     # 发送资金不足通知邮件
@@ -746,7 +813,6 @@ class SimulationTrader:
 大模型建议买入理由：{reason}
 资金分配比例：{allocation_pct}
 建议止损价格：{stop_loss_price}
-建议买入数量：{shares} 股
 建议买入金额：HK${required_amount:.2f}
 无法买入原因：资金不足
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -777,7 +843,6 @@ class SimulationTrader:
 大模型建议买入理由：{reason}
 资金分配比例：{allocation_pct}
 建议止损价格：{stop_loss_price}
-建议买入数量：{shares} 股
 无法买入原因：交易执行失败
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -851,9 +916,9 @@ class SimulationTrader:
         if not self.portfolio_history:
             return
             
-        self.log_message("="*80)
+        self.log_message("="*90)
         self.log_message("每日交易总结")
-        self.log_message("="*80)
+        self.log_message("="*90)
         
         # 计算当日收益
         if len(self.portfolio_history) >= 2:
@@ -873,20 +938,33 @@ class SimulationTrader:
         if positions_info:
             self.log_message("")
             self.log_message("当前持仓详情:")
-            self.log_message("-" * 100)
-            self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15} {'盈亏金额':<15}")
-            self.log_message("-" * 100)
+            self.log_message("-" * 120)
+            self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'止损价格':<10} {'持有金额':<15} {'盈亏金额':<15}")
+            self.log_message("-" * 120)
             
             for pos in positions_info:
                 profit_loss_str = f"{pos['profit_loss']:>+.2f}" if pos['profit_loss'] >= 0 else f"{pos['profit_loss']:>+.2f}"
-                self.log_message(f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f} {profit_loss_str:>15}")
+                stop_loss_str = f"{pos['stop_loss_price']:>10.2f}" if pos['stop_loss_price'] is not None else "N/A"
+                self.log_message(f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {stop_loss_str:>10} {pos['position_value']:>15,.0f} {profit_loss_str:>15}")
             
-            self.log_message("-" * 100)
+            self.log_message("-" * 120)
+            
+            # 显示投资组合资金分配比例
+            self.log_message("")
+            self.log_message("投资组合资金分配比例:")
+            self.log_message("-" * 60)
+            portfolio_allocation = self.calculate_portfolio_allocation()
+            if portfolio_allocation:
+                self.log_message(f"{'股票代码':<12} {'股票名称':<12} {'持有金额':<15} {'分配比例':<10}")
+                self.log_message("-" * 60)
+                for code, info in portfolio_allocation.items():
+                    self.log_message(f"{code:<12} {info['name']:<12} {info['value']:>15,.0f} {info['percentage']:>9.2f}%")
+                self.log_message("-" * 60)
         
-        self.log_message(f"{'现金余额:':<65} {self.capital:>15,.2f}")
-        self.log_message(f"{'股票总价值:':<65} {total_stock_value:>15,.2f}")
-        self.log_message(f"{'投资组合总价值:':<65} {self.capital + total_stock_value:>15,.2f}")
-        self.log_message(f"{'可用资金:':<65} {self.capital:>15,.2f}")
+        self.log_message(f"{'现金余额:':<75} {self.capital:>15,.2f}")
+        self.log_message(f"{'股票总价值:':<75} {total_stock_value:>15,.2f}")
+        self.log_message(f"{'投资组合总价值:':<75} {self.capital + total_stock_value:>15,.2f}")
+        self.log_message(f"{'可用资金:':<75} {self.capital:>15,.2f}")
         
     def get_detailed_positions_info(self):
         """获取详细的持仓信息，包括当前价格和持有金额"""
@@ -932,6 +1010,9 @@ class SimulationTrader:
                 # 获取股票名称
                 name = hk_smart_money_tracker.WATCHLIST.get(code, code)
                 
+                # 获取止损价格（如果存在）
+                stop_loss_price = self.positions[code].get('stop_loss_price', None)
+                
                 positions_info.append({
                     'code': code,
                     'name': name,
@@ -939,13 +1020,47 @@ class SimulationTrader:
                     'avg_price': avg_price,
                     'current_price': current_price,
                     'position_value': position_value,
-                    'profit_loss': profit_loss
+                    'profit_loss': profit_loss,
+                    'stop_loss_price': stop_loss_price
                 })
             
             return positions_info, total_stock_value
         except Exception as e:
             self.log_message(f"获取持仓详情失败: {e}")
             return [], 0
+
+    def calculate_portfolio_allocation(self):
+        """
+        计算投资组合中各股票的资金分配比例
+        
+        Returns:
+            dict: 各股票的资金分配比例
+        """
+        try:
+            # 获取当前投资组合总价值
+            portfolio_value = self.get_portfolio_value()
+            if portfolio_value <= 0:
+                return {}
+            
+            # 获取持仓详情
+            positions_info, _ = self.get_detailed_positions_info()
+            
+            # 计算各股票的资金分配比例
+            allocation = {}
+            for pos in positions_info:
+                code = pos['code']
+                position_value = pos['position_value']
+                allocation_pct = (position_value / portfolio_value) * 100
+                allocation[code] = {
+                    'name': pos['name'],
+                    'value': position_value,
+                    'percentage': allocation_pct
+                }
+            
+            return allocation
+        except Exception as e:
+            self.log_message(f"计算投资组合资金分配比例失败: {e}")
+            return {}
 
     def build_positions_detail(self):
         """
@@ -960,16 +1075,17 @@ class SimulationTrader:
         # 构建持仓详情文本
         if positions_info:
             positions_detail = "当前持仓详情:\n"
-            positions_detail += "-" * 85 + "\n"
-            positions_detail += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'持有金额':<15} {'盈亏金额':<15}\n"
-            positions_detail += "-" * 85 + "\n"
+            positions_detail += "-" * 95 + "\n"
+            positions_detail += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'止损价格':<10} {'持有金额':<15} {'盈亏金额':<15}\n"
+            positions_detail += "-" * 95 + "\n"
             for pos in positions_info:
                 profit_loss_str = f"{pos['profit_loss']:>+.2f}" if pos['profit_loss'] >= 0 else f"{pos['profit_loss']:>+.2f}"
-                positions_detail += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {pos['position_value']:>15,.0f} {profit_loss_str:>15}\n"
-            positions_detail += "-" * 85 + "\n"
-            positions_detail += f"{'现金余额:':<70} {self.capital:>15,.2f}\n"
-            positions_detail += f"{'股票总价值:':<70} {total_stock_value:>15,.2f}\n"
-            positions_detail += f"{'投资组合总价值:':<70} {self.capital + total_stock_value:>15,.2f}\n"
+                stop_loss_str = f"{pos['stop_loss_price']:>10.2f}" if pos['stop_loss_price'] is not None else "N/A"
+                positions_detail += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {stop_loss_str:>10} {pos['position_value']:>15,.0f} {profit_loss_str:>15}\n"
+            positions_detail += "-" * 95 + "\n"
+            positions_detail += f"{'现金余额:':<80} {self.capital:>15,.2f}\n"
+            positions_detail += f"{'股票总价值:':<80} {total_stock_value:>15,.2f}\n"
+            positions_detail += f"{'投资组合总价值:':<80} {self.capital + total_stock_value:>15,.2f}\n"
         else:
             positions_detail = "暂无持仓\n"
         
