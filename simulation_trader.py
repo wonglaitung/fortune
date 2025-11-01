@@ -798,14 +798,14 @@ class SimulationTrader:
                     
                     required_amount = shares * current_price
                 
-                # 检查是否有足够资金
-                if required_amount > self.capital:
-                    self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要HK${required_amount:.2f}，当前资金HK${self.capital:.2f}")
-                    # 发送资金不足通知邮件
-                    positions_detail = self.build_positions_detail()
-                    
-                    subject = f"【无法买入通知】{name} ({code})"
-                    content = f"""
+                    # 检查是否有足够资金
+                    if required_amount > self.capital:
+                        self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要HK${required_amount:.2f}，当前资金HK${self.capital:.2f}")
+                        # 发送资金不足通知邮件
+                        positions_detail = self.build_positions_detail()
+                        
+                        subject = f"【无法买入通知】{name} ({code})"
+                        content = f"""
 模拟交易系统无法按大模型建议买入通知：
 
 股票名称：{name}
@@ -820,8 +820,13 @@ class SimulationTrader:
 当前资金：HK${self.capital:,.2f}
 
 {positions_detail}
-                    """
-                    self.send_email_notification(subject, content)
+                        """
+                        self.send_email_notification(subject, content)
+                        continue
+                        
+                except (ValueError, TypeError):
+                    # 如果无法解析资金分配比例
+                    self.log_message(f"无法解析资金分配比例 {allocation_pct}，跳过买入 {name} ({code})")
                     continue
                 
                 # 执行买入
