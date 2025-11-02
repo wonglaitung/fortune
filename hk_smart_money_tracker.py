@@ -296,25 +296,28 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
             watchlist_codes = list(WATCHLIST.keys())
             news_df = news_df[news_df['股票代码'].isin(watchlist_codes)]
             
-            # 构建新闻数据表格
-            news_table_header = "| 股票名称 | 股票代码 | 新闻时间 | 新闻标题 | 简要内容 |\n"
-            news_table_separator = "|----------|----------|----------|----------|----------|\n"
-            
-            news_table_rows = []
-            for _, row in news_df.iterrows():
-                news_row = f"| {row['股票名称']} | {row['股票代码']} | {row['新闻时间']} | {row['新闻标题']} | {row['简要内容']} |"
-                news_table_rows.append(news_row)
-            
-            news_table = news_table_header + news_table_separator + "\n".join(news_table_rows)
-            
-            news_content = f"""
- additionally, here is recent news data for the stocks:
+            if not news_df.empty:
+                # 构建新闻数据表格
+                news_table_header = "| 股票名称 | 股票代码 | 新闻时间 | 新闻标题 | 简要内容 |\n"
+                news_table_separator = "|----------|----------|----------|----------|----------|\n"
+                
+                news_table_rows = []
+                for _, row in news_df.iterrows():
+                    news_row = f"| {row['股票名称']} | {row['股票代码']} | {row['新闻时间']} | {row['新闻标题']} | {row['简要内容']} |"
+                    news_table_rows.append(news_row)
+                
+                news_table = news_table_header + news_table_separator + "\n".join(news_table_rows)
+                
+                news_content = f"""
+ additionally, here is recent news data for the stocks in your WATCHLIST:
 
 {news_table}
 """
+            else:
+                news_content = "\n additionally, there is currently no relevant news data for the stocks in your WATCHLIST."
         except Exception as e:
             print(f"⚠️ 读取新闻数据文件失败: {e}")
-            news_content = ""
+            news_content = "\n additionally, unable to access news data due to an error."
     
     # 获取当前日期和时间
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -333,10 +336,12 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
 - 数据分析日期：{run_date if run_date else '最新数据'}
 - 当前恒生指数：{current_hsi}
 - 分析股票数量：{len(stock_data)}只
-- 分析股票清单：{list(WATCHLIST.values())}
+- 分析股票清单(WATCHLIST)：{list(WATCHLIST.values())}
 
 📋 实际数据表格（CSV格式）：
 {stock_table}
+
+{news_content}
 
 重要提示：以上表格包含了所有实际的股票数据，包括价格、技术指标、资金流向和信号等。请基于这些实际数据进行分析，而不是进行任何数据假设。这些数据已经通过量化分析和回测验证了可靠性。
 
@@ -357,6 +362,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
 - 结合新闻数据，分析市场对WATCHLIST中股票的关注度变化
 - 评估新闻对WATCHLIST中股票短期走势的潜在影响（正面、负面、中性）
 - 识别WATCHLIST中可能被市场错杀或过度炒作的标的
+- 对比新闻情绪与技术指标的背离情况（例如，负面新闻但技术指标向好，或反之）
 
 【维度四：相对表现与市场趋势】
 - 筛选WATCHLIST中跑赢恒指（值为1）且相对强度高的股票
@@ -367,12 +373,12 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
 请提供以下三个方面的专业建议：
 
 1. 🎯 投资机会推荐（从WATCHLIST中选择3-5只最值得关注的股票）
-   - 明确推荐理由（结合技术面、资金面、基本面）
+   - 明确推荐理由（结合技术面、资金面、基本面和新闻影响）
    - 给出短期（1-2周）和中期（1-3个月）的投资预期
    - 提示关键的买入时机和止损位参考
 
 2. ⚠️ 风险警示（从WATCHLIST中识别需要警惕的股票）
-   - 详细说明风险来源（技术面恶化、资金流出、基本面变化等）
+   - 详细说明风险来源（技术面恶化、资金流出、基本面变化、负面新闻等）
    - 给出风险等级评估（高、中、低）
    - 提供应对建议（减持、观望、回避等）
 
