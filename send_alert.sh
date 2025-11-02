@@ -17,3 +17,6 @@ python hk_smart_money_tracker.py --date $YESTERDAY
 # 调用 gold_analyzer.py
 python gold_analyzer.py
 
+# 调用 batch_stock_news_fetcher.py
+python batch_stock_news_fetcher.py
+

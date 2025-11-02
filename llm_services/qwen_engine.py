@@ -47,12 +47,13 @@ def embed_with_llm(query):
         print(f'Error during requests POST: {error}')
         raise error  # Re-raise the error for the caller to handle
 
-def chat_with_llm(query):
+def chat_with_llm(query, enable_thinking=True):
     """
     Generate a response from Qwen model for a given query.
     
     Args:
         query (str): The user's query
+        enable_thinking (bool): Whether to enable thinking mode (推理模式). Default is True.
         
     Returns:
         str: The model's response text
@@ -81,7 +82,7 @@ def chat_with_llm(query):
             'temperature': 0.05,
             'max_tokens': max_tokens,
             'seed': 1368,
-            'enable_thinking': True
+            'enable_thinking': enable_thinking  # 使用传入的参数
         }
         
         response = requests.post(chat_url, headers=headers, json=payload)

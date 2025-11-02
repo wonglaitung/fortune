@@ -8,7 +8,7 @@
 
 import akshare as ak
 import yfinance as yf
-from datetime import datetime, time as dt_time
+from datetime import datetime, time as dt_time, timedelta
 import json
 import os
 import csv
@@ -64,8 +64,8 @@ def filter_news_with_llm(news_list, stock_name, stock_code, max_news=3):
 """
     
     try:
-        # 调用大模型
-        response = chat_with_llm(prompt)
+        # 调用大模型（非推理模式）
+        response = chat_with_llm(prompt, enable_thinking=False)
         
         # 解析大模型返回的JSON
         start_idx = response.find('{')
@@ -108,16 +108,25 @@ def get_stock_news(symbol, stock_name="", size=3):
         df = ak.stock_news_em(symbol=symbol)
         articles = []
         
+        # 计算一个月前的日期
+        one_month_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=30)
+        
         # 处理新闻数据
         for _, item in df.iterrows():
             # 格式化发布时间
             pub_time = item.get("发布时间", "")
+            pub_datetime = None
             if pub_time:
                 # 将时间字符串转换为标准格式
                 try:
-                    pub_time = datetime.strptime(pub_time, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
+                    pub_datetime = datetime.strptime(pub_time, "%Y-%m-%d %H:%M:%S")
+                    pub_time = pub_datetime.strftime("%Y-%m-%d %H:%M:%S")
                 except:
                     pass
+            
+            # 只获取一个月内的新闻
+            if pub_datetime and pub_datetime < one_month_ago:
+                continue
             
             title = item.get("新闻标题", "").strip()
             summary = item.get("新闻内容", "").strip()
