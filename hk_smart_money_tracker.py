@@ -291,6 +291,10 @@ def build_llm_analysis_prompt(stock_data):
             # 读取CSV文件
             news_df = pd.read_csv(news_file_path)
             
+            # 只保留WATCHLIST中的股票新闻
+            watchlist_codes = list(WATCHLIST.keys())
+            news_df = news_df[news_df['股票代码'].isin(watchlist_codes)]
+            
             # 构建新闻数据表格
             news_table_header = "| 股票名称 | 股票代码 | 新闻时间 | 新闻标题 | 简要内容 |\n"
             news_table_separator = "|----------|----------|----------|----------|----------|\n"
@@ -327,6 +331,7 @@ def build_llm_analysis_prompt(stock_data):
 - 分析时间：{current_time}
 - 当前恒生指数：{current_hsi}
 - 分析股票数量：{len(stock_data)}只
+- 分析股票清单：{list(WATCHLIST.values())}
 
 📋 数据说明：
 1. 股票数据表格采用CSV格式，包含关键技术和资金流向指标
@@ -334,40 +339,40 @@ def build_llm_analysis_prompt(stock_data):
 3. 出货信号：表示主力资金可能在高位派发的股票
 4. 南向资金：反映内地资金对港股的关注度和实际买入情况
 5. 相对强度(RS)：个股相对于恒生指数的表现
-6. 新闻数据：近期与相关股票有关的市场资讯
+6. 新闻数据：近期与WATCHLIST中股票相关的市场资讯
 
 📈 核心分析任务：
-请从以下四个关键维度对股票进行深度分析：
+请从以下四个关键维度对WATCHLIST中的股票进行深度分析：
 
 【维度一：主力资金动向分析】
-- 重点筛选建仓信号为"1"的股票，分析其南向资金流入情况和相对强度
-- 识别出货信号为"1"的股票，评估其风险等级
+- 重点筛选WATCHLIST中建仓信号为"1"的股票，分析其南向资金流入情况和相对强度
+- 识别WATCHLIST中出货信号为"1"的股票，评估其风险等级
 - 结合成交量比率、OBV、CMF等资金指标验证信号可靠性
 
 【维度二：技术面综合评估】
-- 分析RSI、MACD、布林带等技术指标的协同信号
-- 评估股票所处的位置（低位、中位、高位）与其技术形态的匹配度
-- 识别放量上涨和缩量回调的股票，判断趋势的可持续性
+- 分析WATCHLIST中股票的RSI、MACD、布林带等技术指标的协同信号
+- 评估WATCHLIST中股票所处的位置（低位、中位、高位）与其技术形态的匹配度
+- 识别WATCHLIST中放量上涨和缩量回调的股票，判断趋势的可持续性
 
 【维度三：市场情绪与新闻影响】
-- 结合新闻数据，分析市场对特定股票的关注度变化
-- 评估新闻对股票短期走势的潜在影响（正面、负面、中性）
-- 识别可能被市场错杀或过度炒作的标的
+- 结合新闻数据，分析市场对WATCHLIST中股票的关注度变化
+- 评估新闻对WATCHLIST中股票短期走势的潜在影响（正面、负面、中性）
+- 识别WATCHLIST中可能被市场错杀或过度炒作的标的
 
 【维度四：相对表现与市场趋势】
-- 筛选跑赢恒指（值为1）且相对强度高的股票
+- 筛选WATCHLIST中跑赢恒指（值为1）且相对强度高的股票
 - 分析整体市场的资金流向和风险偏好
-- 评估当前市场环境对不同类型的股票（价值股、成长股等）的影响
+- 评估当前市场环境对WATCHLIST中股票的影响
 
 🎯 最终输出要求：
 请提供以下三个方面的专业建议：
 
-1. 🎯 投资机会推荐（3-5只最值得关注的股票）
+1. 🎯 投资机会推荐（从WATCHLIST中选择3-5只最值得关注的股票）
    - 明确推荐理由（结合技术面、资金面、基本面）
    - 给出短期（1-2周）和中期（1-3个月）的投资预期
    - 提示关键的买入时机和止损位参考
 
-2. ⚠️ 风险警示（需要警惕的股票）
+2. ⚠️ 风险警示（从WATCHLIST中识别需要警惕的股票）
    - 详细说明风险来源（技术面恶化、资金流出、基本面变化等）
    - 给出风险等级评估（高、中、低）
    - 提供应对建议（减持、观望、回避等）
@@ -1883,6 +1888,10 @@ def main(run_date=None):
             if os.path.exists(news_file_path):
                 try:
                     news_df = pd.read_csv(news_file_path)
+                    # 只保留WATCHLIST中的股票新闻
+                    watchlist_codes = list(WATCHLIST.keys())
+                    news_df = news_df[news_df['股票代码'].isin(watchlist_codes)]
+                    
                     if not news_df.empty:
                         html += "<h3>📰 相关新闻摘要</h3>"
                         html += "<div style='background-color: #f9f9f9; padding: 15px; border-radius: 5px;'>"
