@@ -426,21 +426,33 @@ class GoldMarketAnalyzer:
                 # 尝试解析JSON格式的输出
                 import json
                 analysis_json = json.loads(llm_analysis)
-                print(f"趋势分析: {analysis_json.get('trend_analysis', 'N/A')}")
-                print(f"技术信号: {analysis_json.get('technical_signals', 'N/A')}")
-                print(f"宏观影响: {analysis_json.get('macro_impact', 'N/A')}")
-                print("投资建议:")
+                
+                print("📈 趋势分析:")
+                print(f"   {analysis_json.get('trend_analysis', 'N/A')}")
+                
+                print("\n📊 技术信号:")
+                print(f"   {analysis_json.get('technical_signals', 'N/A')}")
+                
+                print("\n💼 宏观影响:")
+                print(f"   {analysis_json.get('macro_impact', 'N/A')}")
+                
+                print("\n💡 投资建议:")
                 advice = analysis_json.get('investment_advice', {})
-                print(f"  短期: {advice.get('short_term', 'N/A')}")
-                print(f"  中期: {advice.get('medium_term', 'N/A')}")
-                print(f"  长期: {advice.get('long_term', 'N/A')}")
-                print(f"风险预警: {analysis_json.get('risk_warning', 'N/A')}")
-            except:
+                print(f"   📌 短期: {advice.get('short_term', 'N/A')}")
+                print(f"   📌 中期: {advice.get('medium_term', 'N/A')}")
+                print(f"   📌 长期: {advice.get('long_term', 'N/A')}")
+                
+                print("\n⚠️ 风险预警:")
+                print(f"   {analysis_json.get('risk_warning', 'N/A')}")
+            except json.JSONDecodeError:
                 # 如果不是JSON格式，直接输出
                 print(llm_analysis)
+            except Exception as e:
+                print(f"   分析内容解析失败: {e}")
+                print(f"   原始内容: {llm_analysis}")
         else:
             print("\n⚠️ 大模型分析暂不可用")
-            print("请检查大模型服务配置或API密钥")
+            print("   请检查大模型服务配置或API密钥")
         
         print("\n" + "="*60)
         print("分析完成！")
@@ -626,22 +638,58 @@ class GoldMarketAnalyzer:
                 try:
                     # 尝试解析JSON格式的输出
                     analysis_json = json.loads(llm_analysis)
-                    html_body += "<p><strong>趋势分析:</strong> {}</p>".format(analysis_json.get('trend_analysis', 'N/A'))
-                    html_body += "<p><strong>技术信号:</strong> {}</p>".format(analysis_json.get('technical_signals', 'N/A'))
-                    html_body += "<p><strong>宏观影响:</strong> {}</p>".format(analysis_json.get('macro_impact', 'N/A'))
+                    
+                    html_body += """
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #333; margin-bottom: 5px;">📈 趋势分析</h4>
+                            <p style="margin: 5px 0 15px 10px;">{}</p>
+                        </div>
+                    """.format(analysis_json.get('trend_analysis', 'N/A'))
+                    
+                    html_body += """
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #333; margin-bottom: 5px;">📊 技术信号</h4>
+                            <p style="margin: 5px 0 15px 10px;">{}</p>
+                        </div>
+                    """.format(analysis_json.get('technical_signals', 'N/A'))
+                    
+                    html_body += """
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #333; margin-bottom: 5px;">💼 宏观影响</h4>
+                            <p style="margin: 5px 0 15px 10px;">{}</p>
+                        </div>
+                    """.format(analysis_json.get('macro_impact', 'N/A'))
+                    
+                    html_body += """
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #333; margin-bottom: 5px;">💡 投资建议</h4>
+                            <div style="margin: 5px 0 15px 10px;">
+                    """
                     
                     advice = analysis_json.get('investment_advice', {})
-                    html_body += "<p><strong>投资建议:</strong></p><ul>"
-                    html_body += "<li>短期: {}</li>".format(advice.get('short_term', 'N/A'))
-                    html_body += "<li>中期: {}</li>".format(advice.get('medium_term', 'N/A'))
-                    html_body += "<li>长期: {}</li>".format(advice.get('long_term', 'N/A'))
-                    html_body += "</ul>"
-                    html_body += "<p><strong>风险预警:</strong> {}</p>".format(analysis_json.get('risk_warning', 'N/A'))
-                except:
+                    html_body += "<p><strong>📌 短期:</strong> {}</p>".format(advice.get('short_term', 'N/A'))
+                    html_body += "<p><strong>📌 中期:</strong> {}</p>".format(advice.get('medium_term', 'N/A'))
+                    html_body += "<p><strong>📌 长期:</strong> {}</p>".format(advice.get('long_term', 'N/A'))
+                    
+                    html_body += """
+                            </div>
+                        </div>
+                    """
+                    
+                    html_body += """
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #333; margin-bottom: 5px;">⚠️ 风险预警</h4>
+                            <p style="margin: 5px 0 15px 10px;">{}</p>
+                        </div>
+                    """.format(analysis_json.get('risk_warning', 'N/A'))
+                except json.JSONDecodeError:
                     # 如果不是JSON格式，直接输出
                     # 将换行符转换为HTML换行标签
                     llm_analysis_html = llm_analysis.replace('\n', '<br>')
                     html_body += "<p>{}</p>".format(llm_analysis_html)
+                except Exception as e:
+                    html_body += "<p>分析内容解析失败: {}</p>".format(e)
+                    html_body += "<p>原始内容: {}</p>".format(llm_analysis)
                 
                 html_body += """
                         </div>
@@ -651,7 +699,7 @@ class GoldMarketAnalyzer:
                 html_body += """
                     <div class="section">
                         <h3>🤖 大模型深度分析</h3>
-                        <p>⚠️ 大模型分析暂不可用<br>请检查大模型服务配置或API密钥</p>
+                        <p style="color: #888;">⚠️ 大模型分析暂不可用<br>请检查大模型服务配置或API密钥</p>
                     </div>
                 """
             
