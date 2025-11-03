@@ -146,6 +146,202 @@ class SimulationTrader:
             self.log_message(f"发送邮件失败: {e}")
             return False
     
+    def send_trading_notification(self, notification_type, **kwargs):
+        """
+        发送交易通知邮件的统一方法
+        
+        Args:
+            notification_type (str): 通知类型
+            **kwargs: 其他参数，根据通知类型而定
+        """
+        # 构建持仓详情文本
+        positions_detail = self.build_positions_detail()
+        
+        if notification_type == "buy":
+            # 买入通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            price = kwargs.get('price')
+            shares = kwargs.get('shares')
+            amount = kwargs.get('amount')
+            reason = kwargs.get('reason')
+            is_new_stock = kwargs.get('is_new_stock', False)
+            
+            subject_prefix = "【新买入通知】" if is_new_stock else "【加仓通知】"
+            subject = f"{subject_prefix}{name} ({code})"
+            content = f"""
+模拟交易系统买入通知：
+
+股票名称：{name}
+股票代码：{code}
+买入价格：HK${price:.2f}
+买入数量：{shares} 股
+买入金额：HK${amount:.2f}
+买入原因：{reason if reason else '未提供理由'}
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
+        elif notification_type == "sell":
+            # 卖出通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            price = kwargs.get('price')
+            shares = kwargs.get('shares')
+            amount = kwargs.get('amount')
+            avg_price = kwargs.get('avg_price')
+            profit_loss = kwargs.get('profit_loss')
+            reason = kwargs.get('reason')
+            
+            profit_loss_status = "盈利" if profit_loss >= 0 else "亏损"
+            subject = f"【卖出通知】{name} ({code})"
+            content = f"""
+模拟交易系统卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+卖出价格：HK${price:.2f}
+卖出数量：{shares} 股
+卖出金额：HK${amount:.2f}
+平均成本：HK${avg_price:.2f}
+盈亏金额：HK${profit_loss:+.2f} ({profit_loss_status})
+卖出原因：{reason if reason else '未提供理由'}
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
+        elif notification_type == "cannot_sell":
+            # 无法卖出通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            reason = kwargs.get('reason')
+            stop_loss_triggered = kwargs.get('stop_loss_triggered', False)
+            
+            subject = f"【无法卖出通知】{name} ({code})"
+            content = f"""
+模拟交易系统无法按大模型建议卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+大模型建议卖出理由：{reason}
+是否止损触发：{stop_loss_triggered}
+无法卖出原因：未持有该股票
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+{positions_detail}
+            """
+        elif notification_type == "stop_loss":
+            # 止损触发通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            current_price = kwargs.get('current_price')
+            stop_loss_price = kwargs.get('stop_loss_price')
+            
+            subject = f"【止损触发通知】{name} ({code})"
+            content = f"""
+模拟交易系统止损触发通知：
+
+股票名称：{name}
+股票代码：{code}
+当前价格：HK${current_price:.2f}
+止损价格：HK${stop_loss_price:.2f}
+触发原因：当前价格跌破止损价格
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{positions_detail}
+            """
+        elif notification_type == "insufficient_funds":
+            # 资金不足无法买入通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            reason = kwargs.get('reason')
+            allocation_pct = kwargs.get('allocation_pct')
+            stop_loss_price = kwargs.get('stop_loss_price')
+            required_amount = kwargs.get('required_amount')
+            
+            subject = f"【无法买入通知】{name} ({code})"
+            content = f"""
+模拟交易系统无法按大模型建议买入通知：
+
+股票名称：{name}
+股票代码：{code}
+大模型建议买入理由：{reason}
+资金分配比例：{allocation_pct}
+建议止损价格：{stop_loss_price}
+建议买入金额：HK${required_amount:.2f}
+无法买入原因：资金不足
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
+        elif notification_type == "buy_failed":
+            # 买入执行失败通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            reason = kwargs.get('reason')
+            allocation_pct = kwargs.get('allocation_pct')
+            stop_loss_price = kwargs.get('stop_loss_price')
+            
+            subject = f"【无法买入通知】{name} ({code})"
+            content = f"""
+模拟交易系统无法按大模型建议买入通知：
+
+股票名称：{name}
+股票代码：{code}
+大模型建议买入理由：{reason}
+资金分配比例：{allocation_pct}
+建议止损价格：{stop_loss_price}
+无法买入原因：交易执行失败
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
+        elif notification_type == "manual_cannot_sell":
+            # 手工卖出无法执行通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            
+            subject = f"【无法卖出通知】{name} ({code})"
+            content = f"""
+模拟交易系统无法按手动指令卖出通知：
+
+股票名称：{name}
+股票代码：{code}
+无法卖出原因：未持有该股票
+交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+{positions_detail}
+            """
+        elif notification_type == "test":
+            # 邮件功能测试
+            subject = "港股模拟交易系统 - 邮件功能测试"
+            content = f"""
+这是港股模拟交易系统的邮件功能测试邮件。
+
+时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+系统状态：
+- 初始资金: HK${self.initial_capital:,.2f}
+- 当前资金: HK${self.capital:,.2f}
+- 持仓数量: {len(self.positions)}
+
+当前持仓详情：
+{positions_detail}
+            """
+        else:
+            # 未知通知类型
+            self.log_message(f"未知的邮件通知类型: {notification_type}")
+            return False
+        
+        return self.send_email_notification(subject, content)
+    
     def get_daily_log_file(self):
         """获取当天的日志文件路径"""
         today = datetime.now().strftime("%Y%m%d")
@@ -339,31 +535,16 @@ class SimulationTrader:
         self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
         
         # 发送买入通知邮件（无论是否为新股票）
-        # 构建持仓详情文本
-        positions_detail = self.build_positions_detail()
-        
-        if is_new_stock:
-            subject_prefix = "【新买入通知】"
-        else:
-            subject_prefix = "【加仓通知】"
-            
-        subject = f"{subject_prefix}{name} ({code})"
-        content = f"""
-模拟交易系统买入通知：
-
-股票名称：{name}
-股票代码：{code}
-买入价格：HK${current_price:.2f}
-买入数量：{shares} 股
-买入金额：HK${actual_invest:.2f}
-买入原因：{reason if reason else '未提供理由'}
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-        """
-        self.send_email_notification(subject, content)
+        self.send_trading_notification(
+            notification_type="buy",
+            code=code,
+            name=name,
+            price=current_price,
+            shares=shares,
+            amount=actual_invest,
+            reason=reason,
+            is_new_stock=is_new_stock
+        )
         
         return True
     
@@ -436,28 +617,17 @@ class SimulationTrader:
         self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}, {profit_loss_status}: HK${abs(profit_loss):.2f}")
         
         # 发送卖出通知邮件
-        # 构建持仓详情文本
-        positions_detail = self.build_positions_detail()
-        
-        subject = f"【卖出通知】{name} ({code})"
-        content = f"""
-模拟交易系统卖出通知：
-
-股票名称：{name}
-股票代码：{code}
-卖出价格：HK${current_price:.2f}
-卖出数量：{shares_to_sell} 股
-卖出金额：HK${sell_amount:.2f}
-平均成本：HK${avg_price:.2f}
-盈亏金额：HK${profit_loss:+.2f} ({profit_loss_status})
-卖出原因：{reason if reason else '未提供理由'}
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-        """
-        self.send_email_notification(subject, content)
+        self.send_trading_notification(
+            notification_type="sell",
+            code=code,
+            name=name,
+            price=current_price,
+            shares=shares_to_sell,
+            amount=sell_amount,
+            avg_price=avg_price,
+            profit_loss=profit_loss,
+            reason=reason
+        )
         
         return True
     
@@ -688,23 +858,13 @@ class SimulationTrader:
                     # 没有持仓，无法卖出，发送邮件通知
                     self.log_message(f"未持有 {name} ({code})，无法按大模型建议卖出")
                     # 发送无法卖出通知邮件
-                    # 构建持仓详情文本
-                    positions_detail = self.build_positions_detail()
-                    
-                    subject = f"【无法卖出通知】{name} ({code})"
-                    content = f"""
-模拟交易系统无法按大模型建议卖出通知：
-
-股票名称：{name}
-股票代码：{code}
-大模型建议卖出理由：{reason}
-是否止损触发：{stop_loss_triggered}
-无法卖出原因：未持有该股票
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-{positions_detail}
-                    """
-                    self.send_email_notification(subject, content)
+                    self.send_trading_notification(
+                        notification_type="cannot_sell",
+                        code=code,
+                        name=name,
+                        reason=reason,
+                        stop_loss_triggered=stop_loss_triggered
+                    )
                 else:
                     # 卖出全部持仓
                     sell_pct = 1.0
@@ -724,22 +884,13 @@ class SimulationTrader:
                             name = hk_smart_money_tracker.WATCHLIST.get(code, code)
                             self.log_message(f"触发止损: {name} ({code}) 当前价格 HK${current_price:.2f} < 止损价格 HK${position['stop_loss_price']:.2f}")
                             # 发送止损通知邮件
-                            positions_detail = self.build_positions_detail()
-                            
-                            subject = f"【止损触发通知】{name} ({code})"
-                            content = f"""
-模拟交易系统止损触发通知：
-
-股票名称：{name}
-股票代码：{code}
-当前价格：HK${current_price:.2f}
-止损价格：HK${position['stop_loss_price']:.2f}
-触发原因：当前价格跌破止损价格
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-{positions_detail}
-                            """
-                            self.send_email_notification(subject, content)
+                            self.send_trading_notification(
+                                notification_type="stop_loss",
+                                code=code,
+                                name=name,
+                                current_price=current_price,
+                                stop_loss_price=position['stop_loss_price']
+                            )
                             
                             # 执行止损卖出
                             self.sell_stock(code, name, 1.0, f"止损触发: 当前价格HK${current_price:.2f} < 止损价格HK${position['stop_loss_price']:.2f}")
@@ -796,26 +947,15 @@ class SimulationTrader:
                         else:
                             self.log_message(f"资金不足买入 {name} ({code})，跳过买入")
                             # 发送资金不足通知邮件
-                            positions_detail = self.build_positions_detail()
-                            
-                            subject = f"【无法买入通知】{name} ({code})"
-                            content = f"""
-模拟交易系统无法按大模型建议买入通知：
-
-股票名称：{name}
-股票代码：{code}
-大模型建议买入理由：{reason}
-资金分配比例：{allocation_pct}
-建议止损价格：{stop_loss_price}
-建议买入金额：HK${required_amount:.2f}
-无法买入原因：资金不足
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-                            """
-                            self.send_email_notification(subject, content)
+                            self.send_trading_notification(
+                                notification_type="insufficient_funds",
+                                code=code,
+                                name=name,
+                                reason=reason,
+                                allocation_pct=allocation_pct,
+                                stop_loss_price=stop_loss_price,
+                                required_amount=required_amount
+                            )
                             continue
                     
                     # 计算买入后股票在投资组合中的预期比例
@@ -852,25 +992,14 @@ class SimulationTrader:
                 if not buy_result:
                     self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
                     # 发送无法买入通知邮件
-                    positions_detail = self.build_positions_detail()
-                    
-                    subject = f"【无法买入通知】{name} ({code})"
-                    content = f"""
-模拟交易系统无法按大模型建议买入通知：
-
-股票名称：{name}
-股票代码：{code}
-大模型建议买入理由：{reason}
-资金分配比例：{allocation_pct}
-建议止损价格：{stop_loss_price}
-无法买入原因：交易执行失败
-交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-当前资金：HK${self.capital:,.2f}
-
-{positions_detail}
-                    """
-                    self.send_email_notification(subject, content)
+                    self.send_trading_notification(
+                        notification_type="buy_failed",
+                        code=code,
+                        name=name,
+                        reason=reason,
+                        allocation_pct=allocation_pct,
+                        stop_loss_price=stop_loss_price
+                    )
         
         
                 
@@ -1137,21 +1266,11 @@ class SimulationTrader:
         if code not in self.positions:
             self.log_message(f"未持有 {name} ({code})，无法卖出")
             # 发送无法卖出通知邮件
-            # 构建持仓详情文本
-            positions_detail = self.build_positions_detail()
-            
-            subject = f"【无法卖出通知】{name} ({code})"
-            content = f"""
-模拟交易系统无法按手动指令卖出通知：
-
-股票名称：{name}
-股票代码：{code}
-无法卖出原因：未持有该股票
-交易时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-{positions_detail}
-            """
-            self.send_email_notification(subject, content)
+            self.send_trading_notification(
+                notification_type="manual_cannot_sell",
+                code=code,
+                name=name
+            )
             return False
         
         return self.sell_stock(code, name, percentage, None)
@@ -1159,24 +1278,8 @@ class SimulationTrader:
     def test_email_notification(self):
         """测试邮件发送功能"""
         self.log_message("测试邮件发送功能...")
-        # 构建持仓详情文本
-        positions_detail = self.build_positions_detail()
         
-        subject = "港股模拟交易系统 - 邮件功能测试"
-        content = f"""
-这是港股模拟交易系统的邮件功能测试邮件。
-
-时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-系统状态：
-- 初始资金: HK${self.initial_capital:,.2f}
-- 当前资金: HK${self.capital:,.2f}
-- 持仓数量: {len(self.positions)}
-
-当前持仓详情：
-{positions_detail}
-        """
-        
-        success = self.send_email_notification(subject, content)
+        success = self.send_trading_notification(notification_type="test")
         if success:
             self.log_message("邮件功能测试成功")
         else:
