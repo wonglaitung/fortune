@@ -342,7 +342,6 @@ class SimulationTrader:
 - 当前资金: HK${self.capital:,.2f}
 - 持仓数量: {len(self.positions)}
 
-当前持仓详情：
 {positions_detail}
             """
         else:
