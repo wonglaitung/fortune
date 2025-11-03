@@ -1,22 +1,10 @@
 {
   "initial_capital": 1000000,
-  "capital": 126442.98929405212,
+  "capital": 643.1892940521357,
   "positions": {
-    "1288.HK": {
-      "shares": 12410,
-      "avg_price": 5.9901289808932665
-    },
-    "3968.HK": {
-      "shares": 1500,
-      "avg_price": 49.839999043782555
-    },
     "0728.HK": {
       "shares": 4600,
       "avg_price": 5.650000095367432
-    },
-    "9660.HK": {
-      "shares": 23200,
-      "avg_price": 9.001810344827584
     },
     "1138.HK": {
       "shares": 21000,
@@ -26,13 +14,17 @@
       "shares": 1500,
       "avg_price": 41.128
     },
-    "6682.HK": {
-      "shares": 2700,
-      "avg_price": 54.55740740740741
-    },
     "0883.HK": {
       "shares": 2300,
       "avg_price": 19.95130434782609
+    },
+    "1810.HK": {
+      "shares": 7900,
+      "avg_price": 45.0
+    },
+    "2533.HK": {
+      "shares": 11600,
+      "avg_price": 24.08
     }
   },
   "transaction_history": [
@@ -1715,6 +1707,66 @@
       "price": 7.94,
       "amount": 54627.200000000004,
       "capital_after": 126442.98929405212
+    },
+    {
+      "timestamp": "2025-11-03T14:55:34.924406",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 2700,
+      "price": 57.7,
+      "amount": 155790.0,
+      "capital_after": 282232.9892940521
+    },
+    {
+      "timestamp": "2025-11-03T14:55:37.657877",
+      "type": "SELL",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 1500,
+      "price": 49.58,
+      "amount": 74370.0,
+      "capital_after": 356602.9892940521
+    },
+    {
+      "timestamp": "2025-11-03T14:55:41.392342",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 7900,
+      "price": 45.0,
+      "amount": 355500.0,
+      "capital_after": 1102.989294052124
+    },
+    {
+      "timestamp": "2025-11-03T16:01:12.001200",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 12410,
+      "price": 6.02,
+      "amount": 74708.2,
+      "capital_after": 75811.18929405212
+    },
+    {
+      "timestamp": "2025-11-03T16:01:15.855956",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 23200,
+      "price": 8.8,
+      "amount": 204160.00000000003,
+      "capital_after": 279971.18929405214
+    },
+    {
+      "timestamp": "2025-11-03T16:01:23.718293",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 11600,
+      "price": 24.08,
+      "amount": 279328.0,
+      "capital_after": 643.1892940521357
     }
   ],
   "portfolio_history": [
@@ -4982,6 +5034,72 @@
         "0883.HK": {
           "shares": 2300,
           "avg_price": 19.95130434782609
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-03T14:55:47.520270",
+      "capital": 1102.989294052124,
+      "portfolio_value": 1000124.889294052,
+      "positions": {
+        "1288.HK": {
+          "shares": 0,
+          "avg_price": 5.9901289808932665
+        },
+        "0728.HK": {
+          "shares": 4600,
+          "avg_price": 5.650000095367432
+        },
+        "9660.HK": {
+          "shares": 0,
+          "avg_price": 9.001810344827584
+        },
+        "1138.HK": {
+          "shares": 21000,
+          "avg_price": 11.150333333333336
+        },
+        "1088.HK": {
+          "shares": 1500,
+          "avg_price": 41.128
+        },
+        "0883.HK": {
+          "shares": 2300,
+          "avg_price": 19.95130434782609
+        },
+        "1810.HK": {
+          "shares": 7900,
+          "avg_price": 45.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-03T16:01:26.075628",
+      "capital": 643.1892940521357,
+      "portfolio_value": 1000005.1892940521,
+      "positions": {
+        "0728.HK": {
+          "shares": 4600,
+          "avg_price": 5.650000095367432
+        },
+        "1138.HK": {
+          "shares": 21000,
+          "avg_price": 11.150333333333336
+        },
+        "1088.HK": {
+          "shares": 1500,
+          "avg_price": 41.128
+        },
+        "0883.HK": {
+          "shares": 2300,
+          "avg_price": 19.95130434782609
+        },
+        "1810.HK": {
+          "shares": 7900,
+          "avg_price": 45.0
+        },
+        "2533.HK": {
+          "shares": 11600,
+          "avg_price": 24.08
         }
       }
     }
