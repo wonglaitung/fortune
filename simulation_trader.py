@@ -642,7 +642,7 @@ class SimulationTrader:
 5. 如果没有明确的买卖建议，对应的字段为空数组
 6. 根据投资者风险偏好筛选适合的股票
 7. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
-8. 请避免重复买入已持有的股票
+8. 可以建议买入已持有的股票以进行加仓
 9. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
 10. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
 """
@@ -753,11 +753,6 @@ class SimulationTrader:
             stop_loss_price = stock.get('stop_loss_price', '未提供')
             
             if code in hk_smart_money_tracker.WATCHLIST:
-                # 检查是否已经持有该股票
-                if code in self.positions:
-                    self.log_message(f"已持有 {name} ({code})，跳过买入")
-                    continue
-                
                 # 检查是否提供了资金分配比例
                 if allocation_pct == '未提供' or allocation_pct is None:
                     self.log_message(f"大模型未提供 {name} ({code}) 的资金分配比例，跳过买入")
