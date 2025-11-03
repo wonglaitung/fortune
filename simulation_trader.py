@@ -612,16 +612,16 @@ class SimulationTrader:
 2. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
 
 请严格按照以下格式输出：
-{
+{{
     "buy": [
-        {"code": "股票代码1", "name": "股票名称1", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"},
-        {"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"}
+        {{"code": "股票代码1", "name": "股票名称1", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"}},
+        {{"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": "资金分配比例", "stop_loss_price": "止损价格"}}
     ],
     "sell": [
-        {"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"},
-        {"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"}
+        {{"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"}},
+        {{"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": "是否由止损机制触发"}}
     ]
-}
+}}
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
