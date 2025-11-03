@@ -34,13 +34,14 @@ import hk_smart_money_tracker
 from tencent_finance import get_hk_stock_data_tencent
 
 class SimulationTrader:
-    def __init__(self, initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY):
+    def __init__(self, initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY, investor_type="进取型"):
         """
         初始化模拟交易系统
         
         Args:
             initial_capital (float): 初始资金，默认100万港元
             analysis_frequency (int): 分析频率（分钟），默认15分钟
+            investor_type (str): 投资者风险偏好，默认为"进取型"
         """
         self.initial_capital = initial_capital
         self.capital = initial_capital
@@ -50,6 +51,7 @@ class SimulationTrader:
         self.start_date = datetime.now()
         self.is_trading_hours = True  # 模拟港股交易时间 (9:30-16:00)
         self.analysis_frequency = analysis_frequency  # 分析频率（分钟）
+        self.investor_type = investor_type  # 投资者风险偏好
         
         # 确保data目录存在
         self.data_dir = "data"
@@ -172,6 +174,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统买入通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 买入价格：HK${price:.2f}
@@ -200,6 +203,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统卖出通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 卖出价格：HK${price:.2f}
@@ -225,6 +229,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统无法按大模型建议卖出通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 大模型建议卖出理由：{reason}
@@ -245,6 +250,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统止损触发通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 当前价格：HK${current_price:.2f}
@@ -267,6 +273,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统无法按大模型建议买入通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 大模型建议买入理由：{reason}
@@ -292,6 +299,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统无法按大模型建议买入通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 大模型建议买入理由：{reason}
@@ -313,6 +321,7 @@ class SimulationTrader:
             content = f"""
 模拟交易系统无法按手动指令卖出通知：
 
+投资者风险偏好：{self.investor_type}
 股票名称：{name}
 股票代码：{code}
 无法卖出原因：未持有该股票
@@ -326,6 +335,7 @@ class SimulationTrader:
             content = f"""
 这是港股模拟交易系统的邮件功能测试邮件。
 
+投资者风险偏好：{self.investor_type}
 时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 系统状态：
 - 初始资金: HK${self.initial_capital:,.2f}
@@ -732,7 +742,7 @@ class SimulationTrader:
         # 保守型：偏好低风险、稳定收益的股票
         # 平衡型：平衡风险与收益
         # 进取型：偏好高风险、高收益的股票
-        investor_type = "进取型"  # 可以根据需要调整为"保守型"或"平衡型"
+        # 使用实例变量存储投资者风险偏好
         
         # 运行股票分析
         try:
@@ -775,7 +785,7 @@ class SimulationTrader:
                 
                 # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
                 format_prompt = f"""
-请分析以下港股分析报告，考虑投资者风险偏好为{investor_type}，并严格按照以下JSON格式输出买卖信号和资金分配建议：
+请分析以下港股分析报告，考虑投资者风险偏好为{self.investor_type}，并严格按照以下JSON格式输出买卖信号和资金分配建议：
 
 报告内容：
 {llm_analysis}
@@ -783,7 +793,7 @@ class SimulationTrader:
 {positions_text}
 {capital_info}
 
-投资者风险偏好：{investor_type}
+投资者风险偏好：{self.investor_type}
 - 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
 - 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
 - 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
@@ -1286,19 +1296,20 @@ class SimulationTrader:
             self.log_message("邮件功能测试失败")
         return success
 
-def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY):
+def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY, investor_type="进取型"):
     """
     运行模拟交易
     
     Args:
         duration_days (int): 模拟天数，默认30天
         analysis_frequency (int): 分析频率（分钟），默认15分钟
+        investor_type (str): 投资者风险偏好，默认为"进取型"
     """
     print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
     print("初始资金: HK$1,000,000")
     
     # 创建模拟交易器
-    trader = SimulationTrader(initial_capital=1000000, analysis_frequency=analysis_frequency)
+    trader = SimulationTrader(initial_capital=1000000, analysis_frequency=analysis_frequency, investor_type=investor_type)
     
     # 测试邮件功能
     trader.test_email_notification()
@@ -1343,12 +1354,13 @@ if __name__ == "__main__":
     parser.add_argument('--analysis-frequency', type=int, default=DEFAULT_ANALYSIS_FREQUENCY, help=f'分析频率（分钟），默认{DEFAULT_ANALYSIS_FREQUENCY}分钟')
     parser.add_argument('--manual-sell', type=str, help='手工卖出股票代码（例如：0700.HK）')
     parser.add_argument('--sell-percentage', type=float, default=1.0, help='卖出比例（0.0-1.0），默认1.0（100%）')
+    parser.add_argument('--investor-type', type=str, default='进取型', choices=['保守型', '平衡型', '进取型'], help='投资者风险偏好，默认为"进取型"')
     args = parser.parse_args()
     
     # 如果指定了手工卖出股票，则执行手工卖出
     if args.manual_sell:
         # 创建模拟交易器
-        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY)
+        trader = SimulationTrader(initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY, investor_type=args.investor_type)
         
         # 执行手工卖出
         success = trader.manual_sell_stock(args.manual_sell, args.sell_percentage)
@@ -1359,4 +1371,4 @@ if __name__ == "__main__":
         exit(0)
     
     # 运行模拟交易
-    run_simulation(duration_days=args.duration_days, analysis_frequency=args.analysis_frequency)
+    run_simulation(duration_days=args.duration_days, analysis_frequency=args.analysis_frequency, investor_type=args.investor_type)
