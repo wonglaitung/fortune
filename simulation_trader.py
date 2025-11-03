@@ -15,6 +15,7 @@ import os
 import sys
 import time
 import json
+import random
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -1182,7 +1183,7 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     运行模拟交易
     
     Args:
-        duration_days (int): 模�拟天数，默认30天
+        duration_days (int): 模拟天数，默认30天
         analysis_frequency (int): 分析频率（分钟），默认15分钟
     """
     print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
@@ -1194,8 +1195,8 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     # 测试邮件功能
     trader.test_email_notification()
     
-    # 计划按指定频率执行交易分析
-    schedule.every(analysis_frequency).minutes.do(trader.run_hourly_analysis)
+    # 计划随机间隔执行交易分析（每15-60分钟之间随机）
+    next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
     
     # 计划每天收盘后生成总结
     schedule.every().day.at("16:05").do(trader.run_daily_summary)
@@ -1205,7 +1206,14 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     
     try:
         while datetime.now() < end_time:
-            # 运行计划任务
+            # 检查是否到了随机交易时间
+            if datetime.now() >= next_analysis_time:
+                trader.run_hourly_analysis()
+                # 设置下一次随机交易时间（15-60分钟之间）
+                next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
+                print(f"下一次交易分析将在 {next_analysis_time.strftime('%Y-%m-%d %H:%M:%S')} 执行")
+            
+            # 运行计划任务（用于每日总结等）
             schedule.run_pending()
             
             # 每分钟检查一次
@@ -1216,7 +1224,7 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     finally:
         # 生成最终报告
         trader.generate_final_report()
-        print(f"模拟交易完成，详细日志请查看: {trader.log_file}")
+        print(f"模拟交易完成，详细日志请查看: {trader.get_daily_log_file()}")
 
 if __name__ == "__main__":
     import argparse
