@@ -252,7 +252,7 @@ class SimulationTrader:
     
     
     
-    def buy_stock_by_shares(self, code, name, shares, reason=None):
+    def buy_stock_by_shares(self, code, name, shares, reason=None, stop_loss_price=None):
         """
         按指定股数买入股票
         
@@ -261,6 +261,7 @@ class SimulationTrader:
             name (str): 股票名称
             shares (int): 买入股数
             reason (str): 买入原因
+            stop_loss_price (float): 止损价格
         """
         # 检查是否在交易时间
         if not self.is_trading_hours:
@@ -295,7 +296,7 @@ class SimulationTrader:
             self.positions[code]['shares'] += shares
             self.positions[code]['avg_price'] = new_avg_price
             # 如果有新的止损价格建议，更新止损价格
-            if 'stop_loss_price' in locals() and stop_loss_price != '未提供' and stop_loss_price is not None:
+            if stop_loss_price is not None and stop_loss_price != '未提供':
                 try:
                     stop_loss_price_float = float(stop_loss_price)
                     self.positions[code]['stop_loss_price'] = stop_loss_price_float
@@ -309,7 +310,7 @@ class SimulationTrader:
                 'avg_price': current_price
             }
             # 添加止损价格（如果提供）
-            if 'stop_loss_price' in locals() and stop_loss_price != '未提供' and stop_loss_price is not None:
+            if stop_loss_price is not None and stop_loss_price != '未提供':
                 try:
                     stop_loss_price_float = float(stop_loss_price)
                     position_info['stop_loss_price'] = stop_loss_price_float
@@ -840,7 +841,7 @@ class SimulationTrader:
                 
                 # 执行买入
                 self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}，资金分配比例: {allocation_pct}，止损价格: {stop_loss_price}")
-                buy_result = self.buy_stock_by_shares(code, name, shares, reason)
+                buy_result = self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price)
                 
                 # 如果买入失败，发送邮件通知
                 if not buy_result:
