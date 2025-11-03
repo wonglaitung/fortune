@@ -955,6 +955,72 @@ class SimulationTrader:
         self.log_message(f"{'投资组合总价值:':<75} {self.capital + total_stock_value:>15,.2f}")
         self.log_message(f"{'可用资金:':<75} {self.capital:>15,.2f}")
         
+        # 发送每日总结邮件
+        self.send_daily_summary_email()
+        
+    def send_daily_summary_email(self):
+        """发送每日总结邮件"""
+        try:
+            # 构建邮件内容
+            subject = f"港股模拟交易系统 - {datetime.now().strftime('%Y-%m-%d')} 每日总结"
+            
+            content = f"""港股模拟交易系统每日总结 ({datetime.now().strftime('%Y-%m-%d')})
+
+总体收益情况：
+"""
+            
+            # 计算当日收益
+            if len(self.portfolio_history) >= 2:
+                today_value = self.portfolio_history[-1]['portfolio_value']
+                yesterday_value = self.portfolio_history[-2]['portfolio_value']
+                daily_return = (today_value - yesterday_value) / yesterday_value * 100
+                content += f"当日收益率: {daily_return:.2f}%\n"
+                
+            # 总体收益
+            current_value = self.get_portfolio_value()
+            total_return = (current_value - self.initial_capital) / self.initial_capital * 100
+            content += f"总体收益率: {total_return:.2f}%\n\n"
+            
+            # 持仓详情
+            positions_info, total_stock_value = self.get_detailed_positions_info()
+            
+            if positions_info:
+                content += "当前持仓详情:\n"
+                content += "-" * 100 + "\n"
+                content += f"{'股票代码':<12} {'股票名称':<12} {'持有数量':<12} {'平均成本':<10} {'当前价格':<10} {'止损价格':<10} {'持有金额':<15} {'盈亏金额':<15}\n"
+                content += "-" * 100 + "\n"
+                
+                for pos in positions_info:
+                    profit_loss_str = f"{pos['profit_loss']:>+.2f}" if pos['profit_loss'] >= 0 else f"{pos['profit_loss']:>+.2f}"
+                    stop_loss_str = f"{pos['stop_loss_price']:>10.2f}" if pos['stop_loss_price'] is not None else "N/A"
+                    content += f"{pos['code']:<12} {pos['name']:<12} {pos['shares']:>12,} {pos['avg_price']:>10.2f} {pos['current_price']:>10.2f} {stop_loss_str:>10} {pos['position_value']:>15,.0f} {profit_loss_str:>15}\n"
+                
+                content += "-" * 100 + "\n"
+                
+                # 投资组合资金分配比例
+                content += "\n投资组合资金分配比例:\n"
+                content += "-" * 60 + "\n"
+                portfolio_allocation = self.calculate_portfolio_allocation()
+                if portfolio_allocation:
+                    content += f"{'股票代码':<12} {'股票名称':<12} {'持有金额':<15} {'分配比例':<10}\n"
+                    content += "-" * 60 + "\n"
+                    for code, info in portfolio_allocation.items():
+                        content += f"{code:<12} {info['name']:<12} {info['value']:>15,.0f} {info['percentage']:>9.2f}%\n"
+                    content += "-" * 60 + "\n"
+        
+            content += f"\n资金情况:\n"
+            content += f"现金余额:     {self.capital:>15,.2f}\n"
+            content += f"股票总价值:   {total_stock_value:>15,.2f}\n"
+            content += f"投资组合总价值: {self.capital + total_stock_value:>15,.2f}\n"
+            content += f"可用资金:     {self.capital:>15,.2f}\n\n"
+            
+            content += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            
+            # 发送邮件
+            self.send_email_notification(subject, content)
+        except Exception as e:
+            self.log_message(f"发送每日总结邮件失败: {e}")
+        
     def get_detailed_positions_info(self):
         """获取详细的持仓信息，包括当前价格和持有金额"""
         try:
