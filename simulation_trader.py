@@ -776,20 +776,24 @@ class SimulationTrader:
                     # 计算对应的股数（确保是100的倍数）
                     shares = int(target_investment / current_price // 100) * 100
                     
-                    if shares <= 0:
-                        self.log_message(f"根据资金分配比例计算的买入股数为0，跳过买入 {name} ({code})")
-                        continue
-                    
                     required_amount = shares * current_price
                 
                     # 检查是否有足够资金
                     if required_amount > self.capital:
-                        self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要HK${required_amount:.2f}，当前资金HK${self.capital:.2f}")
-                        # 发送资金不足通知邮件
-                        positions_detail = self.build_positions_detail()
+                        # 如果资金不足，计算在当前资金下最多能买入多少股（确保是100的倍数）
+                        max_shares = int(self.capital / current_price // 100) * 100
                         
-                        subject = f"【无法买入通知】{name} ({code})"
-                        content = f"""
+                        if max_shares > 0:
+                            shares = max_shares
+                            required_amount = shares * current_price
+                            self.log_message(f"资金不足按大模型建议比率买入 {name} ({code})，改为买入 {shares} 股")
+                        else:
+                            self.log_message(f"资金不足买入 {name} ({code})，跳过买入")
+                            # 发送资金不足通知邮件
+                            positions_detail = self.build_positions_detail()
+                            
+                            subject = f"【无法买入通知】{name} ({code})"
+                            content = f"""
 模拟交易系统无法按大模型建议买入通知：
 
 股票名称：{name}
@@ -804,9 +808,30 @@ class SimulationTrader:
 当前资金：HK${self.capital:,.2f}
 
 {positions_detail}
-                        """
-                        self.send_email_notification(subject, content)
-                        continue
+                            """
+                            self.send_email_notification(subject, content)
+                            continue
+                    
+                    # 计算买入后股票在投资组合中的预期比例
+                    current_portfolio_value = self.get_portfolio_value()
+                    expected_stock_value = shares * current_price
+                    expected_portfolio_value = current_portfolio_value - self.capital + (self.capital - required_amount)
+                    expected_allocation = (expected_stock_value / expected_portfolio_value) * 100
+                    
+                    # 如果预期持仓比例超过大模型建议的比例，则调整买入数量
+                    if expected_allocation > (allocation_pct_value * 100):
+                        # 计算在不超过建议比例的前提下，最大可买入的金额
+                        max_investment_for_allocation = (current_portfolio_value * allocation_pct_value) - (self.get_current_stock_price(code) * self.positions.get(code, {}).get('shares', 0) if code in self.positions else 0)
+                        if max_investment_for_allocation > 0:
+                            max_shares_for_allocation = int(max_investment_for_allocation / current_price // 100) * 100
+                            if max_shares_for_allocation > 0:
+                                # 取资金限制和比例限制下的较小股数
+                                shares = min(shares, max_shares_for_allocation)
+                                required_amount = shares * current_price
+                                self.log_message(f"调整买入股数以符合大模型建议的持仓比例: {shares} 股 {name} ({code})")
+                        else:
+                            self.log_message(f"按大模型建议的持仓比例，无法买入 {name} ({code})")
+                            continue
                         
                 except (ValueError, TypeError):
                     # 如果无法解析资金分配比例
