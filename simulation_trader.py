@@ -388,6 +388,7 @@ class SimulationTrader:
             return False
             
         position = self.positions[code]
+        avg_price = position['avg_price']
         current_price = self.get_current_stock_price(code)
         if current_price is None:
             self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过卖出")
@@ -401,6 +402,9 @@ class SimulationTrader:
             
         # 计算卖出金额
         sell_amount = shares_to_sell * current_price
+        
+        # 计算盈亏金额
+        profit_loss = (current_price - avg_price) * shares_to_sell
         
         # 执行卖出
         self.capital += sell_amount
@@ -426,7 +430,10 @@ class SimulationTrader:
         # 保存状态
         self.save_state()
         
-        self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}")
+        # 确定盈亏状态文本
+        profit_loss_status = "盈利" if profit_loss >= 0 else "亏损"
+        
+        self.log_message(f"卖出 {shares_to_sell} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${sell_amount:.2f}, {profit_loss_status}: HK${abs(profit_loss):.2f}")
         
         # 发送卖出通知邮件
         # 构建持仓详情文本
@@ -441,6 +448,8 @@ class SimulationTrader:
 卖出价格：HK${current_price:.2f}
 卖出数量：{shares_to_sell} 股
 卖出金额：HK${sell_amount:.2f}
+平均成本：HK${avg_price:.2f}
+盈亏金额：HK${profit_loss:+.2f} ({profit_loss_status})
 卖出原因：{reason if reason else '未提供理由'}
 交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
