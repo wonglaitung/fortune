@@ -483,8 +483,17 @@ class SimulationTrader:
             else:
                 allocation_pct_value = float(allocation_pct)
             
-            # 根据资金分配比例计算应买入的金额
-            target_investment = self.capital * allocation_pct_value
+            # 获取当前投资组合总价值
+            current_portfolio_value = self.get_portfolio_value()
+            
+            # 根据资金分配比例计算应买入的金额（基于投资组合总价值）
+            target_investment = current_portfolio_value * allocation_pct_value
+            
+            # 检查是否有足够现金
+            if target_investment > self.capital:
+                self.log_message(f"投资组合价值的{allocation_pct_value*100:.2f}%超出可用现金，限制买入金额至现金余额")
+                target_investment = self.capital
+            
             # 计算对应的股数（确保是100的倍数）
             shares = int(target_investment / current_price // 100) * 100
             
@@ -504,7 +513,6 @@ class SimulationTrader:
                     return 0, required_amount
             
             # 计算买入后股票在投资组合中的预期比例
-            current_portfolio_value = self.get_portfolio_value()
             expected_stock_value = shares * current_price
             expected_portfolio_value = current_portfolio_value - self.capital + (self.capital - required_amount)
             expected_allocation = (expected_stock_value / expected_portfolio_value) * 100
