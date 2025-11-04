@@ -7,21 +7,6 @@
       "avg_price": 20.67641379310345,
       "stop_loss_price": 19.8
     },
-    "0981.HK": {
-      "shares": 0,
-      "avg_price": NaN,
-      "stop_loss_price": 70.0
-    },
-    "1138.HK": {
-      "shares": 0,
-      "avg_price": NaN,
-      "stop_loss_price": 9.9
-    },
-    "1810.HK": {
-      "shares": 0,
-      "avg_price": 43.38,
-      "stop_loss_price": 41.5
-    },
     "2533.HK": {
       "shares": 2700,
       "avg_price": 22.6,
