@@ -1,16 +1,16 @@
 {
   "initial_capital": 1000000,
-  "capital": 1651.189294052063,
+  "capital": 224.18929405204108,
   "positions": {
     "0883.HK": {
       "shares": 43500,
       "avg_price": 20.67641379310345,
       "stop_loss_price": 19.8
     },
-    "2533.HK": {
-      "shares": 2700,
-      "avg_price": 22.6,
-      "stop_loss_price": 9.5
+    "9660.HK": {
+      "shares": 7600,
+      "avg_price": 8.38,
+      "stop_loss_price": 7.9
     }
   },
   "transaction_history": [
@@ -1963,6 +1963,76 @@
       "price": 22.6,
       "amount": 61020.00000000001,
       "capital_after": 1651.189294052063
+    },
+    {
+      "timestamp": "2025-11-05T14:04:52.685098",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 200,
+      "price": 6.09,
+      "amount": 1218.0,
+      "capital_after": 433.1892940520629
+    },
+    {
+      "timestamp": "2025-11-05T14:31:44.854906",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 2700,
+      "price": 23.16,
+      "amount": 62532.0,
+      "capital_after": 62965.18929405206
+    },
+    {
+      "timestamp": "2025-11-05T14:31:47.180773",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 7500,
+      "price": 8.38,
+      "amount": 62850.00000000001,
+      "capital_after": 115.18929405205563
+    },
+    {
+      "timestamp": "2025-11-05T15:26:48.277916",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 7500,
+      "price": 8.33,
+      "amount": 62475.0,
+      "capital_after": 62590.189294052056
+    },
+    {
+      "timestamp": "2025-11-05T15:26:51.882142",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 10200,
+      "price": 6.09,
+      "amount": 62118.0,
+      "capital_after": 472.18929405205563
+    },
+    {
+      "timestamp": "2025-11-05T15:52:39.499894",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 10400,
+      "price": 6.1,
+      "amount": 63439.99999999999,
+      "capital_after": 63912.18929405205
+    },
+    {
+      "timestamp": "2025-11-05T15:52:42.317045",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 7600,
+      "price": 8.38,
+      "amount": 63688.00000000001,
+      "capital_after": 224.18929405204108
     }
   ],
   "portfolio_history": [
@@ -5508,6 +5578,135 @@
           "shares": 2700,
           "avg_price": 22.6,
           "stop_loss_price": 9.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T10:58:34.113878",
+      "capital": 1651.189294052063,
+      "portfolio_value": 944791.1892940522,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "2533.HK": {
+          "shares": 0,
+          "avg_price": 22.6,
+          "stop_loss_price": 9.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T11:25:34.548990",
+      "capital": 1651.189294052063,
+      "portfolio_value": 947617.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "2533.HK": {
+          "shares": 0,
+          "avg_price": 22.6,
+          "stop_loss_price": 9.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T13:27:42.295863",
+      "capital": 1651.189294052063,
+      "portfolio_value": 951259.189294052,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "2533.HK": {
+          "shares": 0,
+          "avg_price": 22.6,
+          "stop_loss_price": 9.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T14:04:55.275122",
+      "capital": 433.1892940520629,
+      "portfolio_value": 951151.189294052,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "2533.HK": {
+          "shares": 0,
+          "avg_price": 22.6,
+          "stop_loss_price": 9.5
+        },
+        "1288.HK": {
+          "shares": 0,
+          "avg_price": 6.09,
+          "stop_loss_price": 5.95
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T14:31:53.853540",
+      "capital": 115.18929405205563,
+      "portfolio_value": 951502.189294052,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 0,
+          "avg_price": 6.09,
+          "stop_loss_price": 5.95
+        },
+        "9660.HK": {
+          "shares": 0,
+          "avg_price": 8.38,
+          "stop_loss_price": 7.9
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T15:26:56.619142",
+      "capital": 472.18929405205563,
+      "portfolio_value": 950338.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 0,
+          "avg_price": 6.09,
+          "stop_loss_price": 5.95
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-05T15:52:48.272776",
+      "capital": 224.18929405204108,
+      "portfolio_value": 950442.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 43500,
+          "avg_price": 20.67641379310345,
+          "stop_loss_price": 19.8
+        },
+        "9660.HK": {
+          "shares": 7600,
+          "avg_price": 8.38,
+          "stop_loss_price": 7.9
         }
       }
     }
