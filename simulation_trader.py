@@ -475,13 +475,18 @@ class SimulationTrader:
             # 解析资金分配比例
             allocation_pct_value = 0
             if isinstance(allocation_pct, str):
-                # 处理百分比格式，如"10%"或"0.1"
+                # 处理百分比格式，如"10%"
                 if '%' in allocation_pct:
                     allocation_pct_value = float(allocation_pct.replace('%', '')) / 100
                 else:
                     allocation_pct_value = float(allocation_pct)
             else:
+                # 数值形式的分配比例，需要判断是小数还是百分比
+                # 如果值大于1，假设是百分比形式（如19.36表示19.36%）
+                # 如果值小于等于1，假设是小数形式（如0.15表示15%）
                 allocation_pct_value = float(allocation_pct)
+                if allocation_pct_value > 1:
+                    allocation_pct_value = allocation_pct_value / 100
             
             # 获取当前投资组合总价值
             current_portfolio_value = self.get_portfolio_value()
@@ -491,7 +496,7 @@ class SimulationTrader:
             
             # 检查是否有足够现金
             if target_investment > self.capital:
-                self.log_message(f"投资组合价值的{allocation_pct_value*100:.2f}%超出可用现金，限制买入金额至现金余额")
+                self.log_message(f"按大模型建议的{allocation_pct_value*100:.2f}%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额")
                 target_investment = self.capital
             
             # 计算对应的股数（确保是100的倍数）
