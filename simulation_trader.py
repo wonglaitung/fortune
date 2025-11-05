@@ -52,6 +52,7 @@ class SimulationTrader:
         self.is_trading_hours = True  # 模拟港股交易时间 (9:30-16:00)
         self.analysis_frequency = analysis_frequency  # 分析频率（分钟）
         self.investor_type = investor_type  # 投资者风险偏好
+        self.decision_history = []  # 存储历史决策以供大模型分析
         
         # 确保data目录存在
         self.data_dir = "data"
@@ -815,6 +816,45 @@ class SimulationTrader:
         self.log_message("JSON格式解析失败，跳过本次交易")
         return recommendations
     
+    def get_recent_decisions_context(self):
+        """
+        获取最近的决策历史作为上下文提供给大模型
+        
+        Returns:
+            str: 决策历史上下文文本
+        """
+        if not self.decision_history:
+            return "无历史决策记录。"
+        
+        # 只返回最近的几次决策
+        recent_decisions = self.decision_history[-3:]  # 只取最近3次决策
+        
+        context = "历史决策记录（按时间倒序）：\n"
+        for i, decision in enumerate(recent_decisions):
+            timestamp = decision.get('timestamp', '未知时间')
+            buy_stocks = decision.get('buy', [])
+            sell_stocks = decision.get('sell', [])
+            
+            context += f"\n第{i+1}次决策 ({timestamp}):\n"
+            
+            if buy_stocks:
+                context += "  买入:\n"
+                for stock in buy_stocks:
+                    name = stock.get('name', stock.get('code', '未知'))
+                    code = stock.get('code', '未知代码')
+                    reason = stock.get('reason', '未提供理由')
+                    context += f"    {name}({code}): {reason}\n"
+            
+            if sell_stocks:
+                context += "  卖出:\n"
+                for stock in sell_stocks:
+                    name = stock.get('name', stock.get('code', '未知'))
+                    code = stock.get('code', '未知代码')
+                    reason = stock.get('reason', '未提供理由')
+                    context += f"    {name}({code}): {reason}\n"
+        
+        return context
+
     def execute_trades(self):
         """执行交易决策"""
         # 更新交易时间状态
@@ -872,6 +912,9 @@ class SimulationTrader:
                 portfolio_value = self.get_portfolio_value()
                 capital_info = f"当前资金: HK${self.capital:,.2f}\n投资组合总价值: HK${portfolio_value:,.2f}"
                 
+                # 获取历史决策上下文
+                decision_history_context = self.get_recent_decisions_context()
+                
                 # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
                 format_prompt = f"""
 请分析以下港股分析报告，考虑投资者风险偏好为{self.investor_type}，并严格按照以下JSON格式输出买卖信号和资金分配建议：
@@ -882,14 +925,17 @@ class SimulationTrader:
 {positions_text}
 {capital_info}
 
+{decision_history_context}
+
 投资者风险偏好：{self.investor_type}
 - 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
 - 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
 - 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
 
 请特别关注以下风险管理要求：
-1. 资金分配策略优化：避免过度集中投资于单一股票或行业，建议合理的资金分配比例
-2. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
+1. 决策一致性：请分析历史决策记录，当前决策应与历史决策保持一致性，避免频繁的买卖操作，但在市场情况发生重大变化时允许必要的调整
+2. 资金分配策略优化：避免过度集中投资于单一股票或行业，建议合理的资金分配比例
+3. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
 
 请严格按照以下格式输出：
 {{
@@ -914,6 +960,7 @@ class SimulationTrader:
 8. 可以建议买入已持有的股票以进行加仓
 9. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
 10. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
+11. 决策一致性：当前决策应与历史决策保持一致性，避免在短时间内对同一只股票进行相反的操作，但在市场情况发生重大变化时允许必要的调整
 """
                 
                 self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -935,6 +982,18 @@ class SimulationTrader:
         try:
             recommendations = self.parse_llm_recommendations(llm_analysis)
             self.log_message(f"解析后推荐: 买入 {recommendations['buy']}, 卖出 {recommendations['sell']}")
+            
+            # 保存决策历史记录
+            decision_record = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'buy': recommendations.get('buy', []),
+                'sell': recommendations.get('sell', [])
+            }
+            self.decision_history.append(decision_record)
+            
+            # 限制决策历史记录数量，只保留最近的10次决策
+            if len(self.decision_history) > 10:
+                self.decision_history = self.decision_history[-10:]
             
             # 如果没有推荐，跳过本次交易
             if not recommendations['buy'] and not recommendations['sell']:
