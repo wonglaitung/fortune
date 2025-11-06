@@ -480,7 +480,12 @@ class SimulationTrader:
                 if '%' in allocation_pct:
                     allocation_pct_value = float(allocation_pct.replace('%', '')) / 100
                 else:
+                    # 对于不带%的字符串，判断是小数还是百分比
+                    # 如果值大于1，假设是百分比形式（如"15.0"表示15.0%）
+                    # 如果值小于等于1，假设是小数形式（如"0.15"表示15%）
                     allocation_pct_value = float(allocation_pct)
+                    if allocation_pct_value > 1:
+                        allocation_pct_value = allocation_pct_value / 100
             else:
                 # 数值形式的分配比例，需要判断是小数还是百分比
                 # 如果值大于1，假设是百分比形式（如19.36表示19.36%）
