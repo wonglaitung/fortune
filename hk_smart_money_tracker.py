@@ -321,7 +321,6 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
     
     # 获取当前日期和时间
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    current_time_chinese = datetime.now().strftime("%Y年%m月%d日 %H点%M分")
     
     # 获取当前恒生指数
     current_hsi = "未知"
@@ -333,7 +332,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
 你是一位专业的港股投资顾问和资深股票分析师，请基于以下实际数据进行全面、深入的分析，并提供具有实际投资价值的建议：
 
 📊 分析背景信息：
-- 当前时间：{current_time} ({current_time_chinese})
+- 当前时间：{current_time}
 - 数据分析日期：{run_date if run_date else '最新数据'}
 - 当前恒生指数：{current_hsi}
 - 分析股票数量：{len(stock_data)}只
@@ -345,45 +344,13 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
 {news_content}
 
 重要提示：以上表格包含了所有实际的股票数据，包括价格、技术指标、资金流向和信号等。请基于这些实际数据进行分析，而不是进行任何数据假设。这些数据已经通过量化分析和回测验证了可靠性。
-"""
-    
-    return prompt
 
-
-def get_analysis_tasks():
-    """
-    返回分析任务说明，用于指导大模型分析
-    """
-    tasks = """
 📈 核心分析任务：
 请从以下四个关键维度对关注清单中的股票进行深度分析：
 
 【维度一：主力资金动向分析】
 - 重点筛选关注清单中建仓信号为\"1\"的股票，分析其南向资金流入情况和相对强度
 - 识别关注清单中出货信号为\"1\"的股票，评估其风险等级
-- 结合成交量比率、OBV、CMF等资金指标验证信号可靠性
-
-【维度二：技术面综合评估】
-- 分析关注清单中股票的RSI、MACD、布林带等技术指标的协同信号
-- 评估关注清单中股票所处的位置（低位、中位、高位）与其技术形态的匹配度
-- 识别关注清单中放量上涨和缩量回调的股票，判断趋势的可持续性
-
-【维度三：市场情绪与新闻影响】
-"""
-    return tasks
-
-
-def get_full_analysis_prompt():
-    """
-    返回完整的分析任务说明，包括分析维度和输出要求
-    """
-    prompt = """
-📈 核心分析任务：
-请从以下四个关键维度对关注清单中的股票进行深度分析：
-
-【维度一：主力资金动向分析】
-- 重点筛选关注清单中建仓信号为"1"的股票，分析其南向资金流入情况和相对强度
-- 识别关注清单中出货信号为"1"的股票，评估其风险等级
 - 结合成交量比率、OBV、CMF等资金指标验证信号可靠性
 
 【维度二：技术面综合评估】
@@ -422,6 +389,7 @@ def get_full_analysis_prompt():
 
 请用中文回答，确保分析逻辑清晰、论据充分、建议具体可行。禁止进行任何数据假设或构建假设性数据模型。
 """
+    
     return prompt
 
 
