@@ -860,81 +860,6 @@ class SimulationTrader:
         
         return context
 
-    def get_recent_decisions_context(self):
-        """
-        获取最近的决策历史和交易历史作为上下文提供给大模型
-        
-        Returns:
-            str: 决策历史和交易历史上下文文本
-        """
-        context = ""
-        
-        # 添加历史交易记录
-        if self.transaction_history:
-            # 只返回最近的几次交易
-            recent_transactions = self.transaction_history[-10:]  # 只取最近10次交易
-            
-            context += "历史交易记录（按时间倒序）：\n"
-            for i, transaction in enumerate(recent_transactions):
-                # 解析时间戳，将其格式化为包含几点几分的格式
-                timestamp_str = transaction.get('timestamp', '未知时间')
-                
-                # 将ISO格式的时间戳转换为中文格式，包含几点几分
-                try:
-                    dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                    formatted_time = dt.strftime('%Y年%m月%d日 %H点%M分')
-                except:
-                    formatted_time = timestamp_str  # 如果解析失败，使用原始时间戳
-                
-                trans_type = transaction.get('type', '未知类型')
-                code = transaction.get('code', '未知代码')
-                name = transaction.get('name', code)
-                shares = transaction.get('shares', 0)
-                price = transaction.get('price', 0)
-                amount = transaction.get('amount', 0)
-                
-                context += f"\n第{i+1}笔交易 ({formatted_time}):\n"
-                context += f"  类型: {trans_type}\n"
-                context += f"  股票: {name}({code})\n"
-                context += f"  数量: {shares}股\n"
-                context += f"  价格: HK${price:.2f}\n"
-                context += f"  金额: HK${amount:.2f}\n"
-        else:
-            context += "无历史交易记录。\n"
-        
-        # 添加历史决策记录
-        if self.decision_history:
-            # 只返回最近的几次决策
-            recent_decisions = self.decision_history[-3:]  # 只取最近3次决策
-            
-            context += "\n历史决策记录（按时间倒序）：\n"
-            for i, decision in enumerate(recent_decisions):
-                timestamp = decision.get('timestamp', '未知时间')
-                buy_stocks = decision.get('buy', [])
-                sell_stocks = decision.get('sell', [])
-                
-                context += f"\n第{i+1}次决策 ({timestamp}):\n"
-                
-                if buy_stocks:
-                    context += "  买入:\n"
-                    for stock in buy_stocks:
-                        name = stock.get('name', stock.get('code', '未知'))
-                        code = stock.get('code', '未知代码')
-                        reason = stock.get('reason', '未提供理由')
-                        context += f"    {name}({code}): {reason}\n"
-                
-                if sell_stocks:
-                    context += "  卖出:\n"
-                    for stock in sell_stocks:
-                        name = stock.get('name', stock.get('code', '未知'))
-                        code = stock.get('code', '未知代码')
-                        reason = stock.get('reason', '未提供理由')
-                        context += f"    {name}({code}): {reason}\n"
-        else:
-            context += "\n无历史决策记录。\n"
-        
-        return context
-
     def execute_trades(self):
         """执行交易决策"""
         # 更新交易时间状态
@@ -992,7 +917,7 @@ class SimulationTrader:
                 portfolio_value = self.get_portfolio_value()
                 capital_info = f"当前资金: HK${self.capital:,.2f}\n投资组合总价值: HK${portfolio_value:,.2f}"
                 
-                # 获取历史决策和交易上下文
+                # 获取历史决策上下文
                 decision_history_context = self.get_recent_decisions_context()
                 
                 # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
