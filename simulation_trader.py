@@ -832,7 +832,7 @@ class SimulationTrader:
             return "无历史决策记录。"
         
         # 只返回最近的几次决策
-        recent_decisions = self.decision_history[-3:]  # 只取最近3次决策
+        recent_decisions = self.decision_history[-6:]  # 只取最近6次决策
         
         context = "历史决策记录（按时间倒序）：\n"
         for i, decision in enumerate(recent_decisions):
