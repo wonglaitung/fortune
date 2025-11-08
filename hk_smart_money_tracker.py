@@ -262,6 +262,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None):
     Args:
         stock_data (list): 股票数据分析结果列表
         run_date (str): 指定的运行日期
+        market_metrics (dict): 市场整体指标
         
     Returns:
         str: 构建好的提示词
@@ -1309,6 +1310,11 @@ def main(run_date=None):
         else:
             print("\nℹ️ 未找到新闻数据文件")
 
+        # 获取当前恒生指数
+        current_hsi = "未知"
+        if hsi_hist is not None and not hsi_hist.empty:
+            current_hsi = hsi_hist['Close'].iloc[-1]
+        
         # 计算市场整体指标，为大模型提供更全面的市场状态
         market_metrics = {}
         
