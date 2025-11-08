@@ -892,7 +892,7 @@ class SimulationTrader:
                 return
                 
             # 构建大模型分析提示
-            llm_prompt = hk_smart_money_tracker.build_llm_analysis_prompt(results)
+            llm_prompt = hk_smart_money_tracker.build_llm_analysis_prompt(results, None, None)
             
             # 调用大模型分析（真实调用）
             self.log_message("正在调用大模型分析...")
