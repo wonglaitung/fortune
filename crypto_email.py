@@ -6,14 +6,18 @@ import math
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+import yfinance as yf
+import pandas as pd
 
-# 导入大模型服务
+
+
+# 导入技术分析工具
 try:
-    from llm_services import qwen_engine
-    LLM_AVAILABLE = True
+    from technical_analysis import TechnicalAnalyzer
+    TECHNICAL_ANALYSIS_AVAILABLE = True
 except ImportError:
-    LLM_AVAILABLE = False
-    print("⚠️ 大模型服务不可用，将跳过AI分析功能")
+    TECHNICAL_ANALYSIS_AVAILABLE = False
+    print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
 def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
     # 注意：原 URL 末尾有空格，已修正
@@ -46,23 +50,178 @@ def calculate_technical_indicators(prices):
     """
     计算加密货币技术指标
     """
-    # 这里简化处理，实际应用中可以获取历史价格数据进行更详细的分析
-    btc = prices.get('bitcoin', {})
-    eth = prices.get('ethereum', {})
+    if not TECHNICAL_ANALYSIS_AVAILABLE:
+        # 如果技术分析工具不可用，使用简化指标计算
+        btc = prices.get('bitcoin', {})
+        eth = prices.get('ethereum', {})
+        
+        # 简化的技术指标计算
+        indicators = {
+            'bitcoin': {
+                'rsi': calculate_rsi(btc.get('usd_24h_change', 0)),
+                'macd': calculate_macd(btc.get('usd', 0)),
+                'price_position': calculate_price_position(btc.get('usd', 0)),
+            },
+            'ethereum': {
+                'rsi': calculate_rsi(eth.get('usd_24h_change', 0)),
+                'macd': calculate_macd(eth.get('usd', 0)),
+                'price_position': calculate_price_position(eth.get('usd', 0)),
+            }
+        }
+        
+        return indicators
     
-    # 简化的技术指标计算
-    indicators = {
-        'bitcoin': {
+    # 使用技术分析工具计算更准确的指标
+    analyzer = TechnicalAnalyzer()
+    
+    # 获取历史数据进行技术分析
+    indicators = {}
+    
+    # 获取比特币历史数据
+    try:
+        btc_ticker = yf.Ticker("BTC-USD")
+        btc_hist = btc_ticker.history(period="6mo")  # 获取6个月的历史数据
+        if not btc_hist.empty:
+            # 计算技术指标
+            btc_indicators = analyzer.calculate_all_indicators(btc_hist.copy())
+            
+            # 生成买卖信号
+            btc_indicators_with_signals = analyzer.generate_buy_sell_signals(btc_indicators.copy())
+            
+            # 分析趋势
+            btc_trend = analyzer.analyze_trend(btc_indicators_with_signals)
+            
+            # 获取最新的指标值
+            latest_btc = btc_indicators_with_signals.iloc[-1]
+            btc_rsi = latest_btc.get('RSI', 50.0)
+            btc_macd = latest_btc.get('MACD', 0.0)
+            btc_macd_signal = latest_btc.get('MACD_signal', 0.0)
+            btc_bb_position = latest_btc.get('BB_position', 0.5) if 'BB_position' in latest_btc else 0.5
+            
+            # 检查最近的交易信号
+            recent_signals = btc_indicators_with_signals.tail(5)
+            buy_signals = []
+            sell_signals = []
+            
+            if 'Buy_Signal' in recent_signals.columns:
+                buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
+                for idx, row in buy_signals_df.iterrows():
+                    buy_signals.append({
+                        'date': idx.strftime('%Y-%m-%d'),
+                        'description': row['Signal_Description']
+                    })
+            
+            if 'Sell_Signal' in recent_signals.columns:
+                sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                for idx, row in sell_signals_df.iterrows():
+                    sell_signals.append({
+                        'date': idx.strftime('%Y-%m-%d'),
+                        'description': row['Signal_Description']
+                    })
+            
+            indicators['bitcoin'] = {
+                'rsi': btc_rsi,
+                'macd': btc_macd,
+                'macd_signal': btc_macd_signal,
+                'price_position': calculate_price_position(latest_btc.get('Close', 0)),
+                'bb_position': btc_bb_position,
+                'trend': btc_trend,
+                'recent_buy_signals': buy_signals,
+                'recent_sell_signals': sell_signals,
+                'current_price': latest_btc.get('Close', 0),
+                'ma20': latest_btc.get('MA20', 0),
+                'ma50': latest_btc.get('MA50', 0),
+            }
+        else:
+            # 如果无法获取历史数据，使用简化计算
+            btc = prices.get('bitcoin', {})
+            indicators['bitcoin'] = {
+                'rsi': calculate_rsi(btc.get('usd_24h_change', 0)),
+                'macd': calculate_macd(btc.get('usd', 0)),
+                'price_position': calculate_price_position(btc.get('usd', 0)),
+            }
+    except Exception as e:
+        print(f"⚠️ 获取比特币历史数据失败: {e}")
+        # 如果获取历史数据失败，使用简化计算
+        btc = prices.get('bitcoin', {})
+        indicators['bitcoin'] = {
             'rsi': calculate_rsi(btc.get('usd_24h_change', 0)),
             'macd': calculate_macd(btc.get('usd', 0)),
             'price_position': calculate_price_position(btc.get('usd', 0)),
-        },
-        'ethereum': {
+        }
+    
+    # 获取以太坊历史数据
+    try:
+        eth_ticker = yf.Ticker("ETH-USD")
+        eth_hist = eth_ticker.history(period="6mo")  # 获取6个月的历史数据
+        if not eth_hist.empty:
+            # 计算技术指标
+            eth_indicators = analyzer.calculate_all_indicators(eth_hist.copy())
+            
+            # 生成买卖信号
+            eth_indicators_with_signals = analyzer.generate_buy_sell_signals(eth_indicators.copy())
+            
+            # 分析趋势
+            eth_trend = analyzer.analyze_trend(eth_indicators_with_signals)
+            
+            # 获取最新的指标值
+            latest_eth = eth_indicators_with_signals.iloc[-1]
+            eth_rsi = latest_eth.get('RSI', 50.0)
+            eth_macd = latest_eth.get('MACD', 0.0)
+            eth_macd_signal = latest_eth.get('MACD_signal', 0.0)
+            eth_bb_position = latest_eth.get('BB_position', 0.5) if 'BB_position' in latest_eth else 0.5
+            
+            # 检查最近的交易信号
+            recent_signals = eth_indicators_with_signals.tail(5)
+            buy_signals = []
+            sell_signals = []
+            
+            if 'Buy_Signal' in recent_signals.columns:
+                buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
+                for idx, row in buy_signals_df.iterrows():
+                    buy_signals.append({
+                        'date': idx.strftime('%Y-%m-%d'),
+                        'description': row['Signal_Description']
+                    })
+            
+            if 'Sell_Signal' in recent_signals.columns:
+                sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                for idx, row in sell_signals_df.iterrows():
+                    sell_signals.append({
+                        'date': idx.strftime('%Y-%m-%d'),
+                        'description': row['Signal_Description']
+                    })
+            
+            indicators['ethereum'] = {
+                'rsi': eth_rsi,
+                'macd': eth_macd,
+                'macd_signal': eth_macd_signal,
+                'price_position': calculate_price_position(latest_eth.get('Close', 0)),
+                'bb_position': eth_bb_position,
+                'trend': eth_trend,
+                'recent_buy_signals': buy_signals,
+                'recent_sell_signals': sell_signals,
+                'current_price': latest_eth.get('Close', 0),
+                'ma20': latest_eth.get('MA20', 0),
+                'ma50': latest_eth.get('MA50', 0),
+            }
+        else:
+            # 如果无法获取历史数据，使用简化计算
+            eth = prices.get('ethereum', {})
+            indicators['ethereum'] = {
+                'rsi': calculate_rsi(eth.get('usd_24h_change', 0)),
+                'macd': calculate_macd(eth.get('usd', 0)),
+                'price_position': calculate_price_position(eth.get('usd', 0)),
+            }
+    except Exception as e:
+        print(f"⚠️ 获取以太坊历史数据失败: {e}")
+        # 如果获取历史数据失败，使用简化计算
+        eth = prices.get('ethereum', {})
+        indicators['ethereum'] = {
             'rsi': calculate_rsi(eth.get('usd_24h_change', 0)),
             'macd': calculate_macd(eth.get('usd', 0)),
             'price_position': calculate_price_position(eth.get('usd', 0)),
         }
-    }
     
     return indicators
 
@@ -90,82 +249,7 @@ def calculate_price_position(price):
     # 这是一个非常简化的计算，实际需要历史价格数据
     return 50.0  # 假设在中位
 
-def build_llm_analysis_prompt(prices, indicators):
-    """
-    构建发送给大模型的加密货币数据分析提示词
-    
-    Args:
-        prices (dict): 加密货币价格数据
-        indicators (dict): 技术指标数据
-        
-    Returns:
-        str: 构建好的提示词
-    """
-    # 构建加密货币数据表格
-    table_header = "| 加密货币 | 价格(USD) | 24小时变化(%) | RSI | MACD | 价格位置(%) |\n"
-    table_separator = "|----------|-----------|----------------|-----|------|--------------|\n"
-    
-    table_rows = []
-    
-    # Bitcoin数据
-    if 'bitcoin' in prices:
-        btc = prices['bitcoin']
-        btc_ind = indicators['bitcoin']
-        row = f"| Bitcoin | ${btc.get('usd', 0):,.2f} | {btc.get('usd_24h_change', 0):.2f} | {btc_ind.get('rsi', 0):.2f} | {btc_ind.get('macd', 0):.2f} | {btc_ind.get('price_position', 0):.2f} |"
-        table_rows.append(row)
-    
-    # Ethereum数据
-    if 'ethereum' in prices:
-        eth = prices['ethereum']
-        eth_ind = indicators['ethereum']
-        row = f"| Ethereum | ${eth.get('usd', 0):,.2f} | {eth.get('usd_24h_change', 0):.2f} | {eth_ind.get('rsi', 0):.2f} | {eth_ind.get('macd', 0):.2f} | {eth_ind.get('price_position', 0):.2f} |"
-        table_rows.append(row)
-    
-    crypto_table = table_header + table_separator + "\n".join(table_rows)
-    
-    # 构建提示词
-    prompt = f"""
-你是一个专业的加密货币分析师，请根据以下加密货币市场数据，分析并提供投资建议：
 
-{crypto_table}
-
-请从以下几个维度分析：
-1. Bitcoin和Ethereum的当前市场表现对比
-2. 技术指标分析（RSI、MACD等）
-3. 市场趋势判断
-4. 投资建议
-
-请给出你的分析结论，包括：
-1. 最值得关注的加密货币及其理由
-2. 需要警惕的风险点
-3. 短期和中长期市场趋势预测
-
-请用中文回答，格式清晰易读。
-"""
-    
-    return prompt
-
-def analyze_with_llm(prices, indicators):
-    """
-    使用大模型分析加密货币数据
-    
-    Args:
-        prices (dict): 加密货币价格数据
-        indicators (dict): 技术指标数据
-        
-    Returns:
-        str: 大模型分析结果
-    """
-    if not LLM_AVAILABLE:
-        return "大模型服务不可用"
-    
-    try:
-        prompt = build_llm_analysis_prompt(prices, indicators)
-        analysis = qwen_engine.chat_with_llm(prompt)
-        return analysis
-    except Exception as e:
-        print(f"⚠️ 大模型分析失败: {e}")
-        return "大模型分析暂不可用"
 
 def send_email(to, subject, text, html):
     smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
@@ -242,18 +326,49 @@ if __name__ == "__main__":
 
     # 计算技术指标
     indicators = calculate_technical_indicators(prices)
-    
-    # 使用大模型分析数据
-    llm_analysis = analyze_with_llm(prices, indicators)
 
     subject = "Ethereum and Bitcoin Price Update"
 
     text = ""
-    html = "<html><body>"
-    html += "<h2>加密货币价格更新</h2>"
-    html += f"<p><strong>报告时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>"
+    html = f"""
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; }}
+            h2 {{ color: #333; }}
+            h3 {{ color: #555; }}
+            table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            .section {{ margin: 20px 0; }}
+            .highlight {{ background-color: #ffffcc; }}
+            .buy-signal {{ background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+            .sell-signal {{ background-color: #ffebee; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <h2>💰 加密货币价格更新</h2>
+        <p><strong>报告生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    """
 
-    # Ethereum (放在前面)
+    # 使用表格展示加密货币价格概览
+    html += """
+        <div class="section">
+            <h3>💰 加密货币价格概览</h3>
+            <table>
+                <tr>
+                    <th>资产名称</th>
+                    <th>最新价格 (USD)</th>
+                    <th>最新价格 (HKD)</th>
+                    <th>24小时变化</th>
+                    <th>市值 (USD)</th>
+                    <th>24小时交易量 (USD)</th>
+                </tr>
+    """
+    
+    # Ethereum
     if 'ethereum' in prices:
         eth = prices['ethereum']
         eth_usd = eth['usd']
@@ -261,30 +376,26 @@ if __name__ == "__main__":
         eth_change = eth.get('usd_24h_change', 0.0)
         eth_market_cap = eth.get('usd_market_cap', 0.0) if 'usd_market_cap' in eth else 0.0
         eth_24hr_vol = eth.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in eth else 0.0
-        eth_rsi = indicators['ethereum'].get('rsi', 0.0)
-        eth_macd = indicators['ethereum'].get('macd', 0.0)
         
-        text += f"Ethereum price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)\n"
-        text += f"Ethereum price: ${eth_hkd:,.2f} HKD\n"
-        if eth_market_cap > 0:
-            text += f"Market Cap: ${eth_market_cap:,.2f} USD\n"
-        if eth_24hr_vol > 0:
-            text += f"24h Volume: ${eth_24hr_vol:,.2f} USD\n"
-        text += f"RSI: {eth_rsi:.2f}\n"
-        text += f"MACD: {eth_macd:.2f}\n"
-        text += "\n"
+        html += f"""
+                <tr>
+                    <td>Ethereum (ETH)</td>
+                    <td>${eth_usd:,.2f}</td>
+                    <td>${eth_hkd:,.2f}</td>
+                    <td>{eth_change:+.2f}%</td>
+                    <td>${eth_market_cap:,.2f}</td>
+                    <td>${eth_24hr_vol:,.2f}</td>
+                </tr>
+        """
         
-        html += f"<p><strong>Ethereum</strong><br>"
-        html += f"Price: ${eth_usd:,.2f} USD ({eth_change:.2f}% 24h)<br>"
-        html += f"Price: ${eth_hkd:,.2f} HKD<br>"
+        text += f"Ethereum (ETH):\n"
+        text += f"  价格: ${eth_usd:,.2f} USD ({eth_change:+.2f}% 24h)\n"
+        text += f"  价格: ${eth_hkd:,.2f} HKD\n"
         if eth_market_cap > 0:
-            html += f"Market Cap: ${eth_market_cap:,.2f} USD<br>"
+            text += f"  市值: ${eth_market_cap:,.2f} USD\n"
         if eth_24hr_vol > 0:
-            html += f"24h Volume: ${eth_24hr_vol:,.2f} USD<br>"
-        html += f"RSI: {eth_rsi:.2f}<br>"
-        html += f"MACD: {eth_macd:.2f}<br>"
-        html += "</p>"
-
+            text += f"  24小时交易量: ${eth_24hr_vol:,.2f} USD\n"
+    
     # Bitcoin
     if 'bitcoin' in prices:
         btc = prices['bitcoin']
@@ -293,54 +404,250 @@ if __name__ == "__main__":
         btc_change = btc.get('usd_24h_change', 0.0)
         btc_market_cap = btc.get('usd_market_cap', 0.0) if 'usd_market_cap' in btc else 0.0
         btc_24hr_vol = btc.get('usd_24h_vol', 0.0) if 'usd_24h_vol' in btc else 0.0
+        
+        html += f"""
+                <tr>
+                    <td>Bitcoin (BTC)</td>
+                    <td>${btc_usd:,.2f}</td>
+                    <td>${btc_hkd:,.2f}</td>
+                    <td>{btc_change:+.2f}%</td>
+                    <td>${btc_market_cap:,.2f}</td>
+                    <td>${btc_24hr_vol:,.2f}</td>
+                </tr>
+        """
+        
+        text += f"Bitcoin (BTC):\n"
+        text += f"  价格: ${btc_usd:,.2f} USD ({btc_change:+.2f}% 24h)\n"
+        text += f"  价格: ${btc_hkd:,.2f} HKD\n"
+        if btc_market_cap > 0:
+            text += f"  市值: ${btc_market_cap:,.2f} USD\n"
+        if btc_24hr_vol > 0:
+            text += f"  24小时交易量: ${btc_24hr_vol:,.2f} USD\n"
+    
+    html += """
+            </table>
+        </div>
+    """
+
+    # 使用表格展示技术分析
+    html += """
+        <div class=\"section\">
+            <h3>🔬 技术分析</h3>
+            <table>
+                <tr>
+                    <th>资产名称</th>
+                    <th>趋势</th>
+                    <th>RSI (14日)</th>
+                    <th>MACD</th>
+                    <th>MACD信号线</th>
+                    <th>布林带位置</th>
+                    <th>MA20</th>
+                    <th>MA50</th>
+                </tr>
+    """
+    
+    # Ethereum 技术分析
+    if 'ethereum' in prices:
+        eth_rsi = indicators['ethereum'].get('rsi', 0.0)
+        eth_macd = indicators['ethereum'].get('macd', 0.0)
+        eth_macd_signal = indicators['ethereum'].get('macd_signal', 0.0)
+        eth_bb_position = indicators['ethereum'].get('bb_position', 0.5)
+        eth_trend = indicators['ethereum'].get('trend', '未知')
+        eth_ma20 = indicators['ethereum'].get('ma20', 0)
+        eth_ma50 = indicators['ethereum'].get('ma50', 0)
+        eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
+        eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
+        
+        html += f"""
+                <tr>
+                    <td>Ethereum (ETH)</td>
+                    <td>{eth_trend}</td>
+                    <td>{eth_rsi:.2f}</td>
+                    <td>{eth_macd:.4f}</td>
+                    <td>{eth_macd_signal:.4f}</td>
+                    <td>{eth_bb_position:.2f}</td>
+                    <td>${eth_ma20:.2f}</td>
+                    <td>${eth_ma50:.2f}</td>
+                </tr>
+        """
+        
+        # 添加交易信号到表格中
+        if eth_recent_buy_signals:
+            html += f"""
+                <tr>
+                    <td colspan=\"8\">
+                        <div class=\"buy-signal\">
+                            <strong>🔔 Ethereum (ETH) 最近买入信号:</strong><br>
+            """
+            for signal in eth_recent_buy_signals:
+                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+        
+        if eth_recent_sell_signals:
+            html += f"""
+                <tr>
+                    <td colspan=\"8\">
+                        <div class=\"sell-signal\">
+                            <strong>🔻 Ethereum (ETH) 最近卖出信号:</strong><br>
+            """
+            for signal in eth_recent_sell_signals:
+                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+        
+        text += f"  RSI: {eth_rsi:.2f}\n"
+        text += f"  MACD: {eth_macd:.4f} (信号线: {eth_macd_signal:.4f})\n"
+        text += f"  布林带位置: {eth_bb_position:.2f}\n"
+        text += f"  趋势: {eth_trend}\n"
+        text += f"  MA20: ${eth_ma20:.2f}\n"
+        text += f"  MA50: ${eth_ma50:.2f}\n"
+        
+        # 添加交易信号信息到文本版本
+        if eth_recent_buy_signals:
+            text += f"  🔔 最近买入信号 ({len(eth_recent_buy_signals)} 个):\n"
+            for signal in eth_recent_buy_signals:
+                text += f"    {signal['date']}: {signal['description']}\n"
+        
+        if eth_recent_sell_signals:
+            text += f"  🔻 最近卖出信号 ({len(eth_recent_sell_signals)} 个):\n"
+            for signal in eth_recent_sell_signals:
+                text += f"    {signal['date']}: {signal['description']}\n"
+    
+    # Bitcoin 技术分析
+    if 'bitcoin' in prices:
         btc_rsi = indicators['bitcoin'].get('rsi', 0.0)
         btc_macd = indicators['bitcoin'].get('macd', 0.0)
+        btc_macd_signal = indicators['bitcoin'].get('macd_signal', 0.0)
+        btc_bb_position = indicators['bitcoin'].get('bb_position', 0.5)
+        btc_trend = indicators['bitcoin'].get('trend', '未知')
+        btc_ma20 = indicators['bitcoin'].get('ma20', 0)
+        btc_ma50 = indicators['bitcoin'].get('ma50', 0)
+        btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
+        btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
         
-        text += f"Bitcoin price: ${btc_usd:,.2f} USD ({btc_change:.2f}% 24h)\n"
-        text += f"Bitcoin price: ${btc_hkd:,.2f} HKD\n"
-        if btc_market_cap > 0:
-            text += f"Market Cap: ${btc_market_cap:,.2f} USD\n"
-        if btc_24hr_vol > 0:
-            text += f"24h Volume: ${btc_24hr_vol:,.2f} USD\n"
-        text += f"RSI: {btc_rsi:.2f}\n"
-        text += f"MACD: {btc_macd:.2f}\n"
-        text += "\n"
+        html += f"""
+                <tr>
+                    <td>Bitcoin (BTC)</td>
+                    <td>{btc_trend}</td>
+                    <td>{btc_rsi:.2f}</td>
+                    <td>{btc_macd:.4f}</td>
+                    <td>{btc_macd_signal:.4f}</td>
+                    <td>{btc_bb_position:.2f}</td>
+                    <td>${btc_ma20:.2f}</td>
+                    <td>${btc_ma50:.2f}</td>
+                </tr>
+        """
         
-        html += f"<p><strong>Bitcoin</strong><br>"
-        html += f"Price: ${btc_usd:,.2f} USD ({btc_change:.2f}% 24h)<br>"
-        html += f"Price: ${btc_hkd:,.2f} HKD<br>"
-        if btc_market_cap > 0:
-            html += f"Market Cap: ${btc_market_cap:,.2f} USD<br>"
-        if btc_24hr_vol > 0:
-            html += f"24h Volume: ${btc_24hr_vol:,.2f} USD<br>"
-        html += f"RSI: {btc_rsi:.2f}<br>"
-        html += f"MACD: {btc_macd:.2f}<br>"
-        html += "</p>"
+        # 添加交易信号到表格中
+        if btc_recent_buy_signals:
+            html += f"""
+                <tr>
+                    <td colspan=\"8\">
+                        <div class=\"buy-signal\">
+                            <strong>🔔 Bitcoin (BTC) 最近买入信号:</strong><br>
+            """
+            for signal in btc_recent_buy_signals:
+                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+        
+        if btc_recent_sell_signals:
+            html += f"""
+                <tr>
+                    <td colspan=\"8\">
+                        <div class=\"sell-signal\">
+                            <strong>🔻 Bitcoin (BTC) 最近卖出信号:</strong><br>
+            """
+            for signal in btc_recent_sell_signals:
+                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+        
+        text += f"  RSI: {btc_rsi:.2f}\n"
+        text += f"  MACD: {btc_macd:.4f} (信号线: {btc_macd_signal:.4f})\n"
+        text += f"  布林带位置: {btc_bb_position:.2f}\n"
+        text += f"  趋势: {btc_trend}\n"
+        text += f"  MA20: ${btc_ma20:.2f}\n"
+        text += f"  MA50: ${btc_ma50:.2f}\n"
+        
+        # 添加交易信号信息到文本版本
+        if btc_recent_buy_signals:
+            text += f"  🔔 最近买入信号 ({len(btc_recent_buy_signals)} 个):\n"
+            for signal in btc_recent_buy_signals:
+                text += f"    {signal['date']}: {signal['description']}\n"
+        
+        if btc_recent_sell_signals:
+            text += f"  🔻 最近卖出信号 ({len(btc_recent_sell_signals)} 个):\n"
+            for signal in btc_recent_sell_signals:
+                text += f"    {signal['date']}: {signal['description']}\n"
+    
+    html += """
+            </table>
+        </div>
+    """
 
-    # 添加大模型分析结果
-    html += "<h3>🤖 大模型分析结果：</h3>"
-    html += "<div style='background-color: #f0f0f0; padding: 15px; border-radius: 5px;'>"
-    if llm_analysis:
-        # 将大模型分析结果中的换行符转换为HTML换行标签
-        llm_analysis_html = llm_analysis.replace('\n', '<br>')
-        html += f"<p>{llm_analysis_html}</p>"
-    else:
-        html += "<p>大模型分析暂不可用</p>"
-    html += "</div>"
-
+    # 添加指标说明到文本版本
+    text += "\n📋 指标说明:\n"
+    text += "价格(USD/HKD)：加密货币的当前价格，分别以美元和港币计价。\n"
+    text += "24小时变化(%)：过去24小时内价格的变化百分比。\n"
+    text += "市值(Market Cap)：加密货币的总市值，以美元计价。\n"
+    text += "24小时交易量：过去24小时内该加密货币的交易总额，以美元计价。\n"
+    text += "RSI(相对强弱指数)：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。\n"
+    text += "MACD(异同移动平均线)：判断价格趋势和动能的技术指标。\n"
+    text += "MA20(20日移动平均线)：过去20个交易日的平均价格，反映短期趋势。\n"
+    text += "MA50(50日移动平均线)：过去50个交易日的平均价格，反映中期趋势。\n"
+    text += "布林带位置：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。\n"
+    text += "价格位置(%)：当前价格在近期价格区间的相对位置。\n"
+    text += "趋势：市场当前的整体方向。\n"
+    text += "  强势多头：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）\n"
+    text += "  多头趋势：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）\n"
+    text += "  弱势空头：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）\n"
+    text += "  空头趋势：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）\n"
+    text += "  震荡整理：价格在一定区间内波动，无明显趋势\n"
+    text += "  短期上涨/下跌：基于最近价格变化的短期趋势判断\n"
+    text += "\n"
+    
     # 添加指标说明
     html += """
-    <h3>📋 指标说明</h3>
-    <div style="font-size:0.9em; line-height:1.4;">
-    <ul>
-      <li><b>价格(USD/HKD)</b>：加密货币的当前价格，分别以美元和港币计价。</li>
-      <li><b>24小时变化(%)</b>：过去24小时内价格的变化百分比。</li>
-      <li><b>市值(Market Cap)</b>：加密货币的总市值，以美元计价。</li>
-      <li><b>24小时交易量</b>：过去24小时内该加密货币的交易总额，以美元计价。</li>
-      <li><b>RSI(相对强弱指数)</b>：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。</li>
-      <li><b>MACD(异同移动平均线)</b>：判断价格趋势和动能的技术指标。</li>
-      <li><b>价格位置(%)</b>：当前价格在近期价格区间的相对位置。</li>
-    </ul>
+    <div class="section">
+        <h3>📋 指标说明</h3>
+        <div style="font-size:0.9em; line-height:1.4;">
+        <ul>
+          <li><b>价格(USD/HKD)</b>：加密货币的当前价格，分别以美元和港币计价。</li>
+          <li><b>24小时变化(%)</b>：过去24小时内价格的变化百分比。</li>
+          <li><b>市值(Market Cap)</b>：加密货币的总市值，以美元计价。</li>
+          <li><b>24小时交易量</b>：过去24小时内该加密货币的交易总额，以美元计价。</li>
+          <li><b>RSI(相对强弱指数)</b>：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。</li>
+          <li><b>MACD(异同移动平均线)</b>：判断价格趋势和动能的技术指标。</li>
+          <li><b>MA20(20日移动平均线)</b>：过去20个交易日的平均价格，反映短期趋势。</li>
+          <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均价格，反映中期趋势。</li>
+          <li><b>布林带位置</b>：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。</li>
+          <li><b>价格位置(%)</b>：当前价格在近期价格区间的相对位置。</li>
+          <li><b>趋势</b>：市场当前的整体方向。
+            <ul>
+              <li><b>强势多头</b>：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）</li>
+              <li><b>多头趋势</b>：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）</li>
+              <li><b>弱势空头</b>：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）</li>
+              <li><b>空头趋势</b>：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）</li>
+              <li><b>震荡整理</b>：价格在一定区间内波动，无明显趋势</li>
+              <li><b>短期上涨/下跌</b>：基于最近价格变化的短期趋势判断</li>
+            </ul>
+          </li>
+        </ul>
+        </div>
     </div>
     """
 
