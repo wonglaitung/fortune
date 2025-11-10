@@ -11,12 +11,14 @@ source set_key.sh
 # 调用 batch_stock_news_fetcher.py
 python batch_stock_news_fetcher.py
 
+# 分析市场环境
+python hsi_llm_strategy.py
+
 # 获取昨天的日期
 YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 
 # 调用 hk_smart_money_tracker.py 并传入昨天的日期
 python hk_smart_money_tracker.py --date $YESTERDAY
-python hsi_llm_strategy.py
 
 # 调用 gold_analyzer.py
 python gold_analyzer.py
