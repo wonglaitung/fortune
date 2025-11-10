@@ -470,7 +470,7 @@ class SimulationTrader:
             current_price (float): 当前价格
             
         Returns:
-            tuple: (shares, required_amount) 股数和所需金额
+            tuple: (shares, required_amount, reason) 股数、所需金额和原因
         """
         try:
             # 解析资金分配比例
@@ -521,9 +521,10 @@ class SimulationTrader:
                     shares = max_shares
                     required_amount = shares * current_price
                     self.log_message(f"资金不足按大模型建议比率买入 {name} ({code})，改为买入 {shares} 股")
+                    return shares, required_amount, "资金不足"
                 else:
                     self.log_message(f"资金不足买入 {name} ({code})，跳过买入")
-                    return 0, required_amount
+                    return 0, required_amount, "资金不足"
             
             # 计算买入后股票在投资组合中的预期比例
             expected_stock_value = shares * current_price
@@ -544,17 +545,18 @@ class SimulationTrader:
                         shares = min(shares, max_shares_for_allocation)
                         required_amount = shares * current_price
                         self.log_message(f"调整买入股数以符合大模型建议的持仓比例: {shares} 股 {name} ({code})")
+                        return shares, required_amount, "持仓比例调整"
                 elif max_investment_for_allocation <= 0:
                     # 如果当前持仓价值已经等于或超过建议比例，说明不需要再买入
                     # 或者如果当前持仓价值超过建议比例，说明已经超配了
                     self.log_message(f"当前持仓价值已达到或超过大模型建议的持仓比例，无需买入 {name} ({code})")
-                    return 0, 0  # 返回0股数和0金额
+                    return 0, 0, "持仓比例已达到建议值"  # 返回0股数和0金额，原因是指定的文本
                     
-            return shares, required_amount
+            return shares, required_amount, "正常买入"
         except (ValueError, TypeError):
             # 如果无法解析资金分配比例
             self.log_message(f"无法解析资金分配比例 {allocation_pct}，跳过买入 {name} ({code})")
-            return 0, 0
+            return 0, 0, "无法解析资金分配比例"
 
     def buy_stock_by_shares(self, code, name, shares, reason=None, stop_loss_price=None):
         """
@@ -1086,21 +1088,36 @@ class SimulationTrader:
                     continue
                 
                 # 根据大模型建议的资金分配比例计算应买入的股数
-                shares, required_amount = self.calculate_shares_to_buy(code, name, allocation_pct, current_price)
+                shares, required_amount, calculation_reason = self.calculate_shares_to_buy(code, name, allocation_pct, current_price)
                 
                 # 检查计算出的股数是否为0
                 if shares <= 0:
-                    self.log_message(f"按大模型建议计算出的买入股数为0，跳过买入 {name} ({code})")
-                    # 发送资金不足通知邮件
-                    self.send_trading_notification(
-                        notification_type="insufficient_funds",
-                        code=code,
-                        name=name,
-                        reason=reason,
-                        allocation_pct=allocation_pct,
-                        stop_loss_price=stop_loss_price,
-                        required_amount=required_amount
-                    )
+                    self.log_message(f"按大模型建议计算出的买入股数为0，跳过买入 {name} ({code})，原因: {calculation_reason}")
+                    # 根据计算原因决定是否发送资金不足通知
+                    if calculation_reason == "资金不足":
+                        # 只在真正资金不足时发送资金不足通知
+                        self.send_trading_notification(
+                            notification_type="insufficient_funds",
+                            code=code,
+                            name=name,
+                            reason=reason,
+                            allocation_pct=allocation_pct,
+                            stop_loss_price=stop_loss_price,
+                            required_amount=required_amount
+                        )
+                    elif calculation_reason == "持仓比例已达到建议值":
+                        # 当持仓比例已达到建议值时，不发送资金不足通知
+                        self.log_message(f"当前持仓价值已达到大模型建议的比例，无需买入 {name} ({code})")
+                    else:
+                        # 其他原因导致无法买入时，发送一般性的无法买入通知
+                        self.send_trading_notification(
+                            notification_type="buy_failed",
+                            code=code,
+                            name=name,
+                            reason=reason,
+                            allocation_pct=allocation_pct,
+                            stop_loss_price=stop_loss_price
+                        )
                     continue
                 
                 # 执行买入
