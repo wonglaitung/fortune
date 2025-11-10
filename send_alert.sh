@@ -16,6 +16,7 @@ YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 
 # 调用 hk_smart_money_tracker.py 并传入昨天的日期
 python hk_smart_money_tracker.py --date $YESTERDAY
+python hsi_llm_strategy.py
 
 # 调用 gold_analyzer.py
 python gold_analyzer.py
