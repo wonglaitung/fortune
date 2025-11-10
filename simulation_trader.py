@@ -502,6 +502,8 @@ class SimulationTrader:
             
             # 检查是否有足够现金
             if target_investment > self.capital:
+                # 如果按投资组合比例计算的金额超过可用现金，则使用可用现金进行投资
+                # 或者根据可用现金重新计算实际能投资的比例
                 self.log_message(f"按大模型建议的{allocation_pct_value*100:.2f}%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额")
                 target_investment = self.capital
             
@@ -525,13 +527,16 @@ class SimulationTrader:
             
             # 计算买入后股票在投资组合中的预期比例
             expected_stock_value = shares * current_price
-            expected_portfolio_value = current_portfolio_value - self.capital + (self.capital - required_amount)
-            expected_allocation = (expected_stock_value / expected_portfolio_value) * 100
+            expected_portfolio_value = current_portfolio_value - required_amount  # 买入后投资组合价值 = 原价值 - 买入金额
+            expected_allocation = (expected_stock_value / expected_portfolio_value) * 100 if expected_portfolio_value > 0 else 0
             
             # 如果预期持仓比例超过大模型建议的比例，则调整买入数量
-            if expected_allocation > (allocation_pct_value * 100):
+            if expected_allocation > (allocation_pct_value * 100) and expected_portfolio_value > 0:
                 # 计算在不超过建议比例的前提下，最大可买入的金额
-                max_investment_for_allocation = (current_portfolio_value * allocation_pct_value) - (self.get_current_stock_price(code) * self.positions.get(code, {}).get('shares', 0) if code in self.positions else 0)
+                current_position_value = self.get_current_stock_price(code) * self.positions.get(code, {}).get('shares', 0) if code in self.positions and self.get_current_stock_price(code) is not None else 0
+                max_allowed_total_value = current_portfolio_value * allocation_pct_value  # 按建议比例允许的该股票总价值
+                max_investment_for_allocation = max_allowed_total_value - current_position_value  # 还可以投资的金额
+                
                 if max_investment_for_allocation > 0:
                     max_shares_for_allocation = int(max_investment_for_allocation / current_price // 100) * 100
                     if max_shares_for_allocation > 0:
@@ -539,9 +544,11 @@ class SimulationTrader:
                         shares = min(shares, max_shares_for_allocation)
                         required_amount = shares * current_price
                         self.log_message(f"调整买入股数以符合大模型建议的持仓比例: {shares} 股 {name} ({code})")
-                else:
-                    self.log_message(f"按大模型建议的持仓比例，无法买入 {name} ({code})")
-                    return 0, required_amount
+                elif max_investment_for_allocation <= 0:
+                    # 如果当前持仓价值已经等于或超过建议比例，说明不需要再买入
+                    # 或者如果当前持仓价值超过建议比例，说明已经超配了
+                    self.log_message(f"当前持仓价值已达到或超过大模型建议的持仓比例，无需买入 {name} ({code})")
+                    return 0, 0  # 返回0股数和0金额
                     
             return shares, required_amount
         except (ValueError, TypeError):
