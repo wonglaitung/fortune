@@ -1,21 +1,16 @@
 {
   "initial_capital": 1000000,
-  "capital": 495739.1892940522,
+  "capital": 577989.1892940522,
   "positions": {
     "0728.HK": {
-      "shares": 15900,
-      "avg_price": 5.86874213836478,
-      "stop_loss_price": 5.6
+      "shares": 28900,
+      "avg_price": 5.891799307958477,
+      "stop_loss_price": 5.5
     },
-    "3690.HK": {
-      "shares": 1800,
-      "avg_price": 101.9,
-      "stop_loss_price": 97.0
-    },
-    "1347.HK": {
-      "shares": 2100,
-      "avg_price": 79.15,
-      "stop_loss_price": 75.0
+    "0883.HK": {
+      "shares": 8500,
+      "avg_price": 21.4,
+      "stop_loss_price": 20.0
     }
   },
   "transaction_history": [
@@ -2268,6 +2263,86 @@
       "price": 79.15,
       "amount": 166215.0,
       "capital_after": 495739.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T09:36:29.676570",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 1800,
+      "price": 101.6,
+      "amount": 182880.0,
+      "capital_after": 678619.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T09:36:32.076985",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 8500,
+      "price": 21.4,
+      "amount": 181900.0,
+      "capital_after": 496719.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T09:36:34.319447",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 13000,
+      "price": 5.92,
+      "amount": 76960.0,
+      "capital_after": 419759.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T09:36:36.959444",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 2000,
+      "price": 81.45,
+      "amount": 162900.0,
+      "capital_after": 256859.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T09:36:40.096388",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 13500,
+      "price": 8.34,
+      "amount": 112590.0,
+      "capital_after": 144269.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T10:17:56.321523",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 13500,
+      "price": 8.17,
+      "amount": 110295.0,
+      "capital_after": 254564.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T10:17:59.158227",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 2100,
+      "price": 77.25,
+      "amount": 162225.0,
+      "capital_after": 416789.1892940522
+    },
+    {
+      "timestamp": "2025-11-10T11:03:58.896897",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 2000,
+      "price": 80.6,
+      "amount": 161200.0,
+      "capital_after": 577989.1892940522
     }
   ],
   "portfolio_history": [
@@ -6140,6 +6215,77 @@
           "shares": 2100,
           "avg_price": 79.15,
           "stop_loss_price": 75.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-10T09:36:42.781431",
+      "capital": 144269.1892940522,
+      "portfolio_value": 941377.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "1347.HK": {
+          "shares": 0,
+          "avg_price": 79.15,
+          "stop_loss_price": 75.0
+        },
+        "0883.HK": {
+          "shares": 8500,
+          "avg_price": 21.4,
+          "stop_loss_price": 20.0
+        },
+        "1299.HK": {
+          "shares": 0,
+          "avg_price": 81.45,
+          "stop_loss_price": 78.0
+        },
+        "9660.HK": {
+          "shares": 0,
+          "avg_price": 8.34,
+          "stop_loss_price": 38.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-10T10:18:07.481540",
+      "capital": 416789.1892940522,
+      "portfolio_value": 933798.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "0883.HK": {
+          "shares": 8500,
+          "avg_price": 21.4,
+          "stop_loss_price": 20.0
+        },
+        "1299.HK": {
+          "shares": 0,
+          "avg_price": 81.45,
+          "stop_loss_price": 78.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-10T11:04:08.590297",
+      "capital": 577989.1892940522,
+      "portfolio_value": 933408.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "0883.HK": {
+          "shares": 8500,
+          "avg_price": 21.4,
+          "stop_loss_price": 20.0
         }
       }
     }
