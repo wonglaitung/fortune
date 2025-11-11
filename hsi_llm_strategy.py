@@ -11,9 +11,78 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import warnings
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 邮件发送函数
+def send_email(to, subject, text, html=None):
+    """发送邮件功能"""
+    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
+    smtp_user = os.environ.get("YAHOO_EMAIL")
+    smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+    sender_email = smtp_user
+
+    if not smtp_user or not smtp_pass:
+        print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
+        return False
+
+    # 如果to是字符串，转换为列表
+    if isinstance(to, str):
+        to = [to]
+
+    msg = MIMEMultipart("alternative")
+    msg['From'] = f'"wonglaitung" <{sender_email}>'
+    msg['To'] = ", ".join(to)  # 将收件人列表转换为逗号分隔的字符串
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(text, "plain"))
+    
+    # 如果提供了HTML内容，则也添加HTML版本
+    if html:
+        msg.attach(MIMEText(html, "html"))
+
+    # 根据SMTP服务器类型选择合适的端口和连接方式
+    if "163.com" in smtp_server:
+        # 163邮箱使用SSL连接，端口465
+        smtp_port = 465
+        use_ssl = True
+    elif "gmail.com" in smtp_server:
+        # Gmail使用TLS连接，端口587
+        smtp_port = 587
+        use_ssl = False
+    else:
+        # 默认使用TLS连接，端口587
+        smtp_port = 587
+        use_ssl = False
+
+    # 发送邮件（增加重试机制）
+    for attempt in range(3):
+        try:
+            if use_ssl:
+                # 使用SSL连接
+                server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, to, msg.as_string())
+                server.quit()
+            else:
+                # 使用TLS连接
+                server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, to, msg.as_string())
+                server.quit()
+            
+            print("✅ Email sent successfully!")
+            return True
+        except Exception as e:
+            print(f"❌ Error sending email (attempt {attempt+1}/3): {e}")
+    
+    print("❌ Failed to send email after 3 attempts")
+    return False
 
 # 导入腾讯财经接口
 from tencent_finance import get_hsi_data_tencent
@@ -208,7 +277,11 @@ def generate_hsi_llm_strategy():
             
             print(f"💾 策略报告已保存到: {filepath}")
             
-            return response
+            # 返回策略内容和标题
+            return {
+                'content': response,
+                'title': title
+            }
         except Exception as e:
             print(f"❌ 调用大模型失败: {str(e)}")
             print("💡 请确保已设置 QWEN_API_KEY 环境变量")
@@ -223,10 +296,34 @@ def main():
     print("="*50)
     
     # 生成策略分析
-    strategy = generate_hsi_llm_strategy()
+    strategy_result = generate_hsi_llm_strategy()
     
-    if strategy:
+    if strategy_result:
         print("\n✅ 恒生指数大模型策略分析完成！")
+        
+        # 发送邮件
+        recipients = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@gmail.com")
+        # 如果是字符串，分割成列表
+        if isinstance(recipients, str):
+            recipients = [email.strip() for email in recipients.split(',')]
+        
+        subject = f"📈 恒生指数策略分析 - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        content = f"""恒生指数(HSI)大模型策略分析报告
+
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+{strategy_result['content']}
+
+---
+此邮件由恒生指数大模型策略分析器自动生成
+"""
+        
+        print("📧 正在发送邮件...")
+        success = send_email(recipients, subject, content)
+        if success:
+            print("✅ 邮件发送成功！")
+        else:
+            print("❌ 邮件发送失败！")
     else:
         print("\n❌ 恒生指数大模型策略分析失败")
 
