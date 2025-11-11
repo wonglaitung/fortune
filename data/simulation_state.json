@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 41.18929405219387,
+  "capital": 906.1892940521939,
   "positions": {
     "0728.HK": {
       "shares": 28900,
@@ -11,11 +11,6 @@
       "shares": 32800,
       "avg_price": 6.415579268292683,
       "stop_loss_price": 6.15
-    },
-    "0939.HK": {
-      "shares": 17000,
-      "avg_price": 8.281352941176468,
-      "stop_loss_price": 7.8
     },
     "0005.HK": {
       "shares": 1200,
@@ -31,6 +26,16 @@
       "shares": 6300,
       "avg_price": 22.26,
       "stop_loss_price": 20.0
+    },
+    "3968.HK": {
+      "shares": 2300,
+      "avg_price": 52.05,
+      "stop_loss_price": 49.0
+    },
+    "1138.HK": {
+      "shares": 2000,
+      "avg_price": 10.43,
+      "stop_loss_price": 9.8
     }
   },
   "transaction_history": [
@@ -2513,6 +2518,36 @@
       "price": 22.26,
       "amount": 140238.0,
       "capital_after": 41.18929405219387
+    },
+    {
+      "timestamp": "2025-11-11T15:44:51.030503",
+      "type": "SELL",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 17000,
+      "price": 8.32,
+      "amount": 141440.0,
+      "capital_after": 141481.1892940522
+    },
+    {
+      "timestamp": "2025-11-11T15:44:58.981632",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 2300,
+      "price": 52.05,
+      "amount": 119715.0,
+      "capital_after": 21766.189294052194
+    },
+    {
+      "timestamp": "2025-11-11T15:45:01.816849",
+      "type": "BUY",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 2000,
+      "price": 10.43,
+      "amount": 20860.0,
+      "capital_after": 906.1892940521939
     }
   ],
   "portfolio_history": [
@@ -6749,6 +6784,159 @@
           "shares": 6300,
           "avg_price": 22.26,
           "stop_loss_price": 20.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-11T13:41:23.670091",
+      "capital": 41.18929405219387,
+      "portfolio_value": 941699.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "1398.HK": {
+          "shares": 32800,
+          "avg_price": 6.415579268292683,
+          "stop_loss_price": 6.15
+        },
+        "0939.HK": {
+          "shares": 0,
+          "avg_price": 8.281352941176468,
+          "stop_loss_price": 7.8
+        },
+        "0005.HK": {
+          "shares": 1200,
+          "avg_price": 112.1,
+          "stop_loss_price": 106.0
+        },
+        "1288.HK": {
+          "shares": 22800,
+          "avg_price": 6.17,
+          "stop_loss_price": 5.95
+        },
+        "0883.HK": {
+          "shares": 6300,
+          "avg_price": 22.26,
+          "stop_loss_price": 20.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-11T13:59:36.243806",
+      "capital": 41.18929405219387,
+      "portfolio_value": 940273.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "1398.HK": {
+          "shares": 32800,
+          "avg_price": 6.415579268292683,
+          "stop_loss_price": 6.15
+        },
+        "0939.HK": {
+          "shares": 0,
+          "avg_price": 8.281352941176468,
+          "stop_loss_price": 7.8
+        },
+        "0005.HK": {
+          "shares": 1200,
+          "avg_price": 112.1,
+          "stop_loss_price": 106.0
+        },
+        "1288.HK": {
+          "shares": 22800,
+          "avg_price": 6.17,
+          "stop_loss_price": 5.95
+        },
+        "0883.HK": {
+          "shares": 6300,
+          "avg_price": 22.26,
+          "stop_loss_price": 20.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-11T14:46:55.397310",
+      "capital": 41.18929405219387,
+      "portfolio_value": 940865.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "1398.HK": {
+          "shares": 32800,
+          "avg_price": 6.415579268292683,
+          "stop_loss_price": 6.15
+        },
+        "0939.HK": {
+          "shares": 0,
+          "avg_price": 8.281352941176468,
+          "stop_loss_price": 7.8
+        },
+        "0005.HK": {
+          "shares": 1200,
+          "avg_price": 112.1,
+          "stop_loss_price": 106.0
+        },
+        "1288.HK": {
+          "shares": 22800,
+          "avg_price": 6.17,
+          "stop_loss_price": 5.95
+        },
+        "0883.HK": {
+          "shares": 6300,
+          "avg_price": 22.26,
+          "stop_loss_price": 20.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-11T15:45:06.580028",
+      "capital": 906.1892940521939,
+      "portfolio_value": 943297.1892940522,
+      "positions": {
+        "0728.HK": {
+          "shares": 28900,
+          "avg_price": 5.891799307958477,
+          "stop_loss_price": 5.5
+        },
+        "1398.HK": {
+          "shares": 32800,
+          "avg_price": 6.415579268292683,
+          "stop_loss_price": 6.15
+        },
+        "0005.HK": {
+          "shares": 1200,
+          "avg_price": 112.1,
+          "stop_loss_price": 106.0
+        },
+        "1288.HK": {
+          "shares": 22800,
+          "avg_price": 6.17,
+          "stop_loss_price": 5.95
+        },
+        "0883.HK": {
+          "shares": 6300,
+          "avg_price": 22.26,
+          "stop_loss_price": 20.0
+        },
+        "3968.HK": {
+          "shares": 2300,
+          "avg_price": 52.05,
+          "stop_loss_price": 49.0
+        },
+        "1138.HK": {
+          "shares": 2000,
+          "avg_price": 10.43,
+          "stop_loss_price": 9.8
         }
       }
     }
