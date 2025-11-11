@@ -39,12 +39,13 @@ def filter_news_with_llm(news_list, stock_name, stock_code, max_news=3):
     
     # 构建大模型查询
     prompt = f"""
-你是一位专业的金融分析师，请分析以下新闻与股票 \"{stock_name}\"（代码：{stock_code}）的相关性。
+你是一位专业的金融分析师，请分析以下新闻与股票 \"{stock_name}\"（代码：{stock_code}）的相关性，并过滤掉不相关的新闻。
 
 分析要求：
 1. 相关性评估：新闻内容是否直接影响该股票或其所属行业
 2. 时效性考量：发布时间越近越重要（一个月内的新闻优先）
 3. 影响力判断：新闻对股价的潜在影响程度
+4. 过滤不相关：请删除与该股票完全无关的新闻
 
 股票信息：
 - 股票名称：{stock_name}
@@ -53,11 +54,12 @@ def filter_news_with_llm(news_list, stock_name, stock_code, max_news=3):
 新闻列表：
 {news_data}
 
-请按综合评分从高到低排序，返回前{max_news}条新闻的序号列表。
+请按综合评分从高到低排序，返回前{max_news}条最相关且重要的新闻序号列表。
+如果某些新闻与该股票完全无关，请不要将其包含在返回的列表中。
 
 请按照以下JSON格式返回结果：
 {{
-    \"relevant_news_indices\": [1, 3, 5, 2, 4]
+    \"relevant_news_indices\": [1, 3, 5]
 }}
 
 只返回JSON格式结果，不要添加其他解释。
