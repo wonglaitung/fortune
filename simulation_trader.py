@@ -288,6 +288,31 @@ class SimulationTrader:
 
 {positions_detail}
             """
+        elif notification_type == "max_position_reached":
+            # 持仓比例已达到建议值通知
+            code = kwargs.get('code')
+            name = kwargs.get('name')
+            reason = kwargs.get('reason')
+            allocation_pct = kwargs.get('allocation_pct')
+            stop_loss_price = kwargs.get('stop_loss_price')
+            
+            subject = f"【持仓比例已达上限通知】{name} ({code})"
+            content = f"""
+模拟交易系统持仓比例已达建议上限通知：
+
+投资者风险偏好：{self.investor_type}
+股票名称：{name}
+股票代码：{code}
+大模型建议买入理由：{reason}
+资金分配比例：{allocation_pct}
+建议止损价格：{stop_loss_price}
+无法买入原因：当前持仓价值已达到大模型建议的比例上限
+交易时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+当前资金：HK${self.capital:,.2f}
+
+{positions_detail}
+            """
         elif notification_type == "buy_failed":
             # 买入执行失败通知
             code = kwargs.get('code')
@@ -1106,8 +1131,16 @@ class SimulationTrader:
                             required_amount=required_amount
                         )
                     elif calculation_reason == "持仓比例已达到建议值":
-                        # 当持仓比例已达到建议值时，不发送资金不足通知
+                        # 当持仓比例已达到建议值时，发送持仓比例已达上限通知
                         self.log_message(f"当前持仓价值已达到大模型建议的比例，无需买入 {name} ({code})")
+                        self.send_trading_notification(
+                            notification_type="max_position_reached",
+                            code=code,
+                            name=name,
+                            reason=reason,
+                            allocation_pct=allocation_pct,
+                            stop_loss_price=stop_loss_price
+                        )
                     else:
                         # 其他原因导致无法买入时，发送一般性的无法买入通知
                         self.send_trading_notification(
