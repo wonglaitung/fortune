@@ -1,21 +1,21 @@
 {
   "initial_capital": 1000000,
-  "capital": 510109.1892940521,
+  "capital": 94647.18929405205,
   "positions": {
     "0883.HK": {
-      "shares": 6100,
-      "avg_price": 22.6,
-      "stop_loss_price": 21.5
+      "shares": 6400,
+      "avg_price": 22.56625,
+      "stop_loss_price": 20.5
     },
-    "1398.HK": {
-      "shares": 21300,
-      "avg_price": 6.51,
-      "stop_loss_price": 6.2
+    "1288.HK": {
+      "shares": 91400,
+      "avg_price": 5.96,
+      "stop_loss_price": 5.65
     },
-    "1330.HK": {
-      "shares": 24300,
-      "avg_price": 5.71,
-      "stop_loss_price": 5.2
+    "1088.HK": {
+      "shares": 3400,
+      "avg_price": 40.22,
+      "stop_loss_price": 22.5
     }
   },
   "transaction_history": [
@@ -3428,6 +3428,156 @@
       "price": 5.71,
       "amount": 138753.0,
       "capital_after": 510109.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T10:13:59.495923",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 21300,
+      "price": 6.45,
+      "amount": 137385.0,
+      "capital_after": 647494.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T10:14:04.273299",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 300,
+      "price": 418.6,
+      "amount": 125580.0,
+      "capital_after": 521914.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T10:40:52.567616",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 300,
+      "price": 419.4,
+      "amount": 125820.0,
+      "capital_after": 647734.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T10:40:55.464558",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 700,
+      "price": 82.65,
+      "amount": 57855.00000000001,
+      "capital_after": 589879.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T11:04:33.341571",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 24300,
+      "price": 5.7,
+      "amount": 138510.0,
+      "capital_after": 728389.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T11:04:34.642392",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 700,
+      "price": 81.5,
+      "amount": 57050.0,
+      "capital_after": 785439.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T11:04:38.184220",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 21300,
+      "price": 6.45,
+      "amount": 137385.0,
+      "capital_after": 648054.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T11:04:40.251784",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 24000,
+      "price": 5.73,
+      "amount": 137520.0,
+      "capital_after": 510534.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T13:16:33.392228",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 21300,
+      "price": 6.43,
+      "amount": 136959.0,
+      "capital_after": 647493.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T13:16:36.276861",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 24000,
+      "price": 5.74,
+      "amount": 137760.0,
+      "capital_after": 785253.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T13:16:39.336796",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 1500,
+      "price": 155.9,
+      "amount": 233850.0,
+      "capital_after": 551403.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T13:16:41.885465",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 300,
+      "price": 21.88,
+      "amount": 6564.0,
+      "capital_after": 544839.1892940521
+    },
+    {
+      "timestamp": "2025-11-18T13:16:43.835149",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 91400,
+      "price": 5.96,
+      "amount": 544744.0,
+      "capital_after": 95.18929405207746
+    },
+    {
+      "timestamp": "2025-11-18T15:12:46.569251",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 1500,
+      "price": 154.2,
+      "amount": 231299.99999999997,
+      "capital_after": 231395.18929405205
+    },
+    {
+      "timestamp": "2025-11-18T15:12:48.740791",
+      "type": "BUY",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 3400,
+      "price": 40.22,
+      "amount": 136748.0,
+      "capital_after": 94647.18929405205
     }
   ],
   "portfolio_history": [
@@ -8837,9 +8987,9 @@
       "portfolio_value": 924885.1892940521,
       "positions": {
         "0883.HK": {
-          "shares": 6100,
-          "avg_price": 22.6,
-          "stop_loss_price": 21.5
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
         },
         "9988.HK": {
           "shares": 0,
@@ -8847,7 +8997,7 @@
           "stop_loss_price": 148.0
         },
         "1398.HK": {
-          "shares": 21300,
+          "shares": 0,
           "avg_price": 6.51,
           "stop_loss_price": 6.2
         }
@@ -8859,19 +9009,128 @@
       "portfolio_value": 925139.1892940521,
       "positions": {
         "0883.HK": {
-          "shares": 6100,
-          "avg_price": 22.6,
-          "stop_loss_price": 21.5
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
         },
         "1398.HK": {
-          "shares": 21300,
+          "shares": 0,
           "avg_price": 6.51,
           "stop_loss_price": 6.2
         },
         "1330.HK": {
-          "shares": 24300,
+          "shares": 0,
           "avg_price": 5.71,
           "stop_loss_price": 5.2
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-18T10:14:07.140683",
+      "capital": 521914.1892940521,
+      "portfolio_value": 920814.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
+        },
+        "1330.HK": {
+          "shares": 0,
+          "avg_price": 5.71,
+          "stop_loss_price": 5.2
+        },
+        "0388.HK": {
+          "shares": 0,
+          "avg_price": 418.6
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-18T10:40:56.949776",
+      "capital": 589879.1892940521,
+      "portfolio_value": 920637.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
+        },
+        "1330.HK": {
+          "shares": 0,
+          "avg_price": 5.71,
+          "stop_loss_price": 5.2
+        },
+        "1347.HK": {
+          "shares": 0,
+          "avg_price": 82.65,
+          "stop_loss_price": 41.85
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-18T11:04:41.283906",
+      "capital": 510534.1892940521,
+      "portfolio_value": 919883.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
+        },
+        "1398.HK": {
+          "shares": 0,
+          "avg_price": 6.45,
+          "stop_loss_price": 6.2
+        },
+        "0728.HK": {
+          "shares": 0,
+          "avg_price": 5.73,
+          "stop_loss_price": 5.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-18T13:16:45.673620",
+      "capital": 95.18929405207746,
+      "portfolio_value": 918721.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
+        },
+        "9988.HK": {
+          "shares": 0,
+          "avg_price": 155.9,
+          "stop_loss_price": 145.0
+        },
+        "1288.HK": {
+          "shares": 91400,
+          "avg_price": 5.96,
+          "stop_loss_price": 5.65
+        }
+      }
+    },
+    {
+      "timestamp": "2025-11-18T15:12:51.113530",
+      "capital": 94647.18929405205,
+      "portfolio_value": 914635.1892940521,
+      "positions": {
+        "0883.HK": {
+          "shares": 6400,
+          "avg_price": 22.56625,
+          "stop_loss_price": 20.5
+        },
+        "1288.HK": {
+          "shares": 91400,
+          "avg_price": 5.96,
+          "stop_loss_price": 5.65
+        },
+        "1088.HK": {
+          "shares": 3400,
+          "avg_price": 40.22,
+          "stop_loss_price": 22.5
         }
       }
     }
