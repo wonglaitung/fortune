@@ -10,7 +10,9 @@
 5. 基于大模型的港股模拟交易系统
 6. 批量获取自选股新闻
 7. 黄金市场分析器
-8. 通过腾讯财经接口获取港股数据
+8. 恒生指数大模型策略分析器
+9. 通用技术分析工具
+10. 通过腾讯财经接口获取港股数据
 
 ## 关键文件
 
@@ -21,9 +23,12 @@
 *   `simulation_trader.py`: 基于大模型分析的港股模拟交易系统。
 *   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
+*   `hsi_llm_strategy.py`: 恒生指数大模型策略分析器。
+*   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪和黄金分析。
+*   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
@@ -32,19 +37,22 @@
 
 ## 项目类型
 
-这是一个 Python 脚本项目，使用 GitHub Actions 进行自动化调度，并包含数据分析、可视化和大模型集成功能。
+这是一个 Python 脚本项目，使用 GitHub Actions 进行自动化调度，并包含数据分析、可视化和大模型集成功能，为投资者提供全面的市场分析和交易策略验证工具。
 
 ### 主要功能
 
 #### 加密货币价格监控
 1. 从 CoinGecko API 获取比特币 (Bitcoin) 和以太坊 (Ethereum) 的价格信息（美元和港币）、24小时变化率、市值和24小时交易量。
-2. 使用 Yahoo 邮件服务将获取到的价格信息通过邮件发送给指定收件人。
-3. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 0:00、8:00 和 16:00，即北京时间 8:00、16:00 和 0:00）。
+2. 集成通用技术分析工具，计算多种技术指标（移动平均线、RSI、MACD、布林带等）。
+3. 识别最近的交易信号（买入/卖出）。
+4. 使用 Yahoo 邮件服务将获取到的价格信息通过邮件发送给指定收件人。
+5. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 0:00、8:00 和 16:00，即北京时间 8:00、16:00 和 0:00）。
 
 #### 香港股市 IPO 信息获取
 1. 通过爬取 AAStocks 网站获取香港股市 IPO 信息。
-2. 将获取到的 IPO 信息通过邮件发送给指定收件人。
-3. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 1:00，即北京时间 9:00）。
+2. 提取公司名称、上市日期、行业、招股日期、每手股数、招股价格、入场费、暗盘日期等信息。
+3. 将获取到的 IPO 信息通过邮件发送给指定收件人。
+4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 1:00，即北京时间 9:00）。
 
 #### 港股主力资金追踪
 1. 批量扫描自选股，分析股票的建仓和出货信号。
@@ -52,7 +60,8 @@
 3. 生成可视化图表和Excel报告。
 4. 集成大模型分析股票数据，提供投资建议。
 5. 使用腾讯财经接口获取更准确的港股和恒生指数数据。
-6. 支持本地定时执行脚本 `send_alert.sh`。
+6. 集成通用技术分析工具，提供全面的技术指标分析。
+7. 支持本地定时执行脚本 `send_alert.sh`。
 
 #### 港股主力资金历史数据分析
 1. 分析指定时间段内的历史数据。
@@ -69,7 +78,8 @@
 7. 在无法按大模型建议执行交易时（如资金不足或无持仓），会发送邮件通知。
 8. 完整的交易日志记录（按日期分割）。
 9. 详细的持仓详情展示和每日总结功能。
-10. **最新功能**：将大模型建议的买卖原因添加到所有通知邮件中，使用户能够更好地理解交易决策的依据。
+10. 实现止损机制，根据大模型建议的止损价格自动执行止损操作。
+11. **最新功能**：将大模型建议的买卖原因添加到所有通知邮件中，使用户能够更好地理解交易决策的依据。
 
 #### 批量获取自选股新闻
 1. 获取自选股的最新新闻。
@@ -78,10 +88,28 @@
 
 #### 黄金市场分析器
 1. 获取黄金相关资产和宏观经济数据。
-2. 进行技术分析，计算各种技术指标。
+2. 进行技术分析，计算各种技术指标（MACD、RSI、均线、布林带等）。
 3. 使用大模型进行深度分析，提供投资建议。
 4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 7:00，即北京时间 15:00）。
 5. 支持本地定时执行脚本 `send_alert.sh`。
+6. 集成通用技术分析工具，提供全面的技术指标分析。
+
+#### 恒生指数大模型策略分析器
+1. 通过腾讯财经API获取最新的恒生指数(HSI)数据。
+2. 计算多种技术指标（移动平均线、RSI、MACD、布林带、波动率、量比等）。
+3. 分析当前市场趋势（强势多头、多头趋势、弱势空头、空头趋势、震荡整理等）。
+4. 调用大模型生成明确的交易策略建议。
+5. 将策略分析报告保存到`data/hsi_strategy_latest.txt`文件。
+6. 通过邮件发送策略分析报告。
+7. 支持本地定时执行脚本 `send_alert.sh`。
+8. 集成通用技术分析工具，提供全面的技术指标分析。
+
+#### 通用技术分析工具
+1. 实现多种常用技术指标的计算，包括移动平均线、RSI、MACD、布林带、随机振荡器、ATR、CCI、OBV等。
+2. 提供趋势分析算法，基于均线排列判断市场趋势。
+3. 提供买卖信号生成机制，基于多种技术指标组合判断。
+4. 为其他组件提供统一的技术分析接口。
+5. 支持多种金融产品（股票、期货、外汇、加密货币等）的技术分析。
 
 #### 腾讯财经数据接口
 1. 通过腾讯财经API获取港股股票数据。
@@ -96,12 +124,12 @@
 1. 确保已安装 Python 3.10 或更高版本。
 2. 安装依赖:
    ```bash
-   pip install requests
+   pip install requests yfinance pandas numpy
    ```
 3. 设置环境变量:
    - `YAHOO_EMAIL`: 你的邮箱地址。
    - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@google.com`）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
 4. 运行脚本:
    ```bash
    python crypto_email.py
@@ -112,7 +140,7 @@
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
 3. 设置 Python 3.10 环境。
-4. 安装 `requests` 依赖。
+4. 安装 `requests`, `yfinance`, `pandas`, `numpy` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`) 运行 `crypto_email.py` 脚本。
    
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
@@ -131,7 +159,7 @@
 3. 设置环境变量:
    - `YAHOO_EMAIL`: 你的邮箱地址。
    - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@google.com`）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
 4. 运行脚本:
    ```bash
    python hk_ipo_aastocks.py
@@ -141,7 +169,7 @@
 该项目配置了 GitHub Actions 工作流 (`.github/workflows/ipo-alert.yml`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
-3. 设置 Python 3.10 玎境。
+3. 设置 Python 3.10 环境。
 4. 安装 `requests`, `beautifulsoup4`, `pandas` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`) 运行 `hk_ipo_aastocks.py` 脚本。
    
@@ -183,7 +211,7 @@ crontab -e
 该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml.bak`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
-3. 设置 Python 3.10 玎境。
+3. 设置 Python 3.10 环境。
 4. 安装 `yfinance`, `akshare`, `pandas`, `matplotlib`, `openpyxl`, `scipy`, `schedule` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `hk_smart_money_tracker.py` 脚本。
    
@@ -237,13 +265,14 @@ crontab -e
 
 ##### 交易执行逻辑
 1. 严格按照"先卖后买"的原则执行交易
-2. 买入时优先考虑没有持仓的股票
-3. 在无法按大模型建议执行交易时（如资金不足或无持仓），会发送邮件通知
+2. 买入时优先考虑没有持仓的股票，同时支持对已有持仓股票的加仓
+3. 严格按照大模型建议的资金分配比例进行投资，避免过度集中投资
 4. 根据不同投资者类型（保守型、平衡型、进取型）自动进行盈亏比例交易
 5. 根据市场情况自动建议买入股票
 6. 每日收盘后生成交易总结报告
 7. 支持手工执行卖出操作
-8. **最新功能**：将大模型建议的买卖原因添加到所有通知邮件中，包括买入通知、卖出通知、资金不足无法买入通知、无持仓无法卖出通知等，使用户能够更好地理解交易决策的依据。
+8. 实现止损机制，根据大模型建议的止损价格自动执行止损操作
+9. **最新功能**：将大模型建议的买卖原因添加到所有通知邮件中，包括买入通知、卖出通知、资金不足无法买入通知、无持仓无法卖出通知、止损通知等，使用户能够更好地理解交易决策的依据。
 
 #### 批量获取自选股新闻
 
@@ -270,7 +299,7 @@ crontab -e
 1. 确保已安装 Python 3.10 或更高版本。
 2. 安装依赖:
    ```bash
-   pip install yfinance
+   pip install yfinance pandas numpy
    ```
 3. 运行脚本:
    ```bash
@@ -295,7 +324,7 @@ crontab -e
 该项目配置了 GitHub Actions 工作流 (`.github/workflows/gold-analyzer.yml`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
-3. 设置 Python 3.10 玎境。
+3. 设置 Python 3.10 环境。
 4. 安装 `yfinance`, `requests`, `pandas`, `numpy` 依赖。
 5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `gold_analyzer.py` 脚本。
    
@@ -304,6 +333,50 @@ crontab -e
 - `YAHOO_APP_PASSWORD`
 - `RECIPIENT_EMAIL`
 - `QWEN_API_KEY`
+
+#### 恒生指数大模型策略分析器
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 安装依赖:
+   ```bash
+   pip install yfinance pandas numpy
+   ```
+3. 设置环境变量:
+   - `QWEN_API_KEY`: 大模型API密钥。
+   - `YAHOO_EMAIL`: 你的邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+4. 运行脚本:
+   ```bash
+   python hsi_llm_strategy.py
+   ```
+5. 查看生成的策略分析文件:
+   - `data/hsi_strategy_latest.txt`: 恒生指数策略分析报告
+
+##### 本地定时执行
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行:
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行以每天执行（请根据需要调整时间）
+0 6 * * * /data/fortune/send_alert.sh
+```
+
+#### 通用技术分析工具
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 安装依赖:
+   ```bash
+   pip install yfinance pandas numpy
+   ```
+3. 运行脚本:
+   ```bash
+   python technical_analysis.py
+   ```
+4. 在代码中修改symbols变量以分析指定金融产品
 
 #### 腾讯财经数据接口
 
@@ -340,7 +413,7 @@ crontab -e
 - 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
 - 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
 
-资金分配策略由大模型根据投资者风险偏好确定，系统不再使用预设的投资比例限制，而是完全依赖大模型建议的资金分配比例进行投资，以避免过度集中投资。
+资金分配策略由大模型根据投资者风险偏好确定，系统会严格按照大模型建议的资金分配比例进行投资，同时保留一定的执行层面风险控制机制以避免过度集中投资。
 
 #### 个股新闻获取器参数
 在`batch_stock_news_fetcher.py`文件中可以使用以下参数：
@@ -359,7 +432,9 @@ crontab -e
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
-│   └── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
+│   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
+│   ├── 通用技术分析工具 (@technical_analysis.py)
+│   └── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -376,6 +451,7 @@ crontab -e
 - 在 `simulation_trader.py` 中使用大模型进行交易决策
 - 在 `batch_stock_news_fetcher.py` 中使用大模型过滤相关新闻
 - 在 `gold_analyzer.py` 中使用大模型进行黄金市场深度分析
+- 在 `hsi_llm_strategy.py` 中使用大模型进行恒生指数策略分析
 - **最新功能**：在 `simulation_trader.py` 中，将大模型建议的买卖原因添加到所有通知邮件中，使用户能够更好地理解交易决策的依据。
 
 ### 项目扩展性
@@ -389,3 +465,5 @@ crontab -e
 6. 集成更多大模型服务提供商
 7. 增加更多数据源接口（如其他财经网站API）
 8. **最新改进**：在模拟交易系统中增加了更详细的交易决策说明，包括买卖原因的邮件通知，使系统更加透明和易于理解。
+9. **新增功能**：集成通用技术分析工具，提供全面的技术指标分析能力。
+10. **新增功能**：增加恒生指数大模型策略分析器，提供专业的恒生指数交易策略。

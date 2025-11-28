@@ -14,9 +14,113 @@ import warnings
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import re
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Markdown到HTML的转换函数
+def markdown_to_html(md_text):
+    if not md_text:
+        return md_text
+
+    # 保存原始文本并逐行处理
+    lines = md_text.split('\n')
+    html_lines = []
+    in_list = False
+    list_type = None  # 'ul' for unordered, 'ol' for ordered
+
+    for line in lines:
+        stripped_line = line.strip()
+        
+        # 检查是否是标题
+        header_match = re.match(r'^(#{1,6})\s+(.*)', line)
+        if header_match:
+            if in_list:
+                html_lines.append(f'</{list_type}>')
+                in_list = False
+            header_level = len(header_match.group(1))
+            header_content = header_match.group(2)
+            # 处理标题内的粗体和斜体
+            header_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', header_content)
+            header_content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', header_content)
+            header_content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', header_content)
+            header_content = re.sub(r'_(.*?)_', r'<em>\1</em>', header_content)
+            html_lines.append(f'<h{header_level}>{header_content}</h{header_level}>')
+            continue
+
+        # 检查是否是列表项（无序）
+        ul_match = re.match(r'^\s*[-*+]\s+(.*)', line)
+        if ul_match:
+            content = ul_match.group(1).strip()
+            # 处理列表项内的粗体和斜体
+            content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+            content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', content)
+            content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', content)
+            content = re.sub(r'_(.*?)_', r'<em>\1</em>', content)
+            
+            if not in_list or list_type != 'ul':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ul>')
+                in_list = True
+                list_type = 'ul'
+            
+            html_lines.append(f'<li>{content}</li>')
+            continue
+
+        # 检查是否是列表项（有序）
+        ol_match = re.match(r'^\s*(\d+)\.\s+(.*)', line)
+        if ol_match:
+            content = ol_match.group(2).strip()
+            # 处理列表项内的粗体和斜体
+            content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+            content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', content)
+            content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', content)
+            content = re.sub(r'_(.*?)_', r'<em>\1</em>', content)
+            
+            if not in_list or list_type != 'ol':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ol>')
+                in_list = True
+                list_type = 'ol'
+            
+            html_lines.append(f'<li>{content}</li>')
+            continue
+
+        # 如果当前行不是列表项，但之前在列表中，则关闭列表
+        if in_list:
+            html_lines.append(f'</{list_type}>')
+            in_list = False
+
+        # 处理普通行
+        if stripped_line:
+            # 处理粗体和斜体
+            processed_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', line)
+            processed_line = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_line)
+            processed_line = re.sub(r'__(.*?)__', r'<strong>\1</strong>', processed_line)
+            processed_line = re.sub(r'_(.*?)_', r'<em>\1</em>', processed_line)
+            # 处理代码
+            processed_line = re.sub(r'`(.*?)`', r'<code>\1</code>', processed_line)
+            # 处理链接
+            processed_line = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', processed_line)
+            html_lines.append(processed_line)
+        else:
+            # 空行转为<br>
+            html_lines.append('<br>')
+
+    # 如果文档以列表结束，关闭列表
+    if in_list:
+        html_lines.append(f'</{list_type}>')
+
+    # 将所有行用<br>连接（但避免在已有HTML标签后添加额外的<br>）
+    final_html = '<br>'.join(html_lines)
+    # 修复多余的<br>标签
+    final_html = re.sub(r'<br>(\s*<(ul|ol|h[1-6]|/ul|/ol|/h[1-6])>)', r'\1', final_html)
+    final_html = re.sub(r'<br><br>', r'<br>', final_html)
+
+    return final_html
 
 # 邮件发送函数
 def send_email(to, subject, text, html=None):
@@ -308,7 +412,19 @@ def main():
             recipients = [email.strip() for email in recipients.split(',')]
         
         subject = f"📈 恒生指数策略分析 - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        content = f"""恒生指数(HSI)大模型策略分析报告
+        
+        # 创建HTML版本的内容
+        html_content = f"""
+        <h2>📈 恒生指数(HSI)大模型策略分析报告</h2>
+        <p><strong>生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0;">
+            {markdown_to_html(strategy_result['content'])}
+        </div>
+        <p><em>--- 此邮件由恒生指数大模型策略分析器自动生成</em></p>
+        """
+        
+        # 纯文本版本的内容
+        text_content = f"""恒生指数(HSI)大模型策略分析报告
 
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -319,7 +435,7 @@ def main():
 """
         
         print("📧 正在发送邮件...")
-        success = send_email(recipients, subject, content)
+        success = send_email(recipients, subject, text_content, html_content)
         if success:
             print("✅ 邮件发送成功！")
         else:

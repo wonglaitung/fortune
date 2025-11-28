@@ -25,6 +25,7 @@ import math
 import time
 import argparse
 from datetime import datetime
+import re
 
 warnings.filterwarnings("ignore")
 os.environ['MPLBACKEND'] = 'Agg'
@@ -1022,6 +1023,115 @@ def analyze_stock(code, name, run_date=None):
         print(f"❌ {name} 分析出错: {e}")
         return None
 
+# Markdown到HTML的转换函数
+def markdown_to_html(md_text):
+    if not md_text:
+        return md_text
+
+    # 保存原始文本并逐行处理
+    lines = md_text.split('\n')
+    html_lines = []
+    in_list = False
+    list_type = None  # 'ul' for unordered, 'ol' for ordered
+
+    for line in lines:
+        stripped_line = line.strip()
+        
+        # 检查是否是标题
+        header_match = re.match(r'^(#{1,6})\s+(.*)', line)
+        if header_match:
+            if in_list:
+                html_lines.append(f'</{list_type}>')
+                in_list = False
+            header_level = len(header_match.group(1))
+            header_content = header_match.group(2)
+            # 处理标题内的粗体和斜体
+            header_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', header_content)
+            header_content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', header_content)
+            header_content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', header_content)
+            header_content = re.sub(r'_(.*?)_', r'<em>\1</em>', header_content)
+            html_lines.append(f'<h{header_level}>{header_content}</h{header_level}>')
+            continue
+
+        # 检查是否是列表项（无序）
+        ul_match = re.match(r'^\s*[-*+]\s+(.*)', line)
+        if ul_match:
+            content = ul_match.group(1).strip()
+            # 处理列表项内的粗体和斜体
+            content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+            content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', content)
+            content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', content)
+            content = re.sub(r'_(.*?)_', r'<em>\1</em>', content)
+            
+            if not in_list or list_type != 'ul':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ul>')
+                in_list = True
+                list_type = 'ul'
+            
+            # 检查是否有嵌套
+            indent_level = len(ul_match.group(0)) - len(ul_match.group(0).lstrip())
+            if indent_level > 0:
+                # 这里简单处理，实际可以更复杂
+                html_lines.append(f'<li>{content}</li>')
+            else:
+                html_lines.append(f'<li>{content}</li>')
+            continue
+
+        # 检查是否是列表项（有序）
+        ol_match = re.match(r'^\s*(\d+)\.\s+(.*)', line)
+        if ol_match:
+            content = ol_match.group(2).strip()
+            # 处理列表项内的粗体和斜体
+            content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', content)
+            content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', content)
+            content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', content)
+            content = re.sub(r'_(.*?)_', r'<em>\1</em>', content)
+            
+            if not in_list or list_type != 'ol':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ol>')
+                in_list = True
+                list_type = 'ol'
+            
+            html_lines.append(f'<li>{content}</li>')
+            continue
+
+        # 如果当前行不是列表项，但之前在列表中，则关闭列表
+        if in_list:
+            html_lines.append(f'</{list_type}>')
+            in_list = False
+
+        # 处理普通行
+        if stripped_line:
+            # 处理粗体和斜体
+            processed_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', line)
+            processed_line = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_line)
+            processed_line = re.sub(r'__(.*?)__', r'<strong>\1</strong>', processed_line)
+            processed_line = re.sub(r'_(.*?)_', r'<em>\1</em>', processed_line)
+            # 处理代码
+            processed_line = re.sub(r'`(.*?)`', r'<code>\1</code>', processed_line)
+            # 处理链接
+            processed_line = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', processed_line)
+            html_lines.append(processed_line)
+        else:
+            # 空行转为<br>
+            html_lines.append('<br>')
+
+    # 如果文档以列表结束，关闭列表
+    if in_list:
+        html_lines.append(f'</{list_type}>')
+
+    # 将所有行用<br>连接（但避免在已有HTML标签后添加额外的<br>）
+    final_html = '<br>'.join(html_lines)
+    # 修复多余的<br>标签
+    final_html = re.sub(r'<br>(\s*<(ul|ol|h[1-6]|/ul|/ol|/h[1-6])>)', r'\1', final_html)
+    final_html = re.sub(r'<br><br>', r'<br>', final_html)
+
+    return final_html
+
 # ==============================
 # 5. 批量分析与报告生成
 # ==============================
@@ -1385,7 +1495,6 @@ def main(run_date=None):
                 html_table = temp_df.to_html(index=False, escape=False)
                 
                 # 在HTML表格中插入分类行，将分类信息插入到<th>标签中
-                import re
                 # 首先提取表头部分（字段名称行）
                 field_names = chunk.columns.tolist()
                 
@@ -1422,8 +1531,8 @@ def main(run_date=None):
             if llm_analysis:
                 html += "<h3>🤖 大模型分析结果：</h3>"
                 html += "<div style='background-color: #f0f0f0; padding: 15px; border-radius: 5px;'>"
-                # 将大模型分析结果中的换行符转换为HTML换行标签
-                llm_analysis_html = llm_analysis.replace('\n', '<br>')
+                # 使用markdown到HTML转换函数
+                llm_analysis_html = markdown_to_html(llm_analysis)
                 html += f"<p>{llm_analysis_html}</p>"
                 html += "</div>"
             else:
