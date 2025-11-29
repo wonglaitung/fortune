@@ -89,7 +89,8 @@
 pip install requests beautifulsoup4 pandas
 
 # 港股分析组件依赖
-pip install yfinance akshare matplotlib numpy scipy
+# 港股分析组件依赖
+pip install yfinance pandas matplotlib openpyxl scipy schedule
 
 # 模拟交易系统依赖
 pip install schedule
@@ -98,7 +99,7 @@ pip install schedule
 pip install yfinance pandas numpy
 
 # 新闻获取器依赖
-pip install akshare yfinance
+pip install yfinance
 
 # 技术分析工具依赖
 pip install yfinance pandas numpy
@@ -184,7 +185,7 @@ pip install yfinance pandas numpy
 
 ### 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 - 获取自选股相关的最新财经新闻
-- 使用AKShare获取个股新闻数据
+- **重要更新**：使用yfinance库获取个股新闻数据（此前使用AKShare，现已改为yfinance以提高数据获取成功率）
 - 利用大模型分析新闻与股票的相关性
 - 按时间由近到远排列新闻
 - 将新闻数据持久化保存到CSV文件

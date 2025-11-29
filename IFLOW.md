@@ -29,6 +29,7 @@
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub。
+*   `set_key.sh`: 环境变量配置，包含API密钥和邮件配置。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
@@ -85,6 +86,7 @@
 1. 获取自选股的最新新闻。
 2. 使用大模型过滤相关新闻，评估新闻与股票的相关性。
 3. 按时间排序并保存相关新闻数据到CSV文件。
+4. **重要更新**：新闻获取已从 `akshare.stock_news_em` 更改为 `yfinance` 库，以提高可靠性和数据获取成功率。
 
 #### 黄金市场分析器
 1. 获取黄金相关资产和宏观经济数据。
@@ -280,7 +282,7 @@ crontab -e
 1. 确保已安装 Python 3.10 或更高版本。
 2. 安装依赖:
    ```bash
-   pip install akshare yfinance
+   pip install yfinance
    ```
 3. 运行脚本:
    ```bash
@@ -292,6 +294,8 @@ crontab -e
    ```
 5. 查看生成的新闻数据文件:
    - `data/all_stock_news_records.csv`: 所有股票相关新闻记录
+
+> **重要更新**：新闻获取已从 `akshare.stock_news_em` 更改为 `yfinance` 库，以提高可靠性和数据获取成功率。此更改解决了之前新闻获取失败的问题。
 
 #### 黄金市场分析器
 
@@ -467,3 +471,4 @@ crontab -e
 8. **最新改进**：在模拟交易系统中增加了更详细的交易决策说明，包括买卖原因的邮件通知，使系统更加透明和易于理解。
 9. **新增功能**：集成通用技术分析工具，提供全面的技术指标分析能力。
 10. **新增功能**：增加恒生指数大模型策略分析器，提供专业的恒生指数交易策略。
+11. **重要更新**：`batch_stock_news_fetcher.py` 已更新为使用 `yfinance` 库获取新闻，提高了数据获取的可靠性和成功率。
