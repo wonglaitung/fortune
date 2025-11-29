@@ -11,6 +11,12 @@ RETRY_DELAY=10
 # 进入项目根目录
 cd /data/fortune
 
+git pull 
+sleep $RETRY_DELAY
+git pull
+sleep $RETRY_DELAY
+git pull
+
 # 添加 data 目录下的所有更改到暂存区
 git add data/
 
