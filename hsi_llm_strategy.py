@@ -20,6 +20,7 @@ import re
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Markdown到HTML的转换函数
+# Markdown到HTML的转换函数
 def markdown_to_html(md_text):
     if not md_text:
         return md_text
@@ -29,10 +30,77 @@ def markdown_to_html(md_text):
     html_lines = []
     in_list = False
     list_type = None  # 'ul' for unordered, 'ol' for ordered
+    in_table = False  # 标记是否在表格中
+    table_header_processed = False  # 标记表格头部是否已处理
 
     for line in lines:
         stripped_line = line.strip()
         
+        # 检查是否是表格分隔行（包含 | 和 - 用于定义表格结构）
+        table_separator_match = re.match(r'^\s*\|?\s*[:\-\s\|]*\|\s*$', line)
+        if table_separator_match and '|' in line and any(c in line for c in ['-', ':']):
+            # 这是表格的分隔行，跳过处理
+            continue
+
+        # 检查是否是表格行（包含 | 分隔符）
+        is_table_row = '|' in line and not stripped_line.startswith('```')
+        
+        if is_table_row and not table_separator_match:
+            # 处理表格行
+            if not in_table:
+                # 开始新表格
+                in_table = True
+                table_header_processed = False
+                html_lines.append('<table border="1" style="border-collapse: collapse; width: 100%;">')
+            
+            # 分割单元格并去除空白
+            cells = [cell.strip() for cell in line.split('|')]
+            # 过滤掉首尾的空字符串（因为 | 开头或结尾会产生空字符串）
+            cells = [cell for i, cell in enumerate(cells) if i > 0 and i < len(cells) - 1]
+            
+            # 确定是表头还是数据行
+            if not table_header_processed and any('---' in cell for cell in [c for c in cells if c.strip()]):
+                # 如果这一行包含 ---，则认为是分隔行，跳过
+                continue
+            elif not table_header_processed:
+                # 首次遇到非分隔行，作为表头处理
+                html_lines.append('<thead><tr>')
+                for cell in cells:
+                    # 处理单元格内的粗体和斜体
+                    cell_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', cell)
+                    cell_content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', cell_content)
+                    cell_content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', cell_content)
+                    cell_content = re.sub(r'_(.*?)_', r'<em>\1</em>', cell_content)
+                    # 处理代码
+                    cell_content = re.sub(r'`(.*?)`', r'<code>\1</code>', cell_content)
+                    # 处理链接
+                    cell_content = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', cell_content)
+                    html_lines.append(f'<th style="padding: 8px; text-align: left; border: 1px solid #ddd;">{cell_content}</th>')
+                html_lines.append('</tr></thead><tbody>')
+                table_header_processed = True
+            else:
+                # 数据行
+                html_lines.append('<tr>')
+                for cell in cells:
+                    # 处理单元格内的粗体和斜体
+                    cell_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', cell)
+                    cell_content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', cell_content)
+                    cell_content = re.sub(r'__(.*?)__', r'<strong>\1</strong>', cell_content)
+                    cell_content = re.sub(r'_(.*?)_', r'<em>\1</em>', cell_content)
+                    # 处理代码
+                    cell_content = re.sub(r'`(.*?)`', r'<code>\1</code>', cell_content)
+                    # 处理链接
+                    cell_content = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', cell_content)
+                    html_lines.append(f'<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">{cell_content}</td>')
+                html_lines.append('</tr>')
+            continue
+
+        # 如果当前行不是表格行，但之前在表格中，则关闭表格
+        if in_table:
+            html_lines.append('</tbody></table>')
+            in_table = False
+            table_header_processed = False
+
         # 检查是否是标题
         header_match = re.match(r'^(#{1,6})\s+(.*)', line)
         if header_match:
@@ -114,14 +182,17 @@ def markdown_to_html(md_text):
     if in_list:
         html_lines.append(f'</{list_type}>')
 
+    # 如果文档以表格结束，关闭表格
+    if in_table:
+        html_lines.append('</tbody></table>')
+
     # 将所有行用<br>连接（但避免在已有HTML标签后添加额外的<br>）
     final_html = '<br>'.join(html_lines)
     # 修复多余的<br>标签
-    final_html = re.sub(r'<br>(\s*<(ul|ol|h[1-6]|/ul|/ol|/h[1-6])>)', r'\1', final_html)
+    final_html = re.sub(r'<br>(\s*<(ul|ol|h[1-6]|/ul|/ol|/h[1-6]|table|/table|/tbody|/thead|tr|/tr|td|/td|th|/th)>)', r'\1', final_html)
     final_html = re.sub(r'<br><br>', r'<br>', final_html)
 
     return final_html
-
 # 邮件发送函数
 def send_email(to, subject, text, html=None):
     """发送邮件功能"""
