@@ -1,0 +1,109 @@
+2025-11-29 15:41:15 - 尝试执行命令 (第 1 次): python batch_stock_news_fetcher.py
+📈 获取恒生指数（HSI）用于对比...
+============================================================
+📈 批量获取自选股新闻
+📅 生成时间: 2025-11-29 15:41:18
+============================================================
+
+🔍 正在获取 盈富基金 (2800.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 盈富基金 的新闻
+
+🔍 正在获取 招商银行 (3968.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 招商银行 的新闻
+
+🔍 正在获取 建设银行 (0939.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 建设银行 的新闻
+
+🔍 正在获取 工商银行 (1398.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 工商银行 的新闻
+
+🔍 正在获取 农业银行 (1288.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 农业银行 的新闻
+
+🔍 正在获取 汇丰银行 (0005.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 汇丰银行 的新闻
+
+🔍 正在获取 中国电信 (0728.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 中国电信 的新闻
+
+🔍 正在获取 第四范式 (6682.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 第四范式 的新闻
+
+🔍 正在获取 华虹半导体 (1347.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 华虹半导体 的新闻
+
+🔍 正在获取 中远海能 (1138.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 中远海能 的新闻
+
+🔍 正在获取 中国神华 (1088.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 中国神华 的新闻
+
+🔍 正在获取 中国海洋石油 (0883.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 中国海洋石油 的新闻
+
+🔍 正在获取 中芯国际 (0981.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 中芯国际 的新闻
+
+🔍 正在获取 香港交易所 (0388.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 香港交易所 的新闻
+
+🔍 正在获取 腾讯控股 (0700.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 腾讯控股 的新闻
+
+🔍 正在获取 阿里巴巴-SW (9988.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 阿里巴巴-SW 的新闻
+
+🔍 正在获取 美团-W (3690.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 美团-W 的新闻
+
+🔍 正在获取 小米集团-W (1810.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 小米集团-W 的新闻
+
+🔍 正在获取 地平线机器人 (9660.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 地平线机器人 的新闻
+
+🔍 正在获取 黑芝麻智能 (2533.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 黑芝麻智能 的新闻
+
+🔍 正在获取 绿色动力环保 (1330.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 绿色动力环保 的新闻
+
+🔍 正在获取 比亚迪股份 (1211.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 比亚迪股份 的新闻
+
+🔍 正在获取 药明生物 (2269.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 药明生物 的新闻
+
+🔍 正在获取 友邦保险 (1299.HK) 的新闻...
+⚠️ 获取个股新闻失败: Expecting value: line 1 column 1 (char 0)
+  ⚠️ 未获取到 友邦保险 的新闻
+
+❌ 未获取到任何新闻数据
+
+📊 总共处理了 24 只股票
+============================================================
+2025-11-29 15:41:43 - 命令执行成功: python batch_stock_news_fetcher.py
+2025-11-29 15:41:43 - 尝试执行命令 (第 1 次): python hsi_llm_strategy.py
