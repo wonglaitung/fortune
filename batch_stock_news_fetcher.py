@@ -6,9 +6,8 @@
 日期：2025-10-25
 """
 
-import akshare as ak
 import yfinance as yf
-from datetime import datetime, time as dt_time, timedelta
+from datetime import datetime, timedelta
 import json
 import os
 import csv
@@ -99,44 +98,66 @@ def filter_news_with_llm(news_list, stock_name, stock_code, max_news=3):
 
 def get_stock_news(symbol, stock_name="", size=3):
     """
-    通过AKShare获取个股新闻，并使用大模型进行相关性过滤
-    :param symbol: 股票代码 (例如: "1810" for 小米集团)
-    :param stock_name: 股票名称 (例如: "小米集团")
+    通过yfinance获取个股新闻，并使用大模型进行相关性过滤
+    :param symbol: 股票代码 (例如: "0700.HK" for 腾讯控股)
+    :param stock_name: 股票名称 (例如: "腾讯控股")
     :param size: 获取新闻条数
     :return: 新闻列表
     """
     try:
-        # 使用AKShare获取个股新闻
-        df = ak.stock_news_em(symbol=symbol)
+        # 使用yfinance获取个股新闻
+        ticker = yf.Ticker(symbol)
+        news_data = ticker.news
+        
+        if not news_data:
+            return []
+        
         articles = []
         
         # 计算一个月前的日期
-        one_month_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=30)
+        one_month_ago = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None) - timedelta(days=30)
         
         # 处理新闻数据
-        for _, item in df.iterrows():
+        for item in news_data:
+            # 从content字段获取新闻数据
+            content = item.get("content", {})
+            
             # 格式化发布时间
-            pub_time = item.get("发布时间", "")
+            pub_time_str = content.get("pubDate", "")
             pub_datetime = None
-            if pub_time:
-                # 将时间字符串转换为标准格式
+            pub_time = pub_time_str  # 默认使用原始时间字符串
+            if pub_time_str:
                 try:
-                    pub_datetime = datetime.strptime(pub_time, "%Y-%m-%d %H:%M:%S")
+                    # 将ISO格式时间字符串转换为datetime对象
+                    pub_datetime = datetime.fromisoformat(pub_time_str.replace('Z', '+00:00'))
+                    # 移除时区信息以避免比较错误
+                    pub_datetime = pub_datetime.replace(tzinfo=None)
                     pub_time = pub_datetime.strftime("%Y-%m-%d %H:%M:%S")
                 except:
+                    # 如果解析失败，保持使用原始时间字符串
                     pass
             
             # 只获取一个月内的新闻
             if pub_datetime and pub_datetime < one_month_ago:
                 continue
             
-            title = item.get("新闻标题", "").strip()
-            summary = item.get("新闻内容", "").strip()
+            title = content.get("title", "").strip()
+            summary = content.get("summary", "").strip()
+            
+            # 获取新闻链接
+            url = ""
+            canonical_url = content.get("canonicalUrl", {})
+            click_through_url = content.get("clickThroughUrl", {})
+            
+            if isinstance(canonical_url, dict):
+                url = canonical_url.get("url", "")
+            elif isinstance(click_through_url, dict):
+                url = click_through_url.get("url", "")
             
             articles.append({
                 "title": title[:80] + ("..." if len(title) > 80 else ""),
                 "summary": summary[:120] + ("..." if len(summary) > 120 else ""),
-                "url": item.get("新闻链接", ""),
+                "url": url,
                 "publishedAt": pub_time
             })
         
@@ -151,22 +172,7 @@ def get_stock_news(symbol, stock_name="", size=3):
         print(f"⚠️ 获取个股新闻失败: {e}")
         return []
 
-def get_stock_info(symbol):
-    """获取股价与基本面数据"""
-    try:
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
-        return {
-            "name": info.get("longName", "N/A"),
-            "price": info.get("currentPrice", "N/A"),
-            "currency": info.get("currency", "HKD"),
-            "market_cap": info.get("marketCap", "N/A"),
-            "pe_ratio": info.get("trailingPE", "N/A"),
-            "change": info.get("regularMarketChangePercent", "N/A")
-        }
-    except Exception as e:
-        print(f"⚠️ 获取股价失败: {e}")
-        return {}
+
 
 def fetch_all_stock_news():
     """获取watch list中所有股票的新闻"""
@@ -186,11 +192,8 @@ def fetch_all_stock_news():
     for code, name in WATCHLIST.items():
         print(f"\n🔍 正在获取 {name} ({code}) 的新闻...")
         
-        # 根据股票代码确定AKShare使用的代码格式
-        if "." in code:
-            symbol_code = code.split(".")[0]
-        else:
-            symbol_code = code
+        # 为yfinance使用完整的股票代码（包含后缀如.HK）
+        symbol_code = code
         
         # 获取新闻，每只股票获取3条新闻
         articles = get_stock_news(symbol_code, name, size=3)
