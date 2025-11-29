@@ -11,11 +11,19 @@ RETRY_DELAY=10
 # 进入项目根目录
 cd /data/fortune
 
-git pull 
-sleep $RETRY_DELAY
-git pull
-sleep $RETRY_DELAY
-git pull
+retry_count=0
+while [ $retry_count -lt $MAX_RETRIES ]; do
+    git pull
+    exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        echo "Files updated from GitHub successfully at $(date '+%Y-%m-%d %H:%M:%S')"
+	break
+    else
+        retry_count=$((retry_count + 1))
+        echo "Git pull failed (attempt $retry_count/$MAX_RETRIES), retrying in $RETRY_DELAY seconds..."
+        sleep $RETRY_DELAY
+    fi
+done
 
 # 添加 data 目录下的所有更改到暂存区
 git add data/
