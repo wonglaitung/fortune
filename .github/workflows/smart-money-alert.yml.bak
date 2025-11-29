@@ -36,4 +36,4 @@ jobs:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
           python batch_stock_news_fetcher.py
-          # python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
+          python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
