@@ -3,7 +3,7 @@ name: HK Smart Money Alert
 on:
   schedule:
   # 每天香港时间上午8点执行（即UTC时间0点）
-    - cron: '8 0 * * *'
+    - cron: '10 0 * * *'
   # 可选：允许手动触发
   workflow_dispatch:
 
@@ -36,4 +36,4 @@ jobs:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
           python batch_stock_news_fetcher.py
-          python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
+          # python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
