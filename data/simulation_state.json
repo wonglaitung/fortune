@@ -5678,6 +5678,28 @@
       "price": 5.85,
       "amount": 54990.0,
       "capital_after": 282.18929405207746
+    },
+    {
+      "timestamp": "2025-11-30T15:10:58.498998",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 1000,
+      "price": 250.0,
+      "amount": 250000.0,
+      "capital_after": 750000.0,
+      "reason": "技术指标显示买入信号"
+    },
+    {
+      "timestamp": "2025-11-30T15:10:58.499008",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 500,
+      "price": 270.0,
+      "amount": 135000.0,
+      "capital_after": 885000.0,
+      "reason": "达到目标盈利点位"
     }
   ],
   "portfolio_history": [
