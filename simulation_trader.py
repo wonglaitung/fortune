@@ -404,6 +404,7 @@ class SimulationTrader:
                 'positions': self.positions,
                 'transaction_history': self.transaction_history,
                 'portfolio_history': self.portfolio_history,
+                'decision_history': self.decision_history,
                 'start_date': self.start_date.isoformat() if isinstance(self.start_date, datetime) else str(self.start_date)
             }
             
@@ -424,6 +425,7 @@ class SimulationTrader:
                 self.positions = {k: v for k, v in state.get('positions', {}).items()}
                 self.transaction_history = state.get('transaction_history', [])
                 self.portfolio_history = state.get('portfolio_history', [])
+                self.decision_history = state.get('decision_history', [])
                 
                 # 恢复开始日期
                 start_date_str = state.get('start_date')
@@ -433,7 +435,7 @@ class SimulationTrader:
                     except:
                         self.start_date = datetime.now()
                 
-                self.log_message(f"从文件恢复状态成功: {len(self.transaction_history)} 笔交易, {len(self.positions)} 个持仓")
+                self.log_message(f"从文件恢复状态成功: {len(self.transaction_history)} 笔交易, {len(self.positions)} 个持仓, {len(self.decision_history)} 条决策历史")
                 return True
         except Exception as e:
             self.log_message(f"加载状态失败: {e}")
@@ -682,6 +684,24 @@ class SimulationTrader:
         }
         self.transaction_history.append(transaction)
         
+        # 将交易记录添加到决策历史中
+        trade_record = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'type': 'BUY',
+            'code': code,
+            'name': name,
+            'shares': shares,
+            'price': current_price,
+            'amount': actual_invest,
+            'reason': reason,
+            'capital_after': self.capital
+        }
+        self.decision_history.append(trade_record)
+        
+        # 限制决策历史记录数量，只保留最近的50条记录
+        if len(self.decision_history) > 50:
+            self.decision_history = self.decision_history[-50:]
+        
         # 保存状态
         self.save_state()
         
@@ -761,6 +781,25 @@ class SimulationTrader:
             'reason': reason if reason else '未提供理由'
         }
         self.transaction_history.append(transaction)
+        
+        # 将交易记录添加到决策历史中
+        trade_record = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'type': 'SELL',
+            'code': code,
+            'name': name,
+            'shares': shares_to_sell,
+            'price': current_price,
+            'amount': sell_amount,
+            'reason': reason,
+            'profit_loss': profit_loss,
+            'capital_after': self.capital
+        }
+        self.decision_history.append(trade_record)
+        
+        # 限制决策历史记录数量，只保留最近的50条记录
+        if len(self.decision_history) > 50:
+            self.decision_history = self.decision_history[-50:]
         
         # 保存状态
         self.save_state()
@@ -872,7 +911,7 @@ class SimulationTrader:
     
     def get_recent_decisions_context(self):
         """
-        获取最近的决策历史作为上下文提供给大模型
+        获取当天的决策历史作为上下文提供给大模型
         
         Returns:
             str: 决策历史上下文文本
@@ -880,32 +919,52 @@ class SimulationTrader:
         if not self.decision_history:
             return "无历史决策记录。"
         
-        # 只返回最近的几次决策
-        recent_decisions = self.decision_history[-6:]  # 只取最近6次决策
+        # 获取今天的日期
+        today = datetime.now().date()
         
-        context = "历史决策记录（按时间倒序）：\n"
-        for i, decision in enumerate(recent_decisions):
-            timestamp = decision.get('timestamp', '未知时间')
-            buy_stocks = decision.get('buy', [])
-            sell_stocks = decision.get('sell', [])
+        # 筛选出今天的交易记录（只包含BUY和SELL，不包含持仓信息）
+        today_trade_records = []
+        for record in self.decision_history:
+            timestamp_str = record.get('timestamp', '未知时间')
+            decision_type = record.get('type', '未知类型')
             
-            context += f"\n第{i+1}次决策 ({timestamp}):\n"
+            # 只处理交易记录（BUY和SELL），忽略其他类型
+            if decision_type in ['BUY', 'SELL']:
+                try:
+                    # 解析时间戳并检查是否是今天
+                    decision_date = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00')).date() if 'Z' in timestamp_str else datetime.fromisoformat(timestamp_str).date()
+                    if decision_date == today:
+                        today_trade_records.append(record)
+                except:
+                    # 如果时间戳格式不正确，尝试直接检查日期部分
+                    if timestamp_str.startswith(today.strftime('%Y-%m-%d')):
+                        today_trade_records.append(record)
+        
+        if not today_trade_records:
+            return "今天无交易记录。"
+        
+        context = f"今天({today.strftime('%Y-%m-%d')})的交易记录：\n"
+        for i, record in enumerate(today_trade_records):
+            timestamp = record.get('timestamp', '未知时间')
+            decision_type = record.get('type', '未知类型')
             
-            if buy_stocks:
-                context += "  买入:\n"
-                for stock in buy_stocks:
-                    name = stock.get('name', stock.get('code', '未知'))
-                    code = stock.get('code', '未知代码')
-                    reason = stock.get('reason', '未提供理由')
-                    context += f"    {name}({code}): {reason}\n"
-            
-            if sell_stocks:
-                context += "  卖出:\n"
-                for stock in sell_stocks:
-                    name = stock.get('name', stock.get('code', '未知'))
-                    code = stock.get('code', '未知代码')
-                    reason = stock.get('reason', '未提供理由')
-                    context += f"    {name}({code}): {reason}\n"
+            if decision_type in ['BUY', 'SELL']:  # 实际交易记录
+                context += f"\n第{i+1}次交易 ({timestamp}):\n"
+                context += f"  类型: {decision_type}\n"
+                name = record.get('name', record.get('code', '未知'))
+                code = record.get('code', '未知代码')
+                shares = record.get('shares', '未知数量')
+                price = record.get('price', '未知价格')
+                amount = record.get('amount', '未知金额')
+                reason = record.get('reason', '未提供理由')
+                
+                if decision_type == 'BUY':
+                    context += f"  买入: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}\n"
+                else:  # SELL
+                    profit_loss = record.get('profit_loss', '未知盈亏')
+                    context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: HK${profit_loss:+.2f}\n"
+                
+                context += f"  原因: {reason}\n"
         
         return context
 
@@ -952,20 +1011,6 @@ class SimulationTrader:
                 self.log_message("大模型分析调用成功")
                 self.log_message(f"大模型分析结果:\n{llm_analysis}")
                 
-                # 构建当前持仓信息
-                positions_info = self.get_detailed_positions_info()[0]
-                positions_text = ""
-                if positions_info:
-                    positions_text = "当前持仓情况：\n"
-                    for pos in positions_info:
-                        positions_text += f"- {pos['code']} {pos['name']}: {pos['shares']}股 @ 平均成本HK${pos['avg_price']:.2f}, 当前价格HK${pos['current_price']:.2f}\n"
-                else:
-                    positions_text = "当前无持仓\n"
-                
-                # 获取当前资金情况
-                portfolio_value = self.get_portfolio_value()
-                capital_info = f"当前资金: HK${self.capital:,.2f}\n投资组合总价值: HK${portfolio_value:,.2f}"
-                
                 # 获取历史决策上下文
                 decision_history_context = self.get_recent_decisions_context()
                 
@@ -975,9 +1020,6 @@ class SimulationTrader:
 
 报告内容：
 {llm_analysis}
-
-{positions_text}
-{capital_info}
 
 {decision_history_context}
 
