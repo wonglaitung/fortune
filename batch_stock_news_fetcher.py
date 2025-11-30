@@ -8,97 +8,22 @@
 
 import yfinance as yf
 from datetime import datetime, timedelta
-import json
 import os
 import csv
 import time
 import argparse
 import schedule
-from llm_services.qwen_engine import chat_with_llm
 
 # 导入hk_smart_money_tracker.py中的WATCHLIST
 import sys
 sys.path.append('/data/fortune')
 from hk_smart_money_tracker import WATCHLIST
 
-def filter_news_with_llm(news_list, stock_name, stock_code, max_news=3):
-    """
-    使用大模型过滤新闻，评估新闻与股票的相关性，并按时间排序
-    """
-    if not news_list:
-        return []
-    
-    # 准备新闻数据用于发送给大模型
-    news_texts = []
-    for i, news in enumerate(news_list):
-        news_text = f"{i+1}. 标题: {news['title']}\n   内容: {news['summary']}\n   发布时间: {news['publishedAt']}\n"
-        news_texts.append(news_text)
-    
-    news_data = "\n".join(news_texts)
-    
-    # 构建大模型查询
-    prompt = f"""
-你是一位专业的金融分析师，请分析以下新闻与股票 \"{stock_name}\"（代码：{stock_code}）的相关性，并过滤掉不相关的新闻。
 
-分析要求：
-1. 相关性评估：新闻内容是否直接影响该股票或其所属行业
-2. 时效性考量：发布时间越近越重要（一个月内的新闻优先）
-3. 影响力判断：新闻对股价的潜在影响程度
-4. 过滤不相关：请删除与该股票完全无关的新闻
-
-股票信息：
-- 股票名称：{stock_name}
-- 股票代码：{stock_code}
-
-新闻列表：
-{news_data}
-
-请按综合评分从高到低排序，返回前{max_news}条最相关且重要的新闻序号列表。
-如果某些新闻与该股票完全无关，请不要将其包含在返回的列表中。
-
-请按照以下JSON格式返回结果：
-{{
-    \"relevant_news_indices\": [1, 3, 5]
-}}
-
-只返回JSON格式结果，不要添加其他解释。
-"""
-    
-    try:
-        # 调用大模型（非推理模式）
-        response = chat_with_llm(prompt, enable_thinking=False)
-        
-        # 解析大模型返回的JSON
-        start_idx = response.find('{')
-        end_idx = response.rfind('}') + 1
-        if start_idx != -1 and end_idx != 0:
-            json_str = response[start_idx:end_idx]
-            result = json.loads(json_str)
-            relevant_indices = result.get("relevant_news_indices", [])
-            
-            # 根据大模型返回的序号获取相关新闻
-            filtered_news = []
-            for idx in relevant_indices[:max_news]:
-                if 1 <= idx <= len(news_list):
-                    filtered_news.append(news_list[idx-1])
-            
-            # 按时间由近到远排序
-            filtered_news.sort(key=lambda x: x['publishedAt'], reverse=True)
-            
-            return filtered_news
-        else:
-            # 如果没有找到有效的JSON，返回原始数据并按时间排序
-            sorted_news = sorted(news_list[:max_news], key=lambda x: x['publishedAt'], reverse=True)
-            return sorted_news
-    except Exception as e:
-        print(f"⚠️ 大模型过滤失败: {e}")
-        # 如果大模型调用失败，返回原始数据并按时间排序
-        sorted_news = sorted(news_list[:max_news], key=lambda x: x['publishedAt'], reverse=True)
-        return sorted_news
 
 def get_stock_news(symbol, stock_name="", size=3):
     """
-    通过yfinance获取个股新闻，并使用大模型进行相关性过滤
+    通过yfinance获取个股新闻，只返回一个月内的新闻
     :param symbol: 股票代码 (例如: "0700.HK" for 腾讯控股)
     :param stock_name: 股票名称 (例如: "腾讯控股")
     :param size: 获取新闻条数
@@ -161,13 +86,9 @@ def get_stock_news(symbol, stock_name="", size=3):
                 "publishedAt": pub_time
             })
         
-        # 如果没有指定股票名称，直接返回原始数据
-        if not stock_name:
-            return articles[:size]
-        
-        # 使用大模型过滤相关新闻
-        filtered_articles = filter_news_with_llm(articles, stock_name, symbol, size)
-        return filtered_articles
+        # 按时间由近到远排序，然后返回指定数量的新闻
+        sorted_articles = sorted(articles, key=lambda x: x['publishedAt'], reverse=True)
+        return sorted_articles[:size]
     except Exception as e:
         print(f"⚠️ 获取个股新闻失败: {e}")
         return []
