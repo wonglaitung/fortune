@@ -12640,5 +12640,30 @@
       }
     }
   ],
+  "decision_history": [
+    {
+      "timestamp": "2025-11-30 10:30:00",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 100,
+      "price": 100.0,
+      "amount": 10000,
+      "reason": "技术指标显示买入信号",
+      "capital_after": 990000
+    },
+    {
+      "timestamp": "2025-11-30 14:30:00",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 100,
+      "price": 105.0,
+      "amount": 10500,
+      "reason": "达到目标盈利点",
+      "profit_loss": 500,
+      "capital_after": 995000
+    }
+  ],
   "start_date": "2025-10-24T12:47:53.368185"
 }
