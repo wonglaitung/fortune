@@ -28,8 +28,18 @@ done
 # 添加 data 目录下的所有更改到暂存区
 git add data/
 
+# 检查是否有任何更改需要提交
+if git diff --cached --quiet --exit-code; then
+    echo "No changes staged for commit, skipping commit and push" 
+    exit 0
+fi
+
 # 提交更改
-git commit -m "Update data files on $(date '+%Y-%m-%d %H:%M:%S')" 2>/dev/null || echo "No changes to commit"
+git commit -m "Update data files on $(date '+%Y-%m-%d %H:%M:%S')"
+if [ $? -ne 0 ]; then
+    echo "Git commit failed at $(date '+%Y-%m-%d %H:%M:%S')"
+    exit 1
+fi
 
 # 推送到远程仓库，带重试机制
 retry_count=0

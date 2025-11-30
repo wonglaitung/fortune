@@ -677,7 +677,8 @@ class SimulationTrader:
             'shares': shares,
             'price': current_price,
             'amount': actual_invest,
-            'capital_after': self.capital
+            'capital_after': self.capital,
+            'reason': reason if reason else '未提供理由'
         }
         self.transaction_history.append(transaction)
         
@@ -756,7 +757,8 @@ class SimulationTrader:
             'shares': shares_to_sell,
             'price': current_price,
             'amount': sell_amount,
-            'capital_after': self.capital
+            'capital_after': self.capital,
+            'reason': reason if reason else '未提供理由'
         }
         self.transaction_history.append(transaction)
         
