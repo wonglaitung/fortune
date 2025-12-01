@@ -45,5 +45,8 @@ jobs:
           git add data/all_stock_news_records.csv
           if ! git diff --cached --quiet; then
             git commit -m "Update stock news records [skip ci]"
+            git remote set-url origin https://x-access-token:${{ secrets.GIT_TOKEN }}@github.com/${{ github.repository }}.git
             git push
           fi
+        env:
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
