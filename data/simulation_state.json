@@ -12798,6 +12798,102 @@
           "stop_loss_price": 5.65
         }
       }
+    },
+    {
+      "timestamp": "2025-12-01T14:06:37.391008",
+      "capital": 282.18929405207746,
+      "portfolio_value": 958544.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1138.HK": {
+          "shares": 13600,
+          "avg_price": 10.39,
+          "stop_loss_price": 9.9
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-01T15:09:56.164685",
+      "capital": 282.18929405207746,
+      "portfolio_value": 956802.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1138.HK": {
+          "shares": 13600,
+          "avg_price": 10.39,
+          "stop_loss_price": 9.9
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-01T15:37:51.108265",
+      "capital": 282.18929405207746,
+      "portfolio_value": 955712.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1138.HK": {
+          "shares": 13600,
+          "avg_price": 10.39,
+          "stop_loss_price": 9.9
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        }
+      }
     }
   ],
   "decision_history": [
@@ -12948,6 +13044,80 @@
           "reason": "南向资金流入139,775万港元，高股息率5.2%提供安全边际，相对强度差值4.34%领跑银行股，缩量回调后技术面蓄势，符合震荡市防御需求",
           "allocation_pct": 12,
           "stop_loss_price": 50.0
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-01 14:06:26",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "资金流入显著（OBV+360M、CMF+0.0536）、技术面健康（位置47.38%中位、放量上涨）、新闻正面（云业务增长+AI需求催化）、跑赢恒指+3.49%，AI与云计算主题领涨，平衡成长与价值",
+          "allocation_pct": 15,
+          "stop_loss_price": 148.0
+        },
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "缩量回调提供安全边际、高股息率~7%、PB 0.5x低估，防御属性强，受益经济稳增长政策，技术面抛压衰竭（RSI 53.17中性），适合平衡型投资者稳健配置",
+          "allocation_pct": 10,
+          "stop_loss_price": 8.0
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "能源安全主题催化（航运旺季+地缘事件）、资金流入健康（OBV+474M、量比0.75）、技术面突破中轨（布林带突破0.56），独立行情显著，短期成长潜力与风险平衡",
+          "allocation_pct": 8,
+          "stop_loss_price": 10.4
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-01 15:09:45",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "资金流入可靠（CMF趋势信号=1），技术面多指标共振上涨（放量上涨信号=1、RSI健康、MACD柱状图仍为正），云业务增长与AI需求新闻支撑估值修复",
+          "allocation_pct": "15%",
+          "stop_loss_price": 148.0
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "低位放量上涨（位置23.53%、OBV+7.76亿资金流入），技术面动能加速（MACD柱状图变化率+3.1917），AI芯片需求爆发低估，存在预期差",
+          "allocation_pct": "12%",
+          "stop_loss_price": 7.6
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "高股息5.2%提供安全边际，相对强度领先（差值+6.14%跑赢恒指），5G投资周期启动催化技术面强势通道",
+          "allocation_pct": "13%",
+          "stop_loss_price": 5.7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-01 15:37:41",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "资金持续流入（CMF趋势信号=1且OBV上升），技术指标多头共振（随机振荡器金叉、Williams %R超卖反弹），新闻强正面（云业务增长及$195目标价），相对强度2.83%跑赢恒指",
+          "allocation_pct": "15",
+          "stop_loss_price": "72.00"
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "量价配合良好（涨跌幅4.23%+量比0.92），技术面改善（MACD负转弱+布林带突破），新闻正面（乌干达油田发现）且无缩量回调风险",
+          "allocation_pct": "12",
+          "stop_loss_price": "4.50"
         }
       ],
       "sell": []
