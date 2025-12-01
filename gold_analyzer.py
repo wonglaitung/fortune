@@ -29,9 +29,7 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
-# 导入大模型服务
-from llm_services import qwen_engine
-LLM_AVAILABLE = True
+LLM_AVAILABLE = False
 
 class GoldDataCollector:
     def __init__(self):
@@ -315,131 +313,12 @@ class GoldTechnicalAnalyzer:
         else:
             return "数据不足"
 
-class GoldLLMAnalyzer:
-    def __init__(self):
-        self.llm_available = LLM_AVAILABLE
-        
-    def build_analysis_prompt(self, gold_data, technical_data, macro_data):
-        """构建大模型分析提示"""
-        if not self.llm_available:
-            return None
-            
-        # 构建黄金数据摘要
-        gold_summary = self._format_gold_summary(gold_data)
-        tech_summary = self._format_technical_summary(technical_data)
-        macro_summary = self._format_macro_summary(macro_data)
-        
-        prompt = f"""
-你是一位专业的黄金投资分析师，请根据以下数据对黄金市场进行全面分析：
 
-【黄金市场概况】
-{gold_summary}
-
-【技术面分析】
-{tech_summary}
-
-【宏观经济环境】
-{macro_summary}
-
-请从以下几个维度进行专业分析：
-
-1. **当前黄金价格趋势分析**
-   - 短期（1-2周）、中期（1-3个月）、长期（6个月以上）趋势
-   - 价格波动性和风险评估
-
-2. **技术面信号解读**
-   - 关键技术指标（RSI、MACD、均线）状态
-   - 支撑位和阻力位分析
-   - 买卖信号判断
-
-3. **宏观经济因素影响**
-   - 美元指数对黄金的影响
-   - 美债收益率与黄金关系
-   - 原油价格对通胀预期的影响
-   - 市场恐慌情绪（VIX）对避险需求的影响
-
-4. **投资建议**
-   - 短期（1-4周）操作建议
-   - 中期（1-3个月）策略建议
-   - 长期（6个月以上）配置建议
-   - 仓位管理和风险控制建议
-
-5. **风险预警**
-   - 需要关注的关键风险因素
-   - 可能影响黄金价格的重大事件
-
-请用中文回答，格式清晰易读，给出明确但谨慎的投资建议。避免过于绝对的预测，重点分析当前市场状况和可能的发展方向。
-
-请严格按照以下JSON格式输出：
-{{
-    "trend_analysis": "趋势分析内容",
-    "technical_signals": "技术信号解读",
-    "macro_impact": "宏观经济影响分析",
-    "investment_advice": {{
-        "short_term": "短期建议",
-        "medium_term": "中期建议",
-        "long_term": "长期建议"
-    }},
-    "risk_warning": "风险预警"
-}}
-"""
-        
-        return prompt
-    
-    def _format_gold_summary(self, data):
-        """格式化黄金数据摘要"""
-        summary = ""
-        for symbol, info in data.items():
-            if not info['data'].empty:
-                latest = info['data'].iloc[-1]
-                name = info['name']
-                # 检查是否存在价格变化列
-                if 'Price_change_1d' in latest:
-                    summary += f"- {name} ({symbol}): ${latest['Close']:.2f} (24h: {latest['Price_change_1d']*100:.2f}%)\n"
-                else:
-                    summary += f"- {name} ({symbol}): ${latest['Close']:.2f}\n"
-        return summary or "暂无数据"
-        
-    def _format_technical_summary(self, data):
-        """格式化技术数据摘要"""
-        summary = ""
-        for symbol, info in data.items():
-            if 'indicators' in info and not info['indicators'].empty:
-                latest = info['indicators'].iloc[-1]
-                name = info.get('name', symbol)
-                summary += f"- {name}: RSI={latest['RSI']:.1f}, MACD={latest['MACD']:.2f}, 20日均线=${latest['MA20']:.2f}\n"
-        return summary or "暂无数据"
-        
-    def _format_macro_summary(self, data):
-        """格式化宏观数据摘要"""
-        summary = ""
-        for symbol, info in data.items():
-            if not info['data'].empty:
-                latest = info['data'].iloc[-1]
-                name = info['name']
-                if 'Close' in latest:
-                    summary += f"- {name} ({symbol}): {latest['Close']:.2f}\n"
-        return summary or "暂无数据"
-    
-    def analyze_gold_market(self, prompt):
-        """调用大模型进行黄金市场分析"""
-        if not self.llm_available or not prompt:
-            return None
-            
-        try:
-            print("🤖 正在调用大模型进行深度分析...")
-            analysis = qwen_engine.chat_with_llm(prompt)
-            print("✅ 大模型分析完成")
-            return analysis
-        except Exception as e:
-            print(f"❌ 大模型分析失败: {e}")
-            return None
 
 class GoldMarketAnalyzer:
     def __init__(self):
         self.collector = GoldDataCollector()
         self.tech_analyzer = GoldTechnicalAnalyzer()
-        self.llm_analyzer = GoldLLMAnalyzer()
         
     def run_comprehensive_analysis(self, period="3mo"):
         """运行综合分析"""
@@ -473,26 +352,18 @@ class GoldMarketAnalyzer:
                 'trend': trend
             }
         
-        # 3. 大模型分析
-        llm_analysis = None
-        if self.llm_analyzer.llm_available:
-            prompt = self.llm_analyzer.build_analysis_prompt(
-                gold_data, technical_analysis, macro_data
-            )
-            if prompt:
-                llm_analysis = self.llm_analyzer.analyze_gold_market(prompt)
+        
         
         # 4. 生成报告
-        self._generate_report(gold_data, technical_analysis, macro_data, llm_analysis)
+        self._generate_report(gold_data, technical_analysis, macro_data, None)
         
         # 5. 发送邮件报告
-        self.send_email_report(gold_data, technical_analysis, macro_data, llm_analysis)
+        self.send_email_report(gold_data, technical_analysis, macro_data, None)
         
         return {
             'gold_data': gold_data,
             'technical_analysis': technical_analysis,
-            'macro_data': macro_data,
-            'llm_analysis': llm_analysis
+            'macro_data': macro_data
         }
     
     def _generate_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
@@ -583,114 +454,7 @@ class GoldMarketAnalyzer:
                     print(f"{data['name']} ({symbol}): {latest['Close']:.2f}")
         print()
         
-        # 4. 大模型分析
-        if llm_analysis:
-            print("\n🤖 大模型深度分析:")
-            print("-" * 30)
-            try:
-                # 尝试解析JSON格式的输出
-                import json
-                analysis_json = json.loads(llm_analysis)
-                
-                # 趋势分析
-                trend_analysis = analysis_json.get('trend_analysis', 'N/A')
-                if trend_analysis != 'N/A':
-                    print("📈 趋势分析:")
-                    # 格式化输出，每行不超过80个字符
-                    lines = []
-                    for i in range(0, len(trend_analysis), 80):
-                        lines.append(trend_analysis[i:i+80])
-                    for line in lines:
-                        print(f"   {line}")
-                    print()
-                
-                # 技术信号
-                technical_signals = analysis_json.get('technical_signals', 'N/A')
-                if technical_signals != 'N/A':
-                    print("📊 技术信号:")
-                    # 格式化输出，每行不超过80个字符
-                    lines = []
-                    for i in range(0, len(technical_signals), 80):
-                        lines.append(technical_signals[i:i+80])
-                    for line in lines:
-                        print(f"   {line}")
-                    print()
-                
-                # 宏观影响
-                macro_impact = analysis_json.get('macro_impact', 'N/A')
-                if macro_impact != 'N/A':
-                    print("💼 宏观影响:")
-                    # 格式化输出，每行不超过80个字符
-                    lines = []
-                    for i in range(0, len(macro_impact), 80):
-                        lines.append(macro_impact[i:i+80])
-                    for line in lines:
-                        print(f"   {line}")
-                    print()
-                
-                # 投资建议
-                advice = analysis_json.get('investment_advice', {})
-                short_term = advice.get('short_term', 'N/A')
-                medium_term = advice.get('medium_term', 'N/A')
-                long_term = advice.get('long_term', 'N/A')
-                
-                if short_term != 'N/A' or medium_term != 'N/A' or long_term != 'N/A':
-                    print("💡 投资建议:")
-                    if short_term != 'N/A':
-                        print("   📌 短期:")
-                        # 格式化输出，每行不超过75个字符
-                        lines = []
-                        for i in range(0, len(short_term), 75):
-                            lines.append(short_term[i:i+75])
-                        for line in lines:
-                            print(f"      {line}")
-                    if medium_term != 'N/A':
-                        print("   📌 中期:")
-                        # 格式化输出，每行不超过75个字符
-                        lines = []
-                        for i in range(0, len(medium_term), 75):
-                            lines.append(medium_term[i:i+75])
-                        for line in lines:
-                            print(f"      {line}")
-                    if long_term != 'N/A':
-                        print("   📌 长期:")
-                        # 格式化输出，每行不超过75个字符
-                        lines = []
-                        for i in range(0, len(long_term), 75):
-                            lines.append(long_term[i:i+75])
-                        for line in lines:
-                            print(f"      {line}")
-                    print()
-                
-                # 风险预警
-                risk_warning = analysis_json.get('risk_warning', 'N/A')
-                if risk_warning != 'N/A':
-                    print("⚠️ 风险预警:")
-                    # 格式化输出，每行不超过80个字符
-                    lines = []
-                    for i in range(0, len(risk_warning), 80):
-                        lines.append(risk_warning[i:i+80])
-                    for line in lines:
-                        print(f"   {line}")
-                    print()
-            except json.JSONDecodeError:
-                # 如果不是JSON格式，直接输出
-                print("分析结果:")
-                # 格式化输出，每行不超过80个字符
-                lines = []
-                for i in range(0, len(llm_analysis), 80):
-                    lines.append(llm_analysis[i:i+80])
-                for line in lines:
-                    print(f"   {line}")
-                print()
-            except Exception as e:
-                print(f"   分析内容解析失败: {e}")
-                print(f"   原始内容: {llm_analysis}")
-                print()
-        else:
-            print("\n⚠️ 大模型分析暂不可用")
-            print("   请检查大模型服务配置或API密钥")
-            print()
+        
     
     def send_email_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
         """发送邮件报告"""
@@ -913,133 +677,7 @@ class GoldMarketAnalyzer:
                 </div>
             """
             
-            # 4. 大模型分析
-            if llm_analysis:
-                html_body += """
-                    <div class="section">
-                        <h3>🤖 大模型深度分析</h3>
-                        <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px;">
-                """
-                
-                try:
-                    # 尝试解析JSON格式的输出
-                    analysis_json = json.loads(llm_analysis)
-                    
-                    # 趋势分析
-                    trend_analysis = analysis_json.get('trend_analysis', 'N/A')
-                    if trend_analysis != 'N/A':
-                        trend_analysis_html = trend_analysis.replace('\n', '<br>').replace('。', '。<br>')
-                    html_body += f"""
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 5px;">📈 趋势分析</h4>
-                            <div style="background-color: #ffffff; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                                {trend_analysis_html}
-                            </div>
-                        </div>
-                        """
-                    
-                    # 技术信号
-                    technical_signals = analysis_json.get('technical_signals', 'N/A')
-                    if technical_signals != 'N/A':
-                        technical_signals_html = technical_signals.replace('\n', '<br>').replace('。', '。<br>')
-                    html_body += f"""
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 5px;">📊 技术信号</h4>
-                            <div style="background-color: #ffffff; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                                {technical_signals_html}
-                            </div>
-                        </div>
-                        """
-                    
-                    # 宏观影响
-                    macro_impact = analysis_json.get('macro_impact', 'N/A')
-                    if macro_impact != 'N/A':
-                        macro_impact_html = macro_impact.replace('\n', '<br>').replace('。', '。<br>')
-                    html_body += f"""
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 5px;">💼 宏观影响</h4>
-                            <div style="background-color: #ffffff; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                                {macro_impact_html}
-                            </div>
-                        </div>
-                        """
-                    
-                    # 投资建议
-                    advice = analysis_json.get('investment_advice', {})
-                    short_term = advice.get('short_term', 'N/A')
-                    medium_term = advice.get('medium_term', 'N/A')
-                    long_term = advice.get('long_term', 'N/A')
-                    
-                    if short_term != 'N/A' or medium_term != 'N/A' or long_term != 'N/A':
-                        html_body += """
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 5px;">💡 投资建议</h4>
-                            <div style="background-color: #ffffff; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                        """
-                        if short_term != 'N/A':
-                            short_term_html = short_term.replace('\n', '<br>').replace('。', '。<br>')
-                            html_body += f"""
-                            <div style="margin: 5px 0;">
-                                <strong>📌 短期:</strong><br>
-                                <span>{short_term_html}</span>
-                            </div>
-                            """
-                        if medium_term != 'N/A':
-                            medium_term_html = medium_term.replace('\n', '<br>').replace('。', '。<br>')
-                            html_body += f"""
-                            <div style="margin: 5px 0;">
-                                <strong>📌 中期:</strong><br>
-                                <span>{medium_term_html}</span>
-                            </div>
-                            """
-                        if long_term != 'N/A':
-                            long_term_html = long_term.replace('\n', '<br>').replace('。', '。<br>')
-                            html_body += f"""
-                            <div style="margin: 5px 0;">
-                                <strong>📌 长期:</strong><br>
-                                <span>{long_term_html}</span>
-                            </div>
-                            """
-                        html_body += """
-                            </div>
-                        </div>
-                        """
-                    
-                    # 风险预警
-                    risk_warning = analysis_json.get('risk_warning', 'N/A')
-                    if risk_warning != 'N/A':
-                        risk_warning_html = risk_warning.replace('\n', '<br>').replace('。', '。<br>')
-                    html_body += f"""
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #333; margin-bottom: 5px;">⚠️ 风险预警</h4>
-                            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                                {risk_warning_html}
-                            </div>
-                        </div>
-                        """
-                except json.JSONDecodeError:
-                    # 如果不是JSON格式，直接输出并格式化
-                    formatted_output = llm_analysis.replace('\n', '<br>').replace('\\n', '<br>')
-                    html_body += """
-                        <div style="background-color: #ffffff; padding: 10px; border-radius: 3px; margin: 5px 0;">
-                            {}
-                        </div>
-                    """.format(formatted_output)
-                except Exception as e:
-                    html_body += f"<p>分析内容解析失败: {e}</p>"
-                    html_body += f"<p>原始内容: {llm_analysis}</p>"
-                
-                html_body += """
-                        </div>
-                    </div>
-                """
-            else:
-                html_body += """
-                    <div class="section">
-                        <h3>🤖 大模型深度分析</h3>
-                        <p style="color: #888;">⚠️ 大模型分析暂不可用<br>请检查大模型服务配置或API密钥</p>
-                    </div>
-                """
+            
             
             # 添加指标说明
             html_body += """
@@ -1112,111 +750,7 @@ class GoldMarketAnalyzer:
                             for signal in sell_signals:
                                 text_body += f"    {signal['date']}: {signal['description']}\n"
             
-            # 添加大模型分析到文本版本
-            if llm_analysis:
-                text_body += "\n🤖 大模型深度分析:\n"
-                text_body += "=" * 30 + "\n"
-                try:
-                    # 尝试解析JSON格式的输出
-                    analysis_json = json.loads(llm_analysis)
-                    
-                    # 趋势分析
-                    trend_analysis = analysis_json.get('trend_analysis', 'N/A')
-                    if trend_analysis != 'N/A':
-                        text_body += "📈 趋势分析:\n"
-                        # 格式化输出，每行不超过70个字符
-                        lines = []
-                        for i in range(0, len(trend_analysis), 70):
-                            lines.append(trend_analysis[i:i+70])
-                        for line in lines:
-                            text_body += f"  {line}\n"
-                        text_body += "\n"
-                    
-                    # 技术信号
-                    technical_signals = analysis_json.get('technical_signals', 'N/A')
-                    if technical_signals != 'N/A':
-                        text_body += "📊 技术信号:\n"
-                        # 格式化输出，每行不超过70个字符
-                        lines = []
-                        for i in range(0, len(technical_signals), 70):
-                            lines.append(technical_signals[i:i+70])
-                        for line in lines:
-                            text_body += f"  {line}\n"
-                        text_body += "\n"
-                    
-                    # 宏观影响
-                    macro_impact = analysis_json.get('macro_impact', 'N/A')
-                    if macro_impact != 'N/A':
-                        text_body += "💼 宏观影响:\n"
-                        # 格式化输出，每行不超过70个字符
-                        lines = []
-                        for i in range(0, len(macro_impact), 70):
-                            lines.append(macro_impact[i:i+70])
-                        for line in lines:
-                            text_body += f"  {line}\n"
-                        text_body += "\n"
-                    
-                    # 投资建议
-                    advice = analysis_json.get('investment_advice', {})
-                    short_term = advice.get('short_term', 'N/A')
-                    medium_term = advice.get('medium_term', 'N/A')
-                    long_term = advice.get('long_term', 'N/A')
-                    
-                    if short_term != 'N/A' or medium_term != 'N/A' or long_term != 'N/A':
-                        text_body += "💡 投资建议:\n"
-                        if short_term != 'N/A':
-                            text_body += "  📌 短期:\n"
-                            # 格式化输出，每行不超过65个字符
-                            lines = []
-                            for i in range(0, len(short_term), 65):
-                                lines.append(short_term[i:i+65])
-                            for line in lines:
-                                text_body += f"    {line}\n"
-                        if medium_term != 'N/A':
-                            text_body += "  📌 中期:\n"
-                            # 格式化输出，每行不超过65个字符
-                            lines = []
-                            for i in range(0, len(medium_term), 65):
-                                lines.append(medium_term[i:i+65])
-                            for line in lines:
-                                text_body += f"    {line}\n"
-                        if long_term != 'N/A':
-                            text_body += "  📌 长期:\n"
-                            # 格式化输出，每行不超过65个字符
-                            lines = []
-                            for i in range(0, len(long_term), 65):
-                                lines.append(long_term[i:i+65])
-                            for line in lines:
-                                text_body += f"    {line}\n"
-                        text_body += "\n"
-                    
-                    # 风险预警
-                    risk_warning = analysis_json.get('risk_warning', 'N/A')
-                    if risk_warning != 'N/A':
-                        text_body += "⚠️ 风险预警:\n"
-                        # 格式化输出，每行不超过70个字符
-                        lines = []
-                        for i in range(0, len(risk_warning), 70):
-                            lines.append(risk_warning[i:i+70])
-                        for line in lines:
-                            text_body += f"  {line}\n"
-                        text_body += "\n"
-                except json.JSONDecodeError:
-                    # 如果不是JSON格式，直接输出
-                    text_body += "分析结果:\n"
-                    # 格式化输出，每行不超过70个字符
-                    lines = []
-                    for i in range(0, len(llm_analysis), 70):
-                        lines.append(llm_analysis[i:i+70])
-                    for line in lines:
-                        text_body += f"  {line}\n"
-                    text_body += "\n"
-                except Exception as e:
-                    text_body += f"分析内容解析失败: {e}\n"
-                    text_body += f"原始内容: {llm_analysis}\n\n"
-            else:
-                text_body += "\n⚠️ 大模型分析暂不可用\n"
-                text_body += "请检查大模型服务配置或API密钥\n\n"
+            
             
             # 添加指标说明到文本版本
             text_body += "\n📋 指标说明:\n"
