@@ -40,8 +40,8 @@ jobs:
 
       - name: Configure git and commit changes
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'wonglaitung'
+          git config --global user.email 'wonglaitung@gmail.com'
           git add data/all_stock_news_records.csv
           if ! git diff --cached --quiet; then
             git commit -m "Update stock news records [skip ci]"
