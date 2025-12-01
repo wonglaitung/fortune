@@ -1112,13 +1112,17 @@ class SimulationTrader:
                     # 没有持仓，无法卖出，发送邮件通知
                     self.log_message(f"未持有 {name} ({code})，无法按大模型建议卖出")
                     # 发送无法卖出通知邮件
-                    self.send_trading_notification(
+                    success = self.send_trading_notification(
                         notification_type="cannot_sell",
                         code=code,
                         name=name,
                         reason=reason,
                         stop_loss_triggered=stop_loss_triggered
                     )
+                    if success:
+                        self.log_message(f"已发送无法卖出通知邮件: {name} ({code})")
+                    else:
+                        self.log_message(f"发送无法卖出通知邮件失败: {name} ({code})")
                 else:
                     # 卖出全部持仓
                     sell_pct = 1.0
@@ -1522,11 +1526,15 @@ class SimulationTrader:
         if code not in self.positions:
             self.log_message(f"未持有 {name} ({code})，无法卖出")
             # 发送无法卖出通知邮件
-            self.send_trading_notification(
+            success = self.send_trading_notification(
                 notification_type="manual_cannot_sell",
                 code=code,
                 name=name
             )
+            if success:
+                self.log_message(f"已发送手工无法卖出通知邮件: {name} ({code})")
+            else:
+                self.log_message(f"发送手工无法卖出通知邮件失败: {name} ({code})")
             return False
         
         return self.sell_stock(code, name, percentage, None)
