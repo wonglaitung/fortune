@@ -610,17 +610,62 @@ class SimulationTrader:
         # 检查是否在交易时间
         if not self.is_trading_hours:
             self.log_message(f"非交易时间，跳过买入 {name} ({code})")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'BUY',
+                'code': code,
+                'name': name,
+                'shares': shares,
+                'price': price_at_calculation if price_at_calculation is not None else 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 检查股数是否为0
         if shares <= 0:
             self.log_message(f"买入股数为0或负数，跳过买入 {name} ({code})")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'BUY',
+                'code': code,
+                'name': name,
+                'shares': shares,
+                'price': price_at_calculation if price_at_calculation is not None else 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 获取当前价格（如果提供了计算时的价格，则使用计算时的价格）
         current_price = price_at_calculation if price_at_calculation is not None else self.get_current_stock_price(code)
         if current_price is None:
             self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过买入")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'BUY',
+                'code': code,
+                'name': name,
+                'shares': shares,
+                'price': 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 计算实际投资金额
@@ -629,6 +674,22 @@ class SimulationTrader:
         # 检查是否有足够资金
         if actual_invest > self.capital:
             self.log_message(f"资金不足买入 {shares} 股 {name} ({code})，需要 HK${actual_invest:.2f}，当前资金 HK${self.capital:.2f}")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'BUY',
+                'code': code,
+                'name': name,
+                'shares': shares,
+                'price': current_price,
+                'amount': actual_invest,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
+            
             # 返回一个特殊值来表示资金不足
             return "insufficient_funds"
             
@@ -680,7 +741,8 @@ class SimulationTrader:
             'price': current_price,
             'amount': actual_invest,
             'capital_after': self.capital,
-            'reason': reason if reason else '未提供理由'
+            'reason': reason if reason else '未提供理由',
+            'success': True  # 交易成功
         }
         self.transaction_history.append(transaction)
         
@@ -694,7 +756,8 @@ class SimulationTrader:
             'price': current_price,
             'amount': actual_invest,
             'reason': reason,
-            'capital_after': self.capital
+            'capital_after': self.capital,
+            'success': True  # 交易成功
         }
         self.decision_history.append(trade_record)
         
@@ -734,11 +797,41 @@ class SimulationTrader:
         # 检查是否在交易时间
         if not self.is_trading_hours:
             self.log_message(f"非交易时间，跳过卖出 {name} ({code})")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'SELL',
+                'code': code,
+                'name': name,
+                'shares': int(self.positions.get(code, {}).get('shares', 0) * percentage) if code in self.positions else 0,
+                'price': 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 检查是否有持仓
         if code not in self.positions:
             self.log_message(f"未持有 {name} ({code})，无法卖出")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'SELL',
+                'code': code,
+                'name': name,
+                'shares': 0,
+                'price': 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         position = self.positions[code]
@@ -746,12 +839,42 @@ class SimulationTrader:
         current_price = self.get_current_stock_price(code)
         if current_price is None:
             self.log_message(f"无法获取 {name} ({code}) 的当前价格，跳过卖出")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'SELL',
+                'code': code,
+                'name': name,
+                'shares': int(self.positions.get(code, {}).get('shares', 0) * percentage),
+                'price': 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 计算卖出股数
         shares_to_sell = int(position['shares'] * percentage)
         if shares_to_sell <= 0:
             self.log_message(f"卖出股数为0，跳过卖出 {name} ({code})")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'SELL',
+                'code': code,
+                'name': name,
+                'shares': 0,
+                'price': current_price,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': reason if reason else '未提供理由',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
             return False
             
         # 计算卖出金额
@@ -778,7 +901,8 @@ class SimulationTrader:
             'price': current_price,
             'amount': sell_amount,
             'capital_after': self.capital,
-            'reason': reason if reason else '未提供理由'
+            'reason': reason if reason else '未提供理由',
+            'success': True  # 交易成功
         }
         self.transaction_history.append(transaction)
         
@@ -793,7 +917,8 @@ class SimulationTrader:
             'amount': sell_amount,
             'reason': reason,
             'profit_loss': profit_loss,
-            'capital_after': self.capital
+            'capital_after': self.capital,
+            'success': True  # 交易成功
         }
         self.decision_history.append(trade_record)
         
@@ -1525,6 +1650,22 @@ class SimulationTrader:
         # 检查是否有持仓
         if code not in self.positions:
             self.log_message(f"未持有 {name} ({code})，无法卖出")
+            
+            # 记录失败的交易
+            transaction = {
+                'timestamp': datetime.now().isoformat(),
+                'type': 'SELL',
+                'code': code,
+                'name': name,
+                'shares': 0,
+                'price': 0,
+                'amount': 0,
+                'capital_after': self.capital,
+                'reason': '手工卖出指令',
+                'success': False  # 交易失败
+            }
+            self.transaction_history.append(transaction)
+            
             # 发送无法卖出通知邮件
             success = self.send_trading_notification(
                 notification_type="manual_cannot_sell",
