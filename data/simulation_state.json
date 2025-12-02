@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 282.18929405207746,
+  "capital": 82.18929405207746,
   "positions": {
     "2269.HK": {
       "shares": 15100,
@@ -17,15 +17,15 @@
       "avg_price": 21.22,
       "stop_loss_price": 20.0
     },
-    "1138.HK": {
-      "shares": 13600,
-      "avg_price": 10.39,
-      "stop_loss_price": 9.9
-    },
     "1288.HK": {
       "shares": 9400,
       "avg_price": 5.85,
       "stop_loss_price": 5.65
+    },
+    "0728.HK": {
+      "shares": 22400,
+      "avg_price": 6.05,
+      "stop_loss_price": 5.85
     }
   },
   "transaction_history": [
@@ -5700,6 +5700,30 @@
       "amount": 135000.0,
       "capital_after": 885000.0,
       "reason": "达到目标盈利点位"
+    },
+    {
+      "timestamp": "2025-12-02T13:09:45.851854",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 13600,
+      "price": 9.95,
+      "amount": 135320.0,
+      "capital_after": 135602.18929405208,
+      "reason": "单日暴跌8.29%显示趋势恶化，油价波动与电池警报新闻加剧不确定性，资金信号矛盾需规避高波动风险",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02T13:09:48.223653",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 22400,
+      "price": 6.05,
+      "amount": 135520.0,
+      "capital_after": 82.18929405207746,
+      "reason": "南向资金流出但CMF趋势信号确认主力布局5G/AI，技术面高位突破动能强劲，新闻驱动算力业务增长预期，相对强度6.09显著跑赢恒指",
+      "success": true
     }
   ],
   "portfolio_history": [
@@ -12916,7 +12940,7 @@
           "stop_loss_price": 20.0
         },
         "1138.HK": {
-          "shares": 13600,
+          "shares": 0,
           "avg_price": 10.39,
           "stop_loss_price": 9.9
         },
@@ -12948,7 +12972,7 @@
           "stop_loss_price": 20.0
         },
         "1138.HK": {
-          "shares": 13600,
+          "shares": 0,
           "avg_price": 10.39,
           "stop_loss_price": 9.9
         },
@@ -12958,63 +12982,41 @@
           "stop_loss_price": 5.65
         }
       }
+    },
+    {
+      "timestamp": "2025-12-02T13:09:56.690435",
+      "capital": 82.18929405207746,
+      "portfolio_value": 940036.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        },
+        "0728.HK": {
+          "shares": 22400,
+          "avg_price": 6.05,
+          "stop_loss_price": 5.85
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2025-12-01 09:53:27",
-      "buy": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "资金信号可靠（CMF趋势信号=1，缩量回调），技术面低位（位置13.15%）且MACD转强，新闻面获创始人买入1亿港元强化信心，相对强度显著跑赢恒指",
-          "allocation_pct": "15%",
-          "stop_loss_price": "38.5"
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "新闻强正面驱动（云业务增长及AI需求加速），技术面中位稳健（RSI 48.17）且相对强度高，资金面CMF趋势信号=1，估值修复潜力大",
-          "allocation_pct": "15%",
-          "stop_loss_price": "145"
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术面超卖（位置8.61%，RSI 41.28），新闻确认记录利润及IPO活跃，估值折让18%，安全边际高且受益于中概股回流预期",
-          "allocation_pct": "12%",
-          "stop_loss_price": "400"
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-01 10:53:39",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "主力资金持续流入（南向资金+5.97万），相对强度差值+5.80%显著跑赢恒指，布林带突破信号与中性RSI协同，5G及云业务增长提供基本面支撑",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.19
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "布林带突破信号与中性RSI（48.28）形成有效突破，云业务增长及AI需求加速获Benchmark上调评级，MACD负值收窄显示下行压力减弱",
-          "allocation_pct": 15,
-          "stop_loss_price": 74.4
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "超卖区域（位置5.74%）出现布林带突破信号，Q3创纪录利润且估值折让18%，VWAP支撑位明确（422.84>现价412.0）",
-          "allocation_pct": 10,
-          "stop_loss_price": 383.2
-        }
-      ],
-      "sell": []
-    },
     {
       "timestamp": "2025-12-01 11:15:06",
       "buy": [
@@ -13216,6 +13218,70 @@
         }
       ],
       "sell": []
+    },
+    {
+      "timestamp": "2025-12-02 11:42:16",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-02 13:09:45",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "南向资金流出但CMF趋势信号确认主力布局5G/AI，技术面高位突破动能强劲，新闻驱动算力业务增长预期，相对强度6.09显著跑赢恒指",
+          "allocation_pct": "15",
+          "stop_loss_price": "5.85"
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "南向资金大流入50.90亿港元验证主力介入，随机振荡器金叉与AI眼镜发布形成技术面与新闻共振，位置中位提供上行空间",
+          "allocation_pct": "15",
+          "stop_loss_price": "150.00"
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "南向资金流入44.91亿港元显示低位布局，MACD动能拐点与高insider ownership新闻形成安全边际，布林带下轨提供弹性空间",
+          "allocation_pct": "10",
+          "stop_loss_price": "7.50"
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "单日暴跌8.29%显示趋势恶化，油价波动与电池警报新闻加剧不确定性，资金信号矛盾需规避高波动风险",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-02 13:09:45",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 13600,
+      "price": 9.95,
+      "amount": 135320.0,
+      "reason": "单日暴跌8.29%显示趋势恶化，油价波动与电池警报新闻加剧不确定性，资金信号矛盾需规避高波动风险",
+      "profit_loss": -5984.000000000017,
+      "capital_after": 135602.18929405208,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02 13:09:48",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 22400,
+      "price": 6.05,
+      "amount": 135520.0,
+      "reason": "南向资金流出但CMF趋势信号确认主力布局5G/AI，技术面高位突破动能强劲，新闻驱动算力业务增长预期，相对强度6.09显著跑赢恒指",
+      "capital_after": 82.18929405207746,
+      "success": true
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
