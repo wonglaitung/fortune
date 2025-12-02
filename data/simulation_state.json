@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 371.18929405207564,
+  "capital": 11.189294052077457,
   "positions": {
     "2269.HK": {
       "shares": 15100,
@@ -22,11 +22,6 @@
       "avg_price": 5.85,
       "stop_loss_price": 5.65
     },
-    "3968.HK": {
-      "shares": 2100,
-      "avg_price": 52.6,
-      "stop_loss_price": 50.0
-    },
     "9988.HK": {
       "shares": 100,
       "avg_price": 157.8,
@@ -36,6 +31,11 @@
       "shares": 1100,
       "avg_price": 7.97,
       "stop_loss_price": 7.5
+    },
+    "0728.HK": {
+      "shares": 18300,
+      "avg_price": 6.05,
+      "stop_loss_price": 5.75
     }
   },
   "transaction_history": [
@@ -5781,6 +5781,30 @@
       "amount": 8767.0,
       "capital_after": 371.18929405207564,
       "reason": "位置低位（19.61%），资金流入爆发（南向资金净流入4.40亿港元），自动驾驶新闻利好，短期目标+7.1%，高增长潜力但风险可控",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02T15:00:56.341424",
+      "type": "SELL",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 2100,
+      "price": 52.55,
+      "amount": 110355.0,
+      "capital_after": 110726.18929405208,
+      "reason": "位置高位（97.26%）上涨动能衰竭，10日均线偏离仅0.75%且买入价52.60港元高于报告建议介入价51.50港元，释放资金配置更高确定性核心标的以优化仓位结构",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02T15:01:01.524076",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 18300,
+      "price": 6.05,
+      "amount": 110715.0,
+      "capital_after": 11.189294052077457,
+      "reason": "资金面南向资金当日净流入最高（+6.28万港元），技术面突破高位RSI强势（69.06未超买）且MACD柱状图加速上行，新闻催化Nvidia竞争对标强化AI业务预期，短期目标价+7.4%具备高确定性",
       "success": true
     }
   ],
@@ -13114,137 +13138,88 @@
           "stop_loss_price": 7.5
         }
       }
+    },
+    {
+      "timestamp": "2025-12-02T15:00:57.138442",
+      "capital": 110726.18929405208,
+      "portfolio_value": 940418.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        },
+        "9988.HK": {
+          "shares": 100,
+          "avg_price": 157.8,
+          "stop_loss_price": 150.0
+        },
+        "9660.HK": {
+          "shares": 1100,
+          "avg_price": 7.97,
+          "stop_loss_price": 7.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-02T15:01:02.337795",
+      "capital": 11.189294052077457,
+      "portfolio_value": 940428.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        },
+        "9988.HK": {
+          "shares": 100,
+          "avg_price": 157.8,
+          "stop_loss_price": 150.0
+        },
+        "9660.HK": {
+          "shares": 1100,
+          "avg_price": 7.97,
+          "stop_loss_price": 7.5
+        },
+        "0728.HK": {
+          "shares": 18300,
+          "avg_price": 6.05,
+          "stop_loss_price": 5.75
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2025-12-01 14:06:26",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "资金流入显著（OBV+360M、CMF+0.0536）、技术面健康（位置47.38%中位、放量上涨）、新闻正面（云业务增长+AI需求催化）、跑赢恒指+3.49%，AI与云计算主题领涨，平衡成长与价值",
-          "allocation_pct": 15,
-          "stop_loss_price": 148.0
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "缩量回调提供安全边际、高股息率~7%、PB 0.5x低估，防御属性强，受益经济稳增长政策，技术面抛压衰竭（RSI 53.17中性），适合平衡型投资者稳健配置",
-          "allocation_pct": 10,
-          "stop_loss_price": 8.0
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "能源安全主题催化（航运旺季+地缘事件）、资金流入健康（OBV+474M、量比0.75）、技术面突破中轨（布林带突破0.56），独立行情显著，短期成长潜力与风险平衡",
-          "allocation_pct": 8,
-          "stop_loss_price": 10.4
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-01 15:09:45",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "资金流入可靠（CMF趋势信号=1），技术面多指标共振上涨（放量上涨信号=1、RSI健康、MACD柱状图仍为正），云业务增长与AI需求新闻支撑估值修复",
-          "allocation_pct": "15%",
-          "stop_loss_price": 148.0
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "低位放量上涨（位置23.53%、OBV+7.76亿资金流入），技术面动能加速（MACD柱状图变化率+3.1917），AI芯片需求爆发低估，存在预期差",
-          "allocation_pct": "12%",
-          "stop_loss_price": 7.6
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "高股息5.2%提供安全边际，相对强度领先（差值+6.14%跑赢恒指），5G投资周期启动催化技术面强势通道",
-          "allocation_pct": "13%",
-          "stop_loss_price": 5.7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-01 15:37:41",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "资金持续流入（CMF趋势信号=1且OBV上升），技术指标多头共振（随机振荡器金叉、Williams %R超卖反弹），新闻强正面（云业务增长及$195目标价），相对强度2.83%跑赢恒指",
-          "allocation_pct": "15",
-          "stop_loss_price": "72.00"
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "量价配合良好（涨跌幅4.23%+量比0.92），技术面改善（MACD负转弱+布林带突破），新闻正面（乌干达油田发现）且无缩量回调风险",
-          "allocation_pct": "12",
-          "stop_loss_price": "4.50"
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-02 09:47:45",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "政策驱动5G建设加速，资金持续流入（CMF趋势信号=1），技术面多头共振（布林带突破信号=1），相对强度最高（5.74%）且估值安全",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.8
-        },
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "高股息稳定现金流（约4.5%），南向资金持续流入（连续3日CMF趋势信号=1），技术面强势低波动（布林带宽度9.62%）",
-          "allocation_pct": 15,
-          "stop_loss_price": 80.0
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "AI竞争受益放量上涨（量比0.17），成长潜力大（AI商业化落地），技术面加速上涨（MACD柱状图变化率+0.115）",
-          "allocation_pct": 15,
-          "stop_loss_price": 152.0
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-02 10:42:49",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "南向资金流入49.63亿港元，技术面多指标共振（位置中位、RSI健康、布林带突破），新闻情绪改善叠加估值低位，风险收益比优异",
-          "allocation_pct": "15%",
-          "stop_loss_price": 150.0
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "南向资金流入46.55亿港元，技术面低位超卖（位置19.89%、RSI接近超卖、MACD改善），新闻催化增长潜力与产业合作，提供高弹性机会",
-          "allocation_pct": "12%",
-          "stop_loss_price": 7.5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "南向资金流入129.10亿港元（清单最高），新闻催化乌干达油藏与圭亚那产量，股息率5.2%提供安全垫，技术面强势但位置高位需控制风险",
-          "allocation_pct": "13%",
-          "stop_loss_price": 21.0
-        }
-      ],
-      "sell": []
-    },
     {
       "timestamp": "2025-12-02 11:42:16",
       "buy": [],
@@ -13390,6 +13365,65 @@
       "amount": 8767.0,
       "reason": "位置低位（19.61%），资金流入爆发（南向资金净流入4.40亿港元），自动驾驶新闻利好，短期目标+7.1%，高增长潜力但风险可控",
       "capital_after": 371.18929405207564,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02 15:00:56",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "资金面南向资金当日净流入最高（+6.28万港元），技术面突破高位RSI强势（69.06未超买）且MACD柱状图加速上行，新闻催化Nvidia竞争对标强化AI业务预期，短期目标价+7.4%具备高确定性",
+          "allocation_pct": "15",
+          "stop_loss_price": "5.75"
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "位置低位（19.89%）资金大举流入（OBV +430,930,879.0），技术面MACD柱状图变化率+0.368金叉启动，新闻绑定Volkswagen自研芯片合作驱动成长，短期目标价+6.9%反弹窗口明确",
+          "allocation_pct": "15",
+          "stop_loss_price": "7.50"
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "技术面随机振荡器K/D金叉超卖反弹（112.28/72.22），新闻Quark AI眼镜发布催化AI商业化落地，估值处于近3年低位（PE 15x），短期目标价+5.1%风险收益比优化",
+          "allocation_pct": "15",
+          "stop_loss_price": "150.00"
+        }
+      ],
+      "sell": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "位置高位（97.26%）上涨动能衰竭，10日均线偏离仅0.75%且买入价52.60港元高于报告建议介入价51.50港元，释放资金配置更高确定性核心标的以优化仓位结构",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-02 15:00:56",
+      "type": "SELL",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 2100,
+      "price": 52.55,
+      "amount": 110355.0,
+      "reason": "位置高位（97.26%）上涨动能衰竭，10日均线偏离仅0.75%且买入价52.60港元高于报告建议介入价51.50港元，释放资金配置更高确定性核心标的以优化仓位结构",
+      "profit_loss": -105.00000000000895,
+      "capital_after": 110726.18929405208,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-02 15:01:01",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 18300,
+      "price": 6.05,
+      "amount": 110715.0,
+      "reason": "资金面南向资金当日净流入最高（+6.28万港元），技术面突破高位RSI强势（69.06未超买）且MACD柱状图加速上行，新闻催化Nvidia竞争对标强化AI业务预期，短期目标价+7.4%具备高确定性",
+      "capital_after": 11.189294052077457,
       "success": true
     }
   ],
