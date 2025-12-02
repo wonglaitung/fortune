@@ -12894,32 +12894,73 @@
           "stop_loss_price": 5.65
         }
       }
+    },
+    {
+      "timestamp": "2025-12-02T09:47:55.332606",
+      "capital": 282.18929405207746,
+      "portfolio_value": 946874.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1138.HK": {
+          "shares": 13600,
+          "avg_price": 10.39,
+          "stop_loss_price": 9.9
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-02T10:42:58.079651",
+      "capital": 282.18929405207746,
+      "portfolio_value": 946752.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 3300,
+          "avg_price": 21.22,
+          "stop_loss_price": 20.0
+        },
+        "1138.HK": {
+          "shares": 13600,
+          "avg_price": 10.39,
+          "stop_loss_price": 9.9
+        },
+        "1288.HK": {
+          "shares": 9400,
+          "avg_price": 5.85,
+          "stop_loss_price": 5.65
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2025-11-30 10:30:00",
-      "type": "BUY",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 100,
-      "price": 100.0,
-      "amount": 10000,
-      "reason": "技术指标显示买入信号",
-      "capital_after": 990000
-    },
-    {
-      "timestamp": "2025-11-30 14:30:00",
-      "type": "SELL",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 100,
-      "price": 105.0,
-      "amount": 10500,
-      "reason": "达到目标盈利点",
-      "profit_loss": 500,
-      "capital_after": 995000
-    },
     {
       "timestamp": "2025-12-01 09:53:27",
       "buy": [
@@ -13118,6 +13159,60 @@
           "reason": "量价配合良好（涨跌幅4.23%+量比0.92），技术面改善（MACD负转弱+布林带突破），新闻正面（乌干达油田发现）且无缩量回调风险",
           "allocation_pct": "12",
           "stop_loss_price": "4.50"
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-02 09:47:45",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "政策驱动5G建设加速，资金持续流入（CMF趋势信号=1），技术面多头共振（布林带突破信号=1），相对强度最高（5.74%）且估值安全",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.8
+        },
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "高股息稳定现金流（约4.5%），南向资金持续流入（连续3日CMF趋势信号=1），技术面强势低波动（布林带宽度9.62%）",
+          "allocation_pct": 15,
+          "stop_loss_price": 80.0
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "AI竞争受益放量上涨（量比0.17），成长潜力大（AI商业化落地），技术面加速上涨（MACD柱状图变化率+0.115）",
+          "allocation_pct": 15,
+          "stop_loss_price": 152.0
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-02 10:42:49",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "南向资金流入49.63亿港元，技术面多指标共振（位置中位、RSI健康、布林带突破），新闻情绪改善叠加估值低位，风险收益比优异",
+          "allocation_pct": "15%",
+          "stop_loss_price": 150.0
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "南向资金流入46.55亿港元，技术面低位超卖（位置19.89%、RSI接近超卖、MACD改善），新闻催化增长潜力与产业合作，提供高弹性机会",
+          "allocation_pct": "12%",
+          "stop_loss_price": 7.5
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "南向资金流入129.10亿港元（清单最高），新闻催化乌干达油藏与圭亚那产量，股息率5.2%提供安全垫，技术面强势但位置高位需控制风险",
+          "allocation_pct": "13%",
+          "stop_loss_price": 21.0
         }
       ],
       "sell": []
