@@ -625,6 +625,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         # 检查股数是否为0
@@ -645,6 +646,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         # 获取当前价格（如果提供了计算时的价格，则使用计算时的价格）
@@ -689,6 +691,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             
             # 返回一个特殊值来表示资金不足
             return "insufficient_funds"
@@ -745,6 +748,7 @@ class SimulationTrader:
             'success': True  # 交易成功
         }
         self.transaction_history.append(transaction)
+        self.save_transactions_to_csv()  # 立即保存到CSV
         
         # 将交易记录添加到决策历史中
         trade_record = {
@@ -765,8 +769,18 @@ class SimulationTrader:
         if len(self.decision_history) > 50:
             self.decision_history = self.decision_history[-50:]
         
+        # 记录投资组合价值
+        portfolio_value = self.get_portfolio_value()
+        self.portfolio_history.append({
+            'timestamp': datetime.now().isoformat(),
+            'capital': self.capital,
+            'portfolio_value': portfolio_value,
+            'positions': dict(self.positions)
+        })
+        
         # 保存状态
         self.save_state()
+        self.save_portfolio_to_csv()  # 立即保存投资组合历史到CSV
         
         self.log_message(f"买入 {shares} 股 {name} ({code}) @ HK${current_price:.2f}, 总金额: HK${actual_invest:.2f}")
         
@@ -812,6 +826,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         # 检查是否有持仓
@@ -832,6 +847,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         position = self.positions[code]
@@ -854,6 +870,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         # 计算卖出股数
@@ -875,6 +892,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             return False
             
         # 计算卖出金额
@@ -905,6 +923,7 @@ class SimulationTrader:
             'success': True  # 交易成功
         }
         self.transaction_history.append(transaction)
+        self.save_transactions_to_csv()  # 立即保存到CSV
         
         # 将交易记录添加到决策历史中
         trade_record = {
@@ -926,8 +945,18 @@ class SimulationTrader:
         if len(self.decision_history) > 50:
             self.decision_history = self.decision_history[-50:]
         
+        # 记录投资组合价值
+        portfolio_value = self.get_portfolio_value()
+        self.portfolio_history.append({
+            'timestamp': datetime.now().isoformat(),
+            'capital': self.capital,
+            'portfolio_value': portfolio_value,
+            'positions': dict(self.positions)
+        })
+        
         # 保存状态
         self.save_state()
+        self.save_portfolio_to_csv()  # 立即保存投资组合历史到CSV
         
         # 确定盈亏状态文本
         profit_loss_status = "盈利" if profit_loss >= 0 else "亏损"
@@ -1388,17 +1417,11 @@ class SimulationTrader:
         
         
                 
-        # 记录投资组合价值
-        portfolio_value = self.get_portfolio_value()
-        self.portfolio_history.append({
-            'timestamp': datetime.now().isoformat(),
-            'capital': self.capital,
-            'portfolio_value': portfolio_value,
-            'positions': dict(self.positions)
-        })
-        
         # 保存状态
         self.save_state()
+        
+        # 计算当前投资组合价值
+        portfolio_value = self.get_portfolio_value()
         
         # 记录当前状态
         self.log_message(f"当前资金: HK${self.capital:,.2f}")
@@ -1595,6 +1618,24 @@ class SimulationTrader:
         
         return positions_detail
     
+    def save_transactions_to_csv(self):
+        """将交易历史保存到CSV文件"""
+        try:
+            df_transactions = pd.DataFrame(self.transaction_history)
+            df_transactions.to_csv(os.path.join(self.data_dir, "simulation_transactions.csv"), index=False, encoding="utf-8")
+            # 不打印日志，避免重复输出
+        except Exception as e:
+            self.log_message(f"保存交易历史失败: {e}")
+    
+    def save_portfolio_to_csv(self):
+        """将投资组合历史保存到CSV文件"""
+        try:
+            df_portfolio = pd.DataFrame(self.portfolio_history)
+            df_portfolio.to_csv(os.path.join(self.data_dir, "simulation_portfolio.csv"), index=False, encoding="utf-8")
+            # 不打印日志，避免重复输出
+        except Exception as e:
+            self.log_message(f"保存投资组合历史失败: {e}")
+    
     def generate_final_report(self):
         """生成最终报告"""
         # 保存最终状态
@@ -1620,21 +1661,11 @@ class SimulationTrader:
         # 持仓情况
         self.log_message(f"最终持仓: {self.positions}")
         
-        # 保存交易历史到文件
-        try:
-            df_transactions = pd.DataFrame(self.transaction_history)
-            df_transactions.to_csv(os.path.join(self.data_dir, "simulation_transactions.csv"), index=False, encoding="utf-8")
-            self.log_message("交易历史已保存到 data/simulation_transactions.csv")
-        except Exception as e:
-            self.log_message(f"保存交易历史失败: {e}")
+        # 交易历史已在每次交易后保存，这里仅作最终确认
+        self.log_message("模拟交易系统最终报告生成完成")
             
-        # 保存投资组合历史到文件
-        try:
-            df_portfolio = pd.DataFrame(self.portfolio_history)
-            df_portfolio.to_csv(os.path.join(self.data_dir, "simulation_portfolio.csv"), index=False, encoding="utf-8")
-            self.log_message("投资组合历史已保存到 data/simulation_portfolio.csv")
-        except Exception as e:
-            self.log_message(f"保存投资组合历史失败: {e}")
+        # 投资组合历史已在每次交易后保存，这里仅作最终确认
+        self.log_message("投资组合历史已保存到 data/simulation_portfolio.csv")
 
     def manual_sell_stock(self, code, percentage=1.0):
         """
@@ -1665,6 +1696,7 @@ class SimulationTrader:
                 'success': False  # 交易失败
             }
             self.transaction_history.append(transaction)
+            self.save_transactions_to_csv()  # 立即保存到CSV
             
             # 发送无法卖出通知邮件
             success = self.send_trading_notification(
