@@ -905,11 +905,11 @@ class SimulationTrader:
                             if stock['code'] in hk_smart_money_tracker.WATCHLIST:
                                 buy_stocks.append(stock)
                     
-                    # 验证卖出股票是否在自选股列表中且有持仓
+                    # 验证卖出股票是否在自选股列表中（允许建议卖出任何在自选股中的股票，即使没有持仓）
                     sell_stocks = []
                     for stock in parsed_json['sell']:
                         if isinstance(stock, dict) and 'code' in stock:
-                            if stock['code'] in hk_smart_money_tracker.WATCHLIST and stock['code'] in self.positions:
+                            if stock['code'] in hk_smart_money_tracker.WATCHLIST:
                                 sell_stocks.append(stock)
                     
                     recommendations['buy'] = buy_stocks
@@ -1184,9 +1184,9 @@ class SimulationTrader:
                     # 没有持仓，无法卖出，发送邮件通知
                     self.log_message(f"未持有 {name} ({code})，无法按大模型建议卖出")
                     
-                    # 记录失败的交易
-                    amount = 0 * 0 if 0 > 0 else 0
-                    self.record_transaction('SELL', code, name, 0, 0, amount, reason, False)
+                    # 记录失败的交易 - 确保记录到交易历史中
+                    amount = 0.0
+                    self.record_transaction('SELL', code, name, 0, 0.0, amount, reason, False)
                     
                     # 发送无法卖出通知邮件
                     success = self.send_trading_notification(
@@ -1315,63 +1315,7 @@ class SimulationTrader:
                         )
                     continue
                 
-                # 执行买入
-                self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}，资金分配比例: {allocation_pct}，止损价格: {stop_loss_price}")
-                buy_result = self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price, current_price, skip_decision_record=True)  # 已在决策阶段记录，跳过执行阶段的记录
                 
-                # 如果买入失败，发送邮件通知
-                if buy_result is False:
-                    self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
-                    # 发送无法买入通知邮件
-                    self.send_trading_notification(
-                        notification_type="buy_failed",
-                        code=code,
-                        name=name,
-                        reason=reason,
-                        allocation_pct=allocation_pct,
-                        stop_loss_price=stop_loss_price
-                    )
-                elif buy_result == "insufficient_funds":
-                    self.log_message(f"资金不足，无法按大模型建议买入 {name} ({code})，发送资金不足通知")
-                    # 发送资金不足通知邮件，使用计算股数时的所需金额
-                    self.send_trading_notification(
-                        notification_type="insufficient_funds",
-                        code=code,
-                        name=name,
-                        reason=reason,
-                        allocation_pct=allocation_pct,
-                        stop_loss_price=stop_loss_price,
-                        required_amount=required_amount  # 使用计算时的金额
-                    )
-                
-                # 执行买入
-                self.log_message(f"按大模型建议买入 {name} ({code}) {shares}股，理由: {reason}，资金分配比例: {allocation_pct}，止损价格: {stop_loss_price}")
-                buy_result = self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price, current_price)
-                
-                # 如果买入失败，发送邮件通知
-                if buy_result is False:
-                    self.log_message(f"无法按大模型建议买入 {name} ({code})，发送邮件通知")
-                    # 发送无法买入通知邮件
-                    self.send_trading_notification(
-                        notification_type="buy_failed",
-                        code=code,
-                        name=name,
-                        reason=reason,
-                        allocation_pct=allocation_pct,
-                        stop_loss_price=stop_loss_price
-                    )
-                elif buy_result == "insufficient_funds":
-                    self.log_message(f"资金不足，无法按大模型建议买入 {name} ({code})，发送资金不足通知")
-                    # 发送资金不足通知邮件，使用计算出的所需金额
-                    self.send_trading_notification(
-                        notification_type="insufficient_funds",
-                        code=code,
-                        name=name,
-                        reason=reason,
-                        allocation_pct=allocation_pct,
-                        stop_loss_price=stop_loss_price,
-                        required_amount=shares * current_price  # 使用计算股数时的股价
-                    )
         
         
                 
