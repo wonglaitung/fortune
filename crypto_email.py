@@ -327,19 +327,37 @@ if __name__ == "__main__":
     # 计算技术指标
     indicators = calculate_technical_indicators(prices)
 
-    # 检查是否存在任何交易信号
+    # 检查是否存在当天的交易信号
     has_signals = False
+    today = datetime.now().date()
+    
     if 'ethereum' in indicators:
         eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
         eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
-        if eth_recent_buy_signals or eth_recent_sell_signals:
-            has_signals = True
+        
+        # 检查以太坊是否有今天的信号
+        for signal in eth_recent_buy_signals:
+            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
+        for signal in eth_recent_sell_signals:
+            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
     
     if 'bitcoin' in indicators and not has_signals:
         btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
         btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
-        if btc_recent_buy_signals or btc_recent_sell_signals:
-            has_signals = True
+        
+        # 检查比特币是否有今天的信号
+        for signal in btc_recent_buy_signals:
+            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
+        for signal in btc_recent_sell_signals:
+            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
 
     # 如果没有交易信号，则不发送邮件
     if not has_signals:
