@@ -16,7 +16,7 @@ import csv
 
 def analyze_last_24_hours():
     # Read the CSV file
-    with open('/data/fortune/data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
+    with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
         content = file.read()
     
     # Parse the CSV content
