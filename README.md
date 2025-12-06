@@ -4,7 +4,7 @@
 
 本项目是一个综合性的金融信息监控与模拟交易系统，旨在为投资者提供全面的市场分析和交易策略验证工具。系统集成了多种金融数据源，利用技术分析、资金流向分析和大模型智能判断，帮助用户更好地理解市场动态并验证投资策略。
 
-系统包含九个核心组件：
+系统包含十个核心组件：
 1. **加密货币价格监控器** - 实时获取主流加密货币的价格信息并通过邮件发送
 2. **港股IPO信息获取器** - 爬取AAStocks网站获取最新的港股IPO信息
 3. **港股主力资金追踪器** - 分析港股市场主力资金动向，识别建仓和出货信号
@@ -12,8 +12,9 @@
 5. **港股模拟交易系统** - 基于主力资金追踪器的分析结果和大模型判断进行模拟交易
 6. **批量获取自选股新闻** - 获取自选股相关的最新财经新闻并使用大模型分析相关性
 7. **黄金市场分析器** - 分析黄金市场价格趋势和技术指标
-8. **通用技术分析工具** - 提供多种常用技术指标计算功能（移动平均线、RSI、MACD、布林带等）
-9. **腾讯财经数据接口** - 提供更稳定和准确的港股及恒生指数数据
+8. **恒生指数大模型策略分析器** - 通过腾讯财经API获取恒生指数数据并进行大模型策略分析
+9. **通用技术分析工具** - 提供多种常用技术指标计算功能（移动平均线、RSI、MACD、布林带等）
+10. **腾讯财经数据接口** - 提供更稳定和准确的港股及恒生指数数据
 
 ## 系统架构
 
@@ -22,7 +23,8 @@
 ├── 数据获取层
 │   ├── 加密货币价格监控器 (@crypto_email.py)
 │   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
-│   └── 黄金市场分析器 (@gold_analyzer.py)
+│   ├── 黄金市场分析器 (@gold_analyzer.py)
+│   └── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
@@ -64,6 +66,7 @@
 - **历史数据分析**：分析历史数据中的信号模式
 - **新闻分析**：利用大模型分析新闻与股票的相关性
 - **黄金市场分析**：获取黄金相关资产和宏观经济数据，进行技术分析
+- **恒生指数策略分析**：获取恒生指数数据并进行大模型策略分析
 - **通用技术分析工具**：集成多种技术指标计算功能，提供全面的市场分析能力
 
 ### 4. 模拟交易
@@ -89,8 +92,7 @@
 pip install requests beautifulsoup4 pandas
 
 # 港股分析组件依赖
-# 港股分析组件依赖
-pip install yfinance pandas matplotlib openpyxl scipy schedule
+pip install yfinance akshare pandas matplotlib openpyxl scipy schedule
 
 # 模拟交易系统依赖
 pip install schedule
@@ -103,6 +105,9 @@ pip install yfinance
 
 # 技术分析工具依赖
 pip install yfinance pandas numpy
+
+# 恒生指数策略分析器依赖
+pip install yfinance pandas numpy
 ```
 
 ### 环境变量配置
@@ -112,7 +117,7 @@ pip install yfinance pandas numpy
 - `YAHOO_EMAIL`：发件人邮箱地址
 - `YAHOO_APP_PASSWORD`：发件人邮箱应用密码
 - `RECIPIENT_EMAIL`：收件人邮箱地址（可选，多个收件人用逗号分隔）
-- `QWEN_API_KEY`：大模型API密钥（用于模拟交易系统和资金追踪器）
+- `QWEN_API_KEY`：大模型API密钥（用于模拟交易系统、资金追踪器、新闻分析和恒生指数策略分析）
 - `YAHOO_SMTP`：SMTP服务器地址（可选，默认为smtp.gmail.com）
 
 ## 组件详细说明
@@ -183,6 +188,16 @@ pip install yfinance pandas numpy
 - 集成通用技术分析工具（@technical_analysis.py），提供全面的技术指标分析
 - 通过GitHub Actions自动化调度（每天UTC时间7:00执行，即北京时间15:00）
 
+### 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
+- 通过腾讯财经API获取最新的恒生指数(HSI)数据
+- 计算多种技术指标（移动平均线、RSI、MACD、布林带、波动率、量比等）
+- 分析当前市场趋势（强势多头、多头趋势、弱势空头、空头趋势、震荡整理等）
+- 调用大模型生成明确的交易策略建议
+- 将策略分析报告保存到`data/hsi_strategy_latest.txt`文件
+- 通过邮件发送策略分析报告
+- 支持本地定时执行脚本 `send_alert.sh`
+- 集成通用技术分析工具（@technical_analysis.py），提供全面的技术指标分析
+
 ### 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 - 获取自选股相关的最新财经新闻
 - **重要更新**：使用yfinance库获取个股新闻数据（此前使用AKShare，现已改为yfinance以提高数据获取成功率）
@@ -245,6 +260,9 @@ python gold_analyzer.py
 # 黄金市场分析器（指定分析周期）
 python gold_analyzer.py --period 6mo
 
+# 恒生指数大模型策略分析器
+python hsi_llm_strategy.py
+
 # 个股新闻获取器
 python batch_stock_news_fetcher.py
 
@@ -273,7 +291,7 @@ python simulation_trader.py --manual-sell 0700.HK --sell-percentage 0.5
 
 ### 本地定时执行
 
-项目包含 `send_alert.sh` 脚本，可用于本地定时执行主力资金追踪和黄金分析：
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行主力资金追踪、黄金分析和恒生指数策略分析：
 
 ```bash
 # 编辑 crontab
@@ -352,6 +370,7 @@ python technical_analysis.py
 - 可视化图表：保存在hk_smart_charts目录下
 - 邮件报告：包含详细指标说明和分析结果
 - CSV文件：保存个股新闻数据
+- 文本文件：恒生指数策略分析报告保存在`data/hsi_strategy_latest.txt`
 
 ### 模拟交易系统
 - 状态文件：data/simulation_state.json（保存交易状态，支持中断后继续）
@@ -370,9 +389,10 @@ python technical_analysis.py
    - **加密货币价格监控**：默认每天UTC时间0:00、8:00和16:00执行（即北京时间8:00、16:00和0:00）
    - **港股IPO信息获取**：默认每天UTC时间1:00执行（即北京时间9:00）
    - **黄金市场分析**：默认每天UTC时间7:00执行（即北京时间15:00）
+   - **港股主力资金追踪**：默认每天UTC时间22:00（即香港时间早上6:00）执行，现已整合个股新闻获取和恒生指数策略分析
 
 2. **本地定时执行**：
-   - 通过`send_alert.sh`脚本实现本地定时执行主力资金追踪和黄金分析
+   - 通过`send_alert.sh`脚本实现本地定时执行主力资金追踪、黄金分析和恒生指数策略分析
    - 可通过crontab配置执行时间
    - 批量获取自选股新闻支持定时运行模式
 
@@ -402,3 +422,5 @@ python technical_analysis.py
 - 统一邮件报告格式和样式
 - 完善技术分析工具功能
 - 优化用户体验和交互界面
+- **最新更新**：GitHub Actions 工作流 `.github/workflows/smart-money-alert.yml` 现已整合运行 `batch_stock_news_fetcher.py` 和 `hsi_llm_strategy.py`，实现了更全面的市场分析和策略生成
+- **最新更新**：本地 `send_alert.sh` 脚本也已更新，包含个股新闻获取和恒生指数策略分析功能
