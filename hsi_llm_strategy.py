@@ -15,6 +15,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import re
+import yfinance as yf
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -273,9 +274,180 @@ except ImportError:
     LLM_AVAILABLE = False
     print("警告: 无法导入大模型服务，将跳过大模型分析功能")
 
+def get_overseas_market_data():
+    """
+    获取隔夜美股及A50期货数据
+    """
+    print("🌍 开始获取隔夜美股及A50期货数据...")
+    
+    overseas_data = {}
+    
+    try:
+        # 获取主要美股指数数据
+        us_indices = {
+            'SPY': '标普500 ETF', 
+            'QQQ': '纳斯达克100 ETF', 
+            'DIA': '道琼斯工业平均ETF',
+            'TLT': '20+年国债ETF(反映利率情绪)'
+        }
+        
+        for symbol, name in us_indices.items():
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="5d")  # 获取最近5天的数据
+                if not hist.empty:
+                    latest = hist.iloc[-1]
+                    prev_close = hist.iloc[-2]['Close'] if len(hist) > 1 else latest['Close']
+                    change_pct = ((latest['Close'] - prev_close) / prev_close) * 100
+                    overseas_data[symbol] = {
+                        'name': name,
+                        'price': latest['Close'],
+                        'change_pct': change_pct,
+                        'volume': latest['Volume']
+                    }
+                    print(f"✅ {name}({symbol}): {latest['Close']:.2f}, 涨跌: {change_pct:+.2f}%")
+                else:
+                    print(f"⚠️ 无法获取 {symbol} 数据")
+                    overseas_data[symbol] = {
+                        'name': name,
+                        'price': 0,
+                        'change_pct': 0,
+                        'volume': 0
+                    }
+            except Exception as e:
+                print(f"⚠️ 获取 {symbol} 数据失败: {e}")
+                overseas_data[symbol] = {
+                    'name': name,
+                    'price': 0,
+                    'change_pct': 0,
+                    'volume': 0
+                }
+        
+        # 获取恐慌指数(VIX)
+        try:
+            vix_ticker = yf.Ticker("^VIX")  # VIX指数的正确符号
+            hist = vix_ticker.history(period="5d")
+            if not hist.empty:
+                latest = hist.iloc[-1]
+                prev_close = hist.iloc[-2]['Close'] if len(hist) > 1 else latest['Close']
+                change_pct = ((latest['Close'] - prev_close) / prev_close) * 100
+                overseas_data['VIX'] = {
+                    'name': '恐慌指数(VIX)',
+                    'price': latest['Close'],
+                    'change_pct': change_pct,
+                    'volume': latest['Volume']
+                }
+                print(f"✅ 恐慌指数(VIX): {latest['Close']:.2f}, 涨跌: {change_pct:+.2f}%")
+            else:
+                print(f"⚠️ 无法获取 VIX 数据")
+                overseas_data['VIX'] = {
+                    'name': '恐慌指数(VIX)',
+                    'price': 0,
+                    'change_pct': 0,
+                    'volume': 0
+                }
+        except Exception as e:
+            print(f"⚠️ 获取 VIX 数据失败: {e}")
+            overseas_data['VIX'] = {
+                'name': '恐慌指数(VIX)',
+                'price': 0,
+                'change_pct': 0,
+                'volume': 0
+            }
+        
+        # 获取A50期货数据 - 尝试不同的可能代码
+        a50_symbols = ["CHI50.MI", "05101.HK", "FU50.CFE"]  # 尝试不同的A50期货代码
+        a50_found = False
+        
+        for symbol in a50_symbols:
+            try:
+                a50_futures = yf.Ticker(symbol)
+                hist = a50_futures.history(period="5d")
+                if not hist.empty:
+                    latest = hist.iloc[-1]
+                    prev_close = hist.iloc[-2]['Close'] if len(hist) > 1 else latest['Close']
+                    change_pct = ((latest['Close'] - prev_close) / prev_close) * 100
+                    overseas_data['A50_FUTURES'] = {
+                        'name': f'富时中国A50指数期货({symbol})',
+                        'price': latest['Close'],
+                        'change_pct': change_pct,
+                        'volume': latest['Volume']
+                    }
+                    print(f"✅ A50期货({symbol}): {latest['Close']:.2f}, 涨跌: {change_pct:+.2f}%")
+                    a50_found = True
+                    break
+                else:
+                    print(f"⚠️ 无法获取 {symbol} 数据")
+            except Exception as e:
+                print(f"⚠️ 获取 {symbol} 数据失败: {e}")
+        
+        if not a50_found:
+            print(f"⚠️ 无法获取 A50期货 数据，所有尝试的代码均失败")
+            overseas_data['A50_FUTURES'] = {
+                'name': '富时中国A50指数期货',
+                'price': 0,
+                'change_pct': 0,
+                'volume': 0
+            }
+        
+        return overseas_data
+    except Exception as e:
+        print(f"❌ 获取海外数据时发生错误: {e}")
+        return {}
+
+def assess_risk_level(overseas_data):
+    """
+    评估隔夜市场对港股的潜在风险水平
+    """
+    risk_level = "中等"
+    risk_factors = []
+    
+    if not overseas_data:
+        return risk_level, risk_factors
+    
+    # 评估美股风险
+    for symbol in ['SPY', 'QQQ', 'DIA']:
+        if symbol in overseas_data:
+            change_pct = overseas_data[symbol]['change_pct']
+            if abs(change_pct) > 3:
+                risk_factors.append(f"{overseas_data[symbol]['name']}({symbol})隔夜波动{change_pct:+.2f}%，波动较大")
+            elif abs(change_pct) > 2:
+                risk_factors.append(f"{overseas_data[symbol]['name']}({symbol})隔夜波动{change_pct:+.2f}%，波动明显")
+    
+    # 评估A50期货风险
+    if 'A50_FUTURES' in overseas_data:
+        a50_change = overseas_data['A50_FUTURES']['change_pct']
+        # 如果A50期货数据是默认的0值，说明实际数据获取失败，忽略此数据
+        if a50_change != 0 or overseas_data['A50_FUTURES']['price'] != 0:
+            if abs(a50_change) > 2.5:
+                risk_factors.append(f"A50期货隔夜波动{a50_change:+.2f}%，可能影响A股及港股走势")
+            elif abs(a50_change) > 1.5:
+                risk_factors.append(f"A50期货隔夜波动{a50_change:+.2f}%，对A股及港股有一定影响")
+    
+    # 评估恐慌指数(VIX)
+    if 'VIX' in overseas_data:
+        vix_value = overseas_data['VIX']['change_pct']
+        if vix_value > 5:
+            risk_factors.append(f"恐慌指数(VIX)大幅上升{vix_value:+.2f}%，市场避险情绪浓厚")
+        elif vix_value > 2:
+            risk_factors.append(f"恐慌指数(VIX)上升{vix_value:+.2f}%，市场情绪偏谨慎")
+        elif vix_value < -5:
+            risk_factors.append(f"恐慌指数(VIX)大幅下降{vix_value:+.2f}%，市场风险偏好过高需警惕")
+    
+    # 综合评估风险等级
+    high_risk_factors = [f for f in risk_factors if "波动较大" in f or "大幅上升" in f or "大幅下降" in f or "数据缺失" in f]
+    medium_risk_factors = [f for f in risk_factors if "波动明显" in f or "上升" in f or "下降" in f]
+    
+    if len(high_risk_factors) >= 2 or (len(high_risk_factors) >= 1 and len(medium_risk_factors) >= 2):
+        risk_level = "高风险"
+    elif len(high_risk_factors) >= 1 or len(medium_risk_factors) >= 2:
+        risk_level = "中高风险"
+    
+    return risk_level, risk_factors
+
 warnings.filterwarnings('ignore')
 
-def generate_hsi_llm_strategy():
+def generate_hsi_llm_strategy(overseas_data=None):
     """
     生成恒生指数大模型策略分析
     """
@@ -326,6 +498,13 @@ def generate_hsi_llm_strategy():
     print(f"价格位置: {latest['Price_Percentile']:.2f}%")
     print(f"波动率: {latest['Volatility']:.2f}%")
     print(f"量比: {latest['Vol_Ratio']:.2f}")
+    
+    # 如果没有提供海外数据，则获取
+    if overseas_data is None:
+        overseas_data = get_overseas_market_data()
+    
+    # 评估风险等级
+    risk_level, risk_factors = assess_risk_level(overseas_data)
     
     # 构建分析报告内容作为大模型输入
     analysis_summary = []
@@ -386,38 +565,135 @@ def generate_hsi_llm_strategy():
         analysis_summary.append(f"  {idx.strftime('%Y-%m-%d')}: {row['Close']:.2f}")
     analysis_summary.append("")
     
+    # 添加隔夜海外市场数据
+    if overseas_data:
+        analysis_summary.append("隔夜海外市场数据:")
+        for symbol, data in overseas_data.items():
+            if 'A50_FUTURES' in symbol:
+                # 如果A50期货数据是实际数据（非默认0值），才显示
+                if data['change_pct'] != 0 or data['price'] != 0:
+                    analysis_summary.append(f"{data['name']}: {data['price']:.2f}, 涨跌: {data['change_pct']:+.2f}%")
+                else:
+                    analysis_summary.append(f"{data['name']}: 数据缺失 (无法获取)")
+            else:
+                analysis_summary.append(f"{data['name']}: {data['price']:.2f}, 涨跌: {data['change_pct']:+.2f}%")
+        analysis_summary.append("")
+        
+        # 分析隔夜市场对港股的潜在影响
+        analysis_summary.append("隔夜市场影响分析:")
+        
+        # 分析美股三大指数
+        us_impact = 0
+        if 'SPY' in overseas_data:
+            spy_change = overseas_data['SPY']['change_pct']
+            if spy_change > 1:
+                analysis_summary.append(f"• SPY(标普500)上涨 {spy_change:.2f}%，对港股形成正面带动")
+                us_impact += 1
+            elif spy_change < -1:
+                analysis_summary.append(f"• SPY(标普500)下跌 {spy_change:.2f}%，对港股形成负面冲击")
+                us_impact -= 1
+            else:
+                analysis_summary.append(f"• SPY(标普500)涨跌 {spy_change:.2f}%，对港股影响中性")
+                
+        if 'QQQ' in overseas_data:
+            qqq_change = overseas_data['QQQ']['change_pct']
+            if qqq_change > 1:
+                analysis_summary.append(f"• QQQ(纳斯达克100)上涨 {qqq_change:.2f}%，利好科技股")
+                us_impact += 1
+            elif qqq_change < -1:
+                analysis_summary.append(f"• QQQ(纳斯达克100)下跌 {qqq_change:.2f}%，对科技股形成压力")
+                us_impact -= 1
+            else:
+                analysis_summary.append(f"• QQQ(纳斯达克100)涨跌 {qqq_change:.2f}%，对科技股影响中性")
+                
+        if 'DIA' in overseas_data:
+            dia_change = overseas_data['DIA']['change_pct']
+            if dia_change > 1:
+                analysis_summary.append(f"• DIA(道琼斯)上涨 {dia_change:.2f}%，反映市场情绪向好")
+            elif dia_change < -1:
+                analysis_summary.append(f"• DIA(道琼斯)下跌 {dia_change:.2f}%，反映市场情绪偏弱")
+            else:
+                analysis_summary.append(f"• DIA(道琼斯)涨跌 {dia_change:.2f}%，对市场情绪影响中性")
+        
+        # 分析A50期货 - 只有当有实际数据时才分析
+        a50_impact = 0
+        if 'A50_FUTURES' in overseas_data:
+            a50_change = overseas_data['A50_FUTURES']['change_pct']
+            # 如果A50期货数据是实际数据（非默认0值），才进行分析
+            if a50_change != 0 or overseas_data['A50_FUTURES']['price'] != 0:
+                if a50_change > 1:
+                    analysis_summary.append(f"• A50期货上涨 {a50_change:.2f}%，预示A股情绪向好，利好港股")
+                    a50_impact += 1
+                elif a50_change < -1:
+                    analysis_summary.append(f"• A50期货下跌 {a50_change:.2f}%，预示A股情绪偏弱，利空港股")
+                    a50_impact -= 1
+                else:
+                    analysis_summary.append(f"• A50期货涨跌 {a50_change:.2f}%，对A股及港股影响中性")
+            # 如果A50期货数据缺失，则不进行分析，也不在影响评估中考虑
+        
+        # 总体影响评估 - 如果A50期货数据缺失，则只考虑美股影响
+        if 'A50_FUTURES' in overseas_data and (overseas_data['A50_FUTURES']['change_pct'] != 0 or overseas_data['A50_FUTURES']['price'] != 0):
+            # A50期货有实际数据，计入总体影响
+            total_impact = us_impact + a50_impact
+        else:
+            # A50期货数据缺失，只考虑美股影响
+            total_impact = us_impact
+        
+        if total_impact > 1:
+            analysis_summary.append("综合影响: 隔夜市场整体向好，对港股开盘形成支撑")
+        elif total_impact < -1:
+            analysis_summary.append("综合影响: 隔夜市场整体偏弱，对港股开盘形成压力")
+        else:
+            analysis_summary.append("综合影响: 隔夜市场影响中性，港股更多将跟随自身逻辑")
+        
+        analysis_summary.append("")
+    
+    # 添加风险评估
+    analysis_summary.append("风险评估:")
+    analysis_summary.append(f"整体风险等级: {risk_level}")
+    if risk_factors:
+        analysis_summary.append("主要风险因素:")
+        for factor in risk_factors:
+            analysis_summary.append(f"• {factor}")
+    else:
+        analysis_summary.append("主要风险因素: 隔夜市场波动正常，暂无显著风险因素")
+    analysis_summary.append("")
+    
     # 构建大模型提示
     prompt = f"""
-请分析以下恒生指数(HSI)技术分析数据，并提供明确的交易策略建议：
+请分析以下恒生指数(HSI)技术分析数据及隔夜海外市场表现，并提供明确的交易策略建议：
 
 {chr(10).join(analysis_summary)}
+
+请特别关注隔夜美股对港股的潜在影响，在策略建议中充分考虑外部市场因素，避免黑天鹅事件。如果A50期货数据存在，则同时考虑A50期货对港股的潜在影响；如果A50期货数据缺失，请主要基于美股及其他市场因素进行分析。
 
 请根据以下原则提供具体的交易策略：
 1. 基于趋势分析：如果指数处于上升趋势，考虑多头策略；如果处于下降趋势，考虑空头或谨慎策略
 2. 基于技术指标：利用RSI、MACD、移动平均线等指标判断买卖时机
 3. 基于市场状态：考虑当前市场是处于高位、中位还是低位
-4. 风险管理：在建议中包含止损和风险控制策略
-5. 资金管理：考虑适当的仓位管理原则
+4. 基于隔夜市场影响：充分考虑美股对港股的带动或冲击作用（如果A50期货数据存在，也考虑其影响）
+5. 风险管理：在建议中包含止损和风险控制策略，特别在隔夜市场大幅波动时加强风险控制
+6. 资金管理：考虑适当的仓位管理原则
 
 策略定义参考：
 - 保守型：偏好低风险、稳定收益的投资策略，如高股息股票，注重资本保值
 - 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
 - 进取型：偏好高风险、高收益的投资策略，如科技成长股，追求资本增值
 
-请在报告的开头提供一个明确的标题，反映当前市场情况和推荐的交易策略，例如：
+请在回复的第一行提供一个明确的标题，反映当前市场情况和推荐的交易策略，例如：
 - 如果市场趋势向好："📈 恒生指数强势多头策略 - 推荐进取型投资者积极布局"
 - 如果市场趋势偏弱："📉 恒生指数谨慎观望策略 - 推荐保守型投资者控制仓位"
 - 如果市场震荡："📊 恒生指数震荡整理策略 - 推荐平衡型投资者灵活操作"
 
-然后提供具体的交易策略，包括：
+请务必在回复的第二行用一句话总结当天的交易策略（例如：当前建议采取保守型投资者策略，重点关注隔夜市场风险，谨慎操作。），然后继续提供具体的交易策略，包括：
 - 当前市场观点
 - 交易方向建议（做多/做空/观望）
 - 明确推荐一个最适合当前市场状况的投资者类型（保守型/平衡型/进取型）
 - 具体操作建议
-- 风险控制措施
+- 风险控制措施（特别是基于隔夜市场情况的风险警示）
 - 目标价位和止损位
 
-请确保策略符合港股市场特点和恒生指数的特性。
+请确保策略符合港股市场特点和恒生指数的特性，并特别关注隔夜市场波动对港股开盘的潜在影响。
 """
     
     if LLM_AVAILABLE:
@@ -470,8 +746,11 @@ def main():
     print("📈 恒生指数(HSI)大模型策略分析器")
     print("="*50)
     
+    # 获取隔夜美股及A50期货数据
+    overseas_data = get_overseas_market_data()
+    
     # 生成策略分析
-    strategy_result = generate_hsi_llm_strategy()
+    strategy_result = generate_hsi_llm_strategy(overseas_data)
     
     if strategy_result:
         print("\n✅ 恒生指数大模型策略分析完成！")
@@ -488,9 +767,24 @@ def main():
         html_content = f"""
         <h2>📈 恒生指数(HSI)大模型策略分析报告</h2>
         <p><strong>生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        
         <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 10px 0;">
             {markdown_to_html(strategy_result['content'])}
         </div>
+        
+        <!-- 隔夜美股及A50期货数据 -->
+        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin: 10px 0; border: 1px solid #b3d9ff;">
+            <h3>🌍 隔夜美股及A50期货数据</h3>
+            <ul>
+                <li>✅ 标普500 ETF(SPY): {overseas_data.get('SPY', {}).get('price', 'N/A')} ({overseas_data.get('SPY', {}).get('change_pct', 0):+.2f}%)</li>
+                <li>✅ 纳斯达克100 ETF(QQQ): {overseas_data.get('QQQ', {}).get('price', 'N/A')} ({overseas_data.get('QQQ', {}).get('change_pct', 0):+.2f}%)</li>
+                <li>✅ 道琼斯工业平均ETF(DIA): {overseas_data.get('DIA', {}).get('price', 'N/A')} ({overseas_data.get('DIA', {}).get('change_pct', 0):+.2f}%)</li>
+                <li>✅ 20+年国债ETF(反映利率情绪)(TLT): {overseas_data.get('TLT', {}).get('price', 'N/A')} ({overseas_data.get('TLT', {}).get('change_pct', 0):+.2f}%)</li>
+                <li>✅ 恐慌指数(VIX): {overseas_data.get('VIX', {}).get('price', 'N/A')} ({overseas_data.get('VIX', {}).get('change_pct', 0):+.2f}%)</li>
+                <li>✅ A50期货: {overseas_data.get('A50_FUTURES', {}).get('price', 'N/A')} ({overseas_data.get('A50_FUTURES', {}).get('change_pct', 0):+.2f}%)</li>
+            </ul>
+        </div>
+        
         <p><em>--- 此邮件由恒生指数大模型策略分析器自动生成</em></p>
         """
         
@@ -499,7 +793,19 @@ def main():
 
 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
+【隔夜市场摘要 - 重要风险提示】
+请在港股开盘前务必检查隔夜美股及A50期货走势，避免黑天鹅事件
+本报告已整合隔夜市场数据，建议重点关注潜在风险因素
+
 {strategy_result['content']}
+
+【隔夜美股及A50期货数据】
+✅ 标普500 ETF(SPY): {overseas_data.get('SPY', {}).get('price', 'N/A')} ({overseas_data.get('SPY', {}).get('change_pct', 0):+.2f}%)
+✅ 纳斯达克100 ETF(QQQ): {overseas_data.get('QQQ', {}).get('price', 'N/A')} ({overseas_data.get('QQQ', {}).get('change_pct', 0):+.2f}%)
+✅ 道琼斯工业平均ETF(DIA): {overseas_data.get('DIA', {}).get('price', 'N/A')} ({overseas_data.get('DIA', {}).get('change_pct', 0):+.2f}%)
+✅ 20+年国债ETF(反映利率情绪)(TLT): {overseas_data.get('TLT', {}).get('price', 'N/A')} ({overseas_data.get('TLT', {}).get('change_pct', 0):+.2f}%)
+✅ 恐慌指数(VIX): {overseas_data.get('VIX', {}).get('price', 'N/A')} ({overseas_data.get('VIX', {}).get('change_pct', 0):+.2f}%)
+✅ A50期货: {overseas_data.get('A50_FUTURES', {}).get('price', 'N/A')} ({overseas_data.get('A50_FUTURES', {}).get('change_pct', 0):+.2f}%)
 
 ---
 此邮件由恒生指数大模型策略分析器自动生成
