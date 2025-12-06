@@ -8,10 +8,10 @@
 cd /data/fortune
 source set_key.sh
 
-# 调用 batch_stock_news_fetcher.py
+# 获取股票新闻(需yahoo finance)
 python batch_stock_news_fetcher.py
 
-# 分析市场环境
+# 分析市场环境(需yahoo finance)
 python hsi_llm_strategy.py
 
 # 获取昨天的日期
@@ -20,6 +20,6 @@ YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 # 调用 hk_smart_money_tracker.py 并传入昨天的日期
 python hk_smart_money_tracker.py --date $YESTERDAY
 
-# 调用 gold_analyzer.py
+# 获取黄金信息
 python gold_analyzer.py
 
