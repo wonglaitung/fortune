@@ -47,7 +47,8 @@ jobs:
           git add data/hsi_strategy_latest.txt
           if ! git diff --cached --quiet; then
             git commit -m "Update stock news and strategy [skip ci]"
-            git push --force-with-lease origin main
+            git pull --rebase origin main
+            git push origin main
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
