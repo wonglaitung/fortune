@@ -1,0 +1,10 @@
+yfinance
+requests
+pandas
+numpy
+akshare
+matplotlib
+beautifulsoup4
+openpyxl
+scipy
+schedule
