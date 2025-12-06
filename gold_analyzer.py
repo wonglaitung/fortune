@@ -357,8 +357,11 @@ class GoldMarketAnalyzer:
         # 4. 生成报告
         self._generate_report(gold_data, technical_analysis, macro_data, None)
         
-        # 5. 检查是否有交易信号
+        # 5. 检查是否有当天的交易信号
+        from datetime import datetime
         has_signals = False
+        today = datetime.now().date()
+        
         for symbol, data in technical_analysis.items():
             if not data['indicators'].empty:
                 # 检查最近的交易信号
@@ -366,15 +369,22 @@ class GoldMarketAnalyzer:
                 
                 if 'Buy_Signal' in recent_signals.columns:
                     buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
-                    if not buy_signals_df.empty:
-                        has_signals = True
-                        break
+                    # 检查是否有今天的买入信号
+                    for idx, row in buy_signals_df.iterrows():
+                        if idx.date() == today:
+                            has_signals = True
+                            break
                 
-                if 'Sell_Signal' in recent_signals.columns:
+                if 'Sell_Signal' in recent_signals.columns and not has_signals:
                     sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
-                    if not sell_signals_df.empty:
-                        has_signals = True
-                        break
+                    # 检查是否有今天的卖出信号
+                    for idx, row in sell_signals_df.iterrows():
+                        if idx.date() == today:
+                            has_signals = True
+                            break
+                
+                if has_signals:
+                    break
         
         # 6. 只在有交易信号时发送邮件报告
         if has_signals:
