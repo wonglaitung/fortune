@@ -2,14 +2,17 @@ name: HK Smart Money Alert
 
 on:
   schedule:
-  # 每天香港时间上午6点执行（即UTC时间0点 + 8）
-    - cron: '0 22 * * *'
+    - cron: '0 6 * * *'
+  # 时区设置为香港
+  timezone: Asia/Hong_Kong
   # 可选：允许手动触发
   workflow_dispatch:
 
 jobs:
   send-email:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
