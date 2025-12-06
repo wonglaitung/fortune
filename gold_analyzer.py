@@ -357,8 +357,30 @@ class GoldMarketAnalyzer:
         # 4. 生成报告
         self._generate_report(gold_data, technical_analysis, macro_data, None)
         
-        # 5. 发送邮件报告
-        self.send_email_report(gold_data, technical_analysis, macro_data, None)
+        # 5. 检查是否有交易信号
+        has_signals = False
+        for symbol, data in technical_analysis.items():
+            if not data['indicators'].empty:
+                # 检查最近的交易信号
+                recent_signals = data['indicators'].tail(5)
+                
+                if 'Buy_Signal' in recent_signals.columns:
+                    buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
+                    if not buy_signals_df.empty:
+                        has_signals = True
+                        break
+                
+                if 'Sell_Signal' in recent_signals.columns:
+                    sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                    if not sell_signals_df.empty:
+                        has_signals = True
+                        break
+        
+        # 6. 只在有交易信号时发送邮件报告
+        if has_signals:
+            self.send_email_report(gold_data, technical_analysis, macro_data, None)
+        else:
+            print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
         
         return {
             'gold_data': gold_data,
