@@ -10,6 +10,8 @@ on:
 jobs:
   send-ipo-email:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
