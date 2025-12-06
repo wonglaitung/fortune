@@ -327,7 +327,26 @@ if __name__ == "__main__":
     # 计算技术指标
     indicators = calculate_technical_indicators(prices)
 
-    subject = "Ethereum and Bitcoin Price Update"
+    # 检查是否存在任何交易信号
+    has_signals = False
+    if 'ethereum' in indicators:
+        eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
+        eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
+        if eth_recent_buy_signals or eth_recent_sell_signals:
+            has_signals = True
+    
+    if 'bitcoin' in indicators and not has_signals:
+        btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
+        btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
+        if btc_recent_buy_signals or btc_recent_sell_signals:
+            has_signals = True
+
+    # 如果没有交易信号，则不发送邮件
+    if not has_signals:
+        print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
+        exit(0)
+
+    subject = "Ethereum and Bitcoin Price Update - 交易信号提醒"
 
     text = ""
     html = f"""
@@ -349,7 +368,7 @@ if __name__ == "__main__":
         </style>
     </head>
     <body>
-        <h2>💰 加密货币价格更新</h2>
+        <h2>💰 加密货币价格更新 - 交易信号提醒</h2>
         <p><strong>报告生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     """
 
@@ -380,21 +399,21 @@ if __name__ == "__main__":
         html += f"""
                 <tr>
                     <td>Ethereum (ETH)</td>
-                    <td>${eth_usd:,.2f}</td>
-                    <td>${eth_hkd:,.2f}</td>
-                    <td>{eth_change:+.2f}%</td>
-                    <td>${eth_market_cap:,.2f}</td>
-                    <td>${eth_24hr_vol:,.2f}</td>
+                    <td>${{eth_usd:,.2f}}</td>
+                    <td>${{eth_hkd:,.2f}}</td>
+                    <td>{{eth_change:+.2f}}%</td>
+                    <td>${{eth_market_cap:,.2f}}</td>
+                    <td>${{eth_24hr_vol:,.2f}}</td>
                 </tr>
         """
         
         text += f"Ethereum (ETH):\n"
-        text += f"  价格: ${eth_usd:,.2f} USD ({eth_change:+.2f}% 24h)\n"
-        text += f"  价格: ${eth_hkd:,.2f} HKD\n"
+        text += f"  价格: ${{eth_usd:,.2f}} USD ({{eth_change:+.2f}}% 24h)\n"
+        text += f"  价格: ${{eth_hkd:,.2f}} HKD\n"
         if eth_market_cap > 0:
-            text += f"  市值: ${eth_market_cap:,.2f} USD\n"
+            text += f"  市值: ${{eth_market_cap:,.2f}} USD\n"
         if eth_24hr_vol > 0:
-            text += f"  24小时交易量: ${eth_24hr_vol:,.2f} USD\n"
+            text += f"  24小时交易量: ${{eth_24hr_vol:,.2f}} USD\n"
     
     # Bitcoin
     if 'bitcoin' in prices:
@@ -408,21 +427,21 @@ if __name__ == "__main__":
         html += f"""
                 <tr>
                     <td>Bitcoin (BTC)</td>
-                    <td>${btc_usd:,.2f}</td>
-                    <td>${btc_hkd:,.2f}</td>
-                    <td>{btc_change:+.2f}%</td>
-                    <td>${btc_market_cap:,.2f}</td>
-                    <td>${btc_24hr_vol:,.2f}</td>
+                    <td>${{btc_usd:,.2f}}</td>
+                    <td>${{btc_hkd:,.2f}}</td>
+                    <td>{{btc_change:+.2f}}%</td>
+                    <td>${{btc_market_cap:,.2f}}</td>
+                    <td>${{btc_24hr_vol:,.2f}}</td>
                 </tr>
         """
         
         text += f"Bitcoin (BTC):\n"
-        text += f"  价格: ${btc_usd:,.2f} USD ({btc_change:+.2f}% 24h)\n"
-        text += f"  价格: ${btc_hkd:,.2f} HKD\n"
+        text += f"  价格: ${{btc_usd:,.2f}} USD ({{btc_change:+.2f}}% 24h)\n"
+        text += f"  价格: ${{btc_hkd:,.2f}} HKD\n"
         if btc_market_cap > 0:
-            text += f"  市值: ${btc_market_cap:,.2f} USD\n"
+            text += f"  市值: ${{btc_market_cap:,.2f}} USD\n"
         if btc_24hr_vol > 0:
-            text += f"  24小时交易量: ${btc_24hr_vol:,.2f} USD\n"
+            text += f"  24小时交易量: ${{btc_24hr_vol:,.2f}} USD\n"
     
     html += """
             </table>
@@ -461,13 +480,13 @@ if __name__ == "__main__":
         html += f"""
                 <tr>
                     <td>Ethereum (ETH)</td>
-                    <td>{eth_trend}</td>
-                    <td>{eth_rsi:.2f}</td>
-                    <td>{eth_macd:.4f}</td>
-                    <td>{eth_macd_signal:.4f}</td>
-                    <td>{eth_bb_position:.2f}</td>
-                    <td>${eth_ma20:.2f}</td>
-                    <td>${eth_ma50:.2f}</td>
+                    <td>{{eth_trend}}</td>
+                    <td>{{eth_rsi:.2f}}</td>
+                    <td>{{eth_macd:.4f}}</td>
+                    <td>{{eth_macd_signal:.4f}}</td>
+                    <td>{{eth_bb_position:.2f}}</td>
+                    <td>${{eth_ma20:.2f}}</td>
+                    <td>${{eth_ma50:.2f}}</td>
                 </tr>
         """
         
@@ -480,7 +499,7 @@ if __name__ == "__main__":
                             <strong>🔔 Ethereum (ETH) 最近买入信号:</strong><br>
             """
             for signal in eth_recent_buy_signals:
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += f"<span style='color: green;'>• {{signal['date']}}: {{signal['description']}}</span><br>"
             html += """
                         </div>
                     </td>
@@ -495,30 +514,30 @@ if __name__ == "__main__":
                             <strong>🔻 Ethereum (ETH) 最近卖出信号:</strong><br>
             """
             for signal in eth_recent_sell_signals:
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += f"<span style='color: red;'>• {{signal['date']}}: {{signal['description']}}</span><br>"
             html += """
                         </div>
                     </td>
                 </tr>
             """
         
-        text += f"  RSI: {eth_rsi:.2f}\n"
-        text += f"  MACD: {eth_macd:.4f} (信号线: {eth_macd_signal:.4f})\n"
-        text += f"  布林带位置: {eth_bb_position:.2f}\n"
-        text += f"  趋势: {eth_trend}\n"
-        text += f"  MA20: ${eth_ma20:.2f}\n"
-        text += f"  MA50: ${eth_ma50:.2f}\n"
+        text += f"  RSI: {{eth_rsi:.2f}}\n"
+        text += f"  MACD: {{eth_macd:.4f}} (信号线: {{eth_macd_signal:.4f}})\n"
+        text += f"  布林带位置: {{eth_bb_position:.2f}}\n"
+        text += f"  趋势: {{eth_trend}}\n"
+        text += f"  MA20: ${{eth_ma20:.2f}}\n"
+        text += f"  MA50: ${{eth_ma50:.2f}}\n"
         
         # 添加交易信号信息到文本版本
         if eth_recent_buy_signals:
-            text += f"  🔔 最近买入信号 ({len(eth_recent_buy_signals)} 个):\n"
+            text += f"  🔔 最近买入信号 ({{len(eth_recent_buy_signals)}} 个):\n"
             for signal in eth_recent_buy_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                text += f"    {{signal['date']}}: {{signal['description']}}\n"
         
         if eth_recent_sell_signals:
-            text += f"  🔻 最近卖出信号 ({len(eth_recent_sell_signals)} 个):\n"
+            text += f"  🔻 最近卖出信号 ({{len(eth_recent_sell_signals)}} 个):\n"
             for signal in eth_recent_sell_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                text += f"    {{signal['date']}}: {{signal['description']}}\n"
     
     # Bitcoin 技术分析
     if 'bitcoin' in prices:
@@ -535,13 +554,13 @@ if __name__ == "__main__":
         html += f"""
                 <tr>
                     <td>Bitcoin (BTC)</td>
-                    <td>{btc_trend}</td>
-                    <td>{btc_rsi:.2f}</td>
-                    <td>{btc_macd:.4f}</td>
-                    <td>{btc_macd_signal:.4f}</td>
-                    <td>{btc_bb_position:.2f}</td>
-                    <td>${btc_ma20:.2f}</td>
-                    <td>${btc_ma50:.2f}</td>
+                    <td>{{btc_trend}}</td>
+                    <td>{{btc_rsi:.2f}}</td>
+                    <td>{{btc_macd:.4f}}</td>
+                    <td>{{btc_macd_signal:.4f}}</td>
+                    <td>{{btc_bb_position:.2f}}</td>
+                    <td>${{btc_ma20:.2f}}</td>
+                    <td>${{btc_ma50:.2f}}</td>
                 </tr>
         """
         
@@ -554,7 +573,7 @@ if __name__ == "__main__":
                             <strong>🔔 Bitcoin (BTC) 最近买入信号:</strong><br>
             """
             for signal in btc_recent_buy_signals:
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += f"<span style='color: green;'>• {{signal['date']}}: {{signal['description']}}</span><br>"
             html += """
                         </div>
                     </td>
@@ -569,30 +588,30 @@ if __name__ == "__main__":
                             <strong>🔻 Bitcoin (BTC) 最近卖出信号:</strong><br>
             """
             for signal in btc_recent_sell_signals:
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += f"<span style='color: red;'>• {{signal['date']}}: {{signal['description']}}</span><br>"
             html += """
                         </div>
                     </td>
                 </tr>
             """
         
-        text += f"  RSI: {btc_rsi:.2f}\n"
-        text += f"  MACD: {btc_macd:.4f} (信号线: {btc_macd_signal:.4f})\n"
-        text += f"  布林带位置: {btc_bb_position:.2f}\n"
-        text += f"  趋势: {btc_trend}\n"
-        text += f"  MA20: ${btc_ma20:.2f}\n"
-        text += f"  MA50: ${btc_ma50:.2f}\n"
+        text += f"  RSI: {{btc_rsi:.2f}}\n"
+        text += f"  MACD: {{btc_macd:.4f}} (信号线: {{btc_macd_signal:.4f}})\n"
+        text += f"  布林带位置: {{btc_bb_position:.2f}}\n"
+        text += f"  趋势: {{btc_trend}}\n"
+        text += f"  MA20: ${{btc_ma20:.2f}}\n"
+        text += f"  MA50: ${{btc_ma50:.2f}}\n"
         
         # 添加交易信号信息到文本版本
         if btc_recent_buy_signals:
-            text += f"  🔔 最近买入信号 ({len(btc_recent_buy_signals)} 个):\n"
+            text += f"  🔔 最近买入信号 ({{len(btc_recent_buy_signals)}} 个):\n"
             for signal in btc_recent_buy_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                text += f"    {{signal['date']}}: {{signal['description']}}\n"
         
         if btc_recent_sell_signals:
-            text += f"  🔻 最近卖出信号 ({len(btc_recent_sell_signals)} 个):\n"
+            text += f"  🔻 最近卖出信号 ({{len(btc_recent_sell_signals)}} 个):\n"
             for signal in btc_recent_sell_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                text += f"    {{signal['date']}}: {{signal['description']}}\n"
     
     html += """
             </table>
@@ -662,10 +681,11 @@ if __name__ == "__main__":
     else:
         recipients = [recipient_env]
 
-    print("📧 Sending email to:", ", ".join(recipients))
+    print("🔔 检测到交易信号，发送邮件到:", ", ".join(recipients))
     print("📝 Subject:", subject)
     print("📄 Text preview:\n", text)
 
     success = send_email(recipients, subject, text, html)
     if not success:
         exit(1)
+
