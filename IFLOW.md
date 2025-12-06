@@ -27,14 +27,15 @@
 *   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
-*   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪和黄金分析。
+*   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪、黄金分析和恒生指数策略分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub。
 *   `set_key.sh`: 环境变量配置，包含API密钥和邮件配置。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
-*   `.github/workflows/smart-money-alert.yml.bak`: 港股主力资金追踪器的GitHub Actions工作流备份文件。
+*   `.github/workflows/smart-money-alert.yml`: 港股主力资金追踪器的GitHub Actions工作流文件，现已整合个股新闻获取和恒生指数策略分析。
 *   `IFLOW.md`: 此文件，提供 iFlow 代理的上下文信息。
+*   `README.md`: 项目详细说明文档。
 
 ## 项目类型
 
@@ -200,7 +201,7 @@
 6. 查看生成的Excel报告 `hk_smart_money_report.xlsx` 和图表 `hk_smart_charts/` 目录。
 
 ##### 本地定时执行
-项目包含 `send_alert.sh` 脚本，可用于本地定时执行:
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行，该脚本现在还会运行个股新闻获取器和恒生指数策略分析器:
 ```bash
 # 编辑 crontab
 crontab -e
@@ -210,12 +211,12 @@ crontab -e
 ```
 
 ##### GitHub Actions 自动化
-该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml.bak`)，它会:
+该项目配置了 GitHub Actions 工作流 (`.github/workflows/smart-money-alert.yml`)，它会:
 1. 在 Ubuntu 最新版本的 runner 上执行。
 2. 检出代码。
 3. 设置 Python 3.10 环境。
 4. 安装 `yfinance`, `akshare`, `pandas`, `matplotlib`, `openpyxl`, `scipy`, `schedule` 依赖。
-5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `hk_smart_money_tracker.py` 脚本。
+5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `batch_stock_news_fetcher.py`, `hsi_llm_strategy.py` 和 `hk_smart_money_tracker.py` 脚本。
    
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
@@ -472,3 +473,4 @@ crontab -e
 9. **新增功能**：集成通用技术分析工具，提供全面的技术指标分析能力。
 10. **新增功能**：增加恒生指数大模型策略分析器，提供专业的恒生指数交易策略。
 11. **重要更新**：`batch_stock_news_fetcher.py` 已更新为使用 `yfinance` 库获取新闻，提高了数据获取的可靠性和成功率。
+12. **最新更新**：GitHub Actions 工作流 `.github/workflows/smart-money-alert.yml` 现已整合运行 `batch_stock_news_fetcher.py` 和 `hsi_llm_strategy.py`，实现了更全面的市场分析和策略生成。
