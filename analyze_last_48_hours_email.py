@@ -93,10 +93,12 @@ def analyze_last_24_hours():
         # Check if there are 3 or more buys and no sells for this stock in the period
         if len(buys) >= 3 and len(sells) == 0:
             stock_name = buys[0]['name'] if buys else 'Unknown'
-            buy_without_sell_after.append((stock_code, stock_name))
+            buy_times = [buy['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for buy in buys]
+            buy_without_sell_after.append((stock_code, stock_name, buy_times))
         elif len(sells) >= 3 and len(buys) == 0:
             stock_name = sells[0]['name'] if sells else 'Unknown'
-            sell_without_buy_after.append((stock_code, stock_name))
+            sell_times = [sell['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for sell in sells]
+            sell_without_buy_after.append((stock_code, stock_name, sell_times))
     
     return buy_without_sell_after, sell_without_buy_after
 
@@ -214,14 +216,17 @@ if __name__ == "__main__":
                 <tr>
                     <th>股票代码</th>
                     <th>股票名称</th>
+                    <th>建议时间</th>
                 </tr>
         """
         
-        for code, name in buy_without_sell_after:
+        for code, name, times in buy_without_sell_after:
+            times_str = "<br>".join(times)
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
+                <td>{times_str}</td>
             </tr>
             """
         
@@ -239,14 +244,17 @@ if __name__ == "__main__":
                 <tr>
                     <th>股票代码</th>
                     <th>股票名称</th>
+                    <th>建议时间</th>
                 </tr>
         """
         
-        for code, name in sell_without_buy_after:
+        for code, name, times in sell_without_buy_after:
+            times_str = "<br>".join(times)
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
+                <td>{times_str}</td>
             </tr>
             """
         
@@ -258,14 +266,16 @@ if __name__ == "__main__":
     # 在文本版本中也添加信息
     if buy_without_sell_after:
         text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
-        for code, name in buy_without_sell_after:
-            text += f"  {code} ({name})\n"
+        for code, name, times in buy_without_sell_after:
+            times_str = ", ".join(times)
+            text += f"  {code} ({name}) - 建议时间: {times_str}\n"
         text += "\n"
     
     if sell_without_buy_after:
         text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
-        for code, name in sell_without_buy_after:
-            text += f"  {code} ({name})\n"
+        for code, name, times in sell_without_buy_after:
+            times_str = ", ".join(times)
+            text += f"  {code} ({name}) - 建议时间: {times_str}\n"
         text += "\n"
 
     # 添加说明
