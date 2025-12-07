@@ -70,13 +70,6 @@ def analyze_last_24_hours():
     time_48_hours_ago = now - timedelta(hours=48)
     recent_transactions = [t for t in transactions if t['timestamp'] >= time_48_hours_ago]
     
-    if not recent_transactions:
-        # If no transactions in the last 48 hours, check for the most recent date in the data
-        if transactions:
-            latest_date = max(transactions, key=lambda x: x['timestamp'])['timestamp'].date()
-            time_48_hours_ago = datetime.combine(latest_date, datetime.min.time()) - timedelta(hours=48)
-            recent_transactions = [t for t in transactions if t['timestamp'] >= time_48_hours_ago]
-    
     # Group transactions by stock code
     transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
     for trans in recent_transactions:
@@ -216,6 +209,7 @@ if __name__ == "__main__":
                 <tr>
                     <th>股票代码</th>
                     <th>股票名称</th>
+                    <th>建议次数</th>
                     <th>建议时间</th>
                 </tr>
         """
@@ -226,6 +220,7 @@ if __name__ == "__main__":
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
+                <td>{len(times)}次</td>
                 <td>{times_str}</td>
             </tr>
             """
@@ -244,6 +239,7 @@ if __name__ == "__main__":
                 <tr>
                     <th>股票代码</th>
                     <th>股票名称</th>
+                    <th>建议次数</th>
                     <th>建议时间</th>
                 </tr>
         """
@@ -254,6 +250,7 @@ if __name__ == "__main__":
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
+                <td>{len(times)}次</td>
                 <td>{times_str}</td>
             </tr>
             """
@@ -268,14 +265,14 @@ if __name__ == "__main__":
         text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
         for code, name, times in buy_without_sell_after:
             times_str = ", ".join(times)
-            text += f"  {code} ({name}) - 建议时间: {times_str}\n"
+            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n"
         text += "\n"
     
     if sell_without_buy_after:
         text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
         for code, name, times in sell_without_buy_after:
             times_str = ", ".join(times)
-            text += f"  {code} ({name}) - 建议时间: {times_str}\n"
+            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n"
         text += "\n"
 
     # 添加说明
