@@ -386,7 +386,6 @@ class SimulationTrader:
         """记录交易日志"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
-        print(log_entry)
         
         # 获取当天的日志文件路径
         today_log_file = self.get_daily_log_file()
@@ -1622,17 +1621,18 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
         analysis_frequency (int): 分析频率（分钟），默认15分钟
         investor_type (str): 投资者风险偏好，默认为"进取型"
     """
-    print(f"开始港股模拟交易，模拟周期: {duration_days} 天")
-    print("初始资金: HK$1,000,000")
-    
     # 创建模拟交易器
     trader = SimulationTrader(initial_capital=1000000, analysis_frequency=analysis_frequency, investor_type=investor_type)
+    
+    # 记录开始信息
+    trader.log_message(f"开始港股模拟交易，模拟周期: {duration_days} 天")
+    trader.log_message("初始资金: HK$1,000,000")
     
     # 测试邮件功能
     trader.test_email_notification()
     
     # 启动时先执行一次交易分析
-    print("启动时执行首次交易分析...")
+    trader.log_message("启动时执行首次交易分析...")
     trader.run_hourly_analysis()
     
     # 计划随机间隔执行交易分析（每15-60分钟之间随机）
@@ -1651,7 +1651,7 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
                 trader.run_hourly_analysis()
                 # 设置下一次随机交易时间（15-60分钟之间）
                 next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
-                print(f"下一次交易分析将在 {next_analysis_time.strftime('%Y-%m-%d %H:%M:%S')} 执行")
+                trader.log_message(f"下一次交易分析将在 {next_analysis_time.strftime('%Y-%m-%d %H:%M:%S')} 执行")
             
             # 运行计划任务（用于每日总结等）
             schedule.run_pending()
@@ -1660,11 +1660,11 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
             time.sleep(60)
             
     except KeyboardInterrupt:
-        print("\n模拟交易被手动中断")
+        trader.log_message("\n模拟交易被手动中断")
     finally:
         # 生成最终报告
         trader.generate_final_report()
-        print(f"模拟交易完成，详细日志请查看: {trader.get_daily_log_file()}")
+        trader.log_message(f"模拟交易完成，详细日志请查看: {trader.get_daily_log_file()}")
 
 if __name__ == "__main__":
     import argparse
@@ -1686,9 +1686,9 @@ if __name__ == "__main__":
         # 执行手工卖出
         success = trader.manual_sell_stock(args.manual_sell, args.sell_percentage)
         if success:
-            print(f"成功卖出 {args.manual_sell} ({args.sell_percentage*100:.1f}%)")
+            trader.log_message(f"成功卖出 {args.manual_sell} ({args.sell_percentage*100:.1f}%)")
         else:
-            print(f"卖出 {args.manual_sell} 失败")
+            trader.log_message(f"卖出 {args.manual_sell} 失败")
         exit(0)
     
     # 运行模拟交易
