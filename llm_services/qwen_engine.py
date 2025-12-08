@@ -22,6 +22,7 @@ def embed_with_llm(query):
         Exception: If the API request fails
     """
     try:
+        print(f"[DEBUG] embed_with_llm called with query: {repr(query)}")  # 打印完整的输入
         # 检查 API 密钥是否设置
         if not api_key:
             raise ValueError("QWEN_API_KEY 环境变量未设置")
@@ -29,6 +30,9 @@ def embed_with_llm(query):
         headers = {
             'Authorization': f'Bearer {api_key}'
         }
+        
+        print(f"[DEBUG] embed_with_llm headers: {headers}")  # 调试日志
+        print(f"[DEBUG] embed_with_llm payload: {{'model': 'text-embedding-v4', 'input': {repr(query)}}}")  # 打印完整的输入
         
         # 确保查询文本是 UTF-8 编码
         if isinstance(query, str):
@@ -40,9 +44,28 @@ def embed_with_llm(query):
         }
         
         response = requests.post(embedding_url, headers=headers, json=payload)
+        print(f"[DEBUG] embed_with_llm response status: {response.status_code}")  # 调试日志
+        print(f"[DEBUG] embed_with_llm response headers: {response.headers}")  # 调试日志
+        print(f"[DEBUG] embed_with_llm response text: {response.text}")  # 打印完整的输出
+        
         response.raise_for_status()  # Raise an exception for bad status codes
         
-        return response.json()['data'][0]  # Return the embedding vector
+        result = response.json()['data'][0]  # Return the embedding vector
+        print(f"[DEBUG] embed_with_llm success, returning data: {result}")  # 打印完整的输出
+        return result
+    except requests.exceptions.HTTPError as http_err:
+        print(f'HTTP error occurred during embedding request: {http_err}')
+        print(f'Response content: {response.text if "response" in locals() else "No response"}')
+        raise http_err
+    except requests.exceptions.ConnectionError as conn_err:
+        print(f'Connection error occurred during embedding request: {conn_err}')
+        raise conn_err
+    except requests.exceptions.Timeout as timeout_err:
+        print(f'Timeout error occurred during embedding request: {timeout_err}')
+        raise timeout_err
+    except requests.exceptions.RequestException as req_err:
+        print(f'Request error occurred during embedding request: {req_err}')
+        raise req_err
     except Exception as error:
         print(f'Error during requests POST: {error}')
         raise error  # Re-raise the error for the caller to handle
@@ -62,6 +85,9 @@ def chat_with_llm(query, enable_thinking=True):
         Exception: If the API request fails
     """
     try:
+        print(f"[DEBUG] chat_with_llm called with query: {repr(query)}")  # 打印完整的输入
+        print(f"[DEBUG] chat_with_llm enable_thinking: {enable_thinking}")  # 调试日志
+        
         # 检查 API 密钥是否设置
         if not api_key:
             raise ValueError("QWEN_API_KEY 环境变量未设置")
@@ -86,10 +112,33 @@ def chat_with_llm(query, enable_thinking=True):
             'enable_thinking': enable_thinking  # 使用传入的参数
         }
         
+        print(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志
+        print(f"[DEBUG] chat_with_llm payload: {payload}")  # 打印完整的输入
+        
         response = requests.post(chat_url, headers=headers, json=payload)
+        print(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
+        print(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
+        print(f"[DEBUG] chat_with_llm response text: {response.text}")  # 打印完整的输出
+        
         response.raise_for_status()  # Raise an exception for bad status codes
         
-        return response.json()['choices'][0]['message']['content']  # Return the response text
+        result = response.json()['choices'][0]['message']['content']  # Return the response text
+        print(f"[DEBUG] chat_with_llm success, returning content: {repr(result)}")  # 打印完整的输出
+        return result
+    except requests.exceptions.HTTPError as http_err:
+        print(f'HTTP error occurred during chat request: {http_err}')
+        print(f'Response status code: {response.status_code if "response" in locals() else "No response"}')
+        print(f'Response content: {response.text if "response" in locals() else "No response"}')
+        raise http_err
+    except requests.exceptions.ConnectionError as conn_err:
+        print(f'Connection error occurred during chat request: {conn_err}')
+        raise conn_err
+    except requests.exceptions.Timeout as timeout_err:
+        print(f'Timeout error occurred during chat request: {timeout_err}')
+        raise timeout_err
+    except requests.exceptions.RequestException as req_err:
+        print(f'Request error occurred during chat request: {req_err}')
+        raise req_err
     except Exception as error:
         print(f'Error during requests POST: {error}')
         raise error  # Re-raise the error for the caller to handle
