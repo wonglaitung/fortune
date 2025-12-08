@@ -1631,6 +1631,10 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     # 测试邮件功能
     trader.test_email_notification()
     
+    # 启动时先执行一次交易分析
+    print("启动时执行首次交易分析...")
+    trader.run_hourly_analysis()
+    
     # 计划随机间隔执行交易分析（每15-60分钟之间随机）
     next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
     
