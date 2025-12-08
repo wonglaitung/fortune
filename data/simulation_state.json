@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 53194.18929405208,
+  "capital": 113.18929405204835,
   "positions": {
     "2269.HK": {
       "shares": 15100,
@@ -13,14 +13,14 @@
       "stop_loss_price": 230.0
     },
     "0883.HK": {
-      "shares": 4000,
-      "avg_price": 21.325,
+      "shares": 4400,
+      "avg_price": 21.35181818181818,
       "stop_loss_price": 20.5
     },
-    "9660.HK": {
-      "shares": 14700,
-      "avg_price": 7.997755102040816,
-      "stop_loss_price": 7.5
+    "9988.HK": {
+      "shares": 1100,
+      "avg_price": 153.1,
+      "stop_loss_price": 148.0
     }
   },
   "transaction_history": [
@@ -6367,6 +6367,138 @@
       "capital_after": 53194.18929405208,
       "reason": "止损触发: 当前价格HK$5.63 < 止损价格HK$5.65",
       "success": true
+    },
+    {
+      "timestamp": "2025-12-08T14:33:58.278352",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 6200,
+      "price": 8.5,
+      "amount": 52700.0,
+      "capital_after": 494.18929405207746,
+      "reason": "南向资金大额流入9.29亿港元，相对强度差值+14.37%显著跑赢恒指，技术面位置34.73%低位启动多头信号，新闻面高内资持股催化AI需求",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T14:34:01.711088",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 153.5,
+      "amount": 0,
+      "capital_after": 494.18929405207746,
+      "reason": "南向资金流入5.85亿港元，技术面位置24.16%低位蓄力回调充分，新闻面AI与云新动向推动估值上调至$197.98/股 (原因: 资金不足)",
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08T14:45:40.575050",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 20900,
+      "price": 8.45,
+      "amount": 176604.99999999997,
+      "capital_after": 177099.18929405205,
+      "reason": "资金流出信号矛盾（CMF=-0.1204负值），相对强度与资金流向背离，技术面信号不可靠且风险高",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T14:45:46.876128",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 1100,
+      "price": 153.1,
+      "amount": 168410.0,
+      "capital_after": 8689.189294052048,
+      "reason": "低位反弹机会显著（位置24.4%），资金流入可靠（CMF=0.1182, OBV正增长），估值折价20%且AI业务重估驱动，技术面MACD金叉加速",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T14:45:50.552522",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 21.36,
+      "amount": 8544.0,
+      "capital_after": 145.18929405204835,
+      "reason": "AI芯片主题核心标的，相对强度差值10.42%大幅跑赢恒指，技术面布林带突破上轨且资金强流入（CMF=0.1699），存在市场预期差",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T14:45:52.791094",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 42.54,
+      "amount": 0,
+      "capital_after": 145.18929405204835,
+      "reason": "EV与AI业务增长超预期，相对强度差值9.26%领跑，技术面MACD强势金叉且位置低位（22.62%），但随机振荡器超买需谨慎 (原因: 资金不足)",
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08T14:54:58.938664",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.66,
+      "amount": 0,
+      "capital_after": 145.18929405204835,
+      "reason": "南向资金大幅流入1191.02亿港元且CMF趋势信号=1，技术面RSI=55.12健康区间、MACD上升加速、布林带未超买，新项目投产强化基本面，股息率5.2%提供安全边际，符合平衡型投资者价值与成长兼顾需求 (原因: 资金不足)",
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08T14:55:02.381075",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 21.48,
+      "amount": 0,
+      "capital_after": 145.18929405204835,
+      "reason": "AI芯片主题高景气驱动相对强度差值+10.39%显著跑赢恒指，技术面RSI健康、MACD柱状图加速上升、放量上涨信号=1，资金流入OBV正值，成长潜力与波动风险平衡，适合平衡型投资者稳健增长目标 (原因: 资金不足)",
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08T15:48:02.304962",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 21.54,
+      "amount": 8616.0,
+      "capital_after": 8761.189294052048,
+      "reason": "波动率过高（64.57%），短期回调风险大，Williams %R接近超卖区域，新闻无实质利好支撑，不符合平衡型风险偏好且与资金分配优化原则冲突",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T15:48:08.754240",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 400,
+      "price": 21.62,
+      "amount": 8648.0,
+      "capital_after": 113.18929405204835,
+      "reason": "南向资金大幅流入118.34亿港元（清单最高），新油田投产催化盈利预期，技术面布林带突破且MACD加速，高股息率5.2%提供安全边际，符合平衡型价值与成长兼顾需求",
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08T15:48:13.619991",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 33.04,
+      "amount": 0,
+      "capital_after": 113.18929405204835,
+      "reason": "错杀机会显著，估值修复（PEG 0.8低于行业均值），技术面MACD金叉且RSI健康区间，生物科技板块领涨潜力，安全边际高适合平衡型稳健增长 (原因: 资金不足)",
+      "success": false
     }
   ],
   "portfolio_history": [
@@ -13943,209 +14075,373 @@
           "stop_loss_price": 7.5
         }
       }
+    },
+    {
+      "timestamp": "2025-12-08T14:33:58.768771",
+      "capital": 494.18929405207746,
+      "portfolio_value": 964126.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4000,
+          "avg_price": 21.325,
+          "stop_loss_price": 20.5
+        },
+        "9660.HK": {
+          "shares": 20900,
+          "avg_price": 8.146746411483253,
+          "stop_loss_price": 7.8
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-08T14:45:40.936680",
+      "capital": 177099.18929405205,
+      "portfolio_value": 964493.189294052,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4000,
+          "avg_price": 21.325,
+          "stop_loss_price": 20.5
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-08T14:45:47.331176",
+      "capital": 8689.189294052048,
+      "portfolio_value": 964573.189294052,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4000,
+          "avg_price": 21.325,
+          "stop_loss_price": 20.5
+        },
+        "9988.HK": {
+          "shares": 1100,
+          "avg_price": 153.1,
+          "stop_loss_price": 148.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-08T14:45:51.138036",
+      "capital": 145.18929405204835,
+      "portfolio_value": 964491.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4000,
+          "avg_price": 21.325,
+          "stop_loss_price": 20.5
+        },
+        "9988.HK": {
+          "shares": 1100,
+          "avg_price": 153.1,
+          "stop_loss_price": 148.0
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 21.36,
+          "stop_loss_price": 19.8
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-08T15:48:02.794759",
+      "capital": 8761.189294052048,
+      "portfolio_value": 965417.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4400,
+          "avg_price": 21.35181818181818,
+          "stop_loss_price": 20.5
+        },
+        "9988.HK": {
+          "shares": 1100,
+          "avg_price": 153.1,
+          "stop_loss_price": 148.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-08T15:48:09.225080",
+      "capital": 113.18929405204835,
+      "portfolio_value": 964925.1892940521,
+      "positions": {
+        "2269.HK": {
+          "shares": 15100,
+          "avg_price": 31.09907284768212,
+          "stop_loss_price": 29.5
+        },
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 4400,
+          "avg_price": 21.35181818181818,
+          "stop_loss_price": 20.5
+        },
+        "9988.HK": {
+          "shares": 1100,
+          "avg_price": 153.1,
+          "stop_loss_price": 148.0
+        }
+      }
     }
   ],
   "decision_history": [
     {
-      "timestamp": "2025-12-04 14:27:00",
+      "timestamp": "2025-12-08 14:34:01",
       "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
       "shares": 0,
-      "price": 41.44,
+      "price": 153.5,
       "amount": 0,
-      "reason": "超低位错杀（位置17.56%），印度政策软化预期修复估值，相对强度+6.91%最强跑赢恒指，动态PE 18x低于行业平均，技术面缩量回调未破位，适合平衡型投资者捕捉事件驱动机会 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
+      "reason": "南向资金流入5.85亿港元，技术面位置24.16%低位蓄力回调充分，新闻面AI与云新动向推动估值上调至$197.98/股 (原因: 资金不足)",
+      "capital_after": 494.18929405207746,
       "success": false
     },
     {
-      "timestamp": "2025-12-04 14:27:05",
-      "type": "BUY",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 75.9,
-      "amount": 0,
-      "reason": "AI芯片需求爆发催化（内存短缺新闻），技术面中高位健康（5日均线偏离+2.11%），动态PE 35x低于行业平均，波动率提供弹性，符合平衡型对价值与成长的均衡配置需求 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-04 15:31:23",
+      "timestamp": "2025-12-08 14:45:40",
       "buy": [
         {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "AI芯片国产替代加速，Volkswagen合作新闻催化，技术面布林带突破+MACD强动能，相对强度11.43%显著跑赢恒指，符合平衡型成长配置需求",
-          "allocation_pct": 12,
-          "stop_loss_price": 7.7
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "低位反弹机会显著（位置24.4%），资金流入可靠（CMF=0.1182, OBV正增长），估值折价20%且AI业务重估驱动，技术面MACD金叉加速",
+          "allocation_pct": 20,
+          "stop_loss_price": 148.0
         },
         {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "生物科技政策风险缓和，估值修复逻辑强化，技术面低位反弹+MACD最强动能，位置18.24%提供安全边际，相对强度2.33%稳健增长",
-          "allocation_pct": 13,
-          "stop_loss_price": 30.5
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "AI芯片主题核心标的，相对强度差值10.42%大幅跑赢恒指，技术面布林带突破上轨且资金强流入（CMF=0.1699），存在市场预期差",
+          "allocation_pct": 20,
+          "stop_loss_price": 19.8
         },
         {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "高股息防御属性突出（股息率约4.5%），资金持续流入（CMF趋势信号为1），技术面缩量回调健康，相对强度1.24%匹配平衡型风险偏好",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "EV与AI业务增长超预期，相对强度差值9.26%领跑，技术面MACD强势金叉且位置低位（22.62%），但随机振荡器超买需谨慎",
           "allocation_pct": 15,
-          "stop_loss_price": 76.5
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-04 15:31:24",
-      "type": "BUY",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 0,
-      "price": 8.33,
-      "amount": 0,
-      "reason": "AI芯片国产替代加速，Volkswagen合作新闻催化，技术面布林带突破+MACD强动能，相对强度11.43%显著跑赢恒指，符合平衡型成长配置需求 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-04 15:31:28",
-      "type": "BUY",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 32.74,
-      "amount": 0,
-      "reason": "生物科技政策风险缓和，估值修复逻辑强化，技术面低位反弹+MACD最强动能，位置18.24%提供安全边际，相对强度2.33%稳健增长 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-04 15:31:31",
-      "type": "BUY",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 78.9,
-      "amount": 0,
-      "reason": "高股息防御属性突出（股息率约4.5%），资金持续流入（CMF趋势信号为1），技术面缩量回调健康，相对强度1.24%匹配平衡型风险偏好 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-05 09:41:47",
-      "buy": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "南向资金强流入11.13万（全清单第1），位置20.05%超低位，MACD动量加速，印度政策利好催化，技术面与新闻高度匹配",
-          "allocation_pct": "15",
-          "stop_loss_price": "40.0"
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "南向资金流入9.23万（全清单第2），位置26.33%低位，MACD动量改善，Volkswagen芯片合作新闻强化自动驾驶预期",
-          "allocation_pct": "15",
-          "stop_loss_price": "7.80"
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-05 09:41:49",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 42.24,
-      "amount": 0,
-      "reason": "南向资金强流入11.13万（全清单第1），位置20.05%超低位，MACD动量加速，印度政策利好催化，技术面与新闻高度匹配 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-05 09:41:53",
-      "type": "BUY",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 0,
-      "price": 8.22,
-      "amount": 0,
-      "reason": "南向资金流入9.23万（全清单第2），位置26.33%低位，MACD动量改善，Volkswagen芯片合作新闻强化自动驾驶预期 (原因: 资金不足)",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-05 11:38:25",
-      "buy": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "资金面建仓信号=1，南向资金流入+12.9万（24股最高），技术面位置22.44%低位放量上涨，相对强度+12.9%跑赢恒指，新闻中性偏正支持AI和汽车电子生态扩张",
-          "allocation_pct": "15%",
-          "stop_loss_price": 40.0
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "资金面建仓信号=1，南向资金流入+11.48万（24股第2），技术面位置30.25%低位反弹，OBV正值确认资金流入，新闻正面（大众芯片合作强化自动驾驶预期）",
-          "allocation_pct": "14%",
-          "stop_loss_price": 7.8
+          "stop_loss_price": 40.5
         }
       ],
       "sell": [
         {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货信号=1，南向资金流出-14.57万（24股最大），价格大跌-3.11%，技术破位且无支撑，航运周期下行风险，风险等级高",
-          "stop_loss_triggered": false
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "出货信号=1，南向资金流出-5.09万，FSB G-SIB名单系统性风险，CMF趋势信号=1资金流出，技术面弱势且无承接",
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "资金流出信号矛盾（CMF=-0.1204负值），相对强度与资金流向背离，技术面信号不可靠且风险高",
           "stop_loss_triggered": false
         }
       ]
     },
     {
-      "timestamp": "2025-12-05 11:38:25",
+      "timestamp": "2025-12-08 14:45:40",
       "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号=1，南向资金流出-14.57万（24股最大），价格大跌-3.11%，技术破位且无支撑，航运周期下行风险，风险等级高",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-05 11:38:27",
-      "type": "SELL",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号=1，南向资金流出-5.09万，FSB G-SIB名单系统性风险，CMF趋势信号=1资金流出，技术面弱势且无承接",
-      "capital_after": 272.18929405207746,
-      "success": false
-    },
-    {
-      "timestamp": "2025-12-05 11:38:32",
-      "type": "SELL",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 9400,
-      "price": 5.63,
-      "amount": 52922.0,
-      "reason": "止损触发: 当前价格HK$5.63 < 止损价格HK$5.65",
-      "capital_after": 53194.18929405208,
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 20900,
+      "price": 8.45,
+      "amount": 176604.99999999997,
+      "reason": "资金流出信号矛盾（CMF=-0.1204负值），相对强度与资金流向背离，技术面信号不可靠且风险高",
+      "capital_after": 177099.18929405205,
       "success": true,
-      "profit_loss": -2067.9999999999977
+      "profit_loss": 6337.999999999996
+    },
+    {
+      "timestamp": "2025-12-08 14:45:46",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 1100,
+      "price": 153.1,
+      "amount": 168410.0,
+      "reason": "低位反弹机会显著（位置24.4%），资金流入可靠（CMF=0.1182, OBV正增长），估值折价20%且AI业务重估驱动，技术面MACD金叉加速",
+      "capital_after": 8689.189294052048,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08 14:45:50",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 21.36,
+      "amount": 8544.0,
+      "reason": "AI芯片主题核心标的，相对强度差值10.42%大幅跑赢恒指，技术面布林带突破上轨且资金强流入（CMF=0.1699），存在市场预期差",
+      "capital_after": 145.18929405204835,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08 14:45:52",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 42.54,
+      "amount": 0,
+      "reason": "EV与AI业务增长超预期，相对强度差值9.26%领跑，技术面MACD强势金叉且位置低位（22.62%），但随机振荡器超买需谨慎 (原因: 资金不足)",
+      "capital_after": 145.18929405204835,
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08 14:54:57",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "南向资金大幅流入1191.02亿港元且CMF趋势信号=1，技术面RSI=55.12健康区间、MACD上升加速、布林带未超买，新项目投产强化基本面，股息率5.2%提供安全边际，符合平衡型投资者价值与成长兼顾需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 11.4
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "AI芯片主题高景气驱动相对强度差值+10.39%显著跑赢恒指，技术面RSI健康、MACD柱状图加速上升、放量上涨信号=1，资金流入OBV正值，成长潜力与波动风险平衡，适合平衡型投资者稳健增长目标",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.3
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2025-12-08 14:54:58",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.66,
+      "amount": 0,
+      "reason": "南向资金大幅流入1191.02亿港元且CMF趋势信号=1，技术面RSI=55.12健康区间、MACD上升加速、布林带未超买，新项目投产强化基本面，股息率5.2%提供安全边际，符合平衡型投资者价值与成长兼顾需求 (原因: 资金不足)",
+      "capital_after": 145.18929405204835,
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08 14:55:02",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 21.48,
+      "amount": 0,
+      "reason": "AI芯片主题高景气驱动相对强度差值+10.39%显著跑赢恒指，技术面RSI健康、MACD柱状图加速上升、放量上涨信号=1，资金流入OBV正值，成长潜力与波动风险平衡，适合平衡型投资者稳健增长目标 (原因: 资金不足)",
+      "capital_after": 145.18929405204835,
+      "success": false
+    },
+    {
+      "timestamp": "2025-12-08 15:48:02",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "南向资金大幅流入118.34亿港元（清单最高），新油田投产催化盈利预期，技术面布林带突破且MACD加速，高股息率5.2%提供安全边际，符合平衡型价值与成长兼顾需求",
+          "allocation_pct": 12,
+          "stop_loss_price": 20.5
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "错杀机会显著，估值修复（PEG 0.8低于行业均值），技术面MACD金叉且RSI健康区间，生物科技板块领涨潜力，安全边际高适合平衡型稳健增长",
+          "allocation_pct": 12,
+          "stop_loss_price": 31.0
+        }
+      ],
+      "sell": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "波动率过高（64.57%），短期回调风险大，Williams %R接近超卖区域，新闻无实质利好支撑，不符合平衡型风险偏好且与资金分配优化原则冲突",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-08 15:48:02",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 21.54,
+      "amount": 8616.0,
+      "reason": "波动率过高（64.57%），短期回调风险大，Williams %R接近超卖区域，新闻无实质利好支撑，不符合平衡型风险偏好且与资金分配优化原则冲突",
+      "capital_after": 8761.189294052048,
+      "success": true,
+      "profit_loss": 71.99999999999989
+    },
+    {
+      "timestamp": "2025-12-08 15:48:08",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 400,
+      "price": 21.62,
+      "amount": 8648.0,
+      "reason": "南向资金大幅流入118.34亿港元（清单最高），新油田投产催化盈利预期，技术面布林带突破且MACD加速，高股息率5.2%提供安全边际，符合平衡型价值与成长兼顾需求",
+      "capital_after": 113.18929405204835,
+      "success": true
+    },
+    {
+      "timestamp": "2025-12-08 15:48:13",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 33.04,
+      "amount": 0,
+      "reason": "错杀机会显著，估值修复（PEG 0.8低于行业均值），技术面MACD金叉且RSI健康区间，生物科技板块领涨潜力，安全边际高适合平衡型稳健增长 (原因: 资金不足)",
+      "capital_after": 113.18929405204835,
+      "success": false
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
