@@ -1316,9 +1316,8 @@ class SimulationTrader:
                         )
                     continue
                 
-                
-        
-        
+                # 如果计算出的股数大于0，则执行买入操作
+                self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price, current_price, skip_decision_record=False)
                 
         # 保存状态
         self.save_state()
