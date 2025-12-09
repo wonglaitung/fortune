@@ -203,7 +203,7 @@ def send_ipo_email(data, to):
     html += "</body></html>"
 
     msg = MIMEMultipart("alternative")
-    msg['From'] = f'"wonglaitung" <{sender_email}>'
+    msg['From'] = f'<{sender_email}>'
     msg['To'] = ", ".join(to)
     msg['Subject'] = subject
 

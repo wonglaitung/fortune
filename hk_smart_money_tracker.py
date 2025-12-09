@@ -2200,7 +2200,7 @@ def main(run_date=None):
             html += "</body></html>"
 
             msg = MIMEMultipart("mixed")
-            msg['From'] = f'"wonglaitung" <{sender_email}>'
+            msg['From'] = f'<{sender_email}>'
             msg['To'] = ", ".join(to)
             msg['Subject'] = subject
 
