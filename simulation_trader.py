@@ -979,7 +979,10 @@ class SimulationTrader:
                     context += f"  买入: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}\n"
                 else:  # SELL
                     profit_loss = record.get('profit_loss', '未知盈亏')
-                    context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: HK${profit_loss:+.2f}\n"
+                    if isinstance(profit_loss, (int, float)):
+                        context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: HK${profit_loss:+.2f}\n"
+                    else:
+                        context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: {profit_loss}\n"
                 
                 context += f"  原因: {reason}\n"
         
@@ -1075,18 +1078,18 @@ class SimulationTrader:
             
             # 调用大模型分析（真实调用）
             self.log_message("正在调用大模型分析...")
-            try:
-                # 导入大模型服务
-                from llm_services import qwen_engine
-                llm_analysis = qwen_engine.chat_with_llm(llm_prompt)
-                self.log_message("大模型分析调用成功")
-                self.log_message(f"大模型分析结果:\n{llm_analysis}")
+        
+            # 导入大模型服务
+            from llm_services import qwen_engine
+            llm_analysis = qwen_engine.chat_with_llm(llm_prompt)
+            self.log_message("大模型分析调用成功")
+            self.log_message(f"大模型分析结果:\n{llm_analysis}")
                 
-                # 获取历史决策上下文
-                decision_history_context = self.get_recent_decisions_context()
+            # 获取历史决策上下文
+            decision_history_context = self.get_recent_decisions_context()
                 
-                # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
-                format_prompt = f"""
+            # 再次调用大模型，要求以固定格式输出买卖信号和资金分配建议
+            format_prompt = f"""
 请分析以下港股分析报告，考虑投资者风险偏好为{self.investor_type}，并严格按照以下JSON格式输出买卖信号和资金分配建议：
 
 报告内容：
@@ -1131,17 +1134,12 @@ class SimulationTrader:
 12. 决策一致性：当前决策应与历史决策保持一致性，避免在短时间内对同一只股票进行相反的操作，但在市场情况发生重大变化时允许必要的调整
 """
                 
-                self.log_message("正在请求大模型以固定格式输出买卖信号...")
-                formatted_output = qwen_engine.chat_with_llm(format_prompt)
-                self.log_message(f"格式化输出结果:\n{formatted_output}")
+            self.log_message("正在请求大模型以固定格式输出买卖信号...")
+            formatted_output = qwen_engine.chat_with_llm(format_prompt)
+            self.log_message(f"格式化输出结果:\n{formatted_output}")
                 
-                # 将大模型的格式化输出传递给解析函数
-                llm_analysis = formatted_output
-            except Exception as e:
-                self.log_message(f"大模型分析调用失败: {e}")
-                self.log_message("由于大模型分析失败，跳过本次交易决策")
-                return
-            
+            # 将大模型的格式化输出传递给解析函数
+            llm_analysis = formatted_output
         except Exception as e:
             self.log_message(f"股票分析或大模型调用失败: {e}")
             return
