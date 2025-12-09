@@ -185,7 +185,7 @@ def send_email(to, subject, text, html):
         to = [to]
 
     msg = MIMEMultipart("alternative")
-    msg['From'] = f'"HSI Monitor" <{sender_email}>'
+    msg['From'] = f'<{sender_email}>'
     msg['To'] = ", ".join(to)  # 将收件人列表转换为逗号分隔的字符串
     msg['Subject'] = subject
 

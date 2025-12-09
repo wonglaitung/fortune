@@ -805,7 +805,7 @@ class GoldMarketAnalyzer:
             
             # 创建邮件消息
             msg = MIMEMultipart("mixed")
-            msg['From'] = f'"Gold Analyzer" <{sender_email}>'
+            msg['From'] = f'<{sender_email}>'
             msg['To'] = ", ".join(recipients)
             msg['Subject'] = subject
             
