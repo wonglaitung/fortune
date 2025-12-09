@@ -43,13 +43,15 @@ def analyze_last_24_hours():
                     i += 1
             fields = reconstructed
         
-        if len(fields) >= 6:  # Ensure we have enough fields
+        if len(fields) >= 8:  # Ensure we have enough fields (including reason)
             timestamp_str = fields[0]
             trans_type = fields[1]
             code = fields[2]
             name = fields[3] if len(fields) > 3 else ""
             shares_str = fields[4] if len(fields) > 4 else "0"
             price_str = fields[5] if len(fields) > 5 else "0"
+            amount_str = fields[6] if len(fields) > 6 else "0"
+            reason = fields[8] if len(fields) > 8 else ""  # reason is at index 8
             
             try:
                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
@@ -60,7 +62,9 @@ def analyze_last_24_hours():
                     'code': code,
                     'name': name,
                     'shares': int(float(shares_str)),
-                    'price': float(price_str)
+                    'price': float(price_str),
+                    'amount': float(amount_str),
+                    'reason': reason
                 })
             except ValueError as e:
                 print(f"Error parsing line: {line[:100]}... Error: {e}")
@@ -87,11 +91,13 @@ def analyze_last_24_hours():
         if len(buys) >= 3 and len(sells) == 0:
             stock_name = buys[0]['name'] if buys else 'Unknown'
             buy_times = [buy['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for buy in buys]
-            buy_without_sell_after.append((stock_code, stock_name, buy_times))
+            buy_reasons = [buy['reason'] for buy in buys]
+            buy_without_sell_after.append((stock_code, stock_name, buy_times, buy_reasons))
         elif len(sells) >= 3 and len(buys) == 0:
             stock_name = sells[0]['name'] if sells else 'Unknown'
             sell_times = [sell['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for sell in sells]
-            sell_without_buy_after.append((stock_code, stock_name, sell_times))
+            sell_reasons = [sell['reason'] for sell in sells]
+            sell_without_buy_after.append((stock_code, stock_name, sell_times, sell_reasons))
     
     return buy_without_sell_after, sell_without_buy_after
 
@@ -211,17 +217,21 @@ if __name__ == "__main__":
                     <th>股票名称</th>
                     <th>建议次数</th>
                     <th>建议时间</th>
+                    <th>建议理由</th>
                 </tr>
         """
         
-        for code, name, times in buy_without_sell_after:
+        for code, name, times, reasons in buy_without_sell_after:
             times_str = "<br>".join(times)
+            # 将理由用换行符连接，确保每条理由单独显示
+            reasons_str = "<br>".join([reason if reason else "无具体理由" for reason in reasons])
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
                 <td>{len(times)}次</td>
                 <td>{times_str}</td>
+                <td>{reasons_str}</td>
             </tr>
             """
         
@@ -241,17 +251,21 @@ if __name__ == "__main__":
                     <th>股票名称</th>
                     <th>建议次数</th>
                     <th>建议时间</th>
+                    <th>建议理由</th>
                 </tr>
         """
         
-        for code, name, times in sell_without_buy_after:
+        for code, name, times, reasons in sell_without_buy_after:
             times_str = "<br>".join(times)
+            # 将理由用换行符连接，确保每条理由单独显示
+            reasons_str = "<br>".join([reason if reason else "无具体理由" for reason in reasons])
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
                 <td>{len(times)}次</td>
                 <td>{times_str}</td>
+                <td>{reasons_str}</td>
             </tr>
             """
         
@@ -263,16 +277,18 @@ if __name__ == "__main__":
     # 在文本版本中也添加信息
     if buy_without_sell_after:
         text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
-        for code, name, times in buy_without_sell_after:
+        for code, name, times, reasons in buy_without_sell_after:
             times_str = ", ".join(times)
-            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n"
+            reasons_str = "\n    理由: ".join([reason if reason else "无具体理由" for reason in reasons])
+            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n    理由: {reasons_str}\n"
         text += "\n"
     
     if sell_without_buy_after:
         text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
-        for code, name, times in sell_without_buy_after:
+        for code, name, times, reasons in sell_without_buy_after:
             times_str = ", ".join(times)
-            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n"
+            reasons_str = "\n    理由: ".join([reason if reason else "无具体理由" for reason in reasons])
+            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n    理由: {reasons_str}\n"
         text += "\n"
 
     # 添加说明
