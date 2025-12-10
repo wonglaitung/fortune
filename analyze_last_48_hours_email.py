@@ -216,22 +216,25 @@ if __name__ == "__main__":
                     <th>股票代码</th>
                     <th>股票名称</th>
                     <th>建议次数</th>
-                    <th>建议时间</th>
-                    <th>建议理由</th>
+                    <th>建议时间及理由</th>
                 </tr>
         """
         
         for code, name, times, reasons in buy_without_sell_after:
-            times_str = "<br>".join(times)
-            # 将理由用换行符连接，确保每条理由单独显示
-            reasons_str = "<br>".join([reason if reason else "无具体理由" for reason in reasons])
+            # 合并时间和原因
+            combined_str = ""
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                if i < len(times) - 1:
+                    combined_str += time_reason + "<br>"
+                else:
+                    combined_str += time_reason
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
                 <td>{len(times)}次</td>
-                <td>{times_str}</td>
-                <td>{reasons_str}</td>
+                <td>{combined_str}</td>
             </tr>
             """
         
@@ -250,22 +253,25 @@ if __name__ == "__main__":
                     <th>股票代码</th>
                     <th>股票名称</th>
                     <th>建议次数</th>
-                    <th>建议时间</th>
-                    <th>建议理由</th>
+                    <th>建议时间及理由</th>
                 </tr>
         """
         
         for code, name, times, reasons in sell_without_buy_after:
-            times_str = "<br>".join(times)
-            # 将理由用换行符连接，确保每条理由单独显示
-            reasons_str = "<br>".join([reason if reason else "无具体理由" for reason in reasons])
+            # 合并时间和原因
+            combined_str = ""
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                if i < len(times) - 1:
+                    combined_str += time_reason + "<br>"
+                else:
+                    combined_str += time_reason
             html += f"""
             <tr>
                 <td>{code}</td>
                 <td>{name}</td>
                 <td>{len(times)}次</td>
-                <td>{times_str}</td>
-                <td>{reasons_str}</td>
+                <td>{combined_str}</td>
             </tr>
             """
         
@@ -278,17 +284,25 @@ if __name__ == "__main__":
     if buy_without_sell_after:
         text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
         for code, name, times, reasons in buy_without_sell_after:
-            times_str = ", ".join(times)
-            reasons_str = "\n    理由: ".join([reason if reason else "无具体理由" for reason in reasons])
-            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n    理由: {reasons_str}\n"
+            # 合并时间和原因
+            combined_list = []
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                combined_list.append(time_reason)
+            combined_str = "\n    ".join(combined_list)
+            text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
         text += "\n"
     
     if sell_without_buy_after:
         text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
         for code, name, times, reasons in sell_without_buy_after:
-            times_str = ", ".join(times)
-            reasons_str = "\n    理由: ".join([reason if reason else "无具体理由" for reason in reasons])
-            text += f"  {code} ({name}) - 建议{len(times)}次 - 建议时间: {times_str}\n    理由: {reasons_str}\n"
+            # 合并时间和原因
+            combined_list = []
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                combined_list.append(time_reason)
+            combined_str = "\n    ".join(combined_list)
+            text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
         text += "\n"
 
     # 添加说明
