@@ -61,21 +61,23 @@ def analyze_last_24_hours():
                 formatted_reason = reason
                 has_additional_info = False
                 
-                if stop_loss_price not in ["", "None", "nan"] and stop_loss_price is not None:
+                # 检查止损价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+                if stop_loss_price and stop_loss_price not in ["", "None", "nan", "False", "null"] and stop_loss_price is not None and stop_loss_price != "False":
                     try:
                         # 尝试将stop_loss_price转换为浮点数以检查是否有效
                         float_stop_loss = float(stop_loss_price)
-                        if not (float_stop_loss != float_stop_loss):  # 检查是否为NaN
+                        if stop_loss_price and stop_loss_price != 'False' and not (float_stop_loss != float_stop_loss):  # 检查是否为NaN
                             formatted_reason += f", 止损价: {stop_loss_price}"
                             has_additional_info = True
                     except (ValueError, TypeError):
                         pass  # 如果无法转换为浮点数，则跳过
                 
-                if current_price not in ["", "None", "nan"] and current_price is not None:
+                # 检查现价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+                if current_price and current_price not in ["", "None", "nan", "False", "null"] and current_price is not None and current_price != "False":
                     try:
                         # 尝试将current_price转换为浮点数以检查是否有效
                         float_current = float(current_price)
-                        if not (float_current != float_current):  # 检查是否为NaN
+                        if current_price and current_price != 'False' and not (float_current != float_current):  # 检查是否为NaN
                             formatted_reason += f", 现价: {current_price}"
                             has_additional_info = True
                     except (ValueError, TypeError):
