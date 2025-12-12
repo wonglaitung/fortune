@@ -43,7 +43,7 @@ def analyze_last_24_hours():
                     i += 1
             fields = reconstructed
         
-        if len(fields) >= 8:  # Ensure we have enough fields (including reason)
+        if len(fields) >= 10:  # Ensure we have enough fields (including reason, stop_loss_price, and current_price)
             timestamp_str = fields[0]
             trans_type = fields[1]
             code = fields[2]
@@ -52,9 +52,39 @@ def analyze_last_24_hours():
             price_str = fields[5] if len(fields) > 5 else "0"
             amount_str = fields[6] if len(fields) > 6 else "0"
             reason = fields[8] if len(fields) > 8 else ""  # reason is at index 8
+            stop_loss_price = fields[10] if len(fields) > 10 else ""  # stop_loss_price is at index 10 (after success field at index 9)
+            current_price = fields[11] if len(fields) > 11 else ""  # current_price is at index 11
             
             try:
                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                # Format reason with stop_loss_price and current_price if they exist
+                formatted_reason = reason
+                has_additional_info = False
+                
+                if stop_loss_price not in ["", "None", "nan"] and stop_loss_price is not None:
+                    try:
+                        # 尝试将stop_loss_price转换为浮点数以检查是否有效
+                        float_stop_loss = float(stop_loss_price)
+                        if not (float_stop_loss != float_stop_loss):  # 检查是否为NaN
+                            formatted_reason += f", 止损价: {stop_loss_price}"
+                            has_additional_info = True
+                    except (ValueError, TypeError):
+                        pass  # 如果无法转换为浮点数，则跳过
+                
+                if current_price not in ["", "None", "nan"] and current_price is not None:
+                    try:
+                        # 尝试将current_price转换为浮点数以检查是否有效
+                        float_current = float(current_price)
+                        if not (float_current != float_current):  # 检查是否为NaN
+                            formatted_reason += f", 现价: {current_price}"
+                            has_additional_info = True
+                    except (ValueError, TypeError):
+                        pass  # 如果无法转换为浮点数，则跳过
+                
+                # 如果添加了额外信息，确保正确的格式
+                if has_additional_info and formatted_reason.startswith(", "):
+                    formatted_reason = formatted_reason[2:]
+                
                 transactions.append({
                     'timestamp': timestamp,
                     'date': timestamp.date(),
@@ -64,7 +94,7 @@ def analyze_last_24_hours():
                     'shares': int(float(shares_str)),
                     'price': float(price_str),
                     'amount': float(amount_str),
-                    'reason': reason
+                    'reason': formatted_reason.strip()
                 })
             except ValueError as e:
                 print(f"Error parsing line: {line[:100]}... Error: {e}")
