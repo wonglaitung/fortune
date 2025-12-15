@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 137507.18929405196,
+  "capital": 54113.18929405196,
   "positions": {
     "0388.HK": {
       "shares": 500,
@@ -11,11 +11,6 @@
       "shares": 5400,
       "avg_price": 21.253333333333334,
       "stop_loss_price": 19.8
-    },
-    "1810.HK": {
-      "shares": 3300,
-      "avg_price": 43.1,
-      "stop_loss_price": 41.5
     },
     "2269.HK": {
       "shares": 4300,
@@ -31,6 +26,16 @@
       "shares": 20000,
       "avg_price": 6.14,
       "stop_loss_price": 5.8
+    },
+    "9660.HK": {
+      "shares": 10800,
+      "avg_price": 8.73,
+      "stop_loss_price": 8.0
+    },
+    "0005.HK": {
+      "shares": 1100,
+      "avg_price": 116.1,
+      "stop_loss_price": 112.0
     }
   },
   "transaction_history": [
@@ -8397,6 +8402,48 @@
       "success": true,
       "stop_loss_price": 5.8,
       "current_price": 6.14
+    },
+    {
+      "timestamp": "2025-12-15T11:53:13.192522",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 3300,
+      "price": 42.0,
+      "amount": 138600.0,
+      "capital_after": 276107.18929405196,
+      "reason": "南向资金大幅流出26.9亿港元，技术面MACD负值与放量上涨信号背离，基本面支撑不足，风险等级中高，不符合平衡型投资者风险偏好",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 42.0
+    },
+    {
+      "timestamp": "2025-12-15T11:53:17.826036",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 10800,
+      "price": 8.73,
+      "amount": 94284.0,
+      "capital_after": 181823.18929405196,
+      "reason": "技术面强势（RSI 56.65，MACD柱状图扩大），资金面高相对强度（10.16%），新闻面机构关注度提升，AI硬件赛道高成长，短期预期+8%~10%，符合平衡型风险偏好追求稳健增长",
+      "success": true,
+      "stop_loss_price": 8.0,
+      "current_price": 8.73
+    },
+    {
+      "timestamp": "2025-12-15T11:53:22.193022",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 1100,
+      "price": 116.1,
+      "amount": 127710.0,
+      "capital_after": 54113.18929405196,
+      "reason": "技术面稳健（RSI 66.7未超买），资金面跑赢恒指（5.83%），新闻面估值合理，高股息防御属性，短期预期+3%~5%，提供稳定收益，符合平衡型风险偏好侧重防守需求",
+      "success": true,
+      "stop_loss_price": 112.0,
+      "current_price": 116.1
     }
   ],
   "portfolio_history": [
@@ -16312,7 +16359,7 @@
           "stop_loss_price": 148.0
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16344,7 +16391,7 @@
           "stop_loss_price": 148.0
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16381,7 +16428,7 @@
           "stop_loss_price": 148.0
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16418,7 +16465,7 @@
           "stop_loss_price": 19.8
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16455,7 +16502,7 @@
           "stop_loss_price": 19.8
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16492,7 +16539,7 @@
           "stop_loss_price": 19.8
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16524,7 +16571,7 @@
           "stop_loss_price": 19.8
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16556,7 +16603,7 @@
           "stop_loss_price": 19.8
         },
         "1810.HK": {
-          "shares": 3300,
+          "shares": 0,
           "avg_price": 43.1,
           "stop_loss_price": 41.5
         },
@@ -16576,98 +16623,120 @@
           "stop_loss_price": 5.8
         }
       }
+    },
+    {
+      "timestamp": "2025-12-15T11:53:13.733881",
+      "capital": 276107.18929405196,
+      "portfolio_value": 947251.189294052,
+      "positions": {
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 5400,
+          "avg_price": 21.253333333333334,
+          "stop_loss_price": 19.8
+        },
+        "2269.HK": {
+          "shares": 4300,
+          "avg_price": 32.68,
+          "stop_loss_price": 30.5
+        },
+        "1288.HK": {
+          "shares": 17300,
+          "avg_price": 5.4978612716763005,
+          "stop_loss_price": 5.23
+        },
+        "1398.HK": {
+          "shares": 20000,
+          "avg_price": 6.14,
+          "stop_loss_price": 5.8
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-15T11:53:18.455016",
+      "capital": 181823.18929405196,
+      "portfolio_value": 947559.189294052,
+      "positions": {
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 5400,
+          "avg_price": 21.253333333333334,
+          "stop_loss_price": 19.8
+        },
+        "2269.HK": {
+          "shares": 4300,
+          "avg_price": 32.68,
+          "stop_loss_price": 30.5
+        },
+        "1288.HK": {
+          "shares": 17300,
+          "avg_price": 5.4978612716763005,
+          "stop_loss_price": 5.23
+        },
+        "1398.HK": {
+          "shares": 20000,
+          "avg_price": 6.14,
+          "stop_loss_price": 5.8
+        },
+        "9660.HK": {
+          "shares": 10800,
+          "avg_price": 8.73,
+          "stop_loss_price": 8.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-15T11:53:22.982588",
+      "capital": 54113.18929405196,
+      "portfolio_value": 947451.189294052,
+      "positions": {
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "0883.HK": {
+          "shares": 5400,
+          "avg_price": 21.253333333333334,
+          "stop_loss_price": 19.8
+        },
+        "2269.HK": {
+          "shares": 4300,
+          "avg_price": 32.68,
+          "stop_loss_price": 30.5
+        },
+        "1288.HK": {
+          "shares": 17300,
+          "avg_price": 5.4978612716763005,
+          "stop_loss_price": 5.23
+        },
+        "1398.HK": {
+          "shares": 20000,
+          "avg_price": 6.14,
+          "stop_loss_price": 5.8
+        },
+        "9660.HK": {
+          "shares": 10800,
+          "avg_price": 8.73,
+          "stop_loss_price": 8.0
+        },
+        "0005.HK": {
+          "shares": 1100,
+          "avg_price": 116.1,
+          "stop_loss_price": 112.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2025-12-15 09:58:34",
-      "type": "SELL",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "地缘政治风险（美国军事关联审查），出货信号与资金流出趋势，基本面支撑弱于技术面，风险等级中高",
-      "capital_after": 215724.18929405193,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 0
-    },
-    {
-      "timestamp": "2025-12-15 09:58:37",
-      "type": "BUY",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 4300,
-      "price": 32.68,
-      "amount": 140524.0,
-      "reason": "错杀成长股，跑赢恒指且资金流入持续，技术面低位缩量回调，新闻无负面且估值安全边际高，风险收益比1:3",
-      "capital_after": 75200.18929405193,
-      "success": true,
-      "stop_loss_price": 30.5,
-      "current_price": 32.68
-    },
-    {
-      "timestamp": "2025-12-15 09:58:40",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 13600,
-      "price": 5.5,
-      "amount": 74800.0,
-      "reason": "高股息防御标的，缩量回调信号确认支撑，技术面低位RSI接近超卖，基本面稳健PB破净，风险收益比1:2.5",
-      "capital_after": 400.18929405193194,
-      "success": true,
-      "stop_loss_price": 5.3,
-      "current_price": 5.5
-    },
-    {
-      "timestamp": "2025-12-15 09:58:44",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 20.7,
-      "amount": 0,
-      "reason": "能源股新项目投产驱动，南向资金流入持续，技术面随机振荡器金叉且波动率低，股息率5.8%估值合理 (原因: 资金不足)",
-      "capital_after": 400.18929405193194,
-      "success": false,
-      "stop_loss_price": 19.8,
-      "current_price": 20.7
-    },
-    {
-      "timestamp": "2025-12-15 10:47:46",
-      "buy": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "错杀成长股，资金流入持续，技术面低位缩量回调，安全边际高，符合观察端布局",
-          "allocation_pct": 10,
-          "stop_loss_price": 32.15
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "高股息防御标的，技术面低位支撑，基本面稳健PB破净，符合防守端配置",
-          "allocation_pct": 10,
-          "stop_loss_price": 5.23
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "技术面恶化、资金流出、负面新闻三重风险，风险等级高",
-          "stop_loss_triggered": false
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "技术面弱势、新闻情绪持续负面、地缘政治风险，风险等级中高",
-          "stop_loss_triggered": false
-        }
-      ]
-    },
     {
       "timestamp": "2025-12-15 10:47:46",
       "type": "SELL",
@@ -16814,6 +16883,76 @@
       "success": true,
       "stop_loss_price": 5.8,
       "current_price": 6.14
+    },
+    {
+      "timestamp": "2025-12-15 11:53:13",
+      "buy": [
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "技术面强势（RSI 56.65，MACD柱状图扩大），资金面高相对强度（10.16%），新闻面机构关注度提升，AI硬件赛道高成长，短期预期+8%~10%，符合平衡型风险偏好追求稳健增长",
+          "allocation_pct": 10.0,
+          "stop_loss_price": 8.0
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "技术面稳健（RSI 66.7未超买），资金面跑赢恒指（5.83%），新闻面估值合理，高股息防御属性，短期预期+3%~5%，提供稳定收益，符合平衡型风险偏好侧重防守需求",
+          "allocation_pct": 14.0,
+          "stop_loss_price": 112.0
+        }
+      ],
+      "sell": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "南向资金大幅流出26.9亿港元，技术面MACD负值与放量上涨信号背离，基本面支撑不足，风险等级中高，不符合平衡型投资者风险偏好",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-15 11:53:13",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 3300,
+      "price": 42.0,
+      "amount": 138600.0,
+      "reason": "南向资金大幅流出26.9亿港元，技术面MACD负值与放量上涨信号背离，基本面支撑不足，风险等级中高，不符合平衡型投资者风险偏好",
+      "capital_after": 276107.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 42.0,
+      "profit_loss": -3630.0000000000045
+    },
+    {
+      "timestamp": "2025-12-15 11:53:17",
+      "type": "BUY",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 10800,
+      "price": 8.73,
+      "amount": 94284.0,
+      "reason": "技术面强势（RSI 56.65，MACD柱状图扩大），资金面高相对强度（10.16%），新闻面机构关注度提升，AI硬件赛道高成长，短期预期+8%~10%，符合平衡型风险偏好追求稳健增长",
+      "capital_after": 181823.18929405196,
+      "success": true,
+      "stop_loss_price": 8.0,
+      "current_price": 8.73
+    },
+    {
+      "timestamp": "2025-12-15 11:53:22",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 1100,
+      "price": 116.1,
+      "amount": 127710.0,
+      "reason": "技术面稳健（RSI 66.7未超买），资金面跑赢恒指（5.83%），新闻面估值合理，高股息防御属性，短期预期+3%~5%，提供稳定收益，符合平衡型风险偏好侧重防守需求",
+      "capital_after": 54113.18929405196,
+      "success": true,
+      "stop_loss_price": 112.0,
+      "current_price": 116.1
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
