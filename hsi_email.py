@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-恒生指数价格监控和交易信号邮件通知系统
+恒生指数及港股主力资金追踪器股票价格监控和交易信号邮件通知系统
 基于技术分析指标生成买卖信号，只在有交易信号时发送邮件
 """
 
@@ -22,6 +22,20 @@ try:
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
+
+# 从港股主力资金追踪器导入股票列表
+try:
+    from hk_smart_money_tracker import WATCHLIST
+    STOCK_LIST = WATCHLIST
+except ImportError:
+    print("⚠️ 无法导入 hk_smart_money_tracker.WATCHLIST，使用默认股票列表")
+    # 默认使用一些常见的港股股票
+    STOCK_LIST = {
+        "0700.HK": "腾讯控股",
+        "9988.HK": "阿里巴巴",
+        "3690.HK": "美团",
+        "0005.HK": "汇丰控股"
+    }
 
 def get_hsi_data():
     """获取恒生指数数据"""
@@ -53,14 +67,45 @@ def get_hsi_data():
         print(f"❌ 获取恒生指数数据失败: {e}")
         return None
 
-def calculate_technical_indicators(hsi_data):
+def get_stock_data(symbol):
+    """获取指定股票的数据"""
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="6mo")  # 获取6个月的历史数据
+        if hist.empty:
+            print(f"❌ 无法获取 {symbol} 的历史数据")
+            return None
+        
+        # 获取最新数据
+        latest = hist.iloc[-1]
+        prev = hist.iloc[-2] if len(hist) > 1 else latest
+        
+        stock_data = {
+            'symbol': symbol,
+            'name': STOCK_LIST.get(symbol, symbol),  # 使用导入的股票列表获取股票名称
+            'current_price': latest['Close'],
+            'change_1d': (latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0,
+            'change_1d_points': latest['Close'] - prev['Close'],
+            'open': latest['Open'],
+            'high': latest['High'],
+            'low': latest['Low'],
+            'volume': latest['Volume'],
+            'hist': hist
+        }
+        
+        return stock_data
+    except Exception as e:
+        print(f"❌ 获取 {symbol} 数据失败: {e}")
+        return None
+
+def calculate_technical_indicators(data):
     """
-    计算恒生指数技术指标
+    计算技术指标（适用于恒生指数或个股）
     """
-    if hsi_data is None:
+    if data is None:
         return None
     
-    hist = hsi_data['hist']
+    hist = data['hist']
     
     if not TECHNICAL_ANALYSIS_AVAILABLE:
         # 如果技术分析工具不可用，使用简化指标计算
@@ -104,17 +149,37 @@ def calculate_technical_indicators(hsi_data):
         if 'Buy_Signal' in recent_signals.columns:
             buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
             for idx, row in buy_signals_df.iterrows():
+                description = row['Signal_Description']
+                # 如果描述中已经有"买入信号"字样，去除它，因为我们会在显示时添加
+                if description.startswith('买入信号:'):
+                    description = description[5:].strip()  # 去掉"买入信号:"和可能的空格
+                elif description.startswith('买入信号'):
+                    description = description[4:].strip()  # 去掉"买入信号"和可能的冒号和空格
+                elif description.startswith('Buy Signal:'):
+                    description = description[11:].strip()
+                elif description.startswith('Buy Signal'):
+                    description = description[10:].strip()
                 buy_signals.append({
                     'date': idx.strftime('%Y-%m-%d'),
-                    'description': row['Signal_Description']
+                    'description': description
                 })
         
         if 'Sell_Signal' in recent_signals.columns:
             sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
             for idx, row in sell_signals_df.iterrows():
+                description = row['Signal_Description']
+                # 如果描述中已经有"卖出信号"字样，去除它，因为我们会在显示时添加
+                if description.startswith('卖出信号:'):
+                    description = description[5:].strip()  # 去掉"卖出信号:"和可能的空格
+                elif description.startswith('卖出信号'):
+                    description = description[4:].strip()  # 去掉"卖出信号"和可能的冒号和空格
+                elif description.startswith('Sell Signal:'):
+                    description = description[11:].strip()
+                elif description.startswith('Sell Signal'):
+                    description = description[10:].strip()
                 sell_signals.append({
                     'date': idx.strftime('%Y-%m-%d'),
-                    'description': row['Signal_Description']
+                    'description': description
                 })
         
         return {
@@ -169,6 +234,170 @@ def calculate_price_position(current_price, min_price, max_price):
         return 50.0
     
     return (current_price - min_price) / (max_price - min_price) * 100
+
+def has_any_signals(hsi_indicators, stock_results):
+    """检查是否有任何股票有当天的交易信号"""
+    today = datetime.now().date()
+    
+    # 检查恒生指数信号
+    if hsi_indicators:
+        recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
+        recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
+        
+        for signal in recent_buy_signals:
+            signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+            if signal_date == today:
+                return True
+        for signal in recent_sell_signals:
+            signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+            if signal_date == today:
+                return True
+    
+    # 检查持仓股票信号
+    for stock_result in stock_results:
+        indicators = stock_result.get('indicators')
+        if indicators:
+            recent_buy_signals = indicators.get('recent_buy_signals', [])
+            recent_sell_signals = indicators.get('recent_sell_signals', [])
+            
+            for signal in recent_buy_signals:
+                signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+                if signal_date == today:
+                    return True
+            for signal in recent_sell_signals:
+                signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+                if signal_date == today:
+                    return True
+    
+    return False
+
+def generate_stock_analysis_html(stock_data, indicators):
+    """为单只股票生成HTML分析部分"""
+    if not indicators:
+        return ""
+    
+    html = f"""
+    <div class="section">
+        <h3>📊 {stock_data['name']} ({stock_data['symbol']}) 分析</h3>
+        <table>
+            <tr>
+                <th>指标</th>
+                <th>数值</th>
+            </tr>
+    """
+    
+    html += f"""
+            <tr>
+                <td>当前价格</td>
+                <td>{stock_data['current_price']:,.2f}</td>
+            </tr>
+            <tr>
+                <td>24小时变化</td>
+                <td>{stock_data['change_1d']:+.2f}% ({stock_data['change_1d_points']:+.2f})</td>
+            </tr>
+            <tr>
+                <td>当日开盘</td>
+                <td>{stock_data['open']:,.2f}</td>
+            </tr>
+            <tr>
+                <td>当日最高</td>
+                <td>{stock_data['high']:,.2f}</td>
+            </tr>
+            <tr>
+                <td>当日最低</td>
+                <td>{stock_data['low']:,.2f}</td>
+            </tr>
+            <tr>
+                <td>成交量</td>
+                <td>{stock_data['volume']:,.0f}</td>
+            </tr>
+    """
+    
+    # 添加技术指标
+    rsi = indicators.get('rsi', 0.0)
+    macd = indicators.get('macd', 0.0)
+    macd_signal = indicators.get('macd_signal', 0.0)
+    bb_position = indicators.get('bb_position', 0.5)
+    trend = indicators.get('trend', '未知')
+    ma20 = indicators.get('ma20', 0)
+    ma50 = indicators.get('ma50', 0)
+    ma200 = indicators.get('ma200', 0)
+    
+    html += f"""
+            <tr>
+                <td>趋势</td>
+                <td>{trend}</td>
+            </tr>
+            <tr>
+                <td>RSI (14日)</td>
+                <td>{rsi:.2f}</td>
+            </tr>
+            <tr>
+                <td>MACD</td>
+                <td>{macd:.4f}</td>
+            </tr>
+            <tr>
+                <td>MACD信号线</td>
+                <td>{macd_signal:.4f}</td>
+            </tr>
+            <tr>
+                <td>布林带位置</td>
+                <td>{bb_position:.2f}</td>
+            </tr>
+            <tr>
+                <td>MA20</td>
+                <td>{ma20:,.2f}</td>
+            </tr>
+            <tr>
+                <td>MA50</td>
+                <td>{ma50:,.2f}</td>
+            </tr>
+            <tr>
+                <td>MA200</td>
+                <td>{ma200:,.2f}</td>
+            </tr>
+    """
+    
+    # 添加交易信号
+    recent_buy_signals = indicators.get('recent_buy_signals', [])
+    recent_sell_signals = indicators.get('recent_sell_signals', [])
+    
+    if recent_buy_signals:
+        html += f"""
+            <tr>
+                <td colspan="2">
+                    <div class="buy-signal">
+                        <strong>🔔 最近买入信号:</strong><br>
+        """
+        for signal in recent_buy_signals:
+            html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+        html += """
+                    </div>
+                </td>
+            </tr>
+        """
+    
+    if recent_sell_signals:
+        html += f"""
+            <tr>
+                <td colspan="2">
+                    <div class="sell-signal">
+                        <strong>🔻 最近卖出信号:</strong><br>
+        """
+        for signal in recent_sell_signals:
+            html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+        html += """
+                    </div>
+                </td>
+            </tr>
+        """
+    
+    html += """
+            </table>
+        </div>
+    """
+    
+    return html
 
 def send_email(to, subject, text, html):
     smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
@@ -238,46 +467,72 @@ def send_email(to, subject, text, html):
 if __name__ == "__main__":
     print("🔍 正在获取恒生指数数据...")
     
-    # 获取恒生指数数据
+    # 获取恒生指数数据和指标
     hsi_data = get_hsi_data()
-
     if hsi_data is None:
-        print("❌ 无法获取恒生指数数据，退出。")
-        exit(1)
+        print("❌ 无法获取恒生指数数据")
+        hsi_indicators = None
+    else:
+        print("📊 正在计算恒生指数技术指标...")
+        hsi_indicators = calculate_technical_indicators(hsi_data)
 
-    # 计算技术指标
-    print("📊 正在计算技术指标...")
-    indicators = calculate_technical_indicators(hsi_data)
-
-    if indicators is None:
-        print("❌ 无法计算技术指标，退出。")
-        exit(1)
-
-    # 检查是否存在当天的交易信号
-    has_signals = False
-    today = datetime.now().date()
+    # 获取WATCHLIST中的股票并进行分析
+    print(f"🔍 正在获取股票列表并分析 ({len(STOCK_LIST)} 只股票)...")
+    stock_results = []
     
-    if indicators:
-        recent_buy_signals = indicators.get('recent_buy_signals', [])
-        recent_sell_signals = indicators.get('recent_sell_signals', [])
-        
-        # 检查是否有今天的买入信号
-        for signal in recent_buy_signals:
-            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
-                has_signals = True
-                break
-        # 检查是否有今天的卖出信号
-        for signal in recent_sell_signals:
-            if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
-                has_signals = True
-                break
+    for stock_code, stock_name in STOCK_LIST.items():
+        print(f"🔍 正在分析 {stock_name} ({stock_code}) ...")
+        stock_data = get_stock_data(stock_code)
+        if stock_data:
+            print(f"📊 正在计算 {stock_name} ({stock_code}) 技术指标...")
+            indicators = calculate_technical_indicators(stock_data)
+            stock_results.append({
+                'code': stock_code,
+                'name': stock_name,
+                'data': stock_data,
+                'indicators': indicators
+            })
 
-    # 如果没有交易信号，则不发送邮件
-    if not has_signals:
+    # 检查是否有任何股票有交易信号
+    if not has_any_signals(hsi_indicators, stock_results):
         print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
         exit(0)
 
-    subject = "恒生指数交易信号提醒"
+    subject = "恒生指数及港股主力资金追踪器股票交易信号提醒"
+
+    # 创建信号汇总
+    all_signals = []  # 合并买入和卖出信号
+    
+    # 恒生指数信号
+    if hsi_indicators:
+        recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
+        recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
+        for signal in recent_buy_signals:
+            all_signals.append(('恒生指数', 'HSI', signal, '买入'))
+        for signal in recent_sell_signals:
+            all_signals.append(('恒生指数', 'HSI', signal, '卖出'))
+    
+    # 股票信号
+    for stock_result in stock_results:
+        indicators = stock_result['indicators']
+        if indicators:
+            recent_buy_signals = indicators.get('recent_buy_signals', [])
+            recent_sell_signals = indicators.get('recent_sell_signals', [])
+            for signal in recent_buy_signals:
+                all_signals.append((stock_result['name'], stock_result['code'], signal, '买入'))
+            for signal in recent_sell_signals:
+                all_signals.append((stock_result['name'], stock_result['code'], signal, '卖出'))
+    
+    # 只保留当天的信号
+    today = datetime.now().date()
+    today_signals = []
+    for stock_name, stock_code, signal, signal_type in all_signals:
+        signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+        if signal_date == today:
+            today_signals.append((stock_name, stock_code, signal, signal_type))
+    
+    # 按股票名称和日期排序
+    today_signals.sort(key=lambda x: (x[0], x[2]['date']))  # 按股票名称和日期排序
 
     text = ""
     html = f"""
@@ -299,216 +554,289 @@ if __name__ == "__main__":
         </style>
     </head>
     <body>
-        <h2>📈 恒生指数交易信号提醒</h2>
+        <h2>📈 恒生指数及港股主力资金追踪器股票交易信号提醒</h2>
         <p><strong>报告生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     """
 
-    # 恒生指数价格概览
+    # 交易信号总结
     html += """
         <div class="section">
-            <h3>📈 恒生指数价格概览</h3>
+            <h3>🔔 交易信号总结</h3>
             <table>
                 <tr>
-                    <th>指标</th>
-                    <th>数值</th>
+                    <th>股票名称</th>
+                    <th>股票代码</th>
+                    <th>信号类型</th>
+                    <th>信号描述</th>
+                    <th>日期</th>
                 </tr>
     """
-    
-    html += f"""
-            <tr>
-                <td>当前指数</td>
-                <td>{hsi_data['current_price']:,.2f}</td>
-            </tr>
-            <tr>
-                <td>24小时变化</td>
-                <td>{hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)</td>
-            </tr>
-            <tr>
-                <td>当日开盘</td>
-                <td>{hsi_data['open']:,.2f}</td>
-            </tr>
-            <tr>
-                <td>当日最高</td>
-                <td>{hsi_data['high']:,.2f}</td>
-            </tr>
-            <tr>
-                <td>当日最低</td>
-                <td>{hsi_data['low']:,.2f}</td>
-            </tr>
-            <tr>
-                <td>成交量</td>
-                <td>{hsi_data['volume']:,.0f}</td>
-            </tr>
-    """
-    
+
+    # 添加所有信号（买入和卖出已合并并排序，只显示当天的）
+    for stock_name, stock_code, signal, signal_type in today_signals:
+        signal_display = f"{signal_type}信号"
+        color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
+        html += f"""
+                <tr>
+                    <td>{stock_name}</td>
+                    <td>{stock_code}</td>
+                    <td><span style=\"{color_style}\">{signal_display}</span></td>
+                    <td>{signal['description']}</td>
+                    <td>{signal['date']}</td>
+                </tr>
+        """
+
+    if not today_signals:
+        html += """
+                <tr>
+                    <td colspan="5">当前没有检测到任何交易信号</td>
+                </tr>
+        """
+
     html += """
             </table>
         </div>
     """
 
-    # 技术分析
-    html += """
-        <div class="section">
-            <h3>🔬 技术分析</h3>
-            <table>
-                <tr>
-                    <th>指标</th>
-                    <th>数值</th>
-                </tr>
-    """
+    # 在文本版本中添加信号总结（只显示当天的信号）
+    text += "🔔 交易信号总结:\n"
+    if today_signals:
+        for stock_name, stock_code, signal, signal_type in today_signals:
+            text += f"  • {stock_name} ({stock_code}): {signal_type}信号: {signal['description']} ({signal['date']})\n"
+    else:
+        text += "当前没有检测到任何交易信号\n"
     
-    rsi = indicators.get('rsi', 0.0)
-    macd = indicators.get('macd', 0.0)
-    macd_signal = indicators.get('macd_signal', 0.0)
-    bb_position = indicators.get('bb_position', 0.5)
-    trend = indicators.get('trend', '未知')
-    ma20 = indicators.get('ma20', 0)
-    ma50 = indicators.get('ma50', 0)
-    ma200 = indicators.get('ma200', 0)
-    recent_buy_signals = indicators.get('recent_buy_signals', [])
-    recent_sell_signals = indicators.get('recent_sell_signals', [])
-    
-    html += f"""
-            <tr>
-                <td>趋势</td>
-                <td>{trend}</td>
-            </tr>
-            <tr>
-                <td>RSI (14日)</td>
-                <td>{rsi:.2f}</td>
-            </tr>
-            <tr>
-                <td>MACD</td>
-                <td>{macd:.4f}</td>
-            </tr>
-            <tr>
-                <td>MACD信号线</td>
-                <td>{macd_signal:.4f}</td>
-            </tr>
-            <tr>
-                <td>布林带位置</td>
-                <td>{bb_position:.2f}</td>
-            </tr>
-            <tr>
-                <td>MA20</td>
-                <td>{ma20:,.2f}</td>
-            </tr>
-            <tr>
-                <td>MA50</td>
-                <td>{ma50:,.2f}</td>
-            </tr>
-            <tr>
-                <td>MA200</td>
-                <td>{ma200:,.2f}</td>
-            </tr>
-    """
-    
-    # 添加交易信号到表格中
-    if recent_buy_signals:
-        html += f"""
-            <tr>
-                <td colspan="2">
-                    <div class="buy-signal">
-                        <strong>🔔 恒生指数最近买入信号:</strong><br>
-        """
-        for signal in recent_buy_signals:
-            html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
-        html += """
-                    </div>
-                </td>
-            </tr>
-        """
-    
-    if recent_sell_signals:
-        html += f"""
-            <tr>
-                <td colspan="2">
-                    <div class="sell-signal">
-                        <strong>🔻 恒生指数最近卖出信号:</strong><br>
-        """
-        for signal in recent_sell_signals:
-            html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
-        html += """
-                    </div>
-                </td>
-            </tr>
-        """
-    
-    html += """
-            </table>
-        </div>
-    """
-
-    # 在文本版本中也添加信息
-    text += f"📈 恒生指数价格概览:\n"
-    text += f"  当前指数: {hsi_data['current_price']:,.2f}\n"
-    text += f"  24小时变化: {hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)\n"
-    text += f"  当日开盘: {hsi_data['open']:,.2f}\n"
-    text += f"  当日最高: {hsi_data['high']:,.2f}\n"
-    text += f"  当日最低: {hsi_data['low']:,.2f}\n"
-    text += f"  成交量: {hsi_data['volume']:,.0f}\n\n"
-    
-    text += f"📊 技术分析:\n"
-    text += f"  趋势: {trend}\n"
-    text += f"  RSI: {rsi:.2f}\n"
-    text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
-    text += f"  布林带位置: {bb_position:.2f}\n"
-    text += f"  MA20: {ma20:,.2f}\n"
-    text += f"  MA50: {ma50:,.2f}\n"
-    text += f"  MA200: {ma200:,.2f}\n"
-    
-    # 添加交易信号信息到文本版本
-    if recent_buy_signals:
-        text += f"\n🔔 最近买入信号 ({len(recent_buy_signals)} 个):\n"
-        for signal in recent_buy_signals:
-            text += f"  {signal['date']}: {signal['description']}\n"
-    
-    if recent_sell_signals:
-        text += f"\n🔻 最近卖出信号 ({len(recent_sell_signals)} 个):\n"
-        for signal in recent_sell_signals:
-            text += f"  {signal['date']}: {signal['description']}\n"
-    
-    # 添加指标说明到文本版本
-    text += "\n📋 指标说明:\n"
-    text += "当前指数：恒生指数的实时点位。\n"
-    text += "24小时变化：过去24小时内指数的变化百分比和点数。\n"
-    text += "RSI(相对强弱指数)：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。\n"
-    text += "MACD(异同移动平均线)：判断价格趋势和动能的技术指标。\n"
-    text += "MA20(20日移动平均线)：过去20个交易日的平均指数，反映短期趋势。\n"
-    text += "MA50(50日移动平均线)：过去50个交易日的平均指数，反映中期趋势。\n"
-    text += "MA200(200日移动平均线)：过去200个交易日的平均指数，反映长期趋势。\n"
-    text += "布林带位置：当前指数在布林带中的相对位置，范围0-1。接近0表示指数接近下轨（可能超卖），接近1表示指数接近上轨（可能超买）。\n"
-    text += "趋势：市场当前的整体方向。\n"
-    text += "  强势多头：指数强劲上涨趋势，各周期均线呈多头排列（指数 > MA20 > MA50 > MA200）\n"
-    text += "  多头趋势：指数上涨趋势，中期均线呈多头排列（指数 > MA20 > MA50）\n"
-    text += "  弱势空头：指数持续下跌趋势，各周期均线呈空头排列（指数 < MA20 < MA50 < MA200）\n"
-    text += "  空头趋势：指数下跌趋势，中期均线呈空头排列（指数 < MA20 < MA50）\n"
-    text += "  震荡整理：指数在一定区间内波动，无明显趋势\n"
-    text += "  短期上涨/下跌：基于最近指数变化的短期趋势判断\n"
     text += "\n"
+
+    # 恒生指数价格概览（如果数据可用）
+    if hsi_data:
+        html += """
+            <div class="section">
+                <h3>📈 恒生指数价格概览</h3>
+                <table>
+                    <tr>
+                        <th>指标</th>
+                        <th>数值</th>
+                    </tr>
+        """
+        
+        html += f"""
+                <tr>
+                    <td>当前指数</td>
+                    <td>{hsi_data['current_price']:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>24小时变化</td>
+                    <td>{hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)</td>
+                </tr>
+                <tr>
+                    <td>当日开盘</td>
+                    <td>{hsi_data['open']:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>当日最高</td>
+                    <td>{hsi_data['high']:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>当日最低</td>
+                    <td>{hsi_data['low']:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>成交量</td>
+                    <td>{hsi_data['volume']:,.0f}</td>
+                </tr>
+        """
+        
+        if hsi_indicators:
+            rsi = hsi_indicators.get('rsi', 0.0)
+            macd = hsi_indicators.get('macd', 0.0)
+            macd_signal = hsi_indicators.get('macd_signal', 0.0)
+            bb_position = hsi_indicators.get('bb_position', 0.5)
+            trend = hsi_indicators.get('trend', '未知')
+            ma20 = hsi_indicators.get('ma20', 0)
+            ma50 = hsi_indicators.get('ma50', 0)
+            ma200 = hsi_indicators.get('ma200', 0)
+            
+            html += f"""
+                <tr>
+                    <td>趋势</td>
+                    <td>{trend}</td>
+                </tr>
+                <tr>
+                    <td>RSI (14日)</td>
+                    <td>{rsi:.2f}</td>
+                </tr>
+                <tr>
+                    <td>MACD</td>
+                    <td>{macd:.4f}</td>
+                </tr>
+                <tr>
+                    <td>MACD信号线</td>
+                    <td>{macd_signal:.4f}</td>
+                </tr>
+                <tr>
+                    <td>布林带位置</td>
+                    <td>{bb_position:.2f}</td>
+                </tr>
+                <tr>
+                    <td>MA20</td>
+                    <td>{ma20:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>MA50</td>
+                    <td>{ma50:,.2f}</td>
+                </tr>
+                <tr>
+                    <td>MA200</td>
+                    <td>{ma200:,.2f}</td>
+                </tr>
+            """
+            
+            # 添加交易信号
+            recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
+            recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
+            
+            if recent_buy_signals:
+                html += f"""
+                    <tr>
+                        <td colspan="2">
+                            <div class="buy-signal">
+                                <strong>🔔 恒生指数最近买入信号:</strong><br>
+                """
+                for signal in recent_buy_signals:
+                    html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += """
+                            </div>
+                        </td>
+                    </tr>
+                """
+            
+            if recent_sell_signals:
+                html += f"""
+                    <tr>
+                        <td colspan="2">
+                            <div class="sell-signal">
+                                <strong>🔻 恒生指数最近卖出信号:</strong><br>
+                """
+                for signal in recent_sell_signals:
+                    html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                html += """
+                            </div>
+                        </td>
+                    </tr>
+                """
+        
+        html += """
+                </table>
+            </div>
+        """
+
+        # 在文本版本中添加恒生指数信息
+        text += f"📈 恒生指数价格概览:\n"
+        text += f"  当前指数: {hsi_data['current_price']:,.2f}\n"
+        text += f"  24小时变化: {hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)\n"
+        text += f"  当日开盘: {hsi_data['open']:,.2f}\n"
+        text += f"  当日最高: {hsi_data['high']:,.2f}\n"
+        text += f"  当日最低: {hsi_data['low']:,.2f}\n"
+        text += f"  成交量: {hsi_data['volume']:,.0f}\n\n"
+        
+        if hsi_indicators:
+            text += f"📊 恒生指数技术分析:\n"
+            text += f"  趋势: {trend}\n"
+            text += f"  RSI: {rsi:.2f}\n"
+            text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
+            text += f"  布林带位置: {bb_position:.2f}\n"
+            text += f"  MA20: {ma20:,.2f}\n"
+            text += f"  MA50: {ma50:,.2f}\n"
+            text += f"  MA200: {ma200:,.2f}\n"
+            
+            # 添加交易信号信息到文本版本
+            if recent_buy_signals:
+                text += f"  🔔 最近买入信号 ({len(recent_buy_signals)} 个):\n"
+                for signal in recent_buy_signals:
+                    text += f"    {signal['date']}: {signal['description']}\n"
+            
+            if recent_sell_signals:
+                text += f"  🔻 最近卖出信号 ({len(recent_sell_signals)} 个):\n"
+                for signal in recent_sell_signals:
+                    text += f"    {signal['date']}: {signal['description']}\n"
+        
+        text += "\n"
     
+    # 添加股票分析结果
+    for stock_result in stock_results:
+        stock_data = stock_result['data']
+        indicators = stock_result['indicators']
+        
+        if indicators:
+            # 添加到HTML
+            html += generate_stock_analysis_html(stock_data, indicators)
+            
+            # 添加到文本版本
+            text += f"📊 {stock_result['name']} ({stock_result['code']}) 分析:\n"
+            text += f"  当前价格: {stock_data['current_price']:,.2f}\n"
+            text += f"  24小时变化: {stock_data['change_1d']:+.2f}% ({stock_data['change_1d_points']:+.2f})\n"
+            text += f"  当日开盘: {stock_data['open']:,.2f}\n"
+            text += f"  当日最高: {stock_data['high']:,.2f}\n"
+            text += f"  当日最低: {stock_data['low']:,.2f}\n"
+            text += f"  成交量: {stock_data['volume']:,.0f}\n"
+            
+            # 添加技术指标到文本版本
+            rsi = indicators.get('rsi', 0.0)
+            macd = indicators.get('macd', 0.0)
+            macd_signal = indicators.get('macd_signal', 0.0)
+            bb_position = indicators.get('bb_position', 0.5)
+            trend = indicators.get('trend', '未知')
+            ma20 = indicators.get('ma20', 0)
+            ma50 = indicators.get('ma50', 0)
+            ma200 = indicators.get('ma200', 0)
+            
+            text += f"  趋势: {trend}\n"
+            text += f"  RSI: {rsi:.2f}\n"
+            text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
+            text += f"  布林带位置: {bb_position:.2f}\n"
+            text += f"  MA20: {ma20:,.2f}\n"
+            text += f"  MA50: {ma50:,.2f}\n"
+            text += f"  MA200: {ma200:,.2f}\n"
+            
+            # 添加交易信号信息到文本版本
+            recent_buy_signals = indicators.get('recent_buy_signals', [])
+            recent_sell_signals = indicators.get('recent_sell_signals', [])
+            
+            if recent_buy_signals:
+                text += f"  🔔 最近买入信号 ({len(recent_buy_signals)} 个):\n"
+                for signal in recent_buy_signals:
+                    text += f"    {signal['date']}: {signal['description']}\n"
+            
+            if recent_sell_signals:
+                text += f"  🔻 最近卖出信号 ({len(recent_sell_signals)} 个):\n"
+                for signal in recent_sell_signals:
+                    text += f"    {signal['date']}: {signal['description']}\n"
+            
+            text += "\n"
+
     # 添加指标说明
     html += """
     <div class="section">
         <h3>📋 指标说明</h3>
         <div style="font-size:0.9em; line-height:1.4;">
         <ul>
-          <li><b>当前指数</b>：恒生指数的实时点位。</li>
-          <li><b>24小时变化</b>：过去24小时内指数的变化百分比和点数。</li>
+          <li><b>当前指数/价格</b>：恒生指数或股票的实时点位/价格。</li>
+          <li><b>24小时变化</b>：过去24小时内指数或股价的变化百分比和点数/金额。</li>
           <li><b>RSI(相对强弱指数)</b>：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。</li>
           <li><b>MACD(异同移动平均线)</b>：判断价格趋势和动能的技术指标。</li>
-          <li><b>MA20(20日移动平均线)</b>：过去20个交易日的平均指数，反映短期趋势。</li>
-          <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均指数，反映中期趋势。</li>
-          <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数，反映长期趋势。</li>
-          <li><b>布林带位置</b>：当前指数在布林带中的相对位置，范围0-1。接近0表示指数接近下轨（可能超卖），接近1表示指数接近上轨（可能超买）。</li>
+          <li><b>MA20(20日移动平均线)</b>：过去20个交易日的平均指数/股价，反映短期趋势。</li>
+          <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均指数/股价，反映中期趋势。</li>
+          <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
+          <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。接近0表示接近下轨（可能超卖），接近1表示接近上轨（可能超买）。</li>
           <li><b>趋势</b>：市场当前的整体方向。
             <ul>
-              <li><b>强势多头</b>：指数强劲上涨趋势，各周期均线呈多头排列（指数 > MA20 > MA50 > MA200）</li>
-              <li><b>多头趋势</b>：指数上涨趋势，中期均线呈多头排列（指数 > MA20 > MA50）</li>
-              <li><b>弱势空头</b>：指数持续下跌趋势，各周期均线呈空头排列（指数 < MA20 < MA50 < MA200）</li>
-              <li><b>空头趋势</b>：指数下跌趋势，中期均线呈空头排列（指数 < MA20 < MA50）</li>
-              <li><b>震荡整理</b>：指数在一定区间内波动，无明显趋势</li>
-              <li><b>短期上涨/下跌</b>：基于最近指数变化的短期趋势判断</li>
+              <li><b>强势多头</b>：强劲上涨趋势，各周期均线呈多头排列（指数/股价 > MA20 > MA50 > MA200）</li>
+              <li><b>多头趋势</b>：上涨趋势，中期均线呈多头排列（指数/股价 > MA20 > MA50）</li>
+              <li><b>弱势空头</b>：持续下跌趋势，各周期均线呈空头排列（指数/股价 < MA20 < MA50 < MA200）</li>
+              <li><b>空头趋势</b>：下跌趋势，中期均线呈空头排列（指数/股价 < MA20 < MA50）</li>
+              <li><b>震荡整理</b>：在一定区间内波动，无明显趋势</li>
+              <li><b>短期上涨/下跌</b>：基于最近指数/股价变化的短期趋势判断</li>
             </ul>
           </li>
         </ul>
