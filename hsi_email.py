@@ -256,60 +256,114 @@ def calculate_price_position(current_price, min_price, max_price):
     
     return (current_price - min_price) / (max_price - min_price) * 100
 
+def detect_continuous_signals_in_history_from_transactions(stock_code, hours=48, min_signals=3):
+    """
+    基于交易历史记录检测连续买卖信号
+    - stock_code: 股票代码
+    - hours: 检测的时间范围（小时）
+    - min_signals: 判定为连续信号的最小信号数量
+    返回: 连续信号状态（如"连续买入(3次)"、"买入2次,卖出1次"等）
+    """
+    try:
+        import csv
+        from collections import defaultdict
+        
+        # 读取交易记录文件
+        if not os.path.exists('data/simulation_transactions.csv'):
+            return "无交易记录"
+        
+        with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
+            content = file.read()
+        
+        # 解析CSV内容
+        lines = content.strip().split('\n')
+        headers = lines[0].split(',')
+        transactions = []
+        
+        for line in lines[1:]:
+            fields = line.split(',')
+            # 处理可能包含逗号的字段
+            if len(fields) > len(headers):
+                reconstructed = []
+                i = 0
+                while i < len(fields):
+                    if fields[i].startswith('"') and not fields[i].endswith('"'):
+                        j = i
+                        while j < len(fields) and not fields[j].endswith('"'):
+                            j += 1
+                        reconstructed.append(','.join(fields[i:j+1]).strip('"'))
+                        i = j + 1
+                    else:
+                        reconstructed.append(fields[i].strip('"'))
+                        i += 1
+                fields = reconstructed
+            
+            if len(fields) >= 10:  # 确保有足够的字段
+                timestamp_str = fields[0]
+                trans_type = fields[1]
+                code = fields[2]
+                name = fields[3] if len(fields) > 3 else ""
+                
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    transactions.append({
+                        'timestamp': timestamp,
+                        'type': trans_type,
+                        'code': code,
+                        'name': name
+                    })
+                except ValueError as e:
+                    print(f"解析时间戳失败: {timestamp_str}, 错误: {e}")
+                    continue
+    
+        # 过滤指定时间范围内的交易
+        now = datetime.now()
+        time_threshold = now - timedelta(hours=hours)
+        recent_transactions = [t for t in transactions if t['timestamp'] >= time_threshold and t['code'] == stock_code]
+        
+        # 按股票代码分组交易
+        transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
+        for trans in recent_transactions:
+            if trans['type'] in transactions_by_stock[trans['code']]:
+                transactions_by_stock[trans['code']][trans['type']].append(trans)
+        
+        # 获取指定股票的交易
+        trans_dict = transactions_by_stock[stock_code]
+        buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
+        sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
+        
+        buy_count = len(buys)
+        sell_count = len(sells)
+        
+        # 根据买卖次数返回不同的状态
+        if buy_count >= min_signals and sell_count == 0 and buy_count > 0:
+            return f"连续买入({buy_count}次)"
+        elif sell_count >= min_signals and buy_count == 0 and sell_count > 0:
+            return f"连续卖出({sell_count}次)"
+        elif buy_count > 0 and sell_count == 0:
+            return f"买入({buy_count}次)"
+        elif sell_count > 0 and buy_count == 0:
+            return f"卖出({sell_count}次)"
+        elif buy_count > 0 and sell_count > 0:
+            return f"买入{buy_count}次,卖出{sell_count}次"
+        else:
+            return "无信号"
+    
+    except Exception as e:
+        print(f"⚠️ 检测连续信号失败: {e}")
+        return "检测失败"
+
 def detect_continuous_signals_in_history(indicators_df, hours=48, min_signals=3):
     """
-    检测历史数据中的连续买卖信号
+    检测历史数据中的连续买卖信号（基于交易记录）
     - indicators_df: 包含历史信号数据的DataFrame
     - hours: 检测的时间范围（小时）
     - min_signals: 判定为连续信号的最小信号数量
     返回: 连续信号状态（如"连续买入"、"连续卖出"、"无连续信号"）
     """
-    if indicators_df is None or 'hist' not in indicators_df or indicators_df['hist'] is None:
-        return "数据不足"
-    
-    # 从技术分析工具获取完整的信号历史
-    hist = indicators_df['hist']
-    
-    if not TECHNICAL_ANALYSIS_AVAILABLE:
-        return "无信号历史"
-    
-    # 使用技术分析工具来获取完整的信号历史
-    analyzer = TechnicalAnalyzer()
-    try:
-        indicators_with_signals = analyzer.calculate_all_indicators(hist.copy())
-        indicators_with_signals = analyzer.generate_buy_sell_signals(indicators_with_signals)
-        
-        # 获取过去指定小时的数据
-        time_threshold = datetime.now() - timedelta(hours=hours)
-        # 处理带时区的索引
-        if hasattr(indicators_with_signals.index, 'tz') and indicators_with_signals.index.tz is not None:
-            # 如果索引有时区，将时间阈值也转换为带时区的
-            time_threshold = time_threshold.astimezone(indicators_with_signals.index.tz)
-        
-        # 按日期过滤信号
-        recent_data = indicators_with_signals[indicators_with_signals.index >= time_threshold]
-        
-        if recent_data.empty:
-            return "无信号"
-        
-        # 统计买入和卖出信号
-        buy_signals = recent_data[recent_data['Buy_Signal'] == True] if 'Buy_Signal' in recent_data.columns else pd.DataFrame()
-        sell_signals = recent_data[recent_data['Sell_Signal'] == True] if 'Sell_Signal' in recent_data.columns else pd.DataFrame()
-        
-        buy_count = len(buy_signals)
-        sell_count = len(sell_signals)
-        
-        # 检查连续买入信号：有买入信号且无卖出信号，且买入信号数量达到阈值
-        if buy_count >= min_signals and sell_count == 0 and buy_count > 0:
-            return "连续买入"
-        # 检查连续卖出信号：有卖出信号且无买入信号，且卖出信号数量达到阈值
-        elif sell_count >= min_signals and buy_count == 0 and sell_count > 0:
-            return "连续卖出"
-        else:
-            return "无连续信号"
-    except Exception as e:
-        print(f"⚠️ 检测连续信号失败: {e}")
-        return "检测失败"
+    # 这里应该检测基于交易记录的连续信号，而不是技术指标
+    # 由于我们无法从indicators_df获取股票代码，需要另外处理
+    return "无交易记录"  # 作为默认返回值，实际调用时会使用新的函数
 
 def has_any_signals(hsi_indicators, stock_results):
     """检查是否有任何股票有当天的交易信号"""
@@ -645,7 +699,7 @@ if __name__ == "__main__":
                     <th>信号类型</th>
                     <th>信号描述</th>
                     <th>日期</th>
-                    <th>48小时连续信号</th>
+                    <th>48小时智能建议</th>
                 </tr>
     """
 
@@ -655,12 +709,10 @@ if __name__ == "__main__":
         color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
         
         # 获取连续信号状态
-        continuous_signal_status = "无连续信号"
+        continuous_signal_status = "无信号"
         if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
-            # 找到对应股票的指标数据
-            stock_result = next((result for result in stock_results if result['code'] == stock_code), None)
-            if stock_result and stock_result['indicators']:
-                continuous_signal_status = detect_continuous_signals_in_history(stock_result['indicators'])
+            # 使用基于交易记录的连续信号检测
+            continuous_signal_status = detect_continuous_signals_in_history_from_transactions(stock_code)
         
         html += f"""
                 <tr>
@@ -688,16 +740,14 @@ if __name__ == "__main__":
     # 在文本版本中添加信号总结（只显示当天的信号）
     text += "🔔 交易信号总结:\n"
     if today_signals:
-        text += f"  {'股票名称':<15} {'股票代码':<10} {'信号类型':<6} {'信号描述':<30} {'日期':<12} {'48小时连续信号':<12}\n"
+        text += f"  {'股票名称':<15} {'股票代码':<10} {'信号类型':<6} {'信号描述':<30} {'日期':<12} {'48小时内人工智能买卖建议':<18}\n"
         for stock_name, stock_code, signal, signal_type in today_signals:
             # 获取连续信号状态
-            continuous_signal_status = "无连续信号"
+            continuous_signal_status = "无信号"
             if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
-                # 找到对应股票的指标数据
-                stock_result = next((result for result in stock_results if result['code'] == stock_code), None)
-                if stock_result and stock_result['indicators']:
-                    continuous_signal_status = detect_continuous_signals_in_history(stock_result['indicators'])
-            text += f"  {stock_name:<15} {stock_code:<10} {signal_type:<6} {signal['description']:<30} {signal['date']:<12} {continuous_signal_status:<12}\n"
+                # 使用基于交易记录的连续信号检测
+                continuous_signal_status = detect_continuous_signals_in_history_from_transactions(stock_code)
+            text += f"  {stock_name:<15} {stock_code:<10} {signal_type:<6} {signal['description']:<30} {signal['date']:<12} {continuous_signal_status:<18}\n"
     else:
         text += "当前没有检测到任何交易信号\n"
     
