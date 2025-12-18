@@ -365,6 +365,134 @@ def detect_continuous_signals_in_history(indicators_df, hours=48, min_signals=3)
     # 由于我们无法从indicators_df获取股票代码，需要另外处理
     return "无交易记录"  # 作为默认返回值，实际调用时会使用新的函数
 
+def analyze_continuous_signals():
+    """
+    分析最近48小时内的连续买卖信号
+    返回: 有连续买入信号的股票列表、有连续卖出信号的股票列表
+    """
+    import csv
+    from collections import defaultdict
+    
+    # 读取交易记录文件
+    if not os.path.exists('data/simulation_transactions.csv'):
+        return [], []
+    
+    with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
+        content = file.read()
+    
+    # 解析CSV内容
+    lines = content.strip().split('\n')
+    headers = lines[0].split(',')
+    transactions = []
+    
+    for line in lines[1:]:
+        fields = line.split(',')
+        # 处理可能包含逗号的字段
+        if len(fields) > len(headers):
+            reconstructed = []
+            i = 0
+            while i < len(fields):
+                if fields[i].startswith('"') and not fields[i].endswith('"'):
+                    j = i
+                    while j < len(fields) and not fields[j].endswith('"'):
+                        j += 1
+                    reconstructed.append(','.join(fields[i:j+1]).strip('"'))
+                    i = j + 1
+                else:
+                    reconstructed.append(fields[i].strip('"'))
+                    i += 1
+            fields = reconstructed
+        
+        if len(fields) >= 10:  # 确保有足够的字段
+            timestamp_str = fields[0]
+            trans_type = fields[1]
+            code = fields[2]
+            name = fields[3] if len(fields) > 3 else ""
+            shares_str = fields[4] if len(fields) > 4 else "0"
+            price_str = fields[5] if len(fields) > 5 else "0"
+            amount_str = fields[6] if len(fields) > 6 else "0"
+            reason = fields[8] if len(fields) > 8 else ""  # reason is at index 8
+            stop_loss_price = fields[10] if len(fields) > 10 else ""  # stop_loss_price is at index 10 (after success field at index 9)
+            current_price = fields[11] if len(fields) > 11 else ""  # current_price is at index 11
+            
+            try:
+                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                # Format reason with stop_loss_price and current_price if they exist
+                formatted_reason = reason
+                has_additional_info = False
+                
+                # 检查止损价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+                if stop_loss_price and stop_loss_price not in ["", "None", "nan", "False", "null"] and stop_loss_price is not None and stop_loss_price != "False":
+                    try:
+                        # 尝试将stop_loss_price转换为浮点数以检查是否有效
+                        float_stop_loss = float(stop_loss_price)
+                        if stop_loss_price and stop_loss_price != 'False' and not (float_stop_loss != float_stop_loss):  # 检查是否为NaN
+                            formatted_reason += f", 止损价: {stop_loss_price}"
+                            has_additional_info = True
+                    except (ValueError, TypeError):
+                        pass  # 如果无法转换为浮点数，则跳过
+                
+                # 检查现价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+                if current_price and current_price not in ["", "None", "nan", "False", "null"] and current_price is not None and current_price != "False":
+                    try:
+                        # 尝试将current_price转换为浮点数以检查是否有效
+                        float_current = float(current_price)
+                        if current_price and current_price != 'False' and not (float_current != float_current):  # 检查是否为NaN
+                            formatted_reason += f", 现价: {current_price}"
+                            has_additional_info = True
+                    except (ValueError, TypeError):
+                        pass  # 如果无法转换为浮点数，则跳过
+                
+                # 如果添加了额外信息，确保正确的格式
+                if has_additional_info and formatted_reason.startswith(", "):
+                    formatted_reason = formatted_reason[2:]
+                
+                transactions.append({
+                    'timestamp': timestamp,
+                    'date': timestamp.date(),
+                    'type': trans_type,
+                    'code': code,
+                    'name': name,
+                    'shares': int(float(shares_str)),
+                    'price': float(price_str),
+                    'amount': float(amount_str),
+                    'reason': formatted_reason.strip()
+                })
+            except ValueError as e:
+                print(f"Error parsing line: {line[:100]}... Error: {e}")
+    
+    # 过滤最近48小时的交易
+    now = datetime.now()
+    time_48_hours_ago = now - timedelta(hours=48)
+    recent_transactions = [t for t in transactions if t['timestamp'] >= time_48_hours_ago]
+    
+    # 按股票代码分组交易
+    transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
+    for trans in recent_transactions:
+        transactions_by_stock[trans['code']][trans['type']].append(trans)
+    
+    # 查找有3次或以上连续买入信号且无卖出信号的股票
+    buy_without_sell_after = []
+    sell_without_buy_after = []
+    
+    for stock_code, trans_dict in transactions_by_stock.items():
+        buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
+        sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
+        
+        # 检查是否有3次或以上买入且无卖出
+        if len(buys) >= 3 and len(sells) == 0:
+            stock_name = buys[0]['name'] if buys else 'Unknown'
+            buy_times = [buy['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for buy in buys]
+            buy_reasons = [buy['reason'] for buy in buys]
+            buy_without_sell_after.append((stock_code, stock_name, buy_times, buy_reasons))
+        elif len(sells) >= 3 and len(buys) == 0:
+            stock_name = sells[0]['name'] if sells else 'Unknown'
+            sell_times = [sell['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for sell in sells]
+            sell_reasons = [sell['reason'] for sell in sells]
+            sell_without_buy_after.append((stock_code, stock_name, sell_times, sell_reasons))
+    
+    return buy_without_sell_after, sell_without_buy_after
+
 def has_any_signals(hsi_indicators, stock_results):
     """检查是否有任何股票有当天的交易信号"""
     today = datetime.now().date()
@@ -752,6 +880,141 @@ if __name__ == "__main__":
         text += "当前没有检测到任何交易信号\n"
     
     text += "\n"
+
+    # 分析最近48小时内的连续信号
+    print("🔍 正在分析最近48小时内的连续交易信号...")
+    buy_without_sell_after, sell_without_buy_after = analyze_continuous_signals()
+
+    # 检查是否存在符合条件的连续信号
+    has_continuous_signals = len(buy_without_sell_after) > 0 or len(sell_without_buy_after) > 0
+
+    # 连续信号分析 - HTML
+    if has_continuous_signals:
+        html += """
+        <div class="section">
+            <h3>🔔 48小时连续交易信号分析</h3>
+        """
+        
+        # 连续买入信号
+        if buy_without_sell_after:
+            html += """
+            <div class="section">
+                <h3>📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）</h3>
+                <table>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>建议次数</th>
+                        <th>建议时间及理由</th>
+                    </tr>
+            """
+            
+            for code, name, times, reasons in buy_without_sell_after:
+                # 合并时间和原因
+                combined_str = ""
+                for i in range(len(times)):
+                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                    if i < len(times) - 1:
+                        combined_str += time_reason + "<br>"
+                    else:
+                        combined_str += time_reason
+                html += f"""
+                <tr>
+                    <td>{code}</td>
+                    <td>{name}</td>
+                    <td>{len(times)}次</td>
+                    <td>{combined_str}</td>
+                </tr>
+                """
+            
+            html += """
+                </table>
+            </div>
+            """
+
+        # 连续卖出信号
+        if sell_without_buy_after:
+            html += """
+            <div class="section">
+                <h3>📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）</h3>
+                <table>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>建议次数</th>
+                        <th>建议时间及理由</th>
+                    </tr>
+            """
+            
+            for code, name, times, reasons in sell_without_buy_after:
+                # 合并时间和原因
+                combined_str = ""
+                for i in range(len(times)):
+                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                    if i < len(times) - 1:
+                        combined_str += time_reason + "<br>"
+                    else:
+                        combined_str += time_reason
+                html += f"""
+                <tr>
+                    <td>{code}</td>
+                    <td>{name}</td>
+                    <td>{len(times)}次</td>
+                    <td>{combined_str}</td>
+                </tr>
+                """
+            
+            html += """
+                </table>
+            </div>
+            """
+        
+        html += """
+        </div>
+        """
+
+    # 连续信号分析 - 文本
+    if buy_without_sell_after:
+        text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
+        for code, name, times, reasons in buy_without_sell_after:
+            # 合并时间和原因
+            combined_list = []
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                combined_list.append(time_reason)
+            combined_str = "\n    ".join(combined_list)
+            text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
+        text += "\n"
+    
+    if sell_without_buy_after:
+        text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
+        for code, name, times, reasons in sell_without_buy_after:
+            # 合并时间和原因
+            combined_list = []
+            for i in range(len(times)):
+                time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                combined_list.append(time_reason)
+            combined_str = "\n    ".join(combined_list)
+            text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
+        text += "\n"
+
+    # 添加说明
+    if has_continuous_signals:
+        text += "📋 说明:\n"
+        text += "连续买入：指在最近48小时内，某只股票收到3次或以上买入建议，且期间没有收到任何卖出建议。\n"
+        text += "连续卖出：指在最近48小时内，某只股票收到3次或以上卖出建议，且期间没有收到任何买入建议。\n\n"
+        
+        html += """
+        <div class="section">
+            <h3>📋 说明</h3>
+            <div style="font-size:0.9em; line-height:1.4;">
+            <ul>
+              <li><b>连续买入</b>：指在最近48小时内，某只股票收到3次或以上买入建议，且期间没有收到任何卖出建议。</li>
+              <li><b>连续卖出</b>：指在最近48小时内，某只股票收到3次或以上卖出建议，且期间没有收到任何买入建议。</li>
+            </ul>
+            </div>
+        </div>
+        """
 
     # 恒生指数价格概览（如果数据可用）
     if hsi_data:
