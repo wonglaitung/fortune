@@ -8,6 +8,7 @@
 import os
 import smtplib
 import json
+import argparse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -493,9 +494,10 @@ def analyze_continuous_signals():
     
     return buy_without_sell_after, sell_without_buy_after
 
-def has_any_signals(hsi_indicators, stock_results):
-    """检查是否有任何股票有当天的交易信号"""
-    today = datetime.now().date()
+def has_any_signals(hsi_indicators, stock_results, target_date=None):
+    """检查是否有任何股票有指定日期的交易信号"""
+    if target_date is None:
+        target_date = datetime.now().date()
     
     # 检查恒生指数信号
     if hsi_indicators:
@@ -504,11 +506,11 @@ def has_any_signals(hsi_indicators, stock_results):
         
         for signal in recent_buy_signals:
             signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-            if signal_date == today:
+            if signal_date == target_date:
                 return True
         for signal in recent_sell_signals:
             signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-            if signal_date == today:
+            if signal_date == target_date:
                 return True
     
     # 检查持仓股票信号
@@ -520,11 +522,11 @@ def has_any_signals(hsi_indicators, stock_results):
             
             for signal in recent_buy_signals:
                 signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                if signal_date == today:
+                if signal_date == target_date:
                     return True
             for signal in recent_sell_signals:
                 signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                if signal_date == today:
+                if signal_date == target_date:
                     return True
     
     return False
@@ -723,6 +725,24 @@ def send_email(to, subject, text, html):
 
 # === 主逻辑 ===
 if __name__ == "__main__":
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='恒生指数及港股主力资金追踪器股票交易信号邮件通知系统')
+    parser.add_argument('--date', type=str, default=None, help='指定日期 (格式: YYYY-MM-DD)，默认为今天')
+    args = parser.parse_args()
+    
+    # 解析日期参数
+    target_date = None
+    if args.date:
+        try:
+            target_date = datetime.strptime(args.date, '%Y-%m-%d').date()
+            print(f"📅 指定分析日期: {target_date}")
+        except ValueError:
+            print("❌ 日期格式错误，请使用 YYYY-MM-DD 格式")
+            exit(1)
+    else:
+        target_date = datetime.now().date()
+        print(f"📅 分析日期: {target_date} (默认为今天)")
+    
     print("🔍 正在获取恒生指数数据...")
     
     # 获取恒生指数数据和指标
@@ -751,8 +771,8 @@ if __name__ == "__main__":
                 'indicators': indicators
             })
 
-    # 检查是否有任何股票有交易信号
-    if not has_any_signals(hsi_indicators, stock_results):
+    # 检查是否有任何股票有指定日期的交易信号
+    if not has_any_signals(hsi_indicators, stock_results, target_date):
         print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
         exit(0)
 
@@ -789,18 +809,17 @@ if __name__ == "__main__":
             for signal in recent_sell_signals:
                 all_signals.append((stock_result['name'], stock_result['code'], signal, '卖出'))
     
-    # 只保留当天的信号
-    today = datetime.now().date()
-    today_signals = []
+    # 只保留指定日期的信号
+    target_date_signals = []
     for stock_name, stock_code, signal, signal_type in all_signals:
         signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-        if signal_date == today:
+        if signal_date == target_date:
             # 获取该股票的趋势
             trend = stock_trends.get(stock_code, '未知')
-            today_signals.append((stock_name, stock_code, trend, signal, signal_type))
+            target_date_signals.append((stock_name, stock_code, trend, signal, signal_type))
     
     # 按股票名称排序
-    today_signals.sort(key=lambda x: x[0])  # 按股票名称排序
+    target_date_signals.sort(key=lambda x: x[0])  # 按股票名称排序
 
     text = ""
     html = f"""
@@ -822,8 +841,9 @@ if __name__ == "__main__":
         </style>
     </head>
     <body>
-        <h2>📈 恒生指数及港股主力资金追踪器股票交易信号提醒</h2>
+        <h2>📈 恒生指数及港股主力资金追踪器股票交易信号提醒 - {target_date}</h2>
         <p><strong>报告生成时间:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p><strong>分析日期:</strong> {target_date}</p>
     """
 
     # 交易信号总结
@@ -841,8 +861,8 @@ if __name__ == "__main__":
                 </tr>
     """
 
-    # 添加所有信号（买入和卖出已合并并排序，只显示当天的）
-    for stock_name, stock_code, trend, signal, signal_type in today_signals:
+    # 添加所有信号（买入和卖出已合并并排序，只显示指定日期的）
+    for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
         signal_display = f"{signal_type}信号"
         color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
         
@@ -863,7 +883,7 @@ if __name__ == "__main__":
                 </tr>
         """
 
-    if not today_signals:
+    if not target_date_signals:
         html += """
                 <tr>
                     <td colspan="5">当前没有检测到任何交易信号</td>
@@ -875,11 +895,11 @@ if __name__ == "__main__":
         </div>
     """
 
-    # 在文本版本中添加信号总结（只显示当天的信号）
+    # 在文本版本中添加信号总结（只显示指定日期的信号）
     text += "🔔 交易信号总结:\n"
-    if today_signals:
+    if target_date_signals:
         text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势':<10} {'信号类型':<6} {'信号描述':<30} {'48小时内人工智能买卖建议':<18}\n"
-        for stock_name, stock_code, trend, signal, signal_type in today_signals:
+        for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
             # 获取连续信号状态
             continuous_signal_status = "无信号"
             if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
