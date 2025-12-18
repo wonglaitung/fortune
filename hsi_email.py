@@ -770,6 +770,14 @@ if __name__ == "__main__":
         for signal in recent_sell_signals:
             all_signals.append(('恒生指数', 'HSI', signal, '卖出'))
     
+    # 创建股票趋势映射
+    stock_trends = {}
+    for stock_result in stock_results:
+        indicators = stock_result['indicators']
+        if indicators:
+            trend = indicators.get('trend', '未知')
+            stock_trends[stock_result['code']] = trend
+    
     # 股票信号
     for stock_result in stock_results:
         indicators = stock_result['indicators']
@@ -787,10 +795,12 @@ if __name__ == "__main__":
     for stock_name, stock_code, signal, signal_type in all_signals:
         signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
         if signal_date == today:
-            today_signals.append((stock_name, stock_code, signal, signal_type))
+            # 获取该股票的趋势
+            trend = stock_trends.get(stock_code, '未知')
+            today_signals.append((stock_name, stock_code, trend, signal, signal_type))
     
-    # 按股票名称和日期排序
-    today_signals.sort(key=lambda x: (x[0], x[2]['date']))  # 按股票名称和日期排序
+    # 按股票名称排序
+    today_signals.sort(key=lambda x: x[0])  # 按股票名称排序
 
     text = ""
     html = f"""
@@ -824,15 +834,15 @@ if __name__ == "__main__":
                 <tr>
                     <th>股票名称</th>
                     <th>股票代码</th>
+                    <th>趋势</th>
                     <th>信号类型</th>
                     <th>信号描述</th>
-                    <th>日期</th>
                     <th>48小时智能建议</th>
                 </tr>
     """
 
     # 添加所有信号（买入和卖出已合并并排序，只显示当天的）
-    for stock_name, stock_code, signal, signal_type in today_signals:
+    for stock_name, stock_code, trend, signal, signal_type in today_signals:
         signal_display = f"{signal_type}信号"
         color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
         
@@ -846,9 +856,9 @@ if __name__ == "__main__":
                 <tr>
                     <td>{stock_name}</td>
                     <td>{stock_code}</td>
+                    <td>{trend}</td>
                     <td><span style=\"{color_style}\">{signal_display}</span></td>
                     <td>{signal['description']}</td>
-                    <td>{signal['date']}</td>
                     <td>{continuous_signal_status}</td>
                 </tr>
         """
@@ -868,14 +878,14 @@ if __name__ == "__main__":
     # 在文本版本中添加信号总结（只显示当天的信号）
     text += "🔔 交易信号总结:\n"
     if today_signals:
-        text += f"  {'股票名称':<15} {'股票代码':<10} {'信号类型':<6} {'信号描述':<30} {'日期':<12} {'48小时内人工智能买卖建议':<18}\n"
-        for stock_name, stock_code, signal, signal_type in today_signals:
+        text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势':<10} {'信号类型':<6} {'信号描述':<30} {'48小时内人工智能买卖建议':<18}\n"
+        for stock_name, stock_code, trend, signal, signal_type in today_signals:
             # 获取连续信号状态
             continuous_signal_status = "无信号"
             if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
                 # 使用基于交易记录的连续信号检测
                 continuous_signal_status = detect_continuous_signals_in_history_from_transactions(stock_code)
-            text += f"  {stock_name:<15} {stock_code:<10} {signal_type:<6} {signal['description']:<30} {signal['date']:<12} {continuous_signal_status:<18}\n"
+            text += f"  {stock_name:<15} {stock_code:<10} {trend:<10} {signal_type:<6} {signal['description']:<30} {continuous_signal_status:<18}\n"
     else:
         text += "当前没有检测到任何交易信号\n"
     
