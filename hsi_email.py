@@ -531,10 +531,25 @@ def has_any_signals(hsi_indicators, stock_results, target_date=None):
     
     return False
 
-def generate_stock_analysis_html(stock_data, indicators):
+def generate_stock_analysis_html(stock_data, indicators, continuous_buy_signals=None, continuous_sell_signals=None):
     """为单只股票生成HTML分析部分"""
     if not indicators:
         return ""
+    
+    # 如果提供了连续信号数据，获取当前股票的信号
+    continuous_signal_info = None
+    if continuous_buy_signals is not None:
+        # 查找当前股票的连续买入信号
+        for code, name, times, reasons in continuous_buy_signals:
+            if code == stock_data['symbol']:
+                continuous_signal_info = f"连续买入({len(times)}次)"
+                break
+    if continuous_signal_info is None and continuous_sell_signals is not None:
+        # 查找当前股票的连续卖出信号
+        for code, name, times, reasons in continuous_sell_signals:
+            if code == stock_data['symbol']:
+                continuous_signal_info = f"连续卖出({len(times)}次)"
+                break
     
     html = f"""
     <div class="section">
@@ -627,7 +642,7 @@ def generate_stock_analysis_html(stock_data, indicators):
             <tr>
                 <td colspan="2">
                     <div class="buy-signal">
-                        <strong>🔔 最近买入信号:</strong><br>
+                        <strong>🔔 最近买入信号(五天内):</strong><br>
         """
         for signal in recent_buy_signals:
             html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
@@ -642,7 +657,7 @@ def generate_stock_analysis_html(stock_data, indicators):
             <tr>
                 <td colspan="2">
                     <div class="sell-signal">
-                        <strong>🔻 最近卖出信号:</strong><br>
+                        <strong>🔻 最近卖出信号(五天内):</strong><br>
         """
         for signal in recent_sell_signals:
             html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
@@ -650,6 +665,19 @@ def generate_stock_analysis_html(stock_data, indicators):
                     </div>
                 </td>
             </tr>
+        """
+    
+    # 添加48小时智能建议（使用analyze_continuous_signals的结果）
+    if continuous_signal_info:
+        html += f"""
+        <tr>
+            <td colspan="2">
+                <div class="continuous-signal">
+                    <strong>🤖 48小时智能建议:</strong><br>
+                    <span style='color: blue;'>• {continuous_signal_info}</span>
+                </div>
+            </td>
+        </tr>
         """
     
     html += """
@@ -1046,6 +1074,9 @@ if __name__ == "__main__":
         </div>
         """
 
+
+    text += "\n"
+
     # 恒生指数价格概览（如果数据可用）
     if hsi_data:
         html += """
@@ -1190,17 +1221,21 @@ if __name__ == "__main__":
             
             # 添加交易信号信息到文本版本
             if recent_buy_signals:
-                text += f"  🔔 最近买入信号 ({len(recent_buy_signals)} 个):\n"
+                text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
                 for signal in recent_buy_signals:
                     text += f"    {signal['date']}: {signal['description']}\n"
             
             if recent_sell_signals:
-                text += f"  🔻 最近卖出信号 ({len(recent_sell_signals)} 个):\n"
+                text += f"  🔻 最近卖出信号(五天内) ({len(recent_sell_signals)} 个):\n"
                 for signal in recent_sell_signals:
                     text += f"    {signal['date']}: {signal['description']}\n"
         
         text += "\n"
     
+    # 分析最近48小时内的连续信号
+    print("🔍 正在分析最近48小时内的连续交易信号...")
+    buy_without_sell_after, sell_without_buy_after = analyze_continuous_signals()
+
     # 添加股票分析结果
     for stock_result in stock_results:
         stock_data = stock_result['data']
@@ -1208,7 +1243,7 @@ if __name__ == "__main__":
         
         if indicators:
             # 添加到HTML
-            html += generate_stock_analysis_html(stock_data, indicators)
+            html += generate_stock_analysis_html(stock_data, indicators, buy_without_sell_after, sell_without_buy_after)
             
             # 添加到文本版本
             text += f"📊 {stock_result['name']} ({stock_result['code']}) 分析:\n"
@@ -1242,14 +1277,31 @@ if __name__ == "__main__":
             recent_sell_signals = indicators.get('recent_sell_signals', [])
             
             if recent_buy_signals:
-                text += f"  🔔 最近买入信号 ({len(recent_buy_signals)} 个):\n"
+                text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
                 for signal in recent_buy_signals:
                     text += f"    {signal['date']}: {signal['description']}\n"
             
             if recent_sell_signals:
-                text += f"  🔻 最近卖出信号 ({len(recent_sell_signals)} 个):\n"
+                text += f"  🔻 最近卖出信号(五天内) ({len(recent_sell_signals)} 个):\n"
                 for signal in recent_sell_signals:
                     text += f"    {signal['date']}: {signal['description']}\n"
+            
+            # 添加48小时智能建议（使用analyze_continuous_signals的结果）
+            continuous_signal_info = None
+            # 检查连续买入信号
+            for code, name, times, reasons in buy_without_sell_after:
+                if code == stock_result['code']:
+                    continuous_signal_info = f"连续买入({len(times)}次)"
+                    break
+            # 如果没有连续买入信号，检查连续卖出信号
+            if continuous_signal_info is None:
+                for code, name, times, reasons in sell_without_buy_after:
+                    if code == stock_result['code']:
+                        continuous_signal_info = f"连续卖出({len(times)}次)"
+                        break
+            
+            if continuous_signal_info:
+                text += f"  🤖 48小时智能建议: {continuous_signal_info}\n"
             
             text += "\n"
 
