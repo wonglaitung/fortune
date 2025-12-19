@@ -11,8 +11,10 @@
 6. 批量获取自选股新闻
 7. 黄金市场分析器
 8. 恒生指数大模型策略分析器
-9. 通用技术分析工具
-10. 通过腾讯财经接口获取港股数据
+9. 恒生指数价格监控器
+10. 最近48小时连续交易信号分析器
+11. 通用技术分析工具
+12. 通过腾讯财经接口获取港股数据
 
 ## 关键文件
 
@@ -24,6 +26,8 @@
 *   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
 *   `hsi_llm_strategy.py`: 恒生指数大模型策略分析器。
+*   `hsi_email.py`: 恒生指数价格监控器，基于技术分析指标生成买卖信号，只在有交易信号时发送邮件。
+*   `analyze_last_48_hours_email.py`: 最近48小时连续交易信号分析器，分析最近48小时内连续买入/卖出同一只股票的信号。
 *   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
@@ -33,6 +37,7 @@
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
+*   `.github/workflows/hsi-email-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hsi_email.py` 脚本。
 *   `.github/workflows/smart-money-alert.yml`: 港股主力资金追踪器的GitHub Actions工作流文件，现已整合个股新闻获取和恒生指数策略分析。
 *   `IFLOW.md`: 此文件，提供 iFlow 代理的上下文信息。
 *   `README.md`: 项目详细说明文档。
@@ -106,6 +111,25 @@
 6. 通过邮件发送策略分析报告。
 7. 支持本地定时执行脚本 `send_alert.sh`。
 8. 集成通用技术分析工具，提供全面的技术指标分析。
+
+#### 恒生指数价格监控器
+1. 实时获取恒生指数的价格和交易数据。
+2. 计算技术指标（RSI、MACD、均线、布林带等）。
+3. 识别买卖信号。
+4. 只在检测到当天的交易信号时才发送邮件。
+5. 通过GitHub Actions自动化调度（每小时执行一次，使用香港时区）。
+6. 包含详细的技术分析指标和市场概览。
+7. 发送交易信号提醒邮件，采用统一的表格样式展示。
+8. **最新功能**：支持基于指定日期的历史数据分析，所有技术分析都基于截止到指定日期的数据进行计算。
+9. **最新功能**：止损价和止盈价显示保留小数点后两位。
+10. **最新功能**：在指标说明中增加了ATR(平均真实波幅)指标的解释。
+
+#### 最近48小时连续交易信号分析器
+1. 分析最近48小时内连续买入/卖出同一只股票的信号。
+2. 识别连续3次或以上建议买入同一只股票且期间没有卖出建议的情况。
+3. 识别连续3次或以上建议卖出同一只股票且期间没有买入建议的情况。
+4. 只在检测到符合条件的信号时发送邮件通知。
+5. 通过GitHub Actions自动化调度（每小时执行一次，使用香港时区）。
 
 #### 通用技术分析工具
 1. 实现多种常用技术指标的计算，包括移动平均线、RSI、MACD、布林带、随机振荡器、ATR、CCI、OBV等。
@@ -369,6 +393,73 @@ crontab -e
 0 6 * * * /data/fortune/send_alert.sh
 ```
 
+#### 恒生指数价格监控器
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 安装依赖:
+   ```bash
+   pip install yfinance pandas numpy
+   ```
+3. 设置环境变量:
+   - `QWEN_API_KEY`: 大模型API密钥。
+   - `YAHOO_EMAIL`: 你的邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+4. 运行脚本:
+   ```bash
+   python hsi_email.py
+   ```
+5. 指定分析日期:
+   ```bash
+   python hsi_email.py --date 2025-10-25
+   ```
+
+##### 本地定时执行
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行:
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行以每天执行（请根据需要调整时间）
+0 6 * * * /data/fortune/send_alert.sh
+```
+
+##### GitHub Actions 自动化
+该项目配置了 GitHub Actions 工作流 (`.github/workflows/hsi-email-alert.yml`)，它会:
+1. 在 Ubuntu 最新版本的 runner 上执行。
+2. 检出代码。
+3. 设置 Python 3.10 环境。
+4. 安装 `yfinance`, `requests`, `pandas`, `numpy` 依赖。
+5. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`, `QWEN_API_KEY`) 运行 `hsi_email.py` 脚本。
+   
+需要在 GitHub 仓库的 secrets 中配置以下环境变量:
+- `YAHOO_EMAIL`
+- `YAHOO_APP_PASSWORD`
+- `RECIPIENT_EMAIL`
+- `QWEN_API_KEY`
+
+#### 最近48小时连续交易信号分析器
+
+##### 本地运行
+1. 确保已安装 Python 3.10 或更高版本。
+2. 运行脚本:
+   ```bash
+   python analyze_last_48_hours_email.py
+   ```
+
+##### GitHub Actions 自动化
+该项目配置了 GitHub Actions 工作流，它会:
+1. 在 Ubuntu 最新版本的 runner 上执行。
+2. 检出代码。
+3. 设置 Python 3.10 环境。
+4. 使用仓库中设置的 secrets (`YAHOO_EMAIL`, `YAHOO_APP_PASSWORD`, `RECIPIENT_EMAIL`) 运行 `analyze_last_48_hours_email.py` 脚本。
+   
+需要在 GitHub 仓库的 secrets 中配置以下环境变量:
+- `YAHOO_EMAIL`
+- `YAHOO_APP_PASSWORD`
+- `RECIPIENT_EMAIL`
+
 #### 通用技术分析工具
 
 ##### 本地运行
@@ -439,7 +530,9 @@ crontab -e
 │   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
 │   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 │   ├── 通用技术分析工具 (@technical_analysis.py)
-│   └── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
+│   ├── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
+│   ├── 恒生指数价格监控器 (@hsi_email.py)
+│   └── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -474,3 +567,8 @@ crontab -e
 10. **新增功能**：增加恒生指数大模型策略分析器，提供专业的恒生指数交易策略。
 11. **重要更新**：`batch_stock_news_fetcher.py` 已更新为使用 `yfinance` 库获取新闻，提高了数据获取的可靠性和成功率。
 12. **最新更新**：GitHub Actions 工作流 `.github/workflows/smart-money-alert.yml` 现已整合运行 `batch_stock_news_fetcher.py` 和 `hsi_llm_strategy.py`，实现了更全面的市场分析和策略生成。
+13. **新增功能**：新增恒生指数价格监控器（@hsi_email.py），提供基于技术指标的恒生指数交易信号。
+14. **新增功能**：新增最近48小时连续交易信号分析器（@analyze_last_48_hours_email.py），分析连续买卖信号模式。
+15. **功能增强**：恒生指数价格监控器（@hsi_email.py）现在支持基于指定日期的历史数据分析，所有技术分析都基于截止到指定日期的数据进行计算。
+16. **功能增强**：恒生指数价格监控器（@hsi_email.py）的止损价和止盈价显示保留小数点后两位。
+17. **功能增强**：恒生指数价格监控器（@hsi_email.py）在指标说明中增加了ATR(平均真实波幅)指标的解释。
