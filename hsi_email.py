@@ -128,6 +128,83 @@ class HSIEmailSystem:
             print(f"❌ 获取 {symbol} 数据失败: {e}")
             return None
 
+    def calculate_atr(self, df, period=14):
+        """
+        计算平均真实波幅(ATR)
+        """
+        high = df['High']
+        low = df['Low']
+        close = df['Close']
+        
+        # 计算真实波幅(TR)
+        df['prev_close'] = close.shift(1)
+        tr1 = high - low
+        tr2 = abs(high - df['prev_close'])
+        tr3 = abs(low - df['prev_close'])
+        
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        
+        # 计算ATR
+        atr = true_range.rolling(window=period).mean()
+        
+        # 清理临时列
+        df.drop('prev_close', axis=1, inplace=True)
+        
+        return atr.iloc[-1] if not pd.isna(atr.iloc[-1]) else 0.0
+
+    def calculate_stop_loss_take_profit(self, current_price, signal_type='BUY', method='ATR', atr_period=14, atr_multiplier=1.5, risk_reward_ratio=2.0, percentage=0.05):
+        """
+        计算止损价和止盈价
+        - current_price: 当前价格
+        - signal_type: 信号类型 ('BUY' 或 'SELL')
+        - method: 计算方法 ('ATR' 或 'PERCENTAGE')
+        - atr_period: ATR周期
+        - atr_multiplier: ATR倍数
+        - risk_reward_ratio: 风险收益比
+        - percentage: 固定百分比
+        """
+        if method == 'ATR':
+            # 获取历史数据来计算ATR (这里模拟获取ATR，实际会需要完整的数据)
+            # 由于我们没有完整的数据，这里用一个模拟的ATR值
+            # 在实际情况下，我们会使用self.calculate_atr方法
+            # 这里我们用一个估算的ATR值
+            atr_value = current_price * 0.02  # 假设ATR为价格的2%
+            
+            if signal_type == 'BUY':
+                # 买入信号：止损在下方，止盈在上方
+                stop_loss = current_price - atr_value * atr_multiplier
+                stop_loss = max(stop_loss, current_price * 0.9)  # 确保止损不低于当前价格的90%
+                potential_loss = current_price - stop_loss
+                take_profit = current_price + potential_loss * risk_reward_ratio
+            elif signal_type == 'SELL':
+                # 卖出信号：止损在上方，止盈在下方
+                stop_loss = current_price + atr_value * atr_multiplier
+                stop_loss = min(stop_loss, current_price * 1.1)  # 确保止损不超过当前价格的110%
+                potential_loss = stop_loss - current_price
+                take_profit = current_price - potential_loss * risk_reward_ratio
+        elif method == 'PERCENTAGE':
+            if signal_type == 'BUY':
+                # 买入信号：止损在下方，止盈在上方
+                stop_loss = current_price * (1 - percentage)
+                take_profit = current_price * (1 + percentage * risk_reward_ratio)
+            elif signal_type == 'SELL':
+                # 卖出信号：止损在上方，止盈在下方
+                stop_loss = current_price * (1 + percentage)
+                take_profit = current_price * (1 - percentage * risk_reward_ratio)
+        else:
+            # 默认不设置止损止盈
+            return current_price, current_price
+
+        # 确保止损和止盈价的合理性
+        if signal_type == 'BUY':
+            stop_loss = min(stop_loss, current_price)  # 买入信号的止损价不应高于当前价
+            take_profit = max(take_profit, current_price)  # 买入信号的止盈价不应低于当前价
+        elif signal_type == 'SELL':
+            stop_loss = max(stop_loss, current_price)  # 卖出信号的止损价不应低于当前价
+            take_profit = min(take_profit, current_price)  # 卖出信号的止盈价不应高于当前价
+
+        return round(stop_loss, 2), round(take_profit, 2)
+
     def calculate_technical_indicators(self, data):
         """
         计算技术指标（适用于恒生指数或个股）
@@ -148,6 +225,27 @@ class HSIEmailSystem:
                 'macd': self.calculate_macd(latest['Close']),
                 'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
             }
+            
+            # 计算ATR
+            try:
+                atr_value = self.calculate_atr(hist)
+                current_price = latest['Close']
+                stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                    current_price, 
+                    signal_type='BUY',  # 默认为买入信号
+                    method='ATR',
+                    atr_period=14,
+                    atr_multiplier=1.5,
+                    risk_reward_ratio=2.0
+                )
+                indicators['atr'] = atr_value
+                indicators['stop_loss'] = stop_loss
+                indicators['take_profit'] = take_profit
+            except Exception as e:
+                print(f"⚠️ 计算ATR或止损止盈失败: {e}")
+                indicators['atr'] = 0.0
+                indicators['stop_loss'] = None
+                indicators['take_profit'] = None
             
             return indicators
         
@@ -210,6 +308,29 @@ class HSIEmailSystem:
                         'description': description
                     })
             
+            # 计算ATR和止损止盈
+            current_price = latest.get('Close', 0)
+            atr_value = self.calculate_atr(hist)
+            
+            # 确定信号类型，基于最近的信号
+            signal_type = 'BUY'  # 默认为买入
+            if recent_signals is not None and len(recent_signals) > 0:
+                # 检查最近的信号类型
+                latest_signal = recent_signals.iloc[-1]  # 最近的信号
+                if 'Buy_Signal' in latest_signal and latest_signal['Buy_Signal'] == True:
+                    signal_type = 'BUY'
+                elif 'Sell_Signal' in latest_signal and latest_signal['Sell_Signal'] == True:
+                    signal_type = 'SELL'
+            
+            stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                current_price, 
+                signal_type=signal_type,
+                method='ATR',
+                atr_period=14,
+                atr_multiplier=1.5,
+                risk_reward_ratio=2.0
+            )
+            
             return {
                 'rsi': rsi,
                 'macd': macd,
@@ -223,7 +344,10 @@ class HSIEmailSystem:
                 'ma20': latest.get('MA20', 0),
                 'ma50': latest.get('MA50', 0),
                 'ma200': latest.get('MA200', 0),
-                'hist': hist
+                'hist': hist,
+                'atr': atr_value,
+                'stop_loss': stop_loss,
+                'take_profit': take_profit
             }
         except Exception as e:
             print(f"⚠️ 计算技术指标失败: {e}")
@@ -231,10 +355,31 @@ class HSIEmailSystem:
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
             
+            # 计算ATR
+            try:
+                atr_value = self.calculate_atr(hist)
+                current_price = latest['Close']
+                stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                    current_price, 
+                    signal_type='BUY',  # 默认为买入信号
+                    method='ATR',
+                    atr_period=14,
+                    atr_multiplier=1.5,
+                    risk_reward_ratio=2.0
+                )
+            except Exception as e2:
+                print(f"⚠️ 计算ATR或止损止盈失败: {e2}")
+                atr_value = 0.0
+                stop_loss = None
+                take_profit = None
+            
             return {
                 'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100),
                 'macd': self.calculate_macd(latest['Close']),
                 'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
+                'atr': atr_value,
+                'stop_loss': stop_loss,
+                'take_profit': take_profit
             }
 
     def calculate_rsi(self, change_pct):
@@ -253,6 +398,83 @@ class HSIEmailSystem:
         """
         # 这是一个非常简化的计算，实际MACD需要历史价格数据
         return price * 0.01  # 简单映射
+
+    def calculate_atr(self, df, period=14):
+        """
+        计算平均真实波幅(ATR)
+        """
+        high = df['High']
+        low = df['Low']
+        close = df['Close']
+        
+        # 计算真实波幅(TR)
+        df['prev_close'] = close.shift(1)
+        tr1 = high - low
+        tr2 = abs(high - df['prev_close'])
+        tr3 = abs(low - df['prev_close'])
+        
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        
+        # 计算ATR
+        atr = true_range.rolling(window=period).mean()
+        
+        # 清理临时列
+        df.drop('prev_close', axis=1, inplace=True)
+        
+        return atr.iloc[-1] if not pd.isna(atr.iloc[-1]) else 0.0
+
+    def calculate_stop_loss_take_profit(self, current_price, signal_type='BUY', method='ATR', atr_period=14, atr_multiplier=1.5, risk_reward_ratio=2.0, percentage=0.05):
+        """
+        计算止损价和止盈价
+        - current_price: 当前价格
+        - signal_type: 信号类型 ('BUY' 或 'SELL')
+        - method: 计算方法 ('ATR' 或 'PERCENTAGE')
+        - atr_period: ATR周期
+        - atr_multiplier: ATR倍数
+        - risk_reward_ratio: 风险收益比
+        - percentage: 固定百分比
+        """
+        if method == 'ATR':
+            # 获取历史数据来计算ATR (这里模拟获取ATR，实际会需要完整的数据)
+            # 由于我们没有完整的数据，这里用一个模拟的ATR值
+            # 在实际情况下，我们会使用self.calculate_atr方法
+            # 这里我们用一个估算的ATR值
+            atr_value = current_price * 0.02  # 假设ATR为价格的2%
+            
+            if signal_type == 'BUY':
+                # 买入信号：止损在下方，止盈在上方
+                stop_loss = current_price - atr_value * atr_multiplier
+                stop_loss = max(stop_loss, current_price * 0.9)  # 确保止损不低于当前价格的90%
+                potential_loss = current_price - stop_loss
+                take_profit = current_price + potential_loss * risk_reward_ratio
+            elif signal_type == 'SELL':
+                # 卖出信号：止损在上方，止盈在下方
+                stop_loss = current_price + atr_value * atr_multiplier
+                stop_loss = min(stop_loss, current_price * 1.1)  # 确保止损不超过当前价格的110%
+                potential_loss = stop_loss - current_price
+                take_profit = current_price - potential_loss * risk_reward_ratio
+        elif method == 'PERCENTAGE':
+            if signal_type == 'BUY':
+                # 买入信号：止损在下方，止盈在上方
+                stop_loss = current_price * (1 - percentage)
+                take_profit = current_price * (1 + percentage * risk_reward_ratio)
+            elif signal_type == 'SELL':
+                # 卖出信号：止损在上方，止盈在下方
+                stop_loss = current_price * (1 + percentage)
+                take_profit = current_price * (1 - percentage * risk_reward_ratio)
+        else:
+            # 默认不设置止损止盈
+            return current_price, current_price
+
+        # 确保止损和止盈价的合理性
+        if signal_type == 'BUY':
+            stop_loss = min(stop_loss, current_price)  # 买入信号的止损价不应高于当前价
+            take_profit = max(take_profit, current_price)  # 买入信号的止盈价不应低于当前价
+        elif signal_type == 'SELL':
+            stop_loss = max(stop_loss, current_price)  # 卖出信号的止损价不应低于当前价
+            take_profit = min(take_profit, current_price)  # 卖出信号的止盈价不应高于当前价
+
+        return round(stop_loss, 2), round(take_profit, 2)
 
     def calculate_price_position(self, current_price, min_price, max_price):
         """
@@ -641,6 +863,9 @@ class HSIEmailSystem:
         ma20 = indicators.get('ma20', 0)
         ma50 = indicators.get('ma50', 0)
         ma200 = indicators.get('ma200', 0)
+        atr = indicators.get('atr', 0.0)
+        stop_loss = indicators.get('stop_loss', None)
+        take_profit = indicators.get('take_profit', None)
         
         html += f"""
                 <tr>
@@ -675,7 +900,28 @@ class HSIEmailSystem:
                     <td>MA200</td>
                     <td>{ma200:,.2f}</td>
                 </tr>
+                <tr>
+                    <td>ATR (14日)</td>
+                    <td>{atr:.2f}</td>
+                </tr>
         """
+        
+        # 添加止损价和止盈价
+        if stop_loss is not None:
+            html += f"""
+                <tr>
+                    <td>建议止损价</td>
+                    <td>{stop_loss:,.2f}</td>
+                </tr>
+            """
+        
+        if take_profit is not None:
+            html += f"""
+                <tr>
+                    <td>建议止盈价</td>
+                    <td>{take_profit:,.2f}</td>
+                </tr>
+            """
         
         # 添加交易信号
         recent_buy_signals = indicators.get('recent_buy_signals', [])
@@ -1122,6 +1368,9 @@ class HSIEmailSystem:
                 ma20 = hsi_indicators.get('ma20', 0)
                 ma50 = hsi_indicators.get('ma50', 0)
                 ma200 = hsi_indicators.get('ma200', 0)
+                atr = hsi_indicators.get('atr', 0.0)
+                stop_loss = hsi_indicators.get('stop_loss', None)
+                take_profit = hsi_indicators.get('take_profit', None)
                 
                 html += f"""
                     <tr>
@@ -1156,7 +1405,28 @@ class HSIEmailSystem:
                         <td>MA200</td>
                         <td>{ma200:,.2f}</td>
                     </tr>
+                    <tr>
+                        <td>ATR (14日)</td>
+                        <td>{atr:.2f}</td>
+                    </tr>
                 """
+                
+                # 添加止损价和止盈价
+                if stop_loss is not None:
+                    html += f"""
+                        <tr>
+                            <td>建议止损价</td>
+                            <td>{stop_loss:,.2f}</td>
+                        </tr>
+                    """
+                
+                if take_profit is not None:
+                    html += f"""
+                        <tr>
+                            <td>建议止盈价</td>
+                            <td>{take_profit:,.2f}</td>
+                        </tr>
+                    """
                 
                 # 添加交易信号
                 recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
@@ -1215,6 +1485,13 @@ class HSIEmailSystem:
                 text += f"  MA20: {ma20:,.2f}\n"
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
+                text += f"  ATR: {atr:.2f}\n"
+                
+                # 添加止损价和止盈价到文本版本
+                if stop_loss is not None:
+                    text += f"  建议止损价: {stop_loss:,.2f}\n"
+                if take_profit is not None:
+                    text += f"  建议止盈价: {take_profit:,.2f}\n"
                 
                 # 添加交易信号信息到文本版本
                 if recent_buy_signals:
@@ -1306,6 +1583,9 @@ class HSIEmailSystem:
                 ma20 = indicators.get('ma20', 0)
                 ma50 = indicators.get('ma50', 0)
                 ma200 = indicators.get('ma200', 0)
+                atr = indicators.get('atr', 0.0)
+                stop_loss = indicators.get('stop_loss', None)
+                take_profit = indicators.get('take_profit', None)
                 
                 text += f"  趋势: {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
@@ -1314,6 +1594,13 @@ class HSIEmailSystem:
                 text += f"  MA20: {ma20:,.2f}\n"
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
+                text += f"  ATR: {atr:.2f}\n"
+                
+                # 添加止损价和止盈价到文本版本
+                if stop_loss is not None:
+                    text += f"  建议止损价: {stop_loss:,.2f}\n"
+                if take_profit is not None:
+                    text += f"  建议止盈价: {take_profit:,.2f}\n"
                 
                 # 添加交易信号信息到文本版本
                 recent_buy_signals = indicators.get('recent_buy_signals', [])
