@@ -614,7 +614,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 amount = shares * (price_at_calculation if price_at_calculation is not None else 0) if shares > 0 and (price_at_calculation if price_at_calculation is not None else 0) > 0 else 0
-                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=price_at_calculation)
+                actual_current_price = price_at_calculation if price_at_calculation is not None else self.get_current_stock_price(code)
+                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
             return False
             
         # 检查股数是否为0
@@ -624,7 +625,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 amount = shares * (price_at_calculation if price_at_calculation is not None else 0) if shares > 0 and (price_at_calculation if price_at_calculation is not None else 0) > 0 else 0
-                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=price_at_calculation)
+                actual_current_price = price_at_calculation if price_at_calculation is not None else self.get_current_stock_price(code)
+                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
             return False
             
         # 获取当前价格（如果提供了计算时的价格，则使用计算时的价格）
@@ -635,7 +637,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 amount = shares * 0 if shares > 0 else 0
-                self.record_transaction('BUY', code, name, shares, 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=current_price)
+                actual_current_price = current_price if current_price is not None else self.get_current_stock_price(code)
+                self.record_transaction('BUY', code, name, shares, 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
             return False
             
         # 计算实际投资金额
@@ -740,9 +743,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 actual_shares = int(self.positions.get(code, {}).get('shares', 0) * percentage) if code in self.positions else 0
-                amount = actual_shares * 0 if actual_shares > 0 else 0
-                current_price = self.get_current_stock_price(code)
-                self.record_transaction('SELL', code, name, actual_shares, 0, amount, reason, False, current_price=current_price)
+                actual_current_price = self.get_current_stock_price(code)  # 获取当前价格作为参考
+                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price)
             return False
             
         # 检查是否有持仓
@@ -752,7 +754,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 amount = 0 * 0 if 0 > 0 else 0
-                self.record_transaction('SELL', code, name, 0, 0, amount, reason, False, current_price=0)
+                current_price = self.get_current_stock_price(code)  # 获取当前价格作为参考
+                self.record_transaction('SELL', code, name, 0, 0, amount, reason, False, current_price=current_price)
             return False
             
         position = self.positions[code]
@@ -764,8 +767,8 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 actual_shares = int(self.positions.get(code, {}).get('shares', 0) * percentage)
-                amount = actual_shares * 0 if actual_shares > 0 else 0
-                self.record_transaction('SELL', code, name, actual_shares, 0, amount, reason, False, current_price=0)
+                actual_current_price = self.get_current_stock_price(code)  # 即使获取不到也尝试一次
+                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price)
             return False
             
         # 计算卖出股数
@@ -775,8 +778,8 @@ class SimulationTrader:
             
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
-                amount = 0 * current_price if 0 > 0 else 0
-                self.record_transaction('SELL', code, name, 0, current_price, amount, reason, False, current_price=current_price)
+                actual_current_price = self.get_current_stock_price(code)
+                self.record_transaction('SELL', code, name, 0, current_price, 0, reason, False, current_price=actual_current_price)
             return False
             
         # 计算卖出金额
@@ -1178,7 +1181,8 @@ class SimulationTrader:
                     
                     # 记录失败的交易 - 确保记录到交易历史中
                     amount = 0.0
-                    self.record_transaction('SELL', code, name, 0, 0.0, amount, reason, False, current_price=0)
+                    actual_current_price = self.get_current_stock_price(code)
+                    self.record_transaction('SELL', code, name, 0, 0.0, amount, reason, False, current_price=actual_current_price)
                     
                     # 发送无法卖出通知邮件
                     success = self.send_trading_notification(
@@ -1270,7 +1274,8 @@ class SimulationTrader:
                     
                     # 记录失败的交易
                     amount = 0 * current_price if 0 > 0 else 0
-                    self.record_transaction('BUY', code, name, 0, current_price, amount, f"{reason} (原因: {calculation_reason})", False, stop_loss_price=stop_loss_price, current_price=current_price)
+                    actual_current_price = current_price if current_price is not None else self.get_current_stock_price(code)
+                    self.record_transaction('BUY', code, name, 0, current_price, amount, f"{reason} (原因: {calculation_reason})", False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
                     
                     # 根据计算原因决定是否发送资金不足通知
                     if calculation_reason == "资金不足":
@@ -1577,7 +1582,8 @@ class SimulationTrader:
             
             # 记录失败的交易
             amount = 0 * 0 if 0 > 0 else 0
-            self.record_transaction('SELL', code, name, 0, 0, amount, '手工卖出指令', False, current_price=0)
+            actual_current_price = self.get_current_stock_price(code)
+            self.record_transaction('SELL', code, name, 0, 0, amount, '手工卖出指令', False, current_price=actual_current_price)
             
             # 发送无法卖出通知邮件
             success = self.send_trading_notification(
