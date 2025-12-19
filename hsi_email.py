@@ -882,7 +882,7 @@ class HSIEmailSystem:
             html += f"""
                 <tr>
                     <td>建议止损价</td>
-                    <td>{stop_loss:,.8f}</td>
+                    <td>{stop_loss:,.2f}</td>
                 </tr>
             """
 
@@ -890,7 +890,7 @@ class HSIEmailSystem:
             html += f"""
                 <tr>
                     <td>建议止盈价</td>
-                    <td>{take_profit:,.8f}</td>
+                    <td>{take_profit:,.2f}</td>
                 </tr>
             """
 
@@ -1332,7 +1332,7 @@ class HSIEmailSystem:
                     html += f"""
                         <tr>
                             <td>建议止损价</td>
-                            <td>{stop_loss:,.8f}</td>
+                            <td>{stop_loss:,.2f}</td>
                         </tr>
                     """
 
@@ -1340,7 +1340,7 @@ class HSIEmailSystem:
                     html += f"""
                         <tr>
                             <td>建议止盈价</td>
-                            <td>{take_profit:,.8f}</td>
+                            <td>{take_profit:,.2f}</td>
                         </tr>
                     """
 
@@ -1402,9 +1402,9 @@ class HSIEmailSystem:
                 text += f"  ATR: {atr:.2f}\n"
 
                 if stop_loss is not None:
-                    text += f"  建议止损价: {stop_loss:,.8f}\n"
+                    text += f"  建议止损价: {stop_loss:,.2f}\n"
                 if take_profit is not None:
-                    text += f"  建议止盈价: {take_profit:,.8f}\n"
+                    text += f"  建议止盈价: {take_profit:,.2f}\n"
 
                 if recent_buy_signals:
                     text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
@@ -1498,9 +1498,9 @@ class HSIEmailSystem:
                 text += f"  ATR: {atr:.2f}\n"
 
                 if stop_loss is not None:
-                    text += f"  建议止损价: {stop_loss:,.8f}\n"
+                    text += f"  建议止损价: {stop_loss:,.2f}\n"
                 if take_profit is not None:
-                    text += f"  建议止盈价: {take_profit:,.8f}\n"
+                    text += f"  建议止盈价: {take_profit:,.2f}\n"
 
                 recent_buy_signals = indicators.get('recent_buy_signals', [])
                 recent_sell_signals = indicators.get('recent_sell_signals', [])
