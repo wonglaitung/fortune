@@ -1260,6 +1260,145 @@ class HSIEmailSystem:
 
         text += "\n"
 
+        # 添加最近24小时的模拟交易记录
+        html += """
+        <div class="section">
+            <h3>💰 最近24小时模拟交易记录</h3>
+        """
+        
+        # 读取交易记录
+        try:
+            import csv
+            import os
+            
+            transactions_file = 'data/simulation_transactions.csv'
+            if os.path.exists(transactions_file):
+                with open(transactions_file, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                
+                lines = content.strip().split('\n')
+                if len(lines) > 1:
+                    headers = lines[0].split(',')
+                    recent_transactions = []
+                    
+                    now = datetime.now()
+                    time_24_hours_ago = now - timedelta(hours=24)
+                    
+                    for line in lines[1:]:
+                        fields = line.split(',')
+                        # 处理包含逗号的字段
+                        if len(fields) > len(headers):
+                            reconstructed = []
+                            i = 0
+                            while i < len(fields):
+                                if fields[i].startswith('"') and not fields[i].endswith('"'):
+                                    j = i
+                                    while j < len(fields) and not fields[j].endswith('"'):
+                                        j += 1
+                                    reconstructed.append(','.join(fields[i:j+1]).strip('"'))
+                                    i = j + 1
+                                else:
+                                    reconstructed.append(fields[i].strip('"'))
+                                    i += 1
+                            fields = reconstructed
+
+                        if len(fields) >= 10:
+                            timestamp_str = fields[0]
+                            try:
+                                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                if timestamp >= time_24_hours_ago:
+                                    trans_type = fields[1] if len(fields) > 1 else ""
+                                    code = fields[2] if len(fields) > 2 else ""
+                                    name = fields[3] if len(fields) > 3 else ""
+                                    shares_str = fields[4] if len(fields) > 4 else "0"
+                                    price_str = fields[5] if len(fields) > 5 else "0"
+                                    amount_str = fields[6] if len(fields) > 6 else "0"
+                                    reason = fields[8] if len(fields) > 8 else ""
+                                    
+                                    shares = int(float(shares_str)) if shares_str and shares_str != '0' else 0
+                                    price = float(price_str) if price_str and price_str != '0' else 0.0
+                                    amount = float(amount_str) if amount_str and amount_str != '0' else 0.0
+                                    
+                                    recent_transactions.append({
+                                        'timestamp': timestamp,
+                                        'type': trans_type,
+                                        'code': code,
+                                        'name': name,
+                                        'shares': shares,
+                                        'price': price,
+                                        'amount': amount,
+                                        'reason': reason
+                                    })
+                            except ValueError:
+                                continue
+                    
+                    if recent_transactions:
+                        # 按股票名称、时间顺序排列（先按股票名称排序，再按时间正序排序）
+                        recent_transactions.sort(key=lambda x: (x['name'], x['timestamp']))
+                        
+                        html += """
+                        <table>
+                            <tr>
+                                <th>股票名称</th>
+                                <th>股票代码</th>
+                                <th>时间</th>
+                                <th>类型</th>
+                                <th>价格</th>
+                                <th>理由</th>
+                            </tr>
+                        """
+                        
+                        for trans in recent_transactions:
+                            trans_type = trans['type']
+                            row_style = "background-color: #e8f5e9;" if trans_type == 'BUY' else "background-color: #ffebee;"
+                            html += f"""
+                            <tr style="{row_style}">
+                                <td>{trans['name']}</td>
+                                <td>{trans['code']}</td>
+                                <td>{trans['timestamp'].strftime('%m-%d %H:%M:%S')}</td>
+                                <td>{trans['type']}</td>
+                                <td>{trans['price']:,.2f}</td>
+                                <td>{trans['reason']}</td>
+                            </tr>
+                            """
+                        
+                        html += "</table>"
+                        
+                        # 添加文本版本，按股票名称分组显示
+                        text += f"💰 最近24小时模拟交易记录:\n"
+                        
+                        # 按股票名称分组
+                        from collections import OrderedDict
+                        grouped_transactions = OrderedDict()
+                        for trans in recent_transactions:
+                            if trans['name'] not in grouped_transactions:
+                                grouped_transactions[trans['name']] = []
+                            grouped_transactions[trans['name']].append(trans)
+                        
+                        for stock_name, trans_list in grouped_transactions.items():
+                            text += f"  {stock_name} ({trans_list[0]['code']}):\n"
+                            for trans in trans_list:
+                                trans_type = trans['type']
+                                text += f"    {trans['timestamp'].strftime('%m-%d %H:%M:%S')} {trans_type} @ {trans['price']:,.2f} ({trans['reason']})\n"
+                    else:
+                        html += "<p>最近24小时内没有交易记录</p>"
+                        text += "💰 最近24小时模拟交易记录:\n  最近24小时内没有交易记录\n"
+                else:
+                    html += "<p>交易记录文件为空</p>"
+                    text += "💰 最近24小时模拟交易记录:\n  交易记录文件为空\n"
+            else:
+                html += "<p>未找到交易记录文件</p>"
+                text += "💰 最近24小时模拟交易记录:\n  未找到交易记录文件\n"
+        except Exception as e:
+            html += f"<p>读取交易记录时出错: {str(e)}</p>"
+            text += f"💰 最近24小时模拟交易记录:\n  读取交易记录时出错: {str(e)}\n"
+        
+        html += """
+            </div>
+        """
+
+        text += "\n"
+
         if hsi_data:
             html += """
                 <div class="section">
@@ -1612,7 +1751,7 @@ class HSIEmailSystem:
             print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
             return False
 
-        subject = "恒生指数及港股主力资金追踪器股票交易信号提醒"
+        subject = "恒生指数及港股交易信号提醒 - 包含最近24小时模拟交易记录"
         text, html = self.generate_report_content(target_date, hsi_data, hsi_indicators, stock_results)
 
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
