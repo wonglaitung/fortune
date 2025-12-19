@@ -1165,13 +1165,38 @@ class HSIEmailSystem:
                             <th>股票代码</th>
                             <th>股票名称</th>
                             <th>建议次数</th>
-                            <th>建议时间及理由</th>
+                            <th>建议时间、现价、止损价</th>
                         </tr>
                 """
                 for code, name, times, reasons in buy_without_sell_after:
                     combined_str = ""
                     for i in range(len(times)):
-                        time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                        time_info = f"{times[i]}"
+                        # 从reason中提取现价和止损价信息，不显示详细理由
+                        reason = reasons[i] if reasons[i] else ''
+                        # 提取现价和止损价信息
+                        price_info = ""
+                        stop_loss_info = ""
+                        
+                        if '现价' in reason:
+                            # 提取现价信息
+                            import re
+                            price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                            if price_match:
+                                price_info = f"现价: {price_match.group(1)}"
+                        
+                        if '止损价' in reason:
+                            # 提取止损价信息
+                            import re
+                            stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                            if stop_loss_match:
+                                stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                        
+                        # 组合现价和止损价信息
+                        info_parts = [part for part in [price_info, stop_loss_info] if part]
+                        reason_info = ", ".join(info_parts)
+                        
+                        time_reason = f"{time_info} {reason_info}".strip()
                         combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
                     <tr>
@@ -1195,13 +1220,38 @@ class HSIEmailSystem:
                             <th>股票代码</th>
                             <th>股票名称</th>
                             <th>建议次数</th>
-                            <th>建议时间及理由</th>
+                            <th>建议时间、现价、止损价</th>
                         </tr>
                 """
                 for code, name, times, reasons in sell_without_buy_after:
                     combined_str = ""
                     for i in range(len(times)):
-                        time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                        time_info = f"{times[i]}"
+                        # 从reason中提取现价和止损价信息，不显示详细理由
+                        reason = reasons[i] if reasons[i] else ''
+                        # 提取现价和止损价信息
+                        price_info = ""
+                        stop_loss_info = ""
+                        
+                        if '现价' in reason:
+                            # 提取现价信息
+                            import re
+                            price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                            if price_match:
+                                price_info = f"现价: {price_match.group(1)}"
+                        
+                        if '止损价' in reason:
+                            # 提取止损价信息
+                            import re
+                            stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                            if stop_loss_match:
+                                stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                        
+                        # 组合现价和止损价信息
+                        info_parts = [part for part in [price_info, stop_loss_info] if part]
+                        reason_info = ", ".join(info_parts)
+                        
+                        time_reason = f"{time_info} {reason_info}".strip()
                         combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
                     <tr>
@@ -1224,8 +1274,33 @@ class HSIEmailSystem:
             for code, name, times, reasons in buy_without_sell_after:
                 combined_list = []
                 for i in range(len(times)):
-                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
-                    combined_list.append(time_reason)
+                    time_info = f"{times[i]}"
+                    # 从reason中提取现价和止损价信息，不显示详细理由
+                    reason = reasons[i] if reasons[i] else ''
+                    # 提取现价和止损价信息
+                    price_info = ""
+                    stop_loss_info = ""
+                    
+                    if '现价' in reason:
+                        # 提取现价信息
+                        import re
+                        price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                        if price_match:
+                            price_info = f"现价: {price_match.group(1)}"
+                    
+                    if '止损价' in reason:
+                        # 提取止损价信息
+                        import re
+                        stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                        if stop_loss_match:
+                            stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                    
+                    # 组合现价和止损价信息
+                    info_parts = [part for part in [price_info, stop_loss_info] if part]
+                    reason_info = ", ".join(info_parts)
+                    
+                    combined_item = f"{time_info} {reason_info}".strip()
+                    combined_list.append(combined_item)
                 combined_str = "\n    ".join(combined_list)
                 text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
             text += "\n"
@@ -1235,8 +1310,33 @@ class HSIEmailSystem:
             for code, name, times, reasons in sell_without_buy_after:
                 combined_list = []
                 for i in range(len(times)):
-                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
-                    combined_list.append(time_reason)
+                    time_info = f"{times[i]}"
+                    # 从reason中提取现价和止损价信息，不显示详细理由
+                    reason = reasons[i] if reasons[i] else ''
+                    # 提取现价和止损价信息
+                    price_info = ""
+                    stop_loss_info = ""
+                    
+                    if '现价' in reason:
+                        # 提取现价信息
+                        import re
+                        price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                        if price_match:
+                            price_info = f"现价: {price_match.group(1)}"
+                    
+                    if '止损价' in reason:
+                        # 提取止损价信息
+                        import re
+                        stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                        if stop_loss_match:
+                            stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                    
+                    # 组合现价和止损价信息
+                    info_parts = [part for part in [price_info, stop_loss_info] if part]
+                    reason_info = ", ".join(info_parts)
+                    
+                    combined_item = f"{time_info} {reason_info}".strip()
+                    combined_list.append(combined_item)
                 combined_str = "\n    ".join(combined_list)
                 text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
             text += "\n"
@@ -1260,10 +1360,10 @@ class HSIEmailSystem:
 
         text += "\n"
 
-        # 添加最近24小时的模拟交易记录
+        # 添加最近48小时的模拟交易记录
         html += """
         <div class="section">
-            <h3>💰 最近24小时模拟交易记录</h3>
+            <h3>💰 最近48小时模拟交易记录</h3>
         """
         
         # 读取交易记录
@@ -1282,7 +1382,7 @@ class HSIEmailSystem:
                     recent_transactions = []
                     
                     now = datetime.now()
-                    time_24_hours_ago = now - timedelta(hours=24)
+                    time_48_hours_ago = now - timedelta(hours=48)
                     
                     for line in lines[1:]:
                         fields = line.split(',')
@@ -1306,7 +1406,7 @@ class HSIEmailSystem:
                             timestamp_str = fields[0]
                             try:
                                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                                if timestamp >= time_24_hours_ago:
+                                if timestamp >= time_48_hours_ago:
                                     trans_type = fields[1] if len(fields) > 1 else ""
                                     code = fields[2] if len(fields) > 2 else ""
                                     name = fields[3] if len(fields) > 3 else ""
@@ -1365,7 +1465,7 @@ class HSIEmailSystem:
                         html += "</table>"
                         
                         # 添加文本版本，按股票名称分组显示
-                        text += f"💰 最近24小时模拟交易记录:\n"
+                        text += f"💰 最近48小时模拟交易记录:\n"
                         
                         # 按股票名称分组
                         from collections import OrderedDict
@@ -1381,17 +1481,17 @@ class HSIEmailSystem:
                                 trans_type = trans['type']
                                 text += f"    {trans['timestamp'].strftime('%m-%d %H:%M:%S')} {trans_type} @ {trans['price']:,.2f} ({trans['reason']})\n"
                     else:
-                        html += "<p>最近24小时内没有交易记录</p>"
-                        text += "💰 最近24小时模拟交易记录:\n  最近24小时内没有交易记录\n"
+                        html += "<p>最近48小时内没有交易记录</p>"
+                        text += "💰 最近48小时模拟交易记录:\n  最近48小时内没有交易记录\n"
                 else:
                     html += "<p>交易记录文件为空</p>"
-                    text += "💰 最近24小时模拟交易记录:\n  交易记录文件为空\n"
+                    text += "💰 最近48小时模拟交易记录:\n  交易记录文件为空\n"
             else:
                 html += "<p>未找到交易记录文件</p>"
-                text += "💰 最近24小时模拟交易记录:\n  未找到交易记录文件\n"
+                text += "💰 最近48小时模拟交易记录:\n  未找到交易记录文件\n"
         except Exception as e:
             html += f"<p>读取交易记录时出错: {str(e)}</p>"
-            text += f"💰 最近24小时模拟交易记录:\n  读取交易记录时出错: {str(e)}\n"
+            text += f"💰 最近48小时模拟交易记录:\n  读取交易记录时出错: {str(e)}\n"
         
         html += """
             </div>
@@ -1751,7 +1851,7 @@ class HSIEmailSystem:
             print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
             return False
 
-        subject = "恒生指数及港股交易信号提醒 - 包含最近24小时模拟交易记录"
+        subject = "恒生指数及港股交易信号提醒 - 包含最近48小时模拟交易记录"
         text, html = self.generate_report_content(target_date, hsi_data, hsi_indicators, stock_results)
 
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
