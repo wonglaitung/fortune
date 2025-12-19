@@ -3,6 +3,13 @@
 """
 恒生指数及港股主力资金追踪器股票价格监控和交易信号邮件通知系统
 基于技术分析指标生成买卖信号，只在有交易信号时发送邮件
+
+此版本改进了止损/止盈计算：
+- 使用真实历史数据计算 ATR（若可用）
+- 若 ATR 无效则回退到百分比法
+- 可选最大允许亏损百分比（通过环境变量 MAX_LOSS_PCT 设置，示例 0.2 表示 20%）
+- 对止损/止盈按可配置或推断的最小变动单位（tick size）进行四舍五入
+- 删除了重复函数定义并改进了异常处理
 """
 
 import os
@@ -15,8 +22,9 @@ from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
 import numpy as np
+from decimal import Decimal, ROUND_HALF_UP
 
-# 导入技术分析工具
+# 导入技术分析工具（可选）
 try:
     from technical_analysis import TechnicalAnalyzer
     TECHNICAL_ANALYSIS_AVAILABLE = True
@@ -24,63 +32,74 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
-# 从港股主力资金追踪器导入股票列表
+# 从港股主力资金追踪器导入股票列表（可选）
 try:
     from hk_smart_money_tracker import WATCHLIST
     STOCK_LIST = WATCHLIST
 except ImportError:
     print("⚠️ 无法导入 hk_smart_money_tracker.WATCHLIST，使用默认股票列表")
-    # 默认使用一些常见的港股股票
     STOCK_LIST = {
-    "2800.HK": "盈富基金",
-    "3968.HK": "招商银行",
-    "0939.HK": "建设银行",
-    "1398.HK": "工商银行",
-    "1288.HK": "农业银行",
-    "0005.HK": "汇丰银行",
-    "0728.HK": "中国电信",
-    "0941.HK": "中国移动",
-    "6682.HK": "第四范式",
-    "1347.HK": "华虹半导体",
-    "1138.HK": "中远海能",
-    "1088.HK": "中国神华",
-    "0883.HK": "中国海洋石油",
-    "0981.HK": "中芯国际",
-    "0388.HK": "香港交易所",
-    "0700.HK": "腾讯控股",
-    "9988.HK": "阿里巴巴-SW",
-    "3690.HK": "美团-W",
-    "1810.HK": "小米集团-W",
-    "9660.HK": "地平线机器人",
-    "2533.HK": "黑芝麻智能",
-    "1330.HK": "绿色动力环保",
-    "1211.HK": "比亚迪股份",
-    "2269.HK": "药明生物",
-    "1299.HK": "友邦保险"
+        "2800.HK": "盈富基金",
+        "3968.HK": "招商银行",
+        "0939.HK": "建设银行",
+        "1398.HK": "工商银行",
+        "1288.HK": "农业银行",
+        "0005.HK": "汇丰银行",
+        "0728.HK": "中国电信",
+        "0941.HK": "中国移动",
+        "6682.HK": "第四范式",
+        "1347.HK": "华虹半导体",
+        "1138.HK": "中远海能",
+        "1088.HK": "中国神华",
+        "0883.HK": "中国海洋石油",
+        "0981.HK": "中芯国际",
+        "0388.HK": "香港交易所",
+        "0700.HK": "腾讯控股",
+        "9988.HK": "阿里巴巴-SW",
+        "3690.HK": "美团-W",
+        "1810.HK": "小米集团-W",
+        "9660.HK": "地平线机器人",
+        "2533.HK": "黑芝麻智能",
+        "1330.HK": "绿色动力环保",
+        "1211.HK": "比亚迪股份",
+        "2269.HK": "药明生物",
+        "1299.HK": "友邦保险"
     }
 
 
 class HSIEmailSystem:
     """恒生指数及港股主力资金追踪器邮件系统"""
-    
+
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
         self.technical_analyzer = TechnicalAnalyzer() if TECHNICAL_ANALYSIS_AVAILABLE else None
 
+        # 可通过环境变量设置默认最大亏损百分比（例如 0.2 表示 20%）
+        max_loss_env = os.environ.get("MAX_LOSS_PCT", None)
+        try:
+            self.default_max_loss_pct = float(max_loss_env) if max_loss_env is not None else None
+        except Exception:
+            self.default_max_loss_pct = None
+
+        # 可通过环境变量设置默认 tick size（例如 0.01）
+        tick_env = os.environ.get("DEFAULT_TICK_SIZE", None)
+        try:
+            self.default_tick_size = float(tick_env) if tick_env is not None else None
+        except Exception:
+            self.default_tick_size = None
+
     def get_hsi_data(self):
         """获取恒生指数数据"""
         try:
-            # 使用yfinance获取恒生指数数据
             hsi_ticker = yf.Ticker("^HSI")
-            hist = hsi_ticker.history(period="6mo")  # 获取6个月的历史数据
+            hist = hsi_ticker.history(period="6mo")
             if hist.empty:
                 print("❌ 无法获取恒生指数历史数据")
                 return None
-            
-            # 获取最新数据
+
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
-            
+
             hsi_data = {
                 'current_price': latest['Close'],
                 'change_1d': (latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0,
@@ -91,7 +110,7 @@ class HSIEmailSystem:
                 'volume': latest['Volume'],
                 'hist': hist
             }
-            
+
             return hsi_data
         except Exception as e:
             print(f"❌ 获取恒生指数数据失败: {e}")
@@ -101,18 +120,17 @@ class HSIEmailSystem:
         """获取指定股票的数据"""
         try:
             ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="6mo")  # 获取6个月的历史数据
+            hist = ticker.history(period="6mo")
             if hist.empty:
                 print(f"❌ 无法获取 {symbol} 的历史数据")
                 return None
-            
-            # 获取最新数据
+
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
-            
+
             stock_data = {
                 'symbol': symbol,
-                'name': self.stock_list.get(symbol, symbol),  # 使用导入的股票列表获取股票名称
+                'name': self.stock_list.get(symbol, symbol),
                 'current_price': latest['Close'],
                 'change_1d': (latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0,
                 'change_1d_points': latest['Close'] - prev['Close'],
@@ -122,7 +140,7 @@ class HSIEmailSystem:
                 'volume': latest['Volume'],
                 'hist': hist
             }
-            
+
             return stock_data
         except Exception as e:
             print(f"❌ 获取 {symbol} 数据失败: {e}")
@@ -130,80 +148,161 @@ class HSIEmailSystem:
 
     def calculate_atr(self, df, period=14):
         """
-        计算平均真实波幅(ATR)
+        计算平均真实波幅(ATR)，返回最后一行的 ATR 值（float）
+        使用 DataFrame 的副本以避免修改原始数据。
         """
-        high = df['High']
-        low = df['Low']
-        close = df['Close']
-        
-        # 计算真实波幅(TR)
-        df['prev_close'] = close.shift(1)
-        tr1 = high - low
-        tr2 = abs(high - df['prev_close'])
-        tr3 = abs(low - df['prev_close'])
-        
-        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        
-        # 计算ATR
-        atr = true_range.rolling(window=period).mean()
-        
-        # 清理临时列
-        df.drop('prev_close', axis=1, inplace=True)
-        
-        return atr.iloc[-1] if not pd.isna(atr.iloc[-1]) else 0.0
+        try:
+            if df is None or df.empty:
+                return 0.0
+            # work on a copy
+            dfc = df.copy()
+            high = dfc['High'].astype(float)
+            low = dfc['Low'].astype(float)
+            close = dfc['Close'].astype(float)
 
-    def calculate_stop_loss_take_profit(self, current_price, signal_type='BUY', method='ATR', atr_period=14, atr_multiplier=1.5, risk_reward_ratio=2.0, percentage=0.05):
+            prev_close = close.shift(1)
+            tr1 = high - low
+            tr2 = (high - prev_close).abs()
+            tr3 = (low - prev_close).abs()
+            true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+            atr = true_range.rolling(window=period).mean()
+
+            last_atr = atr.dropna().iloc[-1] if not atr.dropna().empty else 0.0
+            return float(last_atr)
+        except Exception as e:
+            print(f"⚠️ 计算 ATR 失败: {e}")
+            return 0.0
+
+    def _round_to_tick(self, price, current_price=None, tick_size=None):
         """
-        计算止损价和止盈价
-        - current_price: 当前价格
-        - signal_type: 信号类型 ('BUY' 或 'SELL')
-        - method: 计算方法 ('ATR' 或 'PERCENTAGE')
-        - atr_period: ATR周期
-        - atr_multiplier: ATR倍数
+        将 price 四舍五入到最接近的 tick。优先使用传入的 tick_size，
+        否则使用实例默认 tick，若都没有则根据 current_price 做简单推断。
+        """
+        try:
+            if price is None or not np.isfinite(price):
+                return price
+            if tick_size is None:
+                tick_size = self.default_tick_size
+
+            if tick_size is None:
+                # 简单规则推断（这只是近似）
+                if current_price is None:
+                    current_price = price
+                if current_price >= 100:
+                    ts = 0.1
+                elif current_price >= 1:
+                    ts = 0.01
+                else:
+                    ts = 0.001
+            else:
+                ts = float(tick_size)
+
+            # 使用 Decimal 精确四舍五入到最接近的 tick
+            if ts <= 0:
+                return float(round(price, 8))
+            quant = Decimal(str(ts))
+            dec_price = Decimal(str(price))
+            rounded = (dec_price / quant).to_integral_value(rounding=ROUND_HALF_UP) * quant
+            # 把结果转换回 float 并截断多余小数
+            return float(rounded)
+        except Exception:
+            # 回退为普通四舍五入
+            return float(round(price, 8))
+
+    def calculate_stop_loss_take_profit(self, hist_df, current_price, signal_type='BUY',
+                                       method='ATR', atr_period=14, atr_multiplier=1.5,
+                                       risk_reward_ratio=2.0, percentage=0.05,
+                                       max_loss_pct=None, tick_size=None):
+        """
+        更稳健的止损/止盈计算：
+        - hist_df: 包含历史 OHLC 的 DataFrame（用于 ATR 计算）
+        - current_price: 当前价格（float）
+        - signal_type: 'BUY' 或 'SELL'
+        - method: 'ATR' 或 'PERCENTAGE'
+        - atr_period: ATR 周期
+        - atr_multiplier: ATR 倍数
         - risk_reward_ratio: 风险收益比
-        - percentage: 固定百分比
+        - percentage: 固定百分比（如 method == 'PERCENTAGE' 时使用）
+        - max_loss_pct: 可选的最大允许亏损百分比（0.2 表示 20%），None 表示不强制
+        - tick_size: 最小价格变动单位（如 0.01）
+        返回 (stop_loss, take_profit)（float 或 None）
         """
-        if method == 'ATR':
-            # 获取历史数据来计算ATR (这里模拟获取ATR，实际会需要完整的数据)
-            # 由于我们没有完整的数据，这里用一个模拟的ATR值
-            # 在实际情况下，我们会使用self.calculate_atr方法
-            # 这里我们用一个估算的ATR值
-            atr_value = current_price * 0.02  # 假设ATR为价格的2%
-            
-            if signal_type == 'BUY':
-                # 买入信号：止损在下方，止盈在上方
-                stop_loss = current_price - atr_value * atr_multiplier
-                stop_loss = max(stop_loss, current_price * 0.9)  # 确保止损不低于当前价格的90%
-                potential_loss = current_price - stop_loss
-                take_profit = current_price + potential_loss * risk_reward_ratio
-            elif signal_type == 'SELL':
-                # 卖出信号：止损在上方，止盈在下方
-                stop_loss = current_price + atr_value * atr_multiplier
-                stop_loss = min(stop_loss, current_price * 1.1)  # 确保止损不超过当前价格的110%
-                potential_loss = stop_loss - current_price
-                take_profit = current_price - potential_loss * risk_reward_ratio
-        elif method == 'PERCENTAGE':
-            if signal_type == 'BUY':
-                # 买入信号：止损在下方，止盈在上方
-                stop_loss = current_price * (1 - percentage)
-                take_profit = current_price * (1 + percentage * risk_reward_ratio)
-            elif signal_type == 'SELL':
-                # 卖出信号：止损在上方，止盈在下方
-                stop_loss = current_price * (1 + percentage)
-                take_profit = current_price * (1 - percentage * risk_reward_ratio)
-        else:
-            # 默认不设置止损止盈
-            return current_price, current_price
+        try:
+            # 参数校验
+            if current_price is None or not np.isfinite(current_price) or current_price <= 0:
+                return None, None
 
-        # 确保止损和止盈价的合理性
-        if signal_type == 'BUY':
-            stop_loss = min(stop_loss, current_price)  # 买入信号的止损价不应高于当前价
-            take_profit = max(take_profit, current_price)  # 买入信号的止盈价不应低于当前价
-        elif signal_type == 'SELL':
-            stop_loss = max(stop_loss, current_price)  # 卖出信号的止损价不应低于当前价
-            take_profit = min(take_profit, current_price)  # 卖出信号的止盈价不应高于当前价
+            # 优先根据历史计算 ATR
+            atr_value = None
+            if method == 'ATR':
+                try:
+                    atr_value = self.calculate_atr(hist_df, period=atr_period)
+                    if not np.isfinite(atr_value) or atr_value <= 0:
+                        # 回退到百分比法
+                        method = 'PERCENTAGE'
+                    # else 使用 atr_value
+                except Exception:
+                    method = 'PERCENTAGE'
 
-        return round(stop_loss, 2), round(take_profit, 2)
+            if method == 'ATR' and atr_value is not None and atr_value > 0:
+                if signal_type == 'BUY':
+                    sl_raw = current_price - atr_value * atr_multiplier
+                    potential_loss = current_price - sl_raw
+                    tp_raw = current_price + potential_loss * risk_reward_ratio
+                else:  # SELL
+                    sl_raw = current_price + atr_value * atr_multiplier
+                    potential_loss = sl_raw - current_price
+                    tp_raw = current_price - potential_loss * risk_reward_ratio
+            else:
+                # 使用百分比方法
+                if signal_type == 'BUY':
+                    sl_raw = current_price * (1 - percentage)
+                    tp_raw = current_price * (1 + percentage * risk_reward_ratio)
+                else:
+                    sl_raw = current_price * (1 + percentage)
+                    tp_raw = current_price * (1 - percentage * risk_reward_ratio)
+
+            # 应用最大允许亏损（如设置）
+            if max_loss_pct is None:
+                max_loss_pct = self.default_max_loss_pct
+
+            if max_loss_pct is not None and max_loss_pct > 0:
+                if signal_type == 'BUY':
+                    max_allowed_sl = current_price * (1 - max_loss_pct)
+                    # 不允许止损低于 max_allowed_sl（即亏损更大于允许值）
+                    if sl_raw < max_allowed_sl:
+                        sl_raw = max_allowed_sl
+                        potential_loss = current_price - sl_raw
+                        tp_raw = current_price + potential_loss * risk_reward_ratio
+                else:
+                    max_allowed_sl = current_price * (1 + max_loss_pct)
+                    if sl_raw > max_allowed_sl:
+                        sl_raw = max_allowed_sl
+                        potential_loss = sl_raw - current_price
+                        tp_raw = current_price - potential_loss * risk_reward_ratio
+
+            # 保证止损/止盈方向正确（避免等于或反向）
+            eps = 1e-12
+            if signal_type == 'BUY':
+                sl = min(sl_raw, current_price - eps)
+                tp = max(tp_raw, current_price + eps)
+            else:
+                sl = max(sl_raw, current_price + eps)
+                tp = min(tp_raw, current_price - eps)
+
+            # 四舍五入到 tick
+            sl = self._round_to_tick(sl, current_price=current_price, tick_size=tick_size)
+            tp = self._round_to_tick(tp, current_price=current_price, tick_size=tick_size)
+
+            # 最后校验合理性
+            if not (np.isfinite(sl) and np.isfinite(tp)):
+                return None, None
+
+            return round(float(sl), 8), round(float(tp), 8)
+        except Exception as e:
+            print("⚠️ 计算止损止盈异常:", e)
+            return None, None
 
     def calculate_technical_indicators(self, data):
         """
@@ -211,126 +310,108 @@ class HSIEmailSystem:
         """
         if data is None:
             return None
-        
-        hist = data['hist']
-        
+
+        hist = data.get('hist')
+        if hist is None or hist.empty:
+            return None
+
         if not TECHNICAL_ANALYSIS_AVAILABLE:
-            # 如果技术分析工具不可用，使用简化指标计算
+            # 简化指标计算（当 technical_analysis 不可用时）
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
-            
-            # 简化的技术指标计算
+
             indicators = {
-                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100),
+                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
                 'macd': self.calculate_macd(latest['Close']),
                 'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
             }
-            
-            # 计算ATR
+
+            # 使用真实 ATR 计算止损/止盈，若失败回退到百分比法
             try:
-                atr_value = self.calculate_atr(hist)
-                current_price = latest['Close']
+                current_price = float(latest['Close'])
                 stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                    current_price, 
-                    signal_type='BUY',  # 默认为买入信号
+                    hist,
+                    current_price,
+                    signal_type='BUY',  # 默认为 BUY，用场景可以调整
                     method='ATR',
                     atr_period=14,
                     atr_multiplier=1.5,
-                    risk_reward_ratio=2.0
+                    risk_reward_ratio=2.0,
+                    percentage=0.05,
+                    max_loss_pct=None,
+                    tick_size=None
                 )
-                indicators['atr'] = atr_value
+                indicators['atr'] = self.calculate_atr(hist)
                 indicators['stop_loss'] = stop_loss
                 indicators['take_profit'] = take_profit
             except Exception as e:
-                print(f"⚠️ 计算ATR或止损止盈失败: {e}")
+                print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e}")
                 indicators['atr'] = 0.0
                 indicators['stop_loss'] = None
                 indicators['take_profit'] = None
-            
+
             return indicators
-        
-        # 使用技术分析工具计算更准确的指标
+
+        # 如果 technical_analysis 可用，则使用其方法（保留兼容逻辑）
         try:
-            # 计算技术指标
-            indicators = self.technical_analyzer.calculate_all_indicators(hist.copy())
-            
-            # 生成买卖信号
-            indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators.copy())
-            
-            # 分析趋势
+            indicators_df = self.technical_analyzer.calculate_all_indicators(hist.copy())
+            indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators_df.copy())
             trend = self.technical_analyzer.analyze_trend(indicators_with_signals)
-            
-            # 获取最新的指标值
+
             latest = indicators_with_signals.iloc[-1]
             rsi = latest.get('RSI', 50.0)
             macd = latest.get('MACD', 0.0)
             macd_signal = latest.get('MACD_signal', 0.0)
             bb_position = latest.get('BB_position', 0.5) if 'BB_position' in latest else 0.5
-            
-            # 检查最近的交易信号
+
+            # recent signals
             recent_signals = indicators_with_signals.tail(5)
             buy_signals = []
             sell_signals = []
-            
+
             if 'Buy_Signal' in recent_signals.columns:
                 buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
                 for idx, row in buy_signals_df.iterrows():
-                    description = row['Signal_Description']
-                    # 如果描述中已经有"买入信号"字样，去除它，因为我们会在显示时添加
-                    if description.startswith('买入信号:'):
-                        description = description[5:].strip()  # 去掉"买入信号:"和可能的空格
-                    elif description.startswith('买入信号'):
-                        description = description[4:].strip()  # 去掉"买入信号"和可能的冒号和空格
-                    elif description.startswith('Buy Signal:'):
-                        description = description[11:].strip()
-                    elif description.startswith('Buy Signal'):
-                        description = description[10:].strip()
-                    buy_signals.append({
-                        'date': idx.strftime('%Y-%m-%d'),
-                        'description': description
-                    })
-            
+                    description = row.get('Signal_Description', '')
+                    for prefix in ['买入信号:', '买入信号', 'Buy Signal:', 'Buy Signal']:
+                        if description.startswith(prefix):
+                            description = description[len(prefix):].strip()
+                    buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+
             if 'Sell_Signal' in recent_signals.columns:
                 sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
                 for idx, row in sell_signals_df.iterrows():
-                    description = row['Signal_Description']
-                    # 如果描述中已经有"卖出信号"字样，去除它，因为我们会在显示时添加
-                    if description.startswith('卖出信号:'):
-                        description = description[5:].strip()  # 去掉"卖出信号:"和可能的空格
-                    elif description.startswith('卖出信号'):
-                        description = description[4:].strip()  # 去掉"卖出信号"和可能的冒号和空格
-                    elif description.startswith('Sell Signal:'):
-                        description = description[11:].strip()
-                    elif description.startswith('Sell Signal'):
-                        description = description[10:].strip()
-                    sell_signals.append({
-                        'date': idx.strftime('%Y-%m-%d'),
-                        'description': description
-                    })
-            
-            # 计算ATR和止损止盈
-            current_price = latest.get('Close', 0)
+                    description = row.get('Signal_Description', '')
+                    for prefix in ['卖出信号:', '卖出信号', 'Sell Signal:', 'Sell Signal']:
+                        if description.startswith(prefix):
+                            description = description[len(prefix):].strip()
+                    sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+
+            # ATR 和止损止盈
+            current_price = float(latest.get('Close', hist['Close'].iloc[-1]))
             atr_value = self.calculate_atr(hist)
-            
-            # 确定信号类型，基于最近的信号
-            signal_type = 'BUY'  # 默认为买入
+            # 根据最近信号确定类型，默认 BUY
+            signal_type = 'BUY'
             if recent_signals is not None and len(recent_signals) > 0:
-                # 检查最近的信号类型
-                latest_signal = recent_signals.iloc[-1]  # 最近的信号
+                latest_signal = recent_signals.iloc[-1]
                 if 'Buy_Signal' in latest_signal and latest_signal['Buy_Signal'] == True:
                     signal_type = 'BUY'
                 elif 'Sell_Signal' in latest_signal and latest_signal['Sell_Signal'] == True:
                     signal_type = 'SELL'
-            
+
             stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                current_price, 
+                hist,
+                current_price,
                 signal_type=signal_type,
                 method='ATR',
                 atr_period=14,
                 atr_multiplier=1.5,
-                risk_reward_ratio=2.0
+                risk_reward_ratio=2.0,
+                percentage=0.05,
+                max_loss_pct=None,
+                tick_size=None
             )
-            
+
             return {
                 'rsi': rsi,
                 'macd': macd,
@@ -351,30 +432,33 @@ class HSIEmailSystem:
             }
         except Exception as e:
             print(f"⚠️ 计算技术指标失败: {e}")
-            # 如果计算失败，使用简化计算
+            # 降级为简化计算
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
-            
-            # 计算ATR
+
             try:
                 atr_value = self.calculate_atr(hist)
-                current_price = latest['Close']
+                current_price = float(latest['Close'])
                 stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                    current_price, 
-                    signal_type='BUY',  # 默认为买入信号
+                    hist,
+                    current_price,
+                    signal_type='BUY',
                     method='ATR',
                     atr_period=14,
                     atr_multiplier=1.5,
-                    risk_reward_ratio=2.0
+                    risk_reward_ratio=2.0,
+                    percentage=0.05,
+                    max_loss_pct=None,
+                    tick_size=None
                 )
             except Exception as e2:
-                print(f"⚠️ 计算ATR或止损止盈失败: {e2}")
+                print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e2}")
                 atr_value = 0.0
                 stop_loss = None
                 take_profit = None
-            
+
             return {
-                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100),
+                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
                 'macd': self.calculate_macd(latest['Close']),
                 'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
                 'atr': atr_value,
@@ -384,134 +468,64 @@ class HSIEmailSystem:
 
     def calculate_rsi(self, change_pct):
         """
-        简化RSI计算（基于24小时变化率）
+        简化RSI计算（基于24小时变化率），仅作指示用途
         """
-        # 这是一个非常简化的计算，实际RSI需要14天的价格数据
-        if change_pct > 0:
-            return min(100, 50 + change_pct * 2)  # 简单映射
-        else:
-            return max(0, 50 + change_pct * 2)
+        try:
+            if change_pct > 0:
+                return min(100.0, 50.0 + change_pct * 2.0)
+            else:
+                return max(0.0, 50.0 + change_pct * 2.0)
+        except Exception:
+            return 50.0
 
     def calculate_macd(self, price):
         """
-        简化MACD计算（基于价格）
+        简化MACD计算（基于价格），仅作指示用途
         """
-        # 这是一个非常简化的计算，实际MACD需要历史价格数据
-        return price * 0.01  # 简单映射
-
-    def calculate_atr(self, df, period=14):
-        """
-        计算平均真实波幅(ATR)
-        """
-        high = df['High']
-        low = df['Low']
-        close = df['Close']
-        
-        # 计算真实波幅(TR)
-        df['prev_close'] = close.shift(1)
-        tr1 = high - low
-        tr2 = abs(high - df['prev_close'])
-        tr3 = abs(low - df['prev_close'])
-        
-        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        
-        # 计算ATR
-        atr = true_range.rolling(window=period).mean()
-        
-        # 清理临时列
-        df.drop('prev_close', axis=1, inplace=True)
-        
-        return atr.iloc[-1] if not pd.isna(atr.iloc[-1]) else 0.0
-
-    def calculate_stop_loss_take_profit(self, current_price, signal_type='BUY', method='ATR', atr_period=14, atr_multiplier=1.5, risk_reward_ratio=2.0, percentage=0.05):
-        """
-        计算止损价和止盈价
-        - current_price: 当前价格
-        - signal_type: 信号类型 ('BUY' 或 'SELL')
-        - method: 计算方法 ('ATR' 或 'PERCENTAGE')
-        - atr_period: ATR周期
-        - atr_multiplier: ATR倍数
-        - risk_reward_ratio: 风险收益比
-        - percentage: 固定百分比
-        """
-        if method == 'ATR':
-            # 获取历史数据来计算ATR (这里模拟获取ATR，实际会需要完整的数据)
-            # 由于我们没有完整的数据，这里用一个模拟的ATR值
-            # 在实际情况下，我们会使用self.calculate_atr方法
-            # 这里我们用一个估算的ATR值
-            atr_value = current_price * 0.02  # 假设ATR为价格的2%
-            
-            if signal_type == 'BUY':
-                # 买入信号：止损在下方，止盈在上方
-                stop_loss = current_price - atr_value * atr_multiplier
-                stop_loss = max(stop_loss, current_price * 0.9)  # 确保止损不低于当前价格的90%
-                potential_loss = current_price - stop_loss
-                take_profit = current_price + potential_loss * risk_reward_ratio
-            elif signal_type == 'SELL':
-                # 卖出信号：止损在上方，止盈在下方
-                stop_loss = current_price + atr_value * atr_multiplier
-                stop_loss = min(stop_loss, current_price * 1.1)  # 确保止损不超过当前价格的110%
-                potential_loss = stop_loss - current_price
-                take_profit = current_price - potential_loss * risk_reward_ratio
-        elif method == 'PERCENTAGE':
-            if signal_type == 'BUY':
-                # 买入信号：止损在下方，止盈在上方
-                stop_loss = current_price * (1 - percentage)
-                take_profit = current_price * (1 + percentage * risk_reward_ratio)
-            elif signal_type == 'SELL':
-                # 卖出信号：止损在上方，止盈在下方
-                stop_loss = current_price * (1 + percentage)
-                take_profit = current_price * (1 - percentage * risk_reward_ratio)
-        else:
-            # 默认不设置止损止盈
-            return current_price, current_price
-
-        # 确保止损和止盈价的合理性
-        if signal_type == 'BUY':
-            stop_loss = min(stop_loss, current_price)  # 买入信号的止损价不应高于当前价
-            take_profit = max(take_profit, current_price)  # 买入信号的止盈价不应低于当前价
-        elif signal_type == 'SELL':
-            stop_loss = max(stop_loss, current_price)  # 卖出信号的止损价不应低于当前价
-            take_profit = min(take_profit, current_price)  # 卖出信号的止盈价不应高于当前价
-
-        return round(stop_loss, 2), round(take_profit, 2)
+        try:
+            return float(price) * 0.01
+        except Exception:
+            return 0.0
 
     def calculate_price_position(self, current_price, min_price, max_price):
         """
         计算价格位置（在近期高低点之间的百分位）
         """
-        if max_price == min_price:
+        try:
+            if max_price == min_price:
+                return 50.0
+            return (current_price - min_price) / (max_price - min_price) * 100.0
+        except Exception:
             return 50.0
-        
-        return (current_price - min_price) / (max_price - min_price) * 100
 
+    # ---------- 以下为交易记录分析和邮件/报告生成函数 ----------
     def detect_continuous_signals_in_history_from_transactions(self, stock_code, hours=48, min_signals=3):
         """
         基于交易历史记录检测连续买卖信号
         - stock_code: 股票代码
         - hours: 检测的时间范围（小时）
         - min_signals: 判定为连续信号的最小信号数量
-        返回: 连续信号状态（如"连续买入(3次)"、"买入2次,卖出1次"等）
+        返回: 连续信号状态字符串
         """
         try:
             import csv
             from collections import defaultdict
-            
-            # 读取交易记录文件
+
             if not os.path.exists('data/simulation_transactions.csv'):
                 return "无交易记录"
-            
+
             with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
                 content = file.read()
-            
-            # 解析CSV内容
+
             lines = content.strip().split('\n')
+            if not lines:
+                return "无交易记录"
             headers = lines[0].split(',')
             transactions = []
-            
+
             for line in lines[1:]:
                 fields = line.split(',')
-                # 处理可能包含逗号的字段
+                # 处理包含逗号的字段
                 if len(fields) > len(headers):
                     reconstructed = []
                     i = 0
@@ -526,45 +540,36 @@ class HSIEmailSystem:
                             reconstructed.append(fields[i].strip('"'))
                             i += 1
                     fields = reconstructed
-                
-                if len(fields) >= 10:  # 确保有足够的字段
+
+                if len(fields) >= 4:
                     timestamp_str = fields[0]
                     trans_type = fields[1]
                     code = fields[2]
                     name = fields[3] if len(fields) > 3 else ""
-                    
                     try:
                         timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                        transactions.append({
-                            'timestamp': timestamp,
-                            'type': trans_type,
-                            'code': code,
-                            'name': name
-                        })
+                        transactions.append({'timestamp': timestamp, 'type': trans_type, 'code': code, 'name': name})
                     except ValueError as e:
                         print(f"解析时间戳失败: {timestamp_str}, 错误: {e}")
                         continue
 
-            # 过滤指定时间范围内的交易
             now = datetime.now()
-            time_threshold = now - timedelta(hours=hours)
-            recent_transactions = [t for t in transactions if t['timestamp'] >= time_threshold and t['code'] == stock_code]
-            
-            # 按股票代码分组交易
-            transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
+            threshold = now - timedelta(hours=hours)
+            recent_transactions = [t for t in transactions if t['timestamp'] >= threshold and t['code'] == stock_code]
+
+            from collections import defaultdict as _dd
+            transactions_by_stock = _dd(lambda: {'BUY': [], 'SELL': []})
             for trans in recent_transactions:
                 if trans['type'] in transactions_by_stock[trans['code']]:
                     transactions_by_stock[trans['code']][trans['type']].append(trans)
-            
-            # 获取指定股票的交易
+
             trans_dict = transactions_by_stock[stock_code]
             buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
             sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
-            
+
             buy_count = len(buys)
             sell_count = len(sells)
-            
-            # 根据买卖次数返回不同的状态
+
             if buy_count >= min_signals and sell_count == 0 and buy_count > 0:
                 return f"连续买入({buy_count}次)"
             elif sell_count >= min_signals and buy_count == 0 and sell_count > 0:
@@ -577,46 +582,40 @@ class HSIEmailSystem:
                 return f"买入{buy_count}次,卖出{sell_count}次"
             else:
                 return "无信号"
-        
+
         except Exception as e:
             print(f"⚠️ 检测连续信号失败: {e}")
             return "检测失败"
 
     def detect_continuous_signals_in_history(self, indicators_df, hours=48, min_signals=3):
         """
-        检测历史数据中的连续买卖信号（基于交易记录）
-        - indicators_df: 包含历史信号数据的DataFrame
-        - hours: 检测的时间范围（小时）
-        - min_signals: 判定为连续信号的最小信号数量
-        返回: 连续信号状态（如"连续买入"、"连续卖出"、"无连续信号"）
+        占位函数：保留原有接口（实际实现建议基于交易记录）
         """
-        # 这里应该检测基于交易记录的连续信号，而不是技术指标
-        # 由于我们无法从indicators_df获取股票代码，需要另外处理
-        return "无交易记录"  # 作为默认返回值，实际调用时会使用新的函数
+        return "无交易记录"
 
     def analyze_continuous_signals(self):
         """
-        分析最近48小时内的连续买卖信号
-        返回: 有连续买入信号的股票列表、有连续卖出信号的股票列表
+        分析最近48小时内的连续买卖信号（从 data/simulation_transactions.csv 中读取）
+        返回: (buy_without_sell_after, sell_without_buy_after)
         """
         import csv
         from collections import defaultdict
-        
-        # 读取交易记录文件
+
         if not os.path.exists('data/simulation_transactions.csv'):
             return [], []
-        
+
         with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
             content = file.read()
-        
-        # 解析CSV内容
+
         lines = content.strip().split('\n')
+        if not lines:
+            return [], []
         headers = lines[0].split(',')
         transactions = []
-        
+
         for line in lines[1:]:
             fields = line.split(',')
-            # 处理可能包含逗号的字段
+            # 处理包含逗号的字段
             if len(fields) > len(headers):
                 reconstructed = []
                 i = 0
@@ -631,8 +630,8 @@ class HSIEmailSystem:
                         reconstructed.append(fields[i].strip('"'))
                         i += 1
                 fields = reconstructed
-            
-            if len(fields) >= 10:  # 确保有足够的字段
+
+            if len(fields) >= 10:
                 timestamp_str = fields[0]
                 trans_type = fields[1]
                 code = fields[2]
@@ -640,75 +639,65 @@ class HSIEmailSystem:
                 shares_str = fields[4] if len(fields) > 4 else "0"
                 price_str = fields[5] if len(fields) > 5 else "0"
                 amount_str = fields[6] if len(fields) > 6 else "0"
-                reason = fields[8] if len(fields) > 8 else ""  # reason is at index 8
-                stop_loss_price = fields[10] if len(fields) > 10 else ""  # stop_loss_price is at index 10 (after success field at index 9)
-                current_price = fields[11] if len(fields) > 11 else ""  # current_price is at index 11
-                
+                reason = fields[8] if len(fields) > 8 else ""
+                stop_loss_price = fields[10] if len(fields) > 10 else ""
+                current_price = fields[11] if len(fields) > 11 else ""
+
                 try:
                     timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                    # Format reason with stop_loss_price and current_price if they exist
                     formatted_reason = reason
                     has_additional_info = False
-                    
-                    # 检查止损价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+
                     if stop_loss_price and stop_loss_price not in ["", "None", "nan", "False", "null"] and stop_loss_price is not None and stop_loss_price != "False":
                         try:
-                            # 尝试将stop_loss_price转换为浮点数以检查是否有效
                             float_stop_loss = float(stop_loss_price)
-                            if stop_loss_price and stop_loss_price != 'False' and not (float_stop_loss != float_stop_loss):  # 检查是否为NaN
+                            if not (float_stop_loss != float_stop_loss):
                                 formatted_reason += f", 止损价: {stop_loss_price}"
                                 has_additional_info = True
                         except (ValueError, TypeError):
-                            pass  # 如果无法转换为浮点数，则跳过
-                    
-                    # 检查现价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
+                            pass
+
                     if current_price and current_price not in ["", "None", "nan", "False", "null"] and current_price is not None and current_price != "False":
                         try:
-                            # 尝试将current_price转换为浮点数以检查是否有效
                             float_current = float(current_price)
-                            if current_price and current_price != 'False' and not (float_current != float_current):  # 检查是否为NaN
+                            if not (float_current != float_current):
                                 formatted_reason += f", 现价: {current_price}"
                                 has_additional_info = True
                         except (ValueError, TypeError):
-                            pass  # 如果无法转换为浮点数，则跳过
-                    
-                    # 如果添加了额外信息，确保正确的格式
+                            pass
+
                     if has_additional_info and formatted_reason.startswith(", "):
                         formatted_reason = formatted_reason[2:]
-                    
+
                     transactions.append({
                         'timestamp': timestamp,
                         'date': timestamp.date(),
                         'type': trans_type,
                         'code': code,
                         'name': name,
-                        'shares': int(float(shares_str)),
-                        'price': float(price_str),
-                        'amount': float(amount_str),
+                        'shares': int(float(shares_str)) if shares_str else 0,
+                        'price': float(price_str) if price_str else 0.0,
+                        'amount': float(amount_str) if amount_str else 0.0,
                         'reason': formatted_reason.strip()
                     })
                 except ValueError as e:
                     print(f"Error parsing line: {line[:100]}... Error: {e}")
-        
-        # 过滤最近48小时的交易
+
         now = datetime.now()
         time_48_hours_ago = now - timedelta(hours=48)
         recent_transactions = [t for t in transactions if t['timestamp'] >= time_48_hours_ago]
-        
-        # 按股票代码分组交易
+
         transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
         for trans in recent_transactions:
             transactions_by_stock[trans['code']][trans['type']].append(trans)
-        
-        # 查找有3次或以上连续买入信号且无卖出信号的股票
+
         buy_without_sell_after = []
         sell_without_buy_after = []
-        
+
         for stock_code, trans_dict in transactions_by_stock.items():
             buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
             sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
-            
-            # 检查是否有3次或以上买入且无卖出
+
             if len(buys) >= 3 and len(sells) == 0:
                 stock_name = buys[0]['name'] if buys else 'Unknown'
                 buy_times = [buy['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for buy in buys]
@@ -719,72 +708,59 @@ class HSIEmailSystem:
                 sell_times = [sell['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for sell in sells]
                 sell_reasons = [sell['reason'] for sell in sells]
                 sell_without_buy_after.append((stock_code, stock_name, sell_times, sell_reasons))
-        
+
         return buy_without_sell_after, sell_without_buy_after
 
     def has_any_signals(self, hsi_indicators, stock_results, target_date=None):
         """检查是否有任何股票有指定日期的交易信号"""
         if target_date is None:
             target_date = datetime.now().date()
-        
-        # 检查恒生指数信号
+
         if hsi_indicators:
             recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
             recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
-            
-            for signal in recent_buy_signals:
-                signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                if signal_date == target_date:
-                    return True
-            for signal in recent_sell_signals:
-                signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                if signal_date == target_date:
-                    return True
-        
-        # 检查持仓股票信号
+            for signal in recent_buy_signals + recent_sell_signals:
+                try:
+                    signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+                    if signal_date == target_date:
+                        return True
+                except Exception:
+                    continue
+
         for stock_result in stock_results:
             indicators = stock_result.get('indicators')
             if indicators:
-                recent_buy_signals = indicators.get('recent_buy_signals', [])
-                recent_sell_signals = indicators.get('recent_sell_signals', [])
-                
-                for signal in recent_buy_signals:
-                    signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                    if signal_date == target_date:
-                        return True
-                for signal in recent_sell_signals:
-                    signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-                    if signal_date == target_date:
-                        return True
-        
+                for signal in indicators.get('recent_buy_signals', []) + indicators.get('recent_sell_signals', []):
+                    try:
+                        signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+                        if signal_date == target_date:
+                            return True
+                    except Exception:
+                        continue
+
         return False
 
     def generate_stock_analysis_html(self, stock_data, indicators, continuous_buy_signals=None, continuous_sell_signals=None):
         """为单只股票生成HTML分析部分"""
         if not indicators:
             return ""
-        
-        # 如果提供了连续信号数据，获取当前股票的信号
+
         continuous_signal_info = None
         if continuous_buy_signals is not None:
-            # 查找当前股票的连续买入信号
             for code, name, times, reasons in continuous_buy_signals:
                 if code == stock_data['symbol']:
                     continuous_signal_info = f"连续买入({len(times)}次)"
                     break
         if continuous_signal_info is None and continuous_sell_signals is not None:
-            # 查找当前股票的连续卖出信号
             for code, name, times, reasons in continuous_sell_signals:
                 if code == stock_data['symbol']:
                     continuous_signal_info = f"连续卖出({len(times)}次)"
                     break
-        
-        # 获取历史数据（前4天+今天）
+
         hist = stock_data['hist']
-        recent_data = hist.sort_index()  # 按日期升序排列（日期最小的在前）
-        last_5_days = recent_data.tail(5)  # 获取最近5天的数据（包含今天）
-        
-        # 构建多日数据表格
+        recent_data = hist.sort_index()
+        last_5_days = recent_data.tail(5)
+
         multi_day_html = ""
         if len(last_5_days) > 0:
             multi_day_html += """
@@ -794,16 +770,13 @@ class HSIEmailSystem:
                     <tr style="background-color: #f2f2f2;">
                         <th>指标</th>
             """
-            
-            # 添加日期标题行
             for date in last_5_days.index:
                 multi_day_html += f"<th>{date.strftime('%m-%d')}</th>"
             multi_day_html += "</tr>"
-            
-            # 添加各项指标数据行
+
             indicators_list = ['Open', 'High', 'Low', 'Close', 'Volume']
             indicators_names = ['开盘价', '最高价', '最低价', '收盘价', '成交量']
-            
+
             for i, ind in enumerate(indicators_list):
                 multi_day_html += "<tr>"
                 multi_day_html += f"<td>{indicators_names[i]}</td>"
@@ -814,9 +787,9 @@ class HSIEmailSystem:
                         value = f"{row[ind]:,.2f}"
                     multi_day_html += f"<td>{value}</td>"
                 multi_day_html += "</tr>"
-            
+
             multi_day_html += "</table></div>"
-        
+
         html = f"""
         <div class="section">
             <h3>📊 {stock_data['name']} ({stock_data['symbol']}) 分析</h3>
@@ -826,7 +799,7 @@ class HSIEmailSystem:
                     <th>数值</th>
                 </tr>
         """
-        
+
         html += f"""
                 <tr>
                     <td>当前价格</td>
@@ -853,8 +826,7 @@ class HSIEmailSystem:
                     <td>{stock_data['volume']:,.0f}</td>
                 </tr>
         """
-        
-        # 添加技术指标
+
         rsi = indicators.get('rsi', 0.0)
         macd = indicators.get('macd', 0.0)
         macd_signal = indicators.get('macd_signal', 0.0)
@@ -866,7 +838,7 @@ class HSIEmailSystem:
         atr = indicators.get('atr', 0.0)
         stop_loss = indicators.get('stop_loss', None)
         take_profit = indicators.get('take_profit', None)
-        
+
         html += f"""
                 <tr>
                     <td>趋势</td>
@@ -905,28 +877,26 @@ class HSIEmailSystem:
                     <td>{atr:.2f}</td>
                 </tr>
         """
-        
-        # 添加止损价和止盈价
+
         if stop_loss is not None:
             html += f"""
                 <tr>
                     <td>建议止损价</td>
-                    <td>{stop_loss:,.2f}</td>
+                    <td>{stop_loss:,.8f}</td>
                 </tr>
             """
-        
+
         if take_profit is not None:
             html += f"""
                 <tr>
                     <td>建议止盈价</td>
-                    <td>{take_profit:,.2f}</td>
+                    <td>{take_profit:,.8f}</td>
                 </tr>
             """
-        
-        # 添加交易信号
+
         recent_buy_signals = indicators.get('recent_buy_signals', [])
         recent_sell_signals = indicators.get('recent_sell_signals', [])
-        
+
         if recent_buy_signals:
             html += f"""
                 <tr>
@@ -941,7 +911,7 @@ class HSIEmailSystem:
                     </td>
                 </tr>
             """
-        
+
         if recent_sell_signals:
             html += f"""
                 <tr>
@@ -956,8 +926,7 @@ class HSIEmailSystem:
                     </td>
                 </tr>
             """
-        
-        # 添加48小时智能建议（使用analyze_continuous_signals的结果）
+
         if continuous_signal_info:
             html += f"""
             <tr>
@@ -969,18 +938,16 @@ class HSIEmailSystem:
                 </td>
             </tr>
             """
-        
+
         html += """
                 </table>
         """
-        
-        # 添加多日数据表格
+
         html += multi_day_html
-        
         html += """
             </div>
         """
-        
+
         return html
 
     def send_email(self, to, subject, text, html):
@@ -993,104 +960,87 @@ class HSIEmailSystem:
             print("❌ 缺少YAHOO_EMAIL或YAHOO_APP_PASSWORD环境变量")
             return False
 
-        # 如果to是字符串，转换为列表
         if isinstance(to, str):
             to = [to]
 
         msg = MIMEMultipart("alternative")
         msg['From'] = f'<{sender_email}>'
-        msg['To'] = ", ".join(to)  # 将收件人列表转换为逗号分隔的字符串
+        msg['To'] = ", ".join(to)
         msg['Subject'] = subject
 
         msg.attach(MIMEText(text, "plain"))
         msg.attach(MIMEText(html, "html"))
 
-        # 根据SMTP服务器类型选择合适的端口和连接方式
         if "163.com" in smtp_server:
-            # 163邮箱使用SSL连接，端口465
             smtp_port = 465
             use_ssl = True
         elif "gmail.com" in smtp_server:
-            # Gmail使用TLS连接，端口587
             smtp_port = 587
             use_ssl = False
         else:
-            # 默认使用TLS连接，端口587
             smtp_port = 587
             use_ssl = False
 
-        # 发送邮件（增加重试机制）
         for attempt in range(3):
             try:
                 if use_ssl:
-                    # 使用SSL连接
                     server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
                     server.login(smtp_user, smtp_pass)
                     server.sendmail(sender_email, to, msg.as_string())
                     server.quit()
                 else:
-                    # 使用TLS连接
                     server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
                     server.starttls()
                     server.login(smtp_user, smtp_pass)
                     server.sendmail(sender_email, to, msg.as_string())
                     server.quit()
-                
+
                 print("✅ 邮件发送成功!")
                 return True
             except Exception as e:
                 print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
-                if attempt < 2:  # 不是最后一次尝试，等待后重试
+                if attempt < 2:
                     import time
                     time.sleep(5)
-        
+
         print("❌ 3次尝试后仍无法发送邮件")
         return False
 
     def generate_report_content(self, target_date, hsi_data, hsi_indicators, stock_results):
-        """生成报告的HTML和文本内容"""
+        """生成报告的HTML和文本内容（此处保留原有结构，使用新的止损止盈结果）"""
         # 创建信号汇总
-        all_signals = []  # 合并买入和卖出信号
-        
-        # 恒生指数信号
+        all_signals = []
+
         if hsi_indicators:
-            recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
-            recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
-            for signal in recent_buy_signals:
+            for signal in hsi_indicators.get('recent_buy_signals', []):
                 all_signals.append(('恒生指数', 'HSI', signal, '买入'))
-            for signal in recent_sell_signals:
+            for signal in hsi_indicators.get('recent_sell_signals', []):
                 all_signals.append(('恒生指数', 'HSI', signal, '卖出'))
-        
-        # 创建股票趋势映射
+
         stock_trends = {}
         for stock_result in stock_results:
-            indicators = stock_result['indicators']
-            if indicators:
-                trend = indicators.get('trend', '未知')
-                stock_trends[stock_result['code']] = trend
-        
-        # 股票信号
+            indicators = stock_result.get('indicators') or {}
+            trend = indicators.get('trend', '未知')
+            stock_trends[stock_result['code']] = trend
+
         for stock_result in stock_results:
-            indicators = stock_result['indicators']
-            if indicators:
-                recent_buy_signals = indicators.get('recent_buy_signals', [])
-                recent_sell_signals = indicators.get('recent_sell_signals', [])
-                for signal in recent_buy_signals:
-                    all_signals.append((stock_result['name'], stock_result['code'], signal, '买入'))
-                for signal in recent_sell_signals:
-                    all_signals.append((stock_result['name'], stock_result['code'], signal, '卖出'))
-        
-        # 只保留指定日期的信号
+            indicators = stock_result.get('indicators') or {}
+            for signal in indicators.get('recent_buy_signals', []):
+                all_signals.append((stock_result['name'], stock_result['code'], signal, '买入'))
+            for signal in indicators.get('recent_sell_signals', []):
+                all_signals.append((stock_result['name'], stock_result['code'], signal, '卖出'))
+
         target_date_signals = []
         for stock_name, stock_code, signal, signal_type in all_signals:
-            signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
-            if signal_date == target_date:
-                # 获取该股票的趋势
-                trend = stock_trends.get(stock_code, '未知')
-                target_date_signals.append((stock_name, stock_code, trend, signal, signal_type))
-        
-        # 按股票名称排序
-        target_date_signals.sort(key=lambda x: x[0])  # 按股票名称排序
+            try:
+                signal_date = datetime.strptime(signal['date'], '%Y-%m-%d').date()
+                if signal_date == target_date:
+                    trend = stock_trends.get(stock_code, '未知')
+                    target_date_signals.append((stock_name, stock_code, trend, signal, signal_type))
+            except Exception:
+                continue
+
+        target_date_signals.sort(key=lambda x: x[0])
 
         text = ""
         html = f"""
@@ -1117,7 +1067,6 @@ class HSIEmailSystem:
             <p><strong>分析日期:</strong> {target_date}</p>
         """
 
-        # 交易信号总结
         html += """
             <div class="section">
                 <h3>🔔 交易信号总结</h3>
@@ -1132,17 +1081,13 @@ class HSIEmailSystem:
                     </tr>
         """
 
-        # 添加所有信号（买入和卖出已合并并排序，只显示指定日期的）
         for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
             signal_display = f"{signal_type}信号"
             color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
-            
-            # 获取连续信号状态
             continuous_signal_status = "无信号"
-            if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
-                # 使用基于交易记录的连续信号检测
+            if stock_code != 'HSI':
                 continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
-            
+
             html += f"""
                     <tr>
                         <td>{stock_name}</td>
@@ -1157,7 +1102,7 @@ class HSIEmailSystem:
         if not target_date_signals:
             html += """
                     <tr>
-                        <td colspan="5">当前没有检测到任何交易信号</td>
+                        <td colspan="6">当前没有检测到任何交易信号</td>
                     </tr>
             """
 
@@ -1166,37 +1111,29 @@ class HSIEmailSystem:
             </div>
         """
 
-        # 在文本版本中添加信号总结（只显示指定日期的信号）
         text += "🔔 交易信号总结:\n"
         if target_date_signals:
             text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势':<10} {'信号类型':<6} {'信号描述':<30} {'48小时内人工智能买卖建议':<18}\n"
             for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
-                # 获取连续信号状态
                 continuous_signal_status = "无信号"
-                if stock_code != 'HSI':  # 恒生指数不适用连续信号检测
-                    # 使用基于交易记录的连续信号检测
+                if stock_code != 'HSI':
                     continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
                 text += f"  {stock_name:<15} {stock_code:<10} {trend:<10} {signal_type:<6} {signal['description']:<30} {continuous_signal_status:<18}\n"
         else:
             text += "当前没有检测到任何交易信号\n"
-        
+
         text += "\n"
 
-        # 分析最近48小时内的连续信号
+        # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
         buy_without_sell_after, sell_without_buy_after = self.analyze_continuous_signals()
-
-        # 检查是否存在符合条件的连续信号
         has_continuous_signals = len(buy_without_sell_after) > 0 or len(sell_without_buy_after) > 0
 
-        # 连续信号分析 - HTML
         if has_continuous_signals:
             html += """
             <div class="section">
                 <h3>🔔 48小时连续交易信号分析</h3>
             """
-            
-            # 连续买入信号
             if buy_without_sell_after:
                 html += """
                 <div class="section">
@@ -1209,16 +1146,11 @@ class HSIEmailSystem:
                             <th>建议时间及理由</th>
                         </tr>
                 """
-                
                 for code, name, times, reasons in buy_without_sell_after:
-                    # 合并时间和原因
                     combined_str = ""
                     for i in range(len(times)):
                         time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
-                        if i < len(times) - 1:
-                            combined_str += time_reason + "<br>"
-                        else:
-                            combined_str += time_reason
+                        combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
                     <tr>
                         <td>{code}</td>
@@ -1227,13 +1159,11 @@ class HSIEmailSystem:
                         <td>{combined_str}</td>
                     </tr>
                     """
-                
                 html += """
                     </table>
                 </div>
                 """
 
-            # 连续卖出信号
             if sell_without_buy_after:
                 html += """
                 <div class="section">
@@ -1246,16 +1176,11 @@ class HSIEmailSystem:
                             <th>建议时间及理由</th>
                         </tr>
                 """
-                
                 for code, name, times, reasons in sell_without_buy_after:
-                    # 合并时间和原因
                     combined_str = ""
                     for i in range(len(times)):
                         time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
-                        if i < len(times) - 1:
-                            combined_str += time_reason + "<br>"
-                        else:
-                            combined_str += time_reason
+                        combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
                     <tr>
                         <td>{code}</td>
@@ -1264,33 +1189,17 @@ class HSIEmailSystem:
                         <td>{combined_str}</td>
                     </tr>
                     """
-                
                 html += """
                     </table>
                 </div>
                 """
-            
             html += """
             </div>
             """
 
-        # 连续信号分析 - 文本
         if buy_without_sell_after:
             text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
             for code, name, times, reasons in buy_without_sell_after:
-                # 合并时间和原因
-                combined_list = []
-                for i in range(len(times)):
-                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
-                    combined_list.append(time_reason)
-                combined_str = "\n    ".join(combined_list)
-                text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
-            text += "\n"
-        
-        if sell_without_buy_after:
-            text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
-            for code, name, times, reasons in sell_without_buy_after:
-                # 合并时间和原因
                 combined_list = []
                 for i in range(len(times)):
                     time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
@@ -1299,12 +1208,22 @@ class HSIEmailSystem:
                 text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
             text += "\n"
 
-        # 添加说明
+        if sell_without_buy_after:
+            text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
+            for code, name, times, reasons in sell_without_buy_after:
+                combined_list = []
+                for i in range(len(times)):
+                    time_reason = f"{times[i]}: {reasons[i] if reasons[i] else '无具体理由'}"
+                    combined_list.append(time_reason)
+                combined_str = "\n    ".join(combined_list)
+                text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
+            text += "\n"
+
         if has_continuous_signals:
             text += "📋 说明:\n"
             text += "连续买入：指在最近48小时内，某只股票收到3次或以上买入建议，且期间没有收到任何卖出建议。\n"
             text += "连续卖出：指在最近48小时内，某只股票收到3次或以上卖出建议，且期间没有收到任何买入建议。\n\n"
-            
+
             html += """
             <div class="section">
                 <h3>📋 说明</h3>
@@ -1317,10 +1236,8 @@ class HSIEmailSystem:
             </div>
             """
 
-
         text += "\n"
 
-        # 恒生指数价格概览（如果数据可用）
         if hsi_data:
             html += """
                 <div class="section">
@@ -1331,7 +1248,7 @@ class HSIEmailSystem:
                             <th>数值</th>
                         </tr>
             """
-            
+
             html += f"""
                     <tr>
                         <td>当前指数</td>
@@ -1358,7 +1275,7 @@ class HSIEmailSystem:
                         <td>{hsi_data['volume']:,.0f}</td>
                     </tr>
             """
-            
+
             if hsi_indicators:
                 rsi = hsi_indicators.get('rsi', 0.0)
                 macd = hsi_indicators.get('macd', 0.0)
@@ -1371,7 +1288,7 @@ class HSIEmailSystem:
                 atr = hsi_indicators.get('atr', 0.0)
                 stop_loss = hsi_indicators.get('stop_loss', None)
                 take_profit = hsi_indicators.get('take_profit', None)
-                
+
                 html += f"""
                     <tr>
                         <td>趋势</td>
@@ -1410,35 +1327,33 @@ class HSIEmailSystem:
                         <td>{atr:.2f}</td>
                     </tr>
                 """
-                
-                # 添加止损价和止盈价
+
                 if stop_loss is not None:
                     html += f"""
                         <tr>
                             <td>建议止损价</td>
-                            <td>{stop_loss:,.2f}</td>
+                            <td>{stop_loss:,.8f}</td>
                         </tr>
                     """
-                
+
                 if take_profit is not None:
                     html += f"""
                         <tr>
                             <td>建议止盈价</td>
-                            <td>{take_profit:,.2f}</td>
+                            <td>{take_profit:,.8f}</td>
                         </tr>
                     """
-                
-                # 添加交易信号
+
                 recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
                 recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
-                
+
                 if recent_buy_signals:
                     html += f"""
                         <tr>
                             <td colspan="2">
                                 <div class="buy-signal">
                                     <strong>🔔 恒生指数最近买入信号:</strong><br>
-                    """
+                        """
                     for signal in recent_buy_signals:
                         html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
                     html += """
@@ -1446,14 +1361,14 @@ class HSIEmailSystem:
                             </td>
                         </tr>
                     """
-                
+
                 if recent_sell_signals:
                     html += f"""
                         <tr>
                             <td colspan="2">
                                 <div class="sell-signal">
                                     <strong>🔻 恒生指数最近卖出信号:</strong><br>
-                    """
+                        """
                     for signal in recent_sell_signals:
                         html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
                     html += """
@@ -1461,13 +1376,12 @@ class HSIEmailSystem:
                             </td>
                         </tr>
                     """
-            
+
             html += """
                     </table>
                 </div>
             """
 
-            # 在文本版本中添加恒生指数信息
             text += f"📈 恒生指数价格概览:\n"
             text += f"  当前指数: {hsi_data['current_price']:,.2f}\n"
             text += f"  24小时变化: {hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)\n"
@@ -1475,7 +1389,7 @@ class HSIEmailSystem:
             text += f"  当日最高: {hsi_data['high']:,.2f}\n"
             text += f"  当日最低: {hsi_data['low']:,.2f}\n"
             text += f"  成交量: {hsi_data['volume']:,.0f}\n\n"
-            
+
             if hsi_indicators:
                 text += f"📊 恒生指数技术分析:\n"
                 text += f"  趋势: {trend}\n"
@@ -1486,36 +1400,32 @@ class HSIEmailSystem:
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
                 text += f"  ATR: {atr:.2f}\n"
-                
-                # 添加止损价和止盈价到文本版本
+
                 if stop_loss is not None:
-                    text += f"  建议止损价: {stop_loss:,.2f}\n"
+                    text += f"  建议止损价: {stop_loss:,.8f}\n"
                 if take_profit is not None:
-                    text += f"  建议止盈价: {take_profit:,.2f}\n"
-                
-                # 添加交易信号信息到文本版本
+                    text += f"  建议止盈价: {take_profit:,.8f}\n"
+
                 if recent_buy_signals:
                     text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
                     for signal in recent_buy_signals:
                         text += f"    {signal['date']}: {signal['description']}\n"
-                
+
                 if recent_sell_signals:
                     text += f"  🔻 最近卖出信号(五天内) ({len(recent_sell_signals)} 个):\n"
                     for signal in recent_sell_signals:
                         text += f"    {signal['date']}: {signal['description']}\n"
-            
+
             text += "\n"
-        
+
         # 添加股票分析结果
         for stock_result in stock_results:
             stock_data = stock_result['data']
-            indicators = stock_result['indicators']
-            
+            indicators = stock_result.get('indicators') or {}
+
             if indicators:
-                # 添加到HTML
                 html += self.generate_stock_analysis_html(stock_data, indicators, buy_without_sell_after, sell_without_buy_after)
-                
-                # 添加到文本版本
+
                 text += f"📊 {stock_result['name']} ({stock_result['code']}) 分析:\n"
                 text += f"  当前价格: {stock_data['current_price']:,.2f}\n"
                 text += f"  24小时变化: {stock_data['change_1d']:+.2f}% ({stock_data['change_1d_points']:+.2f})\n"
@@ -1523,58 +1433,49 @@ class HSIEmailSystem:
                 text += f"  当日最高: {stock_data['high']:,.2f}\n"
                 text += f"  当日最低: {stock_data['low']:,.2f}\n"
                 text += f"  成交量: {stock_data['volume']:,.0f}\n"
-                
-                # 添加五日数据对比到文本版本
+
                 hist = stock_data['hist']
-                recent_data = hist.sort_index()  # 按日期升序排列（日期最小的在前）
-                last_5_days = recent_data.tail(5)  # 获取最近5天的数据（包含今天）
-                
-                if len(last_5_days) > 0:  # 如果有数据
+                recent_data = hist.sort_index()
+                last_5_days = recent_data.tail(5)
+
+                if len(last_5_days) > 0:
                     text += f"  📈 五日数据对比:\n"
-                    
-                    # 日期行
                     date_line = "    日期:     "
                     for date in last_5_days.index:
                         date_str = date.strftime('%m-%d')
                         date_line += f"{date_str:>10} "
                     text += date_line + "\n"
-                    
-                    # 开盘价行
+
                     open_line = "    开盘价:   "
                     for date, row in last_5_days.iterrows():
                         open_str = f"{row['Open']:,.2f}"
                         open_line += f"{open_str:>10} "
                     text += open_line + "\n"
-                    
-                    # 最高价行
+
                     high_line = "    最高价:   "
                     for date, row in last_5_days.iterrows():
                         high_str = f"{row['High']:,.2f}"
                         high_line += f"{high_str:>10} "
                     text += high_line + "\n"
-                    
-                    # 最低价行
+
                     low_line = "    最低价:   "
                     for date, row in last_5_days.iterrows():
                         low_str = f"{row['Low']:,.2f}"
                         low_line += f"{low_str:>10} "
                     text += low_line + "\n"
-                    
-                    # 收盘价行
+
                     close_line = "    收盘价:   "
                     for date, row in last_5_days.iterrows():
                         close_str = f"{row['Close']:,.2f}"
                         close_line += f"{close_str:>10} "
                     text += close_line + "\n"
-                    
-                    # 成交量行
+
                     volume_line = "    成交量:   "
                     for date, row in last_5_days.iterrows():
                         volume_str = f"{row['Volume']:,.0f}"
                         volume_line += f"{volume_str:>10} "
                     text += volume_line + "\n"
-                
-                # 添加技术指标到文本版本
+
                 rsi = indicators.get('rsi', 0.0)
                 macd = indicators.get('macd', 0.0)
                 macd_signal = indicators.get('macd_signal', 0.0)
@@ -1586,7 +1487,7 @@ class HSIEmailSystem:
                 atr = indicators.get('atr', 0.0)
                 stop_loss = indicators.get('stop_loss', None)
                 take_profit = indicators.get('take_profit', None)
-                
+
                 text += f"  趋势: {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
@@ -1595,47 +1496,41 @@ class HSIEmailSystem:
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
                 text += f"  ATR: {atr:.2f}\n"
-                
-                # 添加止损价和止盈价到文本版本
+
                 if stop_loss is not None:
-                    text += f"  建议止损价: {stop_loss:,.2f}\n"
+                    text += f"  建议止损价: {stop_loss:,.8f}\n"
                 if take_profit is not None:
-                    text += f"  建议止盈价: {take_profit:,.2f}\n"
-                
-                # 添加交易信号信息到文本版本
+                    text += f"  建议止盈价: {take_profit:,.8f}\n"
+
                 recent_buy_signals = indicators.get('recent_buy_signals', [])
                 recent_sell_signals = indicators.get('recent_sell_signals', [])
-                
+
                 if recent_buy_signals:
                     text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
                     for signal in recent_buy_signals:
                         text += f"    {signal['date']}: {signal['description']}\n"
-                
+
                 if recent_sell_signals:
                     text += f"  🔻 最近卖出信号(五天内) ({len(recent_sell_signals)} 个):\n"
                     for signal in recent_sell_signals:
                         text += f"    {signal['date']}: {signal['description']}\n"
-                
-                # 添加48小时智能建议（使用analyze_continuous_signals的结果）
+
                 continuous_signal_info = None
-                # 检查连续买入信号
                 for code, name, times, reasons in buy_without_sell_after:
                     if code == stock_result['code']:
                         continuous_signal_info = f"连续买入({len(times)}次)"
                         break
-                # 如果没有连续买入信号，检查连续卖出信号
                 if continuous_signal_info is None:
                     for code, name, times, reasons in sell_without_buy_after:
                         if code == stock_result['code']:
                             continuous_signal_info = f"连续卖出({len(times)}次)"
                             break
-                
+
                 if continuous_signal_info:
                     text += f"  🤖 48小时智能建议: {continuous_signal_info}\n"
-                
+
                 text += "\n"
 
-        # 添加指标说明
         html += """
         <div class="section">
             <h3>📋 指标说明</h3>
@@ -1648,17 +1543,8 @@ class HSIEmailSystem:
               <li><b>MA20(20日移动平均线)</b>：过去20个交易日的平均指数/股价，反映短期趋势。</li>
               <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均指数/股价，反映中期趋势。</li>
               <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
-              <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。接近0表示接近下轨（可能超卖），接近1表示接近上轨（可能超买）。</li>
-              <li><b>趋势</b>：市场当前的整体方向。
-                <ul>
-                  <li><b>强势多头</b>：强劲上涨趋势，各周期均线呈多头排列（指数/股价 > MA20 > MA50 > MA200）</li>
-                  <li><b>多头趋势</b>：上涨趋势，中期均线呈多头排列（指数/股价 > MA20 > MA50）</li>
-                  <li><b>弱势空头</b>：持续下跌趋势，各周期均线呈空头排列（指数/股价 < MA20 < MA50 < MA200）</li>
-                  <li><b>空头趋势</b>：下跌趋势，中期均线呈空头排列（指数/股价 < MA20 < MA50）</li>
-                  <li><b>震荡整理</b>：在一定区间内波动，无明显趋势</li>
-                  <li><b>短期上涨/下跌</b>：基于最近指数/股价变化的短期趋势判断</li>
-                </ul>
-              </li>
+              <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
+              <li><b>趋势</b>：市场当前的整体方向。</li>
             </ul>
             </div>
         </div>
@@ -1672,12 +1558,10 @@ class HSIEmailSystem:
         """执行分析并发送邮件"""
         if target_date is None:
             target_date = datetime.now().date()
-        
+
         print(f"📅 分析日期: {target_date} (默认为今天)")
-        
+
         print("🔍 正在获取恒生指数数据...")
-        
-        # 获取恒生指数数据和指标
         hsi_data = self.get_hsi_data()
         if hsi_data is None:
             print("❌ 无法获取恒生指数数据")
@@ -1686,10 +1570,8 @@ class HSIEmailSystem:
             print("📊 正在计算恒生指数技术指标...")
             hsi_indicators = self.calculate_technical_indicators(hsi_data)
 
-        # 获取WATCHLIST中的股票并进行分析
         print(f"🔍 正在获取股票列表并分析 ({len(self.stock_list)} 只股票)...")
         stock_results = []
-        
         for stock_code, stock_name in self.stock_list.items():
             print(f"🔍 正在分析 {stock_name} ({stock_code}) ...")
             stock_data = self.get_stock_data(stock_code)
@@ -1703,20 +1585,14 @@ class HSIEmailSystem:
                     'indicators': indicators
                 })
 
-        # 检查是否有任何股票有指定日期的交易信号
         if not self.has_any_signals(hsi_indicators, stock_results, target_date):
             print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
             return False
 
         subject = "恒生指数及港股主力资金追踪器股票交易信号提醒"
-
-        # 生成报告内容
         text, html = self.generate_report_content(target_date, hsi_data, hsi_indicators, stock_results)
 
-        # 获取收件人（默认 fallback）
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
-        
-        # 如果环境变量中有多个收件人（用逗号分隔），则拆分为列表
         if ',' in recipient_env:
             recipients = [recipient.strip() for recipient in recipient_env.split(',')]
         else:
@@ -1732,12 +1608,10 @@ class HSIEmailSystem:
 
 # === 主逻辑 ===
 if __name__ == "__main__":
-    # 解析命令行参数
     parser = argparse.ArgumentParser(description='恒生指数及港股主力资金追踪器股票交易信号邮件通知系统')
     parser.add_argument('--date', type=str, default=None, help='指定日期 (格式: YYYY-MM-DD)，默认为今天')
     args = parser.parse_args()
-    
-    # 解析日期参数
+
     target_date = None
     if args.date:
         try:
@@ -1748,10 +1622,9 @@ if __name__ == "__main__":
             exit(1)
     else:
         target_date = datetime.now().date()
-    
-    # 创建HSIEmailSystem实例并运行分析
+
     email_system = HSIEmailSystem()
     success = email_system.run_analysis(target_date)
-    
+
     if not success:
         exit(1)
