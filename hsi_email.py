@@ -88,7 +88,7 @@ class HSIEmailSystem:
         except Exception:
             self.default_tick_size = None
 
-    def get_hsi_data(self):
+    def get_hsi_data(self, target_date=None):
         """获取恒生指数数据"""
         try:
             hsi_ticker = yf.Ticker("^HSI")
@@ -96,6 +96,17 @@ class HSIEmailSystem:
             if hist.empty:
                 print("❌ 无法获取恒生指数历史数据")
                 return None
+
+            # 根据target_date截断历史数据
+            if target_date is not None:
+                # 将target_date转换为pandas时间戳，用于与历史数据的索引比较
+                target_timestamp = pd.Timestamp(target_date)
+                # 过滤出日期小于等于target_date的数据
+                hist = hist[hist.index.date <= target_date]
+                
+                if hist.empty:
+                    print(f"⚠️ 在 {target_date} 之前没有历史数据")
+                    return None
 
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
@@ -116,7 +127,7 @@ class HSIEmailSystem:
             print(f"❌ 获取恒生指数数据失败: {e}")
             return None
 
-    def get_stock_data(self, symbol):
+    def get_stock_data(self, symbol, target_date=None):
         """获取指定股票的数据"""
         try:
             ticker = yf.Ticker(symbol)
@@ -124,6 +135,17 @@ class HSIEmailSystem:
             if hist.empty:
                 print(f"❌ 无法获取 {symbol} 的历史数据")
                 return None
+
+            # 根据target_date截断历史数据
+            if target_date is not None:
+                # 将target_date转换为pandas时间戳，用于与历史数据的索引比较
+                target_timestamp = pd.Timestamp(target_date)
+                # 过滤出日期小于等于target_date的数据
+                hist = hist[hist.index.date <= target_date]
+                
+                if hist.empty:
+                    print(f"⚠️ 在 {target_date} 之前没有 {symbol} 的历史数据")
+                    return None
 
             latest = hist.iloc[-1]
             prev = hist.iloc[-2] if len(hist) > 1 else latest
@@ -1563,7 +1585,7 @@ class HSIEmailSystem:
         print(f"📅 分析日期: {target_date} (默认为今天)")
 
         print("🔍 正在获取恒生指数数据...")
-        hsi_data = self.get_hsi_data()
+        hsi_data = self.get_hsi_data(target_date=target_date)
         if hsi_data is None:
             print("❌ 无法获取恒生指数数据")
             hsi_indicators = None
@@ -1575,7 +1597,7 @@ class HSIEmailSystem:
         stock_results = []
         for stock_code, stock_name in self.stock_list.items():
             print(f"🔍 正在分析 {stock_name} ({stock_code}) ...")
-            stock_data = self.get_stock_data(stock_code)
+            stock_data = self.get_stock_data(stock_code, target_date=target_date)
             if stock_data:
                 print(f"📊 正在计算 {stock_name} ({stock_code}) 技术指标...")
                 indicators = self.calculate_technical_indicators(stock_data)
