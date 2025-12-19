@@ -863,7 +863,7 @@ class HSIEmailSystem:
 
         html += f"""
                 <tr>
-                    <td>趋势</td>
+                    <td>趋势(技术分析)</td>
                     <td>{trend}</td>
                 </tr>
                 <tr>
@@ -1096,9 +1096,9 @@ class HSIEmailSystem:
                     <tr>
                         <th>股票名称</th>
                         <th>股票代码</th>
-                        <th>趋势</th>
+                        <th>趋势(技术分析)</th>
                         <th>信号类型(技术分析)</th>
-                        <th>信号描述</th>
+                        <th>信号描述(技术分析)</th>
                         <th>48小时智能建议</th>
                     </tr>
         """
@@ -1135,7 +1135,7 @@ class HSIEmailSystem:
 
         text += "🔔 交易信号总结:\n"
         if target_date_signals:
-            text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势':<10} {'信号类型(技术分析)':<6} {'信号描述':<30} {'48小时内人工智能买卖建议':<18}\n"
+            text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<10} {'信号类型(技术分析)':<6} {'信号描述(技术分析)':<30} {'48小时内人工智能买卖建议':<18}\n"
             for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
                 continuous_signal_status = "无信号"
                 if stock_code != 'HSI':
@@ -1313,7 +1313,7 @@ class HSIEmailSystem:
 
                 html += f"""
                     <tr>
-                        <td>趋势</td>
+                        <td>趋势(技术分析)</td>
                         <td>{trend}</td>
                     </tr>
                     <tr>
@@ -1414,7 +1414,7 @@ class HSIEmailSystem:
 
             if hsi_indicators:
                 text += f"📊 恒生指数技术分析:\n"
-                text += f"  趋势: {trend}\n"
+                text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
                 text += f"  布林带位置: {bb_position:.2f}\n"
@@ -1510,7 +1510,7 @@ class HSIEmailSystem:
                 stop_loss = indicators.get('stop_loss', None)
                 take_profit = indicators.get('take_profit', None)
 
-                text += f"  趋势: {trend}\n"
+                text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
                 text += f"  布林带位置: {bb_position:.2f}\n"
@@ -1567,7 +1567,7 @@ class HSIEmailSystem:
               <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
               <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
               <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。</li>
-              <li><b>趋势</b>：市场当前的整体方向。</li>
+              <li><b>趋势(技术分析)</b>：市场当前的整体方向。</li>
             </ul>
             </div>
         </div>
