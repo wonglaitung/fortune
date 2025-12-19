@@ -663,7 +663,7 @@ class HSIEmailSystem:
                 amount_str = fields[6] if len(fields) > 6 else "0"
                 reason = fields[8] if len(fields) > 8 else ""
                 stop_loss_price = fields[10] if len(fields) > 10 else ""
-                current_price = fields[11] if len(fields) > 11 else ""
+                current_price_str = fields[11] if len(fields) > 11 else ""
 
                 try:
                     timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
@@ -679,17 +679,25 @@ class HSIEmailSystem:
                         except (ValueError, TypeError):
                             pass
 
-                    if current_price and current_price not in ["", "None", "nan", "False", "null"] and current_price is not None and current_price != "False":
+                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str is not None and current_price_str != "False":
                         try:
-                            float_current = float(current_price)
+                            float_current = float(current_price_str)
                             if not (float_current != float_current):
-                                formatted_reason += f", 现价: {current_price}"
+                                formatted_reason += f", 现价: {current_price_str}"
                                 has_additional_info = True
                         except (ValueError, TypeError):
                             pass
 
                     if has_additional_info and formatted_reason.startswith(", "):
                         formatted_reason = formatted_reason[2:]
+
+                    # 只使用 current_price 字段
+                    effective_price = 0.0
+                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str != "0" and current_price_str is not None:
+                        try:
+                            effective_price = float(current_price_str)
+                        except (ValueError, TypeError):
+                            effective_price = 0.0
 
                     transactions.append({
                         'timestamp': timestamp,
@@ -698,7 +706,7 @@ class HSIEmailSystem:
                         'code': code,
                         'name': name,
                         'shares': int(float(shares_str)) if shares_str else 0,
-                        'price': float(price_str) if price_str else 0.0,
+                        'price': effective_price,
                         'amount': float(amount_str) if amount_str else 0.0,
                         'reason': formatted_reason.strip()
                     })
@@ -1414,9 +1422,18 @@ class HSIEmailSystem:
                                     price_str = fields[5] if len(fields) > 5 else "0"
                                     amount_str = fields[6] if len(fields) > 6 else "0"
                                     reason = fields[8] if len(fields) > 8 else ""
+                                    current_price_str = fields[11] if len(fields) > 11 else ""
                                     
                                     shares = int(float(shares_str)) if shares_str and shares_str != '0' else 0
-                                    price = float(price_str) if price_str and price_str != '0' else 0.0
+                                    
+                                    # 只使用 current_price 字段
+                                    price = 0.0
+                                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str != "0" and current_price_str is not None:
+                                        try:
+                                            price = float(current_price_str)
+                                        except (ValueError, TypeError):
+                                            price = 0.0
+                                    
                                     amount = float(amount_str) if amount_str and amount_str != '0' else 0.0
                                     
                                     recent_transactions.append({

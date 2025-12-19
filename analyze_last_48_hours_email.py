@@ -53,7 +53,7 @@ def analyze_last_24_hours():
             amount_str = fields[6] if len(fields) > 6 else "0"
             reason = fields[8] if len(fields) > 8 else ""  # reason is at index 8
             stop_loss_price = fields[10] if len(fields) > 10 else ""  # stop_loss_price is at index 10 (after success field at index 9)
-            current_price = fields[11] if len(fields) > 11 else ""  # current_price is at index 11
+            current_price_str = fields[11] if len(fields) > 11 else ""  # current_price is at index 11
             
             try:
                 timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
@@ -73,12 +73,12 @@ def analyze_last_24_hours():
                         pass  # 如果无法转换为浮点数，则跳过
                 
                 # 检查现价是否有效（不是空字符串、None、False、'None'、'nan'、'False'等）
-                if current_price and current_price not in ["", "None", "nan", "False", "null"] and current_price is not None and current_price != "False":
+                if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str is not None and current_price_str != "False":
                     try:
                         # 尝试将current_price转换为浮点数以检查是否有效
-                        float_current = float(current_price)
-                        if current_price and current_price != 'False' and not (float_current != float_current):  # 检查是否为NaN
-                            formatted_reason += f", 现价: {current_price}"
+                        float_current = float(current_price_str)
+                        if current_price_str and current_price_str != 'False' and not (float_current != float_current):  # 检查是否为NaN
+                            formatted_reason += f", 现价: {current_price_str}"
                             has_additional_info = True
                     except (ValueError, TypeError):
                         pass  # 如果无法转换为浮点数，则跳过
@@ -87,6 +87,14 @@ def analyze_last_24_hours():
                 if has_additional_info and formatted_reason.startswith(", "):
                     formatted_reason = formatted_reason[2:]
                 
+                # 优先使用 current_price，如果不存在或无效则使用 price
+                effective_price = 0.0
+                if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str != "0" and current_price_str is not None:
+                    try:
+                        effective_price = float(current_price_str)
+                    except (ValueError, TypeError):
+                        effective_price = 0.0  # 不再回退到 price 字段
+
                 transactions.append({
                     'timestamp': timestamp,
                     'date': timestamp.date(),
@@ -94,7 +102,7 @@ def analyze_last_24_hours():
                     'code': code,
                     'name': name,
                     'shares': int(float(shares_str)),
-                    'price': float(price_str),
+                    'price': effective_price,
                     'amount': float(amount_str),
                     'reason': formatted_reason.strip()
                 })
