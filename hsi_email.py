@@ -551,6 +551,44 @@ def generate_stock_analysis_html(stock_data, indicators, continuous_buy_signals=
                 continuous_signal_info = f"连续卖出({len(times)}次)"
                 break
     
+    # 获取历史数据（前4天+今天）
+    hist = stock_data['hist']
+    recent_data = hist.sort_index()  # 按日期升序排列（日期最小的在前）
+    last_5_days = recent_data.tail(5)  # 获取最近5天的数据（包含今天）
+    
+    # 构建多日数据表格
+    multi_day_html = ""
+    if len(last_5_days) > 0:
+        multi_day_html += """
+        <div class="section">
+            <h4>📈 五日数据对比</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f2f2f2;">
+                    <th>指标</th>
+        """
+        
+        # 添加日期标题行
+        for date in last_5_days.index:
+            multi_day_html += f"<th>{date.strftime('%m-%d')}</th>"
+        multi_day_html += "</tr>"
+        
+        # 添加各项指标数据行
+        indicators_list = ['Open', 'High', 'Low', 'Close', 'Volume']
+        indicators_names = ['开盘价', '最高价', '最低价', '收盘价', '成交量']
+        
+        for i, ind in enumerate(indicators_list):
+            multi_day_html += "<tr>"
+            multi_day_html += f"<td>{indicators_names[i]}</td>"
+            for date, row in last_5_days.iterrows():
+                if ind == 'Volume':
+                    value = f"{row[ind]:,.0f}"
+                else:
+                    value = f"{row[ind]:,.2f}"
+                multi_day_html += f"<td>{value}</td>"
+            multi_day_html += "</tr>"
+        
+        multi_day_html += "</table></div>"
+    
     html = f"""
     <div class="section">
         <h3>📊 {stock_data['name']} ({stock_data['symbol']}) 分析</h3>
@@ -682,11 +720,16 @@ def generate_stock_analysis_html(stock_data, indicators, continuous_buy_signals=
     
     html += """
             </table>
+    """
+    
+    # 添加多日数据表格
+    html += multi_day_html
+    
+    html += """
         </div>
     """
     
     return html
-
 def send_email(to, subject, text, html):
     smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
     smtp_user = os.environ.get("YAHOO_EMAIL")
@@ -1253,6 +1296,56 @@ if __name__ == "__main__":
             text += f"  当日最高: {stock_data['high']:,.2f}\n"
             text += f"  当日最低: {stock_data['low']:,.2f}\n"
             text += f"  成交量: {stock_data['volume']:,.0f}\n"
+            
+            # 添加五日数据对比到文本版本
+            hist = stock_data['hist']
+            recent_data = hist.sort_index()  # 按日期升序排列（日期最小的在前）
+            last_5_days = recent_data.tail(5)  # 获取最近5天的数据（包含今天）
+            
+            if len(last_5_days) > 0:  # 如果有数据
+                text += f"  📈 五日数据对比:\n"
+                
+                # 日期行
+                date_line = "    日期:     "
+                for date in last_5_days.index:
+                    date_str = date.strftime('%m-%d')
+                    date_line += f"{date_str:>10} "
+                text += date_line + "\n"
+                
+                # 开盘价行
+                open_line = "    开盘价:   "
+                for date, row in last_5_days.iterrows():
+                    open_str = f"{row['Open']:,.2f}"
+                    open_line += f"{open_str:>10} "
+                text += open_line + "\n"
+                
+                # 最高价行
+                high_line = "    最高价:   "
+                for date, row in last_5_days.iterrows():
+                    high_str = f"{row['High']:,.2f}"
+                    high_line += f"{high_str:>10} "
+                text += high_line + "\n"
+                
+                # 最低价行
+                low_line = "    最低价:   "
+                for date, row in last_5_days.iterrows():
+                    low_str = f"{row['Low']:,.2f}"
+                    low_line += f"{low_str:>10} "
+                text += low_line + "\n"
+                
+                # 收盘价行
+                close_line = "    收盘价:   "
+                for date, row in last_5_days.iterrows():
+                    close_str = f"{row['Close']:,.2f}"
+                    close_line += f"{close_str:>10} "
+                text += close_line + "\n"
+                
+                # 成交量行
+                volume_line = "    成交量:   "
+                for date, row in last_5_days.iterrows():
+                    volume_str = f"{row['Volume']:,.0f}"
+                    volume_line += f"{volume_str:>10} "
+                text += volume_line + "\n"
             
             # 添加技术指标到文本版本
             rsi = indicators.get('rsi', 0.0)
