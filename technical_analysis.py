@@ -98,6 +98,98 @@ class TechnicalAnalyzer:
         
         return df
     
+    def calculate_volume_indicators(self, df, short_period=10, long_period=20, surge_threshold=1.2, shrink_threshold=0.8,
+                              reversal_volume_threshold=1.5, continuation_volume_threshold=1.2):
+        """计算成交量相关指标，提供多级成交量确认，区分反转型和延续型信号"""
+        if df.empty or 'Volume' not in df.columns:
+            return df
+        
+        # 成交量移动平均线
+        df[f'Volume_MA{short_period}'] = df['Volume'].rolling(window=short_period).mean()
+        df[f'Volume_MA{long_period}'] = df['Volume'].rolling(window=long_period).mean()
+        
+        # 成交量比率（当前成交量与长期均量的比率）
+        df['Volume_Ratio'] = df['Volume'] / df[f'Volume_MA{long_period}']
+        
+        # 多级成交量突增检测
+        df['Volume_Surge_Weak'] = df['Volume_Ratio'] > 1.2    # 弱突增
+        df['Volume_Surge_Medium'] = df['Volume_Ratio'] > 1.5   # 中等突增
+        df['Volume_Surge_Strong'] = df['Volume_Ratio'] > 2.0   # 强突增
+        
+        # 保持向后兼容
+        df['Volume_Surge'] = df['Volume_Ratio'] > surge_threshold
+        
+        # 成交量萎缩检测（成交量低于长期均量的指定倍数）
+        df['Volume_Shrink'] = df['Volume_Ratio'] < shrink_threshold
+        
+        # 成交量趋势（短期均线与长期均线的关系）
+        df['Volume_Trend_Up'] = df[f'Volume_MA{short_period}'] > df[f'Volume_MA{long_period}']
+        df['Volume_Trend_Down'] = df[f'Volume_MA{short_period}'] < df[f'Volume_MA{long_period}']
+        
+        # 价量配合指标（多级）
+        if 'Close' in df.columns:
+            # 计算价格变化
+            df['Price_Change'] = df['Close'].pct_change()
+            
+            # 价格方向历史追踪
+            df['Price_Direction'] = np.sign(df['Price_Change'])
+            df['Price_Direction_Prev1'] = df['Price_Direction'].shift(1)
+            df['Price_Direction_Prev2'] = df['Price_Direction'].shift(2)
+            
+            # 处理NaN值，确保数据安全
+            df['Price_Direction'] = df['Price_Direction'].fillna(0)
+            df['Price_Direction_Prev1'] = df['Price_Direction_Prev1'].fillna(0)
+            df['Price_Direction_Prev2'] = df['Price_Direction_Prev2'].fillna(0)
+            
+            # 反转型价量配合信号检测（前一天价格相反方向+成交量放大）
+            df['Price_Volume_Reversal_Bullish'] = (
+                (df['Price_Direction'] > 0) &  # 当日上涨
+                (df['Price_Direction_Prev1'] < 0) &  # 前一日下跌
+                (df['Volume_Ratio'] > reversal_volume_threshold)
+            )
+            
+            df['Price_Volume_Reversal_Bearish'] = (
+                (df['Price_Direction'] < 0) &  # 当日下跌
+                (df['Price_Direction_Prev1'] > 0) &  # 前一日上涨
+                (df['Volume_Ratio'] > reversal_volume_threshold)
+            )
+            
+            # 延续型价量配合信号检测（连续同向价格变化+成交量放大）
+            df['Price_Volume_Continuation_Bullish'] = (
+                (df['Price_Direction'] > 0) &  # 当日上涨
+                (df['Price_Direction_Prev1'] > 0) &  # 前一日也上涨
+                (df['Volume_Ratio'] > continuation_volume_threshold)
+            )
+            
+            df['Price_Volume_Continuation_Bearish'] = (
+                (df['Price_Direction'] < 0) &  # 当日下跌
+                (df['Price_Direction_Prev1'] < 0) &  # 前一日也下跌
+                (df['Volume_Ratio'] > continuation_volume_threshold)
+            )
+            
+            # 成交量与价格变化的相关性（多级指标）- 保持原有逻辑
+            df['Price_Volume_Bullish_Weak'] = (df['Price_Change'] > 0) & (df['Volume_Surge_Weak'])
+            df['Price_Volume_Bullish_Medium'] = (df['Price_Change'] > 0) & (df['Volume_Surge_Medium'])
+            df['Price_Volume_Bullish_Strong'] = (df['Price_Change'] > 0) & (df['Volume_Surge_Strong'])
+            
+            df['Price_Volume_Bearish_Weak'] = (df['Price_Change'] < 0) & (df['Volume_Surge_Weak'])
+            df['Price_Volume_Bearish_Medium'] = (df['Price_Change'] < 0) & (df['Volume_Surge_Medium'])
+            df['Price_Volume_Bearish_Strong'] = (df['Price_Change'] < 0) & (df['Volume_Surge_Strong'])
+            
+            # 保持向后兼容：合并反转型和延续型信号
+            df['Price_Volume_Bullish'] = (
+                df['Price_Volume_Reversal_Bullish'] | df['Price_Volume_Continuation_Bullish']
+            )
+            df['Price_Volume_Bearish'] = (
+                df['Price_Volume_Reversal_Bearish'] | df['Price_Volume_Continuation_Bearish']
+            )
+            
+            # 保持向后兼容的原始逻辑
+            df['Price_Volume_Bullish_Original'] = (df['Price_Change'] > 0) & (df['Volume_Surge'])
+            df['Price_Volume_Bearish_Original'] = (df['Price_Change'] < 0) & (df['Volume_Surge'])
+        
+        return df
+    
     def calculate_cci(self, df, period=20):
         """计算商品通道指数(CCI)"""
         if df.empty:
@@ -147,6 +239,17 @@ class TechnicalAnalyzer:
         
         return df
     
+    def _get_volume_level(self, row):
+        """获取成交量突增等级"""
+        if row.get('Volume_Surge_Strong', False):
+            return "(强)"
+        elif row.get('Volume_Surge_Medium', False):
+            return "(中)"
+        elif row.get('Volume_Surge_Weak', False):
+            return "(弱)"
+        else:
+            return "(普通)"
+    
     def calculate_all_indicators(self, df):
         """计算所有技术指标"""
         if df.empty:
@@ -176,10 +279,13 @@ class TechnicalAnalyzer:
         # 计算OBV
         df = self.calculate_obv(df)
         
+        # 计算成交量指标
+        df = self.calculate_volume_indicators(df)
+        
         return df
     
     def generate_buy_sell_signals(self, df):
-        """基于技术指标生成买卖信号"""
+        """基于技术指标生成买卖信号，包含成交量确认"""
         if df.empty:
             return df
         
@@ -187,6 +293,21 @@ class TechnicalAnalyzer:
         df['Buy_Signal'] = False
         df['Sell_Signal'] = False
         df['Signal_Description'] = ''
+        
+        # 计算成交量指标
+        if 'Volume' in df.columns:
+            # 成交量移动平均线
+            df['Volume_MA10'] = df['Volume'].rolling(window=10).mean()
+            df['Volume_MA20'] = df['Volume'].rolling(window=20).mean()
+            
+            # 成交量比率（当前成交量与20日均量的比率）
+            df['Volume_Ratio'] = df['Volume'] / df['Volume_MA20']
+            
+            # 成交量突增检测（成交量超过20日均量的1.5倍）
+            df['Volume_Surge'] = df['Volume_Ratio'] > 1.5
+            
+            # 成交量萎缩检测（成交量低于20日均量的0.7倍）
+            df['Volume_Shrink'] = df['Volume_Ratio'] < 0.7
         
         # 计算一些必要的中间指标
         if 'MA20' in df.columns and 'MA50' in df.columns:
@@ -214,25 +335,89 @@ class TechnicalAnalyzer:
             buy_conditions = []
             sell_conditions = []
             
-            # 条件1: 价格在上升趋势中 (MA20 > MA50)
+            # 分级成交量确认检查
+            def check_volume_confirmation(signal_type, strength='medium'):
+                """检查不同信号类型的成交量确认要求"""
+                if signal_type == 'trend':  # 趋势信号（MA交叉）
+                    if strength == 'weak':
+                        # 趋势信号弱确认：成交量突增(弱)或成交量趋势向上或成交量比率>0.9
+                        return (df.iloc[i].get('Volume_Surge_Weak', False) or 
+                                df.iloc[i].get('Volume_Trend_Up', False) or 
+                                df.iloc[i].get('Volume_Ratio', 0) > 0.9)
+                    elif strength == 'medium':
+                        return df.iloc[i].get('Volume_Surge_Weak', False) or df.iloc[i].get('Volume_Trend_Up', False)
+                    else:  # strong
+                        return df.iloc[i].get('Volume_Surge_Medium', False)
+                
+                elif signal_type == 'momentum':  # 动量信号（MACD、RSI）
+                    if strength == 'weak':
+                        # 动量信号弱确认：成交量突增(弱)或成交量比率>1.0
+                        return (df.iloc[i].get('Volume_Surge_Weak', False) or 
+                                df.iloc[i].get('Volume_Ratio', 0) > 1.0)
+                    elif strength == 'medium':
+                        return df.iloc[i].get('Volume_Surge_Weak', False)
+                    else:  # strong
+                        return df.iloc[i].get('Volume_Surge_Medium', False)
+                
+                elif signal_type == 'price_action':  # 价格行为信号（布林带）
+                    if strength == 'weak':
+                        return df.iloc[i].get('Volume_Surge_Weak', False)
+                    elif strength == 'medium':
+                        return df.iloc[i].get('Volume_Surge_Medium', False)
+                    else:  # strong
+                        return df.iloc[i].get('Volume_Surge_Strong', False)
+                
+                elif signal_type == 'price_volume':  # 价量配合信号
+                    return True  # 价量配合信号本身就是成交量确认的
+                
+                return True  # 默认通过
+            
+            # 条件1: 价格在上升趋势中 (MA20 > MA50) - 趋势信号，使用弱强度确认
             if ('MA20_above_MA50' in df.columns and df.iloc[i]['MA20_above_MA50'] and 
-                not df.iloc[i-1]['MA20_above_MA50']):
-                buy_conditions.append("上升趋势形成")
+                not df.iloc[i-1]['MA20_above_MA50'] and check_volume_confirmation('trend', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else ("弱" if df.iloc[i].get('Volume_Surge_Weak', False) else "普通"))
+                buy_conditions.append(f"上升趋势形成(成交量{volume_level}确认)")
             
-            # 条件2: MACD金叉
+            # 条件2: MACD金叉 - 动量信号，使用弱强度确认
             if ('MACD_above_signal' in df.columns and df.iloc[i]['MACD_above_signal'] and 
-                not df.iloc[i-1]['MACD_above_signal']):
-                buy_conditions.append("MACD金叉")
+                not df.iloc[i-1]['MACD_above_signal'] and check_volume_confirmation('momentum', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                buy_conditions.append(f"MACD金叉(成交量{volume_level}确认)")
             
-            # 条件3: RSI从超卖区域回升
+            # 条件3: RSI从超卖区域回升 - 动量信号，使用弱强度确认
             if ('RSI_oversold' in df.columns and not df.iloc[i]['RSI_oversold'] and 
-                df.iloc[i-1]['RSI_oversold']):
-                buy_conditions.append("RSI超卖反弹")
+                df.iloc[i-1]['RSI_oversold'] and check_volume_confirmation('momentum', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                buy_conditions.append(f"RSI超卖反弹(成交量{volume_level}确认)")
             
-            # 条件4: 价格从布林带下轨反弹
+            # 条件4: 价格从布林带下轨反弹 - 价格行为信号，使用中等强度确认
             if ('Price_below_BB_lower' in df.columns and not df.iloc[i]['Price_below_BB_lower'] and 
-                df.iloc[i-1]['Price_below_BB_lower']):
-                buy_conditions.append("布林带下轨反弹")
+                df.iloc[i-1]['Price_below_BB_lower'] and check_volume_confirmation('price_action', 'medium')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                buy_conditions.append(f"布林带下轨反弹(成交量{volume_level}确认)")
+            
+            # 条件5: 价量配合买入信号（价格上涨且成交量放大）
+            if ('Close' in df.columns and 
+                df.iloc[i]['Close'] > df.iloc[i-1]['Close'] and 
+                df.iloc[i].get('Price_Volume_Bullish_Weak', False)):
+                
+                # 检查是反转型还是延续型信号
+                if df.iloc[i].get('Price_Volume_Reversal_Bullish', False):
+                    # 反转型信号：前一天下跌，当天上涨
+                    volume_level = self._get_volume_level(df.iloc[i])
+                    buy_conditions.append(f"价量配合反转{volume_level}")
+                elif df.iloc[i].get('Price_Volume_Continuation_Bullish', False):
+                    # 延续型信号：连续上涨，成交量放大
+                    volume_level = self._get_volume_level(df.iloc[i])
+                    buy_conditions.append(f"价量配合延续{volume_level}")
+                else:
+                    # 兼容原有逻辑
+                    if df.iloc[i].get('Price_Volume_Bullish_Strong', False):
+                        buy_conditions.append("价量配合上涨(强)")
+                    elif df.iloc[i].get('Price_Volume_Bullish_Medium', False):
+                        buy_conditions.append("价量配合上涨(中)")
+                    else:
+                        buy_conditions.append("价量配合上涨(弱)")
             
             # 生成买入信号
             if buy_conditions:
@@ -240,25 +425,52 @@ class TechnicalAnalyzer:
                 df.at[df.index[i], 'Signal_Description'] = "买入信号: " + ", ".join(buy_conditions)
             
             # 生成卖出信号逻辑
-            # 条件1: 价格在下降趋势中 (MA20 < MA50)
+            # 条件1: 价格在下降趋势中 (MA20 < MA50) - 趋势信号，使用弱强度确认
             if ('MA20_below_MA50' in df.columns and df.iloc[i]['MA20_below_MA50'] and 
-                not df.iloc[i-1]['MA20_below_MA50']):
-                sell_conditions.append("下降趋势形成")
+                not df.iloc[i-1]['MA20_below_MA50'] and check_volume_confirmation('trend', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else ("弱" if df.iloc[i].get('Volume_Surge_Weak', False) else "普通"))
+                sell_conditions.append(f"下降趋势形成(成交量{volume_level}确认)")
             
-            # 条件2: MACD死叉
+            # 条件2: MACD死叉 - 动量信号，使用弱强度确认
             if ('MACD_below_signal' in df.columns and df.iloc[i]['MACD_below_signal'] and 
-                not df.iloc[i-1]['MACD_below_signal']):
-                sell_conditions.append("MACD死叉")
+                not df.iloc[i-1]['MACD_below_signal'] and check_volume_confirmation('momentum', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                sell_conditions.append(f"MACD死叉(成交量{volume_level}确认)")
             
-            # 条件3: RSI从超买区域回落
+            # 条件3: RSI从超买区域回落 - 动量信号，使用弱强度确认
             if ('RSI_overbought' in df.columns and not df.iloc[i]['RSI_overbought'] and 
-                df.iloc[i-1]['RSI_overbought']):
-                sell_conditions.append("RSI超买回落")
+                df.iloc[i-1]['RSI_overbought'] and check_volume_confirmation('momentum', 'weak')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                sell_conditions.append(f"RSI超买回落(成交量{volume_level}确认)")
             
-            # 条件4: 价格跌破布林带上轨
+            # 条件4: 价格跌破布林带上轨 - 价格行为信号，使用中等强度确认
             if ('Price_above_BB_upper' in df.columns and not df.iloc[i]['Price_above_BB_upper'] and 
-                df.iloc[i-1]['Price_above_BB_upper']):
-                sell_conditions.append("跌破布林带上轨")
+                df.iloc[i-1]['Price_above_BB_upper'] and check_volume_confirmation('price_action', 'medium')):
+                volume_level = "强" if df.iloc[i].get('Volume_Surge_Strong', False) else ("中" if df.iloc[i].get('Volume_Surge_Medium', False) else "弱")
+                sell_conditions.append(f"跌破布林带上轨(成交量{volume_level}确认)")
+            
+            # 条件5: 价量配合卖出信号（价格下跌且成交量放大）
+            if ('Close' in df.columns and 
+                df.iloc[i]['Close'] < df.iloc[i-1]['Close'] and 
+                df.iloc[i].get('Price_Volume_Bearish_Weak', False)):
+                
+                # 检查是反转型还是延续型信号
+                if df.iloc[i].get('Price_Volume_Reversal_Bearish', False):
+                    # 反转型信号：前一天上涨，当天下跌
+                    volume_level = self._get_volume_level(df.iloc[i])
+                    sell_conditions.append(f"价量配合反转{volume_level}")
+                elif df.iloc[i].get('Price_Volume_Continuation_Bearish', False):
+                    # 延续型信号：连续下跌，成交量放大
+                    volume_level = self._get_volume_level(df.iloc[i])
+                    sell_conditions.append(f"价量配合延续{volume_level}")
+                else:
+                    # 兼容原有逻辑
+                    if df.iloc[i].get('Price_Volume_Bearish_Strong', False):
+                        sell_conditions.append("价量配合下跌(强)")
+                    elif df.iloc[i].get('Price_Volume_Bearish_Medium', False):
+                        sell_conditions.append("价量配合下跌(中)")
+                    else:
+                        sell_conditions.append("价量配合下跌(弱)")
             
             # 生成卖出信号
             if sell_conditions:
