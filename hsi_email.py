@@ -101,8 +101,10 @@ class HSIEmailSystem:
             if target_date is not None:
                 # 将target_date转换为pandas时间戳，用于与历史数据的索引比较
                 target_timestamp = pd.Timestamp(target_date)
+                # 确保target_timestamp是date类型
+                target_date_only = target_timestamp.date()
                 # 过滤出日期小于等于target_date的数据
-                hist = hist[hist.index.date <= target_date]
+                hist = hist[hist.index.date <= target_date_only]
                 
                 if hist.empty:
                     print(f"⚠️ 在 {target_date} 之前没有历史数据")
@@ -140,8 +142,10 @@ class HSIEmailSystem:
             if target_date is not None:
                 # 将target_date转换为pandas时间戳，用于与历史数据的索引比较
                 target_timestamp = pd.Timestamp(target_date)
+                # 确保target_timestamp是date类型
+                target_date_only = target_timestamp.date()
                 # 过滤出日期小于等于target_date的数据
-                hist = hist[hist.index.date <= target_date]
+                hist = hist[hist.index.date <= target_date_only]
                 
                 if hist.empty:
                     print(f"⚠️ 在 {target_date} 之前没有 {symbol} 的历史数据")
@@ -434,6 +438,13 @@ class HSIEmailSystem:
                 tick_size=None
             )
 
+            # 添加成交量指标
+            volume_ratio = latest.get('Volume_Ratio', 0.0)
+            volume_surge = latest.get('Volume_Surge', False)
+            volume_shrink = latest.get('Volume_Shrink', False)
+            volume_ma10 = latest.get('Volume_MA10', 0.0)
+            volume_ma20 = latest.get('Volume_MA20', 0.0)
+
             return {
                 'rsi': rsi,
                 'macd': macd,
@@ -450,7 +461,12 @@ class HSIEmailSystem:
                 'hist': hist,
                 'atr': atr_value,
                 'stop_loss': stop_loss,
-                'take_profit': take_profit
+                'take_profit': take_profit,
+                'volume_ratio': volume_ratio,
+                'volume_surge': volume_surge,
+                'volume_shrink': volume_shrink,
+                'volume_ma10': volume_ma10,
+                'volume_ma20': volume_ma20
             }
         except Exception as e:
             print(f"⚠️ 计算技术指标失败: {e}")
@@ -603,7 +619,7 @@ class HSIEmailSystem:
             elif buy_count > 0 and sell_count > 0:
                 return f"买入{buy_count}次,卖出{sell_count}次"
             else:
-                return "无信号"
+                return "无建议信号"
 
         except Exception as e:
             print(f"⚠️ 检测连续信号失败: {e}")
@@ -869,10 +885,20 @@ class HSIEmailSystem:
         stop_loss = indicators.get('stop_loss', None)
         take_profit = indicators.get('take_profit', None)
 
+        # 为趋势设置颜色
+        if "多头" in trend:
+            trend_color_style = "color: green; font-weight: bold;"
+        elif "空头" in trend:
+            trend_color_style = "color: red; font-weight: bold;"
+        elif "震荡" in trend:
+            trend_color_style = "color: blue; font-weight: bold;"
+        else:
+            trend_color_style = ""
+
         html += f"""
                 <tr>
                     <td>趋势(技术分析)</td>
-                    <td>{trend}</td>
+                    <td><span style=\"{trend_color_style}\">{trend}</span></td>
                 </tr>
                 <tr>
                     <td>RSI (14日)</td>
@@ -1070,6 +1096,24 @@ class HSIEmailSystem:
             except Exception:
                 continue
 
+        # 添加48小时有智能建议但当天无量价信号的股票
+        for stock_code, stock_name in self.stock_list.items():
+            # 检查是否已经在target_date_signals中
+            already_included = any(code == stock_code for _, code, _, _, _ in target_date_signals)
+            if not already_included:
+                # 检查48小时智能建议
+                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
+                if continuous_signal_status != "无建议信号":
+                    trend = stock_trends.get(stock_code, '未知')
+                    # 创建一个虚拟的信号对象
+                    # 确保target_date是date对象
+                    if isinstance(target_date, str):
+                        target_date_obj = datetime.strptime(target_date, '%Y-%m-%d').date()
+                    else:
+                        target_date_obj = target_date
+                    dummy_signal = {'description': '仅48小时智能建议', 'date': target_date_obj.strftime('%Y-%m-%d')}
+                    target_date_signals.append((stock_name, stock_code, trend, dummy_signal, '无建议信号'))
+
         target_date_signals.sort(key=lambda x: x[0])
 
         text = ""
@@ -1105,9 +1149,9 @@ class HSIEmailSystem:
                         <th>股票名称</th>
                         <th>股票代码</th>
                         <th>趋势(技术分析)</th>
-                        <th>信号类型(技术分析)</th>
-                        <th>信号描述(技术分析)</th>
+                        <th>信号类型(量价分析)</th>
                         <th>48小时智能建议</th>
+                        <th>信号描述(量价分析)</th>
                     </tr>
         """
 
@@ -1118,21 +1162,68 @@ class HSIEmailSystem:
             if stock_code != 'HSI':
                 continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
 
+            # 智能过滤：保留有量价信号或有48小时智能建议的股票
+            should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
+            
+            if not should_show:
+                continue
+            
+            # 为无量价信号但有48小时建议的股票创建特殊显示
+            if signal_type not in ['买入', '卖出'] and continuous_signal_status != "无建议信号":
+                signal_display = "无量价信号"
+                color_style = "color: blue; font-weight: bold;"
+                signal_description = f"仅48小时智能建议: {continuous_signal_status}"
+            else:
+                signal_description = signal['description']
+
+            # 为48小时智能建议设置颜色
+            if "买入" in continuous_signal_status:
+                signal_color_style = "color: green; font-weight: bold;"
+            elif "卖出" in continuous_signal_status:
+                signal_color_style = "color: red; font-weight: bold;"
+            elif "无建议信号" in continuous_signal_status:
+                signal_color_style = "color: blue; font-weight: bold;"
+            else:
+                signal_color_style = ""
+            
+            # 为趋势设置颜色
+            if "多头" in trend:
+                trend_color_style = "color: green; font-weight: bold;"
+            elif "空头" in trend:
+                trend_color_style = "color: red; font-weight: bold;"
+            elif "震荡" in trend:
+                trend_color_style = "color: blue; font-weight: bold;"
+            else:
+                trend_color_style = ""
+            
             html += f"""
                     <tr>
                         <td>{stock_name}</td>
                         <td>{stock_code}</td>
-                        <td>{trend}</td>
+                        <td><span style=\"{trend_color_style}\">{trend}</span></td>
                         <td><span style=\"{color_style}\">{signal_display}</span></td>
-                        <td>{signal['description']}</td>
-                        <td>{continuous_signal_status}</td>
+                        <td><span style=\"{signal_color_style}\">{continuous_signal_status}</span></td>
+                        <td>{signal_description}</td>
                     </tr>
             """
 
-        if not target_date_signals:
+        # 检查过滤后是否有信号（使用新的过滤逻辑）
+        has_filtered_signals = False
+        for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
+            continuous_signal_status = "无信号"
+            if stock_code != 'HSI':
+                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
+            
+            # 使用与上面相同的过滤逻辑
+            should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
+            if should_show:
+                has_filtered_signals = True
+                break
+
+        if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="6">当前没有检测到任何交易信号</td>
+                        <td colspan="6">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
 
@@ -1143,12 +1234,34 @@ class HSIEmailSystem:
 
         text += "🔔 交易信号总结:\n"
         if target_date_signals:
-            text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<10} {'信号类型(技术分析)':<6} {'信号描述(技术分析)':<30} {'48小时内人工智能买卖建议':<18}\n"
+            text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<10} {'信号类型(量价分析)':<6} {'48小时内人工智能买卖建议':<18} {'信号描述(量价分析)':<30}\n"
+            # 智能过滤：保留有量价信号或有48小时智能建议的股票
+            filtered_signals = []
             for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
                 continuous_signal_status = "无信号"
                 if stock_code != 'HSI':
                     continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
-                text += f"  {stock_name:<15} {stock_code:<10} {trend:<10} {signal_type:<6} {signal['description']:<30} {continuous_signal_status:<18}\n"
+                
+                # 使用与HTML相同的过滤逻辑
+                should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
+                
+                if should_show:
+                    # 为无量价信号但有48小时建议的股票创建特殊显示
+                    if signal_type not in ['买入', '卖出'] and continuous_signal_status != "无建议信号":
+                        display_signal_type = "无量价"
+                        signal_description = f"仅48小时智能建议: {continuous_signal_status}"
+                    else:
+                        display_signal_type = signal_type
+                        signal_description = signal['description']
+                    
+                    filtered_signals.append((stock_name, stock_code, trend, display_signal_type, signal_description, continuous_signal_status))
+            
+            # 如果过滤后没有信号，显示相应提示
+            if not filtered_signals:
+                text += "当前没有检测到任何有效的交易信号（已过滤无信号股票）\n"
+            else:
+                for stock_name, stock_code, trend, signal_type, signal_description, continuous_signal_status in filtered_signals:
+                    text += f"  {stock_name:<15} {stock_code:<10} {trend:<10} {signal_type:<6} {continuous_signal_status:<18} {signal_description:<30}\n"
         else:
             text += "当前没有检测到任何交易信号\n"
 
@@ -1567,10 +1680,20 @@ class HSIEmailSystem:
                 stop_loss = hsi_indicators.get('stop_loss', None)
                 take_profit = hsi_indicators.get('take_profit', None)
 
+                # 为恒生指数趋势设置颜色
+                if "多头" in trend:
+                    hsi_trend_color_style = "color: green; font-weight: bold;"
+                elif "空头" in trend:
+                    hsi_trend_color_style = "color: red; font-weight: bold;"
+                elif "震荡" in trend:
+                    hsi_trend_color_style = "color: blue; font-weight: bold;"
+                else:
+                    hsi_trend_color_style = ""
+                
                 html += f"""
                     <tr>
                         <td>趋势(技术分析)</td>
-                        <td>{trend}</td>
+                        <td><span style=\"{hsi_trend_color_style}\">{trend}</span></td>
                     </tr>
                     <tr>
                         <td>RSI (14日)</td>
@@ -1824,10 +1947,69 @@ class HSIEmailSystem:
               <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
               <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。</li>
               <li><b>趋势(技术分析)</b>：市场当前的整体方向。</li>
+              <li><b>信号描述(量价分析)</b>：基于价格和成交量关系的技术信号类型：
+                <ul>
+                  <li><b>上升趋势形成</b>：短期均线(MA20)上穿中期均线(MA50)，形成上升趋势</li>
+                  <li><b>下降趋势形成</b>：短期均线(MA20)下穿中期均线(MA50)，形成下降趋势</li>
+                  <li><b>MACD金叉</b>：MACD线上穿信号线，预示上涨动能增强</li>
+                  <li><b>MACD死叉</b>：MACD线下穿信号线，预示下跌动能增强</li>
+                  <li><b>RSI超卖反弹</b>：RSI从超卖区域(30以下)回升，预示价格可能反弹</li>
+                  <li><b>RSI超买回落</b>：RSI从超买区域(70以上)回落，预示价格可能回调</li>
+                  <li><b>布林带下轨反弹</b>：价格从布林带下轨反弹，预示支撑有效</li>
+                  <li><b>跌破布林带上轨</b>：价格跌破布林带上轨，预示阻力有效</li>
+                  <li><b>价量配合反转(强/中/弱)</b>：前一天价格相反方向+当天价格反转+成交量放大，预示趋势反转</li>
+                  <li><b>价量配合延续(强/中/弱)</b>：连续同向价格变化+成交量放大，预示趋势延续</li>
+                  <li><b>价量配合上涨/下跌</b>：价格上涨/下跌+成交量放大，价量同向配合</li>
+                  <li><b>成交量确认</b>：括号内表示成交量放大程度，强(>2倍)、中(>1.5倍)、弱(>1.2倍)、普通(>0.9倍)</li>
+                </ul>
+              </li>
+              <li><b>48小时内人工智能买卖建议</b>：基于大模型分析的智能交易建议：
+                <ul>
+                  <li><b>连续买入(N次)</b>：48小时内连续N次买入建议，无卖出建议，强烈看好</li>
+                  <li><b>连续卖出(N次)</b>：48小时内连续N次卖出建议，无买入建议，强烈看空</li>
+                  <li><b>买入(N次)</b>：48小时内N次买入建议，可能有卖出建议</li>
+                  <li><b>卖出(N次)</b>：48小时内N次卖出建议，可能有买入建议</li>
+                  <li><b>买入M次,卖出N次</b>：48小时内买卖建议混合，市场观点不明</li>
+                  <li><b>无建议信号</b>：48小时内无任何买卖建议，缺乏明确信号</li>
+                </ul>
+              </li>
             </ul>
             </div>
         </div>
         """
+
+        # 添加文本版本的指标说明
+        text += "\n📋 指标说明:\n"
+        text += "• 当前指数/价格：恒生指数或股票的实时点位/价格。\n"
+        text += "• 24小时变化：过去24小时内指数或股价的变化百分比和点数/金额。\n"
+        text += "• RSI(相对强弱指数)：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。\n"
+        text += "• MACD(异同移动平均线)：判断价格趋势和动能的技术指标。\n"
+        text += "• MA20(20日移动平均线)：过去20个交易日的平均指数/股价，反映短期趋势。\n"
+        text += "• MA50(50日移动平均线)：过去50个交易日的平均指数/股价，反映中期趋势。\n"
+        text += "• MA200(200日移动平均线)：过去200个交易日的平均指数/股价，反映长期趋势。\n"
+        text += "• 布林带位置：当前指数/股价在布林带中的相对位置，范围0-1。\n"
+        text += "• ATR(平均真实波幅)：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。\n"
+        text += "• 趋势(技术分析)：市场当前的整体方向。\n"
+        text += "• 信号描述(量价分析)：基于价格和成交量关系的技术信号类型：\n"
+        text += "  - 上升趋势形成：短期均线(MA20)上穿中期均线(MA50)，形成上升趋势\n"
+        text += "  - 下降趋势形成：短期均线(MA20)下穿中期均线(MA50)，形成下降趋势\n"
+        text += "  - MACD金叉：MACD线上穿信号线，预示上涨动能增强\n"
+        text += "  - MACD死叉：MACD线下穿信号线，预示下跌动能增强\n"
+        text += "  - RSI超卖反弹：RSI从超卖区域(30以下)回升，预示价格可能反弹\n"
+        text += "  - RSI超买回落：RSI从超买区域(70以上)回落，预示价格可能回调\n"
+        text += "  - 布林带下轨反弹：价格从布林带下轨反弹，预示支撑有效\n"
+        text += "  - 跌破布林带上轨：价格跌破布林带上轨，预示阻力有效\n"
+        text += "  - 价量配合反转(强/中/弱)：前一天价格相反方向+当天价格反转+成交量放大，预示趋势反转\n"
+        text += "  - 价量配合延续(强/中/弱)：连续同向价格变化+成交量放大，预示趋势延续\n"
+        text += "  - 价量配合上涨/下跌：价格上涨/下跌+成交量放大，价量同向配合\n"
+        text += "  - 成交量确认：括号内表示成交量放大程度，强(>2倍)、中(>1.5倍)、弱(>1.2倍)、普通(>0.9倍)\n"
+        text += "• 48小时内人工智能买卖建议：基于大模型分析的智能交易建议：\n"
+        text += "  - 连续买入(N次)：48小时内连续N次买入建议，无卖出建议，强烈看好\n"
+        text += "  - 连续卖出(N次)：48小时内连续N次卖出建议，无买入建议，强烈看空\n"
+        text += "  - 买入(N次)：48小时内N次买入建议，可能有卖出建议\n"
+        text += "  - 卖出(N次)：48小时内N次卖出建议，可能有买入建议\n"
+        text += "  - 买入M次,卖出N次：48小时内买卖建议混合，市场观点不明\n"
+        text += "  - 无建议信号：48小时内无任何买卖建议，缺乏明确信号\n"
 
         html += "</body></html>"
 
