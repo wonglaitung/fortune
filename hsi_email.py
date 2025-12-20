@@ -1146,9 +1146,14 @@ class HSIEmailSystem:
             else:
                 trend_color_style = ""
             
+            # 判断三列颜色是否相同，如果相同则股票名称也使用相同颜色
+            name_color_style = ""
+            if trend_color_style == color_style == signal_color_style and trend_color_style != "":
+                name_color_style = trend_color_style
+            
             html += f"""
                     <tr>
-                        <td>{stock_name}</td>
+                        <td><span style=\"{name_color_style}\">{stock_name}</span></td>
                         <td>{stock_code}</td>
                         <td><span style=\"{trend_color_style}\">{trend}</span></td>
                         <td><span style=\"{color_style}\">{signal_display}</span></td>
