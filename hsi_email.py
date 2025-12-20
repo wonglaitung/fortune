@@ -667,7 +667,8 @@ class HSIEmailSystem:
         """
         分析最近48小时内的连续买卖信号（使用 pandas 读取 data/simulation_transactions.csv）
         返回: (buy_without_sell_after, sell_without_buy_after)
-        每个元素为 (code, name, times_list, reasons_list)
+        每个元素为 (code, name, times_list, reasons_list, transactions_df)
+        其中 transactions_df 是该股票的所有相关交易记录的DataFrame
         """
         df = self._read_transactions_df()
         if df.empty:
@@ -692,12 +693,12 @@ class HSIEmailSystem:
                 name = buy_rows['name'].iloc[0] if 'name' in buy_rows.columns and len(buy_rows) > 0 else 'Unknown'
                 times = [ts.strftime('%Y-%m-%d %H:%M:%S') for ts in buy_rows['timestamp'].tolist()]
                 reasons = buy_rows['reason'].fillna('').tolist() if 'reason' in buy_rows.columns else [''] * len(times)
-                results_buy.append((code, name, times, reasons))
+                results_buy.append((code, name, times, reasons, buy_rows))
             elif len(sell_rows) >= 3 and len(buy_rows) == 0:
                 name = sell_rows['name'].iloc[0] if 'name' in sell_rows.columns and len(sell_rows) > 0 else 'Unknown'
                 times = [ts.strftime('%Y-%m-%d %H:%M:%S') for ts in sell_rows['timestamp'].tolist()]
                 reasons = sell_rows['reason'].fillna('').tolist() if 'reason' in sell_rows.columns else [''] * len(times)
-                results_sell.append((code, name, times, reasons))
+                results_sell.append((code, name, times, reasons, sell_rows))
 
         return results_buy, results_sell
 
@@ -737,12 +738,12 @@ class HSIEmailSystem:
 
         continuous_signal_info = None
         if continuous_buy_signals is not None:
-            for code, name, times, reasons in continuous_buy_signals:
+            for code, name, times, reasons, transactions_df in continuous_buy_signals:
                 if code == stock_data['symbol']:
                     continuous_signal_info = f"连续买入({len(times)}次)"
                     break
         if continuous_signal_info is None and continuous_sell_signals is not None:
-            for code, name, times, reasons in continuous_sell_signals:
+            for code, name, times, reasons, transactions_df in continuous_sell_signals:
                 if code == stock_data['symbol']:
                     continuous_signal_info = f"连续卖出({len(times)}次)"
                     break
@@ -1200,23 +1201,26 @@ class HSIEmailSystem:
                             <th>建议时间、现价、止损价</th>
                         </tr>
                 """
-                for code, name, times, reasons in buy_without_sell_after:
+                for code, name, times, reasons, transactions_df in buy_without_sell_after:
                     combined_str = ""
+                    # 确保交易记录按时间排序
+                    transactions_df = transactions_df.sort_values('timestamp')
                     for i in range(len(times)):
                         time_info = f"{times[i]}"
-                        reason = reasons[i] if i < len(reasons) else ''
                         price_info = ""
                         stop_loss_info = ""
-                        if isinstance(reason, str) and '现价' in reason:
-                            import re
-                            price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
-                            if price_match:
-                                price_info = f"现价: {price_match.group(1)}"
-                        if isinstance(reason, str) and '止损价' in reason:
-                            import re
-                            stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
-                            if stop_loss_match:
-                                stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                        
+                        # 从交易记录中获取现价和止损价
+                        if i < len(transactions_df):
+                            transaction = transactions_df.iloc[i]
+                            current_price = transaction.get('current_price')
+                            stop_loss_price = transaction.get('stop_loss_price')
+                            
+                            if pd.notna(current_price):
+                                price_info = f"现价: {current_price:.2f}"
+                            if pd.notna(stop_loss_price):
+                                stop_loss_info = f"止损价: {stop_loss_price:.2f}"
+                        
                         info_parts = [part for part in [price_info, stop_loss_info] if part]
                         reason_info = ", ".join(info_parts)
                         time_reason = f"{time_info} {reason_info}".strip()
@@ -1246,23 +1250,26 @@ class HSIEmailSystem:
                             <th>建议时间、现价、止损价</th>
                         </tr>
                 """
-                for code, name, times, reasons in sell_without_buy_after:
+                for code, name, times, reasons, transactions_df in sell_without_buy_after:
                     combined_str = ""
+                    # 确保交易记录按时间排序
+                    transactions_df = transactions_df.sort_values('timestamp')
                     for i in range(len(times)):
                         time_info = f"{times[i]}"
-                        reason = reasons[i] if i < len(reasons) else ''
                         price_info = ""
                         stop_loss_info = ""
-                        if isinstance(reason, str) and '现价' in reason:
-                            import re
-                            price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
-                            if price_match:
-                                price_info = f"现价: {price_match.group(1)}"
-                        if isinstance(reason, str) and '止损价' in reason:
-                            import re
-                            stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
-                            if stop_loss_match:
-                                stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                        
+                        # 从交易记录中获取现价和止损价
+                        if i < len(transactions_df):
+                            transaction = transactions_df.iloc[i]
+                            current_price = transaction.get('current_price')
+                            stop_loss_price = transaction.get('stop_loss_price')
+                            
+                            if pd.notna(current_price):
+                                price_info = f"现价: {current_price:.2f}"
+                            if pd.notna(stop_loss_price):
+                                stop_loss_info = f"止损价: {stop_loss_price:.2f}"
+                        
                         info_parts = [part for part in [price_info, stop_loss_info] if part]
                         reason_info = ", ".join(info_parts)
                         time_reason = f"{time_info} {reason_info}".strip()
@@ -1285,23 +1292,26 @@ class HSIEmailSystem:
 
         if buy_without_sell_after:
             text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
-            for code, name, times, reasons in buy_without_sell_after:
+            for code, name, times, reasons, transactions_df in buy_without_sell_after:
                 combined_list = []
+                # 确保交易记录按时间排序
+                transactions_df = transactions_df.sort_values('timestamp')
                 for i in range(len(times)):
                     time_info = f"{times[i]}"
-                    reason = reasons[i] if i < len(reasons) else ''
                     price_info = ""
                     stop_loss_info = ""
-                    if isinstance(reason, str) and '现价' in reason:
-                        import re
-                        price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
-                        if price_match:
-                            price_info = f"现价: {price_match.group(1)}"
-                    if isinstance(reason, str) and '止损价' in reason:
-                        import re
-                        stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
-                        if stop_loss_match:
-                            stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                    
+                    # 从交易记录中获取现价和止损价
+                    if i < len(transactions_df):
+                        transaction = transactions_df.iloc[i]
+                        current_price = transaction.get('current_price')
+                        stop_loss_price = transaction.get('stop_loss_price')
+                        
+                        if pd.notna(current_price):
+                            price_info = f"现价: {current_price:.2f}"
+                        if pd.notna(stop_loss_price):
+                            stop_loss_info = f"止损价: {stop_loss_price:.2f}"
+                    
                     info_parts = [part for part in [price_info, stop_loss_info] if part]
                     reason_info = ", ".join(info_parts)
                     combined_item = f"{time_info} {reason_info}".strip()
@@ -1312,23 +1322,26 @@ class HSIEmailSystem:
 
         if sell_without_buy_after:
             text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
-            for code, name, times, reasons in sell_without_buy_after:
+            for code, name, times, reasons, transactions_df in sell_without_buy_after:
                 combined_list = []
+                # 确保交易记录按时间排序
+                transactions_df = transactions_df.sort_values('timestamp')
                 for i in range(len(times)):
                     time_info = f"{times[i]}"
-                    reason = reasons[i] if i < len(reasons) else ''
                     price_info = ""
                     stop_loss_info = ""
-                    if isinstance(reason, str) and '现价' in reason:
-                        import re
-                        price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
-                        if price_match:
-                            price_info = f"现价: {price_match.group(1)}"
-                    if isinstance(reason, str) and '止损价' in reason:
-                        import re
-                        stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
-                        if stop_loss_match:
-                            stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
+                    
+                    # 从交易记录中获取现价和止损价
+                    if i < len(transactions_df):
+                        transaction = transactions_df.iloc[i]
+                        current_price = transaction.get('current_price')
+                        stop_loss_price = transaction.get('stop_loss_price')
+                        
+                        if pd.notna(current_price):
+                            price_info = f"现价: {current_price:.2f}"
+                        if pd.notna(stop_loss_price):
+                            stop_loss_info = f"止损价: {stop_loss_price:.2f}"
+                    
                     info_parts = [part for part in [price_info, stop_loss_info] if part]
                     reason_info = ", ".join(info_parts)
                     combined_item = f"{time_info} {reason_info}".strip()
@@ -1723,12 +1736,12 @@ class HSIEmailSystem:
                         text += f"    {signal['date']}: {signal['description']}\n"
 
                 continuous_signal_info = None
-                for code, name, times, reasons in buy_without_sell_after:
+                for code, name, times, reasons, transactions_df in buy_without_sell_after:
                     if code == stock_result['code']:
                         continuous_signal_info = f"连续买入({len(times)}次)"
                         break
                 if continuous_signal_info is None:
-                    for code, name, times, reasons in sell_without_buy_after:
+                    for code, name, times, reasons, transactions_df in sell_without_buy_after:
                         if code == stock_result['code']:
                             continuous_signal_info = f"连续卖出({len(times)}次)"
                             break
