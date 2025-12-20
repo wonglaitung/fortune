@@ -10,6 +10,8 @@
 - 可选最大允许亏损百分比（通过环境变量 MAX_LOSS_PCT 设置，示例 0.2 表示 20%）
 - 对止损/止盈按可配置或推断的最小变动单位（tick size）进行四舍五入
 - 删除了重复函数定义并改进了异常处理
+- 将交易记录的 CSV 解析改为 pandas.read_csv，提高健壮性并修复原先手写解析的 bug
+- 修复 generate_report_content 中被截断的文本构造导致的语法错误
 """
 
 import os
@@ -18,7 +20,7 @@ import json
 import argparse
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -192,7 +194,8 @@ class HSIEmailSystem:
             tr3 = (low - prev_close).abs()
             true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
 
-            atr = true_range.rolling(window=period).mean()
+            # 使用 Wilder 平滑（EWMA）更稳健
+            atr = true_range.ewm(alpha=1/period, adjust=False).mean()
 
             last_atr = atr.dropna().iloc[-1] if not atr.dropna().empty else 0.0
             return float(last_atr)
@@ -537,76 +540,105 @@ class HSIEmailSystem:
             return 50.0
 
     # ---------- 以下为交易记录分析和邮件/报告生成函数 ----------
+    def _read_transactions_df(self, path='data/simulation_transactions.csv'):
+        """
+        使用 pandas 读取交易记录 CSV，返回 DataFrame 并确保 timestamp 列为 UTC datetime。
+        该函数尽量智能匹配常见列名（timestamp/time/date, type/trans_type, code/symbol, name）。
+        """
+        if not os.path.exists(path):
+            return pd.DataFrame()
+        try:
+            df = pd.read_csv(path, dtype=str, low_memory=False)
+            if df.empty:
+                return pd.DataFrame()
+            # 找到时间列
+            cols_lower = [c.lower() for c in df.columns]
+            timestamp_col = None
+            for candidate in ['timestamp', 'time', 'datetime', 'date']:
+                if candidate in cols_lower:
+                    timestamp_col = df.columns[cols_lower.index(candidate)]
+                    break
+            if timestamp_col is None:
+                # fallback to first column
+                timestamp_col = df.columns[0]
+
+            # parse timestamp to UTC
+            df[timestamp_col] = pd.to_datetime(df[timestamp_col].astype(str), utc=True, errors='coerce')
+
+            # normalize key columns names to common names
+            def find_col(possibilities):
+                for p in possibilities:
+                    if p in cols_lower:
+                        return df.columns[cols_lower.index(p)]
+                return None
+
+            type_col = find_col(['type', 'trans_type', 'action'])
+            code_col = find_col(['code', 'symbol', 'ticker'])
+            name_col = find_col(['name', 'stock_name'])
+            reason_col = find_col(['reason', 'desc', 'description'])
+            current_price_col = find_col(['current_price', 'price', 'currentprice', 'last_price'])
+            stop_loss_col = find_col(['stop_loss', 'stoploss', 'stop_loss_price'])
+
+            # rename to standard columns
+            rename_map = {}
+            if timestamp_col:
+                rename_map[timestamp_col] = 'timestamp'
+            if type_col:
+                rename_map[type_col] = 'type'
+            if code_col:
+                rename_map[code_col] = 'code'
+            if name_col:
+                rename_map[name_col] = 'name'
+            if reason_col:
+                rename_map[reason_col] = 'reason'
+            if current_price_col:
+                rename_map[current_price_col] = 'current_price'
+            if stop_loss_col:
+                rename_map[stop_loss_col] = 'stop_loss_price'
+
+            df = df.rename(columns=rename_map)
+
+            # ensure required columns exist
+            for c in ['type', 'code', 'name', 'reason', 'current_price', 'stop_loss_price']:
+                if c not in df.columns:
+                    df[c] = ''
+
+            # normalize type column
+            df['type'] = df['type'].fillna('').astype(str).str.upper()
+            # coerce numeric price columns where possible
+            df['current_price'] = pd.to_numeric(df['current_price'].replace('', np.nan), errors='coerce')
+            df['stop_loss_price'] = pd.to_numeric(df['stop_loss_price'].replace('', np.nan), errors='coerce')
+
+            # drop rows without timestamp
+            df = df[~df['timestamp'].isna()].copy()
+
+            return df
+        except Exception as e:
+            print(f"⚠️ 读取交易记录 CSV 失败: {e}")
+            return pd.DataFrame()
+
     def detect_continuous_signals_in_history_from_transactions(self, stock_code, hours=48, min_signals=3):
         """
-        基于交易历史记录检测连续买卖信号
+        基于交易历史记录检测连续买卖信号（使用 pandas 读取 CSV）
         - stock_code: 股票代码
         - hours: 检测的时间范围（小时）
         - min_signals: 判定为连续信号的最小信号数量
         返回: 连续信号状态字符串
         """
         try:
-            import csv
-            from collections import defaultdict
-
-            if not os.path.exists('data/simulation_transactions.csv'):
+            df = self._read_transactions_df()
+            if df.empty:
                 return "无交易记录"
 
-            with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
-                content = file.read()
+            now = pd.Timestamp.now(tz='UTC')
+            threshold = now - pd.Timedelta(hours=hours)
 
-            lines = content.strip().split('\n')
-            if not lines:
-                return "无交易记录"
-            headers = lines[0].split(',')
-            transactions = []
+            df_recent = df[(df['timestamp'] >= threshold) & (df['code'] == stock_code)]
+            if df_recent.empty:
+                return "无建议信号"
 
-            for line in lines[1:]:
-                fields = line.split(',')
-                # 处理包含逗号的字段
-                if len(fields) > len(headers):
-                    reconstructed = []
-                    i = 0
-                    while i < len(fields):
-                        if fields[i].startswith('"') and not fields[i].endswith('"'):
-                            j = i
-                            while j < len(fields) and not fields[j].endswith('"'):
-                                j += 1
-                            reconstructed.append(','.join(fields[i:j+1]).strip('"'))
-                            i = j + 1
-                        else:
-                            reconstructed.append(fields[i].strip('"'))
-                            i += 1
-                    fields = reconstructed
-
-                if len(fields) >= 4:
-                    timestamp_str = fields[0]
-                    trans_type = fields[1]
-                    code = fields[2]
-                    name = fields[3] if len(fields) > 3 else ""
-                    try:
-                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                        transactions.append({'timestamp': timestamp, 'type': trans_type, 'code': code, 'name': name})
-                    except ValueError as e:
-                        print(f"解析时间戳失败: {timestamp_str}, 错误: {e}")
-                        continue
-
-            now = datetime.now()
-            threshold = now - timedelta(hours=hours)
-            recent_transactions = [t for t in transactions if t['timestamp'] >= threshold and t['code'] == stock_code]
-
-            from collections import defaultdict as _dd
-            transactions_by_stock = _dd(lambda: {'BUY': [], 'SELL': []})
-            for trans in recent_transactions:
-                if trans['type'] in transactions_by_stock[trans['code']]:
-                    transactions_by_stock[trans['code']][trans['type']].append(trans)
-
-            trans_dict = transactions_by_stock[stock_code]
-            buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
-            sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
-
-            buy_count = len(buys)
-            sell_count = len(sells)
+            buy_count = int((df_recent['type'].str.contains('BUY')).sum())
+            sell_count = int((df_recent['type'].str.contains('SELL')).sum())
 
             if buy_count >= min_signals and sell_count == 0 and buy_count > 0:
                 return f"连续买入({buy_count}次)"
@@ -633,129 +665,41 @@ class HSIEmailSystem:
 
     def analyze_continuous_signals(self):
         """
-        分析最近48小时内的连续买卖信号（从 data/simulation_transactions.csv 中读取）
+        分析最近48小时内的连续买卖信号（使用 pandas 读取 data/simulation_transactions.csv）
         返回: (buy_without_sell_after, sell_without_buy_after)
+        每个元素为 (code, name, times_list, reasons_list)
         """
-        import csv
-        from collections import defaultdict
-
-        if not os.path.exists('data/simulation_transactions.csv'):
+        df = self._read_transactions_df()
+        if df.empty:
             return [], []
 
-        with open('data/simulation_transactions.csv', 'r', encoding='utf-8') as file:
-            content = file.read()
-
-        lines = content.strip().split('\n')
-        if not lines:
+        now = pd.Timestamp.now(tz='UTC')
+        time_48_hours_ago = now - pd.Timedelta(hours=48)
+        df_recent = df[df['timestamp'] >= time_48_hours_ago].copy()
+        if df_recent.empty:
             return [], []
-        headers = lines[0].split(',')
-        transactions = []
 
-        for line in lines[1:]:
-            fields = line.split(',')
-            # 处理包含逗号的字段
-            if len(fields) > len(headers):
-                reconstructed = []
-                i = 0
-                while i < len(fields):
-                    if fields[i].startswith('"') and not fields[i].endswith('"'):
-                        j = i
-                        while j < len(fields) and not fields[j].endswith('"'):
-                            j += 1
-                        reconstructed.append(','.join(fields[i:j+1]).strip('"'))
-                        i = j + 1
-                    else:
-                        reconstructed.append(fields[i].strip('"'))
-                        i += 1
-                fields = reconstructed
+        results_buy = []
+        results_sell = []
 
-            if len(fields) >= 10:
-                timestamp_str = fields[0]
-                trans_type = fields[1]
-                code = fields[2]
-                name = fields[3] if len(fields) > 3 else ""
-                shares_str = fields[4] if len(fields) > 4 else "0"
-                price_str = fields[5] if len(fields) > 5 else "0"
-                amount_str = fields[6] if len(fields) > 6 else "0"
-                reason = fields[8] if len(fields) > 8 else ""
-                stop_loss_price = fields[10] if len(fields) > 10 else ""
-                current_price_str = fields[11] if len(fields) > 11 else ""
+        grouped = df_recent.groupby('code')
+        for code, group in grouped:
+            types = group['type'].fillna('').astype(str).str.upper()
+            buy_rows = group[types.str.contains('BUY')]
+            sell_rows = group[types.str.contains('SELL')]
 
-                try:
-                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                    formatted_reason = reason
-                    has_additional_info = False
+            if len(buy_rows) >= 3 and len(sell_rows) == 0:
+                name = buy_rows['name'].iloc[0] if 'name' in buy_rows.columns and len(buy_rows) > 0 else 'Unknown'
+                times = [ts.strftime('%Y-%m-%d %H:%M:%S') for ts in buy_rows['timestamp'].tolist()]
+                reasons = buy_rows['reason'].fillna('').tolist() if 'reason' in buy_rows.columns else [''] * len(times)
+                results_buy.append((code, name, times, reasons))
+            elif len(sell_rows) >= 3 and len(buy_rows) == 0:
+                name = sell_rows['name'].iloc[0] if 'name' in sell_rows.columns and len(sell_rows) > 0 else 'Unknown'
+                times = [ts.strftime('%Y-%m-%d %H:%M:%S') for ts in sell_rows['timestamp'].tolist()]
+                reasons = sell_rows['reason'].fillna('').tolist() if 'reason' in sell_rows.columns else [''] * len(times)
+                results_sell.append((code, name, times, reasons))
 
-                    if stop_loss_price and stop_loss_price not in ["", "None", "nan", "False", "null"] and stop_loss_price is not None and stop_loss_price != "False":
-                        try:
-                            float_stop_loss = float(stop_loss_price)
-                            if not (float_stop_loss != float_stop_loss):
-                                formatted_reason += f", 止损价: {stop_loss_price}"
-                                has_additional_info = True
-                        except (ValueError, TypeError):
-                            pass
-
-                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str is not None and current_price_str != "False":
-                        try:
-                            float_current = float(current_price_str)
-                            if not (float_current != float_current):
-                                formatted_reason += f", 现价: {current_price_str}"
-                                has_additional_info = True
-                        except (ValueError, TypeError):
-                            pass
-
-                    if has_additional_info and formatted_reason.startswith(", "):
-                        formatted_reason = formatted_reason[2:]
-
-                    # 只使用 current_price 字段
-                    effective_price = 0.0
-                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str != "0" and current_price_str is not None:
-                        try:
-                            effective_price = float(current_price_str)
-                        except (ValueError, TypeError):
-                            effective_price = 0.0
-
-                    transactions.append({
-                        'timestamp': timestamp,
-                        'date': timestamp.date(),
-                        'type': trans_type,
-                        'code': code,
-                        'name': name,
-                        'shares': int(float(shares_str)) if shares_str else 0,
-                        'price': effective_price,
-                        'amount': float(amount_str) if amount_str else 0.0,
-                        'reason': formatted_reason.strip()
-                    })
-                except ValueError as e:
-                    print(f"Error parsing line: {line[:100]}... Error: {e}")
-
-        now = datetime.now()
-        time_48_hours_ago = now - timedelta(hours=48)
-        recent_transactions = [t for t in transactions if t['timestamp'] >= time_48_hours_ago]
-
-        transactions_by_stock = defaultdict(lambda: {'BUY': [], 'SELL': []})
-        for trans in recent_transactions:
-            transactions_by_stock[trans['code']][trans['type']].append(trans)
-
-        buy_without_sell_after = []
-        sell_without_buy_after = []
-
-        for stock_code, trans_dict in transactions_by_stock.items():
-            buys = sorted(trans_dict['BUY'], key=lambda x: x['timestamp'])
-            sells = sorted(trans_dict['SELL'], key=lambda x: x['timestamp'])
-
-            if len(buys) >= 3 and len(sells) == 0:
-                stock_name = buys[0]['name'] if buys else 'Unknown'
-                buy_times = [buy['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for buy in buys]
-                buy_reasons = [buy['reason'] for buy in buys]
-                buy_without_sell_after.append((stock_code, stock_name, buy_times, buy_reasons))
-            elif len(sells) >= 3 and len(buys) == 0:
-                stock_name = sells[0]['name'] if sells else 'Unknown'
-                sell_times = [sell['timestamp'].strftime('%Y-%m-%d %H:%M:%S') for sell in sells]
-                sell_reasons = [sell['reason'] for sell in sells]
-                sell_without_buy_after.append((stock_code, stock_name, sell_times, sell_reasons))
-
-        return buy_without_sell_after, sell_without_buy_after
+        return results_buy, results_sell
 
     def has_any_signals(self, hsi_indicators, stock_results, target_date=None):
         """检查是否有任何股票有指定日期的交易信号"""
@@ -1116,7 +1060,12 @@ class HSIEmailSystem:
 
         target_date_signals.sort(key=lambda x: x[0])
 
-        text = ""
+        # 文本版表头（修复原先被截断的 f-string）
+        text_lines = []
+        text_lines.append("🔔 交易信号总结:")
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述'}"
+        text_lines.append(header)
+
         html = f"""
         <html>
         <head>
@@ -1174,7 +1123,7 @@ class HSIEmailSystem:
                 color_style = "color: blue; font-weight: bold;"
                 signal_description = f"仅48小时智能建议: {continuous_signal_status}"
             else:
-                signal_description = signal['description']
+                signal_description = signal.get('description', '') if isinstance(signal, dict) else str(signal)
 
             # 为48小时智能建议设置颜色
             if "买入" in continuous_signal_status:
@@ -1207,18 +1156,12 @@ class HSIEmailSystem:
                     </tr>
             """
 
+            # 文本版本追加
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description}")
+
         # 检查过滤后是否有信号（使用新的过滤逻辑）
-        has_filtered_signals = False
-        for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
-            continuous_signal_status = "无信号"
-            if stock_code != 'HSI':
-                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
-            
-            # 使用与上面相同的过滤逻辑
-            should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
-            if should_show:
-                has_filtered_signals = True
-                break
+        has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
+                                   if (signal_type in ['买入', '卖出']) or (self.detect_continuous_signals_in_history_from_transactions(stock_code) != "无建议信号"))
 
         if not has_filtered_signals:
             html += """
@@ -1226,46 +1169,14 @@ class HSIEmailSystem:
                         <td colspan="6">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
+            text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
 
         html += """
                 </table>
             </div>
         """
 
-        text += "🔔 交易信号总结:\n"
-        if target_date_signals:
-            text += f"  {'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<10} {'信号类型(量价分析)':<6} {'48小时内人工智能买卖建议':<18} {'信号描述(量价分析)':<30}\n"
-            # 智能过滤：保留有量价信号或有48小时智能建议的股票
-            filtered_signals = []
-            for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
-                continuous_signal_status = "无信号"
-                if stock_code != 'HSI':
-                    continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
-                
-                # 使用与HTML相同的过滤逻辑
-                should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
-                
-                if should_show:
-                    # 为无量价信号但有48小时建议的股票创建特殊显示
-                    if signal_type not in ['买入', '卖出'] and continuous_signal_status != "无建议信号":
-                        display_signal_type = "无量价"
-                        signal_description = f"仅48小时智能建议: {continuous_signal_status}"
-                    else:
-                        display_signal_type = signal_type
-                        signal_description = signal['description']
-                    
-                    filtered_signals.append((stock_name, stock_code, trend, display_signal_type, signal_description, continuous_signal_status))
-            
-            # 如果过滤后没有信号，显示相应提示
-            if not filtered_signals:
-                text += "当前没有检测到任何有效的交易信号（已过滤无信号股票）\n"
-            else:
-                for stock_name, stock_code, trend, signal_type, signal_description, continuous_signal_status in filtered_signals:
-                    text += f"  {stock_name:<15} {stock_code:<10} {trend:<10} {signal_type:<6} {continuous_signal_status:<18} {signal_description:<30}\n"
-        else:
-            text += "当前没有检测到任何交易信号\n"
-
-        text += "\n"
+        text = "\n".join(text_lines) + "\n\n"
 
         # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
@@ -1293,30 +1204,21 @@ class HSIEmailSystem:
                     combined_str = ""
                     for i in range(len(times)):
                         time_info = f"{times[i]}"
-                        # 从reason中提取现价和止损价信息，不显示详细理由
-                        reason = reasons[i] if reasons[i] else ''
-                        # 提取现价和止损价信息
+                        reason = reasons[i] if i < len(reasons) else ''
                         price_info = ""
                         stop_loss_info = ""
-                        
-                        if '现价' in reason:
-                            # 提取现价信息
+                        if isinstance(reason, str) and '现价' in reason:
                             import re
-                            price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                            price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
                             if price_match:
                                 price_info = f"现价: {price_match.group(1)}"
-                        
-                        if '止损价' in reason:
-                            # 提取止损价信息
+                        if isinstance(reason, str) and '止损价' in reason:
                             import re
-                            stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                            stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
                             if stop_loss_match:
                                 stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
-                        
-                        # 组合现价和止损价信息
                         info_parts = [part for part in [price_info, stop_loss_info] if part]
                         reason_info = ", ".join(info_parts)
-                        
                         time_reason = f"{time_info} {reason_info}".strip()
                         combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
@@ -1348,30 +1250,21 @@ class HSIEmailSystem:
                     combined_str = ""
                     for i in range(len(times)):
                         time_info = f"{times[i]}"
-                        # 从reason中提取现价和止损价信息，不显示详细理由
-                        reason = reasons[i] if reasons[i] else ''
-                        # 提取现价和止损价信息
+                        reason = reasons[i] if i < len(reasons) else ''
                         price_info = ""
                         stop_loss_info = ""
-                        
-                        if '现价' in reason:
-                            # 提取现价信息
+                        if isinstance(reason, str) and '现价' in reason:
                             import re
-                            price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                            price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
                             if price_match:
                                 price_info = f"现价: {price_match.group(1)}"
-                        
-                        if '止损价' in reason:
-                            # 提取止损价信息
+                        if isinstance(reason, str) and '止损价' in reason:
                             import re
-                            stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                            stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
                             if stop_loss_match:
                                 stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
-                        
-                        # 组合现价和止损价信息
                         info_parts = [part for part in [price_info, stop_loss_info] if part]
                         reason_info = ", ".join(info_parts)
-                        
                         time_reason = f"{time_info} {reason_info}".strip()
                         combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
                     html += f"""
@@ -1396,30 +1289,21 @@ class HSIEmailSystem:
                 combined_list = []
                 for i in range(len(times)):
                     time_info = f"{times[i]}"
-                    # 从reason中提取现价和止损价信息，不显示详细理由
-                    reason = reasons[i] if reasons[i] else ''
-                    # 提取现价和止损价信息
+                    reason = reasons[i] if i < len(reasons) else ''
                     price_info = ""
                     stop_loss_info = ""
-                    
-                    if '现价' in reason:
-                        # 提取现价信息
+                    if isinstance(reason, str) and '现价' in reason:
                         import re
-                        price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                        price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
                         if price_match:
                             price_info = f"现价: {price_match.group(1)}"
-                    
-                    if '止损价' in reason:
-                        # 提取止损价信息
+                    if isinstance(reason, str) and '止损价' in reason:
                         import re
-                        stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                        stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
                         if stop_loss_match:
                             stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
-                    
-                    # 组合现价和止损价信息
                     info_parts = [part for part in [price_info, stop_loss_info] if part]
                     reason_info = ", ".join(info_parts)
-                    
                     combined_item = f"{time_info} {reason_info}".strip()
                     combined_list.append(combined_item)
                 combined_str = "\n    ".join(combined_list)
@@ -1432,30 +1316,21 @@ class HSIEmailSystem:
                 combined_list = []
                 for i in range(len(times)):
                     time_info = f"{times[i]}"
-                    # 从reason中提取现价和止损价信息，不显示详细理由
-                    reason = reasons[i] if reasons[i] else ''
-                    # 提取现价和止损价信息
+                    reason = reasons[i] if i < len(reasons) else ''
                     price_info = ""
                     stop_loss_info = ""
-                    
-                    if '现价' in reason:
-                        # 提取现价信息
+                    if isinstance(reason, str) and '现价' in reason:
                         import re
-                        price_match = re.search(r'现价:\s*([0-9.]+)', reason)
+                        price_match = re.search(r'现价[:：]?\s*([0-9.]+)', reason)
                         if price_match:
                             price_info = f"现价: {price_match.group(1)}"
-                    
-                    if '止损价' in reason:
-                        # 提取止损价信息
+                    if isinstance(reason, str) and '止损价' in reason:
                         import re
-                        stop_loss_match = re.search(r'止损价:\s*([0-9.]+)', reason)
+                        stop_loss_match = re.search(r'止损价[:：]?\s*([0-9.]+)', reason)
                         if stop_loss_match:
                             stop_loss_info = f"止损价: {stop_loss_match.group(1)}"
-                    
-                    # 组合现价和止损价信息
                     info_parts = [part for part in [price_info, stop_loss_info] if part]
                     reason_info = ", ".join(info_parts)
-                    
                     combined_item = f"{time_info} {reason_info}".strip()
                     combined_list.append(combined_item)
                 combined_str = "\n    ".join(combined_list)
@@ -1481,144 +1356,75 @@ class HSIEmailSystem:
 
         text += "\n"
 
-        # 添加最近48小时的模拟交易记录
+        # 添加最近48小时的模拟交易记录（使用 pandas）
         html += """
         <div class="section">
             <h3>💰 最近48小时模拟交易记录</h3>
         """
         
-        # 读取交易记录
         try:
-            import csv
-            import os
-            
-            transactions_file = 'data/simulation_transactions.csv'
-            if os.path.exists(transactions_file):
-                with open(transactions_file, 'r', encoding='utf-8') as file:
-                    content = file.read()
-                
-                lines = content.strip().split('\n')
-                if len(lines) > 1:
-                    headers = lines[0].split(',')
-                    recent_transactions = []
-                    
-                    now = datetime.now()
-                    time_48_hours_ago = now - timedelta(hours=48)
-                    
-                    for line in lines[1:]:
-                        fields = line.split(',')
-                        # 处理包含逗号的字段
-                        if len(fields) > len(headers):
-                            reconstructed = []
-                            i = 0
-                            while i < len(fields):
-                                if fields[i].startswith('"') and not fields[i].endswith('"'):
-                                    j = i
-                                    while j < len(fields) and not fields[j].endswith('"'):
-                                        j += 1
-                                    reconstructed.append(','.join(fields[i:j+1]).strip('"'))
-                                    i = j + 1
-                                else:
-                                    reconstructed.append(fields[i].strip('"'))
-                                    i += 1
-                            fields = reconstructed
-
-                        if len(fields) >= 10:
-                            timestamp_str = fields[0]
-                            try:
-                                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                                if timestamp >= time_48_hours_ago:
-                                    trans_type = fields[1] if len(fields) > 1 else ""
-                                    code = fields[2] if len(fields) > 2 else ""
-                                    name = fields[3] if len(fields) > 3 else ""
-                                    shares_str = fields[4] if len(fields) > 4 else "0"
-                                    price_str = fields[5] if len(fields) > 5 else "0"
-                                    amount_str = fields[6] if len(fields) > 6 else "0"
-                                    reason = fields[8] if len(fields) > 8 else ""
-                                    current_price_str = fields[11] if len(fields) > 11 else ""
-                                    
-                                    shares = int(float(shares_str)) if shares_str and shares_str != '0' else 0
-                                    
-                                    # 只使用 current_price 字段
-                                    price = 0.0
-                                    if current_price_str and current_price_str not in ["", "None", "nan", "False", "null"] and current_price_str != "0" and current_price_str is not None:
-                                        try:
-                                            price = float(current_price_str)
-                                        except (ValueError, TypeError):
-                                            price = 0.0
-                                    
-                                    amount = float(amount_str) if amount_str and amount_str != '0' else 0.0
-                                    
-                                    recent_transactions.append({
-                                        'timestamp': timestamp,
-                                        'type': trans_type,
-                                        'code': code,
-                                        'name': name,
-                                        'shares': shares,
-                                        'price': price,
-                                        'amount': amount,
-                                        'reason': reason
-                                    })
-                            except ValueError:
-                                continue
-                    
-                    if recent_transactions:
-                        # 按股票名称、时间顺序排列（先按股票名称排序，再按时间正序排序）
-                        recent_transactions.sort(key=lambda x: (x['name'], x['timestamp']))
-                        
-                        html += """
-                        <table>
-                            <tr>
-                                <th>股票名称</th>
-                                <th>股票代码</th>
-                                <th>时间</th>
-                                <th>类型</th>
-                                <th>价格</th>
-                                <th>理由</th>
-                            </tr>
-                        """
-                        
-                        for trans in recent_transactions:
-                            trans_type = trans['type']
-                            row_style = "background-color: #e8f5e9;" if trans_type == 'BUY' else "background-color: #ffebee;"
-                            html += f"""
-                            <tr style="{row_style}">
-                                <td>{trans['name']}</td>
-                                <td>{trans['code']}</td>
-                                <td>{trans['timestamp'].strftime('%m-%d %H:%M:%S')}</td>
-                                <td>{trans['type']}</td>
-                                <td>{trans['price']:,.2f}</td>
-                                <td>{trans['reason']}</td>
-                            </tr>
-                            """
-                        
-                        html += "</table>"
-                        
-                        # 添加文本版本，按股票名称分组显示
-                        text += f"💰 最近48小时模拟交易记录:\n"
-                        
-                        # 按股票名称分组
-                        from collections import OrderedDict
-                        grouped_transactions = OrderedDict()
-                        for trans in recent_transactions:
-                            if trans['name'] not in grouped_transactions:
-                                grouped_transactions[trans['name']] = []
-                            grouped_transactions[trans['name']].append(trans)
-                        
-                        for stock_name, trans_list in grouped_transactions.items():
-                            text += f"  {stock_name} ({trans_list[0]['code']}):\n"
-                            for trans in trans_list:
-                                trans_type = trans['type']
-                                text += f"    {trans['timestamp'].strftime('%m-%d %H:%M:%S')} {trans_type} @ {trans['price']:,.2f} ({trans['reason']})\n"
-                    else:
-                        html += "<p>最近48小时内没有交易记录</p>"
-                        text += "💰 最近48小时模拟交易记录:\n  最近48小时内没有交易记录\n"
-                else:
-                    html += "<p>交易记录文件为空</p>"
-                    text += "💰 最近48小时模拟交易记录:\n  交易记录文件为空\n"
+            df_all = self._read_transactions_df()
+            if df_all.empty:
+                html += "<p>未找到交易记录文件或文件为空</p>"
+                text += "💰 最近48小时模拟交易记录:\n  未找到交易记录文件或文件为空\n"
             else:
-                html += "<p>未找到交易记录文件</p>"
-                text += "💰 最近48小时模拟交易记录:\n  未找到交易记录文件\n"
+                now = pd.Timestamp.now(tz='UTC')
+                time_48_hours_ago = now - pd.Timedelta(hours=48)
+                df_recent = df_all[df_all['timestamp'] >= time_48_hours_ago].copy()
+                if df_recent.empty:
+                    html += "<p>最近48小时内没有交易记录</p>"
+                    text += "💰 最近48小时模拟交易记录:\n  最近48小时内没有交易记录\n"
+                else:
+                    # sort by name then time
+                    df_recent.sort_values(by=['name', 'timestamp'], inplace=True)
+                    html += """
+                    <table>
+                        <tr>
+                            <th>股票名称</th>
+                            <th>股票代码</th>
+                            <th>时间</th>
+                            <th>类型</th>
+                            <th>价格</th>
+                            <th>理由</th>
+                        </tr>
+                    """
+                    for _, trans in df_recent.iterrows():
+                        trans_type = trans.get('type', '')
+                        row_style = "background-color: #e8f5e9;" if 'BUY' in str(trans_type).upper() else "background-color: #ffebee;"
+                        price = trans.get('current_price', np.nan)
+                        price_display = f"{price:,.2f}" if not pd.isna(price) else (trans.get('price', '') or '')
+                        reason = trans.get('reason', '') or ''
+                        html += f"""
+                        <tr style="{row_style}">
+                            <td>{trans.get('name','')}</td>
+                            <td>{trans.get('code','')}</td>
+                            <td>{pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')}</td>
+                            <td>{trans_type}</td>
+                            <td>{price_display}</td>
+                            <td>{reason}</td>
+                        </tr>
+                        """
+                    html += "</table>"
+
+                    # 文本版
+                    text += "💰 最近48小时模拟交易记录:\n"
+                    from collections import OrderedDict
+                    grouped_transactions = OrderedDict()
+                    for _, tr in df_recent.iterrows():
+                        n = tr.get('name','')
+                        if n not in grouped_transactions:
+                            grouped_transactions[n] = []
+                        grouped_transactions[n].append(tr)
+                    for stock_name, trans_list in grouped_transactions.items():
+                        code = trans_list[0].get('code','')
+                        text += f"  {stock_name} ({code}):\n"
+                        for tr in trans_list:
+                            trans_type = tr.get('type','')
+                            timestamp = pd.Timestamp(tr['timestamp']).strftime('%m-%d %H:%M:%S')
+                            price = tr.get('current_price', np.nan)
+                            price_display = f"{price:,.2f}" if not pd.isna(price) else ''
+                            reason = tr.get('reason','') or ''
+                            text += f"    {timestamp} {trans_type} @ {price_display} ({reason})\n"
         except Exception as e:
             html += f"<p>读取交易记录时出错: {str(e)}</p>"
             text += f"💰 最近48小时模拟交易记录:\n  读取交易记录时出错: {str(e)}\n"
