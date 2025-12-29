@@ -11594,6 +11594,314 @@
       "success": false,
       "stop_loss_price": 80.0,
       "current_price": 83.25
+    },
+    {
+      "timestamp": "2025-12-29T13:13:25.945456",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "资金大幅流出且CMF趋势信号恶化，技术面超卖但无反弹动能，负面新闻质疑估值透支，三重风险共振不符合平衡型稳健要求",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.41
+    },
+    {
+      "timestamp": "2025-12-29T13:13:30.652825",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金巨幅流出规模居首，位置低位但缺乏技术反弹信号，风险等级中高且新闻影响不足，需减持规避潜在下行风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.12
+    },
+    {
+      "timestamp": "2025-12-29T13:13:35.003373",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 70.35,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金净流入且CMF趋势信号为1，技术面RSI健康区间与MACD多头共振，AI新闻催化驱动估值修复，位置低位提供高安全边际，符合平衡型风险偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 66.0,
+      "current_price": 70.35
+    },
+    {
+      "timestamp": "2025-12-29T13:13:38.385132",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 411.6,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金最高流入且相对强度128.26%，技术面布林带突破与MACD金叉确认强势，IPO政策红利持续，波动率低于科技股风险收益比佳，适合平衡型稳健配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 398.0,
+      "current_price": 411.6
+    },
+    {
+      "timestamp": "2025-12-29T13:13:41.693710",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 82.7,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "保险板块防御属性突出，受益低利率环境，相对强度差值提供安全边际，新闻支持内地市场扩张，ROE优势匹配平衡型价值与成长兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 82.7
+    },
+    {
+      "timestamp": "2025-12-29T13:39:09.787346",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面高位滞涨（位置93.01%+RSI 71.92超买），MACD恶化且量比0.45显示资金分歧，短期回调风险积聚不符合平衡型风险偏好",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 122.3
+    },
+    {
+      "timestamp": "2025-12-29T13:39:15.490586",
+      "type": "BUY",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 99.15,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "位置31.44%中低位提供安全边际，放量上涨验证趋势，欧洲销售增长235%驱动基本面改善，估值被错杀且符合平衡型稳健增长需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 94,
+      "current_price": 99.15
+    },
+    {
+      "timestamp": "2025-12-29T13:39:18.904333",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 70.75,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "位置27.36%低位安全边际高，MACD改善信号与AI新闻催化协同，南向资金流入支撑趋势，估值具吸引力且风险收益比佳 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 67,
+      "current_price": 70.75
+    },
+    {
+      "timestamp": "2025-12-29T14:01:11.925031",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面高位滞涨（位置94.32%+RSI 73.16超买）、MACD柱状图变化率-0.1221动能衰减且量比0.52显示抛压隐现，CMF=-0.2249恶化，虽新闻正面但风险等级高不符合平衡型稳健要求",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 122.3
+    },
+    {
+      "timestamp": "2025-12-29T14:01:15.182639",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "缩量回调主导（缩量回调=1）、CMF趋势信号恶化且技术面弱势（RSI 31.42接近超卖但MACD柱状图变化率信号=0），负面新闻质疑估值透支，三重风险共振不符合平衡型风险偏好",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.44
+    },
+    {
+      "timestamp": "2025-12-29T14:01:19.647002",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 70.65,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金持续流入（3日累计>5%），技术面RSI健康（55.98未超买）、MACD柱状图变化率信号为正（+0.2996）且布林带宽度放大，位置27.90%低位提供安全边际，AI芯片国产化新闻驱动（2025-12-23全球资金加注中国AI）与基本面共振，符合平衡型投资者价值与成长兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 65.44,
+      "current_price": 70.65
+    },
+    {
+      "timestamp": "2025-12-29T14:01:23.336318",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 410.6,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金流入显著（相对强度128.26%），技术面布林带突破0.84、MACD柱状图变化率信号为正（+0.1457）且位置25.33%低位安全边际高，IPO活跃（2025年募资354亿美元）新闻持续催化，波动率4.48%低于科技股，风险收益比佳匹配平衡型稳健配置需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 380.73,
+      "current_price": 410.6
+    },
+    {
+      "timestamp": "2025-12-29T14:38:53.251348",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面高位92.58%超买RSI 71.51，资金流向冲突（南向资金流入但CMF=-0.2074<0），风险等级高且新闻与技术面背离",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 122.0
+    },
+    {
+      "timestamp": "2025-12-29T14:38:56.772508",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面超卖RSI 30.53未反弹，缩量回调量比0.88<1，负面新闻质疑估值透支且资金流出-12.80亿港元",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.43
+    },
+    {
+      "timestamp": "2025-12-29T14:38:59.369305",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "趋势破坏缩量回调（成交额z-score -0.15），资金流出-28.48亿港元居首，新闻利空苹果反弹挤压市场份额",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.78
+    },
+    {
+      "timestamp": "2025-12-29T14:39:03.493723",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 104.5,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金流入+4.33亿港元（关注清单最高），CMF=0.2283>0趋势强，技术面RSI 60.34健康区间MACD上升，新闻面本地生活旺季催化，相对强度+3.37%跑赢恒指 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 100.0,
+      "current_price": 104.5
+    },
+    {
+      "timestamp": "2025-12-29T14:39:08.767714",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.23,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "南向资金流入+301.35亿港元（关注清单最高），股息率6.2%提供稳定收益，技术面RSI 52.43无超买压力，基本面稳健资产质量改善（不良率1.37%） (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 6.0,
+      "current_price": 6.23
+    },
+    {
+      "timestamp": "2025-12-29T14:39:11.299289",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 70.45,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "位置24.82%低位安全边际高，MACD柱0.6532加速上升，AI芯片国产化新闻驱动（全球资金加注中国AI），南向资金流入+9.33亿港元支撑趋势 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 66.0,
+      "current_price": 70.45
+    },
+    {
+      "timestamp": "2025-12-29T15:35:41.811953",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面顶背离恶化（RSI下行vs价格反弹），南向资金单日流出-7.28万，缩量回调且新闻质疑抵消AI芯片利好，高风险不符合平衡型稳健要求",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 143.6
+    },
+    {
+      "timestamp": "2025-12-29T15:35:45.127688",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 424.18929405190283,
+      "reason": "技术面超卖无反弹动能（RSI 30.1），缩量回调主导且OBV-13.01亿资金流出，负面新闻质疑估值透支，三重风险共振需主动回避",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.4
+    },
+    {
+      "timestamp": "2025-12-29T15:35:49.091068",
+      "type": "BUY",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 96.95,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "位置低位21.04%提供安全边际，欧洲销售暴增235%驱动基本面改善，技术面放量上涨（量比1.50）且MACD加速上行，符合平衡型稳健增长需求与历史买入逻辑 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 92.0,
+      "current_price": 96.95
+    },
+    {
+      "timestamp": "2025-12-29T15:35:51.293607",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 408.6,
+      "amount": 0,
+      "capital_after": 424.18929405190283,
+      "reason": "位置低位22.7%支撑反弹，IPO募资全球第1新闻催化（354亿美元），技术面布林带突破0.76且CMF资金流入，波动率4.48%低于科技股，匹配平衡型价值成长兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 400.0,
+      "current_price": 408.6
     }
   ],
   "portfolio_history": [
@@ -21462,259 +21770,251 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2025-12-29 10:09:18",
+      "timestamp": "2025-12-29 14:01:19",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 70.65,
+      "amount": 0,
+      "reason": "南向资金持续流入（3日累计>5%），技术面RSI健康（55.98未超买）、MACD柱状图变化率信号为正（+0.2996）且布林带宽度放大，位置27.90%低位提供安全边际，AI芯片国产化新闻驱动（2025-12-23全球资金加注中国AI）与基本面共振，符合平衡型投资者价值与成长兼顾需求 (原因: 资金不足)",
+      "capital_after": 424.18929405190283,
+      "success": false,
+      "stop_loss_price": 65.44,
+      "current_price": 70.65
+    },
+    {
+      "timestamp": "2025-12-29 14:01:23",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 410.6,
+      "amount": 0,
+      "reason": "南向资金流入显著（相对强度128.26%），技术面布林带突破0.84、MACD柱状图变化率信号为正（+0.1457）且位置25.33%低位安全边际高，IPO活跃（2025年募资354亿美元）新闻持续催化，波动率4.48%低于科技股，风险收益比佳匹配平衡型稳健配置需求 (原因: 资金不足)",
+      "capital_after": 424.18929405190283,
+      "success": false,
+      "stop_loss_price": 380.73,
+      "current_price": 410.6
+    },
+    {
+      "timestamp": "2025-12-29 14:38:53",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "南向资金流入+4.33亿港元（关注清单最高），CMF=0.2283>0趋势强，技术面RSI 60.34健康区间MACD上升，新闻面本地生活旺季催化，相对强度+3.37%跑赢恒指",
+          "allocation_pct": 15,
+          "stop_loss_price": 100.0
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "南向资金流入+301.35亿港元（关注清单最高），股息率6.2%提供稳定收益，技术面RSI 52.43无超买压力，基本面稳健资产质量改善（不良率1.37%）",
+          "allocation_pct": 15,
+          "stop_loss_price": 6.0
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "位置24.82%低位安全边际高，MACD柱0.6532加速上升，AI芯片国产化新闻驱动（全球资金加注中国AI），南向资金流入+9.33亿港元支撑趋势",
+          "allocation_pct": 15,
+          "stop_loss_price": 66.0
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "技术面高位92.58%超买RSI 71.51，资金流向冲突（南向资金流入但CMF=-0.2074<0），风险等级高且新闻与技术面背离",
+          "stop_loss_triggered": false
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "技术面超卖RSI 30.53未反弹，缩量回调量比0.88<1，负面新闻质疑估值透支且资金流出-12.80亿港元",
+          "stop_loss_triggered": false
+        },
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "趋势破坏缩量回调（成交额z-score -0.15），资金流出-28.48亿港元居首，新闻利空苹果反弹挤压市场份额",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-29 14:38:53",
       "type": "SELL",
       "code": "0005.HK",
       "name": "汇丰银行",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "技术面顶背离（RSI 75.34超买+缩量回调信号），资金流入弱于板块均值且OBV下降，新闻利好与技术面背离存在过度炒作风险",
+      "reason": "技术面高位92.58%超买RSI 71.51，资金流向冲突（南向资金流入但CMF=-0.2074<0），风险等级高且新闻与技术面背离",
       "capital_after": 424.18929405190283,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 122.7
+      "current_price": 122.0
     },
     {
-      "timestamp": "2025-12-29 10:09:23",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "南向资金连续流出-1.99亿港元，缩量回调信号与超卖RSI 27.03形成矛盾信号，技术面与资金面双重恶化且无新闻支撑",
-      "capital_after": 424.18929405190283,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 82.4
-    },
-    {
-      "timestamp": "2025-12-29 10:09:29",
-      "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 71.75,
-      "amount": 0,
-      "reason": "南向资金强流入+10.24亿港元，技术面强多头信号（RSI 57.65/MACD加速/布林带突破0.89），新闻'全球投资者转向中国AI'驱动持续性上涨，匹配度高 (原因: 资金不足)",
-      "capital_after": 424.18929405190283,
-      "success": false,
-      "stop_loss_price": 22.5,
-      "current_price": 71.75
-    },
-    {
-      "timestamp": "2025-12-29 10:09:32",
-      "type": "BUY",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 105.3,
-      "amount": 0,
-      "reason": "南向资金流入+4.08亿港元，技术面强多头信号（布林带突破1.0/MACD加速），消费复苏主线与'股价稳定化'新闻协同，相对强度差值+4.46%领跑板块 (原因: 资金不足)",
-      "capital_after": 424.18929405190283,
-      "success": false,
-      "stop_loss_price": 180.0,
-      "current_price": 105.3
-    },
-    {
-      "timestamp": "2025-12-29 10:57:46",
-      "buy": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "资金技术面双重支撑（南向资金连续流入+OBV正向），能源周期复苏明确，位置中位43.19%提供安全边际，新闻催化（LNG协议）强化趋势",
-          "allocation_pct": 15,
-          "stop_loss_price": 9.4
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "AI芯片国产替代强催化（新闻热度高），技术面低位强势（位置30.8%+MACD加速），南向资金流入支撑，估值安全边际高",
-          "allocation_pct": 15,
-          "stop_loss_price": 68.0
-        }
-      ],
-      "sell": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "三重利空共振（资金持续流出-12.51亿港元+缩量回调信号+负面新闻质疑长期价值），技术面下行风险未释放",
-          "stop_loss_triggered": false
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "技术面恶化未止跌（MACD加速下行+缩量回调），资金流出且基本面隐忧，历史决策已验证风险一致性",
-          "stop_loss_triggered": false
-        }
-      ]
-    },
-    {
-      "timestamp": "2025-12-29 10:57:47",
+      "timestamp": "2025-12-29 14:38:56",
       "type": "SELL",
       "code": "0728.HK",
       "name": "中国电信",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "三重利空共振（资金持续流出-12.51亿港元+缩量回调信号+负面新闻质疑长期价值），技术面下行风险未释放",
+      "reason": "技术面超卖RSI 30.53未反弹，缩量回调量比0.88<1，负面新闻质疑估值透支且资金流出-12.80亿港元",
       "capital_after": 424.18929405190283,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 5.48
+      "current_price": 5.43
     },
     {
-      "timestamp": "2025-12-29 10:57:51",
+      "timestamp": "2025-12-29 14:38:59",
       "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
+      "code": "1810.HK",
+      "name": "小米集团-W",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "技术面恶化未止跌（MACD加速下行+缩量回调），资金流出且基本面隐忧，历史决策已验证风险一致性",
+      "reason": "趋势破坏缩量回调（成交额z-score -0.15），资金流出-28.48亿港元居首，新闻利空苹果反弹挤压市场份额",
       "capital_after": 424.18929405190283,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 82.15
+      "current_price": 38.78
     },
     {
-      "timestamp": "2025-12-29 10:57:56",
+      "timestamp": "2025-12-29 14:39:03",
       "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
+      "code": "3690.HK",
+      "name": "美团-W",
       "shares": 0,
-      "price": 9.84,
+      "price": 104.5,
       "amount": 0,
-      "reason": "资金技术面双重支撑（南向资金连续流入+OBV正向），能源周期复苏明确，位置中位43.19%提供安全边际，新闻催化（LNG协议）强化趋势 (原因: 资金不足)",
+      "reason": "南向资金流入+4.33亿港元（关注清单最高），CMF=0.2283>0趋势强，技术面RSI 60.34健康区间MACD上升，新闻面本地生活旺季催化，相对强度+3.37%跑赢恒指 (原因: 资金不足)",
       "capital_after": 424.18929405190283,
       "success": false,
-      "stop_loss_price": 9.4,
-      "current_price": 9.84
+      "stop_loss_price": 100.0,
+      "current_price": 104.5
     },
     {
-      "timestamp": "2025-12-29 10:57:59",
+      "timestamp": "2025-12-29 14:39:08",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.23,
+      "amount": 0,
+      "reason": "南向资金流入+301.35亿港元（关注清单最高），股息率6.2%提供稳定收益，技术面RSI 52.43无超买压力，基本面稳健资产质量改善（不良率1.37%） (原因: 资金不足)",
+      "capital_after": 424.18929405190283,
+      "success": false,
+      "stop_loss_price": 6.0,
+      "current_price": 6.23
+    },
+    {
+      "timestamp": "2025-12-29 14:39:11",
       "type": "BUY",
       "code": "0981.HK",
       "name": "中芯国际",
       "shares": 0,
-      "price": 72.0,
+      "price": 70.45,
       "amount": 0,
-      "reason": "AI芯片国产替代强催化（新闻热度高），技术面低位强势（位置30.8%+MACD加速），南向资金流入支撑，估值安全边际高 (原因: 资金不足)",
+      "reason": "位置24.82%低位安全边际高，MACD柱0.6532加速上升，AI芯片国产化新闻驱动（全球资金加注中国AI），南向资金流入+9.33亿港元支撑趋势 (原因: 资金不足)",
       "capital_after": 424.18929405190283,
       "success": false,
-      "stop_loss_price": 68.0,
-      "current_price": 72.0
+      "stop_loss_price": 66.0,
+      "current_price": 70.45
     },
     {
-      "timestamp": "2025-12-29 11:45:44",
+      "timestamp": "2025-12-29 15:35:41",
       "buy": [
         {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "南向资金流入强劲（+2.33亿港元），相对强度差值8.66%全清单最高，技术面短期回调后有望延续升势，新闻催化私行业务强化且估值合理，符合平衡型投资者价值与成长兼顾需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 115.0
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "南向资金强流入（+10.41亿港元），技术面RSI 57.0健康中位与MACD/MACD共振上涨，AI芯片国产替代主题明确，新闻驱动全球投资者转向中国AI，趋势可持续性强且风险收益比佳",
-          "allocation_pct": 15,
-          "stop_loss_price": 67.5
-        },
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "保险板块防御属性突出，受益低利率环境，相对强度差值6.26%提供安全边际，新闻支持中国内地市场扩张及ROE优势，适合平衡型投资者稳健配置需求",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "位置低位21.04%提供安全边际，欧洲销售暴增235%驱动基本面改善，技术面放量上涨（量比1.50）且MACD加速上行，符合平衡型稳健增长需求与历史买入逻辑",
           "allocation_pct": 10,
-          "stop_loss_price": 80.0
+          "stop_loss_price": 92.0
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "位置低位22.7%支撑反弹，IPO募资全球第1新闻催化（354亿美元），技术面布林带突破0.76且CMF资金流入，波动率4.48%低于科技股，匹配平衡型价值成长兼顾需求",
+          "allocation_pct": 7,
+          "stop_loss_price": 400.0
         }
       ],
       "sell": [
         {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "基本面脆弱无实质业务催化，技术面价格与MACD背离且Williams %R极端超卖，资金异常疑似主力对倒出货，高波动率44.08%构成流动性风险，平衡型投资者应严格回避",
-          "stop_loss_triggered": false
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "技术面顶背离恶化（RSI下行vs价格反弹），南向资金单日流出-7.28万，缩量回调且新闻质疑抵消AI芯片利好，高风险不符合平衡型稳健要求",
+          "stop_loss_triggered": true
         },
         {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "位置98.28%极端高位且布林带突破上轨，RSI 63.33与新闻投机情绪过热形成共振，短期过热风险积聚，不符合平衡型投资者风险偏好，应减持规避回调风险",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "技术面超卖无反弹动能（RSI 30.1），缩量回调主导且OBV-13.01亿资金流出，负面新闻质疑估值透支，三重风险共振需主动回避",
           "stop_loss_triggered": false
         }
       ]
     },
     {
-      "timestamp": "2025-12-29 11:45:44",
+      "timestamp": "2025-12-29 15:35:41",
       "type": "SELL",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "基本面脆弱无实质业务催化，技术面价格与MACD背离且Williams %R极端超卖，资金异常疑似主力对倒出货，高波动率44.08%构成流动性风险，平衡型投资者应严格回避",
+      "reason": "技术面顶背离恶化（RSI下行vs价格反弹），南向资金单日流出-7.28万，缩量回调且新闻质疑抵消AI芯片利好，高风险不符合平衡型稳健要求",
       "capital_after": 424.18929405190283,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 18.98
+      "current_price": 143.6
     },
     {
-      "timestamp": "2025-12-29 11:45:48",
+      "timestamp": "2025-12-29 15:35:45",
       "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团-W",
+      "code": "0728.HK",
+      "name": "中国电信",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "位置98.28%极端高位且布林带突破上轨，RSI 63.33与新闻投机情绪过热形成共振，短期过热风险积聚，不符合平衡型投资者风险偏好，应减持规避回调风险",
+      "reason": "技术面超卖无反弹动能（RSI 30.1），缩量回调主导且OBV-13.01亿资金流出，负面新闻质疑估值透支，三重风险共振需主动回避",
       "capital_after": 424.18929405190283,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 105.7
+      "current_price": 5.4
     },
     {
-      "timestamp": "2025-12-29 11:45:53",
+      "timestamp": "2025-12-29 15:35:49",
       "type": "BUY",
-      "code": "0005.HK",
-      "name": "汇丰银行",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
       "shares": 0,
-      "price": 122.7,
+      "price": 96.95,
       "amount": 0,
-      "reason": "南向资金流入强劲（+2.33亿港元），相对强度差值8.66%全清单最高，技术面短期回调后有望延续升势，新闻催化私行业务强化且估值合理，符合平衡型投资者价值与成长兼顾需求 (原因: 资金不足)",
+      "reason": "位置低位21.04%提供安全边际，欧洲销售暴增235%驱动基本面改善，技术面放量上涨（量比1.50）且MACD加速上行，符合平衡型稳健增长需求与历史买入逻辑 (原因: 资金不足)",
       "capital_after": 424.18929405190283,
       "success": false,
-      "stop_loss_price": 115.0,
-      "current_price": 122.7
+      "stop_loss_price": 92.0,
+      "current_price": 96.95
     },
     {
-      "timestamp": "2025-12-29 11:45:56",
+      "timestamp": "2025-12-29 15:35:51",
       "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
+      "code": "0388.HK",
+      "name": "香港交易所",
       "shares": 0,
-      "price": 71.5,
+      "price": 408.6,
       "amount": 0,
-      "reason": "南向资金强流入（+10.41亿港元），技术面RSI 57.0健康中位与MACD/MACD共振上涨，AI芯片国产替代主题明确，新闻驱动全球投资者转向中国AI，趋势可持续性强且风险收益比佳 (原因: 资金不足)",
+      "reason": "位置低位22.7%支撑反弹，IPO募资全球第1新闻催化（354亿美元），技术面布林带突破0.76且CMF资金流入，波动率4.48%低于科技股，匹配平衡型价值成长兼顾需求 (原因: 资金不足)",
       "capital_after": 424.18929405190283,
       "success": false,
-      "stop_loss_price": 67.5,
-      "current_price": 71.5
-    },
-    {
-      "timestamp": "2025-12-29 11:45:58",
-      "type": "BUY",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 83.25,
-      "amount": 0,
-      "reason": "保险板块防御属性突出，受益低利率环境，相对强度差值6.26%提供安全边际，新闻支持中国内地市场扩张及ROE优势，适合平衡型投资者稳健配置需求 (原因: 资金不足)",
-      "capital_after": 424.18929405190283,
-      "success": false,
-      "stop_loss_price": 80.0,
-      "current_price": 83.25
+      "stop_loss_price": 400.0,
+      "current_price": 408.6
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
