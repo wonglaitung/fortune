@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 113.18929405191739,
+  "capital": 1444.1892940519174,
   "positions": {
     "0388.HK": {
       "shares": 500,
@@ -13,19 +13,14 @@
       "stop_loss_price": 90.0
     },
     "0883.HK": {
-      "shares": 12600,
-      "avg_price": 20.96920634920635,
-      "stop_loss_price": 20.5
+      "shares": 12800,
+      "avg_price": 20.975625,
+      "stop_loss_price": 19.39
     },
     "1138.HK": {
       "shares": 19300,
       "avg_price": 10.008549222797928,
       "stop_loss_price": 6.9
-    },
-    "1398.HK": {
-      "shares": 900,
-      "avg_price": 6.167777777777777,
-      "stop_loss_price": 5.95
     },
     "0981.HK": {
       "shares": 1900,
@@ -12135,6 +12130,272 @@
       "success": false,
       "stop_loss_price": 5.62,
       "current_price": 6.25
+    },
+    {
+      "timestamp": "2025-12-30T13:28:53.007128",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金大额流出-27.36亿港元（清单最大流出），技术面弱势（MACD无改善、空头排列）与新闻利好背离反映竞争加剧风险，资金、技术、新闻三重恶化验证高风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.2
+    },
+    {
+      "timestamp": "2025-12-30T13:28:58.133518",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 72.45,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入10.51亿港元验证持续性，放量上涨信号唯一且技术面中低位强势（位置32.43%，MACD改善），新闻催化AI芯片需求爆发，相对强度差值6.69%领跑市场，符合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 68.0,
+      "current_price": 72.45
+    },
+    {
+      "timestamp": "2025-12-30T13:29:00.765036",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.66,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入13.08亿港元居前，LNG长期协议锁定需求消除波动担忧，技术面稳健（RSI 60.15健康区间），高股息率6%提供安全边际，能源板块领涨且波动率适中，契合平衡型防御配置需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.8,
+      "current_price": 21.66
+    },
+    {
+      "timestamp": "2025-12-30T13:29:03.761618",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 53.1,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入2.73亿港元持续验证，高股息率5-7%提供下行保护，技术面高位但MACD改善（信号=1），银行板块中相对强度弹性最佳（差值2.69%），基本面稳健匹配经济复苏预期，适合平衡型价值端配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 50.5,
+      "current_price": 53.1
+    },
+    {
+      "timestamp": "2025-12-30T14:04:01.260100",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "技术面出货信号与缩量回调共振（MACD死叉，Williams %R=-116.9），南向资金流出9218万港元，受美国审查中企隐性利空压制，生物科技行业估值泡沫未挤尽",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 31.74
+    },
+    {
+      "timestamp": "2025-12-30T14:04:04.746610",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金大幅流出1302亿港元（清单最严重），技术面超卖未反弹（RSI=29.16但MACD死叉），缩量回调信号确认弱势，行业增长放缓质疑压制估值",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.38
+    },
+    {
+      "timestamp": "2025-12-30T14:04:07.401591",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流出2722亿港元（清单最高），技术面跑输恒指7.34%且MACD死叉，手机出货受外资挤压+电动车业务不明朗，消费电子竞争加剧风险高",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.5
+    },
+    {
+      "timestamp": "2025-12-30T14:04:10.930984",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 72.35,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金大流入1060亿港元，技术面RSI/MACD/布林带共振（RSI=57.91未超买，MACD动能加速），AI芯片需求爆发催化，相对强度差值6.54%领跑市场，符合平衡型对成长与价值的兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 68.0,
+      "current_price": 72.35
+    },
+    {
+      "timestamp": "2025-12-30T14:04:13.172003",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.52,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入1319亿港元，LNG长期协议保障需求确定性，技术面稳健（布林带突破0.73，5日均线偏离3.49%），股息率5.2%提供安全边际，波动率适中且独立于板块走势 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.5,
+      "current_price": 21.52
+    },
+    {
+      "timestamp": "2025-12-30T14:04:16.178590",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.26,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入3319亿港元（清单最高），高股息率6.5%+低估值（PB 0.6x），技术面MACD加速上行（变化率2.4372），经济复苏预期驱动估值修复，风险收益比最优 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.9,
+      "current_price": 6.26
+    },
+    {
+      "timestamp": "2025-12-30T14:57:28.601588",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金大额流出（27.02亿港元，清单最高），技术面下行趋势（MACD柱状图负值、相对强度-7.35%），新闻负面催化竞争风险（外国手机出货激增），资金、技术、新闻三重恶化验证高风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.52
+    },
+    {
+      "timestamp": "2025-12-30T14:57:31.951703",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 113.18929405191739,
+      "reason": "技术面超买顶背离（RSI 72.37、位置96.07%），利好出尽风险（研报利好但无新增催化剂），高位回调压力显著，基本面受香港地产风险压制，建议止盈规避短期波动",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 123.0
+    },
+    {
+      "timestamp": "2025-12-30T14:57:37.594332",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 72.85,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "南向资金流入强劲（10.70亿港元），AI芯片需求爆发催化，技术面多头共振（RSI健康、MACD加速上行），估值合理（动态PE 35x），符合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 68.0,
+      "current_price": 72.85
+    },
+    {
+      "timestamp": "2025-12-30T14:57:40.304540",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.56,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "LNG长期协议保障现金流，高股息率6.8%提供安全边际，技术面稳健（MACD金叉初期、布林带波动适中），能源板块领涨且风险收益比优异，契合平衡型防御配置需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.5,
+      "current_price": 21.56
+    },
+    {
+      "timestamp": "2025-12-30T14:57:44.743573",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.28,
+      "amount": 0,
+      "capital_after": 113.18929405191739,
+      "reason": "高股息率6.5%突出安全边际，估值低位（PB 0.6x破净），南向资金大流入（33.65亿港元）验证持续性，基本面稳健匹配经济复苏预期，适合平衡型防御性配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 6.1,
+      "current_price": 6.28
+    },
+    {
+      "timestamp": "2025-12-30T15:54:35.729005",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 900,
+      "price": 6.23,
+      "amount": 5607.0,
+      "capital_after": 5720.189294051917,
+      "reason": "缩量回调信号为'1'，OBV与价格背离（价格涨0.32%但OBV下降），CMF趋势转弱，结合新闻'ICBC是否仍被低估存疑'，短期获利盘回吐风险高，与历史买入决策因市场恶化需调整",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 6.23
+    },
+    {
+      "timestamp": "2025-12-30T15:54:39.376340",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 5720.189294051917,
+      "reason": "RSI 72.05超买且位置95.2%高位，技术面背离（MACD柱状图变化率转弱），新闻利好但持续性存疑（缩量上涨矛盾信号），短期回调概率高，与历史卖出决策一致",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 122.8
+    },
+    {
+      "timestamp": "2025-12-30T15:54:42.962762",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 72.2,
+      "amount": 0,
+      "capital_after": 5720.189294051917,
+      "reason": "南向资金持续流入（近3日累计超25亿港元），技术面多指标共振（MACD加速上行、布林带突破、位置32.97%低位），新闻面AI芯片需求爆发催化，估值匹配行业高增长，契合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 65.25,
+      "current_price": 72.2
+    },
+    {
+      "timestamp": "2025-12-30T15:54:45.615906",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 200,
+      "price": 21.38,
+      "amount": 4276.0,
+      "capital_after": 1444.1892940519174,
+      "reason": "南向资金大额流入（13.41亿港元），LNG长期协议保障需求确定性，技术面放量上涨稳健（量比1.63、RSI 57.9中性），股息率6.8%提供安全边际，波动率适中且独立于板块走势，符合平衡型防御与收益平衡需求",
+      "success": true,
+      "stop_loss_price": 19.39,
+      "current_price": 21.38
     }
   ],
   "portfolio_history": [
@@ -22016,9 +22277,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "2269.HK": {
           "shares": 0,
@@ -22031,7 +22292,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         }
@@ -22053,9 +22314,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "2269.HK": {
           "shares": 0,
@@ -22068,7 +22329,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         },
@@ -22095,9 +22356,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "2269.HK": {
           "shares": 0,
@@ -22110,7 +22371,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         },
@@ -22137,9 +22398,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "2269.HK": {
           "shares": 0,
@@ -22152,7 +22413,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         },
@@ -22179,9 +22440,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "1138.HK": {
           "shares": 19300,
@@ -22189,7 +22450,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         },
@@ -22216,9 +22477,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "1138.HK": {
           "shares": 19300,
@@ -22226,7 +22487,7 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
         },
@@ -22253,9 +22514,9 @@
           "stop_loss_price": 90.0
         },
         "0883.HK": {
-          "shares": 12600,
-          "avg_price": 20.96920634920635,
-          "stop_loss_price": 20.5
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
         },
         "1138.HK": {
           "shares": 19300,
@@ -22263,9 +22524,73 @@
           "stop_loss_price": 6.9
         },
         "1398.HK": {
-          "shares": 900,
+          "shares": 0,
           "avg_price": 6.167777777777777,
           "stop_loss_price": 5.95
+        },
+        "0981.HK": {
+          "shares": 1900,
+          "avg_price": 70.89736842105263,
+          "stop_loss_price": 68.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-30T15:54:36.286623",
+      "capital": 5720.189294051917,
+      "portfolio_value": 940317.1892940518,
+      "positions": {
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "1211.HK": {
+          "shares": 1400,
+          "avg_price": 93.60714285714286,
+          "stop_loss_price": 90.0
+        },
+        "0883.HK": {
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
+        },
+        "1138.HK": {
+          "shares": 19300,
+          "avg_price": 10.008549222797928,
+          "stop_loss_price": 6.9
+        },
+        "0981.HK": {
+          "shares": 1900,
+          "avg_price": 70.89736842105263,
+          "stop_loss_price": 68.0
+        }
+      }
+    },
+    {
+      "timestamp": "2025-12-30T15:54:46.188939",
+      "capital": 1444.1892940519174,
+      "portfolio_value": 939970.1892940518,
+      "positions": {
+        "0388.HK": {
+          "shares": 500,
+          "avg_price": 410.8,
+          "stop_loss_price": 230.0
+        },
+        "1211.HK": {
+          "shares": 1400,
+          "avg_price": 93.60714285714286,
+          "stop_loss_price": 90.0
+        },
+        "0883.HK": {
+          "shares": 12800,
+          "avg_price": 20.975625,
+          "stop_loss_price": 19.39
+        },
+        "1138.HK": {
+          "shares": 19300,
+          "avg_price": 10.008549222797928,
+          "stop_loss_price": 6.9
         },
         "0981.HK": {
           "shares": 1900,
@@ -22277,225 +22602,246 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2025-12-30 10:24:25",
+      "timestamp": "2025-12-30 14:04:10",
       "type": "BUY",
       "code": "0981.HK",
       "name": "中芯国际",
-      "shares": 300,
-      "price": 71.95,
-      "amount": 21585.0,
-      "reason": "南向资金大流入1024亿港元，技术面低位28.62%，AI芯片需求爆发催化，相对强度5.07%领跑市场，短期目标价+5.2%-7.9%",
-      "capital_after": 117813.1892940519,
-      "success": true,
+      "shares": 0,
+      "price": 72.35,
+      "amount": 0,
+      "reason": "南向资金大流入1060亿港元，技术面RSI/MACD/布林带共振（RSI=57.91未超买，MACD动能加速），AI芯片需求爆发催化，相对强度差值6.54%领跑市场，符合平衡型对成长与价值的兼顾需求 (原因: 资金不足)",
+      "capital_after": 113.18929405191739,
+      "success": false,
       "stop_loss_price": 68.0,
-      "current_price": 71.95
+      "current_price": 72.35
     },
     {
-      "timestamp": "2025-12-30 10:24:30",
+      "timestamp": "2025-12-30 14:04:13",
       "type": "BUY",
       "code": "0883.HK",
       "name": "中国海洋石油",
-      "shares": 5500,
-      "price": 21.4,
-      "amount": 117699.99999999999,
-      "reason": "南向资金流入1268亿港元，LNG长期协议锁定需求对冲油价波动，技术面中位稳健，波动率24.94%提供安全边际，短期目标价+2.5%-4.9%",
+      "shares": 0,
+      "price": 21.52,
+      "amount": 0,
+      "reason": "南向资金流入1319亿港元，LNG长期协议保障需求确定性，技术面稳健（布林带突破0.73，5日均线偏离3.49%），股息率5.2%提供安全边际，波动率适中且独立于板块走势 (原因: 资金不足)",
       "capital_after": 113.18929405191739,
-      "success": true,
+      "success": false,
       "stop_loss_price": 20.5,
-      "current_price": 21.4
+      "current_price": 21.52
     },
     {
-      "timestamp": "2025-12-30 10:24:34",
+      "timestamp": "2025-12-30 14:04:16",
       "type": "BUY",
       "code": "1398.HK",
       "name": "工商银行",
       "shares": 0,
-      "price": 6.27,
+      "price": 6.26,
       "amount": 0,
-      "reason": "南向资金流入3159亿港元居首，高股息率6.5%提供下行保护，估值低位PB 0.55x，适合防御配置，短期目标价+2.3%-3.8% (原因: 资金不足)",
+      "reason": "南向资金流入3319亿港元（清单最高），高股息率6.5%+低估值（PB 0.6x），技术面MACD加速上行（变化率2.4372），经济复苏预期驱动估值修复，风险收益比最优 (原因: 资金不足)",
       "capital_after": 113.18929405191739,
       "success": false,
-      "stop_loss_price": 6.0,
-      "current_price": 6.27
+      "stop_loss_price": 5.9,
+      "current_price": 6.26
     },
     {
-      "timestamp": "2025-12-30 11:06:30",
+      "timestamp": "2025-12-30 14:57:28",
       "buy": [
         {
           "code": "0981.HK",
           "name": "中芯国际",
-          "reason": "南向资金大流入10.36亿港元，技术面强势（RSI 57.62，MACD柱状图正，布林带突破0.91），AI芯片需求爆发催化，相对强度差值6.32%领跑市场，符合平衡型投资者对成长与价值的兼顾需求",
+          "reason": "南向资金流入强劲（10.70亿港元），AI芯片需求爆发催化，技术面多头共振（RSI健康、MACD加速上行），估值合理（动态PE 35x），符合平衡型投资者对成长与价值的兼顾需求",
           "allocation_pct": 15,
-          "stop_loss_price": 66.96
+          "stop_loss_price": 68.0
         },
         {
           "code": "0883.HK",
           "name": "中国海洋石油",
-          "reason": "南向资金流入12.83亿港元，LNG合作深化提供事件驱动持续性，技术面稳健（RSI 57.90，布林带突破0.68），股息率5.2%提供安全边际，能源板块领涨且波动率适中",
-          "allocation_pct": 14,
-          "stop_loss_price": 20.0
+          "reason": "LNG长期协议保障现金流，高股息率6.8%提供安全边际，技术面稳健（MACD金叉初期、布林带波动适中），能源板块领涨且风险收益比优异，契合平衡型防御配置需求",
+          "allocation_pct": 12,
+          "stop_loss_price": 20.5
         },
         {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "南向资金流入4.34亿港元，缩量回调健康（缩量回调=1），技术面中性偏强（RSI 47.74，MACD柱状图正），市场可能错杀航运周期复苏机会，相对强度差值4.63%跑赢恒指",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "高股息率6.5%突出安全边际，估值低位（PB 0.6x破净），南向资金大流入（33.65亿港元）验证持续性，基本面稳健匹配经济复苏预期，适合平衡型防御性配置",
           "allocation_pct": 13,
-          "stop_loss_price": 7.91
+          "stop_loss_price": 6.1
         }
       ],
       "sell": [
         {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "缩量回调且南向资金流出12.83亿港元，技术面弱势（RSI 28.34超卖但MACD下行），资金流出主导信号矛盾，估值泡沫质疑压制反弹空间",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "南向资金大额流出（27.02亿港元，清单最高），技术面下行趋势（MACD柱状图负值、相对强度-7.35%），新闻负面催化竞争风险（外国手机出货激增），资金、技术、新闻三重恶化验证高风险",
           "stop_loss_triggered": false
         },
         {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "南向资金单日流出27.52亿港元（清单最大流出），利好被忽视反映竞争恶化，技术面位置低位但RSI弱势，消费电子板块承压风险高",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "技术面超买顶背离（RSI 72.37、位置96.07%），利好出尽风险（研报利好但无新增催化剂），高位回调压力显著，基本面受香港地产风险压制，建议止盈规避短期波动",
           "stop_loss_triggered": false
         }
       ]
     },
     {
-      "timestamp": "2025-12-30 11:06:31",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "缩量回调且南向资金流出12.83亿港元，技术面弱势（RSI 28.34超卖但MACD下行），资金流出主导信号矛盾，估值泡沫质疑压制反弹空间",
-      "capital_after": 113.18929405191739,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.36
-    },
-    {
-      "timestamp": "2025-12-30 11:06:34",
+      "timestamp": "2025-12-30 14:57:28",
       "type": "SELL",
       "code": "1810.HK",
       "name": "小米集团-W",
       "shares": 0,
       "price": 0.0,
       "amount": 0.0,
-      "reason": "南向资金单日流出27.52亿港元（清单最大流出），利好被忽视反映竞争恶化，技术面位置低位但RSI弱势，消费电子板块承压风险高",
+      "reason": "南向资金大额流出（27.02亿港元，清单最高），技术面下行趋势（MACD柱状图负值、相对强度-7.35%），新闻负面催化竞争风险（外国手机出货激增），资金、技术、新闻三重恶化验证高风险",
       "capital_after": 113.18929405191739,
       "success": false,
       "stop_loss_price": null,
-      "current_price": 38.92
+      "current_price": 39.52
     },
     {
-      "timestamp": "2025-12-30 11:06:38",
+      "timestamp": "2025-12-30 14:57:31",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面超买顶背离（RSI 72.37、位置96.07%），利好出尽风险（研报利好但无新增催化剂），高位回调压力显著，基本面受香港地产风险压制，建议止盈规避短期波动",
+      "capital_after": 113.18929405191739,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 123.0
+    },
+    {
+      "timestamp": "2025-12-30 14:57:37",
       "type": "BUY",
       "code": "0981.HK",
       "name": "中芯国际",
       "shares": 0,
-      "price": 71.85,
+      "price": 72.85,
       "amount": 0,
-      "reason": "南向资金大流入10.36亿港元，技术面强势（RSI 57.62，MACD柱状图正，布林带突破0.91），AI芯片需求爆发催化，相对强度差值6.32%领跑市场，符合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
+      "reason": "南向资金流入强劲（10.70亿港元），AI芯片需求爆发催化，技术面多头共振（RSI健康、MACD加速上行），估值合理（动态PE 35x），符合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
       "capital_after": 113.18929405191739,
       "success": false,
-      "stop_loss_price": 66.96,
-      "current_price": 71.85
+      "stop_loss_price": 68.0,
+      "current_price": 72.85
     },
     {
-      "timestamp": "2025-12-30 11:06:41",
+      "timestamp": "2025-12-30 14:57:40",
       "type": "BUY",
       "code": "0883.HK",
       "name": "中国海洋石油",
       "shares": 0,
-      "price": 21.4,
+      "price": 21.56,
       "amount": 0,
-      "reason": "南向资金流入12.83亿港元，LNG合作深化提供事件驱动持续性，技术面稳健（RSI 57.90，布林带突破0.68），股息率5.2%提供安全边际，能源板块领涨且波动率适中 (原因: 资金不足)",
+      "reason": "LNG长期协议保障现金流，高股息率6.8%提供安全边际，技术面稳健（MACD金叉初期、布林带波动适中），能源板块领涨且风险收益比优异，契合平衡型防御配置需求 (原因: 资金不足)",
       "capital_after": 113.18929405191739,
       "success": false,
-      "stop_loss_price": 20.0,
-      "current_price": 21.4
+      "stop_loss_price": 20.5,
+      "current_price": 21.56
     },
     {
-      "timestamp": "2025-12-30 11:06:45",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 9.8,
-      "amount": 0,
-      "reason": "南向资金流入4.34亿港元，缩量回调健康（缩量回调=1），技术面中性偏强（RSI 47.74，MACD柱状图正），市场可能错杀航运周期复苏机会，相对强度差值4.63%跑赢恒指 (原因: 资金不足)",
-      "capital_after": 113.18929405191739,
-      "success": false,
-      "stop_loss_price": 7.91,
-      "current_price": 9.8
-    },
-    {
-      "timestamp": "2025-12-30 11:49:26",
-      "buy": [
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "南向资金大流入1024亿港元，AI芯片需求爆发催化，技术面低位放量突破布林带上轨，相对强度差值6.32%领跑市场，符合平衡型投资者对成长与价值的兼顾需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 64.35
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "LNG长期协议锁定现金流，股息率5.2%提供安全边际，技术面中位稳健随机振荡器金叉，南向资金流入1268亿港元，受益于油价企稳和能源板块领涨",
-          "allocation_pct": 15,
-          "stop_loss_price": 19.04
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "高股息率6.5%突出安全边际，PB 0.58x行业最低估值，资金持续流入308.39亿港元，受益于年底分红行情和经济复苏预期，适合平衡型防御配置",
-          "allocation_pct": 10,
-          "stop_loss_price": 5.62
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2025-12-30 11:49:28",
-      "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 71.75,
-      "amount": 0,
-      "reason": "南向资金大流入1024亿港元，AI芯片需求爆发催化，技术面低位放量突破布林带上轨，相对强度差值6.32%领跑市场，符合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
-      "capital_after": 113.18929405191739,
-      "success": false,
-      "stop_loss_price": 64.35,
-      "current_price": 71.75
-    },
-    {
-      "timestamp": "2025-12-30 11:49:32",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 21.48,
-      "amount": 0,
-      "reason": "LNG长期协议锁定现金流，股息率5.2%提供安全边际，技术面中位稳健随机振荡器金叉，南向资金流入1268亿港元，受益于油价企稳和能源板块领涨 (原因: 资金不足)",
-      "capital_after": 113.18929405191739,
-      "success": false,
-      "stop_loss_price": 19.04,
-      "current_price": 21.48
-    },
-    {
-      "timestamp": "2025-12-30 11:49:36",
+      "timestamp": "2025-12-30 14:57:44",
       "type": "BUY",
       "code": "1398.HK",
       "name": "工商银行",
       "shares": 0,
-      "price": 6.25,
+      "price": 6.28,
       "amount": 0,
-      "reason": "高股息率6.5%突出安全边际，PB 0.58x行业最低估值，资金持续流入308.39亿港元，受益于年底分红行情和经济复苏预期，适合平衡型防御配置 (原因: 资金不足)",
+      "reason": "高股息率6.5%突出安全边际，估值低位（PB 0.6x破净），南向资金大流入（33.65亿港元）验证持续性，基本面稳健匹配经济复苏预期，适合平衡型防御性配置 (原因: 资金不足)",
       "capital_after": 113.18929405191739,
       "success": false,
-      "stop_loss_price": 5.62,
-      "current_price": 6.25
+      "stop_loss_price": 6.1,
+      "current_price": 6.28
+    },
+    {
+      "timestamp": "2025-12-30 15:54:35",
+      "buy": [
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "南向资金持续流入（近3日累计超25亿港元），技术面多指标共振（MACD加速上行、布林带突破、位置32.97%低位），新闻面AI芯片需求爆发催化，估值匹配行业高增长，契合平衡型投资者对成长与价值的兼顾需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 65.25
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "南向资金大额流入（13.41亿港元），LNG长期协议保障需求确定性，技术面放量上涨稳健（量比1.63、RSI 57.9中性），股息率6.8%提供安全边际，波动率适中且独立于板块走势，符合平衡型防御与收益平衡需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 19.39
+        }
+      ],
+      "sell": [
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "缩量回调信号为'1'，OBV与价格背离（价格涨0.32%但OBV下降），CMF趋势转弱，结合新闻'ICBC是否仍被低估存疑'，短期获利盘回吐风险高，与历史买入决策因市场恶化需调整",
+          "stop_loss_triggered": false
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "RSI 72.05超买且位置95.2%高位，技术面背离（MACD柱状图变化率转弱），新闻利好但持续性存疑（缩量上涨矛盾信号），短期回调概率高，与历史卖出决策一致",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-30 15:54:35",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 900,
+      "price": 6.23,
+      "amount": 5607.0,
+      "reason": "缩量回调信号为'1'，OBV与价格背离（价格涨0.32%但OBV下降），CMF趋势转弱，结合新闻'ICBC是否仍被低估存疑'，短期获利盘回吐风险高，与历史买入决策因市场恶化需调整",
+      "capital_after": 5720.189294051917,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 6.23,
+      "profit_loss": 56.00000000000076
+    },
+    {
+      "timestamp": "2025-12-30 15:54:39",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI 72.05超买且位置95.2%高位，技术面背离（MACD柱状图变化率转弱），新闻利好但持续性存疑（缩量上涨矛盾信号），短期回调概率高，与历史卖出决策一致",
+      "capital_after": 5720.189294051917,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 122.8
+    },
+    {
+      "timestamp": "2025-12-30 15:54:42",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 72.2,
+      "amount": 0,
+      "reason": "南向资金持续流入（近3日累计超25亿港元），技术面多指标共振（MACD加速上行、布林带突破、位置32.97%低位），新闻面AI芯片需求爆发催化，估值匹配行业高增长，契合平衡型投资者对成长与价值的兼顾需求 (原因: 资金不足)",
+      "capital_after": 5720.189294051917,
+      "success": false,
+      "stop_loss_price": 65.25,
+      "current_price": 72.2
+    },
+    {
+      "timestamp": "2025-12-30 15:54:45",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 200,
+      "price": 21.38,
+      "amount": 4276.0,
+      "reason": "南向资金大额流入（13.41亿港元），LNG长期协议保障需求确定性，技术面放量上涨稳健（量比1.63、RSI 57.9中性），股息率6.8%提供安全边际，波动率适中且独立于板块走势，符合平衡型防御与收益平衡需求",
+      "capital_after": 1444.1892940519174,
+      "success": true,
+      "stop_loss_price": 19.39,
+      "current_price": 21.38
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
