@@ -113,7 +113,7 @@ class GoldTechnicalAnalyzer:
             self.analyzer = None
             self.use_tav = False
             
-def calculate_indicators(self, df):
+    def calculate_indicators(self, df):
         """计算技术指标"""
         if df.empty:
             return df
@@ -182,7 +182,7 @@ def calculate_indicators(self, df):
         return None
     
     def _generate_buy_sell_signals(self, df):
-    """基于技术指标生成买卖信号"""
+        """基于技术指标生成买卖信号"""
         if df.empty:
             return df
         
@@ -336,6 +336,7 @@ class GoldMarketAnalyzer:
     def __init__(self):
         self.collector = GoldDataCollector()
         self.tech_analyzer = GoldTechnicalAnalyzer()
+        self.use_tav = self.tech_analyzer.use_tav
         
     def run_comprehensive_analysis(self, period="3mo"):
         """运行综合分析"""
@@ -616,6 +617,7 @@ class GoldMarketAnalyzer:
                             <th>MACD</th>
                             <th>MACD信号线</th>
                             <th>布林带位置</th>
+                            <th>TAV评分</th>
                             <th>支撑位</th>
                             <th>阻力位</th>
                             <th>20日均线</th>
@@ -635,6 +637,12 @@ class GoldMarketAnalyzer:
                     buy_signals = []
                     sell_signals = []
                     
+                    # 获取TAV评分数据
+                    tav_score = 0
+                    tav_status = "无TAV"
+                    if data.get("tav_summary"):
+                        tav_score = data["tav_summary"].get("tav_score", 0)
+                        tav_status = data["tav_summary"].get("tav_status", "无TAV")
                     if 'Buy_Signal' in recent_signals.columns:
                         buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
                         for idx, row in buy_signals_df.iterrows():
@@ -658,6 +666,7 @@ class GoldMarketAnalyzer:
                             <td>{data['trend']}</td>
                             <td>{latest['RSI']:.1f}</td>
                             <td>{latest['MACD']:.2f}</td>
+                            <td>{tav_score:.1f} ({tav_status})</td>
                             <td>{latest['MACD_signal']:.2f}</td>
                             <td>{bb_position:.2f}</td>
                             <td>${f"{support:.2f}" if isinstance(support, (int, float)) else support}</td>
@@ -671,7 +680,7 @@ class GoldMarketAnalyzer:
                     if buy_signals:
                         html_body += f"""
                         <tr>
-                            <td colspan="11">
+                            <td colspan="12">
                                 <div class="buy-signal">
                                     <strong>🔔 {data['name']} ({symbol}) 最近买入信号:</strong><br>
                         """
@@ -686,7 +695,7 @@ class GoldMarketAnalyzer:
                     if sell_signals:
                         html_body += f"""
                         <tr>
-                            <td colspan="11">
+                            <td colspan="12">
                                 <div class="sell-signal">
                                     <strong>🔻 {data['name']} ({symbol}) 最近卖出信号:</strong><br>
                         """
@@ -757,6 +766,22 @@ class GoldMarketAnalyzer:
                           <li><b>空头趋势</b>：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）</li>
                           <li><b>震荡整理</b>：价格在一定区间内波动，无明显趋势</li>
                           <li><b>短期上涨/下跌</b>：基于最近价格变化的短期趋势判断</li>
+                      <li><b>TAV评分(趋势-动量-成交量综合评分)</b>：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
+                        <ul>
+                          <li><b>计算方式</b>：TAV评分 = 趋势评分 × 45% + 动量评分 × 30% + 成交量评分 × 25%（黄金权重配置）</li>
+                          <li><b>趋势评分(45%权重)</b>：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性</li>
+                          <li><b>动量评分(30%权重)</b>：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向</li>
+                          <li><b>成交量评分(25%权重)</b>：基于20日成交量均线，分析成交量突增(>1.15倍为弱、>1.3倍为中、>1.6倍为强)或萎缩(<0.7倍)情况</li>
+                          <li><b>评分等级</b>：
+                            <ul>
+                              <li>≥75分：强共振 - 三个维度高度一致，强烈信号</li>
+                              <li>50-74分：中等共振 - 多数维度一致，中等信号</li>
+                              <li>25-49分：弱共振 - 部分维度一致，弱信号</li>
+                              <li><25分：无共振 - 各维度分歧，无明确信号</li>
+                            </ul>
+                          </li>
+                        </ul>
+                      </li>
                         </ul>
                       </li>
                     </ul>
@@ -819,6 +844,17 @@ class GoldMarketAnalyzer:
             text_body += "MA50(50日移动平均线)：过去50个交易日的平均价格，反映中期趋势。\n"
             text_body += "布林带位置：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。\n"
             text_body += "趋势：市场当前的整体方向。\n"
+            text_body += "TAV评分(趋势-动量-成交量综合评分)：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：\n"
+            text_body += "  - 计算方式：TAV评分 = 趋势评分 × 45% + 动量评分 × 30% + 成交量评分 × 25%（黄金权重配置）\n"
+            text_body += "  - 趋势评分(45%权重)：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性\n"
+            text_body += "  - 动量评分(30%权重)：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向\n"
+            text_body += "  - 成交量评分(25%权重)：基于20日成交量均线，分析成交量突增(>1.15倍为弱、>1.3倍为中、>1.6倍为强)或萎缩(<0.7倍)情况\n"
+            text_body += "  - 评分等级：\n"
+            text_body += "    * ≥75分：强共振 - 三个维度高度一致，强烈信号\n"
+            text_body += "    * 50-74分：中等共振 - 多数维度一致，中等信号\n"
+            text_body += "    * 25-49分：弱共振 - 部分维度一致，弱信号\n"
+            text_body += "    * <25分：无共振 - 各维度分歧，无明确信号\n"
+
             text_body += "  强势多头：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）\n"
             text_body += "  多头趋势：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）\n"
             text_body += "  弱势空头：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）\n"

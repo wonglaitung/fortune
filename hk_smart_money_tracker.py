@@ -284,7 +284,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         str: 构建好的提示词
     """
     # 构建股票数据表格 (CSV格式)
-    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,建仓信号,出货信号,放量上涨,缩量回调"
+    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,建仓信号,出货信号,放量上涨,缩量回调,TAV评分,TAV状态"
     
     csv_rows = []
     for stock in stock_data:
@@ -296,7 +296,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
         
         # 使用与邮件报告一致的字段名（按新的分类顺序排列）
-        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{int(stock['has_buildup'])},{int(stock['has_distribution'])},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])}"
+        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{int(stock['has_buildup'])},{int(stock['has_distribution'])},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'}"
         csv_rows.append(row)
     
     stock_table = csv_header + "\n" + "\n".join(csv_rows)
@@ -399,6 +399,9 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 - 识别关注清单中放量上涨和缩量回调的股票，判断趋势的可持续性
 - 评估技术指标的强度和可靠性（如RSI是否接近超买/超卖区域、MACD柱状图变化等）
 - 分析技术指标的背离现象（价格与指标的不一致）
+- 基于TAV评分系统综合评估股票的技术面质量（趋势-加速度-成交量三维分析）
+- 分析TAV评分与各技术指标的匹配度，验证评分的可靠性
+- 重点关注TAV评分高于70分的股票，警惕TAV评分低于30分的股票
 
 【维度三：市场情绪与新闻影响】
 - 结合新闻数据，分析市场对关注清单中股票的关注度变化
@@ -1073,6 +1076,8 @@ def analyze_stock(code, name, run_date=None):
             # TAV信号质量信息
             'tav_quality_score': tav_quality_score,
             'tav_recommendation': tav_recommendation,
+            'tav_score': tav_quality_score if tav_quality_score is not None else 0,
+            'tav_status': tav_recommendation if tav_recommendation else '无TAV',
         }
         return result
 
@@ -1513,7 +1518,9 @@ def main(run_date=None):
                 # 相对表现
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
                 # 信号指标
-                '建仓信号', '出货信号', '放量上涨', '缩量回调'
+                '建仓信号', '出货信号', '放量上涨', '缩量回调',
+                # TAV评分
+                'TAV评分', 'TAV状态'
             ]
             
             # 排序与邮件报告一致
@@ -1529,20 +1536,22 @@ def main(run_date=None):
                 '基本信息', '', '', '',
                 # 价格位置 (1列)
                 '价格位置',
-                # 成交量相关 (8列)
-                '成交量相关', '', '', '', '', '', '', '',
+                # 成交量相关 (9列)
+                '成交量相关', '', '', '', '', '', '', '', '',
                 # 波动性指标 (6列)
                 '波动性指标', '', '', '', '', '',
                 # 均线偏离 (2列)
-                '', '',
-                # 技术指标 (18列)
-                '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                '均线偏离', '',
+                # 技术指标 (16列)
+                '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                 # 资金流向指标 (1列)
                 '资金流向指标',
                 # 相对表现 (3列)
                 '相对表现', '', '',
                 # 信号指标 (4列)
-                '', '信号指标', '', ''
+                '', '信号指标', '', '',
+                # TAV评分 (2列)
+                'TAV评分', ''
             ]
             
             category_df = pd.DataFrame([category_row], columns=df_excel.columns)
