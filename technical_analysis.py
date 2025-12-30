@@ -597,6 +597,626 @@ class MarketAnalyzer:
         
         return results
 
+# ==================== TAV 方法论整合 ====================
+
+class TAVConfig:
+    """TAV 配置类，支持不同资产类型的差异化配置"""
+    
+    # 股票市场配置
+    STOCK_CONFIG = {
+        'weights': {
+            'trend': 0.4,      # 股票注重趋势
+            'momentum': 0.35,  # 动量次之
+            'volume': 0.25     # 成交量验证
+        },
+        'thresholds': {
+            'strong_signal': 75,    # 强信号阈值
+            'medium_signal': 50,    # 中等信号阈值
+            'weak_signal': 25       # 弱信号阈值
+        },
+        'trend': {
+            'ma_periods': [20, 50, 200],
+            'trend_threshold': 0.02,  # 2%的趋势确认阈值
+            'consolidation_threshold': 0.01  # 1%的震荡阈值
+        },
+        'momentum': {
+            'rsi_period': 14,
+            'rsi_oversold': 30,
+            'rsi_overbought': 70,
+            'macd_fast': 12,
+            'macd_slow': 26,
+            'macd_signal': 9
+        },
+        'volume': {
+            'volume_ma_period': 20,
+            'surge_threshold_weak': 1.2,
+            'surge_threshold_medium': 1.5,
+            'surge_threshold_strong': 2.0,
+            'shrink_threshold': 0.8
+        }
+    }
+    
+    # 加密货币配置
+    CRYPTO_CONFIG = {
+        'weights': {
+            'trend': 0.3,      # 加密货币波动大，趋势权重降低
+            'momentum': 0.45,  # 动量更重要
+            'volume': 0.25     # 成交量同样重要
+        },
+        'thresholds': {
+            'strong_signal': 80,    # 更高的强信号阈值
+            'medium_signal': 55,    # 中等信号阈值
+            'weak_signal': 30       # 弱信号阈值
+        },
+        'trend': {
+            'ma_periods': [10, 30, 100],  # 更短期的均线
+            'trend_threshold': 0.03,      # 更高的趋势确认阈值
+            'consolidation_threshold': 0.02
+        },
+        'momentum': {
+            'rsi_period': 14,
+            'rsi_oversold': 25,           # 更极端的超卖阈值
+            'rsi_overbought': 75,         # 更极端的超买阈值
+            'macd_fast': 12,
+            'macd_slow': 26,
+            'macd_signal': 9
+        },
+        'volume': {
+            'volume_ma_period': 20,
+            'surge_threshold_weak': 1.3,  # 更高的成交量突增阈值
+            'surge_threshold_medium': 1.8,
+            'surge_threshold_strong': 2.5,
+            'shrink_threshold': 0.7
+        }
+    }
+    
+    # 黄金市场配置
+    GOLD_CONFIG = {
+        'weights': {
+            'trend': 0.45,     # 黄金趋势性强
+            'momentum': 0.3,   # 动量相对次要
+            'volume': 0.25     # 成交量验证
+        },
+        'thresholds': {
+            'strong_signal': 75,
+            'medium_signal': 50,
+            'weak_signal': 25
+        },
+        'trend': {
+            'ma_periods': [20, 50, 200],  # 黄金使用标准均线
+            'trend_threshold': 0.015,     # 中等趋势确认阈值
+            'consolidation_threshold': 0.01
+        },
+        'momentum': {
+            'rsi_period': 14,
+            'rsi_oversold': 30,
+            'rsi_overbought': 70,
+            'macd_fast': 12,
+            'macd_slow': 26,
+            'macd_signal': 9
+        },
+        'volume': {
+            'volume_ma_period': 20,
+            'surge_threshold_weak': 1.15, # 黄金对成交量敏感度较低
+            'surge_threshold_medium': 1.3,
+            'surge_threshold_strong': 1.6,
+            'shrink_threshold': 0.85
+        }
+    }
+    
+    # 恒生指数配置
+    HSI_CONFIG = {
+        'weights': {
+            'trend': 0.5,      # 指数趋势最重要
+            'momentum': 0.3,   # 动量次之
+            'volume': 0.2      # 成交量权重略低
+        },
+        'thresholds': {
+            'strong_signal': 75,
+            'medium_signal': 50,
+            'weak_signal': 25
+        },
+        'trend': {
+            'ma_periods': [20, 50, 200],
+            'trend_threshold': 0.015,
+            'consolidation_threshold': 0.01
+        },
+        'momentum': {
+            'rsi_period': 14,
+            'rsi_oversold': 30,
+            'rsi_overbought': 70,
+            'macd_fast': 12,
+            'macd_slow': 26,
+            'macd_signal': 9
+        },
+        'volume': {
+            'volume_ma_period': 20,
+            'surge_threshold_weak': 1.2,
+            'surge_threshold_medium': 1.5,
+            'surge_threshold_strong': 2.0,
+            'shrink_threshold': 0.8
+        }
+    }
+    
+    @classmethod
+    def get_config(cls, asset_type='stock'):
+        """根据资产类型获取配置"""
+        config_map = {
+            'stock': cls.STOCK_CONFIG,
+            'crypto': cls.CRYPTO_CONFIG,
+            'gold': cls.GOLD_CONFIG,
+            'hsi': cls.HSI_CONFIG
+        }
+        return config_map.get(asset_type, cls.STOCK_CONFIG)
+    
+    @classmethod
+    def detect_asset_type(cls, symbol):
+        """根据股票代码自动检测资产类型"""
+        symbol_upper = symbol.upper()
+        
+        # 加密货币检测
+        crypto_patterns = ['-USD', 'BTC', 'ETH', 'USDT']
+        if any(pattern in symbol_upper for pattern in crypto_patterns):
+            return 'crypto'
+        
+        # 黄金检测
+        gold_patterns = ['GC=F', 'GOLD', 'XAU', 'GLD']
+        if any(pattern in symbol_upper for pattern in gold_patterns):
+            return 'gold'
+        
+        # 恒生指数检测
+        hsi_patterns = ['^HSI', 'HSI', '0700.HK']
+        if any(pattern in symbol_upper for pattern in hsi_patterns):
+            return 'hsi'
+        
+        # 默认为股票
+        return 'stock'
+
+
+class TAVScorer:
+    """TAV 评分系统：趋势(Trend) + 动量(Acceleration/Momentum) + 成交量(Volume)"""
+    
+    def __init__(self, config=None):
+        self.config = config or TAVConfig.STOCK_CONFIG
+        self.weights = self.config['weights']
+        self.thresholds = self.config['thresholds']
+    
+    def calculate_tav_score(self, df, asset_type='stock'):
+        """计算TAV综合评分 (0-100分)"""
+        if df.empty:
+            return 0, {'trend': 0, 'momentum': 0, 'volume': 0}, "数据不足"
+        
+        # 获取资产类型特定配置
+        asset_config = TAVConfig.get_config(asset_type)
+        adjusted_weights = asset_config['weights']
+        
+        # 计算各维度评分
+        trend_score = self._calculate_trend_score(df, asset_config)
+        momentum_score = self._calculate_momentum_score(df, asset_config)
+        volume_score = self._calculate_volume_score(df, asset_config)
+        
+        # 综合评分
+        tav_score = (
+            trend_score * adjusted_weights['trend'] +
+            momentum_score * adjusted_weights['momentum'] +
+            volume_score * adjusted_weights['volume']
+        )
+        
+        # 限制在0-100范围内
+        tav_score = min(100, max(0, tav_score))
+        
+        # 生成状态描述
+        status = self._get_tav_status(tav_score)
+        
+        # 详细评分
+        detailed_scores = {
+            'trend': trend_score,
+            'momentum': momentum_score,
+            'volume': volume_score
+        }
+        
+        return tav_score, detailed_scores, status
+    
+    def _calculate_trend_score(self, df, config):
+        """计算趋势评分"""
+        if df.empty or len(df) < 20:
+            return 0
+        
+        current_price = df['Close'].iloc[-1]
+        trend_config = config['trend']
+        ma_periods = trend_config['ma_periods']
+        
+        # 检查是否有足够的均线数据
+        available_mas = []
+        for period in ma_periods:
+            ma_col = f'MA{period}'
+            if ma_col in df.columns and not pd.isna(df[ma_col].iloc[-1]):
+                available_mas.append((period, df[ma_col].iloc[-1]))
+        
+        if len(available_mas) < 2:
+            return 30  # 默认中性评分
+        
+        # 趋势评分逻辑
+        if len(available_mas) >= 3:
+            # 完整的三均线分析
+            ma20 = next((val for period, val in available_mas if period == 20), None)
+            ma50 = next((val for period, val in available_mas if period == 50), None)
+            ma200 = next((val for period, val in available_mas if period == 200), None)
+            
+            if all([ma20, ma50, ma200]):
+                # 多头排列：价格 > MA20 > MA50 > MA200
+                if current_price > ma20 > ma50 > ma200:
+                    return 95
+                # 强势多头：价格 > MA20 > MA50，MA50 < MA200
+                elif current_price > ma20 > ma50:
+                    return 80
+                # 震荡整理：价格在均线之间
+                elif ma20 < current_price < ma50 or ma50 < current_price < ma20:
+                    return 50
+                # 弱势空头：价格 < MA20 < MA50，MA50 > MA200
+                elif current_price < ma20 < ma50:
+                    return 30
+                # 空头排列：价格 < MA20 < MA50 < MA200
+                elif current_price < ma20 < ma50 < ma200:
+                    return 15
+        
+        # 双均线分析
+        if len(available_mas) >= 2:
+            available_mas.sort(key=lambda x: x[0])  # 按周期排序
+            short_ma = available_mas[0][1]
+            long_ma = available_mas[1][1]
+            
+            if current_price > short_ma > long_ma:
+                return 75
+            elif current_price < short_ma < long_ma:
+                return 25
+            else:
+                return 50
+        
+        return 40  # 默认中性评分
+    
+    def _calculate_momentum_score(self, df, config):
+        """计算动量评分"""
+        if df.empty or len(df) < 14:
+            return 0
+        
+        momentum_config = config['momentum']
+        score = 50  # 基础分
+        
+        # RSI 评分
+        if 'RSI' in df.columns and not pd.isna(df['RSI'].iloc[-1]):
+            rsi = df['RSI'].iloc[-1]
+            if rsi > momentum_config['rsi_overbought']:
+                score += 15  # 超买，动量强劲
+            elif rsi < momentum_config['rsi_oversold']:
+                score -= 15  # 超卖，动量疲软
+            elif rsi > 50:
+                score += 10  # RSI强势
+            else:
+                score -= 10  # RSI弱势
+        
+        # MACD 评分
+        if all(col in df.columns for col in ['MACD', 'MACD_signal', 'MACD_histogram']):
+            macd = df['MACD'].iloc[-1]
+            macd_signal = df['MACD_signal'].iloc[-1]
+            macd_hist = df['MACD_histogram'].iloc[-1]
+            
+            if not any(pd.isna([macd, macd_signal, macd_hist])):
+                # MACD 金叉
+                if macd > macd_signal and macd_hist > 0:
+                    score += 20
+                # MACD 死叉
+                elif macd < macd_signal and macd_hist < 0:
+                    score -= 20
+                # MACD 柱状体增强
+                elif macd_hist > 0:
+                    score += 10
+                elif macd_hist < 0:
+                    score -= 10
+        
+        # 随机振荡器评分
+        if all(col in df.columns for col in ['K', 'D']):
+            k = df['K'].iloc[-1]
+            d = df['D'].iloc[-1]
+            
+            if not any(pd.isna([k, d])):
+                if k > d and k > 80:
+                    score += 15  # 超买且K>D
+                elif k < d and k < 20:
+                    score -= 15  # 超卖且K<D
+                elif k > d:
+                    score += 5   # K>D
+                else:
+                    score -= 5   # K<D
+        
+        return min(100, max(0, score))
+    
+    def _calculate_volume_score(self, df, config):
+        """计算成交量评分"""
+        if df.empty or 'Volume' not in df.columns:
+            return 0
+        
+        volume_config = config['volume']
+        score = 40  # 基础分
+        
+        # 成交量比率评分
+        if 'Volume_Ratio' in df.columns and not pd.isna(df['Volume_Ratio'].iloc[-1]):
+            volume_ratio = df['Volume_Ratio'].iloc[-1]
+            
+            if volume_ratio > volume_config['surge_threshold_strong']:
+                score += 40  # 强突增
+            elif volume_ratio > volume_config['surge_threshold_medium']:
+                score += 25  # 中等突增
+            elif volume_ratio > volume_config['surge_threshold_weak']:
+                score += 15  # 弱突增
+            elif volume_ratio < volume_config['shrink_threshold']:
+                score -= 20  # 萎缩
+        
+        # 价量配合评分
+        price_volume_bullish = 0
+        price_volume_bearish = 0
+        
+        # 检查各种价量配合信号
+        bullish_signals = [
+            'Price_Volume_Bullish_Strong',
+            'Price_Volume_Bullish_Medium', 
+            'Price_Volume_Bullish_Weak',
+            'Price_Volume_Reversal_Bullish',
+            'Price_Volume_Continuation_Bullish'
+        ]
+        
+        bearish_signals = [
+            'Price_Volume_Bearish_Strong',
+            'Price_Volume_Bearish_Medium',
+            'Price_Volume_Bearish_Weak', 
+            'Price_Volume_Reversal_Bearish',
+            'Price_Volume_Continuation_Bearish'
+        ]
+        
+        for signal in bullish_signals:
+            if signal in df.columns and df.iloc[-1][signal]:
+                price_volume_bullish += 1
+        
+        for signal in bearish_signals:
+            if signal in df.columns and df.iloc[-1][signal]:
+                price_volume_bearish += 1
+        
+        # 价量配合评分调整
+        if price_volume_bullish > price_volume_bearish:
+            score += min(20, price_volume_bullish * 5)
+        elif price_volume_bearish > price_volume_bullish:
+            score -= min(20, price_volume_bearish * 5)
+        
+        return min(100, max(0, score))
+    
+    def _get_tav_status(self, score):
+        """根据评分获取TAV状态"""
+        if score >= self.thresholds['strong_signal']:
+            return "强共振"
+        elif score >= self.thresholds['medium_signal']:
+            return "中等共振"
+        elif score >= self.thresholds['weak_signal']:
+            return "弱共振"
+        else:
+            return "无共振"
+    
+    def get_tav_summary(self, df, asset_type='stock'):
+        """获取TAV分析摘要"""
+        tav_score, detailed_scores, status = self.calculate_tav_score(df, asset_type)
+        
+        # 趋势分析
+        trend_analysis = self._analyze_trend_direction(df)
+        
+        # 动量分析
+        momentum_analysis = self._analyze_momentum_state(df)
+        
+        # 成交量分析
+        volume_analysis = self._analyze_volume_state(df)
+        
+        return {
+            'tav_score': tav_score,
+            'tav_status': status,
+            'detailed_scores': detailed_scores,
+            'trend_analysis': trend_analysis,
+            'momentum_analysis': momentum_analysis,
+            'volume_analysis': volume_analysis,
+            'recommendation': self._get_recommendation(tav_score, trend_analysis, momentum_analysis, volume_analysis)
+        }
+    
+    def _analyze_trend_direction(self, df):
+        """分析趋势方向"""
+        if df.empty or len(df) < 20:
+            return "数据不足"
+        
+        analyzer = TechnicalAnalyzer()
+        return analyzer.analyze_trend(df)
+    
+    def _analyze_momentum_state(self, df):
+        """分析动量状态"""
+        if df.empty:
+            return "数据不足"
+        
+        momentum_states = []
+        
+        # RSI状态
+        if 'RSI' in df.columns and not pd.isna(df['RSI'].iloc[-1]):
+            rsi = df['RSI'].iloc[-1]
+            if rsi > 70:
+                momentum_states.append("RSI超买")
+            elif rsi < 30:
+                momentum_states.append("RSI超卖")
+            elif rsi > 50:
+                momentum_states.append("RSI强势")
+            else:
+                momentum_states.append("RSI弱势")
+        
+        # MACD状态
+        if all(col in df.columns for col in ['MACD', 'MACD_signal']):
+            macd = df['MACD'].iloc[-1]
+            macd_signal = df['MACD_signal'].iloc[-1]
+            
+            if not any(pd.isna([macd, macd_signal])):
+                if macd > macd_signal:
+                    momentum_states.append("MACD金叉")
+                else:
+                    momentum_states.append("MACD死叉")
+        
+        return ", ".join(momentum_states) if momentum_states else "中性"
+    
+    def _analyze_volume_state(self, df):
+        """分析成交量状态"""
+        if df.empty or 'Volume' not in df.columns:
+            return "数据不足"
+        
+        volume_states = []
+        
+        # 成交量比率状态
+        if 'Volume_Ratio' in df.columns and not pd.isna(df['Volume_Ratio'].iloc[-1]):
+            volume_ratio = df['Volume_Ratio'].iloc[-1]
+            if volume_ratio > 2.0:
+                volume_states.append("成交量暴增")
+            elif volume_ratio > 1.5:
+                volume_states.append("成交量放大")
+            elif volume_ratio < 0.8:
+                volume_states.append("成交量萎缩")
+            else:
+                volume_states.append("成交量正常")
+        
+        # 价量配合状态
+        bullish_signals = ['Price_Volume_Bullish_Strong', 'Price_Volume_Bullish_Medium', 'Price_Volume_Bullish_Weak']
+        bearish_signals = ['Price_Volume_Bearish_Strong', 'Price_Volume_Bearish_Medium', 'Price_Volume_Bearish_Weak']
+        
+        has_bullish = any(df.iloc[-1].get(signal, False) for signal in bullish_signals)
+        has_bearish = any(df.iloc[-1].get(signal, False) for signal in bearish_signals)
+        
+        if has_bullish:
+            volume_states.append("价量配合上涨")
+        elif has_bearish:
+            volume_states.append("价量配合下跌")
+        
+        return ", ".join(volume_states) if volume_states else "中性"
+    
+    def _get_recommendation(self, tav_score, trend_analysis, momentum_analysis, volume_analysis):
+        """获取投资建议"""
+        if tav_score >= 75:
+            return "强烈建议关注，TAV三要素共振强烈"
+        elif tav_score >= 50:
+            return "建议关注，TAV中等共振，需结合其他分析"
+        elif tav_score >= 25:
+            return "谨慎观察，TAV弱共振，信号质量一般"
+        else:
+            return "不建议操作，TAV无共振，缺乏明确方向"
+
+
+class TechnicalAnalyzerV2(TechnicalAnalyzer):
+    """扩展版技术分析器，集成TAV方法论"""
+    
+    def __init__(self, enable_tav=False, tav_config=None):
+        super().__init__()
+        self.enable_tav = enable_tav
+        self.tav_config = tav_config
+        self.tav_scorer = TAVScorer(tav_config) if enable_tav else None
+    
+    def calculate_all_indicators(self, df, asset_type='stock'):
+        """计算所有指标，保持原有接口，可选添加TAV指标"""
+        # 调用原有方法
+        df = super().calculate_all_indicators(df)
+        
+        # 如果启用TAV，添加TAV相关指标
+        if self.enable_tav and self.tav_scorer:
+            df = self._add_tav_indicators(df, asset_type)
+        
+        return df
+    
+    def _add_tav_indicators(self, df, asset_type='stock'):
+        """添加TAV相关指标到数据框"""
+        if df.empty:
+            return df
+        
+        # 计算TAV评分
+        tav_score, detailed_scores, status = self.tav_scorer.calculate_tav_score(df, asset_type)
+        
+        # 添加TAV指标列
+        df['TAV_Score'] = tav_score
+        df['TAV_Status'] = status
+        df['TAV_Trend_Score'] = detailed_scores['trend']
+        df['TAV_Momentum_Score'] = detailed_scores['momentum']
+        df['TAV_Volume_Score'] = detailed_scores['volume']
+        
+        # 添加TAV信号列
+        df['TAV_Strong_Signal'] = tav_score >= 75
+        df['TAV_Medium_Signal'] = (tav_score >= 50) & (tav_score < 75)
+        df['TAV_Weak_Signal'] = (tav_score >= 25) & (tav_score < 50)
+        df['TAV_No_Signal'] = tav_score < 25
+        
+        return df
+    
+    def generate_buy_sell_signals(self, df, use_tav=None, asset_type='stock'):
+        """生成信号，支持TAV和传统模式"""
+        # 决定是否使用TAV
+        use_tav = use_tav if use_tav is not None else self.enable_tav
+        
+        if use_tav and self.tav_scorer:
+            return self._generate_tav_enhanced_signals(df, asset_type)
+        else:
+            # 调用原有方法，保持完全兼容
+            return super().generate_buy_sell_signals(df)
+    
+    def _generate_tav_enhanced_signals(self, df, asset_type='stock'):
+        """生成TAV增强的交易信号"""
+        if df.empty:
+            return df
+        
+        # 首先生成传统信号
+        df = super().generate_buy_sell_signals(df)
+        
+        # 添加TAV增强逻辑
+        tav_config = TAVConfig.get_config(asset_type)
+        tav_scorer = TAVScorer(tav_config)
+        
+        # 为每个数据点计算TAV评分
+        for i in range(len(df)):
+            if i < 50:  # 需要足够的历史数据
+                continue
+            
+            # 获取当前时间窗口的数据
+            window_df = df.iloc[max(0, i-200):i+1].copy()
+            
+            # 计算TAV评分
+            tav_score, detailed_scores, status = tav_scorer.calculate_tav_score(window_df, asset_type)
+            
+            # TAV增强信号逻辑
+            tav_strong = tav_score >= tav_config['thresholds']['strong_signal']
+            tav_medium = tav_score >= tav_config['thresholds']['medium_signal']
+            
+            # 增强买入信号：传统信号 + TAV确认
+            if df.iloc[i].get('Buy_Signal', False):
+                if tav_strong:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
+                elif tav_medium:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
+            
+            # 增强卖出信号：传统信号 + TAV确认
+            if df.iloc[i].get('Sell_Signal', False):
+                if tav_strong:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
+                elif tav_medium:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
+        
+        return df
+    
+    def get_tav_analysis_summary(self, df, asset_type='stock'):
+        """获取TAV分析摘要"""
+        if not self.enable_tav or not self.tav_scorer:
+            return None
+        
+        return self.tav_scorer.get_tav_summary(df, asset_type)
+
+
 def main():
     """主函数示例"""
     # 测试一些常用的金融产品

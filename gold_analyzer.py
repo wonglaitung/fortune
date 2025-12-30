@@ -23,10 +23,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 导入技术分析工具
 try:
-    from technical_analysis import TechnicalAnalyzer
+    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
+    TAV_AVAILABLE = True
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
+    TAV_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
 LLM_AVAILABLE = False
@@ -100,9 +102,18 @@ class GoldDataCollector:
 
 class GoldTechnicalAnalyzer:
     def __init__(self):
-        pass
-        
-    def calculate_indicators(self, df):
+        if TECHNICAL_ANALYSIS_AVAILABLE:
+            if TAV_AVAILABLE:
+                self.analyzer = TechnicalAnalyzerV2(enable_tav=True)
+                self.use_tav = True
+            else:
+                self.analyzer = TechnicalAnalyzer()
+                self.use_tav = False
+        else:
+            self.analyzer = None
+            self.use_tav = False
+            
+def calculate_indicators(self, df):
         """计算技术指标"""
         if df.empty:
             return df
@@ -164,8 +175,14 @@ class GoldTechnicalAnalyzer:
         
         return df
     
+    def get_tav_analysis_summary(self, df):
+        """获取TAV分析摘要"""
+        if self.use_tav and self.analyzer is not None:
+            return self.analyzer.get_tav_analysis_summary(df, 'gold')
+        return None
+    
     def _generate_buy_sell_signals(self, df):
-        """基于技术指标生成买卖信号"""
+    """基于技术指标生成买卖信号"""
         if df.empty:
             return df
         
@@ -345,11 +362,17 @@ class GoldMarketAnalyzer:
             support_resistance = self.tech_analyzer.identify_support_resistance(df)
             trend = self.tech_analyzer.identify_trend(df)
             
+            # 获取TAV分析摘要（如果可用）
+            tav_summary = None
+            if self.use_tav:
+                tav_summary = self.tech_analyzer.get_tav_analysis_summary(df)
+            
             technical_analysis[symbol] = {
                 'name': data['name'],
                 'indicators': df,
                 'support_resistance': support_resistance,
-                'trend': trend
+                'trend': trend,
+                'tav_summary': tav_summary
             }
         
         
