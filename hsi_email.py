@@ -28,10 +28,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 # 导入技术分析工具（可选）
 try:
-    from technical_analysis import TechnicalAnalyzer
+    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
+    TAV_AVAILABLE = True
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
+    TAV_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
 # 从港股主力资金追踪器导入股票列表（可选）
@@ -74,7 +76,16 @@ class HSIEmailSystem:
 
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
-        self.technical_analyzer = TechnicalAnalyzer() if TECHNICAL_ANALYSIS_AVAILABLE else None
+        if TECHNICAL_ANALYSIS_AVAILABLE:
+            if TAV_AVAILABLE:
+                self.technical_analyzer = TechnicalAnalyzerV2(enable_tav=True)
+                self.use_tav = True
+            else:
+                self.technical_analyzer = TechnicalAnalyzer()
+                self.use_tav = False
+        else:
+            self.technical_analyzer = None
+            self.use_tav = False
 
         # 可通过环境变量设置默认最大亏损百分比（例如 0.2 表示 20%）
         max_loss_env = os.environ.get("MAX_LOSS_PCT", None)
@@ -333,179 +344,276 @@ class HSIEmailSystem:
             print("⚠️ 计算止损止盈异常:", e)
             return None, None
 
+    def _get_tav_color(self, tav_score):
+        """
+        根据TAV评分返回对应的颜色样式
+        """
+        if tav_score is None:
+            return "color: gray; font-weight: bold;"
+        
+        if tav_score >= 75:
+            return "color: green; font-weight: bold;"
+        elif tav_score >= 50:
+            return "color: orange; font-weight: bold;"
+        elif tav_score >= 25:
+            return "color: red; font-weight: bold;"
+        else:
+            return "color: gray; font-weight: bold;"
+
+    def _clean_signal_description(self, description):
+        """
+        清理信号描述，移除前缀
+        """
+        if not description:
+            return description
+        
+        # 买入信号前缀
+        buy_prefixes = ['买入信号:', '买入信号', 'Buy Signal:', 'Buy Signal']
+        # 卖出信号前缀
+        sell_prefixes = ['卖出信号:', '卖出信号', 'Sell Signal:', 'Sell Signal']
+        
+        cleaned = description
+        for prefix in buy_prefixes + sell_prefixes:
+            if cleaned.startswith(prefix):
+                cleaned = cleaned[len(prefix):].strip()
+                break
+        
+        return cleaned
+
+    def _calculate_technical_indicators_core(self, data, asset_type='stock'):
+        """
+        计算技术指标的核心方法（支持不同资产类型）- 修复版本
+        """
+        try:
+            if data is None:
+                print("   ❌ data 是 None")
+                return None
+
+            hist = data.get('hist')
+            if hist is None or hist.empty:
+                print("   ❌ hist 是 None 或空的")
+                return None
+
+            from hsi_email import TECHNICAL_ANALYSIS_AVAILABLE
+            if not TECHNICAL_ANALYSIS_AVAILABLE:
+                # 简化指标计算（当 technical_analysis 不可用时）
+                latest = hist.iloc[-1]
+                prev = hist.iloc[-2] if len(hist) > 1 else latest
+
+                indicators = {
+                    'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
+                    'macd': self.calculate_macd(latest['Close']),
+                    'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
+                }
+
+                # 使用真实 ATR 计算止损/止盈，若失败回退到百分比法
+                try:
+                    current_price = float(latest['Close'])
+                    stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                        hist,
+                        current_price,
+                        signal_type='BUY',  # 默认为 BUY，用场景可以调整
+                        method='ATR',
+                        atr_period=14,
+                        atr_multiplier=1.5,
+                        risk_reward_ratio=2.0,
+                        percentage=0.05,
+                        max_loss_pct=None,
+                        tick_size=None
+                    )
+                    indicators['atr'] = self.calculate_atr(hist)
+                    indicators['stop_loss'] = stop_loss
+                    indicators['take_profit'] = take_profit
+                except Exception as e:
+                    print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e}")
+                    indicators['atr'] = 0.0
+                    indicators['stop_loss'] = None
+                    indicators['take_profit'] = None
+
+                return indicators
+
+            # 如果 technical_analysis 可用，则使用其方法（保留兼容逻辑）
+            try:
+                # 使用TAV增强分析（如果可用）
+                if self.use_tav:
+                    indicators_df = self.technical_analyzer.calculate_all_indicators(hist.copy(), asset_type=asset_type)
+                    indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators_df.copy(), use_tav=True, asset_type=asset_type)
+                else:
+                    indicators_df = self.technical_analyzer.calculate_all_indicators(hist.copy())
+                    indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators_df.copy())
+                
+                trend = self.technical_analyzer.analyze_trend(indicators_with_signals)
+
+                latest = indicators_with_signals.iloc[-1]
+                rsi = latest.get('RSI', 50.0)
+                macd = latest.get('MACD', 0.0)
+                macd_signal = latest.get('MACD_signal', 0.0)
+                bb_position = latest.get('BB_position', 0.5) if 'BB_position' in latest else 0.5
+
+                # recent signals
+                recent_signals = indicators_with_signals.tail(5)
+                buy_signals = []
+                sell_signals = []
+
+                if 'Buy_Signal' in recent_signals.columns:
+                    buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
+                    for idx, row in buy_signals_df.iterrows():
+                        description = self._clean_signal_description(row.get('Signal_Description', ''))
+                        buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+
+                if 'Sell_Signal' in recent_signals.columns:
+                    sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                    for idx, row in sell_signals_df.iterrows():
+                        description = self._clean_signal_description(row.get('Signal_Description', ''))
+                        sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+
+                # ATR 和止损止盈
+                current_price = float(latest.get('Close', hist['Close'].iloc[-1]))
+                atr_value = self.calculate_atr(hist)
+                # 根据最近信号确定类型，默认 BUY
+                signal_type = 'BUY'
+                if recent_signals is not None and len(recent_signals) > 0:
+                    latest_signal = recent_signals.iloc[-1]
+                    if 'Buy_Signal' in latest_signal and latest_signal['Buy_Signal'] == True:
+                        signal_type = 'BUY'
+                    elif 'Sell_Signal' in latest_signal and latest_signal['Sell_Signal'] == True:
+                        signal_type = 'SELL'
+
+                stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                    hist,
+                    current_price,
+                    signal_type=signal_type,
+                    method='ATR',
+                    atr_period=14,
+                    atr_multiplier=1.5,
+                    risk_reward_ratio=2.0,
+                    percentage=0.05,
+                    max_loss_pct=None,
+                    tick_size=None
+                )
+
+                # 添加成交量指标
+                volume_ratio = latest.get('Volume_Ratio', 0.0)
+                volume_surge = latest.get('Volume_Surge', False)
+                volume_shrink = latest.get('Volume_Shrink', False)
+                volume_ma10 = latest.get('Volume_MA10', 0.0)
+                volume_ma20 = latest.get('Volume_MA20', 0.0)
+
+                # 初始化指标字典
+                indicators = {
+                    'rsi': rsi,
+                    'macd': macd,
+                    'macd_signal': macd_signal,
+                    'price_position': self.calculate_price_position(latest.get('Close', 0), hist['Close'].min(), hist['Close'].max()),
+                    'bb_position': bb_position,
+                    'trend': trend,
+                    'recent_buy_signals': buy_signals,
+                    'recent_sell_signals': sell_signals,
+                    'current_price': latest.get('Close', 0),
+                    'ma20': latest.get('MA20', 0),
+                    'ma50': latest.get('MA50', 0),
+                    'ma200': latest.get('MA200', 0),
+                    'hist': hist,
+                    'atr': atr_value,
+                    'stop_loss': stop_loss,
+                    'take_profit': take_profit,
+                    'volume_ratio': volume_ratio,
+                    'volume_surge': volume_surge,
+                    'volume_shrink': volume_shrink,
+                    'volume_ma10': volume_ma10,
+                    'volume_ma20': volume_ma20
+                }
+                
+                # 添加TAV分析信息（如果可用）
+                if self.use_tav:
+                    try:
+                        tav_summary = self.technical_analyzer.get_tav_analysis_summary(indicators_with_signals, asset_type)
+                        if tav_summary:
+                            indicators['tav_score'] = tav_summary.get('tav_score', 0)
+                            indicators['tav_status'] = tav_summary.get('tav_status', '无TAV')
+                            indicators['tav_summary'] = tav_summary
+                    except Exception as e:
+                        print(f"⚠️ TAV分析失败: {e}")
+                        indicators['tav_score'] = 0
+                        indicators['tav_status'] = 'TAV分析失败'
+                        indicators['tav_summary'] = None
+                
+                return indicators
+                
+            except Exception as e:
+                print(f"⚠️ 计算技术指标失败: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # 降级为简化计算
+                if hist is not None and not hist.empty:
+                    latest = hist.iloc[-1]
+                    prev = hist.iloc[-2] if len(hist) > 1 else latest
+
+                    try:
+                        atr_value = self.calculate_atr(hist)
+                        current_price = float(latest['Close'])
+                        stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                            hist,
+                            current_price,
+                            signal_type='BUY',
+                            method='ATR',
+                            atr_period=14,
+                            atr_multiplier=1.5,
+                            risk_reward_ratio=2.0,
+                            percentage=0.05,
+                            max_loss_pct=None,
+                            tick_size=None
+                        )
+                    except Exception as e2:
+                        print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e2}")
+                        atr_value = 0.0
+                        stop_loss = None
+                        take_profit = None
+
+                    indicators = {
+                        'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
+                        'macd': self.calculate_macd(latest['Close']),
+                        'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
+                        'atr': atr_value,
+                        'stop_loss': stop_loss,
+                        'take_profit': take_profit,
+                        'recent_buy_signals': [],
+                        'recent_sell_signals': [],
+                        'trend': '数据不足',
+                        'current_price': latest.get('Close', 0),
+                        'ma20': 0,
+                        'ma50': 0,
+                        'ma200': 0,
+                        'hist': hist
+                    }
+                    
+                    # 添加TAV分析信息（降级模式）
+                    if self.use_tav:
+                        indicators['tav_score'] = 0
+                        indicators['tav_status'] = 'TAV分析失败'
+                        indicators['tav_summary'] = None
+                    
+                    return indicators
+                else:
+                    return None
+        except Exception as e:
+            print(f"❌ _calculate_technical_indicators_core 发生未捕获的异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def calculate_hsi_technical_indicators(self, data):
+        """
+        计算恒生指数技术指标（使用HSI专用配置）
+        """
+        return self._calculate_technical_indicators_core(data, asset_type='hsi')
+
     def calculate_technical_indicators(self, data):
         """
-        计算技术指标（适用于恒生指数或个股）
+        计算技术指标（适用于个股）
         """
-        if data is None:
-            return None
-
-        hist = data.get('hist')
-        if hist is None or hist.empty:
-            return None
-
-        if not TECHNICAL_ANALYSIS_AVAILABLE:
-            # 简化指标计算（当 technical_analysis 不可用时）
-            latest = hist.iloc[-1]
-            prev = hist.iloc[-2] if len(hist) > 1 else latest
-
-            indicators = {
-                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
-                'macd': self.calculate_macd(latest['Close']),
-                'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
-            }
-
-            # 使用真实 ATR 计算止损/止盈，若失败回退到百分比法
-            try:
-                current_price = float(latest['Close'])
-                stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                    hist,
-                    current_price,
-                    signal_type='BUY',  # 默认为 BUY，用场景可以调整
-                    method='ATR',
-                    atr_period=14,
-                    atr_multiplier=1.5,
-                    risk_reward_ratio=2.0,
-                    percentage=0.05,
-                    max_loss_pct=None,
-                    tick_size=None
-                )
-                indicators['atr'] = self.calculate_atr(hist)
-                indicators['stop_loss'] = stop_loss
-                indicators['take_profit'] = take_profit
-            except Exception as e:
-                print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e}")
-                indicators['atr'] = 0.0
-                indicators['stop_loss'] = None
-                indicators['take_profit'] = None
-
-            return indicators
-
-        # 如果 technical_analysis 可用，则使用其方法（保留兼容逻辑）
-        try:
-            indicators_df = self.technical_analyzer.calculate_all_indicators(hist.copy())
-            indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators_df.copy())
-            trend = self.technical_analyzer.analyze_trend(indicators_with_signals)
-
-            latest = indicators_with_signals.iloc[-1]
-            rsi = latest.get('RSI', 50.0)
-            macd = latest.get('MACD', 0.0)
-            macd_signal = latest.get('MACD_signal', 0.0)
-            bb_position = latest.get('BB_position', 0.5) if 'BB_position' in latest else 0.5
-
-            # recent signals
-            recent_signals = indicators_with_signals.tail(5)
-            buy_signals = []
-            sell_signals = []
-
-            if 'Buy_Signal' in recent_signals.columns:
-                buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
-                for idx, row in buy_signals_df.iterrows():
-                    description = row.get('Signal_Description', '')
-                    for prefix in ['买入信号:', '买入信号', 'Buy Signal:', 'Buy Signal']:
-                        if description.startswith(prefix):
-                            description = description[len(prefix):].strip()
-                    buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
-
-            if 'Sell_Signal' in recent_signals.columns:
-                sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
-                for idx, row in sell_signals_df.iterrows():
-                    description = row.get('Signal_Description', '')
-                    for prefix in ['卖出信号:', '卖出信号', 'Sell Signal:', 'Sell Signal']:
-                        if description.startswith(prefix):
-                            description = description[len(prefix):].strip()
-                    sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
-
-            # ATR 和止损止盈
-            current_price = float(latest.get('Close', hist['Close'].iloc[-1]))
-            atr_value = self.calculate_atr(hist)
-            # 根据最近信号确定类型，默认 BUY
-            signal_type = 'BUY'
-            if recent_signals is not None and len(recent_signals) > 0:
-                latest_signal = recent_signals.iloc[-1]
-                if 'Buy_Signal' in latest_signal and latest_signal['Buy_Signal'] == True:
-                    signal_type = 'BUY'
-                elif 'Sell_Signal' in latest_signal and latest_signal['Sell_Signal'] == True:
-                    signal_type = 'SELL'
-
-            stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                hist,
-                current_price,
-                signal_type=signal_type,
-                method='ATR',
-                atr_period=14,
-                atr_multiplier=1.5,
-                risk_reward_ratio=2.0,
-                percentage=0.05,
-                max_loss_pct=None,
-                tick_size=None
-            )
-
-            # 添加成交量指标
-            volume_ratio = latest.get('Volume_Ratio', 0.0)
-            volume_surge = latest.get('Volume_Surge', False)
-            volume_shrink = latest.get('Volume_Shrink', False)
-            volume_ma10 = latest.get('Volume_MA10', 0.0)
-            volume_ma20 = latest.get('Volume_MA20', 0.0)
-
-            return {
-                'rsi': rsi,
-                'macd': macd,
-                'macd_signal': macd_signal,
-                'price_position': self.calculate_price_position(latest.get('Close', 0), hist['Close'].min(), hist['Close'].max()),
-                'bb_position': bb_position,
-                'trend': trend,
-                'recent_buy_signals': buy_signals,
-                'recent_sell_signals': sell_signals,
-                'current_price': latest.get('Close', 0),
-                'ma20': latest.get('MA20', 0),
-                'ma50': latest.get('MA50', 0),
-                'ma200': latest.get('MA200', 0),
-                'hist': hist,
-                'atr': atr_value,
-                'stop_loss': stop_loss,
-                'take_profit': take_profit,
-                'volume_ratio': volume_ratio,
-                'volume_surge': volume_surge,
-                'volume_shrink': volume_shrink,
-                'volume_ma10': volume_ma10,
-                'volume_ma20': volume_ma20
-            }
-        except Exception as e:
-            print(f"⚠️ 计算技术指标失败: {e}")
-            # 降级为简化计算
-            latest = hist.iloc[-1]
-            prev = hist.iloc[-2] if len(hist) > 1 else latest
-
-            try:
-                atr_value = self.calculate_atr(hist)
-                current_price = float(latest['Close'])
-                stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                    hist,
-                    current_price,
-                    signal_type='BUY',
-                    method='ATR',
-                    atr_period=14,
-                    atr_multiplier=1.5,
-                    risk_reward_ratio=2.0,
-                    percentage=0.05,
-                    max_loss_pct=None,
-                    tick_size=None
-                )
-            except Exception as e2:
-                print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e2}")
-                atr_value = 0.0
-                stop_loss = None
-                take_profit = None
-
-            return {
-                'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
-                'macd': self.calculate_macd(latest['Close']),
-                'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
-                'atr': atr_value,
-                'stop_loss': stop_loss,
-                'take_profit': take_profit
-            }
+        return self._calculate_technical_indicators_core(data, asset_type='stock')
 
     def calculate_rsi(self, change_pct):
         """
@@ -879,6 +987,45 @@ class HSIEmailSystem:
                 </tr>
         """
 
+        # 添加TAV信息（如果可用）
+        tav_score = indicators.get('tav_score', None)
+        tav_status = indicators.get('tav_status', '无TAV')
+        tav_summary = indicators.get('tav_summary', None)
+        
+        if tav_score is not None:
+            # TAV评分颜色
+            tav_color = self._get_tav_color(tav_score)
+            
+            html += f"""
+                <tr>
+                    <td>TAV评分</td>
+                    <td><span style="{tav_color}">{tav_score:.1f}</span> <span style="font-size: 0.8em; color: #666;">({tav_status})</span></td>
+                </tr>
+            """
+            
+            # 如果有TAV详细分析，添加展开/折叠的详细信息
+            if tav_summary:
+                trend_analysis = tav_summary.get('trend_analysis', 'N/A')
+                momentum_analysis = tav_summary.get('momentum_analysis', 'N/A')
+                volume_analysis = tav_summary.get('volume_analysis', 'N/A')
+                recommendation = tav_summary.get('recommendation', 'N/A')
+                
+                html += f"""
+                <tr>
+                    <td colspan="2">
+                        <details style="cursor: pointer;">
+                            <summary style="color: #666; font-size: 0.9em;">📊 TAV详细分析 (点击展开)</summary>
+                            <div style="margin-top: 10px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; font-size: 0.9em;">
+                                <p><strong>趋势分析:</strong> {trend_analysis}</p>
+                                <p><strong>动量分析:</strong> {momentum_analysis}</p>
+                                <p><strong>成交量分析:</strong> {volume_analysis}</p>
+                                <p><strong>TAV建议:</strong> {recommendation}</p>
+                            </div>
+                        </details>
+                    </td>
+                </tr>
+                """
+
         if stop_loss is not None:
             html += f"""
                 <tr>
@@ -1059,12 +1206,12 @@ class HSIEmailSystem:
                     dummy_signal = {'description': '仅48小时智能建议', 'date': target_date_obj.strftime('%Y-%m-%d')}
                     target_date_signals.append((stock_name, stock_code, trend, dummy_signal, '无建议信号'))
 
-        target_date_signals.sort(key=lambda x: x[0])
+        target_date_signals.sort(key=lambda x: x[1])
 
         # 文本版表头（修复原先被截断的 f-string）
         text_lines = []
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述'}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'TAV评分':<8} {'48小时智能建议':<20} {'信号描述'}"
         text_lines.append(header)
 
         html = f"""
@@ -1091,7 +1238,7 @@ class HSIEmailSystem:
             <p><strong>分析日期:</strong> {target_date}</p>
         """
 
-        html += """
+        html += f"""
             <div class="section">
                 <h3>🔔 交易信号总结</h3>
                 <table>
@@ -1100,6 +1247,7 @@ class HSIEmailSystem:
                         <th>股票代码</th>
                         <th>趋势(技术分析)</th>
                         <th>信号类型(量价分析)</th>
+                        <th>TAV评分</th>
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                     </tr>
@@ -1124,7 +1272,7 @@ class HSIEmailSystem:
                 color_style = "color: blue; font-weight: bold;"
                 signal_description = f"仅48小时智能建议: {continuous_signal_status}"
             else:
-                signal_description = signal.get('description', '') if isinstance(signal, dict) else str(signal)
+                signal_description = signal.get('description', '') if isinstance(signal, dict) else (str(signal) if signal is not None else '')
 
             # 为48小时智能建议设置颜色
             if "买入" in continuous_signal_status:
@@ -1151,19 +1299,50 @@ class HSIEmailSystem:
             if trend_color_style == color_style == signal_color_style and trend_color_style != "":
                 name_color_style = trend_color_style
             
+            # 获取TAV评分信息
+            tav_score = None
+            tav_status = None
+            tav_color = "color: gray; font-weight: bold;"  # 默认颜色
+            if stock_code != 'HSI':
+                # stock_results是列表，需要查找匹配的股票代码
+                stock_indicators = None
+                for stock_result in stock_results:
+                    if stock_result.get('code') == stock_code:
+                        stock_indicators = stock_result.get('indicators', {})
+                        break
+                
+                if stock_indicators:
+                    tav_score = stock_indicators.get('tav_score', 0)
+                    tav_status = stock_indicators.get('tav_status', '无TAV')
+                
+                # TAV评分颜色
+                tav_color = self._get_tav_color(tav_score)
+            
+            # 确保所有变量都有默认值，避免格式化错误
+            safe_name = stock_name if stock_name is not None else 'N/A'
+            safe_code = stock_code if stock_code is not None else 'N/A'
+            safe_trend = trend if trend is not None else 'N/A'
+            safe_signal_display = signal_display if signal_display is not None else 'N/A'
+            safe_tav_score = tav_score if tav_score is not None else 'N/A'
+            safe_tav_status = tav_status if tav_status is not None else '无TAV'
+            safe_continuous_signal_status = continuous_signal_status if continuous_signal_status is not None else 'N/A'
+            safe_signal_description = signal_description if signal_description is not None else 'N/A'
+            
             html += f"""
                     <tr>
-                        <td><span style=\"{name_color_style}\">{stock_name}</span></td>
-                        <td>{stock_code}</td>
-                        <td><span style=\"{trend_color_style}\">{trend}</span></td>
-                        <td><span style=\"{color_style}\">{signal_display}</span></td>
-                        <td><span style=\"{signal_color_style}\">{continuous_signal_status}</span></td>
-                        <td>{signal_description}</td>
+                        <td><span style=\"{name_color_style}\">{safe_name}</span></td>
+                        <td>{safe_code}</td>
+                        <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
+                        <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
+                        <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
+                        <td>{safe_signal_description}</td>
                     </tr>
             """
 
             # 文本版本追加
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description}")
+            tav_display = f"{tav_score:.1f}" if tav_score is not None else "N/A"
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {tav_display:<8} {continuous_signal_status:<20} {signal_description}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -1770,6 +1949,23 @@ class HSIEmailSystem:
               <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
               <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
               <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。</li>
+              <li><b>TAV评分(趋势-动量-成交量综合评分)</b>：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
+                <ul>
+                  <li><b>计算方式</b>：TAV评分 = 趋势评分 × 40% + 动量评分 × 35% + 成交量评分 × 25%</li>
+                  <li><b>趋势评分(40%权重)</b>：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性</li>
+                  <li><b>动量评分(35%权重)</b>：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向</li>
+                  <li><b>成交量评分(25%权重)</b>：基于20日成交量均线，分析成交量突增(>1.2倍为弱、>1.5倍为中、>2倍为强)或萎缩(<0.8倍)情况</li>
+                  <li><b>评分等级</b>：
+                    <ul>
+                      <li>≥75分：<b>强共振</b> - 三个维度高度一致，强烈信号</li>
+                      <li>50-74分：<b>中等共振</b> - 多数维度一致，中等信号</li>
+                      <li>25-49分：<b>弱共振</b> - 部分维度一致，弱信号</li>
+                      <li><25分：<b>无共振</b> - 各维度分歧，无明确信号</li>
+                    </ul>
+                  </li>
+                  <li><b>资产类型差异</b>：不同资产类型使用不同权重配置，股票(40%/35%/25%)、加密货币(30%/45%/25%)、黄金(45%/30%/25%)</li>
+                </ul>
+              </li>
               <li><b>趋势(技术分析)</b>：市场当前的整体方向。</li>
               <li><b>信号描述(量价分析)</b>：基于价格和成交量关系的技术信号类型：
                 <ul>
@@ -1813,6 +2009,17 @@ class HSIEmailSystem:
         text += "• MA200(200日移动平均线)：过去200个交易日的平均指数/股价，反映长期趋势。\n"
         text += "• 布林带位置：当前指数/股价在布林带中的相对位置，范围0-1。\n"
         text += "• ATR(平均真实波幅)：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。\n"
+        text += "• TAV评分(趋势-动量-成交量综合评分)：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：\n"
+        text += "  - 计算方式：TAV评分 = 趋势评分 × 40% + 动量评分 × 35% + 成交量评分 × 25%\n"
+        text += "  - 趋势评分(40%权重)：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性\n"
+        text += "  - 动量评分(35%权重)：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向\n"
+        text += "  - 成交量评分(25%权重)：基于20日成交量均线，分析成交量突增(>1.2倍为弱、>1.5倍为中、>2倍为强)或萎缩(<0.8倍)情况\n"
+        text += "  - 评分等级：\n"
+        text += "    * ≥75分：强共振 - 三个维度高度一致，强烈信号\n"
+        text += "    * 50-74分：中等共振 - 多数维度一致，中等信号\n"
+        text += "    * 25-49分：弱共振 - 部分维度一致，弱信号\n"
+        text += "    * <25分：无共振 - 各维度分歧，无明确信号\n"
+        text += "  - 资产类型差异：不同资产类型使用不同权重配置，股票(40%/35%/25%)、加密货币(30%/45%/25%)、黄金(45%/30%/25%)\n"
         text += "• 趋势(技术分析)：市场当前的整体方向。\n"
         text += "• 信号描述(量价分析)：基于价格和成交量关系的技术信号类型：\n"
         text += "  - 上升趋势形成：短期均线(MA20)上穿中期均线(MA50)，形成上升趋势\n"
@@ -1853,7 +2060,7 @@ class HSIEmailSystem:
             hsi_indicators = None
         else:
             print("📊 正在计算恒生指数技术指标...")
-            hsi_indicators = self.calculate_technical_indicators(hsi_data)
+            hsi_indicators = self.calculate_hsi_technical_indicators(hsi_data)
 
         print(f"🔍 正在获取股票列表并分析 ({len(self.stock_list)} 只股票)...")
         stock_results = []

@@ -41,6 +41,16 @@ from tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
 # 导入大模型服务
 from llm_services import qwen_engine
 
+# 导入技术分析工具和TAV系统
+try:
+    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
+    TECHNICAL_ANALYSIS_AVAILABLE = True
+    TAV_AVAILABLE = True
+except ImportError:
+    TECHNICAL_ANALYSIS_AVAILABLE = False
+    TAV_AVAILABLE = False
+    print("⚠️ 技术分析工具不可用，将使用原有分析逻辑")
+
 plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS', 'sans-serif']
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -847,6 +857,49 @@ def analyze_stock(code, name, run_date=None):
         # 是否存在信号
         has_buildup = main_hist['Buildup_Confirmed'].any()
         has_distribution = main_hist['Distribution_Confirmed'].any()
+        
+        # TAV信号质量过滤（如果可用）
+        tav_quality_score = None
+        tav_recommendation = None
+        if TAV_AVAILABLE and TECHNICAL_ANALYSIS_AVAILABLE:
+            try:
+                # 使用TAV分析器评估信号质量
+                tav_analyzer = TechnicalAnalyzerV2(enable_tav=True)
+                
+                # 为TAV分析准备数据（需要完整的OHLCV数据）
+                tav_data = full_hist[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+                
+                # 计算TAV指标
+                tav_data = tav_analyzer.calculate_all_indicators(tav_data, asset_type='stock')
+                
+                # 获取TAV分析摘要
+                tav_summary = tav_analyzer.get_tav_analysis_summary(tav_data, 'stock')
+                
+                if tav_summary:
+                    tav_quality_score = tav_summary.get('tav_score', 0)
+                    tav_recommendation = tav_summary.get('recommendation', '无建议')
+                    
+                    # TAV信号质量过滤逻辑
+                    # 如果TAV评分较低，降低信号的可靠性
+                    if tav_quality_score < 30:
+                        print(f"  ⚠️ TAV评分较低({tav_quality_score:.1f})，信号质量可能不佳")
+                        # 可以选择性地降低信号的权重或标记为低质量
+                        if has_buildup:
+                            print(f"  ⚠️ 建仓信号被TAV系统标记为低质量")
+                        if has_distribution:
+                            print(f"  ⚠️ 出货信号被TAV系统标记为低质量")
+                    elif tav_quality_score >= 70:
+                        print(f"  ✅ TAV评分较高({tav_quality_score:.1f})，信号质量良好")
+                        if has_buildup:
+                            print(f"  ✅ 建仓信号得到TAV系统确认")
+                        if has_distribution:
+                            print(f"  ✅ 出货信号得到TAV系统确认")
+                    
+                    print(f"  📊 TAV分析: {tav_recommendation}")
+            except Exception as e:
+                print(f"  ⚠️ TAV分析失败: {e}")
+                tav_quality_score = None
+                tav_recommendation = None
 
         # 保存图表
         if SAVE_CHARTS:
@@ -1017,6 +1070,9 @@ def analyze_stock(code, name, run_date=None):
             'volume_ratio_signal': bool(main_hist['Volume_Ratio_Signal'].iloc[-1]),  # 成交量比率信号
             'buildup_dates': main_hist[main_hist['Buildup_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
             'distribution_dates': main_hist[main_hist['Distribution_Confirmed']].index.strftime('%Y-%m-%d').tolist(),
+            # TAV信号质量信息
+            'tav_quality_score': tav_quality_score,
+            'tav_recommendation': tav_recommendation,
         }
         return result
 
