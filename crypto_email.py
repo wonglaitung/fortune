@@ -516,6 +516,7 @@ if __name__ == "__main__":
                     <th>MACD</th>
                     <th>MACD信号线</th>
                     <th>布林带位置</th>
+                    <th>TAV评分</th>
                     <th>MA20</th>
                     <th>MA50</th>
                 </tr>
@@ -532,6 +533,8 @@ if __name__ == "__main__":
         eth_ma50 = indicators['ethereum'].get('ma50', 0)
         eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
         eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
+        eth_tav_score = indicators['ethereum'].get('tav_score', 0)
+        eth_tav_status = indicators['ethereum'].get('tav_status', '无TAV')
         
         html += f"""
                 <tr>
@@ -543,6 +546,7 @@ if __name__ == "__main__":
                     <td>{eth_bb_position:.2f}</td>
                     <td>${eth_ma20:.2f}</td>
                     <td>${eth_ma50:.2f}</td>
+                    <td>{eth_tav_score:.1f} ({eth_tav_status})</td>
                 </tr>
                 
                 # 添加TAV信息到HTML
@@ -626,6 +630,8 @@ if __name__ == "__main__":
         btc_trend = indicators['bitcoin'].get('trend', '未知')
         btc_ma20 = indicators['bitcoin'].get('ma20', 0)
         btc_ma50 = indicators['bitcoin'].get('ma50', 0)
+        btc_tav_score = indicators['bitcoin'].get('tav_score', 0)
+        btc_tav_status = indicators['bitcoin'].get('tav_status', '无TAV')
         btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
         btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
         
@@ -639,6 +645,7 @@ if __name__ == "__main__":
                     <td>{btc_bb_position:.2f}</td>
                     <td>${btc_ma20:.2f}</td>
                     <td>${btc_ma50:.2f}</td>
+                    <td>{btc_tav_score:.1f} ({btc_tav_status})</td>
                 </tr>
         """
         
@@ -723,6 +730,17 @@ if __name__ == "__main__":
     text += "布林带位置：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。\n"
     text += "价格位置(%)：当前价格在近期价格区间的相对位置。\n"
     text += "趋势：市场当前的整体方向。\n"
+    text += "TAV评分(趋势-动量-成交量综合评分)：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：\n"
+    text += "  - 计算方式：TAV评分 = 趋势评分 × 30% + 动量评分 × 45% + 成交量评分 × 25%（加密货币权重配置）\n"
+    text += "  - 趋势评分(30%权重)：基于10日、30日、100日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性\n"
+    text += "  - 动量评分(45%权重)：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向\n"
+    text += "  - 成交量评分(25%权重)：基于20日成交量均线，分析成交量突增(>1.3倍为弱、>1.8倍为中、>2.5倍为强)或萎缩(<0.7倍)情况\n"
+    text += "  - 评分等级：\n"
+    text += "    * ≥80分：强共振 - 三个维度高度一致，强烈信号\n"
+    text += "    * 55-79分：中等共振 - 多数维度一致，中等信号\n"
+    text += "    * 30-54分：弱共振 - 部分维度一致，弱信号\n"
+    text += "    * <30分：无共振 - 各维度分歧，无明确信号\n"
+
     text += "  强势多头：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）\n"
     text += "  多头趋势：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）\n"
     text += "  弱势空头：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）\n"
@@ -755,6 +773,22 @@ if __name__ == "__main__":
               <li><b>空头趋势</b>：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）</li>
               <li><b>震荡整理</b>：价格在一定区间内波动，无明显趋势</li>
               <li><b>短期上涨/下跌</b>：基于最近价格变化的短期趋势判断</li>
+            </ul>
+          </li>
+          <li><b>TAV评分(趋势-动量-成交量综合评分)</b>：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
+            <ul>
+              <li><b>计算方式</b>：TAV评分 = 趋势评分 × 30% + 动量评分 × 45% + 成交量评分 × 25%（加密货币权重配置）</li>
+              <li><b>趋势评分(30%权重)</b>：基于10日、30日、100日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性</li>
+              <li><b>动量评分(45%权重)</b>：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向</li>
+              <li><b>成交量评分(25%权重)</b>：基于20日成交量均线，分析成交量突增(>1.3倍为弱、>1.8倍为中、>2.5倍为强)或萎缩(<0.7倍)情况</li>
+              <li><b>评分等级</b>：
+                <ul>
+                  <li>≥80分：强共振 - 三个维度高度一致，强烈信号</li>
+                  <li>55-79分：中等共振 - 多数维度一致，中等信号</li>
+                  <li>30-54分：弱共振 - 部分维度一致，弱信号</li>
+                  <li><30分：无共振 - 各维度分歧，无明确信号</li>
+                </ul>
+              </li>
             </ul>
           </li>
         </ul>
