@@ -1,5 +1,11 @@
 # iFlow 上下文
 
+## 编码规范
+1. 优先检查是否已有实现 
+2. 若无，先提议新增公共函数，再在当前上下文中调用
+3. 避免内联重复逻辑
+
+
 ## 目录概览
 
 此目录 (`/data/fortune`) 是一个 Python 项目，包含多个金融信息获取、分析和模拟交易功能：
@@ -31,9 +37,9 @@
 *   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
-*   `send_alert.sh`: 本地定时执行脚本，用于执行主力资金追踪、黄金分析和恒生指数策略分析。
+*   `send_alert.sh`: 本地定时执行脚本，按顺序执行个股新闻获取、恒生指数策略分析、主力资金追踪（使用昨天的日期）和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub。
-*   `set_key.sh`: 环境变量配置，包含API密钥和邮件配置。
+*   `set_key.sh`: 环境变量配置，包含API密钥和163邮件配置。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
@@ -52,13 +58,13 @@
 1. 从 CoinGecko API 获取比特币 (Bitcoin) 和以太坊 (Ethereum) 的价格信息（美元和港币）、24小时变化率、市值和24小时交易量。
 2. 集成通用技术分析工具，计算多种技术指标（移动平均线、RSI、MACD、布林带等）。
 3. 识别最近的交易信号（买入/卖出）。
-4. 使用 Yahoo 邮件服务将获取到的价格信息通过邮件发送给指定收件人。
+4. 使用 163 邮件服务将获取到的价格信息通过邮件发送给指定收件人。
 5. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 0:00、8:00 和 16:00，即北京时间 8:00、16:00 和 0:00）。
 
 #### 香港股市 IPO 信息获取
 1. 通过爬取 AAStocks 网站获取香港股市 IPO 信息。
 2. 提取公司名称、上市日期、行业、招股日期、每手股数、招股价格、入场费、暗盘日期等信息。
-3. 将获取到的 IPO 信息通过邮件发送给指定收件人。
+3. 将获取到的 IPO 信息通过 163 邮件服务发送给指定收件人。
 4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 1:00，即北京时间 9:00）。
 
 #### 港股主力资金追踪
@@ -154,9 +160,10 @@
    pip install requests yfinance pandas numpy
    ```
 3. 设置环境变量:
-   - `YAHOO_EMAIL`: 你的邮箱地址。
-   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+   - `YAHOO_EMAIL`: 你的163邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的163邮箱应用专用密码。
+   - `YAHOO_SMTP`: 163邮箱SMTP服务器地址（smtp.163.com）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com,marco.lt.wong@icbcasia.com`）。
 4. 运行脚本:
    ```bash
    python crypto_email.py
@@ -173,6 +180,7 @@
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
 - `YAHOO_APP_PASSWORD`
+- `YAHOO_SMTP`
 - `RECIPIENT_EMAIL`
 
 #### 香港股市 IPO 信息获取
@@ -184,9 +192,10 @@
    pip install requests beautifulsoup4 pandas
    ```
 3. 设置环境变量:
-   - `YAHOO_EMAIL`: 你的邮箱地址。
-   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+   - `YAHOO_EMAIL`: 你的163邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的163邮箱应用专用密码。
+   - `YAHOO_SMTP`: 163邮箱SMTP服务器地址（smtp.163.com）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com,marco.lt.wong@icbcasia.com`）。
 4. 运行脚本:
    ```bash
    python hk_ipo_aastocks.py
@@ -225,7 +234,7 @@
 6. 查看生成的Excel报告 `hk_smart_money_report.xlsx` 和图表 `hk_smart_charts/` 目录。
 
 ##### 本地定时执行
-项目包含 `send_alert.sh` 脚本，可用于本地定时执行，该脚本现在还会运行个股新闻获取器和恒生指数策略分析器:
+项目包含 `send_alert.sh` 脚本，可用于本地定时执行，该脚本会依次运行个股新闻获取器、恒生指数策略分析器、主力资金追踪器和黄金分析器:
 ```bash
 # 编辑 crontab
 crontab -e
@@ -245,6 +254,7 @@ crontab -e
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
 - `YAHOO_APP_PASSWORD`
+- `YAHOO_SMTP`
 - `RECIPIENT_EMAIL`
 - `QWEN_API_KEY`
 
@@ -360,6 +370,7 @@ crontab -e
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
 - `YAHOO_APP_PASSWORD`
+- `YAHOO_SMTP`
 - `RECIPIENT_EMAIL`
 - `QWEN_API_KEY`
 
@@ -373,9 +384,10 @@ crontab -e
    ```
 3. 设置环境变量:
    - `QWEN_API_KEY`: 大模型API密钥。
-   - `YAHOO_EMAIL`: 你的邮箱地址。
-   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+   - `YAHOO_EMAIL`: 你的163邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的163邮箱应用专用密码。
+   - `YAHOO_SMTP`: 163邮箱SMTP服务器地址（smtp.163.com）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com,marco.lt.wong@icbcasia.com`）。
 4. 运行脚本:
    ```bash
    python hsi_llm_strategy.py
@@ -403,9 +415,10 @@ crontab -e
    ```
 3. 设置环境变量:
    - `QWEN_API_KEY`: 大模型API密钥。
-   - `YAHOO_EMAIL`: 你的邮箱地址。
-   - `YAHOO_APP_PASSWORD`: 你的邮箱应用专用密码。
-   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com`）。
+   - `YAHOO_EMAIL`: 你的163邮箱地址。
+   - `YAHOO_APP_PASSWORD`: 你的163邮箱应用专用密码。
+   - `YAHOO_SMTP`: 163邮箱SMTP服务器地址（smtp.163.com）。
+   - `RECIPIENT_EMAIL`: 收件人邮箱地址（可选，默认为 `wonglaitung@gmail.com,marco.lt.wong@icbcasia.com`）。
 4. 运行脚本:
    ```bash
    python hsi_email.py
@@ -436,6 +449,7 @@ crontab -e
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
 - `YAHOO_APP_PASSWORD`
+- `YAHOO_SMTP`
 - `RECIPIENT_EMAIL`
 - `QWEN_API_KEY`
 
@@ -458,6 +472,7 @@ crontab -e
 需要在 GitHub 仓库的 secrets 中配置以下环境变量:
 - `YAHOO_EMAIL`
 - `YAHOO_APP_PASSWORD`
+- `YAHOO_SMTP`
 - `RECIPIENT_EMAIL`
 
 #### 通用技术分析工具
@@ -572,3 +587,4 @@ crontab -e
 15. **功能增强**：恒生指数价格监控器（@hsi_email.py）现在支持基于指定日期的历史数据分析，所有技术分析都基于截止到指定日期的数据进行计算。
 16. **功能增强**：恒生指数价格监控器（@hsi_email.py）的止损价和止盈价显示保留小数点后两位。
 17. **功能增强**：恒生指数价格监控器（@hsi_email.py）在指标说明中增加了ATR(平均真实波幅)指标的解释。
+18. **配置更新**：邮件服务已从Yahoo邮箱更新为163邮箱，相关配置参数已同步更新。

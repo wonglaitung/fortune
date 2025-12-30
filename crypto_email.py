@@ -13,10 +13,12 @@ import pandas as pd
 
 # 导入技术分析工具
 try:
-    from technical_analysis import TechnicalAnalyzer
+    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
+    TAV_AVAILABLE = True
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
+    TAV_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
 def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
@@ -72,7 +74,13 @@ def calculate_technical_indicators(prices):
         return indicators
     
     # 使用技术分析工具计算更准确的指标
-    analyzer = TechnicalAnalyzer()
+    # 根据TAV可用性选择分析器
+    if TAV_AVAILABLE:
+        analyzer = TechnicalAnalyzerV2(enable_tav=True)
+        use_tav = True
+    else:
+        analyzer = TechnicalAnalyzer()
+        use_tav = False
     
     # 获取历史数据进行技术分析
     indicators = {}
@@ -82,14 +90,22 @@ def calculate_technical_indicators(prices):
         btc_ticker = yf.Ticker("BTC-USD")
         btc_hist = btc_ticker.history(period="6mo")  # 获取6个月的历史数据
         if not btc_hist.empty:
-            # 计算技术指标
-            btc_indicators = analyzer.calculate_all_indicators(btc_hist.copy())
+            # 计算技术指标（包含TAV分析）
+            btc_indicators = analyzer.calculate_all_indicators(btc_hist.copy(), asset_type='crypto')
             
-            # 生成买卖信号
-            btc_indicators_with_signals = analyzer.generate_buy_sell_signals(btc_indicators.copy())
+            # 生成买卖信号（如果启用TAV，使用TAV增强信号）
+            if use_tav:
+                btc_indicators_with_signals = analyzer.generate_buy_sell_signals(btc_indicators.copy(), use_tav=True, asset_type='crypto')
+            else:
+                btc_indicators_with_signals = analyzer.generate_buy_sell_signals(btc_indicators.copy())
             
             # 分析趋势
             btc_trend = analyzer.analyze_trend(btc_indicators_with_signals)
+            
+            # 获取TAV分析摘要（如果可用）
+            btc_tav_summary = None
+            if use_tav:
+                btc_tav_summary = analyzer.get_tav_analysis_summary(btc_indicators_with_signals, 'crypto')
             
             # 获取最新的指标值
             latest_btc = btc_indicators_with_signals.iloc[-1]
@@ -97,6 +113,10 @@ def calculate_technical_indicators(prices):
             btc_macd = latest_btc.get('MACD', 0.0)
             btc_macd_signal = latest_btc.get('MACD_signal', 0.0)
             btc_bb_position = latest_btc.get('BB_position', 0.5) if 'BB_position' in latest_btc else 0.5
+            
+            # 获取TAV评分（如果可用）
+            btc_tav_score = latest_btc.get('TAV_Score', 0) if use_tav else 0
+            btc_tav_status = latest_btc.get('TAV_Status', '无TAV') if use_tav else '无TAV'
             
             # 检查最近的交易信号
             recent_signals = btc_indicators_with_signals.tail(5)
@@ -131,6 +151,9 @@ def calculate_technical_indicators(prices):
                 'current_price': latest_btc.get('Close', 0),
                 'ma20': latest_btc.get('MA20', 0),
                 'ma50': latest_btc.get('MA50', 0),
+                'tav_score': btc_tav_score,
+                'tav_status': btc_tav_status,
+                'tav_summary': btc_tav_summary,
             }
         else:
             # 如果无法获取历史数据，使用简化计算
@@ -155,14 +178,22 @@ def calculate_technical_indicators(prices):
         eth_ticker = yf.Ticker("ETH-USD")
         eth_hist = eth_ticker.history(period="6mo")  # 获取6个月的历史数据
         if not eth_hist.empty:
-            # 计算技术指标
-            eth_indicators = analyzer.calculate_all_indicators(eth_hist.copy())
+            # 计算技术指标（包含TAV分析）
+            eth_indicators = analyzer.calculate_all_indicators(eth_hist.copy(), asset_type='crypto')
             
-            # 生成买卖信号
-            eth_indicators_with_signals = analyzer.generate_buy_sell_signals(eth_indicators.copy())
+            # 生成买卖信号（如果启用TAV，使用TAV增强信号）
+            if use_tav:
+                eth_indicators_with_signals = analyzer.generate_buy_sell_signals(eth_indicators.copy(), use_tav=True, asset_type='crypto')
+            else:
+                eth_indicators_with_signals = analyzer.generate_buy_sell_signals(eth_indicators.copy())
             
             # 分析趋势
             eth_trend = analyzer.analyze_trend(eth_indicators_with_signals)
+            
+            # 获取TAV分析摘要（如果可用）
+            eth_tav_summary = None
+            if use_tav:
+                eth_tav_summary = analyzer.get_tav_analysis_summary(eth_indicators_with_signals, 'crypto')
             
             # 获取最新的指标值
             latest_eth = eth_indicators_with_signals.iloc[-1]
@@ -170,6 +201,10 @@ def calculate_technical_indicators(prices):
             eth_macd = latest_eth.get('MACD', 0.0)
             eth_macd_signal = latest_eth.get('MACD_signal', 0.0)
             eth_bb_position = latest_eth.get('BB_position', 0.5) if 'BB_position' in latest_eth else 0.5
+            
+            # 获取TAV评分（如果可用）
+            eth_tav_score = latest_eth.get('TAV_Score', 0) if use_tav else 0
+            eth_tav_status = latest_eth.get('TAV_Status', '无TAV') if use_tav else '无TAV'
             
             # 检查最近的交易信号
             recent_signals = eth_indicators_with_signals.tail(5)
@@ -204,6 +239,9 @@ def calculate_technical_indicators(prices):
                 'current_price': latest_eth.get('Close', 0),
                 'ma20': latest_eth.get('MA20', 0),
                 'ma50': latest_eth.get('MA50', 0),
+                'tav_score': eth_tav_score,
+                'tav_status': eth_tav_status,
+                'tav_summary': eth_tav_summary,
             }
         else:
             # 如果无法获取历史数据，使用简化计算
@@ -506,8 +544,16 @@ if __name__ == "__main__":
                     <td>${eth_ma20:.2f}</td>
                     <td>${eth_ma50:.2f}</td>
                 </tr>
-        """
-        
+                
+                # 添加TAV信息到HTML
+                if TAV_AVAILABLE and indicators['ethereum'].get('tav_score') is not None:
+                    eth_tav_score = indicators['ethereum'].get('tav_score', 0)
+                    eth_tav_status = indicators['ethereum'].get('tav_status', '无TAV')
+                    
+                    # TAV评分状态颜色
+                    tav_color = "green" if eth_tav_score >= 75 else ("orange" if eth_tav_score >= 50 else ("red" if eth_tav_score >= 25 else "gray"))
+                    
+                    html += f"""
         # 添加交易信号到表格中
         if eth_recent_buy_signals:
             html += f"""
@@ -545,6 +591,20 @@ if __name__ == "__main__":
         text += f"  趋势: {eth_trend}\n"
         text += f"  MA20: ${eth_ma20:.2f}\n"
         text += f"  MA50: ${eth_ma50:.2f}\n"
+        
+        # 添加TAV信息
+        if TAV_AVAILABLE and indicators['ethereum'].get('tav_score') is not None:
+            eth_tav_score = indicators['ethereum'].get('tav_score', 0)
+            eth_tav_status = indicators['ethereum'].get('tav_status', '无TAV')
+            text += f"  TAV评分: {eth_tav_score:.1f} ({eth_tav_status})\n"
+            
+            # 添加TAV详细分析
+            eth_tav_summary = indicators['ethereum'].get('tav_summary')
+            if eth_tav_summary:
+                text += f"  TAV趋势分析: {eth_tav_summary.get('trend_analysis', 'N/A')}\n"
+                text += f"  TAV动量分析: {eth_tav_summary.get('momentum_analysis', 'N/A')}\n"
+                text += f"  TAV成交量分析: {eth_tav_summary.get('volume_analysis', 'N/A')}\n"
+                text += f"  TAV建议: {eth_tav_summary.get('recommendation', 'N/A')}\n"
         
         # 添加交易信号信息到文本版本
         if eth_recent_buy_signals:
@@ -619,6 +679,20 @@ if __name__ == "__main__":
         text += f"  趋势: {btc_trend}\n"
         text += f"  MA20: ${btc_ma20:.2f}\n"
         text += f"  MA50: ${btc_ma50:.2f}\n"
+        
+        # 添加TAV信息
+        if TAV_AVAILABLE and indicators['bitcoin'].get('tav_score') is not None:
+            btc_tav_score = indicators['bitcoin'].get('tav_score', 0)
+            btc_tav_status = indicators['bitcoin'].get('tav_status', '无TAV')
+            text += f"  TAV评分: {btc_tav_score:.1f} ({btc_tav_status})\n"
+            
+            # 添加TAV详细分析
+            btc_tav_summary = indicators['bitcoin'].get('tav_summary')
+            if btc_tav_summary:
+                text += f"  TAV趋势分析: {btc_tav_summary.get('trend_analysis', 'N/A')}\n"
+                text += f"  TAV动量分析: {btc_tav_summary.get('momentum_analysis', 'N/A')}\n"
+                text += f"  TAV成交量分析: {btc_tav_summary.get('volume_analysis', 'N/A')}\n"
+                text += f"  TAV建议: {btc_tav_summary.get('recommendation', 'N/A')}\n"
         
         # 添加交易信号信息到文本版本
         if btc_recent_buy_signals:
