@@ -115,7 +115,7 @@ if SAVE_CHARTS and not os.path.exists(CHART_DIR):
     os.makedirs(CHART_DIR)
 
 # 其它
-AK_CALL_SLEEP = 0.2  # 调用 ak 时的短暂停顿以避免限流
+AK_CALL_SLEEP = 0.1  # 调用 ak 时的短暂停顿以避免限流
 
 # ==============================
 # 2. 获取恒生指数数据 (使用腾讯财经接口)
@@ -1514,41 +1514,12 @@ def main(run_date=None):
             for col in df_excel.select_dtypes(include=['float64', 'int64']).columns:
                 df_excel[col] = df_excel[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else x)
             
-            # 创建包含分类信息的DataFrame并保存到Excel
-            category_row = [
-                # 基本信息 (4列)
-                '基本信息', '', '', '',
-                # 价格位置 (1列)
-                '价格位置',
-                # 成交量相关 (9列)
-                '成交量相关', '', '', '', '', '', '', '', '',
-                # 波动性指标 (6列)
-                '波动性指标', '', '', '', '', '',
-                # 均线偏离 (2列)
-                '均线偏离', '',
-                # 技术指标 (16列)
-                '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                # 资金流向指标 (1列)
-                '资金流向指标',
-                # 相对表现 (3列)
-                '相对表现', '', '',
-                # 信号指标 (4列)
-                '', '信号指标', '', '',
-                # TAV评分 (2列)
-                'TAV评分', ''
-            ]
-            
-            category_df = pd.DataFrame([category_row], columns=df_excel.columns)
-            
-            # 保存到Excel文件（包含分类行）
-            with pd.ExcelWriter("hk_smart_money_report.xlsx", engine='openpyxl') as writer:
-                # 将分类行写入Excel
-                category_df.to_excel(writer, index=False, header=True, startrow=0)
-                # 将实际数据写入Excel
-                df_excel.to_excel(writer, index=False, header=True, startrow=1)
-            
-            df_excel.to_excel("hk_smart_money_report.xlsx", index=False)
-            print("\n💾 报告已保存: hk_smart_money_report.xlsx")
+            # 保存到Excel文件
+            try:
+                df_excel.to_excel("hk_smart_money_report.xlsx", index=False)
+                print("\n💾 报告已保存: hk_smart_money_report.xlsx")
+            except Exception as e:
+                print(f"⚠️  Excel保存失败: {e}")
         except Exception as e:
             print(f"⚠️  Excel保存失败: {e}")
 
