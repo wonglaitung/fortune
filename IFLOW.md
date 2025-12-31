@@ -45,6 +45,7 @@
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
 *   `.github/workflows/hsi-email-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hsi_email.py` 脚本。
 *   `.github/workflows/smart-money-alert.yml`: 港股主力资金追踪器的GitHub Actions工作流文件，现已整合个股新闻获取和恒生指数策略分析。
+*   `.github/workflows/analyze-last-48-hours-email-alert.yml.bak`: 最近48小时连续交易信号分析器的备份工作流文件。
 *   `IFLOW.md`: 此文件，提供 iFlow 代理的上下文信息。
 *   `README.md`: 项目详细说明文档。
 
@@ -75,13 +76,13 @@ schedule
 2. 集成通用技术分析工具，计算多种技术指标（移动平均线、RSI、MACD、布林带等）。
 3. 识别最近的交易信号（买入/卖出）。
 4. 使用 163 邮件服务将获取到的价格信息通过邮件发送给指定收件人。
-5. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 0:00、8:00 和 16:00，即北京时间 8:00、16:00 和 0:00）。
+5. 通过 GitHub Actions 工作流实现定时自动执行（默认每小时执行一次，全天候监控）。
 
 #### 香港股市 IPO 信息获取
 1. 通过爬取 AAStocks 网站获取香港股市 IPO 信息。
 2. 提取公司名称、上市日期、行业、招股日期、每手股数、招股价格、入场费、暗盘日期等信息。
 3. 将获取到的 IPO 信息通过 163 邮件服务发送给指定收件人。
-4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 1:00，即北京时间 9:00）。
+4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 2:00，即北京时间 10:00）。
 
 #### 港股主力资金追踪
 1. 批量扫描自选股，分析股票的建仓和出货信号。
@@ -99,7 +100,7 @@ schedule
 
 #### 港股模拟交易系统
 1. 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易。
-2. 每60分钟执行一次交易分析。
+2. 默认每60分钟执行一次交易分析，频率可配置。
 3. 真实调用大模型进行股票分析，并要求以固定JSON格式输出买卖信号。
 4. 支持保守型、平衡型、进取型投资者风险偏好设置。
 5. 严格按照大模型建议执行交易，无随机操作。
@@ -120,7 +121,7 @@ schedule
 1. 获取黄金相关资产和宏观经济数据。
 2. 进行技术分析，计算各种技术指标（MACD、RSI、均线、布林带等）。
 3. 使用大模型进行深度分析，提供投资建议。
-4. 通过 GitHub Actions 工作流实现定时自动执行（默认每天 UTC 时间 7:00，即北京时间 15:00）。
+4. 通过 GitHub Actions 工作流实现定时自动执行（默认每小时执行一次，全天候监控）。
 5. 支持本地定时执行脚本 `send_alert.sh`。
 6. 集成通用技术分析工具，提供全面的技术指标分析。
 
@@ -190,7 +191,7 @@ python crypto_email.py
 
 ##### GitHub Actions 自动化
 - 工作流文件：`.github/workflows/crypto-alert.yml`
-- 执行时间：每天 UTC 时间 0:00、8:00 和 16:00
+- 执行时间：每小时执行一次（全天候监控）
 
 #### 香港股市 IPO 信息获取
 
@@ -201,7 +202,7 @@ python hk_ipo_aastocks.py
 
 ##### GitHub Actions 自动化
 - 工作流文件：`.github/workflows/ipo-alert.yml`
-- 执行时间：每天 UTC 时间 1:00
+- 执行时间：每天 UTC 时间 2:00
 
 #### 港股主力资金追踪
 
@@ -286,7 +287,7 @@ python gold_analyzer.py --period 6mo
 
 ##### GitHub Actions 自动化
 - 工作流文件：`.github/workflows/gold-analyzer.yml`
-- 执行时间：每天 UTC 时间 7:00
+- 执行时间：每小时执行一次（全天候监控）
 
 #### 恒生指数大模型策略分析器
 
@@ -347,7 +348,7 @@ python technical_analysis.py
 
 - `investor_type`：投资者风险偏好（"保守型"、"平衡型"、"进取型"）
 - `initial_capital`：初始资金（默认100万港元）
-- `analysis_frequency`：执行频率（默认每60分钟执行一次交易分析）
+- `analysis_frequency`：执行频率（默认每60分钟执行一次交易分析，可根据需要调整）
 
 不同投资者类型的风险偏好设置：
 - 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
@@ -423,3 +424,4 @@ python technical_analysis.py
 13. **新增功能**：新增恒生指数价格监控器和最近48小时连续交易信号分析器
 14. **功能增强**：恒生指数价格监控器支持基于指定日期的历史数据分析
 15. **配置更新**：邮件服务已统一使用163邮箱，相关配置参数已同步更新
+16. **调度优化**：加密货币价格监控和黄金市场分析器已更新为每小时执行一次，提供更及时的市场监控
