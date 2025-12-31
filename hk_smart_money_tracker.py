@@ -1294,7 +1294,9 @@ def main(run_date=None):
             # 相对表现
             'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
             # 信号指标
-            'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down'
+            'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down',
+            # TAV评分
+            'tav_score', 'tav_status'
         ]]
         df_report.columns = [
             # 基本信息
@@ -1321,7 +1323,9 @@ def main(run_date=None):
             # 相对表现
             '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
             # 信号指标
-            '建仓信号', '出货信号', '放量上涨', '缩量回调'
+            '建仓信号', '出货信号', '放量上涨', '缩量回调',
+            # TAV评分
+            'TAV评分', 'TAV状态'
         ]
 
         df_report = df_report.sort_values(['出货信号', '建仓信号'], ascending=[True, False])
@@ -1468,7 +1472,9 @@ def main(run_date=None):
                 # 相对表现
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
                 # 信号指标
-                'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down'
+                'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down',
+                # TAV评分
+                'tav_score', 'tav_status'
             ]]
             
             df_excel.columns = [
@@ -1595,7 +1601,9 @@ def main(run_date=None):
                     # 相对表现 (3列)
                     '相对表现', '', '',
                     # 信号指标 (4列)
-                    '', '信号指标', '', ''
+                    '', '信号指标', '', '',
+                    # TAV评分 (2列)
+                    'TAV评分', ''
                 ]
                 
                 # 将分类行作为第一行，字段名作为第二行，数据作为后续行
@@ -2193,6 +2201,31 @@ def main(run_date=None):
                 </ul>
               </li>
             </ul>
+            <h4>TAV评分系统</h4>
+            <ul>
+              <li><b>TAV评分</b>：
+                <ul>
+                  <li>含义：趋势-加速度-成交量三维分析的综合评分（0-100分）</li>
+                  <li>计算：基于价格趋势、趋势加速度和成交量变化的综合分析</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>TAV评分 > 70：强势状态，技术面强劲</li>
+                      <li>TAV评分 30-70：中性状态，技术面平稳</li>
+                      <li>TAV评分 < 30：弱势状态，技术面疲弱</li>
+                    </ul>
+                  </li>
+                  <li>用途：用于评估股票技术面的整体强度，辅助判断建仓/出货信号的可靠性</li>
+                </ul>
+              </li>
+              <li><b>TAV状态</b>：
+                <ul>
+                  <li>含义：基于TAV评分生成的文字描述状态</li>
+                  <li>可能状态：强势、中性、弱势、无TAV等</li>
+                  <li>用途：提供直观的技术面状态描述，便于快速理解股票当前的技术健康状况</li>
+                </ul>
+              </li>
+            </ul>
+            
             <h4>其他说明与实践建议</h4>
             <ul>
               <li>时间窗口与阈值（如 PRICE_WINDOW、VOL_WINDOW、阈值等）可根据策略偏好调整。更短窗口更灵敏但噪声更多，反之亦然。</li>
