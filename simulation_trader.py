@@ -594,7 +594,7 @@ class SimulationTrader:
             self.log_message(f"无法解析资金分配比例 {allocation_pct}，跳过买入 {name} ({code})")
             return 0, 0, "无法解析资金分配比例"
 
-    def buy_stock_by_shares(self, code, name, shares, reason=None, stop_loss_price=None, price_at_calculation=None, skip_decision_record=False):
+    def buy_stock_by_shares(self, code, name, shares, reason=None, stop_loss_price=None, price_at_calculation=None, skip_decision_record=False, target_price=None, validity_period=None):
         """
         按指定股数买入股票
         
@@ -615,7 +615,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 amount = shares * (price_at_calculation if price_at_calculation is not None else 0) if shares > 0 and (price_at_calculation if price_at_calculation is not None else 0) > 0 else 0
                 actual_current_price = price_at_calculation if price_at_calculation is not None else self.get_current_stock_price(code)
-                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
+                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 检查股数是否为0
@@ -626,7 +626,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 amount = shares * (price_at_calculation if price_at_calculation is not None else 0) if shares > 0 and (price_at_calculation if price_at_calculation is not None else 0) > 0 else 0
                 actual_current_price = price_at_calculation if price_at_calculation is not None else self.get_current_stock_price(code)
-                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
+                self.record_transaction('BUY', code, name, shares, price_at_calculation if price_at_calculation is not None else 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 获取当前价格（如果提供了计算时的价格，则使用计算时的价格）
@@ -638,7 +638,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 amount = shares * 0 if shares > 0 else 0
                 actual_current_price = current_price if current_price is not None else self.get_current_stock_price(code)
-                self.record_transaction('BUY', code, name, shares, 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
+                self.record_transaction('BUY', code, name, shares, 0, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 计算实际投资金额
@@ -650,7 +650,7 @@ class SimulationTrader:
             
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
-                self.record_transaction('BUY', code, name, shares, current_price, actual_invest, reason, False, stop_loss_price=stop_loss_price, current_price=current_price)
+                self.record_transaction('BUY', code, name, shares, current_price, actual_invest, reason, False, stop_loss_price=stop_loss_price, current_price=current_price, target_price=target_price, validity_period=validity_period)
             
             # 返回一个特殊值来表示资金不足
             return "insufficient_funds"
@@ -694,7 +694,7 @@ class SimulationTrader:
             self.positions[code] = position_info
             
         # 记录交易
-        self.record_transaction('BUY', code, name, shares, current_price, actual_invest, reason, True, stop_loss_price=stop_loss_price, current_price=current_price)
+        self.record_transaction('BUY', code, name, shares, current_price, actual_invest, reason, True, stop_loss_price=stop_loss_price, current_price=current_price, target_price=target_price, validity_period=validity_period)
         
         # 记录投资组合价值
         portfolio_value = self.get_portfolio_value()
@@ -725,7 +725,7 @@ class SimulationTrader:
         
         return True
     
-    def sell_stock(self, code, name, percentage=1.0, reason=None, skip_decision_record=False):
+    def sell_stock(self, code, name, percentage=1.0, reason=None, skip_decision_record=False, target_price=None, validity_period=None):
         """
         卖出股票
         
@@ -744,7 +744,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 actual_shares = int(self.positions.get(code, {}).get('shares', 0) * percentage) if code in self.positions else 0
                 actual_current_price = self.get_current_stock_price(code)  # 获取当前价格作为参考
-                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price)
+                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 检查是否有持仓
@@ -755,7 +755,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 amount = 0 * 0 if 0 > 0 else 0
                 current_price = self.get_current_stock_price(code)  # 获取当前价格作为参考
-                self.record_transaction('SELL', code, name, 0, 0, amount, reason, False, current_price=current_price)
+                self.record_transaction('SELL', code, name, 0, 0, amount, reason, False, current_price=current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         position = self.positions[code]
@@ -768,7 +768,7 @@ class SimulationTrader:
             if not skip_decision_record:
                 actual_shares = int(self.positions.get(code, {}).get('shares', 0) * percentage)
                 actual_current_price = self.get_current_stock_price(code)  # 即使获取不到也尝试一次
-                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price)
+                self.record_transaction('SELL', code, name, actual_shares, 0, 0, reason, False, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 计算卖出股数
@@ -779,7 +779,7 @@ class SimulationTrader:
             # 如果没有在决策阶段记录过，则在执行阶段记录失败的交易
             if not skip_decision_record:
                 actual_current_price = self.get_current_stock_price(code)
-                self.record_transaction('SELL', code, name, 0, current_price, 0, reason, False, current_price=actual_current_price)
+                self.record_transaction('SELL', code, name, 0, current_price, 0, reason, False, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
             return False
             
         # 计算卖出金额
@@ -979,7 +979,7 @@ class SimulationTrader:
         
         return context
 
-    def record_transaction(self, transaction_type, code, name, shares, price, amount, reason, success, profit_loss=None, stop_loss_price=None, current_price=None):
+    def record_transaction(self, transaction_type, code, name, shares, price, amount, reason, success, profit_loss=None, stop_loss_price=None, current_price=None, target_price=None, validity_period=None):
         """
         记录交易（成功或失败）
         
@@ -995,6 +995,8 @@ class SimulationTrader:
             profit_loss (float, optional): 盈亏金额，仅适用于卖出交易
             stop_loss_price (float, optional): 止损价格
             current_price (float, optional): 当前价格
+            target_price (float, optional): 目标价格
+            validity_period (int, optional): 有效期（天数）
         """
         transaction = {
             'timestamp': datetime.now().isoformat(),
@@ -1008,7 +1010,9 @@ class SimulationTrader:
             'reason': reason if reason else '未提供理由',
             'success': success,
             'stop_loss_price': stop_loss_price,
-            'current_price': current_price
+            'current_price': current_price,
+            'target_price': target_price,
+            'validity_period': validity_period
         }
         self.transaction_history.append(transaction)
         self.save_transactions_to_csv()  # 立即保存到CSV
@@ -1026,7 +1030,9 @@ class SimulationTrader:
             'capital_after': self.capital,
             'success': success,
             'stop_loss_price': stop_loss_price,
-            'current_price': current_price
+            'current_price': current_price,
+            'target_price': target_price,
+            'validity_period': validity_period
         }
         
         # 如果是卖出交易且提供了盈亏信息，则添加到记录中
@@ -1107,28 +1113,32 @@ class SimulationTrader:
 请严格按照以下格式输出：
 {{
     "buy": [
-        {{"code": "股票代码1", "name": "股票名称1", "reason": "买入理由", "allocation_pct": 数字, "stop_loss_price": 数字}},
-        {{"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": 数字, "stop_loss_price": 数字}}
+        {{"code": "股票代码1", "name": "股票名称1", "reason": "买入理由", "allocation_pct": 数字, "stop_loss_price": 数字, "target_price": 数字, "validity_period": 数字}},
+        {{"code": "股票代码2", "name": "股票名称2", "reason": "买入理由", "allocation_pct": 数字, "stop_loss_price": 数字, "target_price": 数字, "validity_period": 数字}}
     ],
     "sell": [
-        {{"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": 布尔值}},
-        {{"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": 布尔值}}
+        {{"code": "股票代码3", "name": "股票名称3", "reason": "卖出理由", "stop_loss_triggered": 布尔值, "target_price": 数字, "validity_period": 数字}},
+        {{"code": "股票代码4", "name": "股票名称4", "reason": "卖出理由", "stop_loss_triggered": 布尔值, "target_price": 数字, "validity_period": 数字}}
     ]
 }}
 
 要求：
 1. 只输出JSON格式，不要包含其他文字
-2. "buy"字段包含建议买入的股票信息列表，每项包含代码、名称、理由、资金分配比例和止损价格
-3. "sell"字段包含建议卖出的股票信息列表，每项包含代码、名称、理由和是否由止损机制触发
+2. "buy"字段包含建议买入的股票信息列表，每项包含代码、名称、理由、资金分配比例、止损价格、目标价格和有效期
+3. "sell"字段包含建议卖出的股票信息列表，每项包含代码、名称、理由、是否由止损机制触发、目标价格和有效期
 4. **资金分配比例必须是数字格式**，例如：15 表示 15%，而不是 "15%" 或 "0.15"。数值范围通常在 0-100 之间
 5. **止损价格必须是数字格式**，例如：120.5，而不是字符串
-6. **是否由止损机制触发必须是布尔值**，true 或 false
-7. 如果没有明确的买卖建议，对应的字段为空数组
-8. 根据投资者风险偏好筛选适合的股票
-9. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
-10. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
-11. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
-12. 决策一致性：当前决策应与历史决策保持一致性，避免在短时间内对同一只股票进行相反的操作，但在市场情况发生重大变化时允许必要的调整
+6. **目标价格必须是数字格式**，表示预期的目标价位，例如：150.5
+7. **有效期必须是数字格式**，表示建议的有效天数，例如：7 表示7天有效期
+8. **是否由止损机制触发必须是布尔值**，true 或 false
+9. 如果没有明确的买卖建议，对应的字段为空数组
+10. 根据投资者风险偏好筛选适合的股票
+11. 买入列表中的股票应按投资价值从高到低排序，最有价值的股票排在最前面
+12. 资金分配策略：单只股票投资金额不应超过总投资金额的一定比例（保守型不超过10%，平衡型不超过15%，进取型不超过20%）
+13. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
+14. 目标价格策略：基于技术分析和市场预期，设定合理的盈利目标价格
+15. 有效期策略：根据市场波动性和分析可靠性，设定建议的有效期限（通常3-30天）
+16. 决策一致性：当前决策应与历史决策保持一致性，避免在短时间内对同一只股票进行相反的操作，但在市场情况发生重大变化时允许必要的调整
 """
                 
             self.log_message("正在请求大模型以固定格式输出买卖信号...")
@@ -1172,6 +1182,8 @@ class SimulationTrader:
             name = stock.get('name', hk_smart_money_tracker.WATCHLIST.get(code, code))
             reason = stock.get('reason', '未提供理由')
             stop_loss_triggered = stock.get('stop_loss_triggered', False)
+            target_price = stock.get('target_price', None)
+            validity_period = stock.get('validity_period', None)
             
             if code in hk_smart_money_tracker.WATCHLIST:
                 # 记录卖出决策（无论是否成功执行）
@@ -1182,7 +1194,7 @@ class SimulationTrader:
                     # 记录失败的交易 - 确保记录到交易历史中
                     amount = 0.0
                     actual_current_price = self.get_current_stock_price(code)
-                    self.record_transaction('SELL', code, name, 0, 0.0, amount, reason, False, current_price=actual_current_price)
+                    self.record_transaction('SELL', code, name, 0, 0.0, amount, reason, False, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
                     
                     # 发送无法卖出通知邮件
                     success = self.send_trading_notification(
@@ -1200,7 +1212,7 @@ class SimulationTrader:
                     # 卖出全部持仓
                     sell_pct = 1.0
                     self.log_message(f"按大模型建议卖出 {name} ({code})，理由: {reason}，止损触发: {stop_loss_triggered}")
-                    self.sell_stock(code, name, sell_pct, reason, skip_decision_record=True)  # 已在决策阶段记录，跳过执行阶段的记录
+                    self.sell_stock(code, name, sell_pct, reason, skip_decision_record=True, target_price=target_price, validity_period=validity_period)  # 已在决策阶段记录，跳过执行阶段的记录
                 
         # 检查是否需要止损
         positions_to_check = list(self.positions.items())  # 创建副本以避免修改时出错
@@ -1233,6 +1245,8 @@ class SimulationTrader:
             reason = stock.get('reason', '未提供理由')
             allocation_pct = stock.get('allocation_pct', '未提供')
             stop_loss_price = stock.get('stop_loss_price', '未提供')
+            target_price = stock.get('target_price', None)
+            validity_period = stock.get('validity_period', None)
             
             if code in hk_smart_money_tracker.WATCHLIST:
                 # 检查是否提供了资金分配比例
@@ -1275,7 +1289,7 @@ class SimulationTrader:
                     # 记录失败的交易
                     amount = 0 * current_price if 0 > 0 else 0
                     actual_current_price = current_price if current_price is not None else self.get_current_stock_price(code)
-                    self.record_transaction('BUY', code, name, 0, current_price, amount, f"{reason} (原因: {calculation_reason})", False, stop_loss_price=stop_loss_price, current_price=actual_current_price)
+                    self.record_transaction('BUY', code, name, 0, current_price, amount, f"{reason} (原因: {calculation_reason})", False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
                     
                     # 根据计算原因决定是否发送资金不足通知
                     if calculation_reason == "资金不足":
@@ -1313,7 +1327,7 @@ class SimulationTrader:
                     continue
                 
                 # 如果计算出的股数大于0，则执行买入操作
-                self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price, current_price, skip_decision_record=False)
+                self.buy_stock_by_shares(code, name, shares, reason, stop_loss_price, current_price, skip_decision_record=False, target_price=target_price, validity_period=validity_period)
                 
         # 保存状态
         self.save_state()
