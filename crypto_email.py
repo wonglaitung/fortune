@@ -548,16 +548,8 @@ if __name__ == "__main__":
                     <td>${eth_ma50:.2f}</td>
                     <td>{eth_tav_score:.1f} ({eth_tav_status})</td>
                 </tr>
-                
-                # 添加TAV信息到HTML
-                if TAV_AVAILABLE and indicators['ethereum'].get('tav_score') is not None:
-                    eth_tav_score = indicators['ethereum'].get('tav_score', 0)
-                    eth_tav_status = indicators['ethereum'].get('tav_status', '无TAV')
-                    
-                    # TAV评分状态颜色
-                    tav_color = "green" if eth_tav_score >= 75 else ("orange" if eth_tav_score >= 50 else ("red" if eth_tav_score >= 25 else "gray"))
-                    
-                    html += f"""
+            """
+        
         # 添加交易信号到表格中
         if eth_recent_buy_signals:
             html += f"""
