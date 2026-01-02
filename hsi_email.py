@@ -359,6 +359,61 @@ class HSIEmailSystem:
             return "color: red; font-weight: bold;"
         else:
             return "color: gray; font-weight: bold;"
+    
+    def _format_price_info(self, current_price=None, stop_loss_price=None, target_price=None, validity_period=None):
+        """
+        公用方法：格式化价格信息，确保数字类型正确转换
+        
+        Returns:
+            dict: 包含格式化后的价格信息
+        """
+        price_info = ""
+        stop_loss_info = ""
+        target_price_info = ""
+        validity_period_info = ""
+        
+        try:
+            # 格式化当前价格
+            if current_price is not None and pd.notna(current_price):
+                price_info = f"现价: {float(current_price):.2f}"
+            
+            # 格式化止损价格
+            if stop_loss_price is not None and pd.notna(stop_loss_price):
+                stop_loss_info = f"止损价: {float(stop_loss_price):.2f}"
+            
+            # 格式化目标价格
+            if target_price is not None and pd.notna(target_price):
+                try:
+                    # 确保target_price是数字类型
+                    if isinstance(target_price, str) and target_price.strip():
+                        target_price_float = float(target_price)
+                        target_price_info = f"目标价: {target_price_float:.2f}"
+                    else:
+                        target_price_info = f"目标价: {float(target_price):.2f}"
+                except (ValueError, TypeError):
+                    target_price_info = f"目标价: {target_price}"
+            
+            # 格式化有效期
+            if validity_period is not None and pd.notna(validity_period):
+                try:
+                    # 确保validity_period是数字类型
+                    if isinstance(validity_period, str) and validity_period.strip():
+                        validity_period_int = int(float(validity_period))
+                        validity_period_info = f"有效期: {validity_period_int}天"
+                    else:
+                        validity_period_info = f"有效期: {int(validity_period)}天"
+                except (ValueError, TypeError):
+                    validity_period_info = f"有效期: {validity_period}"
+            
+        except Exception as e:
+            print(f"⚠️ 格式化价格信息时出错: {e}")
+        
+        return {
+            'price_info': price_info,
+            'stop_loss_info': stop_loss_info,
+            'target_price_info': target_price_info,
+            'validity_period_info': validity_period_info
+        }
 
     def _clean_signal_description(self, description):
         """
@@ -1404,14 +1459,12 @@ class HSIEmailSystem:
                             target_price = transaction.get('target_price')
                             validity_period = transaction.get('validity_period')
                             
-                            if pd.notna(current_price):
-                                price_info = f"现价: {current_price:.2f}"
-                            if pd.notna(stop_loss_price):
-                                stop_loss_info = f"止损价: {stop_loss_price:.2f}"
-                            if pd.notna(target_price):
-                                target_price_info = f"目标价: {target_price:.2f}"
-                            if pd.notna(validity_period):
-                                validity_period_info = f"有效期: {int(validity_period)}天"
+                            # 使用公用的格式化方法
+                            price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                            price_info = price_data['price_info']
+                            stop_loss_info = price_data['stop_loss_info']
+                            target_price_info = price_data['target_price_info']
+                            validity_period_info = price_data['validity_period_info']
                         
                         info_parts = [part for part in [price_info, stop_loss_info, target_price_info, validity_period_info] if part]
                         reason_info = ", ".join(info_parts)
@@ -1461,14 +1514,12 @@ class HSIEmailSystem:
                             target_price = transaction.get('target_price')
                             validity_period = transaction.get('validity_period')
                             
-                            if pd.notna(current_price):
-                                price_info = f"现价: {current_price:.2f}"
-                            if pd.notna(stop_loss_price):
-                                stop_loss_info = f"止损价: {stop_loss_price:.2f}"
-                            if pd.notna(target_price):
-                                target_price_info = f"目标价: {target_price:.2f}"
-                            if pd.notna(validity_period):
-                                validity_period_info = f"有效期: {int(validity_period)}天"
+                            # 使用公用的格式化方法
+                            price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                            price_info = price_data['price_info']
+                            stop_loss_info = price_data['stop_loss_info']
+                            target_price_info = price_data['target_price_info']
+                            validity_period_info = price_data['validity_period_info']
                         
                         info_parts = [part for part in [price_info, stop_loss_info, target_price_info, validity_period_info] if part]
                         reason_info = ", ".join(info_parts)
@@ -1511,15 +1562,12 @@ class HSIEmailSystem:
                         target_price = transaction.get('target_price')
                         validity_period = transaction.get('validity_period')
                         
-                        if pd.notna(current_price):
-                            price_info = f"现价: {current_price:.2f}"
-                        if pd.notna(stop_loss_price):
-                            stop_loss_info = f"止损价: {stop_loss_price:.2f}"
-                        if pd.notna(target_price):
-                            target_price_info = f"目标价: {target_price:.2f}"
-                        if pd.notna(validity_period):
-                            validity_period_info = f"有效期: {int(validity_period)}天"
-                    
+                        # 使用公用的格式化方法
+                        price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                        price_info = price_data['price_info']
+                        stop_loss_info = price_data['stop_loss_info']
+                        target_price_info = price_data['target_price_info']
+                        validity_period_info = price_data['validity_period_info']                    
                     info_parts = [part for part in [price_info, stop_loss_info, target_price_info, validity_period_info] if part]
                     reason_info = ", ".join(info_parts)
                     combined_item = f"{time_info} {reason_info}".strip()
@@ -1549,15 +1597,12 @@ class HSIEmailSystem:
                         target_price = transaction.get('target_price')
                         validity_period = transaction.get('validity_period')
                         
-                        if pd.notna(current_price):
-                            price_info = f"现价: {current_price:.2f}"
-                        if pd.notna(stop_loss_price):
-                            stop_loss_info = f"止损价: {stop_loss_price:.2f}"
-                        if pd.notna(target_price):
-                            target_price_info = f"目标价: {target_price:.2f}"
-                        if pd.notna(validity_period):
-                            validity_period_info = f"有效期: {int(validity_period)}天"
-                    
+                        # 使用公用的格式化方法
+                        price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                        price_info = price_data['price_info']
+                        stop_loss_info = price_data['stop_loss_info']
+                        target_price_info = price_data['target_price_info']
+                        validity_period_info = price_data['validity_period_info']                    
                     info_parts = [part for part in [price_info, stop_loss_info, target_price_info, validity_period_info] if part]
                     reason_info = ", ".join(info_parts)
                     combined_item = f"{time_info} {reason_info}".strip()
@@ -1627,41 +1672,18 @@ class HSIEmailSystem:
                         price_display = f"{price:,.2f}" if not pd.isna(price) else (trans.get('price', '') or '')
                         reason = trans.get('reason', '') or ''
                         
-                        # 获取止损价、目标价和有效期
-                        stop_loss_price = trans.get('stop_loss_price', np.nan)
-                        try:
-                            if not pd.isna(stop_loss_price) and isinstance(stop_loss_price, (int, float)):
-                                stop_loss_display = f"{stop_loss_price:,.2f}"
-                            else:
-                                stop_loss_display = ''
-                        except (ValueError, TypeError):
-                            stop_loss_display = ''
+                        # 使用公用的格式化方法获取价格信息
+                        price_data = self._format_price_info(
+                            trans.get('current_price', np.nan),
+                            trans.get('stop_loss_price', np.nan),
+                            trans.get('target_price', np.nan),
+                            trans.get('validity_period', np.nan)
+                        )
                         
-                        target_price = trans.get('target_price', np.nan)
-                        try:
-                            # 尝试将字符串转换为数字
-                            if isinstance(target_price, str) and target_price.strip():
-                                target_price = float(target_price)
-                            
-                            if not pd.isna(target_price) and isinstance(target_price, (int, float)):
-                                target_price_display = f"{target_price:,.2f}"
-                            else:
-                                target_price_display = ''
-                        except (ValueError, TypeError):
-                            target_price_display = ''
-                        
-                        validity_period = trans.get('validity_period', np.nan)
-                        try:
-                            # 尝试将字符串转换为数字
-                            if isinstance(validity_period, str) and validity_period.strip():
-                                validity_period = float(validity_period)
-                            
-                            if not pd.isna(validity_period) and isinstance(validity_period, (int, float)):
-                                validity_period_display = f"{int(validity_period)}天"
-                            else:
-                                validity_period_display = ''
-                        except (ValueError, TypeError):
-                            validity_period_display = ''
+                        # 格式化显示
+                        stop_loss_display = price_data['stop_loss_info'].replace('止损价: ', '') if price_data['stop_loss_info'] else ''
+                        target_price_display = price_data['target_price_info'].replace('目标价: ', '') if price_data['target_price_info'] else ''
+                        validity_period_display = price_data['validity_period_info'].replace('有效期: ', '') if price_data['validity_period_info'] else ''
                         
                         html += f"""
                         <tr style="{row_style}">
@@ -1697,41 +1719,18 @@ class HSIEmailSystem:
                             price_display = f"{price:,.2f}" if not pd.isna(price) else ''
                             reason = tr.get('reason','') or ''
                             
-                            # 获取止损价、目标价和有效期
-                            stop_loss_price = tr.get('stop_loss_price', np.nan)
-                            try:
-                                if not pd.isna(stop_loss_price) and isinstance(stop_loss_price, (int, float)):
-                                    stop_loss_display = f"{stop_loss_price:,.2f}"
-                                else:
-                                    stop_loss_display = ''
-                            except (ValueError, TypeError):
-                                stop_loss_display = ''
+                            # 使用公用的格式化方法获取价格信息
+                            price_data = self._format_price_info(
+                                tr.get('current_price', np.nan),
+                                tr.get('stop_loss_price', np.nan),
+                                tr.get('target_price', np.nan),
+                                tr.get('validity_period', np.nan)
+                            )
                             
-                            target_price = tr.get('target_price', np.nan)
-                            try:
-                                # 尝试将字符串转换为数字
-                                if isinstance(target_price, str) and target_price.strip():
-                                    target_price = float(target_price)
-                                
-                                if not pd.isna(target_price) and isinstance(target_price, (int, float)):
-                                    target_price_display = f"{target_price:,.2f}"
-                                else:
-                                    target_price_display = ''
-                            except (ValueError, TypeError):
-                                target_price_display = ''
-                            
-                            validity_period = tr.get('validity_period', np.nan)
-                            try:
-                                # 尝试将字符串转换为数字
-                                if isinstance(validity_period, str) and validity_period.strip():
-                                    validity_period = float(validity_period)
-                                
-                                if not pd.isna(validity_period) and isinstance(validity_period, (int, float)):
-                                    validity_period_display = f"{int(validity_period)}天"
-                                else:
-                                    validity_period_display = ''
-                            except (ValueError, TypeError):
-                                validity_period_display = ''
+                            # 格式化显示
+                            stop_loss_display = price_data['stop_loss_info'].replace('止损价: ', '') if price_data['stop_loss_info'] else ''
+                            target_price_display = price_data['target_price_info'].replace('目标价: ', '') if price_data['target_price_info'] else ''
+                            validity_period_display = price_data['validity_period_info'].replace('有效期: ', '') if price_data['validity_period_info'] else ''
                             
                             # 调试信息
                             print(f"调试: {stock_name} - 原始值: 止损价={stop_loss_price}, 目标价={target_price}, 有效期={validity_period}")
