@@ -349,7 +349,7 @@ class HSIEmailSystem:
         根据TAV评分返回对应的颜色样式
         """
         if tav_score is None:
-            return "color: gray; font-weight: bold;"
+            return "color: orange; font-weight: bold;"
         
         if tav_score >= 75:
             return "color: green; font-weight: bold;"
@@ -358,7 +358,7 @@ class HSIEmailSystem:
         elif tav_score >= 25:
             return "color: red; font-weight: bold;"
         else:
-            return "color: gray; font-weight: bold;"
+            return "color: orange; font-weight: bold;"
     
     def _format_price_info(self, current_price=None, stop_loss_price=None, target_price=None, validity_period=None):
         """
@@ -554,6 +554,11 @@ class HSIEmailSystem:
                 volume_ma10 = latest.get('Volume_MA10', 0.0)
                 volume_ma20 = latest.get('Volume_MA20', 0.0)
 
+                # 计算不同投资风格的VaR
+                var_ultra_short = self.calculate_var(hist, 'ultra_short_term')
+                var_short = self.calculate_var(hist, 'short_term')
+                var_medium_long = self.calculate_var(hist, 'medium_long_term')
+                
                 # 初始化指标字典
                 indicators = {
                     'rsi': rsi,
@@ -576,7 +581,10 @@ class HSIEmailSystem:
                     'volume_surge': volume_surge,
                     'volume_shrink': volume_shrink,
                     'volume_ma10': volume_ma10,
-                    'volume_ma20': volume_ma20
+                    'volume_ma20': volume_ma20,
+                    'var_ultra_short_term': var_ultra_short,
+                    'var_short_term': var_short,
+                    'var_medium_long_term': var_medium_long
                 }
                 
                 # 添加TAV分析信息（如果可用）
@@ -669,6 +677,68 @@ class HSIEmailSystem:
         计算技术指标（适用于个股）
         """
         return self._calculate_technical_indicators_core(data, asset_type='stock')
+
+    def calculate_var(self, hist_df, investment_style='medium_term', confidence_level=0.95):
+        """
+        计算风险价值(VaR)，时间维度与投资周期匹配
+        
+        参数:
+        - hist_df: 包含历史价格数据的DataFrame
+        - investment_style: 投资风格
+          - 'ultra_short_term': 超短线交易（日内/隔夜）
+          - 'short_term': 波段交易（数天–数周）
+          - 'medium_long_term': 中长期投资（1个月+）
+        - confidence_level: 置信水平（默认0.95，即95%）
+        
+        返回:
+        - VaR值（百分比）
+        """
+        try:
+            if hist_df is None or hist_df.empty:
+                return None
+            
+            # 根据投资风格确定VaR计算的时间窗口
+            if investment_style == 'ultra_short_term':
+                # 超短线交易：1日VaR
+                var_window = 1
+            elif investment_style == 'short_term':
+                # 波段交易：5日VaR
+                var_window = 5
+            elif investment_style == 'medium_long_term':
+                # 中长期投资：20日VaR（≈1个月）
+                var_window = 20
+            else:
+                # 默认使用5日VaR
+                var_window = 5
+            
+            # 确保有足够的历史数据
+            required_data = max(var_window * 5, 30)  # 至少需要5倍时间窗口或30天的数据
+            if len(hist_df) < required_data:
+                return None
+            
+            # 计算日收益率
+            returns = hist_df['Close'].pct_change().dropna()
+            
+            if len(returns) < var_window:
+                return None
+            
+            # 计算指定时间窗口的收益率
+            if var_window == 1:
+                # 1日VaR直接使用日收益率
+                window_returns = returns
+            else:
+                # 多日VaR使用滚动收益率
+                window_returns = hist_df['Close'].pct_change(var_window).dropna()
+            
+            # 使用历史模拟法计算VaR
+            var_percentile = (1 - confidence_level) * 100
+            var_value = np.percentile(window_returns, var_percentile)
+            
+            # 返回绝对值（VaR通常表示为正数，表示最大可能损失）
+            return abs(var_value)
+        except Exception as e:
+            print(f"⚠️ 计算VaR失败: {e}")
+            return None
 
     def calculate_rsi(self, change_pct):
         """
@@ -1075,6 +1145,35 @@ class HSIEmailSystem:
                 </tr>
         """
 
+        # 添加VaR信息
+        var_ultra_short = indicators.get('var_ultra_short_term')
+        var_short = indicators.get('var_short_term')
+        var_medium_long = indicators.get('var_medium_long_term')
+        
+        if var_ultra_short is not None:
+            html += f"""
+                <tr>
+                    <td>1日VaR (95%)</td>
+                    <td>{var_ultra_short:.2%}</td>
+                </tr>
+            """
+        
+        if var_short is not None:
+            html += f"""
+                <tr>
+                    <td>5日VaR (95%)</td>
+                    <td>{var_short:.2%}</td>
+                </tr>
+            """
+        
+        if var_medium_long is not None:
+            html += f"""
+                <tr>
+                    <td>20日VaR (95%)</td>
+                    <td>{var_medium_long:.2%}</td>
+                </tr>
+            """
+
         # 添加TAV信息（如果可用）
         tav_score = indicators.get('tav_score', None)
         tav_status = indicators.get('tav_status', '无TAV')
@@ -1091,28 +1190,30 @@ class HSIEmailSystem:
                 </tr>
             """
             
-            # 如果有TAV详细分析，添加展开/折叠的详细信息
+            # 如果有TAV详细分析，添加详细信息
             if tav_summary:
                 trend_analysis = tav_summary.get('trend_analysis', 'N/A')
                 momentum_analysis = tav_summary.get('momentum_analysis', 'N/A')
                 volume_analysis = tav_summary.get('volume_analysis', 'N/A')
                 recommendation = tav_summary.get('recommendation', 'N/A')
                 
+                # 直接显示TAV详细分析内容，兼容所有邮件客户端
                 html += f"""
                 <tr>
                     <td colspan="2">
-                        <details style="cursor: pointer;">
-                            <summary style="color: #666; font-size: 0.9em;">📊 TAV详细分析 (点击展开)</summary>
-                            <div style="margin-top: 10px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; font-size: 0.9em;">
-                                <p><strong>趋势分析:</strong> {trend_analysis}</p>
-                                <p><strong>动量分析:</strong> {momentum_analysis}</p>
-                                <p><strong>成交量分析:</strong> {volume_analysis}</p>
-                                <p><strong>TAV建议:</strong> {recommendation}</p>
-                            </div>
-                        </details>
+                        <div style="margin-top: 15px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; font-size: 0.9em; border-left: 4px solid #ff9800; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="margin-bottom: 8px; font-weight: bold; color: #000; font-size: 1.1em;">📊 TAV详细分析</div>
+                            <div style="margin-bottom: 8px;"><strong style="color: #333;">趋势分析:</strong> {trend_analysis}</div>
+                            <div style="margin-bottom: 8px;"><strong style="color: #333;">动量分析:</strong> {momentum_analysis}</div>
+                            <div style="margin-bottom: 8px;"><strong style="color: #333;">成交量分析:</strong> {volume_analysis}</div>
+                            <div><strong style="color: #333;">TAV建议:</strong> {recommendation}</div>
+                        </div>
                     </td>
                 </tr>
                 """
+            else:
+                # 调试信息
+                print(f"⚠️ 股票 {stock_data['name']} ({stock_data['symbol']}) 没有TAV摘要")
 
         # 只使用交易记录中的止损价和目标价
         if latest_stop_loss is not None and pd.notna(latest_stop_loss):
@@ -1173,12 +1274,20 @@ class HSIEmailSystem:
             """
 
         if continuous_signal_info:
+            # 根据连续信号内容设置颜色
+            if "买入" in continuous_signal_info:
+                signal_color = "green"
+            elif "卖出" in continuous_signal_info:
+                signal_color = "red"
+            else:
+                signal_color = "orange"
+                
             html += f"""
             <tr>
                 <td colspan="2">
                     <div class="continuous-signal">
                         <strong>🤖 48小时智能建议:</strong><br>
-                        <span style='color: blue;'>• {continuous_signal_info}</span>
+                        <span style='color: {signal_color};'>• {continuous_signal_info}</span>
                     </div>
                 </td>
             </tr>
@@ -1308,7 +1417,7 @@ class HSIEmailSystem:
         # 文本版表头（修复原先被截断的 f-string）
         text_lines = []
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'1日VaR':<8} {'5日VaR':<8} {'20日VaR':<8}"
         text_lines.append(header)
 
         html = f"""
@@ -1347,6 +1456,9 @@ class HSIEmailSystem:
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
+                        <th>1日VaR(95%)</th>
+                        <th>5日VaR(95%)</th>
+                        <th>20日VaR(95%)</th>
                     </tr>
         """
 
@@ -1366,7 +1478,7 @@ class HSIEmailSystem:
             # 为无量价信号但有48小时建议的股票创建特殊显示
             if signal_type not in ['买入', '卖出'] and continuous_signal_status != "无建议信号":
                 signal_display = "无量价信号"
-                color_style = "color: blue; font-weight: bold;"
+                color_style = "color: orange; font-weight: bold;"
                 signal_description = f"仅48小时智能建议: {continuous_signal_status}"
             else:
                 signal_description = signal.get('description', '') if isinstance(signal, dict) else (str(signal) if signal is not None else '')
@@ -1377,7 +1489,7 @@ class HSIEmailSystem:
             elif "卖出" in continuous_signal_status:
                 signal_color_style = "color: red; font-weight: bold;"
             elif "无建议信号" in continuous_signal_status:
-                signal_color_style = "color: blue; font-weight: bold;"
+                signal_color_style = "color: orange; font-weight: bold;"
             else:
                 signal_color_style = ""
             
@@ -1387,7 +1499,7 @@ class HSIEmailSystem:
             elif "空头" in trend:
                 trend_color_style = "color: red; font-weight: bold;"
             elif "震荡" in trend:
-                trend_color_style = "color: blue; font-weight: bold;"
+                trend_color_style = "color: orange; font-weight: bold;"
             else:
                 trend_color_style = ""
             
@@ -1396,10 +1508,14 @@ class HSIEmailSystem:
             if trend_color_style == color_style == signal_color_style and trend_color_style != "":
                 name_color_style = trend_color_style
             
-            # 获取TAV评分信息
+            # 获取TAV评分信息和VaR值
             tav_score = None
             tav_status = None
-            tav_color = "color: gray; font-weight: bold;"  # 默认颜色
+            tav_color = "color: orange; font-weight: bold;"  # 默认颜色
+            var_ultra_short = None
+            var_short = None
+            var_medium_long = None
+            
             if stock_code != 'HSI':
                 # stock_results是列表，需要查找匹配的股票代码
                 stock_indicators = None
@@ -1411,6 +1527,9 @@ class HSIEmailSystem:
                 if stock_indicators:
                     tav_score = stock_indicators.get('tav_score', 0)
                     tav_status = stock_indicators.get('tav_status', '无TAV')
+                    var_ultra_short = stock_indicators.get('var_ultra_short_term')
+                    var_short = stock_indicators.get('var_short_term')
+                    var_medium_long = stock_indicators.get('var_medium_long_term')
                 
                 # TAV评分颜色
                 tav_color = self._get_tav_color(tav_score)
@@ -1425,6 +1544,11 @@ class HSIEmailSystem:
             safe_continuous_signal_status = continuous_signal_status if continuous_signal_status is not None else 'N/A'
             safe_signal_description = signal_description if signal_description is not None else 'N/A'
             
+            # 格式化VaR值
+            var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
+            var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
+            var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
@@ -1434,12 +1558,18 @@ class HSIEmailSystem:
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td>{var_ultra_short_display}</td>
+                        <td>{var_short_display}</td>
+                        <td>{var_medium_long_display}</td>
                     </tr>
             """
 
             # 文本版本追加
             tav_display = f"{tav_score:.1f}" if tav_score is not None else "N/A"
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display}")
+            var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
+            var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
+            var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_ultra_short_display:<8} {var_short_display:<8} {var_medium_long_display:<8}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -1448,7 +1578,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="7">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="10">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
@@ -1868,7 +1998,7 @@ class HSIEmailSystem:
                 elif "空头" in trend:
                     hsi_trend_color_style = "color: red; font-weight: bold;"
                 elif "震荡" in trend:
-                    hsi_trend_color_style = "color: blue; font-weight: bold;"
+                    hsi_trend_color_style = "color: orange; font-weight: bold;"
                 else:
                     hsi_trend_color_style = ""
                 
@@ -2008,6 +2138,13 @@ class HSIEmailSystem:
 
             if indicators:
                 html += self.generate_stock_analysis_html(stock_data, indicators, buy_without_sell_after, sell_without_buy_after)
+                
+                # HTML版本：添加分割线
+                html += f"""
+                <tr>
+                    <td colspan=\"2\" style=\"padding: 0;\"><hr style=\"border: 1px solid #e0e0e0; margin: 15px 0;\"></td>
+                </tr>
+                """
 
                 text += f"📊 {stock_result['name']} ({stock_result['code']}) 分析:\n"
                 text += f"  当前价格: {stock_data['current_price']:,.2f}\n"
@@ -2093,6 +2230,20 @@ class HSIEmailSystem:
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
                 text += f"  ATR: {atr:.2f}\n"
+                
+                # 添加VaR信息
+                var_ultra_short = indicators.get('var_ultra_short_term')
+                var_short = indicators.get('var_short_term')
+                var_medium_long = indicators.get('var_medium_long_term')
+                
+                if var_ultra_short is not None:
+                    text += f"  1日VaR (95%): {var_ultra_short:.2%}\n"
+                
+                if var_short is not None:
+                    text += f"  5日VaR (95%): {var_short:.2%}\n"
+                
+                if var_medium_long is not None:
+                    text += f"  20日VaR (95%): {var_medium_long:.2%}\n"
 
                 if latest_stop_loss is not None and pd.notna(latest_stop_loss):
                     try:
@@ -2135,6 +2286,8 @@ class HSIEmailSystem:
                     text += f"  🤖 48小时智能建议: {continuous_signal_info}\n"
 
                 text += "\n"
+                # 文本版本：添加分割线
+                text += "────────────────────────────────────────\n\n"
 
         html += """
         <div class="section">
@@ -2150,6 +2303,13 @@ class HSIEmailSystem:
               <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
               <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
               <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。</li>
+              <li><b>VaR(风险价值)</b>：在给定置信水平下，投资组合在特定时间内可能面临的最大损失。时间维度与投资周期相匹配：
+                <ul>
+                  <li><b>1日VaR(95%)</b>：适用于超短线交易（日内/隔夜），匹配持仓周期，控制单日最大回撤</li>
+                  <li><b>5日VaR(95%)</b>：适用于波段交易（数天–数周），覆盖典型持仓期</li>
+                  <li><b>20日VaR(95%)</b>：适用于中长期投资（1个月+），用于评估月度波动风险</li>
+                </ul>
+              </li>
               <li><b>TAV评分(趋势-动量-成交量综合评分)</b>：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
                 <ul>
                   <li><b>计算方式</b>：TAV评分 = 趋势评分 × 40% + 动量评分 × 35% + 成交量评分 × 25%</li>
@@ -2210,6 +2370,10 @@ class HSIEmailSystem:
         text += "• MA200(200日移动平均线)：过去200个交易日的平均指数/股价，反映长期趋势。\n"
         text += "• 布林带位置：当前指数/股价在布林带中的相对位置，范围0-1。\n"
         text += "• ATR(平均真实波幅)：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。\n"
+        text += "• VaR(风险价值)：在给定置信水平下，投资组合在特定时间内可能面临的最大损失。时间维度与投资周期相匹配：\n"
+        text += "  - 1日VaR(95%)：适用于超短线交易（日内/隔夜），匹配持仓周期，控制单日最大回撤\n"
+        text += "  - 5日VaR(95%)：适用于波段交易（数天–数周），覆盖典型持仓期\n"
+        text += "  - 20日VaR(95%)：适用于中长期投资（1个月+），用于评估月度波动风险\n"
         text += "• TAV评分(趋势-动量-成交量综合评分)：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：\n"
         text += "  - 计算方式：TAV评分 = 趋势评分 × 40% + 动量评分 × 35% + 成交量评分 × 25%\n"
         text += "  - 趋势评分(40%权重)：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性\n"
