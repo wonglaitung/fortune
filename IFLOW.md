@@ -179,7 +179,7 @@ pip install -r requirements.txt
 - `YAHOO_EMAIL`: 163邮箱地址
 - `YAHOO_APP_PASSWORD`: 163邮箱应用专用密码
 - `YAHOO_SMTP`: 163邮箱SMTP服务器地址（smtp.163.com）
-- `RECIPIENT_EMAIL`: 收件人邮箱地址
+- `RECIPIENT_EMAIL`: 收件人邮箱地址（支持多个收件人，用逗号分隔）
 - `QWEN_API_KEY`: 大模型API密钥（部分脚本需要）
 
 #### 加密货币价格监控
