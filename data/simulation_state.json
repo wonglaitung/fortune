@@ -1,16 +1,16 @@
 {
   "initial_capital": 1000000,
-  "capital": 70954.1892940519,
+  "capital": 561.1892940519028,
   "positions": {
     "1211.HK": {
-      "shares": 1400,
-      "avg_price": 93.60714285714286,
-      "stop_loss_price": 90.0
+      "shares": 2100,
+      "avg_price": 94.88809523809523,
+      "stop_loss_price": 94.0
     },
     "0883.HK": {
-      "shares": 12800,
-      "avg_price": 20.975625,
-      "stop_loss_price": 19.39
+      "shares": 12900,
+      "avg_price": 20.98186046511628,
+      "stop_loss_price": 20.5
     },
     "1138.HK": {
       "shares": 19300,
@@ -13040,6 +13040,94 @@
       "success": true,
       "stop_loss_price": 98.0,
       "current_price": 103.3
+    },
+    {
+      "timestamp": "2026-01-02T10:21:30.247883",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 70954.1892940519,
+      "reason": "TAV评分23.75技术面显著恶化，芯片短缺新闻直接利空硬件业务，形成'利空未出尽'格局",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 40.36,
+      "target_price": null,
+      "expiry_date": null
+    },
+    {
+      "timestamp": "2026-01-02T10:21:35.116893",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 70954.1892940519,
+      "reason": "TAV评分23.75弱势区间，放量下跌且估值质疑新闻冲击，下跌通道未现企稳信号",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.51,
+      "target_price": null,
+      "expiry_date": null
+    },
+    {
+      "timestamp": "2026-01-02T11:51:59.092961",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 2739.189294051903,
+      "reason": "技术面弱势（TAV评分23.75），缩量回调信号显著，生物医药板块受全球投融资放缓冲击，风险积聚",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 32.08
+    },
+    {
+      "timestamp": "2026-01-02T11:52:01.512614",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 82.25,
+      "amount": 0,
+      "capital_after": 2739.189294051903,
+      "reason": "TAV评分68.25，资金流入信号明确，保险板块估值修复进行中，波动率21.57%低于金融股均值，符合平衡型投资者对稳健增长的需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 82.25
+    },
+    {
+      "timestamp": "2026-01-02T11:52:04.299967",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 100,
+      "price": 21.78,
+      "amount": 2178.0,
+      "capital_after": 561.1892940519028,
+      "reason": "新闻与技术面高度协同（LNG协议利好），放量突破关键位，能源板块技术强度优于科技，适合平衡型投资者波段操作",
+      "success": true,
+      "stop_loss_price": 20.5,
+      "current_price": 21.78
+    },
+    {
+      "timestamp": "2026-01-02T11:52:06.616344",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 104.8,
+      "amount": 0,
+      "capital_after": 561.1892940519028,
+      "reason": "TAV评分68.25，资金持续流入，行业景气度提升（即时零售需求扩容），适合中线布局，兼顾成长性与风险控制 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 100.0,
+      "current_price": 104.8
     }
   ],
   "portfolio_history": [
@@ -23301,146 +23389,41 @@
           "stop_loss_price": 98.0
         }
       }
+    },
+    {
+      "timestamp": "2026-01-02T11:52:04.821689",
+      "capital": 561.1892940519028,
+      "portfolio_value": 950127.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0883.HK": {
+          "shares": 12900,
+          "avg_price": 20.98186046511628,
+          "stop_loss_price": 20.5
+        },
+        "1138.HK": {
+          "shares": 19300,
+          "avg_price": 10.008549222797928,
+          "stop_loss_price": 6.9
+        },
+        "0981.HK": {
+          "shares": 1900,
+          "avg_price": 70.89736842105263,
+          "stop_loss_price": 68.0
+        },
+        "3690.HK": {
+          "shares": 1300,
+          "avg_price": 103.3,
+          "stop_loss_price": 98.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2025-12-31 14:29:19",
-      "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 71.45,
-      "amount": 0,
-      "reason": "AI芯片投资热潮驱动，布林带突破信号有效，但波动率较高，平衡型适度配置以捕捉成长性同时控制风险 (原因: 资金不足)",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": 68.0,
-      "current_price": 71.45
-    },
-    {
-      "timestamp": "2025-12-31 15:25:54",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "TAV评分75.75强势，MACD金叉加速上行，银行股估值修复逻辑与政策支持共振，位置高位但未触及布林带上轨，符合平衡型价值稳健偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 50.5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "LNG协议新闻催化强化现金流预期，MACD趋势显著改善且位置中位，资金流入与量能稳定，风险收益比平衡适合稳健增长",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.0
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "AI主题催化低位启动，MACD加速改善与量能配合，成长性突出但波动较高，平衡型适度配置以控制风险",
-          "allocation_pct": 10,
-          "stop_loss_price": 68.0
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "IPO活跃直接利好，低位布局安全边际高，MACD改善与资金流入共振，金融业务稳健契合平衡型价值增长需求",
-          "allocation_pct": 10,
-          "stop_loss_price": 395.0
-        }
-      ],
-      "sell": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "TAV评分15.0全样本最低，技术面弱势无信号且波动率萎缩，高估值担忧新闻与技术面双杀加剧下行风险",
-          "stop_loss_triggered": false
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "TAV评分16.75弱势区间，MACD深度负值动能衰竭，新闻利好被竞争风险抵消形成背离，技术面持续恶化需主动规避",
-          "stop_loss_triggered": false
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "TAV评分23.75中高风险，缩量回调破位且行业竞争恶化新闻压制，技术面弱势不符合平衡型稳健偏好",
-          "stop_loss_triggered": false
-        }
-      ]
-    },
-    {
-      "timestamp": "2025-12-31 15:25:54",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "TAV评分15.0全样本最低，技术面弱势无信号且波动率萎缩，高估值担忧新闻与技术面双杀加剧下行风险",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.39
-    },
-    {
-      "timestamp": "2025-12-31 15:25:57",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "TAV评分16.75弱势区间，MACD深度负值动能衰竭，新闻利好被竞争风险抵消形成背离，技术面持续恶化需主动规避",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 142.8
-    },
-    {
-      "timestamp": "2025-12-31 15:25:59",
-      "type": "SELL",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "TAV评分23.75中高风险，缩量回调破位且行业竞争恶化新闻压制，技术面弱势不符合平衡型稳健偏好",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.3
-    },
-    {
-      "timestamp": "2025-12-31 15:26:01",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 52.8,
-      "amount": 0,
-      "reason": "TAV评分75.75强势，MACD金叉加速上行，银行股估值修复逻辑与政策支持共振，位置高位但未触及布林带上轨，符合平衡型价值稳健偏好 (原因: 资金不足)",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": 50.5,
-      "current_price": 52.8
-    },
-    {
-      "timestamp": "2025-12-31 15:26:04",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 21.3,
-      "amount": 0,
-      "reason": "LNG协议新闻催化强化现金流预期，MACD趋势显著改善且位置中位，资金流入与量能稳定，风险收益比平衡适合稳健增长 (原因: 资金不足)",
-      "capital_after": 1444.1892940519174,
-      "success": false,
-      "stop_loss_price": 20.0,
-      "current_price": 21.3
-    },
     {
       "timestamp": "2025-12-31 15:26:07",
       "type": "BUY",
@@ -23537,6 +23520,183 @@
       "success": true,
       "stop_loss_price": 98.0,
       "current_price": 103.3
+    },
+    {
+      "timestamp": "2026-01-02 10:21:30",
+      "buy": [
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "技术面低位蓄力（位置27.79%）+ MACD加速上行 + 销量新闻强化成长逻辑，风险收益比优异，符合平衡型投资者稳健增长需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 94.0,
+          "target_price": 112.5,
+          "expiry_days": 30
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "布林带突破+放量上涨确认主升浪，AI主题新闻提供持续动能，TAV评分58.25支撑趋势延续，兼顾成长与风险控制",
+          "allocation_pct": 12,
+          "stop_loss_price": 70.0,
+          "target_price": 81.0,
+          "expiry_days": 30
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "半导体板块领涨标的，放量突破确认趋势，AI芯片产能扩张新闻提供中长期支撑，与中芯国际形成行业对冲",
+          "allocation_pct": 10,
+          "stop_loss_price": 76.0,
+          "target_price": 89.0,
+          "expiry_days": 30
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "TAV评分70.0三维共振，南向资金流入显示机构布局，银行股低估值提供防御性，平衡科技股波动风险",
+          "allocation_pct": 8,
+          "stop_loss_price": 120.0,
+          "target_price": 131.0,
+          "expiry_days": 60
+        }
+      ],
+      "sell": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "TAV评分23.75技术面显著恶化，芯片短缺新闻直接利空硬件业务，形成'利空未出尽'格局",
+          "stop_loss_triggered": false
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "TAV评分23.75弱势区间，放量下跌且估值质疑新闻冲击，下跌通道未现企稳信号",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-02 10:21:30",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "TAV评分23.75技术面显著恶化，芯片短缺新闻直接利空硬件业务，形成'利空未出尽'格局",
+      "capital_after": 70954.1892940519,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 40.36,
+      "target_price": null,
+      "expiry_date": null
+    },
+    {
+      "timestamp": "2026-01-02 10:21:35",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "TAV评分23.75弱势区间，放量下跌且估值质疑新闻冲击，下跌通道未现企稳信号",
+      "capital_after": 70954.1892940519,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.51,
+      "target_price": null,
+      "expiry_date": null
+    },
+    {
+      "timestamp": "2026-01-02 11:51:58",
+      "buy": [
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "TAV评分68.25，资金流入信号明确，保险板块估值修复进行中，波动率21.57%低于金融股均值，符合平衡型投资者对稳健增长的需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 78.0
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "新闻与技术面高度协同（LNG协议利好），放量突破关键位，能源板块技术强度优于科技，适合平衡型投资者波段操作",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.5
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "TAV评分68.25，资金持续流入，行业景气度提升（即时零售需求扩容），适合中线布局，兼顾成长性与风险控制",
+          "allocation_pct": 10,
+          "stop_loss_price": 100.0
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "技术面弱势（TAV评分23.75），缩量回调信号显著，生物医药板块受全球投融资放缓冲击，风险积聚",
+          "stop_loss_triggered": false
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-02 11:51:59",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面弱势（TAV评分23.75），缩量回调信号显著，生物医药板块受全球投融资放缓冲击，风险积聚",
+      "capital_after": 2739.189294051903,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 32.08
+    },
+    {
+      "timestamp": "2026-01-02 11:52:01",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 82.25,
+      "amount": 0,
+      "reason": "TAV评分68.25，资金流入信号明确，保险板块估值修复进行中，波动率21.57%低于金融股均值，符合平衡型投资者对稳健增长的需求 (原因: 资金不足)",
+      "capital_after": 2739.189294051903,
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 82.25
+    },
+    {
+      "timestamp": "2026-01-02 11:52:04",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 100,
+      "price": 21.78,
+      "amount": 2178.0,
+      "reason": "新闻与技术面高度协同（LNG协议利好），放量突破关键位，能源板块技术强度优于科技，适合平衡型投资者波段操作",
+      "capital_after": 561.1892940519028,
+      "success": true,
+      "stop_loss_price": 20.5,
+      "current_price": 21.78
+    },
+    {
+      "timestamp": "2026-01-02 11:52:06",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 104.8,
+      "amount": 0,
+      "reason": "TAV评分68.25，资金持续流入，行业景气度提升（即时零售需求扩容），适合中线布局，兼顾成长性与风险控制 (原因: 资金不足)",
+      "capital_after": 561.1892940519028,
+      "success": false,
+      "stop_loss_price": 100.0,
+      "current_price": 104.8
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
