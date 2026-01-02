@@ -1102,7 +1102,7 @@ class HSIEmailSystem:
         elif "空头" in trend:
             trend_color_style = "color: red; font-weight: bold;"
         elif "震荡" in trend:
-            trend_color_style = "color: blue; font-weight: bold;"
+            trend_color_style = "color: orange; font-weight: bold;"
         else:
             trend_color_style = ""
 
