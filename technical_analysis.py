@@ -20,6 +20,65 @@ class TechnicalAnalyzer:
     def __init__(self):
         pass
     
+    def calculate_var(self, df, investment_style='medium_term', confidence_level=0.95):
+        """
+        计算风险价值(VaR)，时间维度与投资周期匹配
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - investment_style: 投资风格
+          - 'ultra_short_term': 超短线交易（日内/隔夜）
+          - 'short_term': 波段交易（数天–数周）
+          - 'medium_long_term': 中长期投资（1个月+）
+        - confidence_level: 置信水平（默认0.95，即95%）
+        
+        返回:
+        - VaR值（百分比）
+        """
+        if df.empty or len(df) < 20:
+            return None
+        
+        # 根据投资风格确定VaR计算的时间窗口
+        if investment_style == 'ultra_short_term':
+            # 超短线交易：1日VaR
+            var_window = 1
+        elif investment_style == 'short_term':
+            # 波段交易：5日VaR
+            var_window = 5
+        elif investment_style == 'medium_long_term':
+            # 中长期投资：20日VaR（≈1个月）
+            var_window = 20
+        else:
+            # 默认使用5日VaR
+            var_window = 5
+        
+        # 确保有足够的历史数据
+        required_data = max(var_window * 5, 30)  # 至少需要5倍时间窗口或30天的数据
+        if len(df) < required_data:
+            return None
+        
+        # 计算日收益率
+        df['Returns'] = df['Close'].pct_change()
+        returns = df['Returns'].dropna()
+        
+        if len(returns) < var_window:
+            return None
+        
+        # 计算指定时间窗口的收益率
+        if var_window == 1:
+            # 1日VaR直接使用日收益率
+            window_returns = returns
+        else:
+            # 多日VaR使用滚动收益率
+            window_returns = df['Close'].pct_change(var_window).dropna()
+        
+        # 使用历史模拟法计算VaR
+        var_percentile = (1 - confidence_level) * 100
+        var_value = np.percentile(window_returns, var_percentile)
+        
+        # 返回绝对值（VaR通常表示为正数，表示最大可能损失）
+        return abs(var_value)
+    
     def calculate_moving_averages(self, df, periods=[5, 10, 20, 50, 100, 200]):
         """计算多种移动平均线"""
         if df.empty:
