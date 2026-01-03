@@ -513,14 +513,33 @@ class HSIEmailSystem:
                 if 'Buy_Signal' in recent_signals.columns:
                     buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
                     for idx, row in buy_signals_df.iterrows():
-                        description = self._clean_signal_description(row.get('Signal_Description', ''))
-                        buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+                        # 从描述中提取买入信号部分
+                        desc = row.get('Signal_Description', '')
+                        if '买入信号:' in desc and '卖出信号:' in desc:
+                            # 如果同时有买入和卖出信号，只提取买入部分
+                            buy_part = desc.split('买入信号:')[1].split('卖出信号:')[0].strip()
+                            # 移除可能的结尾分隔符
+                            if buy_part.endswith('|'):
+                                buy_part = buy_part[:-1].strip()
+                            buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': f"买入信号: {buy_part}"})
+                        elif '买入信号:' in desc:
+                            # 如果只有买入信号
+                            description = self._clean_signal_description(desc)
+                            buy_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': f"买入信号: {description}"})
 
                 if 'Sell_Signal' in recent_signals.columns:
                     sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
                     for idx, row in sell_signals_df.iterrows():
-                        description = self._clean_signal_description(row.get('Signal_Description', ''))
-                        sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': description})
+                        # 从描述中提取卖出信号部分
+                        desc = row.get('Signal_Description', '')
+                        if '买入信号:' in desc and '卖出信号:' in desc:
+                            # 如果同时有买入和卖出信号，只提取卖出部分
+                            sell_part = desc.split('卖出信号:')[1].strip()
+                            sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': f"卖出信号: {sell_part}"})
+                        elif '卖出信号:' in desc:
+                            # 如果只有卖出信号
+                            description = self._clean_signal_description(desc)
+                            sell_signals.append({'date': idx.strftime('%Y-%m-%d'), 'description': f"卖出信号: {description}"})
 
                 # ATR 和止损止盈
                 current_price = float(latest.get('Close', hist['Close'].iloc[-1]))
