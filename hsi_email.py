@@ -76,8 +76,19 @@ except ImportError:
 class HSIEmailSystem:
     """恒生指数及港股主力资金追踪器邮件系统"""
 
+    # 根据投资风格和计算窗口确定历史数据长度
+    DATA_PERIOD_CONFIG = {
+        'ultra_short_term': '6mo',    # 超短线：6个月数据（约125个交易日）
+        'short_term': '1y',           # 波段交易：1年数据（约247个交易日）
+        'medium_long_term': '2y',      # 中长期投资：2年数据（约493个交易日）
+    }
+
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
+        # 添加数据缓存机制
+        self._data_cache = {}  # 格式: {symbol_investment_style: DataFrame}
+        self._cache_timestamp = {}  # 缓存时间戳
+        self._cache_ttl = 3600  # 缓存1小时
         if TECHNICAL_ANALYSIS_AVAILABLE:
             if TAV_AVAILABLE:
                 self.technical_analyzer = TechnicalAnalyzerV2(enable_tav=True)
@@ -185,6 +196,59 @@ class HSIEmailSystem:
             return stock_data
         except Exception as e:
             print(f"❌ 获取 {symbol} 数据失败: {e}")
+            return None
+
+    def get_data_for_investment_style(self, symbol, investment_style='short_term'):
+        """
+        根据投资风格动态获取历史数据（带缓存）
+        
+        参数:
+        - symbol: 股票代码
+        - investment_style: 投资风格
+        
+        返回:
+        - 历史数据DataFrame
+        """
+        try:
+            import time
+            
+            # 生成缓存键
+            cache_key = f"{symbol}_{investment_style}"
+            current_time = time.time()
+            
+            # 检查缓存
+            if cache_key in self._data_cache:
+                # 检查缓存是否过期
+                if current_time - self._cache_timestamp.get(cache_key, 0) < self._cache_ttl:
+                    return self._data_cache[cache_key]
+                else:
+                    # 缓存过期，删除
+                    del self._data_cache[cache_key]
+                    del self._cache_timestamp[cache_key]
+            
+            # 根据投资风格获取对应的数据周期
+            period = self.DATA_PERIOD_CONFIG.get(investment_style, '6mo')
+            
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period=period)
+            
+            if hist.empty:
+                print(f"⚠️ 无法获取 {symbol} 的历史数据 (period={period})")
+                return None
+            
+            # 验证数据量是否足够
+            if investment_style == 'medium_long_term' and len(hist) < 200:
+                print(f"⚠️ {symbol} 20日ES计算需要至少200个交易日数据，当前只有{len(hist)}个")
+            elif investment_style == 'short_term' and len(hist) < 50:
+                print(f"⚠️ {symbol} 5日ES计算建议至少50个交易日数据，当前只有{len(hist)}个")
+            
+            # 缓存数据
+            self._data_cache[cache_key] = hist
+            self._cache_timestamp[cache_key] = current_time
+            
+            return hist
+        except Exception as e:
+            print(f"⚠️ 获取 {symbol} 数据失败: {e}")
             return None
 
     def calculate_atr(self, df, period=14):
