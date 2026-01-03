@@ -960,6 +960,8 @@ class HSIEmailSystem:
         """
         计算期望损失（Expected Shortfall, ES），用于评估极端风险和尾部风险
         
+        ES是超过VaR阈值的所有损失的平均值，因此ES > VaR
+        
         参数:
         - hist_df: 包含历史价格数据的DataFrame
         - investment_style: 投资风格
@@ -994,35 +996,31 @@ class HSIEmailSystem:
             if len(hist_df) < required_data:
                 return None
             
-            # 计算日收益率
-            returns = hist_df['Close'].pct_change().dropna()
-            
-            if len(returns) < es_window:
-                return None
-            
             # 计算指定时间窗口的收益率
             if es_window == 1:
                 # 1日ES直接使用日收益率
-                window_returns = returns
+                window_returns = hist_df['Close'].pct_change().dropna()
             else:
                 # 多日ES使用滚动收益率
                 window_returns = hist_df['Close'].pct_change(es_window).dropna()
             
-            # 计算ES：基于收益率分布的尾部损失期望值
-            # 只考虑负收益率（损失）
-            losses = -window_returns[window_returns < 0]
+            if len(window_returns) == 0:
+                return None
             
-            if len(losses) == 0:
-                return 0.0  # 没有损失，ES为0
+            # 计算VaR（作为ES的基准）
+            var_percentile = (1 - confidence_level) * 100
+            var_value = np.percentile(window_returns, var_percentile)
             
-            # 按损失大小排序（从最大损失到最小损失）
-            sorted_losses = sorted(losses, reverse=True)
+            # 计算ES：所有小于等于VaR的收益率的平均值
+            tail_losses = window_returns[window_returns <= var_value]
             
-            # 计算期望损失
-            total_loss = sum(sorted_losses)
-            es = total_loss / len(sorted_losses)
+            if len(tail_losses) == 0:
+                return abs(var_value) * 100  # 如果没有尾部数据，返回VaR值
             
-            return es * 100  # 转换为百分比
+            es_value = tail_losses.mean()
+            
+            # 返回绝对值（ES通常表示为正数，表示损失）
+            return abs(es_value) * 100
             
         except Exception as e:
             print(f"⚠️ 计算期望损失失败: {e}")
