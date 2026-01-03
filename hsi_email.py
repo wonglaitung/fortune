@@ -251,6 +251,33 @@ class HSIEmailSystem:
             print(f"⚠️ 获取 {symbol} 数据失败: {e}")
             return None
 
+    def calculate_max_drawdown(self, hist_df):
+        """
+        计算历史最大回撤
+        
+        参数:
+        - hist_df: 包含历史价格数据的DataFrame
+        
+        返回:
+        - 最大回撤（百分比）
+        """
+        try:
+            if hist_df is None or hist_df.empty:
+                return None
+            
+            # 计算累计收益
+            cumulative = (1 + hist_df['Close'].pct_change()).cumprod()
+            running_max = cumulative.expanding().max()
+            drawdown = (cumulative - running_max) / running_max
+            
+            # 最大回撤（取绝对值，转换为正数）
+            max_drawdown = abs(drawdown.min()) * 100
+            
+            return max_drawdown
+        except Exception as e:
+            print(f"⚠️ 计算最大回撤失败: {e}")
+            return None
+
     def calculate_atr(self, df, period=14):
         """
         计算平均真实波幅(ATR)，返回最后一行的 ATR 值（float）
@@ -1617,7 +1644,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
         text_lines.append(header)
 
         html = f"""
@@ -1665,6 +1692,8 @@ class HSIEmailSystem:
                         <th>20日VaR(95%)</th>
                         <th>5日ES(95%)</th>
                         <th>20日ES(95%)</th>
+                        <th>历史回撤</th>
+                        <th>风险评估</th>
                     </tr>
         """
 
@@ -1723,7 +1752,7 @@ class HSIEmailSystem:
             var_medium_long = None
             es_short = None
             es_medium_long = None
-            
+            max_drawdown = None            
             if stock_code != 'HSI':
                 # stock_results是列表，需要查找匹配的股票代码
                 stock_indicators = None
@@ -1739,15 +1768,31 @@ class HSIEmailSystem:
                     var_short = stock_indicators.get('var_short_term')
                     var_medium_long = stock_indicators.get('var_medium_long_term')
                     
-                    # 计算ES值
+                    # 计算ES值和回撤
                     hist_data = self.get_stock_data(stock_code)
                     if hist_data is not None:
                         # 从hist_data中提取历史价格数据
                         ticker = yf.Ticker(stock_code)
-                        hist = ticker.history(period="6mo")
+                        hist = ticker.history(period="2y")  # 使用2年数据计算回撤
                         if not hist.empty:
                             es_short = self.calculate_expected_shortfall(hist, 'short_term')
                             es_medium_long = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                            # 计算历史最大回撤
+                            max_drawdown = self.calculate_max_drawdown(hist)
+                            
+                            # 风险评估
+                            risk_assessment = "正常"
+                            if max_drawdown is not None and es_medium_long is not None:
+                                # 将ES和回撤转换为小数进行比较
+                                es_decimal = es_medium_long / 100
+                                max_dd_decimal = max_drawdown / 100
+                                
+                                if es_decimal < max_dd_decimal / 3:
+                                    risk_assessment = "优秀"
+                                elif es_decimal > max_dd_decimal / 2:
+                                    risk_assessment = "警示"
+                                else:
+                                    risk_assessment = "合理"
                 
                 # TAV评分颜色
                 tav_color = self._get_tav_color(tav_score)
@@ -1769,6 +1814,16 @@ class HSIEmailSystem:
             es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
             
+            # 格式化回撤和风险评估
+            max_drawdown_display = f"{max_drawdown:.2%}" if max_drawdown is not None else "N/A"
+            risk_color = ""
+            if risk_assessment == "优秀":
+                risk_color = "color: green; font-weight: bold;"
+            elif risk_assessment == "警示":
+                risk_color = "color: red; font-weight: bold;"
+            else:
+                risk_color = "color: orange; font-weight: bold;"
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
@@ -1782,6 +1837,8 @@ class HSIEmailSystem:
                         <td>{var_medium_long_display}</td>
                         <td>{es_short_display}</td>
                         <td>{es_medium_long_display}</td>
+                        <td>{max_drawdown_display}</td>
+                        <td><span style=\"{risk_color}\">{risk_assessment}</span></td>
                     </tr>
             """
 
@@ -1792,7 +1849,7 @@ class HSIEmailSystem:
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
             es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8}")
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -1801,7 +1858,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="12">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="14">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
