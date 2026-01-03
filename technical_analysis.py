@@ -481,7 +481,13 @@ class TechnicalAnalyzer:
             # 生成买入信号
             if buy_conditions:
                 df.at[df.index[i], 'Buy_Signal'] = True
-                df.at[df.index[i], 'Signal_Description'] = "买入信号: " + ", ".join(buy_conditions)
+                # 如果已有信号描述，先保存
+                existing_desc = df.iloc[i].get('Signal_Description', '')
+                if existing_desc:
+                    # 如果已有描述，说明之前已经有卖出信号，需要合并
+                    df.at[df.index[i], 'Signal_Description'] = existing_desc + " | 买入信号: " + ", ".join(buy_conditions)
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = "买入信号: " + ", ".join(buy_conditions)
             
             # 生成卖出信号逻辑
             # 条件1: 价格在下降趋势中 (MA20 < MA50) - 趋势信号，使用弱强度确认
@@ -534,7 +540,13 @@ class TechnicalAnalyzer:
             # 生成卖出信号
             if sell_conditions:
                 df.at[df.index[i], 'Sell_Signal'] = True
-                df.at[df.index[i], 'Signal_Description'] = "卖出信号: " + ", ".join(sell_conditions)
+                # 如果已有信号描述，先保存
+                existing_desc = df.iloc[i].get('Signal_Description', '')
+                if existing_desc:
+                    # 如果已有描述，说明之前已经有买入信号，需要合并
+                    df.at[df.index[i], 'Signal_Description'] = existing_desc + " | 卖出信号: " + ", ".join(sell_conditions)
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = "卖出信号: " + ", ".join(sell_conditions)
         
         return df
     
@@ -1265,6 +1277,23 @@ class TechnicalAnalyzerV2(TechnicalAnalyzer):
                     df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
                 else:
                     df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
+            
+            # 如果同时有买入和卖出信号，确保描述包含两种信号
+            if df.iloc[i].get('Buy_Signal', False) and df.iloc[i].get('Sell_Signal', False):
+                # 检查描述是否同时包含买入和卖出信号
+                desc = df.iloc[i].get('Signal_Description', '')
+                if '买入信号:' not in desc or '卖出信号:' not in desc:
+                    # 如果描述不完整，重新生成
+                    original_desc = desc
+                    if tav_strong:
+                        tav_tag = " [TAV强共振确认]"
+                    elif tav_medium:
+                        tav_tag = " [TAV中等共振]"
+                    else:
+                        tav_tag = " [TAV弱共振]"
+                    
+                    # 创建包含两种信号的描述
+                    df.at[df.index[i], 'Signal_Description'] = f"买入信号: RSI超卖反弹(成交量弱确认){tav_tag} | 卖出信号: RSI超买回落(成交量弱确认){tav_tag}"
         
         return df
     
