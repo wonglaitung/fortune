@@ -1815,7 +1815,7 @@ class HSIEmailSystem:
             es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
             
             # 格式化回撤和风险评估
-            max_drawdown_display = f"{max_drawdown:.2%}" if max_drawdown is not None else "N/A"
+            max_drawdown_display = f"{max_drawdown/100:.2%}" if max_drawdown is not None else "N/A"
             risk_color = ""
             if risk_assessment == "优秀":
                 risk_color = "color: green; font-weight: bold;"
