@@ -18,12 +18,14 @@ import os
 import smtplib
 import json
 import argparse
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta, timezone
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import akshare as ak
 from decimal import Decimal, ROUND_HALF_UP
 
 # 导入技术分析工具（可选）
@@ -1381,6 +1383,10 @@ class HSIEmailSystem:
 
     def generate_report_content(self, target_date, hsi_data, hsi_indicators, stock_results):
         """生成报告的HTML和文本内容（此处保留原有结构，使用新的止损止盈结果）"""
+        # 获取股息信息
+        print("📊 获取即将除净的港股信息...")
+        dividend_data = self.get_upcoming_dividends(days_ahead=90)
+        
         # 创建信号汇总
         all_signals = []
 
@@ -1435,8 +1441,14 @@ class HSIEmailSystem:
 
         # 文本版表头（修复原先被截断的 f-string）
         text_lines = []
+        
+        # 添加股息信息到文本
+        dividend_text = self.format_dividend_table_text(dividend_data)
+        if dividend_text:
+            text_lines.append(dividend_text)
+        
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'1日VaR':<8} {'5日VaR':<8} {'20日VaR':<8}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8}"
         text_lines.append(header)
 
         html = f"""
@@ -1463,6 +1475,11 @@ class HSIEmailSystem:
             <p><strong>分析日期:</strong> {target_date}</p>
         """
 
+        # 添加股息信息到HTML
+        dividend_html = self.format_dividend_table_html(dividend_data)
+        if dividend_html:
+            html += dividend_html
+
         html += f"""
             <div class="section">
                 <h3>🔔 交易信号总结</h3>
@@ -1475,7 +1492,6 @@ class HSIEmailSystem:
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
-                        <th>1日VaR(95%)</th>
                         <th>5日VaR(95%)</th>
                         <th>20日VaR(95%)</th>
                     </tr>
@@ -1577,7 +1593,6 @@ class HSIEmailSystem:
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
-                        <td>{var_ultra_short_display}</td>
                         <td>{var_short_display}</td>
                         <td>{var_medium_long_display}</td>
                     </tr>
@@ -1588,7 +1603,7 @@ class HSIEmailSystem:
             var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
             var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_ultra_short_display:<8} {var_short_display:<8} {var_medium_long_display:<8}")
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -2429,6 +2444,181 @@ class HSIEmailSystem:
         html += "</body></html>"
 
         return text, html
+
+    def get_dividend_info(self, stock_code, stock_name):
+        """
+        获取单只股票的股息和除净日信息
+        """
+        try:
+            # 移除.HK后缀，akshare要求5位数字格式
+            symbol = stock_code.replace('.HK', '')
+            if len(symbol) < 5:
+                symbol = symbol.zfill(5)
+            elif len(symbol) > 5:
+                symbol = symbol[-5:]
+            
+            print(f"正在获取 {stock_name} ({stock_code}) 的股息信息...")
+            
+            # 获取港股股息数据
+            df_dividend = ak.stock_hk_dividend_payout_em(symbol=symbol)
+            
+            if df_dividend is None or df_dividend.empty:
+                print(f"⚠️ 未找到 {stock_name} 的股息数据")
+                return None
+                
+            # 检查数据列
+            available_columns = df_dividend.columns.tolist()
+            print(f"📋 {stock_name} 数据列: {available_columns}")
+            
+            # 创建结果DataFrame
+            result_data = []
+            
+            for _, row in df_dividend.iterrows():
+                try:
+                    # 提取关键信息
+                    ex_date = row.get('除净日', None)
+                    dividend_plan = row.get('分红方案', None)
+                    record_date = row.get('截至过户日', None)
+                    announcement_date = row.get('最新公告日期', None)
+                    fiscal_year = row.get('财政年度', None)
+                    distribution_type = row.get('分配类型', None)
+                    payment_date = row.get('发放日', None)
+                    
+                    # 只处理有除净日的记录
+                    if pd.notna(ex_date):
+                        result_data.append({
+                            '股票代码': stock_code,
+                            '股票名称': stock_name,
+                            '除净日': ex_date,
+                            '分红方案': dividend_plan,
+                            '截至过户日': record_date,
+                            '最新公告日期': announcement_date,
+                            '财政年度': fiscal_year,
+                            '分配类型': distribution_type,
+                            '发放日': payment_date
+                        })
+                except Exception as e:
+                    print(f"⚠️ 处理 {stock_name} 股息数据时出错: {e}")
+                    continue
+            
+            if not result_data:
+                print(f"⚠️ {stock_name} 没有有效的除净日数据")
+                return None
+                
+            return pd.DataFrame(result_data)
+            
+        except Exception as e:
+            print(f"⚠️ 获取 {stock_name} 股息信息失败: {e}")
+            return None
+
+    def get_upcoming_dividends(self, days_ahead=90):
+        """
+        获取未来指定天数内的即将除净的股票
+        """
+        all_dividends = []
+        
+        for stock_code, stock_name in self.stock_list.items():
+            dividend_data = self.get_dividend_info(stock_code, stock_name)
+            
+            if dividend_data is not None and not dividend_data.empty:
+                all_dividends.append(dividend_data)
+            
+            # 避免请求过于频繁
+            time.sleep(0.5)
+        
+        if not all_dividends:
+            print("⚠️ 未获取到任何股息数据")
+            return None
+        
+        # 合并所有数据
+        all_dividends_df = pd.concat(all_dividends, ignore_index=True)
+        
+        # 转换日期格式
+        all_dividends_df['除净日'] = pd.to_datetime(all_dividends_df['除净日'])
+        
+        # 筛选未来指定天数内的除净日
+        today = datetime.now()
+        future_date = today + timedelta(days=days_ahead)
+        
+        upcoming_dividends = all_dividends_df[
+            (all_dividends_df['除净日'] >= today) & 
+            (all_dividends_df['除净日'] <= future_date)
+        ].sort_values('除净日')
+        
+        # 筛选历史除净日（最近30天）
+        past_date = today - timedelta(days=30)
+        recent_dividends = all_dividends_df[
+            (all_dividends_df['除净日'] >= past_date) & 
+            (all_dividends_df['除净日'] < today)
+        ].sort_values('除净日', ascending=False)
+        
+        return {
+            'upcoming': upcoming_dividends,
+            'recent': recent_dividends,
+            'all': all_dividends_df.sort_values('除净日', ascending=False)
+        }
+
+    def format_dividend_table_html(self, dividend_data):
+        """
+        格式化股息信息为HTML表格
+        """
+        if dividend_data is None or dividend_data['upcoming'] is None or dividend_data['upcoming'].empty:
+            return ""
+        
+        html = """
+        <div class="section">
+            <h3>📈 即将除净的港股信息</h3>
+            <table>
+                <tr>
+                    <th>股票名称</th>
+                    <th>股票代码</th>
+                    <th>除净日</th>
+                    <th>分红方案</th>
+                    <th>截至过户日</th>
+                    <th>财政年度</th>
+                </tr>
+        """
+        
+        for _, row in dividend_data['upcoming'].iterrows():
+            ex_date = row['除净日'].strftime('%Y-%m-%d') if pd.notna(row['除净日']) else 'N/A'
+            html += f"""
+                <tr>
+                    <td>{row['股票名称']}</td>
+                    <td>{row['股票代码']}</td>
+                    <td>{ex_date}</td>
+                    <td>{row['分红方案']}</td>
+                    <td>{row['截至过户日']}</td>
+                    <td>{row['财政年度']}</td>
+                </tr>
+            """
+        
+        html += """
+            </table>
+        </div>
+        """
+        
+        return html
+
+    def format_dividend_table_text(self, dividend_data):
+        """
+        格式化股息信息为文本
+        """
+        if dividend_data is None or dividend_data['upcoming'] is None or dividend_data['upcoming'].empty:
+            return ""
+        
+        text = "📈 即将除净的港股信息:\n"
+        text += "-" * 80 + "\n"
+        text += f"{'股票名称':<15} {'股票代码':<10} {'除净日':<12} {'分红方案':<30} {'财政年度':<8}\n"
+        text += "-" * 80 + "\n"
+        
+        for _, row in dividend_data['upcoming'].iterrows():
+            ex_date = row['除净日'].strftime('%Y-%m-%d') if pd.notna(row['除净日']) else 'N/A'
+            dividend_plan = row['分红方案'][:28] + '...' if len(row['分红方案']) > 28 else row['分红方案']
+            text += f"{row['股票名称']:<15} {row['股票代码']:<10} {ex_date:<12} {dividend_plan:<30} {row['财政年度']:<8}\n"
+        
+        text += "-" * 80 + "\n\n"
+        
+        return text
 
     def run_analysis(self, target_date=None):
         """执行分析并发送邮件"""
