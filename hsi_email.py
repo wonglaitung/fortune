@@ -2795,6 +2795,7 @@ class HSIEmailSystem:
                     <th>除净日</th>
                     <th>分红方案</th>
                     <th>截至过户日</th>
+                    <th>发放日</th>
                     <th>财政年度</th>
                 </tr>
         """
@@ -2808,6 +2809,7 @@ class HSIEmailSystem:
                     <td>{ex_date}</td>
                     <td>{row['分红方案']}</td>
                     <td>{row['截至过户日']}</td>
+                    <td>{row['发放日']}</td>
                     <td>{row['财政年度']}</td>
                 </tr>
             """
@@ -2828,13 +2830,16 @@ class HSIEmailSystem:
         
         text = "📈 即将除净的港股信息:\n"
         text += "-" * 80 + "\n"
-        text += f"{'股票名称':<15} {'股票代码':<10} {'除净日':<12} {'分红方案':<30} {'财政年度':<8}\n"
+        text += f"{'股票名称':<15} {'股票代码':<10} {'除净日':<12} {'分红方案':<30} {'截至过户日':<12} {'发放日':<12} {'财政年度':<8}\n"
         text += "-" * 80 + "\n"
         
         for _, row in dividend_data['upcoming'].iterrows():
             ex_date = row['除净日'].strftime('%Y-%m-%d') if pd.notna(row['除净日']) else 'N/A'
             dividend_plan = row['分红方案'][:28] + '...' if len(row['分红方案']) > 28 else row['分红方案']
-            text += f"{row['股票名称']:<15} {row['股票代码']:<10} {ex_date:<12} {dividend_plan:<30} {row['财政年度']:<8}\n"
+            # 格式化截至过户日和发放日
+            record_date = row['截至过户日'] if pd.notna(row['截至过户日']) and row['截至过户日'] != '' else 'N/A'
+            pay_date = row['发放日'] if pd.notna(row['发放日']) and row['发放日'] != '' else 'N/A'
+            text += f"{row['股票名称']:<15} {row['股票代码']:<10} {ex_date:<12} {dividend_plan:<30} {record_date:<12} {pay_date:<12} {row['财政年度']:<8}\n"
         
         text += "-" * 80 + "\n\n"
         
