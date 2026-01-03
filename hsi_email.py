@@ -1264,6 +1264,41 @@ class HSIEmailSystem:
                     <td>{var_medium_long:.2%}</td>
                 </tr>
             """
+        
+        # 添加ES信息（如果可用）
+        if stock_data['symbol'] != 'HSI':
+            # 获取历史数据计算ES
+            ticker = yf.Ticker(stock_data['symbol'])
+            hist = ticker.history(period="6mo")
+            if not hist.empty:
+                # 计算各时间窗口的ES
+                es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term')
+                es_5d = self.calculate_expected_shortfall(hist, 'short_term')
+                es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                
+                if es_1d is not None:
+                    html += f"""
+                        <tr>
+                            <td>1日ES (95%)</td>
+                            <td>{es_1d/100:.2%}</td>
+                        </tr>
+                    """
+                
+                if es_5d is not None:
+                    html += f"""
+                        <tr>
+                            <td>5日ES (95%)</td>
+                            <td>{es_5d/100:.2%}</td>
+                        </tr>
+                    """
+                
+                if es_20d is not None:
+                    html += f"""
+                        <tr>
+                            <td>20日ES (95%)</td>
+                            <td>{es_20d/100:.2%}</td>
+                        </tr>
+                    """
 
         # 添加TAV信息（如果可用）
         tav_score = indicators.get('tav_score', None)
@@ -2368,6 +2403,24 @@ class HSIEmailSystem:
                 
                 if var_medium_long is not None:
                     text += f"  20日VaR (95%): {var_medium_long:.2%}\n"
+                
+                # 计算并显示ES值
+                if stock_result['code'] != 'HSI':
+                    # 获取历史数据计算ES
+                    ticker = yf.Ticker(stock_result['code'])
+                    hist = ticker.history(period="6mo")
+                    if not hist.empty:
+                        # 计算各时间窗口的ES
+                        es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term')
+                        es_5d = self.calculate_expected_shortfall(hist, 'short_term')
+                        es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                        
+                        if es_1d is not None:
+                            text += f"  1日ES (95%): {es_1d/100:.2%}\n"
+                        if es_5d is not None:
+                            text += f"  5日ES (95%): {es_5d/100:.2%}\n"
+                        if es_20d is not None:
+                            text += f"  20日ES (95%): {es_20d/100:.2%}\n"
 
                 if latest_stop_loss is not None and pd.notna(latest_stop_loss):
                     try:
