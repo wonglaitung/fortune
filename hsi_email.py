@@ -956,6 +956,78 @@ class HSIEmailSystem:
 
         return results_buy, results_sell
 
+    def calculate_expected_shortfall(self, hist_df, investment_style='short_term', confidence_level=0.95):
+        """
+        计算期望损失（Expected Shortfall, ES），用于评估极端风险和尾部风险
+        
+        参数:
+        - hist_df: 包含历史价格数据的DataFrame
+        - investment_style: 投资风格
+          - 'ultra_short_term': 超短线交易（日内/隔夜）
+          - 'short_term': 波段交易（数天–数周）
+          - 'medium_long_term': 中长期投资（1个月+）
+        - confidence_level: 置信水平（默认0.95，即95%）
+        
+        返回:
+        - ES值（百分比）
+        """
+        try:
+            if hist_df is None or hist_df.empty:
+                return None
+            
+            # 根据投资风格确定ES计算的时间窗口
+            if investment_style == 'ultra_short_term':
+                # 超短线交易：1日ES
+                es_window = 1
+            elif investment_style == 'short_term':
+                # 波段交易：5日ES
+                es_window = 5
+            elif investment_style == 'medium_long_term':
+                # 中长期投资：20日ES（≈1个月）
+                es_window = 20
+            else:
+                # 默认使用5日ES
+                es_window = 5
+            
+            # 确保有足够的历史数据
+            required_data = max(es_window * 5, 30)  # 至少需要5倍时间窗口或30天的数据
+            if len(hist_df) < required_data:
+                return None
+            
+            # 计算日收益率
+            returns = hist_df['Close'].pct_change().dropna()
+            
+            if len(returns) < es_window:
+                return None
+            
+            # 计算指定时间窗口的收益率
+            if es_window == 1:
+                # 1日ES直接使用日收益率
+                window_returns = returns
+            else:
+                # 多日ES使用滚动收益率
+                window_returns = hist_df['Close'].pct_change(es_window).dropna()
+            
+            # 计算ES：基于收益率分布的尾部损失期望值
+            # 只考虑负收益率（损失）
+            losses = -window_returns[window_returns < 0]
+            
+            if len(losses) == 0:
+                return 0.0  # 没有损失，ES为0
+            
+            # 按损失大小排序（从最大损失到最小损失）
+            sorted_losses = sorted(losses, reverse=True)
+            
+            # 计算期望损失
+            total_loss = sum(sorted_losses)
+            es = total_loss / len(sorted_losses)
+            
+            return es * 100  # 转换为百分比
+            
+        except Exception as e:
+            print(f"⚠️ 计算期望损失失败: {e}")
+            return None
+
     def has_any_signals(self, hsi_indicators, stock_results, target_date=None):
         """检查是否有任何股票有指定日期的交易信号"""
         if target_date is None:
@@ -1448,7 +1520,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8}"
         text_lines.append(header)
 
         html = f"""
@@ -1494,6 +1566,8 @@ class HSIEmailSystem:
                         <th>TAV评分</th>
                         <th>5日VaR(95%)</th>
                         <th>20日VaR(95%)</th>
+                        <th>5日ES(95%)</th>
+                        <th>20日ES(95%)</th>
                     </tr>
         """
 
@@ -1550,6 +1624,8 @@ class HSIEmailSystem:
             var_ultra_short = None
             var_short = None
             var_medium_long = None
+            es_short = None
+            es_medium_long = None
             
             if stock_code != 'HSI':
                 # stock_results是列表，需要查找匹配的股票代码
@@ -1565,6 +1641,16 @@ class HSIEmailSystem:
                     var_ultra_short = stock_indicators.get('var_ultra_short_term')
                     var_short = stock_indicators.get('var_short_term')
                     var_medium_long = stock_indicators.get('var_medium_long_term')
+                    
+                    # 计算ES值
+                    hist_data = self.get_stock_data(stock_code)
+                    if hist_data is not None:
+                        # 从hist_data中提取历史价格数据
+                        ticker = yf.Ticker(stock_code)
+                        hist = ticker.history(period="6mo")
+                        if not hist.empty:
+                            es_short = self.calculate_expected_shortfall(hist, 'short_term')
+                            es_medium_long = self.calculate_expected_shortfall(hist, 'medium_long_term')
                 
                 # TAV评分颜色
                 tav_color = self._get_tav_color(tav_score)
@@ -1579,10 +1665,12 @@ class HSIEmailSystem:
             safe_continuous_signal_status = continuous_signal_status if continuous_signal_status is not None else 'N/A'
             safe_signal_description = signal_description if signal_description is not None else 'N/A'
             
-            # 格式化VaR值
+            # 格式化VaR值和ES值
             var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
             var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
+            es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
+            es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
             
             html += f"""
                     <tr>
@@ -1595,6 +1683,8 @@ class HSIEmailSystem:
                         <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
                         <td>{var_short_display}</td>
                         <td>{var_medium_long_display}</td>
+                        <td>{es_short_display}</td>
+                        <td>{es_medium_long_display}</td>
                     </tr>
             """
 
@@ -1603,7 +1693,9 @@ class HSIEmailSystem:
             var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
             var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8}")
+            es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
+            es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -1612,7 +1704,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="10">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="12">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
