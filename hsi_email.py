@@ -1399,7 +1399,7 @@ class HSIEmailSystem:
         var_medium_long_amount = indicators.get('var_medium_long_term_amount')
         
         if var_ultra_short is not None:
-            var_amount_display = f" (¥{var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
+            var_amount_display = f" (HK${var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
             html += f"""
                 <tr>
                     <td>1日VaR (95%)</td>
@@ -1408,7 +1408,7 @@ class HSIEmailSystem:
             """
         
         if var_short is not None:
-            var_amount_display = f" (¥{var_short_amount:.2f})" if var_short_amount is not None else ""
+            var_amount_display = f" (HK${var_short_amount:.2f})" if var_short_amount is not None else ""
             html += f"""
                 <tr>
                     <td>5日VaR (95%)</td>
@@ -1417,7 +1417,7 @@ class HSIEmailSystem:
             """
         
         if var_medium_long is not None:
-            var_amount_display = f" (¥{var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
+            var_amount_display = f" (HK${var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
             html += f"""
                 <tr>
                     <td>20日VaR (95%)</td>
@@ -1439,7 +1439,7 @@ class HSIEmailSystem:
                 if es_1d is not None:
                     es_1d_percentage = es_1d['percentage'] / 100 if es_1d else None
                     es_1d_amount = es_1d['amount'] if es_1d else None
-                    es_amount_display = f" (¥{es_1d_amount:.2f})" if es_1d_amount is not None else ""
+                    es_amount_display = f" (HK${es_1d_amount:.2f})" if es_1d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>1日ES (95%)</td>
@@ -1450,7 +1450,7 @@ class HSIEmailSystem:
                 if es_5d is not None:
                     es_5d_percentage = es_5d['percentage'] / 100 if es_5d else None
                     es_5d_amount = es_5d['amount'] if es_5d else None
-                    es_amount_display = f" (¥{es_5d_amount:.2f})" if es_5d_amount is not None else ""
+                    es_amount_display = f" (HK${es_5d_amount:.2f})" if es_5d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>5日ES (95%)</td>
@@ -1461,7 +1461,7 @@ class HSIEmailSystem:
                 if es_20d is not None:
                     es_20d_percentage = es_20d['percentage'] / 100 if es_20d else None
                     es_20d_amount = es_20d['amount'] if es_20d else None
-                    es_amount_display = f" (¥{es_20d_amount:.2f})" if es_20d_amount is not None else ""
+                    es_amount_display = f" (HK${es_20d_amount:.2f})" if es_20d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>20日ES (95%)</td>
@@ -1898,27 +1898,27 @@ class HSIEmailSystem:
             
             # 添加货币值显示
             if var_ultra_short is not None and var_ultra_short_amount is not None:
-                var_ultra_short_display += f" (¥{var_ultra_short_amount:.2f})"
+                var_ultra_short_display += f" (HK${var_ultra_short_amount:.2f})"
             if var_short is not None and var_short_amount is not None:
-                var_short_display += f" (¥{var_short_amount:.2f})"
+                var_short_display += f" (HK${var_short_amount:.2f})"
             if var_medium_long is not None and var_medium_long_amount is not None:
-                var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
+                var_medium_long_display += f" (HK${var_medium_long_amount:.2f})"
             # 格式化ES值
             es_short_display = f"{es_short['percentage']/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long['percentage']/100:.2%}" if es_medium_long is not None else "N/A"
             
             # 添加ES货币值显示
             if es_short is not None and es_short.get('amount') is not None:
-                es_short_display += f" (¥{es_short['amount']:.2f})"
+                es_short_display += f" (HK${es_short['amount']:.2f})"
             if es_medium_long is not None and es_medium_long.get('amount') is not None:
-                es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
+                es_medium_long_display += f" (HK${es_medium_long['amount']:.2f})"
             
             # 格式化回撤和风险评估
             max_drawdown_display = f"{max_drawdown['percentage']/100:.2%}" if max_drawdown is not None else "N/A"
             
             # 添加回撤货币值显示
             if max_drawdown is not None and max_drawdown.get('amount') is not None:
-                max_drawdown_display += f" (¥{max_drawdown['amount']:.2f})"
+                max_drawdown_display += f" (HK${max_drawdown['amount']:.2f})"
             risk_color = ""
             if risk_assessment == "优秀":
                 risk_color = "color: green; font-weight: bold;"
@@ -1959,20 +1959,20 @@ class HSIEmailSystem:
             
             # 添加货币值显示
             if var_ultra_short is not None and var_ultra_short_amount is not None:
-                var_ultra_short_display += f" (¥{var_ultra_short_amount:.2f})"
+                var_ultra_short_display += f" (HK${var_ultra_short_amount:.2f})"
             if var_short is not None and var_short_amount is not None:
-                var_short_display += f" (¥{var_short_amount:.2f})"
+                var_short_display += f" (HK${var_short_amount:.2f})"
             if var_medium_long is not None and var_medium_long_amount is not None:
-                var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
+                var_medium_long_display += f" (HK${var_medium_long_amount:.2f})"
             # 格式化ES值
             es_short_display = f"{es_short['percentage']/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long['percentage']/100:.2%}" if es_medium_long is not None else "N/A"
             
             # 添加ES货币值显示
             if es_short is not None and es_short.get('amount') is not None:
-                es_short_display += f" (¥{es_short['amount']:.2f})"
+                es_short_display += f" (HK${es_short['amount']:.2f})"
             if es_medium_long is not None and es_medium_long.get('amount') is not None:
-                es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
+                es_medium_long_display += f" (HK${es_medium_long['amount']:.2f})"
             # 添加股票现价显示
             price_value = hist_data['current_price'] if hist_data is not None else None
             price_display = f"{price_value:.2f}" if price_value is not None else 'N/A'
@@ -2658,15 +2658,15 @@ class HSIEmailSystem:
                 var_medium_long_amount = indicators.get('var_medium_long_term_amount')
                 
                 if var_ultra_short is not None:
-                    amount_display = f" (¥{var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
+                    amount_display = f" (HK${var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
                     text += f"  1日VaR (95%): {var_ultra_short:.2%}{amount_display}\n"
                 
                 if var_short is not None:
-                    amount_display = f" (¥{var_short_amount:.2f})" if var_short_amount is not None else ""
+                    amount_display = f" (HK${var_short_amount:.2f})" if var_short_amount is not None else ""
                     text += f"  5日VaR (95%): {var_short:.2%}{amount_display}\n"
                 
                 if var_medium_long is not None:
-                    amount_display = f" (¥{var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
+                    amount_display = f" (HK${var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
                     text += f"  20日VaR (95%): {var_medium_long:.2%}{amount_display}\n"
                 
                 # 计算并显示ES值
@@ -2682,13 +2682,13 @@ class HSIEmailSystem:
                         es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term', position_value=current_price)
                         
                         if es_1d is not None:
-                            amount_display = f" (¥{es_1d['amount']:.2f})" if es_1d.get('amount') is not None else ""
+                            amount_display = f" (HK${es_1d['amount']:.2f})" if es_1d.get('amount') is not None else ""
                             text += f"  1日ES (95%): {es_1d['percentage']/100:.2%}{amount_display}\n"
                         if es_5d is not None:
-                            amount_display = f" (¥{es_5d['amount']:.2f})" if es_5d.get('amount') is not None else ""
+                            amount_display = f" (HK${es_5d['amount']:.2f})" if es_5d.get('amount') is not None else ""
                             text += f"  5日ES (95%): {es_5d['percentage']/100:.2%}{amount_display}\n"
                         if es_20d is not None:
-                            amount_display = f" (¥{es_20d['amount']:.2f})" if es_20d.get('amount') is not None else ""
+                            amount_display = f" (HK${es_20d['amount']:.2f})" if es_20d.get('amount') is not None else ""
                             text += f"  20日ES (95%): {es_20d['percentage']/100:.2%}{amount_display}\n"
 
                 if latest_stop_loss is not None and pd.notna(latest_stop_loss):
