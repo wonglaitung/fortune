@@ -1901,6 +1901,11 @@ class HSIEmailSystem:
             else:
                 risk_color = "color: orange; font-weight: bold;"
             
+            # 准备价格显示和TAV评分显示
+            price_display = hist_data['current_price'] if hist_data is not None else None
+            tav_score_display = f"{safe_tav_score:.1f}" if isinstance(safe_tav_score, (int, float)) else "N/A"
+            price_value_display = f"{price_display:.2f}" if price_display is not None else "N/A"
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
@@ -1909,8 +1914,8 @@ class HSIEmailSystem:
                         <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
-                        <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
-                        <td>{stock_data['current_price']:.2f if stock_data else 'N/A'}</td>
+                        <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td>{price_value_display}</td>
                         <td>{var_short_display}</td>
                         <td>{var_medium_long_display}</td>
                         <td>{es_short_display}</td>
@@ -1943,7 +1948,8 @@ class HSIEmailSystem:
             if es_medium_long is not None and es_medium_long.get('amount') is not None:
                 es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
             # 添加股票现价显示
-            price_display = f"{stock_data['current_price']:.2f}" if stock_data else 'N/A'
+            price_value = hist_data['current_price'] if hist_data is not None else None
+            price_display = f"{price_value:.2f}" if price_value is not None else 'N/A'
             text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
@@ -2633,7 +2639,8 @@ class HSIEmailSystem:
                     hist = ticker.history(period="6mo")
                     if not hist.empty:
                         # 计算各时间窗口的ES
-                        current_price = float(stock_result['current_price'])
+                        indicators = stock_result.get('indicators', {})
+                        current_price = float(indicators.get('current_price', 0))
                         es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term', position_value=current_price)
                         es_5d = self.calculate_expected_shortfall(hist, 'short_term', position_value=current_price)
                         es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term', position_value=current_price)
