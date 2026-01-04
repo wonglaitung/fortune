@@ -1695,7 +1695,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
         text_lines.append(header)
 
         html = f"""
@@ -1739,6 +1739,7 @@ class HSIEmailSystem:
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
+                        <th>股票现价</th>
                         <th>5日VaR(95%)</th>
                         <th>20日VaR(95%)</th>
                         <th>5日ES(95%)</th>
@@ -1909,6 +1910,7 @@ class HSIEmailSystem:
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{f'{safe_tav_score:.1f}' if isinstance(safe_tav_score, (int, float)) else 'N/A'}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td>{stock_data['current_price']:.2f if stock_data else 'N/A'}</td>
                         <td>{var_short_display}</td>
                         <td>{var_medium_long_display}</td>
                         <td>{es_short_display}</td>
@@ -1940,7 +1942,9 @@ class HSIEmailSystem:
                 es_short_display += f" (¥{es_short['amount']:.2f})"
             if es_medium_long is not None and es_medium_long.get('amount') is not None:
                 es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
+            # 添加股票现价显示
+            price_display = f"{stock_data['current_price']:.2f}" if stock_data else 'N/A'
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -1949,7 +1953,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="14">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
