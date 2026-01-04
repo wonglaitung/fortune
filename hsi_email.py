@@ -1007,8 +1007,8 @@ class HSIEmailSystem:
                     target_dt = pd.Timestamp(target_date).tz_localize('UTC')
                 else:
                     target_dt = pd.Timestamp(target_date).tz_localize('UTC')
-                # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
-                reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
+                # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
+                reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
             else:
                 reference_time = pd.Timestamp.now(tz='UTC')
             
@@ -1064,8 +1064,8 @@ class HSIEmailSystem:
                 target_dt = pd.Timestamp(target_date).tz_localize('UTC')
             else:
                 target_dt = pd.Timestamp(target_date).tz_localize('UTC')
-            # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
-            reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
+            # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
+            reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
         else:
             reference_time = pd.Timestamp.now(tz='UTC')
         
@@ -2229,8 +2229,8 @@ class HSIEmailSystem:
                         target_dt = pd.Timestamp(target_date).tz_localize('UTC')
                     else:
                         target_dt = pd.Timestamp(target_date).tz_localize('UTC')
-                    # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
-                    reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
+                    # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
+                    reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
                 else:
                     reference_time = pd.Timestamp.now(tz='UTC')
                 
