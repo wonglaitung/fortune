@@ -2240,8 +2240,8 @@ class HSIEmailSystem:
                     html += "<p>最近48小时内没有交易记录</p>"
                     text += "💰 最近48小时模拟交易记录:\n  最近48小时内没有交易记录\n"
                 else:
-                    # sort by name then time
-                    df_recent.sort_values(by=['name', 'timestamp'], inplace=True)
+                    # sort by stock code then time
+                    df_recent.sort_values(by=['code', 'timestamp'], inplace=True)
                     html += """
                     <table>
                         <tr>
@@ -2303,11 +2303,14 @@ class HSIEmailSystem:
                     from collections import OrderedDict
                     grouped_transactions = OrderedDict()
                     for _, tr in df_recent.iterrows():
-                        n = tr.get('name','')
-                        if n not in grouped_transactions:
-                            grouped_transactions[n] = []
-                        grouped_transactions[n].append(tr)
-                    for stock_name, trans_list in grouped_transactions.items():
+                        c = tr.get('code','')
+                        if c not in grouped_transactions:
+                            grouped_transactions[c] = []
+                        grouped_transactions[c].append(tr)
+                    # 按股票代码排序
+                    for stock_code in sorted(grouped_transactions.keys()):
+                        trans_list = grouped_transactions[stock_code]
+                        stock_name = trans_list[0].get('name','')
                         code = trans_list[0].get('code','')
                         text += f"  {stock_name} ({code}):\n"
                         for tr in trans_list:
