@@ -986,12 +986,13 @@ class HSIEmailSystem:
             print(f"⚠️ 读取交易记录 CSV 失败: {e}")
             return pd.DataFrame()
 
-    def detect_continuous_signals_in_history_from_transactions(self, stock_code, hours=48, min_signals=3):
+    def detect_continuous_signals_in_history_from_transactions(self, stock_code, hours=48, min_signals=3, target_date=None):
         """
         基于交易历史记录检测连续买卖信号（使用 pandas 读取 CSV）
         - stock_code: 股票代码
         - hours: 检测的时间范围（小时）
         - min_signals: 判定为连续信号的最小信号数量
+        - target_date: 目标日期，如果为None则使用当前时间
         返回: 连续信号状态字符串
         """
         try:
@@ -999,8 +1000,19 @@ class HSIEmailSystem:
             if df.empty:
                 return "无交易记录"
 
-            now = pd.Timestamp.now(tz='UTC')
-            threshold = now - pd.Timedelta(hours=hours)
+            # 使用目标日期或当前时间
+            if target_date is not None:
+                # 将目标日期转换为带时区的时间戳
+                if isinstance(target_date, str):
+                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                else:
+                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                # 设置为当天的收盘时间（16:00 UTC，对应香港时间24:00）
+                reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
+            else:
+                reference_time = pd.Timestamp.now(tz='UTC')
+            
+            threshold = reference_time - pd.Timedelta(hours=hours)
 
             df_recent = df[(df['timestamp'] >= threshold) & (df['code'] == stock_code)]
             if df_recent.empty:
@@ -1671,18 +1683,18 @@ class HSIEmailSystem:
             # 检查是否已经在target_date_signals中
             already_included = any(code == stock_code for _, code, _, _, _ in target_date_signals)
             if not already_included:
-                # 检查48小时智能建议
-                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
-                if continuous_signal_status != "无建议信号":
-                    trend = stock_trends.get(stock_code, '未知')
-                    # 创建一个虚拟的信号对象
-                    # 确保target_date是date对象
-                    if isinstance(target_date, str):
-                        target_date_obj = datetime.strptime(target_date, '%Y-%m-%d').date()
-                    else:
-                        target_date_obj = target_date
-                    dummy_signal = {'description': '仅48小时智能建议', 'date': target_date_obj.strftime('%Y-%m-%d')}
-                    target_date_signals.append((stock_name, stock_code, trend, dummy_signal, '无建议信号'))
+                            # 检查48小时智能建议
+                            continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code, target_date=target_date)
+                            if continuous_signal_status != "无建议信号":
+                                trend = stock_trends.get(stock_code, '未知')
+                                # 创建一个虚拟的信号对象
+                                # 确保target_date是date对象
+                                if isinstance(target_date, str):
+                                    target_date_obj = datetime.strptime(target_date, '%Y-%m-%d').date()
+                                else:
+                                    target_date_obj = target_date
+                                dummy_signal = {'description': '仅48小时智能建议', 'date': target_date_obj.strftime('%Y-%m-%d')}
+                                target_date_signals.append((stock_name, stock_code, trend, dummy_signal, '无建议信号'))
 
         target_date_signals.sort(key=lambda x: x[1])
 
@@ -1754,7 +1766,7 @@ class HSIEmailSystem:
             color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
             continuous_signal_status = "无信号"
             if stock_code != 'HSI':
-                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code)
+                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code, target_date=target_date)
 
             # 智能过滤：保留有量价信号或有48小时智能建议的股票
             should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
@@ -1954,7 +1966,7 @@ class HSIEmailSystem:
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
-                                   if (signal_type in ['买入', '卖出']) or (self.detect_continuous_signals_in_history_from_transactions(stock_code) != "无建议信号"))
+                                   if (signal_type in ['买入', '卖出']) or (self.detect_continuous_signals_in_history_from_transactions(stock_code, target_date=target_date) != "无建议信号"))
 
         if not has_filtered_signals:
             html += """
