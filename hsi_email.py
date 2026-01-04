@@ -667,9 +667,10 @@ class HSIEmailSystem:
                 volume_ma20 = latest.get('Volume_MA20', 0.0)
 
                 # 计算不同投资风格的VaR
-                var_ultra_short = self.calculate_var(hist, 'ultra_short_term')
-                var_short = self.calculate_var(hist, 'short_term')
-                var_medium_long = self.calculate_var(hist, 'medium_long_term')
+                current_price = float(latest.get('Close', hist['Close'].iloc[-1]))
+                var_ultra_short = self.calculate_var(hist, 'ultra_short_term', position_value=current_price)
+                var_short = self.calculate_var(hist, 'short_term', position_value=current_price)
+                var_medium_long = self.calculate_var(hist, 'medium_long_term', position_value=current_price)
                 
                 # 初始化指标字典
                 indicators = {
@@ -694,9 +695,12 @@ class HSIEmailSystem:
                     'volume_shrink': volume_shrink,
                     'volume_ma10': volume_ma10,
                     'volume_ma20': volume_ma20,
-                    'var_ultra_short_term': var_ultra_short,
-                    'var_short_term': var_short,
-                    'var_medium_long_term': var_medium_long
+                    'var_ultra_short_term': var_ultra_short['percentage'] if var_ultra_short else None,
+                    'var_short_term': var_short['percentage'] if var_short else None,
+                    'var_medium_long_term': var_medium_long['percentage'] if var_medium_long else None,
+                    'var_ultra_short_term_amount': var_ultra_short['amount'] if var_ultra_short else None,
+                    'var_short_term_amount': var_short['amount'] if var_short else None,
+                    'var_medium_long_term_amount': var_medium_long['amount'] if var_medium_long else None
                 }
                 
                 # 添加TAV分析信息（如果可用）
@@ -790,7 +794,7 @@ class HSIEmailSystem:
         """
         return self._calculate_technical_indicators_core(data, asset_type='stock')
 
-    def calculate_var(self, hist_df, investment_style='medium_term', confidence_level=0.95):
+    def calculate_var(self, hist_df, investment_style='medium_term', confidence_level=0.95, position_value=None):
         """
         计算风险价值(VaR)，时间维度与投资周期匹配
         
@@ -801,9 +805,10 @@ class HSIEmailSystem:
           - 'short_term': 波段交易（数天–数周）
           - 'medium_long_term': 中长期投资（1个月+）
         - confidence_level: 置信水平（默认0.95，即95%）
+        - position_value: 头寸市值（用于计算VaR货币值）
         
         返回:
-        - VaR值（百分比）
+        - 字典，包含VaR百分比和货币值 {'percentage': float, 'amount': float}
         """
         try:
             if hist_df is None or hist_df.empty:
@@ -847,7 +852,17 @@ class HSIEmailSystem:
             var_value = np.percentile(window_returns, var_percentile)
             
             # 返回绝对值（VaR通常表示为正数，表示最大可能损失）
-            return abs(var_value)
+            var_percentage = abs(var_value)
+            
+            # 计算VaR货币值
+            var_amount = None
+            if position_value is not None and position_value > 0:
+                var_amount = position_value * var_percentage
+            
+            return {
+                'percentage': var_percentage,
+                'amount': var_amount
+            }
         except Exception as e:
             print(f"⚠️ 计算VaR失败: {e}")
             return None
@@ -1329,30 +1344,36 @@ class HSIEmailSystem:
 
         # 添加VaR信息
         var_ultra_short = indicators.get('var_ultra_short_term')
+        var_ultra_short_amount = indicators.get('var_ultra_short_term_amount')
         var_short = indicators.get('var_short_term')
+        var_short_amount = indicators.get('var_short_term_amount')
         var_medium_long = indicators.get('var_medium_long_term')
+        var_medium_long_amount = indicators.get('var_medium_long_term_amount')
         
         if var_ultra_short is not None:
+            var_amount_display = f" (¥{var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
             html += f"""
                 <tr>
                     <td>1日VaR (95%)</td>
-                    <td>{var_ultra_short:.2%}</td>
+                    <td>{var_ultra_short:.2%}{var_amount_display}</td>
                 </tr>
             """
         
         if var_short is not None:
+            var_amount_display = f" (¥{var_short_amount:.2f})" if var_short_amount is not None else ""
             html += f"""
                 <tr>
                     <td>5日VaR (95%)</td>
-                    <td>{var_short:.2%}</td>
+                    <td>{var_short:.2%}{var_amount_display}</td>
                 </tr>
             """
         
         if var_medium_long is not None:
+            var_amount_display = f" (¥{var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
             html += f"""
                 <tr>
                     <td>20日VaR (95%)</td>
-                    <td>{var_medium_long:.2%}</td>
+                    <td>{var_medium_long:.2%}{var_amount_display}</td>
                 </tr>
             """
         
@@ -1811,6 +1832,19 @@ class HSIEmailSystem:
             var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
             var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
+            
+            # 获取VaR货币值
+            var_ultra_short_amount = stock_indicators.get('var_ultra_short_term_amount')
+            var_short_amount = stock_indicators.get('var_short_term_amount')
+            var_medium_long_amount = stock_indicators.get('var_medium_long_term_amount')
+            
+            # 添加货币值显示
+            if var_ultra_short is not None and var_ultra_short_amount is not None:
+                var_ultra_short_display += f" (¥{var_ultra_short_amount:.2f})"
+            if var_short is not None and var_short_amount is not None:
+                var_short_display += f" (¥{var_short_amount:.2f})"
+            if var_medium_long is not None and var_medium_long_amount is not None:
+                var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
             es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
             
@@ -1847,6 +1881,14 @@ class HSIEmailSystem:
             var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
             var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
             var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
+            
+            # 添加货币值显示
+            if var_ultra_short is not None and var_ultra_short_amount is not None:
+                var_ultra_short_display += f" (¥{var_ultra_short_amount:.2f})"
+            if var_short is not None and var_short_amount is not None:
+                var_short_display += f" (¥{var_short_amount:.2f})"
+            if var_medium_long is not None and var_medium_long_amount is not None:
+                var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
             es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
             text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
@@ -2513,17 +2555,23 @@ class HSIEmailSystem:
                 
                 # 添加VaR信息
                 var_ultra_short = indicators.get('var_ultra_short_term')
+                var_ultra_short_amount = indicators.get('var_ultra_short_term_amount')
                 var_short = indicators.get('var_short_term')
+                var_short_amount = indicators.get('var_short_term_amount')
                 var_medium_long = indicators.get('var_medium_long_term')
+                var_medium_long_amount = indicators.get('var_medium_long_term_amount')
                 
                 if var_ultra_short is not None:
-                    text += f"  1日VaR (95%): {var_ultra_short:.2%}\n"
+                    amount_display = f" (¥{var_ultra_short_amount:.2f})" if var_ultra_short_amount is not None else ""
+                    text += f"  1日VaR (95%): {var_ultra_short:.2%}{amount_display}\n"
                 
                 if var_short is not None:
-                    text += f"  5日VaR (95%): {var_short:.2%}\n"
+                    amount_display = f" (¥{var_short_amount:.2f})" if var_short_amount is not None else ""
+                    text += f"  5日VaR (95%): {var_short:.2%}{amount_display}\n"
                 
                 if var_medium_long is not None:
-                    text += f"  20日VaR (95%): {var_medium_long:.2%}\n"
+                    amount_display = f" (¥{var_medium_long_amount:.2f})" if var_medium_long_amount is not None else ""
+                    text += f"  20日VaR (95%): {var_medium_long:.2%}{amount_display}\n"
                 
                 # 计算并显示ES值
                 if stock_result['code'] != 'HSI':
