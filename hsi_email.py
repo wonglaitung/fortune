@@ -251,15 +251,16 @@ class HSIEmailSystem:
             print(f"⚠️ 获取 {symbol} 数据失败: {e}")
             return None
 
-    def calculate_max_drawdown(self, hist_df):
+    def calculate_max_drawdown(self, hist_df, position_value=None):
         """
         计算历史最大回撤
         
         参数:
         - hist_df: 包含历史价格数据的DataFrame
+        - position_value: 头寸市值（用于计算回撤货币值）
         
         返回:
-        - 最大回撤（百分比）
+        - 字典，包含最大回撤百分比和货币值 {'percentage': float, 'amount': float}
         """
         try:
             if hist_df is None or hist_df.empty:
@@ -271,9 +272,17 @@ class HSIEmailSystem:
             drawdown = (cumulative - running_max) / running_max
             
             # 最大回撤（取绝对值，转换为正数）
-            max_drawdown = abs(drawdown.min()) * 100
+            max_drawdown_percentage = abs(drawdown.min()) * 100
             
-            return max_drawdown
+            # 计算回撤货币值
+            max_drawdown_amount = None
+            if position_value is not None and position_value > 0:
+                max_drawdown_amount = position_value * (max_drawdown_percentage / 100)
+            
+            return {
+                'percentage': max_drawdown_percentage,
+                'amount': max_drawdown_amount
+            }
         except Exception as e:
             print(f"⚠️ 计算最大回撤失败: {e}")
             return None
@@ -1062,7 +1071,7 @@ class HSIEmailSystem:
 
         return results_buy, results_sell
 
-    def calculate_expected_shortfall(self, hist_df, investment_style='short_term', confidence_level=0.95):
+    def calculate_expected_shortfall(self, hist_df, investment_style='short_term', confidence_level=0.95, position_value=None):
         """
         计算期望损失（Expected Shortfall, ES），用于评估极端风险和尾部风险
         
@@ -1075,9 +1084,10 @@ class HSIEmailSystem:
           - 'short_term': 波段交易（数天–数周）
           - 'medium_long_term': 中长期投资（1个月+）
         - confidence_level: 置信水平（默认0.95，即95%）
+        - position_value: 头寸市值（用于计算ES货币值）
         
         返回:
-        - ES值（百分比）
+        - 字典，包含ES百分比和货币值 {'percentage': float, 'amount': float}
         """
         try:
             if hist_df is None or hist_df.empty:
@@ -1126,7 +1136,17 @@ class HSIEmailSystem:
             es_value = tail_losses.mean()
             
             # 返回绝对值（ES通常表示为正数，表示损失）
-            return abs(es_value) * 100
+            es_percentage = abs(es_value) * 100
+            
+            # 计算ES货币值
+            es_amount = None
+            if position_value is not None and position_value > 0:
+                es_amount = position_value * (es_percentage / 100)
+            
+            return {
+                'percentage': es_percentage,
+                'amount': es_amount
+            }
             
         except Exception as e:
             print(f"⚠️ 计算期望损失失败: {e}")
@@ -1384,31 +1404,41 @@ class HSIEmailSystem:
             hist = ticker.history(period="6mo")
             if not hist.empty:
                 # 计算各时间窗口的ES
-                es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term')
-                es_5d = self.calculate_expected_shortfall(hist, 'short_term')
-                es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                current_price = float(stock_data['current_price'])
+                es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term', position_value=current_price)
+                es_5d = self.calculate_expected_shortfall(hist, 'short_term', position_value=current_price)
+                es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term', position_value=current_price)
                 
                 if es_1d is not None:
+                    es_1d_percentage = es_1d['percentage'] / 100 if es_1d else None
+                    es_1d_amount = es_1d['amount'] if es_1d else None
+                    es_amount_display = f" (¥{es_1d_amount:.2f})" if es_1d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>1日ES (95%)</td>
-                            <td>{es_1d/100:.2%}</td>
+                            <td>{es_1d_percentage:.2%}{es_amount_display}</td>
                         </tr>
                     """
                 
                 if es_5d is not None:
+                    es_5d_percentage = es_5d['percentage'] / 100 if es_5d else None
+                    es_5d_amount = es_5d['amount'] if es_5d else None
+                    es_amount_display = f" (¥{es_5d_amount:.2f})" if es_5d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>5日ES (95%)</td>
-                            <td>{es_5d/100:.2%}</td>
+                            <td>{es_5d_percentage:.2%}{es_amount_display}</td>
                         </tr>
                     """
                 
                 if es_20d is not None:
+                    es_20d_percentage = es_20d['percentage'] / 100 if es_20d else None
+                    es_20d_amount = es_20d['amount'] if es_20d else None
+                    es_amount_display = f" (¥{es_20d_amount:.2f})" if es_20d_amount is not None else ""
                     html += f"""
                         <tr>
                             <td>20日ES (95%)</td>
-                            <td>{es_20d/100:.2%}</td>
+                            <td>{es_20d_percentage:.2%}{es_amount_display}</td>
                         </tr>
                     """
 
@@ -1796,17 +1826,18 @@ class HSIEmailSystem:
                         ticker = yf.Ticker(stock_code)
                         hist = ticker.history(period="2y")  # 使用2年数据计算回撤
                         if not hist.empty:
-                            es_short = self.calculate_expected_shortfall(hist, 'short_term')
-                            es_medium_long = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                            current_price = float(hist_data['current_price'])
+                            es_short = self.calculate_expected_shortfall(hist, 'short_term', position_value=current_price)
+                            es_medium_long = self.calculate_expected_shortfall(hist, 'medium_long_term', position_value=current_price)
                             # 计算历史最大回撤
-                            max_drawdown = self.calculate_max_drawdown(hist)
+                            max_drawdown = self.calculate_max_drawdown(hist, position_value=current_price)
                             
                             # 风险评估
                             risk_assessment = "正常"
                             if max_drawdown is not None and es_medium_long is not None:
                                 # 将ES和回撤转换为小数进行比较
-                                es_decimal = es_medium_long / 100
-                                max_dd_decimal = max_drawdown / 100
+                                es_decimal = es_medium_long['percentage'] / 100 if isinstance(es_medium_long, dict) else es_medium_long / 100
+                                max_dd_decimal = max_drawdown['percentage'] / 100 if isinstance(max_drawdown, dict) else max_drawdown / 100
                                 
                                 if es_decimal < max_dd_decimal / 3:
                                     risk_assessment = "优秀"
@@ -1845,11 +1876,22 @@ class HSIEmailSystem:
                 var_short_display += f" (¥{var_short_amount:.2f})"
             if var_medium_long is not None and var_medium_long_amount is not None:
                 var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
-            es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
-            es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
+            # 格式化ES值
+            es_short_display = f"{es_short['percentage']/100:.2%}" if es_short is not None else "N/A"
+            es_medium_long_display = f"{es_medium_long['percentage']/100:.2%}" if es_medium_long is not None else "N/A"
+            
+            # 添加ES货币值显示
+            if es_short is not None and es_short.get('amount') is not None:
+                es_short_display += f" (¥{es_short['amount']:.2f})"
+            if es_medium_long is not None and es_medium_long.get('amount') is not None:
+                es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
             
             # 格式化回撤和风险评估
-            max_drawdown_display = f"{max_drawdown/100:.2%}" if max_drawdown is not None else "N/A"
+            max_drawdown_display = f"{max_drawdown['percentage']/100:.2%}" if max_drawdown is not None else "N/A"
+            
+            # 添加回撤货币值显示
+            if max_drawdown is not None and max_drawdown.get('amount') is not None:
+                max_drawdown_display += f" (¥{max_drawdown['amount']:.2f})"
             risk_color = ""
             if risk_assessment == "优秀":
                 risk_color = "color: green; font-weight: bold;"
@@ -1889,8 +1931,15 @@ class HSIEmailSystem:
                 var_short_display += f" (¥{var_short_amount:.2f})"
             if var_medium_long is not None and var_medium_long_amount is not None:
                 var_medium_long_display += f" (¥{var_medium_long_amount:.2f})"
-            es_short_display = f"{es_short/100:.2%}" if es_short is not None else "N/A"
-            es_medium_long_display = f"{es_medium_long/100:.2%}" if es_medium_long is not None else "N/A"
+            # 格式化ES值
+            es_short_display = f"{es_short['percentage']/100:.2%}" if es_short is not None else "N/A"
+            es_medium_long_display = f"{es_medium_long['percentage']/100:.2%}" if es_medium_long is not None else "N/A"
+            
+            # 添加ES货币值显示
+            if es_short is not None and es_short.get('amount') is not None:
+                es_short_display += f" (¥{es_short['amount']:.2f})"
+            if es_medium_long is not None and es_medium_long.get('amount') is not None:
+                es_medium_long_display += f" (¥{es_medium_long['amount']:.2f})"
             text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
@@ -2580,16 +2629,20 @@ class HSIEmailSystem:
                     hist = ticker.history(period="6mo")
                     if not hist.empty:
                         # 计算各时间窗口的ES
-                        es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term')
-                        es_5d = self.calculate_expected_shortfall(hist, 'short_term')
-                        es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term')
+                        current_price = float(stock_result['current_price'])
+                        es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term', position_value=current_price)
+                        es_5d = self.calculate_expected_shortfall(hist, 'short_term', position_value=current_price)
+                        es_20d = self.calculate_expected_shortfall(hist, 'medium_long_term', position_value=current_price)
                         
                         if es_1d is not None:
-                            text += f"  1日ES (95%): {es_1d/100:.2%}\n"
+                            amount_display = f" (¥{es_1d['amount']:.2f})" if es_1d.get('amount') is not None else ""
+                            text += f"  1日ES (95%): {es_1d['percentage']/100:.2%}{amount_display}\n"
                         if es_5d is not None:
-                            text += f"  5日ES (95%): {es_5d/100:.2%}\n"
+                            amount_display = f" (¥{es_5d['amount']:.2f})" if es_5d.get('amount') is not None else ""
+                            text += f"  5日ES (95%): {es_5d['percentage']/100:.2%}{amount_display}\n"
                         if es_20d is not None:
-                            text += f"  20日ES (95%): {es_20d/100:.2%}\n"
+                            amount_display = f" (¥{es_20d['amount']:.2f})" if es_20d.get('amount') is not None else ""
+                            text += f"  20日ES (95%): {es_20d['percentage']/100:.2%}{amount_display}\n"
 
                 if latest_stop_loss is not None and pd.notna(latest_stop_loss):
                     try:
