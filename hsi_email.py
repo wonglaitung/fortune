@@ -1193,10 +1193,13 @@ class HSIEmailSystem:
 
         return False
 
-    def generate_stock_analysis_html(self, stock_data, indicators, continuous_buy_signals=None, continuous_sell_signals=None):
+    def generate_stock_analysis_html(self, stock_data, indicators, continuous_buy_signals=None, continuous_sell_signals=None, target_date=None):
         """为单只股票生成HTML分析部分"""
         if not indicators:
             return ""
+        
+        # 获取历史数据
+        hist_data = self.get_stock_data(stock_data['symbol'], target_date=target_date)
 
         continuous_signal_info = None
         transactions_df_for_stock = None
@@ -1411,10 +1414,9 @@ class HSIEmailSystem:
         
         # 添加ES信息（如果可用）
         if stock_data['symbol'] != 'HSI':
-            # 获取历史数据计算ES
-            ticker = yf.Ticker(stock_data['symbol'])
-            hist = ticker.history(period="6mo")
-            if not hist.empty:
+            # 使用已经根据target_date过滤的历史数据计算ES
+            if hist_data is not None and not hist_data.get('hist', pd.DataFrame()).empty:
+                hist = hist_data['hist']
                 # 计算各时间窗口的ES
                 current_price = float(stock_data['current_price'])
                 es_1d = self.calculate_expected_shortfall(hist, 'ultra_short_term', position_value=current_price)
@@ -1833,11 +1835,10 @@ class HSIEmailSystem:
                     var_medium_long = stock_indicators.get('var_medium_long_term')
                     
                     # 计算ES值和回撤
-                    hist_data = self.get_stock_data(stock_code)
+                    hist_data = self.get_stock_data(stock_code, target_date=target_date)
                     if hist_data is not None:
-                        # 从hist_data中提取历史价格数据
-                        ticker = yf.Ticker(stock_code)
-                        hist = ticker.history(period="2y")  # 使用2年数据计算回撤
+                        # 使用已经根据target_date过滤的历史数据
+                        hist = hist_data['hist']
                         if not hist.empty:
                             current_price = float(hist_data['current_price'])
                             es_short = self.calculate_expected_shortfall(hist, 'short_term', position_value=current_price)
@@ -2541,7 +2542,7 @@ class HSIEmailSystem:
             indicators = stock_result.get('indicators') or {}
 
             if indicators:
-                html += self.generate_stock_analysis_html(stock_data, indicators, buy_without_sell_after, sell_without_buy_after)
+                html += self.generate_stock_analysis_html(stock_data, indicators, buy_without_sell_after, sell_without_buy_after, target_date)
                 
                 # HTML版本：添加分割线
                 html += f"""
@@ -2657,9 +2658,8 @@ class HSIEmailSystem:
                 
                 # 计算并显示ES值
                 if stock_result['code'] != 'HSI':
-                    # 获取历史数据计算ES
-                    ticker = yf.Ticker(stock_result['code'])
-                    hist = ticker.history(period="6mo")
+                    # 使用已经根据target_date过滤的历史数据计算ES
+                    hist = stock_result.get('data', {}).get('hist', pd.DataFrame())
                     if not hist.empty:
                         # 计算各时间窗口的ES
                         indicators = stock_result.get('indicators', {})
