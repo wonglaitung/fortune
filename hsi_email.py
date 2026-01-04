@@ -1007,14 +1007,14 @@ class HSIEmailSystem:
                     target_dt = pd.Timestamp(target_date).tz_localize('UTC')
                 else:
                     target_dt = pd.Timestamp(target_date).tz_localize('UTC')
-                # 设置为当天的收盘时间（16:00 UTC，对应香港时间24:00）
-                reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
+                # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
+                reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
             else:
                 reference_time = pd.Timestamp.now(tz='UTC')
             
             threshold = reference_time - pd.Timedelta(hours=hours)
 
-            df_recent = df[(df['timestamp'] >= threshold) & (df['code'] == stock_code)]
+            df_recent = df[(df['timestamp'] >= threshold) & (df['timestamp'] <= reference_time) & (df['code'] == stock_code)]
             if df_recent.empty:
                 return "无建议信号"
 
@@ -1044,9 +1044,11 @@ class HSIEmailSystem:
         """
         return "无交易记录"
 
-    def analyze_continuous_signals(self):
+    def analyze_continuous_signals(self, target_date=None):
         """
         分析最近48小时内的连续买卖信号（使用 pandas 读取 data/simulation_transactions.csv）
+        参数:
+        - target_date: 目标日期，如果为None则使用当前时间
         返回: (buy_without_sell_after, sell_without_buy_after)
         每个元素为 (code, name, times_list, reasons_list, transactions_df)
         其中 transactions_df 是该股票的所有相关交易记录的DataFrame
@@ -1055,9 +1057,20 @@ class HSIEmailSystem:
         if df.empty:
             return [], []
 
-        now = pd.Timestamp.now(tz='UTC')
-        time_48_hours_ago = now - pd.Timedelta(hours=48)
-        df_recent = df[df['timestamp'] >= time_48_hours_ago].copy()
+        # 使用目标日期或当前时间
+        if target_date is not None:
+            # 将目标日期转换为带时区的时间戳
+            if isinstance(target_date, str):
+                target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+            else:
+                target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+            # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
+            reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
+        else:
+            reference_time = pd.Timestamp.now(tz='UTC')
+        
+        time_48_hours_ago = reference_time - pd.Timedelta(hours=48)
+        df_recent = df[(df['timestamp'] >= time_48_hours_ago) & (df['timestamp'] <= reference_time)].copy()
         if df_recent.empty:
             return [], []
 
@@ -1986,7 +1999,7 @@ class HSIEmailSystem:
 
         # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
-        buy_without_sell_after, sell_without_buy_after = self.analyze_continuous_signals()
+        buy_without_sell_after, sell_without_buy_after = self.analyze_continuous_signals(target_date)
         has_continuous_signals = len(buy_without_sell_after) > 0 or len(sell_without_buy_after) > 0
 
         if has_continuous_signals:
@@ -2216,13 +2229,13 @@ class HSIEmailSystem:
                         target_dt = pd.Timestamp(target_date).tz_localize('UTC')
                     else:
                         target_dt = pd.Timestamp(target_date).tz_localize('UTC')
-                    # 设置为当天的收盘时间（16:00 UTC，对应香港时间24:00）
-                    reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
+                    # 设置为前一天的晚上（20:00 UTC，对应香港时间次日04:00）
+                    reference_time = target_dt.replace(hour=20, minute=0, second=0, microsecond=0) - pd.Timedelta(days=1)
                 else:
                     reference_time = pd.Timestamp.now(tz='UTC')
                 
                 time_48_hours_ago = reference_time - pd.Timedelta(hours=48)
-                df_recent = df_all[df_all['timestamp'] >= time_48_hours_ago].copy()
+                df_recent = df_all[(df_all['timestamp'] >= time_48_hours_ago) & (df_all['timestamp'] <= reference_time)].copy()
                 if df_recent.empty:
                     html += "<p>最近48小时内没有交易记录</p>"
                     text += "💰 最近48小时模拟交易记录:\n  最近48小时内没有交易记录\n"
