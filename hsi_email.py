@@ -2208,8 +2208,19 @@ class HSIEmailSystem:
                 html += "<p>未找到交易记录文件或文件为空</p>"
                 text += "💰 最近48小时模拟交易记录:\n  未找到交易记录文件或文件为空\n"
             else:
-                now = pd.Timestamp.now(tz='UTC')
-                time_48_hours_ago = now - pd.Timedelta(hours=48)
+                # 使用目标日期或当前时间
+                if target_date is not None:
+                    # 将目标日期转换为带时区的时间戳
+                    if isinstance(target_date, str):
+                        target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    else:
+                        target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    # 设置为当天的收盘时间（16:00 UTC，对应香港时间24:00）
+                    reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
+                else:
+                    reference_time = pd.Timestamp.now(tz='UTC')
+                
+                time_48_hours_ago = reference_time - pd.Timedelta(hours=48)
                 df_recent = df_all[df_all['timestamp'] >= time_48_hours_ago].copy()
                 if df_recent.empty:
                     html += "<p>最近48小时内没有交易记录</p>"
