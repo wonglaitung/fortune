@@ -517,6 +517,220 @@ class HSIEmailSystem:
             'validity_period_info': validity_period_info
         }
 
+    def _get_latest_stop_loss_target(self, stock_code, target_date=None):
+        """
+        公用方法：从交易记录中获取指定股票的最新止损价和目标价
+        
+        参数:
+        - stock_code: 股票代码
+        - target_date: 目标日期，如果为None则使用当前时间
+        
+        返回:
+        - tuple: (latest_stop_loss, latest_target_price)
+        """
+        try:
+            df_transactions = self._read_transactions_df()
+            if df_transactions.empty:
+                return None, None
+                
+            # 如果指定了目标日期，过滤出该日期之前的交易记录
+            if target_date is not None:
+                # 将目标日期转换为带时区的时间戳
+                if isinstance(target_date, str):
+                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                else:
+                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
+                reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
+                df_transactions = df_transactions[df_transactions['timestamp'] <= reference_time]
+            
+            stock_transactions = df_transactions[df_transactions['code'] == stock_code]
+            if stock_transactions.empty:
+                return None, None
+                
+            # 按时间排序，获取最新的交易记录
+            stock_transactions = stock_transactions.sort_values('timestamp')
+            latest_transaction = stock_transactions.iloc[-1]
+            latest_stop_loss = latest_transaction.get('stop_loss_price')
+            latest_target_price = latest_transaction.get('target_price')
+            
+            return latest_stop_loss, latest_target_price
+        except Exception as e:
+            print(f"⚠️ 获取股票 {stock_code} 的止损价和目标价失败: {e}")
+            return None, None
+
+    def _get_trend_color_style(self, trend):
+        """
+        公用方法：根据趋势内容返回对应的颜色样式
+        
+        参数:
+        - trend: 趋势字符串
+        
+        返回:
+        - str: 颜色样式字符串
+        """
+        if "多头" in trend:
+            return "color: green; font-weight: bold;"
+        elif "空头" in trend:
+            return "color: red; font-weight: bold;"
+        elif "震荡" in trend:
+            return "color: orange; font-weight: bold;"
+        else:
+            return ""
+
+    def _get_signal_color_style(self, signal_type):
+        """
+        公用方法：根据信号类型返回对应的颜色样式
+        
+        参数:
+        - signal_type: 信号类型字符串
+        
+        返回:
+        - str: 颜色样式字符串
+        """
+        if "买入" in signal_type:
+            return "color: green; font-weight: bold;"
+        elif "卖出" in signal_type:
+            return "color: red; font-weight: bold;"
+        else:
+            return "color: orange; font-weight: bold;"
+
+    def _format_var_es_display(self, var_value, var_amount=None, es_value=None, es_amount=None):
+        """
+        公用方法：格式化VaR和ES值的显示
+        
+        参数:
+        - var_value: VaR值（百分比形式，如0.05表示5%）
+        - var_amount: VaR货币值
+        - es_value: ES值（百分比形式，如0.05表示5%）
+        - es_amount: ES货币值
+        
+        返回:
+        - dict: 包含格式化后的VaR和ES显示字符串
+        """
+        result = {
+            'var_display': 'N/A',
+            'es_display': 'N/A'
+        }
+        
+        try:
+            # 格式化VaR值
+            if var_value is not None:
+                var_display = f"{var_value:.2%}"
+                if var_amount is not None:
+                    var_display += f" (HK${var_amount:.2f})"
+                result['var_display'] = var_display
+            
+            # 格式化ES值
+            if es_value is not None:
+                es_display = f"{es_value:.2%}"
+                if es_amount is not None:
+                    es_display += f" (HK${es_amount:.2f})"
+                result['es_display'] = es_display
+                
+        except Exception as e:
+            print(f"⚠️ 格式化VaR/ES值时出错: {e}")
+        
+        return result
+
+    def _format_continuous_signal_details(self, transactions_df, times):
+        """
+        公用方法：格式化连续信号的详细信息（HTML版本）
+        
+        参数:
+        - transactions_df: 交易记录DataFrame
+        - times: 时间列表
+        
+        返回:
+        - str: 格式化后的连续信号详细信息
+        """
+        try:
+            combined_str = ""
+            # 确保交易记录按时间排序
+            transactions_df = transactions_df.sort_values('timestamp')
+            
+            for i in range(len(times)):
+                time_info = f"{times[i]}"
+                
+                # 从交易记录中获取现价、止损价、目标价格和有效期
+                if i < len(transactions_df):
+                    transaction = transactions_df.iloc[i]
+                    current_price = transaction.get('current_price')
+                    stop_loss_price = transaction.get('stop_loss_price')
+                    target_price = transaction.get('target_price')
+                    validity_period = transaction.get('validity_period')
+                    
+                    # 使用公用的格式化方法
+                    price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                    price_info = price_data['price_info']
+                    stop_loss_info = price_data['stop_loss_info']
+                    target_price_info = price_data['target_price_info']
+                    validity_period_info = price_data['validity_period_info']
+                else:
+                    price_info = ""
+                    stop_loss_info = ""
+                    target_price_info = ""
+                    validity_period_info = ""
+                
+                info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
+                reason_info = ", ".join(info_parts)
+                time_reason = f"{time_info} {reason_info}".strip()
+                combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
+            
+            return combined_str
+        except Exception as e:
+            print(f"⚠️ 格式化连续信号详细信息时出错: {e}")
+            return ""
+
+    def _format_continuous_signal_details_text(self, transactions_df, times):
+        """
+        公用方法：格式化连续信号的详细信息（文本版本）
+        
+        参数:
+        - transactions_df: 交易记录DataFrame
+        - times: 时间列表
+        
+        返回:
+        - str: 格式化后的连续信号详细信息
+        """
+        try:
+            combined_list = []
+            # 确保交易记录按时间排序
+            transactions_df = transactions_df.sort_values('timestamp')
+            
+            for i in range(len(times)):
+                time_info = f"{times[i]}"
+                
+                # 从交易记录中获取现价、止损价、目标价格和有效期
+                if i < len(transactions_df):
+                    transaction = transactions_df.iloc[i]
+                    current_price = transaction.get('current_price')
+                    stop_loss_price = transaction.get('stop_loss_price')
+                    target_price = transaction.get('target_price')
+                    validity_period = transaction.get('validity_period')
+                    
+                    # 使用公用的格式化方法
+                    price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
+                    price_info = price_data['price_info']
+                    stop_loss_info = price_data['stop_loss_info']
+                    target_price_info = price_data['target_price_info']
+                    validity_period_info = price_data['validity_period_info']
+                else:
+                    price_info = ""
+                    stop_loss_info = ""
+                    target_price_info = ""
+                    validity_period_info = ""
+                
+                info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
+                reason_info = ", ".join(info_parts)
+                combined_item = f"{time_info} {reason_info}".strip()
+                combined_list.append(combined_item)
+            
+            return "\n    ".join(combined_list)
+        except Exception as e:
+            print(f"⚠️ 格式化连续信号详细信息时出错: {e}")
+            return ""
+
     def _clean_signal_description(self, description):
         """
         清理信号描述，移除前缀
@@ -1229,15 +1443,8 @@ class HSIEmailSystem:
                     transactions_df_for_stock = transactions_df
                     break
 
-        # 从交易记录中获取最新的止损价和目标价
-        latest_stop_loss = None
-        latest_target_price = None
-        if transactions_df_for_stock is not None and not transactions_df_for_stock.empty:
-            # 按时间排序，获取最新的交易记录
-            transactions_df_for_stock = transactions_df_for_stock.sort_values('timestamp')
-            latest_transaction = transactions_df_for_stock.iloc[-1]
-            latest_stop_loss = latest_transaction.get('stop_loss_price')
-            latest_target_price = latest_transaction.get('target_price')
+        # 使用公共方法获取最新的止损价和目标价
+        latest_stop_loss, latest_target_price = self._get_latest_stop_loss_target(stock_data['symbol'], target_date)
 
         hist = stock_data['hist']
         recent_data = hist.sort_index()
@@ -1319,37 +1526,11 @@ class HSIEmailSystem:
         ma200 = indicators.get('ma200', 0)
         atr = indicators.get('atr', 0.0)
         
-        # 从交易记录中获取最新的止损价和目标价
-        try:
-            df_transactions = self._read_transactions_df()
-            if not df_transactions.empty:
-                stock_transactions = df_transactions[df_transactions['code'] == stock_data['symbol']]
-                if not stock_transactions.empty:
-                    # 按时间排序，获取最新的交易记录
-                    stock_transactions = stock_transactions.sort_values('timestamp')
-                    latest_transaction = stock_transactions.iloc[-1]
-                    latest_stop_loss = latest_transaction.get('stop_loss_price')
-                    latest_target_price = latest_transaction.get('target_price')
-                else:
-                    latest_stop_loss = None
-                    latest_target_price = None
-            else:
-                latest_stop_loss = None
-                latest_target_price = None
-        except Exception as e:
-            print(f"⚠️ 获取交易记录失败: {e}")
-            latest_stop_loss = None
-            latest_target_price = None
+        # 使用公共方法获取最新的止损价和目标价
+        latest_stop_loss, latest_target_price = self._get_latest_stop_loss_target(stock_data['symbol'], target_date)
 
-        # 为趋势设置颜色
-        if "多头" in trend:
-            trend_color_style = "color: green; font-weight: bold;"
-        elif "空头" in trend:
-            trend_color_style = "color: red; font-weight: bold;"
-        elif "震荡" in trend:
-            trend_color_style = "color: orange; font-weight: bold;"
-        else:
-            trend_color_style = ""
+        # 使用公共方法获取趋势颜色样式
+        trend_color_style = self._get_trend_color_style(trend)
 
         html += f"""
                 <tr>
@@ -1797,25 +1978,11 @@ class HSIEmailSystem:
             else:
                 signal_description = signal.get('description', '') if isinstance(signal, dict) else (str(signal) if signal is not None else '')
 
-            # 为48小时智能建议设置颜色
-            if "买入" in continuous_signal_status:
-                signal_color_style = "color: green; font-weight: bold;"
-            elif "卖出" in continuous_signal_status:
-                signal_color_style = "color: red; font-weight: bold;"
-            elif "无建议信号" in continuous_signal_status:
-                signal_color_style = "color: orange; font-weight: bold;"
-            else:
-                signal_color_style = ""
+            # 使用公共方法获取48小时智能建议颜色样式
+            signal_color_style = self._get_signal_color_style(continuous_signal_status)
             
-            # 为趋势设置颜色
-            if "多头" in trend:
-                trend_color_style = "color: green; font-weight: bold;"
-            elif "空头" in trend:
-                trend_color_style = "color: red; font-weight: bold;"
-            elif "震荡" in trend:
-                trend_color_style = "color: orange; font-weight: bold;"
-            else:
-                trend_color_style = ""
+            # 使用公共方法获取趋势颜色样式
+            trend_color_style = self._get_trend_color_style(trend)
             
             # 判断三列颜色是否相同，如果相同则股票名称也使用相同颜色
             name_color_style = ""
@@ -1886,15 +2053,15 @@ class HSIEmailSystem:
             safe_continuous_signal_status = continuous_signal_status if continuous_signal_status is not None else 'N/A'
             safe_signal_description = signal_description if signal_description is not None else 'N/A'
             
-            # 格式化VaR值和ES值
-            var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
-            var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
-            var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
-            
-            # 获取VaR货币值
+            # 使用公共方法格式化VaR和ES值
             var_ultra_short_amount = stock_indicators.get('var_ultra_short_term_amount')
             var_short_amount = stock_indicators.get('var_short_term_amount')
             var_medium_long_amount = stock_indicators.get('var_medium_long_term_amount')
+            
+            # 格式化VaR值
+            var_ultra_short_display = f"{var_ultra_short:.2%}" if var_ultra_short is not None else "N/A"
+            var_short_display = f"{var_short:.2%}" if var_short is not None else "N/A"
+            var_medium_long_display = f"{var_medium_long:.2%}" if var_medium_long is not None else "N/A"
             
             # 添加货币值显示
             if var_ultra_short is not None and var_ultra_short_amount is not None:
@@ -1903,6 +2070,7 @@ class HSIEmailSystem:
                 var_short_display += f" (HK${var_short_amount:.2f})"
             if var_medium_long is not None and var_medium_long_amount is not None:
                 var_medium_long_display += f" (HK${var_medium_long_amount:.2f})"
+            
             # 格式化ES值
             es_short_display = f"{es_short['percentage']/100:.2%}" if es_short is not None else "N/A"
             es_medium_long_display = f"{es_medium_long['percentage']/100:.2%}" if es_medium_long is not None else "N/A"
@@ -2020,35 +2188,7 @@ class HSIEmailSystem:
                         </tr>
                 """
                 for code, name, times, reasons, transactions_df in buy_without_sell_after:
-                    combined_str = ""
-                    # 确保交易记录按时间排序
-                    transactions_df = transactions_df.sort_values('timestamp')
-                    for i in range(len(times)):
-                        time_info = f"{times[i]}"
-                        price_info = ""
-                        stop_loss_info = ""
-                        target_price_info = ""
-                        validity_period_info = ""
-                        
-                        # 从交易记录中获取现价、止损价、目标价格和有效期
-                        if i < len(transactions_df):
-                            transaction = transactions_df.iloc[i]
-                            current_price = transaction.get('current_price')
-                            stop_loss_price = transaction.get('stop_loss_price')
-                            target_price = transaction.get('target_price')
-                            validity_period = transaction.get('validity_period')
-                            
-                            # 使用公用的格式化方法
-                            price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
-                            price_info = price_data['price_info']
-                            stop_loss_info = price_data['stop_loss_info']
-                            target_price_info = price_data['target_price_info']
-                            validity_period_info = price_data['validity_period_info']
-                        
-                        info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
-                        reason_info = ", ".join(info_parts)
-                        time_reason = f"{time_info} {reason_info}".strip()
-                        combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
+                    combined_str = self._format_continuous_signal_details(transactions_df, times)
                     html += f"""
                     <tr>
                         <td>{code}</td>
@@ -2075,35 +2215,7 @@ class HSIEmailSystem:
                         </tr>
                 """
                 for code, name, times, reasons, transactions_df in sell_without_buy_after:
-                    combined_str = ""
-                    # 确保交易记录按时间排序
-                    transactions_df = transactions_df.sort_values('timestamp')
-                    for i in range(len(times)):
-                        time_info = f"{times[i]}"
-                        price_info = ""
-                        stop_loss_info = ""
-                        target_price_info = ""
-                        validity_period_info = ""
-                        
-                        # 从交易记录中获取现价、止损价、目标价格和有效期
-                        if i < len(transactions_df):
-                            transaction = transactions_df.iloc[i]
-                            current_price = transaction.get('current_price')
-                            stop_loss_price = transaction.get('stop_loss_price')
-                            target_price = transaction.get('target_price')
-                            validity_period = transaction.get('validity_period')
-                            
-                            # 使用公用的格式化方法
-                            price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
-                            price_info = price_data['price_info']
-                            stop_loss_info = price_data['stop_loss_info']
-                            target_price_info = price_data['target_price_info']
-                            validity_period_info = price_data['validity_period_info']
-                        
-                        info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
-                        reason_info = ", ".join(info_parts)
-                        time_reason = f"{time_info} {reason_info}".strip()
-                        combined_str += time_reason + ("<br>" if i < len(times) - 1 else "")
+                    combined_str = self._format_continuous_signal_details(transactions_df, times)
                     html += f"""
                     <tr>
                         <td>{code}</td>
@@ -2123,71 +2235,14 @@ class HSIEmailSystem:
         if buy_without_sell_after:
             text += f"📈 最近48小时内连续3次或以上建议买入同一只股票（期间没有卖出建议）:\n"
             for code, name, times, reasons, transactions_df in buy_without_sell_after:
-                combined_list = []
-                # 确保交易记录按时间排序
-                transactions_df = transactions_df.sort_values('timestamp')
-                for i in range(len(times)):
-                    time_info = f"{times[i]}"
-                    price_info = ""
-                    stop_loss_info = ""
-                    target_price_info = ""
-                    validity_period_info = ""
-                    
-                    # 从交易记录中获取现价、止损价、目标价格和有效期
-                    if i < len(transactions_df):
-                        transaction = transactions_df.iloc[i]
-                        current_price = transaction.get('current_price')
-                        stop_loss_price = transaction.get('stop_loss_price')
-                        target_price = transaction.get('target_price')
-                        validity_period = transaction.get('validity_period')
-                        
-                                                                # 使用公用的格式化方法
-                        price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
-                        price_info = price_data['price_info']
-                        stop_loss_info = price_data['stop_loss_info']
-                        target_price_info = price_data['target_price_info']
-                        validity_period_info = price_data['validity_period_info']
-                    
-                    info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
-                    reason_info = ", ".join(info_parts)
-                    combined_item = f"{time_info} {reason_info}".strip()
-                    combined_list.append(combined_item)
-                combined_str = "\n    ".join(combined_list)
+                combined_str = self._format_continuous_signal_details_text(transactions_df, times)
                 text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
             text += "\n"
 
         if sell_without_buy_after:
             text += f"📉 最近48小时内连续3次或以上建议卖出同一只股票（期间没有买入建议）:\n"
             for code, name, times, reasons, transactions_df in sell_without_buy_after:
-                combined_list = []
-                # 确保交易记录按时间排序
-                transactions_df = transactions_df.sort_values('timestamp')
-                for i in range(len(times)):
-                    time_info = f"{times[i]}"
-                    price_info = ""
-                    stop_loss_info = ""
-                    target_price_info = ""
-                    validity_period_info = ""
-                    
-                    # 从交易记录中获取现价、止损价、目标价格和有效期
-                    if i < len(transactions_df):
-                        transaction = transactions_df.iloc[i]
-                        current_price = transaction.get('current_price')
-                        stop_loss_price = transaction.get('stop_loss_price')
-                        target_price = transaction.get('target_price')
-                        validity_period = transaction.get('validity_period')
-                        
-                        # 使用公用的格式化方法
-                        price_data = self._format_price_info(current_price, stop_loss_price, target_price, validity_period)
-                        price_info = price_data['price_info']
-                        stop_loss_info = price_data['stop_loss_info']
-                        target_price_info = price_data['target_price_info']
-                        validity_period_info = price_data['validity_period_info']                    
-                    info_parts = [part for part in [price_info, target_price_info, stop_loss_info, validity_period_info] if part]
-                    reason_info = ", ".join(info_parts)
-                    combined_item = f"{time_info} {reason_info}".strip()
-                    combined_list.append(combined_item)
-                combined_str = "\n    ".join(combined_list)
+                combined_str = self._format_continuous_signal_details_text(transactions_df, times)
                 text += f"  {code} ({name}) - 建议{len(times)}次\n    {combined_str}\n"
             text += "\n"
 
@@ -2413,15 +2468,8 @@ class HSIEmailSystem:
                 stop_loss = hsi_indicators.get('stop_loss', None)
                 take_profit = hsi_indicators.get('take_profit', None)
 
-                # 为恒生指数趋势设置颜色
-                if "多头" in trend:
-                    hsi_trend_color_style = "color: green; font-weight: bold;"
-                elif "空头" in trend:
-                    hsi_trend_color_style = "color: red; font-weight: bold;"
-                elif "震荡" in trend:
-                    hsi_trend_color_style = "color: orange; font-weight: bold;"
-                else:
-                    hsi_trend_color_style = ""
+                # 使用公共方法获取恒生指数趋势颜色样式
+                hsi_trend_color_style = self._get_trend_color_style(trend)
                 
                 html += f"""
                     <tr>
@@ -2627,21 +2675,8 @@ class HSIEmailSystem:
                 ma200 = indicators.get('ma200', 0)
                 atr = indicators.get('atr', 0.0)
                 
-                # 从交易记录中获取最新的止损价和目标价
-                latest_stop_loss = None
-                latest_target_price = None
-                try:
-                    df_transactions = self._read_transactions_df()
-                    if not df_transactions.empty:
-                        stock_transactions = df_transactions[df_transactions['code'] == stock_result['code']]
-                        if not stock_transactions.empty:
-                            # 按时间排序，获取最新的交易记录
-                            stock_transactions = stock_transactions.sort_values('timestamp')
-                            latest_transaction = stock_transactions.iloc[-1]
-                            latest_stop_loss = latest_transaction.get('stop_loss_price')
-                            latest_target_price = latest_transaction.get('target_price')
-                except Exception as e:
-                    print(f"⚠️ 获取交易记录失败: {e}")
+                # 使用公共方法获取最新的止损价和目标价
+                latest_stop_loss, latest_target_price = self._get_latest_stop_loss_target(stock_result['code'], target_date)
 
                 text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
