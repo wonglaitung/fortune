@@ -1567,6 +1567,21 @@ class HSIEmailSystem:
             except (ValueError, TypeError):
                 pass
 
+        # 添加ATR计算的止损价
+        if atr > 0 and stock_data.get('current_price'):
+            try:
+                current_price = float(stock_data['current_price'])
+                # 使用1.5倍ATR作为默认止损距离
+                atr_stop_loss = current_price - (atr * 1.5)
+                html += f"""
+                <tr>
+                    <td>ATR止损价(1.5x)</td>
+                    <td>{atr_stop_loss:,.2f}</td>
+                </tr>
+            """
+            except (ValueError, TypeError):
+                pass
+
         html += f"""
                 <tr>
                     <td>成交量</td>
@@ -2514,6 +2529,21 @@ class HSIEmailSystem:
                     except (ValueError, TypeError):
                         pass
 
+                # 添加ATR计算的止损价
+                if atr > 0 and hsi_data.get('current_price'):
+                    try:
+                        current_price = float(hsi_data['current_price'])
+                        # 使用1.5倍ATR作为默认止损距离
+                        atr_stop_loss = current_price - (atr * 1.5)
+                        html += f"""
+                    <tr>
+                        <td>ATR止损价(1.5x)</td>
+                        <td>{atr_stop_loss:,.2f}</td>
+                    </tr>
+                """
+                    except (ValueError, TypeError):
+                        pass
+
                 html += f"""
                     <tr>
                         <td>成交量</td>
@@ -2608,6 +2638,16 @@ class HSIEmailSystem:
                     text += f"  建议止损价: {stop_loss:,.2f}\n"
                 if take_profit is not None:
                     text += f"  建议止盈价: {take_profit:,.2f}\n"
+
+                # 添加ATR计算的止损价
+                if atr > 0 and hsi_data.get('current_price'):
+                    try:
+                        current_price = float(hsi_data['current_price'])
+                        # 使用1.5倍ATR作为默认止损距离
+                        atr_stop_loss = current_price - (atr * 1.5)
+                        text += f"  ATR止损价(1.5x): {atr_stop_loss:,.2f}\n"
+                    except (ValueError, TypeError):
+                        pass
                 
                 text += f"  成交量: {hsi_data['volume']:,.0f}\n"
                 text += f"  趋势(技术分析): {trend}\n"
@@ -2719,6 +2759,16 @@ class HSIEmailSystem:
                     try:
                         target_price_float = float(latest_target_price)
                         text += f"  建议止盈价: {target_price_float:,.2f}\n"
+                    except (ValueError, TypeError):
+                        pass
+
+                # 添加ATR计算的止损价
+                if atr > 0 and stock_data.get('current_price'):
+                    try:
+                        current_price = float(stock_data['current_price'])
+                        # 使用1.5倍ATR作为默认止损距离
+                        atr_stop_loss = current_price - (atr * 1.5)
+                        text += f"  ATR止损价(1.5x): {atr_stop_loss:,.2f}\n"
                     except (ValueError, TypeError):
                         pass
                 
