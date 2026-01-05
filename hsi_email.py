@@ -1572,11 +1572,7 @@ class HSIEmailSystem:
                     <td>MA200</td>
                     <td>{ma200:,.2f}</td>
                 </tr>
-                <tr>
-                    <td>ATR (14日)</td>
-                    <td>{atr:.2f}</td>
-                </tr>
-        """
+                """
 
         # 添加VaR信息
         var_ultra_short = indicators.get('var_ultra_short_term')
@@ -1722,6 +1718,14 @@ class HSIEmailSystem:
             """
             except (ValueError, TypeError):
                 pass
+
+        # 添加ATR信息
+        html += f"""
+                <tr>
+                    <td>ATR (14日)</td>
+                    <td>{atr:.2f}</td>
+                </tr>
+        """
 
         recent_buy_signals = indicators.get('recent_buy_signals', [])
         recent_sell_signals = indicators.get('recent_sell_signals', [])
@@ -2511,11 +2515,7 @@ class HSIEmailSystem:
                         <td>MA200</td>
                         <td>{ma200:,.2f}</td>
                     </tr>
-                    <tr>
-                        <td>ATR (14日)</td>
-                        <td>{atr:.2f}</td>
-                    </tr>
-                """
+                    """
 
                 if stop_loss is not None:
                     html += f"""
@@ -2532,6 +2532,14 @@ class HSIEmailSystem:
                             <td>{take_profit:,.2f}</td>
                         </tr>
                     """
+
+                # 添加ATR信息
+                html += f"""
+                    <tr>
+                        <td>ATR (14日)</td>
+                        <td>{atr:.2f}</td>
+                    </tr>
+                """
 
                 recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
                 recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
