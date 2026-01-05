@@ -15,6 +15,13 @@
 """
 
 import os
+import warnings
+
+# 抑制 pkg_resources 弃用警告
+os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning:py_mini_racer.*'
+warnings.filterwarnings("ignore", category=UserWarning, message=".*pkg_resources is deprecated.*")
+warnings.filterwarnings("ignore", category=UserWarning, module='py_mini_racer')
+
 import smtplib
 import json
 import argparse
