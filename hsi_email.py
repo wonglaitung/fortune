@@ -1517,11 +1517,7 @@ class HSIEmailSystem:
                     <td>当日最低</td>
                     <td>{stock_data['low']:,.2f}</td>
                 </tr>
-                <tr>
-                    <td>成交量</td>
-                    <td>{stock_data['volume']:,.0f}</td>
-                </tr>
-        """
+                """
 
         rsi = indicators.get('rsi', 0.0)
         macd = indicators.get('macd', 0.0)
@@ -1538,6 +1534,45 @@ class HSIEmailSystem:
 
         # 使用公共方法获取趋势颜色样式
         trend_color_style = self._get_trend_color_style(trend)
+
+        # 添加ATR信息
+        html += f"""
+                <tr>
+                    <td>ATR (14日)</td>
+                    <td>{atr:.2f}</td>
+                </tr>
+        """
+
+        if latest_stop_loss is not None and pd.notna(latest_stop_loss):
+            try:
+                stop_loss_float = float(latest_stop_loss)
+                html += f"""
+                <tr>
+                    <td>建议止损价</td>
+                    <td>{stop_loss_float:,.2f}</td>
+                </tr>
+            """
+            except (ValueError, TypeError):
+                pass
+
+        if latest_target_price is not None and pd.notna(latest_target_price):
+            try:
+                target_price_float = float(latest_target_price)
+                html += f"""
+                <tr>
+                    <td>建议止盈价</td>
+                    <td>{target_price_float:,.2f}</td>
+                </tr>
+            """
+            except (ValueError, TypeError):
+                pass
+
+        html += f"""
+                <tr>
+                    <td>成交量</td>
+                    <td>{stock_data['volume']:,.0f}</td>
+                </tr>
+        """
 
         html += f"""
                 <tr>
@@ -1694,38 +1729,7 @@ class HSIEmailSystem:
                 # 调试信息
                 print(f"⚠️ 股票 {stock_data['name']} ({stock_data['symbol']}) 没有TAV摘要")
 
-        # 只使用交易记录中的止损价和目标价
-        if latest_stop_loss is not None and pd.notna(latest_stop_loss):
-            try:
-                stop_loss_float = float(latest_stop_loss)
-                html += f"""
-                <tr>
-                    <td>建议止损价</td>
-                    <td>{stop_loss_float:,.2f}</td>
-                </tr>
-            """
-            except (ValueError, TypeError):
-                pass
-
-        if latest_target_price is not None and pd.notna(latest_target_price):
-            try:
-                target_price_float = float(latest_target_price)
-                html += f"""
-                <tr>
-                    <td>建议止盈价</td>
-                    <td>{target_price_float:,.2f}</td>
-                </tr>
-            """
-            except (ValueError, TypeError):
-                pass
-
-        # 添加ATR信息
-        html += f"""
-                <tr>
-                    <td>ATR (14日)</td>
-                    <td>{atr:.2f}</td>
-                </tr>
-        """
+        
 
         recent_buy_signals = indicators.get('recent_buy_signals', [])
         recent_sell_signals = indicators.get('recent_sell_signals', [])
@@ -2460,11 +2464,7 @@ class HSIEmailSystem:
                         <td>当日最低</td>
                         <td>{hsi_data['low']:,.2f}</td>
                     </tr>
-                    <tr>
-                        <td>成交量</td>
-                        <td>{hsi_data['volume']:,.0f}</td>
-                    </tr>
-            """
+                    """
 
             if hsi_indicators:
                 rsi = hsi_indicators.get('rsi', 0.0)
@@ -2482,7 +2482,43 @@ class HSIEmailSystem:
                 # 使用公共方法获取恒生指数趋势颜色样式
                 hsi_trend_color_style = self._get_trend_color_style(trend)
                 
+                # 添加ATR信息
                 html += f"""
+                    <tr>
+                        <td>ATR (14日)</td>
+                        <td>{atr:.2f}</td>
+                    </tr>
+                """
+
+                if stop_loss is not None and pd.notna(stop_loss):
+                    try:
+                        stop_loss_float = float(stop_loss)
+                        html += f"""
+                    <tr>
+                        <td>建议止损价</td>
+                        <td>{stop_loss_float:,.2f}</td>
+                    </tr>
+                """
+                    except (ValueError, TypeError):
+                        pass
+
+                if take_profit is not None and pd.notna(take_profit):
+                    try:
+                        take_profit_float = float(take_profit)
+                        html += f"""
+                    <tr>
+                        <td>建议止盈价</td>
+                        <td>{take_profit_float:,.2f}</td>
+                    </tr>
+                """
+                    except (ValueError, TypeError):
+                        pass
+
+                html += f"""
+                    <tr>
+                        <td>成交量</td>
+                        <td>{hsi_data['volume']:,.0f}</td>
+                    </tr>
                     <tr>
                         <td>趋势(技术分析)</td>
                         <td><span style=\"{hsi_trend_color_style}\">{trend}</span></td>
@@ -2517,29 +2553,7 @@ class HSIEmailSystem:
                     </tr>
                     """
 
-                if stop_loss is not None:
-                    html += f"""
-                        <tr>
-                            <td>建议止损价</td>
-                            <td>{stop_loss:,.2f}</td>
-                        </tr>
-                    """
-
-                if take_profit is not None:
-                    html += f"""
-                        <tr>
-                            <td>建议止盈价</td>
-                            <td>{take_profit:,.2f}</td>
-                        </tr>
-                    """
-
-                # 添加ATR信息
-                html += f"""
-                    <tr>
-                        <td>ATR (14日)</td>
-                        <td>{atr:.2f}</td>
-                    </tr>
-                """
+                
 
                 recent_buy_signals = hsi_indicators.get('recent_buy_signals', [])
                 recent_sell_signals = hsi_indicators.get('recent_sell_signals', [])
@@ -2585,23 +2599,24 @@ class HSIEmailSystem:
             text += f"  当日开盘: {hsi_data['open']:,.2f}\n"
             text += f"  当日最高: {hsi_data['high']:,.2f}\n"
             text += f"  当日最低: {hsi_data['low']:,.2f}\n"
-            text += f"  成交量: {hsi_data['volume']:,.0f}\n\n"
 
             if hsi_indicators:
                 text += f"📊 恒生指数技术分析:\n"
+                text += f"  ATR: {atr:.2f}\n"
+                
+                if stop_loss is not None:
+                    text += f"  建议止损价: {stop_loss:,.2f}\n"
+                if take_profit is not None:
+                    text += f"  建议止盈价: {take_profit:,.2f}\n"
+                
+                text += f"  成交量: {hsi_data['volume']:,.0f}\n"
                 text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
                 text += f"  布林带位置: {bb_position:.2f}\n"
                 text += f"  MA20: {ma20:,.2f}\n"
                 text += f"  MA50: {ma50:,.2f}\n"
-                text += f"  MA200: {ma200:,.2f}\n"
-                text += f"  ATR: {atr:.2f}\n"
-
-                if stop_loss is not None:
-                    text += f"  建议止损价: {stop_loss:,.2f}\n"
-                if take_profit is not None:
-                    text += f"  建议止盈价: {take_profit:,.2f}\n"
+                text += f"  MA200: {ma200:,.2f}\n\n"
 
                 if recent_buy_signals:
                     text += f"  🔔 最近买入信号(五天内) ({len(recent_buy_signals)} 个):\n"
@@ -2636,7 +2651,6 @@ class HSIEmailSystem:
                 text += f"  当日开盘: {stock_data['open']:,.2f}\n"
                 text += f"  当日最高: {stock_data['high']:,.2f}\n"
                 text += f"  当日最低: {stock_data['low']:,.2f}\n"
-                text += f"  成交量: {stock_data['volume']:,.0f}\n"
 
                 hist = stock_data['hist']
                 recent_data = hist.sort_index()
@@ -2693,6 +2707,22 @@ class HSIEmailSystem:
                 # 使用公共方法获取最新的止损价和目标价
                 latest_stop_loss, latest_target_price = self._get_latest_stop_loss_target(stock_result['code'], target_date)
 
+                text += f"  ATR: {atr:.2f}\n"
+                
+                if latest_stop_loss is not None and pd.notna(latest_stop_loss):
+                    try:
+                        stop_loss_float = float(latest_stop_loss)
+                        text += f"  建议止损价: {stop_loss_float:,.2f}\n"
+                    except (ValueError, TypeError):
+                        pass
+                if latest_target_price is not None and pd.notna(latest_target_price):
+                    try:
+                        target_price_float = float(latest_target_price)
+                        text += f"  建议止盈价: {target_price_float:,.2f}\n"
+                    except (ValueError, TypeError):
+                        pass
+                
+                text += f"  成交量: {stock_data['volume']:,.0f}\n"
                 text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
@@ -2700,7 +2730,6 @@ class HSIEmailSystem:
                 text += f"  MA20: {ma20:,.2f}\n"
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
-                text += f"  ATR: {atr:.2f}\n"
                 
                 # 添加VaR信息
                 var_ultra_short = indicators.get('var_ultra_short_term')
@@ -2801,7 +2830,13 @@ class HSIEmailSystem:
               <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均指数/股价，反映中期趋势。</li>
               <li><b>MA200(200日移动平均线)</b>：过去200个交易日的平均指数/股价，反映长期趋势。</li>
               <li><b>布林带位置</b>：当前指数/股价在布林带中的相对位置，范围0-1。</li>
-              <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。</li>
+              <li><b>ATR(平均真实波幅)</b>：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。
+                <ul>
+                  <li><b>港股单位</b>：港元（HK$），表示股票的平均价格波动幅度</li>
+                  <li><b>恒指单位</b>：点数，表示恒生指数的平均波动幅度</li>
+                  <li><b>应用</b>：通常使用1.5-2倍ATR作为止损距离，例如当前价-1.5×ATR可作为止损参考</li>
+                </ul>
+              </li>
               <li><b>VaR(风险价值)</b>：在给定置信水平下，投资组合在特定时间内可能面临的最大损失。时间维度与投资周期相匹配：
                 <ul>
                   <li><b>1日VaR(95%)</b>：适用于超短线交易（日内/隔夜），匹配持仓周期，控制单日最大回撤</li>
@@ -2893,6 +2928,9 @@ class HSIEmailSystem:
         text += "• MA200(200日移动平均线)：过去200个交易日的平均指数/股价，反映长期趋势。\n"
         text += "• 布林带位置：当前指数/股价在布林带中的相对位置，范围0-1。\n"
         text += "• ATR(平均真实波幅)：衡量市场波动性的技术指标，数值越高表示波动越大，常用于设置止损和止盈位。\n"
+        text += "  - 港股单位：港元（HK$），表示股票的平均价格波动幅度\n"
+        text += "  - 恒指单位：点数，表示恒生指数的平均波动幅度\n"
+        text += "  - 应用：通常使用1.5-2倍ATR作为止损距离，例如当前价-1.5×ATR可作为止损参考\n"
         text += "• VaR(风险价值)：在给定置信水平下，投资组合在特定时间内可能面临的最大损失。时间维度与投资周期相匹配：\n"
         text += "  - 1日VaR(95%)：适用于超短线交易（日内/隔夜），匹配持仓周期，控制单日最大回撤\n"
         text += "  - 5日VaR(95%)：适用于波段交易（数天–数周），覆盖典型持仓期\n"
