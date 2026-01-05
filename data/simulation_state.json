@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 23395.189294051903,
+  "capital": 505.18929405190283,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -31,6 +31,11 @@
       "shares": 2300,
       "avg_price": 47.08,
       "stop_loss_price": 44.0
+    },
+    "0981.HK": {
+      "shares": 300,
+      "avg_price": 76.3,
+      "stop_loss_price": 72.0
     }
   },
   "transaction_history": [
@@ -13757,6 +13762,118 @@
       "current_price": 47.08,
       "target_price": 52.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05T13:16:44.547197",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 23395.189294051903,
+      "reason": "技术面全市场最低TAV评分16.75（弱势无共振）、RSI持续下行、MACD负值扩大，叠加芯片短缺新闻冲击硬件业务，高风险需主动回避",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.26,
+      "target_price": 39.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05T13:16:46.784838",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 23395.189294051903,
+      "reason": "技术面弱势TAV评分23.75（RSI 37.84下行、MACD负值扩大）、缩量回调，叠加估值质疑新闻加速下跌，高风险需严格止损",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.55,
+      "target_price": 81.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05T13:16:50.255610",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 300,
+      "price": 76.3,
+      "amount": 22890.0,
+      "capital_after": 505.18929405190283,
+      "reason": "技术面强势共振（TAV评分64.25、MACD柱状图加速扩大、布林带突破上轨）+ 新闻催化（国产芯片收购加速、全球半导体板块大涨）+ 资金流入验证（南向资金+8.51亿港元），优先级最高且符合平衡型风险偏好",
+      "success": true,
+      "stop_loss_price": 72.0,
+      "current_price": 76.3,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05T13:16:55.073349",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 83.3,
+      "amount": 0,
+      "capital_after": 505.18929405190283,
+      "reason": "半导体板块政策驱动（国产替代逻辑强化），TAV评分62.5中等共振，收购新闻与技术面放量突破（量比1.4）高度契合，波动率健康（60.44%）提供弹性，风险收益比优化 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 83.3,
+      "target_price": 95.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05T13:59:00.697633",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 505.18929405190283,
+      "reason": "技术面极端高位（位置100.0%）+严重超买（RSI 73.66）+负面新闻催化（Barclay兄弟破产诉讼暴露资产质量风险），高危共振",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 124.6,
+      "target_price": 124.6,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-05T13:59:08.017592",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 83.7,
+      "amount": 0,
+      "capital_after": 505.18929405190283,
+      "reason": "高位缩量上涨显示主力控盘，新闻面中长期逻辑稳固（AIA中国扩张计划+低利率环境利好），TAV评分70.0分强势，符合平衡型风险偏好稳健增长需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 80.0,
+      "current_price": 83.7,
+      "target_price": 90.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-05T13:59:12.100733",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 83.35,
+      "amount": 0,
+      "capital_after": 505.18929405190283,
+      "reason": "政策+资金双击驱动（国产替代新闻催化），放量突破布林带上轨，TAV评分66.25分，波动率健康提供弹性，风险收益比优化 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 83.35,
+      "target_price": 92.0,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -24284,163 +24401,51 @@
           "stop_loss_price": 44.0
         }
       }
+    },
+    {
+      "timestamp": "2026-01-05T13:16:51.031435",
+      "capital": 505.18929405190283,
+      "portfolio_value": 941159.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0883.HK": {
+          "shares": 12900,
+          "avg_price": 20.98186046511628,
+          "stop_loss_price": 20.5
+        },
+        "1138.HK": {
+          "shares": 19300,
+          "avg_price": 10.008549222797928,
+          "stop_loss_price": 6.9
+        },
+        "3690.HK": {
+          "shares": 1300,
+          "avg_price": 103.3,
+          "stop_loss_price": 98.0
+        },
+        "9988.HK": {
+          "shares": 100,
+          "avg_price": 151.4,
+          "stop_loss_price": 145.0
+        },
+        "6682.HK": {
+          "shares": 2300,
+          "avg_price": 47.08,
+          "stop_loss_price": 44.0
+        },
+        "0981.HK": {
+          "shares": 300,
+          "avg_price": 76.3,
+          "stop_loss_price": 72.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-05 09:38:55",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面严重超买（位置100%、RSI 74.12）、资金持续流出，负面新闻（破产诉讼）强化高位风险，中高风险需逢反弹减仓",
-      "capital_after": 146291.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 124.8,
-      "target_price": 126.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-05 09:39:03",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 9.93,
-      "amount": 0,
-      "reason": "技术面多指标共振（TAV 58.25、布林带突破、MACD加速），位置中位避免超买，航运能源板块受益全球贸易复苏提供新闻催化，风险收益比优化（目标涨幅14%） (原因: 持仓比例已达到建议值)",
-      "capital_after": 146291.1892940519,
-      "success": false,
-      "stop_loss_price": 9.8,
-      "current_price": 9.93,
-      "target_price": 11.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-05 09:39:06",
-      "type": "BUY",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 200,
-      "price": 622.0,
-      "amount": 124400.0,
-      "reason": "技术面低位反转（位置27.22%、MACD柱状图扩大），跑赢恒指验证抗跌性，AI芯片上市新闻强化生态利好，提供安全边际和明确催化",
-      "capital_after": 21891.189294051903,
-      "success": true,
-      "stop_loss_price": 595,
-      "current_price": 622.0,
-      "target_price": 680,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-05 09:39:10",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 100,
-      "price": 151.4,
-      "amount": 15140.0,
-      "reason": "技术面超跌反弹（位置21.55%、MACD加速最显著），AI政策新闻直接驱动，相对强度差值+50.95%显示修复潜力，低位提供安全垫",
-      "capital_after": 6751.189294051903,
-      "success": true,
-      "stop_loss_price": 145,
-      "current_price": 151.4,
-      "target_price": 165,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-05 10:42:57",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "TAV评分69.5接近强势阈值，新闻催化明确（高内部人持股+亚洲增长潜力），量价齐升（量比1.31、布林带突破），技术面共振强且位置中低位（42.78%），安全边际高，符合平衡型风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.0,
-          "target_price": 24.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "半导体板块政策驱动（国产替代逻辑），MACD动量加速上行（变化率信号=1），TAV评分58.0稳健，波动率适中（61.03%），新闻与技术面共振（收购新闻催化），风险收益比优化，适合平衡型稳健增长需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 80.0,
-          "target_price": 95.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "TAV评分23.75（全样本最低之一），技术面恶化（RSI 38.4低位钝化、MACD负值扩大），新闻与技术背离（估值质疑新闻加速弱势），高风险等级需回避",
-          "stop_loss_triggered": false,
-          "target_price": 5.55,
-          "validity_period": 7
-        },
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "报告明确排除（位置36.71%偏低、RSI 58.16未强势突破、新闻关联度弱于阿里），风险收益比不佳，历史买入决策与最新分析不一致，需调整以符合技术面验证",
-          "stop_loss_triggered": false,
-          "target_price": 620.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-05 10:42:57",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "TAV评分23.75（全样本最低之一），技术面恶化（RSI 38.4低位钝化、MACD负值扩大），新闻与技术背离（估值质疑新闻加速弱势），高风险等级需回避",
-      "capital_after": 6751.189294051903,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.45,
-      "target_price": 5.55,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-05 10:43:00",
-      "type": "SELL",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 200,
-      "price": 626.5,
-      "amount": 125300.0,
-      "reason": "报告明确排除（位置36.71%偏低、RSI 58.16未强势突破、新闻关联度弱于阿里），风险收益比不佳，历史买入决策与最新分析不一致，需调整以符合技术面验证",
-      "capital_after": 132051.1892940519,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 626.5,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 900.0
-    },
-    {
-      "timestamp": "2026-01-05 10:43:04",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 6200,
-      "price": 21.14,
-      "amount": 131068.0,
-      "reason": "TAV评分69.5接近强势阈值，新闻催化明确（高内部人持股+亚洲增长潜力），量价齐升（量比1.31、布林带突破），技术面共振强且位置中低位（42.78%），安全边际高，符合平衡型风险偏好",
-      "capital_after": 983.1892940519028,
-      "success": true,
-      "stop_loss_price": 20.0,
-      "current_price": 21.14,
-      "target_price": 24.0,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-01-05 10:43:08",
       "type": "BUY",
@@ -24513,6 +24518,192 @@
       "current_price": 47.08,
       "target_price": 52.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05 13:16:44",
+      "buy": [
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "技术面强势共振（TAV评分64.25、MACD柱状图加速扩大、布林带突破上轨）+ 新闻催化（国产芯片收购加速、全球半导体板块大涨）+ 资金流入验证（南向资金+8.51亿港元），优先级最高且符合平衡型风险偏好",
+          "allocation_pct": 12,
+          "stop_loss_price": 72.0,
+          "target_price": 85.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "半导体板块政策驱动（国产替代逻辑强化），TAV评分62.5中等共振，收购新闻与技术面放量突破（量比1.4）高度契合，波动率健康（60.44%）提供弹性，风险收益比优化",
+          "allocation_pct": 8,
+          "stop_loss_price": 78.0,
+          "target_price": 95.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "技术面全市场最低TAV评分16.75（弱势无共振）、RSI持续下行、MACD负值扩大，叠加芯片短缺新闻冲击硬件业务，高风险需主动回避",
+          "stop_loss_triggered": false,
+          "target_price": 39.5,
+          "validity_period": 7
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "技术面弱势TAV评分23.75（RSI 37.84下行、MACD负值扩大）、缩量回调，叠加估值质疑新闻加速下跌，高风险需严格止损",
+          "stop_loss_triggered": true,
+          "target_price": 81.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-05 13:16:44",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面全市场最低TAV评分16.75（弱势无共振）、RSI持续下行、MACD负值扩大，叠加芯片短缺新闻冲击硬件业务，高风险需主动回避",
+      "capital_after": 23395.189294051903,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.26,
+      "target_price": 39.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05 13:16:46",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面弱势TAV评分23.75（RSI 37.84下行、MACD负值扩大）、缩量回调，叠加估值质疑新闻加速下跌，高风险需严格止损",
+      "capital_after": 23395.189294051903,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.55,
+      "target_price": 81.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05 13:16:50",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 300,
+      "price": 76.3,
+      "amount": 22890.0,
+      "reason": "技术面强势共振（TAV评分64.25、MACD柱状图加速扩大、布林带突破上轨）+ 新闻催化（国产芯片收购加速、全球半导体板块大涨）+ 资金流入验证（南向资金+8.51亿港元），优先级最高且符合平衡型风险偏好",
+      "capital_after": 505.18929405190283,
+      "success": true,
+      "stop_loss_price": 72.0,
+      "current_price": 76.3,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05 13:16:55",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 83.3,
+      "amount": 0,
+      "reason": "半导体板块政策驱动（国产替代逻辑强化），TAV评分62.5中等共振，收购新闻与技术面放量突破（量比1.4）高度契合，波动率健康（60.44%）提供弹性，风险收益比优化 (原因: 资金不足)",
+      "capital_after": 505.18929405190283,
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 83.3,
+      "target_price": 95.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-05 13:59:00",
+      "buy": [
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "高位缩量上涨显示主力控盘，新闻面中长期逻辑稳固（AIA中国扩张计划+低利率环境利好），TAV评分70.0分强势，符合平衡型风险偏好稳健增长需求",
+          "allocation_pct": 12,
+          "stop_loss_price": 80.0,
+          "target_price": 90.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "政策+资金双击驱动（国产替代新闻催化），放量突破布林带上轨，TAV评分66.25分，波动率健康提供弹性，风险收益比优化",
+          "allocation_pct": 10,
+          "stop_loss_price": 78.0,
+          "target_price": 92.0,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "技术面极端高位（位置100.0%）+严重超买（RSI 73.66）+负面新闻催化（Barclay兄弟破产诉讼暴露资产质量风险），高危共振",
+          "stop_loss_triggered": false,
+          "target_price": 124.6,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-05 13:59:00",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面极端高位（位置100.0%）+严重超买（RSI 73.66）+负面新闻催化（Barclay兄弟破产诉讼暴露资产质量风险），高危共振",
+      "capital_after": 505.18929405190283,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 124.6,
+      "target_price": 124.6,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-05 13:59:08",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 83.7,
+      "amount": 0,
+      "reason": "高位缩量上涨显示主力控盘，新闻面中长期逻辑稳固（AIA中国扩张计划+低利率环境利好），TAV评分70.0分强势，符合平衡型风险偏好稳健增长需求 (原因: 资金不足)",
+      "capital_after": 505.18929405190283,
+      "success": false,
+      "stop_loss_price": 80.0,
+      "current_price": 83.7,
+      "target_price": 90.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-05 13:59:12",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 83.35,
+      "amount": 0,
+      "reason": "政策+资金双击驱动（国产替代新闻催化），放量突破布林带上轨，TAV评分66.25分，波动率健康提供弹性，风险收益比优化 (原因: 资金不足)",
+      "capital_after": 505.18929405190283,
+      "success": false,
+      "stop_loss_price": 78.0,
+      "current_price": 83.35,
+      "target_price": 92.0,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
