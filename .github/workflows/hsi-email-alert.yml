@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install yfinance pandas numpy
+          pip install yfinance pandas numpy akshare
 
       - name: Run HSI email script
         env:
