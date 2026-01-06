@@ -265,6 +265,10 @@ pip install -r requirements.txt
 - 计算已实现盈亏和未实现盈亏
 - 生成详细的分析报告，包括每只股票的投资和收益情况
 - 支持历史数据兼容，自动处理current_price和price字段
+- **邮件通知功能**：分析完成后自动发送报告到指定邮箱，支持多收件人
+- **GitHub Actions自动化**：每个交易日收盘后自动运行1天、5天和1个月的分析报告
+- **智能日期计算**：自动排除周末，确保只分析交易日数据
+- **灵活配置**：支持手动触发和自定义日期范围分析
 
 ### 腾讯财经数据接口 (@tencent_finance.py)
 - 通过腾讯财经API获取港股股票数据
@@ -310,11 +314,17 @@ python batch_stock_news_fetcher.py
 # 个股新闻获取器（定时运行模式）
 python batch_stock_news_fetcher.py --schedule
 
-# AI交易分析器
+# AI交易分析器（默认发送邮件）
 python ai_trading_analyzer.py
 
 # AI交易分析器（指定日期范围）
 python ai_trading_analyzer.py --start-date 2025-12-01 --end-date 2026-01-05
+
+# AI交易分析器（不发送邮件）
+python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no-email
+
+# AI交易分析器（不发送邮件）
+python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no-email
 ```
 
 ### 模拟交易系统使用
@@ -459,6 +469,7 @@ python technical_analysis.py
    - **港股主力资金追踪**：默认每天UTC时间22:00（即香港时间早上6:00）执行，现已整合个股新闻获取和恒生指数策略分析
    - **恒生指数价格监控**：默认每小时执行一次（使用香港时区）
    - **最近48小时连续交易信号分析**：默认每小时执行一次（使用香港时区）
+   - **AI交易分析日报**：每个交易日收盘后自动执行（UTC时间16:30，香港时间00:30），自动运行1天、5天和1个月的分析报告并发送邮件
 
 2. **本地定时执行**：
    - 通过`send_alert.sh`脚本实现本地定时执行主力资金追踪、黄金分析和恒生指数策略分析
@@ -513,6 +524,7 @@ python technical_analysis.py
 ├── llm_services/                    # 大模型服务
 │   └── qwen_engine.py               # 大模型引擎
 └── .github/workflows/               # GitHub Actions工作流
+    ├── ai-trading-analysis-daily.yml # AI交易分析日报工作流
     ├── crypto-alert.yml             # 加密货币监控工作流
     ├── gold-analyzer.yml            # 黄金分析工作流
     ├── hsi-email-alert.yml          # 恒生指数监控工作流
@@ -528,6 +540,9 @@ python technical_analysis.py
 - 修复了AI交易分析器的计算逻辑，确保数据一致性
 - 移除了港股主力资金历史数据分析器（已删除）
 - 更新了项目架构，反映当前组件结构
+- **新增AI交易分析日报GitHub Actions工作流**：每个交易日收盘后自动运行1天、5天和1个月的分析报告
+- **AI交易分析器集成邮件通知功能**：分析完成后自动发送报告到指定邮箱
+- **支持手动触发工作流**：可指定任意日期范围进行分析
 
 ### 历史更新
 - 添加VaR风险价值计算功能
