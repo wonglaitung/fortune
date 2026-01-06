@@ -11,22 +11,21 @@
 1. 通过 GitHub Actions 自动发送加密货币价格更新邮件
 2. 通过爬取AAStocks网站获取香港股市 IPO 信息并发送邮件
 3. 港股主力资金追踪器（识别建仓和出货信号）
-4. 港股主力资金历史数据分析
-5. 基于大模型的港股模拟交易系统
-6. 批量获取自选股新闻
-7. 黄金市场分析器
-8. 恒生指数大模型策略分析器
-9. 恒生指数价格监控器
-10. 最近48小时连续交易信号分析器
-11. 通用技术分析工具
-12. 通过腾讯财经接口获取港股数据
+4. 基于大模型的港股模拟交易系统
+5. 批量获取自选股新闻
+6. 黄金市场分析器
+7. 恒生指数大模型策略分析器
+8. 恒生指数价格监控器
+9. 最近48小时连续交易信号分析器
+10. 通用技术分析工具
+11. 通过腾讯财经接口获取港股数据
+12. 人工智能股票交易盈利能力分析器
 
 ## 关键文件
 
 *   `crypto_email.py`: 主脚本，负责获取加密货币价格并通过邮件服务发送邮件。
 *   `hk_ipo_aastocks.py`: 通过爬取AAStocks网站获取香港股市IPO信息的脚本。
 *   `hk_smart_money_tracker.py`: 港股主力资金追踪器，分析股票的建仓和出货信号。
-*   `hk_smart_money_historical_analysis.py`: 港股主力资金历史数据分析器，分析指定时间范围内的历史信号。
 *   `simulation_trader.py`: 基于大模型分析的港股模拟交易系统。
 *   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
@@ -36,6 +35,7 @@
 *   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
+*   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
 *   `send_alert.sh`: 本地定时执行脚本，按顺序执行个股新闻获取、恒生指数策略分析、主力资金追踪（使用昨天的日期）和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub。
 *   `set_key.sh`: 环境变量配置，包含API密钥和163邮件配置。
@@ -93,11 +93,6 @@ schedule
 5. 使用腾讯财经接口获取更准确的港股和恒生指数数据。
 6. 集成通用技术分析工具，提供全面的技术指标分析。
 7. 支持本地定时执行脚本 `send_alert.sh`。
-
-#### 港股主力资金历史数据分析
-1. 分析指定时间段内的历史数据。
-2. 识别历史上的建仓和出货信号日期。
-3. 生成历史信号报告Excel文件。
 
 #### 港股模拟交易系统
 1. 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易。
@@ -171,6 +166,14 @@ schedule
    - 波段交易：5日VaR
    - 中长期投资：20日VaR
 
+#### 人工智能股票交易盈利能力分析器
+1. 基于交易记录复盘AI推荐的股票交易策略的盈利能力。
+2. 采用简化复盘规则：买入信号固定买入1000股，卖出信号清仓全部持仓。
+3. 支持按日期范围分析，计算已实现盈亏和未实现盈亏。
+4. 提供详细的交易记录分析，包括每只股票的投资、回收和盈亏情况。
+5. 兼容历史数据，优先使用current_price字段，当为空时使用price字段。
+6. 生成清晰的分析报告，展示总体盈亏率和个股表现。
+
 #### 腾讯财经数据接口
 1. 通过腾讯财经API获取港股股票数据。
 2. 通过腾讯财经API获取恒生指数数据。
@@ -239,17 +242,6 @@ crontab -e
 - 工作流文件：`.github/workflows/smart-money-alert.yml`
 - 执行时间：每天 UTC 时间 22:00（香港时间 06:00）
 - 集成脚本：`batch_stock_news_fetcher.py`, `hsi_llm_strategy.py`, `hk_smart_money_tracker.py`
-
-#### 港股主力资金历史数据分析
-
-##### 本地运行
-```bash
-# 分析默认时间范围
-python hk_smart_money_historical_analysis.py
-
-# 分析指定时间范围
-python hk_smart_money_historical_analysis.py --start-date 2025-01-01 --end-date 2025-09-30
-```
 
 #### 港股模拟交易系统
 
@@ -328,6 +320,25 @@ python hsi_email.py --date 2025-10-25
 python analyze_last_48_hours_email.py
 ```
 
+#### 人工智能股票交易盈利能力分析器
+
+##### 本地运行
+```bash
+# 分析所有数据
+python ai_trading_analyzer.py
+
+# 分析指定日期范围
+python ai_trading_analyzer.py --start-date 2025-12-01 --end-date 2025-12-31
+
+# 指定交易记录文件
+python ai_trading_analyzer.py --file data/simulation_transactions.csv
+```
+
+##### 命令行参数
+- `--start-date` 或 `-s`: 起始日期 (YYYY-MM-DD)，默认为最早交易日期
+- `--end-date` 或 `-e`: 结束日期 (YYYY-MM-DD)，默认为最新交易日期
+- `--file` 或 `-f`: 交易记录CSV文件路径（默认：data/simulation_transactions.csv）
+
 #### 通用技术分析工具
 
 ##### 本地运行
@@ -381,12 +392,12 @@ python technical_analysis.py
 │   └── 黄金市场分析器 (@gold_analyzer.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
-│   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
 │   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 │   ├── 通用技术分析工具 (@technical_analysis.py)
 │   ├── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
 │   ├── 恒生指数价格监控器 (@hsi_email.py)
-│   └── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
+│   ├── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
+│   └── 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -441,3 +452,8 @@ python technical_analysis.py
 20. **UI优化**：统一"震荡"趋势颜色为橙色，保持视觉一致性
 21. **功能更新**：使用交易记录中的止损价和目标价，替代技术分析计算值
 22. **Bug修复**：修复crypto_email.py中HTML显示代码片段的问题
+23. **新增功能**：添加人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性
+24. **功能优化**：AI交易分析器支持历史数据兼容，自动处理current_price和price字段
+
+---
+最后更新：2026-01-06
