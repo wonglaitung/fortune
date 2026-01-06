@@ -41,6 +41,9 @@ from tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
 # 导入大模型服务
 from llm_services import qwen_engine
 
+# 导入基本面数据模块
+from fundamental_data import get_comprehensive_fundamental_data
+
 # 导入技术分析工具和TAV系统
 try:
     from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
@@ -284,7 +287,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         str: 构建好的提示词
     """
     # 构建股票数据表格 (CSV格式)
-    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,建仓信号,出货信号,放量上涨,缩量回调,TAV评分,TAV状态"
+    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,ROE,股息率,营收增长,利润增长,建仓信号,出货信号,放量上涨,缩量回调,TAV评分,TAV状态"
     
     csv_rows = []
     for stock in stock_data:
@@ -296,7 +299,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
         
         # 使用与邮件报告一致的字段名（按新的分类顺序排列）
-        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{int(stock['has_buildup'])},{int(stock['has_distribution'])},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'}"
+        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('roe', 'N/A')},{stock.get('dividend_yield', 'N/A')},{stock.get('revenue_growth', 'N/A')},{stock.get('profit_growth', 'N/A')},{int(stock['has_buildup'])},{int(stock['has_distribution'])},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'}"
         csv_rows.append(row)
     
     stock_table = csv_header + "\n" + "\n".join(csv_rows)
@@ -382,9 +385,10 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 
 ⚠️ 重要说明：
 - 技术指标包含40+项，重点关注RSI、MACD、布林带、ATR、成交量比率、TAV评分等核心指标
-- 建仓信号(1)和出货信号(1)是基于多维度技术分析的综合信号
+- 基本面评分是综合估值、盈利能力、成长性、财务健康和股息率的评分（0-100），60分以上为优秀，30分以下为较差
+- 建仓信号(1)和出货信号(1)是基于技术面和基本面综合分析的综合信号
 - TAV评分是趋势-加速度-成交量三维分析的综合评分(0-100)，70分以上为强势，30分以下为弱势
-- 新闻信息可能影响短期股价走势，需与技术指标结合分析
+- 新闻信息可能影响短期股价走势，需与技术指标和基本面结合分析
 
 🎯 核心分析任务：
 
@@ -394,42 +398,55 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 - 识别放量上涨和缩量回调的股票，评估趋势持续性
 - 分析TAV评分70分以上的强势股票和30分以下的弱势股票
 
-【第二步：技术指标协同分析】
+【第二步：基本面价值评估】
+- 分析基本面评分60分以上的优质股票，重点关注其估值合理性（PE、PB）
+- 评估盈利能力（ROE）和成长性（营收增长、利润增长）
+- 识别基本面评分30分以下的潜在风险股票
+- 分析股息率对投资回报的贡献
+
+【第三步：技术指标协同分析】
 - 分析RSI与价格背离情况（RSI背离信号=1）
 - 评估MACD柱状图变化率信号（MACD柱状图变化率信号=1）
 - 检查布林带突破信号（布林带突破信号=1）和ATR比率信号（ATR比率信号=1）
 - 结合成交量比率信号和CMF趋势信号验证资金流向
 
-【第三步：新闻与技术面结合分析】
-- 分析新闻对个股技术面的影响（正面新闻配合技术指标向好 vs 负面新闻配合技术指标恶化）
-- 识别新闻情绪与技术指标的背离情况（如负面新闻但技术指标强劲，或正面新闻但技术指标疲弱）
-- 评估新闻对技术信号可靠性的影响（是否加强或削弱技术信号）
+【第四步：基本面与技术面综合分析】
+- 分析基本面与技术信号的协同性（基本面优秀且技术面强势 vs 基本面恶化但技术面反弹）
+- 识别基本面与技术面背离的投资机会（基本面优秀但技术面疲弱可能被错杀）
+- 评估基本面对技术信号可靠性的影响（基本面优秀的股票技术信号更可靠）
 
-【第四步：综合评估与建议】
-- 基于技术指标强度和新闻影响，推荐3-5只最优股票
-- 识别技术面恶化或负面新闻影响的风险股票
-- 给出结合技术面和新闻面的操作建议
+【第五步：新闻与技术面、基本面结合分析】
+- 分析新闻对个股技术面和基本面的影响（正面新闻配合技术指标向好和基本面扎实）
+- 识别新闻情绪与技术指标、基本面的背离情况
+- 评估新闻对技术信号和基本面判断可靠性的影响
+
+【第六步：综合评估与建议】
+- 基于技术指标强度、基本面质量和新闻影响，推荐3-5只最优股票
+- 识别技术面恶化、基本面薄弱或受负面新闻影响的风险股票
+- 给出结合技术面、基本面和新闻面的操作建议
 
 📈 输出格式：
 
 1. 🎯 综合推荐（3-5只）
    - 股票代码及名称
    - 核心技术指标亮点（RSI、MACD、TAV评分等具体数值）
+   - 基本面优势（估值、盈利能力、成长性等关键指标）
    - 新闻影响评估（如有相关新闻）
    - 买入理由和时机建议
 
 2. ⚠️ 风险警示
-   - 技术面恶化或受负面新闻影响的股票
-   - 具体风险来源（技术指标/新闻因素）
+   - 技术面恶化、基本面薄弱或受负面新闻影响的股票
+   - 具体风险来源（技术指标/基本面/新闻因素）
    - 风险等级和应对建议
 
 3. 📊 市场总结
    - 整体技术面强度评估
+   - 基本面质量分布（高评分股票占比）
    - 新闻面整体影响
-   - 关键技术信号统计
+   - 关键技术信号和基本面指标统计
 
 报告生成时间：{current_time}，数据截至：{run_date if run_date else '最新数据'}
-请用中文回答，确保技术分析与新闻信息并重。
+请用中文回答，确保技术分析、基本面分析与新闻信息并重。
 """
     
     return prompt
@@ -444,6 +461,14 @@ def analyze_stock(code, name, run_date=None):
         print(f"\n🔍 分析 {name} ({code}) ...")
         # 移除代码中的.HK后缀，腾讯财经接口不需要
         stock_code = code.replace('.HK', '')
+        
+        # 获取基本面数据
+        print(f"  📊 获取 {name} 基本面数据...")
+        fundamental_data = get_comprehensive_fundamental_data(stock_code)
+        if fundamental_data is None:
+            print(f"  ⚠️ 无法获取 {name} 基本面数据，将仅使用技术面数据")
+        else:
+            print(f"  ✅ {name} 基本面数据获取成功")
         
         # 如果指定了运行日期，则获取该日期的历史数据
         if run_date:
@@ -747,12 +772,176 @@ def analyze_stock(code, name, run_date=None):
                 else:
                     outperforms = bool(outperforms_by_diff)
 
+        # === 基本面质量评估函数 ===
+        def evaluate_fundamental_quality():
+            """评估基本面质量，返回评分和关键指标"""
+            if not fundamental_data:
+                return 0, {}  # 无基本面数据，评分为0
+                
+            score = 0
+            details = {}
+            
+            # 估值指标评分 (30分)
+            pe = fundamental_data.get('fi_pe_ratio')
+            pb = fundamental_data.get('fi_pb_ratio')
+            
+            if pe is not None:
+                if pe < 10:
+                    score += 15
+                    details['pe_score'] = "低估值 (PE<10)"
+                elif pe < 15:
+                    score += 10
+                    details['pe_score'] = "合理估值 (10<PE<15)"
+                elif pe < 25:
+                    score += 5
+                    details['pe_score'] = "偏高估值 (15<PE<25)"
+                else:
+                    details['pe_score'] = "高估值 (PE>25)"
+            
+            if pb is not None:
+                if pb < 1:
+                    score += 15
+                    details['pb_score'] = "低市净率 (PB<1)"
+                elif pb < 1.5:
+                    score += 10
+                    details['pb_score'] = "合理市净率 (1<PB<1.5)"
+                elif pb < 3:
+                    score += 5
+                    details['pb_score'] = "偏高市净率 (1.5<PB<3)"
+                else:
+                    details['pb_score'] = "高市净率 (PB>3)"
+            
+            # 盈利能力评分 (30分)
+            roe = fundamental_data.get('fi_roe')
+            roa = fundamental_data.get('fi_roa')
+            net_profit_margin = fundamental_data.get('fi_net_profit_margin')
+            
+            if roe is not None:
+                if roe > 15:
+                    score += 15
+                    details['roe_score'] = "高ROE (>15%)"
+                elif roe > 10:
+                    score += 10
+                    details['roe_score'] = "良好ROE (10-15%)"
+                elif roe > 5:
+                    score += 5
+                    details['roe_score'] = "一般ROE (5-10%)"
+                else:
+                    details['roe_score'] = "低ROE (<5%)"
+            
+            if net_profit_margin is not None:
+                if net_profit_margin > 20:
+                    score += 15
+                    details['margin_score'] = "高净利率 (>20%)"
+                elif net_profit_margin > 10:
+                    score += 10
+                    details['margin_score'] = "良好净利率 (10-20%)"
+                elif net_profit_margin > 5:
+                    score += 5
+                    details['margin_score'] = "一般净利率 (5-10%)"
+                else:
+                    details['margin_score'] = "低净利率 (<5%)"
+            
+            # 成长性评分 (20分)
+            revenue_growth = fundamental_data.get('fi_revenue_growth')
+            profit_growth = fundamental_data.get('fi_profit_growth')
+            
+            if revenue_growth is not None:
+                if revenue_growth > 20:
+                    score += 10
+                    details['revenue_growth_score'] = "高增长 (>20%)"
+                elif revenue_growth > 10:
+                    score += 7
+                    details['revenue_growth_score'] = "良好增长 (10-20%)"
+                elif revenue_growth > 0:
+                    score += 4
+                    details['revenue_growth_score'] = "低速增长 (0-10%)"
+                else:
+                    details['revenue_growth_score'] = "负增长 (<0%)"
+            
+            if profit_growth is not None:
+                if profit_growth > 20:
+                    score += 10
+                    details['profit_growth_score'] = "高增长 (>20%)"
+                elif profit_growth > 10:
+                    score += 7
+                    details['profit_growth_score'] = "良好增长 (10-20%)"
+                elif profit_growth > 0:
+                    score += 4
+                    details['profit_growth_score'] = "低速增长 (0-10%)"
+                else:
+                    details['profit_growth_score'] = "负增长 (<0%)"
+            
+            # 财务健康评分 (20分)
+            debt_to_equity = fundamental_data.get('fi_debt_to_equity')
+            current_ratio = fundamental_data.get('fi_current_ratio')
+            
+            if debt_to_equity is not None:
+                if debt_to_equity < 30:
+                    score += 10
+                    details['debt_score'] = "低负债率 (<30%)"
+                elif debt_to_equity < 60:
+                    score += 7
+                    details['debt_score'] = "合理负债率 (30-60%)"
+                elif debt_to_equity < 100:
+                    score += 4
+                    details['debt_score'] = "偏高负债率 (60-100%)"
+                else:
+                    details['debt_score'] = "高负债率 (>100%)"
+            
+            if current_ratio is not None:
+                if current_ratio > 2:
+                    score += 10
+                    details['liquidity_score'] = "强流动性 (>2)"
+                elif current_ratio > 1.5:
+                    score += 7
+                    details['liquidity_score'] = "良好流动性 (1.5-2)"
+                elif current_ratio > 1:
+                    score += 4
+                    details['liquidity_score'] = "一般流动性 (1-1.5)"
+                else:
+                    details['liquidity_score'] = "弱流动性 (<1)"
+            
+            # 股息率加分 (10分)
+            dividend_yield = fundamental_data.get('fi_dividend_yield')
+            if dividend_yield is not None:
+                if dividend_yield > 5:
+                    score += 10
+                    details['dividend_score'] = "高股息率 (>5%)"
+                elif dividend_yield > 3:
+                    score += 7
+                    details['dividend_score'] = "良好股息率 (3-5%)"
+                elif dividend_yield > 1:
+                    score += 4
+                    details['dividend_score'] = "一般股息率 (1-3%)"
+                else:
+                    details['dividend_score'] = "低股息率 (<1%)"
+            
+            return score, details
+        
+        # 评估基本面质量
+        fundamental_score, fundamental_details = evaluate_fundamental_quality()
+        
         # === 建仓信号 ===
         def is_buildup(row):
             # 基本条件
             price_cond = row['Price_Percentile'] < PRICE_LOW_PCT
             vol_cond = pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_BUILDUP
             sb_cond = pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] > SOUTHBOUND_THRESHOLD
+            
+            # 基本面条件 - 根据基本面评分调整
+            # 如果基本面评分高（>60分），可以放宽其他条件
+            # 如果基本面评分低（<30分），需要更严格的技术面条件
+            fundamental_cond = True  # 默认通过
+            if fundamental_data:
+                if fundamental_score > 60:
+                    # 基本面优秀，降低价格位置要求
+                    price_cond = row['Price_Percentile'] < (PRICE_LOW_PCT + 20)
+                    print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，放宽价格条件")
+                elif fundamental_score < 30:
+                    # 基本面较差，需要更严格的技术面条件
+                    fundamental_cond = False
+                    print(f"    ⚠️ {name} 基本面较差(评分:{fundamental_score})，建仓信号受阻")
             
             # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线上穿信号线
@@ -785,7 +974,7 @@ def analyze_stock(code, name, run_date=None):
             # 如果满足至少2个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
             aux_cond = satisfied_aux_count >= 2
             
-            return price_cond and vol_cond and sb_cond and aux_cond
+            return price_cond and vol_cond and sb_cond and aux_cond and fundamental_cond
 
         main_hist['Buildup_Signal'] = main_hist.apply(is_buildup, axis=1)
         main_hist['Buildup_Confirmed'] = mark_runs(main_hist['Buildup_Signal'], BUILDUP_MIN_DAYS)
@@ -798,6 +987,25 @@ def analyze_stock(code, name, run_date=None):
             vol_cond = (pd.notna(row.get('Vol_Ratio')) and row['Vol_Ratio'] > VOL_RATIO_DISTRIBUTION)
             sb_cond = (pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD)
             price_down_cond = (pd.notna(row.get('Prev_Close')) and (row['Close'] < row['Prev_Close'])) or (row['Close'] < row['Open'])
+            
+            # 基本面条件 - 根据基本面评分调整
+            # 如果基本面评分低（<30分），更容易触发出货信号
+            # 如果基本面评分高（>60分），需要更严格的技术面条件
+            fundamental_cond = True  # 默认通过
+            if fundamental_data:
+                if fundamental_score < 30:
+                    # 基本面较差，降低价格位置要求
+                    price_cond = row['Price_Percentile'] > (PRICE_HIGH_PCT - 20)
+                    print(f"    ⚠️ {name} 基本面较差(评分:{fundamental_score})，放宽出货条件")
+                elif fundamental_score > 60:
+                    # 基本面优秀，需要更严格的技术面条件
+                    fundamental_cond = False
+                    # 只有在价格极高且技术面明显恶化时才触发出货
+                    if row['Price_Percentile'] > 80 and price_down_cond:
+                        fundamental_cond = True
+                        print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，但价格极高，触发出货")
+                    else:
+                        print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，出货信号受阻")
             
             # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线下穿信号线
@@ -830,7 +1038,7 @@ def analyze_stock(code, name, run_date=None):
             # 如果满足至少2个辅助条件，或者满足多个条件中的部分条件（更宽松的策略）
             aux_cond = satisfied_aux_count >= 2
             
-            return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond
+            return price_cond and vol_cond and sb_cond and price_down_cond and aux_cond and fundamental_cond
 
         main_hist['Distribution_Signal'] = main_hist.apply(is_distribution, axis=1)
         main_hist['Distribution_Confirmed'] = mark_runs(main_hist['Distribution_Signal'], DISTRIBUTION_MIN_DAYS)
@@ -1057,6 +1265,48 @@ def analyze_stock(code, name, run_date=None):
             'tav_score': tav_quality_score if tav_quality_score is not None else 0,
             'tav_status': tav_recommendation if tav_recommendation else '无TAV',
         }
+        
+        # 添加基本面数据
+        if fundamental_data:
+            # 添加基本面评分和详细信息
+            result['fundamental_score'] = fundamental_score
+            result['fundamental_details'] = fundamental_details
+            
+            # 添加关键财务指标
+            result['pe_ratio'] = fundamental_data.get('fi_pe_ratio')
+            result['pb_ratio'] = fundamental_data.get('fi_pb_ratio')
+            result['roe'] = fundamental_data.get('fi_roe')
+            result['roa'] = fundamental_data.get('fi_roa')
+            result['eps'] = fundamental_data.get('fi_eps')
+            result['bps'] = fundamental_data.get('fi_bps')
+            result['net_profit_margin'] = fundamental_data.get('fi_net_profit_margin')
+            result['gross_profit_margin'] = fundamental_data.get('fi_gross_profit_margin')
+            result['debt_to_equity'] = fundamental_data.get('fi_debt_to_equity')
+            result['current_ratio'] = fundamental_data.get('fi_current_ratio')
+            result['quick_ratio'] = fundamental_data.get('fi_quick_ratio')
+            result['revenue_growth'] = fundamental_data.get('fi_revenue_growth')
+            result['profit_growth'] = fundamental_data.get('fi_profit_growth')
+            result['dividend_yield'] = fundamental_data.get('fi_dividend_yield')
+            result['market_cap'] = fundamental_data.get('fi_market_cap')
+            
+            # 添加利润表数据
+            result['total_revenue'] = fundamental_data.get('is_total_revenue')
+            result['operating_revenue'] = fundamental_data.get('is_operating_revenue')
+            result['net_profit'] = fundamental_data.get('is_net_profit')
+            result['operating_profit'] = fundamental_data.get('is_operating_profit')
+            
+            # 添加资产负债表数据
+            result['total_assets'] = fundamental_data.get('bs_total_assets')
+            result['total_liabilities'] = fundamental_data.get('bs_total_liabilities')
+            result['total_equity'] = fundamental_data.get('bs_total_equity')
+            
+            # 添加现金流量表数据
+            result['operating_cash_flow'] = fundamental_data.get('cf_operating_cash_flow')
+            result['investing_cash_flow'] = fundamental_data.get('cf_investing_cash_flow')
+            result['financing_cash_flow'] = fundamental_data.get('cf_financing_cash_flow')
+            
+            # 添加数据获取时间
+            result['fundamental_data_time'] = fundamental_data.get('data_fetch_time')
         return result
 
     except Exception as e:
@@ -1293,6 +1543,8 @@ def main(run_date=None):
             'southbound',
             # 相对表现
             'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
+            # 基本面数据
+            'fundamental_score', 'pe_ratio', 'pb_ratio', 'roe', 'dividend_yield', 'revenue_growth', 'profit_growth',
             # 信号指标
             'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down',
             # TAV评分
@@ -1322,6 +1574,8 @@ def main(run_date=None):
             '南向资金(万)',
             # 相对表现
             '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
+            # 基本面数据
+            '基本面评分', '市盈率', '市净率', 'ROE(%)', '股息率(%)', '营收增长(%)', '利润增长(%)',
             # 信号指标
             '建仓信号', '出货信号', '放量上涨', '缩量回调',
             # TAV评分
@@ -1346,14 +1600,16 @@ def main(run_date=None):
         if distribution_stocks:
             print("\n🔴 警惕！检测到大户出货信号：")
             for r in distribution_stocks:
-                print(f"  • {r['name']} | 日期: {', '.join(r['distribution_dates'])}")
+                fundamental_score = r.get('fundamental_score', 'N/A')
+                print(f"  • {r['name']} | 基本面评分={fundamental_score} | 日期: {', '.join(r['distribution_dates'])}")
 
         if buildup_stocks:
             print("\n🟢 检测到建仓信号：")
             for r in buildup_stocks:
                 rs_disp = (round(r['relative_strength'] * 100, 2) if (r.get('relative_strength') is not None) else None)
                 rsd_disp = (round(r['relative_strength_diff'] * 100, 2) if (r.get('relative_strength_diff') is not None) else None)
-                print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
+                fundamental_score = r.get('fundamental_score', 'N/A')
+                print(f"  • {r['name']} | RS_ratio={rs_disp}% | RS_diff={rsd_disp}% | 基本面评分={fundamental_score} | 日期: {', '.join(r['buildup_dates'])} | 跑赢恒指: {r['outperforms_hsi']}")
 
         # 显示相关新闻信息
         news_file_path = "data/all_stock_news_records.csv"
@@ -1471,6 +1727,8 @@ def main(run_date=None):
                 'southbound',
                 # 相对表现
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
+                # 基本面数据
+                'fundamental_score', 'pe_ratio', 'pb_ratio', 'roe', 'dividend_yield', 'revenue_growth', 'profit_growth',
                 # 信号指标
                 'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down',
                 # TAV评分
@@ -1501,6 +1759,8 @@ def main(run_date=None):
                 '南向资金(万)',
                 # 相对表现
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
+                # 基本面数据
+                '基本面评分', '市盈率', '市净率', 'ROE(%)', '股息率(%)', '营收增长(%)', '利润增长(%)',
                 # 信号指标
                 '建仓信号', '出货信号', '放量上涨', '缩量回调',
                 # TAV评分
