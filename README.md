@@ -8,15 +8,15 @@
 1. **加密货币价格监控器** - 实时获取主流加密货币的价格信息并通过邮件发送
 2. **港股IPO信息获取器** - 爬取AAStocks网站获取最新的港股IPO信息
 3. **港股主力资金追踪器** - 分析港股市场主力资金动向，识别建仓和出货信号
-4. **港股主力资金历史数据分析器** - 分析历史数据中的信号模式
-5. **港股模拟交易系统** - 基于主力资金追踪器的分析结果和大模型判断进行模拟交易
-6. **批量获取自选股新闻** - 获取自选股相关的最新财经新闻并使用大模型分析相关性
-7. **黄金市场分析器** - 分析黄金市场价格趋势和技术指标
-8. **恒生指数大模型策略分析器** - 通过腾讯财经API获取恒生指数数据并进行大模型策略分析
-9. **恒生指数价格监控器** - 基于技术分析指标生成恒生指数交易信号，只在有信号时发送邮件
-10. **最近48小时连续交易信号分析器** - 分析最近48小时内连续买入/卖出同一只股票的信号
-11. **通用技术分析工具** - 提供多种常用技术指标计算功能（移动平均线、RSI、MACD、布林带等）
-12. **腾讯财经数据接口** - 提供更稳定和准确的港股及恒生指数数据
+4. **港股模拟交易系统** - 基于主力资金追踪器的分析结果和大模型判断进行模拟交易
+5. **批量获取自选股新闻** - 获取自选股相关的最新财经新闻并使用大模型分析相关性
+6. **黄金市场分析器** - 分析黄金市场价格趋势和技术指标
+7. **恒生指数大模型策略分析器** - 通过腾讯财经API获取恒生指数数据并进行大模型策略分析
+8. **恒生指数价格监控器** - 基于技术分析指标生成恒生指数交易信号，只在有信号时发送邮件
+9. **最近48小时连续交易信号分析器** - 分析最近48小时内连续买入/卖出同一只股票的信号
+10. **通用技术分析工具** - 提供多种常用技术指标计算功能（移动平均线、RSI、MACD、布林带等）
+11. **腾讯财经数据接口** - 提供更稳定和准确的港股及恒生指数数据
+12. **人工智能股票交易盈利能力分析器** - 评估AI交易信号的有效性
 
 ### 核心功能亮点
 - **智能量价分析**：区分反转型和延续型信号，提供更精准的交易信号识别
@@ -40,10 +40,10 @@
 │   └── 恒生指数价格监控器 (@hsi_email.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
-│   ├── 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
 │   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
 │   ├── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
-│   └── 通用技术分析工具 (@technical_analysis.py)
+│   ├── 通用技术分析工具 (@technical_analysis.py)
+│   └── 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -93,12 +93,12 @@
 - **技术指标分析**：MACD、RSI、OBV、均线等技术指标计算
 - **资金流向分析**：沪港通/深港通南向资金数据获取与分析
 - **信号识别**：自动识别主力资金建仓和出货信号
-- **历史数据分析**：分析历史数据中的信号模式
 - **新闻分析**：利用大模型分析新闻与股票的相关性
 - **黄金市场分析**：获取黄金相关资产和宏观经济数据，进行技术分析
 - **恒生指数策略分析**：获取恒生指数数据并进行大模型策略分析
 - **最近48小时连续交易信号分析**：分析最近48小时内连续买入/卖出同一只股票的信号
 - **通用技术分析工具**：集成多种技术指标计算功能，提供全面的市场分析能力
+- **AI交易信号有效性评估**：复盘分析AI推荐的股票交易策略的盈利能力
 
 ### 4. 模拟交易
 - **大模型集成**：真实调用大模型进行股票分析和交易决策
@@ -119,26 +119,8 @@
 ### 安装依赖
 
 ```bash
-# 基础依赖
-pip install requests beautifulsoup4 pandas
-
-# 港股分析组件依赖
-pip install yfinance akshare pandas matplotlib openpyxl scipy schedule
-
-# 模拟交易系统依赖
-pip install schedule
-
-# 黄金分析器依赖
-pip install yfinance pandas numpy
-
-# 新闻获取器依赖
-pip install yfinance
-
-# 技术分析工具依赖
-pip install yfinance pandas numpy
-
-# 恒生指数策略分析器依赖
-pip install yfinance pandas numpy
+# 安装所有依赖
+pip install -r requirements.txt
 ```
 
 ### 环境变量配置
@@ -149,7 +131,7 @@ pip install yfinance pandas numpy
 - `YAHOO_APP_PASSWORD`：发件人邮箱应用密码
 - `RECIPIENT_EMAIL`：收件人邮箱地址（可选，多个收件人用逗号分隔）
 - `QWEN_API_KEY`：大模型API密钥（用于模拟交易系统、资金追踪器、新闻分析和恒生指数策略分析）
-- `YAHOO_SMTP`：SMTP服务器地址（可选，默认为smtp.gmail.com）
+- `YAHOO_SMTP`：SMTP服务器地址（可选，默认为smtp.163.com）
 
 ## 组件详细说明
 
@@ -170,7 +152,7 @@ pip install yfinance pandas numpy
 - 提取公司名称、上市日期、行业、招股日期、每手股数、招股价格、入场费、暗盘日期等信息
 - 保存IPO数据到CSV文件
 - 发送IPO信息邮件
-- 通过GitHub Actions自动化调度（每天UTC时间1:00执行，即北京时间9:00，使用香港时区）
+- 通过GitHub Actions自动化调度（每天UTC时间2:00执行，即北京时间10:00）
 
 ### 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 - 实时获取港股股票价格和交易数据（使用腾讯财经接口获取更准确的数据）
@@ -183,13 +165,6 @@ pip install yfinance pandas numpy
 - 支持本地定时执行脚本 `send_alert.sh`
 - 集成通用技术分析工具（@technical_analysis.py），提供全面的技术指标分析
 - 支持多股票同时分析和监控
-
-### 港股主力资金历史数据分析 (@hk_smart_money_historical_analysis.py)
-- 分析指定时间段内的历史数据
-- 识别历史上的建仓和出货信号日期
-- 生成历史信号报告Excel文件
-- 支持自定义分析时间范围
-- 提供历史信号回测分析功能
 
 ### 港股模拟交易系统 (@simulation_trader.py)
 - 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易
@@ -283,19 +258,13 @@ pip install yfinance pandas numpy
   - 中长期投资：20日VaR（适用于1个月以上投资）
   - 使用历史模拟法计算95%置信水平的风险价值
 
-### 港股模拟交易系统当前限制
-
-目前模拟交易系统在执行层面仍保留一定的风险控制机制：
-
-1. 系统会自动检查预期持仓比例是否超过大模型建议的比例，并在超过时自动调整买入数量或跳过交易
-2. 这种执行层面的限制是为了控制风险，防止过度集中投资
-
-### 港股模拟交易系统未来改进方向
-
-为进一步提升系统的智能化水平，建议进行以下改进：
-
-1. 在大模型提示词中强化风险控制要求，让大模型在生成买入建议时就充分考虑当前持仓情况和风险控制
-2. 优化执行逻辑，使风险控制更加智能化，而不是简单的比例限制
+### 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
+- 评估AI推荐的股票交易策略的盈利能力
+- 按照复盘规则：买入信号每次买入1000股，卖出信号清仓全部持仓
+- 支持指定日期范围分析
+- 计算已实现盈亏和未实现盈亏
+- 生成详细的分析报告，包括每只股票的投资和收益情况
+- 支持历史数据兼容，自动处理current_price和price字段
 
 ### 腾讯财经数据接口 (@tencent_finance.py)
 - 通过腾讯财经API获取港股股票数据
@@ -320,9 +289,6 @@ python hk_smart_money_tracker.py
 # 港股主力资金追踪器（指定日期分析）
 python hk_smart_money_tracker.py --date 2025-10-25
 
-# 港股主力资金历史数据分析
-python hk_smart_money_historical_analysis.py --start-date 2025-01-01 --end-date 2025-09-30
-
 # 黄金市场分析器
 python gold_analyzer.py
 
@@ -343,12 +309,18 @@ python batch_stock_news_fetcher.py
 
 # 个股新闻获取器（定时运行模式）
 python batch_stock_news_fetcher.py --schedule
+
+# AI交易分析器
+python ai_trading_analyzer.py
+
+# AI交易分析器（指定日期范围）
+python ai_trading_analyzer.py --start-date 2025-12-01 --end-date 2026-01-05
 ```
 
 ### 模拟交易系统使用
 
 ```bash
-# 运行模拟交易系统（默认90天）
+# 运行模拟交易系统（默认持续运行）
 python simulation_trader.py
 
 # 运行指定天数的模拟交易
@@ -453,7 +425,7 @@ python technical_analysis.py
 - **蓝色**：表示无信号状态
   - 无建议信号、无量价信号
 
-### 输出文件
+## 输出文件
 
 ### 数据获取组件
 - 控制台输出：价格信息预览
@@ -482,7 +454,7 @@ python technical_analysis.py
 
 1. **GitHub Actions调度**：
    - **加密货币价格监控**：默认每小时执行一次（使用香港时区）
-   - **港股IPO信息获取**：默认每天UTC时间1:00执行（即北京时间9:00，使用香港时区）
+   - **港股IPO信息获取**：默认每天UTC时间2:00（即北京时间10:00）
    - **黄金市场分析**：默认每小时执行一次（使用香港时区）
    - **港股主力资金追踪**：默认每天UTC时间22:00（即香港时间早上6:00）执行，现已整合个股新闻获取和恒生指数策略分析
    - **恒生指数价格监控**：默认每小时执行一次（使用香港时区）
@@ -509,3 +481,58 @@ python technical_analysis.py
 - VaR计算基于历史数据，不能完全预测未来风险
 - 所有 GitHub Actions 工作流都设置为香港时区（Asia/Hong_Kong）
 - 恒生指数价格监控的 GitHub Actions 工作流（.github/workflows/hsi-email-alert.yml）每小时执行一次
+
+## 项目结构
+
+```
+/data/fortune/
+├── ai_trading_analyzer.py           # AI交易分析器
+├── analyze_last_48_hours_email.py   # 48小时连续交易信号分析器
+├── batch_stock_news_fetcher.py      # 批量获取自选股新闻
+├── crypto_email.py                  # 加密货币价格监控器
+├── gold_analyzer.py                 # 黄金市场分析器
+├── hk_ipo_aastocks.py              # 港股IPO信息获取器
+├── hk_smart_money_tracker.py        # 港股主力资金追踪器
+├── hsi_email.py                     # 恒生指数价格监控器
+├── hsi_llm_strategy.py              # 恒生指数大模型策略分析器
+├── simulation_trader.py             # 港股模拟交易系统
+├── technical_analysis.py            # 通用技术分析工具
+├── tencent_finance.py               # 腾讯财经数据接口
+├── requirements.txt                 # 项目依赖
+├── send_alert.sh                    # 本地定时执行脚本
+├── update_data.sh                   # 数据更新脚本
+├── set_key.sh                      # 环境变量配置脚本
+├── IFLOW.md                         # iFlow上下文文档
+├── README.md                        # 项目说明文档
+├── data/                            # 数据目录
+│   ├── all_stock_news_records.csv   # 股票新闻记录
+│   ├── hsi_strategy_latest.txt      # 恒生指数策略分析报告
+│   ├── simulation_state.json        # 模拟交易状态
+│   ├── simulation_transactions.csv   # 交易历史记录
+│   └── simulation_*.csv             # 其他模拟交易数据
+├── llm_services/                    # 大模型服务
+│   └── qwen_engine.py               # 大模型引擎
+└── .github/workflows/               # GitHub Actions工作流
+    ├── crypto-alert.yml             # 加密货币监控工作流
+    ├── gold-analyzer.yml            # 黄金分析工作流
+    ├── hsi-email-alert.yml          # 恒生指数监控工作流
+    ├── ipo-alert.yml                # IPO信息获取工作流
+    └── smart-money-alert.yml        # 主力资金追踪工作流
+```
+
+## 更新日志
+
+### 最新更新 (2026-01-06)
+- 新增人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性
+- AI交易分析器支持历史数据兼容，自动处理current_price和price字段
+- 修复了AI交易分析器的计算逻辑，确保数据一致性
+- 移除了港股主力资金历史数据分析器（已删除）
+- 更新了项目架构，反映当前组件结构
+
+### 历史更新
+- 添加VaR风险价值计算功能
+- 优化邮件展示格式，增加颜色编码
+- 改进技术分析指标计算
+- 支持基于指定日期的历史数据分析
+- 集成通用技术分析工具
+- 优化GitHub Actions工作流调度
