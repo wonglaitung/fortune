@@ -46,6 +46,7 @@
 *   `.github/workflows/hsi-email-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hsi_email.py` 脚本。
 *   `.github/workflows/smart-money-alert.yml`: 港股主力资金追踪器的GitHub Actions工作流文件，现已整合个股新闻获取和恒生指数策略分析。
 *   `.github/workflows/analyze-last-48-hours-email-alert.yml.bak`: 最近48小时连续交易信号分析器的备份工作流文件。
+*   `.github/workflows/ai-trading-analysis-daily.yml`: AI交易分析日报的GitHub Actions工作流文件，在每个交易日完成后自动运行1天、5天和1个月的分析报告。
 *   `IFLOW.md`: 此文件，提供 iFlow 代理的上下文信息。
 *   `README.md`: 项目详细说明文档。
 
@@ -154,6 +155,15 @@ schedule
 3. 识别连续3次或以上建议卖出同一只股票且期间没有买入建议的情况。
 4. 只在检测到符合条件的信号时发送邮件通知。
 5. 通过GitHub Actions自动化调度。
+
+#### AI交易分析日报
+1. 基于模拟交易数据进行多时间维度的盈利能力分析。
+2. 支持分析1天、5天和1个月的不同时间周期。
+3. 计算已实现盈亏和未实现盈亏，提供详细的持仓分析。
+4. 自动排除价格异常的股票，确保数据准确性。
+5. 每个交易日收盘后自动执行，并通过邮件发送分析报告。
+6. 支持手动触发，可指定任意日期范围进行分析。
+7. **最新功能**：集成邮件通知功能，分析完成后自动发送报告到指定邮箱。
 
 #### 通用技术分析工具
 1. 实现多种常用技术指标的计算，包括移动平均线、RSI、MACD、布林带、随机振荡器、ATR、CCI、OBV等。
@@ -319,6 +329,29 @@ python hsi_email.py --date 2025-10-25
 ```bash
 python analyze_last_48_hours_email.py
 ```
+
+#### AI交易分析日报
+
+##### 本地运行
+```bash
+# 分析指定日期
+python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05
+
+# 分析5天数据
+python ai_trading_analyzer.py --start-date 2025-12-31 --end-date 2026-01-05
+
+# 分析1个月数据
+python ai_trading_analyzer.py --start-date 2025-12-05 --end-date 2026-01-05
+
+# 不发送邮件通知
+python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no-email
+```
+
+##### GitHub Actions 自动化
+- 工作流文件：`.github/workflows/ai-trading-analysis-daily.yml`
+- 执行时间：每个交易日收盘后（UTC时间16:30，香港时间00:30）
+- 分析周期：自动执行1天、5天和1个月的分析报告
+- 邮件通知：每个分析报告完成后自动发送邮件通知
 
 #### 人工智能股票交易盈利能力分析器
 

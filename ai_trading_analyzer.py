@@ -8,8 +8,12 @@
 import pandas as pd
 import argparse
 import sys
+import smtplib
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
 
 
 class AITradingAnalyzer:
@@ -25,6 +29,85 @@ class AITradingAnalyzer:
         self.csv_file = csv_file
         self.df = None
         self.excluded_stocks = set()
+    
+    def send_email_notification(self, subject: str, content: str) -> bool:
+        """
+        发送邮件通知
+        
+        Args:
+            subject (str): 邮件主题
+            content (str): 邮件内容
+            
+        Returns:
+            bool: 发送成功返回True，失败返回False
+        """
+        try:
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
+            smtp_user = os.environ.get("YAHOO_EMAIL")
+            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            sender_email = smtp_user
+
+            if not smtp_user or not smtp_pass:
+                print("警告: 缺少 YAHOO_EMAIL 或 YAHOO_APP_PASSWORD 环境变量，无法发送邮件")
+                return False
+
+            recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+            recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
+
+            # 创建邮件
+            msg = MIMEMultipart("alternative")
+            msg['From'] = sender_email
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+
+            # 添加文本内容
+            text_part = MIMEText(content, "plain", "utf-8")
+            msg.attach(text_part)
+
+            # 根据SMTP服务器类型选择合适的端口和连接方式
+            if "163.com" in smtp_server:
+                # 163邮箱使用SSL连接，端口465
+                smtp_port = 465
+                use_ssl = True
+            elif "gmail.com" in smtp_server:
+                # Gmail使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+            else:
+                # 默认使用TLS连接，端口587
+                smtp_port = 587
+                use_ssl = False
+
+            # 发送邮件（增加重试机制）
+            for attempt in range(3):
+                try:
+                    if use_ssl:
+                        # 使用SSL连接
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    else:
+                        # 使用TLS连接
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    
+                    print("✅ 邮件发送成功！")
+                    return True
+                except Exception as e:
+                    print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
+                    if attempt < 2:  # 不是最后一次尝试，等待后重试
+                        import time
+                        time.sleep(5)
+            
+            print("❌ 邮件发送失败，已尝试3次")
+            return False
+        except Exception as e:
+            print(f"❌ 邮件发送过程中发生错误: {e}")
+            return False
         
     def load_transactions(self) -> bool:
         """
@@ -369,13 +452,15 @@ class AITradingAnalyzer:
         return "\n".join(report)
     
     def analyze(self, start_date: Optional[str] = None, 
-                end_date: Optional[str] = None) -> str:
+                end_date: Optional[str] = None, 
+                send_email: bool = True) -> str:
         """
         执行分析
         
         Args:
             start_date: 起始日期，格式YYYY-MM-DD
             end_date: 结束日期，格式YYYY-MM-DD
+            send_email: 是否发送邮件通知，默认为True
             
         Returns:
             分析报告字符串
@@ -406,9 +491,28 @@ class AITradingAnalyzer:
         actual_end = df_filtered['timestamp'].max().strftime('%Y-%m-%d')
         
         # 生成报告
-        return self.generate_report(actual_start, actual_end, cash_flow, 
-                                  holdings_value, profit_results, 
-                                  self.excluded_stocks)
+        report = self.generate_report(actual_start, actual_end, cash_flow, 
+                                    holdings_value, profit_results, 
+                                    self.excluded_stocks)
+        
+        # 发送邮件通知
+        if send_email:
+            subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
+            # 在邮件主题中添加总体盈亏信息
+            total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
+            if total_profit >= 0:
+                subject += f" (盈利 ¥{total_profit:,.2f})"
+            else:
+                subject += f" (亏损 ¥{abs(total_profit):,.2f})"
+            
+            # 发送邮件
+            email_sent = self.send_email_notification(subject, report)
+            if email_sent:
+                print("\n📧 分析报告已通过邮件发送")
+            else:
+                print("\n❌ 邮件发送失败，请检查环境变量配置")
+        
+        return report
 
 
 def main():
@@ -421,6 +525,8 @@ def main():
     parser.add_argument('--file', '-f', type=str, 
                        default='data/simulation_transactions.csv',
                        help='交易记录CSV文件路径')
+    parser.add_argument('--no-email', action='store_true', 
+                       help='不发送邮件通知')
     
     args = parser.parse_args()
     
@@ -441,7 +547,7 @@ def main():
     
     # 创建分析器并执行分析
     analyzer = AITradingAnalyzer(args.file)
-    report = analyzer.analyze(args.start_date, args.end_date)
+    report = analyzer.analyze(args.start_date, args.end_date, send_email=not args.no_email)
     
     # 输出报告
     print(report)
