@@ -1,0 +1,99 @@
+name: AI交易分析日报
+
+on:
+  # 港股交易日收盘后触发 (UTC 16:30 = 香港时间 00:30)
+  schedule:
+    - cron: '30 16 * * 1-5'  # 周一到周五
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      trading_day:
+        description: '交易日 (YYYY-MM-DD)'
+        required: false
+        default: ''
+      send_email:
+        description: '是否发送邮件'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        
+    - name: Set up environment variables
+      run: |
+        echo "YAHOO_EMAIL=${{ secrets.YAHOO_EMAIL }}" >> $GITHUB_ENV
+        echo "YAHOO_APP_PASSWORD=${{ secrets.YAHOO_APP_PASSWORD }}" >> $GITHUB_ENV
+        echo "YAHOO_SMTP=${{ secrets.YAHOO_SMTP }}" >> $GITHUB_ENV
+        echo "RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}" >> $GITHUB_ENV
+        echo "QWEN_API_KEY=${{ secrets.QWEN_API_KEY }}" >> $GITHUB_ENV
+        
+    - name: Calculate trading dates
+      id: dates
+      run: |
+        if [ -n "${{ github.event.inputs.trading_day }}" ]; then
+          TRADING_DAY="${{ github.event.inputs.trading_day }}"
+        else
+          # 获取前一个交易日 (排除周末)
+          TRADING_DAY=$(date -d "yesterday" +%Y-%m-%d)
+          DAY_OF_WEEK=$(date -d "$TRADING_DAY" +%u)
+          # 如果是周日(7)或周六(6)，则往前推到周五
+          if [ $DAY_OF_WEEK -eq 7 ]; then
+            TRADING_DAY=$(date -d "$TRADING_DAY -2 days" +%Y-%m-%d)
+          elif [ $DAY_OF_WEEK -eq 6 ]; then
+            TRADING_DAY=$(date -d "$TRADING_DAY -1 days" +%Y-%m-%d)
+          fi
+        fi
+        
+        # 计算5天前和1个月前的日期
+        FIVE_DAYS_AGO=$(date -d "$TRADING_DAY -5 days" +%Y-%m-%d)
+        ONE_MONTH_AGO=$(date -d "$TRADING_DAY -1 month" +%Y-%m-%d)
+        
+        echo "trading_day=$TRADING_DAY" >> $GITHUB_OUTPUT
+        echo "five_days_ago=$FIVE_DAYS_AGO" >> $GITHUB_OUTPUT
+        echo "one_month_ago=$ONE_MONTH_AGO" >> $GITHUB_OUTPUT
+        
+        echo "交易日: $TRADING_DAY"
+        echo "5天前: $FIVE_DAYS_AGO"
+        echo "1个月前: $ONE_MONTH_AGO"
+        
+    - name: Run AI trading analysis (1 day)
+      run: |
+        echo "=== 执行1天交易分析 ==="
+        python ai_trading_analyzer.py --start-date ${{ steps.dates.outputs.trading_day }} --end-date ${{ steps.dates.outputs.trading_day }}
+        
+    - name: Run AI trading analysis (5 days)
+      run: |
+        echo "=== 执行5天交易分析 ==="
+        python ai_trading_analyzer.py --start-date ${{ steps.dates.outputs.five_days_ago }} --end-date ${{ steps.dates.outputs.trading_day }}
+        
+    - name: Run AI trading analysis (1 month)
+      run: |
+        echo "=== 执行1个月交易分析 ==="
+        python ai_trading_analyzer.py --start-date ${{ steps.dates.outputs.one_month_ago }} --end-date ${{ steps.dates.outputs.trading_day }}
+        
+    - name: Update data files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/
+        git diff --staged --quiet || git commit -m "更新AI交易分析数据 - $(date +'%Y-%m-%d')"
+        
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
