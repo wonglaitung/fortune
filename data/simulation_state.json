@@ -14322,6 +14322,70 @@
       "current_price": 86.25,
       "target_price": 92.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-06T13:31:18.539905",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 4767.189294051901,
+      "reason": "技术面出货信号明确，量能萎缩（量比0.59）反映资金撤离，缺乏新闻支撑，中高风险等级需规避以控制下行风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.57,
+      "target_price": 5.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06T13:31:21.600141",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 4767.189294051901,
+      "reason": "技术面深度弱势低位震荡（位置8.39%），行业估值担忧放大下行风险，中风险等级建议离场以优化组合风险收益比",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.35,
+      "target_price": 80.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06T13:31:24.994074",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 432.0,
+      "amount": 0,
+      "capital_after": 4767.189294051901,
+      "reason": "技术面强势突破布林带上轨，量能显著放大（量比1.51），IPO募资数据强化长期价值，与恒指金融领涨主线共振，TAV评分68.0满足平衡型稳健增长需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 410.0,
+      "current_price": 432.0,
+      "target_price": 465.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06T13:31:30.424986",
+      "type": "BUY",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 98.65,
+      "amount": 0,
+      "capital_after": 4767.189294051901,
+      "reason": "技术面低位启动5/10日均线金叉，新闻面超越特斯拉催化估值重估，消费科技增长潜力释放，TAV评分63.25兼顾价值与成长符合平衡型偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 94.0,
+      "current_price": 98.65,
+      "target_price": 110.0,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -25085,147 +25149,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-06 10:13:15",
-      "buy": [
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "技术面强势突破（TAV 70.0，位置100%），新闻正面催化（中国扩张计划+低利率适应性），风险收益比最优",
-          "allocation_pct": 15,
-          "stop_loss_price": 82.0,
-          "target_price": 92.0,
-          "validity_period": 7
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "量价齐升（TAV 68.25，MACD加速），新闻提供基本面支撑（高内部人持股+亚洲增长潜力），成长性与稳定性平衡",
-          "allocation_pct": 14,
-          "stop_loss_price": 8.6,
-          "target_price": 10.5,
-          "validity_period": 7
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "突破关键阻力（布林带突破信号=1，TAV 53.0），新闻驱动行业景气度（收购扩张+半导体普涨），周期性风险可控",
-          "allocation_pct": 13,
-          "stop_loss_price": 74.0,
-          "target_price": 88.0,
-          "validity_period": 7
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "量价突破双确认（TAV 61.25，位置100%），利空出尽买点（竞争新闻已消化），消费科技龙头稳健增长",
-          "allocation_pct": 12,
-          "stop_loss_price": 102.0,
-          "target_price": 120.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "技术-新闻背离（建仓信号=1但出货信号=1，新闻中性偏负面），高风险等级★★★",
-          "stop_loss_triggered": false,
-          "target_price": 152.6,
-          "validity_period": 7
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "新闻直接冲击（Venezuela地缘政治担忧），技术面脆弱（MACD接近零轴），高风险等级★★★",
-          "stop_loss_triggered": true,
-          "target_price": 21.26,
-          "validity_period": 7
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "技术面崩坏+新闻利空双重打击（TAV 15.0，芯片短缺成本压力），高风险等级★★★",
-          "stop_loss_triggered": false,
-          "target_price": 10.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "技术面疲软（TAV 16.75，低位震荡），新闻情绪中性偏空（估值质疑），中风险等级★★",
-          "stop_loss_triggered": false,
-          "target_price": 5.5,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-06 10:13:15",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 100,
-      "price": 151.7,
-      "amount": 15169.999999999998,
-      "reason": "技术-新闻背离（建仓信号=1但出货信号=1，新闻中性偏负面），高风险等级★★★",
-      "capital_after": 15675.189294051901,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 151.7,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 29.999999999998295
-    },
-    {
-      "timestamp": "2026-01-06 10:13:20",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 12900,
-      "price": 21.26,
-      "amount": 274254.0,
-      "reason": "新闻直接冲击（Venezuela地缘政治担忧），技术面脆弱（MACD接近零轴），高风险等级★★★",
-      "capital_after": 289929.1892940519,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 21.26,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 3587.999999999998
-    },
-    {
-      "timestamp": "2026-01-06 10:13:22",
-      "type": "SELL",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面崩坏+新闻利空双重打击（TAV 15.0，芯片短缺成本压力），高风险等级★★★",
-      "capital_after": 289929.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.96,
-      "target_price": 10.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-06 10:13:25",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面疲软（TAV 16.75，低位震荡），新闻情绪中性偏空（估值质疑），中风险等级★★",
-      "capital_after": 289929.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.44,
-      "target_price": 5.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-06 10:13:27",
       "type": "BUY",
       "code": "1299.HK",
@@ -25393,6 +25316,111 @@
       "current_price": 86.25,
       "target_price": 92.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-06 13:31:18",
+      "buy": [
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "技术面强势突破布林带上轨，量能显著放大（量比1.51），IPO募资数据强化长期价值，与恒指金融领涨主线共振，TAV评分68.0满足平衡型稳健增长需求",
+          "allocation_pct": 12,
+          "stop_loss_price": 410.0,
+          "target_price": 465.0,
+          "validity_period": 14
+        },
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "技术面低位启动5/10日均线金叉，新闻面超越特斯拉催化估值重估，消费科技增长潜力释放，TAV评分63.25兼顾价值与成长符合平衡型偏好",
+          "allocation_pct": 10,
+          "stop_loss_price": 94.0,
+          "target_price": 110.0,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "技术面出货信号明确，量能萎缩（量比0.59）反映资金撤离，缺乏新闻支撑，中高风险等级需规避以控制下行风险",
+          "stop_loss_triggered": false,
+          "target_price": 5.0,
+          "validity_period": 14
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "技术面深度弱势低位震荡（位置8.39%），行业估值担忧放大下行风险，中风险等级建议离场以优化组合风险收益比",
+          "stop_loss_triggered": false,
+          "target_price": 80.0,
+          "validity_period": 14
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-06 13:31:18",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面出货信号明确，量能萎缩（量比0.59）反映资金撤离，缺乏新闻支撑，中高风险等级需规避以控制下行风险",
+      "capital_after": 4767.189294051901,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.57,
+      "target_price": 5.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06 13:31:21",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面深度弱势低位震荡（位置8.39%），行业估值担忧放大下行风险，中风险等级建议离场以优化组合风险收益比",
+      "capital_after": 4767.189294051901,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.35,
+      "target_price": 80.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06 13:31:25",
+      "type": "BUY",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 432.0,
+      "amount": 0,
+      "reason": "技术面强势突破布林带上轨，量能显著放大（量比1.51），IPO募资数据强化长期价值，与恒指金融领涨主线共振，TAV评分68.0满足平衡型稳健增长需求 (原因: 资金不足)",
+      "capital_after": 4767.189294051901,
+      "success": false,
+      "stop_loss_price": 410.0,
+      "current_price": 432.0,
+      "target_price": 465.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-06 13:31:30",
+      "type": "BUY",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 98.65,
+      "amount": 0,
+      "reason": "技术面低位启动5/10日均线金叉，新闻面超越特斯拉催化估值重估，消费科技增长潜力释放，TAV评分63.25兼顾价值与成长符合平衡型偏好 (原因: 资金不足)",
+      "capital_after": 4767.189294051901,
+      "success": false,
+      "stop_loss_price": 94.0,
+      "current_price": 98.65,
+      "target_price": 110.0,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
