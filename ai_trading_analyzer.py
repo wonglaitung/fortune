@@ -266,6 +266,7 @@ class AITradingAnalyzer:
         复盘规则：
         1. 每次买入信号固定买入1000股
         2. 卖出信号清仓全部持仓
+        3. 支持同一股票的多次买卖交易
         
         Args:
             df: 交易记录DataFrame
@@ -290,70 +291,113 @@ class AITradingAnalyzer:
             stock_trades = df[df['code'] == stock_code].sort_values('timestamp')
             stock_name = stock_trades.iloc[0]['name']
             
-            # 获取买入和卖出记录
-            buys = stock_trades[stock_trades['type'] == 'BUY']
-            sells = stock_trades[stock_trades['type'] == 'SELL']
+            # 按时间顺序处理交易
+            portfolio = {
+                'shares': 0,  # 持仓数量
+                'cost': 0.0,  # 平均成本
+                'investment': 0.0  # 总投资
+            }
             
-            if not buys.empty:
-                # 获取第一个有效的买入信号价格
-                buy_price = None
-                for _, buy_row in buys.iterrows():
-                    price = buy_row['current_price'] if pd.notna(buy_row['current_price']) else buy_row['price']
-                    if price > 0:  # 找到有效价格
-                        buy_price = price
-                        break
+            stock_realized_profit = 0.0  # 该股票的已实现盈亏
+            trade_count = 0  # 交易次数
+            
+            for _, row in stock_trades.iterrows():
+                transaction_type = row['type']
+                # 优先使用current_price，如果为空则使用price
+                price = row['current_price']
+                if pd.isna(price):
+                    price = row['price']
                 
-                if buy_price is None:
-                    continue  # 跳过没有有效价格的股票
+                # 跳过价格为0或无效的交易
+                if price <= 0:
+                    continue
                 
-                # 复盘规则：每次买入1000股
-                shares = 1000
-                investment = shares * buy_price
+                if transaction_type == 'BUY':
+                    # 买入信号：如果没有持仓，则买入1000股；如果有持仓，则跳过
+                    if portfolio['shares'] == 0:
+                        shares = 1000
+                        portfolio['shares'] = shares
+                        portfolio['cost'] = price
+                        portfolio['investment'] = shares * price
+                        trade_count += 1
                 
-                # 查找第一个有效的卖出信号
-                sell_price = None
-                for _, sell_row in sells.iterrows():
-                    price = sell_row['current_price'] if pd.notna(sell_row['current_price']) else sell_row['price']
-                    if price > 0:  # 找到有效价格
-                        sell_price = price
-                        break
-                
-                if sell_price is not None:
-                    # 已卖出
-                    returns = shares * sell_price
-                    profit = returns - investment
-                    results['realized_profit'] += profit
-                    
-                    stock_detail = {
-                        'code': stock_code,
-                        'name': stock_name,
-                        'status': '已卖出',
-                        'investment': investment,
-                        'returns': returns,
-                        'profit': profit
-                    }
-                    results['sold_stocks'].append(stock_detail)
-                    results['stock_details'].append(stock_detail)
-                else:
+                elif transaction_type == 'SELL':
+                    # 卖出信号：卖出全部持仓
+                    if portfolio['shares'] > 0:
+                        shares = portfolio['shares']
+                        returns = shares * price
+                        profit = returns - portfolio['investment']
+                        stock_realized_profit += profit
+                        
+                        # 清空持仓
+                        portfolio['shares'] = 0
+                        portfolio['cost'] = 0.0
+                        portfolio['investment'] = 0.0
+            
+            # 处理该股票的最终状态
+            if trade_count > 0:
+                if portfolio['shares'] > 0:
                     # 持仓中 - 获取最新价格
                     latest_record = stock_trades.iloc[-1]
                     latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
                     
                     if latest_price > 0:
-                        current_value = shares * latest_price
-                        profit = current_value - investment
+                        current_value = portfolio['shares'] * latest_price
+                        profit = current_value - portfolio['investment']
                         results['unrealized_profit'] += profit
                         
                         stock_detail = {
                             'code': stock_code,
                             'name': stock_name,
                             'status': '持仓中',
-                            'investment': investment,
+                            'investment': portfolio['investment'],
                             'current_value': current_value,
-                            'profit': profit
+                            'profit': profit,
+                            'trade_count': trade_count
                         }
                         results['holding_stocks'].append(stock_detail)
                         results['stock_details'].append(stock_detail)
+                else:
+                    # 已完全卖出
+                    results['realized_profit'] += stock_realized_profit
+                    
+                    # 计算总投资和总回报
+                    total_investment = 0.0
+                    total_returns = 0.0
+                    
+                    # 重新遍历计算总投资和总回报
+                    temp_portfolio = {'shares': 0, 'investment': 0.0}
+                    for _, row in stock_trades.iterrows():
+                        transaction_type = row['type']
+                        price = row['current_price'] if pd.notna(row['current_price']) else row['price']
+                        
+                        if price <= 0:
+                            continue
+                        
+                        if transaction_type == 'BUY' and temp_portfolio['shares'] == 0:
+                            shares = 1000
+                            temp_portfolio['shares'] = shares
+                            temp_portfolio['investment'] = shares * price
+                            total_investment += temp_portfolio['investment']
+                        
+                        elif transaction_type == 'SELL' and temp_portfolio['shares'] > 0:
+                            shares = temp_portfolio['shares']
+                            returns = shares * price
+                            total_returns += returns
+                            temp_portfolio['shares'] = 0
+                            temp_portfolio['investment'] = 0.0
+                    
+                    stock_detail = {
+                        'code': stock_code,
+                        'name': stock_name,
+                        'status': '已卖出',
+                        'investment': total_investment,
+                        'returns': total_returns,
+                        'profit': stock_realized_profit,
+                        'trade_count': trade_count
+                    }
+                    results['sold_stocks'].append(stock_detail)
+                    results['stock_details'].append(stock_detail)
         
         results['total_profit'] = results['realized_profit'] + results['unrealized_profit']
         
@@ -444,7 +488,7 @@ class AITradingAnalyzer:
         
         # 交易规则说明
         report.append("【交易规则说明】")
-        report.append("1. 买入信号：每次买入1000股，如果已持仓则跳过")
+        report.append("1. 买入信号：每次买入信号固定买入1000股，如果已持仓则跳过")
         report.append("2. 卖出信号：卖出全部持仓")
         report.append("3. 异常处理：排除价格为0的异常交易")
         report.append("")
