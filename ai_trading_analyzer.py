@@ -299,7 +299,8 @@ class AITradingAnalyzer:
             }
             
             stock_realized_profit = 0.0  # 该股票的已实现盈亏
-            trade_count = 0  # 交易次数
+            buy_count = 0  # 买入次数
+            sell_count = 0  # 卖出次数
             
             for _, row in stock_trades.iterrows():
                 transaction_type = row['type']
@@ -319,7 +320,7 @@ class AITradingAnalyzer:
                         portfolio['shares'] = shares
                         portfolio['cost'] = price
                         portfolio['investment'] = shares * price
-                        trade_count += 1
+                        buy_count += 1
                 
                 elif transaction_type == 'SELL':
                     # 卖出信号：卖出全部持仓
@@ -328,6 +329,7 @@ class AITradingAnalyzer:
                         returns = shares * price
                         profit = returns - portfolio['investment']
                         stock_realized_profit += profit
+                        sell_count += 1
                         
                         # 清空持仓
                         portfolio['shares'] = 0
@@ -335,7 +337,7 @@ class AITradingAnalyzer:
                         portfolio['investment'] = 0.0
             
             # 处理该股票的最终状态
-            if trade_count > 0:
+            if buy_count > 0 or sell_count > 0:
                 if portfolio['shares'] > 0:
                     # 持仓中 - 获取最新价格
                     latest_record = stock_trades.iloc[-1]
@@ -353,7 +355,8 @@ class AITradingAnalyzer:
                             'investment': portfolio['investment'],
                             'current_value': current_value,
                             'profit': profit,
-                            'trade_count': trade_count
+                            'buy_count': buy_count,
+                            'sell_count': sell_count
                         }
                         results['holding_stocks'].append(stock_detail)
                         results['stock_details'].append(stock_detail)
@@ -394,7 +397,8 @@ class AITradingAnalyzer:
                         'investment': total_investment,
                         'returns': total_returns,
                         'profit': stock_realized_profit,
-                        'trade_count': trade_count
+                        'buy_count': buy_count,
+                        'sell_count': sell_count
                     }
                     results['sold_stocks'].append(stock_detail)
                     results['stock_details'].append(stock_detail)
@@ -465,7 +469,8 @@ class AITradingAnalyzer:
                 report.append(f"{stock['name']}({stock['code']}): "
                            f"投资¥{stock['investment']:,.2f}, "
                            f"回收¥{stock['returns']:,.2f}, "
-                           f"盈亏¥{stock['profit']:,.2f}")
+                           f"盈亏¥{stock['profit']:,.2f} "
+                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次)")
             report.append("")
         
         # 持仓中股票
@@ -475,7 +480,8 @@ class AITradingAnalyzer:
                 report.append(f"{stock['name']}({stock['code']}): "
                            f"投资¥{stock['investment']:,.2f}, "
                            f"现值¥{stock['current_value']:,.2f}, "
-                           f"盈亏¥{stock['profit']:,.2f}")
+                           f"盈亏¥{stock['profit']:,.2f} "
+                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次)")
             report.append("")
         
         # 排除的股票
