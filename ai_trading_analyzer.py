@@ -55,14 +55,15 @@ class AITradingAnalyzer:
             recipients = [r.strip() for r in recipient_env.split(',')] if ',' in recipient_env else [recipient_env]
 
             # 创建邮件
-            msg = MIMEMultipart("alternative")
+            msg = MIMEMultipart()
             msg['From'] = sender_email
             msg['To'] = ", ".join(recipients)
             msg['Subject'] = subject
 
-            # 添加文本内容
-            text_part = MIMEText(content, "plain", "utf-8")
-            msg.attach(text_part)
+            # 只添加HTML内容（支持颜色显示）
+            html_content = self._format_text_to_html(content)
+            html_part = MIMEText(html_content, "html", "utf-8")
+            msg.attach(html_part)
 
             # 根据SMTP服务器类型选择合适的端口和连接方式
             if "163.com" in smtp_server:
@@ -108,6 +109,96 @@ class AITradingAnalyzer:
         except Exception as e:
             print(f"❌ 邮件发送过程中发生错误: {e}")
             return False
+    
+    def _format_text_to_html(self, text: str) -> str:
+        """
+        将文本内容转换为HTML格式，并为盈亏添加颜色
+        
+        Args:
+            text: 纯文本内容
+            
+        Returns:
+            HTML格式的内容
+        """
+        lines = text.split('\n')
+        html_lines = []
+        
+        for line in lines:
+            # 转义HTML特殊字符
+            line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            
+            # 识别盈亏并添加颜色
+            # 匹配格式：盈亏HK$X,XXX.XX (X.XX%) 或 盈亏HK$-X,XXX.XX (-X.XX%)
+            import re
+            pattern = r'(盈亏HK\$[\d,]+\.?\d*)\s*\(([-\d.]+)%\)'
+            
+            def add_profit_color(match):
+                value = match.group(2)
+                if float(value) >= 0:
+                    # 盈利用绿色
+                    return f'<span style="color: green; font-weight: bold;">{match.group(1)} ({value}%)</span>'
+                else:
+                    # 亏损用红色
+                    return f'<span style="color: red; font-weight: bold;">{match.group(1)} ({value}%)</span>'
+            
+            line = re.sub(pattern, add_profit_color, line)
+            
+            # 识别总体盈亏并添加颜色
+            # 匹配格式：总体盈亏: HK$X,XXX.XX
+            pattern2 = r'(总体盈亏:\s*HK\$[\d,]+\.?\d*)'
+            
+            def add_total_profit_color(match):
+                value_str = match.group(1).replace('总体盈亏:', '').replace('HK$', '').replace(',', '').strip()
+                try:
+                    value = float(value_str)
+                    if value >= 0:
+                        return f'<span style="color: green; font-weight: bold;">{match.group(1)}</span>'
+                    else:
+                        return f'<span style="color: red; font-weight: bold;">{match.group(1)}</span>'
+                except:
+                    return match.group(0)
+            
+            line = re.sub(pattern2, add_total_profit_color, line)
+            
+            # 识别已实现盈亏和未实现盈亏并添加颜色
+            pattern3 = r'(已实现盈亏:\s*HK\$[\d,]+\.?\d*)|(未实现盈亏:\s*HK\$[\d,]+\.?\d*)'
+            
+            def add_component_profit_color(match):
+                value_str = match.group(0).split('HK$')[1].replace(',', '').strip()
+                try:
+                    value = float(value_str)
+                    if value >= 0:
+                        return f'<span style="color: green;">{match.group(0)}</span>'
+                    else:
+                        return f'<span style="color: red;">{match.group(0)}</span>'
+                except:
+                    return match.group(0)
+            
+            line = re.sub(pattern3, add_component_profit_color, line)
+            
+            html_lines.append(line)
+        
+        # 包装在HTML标签中
+        html_content = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                }}
+            </style>
+        </head>
+        <body>
+        {'<br/>'.join(html_lines)}
+        </body>
+        </html>
+        """
+        
+        return html_content
         
     def load_transactions(self) -> bool:
         """
@@ -481,7 +572,9 @@ class AITradingAnalyzer:
         # 已卖出股票
         if profit_results['sold_stocks']:
             report.append("【已卖出股票】")
-            for stock in profit_results['sold_stocks']:
+            # 按股票代码排序
+            sorted_sold = sorted(profit_results['sold_stocks'], key=lambda x: x['code'])
+            for stock in sorted_sold:
                 profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
                            f"投资HK${stock['investment']:,.2f}, "
@@ -494,7 +587,9 @@ class AITradingAnalyzer:
         # 持仓中股票
         if profit_results['holding_stocks']:
             report.append("【持仓中股票】")
-            for stock in profit_results['holding_stocks']:
+            # 按股票代码排序
+            sorted_holding = sorted(profit_results['holding_stocks'], key=lambda x: x['code'])
+            for stock in sorted_holding:
                 profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
                            f"投资HK${stock['investment']:,.2f}, "
