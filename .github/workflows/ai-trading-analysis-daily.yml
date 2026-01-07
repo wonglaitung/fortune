@@ -2,8 +2,9 @@ name: AI交易分析日报
 
 on:
   # 港股交易日收盘后触发 (UTC 8:30 = 香港时间 16:30)
+  # 只在周一到周五运行，周六和周日不运行
   schedule:
-    - cron: '30 8 * * 1-5'  # 周一到周五
+    - cron: '30 8 * * 1-5'
   # 允许手动触发
   workflow_dispatch:
     inputs:
@@ -50,16 +51,9 @@ jobs:
         if [ -n "${{ github.event.inputs.trading_day }}" ]; then
           TRADING_DAY="${{ github.event.inputs.trading_day }}"
         else
-          # 获取前一个交易日 (排除周末)
-          # 使用香港时间计算，确保与港股交易时间一致
-          TRADING_DAY=$(date -d "yesterday" +%Y-%m-%d)
-          DAY_OF_WEEK=$(date -d "$TRADING_DAY" +%u)
-          # 如果是周日(7)或周六(6)，则往前推到周五
-          if [ $DAY_OF_WEEK -eq 7 ]; then
-            TRADING_DAY=$(date -d "$TRADING_DAY -2 days" +%Y-%m-%d)
-          elif [ $DAY_OF_WEEK -eq 6 ]; then
-            TRADING_DAY=$(date -d "$TRADING_DAY -1 days" +%Y-%m-%d)
-          fi
+          # 获取当天交易日
+          # 工作流只在周一到周五运行，无需处理周末
+          TRADING_DAY=$(date +%Y-%m-%d)
         fi
         
         # 计算5天前和1个月前的日期
