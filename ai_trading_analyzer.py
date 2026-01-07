@@ -577,8 +577,6 @@ class AITradingAnalyzer:
             for stock in sorted_sold:
                 profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"投资HK${stock['investment']:,.2f}, "
-                           f"回收HK${stock['returns']:,.2f}, "
                            f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
@@ -592,8 +590,6 @@ class AITradingAnalyzer:
             for stock in sorted_holding:
                 profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"投资HK${stock['investment']:,.2f}, "
-                           f"现值HK${stock['current_value']:,.2f}, "
                            f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
