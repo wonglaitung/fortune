@@ -44,10 +44,14 @@ jobs:
     - name: Calculate trading dates
       id: dates
       run: |
+        # 设置时区为香港时间，确保与港股交易时间一致
+        export TZ='Asia/Hong_Kong'
+        
         if [ -n "${{ github.event.inputs.trading_day }}" ]; then
           TRADING_DAY="${{ github.event.inputs.trading_day }}"
         else
           # 获取前一个交易日 (排除周末)
+          # 使用香港时间计算，确保与港股交易时间一致
           TRADING_DAY=$(date -d "yesterday" +%Y-%m-%d)
           DAY_OF_WEEK=$(date -d "$TRADING_DAY" +%u)
           # 如果是周日(7)或周六(6)，则往前推到周五
