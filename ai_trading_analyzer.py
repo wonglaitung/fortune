@@ -291,6 +291,18 @@ class AITradingAnalyzer:
             stock_trades = df[df['code'] == stock_code].sort_values('timestamp')
             stock_name = stock_trades.iloc[0]['name']
             
+            # 统计建议的买卖次数（所有交易信号）
+            suggested_buy_count = 0
+            suggested_sell_count = 0
+            for _, row in stock_trades.iterrows():
+                transaction_type = row['type']
+                price = row['current_price'] if pd.notna(row['current_price']) else row['price']
+                if price > 0:
+                    if transaction_type == 'BUY':
+                        suggested_buy_count += 1
+                    elif transaction_type == 'SELL':
+                        suggested_sell_count += 1
+            
             # 按时间顺序处理交易
             portfolio = {
                 'shares': 0,  # 持仓数量
@@ -299,8 +311,8 @@ class AITradingAnalyzer:
             }
             
             stock_realized_profit = 0.0  # 该股票的已实现盈亏
-            buy_count = 0  # 买入次数
-            sell_count = 0  # 卖出次数
+            buy_count = 0  # 实际买入次数
+            sell_count = 0  # 实际卖出次数
             
             for _, row in stock_trades.iterrows():
                 transaction_type = row['type']
@@ -356,7 +368,9 @@ class AITradingAnalyzer:
                             'current_value': current_value,
                             'profit': profit,
                             'buy_count': buy_count,
-                            'sell_count': sell_count
+                            'sell_count': sell_count,
+                            'suggested_buy_count': suggested_buy_count,
+                            'suggested_sell_count': suggested_sell_count
                         }
                         results['holding_stocks'].append(stock_detail)
                         results['stock_details'].append(stock_detail)
@@ -398,7 +412,9 @@ class AITradingAnalyzer:
                         'returns': total_returns,
                         'profit': stock_realized_profit,
                         'buy_count': buy_count,
-                        'sell_count': sell_count
+                        'sell_count': sell_count,
+                        'suggested_buy_count': suggested_buy_count,
+                        'suggested_sell_count': suggested_sell_count
                     }
                     results['sold_stocks'].append(stock_detail)
                     results['stock_details'].append(stock_detail)
@@ -470,7 +486,8 @@ class AITradingAnalyzer:
                            f"投资¥{stock['investment']:,.2f}, "
                            f"回收¥{stock['returns']:,.2f}, "
                            f"盈亏¥{stock['profit']:,.2f} "
-                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次)")
+                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
+                           f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
         
         # 持仓中股票
@@ -481,7 +498,8 @@ class AITradingAnalyzer:
                            f"投资¥{stock['investment']:,.2f}, "
                            f"现值¥{stock['current_value']:,.2f}, "
                            f"盈亏¥{stock['profit']:,.2f} "
-                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次)")
+                           f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
+                           f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
         
         # 排除的股票
@@ -547,13 +565,20 @@ class AITradingAnalyzer:
         
         # 发送邮件通知
         if send_email:
-            subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
-            # 在邮件主题中添加总体盈亏信息
+            # 计算总投资和盈亏率
+            total_investment = 0
+            for stock in profit_results['stock_details']:
+                total_investment += stock['investment']
+            
             total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
+            profit_rate = (total_profit / total_investment * 100) if total_investment != 0 else 0
+            
+            subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
+            # 在邮件主题中添加总体盈亏信息和盈亏率
             if total_profit >= 0:
-                subject += f" (盈利 ¥{total_profit:,.2f})"
+                subject += f" (盈利 ¥{total_profit:,.2f}, 盈亏率 {profit_rate:.2f}%)"
             else:
-                subject += f" (亏损 ¥{abs(total_profit):,.2f})"
+                subject += f" (亏损 ¥{abs(total_profit):,.2f}, 盈亏率 {profit_rate:.2f}%)"
             
             # 发送邮件
             email_sent = self.send_email_notification(subject, report)
