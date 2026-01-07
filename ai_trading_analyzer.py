@@ -465,27 +465,28 @@ class AITradingAnalyzer:
         
         # 总体概览
         report.append("【总体概览】")
-        report.append(f"总投入资金: ¥{total_investment:,.2f}")
-        report.append(f"已收回资金: ¥{sold_returns:,.2f}")
-        report.append(f"当前持仓市值: ¥{holdings_value:,.2f}")
-        report.append(f"总体盈亏: ¥{total_profit:,.2f}")
+        report.append(f"总投入资金: HK${total_investment:,.2f}")
+        report.append(f"已收回资金: HK${sold_returns:,.2f}")
+        report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
+        report.append(f"总体盈亏: HK${total_profit:,.2f}")
         report.append(f"盈亏率: {profit_rate:.2f}%")
         report.append("")
         
         # 盈亏构成
         report.append("【盈亏构成】")
-        report.append(f"已实现盈亏: ¥{profit_results['realized_profit']:,.2f}")
-        report.append(f"未实现盈亏: ¥{profit_results['unrealized_profit']:,.2f}")
+        report.append(f"已实现盈亏: HK${profit_results['realized_profit']:,.2f}")
+        report.append(f"未实现盈亏: HK${profit_results['unrealized_profit']:,.2f}")
         report.append("")
         
         # 已卖出股票
         if profit_results['sold_stocks']:
             report.append("【已卖出股票】")
             for stock in profit_results['sold_stocks']:
+                profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"投资¥{stock['investment']:,.2f}, "
-                           f"回收¥{stock['returns']:,.2f}, "
-                           f"盈亏¥{stock['profit']:,.2f} "
+                           f"投资HK${stock['investment']:,.2f}, "
+                           f"回收HK${stock['returns']:,.2f}, "
+                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
@@ -494,10 +495,11 @@ class AITradingAnalyzer:
         if profit_results['holding_stocks']:
             report.append("【持仓中股票】")
             for stock in profit_results['holding_stocks']:
+                profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"投资¥{stock['investment']:,.2f}, "
-                           f"现值¥{stock['current_value']:,.2f}, "
-                           f"盈亏¥{stock['profit']:,.2f} "
+                           f"投资HK${stock['investment']:,.2f}, "
+                           f"现值HK${stock['current_value']:,.2f}, "
+                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
@@ -576,9 +578,9 @@ class AITradingAnalyzer:
             subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
             # 在邮件主题中添加总体盈亏信息和盈亏率
             if total_profit >= 0:
-                subject += f" (盈利 ¥{total_profit:,.2f}, 盈亏率 {profit_rate:.2f}%)"
+                subject += f" (盈利 HK${total_profit:,.2f}, 盈亏率 {profit_rate:.2f}%)"
             else:
-                subject += f" (亏损 ¥{abs(total_profit):,.2f}, 盈亏率 {profit_rate:.2f}%)"
+                subject += f" (亏损 HK${abs(total_profit):,.2f}, 盈亏率 {profit_rate:.2f}%)"
             
             # 发送邮件
             email_sent = self.send_email_notification(subject, report)
