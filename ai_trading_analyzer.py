@@ -130,7 +130,7 @@ class AITradingAnalyzer:
             # 识别盈亏并添加颜色
             # 匹配格式：盈亏HK$X,XXX.XX (X.XX%) 或 盈亏HK$-X,XXX.XX (-X.XX%)
             import re
-            pattern = r'(盈亏HK\$[\d,]+\.?\d*)\s*\(([-\d.]+)%\)'
+            pattern = r'(盈亏HK\$-?[\d,]+\.?\d*)\s*\(([-\d.]+)%\)'
             
             def add_profit_color(match):
                 value = match.group(2)
