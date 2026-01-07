@@ -144,8 +144,8 @@ class AITradingAnalyzer:
             line = re.sub(pattern, add_profit_color, line)
             
             # 识别总体盈亏并添加颜色
-            # 匹配格式：总体盈亏: HK$X,XXX.XX
-            pattern2 = r'(总体盈亏:\s*HK\$[\d,]+\.?\d*)'
+            # 匹配格式：总体盈亏: HK$X,XXX.XX 或 总体盈亏: HK$-X,XXX.XX
+            pattern2 = r'(总体盈亏:\s*HK\$-?[\d,]+\.?\d*)'
             
             def add_total_profit_color(match):
                 value_str = match.group(1).replace('总体盈亏:', '').replace('HK$', '').replace(',', '').strip()
@@ -161,7 +161,7 @@ class AITradingAnalyzer:
             line = re.sub(pattern2, add_total_profit_color, line)
             
             # 识别已实现盈亏和未实现盈亏并添加颜色
-            pattern3 = r'(已实现盈亏:\s*HK\$[\d,]+\.?\d*)|(未实现盈亏:\s*HK\$[\d,]+\.?\d*)'
+            pattern3 = r'(已实现盈亏:\s*HK\$-?[\d,]+\.?\d*)|(未实现盈亏:\s*HK\$-?[\d,]+\.?\d*)'
             
             def add_component_profit_color(match):
                 value_str = match.group(0).split('HK$')[1].replace(',', '').strip()
