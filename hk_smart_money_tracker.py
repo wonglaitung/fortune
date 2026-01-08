@@ -216,7 +216,7 @@ def fetch_ggt_components(code, date_str):
     
     import threading
     
-    def fetch_with_timeout(symbol, timeout=10):
+    def fetch_with_timeout(symbol, timeout=3):
         """带超时的数据获取函数"""
         result = None
         exception = None
