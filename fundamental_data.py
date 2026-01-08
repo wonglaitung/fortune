@@ -411,38 +411,24 @@ def get_stock_cash_flow(stock_code):
 
 def get_comprehensive_fundamental_data(stock_code):
     """
-    获取综合基本面数据
+    获取综合基本面数据（简化版：只包含PE和PB）
     
     Args:
         stock_code (str): 港股代码，如 "00700"
     
     Returns:
-        dict: 包含所有基本面数据的综合字典
+        dict: 包含基本面数据的字典（只包含PE和PB）
     """
-    # 获取各类基本面数据
+    # 只获取财务指标数据（包含PE和PB）
     financial_indicator = get_stock_financial_indicator(stock_code)
-    income_statement = get_stock_income_statement(stock_code)
-    balance_sheet = get_stock_balance_sheet(stock_code)
-    cash_flow = get_stock_cash_flow(stock_code)
     
     # 合并数据
     result = {}
     
-    # 添加财务指标
+    # 添加财务指标（只添加PE和PB）
     if financial_indicator:
-        result.update({f"fi_{k}": v for k, v in financial_indicator.items()})
-    
-    # 添加利润表数据
-    if income_statement:
-        result.update({f"is_{k}": v for k, v in income_statement.items()})
-    
-    # 添加资产负债表数据
-    if balance_sheet:
-        result.update({f"bs_{k}": v for k, v in balance_sheet.items()})
-    
-    # 添加现金流量表数据
-    if cash_flow:
-        result.update({f"cf_{k}": v for k, v in cash_flow.items()})
+        result["fi_pe_ratio"] = financial_indicator.get("pe_ratio")
+        result["fi_pb_ratio"] = financial_indicator.get("pb_ratio")
     
     # 添加数据获取时间
     result["data_fetch_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
