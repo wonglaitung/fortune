@@ -287,6 +287,10 @@ def fetch_ggt_components(code, date_str):
             time.sleep(AK_CALL_SLEEP)
             return None
         
+        # 确保持股日期列是datetime类型
+        if '持股日期' in df_individual.columns:
+            df_individual['持股日期'] = pd.to_datetime(df_individual['持股日期'])
+        
         # 将日期字符串转换为pandas日期格式进行匹配
         target_date = pd.to_datetime(date_str, format='%Y%m%d')
         
@@ -1028,11 +1032,9 @@ def analyze_stock(code, name, run_date=None):
                 if fundamental_score > 60:
                     # 基本面优秀，降低价格位置要求
                     price_cond = row['Price_Percentile'] < (PRICE_LOW_PCT + 20)
-                    print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，放宽价格条件")
                 elif fundamental_score < 30:
                     # 基本面较差，需要更严格的技术面条件
                     fundamental_cond = False
-                    print(f"    ⚠️ {name} 基本面较差(评分:{fundamental_score})，建仓信号受阻")
             
             # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线上穿信号线
@@ -1175,16 +1177,12 @@ def analyze_stock(code, name, run_date=None):
                 if fundamental_score < 30:
                     # 基本面较差，降低价格位置要求
                     price_cond = row['Price_Percentile'] > (PRICE_HIGH_PCT - 20)
-                    print(f"    ⚠️ {name} 基本面较差(评分:{fundamental_score})，放宽出货条件")
                 elif fundamental_score > 60:
                     # 基本面优秀，需要更严格的技术面条件
                     fundamental_cond = False
                     # 只有在价格极高且技术面明显恶化时才触发出货
                     if row['Price_Percentile'] > 80 and price_down_cond:
                         fundamental_cond = True
-                        print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，但价格极高，触发出货")
-                    else:
-                        print(f"    📊 {name} 基本面优秀(评分:{fundamental_score})，出货信号受阻")
             
             # 增加的辅助条件（调整后的阈值和新增条件）
             # MACD线下穿信号线
