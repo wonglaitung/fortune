@@ -417,10 +417,14 @@ def get_comprehensive_fundamental_data(stock_code):
         stock_code (str): 港股代码，如 "00700"
     
     Returns:
-        dict: 包含基本面数据的字典（只包含PE和PB）
+        dict: 包含基本面数据的字典（只包含PE和PB），如果获取失败则返回 None
     """
     # 只获取财务指标数据（包含PE和PB）
     financial_indicator = get_stock_financial_indicator(stock_code)
+    
+    # 如果获取失败，直接返回 None
+    if financial_indicator is None:
+        return None
     
     # 合并数据
     result = {}
@@ -430,10 +434,14 @@ def get_comprehensive_fundamental_data(stock_code):
         result["fi_pe_ratio"] = financial_indicator.get("pe_ratio")
         result["fi_pb_ratio"] = financial_indicator.get("pb_ratio")
     
+    # 如果没有有效的PE或PB数据，返回 None
+    if not result.get("fi_pe_ratio") and not result.get("fi_pb_ratio"):
+        return None
+    
     # 添加数据获取时间
     result["data_fetch_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    return result if result else None
+    return result
 
 def safe_float(value):
     """安全地将值转换为浮点数"""
