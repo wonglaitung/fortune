@@ -2163,7 +2163,7 @@ def main(run_date=None):
                 # 相对表现
                 'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
                 # 基本面数据
-                'fundamental_score', 'pe_ratio', 'pb_ratio', 'roe', 'dividend_yield', 'revenue_growth', 'profit_growth',
+                'fundamental_score', 'pe_ratio', 'pb_ratio',
                 # 信号指标
                 'has_buildup', 'has_distribution', 'strong_volume_up', 'weak_volume_down',
                 # TAV评分
@@ -2195,7 +2195,7 @@ def main(run_date=None):
                 # 相对表现
                 '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
                 # 基本面数据
-                '基本面评分', '市盈率', '市净率', 'ROE(%)', '股息率(%)', '营收增长(%)', '利润增长(%)',
+                '基本面评分', '市盈率', '市净率',
                 # 信号指标
                 '建仓信号', '出货信号', '放量上涨', '缩量回调',
                 # TAV评分
