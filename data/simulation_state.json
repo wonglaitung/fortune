@@ -15816,6 +15816,22 @@
       "current_price": 9.6,
       "target_price": 10.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-09T10:01:28.290909",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 148.7,
+      "amount": 0,
+      "capital_after": 119.18929405190283,
+      "reason": "技术面MACD金叉确认趋势向上，资金流入显著（CMF=0.064>0.03），基本面估值合理（PE=20.53低于行业平均），抗跌性强（相对强度跑赢恒指68.66%），新闻情绪正面 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 72.0,
+      "current_price": 148.7,
+      "target_price": 88.0,
+      "validity_period": 15
     }
   ],
   "portfolio_history": [
@@ -26759,160 +26775,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-08 13:31:03",
-      "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 75.7,
-      "amount": 0,
-      "reason": "国产芯片龙头，MACD柱状图变化率信号确认趋势加速，新闻强化政策支持，量能健康放大 (原因: 资金不足)",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": 72,
-      "current_price": 75.7,
-      "target_price": 85,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-08 13:31:05",
-      "type": "BUY",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 424.6,
-      "amount": 0,
-      "reason": "IPO复苏+ESG政策驱动，布林带突破确认趋势，交易所业务直接受益于港股IPO活跃，新闻与技术面高度协同 (原因: 资金不足)",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": 410,
-      "current_price": 424.6,
-      "target_price": 450,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-08 14:29:48",
-      "buy": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "技术面三要素共振强烈（TAV评分78.25最高），放量上涨（量比2.85），航运复苏行业利好强化信号，短期目标价11.5，符合平衡型稳健增长需求",
-          "allocation_pct": 12,
-          "stop_loss_price": 9.8,
-          "target_price": 11.5,
-          "validity_period": 7
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "半导体板块受国产替代政策催化，技术面突破布林带上轨（位置100%），TAV评分64.25中等偏强，量价配合良好，短期目标价98，风险收益比适合平衡型",
-          "allocation_pct": 10,
-          "stop_loss_price": 85.0,
-          "target_price": 98.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "国产芯片龙头，技术面量价协同（成交额z-score 0.54），TAV评分58.0稳健，双重新闻支撑国产替代逻辑，短期目标价80，波动较低适合平衡型",
-          "allocation_pct": 10,
-          "stop_loss_price": 71.5,
-          "target_price": 80.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "技术面显著恶化（TAV评分35.75弱势），缩量回调（量比0.94），负面新闻冲击云增长与零售疲软，风险等级高需及时规避",
-          "stop_loss_triggered": false,
-          "target_price": 140.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "TAV评分21.75全样本最低，均线空头排列，新闻质疑估值透支，风险等级中高且历史交易已多次警示",
-          "stop_loss_triggered": false,
-          "target_price": 5.2,
-          "validity_period": 3
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "竞争压力导致技术面承压（TAV评分38.75弱势），负面新闻威胁核心业务，风险等级中需减仓观望",
-          "stop_loss_triggered": false,
-          "target_price": 105.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-08 14:29:48",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面显著恶化（TAV评分35.75弱势），缩量回调（量比0.94），负面新闻冲击云增长与零售疲软，风险等级高需及时规避",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 141.5,
-      "target_price": 140.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-08 14:29:50",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "TAV评分21.75全样本最低，均线空头排列，新闻质疑估值透支，风险等级中高且历史交易已多次警示",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.32,
-      "target_price": 5.2,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-08 14:29:53",
-      "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "竞争压力导致技术面承压（TAV评分38.75弱势），负面新闻威胁核心业务，风险等级中需减仓观望",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 99.95,
-      "target_price": 105.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-08 14:29:56",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 10.14,
-      "amount": 0,
-      "reason": "技术面三要素共振强烈（TAV评分78.25最高），放量上涨（量比2.85），航运复苏行业利好强化信号，短期目标价11.5，符合平衡型稳健增长需求 (原因: 资金不足)",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": 9.8,
-      "current_price": 10.14,
-      "target_price": 11.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-08 14:30:00",
       "type": "BUY",
       "code": "1347.HK",
@@ -27097,6 +26959,37 @@
       "current_price": 9.6,
       "target_price": 10.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-09 10:01:26",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "技术面MACD金叉确认趋势向上，资金流入显著（CMF=0.064>0.03），基本面估值合理（PE=20.53低于行业平均），抗跌性强（相对强度跑赢恒指68.66%），新闻情绪正面",
+          "allocation_pct": 15,
+          "stop_loss_price": 72.0,
+          "target_price": 88.0,
+          "validity_period": 15
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-09 10:01:28",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 148.7,
+      "amount": 0,
+      "reason": "技术面MACD金叉确认趋势向上，资金流入显著（CMF=0.064>0.03），基本面估值合理（PE=20.53低于行业平均），抗跌性强（相对强度跑赢恒指68.66%），新闻情绪正面 (原因: 资金不足)",
+      "capital_after": 119.18929405190283,
+      "success": false,
+      "stop_loss_price": 72.0,
+      "current_price": 148.7,
+      "target_price": 88.0,
+      "validity_period": 15
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
