@@ -2629,7 +2629,15 @@ class HSIEmailSystem:
             prev_tav_score = prev_day_data.get('tav_score', None)
             prev_tav_status = prev_day_data.get('tav_status', None)
             prev_price = prev_day_data.get('current_price', None)
-            prev_change_pct = prev_day_data.get('change_pct', None)
+            
+            # 计算今天价格相对于上个交易日的涨跌幅
+            prev_change_pct = None
+            if prev_price is not None and price_display is not None:
+                try:
+                    current_price = float(price_display)
+                    prev_change_pct = (current_price - prev_price) / prev_price * 100
+                except:
+                    pass
             
             # 格式化上个交易日指标显示
             prev_trend_display = prev_trend if prev_trend is not None else 'N/A'
@@ -2728,7 +2736,14 @@ class HSIEmailSystem:
             prev_price_display = "N/A"
             if prev_price is not None:
                 prev_price_display = f"{prev_price:.2f}"
-            prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
+            # 计算今天价格相对于上个交易日的涨跌幅（文本版本）
+            prev_change_pct_text = None
+            if prev_price is not None and price_value is not None:
+                try:
+                    prev_change_pct_text = (price_value - prev_price) / prev_price * 100
+                except:
+                    pass
+            prev_change_display = f"{prev_change_pct_text:+.2f}%" if prev_change_pct_text is not None else 'N/A'
             
             text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
