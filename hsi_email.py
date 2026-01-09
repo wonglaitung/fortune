@@ -3450,7 +3450,169 @@ class HSIEmailSystem:
                 # 文本版本：添加分割线
                 text += "────────────────────────────────────────\n\n"
 
+        # 添加表9：快速决策参考表
+        text += "📊 快速决策参考表:\n"
+        text += "-" * 100 + "\n"
+        text += f"{'指标组合':<12} {'趋势':<12} {'建仓评分':<12} {'出货评分':<12} {'48小时信号':<20} {'决策':<15}\n"
+        text += "-" * 100 + "\n"
+        text += f"{'组合1':<12} {'空头↓':<12} {'<3.0↓':<12} {'>5.0↑':<12} {'连续卖出≥3次':<20} {'✅ 立即清仓':<15}\n"
+        text += f"{'组合2':<12} {'多头↓':<12} {'<3.0↓':<12} {'>3.5↑':<12} {'卖出≥2次':<20} {'⚠️ 卖出60-70%':<15}\n"
+        text += f"{'组合3':<12} {'震荡→':<12} {'3.0-5.0':<12} {'2.0-3.5':<12} {'混合信号':<20} {'👀 卖出20-30%':<15}\n"
+        text += f"{'组合4':<12} {'多头↑':<12} {'>5.0↑':<12} {'<3.0↓':<12} {'连续买入≥3次':<20} {'✅ 继续持有':<15}\n"
+        text += f"{'组合5':<12} {'价值陷阱':<12} {'空头':<12} {'>5.0':<12} {'连续卖出≥3次':<20} {'✅ 立即清仓':<15}\n"
+        text += f"{'组合6':<12} {'超买回调':<12} {'多头':<12} {'3.0-5.0':<12} {'卖出1-2次':<20} {'⚠️ 卖出50%':<15}\n"
+        text += "-" * 100 + "\n\n"
+
+        # 添加表10：决策检查清单
+        text += "📋 决策检查清单:\n"
+        text += "-" * 60 + "\n"
+        text += f"{'检查项':<30} {'是/否':<8} {'权重':<8} {'累计得分':<10}\n"
+        text += "-" * 60 + "\n"
+        text += f"{'趋势是否恶化':<30} {'□ 是 □ 否':<8} {'20分':<8} {'___/20':<10}\n"
+        text += f"{'建仓评分是否下降':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'出货评分是否上升':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'TAV评分是否暴跌':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'48小时是否有卖出信号':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'VaR风险是否过高':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'历史回撤是否过大':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'是否接近止损价':<30} {'□ 是 □ 否':<8} {'5分':<8} {'___/5':<10}\n"
+        text += "-" * 60 + "\n"
+        text += "总分判定:\n"
+        text += "  • ≥70分：立即卖出\n"
+        text += "  • 50-69分：主动卖出\n"
+        text += "  • 30-49分：观察\n"
+        text += "  • <30分：继续持有\n\n"
+
         html += """
+        <div class="section">
+            <h3>📊 快速决策参考表</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">指标组合</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">趋势</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">建仓评分</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">出货评分</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">48小时信号</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">决策</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合1</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">空头↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;5.0↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续卖出≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red; font-weight: bold;">✅ 立即清仓</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合2</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange;">多头↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;3.5↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">卖出≥2次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange; font-weight: bold;">⚠️ 卖出60-70%</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合3</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">震荡→</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">3.0-5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">2.0-3.5</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">混合信号</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: #666; font-weight: bold;">👀 卖出20-30%</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合4</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">多头↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">&gt;5.0↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续买入≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green; font-weight: bold;">✅ 继续持有</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合5</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">价值陷阱</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">空头</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续卖出≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red; font-weight: bold;">✅ 立即清仓</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合6</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">超买回调</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">多头</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">3.0-5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">卖出1-2次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange; font-weight: bold;">⚠️ 卖出50%</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h3>📋 决策检查清单</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">检查项</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">是/否</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">权重</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">累计得分</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">趋势是否恶化</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">20分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/20</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">建仓评分是否下降</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">出货评分是否上升</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">TAV评分是否暴跌</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">48小时是否有卖出信号</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">VaR风险是否过高</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">历史回撤是否过大</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">是否接近止损价</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">5分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/5</td>
+                </tr>
+            </table>
+            <p style="margin-top: 10px;"><strong>总分判定：</strong></p>
+            <ul>
+                <li>≥70分：<span style="color: red; font-weight: bold;">立即卖出</span></li>
+                <li>50-69分：<span style="color: orange; font-weight: bold;">主动卖出</span></li>
+                <li>30-49分：<span style="color: #666; font-weight: bold;">观察</span></li>
+                <li>&lt;30分：<span style="color: green; font-weight: bold;">继续持有</span></li>
+            </ul>
+        </div>
+
         <div class="section">
             <h3>📋 指标说明</h3>
             <div style="font-size:0.9em; line-height:1.4;">
