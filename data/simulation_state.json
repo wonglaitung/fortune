@@ -1,26 +1,16 @@
 {
   "initial_capital": 1000000,
-  "capital": 40978.1892940519,
+  "capital": 49226.1892940519,
   "positions": {
     "1211.HK": {
       "shares": 2100,
       "avg_price": 94.88809523809523,
       "stop_loss_price": 94.0
     },
-    "6682.HK": {
-      "shares": 2300,
-      "avg_price": 47.08,
-      "stop_loss_price": 44.0
-    },
     "1299.HK": {
       "shares": 3100,
       "avg_price": 85.25,
       "stop_loss_price": 81.0
-    },
-    "2533.HK": {
-      "shares": 5000,
-      "avg_price": 22.82,
-      "stop_loss_price": 20.57
     },
     "0939.HK": {
       "shares": 12700,
@@ -32,10 +22,15 @@
       "avg_price": 147.4,
       "stop_loss_price": 140.0
     },
-    "3690.HK": {
-      "shares": 700,
-      "avg_price": 98.45,
-      "stop_loss_price": 95.0
+    "2269.HK": {
+      "shares": 3900,
+      "avg_price": 37.06,
+      "stop_loss_price": 35.8
+    },
+    "1138.HK": {
+      "shares": 13700,
+      "avg_price": 10.52,
+      "stop_loss_price": 9.85
     }
   },
   "transaction_history": [
@@ -16242,6 +16237,102 @@
       "current_price": 98.45,
       "target_price": 115.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-09T15:58:56.819934",
+      "type": "SELL",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 40978.1892940519,
+      "reason": "触发Trailing Stop条件，基本面评分23.75极差，银行股疲软需减仓避险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 50.1,
+      "target_price": 35.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-09T15:59:00.298349",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 5000,
+      "price": 22.84,
+      "amount": 114200.0,
+      "capital_after": 155178.1892940519,
+      "reason": "已触发止盈和Trailing Stop信号，短期涨幅过大需锁定部分利润",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 22.84,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-09T15:59:03.378168",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 2300,
+      "price": 49.52,
+      "amount": 113896.0,
+      "capital_after": 269074.1892940519,
+      "reason": "已触发止盈和Trailing Stop信号，技术面高位风险积聚，建议获利了结",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 49.52,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-09T15:59:05.539758",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 700,
+      "price": 98.3,
+      "amount": 68810.0,
+      "capital_after": 337884.1892940519,
+      "reason": "技术面多空信号冲突，基本面评分34.25薄弱，建议减仓控制风险",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 98.3,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-09T15:59:11.842819",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 3900,
+      "price": 37.06,
+      "amount": 144534.0,
+      "capital_after": 193350.1892940519,
+      "reason": "基本面评分74.25优秀，技术面动量加速与资金流入协同，医药板块避险属性突出，适合平衡型投资者稳健配置",
+      "success": true,
+      "stop_loss_price": 35.8,
+      "current_price": 37.06,
+      "target_price": 42.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-09T15:59:13.892677",
+      "type": "BUY",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 13700,
+      "price": 10.52,
+      "amount": 144124.0,
+      "capital_after": 49226.1892940519,
+      "reason": "基本面评分73.25优秀，市盈率15.99低估且股息率吸引人，能源板块防御性强，适合震荡市布局",
+      "success": true,
+      "stop_loss_price": 9.85,
+      "current_price": 10.52,
+      "target_price": 11.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -27198,7 +27289,7 @@
           "stop_loss_price": 6.9
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27220,7 +27311,7 @@
           "stop_loss_price": 94.0
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27242,7 +27333,7 @@
           "stop_loss_price": 94.0
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27252,7 +27343,7 @@
           "stop_loss_price": 81.0
         },
         "2533.HK": {
-          "shares": 5000,
+          "shares": 0,
           "avg_price": 22.82,
           "stop_loss_price": 20.57
         }
@@ -27269,7 +27360,7 @@
           "stop_loss_price": 94.0
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27279,7 +27370,7 @@
           "stop_loss_price": 81.0
         },
         "2533.HK": {
-          "shares": 5000,
+          "shares": 0,
           "avg_price": 22.82,
           "stop_loss_price": 20.57
         },
@@ -27301,7 +27392,7 @@
           "stop_loss_price": 94.0
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27311,7 +27402,7 @@
           "stop_loss_price": 81.0
         },
         "2533.HK": {
-          "shares": 5000,
+          "shares": 0,
           "avg_price": 22.82,
           "stop_loss_price": 20.57
         },
@@ -27338,7 +27429,7 @@
           "stop_loss_price": 94.0
         },
         "6682.HK": {
-          "shares": 2300,
+          "shares": 0,
           "avg_price": 47.08,
           "stop_loss_price": 44.0
         },
@@ -27348,7 +27439,7 @@
           "stop_loss_price": 81.0
         },
         "2533.HK": {
-          "shares": 5000,
+          "shares": 0,
           "avg_price": 22.82,
           "stop_loss_price": 20.57
         },
@@ -27363,154 +27454,179 @@
           "stop_loss_price": 140.0
         },
         "3690.HK": {
-          "shares": 700,
+          "shares": 0,
           "avg_price": 98.45,
           "stop_loss_price": 95.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-09T15:59:00.970294",
+      "capital": 155178.1892940519,
+      "portfolio_value": 967397.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "6682.HK": {
+          "shares": 0,
+          "avg_price": 47.08,
+          "stop_loss_price": 44.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 500,
+          "avg_price": 147.4,
+          "stop_loss_price": 140.0
+        },
+        "3690.HK": {
+          "shares": 0,
+          "avg_price": 98.45,
+          "stop_loss_price": 95.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-09T15:59:03.925792",
+      "capital": 269074.1892940519,
+      "portfolio_value": 967185.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 500,
+          "avg_price": 147.4,
+          "stop_loss_price": 140.0
+        },
+        "3690.HK": {
+          "shares": 0,
+          "avg_price": 98.45,
+          "stop_loss_price": 95.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-09T15:59:05.957566",
+      "capital": 337884.1892940519,
+      "portfolio_value": 967135.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 500,
+          "avg_price": 147.4,
+          "stop_loss_price": 140.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-09T15:59:12.388429",
+      "capital": 193350.1892940519,
+      "portfolio_value": 967235.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 500,
+          "avg_price": 147.4,
+          "stop_loss_price": 140.0
+        },
+        "2269.HK": {
+          "shares": 3900,
+          "avg_price": 37.06,
+          "stop_loss_price": 35.8
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-09T15:59:14.534821",
+      "capital": 49226.1892940519,
+      "portfolio_value": 967284.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 500,
+          "avg_price": 147.4,
+          "stop_loss_price": 140.0
+        },
+        "2269.HK": {
+          "shares": 3900,
+          "avg_price": 37.06,
+          "stop_loss_price": 35.8
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
         }
       }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-09 14:02:35",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "TAV评分71.25强势，放量上涨，基本面评分60优秀，AI芯片需求旺盛，技术面与新闻高度协同",
-          "allocation_pct": 12,
-          "stop_loss_price": 20.57,
-          "target_price": 25.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "低位启动，MACD金叉，基本面评分100极优秀，高股息低估值，新闻面高股息基金利好共振",
-          "allocation_pct": 10,
-          "stop_loss_price": 7.4,
-          "target_price": 8.5,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "超跌反弹，MACD金叉，位置低位，新闻利好AI业务，相对强度改善",
-          "allocation_pct": 8,
-          "stop_loss_price": 140.0,
-          "target_price": 165.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "止损触发，技术面恶化，基本面评分20较差，高位回撤超18%",
-          "stop_loss_triggered": true,
-          "target_price": 36.82,
-          "validity_period": 1
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "止损触发，高位崩盘风险，基本面评分20较差，位置97.14%超买",
-          "stop_loss_triggered": true,
-          "target_price": 50.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "Trailing Stop触发，高位超买，资金流出，技术面矛盾信号",
-          "stop_loss_triggered": true,
-          "target_price": 76.87,
-          "validity_period": 1
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "Trailing Stop触发，地缘政治风险，动能衰竭，新闻负面影响",
-          "stop_loss_triggered": true,
-          "target_price": 10.2,
-          "validity_period": 1
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "出货级别weak，基本面评分30中等偏下，芯片短缺利空，技术面弱势",
-          "stop_loss_triggered": false,
-          "target_price": 40.06,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-09 14:02:35",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "止损触发，技术面恶化，基本面评分20较差，高位回撤超18%",
-      "capital_after": 119.18929405190283,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 36.86,
-      "target_price": 36.82,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-09 14:02:38",
-      "type": "SELL",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 20000,
-      "price": 9.64,
-      "amount": 192800.0,
-      "reason": "止损触发，高位崩盘风险，基本面评分20较差，位置97.14%超买",
-      "capital_after": 192919.1892940519,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 9.64,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 11035.000000000004
-    },
-    {
-      "timestamp": "2026-01-09 14:02:40",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "Trailing Stop触发，高位超买，资金流出，技术面矛盾信号",
-      "capital_after": 192919.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 90.65,
-      "target_price": 76.87,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-09 14:02:43",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 19300,
-      "price": 10.41,
-      "amount": 200913.0,
-      "reason": "Trailing Stop触发，地缘政治风险，动能衰竭，新闻负面影响",
-      "capital_after": 393832.1892940519,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 10.41,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 7747.999999999992
-    },
     {
       "timestamp": "2026-01-09 14:02:45",
       "type": "SELL",
@@ -27678,6 +27794,162 @@
       "current_price": 98.45,
       "target_price": 115.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-09 15:58:56",
+      "buy": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "基本面评分74.25优秀，技术面动量加速与资金流入协同，医药板块避险属性突出，适合平衡型投资者稳健配置",
+          "allocation_pct": 15,
+          "stop_loss_price": 35.8,
+          "target_price": 42.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "基本面评分73.25优秀，市盈率15.99低估且股息率吸引人，能源板块防御性强，适合震荡市布局",
+          "allocation_pct": 15,
+          "stop_loss_price": 9.85,
+          "target_price": 11.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "触发Trailing Stop条件，基本面评分23.75极差，银行股疲软需减仓避险",
+          "stop_loss_triggered": true,
+          "target_price": 35.0,
+          "validity_period": 1
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "已触发止盈和Trailing Stop信号，短期涨幅过大需锁定部分利润",
+          "stop_loss_triggered": true,
+          "target_price": 23.0,
+          "validity_period": 1
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "已触发止盈和Trailing Stop信号，技术面高位风险积聚，建议获利了结",
+          "stop_loss_triggered": true,
+          "target_price": 45.0,
+          "validity_period": 1
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "技术面多空信号冲突，基本面评分34.25薄弱，建议减仓控制风险",
+          "stop_loss_triggered": false,
+          "target_price": 98.5,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-09 15:58:56",
+      "type": "SELL",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "触发Trailing Stop条件，基本面评分23.75极差，银行股疲软需减仓避险",
+      "capital_after": 40978.1892940519,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 50.1,
+      "target_price": 35.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-09 15:59:00",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 5000,
+      "price": 22.84,
+      "amount": 114200.0,
+      "reason": "已触发止盈和Trailing Stop信号，短期涨幅过大需锁定部分利润",
+      "capital_after": 155178.1892940519,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 22.84,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 99.99999999999787
+    },
+    {
+      "timestamp": "2026-01-09 15:59:03",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 2300,
+      "price": 49.52,
+      "amount": 113896.0,
+      "reason": "已触发止盈和Trailing Stop信号，技术面高位风险积聚，建议获利了结",
+      "capital_after": 269074.1892940519,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 49.52,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 5612.000000000011
+    },
+    {
+      "timestamp": "2026-01-09 15:59:05",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 700,
+      "price": 98.3,
+      "amount": 68810.0,
+      "reason": "技术面多空信号冲突，基本面评分34.25薄弱，建议减仓控制风险",
+      "capital_after": 337884.1892940519,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 98.3,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -105.00000000000398
+    },
+    {
+      "timestamp": "2026-01-09 15:59:11",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 3900,
+      "price": 37.06,
+      "amount": 144534.0,
+      "reason": "基本面评分74.25优秀，技术面动量加速与资金流入协同，医药板块避险属性突出，适合平衡型投资者稳健配置",
+      "capital_after": 193350.1892940519,
+      "success": true,
+      "stop_loss_price": 35.8,
+      "current_price": 37.06,
+      "target_price": 42.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-09 15:59:13",
+      "type": "BUY",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 13700,
+      "price": 10.52,
+      "amount": 144124.0,
+      "reason": "基本面评分73.25优秀，市盈率15.99低估且股息率吸引人，能源板块防御性强，适合震荡市布局",
+      "capital_after": 49226.1892940519,
+      "success": true,
+      "stop_loss_price": 9.85,
+      "current_price": 10.52,
+      "target_price": 11.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
