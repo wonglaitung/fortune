@@ -90,6 +90,55 @@ class HSIEmailSystem:
         'medium_long_term': '2y',      # 中长期投资：2年数据（约493个交易日）
     }
 
+    # ==============================
+    # 加权评分系统参数（新增）
+    # ==============================
+
+    # 是否启用加权评分系统（向后兼容）
+    USE_SCORED_SIGNALS = True   # True=使用新的评分系统，False=使用原有的布尔逻辑
+
+    # 建仓信号权重配置
+    BUILDUP_WEIGHTS = {
+        'price_low': 2.0,      # 价格处于低位
+        'vol_ratio': 2.0,      # 成交量放大
+        'vol_z': 1.0,          # 成交量z-score
+        'macd_cross': 1.5,     # MACD金叉
+        'rsi_oversold': 1.2,   # RSI超卖
+        'obv_up': 1.0,         # OBV上升
+        'vwap_vol': 1.2,       # 价格高于VWAP且放量
+        'price_above_vwap': 0.8,  # 价格高于VWAP
+        'bb_oversold': 1.0,    # 布林带超卖
+    }
+
+    # 建仓信号阈值
+    BUILDUP_THRESHOLD_STRONG = 5.0   # 强烈建仓信号阈值
+    BUILDUP_THRESHOLD_PARTIAL = 3.0  # 部分建仓信号阈值
+
+    # 出货信号权重配置
+    DISTRIBUTION_WEIGHTS = {
+        'price_high': 2.0,     # 价格处于高位
+        'vol_ratio': 2.0,      # 成交量放大
+        'vol_z': 1.5,          # 成交量z-score
+        'macd_cross': 1.5,     # MACD死叉
+        'rsi_high': 1.5,       # RSI超买
+        'obv_down': 1.0,       # OBV下降
+        'vwap_vol': 1.5,       # 价格低于VWAP且放量
+        'price_down': 1.0,     # 价格下跌
+        'bb_overbought': 1.0,  # 布林带超买
+    }
+
+    # 出货信号阈值
+    DISTRIBUTION_THRESHOLD_STRONG = 5.0   # 强烈出货信号阈值
+    DISTRIBUTION_THRESHOLD_WEAK = 3.0     # 弱出货信号阈值
+
+    # 价格位置阈值
+    PRICE_LOW_PCT = 40.0   # 价格百分位低于该值视为"低位"
+    PRICE_HIGH_PCT = 60.0  # 高于该值视为"高位"
+
+    # 成交量阈值
+    VOL_RATIO_BUILDUP = 1.3
+    VOL_RATIO_DISTRIBUTION = 1.5
+
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
         # 添加数据缓存机制
@@ -758,6 +807,183 @@ class HSIEmailSystem:
         
         return cleaned
 
+    def _calculate_buildup_score(self, row, hist_df=None):
+        """
+        基于加权评分的建仓信号检测
+        
+        Args:
+            row: 包含技术指标的数据行（Series）
+            hist_df: 历史数据DataFrame（用于计算某些指标）
+        
+        Returns:
+            dict: 包含评分、信号级别和触发原因
+            - score: 建仓评分（0-10+）
+            - signal: 信号级别 ('none', 'partial', 'strong')
+            - reasons: 触发条件的列表
+        """
+        score = 0.0
+        reasons = []
+
+        # 价格位置：低位加分
+        price_percentile = row.get('price_position', 50.0)
+        if pd.notna(price_percentile) and price_percentile < self.PRICE_LOW_PCT:
+            score += self.BUILDUP_WEIGHTS['price_low']
+            reasons.append('price_low')
+
+        # 成交量倍数
+        vol_ratio = row.get('volume_ratio', 0.0)
+        if pd.notna(vol_ratio) and vol_ratio > self.VOL_RATIO_BUILDUP:
+            score += self.BUILDUP_WEIGHTS['vol_ratio']
+            reasons.append('vol_ratio')
+
+        # 成交量 z-score
+        vol_z_score = row.get('vol_z_score', 0.0)
+        if pd.notna(vol_z_score) and vol_z_score > 1.2:
+            score += self.BUILDUP_WEIGHTS['vol_z']
+            reasons.append('vol_z')
+
+        # MACD 线上穿（金叉）
+        macd = row.get('macd', 0.0)
+        macd_signal = row.get('macd_signal', 0.0)
+        if pd.notna(macd) and pd.notna(macd_signal) and macd > macd_signal:
+            score += self.BUILDUP_WEIGHTS['macd_cross']
+            reasons.append('macd_cross')
+
+        # RSI 超卖
+        rsi = row.get('rsi', 50.0)
+        if pd.notna(rsi) and rsi < 40:
+            score += self.BUILDUP_WEIGHTS['rsi_oversold']
+            reasons.append('rsi_oversold')
+
+        # OBV 上升
+        obv = row.get('obv', 0.0)
+        if pd.notna(obv) and obv > 0:
+            score += self.BUILDUP_WEIGHTS['obv_up']
+            reasons.append('obv_up')
+
+        # 收盘高于 VWAP 且放量
+        vwap = row.get('vwap', 0.0)
+        current_price = row.get('current_price', 0.0)
+        if (pd.notna(vwap) and pd.notna(vol_ratio) and pd.notna(current_price) and 
+            current_price > vwap and vol_ratio > 1.2):
+            score += self.BUILDUP_WEIGHTS['vwap_vol']
+            reasons.append('vwap_vol')
+
+        # 价格高于 VWAP
+        if pd.notna(vwap) and pd.notna(current_price) and current_price > vwap:
+            score += self.BUILDUP_WEIGHTS['price_above_vwap']
+            reasons.append('price_above_vwap')
+
+        # 布林带超卖
+        bb_position = row.get('bb_position', 0.5)
+        if pd.notna(bb_position) and bb_position < 0.2:
+            score += self.BUILDUP_WEIGHTS['bb_oversold']
+            reasons.append('bb_oversold')
+
+        # 返回分数与分层建议
+        signal = None
+        if score >= self.BUILDUP_THRESHOLD_STRONG:
+            signal = 'strong'    # 强烈建仓（建议较高比例或确认）
+        elif score >= self.BUILDUP_THRESHOLD_PARTIAL:
+            signal = 'partial'   # 部分建仓 / 分批入场
+        else:
+            signal = 'none'      # 无信号
+
+        return {
+            'score': score,
+            'signal': signal,
+            'reasons': ','.join(reasons) if reasons else ''
+        }
+
+    def _calculate_distribution_score(self, row, hist_df=None):
+        """
+        基于加权评分的出货信号检测
+        
+        Args:
+            row: 包含技术指标的数据行（Series）
+            hist_df: 历史数据DataFrame（用于计算某些指标）
+        
+        Returns:
+            dict: 包含评分、信号级别和触发原因
+            - score: 出货评分（0-10+）
+            - signal: 信号级别 ('none', 'weak', 'strong')
+            - reasons: 触发条件的列表
+        """
+        score = 0.0
+        reasons = []
+
+        # 价格位置：高位加分
+        price_percentile = row.get('price_position', 50.0)
+        if pd.notna(price_percentile) and price_percentile > self.PRICE_HIGH_PCT:
+            score += self.DISTRIBUTION_WEIGHTS['price_high']
+            reasons.append('price_high')
+
+        # 成交量倍数
+        vol_ratio = row.get('volume_ratio', 0.0)
+        if pd.notna(vol_ratio) and vol_ratio > self.VOL_RATIO_DISTRIBUTION:
+            score += self.DISTRIBUTION_WEIGHTS['vol_ratio']
+            reasons.append('vol_ratio')
+
+        # 成交量 z-score
+        vol_z_score = row.get('vol_z_score', 0.0)
+        if pd.notna(vol_z_score) and vol_z_score > 1.5:
+            score += self.DISTRIBUTION_WEIGHTS['vol_z']
+            reasons.append('vol_z')
+
+        # MACD 线下穿（死叉）
+        macd = row.get('macd', 0.0)
+        macd_signal = row.get('macd_signal', 0.0)
+        if pd.notna(macd) and pd.notna(macd_signal) and macd < macd_signal:
+            score += self.DISTRIBUTION_WEIGHTS['macd_cross']
+            reasons.append('macd_cross')
+
+        # RSI 超买
+        rsi = row.get('rsi', 50.0)
+        if pd.notna(rsi) and rsi > 65:
+            score += self.DISTRIBUTION_WEIGHTS['rsi_high']
+            reasons.append('rsi_high')
+
+        # OBV 下降
+        obv = row.get('obv', 0.0)
+        if pd.notna(obv) and obv < 0:
+            score += self.DISTRIBUTION_WEIGHTS['obv_down']
+            reasons.append('obv_down')
+
+        # 收盘低于 VWAP 且放量
+        vwap = row.get('vwap', 0.0)
+        current_price = row.get('current_price', 0.0)
+        if (pd.notna(vwap) and pd.notna(vol_ratio) and pd.notna(current_price) and 
+            current_price < vwap and vol_ratio > 1.2):
+            score += self.DISTRIBUTION_WEIGHTS['vwap_vol']
+            reasons.append('vwap_vol')
+
+        # 价格下跌
+        change_1d = row.get('change_1d', 0.0)
+        if pd.notna(change_1d) and change_1d < 0:
+            score += self.DISTRIBUTION_WEIGHTS['price_down']
+            reasons.append('price_down')
+
+        # 布林带超买
+        bb_position = row.get('bb_position', 0.5)
+        if pd.notna(bb_position) and bb_position > 0.8:
+            score += self.DISTRIBUTION_WEIGHTS['bb_overbought']
+            reasons.append('bb_overbought')
+
+        # 返回分数与分层建议
+        signal = None
+        if score >= self.DISTRIBUTION_THRESHOLD_STRONG:
+            signal = 'strong'    # 强烈出货（建议较大比例卖出）
+        elif score >= self.DISTRIBUTION_THRESHOLD_WEAK:
+            signal = 'weak'      # 弱出货（建议部分减仓或观察）
+        else:
+            signal = 'none'      # 无信号
+
+        return {
+            'score': score,
+            'signal': signal,
+            'reasons': ','.join(reasons) if reasons else ''
+        }
+
     def _calculate_technical_indicators_core(self, data, asset_type='stock'):
         """
         计算技术指标的核心方法（支持不同资产类型）- 修复版本
@@ -947,6 +1173,53 @@ class HSIEmailSystem:
                         indicators['tav_status'] = 'TAV分析失败'
                         indicators['tav_summary'] = None
                 
+                # 添加评分系统信息（如果启用）
+                if self.USE_SCORED_SIGNALS:
+                    try:
+                        # 准备评分所需的数据行
+                        score_row = pd.Series({
+                            'price_position': indicators.get('price_position', 50.0),
+                            'volume_ratio': volume_ratio,
+                            'vol_z_score': latest.get('Vol_Z_Score', 0.0) if 'Vol_Z_Score' in latest else 0.0,
+                            'macd': macd,
+                            'macd_signal': macd_signal,
+                            'rsi': rsi,
+                            'obv': latest.get('OBV', 0.0) if 'OBV' in latest else 0.0,
+                            'vwap': latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0,
+                            'current_price': current_price,
+                            'change_1d': data.get('change_1d', 0.0),
+                            'bb_position': bb_position
+                        })
+                        
+                        # 计算建仓评分
+                        buildup_result = self._calculate_buildup_score(score_row, hist)
+                        indicators['buildup_score'] = buildup_result['score']
+                        indicators['buildup_level'] = buildup_result['signal']
+                        indicators['buildup_reasons'] = buildup_result['reasons']
+                        
+                        # 计算出货评分
+                        distribution_result = self._calculate_distribution_score(score_row, hist)
+                        indicators['distribution_score'] = distribution_result['score']
+                        indicators['distribution_level'] = distribution_result['signal']
+                        indicators['distribution_reasons'] = distribution_result['reasons']
+                        
+                    except Exception as e:
+                        print(f"⚠️ 评分系统计算失败: {e}")
+                        indicators['buildup_score'] = 0.0
+                        indicators['buildup_level'] = 'none'
+                        indicators['buildup_reasons'] = ''
+                        indicators['distribution_score'] = 0.0
+                        indicators['distribution_level'] = 'none'
+                        indicators['distribution_reasons'] = ''
+                else:
+                    # 评分系统未启用，设置为默认值
+                    indicators['buildup_score'] = None
+                    indicators['buildup_level'] = None
+                    indicators['buildup_reasons'] = None
+                    indicators['distribution_score'] = None
+                    indicators['distribution_level'] = None
+                    indicators['distribution_reasons'] = None
+                
                 return indicators
                 
             except Exception as e:
@@ -1002,6 +1275,22 @@ class HSIEmailSystem:
                         indicators['tav_score'] = 0
                         indicators['tav_status'] = 'TAV分析失败'
                         indicators['tav_summary'] = None
+                    
+                    # 添加评分系统信息（降级模式）
+                    if self.USE_SCORED_SIGNALS:
+                        indicators['buildup_score'] = 0.0
+                        indicators['buildup_level'] = 'none'
+                        indicators['buildup_reasons'] = ''
+                        indicators['distribution_score'] = 0.0
+                        indicators['distribution_level'] = 'none'
+                        indicators['distribution_reasons'] = ''
+                    else:
+                        indicators['buildup_score'] = None
+                        indicators['buildup_level'] = None
+                        indicators['buildup_reasons'] = None
+                        indicators['distribution_score'] = None
+                        indicators['distribution_level'] = None
+                        indicators['distribution_reasons'] = None
                     
                     return indicators
                 else:
@@ -1729,6 +2018,49 @@ class HSIEmailSystem:
             if tav_summary:
                 trend_analysis = tav_summary.get('trend_analysis', 'N/A')
                 momentum_analysis = tav_summary.get('momentum_analysis', 'N/A')
+        
+        # 添加评分系统信息（如果启用）
+        if self.USE_SCORED_SIGNALS:
+            buildup_score = indicators.get('buildup_score', None)
+            buildup_level = indicators.get('buildup_level', None)
+            buildup_reasons = indicators.get('buildup_reasons', None)
+            distribution_score = indicators.get('distribution_score', None)
+            distribution_level = indicators.get('distribution_level', None)
+            distribution_reasons = indicators.get('distribution_reasons', None)
+            
+            # 显示建仓评分
+            if buildup_score is not None:
+                buildup_color = "color: green; font-weight: bold;" if buildup_level == 'strong' else "color: orange; font-weight: bold;" if buildup_level == 'partial' else "color: #666;"
+                html += f"""
+                <tr>
+                    <td>建仓评分</td>
+                    <td><span style="{buildup_color}">{buildup_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({buildup_level})</span></td>
+                </tr>
+                """
+                if buildup_reasons:
+                    html += f"""
+                <tr>
+                    <td>建仓原因</td>
+                    <td style="font-size: 0.9em; color: #666;">{buildup_reasons}</td>
+                </tr>
+                """
+            
+            # 显示出货评分
+            if distribution_score is not None:
+                distribution_color = "color: red; font-weight: bold;" if distribution_level == 'strong' else "color: orange; font-weight: bold;" if distribution_level == 'weak' else "color: #666;"
+                html += f"""
+                <tr>
+                    <td>出货评分</td>
+                    <td><span style="{distribution_color}">{distribution_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({distribution_level})</span></td>
+                </tr>
+                """
+                if distribution_reasons:
+                    html += f"""
+                <tr>
+                    <td>出货原因</td>
+                    <td style="font-size: 0.9em; color: #666;">{distribution_reasons}</td>
+                </tr>
+                """
                 volume_analysis = tav_summary.get('volume_analysis', 'N/A')
                 recommendation = tav_summary.get('recommendation', 'N/A')
                 
@@ -1939,7 +2271,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
         text_lines.append(header)
 
         html = f"""
@@ -1979,6 +2311,8 @@ class HSIEmailSystem:
                         <th>股票名称</th>
                         <th>股票代码</th>
                         <th>趋势(技术分析)</th>
+                        <th>建仓评分</th>
+                        <th>出货评分</th>
                         <th>信号类型(量价分析)</th>
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
@@ -2136,11 +2470,31 @@ class HSIEmailSystem:
             tav_score_display = f"{safe_tav_score:.1f}" if isinstance(safe_tav_score, (int, float)) else "N/A"
             price_value_display = f"{price_display:.2f}" if price_display is not None else "N/A"
             
+            # 获取建仓和出货评分
+            buildup_score = stock_indicators.get('buildup_score', None) if stock_indicators else None
+            buildup_level = stock_indicators.get('buildup_level', None) if stock_indicators else None
+            distribution_score = stock_indicators.get('distribution_score', None) if stock_indicators else None
+            distribution_level = stock_indicators.get('distribution_level', None) if stock_indicators else None
+            
+            # 格式化建仓评分显示
+            buildup_display = "N/A"
+            if buildup_score is not None:
+                buildup_color = "color: green; font-weight: bold;" if buildup_level == 'strong' else "color: orange; font-weight: bold;" if buildup_level == 'partial' else "color: #666;"
+                buildup_display = f"<span style=\"{buildup_color}\">{buildup_score:.2f}</span> <span style=\"font-size: 0.8em; color: #666;\">({buildup_level})</span>"
+            
+            # 格式化出货评分显示
+            distribution_display = "N/A"
+            if distribution_score is not None:
+                distribution_color = "color: red; font-weight: bold;" if distribution_level == 'strong' else "color: orange; font-weight: bold;" if distribution_level == 'weak' else "color: #666;"
+                distribution_display = f"<span style=\"{distribution_color}\">{distribution_score:.2f}</span> <span style=\"font-size: 0.8em; color: #666;\">({distribution_level})</span>"
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
                         <td>{safe_code}</td>
                         <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
+                        <td>{buildup_display}</td>
+                        <td>{distribution_display}</td>
                         <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
@@ -2180,7 +2534,18 @@ class HSIEmailSystem:
             # 添加股票现价显示
             price_value = hist_data['current_price'] if hist_data is not None else None
             price_display = f"{price_value:.2f}" if price_value is not None else 'N/A'
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
+            
+            # 格式化建仓评分（文本版本）
+            buildup_text = "N/A"
+            if buildup_score is not None:
+                buildup_text = f"{buildup_score:.2f}({buildup_level})"
+            
+            # 格式化出货评分（文本版本）
+            distribution_text = "N/A"
+            if distribution_score is not None:
+                distribution_text = f"{distribution_score:.2f}({distribution_level})"
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -2189,7 +2554,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="17">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
