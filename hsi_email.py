@@ -689,6 +689,95 @@ class HSIEmailSystem:
         
         return result
 
+    def _get_trend_change_arrow(self, current_trend, previous_trend):
+        """
+        公用方法：返回趋势变化箭头符号
+        
+        参数:
+        - current_trend: 当前趋势
+        - previous_trend: 上个交易日趋势
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_trend is None or previous_trend == 'N/A' or current_trend is None or current_trend == 'N/A':
+            return '<span style="color: #999;">→</span>'
+        
+        # 定义看涨趋势
+        bullish_trends = ['强势多头', '多头趋势', '短期上涨']
+        # 定义看跌趋势
+        bearish_trends = ['弱势空头', '空头趋势', '短期下跌']
+        # 定义震荡趋势
+        consolidation_trends = ['震荡整理', '震荡']
+        
+        # 趋势改善：看跌/震荡 → 看涨
+        if (previous_trend in bearish_trends + consolidation_trends) and current_trend in bullish_trends:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        
+        # 趋势恶化：看涨 → 看跌
+        if previous_trend in bullish_trends and current_trend in bearish_trends:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        
+        # 震荡 → 看跌（恶化）
+        if previous_trend in consolidation_trends and current_trend in bearish_trends:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        
+        # 看涨 → 震荡（改善）
+        if previous_trend in bullish_trends and current_trend in consolidation_trends:
+            return '<span style="color: orange; font-weight: bold;">↓</span>'
+        
+        # 看跌 → 震荡（改善）
+        if previous_trend in bearish_trends and current_trend in consolidation_trends:
+            return '<span style="color: orange; font-weight: bold;">↑</span>'
+        
+        # 无明显变化（同类型趋势）
+        return '<span style="color: #999;">→</span>'
+    def _get_score_change_arrow(self, current_score, previous_score):
+        """
+        公用方法：返回评分变化箭头符号
+        
+        参数:
+        - current_score: 当前评分
+        - previous_score: 上个交易日评分
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_score is None or current_score is None:
+            return '<span style="color: #999;">→</span>'
+        
+        if current_score > previous_score:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        elif current_score < previous_score:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        else:
+            return '<span style="color: #999;">→</span>'
+
+    def _get_price_change_arrow(self, current_price_str, previous_price):
+        """
+        公用方法：返回价格变化箭头符号
+        
+        参数:
+        - current_price_str: 当前价格字符串（格式化后的）
+        - previous_price: 上个交易日价格（数值）
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_price is None or current_price_str is None or current_price_str == 'N/A':
+            return '<span style="color: #999;">→</span>'
+        
+        try:
+            current_price = float(current_price_str.replace(',', ''))
+            if current_price > previous_price:
+                return '<span style="color: green; font-weight: bold;">↑</span>'
+            elif current_price < previous_price:
+                return '<span style="color: red; font-weight: bold;">↓</span>'
+            else:
+                return '<span style="color: #999;">→</span>'
+        except:
+            return '<span style="color: #999;">→</span>'
+
     def _format_continuous_signal_details(self, transactions_df, times):
         """
         公用方法：格式化连续信号的详细信息（HTML版本）
@@ -2210,6 +2299,43 @@ class HSIEmailSystem:
         print("📊 获取即将除净的港股信息...")
         dividend_data = self.get_upcoming_dividends(days_ahead=90)
         
+        # 计算上个交易日的日期
+        previous_trading_date = None
+        if target_date:
+            if isinstance(target_date, str):
+                target_date_obj = datetime.strptime(target_date, '%Y-%m-%d').date()
+            else:
+                target_date_obj = target_date
+            
+            # 计算上个交易日（排除周末）
+            previous_trading_date = target_date_obj - timedelta(days=1)
+            while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
+                previous_trading_date -= timedelta(days=1)
+        
+        # 获取上个交易日的指标数据
+        previous_day_indicators = {}
+        if previous_trading_date:
+            print(f"📊 获取上个交易日 ({previous_trading_date}) 的指标数据...")
+            for stock_code, stock_name in self.stock_list.items():
+                try:
+                    stock_data = self.get_stock_data(stock_code, target_date=previous_trading_date.strftime('%Y-%m-%d'))
+                    if stock_data:
+                        indicators = self.calculate_technical_indicators(stock_data)
+                        if indicators:
+                            previous_day_indicators[stock_code] = {
+                                'trend': indicators.get('trend', '未知'),
+                                'buildup_score': indicators.get('buildup_score', None),
+                                'buildup_level': indicators.get('buildup_level', None),
+                                'distribution_score': indicators.get('distribution_score', None),
+                                'distribution_level': indicators.get('distribution_level', None),
+                                'tav_score': indicators.get('tav_score', None),
+                                'tav_status': indicators.get('tav_status', None),
+                                'current_price': stock_data.get('current_price', None),
+                                'change_pct': stock_data.get('change_1d', None)
+                            }
+                except Exception as e:
+                    print(f"⚠️ 获取 {stock_code} 上个交易日指标失败: {e}")
+        
         # 创建信号汇总
         all_signals = []
 
@@ -2271,7 +2397,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
         text_lines.append(header)
 
         html = f"""
@@ -2318,6 +2444,11 @@ class HSIEmailSystem:
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
                         <th>股票现价</th>
+                        <th>上个交易日趋势</th>
+                        <th>上个交易日建仓评分</th>
+                        <th>上个交易日出货评分</th>
+                        <th>上个交易日TAV评分</th>
+                        <th>上个交易日价格</th>
                         <th>5日VaR(95%)</th>
                         <th>20日VaR(95%)</th>
                         <th>5日ES(95%)</th>
@@ -2488,6 +2619,39 @@ class HSIEmailSystem:
                 distribution_color = "color: red; font-weight: bold;" if distribution_level == 'strong' else "color: orange; font-weight: bold;" if distribution_level == 'weak' else "color: #666;"
                 distribution_display = f"<span style=\"{distribution_color}\">{distribution_score:.2f}</span> <span style=\"font-size: 0.8em; color: #666;\">({distribution_level})</span>"
             
+            # 获取上个交易日的指标
+            prev_day_data = previous_day_indicators.get(stock_code, {})
+            prev_trend = prev_day_data.get('trend', 'N/A')
+            prev_buildup_score = prev_day_data.get('buildup_score', None)
+            prev_buildup_level = prev_day_data.get('buildup_level', None)
+            prev_distribution_score = prev_day_data.get('distribution_score', None)
+            prev_distribution_level = prev_day_data.get('distribution_level', None)
+            prev_tav_score = prev_day_data.get('tav_score', None)
+            prev_tav_status = prev_day_data.get('tav_status', None)
+            prev_price = prev_day_data.get('current_price', None)
+            prev_change_pct = prev_day_data.get('change_pct', None)
+            
+            # 格式化上个交易日指标显示
+            prev_trend_display = prev_trend if prev_trend is not None else 'N/A'
+            prev_buildup_display = "N/A"
+            if prev_buildup_score is not None:
+                prev_buildup_display = f"{prev_buildup_score:.2f}({prev_buildup_level})"
+            prev_distribution_display = "N/A"
+            if prev_distribution_score is not None:
+                prev_distribution_display = f"{prev_distribution_score:.2f}({prev_distribution_level})"
+            prev_tav_display = "N/A"
+            if prev_tav_score is not None:
+                prev_tav_display = f"{prev_tav_score:.1f}"
+            prev_price_display = f"{prev_price:.2f}" if prev_price is not None else "N/A"
+            prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
+            
+            # 计算变化方向和箭头
+            prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
+            prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
+            prev_distribution_arrow = self._get_score_change_arrow(distribution_score, prev_distribution_score)
+            prev_tav_arrow = self._get_score_change_arrow(tav_score, prev_tav_score)
+            prev_price_arrow = self._get_price_change_arrow(price_value_display, prev_price)
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
@@ -2500,6 +2664,11 @@ class HSIEmailSystem:
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
                         <td>{price_value_display}</td>
+                        <td>{prev_trend_arrow} {prev_trend_display}</td>
+                        <td>{prev_buildup_arrow} {prev_buildup_display}</td>
+                        <td>{prev_distribution_arrow} {prev_distribution_display}</td>
+                        <td>{prev_tav_arrow} {prev_tav_display}</td>
+                        <td>{prev_price_arrow} {prev_price_display} ({prev_change_display})</td>
                         <td>{var_short_display}</td>
                         <td>{var_medium_long_display}</td>
                         <td>{es_short_display}</td>
@@ -2545,7 +2714,23 @@ class HSIEmailSystem:
             if distribution_score is not None:
                 distribution_text = f"{distribution_score:.2f}({distribution_level})"
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
+            # 格式化上个交易日指标（文本版本）
+            prev_trend_display = prev_trend if prev_trend is not None else 'N/A'
+            prev_buildup_display = "N/A"
+            if prev_buildup_score is not None:
+                prev_buildup_display = f"{prev_buildup_score:.2f}({prev_buildup_level})"
+            prev_distribution_display = "N/A"
+            if prev_distribution_score is not None:
+                prev_distribution_display = f"{prev_distribution_score:.2f}({prev_distribution_level})"
+            prev_tav_display = "N/A"
+            if prev_tav_score is not None:
+                prev_tav_display = f"{prev_tav_score:.1f}"
+            prev_price_display = "N/A"
+            if prev_price is not None:
+                prev_price_display = f"{prev_price:.2f}"
+            prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -2554,7 +2739,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="17">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="22">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
