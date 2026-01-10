@@ -2612,7 +2612,7 @@ def main(run_date=None):
         ]
 
         # 按代码号码排序
-        df_report = df_report.sort_values(['code'], ascending=[True])
+        df_report = df_report.sort_values(['代码'], ascending=[True])
 
         # 确保数值列格式化为两位小数用于显示
         for col in df_report.select_dtypes(include=['float64', 'int64']).columns:
