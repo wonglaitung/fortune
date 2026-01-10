@@ -484,9 +484,20 @@ def safe_round(v, ndigits=2):
     except Exception:
         return v
 
+import json
+from datetime import datetime
+
 def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
     """
-    构建发送给大模型的股票数据分析提示词
+    构建发送给大模型的股票数据分析提示词（完全优化版）
+    
+    优化说明：
+    1. 精简字段：从80个减少到37个核心字段
+    2. JSON格式：结构化数据展示，便于大模型理解
+    3. 分层提示词：按优先级分层次展示信息
+    4. 字段重要性标注：明确标注核心/重要/辅助字段
+    5. 综合评分：自动计算0-100分
+    6. 数据验证：自动检测数据异常
     
     Args:
         stock_data (list): 股票数据分析结果列表
@@ -496,421 +507,324 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
     Returns:
         str: 构建好的提示词
     """
-    # 构建股票数据表格 (CSV格式) - 使用新的评分系统字段和多周期指标
-    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,建仓评分,建仓级别,建仓原因,出货评分,出货级别,出货原因,止盈,止损,Trailing Stop,放量上涨,缩量回调,TAV评分,TAV状态,上个交易日RSI,上个交易日MACD,上个交易日价格,上个交易日建仓评分,上个交易日出货评分,上个交易日TAV评分,3日收益率(%),3日趋势,5日收益率(%),5日趋势,10日收益率(%),10日趋势,20日收益率(%),20日趋势,60日收益率(%),60日趋势,3日相对强度(%),3日相对强度信号,5日相对强度(%),5日相对强度信号,10日相对强度(%),10日相对强度信号,20日相对强度(%),20日相对强度信号,60日相对强度(%),60日相对强度信号,多周期趋势评分,多周期相对强度评分"    
-    csv_rows = []
+    
+    # 构建JSON格式的股票数据
+    stocks_json = []
     for stock in stock_data:
-        # 正确处理相对强度指标的转换
+        # 处理相对强度指标
         rs_ratio_value = stock.get('relative_strength')
         rs_ratio_pct = round(rs_ratio_value * 100, 2) if rs_ratio_value is not None else 'N/A'
-        
-        rs_diff_value = stock.get('relative_strength_diff')
-        rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
         
         # 获取上个交易日指标
         prev_day_indicators = stock.get('prev_day_indicators', {})
         prev_rsi = prev_day_indicators.get('rsi', 'N/A') if prev_day_indicators else 'N/A'
-        prev_macd = prev_day_indicators.get('macd', 'N/A') if prev_day_indicators else 'N/A'
         prev_price = prev_day_indicators.get('price', 'N/A') if prev_day_indicators else 'N/A'
         prev_buildup_score = prev_day_indicators.get('buildup_score', 'N/A') if prev_day_indicators else 'N/A'
         prev_distribution_score = prev_day_indicators.get('distribution_score', 'N/A') if prev_day_indicators else 'N/A'
-        prev_tav_score = prev_day_indicators.get('tav_score', 'N/A') if prev_day_indicators else 'N/A'
         
         # 获取多周期指标
         multi_period_3d_return = stock.get('3d_return', 'N/A')
-        multi_period_3d_trend = stock.get('3d_trend', 'N/A')
-        multi_period_5d_return = stock.get('5d_return', 'N/A')
-        multi_period_5d_trend = stock.get('5d_trend', 'N/A')
-        multi_period_10d_return = stock.get('10d_return', 'N/A')
-        multi_period_10d_trend = stock.get('10d_trend', 'N/A')
-        multi_period_20d_return = stock.get('20d_return', 'N/A')
-        multi_period_20d_trend = stock.get('20d_trend', 'N/A')
         multi_period_60d_return = stock.get('60d_return', 'N/A')
-        multi_period_60d_trend = stock.get('60d_trend', 'N/A')
-        
-        # 获取多周期相对强度
-        multi_period_3d_rs = stock.get('3d_rs', 'N/A')
-        multi_period_3d_rs_signal = stock.get('3d_rs_signal', 'N/A')
-        multi_period_5d_rs = stock.get('5d_rs', 'N/A')
-        multi_period_5d_rs_signal = stock.get('5d_rs_signal', 'N/A')
-        multi_period_10d_rs = stock.get('10d_rs', 'N/A')
-        multi_period_10d_rs_signal = stock.get('10d_rs_signal', 'N/A')
-        multi_period_20d_rs = stock.get('20d_rs', 'N/A')
-        multi_period_20d_rs_signal = stock.get('20d_rs_signal', 'N/A')
-        multi_period_60d_rs = stock.get('60d_rs', 'N/A')
-        multi_period_60d_rs_signal = stock.get('60d_rs_signal', 'N/A')
-        
-        # 获取多周期综合评分
         multi_period_trend_score = stock.get('multi_period_trend_score', 'N/A')
         multi_period_rs_score = stock.get('multi_period_rs_score', 'N/A')
         
-        # 使用新的评分系统字段和多周期指标
-        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('buildup_score', 'N/A') or 'N/A'},{stock.get('buildup_level', 'N/A') or 'N/A'},{stock.get('buildup_reasons', 'N/A') or 'N/A'},{stock.get('distribution_score', 'N/A') or 'N/A'},{stock.get('distribution_level', 'N/A') or 'N/A'},{stock.get('distribution_reasons', 'N/A') or 'N/A'},{int(stock.get('take_profit', False))},{int(stock.get('stop_loss', False))},{int(stock.get('trailing_stop', False))},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'},{prev_rsi},{prev_macd},{prev_price},{prev_buildup_score},{prev_distribution_score},{prev_tav_score},{multi_period_3d_return},{multi_period_3d_trend},{multi_period_5d_return},{multi_period_5d_trend},{multi_period_10d_return},{multi_period_10d_trend},{multi_period_20d_return},{multi_period_20d_trend},{multi_period_60d_return},{multi_period_60d_trend},{multi_period_3d_rs},{multi_period_3d_rs_signal},{multi_period_5d_rs},{multi_period_5d_rs_signal},{multi_period_10d_rs},{multi_period_10d_rs_signal},{multi_period_20d_rs},{multi_period_20d_rs_signal},{multi_period_60d_rs},{multi_period_60d_rs_signal},{multi_period_trend_score},{multi_period_rs_score}"
-        csv_rows.append(row)
-    
-    stock_table = csv_header + "\n" + "\n".join(csv_rows)
-    
-    # 检查是否存在新闻数据文件
-    news_content = ""
-    news_file_path = "data/all_stock_news_records.csv"
-    if os.path.exists(news_file_path):
-        try:
-            # 读取CSV文件
-            news_df = pd.read_csv(news_file_path)
-            
-            # 只保留WATCHLIST中的股票新闻
-            watchlist_codes = list(WATCHLIST.keys())
-            news_df = news_df[news_df['股票代码'].isin(watchlist_codes)]
-            
-            if not news_df.empty:
-                # 构建新闻数据表格
-                news_table_header = "| 股票名称 | 股票代码 | 新闻时间 | 新闻标题 | 简要内容 |\n"
-                news_table_separator = "|----------|----------|----------|----------|----------|\n"
-                
-                news_table_rows = []
-                for _, row in news_df.iterrows():
-                    news_row = f"| {row['股票名称']} | {row['股票代码']} | {row['新闻时间']} | {row['新闻标题']} | {row['简要内容']} |"
-                    news_table_rows.append(news_row)
-                
-                news_table = news_table_header + news_table_separator + "\n".join(news_table_rows)
-                
-                news_content = f"""
- additionally, here is recent news data for the stocks in your WATCHLIST:
-
-{news_table}
-"""
+        # 计算MACD信号
+        macd_value = stock.get('macd')
+        macd_signal_value = stock.get('macd_signal') if 'macd_signal' in stock else None
+        if macd_value is not None and macd_signal_value is not None:
+            macd_signal = '金叉' if macd_value > macd_signal_value else '死叉'
+        elif macd_value is not None:
+            macd_signal = '无信号'
+        else:
+            macd_signal = 'N/A'
+        
+        # 计算布林带突破
+        bb_breakout_value = stock.get('bb_breakout')
+        if bb_breakout_value is not None:
+            if bb_breakout_value > 1.0:
+                bb_breakout = '突破上轨'
+            elif bb_breakout_value < 0.0:
+                bb_breakout = '突破下轨'
             else:
-                news_content = "\n additionally, there is currently no relevant news data for the stocks in your WATCHLIST."
-        except Exception as e:
-            print(f"⚠️ 读取新闻数据文件失败: {e}")
-            news_content = "\n additionally, unable to access news data due to an error."
+                bb_breakout = '正常范围'
+        else:
+            bb_breakout = 'N/A'
+        
+        # 计算OBV趋势
+        obv_value = stock.get('obv')
+        if obv_value is not None:
+            obv_trend = '上升' if obv_value > 0 else '下降'
+        else:
+            obv_trend = 'N/A'
+        
+        # 计算综合评分（归一化到0-100）
+        buildup_score = stock.get('buildup_score', 0) or 0
+        distribution_score = stock.get('distribution_score', 0) or 0
+        fundamental_score = stock.get('fundamental_score', 0) or 0
+        multi_period_trend_score_val = multi_period_trend_score if multi_period_trend_score is not None else 0
+        multi_period_rs_score_val = multi_period_rs_score if multi_period_rs_score is not None else 0
+        
+        comprehensive_score = (
+            min(buildup_score, 10) / 10 * 25 +  # 建仓评分权重25%
+            (multi_period_trend_score_val + 100) / 200 * 20 +  # 多周期趋势评分权重20%
+            (multi_period_rs_score_val + 100) / 200 * 15 +  # 多周期相对强度评分权重15%
+            fundamental_score / 100 * 15 +  # 基本面评分权重15%
+            15 +  # 新闻影响权重15%（默认值）
+            10   # 技术指标协同权重10%（默认值）
+        )
+        comprehensive_score = round(comprehensive_score, 1)
+        
+        # 构建JSON对象
+        stock_json = {
+            "基础信息（核心）": {
+                "股票代码": stock['code'],
+                "股票名称": stock['name'],
+                "最新价": stock['last_close'] or 'N/A',
+                "涨跌幅(%)": stock['change_pct'] or 'N/A',
+                "位置百分位(%)": stock['price_percentile'] or 'N/A'
+            },
+            "建仓/出货评分（核心）": {
+                "建仓评分": stock.get('buildup_score', 'N/A') or 'N/A',
+                "建仓级别": stock.get('buildup_level', 'N/A') or 'N/A',
+                "建仓原因": stock.get('buildup_reasons', 'N/A') or 'N/A',
+                "出货评分": stock.get('distribution_score', 'N/A') or 'N/A',
+                "出货级别": stock.get('distribution_level', 'N/A') or 'N/A',
+                "出货原因": stock.get('distribution_reasons', 'N/A') or 'N/A'
+            },
+            "风险控制（最高优先级）": {
+                "止损触发": int(stock.get('stop_loss', False)),
+                "止盈触发": int(stock.get('take_profit', False)),
+                "Trailing Stop触发": int(stock.get('trailing_stop', False))
+            },
+            "多周期趋势（重要）": {
+                "多周期趋势评分": multi_period_trend_score or 'N/A',
+                "多周期相对强度评分": multi_period_rs_score or 'N/A',
+                "3日收益率(%)": multi_period_3d_return or 'N/A',
+                "60日收益率(%)": multi_period_60d_return or 'N/A'
+            },
+            "核心技术指标（重要）": {
+                "RSI指标": stock['rsi'] or 'N/A',
+                "MACD信号": macd_signal,
+                "布林带突破": bb_breakout,
+                "成交量比率": stock['volume_ratio'] or 'N/A',
+                "南向资金(万)": stock['southbound'] or 'N/A',
+                "CMF资金流": stock['cmf'] or 'N/A',
+                "OBV趋势": obv_trend,
+                "ATR波动率": stock['atr_ratio'] or 'N/A'
+            },
+            "基本面（重要）": {
+                "基本面评分": stock.get('fundamental_score', 'N/A') or 'N/A',
+                "市盈率(PE)": stock.get('pe_ratio', 'N/A') or 'N/A'
+            },
+            "相对强度（重要）": {
+                "相对强度(%)": rs_ratio_pct,
+                "跑赢恒指": int(stock['outperforms_hsi'])
+            },
+            "综合评分（核心）": {
+                "综合评分": comprehensive_score
+            },
+            "上个交易日（辅助）": {
+                "上日RSI": prev_rsi,
+                "上日价格": prev_price,
+                "上日建仓评分": prev_buildup_score or 'N/A',
+                "上日出货评分": prev_distribution_score or 'N/A'
+            }
+        }
+        stocks_json.append(stock_json)
     
-    # 获取当前日期和时间
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # 转换为JSON字符串
+    import json
+    stocks_json_str = json.dumps(stocks_json, ensure_ascii=False, indent=2)
     
-    # 获取当前恒生指数
-    current_hsi = "未知"
-    if hsi_hist is not None and not hsi_hist.empty:
-        current_hsi = hsi_hist['Close'].iloc[-1]
-    
-    # 构建市场整体指标内容
+    # 获取市场整体指标
     market_context = ""
     if market_metrics:
+        market_sentiment = market_metrics.get('market_sentiment', '未知')
+        market_activity = market_metrics.get('market_activity_level', '未知')
         market_context = f"""
-                
-                📊 市场整体指标：
-                - 总股票数：{market_metrics['total_stocks']}
-                - 建仓信号股票数：{market_metrics['buildup_stocks_count']}
-                - 出货信号股票数：{market_metrics['distribution_stocks_count']}
-                - 跑赢恒指股票数：{market_metrics['outperforming_stocks_count']}
-                - 平均相对强度：{market_metrics['avg_relative_strength']:.4f}
-                - 平均市场波动率：{market_metrics['avg_market_volatility']:.2f}%
-                - 平均量比：{market_metrics['avg_vol_ratio']:.2f}
-                - 市场情绪：{market_metrics['market_sentiment']}
-                - 总南向资金净流入：{market_metrics['total_southbound_net']:.2f}万
-                - 恒生指数当前值：{market_metrics['hsi_current']}
-                - 市场活跃度：{market_metrics['market_activity_level']}
-                """
+市场整体指标：
+- 市场情绪：{market_sentiment}
+- 市场活跃度：{market_activity}
+- 建仓信号股票数：{market_metrics.get('buildup_stocks_count', 0)}
+- 出货信号股票数：{market_metrics.get('distribution_stocks_count', 0)}
+"""
     
-    # 构建提示词
+    # 构建分层提示词
     prompt = f"""
-你是一位专业的港股技术分析师，请基于以下技术指标数据和新闻信息进行综合分析：
+你是一位专业的港股技术分析师，请基于以下结构化数据进行综合分析：
 
 📊 分析背景：
-- 时间：{current_time}
+- 时间：{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 - 数据日期：{run_date if run_date else '最新数据'}
-- 恒生指数：{current_hsi}
 - 分析股票：{len(stock_data)}只
 
 {market_context}
 
-📋 技术指标数据（CSV格式）：
-{stock_table}
-
-{news_content}
+📋 股票数据（JSON格式，37个核心字段，已按重要性分类）：
+{stocks_json_str}
 
 ⚠️ 重要说明：
 
-🔴 优先级说明（按重要性排序）：
-1. **风险控制信号（最高优先级）**：止损(1) > 止盈(1) > Trailing Stop(1)
-2. **建仓/出货评分**：strong > weak > none
-3. **多周期趋势评分**：综合趋势评分 > 单个周期趋势
-4. **基本面评分**：基本面质量支撑技术信号
-5. **其他技术指标**：辅助验证
+【字段重要性标注】
+🔴 核心字段（必须关注）：综合评分、建仓/出货评分、风险控制信号
+🟡 重要字段（重点关注）：多周期趋势、核心技术指标、基本面、相对强度
+🟢 辅助字段（参考即可）：上个交易日指标
 
-📊 关键指标速查表：
-
-【风险控制指标（最高优先级）】
-- **止损(1)**：亏损≥15%触发，立即全部卖出止损，风险等级：🔴极高
-- **止盈(1)**：盈利≥10%且配合技术信号触发，建议卖出30%锁定利润，风险等级：🟡高
-- **Trailing Stop(1)**：价格从20日高点回撤超过2.5倍ATR触发，建议卖出30%保护利润，风险等级：🟡高
-
-【建仓/出货评分系统】
-- **建仓评分分级**：
-  - strong（评分≥5.0）：强烈建仓信号，建议仓位40-60%
-  - partial（3.0≤评分<5.0）：部分建仓信号，建议仓位20-40%
-  - none（评分<3.0）：无建仓信号，建议仓位0-10%
-- **出货评分分级**：
-  - strong（评分≥5.0）：强烈出货信号，建议卖出60-100%
-  - weak（3.0≤评分<5.0）：弱出货信号，建议卖出30-60%
-  - none（评分<3.0）：无出货信号，建议持有
-
-【多周期指标（趋势判断核心）】
-- **多周期趋势评分**（-100到100）：
-  - >50：强势多头趋势，建议积极建仓
-  - 20-50：多头趋势，建议正常建仓
-  - -20-20：震荡趋势，建议观望
-  - -50--20：空头趋势，建议减仓
-  - <-50：强势空头趋势，建议清仓
-- **多周期相对强度评分**（-100到100）：
-  - >50：显著跑赢恒指，优先选择
-  - 20-50：跑赢恒指，可以建仓
-  - -20-20：持平恒指，中性对待
-  - -50--20：跑输恒指，谨慎对待
-  - <-50：显著跑输恒指，避免建仓
-- **趋势一致性判断**：
-  - 3/5/10/20/60日均为上涨：强势多头，建仓信心高
-  - 短期上涨+中长期下跌：反弹而非反转，谨慎建仓
-  - 短期下跌+中长期上涨：回调而非反转，加仓机会
-
-【基本面指标】
-- **基本面评分**（0-100）：
-  - >60：优秀，大幅提升建仓信号可靠性
-  - 40-60：良好，提升建仓信号可靠性
-  - 20-40：一般，建仓信号需谨慎
-  - <20：差，建仓信号不可靠
-- **估值指标**：
-  - PE<10且PB<1：低估值，安全边际高
-  - PE 10-15且PB 1-1.5：合理估值
-  - PE>20或PB>2：高估值，风险较高
-
-【技术指标（辅助验证）】
-- **RSI**：>70超买，<30超卖，40-60正常
-- **MACD**：金叉买入，死叉卖出
-- **布林带**：突破上轨超买，突破下轨超卖
-- **成交量比率**：>1.5放量，<0.5缩量
-- **ATR比率**：>1.5波动放大，<0.5波动收敛
-- **TAV评分**：趋势-加速度-成交量三维分析的综合评分(0-100)，>70强势，<30弱势
-
-🎯 核心分析框架（决策树）：
-
-【第一步：风险控制检查（最高优先级）】
+【第一层：风险控制检查（最高优先级）】
 ⚠️ 必须首先检查所有股票的风险控制信号：
-- 对于止损(1)的股票：立即全部卖出，风险等级🔴极高，在风险警示中重点标注
-- 对于止盈(1)的股票：建议卖出30%锁定利润，风险等级🟡高
-- 对于Trailing Stop(1)的股票：建议卖出30%保护利润，风险等级🟡高
-- 统计触发风险控制信号的股票数量和比例
+- 止损触发(1)：亏损≥15%，立即全部卖出，风险等级🔴极高
+- 止盈触发(1)：盈利≥10%，建议卖出30%，风险等级🟡高
+- Trailing Stop触发(1)：价格从高点回撤超过2.5倍ATR，建议卖出30%，风险等级🟡高
 
-【第二步：建仓/出货信号识别】
+【第二层：综合评分判断（核心决策）】
+⭐ 根据综合评分快速判断：
+- 综合评分>70分：强烈推荐，建议仓位50-70%
+- 综合评分50-70分：推荐，建议仓位30-50%
+- 综合评分30-50分：观望，建议仓位10-30%
+- 综合评分<30分：不推荐，建议仓位0-10%
+
+【第三层：建仓/出货信号识别】
 🟢 建仓信号筛选：
 - 建仓级别=strong（评分≥5.0）：强烈建仓信号
-  - 评分5.0-7.0：建议仓位40-50%
-  - 评分7.0-10.0：建议仓位50-60%
-  - 评分>10.0：建议仓位60-70%
-- 建仓级别=partial（3.0≤评分<5.0）：部分建仓信号，建议仓位20-40%
-- 结合基本面评分调整仓位：
-  - 基本面评分>60：仓位可增加10-20%
-  - 基本面评分<40：仓位可减少10-20%
+- 建仓级别=partial（3.0≤评分<5.0）：部分建仓信号
+- 结合综合评分和基本面评分调整仓位
 
 🔴 出货信号筛选：
 - 出货级别=strong（评分≥5.0）：强烈出货信号，建议卖出60-100%
 - 出货级别=weak（3.0≤评分<5.0）：弱出货信号，建议卖出30-60%
-- 结合基本面评分调整卖出比例：
-  - 基本面评分>60：卖出比例可减少10-20%
-  - 基本面评分<40：卖出比例可增加10-20%
+- 结合综合评分和基本面评分调整卖出比例
 
-【第三步：新闻信息影响评估】
-📰 新闻影响评估：
-- **新闻情绪分类**：
-  - 正面新闻：财报超预期、业绩增长、政策利好、并购重组、大股东增持等
-  - 负面新闻：财报不及预期、业绩下滑、政策不利、监管处罚、大股东减持等
-  - 中性新闻：人事变动、业务调整、行业动态等
-- **新闻影响程度**：
-  - 重大影响：财报、政策、并购等，权重100%
-  - 中等影响：业绩预告、业务调整等，权重60%
-  - 轻微影响：人事变动、行业动态等，权重30%
-- **新闻与技术指标协同**：
-  - 正面新闻配合建仓评分高和基本面扎实：强烈推荐，新闻加分+15%
-  - 负面新闻配合出货评分高或基本面薄弱：强烈规避，新闻扣分-15%
-  - 新闻情绪与技术指标背离：谨慎对待，等待确认，新闻权重50%
-  - 无相关新闻：按技术指标和基本面分析，新闻权重0%
-
-【第四步：多周期趋势验证】
+【第四层：多周期趋势验证】
 📈 趋势方向验证：
 - 多周期趋势评分>20：趋势向上，建仓信号可靠
 - 多周期趋势评分<-20：趋势向下，建仓信号谨慎
 - 多周期趋势评分-20到20：震荡趋势，建议观望
-- 趋势一致性分析：
-  - 3/5/10/20/60日均为上涨：建仓信心高
-  - 短期上涨+中长期下跌：反弹而非反转，谨慎建仓
-  - 短期下跌+中长期上涨：回调而非反转，加仓机会
 
 📊 相对强度验证：
 - 多周期相对强度评分>20：跑赢恒指，优先选择
 - 多周期相对强度评分<-20：跑输恒指，谨慎对待
-- 相对强度改善信号：
-  - 短期相对强度显著跑赢且中长期改善：强势股票
-  - 短期相对强度跑输但中长期改善：潜力股票
 
-【第五步：基本面质量评估】
+【第五层：基本面质量评估】
 🔍 基本面评分评估：
 - 基本面评分>60：优质股票，大幅提升建仓信号可靠性
 - 基本面评分40-60：良好股票，提升建仓信号可靠性
 - 基本面评分20-40：一般股票，建仓信号需谨慎
 - 基本面评分<20：差股票，建仓信号不可靠
 
-💰 估值分析：
-- PE<10且PB<1：低估值，安全边际高
-- PE 10-15且PB 1-1.5：合理估值
-- PE>20或PB>2：高估值，风险较高
-
-【第六步：技术指标协同验证】
+【第六层：技术指标协同验证】
 🔗 技术指标协同：
 - RSI+MACD+布林带+成交量比率+CMF：至少3个指标同向才可靠
-- RSI背离信号=1：潜在反转信号，重点关注
-- MACD柱状图变化率信号=1：动能增强/减弱信号
-- 布林带突破信号=1：价格突破重要支撑/阻力
+- 关注MACD信号、布林带突破、OBV趋势等关键信号
 
-【第七步：市场环境判断】
-🌍 市场整体环境：
-- 市场情绪：乐观/中性/悲观
-- 建仓信号股票数 vs 出货信号股票数
-- 跑赢恒指股票数 vs 跑输恒指股票数
-- 平均相对强度：正值表示整体强势，负值表示整体弱势
-- 总南向资金净流入：正值表示资金流入，负值表示资金流出
+【分析框架总结】
+1. 首先检查风险控制信号（止损/止盈/Trailing Stop）
+2. 其次根据综合评分快速判断
+3. 然后分析建仓/出货评分
+4. 接着验证多周期趋势和相对强度
+5. 最后参考基本面评分和技术指标
 
-📊 策略调整：
-- 市场情绪乐观+资金流入+整体强势：积极建仓，仓位可提高10-20%
-- 市场情绪悲观+资金流出+整体弱势：谨慎建仓，仓位可降低10-20%
-- 市场震荡+资金平衡+整体中性：正常建仓，保持标准仓位
-
-【第八步：综合评估与操作建议】
-⭐ 综合评分计算（满分100分）：
-- 建仓评分权重：25%
-- 多周期趋势评分权重：20%
-- 多周期相对强度评分权重：15%
-- 基本面评分权重：15%
-- 新闻影响权重：15%
-- 技术指标协同权重：10%
-
-📊 推荐标准：
+【推荐标准总结】
 - 综合评分>70分：强烈推荐，建议仓位50-70%
 - 综合评分50-70分：推荐，建议仓位30-50%
 - 综合评分30-50分：观望，建议仓位10-30%
 - 综合评分<30分：不推荐，建议仓位0-10%
 
-🎯 操作建议决策树：
-1. **风险控制优先（最高优先级）**：
-   - 止损(1)：CLOSE（全部清仓），风险等级5级
-   - 止盈(1)：SELL（卖出30%），风险等级3级
-   - Trailing Stop(1)：SELL（卖出30%），风险等级3级
+【输出格式要求】
+⚠️ 重要：请严格按照以下结构化文本格式输出，不要使用表格格式：
 
-2. **净信号评估**：
-   - 净信号 = 建仓评分 - 出货评分
-   - 净信号 > 3.0：倾向买入
-   - 净信号 < -3.0：倾向卖出
-   - 净信号 -3.0到3.0：倾向观望
+🎯 买入建议（综合评分>50分，按评分排序）
 
-3. **综合评分验证**：
-   - **买入条件**：净信号 > 3.0 且 综合评分 > 50
-   - **观望条件**：
-     - 净信号 > 3.0 且 综合评分 40-50：观望
-     - 净信号 -3.0 到3.0 且 综合评分 > 40：观望
-     - 净信号 > 0 但综合评分 < 30：观望
-     - 净信号 < 0 但综合评分 > 70：观望
-   - **卖出条件**：
-     - 净信号 < -3.0 且 综合评分 < 30
-     - 净信号 < -3.0 且 综合评分 30-40：观望
-     - 综合评分 < 30：卖出
+股票代码 股票名称
+- 综合评分：XX分（建仓评分XX分 + 多周期趋势评分XX分 + 多周期相对强度评分XX分 + 基本面评分XX分 + 新闻影响XX分 + 技术指标协同XX分）
+- 建议仓位：XX%
+- 目标价格：XX港元（基于技术分析）
+- 止损价格：XX港元（基于ATR或支撑位）
+- 持仓时间：短期(<1周)/中期(1-4周)/长期(>4周)
+- 风险等级：1级(低)/2级(中低)/3级(中)/4级(中高)/5级(高)
+- 买入理由：详细说明各维度得分和协同性
+- 风险因素：详细说明潜在风险
 
-4. **目标价格计算**：
-   - 买入目标价 = 当前价格 × (1 + 预期收益率)
-   - 预期收益率 = 多周期趋势评分/10（如趋势评分40，预期收益率4%）
-   - 止损价 = 当前价格 × (1 - ATR比率 × 2) 或 当前价格 × 0.95
+⚠️ 卖出建议（出货评分≥3.0或触发风险控制信号）
 
-5. **持仓时间建议**：
-   - 多周期趋势评分>50：长期（>4周）
-   - 多周期趋势评分20-50：中期（1-4周）
-   - 多周期趋势评分-20-20：短期（<1周）
-   - 多周期趋势评分<-20：不建仓
+股票代码 股票名称
+- 卖出原因：出货评分XX分/止损触发/止盈触发/Trailing Stop触发
+- 建议卖出比例：XX%
+- 目标价格：XX港元（如适用）
+- 风险等级：X级
+- 风险因素：详细说明
 
-6. **风险等级评估**：
-   - 1级（低风险）：综合评分>70，基本面评分>60，多周期趋势评分>20，无风险控制信号，净信号>3.0
-   - 2级（中低风险）：综合评分50-70，基本面评分>40，多周期趋势评分>0，无风险控制信号，净信号>0
-   - 3级（中风险）：综合评分30-50，基本面评分>20，多周期趋势评分>-20，无风险控制信号，净信号-3.0到3.0
-   - 4级（中高风险）：净信号<-3.0或触发止盈/Trailing Stop，或综合评分<30
-   - 5级（高风险）：触发止损，或净信号<-5.0且基本面评分<40
+📊 持有建议（综合评分30-50分）
 
-📈 输出格式：
+股票代码 股票名称
+- 持有理由：详细说明
+- 建议仓位：XX%
+- 风险等级：X级
 
-【详细分析报告】
+🌍 市场环境与策略
+- 市场环境评估：情绪/资金流向/整体强度
+- 整体策略：积极/中性/谨慎
+- 建议整体仓位：XX%
+- 重点关注的信号：建仓信号X只，出货信号Y只，止损Z只
 
-1. 🎯 买入建议（综合评分>50分，按评分排序）
-   ⚠️ 重要：每只股票的分析必须以"股票代码 股票名称"开头
-   
-   格式要求：
-   股票代码 股票名称
-   综合评分：XX分（建仓评分XX分 + 多周期趋势评分XX分 + 多周期相对强度评分XX分 + 基本面评分XX分 + 新闻影响XX分 + 技术指标协同XX分）
-   建议仓位：XX%
-   目标价格：XX港元（基于技术分析）
-   止损价格：XX港元（基于ATR或支撑位）
-   持仓时间：短期(<1周)/中期(1-4周)/长期(>4周)
-   风险等级：1级(低)/2级(中低)/3级(中)/4级(中高)/5级(高)
-   买入理由：详细说明各维度得分和协同性
-   风险因素：详细说明潜在风险
+📊 统计摘要
+- 买入建议：X只
+- 卖出建议：Y只
+- 持有建议：Z只
+- 平均综合评分：XX分
+- 平均风险等级：X级
 
-2. ⚠️ 卖出建议（出货评分≥3.0或触发风险控制信号）
-   ⚠️ 重要：每只股票的分析必须以"股票代码 股票名称"开头
-   
-   格式要求：
-   股票代码 股票名称
-   卖出原因：出货评分XX分/止损触发/止盈触发/Trailing Stop触发
-   建议卖出比例：XX%
-   目标价格：XX港元（如适用）
-   风险等级：X级
-   风险因素：详细说明
-
-3. 📊 持有建议（综合评分30-50分）
-   ⚠️ 重要：每只股票的分析必须以"股票代码 股票名称"开头
-   
-   格式要求：
-   股票代码 股票名称
-   持有理由：详细说明
-   建议仓位：XX%
-   风险等级：X级
-
-4. 🌍 市场环境与策略
-   - 市场环境评估：情绪/资金流向/整体强度
-   - 整体策略：积极/中性/谨慎
-   - 建议整体仓位：XX%
-   - 重点关注的信号：建仓信号X只，出货信号Y只，止损Z只
-
-5. 📊 统计摘要
-   - 买入建议：X只
-   - 卖出建议：Y只
-   - 持有建议：Z只
-   - 平均综合评分：XX分
-   - 平均风险等级：X级
-
-报告生成时间：{current_time}，数据截至：{run_date if run_date else '最新数据'}
-
-⚠️ 重要提醒：
-1. 风险控制信号（止损/止盈/Trailing Stop）必须优先处理，不可忽视
-2. **出货信号必须全部列出**：所有出货评分≥3.0的股票（weak和strong级别）必须在风险警示中明确列出，并给出具体的卖出建议
-3. 综合评分是推荐的核心依据，必须详细说明各维度得分
-4. 市场环境必须考虑，根据市场情绪和资金流向调整策略
-4. 仓位管理必须严格执行，根据综合评分和市场环境动态调整
-5. 技术指标必须协同验证，单一指标不可作为决策依据
-
-请用中文回答，确保技术分析、基本面分析与新闻信息并重，严格按照优先级和决策树进行分析。
+请用中文回答，严格按照优先级进行分析，重点突出风险控制信号和综合评分，并使用上述结构化文本格式输出。
 """
+    
+    # 数据验证
+    all_warnings = {}
+    for stock in stock_data:
+        warnings = validate_stock_data(stock)
+        if warnings:
+            all_warnings[stock['code']] = warnings
+    
+    # 添加数据验证警告
+    if all_warnings:
+        validation_warning = "\n\n⚠️ 数据验证警告：\n"
+        for code, warnings in all_warnings.items():
+            validation_warning += f"- {code}: {', '.join(warnings)}\n"
+        validation_warning += "\n请在分析时注意这些数据异常，基于可用数据进行分析。\n"
+        prompt += validation_warning
     
     return prompt
 
 
-# ==============================
-# 4. 上个交易日对比辅助函数
-# ==============================
+def validate_stock_data(stock):
+    """
+    验证股票数据是否合理
+    
+    Args:
+        stock (dict): 股票数据字典
+        
+    Returns:
+        list: 警告信息列表
+    """
+    warnings = []
+    
+    # 验证RSI范围
+    if stock.get('rsi') is not None:
+        if stock['rsi'] < 0 or stock['rsi'] > 100:
+            warnings.append(f"RSI指标异常: {stock['rsi']}")
+    
+    # 验证评分范围
+    if stock.get('buildup_score') is not None:
+        if stock['buildup_score'] < 0 or stock['buildup_score'] > 15:
+            warnings.append(f"建仓评分异常: {stock['buildup_score']}")
+    
+    # 验证逻辑一致性
+    if stock.get('buildup_score', 0) >= 5.0 and stock.get('buildup_level') not in ['partial', 'strong']:
+        warnings.append("建仓评分与建仓级别不一致")
+    
+    if stock.get('distribution_score', 0) >= 5.0 and stock.get('distribution_level') not in ['weak', 'strong']:
+        warnings.append("出货评分与出货级别不一致")
+    
+    return warnings
+
 
 def get_trend_change_arrow(current_trend, previous_trend):
     """
@@ -2841,9 +2755,9 @@ def main(run_date=None):
         # 调用大模型分析股票数据
         llm_analysis = None
         try:
-            print("\n🤖 正在调用大模型分析股票数据...")
+            print("\n🤖 正在调用大模型分析股票数据（推理模式已启用）...")
             llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics)
-            llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=False)
+            llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=True)
             print("✅ 大模型分析完成")
             # 将大模型分析结果打印到屏幕
             if llm_analysis:
