@@ -2498,108 +2498,88 @@ def main(run_date=None):
         df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
         df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
 
-        # 选择并重命名列用于最终报告（保留 machine-friendly 列名以及展示列）
+        # 选择并重命名列用于最终报告（精简版：只保留32个核心字段）
         df_report = df[[
-            # 基本信息
-            'name', 'code', 'last_close', 'change_pct',
-            # 价格位置
-            'price_percentile',
-            # 成交量相关
-            'vol_ratio', 'vol_z_score', 'turnover_z_score', 'turnover', 'turnover_rate', 'vwap', 'volume_ratio', 'volume_ratio_signal',
-            # 波动性指标
-            'atr', 'atr_ratio', 'atr_ratio_signal', 'bb_width', 'bb_breakout', 'volatility',
-            # 均线偏离
-            'ma5_deviation', 'ma10_deviation',
-            # 技术指标
-            'rsi', 'rsi_roc', 'rsi_divergence',
-            'macd', 'macd_hist', 'macd_hist_roc', 'macd_hist_roc_signal',
-            'obv',
-            'cmf', 'cmf_signal', 'cmf_trend_signal',
-            'stoch_k', 'stoch_d', 'stoch_signal',
-            'williams_r', 'williams_r_signal',
-            'bb_breakout_signal',
-            'roc_signal',
-            # 资金流向指标
-            'southbound',
-            # 相对表现
-            'RS_ratio_%', 'RS_diff_%', 'outperforms_hsi',
-            # 基本面数据（只保留PE和PB）
-            'fundamental_score', 'pe_ratio', 'pb_ratio',
-            # 新的评分系统字段
+            # 基本信息（核心）
+            'name', 'code', 'last_close', 'change_pct', 'price_percentile',
+            # 建仓/出货评分（核心）
             'buildup_score', 'buildup_level', 'buildup_reasons',
             'distribution_score', 'distribution_level', 'distribution_reasons',
+            # 风险控制（最高优先级）
             'take_profit', 'stop_loss', 'trailing_stop',
-            # 信号指标
-            'strong_volume_up', 'weak_volume_down',
-            # TAV评分
-            'tav_score', 'tav_status',
-            # 上个交易日指标（新增）
-            'prev_day_indicators',
-            # 多周期指标（新增）
-            '3d_return', '3d_trend', '5d_return', '5d_trend',
-            '10d_return', '10d_trend', '20d_return', '20d_trend',
-            '60d_return', '60d_trend',
-            '3d_rs', '3d_rs_signal', '5d_rs', '5d_rs_signal',
-            '10d_rs', '10d_rs_signal', '20d_rs', '20d_rs_signal',
-            '60d_rs', '60d_rs_signal',
-            'multi_period_trend_score', 'multi_period_rs_score'
+            # 多周期趋势（重要）
+            '3d_return', '5d_return', '10d_return', '20d_return', '60d_return',
+            'multi_period_trend_score',
+            # 核心技术指标（重要）
+            'rsi', 'macd', 'volume_ratio', 'atr', 'cmf',
+            # 基本面（重要）
+            'fundamental_score', 'pe_ratio', 'pb_ratio',
+            # 相对强度（重要）
+            'RS_ratio_%', 'outperforms_hsi',
+            # 综合评分（核心）
+            'multi_period_rs_score'
         ]]
         
-        # 从prev_day_indicators中提取上个交易日指标作为独立列
-        df_report['prev_rsi'] = df_report['prev_day_indicators'].apply(lambda x: x.get('rsi') if isinstance(x, dict) else None)
-        df_report['prev_macd'] = df_report['prev_day_indicators'].apply(lambda x: x.get('macd') if isinstance(x, dict) else None)
-        df_report['prev_price'] = df_report['prev_day_indicators'].apply(lambda x: x.get('price') if isinstance(x, dict) else None)
-        df_report['prev_buildup_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('buildup_score') if isinstance(x, dict) else None)
-        df_report['prev_distribution_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('distribution_score') if isinstance(x, dict) else None)
-        df_report['prev_tav_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('tav_score') if isinstance(x, dict) else None)
+        # 计算综合评分（0-100分）
+        def calculate_comprehensive_score(row):
+            """计算综合评分：建仓评分(15) + 多周期趋势评分(35) + 多周期相对强度评分(20) + 基本面评分(15) + 新闻影响(10) + 技术指标协同(5)"""
+            buildup_score = row.get('buildup_score', 0) or 0
+            trend_score = row.get('multi_period_trend_score', 0) or 0
+            rs_score = row.get('multi_period_rs_score', 0) or 0
+            fundamental_score = row.get('fundamental_score', 0) or 0
+            
+            # 新闻影响：暂时设为10分（如果有新闻数据可以动态调整）
+            news_impact = 10
+            
+            # 技术指标协同：基于RSI、MACD、成交量、ATR、CMF的协同性
+            rsi = row.get('rsi', 50) or 50
+            macd = row.get('macd', 0) or 0
+            vol_ratio = row.get('volume_ratio', 1) or 1
+            cmf = row.get('cmf', 0) or 0
+            
+            # 简单协同性评分：RSI在30-70之间，MACD为正，成交量放大，CMF为正
+            tech_synergy = 0
+            if 30 <= rsi <= 70:
+                tech_synergy += 1
+            if macd > 0:
+                tech_synergy += 2
+            if vol_ratio > 1.5:
+                tech_synergy += 1
+            if cmf > 0:
+                tech_synergy += 1
+            
+            # 综合评分：归一化到0-100分
+            comprehensive_score = (
+                buildup_score +  # 0-15分
+                trend_score +    # 0-35分
+                rs_score +       # 0-20分
+                fundamental_score +  # 0-15分
+                news_impact +    # 10分
+                tech_synergy     # 0-5分
+            )
+            return round(comprehensive_score, 1)
         
-        # 移除prev_day_indicators列（已提取为独立列）
-        df_report = df_report.drop('prev_day_indicators', axis=1)
+        df_report['comprehensive_score'] = df_report.apply(calculate_comprehensive_score, axis=1)
         
         df_report.columns = [
-            # 基本信息
-            '股票名称', '代码', '最新价', '涨跌幅(%)',
-            # 价格位置
-            '位置(%)',
-            # 成交量相关
-            '量比', '成交量z-score', '成交额z-score', '成交金额(百万)', '换手率(%)', 'VWAP', '成交量比率', '成交量比率信号',
-            # 波动性指标
-            'ATR', 'ATR比率', 'ATR比率信号', '布林带宽度(%)', '布林带突破', '波动率(%)',
-            # 均线偏离
-            '5日均线偏离(%)', '10日均线偏离(%)',
-            # 技术指标
-            'RSI', 'RSI变化率', 'RSI背离信号',
-            'MACD', 'MACD柱状图', 'MACD柱状图变化率', 'MACD柱状图变化率信号',
-            'OBV',
-            'CMF', 'CMF信号线', 'CMF趋势信号',
-            '随机振荡器K', '随机振荡器D', '随机振荡器信号',
-            'Williams %R', 'Williams %R信号',
-            '布林带突破信号',
-            '价格变化率信号',
-            # 资金流向指标
-            '南向资金(万)',
-            # 相对表现
-            '相对强度(RS_ratio_%)', '相对强度差值(RS_diff_%)', '跑赢恒指',
-            # 基本面数据（只保留PE和PB）
-            '基本面评分', '市盈率', '市净率',
-            # 新的评分系统字段
+            # 基本信息（核心）
+            '股票名称', '代码', '最新价', '涨跌幅(%)', '位置(%)',
+            # 建仓/出货评分（核心）
             '建仓评分', '建仓级别', '建仓原因',
             '出货评分', '出货级别', '出货原因',
+            # 风险控制（最高优先级）
             '止盈', '止损', 'Trailing Stop',
-            # 信号指标
-            '放量上涨', '缩量回调',
-            # TAV评分
-            'TAV评分', 'TAV状态',
-            # 上个交易日指标（新增）
-            '上个交易日RSI', '上个交易日MACD', '上个交易日价格', '上个交易日建仓评分', '上个交易日出货评分', '上个交易日TAV评分',
-            # 多周期指标（新增）
-            '3日收益率(%)', '3日趋势', '5日收益率(%)', '5日趋势',
-            '10日收益率(%)', '10日趋势', '20日收益率(%)', '20日趋势',
-            '60日收益率(%)', '60日趋势',
-            '3日相对强度(%)', '3日相对强度信号', '5日相对强度(%)', '5日相对强度信号',
-            '10日相对强度(%)', '10日相对强度信号', '20日相对强度(%)', '20日相对强度信号',
-            '60日相对强度(%)', '60日相对强度信号',
-            '多周期趋势评分', '多周期相对强度评分'
+            # 多周期趋势（重要）
+            '3日收益率(%)', '5日收益率(%)', '10日收益率(%)', '20日收益率(%)', '60日收益率(%)',
+            '多周期趋势评分',
+            # 核心技术指标（重要）
+            'RSI', 'MACD', '成交量比率', 'ATR', 'CMF',
+            # 基本面（重要）
+            '基本面评分', '市盈率', '市净率',
+            # 相对强度（重要）
+            '相对强度(RS_ratio_%)', '跑赢恒指',
+            # 综合评分（核心）
+            '多周期相对强度评分', '综合评分'
         ]
 
         # 按代码号码排序
@@ -2897,30 +2877,24 @@ def main(run_date=None):
                 chunk = df_report.iloc[i:i+5]
                 
                 # 创建包含分类信息和字段名的完整表格
-                # 分类行
+                # 分类行（精简版：32个核心字段）
                 category_row = [
-                    # 基本信息 (4列)
-                    '基本信息', '', '', '',
-                    # 价格位置 (1列)
-                    '价格位置',
-                    # 成交量相关 (8列)
-                    '成交量相关', '', '', '', '', '', '', '',
-                    # 波动性指标 (6列)
-                    '波动性指标', '', '', '', '', '',
-                    # 均线偏离 (2列)
-                    '', '',
-                    # 技术指标 (18列)
-                    '技术指标', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                    # 资金流向指标 (1列)
-                    '资金流向指标',
-                    # 相对表现 (3列)
-                    '相对表现', '', '',
-                    # 基本面数据 (7列)
-                    '基本面数据', '', '', '', '', '', '',
-                    # 信号指标 (4列)
-                    '', '信号指标', '', '',
-                    # TAV评分 (2列)
-                    'TAV评分', ''
+                    # 基本信息（核心）- 5列
+                    '基本信息', '', '', '', '',
+                    # 建仓/出货评分（核心）- 6列
+                    '建仓/出货评分', '', '', '', '', '',
+                    # 风险控制（最高优先级）- 3列
+                    '风险控制', '', '',
+                    # 多周期趋势（重要）- 6列
+                    '多周期趋势', '', '', '', '', '',
+                    # 核心技术指标（重要）- 5列
+                    '核心技术指标', '', '', '', '',
+                    # 基本面（重要）- 3列
+                    '基本面', '', '',
+                    # 相对强度（重要）- 2列
+                    '相对强度', '',
+                    # 综合评分（核心）- 2列
+                    '综合评分', ''
                 ]
                 
                 # 将分类行作为第一行，字段名作为第二行，数据作为后续行
