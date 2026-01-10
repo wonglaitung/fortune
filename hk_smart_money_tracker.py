@@ -2603,8 +2603,8 @@ def main(run_date=None):
             '多周期趋势评分', '多周期相对强度评分'
         ]
 
-        # 按出货评分降序、建仓评分降序排序（优先显示出货信号强的股票）
-        df_report = df_report.sort_values(['出货评分', '建仓评分'], ascending=[False, False])
+        # 按代码号码排序
+        df_report = df_report.sort_values(['code'], ascending=[True])
 
         # 确保数值列格式化为两位小数用于显示
         for col in df_report.select_dtypes(include=['float64', 'int64']).columns:
