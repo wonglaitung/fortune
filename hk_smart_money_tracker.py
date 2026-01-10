@@ -2343,7 +2343,8 @@ def markdown_to_html(md_text):
             # 分割单元格并去除空白
             cells = [cell.strip() for cell in line.split('|')]
             # 过滤掉首尾的空字符串（因为 | 开头或结尾会产生空字符串）
-            cells = [cell for i, cell in enumerate(cells) if i > 0 and i < len(cells) - 1]
+            # 但是要保留所有非空的单元格
+            cells = [cell for cell in cells if cell.strip()]
             
             # 确定是表头还是数据行
             if not table_header_processed and any('---' in cell for cell in [c for c in cells if c.strip()]):
