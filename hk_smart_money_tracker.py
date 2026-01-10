@@ -2757,7 +2757,7 @@ def main(run_date=None):
         try:
             print("\n🤖 正在调用大模型分析股票数据...")
             llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics)
-            llm_analysis = qwen_engine.chat_with_llm(llm_prompt)
+            llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=False)
             print("✅ 大模型分析完成")
             # 将大模型分析结果打印到屏幕
             if llm_analysis:
