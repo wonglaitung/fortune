@@ -7,7 +7,7 @@ from datetime import datetime
 api_key = os.getenv('QWEN_API_KEY', '')  # 从环境变量读取API密钥
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-max_tokens = int(os.getenv('MAX_TOKENS', 32768))
+max_tokens = int(os.getenv('MAX_TOKENS', 65536))
 
 def log_message(message, log_file="qwen_engine.log"):
     """
