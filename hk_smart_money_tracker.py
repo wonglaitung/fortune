@@ -413,9 +413,8 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
     Returns:
         str: 构建好的提示词
     """
-    # 构建股票数据表格 (CSV格式) - 使用新的评分系统字段
-    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,建仓评分,建仓级别,建仓原因,出货评分,出货级别,出货原因,止盈,止损,Trailing Stop,放量上涨,缩量回调,TAV评分,TAV状态,上个交易日RSI,上个交易日MACD,上个交易日价格,上个交易日建仓评分,上个交易日出货评分,上个交易日TAV评分"
-    
+    # 构建股票数据表格 (CSV格式) - 使用新的评分系统字段和多周期指标
+    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,建仓评分,建仓级别,建仓原因,出货评分,出货级别,出货原因,止盈,止损,Trailing Stop,放量上涨,缩量回调,TAV评分,TAV状态,上个交易日RSI,上个交易日MACD,上个交易日价格,上个交易日建仓评分,上个交易日出货评分,上个交易日TAV评分,3日收益率(%),3日趋势,5日收益率(%),5日趋势,10日收益率(%),10日趋势,20日收益率(%),20日趋势,60日收益率(%),60日趋势,3日相对强度(%),3日相对强度信号,5日相对强度(%),5日相对强度信号,10日相对强度(%),10日相对强度信号,20日相对强度(%),20日相对强度信号,60日相对强度(%),60日相对强度信号,多周期趋势评分,多周期相对强度评分"    
     csv_rows = []
     for stock in stock_data:
         # 正确处理相对强度指标的转换
@@ -434,8 +433,36 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         prev_distribution_score = prev_day_indicators.get('distribution_score', 'N/A') if prev_day_indicators else 'N/A'
         prev_tav_score = prev_day_indicators.get('tav_score', 'N/A') if prev_day_indicators else 'N/A'
         
-        # 使用新的评分系统字段
-        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('buildup_score', 'N/A') or 'N/A'},{stock.get('buildup_level', 'N/A') or 'N/A'},{stock.get('buildup_reasons', 'N/A') or 'N/A'},{stock.get('distribution_score', 'N/A') or 'N/A'},{stock.get('distribution_level', 'N/A') or 'N/A'},{stock.get('distribution_reasons', 'N/A') or 'N/A'},{int(stock.get('take_profit', False))},{int(stock.get('stop_loss', False))},{int(stock.get('trailing_stop', False))},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'},{prev_rsi},{prev_macd},{prev_price},{prev_buildup_score},{prev_distribution_score},{prev_tav_score}"
+        # 获取多周期指标
+        multi_period_3d_return = stock.get('3d_return', 'N/A')
+        multi_period_3d_trend = stock.get('3d_trend', 'N/A')
+        multi_period_5d_return = stock.get('5d_return', 'N/A')
+        multi_period_5d_trend = stock.get('5d_trend', 'N/A')
+        multi_period_10d_return = stock.get('10d_return', 'N/A')
+        multi_period_10d_trend = stock.get('10d_trend', 'N/A')
+        multi_period_20d_return = stock.get('20d_return', 'N/A')
+        multi_period_20d_trend = stock.get('20d_trend', 'N/A')
+        multi_period_60d_return = stock.get('60d_return', 'N/A')
+        multi_period_60d_trend = stock.get('60d_trend', 'N/A')
+        
+        # 获取多周期相对强度
+        multi_period_3d_rs = stock.get('3d_rs', 'N/A')
+        multi_period_3d_rs_signal = stock.get('3d_rs_signal', 'N/A')
+        multi_period_5d_rs = stock.get('5d_rs', 'N/A')
+        multi_period_5d_rs_signal = stock.get('5d_rs_signal', 'N/A')
+        multi_period_10d_rs = stock.get('10d_rs', 'N/A')
+        multi_period_10d_rs_signal = stock.get('10d_rs_signal', 'N/A')
+        multi_period_20d_rs = stock.get('20d_rs', 'N/A')
+        multi_period_20d_rs_signal = stock.get('20d_rs_signal', 'N/A')
+        multi_period_60d_rs = stock.get('60d_rs', 'N/A')
+        multi_period_60d_rs_signal = stock.get('60d_rs_signal', 'N/A')
+        
+        # 获取多周期综合评分
+        multi_period_trend_score = stock.get('multi_period_trend_score', 'N/A')
+        multi_period_rs_score = stock.get('multi_period_rs_score', 'N/A')
+        
+        # 使用新的评分系统字段和多周期指标
+        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('buildup_score', 'N/A') or 'N/A'},{stock.get('buildup_level', 'N/A') or 'N/A'},{stock.get('buildup_reasons', 'N/A') or 'N/A'},{stock.get('distribution_score', 'N/A') or 'N/A'},{stock.get('distribution_level', 'N/A') or 'N/A'},{stock.get('distribution_reasons', 'N/A') or 'N/A'},{int(stock.get('take_profit', False))},{int(stock.get('stop_loss', False))},{int(stock.get('trailing_stop', False))},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'},{prev_rsi},{prev_macd},{prev_price},{prev_buildup_score},{prev_distribution_score},{prev_tav_score},{multi_period_3d_return},{multi_period_3d_trend},{multi_period_5d_return},{multi_period_5d_trend},{multi_period_10d_return},{multi_period_10d_trend},{multi_period_20d_return},{multi_period_20d_trend},{multi_period_60d_return},{multi_period_60d_trend},{multi_period_3d_rs},{multi_period_3d_rs_signal},{multi_period_5d_rs},{multi_period_5d_rs_signal},{multi_period_10d_rs},{multi_period_10d_rs_signal},{multi_period_20d_rs},{multi_period_20d_rs_signal},{multi_period_60d_rs},{multi_period_60d_rs_signal},{multi_period_trend_score},{multi_period_rs_score}"
         csv_rows.append(row)
     
     stock_table = csv_header + "\n" + "\n".join(csv_rows)
@@ -740,6 +767,150 @@ def get_price_change_arrow(current_price_str, previous_price):
             return '<span style="color: #999;">→</span>'
     except:
         return '<span style="color: #999;">→</span>'
+
+# ==============================
+# 4.5. 多周期指标计算函数
+# ==============================
+
+def calculate_multi_period_metrics(hist_df, periods=[3, 5, 10, 20, 60]):
+    """
+    计算多周期价格变化率和趋势方向
+    
+    参数:
+    - hist_df: 历史价格数据（DataFrame，包含Close列）
+    - periods: 周期列表，默认为[3, 5, 10, 20, 60]
+    
+    返回:
+    - dict: 包含各周期的价格变化率和趋势方向
+    """
+    metrics = {}
+    
+    for period in periods:
+        if len(hist_df) < period:
+            metrics[f'{period}d_return'] = None
+            metrics[f'{period}d_trend'] = None
+            continue
+        
+        # 计算价格变化率
+        current_price = hist_df['Close'].iloc[-1]
+        past_price = hist_df['Close'].iloc[-period]
+        return_pct = ((current_price - past_price) / past_price) * 100
+        
+        metrics[f'{period}d_return'] = safe_round(return_pct, 2)
+        
+        # 判断趋势方向
+        if return_pct > 2:
+            metrics[f'{period}d_trend'] = '强势上涨'
+        elif return_pct > 0:
+            metrics[f'{period}d_trend'] = '上涨'
+        elif return_pct > -2:
+            metrics[f'{period}d_trend'] = '下跌'
+        else:
+            metrics[f'{period}d_trend'] = '强势下跌'
+    
+    return metrics
+
+def calculate_relative_strength_multi_period(stock_hist, hsi_hist, periods=[3, 5, 10, 20, 60]):
+    """
+    计算多周期相对强度（股票 vs 恒生指数）
+    
+    参数:
+    - stock_hist: 股票历史价格数据（DataFrame，包含Close列）
+    - hsi_hist: 恒生指数历史价格数据（DataFrame，包含Close列）
+    - periods: 周期列表，默认为[3, 5, 10, 20, 60]
+    
+    返回:
+    - dict: 包含各周期的相对强度
+    """
+    rs_metrics = {}
+    
+    for period in periods:
+        if len(stock_hist) < period or len(hsi_hist) < period:
+            rs_metrics[f'{period}d_rs'] = None
+            rs_metrics[f'{period}d_rs_signal'] = None
+            continue
+        
+        # 计算股票收益
+        stock_current = stock_hist['Close'].iloc[-1]
+        stock_past = stock_hist['Close'].iloc[-period]
+        stock_return = (stock_current - stock_past) / stock_past
+        
+        # 计算恒生指数收益
+        hsi_current = hsi_hist['Close'].iloc[-1]
+        hsi_past = hsi_hist['Close'].iloc[-period]
+        hsi_return = (hsi_current - hsi_past) / hsi_past
+        
+        # 计算相对强度（股票收益 - 恒生指数收益）
+        rs = stock_return - hsi_return
+        rs_pct = rs * 100
+        
+        rs_metrics[f'{period}d_rs'] = safe_round(rs_pct, 2)
+        
+        # 判断相对强度信号
+        if rs_pct > 5:
+            rs_metrics[f'{period}d_rs_signal'] = '显著跑赢'
+        elif rs_pct > 2:
+            rs_metrics[f'{period}d_rs_signal'] = '跑赢'
+        elif rs_pct > -2:
+            rs_metrics[f'{period}d_rs_signal'] = '持平'
+        elif rs_pct > -5:
+            rs_metrics[f'{period}d_rs_signal'] = '跑输'
+        else:
+            rs_metrics[f'{period}d_rs_signal'] = '显著跑输'
+    
+    return rs_metrics
+
+def get_multi_period_trend_score(metrics, periods=[3, 5, 10, 20, 60]):
+    """
+    计算多周期趋势综合评分
+    
+    参数:
+    - metrics: 多周期指标字典
+    - periods: 周期列表
+    
+    返回:
+    - float: 综合趋势评分（-100到100）
+    """
+    if not metrics:
+        return None
+    
+    score = 0
+    weights = {3: 0.1, 5: 0.15, 10: 0.2, 20: 0.25, 60: 0.3}
+    
+    for period in periods:
+        return_key = f'{period}d_return'
+        if return_key in metrics and metrics[return_key] is not None:
+            # 标准化收益：假设±10%为极限
+            normalized_return = metrics[return_key] / 10.0 * 100
+            score += normalized_return * weights.get(period, 0.2)
+    
+    return safe_round(score, 1)
+
+def get_multi_period_rs_score(rs_metrics, periods=[3, 5, 10, 20, 60]):
+    """
+    计算多周期相对强度综合评分
+    
+    参数:
+    - rs_metrics: 多周期相对强度字典
+    - periods: 周期列表
+    
+    返回:
+    - float: 综合相对强度评分（-100到100）
+    """
+    if not rs_metrics:
+        return None
+    
+    score = 0
+    weights = {3: 0.1, 5: 0.15, 10: 0.2, 20: 0.25, 60: 0.3}
+    
+    for period in periods:
+        rs_key = f'{period}d_rs'
+        if rs_key in rs_metrics and rs_metrics[rs_key] is not None:
+            # 标准化相对强度：假设±10%为极限
+            normalized_rs = rs_metrics[rs_key] / 10.0 * 100
+            score += normalized_rs * weights.get(period, 0.2)
+    
+    return safe_round(score, 1)
 
 # ==============================
 # 5. 单股分析函数
@@ -1771,6 +1942,19 @@ def analyze_stock(code, name, run_date=None):
         # 成交量比率信号
         main_hist['Volume_Ratio_Signal'] = main_hist['Volume_Ratio'] > 1.5
 
+        # === 多周期指标计算（新增）===
+        # 计算多周期价格变化率和趋势方向
+        multi_period_metrics = calculate_multi_period_metrics(full_hist, periods=[3, 5, 10, 20, 60])
+        
+        # 计算多周期相对强度（股票 vs 恒生指数）
+        multi_period_rs = calculate_relative_strength_multi_period(full_hist, hsi_hist, periods=[3, 5, 10, 20, 60])
+        
+        # 计算多周期趋势综合评分
+        multi_period_trend_score = get_multi_period_trend_score(multi_period_metrics, periods=[3, 5, 10, 20, 60])
+        
+        # 计算多周期相对强度综合评分
+        multi_period_rs_score = get_multi_period_rs_score(multi_period_rs, periods=[3, 5, 10, 20, 60])
+
         result = {
             'code': code,
             'name': name,
@@ -1842,6 +2026,31 @@ def analyze_stock(code, name, run_date=None):
             'tav_recommendation': tav_recommendation,
             'tav_score': tav_quality_score if tav_quality_score is not None else 0,
             'tav_status': tav_recommendation if tav_recommendation else '无TAV',
+            # 多周期指标（新增）
+            '3d_return': multi_period_metrics.get('3d_return'),
+            '3d_trend': multi_period_metrics.get('3d_trend'),
+            '5d_return': multi_period_metrics.get('5d_return'),
+            '5d_trend': multi_period_metrics.get('5d_trend'),
+            '10d_return': multi_period_metrics.get('10d_return'),
+            '10d_trend': multi_period_metrics.get('10d_trend'),
+            '20d_return': multi_period_metrics.get('20d_return'),
+            '20d_trend': multi_period_metrics.get('20d_trend'),
+            '60d_return': multi_period_metrics.get('60d_return'),
+            '60d_trend': multi_period_metrics.get('60d_trend'),
+            # 多周期相对强度（新增）
+            '3d_rs': multi_period_rs.get('3d_rs'),
+            '3d_rs_signal': multi_period_rs.get('3d_rs_signal'),
+            '5d_rs': multi_period_rs.get('5d_rs'),
+            '5d_rs_signal': multi_period_rs.get('5d_rs_signal'),
+            '10d_rs': multi_period_rs.get('10d_rs'),
+            '10d_rs_signal': multi_period_rs.get('10d_rs_signal'),
+            '20d_rs': multi_period_rs.get('20d_rs'),
+            '20d_rs_signal': multi_period_rs.get('20d_rs_signal'),
+            '60d_rs': multi_period_rs.get('60d_rs'),
+            '60d_rs_signal': multi_period_rs.get('60d_rs_signal'),
+            # 多周期综合评分（新增）
+            'multi_period_trend_score': multi_period_trend_score,
+            'multi_period_rs_score': multi_period_rs_score,
         }
         
         # 重新获取上个交易日的评分数据（在所有评分计算完成后）
@@ -2158,7 +2367,15 @@ def main(run_date=None):
             # TAV评分
             'tav_score', 'tav_status',
             # 上个交易日指标（新增）
-            'prev_day_indicators'
+            'prev_day_indicators',
+            # 多周期指标（新增）
+            '3d_return', '3d_trend', '5d_return', '5d_trend',
+            '10d_return', '10d_trend', '20d_return', '20d_trend',
+            '60d_return', '60d_trend',
+            '3d_rs', '3d_rs_signal', '5d_rs', '5d_rs_signal',
+            '10d_rs', '10d_rs_signal', '20d_rs', '20d_rs_signal',
+            '60d_rs', '60d_rs_signal',
+            'multi_period_trend_score', 'multi_period_rs_score'
         ]]
         
         # 从prev_day_indicators中提取上个交易日指标作为独立列
@@ -2207,7 +2424,15 @@ def main(run_date=None):
             # TAV评分
             'TAV评分', 'TAV状态',
             # 上个交易日指标（新增）
-            '上个交易日RSI', '上个交易日MACD', '上个交易日价格', '上个交易日建仓评分', '上个交易日出货评分', '上个交易日TAV评分'
+            '上个交易日RSI', '上个交易日MACD', '上个交易日价格', '上个交易日建仓评分', '上个交易日出货评分', '上个交易日TAV评分',
+            # 多周期指标（新增）
+            '3日收益率(%)', '3日趋势', '5日收益率(%)', '5日趋势',
+            '10日收益率(%)', '10日趋势', '20日收益率(%)', '20日趋势',
+            '60日收益率(%)', '60日趋势',
+            '3日相对强度(%)', '3日相对强度信号', '5日相对强度(%)', '5日相对强度信号',
+            '10日相对强度(%)', '10日相对强度信号', '20日相对强度(%)', '20日相对强度信号',
+            '60日相对强度(%)', '60日相对强度信号',
+            '多周期趋势评分', '多周期相对强度评分'
         ]
 
         # 按出货评分降序、建仓评分降序排序（优先显示出货信号强的股票）
