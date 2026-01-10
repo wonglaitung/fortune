@@ -90,6 +90,55 @@ class HSIEmailSystem:
         'medium_long_term': '2y',      # 中长期投资：2年数据（约493个交易日）
     }
 
+    # ==============================
+    # 加权评分系统参数（新增）
+    # ==============================
+
+    # 是否启用加权评分系统（向后兼容）
+    USE_SCORED_SIGNALS = True   # True=使用新的评分系统，False=使用原有的布尔逻辑
+
+    # 建仓信号权重配置
+    BUILDUP_WEIGHTS = {
+        'price_low': 2.0,      # 价格处于低位
+        'vol_ratio': 2.0,      # 成交量放大
+        'vol_z': 1.0,          # 成交量z-score
+        'macd_cross': 1.5,     # MACD金叉
+        'rsi_oversold': 1.2,   # RSI超卖
+        'obv_up': 1.0,         # OBV上升
+        'vwap_vol': 1.2,       # 价格高于VWAP且放量
+        'price_above_vwap': 0.8,  # 价格高于VWAP
+        'bb_oversold': 1.0,    # 布林带超卖
+    }
+
+    # 建仓信号阈值
+    BUILDUP_THRESHOLD_STRONG = 5.0   # 强烈建仓信号阈值
+    BUILDUP_THRESHOLD_PARTIAL = 3.0  # 部分建仓信号阈值
+
+    # 出货信号权重配置
+    DISTRIBUTION_WEIGHTS = {
+        'price_high': 2.0,     # 价格处于高位
+        'vol_ratio': 2.0,      # 成交量放大
+        'vol_z': 1.5,          # 成交量z-score
+        'macd_cross': 1.5,     # MACD死叉
+        'rsi_high': 1.5,       # RSI超买
+        'obv_down': 1.0,       # OBV下降
+        'vwap_vol': 1.5,       # 价格低于VWAP且放量
+        'price_down': 1.0,     # 价格下跌
+        'bb_overbought': 1.0,  # 布林带超买
+    }
+
+    # 出货信号阈值
+    DISTRIBUTION_THRESHOLD_STRONG = 5.0   # 强烈出货信号阈值
+    DISTRIBUTION_THRESHOLD_WEAK = 3.0     # 弱出货信号阈值
+
+    # 价格位置阈值
+    PRICE_LOW_PCT = 40.0   # 价格百分位低于该值视为"低位"
+    PRICE_HIGH_PCT = 60.0  # 高于该值视为"高位"
+
+    # 成交量阈值
+    VOL_RATIO_BUILDUP = 1.3
+    VOL_RATIO_DISTRIBUTION = 1.5
+
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
         # 添加数据缓存机制
@@ -640,6 +689,95 @@ class HSIEmailSystem:
         
         return result
 
+    def _get_trend_change_arrow(self, current_trend, previous_trend):
+        """
+        公用方法：返回趋势变化箭头符号
+        
+        参数:
+        - current_trend: 当前趋势
+        - previous_trend: 上个交易日趋势
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_trend is None or previous_trend == 'N/A' or current_trend is None or current_trend == 'N/A':
+            return '<span style="color: #999;">→</span>'
+        
+        # 定义看涨趋势
+        bullish_trends = ['强势多头', '多头趋势', '短期上涨']
+        # 定义看跌趋势
+        bearish_trends = ['弱势空头', '空头趋势', '短期下跌']
+        # 定义震荡趋势
+        consolidation_trends = ['震荡整理', '震荡']
+        
+        # 趋势改善：看跌/震荡 → 看涨
+        if (previous_trend in bearish_trends + consolidation_trends) and current_trend in bullish_trends:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        
+        # 趋势恶化：看涨 → 看跌
+        if previous_trend in bullish_trends and current_trend in bearish_trends:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        
+        # 震荡 → 看跌（恶化）
+        if previous_trend in consolidation_trends and current_trend in bearish_trends:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        
+        # 看涨 → 震荡（改善）
+        if previous_trend in bullish_trends and current_trend in consolidation_trends:
+            return '<span style="color: orange; font-weight: bold;">↓</span>'
+        
+        # 看跌 → 震荡（改善）
+        if previous_trend in bearish_trends and current_trend in consolidation_trends:
+            return '<span style="color: orange; font-weight: bold;">↑</span>'
+        
+        # 无明显变化（同类型趋势）
+        return '<span style="color: #999;">→</span>'
+    def _get_score_change_arrow(self, current_score, previous_score):
+        """
+        公用方法：返回评分变化箭头符号
+        
+        参数:
+        - current_score: 当前评分
+        - previous_score: 上个交易日评分
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_score is None or current_score is None:
+            return '<span style="color: #999;">→</span>'
+        
+        if current_score > previous_score:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        elif current_score < previous_score:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        else:
+            return '<span style="color: #999;">→</span>'
+
+    def _get_price_change_arrow(self, current_price_str, previous_price):
+        """
+        公用方法：返回价格变化箭头符号
+        
+        参数:
+        - current_price_str: 当前价格字符串（格式化后的）
+        - previous_price: 上个交易日价格（数值）
+        
+        返回:
+        - str: 箭头符号和颜色样式
+        """
+        if previous_price is None or current_price_str is None or current_price_str == 'N/A':
+            return '<span style="color: #999;">→</span>'
+        
+        try:
+            current_price = float(current_price_str.replace(',', ''))
+            if current_price > previous_price:
+                return '<span style="color: green; font-weight: bold;">↑</span>'
+            elif current_price < previous_price:
+                return '<span style="color: red; font-weight: bold;">↓</span>'
+            else:
+                return '<span style="color: #999;">→</span>'
+        except:
+            return '<span style="color: #999;">→</span>'
+
     def _format_continuous_signal_details(self, transactions_df, times):
         """
         公用方法：格式化连续信号的详细信息（HTML版本）
@@ -757,6 +895,183 @@ class HSIEmailSystem:
                 break
         
         return cleaned
+
+    def _calculate_buildup_score(self, row, hist_df=None):
+        """
+        基于加权评分的建仓信号检测
+        
+        Args:
+            row: 包含技术指标的数据行（Series）
+            hist_df: 历史数据DataFrame（用于计算某些指标）
+        
+        Returns:
+            dict: 包含评分、信号级别和触发原因
+            - score: 建仓评分（0-10+）
+            - signal: 信号级别 ('none', 'partial', 'strong')
+            - reasons: 触发条件的列表
+        """
+        score = 0.0
+        reasons = []
+
+        # 价格位置：低位加分
+        price_percentile = row.get('price_position', 50.0)
+        if pd.notna(price_percentile) and price_percentile < self.PRICE_LOW_PCT:
+            score += self.BUILDUP_WEIGHTS['price_low']
+            reasons.append('price_low')
+
+        # 成交量倍数
+        vol_ratio = row.get('volume_ratio', 0.0)
+        if pd.notna(vol_ratio) and vol_ratio > self.VOL_RATIO_BUILDUP:
+            score += self.BUILDUP_WEIGHTS['vol_ratio']
+            reasons.append('vol_ratio')
+
+        # 成交量 z-score
+        vol_z_score = row.get('vol_z_score', 0.0)
+        if pd.notna(vol_z_score) and vol_z_score > 1.2:
+            score += self.BUILDUP_WEIGHTS['vol_z']
+            reasons.append('vol_z')
+
+        # MACD 线上穿（金叉）
+        macd = row.get('macd', 0.0)
+        macd_signal = row.get('macd_signal', 0.0)
+        if pd.notna(macd) and pd.notna(macd_signal) and macd > macd_signal:
+            score += self.BUILDUP_WEIGHTS['macd_cross']
+            reasons.append('macd_cross')
+
+        # RSI 超卖
+        rsi = row.get('rsi', 50.0)
+        if pd.notna(rsi) and rsi < 40:
+            score += self.BUILDUP_WEIGHTS['rsi_oversold']
+            reasons.append('rsi_oversold')
+
+        # OBV 上升
+        obv = row.get('obv', 0.0)
+        if pd.notna(obv) and obv > 0:
+            score += self.BUILDUP_WEIGHTS['obv_up']
+            reasons.append('obv_up')
+
+        # 收盘高于 VWAP 且放量
+        vwap = row.get('vwap', 0.0)
+        current_price = row.get('current_price', 0.0)
+        if (pd.notna(vwap) and pd.notna(vol_ratio) and pd.notna(current_price) and 
+            current_price > vwap and vol_ratio > 1.2):
+            score += self.BUILDUP_WEIGHTS['vwap_vol']
+            reasons.append('vwap_vol')
+
+        # 价格高于 VWAP
+        if pd.notna(vwap) and pd.notna(current_price) and current_price > vwap:
+            score += self.BUILDUP_WEIGHTS['price_above_vwap']
+            reasons.append('price_above_vwap')
+
+        # 布林带超卖
+        bb_position = row.get('bb_position', 0.5)
+        if pd.notna(bb_position) and bb_position < 0.2:
+            score += self.BUILDUP_WEIGHTS['bb_oversold']
+            reasons.append('bb_oversold')
+
+        # 返回分数与分层建议
+        signal = None
+        if score >= self.BUILDUP_THRESHOLD_STRONG:
+            signal = 'strong'    # 强烈建仓（建议较高比例或确认）
+        elif score >= self.BUILDUP_THRESHOLD_PARTIAL:
+            signal = 'partial'   # 部分建仓 / 分批入场
+        else:
+            signal = 'none'      # 无信号
+
+        return {
+            'score': score,
+            'signal': signal,
+            'reasons': ','.join(reasons) if reasons else ''
+        }
+
+    def _calculate_distribution_score(self, row, hist_df=None):
+        """
+        基于加权评分的出货信号检测
+        
+        Args:
+            row: 包含技术指标的数据行（Series）
+            hist_df: 历史数据DataFrame（用于计算某些指标）
+        
+        Returns:
+            dict: 包含评分、信号级别和触发原因
+            - score: 出货评分（0-10+）
+            - signal: 信号级别 ('none', 'weak', 'strong')
+            - reasons: 触发条件的列表
+        """
+        score = 0.0
+        reasons = []
+
+        # 价格位置：高位加分
+        price_percentile = row.get('price_position', 50.0)
+        if pd.notna(price_percentile) and price_percentile > self.PRICE_HIGH_PCT:
+            score += self.DISTRIBUTION_WEIGHTS['price_high']
+            reasons.append('price_high')
+
+        # 成交量倍数
+        vol_ratio = row.get('volume_ratio', 0.0)
+        if pd.notna(vol_ratio) and vol_ratio > self.VOL_RATIO_DISTRIBUTION:
+            score += self.DISTRIBUTION_WEIGHTS['vol_ratio']
+            reasons.append('vol_ratio')
+
+        # 成交量 z-score
+        vol_z_score = row.get('vol_z_score', 0.0)
+        if pd.notna(vol_z_score) and vol_z_score > 1.5:
+            score += self.DISTRIBUTION_WEIGHTS['vol_z']
+            reasons.append('vol_z')
+
+        # MACD 线下穿（死叉）
+        macd = row.get('macd', 0.0)
+        macd_signal = row.get('macd_signal', 0.0)
+        if pd.notna(macd) and pd.notna(macd_signal) and macd < macd_signal:
+            score += self.DISTRIBUTION_WEIGHTS['macd_cross']
+            reasons.append('macd_cross')
+
+        # RSI 超买
+        rsi = row.get('rsi', 50.0)
+        if pd.notna(rsi) and rsi > 65:
+            score += self.DISTRIBUTION_WEIGHTS['rsi_high']
+            reasons.append('rsi_high')
+
+        # OBV 下降
+        obv = row.get('obv', 0.0)
+        if pd.notna(obv) and obv < 0:
+            score += self.DISTRIBUTION_WEIGHTS['obv_down']
+            reasons.append('obv_down')
+
+        # 收盘低于 VWAP 且放量
+        vwap = row.get('vwap', 0.0)
+        current_price = row.get('current_price', 0.0)
+        if (pd.notna(vwap) and pd.notna(vol_ratio) and pd.notna(current_price) and 
+            current_price < vwap and vol_ratio > 1.2):
+            score += self.DISTRIBUTION_WEIGHTS['vwap_vol']
+            reasons.append('vwap_vol')
+
+        # 价格下跌
+        change_1d = row.get('change_1d', 0.0)
+        if pd.notna(change_1d) and change_1d < 0:
+            score += self.DISTRIBUTION_WEIGHTS['price_down']
+            reasons.append('price_down')
+
+        # 布林带超买
+        bb_position = row.get('bb_position', 0.5)
+        if pd.notna(bb_position) and bb_position > 0.8:
+            score += self.DISTRIBUTION_WEIGHTS['bb_overbought']
+            reasons.append('bb_overbought')
+
+        # 返回分数与分层建议
+        signal = None
+        if score >= self.DISTRIBUTION_THRESHOLD_STRONG:
+            signal = 'strong'    # 强烈出货（建议较大比例卖出）
+        elif score >= self.DISTRIBUTION_THRESHOLD_WEAK:
+            signal = 'weak'      # 弱出货（建议部分减仓或观察）
+        else:
+            signal = 'none'      # 无信号
+
+        return {
+            'score': score,
+            'signal': signal,
+            'reasons': ','.join(reasons) if reasons else ''
+        }
 
     def _calculate_technical_indicators_core(self, data, asset_type='stock'):
         """
@@ -947,6 +1262,53 @@ class HSIEmailSystem:
                         indicators['tav_status'] = 'TAV分析失败'
                         indicators['tav_summary'] = None
                 
+                # 添加评分系统信息（如果启用）
+                if self.USE_SCORED_SIGNALS:
+                    try:
+                        # 准备评分所需的数据行
+                        score_row = pd.Series({
+                            'price_position': indicators.get('price_position', 50.0),
+                            'volume_ratio': volume_ratio,
+                            'vol_z_score': latest.get('Vol_Z_Score', 0.0) if 'Vol_Z_Score' in latest else 0.0,
+                            'macd': macd,
+                            'macd_signal': macd_signal,
+                            'rsi': rsi,
+                            'obv': latest.get('OBV', 0.0) if 'OBV' in latest else 0.0,
+                            'vwap': latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0,
+                            'current_price': current_price,
+                            'change_1d': data.get('change_1d', 0.0),
+                            'bb_position': bb_position
+                        })
+                        
+                        # 计算建仓评分
+                        buildup_result = self._calculate_buildup_score(score_row, hist)
+                        indicators['buildup_score'] = buildup_result['score']
+                        indicators['buildup_level'] = buildup_result['signal']
+                        indicators['buildup_reasons'] = buildup_result['reasons']
+                        
+                        # 计算出货评分
+                        distribution_result = self._calculate_distribution_score(score_row, hist)
+                        indicators['distribution_score'] = distribution_result['score']
+                        indicators['distribution_level'] = distribution_result['signal']
+                        indicators['distribution_reasons'] = distribution_result['reasons']
+                        
+                    except Exception as e:
+                        print(f"⚠️ 评分系统计算失败: {e}")
+                        indicators['buildup_score'] = 0.0
+                        indicators['buildup_level'] = 'none'
+                        indicators['buildup_reasons'] = ''
+                        indicators['distribution_score'] = 0.0
+                        indicators['distribution_level'] = 'none'
+                        indicators['distribution_reasons'] = ''
+                else:
+                    # 评分系统未启用，设置为默认值
+                    indicators['buildup_score'] = None
+                    indicators['buildup_level'] = None
+                    indicators['buildup_reasons'] = None
+                    indicators['distribution_score'] = None
+                    indicators['distribution_level'] = None
+                    indicators['distribution_reasons'] = None
+                
                 return indicators
                 
             except Exception as e:
@@ -1002,6 +1364,22 @@ class HSIEmailSystem:
                         indicators['tav_score'] = 0
                         indicators['tav_status'] = 'TAV分析失败'
                         indicators['tav_summary'] = None
+                    
+                    # 添加评分系统信息（降级模式）
+                    if self.USE_SCORED_SIGNALS:
+                        indicators['buildup_score'] = 0.0
+                        indicators['buildup_level'] = 'none'
+                        indicators['buildup_reasons'] = ''
+                        indicators['distribution_score'] = 0.0
+                        indicators['distribution_level'] = 'none'
+                        indicators['distribution_reasons'] = ''
+                    else:
+                        indicators['buildup_score'] = None
+                        indicators['buildup_level'] = None
+                        indicators['buildup_reasons'] = None
+                        indicators['distribution_score'] = None
+                        indicators['distribution_level'] = None
+                        indicators['distribution_reasons'] = None
                     
                     return indicators
                 else:
@@ -1729,6 +2107,49 @@ class HSIEmailSystem:
             if tav_summary:
                 trend_analysis = tav_summary.get('trend_analysis', 'N/A')
                 momentum_analysis = tav_summary.get('momentum_analysis', 'N/A')
+        
+        # 添加评分系统信息（如果启用）
+        if self.USE_SCORED_SIGNALS:
+            buildup_score = indicators.get('buildup_score', None)
+            buildup_level = indicators.get('buildup_level', None)
+            buildup_reasons = indicators.get('buildup_reasons', None)
+            distribution_score = indicators.get('distribution_score', None)
+            distribution_level = indicators.get('distribution_level', None)
+            distribution_reasons = indicators.get('distribution_reasons', None)
+            
+            # 显示建仓评分
+            if buildup_score is not None:
+                buildup_color = "color: green; font-weight: bold;" if buildup_level == 'strong' else "color: orange; font-weight: bold;" if buildup_level == 'partial' else "color: #666;"
+                html += f"""
+                <tr>
+                    <td>建仓评分</td>
+                    <td><span style="{buildup_color}">{buildup_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({buildup_level})</span></td>
+                </tr>
+                """
+                if buildup_reasons:
+                    html += f"""
+                <tr>
+                    <td>建仓原因</td>
+                    <td style="font-size: 0.9em; color: #666;">{buildup_reasons}</td>
+                </tr>
+                """
+            
+            # 显示出货评分
+            if distribution_score is not None:
+                distribution_color = "color: red; font-weight: bold;" if distribution_level == 'strong' else "color: orange; font-weight: bold;" if distribution_level == 'weak' else "color: #666;"
+                html += f"""
+                <tr>
+                    <td>出货评分</td>
+                    <td><span style="{distribution_color}">{distribution_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({distribution_level})</span></td>
+                </tr>
+                """
+                if distribution_reasons:
+                    html += f"""
+                <tr>
+                    <td>出货原因</td>
+                    <td style="font-size: 0.9em; color: #666;">{distribution_reasons}</td>
+                </tr>
+                """
                 volume_analysis = tav_summary.get('volume_analysis', 'N/A')
                 recommendation = tav_summary.get('recommendation', 'N/A')
                 
@@ -1878,6 +2299,43 @@ class HSIEmailSystem:
         print("📊 获取即将除净的港股信息...")
         dividend_data = self.get_upcoming_dividends(days_ahead=90)
         
+        # 计算上个交易日的日期
+        previous_trading_date = None
+        if target_date:
+            if isinstance(target_date, str):
+                target_date_obj = datetime.strptime(target_date, '%Y-%m-%d').date()
+            else:
+                target_date_obj = target_date
+            
+            # 计算上个交易日（排除周末）
+            previous_trading_date = target_date_obj - timedelta(days=1)
+            while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
+                previous_trading_date -= timedelta(days=1)
+        
+        # 获取上个交易日的指标数据
+        previous_day_indicators = {}
+        if previous_trading_date:
+            print(f"📊 获取上个交易日 ({previous_trading_date}) 的指标数据...")
+            for stock_code, stock_name in self.stock_list.items():
+                try:
+                    stock_data = self.get_stock_data(stock_code, target_date=previous_trading_date.strftime('%Y-%m-%d'))
+                    if stock_data:
+                        indicators = self.calculate_technical_indicators(stock_data)
+                        if indicators:
+                            previous_day_indicators[stock_code] = {
+                                'trend': indicators.get('trend', '未知'),
+                                'buildup_score': indicators.get('buildup_score', None),
+                                'buildup_level': indicators.get('buildup_level', None),
+                                'distribution_score': indicators.get('distribution_score', None),
+                                'distribution_level': indicators.get('distribution_level', None),
+                                'tav_score': indicators.get('tav_score', None),
+                                'tav_status': indicators.get('tav_status', None),
+                                'current_price': stock_data.get('current_price', None),
+                                'change_pct': stock_data.get('change_1d', None)
+                            }
+                except Exception as e:
+                    print(f"⚠️ 获取 {stock_code} 上个交易日指标失败: {e}")
+        
         # 创建信号汇总
         all_signals = []
 
@@ -1939,7 +2397,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'5日VaR':<8} {'20日VaR':<8} {'5日ES':<8} {'20日ES':<8} {'历史回撤':<10} {'风险评估':<6}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -1979,17 +2437,18 @@ class HSIEmailSystem:
                         <th>股票名称</th>
                         <th>股票代码</th>
                         <th>趋势(技术分析)</th>
+                        <th>建仓评分</th>
+                        <th>出货评分</th>
                         <th>信号类型(量价分析)</th>
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
                         <th>股票现价</th>
-                        <th>5日VaR(95%)</th>
-                        <th>20日VaR(95%)</th>
-                        <th>5日ES(95%)</th>
-                        <th>20日ES(95%)</th>
-                        <th>历史回撤</th>
-                        <th>风险评估</th>
+                        <th>上个交易日趋势</th>
+                        <th>上个交易日建仓评分</th>
+                        <th>上个交易日出货评分</th>
+                        <th>上个交易日TAV评分</th>
+                        <th>上个交易日价格</th>
                     </tr>
         """
 
@@ -2136,22 +2595,82 @@ class HSIEmailSystem:
             tav_score_display = f"{safe_tav_score:.1f}" if isinstance(safe_tav_score, (int, float)) else "N/A"
             price_value_display = f"{price_display:.2f}" if price_display is not None else "N/A"
             
+            # 获取建仓和出货评分
+            buildup_score = stock_indicators.get('buildup_score', None) if stock_indicators else None
+            buildup_level = stock_indicators.get('buildup_level', None) if stock_indicators else None
+            distribution_score = stock_indicators.get('distribution_score', None) if stock_indicators else None
+            distribution_level = stock_indicators.get('distribution_level', None) if stock_indicators else None
+            
+            # 格式化建仓评分显示
+            buildup_display = "N/A"
+            if buildup_score is not None:
+                buildup_color = "color: green; font-weight: bold;" if buildup_level == 'strong' else "color: orange; font-weight: bold;" if buildup_level == 'partial' else "color: #666;"
+                buildup_display = f"<span style=\"{buildup_color}\">{buildup_score:.2f}</span> <span style=\"font-size: 0.8em; color: #666;\">({buildup_level})</span>"
+            
+            # 格式化出货评分显示
+            distribution_display = "N/A"
+            if distribution_score is not None:
+                distribution_color = "color: red; font-weight: bold;" if distribution_level == 'strong' else "color: orange; font-weight: bold;" if distribution_level == 'weak' else "color: #666;"
+                distribution_display = f"<span style=\"{distribution_color}\">{distribution_score:.2f}</span> <span style=\"font-size: 0.8em; color: #666;\">({distribution_level})</span>"
+            
+            # 获取上个交易日的指标
+            prev_day_data = previous_day_indicators.get(stock_code, {})
+            prev_trend = prev_day_data.get('trend', 'N/A')
+            prev_buildup_score = prev_day_data.get('buildup_score', None)
+            prev_buildup_level = prev_day_data.get('buildup_level', None)
+            prev_distribution_score = prev_day_data.get('distribution_score', None)
+            prev_distribution_level = prev_day_data.get('distribution_level', None)
+            prev_tav_score = prev_day_data.get('tav_score', None)
+            prev_tav_status = prev_day_data.get('tav_status', None)
+            prev_price = prev_day_data.get('current_price', None)
+            
+            # 计算今天价格相对于上个交易日的涨跌幅
+            prev_change_pct = None
+            if prev_price is not None and price_display is not None:
+                try:
+                    current_price = float(price_display)
+                    prev_change_pct = (current_price - prev_price) / prev_price * 100
+                except:
+                    pass
+            
+            # 格式化上个交易日指标显示
+            prev_trend_display = prev_trend if prev_trend is not None else 'N/A'
+            prev_buildup_display = "N/A"
+            if prev_buildup_score is not None:
+                prev_buildup_display = f"{prev_buildup_score:.2f}({prev_buildup_level})"
+            prev_distribution_display = "N/A"
+            if prev_distribution_score is not None:
+                prev_distribution_display = f"{prev_distribution_score:.2f}({prev_distribution_level})"
+            prev_tav_display = "N/A"
+            if prev_tav_score is not None:
+                prev_tav_display = f"{prev_tav_score:.1f}"
+            prev_price_display = f"{prev_price:.2f}" if prev_price is not None else "N/A"
+            prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
+            
+            # 计算变化方向和箭头
+            prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
+            prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
+            prev_distribution_arrow = self._get_score_change_arrow(distribution_score, prev_distribution_score)
+            prev_tav_arrow = self._get_score_change_arrow(tav_score, prev_tav_score)
+            prev_price_arrow = self._get_price_change_arrow(price_value_display, prev_price)
+            
             html += f"""
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
                         <td>{safe_code}</td>
                         <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
+                        <td>{buildup_display}</td>
+                        <td>{distribution_display}</td>
                         <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
                         <td>{price_value_display}</td>
-                        <td>{var_short_display}</td>
-                        <td>{var_medium_long_display}</td>
-                        <td>{es_short_display}</td>
-                        <td>{es_medium_long_display}</td>
-                        <td>{max_drawdown_display}</td>
-                        <td><span style=\"{risk_color}\">{risk_assessment}</span></td>
+                        <td>{prev_trend_arrow} {prev_trend_display}</td>
+                        <td>{prev_buildup_arrow} {prev_buildup_display}</td>
+                        <td>{prev_distribution_arrow} {prev_distribution_display}</td>
+                        <td>{prev_tav_arrow} {prev_tav_display}</td>
+                        <td>{prev_price_arrow} {prev_price_display} ({prev_change_display})</td>
                     </tr>
             """
 
@@ -2180,7 +2699,41 @@ class HSIEmailSystem:
             # 添加股票现价显示
             price_value = hist_data['current_price'] if hist_data is not None else None
             price_display = f"{price_value:.2f}" if price_value is not None else 'N/A'
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {var_short_display:<8} {var_medium_long_display:<8} {es_short_display:<8} {es_medium_long_display:<8} {max_drawdown_display:<10} {risk_assessment:<6}")
+            
+            # 格式化建仓评分（文本版本）
+            buildup_text = "N/A"
+            if buildup_score is not None:
+                buildup_text = f"{buildup_score:.2f}({buildup_level})"
+            
+            # 格式化出货评分（文本版本）
+            distribution_text = "N/A"
+            if distribution_score is not None:
+                distribution_text = f"{distribution_score:.2f}({distribution_level})"
+            
+            # 格式化上个交易日指标（文本版本）
+            prev_trend_display = prev_trend if prev_trend is not None else 'N/A'
+            prev_buildup_display = "N/A"
+            if prev_buildup_score is not None:
+                prev_buildup_display = f"{prev_buildup_score:.2f}({prev_buildup_level})"
+            prev_distribution_display = "N/A"
+            if prev_distribution_score is not None:
+                prev_distribution_display = f"{prev_distribution_score:.2f}({prev_distribution_level})"
+            prev_tav_display = "N/A"
+            if prev_tav_score is not None:
+                prev_tav_display = f"{prev_tav_score:.1f}"
+            prev_price_display = "N/A"
+            if prev_price is not None:
+                prev_price_display = f"{prev_price:.2f}"
+            # 计算今天价格相对于上个交易日的涨跌幅（文本版本）
+            prev_change_pct_text = None
+            if prev_price is not None and price_value is not None:
+                try:
+                    prev_change_pct_text = (price_value - prev_price) / prev_price * 100
+                except:
+                    pass
+            prev_change_display = f"{prev_change_pct_text:+.2f}%" if prev_change_pct_text is not None else 'N/A'
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -2189,7 +2742,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="16">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
@@ -2885,7 +3438,169 @@ class HSIEmailSystem:
                 # 文本版本：添加分割线
                 text += "────────────────────────────────────────\n\n"
 
+        # 添加表9：快速决策参考表
+        text += "📊 快速决策参考表:\n"
+        text += "-" * 100 + "\n"
+        text += f"{'指标组合':<12} {'趋势':<12} {'建仓评分':<12} {'出货评分':<12} {'48小时信号':<20} {'决策':<15}\n"
+        text += "-" * 100 + "\n"
+        text += f"{'组合1':<12} {'空头↓':<12} {'<3.0↓':<12} {'>5.0↑':<12} {'连续卖出≥3次':<20} {'✅ 立即清仓':<15}\n"
+        text += f"{'组合2':<12} {'多头↓':<12} {'<3.0↓':<12} {'>3.5↑':<12} {'卖出≥2次':<20} {'⚠️ 卖出60-70%':<15}\n"
+        text += f"{'组合3':<12} {'震荡→':<12} {'3.0-5.0':<12} {'2.0-3.5':<12} {'混合信号':<20} {'👀 卖出20-30%':<15}\n"
+        text += f"{'组合4':<12} {'多头↑':<12} {'>5.0↑':<12} {'<3.0↓':<12} {'连续买入≥3次':<20} {'✅ 继续持有':<15}\n"
+        text += f"{'组合5':<12} {'价值陷阱':<12} {'空头':<12} {'>5.0':<12} {'连续卖出≥3次':<20} {'✅ 立即清仓':<15}\n"
+        text += f"{'组合6':<12} {'超买回调':<12} {'多头':<12} {'3.0-5.0':<12} {'卖出1-2次':<20} {'⚠️ 卖出50%':<15}\n"
+        text += "-" * 100 + "\n\n"
+
+        # 添加表10：决策检查清单
+        text += "📋 决策检查清单:\n"
+        text += "-" * 60 + "\n"
+        text += f"{'检查项':<30} {'是/否':<8} {'权重':<8} {'累计得分':<10}\n"
+        text += "-" * 60 + "\n"
+        text += f"{'趋势是否恶化':<30} {'□ 是 □ 否':<8} {'20分':<8} {'___/20':<10}\n"
+        text += f"{'建仓评分是否下降':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'出货评分是否上升':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'TAV评分是否暴跌':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'48小时是否有卖出信号':<30} {'□ 是 □ 否':<8} {'15分':<8} {'___/15':<10}\n"
+        text += f"{'VaR风险是否过高':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'历史回撤是否过大':<30} {'□ 是 □ 否':<8} {'10分':<8} {'___/10':<10}\n"
+        text += f"{'是否接近止损价':<30} {'□ 是 □ 否':<8} {'5分':<8} {'___/5':<10}\n"
+        text += "-" * 60 + "\n"
+        text += "总分判定:\n"
+        text += "  • ≥70分：立即卖出\n"
+        text += "  • 50-69分：主动卖出\n"
+        text += "  • 30-49分：观察\n"
+        text += "  • <30分：继续持有\n\n"
+
         html += """
+        <div class="section">
+            <h3>📊 快速决策参考表</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">指标组合</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">趋势</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">建仓评分</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">出货评分</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">48小时信号</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">决策</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合1</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">空头↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;5.0↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续卖出≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red; font-weight: bold;">✅ 立即清仓</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合2</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange;">多头↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;3.5↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">卖出≥2次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange; font-weight: bold;">⚠️ 卖出60-70%</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合3</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">震荡→</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">3.0-5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">2.0-3.5</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">混合信号</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: #666; font-weight: bold;">👀 卖出20-30%</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合4</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">多头↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">&gt;5.0↑</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green;">&lt;3.0↓</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续买入≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: green; font-weight: bold;">✅ 继续持有</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合5</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">价值陷阱</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">空头</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red;">&gt;5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">连续卖出≥3次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: red; font-weight: bold;">✅ 立即清仓</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">组合6</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">超买回调</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">多头</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">3.0-5.0</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">卖出1-2次</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; color: orange; font-weight: bold;">⚠️ 卖出50%</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h3>📋 决策检查清单</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">检查项</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">是/否</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">权重</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">累计得分</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">趋势是否恶化</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">20分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/20</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">建仓评分是否下降</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">出货评分是否上升</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">TAV评分是否暴跌</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">48小时是否有卖出信号</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">15分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/15</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">VaR风险是否过高</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">历史回撤是否过大</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">10分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/10</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">是否接近止损价</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">□ 是 □ 否</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">5分</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">___/5</td>
+                </tr>
+            </table>
+            <p style="margin-top: 10px;"><strong>总分判定：</strong></p>
+            <ul>
+                <li>≥70分：<span style="color: red; font-weight: bold;">立即卖出</span></li>
+                <li>50-69分：<span style="color: orange; font-weight: bold;">主动卖出</span></li>
+                <li>30-49分：<span style="color: #666; font-weight: bold;">观察</span></li>
+                <li>&lt;30分：<span style="color: green; font-weight: bold;">继续持有</span></li>
+            </ul>
+        </div>
+
         <div class="section">
             <h3>📋 指标说明</h3>
             <div style="font-size:0.9em; line-height:1.4;">
@@ -2951,6 +3666,71 @@ class HSIEmailSystem:
                     </ul>
                   </li>
                   <li><b>资产类型差异</b>：不同资产类型使用不同权重配置，股票(40%/35%/25%)、加密货币(30%/45%/25%)、黄金(45%/30%/25%)</li>
+                </ul>
+              </li>
+              <li><b>建仓评分(0-10+)</b>：基于9个技术指标的加权评分系统，用于识别主力资金建仓信号：
+                <ul>
+                  <li><b>评分范围</b>：0-10+分，分数越高建仓信号越强</li>
+                  <li><b>信号级别</b>：
+                    <ul>
+                      <li>strong（强烈建仓）：评分≥5.0，建议较高比例买入或确认建仓</li>
+                      <li>partial（部分建仓）：评分≥3.0，建议分批入场或小仓位试探</li>
+                      <li>none（无信号）：评分<3.0，无明确建仓信号</li>
+                    </ul>
+                  </li>
+                  <li><b>评估指标（共9个）</b>：
+                    <ul>
+                      <li>price_low（权重2.0）：价格处于低位（价格百分位<40%）</li>
+                      <li>vol_ratio（权重2.0）：成交量放大（成交量比率>1.3）</li>
+                      <li>vol_z（权重1.0）：成交量z-score>1.2，显著高于平均水平</li>
+                      <li>macd_cross（权重1.5）：MACD线上穿信号线（金叉），上涨动能增强</li>
+                      <li>rsi_oversold（权重1.2）：RSI<40，超卖区域，反弹概率高</li>
+                      <li>obv_up（权重1.0）：OBV>0，资金净流入</li>
+                      <li>vwap_vol（权重1.2）：价格高于VWAP且成交量比率>1.2，强势特征</li>
+                      <li>price_above_vwap（权重0.8）：价格高于VWAP，当日表现强势</li>
+                      <li>bb_oversold（权重1.0）：布林带位置<0.2，接近下轨，超卖信号</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>建仓评分持续上升：主力资金持续流入，可考虑加仓</li>
+                      <li>建仓评分下降：建仓动能减弱，需谨慎</li>
+                      <li>建仓评分与出货评分同时高：多空信号冲突，建议观望</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li><b>出货评分(0-10+)</b>：基于10个技术指标的加权评分系统，用于识别主力资金出货信号：
+                <ul>
+                  <li><b>评分范围</b>：0-10+分，分数越高出货信号越强</li>
+                  <li><b>信号级别</b>：
+                    <ul>
+                      <li>strong（强烈出货）：评分≥5.0，建议较大比例卖出或清仓</li>
+                      <li>weak（弱出货）：评分≥3.0，建议部分减仓或密切观察</li>
+                      <li>none（无信号）：评分<3.0，无明确出货信号</li>
+                    </ul>
+                  </li>
+                  <li><b>评估指标（共10个）</b>：
+                    <ul>
+                      <li>price_high（权重2.0）：价格处于高位（价格百分位>60%）</li>
+                      <li>vol_ratio（权重2.0）：成交量放大（成交量比率>1.5）</li>
+                      <li>vol_z（权重1.5）：成交量z-score>1.5，显著高于平均水平</li>
+                      <li>macd_cross（权重1.5）：MACD线下穿信号线（死叉），下跌动能增强</li>
+                      <li>rsi_high（权重1.5）：RSI>65，超买区域，回调风险高</li>
+                      <li>obv_down（权重1.0）：OBV<0，资金净流出</li>
+                      <li>vwap_vol（权重1.5）：价格低于VWAP且成交量比率>1.2，弱势特征</li>
+                      <li>price_down（权重1.0）：日变化<0，价格下跌</li>
+                      <li>bb_overbought（权重1.0）：布林带位置>0.8，接近上轨，超买信号</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>出货评分持续上升：主力资金持续流出，建议减仓或清仓</li>
+                      <li>出货评分下降：出货动能减弱，可考虑观望</li>
+                      <li>建仓评分与出货评分同时低：缺乏明确方向，建议观望</li>
+                      <li>建仓评分高且出货评分低：建仓信号明确，可考虑买入</li>
+                    </ul>
+                  </li>
                 </ul>
               </li>
               <li><b>趋势(技术分析)</b>：市场当前的整体方向。</li>
@@ -3029,6 +3809,47 @@ class HSIEmailSystem:
         text += "    * 25-49分：弱共振 - 部分维度一致，弱信号\n"
         text += "    * <25分：无共振 - 各维度分歧，无明确信号\n"
         text += "  - 资产类型差异：不同资产类型使用不同权重配置，股票(40%/35%/25%)、加密货币(30%/45%/25%)、黄金(45%/30%/25%)\n"
+        text += "• 建仓评分(0-10+)：基于9个技术指标的加权评分系统，用于识别主力资金建仓信号：\n"
+        text += "  - 评分范围：0-10+分，分数越高建仓信号越强\n"
+        text += "  - 信号级别：\n"
+        text += "    * strong（强烈建仓）：评分≥5.0，建议较高比例买入或确认建仓\n"
+        text += "    * partial（部分建仓）：评分≥3.0，建议分批入场或小仓位试探\n"
+        text += "    * none（无信号）：评分<3.0，无明确建仓信号\n"
+        text += "  - 评估指标（共9个）：\n"
+        text += "    * price_low（权重2.0）：价格处于低位（价格百分位<40%）\n"
+        text += "    * vol_ratio（权重2.0）：成交量放大（成交量比率>1.3）\n"
+        text += "    * vol_z（权重1.0）：成交量z-score>1.2，显著高于平均水平\n"
+        text += "    * macd_cross（权重1.5）：MACD线上穿信号线（金叉），上涨动能增强\n"
+        text += "    * rsi_oversold（权重1.2）：RSI<40，超卖区域，反弹概率高\n"
+        text += "    * obv_up（权重1.0）：OBV>0，资金净流入\n"
+        text += "    * vwap_vol（权重1.2）：价格高于VWAP且成交量比率>1.2，强势特征\n"
+        text += "    * price_above_vwap（权重0.8）：价格高于VWAP，当日表现强势\n"
+        text += "    * bb_oversold（权重1.0）：布林带位置<0.2，接近下轨，超卖信号\n"
+        text += "  - 应用场景：\n"
+        text += "    * 建仓评分持续上升：主力资金持续流入，可考虑加仓\n"
+        text += "    * 建仓评分下降：建仓动能减弱，需谨慎\n"
+        text += "    * 建仓评分与出货评分同时高：多空信号冲突，建议观望\n"
+        text += "• 出货评分(0-10+)：基于10个技术指标的加权评分系统，用于识别主力资金出货信号：\n"
+        text += "  - 评分范围：0-10+分，分数越高出货信号越强\n"
+        text += "  - 信号级别：\n"
+        text += "    * strong（强烈出货）：评分≥5.0，建议较大比例卖出或清仓\n"
+        text += "    * weak（弱出货）：评分≥3.0，建议部分减仓或密切观察\n"
+        text += "    * none（无信号）：评分<3.0，无明确出货信号\n"
+        text += "  - 评估指标（共10个）：\n"
+        text += "    * price_high（权重2.0）：价格处于高位（价格百分位>60%）\n"
+        text += "    * vol_ratio（权重2.0）：成交量放大（成交量比率>1.5）\n"
+        text += "    * vol_z（权重1.5）：成交量z-score>1.5，显著高于平均水平\n"
+        text += "    * macd_cross（权重1.5）：MACD线下穿信号线（死叉），下跌动能增强\n"
+        text += "    * rsi_high（权重1.5）：RSI>65，超买区域，回调风险高\n"
+        text += "    * obv_down（权重1.0）：OBV<0，资金净流出\n"
+        text += "    * vwap_vol（权重1.5）：价格低于VWAP且成交量比率>1.2，弱势特征\n"
+        text += "    * price_down（权重1.0）：日变化<0，价格下跌\n"
+        text += "    * bb_overbought（权重1.0）：布林带位置>0.8，接近上轨，超买信号\n"
+        text += "  - 应用场景：\n"
+        text += "    * 出货评分持续上升：主力资金持续流出，建议减仓或清仓\n"
+        text += "    * 出货评分下降：出货动能减弱，可考虑观望\n"
+        text += "    * 建仓评分与出货评分同时低：缺乏明确方向，建议观望\n"
+        text += "    * 建仓评分高且出货评分低：建仓信号明确，可考虑买入\n"
         text += "• 趋势(技术分析)：市场当前的整体方向。\n"
         text += "• 信号描述(量价分析)：基于价格和成交量关系的技术信号类型：\n"
         text += "  - 上升趋势形成：短期均线(MA20)上穿中期均线(MA50)，形成上升趋势\n"
