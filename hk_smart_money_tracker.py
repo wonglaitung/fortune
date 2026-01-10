@@ -740,6 +740,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 5. **风险控制触发**：如果触发止损/止盈/Trailing Stop，强制归入卖出建议，优先级最高
 
 🎯 买入建议（综合评分>50分 且 建仓评分 ≥ 出货评分，按评分排序）
+⚠️ 数量限制：只输出最优先的3-5只股票（按综合评分从高到低排序）
 
 股票代码 股票名称
 - 综合评分：XX分（建仓评分XX分 + 多周期趋势评分XX分 + 多周期相对强度评分XX分 + 基本面评分XX分 + 新闻影响XX分 + 技术指标协同XX分）
@@ -752,6 +753,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 - 风险因素：详细说明潜在风险
 
 ⚠️ 卖出建议（出货评分 ≥ 3.0 且 出货评分 > 建仓评分，或触发风险控制信号）
+⚠️ 重要：只列出最优先的3-5只股票，按综合评分从高到低排序
 
 股票代码 股票名称
 - 卖出原因：出货评分XX分（出货评分>建仓评分）/止损触发/止盈触发/Trailing Stop触发
