@@ -202,21 +202,64 @@ def get_hsi_return(start, end):
 # ==============================
 # 3. 辅助函数与缓存（包括南向资金缓存，避免重复调用 ak）
 # ==============================
+import pickle
+import hashlib
+
+# 内存缓存（用于单次运行）
 southbound_cache = {}  # cache[(code, date_str)] = DataFrame from ak or cache[code] = full DataFrame
 
-def fetch_ggt_components(code, date_str):
+# 持久化缓存文件路径
+SOUTHBOUND_CACHE_FILE = 'data/southbound_data_cache.pkl'
+
+def load_southbound_cache():
+    """从磁盘加载南向资金缓存"""
+    try:
+        if os.path.exists(SOUTHBOUND_CACHE_FILE):
+            with open(SOUTHBOUND_CACHE_FILE, 'rb') as f:
+                return pickle.load(f)
+    except Exception as e:
+        print(f"⚠️ 加载南向资金缓存失败: {e}")
+    return {}
+
+def save_southbound_cache(cache):
+    """保存南向资金缓存到磁盘"""
+    try:
+        os.makedirs('data', exist_ok=True)
+        with open(SOUTHBOUND_CACHE_FILE, 'wb') as f:
+            pickle.dump(cache, f)
+    except Exception as e:
+        print(f"⚠️ 保存南向资金缓存失败: {e}")
+
+def fetch_ggt_components(code, date_str, max_retries=3):
     """
     从 ak 获取指定股票和日期的港股南向资金数据，并缓存。
     date_str 格式 YYYYMMDD
     返回 DataFrame 或 None
+    
+    改进：
+    1. 持久化缓存到磁盘，确保同一日期的数据在多次运行中保持一致
+    2. 增加重试机制
+    3. 使用确定性逻辑（不使用"最近日期"，而是使用固定规则）
+    4. 添加缓存验证
     """
+    # 加载持久化缓存
+    persistent_cache = load_southbound_cache()
+    
     cache_key = (code, date_str)
+    
+    # 检查内存缓存
     if cache_key in southbound_cache:
         return southbound_cache[cache_key]
     
+    # 检查持久化缓存
+    if cache_key in persistent_cache:
+        cached_data = persistent_cache[cache_key]
+        southbound_cache[cache_key] = cached_data
+        return cached_data
+    
     import threading
     
-    def fetch_with_timeout(symbol, timeout=3):
+    def fetch_with_timeout(symbol, timeout=10):
         """带超时的数据获取函数"""
         result = None
         exception = None
@@ -238,99 +281,139 @@ def fetch_ggt_components(code, date_str):
         
         return result, exception
     
-    try:
-        # 使用新的接口获取个股南向资金数据
-        # akshare要求股票代码为5位数字格式，不足5位的需要在前面补0
-        symbol = code.replace('.HK', '')
-        if len(symbol) < 5:
-            symbol = symbol.zfill(5)
-        elif len(symbol) > 5:
-            # 如果超过5位，取后5位（处理像 "00700.HK" 这样的格式）
-            symbol = symbol[-5:]
-        
-        # 检查缓存中是否已有该股票的数据
-        stock_cache_key = symbol
-        if stock_cache_key in southbound_cache and southbound_cache[stock_cache_key] is not None:
-            df_individual = southbound_cache[stock_cache_key]
-        else:
-            # 获取个股南向资金数据（带10秒超时）
-            df_individual, exception = fetch_with_timeout(symbol, timeout=10)
+    # 重试机制
+    for retry in range(max_retries):
+        try:
+            # 使用新的接口获取个股南向资金数据
+            # akshare要求股票代码为5位数字格式，不足5位的需要在前面补0
+            symbol = code.replace('.HK', '')
+            if len(symbol) < 5:
+                symbol = symbol.zfill(5)
+            elif len(symbol) > 5:
+                # 如果超过5位，取后5位（处理像 "00700.HK" 这样的格式）
+                symbol = symbol[-5:]
             
-            # 检查是否超时
-            if exception == "timeout":
-                print(f"⚠️ 获取南向资金数据超时 {code} {date_str}，跳过")
-                southbound_cache[stock_cache_key] = None
-                time.sleep(AK_CALL_SLEEP)
-                return None
-            
-            # 检查是否有其他异常
-            if exception is not None:
-                print(f"⚠️ 获取南向资金数据失败 {code} {date_str}: {exception}")
-                southbound_cache[stock_cache_key] = None
-                time.sleep(AK_CALL_SLEEP)
-                return None
-            
-            # 检查返回的数据是否有效
-            if df_individual is None or not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
-                print(f"⚠️ 获取南向资金数据为空 {code}")
-                southbound_cache[stock_cache_key] = None
-                time.sleep(AK_CALL_SLEEP)
-                return None
-            
-            # 缓存该股票的所有数据
-            southbound_cache[stock_cache_key] = df_individual
-        
-        # 检查DataFrame是否有效
-        if not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
-            print(f"⚠️ 南向资金数据无效 {code}")
-            southbound_cache[cache_key] = None
-            time.sleep(AK_CALL_SLEEP)
-            return None
-        
-        # 确保持股日期列是datetime类型
-        if '持股日期' in df_individual.columns:
-            df_individual['持股日期'] = pd.to_datetime(df_individual['持股日期'])
-        
-        # 将日期字符串转换为pandas日期格式进行匹配
-        target_date = pd.to_datetime(date_str, format='%Y%m%d')
-        
-        # 筛选指定日期的数据
-        df_filtered = df_individual[df_individual['持股日期'] == target_date.date()]
-        
-        # 如果未找到指定日期的数据，使用最近的可用日期数据
-        if df_filtered.empty:
-            # 获取所有可用日期
-            available_dates = df_individual['持股日期']
-            # 找到最近的日期（小于或等于目标日期）
-            closest_date = available_dates[available_dates <= target_date].max()
-            
-            if pd.notna(closest_date):
-                # 使用最近日期的数据
-                df_filtered = df_individual[df_individual['持股日期'] == closest_date]
-                print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}，使用最近日期 {closest_date.strftime('%Y%m%d')} 的数据")
+            # 检查内存缓存中是否已有该股票的数据
+            stock_cache_key = symbol
+            if stock_cache_key in southbound_cache and southbound_cache[stock_cache_key] is not None:
+                df_individual = southbound_cache[stock_cache_key]
             else:
-                print(f"⚠️ 未找到指定日期及之前的南向资金数据 {code} {date_str}")
+                # 获取个股南向资金数据（带10秒超时）
+                df_individual, exception = fetch_with_timeout(symbol, timeout=10)
+                
+                # 检查是否超时
+                if exception == "timeout":
+                    print(f"⚠️ 获取南向资金数据超时 {code} {date_str}（重试 {retry+1}/{max_retries}），跳过")
+                    if retry < max_retries - 1:
+                        time.sleep(2)  # 等待2秒后重试
+                        continue
+                    southbound_cache[stock_cache_key] = None
+                    persistent_cache[stock_cache_key] = None
+                    save_southbound_cache(persistent_cache)
+                    time.sleep(AK_CALL_SLEEP)
+                    return None
+                
+                # 检查是否有其他异常
+                if exception is not None:
+                    print(f"⚠️ 获取南向资金数据失败 {code} {date_str}: {exception}（重试 {retry+1}/{max_retries}）")
+                    if retry < max_retries - 1:
+                        time.sleep(2)  # 等待2秒后重试
+                        continue
+                    southbound_cache[stock_cache_key] = None
+                    persistent_cache[stock_cache_key] = None
+                    save_southbound_cache(persistent_cache)
+                    time.sleep(AK_CALL_SLEEP)
+                    return None
+                
+                # 检查返回的数据是否有效
+                if df_individual is None or not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
+                    print(f"⚠️ 获取南向资金数据为空 {code}（重试 {retry+1}/{max_retries}）")
+                    if retry < max_retries - 1:
+                        time.sleep(2)  # 等待2秒后重试
+                        continue
+                    southbound_cache[stock_cache_key] = None
+                    persistent_cache[stock_cache_key] = None
+                    save_southbound_cache(persistent_cache)
+                    time.sleep(AK_CALL_SLEEP)
+                    return None
+                
+                # 缓存该股票的所有数据到内存和持久化缓存
+                southbound_cache[stock_cache_key] = df_individual
+                persistent_cache[stock_cache_key] = df_individual
+                save_southbound_cache(persistent_cache)
+            
+            # 检查DataFrame是否有效
+            if not isinstance(df_individual, pd.DataFrame) or df_individual.empty:
+                print(f"⚠️ 南向资金数据无效 {code}")
                 southbound_cache[cache_key] = None
+                persistent_cache[cache_key] = None
+                save_southbound_cache(persistent_cache)
                 time.sleep(AK_CALL_SLEEP)
                 return None
-        
-        if isinstance(df_filtered, pd.DataFrame) and not df_filtered.empty:
-            # 只返回需要的列以减少内存占用
-            result = df_filtered[['持股日期', '持股市值变化-1日']].copy()
-            southbound_cache[cache_key] = result
-            # 略微延时以防被限流
-            time.sleep(AK_CALL_SLEEP)
-            return result
-        else:
-            print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}")
+            
+            # 确保持股日期列是datetime类型
+            if '持股日期' in df_individual.columns:
+                df_individual['持股日期'] = pd.to_datetime(df_individual['持股日期'])
+            
+            # 将日期字符串转换为pandas日期格式进行匹配
+            target_date = pd.to_datetime(date_str, format='%Y%m%d')
+            
+            # 筛选指定日期的数据
+            df_filtered = df_individual[df_individual['持股日期'] == target_date.date()]
+            
+            # 如果未找到指定日期的数据，使用确定性逻辑：查找前一个交易日
+            if df_filtered.empty:
+                # 计算前一个交易日（排除周末）
+                previous_date = target_date
+                for _ in range(7):  # 最多查找7天
+                    previous_date = previous_date - timedelta(days=1)
+                    if previous_date.weekday() < 5:  # 0-4是周一到周五
+                        df_filtered = df_individual[df_individual['持股日期'] == previous_date.date()]
+                        if not df_filtered.empty:
+                            print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}，使用前一个交易日 {previous_date.strftime('%Y%m%d')} 的数据")
+                            break
+                
+                # 如果仍然没有找到数据，返回None
+                if df_filtered.empty:
+                    print(f"⚠️ 未找到指定日期及前一周的南向资金数据 {code} {date_str}")
+                    southbound_cache[cache_key] = None
+                    persistent_cache[cache_key] = None
+                    save_southbound_cache(persistent_cache)
+                    time.sleep(AK_CALL_SLEEP)
+                    return None
+            
+            if isinstance(df_filtered, pd.DataFrame) and not df_filtered.empty:
+                # 只返回需要的列以减少内存占用
+                result = df_filtered[['持股日期', '持股市值变化-1日']].copy()
+                
+                # 缓存结果到内存和持久化缓存
+                southbound_cache[cache_key] = result
+                persistent_cache[cache_key] = result
+                save_southbound_cache(persistent_cache)
+                
+                # 略微延时以防被限流
+                time.sleep(AK_CALL_SLEEP)
+                return result
+            else:
+                print(f"⚠️ 未找到指定日期的南向资金数据 {code} {date_str}")
+                southbound_cache[cache_key] = None
+                persistent_cache[cache_key] = None
+                save_southbound_cache(persistent_cache)
+                time.sleep(AK_CALL_SLEEP)
+                return None
+        except Exception as e:
+            print(f"⚠️ 获取南向资金数据失败 {code} {date_str}: {e}（重试 {retry+1}/{max_retries}）")
+            if retry < max_retries - 1:
+                time.sleep(2)  # 等待2秒后重试
+                continue
             southbound_cache[cache_key] = None
+            persistent_cache[cache_key] = None
+            save_southbound_cache(persistent_cache)
             time.sleep(AK_CALL_SLEEP)
             return None
-    except Exception as e:
-        print(f"⚠️ 获取南向资金数据失败 {code} {date_str}: {e}")
-        southbound_cache[cache_key] = None
-        time.sleep(AK_CALL_SLEEP)
-        return None
+    
+    # 所有重试都失败
+    return None
 
 def mark_runs(signal_series, min_len):
     """
@@ -1095,8 +1178,8 @@ def analyze_stock(code, name, run_date=None):
         if run_date:
             # 获取指定日期前 PRICE_WINDOW+30 天的数据
             target_date = pd.to_datetime(run_date)
-            # 计算需要获取的天数
-            days_diff = (datetime.now() - target_date).days + PRICE_WINDOW + 30
+            # 使用固定的数据获取天数，确保确定性
+            days_diff = PRICE_WINDOW + 30
             full_hist = get_hk_stock_data_tencent(stock_code, period_days=days_diff)
         else:
             # 默认行为：获取最近 PRICE_WINDOW+30 天的数据
@@ -1132,9 +1215,17 @@ def analyze_stock(code, name, run_date=None):
             main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
             
             # 获取上个交易日的日期（排除周末）
-            previous_trading_date = (datetime.now() - timedelta(days=1)).date()
-            while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
-                previous_trading_date -= timedelta(days=1)
+            # 使用main_hist的最后一个交易日的前一天（确保确定性）
+            if len(main_hist) > 0:
+                last_trading_date = main_hist.index[-1].date()
+                previous_trading_date = last_trading_date - timedelta(days=1)
+                while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
+                    previous_trading_date -= timedelta(days=1)
+            else:
+                # 如果main_hist为空，使用当前日期的前一天
+                previous_trading_date = (datetime.now() - timedelta(days=1)).date()
+                while previous_trading_date.weekday() >= 5:
+                    previous_trading_date -= timedelta(days=1)
             
         if len(main_hist) < 5:
             print(f"⚠️  {name} 主分析窗口数据不足")
@@ -2748,6 +2839,7 @@ def main(run_date=None):
             }
         
         # 调用大模型分析股票数据
+        llm_analysis = None
         try:
             print("\n🤖 正在调用大模型分析股票数据...")
             llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics)
