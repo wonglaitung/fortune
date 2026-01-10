@@ -736,11 +736,21 @@ def get_score_change_arrow(current_score, previous_score):
     if previous_score is None or current_score is None:
         return '<span style="color: #999;">→</span>'
     
-    if current_score > previous_score:
-        return '<span style="color: green; font-weight: bold;">↑</span>'
-    elif current_score < previous_score:
-        return '<span style="color: red; font-weight: bold;">↓</span>'
-    else:
+    # 尝试转换为数值类型进行比较
+    try:
+        current_val = float(current_score) if current_score != 'N/A' else None
+        previous_val = float(previous_score) if previous_score != 'N/A' else None
+        
+        if current_val is None or previous_val is None:
+            return '<span style="color: #999;">→</span>'
+        
+        if current_val > previous_val:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        elif current_val < previous_val:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        else:
+            return '<span style="color: #999;">→</span>'
+    except (ValueError, TypeError):
         return '<span style="color: #999;">→</span>'
 
 def get_price_change_arrow(current_price_str, previous_price):
