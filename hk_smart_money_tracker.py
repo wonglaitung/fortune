@@ -302,7 +302,7 @@ def fetch_ggt_components(code, date_str):
             # 获取所有可用日期
             available_dates = df_individual['持股日期']
             # 找到最近的日期（小于或等于目标日期）
-            closest_date = available_dates[available_dates.dt.date() <= target_date.date()].max()
+            closest_date = available_dates[available_dates <= target_date].max()
             
             if pd.notna(closest_date):
                 # 使用最近日期的数据
