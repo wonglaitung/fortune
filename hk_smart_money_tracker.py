@@ -24,7 +24,7 @@ from email import encoders
 import math
 import time
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 warnings.filterwarnings("ignore")
@@ -414,7 +414,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         str: 构建好的提示词
     """
     # 构建股票数据表格 (CSV格式) - 使用新的评分系统字段
-    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,建仓评分,建仓级别,建仓原因,出货评分,出货级别,出货原因,止盈,止损,Trailing Stop,放量上涨,缩量回调,TAV评分,TAV状态"
+    csv_header = "股票名称,代码,最新价,涨跌幅(%),位置(%),量比,成交量z-score,成交额z-score,成交金额(百万),换手率(%),VWAP,成交量比率,成交量比率信号,ATR,ATR比率,ATR比率信号,布林带宽度(%),布林带突破,波动率(%),5日均线偏离(%),10日均线偏离(%),RSI,RSI变化率,RSI背离信号,MACD,MACD柱状图,MACD柱状图变化率,MACD柱状图变化率信号,OBV,CMF,CMF信号线,CMF趋势信号,随机振荡器K,随机振荡器D,随机振荡器信号,Williams %R,Williams %R信号,布林带突破信号,价格变化率信号,南向资金(万),相对强度(RS_ratio_%),相对强度差值(RS_diff_%),跑赢恒指,基本面评分,市盈率,市净率,建仓评分,建仓级别,建仓原因,出货评分,出货级别,出货原因,止盈,止损,Trailing Stop,放量上涨,缩量回调,TAV评分,TAV状态,上个交易日RSI,上个交易日MACD,上个交易日价格,上个交易日建仓评分,上个交易日出货评分,上个交易日TAV评分"
     
     csv_rows = []
     for stock in stock_data:
@@ -425,8 +425,17 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
         rs_diff_value = stock.get('relative_strength_diff')
         rs_diff_pct = round(rs_diff_value * 100, 2) if rs_diff_value is not None else 'N/A'
         
+        # 获取上个交易日指标
+        prev_day_indicators = stock.get('prev_day_indicators', {})
+        prev_rsi = prev_day_indicators.get('rsi', 'N/A') if prev_day_indicators else 'N/A'
+        prev_macd = prev_day_indicators.get('macd', 'N/A') if prev_day_indicators else 'N/A'
+        prev_price = prev_day_indicators.get('price', 'N/A') if prev_day_indicators else 'N/A'
+        prev_buildup_score = prev_day_indicators.get('buildup_score', 'N/A') if prev_day_indicators else 'N/A'
+        prev_distribution_score = prev_day_indicators.get('distribution_score', 'N/A') if prev_day_indicators else 'N/A'
+        prev_tav_score = prev_day_indicators.get('tav_score', 'N/A') if prev_day_indicators else 'N/A'
+        
         # 使用新的评分系统字段
-        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('buildup_score', 'N/A') or 'N/A'},{stock.get('buildup_level', 'N/A') or 'N/A'},{stock.get('buildup_reasons', 'N/A') or 'N/A'},{stock.get('distribution_score', 'N/A') or 'N/A'},{stock.get('distribution_level', 'N/A') or 'N/A'},{stock.get('distribution_reasons', 'N/A') or 'N/A'},{int(stock.get('take_profit', False))},{int(stock.get('stop_loss', False))},{int(stock.get('trailing_stop', False))},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'}"
+        row = f"{stock['name']},{stock['code']},{stock['last_close'] or 'N/A'},{stock['change_pct'] or 'N/A'},{stock['price_percentile'] or 'N/A'},{stock['vol_ratio'] or 'N/A'},{stock['vol_z_score'] or 'N/A'},{stock['turnover_z_score'] or 'N/A'},{stock['turnover'] or 'N/A'},{stock['turnover_rate'] or 'N/A'},{stock['vwap'] or 'N/A'},{stock['volume_ratio'] or 'N/A'},{int(stock['volume_ratio_signal'])},{stock['atr'] or 'N/A'},{stock['atr_ratio'] or 'N/A'},{int(stock['atr_ratio_signal'])},{stock['bb_width'] or 'N/A'},{stock['bb_breakout'] or 'N/A'},{stock['volatility'] or 'N/A'},{stock['ma5_deviation'] or 'N/A'},{stock['ma10_deviation'] or 'N/A'},{stock['rsi'] or 'N/A'},{stock['rsi_roc'] or 'N/A'},{int(stock['rsi_divergence'])},{stock['macd'] or 'N/A'},{stock['macd_hist'] or 'N/A'},{stock['macd_hist_roc'] or 'N/A'},{int(stock['macd_hist_roc_signal'])},{stock['obv'] or 'N/A'},{stock['cmf'] or 'N/A'},{stock['cmf_signal'] or 'N/A'},{int(stock['cmf_trend_signal'])},{stock['stoch_k'] or 'N/A'},{stock['stoch_d'] or 'N/A'},{int(stock['stoch_signal'])},{stock['williams_r'] or 'N/A'},{int(stock['williams_r_signal'])},{int(stock['bb_breakout_signal'])},{stock['roc_signal'] or 'N/A'},{stock['southbound'] or 'N/A'},{rs_ratio_pct},{rs_diff_pct},{int(stock['outperforms_hsi'])},{stock.get('fundamental_score', 'N/A')},{stock.get('pe_ratio', 'N/A')},{stock.get('pb_ratio', 'N/A')},{stock.get('buildup_score', 'N/A') or 'N/A'},{stock.get('buildup_level', 'N/A') or 'N/A'},{stock.get('buildup_reasons', 'N/A') or 'N/A'},{stock.get('distribution_score', 'N/A') or 'N/A'},{stock.get('distribution_level', 'N/A') or 'N/A'},{stock.get('distribution_reasons', 'N/A') or 'N/A'},{int(stock.get('take_profit', False))},{int(stock.get('stop_loss', False))},{int(stock.get('trailing_stop', False))},{int(stock['strong_volume_up'])},{int(stock['weak_volume_down'])},{stock['tav_score'] or 'N/A'},{stock['tav_status'] or 'N/A'},{prev_rsi},{prev_macd},{prev_price},{prev_buildup_score},{prev_distribution_score},{prev_tav_score}"
         csv_rows.append(row)
     
     stock_table = csv_header + "\n" + "\n".join(csv_rows)
@@ -565,6 +574,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 - **TAV评分**：趋势-加速度-成交量三维分析的综合评分(0-100)，70分以上为强势，30分以下为弱势
 - **南向资金**：大陆资金流入港股的情况，正值表示净流入，负值表示净流出
 - **新闻信息**：可能影响短期股价走势，需与技术指标和基本面结合分析
+- **上个交易日对比**：提供与上个交易日的关键指标对比，包括RSI、MACD、价格、建仓评分、出货评分、TAV评分，帮助识别指标变化趋势
 
 🎯 核心分析任务：
 
@@ -638,7 +648,101 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None):
 
 
 # ==============================
-# 4. 单股分析函数
+# 4. 上个交易日对比辅助函数
+# ==============================
+
+def get_trend_change_arrow(current_trend, previous_trend):
+    """
+    返回趋势变化箭头符号
+    
+    参数:
+    - current_trend: 当前趋势
+    - previous_trend: 上个交易日趋势
+    
+    返回:
+    - str: 箭头符号和颜色样式
+    """
+    if previous_trend is None or previous_trend == 'N/A' or current_trend is None or current_trend == 'N/A':
+        return '<span style="color: #999;">→</span>'
+    
+    # 定义看涨趋势
+    bullish_trends = ['强势多头', '多头趋势', '短期上涨']
+    # 定义看跌趋势
+    bearish_trends = ['弱势空头', '空头趋势', '短期下跌']
+    # 定义震荡趋势
+    consolidation_trends = ['震荡整理', '震荡']
+    
+    # 趋势改善：看跌/震荡 → 看涨
+    if (previous_trend in bearish_trends + consolidation_trends) and current_trend in bullish_trends:
+        return '<span style="color: green; font-weight: bold;">↑</span>'
+    
+    # 趋势恶化：看涨 → 看跌
+    if previous_trend in bullish_trends and current_trend in bearish_trends:
+        return '<span style="color: red; font-weight: bold;">↓</span>'
+    
+    # 震荡 → 看跌（恶化）
+    if previous_trend in consolidation_trends and current_trend in bearish_trends:
+        return '<span style="color: red; font-weight: bold;">↓</span>'
+    
+    # 看涨 → 震荡（改善）
+    if previous_trend in bullish_trends and current_trend in consolidation_trends:
+        return '<span style="color: orange; font-weight: bold;">↓</span>'
+    
+    # 看跌 → 震荡（改善）
+    if previous_trend in bearish_trends and current_trend in consolidation_trends:
+        return '<span style="color: orange; font-weight: bold;">↑</span>'
+    
+    # 无明显变化（同类型趋势）
+    return '<span style="color: #999;">→</span>'
+
+def get_score_change_arrow(current_score, previous_score):
+    """
+    返回评分变化箭头符号
+    
+    参数:
+    - current_score: 当前评分
+    - previous_score: 上个交易日评分
+    
+    返回:
+    - str: 箭头符号和颜色样式
+    """
+    if previous_score is None or current_score is None:
+        return '<span style="color: #999;">→</span>'
+    
+    if current_score > previous_score:
+        return '<span style="color: green; font-weight: bold;">↑</span>'
+    elif current_score < previous_score:
+        return '<span style="color: red; font-weight: bold;">↓</span>'
+    else:
+        return '<span style="color: #999;">→</span>'
+
+def get_price_change_arrow(current_price_str, previous_price):
+    """
+    返回价格变化箭头符号
+    
+    参数:
+    - current_price_str: 当前价格字符串（格式化后的）
+    - previous_price: 上个交易日价格（数值）
+    
+    返回:
+    - str: 箭头符号和颜色样式
+    """
+    if previous_price is None or current_price_str is None or current_price_str == 'N/A':
+        return '<span style="color: #999;">→</span>'
+    
+    try:
+        current_price = float(current_price_str.replace(',', ''))
+        if current_price > previous_price:
+            return '<span style="color: green; font-weight: bold;">↑</span>'
+        elif current_price < previous_price:
+            return '<span style="color: red; font-weight: bold;">↓</span>'
+        else:
+            return '<span style="color: #999;">→</span>'
+    except:
+        return '<span style="color: #999;">→</span>'
+
+# ==============================
+# 5. 单股分析函数
 # ==============================
 
 def analyze_stock(code, name, run_date=None):
@@ -687,12 +791,24 @@ def analyze_stock(code, name, run_date=None):
                 filtered_hist = full_hist[full_hist.index >= target_date]
             
             main_hist = filtered_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+            
+            # 获取上个交易日的日期（排除周末）
+            previous_trading_date = target_date.date() - timedelta(days=1)
+            while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
+                previous_trading_date -= timedelta(days=1)
         else:
             main_hist = full_hist[['Open', 'Close', 'Volume']].tail(DAYS_ANALYSIS).copy()
+            
+            # 获取上个交易日的日期（排除周末）
+            previous_trading_date = (datetime.now() - timedelta(days=1)).date()
+            while previous_trading_date.weekday() >= 5:  # 5=周六, 6=周日
+                previous_trading_date -= timedelta(days=1)
             
         if len(main_hist) < 5:
             print(f"⚠️  {name} 主分析窗口数据不足")
             return None
+
+        # 获取上个交易日的指标数据（移到技术指标计算之后）
 
         # ====== 排除周六日（只保留交易日）======
         main_hist = main_hist[main_hist.index.weekday < 5]
@@ -902,6 +1018,61 @@ def analyze_stock(code, name, run_date=None):
         main_hist['Williams_R'] = full_hist['Williams_R'].reindex(main_hist.index, method='ffill')
         main_hist['ROC'] = full_hist['ROC'].reindex(main_hist.index, method='ffill')
         main_hist['Volume_Ratio'] = full_hist['Volume_Ratio'].reindex(main_hist.index, method='ffill')
+
+        # 获取上个交易日的指标数据（在所有技术指标计算完成后）
+        previous_day_indicators = None
+        try:
+            # 计算上个交易日日期
+            yesterday = datetime.now().date() - timedelta(days=1)
+            while yesterday.weekday() >= 5:  # 5=周六, 6=周日
+                yesterday -= timedelta(days=1)
+            
+            # 如果指定了运行日期，使用运行日期的前一天
+            if run_date:
+                target_date = pd.to_datetime(run_date).date()
+                previous_trading_date = target_date - timedelta(days=1)
+                while previous_trading_date.weekday() >= 5:
+                    previous_trading_date -= timedelta(days=1)
+            else:
+                previous_trading_date = yesterday
+            
+            # 筛选出上个交易日及之前的数据
+            previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
+            if full_hist.index.tz is not None:
+                previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize(full_hist.index.tz)
+            
+            prev_filtered_hist = full_hist[full_hist.index <= previous_trading_date_timestamp]
+            
+            if not prev_filtered_hist.empty:
+                # 获取上个交易日的数据（最后一天）
+                prev_day_data = prev_filtered_hist.iloc[-1]
+                
+                # 计算上个交易日的关键指标
+                prev_rsi = prev_day_data.get('RSI') if pd.notna(prev_day_data.get('RSI')) else None
+                prev_macd = prev_day_data.get('MACD') if pd.notna(prev_day_data.get('MACD')) else None
+                prev_price = prev_day_data.get('Close') if pd.notna(prev_day_data.get('Close')) else None
+                
+                # 获取上个交易日的建仓和出货评分（如果可用）
+                prev_buildup_score = None
+                prev_distribution_score = None
+                prev_tav_score = None
+                
+                # 尝试从历史数据中获取评分
+                if 'Buildup_Score' in prev_filtered_hist.columns:
+                    prev_buildup_score = prev_filtered_hist['Buildup_Score'].iloc[-1] if pd.notna(prev_filtered_hist['Buildup_Score'].iloc[-1]) else None
+                if 'Distribution_Score' in prev_filtered_hist.columns:
+                    prev_distribution_score = prev_filtered_hist['Distribution_Score'].iloc[-1] if pd.notna(prev_filtered_hist['Distribution_Score'].iloc[-1]) else None
+                
+                previous_day_indicators = {
+                    'rsi': safe_round(prev_rsi, 2) if prev_rsi is not None else None,
+                    'macd': safe_round(prev_macd, 4) if prev_macd is not None else None,
+                    'price': safe_round(prev_price, 2) if prev_price is not None else None,
+                    'buildup_score': safe_round(prev_buildup_score, 2) if prev_buildup_score is not None else None,
+                    'distribution_score': safe_round(prev_distribution_score, 2) if prev_distribution_score is not None else None,
+                    'tav_score': safe_round(prev_tav_score, 1) if prev_tav_score is not None else None,
+                }
+        except Exception as e:
+            print(f"  ⚠️ 获取 {name} 上个交易日指标失败: {e}")
 
         # 南向资金：按日期获取并缓存，转换为"万"
         main_hist['Southbound_Net'] = 0.0
@@ -1673,6 +1844,61 @@ def analyze_stock(code, name, run_date=None):
             'tav_status': tav_recommendation if tav_recommendation else '无TAV',
         }
         
+        # 重新获取上个交易日的评分数据（在所有评分计算完成后）
+        if previous_day_indicators is not None:
+            try:
+                # 计算上个交易日的日期
+                yesterday = datetime.now().date() - timedelta(days=1)
+                while yesterday.weekday() >= 5:  # 5=周六, 6=周日
+                    yesterday -= timedelta(days=1)
+                
+                # 如果指定了运行日期，使用运行日期的前一天
+                if run_date:
+                    target_date = pd.to_datetime(run_date).date()
+                    previous_trading_date = target_date - timedelta(days=1)
+                    while previous_trading_date.weekday() >= 5:
+                        previous_trading_date -= timedelta(days=1)
+                else:
+                    previous_trading_date = yesterday
+                
+                # 筛选出上个交易日及之前的数据
+                previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
+                if main_hist.index.tz is not None:
+                    previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize(main_hist.index.tz)
+                
+                # 从main_hist中查找上个交易日数据（因为评分在main_hist中）
+                prev_filtered_hist = main_hist[main_hist.index <= previous_trading_date_timestamp]
+                
+                if not prev_filtered_hist.empty:
+                    # 获取上个交易日的建仓和出货评分
+                    if 'Buildup_Score' in prev_filtered_hist.columns:
+                        prev_buildup_score = prev_filtered_hist['Buildup_Score'].iloc[-1] if pd.notna(prev_filtered_hist['Buildup_Score'].iloc[-1]) else None
+                        previous_day_indicators['buildup_score'] = safe_round(prev_buildup_score, 2) if prev_buildup_score is not None else None
+                    if 'Distribution_Score' in prev_filtered_hist.columns:
+                        prev_distribution_score = prev_filtered_hist['Distribution_Score'].iloc[-1] if pd.notna(prev_filtered_hist['Distribution_Score'].iloc[-1]) else None
+                        previous_day_indicators['distribution_score'] = safe_round(prev_distribution_score, 2) if prev_distribution_score is not None else None
+                    
+                    # TAV评分需要重新计算（使用full_hist，因为需要High和Low列）
+                    if TAV_AVAILABLE and TECHNICAL_ANALYSIS_AVAILABLE:
+                        try:
+                            # 从full_hist中获取上个交易日数据（包含High和Low列）
+                            prev_filtered_full_hist = full_hist[full_hist.index <= previous_trading_date_timestamp]
+                            if not prev_filtered_full_hist.empty:
+                                tav_analyzer = TechnicalAnalyzerV2(enable_tav=True)
+                                tav_data = prev_filtered_full_hist[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+                                tav_data = tav_analyzer.calculate_all_indicators(tav_data, asset_type='stock')
+                                tav_summary = tav_analyzer.get_tav_analysis_summary(tav_data, 'stock')
+                                if tav_summary:
+                                    prev_tav_score = tav_summary.get('tav_score', 0)
+                                    previous_day_indicators['tav_score'] = safe_round(prev_tav_score, 1) if prev_tav_score is not None else None
+                        except Exception:
+                            pass
+            except Exception as e:
+                print(f"  ⚠️ 重新获取上个交易日评分失败: {e}")
+        
+        # 添加上个交易日指标信息
+        result['prev_day_indicators'] = previous_day_indicators
+        
         # 添加基本面数据
         if fundamental_data:
             # 添加基本面评分和详细信息
@@ -1930,8 +2156,22 @@ def main(run_date=None):
             # 信号指标
             'strong_volume_up', 'weak_volume_down',
             # TAV评分
-            'tav_score', 'tav_status'
+            'tav_score', 'tav_status',
+            # 上个交易日指标（新增）
+            'prev_day_indicators'
         ]]
+        
+        # 从prev_day_indicators中提取上个交易日指标作为独立列
+        df_report['prev_rsi'] = df_report['prev_day_indicators'].apply(lambda x: x.get('rsi') if isinstance(x, dict) else None)
+        df_report['prev_macd'] = df_report['prev_day_indicators'].apply(lambda x: x.get('macd') if isinstance(x, dict) else None)
+        df_report['prev_price'] = df_report['prev_day_indicators'].apply(lambda x: x.get('price') if isinstance(x, dict) else None)
+        df_report['prev_buildup_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('buildup_score') if isinstance(x, dict) else None)
+        df_report['prev_distribution_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('distribution_score') if isinstance(x, dict) else None)
+        df_report['prev_tav_score'] = df_report['prev_day_indicators'].apply(lambda x: x.get('tav_score') if isinstance(x, dict) else None)
+        
+        # 移除prev_day_indicators列（已提取为独立列）
+        df_report = df_report.drop('prev_day_indicators', axis=1)
+        
         df_report.columns = [
             # 基本信息
             '股票名称', '代码', '最新价', '涨跌幅(%)',
@@ -1965,7 +2205,9 @@ def main(run_date=None):
             # 信号指标
             '放量上涨', '缩量回调',
             # TAV评分
-            'TAV评分', 'TAV状态'
+            'TAV评分', 'TAV状态',
+            # 上个交易日指标（新增）
+            '上个交易日RSI', '上个交易日MACD', '上个交易日价格', '上个交易日建仓评分', '上个交易日出货评分', '上个交易日TAV评分'
         ]
 
         # 按出货评分降序、建仓评分降序排序（优先显示出货信号强的股票）
@@ -2320,11 +2562,31 @@ def main(run_date=None):
                 # 添加数据行
                 for idx, row in chunk.iterrows():
                     html += '    <tr>\n'
-                    for cell in row:
+                    for i, (col_name, cell) in enumerate(row.items()):
                         if pd.isna(cell) or cell is None:
                             html += f'      <td>None</td>\n'
                         else:
-                            html += f'      <td>{cell}</td>\n'
+                            # 为上个交易日指标添加变化箭头
+                            cell_display = str(cell)
+                            if col_name == '上个交易日RSI' and pd.notna(row.get('RSI')):
+                                arrow = get_score_change_arrow(row['RSI'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            elif col_name == '上个交易日MACD' and pd.notna(row.get('MACD')):
+                                arrow = get_score_change_arrow(row['MACD'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            elif col_name == '上个交易日价格' and pd.notna(row.get('最新价')):
+                                arrow = get_price_change_arrow(row['最新价'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            elif col_name == '上个交易日建仓评分' and pd.notna(row.get('建仓评分')):
+                                arrow = get_score_change_arrow(row['建仓评分'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            elif col_name == '上个交易日出货评分' and pd.notna(row.get('出货评分')):
+                                arrow = get_score_change_arrow(row['出货评分'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            elif col_name == '上个交易日TAV评分' and pd.notna(row.get('TAV评分')):
+                                arrow = get_score_change_arrow(row['TAV评分'], cell)
+                                cell_display = f"{arrow} {cell}"
+                            html += f'      <td>{cell_display}</td>\n'
                     html += '    </tr>\n'
                 html += '  </tbody>\n'
                 html += '</table>\n'
