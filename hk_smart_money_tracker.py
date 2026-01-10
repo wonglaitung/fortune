@@ -2323,6 +2323,20 @@ def markdown_to_html(md_text):
     for line in lines:
         stripped_line = line.strip()
         
+        # 检查是否是交易建议清单的特殊格式（以[BUY]、[SELL]、[HOLD]、[CLOSE]开头）
+        trade_signal_match = re.match(r'^\[(BUY|SELL|HOLD|CLOSE)\]', line)
+        if trade_signal_match:
+            # 这是交易建议清单的特殊格式，不要当作表格行处理
+            # 将"|"替换为" | "（前后加空格），便于阅读
+            processed_line = line.replace('|', ' | ')
+            # 处理粗体和斜体
+            processed_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', processed_line)
+            processed_line = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_line)
+            processed_line = re.sub(r'__(.*?)__', r'<strong>\1</strong>', processed_line)
+            processed_line = re.sub(r'_(.*?)_', r'<em>\1</em>', processed_line)
+            html_lines.append(f'<div style="margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #007bff;">{processed_line}</div>')
+            continue
+        
         # 检查是否是表格分隔行（包含 | 和 - 用于定义表格结构）
         table_separator_match = re.match(r'^\s*\|?\s*[:\-\s\|]*\|\s*$', line)
         if table_separator_match and '|' in line and any(c in line for c in ['-', ':']):
