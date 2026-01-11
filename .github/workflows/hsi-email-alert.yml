@@ -1,4 +1,4 @@
-‘name: HSI Email Alert
+name: HSI Email Alert
 
 on:
   schedule:
