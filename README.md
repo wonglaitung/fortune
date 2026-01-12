@@ -83,6 +83,7 @@
 - CCI（商品通道指数）
 - OBV（能量潮）
 - VaR（风险价值）计算
+- TAV加权评分系统
 
 #### 人工智能股票交易盈利能力分析器 (`ai_trading_analyzer.py`)
 - 基于交易记录复盘AI推荐策略
@@ -168,14 +169,7 @@ pip install -r requirements.txt
 
 ### 2. 配置环境变量
 
-复制并编辑环境变量配置文件：
-
-```bash
-cp set_key.sh.example set_key.sh
-# 编辑 set_key.sh 填入你的配置
-```
-
-需要配置的环境变量：
+编辑 `set_key.sh` 文件，填入你的配置：
 
 ```bash
 # 邮件配置
@@ -348,14 +342,11 @@ fortune/
 ├── llm_services/                   # 大模型服务
 │   └── qwen_engine.py
 ├── data/                           # 数据文件目录
-│   ├── all_dividends.csv
-│   ├── recent_dividends.csv
-│   ├── upcoming_dividends.csv
-│   ├── all_stock_news_records.csv
-│   ├── hsi_strategy_latest.txt
-│   ├── simulation_state.json
-│   ├── simulation_transactions.csv
-│   ├── simulation_portfolio.csv
+│   ├── all_stock_news_records.csv  # 股票新闻记录
+│   ├── hsi_strategy_latest.txt     # 恒生指数策略分析
+│   ├── simulation_state.json       # 模拟交易状态
+│   ├── simulation_transactions.csv # 交易历史记录
+│   ├── simulation_portfolio.csv    # 投资组合价值
 │   ├── simulation_trade_log_*.txt  # 交易日志（按日期分割）
 │   └── fundamental_cache/          # 基本面数据缓存
 │       ├── 0005_financial_indicator.pkl
@@ -460,9 +451,6 @@ fortune/
 
 | 文件 | 说明 | 更新频率 |
 |------|------|---------|
-| `all_dividends.csv` | 所有股息信息记录 | 按需 |
-| `recent_dividends.csv` | 最近股息信息记录 | 按需 |
-| `upcoming_dividends.csv` | 即将除净的股息信息 | 每日 |
 | `all_stock_news_records.csv` | 所有股票相关新闻记录 | 按需 |
 | `hsi_strategy_latest.txt` | 恒生指数策略分析报告 | 每日 |
 | `simulation_state.json` | 模拟交易状态 | 实时 |
@@ -479,6 +467,7 @@ fortune/
 4. **风险提示**：本系统仅供学习和研究使用，不构成投资建议
 5. **API密钥**：请妥善保管API密钥，不要提交到版本控制
 6. **时区注意**：系统默认使用香港时间进行日期计算
+7. **股息数据**：股息信息通过AKShare实时获取，不保存到CSV文件
 
 ## 📦 依赖项
 
@@ -512,6 +501,9 @@ A: 删除 `data/fundamental_cache/` 目录下的所有文件
 ### Q5: 模拟交易会真实下单吗？
 A: 不会，模拟交易系统只在本地记录，不会进行真实交易
 
+### Q6: 股息数据保存在哪里？
+A: 股息数据通过AKShare实时获取，不保存到CSV文件，仅在邮件中展示
+
 ## 📄 许可证
 
 本项目仅供学习和研究使用。
@@ -526,4 +518,4 @@ A: 不会，模拟交易系统只在本地记录，不会进行真实交易
 
 ---
 
-**最后更新**: 2026-01-07
+**最后更新**: 2026-01-12
