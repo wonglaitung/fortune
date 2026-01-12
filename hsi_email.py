@@ -1585,6 +1585,459 @@ class HSIEmailSystem:
             print(f"⚠️ 读取交易记录 CSV 失败: {e}")
             return pd.DataFrame()
 
+    def _read_portfolio_data(self, path='data/actual_porfolio.csv'):
+        """
+        读取持仓数据 CSV 文件
+        
+        参数:
+        - path: 持仓文件路径
+        
+        返回:
+        - list: 持仓列表，每个元素为字典，包含股票代码、名称、数量、成本价等信息
+        """
+        if not os.path.exists(path):
+            print(f"⚠️ 持仓文件不存在: {path}")
+            return []
+        
+        try:
+            df = pd.read_csv(path, encoding='utf-8')
+            if df.empty:
+                print("⚠️ 持仓文件为空")
+                return []
+            
+            portfolio = []
+            for _, row in df.iterrows():
+                # 尝试识别列名（支持中英文）
+                stock_code = None
+                lot_size = None
+                cost_price = None
+                lot_count = None
+                
+                # 查找股票代码列
+                for col in df.columns:
+                    if '股票号码' in col or 'stock_code' in col.lower() or 'code' in col.lower():
+                        stock_code = str(row[col]).strip()
+                        break
+                
+                # 查找每手股数列
+                for col in df.columns:
+                    if '一手股数' in col or 'lot_size' in col.lower():
+                        lot_size = float(row[col]) if pd.notna(row[col]) else None
+                        break
+                
+                # 查找成本价列
+                for col in df.columns:
+                    if '成本价' in col or 'cost_price' in col.lower() or 'cost' in col.lower():
+                        cost_price = float(row[col]) if pd.notna(row[col]) else None
+                        break
+                
+                # 查找持有手数列
+                for col in df.columns:
+                    if '持有手数' in col or 'lot_count' in col.lower() or 'quantity' in col.lower():
+                        lot_count = int(row[col]) if pd.notna(row[col]) else None
+                        break
+                
+                # 如果所有必要字段都存在，添加到持仓列表
+                if stock_code and lot_size and cost_price and lot_count:
+                    total_shares = lot_size * lot_count
+                    total_cost = cost_price * total_shares
+                    
+                    # 获取股票名称
+                    stock_name = self.stock_list.get(stock_code, stock_code)
+                    
+                    portfolio.append({
+                        'stock_code': stock_code,
+                        'stock_name': stock_name,
+                        'lot_size': lot_size,
+                        'cost_price': cost_price,
+                        'lot_count': lot_count,
+                        'total_shares': total_shares,
+                        'total_cost': total_cost
+                    })
+                else:
+                    print(f"⚠️ 跳过不完整的持仓记录: {row.to_dict()}")
+            
+            print(f"✅ 成功读取 {len(portfolio)} 条持仓记录")
+            return portfolio
+            
+        except Exception as e:
+            print(f"❌ 读取持仓数据失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
+        """
+        使用大模型分析持仓股票
+        
+        参数:
+        - portfolio: 持仓列表
+        - stock_results: 股票分析结果列表
+        - hsi_data: 恒生指数数据（可选）
+        
+        返回:
+        - str: 大模型生成的分析报告
+        """
+        if not portfolio:
+            return None
+        
+        try:
+            # 导入大模型服务
+            from llm_services.qwen_engine import chat_with_llm
+            
+            # 构建持仓分析数据
+            portfolio_analysis = []
+            total_cost = 0
+            total_current_value = 0
+            
+            for position in portfolio:
+                stock_code = position['stock_code']
+                stock_name = position['stock_name']
+                total_shares = position['total_shares']
+                cost_price = position['cost_price']
+                total_cost += position['total_cost']
+                
+                # 从 stock_results 中获取当前价格和技术指标
+                current_price = None
+                indicators = None
+                
+                for stock_result in stock_results:
+                    if stock_result['code'] == stock_code:
+                        stock_data = stock_result.get('data', {})
+                        current_price = stock_data.get('current_price')
+                        indicators = stock_result.get('indicators', {})
+                        break
+                
+                if current_price is None:
+                    print(f"⚠️ 无法获取 {stock_name} ({stock_code}) 的当前价格")
+                    continue
+                
+                current_value = current_price * total_shares
+                total_current_value += current_value
+                
+                profit_loss = current_value - position['total_cost']
+                profit_loss_pct = (profit_loss / position['total_cost']) * 100 if position['total_cost'] > 0 else 0
+                
+                # 构建技术指标信息
+                tech_info = []
+                if indicators:
+                    trend = indicators.get('trend', '未知')
+                    rsi = indicators.get('rsi', 0)
+                    macd = indicators.get('macd', 0)
+                    tav_score = indicators.get('tav_score', 0)
+                    buildup_score = indicators.get('buildup_score', 0)
+                    distribution_score = indicators.get('distribution_score', 0)
+                    
+                    tech_info.append(f"趋势: {trend}")
+                    tech_info.append(f"RSI: {rsi:.2f}")
+                    tech_info.append(f"MACD: {macd:.4f}")
+                    if tav_score > 0:
+                        tech_info.append(f"TAV评分: {tav_score:.1f}")
+                    if buildup_score > 0:
+                        tech_info.append(f"建仓评分: {buildup_score:.1f}")
+                    if distribution_score > 0:
+                        tech_info.append(f"出货评分: {distribution_score:.1f}")
+                
+                portfolio_analysis.append({
+                    'stock_code': stock_code,
+                    'stock_name': stock_name,
+                    'total_shares': total_shares,
+                    'cost_price': cost_price,
+                    'current_price': current_price,
+                    'total_cost': position['total_cost'],
+                    'current_value': current_value,
+                    'profit_loss': profit_loss,
+                    'profit_loss_pct': profit_loss_pct,
+                    'tech_info': ', '.join(tech_info) if tech_info else 'N/A'
+                })
+            
+            if not portfolio_analysis:
+                return None
+            
+            # 计算整体盈亏
+            total_profit_loss = total_current_value - total_cost
+            total_profit_loss_pct = (total_profit_loss / total_cost) * 100 if total_cost > 0 else 0
+            
+            # 获取恒生指数信息作为市场环境参考
+            market_context = ""
+            if hsi_data:
+                hsi_price = hsi_data.get('current_price', 0)
+                hsi_change = hsi_data.get('change_1d', 0)
+                market_context = f"""
+## 市场环境
+- 恒生指数: {hsi_price:,.2f} ({hsi_change:+.2f}%)
+"""
+            
+            # 构建大模型提示词
+            prompt = f"""你是一位专业的港股投资分析师。请根据以下持仓信息、技术指标和交易记录，提供详细的投资分析和建议。
+
+{market_context}
+## 持仓概览
+- 总投资成本: HK${total_cost:,.2f}
+- 当前市值: HK${total_current_value:,.2f}
+- 浮动盈亏: HK${total_profit_loss:,.2f} ({total_profit_loss_pct:+.2f}%)
+- 持仓股票数量: {len(portfolio_analysis)}只
+
+## 持仓股票详情
+"""
+            for i, pos in enumerate(portfolio_analysis, 1):
+                # 计算持仓占比
+                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
+                
+                prompt += f"""
+{i}. {pos['stock_name']} ({pos['stock_code']})
+   - 持仓占比: {position_pct:.1f}%
+   - 持仓数量: {pos['total_shares']:,}股
+   - 成本价: HK${pos['cost_price']:.2f}
+   - 当前价格: HK${pos['current_price']:.2f}
+   - 浮动盈亏: HK${pos['profit_loss']:,.2f} ({pos['profit_loss_pct']:+.2f}%)
+   - 技术指标: {pos['tech_info']}
+"""
+            
+            # 添加技术面信号摘要
+            prompt += """
+## 今日技术面信号摘要
+"""
+            
+            for stock_result in stock_results:
+                stock_code = stock_result['code']
+                stock_name = stock_result['name']
+                indicators = stock_result.get('indicators', {})
+                
+                # 检查是否是持仓股票
+                is_holding = any(pos['stock_code'] == stock_code for pos in portfolio_analysis)
+                
+                if is_holding and indicators:
+                    buildup_score = indicators.get('buildup_score', 0)
+                    buildup_level = indicators.get('buildup_level', 'none')
+                    distribution_score = indicators.get('distribution_score', 0)
+                    distribution_level = indicators.get('distribution_level', 'none')
+                    trend = indicators.get('trend', '未知')
+                    
+                    # 获取48小时智能建议
+                    continuous_signal = self.detect_continuous_signals_in_history_from_transactions(
+                        stock_code, hours=48, min_signals=3, target_date=None
+                    )
+                    
+                    # 判断信号强度
+                    signal_strength = "中性"
+                    if buildup_level == 'strong' and distribution_level == 'none':
+                        signal_strength = "强烈买入"
+                    elif buildup_level == 'partial' and distribution_level == 'none':
+                        signal_strength = "温和买入"
+                    elif distribution_level == 'strong' and buildup_level == 'none':
+                        signal_strength = "强烈卖出"
+                    elif distribution_level == 'weak' and buildup_level == 'none':
+                        signal_strength = "温和卖出"
+                    elif buildup_level == 'strong' and distribution_level == 'strong':
+                        signal_strength = "多空分歧"
+                    
+                    prompt += f"""
+- {stock_name} ({stock_code}):
+  * 技术趋势: {trend}
+  * 信号强度: {signal_strength}
+  * 建仓评分: {buildup_score:.2f} ({buildup_level})
+  * 出货评分: {distribution_score:.2f} ({distribution_level})
+  * 48小时连续信号: {continuous_signal}
+"""
+            
+            # 添加最近48小时模拟交易记录
+            prompt += """
+## 最近48小时模拟交易记录
+"""
+            
+            try:
+                df_transactions = self._read_transactions_df()
+                if not df_transactions.empty:
+                    # 获取最近48小时的交易记录
+                    reference_time = pd.Timestamp.now(tz='UTC')
+                    start_time = reference_time - pd.Timedelta(hours=48)
+                    
+                    # 过滤持仓股票的交易记录
+                    holding_codes = [pos['stock_code'] for pos in portfolio_analysis]
+                    recent_transactions = df_transactions[
+                        (df_transactions['timestamp'] >= start_time) &
+                        (df_transactions['timestamp'] <= reference_time) &
+                        (df_transactions['code'].isin(holding_codes))
+                    ].sort_values('timestamp', ascending=False)
+                    
+                    if not recent_transactions.empty:
+                        # 按股票分组
+                        for stock_code in holding_codes:
+                            stock_transactions = recent_transactions[recent_transactions['code'] == stock_code]
+                            if not stock_transactions.empty:
+                                stock_name = self.stock_list.get(stock_code, stock_code)
+                                prompt += f"\n{stock_name} ({stock_code}):\n"
+                                
+                                for _, trans in stock_transactions.iterrows():
+                                    trans_type = trans.get('type', '')
+                                    timestamp = pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')
+                                    current_price = trans.get('current_price')
+                                    target_price = trans.get('target_price')
+                                    stop_loss_price = trans.get('stop_loss_price')
+                                    validity_period = trans.get('validity_period')
+                                    reason = trans.get('reason', '')
+                                    
+                                    # 格式化交易信息
+                                    price_info = []
+                                    if pd.notna(current_price):
+                                        price_info.append(f"现价:HK${current_price:.2f}")
+                                    if pd.notna(target_price):
+                                        price_info.append(f"目标:HK${target_price:.2f}")
+                                    if pd.notna(stop_loss_price):
+                                        price_info.append(f"止损:HK${stop_loss_price:.2f}")
+                                    if pd.notna(validity_period):
+                                        price_info.append(f"有效期:{int(validity_period)}天")
+                                    
+                                    price_info_str = " | ".join(price_info) if price_info else ""
+                                    prompt += f"  {timestamp} {trans_type} @ {price_info_str} ({reason})\n"
+                    else:
+                        prompt += "  最近48小时无持仓股票的交易记录\n"
+                else:
+                    prompt += "  无交易记录\n"
+            except Exception as e:
+                print(f"⚠️ 获取交易记录失败: {e}")
+                prompt += "  获取交易记录失败\n"
+            
+            prompt += """
+## 分析要求
+请基于以上信息，提供专业的投资分析和建议：
+
+1. **整体持仓评估**
+   - 当前持仓的风险等级（低/中/高）
+   - 整体盈亏状况评估
+   - 持仓结构合理性分析
+
+2. **个股操作建议**（按优先级排序）
+   - 对每只持仓股票给出明确建议：持有/加仓/减仓/清仓
+   - 提供具体的操作理由（基于技术面、基本面、交易信号）
+   - 建议具体的止损位和目标价（基于当前价格的百分比或具体价格）
+   - 建议操作时机（立即/等待突破/等待回调）
+
+3. **仓位管理建议**
+   - 是否需要调整各股持仓比例
+   - 建议的仓位分配（百分比）
+   - 是否需要保留现金储备
+
+4. **风险控制措施**
+   - 整体止损策略
+   - 单股最大亏损限制
+   - 仓位集中度控制
+
+5. **交易执行建议**
+   - 优先处理哪些股票
+   - 建议的交易方式（一次性/分批）
+   - 注意事项（如交易成本、流动性等）
+
+请以简洁、专业的语言回答，重点突出可操作的建议，避免模糊表述。"""
+            
+            print("🤖 正在使用大模型分析持仓...")
+            analysis_result = chat_with_llm(prompt, enable_thinking=True)
+            print("✅ 大模型分析完成")
+            
+            return analysis_result
+            
+        except Exception as e:
+            print(f"❌ 大模型持仓分析失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _markdown_to_html(self, markdown_text):
+        """
+        将Markdown文本转换为HTML格式
+        
+        参数:
+        - markdown_text: Markdown格式的文本
+        
+        返回:
+        - str: HTML格式的文本
+        """
+        if not markdown_text:
+            return ""
+        
+        try:
+            # 尝试导入markdown库
+            import markdown
+            # 使用markdown库转换
+            html = markdown.markdown(markdown_text, extensions=['tables', 'fenced_code'])
+            return html
+        except ImportError:
+            # 如果没有markdown库，使用简单的转换
+            return self._simple_markdown_to_html(markdown_text)
+    
+    def _simple_markdown_to_html(self, markdown_text):
+        """
+        简单的Markdown到HTML转换器（当markdown库不可用时使用）
+        
+        参数:
+        - markdown_text: Markdown格式的文本
+        
+        返回:
+        - str: HTML格式的文本
+        """
+        if not markdown_text:
+            return ""
+        
+        lines = markdown_text.split('\n')
+        html_lines = []
+        in_list = False
+        in_code_block = False
+        
+        for line in lines:
+            # 代码块
+            if line.strip().startswith('```'):
+                in_code_block = not in_code_block
+                if in_code_block:
+                    html_lines.append('<pre><code>')
+                else:
+                    html_lines.append('</code></pre>')
+                continue
+            
+            if in_code_block:
+                html_lines.append(f'{line}\n')
+                continue
+            
+            # 标题
+            if line.startswith('# '):
+                html_lines.append(f'<h1>{line[2:]}</h1>')
+            elif line.startswith('## '):
+                html_lines.append(f'<h2>{line[3:]}</h2>')
+            elif line.startswith('### '):
+                html_lines.append(f'<h3>{line[4:]}</h3>')
+            elif line.startswith('#### '):
+                html_lines.append(f'<h4>{line[5:]}</h4>')
+            # 列表
+            elif line.strip().startswith('- ') or line.strip().startswith('* '):
+                if not in_list:
+                    html_lines.append('<ul>')
+                    in_list = True
+                html_lines.append(f'<li>{line.strip()[2:]}</li>')
+            elif line.strip().startswith('1. ') or line.strip().startswith('2. ') or line.strip().startswith('3. ') or line.strip().startswith('4. ') or line.strip().startswith('5. '):
+                if not in_list:
+                    html_lines.append('<ol>')
+                    in_list = True
+                # 提取数字和内容
+                parts = line.strip().split('. ', 1)
+                if len(parts) == 2:
+                    html_lines.append(f'<li>{parts[1]}</li>')
+            elif line.strip() == '':
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                html_lines.append('<br>')
+            # 粗体
+            else:
+                processed_line = line.replace('**', '<strong>').replace('__', '<strong>')
+                # 斜体
+                processed_line = processed_line.replace('*', '<em>').replace('_', '<em>')
+                html_lines.append(f'<p>{processed_line}</p>')
+        
+        if in_list:
+            html_lines.append('</ul>')
+        
+        return '\n'.join(html_lines)
+
     def detect_continuous_signals_in_history_from_transactions(self, stock_code, hours=48, min_signals=3, target_date=None):
         """
         基于交易历史记录检测连续买卖信号（使用 pandas 读取 CSV）
@@ -2299,6 +2752,15 @@ class HSIEmailSystem:
         print("📊 获取即将除净的港股信息...")
         dividend_data = self.get_upcoming_dividends(days_ahead=90)
         
+        # 读取持仓数据并使用大模型分析
+        print("📊 读取持仓数据...")
+        portfolio = self._read_portfolio_data()
+        
+        portfolio_analysis = None
+        if portfolio:
+            print("🤖 使用大模型分析持仓...")
+            portfolio_analysis = self._analyze_portfolio_with_llm(portfolio, stock_results, hsi_data)
+        
         # 计算上个交易日的日期
         previous_trading_date = None
         if target_date:
@@ -3005,6 +3467,22 @@ class HSIEmailSystem:
         """
 
         text += "\n"
+
+        # 添加持仓分析（如果有）
+        if portfolio_analysis:
+            # 将markdown转换为HTML
+            portfolio_analysis_html = self._markdown_to_html(portfolio_analysis)
+            
+            html += """
+        <div class="section">
+            <h3>💼 持仓投资分析（AI智能分析）</h3>
+            <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 10px 0;">
+                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + portfolio_analysis_html + """</div>
+            </div>
+        </div>
+            """
+            
+            text += f"\n💼 持仓投资分析（AI智能分析）:\n{portfolio_analysis}\n\n"
 
         if hsi_data:
             html += """
