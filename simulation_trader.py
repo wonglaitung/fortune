@@ -919,7 +919,7 @@ class SimulationTrader:
     
     def get_recent_decisions_context(self):
         """
-        获取当天的决策历史作为上下文提供给大模型
+        获取最近的决策历史作为上下文提供给大模型，特别关注时间窗口分析
         
         Returns:
             str: 决策历史上下文文本
@@ -927,11 +927,12 @@ class SimulationTrader:
         if not self.decision_history:
             return "无历史决策记录。"
         
-        # 获取今天的日期
-        today = datetime.now().date()
+        # 获取当前时间
+        now = datetime.now()
+        today = now.date()
         
-        # 筛选出今天的交易记录（只包含BUY和SELL，不包含持仓信息）
-        today_trade_records = []
+        # 筛选出交易记录（只包含BUY和SELL，不包含持仓信息）
+        trade_records = []
         for record in self.decision_history:
             timestamp_str = record.get('timestamp', '未知时间')
             decision_type = record.get('type', '未知类型')
@@ -939,45 +940,92 @@ class SimulationTrader:
             # 只处理交易记录（BUY和SELL），忽略其他类型
             if decision_type in ['BUY', 'SELL']:
                 try:
-                    # 解析时间戳并检查是否是今天
-                    decision_date = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00')).date() if 'Z' in timestamp_str else datetime.fromisoformat(timestamp_str).date()
-                    if decision_date == today:
-                        today_trade_records.append(record)
+                    # 解析时间戳
+                    if 'Z' in timestamp_str:
+                        decision_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    else:
+                        decision_time = datetime.fromisoformat(timestamp_str)
+                    
+                    # 计算时间差
+                    time_diff = now - decision_time
+                    hours_diff = time_diff.total_seconds() / 3600
+                    
+                    # 添加时间差信息
+                    record_copy = record.copy()
+                    record_copy['hours_diff'] = hours_diff
+                    record_copy['datetime'] = decision_time
+                    
+                    trade_records.append(record_copy)
                 except:
                     # 如果时间戳格式不正确，尝试直接检查日期部分
                     if timestamp_str.startswith(today.strftime('%Y-%m-%d')):
-                        today_trade_records.append(record)
+                        record_copy = record.copy()
+                        record_copy['hours_diff'] = 24  # 假设是今天但无法解析具体时间
+                        trade_records.append(record_copy)
         
-        if not today_trade_records:
+        if not trade_records:
             return "今天无交易记录。"
         
-        context = f"今天({today.strftime('%Y-%m-%d')})的交易记录：\n"
-        for i, record in enumerate(today_trade_records):
-            timestamp = record.get('timestamp', '未知时间')
-            decision_type = record.get('type', '未知类型')
-            
-            if decision_type in ['BUY', 'SELL']:  # 实际交易记录
-                context += f"\n第{i+1}次交易 ({timestamp}):\n"
-                context += f"  类型: {decision_type}\n"
+        # 按时间排序（最新的在前）
+        trade_records.sort(key=lambda x: x.get('hours_diff', float('inf')))
+        
+        # 分类不同时间窗口的交易
+        recent_3h = [r for r in trade_records if r.get('hours_diff', float('inf')) <= 3]
+        recent_24h = [r for r in trade_records if r.get('hours_diff', float('inf')) <= 24]
+        
+        # 构建上下文
+        context = f"交易历史分析（当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}）:\n\n"
+        
+        # 最近3小时的交易（关键决策约束）
+        if recent_3h:
+            context += "【最近3小时内的交易 - 关键约束窗口】:\n"
+            for i, record in enumerate(recent_3h):
+                decision_type = record.get('type', '未知类型')
                 name = record.get('name', record.get('code', '未知'))
                 code = record.get('code', '未知代码')
                 shares = record.get('shares', '未知数量')
                 price = record.get('price', '未知价格')
                 amount = record.get('amount', '未知金额')
                 reason = record.get('reason', '未提供理由')
+                hours_ago = record.get('hours_diff', 0)
                 
-                if decision_type == 'BUY':
-                    context += f"  买入: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}\n"
-                else:  # SELL
-                    profit_loss = record.get('profit_loss', '未知盈亏')
-                    if isinstance(profit_loss, (int, float)):
-                        context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: HK${profit_loss:+.2f}\n"
-                    else:
-                        context += f"  卖出: {name}({code}) {shares}股 @ HK${price:.2f}, 金额: HK${amount:.2f}, 盈亏: {profit_loss}\n"
-                
-                context += f"  原因: {reason}\n"
+                context += f"  {i+1}. {decision_type} {name}({code}) - {hours_ago:.1f}小时前\n"
+                context += f"     数量: {shares}股, 价格: HK${price:.2f}, 金额: HK${amount:.2f}\n"
+                context += f"     原因: {reason}\n"
+        else:
+            context += "【最近3小时内无交易记录】\n"
+        
+        # 最近24小时的交易（决策参考窗口）
+        if recent_24h:
+            context += "\n【最近24小时内的交易 - 决策参考窗口】:\n"
+            # 按股票分组，显示每只股票的最近操作
+            stock_operations = {}
+            for record in recent_24h:
+                code = record.get('code', '未知')
+                if code not in stock_operations:
+                    stock_operations[code] = []
+                stock_operations[code].append(record)
+            
+            for code, operations in stock_operations.items():
+                name = operations[0].get('name', code)
+                context += f"  {name}({code}):\n"
+                for op in operations:
+                    decision_type = op.get('type', '未知')
+                    hours_ago = op.get('hours_diff', 0)
+                    price = op.get('price', 0)
+                    context += f"    - {decision_type} {hours_ago:.1f}小时前 @ HK${price:.2f}\n"
+        else:
+            context += "\n【最近24小时内无交易记录】\n"
+        
+        # 特别提醒
+        context += "\n【决策一致性提醒】:\n"
+        context += "1. 3小时窗口内严禁对同一股票进行相反操作\n"
+        context += "2. 24小时窗口内只允许在有明确技术信号变化时调整方向\n"
+        context += "3. 如果没有重大变化，应该选择'观望'而非频繁操作\n"
         
         return context
+
+    
 
     def record_transaction(self, transaction_type, code, name, shares, price, amount, reason, success, profit_loss=None, stop_loss_price=None, current_price=None, target_price=None, validity_period=None):
         """
@@ -1098,17 +1146,35 @@ class SimulationTrader:
 报告内容：
 {llm_analysis}
 
+【关键决策约束】请严格遵守以下规则，避免今日出现的频繁矛盾交易：
+
+1. 决策一致性检查（必须执行）：
+   - 检查最近3小时内是否有同一股票的相反操作记录
+   - 检查最近24小时内是否有同一股票的买卖记录
+   - 如果存在上述记录，除非出现明确的技术指标反转信号（如MACD死叉/金叉、放量突破等）或重大新闻事件，否则必须维持原方向
+
+2. 时间窗口管理：
+   - 3小时窗口：严禁对同一股票进行相反操作
+   - 24小时窗口：只允许在有明确技术信号变化时调整
+   - 对于已触发Trailing Stop的股票，需要确认是否是正常波动而非趋势反转
+
+3. 风险控制优先级：
+   - 资金保护 > 收益追求：减少交易频率，提高决策质量
+   - 单只股票日内不应出现超过1次买卖方向转换
+   - 如果建议与历史决策相反，必须在理由中明确说明"市场发生重大变化：[具体变化内容]"
+
+4. 决策解释要求：
+   - 如果维持原决策，请明确说明"维持此前决策，不建议操作"
+   - 如果改变决策方向，必须解释具体的技术指标或基本面变化
+   - 对于没有重大变化的股票，应该选择"观望"而非频繁操作
+
+【历史决策记录】
 {decision_history_context}
 
 投资者风险偏好：{self.investor_type}
 - 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
 - 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
-- 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
-
-请特别关注以下风险管理要求：
-1. 决策一致性：请分析历史决策记录，当前决策应与历史决策保持一致性，避免频繁的买卖操作，但在市场情况发生重大变化时允许必要的调整
-2. 资金分配策略优化：避免过度集中投资于单一股票或行业，建议合理的资金分配比例
-3. 止损机制：识别潜在亏损风险，建议适当的止损策略以控制损失
+- 进进型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
 
 请严格按照以下格式输出：
 {{
@@ -1138,7 +1204,7 @@ class SimulationTrader:
 13. 止损策略：建议设置合理的止损价格（如低于买入价格5-10%），以控制潜在亏损
 14. 目标价格策略：基于技术分析和市场预期，设定合理的盈利目标价格
 15. 有效期策略：根据市场波动性和分析可靠性，设定建议的有效期限（通常3-30天）
-16. 决策一致性：当前决策应与历史决策保持一致性，避免在短时间内对同一只股票进行相反的操作，但在市场情况发生重大变化时允许必要的调整
+16. 【重要】决策一致性：必须严格遵守上述决策约束，特别是3小时和24小时窗口的限制，避免频繁交易
 """
                 
             self.log_message("正在请求大模型以固定格式输出买卖信号...")
