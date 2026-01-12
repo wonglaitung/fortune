@@ -3046,12 +3046,18 @@ class HSIEmailSystem:
 
         target_date_signals.sort(key=lambda x: x[1])
 
-        # 分析买入信号股票（需同时满足买入信号和多头趋势）
+        # 分析买入信号股票（需同时满足买入信号、多头趋势和48小时智能建议有买入）
         buy_signals = []
         bullish_trends = ['强势多头', '多头趋势', '短期上涨']
         for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
             if signal_type == '买入' and trend in bullish_trends:
-                buy_signals.append((stock_name, stock_code, trend, signal, signal_type))
+                # 检查48小时智能建议是否有买入
+                continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(
+                    stock_code, hours=48, min_signals=3, target_date=target_date
+                )
+                # 如果48小时智能建议包含买入（连续买入或买入）
+                if '买入' in continuous_signal_status and '卖出' not in continuous_signal_status:
+                    buy_signals.append((stock_name, stock_code, trend, signal, signal_type))
         
         buy_signals_analysis = None
         if buy_signals:
