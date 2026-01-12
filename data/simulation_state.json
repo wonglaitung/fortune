@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 115.18929405190329,
+  "capital": 157565.1892940519,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -17,16 +17,6 @@
       "avg_price": 7.57,
       "stop_loss_price": 7.4
     },
-    "9988.HK": {
-      "shares": 800,
-      "avg_price": 147.6625,
-      "stop_loss_price": 138.0
-    },
-    "2269.HK": {
-      "shares": 4000,
-      "avg_price": 37.075,
-      "stop_loss_price": 34.73
-    },
     "1138.HK": {
       "shares": 13700,
       "avg_price": 10.52,
@@ -36,6 +26,11 @@
       "shares": 100,
       "avg_price": 9.15,
       "stop_loss_price": 7.85
+    },
+    "3690.HK": {
+      "shares": 1100,
+      "avg_price": 104.5,
+      "stop_loss_price": 98.0
     }
   },
   "transaction_history": [
@@ -16482,6 +16477,70 @@
       "current_price": 83.7,
       "target_price": 90,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-12T11:15:30.559310",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 4000,
+      "price": 37.58,
+      "amount": 150320.0,
+      "capital_after": 150435.1892940519,
+      "reason": "技术面超买（RSI 71.35）且布林带上轨压力显著，已盈利≥10%触发止盈信号，需锁定30%利润避免回调风险",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 37.58,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-12T11:15:34.520024",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 800,
+      "price": 152.6,
+      "amount": 122080.0,
+      "capital_after": 272515.1892940519,
+      "reason": "已盈利≥10%触发止盈信号，尽管技术面低位但短期涨幅透支部分空间，建议部分止盈30%锁定利润以符合仓位管理纪律",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 152.6,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-12T11:15:39.079185",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 1100,
+      "price": 104.5,
+      "amount": 114950.0,
+      "capital_after": 157565.1892940519,
+      "reason": "政策催化盈利修复，监管环境改善终结价格战，技术面OBV持续上升且资金流入，基本面评分60.75优秀，回调至100港元支撑位提供加仓机会",
+      "success": true,
+      "stop_loss_price": 98.0,
+      "current_price": 104.5,
+      "target_price": 120.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-12T11:15:42.563687",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 83.85,
+      "amount": 0,
+      "capital_after": 157565.1892940519,
+      "reason": "保险板块防御属性突出，基本面评分61.25优秀，估值安全（PE 18.81低于行业），技术面MACD金叉确认趋势反转，适合平衡型投资者稳健配置 (原因: 持仓比例已达到建议值)",
+      "success": false,
+      "stop_loss_price": 79.5,
+      "current_price": 83.85,
+      "target_price": 95.0,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -27561,7 +27620,7 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         }
@@ -27598,7 +27657,7 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
@@ -27635,7 +27694,7 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
@@ -27667,7 +27726,7 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
@@ -27699,7 +27758,7 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         }
@@ -27726,12 +27785,12 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
         "2269.HK": {
-          "shares": 4000,
+          "shares": 0,
           "avg_price": 37.075,
           "stop_loss_price": 34.73
         }
@@ -27758,12 +27817,12 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
         "2269.HK": {
-          "shares": 4000,
+          "shares": 0,
           "avg_price": 37.075,
           "stop_loss_price": 34.73
         },
@@ -27795,12 +27854,12 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
         "2269.HK": {
-          "shares": 4000,
+          "shares": 0,
           "avg_price": 37.075,
           "stop_loss_price": 34.73
         },
@@ -27832,12 +27891,12 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
         "2269.HK": {
-          "shares": 4000,
+          "shares": 0,
           "avg_price": 37.075,
           "stop_loss_price": 34.73
         },
@@ -27869,12 +27928,12 @@
           "stop_loss_price": 7.4
         },
         "9988.HK": {
-          "shares": 800,
+          "shares": 0,
           "avg_price": 147.6625,
           "stop_loss_price": 138.0
         },
         "2269.HK": {
-          "shares": 4000,
+          "shares": 0,
           "avg_price": 37.075,
           "stop_loss_price": 34.73
         },
@@ -27889,124 +27948,115 @@
           "stop_loss_price": 7.85
         }
       }
+    },
+    {
+      "timestamp": "2026-01-12T11:15:31.341630",
+      "capital": 150435.1892940519,
+      "portfolio_value": 982224.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "9988.HK": {
+          "shares": 0,
+          "avg_price": 147.6625,
+          "stop_loss_price": 138.0
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
+        },
+        "9660.HK": {
+          "shares": 100,
+          "avg_price": 9.15,
+          "stop_loss_price": 7.85
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T11:15:35.133408",
+      "capital": 272515.1892940519,
+      "portfolio_value": 981959.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
+        },
+        "9660.HK": {
+          "shares": 100,
+          "avg_price": 9.15,
+          "stop_loss_price": 7.85
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T11:15:39.830033",
+      "capital": 157565.1892940519,
+      "portfolio_value": 981667.1892940518,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "1299.HK": {
+          "shares": 3100,
+          "avg_price": 85.25,
+          "stop_loss_price": 81.0
+        },
+        "0939.HK": {
+          "shares": 12700,
+          "avg_price": 7.57,
+          "stop_loss_price": 7.4
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
+        },
+        "9660.HK": {
+          "shares": 100,
+          "avg_price": 9.15,
+          "stop_loss_price": 7.85
+        },
+        "3690.HK": {
+          "shares": 1100,
+          "avg_price": 104.5,
+          "stop_loss_price": 98.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-09 15:59:05",
-      "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 700,
-      "price": 98.3,
-      "amount": 68810.0,
-      "reason": "技术面多空信号冲突，基本面评分34.25薄弱，建议减仓控制风险",
-      "capital_after": 337884.1892940519,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 98.3,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -105.00000000000398
-    },
-    {
-      "timestamp": "2026-01-09 15:59:11",
-      "type": "BUY",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 3900,
-      "price": 37.06,
-      "amount": 144534.0,
-      "reason": "基本面评分74.25优秀，技术面动量加速与资金流入协同，医药板块避险属性突出，适合平衡型投资者稳健配置",
-      "capital_after": 193350.1892940519,
-      "success": true,
-      "stop_loss_price": 35.8,
-      "current_price": 37.06,
-      "target_price": 42.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-09 15:59:13",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 13700,
-      "price": 10.52,
-      "amount": 144124.0,
-      "reason": "基本面评分73.25优秀，市盈率15.99低估且股息率吸引人，能源板块防御性强，适合震荡市布局",
-      "capital_after": 49226.1892940519,
-      "success": true,
-      "stop_loss_price": 9.85,
-      "current_price": 10.52,
-      "target_price": 11.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-12 09:44:46",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "建仓评分5.7（strong），价格低位14.52%叠加MACD金叉与资金流入，新闻催化电商生态扩张，技术面与基本面协同性强",
-          "allocation_pct": 15,
-          "stop_loss_price": 138.0,
-          "target_price": 160.0,
-          "validity_period": 7
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "TAV评分63.0强势，布林带突破与放量上涨共振，ESG新闻强化估值支撑，南向资金大幅净流入34.96亿港元",
-          "allocation_pct": 15,
-          "stop_loss_price": 34.73,
-          "target_price": 42.0,
-          "validity_period": 7
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "TAV评分61.25强势，缩量回调后量能恢复，内部人持股新闻增强长期信心，技术面修复信号明确",
-          "allocation_pct": 10,
-          "stop_loss_price": 7.85,
-          "target_price": 10.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "Trailing Stop已触发（价格回撤>2.5倍ATR），技术面出货评分strong叠加资金流出，乌干达石油协议风险冲击基本面",
-          "stop_loss_triggered": true,
-          "target_price": 420.4,
-          "validity_period": 1
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "Trailing Stop已触发（价格回撤>2.5倍ATR），MACD死叉加速下行，IPO停滞新闻导致估值泡沫破裂",
-          "stop_loss_triggered": true,
-          "target_price": 420.4,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-12 09:44:46",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "Trailing Stop已触发（价格回撤>2.5倍ATR），技术面出货评分strong叠加资金流出，乌干达石油协议风险冲击基本面",
-      "capital_after": 49226.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 124.1,
-      "target_price": 420.4,
-      "validity_period": 1
-    },
     {
       "timestamp": "2026-01-12 09:44:48",
       "type": "SELL",
@@ -28174,6 +28224,113 @@
       "current_price": 83.7,
       "target_price": 90,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-12 11:15:30",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "政策催化盈利修复，监管环境改善终结价格战，技术面OBV持续上升且资金流入，基本面评分60.75优秀，回调至100港元支撑位提供加仓机会",
+          "allocation_pct": 12,
+          "stop_loss_price": 98.0,
+          "target_price": 120.0,
+          "validity_period": 14
+        },
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "保险板块防御属性突出，基本面评分61.25优秀，估值安全（PE 18.81低于行业），技术面MACD金叉确认趋势反转，适合平衡型投资者稳健配置",
+          "allocation_pct": 10,
+          "stop_loss_price": 79.5,
+          "target_price": 95.0,
+          "validity_period": 21
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "技术面超买（RSI 71.35）且布林带上轨压力显著，已盈利≥10%触发止盈信号，需锁定30%利润避免回调风险",
+          "stop_loss_triggered": false,
+          "target_price": 40.0,
+          "validity_period": 3
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "已盈利≥10%触发止盈信号，尽管技术面低位但短期涨幅透支部分空间，建议部分止盈30%锁定利润以符合仓位管理纪律",
+          "stop_loss_triggered": false,
+          "target_price": 152.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12 11:15:30",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 4000,
+      "price": 37.58,
+      "amount": 150320.0,
+      "reason": "技术面超买（RSI 71.35）且布林带上轨压力显著，已盈利≥10%触发止盈信号，需锁定30%利润避免回调风险",
+      "capital_after": 150435.1892940519,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 37.58,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 2019.9999999999818
+    },
+    {
+      "timestamp": "2026-01-12 11:15:34",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 800,
+      "price": 152.6,
+      "amount": 122080.0,
+      "reason": "已盈利≥10%触发止盈信号，尽管技术面低位但短期涨幅透支部分空间，建议部分止盈30%锁定利润以符合仓位管理纪律",
+      "capital_after": 272515.1892940519,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 152.6,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 3950.0
+    },
+    {
+      "timestamp": "2026-01-12 11:15:39",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 1100,
+      "price": 104.5,
+      "amount": 114950.0,
+      "reason": "政策催化盈利修复，监管环境改善终结价格战，技术面OBV持续上升且资金流入，基本面评分60.75优秀，回调至100港元支撑位提供加仓机会",
+      "capital_after": 157565.1892940519,
+      "success": true,
+      "stop_loss_price": 98.0,
+      "current_price": 104.5,
+      "target_price": 120.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-12 11:15:42",
+      "type": "BUY",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 83.85,
+      "amount": 0,
+      "reason": "保险板块防御属性突出，基本面评分61.25优秀，估值安全（PE 18.81低于行业），技术面MACD金叉确认趋势反转，适合平衡型投资者稳健配置 (原因: 持仓比例已达到建议值)",
+      "capital_after": 157565.1892940519,
+      "success": false,
+      "stop_loss_price": 79.5,
+      "current_price": 83.85,
+      "target_price": 95.0,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
