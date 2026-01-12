@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 535662.189294052,
+  "capital": 346612.18929405196,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -8,14 +8,19 @@
       "stop_loss_price": 94.0
     },
     "0939.HK": {
-      "shares": 12700,
-      "avg_price": 7.57,
-      "stop_loss_price": 7.4
+      "shares": 19200,
+      "avg_price": 7.62078125,
+      "stop_loss_price": 7.16
     },
     "1138.HK": {
       "shares": 13700,
       "avg_price": 10.52,
       "stop_loss_price": 9.85
+    },
+    "9988.HK": {
+      "shares": 900,
+      "avg_price": 154.3,
+      "stop_loss_price": 141.86
     }
   },
   "transaction_history": [
@@ -16686,6 +16691,86 @@
       "current_price": 11.44,
       "target_price": 11.91,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-01-12T16:08:27.217942",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 535662.189294052,
+      "reason": "Trailing Stop触发，技术面恶化（资金流出、动能减弱），基本面评分58.0<60，估值偏高（PB 9.99），风险等级高需紧急处理",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 426.2,
+      "target_price": 340.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-12T16:08:31.349274",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 535662.189294052,
+      "reason": "Trailing Stop触发，缩量回调（量比0.49），基本面评分51.25<60，煤炭行业周期下行压力大，需减仓锁定利润",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 41.06,
+      "target_price": 40.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-12T16:08:34.779637",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 535662.189294052,
+      "reason": "出货级别strong（评分7.0），新闻负面监管利空（价格战政策影响），止盈卖出30%仓位锁定利润，当前盈利6.29%接近目标",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 105.0,
+      "target_price": 115.28,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-12T16:08:36.390716",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 900,
+      "price": 154.3,
+      "amount": 138870.0,
+      "capital_after": 396792.18929405196,
+      "reason": "TAV评分73.25强势，基本面评分73.25优秀，新闻催化AI订单，出货级别weak，短期上行空间明确，符合平衡型投资者对稳健成长股的需求",
+      "success": true,
+      "stop_loss_price": 141.86,
+      "current_price": 154.3,
+      "target_price": 169.6,
+      "validity_period": 10
+    },
+    {
+      "timestamp": "2026-01-12T16:08:38.922351",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 6500,
+      "price": 7.72,
+      "amount": 50180.0,
+      "capital_after": 346612.18929405196,
+      "reason": "高股息率5.2%，低估值（PE 5.51, PB 0.53），技术面底部信号（TAV 63.25），出货级别none，安全边际高，适合平衡型投资者追求稳健收益",
+      "success": true,
+      "stop_loss_price": 7.16,
+      "current_price": 7.72,
+      "target_price": 8.2,
+      "validity_period": 15
     }
   ],
   "portfolio_history": [
@@ -27728,9 +27813,9 @@
           "stop_loss_price": 20.57
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         }
       }
     },
@@ -27760,9 +27845,9 @@
           "stop_loss_price": 20.57
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27797,9 +27882,9 @@
           "stop_loss_price": 20.57
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27834,9 +27919,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27866,9 +27951,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27898,9 +27983,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27925,9 +28010,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27957,9 +28042,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -27994,9 +28079,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -28031,9 +28116,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -28068,9 +28153,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -28110,9 +28195,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "9988.HK": {
           "shares": 0,
@@ -28147,9 +28232,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28179,9 +28264,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28216,9 +28301,9 @@
           "stop_loss_price": 81.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28248,9 +28333,9 @@
           "stop_loss_price": 94.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28280,9 +28365,9 @@
           "stop_loss_price": 94.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28312,9 +28397,9 @@
           "stop_loss_price": 94.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28344,9 +28429,9 @@
           "stop_loss_price": 94.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28371,9 +28456,9 @@
           "stop_loss_price": 94.0
         },
         "0939.HK": {
-          "shares": 12700,
-          "avg_price": 7.57,
-          "stop_loss_price": 7.4
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
         },
         "1138.HK": {
           "shares": 13700,
@@ -28381,90 +28466,63 @@
           "stop_loss_price": 9.85
         }
       }
+    },
+    {
+      "timestamp": "2026-01-12T16:08:36.828435",
+      "capital": 396792.18929405196,
+      "portfolio_value": 991815.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
+        },
+        "9988.HK": {
+          "shares": 900,
+          "avg_price": 154.3,
+          "stop_loss_price": 141.86
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-12T16:08:39.335061",
+      "capital": 346612.18929405196,
+      "portfolio_value": 991815.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19200,
+          "avg_price": 7.62078125,
+          "stop_loss_price": 7.16
+        },
+        "1138.HK": {
+          "shares": 13700,
+          "avg_price": 10.52,
+          "stop_loss_price": 9.85
+        },
+        "9988.HK": {
+          "shares": 900,
+          "avg_price": 154.3,
+          "stop_loss_price": 141.86
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-12 13:46:16",
-      "buy": [
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "技术面强势突破布林带上轨，TAV评分68.75三维共振，基本面评分68.75优秀且市盈率合理，新闻面高内部持股利好协同，符合平衡型投资者对稳健成长股的需求，历史已持有但仓位未达上限可加仓",
-          "allocation_pct": 5,
-          "stop_loss_price": 8.3,
-          "target_price": 10.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "基本面稳健（市盈率16.38低于行业，市净率1.4028合理），技术面放量上涨且TAV评分66.25中等强势，航运业受益全球贸易复苏形成戴维斯双击，风险收益比适合平衡型投资者",
-          "allocation_pct": 8,
-          "stop_loss_price": 10.5,
-          "target_price": 12.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "技术面出货信号强烈（Trailing Stop已触发，CMF资金流出），基本面评分47.25薄弱且增长乏力，新闻面缺乏港股业务关联利好，需紧急风险控制",
-          "stop_loss_triggered": true,
-          "target_price": 120.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-12 13:46:17",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面出货信号强烈（Trailing Stop已触发，CMF资金流出），基本面评分47.25薄弱且增长乏力，新闻面缺乏港股业务关联利好，需紧急风险控制",
-      "capital_after": 157565.1892940519,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 124.1,
-      "target_price": 120.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-12 13:46:21",
-      "type": "BUY",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 5400,
-      "price": 8.96,
-      "amount": 48384.00000000001,
-      "reason": "技术面强势突破布林带上轨，TAV评分68.75三维共振，基本面评分68.75优秀且市盈率合理，新闻面高内部持股利好协同，符合平衡型投资者对稳健成长股的需求，历史已持有但仓位未达上限可加仓",
-      "capital_after": 109181.1892940519,
-      "success": true,
-      "stop_loss_price": 8.3,
-      "current_price": 8.96,
-      "target_price": 10.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-12 13:46:25",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 11.32,
-      "amount": 0,
-      "reason": "基本面稳健（市盈率16.38低于行业，市净率1.4028合理），技术面放量上涨且TAV评分66.25中等强势，航运业受益全球贸易复苏形成戴维斯双击，风险收益比适合平衡型投资者 (原因: 持仓比例已达到建议值)",
-      "capital_after": 109181.1892940519,
-      "success": false,
-      "stop_loss_price": 10.5,
-      "current_price": 11.32,
-      "target_price": 12.5,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-01-12 14:13:58",
       "buy": [
@@ -28652,6 +28710,135 @@
       "current_price": 11.44,
       "target_price": 11.91,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-01-12 16:08:27",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "TAV评分73.25强势，基本面评分73.25优秀，新闻催化AI订单，出货级别weak，短期上行空间明确，符合平衡型投资者对稳健成长股的需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 141.86,
+          "target_price": 169.6,
+          "validity_period": 10
+        },
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "高股息率5.2%，低估值（PE 5.51, PB 0.53），技术面底部信号（TAV 63.25），出货级别none，安全边际高，适合平衡型投资者追求稳健收益",
+          "allocation_pct": 15,
+          "stop_loss_price": 7.16,
+          "target_price": 8.2,
+          "validity_period": 15
+        }
+      ],
+      "sell": [
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "Trailing Stop触发，技术面恶化（资金流出、动能减弱），基本面评分58.0<60，估值偏高（PB 9.99），风险等级高需紧急处理",
+          "stop_loss_triggered": true,
+          "target_price": 340.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "Trailing Stop触发，缩量回调（量比0.49），基本面评分51.25<60，煤炭行业周期下行压力大，需减仓锁定利润",
+          "stop_loss_triggered": true,
+          "target_price": 40.0,
+          "validity_period": 5
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "出货级别strong（评分7.0），新闻负面监管利空（价格战政策影响），止盈卖出30%仓位锁定利润，当前盈利6.29%接近目标",
+          "stop_loss_triggered": false,
+          "target_price": 115.28,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12 16:08:27",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "Trailing Stop触发，技术面恶化（资金流出、动能减弱），基本面评分58.0<60，估值偏高（PB 9.99），风险等级高需紧急处理",
+      "capital_after": 535662.189294052,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 426.2,
+      "target_price": 340.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-12 16:08:31",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "Trailing Stop触发，缩量回调（量比0.49），基本面评分51.25<60，煤炭行业周期下行压力大，需减仓锁定利润",
+      "capital_after": 535662.189294052,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 41.06,
+      "target_price": 40.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-12 16:08:34",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货级别strong（评分7.0），新闻负面监管利空（价格战政策影响），止盈卖出30%仓位锁定利润，当前盈利6.29%接近目标",
+      "capital_after": 535662.189294052,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 105.0,
+      "target_price": 115.28,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-12 16:08:36",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 900,
+      "price": 154.3,
+      "amount": 138870.0,
+      "reason": "TAV评分73.25强势，基本面评分73.25优秀，新闻催化AI订单，出货级别weak，短期上行空间明确，符合平衡型投资者对稳健成长股的需求",
+      "capital_after": 396792.18929405196,
+      "success": true,
+      "stop_loss_price": 141.86,
+      "current_price": 154.3,
+      "target_price": 169.6,
+      "validity_period": 10
+    },
+    {
+      "timestamp": "2026-01-12 16:08:38",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 6500,
+      "price": 7.72,
+      "amount": 50180.0,
+      "reason": "高股息率5.2%，低估值（PE 5.51, PB 0.53），技术面底部信号（TAV 63.25），出货级别none，安全边际高，适合平衡型投资者追求稳健收益",
+      "capital_after": 346612.18929405196,
+      "success": true,
+      "stop_loss_price": 7.16,
+      "current_price": 7.72,
+      "target_price": 8.2,
+      "validity_period": 15
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
