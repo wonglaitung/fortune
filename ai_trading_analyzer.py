@@ -372,12 +372,56 @@ class AITradingAnalyzer:
             'total_profit': 0.0,  # 总盈亏
             'stock_details': [],  # 股票明细
             'sold_stocks': [],  # 已卖出股票
-            'holding_stocks': []  # 持仓中股票
+            'holding_stocks': [],  # 持仓中股票
+            'peak_investment': 0.0  # 最高峰资金需求
         }
         
         # 获取所有股票
         all_stocks = set(df['code'].unique()) - excluded_stocks
         
+        # 为了计算最高峰资金需求，我们需要按时间顺序处理所有交易
+        current_holdings = {}  # {股票代码: [数量, 成本]}
+        peak_investment = 0.0  # 最高峰资金需求
+        
+        # 首先，按时间顺序处理所有交易，计算最高峰资金需求
+        all_trades = df[df['code'].isin(all_stocks)].sort_values('timestamp')
+        for _, row in all_trades.iterrows():
+            stock_code = row['code']
+            transaction_type = row['type']
+            # 优先使用current_price，如果为空则使用price
+            price = row['current_price']
+            if pd.isna(price):
+                price = row['price']
+            
+            # 跳过价格为0或无效的交易
+            if price <= 0:
+                continue
+            
+            if transaction_type == 'BUY':
+                # 买入信号：如果没有持仓，则买入1000股
+                if stock_code not in current_holdings:
+                    current_holdings[stock_code] = [1000, price]
+                else:
+                    # 已有持仓，不增加（按规则跳过）
+                    pass
+                
+                # 计算当前总持仓价值
+                current_total = sum(holdings[0] * holdings[1] for holdings in current_holdings.values())
+                peak_investment = max(peak_investment, current_total)
+                
+            elif transaction_type == 'SELL':
+                # 卖出信号：如果有持仓，则卖出全部
+                if stock_code in current_holdings:
+                    del current_holdings[stock_code]
+                
+                # 计算当前总持仓价值
+                current_total = sum(holdings[0] * holdings[1] for holdings in current_holdings.values())
+                peak_investment = max(peak_investment, current_total)
+        
+        # 将最高峰资金需求添加到结果中
+        results['peak_investment'] = peak_investment
+        
+        # 然后，处理每只股票的最终状态
         for stock_code in all_stocks:
             stock_trades = df[df['code'] == stock_code].sort_values('timestamp')
             stock_name = stock_trades.iloc[0]['name']
@@ -531,10 +575,8 @@ class AITradingAnalyzer:
         Returns:
             格式化的报告字符串
         """
-        # 计算总投资
-        total_investment = 0
-        for stock in profit_results['stock_details']:
-            total_investment += stock['investment']
+        # 使用最高峰资金需求
+        peak_investment = profit_results.get('peak_investment', 0.0)
         
         # 计算已收回资金（卖出所得）
         sold_returns = 0
@@ -544,8 +586,9 @@ class AITradingAnalyzer:
         # 总体盈亏 = 已实现盈亏 + 未实现盈亏
         total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
         
-        # 计算盈亏率
-        profit_rate = (total_profit / total_investment * 100) if total_investment != 0 else 0
+        # 使用最高峰资金需求计算盈亏率
+        peak_investment = profit_results.get('peak_investment', 0.0)
+        profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
         
         report = []
         report.append("=" * 60)
@@ -556,10 +599,12 @@ class AITradingAnalyzer:
         
         # 总体概览
         report.append("【总体概览】")
-        report.append(f"总投入资金: HK${total_investment:,.2f}")
+        report.append(f"最高峰资金需求: HK${peak_investment:,.2f}")
         report.append(f"已收回资金: HK${sold_returns:,.2f}")
         report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
         report.append(f"总体盈亏: HK${total_profit:,.2f}")
+        # 基于最高峰资金需求计算盈亏率
+        profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
         report.append(f"盈亏率: {profit_rate:.2f}%")
         report.append("")
         
@@ -658,13 +703,11 @@ class AITradingAnalyzer:
         
         # 发送邮件通知
         if send_email:
-            # 计算总投资和盈亏率
-            total_investment = 0
-            for stock in profit_results['stock_details']:
-                total_investment += stock['investment']
+            # 使用最高峰资金需求计算盈亏率
+            peak_investment = profit_results.get('peak_investment', 0.0)
             
             total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
-            profit_rate = (total_profit / total_investment * 100) if total_investment != 0 else 0
+            profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
             
             subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
             # 在邮件主题中添加总体盈亏信息和盈亏率
