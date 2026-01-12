@@ -3130,10 +3130,23 @@ class HSIEmailSystem:
 
         for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
             signal_display = f"{signal_type}信号"
-            color_style = "color: green; font-weight: bold;" if signal_type == '买入' else "color: red; font-weight: bold;"
             continuous_signal_status = "无信号"
             if stock_code != 'HSI':
                 continuous_signal_status = self.detect_continuous_signals_in_history_from_transactions(stock_code, target_date=target_date)
+            
+            # 判断是否满足高质量买入条件（与AI分析判断逻辑一致）
+            bullish_trends = ['强势多头', '多头趋势', '短期上涨']
+            is_high_quality_buy = (signal_type == '买入' and 
+                                   trend in bullish_trends and 
+                                   '买入' in continuous_signal_status)
+            
+            # 根据条件设置颜色样式
+            if is_high_quality_buy:
+                color_style = "color: green; font-weight: bold;"
+            elif signal_type == '卖出':
+                color_style = "color: red; font-weight: bold;"
+            else:
+                color_style = "color: black; font-weight: normal;"
 
             # 智能过滤：保留有量价信号或有48小时智能建议的股票
             should_show = (signal_type in ['买入', '卖出']) or (continuous_signal_status != "无建议信号")
