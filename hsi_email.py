@@ -3046,10 +3046,11 @@ class HSIEmailSystem:
 
         target_date_signals.sort(key=lambda x: x[1])
 
-        # 分析买入信号股票
+        # 分析买入信号股票（需同时满足买入信号和多头趋势）
         buy_signals = []
+        bullish_trends = ['强势多头', '多头趋势', '短期上涨']
         for stock_name, stock_code, trend, signal, signal_type in target_date_signals:
-            if signal_type == '买入':
+            if signal_type == '买入' and trend in bullish_trends:
                 buy_signals.append((stock_name, stock_code, trend, signal, signal_type))
         
         buy_signals_analysis = None
