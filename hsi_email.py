@@ -3056,7 +3056,7 @@ class HSIEmailSystem:
                     stock_code, hours=48, min_signals=3, target_date=target_date
                 )
                 # 如果48小时智能建议包含买入（连续买入或买入）
-                if '买入' in continuous_signal_status and '卖出' not in continuous_signal_status:
+                if '买入' in continuous_signal_status:
                     buy_signals.append((stock_name, stock_code, trend, signal, signal_type))
         
         buy_signals_analysis = None
