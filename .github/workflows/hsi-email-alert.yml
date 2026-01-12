@@ -3,7 +3,7 @@ name: HSI Email Alert
 on:
   schedule:
     # 只在港股交易日的交易时段执行 (周一到周五，上午1:30-3:59和下午6:00-8:00 UTC时间)
-    - cron: '15 1,3,6,8 * * *'
+    - cron: '15 1,3,6,8 * * 1-5'
   # 可选：允许手动触发
   workflow_dispatch:
 
