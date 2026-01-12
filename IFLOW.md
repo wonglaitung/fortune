@@ -21,7 +21,6 @@
 11. 通过腾讯财经接口获取港股数据
 12. 人工智能股票交易盈利能力分析器
 13. 港股基本面数据获取器（财务指标、利润表、资产负债表、现金流量表）
-14. 港股股息信息追踪器（即将除净股息提醒）
 
 ## 关键文件
 
@@ -32,9 +31,9 @@
 *   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
 *   `hsi_llm_strategy.py`: 恒生指数大模型策略分析器。
-*   `hsi_email.py`: 恒生指数价格监控器，基于技术分析指标生成买卖信号，只在有交易信号时发送邮件。
+*   `hsi_email.py`: 恒生指数价格监控器，基于技术分析指标生成买卖信号，只在有交易信号时发送邮件，集成股息信息追踪功能。
 *   `analyze_last_48_hours_email.py`: 最近48小时连续交易信号分析器，分析最近48小时内连续买入/卖出同一只股票的信号。
-*   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能。
+*   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能，包括VaR风险价值计算和TAV加权评分系统。
 *   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
@@ -214,7 +213,7 @@ schedule
    - 除净日、分红方案、截至过户日
    - 最新公告日期、财政年度、分配类型、发放日
 5. 在恒生指数价格监控器邮件中自动展示即将除净的股息信息。
-6. 保存股息数据到CSV文件，便于历史查询和分析。
+6. 通过AKShare的 `stock_hk_dividend_payout_em` 接口获取股息数据。
 
 #### 人工智能股票交易盈利能力分析器
 1. 基于交易记录复盘AI推荐的股票交易策略的盈利能力。
@@ -527,9 +526,6 @@ clear_cache()
 - `simulation_trade_log_*.txt`: 详细交易日志记录（按日期分割）
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_portfolio.csv`: 投资组合价值变化记录
-- `all_dividends.csv`: 所有股息信息记录
-- `recent_dividends.csv`: 最近股息信息记录
-- `upcoming_dividends.csv`: 即将除净的股息信息记录
 - `fundamental_cache/`: 基本面数据缓存目录（包含财务指标、利润表、资产负债表、现金流量表的缓存文件）
 
 ### 项目扩展性
@@ -569,4 +565,4 @@ clear_cache()
 32. **功能优化**：update_data.sh脚本增加重试机制，提高Git操作的稳定性
 
 ---
-最后更新：2026-01-10
+最后更新：2026-01-12
