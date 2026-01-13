@@ -1720,26 +1720,80 @@ class HSIEmailSystem:
         """
         tech_info = []
         if indicators:
+            # 趋势信息
             if include_trend:
                 trend = indicators.get('trend', '未知')
                 tech_info.append(f"趋势: {trend}")
             
+            # 基础技术指标
             rsi = indicators.get('rsi', 0)
             macd = indicators.get('macd', 0)
-            tav_score = indicators.get('tav_score', 0)
-            buildup_score = indicators.get('buildup_score', 0)
-            distribution_score = indicators.get('distribution_score', 0)
+            bb_position = indicators.get('bb_position', 0.5)
             
             if rsi > 0:
                 tech_info.append(f"RSI: {rsi:.2f}")
             if macd != 0:
                 tech_info.append(f"MACD: {macd:.4f}")
+            if bb_position > 0:
+                tech_info.append(f"布林带位置: {bb_position:.2%}")
+            
+            # 均线信息
+            current_price = indicators.get('current_price', 0)
+            ma20 = indicators.get('ma20', 0)
+            ma50 = indicators.get('ma50', 0)
+            ma200 = indicators.get('ma200', 0)
+            
+            if ma20 > 0 and current_price > 0:
+                ma20_pct = (current_price - ma20) / ma20 * 100
+                tech_info.append(f"MA20: {ma20:.2f} ({ma20_pct:+.2f}%)")
+            if ma50 > 0 and current_price > 0:
+                ma50_pct = (current_price - ma50) / ma50 * 100
+                tech_info.append(f"MA50: {ma50:.2f} ({ma50_pct:+.2f}%)")
+            if ma200 > 0 and current_price > 0:
+                ma200_pct = (current_price - ma200) / ma200 * 100
+                tech_info.append(f"MA200: {ma200:.2f} ({ma200_pct:+.2f}%)")
+            
+            # 成交量指标
+            volume_ratio = indicators.get('volume_ratio', 0)
+            volume_surge = indicators.get('volume_surge', False)
+            volume_shrink = indicators.get('volume_shrink', False)
+            
+            if volume_ratio > 0:
+                vol_status = ""
+                if volume_surge:
+                    vol_status = " (放量)"
+                elif volume_shrink:
+                    vol_status = " (缩量)"
+                tech_info.append(f"量比: {volume_ratio:.2f}{vol_status}")
+            
+            # 评分系统
+            tav_score = indicators.get('tav_score', 0)
+            buildup_score = indicators.get('buildup_score', 0)
+            distribution_score = indicators.get('distribution_score', 0)
+            
             if tav_score > 0:
                 tech_info.append(f"TAV评分: {tav_score:.1f}")
             if buildup_score > 0:
                 tech_info.append(f"建仓评分: {buildup_score:.2f}")
             if distribution_score > 0:
                 tech_info.append(f"出货评分: {distribution_score:.2f}")
+            
+            # 止损止盈
+            stop_loss = indicators.get('stop_loss')
+            take_profit = indicators.get('take_profit')
+            
+            if stop_loss is not None and stop_loss > 0:
+                sl_pct = (stop_loss - current_price) / current_price * 100 if current_price > 0 else 0
+                tech_info.append(f"止损: {stop_loss:.2f} ({sl_pct:+.2f}%)")
+            if take_profit is not None and take_profit > 0:
+                tp_pct = (take_profit - current_price) / current_price * 100 if current_price > 0 else 0
+                tech_info.append(f"止盈: {take_profit:.2f} ({tp_pct:+.2f}%)")
+            
+            # ATR
+            atr = indicators.get('atr', 0)
+            if atr > 0:
+                atr_pct = (atr / current_price * 100) if current_price > 0 else 0
+                tech_info.append(f"ATR: {atr:.2f} ({atr_pct:.2f}%)")
         
         return ', '.join(tech_info) if tech_info else 'N/A'
     
@@ -1791,8 +1845,10 @@ class HSIEmailSystem:
             if indicators:
                 buildup_score = indicators.get('buildup_score', 0)
                 buildup_level = indicators.get('buildup_level', 'none')
+                buildup_reasons = indicators.get('buildup_reasons', '')
                 distribution_score = indicators.get('distribution_score', 0)
                 distribution_level = indicators.get('distribution_level', 'none')
+                distribution_reasons = indicators.get('distribution_reasons', '')
                 trend = indicators.get('trend', '未知')
                 
                 # 获取48小时智能建议
@@ -1807,7 +1863,9 @@ class HSIEmailSystem:
   * 技术趋势: {trend}
   * 信号强度: {signal_strength}
   * 建仓评分: {buildup_score:.2f} ({buildup_level})
+  * 建仓原因: {buildup_reasons if buildup_reasons else '无'}
   * 出货评分: {distribution_score:.2f} ({distribution_level})
+  * 出货原因: {distribution_reasons if distribution_reasons else '无'}
   * 48小时连续信号: {continuous_signal}
 """
         
