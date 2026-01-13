@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 53820.18929405196,
+  "capital": 1370.189294051961,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -31,6 +31,11 @@
       "shares": 24000,
       "avg_price": 6.29,
       "stop_loss_price": 5.8
+    },
+    "3690.HK": {
+      "shares": 500,
+      "avg_price": 104.9,
+      "stop_loss_price": 100.0
     }
   },
   "transaction_history": [
@@ -16877,6 +16882,22 @@
       "current_price": 6.29,
       "target_price": 6.8,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-13T10:18:54.294331",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 500,
+      "price": 104.9,
+      "amount": 52450.0,
+      "capital_after": 1370.189294051961,
+      "reason": "技术指标高度协同（CMF 0.202正、OBV上升），多周期趋势评分45.8>20，3日收益率7.82%动能强劲，消费复苏利好本地生活服务",
+      "success": true,
+      "stop_loss_price": 100.0,
+      "current_price": 104.9,
+      "target_price": 115.0,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -28766,156 +28787,51 @@
           "stop_loss_price": 5.8
         }
       }
+    },
+    {
+      "timestamp": "2026-01-13T10:18:55.117337",
+      "capital": 1370.189294051961,
+      "portfolio_value": 1008513.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19300,
+          "avg_price": 7.6217616580310885,
+          "stop_loss_price": 6.8
+        },
+        "9988.HK": {
+          "shares": 900,
+          "avg_price": 154.3,
+          "stop_loss_price": 141.86
+        },
+        "0883.HK": {
+          "shares": 7000,
+          "avg_price": 21.36,
+          "stop_loss_price": 19.5
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 104.9,
+          "stop_loss_price": 100.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-12 15:14:48",
-      "type": "SELL",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 16300,
-      "price": 9.13,
-      "amount": 148819.0,
-      "reason": "触发Trailing Stop信号（价格从高点回撤超2.5倍ATR），技术面高位波动加剧，需减仓30%锁定利润以符合风险控制纪律",
-      "capital_after": 388802.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 9.13,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 1672.0000000000164
-    },
-    {
-      "timestamp": "2026-01-12 15:14:52",
-      "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 1400,
-      "price": 104.9,
-      "amount": 146860.0,
-      "reason": "触发Trailing Stop信号（价格回撤超2.5倍ATR），基本面受监管风险压制（价格战政策影响），需减仓25%保护利润避免回撤扩大",
-      "capital_after": 535662.189294052,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 104.9,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 470.00000000000455
-    },
-    {
-      "timestamp": "2026-01-12 15:14:55",
-      "type": "BUY",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 11.44,
-      "amount": 0,
-      "reason": "技术面强势共振（放量上涨+MACD金叉+资金流入）、基本面估值合理（PE 51.79行业合理，PB 1.40安全边际高）、新闻情绪正面（航运需求受益地缘风险），且无止盈/止损信号，适合平衡型投资者稳健配置 (原因: 持仓比例已达到建议值)",
-      "capital_after": 535662.189294052,
-      "success": false,
-      "stop_loss_price": 10.9,
-      "current_price": 11.44,
-      "target_price": 11.91,
-      "validity_period": 10
-    },
-    {
-      "timestamp": "2026-01-12 16:08:27",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "TAV评分73.25强势，基本面评分73.25优秀，新闻催化AI订单，出货级别weak，短期上行空间明确，符合平衡型投资者对稳健成长股的需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 141.86,
-          "target_price": 169.6,
-          "validity_period": 10
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "高股息率5.2%，低估值（PE 5.51, PB 0.53），技术面底部信号（TAV 63.25），出货级别none，安全边际高，适合平衡型投资者追求稳健收益",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.16,
-          "target_price": 8.2,
-          "validity_period": 15
-        }
-      ],
-      "sell": [
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "Trailing Stop触发，技术面恶化（资金流出、动能减弱），基本面评分58.0<60，估值偏高（PB 9.99），风险等级高需紧急处理",
-          "stop_loss_triggered": true,
-          "target_price": 340.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "Trailing Stop触发，缩量回调（量比0.49），基本面评分51.25<60，煤炭行业周期下行压力大，需减仓锁定利润",
-          "stop_loss_triggered": true,
-          "target_price": 40.0,
-          "validity_period": 5
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "出货级别strong（评分7.0），新闻负面监管利空（价格战政策影响），止盈卖出30%仓位锁定利润，当前盈利6.29%接近目标",
-          "stop_loss_triggered": false,
-          "target_price": 115.28,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-12 16:08:27",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "Trailing Stop触发，技术面恶化（资金流出、动能减弱），基本面评分58.0<60，估值偏高（PB 9.99），风险等级高需紧急处理",
-      "capital_after": 535662.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 426.2,
-      "target_price": 340.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-12 16:08:31",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "Trailing Stop触发，缩量回调（量比0.49），基本面评分51.25<60，煤炭行业周期下行压力大，需减仓锁定利润",
-      "capital_after": 535662.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 41.06,
-      "target_price": 40.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-12 16:08:34",
-      "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货级别strong（评分7.0），新闻负面监管利空（价格战政策影响），止盈卖出30%仓位锁定利润，当前盈利6.29%接近目标",
-      "capital_after": 535662.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 105.0,
-      "target_price": 115.28,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-01-12 16:08:36",
       "type": "BUY",
@@ -29103,6 +29019,37 @@
       "current_price": 6.29,
       "target_price": 6.8,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-13 10:18:52",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "技术指标高度协同（CMF 0.202正、OBV上升），多周期趋势评分45.8>20，3日收益率7.82%动能强劲，消费复苏利好本地生活服务",
+          "allocation_pct": 15,
+          "stop_loss_price": 100.0,
+          "target_price": 115.0,
+          "validity_period": 5
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-13 10:18:54",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 500,
+      "price": 104.9,
+      "amount": 52450.0,
+      "reason": "技术指标高度协同（CMF 0.202正、OBV上升），多周期趋势评分45.8>20，3日收益率7.82%动能强劲，消费复苏利好本地生活服务",
+      "capital_after": 1370.189294051961,
+      "success": true,
+      "stop_loss_price": 100.0,
+      "current_price": 104.9,
+      "target_price": 115.0,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
