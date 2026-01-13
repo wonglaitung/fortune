@@ -33,4 +33,4 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
-          python hsi_email.py
+          python hsi_email.py --force
