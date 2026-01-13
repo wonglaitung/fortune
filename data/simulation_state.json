@@ -17095,6 +17095,54 @@
       "current_price": 6.28,
       "target_price": 6.59,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-13T15:56:44.584720",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 316.18929405196104,
+      "reason": "出货评分9.0分（strong级别），RSI 76.46深度超买，CMF资金流-0.2785大额流出，位置百分位100.0%历史最高位，基本面PE 34.17偏高且动能衰竭",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.68,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-13T15:56:48.319932",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 316.18929405196104,
+      "reason": "出货评分4.5分（weak级别），RSI 66.36接近超买区，CMF资金流微正但OBV下降量价背离，基本面PE -8.56亏损且技术动能衰减",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 22.76,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-13T15:56:53.134292",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 159.8,
+      "amount": 0,
+      "capital_after": 316.18929405196104,
+      "reason": "综合评分72.2分（>70），建仓评分6.7>出货评分3.0信号明确，多周期趋势评分51.2>20趋势向上，技术指标协同性强（布林带突破上轨、成交量比率1.79>1放量上涨），风险等级2级（中低）适合平衡型投资者 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 157.5,
+      "current_price": 159.8,
+      "target_price": 172.0,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -29077,70 +29125,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-13 13:54:45",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "综合评分65.7分>50分，建仓评分4.0分（partial级别），基本面评分100分（市盈率9.89高分红），技术指标协同40分（RSI 44.97低位超卖、OBV趋势上升），位置百分位23.81%低位，环保政策利好驱动短期反弹，风险等级2级(中低)适合平衡型投资者",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.0,
-          "target_price": 5.6,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分5.0分（strong级别），位置百分位100.0%历史高点，RSI 70.8超买，布林带突破上轨且CMF资金流-0.325显著流出，60日收益率20.79%涨幅过大需回调，风险等级5级(高)需及时锁定利润",
-          "stop_loss_triggered": false,
-          "target_price": 9.5,
-          "validity_period": 7
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货评分9.0分（strong级别），位置百分位84.06%高位，RSI 67.64接近超买，布林带突破上轨且CMF资金流-0.2243流出，成交量比率2.14异常放量警示出货，风险等级5级(高)避免高位接盘",
-          "stop_loss_triggered": false,
-          "target_price": 48.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-13 13:54:45",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分（strong级别），位置百分位100.0%历史高点，RSI 70.8超买，布林带突破上轨且CMF资金流-0.325显著流出，60日收益率20.79%涨幅过大需回调，风险等级5级(高)需及时锁定利润",
-      "capital_after": 1370.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 11.68,
-      "target_price": 9.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-13 13:54:50",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分9.0分（strong级别），位置百分位84.06%高位，RSI 67.64接近超买，布林带突破上轨且CMF资金流-0.2243流出，成交量比率2.14异常放量警示出货，风险等级5级(高)避免高位接盘",
-      "capital_after": 1370.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 55.7,
-      "target_price": 48.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-13 13:54:54",
       "type": "BUY",
       "code": "1330.HK",
@@ -29316,6 +29300,86 @@
       "current_price": 6.28,
       "target_price": 6.59,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-13 15:56:44",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "综合评分72.2分（>70），建仓评分6.7>出货评分3.0信号明确，多周期趋势评分51.2>20趋势向上，技术指标协同性强（布林带突破上轨、成交量比率1.79>1放量上涨），风险等级2级（中低）适合平衡型投资者",
+          "allocation_pct": 15,
+          "stop_loss_price": 157.5,
+          "target_price": 172.0,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分9.0分（strong级别），RSI 76.46深度超买，CMF资金流-0.2785大额流出，位置百分位100.0%历史最高位，基本面PE 34.17偏高且动能衰竭",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "出货评分4.5分（weak级别），RSI 66.36接近超买区，CMF资金流微正但OBV下降量价背离，基本面PE -8.56亏损且技术动能衰减",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-13 15:56:44",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分9.0分（strong级别），RSI 76.46深度超买，CMF资金流-0.2785大额流出，位置百分位100.0%历史最高位，基本面PE 34.17偏高且动能衰竭",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.68,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-13 15:56:48",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分4.5分（weak级别），RSI 66.36接近超买区，CMF资金流微正但OBV下降量价背离，基本面PE -8.56亏损且技术动能衰减",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 22.76,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-13 15:56:53",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 159.8,
+      "amount": 0,
+      "reason": "综合评分72.2分（>70），建仓评分6.7>出货评分3.0信号明确，多周期趋势评分51.2>20趋势向上，技术指标协同性强（布林带突破上轨、成交量比率1.79>1放量上涨），风险等级2级（中低）适合平衡型投资者 (原因: 资金不足)",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": 157.5,
+      "current_price": 159.8,
+      "target_price": 172.0,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
