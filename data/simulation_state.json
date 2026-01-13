@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 1370.189294051961,
+  "capital": 316.18929405196104,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -36,6 +36,11 @@
       "shares": 500,
       "avg_price": 104.9,
       "stop_loss_price": 100.0
+    },
+    "1330.HK": {
+      "shares": 200,
+      "avg_price": 5.27,
+      "stop_loss_price": 5.0
     }
   },
   "transaction_history": [
@@ -16946,6 +16951,54 @@
       "current_price": 159.4,
       "target_price": 175.0,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-13T13:54:45.861783",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1370.189294051961,
+      "reason": "出货评分5.0分（strong级别），位置百分位100.0%历史高点，RSI 70.8超买，布林带突破上轨且CMF资金流-0.325显著流出，60日收益率20.79%涨幅过大需回调，风险等级5级(高)需及时锁定利润",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.68,
+      "target_price": 9.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-13T13:54:50.316386",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1370.189294051961,
+      "reason": "出货评分9.0分（strong级别），位置百分位84.06%高位，RSI 67.64接近超买，布林带突破上轨且CMF资金流-0.2243流出，成交量比率2.14异常放量警示出货，风险等级5级(高)避免高位接盘",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 55.7,
+      "target_price": 48.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-13T13:54:54.390888",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 200,
+      "price": 5.27,
+      "amount": 1054.0,
+      "capital_after": 316.18929405196104,
+      "reason": "综合评分65.7分>50分，建仓评分4.0分（partial级别），基本面评分100分（市盈率9.89高分红），技术指标协同40分（RSI 44.97低位超卖、OBV趋势上升），位置百分位23.81%低位，环保政策利好驱动短期反弹，风险等级2级(中低)适合平衡型投资者",
+      "success": true,
+      "stop_loss_price": 5.0,
+      "current_price": 5.27,
+      "target_price": 5.6,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -28877,57 +28930,56 @@
           "stop_loss_price": 100.0
         }
       }
+    },
+    {
+      "timestamp": "2026-01-13T13:54:55.299514",
+      "capital": 316.18929405196104,
+      "portfolio_value": 1006861.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19300,
+          "avg_price": 7.6217616580310885,
+          "stop_loss_price": 6.8
+        },
+        "9988.HK": {
+          "shares": 900,
+          "avg_price": 154.3,
+          "stop_loss_price": 141.86
+        },
+        "0883.HK": {
+          "shares": 7000,
+          "avg_price": 21.36,
+          "stop_loss_price": 19.5
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 104.9,
+          "stop_loss_price": 100.0
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-13 09:54:24",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 100,
-      "price": 7.81,
-      "amount": 781.0,
-      "reason": "综合评分72.1分，基本面评分100分，技术指标协同性强（CMF/OBV/RSI/布林带同向看涨），潜在上行空间9.0%",
-      "capital_after": 504888.18929405196,
-      "success": true,
-      "stop_loss_price": 6.8,
-      "current_price": 7.81,
-      "target_price": 8.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-13 09:54:26",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 7000,
-      "price": 21.36,
-      "amount": 149520.0,
-      "reason": "综合评分70.2分，多周期趋势评分46.9分（60日收益率12.34%），基本面评分90分，受益油价上行周期",
-      "capital_after": 355368.18929405196,
-      "success": true,
-      "stop_loss_price": 19.5,
-      "current_price": 21.36,
-      "target_price": 23.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-13 09:54:28",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 26700,
-      "price": 5.64,
-      "amount": 150588.0,
-      "reason": "综合评分67.2分，基本面评分100分（高股息率防御属性），位置百分位31.07%处于估值修复区间",
-      "capital_after": 204780.18929405196,
-      "success": true,
-      "stop_loss_price": 5.2,
-      "current_price": 5.64,
-      "target_price": 6.2,
-      "validity_period": 30
-    },
     {
       "timestamp": "2026-01-13 09:54:33",
       "type": "BUY",
@@ -29065,6 +29117,86 @@
       "current_price": 159.4,
       "target_price": 175.0,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-13 13:54:45",
+      "buy": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "综合评分65.7分>50分，建仓评分4.0分（partial级别），基本面评分100分（市盈率9.89高分红），技术指标协同40分（RSI 44.97低位超卖、OBV趋势上升），位置百分位23.81%低位，环保政策利好驱动短期反弹，风险等级2级(中低)适合平衡型投资者",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.0,
+          "target_price": 5.6,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分5.0分（strong级别），位置百分位100.0%历史高点，RSI 70.8超买，布林带突破上轨且CMF资金流-0.325显著流出，60日收益率20.79%涨幅过大需回调，风险等级5级(高)需及时锁定利润",
+          "stop_loss_triggered": false,
+          "target_price": 9.5,
+          "validity_period": 7
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货评分9.0分（strong级别），位置百分位84.06%高位，RSI 67.64接近超买，布林带突破上轨且CMF资金流-0.2243流出，成交量比率2.14异常放量警示出货，风险等级5级(高)避免高位接盘",
+          "stop_loss_triggered": false,
+          "target_price": 48.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-13 13:54:45",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（strong级别），位置百分位100.0%历史高点，RSI 70.8超买，布林带突破上轨且CMF资金流-0.325显著流出，60日收益率20.79%涨幅过大需回调，风险等级5级(高)需及时锁定利润",
+      "capital_after": 1370.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.68,
+      "target_price": 9.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-13 13:54:50",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分9.0分（strong级别），位置百分位84.06%高位，RSI 67.64接近超买，布林带突破上轨且CMF资金流-0.2243流出，成交量比率2.14异常放量警示出货，风险等级5级(高)避免高位接盘",
+      "capital_after": 1370.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 55.7,
+      "target_price": 48.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-13 13:54:54",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 200,
+      "price": 5.27,
+      "amount": 1054.0,
+      "reason": "综合评分65.7分>50分，建仓评分4.0分（partial级别），基本面评分100分（市盈率9.89高分红），技术指标协同40分（RSI 44.97低位超卖、OBV趋势上升），位置百分位23.81%低位，环保政策利好驱动短期反弹，风险等级2级(中低)适合平衡型投资者",
+      "capital_after": 316.18929405196104,
+      "success": true,
+      "stop_loss_price": 5.0,
+      "current_price": 5.27,
+      "target_price": 5.6,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
