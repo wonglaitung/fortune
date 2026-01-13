@@ -16898,6 +16898,22 @@
       "current_price": 104.9,
       "target_price": 115.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-13T11:05:31.596141",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1370.189294051961,
+      "reason": "出货评分5.5分（出货评分>建仓评分：5.5 > 4.2），技术指标显示超买压力显著（RSI 74.95深度超买），资金流向逆转（CMF资金流-0.2219流出），生物科技股受政策不确定性影响",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.98,
+      "target_price": 0.0,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -28833,38 +28849,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-12 16:08:36",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 900,
-      "price": 154.3,
-      "amount": 138870.0,
-      "reason": "TAV评分73.25强势，基本面评分73.25优秀，新闻催化AI订单，出货级别weak，短期上行空间明确，符合平衡型投资者对稳健成长股的需求",
-      "capital_after": 396792.18929405196,
-      "success": true,
-      "stop_loss_price": 141.86,
-      "current_price": 154.3,
-      "target_price": 169.6,
-      "validity_period": 10
-    },
-    {
-      "timestamp": "2026-01-12 16:08:38",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 6500,
-      "price": 7.72,
-      "amount": 50180.0,
-      "reason": "高股息率5.2%，低估值（PE 5.51, PB 0.53），技术面底部信号（TAV 63.25），出货级别none，安全边际高，适合平衡型投资者追求稳健收益",
-      "capital_after": 346612.18929405196,
-      "success": true,
-      "stop_loss_price": 7.16,
-      "current_price": 7.72,
-      "target_price": 8.2,
-      "validity_period": 15
-    },
-    {
       "timestamp": "2026-01-13 09:54:20",
       "buy": [
         {
@@ -29050,6 +29034,36 @@
       "current_price": 104.9,
       "target_price": 115.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-13 11:05:31",
+      "buy": [],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分5.5分（出货评分>建仓评分：5.5 > 4.2），技术指标显示超买压力显著（RSI 74.95深度超买），资金流向逆转（CMF资金流-0.2219流出），生物科技股受政策不确定性影响",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 14
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-13 11:05:31",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分（出货评分>建仓评分：5.5 > 4.2），技术指标显示超买压力显著（RSI 74.95深度超买），资金流向逆转（CMF资金流-0.2219流出），生物科技股受政策不确定性影响",
+      "capital_after": 1370.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.98,
+      "target_price": 0.0,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
