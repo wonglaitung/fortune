@@ -16914,6 +16914,38 @@
       "current_price": 38.98,
       "target_price": 0.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-13T13:31:10.665272",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.8,
+      "amount": 0,
+      "capital_after": 1370.189294051961,
+      "reason": "综合评分72.9分显示强劲上升趋势，多周期趋势评分80.9分与技术指标协同买入信号（MACD金叉/CMF资金流入），位置百分位65.09%仍有上升空间，符合平衡型风险偏好中期配置需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.42,
+      "current_price": 22.8,
+      "target_price": 25.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-13T13:31:15.028494",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 159.4,
+      "amount": 0,
+      "capital_after": 1370.189294051961,
+      "reason": "建仓评分6.9分触发强烈买入信号，成交量比率1.39放大配合VWAP突破，短期反弹动能充足，技术指标高度协同但风险等级中高，适合平衡型投资者短期战术配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 156.58,
+      "current_price": 159.4,
+      "target_price": 175.0,
+      "validity_period": 3
     }
   ],
   "portfolio_history": [
@@ -28849,98 +28881,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-13 09:54:20",
-      "buy": [
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "综合评分72.1分，基本面评分100分，技术指标协同性强（CMF/OBV/RSI/布林带同向看涨），潜在上行空间9.0%",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.8,
-          "target_price": 8.5,
-          "validity_period": 14
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "综合评分70.2分，多周期趋势评分46.9分（60日收益率12.34%），基本面评分90分，受益油价上行周期",
-          "allocation_pct": 15,
-          "stop_loss_price": 19.5,
-          "target_price": 23.0,
-          "validity_period": 14
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "综合评分67.2分，基本面评分100分（高股息率防御属性），位置百分位31.07%处于估值修复区间",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.2,
-          "target_price": 6.2,
-          "validity_period": 30
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "综合评分66.1分，基本面评分100分（市盈率5.67倍），多周期趋势评分32.3分显示中期动能",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.8,
-          "target_price": 6.8,
-          "validity_period": 30
-        }
-      ],
-      "sell": [
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货评分7.0分（strong级别），RSI 74.16严重超买，CMF -0.3031资金大幅流出，高风险标的",
-          "stop_loss_triggered": false,
-          "target_price": 52.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分5.0分（strong级别），技术指标显示price_high/rsi_high/cmf_out共振，24小时内存在明确趋势反转信号",
-          "stop_loss_triggered": false,
-          "target_price": 10.5,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-13 09:54:20",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分（strong级别），RSI 74.16严重超买，CMF -0.3031资金大幅流出，高风险标的",
-      "capital_after": 346612.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 57.45,
-      "target_price": 52.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-13 09:54:21",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 13700,
-      "price": 11.61,
-      "amount": 159057.0,
-      "reason": "出货评分5.0分（strong级别），技术指标显示price_high/rsi_high/cmf_out共振，24小时内存在明确趋势反转信号",
-      "capital_after": 505669.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 11.61,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 14932.999999999998
-    },
-    {
       "timestamp": "2026-01-13 09:54:24",
       "type": "BUY",
       "code": "0939.HK",
@@ -29064,6 +29004,67 @@
       "current_price": 38.98,
       "target_price": 0.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-13 11:34:29",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-13 13:31:08",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "综合评分72.9分显示强劲上升趋势，多周期趋势评分80.9分与技术指标协同买入信号（MACD金叉/CMF资金流入），位置百分位65.09%仍有上升空间，符合平衡型风险偏好中期配置需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.42,
+          "target_price": 25.0,
+          "validity_period": 14
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "建仓评分6.9分触发强烈买入信号，成交量比率1.39放大配合VWAP突破，短期反弹动能充足，技术指标高度协同但风险等级中高，适合平衡型投资者短期战术配置",
+          "allocation_pct": 15,
+          "stop_loss_price": 156.58,
+          "target_price": 175.0,
+          "validity_period": 3
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-13 13:31:10",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.8,
+      "amount": 0,
+      "reason": "综合评分72.9分显示强劲上升趋势，多周期趋势评分80.9分与技术指标协同买入信号（MACD金叉/CMF资金流入），位置百分位65.09%仍有上升空间，符合平衡型风险偏好中期配置需求 (原因: 资金不足)",
+      "capital_after": 1370.189294051961,
+      "success": false,
+      "stop_loss_price": 20.42,
+      "current_price": 22.8,
+      "target_price": 25.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-13 13:31:15",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 159.4,
+      "amount": 0,
+      "reason": "建仓评分6.9分触发强烈买入信号，成交量比率1.39放大配合VWAP突破，短期反弹动能充足，技术指标高度协同但风险等级中高，适合平衡型投资者短期战术配置 (原因: 资金不足)",
+      "capital_after": 1370.189294051961,
+      "success": false,
+      "stop_loss_price": 156.58,
+      "current_price": 159.4,
+      "target_price": 175.0,
+      "validity_period": 3
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
