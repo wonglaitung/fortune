@@ -17388,6 +17388,102 @@
       "current_price": 6.26,
       "target_price": 6.5,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-14T13:29:45.842710",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 6.189294051959223,
+      "reason": "出货评分6.5分（strong级别），位置百分位98.92%严重超买，RSI 75.96超买，CMF资金流-0.2764流出，风险等级5级（高）需优先止盈",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.44,
+      "target_price": 37.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14T13:29:51.005268",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 6.189294051959223,
+      "reason": "出货评分6.0分（strong级别），RSI 68.42高位，CMF资金流-0.0902流出，基本面亏损（市盈率-153.3），风险等级5级（高）需规避估值泡沫",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 55.9,
+      "target_price": 52.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14T13:29:53.658047",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 6.189294051959223,
+      "reason": "出货评分5.5分（strong级别），位置百分位100%历史新高，RSI 71.53超买，基本面估值极高（市盈率1674.4），风险等级5级（高）需锁定利润",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 93.25,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14T13:29:57.111022",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 6.189294051959223,
+      "reason": "出货评分5.0分（strong级别），位置百分位100%历史新高，RSI 73.54超买，布林带突破上轨，风险等级5级（高）短期超买严重需止盈",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.97,
+      "target_price": 11.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14T13:30:02.365239",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.82,
+      "amount": 0,
+      "capital_after": 6.189294051959223,
+      "reason": "基本面评分90分（优质），市盈率7.58低估值，高分红潜力，多周期趋势评分82.9分强劲，风险等级2级（中低）符合平衡型风险偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.2,
+      "current_price": 21.82,
+      "target_price": 23.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14T13:30:07.935845",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.55,
+      "amount": 0,
+      "capital_after": 6.189294051959223,
+      "reason": "基本面评分100分（优质），市盈率6.34低估值，高股息率提供安全边际，位置百分位22.33%超跌反弹空间大，风险等级2级（中低）适合平衡型投资者 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.2,
+      "current_price": 5.55,
+      "target_price": 6.0,
+      "validity_period": 30
     }
   ],
   "portfolio_history": [
@@ -29553,159 +29649,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-14 10:12:19",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI超买70.01，布林带突破上轨，CMF资金流流出-0.1411，OBV趋势下降，位置百分位92.75%高位，高风险需止盈",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 58.2,
-      "target_price": 0.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-14 10:12:22",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 22.76,
-      "amount": 0,
-      "reason": "市场发生重大变化：MACD金叉、OBV资金流入增强、CMF转正，技术指标协同支持上涨，风险等级中低适合平衡型投资者 (原因: 资金不足)",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": 21.2,
-      "current_price": 22.76,
-      "target_price": 25.5,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-01-14 10:38:06",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "维持此前买入决策，MACD金叉与CMF转正趋势延续，OBV资金流入持续增强，技术指标协同支持上涨且符合平衡型投资者中低风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.48,
-          "target_price": 25.04,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-14 10:38:08",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 22.66,
-      "amount": 0,
-      "reason": "维持此前买入决策，MACD金叉与CMF转正趋势延续，OBV资金流入持续增强，技术指标协同支持上涨且符合平衡型投资者中低风险偏好 (原因: 资金不足)",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": 20.48,
-      "current_price": 22.66,
-      "target_price": 25.04,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 11:15:04",
-      "buy": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "综合评分74.2分，多周期趋势强劲(86.9分)，基本面稳健(PE 7.58倍高现金流)，技术指标协同支持上涨(OBV上升、MACD金叉)，风险等级2级(中低)适合平衡型投资者，无历史交易冲突",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.5,
-          "target_price": 24.5,
-          "validity_period": 21
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "综合评分72.0分，建仓信号强(5.2分)，基本面卓越(PE 5.6倍高分红)，技术指标健康(RSI 53.23、OBV上升)，风险等级2级(中低)适合平衡型投资者，无历史交易冲突",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.4,
-          "target_price": 8.5,
-          "validity_period": 21
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分5.5分，技术面严重超买(RSI 73.29)，极端估值风险(PE 1674倍)，资金流出加速(CMF -0.0762)，风险等级5级(高)需止盈，无历史交易冲突",
-          "stop_loss_triggered": false,
-          "target_price": 88.0,
-          "validity_period": 5
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "市场发生重大变化：技术指标从买入信号转为卖出信号(历史BUY 19.2小时前，当前出货评分3.5分>建仓评分)，RSI接近超买(66.18)，资金分歧(OBV下降)，风险等级3级(中)需部分止盈",
-          "stop_loss_triggered": false,
-          "target_price": 160.0,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-14 11:15:04",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，技术面严重超买(RSI 73.29)，极端估值风险(PE 1674倍)，资金流出加速(CMF -0.0762)，风险等级5级(高)需止盈，无历史交易冲突",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 94.35,
-      "target_price": 88.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-14 11:15:10",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 900,
-      "price": 166.9,
-      "amount": 150210.0,
-      "reason": "市场发生重大变化：技术指标从买入信号转为卖出信号(历史BUY 19.2小时前，当前出货评分3.5分>建仓评分)，RSI接近超买(66.18)，资金分歧(OBV下降)，风险等级3级(中)需部分止盈",
-      "capital_after": 150526.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 166.9,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 11339.999999999995
-    },
-    {
-      "timestamp": "2026-01-14 11:15:14",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 21.92,
-      "amount": 0,
-      "reason": "综合评分74.2分，多周期趋势强劲(86.9分)，基本面稳健(PE 7.58倍高现金流)，技术指标协同支持上涨(OBV上升、MACD金叉)，风险等级2级(中低)适合平衡型投资者，无历史交易冲突 (原因: 持仓比例已达到建议值)",
-      "capital_after": 150526.18929405196,
-      "success": false,
-      "stop_loss_price": 20.5,
-      "current_price": 21.92,
-      "target_price": 24.5,
-      "validity_period": 21
-    },
-    {
       "timestamp": "2026-01-14 11:15:19",
       "type": "BUY",
       "code": "0939.HK",
@@ -29897,6 +29840,159 @@
       "stop_loss_price": 6.1,
       "current_price": 6.26,
       "target_price": 6.5,
+      "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-14 13:29:45",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "基本面评分90分（优质），市盈率7.58低估值，高分红潜力，多周期趋势评分82.9分强劲，风险等级2级（中低）符合平衡型风险偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.2,
+          "target_price": 23.0,
+          "validity_period": 14
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "基本面评分100分（优质），市盈率6.34低估值，高股息率提供安全边际，位置百分位22.33%超跌反弹空间大，风险等级2级（中低）适合平衡型投资者",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.2,
+          "target_price": 6.0,
+          "validity_period": 30
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分6.5分（strong级别），位置百分位98.92%严重超买，RSI 75.96超买，CMF资金流-0.2764流出，风险等级5级（高）需优先止盈",
+          "stop_loss_triggered": false,
+          "target_price": 37.0,
+          "validity_period": 7
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货评分6.0分（strong级别），RSI 68.42高位，CMF资金流-0.0902流出，基本面亏损（市盈率-153.3），风险等级5级（高）需规避估值泡沫",
+          "stop_loss_triggered": false,
+          "target_price": 52.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分5.5分（strong级别），位置百分位100%历史新高，RSI 71.53超买，基本面估值极高（市盈率1674.4），风险等级5级（高）需锁定利润",
+          "stop_loss_triggered": false,
+          "target_price": 85.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分5.0分（strong级别），位置百分位100%历史新高，RSI 73.54超买，布林带突破上轨，风险等级5级（高）短期超买严重需止盈",
+          "stop_loss_triggered": false,
+          "target_price": 11.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-14 13:29:45",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分（strong级别），位置百分位98.92%严重超买，RSI 75.96超买，CMF资金流-0.2764流出，风险等级5级（高）需优先止盈",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.44,
+      "target_price": 37.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14 13:29:51",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（strong级别），RSI 68.42高位，CMF资金流-0.0902流出，基本面亏损（市盈率-153.3），风险等级5级（高）需规避估值泡沫",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 55.9,
+      "target_price": 52.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14 13:29:53",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分（strong级别），位置百分位100%历史新高，RSI 71.53超买，基本面估值极高（市盈率1674.4），风险等级5级（高）需锁定利润",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 93.25,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14 13:29:57",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（strong级别），位置百分位100%历史新高，RSI 73.54超买，布林带突破上轨，风险等级5级（高）短期超买严重需止盈",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.97,
+      "target_price": 11.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-14 13:30:02",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.82,
+      "amount": 0,
+      "reason": "基本面评分90分（优质），市盈率7.58低估值，高分红潜力，多周期趋势评分82.9分强劲，风险等级2级（中低）符合平衡型风险偏好 (原因: 资金不足)",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": 20.2,
+      "current_price": 21.82,
+      "target_price": 23.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14 13:30:07",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.55,
+      "amount": 0,
+      "reason": "基本面评分100分（优质），市盈率6.34低估值，高股息率提供安全边际，位置百分位22.33%超跌反弹空间大，风险等级2级（中低）适合平衡型投资者 (原因: 资金不足)",
+      "capital_after": 6.189294051959223,
+      "success": false,
+      "stop_loss_price": 5.2,
+      "current_price": 5.55,
+      "target_price": 6.0,
       "validity_period": 30
     }
   ],
