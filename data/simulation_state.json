@@ -17143,6 +17143,54 @@
       "current_price": 159.8,
       "target_price": 172.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14T10:12:15.729196",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 316.18929405196104,
+      "reason": "出货评分5.0分，RSI严重超买74.06，CMF资金流显著流出-0.3175，位置百分位100.0%历史高位，高风险需止盈",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.0,
+      "target_price": 0.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-14T10:12:19.164509",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 316.18929405196104,
+      "reason": "出货评分6.0分，RSI超买70.01，布林带突破上轨，CMF资金流流出-0.1411，OBV趋势下降，位置百分位92.75%高位，高风险需止盈",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 58.2,
+      "target_price": 0.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-14T10:12:22.967445",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.76,
+      "amount": 0,
+      "capital_after": 316.18929405196104,
+      "reason": "市场发生重大变化：MACD金叉、OBV资金流入增强、CMF转正，技术指标协同支持上涨，风险等级中低适合平衡型投资者 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 21.2,
+      "current_price": 22.76,
+      "target_price": 25.5,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -29125,95 +29173,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-13 13:54:54",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 200,
-      "price": 5.27,
-      "amount": 1054.0,
-      "reason": "综合评分65.7分>50分，建仓评分4.0分（partial级别），基本面评分100分（市盈率9.89高分红），技术指标协同40分（RSI 44.97低位超卖、OBV趋势上升），位置百分位23.81%低位，环保政策利好驱动短期反弹，风险等级2级(中低)适合平衡型投资者",
-      "capital_after": 316.18929405196104,
-      "success": true,
-      "stop_loss_price": 5.0,
-      "current_price": 5.27,
-      "target_price": 5.6,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-13 14:47:46",
-      "buy": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "综合评分71.2分，多周期趋势稳健向上（评分52.8），基本面极佳（PE 7.58行业低位），技术指标协同强（CMF资金流入、OBV上升、RSI健康区间），风险等级2级(中低)适合平衡型投资者追求稳健收益",
-          "allocation_pct": 15,
-          "stop_loss_price": 19.5,
-          "target_price": 23.5,
-          "validity_period": 14
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "综合评分67.3分，基本面卓越（PE 5.60行业最低），多周期趋势向上（评分22.0），技术指标协同稳健（OBV上升、CMF资金流入），风险等级1级(低)适合平衡型投资者配置低估值高分红标的",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.3,
-          "target_price": 8.2,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分6.5分，RSI 67.05超买，CMF资金流出，位置百分位89.94%高位，基本面评分低（PE 1674.4畸高），风险等级4级(中高)需及时锁定利润避免估值回归",
-          "stop_loss_triggered": false,
-          "target_price": 80.0,
-          "validity_period": 14
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分5.5分，RSI 65.58超买，CMF资金大幅流出，多周期趋势虽高但60日收益率22.64%已充分反映预期，相对强度-1.09跑输恒指，风险等级4级(中高)缺乏上行动能",
-          "stop_loss_triggered": false,
-          "target_price": 118.0,
-          "validity_period": 14
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-13 14:47:46",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，RSI 67.05超买，CMF资金流出，位置百分位89.94%高位，基本面评分低（PE 1674.4畸高），风险等级4级(中高)需及时锁定利润避免估值回归",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 88.6,
-      "target_price": 80.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-13 14:47:50",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，RSI 65.58超买，CMF资金大幅流出，多周期趋势虽高但60日收益率22.64%已充分反映预期，相对强度-1.09跑输恒指，风险等级4级(中高)缺乏上行动能",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 126.3,
-      "target_price": 118.0,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-13 14:47:55",
       "type": "BUY",
       "code": "0883.HK",
@@ -29380,6 +29339,86 @@
       "current_price": 159.8,
       "target_price": 172.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14 10:12:15",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "市场发生重大变化：MACD金叉、OBV资金流入增强、CMF转正，技术指标协同支持上涨，风险等级中低适合平衡型投资者",
+          "allocation_pct": 15,
+          "stop_loss_price": 21.2,
+          "target_price": 25.5,
+          "validity_period": 21
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分5.0分，RSI严重超买74.06，CMF资金流显著流出-0.3175，位置百分位100.0%历史高位，高风险需止盈",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 3
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货评分6.0分，RSI超买70.01，布林带突破上轨，CMF资金流流出-0.1411，OBV趋势下降，位置百分位92.75%高位，高风险需止盈",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-14 10:12:15",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分，RSI严重超买74.06，CMF资金流显著流出-0.3175，位置百分位100.0%历史高位，高风险需止盈",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.0,
+      "target_price": 0.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-14 10:12:19",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，RSI超买70.01，布林带突破上轨，CMF资金流流出-0.1411，OBV趋势下降，位置百分位92.75%高位，高风险需止盈",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 58.2,
+      "target_price": 0.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-14 10:12:22",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.76,
+      "amount": 0,
+      "reason": "市场发生重大变化：MACD金叉、OBV资金流入增强、CMF转正，技术指标协同支持上涨，风险等级中低适合平衡型投资者 (原因: 资金不足)",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": 21.2,
+      "current_price": 22.76,
+      "target_price": 25.5,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
