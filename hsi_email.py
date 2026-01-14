@@ -3501,6 +3501,38 @@ class HSIEmailSystem:
 
         text = "\n".join(text_lines) + "\n\n"
 
+        # 添加买入信号股票分析（如果有）
+        if buy_signals_analysis:
+            # 将markdown转换为HTML
+            buy_signals_analysis_html = self._markdown_to_html(buy_signals_analysis)
+            
+            html += """
+        <div class="section">
+            <h3>🎯 买入信号股票分析（AI智能分析）</h3>
+            <div style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4CAF50; margin: 10px 0;">
+                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + buy_signals_analysis_html + """</div>
+            </div>
+        </div>
+            """
+            
+            text += f"\n🎯 买入信号股票分析（AI智能分析）:\n{buy_signals_analysis}\n\n"
+
+        # 添加持仓分析（如果有）
+        if portfolio_analysis:
+            # 将markdown转换为HTML
+            portfolio_analysis_html = self._markdown_to_html(portfolio_analysis)
+            
+            html += """
+        <div class="section">
+            <h3>💼 持仓投资分析（AI智能分析）</h3>
+            <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 10px 0;">
+                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + portfolio_analysis_html + """</div>
+            </div>
+        </div>
+            """
+            
+            text += f"\n💼 持仓投资分析（AI智能分析）:\n{portfolio_analysis}\n\n"
+
         # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
         buy_without_sell_after, sell_without_buy_after = self.analyze_continuous_signals(target_date)
@@ -3752,38 +3784,6 @@ class HSIEmailSystem:
         """
 
         text += "\n"
-
-        # 添加买入信号股票分析（如果有）
-        if buy_signals_analysis:
-            # 将markdown转换为HTML
-            buy_signals_analysis_html = self._markdown_to_html(buy_signals_analysis)
-            
-            html += """
-        <div class="section">
-            <h3>🎯 买入信号股票分析（AI智能分析）</h3>
-            <div style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4CAF50; margin: 10px 0;">
-                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + buy_signals_analysis_html + """</div>
-            </div>
-        </div>
-            """
-            
-            text += f"\n🎯 买入信号股票分析（AI智能分析）:\n{buy_signals_analysis}\n\n"
-
-        # 添加持仓分析（如果有）
-        if portfolio_analysis:
-            # 将markdown转换为HTML
-            portfolio_analysis_html = self._markdown_to_html(portfolio_analysis)
-            
-            html += """
-        <div class="section">
-            <h3>💼 持仓投资分析（AI智能分析）</h3>
-            <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 10px 0;">
-                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + portfolio_analysis_html + """</div>
-            </div>
-        </div>
-            """
-            
-            text += f"\n💼 持仓投资分析（AI智能分析）:\n{portfolio_analysis}\n\n"
 
         if hsi_data:
             html += """
