@@ -17596,6 +17596,54 @@
       "current_price": 7.77,
       "target_price": 8.2,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-14T15:42:36.533194",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货评分6.5分strong级别，位置百分位93.19%高位，RSI 66.77超买，CMF资金流-0.3499大幅流出，风险等级4级中高超出平衡型承受范围",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 126.8,
+      "target_price": 120.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14T15:42:41.587471",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 632.0,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "综合评分68.9分（50-70分推荐区间），建仓评分6.7分strong级别，技术指标协同优秀（成交量比率1.51、MACD金叉、OBV上升），风险等级3级中适合平衡型风险偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 609.28,
+      "current_price": 632.0,
+      "target_price": 664.13,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14T15:42:48.452558",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 75.75,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "综合评分68.7分（50-70分推荐区间），多周期趋势评分84.4分强劲，相对强度评分57.0分跑赢恒指，风险等级3级中符合平衡型收益风险平衡需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 73.89,
+      "current_price": 75.75,
+      "target_price": 79.43,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -29860,175 +29908,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-14 11:57:39",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.26,
-      "amount": 0,
-      "reason": "综合评分66.3分>50分，基本面评分100分（市盈率5.67行业最低，高股息防御性强），风险等级1级(低)，适合平衡型投资者稳健配置 (原因: 资金不足)",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": 6.1,
-      "current_price": 6.26,
-      "target_price": 6.5,
-      "validity_period": 30
-    },
-    {
-      "timestamp": "2026-01-14 13:29:45",
-      "buy": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "基本面评分90分（优质），市盈率7.58低估值，高分红潜力，多周期趋势评分82.9分强劲，风险等级2级（中低）符合平衡型风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.2,
-          "target_price": 23.0,
-          "validity_period": 14
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "基本面评分100分（优质），市盈率6.34低估值，高股息率提供安全边际，位置百分位22.33%超跌反弹空间大，风险等级2级（中低）适合平衡型投资者",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.2,
-          "target_price": 6.0,
-          "validity_period": 30
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分6.5分（strong级别），位置百分位98.92%严重超买，RSI 75.96超买，CMF资金流-0.2764流出，风险等级5级（高）需优先止盈",
-          "stop_loss_triggered": false,
-          "target_price": 37.0,
-          "validity_period": 7
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货评分6.0分（strong级别），RSI 68.42高位，CMF资金流-0.0902流出，基本面亏损（市盈率-153.3），风险等级5级（高）需规避估值泡沫",
-          "stop_loss_triggered": false,
-          "target_price": 52.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分5.5分（strong级别），位置百分位100%历史新高，RSI 71.53超买，基本面估值极高（市盈率1674.4），风险等级5级（高）需锁定利润",
-          "stop_loss_triggered": false,
-          "target_price": 85.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分5.0分（strong级别），位置百分位100%历史新高，RSI 73.54超买，布林带突破上轨，风险等级5级（高）短期超买严重需止盈",
-          "stop_loss_triggered": false,
-          "target_price": 11.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-14 13:29:45",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分（strong级别），位置百分位98.92%严重超买，RSI 75.96超买，CMF资金流-0.2764流出，风险等级5级（高）需优先止盈",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.44,
-      "target_price": 37.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 13:29:51",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（strong级别），RSI 68.42高位，CMF资金流-0.0902流出，基本面亏损（市盈率-153.3），风险等级5级（高）需规避估值泡沫",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 55.9,
-      "target_price": 52.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 13:29:53",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分（strong级别），位置百分位100%历史新高，RSI 71.53超买，基本面估值极高（市盈率1674.4），风险等级5级（高）需锁定利润",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 93.25,
-      "target_price": 85.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 13:29:57",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分（strong级别），位置百分位100%历史新高，RSI 73.54超买，布林带突破上轨，风险等级5级（高）短期超买严重需止盈",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 11.97,
-      "target_price": 11.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 13:30:02",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 21.82,
-      "amount": 0,
-      "reason": "基本面评分90分（优质），市盈率7.58低估值，高分红潜力，多周期趋势评分82.9分强劲，风险等级2级（中低）符合平衡型风险偏好 (原因: 资金不足)",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": 20.2,
-      "current_price": 21.82,
-      "target_price": 23.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-14 13:30:07",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.55,
-      "amount": 0,
-      "reason": "基本面评分100分（优质），市盈率6.34低估值，高股息率提供安全边际，位置百分位22.33%超跌反弹空间大，风险等级2级（中低）适合平衡型投资者 (原因: 资金不足)",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": 5.2,
-      "current_price": 5.55,
-      "target_price": 6.0,
-      "validity_period": 30
-    },
-    {
       "timestamp": "2026-01-14 14:03:46",
       "buy": [],
       "sell": []
@@ -30211,6 +30090,87 @@
       "current_price": 7.77,
       "target_price": 8.2,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-14 15:42:36",
+      "buy": [
+        {
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "reason": "综合评分68.9分（50-70分推荐区间），建仓评分6.7分strong级别，技术指标协同优秀（成交量比率1.51、MACD金叉、OBV上升），风险等级3级中适合平衡型风险偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 609.28,
+          "target_price": 664.13,
+          "validity_period": 14
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "综合评分68.7分（50-70分推荐区间），多周期趋势评分84.4分强劲，相对强度评分57.0分跑赢恒指，风险等级3级中符合平衡型收益风险平衡需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 73.89,
+          "target_price": 79.43,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分6.5分strong级别，位置百分位93.19%高位，RSI 66.77超买，CMF资金流-0.3499大幅流出，风险等级4级中高超出平衡型承受范围",
+          "stop_loss_triggered": false,
+          "target_price": 120.0,
+          "validity_period": 14
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-14 15:42:36",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分strong级别，位置百分位93.19%高位，RSI 66.77超买，CMF资金流-0.3499大幅流出，风险等级4级中高超出平衡型承受范围",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 126.8,
+      "target_price": 120.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14 15:42:41",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 632.0,
+      "amount": 0,
+      "reason": "综合评分68.9分（50-70分推荐区间），建仓评分6.7分strong级别，技术指标协同优秀（成交量比率1.51、MACD金叉、OBV上升），风险等级3级中适合平衡型风险偏好 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 609.28,
+      "current_price": 632.0,
+      "target_price": 664.13,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-14 15:42:48",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 75.75,
+      "amount": 0,
+      "reason": "综合评分68.7分（50-70分推荐区间），多周期趋势评分84.4分强劲，相对强度评分57.0分跑赢恒指，风险等级3级中符合平衡型收益风险平衡需求 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 73.89,
+      "current_price": 75.75,
+      "target_price": 79.43,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
