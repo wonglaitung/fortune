@@ -108,6 +108,7 @@ class HSIEmailSystem:
         'vwap_vol': 1.2,       # 价格高于VWAP且放量
         'price_above_vwap': 0.8,  # 价格高于VWAP
         'bb_oversold': 1.0,    # 布林带超卖
+        'cmf_in': 1.2,         # CMF资金流入
     }
 
     # 建仓信号阈值
@@ -125,6 +126,7 @@ class HSIEmailSystem:
         'vwap_vol': 1.5,       # 价格低于VWAP且放量
         'price_down': 1.0,     # 价格下跌
         'bb_overbought': 1.0,  # 布林带超买
+        'cmf_out': 1.5,        # CMF资金流出
     }
 
     # 出货信号阈值
@@ -969,6 +971,12 @@ class HSIEmailSystem:
             score += self.BUILDUP_WEIGHTS['bb_oversold']
             reasons.append('bb_oversold')
 
+        # CMF资金流入
+        cmf = row.get('cmf', 0.0)
+        if pd.notna(cmf) and cmf > 0.03:
+            score += self.BUILDUP_WEIGHTS['cmf_in']
+            reasons.append('cmf_in')
+
         # 返回分数与分层建议
         signal = None
         if score >= self.BUILDUP_THRESHOLD_STRONG:
@@ -1057,6 +1065,12 @@ class HSIEmailSystem:
         if pd.notna(bb_position) and bb_position > 0.8:
             score += self.DISTRIBUTION_WEIGHTS['bb_overbought']
             reasons.append('bb_overbought')
+
+        # CMF资金流出
+        cmf = row.get('cmf', 0.0)
+        if pd.notna(cmf) and cmf < -0.05:
+            score += self.DISTRIBUTION_WEIGHTS['cmf_out']
+            reasons.append('cmf_out')
 
         # 返回分数与分层建议
         signal = None
@@ -1277,7 +1291,8 @@ class HSIEmailSystem:
                             'vwap': latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0,
                             'current_price': current_price,
                             'change_1d': data.get('change_1d', 0.0),
-                            'bb_position': bb_position
+                            'bb_position': bb_position,
+                            'cmf': latest.get('CMF', 0.0) if 'CMF' in latest else 0.0
                         })
                         
                         # 计算建仓评分

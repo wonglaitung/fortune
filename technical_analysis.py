@@ -309,6 +309,32 @@ class TechnicalAnalyzer:
         else:
             return "(普通)"
     
+    def calculate_cmf(self, df, period=20):
+        """
+        计算Chaikin Money Flow (CMF)指标
+        
+        参数:
+        - df: 包含OHLCV数据的DataFrame
+        - period: 计算周期，默认20
+        
+        返回:
+        - 包含CMF列的DataFrame
+        """
+        if df.empty or len(df) < period + 1:
+            return df
+        
+        # 计算Money Flow Multiplier
+        mfm = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+        mfm = mfm.fillna(0)  # 处理除零情况
+        
+        # 计算Money Flow Volume
+        mfv = mfm * df['Volume']
+        
+        # 计算CMF（Money Flow Volume的滚动和 / Volume的滚动和）
+        df['CMF'] = mfv.rolling(window=period).sum() / df['Volume'].rolling(window=period).sum()
+        
+        return df
+    
     def calculate_all_indicators(self, df):
         """计算所有技术指标"""
         if df.empty:
@@ -337,6 +363,9 @@ class TechnicalAnalyzer:
         
         # 计算OBV
         df = self.calculate_obv(df)
+        
+        # 计算CMF
+        df = self.calculate_cmf(df)
         
         # 计算成交量指标
         df = self.calculate_volume_indicators(df)

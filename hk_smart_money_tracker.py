@@ -136,6 +136,7 @@ BUILDUP_WEIGHTS = {
     'southbound_in': 1.8,  # 南向资金流入
     'cmf_in': 1.2,         # CMF资金流入
     'price_above_vwap': 0.8,  # 价格高于VWAP
+    'bb_oversold': 1.0,    # 布林带超卖
 }
 
 # 建仓信号阈值
@@ -155,6 +156,7 @@ DISTRIBUTION_WEIGHTS = {
     'vwap_vol': 1.5,       # 价格低于VWAP且放量
     'southbound_out': 2.0, # 南向资金流出
     'price_down': 1.0,     # 价格下跌
+    'bb_overbought': 1.0,  # 布林带超买
 }
 
 # 出货信号阈值
@@ -1660,6 +1662,11 @@ def analyze_stock(code, name, run_date=None):
                 score += BUILDUP_WEIGHTS['southbound_in']
                 reasons.append('southbound_in')
 
+            # 布林带超卖（价格接近或低于下轨）
+            if pd.notna(row.get('BB_Breakout')) and row['BB_Breakout'] < 0.2:
+                score += BUILDUP_WEIGHTS['bb_oversold']
+                reasons.append('bb_oversold')
+
             # 基本面调整（示例：基本面越差，更容易做短线建仓；基本面好时偏长期持有）
             if fundamental_score is not None:
                 if fundamental_score > 60:
@@ -1807,6 +1814,11 @@ def analyze_stock(code, name, run_date=None):
             if pd.notna(row.get('Southbound_Net')) and row['Southbound_Net'] < -SOUTHBOUND_THRESHOLD_OUT:
                 score += DISTRIBUTION_WEIGHTS['southbound_out']
                 reasons.append('southbound_out')
+
+            # 布林带超买（价格接近或高于上轨）
+            if pd.notna(row.get('BB_Breakout')) and row['BB_Breakout'] > 0.8:
+                score += DISTRIBUTION_WEIGHTS['bb_overbought']
+                reasons.append('bb_overbought')
 
             # 价格下跌
             if (pd.notna(row.get('Prev_Close')) and row['Close'] < row['Prev_Close']) or (row['Close'] < row['Open']):
