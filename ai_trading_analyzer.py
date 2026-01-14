@@ -12,6 +12,53 @@
   - 风险指标：最大回撤、年化波动率、夏普比率（假设无风险利率为0）
 - 生成现金流列表、净值时间序列，用于这些计算
 - 在报告中输出上述指标
+
+指标含义与假设：
+1. ROI（总投入回报率）= 总盈亏 / 总投入金额
+   - 基数：所有买入交易的总投入金额
+   - 假设：不考虑时间价值，适用于简单盈亏评估
+
+2. XIRR（基于现金流的内部收益率）
+   - 计算方法：使用二分法求解使现金流净现值为0的折现率
+   - 假设：所有现金流按时间连续复利计算
+   - 注意：对于短时间周期（<30天），年化值可能不稳定
+   - 基数：现金流序列（买入为负，卖出为正）
+
+3. TWR（时间加权回报）
+   - 计算方法：基于每日净值序列的复合收益率
+   - 假设：每日收益独立，不考虑资金流入流出影响
+   - 基数：初始资本（默认100万港元）
+
+4. CAGR（复合年增长率）
+   - 计算方法：基于净值序列起止值的年化增长率
+   - 假设：收益按固定年化率复利增长
+   - 注意：对于短时间周期（<30天），返回累计收益率而非年化
+   - 基数：净值序列起止值
+
+5. 最大回撤
+   - 计算方法：净值从峰值到谷底的最大跌幅
+   - 假设：衡量策略的最大潜在损失
+   - 基数：净值序列
+
+6. 年化波动率
+   - 计算方法：日收益率标准差 × √252（交易日）
+   - 假设：收益率服从正态分布
+   - 基数：日收益率序列
+
+7. 夏普比率
+   - 计算方法：年化收益率 / 年化波动率
+   - 假设：无风险利率为0
+   - 基数：年化收益率和年化波动率
+
+重要假设与限制：
+- 不考虑交易手续费和印花税
+- 不考虑股息收入
+- 初始资本默认为100万港元（可配置）
+- 买入信号固定买入1000股
+- 卖出信号清仓全部持仓
+- 排除价格为0的异常交易
+- XIRR对于短时间周期（<30天）可能不稳定
+- 净值序列基于初始资本+累计盈亏计算
 """
 
 import pandas as pd
@@ -31,16 +78,18 @@ import time
 class AITradingAnalyzer:
     """AI股票交易分析器"""
     
-    def __init__(self, csv_file: str = 'data/simulation_transactions.csv'):
+    def __init__(self, csv_file: str = 'data/simulation_transactions.csv', initial_capital: float = 1000000.0):
         """
         初始化分析器
         
         Args:
             csv_file: 交易记录CSV文件路径
+            initial_capital: 初始资本（港元），用于计算净值序列，默认100万港元
         """
         self.csv_file = csv_file
         self.df = None
         self.excluded_stocks = set()
+        self.initial_capital = initial_capital
     
     def send_email_notification(self, subject: str, content: str) -> bool:
         """
@@ -356,7 +405,7 @@ class AITradingAnalyzer:
         通过二分法求解 XIRR（年化内部收益率）
         返回年化率，例如 0.12 表示 12%
         如果无法收敛或现金流不支持（例如全为同号），返回 None
-        注意：对于短时间周期（<30天），返回累计收益率而非年化收益率
+        注意：对于短时间周期（<30天），仍返回年化值但可能不稳定
         """
         if not cashflows:
             return None
@@ -373,17 +422,8 @@ class AITradingAnalyzer:
         end_date = cashflows_sorted[-1][0]
         days = (end_date - start_date).days
         
-        # 如果时间周期少于30天，返回累计收益率而非年化
-        if days < 30:
-            total_inflow = sum(amt for _, amt in cashflows_sorted if amt > 0)
-            total_outflow = sum(abs(amt) for _, amt in cashflows_sorted if amt < 0)
-            if total_outflow > 0:
-                return (total_inflow / total_outflow) - 1
-            else:
-                return None
-        
-        # 计算年化 XIRR
-        low = -0.9999999
+        # 计算年化 XIRR（无论时间周期长短都返回年化值）
+        low = -0.999999999  # 扩展 low 区间以提高稳定性
         high = 10.0
         f_low = self._xnpv(low, cashflows_sorted)
         f_high = self._xnpv(high, cashflows_sorted)
@@ -420,7 +460,7 @@ class AITradingAnalyzer:
         - 在每个交易时间点计算 NAV（现金 + 各持仓按当时已知价格估值）
         - 将 NAV 序列按天重采样（每天取最后一次已知 NAV，前向填充），返回每日 NAV（pd.Series）
         注意：为了避免负值导致的收益率计算异常，我们使用累计盈亏作为净值基准
-              净值 = 初始基准值(1000) + 累计盈亏
+              净值 = 初始资本(initial_capital) + 累计盈亏
         """
         df_sorted = df.sort_values('timestamp')
         # 初始化
@@ -429,7 +469,7 @@ class AITradingAnalyzer:
         last_price_map = {}  # code -> last known price
         nav_times = []
         nav_values = []
-        base_value = 1000.0  # 基准值，用于避免负值
+        base_value = self.initial_capital  # 使用初始资本作为基准值
 
         # 处理每个交易时间点，记录 NAV
         for _, row in df_sorted.iterrows():
@@ -796,7 +836,8 @@ class AITradingAnalyzer:
             pass
 
         # 填充结果的 cashflows
-        results['cashflows'] = sorted(cashflows, key=lambda x: x[0])
+        # 显式排序：先按 timestamp 排序，同一 timestamp 内按金额排序（买入为负，卖出为正，确保买入在前）
+        results['cashflows'] = sorted(cashflows, key=lambda x: (x[0], x[1]))
         results['total_invested'] = results.get('total_invested', 0.0)
 
         # 计算总体已实现+未实现利润
@@ -811,7 +852,12 @@ class AITradingAnalyzer:
                        holdings_value: float, profit_results: Dict, 
                        excluded_stocks: set) -> str:
         """
-        生成分析报告，包含多种回报与风险指标
+        生成分析报告，根据时间周期动态调整内容
+        
+        时间周期分类：
+        - 短期（<5天）：只显示基础指标
+        - 中期（5-20天）：显示大部分指标
+        - 长期（≥20天）：显示所有指标
         """
         # 使用最高峰资金需求
         peak_investment = profit_results.get('peak_investment', 0.0)
@@ -847,10 +893,36 @@ class AITradingAnalyzer:
         annual_vol = self.calculate_annualized_volatility(daily_returns)
         # TWR 和 CAGR 计算基于净值序列
         twr_annual = self.calculate_time_weighted_return(nav_series)
-        cagr = twr_annual  # CAGR 使用与 TWR 相同的计算逻辑
+        # CAGR 基于净值序列起止值正确计算
+        if not nav_series.empty and len(nav_series) >= 2:
+            start_val = nav_series.iloc[0]
+            end_val = nav_series.iloc[-1]
+            days = (nav_series.index[-1] - nav_series.index[0]).days
+            if start_val > 0 and days > 0:
+                # 如果时间周期少于30天，返回累计收益率而非年化
+                if days < 30:
+                    cagr = (end_val / start_val) - 1
+                else:
+                    years = days / 365.0
+                    try:
+                        cagr = (end_val / start_val) ** (1.0 / years) - 1
+                    except Exception:
+                        cagr = 0.0
+            else:
+                cagr = 0.0
+        else:
+            cagr = 0.0
 
         # 夏普比率（假设无风险利率为0）
         sharpe = (twr_annual / annual_vol) if annual_vol > 0 else 0.0
+
+        # 计算时间周期（天数）
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            days = (end_dt - start_dt).days
+        except:
+            days = 0
 
         report = []
         report.append("=" * 60)
@@ -859,24 +931,64 @@ class AITradingAnalyzer:
         report.append(f"分析期间: {start_date} 至 {end_date}")
         report.append("")
         
+        # 根据时间周期添加说明
+        if days < 5:
+            report.append("【时间周期说明】")
+            report.append("⚠️ 短期数据（<5天），指标仅供参考")
+            report.append("   建议关注：ROI、总体盈亏、交易次数")
+            report.append("   谨慎解读：XIRR（年化值不稳定）")
+            report.append("")
+        elif days < 20:
+            report.append("【时间周期说明】")
+            report.append("✓ 中期数据（5-20天），指标相对稳定")
+            report.append("   可作为策略评估参考")
+            report.append("")
+        else:
+            report.append("【时间周期说明】")
+            report.append("✓ 长期数据（≥20天），指标具有较高参考价值")
+            report.append("   适合全面评估策略表现")
+            report.append("")
+        
         # 总体概览
         report.append("【总体概览】")
         report.append(f"最高峰资金需求: HK${peak_investment:,.2f}")
+        report.append(f"总投入金额: HK${total_invested:,.2f}")
         report.append(f"已收回资金: HK${sold_returns:,.2f}")
         report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
         report.append(f"总体盈亏: HK${total_profit:,.2f}")
         # 继续保留旧的基于峰值的计算以便对比（但提醒用户）
         peak_based_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0.0
         report.append(f"（对比）基于最高峰资金需求的盈亏率: {peak_based_rate:.2f}%")
-        report.append(f"基于总投入的 ROI: {roi:.2f}%")
+        # ROI 基于总投入金额计算（总盈亏 / 总投入）
+        report.append(f"基于总投入的 ROI: {roi:.2f}% （基数：总投入金额）")
         report.append("")
         
         # XIRR / 回报指标
         report.append("【回报指标】")
         if xirr_value is not None:
-            report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}%")
+            if days < 5:
+                # 短期数据：添加警告
+                report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
+            else:
+                report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}%")
         else:
             report.append("XIRR: 无法计算（现金流可能不包含正负两类流）")
+        
+        # 根据时间周期决定是否显示风险指标
+        if days >= 5:
+            report.append("")
+            report.append("【风险指标】")
+            report.append(f"最大回撤: {max_drawdown * 100:.2f}%")
+            
+            if days >= 20:
+                # 长期数据：显示完整风险指标
+                report.append(f"年化波动率: {annual_vol * 100:.2f}%")
+                report.append(f"夏普比率（假设无风险利率=0）: {sharpe:.2f}")
+            else:
+                # 中期数据：不显示波动率和夏普比率
+                report.append("年化波动率: 数据不足，暂不显示（需≥20天）")
+                report.append("夏普比率: 数据不足，暂不显示（需≥20天）")
+        
         report.append("")
         
         # 盈亏构成
