@@ -17191,6 +17191,22 @@
       "current_price": 22.76,
       "target_price": 25.5,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-14T10:38:08.439056",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.66,
+      "amount": 0,
+      "capital_after": 316.18929405196104,
+      "reason": "维持此前买入决策，MACD金叉与CMF转正趋势延续，OBV资金流入持续增强，技术指标协同支持上涨且符合平衡型投资者中低风险偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.48,
+      "current_price": 22.66,
+      "target_price": 25.04,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -29173,78 +29189,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-13 14:47:55",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 21.44,
-      "amount": 0,
-      "reason": "综合评分71.2分，多周期趋势稳健向上（评分52.8），基本面极佳（PE 7.58行业低位），技术指标协同强（CMF资金流入、OBV上升、RSI健康区间），风险等级2级(中低)适合平衡型投资者追求稳健收益 (原因: 资金不足)",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": 19.5,
-      "current_price": 21.44,
-      "target_price": 23.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-13 14:47:59",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.82,
-      "amount": 0,
-      "reason": "综合评分67.3分，基本面卓越（PE 5.60行业最低），多周期趋势向上（评分22.0），技术指标协同稳健（OBV上升、CMF资金流入），风险等级1级(低)适合平衡型投资者配置低估值高分红标的 (原因: 资金不足)",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": 7.3,
-      "current_price": 7.82,
-      "target_price": 8.2,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-13 15:18:27",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "基本面优异(PE 6.34低位+高分红)，技术指标协同买入信号，风险等级低",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.45,
-          "target_price": 5.9,
-          "validity_period": 30
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "基本面卓越(PE 5.67低位+高分红)，多周期趋势向上，风险等级低",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.11,
-          "target_price": 6.59,
-          "validity_period": 30
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-13 15:18:29",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.6,
-      "amount": 0,
-      "reason": "基本面优异(PE 6.34低位+高分红)，技术指标协同买入信号，风险等级低 (原因: 资金不足)",
-      "capital_after": 316.18929405196104,
-      "success": false,
-      "stop_loss_price": 5.45,
-      "current_price": 5.6,
-      "target_price": 5.9,
-      "validity_period": 30
-    },
-    {
       "timestamp": "2026-01-13 15:18:34",
       "type": "BUY",
       "code": "1398.HK",
@@ -29419,6 +29363,37 @@
       "current_price": 22.76,
       "target_price": 25.5,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-14 10:38:06",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "维持此前买入决策，MACD金叉与CMF转正趋势延续，OBV资金流入持续增强，技术指标协同支持上涨且符合平衡型投资者中低风险偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.48,
+          "target_price": 25.04,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-14 10:38:08",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.66,
+      "amount": 0,
+      "reason": "维持此前买入决策，MACD金叉与CMF转正趋势延续，OBV资金流入持续增强，技术指标协同支持上涨且符合平衡型投资者中低风险偏好 (原因: 资金不足)",
+      "capital_after": 316.18929405196104,
+      "success": false,
+      "stop_loss_price": 20.48,
+      "current_price": 22.66,
+      "target_price": 25.04,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
