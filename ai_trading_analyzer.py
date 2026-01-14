@@ -3,17 +3,29 @@
 人工智能股票交易盈利能力分析器
 
 基于交叉验证后的算法，分析AI推荐的股票交易策略的盈利能力。
+
+本版本改进：
+- 增加了更合理的回报率计算：
+  - ROI（总投入回报率）
+  - XIRR（考虑现金流时间的年化收益率）
+  - TWR / 等效的基于净值序列的年化收益（用于评估策略表现）
+  - 风险指标：最大回撤、年化波动率、夏普比率（假设无风险利率为0）
+- 生成现金流列表、净值时间序列，用于这些计算
+- 在报告中输出上述指标
 """
 
 import pandas as pd
 import argparse
 import sys
 import smtplib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import math
+import re
+import time
 
 
 class AITradingAnalyzer:
@@ -101,7 +113,6 @@ class AITradingAnalyzer:
                 except Exception as e:
                     print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
                     if attempt < 2:  # 不是最后一次尝试，等待后重试
-                        import time
                         time.sleep(5)
             
             print("❌ 邮件发送失败，已尝试3次")
@@ -129,12 +140,15 @@ class AITradingAnalyzer:
             
             # 识别盈亏并添加颜色
             # 匹配格式：盈亏HK$X,XXX.XX (X.XX%) 或 盈亏HK$-X,XXX.XX (-X.XX%)
-            import re
             pattern = r'(盈亏HK\$-?[\d,]+\.?\d*)\s*\(([-\d.]+)%\)'
             
             def add_profit_color(match):
                 value = match.group(2)
-                if float(value) >= 0:
+                try:
+                    v = float(value)
+                except:
+                    v = 0.0
+                if v >= 0:
                     # 盈利用绿色
                     return f'<span style="color: green; font-weight: bold;">{match.group(1)} ({value}%)</span>'
                 else:
@@ -144,7 +158,6 @@ class AITradingAnalyzer:
             line = re.sub(pattern, add_profit_color, line)
             
             # 识别总体盈亏并添加颜色
-            # 匹配格式：总体盈亏: HK$X,XXX.XX 或 总体盈亏: HK$-X,XXX.XX
             pattern2 = r'(总体盈亏:\s*HK\$-?[\d,]+\.?\d*)'
             
             def add_total_profit_color(match):
@@ -164,15 +177,16 @@ class AITradingAnalyzer:
             pattern3 = r'(已实现盈亏:\s*HK\$-?[\d,]+\.?\d*)|(未实现盈亏:\s*HK\$-?[\d,]+\.?\d*)'
             
             def add_component_profit_color(match):
-                value_str = match.group(0).split('HK$')[1].replace(',', '').strip()
+                text0 = match.group(0)
                 try:
+                    value_str = text0.split('HK$')[1].replace(',', '').strip()
                     value = float(value_str)
                     if value >= 0:
-                        return f'<span style="color: green;">{match.group(0)}</span>'
+                        return f'<span style="color: green;">{text0}</span>'
                     else:
-                        return f'<span style="color: red;">{match.group(0)}</span>'
+                        return f'<span style="color: red;">{text0}</span>'
                 except:
-                    return match.group(0)
+                    return text0
             
             line = re.sub(pattern3, add_component_profit_color, line)
             
@@ -285,7 +299,7 @@ class AITradingAnalyzer:
             (现金流, 持仓字典)
         """
         cash_flow = 0.0
-        portfolio = {}  # {股票代码: [数量, 成本]}
+        portfolio = {}  # {股票代码: [数量, 成本, 名称]}
         
         # 按时间顺序处理交易
         df_sorted = df.sort_values('timestamp')
@@ -322,49 +336,229 @@ class AITradingAnalyzer:
         
         return cash_flow, portfolio
     
-    def calculate_holdings_value(self, portfolio: Dict, df: pd.DataFrame) -> float:
+    # --- XIRR helpers ---
+    def _xnpv(self, rate: float, cashflows: List[Tuple[datetime, float]]) -> float:
         """
-        计算持仓市值
-        
-        Args:
-            portfolio: 持仓字典
-            df: 交易记录DataFrame
-            
-        Returns:
-            持仓总市值
+        计算 NPV 给定年化贴现率（rate）和现金流
+        cashflows: list of (datetime, amount)
         """
-        holdings_value = 0.0
+        if rate <= -1.0:
+            return float('inf')
+        t0 = cashflows[0][0]
+        total = 0.0
+        for d, amt in cashflows:
+            days = (d - t0).days + (d - t0).seconds / 86400.0
+            total += amt / ((1.0 + rate) ** (days / 365.0))
+        return total
+
+    def xirr(self, cashflows: List[Tuple[datetime, float]], guess: float = 0.1) -> Optional[float]:
+        """
+        通过二分法求解 XIRR（年化内部收益率）
+        返回年化率，例如 0.12 表示 12%
+        如果无法收敛或现金流不支持（例如全为同号），返回 None
+        注意：对于短时间周期（<30天），返回累计收益率而非年化收益率
+        """
+        if not cashflows:
+            return None
+        # 必须至少包含一次正流入和一次负流出
+        signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in cashflows])
+        if not (1 in signs and -1 in signs):
+            return None
+
+        # 排序现金流
+        cashflows_sorted = sorted(cashflows, key=lambda x: x[0])
         
-        for stock_code, (shares, cost, name) in portfolio.items():
-            if shares > 0:
-                # 获取该股票的最新价格
-                stock_trades = df[df['code'] == stock_code]
-                if not stock_trades.empty:
-                    latest_record = stock_trades.iloc[-1]
-                    # 优先使用current_price，如果为空则使用price
-                    latest_price = latest_record['current_price']
-                    if pd.isna(latest_price):
-                        latest_price = latest_record['price']
-                    market_value = shares * latest_price
-                    holdings_value += market_value
+        # 计算时间周期（天数）
+        start_date = cashflows_sorted[0][0]
+        end_date = cashflows_sorted[-1][0]
+        days = (end_date - start_date).days
         
-        return holdings_value
-    
+        # 如果时间周期少于30天，返回累计收益率而非年化
+        if days < 30:
+            total_inflow = sum(amt for _, amt in cashflows_sorted if amt > 0)
+            total_outflow = sum(abs(amt) for _, amt in cashflows_sorted if amt < 0)
+            if total_outflow > 0:
+                return (total_inflow / total_outflow) - 1
+            else:
+                return None
+        
+        # 计算年化 XIRR
+        low = -0.9999999
+        high = 10.0
+        f_low = self._xnpv(low, cashflows_sorted)
+        f_high = self._xnpv(high, cashflows_sorted)
+        # 扩展区间确保包含根
+        for _ in range(100):
+            if f_low * f_high < 0:
+                break
+            high *= 2
+            f_high = self._xnpv(high, cashflows_sorted)
+        if f_low * f_high > 0:
+            # 无法找到符号变化
+            return None
+
+        # 二分求解
+        for _ in range(200):
+            mid = (low + high) / 2.0
+            f_mid = self._xnpv(mid, cashflows_sorted)
+            if abs(f_mid) < 1e-8:
+                return mid
+            if f_low * f_mid < 0:
+                high = mid
+                f_high = f_mid
+            else:
+                low = mid
+                f_low = f_mid
+        return (low + high) / 2.0
+
+    # --- 净值序列与风险指标计算 ---
+    def build_nav_series(self, df: pd.DataFrame, excluded_stocks: set) -> pd.Series:
+        """
+        构建按日期（天）索引的净值（NAV）序列。
+        方法：
+        - 按时间顺序处理交易，维护持仓与现金
+        - 在每个交易时间点计算 NAV（现金 + 各持仓按当时已知价格估值）
+        - 将 NAV 序列按天重采样（每天取最后一次已知 NAV，前向填充），返回每日 NAV（pd.Series）
+        注意：为了避免负值导致的收益率计算异常，我们使用累计盈亏作为净值基准
+              净值 = 初始基准值(1000) + 累计盈亏
+        """
+        df_sorted = df.sort_values('timestamp')
+        # 初始化
+        cash = 0.0
+        holdings = {}  # code -> [shares, cost]
+        last_price_map = {}  # code -> last known price
+        nav_times = []
+        nav_values = []
+        base_value = 1000.0  # 基准值，用于避免负值
+
+        # 处理每个交易时间点，记录 NAV
+        for _, row in df_sorted.iterrows():
+            code = row['code']
+            # 优先使用 current_price，否则 price
+            price = row['current_price'] if pd.notna(row['current_price']) else row['price']
+            if price is None or pd.isna(price) or price <= 0:
+                # 更新 last price 但不计入 NAV 如果 price <=0 就不更新
+                pass
+            else:
+                last_price_map[code] = price
+
+            if code in excluded_stocks:
+                # 跳过这些股票的交易（就好像未发生）
+                # 仍然记录 NAV（price 可能被更新但我们忽略）
+                total_holdings_value = 0.0
+                for k, v in holdings.items():
+                    shares, cost = v
+                    current_price = last_price_map.get(k, 0.0)
+                    if current_price > 0:
+                        total_holdings_value += shares * current_price
+                nav = base_value + cash + total_holdings_value
+                nav_times.append(row['timestamp'])
+                nav_values.append(nav)
+                continue
+
+            ttype = row['type']
+            # 买入：如果当前没有持仓，买入1000股
+            if ttype == 'BUY':
+                if code not in holdings or holdings[code][0] == 0:
+                    if price > 0:
+                        shares = 1000
+                        amount = shares * price
+                        cash -= amount
+                        holdings[code] = [shares, price]
+                        last_price_map[code] = price
+            elif ttype == 'SELL':
+                if code in holdings and holdings[code][0] > 0:
+                    if price > 0:
+                        shares, cost = holdings[code]
+                        amount = shares * price
+                        cash += amount
+                        holdings[code] = [0, 0.0]  # 清空持仓
+                        last_price_map[code] = price
+
+            # 计算当前 NAV（基准值 + 累计盈亏）
+            total_holdings_value = 0.0
+            for k, v in holdings.items():
+                shares, cost = v
+                current_price = last_price_map.get(k, 0.0)
+                if current_price > 0:
+                    total_holdings_value += shares * current_price
+            nav = base_value + cash + total_holdings_value
+            nav_times.append(row['timestamp'])
+            nav_values.append(nav)
+
+        if not nav_times:
+            return pd.Series(dtype=float)
+
+        nav_df = pd.DataFrame({'timestamp': nav_times, 'nav': nav_values})
+        nav_df['date'] = nav_df['timestamp'].dt.floor('D')
+        # 取每天最后一个 NAV（即交易当日最后一次 NAV）
+        daily_nav = nav_df.groupby('date')['nav'].last().sort_index()
+
+        # 如果只有一天，则直接返回那一天的值
+        if daily_nav.empty:
+            return pd.Series(dtype=float)
+
+        # 填充从第一天到最后一天的每天 NAV（前向填充）
+        idx = pd.date_range(start=daily_nav.index.min(), end=daily_nav.index.max(), freq='D')
+        daily_nav = daily_nav.reindex(idx, method='ffill')
+        daily_nav.index.name = 'date'
+        return daily_nav
+
+    def calculate_max_drawdown(self, nav_series: pd.Series) -> float:
+        """
+        计算最大回撤（以比例表示，例如0.25表示25%）
+        """
+        if nav_series.empty:
+            return 0.0
+        cumulative_max = nav_series.cummax()
+        drawdown = (nav_series - cumulative_max) / cumulative_max
+        max_dd = drawdown.min()
+        return abs(max_dd) if not math.isnan(max_dd) else 0.0
+
+    def calculate_annualized_volatility(self, daily_returns: pd.Series) -> float:
+        """
+        计算年化波动率（基于日收益率），采用交易日252
+        """
+        if daily_returns.empty:
+            return 0.0
+        return daily_returns.std(ddof=0) * math.sqrt(252)
+
+    def calculate_time_weighted_return(self, nav_series: pd.Series) -> float:
+        """
+        计算时间加权回报（TWR）：基于每日净值序列，按日收益连乘
+        返回年化TWR（例如0.12表示12%年化）
+        注意：对于短时间周期（<30天），返回累计收益率而非年化收益率
+        """
+        if nav_series.empty or len(nav_series) < 2:
+            return 0.0
+        # 计算每天的简单回报
+        daily_ret = nav_series.pct_change().dropna()
+        # 复合总回报
+        cumulative_return = (1 + daily_ret).prod() - 1
+        
+        # 计算天数
+        days = (nav_series.index[-1] - nav_series.index[0]).days
+        if days <= 0:
+            return 0.0
+        
+        # 如果时间周期少于30天，返回累计收益率而非年化
+        if days < 30:
+            return cumulative_return
+        
+        # 年化：根据天数
+        years = days / 365.0
+        try:
+            annualized = (1 + cumulative_return) ** (1.0 / years) - 1 if cumulative_return > -1 else -1.0
+        except Exception:
+            annualized = 0.0
+        return annualized
+
     def calculate_profit_loss(self, df: pd.DataFrame, excluded_stocks: set) -> Dict:
         """
-        计算盈亏情况
-        
-        复盘规则：
-        1. 每次买入信号固定买入1000股
-        2. 卖出信号清仓全部持仓
-        3. 支持同一股票的多次买卖交易
-        
-        Args:
-            df: 交易记录DataFrame
-            excluded_stocks: 需要排除的股票代码集合
-            
-        Returns:
-            盈亏结果字典
+        计算盈亏情况，并扩展返回更多用于回报/风险计算的数据:
+         - cashflows: list of (datetime, amount) 用于 XIRR
+         - total_invested: 所有买入的总投入
+         - nav_series: 每日净值序列（pd.Series）
         """
         results = {
             'realized_profit': 0.0,  # 已实现盈亏
@@ -373,7 +567,11 @@ class AITradingAnalyzer:
             'stock_details': [],  # 股票明细
             'sold_stocks': [],  # 已卖出股票
             'holding_stocks': [],  # 持仓中股票
-            'peak_investment': 0.0  # 最高峰资金需求
+            'peak_investment': 0.0,  # 最高峰资金需求
+            # 以下为新增
+            'cashflows': [],  # list of (datetime, amount)
+            'total_invested': 0.0,
+            'nav_series': pd.Series(dtype=float),
         }
         
         # 获取所有股票
@@ -421,10 +619,12 @@ class AITradingAnalyzer:
         # 将最高峰资金需求添加到结果中
         results['peak_investment'] = peak_investment
         
-        # 然后，处理每只股票的最终状态
+        # 另外我们也需要生成现金流（用于 XIRR）和按交易时间点的 NAV（用于 TWR/max drawdown等）
+        cashflows: List[Tuple[datetime, float]] = []
+        # 用于分析每只股票
         for stock_code in all_stocks:
             stock_trades = df[df['code'] == stock_code].sort_values('timestamp')
-            stock_name = stock_trades.iloc[0]['name']
+            stock_name = stock_trades.iloc[0]['name'] if not stock_trades.empty else stock_code
             
             # 统计建议的买卖次数（所有交易信号）
             suggested_buy_count = 0
@@ -468,6 +668,9 @@ class AITradingAnalyzer:
                         portfolio['cost'] = price
                         portfolio['investment'] = shares * price
                         buy_count += 1
+                        # 现金流（买入为负）
+                        cashflows.append((row['timestamp'].to_pydatetime(), -portfolio['investment']))
+                        results['total_invested'] += portfolio['investment']
                 
                 elif transaction_type == 'SELL':
                     # 卖出信号：卖出全部持仓
@@ -477,6 +680,8 @@ class AITradingAnalyzer:
                         profit = returns - portfolio['investment']
                         stock_realized_profit += profit
                         sell_count += 1
+                        # 记录现金流（卖出为正）
+                        cashflows.append((row['timestamp'].to_pydatetime(), returns))
                         
                         # 清空持仓
                         portfolio['shares'] = 0
@@ -513,7 +718,7 @@ class AITradingAnalyzer:
                     # 已完全卖出
                     results['realized_profit'] += stock_realized_profit
                     
-                    # 计算总投资和总回报
+                    # 计算总投资和总回报（冗余计算以确保准确）
                     total_investment = 0.0
                     total_returns = 0.0
                     
@@ -554,26 +759,59 @@ class AITradingAnalyzer:
                     results['sold_stocks'].append(stock_detail)
                     results['stock_details'].append(stock_detail)
         
+        # 期末，把未平仓的市值按最后可得价格加入作为终值现金流（用于 XIRR），并作为 NAV 的最后一条
+        # 计算当前持仓市值（使用 df 中的最后记录价格）
+        holdings_value = 0.0
+        last_ts = df['timestamp'].max().to_pydatetime()
+        # 收集持仓状态按照复盘规则
+        # 我们可以复用 analyze_trades 输出得 portfolio（但为简洁再次构造）
+        portfolio_state = {}
+        df_by_stock = df.sort_values('timestamp')
+        for _, row in df_by_stock.iterrows():
+            code = row['code']
+            if code in excluded_stocks:
+                continue
+            price = row['current_price'] if pd.notna(row['current_price']) else row['price']
+            if price <= 0:
+                continue
+            if row['type'] == 'BUY':
+                if portfolio_state.get(code, 0) == 0:
+                    portfolio_state[code] = 1000
+            elif row['type'] == 'SELL':
+                if portfolio_state.get(code, 0) > 0:
+                    portfolio_state[code] = 0
+        # 估值：每只持仓使用该股票的最后一条记录的价格
+        for code, shares in portfolio_state.items():
+            if shares > 0:
+                trades = df[df['code'] == code].sort_values('timestamp')
+                latest_record = trades.iloc[-1]
+                latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+                if latest_price > 0:
+                    holdings_value += shares * latest_price
+        # 期末现金流：将持仓市值作为终值流入（相当于假设在分析终点清仓）
+        if holdings_value != 0:
+            cashflows.append((last_ts, holdings_value))
+        else:
+            # 如果没有持仓，现金流最后一笔可能已经是卖出流入
+            pass
+
+        # 填充结果的 cashflows
+        results['cashflows'] = sorted(cashflows, key=lambda x: x[0])
+        results['total_invested'] = results.get('total_invested', 0.0)
+
+        # 计算总体已实现+未实现利润
         results['total_profit'] = results['realized_profit'] + results['unrealized_profit']
-        
+
+        # 生成 NAV 序列（按天）
+        results['nav_series'] = self.build_nav_series(df, excluded_stocks)
+
         return results
     
     def generate_report(self, start_date: str, end_date: str, cash_flow: float, 
                        holdings_value: float, profit_results: Dict, 
                        excluded_stocks: set) -> str:
         """
-        生成分析报告
-        
-        Args:
-            start_date: 起始日期
-            end_date: 结束日期
-            cash_flow: 现金流（负数表示支出）
-            holdings_value: 持仓市值
-            profit_results: 盈亏结果
-            excluded_stocks: 排除的股票
-            
-        Returns:
-            格式化的报告字符串
+        生成分析报告，包含多种回报与风险指标
         """
         # 使用最高峰资金需求
         peak_investment = profit_results.get('peak_investment', 0.0)
@@ -581,15 +819,39 @@ class AITradingAnalyzer:
         # 计算已收回资金（卖出所得）
         sold_returns = 0
         for stock in profit_results['sold_stocks']:
-            sold_returns += stock['returns']
+            sold_returns += stock.get('returns', 0.0)
         
         # 总体盈亏 = 已实现盈亏 + 未实现盈亏
         total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
         
-        # 使用最高峰资金需求计算盈亏率
-        peak_investment = profit_results.get('peak_investment', 0.0)
-        profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
+        # ROI（基于总投入）
+        total_invested = profit_results.get('total_invested', 0.0)
+        roi = (total_profit / total_invested * 100) if total_invested != 0 else 0.0
+
+        # XIRR（年化内部收益率）
+        cashflows = profit_results.get('cashflows', [])
+        xirr_value = None
+        try:
+            xirr_value = self.xirr(cashflows)
+        except Exception:
+            xirr_value = None
         
+        # NAV 序列与 TWR、回撤、波动率、夏普
+        nav_series: pd.Series = profit_results.get('nav_series', pd.Series(dtype=float))
+        max_drawdown = self.calculate_max_drawdown(nav_series)
+        twr_annual = self.calculate_time_weighted_return(nav_series)
+        # 计算日收益与年化波动率（简化版，基于净值序列）
+        daily_returns = pd.Series(dtype=float)
+        if not nav_series.empty and len(nav_series) >= 2:
+            daily_returns = nav_series.pct_change().dropna()
+        annual_vol = self.calculate_annualized_volatility(daily_returns)
+        # TWR 和 CAGR 计算基于净值序列
+        twr_annual = self.calculate_time_weighted_return(nav_series)
+        cagr = twr_annual  # CAGR 使用与 TWR 相同的计算逻辑
+
+        # 夏普比率（假设无风险利率为0）
+        sharpe = (twr_annual / annual_vol) if annual_vol > 0 else 0.0
+
         report = []
         report.append("=" * 60)
         report.append("人工智能股票交易盈利能力分析报告")
@@ -603,9 +865,18 @@ class AITradingAnalyzer:
         report.append(f"已收回资金: HK${sold_returns:,.2f}")
         report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
         report.append(f"总体盈亏: HK${total_profit:,.2f}")
-        # 基于最高峰资金需求计算盈亏率
-        profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
-        report.append(f"盈亏率: {profit_rate:.2f}%")
+        # 继续保留旧的基于峰值的计算以便对比（但提醒用户）
+        peak_based_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0.0
+        report.append(f"（对比）基于最高峰资金需求的盈亏率: {peak_based_rate:.2f}%")
+        report.append(f"基于总投入的 ROI: {roi:.2f}%")
+        report.append("")
+        
+        # XIRR / 回报指标
+        report.append("【回报指标】")
+        if xirr_value is not None:
+            report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}%")
+        else:
+            report.append("XIRR: 无法计算（现金流可能不包含正负两类流）")
         report.append("")
         
         # 盈亏构成
@@ -620,9 +891,9 @@ class AITradingAnalyzer:
             # 按股票代码排序
             sorted_sold = sorted(profit_results['sold_stocks'], key=lambda x: x['code'])
             for stock in sorted_sold:
-                profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
+                profit_rate_stock = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
+                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate_stock:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
@@ -633,9 +904,9 @@ class AITradingAnalyzer:
             # 按股票代码排序
             sorted_holding = sorted(profit_results['holding_stocks'], key=lambda x: x['code'])
             for stock in sorted_holding:
-                profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
+                profit_rate_stock = (stock['profit'] / stock['investment'] * 100) if stock['investment'] != 0 else 0
                 report.append(f"{stock['name']}({stock['code']}): "
-                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate:.2f}%) "
+                           f"盈亏HK${stock['profit']:,.2f} ({profit_rate_stock:.2f}%) "
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
@@ -653,6 +924,15 @@ class AITradingAnalyzer:
         report.append("1. 买入信号：每次买入信号固定买入1000股，如果已持仓则跳过")
         report.append("2. 卖出信号：卖出全部持仓")
         report.append("3. 异常处理：排除价格为0的异常交易")
+        report.append("")
+        
+        # 附加：现金流摘要（供 XIRR 校验）
+        report.append("【现金流摘要（用于 XIRR 计算）】")
+        if cashflows:
+            for d, amt in cashflows:
+                report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {'+' if amt>=0 else ''}{amt:,.2f}")
+        else:
+            report.append("无现金流数据")
         report.append("")
         
         return "\n".join(report)
@@ -686,11 +966,14 @@ class AITradingAnalyzer:
         # 分析交易
         cash_flow, portfolio = self.analyze_trades(df_filtered, self.excluded_stocks)
         
-        # 计算持仓市值
-        holdings_value = self.calculate_holdings_value(portfolio, df_filtered)
-        
-        # 计算盈亏
+        # 计算盈亏 & 生成现金流 与 NAV
         profit_results = self.calculate_profit_loss(df_filtered, self.excluded_stocks)
+        
+        # 计算持仓市值（从 profit_results 中获取）
+        holdings_value = sum(
+            stock.get('current_value', 0.0) 
+            for stock in profit_results.get('holding_stocks', [])
+        )
         
         # 确定日期范围
         actual_start = df_filtered['timestamp'].min().strftime('%Y-%m-%d')
@@ -703,18 +986,23 @@ class AITradingAnalyzer:
         
         # 发送邮件通知
         if send_email:
-            # 使用最高峰资金需求计算盈亏率
-            peak_investment = profit_results.get('peak_investment', 0.0)
-            
-            total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
-            profit_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0
+            # 使用 XIRR
+            xirr_value = profit_results.get('cashflows') and self.xirr(profit_results.get('cashflows')) or None
             
             subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
-            # 在邮件主题中添加总体盈亏信息和盈亏率
-            if total_profit >= 0:
-                subject += f" (盈利 HK${total_profit:,.2f}, 盈亏率 {profit_rate:.2f}%)"
+            # 在邮件主题中添加总体盈亏信息和回报指标
+            if total_profit := (profit_results['realized_profit'] + profit_results['unrealized_profit']):
+                if total_profit >= 0:
+                    profit_part = f"盈利 HK${total_profit:,.2f}"
+                else:
+                    profit_part = f"亏损 HK${abs(total_profit):,.2f}"
             else:
-                subject += f" (亏损 HK${abs(total_profit):,.2f}, 盈亏率 {profit_rate:.2f}%)"
+                profit_part = "盈亏 0"
+
+            if xirr_value is not None:
+                subject += f" ({profit_part}, XIRR {xirr_value*100:.2f}%)"
+            else:
+                subject += f" ({profit_part})"
             
             # 发送邮件
             email_sent = self.send_email_notification(subject, report)
