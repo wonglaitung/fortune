@@ -53,9 +53,9 @@
 重要假设与限制：
 - 不考虑交易手续费和印花税
 - 不考虑股息收入
-- 初始资本默认为100万港元（可配置）
-- 买入信号固定买入1000股
-- 卖出信号清仓全部持仓
+- 初始资本默认为200万港元（可配置）
+- 买入信号：每次买入目标金额（默认10万港元）以内的最大股数（100股的倍数）
+- 卖出信号：清仓全部持仓
 - 排除价格为0的异常交易
 - XIRR对于短时间周期（<30天）可能不稳定
 - 净值序列基于初始资本+累计盈亏计算
@@ -78,18 +78,39 @@ import time
 class AITradingAnalyzer:
     """AI股票交易分析器"""
     
-    def __init__(self, csv_file: str = 'data/simulation_transactions.csv', initial_capital: float = 1000000.0):
+    def __init__(self, csv_file: str = 'data/simulation_transactions.csv', 
+                 initial_capital: float = 2000000.0,
+                 trade_amount: float = 100000.0):
         """
         初始化分析器
         
         Args:
             csv_file: 交易记录CSV文件路径
-            initial_capital: 初始资本（港元），用于计算净值序列，默认100万港元
+            initial_capital: 初始资本（港元），用于计算净值序列，默认200万港元
+            trade_amount: 每次交易的目标金额（港元），默认10万港元
         """
         self.csv_file = csv_file
         self.df = None
         self.excluded_stocks = set()
         self.initial_capital = initial_capital
+        self.trade_amount = trade_amount
+    
+    def calculate_shares(self, price: float) -> int:
+        """
+        计算可买入的股数（以100股为倍数）
+        
+        Args:
+            price: 股价（港元）
+            
+        Returns:
+            可买入的股数（100股的倍数）
+        """
+        shares_per_lot = 100  # 港股每手100股
+        max_lots = int(self.trade_amount / (price * shares_per_lot))
+        shares = max_lots * shares_per_lot
+        
+        # 至少买1手
+        return max(shares, shares_per_lot)
     
     def send_email_notification(self, subject: str, content: str) -> bool:
         """
@@ -337,7 +358,7 @@ class AITradingAnalyzer:
         分析交易，计算现金流和持仓
         
         复盘规则：
-        1. 买入信号：每次买入1000股，如果已持仓则跳过
+        1. 买入信号：每次买入目标金额以内的最大股数（100股的倍数），如果已持仓则跳过
         2. 卖出信号：卖出全部持仓
         
         Args:
@@ -368,9 +389,9 @@ class AITradingAnalyzer:
             
             # 复盘只关注交易信号，忽略shares=0的失败交易
             if transaction_type == 'BUY':
-                # 买入信号：如果没有持仓，则买入1000股
+                # 买入信号：如果没有持仓，则买入目标金额以内的最大股数（100股的倍数）
                 if stock_code not in portfolio or portfolio[stock_code][0] == 0:
-                    shares = 1000
+                    shares = self.calculate_shares(price)
                     amount = shares * price
                     cash_flow -= amount  # 买入是现金流出
                     portfolio[stock_code] = [shares, price, stock_name]
@@ -497,11 +518,11 @@ class AITradingAnalyzer:
                 continue
 
             ttype = row['type']
-            # 买入：如果当前没有持仓，买入1000股
+            # 买入：如果当前没有持仓，买入目标金额以内的最大股数（100股的倍数）
             if ttype == 'BUY':
                 if code not in holdings or holdings[code][0] == 0:
                     if price > 0:
-                        shares = 1000
+                        shares = self.calculate_shares(price)
                         amount = shares * price
                         cash -= amount
                         holdings[code] = [shares, price]
@@ -701,9 +722,9 @@ class AITradingAnalyzer:
                     continue
                 
                 if transaction_type == 'BUY':
-                    # 买入信号：如果没有持仓，则买入1000股；如果有持仓，则跳过
+                    # 买入信号：如果没有持仓，则买入目标金额以内的最大股数（100股的倍数）；如果有持仓，则跳过
                     if portfolio['shares'] == 0:
-                        shares = 1000
+                        shares = self.calculate_shares(price)
                         portfolio['shares'] = shares
                         portfolio['cost'] = price
                         portfolio['investment'] = shares * price
@@ -772,7 +793,7 @@ class AITradingAnalyzer:
                             continue
                         
                         if transaction_type == 'BUY' and temp_portfolio['shares'] == 0:
-                            shares = 1000
+                            shares = self.calculate_shares(price)
                             temp_portfolio['shares'] = shares
                             temp_portfolio['investment'] = shares * price
                             total_investment += temp_portfolio['investment']
@@ -1033,7 +1054,7 @@ class AITradingAnalyzer:
         
         # 交易规则说明
         report.append("【交易规则说明】")
-        report.append("1. 买入信号：每次买入信号固定买入1000股，如果已持仓则跳过")
+        report.append("1. 买入信号：每次买入目标金额（默认10万港元）以内的最大股数（100股的倍数），如果已持仓则跳过")
         report.append("2. 卖出信号：卖出全部持仓")
         report.append("3. 异常处理：排除价格为0的异常交易")
         report.append("")
