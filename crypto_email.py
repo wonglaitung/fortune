@@ -127,7 +127,7 @@ def calculate_technical_indicators(prices):
                 buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
                 for idx, row in buy_signals_df.iterrows():
                     # 从描述中提取买入信号部分
-                    desc = row['Signal_Description']
+                    desc = row.get('Signal_Description', '')
                     if '买入信号:' in desc and '卖出信号:' in desc:
                         # 如果同时有买入和卖出信号，只提取买入部分
                         buy_part = desc.split('买入信号:')[1].split('卖出信号:')[0].strip()
@@ -149,7 +149,7 @@ def calculate_technical_indicators(prices):
                 sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
                 for idx, row in sell_signals_df.iterrows():
                     # 从描述中提取卖出信号部分
-                    desc = row['Signal_Description']
+                    desc = row.get('Signal_Description', '')
                     if '买入信号:' in desc and '卖出信号:' in desc:
                         # 如果同时有买入和卖出信号，只提取卖出部分
                         sell_part = desc.split('卖出信号:')[1].strip()
@@ -163,6 +163,11 @@ def calculate_technical_indicators(prices):
                             'date': idx.strftime('%Y-%m-%d'),
                             'description': desc
                         })
+
+            # 解析并解决同日冲突（如果有）
+            final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                buy_signals, sell_signals, tav_score=btc_tav_score if use_tav else None
+            )
             
             indicators['bitcoin'] = {
                 'rsi': btc_rsi,
@@ -171,8 +176,9 @@ def calculate_technical_indicators(prices):
                 'price_position': calculate_price_position(latest_btc.get('Close', 0)),
                 'bb_position': btc_bb_position,
                 'trend': btc_trend,
-                'recent_buy_signals': buy_signals,
-                'recent_sell_signals': sell_signals,
+                'recent_buy_signals': final_buy_signals,
+                'recent_sell_signals': final_sell_signals,
+                'signal_conflicts': signal_conflicts,
                 'current_price': latest_btc.get('Close', 0),
                 'ma20': latest_btc.get('MA20', 0),
                 'ma50': latest_btc.get('MA50', 0),
@@ -240,7 +246,7 @@ def calculate_technical_indicators(prices):
                 buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
                 for idx, row in buy_signals_df.iterrows():
                     # 从描述中提取买入信号部分
-                    desc = row['Signal_Description']
+                    desc = row.get('Signal_Description', '')
                     if '买入信号:' in desc and '卖出信号:' in desc:
                         # 如果同时有买入和卖出信号，只提取买入部分
                         buy_part = desc.split('买入信号:')[1].split('卖出信号:')[0].strip()
@@ -262,7 +268,7 @@ def calculate_technical_indicators(prices):
                 sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
                 for idx, row in sell_signals_df.iterrows():
                     # 从描述中提取卖出信号部分
-                    desc = row['Signal_Description']
+                    desc = row.get('Signal_Description', '')
                     if '买入信号:' in desc and '卖出信号:' in desc:
                         # 如果同时有买入和卖出信号，只提取卖出部分
                         sell_part = desc.split('卖出信号:')[1].strip()
@@ -276,6 +282,11 @@ def calculate_technical_indicators(prices):
                             'date': idx.strftime('%Y-%m-%d'),
                             'description': desc
                         })
+
+            # 解析并解决同日冲突（如果有）
+            final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                buy_signals, sell_signals, tav_score=eth_tav_score if use_tav else None
+            )
             
             indicators['ethereum'] = {
                 'rsi': eth_rsi,
@@ -284,8 +295,9 @@ def calculate_technical_indicators(prices):
                 'price_position': calculate_price_position(latest_eth.get('Close', 0)),
                 'bb_position': eth_bb_position,
                 'trend': eth_trend,
-                'recent_buy_signals': buy_signals,
-                'recent_sell_signals': sell_signals,
+                'recent_buy_signals': final_buy_signals,
+                'recent_sell_signals': final_sell_signals,
+                'signal_conflicts': signal_conflicts,
                 'current_price': latest_eth.get('Close', 0),
                 'ma20': latest_eth.get('MA20', 0),
                 'ma50': latest_eth.get('MA50', 0),
@@ -337,6 +349,71 @@ def calculate_price_position(price):
     # 这是一个非常简化的计算，实际需要历史价格数据
     return 50.0  # 假设在中位
 
+
+# --- 新增：信号冲突解析辅助函数 ---
+def resolve_conflicting_signals(buy_signals, sell_signals, tav_score=None, buy_threshold=55, sell_threshold=45):
+    """
+    输入：
+      buy_signals, sell_signals: 列表，每项形如 {'date': 'YYYY-MM-DD', 'description': '...'}
+      tav_score: 可选的数值评分（0-100），用于解冲决策
+      buy_threshold / sell_threshold: 用于基于 tav_score 的自动决策阈值
+
+    返回：
+      resolved_buy, resolved_sell, conflicts
+      resolved_buy/resolved_sell: 列表，包含被最终判定为买/卖的信号，
+        每项形如 {'date':..., 'description':..., 'reason':...}
+      conflicts: 列表，包含当天同时有买卖但无法自动判定的条目（保留原始描述，便于人工查看）
+    """
+    # 按日期汇总
+    by_date = {}
+    for s in buy_signals:
+        date = s.get('date')
+        by_date.setdefault(date, {'buy': [], 'sell': []})
+        by_date[date]['buy'].append(s.get('description'))
+    for s in sell_signals:
+        date = s.get('date')
+        by_date.setdefault(date, {'buy': [], 'sell': []})
+        by_date[date]['sell'].append(s.get('description'))
+
+    resolved_buy = []
+    resolved_sell = []
+    conflicts = []
+
+    for date, parts in sorted(by_date.items()):
+        buys = parts.get('buy', [])
+        sells = parts.get('sell', [])
+
+        # 只有买或只有卖 —— 直接保留
+        if buys and not sells:
+            combined_desc = " | ".join(buys)
+            resolved_buy.append({'date': date, 'description': combined_desc, 'reason': 'only_buy'})
+            continue
+        if sells and not buys:
+            combined_desc = " | ".join(sells)
+            resolved_sell.append({'date': date, 'description': combined_desc, 'reason': 'only_sell'})
+            continue
+
+        # 同一天同时存在买与卖 —— 尝试用 tav_score 自动解冲
+        if buys and sells:
+            if tav_score is not None:
+                # 简单策略：高于 buy_threshold -> 选 buy；低于 sell_threshold -> 选 sell；否则冲突
+                if tav_score >= buy_threshold and tav_score > sell_threshold:
+                    combined_desc = "Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                    resolved_buy.append({'date': date, 'description': combined_desc, 'reason': f'tav_decision({tav_score})'})
+                elif tav_score <= sell_threshold and tav_score < buy_threshold:
+                    combined_desc = "Sell: " + " | ".join(sells) + " ; Buy: " + " | ".join(buys)
+                    resolved_sell.append({'date': date, 'description': combined_desc, 'reason': f'tav_decision({tav_score})'})
+                else:
+                    # tav_score 在不确定区间 -> 标记冲突
+                    combined_desc = "同时包含买和卖信号。Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                    conflicts.append({'date': date, 'description': combined_desc, 'tav_score': tav_score})
+            else:
+                # 没有 tav_score，无法自动判定 -> 标记冲突
+                combined_desc = "同时包含买和卖信号。Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                conflicts.append({'date': date, 'description': combined_desc, 'tav_score': None})
+
+    return resolved_buy, resolved_sell, conflicts
+# --- 新增结束 ---
 
 
 def send_email(to, subject, text, html):
@@ -422,6 +499,7 @@ if __name__ == "__main__":
     if 'ethereum' in indicators:
         eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
         eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
+        eth_conflicts = indicators['ethereum'].get('signal_conflicts', [])
         
         # 检查以太坊是否有今天的信号
         for signal in eth_recent_buy_signals:
@@ -432,10 +510,15 @@ if __name__ == "__main__":
             if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
                 has_signals = True
                 break
+        for c in eth_conflicts:
+            if datetime.strptime(c['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
     
     if 'bitcoin' in indicators and not has_signals:
         btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
         btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
+        btc_conflicts = indicators['bitcoin'].get('signal_conflicts', [])
         
         # 检查比特币是否有今天的信号
         for signal in btc_recent_buy_signals:
@@ -444,6 +527,10 @@ if __name__ == "__main__":
                 break
         for signal in btc_recent_sell_signals:
             if datetime.strptime(signal['date'], '%Y-%m-%d').date() == today:
+                has_signals = True
+                break
+        for c in btc_conflicts:
+            if datetime.strptime(c['date'], '%Y-%m-%d').date() == today:
                 has_signals = True
                 break
 
@@ -471,6 +558,7 @@ if __name__ == "__main__":
             .highlight {{ background-color: #ffffcc; }}
             .buy-signal {{ background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; }}
             .sell-signal {{ background-color: #ffebee; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+            .conflict-signal {{ background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }}
         </style>
     </head>
     <body>
@@ -573,7 +661,7 @@ if __name__ == "__main__":
     """
     
     # Ethereum 技术分析
-    if 'ethereum' in prices:
+    if 'ethereum' in prices and 'ethereum' in indicators:
         eth_rsi = indicators['ethereum'].get('rsi', 0.0)
         eth_macd = indicators['ethereum'].get('macd', 0.0)
         eth_macd_signal = indicators['ethereum'].get('macd_signal', 0.0)
@@ -583,6 +671,7 @@ if __name__ == "__main__":
         eth_ma50 = indicators['ethereum'].get('ma50', 0)
         eth_recent_buy_signals = indicators['ethereum'].get('recent_buy_signals', [])
         eth_recent_sell_signals = indicators['ethereum'].get('recent_sell_signals', [])
+        eth_conflicts = indicators['ethereum'].get('signal_conflicts', [])
         eth_tav_score = indicators['ethereum'].get('tav_score', 0)
         eth_tav_status = indicators['ethereum'].get('tav_status', '无TAV')
         
@@ -594,9 +683,9 @@ if __name__ == "__main__":
                     <td>{eth_macd:.4f}</td>
                     <td>{eth_macd_signal:.4f}</td>
                     <td>{eth_bb_position:.2f}</td>
+                    <td>{eth_tav_score:.1f} ({eth_tav_status})</td>
                     <td>${eth_ma20:.2f}</td>
                     <td>${eth_ma50:.2f}</td>
-                    <td>{eth_tav_score:.1f} ({eth_tav_status})</td>
                 </tr>
             """
         
@@ -604,12 +693,16 @@ if __name__ == "__main__":
         if eth_recent_buy_signals:
             html += f"""
                 <tr>
-                    <td colspan=\"8\">
+                    <td colspan=\"9\">
                         <div class=\"buy-signal\">
                             <strong>🔔 Ethereum (ETH) 最近买入信号:</strong><br>
             """
             for signal in eth_recent_buy_signals:
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                reason = signal.get('reason', '')
+                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
+                if reason:
+                    html += f" （{reason}）"
+                html += "</span><br>"
             html += """
                         </div>
                     </td>
@@ -619,18 +712,39 @@ if __name__ == "__main__":
         if eth_recent_sell_signals:
             html += f"""
                 <tr>
-                    <td colspan=\"8\">
+                    <td colspan=\"9\">
                         <div class=\"sell-signal\">
                             <strong>🔻 Ethereum (ETH) 最近卖出信号:</strong><br>
             """
             for signal in eth_recent_sell_signals:
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                reason = signal.get('reason', '')
+                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
+                if reason:
+                    html += f" （{reason}）"
+                html += "</span><br>"
             html += """
                         </div>
                     </td>
                 </tr>
             """
         
+        # 添加冲突区块
+        if eth_conflicts:
+            html += f"""
+                <tr>
+                    <td colspan=\"9\">
+                        <div class=\"conflict-signal\">
+                            <strong>⚠️ Ethereum (ETH) 信号冲突（需要人工确认）:</strong><br>
+            """
+            for c in eth_conflicts:
+                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                html += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+
         text += f"  RSI: {eth_rsi:.2f}\n"
         text += f"  MACD: {eth_macd:.4f} (信号线: {eth_macd_signal:.4f})\n"
         text += f"  布林带位置: {eth_bb_position:.2f}\n"
@@ -656,15 +770,29 @@ if __name__ == "__main__":
         if eth_recent_buy_signals:
             text += f"  🔔 最近买入信号 ({len(eth_recent_buy_signals)} 个):\n"
             for signal in eth_recent_buy_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                reason = signal.get('reason', '')
+                text += f"    {signal['date']}: {signal['description']}"
+                if reason:
+                    text += f" （{reason}）"
+                text += "\n"
         
         if eth_recent_sell_signals:
             text += f"  🔻 最近卖出信号 ({len(eth_recent_sell_signals)} 个):\n"
             for signal in eth_recent_sell_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                reason = signal.get('reason', '')
+                text += f"    {signal['date']}: {signal['description']}"
+                if reason:
+                    text += f" （{reason}）"
+                text += "\n"
+
+        if eth_conflicts:
+            text += f"  ⚠️ 信号冲突 ({len(eth_conflicts)} 个)，需要人工确认：\n"
+            for c in eth_conflicts:
+                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                text += f"    {c['date']}: {c['description']}{tav_info}\n"
     
     # Bitcoin 技术分析
-    if 'bitcoin' in prices:
+    if 'bitcoin' in prices and 'bitcoin' in indicators:
         btc_rsi = indicators['bitcoin'].get('rsi', 0.0)
         btc_macd = indicators['bitcoin'].get('macd', 0.0)
         btc_macd_signal = indicators['bitcoin'].get('macd_signal', 0.0)
@@ -676,6 +804,7 @@ if __name__ == "__main__":
         btc_tav_status = indicators['bitcoin'].get('tav_status', '无TAV')
         btc_recent_buy_signals = indicators['bitcoin'].get('recent_buy_signals', [])
         btc_recent_sell_signals = indicators['bitcoin'].get('recent_sell_signals', [])
+        btc_conflicts = indicators['bitcoin'].get('signal_conflicts', [])
         
         html += f"""
                 <tr>
@@ -685,9 +814,9 @@ if __name__ == "__main__":
                     <td>{btc_macd:.4f}</td>
                     <td>{btc_macd_signal:.4f}</td>
                     <td>{btc_bb_position:.2f}</td>
+                    <td>{btc_tav_score:.1f} ({btc_tav_status})</td>
                     <td>${btc_ma20:.2f}</td>
                     <td>${btc_ma50:.2f}</td>
-                    <td>{btc_tav_score:.1f} ({btc_tav_status})</td>
                 </tr>
         """
         
@@ -695,12 +824,16 @@ if __name__ == "__main__":
         if btc_recent_buy_signals:
             html += f"""
                 <tr>
-                    <td colspan=\"8\">
+                    <td colspan=\"9\">
                         <div class=\"buy-signal\">
                             <strong>🔔 Bitcoin (BTC) 最近买入信号:</strong><br>
             """
             for signal in btc_recent_buy_signals:
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                reason = signal.get('reason', '')
+                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
+                if reason:
+                    html += f" （{reason}）"
+                html += "</span><br>"
             html += """
                         </div>
                     </td>
@@ -710,18 +843,39 @@ if __name__ == "__main__":
         if btc_recent_sell_signals:
             html += f"""
                 <tr>
-                    <td colspan=\"8\">
+                    <td colspan=\"9\">
                         <div class=\"sell-signal\">
                             <strong>🔻 Bitcoin (BTC) 最近卖出信号:</strong><br>
             """
             for signal in btc_recent_sell_signals:
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                reason = signal.get('reason', '')
+                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
+                if reason:
+                    html += f" （{reason}）"
+                html += "</span><br>"
             html += """
                         </div>
                     </td>
                 </tr>
             """
         
+        # 添加冲突区块
+        if btc_conflicts:
+            html += f"""
+                <tr>
+                    <td colspan=\"9\">
+                        <div class=\"conflict-signal\">
+                            <strong>⚠️ Bitcoin (BTC) 信号冲突（需要人工确认）:</strong><br>
+            """
+            for c in btc_conflicts:
+                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                html += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
+            html += """
+                        </div>
+                    </td>
+                </tr>
+            """
+
         text += f"  RSI: {btc_rsi:.2f}\n"
         text += f"  MACD: {btc_macd:.4f} (信号线: {btc_macd_signal:.4f})\n"
         text += f"  布林带位置: {btc_bb_position:.2f}\n"
@@ -747,12 +901,26 @@ if __name__ == "__main__":
         if btc_recent_buy_signals:
             text += f"  🔔 最近买入信号 ({len(btc_recent_buy_signals)} 个):\n"
             for signal in btc_recent_buy_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                reason = signal.get('reason', '')
+                text += f"    {signal['date']}: {signal['description']}"
+                if reason:
+                    text += f" （{reason}）"
+                text += "\n"
         
         if btc_recent_sell_signals:
             text += f"  🔻 最近卖出信号 ({len(btc_recent_sell_signals)} 个):\n"
             for signal in btc_recent_sell_signals:
-                text += f"    {signal['date']}: {signal['description']}\n"
+                reason = signal.get('reason', '')
+                text += f"    {signal['date']}: {signal['description']}"
+                if reason:
+                    text += f" （{reason}）"
+                text += "\n"
+
+        if btc_conflicts:
+            text += f"  ⚠️ 信号冲突 ({len(btc_conflicts)} 个)，需要人工确认：\n"
+            for c in btc_conflicts:
+                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                text += f"    {c['date']}: {c['description']}{tav_info}\n"
     
     html += """
             </table>
@@ -856,4 +1024,3 @@ if __name__ == "__main__":
     success = send_email(recipients, subject, text, html)
     if not success:
         exit(1)
-
