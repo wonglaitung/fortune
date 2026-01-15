@@ -17644,6 +17644,54 @@
       "current_price": 75.75,
       "target_price": 79.43,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15T09:36:38.196350",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "技术面超买，RSI高位，资金流出，基本面脆弱（PE 1674.4亏损）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 92.05,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-15T09:36:42.270614",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.58,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "基本面顶级，PE 6.34低估值，超跌反弹机会，风险等级中低 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.3,
+      "current_price": 5.58,
+      "target_price": 5.9,
+      "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-15T09:36:45.865619",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.27,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "基本面无敌，PE 5.67估值洼地，中期趋势改善，风险等级中低 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.9,
+      "current_price": 6.27,
+      "target_price": 6.5,
+      "validity_period": 30
     }
   ],
   "portfolio_history": [
@@ -29908,109 +29956,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-14 14:03:46",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-14 14:42:54",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "综合评分74.2分，多周期趋势评分88.5分强向上，基本面评分60分良好，技术指标协同多头信号（OBV上升、CMF正、成交量比率>1），风险等级中低适合平衡型",
-          "allocation_pct": 15,
-          "stop_loss_price": 20.3,
-          "target_price": 24.5,
-          "validity_period": 14
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "综合评分73.8分，多周期趋势评分84.9分强劲，基本面评分90分优质（PE 7.58低位），技术指标支持多头，风险等级中低符合平衡型偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 19.8,
-          "target_price": 23.8,
-          "validity_period": 14
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "综合评分71.8分，基本面评分100分极优（PE 5.60低位+高股息防御性），风险等级低，技术指标确认资金流入，适合平衡型稳健配置",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.3,
-          "target_price": 8.2,
-          "validity_period": 30
-        }
-      ],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分strong级别，位置百分位100%超买，RSI 72.44超买，CMF资金流出-0.245，短期回调压力大风险等级高",
-          "stop_loss_triggered": false,
-          "target_price": 10.5,
-          "validity_period": 7
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货评分9.0分strong级别，vol_ratio异常1.9，RSI 66.65接近超买，CMF资金流出-0.0788，技术面崩溃风险高",
-          "stop_loss_triggered": false,
-          "target_price": 50.0,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "出货评分7.0分strong级别，vol_ratio异常2.37，RSI 67.01接近超买，位置百分位82.58%高位，动能衰竭风险中高",
-          "stop_loss_triggered": false,
-          "target_price": 155.0,
-          "validity_period": 7
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分6.5分strong级别，RSI 75.37严重超买，CMF资金流出-0.2713，基本面估值偏高（PE 34.17），政策风险大",
-          "stop_loss_triggered": false,
-          "target_price": 36.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-14 14:42:54",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分strong级别，位置百分位100%超买，RSI 72.44超买，CMF资金流出-0.245，短期回调压力大风险等级高",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 11.91,
-      "target_price": 10.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-14 14:42:57",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分9.0分strong级别，vol_ratio异常1.9，RSI 66.65接近超买，CMF资金流出-0.0788，技术面崩溃风险高",
-      "capital_after": 6.189294051959223,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 55.6,
-      "target_price": 50.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-14 14:42:59",
       "type": "SELL",
       "code": "9988.HK",
@@ -30171,6 +30116,87 @@
       "current_price": 75.75,
       "target_price": 79.43,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15 09:36:38",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "基本面顶级，PE 6.34低估值，超跌反弹机会，风险等级中低",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.3,
+          "target_price": 5.9,
+          "validity_period": 30
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "基本面无敌，PE 5.67估值洼地，中期趋势改善，风险等级中低",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.9,
+          "target_price": 6.5,
+          "validity_period": 30
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "技术面超买，RSI高位，资金流出，基本面脆弱（PE 1674.4亏损）",
+          "stop_loss_triggered": false,
+          "target_price": 85.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-15 09:36:38",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面超买，RSI高位，资金流出，基本面脆弱（PE 1674.4亏损）",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 92.05,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-15 09:36:42",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.58,
+      "amount": 0,
+      "reason": "基本面顶级，PE 6.34低估值，超跌反弹机会，风险等级中低 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.3,
+      "current_price": 5.58,
+      "target_price": 5.9,
+      "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-15 09:36:45",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.27,
+      "amount": 0,
+      "reason": "基本面无敌，PE 5.67估值洼地，中期趋势改善，风险等级中低 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.9,
+      "current_price": 6.27,
+      "target_price": 6.5,
+      "validity_period": 30
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
