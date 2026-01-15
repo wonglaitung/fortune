@@ -112,6 +112,43 @@ class AITradingAnalyzer:
         # 至少买1手
         return max(shares, shares_per_lot)
     
+    def calculate_transaction_cost(self, amount: float, is_sell: bool = False) -> float:
+        """
+        计算交易成本（港股标准费率）
+        
+        Args:
+            amount: 交易金额（港元）
+            is_sell: 是否为卖出交易（卖出需要印花税）
+            
+        Returns:
+            总交易成本（港元）
+        """
+        # 港股交易成本标准费率
+        commission_rate = 0.001  # 佣金 0.1%
+        stamp_duty_rate = 0.0013  # 印花税 0.13%（仅卖出时收取）
+        platform_fee = 50.0  # 平台费（固定费用，每笔交易）
+        trading_fee_rate = 0.00005  # 交易费 0.005%
+        settlement_fee_rate = 0.00002  # 交收费 0.002%
+        
+        # 计算各项费用
+        commission = amount * commission_rate
+        stamp_duty = amount * stamp_duty_rate if is_sell else 0.0
+        trading_fee = amount * trading_fee_rate
+        settlement_fee = amount * settlement_fee_rate
+        
+        # 佣金和交易费有最低收费（每笔至少HK$100）
+        min_commission = 100.0
+        commission = max(commission, min_commission)
+        
+        # 交易费最低HK$5
+        min_trading_fee = 5.0
+        trading_fee = max(trading_fee, min_trading_fee)
+        
+        # 总成本
+        total_cost = commission + stamp_duty + platform_fee + trading_fee + settlement_fee
+        
+        return total_cost
+    
     def send_email_notification(self, subject: str, content: str) -> bool:
         """
         发送邮件通知
@@ -353,6 +390,57 @@ class AITradingAnalyzer:
         
         return excluded
     
+    def detect_abnormal_cashflows(self, cashflows: List[Tuple[datetime, float]], 
+                                 threshold_ratio: float = 0.3) -> List[Tuple[datetime, float, str]]:
+        """
+        检测异常现金流（如重复记账或数据导出故障）
+        
+        Args:
+            cashflows: 现金流列表
+            threshold_ratio: 异常阈值比例（相对于最大峰值的比例）
+            
+        Returns:
+            异常现金流列表 [(datetime, amount, reason)]
+        """
+        if not cashflows:
+            return []
+        
+        abnormal_cashflows = []
+        
+        # 计算所有现金流的绝对值
+        abs_amounts = [abs(amt) for _, amt in cashflows]
+        
+        if not abs_amounts:
+            return []
+        
+        # 计算最大峰值（买入的最大金额）
+        max_inflow = max([amt for _, amt in cashflows if amt < 0], default=0)
+        
+        # 计算总流入和总流出
+        total_outflow = sum([amt for _, amt in cashflows if amt > 0])
+        total_inflow = sum([amt for _, amt in cashflows if amt < 0])
+        
+        # 检测异常大额流入（可能是重复记账）
+        for dt, amt in cashflows:
+            if amt > 0:
+                # 如果单笔流入超过总流出的阈值比例，标记为异常
+                if total_outflow > 0 and amt > total_outflow * threshold_ratio:
+                    reason = f"单笔流入占总流出比例过高: {amt/total_outflow*100:.1f}% (阈值: {threshold_ratio*100:.1f}%)"
+                    abnormal_cashflows.append((dt, amt, reason))
+                
+                # 如果单笔流入超过最大峰值的阈值比例，且没有对应的卖出记录，标记为异常
+                if max_inflow > 0 and amt > max_inflow * threshold_ratio:
+                    reason = f"单笔流入超过最大峰值比例: {amt/max_inflow*100:.1f}% (阈值: {threshold_ratio*100:.1f}%)"
+                    abnormal_cashflows.append((dt, amt, reason))
+        
+        # 检测现金流不平衡
+        net_flow = total_outflow + total_inflow
+        if abs(net_flow) > abs(total_inflow) * 0.1:  # 净现金流超过总投入的10%
+            reason = f"现金流不平衡: 净流入 HK${net_flow:,.2f}，占总投入 {abs(net_flow/total_inflow*100):.1f}%"
+            abnormal_cashflows.append((cashflows[-1][0], net_flow, reason))
+        
+        return abnormal_cashflows
+    
     def analyze_trades(self, df: pd.DataFrame, excluded_stocks: set) -> Tuple[float, Dict]:
         """
         分析交易，计算现金流和持仓
@@ -421,15 +509,41 @@ class AITradingAnalyzer:
             total += amt / ((1.0 + rate) ** (days / 365.0))
         return total
 
-    def xirr(self, cashflows: List[Tuple[datetime, float]], guess: float = 0.1) -> Optional[float]:
+    def xirr(self, cashflows: List[Tuple[datetime, float]], guess: float = 0.1,
+           filter_abnormal: bool = True) -> Optional[float]:
         """
         通过二分法求解 XIRR（年化内部收益率）
         返回年化率，例如 0.12 表示 12%
         如果无法收敛或现金流不支持（例如全为同号），返回 None
         注意：对于短时间周期（<30天），仍返回年化值但可能不稳定
+        
+        Args:
+            cashflows: 现金流列表
+            guess: 初始猜测值
+            filter_abnormal: 是否过滤异常现金流
         """
         if not cashflows:
             return None
+        
+        # 检测并过滤异常现金流
+        if filter_abnormal:
+            abnormal_flows = self.detect_abnormal_cashflows(cashflows)
+            if abnormal_flows:
+                # 移除异常现金流
+                abnormal_timestamps = [dt for dt, _, _ in abnormal_flows]
+                filtered_cashflows = [(dt, amt) for dt, amt in cashflows 
+                                    if dt not in abnormal_timestamps]
+                
+                # 如果过滤后现金流为空或只有单向现金流，返回None
+                if not filtered_cashflows:
+                    return None
+                
+                signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in filtered_cashflows])
+                if not (1 in signs and -1 in signs):
+                    return None
+                
+                cashflows = filtered_cashflows
+        
         # 必须至少包含一次正流入和一次负流出
         signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in cashflows])
         if not (1 in signs and -1 in signs):
@@ -568,21 +682,47 @@ class AITradingAnalyzer:
     def calculate_max_drawdown(self, nav_series: pd.Series) -> float:
         """
         计算最大回撤（以比例表示，例如0.25表示25%）
+        包含已实现和未实现盈亏
         """
-        if nav_series.empty:
+        if nav_series.empty or len(nav_series) < 2:
             return 0.0
+        
+        # 计算累积最大值
         cumulative_max = nav_series.cummax()
+        
+        # 计算回撤
         drawdown = (nav_series - cumulative_max) / cumulative_max
+        
+        # 获取最大回撤
         max_dd = drawdown.min()
+        
         return abs(max_dd) if not math.isnan(max_dd) else 0.0
 
-    def calculate_annualized_volatility(self, daily_returns: pd.Series) -> float:
+    def calculate_annualized_volatility(self, nav_series: pd.Series) -> float:
         """
         计算年化波动率（基于日收益率），采用交易日252
+        
+        修正说明：
+        - 使用日收益率的标准差计算
+        - 日收益率 = (当日净值 - 前一日净值) / 前一日净值
+        - 年化波动率 = 日收益率标准差 × √252
         """
+        if nav_series.empty or len(nav_series) < 2:
+            return 0.0
+        
+        # 计算日收益率
+        daily_returns = nav_series.pct_change().dropna()
+        
         if daily_returns.empty:
             return 0.0
-        return daily_returns.std(ddof=0) * math.sqrt(252)
+        
+        # 计算日收益率标准差（使用总体标准差，ddof=0）
+        daily_std = daily_returns.std(ddof=0)
+        
+        # 年化：日标准差 × √252（交易日数）
+        annual_volatility = daily_std * math.sqrt(252)
+        
+        return annual_volatility
 
     def calculate_time_weighted_return(self, nav_series: pd.Series) -> float:
         """
@@ -633,6 +773,8 @@ class AITradingAnalyzer:
             'cashflows': [],  # list of (datetime, amount)
             'total_invested': 0.0,
             'nav_series': pd.Series(dtype=float),
+            'total_transaction_cost': 0.0,  # 总交易成本
+            'abnormal_cashflows': [],  # 异常现金流记录
         }
         
         # 获取所有股票
@@ -729,8 +871,13 @@ class AITradingAnalyzer:
                         portfolio['cost'] = price
                         portfolio['investment'] = shares * price
                         buy_count += 1
-                        # 现金流（买入为负）
-                        cashflows.append((row['timestamp'].to_pydatetime(), -portfolio['investment']))
+                        
+                        # 计算买入交易成本
+                        buy_cost = self.calculate_transaction_cost(portfolio['investment'], is_sell=False)
+                        results['total_transaction_cost'] += buy_cost
+                        
+                        # 现金流（买入为负，包含交易成本）
+                        cashflows.append((row['timestamp'].to_pydatetime(), -(portfolio['investment'] + buy_cost)))
                         results['total_invested'] += portfolio['investment']
                 
                 elif transaction_type == 'SELL':
@@ -739,10 +886,18 @@ class AITradingAnalyzer:
                         shares = portfolio['shares']
                         returns = shares * price
                         profit = returns - portfolio['investment']
-                        stock_realized_profit += profit
+                        
+                        # 计算卖出交易成本
+                        sell_cost = self.calculate_transaction_cost(returns, is_sell=True)
+                        results['total_transaction_cost'] += sell_cost
+                        
+                        # 扣除交易成本后的实际收益
+                        net_returns = returns - sell_cost
+                        stock_realized_profit += (net_returns - portfolio['investment'])
+                        
                         sell_count += 1
-                        # 记录现金流（卖出为正）
-                        cashflows.append((row['timestamp'].to_pydatetime(), returns))
+                        # 记录现金流（卖出为正，扣除交易成本）
+                        cashflows.append((row['timestamp'].to_pydatetime(), net_returns))
                         
                         # 清空持仓
                         portfolio['shares'] = 0
@@ -891,9 +1046,18 @@ class AITradingAnalyzer:
         # 总体盈亏 = 已实现盈亏 + 未实现盈亏
         total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
         
+        # 总交易成本
+        total_transaction_cost = profit_results.get('total_transaction_cost', 0.0)
+        
+        # 扣除交易成本后的净盈亏
+        net_profit = total_profit - total_transaction_cost
+        
         # ROI（基于总投入）
         total_invested = profit_results.get('total_invested', 0.0)
         roi = (total_profit / total_invested * 100) if total_invested != 0 else 0.0
+        
+        # 扣除交易成本后的ROI
+        net_roi = (net_profit / total_invested * 100) if total_invested != 0 else 0.0
 
         # XIRR（年化内部收益率）
         cashflows = profit_results.get('cashflows', [])
@@ -902,6 +1066,11 @@ class AITradingAnalyzer:
             xirr_value = self.xirr(cashflows)
         except Exception:
             xirr_value = None
+        
+        # 检测异常现金流
+        abnormal_cashflows = []
+        if cashflows:
+            abnormal_cashflows = self.detect_abnormal_cashflows(cashflows)
         
         # NAV 序列与 TWR、回撤、波动率、夏普
         nav_series: pd.Series = profit_results.get('nav_series', pd.Series(dtype=float))
@@ -977,12 +1146,32 @@ class AITradingAnalyzer:
         report.append(f"已收回资金: HK${sold_returns:,.2f}")
         report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
         report.append(f"总体盈亏: HK${total_profit:,.2f}")
+        report.append(f"总交易成本: HK${total_transaction_cost:,.2f} (佣金+印花税+平台费)")
+        report.append(f"扣除成本后净盈亏: HK${net_profit:,.2f}")
         # 继续保留旧的基于峰值的计算以便对比（但提醒用户）
         peak_based_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0.0
         report.append(f"（对比）基于最高峰资金需求的盈亏率: {peak_based_rate:.2f}%")
         # ROI 基于总投入金额计算（总盈亏 / 总投入）
         report.append(f"基于总投入的 ROI: {roi:.2f}% （基数：总投入金额）")
+        report.append(f"扣除成本后的 ROI: {net_roi:.2f}% （基数：总投入金额）")
         report.append("")
+        
+        # 交易成本明细
+        if total_transaction_cost > 0:
+            report.append("【交易成本明细】")
+            report.append(f"总交易成本: HK${total_transaction_cost:,.2f}")
+            report.append(f"占总投入比例: {(total_transaction_cost/total_invested*100):.2f}%" if total_invested > 0 else "占总投入比例: N/A")
+            report.append("")
+        
+        # 异常现金流警告
+        if abnormal_cashflows:
+            report.append("【⚠️ 异常现金流警告】")
+            report.append("检测到以下异常现金流，可能影响XIRR计算的准确性：")
+            for dt, amt, reason in abnormal_cashflows:
+                report.append(f"  - {dt.strftime('%Y-%m-%d %H:%M:%S')}: HK${amt:,.2f}")
+                report.append(f"    原因: {reason}")
+            report.append("  这些异常值已从XIRR计算中排除")
+            report.append("")
         
         # XIRR / 回报指标
         report.append("【回报指标】")
