@@ -17740,6 +17740,54 @@
       "current_price": 5.15,
       "target_price": 5.42,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15T11:02:59.096121",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货评分6.5分，位置百分位100%高位，RSI 76.97严重超买，CMF资金流-0.3392流出，基本面评分20分差（地缘政治风险高）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.9,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-15T11:03:07.050165",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.08,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "综合评分71.6分，多周期趋势评分78.2分向上可靠，基本面评分60分良好，技术指标协同支持建仓（CMF资金流入、OBV上升、布林带正常） (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 19.94,
+      "current_price": 22.08,
+      "target_price": 23.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15T11:03:10.417188",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "综合评分59.6分，位置百分位1.37%深度超卖，基本面评分90分优质，技术指标协同支持建仓（CMF资金流入、布林带超卖、RSI超卖） (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.05,
+      "current_price": 5.31,
+      "target_price": 5.65,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -30004,87 +30052,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-14 14:43:18",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.77,
-      "amount": 0,
-      "reason": "综合评分71.8分，基本面评分100分极优（PE 5.60低位+高股息防御性），风险等级低，技术指标确认资金流入，适合平衡型稳健配置 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 7.3,
-      "current_price": 7.77,
-      "target_price": 8.2,
-      "validity_period": 30
-    },
-    {
-      "timestamp": "2026-01-14 15:42:36",
-      "buy": [
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "综合评分68.9分（50-70分推荐区间），建仓评分6.7分strong级别，技术指标协同优秀（成交量比率1.51、MACD金叉、OBV上升），风险等级3级中适合平衡型风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 609.28,
-          "target_price": 664.13,
-          "validity_period": 14
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "综合评分68.7分（50-70分推荐区间），多周期趋势评分84.4分强劲，相对强度评分57.0分跑赢恒指，风险等级3级中符合平衡型收益风险平衡需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 73.89,
-          "target_price": 79.43,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.5分strong级别，位置百分位93.19%高位，RSI 66.77超买，CMF资金流-0.3499大幅流出，风险等级4级中高超出平衡型承受范围",
-          "stop_loss_triggered": false,
-          "target_price": 120.0,
-          "validity_period": 14
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-14 15:42:36",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分strong级别，位置百分位93.19%高位，RSI 66.77超买，CMF资金流-0.3499大幅流出，风险等级4级中高超出平衡型承受范围",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 126.8,
-      "target_price": 120.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-14 15:42:41",
-      "type": "BUY",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 0,
-      "price": 632.0,
-      "amount": 0,
-      "reason": "综合评分68.9分（50-70分推荐区间），建仓评分6.7分strong级别，技术指标协同优秀（成交量比率1.51、MACD金叉、OBV上升），风险等级3级中适合平衡型风险偏好 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 609.28,
-      "current_price": 632.0,
-      "target_price": 664.13,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-14 15:42:48",
       "type": "BUY",
       "code": "0981.HK",
@@ -30259,6 +30226,87 @@
       "stop_loss_price": 5.0,
       "current_price": 5.15,
       "target_price": 5.42,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15 11:02:58",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "综合评分71.6分，多周期趋势评分78.2分向上可靠，基本面评分60分良好，技术指标协同支持建仓（CMF资金流入、OBV上升、布林带正常）",
+          "allocation_pct": 15,
+          "stop_loss_price": 19.94,
+          "target_price": 23.85,
+          "validity_period": 14
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "综合评分59.6分，位置百分位1.37%深度超卖，基本面评分90分优质，技术指标协同支持建仓（CMF资金流入、布林带超卖、RSI超卖）",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.05,
+          "target_price": 5.65,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分6.5分，位置百分位100%高位，RSI 76.97严重超买，CMF资金流-0.3392流出，基本面评分20分差（地缘政治风险高）",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-15 11:02:59",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，位置百分位100%高位，RSI 76.97严重超买，CMF资金流-0.3392流出，基本面评分20分差（地缘政治风险高）",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.9,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-15 11:03:07",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.08,
+      "amount": 0,
+      "reason": "综合评分71.6分，多周期趋势评分78.2分向上可靠，基本面评分60分良好，技术指标协同支持建仓（CMF资金流入、OBV上升、布林带正常） (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 19.94,
+      "current_price": 22.08,
+      "target_price": 23.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-15 11:03:10",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "reason": "综合评分59.6分，位置百分位1.37%深度超卖，基本面评分90分优质，技术指标协同支持建仓（CMF资金流入、布林带超卖、RSI超卖） (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.05,
+      "current_price": 5.31,
+      "target_price": 5.65,
       "validity_period": 14
     }
   ],
