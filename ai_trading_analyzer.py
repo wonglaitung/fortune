@@ -14,48 +14,46 @@
 - 在报告中输出上述指标
 
 指标含义与假设：
-1. ROI（总投入回报率）= 总盈亏 / 总投入金额
-   - 基数：所有买入交易的总投入金额
-   - 假设：不考虑时间价值，适用于简单盈亏评估
-
-2. XIRR（基于现金流的内部收益率）
+1. 初始资本设定：150万港元（可配置）
+2. 资金分配策略：每只股票分配初始资本的固定比例（默认10%）
+3. 买入规则：
+   - 按资金分配比例计算应买入金额
+   - 如果现金不足，使用所有可用现金
+   - 确保总投入不超过初始资本
+4. 卖出规则：清仓全部持仓，释放现金用于后续买入
+5. 持仓市值可以因盈利而超过初始资本
+6. 交易成本：包含佣金、印花税、平台费等港股标准费率
+7. ROI（总投入回报率）= 总盈亏 / 初始资本
+8. XIRR（基于现金流的内部收益率）
    - 计算方法：使用二分法求解使现金流净现值为0的折现率
    - 假设：所有现金流按时间连续复利计算
    - 注意：对于短时间周期（<30天），年化值可能不稳定
    - 基数：现金流序列（买入为负，卖出为正）
-
-3. TWR（时间加权回报）
+9. TWR（时间加权回报）
    - 计算方法：基于每日净值序列的复合收益率
    - 假设：每日收益独立，不考虑资金流入流出影响
-   - 基数：初始资本（默认100万港元）
-
-4. CAGR（复合年增长率）
-   - 计算方法：基于净值序列起止值的年化增长率
-   - 假设：收益按固定年化率复利增长
-   - 注意：对于短时间周期（<30天），返回累计收益率而非年化
-   - 基数：净值序列起止值
-
-5. 最大回撤
-   - 计算方法：净值从峰值到谷底的最大跌幅
-   - 假设：衡量策略的最大潜在损失
-   - 基数：净值序列
-
-6. 年化波动率
-   - 计算方法：日收益率标准差 × √252（交易日）
-   - 假设：收益率服从正态分布
-   - 基数：日收益率序列
-
-7. 夏普比率
-   - 计算方法：年化收益率 / 年化波动率
-   - 假设：无风险利率为0
-   - 基数：年化收益率和年化波动率
+   - 基数：初始资本
+10. 最大回撤
+    - 计算方法：净值从峰值到谷底的最大跌幅
+    - 假设：衡量策略的最大潜在损失
+    - 基数：净值序列
+11. 年化波动率
+    - 计算方法：日收益率标准差 × √252（交易日）
+    - 假设：收益率服从正态分布
+    - 基数：日收益率序列
+12. 夏普比率
+    - 计算方法：年化收益率 / 年化波动率
+    - 假设：无风险利率为0
+    - 基数：年化收益率和年化波动率
 
 重要假设与限制：
-- 不考虑交易手续费和印花税
+- 初始资本默认为150万港元（可配置）
+- 单只股票资金分配比例默认为10%（可配置）
+- 买入时确保总投入不超过初始资本
+- 卖出后释放现金，可用于后续买入
+- 持仓市值可以因盈利而超过初始资本
+- 考虑交易手续费和印花税
 - 不考虑股息收入
-- 初始资本默认为200万港元（可配置）
-- 买入信号：每次买入目标金额（默认10万港元）以内的最大股数（100股的倍数）
-- 卖出信号：清仓全部持仓
 - 排除价格为0的异常交易
 - XIRR对于短时间周期（<30天）可能不稳定
 - 净值序列基于初始资本+累计盈亏计算
@@ -79,34 +77,39 @@ class AITradingAnalyzer:
     """AI股票交易分析器"""
     
     def __init__(self, csv_file: str = 'data/simulation_transactions.csv', 
-                 initial_capital: float = 2000000.0,
-                 trade_amount: float = 100000.0):
+                 initial_capital: float = 1500000.0,
+                 allocation_pct: float = 10.0):
         """
         初始化分析器
         
         Args:
             csv_file: 交易记录CSV文件路径
-            initial_capital: 初始资本（港元），用于计算净值序列，默认200万港元
-            trade_amount: 每次交易的目标金额（港元），默认10万港元
+            initial_capital: 初始资本（港元），默认150万港元
+            allocation_pct: 单只股票的资金分配比例（百分比），默认10%
         """
         self.csv_file = csv_file
         self.df = None
         self.excluded_stocks = set()
         self.initial_capital = initial_capital
-        self.trade_amount = trade_amount
+        self.allocation_pct = allocation_pct
     
-    def calculate_shares(self, price: float) -> int:
+    def calculate_shares(self, price: float, allocation_pct: float = 10.0) -> int:
         """
         计算可买入的股数（以100股为倍数）
         
         Args:
             price: 股价（港元）
+            allocation_pct: 资金分配比例（百分比），例如15表示15%
             
         Returns:
             可买入的股数（100股的倍数）
         """
         shares_per_lot = 100  # 港股每手100股
-        max_lots = int(self.trade_amount / (price * shares_per_lot))
+        
+        # 基于初始资本的资金分配
+        target_investment = self.initial_capital * (allocation_pct / 100.0)
+        
+        max_lots = int(target_investment / (price * shares_per_lot))
         shares = max_lots * shares_per_lot
         
         # 至少买1手
@@ -780,11 +783,13 @@ class AITradingAnalyzer:
         # 获取所有股票
         all_stocks = set(df['code'].unique()) - excluded_stocks
         
-        # 为了计算最高峰资金需求，我们需要按时间顺序处理所有交易
+        # 资金管理变量
+        available_cash = self.initial_capital  # 可用现金
+        current_investment = 0.0  # 当前总投入
         current_holdings = {}  # {股票代码: [数量, 成本]}
         peak_investment = 0.0  # 最高峰资金需求
         
-        # 首先，按时间顺序处理所有交易，计算最高峰资金需求
+        # 首先，按时间顺序处理所有交易，计算最高峰资金需求和现金流
         all_trades = df[df['code'].isin(all_stocks)].sort_values('timestamp')
         for _, row in all_trades.iterrows():
             stock_code = row['code']
@@ -799,31 +804,52 @@ class AITradingAnalyzer:
                 continue
             
             if transaction_type == 'BUY':
-                # 买入信号：如果没有持仓，则买入1000股
+                # 买入信号：基于初始资本的资金分配
                 if stock_code not in current_holdings:
-                    current_holdings[stock_code] = [1000, price]
-                else:
-                    # 已有持仓，不增加（按规则跳过）
-                    pass
-                
-                # 计算当前总持仓价值
-                current_total = sum(holdings[0] * holdings[1] for holdings in current_holdings.values())
-                peak_investment = max(peak_investment, current_total)
+                    # 计算应买入的金额（基于初始资本的比例）
+                    target_investment = self.initial_capital * (self.allocation_pct / 100.0)
+                    
+                    # 检查是否有足够现金
+                    if target_investment > available_cash:
+                        # 如果现金不足，使用所有可用现金
+                        target_investment = available_cash
+                    
+                    if target_investment > 0:
+                        # 计算可买入的股数
+                        shares = self.calculate_shares(price, self.allocation_pct)
+                        # 限制股数不超过可用现金
+                        max_shares = int(available_cash / price // 100) * 100
+                        shares = min(shares, max_shares)
+                        
+                        if shares > 0:
+                            actual_investment = shares * price
+                            current_holdings[stock_code] = [shares, actual_investment]
+                            available_cash -= actual_investment
+                            current_investment += actual_investment
+                            peak_investment = max(peak_investment, current_investment)
                 
             elif transaction_type == 'SELL':
-                # 卖出信号：如果有持仓，则卖出全部
+                # 卖出信号：卖出全部持仓
                 if stock_code in current_holdings:
+                    shares, investment = current_holdings[stock_code]
+                    # 假设按当前价格卖出
+                    returns = shares * price
+                    available_cash += returns
+                    current_investment -= investment
                     del current_holdings[stock_code]
-                
-                # 计算当前总持仓价值
-                current_total = sum(holdings[0] * holdings[1] for holdings in current_holdings.values())
-                peak_investment = max(peak_investment, current_total)
         
         # 将最高峰资金需求添加到结果中
         results['peak_investment'] = peak_investment
+        results['available_cash'] = available_cash  # 最终可用现金
         
         # 另外我们也需要生成现金流（用于 XIRR）和按交易时间点的 NAV（用于 TWR/max drawdown等）
         cashflows: List[Tuple[datetime, float]] = []
+        
+        # 重新初始化资金管理变量，用于现金流计算
+        available_cash = self.initial_capital
+        current_investment = 0.0
+        current_holdings = {}  # {股票代码: [数量, 成本]}
+        
         # 用于分析每只股票
         for stock_code in all_stocks:
             stock_trades = df[df['code'] == stock_code].sort_values('timestamp')
@@ -864,21 +890,42 @@ class AITradingAnalyzer:
                     continue
                 
                 if transaction_type == 'BUY':
-                    # 买入信号：如果没有持仓，则买入目标金额以内的最大股数（100股的倍数）；如果有持仓，则跳过
+                    # 买入信号：基于初始资本的资金分配
                     if portfolio['shares'] == 0:
-                        shares = self.calculate_shares(price)
-                        portfolio['shares'] = shares
-                        portfolio['cost'] = price
-                        portfolio['investment'] = shares * price
-                        buy_count += 1
+                        # 计算应买入的金额（基于初始资本的比例）
+                        target_investment = self.initial_capital * (self.allocation_pct / 100.0)
                         
-                        # 计算买入交易成本
-                        buy_cost = self.calculate_transaction_cost(portfolio['investment'], is_sell=False)
-                        results['total_transaction_cost'] += buy_cost
+                        # 检查是否有足够现金
+                        if target_investment > available_cash:
+                            # 如果现金不足，使用所有可用现金
+                            target_investment = available_cash
                         
-                        # 现金流（买入为负，包含交易成本）
-                        cashflows.append((row['timestamp'].to_pydatetime(), -(portfolio['investment'] + buy_cost)))
-                        results['total_invested'] += portfolio['investment']
+                        if target_investment > 0:
+                            # 计算可买入的股数
+                            shares = self.calculate_shares(price, self.allocation_pct)
+                            # 限制股数不超过可用现金
+                            max_shares = int(available_cash / price // 100) * 100
+                            shares = min(shares, max_shares)
+                            
+                            if shares > 0:
+                                actual_investment = shares * price
+                                portfolio['shares'] = shares
+                                portfolio['cost'] = price
+                                portfolio['investment'] = actual_investment
+                                buy_count += 1
+                                
+                                # 计算买入交易成本
+                                buy_cost = self.calculate_transaction_cost(actual_investment, is_sell=False)
+                                results['total_transaction_cost'] += buy_cost
+                                
+                                # 现金流（买入为负，包含交易成本）
+                                cashflows.append((row['timestamp'].to_pydatetime(), -(actual_investment + buy_cost)))
+                                results['total_invested'] += actual_investment
+                                
+                                # 更新资金管理变量
+                                available_cash -= (actual_investment + buy_cost)
+                                current_investment += actual_investment
+                                current_holdings[stock_code] = [shares, actual_investment]
                 
                 elif transaction_type == 'SELL':
                     # 卖出信号：卖出全部持仓
@@ -898,6 +945,12 @@ class AITradingAnalyzer:
                         sell_count += 1
                         # 记录现金流（卖出为正，扣除交易成本）
                         cashflows.append((row['timestamp'].to_pydatetime(), net_returns))
+                        
+                        # 更新资金管理变量
+                        available_cash += net_returns
+                        current_investment -= portfolio['investment']
+                        if stock_code in current_holdings:
+                            del current_holdings[stock_code]
                         
                         # 清空持仓
                         portfolio['shares'] = 0
@@ -976,40 +1029,31 @@ class AITradingAnalyzer:
                     results['stock_details'].append(stock_detail)
         
         # 期末，把未平仓的市值按最后可得价格加入作为终值现金流（用于 XIRR），并作为 NAV 的最后一条
-        # 计算当前持仓市值（使用 df 中的最后记录价格）
+        # 计算当前持仓市值（使用 current_holdings 中的实际持仓）
         holdings_value = 0.0
         last_ts = df['timestamp'].max().to_pydatetime()
-        # 收集持仓状态按照复盘规则
-        # 我们可以复用 analyze_trades 输出得 portfolio（但为简洁再次构造）
-        portfolio_state = {}
-        df_by_stock = df.sort_values('timestamp')
-        for _, row in df_by_stock.iterrows():
-            code = row['code']
-            if code in excluded_stocks:
-                continue
-            price = row['current_price'] if pd.notna(row['current_price']) else row['price']
-            if price <= 0:
-                continue
-            if row['type'] == 'BUY':
-                if portfolio_state.get(code, 0) == 0:
-                    portfolio_state[code] = 1000
-            elif row['type'] == 'SELL':
-                if portfolio_state.get(code, 0) > 0:
-                    portfolio_state[code] = 0
-        # 估值：每只持仓使用该股票的最后一条记录的价格
-        for code, shares in portfolio_state.items():
-            if shares > 0:
-                trades = df[df['code'] == code].sort_values('timestamp')
-                latest_record = trades.iloc[-1]
-                latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
-                if latest_price > 0:
-                    holdings_value += shares * latest_price
+        
+        # 使用 current_holdings 中的实际持仓数据
+        for code, (shares, investment) in current_holdings.items():
+            # 获取该股票的最后价格
+            stock_trades = df[df['code'] == code].sort_values('timestamp')
+            latest_record = stock_trades.iloc[-1]
+            latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+            
+            if latest_price > 0 and shares > 0:
+                current_value = shares * latest_price
+                holdings_value += current_value
+        
         # 期末现金流：将持仓市值作为终值流入（相当于假设在分析终点清仓）
         if holdings_value != 0:
             cashflows.append((last_ts, holdings_value))
         else:
             # 如果没有持仓，现金流最后一笔可能已经是卖出流入
             pass
+        
+        # 计算最终总资产（现金 + 持仓市值）
+        final_total_assets = available_cash + holdings_value
+        results['final_total_assets'] = final_total_assets
 
         # 填充结果的 cashflows
         # 显式排序：先按 timestamp 排序，同一 timestamp 内按金额排序（买入为负，卖出为正，确保买入在前）
@@ -1141,19 +1185,14 @@ class AITradingAnalyzer:
         
         # 总体概览
         report.append("【总体概览】")
-        report.append(f"最高峰资金需求: HK${peak_investment:,.2f}")
-        report.append(f"总投入金额: HK${total_invested:,.2f}")
-        report.append(f"已收回资金: HK${sold_returns:,.2f}")
-        report.append(f"当前持仓市值: HK${holdings_value:,.2f}")
-        report.append(f"总体盈亏: HK${total_profit:,.2f}")
+        report.append(f"初始资本: HK${self.initial_capital:,.2f}")
+        report.append(f"最终总资产: HK${profit_results.get('final_total_assets', 0.0):,.2f}")
+        report.append(f"总盈亏: HK${total_profit:,.2f}")
+        report.append(f"总收益率: {(total_profit/self.initial_capital*100):.2f}%")
         report.append(f"总交易成本: HK${total_transaction_cost:,.2f} (佣金+印花税+平台费)")
         report.append(f"扣除成本后净盈亏: HK${net_profit:,.2f}")
-        # 继续保留旧的基于峰值的计算以便对比（但提醒用户）
-        peak_based_rate = (total_profit / peak_investment * 100) if peak_investment != 0 else 0.0
-        report.append(f"（对比）基于最高峰资金需求的盈亏率: {peak_based_rate:.2f}%")
-        # ROI 基于总投入金额计算（总盈亏 / 总投入）
-        report.append(f"基于总投入的 ROI: {roi:.2f}% （基数：总投入金额）")
-        report.append(f"扣除成本后的 ROI: {net_roi:.2f}% （基数：总投入金额）")
+        report.append(f"扣除成本后净收益率: {(net_profit/self.initial_capital*100):.2f}%")
+        report.append(f"资金利用率: {(profit_results.get('peak_investment', 0.0)/self.initial_capital*100):.2f}%")
         report.append("")
         
         # 交易成本明细
