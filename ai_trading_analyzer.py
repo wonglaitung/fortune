@@ -1120,11 +1120,8 @@ class AITradingAnalyzer:
         nav_series: pd.Series = profit_results.get('nav_series', pd.Series(dtype=float))
         max_drawdown = self.calculate_max_drawdown(nav_series)
         twr_annual = self.calculate_time_weighted_return(nav_series)
-        # 计算日收益与年化波动率（简化版，基于净值序列）
-        daily_returns = pd.Series(dtype=float)
-        if not nav_series.empty and len(nav_series) >= 2:
-            daily_returns = nav_series.pct_change().dropna()
-        annual_vol = self.calculate_annualized_volatility(daily_returns)
+        # 计算年化波动率（基于净值序列）
+        annual_vol = self.calculate_annualized_volatility(nav_series)
         # TWR 和 CAGR 计算基于净值序列
         twr_annual = self.calculate_time_weighted_return(nav_series)
         # CAGR 基于净值序列起止值正确计算
@@ -1282,9 +1279,12 @@ class AITradingAnalyzer:
         
         # 交易规则说明
         report.append("【交易规则说明】")
-        report.append("1. 买入信号：每次买入目标金额（默认10万港元）以内的最大股数（100股的倍数），如果已持仓则跳过")
-        report.append("2. 卖出信号：卖出全部持仓")
-        report.append("3. 异常处理：排除价格为0的异常交易")
+        report.append("1. 初始资本：150万港元（可配置）")
+        report.append("2. 买入规则：每只股票分配初始资本的10%（可配置）")
+        report.append("3. 资金管理：确保总投入不超过初始资本，卖出后释放现金")
+        report.append("4. 持仓市值可以因盈利而超过初始资本")
+        report.append("5. 交易成本：包含佣金、印花税、平台费等港股标准费率")
+        report.append("6. 异常处理：排除价格为0的异常交易")
         report.append("")
         
         # 附加：现金流摘要（供 XIRR 校验）
