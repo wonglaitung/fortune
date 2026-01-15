@@ -1153,6 +1153,14 @@ class AITradingAnalyzer:
         else:
             cagr = 0.0
 
+        # 计算时间周期（天数）
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            days = (end_dt - start_dt).days
+        except:
+            days = 0
+
         # 夏普比率（假设无风险利率为0）
         # 修正：使用年化收益率而非TWR
         # 年化收益率 = (最终总资产 / 初始资本 - 1) * (365 / 天数)
@@ -1161,14 +1169,6 @@ class AITradingAnalyzer:
         else:
             annual_return = 0.0
         sharpe = (annual_return / annual_vol) if annual_vol > 0 else 0.0
-
-        # 计算时间周期（天数）
-        try:
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-            days = (end_dt - start_dt).days
-        except:
-            days = 0
 
         report = []
         report.append("=" * 60)
