@@ -17948,6 +17948,70 @@
       "current_price": 22.28,
       "target_price": 25.0,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-15T15:45:04.544782",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货评分6.5分（strong级别），价格高位100.0%百分位，RSI 77.17严重超买，基本面评分仅20分（PE 1674.4估值泡沫），维持此前卖出决策",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 99.55,
+      "target_price": 95.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15T15:45:08.205757",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货评分9.0分（strong级别），信号恶化（上日出货评分8.0升至9.0），价格高位100.0%百分位，RSI 73.05超买，市场发生重大变化：出货评分显著上升强化卖出信号",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.91,
+      "target_price": 11.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15T15:45:10.860355",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货评分7.0分（strong级别），价格高位89.86%百分位，RSI 68.55超买，基本面评分60分（PE -153.3亏损），维持此前卖出决策",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 56.6,
+      "target_price": 52.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15T15:45:16.428810",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.13,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "超跌反弹机会，基本面评分100分（高分红+政策支持），位置百分位8.33%低位，技术指标协同性强（价格、RSI、布林带、OBV同向），适合平衡型短期配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.13,
+      "target_price": 5.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -30212,54 +30276,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-15 12:04:29",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5，RSI严重超买（70.56），CMF资金流出，基本面脆弱（市盈率1674.36），风险等级5级",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 92.8,
-      "target_price": 85.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-15 12:04:32",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5，RSI严重超买（76.03），CMF大幅流出，基本面评分低（20分），风险等级5级",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.86,
-      "target_price": 36.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-15 12:04:35",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0，位置历史高位（100.0%），RSI超买，风险等级4级，短期涨幅过大",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 12.02,
-      "target_price": 11.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-15 12:04:39",
       "type": "SELL",
       "code": "6682.HK",
@@ -30399,6 +30415,110 @@
       "current_price": 22.28,
       "target_price": 25.0,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-15 15:45:04",
+      "buy": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "超跌反弹机会，基本面评分100分（高分红+政策支持），位置百分位8.33%低位，技术指标协同性强（价格、RSI、布林带、OBV同向），适合平衡型短期配置",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.9,
+          "target_price": 5.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分6.5分（strong级别），价格高位100.0%百分位，RSI 77.17严重超买，基本面评分仅20分（PE 1674.4估值泡沫），维持此前卖出决策",
+          "stop_loss_triggered": false,
+          "target_price": 95.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分9.0分（strong级别），信号恶化（上日出货评分8.0升至9.0），价格高位100.0%百分位，RSI 73.05超买，市场发生重大变化：出货评分显著上升强化卖出信号",
+          "stop_loss_triggered": false,
+          "target_price": 11.0,
+          "validity_period": 3
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货评分7.0分（strong级别），价格高位89.86%百分位，RSI 68.55超买，基本面评分60分（PE -153.3亏损），维持此前卖出决策",
+          "stop_loss_triggered": false,
+          "target_price": 52.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-15 15:45:04",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分（strong级别），价格高位100.0%百分位，RSI 77.17严重超买，基本面评分仅20分（PE 1674.4估值泡沫），维持此前卖出决策",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 99.55,
+      "target_price": 95.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15 15:45:08",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分9.0分（strong级别），信号恶化（上日出货评分8.0升至9.0），价格高位100.0%百分位，RSI 73.05超买，市场发生重大变化：出货评分显著上升强化卖出信号",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 11.91,
+      "target_price": 11.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15 15:45:10",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分（strong级别），价格高位89.86%百分位，RSI 68.55超买，基本面评分60分（PE -153.3亏损），维持此前卖出决策",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 56.6,
+      "target_price": 52.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-15 15:45:16",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.13,
+      "amount": 0,
+      "reason": "超跌反弹机会，基本面评分100分（高分红+政策支持），位置百分位8.33%低位，技术指标协同性强（价格、RSI、布林带、OBV同向），适合平衡型短期配置 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.13,
+      "target_price": 5.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
