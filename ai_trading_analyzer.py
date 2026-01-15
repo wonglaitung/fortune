@@ -1096,6 +1096,9 @@ class AITradingAnalyzer:
         # 扣除交易成本后的净盈亏
         net_profit = total_profit - total_transaction_cost
         
+        # 最终总资产
+        final_total_assets = profit_results.get('final_total_assets', 0.0)
+        
         # ROI（基于总投入）
         total_invested = profit_results.get('total_invested', 0.0)
         roi = (total_profit / total_invested * 100) if total_invested != 0 else 0.0
@@ -1106,10 +1109,16 @@ class AITradingAnalyzer:
         # XIRR（年化内部收益率）
         cashflows = profit_results.get('cashflows', [])
         xirr_value = None
+        xirr_without_final = None  # 不含期末清算的XIRR
         try:
             xirr_value = self.xirr(cashflows)
+            # 计算不含期末清算的XIRR（移除最后一笔大额流入）
+            if len(cashflows) >= 2:
+                cashflows_without_final = cashflows[:-1]
+                xirr_without_final = self.xirr(cashflows_without_final)
         except Exception:
             xirr_value = None
+            xirr_without_final = None
         
         # 检测异常现金流
         abnormal_cashflows = []
@@ -1145,7 +1154,13 @@ class AITradingAnalyzer:
             cagr = 0.0
 
         # 夏普比率（假设无风险利率为0）
-        sharpe = (twr_annual / annual_vol) if annual_vol > 0 else 0.0
+        # 修正：使用年化收益率而非TWR
+        # 年化收益率 = (最终总资产 / 初始资本 - 1) * (365 / 天数)
+        if days > 0:
+            annual_return = (final_total_assets / self.initial_capital - 1) * (365 / days)
+        else:
+            annual_return = 0.0
+        sharpe = (annual_return / annual_vol) if annual_vol > 0 else 0.0
 
         # 计算时间周期（天数）
         try:
@@ -1197,6 +1212,19 @@ class AITradingAnalyzer:
             report.append("【交易成本明细】")
             report.append(f"总交易成本: HK${total_transaction_cost:,.2f}")
             report.append(f"占总投入比例: {(total_transaction_cost/total_invested*100):.2f}%" if total_invested > 0 else "占总投入比例: N/A")
+            
+            # 计算交易次数和单笔分析
+            total_trades = len(profit_results.get('sold_stocks', [])) + len(profit_results.get('holding_stocks', []))
+            if total_trades > 0:
+                avg_cost_per_trade = total_transaction_cost / total_trades
+                report.append(f"平均单笔交易成本: HK${avg_cost_per_trade:.2f}")
+            
+            # 计算成本吞噬比例
+            gross_profit = total_profit + total_transaction_cost  # 毛利润（不含成本）
+            if gross_profit > 0:
+                cost_ratio = (total_transaction_cost / gross_profit) * 100
+                report.append(f"成本吞噬比例: {cost_ratio:.1f}% (成本占毛利润比例)")
+            
             report.append("")
         
         # 异常现金流警告
@@ -1214,11 +1242,25 @@ class AITradingAnalyzer:
         if xirr_value is not None:
             if days < 5:
                 # 短期数据：添加警告
-                report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
+                report.append(f"XIRR（含期末清算）: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
             else:
-                report.append(f"XIRR（基于现金流的内部收益率）: {xirr_value * 100:.2f}%")
+                report.append(f"XIRR（含期末清算）: {xirr_value * 100:.2f}%")
         else:
             report.append("XIRR: 无法计算（现金流可能不包含正负两类流）")
+        
+        # 添加不含期末清算的XIRR
+        if xirr_without_final is not None:
+            report.append(f"XIRR（不含期末清算）: {xirr_without_final * 100:.2f}%")
+            if xirr_value is not None:
+                diff = xirr_value - xirr_without_final
+                report.append(f"  期末清算影响: +{diff * 100:.2f}%")
+        else:
+            report.append("XIRR（不含期末清算）: 无法计算")
+        
+        # 添加年化收益率（修正后的）
+        if days > 0:
+            report.append(f"年化收益率: {annual_return * 100:.2f}%")
+        report.append("")
         
         # 根据时间周期决定是否显示风险指标
         if days >= 5:
