@@ -477,7 +477,7 @@ class GoldMarketAnalyzer:
                     for idx, row in buy_signals_df.iterrows():
                         buy_signals.append({
                             'date': idx.strftime('%Y-%m-%d'),
-                            'description': row['Signal_Description']
+                            'description': row.get('Signal_Description', '')
                         })
                 
                 if 'Sell_Signal' in recent_signals.columns:
@@ -485,18 +485,42 @@ class GoldMarketAnalyzer:
                     for idx, row in sell_signals_df.iterrows():
                         sell_signals.append({
                             'date': idx.strftime('%Y-%m-%d'),
-                            'description': row['Signal_Description']
+                            'description': row.get('Signal_Description', '')
                         })
                 
-                if buy_signals:
-                    print(f"  🔔 最近买入信号 ({len(buy_signals)} 个):")
-                    for signal in buy_signals:
-                        print(f"    {signal['date']}: {signal['description']}")
+                # 解析并解决同日冲突（如果有）
+                tav_score = 0
+                if data.get("tav_summary"):
+                    tav_score = data["tav_summary"].get("tav_score", 0)
+                final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                    buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
+                )
                 
-                if sell_signals:
-                    print(f"  🔻 最近卖出信号 ({len(sell_signals)} 个):")
-                    for signal in sell_signals:
-                        print(f"    {signal['date']}: {signal['description']}")
+                if final_buy_signals:
+                    print(f"  🔔 最近买入信号 ({len(final_buy_signals)} 个):")
+                    for signal in final_buy_signals:
+                        reason = signal.get('reason', '')
+                        print(f"    {signal['date']}: {signal['description']}", end='')
+                        if reason:
+                            print(f" （{reason}）")
+                        else:
+                            print()
+                
+                if final_sell_signals:
+                    print(f"  🔻 最近卖出信号 ({len(final_sell_signals)} 个):")
+                    for signal in final_sell_signals:
+                        reason = signal.get('reason', '')
+                        print(f"    {signal['date']}: {signal['description']}", end='')
+                        if reason:
+                            print(f" （{reason}）")
+                        else:
+                            print()
+                
+                if signal_conflicts:
+                    print(f"  ⚠️ 信号冲突 ({len(signal_conflicts)} 个)，需要人工确认：")
+                    for c in signal_conflicts:
+                        tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                        print(f"    {c['date']}: {c['description']}{tav_info}")
                 
                 print()
         
@@ -509,9 +533,74 @@ class GoldMarketAnalyzer:
                 if 'Close' in latest:
                     print(f"{data['name']} ({symbol}): {latest['Close']:.2f}")
         print()
-        
-        
-    
+
+
+# --- 新增：信号冲突解析辅助函数 ---
+def resolve_conflicting_signals(buy_signals, sell_signals, tav_score=None, buy_threshold=55, sell_threshold=45):
+    """
+    输入：
+      buy_signals, sell_signals: 列表，每项形如 {'date': 'YYYY-MM-DD', 'description': '...'}
+      tav_score: 可选的数值评分（0-100），用于解冲决策
+      buy_threshold / sell_threshold: 用于基于 tav_score 的自动决策阈值
+
+    返回：
+      resolved_buy, resolved_sell, conflicts
+      resolved_buy/resolved_sell: 列表，包含被最终判定为买/卖的信号，
+        每项形如 {'date':..., 'description':..., 'reason':...}
+      conflicts: 列表，包含当天同时有买卖但无法自动判定的条目（保留原始描述，便于人工查看）
+    """
+    # 按日期汇总
+    by_date = {}
+    for s in buy_signals:
+        date = s.get('date')
+        by_date.setdefault(date, {'buy': [], 'sell': []})
+        by_date[date]['buy'].append(s.get('description'))
+    for s in sell_signals:
+        date = s.get('date')
+        by_date.setdefault(date, {'buy': [], 'sell': []})
+        by_date[date]['sell'].append(s.get('description'))
+
+    resolved_buy = []
+    resolved_sell = []
+    conflicts = []
+
+    for date, parts in sorted(by_date.items()):
+        buys = parts.get('buy', [])
+        sells = parts.get('sell', [])
+
+        # 只有买或只有卖 —— 直接保留
+        if buys and not sells:
+            combined_desc = " | ".join(buys)
+            resolved_buy.append({'date': date, 'description': combined_desc, 'reason': 'only_buy'})
+            continue
+        if sells and not buys:
+            combined_desc = " | ".join(sells)
+            resolved_sell.append({'date': date, 'description': combined_desc, 'reason': 'only_sell'})
+            continue
+
+        # 同一天同时存在买与卖 —— 尝试用 tav_score 自动解冲
+        if buys and sells:
+            if tav_score is not None:
+                # 简单策略：高于 buy_threshold -> 选 buy；低于 sell_threshold -> 选 sell；否则冲突
+                if tav_score >= buy_threshold and tav_score > sell_threshold:
+                    combined_desc = "Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                    resolved_buy.append({'date': date, 'description': combined_desc, 'reason': f'tav_decision({tav_score})'})
+                elif tav_score <= sell_threshold and tav_score < buy_threshold:
+                    combined_desc = "Sell: " + " | ".join(sells) + " ; Buy: " + " | ".join(buys)
+                    resolved_sell.append({'date': date, 'description': combined_desc, 'reason': f'tav_decision({tav_score})'})
+                else:
+                    # tav_score 在不确定区间 -> 标记冲突
+                    combined_desc = "同时包含买和卖信号。Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                    conflicts.append({'date': date, 'description': combined_desc, 'tav_score': tav_score})
+            else:
+                # 没有 tav_score，无法自动判定 -> 标记冲突
+                combined_desc = "同时包含买和卖信号。Buy: " + " | ".join(buys) + " ; Sell: " + " | ".join(sells)
+                conflicts.append({'date': date, 'description': combined_desc, 'tav_score': None})
+
+    return resolved_buy, resolved_sell, conflicts
+# --- 新增结束 ---
+
+
     def send_email_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
         """发送邮件报告"""
         try:
@@ -555,6 +644,7 @@ class GoldMarketAnalyzer:
                     .highlight {{ background-color: #ffffcc; }}
                     .buy-signal {{ background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; }}
                     .sell-signal {{ background-color: #ffebee; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+                    .conflict-signal {{ background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }}
                 </style>
             </head>
             <body>
@@ -648,18 +738,36 @@ class GoldMarketAnalyzer:
                         for idx, row in buy_signals_df.iterrows():
                             buy_signals.append({
                                 'date': idx.strftime('%Y-%m-%d'),
-                                'description': row['Signal_Description']
+                                'description': row.get('Signal_Description', '')
                             })
                     
                     if 'Sell_Signal' in recent_signals.columns:
-                        sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
-                        for idx, row in sell_signals_df.iterrows():
-                            sell_signals.append({
-                                'date': idx.strftime('%Y-%m-%d'),
-                                'description': row['Signal_Description']
-                            })
                     
-                    html_body += f"""
+                                            sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                    
+                                            for idx, row in sell_signals_df.iterrows():
+                    
+                                                sell_signals.append({
+                    
+                                                    'date': idx.strftime('%Y-%m-%d'),
+                    
+                                                    'description': row.get('Signal_Description', '')
+                    
+                                                })
+                    
+                                        
+                    
+                                        # 解析并解决同日冲突（如果有）
+                    
+                                        final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                    
+                                            buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
+                    
+                                        )
+                    
+                    
+                    
+                                        html_body += f"""
                         <tr>
                             <td>{data['name']}</td>
                             <td>{symbol}</td>
@@ -677,30 +785,50 @@ class GoldMarketAnalyzer:
                     """
                     
                     # 添加交易信号到HTML
-                    if buy_signals:
+                    if final_buy_signals:
                         html_body += f"""
                         <tr>
                             <td colspan="12">
                                 <div class="buy-signal">
                                     <strong>🔔 {data['name']} ({symbol}) 最近买入信号:</strong><br>
                         """
-                        for signal in buy_signals:
-                            html_body += f"<span style='color: green;'>• {signal['date']}: {signal['description']}</span><br>"
+                        for signal in final_buy_signals:
+                            reason = signal.get('reason', '')
+                            html_body += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
+                            if reason:
+                                html_body += f" （{reason}）"
+                            html_body += "</span><br>"
                         html_body += """
                                 </div>
                             </td>
                         </tr>
                         """
                     
-                    if sell_signals:
+                    if final_sell_signals:
                         html_body += f"""
                         <tr>
                             <td colspan="12">
                                 <div class="sell-signal">
                                     <strong>🔻 {data['name']} ({symbol}) 最近卖出信号:</strong><br>
                         """
-                        for signal in sell_signals:
-                            html_body += f"<span style='color: red;'>• {signal['date']}: {signal['description']}</span><br>"
+                        for signal in final_sell_signals:
+                            reason = signal.get('reason', '')
+                            html_body += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
+                            if reason:
+                                html_body += f" （{reason}）"
+                            html_body += "</span><br>"
+                    
+                    # 添加冲突区块
+                    if signal_conflicts:
+                        html_body += f"""
+                        <tr>
+                            <td colspan="12">
+                                <div class="conflict-signal">
+                                    <strong>⚠️ {data['name']} ({symbol}) 信号冲突（需要人工确认）:</strong><br>
+                        """
+                        for c in signal_conflicts:
+                            tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                            html_body += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
                         html_body += """
                                 </div>
                             </td>
@@ -808,7 +936,7 @@ class GoldMarketAnalyzer:
                         for idx, row in buy_signals_df.iterrows():
                             buy_signals.append({
                                 'date': idx.strftime('%Y-%m-%d'),
-                                'description': row['Signal_Description']
+                                'description': row.get('Signal_Description', '')
                             })
                     
                     if 'Sell_Signal' in recent_signals.columns:
@@ -816,19 +944,40 @@ class GoldMarketAnalyzer:
                         for idx, row in sell_signals_df.iterrows():
                             sell_signals.append({
                                 'date': idx.strftime('%Y-%m-%d'),
-                                'description': row['Signal_Description']
+                                'description': row.get('Signal_Description', '')
                             })
                     
-                    if buy_signals or sell_signals:
+                    # 解析并解决同日冲突（如果有）
+                    tav_score = 0
+                    if data.get("tav_summary"):
+                        tav_score = data["tav_summary"].get("tav_score", 0)
+                    final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                        buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
+                    )
+                    
+                    if final_buy_signals or final_sell_signals or signal_conflicts:
                         text_body += f"\n📊 {data['name']} ({symbol}) 交易信号:\n"
-                        if buy_signals:
-                            text_body += f"  🔔 最近买入信号 ({len(buy_signals)} 个):\n"
-                            for signal in buy_signals:
-                                text_body += f"    {signal['date']}: {signal['description']}\n"
-                        if sell_signals:
-                            text_body += f"  🔻 最近卖出信号 ({len(sell_signals)} 个):\n"
-                            for signal in sell_signals:
-                                text_body += f"    {signal['date']}: {signal['description']}\n"
+                        if final_buy_signals:
+                            text_body += f"  🔔 最近买入信号 ({len(final_buy_signals)} 个):\n"
+                            for signal in final_buy_signals:
+                                reason = signal.get('reason', '')
+                                text_body += f"    {signal['date']}: {signal['description']}"
+                                if reason:
+                                    text_body += f" （{reason}）"
+                                text_body += "\n"
+                        if final_sell_signals:
+                            text_body += f"  🔻 最近卖出信号 ({len(final_sell_signals)} 个):\n"
+                            for signal in final_sell_signals:
+                                reason = signal.get('reason', '')
+                                text_body += f"    {signal['date']}: {signal['description']}"
+                                if reason:
+                                    text_body += f" （{reason}）"
+                                text_body += "\n"
+                        if signal_conflicts:
+                            text_body += f"  ⚠️ 信号冲突 ({len(signal_conflicts)} 个)，需要人工确认：\n"
+                            for c in signal_conflicts:
+                                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
+                                text_body += f"    {c['date']}: {c['description']}{tav_info}\n"
             
             
             
