@@ -14,7 +14,7 @@
 - 在报告中输出上述指标
 
 指标含义与假设：
-1. 初始资本设定：150万港元（可配置）
+1. 初始资本设定：200万港元（可配置）
 2. 资金分配策略：每只股票分配初始资本的固定比例（默认10%）
 3. 买入规则：
    - 按资金分配比例计算应买入金额
@@ -47,7 +47,7 @@
     - 基数：年化收益率和年化波动率
 
 重要假设与限制：
-- 初始资本默认为150万港元（可配置）
+- 初始资本默认为200万港元（可配置）
 - 单只股票资金分配比例默认为10%（可配置）
 - 买入时确保总投入不超过初始资本
 - 卖出后释放现金，可用于后续买入
@@ -77,14 +77,14 @@ class AITradingAnalyzer:
     """AI股票交易分析器"""
     
     def __init__(self, csv_file: str = 'data/simulation_transactions.csv', 
-                 initial_capital: float = 1500000.0,
+                 initial_capital: float = 2000000.0,
                  allocation_pct: float = 10.0):
         """
         初始化分析器
         
         Args:
             csv_file: 交易记录CSV文件路径
-            initial_capital: 初始资本（港元），默认150万港元
+            initial_capital: 初始资本（港元），默认200万港元
             allocation_pct: 单只股票的资金分配比例（百分比），默认10%
         """
         self.csv_file = csv_file
@@ -1321,7 +1321,7 @@ class AITradingAnalyzer:
         
         # 交易规则说明
         report.append("【交易规则说明】")
-        report.append("1. 初始资本：150万港元（可配置）")
+        report.append("1. 初始资本：200万港元（可配置）")
         report.append("2. 买入规则：每只股票分配初始资本的10%（可配置）")
         report.append("3. 资金管理：确保总投入不超过初始资本，卖出后释放现金")
         report.append("4. 持仓市值可以因盈利而超过初始资本")
