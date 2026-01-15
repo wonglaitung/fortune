@@ -71,6 +71,7 @@ import os
 import math
 import re
 import time
+from tencent_finance import get_hk_stock_info_tencent
 
 
 class AITradingAnalyzer:
@@ -1138,8 +1139,21 @@ class AITradingAnalyzer:
             if buy_count > 0 or sell_count > 0:
                 if portfolio['shares'] > 0:
                     # 持仓中 - 获取最新价格
-                    latest_record = stock_trades.iloc[-1]
-                    latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+                    # 优先调用腾讯财经接口获取实时价格
+                    latest_price = None
+                    try:
+                        stock_info = get_hk_stock_info_tencent(stock_code)
+                        if stock_info and stock_info.get('current_price'):
+                            latest_price = stock_info['current_price']
+                            print(f"✓ 获取股票 {stock_code} 实时价格: {latest_price}")
+                    except Exception as e:
+                        print(f"✗ 获取股票 {stock_code} 实时价格失败: {e}")
+                    
+                    # 如果实时价格获取失败，使用交易记录中的价格
+                    if latest_price is None or latest_price <= 0:
+                        latest_record = stock_trades.iloc[-1]
+                        latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+                        print(f"⚠ 使用交易记录中的价格: {latest_price}")
                     
                     if latest_price > 0:
                         current_value = portfolio['shares'] * latest_price
@@ -1212,10 +1226,22 @@ class AITradingAnalyzer:
         
         # 使用 current_holdings 中的实际持仓数据
         for code, (shares, investment) in current_holdings.items():
-            # 获取该股票的最后价格
-            stock_trades = df[df['code'] == code].sort_values('timestamp')
-            latest_record = stock_trades.iloc[-1]
-            latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+            # 优先调用腾讯财经接口获取实时价格
+            latest_price = None
+            try:
+                stock_info = get_hk_stock_info_tencent(code)
+                if stock_info and stock_info.get('current_price'):
+                    latest_price = stock_info['current_price']
+                    print(f"✓ 获取股票 {code} 实时价格: {latest_price}")
+            except Exception as e:
+                print(f"✗ 获取股票 {code} 实时价格失败: {e}")
+            
+            # 如果实时价格获取失败，使用交易记录中的价格
+            if latest_price is None or latest_price <= 0:
+                stock_trades = df[df['code'] == code].sort_values('timestamp')
+                latest_record = stock_trades.iloc[-1]
+                latest_price = latest_record['current_price'] if pd.notna(latest_record['current_price']) else latest_record['price']
+                print(f"⚠ 使用交易记录中的价格: {latest_price}")
             
             if latest_price > 0 and shares > 0:
                 current_value = shares * latest_price
