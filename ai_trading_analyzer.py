@@ -1394,18 +1394,17 @@ class AITradingAnalyzer:
             
             subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
             # 在邮件主题中添加总体盈亏信息和回报指标
-            if total_profit := (profit_results['realized_profit'] + profit_results['unrealized_profit']):
-                if total_profit >= 0:
-                    profit_part = f"盈利 HK${total_profit:,.2f}"
-                else:
-                    profit_part = f"亏损 HK${abs(total_profit):,.2f}"
-            else:
-                profit_part = "盈亏 0"
-
-            # 计算扣除成本后的净收益率
+            # 计算扣除成本后的净盈亏
             total_transaction_cost = profit_results.get('total_transaction_cost', 0.0)
             net_profit = total_profit - total_transaction_cost
             net_roi = (net_profit / self.initial_capital * 100) if self.initial_capital > 0 else 0.0
+
+            if net_profit > 0:
+                profit_part = f"扣除成本后净盈亏 HK${net_profit:,.2f}"
+            elif net_profit < 0:
+                profit_part = f"扣除成本后净亏损 HK${abs(net_profit):,.2f}"
+            else:
+                profit_part = "扣除成本后净盈亏 HK$0.00"
 
             if xirr_value is not None:
                 subject += f" ({profit_part}, 净收益率 {net_roi:.2f}%, XIRR {xirr_value*100:.2f}%)"
