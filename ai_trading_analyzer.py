@@ -1402,10 +1402,15 @@ class AITradingAnalyzer:
             else:
                 profit_part = "盈亏 0"
 
+            # 计算扣除成本后的净收益率
+            total_transaction_cost = profit_results.get('total_transaction_cost', 0.0)
+            net_profit = total_profit - total_transaction_cost
+            net_roi = (net_profit / self.initial_capital * 100) if self.initial_capital > 0 else 0.0
+
             if xirr_value is not None:
-                subject += f" ({profit_part}, XIRR {xirr_value*100:.2f}%)"
+                subject += f" ({profit_part}, 净收益率 {net_roi:.2f}%, XIRR {xirr_value*100:.2f}%)"
             else:
-                subject += f" ({profit_part})"
+                subject += f" ({profit_part}, 净收益率 {net_roi:.2f}%)"
             
             # 发送邮件
             email_sent = self.send_email_notification(subject, report)
