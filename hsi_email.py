@@ -106,9 +106,9 @@ class HSIEmailSystem:
         'rsi_oversold': 1.2,   # RSI超卖
         'obv_up': 1.0,         # OBV上升
         'vwap_vol': 1.2,       # 价格高于VWAP且放量
+        'cmf_in': 1.2,         # CMF资金流入
         'price_above_vwap': 0.8,  # 价格高于VWAP
         'bb_oversold': 1.0,    # 布林带超卖
-        'cmf_in': 1.2,         # CMF资金流入
     }
 
     # 建仓信号阈值
@@ -122,11 +122,11 @@ class HSIEmailSystem:
         'vol_z': 1.5,          # 成交量z-score
         'macd_cross': 1.5,     # MACD死叉
         'rsi_high': 1.5,       # RSI超买
+        'cmf_out': 1.5,        # CMF资金流出
         'obv_down': 1.0,       # OBV下降
         'vwap_vol': 1.5,       # 价格低于VWAP且放量
         'price_down': 1.0,     # 价格下跌
         'bb_overbought': 1.0,  # 布林带超买
-        'cmf_out': 1.5,        # CMF资金流出
     }
 
     # 出货信号阈值
@@ -139,7 +139,7 @@ class HSIEmailSystem:
 
     # 成交量阈值
     VOL_RATIO_BUILDUP = 1.3
-    VOL_RATIO_DISTRIBUTION = 1.5
+    VOL_RATIO_DISTRIBUTION = 2.0
 
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
@@ -1280,6 +1280,10 @@ class HSIEmailSystem:
                 if self.USE_SCORED_SIGNALS:
                     try:
                         # 准备评分所需的数据行
+                        obv_value = latest.get('OBV', 0.0) if 'OBV' in latest else 0.0
+                        vwap_value = latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0
+                        cmf_value = latest.get('CMF', 0.0) if 'CMF' in latest else 0.0
+                        
                         score_row = pd.Series({
                             'price_position': indicators.get('price_position', 50.0),
                             'volume_ratio': volume_ratio,
@@ -1287,13 +1291,18 @@ class HSIEmailSystem:
                             'macd': macd,
                             'macd_signal': macd_signal,
                             'rsi': rsi,
-                            'obv': latest.get('OBV', 0.0) if 'OBV' in latest else 0.0,
-                            'vwap': latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0,
+                            'obv': obv_value,
+                            'vwap': vwap_value,
                             'current_price': current_price,
                             'change_1d': data.get('change_1d', 0.0),
                             'bb_position': bb_position,
-                            'cmf': latest.get('CMF', 0.0) if 'CMF' in latest else 0.0
+                            'cmf': cmf_value
                         })
+                        
+                        # 将评分所需的指标添加到 indicators 字典中
+                        indicators['obv'] = obv_value
+                        indicators['vwap'] = vwap_value
+                        indicators['cmf'] = cmf_value
                         
                         # 计算建仓评分
                         buildup_result = self._calculate_buildup_score(score_row, hist)
@@ -2848,6 +2857,19 @@ class HSIEmailSystem:
                     <td><span style="{buildup_color}">{buildup_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({buildup_level})</span></td>
                 </tr>
                 """
+
+                # 显示CMF资金流
+                cmf = indicators.get('cmf', None)
+                if cmf is not None:
+                    cmf_color = "color: green; font-weight: bold;" if cmf > 0.03 else "color: red; font-weight: bold;" if cmf < -0.05 else "color: #666;"
+                    cmf_text = f"+{cmf:.3f}" if cmf > 0 else f"{cmf:.3f}"
+                    cmf_status = "流入" if cmf > 0.03 else "流出" if cmf < -0.05 else "中性"
+                    html += f"""
+                <tr>
+                    <td>CMF资金流</td>
+                    <td><span style="{cmf_color}">{cmf_text}</span> <span style="font-size: 0.8em; color: #666;">({cmf_status})</span></td>
+                </tr>
+                """
                 if buildup_reasons:
                     html += f"""
                 <tr>
@@ -2863,6 +2885,18 @@ class HSIEmailSystem:
                 <tr>
                     <td>出货评分</td>
                     <td><span style="{distribution_color}">{distribution_score:.2f}</span> <span style="font-size: 0.8em; color: #666;">({distribution_level})</span></td>
+                </tr>
+                """
+                # 显示CMF资金流（如果建仓评分未显示CMF）
+                cmf = indicators.get('cmf', None)
+                if cmf is not None and buildup_score is None:
+                    cmf_color = "color: green; font-weight: bold;" if cmf > 0.03 else "color: red; font-weight: bold;" if cmf < -0.05 else "color: #666;"
+                    cmf_text = f"+{cmf:.3f}" if cmf > 0 else f"{cmf:.3f}"
+                    cmf_status = "流入" if cmf > 0.03 else "流出" if cmf < -0.05 else "中性"
+                    html += f"""
+                <tr>
+                    <td>CMF资金流</td>
+                    <td><span style="{cmf_color}">{cmf_text}</span> <span style="font-size: 0.8em; color: #666;">({cmf_status})</span></td>
                 </tr>
                 """
                 if distribution_reasons:
@@ -3504,7 +3538,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="16">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
