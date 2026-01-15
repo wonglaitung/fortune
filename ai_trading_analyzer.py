@@ -1394,7 +1394,8 @@ class AITradingAnalyzer:
             
             subject = f"AI交易分析报告 - {actual_start} 至 {actual_end}"
             # 在邮件主题中添加总体盈亏信息和回报指标
-            # 计算扣除成本后的净盈亏
+            # 计算总体盈亏和扣除成本后的净盈亏
+            total_profit = profit_results['realized_profit'] + profit_results['unrealized_profit']
             total_transaction_cost = profit_results.get('total_transaction_cost', 0.0)
             net_profit = total_profit - total_transaction_cost
             net_roi = (net_profit / self.initial_capital * 100) if self.initial_capital > 0 else 0.0
