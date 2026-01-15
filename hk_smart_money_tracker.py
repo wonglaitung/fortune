@@ -2532,7 +2532,20 @@ def main(run_date=None):
         df['RS_ratio_%'] = df['relative_strength'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
         df['RS_diff_%'] = df['relative_strength_diff'].apply(lambda x: round(x * 100, 2) if pd.notna(x) else None)
 
-        # 选择并重命名列用于最终报告（精简版：只保留32个核心字段）
+        # 添加布林带超卖/超买指标
+        def get_bb_status(bb_breakout):
+            """获取布林带状态"""
+            if pd.isna(bb_breakout):
+                return 'N/A'
+            elif bb_breakout < 0.2:
+                return '🟢超卖'
+            elif bb_breakout > 0.8:
+                return '🔴超买'
+            else:
+                return '正常'
+        df['bb_oversold_overbought'] = df['bb_breakout'].apply(get_bb_status)
+
+        # 选择并重命名列用于最终报告（精简版：只保留33个核心字段）
         df_report = df[[
             # 基本信息（核心）
             'name', 'code', 'last_close', 'change_pct', 'price_percentile',
@@ -2545,7 +2558,7 @@ def main(run_date=None):
             '3d_return', '5d_return', '10d_return', '20d_return', '60d_return',
             'multi_period_trend_score',
             # 核心技术指标（重要）
-            'rsi', 'macd', 'volume_ratio', 'atr', 'cmf',
+            'rsi', 'macd', 'volume_ratio', 'atr', 'cmf', 'bb_oversold_overbought',
             # 基本面（重要）
             'fundamental_score', 'pe_ratio', 'pb_ratio',
             # 相对强度（重要）
@@ -2607,7 +2620,7 @@ def main(run_date=None):
             '3日收益率(%)', '5日收益率(%)', '10日收益率(%)', '20日收益率(%)', '60日收益率(%)',
             '多周期趋势评分',
             # 核心技术指标（重要）
-            'RSI', 'MACD', '成交量比率', 'ATR', 'CMF',
+            'RSI', 'MACD', '成交量比率', 'ATR', 'CMF', '布林带超卖/超买',
             # 基本面（重要）
             '基本面评分', '市盈率', '市净率',
             # 相对强度（重要）
@@ -2911,7 +2924,7 @@ def main(run_date=None):
                 chunk = df_report.iloc[i:i+5]
                 
                 # 创建包含分类信息和字段名的完整表格
-                # 分类行（精简版：32个核心字段）
+                # 分类行（精简版：33个核心字段）
                 category_row = [
                     # 基本信息（核心）- 5列
                     '基本信息', '', '', '', '',
@@ -2921,8 +2934,8 @@ def main(run_date=None):
                     '风险控制', '', '',
                     # 多周期趋势（重要）- 6列
                     '多周期趋势', '', '', '', '', '',
-                    # 核心技术指标（重要）- 5列
-                    '核心技术指标', '', '', '', '',
+                    # 核心技术指标（重要）- 6列
+                    '核心技术指标', '', '', '', '', '',
                     # 基本面（重要）- 3列
                     '基本面', '', '',
                     # 相对强度（重要）- 2列
