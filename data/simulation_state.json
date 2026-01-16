@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 480.18929405196104,
+  "capital": 39618.18929405196,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -13,9 +13,9 @@
       "stop_loss_price": 7.4
     },
     "0883.HK": {
-      "shares": 7000,
-      "avg_price": 21.36,
-      "stop_loss_price": 19.5
+      "shares": 7100,
+      "avg_price": 21.364225352112676,
+      "stop_loss_price": 19.8
     },
     "1288.HK": {
       "shares": 26700,
@@ -27,11 +27,6 @@
       "avg_price": 6.29,
       "stop_loss_price": 5.8
     },
-    "3690.HK": {
-      "shares": 500,
-      "avg_price": 104.9,
-      "stop_loss_price": 100.0
-    },
     "1330.HK": {
       "shares": 200,
       "avg_price": 5.27,
@@ -42,10 +37,10 @@
       "avg_price": 75.9,
       "stop_loss_price": 74.5
     },
-    "2533.HK": {
-      "shares": 6100,
-      "avg_price": 22.06,
-      "stop_loss_price": 20.3
+    "3690.HK": {
+      "shares": 1500,
+      "avg_price": 99.85,
+      "stop_loss_price": 95.0
     }
   },
   "transaction_history": [
@@ -18092,6 +18087,86 @@
       "current_price": 47.64,
       "target_price": 49.59,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16T13:40:29.436908",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "出货信号强，RSI超买，资金流出",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 128.8,
+      "target_price": 122.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16T13:40:31.494757",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 6100,
+      "price": 23.14,
+      "amount": 141154.0,
+      "capital_after": 141634.18929405196,
+      "reason": "出货信号，RSI逼近超买，基本面亏损",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 23.14,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-16T13:40:39.454818",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 500,
+      "price": 99.85,
+      "amount": 49925.0,
+      "capital_after": 191559.18929405196,
+      "reason": "止损触发: 当前价格HK$99.85 < 止损价格HK$100.00",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 99.85,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-16T13:40:44.964423",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 100,
+      "price": 21.66,
+      "amount": 2166.0,
+      "capital_after": 189393.18929405196,
+      "reason": "多周期趋势强劲向上，基本面优质，风险等级中",
+      "success": true,
+      "stop_loss_price": 19.8,
+      "current_price": 21.66,
+      "target_price": 24.0,
+      "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-16T13:40:50.349656",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 1500,
+      "price": 99.85,
+      "amount": 149775.0,
+      "capital_after": 39618.18929405196,
+      "reason": "超跌反弹机会，技术指标协同支持",
+      "success": true,
+      "stop_loss_price": 95.0,
+      "current_price": 99.85,
+      "target_price": 105.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -30352,57 +30427,187 @@
           "stop_loss_price": 20.3
         }
       }
+    },
+    {
+      "timestamp": "2026-01-16T13:40:32.403742",
+      "capital": 141634.18929405196,
+      "portfolio_value": 1026256.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19400,
+          "avg_price": 7.622680412371134,
+          "stop_loss_price": 7.4
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "3690.HK": {
+          "shares": 0,
+          "avg_price": 104.9,
+          "stop_loss_price": 100.0
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "0981.HK": {
+          "shares": 200,
+          "avg_price": 75.9,
+          "stop_loss_price": 74.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-16T13:40:40.259098",
+      "capital": 191559.18929405196,
+      "portfolio_value": 1026031.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19400,
+          "avg_price": 7.622680412371134,
+          "stop_loss_price": 7.4
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "0981.HK": {
+          "shares": 200,
+          "avg_price": 75.9,
+          "stop_loss_price": 74.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-16T13:40:45.815620",
+      "capital": 189393.18929405196,
+      "portfolio_value": 1026281.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19400,
+          "avg_price": 7.622680412371134,
+          "stop_loss_price": 7.4
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "0981.HK": {
+          "shares": 200,
+          "avg_price": 75.9,
+          "stop_loss_price": 74.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-16T13:40:51.286962",
+      "capital": 39618.18929405196,
+      "portfolio_value": 1026233.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19400,
+          "avg_price": 7.622680412371134,
+          "stop_loss_price": 7.4
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26700,
+          "avg_price": 5.64,
+          "stop_loss_price": 5.2
+        },
+        "1398.HK": {
+          "shares": 24000,
+          "avg_price": 6.29,
+          "stop_loss_price": 5.8
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "0981.HK": {
+          "shares": 200,
+          "avg_price": 75.9,
+          "stop_loss_price": 74.5
+        },
+        "3690.HK": {
+          "shares": 1500,
+          "avg_price": 99.85,
+          "stop_loss_price": 95.0
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-15 15:45:04",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分（strong级别），价格高位100.0%百分位，RSI 77.17严重超买，基本面评分仅20分（PE 1674.4估值泡沫），维持此前卖出决策",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 99.55,
-      "target_price": 95.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-15 15:45:08",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分9.0分（strong级别），信号恶化（上日出货评分8.0升至9.0），价格高位100.0%百分位，RSI 73.05超买，市场发生重大变化：出货评分显著上升强化卖出信号",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 11.91,
-      "target_price": 11.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-15 15:45:10",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分（strong级别），价格高位89.86%百分位，RSI 68.55超买，基本面评分60分（PE -153.3亏损），维持此前卖出决策",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 56.6,
-      "target_price": 52.0,
-      "validity_period": 3
-    },
     {
       "timestamp": "2026-01-15 15:45:16",
       "type": "BUY",
@@ -30559,6 +30764,129 @@
       "stop_loss_price": 46.27,
       "current_price": 47.64,
       "target_price": 49.59,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16 13:40:29",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "多周期趋势强劲向上，基本面优质，风险等级中",
+          "allocation_pct": 15,
+          "stop_loss_price": 19.8,
+          "target_price": 24.0,
+          "validity_period": 21
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "超跌反弹机会，技术指标协同支持",
+          "allocation_pct": 15,
+          "stop_loss_price": 95.0,
+          "target_price": 105.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货信号强，RSI超买，资金流出",
+          "stop_loss_triggered": false,
+          "target_price": 122.0,
+          "validity_period": 7
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "出货信号，RSI逼近超买，基本面亏损",
+          "stop_loss_triggered": false,
+          "target_price": 21.5,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-16 13:40:29",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号强，RSI超买，资金流出",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 128.8,
+      "target_price": 122.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16 13:40:31",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 6100,
+      "price": 23.14,
+      "amount": 141154.0,
+      "reason": "出货信号，RSI逼近超买，基本面亏损",
+      "capital_after": 141634.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 23.14,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 6588.000000000011
+    },
+    {
+      "timestamp": "2026-01-16 13:40:39",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 500,
+      "price": 99.85,
+      "amount": 49925.0,
+      "reason": "止损触发: 当前价格HK$99.85 < 止损价格HK$100.00",
+      "capital_after": 191559.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 99.85,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -2525.0000000000055
+    },
+    {
+      "timestamp": "2026-01-16 13:40:44",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 100,
+      "price": 21.66,
+      "amount": 2166.0,
+      "reason": "多周期趋势强劲向上，基本面优质，风险等级中",
+      "capital_after": 189393.18929405196,
+      "success": true,
+      "stop_loss_price": 19.8,
+      "current_price": 21.66,
+      "target_price": 24.0,
+      "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-16 13:40:50",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 1500,
+      "price": 99.85,
+      "amount": 149775.0,
+      "reason": "超跌反弹机会，技术指标协同支持",
+      "capital_after": 39618.18929405196,
+      "success": true,
+      "stop_loss_price": 95.0,
+      "current_price": 99.85,
+      "target_price": 105.0,
       "validity_period": 7
     }
   ],
