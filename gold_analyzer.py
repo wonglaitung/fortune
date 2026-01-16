@@ -533,6 +533,325 @@ class GoldMarketAnalyzer:
                 if 'Close' in latest:
                     print(f"{data['name']} ({symbol}): {latest['Close']:.2f}")
         print()
+    
+    def send_email_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
+        """发送邮件报告"""
+        try:
+            # 获取SMTP配置
+            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
+            smtp_user = os.environ.get("YAHOO_EMAIL")
+            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            sender_email = smtp_user
+            
+            if not smtp_user or not smtp_pass:
+                print("⚠️  邮件配置缺失，跳过发送邮件")
+                return False
+            
+            # 获取收件人
+            recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+            recipients = [r.strip() for r in recipient_env.split(",")] if "," in recipient_env else [recipient_env]
+            
+            print(f"📧 正在发送邮件到: {', '.join(recipients)}")
+            
+            # 创建邮件内容
+            subject = "黄金市场分析报告"
+            
+            # 纯文本版本
+            text_body = "黄金市场分析报告\n\n"
+            
+            # HTML版本
+            report_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            html_body = f"""
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; }}
+                    h2 {{ color: #333; }}
+                    h3 {{ color: #555; }}
+                    table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                    th {{ background-color: #f2f2f2; }}
+                    tr:nth-child(even) {{ background-color: #f9f9f9; }}
+                    .section {{ margin: 20px 0; }}
+                    .highlight {{ background-color: #ffffcc; }}
+                    .buy-signal {{ background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+                    .sell-signal {{ background-color: #ffebee; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+                    .conflict-signal {{ background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+                </style>
+            </head>
+            <body>
+                <h2>🥇 黄金市场综合分析报告</h2>
+                <p><strong>报告时间:</strong> {report_time}</p>
+            """
+            
+            # 添加黄金价格概览
+            html_body += """
+                <div class="section">
+                    <h3>💰 黄金价格概览</h3>
+                    <table>
+                        <tr>
+                            <th>资产名称</th>
+                            <th>最新价格</th>
+                            <th>24小时变化</th>
+                            <th>5日变化</th>
+                            <th>20日变化</th>
+                        </tr>
+            """
+            
+            for symbol, data in gold_data.items():
+                if not data['data'].empty:
+                    df = data['data']
+                    latest = df.iloc[-1]
+                    prev = df.iloc[-2] if len(df) > 1 else latest
+                    
+                    price = latest['Close']
+                    change_1d = (price - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0
+                    change_5d = latest['Price_change_5d'] * 100 if 'Price_change_5d' in latest else 0
+                    change_20d = latest['Price_change_20d'] * 100 if 'Price_change_20d' in latest else 0
+                    
+                    # 根据涨跌添加颜色
+                    color_1d = 'green' if change_1d >= 0 else 'red'
+                    color_5d = 'green' if change_5d >= 0 else 'red'
+                    color_20d = 'green' if change_20d >= 0 else 'red'
+                    
+                    html_body += f"""
+                        <tr>
+                            <td>{data['name']} ({symbol})</td>
+                            <td>${price:.2f}</td>
+                            <td style="color: {color_1d}">{change_1d:+.2f}%</td>
+                            <td style="color: {color_5d}">{change_5d:+.2f}%</td>
+                            <td style="color: {color_20d}">{change_20d:+.2f}%</td>
+                        </tr>
+                    """
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 添加技术分析
+            html_body += """
+                <div class="section">
+                    <h3>🔬 技术分析</h3>
+                    <table>
+                        <tr>
+                            <th>资产名称</th>
+                            <th>代码</th>
+                            <th>趋势</th>
+                            <th>RSI (14日)</th>
+                            <th>MACD</th>
+                            <th>MACD信号线</th>
+                            <th>布林带位置</th>
+                            <th>支撑位</th>
+                            <th>阻力位</th>
+                            <th>20日均线</th>
+                            <th>50日均线</th>
+                        </tr>
+            """
+            
+            for symbol, data in technical_analysis.items():
+                if not data['indicators'].empty:
+                    latest = data['indicators'].iloc[-1]
+                    support = data['support_resistance']['support'] if data['support_resistance']['support'] else 'N/A'
+                    resistance = data['support_resistance']['resistance'] if data['support_resistance']['resistance'] else 'N/A'
+                    bb_position = latest.get('BB_position', 0.5) if 'BB_position' in latest else 0.5
+                    
+                    # 检查最近的交易信号
+                    recent_signals = data['indicators'].tail(5)
+                    buy_signals = []
+                    sell_signals = []
+                    
+                    # 获取TAV评分数据
+                    tav_score = 0
+                    tav_status = "无TAV"
+                    if data.get("tav_summary"):
+                        tav_score = data["tav_summary"].get("tav_score", 0)
+                        tav_status = data["tav_summary"].get("tav_status", "无TAV")
+                    if 'Buy_Signal' in recent_signals.columns:
+                        buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
+                        for idx, row in buy_signals_df.iterrows():
+                            buy_signals.append({
+                                'date': idx.strftime('%Y-%m-%d'),
+                                'description': row.get('Signal_Description', '')
+                            })
+                    
+                    if 'Sell_Signal' in recent_signals.columns:
+                        sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                        for idx, row in sell_signals_df.iterrows():
+                            sell_signals.append({
+                                'date': idx.strftime('%Y-%m-%d'),
+                                'description': row.get('Signal_Description', '')
+                            })
+                    
+                    # 解析并解决同日冲突（如果有）
+                    final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                        buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
+                    )
+                    
+                    
+                    
+                    html_body += f"""
+                        <tr>
+                            <td>{data['name']}</td>
+                            <td>{symbol}</td>
+                            <td>{data['trend']}</td>
+                            <td>{latest['RSI']:.1f}</td>
+                            <td>{latest['MACD']:.2f}</td>
+                            <td>{latest['MACD_signal']:.2f}</td>
+                            <td>{bb_position:.2f}</td>
+                            <td>${f"{support:.2f}" if isinstance(support, (int, float)) else support}</td>
+                            <td>${f"{resistance:.2f}" if isinstance(resistance, (int, float)) else resistance}</td>
+                            <td>${latest['MA20']:.2f}</td>
+                            <td>${latest['MA50']:.2f}</td>
+                        </tr>
+                    """
+                    
+                    # 添加交易信号到HTML
+                    if final_buy_signals:
+                        html_body += f"""
+                        <tr>
+                            <td colspan="11">
+                                <div class="buy-signal">
+                                    <strong>🔔 {data['name']} ({symbol}) 最近买入信号:</strong><br>
+                        """
+                        for signal in final_buy_signals:
+                            reason = signal.get('reason', '')
+                            html_body += f"• {signal['date']}: {signal['description']} ({reason})<br>"
+                        html_body += """
+                                </div>
+                            </td>
+                        </tr>
+                        """
+                    
+                    if final_sell_signals:
+                        html_body += f"""
+                        <tr>
+                            <td colspan="11">
+                                <div class="sell-signal">
+                                    <strong>🔻 {data['name']} ({symbol}) 最近卖出信号:</strong><br>
+                        """
+                        for signal in final_sell_signals:
+                            reason = signal.get('reason', '')
+                            html_body += f"• {signal['date']}: {signal['description']} ({reason})<br>"
+                        html_body += """
+                                </div>
+                            </td>
+                        </tr>
+                        """
+                    
+                    if signal_conflicts:
+                        html_body += f"""
+                        <tr>
+                            <td colspan="11">
+                                <div class="conflict-signal">
+                                    <strong>⚠️ {data['name']} ({symbol}) 信号冲突:</strong><br>
+                        """
+                        for conflict in signal_conflicts:
+                            tav_info = f" TAV={conflict.get('tav_score')}" if conflict.get('tav_score') is not None else ""
+                            html_body += f"• {conflict['date']}: {conflict['description']}{tav_info}<br>"
+                        html_body += """
+                                </div>
+                            </td>
+                        </tr>
+                        """
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 添加宏观经济环境
+            html_body += """
+                <div class="section">
+                    <h3>📊 宏观经济环境</h3>
+                    <table>
+                        <tr>
+                            <th>指标名称</th>
+                            <th>代码</th>
+                            <th>最新值</th>
+                        </tr>
+            """
+            
+            for symbol, data in macro_data.items():
+                if not data['data'].empty:
+                    latest = data['data'].iloc[-1]
+                    if 'Close' in latest:
+                        html_body += f"""
+                        <tr>
+                            <td>{data['name']}</td>
+                            <td>{symbol}</td>
+                            <td>{latest['Close']:.2f}</td>
+                        </tr>
+                        """
+            
+            html_body += """
+                    </table>
+                </div>
+            """
+            
+            # 结束HTML
+            html_body += """
+                <p><em>本报告由AI自动生成，仅供参考，不构成投资建议。</em></p>
+            </body>
+            </html>
+            """
+            
+            # 创建邮件
+            msg = MIMEMultipart('alternative')
+            msg['From'] = sender_email
+            msg['To'] = ", ".join(recipients)
+            msg['Subject'] = subject
+            
+            # 添加文本和HTML部分
+            text_part = MIMEText(text_body, 'plain', 'utf-8')
+            html_part = MIMEText(html_body, 'html', 'utf-8')
+            
+            msg.attach(text_part)
+            msg.attach(html_part)
+            
+            # 发送邮件（增加重试机制）
+            for attempt in range(3):
+                try:
+                    if "163.com" in smtp_server:
+                        # 163邮箱使用SSL连接，端口465
+                        smtp_port = 465
+                        use_ssl = True
+                    elif "gmail.com" in smtp_server:
+                        # Gmail使用TLS连接，端口587
+                        smtp_port = 587
+                        use_ssl = False
+                    else:
+                        # 默认使用TLS连接，端口587
+                        smtp_port = 587
+                        use_ssl = False
+                    
+                    if use_ssl:
+                        # 使用SSL连接
+                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    else:
+                        # 使用TLS连接
+                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                        server.starttls()
+                        server.login(smtp_user, smtp_pass)
+                        server.sendmail(sender_email, recipients, msg.as_string())
+                        server.quit()
+                    
+                    print("✅ 邮件发送成功！")
+                    return True
+                except Exception as e:
+                    print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
+                    if attempt < 2:  # 不是最后一次尝试，等待后重试
+                        time.sleep(5)
+            
+            print("❌ 邮件发送失败，已尝试3次")
+            return False
+        except Exception as e:
+            print(f"❌ 邮件发送过程中发生错误: {e}")
+            return False
 
 
 # --- 新增：信号冲突解析辅助函数 ---
@@ -599,462 +918,6 @@ def resolve_conflicting_signals(buy_signals, sell_signals, tav_score=None, buy_t
 
     return resolved_buy, resolved_sell, conflicts
 # --- 新增结束 ---
-
-
-    def send_email_report(self, gold_data, technical_analysis, macro_data, llm_analysis):
-        """发送邮件报告"""
-        try:
-            # 获取SMTP配置
-            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-            smtp_user = os.environ.get("YAHOO_EMAIL")
-            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
-            sender_email = smtp_user
-            
-            if not smtp_user or not smtp_pass:
-                print("⚠️  邮件配置缺失，跳过发送邮件")
-                return False
-            
-            # 获取收件人
-            recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
-            recipients = [r.strip() for r in recipient_env.split(",")] if "," in recipient_env else [recipient_env]
-            
-            print(f"📧 正在发送邮件到: {', '.join(recipients)}")
-            
-            # 创建邮件内容
-            subject = "黄金市场分析报告"
-            
-            # 纯文本版本
-            text_body = "黄金市场分析报告\n\n"
-            
-            # HTML版本
-            report_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            html_body = f"""
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body {{ font-family: Arial, sans-serif; }}
-                    h2 {{ color: #333; }}
-                    h3 {{ color: #555; }}
-                    table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                    th {{ background-color: #f2f2f2; }}
-                    tr:nth-child(even) {{ background-color: #f9f9f9; }}
-                    .section {{ margin: 20px 0; }}
-                    .highlight {{ background-color: #ffffcc; }}
-                    .buy-signal {{ background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; }}
-                    .sell-signal {{ background-color: #ffebee; padding: 10px; border-radius: 5px; margin: 10px 0; }}
-                    .conflict-signal {{ background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }}
-                </style>
-            </head>
-            <body>
-                <h2>🥇 黄金市场综合分析报告</h2>
-                <p><strong>报告生成时间:</strong> {report_time}</p>
-            """
-            
-            # 1. 黄金价格概览
-            html_body += """
-                <div class="section">
-                    <h3>💰 黄金价格概览</h3>
-                    <table>
-                        <tr>
-                            <th>资产名称</th>
-                            <th>代码</th>
-                            <th>最新价格</th>
-                            <th>24小时变化</th>
-                            <th>5日变化</th>
-                            <th>20日变化</th>
-                        </tr>
-            """
-            
-            for symbol, data in gold_data.items():
-                if not data['data'].empty:
-                    df = data['data']
-                    latest = df.iloc[-1]
-                    prev = df.iloc[-2] if len(df) > 1 else latest
-                    
-                    price = latest['Close']
-                    change_1d = (price - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0
-                    change_5d = latest['Price_change_5d'] * 100 if 'Price_change_5d' in latest else 0
-                    change_20d = latest['Price_change_20d'] * 100 if 'Price_change_20d' in latest else 0
-                    
-                    html_body += f"""
-                        <tr>
-                            <td>{data['name']}</td>
-                            <td>{symbol}</td>
-                            <td>${price:.2f}</td>
-                            <td>{change_1d:+.2f}%</td>
-                            <td>{change_5d:+.2f}%</td>
-                            <td>{change_20d:+.2f}%</td>
-                        </tr>
-                    """
-            
-            html_body += """
-                    </table>
-                </div>
-            """
-            
-            # 2. 技术分析
-            html_body += """
-                <div class="section">
-                    <h3>🔬 技术分析</h3>
-                    <table>
-                        <tr>
-                            <th>资产名称</th>
-                            <th>代码</th>
-                            <th>趋势</th>
-                            <th>RSI (14日)</th>
-                            <th>MACD</th>
-                            <th>MACD信号线</th>
-                            <th>布林带位置</th>
-                            <th>TAV评分</th>
-                            <th>支撑位</th>
-                            <th>阻力位</th>
-                            <th>20日均线</th>
-                            <th>50日均线</th>
-                        </tr>
-            """
-            
-            for symbol, data in technical_analysis.items():
-                if not data['indicators'].empty:
-                    latest = data['indicators'].iloc[-1]
-                    support = data['support_resistance']['support'] if data['support_resistance']['support'] else 'N/A'
-                    resistance = data['support_resistance']['resistance'] if data['support_resistance']['resistance'] else 'N/A'
-                    bb_position = latest.get('BB_position', 0.5) if 'BB_position' in latest else 0.5
-                    
-                    # 检查最近的交易信号
-                    recent_signals = data['indicators'].tail(5)
-                    buy_signals = []
-                    sell_signals = []
-                    
-                    # 获取TAV评分数据
-                    tav_score = 0
-                    tav_status = "无TAV"
-                    if data.get("tav_summary"):
-                        tav_score = data["tav_summary"].get("tav_score", 0)
-                        tav_status = data["tav_summary"].get("tav_status", "无TAV")
-                    if 'Buy_Signal' in recent_signals.columns:
-                        buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
-                        for idx, row in buy_signals_df.iterrows():
-                            buy_signals.append({
-                                'date': idx.strftime('%Y-%m-%d'),
-                                'description': row.get('Signal_Description', '')
-                            })
-                    
-                    if 'Sell_Signal' in recent_signals.columns:
-                        sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
-                        for idx, row in sell_signals_df.iterrows():
-                            sell_signals.append({
-                                'date': idx.strftime('%Y-%m-%d'),
-                                'description': row.get('Signal_Description', '')
-                            })
-                    
-                    # 解析并解决同日冲突（如果有）
-                    final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
-                        buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
-                    )
-                    
-                    html_body += f"""
-                        <tr>
-                            <td>{data['name']}</td>
-                            <td>{symbol}</td>
-                            <td>{data['trend']}</td>
-                            <td>{latest['RSI']:.1f}</td>
-                            <td>{latest['MACD']:.2f}</td>
-                            <td>{tav_score:.1f} ({tav_status})</td>
-                            <td>{latest['MACD_signal']:.2f}</td>
-                            <td>{bb_position:.2f}</td>
-                            <td>${f"{support:.2f}" if isinstance(support, (int, float)) else support}</td>
-                            <td>${f"{resistance:.2f}" if isinstance(resistance, (int, float)) else resistance}</td>
-                            <td>${latest['MA20']:.2f}</td>
-                            <td>${latest['MA50']:.2f}</td>
-                        </tr>
-                    """
-                    
-                    # 添加交易信号到HTML
-                    if final_buy_signals:
-                        html_body += f"""
-                        <tr>
-                            <td colspan="12">
-                                <div class="buy-signal">
-                                    <strong>🔔 {data['name']} ({symbol}) 最近买入信号:</strong><br>
-                        """
-                        for signal in final_buy_signals:
-                            reason = signal.get('reason', '')
-                            html_body += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
-                            if reason:
-                                html_body += f" （{reason}）"
-                            html_body += "</span><br>"
-                        html_body += """
-                                </div>
-                            </td>
-                        </tr>
-                        """
-                    
-                    if final_sell_signals:
-                        html_body += f"""
-                        <tr>
-                            <td colspan="12">
-                                <div class="sell-signal">
-                                    <strong>🔻 {data['name']} ({symbol}) 最近卖出信号:</strong><br>
-                        """
-                        for signal in final_sell_signals:
-                            reason = signal.get('reason', '')
-                            html_body += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
-                            if reason:
-                                html_body += f" （{reason}）"
-                            html_body += "</span><br>"
-                    
-                    # 添加冲突区块
-                    if signal_conflicts:
-                        html_body += f"""
-                        <tr>
-                            <td colspan="12">
-                                <div class="conflict-signal">
-                                    <strong>⚠️ {data['name']} ({symbol}) 信号冲突（需要人工确认）:</strong><br>
-                        """
-                        for c in signal_conflicts:
-                            tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
-                            html_body += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
-                        html_body += """
-                                </div>
-                            </td>
-                        </tr>
-                        """
-            
-            html_body += """
-                    </table>
-                </div>
-            """
-            
-            # 3. 宏观经济环境
-            html_body += """
-                <div class="section">
-                    <h3>📊 宏观经济环境</h3>
-                    <table>
-                        <tr>
-                            <th>指标名称</th>
-                            <th>代码</th>
-                            <th>最新值</th>
-                        </tr>
-            """
-            
-            for symbol, data in macro_data.items():
-                if not data['data'].empty:
-                    latest = data['data'].iloc[-1]
-                    if 'Close' in latest:
-                        html_body += f"""
-                            <tr>
-                                <td>{data['name']}</td>
-                                <td>{symbol}</td>
-                                <td>{latest['Close']:.2f}</td>
-                            </tr>
-                        """
-            
-            html_body += """
-                    </table>
-                </div>
-            """
-            
-            
-            
-            # 添加指标说明
-            html_body += """
-                <div class="section">
-                    <h3>📋 指标说明</h3>
-                    <div style="font-size:0.9em; line-height:1.4;">
-                    <ul>
-                      <li><b>价格(USD)</b>：黄金相关资产的当前价格，以美元计价。</li>
-                      <li><b>24小时变化(%)</b>：过去24小时内价格的变化百分比。</li>
-                      <li><b>5日变化(%)</b>：过去5个交易日内价格的变化百分比。</li>
-                      <li><b>20日变化(%)</b>：过去20个交易日内价格的变化百分比。</li>
-                      <li><b>RSI(相对强弱指数)</b>：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。</li>
-                      <li><b>MACD(异同移动平均线)</b>：判断价格趋势和动能的技术指标。</li>
-                      <li><b>MA20(20日移动平均线)</b>：过去20个交易日的平均价格，反映短期趋势。</li>
-                      <li><b>MA50(50日移动平均线)</b>：过去50个交易日的平均价格，反映中期趋势。</li>
-                      <li><b>布林带位置</b>：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。</li>
-                      <li><b>趋势</b>：市场当前的整体方向。
-                        <ul>
-                          <li><b>强势多头</b>：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）</li>
-                          <li><b>多头趋势</b>：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）</li>
-                          <li><b>弱势空头</b>：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）</li>
-                          <li><b>空头趋势</b>：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）</li>
-                          <li><b>震荡整理</b>：价格在一定区间内波动，无明显趋势</li>
-                          <li><b>短期上涨/下跌</b>：基于最近价格变化的短期趋势判断</li>
-                      <li><b>TAV评分(趋势-动量-成交量综合评分)</b>：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
-                        <ul>
-                          <li><b>计算方式</b>：TAV评分 = 趋势评分 × 45% + 动量评分 × 30% + 成交量评分 × 25%（黄金权重配置）</li>
-                          <li><b>趋势评分(45%权重)</b>：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性</li>
-                          <li><b>动量评分(30%权重)</b>：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向</li>
-                          <li><b>成交量评分(25%权重)</b>：基于20日成交量均线，分析成交量突增(>1.15倍为弱、>1.3倍为中、>1.6倍为强)或萎缩(<0.7倍)情况</li>
-                          <li><b>评分等级</b>：
-                            <ul>
-                              <li>≥75分：强共振 - 三个维度高度一致，强烈信号</li>
-                              <li>50-74分：中等共振 - 多数维度一致，中等信号</li>
-                              <li>25-49分：弱共振 - 部分维度一致，弱信号</li>
-                              <li><25分：无共振 - 各维度分歧，无明确信号</li>
-                            </ul>
-                          </li>
-                        </ul>
-                      </li>
-                        </ul>
-                      </li>
-                    </ul>
-                    </div>
-                </div>
-            """
-            
-            # 结束HTML
-            html_body += """
-            </body>
-            </html>
-            """
-            
-            # 在文本版本中也添加交易信号
-            for symbol, data in technical_analysis.items():
-                if not data['indicators'].empty:
-                    # 检查最近的交易信号
-                    recent_signals = data['indicators'].tail(5)
-                    buy_signals = []
-                    sell_signals = []
-                    
-                    if 'Buy_Signal' in recent_signals.columns:
-                        buy_signals_df = recent_signals[recent_signals['Buy_Signal'] == True]
-                        for idx, row in buy_signals_df.iterrows():
-                            buy_signals.append({
-                                'date': idx.strftime('%Y-%m-%d'),
-                                'description': row.get('Signal_Description', '')
-                            })
-                    
-                    if 'Sell_Signal' in recent_signals.columns:
-                        sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
-                        for idx, row in sell_signals_df.iterrows():
-                            sell_signals.append({
-                                'date': idx.strftime('%Y-%m-%d'),
-                                'description': row.get('Signal_Description', '')
-                            })
-                    
-                    # 解析并解决同日冲突（如果有）
-                    tav_score = 0
-                    if data.get("tav_summary"):
-                        tav_score = data["tav_summary"].get("tav_score", 0)
-                    final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
-                        buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
-                    )
-                    
-                    if final_buy_signals or final_sell_signals or signal_conflicts:
-                        text_body += f"\n📊 {data['name']} ({symbol}) 交易信号:\n"
-                        if final_buy_signals:
-                            text_body += f"  🔔 最近买入信号 ({len(final_buy_signals)} 个):\n"
-                            for signal in final_buy_signals:
-                                reason = signal.get('reason', '')
-                                text_body += f"    {signal['date']}: {signal['description']}"
-                                if reason:
-                                    text_body += f" （{reason}）"
-                                text_body += "\n"
-                        if final_sell_signals:
-                            text_body += f"  🔻 最近卖出信号 ({len(final_sell_signals)} 个):\n"
-                            for signal in final_sell_signals:
-                                reason = signal.get('reason', '')
-                                text_body += f"    {signal['date']}: {signal['description']}"
-                                if reason:
-                                    text_body += f" （{reason}）"
-                                text_body += "\n"
-                        if signal_conflicts:
-                            text_body += f"  ⚠️ 信号冲突 ({len(signal_conflicts)} 个)，需要人工确认：\n"
-                            for c in signal_conflicts:
-                                tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
-                                text_body += f"    {c['date']}: {c['description']}{tav_info}\n"
-            
-            
-            
-            # 添加指标说明到文本版本
-            text_body += "\n📋 指标说明:\n"
-            text_body += "价格(USD)：黄金相关资产的当前价格，以美元计价。\n"
-            text_body += "24小时变化(%)：过去24小时内价格的变化百分比。\n"
-            text_body += "5日变化(%)：过去5个交易日内价格的变化百分比。\n"
-            text_body += "20日变化(%)：过去20个交易日内价格的变化百分比。\n"
-            text_body += "RSI(相对强弱指数)：衡量价格变化速度和幅度的技术指标，范围0-100。超过70通常表示超买，低于30表示超卖。\n"
-            text_body += "MACD(异同移动平均线)：判断价格趋势和动能的技术指标。\n"
-            text_body += "MA20(20日移动平均线)：过去20个交易日的平均价格，反映短期趋势。\n"
-            text_body += "MA50(50日移动平均线)：过去50个交易日的平均价格，反映中期趋势。\n"
-            text_body += "布林带位置：当前价格在布林带中的相对位置，范围0-1。接近0表示价格接近下轨（可能超卖），接近1表示价格接近上轨（可能超买）。\n"
-            text_body += "趋势：市场当前的整体方向。\n"
-            text_body += "TAV评分(趋势-动量-成交量综合评分)：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：\n"
-            text_body += "  - 计算方式：TAV评分 = 趋势评分 × 45% + 动量评分 × 30% + 成交量评分 × 25%（黄金权重配置）\n"
-            text_body += "  - 趋势评分(45%权重)：基于20日、50日、200日移动平均线的排列和价格位置计算，评估长期、中期、短期趋势的一致性\n"
-            text_body += "  - 动量评分(30%权重)：结合RSI(14日)和MACD(12,26,9)指标，评估价格变化的动能强度和方向\n"
-            text_body += "  - 成交量评分(25%权重)：基于20日成交量均线，分析成交量突增(>1.15倍为弱、>1.3倍为中、>1.6倍为强)或萎缩(<0.7倍)情况\n"
-            text_body += "  - 评分等级：\n"
-            text_body += "    * ≥75分：强共振 - 三个维度高度一致，强烈信号\n"
-            text_body += "    * 50-74分：中等共振 - 多数维度一致，中等信号\n"
-            text_body += "    * 25-49分：弱共振 - 部分维度一致，弱信号\n"
-            text_body += "    * <25分：无共振 - 各维度分歧，无明确信号\n"
-
-            text_body += "  强势多头：价格强劲上涨趋势，各周期均线呈多头排列（价格 > MA20 > MA50 > MA200）\n"
-            text_body += "  多头趋势：价格上涨趋势，中期均线呈多头排列（价格 > MA20 > MA50）\n"
-            text_body += "  弱势空头：价格持续下跌趋势，各周期均线呈空头排列（价格 < MA20 < MA50 < MA200）\n"
-            text_body += "  空头趋势：价格下跌趋势，中期均线呈空头排列（价格 < MA20 < MA50）\n"
-            text_body += "  震荡整理：价格在一定区间内波动，无明显趋势\n"
-            text_body += "  短期上涨/下跌：基于最近价格变化的短期趋势判断\n"
-            
-            # 创建邮件消息
-            msg = MIMEMultipart("mixed")
-            msg['From'] = f'<{sender_email}>'
-            msg['To'] = ", ".join(recipients)
-            msg['Subject'] = subject
-            
-            # 添加文本和HTML版本
-            body = MIMEMultipart("alternative")
-            body.attach(MIMEText(text_body, "plain", "utf-8"))
-            body.attach(MIMEText(html_body, "html", "utf-8"))
-            msg.attach(body)
-            
-            # 根据SMTP服务器类型选择合适的端口和连接方式
-            if "163.com" in smtp_server:
-                # 163邮箱使用SSL连接，端口465
-                smtp_port = 465
-                use_ssl = True
-            elif "gmail.com" in smtp_server:
-                # Gmail使用TLS连接，端口587
-                smtp_port = 587
-                use_ssl = False
-            else:
-                # 默认使用TLS连接，端口587
-                smtp_port = 587
-                use_ssl = False
-            
-            # 发送邮件（增加重试机制）
-            for attempt in range(3):
-                try:
-                    if use_ssl:
-                        # 使用SSL连接
-                        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
-                        server.login(smtp_user, smtp_pass)
-                        server.sendmail(sender_email, recipients, msg.as_string())
-                        server.quit()
-                    else:
-                        # 使用TLS连接
-                        server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-                        server.starttls()
-                        server.login(smtp_user, smtp_pass)
-                        server.sendmail(sender_email, recipients, msg.as_string())
-                        server.quit()
-                    
-                    print("✅ 邮件发送成功")
-                    return True
-                except Exception as e:
-                    print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
-                    if attempt < 2:  # 不是最后一次尝试，等待后重试
-                        time.sleep(5)
-            
-            print("❌ 发送邮件失败，已重试3次")
-            return False
-            
-        except Exception as e:
-            print("❌ 邮件发送过程中出现错误: {}".format(e))
-            return False
-
 def main():
     """主函数"""
     import argparse
