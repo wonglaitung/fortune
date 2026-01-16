@@ -781,6 +781,150 @@ class AITradingAnalyzer:
         except Exception:
             annualized = 0.0
         return annualized
+    
+    def calculate_sharpe_ratio(self, nav_series: pd.Series, risk_free_rate: float = 0.0) -> float:
+        """
+        计算夏普比率
+        
+        Args:
+            nav_series: 净值序列
+            risk_free_rate: 无风险利率（年化），默认为0
+            
+        Returns:
+            夏普比率
+        """
+        if nav_series.empty or len(nav_series) < 2:
+            return 0.0
+        
+        # 计算年化收益率
+        annualized_return = self.calculate_time_weighted_return(nav_series)
+        
+        # 计算年化波动率
+        annual_volatility = self.calculate_annualized_volatility(nav_series)
+        
+        # 夏普比率 = (年化收益率 - 无风险利率) / 年化波动率
+        if annual_volatility > 0:
+            return (annualized_return - risk_free_rate) / annual_volatility
+        return 0.0
+    
+    def calculate_calmar_ratio(self, nav_series: pd.Series) -> float:
+        """
+        计算卡尔玛比率（年化收益率 / 最大回撤）
+        
+        Args:
+            nav_series: 净值序列
+            
+        Returns:
+            卡尔玛比率
+        """
+        if nav_series.empty or len(nav_series) < 2:
+            return 0.0
+        
+        # 计算年化收益率
+        annualized_return = self.calculate_time_weighted_return(nav_series)
+        
+        # 计算最大回撤
+        max_drawdown = self.calculate_max_drawdown(nav_series)
+        
+        # 卡尔玛比率 = 年化收益率 / 最大回撤
+        if max_drawdown > 0:
+            return annualized_return / max_drawdown
+        return 0.0
+    
+    def calculate_annualized_return(self, total_profit: float, total_investment: float, 
+                                   start_date: datetime, end_date: datetime) -> float:
+        """
+        计算年化收益率
+        
+        Args:
+            total_profit: 总盈亏
+            total_investment: 总投资
+            start_date: 起始日期
+            end_date: 结束日期
+            
+        Returns:
+            年化收益率（小数形式，例如0.12表示12%）
+        """
+        if total_investment == 0:
+            return 0.0
+        
+        # 计算累计收益率
+        cumulative_return = total_profit / total_investment
+        
+        # 计算天数
+        days = (end_date - start_date).days
+        
+        if days <= 0:
+            return cumulative_return
+        
+        # 如果时间周期少于30天，返回累计收益率而非年化
+        if days < 30:
+            return cumulative_return
+        
+        # 年化：根据天数
+        years = days / 365.0
+        try:
+            annualized = (1 + cumulative_return) ** (1.0 / years) - 1 if cumulative_return > -1 else -1.0
+        except Exception:
+            annualized = 0.0
+        
+        return annualized
+    
+    def get_benchmark_return(self, start_date: datetime, end_date: datetime) -> float:
+        """
+        获取基准收益率（恒生指数）
+        
+        Args:
+            start_date: 起始日期
+            end_date: 结束日期
+            
+        Returns:
+            基准收益率（百分比形式，例如5.0表示5%）
+        """
+        try:
+            from tencent_finance import get_hsi_data
+            
+            # 获取恒生指数数据
+            hsi_df = get_hsi_data(start_date.strftime('%Y-%m-%d'), 
+                                   end_date.strftime('%Y-%m-%d'))
+            
+            if hsi_df.empty:
+                return 0.0
+            
+            # 计算基准收益率
+            start_price = hsi_df.iloc[0]['close']
+            end_price = hsi_df.iloc[-1]['close']
+            
+            if start_price > 0:
+                return ((end_price - start_price) / start_price) * 100
+            return 0.0
+        except Exception:
+            # 如果获取失败，返回0
+            return 0.0
+    
+    def get_market_trend(self, start_date: datetime, end_date: datetime) -> str:
+        """
+        获取市场趋势（牛市/熊市/震荡）
+        
+        Args:
+            start_date: 起始日期
+            end_date: 结束日期
+            
+        Returns:
+            市场趋势：'bull'（牛市）、'bear'（熊市）、'neutral'（震荡）
+        """
+        try:
+            benchmark_return = self.get_benchmark_return(start_date, end_date)
+            
+            # 简单判断：涨幅 > 10% 为牛市，跌幅 < -10% 为熊市，否则为震荡
+            if benchmark_return > 10.0:
+                return 'bull'
+            elif benchmark_return < -10.0:
+                return 'bear'
+            else:
+                return 'neutral'
+        except Exception:
+            return 'neutral'
 
     def calculate_profit_loss(self, df: pd.DataFrame, excluded_stocks: set) -> Dict:
         """
@@ -1102,13 +1246,17 @@ class AITradingAnalyzer:
         return results
     
     def classify_stocks(self, stock_details: List[Dict], trade_outcomes_map: Dict[str, List[float]], 
-                       completed_trades: Dict[str, int], min_trades: int = 4) -> Dict[str, List[Dict]]:
+                       completed_trades: Dict[str, int], min_trades: int = 4,
+                       start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
+                       nav_series: Optional[pd.Series] = None) -> Dict[str, List[Dict]]:
         """
-        基于真实交易统计对股票进行分级
+        基于真实交易统计对股票进行分级（改进版）
         
-        分级规则：
-        - S：profit_rate > 5% AND profit_factor > 1.5 AND win_rate > 60% AND trades >= 6
-        - A：profit_rate > 2% AND profit_factor > 1.2 AND win_rate > 55% AND trades >= 4
+        分级规则（考虑风险指标和时间维度）：
+        - S：profit_rate > 5% AND profit_factor > 2.0 AND win_rate > 60% AND trades >= 6 
+             AND max_drawdown < 5% AND sharpe_ratio > 1.5
+        - A：profit_rate > 2% AND profit_factor > 1.5 AND win_rate > 55% AND trades >= 4
+             AND max_drawdown < 8% AND sharpe_ratio > 1.0
         - B：profit_rate > 0% AND trades >= 2
         - C：其余或样本不足
         
@@ -1117,11 +1265,56 @@ class AITradingAnalyzer:
             trade_outcomes_map: 股票代码到逐笔盈亏列表的映射
             completed_trades: 股票代码到已完成交易次数的映射（已完成的交易对/平仓次数）
             min_trades: 最小交易次数阈值（默认为4）
+            start_date: 分析起始日期（用于计算年化收益率和基准比较）
+            end_date: 分析结束日期（用于计算年化收益率和基准比较）
+            nav_series: 净值序列（用于计算风险指标）
             
         Returns:
             分级结果字典，包含 S、A、B、C、INSUFFICIENT 五个等级的股票列表
         """
         classification = {'S': [], 'A': [], 'B': [], 'C': [], 'INSUFFICIENT': []}
+        
+        # 计算时间维度相关的阈值调整
+        threshold_multiplier = 1.0
+        if start_date and end_date:
+            days = (end_date - start_date).days
+            if days > 0:
+                # 根据分析周期调整阈值
+                if days < 30:  # 短期
+                    threshold_multiplier = 0.5
+                elif days < 90:  # 中期
+                    threshold_multiplier = 0.8
+                else:  # 长期
+                    threshold_multiplier = 1.0
+        
+        # 获取市场趋势并动态调整阈值
+        market_trend = 'neutral'
+        if start_date and end_date:
+            market_trend = self.get_market_trend(start_date, end_date)
+        
+        # 根据市场环境调整阈值
+        profit_threshold_adjustment = 1.0
+        if market_trend == 'bull':
+            # 牛市中提高阈值
+            profit_threshold_adjustment = 1.2
+        elif market_trend == 'bear':
+            # 熊市中降低阈值
+            profit_threshold_adjustment = 0.8
+        
+        # 计算整体阈值调整系数
+        overall_multiplier = threshold_multiplier * profit_threshold_adjustment
+        
+        # 计算全局风险指标（如果提供了 nav_series）
+        global_max_drawdown = 0.0
+        global_sharpe_ratio = 0.0
+        if nav_series is not None and not nav_series.empty:
+            global_max_drawdown = self.calculate_max_drawdown(nav_series)
+            global_sharpe_ratio = self.calculate_sharpe_ratio(nav_series)
+        
+        # 获取基准收益率
+        benchmark_return = 0.0
+        if start_date and end_date:
+            benchmark_return = self.get_benchmark_return(start_date, end_date)
         
         for stock in stock_details:
             code = stock.get('code')
@@ -1161,16 +1354,52 @@ class AITradingAnalyzer:
             # 计算收益率（如果 investment 信息可用）
             profit_rate = (total_profit / total_investment * 100) if total_investment > 0 else 0.0
             
-            # 分级规则
+            # 计算年化收益率（如果提供了日期）
+            annualized_return = 0.0
+            if start_date and end_date and total_investment > 0:
+                annualized_return = self.calculate_annualized_return(
+                    total_profit, total_investment, start_date, end_date
+                )
+            
+            # 计算超额收益（相对于基准）
+            excess_return = profit_rate - benchmark_return
+            excess_return_pct = (excess_return / benchmark_return * 100) if benchmark_return != 0 else 0.0
+            
+            # 应用阈值调整
+            adjusted_profit_threshold_s = 5.0 * overall_multiplier
+            adjusted_profit_threshold_a = 2.0 * overall_multiplier
+            
+            # 分级规则（改进版）
             grade = 'C'
-            if profit_rate > 5.0 and profit_factor > 1.5 and win_rate > 0.60 and trade_count >= 6:
+            
+            # S级：更严格的要求
+            if (profit_rate > adjusted_profit_threshold_s and 
+                profit_factor > 2.0 and 
+                win_rate > 0.60 and 
+                trade_count >= 6 and
+                global_max_drawdown < 0.05 and  # 最大回撤 < 5%
+                global_sharpe_ratio > 1.5):   # 夏普比率 > 1.5
                 grade = 'S'
-            elif profit_rate > 2.0 and profit_factor > 1.2 and win_rate > 0.55 and trade_count >= 4:
+            
+            # A级：中等要求
+            elif (profit_rate > adjusted_profit_threshold_a and 
+                  profit_factor > 1.5 and 
+                  win_rate > 0.55 and 
+                  trade_count >= 4 and
+                  global_max_drawdown < 0.08 and  # 最大回撤 < 8%
+                  global_sharpe_ratio > 1.0):   # 夏普比率 > 1.0
                 grade = 'A'
+            
+            # B级：基本要求
             elif profit_rate > 0.0 and trade_count >= 2:
                 grade = 'B'
-            else:
-                grade = 'C'
+            
+            # 基准加成：如果超额收益 > 基准的50%，提升一级
+            if benchmark_return != 0 and excess_return_pct > 50.0:
+                if grade == 'B':
+                    grade = 'A'
+                elif grade == 'A':
+                    grade = 'S'
             
             stock_res = stock.copy()
             stock_res.update({
@@ -1180,6 +1409,13 @@ class AITradingAnalyzer:
                 'avg_win': avg_win,
                 'avg_loss': avg_loss,
                 'profit_rate': profit_rate,
+                'annualized_return': annualized_return,
+                'excess_return': excess_return,
+                'benchmark_return': benchmark_return,
+                'max_drawdown': global_max_drawdown,
+                'sharpe_ratio': global_sharpe_ratio,
+                'market_trend': market_trend,
+                'threshold_multiplier': overall_multiplier,
                 'grade': grade,
                 'recommended_position': self._get_recommended_position(grade),
                 'trade_rule': self._get_trade_rule(grade)
@@ -1473,11 +1709,22 @@ class AITradingAnalyzer:
         report.append("【股票分级（基于真实交易统计）】")
         trade_outcomes_map = profit_results.get('stock_trade_outcomes', {})
         completed_trades = profit_results.get('stock_completed_trades', {})
+        
+        # 转换日期字符串为 datetime 对象
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d') if start_date else None
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d') if end_date else None
+        
+        # 获取净值序列
+        nav_series = profit_results.get('nav_series', pd.Series(dtype=float))
+        
         classification = self.classify_stocks(
             profit_results['stock_details'], 
             trade_outcomes_map, 
             completed_trades,
-            min_trades=4
+            min_trades=4,
+            start_date=start_dt,
+            end_date=end_dt,
+            nav_series=nav_series
         )
         
         # 展示各级别股票
@@ -1494,11 +1741,32 @@ class AITradingAnalyzer:
                         # 显示详细统计信息
                         profit_factor = stock.get('profit_factor', 0)
                         profit_factor_str = f"{profit_factor:.2f}" if profit_factor != float('inf') else "inf"
+                        
+                        # 构建显示信息
+                        info_parts = []
+                        info_parts.append(f"收益率{stock.get('profit_rate', 0):.2f}%")
+                        info_parts.append(f"胜率{stock.get('win_rate', 0)*100:.1f}%")
+                        info_parts.append(f"盈亏比{profit_factor_str}")
+                        info_parts.append(f"交易{stock.get('trade_count', 0)}次")
+                        
+                        # 添加年化收益率（如果有）
+                        if stock.get('annualized_return', 0) != 0:
+                            info_parts.append(f"年化{stock.get('annualized_return', 0)*100:.2f}%")
+                        
+                        # 添加超额收益（如果有基准）
+                        if stock.get('benchmark_return', 0) != 0:
+                            excess = stock.get('excess_return', 0)
+                            excess_str = f"+{excess:.2f}%" if excess > 0 else f"{excess:.2f}%"
+                            info_parts.append(f"超额{excess_str}")
+                        
+                        # 添加风险指标（如果有）
+                        if stock.get('max_drawdown', 0) > 0:
+                            info_parts.append(f"回撤{stock.get('max_drawdown', 0)*100:.2f}%")
+                        if stock.get('sharpe_ratio', 0) != 0:
+                            info_parts.append(f"夏普{stock.get('sharpe_ratio', 0):.2f}")
+                        
                         report.append(f"  {stock['name']}({stock['code']}): "
-                                   f"收益率{stock.get('profit_rate', 0):.2f}%, "
-                                   f"胜率{stock.get('win_rate', 0)*100:.1f}%, "
-                                   f"盈亏比{profit_factor_str}, "
-                                   f"交易{stock.get('trade_count', 0)}次, "
+                                   f"{', '.join(info_parts)}, "
                                    f"推荐仓位: {stock.get('recommended_position', '')}, "
                                    f"交易规则: {stock.get('trade_rule', '')}")
                 report.append("")
