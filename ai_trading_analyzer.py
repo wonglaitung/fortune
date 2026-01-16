@@ -399,13 +399,13 @@ class AITradingAnalyzer:
         return excluded
     
     def detect_abnormal_cashflows(self, cashflows: List[Tuple[datetime, float]], 
-                                 threshold_ratio: float = 0.3) -> List[Tuple[datetime, float, str]]:
+                                 threshold_ratio: float = 2.0) -> List[Tuple[datetime, float, str]]:
         """
         检测异常现金流（如重复记账或数据导出故障）
         
         Args:
             cashflows: 现金流列表
-            threshold_ratio: 异常阈值比例（相对于最大峰值的比例）
+            threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
             
         Returns:
             异常现金流列表 [(datetime, amount, reason)]
