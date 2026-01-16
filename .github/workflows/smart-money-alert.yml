@@ -45,10 +45,24 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # 检查是否有未暂存的更改
+          if ! git diff --quiet; then
+            git stash push -m "Temporary stash before pull"
+          fi
+          
+          # 拉取远程更改
+          git pull --rebase origin main || true
+          
+          # 恢复本地更改
+          if git stash list | grep -q "Temporary stash"; then
+            git stash pop
+          fi
+          
+          # 添加并提交更改
           git add data/all_stock_news_records.csv data/hsi_strategy_latest.txt
           if ! git diff --cached --quiet; then
             git commit -m "Update stock news and strategy [skip ci]"
-            git pull --rebase origin main
             git push origin main
           fi
         env:
