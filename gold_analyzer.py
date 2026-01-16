@@ -742,32 +742,19 @@ def resolve_conflicting_signals(buy_signals, sell_signals, tav_score=None, buy_t
                             })
                     
                     if 'Sell_Signal' in recent_signals.columns:
+                        sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                        for idx, row in sell_signals_df.iterrows():
+                            sell_signals.append({
+                                'date': idx.strftime('%Y-%m-%d'),
+                                'description': row.get('Signal_Description', '')
+                            })
                     
-                                            sell_signals_df = recent_signals[recent_signals['Sell_Signal'] == True]
+                    # 解析并解决同日冲突（如果有）
+                    final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
+                        buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
+                    )
                     
-                                            for idx, row in sell_signals_df.iterrows():
-                    
-                                                sell_signals.append({
-                    
-                                                    'date': idx.strftime('%Y-%m-%d'),
-                    
-                                                    'description': row.get('Signal_Description', '')
-                    
-                                                })
-                    
-                                        
-                    
-                                        # 解析并解决同日冲突（如果有）
-                    
-                                        final_buy_signals, final_sell_signals, signal_conflicts = resolve_conflicting_signals(
-                    
-                                            buy_signals, sell_signals, tav_score=tav_score if tav_score > 0 else None
-                    
-                                        )
-                    
-                    
-                    
-                                        html_body += f"""
+                    html_body += f"""
                         <tr>
                             <td>{data['name']}</td>
                             <td>{symbol}</td>
