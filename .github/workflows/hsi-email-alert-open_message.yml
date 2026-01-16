@@ -1,0 +1,36 @@
+name: HSI Email Alert
+
+on:
+  schedule:
+    # 只在港股交易日的交易时段执行 (周一到周五，下午6:00 HK时间)
+    - cron: '0 8 * * 1-5'
+  # 可选：允许手动触发
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run HSI email script
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          RECIPIENT_EMAIL: mall_cn@hotmail.com
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        run: |
+          python hsi_email.py --force
