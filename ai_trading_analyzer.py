@@ -1098,14 +1098,14 @@ class AITradingAnalyzer:
                                 buy_cost = self.calculate_transaction_cost(actual_investment, is_sell=False)
                                 results['total_transaction_cost'] += buy_cost
                                 
-                                # 现金流（买入为负，包含交易成本）
-                                cashflows.append((row['timestamp'].to_pydatetime(), -(actual_investment + buy_cost)))
+                                # 现金流（买入为负，包含交易成本，记录股票名称）
+                                cashflows.append((row['timestamp'].to_pydatetime(), -(actual_investment + buy_cost), 'buy', stock_name))
                                 results['total_invested'] += actual_investment
                                 
                                 # 更新资金管理变量
                                 available_cash -= (actual_investment + buy_cost)
                                 current_investment += actual_investment
-                                current_holdings[stock_code] = [shares, actual_investment]
+                                current_holdings[stock_code] = [shares, actual_investment, stock_name]
                 
                 elif transaction_type == 'SELL':
                     # 卖出信号：卖出全部持仓
@@ -1123,8 +1123,8 @@ class AITradingAnalyzer:
                         stock_realized_profit += (net_returns - portfolio['investment'])
                         
                         sell_count += 1
-                        # 记录现金流（卖出为正，扣除交易成本）
-                        cashflows.append((row['timestamp'].to_pydatetime(), net_returns))
+                        # 记录现金流（卖出为正，扣除交易成本，记录股票名称）
+                        cashflows.append((row['timestamp'].to_pydatetime(), net_returns, 'sell', stock_name))
                         
                         # 更新资金管理变量
                         available_cash += net_returns
@@ -1234,7 +1234,9 @@ class AITradingAnalyzer:
         last_ts = df['timestamp'].max().to_pydatetime()
         
         # 使用 current_holdings 中的实际持仓数据
-        for code, (shares, investment) in current_holdings.items():
+        for code, data in current_holdings.items():
+            shares = data[0]
+            investment = data[1]
             # 优先调用腾讯财经接口获取实时价格
             latest_price = None
             try:
@@ -1259,9 +1261,11 @@ class AITradingAnalyzer:
                 holdings_value += current_value
         
         # 期末现金流：将持仓市值作为终值流入（相当于假设在分析终点清仓）
-        # 标记为特殊现金流，用于XIRR计算
+        # 标记为特殊现金流，用于XIRR计算，记录所有持仓股票名称
         if holdings_value != 0:
-            cashflows.append((last_ts, holdings_value, 'final_settlement'))
+            holding_stock_names = [f"{code}({data[2]})" for code, data in current_holdings.items()]
+            holdings_list = ", ".join(holding_stock_names) if holding_stock_names else "无"
+            cashflows.append((last_ts, holdings_value, 'final_settlement', f"期末清算: {holdings_list}"))
         else:
             # 如果没有持仓，现金流最后一笔可能已经是卖出流入
             pass
@@ -2090,8 +2094,22 @@ class AITradingAnalyzer:
         # 附加：现金流摘要（供 XIRR 校验）
         report.append("【现金流摘要（用于 XIRR 计算）】")
         if cashflows:
-            for d, amt, *_ in cashflows:
-                report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {'+' if amt>=0 else ''}{amt:,.2f}")
+            for d, amt, cf_type, *rest in cashflows:
+                # 获取股票名称或描述
+                stock_info = rest[0] if rest else ""
+                if cf_type == 'buy':
+                    stock_info = f"买入 {stock_info}"
+                elif cf_type == 'sell':
+                    stock_info = f"卖出 {stock_info}"
+                elif cf_type == 'final_settlement':
+                    stock_info = rest[0] if rest else "期末清算"
+                
+                # 格式化输出
+                amount_str = f"{'+' if amt>=0 else ''}{amt:,.2f}"
+                if stock_info:
+                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str} - {stock_info}")
+                else:
+                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str}")
         else:
             report.append("无现金流数据")
         report.append("")
