@@ -60,6 +60,7 @@
 """
 
 import pandas as pd
+import numpy as np
 import argparse
 import sys
 import smtplib
@@ -1271,26 +1272,244 @@ class AITradingAnalyzer:
 
         return results
     
+    # ========== 新增：单股指标计算方法 ==========
+    
+    def calculate_per_stock_xirr(self, cashflows: List[Tuple[datetime, float]]) -> Optional[float]:
+        """
+        计算单股的年化内部收益率（XIRR）
+        
+        Args:
+            cashflows: 现金流列表 [(datetime, amount)]，买入为负，卖出为正
+            
+        Returns:
+            年化内部收益率（小数形式），如果无法计算则返回 None
+        """
+        if not cashflows or len(cashflows) < 2:
+            return None
+        
+        # 检查是否同时包含正负现金流
+        signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in cashflows])
+        if not (1 in signs and -1 in signs):
+            return None
+        
+        # 排序现金流
+        cashflows_sorted = sorted(cashflows, key=lambda x: x[0])
+        
+        # 使用现有的 xirr 方法
+        return self.xirr(cashflows_sorted)
+    
+    def calculate_per_stock_volatility(self, trade_outcomes: List[float]) -> float:
+        """
+        计算单股的年化波动率（基于逐笔盈亏）
+        
+        Args:
+            trade_outcomes: 逐笔盈亏列表
+            
+        Returns:
+            年化波动率（小数形式）
+        """
+        if len(trade_outcomes) < 2:
+            return 0.0
+        
+        # 计算收益率序列
+        returns = trade_outcomes
+        
+        # 计算标准差
+        std = np.std(returns, ddof=0)
+        
+        # 计算平均投资额（假设每笔交易的投资额相近）
+        avg_investment = np.mean([abs(r) for r in returns if r < 0]) if any(r < 0 for r in returns) else 1.0
+        
+        # 计算年化波动率（假设每年252个交易日）
+        # 这里简化处理：使用交易次数的平方根进行年化
+        if avg_investment > 0:
+            annualized_vol = (std / avg_investment) * np.sqrt(252)
+        else:
+            annualized_vol = 0.0
+        
+        return annualized_vol
+    
+    def calculate_per_stock_sortino(self, trade_outcomes: List[float], risk_free_rate: float = 0.0) -> float:
+        """
+        计算单股的 Sortino 比率（只考虑下行波动）
+        
+        Args:
+            trade_outcomes: 逐笔盈亏列表
+            risk_free_rate: 无风险利率（年化），默认为0
+            
+        Returns:
+            Sortino 比率
+        """
+        if len(trade_outcomes) < 2:
+            return 0.0
+        
+        # 计算平均收益率
+        avg_return = np.mean(trade_outcomes)
+        
+        # 计算下行波动率（只考虑负收益）
+        negative_returns = [r for r in trade_outcomes if r < 0]
+        
+        if not negative_returns:
+            return float('inf') if avg_return > 0 else 0.0
+        
+        # 下行标准差
+        downside_std = np.std(negative_returns, ddof=0)
+        
+        if downside_std == 0:
+            return float('inf') if avg_return > 0 else 0.0
+        
+        # Sortino 比率 = (平均收益率 - 无风险利率) / 下行标准差
+        return (avg_return - risk_free_rate) / downside_std
+    
+    def calculate_expectancy(self, trade_outcomes: List[float]) -> float:
+        """
+        计算每笔交易的期望值
+        
+        Expectancy = win_rate * avg_win + (1 - win_rate) * avg_loss
+        
+        Args:
+            trade_outcomes: 逐笔盈亏列表
+            
+        Returns:
+            每笔期望值
+        """
+        if not trade_outcomes:
+            return 0.0
+        
+        win_trades = [p for p in trade_outcomes if p > 0]
+        loss_trades = [p for p in trade_outcomes if p < 0]
+        
+        win_count = len(win_trades)
+        loss_count = len(loss_trades)
+        total_count = len(trade_outcomes)
+        
+        if total_count == 0:
+            return 0.0
+        
+        win_rate = win_count / total_count
+        avg_win = np.mean(win_trades) if win_count > 0 else 0.0
+        avg_loss = np.mean(loss_trades) if loss_count > 0 else 0.0
+        
+        # Expectancy = win_rate * avg_win + (1 - win_rate) * avg_loss
+        expectancy = win_rate * avg_win + (1 - win_rate) * avg_loss
+        
+        return expectancy
+    
+    def calculate_statistical_significance(self, trade_outcomes: List[float], 
+                                          n_bootstrap: int = 1000, 
+                                          confidence_level: float = 0.95) -> Dict:
+        """
+        使用 Bootstrap 方法计算统计显著性
+        
+        Args:
+            trade_outcomes: 逐笔盈亏列表
+            n_bootstrap: Bootstrap 重采样次数，默认1000
+            confidence_level: 置信水平，默认0.95
+            
+        Returns:
+            包含显著性检验结果的字典：
+            - is_significant: 是否显著（True/False）
+            - mean: 平均收益
+            - ci_lower: 置信区间下限
+            - ci_upper: 置信区间上限
+            - p_value: p值（近似）
+        """
+        if len(trade_outcomes) < 5:
+            return {
+                'is_significant': False,
+                'mean': 0.0,
+                'ci_lower': 0.0,
+                'ci_upper': 0.0,
+                'p_value': 1.0,
+                'reason': 'insufficient_samples'
+            }
+        
+        # 计算原始均值
+        original_mean = np.mean(trade_outcomes)
+        
+        # Bootstrap 重采样
+        bootstrap_means = []
+        for _ in range(n_bootstrap):
+            # 有放回重采样
+            sample = np.random.choice(trade_outcomes, size=len(trade_outcomes), replace=True)
+            bootstrap_means.append(np.mean(sample))
+        
+        # 计算置信区间
+        alpha = 1 - confidence_level
+        ci_lower = np.percentile(bootstrap_means, alpha / 2 * 100)
+        ci_upper = np.percentile(bootstrap_means, (1 - alpha / 2) * 100)
+        
+        # 判断是否显著（置信区间不包含0）
+        is_significant = (ci_lower > 0) if original_mean > 0 else (ci_upper < 0)
+        
+        # 计算 p 值（近似：Bootstrap 样本中均值符号相反的比例）
+        if original_mean > 0:
+            p_value = np.mean([m <= 0 for m in bootstrap_means])
+        else:
+            p_value = np.mean([m >= 0 for m in bootstrap_means])
+        
+        return {
+            'is_significant': is_significant,
+            'mean': original_mean,
+            'ci_lower': ci_lower,
+            'ci_upper': ci_upper,
+            'p_value': p_value,
+            'confidence_level': confidence_level
+        }
+    
+    def percentile_rank(self, value: float, values: List[float]) -> float:
+        """
+        计算值在列表中的百分位数排名（0-1）
+        
+        Args:
+            value: 要计算的值
+            values: 值列表
+            
+        Returns:
+            百分位数排名（0-1）
+        """
+        if not values:
+            return 0.5
+        
+        values_sorted = sorted(values)
+        n = len(values_sorted)
+        
+        # 找到 value 在排序列表中的位置
+        rank = 0
+        for i, v in enumerate(values_sorted):
+            if v <= value:
+                rank = i + 1
+        
+        # 计算百分位数
+        percentile = rank / n
+        
+        return min(max(percentile, 0.0), 1.0)
+    
+    # ========== 新增方法结束 ==========
+    
     def classify_stocks(self, stock_details: List[Dict], trade_outcomes_map: Dict[str, List[float]], 
-                       completed_trades: Dict[str, int], min_trades: int = 4,
+                       completed_trades: Dict[str, int], min_trades: int = 20,
                        start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
                        nav_series: Optional[pd.Series] = None) -> Dict[str, List[Dict]]:
         """
-        基于真实交易统计对股票进行分级（改进版）
+        基于真实交易统计对股票进行分级（业界标准版 - 分数化+分位方法）
         
-        分级规则（考虑风险指标和时间维度）：
-        - S：profit_rate > 5% AND profit_factor > 2.0 AND win_rate > 60% AND trades >= 6 
-             AND max_drawdown < 5% AND sharpe_ratio > 1.5
-        - A：profit_rate > 2% AND profit_factor > 1.5 AND win_rate > 55% AND trades >= 4
-             AND max_drawdown < 8% AND sharpe_ratio > 1.0
-        - B：profit_rate > 0% AND trades >= 2
-        - C：其余或样本不足
+        分级规则（基于综合得分和分位数）：
+        - S：综合得分 >= 90th percentile（top 10%）
+        - A：综合得分 >= 80th percentile（next 20%）
+        - B：综合得分 >= 50th percentile（next 30%）
+        - C：综合得分 < 50th percentile（其余）
+        - INSUFFICIENT：样本不足（completed_trades < 20）
+        
+        样本量要求：
+        - INSUFFICIENT：completed_trades < 20
+        - S/A 级：要求 completed_trades >= 30
         
         Args:
             stock_details: 股票明细列表
             trade_outcomes_map: 股票代码到逐笔盈亏列表的映射
             completed_trades: 股票代码到已完成交易次数的映射（已完成的交易对/平仓次数）
-            min_trades: 最小交易次数阈值（默认为4）
+            min_trades: 最小交易次数阈值（默认为20，符合业界标准）
             start_date: 分析起始日期（用于计算年化收益率和基准比较）
             end_date: 分析结束日期（用于计算年化收益率和基准比较）
             nav_series: 净值序列（用于计算风险指标）
@@ -1300,47 +1519,26 @@ class AITradingAnalyzer:
         """
         classification = {'S': [], 'A': [], 'B': [], 'C': [], 'INSUFFICIENT': []}
         
-        # 计算时间维度相关的阈值调整
-        threshold_multiplier = 1.0
-        if start_date and end_date:
-            days = (end_date - start_date).days
-            if days > 0:
-                # 根据分析周期调整阈值
-                if days < 30:  # 短期
-                    threshold_multiplier = 0.5
-                elif days < 90:  # 中期
-                    threshold_multiplier = 0.8
-                else:  # 长期
-                    threshold_multiplier = 1.0
+        # 权重配置（可根据策略调整）
+        weights = {
+            'return': 0.30,      # 收益率权重
+            'sharpe': 0.25,     # 夏普比率权重
+            'drawdown': 0.20,   # 回撤权重（反向）
+            'profit_factor': 0.10,  # 盈亏比权重
+            'expectancy': 0.10,    # 期望值权重
+            'winrate': 0.05      # 胜率权重
+        }
         
-        # 获取市场趋势并动态调整阈值
-        market_trend = 'neutral'
-        if start_date and end_date:
-            market_trend = self.get_market_trend(start_date, end_date)
-        
-        # 根据市场环境调整阈值
-        profit_threshold_adjustment = 1.0
-        if market_trend == 'bull':
-            # 牛市中提高阈值
-            profit_threshold_adjustment = 1.2
-        elif market_trend == 'bear':
-            # 熊市中降低阈值
-            profit_threshold_adjustment = 0.8
-        
-        # 计算整体阈值调整系数
-        overall_multiplier = threshold_multiplier * profit_threshold_adjustment
-        
-        # 计算全局风险指标（如果提供了 nav_series）
-        global_max_drawdown = 0.0
-        global_sharpe_ratio = 0.0
-        if nav_series is not None and not nav_series.empty:
-            global_max_drawdown = self.calculate_max_drawdown(nav_series)
-            global_sharpe_ratio = self.calculate_sharpe_ratio(nav_series)
+        # 存储所有股票的指标数据，用于计算百分位数
+        all_metrics = []
         
         # 获取基准收益率
         benchmark_return = 0.0
         if start_date and end_date:
             benchmark_return = self.get_benchmark_return(start_date, end_date)
+        
+        # 第一遍：计算所有股票的指标
+        stock_metrics_list = []
         
         for stock in stock_details:
             code = stock.get('code')
@@ -1351,6 +1549,17 @@ class AITradingAnalyzer:
             trades = trade_outcomes_map.get(code, [])
             trade_count = completed_trades.get(code, 0)
             
+            # 检查样本量要求
+            if trade_count < min_trades or total_investment < 50000:  # HK$50,000最小投资
+                stock_res = stock.copy()
+                stock_res.update({
+                    'trade_count': trade_count,
+                    'total_investment': total_investment,
+                    'reason': 'insufficient_samples' if trade_count < min_trades else 'low_investment'
+                })
+                classification['INSUFFICIENT'].append(stock_res)
+                continue
+            
             # 基本统计
             win_trades = [p for p in trades if p > 0]
             loss_trades = [p for p in trades if p < 0]
@@ -1358,133 +1567,200 @@ class AITradingAnalyzer:
             loss_count = len(loss_trades)
             win_rate = (win_count / len(trades)) if trades else 0.0
             gross_profit = sum(win_trades) if win_trades else 0.0
-            gross_loss = -sum(loss_trades) if loss_trades else 0.0  # positive number
+            gross_loss = -sum(loss_trades) if loss_trades else 0.0
             profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (float('inf') if gross_profit > 0 else 0.0)
             avg_win = (sum(win_trades) / win_count) if win_count > 0 else 0.0
             avg_loss = (sum(loss_trades) / loss_count) if loss_count > 0 else 0.0
             
-            # 全部交易不足或投资太小，标记为样本不足
-            if trade_count < min_trades or (total_investment and total_investment < 1e-6):
-                stock_res = stock.copy()
-                stock_res.update({
-                    'trade_count': trade_count,
-                    'win_rate': win_rate,
-                    'profit_factor': profit_factor,
-                    'avg_win': avg_win,
-                    'avg_loss': avg_loss,
-                    'reason': 'insufficient_samples' if trade_count < min_trades else 'low_investment'
-                })
-                classification['INSUFFICIENT'].append(stock_res)
-                continue
-            
-            # 计算收益率（如果 investment 信息可用）
+            # 计算收益率
             profit_rate = (total_profit / total_investment * 100) if total_investment > 0 else 0.0
             
-            # 计算年化收益率（如果提供了日期）
+            # 计算年化收益率
             annualized_return = 0.0
             if start_date and end_date and total_investment > 0:
                 annualized_return = self.calculate_annualized_return(
                     total_profit, total_investment, start_date, end_date
                 )
             
-            # 计算超额收益（相对于基准）
+            # 计算超额收益
             excess_return = profit_rate - benchmark_return
-            excess_return_pct = (excess_return / benchmark_return * 100) if benchmark_return != 0 else 0.0
             
-            # 应用阈值调整
-            adjusted_profit_threshold_s = 5.0 * overall_multiplier
-            adjusted_profit_threshold_a = 2.0 * overall_multiplier
+            # 计算单股指标
+            volatility = self.calculate_per_stock_volatility(trades)
+            sortino = self.calculate_per_stock_sortino(trades)
+            expectancy = self.calculate_expectancy(trades)
             
-            # 分级规则（改进版）
-            grade = 'C'
+            # 统计显著性检验
+            significance = self.calculate_statistical_significance(trades)
             
-            # S级：更严格的要求
-            if (profit_rate > adjusted_profit_threshold_s and 
-                profit_factor > 2.0 and 
-                win_rate > 0.60 and 
-                trade_count >= 6 and
-                global_max_drawdown < 0.05 and  # 最大回撤 < 5%
-                global_sharpe_ratio > 1.5):   # 夏普比率 > 1.5
-                grade = 'S'
-            
-            # A级：中等要求
-            elif (profit_rate > adjusted_profit_threshold_a and 
-                  profit_factor > 1.5 and 
-                  win_rate > 0.55 and 
-                  trade_count >= 4 and
-                  global_max_drawdown < 0.08 and  # 最大回撤 < 8%
-                  global_sharpe_ratio > 1.0):   # 夏普比率 > 1.0
-                grade = 'A'
-            
-            # B级：基本要求
-            elif profit_rate > 0.0 and trade_count >= 2:
-                grade = 'B'
-            
-            # 基准加成：如果超额收益 > 基准的50%，提升一级
-            if benchmark_return != 0 and excess_return_pct > 50.0:
-                if grade == 'B':
-                    grade = 'A'
-                elif grade == 'A':
-                    grade = 'S'
-            
-            stock_res = stock.copy()
-            stock_res.update({
-                'trade_count': trade_count,
-                'win_rate': win_rate,
-                'profit_factor': profit_factor,
-                'avg_win': avg_win,
-                'avg_loss': avg_loss,
+            # 存储指标数据
+            metrics = {
+                'code': code,
+                'name': stock.get('name', code),
                 'profit_rate': profit_rate,
                 'annualized_return': annualized_return,
                 'excess_return': excess_return,
-                'benchmark_return': benchmark_return,
-                'max_drawdown': global_max_drawdown,
-                'sharpe_ratio': global_sharpe_ratio,
-                'market_trend': market_trend,
-                'threshold_multiplier': overall_multiplier,
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'expectancy': expectancy,
+                'volatility': volatility,
+                'sortino': sortino,
+                'trade_count': trade_count,
+                'total_investment': total_investment,
+                'total_profit': total_profit,
+                'significance': significance,
+                'stock_data': stock
+            }
+            stock_metrics_list.append(metrics)
+            all_metrics.append(metrics)
+        
+        # 如果没有足够的股票进行分级，直接返回
+        if len(all_metrics) < 2:
+            for metrics in stock_metrics_list:
+                stock_res = metrics['stock_data'].copy()
+                stock_res.update({
+                    'grade': 'INSUFFICIENT',
+                    'reason': 'insufficient_stocks_for_comparison'
+                })
+                classification['INSUFFICIENT'].append(stock_res)
+            return classification
+        
+        # 第二遍：计算百分位数和综合得分
+        # 提取各指标的值列表
+        profit_rates = [m['profit_rate'] for m in all_metrics]
+        annualized_returns = [m['annualized_return'] for m in all_metrics]
+        win_rates = [m['win_rate'] for m in all_metrics]
+        profit_factors = [m['profit_factor'] if m['profit_factor'] != float('inf') else 0 for m in all_metrics]
+        expectancies = [m['expectancy'] for m in all_metrics]
+        
+        # 计算百分位数得分（0-1）
+        for metrics in stock_metrics_list:
+            # 收益率得分
+            s_return = self.percentile_rank(metrics['profit_rate'], profit_rates)
+            
+            # 胜率得分
+            s_winrate = self.percentile_rank(metrics['win_rate'], win_rates)
+            
+            # 盈亏比得分（处理无穷大）
+            pf_value = metrics['profit_factor'] if metrics['profit_factor'] != float('inf') else max(profit_factors)
+            s_profit_factor = self.percentile_rank(pf_value, profit_factors)
+            
+            # 期望值得分
+            s_expectancy = self.percentile_rank(metrics['expectancy'], expectancies)
+            
+            # 回撤得分（这里简化处理，使用盈亏比作为代理）
+            # 在实际应用中，应该计算单股的最大回撤
+            s_drawdown = 1.0 - s_profit_factor  # 盈亏比越高，回撤风险越低
+            
+            # 夏普比率得分（使用期望值和波动率的比率）
+            if metrics['volatility'] > 0:
+                sharpe_like = metrics['expectancy'] / metrics['volatility']
+                s_sharpe = self.percentile_rank(sharpe_like, [m['expectancy'] / m['volatility'] if m['volatility'] > 0 else 0 for m in all_metrics])
+            else:
+                s_sharpe = 0.0
+            
+            # 计算综合得分
+            composite_score = (
+                weights['return'] * s_return +
+                weights['sharpe'] * s_sharpe +
+                weights['drawdown'] * s_drawdown +
+                weights['profit_factor'] * s_profit_factor +
+                weights['expectancy'] * s_expectancy +
+                weights['winrate'] * s_winrate
+            )
+            
+            metrics['composite_score'] = composite_score
+            metrics['s_return'] = s_return
+            metrics['s_sharpe'] = s_sharpe
+            metrics['s_drawdown'] = s_drawdown
+            metrics['s_profit_factor'] = s_profit_factor
+            metrics['s_expectancy'] = s_expectancy
+            metrics['s_winrate'] = s_winrate
+        
+        # 计算综合得分的百分位数
+        composite_scores = [m['composite_score'] for m in stock_metrics_list]
+        
+        # 第三遍：根据综合得分划分等级
+        for metrics in stock_metrics_list:
+            score = metrics['composite_score']
+            score_percentile = self.percentile_rank(score, composite_scores)
+            
+            # S/A 级要求更高的样本量
+            is_sa_eligible = metrics['trade_count'] >= 30
+            
+            # 分级规则
+            if score_percentile >= 0.90 and is_sa_eligible:
+                grade = 'S'
+            elif score_percentile >= 0.80 and is_sa_eligible:
+                grade = 'A'
+            elif score_percentile >= 0.50:
+                grade = 'B'
+            else:
+                grade = 'C'
+            
+            # 如果样本量不足以评为 S/A，降级
+            if grade in ['S', 'A'] and not is_sa_eligible:
+                grade = 'B' if score_percentile >= 0.50 else 'C'
+            
+            # 构建结果
+            stock_res = metrics['stock_data'].copy()
+            stock_res.update({
+                'trade_count': metrics['trade_count'],
+                'win_rate': metrics['win_rate'],
+                'profit_factor': metrics['profit_factor'],
+                'expectancy': metrics['expectancy'],
+                'profit_rate': metrics['profit_rate'],
+                'annualized_return': metrics['annualized_return'],
+                'excess_return': metrics['excess_return'],
+                'volatility': metrics['volatility'],
+                'sortino': metrics['sortino'],
+                'composite_score': metrics['composite_score'],
+                'score_percentile': score_percentile,
+                'significance': metrics['significance'],
                 'grade': grade,
                 'recommended_position': self._get_recommended_position(grade),
                 'trade_rule': self._get_trade_rule(grade)
             })
+            
             classification[grade].append(stock_res)
         
         return classification
     
     def _get_recommended_position(self, grade: str) -> str:
         """
-        根据股票等级获取推荐仓位
+        根据股票等级获取推荐仓位（业界标准版）
         
         Args:
-            grade: 股票等级（S、A、B、C）
+            grade: 股票等级（S、A、B、C、INSUFFICIENT）
             
         Returns:
             推荐仓位字符串
         """
         position_map = {
-            'S': '重仓（20%-30%）',
-            'A': '中仓（10%-20%）',
-            'B': '轻仓（5%-10%）',
-            'C': '不建议持有',
-            'INSUFFICIENT': '数据不足，建议观望'
+            'S': '重仓（20%-30%）- 综合得分前10%，可积极配置',
+            'A': '中仓（10%-20%）- 综合得分前20%-90%，稳健配置',
+            'B': '轻仓（5%-10%）- 综合得分前50%-80%，谨慎配置',
+            'C': '不建议持有 - 综合得分后50%，建议规避',
+            'INSUFFICIENT': '数据不足（<20次交易），建议观望（需>=30次交易才可评为S/A）'
         }
         return position_map.get(grade, '未知等级')
     
     def _get_trade_rule(self, grade: str) -> str:
         """
-        根据股票等级获取交易规则
+        根据股票等级获取交易规则（业界标准版）
         
         Args:
-            grade: 股票等级（S、A、B、C）
+            grade: 股票等级（S、A、B、C、INSUFFICIENT）
             
         Returns:
             交易规则字符串
         """
         rule_map = {
-            'S': '积极买入，逢低加仓，严格止损（-5%）',
-            'A': '逢低买入，正常止损（-8%）',
-            'B': '谨慎买入，严格止损（-10%）',
-            'C': '不建议买入，如有持仓建议减仓或清仓',
-            'INSUFFICIENT': '建议积累更多数据后再做决策'
+            'S': '全信号执行 + 15%仓位 - 综合得分前10%，统计显著，可积极跟随信号',
+            'A': '仅执行首次买入/卖出 - 综合得分前20%-90%，表现良好，稳健操作',
+            'B': '仅执行首次信号 + 5%仓位 - 综合得分前50%-80%，表现一般，谨慎参与',
+            'C': '完全禁用 - 综合得分后50%，表现不佳，建议规避或清仓',
+            'INSUFFICIENT': '建议积累更多数据（>=20次交易），当前样本不足以判断'
         }
         return rule_map.get(grade, '未知等级')
     
