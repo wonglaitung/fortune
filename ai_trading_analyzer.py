@@ -398,19 +398,20 @@ class AITradingAnalyzer:
         
         return excluded
     
-    def detect_abnormal_cashflows(self, cashflows: List[Tuple], 
-                                 threshold_ratio: float = 2.0) -> List[Tuple[datetime, float, str]]:
-        """
-        检测异常现金流（如重复记账或数据导出故障）
-        
-        Args:
-            cashflows: 现金流列表，可以是 [(datetime, amount)] 或 [(datetime, amount, type)]
-            threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
+    def detect_abnormal_cashflows(self, cashflows: List[Tuple],
+                                     threshold_ratio: float = 2.0) -> List[Tuple[datetime, float, str]]:
+            """
+            检测异常现金流（如重复记账或数据导出故障）
             
-        Returns:
-            异常现金流列表 [(datetime, amount, reason)]
-        """
-        if not cashflows:
+            Args:
+                cashflows: 现金流列表，格式为 [(datetime, amount, type, meta)]
+                       type 可以是 'buy', 'sell', 'final_settlement'
+                       meta 是股票名称或描述
+                threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
+                
+            Returns:
+                异常现金流列表 [(datetime, amount, reason)]
+            """        if not cashflows:
             return []
         
         abnormal_cashflows = []
@@ -510,10 +511,10 @@ class AITradingAnalyzer:
         return cash_flow, portfolio
     
     # --- XIRR helpers ---
-    def _xnpv(self, rate: float, cashflows: List[Tuple[datetime, float]]) -> float:
+    def _xnpv(self, rate: float, cashflows: List[Tuple]) -> float:
         """
         计算 NPV 给定年化贴现率（rate）和现金流
-        cashflows: list of (datetime, amount, type)
+        cashflows: list of (datetime, amount, type, meta)
         """
         if rate <= -1.0:
             return float('inf')
@@ -524,7 +525,7 @@ class AITradingAnalyzer:
             total += amt / ((1.0 + rate) ** (days / 365.0))
         return total
 
-    def xirr(self, cashflows: List[Tuple[datetime, float]], guess: float = 0.1,
+    def xirr(self, cashflows: List[Tuple], guess: float = 0.1,
            filter_abnormal: bool = True) -> Optional[float]:
         """
         通过二分法求解 XIRR（年化内部收益率）
@@ -533,7 +534,7 @@ class AITradingAnalyzer:
         注意：对于短时间周期（<30天），仍返回年化值但可能不稳定
         
         Args:
-            cashflows: 现金流列表
+            cashflows: 现金流列表，格式为 [(datetime, amount, type, meta)]
             guess: 初始猜测值
             filter_abnormal: 是否过滤异常现金流
         """
@@ -654,7 +655,9 @@ class AITradingAnalyzer:
                     if price > 0:
                         shares = self.calculate_shares(price)
                         amount = shares * price
-                        cash -= amount
+                        # 计算买入交易成本
+                        buy_cost = self.calculate_transaction_cost(amount, is_sell=False)
+                        cash -= (amount + buy_cost)  # 扣除股票金额和交易成本
                         holdings[code] = [shares, price]
                         last_price_map[code] = price
             elif ttype == 'SELL':
@@ -662,7 +665,9 @@ class AITradingAnalyzer:
                     if price > 0:
                         shares, cost = holdings[code]
                         amount = shares * price
-                        cash += amount
+                        # 计算卖出交易成本
+                        sell_cost = self.calculate_transaction_cost(amount, is_sell=True)
+                        cash += (amount - sell_cost)  # 加上股票金额，扣除交易成本
                         holdings[code] = [0, 0.0]  # 清空持仓
                         last_price_map[code] = price
 
@@ -937,7 +942,7 @@ class AITradingAnalyzer:
     def calculate_profit_loss(self, df: pd.DataFrame, excluded_stocks: set, end_date: Optional[datetime] = None) -> Dict:
         """
         计算盈亏情况，并扩展返回更多用于回报/风险计算的数据:
-         - cashflows: list of (datetime, amount) 用于 XIRR
+         - cashflows: list of (datetime, amount, type, meta) 用于 XIRR
          - total_invested: 所有买入的总投入
          - nav_series: 每日净值序列（pd.Series）
         
@@ -955,13 +960,13 @@ class AITradingAnalyzer:
             'holding_stocks': [],  # 持仓中股票
             'peak_investment': 0.0,  # 最高峰资金需求
             # 以下为新增
-            'cashflows': [],  # list of (datetime, amount)
+            'cashflows': [],  # list of (datetime, amount, type, meta)
             'total_invested': 0.0,
             'nav_series': pd.Series(dtype=float),
             'total_transaction_cost': 0.0,  # 总交易成本
             'abnormal_cashflows': [],  # 异常现金流记录
             # 逐笔交易统计（用于 classify_stocks）
-            'stock_trade_outcomes': {},  # code -> list of per-trade profits (realized)
+            'stock_trade_outcomes': {},  # code -> list of per-trade profits and investments (realized)
             'stock_completed_trades': {},    # code -> completed trades count (已完成的交易对/平仓次数)
         }
         
@@ -1028,7 +1033,7 @@ class AITradingAnalyzer:
         results['available_cash'] = available_cash  # 最终可用现金
         
         # 另外我们也需要生成现金流（用于 XIRR）和按交易时间点的 NAV（用于 TWR/max drawdown等）
-        cashflows: List[Tuple[datetime, float]] = []
+        cashflows: List[Tuple] = []
         
         # 重新初始化资金管理变量，用于现金流计算
         available_cash = self.initial_capital
@@ -1139,7 +1144,11 @@ class AITradingAnalyzer:
                         
                         # 记录逐笔交易盈亏（用于 classify_stocks），使用净收益（含手续费）
                         trade_profit_net = net_returns - portfolio['investment']
-                        results['stock_trade_outcomes'].setdefault(stock_code, []).append(trade_profit_net)
+                        trade_investment = portfolio['investment']
+                        results['stock_trade_outcomes'].setdefault(stock_code, []).append({
+                            'profit': trade_profit_net,
+                            'investment': trade_investment
+                        })
                         results['stock_completed_trades'][stock_code] = results['stock_completed_trades'].get(stock_code, 0) + 1
                         
                         # 清空持仓
@@ -1316,7 +1325,7 @@ class AITradingAnalyzer:
     
     # ========== 新增：单股指标计算方法 ==========
     
-    def calculate_per_stock_xirr(self, cashflows: List[Tuple[datetime, float]]) -> Optional[float]:
+    def calculate_per_stock_xirr(self, cashflows: List[Tuple]) -> Optional[float]:
         """
         计算单股的年化内部收益率（XIRR）
         
@@ -1340,12 +1349,12 @@ class AITradingAnalyzer:
         # 使用现有的 xirr 方法
         return self.xirr(cashflows_sorted)
     
-    def calculate_per_stock_volatility(self, trade_outcomes: List[float]) -> float:
+    def calculate_per_stock_volatility(self, trade_outcomes: List) -> float:
         """
         计算单股的年化波动率（基于逐笔盈亏）
         
         Args:
-            trade_outcomes: 逐笔盈亏列表
+            trade_outcomes: 逐笔盈亏列表（可以是 List[float] 或 List[Dict]）
             
         Returns:
             年化波动率（小数形式）
@@ -1353,30 +1362,28 @@ class AITradingAnalyzer:
         if len(trade_outcomes) < 2:
             return 0.0
         
-        # 计算收益率序列
-        returns = trade_outcomes
+        # 计算收益率序列（相对收益率）
+        if trade_outcomes and isinstance(trade_outcomes[0], dict):
+            # 新格式：包含 profit 和 investment
+            returns = [t['profit'] / t['investment'] if t['investment'] > 0 else 0 for t in trade_outcomes]
+        else:
+            # 旧格式：只有 profit
+            returns = trade_outcomes
         
         # 计算标准差
         std = np.std(returns, ddof=0)
         
-        # 计算平均投资额（假设每笔交易的投资额相近）
-        avg_investment = np.mean([abs(r) for r in returns if r < 0]) if any(r < 0 for r in returns) else 1.0
-        
         # 计算年化波动率（假设每年252个交易日）
-        # 这里简化处理：使用交易次数的平方根进行年化
-        if avg_investment > 0:
-            annualized_vol = (std / avg_investment) * np.sqrt(252)
-        else:
-            annualized_vol = 0.0
+        annualized_vol = std * np.sqrt(252)
         
         return annualized_vol
     
-    def calculate_per_stock_sortino(self, trade_outcomes: List[float], risk_free_rate: float = 0.0) -> float:
+    def calculate_per_stock_sortino(self, trade_outcomes: List, risk_free_rate: float = 0.0) -> float:
         """
         计算单股的 Sortino 比率（只考虑下行波动）
         
         Args:
-            trade_outcomes: 逐笔盈亏列表
+            trade_outcomes: 逐笔盈亏列表（可以是 List[float] 或 List[Dict]）
             risk_free_rate: 无风险利率（年化），默认为0
             
         Returns:
@@ -1385,11 +1392,19 @@ class AITradingAnalyzer:
         if len(trade_outcomes) < 2:
             return 0.0
         
+        # 计算收益率序列（相对收益率）
+        if trade_outcomes and isinstance(trade_outcomes[0], dict):
+            # 新格式：包含 profit 和 investment
+            returns = [t['profit'] / t['investment'] if t['investment'] > 0 else 0 for t in trade_outcomes]
+        else:
+            # 旧格式：只有 profit
+            returns = trade_outcomes
+        
         # 计算平均收益率
-        avg_return = np.mean(trade_outcomes)
+        avg_return = np.mean(returns)
         
         # 计算下行波动率（只考虑负收益）
-        negative_returns = [r for r in trade_outcomes if r < 0]
+        negative_returns = [r for r in returns if r < 0]
         
         if not negative_returns:
             return float('inf') if avg_return > 0 else 0.0
@@ -1403,14 +1418,14 @@ class AITradingAnalyzer:
         # Sortino 比率 = (平均收益率 - 无风险利率) / 下行标准差
         return (avg_return - risk_free_rate) / downside_std
     
-    def calculate_expectancy(self, trade_outcomes: List[float]) -> float:
+    def calculate_expectancy(self, trade_outcomes: List) -> float:
         """
         计算每笔交易的期望值
         
         Expectancy = win_rate * avg_win + (1 - win_rate) * avg_loss
         
         Args:
-            trade_outcomes: 逐笔盈亏列表
+            trade_outcomes: 逐笔盈亏列表（可以是 List[float] 或 List[Dict]）
             
         Returns:
             每笔期望值
@@ -1418,12 +1433,20 @@ class AITradingAnalyzer:
         if not trade_outcomes:
             return 0.0
         
-        win_trades = [p for p in trade_outcomes if p > 0]
-        loss_trades = [p for p in trade_outcomes if p < 0]
+        # 计算收益率序列（相对收益率）
+        if trade_outcomes and isinstance(trade_outcomes[0], dict):
+            # 新格式：包含 profit 和 investment
+            returns = [t['profit'] / t['investment'] if t['investment'] > 0 else 0 for t in trade_outcomes]
+        else:
+            # 旧格式：只有 profit
+            returns = trade_outcomes
+        
+        win_trades = [p for p in returns if p > 0]
+        loss_trades = [p for p in returns if p < 0]
         
         win_count = len(win_trades)
         loss_count = len(loss_trades)
-        total_count = len(trade_outcomes)
+        total_count = len(returns)
         
         if total_count == 0:
             return 0.0
@@ -1437,43 +1460,48 @@ class AITradingAnalyzer:
         
         return expectancy
     
-    def calculate_statistical_significance(self, trade_outcomes: List[float], 
-                                          n_bootstrap: int = 1000, 
-                                          confidence_level: float = 0.95) -> Dict:
-        """
-        使用 Bootstrap 方法计算统计显著性
-        
-        Args:
-            trade_outcomes: 逐笔盈亏列表
-            n_bootstrap: Bootstrap 重采样次数，默认1000
-            confidence_level: 置信水平，默认0.95
+    def calculate_statistical_significance(self, trade_outcomes: List,
+                                              n_bootstrap: int = 1000, 
+                                              confidence_level: float = 0.95) -> Dict:
+            """
+            使用 Bootstrap 方法计算统计显著性
             
-        Returns:
-            包含显著性检验结果的字典：
-            - is_significant: 是否显著（True/False）
-            - mean: 平均收益
-            - ci_lower: 置信区间下限
-            - ci_upper: 置信区间上限
-            - p_value: p值（近似）
-        """
-        if len(trade_outcomes) < 5:
-            return {
-                'is_significant': False,
-                'mean': 0.0,
-                'ci_lower': 0.0,
-                'ci_upper': 0.0,
-                'p_value': 1.0,
-                'reason': 'insufficient_samples'
-            }
-        
-        # 计算原始均值
-        original_mean = np.mean(trade_outcomes)
-        
+            Args:
+                trade_outcomes: 逐笔盈亏列表（可以是 List[float] 或 List[Dict]）
+                n_bootstrap: Bootstrap 重采样次数，默认1000
+                confidence_level: 置信水平，默认0.95
+                
+            Returns:
+                包含显著性检验结果的字典：
+                - is_significant: 是否显著（True/False）
+                - mean: 平均收益
+                - ci_lower: 置信区间下限
+                - ci_upper: 置信区间上限
+                - p_value: p值（近似）
+            """
+            # 提取 profit 字段（兼容新旧格式）
+            if trade_outcomes and isinstance(trade_outcomes[0], dict):
+                profit_list = [t['profit'] for t in trade_outcomes]
+            else:
+                profit_list = trade_outcomes
+            
+            if len(profit_list) < 5:
+                return {
+                    'is_significant': False,
+                    'mean': 0.0,
+                    'ci_lower': 0.0,
+                    'ci_upper': 0.0,
+                    'p_value': 1.0,
+                    'reason': 'insufficient_samples'
+                }
+            
+            # 计算原始均值
+            original_mean = np.mean(profit_list)        
         # Bootstrap 重采样
         bootstrap_means = []
         for _ in range(n_bootstrap):
             # 有放回重采样
-            sample = np.random.choice(trade_outcomes, size=len(trade_outcomes), replace=True)
+            sample = np.random.choice(profit_list, size=len(profit_list), replace=True)
             bootstrap_means.append(np.mean(sample))
         
         # 计算置信区间
@@ -1603,11 +1631,17 @@ class AITradingAnalyzer:
                 continue
             
             # 基本统计
-            win_trades = [p for p in trades if p > 0]
-            loss_trades = [p for p in trades if p < 0]
+            # 提取 profit 字段（兼容新旧格式）
+            if trades and isinstance(trades[0], dict):
+                profit_list = [t['profit'] for t in trades]
+            else:
+                profit_list = trades
+            
+            win_trades = [p for p in profit_list if p > 0]
+            loss_trades = [p for p in profit_list if p < 0]
             win_count = len(win_trades)
             loss_count = len(loss_trades)
-            win_rate = (win_count / len(trades)) if trades else 0.0
+            win_rate = (win_count / len(profit_list)) if profit_list else 0.0
             gross_profit = sum(win_trades) if win_trades else 0.0
             gross_loss = -sum(loss_trades) if loss_trades else 0.0
             profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (float('inf') if gross_profit > 0 else 0.0)
@@ -1972,8 +2006,20 @@ class AITradingAnalyzer:
         # XIRR / 回报指标
         report.append("【回报指标】")
         if xirr_value is not None:
-            if days < 5:
-                # 短期数据：添加警告
+            # 检查 XIRR 的可靠性
+            xirr_warnings = []
+            if days < 30:
+                xirr_warnings.append("短期数据（<30天），XIRR 可能不稳定")
+            
+            # 检查异常现金流
+            if abnormal_cashflows:
+                xirr_warnings.append(f"检测到 {len(abnormal_cashflows)} 个异常现金流，已从计算中排除")
+            
+            # 显示 XIRR
+            if xirr_warnings:
+                warning_text = " ⚠️ " + " | ".join(xirr_warnings)
+                report.append(f"XIRR: {xirr_value * 100:.2f}%{warning_text}")
+            elif days < 5:
                 report.append(f"XIRR: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
             else:
                 report.append(f"XIRR: {xirr_value * 100:.2f}%")
@@ -2073,7 +2119,7 @@ class AITradingAnalyzer:
             profit_results['stock_details'], 
             trade_outcomes_map, 
             completed_trades,
-            min_trades=4,
+            min_trades=20,  # 使用业界标准的最小交易次数阈值
             start_date=start_dt,
             end_date=end_dt,
             nav_series=nav_series
