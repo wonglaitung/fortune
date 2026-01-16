@@ -934,12 +934,17 @@ class AITradingAnalyzer:
         except Exception:
             return 'neutral'
 
-    def calculate_profit_loss(self, df: pd.DataFrame, excluded_stocks: set) -> Dict:
+    def calculate_profit_loss(self, df: pd.DataFrame, excluded_stocks: set, end_date: Optional[datetime] = None) -> Dict:
         """
         计算盈亏情况，并扩展返回更多用于回报/风险计算的数据:
          - cashflows: list of (datetime, amount) 用于 XIRR
          - total_invested: 所有买入的总投入
          - nav_series: 每日净值序列（pd.Series）
+        
+        Args:
+            df: 交易记录 DataFrame
+            excluded_stocks: 需要排除的股票代码集合
+            end_date: 分析结束日期，如果提供则使用该日期的历史价格，否则使用实时价格
         """
         results = {
             'realized_profit': 0.0,  # 已实现盈亏
@@ -1237,19 +1242,41 @@ class AITradingAnalyzer:
         for code, data in current_holdings.items():
             shares = data[0]
             investment = data[1]
-            # 优先调用腾讯财经接口获取实时价格
             latest_price = None
-            try:
-                # 转换股票代码格式：从 "1288.HK" 转换为 "1288"
-                clean_code = code.replace('.HK', '').replace('.hk', '')
-                stock_info = get_hk_stock_info_tencent(clean_code)
-                if stock_info and stock_info.get('current_price'):
-                    latest_price = stock_info['current_price']
-                    print(f"✓ 获取股票 {code} 实时价格: {latest_price}")
-            except Exception as e:
-                print(f"✗ 获取股票 {code} 实时价格失败: {e}")
             
-            # 如果实时价格获取失败，使用交易记录中的价格
+            # 根据是否提供 end_date 决定使用实时价格还是历史价格
+            if end_date is not None and end_date.date() < datetime.now().date():
+                # 使用历史价格（end_date 是过去的日期）
+                try:
+                    import yfinance as yf
+                    # 转换股票代码格式：从 "1288.HK" 转换为 "1288.HK" (yfinance 需要带 .HK)
+                    ticker = f"{code}.HK" if not code.endswith('.HK') else code
+                    stock_data = yf.download(ticker, start=end_date.strftime('%Y-%m-%d'), 
+                                           end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                                           progress=False)
+                    if not stock_data.empty:
+                        # yfinance 返回 MultiIndex，需要正确提取价格
+                        if len(stock_data['Close'].shape) > 1:
+                            latest_price = stock_data['Close'].iloc[-1, 0]
+                        else:
+                            latest_price = stock_data['Close'].iloc[-1]
+                        print(f"✓ 获取股票 {code} 历史价格 ({end_date.strftime('%Y-%m-%d')}): {latest_price}")
+                except Exception as e:
+                    print(f"✗ 获取股票 {code} 历史价格失败: {e}")
+            
+            # 如果没有提供 end_date，或者 end_date 是今天或未来，使用实时价格
+            if latest_price is None:
+                try:
+                    # 转换股票代码格式：从 "1288.HK" 转换为 "1288"
+                    clean_code = code.replace('.HK', '').replace('.hk', '')
+                    stock_info = get_hk_stock_info_tencent(clean_code)
+                    if stock_info and stock_info.get('current_price'):
+                        latest_price = stock_info['current_price']
+                        print(f"✓ 获取股票 {code} 实时价格: {latest_price}")
+                except Exception as e:
+                    print(f"✗ 获取股票 {code} 实时价格失败: {e}")
+            
+            # 如果价格获取失败，使用交易记录中的价格
             if latest_price is None or latest_price <= 0:
                 stock_trades = df[df['code'] == code].sort_values('timestamp')
                 latest_record = stock_trades.iloc[-1]
@@ -2145,18 +2172,21 @@ class AITradingAnalyzer:
         # 分析交易
         cash_flow, portfolio = self.analyze_trades(df_filtered, self.excluded_stocks)
         
-        # 计算盈亏 & 生成现金流 与 NAV
-        profit_results = self.calculate_profit_loss(df_filtered, self.excluded_stocks)
+        # 确定日期范围
+        actual_start = df_filtered['timestamp'].min().strftime('%Y-%m-%d')
+        actual_end = df_filtered['timestamp'].max().strftime('%Y-%m-%d')
+        
+        # 将 end_date 转换为 datetime 对象
+        end_dt = datetime.strptime(actual_end, '%Y-%m-%d') if end_date else None
+        
+        # 计算盈亏 & 生成现金流 与 NAV（传递 end_date 参数）
+        profit_results = self.calculate_profit_loss(df_filtered, self.excluded_stocks, end_dt)
         
         # 计算持仓市值（从 profit_results 中获取）
         holdings_value = sum(
             stock.get('current_value', 0.0) 
             for stock in profit_results.get('holding_stocks', [])
         )
-        
-        # 确定日期范围
-        actual_start = df_filtered['timestamp'].min().strftime('%Y-%m-%d')
-        actual_end = df_filtered['timestamp'].max().strftime('%Y-%m-%d')
         
         # 生成报告
         report = self.generate_report(actual_start, actual_end, cash_flow, 
