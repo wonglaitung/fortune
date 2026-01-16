@@ -1143,7 +1143,9 @@ class AITradingAnalyzer:
                     # 优先调用腾讯财经接口获取实时价格
                     latest_price = None
                     try:
-                        stock_info = get_hk_stock_info_tencent(stock_code)
+                        # 转换股票代码格式：从 "1288.HK" 转换为 "1288"
+                        clean_code = stock_code.replace('.HK', '').replace('.hk', '')
+                        stock_info = get_hk_stock_info_tencent(clean_code)
                         if stock_info and stock_info.get('current_price'):
                             latest_price = stock_info['current_price']
                             print(f"✓ 获取股票 {stock_code} 实时价格: {latest_price}")
@@ -1230,7 +1232,9 @@ class AITradingAnalyzer:
             # 优先调用腾讯财经接口获取实时价格
             latest_price = None
             try:
-                stock_info = get_hk_stock_info_tencent(code)
+                # 转换股票代码格式：从 "1288.HK" 转换为 "1288"
+                clean_code = code.replace('.HK', '').replace('.hk', '')
+                stock_info = get_hk_stock_info_tencent(clean_code)
                 if stock_info and stock_info.get('current_price'):
                     latest_price = stock_info['current_price']
                     print(f"✓ 获取股票 {code} 实时价格: {latest_price}")
