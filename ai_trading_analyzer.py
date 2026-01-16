@@ -1253,7 +1253,7 @@ class AITradingAnalyzer:
                     ticker = f"{code}.HK" if not code.endswith('.HK') else code
                     stock_data = yf.download(ticker, start=end_date.strftime('%Y-%m-%d'), 
                                            end=(end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
-                                           progress=False)
+                                           progress=False, auto_adjust=True)
                     if not stock_data.empty:
                         # yfinance 返回 MultiIndex，需要正确提取价格
                         if len(stock_data['Close'].shape) > 1:
