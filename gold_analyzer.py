@@ -717,7 +717,10 @@ class GoldMarketAnalyzer:
                         """
                         for signal in final_buy_signals:
                             reason = signal.get('reason', '')
-                            html_body += f"• {signal['date']}: {signal['description']} ({reason})<br>"
+                            is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == datetime.now().date()
+                            bold_start = "<strong>" if is_today else ""
+                            bold_end = "</strong>" if is_today else ""
+                            html_body += f"• {bold_start}{signal['date']}: {signal['description']}{bold_end} ({reason})<br>"
                         html_body += """
                                 </div>
                             </td>
@@ -733,7 +736,10 @@ class GoldMarketAnalyzer:
                         """
                         for signal in final_sell_signals:
                             reason = signal.get('reason', '')
-                            html_body += f"• {signal['date']}: {signal['description']} ({reason})<br>"
+                            is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == datetime.now().date()
+                            bold_start = "<strong>" if is_today else ""
+                            bold_end = "</strong>" if is_today else ""
+                            html_body += f"• {bold_start}{signal['date']}: {signal['description']}{bold_end} ({reason})<br>"
                         html_body += """
                                 </div>
                             </td>
@@ -749,7 +755,10 @@ class GoldMarketAnalyzer:
                         """
                         for conflict in signal_conflicts:
                             tav_info = f" TAV={conflict.get('tav_score')}" if conflict.get('tav_score') is not None else ""
-                            html_body += f"• {conflict['date']}: {conflict['description']}{tav_info}<br>"
+                            is_today = datetime.strptime(conflict['date'], '%Y-%m-%d').date() == datetime.now().date()
+                            bold_start = "<strong>" if is_today else ""
+                            bold_end = "</strong>" if is_today else ""
+                            html_body += f"• {bold_start}{conflict['date']}: {conflict['description']}{tav_info}{bold_end}<br>"
                         html_body += """
                                 </div>
                             </td>
