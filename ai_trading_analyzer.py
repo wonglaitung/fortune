@@ -2034,6 +2034,29 @@ class AITradingAnalyzer:
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
         
+        # 附加：现金流摘要（供 XIRR 校验）
+        report.append("【现金流摘要（用于 XIRR 计算）】")
+        if cashflows:
+            for d, amt, cf_type, *rest in cashflows:
+                # 获取股票名称或描述
+                stock_info = rest[0] if rest else ""
+                if cf_type == 'buy':
+                    stock_info = f"买入 {stock_info}"
+                elif cf_type == 'sell':
+                    stock_info = f"卖出 {stock_info}"
+                elif cf_type == 'final_settlement':
+                    stock_info = rest[0] if rest else "期末清算"
+                
+                # 格式化输出
+                amount_str = f"{'+' if amt>=0 else ''}{amt:,.2f}"
+                if stock_info:
+                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str} - {stock_info}")
+                else:
+                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str}")
+        else:
+            report.append("无现金流数据")
+        report.append("")
+        
         # 股票分级（基于真实交易统计）
         report.append("【股票分级（基于真实交易统计）】")
         trade_outcomes_map = profit_results.get('stock_trade_outcomes', {})
@@ -2116,29 +2139,6 @@ class AITradingAnalyzer:
         report.append("4. 持仓市值可以因盈利而超过初始资本")
         report.append("5. 交易成本：包含佣金、印花税、平台费等港股标准费率")
         report.append("6. 异常处理：排除价格为0的异常交易")
-        report.append("")
-        
-        # 附加：现金流摘要（供 XIRR 校验）
-        report.append("【现金流摘要（用于 XIRR 计算）】")
-        if cashflows:
-            for d, amt, cf_type, *rest in cashflows:
-                # 获取股票名称或描述
-                stock_info = rest[0] if rest else ""
-                if cf_type == 'buy':
-                    stock_info = f"买入 {stock_info}"
-                elif cf_type == 'sell':
-                    stock_info = f"卖出 {stock_info}"
-                elif cf_type == 'final_settlement':
-                    stock_info = rest[0] if rest else "期末清算"
-                
-                # 格式化输出
-                amount_str = f"{'+' if amt>=0 else ''}{amt:,.2f}"
-                if stock_info:
-                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str} - {stock_info}")
-                else:
-                    report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {amount_str}")
-        else:
-            report.append("无现金流数据")
         report.append("")
         
         return "\n".join(report)
