@@ -102,18 +102,21 @@ class AITradingAnalyzer:
             allocation_pct: 资金分配比例（百分比），例如15表示15%
             
         Returns:
-            可买入的股数（100股的倍数）
+            可买入的股数（100股的倍数），如果资金不足则返回0
         """
         shares_per_lot = 100  # 港股每手100股
         
         # 基于初始资本的资金分配
         target_investment = self.initial_capital * (allocation_pct / 100.0)
         
-        max_lots = int(target_investment / (price * shares_per_lot))
-        shares = max_lots * shares_per_lot
+        # 计算可买手数
+        lots = int(target_investment / (price * shares_per_lot))
         
-        # 至少买1手
-        return max(shares, shares_per_lot)
+        # 如果资金不足，返回0
+        if lots <= 0:
+            return 0
+        
+        return lots * shares_per_lot
     
     def calculate_transaction_cost(self, amount: float, is_sell: bool = False) -> float:
         """
@@ -416,12 +419,13 @@ class AITradingAnalyzer:
         if not abs_amounts:
             return []
         
-        # 计算最大峰值（买入的最大金额）
-        max_inflow = max([amt for _, amt in cashflows if amt < 0], default=0)
+        # 计算买入(负值)绝对峰值
+        inflow_amounts = [abs(amt) for _, amt in cashflows if amt < 0]
+        max_inflow = max(inflow_amounts, default=0)
         
-        # 计算总流入和总流出
-        total_outflow = sum([amt for _, amt in cashflows if amt > 0])
-        total_inflow = sum([amt for _, amt in cashflows if amt < 0])
+        # 计算总流入和总流出（正数）
+        total_outflow = sum([amt for _, amt in cashflows if amt > 0])  # 卖出收回
+        total_inflow = sum(inflow_amounts)  # 买入总额，正数
         
         # 检测异常大额流入（可能是重复记账）
         for dt, amt in cashflows:
@@ -437,10 +441,11 @@ class AITradingAnalyzer:
                     abnormal_cashflows.append((dt, amt, reason))
         
         # 检测现金流不平衡
-        net_flow = total_outflow + total_inflow
-        if abs(net_flow) > abs(total_inflow) * 0.1:  # 净现金流超过总投入的10%
-            reason = f"现金流不平衡: 净流入 HK${net_flow:,.2f}，占总投入 {abs(net_flow/total_inflow*100):.1f}%"
-            abnormal_cashflows.append((cashflows[-1][0], net_flow, reason))
+        if total_inflow > 0:  # 避免除零
+            net_flow = total_outflow - total_inflow
+            if abs(net_flow) > total_inflow * 0.1:  # 净现金流超过总投入的10%
+                reason = f"现金流不平衡: 净流入 HK${net_flow:,.2f}，占总投入 {abs(net_flow/total_inflow*100):.1f}%"
+                abnormal_cashflows.append((cashflows[-1][0], net_flow, reason))
         
         return abnormal_cashflows
     
@@ -701,85 +706,7 @@ class AITradingAnalyzer:
         
         return abs(max_dd) if not math.isnan(max_dd) else 0.0
     
-    def classify_stocks(self, stock_details: List[Dict]) -> Dict[str, List[Dict]]:
-        """
-        根据历史表现对股票进行分级
-        
-        分级标准：
-        - S级：收益率>5% + 盈亏比>0.05，全信号执行 + 15%仓位
-        - A级：收益率2-5%，仅执行首次买入/卖出
-        - B级：收益率0-2%，仅执行首次信号 + 5%仓位
-        - C级：收益率<0%，完全禁用
-        
-        Args:
-            stock_details: 股票明细列表
-        
-        Returns:
-            dict: 分级结果 {'S': [], 'A': [], 'B': [], 'C': []}
-        """
-        classification = {'S': [], 'A': [], 'B': [], 'C': []}
-        
-        for stock in stock_details:
-            buy_count = stock.get('buy_count', 0)
-            sell_count = stock.get('sell_count', 0)
-            profit = stock.get('profit', 0)
-            investment = stock.get('investment', 0)
-            
-            # 计算收益率
-            profit_rate = (profit / investment * 100) if investment > 0 else 0
-            
-            # 计算盈亏比（总盈利 / 总亏损）
-            profit_ratio = abs(profit / investment) if profit > 0 else 0
-            
-            # 计算胜率（基于收益率）
-            if profit_rate > 5:
-                win_rate = 0.80
-            elif profit_rate > 2:
-                win_rate = 0.65
-            elif profit_rate > 0:
-                win_rate = 0.50
-            else:
-                win_rate = 0.20
-            
-            # 根据标准分级
-            if profit_rate > 5.0 and profit_ratio > 0.05:
-                grade = 'S'
-            elif profit_rate > 2.0:
-                grade = 'A'
-            elif profit_rate > 0.0:
-                grade = 'B'
-            else:
-                grade = 'C'
-            
-            stock_with_grade = stock.copy()
-            stock_with_grade['grade'] = grade
-            stock_with_grade['win_rate'] = win_rate
-            stock_with_grade['profit_ratio'] = profit_ratio
-            stock_with_grade['profit_rate'] = profit_rate
-            stock_with_grade['recommended_position'] = self._get_recommended_position(grade)
-            stock_with_grade['trade_rule'] = self._get_trade_rule(grade)
-            
-            classification[grade].append(stock_with_grade)
-        
-        return classification
     
-    def _get_recommended_position(self, grade: str) -> float:
-        """
-        获取推荐仓位比例
-        
-        Args:
-            grade: 股票等级
-        
-        Returns:
-            仓位比例（0-100）
-        """
-        position_map = {
-            'S': 15.0,
-            'A': 10.0,
-            'B': 5.0,
-            'C': 0.0
-        }
-        return position_map.get(grade, 0.0)
     
     def _get_trade_rule(self, grade: str) -> str:
         """
@@ -878,7 +805,7 @@ class AITradingAnalyzer:
             'abnormal_cashflows': [],  # 异常现金流记录
             # 逐笔交易统计（用于 classify_stocks）
             'stock_trade_outcomes': {},  # code -> list of per-trade profits (realized)
-            'stock_trade_counts': {},    # code -> total trades count (买+卖信号)
+            'stock_completed_trades': {},    # code -> completed trades count (已完成的交易对/平仓次数)
         }
         
         # 获取所有股票
@@ -1053,9 +980,10 @@ class AITradingAnalyzer:
                         if stock_code in current_holdings:
                             del current_holdings[stock_code]
                         
-                        # 记录逐笔交易盈亏（用于 classify_stocks）
-                        results['stock_trade_outcomes'].setdefault(stock_code, []).append(profit)
-                        results['stock_trade_counts'][stock_code] = results['stock_trade_counts'].get(stock_code, 0) + 1
+                        # 记录逐笔交易盈亏（用于 classify_stocks），使用净收益（含手续费）
+                        trade_profit_net = net_returns - portfolio['investment']
+                        results['stock_trade_outcomes'].setdefault(stock_code, []).append(trade_profit_net)
+                        results['stock_completed_trades'][stock_code] = results['stock_completed_trades'].get(stock_code, 0) + 1
                         
                         # 清空持仓
                         portfolio['shares'] = 0
@@ -1174,7 +1102,7 @@ class AITradingAnalyzer:
         return results
     
     def classify_stocks(self, stock_details: List[Dict], trade_outcomes_map: Dict[str, List[float]], 
-                       trade_counts: Dict[str, int], min_trades: int = 4) -> Dict[str, List[Dict]]:
+                       completed_trades: Dict[str, int], min_trades: int = 4) -> Dict[str, List[Dict]]:
         """
         基于真实交易统计对股票进行分级
         
@@ -1187,7 +1115,7 @@ class AITradingAnalyzer:
         Args:
             stock_details: 股票明细列表
             trade_outcomes_map: 股票代码到逐笔盈亏列表的映射
-            trade_counts: 股票代码到交易次数的映射
+            completed_trades: 股票代码到已完成交易次数的映射（已完成的交易对/平仓次数）
             min_trades: 最小交易次数阈值（默认为4）
             
         Returns:
@@ -1202,7 +1130,7 @@ class AITradingAnalyzer:
             
             # 从逐笔盈亏获得更可靠统计
             trades = trade_outcomes_map.get(code, [])
-            trade_count = trade_counts.get(code, 0)
+            trade_count = completed_trades.get(code, 0)
             
             # 基本统计
             win_trades = [p for p in trades if p > 0]
@@ -1457,44 +1385,6 @@ class AITradingAnalyzer:
             
             report.append("")
         
-        # 股票分级分析
-        all_stock_details = profit_results.get('stock_details', [])
-        if all_stock_details:
-            classification = self.classify_stocks(all_stock_details)
-            
-            report.append("【股票分级分析】")
-            report.append("分级标准：")
-            report.append("  S级：收益率>5% + 盈亏比>0.05，全信号执行 + 15%仓位")
-            report.append("  A级：收益率2-5%，仅执行首次买入/卖出")
-            report.append("  B级：收益率0-2%，仅执行首次信号 + 5%仓位")
-            report.append("  C级：收益率<0%，完全禁用")
-            report.append("")
-            
-            # 显示各级股票
-            grade_names = {'S': 'S级（推荐）', 'A': 'A级（良好）', 'B': 'B级（一般）', 'C': 'C级（禁用）'}
-            for grade in ['S', 'A', 'B', 'C']:
-                stocks = classification.get(grade, [])
-                if stocks:
-                    report.append(f"【{grade_names[grade]}】({len(stocks)}只)")
-                    for stock in stocks:
-                        profit_rate = (stock['profit'] / stock['investment'] * 100) if stock['investment'] > 0 else 0
-                        report.append(f"  {stock['name']}({stock['code']}): "
-                                   f"收益率{profit_rate:+.2f}%, 胜率{stock['win_rate']*100:.1f}%, "
-                                   f"盈亏比{stock['profit_ratio']:.2f}, "
-                                   f"推荐仓位{stock['recommended_position']:.0f}%, "
-                                   f"{stock['trade_rule']}")
-                    report.append("")
-            
-            # 分级建议
-            s_count = len(classification.get('S', []))
-            c_count = len(classification.get('C', []))
-            if c_count > 0:
-                report.append("【分级建议】")
-                report.append(f"  禁用C级股票（{c_count}只）可节省约HK${c_count * 160:,.0f}交易成本")
-                if s_count > 0:
-                    report.append(f"  S级股票（{s_count}只）仓位提升至15%，预期收益提升约50%")
-                report.append("")
-        
         # 异常现金流警告
         if abnormal_cashflows:
             report.append("【⚠️ 异常现金流警告】")
@@ -1582,11 +1472,11 @@ class AITradingAnalyzer:
         # 股票分级（基于真实交易统计）
         report.append("【股票分级（基于真实交易统计）】")
         trade_outcomes_map = profit_results.get('stock_trade_outcomes', {})
-        trade_counts = profit_results.get('stock_trade_counts', {})
+        completed_trades = profit_results.get('stock_completed_trades', {})
         classification = self.classify_stocks(
             profit_results['stock_details'], 
             trade_outcomes_map, 
-            trade_counts,
+            completed_trades,
             min_trades=4
         )
         
@@ -1602,10 +1492,12 @@ class AITradingAnalyzer:
                         report.append(f"  {stock['name']}({stock['code']}): {stock.get('reason', '数据不足')}")
                     else:
                         # 显示详细统计信息
+                        profit_factor = stock.get('profit_factor', 0)
+                        profit_factor_str = f"{profit_factor:.2f}" if profit_factor != float('inf') else "inf"
                         report.append(f"  {stock['name']}({stock['code']}): "
                                    f"收益率{stock.get('profit_rate', 0):.2f}%, "
                                    f"胜率{stock.get('win_rate', 0)*100:.1f}%, "
-                                   f"盈亏比{stock.get('profit_factor', 0):.2f}, "
+                                   f"盈亏比{profit_factor_str}, "
                                    f"交易{stock.get('trade_count', 0)}次, "
                                    f"推荐仓位: {stock.get('recommended_position', '')}, "
                                    f"交易规则: {stock.get('trade_rule', '')}")
