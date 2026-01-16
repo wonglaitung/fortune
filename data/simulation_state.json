@@ -18012,6 +18012,54 @@
       "current_price": 5.13,
       "target_price": 5.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-16T10:26:02.820072",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 480.18929405196104,
+      "reason": "技术超买严重（RSI 69.73、布林带超买、CMF资金流出），位置百分位89.64%高位，基本面与技术面背离（市盈率34.17但评分仅20分），需减仓避险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.04,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-16T10:26:08.599993",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.91,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "低估值高分红银行股，基本面优质（市盈率5.60），多周期趋势向上，技术指标协同支持（OBV上升、CMF微流入、MACD交叉），风险等级2级适合平衡型 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 6.33,
+      "current_price": 7.91,
+      "target_price": 8.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-16T10:26:11.595007",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.62,
+      "amount": 0,
+      "capital_after": 480.18929405196104,
+      "reason": "超跌反弹机会，高股息率（超7%），技术指标显示超卖反弹（OBV上升、MACD交叉、布林带超卖），位置百分位26.21%提供安全边际 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.19,
+      "current_price": 5.62,
+      "target_price": 6.1,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -30276,91 +30324,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-15 12:04:39",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5，RSI接近超买，OBV下降，基本面亏损（市盈率-153.32），风险等级4级",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 56.0,
-      "target_price": 52.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-15 12:04:42",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5，RSI超买，CMF资金流出，风险等级3级，短期涨幅过大需获利了结",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 127.1,
-      "target_price": 122.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-15 12:04:46",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.85,
-      "amount": 0,
-      "reason": "基本面评分100，低估值高股息（PE 5.60），风险等级2级，技术指标协同支持（OBV上升、CMF资金流入），适合平衡型投资者防御配置 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 7.5,
-      "current_price": 7.85,
-      "target_price": 8.2,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-01-15 12:04:49",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.29,
-      "amount": 0,
-      "reason": "基本面评分100，低估值高股息（PE 5.67），风险等级2级，60日收益率优于同业，技术指标支持趋势向上 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 6.05,
-      "current_price": 6.29,
-      "target_price": 6.65,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-01-15 12:04:53",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.6,
-      "amount": 0,
-      "reason": "基本面评分100，超跌反弹机会（位置百分位27.18%），风险等级2级，高分红提供安全边际 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 5.35,
-      "current_price": 5.6,
-      "target_price": 5.9,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-01-15 13:45:49",
-      "buy": [],
-      "sell": []
-    },
-    {
       "timestamp": "2026-01-15 14:44:57",
       "buy": [
         {
@@ -30518,6 +30481,92 @@
       "stop_loss_price": 4.9,
       "current_price": 5.13,
       "target_price": 5.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-16 09:44:24",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-16 10:26:02",
+      "buy": [
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "低估值高分红银行股，基本面优质（市盈率5.60），多周期趋势向上，技术指标协同支持（OBV上升、CMF微流入、MACD交叉），风险等级2级适合平衡型",
+          "allocation_pct": 15,
+          "stop_loss_price": 6.33,
+          "target_price": 8.5,
+          "validity_period": 14
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "超跌反弹机会，高股息率（超7%），技术指标显示超卖反弹（OBV上升、MACD交叉、布林带超卖），位置百分位26.21%提供安全边际",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.19,
+          "target_price": 6.1,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "技术超买严重（RSI 69.73、布林带超买、CMF资金流出），位置百分位89.64%高位，基本面与技术面背离（市盈率34.17但评分仅20分），需减仓避险",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-16 10:26:02",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术超买严重（RSI 69.73、布林带超买、CMF资金流出），位置百分位89.64%高位，基本面与技术面背离（市盈率34.17但评分仅20分），需减仓避险",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.04,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-16 10:26:08",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.91,
+      "amount": 0,
+      "reason": "低估值高分红银行股，基本面优质（市盈率5.60），多周期趋势向上，技术指标协同支持（OBV上升、CMF微流入、MACD交叉），风险等级2级适合平衡型 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 6.33,
+      "current_price": 7.91,
+      "target_price": 8.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-16 10:26:11",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.62,
+      "amount": 0,
+      "reason": "超跌反弹机会，高股息率（超7%），技术指标显示超卖反弹（OBV上升、MACD交叉、布林带超卖），位置百分位26.21%提供安全边际 (原因: 资金不足)",
+      "capital_after": 480.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.19,
+      "current_price": 5.62,
+      "target_price": 6.1,
       "validity_period": 5
     }
   ],
