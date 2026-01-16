@@ -1895,9 +1895,9 @@ class AITradingAnalyzer:
 
         # 夏普比率（假设无风险利率为0）
         # 修正：使用年化收益率而非TWR
-        # 年化收益率 = (最终总资产 / 初始资本 - 1) * (365 / 天数)
+        # 年化收益率 = (最终总资产 / 初始资本) ^ (365 / 天数) - 1
         if days > 0:
-            annual_return = (final_total_assets / self.initial_capital - 1) * (365 / days)
+            annual_return = (final_total_assets / self.initial_capital) ** (365 / days) - 1
         else:
             annual_return = 0.0
         sharpe = (annual_return / annual_vol) if annual_vol > 0 else 0.0
