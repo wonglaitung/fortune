@@ -400,18 +400,19 @@ class AITradingAnalyzer:
     
     def detect_abnormal_cashflows(self, cashflows: List[Tuple],
                                      threshold_ratio: float = 2.0) -> List[Tuple[datetime, float, str]]:
-            """
-            检测异常现金流（如重复记账或数据导出故障）
+        """
+        检测异常现金流（如重复记账或数据导出故障）
+        
+        Args:
+            cashflows: 现金流列表，格式为 [(datetime, amount, type, meta)]
+                   type 可以是 'buy', 'sell', 'final_settlement'
+                   meta 是股票名称或描述
+            threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
             
-            Args:
-                cashflows: 现金流列表，格式为 [(datetime, amount, type, meta)]
-                       type 可以是 'buy', 'sell', 'final_settlement'
-                       meta 是股票名称或描述
-                threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
-                
-            Returns:
-                异常现金流列表 [(datetime, amount, reason)]
-            """        if not cashflows:
+        Returns:
+            异常现金流列表 [(datetime, amount, reason)]
+        """
+        if not cashflows:
             return []
         
         abnormal_cashflows = []
@@ -1496,36 +1497,37 @@ class AITradingAnalyzer:
                 }
             
             # 计算原始均值
-            original_mean = np.mean(profit_list)        
-        # Bootstrap 重采样
-        bootstrap_means = []
-        for _ in range(n_bootstrap):
-            # 有放回重采样
-            sample = np.random.choice(profit_list, size=len(profit_list), replace=True)
-            bootstrap_means.append(np.mean(sample))
+            original_mean = np.mean(profit_list)
         
-        # 计算置信区间
-        alpha = 1 - confidence_level
-        ci_lower = np.percentile(bootstrap_means, alpha / 2 * 100)
-        ci_upper = np.percentile(bootstrap_means, (1 - alpha / 2) * 100)
-        
-        # 判断是否显著（置信区间不包含0）
-        is_significant = (ci_lower > 0) if original_mean > 0 else (ci_upper < 0)
-        
-        # 计算 p 值（近似：Bootstrap 样本中均值符号相反的比例）
-        if original_mean > 0:
-            p_value = np.mean([m <= 0 for m in bootstrap_means])
-        else:
-            p_value = np.mean([m >= 0 for m in bootstrap_means])
-        
-        return {
-            'is_significant': is_significant,
-            'mean': original_mean,
-            'ci_lower': ci_lower,
-            'ci_upper': ci_upper,
-            'p_value': p_value,
-            'confidence_level': confidence_level
-        }
+            # Bootstrap 重采样
+            bootstrap_means = []
+            for _ in range(n_bootstrap):
+                # 有放回重采样
+                sample = np.random.choice(profit_list, size=len(profit_list), replace=True)
+                bootstrap_means.append(np.mean(sample))
+            
+            # 计算置信区间
+            alpha = 1 - confidence_level
+            ci_lower = np.percentile(bootstrap_means, alpha / 2 * 100)
+            ci_upper = np.percentile(bootstrap_means, (1 - alpha / 2) * 100)
+            
+            # 判断是否显著（置信区间不包含0）
+            is_significant = (ci_lower > 0) if original_mean > 0 else (ci_upper < 0)
+            
+            # 计算 p 值（近似：Bootstrap 样本中均值符号相反的比例）
+            if original_mean > 0:
+                p_value = np.mean([m <= 0 for m in bootstrap_means])
+            else:
+                p_value = np.mean([m >= 0 for m in bootstrap_means])
+            
+            return {
+                'is_significant': is_significant,
+                'mean': original_mean,
+                'ci_lower': ci_lower,
+                'ci_upper': ci_upper,
+                'p_value': p_value,
+                'confidence_level': confidence_level
+            }
     
     def percentile_rank(self, value: float, values: List[float]) -> float:
         """
