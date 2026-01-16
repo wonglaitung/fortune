@@ -398,13 +398,13 @@ class AITradingAnalyzer:
         
         return excluded
     
-    def detect_abnormal_cashflows(self, cashflows: List[Tuple[datetime, float]], 
+    def detect_abnormal_cashflows(self, cashflows: List[Tuple], 
                                  threshold_ratio: float = 2.0) -> List[Tuple[datetime, float, str]]:
         """
         检测异常现金流（如重复记账或数据导出故障）
         
         Args:
-            cashflows: 现金流列表
+            cashflows: 现金流列表，可以是 [(datetime, amount)] 或 [(datetime, amount, type)]
             threshold_ratio: 异常阈值比例（相对于最大峰值的比例），默认200%
             
         Returns:
@@ -416,22 +416,27 @@ class AITradingAnalyzer:
         abnormal_cashflows = []
         
         # 计算所有现金流的绝对值
-        abs_amounts = [abs(amt) for _, amt in cashflows]
+        abs_amounts = [abs(item[1]) for item in cashflows]
         
         if not abs_amounts:
             return []
         
         # 计算买入(负值)绝对峰值
-        inflow_amounts = [abs(amt) for _, amt in cashflows if amt < 0]
+        inflow_amounts = [abs(item[1]) for item in cashflows if item[1] < 0]
         max_inflow = max(inflow_amounts, default=0)
         
         # 计算总流入和总流出（正数）
-        total_outflow = sum([amt for _, amt in cashflows if amt > 0])  # 卖出收回
+        total_outflow = sum([item[1] for item in cashflows if item[1] > 0])  # 卖出收回
         total_inflow = sum(inflow_amounts)  # 买入总额，正数
         
         # 检测异常大额流入（可能是重复记账）
-        for dt, amt in cashflows:
-            if amt > 0:
+        for item in cashflows:
+            dt = item[0]
+            amt = item[1]
+            # 检查是否是期末清算（第三字段标记为 'final_settlement'）
+            is_final_settlement = (len(item) >= 3 and item[2] == 'final_settlement')
+            
+            if amt > 0 and not is_final_settlement:
                 # 如果单笔流入超过总流出的阈值比例，标记为异常
                 if total_outflow > 0 and amt > total_outflow * threshold_ratio:
                     reason = f"单笔流入占总流出比例过高: {amt/total_outflow*100:.1f}% (阈值: {threshold_ratio*100:.1f}%)"
@@ -508,13 +513,13 @@ class AITradingAnalyzer:
     def _xnpv(self, rate: float, cashflows: List[Tuple[datetime, float]]) -> float:
         """
         计算 NPV 给定年化贴现率（rate）和现金流
-        cashflows: list of (datetime, amount)
+        cashflows: list of (datetime, amount, type)
         """
         if rate <= -1.0:
             return float('inf')
         t0 = cashflows[0][0]
         total = 0.0
-        for d, amt in cashflows:
+        for d, amt, *_ in cashflows:
             days = (d - t0).days + (d - t0).seconds / 86400.0
             total += amt / ((1.0 + rate) ** (days / 365.0))
         return total
@@ -541,21 +546,22 @@ class AITradingAnalyzer:
             if abnormal_flows:
                 # 移除异常现金流
                 abnormal_timestamps = [dt for dt, _, _ in abnormal_flows]
-                filtered_cashflows = [(dt, amt) for dt, amt in cashflows 
-                                    if dt not in abnormal_timestamps]
+                # 保留所有字段，包括类型标记
+                filtered_cashflows = [item for item in cashflows 
+                                    if item[0] not in abnormal_timestamps]
                 
                 # 如果过滤后现金流为空或只有单向现金流，返回None
                 if not filtered_cashflows:
                     return None
                 
-                signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in filtered_cashflows])
+                signs = set([1 if item[1] > 0 else -1 if item[1] < 0 else 0 for item in filtered_cashflows])
                 if not (1 in signs and -1 in signs):
                     return None
                 
                 cashflows = filtered_cashflows
         
         # 必须至少包含一次正流入和一次负流出
-        signs = set([1 if amt > 0 else -1 if amt < 0 else 0 for _, amt in cashflows])
+        signs = set([1 if item[1] > 0 else -1 if item[1] < 0 else 0 for item in cashflows])
         if not (1 in signs and -1 in signs):
             return None
 
@@ -1253,8 +1259,9 @@ class AITradingAnalyzer:
                 holdings_value += current_value
         
         # 期末现金流：将持仓市值作为终值流入（相当于假设在分析终点清仓）
+        # 标记为特殊现金流，用于XIRR计算
         if holdings_value != 0:
-            cashflows.append((last_ts, holdings_value))
+            cashflows.append((last_ts, holdings_value, 'final_settlement'))
         else:
             # 如果没有持仓，现金流最后一笔可能已经是卖出流入
             pass
@@ -1806,19 +1813,13 @@ class AITradingAnalyzer:
         # 扣除交易成本后的ROI
         net_roi = (net_profit / total_invested * 100) if total_invested != 0 else 0.0
 
-        # XIRR（年化内部收益率）
+        # XIRR（年化内部收益率）- 业界标准：包含所有现金流 + 期末清算价值
         cashflows = profit_results.get('cashflows', [])
         xirr_value = None
-        xirr_without_final = None  # 不含期末清算的XIRR
         try:
             xirr_value = self.xirr(cashflows)
-            # 计算不含期末清算的XIRR（移除最后一笔大额流入）
-            if len(cashflows) >= 2:
-                cashflows_without_final = cashflows[:-1]
-                xirr_without_final = self.xirr(cashflows_without_final)
         except Exception:
             xirr_value = None
-            xirr_without_final = None
         
         # 检测异常现金流
         abnormal_cashflows = []
@@ -1942,20 +1943,11 @@ class AITradingAnalyzer:
         if xirr_value is not None:
             if days < 5:
                 # 短期数据：添加警告
-                report.append(f"XIRR（含期末清算）: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
+                report.append(f"XIRR: {xirr_value * 100:.2f}% ⚠️ 短期数据，仅供参考")
             else:
-                report.append(f"XIRR（含期末清算）: {xirr_value * 100:.2f}%")
+                report.append(f"XIRR: {xirr_value * 100:.2f}%")
         else:
             report.append("XIRR: 无法计算（现金流可能不包含正负两类流）")
-        
-        # 添加不含期末清算的XIRR
-        if xirr_without_final is not None:
-            report.append(f"XIRR（不含期末清算）: {xirr_without_final * 100:.2f}%")
-            if xirr_value is not None:
-                diff = xirr_value - xirr_without_final
-                report.append(f"  期末清算影响: +{diff * 100:.2f}%")
-        else:
-            report.append("XIRR（不含期末清算）: 无法计算")
         
         # 添加年化收益率（修正后的）
         if days > 0:
@@ -2098,7 +2090,7 @@ class AITradingAnalyzer:
         # 附加：现金流摘要（供 XIRR 校验）
         report.append("【现金流摘要（用于 XIRR 计算）】")
         if cashflows:
-            for d, amt in cashflows:
+            for d, amt, *_ in cashflows:
                 report.append(f"{d.strftime('%Y-%m-%d %H:%M:%S')}: {'+' if amt>=0 else ''}{amt:,.2f}")
         else:
             report.append("无现金流数据")
