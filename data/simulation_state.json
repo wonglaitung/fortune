@@ -18167,6 +18167,38 @@
       "current_price": 99.85,
       "target_price": 105.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16T14:35:40.273752",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 39618.18929405196,
+      "reason": "出货评分6.5分，RSI 80.2超买，位置百分位100%，估值泡沫严重（市盈率1674倍）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 104.8,
+      "target_price": 95.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16T14:35:43.005313",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 39618.18929405196,
+      "reason": "出货评分6.0分，RSI 74.24超买，布林带超买，航运周期见顶风险上升",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.06,
+      "target_price": 10.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -30609,108 +30641,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-15 15:45:16",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.13,
-      "amount": 0,
-      "reason": "超跌反弹机会，基本面评分100分（高分红+政策支持），位置百分位8.33%低位，技术指标协同性强（价格、RSI、布林带、OBV同向），适合平衡型短期配置 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.9,
-      "current_price": 5.13,
-      "target_price": 5.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-16 09:44:24",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-16 10:26:02",
-      "buy": [
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "低估值高分红银行股，基本面优质（市盈率5.60），多周期趋势向上，技术指标协同支持（OBV上升、CMF微流入、MACD交叉），风险等级2级适合平衡型",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.33,
-          "target_price": 8.5,
-          "validity_period": 14
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "超跌反弹机会，高股息率（超7%），技术指标显示超卖反弹（OBV上升、MACD交叉、布林带超卖），位置百分位26.21%提供安全边际",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.19,
-          "target_price": 6.1,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "技术超买严重（RSI 69.73、布林带超买、CMF资金流出），位置百分位89.64%高位，基本面与技术面背离（市盈率34.17但评分仅20分），需减仓避险",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-16 10:26:02",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术超买严重（RSI 69.73、布林带超买、CMF资金流出），位置百分位89.64%高位，基本面与技术面背离（市盈率34.17但评分仅20分），需减仓避险",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.04,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-16 10:26:08",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.91,
-      "amount": 0,
-      "reason": "低估值高分红银行股，基本面优质（市盈率5.60），多周期趋势向上，技术指标协同支持（OBV上升、CMF微流入、MACD交叉），风险等级2级适合平衡型 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 6.33,
-      "current_price": 7.91,
-      "target_price": 8.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-16 10:26:11",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.62,
-      "amount": 0,
-      "reason": "超跌反弹机会，高股息率（超7%），技术指标显示超卖反弹（OBV上升、MACD交叉、布林带超卖），位置百分位26.21%提供安全边际 (原因: 资金不足)",
-      "capital_after": 480.18929405196104,
-      "success": false,
-      "stop_loss_price": 5.19,
-      "current_price": 5.62,
-      "target_price": 6.1,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-01-16 11:32:33",
       "buy": [
         {
@@ -30887,6 +30817,60 @@
       "stop_loss_price": 95.0,
       "current_price": 99.85,
       "target_price": 105.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16 14:35:40",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分6.5分，RSI 80.2超买，位置百分位100%，估值泡沫严重（市盈率1674倍）",
+          "stop_loss_triggered": false,
+          "target_price": 95.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分6.0分，RSI 74.24超买，布林带超买，航运周期见顶风险上升",
+          "stop_loss_triggered": false,
+          "target_price": 10.5,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-16 14:35:40",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，RSI 80.2超买，位置百分位100%，估值泡沫严重（市盈率1674倍）",
+      "capital_after": 39618.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 104.8,
+      "target_price": 95.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-16 14:35:43",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，RSI 74.24超买，布林带超买，航运周期见顶风险上升",
+      "capital_after": 39618.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.06,
+      "target_price": 10.5,
       "validity_period": 7
     }
   ],
