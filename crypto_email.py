@@ -699,7 +699,10 @@ if __name__ == "__main__":
             """
             for signal in eth_recent_buy_signals:
                 reason = signal.get('reason', '')
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
+                is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: green;'>• {bold_start}{signal['date']}: {signal['description']}{bold_end}"
                 if reason:
                     html += f" （{reason}）"
                 html += "</span><br>"
@@ -718,7 +721,10 @@ if __name__ == "__main__":
             """
             for signal in eth_recent_sell_signals:
                 reason = signal.get('reason', '')
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
+                is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: red;'>• {bold_start}{signal['date']}: {signal['description']}{bold_end}"
                 if reason:
                     html += f" （{reason}）"
                 html += "</span><br>"
@@ -738,7 +744,10 @@ if __name__ == "__main__":
             """
             for c in eth_conflicts:
                 tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
-                html += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
+                is_today = datetime.strptime(c['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: #856404;'>• {bold_start}{c['date']}: {c['description']}{tav_info}{bold_end}</span><br>"
             html += """
                         </div>
                     </td>
@@ -830,7 +839,10 @@ if __name__ == "__main__":
             """
             for signal in btc_recent_buy_signals:
                 reason = signal.get('reason', '')
-                html += f"<span style='color: green;'>• {signal['date']}: {signal['description']}"
+                is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: green;'>• {bold_start}{signal['date']}: {signal['description']}{bold_end}"
                 if reason:
                     html += f" （{reason}）"
                 html += "</span><br>"
@@ -849,7 +861,10 @@ if __name__ == "__main__":
             """
             for signal in btc_recent_sell_signals:
                 reason = signal.get('reason', '')
-                html += f"<span style='color: red;'>• {signal['date']}: {signal['description']}"
+                is_today = datetime.strptime(signal['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: red;'>• {bold_start}{signal['date']}: {signal['description']}{bold_end}"
                 if reason:
                     html += f" （{reason}）"
                 html += "</span><br>"
@@ -869,7 +884,10 @@ if __name__ == "__main__":
             """
             for c in btc_conflicts:
                 tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
-                html += f"<span style='color: #856404;'>• {c['date']}: {c['description']}{tav_info}</span><br>"
+                is_today = datetime.strptime(c['date'], '%Y-%m-%d').date() == today
+                bold_start = "<strong>" if is_today else ""
+                bold_end = "</strong>" if is_today else ""
+                html += f"<span style='color: #856404;'>• {bold_start}{c['date']}: {c['description']}{tav_info}{bold_end}</span><br>"
             html += """
                         </div>
                     </td>
