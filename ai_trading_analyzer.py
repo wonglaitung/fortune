@@ -876,6 +876,9 @@ class AITradingAnalyzer:
             'nav_series': pd.Series(dtype=float),
             'total_transaction_cost': 0.0,  # 总交易成本
             'abnormal_cashflows': [],  # 异常现金流记录
+            # 逐笔交易统计（用于 classify_stocks）
+            'stock_trade_outcomes': {},  # code -> list of per-trade profits (realized)
+            'stock_trade_counts': {},    # code -> total trades count (买+卖信号)
         }
         
         # 获取所有股票
@@ -1050,6 +1053,10 @@ class AITradingAnalyzer:
                         if stock_code in current_holdings:
                             del current_holdings[stock_code]
                         
+                        # 记录逐笔交易盈亏（用于 classify_stocks）
+                        results['stock_trade_outcomes'].setdefault(stock_code, []).append(profit)
+                        results['stock_trade_counts'][stock_code] = results['stock_trade_counts'].get(stock_code, 0) + 1
+                        
                         # 清空持仓
                         portfolio['shares'] = 0
                         portfolio['cost'] = 0.0
@@ -1165,6 +1172,131 @@ class AITradingAnalyzer:
         results['nav_series'] = self.build_nav_series(df, excluded_stocks)
 
         return results
+    
+    def classify_stocks(self, stock_details: List[Dict], trade_outcomes_map: Dict[str, List[float]], 
+                       trade_counts: Dict[str, int], min_trades: int = 4) -> Dict[str, List[Dict]]:
+        """
+        基于真实交易统计对股票进行分级
+        
+        分级规则：
+        - S：profit_rate > 5% AND profit_factor > 1.5 AND win_rate > 60% AND trades >= 6
+        - A：profit_rate > 2% AND profit_factor > 1.2 AND win_rate > 55% AND trades >= 4
+        - B：profit_rate > 0% AND trades >= 2
+        - C：其余或样本不足
+        
+        Args:
+            stock_details: 股票明细列表
+            trade_outcomes_map: 股票代码到逐笔盈亏列表的映射
+            trade_counts: 股票代码到交易次数的映射
+            min_trades: 最小交易次数阈值（默认为4）
+            
+        Returns:
+            分级结果字典，包含 S、A、B、C、INSUFFICIENT 五个等级的股票列表
+        """
+        classification = {'S': [], 'A': [], 'B': [], 'C': [], 'INSUFFICIENT': []}
+        
+        for stock in stock_details:
+            code = stock.get('code')
+            total_investment = stock.get('investment', 0.0)
+            total_profit = stock.get('profit', 0.0)
+            
+            # 从逐笔盈亏获得更可靠统计
+            trades = trade_outcomes_map.get(code, [])
+            trade_count = trade_counts.get(code, 0)
+            
+            # 基本统计
+            win_trades = [p for p in trades if p > 0]
+            loss_trades = [p for p in trades if p < 0]
+            win_count = len(win_trades)
+            loss_count = len(loss_trades)
+            win_rate = (win_count / len(trades)) if trades else 0.0
+            gross_profit = sum(win_trades) if win_trades else 0.0
+            gross_loss = -sum(loss_trades) if loss_trades else 0.0  # positive number
+            profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (float('inf') if gross_profit > 0 else 0.0)
+            avg_win = (sum(win_trades) / win_count) if win_count > 0 else 0.0
+            avg_loss = (sum(loss_trades) / loss_count) if loss_count > 0 else 0.0
+            
+            # 全部交易不足或投资太小，标记为样本不足
+            if trade_count < min_trades or (total_investment and total_investment < 1e-6):
+                stock_res = stock.copy()
+                stock_res.update({
+                    'trade_count': trade_count,
+                    'win_rate': win_rate,
+                    'profit_factor': profit_factor,
+                    'avg_win': avg_win,
+                    'avg_loss': avg_loss,
+                    'reason': 'insufficient_samples' if trade_count < min_trades else 'low_investment'
+                })
+                classification['INSUFFICIENT'].append(stock_res)
+                continue
+            
+            # 计算收益率（如果 investment 信息可用）
+            profit_rate = (total_profit / total_investment * 100) if total_investment > 0 else 0.0
+            
+            # 分级规则
+            grade = 'C'
+            if profit_rate > 5.0 and profit_factor > 1.5 and win_rate > 0.60 and trade_count >= 6:
+                grade = 'S'
+            elif profit_rate > 2.0 and profit_factor > 1.2 and win_rate > 0.55 and trade_count >= 4:
+                grade = 'A'
+            elif profit_rate > 0.0 and trade_count >= 2:
+                grade = 'B'
+            else:
+                grade = 'C'
+            
+            stock_res = stock.copy()
+            stock_res.update({
+                'trade_count': trade_count,
+                'win_rate': win_rate,
+                'profit_factor': profit_factor,
+                'avg_win': avg_win,
+                'avg_loss': avg_loss,
+                'profit_rate': profit_rate,
+                'grade': grade,
+                'recommended_position': self._get_recommended_position(grade),
+                'trade_rule': self._get_trade_rule(grade)
+            })
+            classification[grade].append(stock_res)
+        
+        return classification
+    
+    def _get_recommended_position(self, grade: str) -> str:
+        """
+        根据股票等级获取推荐仓位
+        
+        Args:
+            grade: 股票等级（S、A、B、C）
+            
+        Returns:
+            推荐仓位字符串
+        """
+        position_map = {
+            'S': '重仓（20%-30%）',
+            'A': '中仓（10%-20%）',
+            'B': '轻仓（5%-10%）',
+            'C': '不建议持有',
+            'INSUFFICIENT': '数据不足，建议观望'
+        }
+        return position_map.get(grade, '未知等级')
+    
+    def _get_trade_rule(self, grade: str) -> str:
+        """
+        根据股票等级获取交易规则
+        
+        Args:
+            grade: 股票等级（S、A、B、C）
+            
+        Returns:
+            交易规则字符串
+        """
+        rule_map = {
+            'S': '积极买入，逢低加仓，严格止损（-5%）',
+            'A': '逢低买入，正常止损（-8%）',
+            'B': '谨慎买入，严格止损（-10%）',
+            'C': '不建议买入，如有持仓建议减仓或清仓',
+            'INSUFFICIENT': '建议积累更多数据后再做决策'
+        }
+        return rule_map.get(grade, '未知等级')
     
     def generate_report(self, start_date: str, end_date: str, cash_flow: float, 
                        holdings_value: float, profit_results: Dict, 
@@ -1446,6 +1578,38 @@ class AITradingAnalyzer:
                            f"(买入{stock['buy_count']}次, 卖出{stock['sell_count']}次, "
                            f"建议买入{stock['suggested_buy_count']}次, 建议卖出{stock['suggested_sell_count']}次)")
             report.append("")
+        
+        # 股票分级（基于真实交易统计）
+        report.append("【股票分级（基于真实交易统计）】")
+        trade_outcomes_map = profit_results.get('stock_trade_outcomes', {})
+        trade_counts = profit_results.get('stock_trade_counts', {})
+        classification = self.classify_stocks(
+            profit_results['stock_details'], 
+            trade_outcomes_map, 
+            trade_counts,
+            min_trades=4
+        )
+        
+        # 展示各级别股票
+        grade_order = ['S', 'A', 'B', 'C', 'INSUFFICIENT']
+        for grade in grade_order:
+            stocks = classification[grade]
+            if stocks:
+                report.append(f"{grade}级 ({len(stocks)}只):")
+                for stock in stocks:
+                    if grade == 'INSUFFICIENT':
+                        # 样本不足的股票显示原因
+                        report.append(f"  {stock['name']}({stock['code']}): {stock.get('reason', '数据不足')}")
+                    else:
+                        # 显示详细统计信息
+                        report.append(f"  {stock['name']}({stock['code']}): "
+                                   f"收益率{stock.get('profit_rate', 0):.2f}%, "
+                                   f"胜率{stock.get('win_rate', 0)*100:.1f}%, "
+                                   f"盈亏比{stock.get('profit_factor', 0):.2f}, "
+                                   f"交易{stock.get('trade_count', 0)}次, "
+                                   f"推荐仓位: {stock.get('recommended_position', '')}, "
+                                   f"交易规则: {stock.get('trade_rule', '')}")
+                report.append("")
         
         # 排除的股票
         if excluded_stocks:
