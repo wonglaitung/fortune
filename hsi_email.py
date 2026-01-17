@@ -65,8 +65,6 @@ try:
 except ImportError:
     FUNDAMENTAL_AVAILABLE = False
     print("⚠️ 基本面数据模块不可用")
-    TAV_AVAILABLE = False
-    print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
 # 从港股主力资金追踪器导入股票列表（可选）
 try:
@@ -1165,7 +1163,7 @@ class HSIEmailSystem:
             # 如果 technical_analysis 可用，则使用其方法（保留兼容逻辑）
             try:
                 # 使用TAV增强分析（如果可用）
-                if self.use_tav:
+                if self.use_tav and isinstance(self.technical_analyzer, TechnicalAnalyzerV2):
                     indicators_df = self.technical_analyzer.calculate_all_indicators(hist.copy(), asset_type=asset_type)
                     indicators_with_signals = self.technical_analyzer.generate_buy_sell_signals(indicators_df.copy(), use_tav=True, asset_type=asset_type)
                 else:
