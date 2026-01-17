@@ -2201,6 +2201,179 @@ class HSIEmailSystem:
         
         return prompt
 
+    def _generate_analysis_prompt(self, investment_style='balanced', investment_horizon='short_term', 
+                                  data_type='portfolio', stock_data=None, market_context=None, 
+                                  stock_results=None, additional_info=None):
+        """
+        生成不同投资风格和周期的分析提示词
+        
+        参数:
+        - investment_style: 投资风格 ('aggressive'进取型, 'balanced'稳健型, 'conservative'保守型)
+        - investment_horizon: 投资周期 ('short_term'短期, 'medium_term'中期)
+        - data_type: 数据类型 ('portfolio'持仓分析, 'buy_signals'买入信号分析)
+        - stock_data: 股票数据列表
+        - market_context: 市场环境信息
+        - stock_results: 股票分析结果
+        - additional_info: 额外信息（如总成本、市值等）
+        
+        返回:
+        - str: 生成的提示词
+        """
+        
+        # 定义不同风格和周期的分析重点
+        style_focus = {
+            'aggressive': {
+                'short_term': {
+                    'role': '你是一位专业的进取型短线交易分析师，擅长捕捉日内和数天内的价格波动机会。',
+                    'focus': '重点关注短期动量、成交量变化、突破信号，追求快速收益。',
+                    'risk_tolerance': '风险承受能力高，可以接受较大波动以换取更高收益。',
+                    'indicators': '重点关注：RSI超买超卖、MACD金叉死叉、成交量突增、价格突破关键位、ATR波动率',
+                    'stop_loss': '止损位设置较紧（通常3-5%），快速止损保护本金。',
+                    'take_profit': '目标价设置较近（通常5-10%），快速兑现利润。',
+                    'timing': '操作时机：立即或等待突破信号，不宜长时间等待。',
+                    'risks': '主要风险：短期波动剧烈、止损可能被触发、需要密切监控。'
+                },
+                'medium_term': {
+                    'role': '你是一位专业的进取型中线投资分析师，擅长捕捉数周到数月内的趋势机会。',
+                    'focus': '重点关注趋势持续性、均线排列、资金流向，追求趋势性收益。',
+                    'risk_tolerance': '风险承受能力高，可以承受中期波动以换取趋势收益。',
+                    'indicators': '重点关注：均线排列、均线斜率、中期趋势评分、支撑阻力位、乖离状态',
+                    'stop_loss': '止损位设置适中（通常5-8%），允许一定波动空间。',
+                    'take_profit': '目标价设置较远（通常15-25%），追求趋势性收益。',
+                    'timing': '操作时机：等待趋势确认或回调至支撑位，不宜追高。',
+                    'risks': '主要风险：趋势反转、中期调整、需要耐心持有。'
+                }
+            },
+            'balanced': {
+                'short_term': {
+                    'role': '你是一位专业的稳健型短线交易分析师，注重风险收益平衡。',
+                    'focus': '重点关注技术指标确认、成交量配合，追求稳健收益。',
+                    'risk_tolerance': '风险承受能力中等，在控制风险的前提下追求收益。',
+                    'indicators': '重点关注：RSI、MACD、成交量、布林带、短期趋势评分',
+                    'stop_loss': '止损位设置合理（通常5-7%），平衡风险和收益。',
+                    'take_profit': '目标价设置适中（通常8-15%），稳健兑现利润。',
+                    'timing': '操作时机：等待技术指标确认或价格回调，避免追涨杀跌。',
+                    'risks': '主要风险：短期震荡、止损可能被触发、需要灵活调整。'
+                },
+                'medium_term': {
+                    'role': '你是一位专业的稳健型中线投资分析师，注重中长期价值投资。',
+                    'focus': '重点关注基本面和技术面结合，追求稳健的中期收益。',
+                    'risk_tolerance': '风险承受能力中等，注重风险控制和资产配置。',
+                    'indicators': '重点关注：中期趋势评分、趋势健康度、可持续性、支撑阻力位、乖离状态',
+                    'stop_loss': '止损位设置较宽（通常8-12%），允许中期波动。',
+                    'take_profit': '目标价设置合理（通常20-30%），追求稳健的中期收益。',
+                    'timing': '操作时机：等待趋势确认或回调至支撑位，分批建仓降低成本。',
+                    'risks': '主要风险：中期趋势变化、基本面恶化、需要定期评估。'
+                }
+            },
+            'conservative': {
+                'short_term': {
+                    'role': '你是一位专业的保守型短线交易分析师，注重本金安全。',
+                    'focus': '重点关注低风险机会、确定性高的信号，追求稳健收益。',
+                    'risk_tolerance': '风险承受能力低，优先保护本金，追求稳健收益。',
+                    'indicators': '重点关注：RSI超卖、强支撑位、成交量萎缩、低波动率',
+                    'stop_loss': '止损位设置较紧（通常2-3%），严格控制风险。',
+                    'take_profit': '目标价设置较近（通常3-5%），快速兑现利润。',
+                    'timing': '操作时机：等待超卖反弹或支撑位确认，避免追高。',
+                    'risks': '主要风险：收益较低、机会成本、可能错过上涨机会。'
+                },
+                'medium_term': {
+                    'role': '你是一位专业的保守型中线投资分析师，注重长期价值投资。',
+                    'focus': '重点关注基本面、估值水平、长期趋势，追求稳健的长期收益。',
+                    'risk_tolerance': '风险承受能力低，注重资产保值和稳健增长。',
+                    'indicators': '重点关注：基本面指标（PE、PB）、估值水平、长期趋势、风险指标',
+                    'stop_loss': '止损位设置较宽（通常10-15%），允许较大波动空间。',
+                    'take_profit': '目标价设置较远（通常30-50%），追求长期价值增长。',
+                    'timing': '操作时机：等待估值合理或长期趋势确认，分批建仓长期持有。',
+                    'risks': '主要风险：长期持有期间市场变化、基本面恶化、需要耐心。'
+                }
+            }
+        }
+        
+        # 获取对应风格和周期的配置
+        config = style_focus.get(investment_style, {}).get(investment_horizon, style_focus['balanced']['short_term'])
+        
+        # 构建基础提示词
+        prompt = f"""{config['role']}
+{config['focus']}
+{config['risk_tolerance']}
+
+{market_context if market_context else ''}
+"""
+        
+        # 根据数据类型添加不同的内容
+        if data_type == 'portfolio' and additional_info:
+            prompt += f"""
+## 持仓概览
+- 总投资成本: HK${additional_info.get('total_cost', 0):,.2f}
+- 当前市值: HK${additional_info.get('total_current_value', 0):,.2f}
+- 浮动盈亏: HK${additional_info.get('total_profit_loss', 0):,.2f} ({additional_info.get('total_profit_loss_pct', 0):+.2f}%)
+- 持仓股票数量: {len(stock_data) if stock_data else 0}只
+
+## 持仓股票详情
+"""
+            for i, pos in enumerate(stock_data, 1):
+                position_pct = pos.get('position_pct', 0)
+                prompt += f"""
+{i}. {pos['stock_name']} ({pos['stock_code']})
+   - 持仓占比: {position_pct:.1f}%
+   - 持仓数量: {pos['total_shares']:,}股
+   - 成本价: HK${pos['cost_price']:.2f}
+   - 当前价格: HK${pos['current_price']:.2f}
+   - 浮动盈亏: HK${pos['profit_loss']:,.2f} ({pos['profit_loss_pct']:+.2f}%)
+   - 技术指标: {pos['tech_info']}
+"""
+        
+        elif data_type == 'buy_signals' and stock_data:
+            prompt += f"""
+## 买入信号股票概览
+- 买入信号股票数量: {len(stock_data)}只
+
+## 买入信号股票详情
+"""
+            for i, stock in enumerate(stock_data, 1):
+                prompt += f"""
+{i}. {stock['stock_name']} ({stock['stock_code']})
+   - 当前价格: HK${stock['current_price']:.2f}
+   - 技术趋势: {stock['trend']}
+   - 技术指标: {stock['tech_info']}
+   - 信号描述: {stock['signal_description']}
+"""
+        
+        # 添加分析要求
+        prompt += f"""
+## 分析重点
+- {config['indicators']}
+
+## 分析要求
+请基于以上信息，对每只股票提供独立的投资分析和建议：
+
+对于每只股票，请提供：
+
+1. **操作建议**
+   - 明确建议：买入/持有/加仓/减仓/清仓/观望
+   - 具体的操作理由（基于技术面、基本面、交易信号）
+   - {config['focus']}
+
+2. **价格指引**
+   - 建议的止损位（基于当前价格的百分比或具体价格）
+   - {config['stop_loss']}
+   - 建议的目标价（基于当前价格的百分比或具体价格）
+   - {config['take_profit']}
+
+3. **操作时机**
+   - {config['timing']}
+
+4. **风险提示**
+   - {config['risks']}
+
+5. **关键指标监控**
+   - 需要重点关注的指标变化
+
+请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
+        
+        return prompt
+
     def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
         """
         使用大模型分析持仓股票
@@ -2266,68 +2439,78 @@ class HSIEmailSystem:
             # 获取市场环境
             market_context = self._get_market_context(hsi_data)
             
-            # 构建大模型提示词
-            prompt = f"""你是一位专业的港股投资分析师。请根据以下持仓信息、技术指标和交易记录，提供详细的投资分析和建议。
+            # 准备股票数据（包含持仓占比）
+            stock_data_with_pct = []
+            for pos in portfolio_analysis:
+                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
+                stock_data_with_pct.append({
+                    **pos,
+                    'position_pct': position_pct
+                })
+            
+            # 准备技术面信号摘要和交易记录
+            stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
+            stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
+            
+            # 生成四种不同风格的分析
+            analysis_styles = [
+                ('aggressive', 'short_term', '🎯 进取型短期分析（日内/数天）'),
+                ('balanced', 'short_term', '⚖️ 稳健型短期分析（日内/数天）'),
+                ('balanced', 'medium_term', '📊 稳健型中期分析（数周-数月）'),
+                ('conservative', 'medium_term', '🛡️ 保守型中期分析（数周-数月）')
+            ]
+            
+            all_analysis = []
+            
+            for style, horizon, title in analysis_styles:
+                print(f"🤖 正在生成{title}...")
+                
+                # 生成基础提示词
+                prompt = self._generate_analysis_prompt(
+                    investment_style=style,
+                    investment_horizon=horizon,
+                    data_type='portfolio',
+                    stock_data=stock_data_with_pct,
+                    market_context=market_context,
+                    additional_info={
+                        'total_cost': total_cost,
+                        'total_current_value': total_current_value,
+                        'total_profit_loss': total_profit_loss,
+                        'total_profit_loss_pct': total_profit_loss_pct
+                    }
+                )
+                
+                # 添加技术面信号摘要
+                prompt = self._add_technical_signals_summary(prompt, stock_list, stock_results)
+                
+                # 添加最近48小时模拟交易记录
+                prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
+                
+                # 调用大模型
+                style_analysis = chat_with_llm(prompt, enable_thinking=True)
+                
+                # 添加标题
+                all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
+                
+                print(f"✅ {title}完成")
+            
+            # 合并所有分析
+            final_analysis = f"""# 持仓投资分析报告
 
-{market_context}
-## 持仓概览
+## 投资组合概览
 - 总投资成本: HK${total_cost:,.2f}
 - 当前市值: HK${total_current_value:,.2f}
 - 浮动盈亏: HK${total_profit_loss:,.2f} ({total_profit_loss_pct:+.2f}%)
 - 持仓股票数量: {len(portfolio_analysis)}只
 
-## 持仓股票详情
+## 持仓股票列表
 """
-            for i, pos in enumerate(portfolio_analysis, 1):
-                # 计算持仓占比
-                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
-                
-                prompt += f"""
-{i}. {pos['stock_name']} ({pos['stock_code']})
-   - 持仓占比: {position_pct:.1f}%
-   - 持仓数量: {pos['total_shares']:,}股
-   - 成本价: HK${pos['cost_price']:.2f}
-   - 当前价格: HK${pos['current_price']:.2f}
-   - 浮动盈亏: HK${pos['profit_loss']:,.2f} ({pos['profit_loss_pct']:+.2f}%)
-   - 技术指标: {pos['tech_info']}
-"""
+            for pos in portfolio_analysis:
+                final_analysis += f"- {pos['stock_name']} ({pos['stock_code']}): {pos['total_shares']:,}股 @ HK${pos['cost_price']:.2f}\n"
             
-            # 添加技术面信号摘要
-            stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
-            prompt = self._add_technical_signals_summary(prompt, stock_list, stock_results)
+            final_analysis += ''.join(all_analysis)
             
-            # 添加最近48小时模拟交易记录
-            stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
-            prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
-            
-            prompt += """
-## 分析要求
-请基于以上信息，对每只持仓股票提供独立的投资分析和建议：
-
-对于每只股票，请提供：
-
-1. **操作建议**
-   - 明确建议：持有/加仓/减仓/清仓
-   - 具体的操作理由（基于技术面、基本面、交易信号）
-
-2. **价格指引**
-   - 建议的止损位（基于当前价格的百分比或具体价格）
-   - 建议的目标价（基于当前价格的百分比或具体价格）
-
-3. **操作时机**
-   - 建议操作时机（立即/等待突破/等待回调）
-
-4. **风险提示**
-   - 该股票的主要风险点
-   - 需要关注的关键指标
-
-请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
-            
-            print("🤖 正在使用大模型分析持仓...")
-            analysis_result = chat_with_llm(prompt, enable_thinking=True)
-            print("✅ 大模型分析完成")
-            
-            return analysis_result
+            return final_analysis
             
         except Exception as e:
             print(f"❌ 大模型持仓分析失败: {e}")
