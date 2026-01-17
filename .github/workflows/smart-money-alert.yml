@@ -3,7 +3,7 @@ name: HK Smart Money Alert
 on:
   # UTC 22 HK 06
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 22 * * 1-5'
   # 可选：允许手动触发
   workflow_dispatch:
 
