@@ -1902,12 +1902,3 @@ def calculate_medium_term_score(df, index_df=None):
     }
 
 
-class TechnicalAnalyzerV2(TechnicalAnalyzer):
-    """扩展版技术分析器，集成TAV方法论和中期分析指标"""
-    
-    def __init__(self, enable_tav=False, tav_config=None):
-        super().__init__()
-        self.enable_tav = enable_tav
-        self.tav_config = tav_config
-        self.tav_scorer = TAVScorer(tav_config) if enable_tav else None
-    
