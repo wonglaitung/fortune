@@ -63,7 +63,7 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
         for item in kline_data:
             if len(item) >= 6:
                 parsed_data.append({
-                    'Date': pd.to_datetime(item[0]),
+                    'Date': pd.to_datetime(item[0], utc=True),
                     'Open': float(item[1]),
                     'Close': float(item[2]),
                     'Low': float(item[3]),

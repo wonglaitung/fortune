@@ -624,9 +624,9 @@ class HSIEmailSystem:
             if target_date is not None:
                 # 将目标日期转换为带时区的时间戳
                 if isinstance(target_date, str):
-                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    target_dt = pd.to_datetime(target_date, utc=True)
                 else:
-                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    target_dt = pd.to_datetime(target_date, utc=True)
                 # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
                 reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
                 df_transactions = df_transactions[df_transactions['timestamp'] <= reference_time]
@@ -2724,9 +2724,9 @@ class HSIEmailSystem:
             if target_date is not None:
                 # 将目标日期转换为带时区的时间戳
                 if isinstance(target_date, str):
-                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    target_dt = pd.to_datetime(target_date, utc=True)
                 else:
-                    target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                    target_dt = pd.to_datetime(target_date, utc=True)
                 # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
                 reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
             else:
@@ -2781,9 +2781,9 @@ class HSIEmailSystem:
         if target_date is not None:
             # 将目标日期转换为带时区的时间戳
             if isinstance(target_date, str):
-                target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                target_dt = pd.to_datetime(target_date, utc=True)
             else:
-                target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                target_dt = pd.to_datetime(target_date, utc=True)
             # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
             reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
         else:
@@ -4371,9 +4371,9 @@ class HSIEmailSystem:
                 if target_date is not None:
                     # 将目标日期转换为带时区的时间戳
                     if isinstance(target_date, str):
-                        target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                        target_dt = pd.to_datetime(target_date, utc=True)
                     else:
-                        target_dt = pd.Timestamp(target_date).tz_localize('UTC')
+                        target_dt = pd.to_datetime(target_date, utc=True)
                     # 设置为目标日期的收盘时间（16:00 UTC，对应香港时间24:00）
                     reference_time = target_dt.replace(hour=16, minute=0, second=0, microsecond=0)
                 else:
