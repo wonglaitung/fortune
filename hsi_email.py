@@ -3761,7 +3761,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'中期趋势评分':<12} {'均线排列':<10} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -3810,6 +3810,8 @@ class HSIEmailSystem:
                         <th>基本面评分</th>
                         <th>PE(市盈率)</th>
                         <th>PB(市净率)</th>
+                        <th>中期趋势评分</th>
+                        <th>均线排列</th>
                         <th>股票现价</th>
                         <th>上个交易日趋势</th>
                         <th>上个交易日建仓评分</th>
@@ -4058,6 +4060,34 @@ class HSIEmailSystem:
                 pb_color = "color: green;" if pb_ratio < 1.5 else "color: orange;" if pb_ratio < 3 else "color: red;"
                 pb_display = f"<span style=\"{pb_color}\">{pb_ratio:.2f}</span>"
             
+            # 格式化中期趋势评分显示
+            medium_term_score = stock_indicators.get('medium_term_score', None) if stock_indicators else None
+            medium_term_display = "N/A"
+            if medium_term_score is not None and medium_term_score > 0:
+                if medium_term_score >= 80:
+                    mt_color = "color: green; font-weight: bold;"
+                    mt_status = "强烈买入"
+                elif medium_term_score >= 65:
+                    mt_color = "color: green; font-weight: bold;"
+                    mt_status = "买入"
+                elif medium_term_score >= 45:
+                    mt_color = "color: orange; font-weight: bold;"
+                    mt_status = "持有"
+                elif medium_term_score >= 30:
+                    mt_color = "color: red; font-weight: bold;"
+                    mt_status = "卖出"
+                else:
+                    mt_color = "color: red; font-weight: bold;"
+                    mt_status = "强烈卖出"
+                medium_term_display = f"<span style=\"{mt_color}\">{medium_term_score:.1f}</span> <span style=\"font-size: 0.8em; color: #666;\">({mt_status})</span>"
+            
+            # 格式化均线排列显示
+            ma_alignment = stock_indicators.get('ma_alignment', None) if stock_indicators else None
+            ma_alignment_display = "N/A"
+            if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
+                ma_alignment_color = "color: green; font-weight: bold;" if ma_alignment == '多头排列' else "color: red; font-weight: bold;" if ma_alignment == '空头排列' else "color: orange; font-weight: bold;"
+                ma_alignment_display = f"<span style=\"{ma_alignment_color}\">{ma_alignment}</span>"
+            
             # 计算变化方向和箭头
             prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
             prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
@@ -4079,6 +4109,8 @@ class HSIEmailSystem:
                         <td>{fundamental_display}</td>
                         <td>{pe_display}</td>
                         <td>{pb_display}</td>
+                        <td>{medium_term_display}</td>
+                        <td>{ma_alignment_display}</td>
                         <td>{price_value_display}</td>
                         <td>{prev_trend_arrow} {prev_trend_display}</td>
                         <td>{prev_buildup_arrow} {prev_buildup_display}</td>
@@ -4168,7 +4200,20 @@ class HSIEmailSystem:
             if pb_ratio is not None and pb_ratio > 0:
                 pb_text = f"{pb_ratio:.2f}"
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
+            # 格式化中期趋势评分（文本版本）
+            medium_term_score = stock_indicators.get('medium_term_score', None) if stock_indicators else None
+            medium_term_text = "N/A"
+            if medium_term_score is not None and medium_term_score > 0:
+                mt_status = "强烈买入" if medium_term_score >= 80 else "买入" if medium_term_score >= 65 else "持有" if medium_term_score >= 45 else "卖出" if medium_term_score >= 30 else "强烈卖出"
+                medium_term_text = f"{medium_term_score:.1f}({mt_status})"
+            
+            # 格式化均线排列（文本版本）
+            ma_alignment = stock_indicators.get('ma_alignment', None) if stock_indicators else None
+            ma_alignment_text = "N/A"
+            if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
+                ma_alignment_text = f"{ma_alignment}"
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {medium_term_text:<12} {ma_alignment_text:<10} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -4177,7 +4222,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="18">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="20">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
