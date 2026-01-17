@@ -3,6 +3,13 @@
 """
 通用技术分析工具
 实现多种常用技术指标的计算，包括移动平均线、RSI、MACD等
+
+【重要约定】统一百分比/分数格式：
+- 所有风险函数返回的 'percentage' 字段统一使用分数形式（fraction）
+- 分数形式：0.05 表示 5%，0.25 表示 25%
+- 金额计算公式：amount = position_value * percentage
+- 格式化显示：f"{percentage:.2%}"  # 0.05 → "5.00%"
+- 适用的函数：calculate_var, calculate_expected_shortfall, calculate_max_drawdown
 """
 
 import yfinance as yf

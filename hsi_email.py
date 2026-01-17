@@ -4,6 +4,13 @@
 恒生指数及港股主力资金追踪器股票价格监控和交易信号邮件通知系统
 基于技术分析指标生成买卖信号，只在有交易信号时发送邮件
 
+【重要约定】统一百分比/分数格式：
+- 所有风险函数返回的 'percentage' 字段统一使用分数形式（fraction）
+- 分数形式：0.05 表示 5%，0.25 表示 25%
+- 金额计算公式：amount = position_value * percentage
+- 格式化显示：f"{percentage:.2%}"  # 0.05 → "5.00%"
+- 适用的函数：calculate_var, calculate_expected_shortfall, calculate_max_drawdown
+
 此版本改进了止损/止盈计算：
 - 使用真实历史数据计算 ATR（若可用）
 - 若 ATR 无效则回退到百分比法
@@ -351,12 +358,13 @@ class HSIEmailSystem:
             drawdown = (cumulative - running_max) / running_max
             
             # 最大回撤（取绝对值，转换为正数）
-            max_drawdown_percentage = abs(drawdown.min()) * 100
+            # 注意：这里返回分数形式（例如 0.25 表示 25%），与 VaR/ES 保持一致
+            max_drawdown_percentage = abs(drawdown.min())
             
             # 计算回撤货币值
             max_drawdown_amount = None
             if position_value is not None and position_value > 0:
-                max_drawdown_amount = position_value * (max_drawdown_percentage / 100)
+                max_drawdown_amount = position_value * max_drawdown_percentage
             
             return {
                 'percentage': max_drawdown_percentage,
@@ -3909,7 +3917,7 @@ class HSIEmailSystem:
                             if max_drawdown is not None and es_medium_long is not None:
                                 # 将ES和回撤转换为小数进行比较
                                 es_decimal = es_medium_long['percentage'] if isinstance(es_medium_long, dict) else es_medium_long
-                                max_dd_decimal = max_drawdown['percentage'] / 100 if isinstance(max_drawdown, dict) else max_drawdown / 100
+                                max_dd_decimal = max_drawdown['percentage'] if isinstance(max_drawdown, dict) else max_drawdown
                                 
                                 if es_decimal < max_dd_decimal / 3:
                                     risk_assessment = "优秀"
@@ -3960,7 +3968,7 @@ class HSIEmailSystem:
                 es_medium_long_display += f" (HK${es_medium_long['amount']:.2f})"
             
             # 格式化回撤和风险评估
-            max_drawdown_display = f"{max_drawdown['percentage']/100:.2%}" if max_drawdown is not None else "N/A"
+            max_drawdown_display = f"{max_drawdown['percentage']:.2%}" if max_drawdown is not None else "N/A"
             
             # 添加回撤货币值显示
             if max_drawdown is not None and max_drawdown.get('amount') is not None:
