@@ -2509,23 +2509,8 @@ class HSIEmailSystem:
                 
                 print(f"✅ {title}完成")
             
-            # 合并所有分析
-            final_analysis = f"""# 持仓投资分析报告
-
-## 投资组合概览
-- 总投资成本: HK${total_cost:,.2f}
-- 当前市值: HK${total_current_value:,.2f}
-- 浮动盈亏: HK${total_profit_loss:,.2f} ({total_profit_loss_pct:+.2f}%)
-- 持仓股票数量: {len(portfolio_analysis)}只
-
-## 持仓股票列表
-"""
-            for pos in portfolio_analysis:
-                final_analysis += f"- {pos['stock_name']} ({pos['stock_code']}): {pos['total_shares']:,}股 @ HK${pos['cost_price']:.2f}\n"
-            
-            final_analysis += ''.join(all_analysis)
-            
-            return final_analysis
+            # 直接返回大模型分析内容
+            return ''.join(all_analysis)
             
         except Exception as e:
             print(f"❌ 大模型持仓分析失败: {e}")
