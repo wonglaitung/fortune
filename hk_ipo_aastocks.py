@@ -34,76 +34,51 @@ def get_hk_ipo_info_from_aastocks():
             # 存储所有公司信息
             all_ipo_data = []
             
-            # 查找包含"同期新股"的表格
+            # 查找包含IPO信息的表格（包含"公司名稱"和"招股價"或"招股截止日"的表格）
             for table in tables:
-                # 检查表格是否包含"同期新股"和"公司名稱"
-                if table.find(string=lambda text: text and '同期新股' in text) and table.find(string=lambda text: text and '公司名稱' in text):
+                table_text = table.get_text()
+                # 检查表格是否包含"公司名稱"和招股相关信息
+                if '公司名稱' in table_text and ('招股價' in table_text or '招股截止日' in table_text):
                     # 遍历表格行
                     rows = table.find_all('tr')
-                    for row in rows:
+                    for row_idx, row in enumerate(rows):
                         # 查找包含公司信息的行
                         cells = row.find_all(['td', 'th'])
                         cell_texts = [cell.get_text(strip=True) for cell in cells]
                         
+                        # 跳过标题行（第一行）
+                        if row_idx == 0:
+                            continue
+                        
                         # 检查是否包含日期格式来识别公司信息行
                         if any(re.match(r'\d{4}/\d{2}/\d{2}', text) for text in cell_texts):
-                            # 提取公司名称、上市日期和行业
-                            # 假设格式为: 公司名称, 上市日期, 行业
-                            if len(cell_texts) >= 3:
-                                company_name = cell_texts[0]
-                                listing_date = cell_texts[1]
-                                industry = cell_texts[2]
+                            # 提取公司信息
+                            # 新表格格式: ['', '公司名稱/代號', '行業', '招股價', '每手股數', '入場費', '招股截止日', '暗盤日期', '上市日期']
+                            if len(cell_texts) >= 9:
+                                company_name = cell_texts[1]  # 公司名称/代号
+                                industry = cell_texts[2]  # 行业
+                                offer_price = cell_texts[3]  # 招股价
+                                shares_per_lot = cell_texts[4]  # 每手股数
+                                entry_fee = cell_texts[5]  # 入场费
+                                offer_close_date = cell_texts[6]  # 招股截止日
+                                grey_market_date = cell_texts[7]  # 暗盘日期
+                                listing_date = cell_texts[8]  # 上市日期
                                 
-                                # 只有当公司名称、日期、行业都存在时才添加
-                                if company_name and listing_date and industry:
+                                # 只有当公司名称、上市日期都存在时才添加
+                                if company_name and listing_date:
                                     # 过滤掉包含多余文本的行
-                                    if not any(keyword in company_name for keyword in ['招股日程', '同期新股公司名稱', '招股日期', '公司名稱']):
+                                    if not any(keyword in company_name for keyword in ['招股日程', '同期新股公司名稱', '招股日期', '公司名稱▼']):
                                         # 为每家公司创建独立的信息字典
                                         company_info = {
                                             '公司名称': company_name,
-                                            '上市日期': listing_date,
-                                            '行业': industry
+                                            '行业': industry,
+                                            '招股价格': offer_price,
+                                            '每手股数': shares_per_lot,
+                                            '入场费': entry_fee,
+                                            '招股日期': offer_close_date,
+                                            '暗盘日期': grey_market_date,
+                                            '上市日期': listing_date
                                         }
-                                        
-                                        # 尝试从页面中提取该公司的详细信息
-                                        # 查找包含IPO基本信息的表格
-                                        for info_table in tables:
-                                            # 遍历表格行
-                                            info_rows = info_table.find_all('tr')
-                                            for info_row in info_rows:
-                                                # 查找包含信息的行
-                                                info_cells = info_row.find_all(['td', 'th'])
-                                                info_cell_texts = [info_cell.get_text(strip=True) for info_cell in info_cells]
-                                                
-                                                # 检查是否包含公司名称
-                                                if company_name in info_cell_texts:
-                                                    # 查找该行的其他信息
-                                                    for i, text in enumerate(info_cell_texts):
-                                                        if '每手股數' in text and i + 1 < len(info_cell_texts):
-                                                            company_info['每手股数'] = info_cell_texts[i + 1]
-                                                        elif '招股價' in text and i + 1 < len(info_cell_texts):
-                                                            company_info['招股价格'] = info_cell_texts[i + 1]
-                                                        elif '入場費' in text and i + 1 < len(info_cell_texts):
-                                                            company_info['入场费'] = info_cell_texts[i + 1]
-                                        
-                                        # 查找通用的IPO信息
-                                        for info_table in tables:
-                                            # 遍历表格行
-                                            info_rows = info_table.find_all('tr')
-                                            for info_row in info_rows:
-                                                # 查找包含信息的行
-                                                info_cells = info_row.find_all(['td', 'th'])
-                                                info_cell_texts = [info_cell.get_text(strip=True) for info_cell in info_cells]
-                                                
-                                                # 提取关键信息
-                                                if len(info_cell_texts) >= 2:
-                                                    key = info_cell_texts[0]
-                                                    value = info_cell_texts[1]
-                                                    
-                                                    if '招股日期' in key and '招股日期' not in company_info:
-                                                        company_info['招股日期'] = value
-                                                    elif '退票寄發日期' in key and '暗盘日期' not in company_info:
-                                                        company_info['暗盘日期'] = value
                                         
                                         all_ipo_data.append(company_info)
             
