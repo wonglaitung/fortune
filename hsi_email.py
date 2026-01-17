@@ -3761,7 +3761,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'中期趋势评分':<12} {'均线排列':<10} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -3800,23 +3800,23 @@ class HSIEmailSystem:
                     <tr>
                         <th>股票名称</th>
                         <th>股票代码</th>
-                        <th>趋势(技术分析)</th>
-                        <th>建仓评分</th>
-                        <th>出货评分</th>
+                        <th>股票现价</th>
                         <th>信号类型(量价分析)</th>
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
+                        <th>趋势(技术分析)</th>
+                        <th>均线排列</th>
+                        <th>中期趋势评分</th>
                         <th>TAV评分</th>
+                        <th>建仓评分</th>
+                        <th>出货评分</th>
                         <th>基本面评分</th>
                         <th>PE(市盈率)</th>
                         <th>PB(市净率)</th>
-                        <th>中期趋势评分</th>
-                        <th>均线排列</th>
-                        <th>股票现价</th>
                         <th>上个交易日趋势</th>
+                        <th>上个交易日TAV评分</th>
                         <th>上个交易日建仓评分</th>
                         <th>上个交易日出货评分</th>
-                        <th>上个交易日TAV评分</th>
                         <th>上个交易日价格</th>
                     </tr>
         """
@@ -4099,23 +4099,23 @@ class HSIEmailSystem:
                     <tr>
                         <td><span style=\"{name_color_style}\">{safe_name}</span></td>
                         <td>{safe_code}</td>
-                        <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
-                        <td>{buildup_display}</td>
-                        <td>{distribution_display}</td>
+                        <td>{price_value_display}</td>
                         <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
+                        <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
+                        <td>{ma_alignment_display}</td>
+                        <td>{medium_term_display}</td>
                         <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td>{buildup_display}</td>
+                        <td>{distribution_display}</td>
                         <td>{fundamental_display}</td>
                         <td>{pe_display}</td>
                         <td>{pb_display}</td>
-                        <td>{medium_term_display}</td>
-                        <td>{ma_alignment_display}</td>
-                        <td>{price_value_display}</td>
                         <td>{prev_trend_arrow} {prev_trend_display}</td>
+                        <td>{prev_tav_arrow} {prev_tav_display}</td>
                         <td>{prev_buildup_arrow} {prev_buildup_display}</td>
                         <td>{prev_distribution_arrow} {prev_distribution_display}</td>
-                        <td>{prev_tav_arrow} {prev_tav_display}</td>
                         <td>{prev_price_arrow} {prev_price_display} ({prev_change_display})</td>
                     </tr>
             """
@@ -4213,7 +4213,7 @@ class HSIEmailSystem:
             if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
                 ma_alignment_text = f"{ma_alignment}"
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {medium_term_text:<12} {ma_alignment_text:<10} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {price_display:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {trend:<12} {ma_alignment_text:<10} {medium_term_text:<12} {tav_display:<8} {buildup_text:<10} {distribution_text:<10} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {prev_trend_display:<12} {prev_tav_display:<15} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
