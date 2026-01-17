@@ -1137,8 +1137,8 @@ class HSIEmailSystem:
                 prev = hist.iloc[-2] if len(hist) > 1 else latest
 
                 indicators = {
-                    'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
-                    'macd': self.calculate_macd(latest['Close']),
+                    'rsi': None,
+                    'macd': None,
                     'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
                 }
 
@@ -1570,8 +1570,8 @@ class HSIEmailSystem:
                     take_profit = None
 
                 indicators = {
-                    'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
-                    'macd': self.calculate_macd(latest['Close']),
+                    'rsi': None,
+                    'macd': None,
                     'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
                     'atr': atr_value,
                     'stop_loss': stop_loss,
@@ -1697,26 +1697,6 @@ class HSIEmailSystem:
             print(f"⚠️ 计算VaR失败: {e}")
             return None
 
-    def calculate_rsi(self, change_pct):
-        """
-        简化RSI计算（基于24小时变化率），仅作指示用途
-        """
-        try:
-            if change_pct > 0:
-                return min(100.0, 50.0 + change_pct * 2.0)
-            else:
-                return max(0.0, 50.0 + change_pct * 2.0)
-        except Exception:
-            return 50.0
-
-    def calculate_macd(self, price):
-        """
-        简化MACD计算（基于价格），仅作指示用途
-        """
-        try:
-            return float(price) * 0.01
-        except Exception:
-            return 0.0
 
     def calculate_price_position(self, current_price, min_price, max_price):
         """
