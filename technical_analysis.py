@@ -1208,8 +1208,160 @@ class TAVScorer:
             return "不建议操作，TAV无共振，缺乏明确方向"
 
 
-# ==================== 中期分析指标函数 ====================
+class TechnicalAnalyzerV2(TechnicalAnalyzer):
+    """扩展版技术分析器，集成TAV方法论"""
+    
+    def __init__(self, enable_tav=False, tav_config=None):
+        super().__init__()
+        self.enable_tav = enable_tav
+        self.tav_config = tav_config
+        self.tav_scorer = TAVScorer(tav_config) if enable_tav else None
+    
+    def calculate_all_indicators(self, df, asset_type='stock'):
+        """计算所有指标，保持原有接口，可选添加TAV指标"""
+        # 调用原有方法
+        df = super().calculate_all_indicators(df)
+        
+        # 如果启用TAV，添加TAV相关指标
+        if self.enable_tav and self.tav_scorer:
+            df = self._add_tav_indicators(df, asset_type)
+        
+        return df
+    
+    def _add_tav_indicators(self, df, asset_type='stock'):
+        """添加TAV相关指标到数据框"""
+        if df.empty:
+            return df
+        
+        # 计算TAV评分
+        tav_score, detailed_scores, status = self.tav_scorer.calculate_tav_score(df, asset_type)
+        
+        # 添加TAV指标列
+        df['TAV_Score'] = tav_score
+        df['TAV_Status'] = status
+        df['TAV_Trend_Score'] = detailed_scores['trend']
+        df['TAV_Momentum_Score'] = detailed_scores['momentum']
+        df['TAV_Volume_Score'] = detailed_scores['volume']
+        
+        # 添加TAV信号列
+        df['TAV_Strong_Signal'] = tav_score >= 75
+        df['TAV_Medium_Signal'] = (tav_score >= 50) & (tav_score < 75)
+        df['TAV_Weak_Signal'] = (tav_score >= 25) & (tav_score < 50)
+        df['TAV_No_Signal'] = tav_score < 25
+        
+        return df
+    
+    def generate_buy_sell_signals(self, df, use_tav=None, asset_type='stock'):
+        """生成信号，支持TAV和传统模式"""
+        # 决定是否使用TAV
+        use_tav = use_tav if use_tav is not None else self.enable_tav
+        
+        if use_tav and self.tav_scorer:
+            return self._generate_tav_enhanced_signals(df, asset_type)
+        else:
+            # 调用原有方法，保持完全兼容
+            return super().generate_buy_sell_signals(df)
+    
+    def _generate_tav_enhanced_signals(self, df, asset_type='stock'):
+        """生成TAV增强的交易信号"""
+        if df.empty:
+            return df
+        
+        # 首先生成传统信号
+        df = super().generate_buy_sell_signals(df)
+        
+        # 添加TAV增强逻辑
+        tav_config = TAVConfig.get_config(asset_type)
+        tav_scorer = TAVScorer(tav_config)
+        
+        # 为每个数据点计算TAV评分
+        for i in range(len(df)):
+            if i < 50:  # 需要足够的历史数据
+                continue
+            
+            # 获取当前时间窗口的数据
+            window_df = df.iloc[max(0, i-200):i+1].copy()
+            
+            # 计算TAV评分
+            tav_score, detailed_scores, status = tav_scorer.calculate_tav_score(window_df, asset_type)
+            
+            # TAV增强信号逻辑
+            tav_strong = tav_score >= tav_config['thresholds']['strong_signal']
+            tav_medium = tav_score >= tav_config['thresholds']['medium_signal']
+            
+            # 增强买入信号：传统信号 + TAV确认
+            if df.iloc[i].get('Buy_Signal', False):
+                if tav_strong:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
+                elif tav_medium:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
+            
+            # 增强卖出信号：传统信号 + TAV确认
+            if df.iloc[i].get('Sell_Signal', False):
+                if tav_strong:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
+                elif tav_medium:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
+                else:
+                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
+            
+            # 如果同时有买入和卖出信号，确保描述包含两种信号
+            if df.iloc[i].get('Buy_Signal', False) and df.iloc[i].get('Sell_Signal', False):
+                # 检查描述是否同时包含买入和卖出信号
+                desc = df.iloc[i].get('Signal_Description', '')
+                if '买入信号:' not in desc or '卖出信号:' not in desc:
+                    # 如果描述不完整，重新生成
+                    original_desc = desc
+                    if tav_strong:
+                        tav_tag = " [TAV强共振确认]"
+                    elif tav_medium:
+                        tav_tag = " [TAV中等共振]"
+                    else:
+                        tav_tag = " [TAV弱共振]"
+                    
+                    # 创建包含两种信号的描述
+                    df.at[df.index[i], 'Signal_Description'] = f"买入信号: RSI超卖反弹(成交量弱确认){tav_tag} | 卖出信号: RSI超买回落(成交量弱确认){tav_tag}"
+        
+        return df
+    
+    def get_tav_analysis_summary(self, df, asset_type='stock'):
+        """获取TAV分析摘要"""
+        if not self.enable_tav or not self.tav_scorer:
+            return None
+        
+        return self.tav_scorer.get_tav_summary(df, asset_type)
 
+
+def main():
+    """主函数示例"""
+    # 测试一些常用的金融产品
+    symbols = ['GC=F', 'CL=F', 'SPY', 'QQQ']  # 黄金、原油、标普500、纳斯达克
+    
+    analyzer = MarketAnalyzer(symbols)
+    results = analyzer.run_analysis(period="6mo")
+    
+    if results:
+        print("\n" + "="*60)
+        print("📊 分析完成！")
+        print("="*60)
+        
+        for symbol, result in results.items():
+            # 检查最近是否有交易信号
+            recent_signals = result['data'].tail(5)[['Buy_Signal', 'Sell_Signal', 'Signal_Description']].dropna()
+            recent_signals = recent_signals[(recent_signals['Buy_Signal']) | (recent_signals['Sell_Signal'])]
+            
+            if not recent_signals.empty:
+                print(f"\n🚨 {result['name']} ({symbol}) 最近交易信号:")
+                for idx, row in recent_signals.iterrows():
+                    signal_type = "买入" if row['Buy_Signal'] else "卖出"
+                    print(f"  {idx.strftime('%Y-%m-%d')}: {signal_type} - {row['Signal_Description']}")
+    else:
+        print("\n❌ 分析失败")
+
+if __name__ == "__main__":
+    main()
 def calculate_ma_alignment(df, periods=[5, 10, 20, 50]):
     """
     计算均线排列状态
@@ -1302,7 +1454,7 @@ def calculate_ma_slope(df, period=20):
     slope = np.polyfit(x, recent_mas, 1)[0]
     
     # 计算角度（斜率转换为角度）
-    angle = np.degrees(np.arctan(slope / recent_mas.mean())) if recent_means := recent_mas.mean() else 0
+    angle = np.degrees(np.arctan(slope / recent_mas.mean())) if (recent_means := recent_mas.mean()) else 0
     
     # 判断趋势强度
     if angle > 5:
@@ -1759,148 +1911,3 @@ class TechnicalAnalyzerV2(TechnicalAnalyzer):
         self.tav_config = tav_config
         self.tav_scorer = TAVScorer(tav_config) if enable_tav else None
     
-    def calculate_all_indicators(self, df, asset_type='stock'):
-        """计算所有指标，保持原有接口，可选添加TAV指标"""
-        # 调用原有方法
-        df = super().calculate_all_indicators(df)
-        
-        # 如果启用TAV，添加TAV相关指标
-        if self.enable_tav and self.tav_scorer:
-            df = self._add_tav_indicators(df, asset_type)
-        
-        return df
-    
-    def _add_tav_indicators(self, df, asset_type='stock'):
-        """添加TAV相关指标到数据框"""
-        if df.empty:
-            return df
-        
-        # 计算TAV评分
-        tav_score, detailed_scores, status = self.tav_scorer.calculate_tav_score(df, asset_type)
-        
-        # 添加TAV指标列
-        df['TAV_Score'] = tav_score
-        df['TAV_Status'] = status
-        df['TAV_Trend_Score'] = detailed_scores['trend']
-        df['TAV_Momentum_Score'] = detailed_scores['momentum']
-        df['TAV_Volume_Score'] = detailed_scores['volume']
-        
-        # 添加TAV信号列
-        df['TAV_Strong_Signal'] = tav_score >= 75
-        df['TAV_Medium_Signal'] = (tav_score >= 50) & (tav_score < 75)
-        df['TAV_Weak_Signal'] = (tav_score >= 25) & (tav_score < 50)
-        df['TAV_No_Signal'] = tav_score < 25
-        
-        return df
-    
-    def generate_buy_sell_signals(self, df, use_tav=None, asset_type='stock'):
-        """生成信号，支持TAV和传统模式"""
-        # 决定是否使用TAV
-        use_tav = use_tav if use_tav is not None else self.enable_tav
-        
-        if use_tav and self.tav_scorer:
-            return self._generate_tav_enhanced_signals(df, asset_type)
-        else:
-            # 调用原有方法，保持完全兼容
-            return super().generate_buy_sell_signals(df)
-    
-    def _generate_tav_enhanced_signals(self, df, asset_type='stock'):
-        """生成TAV增强的交易信号"""
-        if df.empty:
-            return df
-        
-        # 首先生成传统信号
-        df = super().generate_buy_sell_signals(df)
-        
-        # 添加TAV增强逻辑
-        tav_config = TAVConfig.get_config(asset_type)
-        tav_scorer = TAVScorer(tav_config)
-        
-        # 为每个数据点计算TAV评分
-        for i in range(len(df)):
-            if i < 50:  # 需要足够的历史数据
-                continue
-            
-            # 获取当前时间窗口的数据
-            window_df = df.iloc[max(0, i-200):i+1].copy()
-            
-            # 计算TAV评分
-            tav_score, detailed_scores, status = tav_scorer.calculate_tav_score(window_df, asset_type)
-            
-            # TAV增强信号逻辑
-            tav_strong = tav_score >= tav_config['thresholds']['strong_signal']
-            tav_medium = tav_score >= tav_config['thresholds']['medium_signal']
-            
-            # 增强买入信号：传统信号 + TAV确认
-            if df.iloc[i].get('Buy_Signal', False):
-                if tav_strong:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
-                elif tav_medium:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
-                else:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
-            
-            # 增强卖出信号：传统信号 + TAV确认
-            if df.iloc[i].get('Sell_Signal', False):
-                if tav_strong:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV强共振确认]"
-                elif tav_medium:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV中等共振]"
-                else:
-                    df.at[df.index[i], 'Signal_Description'] = f"{df.iloc[i].get('Signal_Description', '')} [TAV弱共振]"
-            
-            # 如果同时有买入和卖出信号，确保描述包含两种信号
-            if df.iloc[i].get('Buy_Signal', False) and df.iloc[i].get('Sell_Signal', False):
-                # 检查描述是否同时包含买入和卖出信号
-                desc = df.iloc[i].get('Signal_Description', '')
-                if '买入信号:' not in desc or '卖出信号:' not in desc:
-                    # 如果描述不完整，重新生成
-                    original_desc = desc
-                    if tav_strong:
-                        tav_tag = " [TAV强共振确认]"
-                    elif tav_medium:
-                        tav_tag = " [TAV中等共振]"
-                    else:
-                        tav_tag = " [TAV弱共振]"
-                    
-                    # 创建包含两种信号的描述
-                    df.at[df.index[i], 'Signal_Description'] = f"买入信号: RSI超卖反弹(成交量弱确认){tav_tag} | 卖出信号: RSI超买回落(成交量弱确认){tav_tag}"
-        
-        return df
-    
-    def get_tav_analysis_summary(self, df, asset_type='stock'):
-        """获取TAV分析摘要"""
-        if not self.enable_tav or not self.tav_scorer:
-            return None
-        
-        return self.tav_scorer.get_tav_summary(df, asset_type)
-
-
-def main():
-    """主函数示例"""
-    # 测试一些常用的金融产品
-    symbols = ['GC=F', 'CL=F', 'SPY', 'QQQ']  # 黄金、原油、标普500、纳斯达克
-    
-    analyzer = MarketAnalyzer(symbols)
-    results = analyzer.run_analysis(period="6mo")
-    
-    if results:
-        print("\n" + "="*60)
-        print("📊 分析完成！")
-        print("="*60)
-        
-        for symbol, result in results.items():
-            # 检查最近是否有交易信号
-            recent_signals = result['data'].tail(5)[['Buy_Signal', 'Sell_Signal', 'Signal_Description']].dropna()
-            recent_signals = recent_signals[(recent_signals['Buy_Signal']) | (recent_signals['Sell_Signal'])]
-            
-            if not recent_signals.empty:
-                print(f"\n🚨 {result['name']} ({symbol}) 最近交易信号:")
-                for idx, row in recent_signals.iterrows():
-                    signal_type = "买入" if row['Buy_Signal'] else "卖出"
-                    print(f"  {idx.strftime('%Y-%m-%d')}: {signal_type} - {row['Signal_Description']}")
-    else:
-        print("\n❌ 分析失败")
-
-if __name__ == "__main__":
-    main()
