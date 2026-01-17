@@ -193,7 +193,7 @@ def get_hsi_data_tencent(period_days=90):
             # 日期,开盘价,收盘价,最高价,最低价,成交量,其他数据
             if len(item) >= 6:
                 parsed_data.append({
-                    'Date': pd.to_datetime(item[0]),
+                    'Date': pd.to_datetime(item[0], utc=True),
                     'Open': float(item[1]),
                     'Close': float(item[2]),
                     'High': float(item[3]),
