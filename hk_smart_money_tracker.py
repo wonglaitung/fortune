@@ -1133,7 +1133,7 @@ def analyze_stock(code, name, run_date=None):
             target_date = pd.to_datetime(run_date)
             # 确保时区一致
             if full_hist.index.tz is not None:
-                target_date = target_date.tz_localize(full_hist.index.tz)
+                target_date = target_date.tz_localize('UTC').tz_convert(full_hist.index.tz)
             
             # 筛选指定日期及之前的数据
             filtered_hist = full_hist[full_hist.index <= target_date]
@@ -1400,7 +1400,7 @@ def analyze_stock(code, name, run_date=None):
             # 筛选出上个交易日及之前的数据
             previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
             if full_hist.index.tz is not None:
-                previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize(full_hist.index.tz)
+                previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize('UTC').tz_convert(full_hist.index.tz)
             
             prev_filtered_hist = full_hist[full_hist.index <= previous_trading_date_timestamp]
             
@@ -2273,7 +2273,7 @@ def analyze_stock(code, name, run_date=None):
                 # 筛选出上个交易日及之前的数据
                 previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
                 if main_hist.index.tz is not None:
-                    previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize(main_hist.index.tz)
+                    previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize('UTC').tz_convert(main_hist.index.tz)
                 
                 # 从main_hist中查找上个交易日数据（因为评分在main_hist中）
                 prev_filtered_hist = main_hist[main_hist.index <= previous_trading_date_timestamp]
