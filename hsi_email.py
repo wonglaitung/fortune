@@ -1282,8 +1282,42 @@ class HSIEmailSystem:
                     'var_short_term_amount': var_short['amount'] if var_short else None,
                     'var_medium_long_term_amount': var_medium_long['amount'] if var_medium_long else None
                 }
-                
-                # 添加TAV分析信息（如果可用）
+            except Exception as e:
+                print(f"⚠️ 技术分析计算失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 返回一个基本的指标字典
+                indicators = {
+                    'rsi': 50.0,
+                    'macd': 0.0,
+                    'macd_signal': 0.0,
+                    'price_position': 50.0,
+                    'bb_position': 0.5,
+                    'trend': '数据不足',
+                    'recent_buy_signals': [],
+                    'recent_sell_signals': [],
+                    'current_price': hist['Close'].iloc[-1] if hist is not None and not hist.empty else 0,
+                    'ma20': 0,
+                    'ma50': 0,
+                    'ma200': 0,
+                    'hist': hist,
+                    'atr': 0.0,
+                    'stop_loss': None,
+                    'take_profit': None,
+                    'volume_ratio': 0.0,
+                    'volume_surge': False,
+                    'volume_shrink': False,
+                    'volume_ma10': 0.0,
+                    'volume_ma20': 0.0,
+                    'var_ultra_short_term': None,
+                    'var_short_term': None,
+                    'var_medium_long_term': None,
+                    'var_ultra_short_term_amount': None,
+                    'var_short_term_amount': None,
+                    'var_medium_long_term_amount': None
+                }
+            
+            # 添加TAV分析信息（如果可用）
                 if self.use_tav:
                     try:
                         tav_summary = self.technical_analyzer.get_tav_analysis_summary(indicators_with_signals, asset_type)
@@ -1354,86 +1388,224 @@ class HSIEmailSystem:
                     indicators['distribution_level'] = None
                     indicators['distribution_reasons'] = None
                 
-                return indicators
+                # 添加中期分析指标
+                try:
+                    if MEDIUM_TERM_AVAILABLE:
+                        # 计算均线排列
+                        ma_alignment = calculate_ma_alignment(indicators_with_signals)
+                        indicators['ma_alignment'] = ma_alignment['alignment']
+                        indicators['ma_alignment_strength'] = ma_alignment['strength']
+                        
+                        # 计算均线斜率
+                        ma_slope_20 = calculate_ma_slope(indicators_with_signals, 20)
+                        ma_slope_50 = calculate_ma_slope(indicators_with_signals, 50)
+                        indicators['ma20_slope'] = ma_slope_20['slope']
+                        indicators['ma20_slope_angle'] = ma_slope_20['angle']
+                        indicators['ma20_slope_trend'] = ma_slope_20['trend']
+                        indicators['ma50_slope'] = ma_slope_50['slope']
+                        indicators['ma50_slope_angle'] = ma_slope_50['angle']
+                        indicators['ma50_slope_trend'] = ma_slope_50['trend']
+                        
+                        # 计算均线乖离率
+                        ma_deviation = calculate_ma_deviation(indicators_with_signals)
+                        indicators['ma_deviation'] = ma_deviation['deviations']
+                        indicators['ma_deviation_avg'] = ma_deviation['avg_deviation']
+                        indicators['ma_deviation_extreme'] = ma_deviation['extreme_deviation']
+                        
+                        # 计算支撑阻力位
+                        support_resistance = calculate_support_resistance(indicators_with_signals)
+                        indicators['support_levels'] = support_resistance['support_levels']
+                        indicators['resistance_levels'] = support_resistance['resistance_levels']
+                        indicators['nearest_support'] = support_resistance['nearest_support']
+                        indicators['nearest_resistance'] = support_resistance['nearest_resistance']
+                        
+                        # 计算中期趋势评分
+                        medium_term_score = calculate_medium_term_score(indicators_with_signals)
+                        indicators['medium_term_score'] = medium_term_score['total_score']
+                        indicators['medium_term_components'] = medium_term_score['components']
+                        indicators['medium_term_trend_health'] = medium_term_score['trend_health']
+                        indicators['medium_term_sustainability'] = medium_term_score['sustainability']
+                        indicators['medium_term_recommendation'] = medium_term_score['recommendation']
+                        
+                except Exception as e:
+                    print(f"⚠️ 中期分析指标计算失败: {e}")
+                    indicators['ma_alignment'] = '数据不足'
+                    indicators['ma_alignment_strength'] = 0
+                    indicators['ma20_slope'] = 0
+                    indicators['ma20_slope_angle'] = 0
+                    indicators['ma20_slope_trend'] = '数据不足'
+                    indicators['ma50_slope'] = 0
+                    indicators['ma50_slope_angle'] = 0
+                    indicators['ma50_slope_trend'] = '数据不足'
+                    indicators['ma_deviation'] = {}
+                    indicators['ma_deviation_avg'] = 0
+                    indicators['ma_deviation_extreme'] = '数据不足'
+                    indicators['support_levels'] = []
+                    indicators['resistance_levels'] = []
+                    indicators['nearest_support'] = None
+                    indicators['nearest_resistance'] = None
+                    indicators['medium_term_score'] = 0
+                    indicators['medium_term_components'] = {}
+                    indicators['medium_term_trend_health'] = '数据不足'
+                    indicators['medium_term_sustainability'] = '低'
+                    indicators['medium_term_recommendation'] = '观望'
                 
-            except Exception as e:
-                print(f"⚠️ 计算技术指标失败: {e}")
-                import traceback
-                traceback.print_exc()
-                
-                # 降级为简化计算
-                if hist is not None and not hist.empty:
-                    latest = hist.iloc[-1]
-                    prev = hist.iloc[-2] if len(hist) > 1 else latest
-
-                    try:
-                        atr_value = self.calculate_atr(hist)
-                        current_price = float(latest['Close'])
-                        stop_loss, take_profit = self.calculate_stop_loss_take_profit(
-                            hist,
-                            current_price,
-                            signal_type='BUY',
-                            method='ATR',
-                            atr_period=14,
-                            atr_multiplier=1.5,
-                            risk_reward_ratio=2.0,
-                            percentage=0.05,
-                            max_loss_pct=None,
-                            tick_size=None
-                        )
-                    except Exception as e2:
-                        print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e2}")
-                        atr_value = 0.0
-                        stop_loss = None
-                        take_profit = None
-
-                    indicators = {
-                        'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
-                        'macd': self.calculate_macd(latest['Close']),
-                        'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
-                        'atr': atr_value,
-                        'stop_loss': stop_loss,
-                        'take_profit': take_profit,
-                        'recent_buy_signals': [],
-                        'recent_sell_signals': [],
-                        'trend': '数据不足',
-                        'current_price': latest.get('Close', 0),
-                        'ma20': 0,
-                        'ma50': 0,
-                        'ma200': 0,
-                        'hist': hist
-                    }
-                    
-                    # 添加TAV分析信息（降级模式）
-                    if self.use_tav:
-                        indicators['tav_score'] = 0
-                        indicators['tav_status'] = 'TAV分析失败'
-                        indicators['tav_summary'] = None
-                    
-                    # 添加评分系统信息（降级模式）
-                    if self.USE_SCORED_SIGNALS:
-                        indicators['buildup_score'] = 0.0
-                        indicators['buildup_level'] = 'none'
-                        indicators['buildup_reasons'] = ''
-                        indicators['distribution_score'] = 0.0
-                        indicators['distribution_level'] = 'none'
-                        indicators['distribution_reasons'] = ''
-                    else:
-                        indicators['buildup_score'] = None
-                        indicators['buildup_level'] = None
-                        indicators['buildup_reasons'] = None
-                        indicators['distribution_score'] = None
-                        indicators['distribution_level'] = None
-                        indicators['distribution_reasons'] = None
-                    
-                    return indicators
-                else:
-                    return None
+                # 添加基本面数据
+                try:
+                    if FUNDAMENTAL_AVAILABLE:
+                        # 获取股票代码（去掉.HK后缀）
+                        stock_code = data.get('symbol', '').replace('.HK', '')
+                        if stock_code:
+                            fundamental_data = get_comprehensive_fundamental_data(stock_code)
+                            
+                            if fundamental_data is not None:
+                                # 计算基本面评分（与hk_smart_money_tracker.py相同的逻辑）
+                                fundamental_score = 0
+                                fundamental_details = {}
+                                
+                                pe = fundamental_data.get('fi_pe_ratio')
+                                pb = fundamental_data.get('fi_pb_ratio')
+                                
+                                # PE评分（50分）
+                                if pe is not None:
+                                    if pe < 10:
+                                        fundamental_score += 50
+                                        fundamental_details['pe_score'] = "低估值 (PE<10)"
+                                    elif pe < 15:
+                                        fundamental_score += 40
+                                        fundamental_details['pe_score'] = "合理估值 (10<PE<15)"
+                                    elif pe < 20:
+                                        fundamental_score += 30
+                                        fundamental_details['pe_score'] = "偏高估值 (15<PE<20)"
+                                    elif pe < 25:
+                                        fundamental_score += 20
+                                        fundamental_details['pe_score'] = "高估值 (20<PE<25)"
+                                    else:
+                                        fundamental_score += 10
+                                        fundamental_details['pe_score'] = "极高估值 (PE>25)"
+                                else:
+                                    fundamental_score += 25
+                                    fundamental_details['pe_score'] = "无PE数据"
+                                
+                                # PB评分（50分）
+                                if pb is not None:
+                                    if pb < 1:
+                                        fundamental_score += 50
+                                        fundamental_details['pb_score'] = "低市净率 (PB<1)"
+                                    elif pb < 1.5:
+                                        fundamental_score += 40
+                                        fundamental_details['pb_score'] = "合理市净率 (1<PB<1.5)"
+                                    elif pb < 2:
+                                        fundamental_score += 30
+                                        fundamental_details['pb_score'] = "偏高市净率 (1.5<PB<2)"
+                                    elif pb < 3:
+                                        fundamental_score += 20
+                                        fundamental_details['pb_score'] = "高市净率 (2<PB<3)"
+                                    else:
+                                        fundamental_score += 10
+                                        fundamental_details['pb_score'] = "极高市净率 (PB>3)"
+                                else:
+                                    fundamental_score += 25
+                                    fundamental_details['pb_score'] = "无PB数据"
+                                
+                                # 添加基本面指标到indicators
+                                indicators['fundamental_score'] = fundamental_score
+                                indicators['fundamental_details'] = fundamental_details
+                                indicators['pe_ratio'] = pe
+                                indicators['pb_ratio'] = pb
+                                
+                                print(f"  📊 {data.get('symbol', '')} 基本面数据获取成功: PE={pe}, PB={pb}, 评分={fundamental_score}")
+                            else:
+                                print(f"  ⚠️ {data.get('symbol', '')} 无法获取基本面数据")
+                                indicators['fundamental_score'] = 0
+                                indicators['pe_ratio'] = None
+                                indicators['pb_ratio'] = None
+                        else:
+                            print(f"  ⚠️ {data.get('symbol', '')} 股票代码为空，跳过基本面数据获取")
+                            indicators['fundamental_score'] = 0
+                            indicators['pe_ratio'] = None
+                            indicators['pb_ratio'] = None
+                except Exception as e:
+                    print(f"⚠️ 获取基本面数据失败: {e}")
+                    indicators['fundamental_score'] = 0
+                    indicators['pe_ratio'] = None
+                    indicators['pb_ratio'] = None
+            
+            return indicators
+        
         except Exception as e:
-            print(f"❌ _calculate_technical_indicators_core 发生未捕获的异常: {e}")
+            print(f"⚠️ 计算技术指标失败: {e}")
             import traceback
             traceback.print_exc()
-            return None
+            
+            # 降级为简化计算
+            if hist is not None and not hist.empty:
+                latest = hist.iloc[-1]
+                prev = hist.iloc[-2] if len(hist) > 1 else latest
+
+                try:
+                    atr_value = self.calculate_atr(hist)
+                    current_price = float(latest['Close'])
+                    stop_loss, take_profit = self.calculate_stop_loss_take_profit(
+                        hist,
+                        current_price,
+                        signal_type='BUY',
+                        method='ATR',
+                        atr_period=14,
+                        atr_multiplier=1.5,
+                        risk_reward_ratio=2.0,
+                        percentage=0.05,
+                        max_loss_pct=None,
+                        tick_size=None
+                    )
+                except Exception as e2:
+                    print(f"⚠️ 计算 ATR 或 止损止盈 失败: {e2}")
+                    atr_value = 0.0
+                    stop_loss = None
+                    take_profit = None
+
+                indicators = {
+                    'rsi': self.calculate_rsi((latest['Close'] - prev['Close']) / prev['Close'] * 100 if prev['Close'] != 0 else 0),
+                    'macd': self.calculate_macd(latest['Close']),
+                    'price_position': self.calculate_price_position(latest['Close'], hist['Close'].min(), hist['Close'].max()),
+                    'atr': atr_value,
+                    'stop_loss': stop_loss,
+                    'take_profit': take_profit,
+                    'recent_buy_signals': [],
+                    'recent_sell_signals': [],
+                    'trend': '数据不足',
+                    'current_price': latest.get('Close', 0),
+                    'ma20': 0,
+                    'ma50': 0,
+                    'ma200': 0,
+                    'hist': hist
+                }
+                
+                # 添加TAV分析信息（降级模式）
+                if self.use_tav:
+                    indicators['tav_score'] = 0
+                    indicators['tav_status'] = 'TAV分析失败'
+                    indicators['tav_summary'] = None
+                
+                # 添加评分系统信息（降级模式）
+                if self.USE_SCORED_SIGNALS:
+                    indicators['buildup_score'] = 0.0
+                    indicators['buildup_level'] = 'none'
+                    indicators['buildup_reasons'] = ''
+                    indicators['distribution_score'] = 0.0
+                    indicators['distribution_level'] = 'none'
+                    indicators['distribution_reasons'] = ''
+                else:
+                    indicators['buildup_score'] = None
+                    indicators['buildup_level'] = None
+                    indicators['buildup_reasons'] = None
+                    indicators['distribution_score'] = None
+                    indicators['distribution_level'] = None
+                    indicators['distribution_reasons'] = None
+                
+                return indicators
+            else:
+                return None
 
     def calculate_hsi_technical_indicators(self, data):
         """
@@ -1839,6 +2011,35 @@ class HSIEmailSystem:
             if atr > 0:
                 atr_pct = (atr / current_price * 100) if current_price > 0 else 0
                 tech_info.append(f"ATR: {atr:.2f} ({atr_pct:.2f}%)")
+            
+            # 中期分析指标
+            medium_term_score = indicators.get('medium_term_score', 0)
+            if medium_term_score > 0:
+                tech_info.append(f"中期评分: {medium_term_score:.1f}")
+            
+            ma_alignment = indicators.get('ma_alignment', 'N/A')
+            if ma_alignment != 'N/A':
+                tech_info.append(f"均线排列: {ma_alignment}")
+            
+            # 基本面指标
+            fundamental_score = indicators.get('fundamental_score', 0)
+            if fundamental_score > 0:
+                # 根据评分设置颜色
+                if fundamental_score > 60:
+                    fundamental_status = "优秀"
+                elif fundamental_score >= 30:
+                    fundamental_status = "一般"
+                else:
+                    fundamental_status = "较差"
+                tech_info.append(f"基本面评分: {fundamental_score:.0f}({fundamental_status})")
+            
+            pe_ratio = indicators.get('pe_ratio')
+            if pe_ratio is not None and pe_ratio > 0:
+                tech_info.append(f"PE: {pe_ratio:.2f}")
+            
+            pb_ratio = indicators.get('pb_ratio')
+            if pb_ratio is not None and pb_ratio > 0:
+                tech_info.append(f"PB: {pb_ratio:.2f}")
         
         return ', '.join(tech_info) if tech_info else 'N/A'
     
