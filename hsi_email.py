@@ -1318,22 +1318,21 @@ class HSIEmailSystem:
                 }
             
             # 添加TAV分析信息（如果可用）
-                if self.use_tav:
-                    try:
+            if self.use_tav:
+                try:
                         tav_summary = self.technical_analyzer.get_tav_analysis_summary(indicators_with_signals, asset_type)
                         if tav_summary:
                             indicators['tav_score'] = tav_summary.get('tav_score', 0)
                             indicators['tav_status'] = tav_summary.get('tav_status', '无TAV')
                             indicators['tav_summary'] = tav_summary
-                    except Exception as e:
+                except Exception as e:
                         print(f"⚠️ TAV分析失败: {e}")
                         indicators['tav_score'] = 0
                         indicators['tav_status'] = 'TAV分析失败'
                         indicators['tav_summary'] = None
-                
-                # 添加评分系统信息（如果启用）
-                if self.USE_SCORED_SIGNALS:
-                    try:
+                         # 添加评分系统信息（如果启用）
+            if self.USE_SCORED_SIGNALS:
+                try:
                         # 准备评分所需的数据行
                         obv_value = latest.get('OBV', 0.0) if 'OBV' in latest else 0.0
                         vwap_value = latest.get('VWAP', 0.0) if 'VWAP' in latest else 0.0
@@ -1371,7 +1370,7 @@ class HSIEmailSystem:
                         indicators['distribution_level'] = distribution_result['signal']
                         indicators['distribution_reasons'] = distribution_result['reasons']
                         
-                    except Exception as e:
+                except Exception as e:
                         print(f"⚠️ 评分系统计算失败: {e}")
                         indicators['buildup_score'] = 0.0
                         indicators['buildup_level'] = 'none'
@@ -1379,18 +1378,17 @@ class HSIEmailSystem:
                         indicators['distribution_score'] = 0.0
                         indicators['distribution_level'] = 'none'
                         indicators['distribution_reasons'] = ''
-                else:
-                    # 评分系统未启用，设置为默认值
-                    indicators['buildup_score'] = None
-                    indicators['buildup_level'] = None
-                    indicators['buildup_reasons'] = None
-                    indicators['distribution_score'] = None
-                    indicators['distribution_level'] = None
-                    indicators['distribution_reasons'] = None
-                
-                # 添加中期分析指标
-                try:
-                    if MEDIUM_TERM_AVAILABLE:
+            else:
+                # 评分系统未启用，设置为默认值
+                indicators['buildup_score'] = None
+                indicators['buildup_level'] = None
+                indicators['buildup_reasons'] = None
+                indicators['distribution_score'] = None
+                indicators['distribution_level'] = None
+                indicators['distribution_reasons'] = None
+                         # 添加中期分析指标
+            try:
+                if MEDIUM_TERM_AVAILABLE:
                         # 计算均线排列
                         ma_alignment = calculate_ma_alignment(indicators_with_signals)
                         indicators['ma_alignment'] = ma_alignment['alignment']
@@ -1427,32 +1425,31 @@ class HSIEmailSystem:
                         indicators['medium_term_sustainability'] = medium_term_score['sustainability']
                         indicators['medium_term_recommendation'] = medium_term_score['recommendation']
                         
-                except Exception as e:
-                    print(f"⚠️ 中期分析指标计算失败: {e}")
-                    indicators['ma_alignment'] = '数据不足'
-                    indicators['ma_alignment_strength'] = 0
-                    indicators['ma20_slope'] = 0
-                    indicators['ma20_slope_angle'] = 0
-                    indicators['ma20_slope_trend'] = '数据不足'
-                    indicators['ma50_slope'] = 0
-                    indicators['ma50_slope_angle'] = 0
-                    indicators['ma50_slope_trend'] = '数据不足'
-                    indicators['ma_deviation'] = {}
-                    indicators['ma_deviation_avg'] = 0
-                    indicators['ma_deviation_extreme'] = '数据不足'
-                    indicators['support_levels'] = []
-                    indicators['resistance_levels'] = []
-                    indicators['nearest_support'] = None
-                    indicators['nearest_resistance'] = None
-                    indicators['medium_term_score'] = 0
-                    indicators['medium_term_components'] = {}
-                    indicators['medium_term_trend_health'] = '数据不足'
-                    indicators['medium_term_sustainability'] = '低'
-                    indicators['medium_term_recommendation'] = '观望'
-                
-                # 添加基本面数据
-                try:
-                    if FUNDAMENTAL_AVAILABLE:
+            except Exception as e:
+                print(f"⚠️ 中期分析指标计算失败: {e}")
+                indicators['ma_alignment'] = '数据不足'
+                indicators['ma_alignment_strength'] = 0
+                indicators['ma20_slope'] = 0
+                indicators['ma20_slope_angle'] = 0
+                indicators['ma20_slope_trend'] = '数据不足'
+                indicators['ma50_slope'] = 0
+                indicators['ma50_slope_angle'] = 0
+                indicators['ma50_slope_trend'] = '数据不足'
+                indicators['ma_deviation'] = {}
+                indicators['ma_deviation_avg'] = 0
+                indicators['ma_deviation_extreme'] = '数据不足'
+                indicators['support_levels'] = []
+                indicators['resistance_levels'] = []
+                indicators['nearest_support'] = None
+                indicators['nearest_resistance'] = None
+                indicators['medium_term_score'] = 0
+                indicators['medium_term_components'] = {}
+                indicators['medium_term_trend_health'] = '数据不足'
+                indicators['medium_term_sustainability'] = '低'
+                indicators['medium_term_recommendation'] = '观望'
+                         # 添加基本面数据
+            try:
+                if FUNDAMENTAL_AVAILABLE:
                         # 获取股票代码（去掉.HK后缀）
                         stock_code = data.get('symbol', '').replace('.HK', '')
                         if stock_code:
@@ -1525,11 +1522,11 @@ class HSIEmailSystem:
                             indicators['fundamental_score'] = 0
                             indicators['pe_ratio'] = None
                             indicators['pb_ratio'] = None
-                except Exception as e:
-                    print(f"⚠️ 获取基本面数据失败: {e}")
-                    indicators['fundamental_score'] = 0
-                    indicators['pe_ratio'] = None
-                    indicators['pb_ratio'] = None
+            except Exception as e:
+                print(f"⚠️ 获取基本面数据失败: {e}")
+                indicators['fundamental_score'] = 0
+                indicators['pe_ratio'] = None
+                indicators['pb_ratio'] = None
             
             return indicators
         

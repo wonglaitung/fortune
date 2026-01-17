@@ -39,6 +39,7 @@
 - 📈 **策略验证**：验证交易策略的有效性
 - 💰 **股息追踪**：获取股息信息和基本面数据
 - 📧 **自动通知**：邮件提醒重要信息和交易信号
+- 📉 **中期评估**：提供数周至数月投资周期的技术分析
 
 ---
 
@@ -49,12 +50,14 @@
 - **持仓分析**：自动分析现有持仓，提供专业的投资建议
 - **信号识别**：智能识别买卖信号，减少人工判断
 - **策略生成**：基于技术面和基本面生成交易策略
+- **多风格分析**：支持进取型短期、稳健型短期、稳健型中期、保守型中期四种投资风格
 
 ### 📈 技术分析
 - **多指标支持**：RSI、MACD、布林带、ATR、CCI、OBV 等
 - **VaR 风险价值**：1日、5日、20日 VaR 计算
 - **TAV 评分系统**：加权评分提供精准交易信号
 - **趋势分析**：自动识别多头、空头、震荡趋势
+- **中期分析**：均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分
 
 ### 💹 模拟交易
 - **真实模拟**：基于大模型建议的模拟交易系统
@@ -84,13 +87,13 @@
 | 加密货币监控 | `crypto_email.py` | 每小时 | 比特币、以太坊价格和技术分析 |
 | 港股 IPO 信息 | `hk_ipo_aastocks.py` | 每天 | 最新 IPO 信息 |
 | 黄金市场分析 | `gold_analyzer.py` | 每小时 | 黄金价格和投资建议 |
-| 恒生指数监控 | `hsi_email.py` | 交易时段 | 价格、技术指标、交易信号、AI持仓分析 |
+| 恒生指数监控 | `hsi_email.py` | 交易时段 | 价格、技术指标、交易信号、基本面指标、中期评估指标、AI持仓分析 |
 
 ### 智能分析
 
 | 功能 | 脚本 | 说明 |
 |------|------|------|
-| 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号 |
+| 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析 |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
 | 48小时信号分析 | `analyze_last_48_hours_email.py` | 连续交易信号识别 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
@@ -107,7 +110,7 @@
 |------|------|------|
 | 批量新闻获取 | `batch_stock_news_fetcher.py` | 自选股新闻 |
 | 基本面数据 | `fundamental_data.py` | 财务指标、利润表等 |
-| 技术分析工具 | `technical_analysis.py` | 通用技术指标计算 |
+| 技术分析工具 | `technical_analysis.py` | 通用技术指标计算，含中期分析指标系统 |
 
 ---
 
@@ -161,7 +164,7 @@ python hk_smart_money_tracker.py
 # 启动模拟交易
 python simulation_trader.py
 
-# 恒生指数价格监控（含 AI 持仓分析）
+# 恒生指数价格监控（含基本面指标、中期评估指标和 AI 持仓分析）
 python hsi_email.py
 ```
 
@@ -200,16 +203,19 @@ python hk_smart_money_tracker.py
 python hk_smart_money_tracker.py --date 2025-10-25
 ```
 
-### 3. 恒生指数价格监控器（含 AI 持仓分析）
+### 3. 恒生指数价格监控器（含基本面指标、中期评估指标和 AI 持仓分析）
 
 **功能**：
 - 实时获取恒生指数价格和交易数据
 - 技术指标计算和信号识别
-- 只在有交易信号时发送邮件
+- 只在有交易信号时才发送邮件
 - 支持历史数据分析
 - 集成股息信息追踪功能
 - VaR 风险价值计算（1日、5日、20日）
+- **基本面指标**：基本面评分、PE、PB等估值指标
+- **中期评估指标**：均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分、中期趋势健康度、中期可持续性、中期建议
 - **AI 智能持仓分析**：读取持仓数据，提供专业投资建议
+- **大模型多风格分析**：支持进取型短期、稳健型短期、稳健型中期、保守型中期四种投资风格
 
 **使用方法**：
 ```bash
@@ -220,6 +226,22 @@ python hsi_email.py
 python hsi_email.py --date 2025-10-25
 ```
 
+**基本面指标功能**：
+- 在交易信号总结表中显示基本面评分、PE、PB
+- 在单个股票分析表格中显示基本面评分、PE、PB
+- 根据估值水平自动评分和分类（优秀/一般/较差）
+- 结合技术指标提供综合判断
+
+**中期评估指标功能**：
+- 均线排列状态判断（多头/空头/混乱排列）
+- 均线斜率计算（MA20/MA50斜率和角度，判断趋势强度）
+- 均线乖离率（评估价格与均线的偏离程度，识别超买超卖状态）
+- 支撑阻力位识别（基于近期局部高低点识别关键价格水平）
+- 相对强弱指标（计算股票相对于恒生指数的表现）
+- 中期趋势评分系统（综合趋势、动量、支撑阻力、相对强弱四维度评分）
+- 中期趋势健康度、可持续性评估
+- 中期投资建议（强烈买入/买入/持有/卖出/强烈卖出）
+
 **AI 持仓分析功能**：
 - 读取 `data/actual_porfolio.csv` 持仓数据
 - 使用大模型进行综合投资分析
@@ -228,6 +250,13 @@ python hsi_email.py --date 2025-10-25
 - 止损位和目标价建议
 - 仓位管理建议
 - 风险控制措施
+
+**大模型多风格分析功能**：
+- 进取型短期分析（日内/数天）：捕捉价格波动机会，高风险高收益
+- 稳健型短期分析（日内/数天）：风险收益平衡，稳健收益
+- 稳健型中期分析（数周-数月）：基本面和技术面结合，中长期价值投资
+- 保守型中期分析（数周-数月）：注重长期价值投资，资产保值和稳健增长
+- 支持通过配置开关切换生成全部四种或部分分析风格
 
 ### 4. 港股模拟交易系统
 
@@ -239,6 +268,7 @@ python hsi_email.py --date 2025-10-25
 - 交易记录和状态持久化
 - 详细持仓展示和每日总结
 - 邮件通知系统
+- 大模型多风格分析功能
 
 **使用方法**：
 ```bash
@@ -291,6 +321,13 @@ python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no
 - OBV（能量潮）
 - VaR（风险价值）
 - TAV（技术分析价值）加权评分系统
+- **中期分析指标系统**：
+  - 均线排列状态判断（多头/空头/混乱排列）
+  - 均线斜率计算（MA20/MA50斜率和角度）
+  - 均线乖离率（价格与均线的偏离程度）
+  - 支撑阻力位识别（基于近期局部高低点）
+  - 相对强弱指标（相对恒生指数的表现）
+  - 中期趋势评分系统（综合趋势、动量、支撑阻力、相对强弱四维度评分）
 
 ### 7. 基本面数据获取器
 
@@ -363,6 +400,16 @@ VOL_RATIO_DISTRIBUTION = 1.5  # 出货信号量比阈值
 SOUTHBOUND_THRESHOLD = 10000  # 南向资金阈值
 ```
 
+### 大模型分析风格配置
+
+在 `hsi_email.py` 中调整：
+
+```python
+# True = 生成全部四种（进取型短期、稳健型短期、稳健型中期、保守型中期）
+# False = 只生成两种（稳健型短期、稳健型中期）
+ENABLE_ALL_ANALYSIS_STYLES = False
+```
+
 ---
 
 ## 📁 项目结构
@@ -397,27 +444,30 @@ fortune/
 │       └── qwen_engine.py              # Qwen 大模型接口
 │
 ├── 📊 数据文件
-│   └── data/
-│       ├── actual_porfolio.csv         # 实际持仓数据
-│       ├── all_stock_news_records.csv  # 股票新闻记录
-│       ├── hsi_strategy_latest.txt     # 恒生指数策略分析
-│       ├── simulation_state.json       # 模拟交易状态
-│       ├── simulation_transactions.csv # 交易历史记录
-│       ├── simulation_portfolio.csv    # 投资组合价值
-│       ├── simulation_trade_log_*.txt  # 交易日志（按日期分割）
-│       └── fundamental_cache/          # 基本面数据缓存
+│   ├── actual_porfolio.csv             # 实际持仓数据
+│   ├── all_stock_news_records.csv      # 股票新闻记录
+│   ├── all_dividends.csv               # 所有股息信息记录
+│   ├── recent_dividends.csv            # 最近除净的股息信息
+│   ├── upcoming_dividends.csv          # 即将除净的股息信息（未来90天）
+│   ├── hsi_strategy_latest.txt         # 恒生指数策略分析
+│   ├── simulation_state.json           # 模拟交易状态
+│   ├── simulation_transactions.csv     # 交易历史记录
+│   ├── simulation_portfolio.csv        # 投资组合价值变化记录
+│   ├── simulation_trade_log_*.txt      # 交易日志（按日期分割）
+│   ├── southbound_data_cache.pkl       # 南向资金数据缓存
+│   └── fundamental_cache/               # 基本面数据缓存
 │
 ├── 📈 图表输出
 │   └── hk_smart_charts/                # 主力资金追踪图表
 │
 └── 🚀 GitHub Actions
     └── .github/workflows/
-        ├── crypto-alert.yml             # 加密货币监控
-        ├── gold-analyzer.yml            # 黄金分析
-        ├── ipo-alert.yml                # IPO 信息
-        ├── hsi-email-alert.yml          # 恒生指数监控
-        ├── smart-money-alert.yml        # 主力资金追踪
-        └── ai-trading-analysis-daily.yml # AI 交易分析
+        ├── crypto-alert.yml              # 加密货币监控
+        ├── gold-analyzer.yml             # 黄金分析
+        ├── ipo-alert.yml                 # IPO 信息
+        ├── hsi-email-alert.yml           # 恒生指数监控
+        ├── smart-money-alert.yml         # 主力资金追踪
+        └── ai-trading-analysis-daily.yml  # AI 交易分析
 ```
 
 ---
@@ -432,15 +482,26 @@ fortune/
 │   ├── 港股数据 (yfinance, 腾讯财经, AKShare)
 │   ├── 黄金数据 (yfinance)
 │   ├── 基本面数据 (AKShare)
+│   ├── 股息数据 (AKShare)
 │   └── IPO 数据 (AAStocks)
 │
 ├── 🔍 分析层
 │   ├── 技术分析 (technical_analysis.py)
+│   │   ├── 短期技术指标（RSI、MACD、布林带、ATR等）
+│   │   ├── TAV加权评分系统
+│   │   └── 中期分析指标系统
+│   │       ├── 均线排列状态判断
+│   │       ├── 均线斜率计算
+│   │       ├── 均线乖离率
+│   │       ├── 支撑阻力位识别
+│   │       ├── 相对强弱指标
+│   │       └── 中期趋势评分系统
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
 │   ├── 48小时信号分析 (analyze_last_48_hours_email.py)
 │   ├── AI 交易分析 (ai_trading_analyzer.py)
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
-│   └── 新闻过滤 (batch_stock_news_fetcher.py)
+│   ├── 新闻过滤 (batch_stock_news_fetcher.py)
+│   └── 基本面分析 (fundamental_data.py)
 │
 ├── 💹 交易层
 │   └── 模拟交易系统 (simulation_trader.py)
@@ -448,7 +509,7 @@ fortune/
 └── 🤖 服务层
     ├── 大模型服务 (qwen_engine.py)
     ├── 邮件服务 (SMTP)
-    └── 数据缓存 (fundamental_cache/)
+    └── 数据缓存 (fundamental_cache/, southbound_data_cache.pkl)
 ```
 
 ---
@@ -459,12 +520,13 @@ fortune/
 
 | 功能模块 | 应用场景 | 说明 |
 |---------|---------|------|
-| 主力资金追踪 | 股票分析 | 识别建仓和出货信号 |
-| 模拟交易 | 交易决策 | 生成买卖信号和原因 |
+| 主力资金追踪 | 股票分析 | 识别建仓和出货信号，集成基本面分析 |
+| 模拟交易 | 交易决策 | 生成买卖信号和原因，支持多风格分析 |
 | 新闻过滤 | 相关性判断 | 过滤相关新闻 |
 | 黄金分析 | 市场分析 | 深度分析和投资建议 |
 | 恒生指数策略 | 策略生成 | 生成交易策略 |
 | **持仓分析** | **投资建议** | **分析现有持仓，提供专业建议** |
+| **多风格分析** | **策略多样性** | **支持四种投资风格和周期的分析报告** |
 
 ---
 
@@ -480,6 +542,8 @@ fortune/
 - 🔄 模拟交易通知（买入、卖出、止损等）
 - 📊 AI 交易分析报告
 - 💼 **AI 持仓投资分析**
+- 📊 **基本面指标展示**
+- 📊 **中期评估指标展示**
 
 邮件采用统一的表格化样式，清晰易读。
 
@@ -491,12 +555,16 @@ fortune/
 |------|------|---------|
 | `actual_porfolio.csv` | 实际持仓数据 | 手动更新 |
 | `all_stock_news_records.csv` | 股票新闻记录 | 按需 |
+| `all_dividends.csv` | 所有股息信息记录 | 按需 |
+| `recent_dividends.csv` | 最近除净的股息信息 | 按需 |
+| `upcoming_dividends.csv` | 即将除净的股息信息（未来90天） | 按需 |
 | `hsi_strategy_latest.txt` | 恒生指数策略分析 | 每日 |
 | `simulation_state.json` | 模拟交易状态 | 实时 |
 | `simulation_transactions.csv` | 交易历史记录 | 实时 |
 | `simulation_portfolio.csv` | 投资组合价值变化 | 实时 |
 | `simulation_trade_log_*.txt` | 详细交易日志 | 每日 |
 | `fundamental_cache/` | 基本面数据缓存 | 7天有效期 |
+| `southbound_data_cache.pkl` | 南向资金数据缓存 | 按需 |
 
 ---
 
@@ -587,6 +655,24 @@ markdown        # Markdown 转 HTML
 - 仓位管理建议
 - 风险控制措施
 - 交易执行建议
+- 基本面指标分析
+- 中期评估指标分析
+
+### Q9: 什么是中期评估指标？
+
+**A**: 中期评估指标是用于分析数周至数月投资周期的技术指标，包括：
+- **均线排列**：识别多头/空头/混乱排列，判断趋势方向
+- **均线斜率**：通过线性回归计算MA20/MA50斜率和角度，判断趋势强度
+- **乖离率**：评估价格与均线的偏离程度，识别超买超卖状态
+- **支撑阻力位**：基于近期局部高低点识别关键价格水平
+- **相对强弱**：计算股票相对于恒生指数的表现
+- **中期趋势评分**：综合趋势、动量、支撑阻力、相对强弱四维度评分（0-100分）
+
+### Q10: 如何配置大模型分析风格？
+
+**A**: 在 `hsi_email.py` 文件中修改 `ENABLE_ALL_ANALYSIS_STYLES` 参数：
+- `True`：生成全部四种分析（进取型短期、稳健型短期、稳健型中期、保守型中期）
+- `False`：只生成两种分析（稳健型短期、稳健型中期）
 
 ---
 
@@ -640,4 +726,4 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-01-12
+**最后更新**: 2026-01-17
