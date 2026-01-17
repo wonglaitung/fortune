@@ -3244,6 +3244,185 @@ class HSIEmailSystem:
                 trend_analysis = tav_summary.get('trend_analysis', 'N/A')
                 momentum_analysis = tav_summary.get('momentum_analysis', 'N/A')
         
+        # 添加基本面指标
+        fundamental_score = indicators.get('fundamental_score', None)
+        pe_ratio = indicators.get('pe_ratio', None)
+        pb_ratio = indicators.get('pb_ratio', None)
+        
+        # 基本面评分
+        if fundamental_score is not None:
+            if fundamental_score > 60:
+                fundamental_color = "color: green; font-weight: bold;"
+                fundamental_status = "优秀"
+            elif fundamental_score >= 30:
+                fundamental_color = "color: orange; font-weight: bold;"
+                fundamental_status = "一般"
+            else:
+                fundamental_color = "color: red; font-weight: bold;"
+                fundamental_status = "较差"
+            
+            html += f"""
+                <tr>
+                    <td>基本面评分</td>
+                    <td><span style="{fundamental_color}">{fundamental_score:.0f}</span> <span style="font-size: 0.8em; color: #666;">({fundamental_status})</span></td>
+                </tr>
+            """
+        
+        # PE（市盈率）
+        if pe_ratio is not None and pe_ratio > 0:
+            pe_color = "color: green;" if pe_ratio < 15 else "color: orange;" if pe_ratio < 25 else "color: red;"
+            html += f"""
+                <tr>
+                    <td>PE（市盈率）</td>
+                    <td><span style="{pe_color}">{pe_ratio:.2f}</span></td>
+                </tr>
+            """
+        
+        # PB（市净率）
+        if pb_ratio is not None and pb_ratio > 0:
+            pb_color = "color: green;" if pb_ratio < 1.5 else "color: orange;" if pb_ratio < 3 else "color: red;"
+            html += f"""
+                <tr>
+                    <td>PB（市净率）</td>
+                    <td><span style="{pb_color}">{pb_ratio:.2f}</span></td>
+                </tr>
+            """
+        
+        # 添加中期评估指标
+        # 均线排列
+        ma_alignment = indicators.get('ma_alignment', None)
+        if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
+            ma_alignment_color = "color: green; font-weight: bold;" if ma_alignment == '多头排列' else "color: red; font-weight: bold;" if ma_alignment == '空头排列' else "color: orange; font-weight: bold;"
+            html += f"""
+                <tr>
+                    <td>均线排列</td>
+                    <td><span style="{ma_alignment_color}">{ma_alignment}</span></td>
+                </tr>
+            """
+        
+        # 均线斜率
+        ma20_slope = indicators.get('ma20_slope', None)
+        ma20_slope_trend = indicators.get('ma20_slope_trend', None)
+        if ma20_slope is not None and ma20_slope_trend is not None:
+            ma20_slope_color = "color: green; font-weight: bold;" if ma20_slope_trend == '上升' else "color: red; font-weight: bold;" if ma20_slope_trend == '下降' else "color: #666;"
+            html += f"""
+                <tr>
+                    <td>MA20斜率</td>
+                    <td><span style="{ma20_slope_color}">{ma20_slope:.4f}</span> ({ma20_slope_trend})</td>
+                </tr>
+            """
+        
+        ma50_slope = indicators.get('ma50_slope', None)
+        ma50_slope_trend = indicators.get('ma50_slope_trend', None)
+        if ma50_slope is not None and ma50_slope_trend is not None:
+            ma50_slope_color = "color: green; font-weight: bold;" if ma50_slope_trend == '上升' else "color: red; font-weight: bold;" if ma50_slope_trend == '下降' else "color: #666;"
+            html += f"""
+                <tr>
+                    <td>MA50斜率</td>
+                    <td><span style="{ma50_slope_color}">{ma50_slope:.4f}</span> ({ma50_slope_trend})</td>
+                </tr>
+            """
+        
+        # 乖离率
+        ma_deviation_avg = indicators.get('ma_deviation_avg', None)
+        if ma_deviation_avg is not None and ma_deviation_avg != 0:
+            deviation_color = "color: red; font-weight: bold;" if abs(ma_deviation_avg) > 5 else "color: orange; font-weight: bold;" if abs(ma_deviation_avg) > 3 else "color: #666;"
+            html += f"""
+                <tr>
+                    <td>均线乖离率</td>
+                    <td><span style="{deviation_color}">{ma_deviation_avg:.2f}%</span></td>
+                </tr>
+            """
+        
+        # 支撑阻力位
+        nearest_support = indicators.get('nearest_support', None)
+        nearest_resistance = indicators.get('nearest_resistance', None)
+        if nearest_support is not None:
+            support_pct = ((current_price - nearest_support) / current_price * 100) if current_price > 0 else 0
+            html += f"""
+                <tr>
+                    <td>最近支撑位</td>
+                    <td>{nearest_support:.2f} (距离{support_pct:.2f}%)</td>
+                </tr>
+            """
+        
+        if nearest_resistance is not None:
+            resistance_pct = ((nearest_resistance - current_price) / current_price * 100) if current_price > 0 else 0
+            html += f"""
+                <tr>
+                    <td>最近阻力位</td>
+                    <td>{nearest_resistance:.2f} (距离{resistance_pct:.2f}%)</td>
+                </tr>
+            """
+        
+        # 相对强弱
+        relative_strength = indicators.get('relative_strength', None)
+        if relative_strength is not None:
+            rs_color = "color: green; font-weight: bold;" if relative_strength > 0 else "color: red; font-weight: bold;" if relative_strength < 0 else "color: #666;"
+            html += f"""
+                <tr>
+                    <td>相对强度(相对恒指)</td>
+                    <td><span style="{rs_color}">{relative_strength:.2%}</span></td>
+                </tr>
+            """
+        
+        # 中期趋势评分
+        medium_term_score = indicators.get('medium_term_score', None)
+        if medium_term_score is not None and medium_term_score > 0:
+            if medium_term_score >= 80:
+                mt_color = "color: green; font-weight: bold;"
+                mt_status = "强烈买入"
+            elif medium_term_score >= 65:
+                mt_color = "color: green; font-weight: bold;"
+                mt_status = "买入"
+            elif medium_term_score >= 45:
+                mt_color = "color: orange; font-weight: bold;"
+                mt_status = "持有"
+            elif medium_term_score >= 30:
+                mt_color = "color: red; font-weight: bold;"
+                mt_status = "卖出"
+            else:
+                mt_color = "color: red; font-weight: bold;"
+                mt_status = "强烈卖出"
+            
+            html += f"""
+                <tr>
+                    <td>中期趋势评分</td>
+                    <td><span style="{mt_color}">{medium_term_score:.1f}</span> <span style="font-size: 0.8em; color: #666;">({mt_status})</span></td>
+                </tr>
+            """
+        
+        # 中期趋势健康度
+        medium_term_trend_health = indicators.get('medium_term_trend_health', None)
+        if medium_term_trend_health is not None:
+            html += f"""
+                <tr>
+                    <td>中期趋势健康度</td>
+                    <td>{medium_term_trend_health}</td>
+                </tr>
+            """
+        
+        # 中期可持续性
+        medium_term_sustainability = indicators.get('medium_term_sustainability', None)
+        if medium_term_sustainability is not None:
+            sustainability_color = "color: green; font-weight: bold;" if medium_term_sustainability == '高' else "color: orange; font-weight: bold;" if medium_term_sustainability == '中' else "color: red; font-weight: bold;"
+            html += f"""
+                <tr>
+                    <td>中期可持续性</td>
+                    <td><span style="{sustainability_color}">{medium_term_sustainability}</span></td>
+                </tr>
+            """
+        
+        # 中期建议
+        medium_term_recommendation = indicators.get('medium_term_recommendation', None)
+        if medium_term_recommendation is not None:
+            html += f"""
+                <tr>
+                    <td>中期建议</td>
+                    <td>{medium_term_recommendation}</td>
+                </tr>
+            """
+        
         # 添加评分系统信息（如果启用）
         if self.USE_SCORED_SIGNALS:
             buildup_score = indicators.get('buildup_score', None)
@@ -3585,7 +3764,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -3631,6 +3810,9 @@ class HSIEmailSystem:
                         <th>48小时智能建议</th>
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
+                        <th>基本面评分</th>
+                        <th>PE(市盈率)</th>
+                        <th>PB(市净率)</th>
                         <th>股票现价</th>
                         <th>上个交易日趋势</th>
                         <th>上个交易日建仓评分</th>
@@ -3848,6 +4030,37 @@ class HSIEmailSystem:
             prev_price_display = f"{prev_price:.2f}" if prev_price is not None else "N/A"
             prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
             
+            # 获取基本面指标
+            fundamental_score = stock_indicators.get('fundamental_score', None) if stock_indicators else None
+            pe_ratio = stock_indicators.get('pe_ratio', None) if stock_indicators else None
+            pb_ratio = stock_indicators.get('pb_ratio', None) if stock_indicators else None
+            
+            # 格式化基本面评分显示
+            fundamental_display = "N/A"
+            if fundamental_score is not None:
+                if fundamental_score > 60:
+                    fundamental_color = "color: green; font-weight: bold;"
+                    fundamental_status = "优秀"
+                elif fundamental_score >= 30:
+                    fundamental_color = "color: orange; font-weight: bold;"
+                    fundamental_status = "一般"
+                else:
+                    fundamental_color = "color: red; font-weight: bold;"
+                    fundamental_status = "较差"
+                fundamental_display = f"<span style=\"{fundamental_color}\">{fundamental_score:.0f}</span> <span style=\"font-size: 0.8em; color: #666;\">({fundamental_status})</span>"
+            
+            # 格式化PE显示
+            pe_display = "N/A"
+            if pe_ratio is not None and pe_ratio > 0:
+                pe_color = "color: green;" if pe_ratio < 15 else "color: orange;" if pe_ratio < 25 else "color: red;"
+                pe_display = f"<span style=\"{pe_color}\">{pe_ratio:.2f}</span>"
+            
+            # 格式化PB显示
+            pb_display = "N/A"
+            if pb_ratio is not None and pb_ratio > 0:
+                pb_color = "color: green;" if pb_ratio < 1.5 else "color: orange;" if pb_ratio < 3 else "color: red;"
+                pb_display = f"<span style=\"{pb_color}\">{pb_ratio:.2f}</span>"
+            
             # 计算变化方向和箭头
             prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
             prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
@@ -3866,6 +4079,9 @@ class HSIEmailSystem:
                         <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
                         <td>{safe_signal_description}</td>
                         <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+                        <td>{fundamental_display}</td>
+                        <td>{pe_display}</td>
+                        <td>{pb_display}</td>
                         <td>{price_value_display}</td>
                         <td>{prev_trend_arrow} {prev_trend_display}</td>
                         <td>{prev_buildup_arrow} {prev_buildup_display}</td>
@@ -3934,7 +4150,28 @@ class HSIEmailSystem:
                     pass
             prev_change_display = f"{prev_change_pct_text:+.2f}%" if prev_change_pct_text is not None else 'N/A'
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
+            # 获取基本面指标（文本版本）
+            fundamental_score = stock_indicators.get('fundamental_score', None) if stock_indicators else None
+            pe_ratio = stock_indicators.get('pe_ratio', None) if stock_indicators else None
+            pb_ratio = stock_indicators.get('pb_ratio', None) if stock_indicators else None
+            
+            # 格式化基本面评分（文本版本）
+            fundamental_text = "N/A"
+            if fundamental_score is not None:
+                fundamental_status = "优秀" if fundamental_score > 60 else "一般" if fundamental_score >= 30 else "较差"
+                fundamental_text = f"{fundamental_score:.0f}({fundamental_status})"
+            
+            # 格式化PE（文本版本）
+            pe_text = "N/A"
+            if pe_ratio is not None and pe_ratio > 0:
+                pe_text = f"{pe_ratio:.2f}"
+            
+            # 格式化PB（文本版本）
+            pb_text = "N/A"
+            if pb_ratio is not None and pb_ratio > 0:
+                pb_text = f"{pb_ratio:.2f}"
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -3943,7 +4180,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="18">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
@@ -4585,6 +4822,89 @@ class HSIEmailSystem:
                 text += f"  MA50: {ma50:,.2f}\n"
                 text += f"  MA200: {ma200:,.2f}\n"
                 
+                # 添加基本面指标
+                fundamental_score = indicators.get('fundamental_score', None)
+                pe_ratio = indicators.get('pe_ratio', None)
+                pb_ratio = indicators.get('pb_ratio', None)
+                
+                if fundamental_score is not None:
+                    fundamental_status = "优秀" if fundamental_score > 60 else "一般" if fundamental_score >= 30 else "较差"
+                    text += f"  基本面评分: {fundamental_score:.0f}({fundamental_status})\n"
+                
+                if pe_ratio is not None and pe_ratio > 0:
+                    text += f"  PE(市盈率): {pe_ratio:.2f}\n"
+                
+                if pb_ratio is not None and pb_ratio > 0:
+                    text += f"  PB(市净率): {pb_ratio:.2f}\n"
+                
+                # 添加中期评估指标
+                # 均线排列
+                ma_alignment = indicators.get('ma_alignment', None)
+                if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
+                    text += f"  均线排列: {ma_alignment}\n"
+                
+                # 均线斜率
+                ma20_slope = indicators.get('ma20_slope', None)
+                ma20_slope_trend = indicators.get('ma20_slope_trend', None)
+                if ma20_slope is not None and ma20_slope_trend is not None:
+                    text += f"  MA20斜率: {ma20_slope:.4f}({ma20_slope_trend})\n"
+                
+                ma50_slope = indicators.get('ma50_slope', None)
+                ma50_slope_trend = indicators.get('ma50_slope_trend', None)
+                if ma50_slope is not None and ma50_slope_trend is not None:
+                    text += f"  MA50斜率: {ma50_slope:.4f}({ma50_slope_trend})\n"
+                
+                # 乖离率
+                ma_deviation_avg = indicators.get('ma_deviation_avg', None)
+                if ma_deviation_avg is not None and ma_deviation_avg != 0:
+                    text += f"  均线乖离率: {ma_deviation_avg:.2f}%\n"
+                
+                # 支撑阻力位
+                nearest_support = indicators.get('nearest_support', None)
+                nearest_resistance = indicators.get('nearest_resistance', None)
+                if nearest_support is not None:
+                    support_pct = ((current_price - nearest_support) / current_price * 100) if current_price > 0 else 0
+                    text += f"  最近支撑位: {nearest_support:.2f}(距离{support_pct:.2f}%)\n"
+                
+                if nearest_resistance is not None:
+                    resistance_pct = ((nearest_resistance - current_price) / current_price * 100) if current_price > 0 else 0
+                    text += f"  最近阻力位: {nearest_resistance:.2f}(距离{resistance_pct:.2f}%)\n"
+                
+                # 相对强弱
+                relative_strength = indicators.get('relative_strength', None)
+                if relative_strength is not None:
+                    text += f"  相对强度(相对恒指): {relative_strength:.2%}\n"
+                
+                # 中期趋势评分
+                medium_term_score = indicators.get('medium_term_score', None)
+                if medium_term_score is not None and medium_term_score > 0:
+                    if medium_term_score >= 80:
+                        mt_status = "强烈买入"
+                    elif medium_term_score >= 65:
+                        mt_status = "买入"
+                    elif medium_term_score >= 45:
+                        mt_status = "持有"
+                    elif medium_term_score >= 30:
+                        mt_status = "卖出"
+                    else:
+                        mt_status = "强烈卖出"
+                    text += f"  中期趋势评分: {medium_term_score:.1f}({mt_status})\n"
+                
+                # 中期趋势健康度
+                medium_term_trend_health = indicators.get('medium_term_trend_health', None)
+                if medium_term_trend_health is not None:
+                    text += f"  中期趋势健康度: {medium_term_trend_health}\n"
+                
+                # 中期可持续性
+                medium_term_sustainability = indicators.get('medium_term_sustainability', None)
+                if medium_term_sustainability is not None:
+                    text += f"  中期可持续性: {medium_term_sustainability}\n"
+                
+                # 中期建议
+                medium_term_recommendation = indicators.get('medium_term_recommendation', None)
+                if medium_term_recommendation is not None:
+                    text += f"  中期建议: {medium_term_recommendation}\n"
+                
                 # 添加VaR信息
                 var_ultra_short = indicators.get('var_ultra_short_term')
                 var_ultra_short_amount = indicators.get('var_ultra_short_term_amount')
@@ -4993,6 +5313,71 @@ class HSIEmailSystem:
                   <li><b>无建议信号</b>：48小时内无任何买卖建议，缺乏明确信号</li>
                 </ul>
               </li>
+              <li><b>基本面评分(0-100)</b>：基于PE（市盈率）和PB（市净率）的综合评分，评估股票的基本面质量：
+                <ul>
+                  <li><b>评分范围</b>：0-100分，分数越高基本面质量越好</li>
+                  <li><b>评分等级</b>：
+                    <ul>
+                      <li>优秀（>60分）：基本面质量高，估值合理或偏低，适合长期投资</li>
+                      <li>一般（30-60分）：基本面质量中等，估值适中，需结合其他指标综合判断</li>
+                      <li>较差（<30分）：基本面质量低，估值偏高，投资风险较大</li>
+                    </ul>
+                  </li>
+                  <li><b>PE评分（50分权重）</b>：基于市盈率评估估值水平
+                    <ul>
+                      <li>PE<10：50分，低估值，投资价值高</li>
+                      <li>10≤PE<15：40分，合理估值，投资价值良好</li>
+                      <li>15≤PE<20：30分，偏高估值，投资价值一般</li>
+                      <li>20≤PE<25：20分，高估值，投资价值较低</li>
+                      <li>PE≥25：10分，极高估值，投资风险高</li>
+                    </ul>
+                  </li>
+                  <li><b>PB评分（50分权重）</b>：基于市净率评估估值水平
+                    <ul>
+                      <li>PB<1：50分，低市净率，投资价值高</li>
+                      <li>1≤PB<1.5：40分，合理市净率，投资价值良好</li>
+                      <li>1.5≤PB<2：30分，偏高市净率，投资价值一般</li>
+                      <li>2≤PB<3：20分，高市净率，投资价值较低</li>
+                      <li>PB≥3：10分，极高市净率，投资风险高</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>基本面评分高：股票估值合理，盈利能力强，适合长期投资</li>
+                      <li>基本面评分低：股票估值偏高，盈利能力弱，投资风险较大</li>
+                      <li>与技术指标结合：基本面评分高+技术指标好=强烈买入信号</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li><b>PE（市盈率）</b>：股票价格与每股收益的比率，衡量股票估值水平：
+                <ul>
+                  <li><b>计算方式</b>：PE = 股票价格 / 每股收益</li>
+                  <li><b>估值判断</b>：
+                    <ul>
+                      <li>PE<15：低估值，投资价值高</li>
+                      <li>15≤PE<25：合理估值，投资价值良好</li>
+                      <li>PE≥25：高估值，投资风险高</li>
+                    </ul>
+                  </li>
+                  <li><b>行业差异</b>：不同行业的PE水平不同，需结合行业平均水平判断</li>
+                  <li><b>局限性</b>：PE不适用于亏损公司，需结合PB等其他指标综合判断</li>
+                </ul>
+              </li>
+              <li><b>PB（市净率）</b>：股票价格与每股净资产的比率，衡量股票估值水平：
+                <ul>
+                  <li><b>计算方式</b>：PB = 股票价格 / 每股净资产</li>
+                  <li><b>估值判断</b>：
+                    <ul>
+                      <li>PB<1.5：低市净率，投资价值高</li>
+                      <li>1.5≤PB<3：合理市净率，投资价值良好</li>
+                      <li>PB≥3：高市净率，投资风险高</li>
+                    </ul>
+                  </li>
+                  <li><b>适用性</b>：PB适用于周期性行业和亏损公司，比PE更稳健</li>
+                  <li><b>行业差异</b>：不同行业的PB水平不同，需结合行业平均水平判断</li>
+                </ul>
+              </li>
             </ul>
             </div>
         </div>
@@ -5104,6 +5489,44 @@ class HSIEmailSystem:
         text += "  - 卖出(N次)：48小时内N次卖出建议，可能有买入建议\n"
         text += "  - 买入M次,卖出N次：48小时内买卖建议混合，市场观点不明\n"
         text += "  - 无建议信号：48小时内无任何买卖建议，缺乏明确信号\n"
+        text += "• 基本面评分(0-100)：基于PE（市盈率）和PB（市净率）的综合评分，评估股票的基本面质量：\n"
+        text += "  - 评分范围：0-100分，分数越高基本面质量越好\n"
+        text += "  - 评分等级：\n"
+        text += "    * 优秀（>60分）：基本面质量高，估值合理或偏低，适合长期投资\n"
+        text += "    * 一般（30-60分）：基本面质量中等，估值适中，需结合其他指标综合判断\n"
+        text += "    * 较差（<30分）：基本面质量低，估值偏高，投资风险较大\n"
+        text += "  - PE评分（50分权重）：基于市盈率评估估值水平\n"
+        text += "    * PE<10：50分，低估值，投资价值高\n"
+        text += "    * 10≤PE<15：40分，合理估值，投资价值良好\n"
+        text += "    * 15≤PE<20：30分，偏高估值，投资价值一般\n"
+        text += "    * 20≤PE<25：20分，高估值，投资价值较低\n"
+        text += "    * PE≥25：10分，极高估值，投资风险高\n"
+        text += "  - PB评分（50分权重）：基于市净率评估估值水平\n"
+        text += "    * PB<1：50分，低市净率，投资价值高\n"
+        text += "    * 1≤PB<1.5：40分，合理市净率，投资价值良好\n"
+        text += "    * 1.5≤PB<2：30分，偏高市净率，投资价值一般\n"
+        text += "    * 2≤PB<3：20分，高市净率，投资价值较低\n"
+        text += "    * PB≥3：10分，极高市净率，投资风险高\n"
+        text += "  - 应用场景：\n"
+        text += "    * 基本面评分高：股票估值合理，盈利能力强，适合长期投资\n"
+        text += "    * 基本面评分低：股票估值偏高，盈利能力弱，投资风险较大\n"
+        text += "    * 与技术指标结合：基本面评分高+技术指标好=强烈买入信号\n"
+        text += "• PE（市盈率）：股票价格与每股收益的比率，衡量股票估值水平：\n"
+        text += "  - 计算方式：PE = 股票价格 / 每股收益\n"
+        text += "  - 估值判断：\n"
+        text += "    * PE<15：低估值，投资价值高\n"
+        text += "    * 15≤PE<25：合理估值，投资价值良好\n"
+        text += "    * PE≥25：高估值，投资风险高\n"
+        text += "  - 行业差异：不同行业的PE水平不同，需结合行业平均水平判断\n"
+        text += "  - 局限性：PE不适用于亏损公司，需结合PB等其他指标综合判断\n"
+        text += "• PB（市净率）：股票价格与每股净资产的比率，衡量股票估值水平：\n"
+        text += "  - 计算方式：PB = 股票价格 / 每股净资产\n"
+        text += "  - 估值判断：\n"
+        text += "    * PB<1.5：低市净率，投资价值高\n"
+        text += "    * 1.5≤PB<3：合理市净率，投资价值良好\n"
+        text += "    * PB≥3：高市净率，投资风险高\n"
+        text += "  - 适用性：PB适用于周期性行业和亏损公司，比PE更稳健\n"
+        text += "  - 行业差异：不同行业的PB水平不同，需结合行业平均水平判断\n"
 
         html += "</body></html>"
 
