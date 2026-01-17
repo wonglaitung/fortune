@@ -2451,14 +2451,29 @@ class HSIEmailSystem:
             # 准备技术面信号摘要和交易记录
             stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
             stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
-            
-            # 生成四种不同风格的分析
-            analysis_styles = [
+
+            # 配置开关：是否生成所有四种分析风格
+            # True = 生成全部四种（进取型短期、稳健型短期、稳健型中期、保守型中期）
+            # False = 只生成两种（稳健型短期、稳健型中期）
+            ENABLE_ALL_ANALYSIS_STYLES = False
+
+            # 定义所有可用的分析风格
+            all_analysis_styles = [
                 ('aggressive', 'short_term', '🎯 进取型短期分析（日内/数天）'),
                 ('balanced', 'short_term', '⚖️ 稳健型短期分析（日内/数天）'),
                 ('balanced', 'medium_term', '📊 稳健型中期分析（数周-数月）'),
                 ('conservative', 'medium_term', '🛡️ 保守型中期分析（数周-数月）')
             ]
+
+            # 根据配置开关选择要生成的分析风格
+            if ENABLE_ALL_ANALYSIS_STYLES:
+                analysis_styles = all_analysis_styles
+            else:
+                # 只生成稳健型短期和稳健型中期
+                analysis_styles = [
+                    ('balanced', 'short_term', '⚖️ 稳健型短期分析（日内/数天）'),
+                    ('balanced', 'medium_term', '📊 稳健型中期分析（数周-数月）')
+                ]
             
             all_analysis = []
             
