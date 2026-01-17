@@ -1115,29 +1115,28 @@ def analyze_stock(code, name, run_date=None):
         # 如果指定了运行日期，则获取该日期的历史数据
         if run_date:
             # 获取指定日期前 PRICE_WINDOW+30 天的数据
-            target_date = pd.to_datetime(run_date)
+            target_date = pd.to_datetime(run_date, utc=True)
             # 使用固定的数据获取天数，确保确定性
             days_diff = PRICE_WINDOW + 30
             full_hist = get_hk_stock_data_tencent(stock_code, period_days=days_diff)
         else:
             # 默认行为：获取最近 PRICE_WINDOW+30 天的数据
             full_hist = get_hk_stock_data_tencent(stock_code, period_days=PRICE_WINDOW + 30)
-            
+
         if len(full_hist) < PRICE_WINDOW:
             print(f"⚠️  {name} 数据不足（需要至少 {PRICE_WINDOW} 日）")
             return None
 
         # 如果指定了运行日期，使用包含指定日期的数据窗口
         if run_date:
-            # 筛选出指定日期及之前的数据
-            target_date = pd.to_datetime(run_date)
-            # 确保时区一致
-            if full_hist.index.tz is not None:
-                target_date = target_date.tz_localize('UTC').tz_convert(full_hist.index.tz)
-            
+            # 筛选指定日期及之前的数据
+            # 确保时区一致（target_date 已经是 timezone-aware）
+            if full_hist.index.tz is not None and full_hist.index.tz != target_date.tz:
+                target_date = target_date.tz_convert(full_hist.index.tz)
+
             # 筛选指定日期及之前的数据
             filtered_hist = full_hist[full_hist.index <= target_date]
-            
+
             # 如果没有数据，使用最接近的日期数据
             if len(filtered_hist) == 0:
                 # 找到最接近指定日期的数据（包括之后的日期）
@@ -1401,8 +1400,11 @@ def analyze_stock(code, name, run_date=None):
             previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
             if full_hist.index.tz is not None:
                 previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize('UTC').tz_convert(full_hist.index.tz)
-            
-            prev_filtered_hist = full_hist[full_hist.index <= previous_trading_date_timestamp]
+
+            try:
+                prev_filtered_hist = full_hist[full_hist.index <= previous_trading_date_timestamp]
+            except Exception as e:
+                raise
             
             if not prev_filtered_hist.empty:
                 # 获取上个交易日的数据（最后一天）
@@ -2026,6 +2028,7 @@ def analyze_stock(code, name, run_date=None):
                 tav_quality_score = None
                 tav_recommendation = None
 
+
         # 保存图表
         if SAVE_CHARTS:
             # 如果有恒生指数数据，则绘制对比图
@@ -2145,7 +2148,7 @@ def analyze_stock(code, name, run_date=None):
         # === 多周期指标计算（新增）===
         # 计算多周期价格变化率和趋势方向
         multi_period_metrics = calculate_multi_period_metrics(full_hist, periods=[3, 5, 10, 20, 60])
-        
+
         # 计算多周期相对强度（股票 vs 恒生指数）
         multi_period_rs = calculate_relative_strength_multi_period(full_hist, hsi_hist, periods=[3, 5, 10, 20, 60])
         
@@ -2274,7 +2277,7 @@ def analyze_stock(code, name, run_date=None):
                 previous_trading_date_timestamp = pd.Timestamp(previous_trading_date)
                 if main_hist.index.tz is not None:
                     previous_trading_date_timestamp = previous_trading_date_timestamp.tz_localize('UTC').tz_convert(main_hist.index.tz)
-                
+
                 # 从main_hist中查找上个交易日数据（因为评分在main_hist中）
                 prev_filtered_hist = main_hist[main_hist.index <= previous_trading_date_timestamp]
                 
