@@ -1208,8 +1208,550 @@ class TAVScorer:
             return "不建议操作，TAV无共振，缺乏明确方向"
 
 
+# ==================== 中期分析指标函数 ====================
+
+def calculate_ma_alignment(df, periods=[5, 10, 20, 50]):
+    """
+    计算均线排列状态
+    
+    参数:
+    - df: 包含价格数据的DataFrame
+    - periods: 均线周期列表
+    
+    返回:
+    - dict: {
+        'alignment': '多头排列'/'空头排列'/'混乱排列',
+        'strength': 0-100,  # 排列强度
+        'details': {  # 各均线关系
+            'ma5_above_ma10': bool,
+            'ma10_above_ma20': bool,
+            'ma20_above_ma50': bool,
+            'all_bullish': bool,
+            'all_bearish': bool
+        }
+    }
+    """
+    if df.empty or len(df) < max(periods):
+        return {'alignment': '数据不足', 'strength': 0, 'details': {}}
+    
+    details = {}
+    latest = df.iloc[-1]
+    
+    # 检查各均线关系
+    for i in range(len(periods) - 1):
+        ma_short = f'MA{periods[i]}'
+        ma_long = f'MA{periods[i+1]}'
+        if ma_short in df.columns and ma_long in df.columns:
+            key = f'{ma_short}_above_{ma_long}'
+            details[key] = latest[ma_short] > latest[ma_long]
+    
+    # 判断排列状态
+    all_bullish = all(details.values()) if details else False
+    all_bearish = all(not v for v in details.values()) if details else False
+    
+    if all_bullish:
+        alignment = '多头排列'
+        strength = 90 + min(10, (latest[f'MA{periods[0]}'] / latest[f'MA{periods[-1]}'] - 1) * 100)
+    elif all_bearish:
+        alignment = '空头排列'
+        strength = 90 + min(10, (1 - latest[f'MA{periods[0]}'] / latest[f'MA{periods[-1]}']) * 100)
+    else:
+        alignment = '混乱排列'
+        # 计算排列一致性
+        bullish_count = sum(details.values()) if details else 0
+        total_count = len(details) if details else 1
+        strength = (bullish_count / total_count) * 50 if bullish_count > total_count / 2 else ((total_count - bullish_count) / total_count) * 50
+    
+    details['all_bullish'] = all_bullish
+    details['all_bearish'] = all_bearish
+    
+    return {
+        'alignment': alignment,
+        'strength': min(100, max(0, strength)),
+        'details': details
+    }
+
+
+def calculate_ma_slope(df, period=20):
+    """
+    计算均线斜率
+    
+    参数:
+    - df: 包含价格数据的DataFrame
+    - period: 均线周期
+    
+    返回:
+    - dict: {
+        'slope': float,  # 斜率（正数表示上升，负数表示下降）
+        'angle': float,  # 角度（度数）
+        'trend': '强势上升'/'上升'/'平缓'/'下降'/'强势下降'
+    }
+    """
+    if df.empty or len(df) < period + 5:
+        return {'slope': 0, 'angle': 0, 'trend': '数据不足'}
+    
+    ma_col = f'MA{period}'
+    if ma_col not in df.columns:
+        return {'slope': 0, 'angle': 0, 'trend': '数据不足'}
+    
+    # 使用最近5个数据点计算斜率
+    recent_mas = df[ma_col].iloc[-5:].values
+    x = np.arange(len(recent_mas))
+    
+    # 线性回归计算斜率
+    slope = np.polyfit(x, recent_mas, 1)[0]
+    
+    # 计算角度（斜率转换为角度）
+    angle = np.degrees(np.arctan(slope / recent_mas.mean())) if recent_means := recent_mas.mean() else 0
+    
+    # 判断趋势强度
+    if angle > 5:
+        trend = '强势上升'
+    elif angle > 2:
+        trend = '上升'
+    elif angle > -2:
+        trend = '平缓'
+    elif angle > -5:
+        trend = '下降'
+    else:
+        trend = '强势下降'
+    
+    return {
+        'slope': slope,
+        'angle': angle,
+        'trend': trend
+    }
+
+
+def calculate_ma_deviation(df, periods=[5, 10, 20, 50]):
+    """
+    计算均线乖离率
+    
+    参数:
+    - df: 包含价格数据的DataFrame
+    - periods: 均线周期列表
+    
+    返回:
+    - dict: {
+        'deviations': {
+            'ma5_deviation': float,  # 百分比
+            'ma10_deviation': float,
+            'ma20_deviation': float,
+            'ma50_deviation': float
+        },
+        'avg_deviation': float,  # 平均乖离率
+        'extreme_deviation': str  # '严重超买'/'超买'/'正常'/'超卖'/'严重超卖'
+    }
+    """
+    if df.empty or len(df) < max(periods):
+        return {'deviations': {}, 'avg_deviation': 0, 'extreme_deviation': '数据不足'}
+    
+    latest = df.iloc[-1]
+    current_price = latest['Close']
+    deviations = {}
+    
+    for period in periods:
+        ma_col = f'MA{period}'
+        if ma_col in df.columns and latest[ma_col] > 0:
+            deviation = (current_price - latest[ma_col]) / latest[ma_col] * 100
+            deviations[f'ma{period}_deviation'] = deviation
+    
+    if not deviations:
+        return {'deviations': {}, 'avg_deviation': 0, 'extreme_deviation': '数据不足'}
+    
+    avg_deviation = np.mean(list(deviations.values()))
+    
+    # 判断极端乖离
+    if avg_deviation > 10:
+        extreme_deviation = '严重超买'
+    elif avg_deviation > 5:
+        extreme_deviation = '超买'
+    elif avg_deviation > -5:
+        extreme_deviation = '正常'
+    elif avg_deviation > -10:
+        extreme_deviation = '超卖'
+    else:
+        extreme_deviation = '严重超卖'
+    
+    return {
+        'deviations': deviations,
+        'avg_deviation': avg_deviation,
+        'extreme_deviation': extreme_deviation
+    }
+
+
+def calculate_support_resistance(df, lookback=20, min_touches=2):
+    """
+    计算支撑阻力位
+    
+    参数:
+    - df: 包含OHLC数据的DataFrame
+    - lookback: 回看天数
+    - min_touches: 最少触及次数
+    
+    返回:
+    - dict: {
+        'support_levels': [
+            {'price': float, 'strength': 0-100, 'touches': int, 'type': 'strong'/'medium'/'weak'}
+        ],
+        'resistance_levels': [
+            {'price': float, 'strength': 0-100, 'touches': int, 'type': 'strong'/'medium'/'weak'}
+        ],
+        'nearest_support': float,
+        'nearest_resistance': float
+    }
+    """
+    if df.empty or len(df) < lookback:
+        return {
+            'support_levels': [],
+            'resistance_levels': [],
+            'nearest_support': None,
+            'nearest_resistance': None
+        }
+    
+    recent_df = df.iloc[-lookback:]
+    current_price = df.iloc[-1]['Close']
+    
+    # 识别局部低点（支撑）
+    support_candidates = []
+    for i in range(2, len(recent_df) - 2):
+        low = recent_df.iloc[i]['Low']
+        if (low < recent_df.iloc[i-1]['Low'] and 
+            low < recent_df.iloc[i-2]['Low'] and
+            low < recent_df.iloc[i+1]['Low'] and 
+            low < recent_df.iloc[i+2]['Low']):
+            support_candidates.append(low)
+    
+    # 识别局部高点（阻力）
+    resistance_candidates = []
+    for i in range(2, len(recent_df) - 2):
+        high = recent_df.iloc[i]['High']
+        if (high > recent_df.iloc[i-1]['High'] and 
+            high > recent_df.iloc[i-2]['High'] and
+            high > recent_df.iloc[i+1]['High'] and 
+            high > recent_df.iloc[i+2]['High']):
+            resistance_candidates.append(high)
+    
+    # 聚类相似价格（误差1%以内）
+    def cluster_prices(prices, tolerance=0.01):
+        if not prices:
+            return []
+        clusters = []
+        sorted_prices = sorted(prices)
+        current_cluster = [sorted_prices[0]]
+        
+        for price in sorted_prices[1:]:
+            if abs(price - current_cluster[0]) / current_cluster[0] <= tolerance:
+                current_cluster.append(price)
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [price]
+        clusters.append(current_cluster)
+        
+        # 计算每个聚类的平均价格和触及次数
+        result = []
+        for cluster in clusters:
+            avg_price = np.mean(cluster)
+            touches = len(cluster)
+            # 基于触及次数和距离当前价格的远近计算强度
+            distance_factor = max(0, 1 - abs(avg_price - current_price) / current_price)
+            strength = min(100, (touches / min_touches) * 50 + distance_factor * 50)
+            
+            level_type = 'strong' if touches >= 3 else ('medium' if touches >= 2 else 'weak')
+            result.append({'price': avg_price, 'strength': strength, 'touches': touches, 'type': level_type})
+        
+        return sorted(result, key=lambda x: x['strength'], reverse=True)
+    
+    support_levels = cluster_prices(support_candidates)
+    resistance_levels = cluster_prices(resistance_candidates)
+    
+    # 找到最近的支撑和阻力
+    nearest_support = None
+    nearest_resistance = None
+    
+    if support_levels:
+        below_supports = [s for s in support_levels if s['price'] < current_price]
+        if below_supports:
+            nearest_support = max(below_supports, key=lambda x: x['price'])['price']
+    
+    if resistance_levels:
+        above_resistances = [r for r in resistance_levels if r['price'] > current_price]
+        if above_resistances:
+            nearest_resistance = min(above_resistances, key=lambda x: x['price'])['price']
+    
+    return {
+        'support_levels': support_levels[:3],  # 只返回前3个
+        'resistance_levels': resistance_levels[:3],
+        'nearest_support': nearest_support,
+        'nearest_resistance': nearest_resistance
+    }
+
+
+def calculate_relative_strength(stock_df, index_df, period=20):
+    """
+    计算相对强弱指标（相对于指数）
+    
+    参数:
+    - stock_df: 股票价格DataFrame
+    - index_df: 指数价格DataFrame
+    - period: 计算周期
+    
+    返回:
+    - dict: {
+        'relative_return': float,  # 相对收益率（股票收益率 - 指数收益率）
+        'beta': float,  # Beta系数
+        'alpha': float,  # Alpha系数
+        'correlation': float,  # 相关系数
+        'performance': '跑赢'/'跑输'/'持平'
+    }
+    """
+    if stock_df.empty or index_df.empty or len(stock_df) < period or len(index_df) < period:
+        return {
+            'relative_return': 0,
+            'beta': 0,
+            'alpha': 0,
+            'correlation': 0,
+            'performance': '数据不足'
+        }
+    
+    # 对齐日期
+    stock_returns = stock_df['Close'].pct_change().iloc[-period:].dropna()
+    index_returns = index_df['Close'].pct_change().iloc[-period:].dropna()
+    
+    if len(stock_returns) < 10 or len(index_returns) < 10:
+        return {
+            'relative_return': 0,
+            'beta': 0,
+            'alpha': 0,
+            'correlation': 0,
+            'performance': '数据不足'
+        }
+    
+    # 计算相对收益率
+    stock_total_return = (1 + stock_returns).prod() - 1
+    index_total_return = (1 + index_returns).prod() - 1
+    relative_return = stock_total_return - index_total_return
+    
+    # 计算Beta和Alpha
+    if len(stock_returns) == len(index_returns):
+        covariance = np.cov(stock_returns, index_returns)[0, 1]
+        index_variance = np.var(index_returns)
+        beta = covariance / index_variance if index_variance > 0 else 0
+        alpha = stock_returns.mean() - beta * index_returns.mean()
+        correlation = np.corrcoef(stock_returns, index_returns)[0, 1]
+    else:
+        beta = 0
+        alpha = 0
+        correlation = 0
+    
+    # 判断相对表现
+    if relative_return > 2:
+        performance = '显著跑赢'
+    elif relative_return > 0:
+        performance = '跑赢'
+    elif relative_return > -2:
+        performance = '跑输'
+    else:
+        performance = '显著跑输'
+    
+    return {
+        'relative_return': relative_return * 100,  # 转换为百分比
+        'beta': beta,
+        'alpha': alpha * 100,  # 转换为百分比
+        'correlation': correlation,
+        'performance': performance
+    }
+
+
+def calculate_medium_term_score(df, index_df=None):
+    """
+    计算中期趋势评分系统
+    
+    参数:
+    - df: 股票价格DataFrame
+    - index_df: 指数价格DataFrame（可选，用于相对强弱）
+    
+    返回:
+    - dict: {
+        'total_score': 0-100,  # 总分
+        'components': {
+            'trend_score': 0-100,  # 趋势评分（均线排列+斜率）
+            'momentum_score': 0-100,  # 动量评分（乖离率+RSI）
+            'support_resistance_score': 0-100,  # 支撑阻力评分
+            'relative_strength_score': 0-100  # 相对强弱评分
+        },
+        'trend_health': '健康'/'一般'/'疲弱',
+        'sustainability': '高'/'中'/'低',
+        'recommendation': '强烈买入'/'买入'/'持有'/'卖出'/'强烈卖出'
+    }
+    """
+    if df.empty or len(df) < 50:
+        return {
+            'total_score': 0,
+            'components': {
+                'trend_score': 0,
+                'momentum_score': 0,
+                'support_resistance_score': 0,
+                'relative_strength_score': 0
+            },
+            'trend_health': '数据不足',
+            'sustainability': '低',
+            'recommendation': '观望'
+        }
+    
+    # 计算各指标
+    ma_alignment = calculate_ma_alignment(df)
+    ma_slope_20 = calculate_ma_slope(df, 20)
+    ma_slope_50 = calculate_ma_slope(df, 50)
+    ma_deviation = calculate_ma_deviation(df)
+    support_resistance = calculate_support_resistance(df)
+    
+    # 1. 趋势评分（40%权重）
+    trend_score = 0
+    if ma_alignment['alignment'] == '多头排列':
+        trend_score += 40
+    elif ma_alignment['alignment'] == '空头排列':
+        trend_score += 10
+    else:
+        trend_score += 25
+    
+    # 均线斜率评分
+    if ma_slope_20['trend'] in ['强势上升', '上升']:
+        trend_score += 30
+    elif ma_slope_20['trend'] == '平缓':
+        trend_score += 15
+    else:
+        trend_score += 5
+    
+    # MA50斜率额外加分
+    if ma_slope_50['trend'] in ['强势上升', '上升']:
+        trend_score += 20
+    elif ma_slope_50['trend'] == '平缓':
+        trend_score += 10
+    
+    trend_score = min(100, trend_score)
+    
+    # 2. 动量评分（30%权重）
+    momentum_score = 0
+    
+    # 乖离率评分
+    if ma_deviation['extreme_deviation'] == '严重超买':
+        momentum_score -= 20
+    elif ma_deviation['extreme_deviation'] == '超买':
+        momentum_score -= 10
+    elif ma_deviation['extreme_deviation'] == '超卖':
+        momentum_score += 10
+    elif ma_deviation['extreme_deviation'] == '严重超卖':
+        momentum_score += 20
+    
+    # RSI评分
+    if 'RSI' in df.columns:
+        rsi = df['RSI'].iloc[-1]
+        if 40 <= rsi <= 60:
+            momentum_score += 30  # 健康区域
+        elif 30 <= rsi < 40:
+            momentum_score += 20  # 偏弱但可接受
+        elif 60 < rsi <= 70:
+            momentum_score += 20  # 偏强但可接受
+        elif rsi < 30:
+            momentum_score += 10  # 超卖，可能反弹
+        elif rsi > 70:
+            momentum_score += 10  # 超买，可能回调
+    
+    momentum_score = max(0, min(100, momentum_score + 30))  # 基础分30
+    
+    # 3. 支撑阻力评分（20%权重）
+    support_resistance_score = 0
+    current_price = df.iloc[-1]['Close']
+    
+    # 距离支撑位的距离
+    if support_resistance['nearest_support']:
+        distance_to_support = (current_price - support_resistance['nearest_support']) / current_price
+        if distance_to_support < 0.02:  # 接近支撑位
+            support_resistance_score += 30
+        elif distance_to_support < 0.05:
+            support_resistance_score += 20
+        elif distance_to_support < 0.10:
+            support_resistance_score += 10
+    
+    # 距离阻力位的距离
+    if support_resistance['nearest_resistance']:
+        distance_to_resistance = (support_resistance['nearest_resistance'] - current_price) / current_price
+        if distance_to_resistance < 0.02:  # 接近阻力位
+            support_resistance_score -= 10
+        elif distance_to_resistance < 0.05:
+            support_resistance_score -= 5
+    
+    # 支撑阻力强度
+    if support_resistance['support_levels']:
+        support_resistance_score += support_resistance['support_levels'][0]['strength'] * 0.2
+    
+    support_resistance_score = max(0, min(100, support_resistance_score + 50))  # 基础分50
+    
+    # 4. 相对强弱评分（10%权重）
+    relative_strength_score = 50  # 基础分50
+    
+    if index_df is not None:
+        relative_strength = calculate_relative_strength(df, index_df)
+        if relative_strength['performance'] == '显著跑赢':
+            relative_strength_score = 90
+        elif relative_strength['performance'] == '跑赢':
+            relative_strength_score = 70
+        elif relative_strength['performance'] == '跑输':
+            relative_strength_score = 30
+        elif relative_strength['performance'] == '显著跑输':
+            relative_strength_score = 10
+    
+    # 计算总分
+    total_score = (
+        trend_score * 0.4 +
+        momentum_score * 0.3 +
+        support_resistance_score * 0.2 +
+        relative_strength_score * 0.1
+    )
+    
+    # 判断趋势健康度
+    if total_score >= 70:
+        trend_health = '健康'
+    elif total_score >= 50:
+        trend_health = '一般'
+    else:
+        trend_health = '疲弱'
+    
+    # 判断可持续性
+    sustainability = '高' if (ma_alignment['alignment'] in ['多头排列', '空头排列'] and 
+                           ma_slope_20['trend'] in ['强势上升', '上升', '强势下降', '下降']) else '中'
+    if ma_alignment['alignment'] == '混乱排列':
+        sustainability = '低'
+    
+    # 生成建议
+    if total_score >= 80:
+        recommendation = '强烈买入'
+    elif total_score >= 65:
+        recommendation = '买入'
+    elif total_score >= 45:
+        recommendation = '持有'
+    elif total_score >= 30:
+        recommendation = '卖出'
+    else:
+        recommendation = '强烈卖出'
+    
+    return {
+        'total_score': round(total_score, 1),
+        'components': {
+            'trend_score': round(trend_score, 1),
+            'momentum_score': round(momentum_score, 1),
+            'support_resistance_score': round(support_resistance_score, 1),
+            'relative_strength_score': round(relative_strength_score, 1)
+        },
+        'trend_health': trend_health,
+        'sustainability': sustainability,
+        'recommendation': recommendation
+    }
+
+
 class TechnicalAnalyzerV2(TechnicalAnalyzer):
-    """扩展版技术分析器，集成TAV方法论"""
+    """扩展版技术分析器，集成TAV方法论和中期分析指标"""
     
     def __init__(self, enable_tav=False, tav_config=None):
         super().__init__()

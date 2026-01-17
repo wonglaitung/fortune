@@ -1333,6 +1333,75 @@ class HSIEmailSystem:
                     indicators['distribution_level'] = None
                     indicators['distribution_reasons'] = None
                 
+                # 添加中期分析指标
+                try:
+                    from technical_analysis import (
+                        calculate_ma_alignment,
+                        calculate_ma_slope,
+                        calculate_ma_deviation,
+                        calculate_support_resistance,
+                        calculate_medium_term_score
+                    )
+                    
+                    # 计算均线排列
+                    ma_alignment = calculate_ma_alignment(indicators_with_signals)
+                    indicators['ma_alignment'] = ma_alignment['alignment']
+                    indicators['ma_alignment_strength'] = ma_alignment['strength']
+                    
+                    # 计算均线斜率
+                    ma_slope_20 = calculate_ma_slope(indicators_with_signals, 20)
+                    ma_slope_50 = calculate_ma_slope(indicators_with_signals, 50)
+                    indicators['ma20_slope'] = ma_slope_20['slope']
+                    indicators['ma20_slope_angle'] = ma_slope_20['angle']
+                    indicators['ma20_slope_trend'] = ma_slope_20['trend']
+                    indicators['ma50_slope'] = ma_slope_50['slope']
+                    indicators['ma50_slope_angle'] = ma_slope_50['angle']
+                    indicators['ma50_slope_trend'] = ma_slope_50['trend']
+                    
+                    # 计算均线乖离率
+                    ma_deviation = calculate_ma_deviation(indicators_with_signals)
+                    indicators['ma_deviation'] = ma_deviation['deviations']
+                    indicators['ma_deviation_avg'] = ma_deviation['avg_deviation']
+                    indicators['ma_deviation_extreme'] = ma_deviation['extreme_deviation']
+                    
+                    # 计算支撑阻力位
+                    support_resistance = calculate_support_resistance(indicators_with_signals)
+                    indicators['support_levels'] = support_resistance['support_levels']
+                    indicators['resistance_levels'] = support_resistance['resistance_levels']
+                    indicators['nearest_support'] = support_resistance['nearest_support']
+                    indicators['nearest_resistance'] = support_resistance['nearest_resistance']
+                    
+                    # 计算中期趋势评分
+                    medium_term_score = calculate_medium_term_score(indicators_with_signals)
+                    indicators['medium_term_score'] = medium_term_score['total_score']
+                    indicators['medium_term_components'] = medium_term_score['components']
+                    indicators['medium_term_trend_health'] = medium_term_score['trend_health']
+                    indicators['medium_term_sustainability'] = medium_term_score['sustainability']
+                    indicators['medium_term_recommendation'] = medium_term_score['recommendation']
+                    
+                except Exception as e:
+                    print(f"⚠️ 中期分析指标计算失败: {e}")
+                    indicators['ma_alignment'] = '数据不足'
+                    indicators['ma_alignment_strength'] = 0
+                    indicators['ma20_slope'] = 0
+                    indicators['ma20_slope_angle'] = 0
+                    indicators['ma20_slope_trend'] = '数据不足'
+                    indicators['ma50_slope'] = 0
+                    indicators['ma50_slope_angle'] = 0
+                    indicators['ma50_slope_trend'] = '数据不足'
+                    indicators['ma_deviation'] = {}
+                    indicators['ma_deviation_avg'] = 0
+                    indicators['ma_deviation_extreme'] = '数据不足'
+                    indicators['support_levels'] = []
+                    indicators['resistance_levels'] = []
+                    indicators['nearest_support'] = None
+                    indicators['nearest_resistance'] = None
+                    indicators['medium_term_score'] = 0
+                    indicators['medium_term_components'] = {}
+                    indicators['medium_term_trend_health'] = '数据不足'
+                    indicators['medium_term_sustainability'] = '低'
+                    indicators['medium_term_recommendation'] = '观望'
+                
                 return indicators
                 
             except Exception as e:
@@ -1818,6 +1887,31 @@ class HSIEmailSystem:
             if atr > 0:
                 atr_pct = (atr / current_price * 100) if current_price > 0 else 0
                 tech_info.append(f"ATR: {atr:.2f} ({atr_pct:.2f}%)")
+            
+            # 中期分析指标
+            ma_alignment = indicators.get('ma_alignment', '')
+            if ma_alignment and ma_alignment != '数据不足':
+                tech_info.append(f"均线排列: {ma_alignment}")
+            
+            ma20_slope_trend = indicators.get('ma20_slope_trend', '')
+            if ma20_slope_trend and ma20_slope_trend != '数据不足':
+                tech_info.append(f"MA20趋势: {ma20_slope_trend}")
+            
+            ma_deviation_extreme = indicators.get('ma_deviation_extreme', '')
+            if ma_deviation_extreme and ma_deviation_extreme != '数据不足':
+                tech_info.append(f"乖离: {ma_deviation_extreme}")
+            
+            nearest_support = indicators.get('nearest_support')
+            if nearest_support is not None and nearest_support > 0:
+                tech_info.append(f"支撑: {nearest_support:.2f}")
+            
+            nearest_resistance = indicators.get('nearest_resistance')
+            if nearest_resistance is not None and nearest_resistance > 0:
+                tech_info.append(f"阻力: {nearest_resistance:.2f}")
+            
+            medium_term_score = indicators.get('medium_term_score', 0)
+            if medium_term_score > 0:
+                tech_info.append(f"中期评分: {medium_term_score:.1f}")
         
         return ', '.join(tech_info) if tech_info else 'N/A'
     
@@ -2738,6 +2832,143 @@ class HSIEmailSystem:
                     <td>{ma200:,.2f}</td>
                 </tr>
                 """
+        
+        # 添加中期分析指标
+        ma_alignment = indicators.get('ma_alignment', 'N/A')
+        ma20_slope_trend = indicators.get('ma20_slope_trend', 'N/A')
+        ma20_slope_angle = indicators.get('ma20_slope_angle', 0)
+        ma50_slope_trend = indicators.get('ma50_slope_trend', 'N/A')
+        ma50_slope_angle = indicators.get('ma50_slope_angle', 0)
+        ma_deviation_avg = indicators.get('ma_deviation_avg', 0)
+        ma_deviation_extreme = indicators.get('ma_deviation_extreme', 'N/A')
+        nearest_support = indicators.get('nearest_support', None)
+        nearest_resistance = indicators.get('nearest_resistance', None)
+        medium_term_score = indicators.get('medium_term_score', None)
+        medium_term_components = indicators.get('medium_term_components', {})
+        medium_term_trend_health = indicators.get('medium_term_trend_health', 'N/A')
+        medium_term_sustainability = indicators.get('medium_term_sustainability', 'N/A')
+        medium_term_recommendation = indicators.get('medium_term_recommendation', 'N/A')
+        
+        # 格式化中期指标显示
+        ma_alignment_display = ma_alignment if ma_alignment != '数据不足' else 'N/A'
+        ma20_slope_trend_display = ma20_slope_trend if ma20_slope_trend != '数据不足' else 'N/A'
+        ma50_slope_trend_display = ma50_slope_trend if ma50_slope_trend != '数据不足' else 'N/A'
+        ma_deviation_extreme_display = ma_deviation_extreme if ma_deviation_extreme != '数据不足' else 'N/A'
+        nearest_support_display = f"{nearest_support:.2f}" if nearest_support is not None and nearest_support > 0 else 'N/A'
+        nearest_resistance_display = f"{nearest_resistance:.2f}" if nearest_resistance is not None and nearest_resistance > 0 else 'N/A'
+        medium_term_score_display = f"{medium_term_score:.1f}" if medium_term_score is not None and medium_term_score > 0 else 'N/A'
+        
+        # 中期评分颜色
+        medium_term_color = ""
+        if medium_term_score is not None:
+            if medium_term_score >= 70:
+                medium_term_color = "color: green; font-weight: bold;"
+            elif medium_term_score >= 50:
+                medium_term_color = "color: orange; font-weight: bold;"
+            elif medium_term_score >= 30:
+                medium_term_color = "color: red; font-weight: bold;"
+            else:
+                medium_term_color = "color: #666;"
+        
+        # 乖离状态颜色
+        deviation_color = ""
+        if ma_deviation_extreme == '严重超买':
+            deviation_color = "color: red; font-weight: bold;"
+        elif ma_deviation_extreme == '超买':
+            deviation_color = "color: orange; font-weight: bold;"
+        elif ma_deviation_extreme == '严重超卖':
+            deviation_color = "color: green; font-weight: bold;"
+        elif ma_deviation_extreme == '超卖':
+            deviation_color = "color: #2e7d32; font-weight: bold;"
+        else:
+            deviation_color = "color: #666;"
+        
+        # 添加中期指标到表格
+        if ma_alignment_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>均线排列</td>
+                    <td>{ma_alignment_display}</td>
+                </tr>
+            """
+        
+        if ma20_slope_trend_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>MA20趋势</td>
+                    <td>{ma20_slope_trend_display} (角度: {ma20_slope_angle:.1f}°)</td>
+                </tr>
+            """
+        
+        if ma50_slope_trend_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>MA50趋势</td>
+                    <td>{ma50_slope_trend_display} (角度: {ma50_slope_angle:.1f}°)</td>
+                </tr>
+            """
+        
+        if ma_deviation_extreme_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>乖离状态</td>
+                    <td><span style="{deviation_color}">{ma_deviation_extreme_display}</span> (平均乖离: {ma_deviation_avg:+.2f}%)</td>
+                </tr>
+            """
+        
+        if nearest_support_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>支撑位</td>
+                    <td>{nearest_support_display}</td>
+                </tr>
+            """
+        
+        if nearest_resistance_display != 'N/A':
+            html += f"""
+                <tr>
+                    <td>阻力位</td>
+                    <td>{nearest_resistance_display}</td>
+                </tr>
+            """
+        
+        if medium_term_score_display != 'N/A':
+            # 获取各维度评分
+            trend_score = medium_term_components.get('trend_score', 0)
+            momentum_score = medium_term_components.get('momentum_score', 0)
+            support_resistance_score = medium_term_components.get('support_resistance_score', 0)
+            relative_strength_score = medium_term_components.get('relative_strength_score', 0)
+            
+            html += f"""
+                <tr>
+                    <td>中期评分</td>
+                    <td><span style="{medium_term_color}">{medium_term_score_display}</span> <span style="font-size: 0.8em; color: #666;">({medium_term_recommendation})</span></td>
+                </tr>
+                <tr>
+                    <td>趋势健康度</td>
+                    <td>{medium_term_trend_health}</td>
+                </tr>
+                <tr>
+                    <td>可持续性</td>
+                    <td>{medium_term_sustainability}</td>
+                </tr>
+                <tr>
+                    <td>中期评分-趋势</td>
+                    <td>{trend_score:.1f}</td>
+                </tr>
+                <tr>
+                    <td>中期评分-动量</td>
+                    <td>{momentum_score:.1f}</td>
+                </tr>
+                <tr>
+                    <td>中期评分-支撑阻力</td>
+                    <td>{support_resistance_score:.1f}</td>
+                </tr>
+                <tr>
+                    <td>中期评分-相对强弱</td>
+                    <td>{relative_strength_score:.1f}</td>
+                </tr>
+            """
 
         # 添加VaR信息
         var_ultra_short = indicators.get('var_ultra_short_term')
@@ -3180,7 +3411,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'趋势(技术分析)':<12} {'建仓评分':<10} {'出货评分':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'TAV评分':<8} {'股票现价':<10} {'均线排列':<10} {'MA20趋势':<8} {'乖离状态':<10} {'支撑位':<10} {'阻力位':<10} {'中期评分':<10} {'上个交易日趋势':<12} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日TAV评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -3227,6 +3458,12 @@ class HSIEmailSystem:
                         <th>信号描述(量价分析)</th>
                         <th>TAV评分</th>
                         <th>股票现价</th>
+                        <th>均线排列</th>
+                        <th>MA20趋势</th>
+                        <th>乖离状态</th>
+                        <th>支撑位</th>
+                        <th>阻力位</th>
+                        <th>中期评分</th>
                         <th>上个交易日趋势</th>
                         <th>上个交易日建仓评分</th>
                         <th>上个交易日出货评分</th>
@@ -3444,31 +3681,152 @@ class HSIEmailSystem:
             prev_change_display = f"{prev_change_pct:+.2f}%" if prev_change_pct is not None else 'N/A'
             
             # 计算变化方向和箭头
-            prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
-            prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
-            prev_distribution_arrow = self._get_score_change_arrow(distribution_score, prev_distribution_score)
-            prev_tav_arrow = self._get_score_change_arrow(tav_score, prev_tav_score)
-            prev_price_arrow = self._get_price_change_arrow(price_value_display, prev_price)
             
-            html += f"""
-                    <tr>
-                        <td><span style=\"{name_color_style}\">{safe_name}</span></td>
-                        <td>{safe_code}</td>
-                        <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
-                        <td>{buildup_display}</td>
-                        <td>{distribution_display}</td>
-                        <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
-                        <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
-                        <td>{safe_signal_description}</td>
-                        <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
-                        <td>{price_value_display}</td>
-                        <td>{prev_trend_arrow} {prev_trend_display}</td>
-                        <td>{prev_buildup_arrow} {prev_buildup_display}</td>
-                        <td>{prev_distribution_arrow} {prev_distribution_display}</td>
-                        <td>{prev_tav_arrow} {prev_tav_display}</td>
-                        <td>{prev_price_arrow} {prev_price_display} ({prev_change_display})</td>
-                    </tr>
-            """
+                        prev_trend_arrow = self._get_trend_change_arrow(safe_trend, prev_trend)
+            
+                        prev_buildup_arrow = self._get_score_change_arrow(buildup_score, prev_buildup_score)
+            
+                        prev_distribution_arrow = self._get_score_change_arrow(distribution_score, prev_distribution_score)
+            
+                        prev_tav_arrow = self._get_score_change_arrow(tav_score, prev_tav_score)
+            
+                        prev_price_arrow = self._get_price_change_arrow(price_value_display, prev_price)
+            
+                        
+            
+                        # 获取中期分析指标
+            
+                        ma_alignment = stock_indicators.get('ma_alignment', 'N/A') if stock_indicators else 'N/A'
+            
+                        ma20_slope_trend = stock_indicators.get('ma20_slope_trend', 'N/A') if stock_indicators else 'N/A'
+            
+                        ma_deviation_extreme = stock_indicators.get('ma_deviation_extreme', 'N/A') if stock_indicators else 'N/A'
+            
+                        nearest_support = stock_indicators.get('nearest_support', None) if stock_indicators else None
+            
+                        nearest_resistance = stock_indicators.get('nearest_resistance', None) if stock_indicators else None
+            
+                        medium_term_score = stock_indicators.get('medium_term_score', None) if stock_indicators else None
+            
+                        medium_term_recommendation = stock_indicators.get('medium_term_recommendation', 'N/A') if stock_indicators else 'N/A'
+            
+                        
+            
+                        # 格式化中期指标显示
+            
+                        ma_alignment_display = ma_alignment if ma_alignment != '数据不足' else 'N/A'
+            
+                        ma20_slope_trend_display = ma20_slope_trend if ma20_slope_trend != '数据不足' else 'N/A'
+            
+                        ma_deviation_extreme_display = ma_deviation_extreme if ma_deviation_extreme != '数据不足' else 'N/A'
+            
+                        nearest_support_display = f"{nearest_support:.2f}" if nearest_support is not None and nearest_support > 0 else 'N/A'
+            
+                        nearest_resistance_display = f"{nearest_resistance:.2f}" if nearest_resistance is not None and nearest_resistance > 0 else 'N/A'
+            
+                        medium_term_score_display = f"{medium_term_score:.1f}" if medium_term_score is not None and medium_term_score > 0 else 'N/A'
+            
+                        
+            
+                        # 中期评分颜色
+            
+                        medium_term_color = ""
+            
+                        if medium_term_score is not None:
+            
+                            if medium_term_score >= 70:
+            
+                                medium_term_color = "color: green; font-weight: bold;"
+            
+                            elif medium_term_score >= 50:
+            
+                                medium_term_color = "color: orange; font-weight: bold;"
+            
+                            elif medium_term_score >= 30:
+            
+                                medium_term_color = "color: red; font-weight: bold;"
+            
+                            else:
+            
+                                medium_term_color = "color: #666;"
+            
+                        
+            
+                        # 乖离状态颜色
+            
+                        deviation_color = ""
+            
+                        if ma_deviation_extreme == '严重超买':
+            
+                            deviation_color = "color: red; font-weight: bold;"
+            
+                        elif ma_deviation_extreme == '超买':
+            
+                            deviation_color = "color: orange; font-weight: bold;"
+            
+                        elif ma_deviation_extreme == '严重超卖':
+            
+                            deviation_color = "color: green; font-weight: bold;"
+            
+                        elif ma_deviation_extreme == '超卖':
+            
+                            deviation_color = "color: #2e7d32; font-weight: bold;"
+            
+                        else:
+            
+                            deviation_color = "color: #666;"
+            
+            
+            
+                        html += f"""
+            
+                                <tr>
+            
+                                    <td><span style=\"{name_color_style}\">{safe_name}</span></td>
+            
+                                    <td>{safe_code}</td>
+            
+                                    <td><span style=\"{trend_color_style}\">{safe_trend}</span></td>
+            
+                                    <td>{buildup_display}</td>
+            
+                                    <td>{distribution_display}</td>
+            
+                                    <td><span style=\"{color_style}\">{safe_signal_display}</span></td>
+            
+                                    <td><span style=\"{signal_color_style}\">{safe_continuous_signal_status}</span></td>
+            
+                                    <td>{safe_signal_description}</td>
+            
+                                    <td><span style=\"{tav_color}\">{tav_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({safe_tav_status})</span></td>
+            
+                                    <td>{price_value_display}</td>
+            
+                                    <td>{ma_alignment_display}</td>
+            
+                                    <td>{ma20_slope_trend_display}</td>
+            
+                                    <td><span style=\"{deviation_color}\">{ma_deviation_extreme_display}</span></td>
+            
+                                    <td>{nearest_support_display}</td>
+            
+                                    <td>{nearest_resistance_display}</td>
+            
+                                    <td><span style=\"{medium_term_color}\">{medium_term_score_display}</span> <span style=\"font-size: 0.8em; color: #666;\">({medium_term_recommendation})</span></td>
+            
+                                    <td>{prev_trend_arrow} {prev_trend_display}</td>
+            
+                                    <td>{prev_buildup_arrow} {prev_buildup_display}</td>
+            
+                                    <td>{prev_distribution_arrow} {prev_distribution_display}</td>
+            
+                                    <td>{prev_tav_arrow} {prev_tav_display}</td>
+            
+                                    <td>{prev_price_arrow} {prev_price_display} ({prev_change_display})</td>
+            
+                                </tr>
+            
+                        """
 
             # 文本版本追加
             tav_display = f"{tav_score:.1f}" if tav_score is not None else "N/A"
@@ -3529,7 +3887,25 @@ class HSIEmailSystem:
                     pass
             prev_change_display = f"{prev_change_pct_text:+.2f}%" if prev_change_pct_text is not None else 'N/A'
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
+            # 获取中期分析指标（文本版本）
+            ma_alignment_text = stock_indicators.get('ma_alignment', 'N/A') if stock_indicators else 'N/A'
+            ma20_slope_trend_text = stock_indicators.get('ma20_slope_trend', 'N/A') if stock_indicators else 'N/A'
+            ma_deviation_extreme_text = stock_indicators.get('ma_deviation_extreme', 'N/A') if stock_indicators else 'N/A'
+            nearest_support_text = stock_indicators.get('nearest_support', None) if stock_indicators else None
+            nearest_resistance_text = stock_indicators.get('nearest_resistance', None) if stock_indicators else None
+            medium_term_score_text = stock_indicators.get('medium_term_score', None) if stock_indicators else None
+            medium_term_recommendation_text = stock_indicators.get('medium_term_recommendation', 'N/A') if stock_indicators else 'N/A'
+            
+            # 格式化中期指标显示（文本版本）
+            ma_alignment_display_text = ma_alignment_text if ma_alignment_text != '数据不足' else 'N/A'
+            ma20_slope_trend_display_text = ma20_slope_trend_text if ma20_slope_trend_text != '数据不足' else 'N/A'
+            ma_deviation_extreme_display_text = ma_deviation_extreme_text if ma_deviation_extreme_text != '数据不足' else 'N/A'
+            nearest_support_display_text = f"{nearest_support_text:.2f}" if nearest_support_text is not None and nearest_support_text > 0 else 'N/A'
+            nearest_resistance_display_text = f"{nearest_resistance_text:.2f}" if nearest_resistance_text is not None and nearest_resistance_text > 0 else 'N/A'
+            medium_term_score_display_text = f"{medium_term_score_text:.1f}" if medium_term_score_text is not None and medium_term_score_text > 0 else 'N/A'
+            medium_term_display_text = f"{medium_term_score_display_text}({medium_term_recommendation_text})" if medium_term_score_text is not None else 'N/A'
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {trend:<12} {buildup_text:<10} {distribution_text:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {tav_display:<8} {price_display:<10} {ma_alignment_display_text:<10} {ma20_slope_trend_display_text:<8} {ma_deviation_extreme_display_text:<10} {nearest_support_display_text:<10} {nearest_resistance_display_text:<10} {medium_term_display_text:<10} {prev_trend_display:<12} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_tav_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -3538,7 +3914,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="15">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="21">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
@@ -4588,6 +4964,93 @@ class HSIEmailSystem:
                   <li><b>无建议信号</b>：48小时内无任何买卖建议，缺乏明确信号</li>
                 </ul>
               </li>
+              <li><b>中期分析指标</b>：专门用于数周至数月中期投资的技术分析指标系统：
+                <ul>
+                  <li><b>均线排列</b>：基于MA5/MA10/MA20/MA50的排列状态判断趋势方向：
+                    <ul>
+                      <li>多头排列：MA5 > MA10 > MA20 > MA50，上升趋势明确</li>
+                      <li>空头排列：MA5 < MA10 < MA20 < MA50，下降趋势明确</li>
+                      <li>混乱排列：均线交叉混乱，趋势不明确</li>
+                      <li>排列强度：0-100分，分数越高排列越整齐</li>
+                    </ul>
+                  </li>
+                  <li><b>MA20/MA50趋势</b>：通过线性回归计算均线的斜率和角度，判断趋势强度：
+                    <ul>
+                      <li>强势上升：角度>5°，强劲上涨趋势</li>
+                      <li>上升：角度2°-5°，温和上涨趋势</li>
+                      <li>平缓：角度-2°至2°，横盘整理</li>
+                      <li>下降：角度-5°至-2°，温和下跌趋势</li>
+                      <li>强势下降：角度<-5°，强劲下跌趋势</li>
+                    </ul>
+                  </li>
+                  <li><b>乖离状态</b>：价格与各均线偏离程度的综合评估：
+                    <ul>
+                      <li>严重超买：平均乖离>10%，价格远高于均线，回调风险高</li>
+                      <li>超买：平均乖离5%-10%，价格高于均线，短期回调可能</li>
+                      <li>正常：平均乖离-5%至5%，价格在合理区间</li>
+                      <li>超卖：平均乖离-10%至-5%，价格低于均线，反弹可能</li>
+                      <li>严重超卖：平均乖离<-10%，价格远低于均线，反弹概率高</li>
+                    </ul>
+                  </li>
+                  <li><b>支撑位</b>：基于近期局部低点识别的关键价格支撑水平：
+                    <ul>
+                      <li>识别方法：寻找过去20天内价格多次触及的低点</li>
+                      <li>强度评估：基于触及次数和成交量确认支撑强度</li>
+                      <li>应用：支撑位附近是买入或加仓的参考点位</li>
+                      <li>距离评估：当前价距离支撑位越近，买入信号越强</li>
+                    </ul>
+                  </li>
+                  <li><b>阻力位</b>：基于近期局部高点识别的关键价格阻力水平：
+                    <ul>
+                      <li>识别方法：寻找过去20天内价格多次触及的高点</li>
+                      <li>强度评估：基于触及次数和成交量确认阻力强度</li>
+                      <li>应用：阻力位附近是卖出或减仓的参考点位</li>
+                      <li>距离评估：当前价距离阻力位越近，卖出信号越强</li>
+                    </ul>
+                  </li>
+                  <li><b>中期评分</b>：综合评估中期趋势的评分系统（0-100分）：
+                    <ul>
+                      <li><b>计算方式</b>：趋势评分×40% + 动量评分×30% + 支撑阻力评分×20% + 相对强弱评分×10%</li>
+                      <li><b>趋势评分（40%权重）</b>：基于均线排列和均线斜率，评估趋势方向和强度</li>
+                      <li><b>动量评分（30%权重）</b>：基于乖离率和RSI，评估价格动能和超买超卖状态</li>
+                      <li><b>支撑阻力评分（20%权重）</b>：基于距离支撑/阻力位的距离和强度，评估买卖点位合理性</li>
+                      <li><b>相对强弱评分（10%权重）</b>：基于相对于恒生指数的表现，评估个股相对强弱</li>
+                      <li><b>评分等级</b>：
+                        <ul>
+                          <li>≥80分：<b>强烈买入</b> - 中期趋势强劲，建议积极买入</li>
+                          <li>65-79分：<b>买入</b> - 中期趋势向好，建议买入</li>
+                          <li>45-64分：<b>持有</b> - 中期趋势中性，建议持有观望</li>
+                          <li>30-44分：<b>卖出</b> - 中期趋势转弱，建议卖出</li>
+                          <li><30分：<b>强烈卖出</b> - 中期趋势恶化，建议清仓</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                  <li><b>趋势健康度</b>：评估中期趋势的健康程度：
+                    <ul>
+                      <li>健康：评分≥70，趋势明确且可持续</li>
+                      <li>一般：评分50-69，趋势存在但不够明确</li>
+                      <li>疲弱：评分<50，趋势混乱或即将反转</li>
+                    </ul>
+                  </li>
+                  <li><b>可持续性</b>：评估中期趋势的可持续能力：
+                    <ul>
+                      <li>高：均线排列整齐+均线斜率明显，趋势可持续性强</li>
+                      <li>中：均线部分排列或斜率平缓，趋势可持续性中等</li>
+                      <li>低：均线混乱排列，趋势可持续性差</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>中期评分≥65且趋势健康度=健康：中期投资机会明确，可考虑建仓</li>
+                      <li>中期评分持续上升：中期趋势加强，可考虑加仓</li>
+                      <li>中期评分下降：中期趋势减弱，需谨慎或减仓</li>
+                      <li>乖离状态=严重超买且中期评分高：短期回调风险，建议等待回调</li>
+                      <li>乖离状态=严重超卖且中期评分低：反弹机会，可考虑逢低买入</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
             </ul>
             </div>
         </div>
@@ -4699,6 +5162,60 @@ class HSIEmailSystem:
         text += "  - 卖出(N次)：48小时内N次卖出建议，可能有买入建议\n"
         text += "  - 买入M次,卖出N次：48小时内买卖建议混合，市场观点不明\n"
         text += "  - 无建议信号：48小时内无任何买卖建议，缺乏明确信号\n"
+        text += "• 中期分析指标：专门用于数周至数月中期投资的技术分析指标系统：\n"
+        text += "  - 均线排列：基于MA5/MA10/MA20/MA50的排列状态判断趋势方向：\n"
+        text += "    * 多头排列：MA5 > MA10 > MA20 > MA50，上升趋势明确\n"
+        text += "    * 空头排列：MA5 < MA10 < MA20 < MA50，下降趋势明确\n"
+        text += "    * 混乱排列：均线交叉混乱，趋势不明确\n"
+        text += "    * 排列强度：0-100分，分数越高排列越整齐\n"
+        text += "  - MA20/MA50趋势：通过线性回归计算均线的斜率和角度，判断趋势强度：\n"
+        text += "    * 强势上升：角度>5°，强劲上涨趋势\n"
+        text += "    * 上升：角度2°-5°，温和上涨趋势\n"
+        text += "    * 平缓：角度-2°至2°，横盘整理\n"
+        text += "    * 下降：角度-5°至-2°，温和下跌趋势\n"
+        text += "    * 强势下降：角度<-5°，强劲下跌趋势\n"
+        text += "  - 乖离状态：价格与各均线偏离程度的综合评估：\n"
+        text += "    * 严重超买：平均乖离>10%，价格远高于均线，回调风险高\n"
+        text += "    * 超买：平均乖离5%-10%，价格高于均线，短期回调可能\n"
+        text += "    * 正常：平均乖离-5%至5%，价格在合理区间\n"
+        text += "    * 超卖：平均乖离-10%至-5%，价格低于均线，反弹可能\n"
+        text += "    * 严重超卖：平均乖离<-10%，价格远低于均线，反弹概率高\n"
+        text += "  - 支撑位：基于近期局部低点识别的关键价格支撑水平：\n"
+        text += "    * 识别方法：寻找过去20天内价格多次触及的低点\n"
+        text += "    * 强度评估：基于触及次数和成交量确认支撑强度\n"
+        text += "    * 应用：支撑位附近是买入或加仓的参考点位\n"
+        text += "    * 距离评估：当前价距离支撑位越近，买入信号越强\n"
+        text += "  - 阻力位：基于近期局部高点识别的关键价格阻力水平：\n"
+        text += "    * 识别方法：寻找过去20天内价格多次触及的高点\n"
+        text += "    * 强度评估：基于触及次数和成交量确认阻力强度\n"
+        text += "    * 应用：阻力位附近是卖出或减仓的参考点位\n"
+        text += "    * 距离评估：当前价距离阻力位越近，卖出信号越强\n"
+        text += "  - 中期评分：综合评估中期趋势的评分系统（0-100分）：\n"
+        text += "    * 计算方式：趋势评分×40% + 动量评分×30% + 支撑阻力评分×20% + 相对强弱评分×10%\n"
+        text += "    * 趋势评分（40%权重）：基于均线排列和均线斜率，评估趋势方向和强度\n"
+        text += "    * 动量评分（30%权重）：基于乖离率和RSI，评估价格动能和超买超卖状态\n"
+        text += "    * 支撑阻力评分（20%权重）：基于距离支撑/阻力位的距离和强度，评估买卖点位合理性\n"
+        text += "    * 相对强弱评分（10%权重）：基于相对于恒生指数的表现，评估个股相对强弱\n"
+        text += "    * 评分等级：\n"
+        text += "      - ≥80分：强烈买入 - 中期趋势强劲，建议积极买入\n"
+        text += "      - 65-79分：买入 - 中期趋势向好，建议买入\n"
+        text += "      - 45-64分：持有 - 中期趋势中性，建议持有观望\n"
+        text += "      - 30-44分：卖出 - 中期趋势转弱，建议卖出\n"
+        text += "      - <30分：强烈卖出 - 中期趋势恶化，建议清仓\n"
+        text += "  - 趋势健康度：评估中期趋势的健康程度：\n"
+        text += "    * 健康：评分≥70，趋势明确且可持续\n"
+        text += "    * 一般：评分50-69，趋势存在但不够明确\n"
+        text += "    * 疲弱：评分<50，趋势混乱或即将反转\n"
+        text += "  - 可持续性：评估中期趋势的可持续能力：\n"
+        text += "    * 高：均线排列整齐+均线斜率明显，趋势可持续性强\n"
+        text += "    * 中：均线部分排列或斜率平缓，趋势可持续性中等\n"
+        text += "    * 低：均线混乱排列，趋势可持续性差\n"
+        text += "  - 应用场景：\n"
+        text += "    * 中期评分≥65且趋势健康度=健康：中期投资机会明确，可考虑建仓\n"
+        text += "    * 中期评分持续上升：中期趋势加强，可考虑加仓\n"
+        text += "    * 中期评分下降：中期趋势减弱，需谨慎或减仓\n"
+        text += "    * 乖离状态=严重超买且中期评分高：短期回调风险，建议等待回调\n"
+        text += "    * 乖离状态=严重超卖且中期评分低：反弹机会，可考虑逢低买入\n"
 
         html += "</body></html>"
 
