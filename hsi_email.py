@@ -45,6 +45,14 @@ except ImportError:
     TAV_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
 
+# 导入基本面数据模块
+try:
+    from fundamental_data import get_comprehensive_fundamental_data
+    FUNDAMENTAL_AVAILABLE = True
+except ImportError:
+    FUNDAMENTAL_AVAILABLE = False
+    print("⚠️ 基本面数据模块不可用")
+
 # 从港股主力资金追踪器导入股票列表（可选）
 try:
     from hk_smart_money_tracker import WATCHLIST
@@ -1402,6 +1410,87 @@ class HSIEmailSystem:
                     indicators['medium_term_sustainability'] = '低'
                     indicators['medium_term_recommendation'] = '观望'
                 
+                # 添加基本面数据
+                try:
+                    if FUNDAMENTAL_AVAILABLE:
+                        # 获取股票代码（去掉.HK后缀）
+                        stock_code = data.get('symbol', '').replace('.HK', '')
+                        if stock_code:
+                            fundamental_data = get_comprehensive_fundamental_data(stock_code)
+                            
+                            if fundamental_data is not None:
+                                # 计算基本面评分（与hk_smart_money_tracker.py相同的逻辑）
+                                fundamental_score = 0
+                                fundamental_details = {}
+                                
+                                pe = fundamental_data.get('fi_pe_ratio')
+                                pb = fundamental_data.get('fi_pb_ratio')
+                                
+                                # PE评分（50分）
+                                if pe is not None:
+                                    if pe < 10:
+                                        fundamental_score += 50
+                                        fundamental_details['pe_score'] = "低估值 (PE<10)"
+                                    elif pe < 15:
+                                        fundamental_score += 40
+                                        fundamental_details['pe_score'] = "合理估值 (10<PE<15)"
+                                    elif pe < 20:
+                                        fundamental_score += 30
+                                        fundamental_details['pe_score'] = "偏高估值 (15<PE<20)"
+                                    elif pe < 25:
+                                        fundamental_score += 20
+                                        fundamental_details['pe_score'] = "高估值 (20<PE<25)"
+                                    else:
+                                        fundamental_score += 10
+                                        fundamental_details['pe_score'] = "极高估值 (PE>25)"
+                                else:
+                                    fundamental_score += 25
+                                    fundamental_details['pe_score'] = "无PE数据"
+                                
+                                # PB评分（50分）
+                                if pb is not None:
+                                    if pb < 1:
+                                        fundamental_score += 50
+                                        fundamental_details['pb_score'] = "低市净率 (PB<1)"
+                                    elif pb < 1.5:
+                                        fundamental_score += 40
+                                        fundamental_details['pb_score'] = "合理市净率 (1<PB<1.5)"
+                                    elif pb < 2:
+                                        fundamental_score += 30
+                                        fundamental_details['pb_score'] = "偏高市净率 (1.5<PB<2)"
+                                    elif pb < 3:
+                                        fundamental_score += 20
+                                        fundamental_details['pb_score'] = "高市净率 (2<PB<3)"
+                                    else:
+                                        fundamental_score += 10
+                                        fundamental_details['pb_score'] = "极高市净率 (PB>3)"
+                                else:
+                                    fundamental_score += 25
+                                    fundamental_details['pb_score'] = "无PB数据"
+                                
+                                # 添加基本面指标到indicators
+                                indicators['fundamental_score'] = fundamental_score
+                                indicators['fundamental_details'] = fundamental_details
+                                indicators['pe_ratio'] = pe
+                                indicators['pb_ratio'] = pb
+                                
+                                print(f"  📊 {data.get('symbol', '')} 基本面数据获取成功: PE={pe}, PB={pb}, 评分={fundamental_score}")
+                            else:
+                                print(f"  ⚠️ {data.get('symbol', '')} 无法获取基本面数据")
+                                indicators['fundamental_score'] = 0
+                                indicators['pe_ratio'] = None
+                                indicators['pb_ratio'] = None
+                        else:
+                            print(f"  ⚠️ {data.get('symbol', '')} 股票代码为空，跳过基本面数据获取")
+                            indicators['fundamental_score'] = 0
+                            indicators['pe_ratio'] = None
+                            indicators['pb_ratio'] = None
+                    except Exception as e:
+                        print(f"⚠️ 获取基本面数据失败: {e}")
+                        indicators['fundamental_score'] = 0
+                        indicators['pe_ratio'] = None
+                        indicators['pb_ratio'] = None
+                
                 return indicators
                 
             except Exception as e:
@@ -1912,6 +2001,26 @@ class HSIEmailSystem:
             medium_term_score = indicators.get('medium_term_score', 0)
             if medium_term_score > 0:
                 tech_info.append(f"中期评分: {medium_term_score:.1f}")
+            
+            # 基本面指标
+            fundamental_score = indicators.get('fundamental_score', 0)
+            if fundamental_score > 0:
+                # 根据评分设置颜色
+                if fundamental_score > 60:
+                    fundamental_status = "优秀"
+                elif fundamental_score >= 30:
+                    fundamental_status = "一般"
+                else:
+                    fundamental_status = "较差"
+                tech_info.append(f"基本面评分: {fundamental_score:.0f}({fundamental_status})")
+            
+            pe_ratio = indicators.get('pe_ratio')
+            if pe_ratio is not None and pe_ratio > 0:
+                tech_info.append(f"PE: {pe_ratio:.2f}")
+            
+            pb_ratio = indicators.get('pb_ratio')
+            if pb_ratio is not None and pb_ratio > 0:
+                tech_info.append(f"PB: {pb_ratio:.2f}")
         
         return ', '.join(tech_info) if tech_info else 'N/A'
     
@@ -1976,6 +2085,23 @@ class HSIEmailSystem:
                 
                 signal_strength = self._get_signal_strength(indicators)
                 
+                # 获取基本面指标
+                fundamental_score = indicators.get('fundamental_score', 0)
+                pe_ratio = indicators.get('pe_ratio', None)
+                pb_ratio = indicators.get('pb_ratio', None)
+                
+                # 构建基本面信息字符串
+                fundamental_info = []
+                if fundamental_score > 0:
+                    fundamental_status = "优秀" if fundamental_score > 60 else "一般" if fundamental_score >= 30 else "较差"
+                    fundamental_info.append(f"基本面评分: {fundamental_score:.0f}({fundamental_status})")
+                if pe_ratio is not None and pe_ratio > 0:
+                    fundamental_info.append(f"PE: {pe_ratio:.2f}")
+                if pb_ratio is not None and pb_ratio > 0:
+                    fundamental_info.append(f"PB: {pb_ratio:.2f}")
+                
+                fundamental_info_str = " | ".join(fundamental_info) if fundamental_info else "无基本面数据"
+                
                 prompt += f"""
 - {stock_name} ({stock_code}):
   * 技术趋势: {trend}
@@ -1985,6 +2111,7 @@ class HSIEmailSystem:
   * 出货评分: {distribution_score:.2f} ({distribution_level})
   * 出货原因: {distribution_reasons if distribution_reasons else '无'}
   * 48小时连续信号: {continuous_signal}
+  * 基本面指标: {fundamental_info_str}
 """
         
         return prompt
@@ -2073,88 +2200,121 @@ class HSIEmailSystem:
         
         return prompt
 
-    def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
-        """
-        使用大模型分析持仓股票
-        
-        参数:
-        - portfolio: 持仓列表
-        - stock_results: 股票分析结果列表
-        - hsi_data: 恒生指数数据（可选）
-        
-        返回:
-        - str: 大模型生成的分析报告
-        """
-        if not portfolio:
-            return None
-        
-        try:
-            # 导入大模型服务
-            from llm_services.qwen_engine import chat_with_llm
-            
-            # 构建持仓分析数据
-            portfolio_analysis = []
-            total_cost = 0
-            total_current_value = 0
-            
-            for position in portfolio:
-                stock_code = position['stock_code']
-                total_cost += position['total_cost']
-                
-                # 从 stock_results 中获取当前价格和技术指标
-                current_price, indicators, stock_name = self._get_stock_data_from_results(stock_code, stock_results)
-                
-                if current_price is None:
-                    print(f"⚠️ 无法获取 {stock_name} ({stock_code}) 的当前价格")
-                    continue
-                
-                total_shares = position['total_shares']
-                current_value = current_price * total_shares
-                total_current_value += current_value
-                
-                profit_loss = current_value - position['total_cost']
-                profit_loss_pct = (profit_loss / position['total_cost']) * 100 if position['total_cost'] > 0 else 0
-                
-                portfolio_analysis.append({
-                    'stock_code': stock_code,
-                    'stock_name': stock_name,
-                    'total_shares': total_shares,
-                    'cost_price': position['cost_price'],
-                    'current_price': current_price,
-                    'total_cost': position['total_cost'],
-                    'current_value': current_value,
-                    'profit_loss': profit_loss,
-                    'profit_loss_pct': profit_loss_pct,
-                    'tech_info': self._format_tech_info(indicators, include_trend=True)
-                })
-            
-            if not portfolio_analysis:
-                return None
-            
-            # 计算整体盈亏
-            total_profit_loss = total_current_value - total_cost
-            total_profit_loss_pct = (total_profit_loss / total_cost) * 100 if total_cost > 0 else 0
-            
-            # 获取市场环境
-            market_context = self._get_market_context(hsi_data)
-            
-            # 构建大模型提示词
-            prompt = f"""你是一位专业的港股投资分析师。请根据以下持仓信息、技术指标和交易记录，提供详细的投资分析和建议。
+    def _generate_analysis_prompt(self, investment_style='balanced', investment_horizon='short_term', 
+                              data_type='portfolio', stock_data=None, market_context=None, 
+                              stock_results=None, additional_info=None):
+    """
+    生成不同投资风格和周期的分析提示词
+    
+    参数:
+    - investment_style: 投资风格 ('aggressive'进取型, 'balanced'稳健型, 'conservative'保守型)
+    - investment_horizon: 投资周期 ('short_term'短期, 'medium_term'中期)
+    - data_type: 数据类型 ('portfolio'持仓分析, 'buy_signals'买入信号分析)
+    - stock_data: 股票数据列表
+    - market_context: 市场环境信息
+    - stock_results: 股票分析结果
+    - additional_info: 额外信息（如总成本、市值等）
+    
+    返回:
+    - str: 生成的提示词
+    """
+    
+    # 定义不同风格和周期的分析重点
+    style_focus = {
+        'aggressive': {
+            'short_term': {
+                'role': '你是一位专业的进取型短线交易分析师，擅长捕捉日内和数天内的价格波动机会。',
+                'focus': '重点关注短期动量、成交量变化、突破信号，追求快速收益。',
+                'risk_tolerance': '风险承受能力高，可以接受较大波动以换取更高收益。',
+                'indicators': '重点关注：RSI超买超卖、MACD金叉死叉、成交量突增、价格突破关键位、ATR波动率',
+                'stop_loss': '止损位设置较紧（通常3-5%），快速止损保护本金。',
+                'take_profit': '目标价设置较近（通常5-10%），快速兑现利润。',
+                'timing': '操作时机：立即或等待突破信号，不宜长时间等待。',
+                'risks': '主要风险：短期波动剧烈、止损可能被触发、需要密切监控。'
+            },
+            'medium_term': {
+                'role': '你是一位专业的进取型中线投资分析师，擅长捕捉数周到数月内的趋势机会。',
+                'focus': '重点关注趋势持续性、均线排列、资金流向，追求趋势性收益。',
+                'risk_tolerance': '风险承受能力高，可以承受中期波动以换取趋势收益。',
+                'indicators': '重点关注：均线排列、均线斜率、中期趋势评分、支撑阻力位、乖离状态',
+                'stop_loss': '止损位设置适中（通常5-8%），允许一定波动空间。',
+                'take_profit': '目标价设置较远（通常15-25%），追求趋势性收益。',
+                'timing': '操作时机：等待趋势确认或回调至支撑位，不宜追高。',
+                'risks': '主要风险：趋势反转、中期调整、需要耐心持有。'
+            }
+        },
+        'balanced': {
+            'short_term': {
+                'role': '你是一位专业的稳健型短线交易分析师，注重风险收益平衡。',
+                'focus': '重点关注技术指标确认、成交量配合，追求稳健收益。',
+                'risk_tolerance': '风险承受能力中等，在控制风险的前提下追求收益。',
+                'indicators': '重点关注：RSI、MACD、成交量、布林带、短期趋势评分',
+                'stop_loss': '止损位设置合理（通常5-7%），平衡风险和收益。',
+                'take_profit': '目标价设置适中（通常8-15%），稳健兑现利润。',
+                'timing': '操作时机：等待技术指标确认或价格回调，避免追涨杀跌。',
+                'risks': '主要风险：短期震荡、止损可能被触发、需要灵活调整。'
+            },
+            'medium_term': {
+                'role': '你是一位专业的稳健型中线投资分析师，注重中长期价值投资。',
+                'focus': '重点关注基本面和技术面结合，追求稳健的中期收益。',
+                'risk_tolerance': '风险承受能力中等，注重风险控制和资产配置。',
+                'indicators': '重点关注：中期趋势评分、趋势健康度、可持续性、支撑阻力位、乖离状态',
+                'stop_loss': '止损位设置较宽（通常8-12%），允许中期波动。',
+                'take_profit': '目标价设置合理（通常20-30%），追求稳健的中期收益。',
+                'timing': '操作时机：等待趋势确认或回调至支撑位，分批建仓降低成本。',
+                'risks': '主要风险：中期趋势变化、基本面恶化、需要定期评估。'
+            }
+        },
+        'conservative': {
+            'short_term': {
+                'role': '你是一位专业的保守型短线交易分析师，注重本金安全。',
+                'focus': '重点关注低风险机会、确定性高的信号，追求稳健收益。',
+                'risk_tolerance': '风险承受能力低，优先保护本金，追求稳健收益。',
+                'indicators': '重点关注：RSI超卖、强支撑位、成交量萎缩、低波动率',
+                'stop_loss': '止损位设置较紧（通常2-3%），严格控制风险。',
+                'take_profit': '目标价设置较近（通常3-5%），快速兑现利润。',
+                'timing': '操作时机：等待超卖反弹或支撑位确认，避免追高。',
+                'risks': '主要风险：收益较低、机会成本、可能错过上涨机会。'
+            },
+            'medium_term': {
+                'role': '你是一位专业的保守型中线投资分析师，注重长期价值投资。',
+                'focus': '重点关注基本面、估值水平、长期趋势，追求稳健的长期收益。',
+                'risk_tolerance': '风险承受能力低，注重资产保值和稳健增长。',
+                'indicators': '重点关注：基本面指标（PE、PB）、估值水平、长期趋势、风险指标',
+                'stop_loss': '止损位设置较宽（通常10-15%），允许较大波动空间。',
+                'take_profit': '目标价设置较远（通常30-50%），追求长期价值增长。',
+                'timing': '操作时机：等待估值合理或长期趋势确认，分批建仓长期持有。',
+                'risks': '主要风险：长期持有期间市场变化、基本面恶化、需要耐心。'
+            }
+        }
+    }
+    
+    # 获取对应风格和周期的配置
+    config = style_focus.get(investment_style, {}).get(investment_horizon, style_focus['balanced']['short_term'])
+    
+    # 构建基础提示词
+    prompt = f"""{config['role']}
+{config['focus']}
+{config['risk_tolerance']}
 
-{market_context}
+{market_context if market_context else ''}
+
+"""
+    
+    # 根据数据类型添加不同的内容
+    if data_type == 'portfolio' and additional_info:
+        prompt += f"""
 ## 持仓概览
-- 总投资成本: HK${total_cost:,.2f}
-- 当前市值: HK${total_current_value:,.2f}
-- 浮动盈亏: HK${total_profit_loss:,.2f} ({total_profit_loss_pct:+.2f}%)
-- 持仓股票数量: {len(portfolio_analysis)}只
+- 总投资成本: HK${additional_info.get('total_cost', 0):,.2f}
+- 当前市值: HK${additional_info.get('total_current_value', 0):,.2f}
+- 浮动盈亏: HK${additional_info.get('total_profit_loss', 0):,.2f} ({additional_info.get('total_profit_loss_pct', 0):+.2f}%)
+- 持仓股票数量: {len(stock_data) if stock_data else 0}只
 
 ## 持仓股票详情
 """
-            for i, pos in enumerate(portfolio_analysis, 1):
-                # 计算持仓占比
-                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
-                
-                prompt += f"""
+        for i, pos in enumerate(stock_data, 1):
+            position_pct = pos.get('position_pct', 0)
+            prompt += f"""
 {i}. {pos['stock_name']} ({pos['stock_code']})
    - 持仓占比: {position_pct:.1f}%
    - 持仓数量: {pos['total_shares']:,}股
@@ -2163,53 +2323,204 @@ class HSIEmailSystem:
    - 浮动盈亏: HK${pos['profit_loss']:,.2f} ({pos['profit_loss_pct']:+.2f}%)
    - 技术指标: {pos['tech_info']}
 """
-            
-            # 添加技术面信号摘要
-            stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
-            prompt = self._add_technical_signals_summary(prompt, stock_list, stock_results)
-            
-            # 添加最近48小时模拟交易记录
-            stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
-            prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
-            
-            prompt += """
+    
+    elif data_type == 'buy_signals' and stock_data:
+        prompt += f"""
+## 买入信号股票概览
+- 买入信号股票数量: {len(stock_data)}只
+
+## 买入信号股票详情
+"""
+        for i, stock in enumerate(stock_data, 1):
+            prompt += f"""
+{i}. {stock['stock_name']} ({stock['stock_code']})
+   - 当前价格: HK${stock['current_price']:.2f}
+   - 技术趋势: {stock['trend']}
+   - 技术指标: {stock['tech_info']}
+   - 信号描述: {stock['signal_description']}
+"""
+    
+    # 添加分析要求
+    prompt += f"""
+## 分析重点
+- {config['indicators']}
+
 ## 分析要求
-请基于以上信息，对每只持仓股票提供独立的投资分析和建议：
+请基于以上信息，对每只股票提供独立的投资分析和建议：
 
 对于每只股票，请提供：
 
 1. **操作建议**
-   - 明确建议：持有/加仓/减仓/清仓
+   - 明确建议：买入/持有/加仓/减仓/清仓/观望
    - 具体的操作理由（基于技术面、基本面、交易信号）
+   - {config['focus']}
 
 2. **价格指引**
    - 建议的止损位（基于当前价格的百分比或具体价格）
+   - {config['stop_loss']}
    - 建议的目标价（基于当前价格的百分比或具体价格）
+   - {config['take_profit']}
 
 3. **操作时机**
-   - 建议操作时机（立即/等待突破/等待回调）
+   - {config['timing']}
 
 4. **风险提示**
-   - 该股票的主要风险点
-   - 需要关注的关键指标
+   - {config['risks']}
+
+5. **关键指标监控**
+   - 需要重点关注的指标变化
 
 请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
-            
-            print("🤖 正在使用大模型分析持仓...")
-            analysis_result = chat_with_llm(prompt, enable_thinking=True)
-            print("✅ 大模型分析完成")
-            
-            return analysis_result
-            
-        except Exception as e:
-            print(f"❌ 大模型持仓分析失败: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+    
+    return prompt
 
+
+def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
+    """
+    使用大模型分析持仓股票，生成四种不同风格的分析
+    
+    参数:
+    - portfolio: 持仓列表
+    - stock_results: 股票分析结果列表
+    - hsi_data: 恒生指数数据（可选）
+    
+    返回:
+    - str: 大模型生成的分析报告（包含四种风格）
+    """
+    if not portfolio:
+        return None
+    
+    try:
+        # 导入大模型服务
+        from llm_services.qwen_engine import chat_with_llm
+        
+        # 构建持仓分析数据
+        portfolio_analysis = []
+        total_cost = 0
+        total_current_value = 0
+        
+        for position in portfolio:
+            stock_code = position['stock_code']
+            total_cost += position['total_cost']
+            
+            # 从 stock_results 中获取当前价格和技术指标
+            current_price, indicators, stock_name = self._get_stock_data_from_results(stock_code, stock_results)
+            
+            if current_price is None:
+                print(f"⚠️ 无法获取 {stock_name} ({stock_code}) 的当前价格")
+                continue
+            
+            total_shares = position['total_shares']
+            current_value = current_price * total_shares
+            total_current_value += current_value
+            
+            profit_loss = current_value - position['total_cost']
+            profit_loss_pct = (profit_loss / position['total_cost']) * 100 if position['total_cost'] > 0 else 0
+            
+            portfolio_analysis.append({
+                'stock_code': stock_code,
+                'stock_name': stock_name,
+                'total_shares': total_shares,
+                'cost_price': position['cost_price'],
+                'current_price': current_price,
+                'total_cost': position['total_cost'],
+                'current_value': current_value,
+                'profit_loss': profit_loss,
+                'profit_loss_pct': profit_loss_pct,
+                'tech_info': self._format_tech_info(indicators, include_trend=True)
+            })
+        
+        if not portfolio_analysis:
+            return None
+        
+        # 计算整体盈亏
+        total_profit_loss = total_current_value - total_cost
+        total_profit_loss_pct = (total_profit_loss / total_cost) * 100 if total_cost > 0 else 0
+        
+        # 获取市场环境
+        market_context = self._get_market_context(hsi_data)
+        
+        # 准备股票数据（包含持仓占比）
+        stock_data_with_pct = []
+        for pos in portfolio_analysis:
+            position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
+            stock_data_with_pct.append({
+                **pos,
+                'position_pct': position_pct
+            })
+        
+        # 准备技术面信号摘要和交易记录
+        stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
+        stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
+        
+        # 生成四种不同风格的分析
+        analysis_styles = [
+            ('aggressive', 'short_term', '🎯 进取型短期分析（日内/数天）'),
+            ('balanced', 'short_term', '⚖️ 稳健型短期分析（日内/数天）'),
+            ('balanced', 'medium_term', '📊 稳健型中期分析（数周-数月）'),
+            ('conservative', 'medium_term', '🛡️ 保守型中期分析（数周-数月）')
+        ]
+        
+        all_analysis = []
+        
+        for style, horizon, title in analysis_styles:
+            print(f"🤖 正在生成{title}...")
+            
+            # 生成基础提示词
+            prompt = self._generate_analysis_prompt(
+                investment_style=style,
+                investment_horizon=horizon,
+                data_type='portfolio',
+                stock_data=stock_data_with_pct,
+                market_context=market_context,
+                additional_info={
+                    'total_cost': total_cost,
+                    'total_current_value': total_current_value,
+                    'total_profit_loss': total_profit_loss,
+                    'total_profit_loss_pct': total_profit_loss_pct
+                }
+            )
+            
+            # 添加技术面信号摘要
+            prompt = self._add_technical_signals_summary(prompt, stock_list, stock_results)
+            
+            # 添加最近48小时模拟交易记录
+            prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
+            
+            # 调用大模型
+            style_analysis = chat_with_llm(prompt, enable_thinking=True)
+            
+            # 添加标题
+            all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
+            
+            print(f"✅ {title}完成")
+        
+        # 合并所有分析
+        final_analysis = f"""# 持仓投资分析报告
+
+## 投资组合概览
+- 总投资成本: HK${total_cost:,.2f}
+- 当前市值: HK${total_current_value:,.2f}
+- 浮动盈亏: HK${total_profit_loss:,.2f} ({total_profit_loss_pct:+.2f}%)
+- 持仓股票数量: {len(portfolio_analysis)}只
+
+## 持仓股票列表
+"""
+        for pos in portfolio_analysis:
+            final_analysis += f"- {pos['stock_name']} ({pos['stock_code']}): {pos['total_shares']:,}股 @ HK${pos['cost_price']:.2f}\n"
+        
+        final_analysis += ''.join(all_analysis)
+        
+        return final_analysis
+        
+    except Exception as e:
+        print(f"❌ 大模型持仓分析失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
     def _analyze_buy_signals_with_llm(self, buy_signals, stock_results, hsi_data=None):
         """
-        使用大模型分析买入信号股票
+        使用大模型分析买入信号股票，生成四种不同风格的分析
         
         参数:
         - buy_signals: 买入信号列表 [(stock_name, stock_code, trend, signal, signal_type), ...]
@@ -2217,7 +2528,7 @@ class HSIEmailSystem:
         - hsi_data: 恒生指数数据（可选）
         
         返回:
-        - str: 大模型生成的分析报告
+        - str: 大模型生成的分析报告（包含四种风格）
         """
         if not buy_signals:
             return None
@@ -2255,66 +2566,65 @@ class HSIEmailSystem:
             if not buy_signal_analysis:
                 return None
             
-            # 构建大模型提示词
-            prompt = f"""你是一位专业的港股投资分析师。请根据以下买入信号股票信息、技术指标和交易记录，提供详细的投资分析和建议。
-
-{market_context}
-## 买入信号股票概览
-- 买入信号股票数量: {len(buy_signal_analysis)}只
-
-## 买入信号股票详情
-"""
-            for i, stock in enumerate(buy_signal_analysis, 1):
-                prompt += f"""
-{i}. {stock['stock_name']} ({stock['stock_code']})
-   - 当前价格: HK${stock['current_price']:.2f}
-   - 技术趋势: {stock['trend']}
-   - 技术指标: {stock['tech_info']}
-   - 信号描述: {stock['signal_description']}
-"""
-            
-            # 添加技术面信号摘要
-            prompt = self._add_technical_signals_summary(prompt, buy_signals, stock_results)
-            
-            # 添加最近48小时模拟交易记录
+            # 准备股票代码列表
             stock_codes = [stock['stock_code'] for stock in buy_signal_analysis]
-            prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
             
-            prompt += """
-## 分析要求
-请基于以上信息，对每只买入信号股票提供独立的投资分析和建议：
-
-对于每只股票，请提供：
-
-1. **操作建议**
-   - 明确建议：买入/持有/观望
-   - 具体的操作理由（基于技术面、基本面、交易信号）
-
-2. **价格指引**
-   - 建议的止损位（基于当前价格的百分比或具体价格）
-   - 建议的目标价（基于当前价格的百分比或具体价格）
-
-3. **操作时机**
-   - 建议操作时机（立即/等待突破/等待回调）
-
-4. **风险提示**
-   - 该股票的主要风险点
-   - 需要关注的关键指标
-
-请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
+            # 生成四种不同风格的分析
+            analysis_styles = [
+                ('aggressive', 'short_term', '🎯 进取型短期分析（日内/数天）'),
+                ('balanced', 'short_term', '⚖️ 稳健型短期分析（日内/数天）'),
+                ('balanced', 'medium_term', '📊 稳健型中期分析（数周-数月）'),
+                ('conservative', 'medium_term', '🛡️ 保守型中期分析（数周-数月）')
+            ]
             
-            print("🤖 正在使用大模型分析买入信号股票...")
-            analysis_result = chat_with_llm(prompt, enable_thinking=True)
-            print("✅ 大模型分析完成")
+            all_analysis = []
             
-            return analysis_result
+            for style, horizon, title in analysis_styles:
+                print(f"🤖 正在生成{title}...")
+                
+                # 生成基础提示词
+                prompt = self._generate_analysis_prompt(
+                    investment_style=style,
+                    investment_horizon=horizon,
+                    data_type='buy_signals',
+                    stock_data=buy_signal_analysis,
+                    market_context=market_context
+                )
+                
+                # 添加技术面信号摘要
+                prompt = self._add_technical_signals_summary(prompt, buy_signals, stock_results)
+                
+                # 添加最近48小时模拟交易记录
+                prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
+                
+                # 调用大模型
+                style_analysis = chat_with_llm(prompt, enable_thinking=True)
+                
+                # 添加标题
+                all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
+                
+                print(f"✅ {title}完成")
+            
+            # 合并所有分析
+            final_analysis = f"""# 买入信号股票分析报告
+    
+    ## 买入信号概览
+    - 买入信号股票数量: {len(buy_signal_analysis)}只
+    
+    ## 买入信号股票列表
+    """
+            for stock in buy_signal_analysis:
+                final_analysis += f"- {stock['stock_name']} ({stock['stock_code']}): HK${stock['current_price']:.2f}\n"
+            
+            final_analysis += ''.join(all_analysis)
+            
+            return final_analysis
             
         except Exception as e:
             print(f"❌ 大模型买入信号分析失败: {e}")
             import traceback
             traceback.print_exc()
             return None
-
     def _markdown_to_html(self, markdown_text):
         """
         将Markdown文本转换为HTML格式
@@ -2967,6 +3277,50 @@ class HSIEmailSystem:
                 <tr>
                     <td>中期评分-相对强弱</td>
                     <td>{relative_strength_score:.1f}</td>
+                </tr>
+            """
+
+        # 添加基本面指标
+        fundamental_score = indicators.get('fundamental_score', None)
+        pe_ratio = indicators.get('pe_ratio', None)
+        pb_ratio = indicators.get('pb_ratio', None)
+
+        # 基本面评分颜色
+        if fundamental_score is not None:
+            if fundamental_score > 60:
+                fundamental_color = "color: green; font-weight: bold;"
+                fundamental_status = "优秀"
+            elif fundamental_score >= 30:
+                fundamental_color = "color: orange; font-weight: bold;"
+                fundamental_status = "一般"
+            else:
+                fundamental_color = "color: red; font-weight: bold;"
+                fundamental_status = "较差"
+
+            html += f"""
+                <tr>
+                    <td>基本面评分</td>
+                    <td><span style="{fundamental_color}">{fundamental_score:.0f}</span> <span style="font-size: 0.8em; color: #666;">({fundamental_status})</span></td>
+                </tr>
+            """
+
+        # PE（市盈率）
+        if pe_ratio is not None and pe_ratio > 0:
+            pe_color = "color: green;" if pe_ratio < 15 else "color: orange;" if pe_ratio < 25 else "color: red;"
+            html += f"""
+                <tr>
+                    <td>PE（市盈率）</td>
+                    <td><span style="{pe_color}">{pe_ratio:.2f}</span></td>
+                </tr>
+            """
+
+        # PB（市净率）
+        if pb_ratio is not None and pb_ratio > 0:
+            pb_color = "color: green;" if pb_ratio < 1.5 else "color: orange;" if pb_ratio < 3 else "color: red;"
+            html += f"""
+                <tr>
+                    <td>PB（市净率）</td>
+                    <td><span style="{pb_color}">{pb_ratio:.2f}</span></td>
                 </tr>
             """
 
@@ -5051,6 +5405,66 @@ class HSIEmailSystem:
                   </li>
                 </ul>
               </li>
+              <li><b>基本面指标</b>：评估公司财务健康程度和投资价值的财务指标：
+                <ul>
+                  <li><b>基本面评分</b>：基于PE和PB的简化评估系统，范围0-100分：
+                    <ul>
+                      <li><b>计算方式</b>：PE评分（50分）+ PB评分（50分）</li>
+                      <li><b>PE评分标准</b>：
+                        <ul>
+                          <li>PE < 10：50分（低估值）</li>
+                          <li>10 ≤ PE < 15：40分（合理估值）</li>
+                          <li>15 ≤ PE < 20：30分（偏高估值）</li>
+                          <li>20 ≤ PE < 25：20分（高估值）</li>
+                          <li>PE ≥ 25：10分（极高估值）</li>
+                        </ul>
+                      </li>
+                      <li><b>PB评分标准</b>：
+                        <ul>
+                          <li>PB < 1：50分（低市净率）</li>
+                          <li>1 ≤ PB < 1.5：40分（合理市净率）</li>
+                          <li>1.5 ≤ PB < 2：30分（偏高市净率）</li>
+                          <li>2 ≤ PB < 3：20分（高市净率）</li>
+                          <li>PB ≥ 3：10分（极高市净率）</li>
+                        </ul>
+                      </li>
+                      <li><b>评分等级</b>：
+                        <ul>
+                          <li>> 60分：<b>优秀</b> - 估值合理，投资价值高</li>
+                          <li>30-60分：<b>一般</b> - 估值适中，需结合其他指标</li>
+                          <li>< 30分：<b>较差</b> - 估值偏高，投资价值低</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                  <li><b>PE（市盈率）</b>：股价与每股收益的比率，衡量投资回收期：
+                    <ul>
+                      <li><b>计算方式</b>：PE = 股价 / 每股收益</li>
+                      <li><b>评估标准</b>：
+                        <ul>
+                          <li>PE < 15：低估，投资价值高</li>
+                          <li>15 ≤ PE < 25：合理估值，可考虑投资</li>
+                          <li>PE ≥ 25：高估，投资价值低</li>
+                        </ul>
+                      </li>
+                      <li><b>应用场景</b>：适用于盈利稳定的公司，不适用于亏损公司</li>
+                    </ul>
+                  </li>
+                  <li><b>PB（市净率）</b>：股价与每股净资产的比率，衡量市场对公司净资产的定价：
+                    <ul>
+                      <li><b>计算方式</b>：PB = 股价 / 每股净资产</li>
+                      <li><b>评估标准</b>：
+                        <ul>
+                          <li>PB < 1：股价低于净资产，低估</li>
+                          <li>1 ≤ PB < 1.5：合理估值</li>
+                          <li>PB ≥ 3：高估，投资价值低</li>
+                        </ul>
+                      </li>
+                      <li><b>应用场景</b>：适用于资产密集型行业（银行、房地产等）</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
             </ul>
             </div>
         </div>
@@ -5216,6 +5630,20 @@ class HSIEmailSystem:
         text += "    * 中期评分下降：中期趋势减弱，需谨慎或减仓\n"
         text += "    * 乖离状态=严重超买且中期评分高：短期回调风险，建议等待回调\n"
         text += "    * 乖离状态=严重超卖且中期评分低：反弹机会，可考虑逢低买入\n"
+        text += "• 基本面指标：评估公司财务健康程度和投资价值的财务指标：\n"
+        text += "  - 基本面评分：基于PE和PB的简化评估系统，范围0-100分：\n"
+        text += "    * 计算方式：PE评分（50分）+ PB评分（50分）\n"
+        text += "    * PE评分标准：PE < 10（50分，低估值）、10≤PE<15（40分，合理）、15≤PE<20（30分，偏高）、20≤PE<25（20分，高估）、PE≥25（10分，极高）\n"
+        text += "    * PB评分标准：PB < 1（50分，低市净率）、1≤PB<1.5（40分，合理）、1.5≤PB<2（30分，偏高）、2≤PB<3（20分，高估）、PB≥3（10分，极高）\n"
+        text += "    * 评分等级：> 60分（优秀，估值合理）、30-60分（一般，估值适中）、< 30分（较差，估值偏高）\n"
+        text += "  - PE（市盈率）：股价与每股收益的比率，衡量投资回收期：\n"
+        text += "    * 计算方式：PE = 股价 / 每股收益\n"
+        text += "    * 评估标准：PE < 15（低估，投资价值高）、15≤PE<25（合理估值，可考虑投资）、PE≥25（高估，投资价值低）\n"
+        text += "    * 应用场景：适用于盈利稳定的公司，不适用于亏损公司\n"
+        text += "  - PB（市净率）：股价与每股净资产的比率，衡量市场对公司净资产的定价：\n"
+        text += "    * 计算方式：PB = 股价 / 每股净资产\n"
+        text += "    * 评估标准：PB < 1（低估）、1≤PB<1.5（合理估值）、PB≥3（高估）\n"
+        text += "    * 应用场景：适用于资产密集型行业（银行、房地产等）\n"
 
         html += "</body></html>"
 
