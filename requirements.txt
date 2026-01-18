@@ -9,3 +9,5 @@ openpyxl
 scipy
 schedule
 markdown
+lightgbm
+scikit-learn
