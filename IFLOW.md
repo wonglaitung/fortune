@@ -153,6 +153,8 @@
 11. 通过腾讯财经接口获取港股数据
 12. 人工智能股票交易盈利能力分析器
 13. 港股基本面数据获取器（财务指标、利润表、资产负债表、现金流量表）
+14. **机器学习交易模型**（基于LightGBM的次日涨跌预测模型）
+15. **策略对比分析**（对比ML模型与手工信号的预测准确性）
 
 ## 关键文件
 
@@ -170,10 +172,12 @@
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
 *   `fundamental_data.py`: 港股基本面数据获取模块，提供财务指标、利润表、资产负债表、现金流量表等数据获取功能，支持缓存机制。
+*   `ml_trading_model.py`: **机器学习交易模型**，基于LightGBM的二分类模型，用于预测次日涨跌，整合技术指标、基本面、资金流向等24个特征，平均验证准确率57.16%。
+*   `compare_strategies.py`: **策略对比分析**，对比机器学习模型预测与主力资金追踪器手工信号的预测准确性，提供信号一致性分析。
 *   `send_alert.sh`: 本地定时执行脚本，按顺序执行个股新闻获取、恒生指数策略分析、主力资金追踪（使用昨天的日期）和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub（带重试机制）。
 *   `set_key.sh`: 环境变量配置，包含API密钥和163邮件配置。
-*   `requirements.txt`: 项目依赖包列表，包含所有必需的Python库。
+*   `requirements.txt`: 项目依赖包列表，包含所有必需的Python库（新增lightgbm、scikit-learn）。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
@@ -203,6 +207,8 @@ openpyxl
 scipy
 schedule
 markdown
+lightgbm
+scikit-learn
 ```
 
 ### 主要功能
@@ -369,6 +375,50 @@ markdown
 5. 兼容历史数据，优先使用current_price字段，当为空时使用price字段。
 6. 生成清晰的分析报告，展示总体盈亏率和个股表现。
 7. **最新功能**：在报告中显示建议的买卖次数和实际执行的买卖次数，帮助用户了解AI建议频率与复盘执行差异。
+
+#### 机器学习交易模型
+1. **模型算法**：基于LightGBM的二分类模型，预测次日涨跌
+2. **特征工程**：整合24个特征
+   - 技术指标特征（15个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅等
+   - 市场环境特征（3个）：恒生指数收益率、相对表现
+   - 资金流向特征（5个）：价格位置、成交量信号、动量信号
+   - 基本面特征（8个，预留）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
+3. **模型性能**：
+   - 平均验证准确率：57.16% (±2.55%)
+   - 使用时间序列交叉验证（5折）
+   - 特征重要性分析：恒生指数相关特征权重最高，成交量、波动率指标次之
+4. **训练流程**：
+   - 获取24只自选股的2年历史数据
+   - 计算所有技术指标特征
+   - 创建标签（次日涨跌）
+   - 时间序列交叉验证
+   - 训练LightGBM模型
+   - 输出特征重要性
+5. **使用场景**：
+   - 作为手工信号的补充参考
+   - 提供量化化的预测概率
+   - 支持定期重训练适应市场变化
+6. **注意事项**：
+   - 模型基于历史数据，市场结构变化可能导致失效
+   - 需要定期验证实际预测准确率
+   - 建议与手工信号结合使用，不单独依赖
+
+#### 策略对比分析
+1. **对比维度**：机器学习模型预测 vs 主力资金追踪器手工信号
+2. **对比内容**：
+   - ML模型预测（上涨/下跌）及置信度
+   - 手工信号（建仓/出货）
+   - 信号一致性分析
+3. **分析结果**：
+   - 信号一致：ML预测下跌 + 无建仓信号
+   - 信号不一致：ML预测上涨 + 无建仓信号（当前市场常见）
+   - 一致性百分比统计
+4. **使用建议**：
+   - 只在两者信号一致时交易（保守策略）
+   - 关注高置信度预测（概率 > 60%）
+   - 定期跟踪ML模型实际准确率
+5. **数据文件**：
+   - `data/strategy_comparison.csv` - 详细的对比结果
 
 #### 腾讯财经数据接口
 1. 通过腾讯财经API获取港股股票数据。
@@ -575,6 +625,52 @@ python ai_trading_analyzer.py --file data/simulation_transactions.csv
 - `--file` 或 `-f`: 交易记录CSV文件路径（默认：data/simulation_transactions.csv）
 - `--no-email`: 不发送邮件通知
 
+#### 机器学习交易模型
+
+##### 本地运行
+```bash
+# 训练模型
+python ml_trading_model.py --mode train
+
+# 预测股票
+python ml_trading_model.py --mode predict
+
+# 评估模型
+python ml_trading_model.py --mode evaluate
+
+# 指定日期范围训练
+python ml_trading_model.py --mode train --start-date 2024-01-01 --end-date 2025-12-31
+```
+
+##### 命令行参数
+- `--mode`: 运行模式（train/predict/evaluate）
+- `--model-path`: 模型保存/加载路径（默认：data/ml_trading_model.pkl）
+- `--start-date`: 训练开始日期 (YYYY-MM-DD)
+- `--end-date`: 训练结束日期 (YYYY-MM-DD)
+
+##### 输出文件
+- `data/ml_trading_model.pkl` - 训练好的模型
+- `data/ml_trading_model_importance.csv` - 特征重要性排名
+- `data/ml_trading_model_predictions.csv` - 预测结果
+
+#### 策略对比分析
+
+##### 本地运行
+```bash
+# 对比ML模型和手工信号
+python compare_strategies.py
+
+# 指定日期范围对比
+python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
+```
+
+##### 命令行参数
+- `--start-date`: 分析开始日期 (YYYY-MM-DD)
+- `--end-date`: 分析结束日期 (YYYY-MM-DD)
+
+##### 输出文件
+- `data/strategy_comparison.csv` - 策略对比结果
+
 #### 通用技术分析工具
 
 ##### 本地运行
@@ -669,7 +765,15 @@ clear_cache()
 │   │   ├── 基本面指标（基本面评分、PE、PB）
 │   │   └── 中期评估指标（均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分等）
 │   ├── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
-│   └── 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
+│   ├── 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
+│   ├── 机器学习交易模型 (@ml_trading_model.py)
+│   │   ├── 特征工程（技术指标、市场环境、资金流向、基本面）
+│   │   ├── LightGBM二分类模型（预测次日涨跌）
+│   │   ├── 时间序列交叉验证
+│   │   └── 特征重要性分析
+│   └── 策略对比分析 (@compare_strategies.py)
+│       ├── ML模型预测 vs 手工信号对比
+│       └── 信号一致性分析
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
@@ -707,6 +811,10 @@ clear_cache()
 - `simulation_portfolio.csv`: 投资组合价值变化记录
 - `southbound_data_cache.pkl`: 南向资金数据缓存
 - `fundamental_cache/`: 基本面数据缓存目录（包含财务指标、利润表、资产负债表、现金流量表的缓存文件）
+- `ml_trading_model.pkl`: 机器学习训练好的模型文件
+- `ml_trading_model_importance.csv`: 机器学习特征重要性排名
+- `ml_trading_model_predictions.csv`: 机器学习模型预测结果
+- `strategy_comparison.csv`: 策略对比分析结果（ML模型 vs 手工信号）
 
 ### 项目扩展性
 
@@ -754,6 +862,11 @@ clear_cache()
 41. **新增功能**：在hsi_email.py中集成中期评估指标（均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分、中期趋势健康度、中期可持续性、中期建议）到单个股票分析表格
 42. **新增功能**：在hsi_email.py中实现大模型多风格分析功能，支持四种投资风格和周期的分析报告（进取型短期、稳健型短期、稳健型中期、保守型中期）
 43. **配置优化**：添加ENABLE_ALL_ANALYSIS_STYLES配置开关，默认只生成稳健型短期和稳健型中期两种分析，可通过配置切换生成全部四种分析
+44. **新增功能**：实现机器学习交易模型（ml_trading_model.py），基于LightGBM预测次日涨跌，平均准确率57.16%
+45. **新增功能**：实现策略对比分析（compare_strategies.py），对比ML模型与手工信号的预测准确性
+46. **依赖更新**：在requirements.txt中添加lightgbm和scikit-learn，支持机器学习功能
+47. **功能扩展**：机器学习模型支持24个特征（技术指标、市场环境、资金流向、基本面），提供特征重要性分析
+48. **功能扩展**：策略对比分析提供信号一致性统计，支持组合使用ML模型和手工信号
 
 ---
-最后更新：2026-01-17
+最后更新：2026-01-18

@@ -98,6 +98,13 @@
 | 48小时信号分析 | `analyze_last_48_hours_email.py` | 连续交易信号识别 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
+### 机器学习
+
+| 功能 | 脚本 | 说明 |
+|------|------|------|
+| 机器学习交易模型 | `ml_trading_model.py` | 基于LightGBM预测次日涨跌，平均准确率57.16% |
+| 策略对比分析 | `compare_strategies.py` | 对比ML模型与手工信号的预测准确性 |
+
 ### 模拟交易
 
 | 功能 | 脚本 | 说明 |
@@ -308,7 +315,94 @@ python ai_trading_analyzer.py --start-date 2025-12-05 --end-date 2026-01-05
 python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no-email
 ```
 
-### 6. 通用技术分析工具
+### 6. 机器学习交易模型
+
+**功能**：
+- 基于LightGBM的二分类模型，预测次日涨跌
+- 整合24个特征（技术指标、市场环境、资金流向、基本面）
+- 时间序列交叉验证（5折）
+- 平均验证准确率57.16%
+- 特征重要性分析
+
+**特征类型**：
+- **技术指标特征**（15个）：RSI、MACD、布林带、ATR、成交量比率、价格相对均线、涨跌幅
+- **市场环境特征**（3个）：恒生指数收益率、股票相对恒指表现
+- **资金流向特征**（5个）：价格位置、成交量信号、动量信号
+- **基本面特征**（8个）：PE、PB、ROE、ROA、股息率等（未使用，API限制）
+
+**特征重要性 Top 10**：
+1. HSI_Return_5d（408）- 恒生指数5日收益率
+2. HSI_Return（336）- 恒生指数日收益率
+3. Vol_Ratio（185）- 成交量比率
+4. BB_width（139）- 布林带宽度
+5. ATR（133）- 平均真实波幅
+6. Price_Ratio_MA50（130）- 价格相对50日均线
+7. MACD_histogram（117）- MACD柱状图
+8. RSI（113）- 相对强弱指标
+9. Return_20d（109）- 20日收益率
+10. Price_Ratio_MA5（104）- 价格相对5日均线
+
+**使用方法**：
+```bash
+# 训练模型
+python ml_trading_model.py --mode train
+
+# 预测股票
+python ml_trading_model.py --mode predict
+
+# 指定日期范围训练
+python ml_trading_model.py --mode train --start-date 2024-01-01 --end-date 2025-12-31
+```
+
+**输出文件**：
+- `data/ml_trading_model.pkl` - 训练好的模型
+- `data/ml_trading_model_importance.csv` - 特征重要性排名
+- `data/ml_trading_model_predictions.csv` - 预测结果
+
+**使用建议**：
+- 作为手工信号的补充参考
+- 只在信号一致时交易（保守策略）
+- 定期重新训练（每周或每月）
+- 跟踪实际预测准确率
+
+### 7. 策略对比分析
+
+**功能**：
+- 对比机器学习模型预测与主力资金追踪器手工信号
+- 分析预测结果、置信度、信号一致性
+- 提供组合使用建议
+
+**对比维度**：
+- ML模型预测（上涨/下跌）
+- ML预测概率
+- 手工建仓信号
+- 手工出货信号
+- 信号一致性
+
+**使用方法**：
+```bash
+# 对比ML模型和手工信号
+python compare_strategies.py
+
+# 指定日期范围对比
+python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
+```
+
+**输出文件**：
+- `data/strategy_comparison.csv` - 策略对比结果
+
+**分析结果**：
+- 信号一致：ML预测下跌 + 无建仓信号
+- 信号不一致：ML预测上涨 + 无建仓信号
+- 一致性统计：百分比和数量
+
+**使用建议**：
+- 只在信号一致时交易（保守策略）
+- ML模型作为参考，手工信号作为确认
+- 关注高置信度预测（概率 > 60%）
+- 定期验证ML模型实际准确率
+
+### 8. 通用技术分析工具
 
 **支持的指标**：
 - 移动平均线（MA）
@@ -420,6 +514,20 @@ fortune/
 │   ├── ai_trading_analyzer.py          # AI 交易分析器
 │   ├── analyze_last_48_hours_email.py  # 48 小时信号分析器
 │   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
+│   ├── compare_strategies.py           # 策略对比分析
+│   ├── crypto_email.py                 # 加密货币监控器
+│   ├── fundamental_data.py             # 基本面数据获取器
+│   ├── gold_analyzer.py                # 黄金市场分析器
+│   ├── hk_ipo_aastocks.py              # IPO 信息获取器
+│   ├── hk_smart_money_tracker.py       # 主力资金追踪器
+│   ├── hsi_email.py                    # 恒生指数价格监控器
+│   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
+│   ├── ml_trading_model.py             # 机器学习交易模型
+│   ├── simulation_trader.py            # 模拟交易系统
+│   ├── technical_analysis.py           # 通用技术分析工具
+│   └── tencent_finance.py              # 腾讯财经接口
+│   ├── analyze_last_48_hours_email.py  # 48 小时信号分析器
+│   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
 │   ├── crypto_email.py                 # 加密货币监控器
 │   ├── fundamental_data.py             # 基本面数据获取器
 │   ├── gold_analyzer.py                # 黄金市场分析器
@@ -445,6 +553,21 @@ fortune/
 │
 ├── 📊 数据文件
 │   ├── actual_porfolio.csv             # 实际持仓数据
+│   ├── all_stock_news_records.csv      # 股票新闻记录
+│   ├── all_dividends.csv               # 所有股息信息记录
+│   ├── recent_dividends.csv            # 最近除净的股息信息
+│   ├── upcoming_dividends.csv          # 即将除净的股息信息（未来90天）
+│   ├── hsi_strategy_latest.txt         # 恒生指数策略分析
+│   ├── ml_trading_model.pkl            # 机器学习训练好的模型文件
+│   ├── ml_trading_model_importance.csv # 机器学习特征重要性排名
+│   ├── ml_trading_model_predictions.csv # 机器学习模型预测结果
+│   ├── simulation_state.json           # 模拟交易状态
+│   ├── simulation_transactions.csv     # 交易历史记录
+│   ├── simulation_portfolio.csv        # 投资组合价值变化记录
+│   ├── simulation_trade_log_*.txt      # 交易日志（按日期分割）
+│   ├── southbound_data_cache.pkl       # 南向资金数据缓存
+│   ├── strategy_comparison.csv         # 策略对比分析结果
+│   └── fundamental_cache/               # 基本面数据缓存
 │   ├── all_stock_news_records.csv      # 股票新闻记录
 │   ├── all_dividends.csv               # 所有股息信息记录
 │   ├── recent_dividends.csv            # 最近除净的股息信息
@@ -501,7 +624,15 @@ fortune/
 │   ├── AI 交易分析 (ai_trading_analyzer.py)
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
 │   ├── 新闻过滤 (batch_stock_news_fetcher.py)
-│   └── 基本面分析 (fundamental_data.py)
+│   ├── 基本面分析 (fundamental_data.py)
+│   ├── 机器学习交易模型 (ml_trading_model.py)
+│   │   ├── 特征工程（24个特征）
+│   │   ├── LightGBM二分类模型
+│   │   ├── 时间序列交叉验证
+│   │   └── 特征重要性分析
+│   └── 策略对比分析 (compare_strategies.py)
+│       ├── ML模型预测 vs 手工信号对比
+│       └── 信号一致性分析
 │
 ├── 💹 交易层
 │   └── 模拟交易系统 (simulation_trader.py)
@@ -582,6 +713,8 @@ openpyxl        # Excel 文件处理
 scipy           # 科学计算
 schedule        # 定时任务
 markdown        # Markdown 转 HTML
+lightgbm        # 机器学习模型（LightGBM）
+scikit-learn    # 机器学习工具库
 ```
 
 ---
@@ -674,6 +807,46 @@ markdown        # Markdown 转 HTML
 - `True`：生成全部四种分析（进取型短期、稳健型短期、稳健型中期、保守型中期）
 - `False`：只生成两种分析（稳健型短期、稳健型中期）
 
+### Q11: 什么是机器学习交易模型？
+
+**A**: 机器学习交易模型是一个基于LightGBM的二分类模型，用于预测股票次日涨跌。它整合了24个特征，包括技术指标、市场环境和资金流向，平均验证准确率为57.16%。
+
+### Q12: 如何训练机器学习模型？
+
+**A**: 运行以下命令：
+```bash
+python ml_trading_model.py --mode train
+```
+模型会使用24只自选股的2年历史数据进行训练，并通过5折时间序列交叉验证。
+
+### Q13: 机器学习模型的准确率如何？
+
+**A**: 平均验证准确率为57.16%（±2.55%），显著高于随机猜测（50%）。5折交叉验证结果分别为：54.50%、54.33%、59.41%、56.91%、60.66%。
+
+### Q14: 如何使用机器学习模型的预测结果？
+
+**A**: 
+1. 运行 `python ml_trading_model.py --mode predict` 获取预测结果
+2. 查看预测概率，关注高置信度预测（概率 > 60%）
+3. 与手工信号对比，只在信号一致时交易（保守策略）
+4. 定期跟踪实际准确率，验证模型有效性
+
+### Q15: 策略对比分析有什么作用？
+
+**A**: 策略对比分析用于对比机器学习模型预测与主力资金追踪器手工信号的一致性。通过对比，可以：
+- 识别信号一致的股票（更可靠）
+- 了解两种方法的差异
+- 提供组合使用建议
+- 降低投资风险
+
+### Q16: 机器学习模型需要多久重新训练一次？
+
+**A**: 建议每周或每月重新训练一次，以适应市场变化。市场风格切换时，模型可能需要更频繁的更新。
+
+### Q17: 机器学习模型支持哪些股票？
+
+**A**: 目前支持配置在 `ml_trading_model.py` 中的24只自选股。可以在代码中添加或修改股票列表。
+
 ---
 
 ## 🤝 贡献指南
@@ -726,4 +899,4 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-01-17
+**最后更新**: 2026-01-18
