@@ -35,6 +35,35 @@ WATCHLIST = [
     "3968.HK", "6682.HK", "9660.HK", "9988.HK"
 ]
 
+# 股票名称映射
+STOCK_NAMES = {
+    "0005.HK": "汇丰银行",
+    "0388.HK": "香港交易所",
+    "0700.HK": "腾讯控股",
+    "0728.HK": "中国电信",
+    "0883.HK": "中国海洋石油",
+    "0939.HK": "建设银行",
+    "0941.HK": "中国移动",
+    "0981.HK": "中芯国际",
+    "1088.HK": "中国神华",
+    "1138.HK": "中远海能",
+    "1288.HK": "农业银行",
+    "1330.HK": "绿色动力环保",
+    "1347.HK": "华虹半导体",
+    "1398.HK": "工商银行",
+    "1810.HK": "小米集团-W",
+    "2269.HK": "药明生物",
+    "2533.HK": "黑芝麻智能",
+    "2800.HK": "盈富基金",
+    "3690.HK": "美团-W",
+    "3968.HK": "招商银行",
+    "6682.HK": "第四范式",
+    "9660.HK": "地平线机器人",
+    "9988.HK": "阿里巴巴-SW",
+    "1211.HK": "比亚迪股份",
+    "1299.HK": "友邦保险"
+}
+
 
 class FeatureEngineer:
     """特征工程类"""
@@ -85,7 +114,10 @@ class FeatureEngineer:
     def create_fundamental_features(self, code):
         """创建基本面特征"""
         try:
-            fundamental_data = get_comprehensive_fundamental_data(code)
+            # 移除代码中的.HK后缀
+            stock_code = code.replace('.HK', '')
+            
+            fundamental_data = get_comprehensive_fundamental_data(stock_code)
             if fundamental_data and 'financial_indicator' in fundamental_data:
                 fi = fundamental_data['financial_indicator']
                 return {
@@ -341,6 +373,7 @@ class MLTradingModel:
 
             return {
                 'code': code,
+                'name': STOCK_NAMES.get(code, code),
                 'prediction': int(prediction),
                 'probability': float(proba[1]),
                 'current_price': float(latest_data['Close'].values[0]),
@@ -420,18 +453,46 @@ def main():
 
         # 显示预测结果
         print("\n预测结果:")
-        print("-" * 80)
-        print(f"{'代码':<10} {'预测':<8} {'概率':<10} {'当前价格':<12} {'日期':<15}")
-        print("-" * 80)
+        print("说明: 基于最新交易日的数据预测下一个交易日的涨跌")
+        print("-" * 100)
+        print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
+        print("-" * 100)
 
         for pred in predictions:
             pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
-            print(f"{pred['code']:<10} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {pred['date'].strftime('%Y-%m-%d')}")
+            data_date = pred['date'].strftime('%Y-%m-%d')
+            
+            # 计算下一个交易日（预测目标日期）
+            data_date_obj = pred['date']
+            next_trading_day = data_date_obj + pd.Timedelta(days=1)
+            # 跳过周末
+            while next_trading_day.weekday() >= 5:  # 5=周六, 6=周日
+                next_trading_day += pd.Timedelta(days=1)
+            target_date = next_trading_day.strftime('%Y-%m-%d')
+            
+            print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
 
         # 保存预测结果
         pred_df = pd.DataFrame(predictions)
+        
+        # 添加预测目标日期列
+        pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+        pred_df['target_date'] = pred_df['date'].apply(lambda x: (x + pd.Timedelta(days=1)).strftime('%Y-%m-%d') if (x + pd.Timedelta(days=1)).weekday() < 5 else (x + pd.Timedelta(days=3 - (x + pd.Timedelta(days=1)).weekday())).strftime('%Y-%m-%d'))
+        
+        # 重新计算正确的下一个交易日（跳过周末）
+        def get_next_trading_day(date):
+            next_day = date + pd.Timedelta(days=1)
+            while next_day.weekday() >= 5:  # 跳过周末
+                next_day += pd.Timedelta(days=1)
+            return next_day.strftime('%Y-%m-%d')
+        
+        pred_df['target_date'] = pred_df['date'].apply(get_next_trading_day)
+        
+        # 选择要保存的列
+        pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
+        
         pred_path = args.model_path.replace('.pkl', '_predictions.csv')
-        pred_df.to_csv(pred_path, index=False)
+        pred_df_export.to_csv(pred_path, index=False)
         print(f"\n预测结果已保存到 {pred_path}")
 
     elif args.mode == 'evaluate':
