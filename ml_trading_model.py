@@ -218,6 +218,7 @@ class MLTradingModel:
 
     def __init__(self):
         self.feature_engineer = FeatureEngineer()
+        self.processor = BaseModelProcessor()
         self.model = None
         self.scaler = StandardScaler()
         self.feature_columns = []
@@ -379,16 +380,28 @@ class MLTradingModel:
 
         print(f"\n平均验证准确率: {np.mean(scores):.4f} (+/- {np.std(scores):.4f})")
 
-        # 特征重要性
-        feature_importance = pd.DataFrame({
-            'Feature': self.feature_columns,
-            'Importance': self.model.feature_importances_
-        }).sort_values('Importance', ascending=False)
+        # 特征重要性（使用 BaseModelProcessor 统一格式）
+        feat_imp = self.processor.analyze_feature_importance(
+            self.model.booster_,
+            self.feature_columns
+        )
+
+        # 计算特征影响方向（如果可能）
+        try:
+            contrib_values = self.model.booster_.predict(X, pred_contrib=True)
+            mean_contrib_values = np.mean(contrib_values[:, :-1], axis=0)
+            feat_imp['Mean_Contrib_Value'] = mean_contrib_values
+            feat_imp['Impact_Direction'] = feat_imp['Mean_Contrib_Value'].apply(
+                lambda x: 'Positive' if x > 0 else 'Negative'
+            )
+        except Exception as e:
+            print(f"⚠️ 特征贡献分析失败: {e}")
+            feat_imp['Impact_Direction'] = 'Unknown'
 
         print("\n特征重要性 Top 10:")
-        print(feature_importance.head(10))
+        print(feat_imp[['Feature', 'Gain_Importance', 'Impact_Direction']].head(10))
 
-        return feature_importance
+        return feat_imp
 
     def predict(self, code, predict_date=None, horizon=None):
         """预测单只股票
@@ -1065,15 +1078,26 @@ def main():
             print("\n" + "="*70)
             print("📊 特征重要性对比")
             print("="*70)
+
+            # 确保 Impact_Direction 列存在
+            if 'Impact_Direction' not in lgbm_feature_importance.columns:
+                lgbm_feature_importance['Impact_Direction'] = 'Unknown'
+            if 'Impact_Direction' not in gbdt_lr_feature_importance.columns:
+                gbdt_lr_feature_importance['Impact_Direction'] = 'Unknown'
+
+            # 合并特征重要性
             comparison = lgbm_feature_importance.merge(
                 gbdt_lr_feature_importance[['Feature', 'Gain_Importance', 'Impact_Direction']],
                 on='Feature',
                 suffixes=('_LGBM', '_GBDT_LR')
             )
-            comparison['Importance_Diff'] = abs(comparison['Importance'] - comparison['Gain_Importance'])
+
+            # 计算重要性差异（使用 Gain_Importance）
+            comparison['Importance_Diff'] = abs(comparison['Gain_Importance_LGBM'] - comparison['Gain_Importance_GBDT_LR'])
             comparison = comparison.sort_values('Importance_Diff', ascending=False)
+
             print("\nTop 10 特征重要性差异:")
-            print(comparison[['Feature', 'Importance', 'Gain_Importance', 'Impact_Direction']].head(10))
+            print(comparison[['Feature', 'Gain_Importance_LGBM', 'Gain_Importance_GBDT_LR', 'Impact_Direction_LGBM', 'Impact_Direction_GBDT_LR']].head(10))
 
         else:
             # 训练单个模型
