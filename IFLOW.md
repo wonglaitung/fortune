@@ -153,8 +153,10 @@
 11. 通过腾讯财经接口获取港股数据
 12. 人工智能股票交易盈利能力分析器
 13. 港股基本面数据获取器（财务指标、利润表、资产负债表、现金流量表）
-14. **机器学习交易模型**（基于LightGBM的次日涨跌预测模型）
+14. **机器学习交易模型**（基于LightGBM的多周期涨跌预测模型，支持1天、5天、20天预测）
 15. **策略对比分析**（对比ML模型与手工信号的预测准确性）
+16. **美股市场数据获取**（标普500、纳斯达克、VIX恐慌指数、美国国债收益率）
+17. **模型可解释性分析**（GBDT决策路径解析、特征重要性分析）
 
 ## 关键文件
 
@@ -172,8 +174,14 @@
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
 *   `fundamental_data.py`: 港股基本面数据获取模块，提供财务指标、利润表、资产负债表、现金流量表等数据获取功能，支持缓存机制。
-*   `ml_trading_model.py`: **机器学习交易模型**，基于LightGBM的二分类模型，用于预测次日涨跌，整合技术指标、基本面、资金流向等24个特征，平均验证准确率57.16%。
+*   `ml_trading_model.py`: **机器学习交易模型**，基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌，整合技术指标、基本面、资金流向、美股市场等34个特征，平均验证准确率64.67%。
 *   `compare_strategies.py`: **策略对比分析**，对比机器学习模型预测与主力资金追踪器手工信号的预测准确性，提供信号一致性分析。
+*   `compare_models.py`: **模型对比工具**，对比LGBM和GBDT+LR两种模型的预测结果。
+*   `us_market_data.py`: **美股市场数据获取模块**，提供标普500、纳斯达克、VIX恐慌指数、美国10年期国债收益率等数据。
+*   `base/base_model_processor.py`: **模型处理器基类**，提供模型训练、特征重要性分析、GBDT决策路径解析等功能。
+*   `train_and_predict_all.sh`: **完整训练和预测脚本**，支持1天、5天、20天三个周期的模型训练和预测，支持历史回测。
+*   `predict_all.sh`: **预测脚本**，使用已训练的模型进行预测，支持历史日期预测。
+*   `backtest_batch.sh`: **批量历史回测脚本**，批量预测多个历史日期，验证模型准确性。
 *   `send_alert.sh`: 本地定时执行脚本，按顺序执行个股新闻获取、恒生指数策略分析、主力资金追踪（使用昨天的日期）和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub（带重试机制）。
 *   `set_key.sh`: 环境变量配置，包含API密钥和163邮件配置。
@@ -377,27 +385,29 @@ scikit-learn
 7. **最新功能**：在报告中显示建议的买卖次数和实际执行的买卖次数，帮助用户了解AI建议频率与复盘执行差异。
 
 #### 机器学习交易模型
-1. **模型算法**：基于LightGBM的二分类模型，预测次日涨跌
-2. **特征工程**：整合24个特征
+1. **模型算法**：基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌
+2. **特征工程**：整合34个特征
    - 技术指标特征（15个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅等
    - 市场环境特征（3个）：恒生指数收益率、相对表现
    - 资金流向特征（5个）：价格位置、成交量信号、动量信号
-   - 基本面特征（8个，预留）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
+   - 基本面特征（8个）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
+   - **美股市场特征（10个）**：标普500收益率（1日、5日、20日）、纳斯达克收益率（1日、5日、20日）、VIX变化率、VIX比率、美国10年期国债收益率及其变化率
 3. **模型性能**：
-   - 平均验证准确率：57.16% (±2.55%)
+   - 平均验证准确率：64.67% (±5.3%) - 添加美股特征后提升13.2%
    - 使用时间序列交叉验证（5折）
-   - 特征重要性分析：恒生指数相关特征权重最高，成交量、波动率指标次之
+   - 特征重要性分析：美股市场特征在Top 10中占据4个位置
 4. **训练流程**：
    - 获取24只自选股的2年历史数据
-   - 计算所有技术指标特征
-   - 创建标签（次日涨跌）
+   - 计算所有技术指标、基本面、美股市场特征
+   - 创建标签（N天后涨跌）
    - 时间序列交叉验证
-   - 训练LightGBM模型
-   - 输出特征重要性
+   - 训练LightGBM和GBDT+LR模型
+   - 输出特征重要性和模型对比
 5. **使用场景**：
    - 作为手工信号的补充参考
    - 提供量化化的预测概率
    - 支持定期重训练适应市场变化
+   - 支持历史回测验证模型准确性
 6. **注意事项**：
    - 模型基于历史数据，市场结构变化可能导致失效
    - 需要定期验证实际预测准确率
@@ -419,6 +429,38 @@ scikit-learn
    - 定期跟踪ML模型实际准确率
 5. **数据文件**：
    - `data/strategy_comparison.csv` - 详细的对比结果
+
+#### 美股市场数据获取
+1. **数据源**：标普500指数 (^GSPC)、纳斯达克指数 (^IXIC)、VIX恐慌指数 (^VIX)、美国10年期国债收益率 (^TNX)
+2. **特征计算**：
+   - 标普500收益率（1日、5日、20日）
+   - 纳斯达克收益率（1日、5日、20日）
+   - VIX变化率、VIX与20日均线比率
+   - 美国10年期国债收益率及其变化率
+3. **数据缓存**：支持1小时缓存，避免重复请求
+4. **时区处理**：统一使用UTC时区，避免与港股数据冲突
+5. **使用场景**：
+   - 作为港股预测的外部市场环境特征
+   - 捕捉美股对港股的影响
+   - 提升模型预测准确率
+
+#### 模型可解释性分析
+1. **特征重要性分析**：
+   - LightGBM原生特征重要性
+   - GBDT+LR模型的特征重要性
+   - LR模型叶子节点系数分析
+2. **GBDT决策路径解析**：
+   - 自动解析每个叶子节点的决策路径
+   - 显示具体的特征名称和阈值
+   - 提供可解释的决策规则
+3. **可视化分析**：
+   - ROC曲线绘制
+   - 特征重要性排序图表
+   - 模型性能对比报告
+4. **输出文件**：
+   - `output/gbdt_feature_importance.csv` - GBDT特征重要性
+   - `output/lr_leaf_coefficients.csv` - LR叶子节点系数
+   - `output/roc_curve.png` - ROC曲线图
 
 #### 腾讯财经数据接口
 1. 通过腾讯财经API获取港股股票数据。
@@ -627,31 +669,88 @@ python ai_trading_analyzer.py --file data/simulation_transactions.csv
 
 #### 机器学习交易模型
 
-##### 本地运行
+##### 完整训练和预测（推荐）
 ```bash
-# 训练模型
-python ml_trading_model.py --mode train
+# 训练所有周期模型并预测（当前日期）
+./train_and_predict_all.sh
 
-# 预测股票
-python ml_trading_model.py --mode predict
+# 训练所有周期模型并预测（指定日期）
+./train_and_predict_all.sh --predict-date 2026-01-15
+
+# 限制训练数据范围
+./train_and_predict_all.sh --start-date 2024-01-01 --end-date 2024-12-31
+
+# 完整历史回测
+./train_and_predict_all.sh --backtest --start-date 2024-01-01 --end-date 2024-12-31 --predict-date 2024-12-31
+```
+
+##### 仅预测（使用已训练模型）
+```bash
+# 预测所有周期（当前日期）
+./predict_all.sh
+
+# 预测所有周期（指定日期）
+./predict_all.sh --predict-date 2026-01-15
+```
+
+##### 批量历史回测
+```bash
+# 回测最近10个交易日的次日涨跌
+./backtest_batch.sh
+
+# 回测最近20个交易日
+./backtest_batch.sh --days 20
+
+# 回测一周涨跌（5天）
+./backtest_batch.sh --horizon 5
+
+# 回测一个月涨跌（20天）
+./backtest_batch.sh --horizon 20
+
+# 回测指定日期
+./backtest_batch.sh --date 2026-01-15
+```
+
+##### 单独训练/预测
+```bash
+# 训练模型（指定周期）
+python ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
+
+# 预测股票（指定周期）
+python ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
 
 # 评估模型
-python ml_trading_model.py --mode evaluate
+python ml_trading_model.py --mode evaluate --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
 
 # 指定日期范围训练
-python ml_trading_model.py --mode train --start-date 2024-01-01 --end-date 2025-12-31
+python ml_trading_model.py --mode train --horizon 1 --start-date 2024-01-01 --end-date 2025-12-31
+
+# 指定预测日期
+python ml_trading_model.py --mode predict --horizon 1 --predict-date 2026-01-15
 ```
 
 ##### 命令行参数
 - `--mode`: 运行模式（train/predict/evaluate）
+- `--horizon`: 预测周期（1=次日，5=一周，20=一个月）
+- `--model-type`: 模型类型（lgbm/gbdt_lr/both）
 - `--model-path`: 模型保存/加载路径（默认：data/ml_trading_model.pkl）
 - `--start-date`: 训练开始日期 (YYYY-MM-DD)
 - `--end-date`: 训练结束日期 (YYYY-MM-DD)
+- `--predict-date`: 预测日期 (YYYY-MM-DD)
 
 ##### 输出文件
-- `data/ml_trading_model.pkl` - 训练好的模型
-- `data/ml_trading_model_importance.csv` - 特征重要性排名
-- `data/ml_trading_model_predictions.csv` - 预测结果
+- `data/ml_trading_model_lgbm_1d.pkl` - LightGBM次日涨跌模型
+- `data/ml_trading_model_lgbm_5d.pkl` - LightGBM一周涨跌模型
+- `data/ml_trading_model_lgbm_20d.pkl` - LightGBM一个月涨跌模型
+- `data/ml_trading_model_gbdt_lr_1d.pkl` - GBDT+LR次日涨跌模型
+- `data/ml_trading_model_gbdt_lr_5d.pkl` - GBDT+LR一周涨跌模型
+- `data/ml_trading_model_gbdt_lr_20d.pkl` - GBDT+LR一个月涨跌模型
+- `data/ml_trading_model_*_importance.csv` - 特征重要性排名
+- `data/ml_trading_model_*_predictions_*.csv` - 预测结果
+- `data/ml_trading_model_comparison.csv` - 模型对比结果
+- `output/gbdt_feature_importance.csv` - GBDT特征重要性
+- `output/lr_leaf_coefficients.csv` - LR叶子节点系数
+- `output/roc_curve.png` - ROC曲线图
 
 #### 策略对比分析
 
@@ -670,6 +769,17 @@ python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
 
 ##### 输出文件
 - `data/strategy_comparison.csv` - 策略对比结果
+
+#### 模型对比工具
+
+##### 本地运行
+```bash
+python compare_models.py
+```
+
+##### 输出
+- 控制台输出两种模型的预测对比
+- 包括预测一致性、概率差异等统计信息
 
 #### 通用技术分析工具
 
@@ -751,7 +861,8 @@ clear_cache()
 │   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
 │   ├── 黄金市场分析器 (@gold_analyzer.py)
 │   ├── 港股基本面数据获取器 (@fundamental_data.py)
-│   └── 港股股息信息追踪器 (@hsi_email.py 中的股息功能)
+│   ├── 港股股息信息追踪器 (@hsi_email.py 中的股息功能)
+│   └── 美股市场数据获取器 (@us_market_data.py)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
@@ -767,15 +878,24 @@ clear_cache()
 │   ├── 最近48小时连续交易信号分析器 (@analyze_last_48_hours_email.py)
 │   ├── 人工智能股票交易盈利能力分析器 (@ai_trading_analyzer.py)
 │   ├── 机器学习交易模型 (@ml_trading_model.py)
-│   │   ├── 特征工程（技术指标、市场环境、资金流向、基本面）
-│   │   ├── LightGBM二分类模型（预测次日涨跌）
-│   │   ├── 时间序列交叉验证
+│   │   ├── 特征工程（技术指标、市场环境、资金流向、基本面、美股市场）
+│   │   ├── LightGBM二分类模型（预测1天、5天、20天后涨跌）
+│   │   ├── GBDT+LR两阶段模型（预测1天、5天、20天后涨跌）
+│   │   ├── 时间序列交叉验证（5-Fold）
 │   │   └── 特征重要性分析
-│   └── 策略对比分析 (@compare_strategies.py)
-│       ├── ML模型预测 vs 手工信号对比
-│       └── 信号一致性分析
+│   ├── 策略对比分析 (@compare_strategies.py)
+│   │   ├── ML模型预测 vs 手工信号对比
+│   │   └── 信号一致性分析
+│   └── 模型对比工具 (@compare_models.py)
+│       └── LGBM vs GBDT+LR预测结果对比
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
+├── 模型层
+│   └── 模型处理器基类 (@base/base_model_processor.py)
+│       ├── 特征重要性分析
+│       ├── GBDT决策路径解析
+│       ├── LR叶子节点系数分析
+│       └── ROC曲线绘制
 └── 服务层
     ├── 大模型服务 (@llm_services/qwen_engine.py)
     └── 腾讯财经数据接口 (@tencent_finance.py)
@@ -811,9 +931,15 @@ clear_cache()
 - `simulation_portfolio.csv`: 投资组合价值变化记录
 - `southbound_data_cache.pkl`: 南向资金数据缓存
 - `fundamental_cache/`: 基本面数据缓存目录（包含财务指标、利润表、资产负债表、现金流量表的缓存文件）
-- `ml_trading_model.pkl`: 机器学习训练好的模型文件
-- `ml_trading_model_importance.csv`: 机器学习特征重要性排名
-- `ml_trading_model_predictions.csv`: 机器学习模型预测结果
+- `ml_trading_model_lgbm_1d.pkl`: LightGBM次日涨跌模型
+- `ml_trading_model_lgbm_5d.pkl`: LightGBM一周涨跌模型
+- `ml_trading_model_lgbm_20d.pkl`: LightGBM一个月涨跌模型
+- `ml_trading_model_gbdt_lr_1d.pkl`: GBDT+LR次日涨跌模型
+- `ml_trading_model_gbdt_lr_5d.pkl`: GBDT+LR一周涨跌模型
+- `ml_trading_model_gbdt_lr_20d.pkl`: GBDT+LR一个月涨跌模型
+- `ml_trading_model_*_importance.csv`: 机器学习特征重要性排名
+- `ml_trading_model_*_predictions_*.csv`: 机器学习模型预测结果
+- `ml_trading_model_comparison.csv`: 模型对比结果
 - `strategy_comparison.csv`: 策略对比分析结果（ML模型 vs 手工信号）
 
 ### 项目扩展性
@@ -862,11 +988,23 @@ clear_cache()
 41. **新增功能**：在hsi_email.py中集成中期评估指标（均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分、中期趋势健康度、中期可持续性、中期建议）到单个股票分析表格
 42. **新增功能**：在hsi_email.py中实现大模型多风格分析功能，支持四种投资风格和周期的分析报告（进取型短期、稳健型短期、稳健型中期、保守型中期）
 43. **配置优化**：添加ENABLE_ALL_ANALYSIS_STYLES配置开关，默认只生成稳健型短期和稳健型中期两种分析，可通过配置切换生成全部四种分析
-44. **新增功能**：实现机器学习交易模型（ml_trading_model.py），基于LightGBM预测次日涨跌，平均准确率57.16%
+44. **新增功能**：实现机器学习交易模型（ml_trading_model.py），基于LightGBM和GBDT+LR预测次日涨跌，平均准确率64.67%
 45. **新增功能**：实现策略对比分析（compare_strategies.py），对比ML模型与手工信号的预测准确性
 46. **依赖更新**：在requirements.txt中添加lightgbm和scikit-learn，支持机器学习功能
-47. **功能扩展**：机器学习模型支持24个特征（技术指标、市场环境、资金流向、基本面），提供特征重要性分析
+47. **功能扩展**：机器学习模型支持34个特征（技术指标、市场环境、资金流向、基本面、美股市场），提供特征重要性分析
 48. **功能扩展**：策略对比分析提供信号一致性统计，支持组合使用ML模型和手工信号
+49. **新增功能**：实现美股市场数据获取模块（us_market_data.py），提供标普500、纳斯达克、VIX、美国国债收益率等数据
+50. **新增功能**：机器学习模型集成美股市场特征，准确率从57.16%提升到64.67%（提升13.2%）
+51. **新增功能**：实现模型处理器基类（base/base_model_processor.py），提供特征重要性分析、GBDT决策路径解析等功能
+52. **新增功能**：实现完整训练和预测脚本（train_and_predict_all.sh），支持1天、5天、20天三个周期的模型训练和预测
+53. **新增功能**：实现预测脚本（predict_all.sh），使用已训练的模型进行预测，支持历史日期预测
+54. **新增功能**：实现批量历史回测脚本（backtest_batch.sh），批量预测多个历史日期，验证模型准确性
+55. **新增功能**：实现模型对比工具（compare_models.py），对比LGBM和GBDT+LR两种模型的预测结果
+56. **功能优化**：模型文件命名支持周期后缀（_1d、_5d、_20d），避免不同周期模型相互覆盖
+57. **功能扩展**：机器学习模型支持多周期预测（1天、5天、20天），适应不同投资需求
+58. **功能扩展**：支持历史回测功能，可基于任意历史日期进行预测，验证模型历史表现
+59. **新增功能**：GBDT决策路径解析，自动解析每个叶子节点的决策路径，显示具体的特征名称和阈值
+60. **新增功能**：支持时间序列交叉验证（5-Fold），评估模型在不同时期的稳定性
 
 ---
-最后更新：2026-01-18
+最后更新：2026-01-19

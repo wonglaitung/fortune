@@ -1,0 +1,75 @@
+name: ML Trading Model Prediction Alert
+
+on:
+  schedule:
+    # 每天香港时间 09:00 (UTC 01:00) 执行预测
+    - cron: '0 1 * * 1-5'
+    # 每天香港时间 16:30 (UTC 08:30) 执行预测
+    - cron: '30 8 * * 1-5'
+
+jobs:
+  predict-and-alert:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run prediction for 1 day horizon
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
+      
+      - name: Run prediction for 5 days horizon
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
+      
+      - name: Run prediction for 20 days horizon
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+
+      - name: Send prediction email
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python ml_prediction_email.py
+
+      - name: Upload prediction results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-predictions-${{ github.run_number }}
+          path: |
+            data/ml_trading_model_lgbm_predictions_1d.csv
+            data/ml_trading_model_lgbm_predictions_5d.csv
+            data/ml_trading_model_lgbm_predictions_20d.csv
+            data/ml_trading_model_gbdt_lr_predictions_1d.csv
+            data/ml_trading_model_gbdt_lr_predictions_5d.csv
+            data/ml_trading_model_gbdt_lr_predictions_20d.csv
+          retention-days: 30
