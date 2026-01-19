@@ -156,28 +156,63 @@ GBDT+LR 模型: 上涨 {gbdt_lr_up} 只, 下跌 {gbdt_lr_down} 只
             print("❌ 邮件配置不完整，跳过发送")
             return False
 
-        try:
-            # 创建邮件
-            msg = MIMEMultipart()
-            msg['From'] = self.email
-            msg['To'] = ', '.join(self.recipients)
-            msg['Subject'] = subject
-            msg['Date'] = formatdate(localtime=True)
+        max_retries = 3
+        retry_delay = 5  # 秒
 
-            # 添加内容（使用纯文本格式）
-            msg.attach(MIMEText(content, 'plain', 'utf-8'))
+        for attempt in range(max_retries):
+            try:
+                # 创建邮件
+                msg = MIMEMultipart()
+                msg['From'] = self.email
+                msg['To'] = ', '.join(self.recipients)
+                msg['Subject'] = subject
+                msg['Date'] = formatdate(localtime=True)
 
-            # 发送邮件
-            with smtplib.SMTP(self.smtp_server, 587) as server:
-                server.starttls()
-                server.login(self.email, self.app_password)
-                server.send_message(msg)
+                # 添加内容（使用纯文本格式）
+                msg.attach(MIMEText(content, 'plain', 'utf-8'))
 
-            print(f"✅ 邮件发送成功: {subject}")
-            return True
-        except Exception as e:
-            print(f"❌ 邮件发送失败: {e}")
-            return False
+                # 发送邮件
+                with smtplib.SMTP(self.smtp_server, 587, timeout=30) as server:
+                    server.set_debuglevel(0)  # 设置为1可以看到详细调试信息
+                    server.starttls()
+                    server.login(self.email, self.app_password)
+                    server.send_message(msg)
+
+                print(f"✅ 邮件发送成功: {subject}")
+                return True
+
+            except smtplib.SMTPAuthenticationError as e:
+                print(f"❌ 邮件认证失败: {e}")
+                print("💡 请检查邮箱地址和应用密码是否正确")
+                return False
+
+            except smtplib.SMTPConnectError as e:
+                print(f"❌ SMTP连接失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    print(f"⏳ {retry_delay}秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # 指数退避
+                else:
+                    print("💡 请检查SMTP服务器地址和网络连接")
+                    return False
+
+            except smtplib.SMTPException as e:
+                print(f"❌ SMTP错误 (尝试 {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    print(f"⏳ {retry_delay}秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    return False
+
+            except Exception as e:
+                print(f"❌ 邮件发送失败: {e}")
+                print(f"💡 错误类型: {type(e).__name__}")
+                return False
+
+        return False
 
     def send_prediction_alert(self, horizons=None):
         """发送预测结果邮件
