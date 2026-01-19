@@ -1,0 +1,7 @@
+export YAHOO_SMTP=smtp.163.com
+export YAHOO_EMAIL=13774896853@163.com
+export YAHOO_APP_PASSWORD=RAj7jiAygSNP4P97
+export RECIPIENT_EMAIL=wonglaitung@gmail.com
+export QWEN_API_KEY=sk-cc9410bc8d804720ad13d28a14fa7400
+echo $QWEN_API_KEY
+
