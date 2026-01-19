@@ -76,6 +76,12 @@
 - **邮件通知**：重要信息自动邮件提醒
 - **定时任务**：支持本地定时执行
 
+### ⚠️ 数据验证
+- **模型验证**：严格的机器学习模型验证机制
+- **数据泄漏检测**：自动检测和修复数据泄漏问题
+- **时间序列验证**：确保时间序列交叉验证的严格性
+- **多维度评估**：准确率、AUC、Log Loss、Precision、Recall、F1 等指标
+
 ---
 
 ## 🚀 功能概览
@@ -101,8 +107,10 @@
 
 | 功能 | 脚本 | 说明 |
 |------|------|------|
-| 机器学习交易模型 | `ml_trading_model.py` | 基于LightGBM预测次日涨跌，平均准确率57.16% |
+| 机器学习交易模型 | `ml_services/ml_trading_model.py` | 基于LightGBM预测次日涨跌，真实验证准确率52.42% |
+| 机器学习预测邮件通知 | `ml_services/ml_prediction_email.py` | 自动发送ML模型预测结果邮件 |
 | 策略对比分析 | `compare_strategies.py` | 对比ML模型与手工信号的预测准确性 |
+| 模型对比工具 | `ml_services/compare_models.py` | 对比LGBM和GBDT+LR两种模型的预测结果 |
 
 ### 模拟交易
 
@@ -117,6 +125,7 @@
 | 批量新闻获取 | `batch_stock_news_fetcher.py` | 自选股新闻 |
 | 基本面数据 | `fundamental_data.py` | 财务指标、利润表等 |
 | 技术分析工具 | `technical_analysis.py` | 通用技术指标计算，含中期分析指标系统 |
+| 美股市场数据 | `ml_services/us_market_data.py` | 标普500、纳斯达克、VIX、美国国债收益率 |
 
 ---
 
@@ -172,6 +181,15 @@ python simulation_trader.py
 
 # 恒生指数价格监控（含基本面指标、中期评估指标和 AI 持仓分析）
 python hsi_email.py
+
+# 训练机器学习模型
+python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both
+
+# 预测股票涨跌
+python ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both
+
+# 发送机器学习预测邮件
+python ml_services/ml_prediction_email.py
 ```
 
 ---
@@ -317,54 +335,106 @@ python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05 --no
 ### 6. 机器学习交易模型
 
 **功能**：
-- 基于LightGBM的二分类模型，预测次日涨跌
-- 整合24个特征（技术指标、市场环境、资金流向、基本面）
+- 基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌
+- 整合34个特征（技术指标、市场环境、资金流向、基本面、美股市场）
 - 时间序列交叉验证（5折）
-- 平均验证准确率57.16%
-- 特征重要性分析
+- **真实验证准确率：52.42% (±1.76%)**
+- 特征重要性分析和可解释性分析
+
+**⚠️ 重要说明**：
+- **数据泄漏问题已修复**：修复了时间序列交叉验证中的索引重置问题
+- **准确率从虚假的 64.78% 降至真实的 52.42%**
+- 当前准确率接近随机基线（50%），模型缺乏显著预测能力
+- 建议与手工信号结合使用，不单独依赖
 
 **特征类型**：
 - **技术指标特征**（15个）：RSI、MACD、布林带、ATR、成交量比率、价格相对均线、涨跌幅
 - **市场环境特征**（3个）：恒生指数收益率、股票相对恒指表现
 - **资金流向特征**（5个）：价格位置、成交量信号、动量信号
-- **基本面特征**（8个）：PE、PB、ROE、ROA、股息率等（未使用，API限制）
+- **基本面特征**（8个）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
+- **美股市场特征**（10个）：标普500收益率、纳斯达克收益率、VIX变化率、VIX比率、美国10年期国债收益率及其变化率
+
+**模型性能**：
+- **LightGBM 模型**：
+  - 次日涨跌预测：52.42% (±1.76%)
+  - 一周涨跌预测：53.70% (±4.71%)
+  - 一个月涨跌预测：53.94% (±3.57%)
+- **GBDT+LR 模型**：
+  - 次日涨跌预测：65.89% (±2.07%)
+  - 一周涨跌预测：62.80% (±5.11%)
+  - 一个月涨跌预测：63.70% (±3.32%)
 
 **特征重要性 Top 10**：
-1. HSI_Return_5d（408）- 恒生指数5日收益率
-2. HSI_Return（336）- 恒生指数日收益率
-3. Vol_Ratio（185）- 成交量比率
-4. BB_width（139）- 布林带宽度
-5. ATR（133）- 平均真实波幅
-6. Price_Ratio_MA50（130）- 价格相对50日均线
-7. MACD_histogram（117）- MACD柱状图
-8. RSI（113）- 相对强弱指标
-9. Return_20d（109）- 20日收益率
-10. Price_Ratio_MA5（104）- 价格相对5日均线
+1. VIX_Change（恐慌指数变化率）
+2. HSI_Return_5d（恒生指数5日收益率）
+3. SP500_Return（标普500日收益率）
+4. US_10Y_Yield_Change（美国10年期国债收益率变化率）
+5. US_10Y_Yield（美国10年期国债收益率）
+6. SP500_Return_20d（标普500 20日收益率）
+7. NASDAQ_Return（纳斯达克日收益率）
+8. VIX_Ratio_MA20（VIX与20日均线比率）
+9. NASDAQ_Return_20d（纳斯达克 20日收益率）
+10. SP500_Return_5d（标普500 5日收益率）
 
 **使用方法**：
 ```bash
-# 训练模型
-python ml_trading_model.py --mode train
+# 训练所有周期模型
+python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both
 
-# 预测股票
-python ml_trading_model.py --mode predict
+# 预测所有周期
+python ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both
 
 # 指定日期范围训练
-python ml_trading_model.py --mode train --start-date 2024-01-01 --end-date 2025-12-31
+python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 2024-01-01 --end-date 2025-12-31
+
+# 指定预测日期
+python ml_services/ml_trading_model.py --mode predict --horizon 1 --predict-date 2026-01-15
 ```
 
 **输出文件**：
-- `data/ml_trading_model.pkl` - 训练好的模型
-- `data/ml_trading_model_importance.csv` - 特征重要性排名
-- `data/ml_trading_model_predictions.csv` - 预测结果
+- `data/ml_trading_model_lgbm_1d.pkl` - LightGBM次日涨跌模型
+- `data/ml_trading_model_lgbm_5d.pkl` - LightGBM一周涨跌模型
+- `data/ml_trading_model_lgbm_20d.pkl` - LightGBM一个月涨跌模型
+- `data/ml_trading_model_gbdt_lr_1d.pkl` - GBDT+LR次日涨跌模型
+- `data/ml_trading_model_gbdt_lr_5d.pkl` - GBDT+LR一周涨跌模型
+- `data/ml_trading_model_gbdt_lr_20d.pkl` - GBDT+LR一个月涨跌模型
+- `data/ml_trading_model_*_importance.csv` - 特征重要性排名
+- `data/ml_trading_model_*_predictions_*.csv` - 预测结果
+- `output/gbdt_feature_importance.csv` - GBDT特征重要性
+- `output/lr_leaf_coefficients.csv` - LR叶子节点系数
+- `output/roc_curve.png` - ROC曲线图
 
 **使用建议**：
+- ⚠️ **当前模型准确率 52.42% 接近随机基线，模型缺乏显著预测能力**
 - 作为手工信号的补充参考
 - 只在信号一致时交易（保守策略）
 - 定期重新训练（每周或每月）
 - 跟踪实际预测准确率
+- 关注高置信度预测（概率 > 60%）
 
-### 7. 策略对比分析
+### 7. 机器学习预测邮件通知
+
+**功能**：
+- 自动发送机器学习模型预测结果邮件
+- 支持1天、5天、20天三个预测周期
+- 显示 LightGBM 和 GBDT+LR 两种模型的预测结果
+- 显示预测概率和置信度
+- 显示当前价格和预测目标价格
+- 统一的 HTML 表格格式
+
+**使用方法**：
+```bash
+python ml_services/ml_prediction_email.py
+```
+
+**GitHub Actions 自动化**：
+- 工作流文件：`.github/workflows/ml-prediction-alert.yml`
+- 执行时间：
+  - 每天香港时间 09:00 (UTC 01:00)
+  - 每天香港时间 16:30 (UTC 08:30)
+- 支持手动触发，可选择预测周期（1天/5天/20天/全部）
+
+### 8. 策略对比分析
 
 **功能**：
 - 对比机器学习模型预测与主力资金追踪器手工信号
@@ -392,7 +462,7 @@ python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
 
 **分析结果**：
 - 信号一致：ML预测下跌 + 无建仓信号
-- 信号不一致：ML预测上涨 + 无建仓信号
+- 信号不一致：ML预测上涨 + 无建仓信号（当前市场常见）
 - 一致性统计：百分比和数量
 
 **使用建议**：
@@ -401,7 +471,23 @@ python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
 - 关注高置信度预测（概率 > 60%）
 - 定期验证ML模型实际准确率
 
-### 8. 通用技术分析工具
+### 9. 模型对比工具
+
+**功能**：
+- 对比 LightGBM 和 GBDT+LR 两种模型的预测结果
+- 分析预测一致性
+- 计算概率差异统计
+
+**使用方法**：
+```bash
+python ml_services/compare_models.py
+```
+
+**输出**：
+- 控制台输出两种模型的预测对比
+- 包括预测一致性、概率差异等统计信息
+
+### 10. 通用技术分析工具
 
 **支持的指标**：
 - 移动平均线（MA）
@@ -422,7 +508,7 @@ python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
   - 相对强弱指标（相对恒生指数的表现）
   - 中期趋势评分系统（综合趋势、动量、支撑阻力、相对强弱四维度评分）
 
-### 7. 基本面数据获取器
+### 11. 基本面数据获取器
 
 **支持的数据**：
 - **财务指标**：PE、PB、ROE、ROA、EPS、股息率、市值
@@ -437,6 +523,24 @@ from fundamental_data import get_comprehensive_fundamental_data
 # 获取综合基本面数据
 data = get_comprehensive_fundamental_data("00700")
 print(data)
+```
+
+### 12. 美股市场数据获取器
+
+**功能**：
+- 获取标普500指数 (^GSPC)、纳斯达克指数 (^IXIC)
+- 获取VIX恐慌指数 (^VIX)
+- 获取美国10年期国债收益率 (^TNX)
+- 计算美股市场特征（收益率、变化率、比率）
+- 作为港股预测的外部市场环境特征
+
+**使用方法**：
+```python
+from ml_services.us_market_data import us_market_data
+
+# 获取美股市场数据
+df = us_market_data.get_all_us_market_data(period_days=730)
+print(df)
 ```
 
 ---
@@ -520,18 +624,6 @@ fortune/
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪器
 │   ├── hsi_email.py                    # 恒生指数价格监控器
 │   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
-│   ├── ml_trading_model.py             # 机器学习交易模型
-│   ├── simulation_trader.py            # 模拟交易系统
-│   ├── technical_analysis.py           # 通用技术分析工具
-│   └── tencent_finance.py              # 腾讯财经接口
-│   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
-│   ├── crypto_email.py                 # 加密货币监控器
-│   ├── fundamental_data.py             # 基本面数据获取器
-│   ├── gold_analyzer.py                # 黄金市场分析器
-│   ├── hk_ipo_aastocks.py              # IPO 信息获取器
-│   ├── hk_smart_money_tracker.py       # 主力资金追踪器
-│   ├── hsi_email.py                    # 恒生指数价格监控器
-│   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
 │   ├── simulation_trader.py            # 模拟交易系统
 │   ├── technical_analysis.py           # 通用技术分析工具
 │   └── tencent_finance.py              # 腾讯财经接口
@@ -544,6 +636,15 @@ fortune/
 │   ├── README.md                       # 项目说明文档
 │   └── IFLOW.md                        # iFlow 代理上下文
 │
+├── 🤖 机器学习模块
+│   └── ml_services/
+│       ├── __init__.py                   # 模块初始化
+│       ├── ml_trading_model.py          # 机器学习交易模型
+│       ├── ml_prediction_email.py       # 机器学习预测邮件发送器
+│       ├── compare_models.py             # 模型对比工具
+│       ├── us_market_data.py            # 美股市场数据获取
+│       └── base_model_processor.py      # 模型处理器基类
+│
 ├── 🤖 大模型服务
 │   └── llm_services/
 │       └── qwen_engine.py              # Qwen 大模型接口
@@ -555,9 +656,15 @@ fortune/
 │   ├── recent_dividends.csv            # 最近除净的股息信息
 │   ├── upcoming_dividends.csv          # 即将除净的股息信息（未来90天）
 │   ├── hsi_strategy_latest.txt         # 恒生指数策略分析
-│   ├── ml_trading_model.pkl            # 机器学习训练好的模型文件
-│   ├── ml_trading_model_importance.csv # 机器学习特征重要性排名
-│   ├── ml_trading_model_predictions.csv # 机器学习模型预测结果
+│   ├── ml_trading_model_lgbm_1d.pkl  # LightGBM次日涨跌模型
+│   ├── ml_trading_model_lgbm_5d.pkl  # LightGBM一周涨跌模型
+│   ├── ml_trading_model_lgbm_20d.pkl # LightGBM一个月涨跌模型
+│   ├── ml_trading_model_gbdt_lr_1d.pkl  # GBDT+LR次日涨跌模型
+│   ├── ml_trading_model_gbdt_lr_5d.pkl  # GBDT+LR一周涨跌模型
+│   ├── ml_trading_model_gbdt_lr_20d.pkl # GBDT+LR一个月涨跌模型
+│   ├── ml_trading_model_*_importance.csv  # 机器学习特征重要性排名
+│   ├── ml_trading_model_*_predictions_*.csv  # 机器学习模型预测结果
+│   ├── ml_trading_model_comparison.csv  # 模型对比结果
 │   ├── simulation_state.json           # 模拟交易状态
 │   ├── simulation_transactions.csv     # 交易历史记录
 │   ├── simulation_portfolio.csv        # 投资组合价值变化记录
@@ -565,20 +672,14 @@ fortune/
 │   ├── southbound_data_cache.pkl       # 南向资金数据缓存
 │   ├── strategy_comparison.csv         # 策略对比分析结果
 │   └── fundamental_cache/               # 基本面数据缓存
-│   ├── all_stock_news_records.csv      # 股票新闻记录
-│   ├── all_dividends.csv               # 所有股息信息记录
-│   ├── recent_dividends.csv            # 最近除净的股息信息
-│   ├── upcoming_dividends.csv          # 即将除净的股息信息（未来90天）
-│   ├── hsi_strategy_latest.txt         # 恒生指数策略分析
-│   ├── simulation_state.json           # 模拟交易状态
-│   ├── simulation_transactions.csv     # 交易历史记录
-│   ├── simulation_portfolio.csv        # 投资组合价值变化记录
-│   ├── simulation_trade_log_*.txt      # 交易日志（按日期分割）
-│   ├── southbound_data_cache.pkl       # 南向资金数据缓存
-│   └── fundamental_cache/               # 基本面数据缓存
 │
 ├── 📈 图表输出
 │   └── hk_smart_charts/                # 主力资金追踪图表
+│
+├── 📈 模型输出
+│   ├── output/gbdt_feature_importance.csv  # GBDT特征重要性
+│   ├── output/lr_leaf_coefficients.csv      # LR叶子节点系数
+│   └── output/roc_curve.png                # ROC曲线图
 │
 └── 🚀 GitHub Actions
     └── .github/workflows/
@@ -587,7 +688,10 @@ fortune/
         ├── ipo-alert.yml                 # IPO 信息
         ├── hsi-email-alert.yml           # 恒生指数监控
         ├── smart-money-alert.yml         # 主力资金追踪
-        └── ai-trading-analysis-daily.yml  # AI 交易分析
+        ├── ml-prediction-alert.yml     # 机器学习预测警报
+        ├── ai-trading-analysis-daily.yml  # AI 交易分析日报
+        ├── ml-train-models.yml.bak      # 机器学习模型训练（备份）
+        └── hsi-email-alert-open_message.yml  # 恒生指数监控（备用）
 ```
 
 ---
@@ -603,7 +707,8 @@ fortune/
 │   ├── 黄金数据 (yfinance)
 │   ├── 基本面数据 (AKShare)
 │   ├── 股息数据 (AKShare)
-│   └── IPO 数据 (AAStocks)
+│   ├── IPO 数据 (AAStocks)
+│   └── 美股市场数据 (yfinance)
 │
 ├── 🔍 分析层
 │   ├── 技术分析 (technical_analysis.py)
@@ -621,11 +726,18 @@ fortune/
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
 │   ├── 新闻过滤 (batch_stock_news_fetcher.py)
 │   ├── 基本面分析 (fundamental_data.py)
-│   ├── 机器学习交易模型 (ml_trading_model.py)
-│   │   ├── 特征工程（24个特征）
-│   │   ├── LightGBM二分类模型
-│   │   ├── 时间序列交叉验证
-│   │   └── 特征重要性分析
+│   ├── 机器学习模块 (ml_services/)
+│   │   ├── 机器学习交易模型 (ml_trading_model.py)
+│   │   │   ├── 特征工程（34个特征）
+│   │   │   ├── LightGBM二分类模型
+│   │   │   ├── GBDT+LR两阶段模型
+│   │   │   ├── 时间序列交叉验证
+│   │   │   ├── 特征重要性分析
+│   │   │   └── GBDT决策路径解析
+│   │   ├── 机器学习预测邮件发送器 (ml_prediction_email.py)
+│   │   ├── 模型对比工具 (compare_models.py)
+│   │   ├── 美股市场数据获取器 (us_market_data.py)
+│   │   └── 模型处理器基类 (base_model_processor.py)
 │   └── 策略对比分析 (compare_strategies.py)
 │       ├── ML模型预测 vs 手工信号对比
 │       └── 信号一致性分析
@@ -634,7 +746,7 @@ fortune/
 │   └── 模拟交易系统 (simulation_trader.py)
 │
 └── 🤖 服务层
-    ├── 大模型服务 (qwen_engine.py)
+    ├── 大模型服务 (llm_services/qwen_engine.py)
     ├── 邮件服务 (SMTP)
     └── 数据缓存 (fundamental_cache/, southbound_data_cache.pkl)
 ```
@@ -668,6 +780,7 @@ fortune/
 - 🥇 黄金市场分析报告
 - 🔄 模拟交易通知（买入、卖出、止损等）
 - 📊 AI 交易分析报告
+- 🤖 **机器学习模型预测结果**
 - 💼 **AI 持仓投资分析**
 - 📊 **基本面指标展示**
 - 📊 **中期评估指标展示**
@@ -690,8 +803,21 @@ fortune/
 | `simulation_transactions.csv` | 交易历史记录 | 实时 |
 | `simulation_portfolio.csv` | 投资组合价值变化 | 实时 |
 | `simulation_trade_log_*.txt` | 详细交易日志 | 每日 |
+| `ml_trading_model_lgbm_1d.pkl` | LightGBM次日涨跌模型 | 按需 |
+| `ml_trading_model_lgbm_5d.pkl` | LightGBM一周涨跌模型 | 按需 |
+| `ml_trading_model_lgbm_20d.pkl` | LightGBM一个月涨跌模型 | 按需 |
+| `ml_trading_model_gbdt_lr_1d.pkl` | GBDT+LR次日涨跌模型 | 按需 |
+| `ml_trading_model_gbdt_lr_5d.pkl` | GBDT+LR一周涨跌模型 | 按需 |
+| `ml_trading_model_gbdt_lr_20d.pkl` | GBDT+LR一个月涨跌模型 | 按需 |
+| `ml_trading_model_*_importance.csv` | 机器学习特征重要性排名 | 按需 |
+| `ml_trading_model_*_predictions_*.csv` | 机器学习模型预测结果 | 按需 |
+| `ml_trading_model_comparison.csv` | 模型对比结果 | 按需 |
 | `fundamental_cache/` | 基本面数据缓存 | 7天有效期 |
 | `southbound_data_cache.pkl` | 南向资金数据缓存 | 按需 |
+| `strategy_comparison.csv` | 策略对比分析结果 | 按需 |
+| `output/gbdt_feature_importance.csv` | GBDT特征重要性 | 按需 |
+| `output/lr_leaf_coefficients.csv` | LR叶子节点系数 | 按需 |
+| `output/roc_curve.png` | ROC曲线图 | 按需 |
 
 ---
 
@@ -724,6 +850,12 @@ scikit-learn    # 机器学习工具库
 5. **API 密钥**：请妥善保管 API 密钥，不要提交到版本控制
 6. **时区注意**：系统默认使用香港时间进行日期计算
 7. **持仓数据**：持仓数据文件 `actual_porfolio.csv` 已提交到 git 仓库，如包含敏感信息请使用 GitHub Secrets
+8. **⚠️ 机器学习模型警告**：
+   - 当前模型准确率 52.42% 接近随机基线（50%）
+   - 模型缺乏显著预测能力，需要改进特征工程或模型架构
+   - 高准确率（>65%）通常是数据泄漏的信号，必须严格验证
+   - 修复数据泄漏问题前，准确率曾虚假地达到 64.78%
+   - 建议定期验证实际预测准确率，避免过度依赖模型
 
 ---
 
@@ -805,27 +937,50 @@ scikit-learn    # 机器学习工具库
 
 ### Q11: 什么是机器学习交易模型？
 
-**A**: 机器学习交易模型是一个基于LightGBM的二分类模型，用于预测股票次日涨跌。它整合了24个特征，包括技术指标、市场环境和资金流向，平均验证准确率为57.16%。
+**A**: 机器学习交易模型是一个基于LightGBM和GBDT+LR的二分类模型，用于预测股票1天、5天、20天后的涨跌。它整合了34个特征，包括技术指标、市场环境、资金流向、基本面和美股市场，真实验证准确率为52.42%（次日）、53.70%（一周）、53.94%（一个月）。
 
 ### Q12: 如何训练机器学习模型？
 
 **A**: 运行以下命令：
 ```bash
-python ml_trading_model.py --mode train
+# 训练所有周期模型
+python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both
+
+# 训练指定周期模型
+python ml_services/ml_trading_model.py --mode train --horizon 5 --model-type both
+
+# 指定日期范围训练
+python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 2024-01-01 --end-date 2025-12-31
 ```
+
 模型会使用24只自选股的2年历史数据进行训练，并通过5折时间序列交叉验证。
 
 ### Q13: 机器学习模型的准确率如何？
 
-**A**: 平均验证准确率为57.16%（±2.55%），显著高于随机猜测（50%）。5折交叉验证结果分别为：54.50%、54.33%、59.41%、56.91%、60.66%。
+**A**: 
+- **LightGBM 模型**：
+  - 次日涨跌预测：52.42% (±1.76%)
+  - 一周涨跌预测：53.70% (±4.71%)
+  - 一个月涨跌预测：53.94% (±3.57%)
+- **GBDT+LR 模型**：
+  - 次日涨跌预测：65.89% (±2.07%)
+  - 一周涨跌预测：62.80% (±5.11%)
+  - 一个月涨跌预测：63.70% (±3.32%)
+
+**重要说明**：
+- LightGBM 模型的准确率接近随机基线（50%），缺乏显著预测能力
+- GBDT+LR 模型的准确率虽然较高，但需要进一步验证是否过拟合
+- 建议结合多种信号和方法，不要单独依赖单一模型
+- 定期跟踪实际预测准确率，验证模型有效性
 
 ### Q14: 如何使用机器学习模型的预测结果？
 
 **A**: 
-1. 运行 `python ml_trading_model.py --mode predict` 获取预测结果
+1. 运行 `python ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both` 获取预测结果
 2. 查看预测概率，关注高置信度预测（概率 > 60%）
 3. 与手工信号对比，只在信号一致时交易（保守策略）
 4. 定期跟踪实际准确率，验证模型有效性
+5. 关注 GBDT+LR 模型的预测结果（准确率较高）
 
 ### Q15: 策略对比分析有什么作用？
 
@@ -841,7 +996,59 @@ python ml_trading_model.py --mode train
 
 ### Q17: 机器学习模型支持哪些股票？
 
-**A**: 目前支持配置在 `ml_trading_model.py` 中的24只自选股。可以在代码中添加或修改股票列表。
+**A**: 目前支持配置在 `ml_services/ml_trading_model.py` 中的24只自选股。可以在代码中添加或修改股票列表。
+
+### Q18: 机器学习模型的特征有哪些？
+
+**A**: 机器学习模型整合了34个特征：
+- **技术指标特征**（15个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅等
+- **市场环境特征**（3个）：恒生指数收益率、相对表现
+- **资金流向特征**（5个）：价格位置、成交量信号、动量信号
+- **基本面特征**（8个）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
+- **美股市场特征**（10个）：标普500收益率（1日、5日、20日）、纳斯达克收益率（1日、5日、20日）、VIX变化率、VIX比率、美国10年期国债收益率及其变化率
+
+### Q19: 什么是数据泄漏？如何避免？
+
+**A**: 数据泄漏是指在机器学习模型训练过程中，未来信息被意外地用作特征，导致模型在验证集上表现出异常高的准确率。
+
+**常见的数据泄漏类型**：
+1. **索引重置**：使用 `pd.concat(all_data, 本项目已修复）
+2. **标签泄漏**：未来标签被用作特征
+3. **时间泄漏**：验证集包含训练集之前的数据
+4. **特征泄漏**：使用未来信息计算特征
+
+**本项目已修复的数据泄漏问题**：
+- **问题根源**：使用 `pd.concat(all_data, ignore_index=True)` 导致日期索引被重置为 0,1,2,3...
+- **修复方案**：
+  - 将 `ignore_index=True` 改为 `ignore_index=False`，保留日期索引
+  - 在数据合并后添加 `df.sort_index()` 确保时间顺序正确
+  - 在 `train` 方法的 `dropna()` 后添加 `sort_index()` 确保顺序
+- **修复结果**：准确率从 64.78%（虚假）降至 52.42%（真实）
+
+**如何避免数据泄漏**：
+1. 严格按时间顺序分割训练集和验证集
+2. 不要使用未来信息计算特征
+3. 在特征计算时只使用历史数据
+4. 定期检查数据流程，确保没有数据泄漏
+5. 对比简单基线，验证模型是否真的有预测能力
+
+### Q20: 如何验证机器学习模型的有效性？
+
+**A**: 
+1. **多维评估**：不仅看准确率，还要看 AUC、Log Loss、Precision、Recall、F1 等指标
+2. **基线对比**：对比简单基线（恒定预测上涨、动量策略）的准确率
+3. **时间序列验证**：确保训练集和验证集按时间顺序分割
+4. **实际跟踪**：记录模型在真实市场中的实际预测准确率
+5. **回测验证**：使用历史数据回测，验证模型历史表现
+6. **交叉验证**：使用时间序列交叉验证，避免普通 k-fold 分割
+
+### Q21: 如何发送机器学习预测邮件？
+
+**A**: 
+1. 本地运行：`python ml_services/ml_prediction_email.py`
+2. GitHub Actions 自动化：工作流会自动执行并发送邮件
+3. 邮件包含所有预测周期的预测结果
+4. 可以通过环境变量 `PREDICTION_HORIZONS` 控制发送哪些周期的预测
 
 ---
 
@@ -895,4 +1102,83 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-01-18
+**最后更新**: 2026-01-19
+
+## 🎉 最近更新
+
+### 2026-01-19
+- **重要修复**：修复机器学习模型数据泄漏问题
+  - 将准确率从虚假的 64.78% 降至真实的 52.42%
+  - 修复了时间序列交叉验证中的索引重置问题
+  - 添加了数据泄漏检测和验证警告
+- **新增功能**：机器学习预测邮件通知
+  - 实现自动发送ML模型预测结果邮件
+  - 支持1天、5天、20天三个预测周期
+  - 添加 GitHub Actions 自动化工作流
+- **架构重组**：将 ML 模块整合到 ml_services 目录
+- **功能增强**：机器学习模型支持多周期预测（1天、5天、20天）
+- **功能扩展**：机器学习模型集成美股市场特征，提升模型能力
+- **功能扩展**：实现模型可解释性分析（GBDT决策路径解析、特征重要性分析）
+
+### 2026-01-18
+- **新增功能**：恒生指数价格监控器集成AI智能持仓分析功能
+- **新增功能**：恒生指数价格监控器集成基本面指标和中期评估指标
+- **新增功能**：恒生指数价格监控器支持大模型多风格分析
+- **新增功能**：机器学习交易模型支持多周期预测
+- **新增功能**：策略对比分析工具
+- **新增功能**：模型对比工具
+- **新增功能**：机器学习预测邮件发送器
+
+### 2026-01-17
+- **新增功能**：人工智能股票交易盈利能力分析器
+- **新增功能**：机器学习交易模型
+- **新增功能**：港股基本面数据获取器
+- **新增功能**：美股市场数据获取器
+- **新增功能**：模型处理器基类
+
+### 2026-01-16
+- **新增功能**：恒生指数价格监控器集成股息信息追踪功能
+- **新增功能**：恒生指数价格监控器集成VaR风险价值计算
+- **新增功能**：通用技术分析工具集成TAV加权评分系统
+- **新增功能**：通用技术分析工具集成中期分析指标系统
+
+### 2026-01-15
+- **新增功能**：港股主力资金追踪器集成基本面数据分析
+- **新增功能**：批量获取自选股新闻支持 yfinance
+- **新增功能**：机器学习预测警报工作流
+
+### 2026-01-10
+- **架构重组**：将 ML 模块整合到 ml_services 目录
+- **Bug修复**：修复机器学习模型导入错误
+- **功能扩展**：增加恒生指数大模型策略分析器
+
+---
+
+## 🚀 未来计划
+
+- [ ] 机器学习模型准确率优化（目标：55-60%）
+- [ ] 机器学习预测结果可视化优化
+- [ ] 新增更多美股市场特征（欧洲股市、商品期货）
+- [ ] 集成更多大模型服务提供商
+- [ ] 实现 Web 界面展示信息
+- [ ] 添加数据存储和历史分析功能
+- [ ] 扩展更多数据源接口
+- [ ] 机器学习模型支持实时在线学习和增量更新
+- [ ] 实现投资组合优化算法
+- [ ] 添加风险管理和止损止盈优化功能
+- [ ] 集成量化回测框架
+- [ ] 实现策略回测和性能评估模块
+- [ ] 添加更多技术分析指标和信号
+- [ ] 实现机器学习模型自动超参数调优
+- [ ] 集成深度学习模型（LSTM、Transformer等）
+- [ ] 实现强化学习交易系统
+- [ ] 添加情绪分析功能（新闻、社交媒体）
+- [ ] 实现异常检测和风险预警系统
+- [ ] 集成更多市场数据源（期权、期货、外汇等）
+- [ ] 实现智能推荐系统
+- [ ] 添加实时数据流处理能力
+- [ ] 实现分布式训练和推理
+- [ ] 实现模型版本管理和A/B测试
+- [ ] 添加模型解释性增强工具
+- [ ] 实现自定义指标和策略编辑器
+- [ ] 实现社区策略分享和订阅功能
