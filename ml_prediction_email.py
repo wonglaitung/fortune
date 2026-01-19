@@ -156,27 +156,45 @@ GBDT+LR 模型: 上涨 {gbdt_lr_up} 只, 下跌 {gbdt_lr_down} 只
             print("❌ 邮件配置不完整，跳过发送")
             return False
 
+        # 确定SMTP端口和是否使用SSL
+        if "163.com" in self.smtp_server:
+            smtp_port = 465
+            use_ssl = True
+        elif "gmail.com" in self.smtp_server:
+            smtp_port = 587
+            use_ssl = False
+        else:
+            smtp_port = 587
+            use_ssl = False
+
+        # 创建邮件
+        msg = MIMEMultipart()
+        msg['From'] = f'<{self.email}>'
+        msg['To'] = ", ".join(self.recipients)
+        msg['Subject'] = subject
+
+        # 添加内容（使用纯文本格式）
+        msg.attach(MIMEText(content, 'plain', 'utf-8'))
+
+        # 重试机制
         max_retries = 3
         retry_delay = 5  # 秒
 
         for attempt in range(max_retries):
             try:
-                # 创建邮件
-                msg = MIMEMultipart()
-                msg['From'] = self.email
-                msg['To'] = ', '.join(self.recipients)
-                msg['Subject'] = subject
-                msg['Date'] = formatdate(localtime=True)
-
-                # 添加内容（使用纯文本格式）
-                msg.attach(MIMEText(content, 'plain', 'utf-8'))
-
-                # 发送邮件
-                with smtplib.SMTP(self.smtp_server, 587, timeout=30) as server:
-                    server.set_debuglevel(0)  # 设置为1可以看到详细调试信息
+                if use_ssl:
+                    # 使用SMTP_SSL（163.com需要）
+                    server = smtplib.SMTP_SSL(self.smtp_server, smtp_port, timeout=30)
+                    server.login(self.email, self.app_password)
+                    server.sendmail(self.email, self.recipients, msg.as_string())
+                    server.quit()
+                else:
+                    # 使用SMTP + STARTTLS
+                    server = smtplib.SMTP(self.smtp_server, smtp_port, timeout=30)
                     server.starttls()
                     server.login(self.email, self.app_password)
-                    server.send_message(msg)
+                    server.sendmail(self.email, self.recipients, msg.as_string())
+                    server.quit()
 
                 print(f"✅ 邮件发送成功: {subject}")
                 return True
@@ -210,8 +228,15 @@ GBDT+LR 模型: 上涨 {gbdt_lr_up} 只, 下跌 {gbdt_lr_down} 只
             except Exception as e:
                 print(f"❌ 邮件发送失败: {e}")
                 print(f"💡 错误类型: {type(e).__name__}")
-                return False
+                if attempt < max_retries - 1:
+                    print(f"⏳ {retry_delay}秒后重试...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    return False
 
+        print("❌ 3次尝试后仍无法发送邮件")
         return False
 
     def send_prediction_alert(self, horizons=None):
