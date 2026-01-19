@@ -293,24 +293,11 @@ class MLTradingModel:
         if not all_data:
             raise ValueError("没有获取到任何数据")
 
-        # 合并所有数据
-        df = pd.concat(all_data, ignore_index=True)
+        # 合并所有数据（保留日期索引，不重置索引）
+        df = pd.concat(all_data, ignore_index=False)
 
-        # 过滤日期范围
-        # 确保索引是 datetime 类型
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-
-        # 转换过滤日期为 datetime 类型
-        if start_date:
-            start_date = pd.to_datetime(start_date)
-            df = df[df.index >= start_date]
-        if end_date:
-            end_date = pd.to_datetime(end_date)
-            df = df[df.index <= end_date]
-
-        return df
-
+        # 按日期索引排序，确保时间顺序正确
+        df = df.sort_index()
     def get_feature_columns(self, df):
         """获取特征列"""
         # 排除非特征列
@@ -325,7 +312,7 @@ class MLTradingModel:
 
     def train(self, codes, start_date=None, end_date=None, horizon=1):
         """训练模型
-        
+
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
@@ -337,6 +324,9 @@ class MLTradingModel:
 
         # 删除包含NaN的行
         df = df.dropna()
+
+        # 确保数据按日期索引排序（dropna 可能会改变顺序）
+        df = df.sort_index()
 
         if len(df) < 100:
             raise ValueError(f"数据量不足，只有 {len(df)} 条记录")
@@ -594,24 +584,11 @@ class GBDTLRModel:
         if not all_data:
             raise ValueError("没有获取到任何数据")
 
-        # 合并所有数据
-        df = pd.concat(all_data, ignore_index=True)
+        # 合并所有数据（保留日期索引，不重置索引）
+        df = pd.concat(all_data, ignore_index=False)
 
-        # 过滤日期范围
-        # 确保索引是 datetime 类型
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-
-        # 转换过滤日期为 datetime 类型
-        if start_date:
-            start_date = pd.to_datetime(start_date)
-            df = df[df.index >= start_date]
-        if end_date:
-            end_date = pd.to_datetime(end_date)
-            df = df[df.index <= end_date]
-
-        return df
-
+        # 按日期索引排序，确保时间顺序正确
+        df = df.sort_index()
     def get_feature_columns(self, df):
         """获取特征列"""
         # 排除非特征列
@@ -626,7 +603,7 @@ class GBDTLRModel:
 
     def train(self, codes, start_date=None, end_date=None, horizon=1):
         """训练 GBDT + LR 模型
-        
+
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
@@ -643,6 +620,9 @@ class GBDTLRModel:
 
         # 删除包含NaN的行
         df = df.dropna()
+
+        # 确保数据按日期索引排序（dropna 可能会改变顺序）
+        df = df.sort_index()
 
         if len(df) < 100:
             raise ValueError(f"数据量不足，只有 {len(df)} 条记录")
