@@ -12,6 +12,9 @@ import argparse
 from datetime import datetime, timedelta
 import pickle
 
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 warnings.filterwarnings('ignore')
 
 import pandas as pd
@@ -26,8 +29,8 @@ import lightgbm as lgb
 from tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 from technical_analysis import TechnicalAnalyzer
 from fundamental_data import get_comprehensive_fundamental_data
-from base.base_model_processor import BaseModelProcessor
-from us_market_data import us_market_data
+from .base_model_processor import BaseModelProcessor
+from .us_market_data import us_market_data
 
 # 自选股列表
 WATCHLIST = [
