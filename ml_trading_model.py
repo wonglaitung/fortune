@@ -27,6 +27,7 @@ from tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 from technical_analysis import TechnicalAnalyzer
 from fundamental_data import get_comprehensive_fundamental_data
 from base.base_model_processor import BaseModelProcessor
+from us_market_data import us_market_data
 
 # 自选股列表
 WATCHLIST = [
@@ -157,8 +158,14 @@ class FeatureEngineer:
 
         return df
 
-    def create_market_environment_features(self, stock_df, hsi_df):
-        """创建市场环境特征"""
+    def create_market_environment_features(self, stock_df, hsi_df, us_market_df=None):
+        """创建市场环境特征（包含港股和美股）
+        
+        Args:
+            stock_df: 股票数据
+            hsi_df: 恒生指数数据
+            us_market_df: 美股市场数据（可选）
+        """
         if stock_df.empty or hsi_df.empty:
             return stock_df
 
@@ -166,11 +173,29 @@ class FeatureEngineer:
         hsi_df['HSI_Return'] = hsi_df['Close'].pct_change()
         hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
 
-        # 合并数据
+        # 合并恒生指数数据
         stock_df = stock_df.merge(hsi_df[['HSI_Return', 'HSI_Return_5d']], left_index=True, right_index=True, how='left')
 
-        # 相对表现
+        # 相对表现（相对于恒生指数）
         stock_df['Relative_Return'] = stock_df['Return_5d'] - stock_df['HSI_Return_5d']
+
+        # 如果提供了美股数据，合并美股特征
+        if us_market_df is not None and not us_market_df.empty:
+            # 美股特征列
+            us_features = [
+                'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
+                'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
+                'VIX_Change', 'VIX_Ratio_MA20',
+                'US_10Y_Yield', 'US_10Y_Yield_Change'
+            ]
+
+            # 只合并存在的特征
+            existing_us_features = [f for f in us_features if f in us_market_df.columns]
+            if existing_us_features:
+                stock_df = stock_df.merge(
+                    us_market_df[existing_us_features],
+                    left_index=True, right_index=True, how='left'
+                )
 
         return stock_df
 
@@ -196,10 +221,27 @@ class MLTradingModel:
         self.model = None
         self.scaler = StandardScaler()
         self.feature_columns = []
+        self.horizon = 1  # 默认预测周期
 
-    def prepare_data(self, codes, start_date=None, end_date=None):
-        """准备训练数据"""
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
+        """准备训练数据
+        
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+        """
+        self.horizon = horizon
         all_data = []
+
+        # 获取美股市场数据（只获取一次）
+        print("📊 获取美股市场数据...")
+        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        if us_market_df is not None:
+            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+        else:
+            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
 
         for code in codes:
             try:
@@ -224,11 +266,11 @@ class MLTradingModel:
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
 
-                # 创建市场环境特征
-                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df)
+                # 创建市场环境特征（包含港股和美股）
+                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
-                # 创建标签
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=1)
+                # 创建标签（使用指定的 horizon）
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -277,10 +319,17 @@ class MLTradingModel:
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None):
-        """训练模型"""
+    def train(self, codes, start_date=None, end_date=None, horizon=1):
+        """训练模型
+        
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+        """
         print("准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
 
         # 删除包含NaN的行
         df = df.dropna()
@@ -341,15 +390,19 @@ class MLTradingModel:
 
         return feature_importance
 
-    def predict(self, code, predict_date=None):
+    def predict(self, code, predict_date=None, horizon=None):
         """预测单只股票
-        
+
         Args:
             code: 股票代码
             predict_date: 预测日期 (YYYY-MM-DD)，基于该日期的数据预测下一个交易日，默认使用最新交易日
+            horizon: 预测周期（1=次日，5=一周，20=一个月），默认使用训练时的周期
         """
+        if horizon is None:
+            horizon = self.horizon
+
         try:
-            # 移除代码中的.HK后缀，腾讯财经接口不需要
+            # 移除代码中的.HK后缀
             stock_code = code.replace('.HK', '')
 
             # 获取股票数据（2年约730天）
@@ -362,22 +415,29 @@ class MLTradingModel:
             if hsi_df is None or hsi_df.empty:
                 return None
 
+            # 获取美股市场数据
+            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+
             # 如果指定了预测日期，过滤数据到该日期
             if predict_date:
                 predict_date = pd.to_datetime(predict_date)
                 # 转换为字符串格式进行比较
                 predict_date_str = predict_date.strftime('%Y-%m-%d')
-                
+
                 # 确保索引是 datetime 类型
                 if not isinstance(stock_df.index, pd.DatetimeIndex):
                     stock_df.index = pd.to_datetime(stock_df.index)
                 if not isinstance(hsi_df.index, pd.DatetimeIndex):
                     hsi_df.index = pd.to_datetime(hsi_df.index)
-                
+                if us_market_df is not None and not isinstance(us_market_df.index, pd.DatetimeIndex):
+                    us_market_df.index = pd.to_datetime(us_market_df.index)
+
                 # 使用字符串比较避免时区问题
                 stock_df = stock_df[stock_df.index.strftime('%Y-%m-%d') <= predict_date_str]
                 hsi_df = hsi_df[hsi_df.index.strftime('%Y-%m-%d') <= predict_date_str]
-                
+                if us_market_df is not None:
+                    us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+
                 if stock_df.empty:
                     print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
@@ -385,7 +445,7 @@ class MLTradingModel:
             # 计算特征
             stock_df = self.feature_engineer.calculate_technical_features(stock_df)
             stock_df = self.feature_engineer.create_smart_money_features(stock_df)
-            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df)
+            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
             # 添加基本面特征
             fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -450,10 +510,27 @@ class GBDTLRModel:
         self.feature_columns = []
         self.actual_n_estimators = 0
         self.gbdt_leaf_names = []
+        self.horizon = 1  # 默认预测周期
 
-    def prepare_data(self, codes, start_date=None, end_date=None):
-        """准备训练数据"""
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
+        """准备训练数据
+        
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+        """
+        self.horizon = horizon
         all_data = []
+
+        # 获取美股市场数据（只获取一次）
+        print("📊 获取美股市场数据...")
+        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        if us_market_df is not None:
+            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+        else:
+            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
 
         for code in codes:
             try:
@@ -478,11 +555,11 @@ class GBDTLRModel:
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
 
-                # 创建市场环境特征
-                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df)
+                # 创建市场环境特征（包含港股和美股）
+                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
-                # 创建标签
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=1)
+                # 创建标签（使用指定的 horizon）
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -531,15 +608,22 @@ class GBDTLRModel:
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None):
-        """训练 GBDT + LR 模型"""
+    def train(self, codes, start_date=None, end_date=None, horizon=1):
+        """训练 GBDT + LR 模型
+        
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+        """
         print("="*70)
         print("🚀 开始训练 GBDT + LR 模型")
         print("="*70)
 
         # 准备数据
         print("📊 准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
 
         # 删除包含NaN的行
         df = df.dropna()
@@ -772,13 +856,17 @@ class GBDTLRModel:
 
         return feat_imp
 
-    def predict(self, code, predict_date=None):
+    def predict(self, code, predict_date=None, horizon=None):
         """预测单只股票
-        
+
         Args:
             code: 股票代码
             predict_date: 预测日期 (YYYY-MM-DD)，基于该日期的数据预测下一个交易日，默认使用最新交易日
+            horizon: 预测周期（1=次日，5=一周，20=一个月），默认使用训练时的周期
         """
+        if horizon is None:
+            horizon = self.horizon
+
         try:
             # 移除代码中的.HK后缀
             stock_code = code.replace('.HK', '')
@@ -793,22 +881,29 @@ class GBDTLRModel:
             if hsi_df is None or hsi_df.empty:
                 return None
 
+            # 获取美股市场数据
+            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+
             # 如果指定了预测日期，过滤数据到该日期
             if predict_date:
                 predict_date = pd.to_datetime(predict_date)
                 # 转换为字符串格式进行比较
                 predict_date_str = predict_date.strftime('%Y-%m-%d')
-                
+
                 # 确保索引是 datetime 类型
                 if not isinstance(stock_df.index, pd.DatetimeIndex):
                     stock_df.index = pd.to_datetime(stock_df.index)
                 if not isinstance(hsi_df.index, pd.DatetimeIndex):
                     hsi_df.index = pd.to_datetime(hsi_df.index)
-                
+                if us_market_df is not None and not isinstance(us_market_df.index, pd.DatetimeIndex):
+                    us_market_df.index = pd.to_datetime(us_market_df.index)
+
                 # 使用字符串比较避免时区问题
                 stock_df = stock_df[stock_df.index.strftime('%Y-%m-%d') <= predict_date_str]
                 hsi_df = hsi_df[hsi_df.index.strftime('%Y-%m-%d') <= predict_date_str]
-                
+                if us_market_df is not None:
+                    us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+
                 if stock_df.empty:
                     print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
@@ -816,7 +911,7 @@ class GBDTLRModel:
             # 计算特征
             stock_df = self.feature_engineer.calculate_technical_features(stock_df)
             stock_df = self.feature_engineer.create_smart_money_features(stock_df)
-            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df)
+            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
             # 添加基本面特征
             fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -907,6 +1002,8 @@ def main():
                        help='训练结束日期 (YYYY-MM-DD)')
     parser.add_argument('--predict-date', type=str, default=None,
                        help='预测日期：基于该日期的数据预测下一个交易日 (YYYY-MM-DD)，默认使用最新交易日')
+    parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 20],
+                       help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
 
     args = parser.parse_args()
 
@@ -942,7 +1039,7 @@ def main():
             print("\n" + "="*70)
             print("🌳 训练 LightGBM 模型")
             print("="*70)
-            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date)
+            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
             lgbm_model_path = args.model_path.replace('.pkl', '_lgbm.pkl')
             lgbm_model.save_model(lgbm_model_path)
             lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
@@ -954,7 +1051,7 @@ def main():
             print("\n" + "="*70)
             print("🌲 训练 GBDT + LR 模型")
             print("="*70)
-            gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date)
+            gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
             gbdt_lr_model_path = args.model_path.replace('.pkl', '_gbdt_lr.pkl')
             gbdt_lr_model.save_model(gbdt_lr_model_path)
             gbdt_lr_importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
@@ -979,7 +1076,7 @@ def main():
         else:
             # 训练单个模型
             if lgbm_model:
-                feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date)
+                feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
                 lgbm_model.save_model(args.model_path)
                 importance_path = args.model_path.replace('.pkl', '_importance.csv')
                 feature_importance.to_csv(importance_path, index=False)
@@ -996,12 +1093,22 @@ def main():
         print("预测模式")
         print("=" * 50)
 
-        # 辅助函数：计算下一个交易日
-        def get_next_trading_day(date):
-            next_day = date + pd.Timedelta(days=1)
-            while next_day.weekday() >= 5:  # 跳过周末
-                next_day += pd.Timedelta(days=1)
-            return next_day.strftime('%Y-%m-%d')
+        # 辅助函数：计算指定交易日后的目标日期
+        def get_target_date(date, horizon=1):
+            """计算指定交易日后的目标日期，跳过周末
+            
+            Args:
+                date: 起始日期
+                horizon: 预测周期（1=次日，5=一周，20=一个月）
+            
+            Returns:
+                目标日期字符串 (YYYY-MM-DD)
+            """
+            target_day = date + pd.Timedelta(days=horizon)
+            # 跳过周末
+            while target_day.weekday() >= 5:
+                target_day += pd.Timedelta(days=1)
+            return target_day.strftime('%Y-%m-%d')
 
         if train_both:
             # 加载两个模型
@@ -1033,10 +1140,10 @@ def main():
 
             # 添加数据日期和目标日期
             lgbm_pred_df['data_date'] = lgbm_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            lgbm_pred_df['target_date'] = lgbm_pred_df['date'].apply(get_next_trading_day)
+            lgbm_pred_df['target_date'] = lgbm_pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
 
             gbdt_lr_pred_df['data_date'] = gbdt_lr_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            gbdt_lr_pred_df['target_date'] = gbdt_lr_pred_df['date'].apply(get_next_trading_day)
+            gbdt_lr_pred_df['target_date'] = gbdt_lr_pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
 
             # 合并对比
             comparison = lgbm_pred_df.merge(
@@ -1135,10 +1242,11 @@ def main():
 
             # 显示预测结果
             print("\n预测结果:")
+            horizon_text = {1: "次日", 5: "一周", 20: "一个月"}.get(args.horizon, f"{args.horizon}天")
             if args.predict_date:
-                print(f"说明: 基于 {args.predict_date} 的数据预测下一个交易日的涨跌")
+                print(f"说明: 基于 {args.predict_date} 的数据预测{horizon_text}后的涨跌")
             else:
-                print("说明: 基于最新交易日的数据预测下一个交易日的涨跌")
+                print(f"说明: 基于最新交易日的数据预测{horizon_text}后的涨跌")
             print("-" * 100)
             print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
             print("-" * 100)
@@ -1146,14 +1254,14 @@ def main():
             for pred in predictions:
                 pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
                 data_date = pred['date'].strftime('%Y-%m-%d')
-                target_date = get_next_trading_day(pred['date'])
-                
+                target_date = get_target_date(pred['date'], horizon=args.horizon)
+
                 print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
 
             # 保存预测结果
             pred_df = pd.DataFrame(predictions)
             pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            pred_df['target_date'] = pred_df['date'].apply(get_next_trading_day)
+            pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
             
             pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
             
