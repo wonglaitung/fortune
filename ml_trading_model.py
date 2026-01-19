@@ -1118,12 +1118,6 @@ def main():
         if train_both:
             # 加载两个模型
             print("\n加载模型...")
-            lgbm_model_path = args.model_path.replace('.pkl', '_lgbm.pkl')
-            gbdt_lr_model_path = args.model_path.replace('.pkl', '_gbdt_lr.pkl')
-            
-            lgbm_model.load_model(lgbm_model_path)
-            gbdt_lr_model.load_model(gbdt_lr_model_path)
-
             # 添加周期后缀：_1d, _5d, _20d
             horizon_suffix = f'_{args.horizon}d'
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
@@ -1131,6 +1125,25 @@ def main():
             
             lgbm_model.load_model(lgbm_model_path)
             gbdt_lr_model.load_model(gbdt_lr_model_path)
+
+            # 预测所有股票
+            print("\n开始预测...")
+            if args.predict_date:
+                print(f"基于日期: {args.predict_date}")
+            lgbm_predictions = []
+            gbdt_lr_predictions = []
+
+            for code in WATCHLIST:
+                lgbm_result = lgbm_model.predict(code, predict_date=args.predict_date)
+                gbdt_lr_result = gbdt_lr_model.predict(code, predict_date=args.predict_date)
+                
+                if lgbm_result and gbdt_lr_result:
+                    lgbm_predictions.append(lgbm_result)
+                    gbdt_lr_predictions.append(gbdt_lr_result)
+
+            # 合并预测结果
+            lgbm_pred_df = pd.DataFrame(lgbm_predictions)
+            gbdt_lr_pred_df = pd.DataFrame(gbdt_lr_predictions)
 
             # 添加数据日期和目标日期
             lgbm_pred_df['data_date'] = lgbm_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
