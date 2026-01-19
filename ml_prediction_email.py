@@ -23,6 +23,10 @@ class MLPredictionEmailSender:
         self.smtp_server = os.getenv('YAHOO_SMTP', 'smtp.163.com')
         self.recipients = os.getenv('RECIPIENT_EMAIL', '').split(',')
 
+        # 从环境变量获取要发送的周期，默认发送全部
+        horizon_str = os.getenv('PREDICTION_HORIZONS', '1,5,20')
+        self.horizons = [int(h.strip()) for h in horizon_str.split(',') if h.strip().isdigit()]
+
     def load_predictions(self, horizon):
         """加载指定周期的预测结果
 
@@ -175,12 +179,15 @@ GBDT+LR 模型: 上涨 {gbdt_lr_up} 只, 下跌 {gbdt_lr_down} 只
             print(f"❌ 邮件发送失败: {e}")
             return False
 
-    def send_prediction_alert(self, horizons=[1, 5, 20]):
+    def send_prediction_alert(self, horizons=None):
         """发送预测结果邮件
 
         Args:
-            horizons: 要发送的预测周期列表
+            horizons: 要发送的预测周期列表，如果为None则使用配置的horizons
         """
+        if horizons is None:
+            horizons = self.horizons
+
         content = f"🤖 机器学习交易模型预测报告\n"
         content += f"📅 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         content += f"\n"
