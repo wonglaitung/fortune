@@ -39,6 +39,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Check if models exist
+        id: check-models
+        run: |
+          if [ -f "data/ml_trading_model_lgbm_1d.pkl" ] && [ -f "data/ml_trading_model_lgbm_5d.pkl" ] && [ -f "data/ml_trading_model_lgbm_20d.pkl" ]; then
+            echo "models_exist=true" >> $GITHUB_OUTPUT
+            echo "✅ 模型文件已存在"
+          else
+            echo "models_exist=false" >> $GITHUB_OUTPUT
+            echo "⚠️  模型文件不存在，需要训练"
+          fi
+
+      - name: Train models if needed
+        if: steps.check-models.outputs.models_exist == 'false'
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          echo "🌳 开始训练模型..."
+          python ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+          echo "✅ 模型训练完成"
+
       - name: Run prediction for 1 day horizon
         if: github.event.inputs.horizon == '1' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
         env:
