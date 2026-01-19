@@ -95,7 +95,6 @@
 |------|------|------|
 | 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析 |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
-| 48小时信号分析 | `analyze_last_48_hours_email.py` | 连续交易信号识别 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
 ### 机器学习
@@ -512,7 +511,6 @@ ENABLE_ALL_ANALYSIS_STYLES = False
 fortune/
 ├── 📄 核心脚本
 │   ├── ai_trading_analyzer.py          # AI 交易分析器
-│   ├── analyze_last_48_hours_email.py  # 48 小时信号分析器
 │   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
 │   ├── compare_strategies.py           # 策略对比分析
 │   ├── crypto_email.py                 # 加密货币监控器
@@ -526,7 +524,6 @@ fortune/
 │   ├── simulation_trader.py            # 模拟交易系统
 │   ├── technical_analysis.py           # 通用技术分析工具
 │   └── tencent_finance.py              # 腾讯财经接口
-│   ├── analyze_last_48_hours_email.py  # 48 小时信号分析器
 │   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
 │   ├── crypto_email.py                 # 加密货币监控器
 │   ├── fundamental_data.py             # 基本面数据获取器
@@ -620,7 +617,6 @@ fortune/
 │   │       ├── 相对强弱指标
 │   │       └── 中期趋势评分系统
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
-│   ├── 48小时信号分析 (analyze_last_48_hours_email.py)
 │   ├── AI 交易分析 (ai_trading_analyzer.py)
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
 │   ├── 新闻过滤 (batch_stock_news_fetcher.py)
