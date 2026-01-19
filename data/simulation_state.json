@@ -18513,6 +18513,54 @@
       "current_price": 5.13,
       "target_price": 5.6,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-19T15:50:55.797767",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1.189294051961042,
+      "reason": "出货信号强（评分5.0），位置百分位92.54%历史高位，CMF资金流-0.3025大幅流出，估值偏高（市盈率16.54）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 126.8,
+      "target_price": 120.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-19T15:50:58.977472",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1.189294051961042,
+      "reason": "出货信号明确（评分4.0），OBV趋势下降与价格背离，3日收益率-3.72%加速下跌，基本面亏损扩大（市盈率-153.32）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 54.2,
+      "target_price": 50.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-19T15:51:04.901970",
+      "type": "BUY",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 40.52,
+      "amount": 0,
+      "capital_after": 1.189294051961042,
+      "reason": "建仓信号稳健（评分4.0），基本面评分70分（高股息率支撑），位置百分位38.87%提供安全边际，多周期趋势评分4.2显示震荡上行 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 39.7,
+      "current_price": 40.52,
+      "target_price": 42.5,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -31329,70 +31377,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-19 11:08:34",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 22.06,
-      "amount": 0,
-      "reason": "多周期趋势强，基本面优质，技术指标支持 (原因: 持仓比例已达到建议值)",
-      "capital_after": 153637.18929405196,
-      "success": false,
-      "stop_loss_price": 20.4,
-      "current_price": 22.06,
-      "target_price": 22.8,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-19 11:08:38",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 200,
-      "price": 7.85,
-      "amount": 1570.0,
-      "reason": "高股息，基本面顶级，技术指标协同强",
-      "capital_after": 152067.18929405196,
-      "success": true,
-      "stop_loss_price": 7.6,
-      "current_price": 7.85,
-      "target_price": 8.15,
-      "validity_period": 30
-    },
-    {
-      "timestamp": "2026-01-19 11:08:41",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 6800,
-      "price": 22.2,
-      "amount": 150960.0,
-      "reason": "相对强度跑赢恒指，技术指标支持短期上涨",
-      "capital_after": 1107.189294051961,
-      "success": true,
-      "stop_loss_price": 21.0,
-      "current_price": 22.2,
-      "target_price": 23.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-19 11:08:45",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 200,
-      "price": 5.53,
-      "amount": 1106.0,
-      "reason": "高股息，基本面顶级，位置低估",
-      "capital_after": 1.189294051961042,
-      "success": true,
-      "stop_loss_price": 5.3,
-      "current_price": 5.53,
-      "target_price": 5.75,
-      "validity_period": 30
-    },
-    {
       "timestamp": "2026-01-19 13:40:47",
       "buy": [
         {
@@ -31576,6 +31560,86 @@
       "current_price": 5.13,
       "target_price": 5.6,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-19 15:50:55",
+      "buy": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "建仓信号稳健（评分4.0），基本面评分70分（高股息率支撑），位置百分位38.87%提供安全边际，多周期趋势评分4.2显示震荡上行",
+          "allocation_pct": 15,
+          "stop_loss_price": 39.7,
+          "target_price": 42.5,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货信号强（评分5.0），位置百分位92.54%历史高位，CMF资金流-0.3025大幅流出，估值偏高（市盈率16.54）",
+          "stop_loss_triggered": false,
+          "target_price": 120.0,
+          "validity_period": 7
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货信号明确（评分4.0），OBV趋势下降与价格背离，3日收益率-3.72%加速下跌，基本面亏损扩大（市盈率-153.32）",
+          "stop_loss_triggered": false,
+          "target_price": 50.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-19 15:50:55",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号强（评分5.0），位置百分位92.54%历史高位，CMF资金流-0.3025大幅流出，估值偏高（市盈率16.54）",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 126.8,
+      "target_price": 120.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-19 15:50:58",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号明确（评分4.0），OBV趋势下降与价格背离，3日收益率-3.72%加速下跌，基本面亏损扩大（市盈率-153.32）",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 54.2,
+      "target_price": 50.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-19 15:51:04",
+      "type": "BUY",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 40.52,
+      "amount": 0,
+      "reason": "建仓信号稳健（评分4.0），基本面评分70分（高股息率支撑），位置百分位38.87%提供安全边际，多周期趋势评分4.2显示震荡上行 (原因: 资金不足)",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": 39.7,
+      "current_price": 40.52,
+      "target_price": 42.5,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
