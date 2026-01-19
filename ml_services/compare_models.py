@@ -5,10 +5,15 @@
 """
 
 import pandas as pd
+import sys
+import os
+
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 读取两种模型的预测结果
-lgbm_pred = pd.read_csv('data/lgbm_model_predictions.csv')
-gbdt_lr_pred = pd.read_csv('data/gbdt_lr_model_predictions.csv')
+lgbm_pred = pd.read_csv('data/ml_trading_model_lgbm_predictions_1d.csv')
+gbdt_lr_pred = pd.read_csv('data/ml_trading_model_gbdt_lr_predictions_1d.csv')
 
 # 合并数据
 comparison = lgbm_pred.merge(
