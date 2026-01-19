@@ -87,7 +87,7 @@ echo ""
 
 # 训练次日涨跌模型（预测1天后）
 echo "🌳 [1/3] 训练次日涨跌模型 (horizon=1)..."
-python3 ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
+python3 ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练次日涨跌模型失败"
     exit 1
@@ -97,7 +97,7 @@ echo ""
 
 # 训练一周涨跌模型（预测5天后）
 echo "🌳 [2/3] 训练一周涨跌模型 (horizon=5)..."
-python3 ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
+python3 ml_services/ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练一周涨跌模型失败"
     exit 1
@@ -107,7 +107,7 @@ echo ""
 
 # 训练一个月涨跌模型（预测20天后）
 echo "🌳 [3/3] 训练一个月涨跌模型 (horizon=20)..."
-python3 ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练一个月涨跌模型失败"
     exit 1
@@ -122,7 +122,7 @@ echo ""
 
 # 预测次日涨跌（基于指定日期或今天的数据预测1天后）
 echo "📈 [1/3] 预测次日涨跌 (horizon=1)..."
-python3 ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
+python3 ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测次日涨跌失败"
     exit 1
@@ -132,7 +132,7 @@ echo ""
 
 # 预测一周涨跌（基于指定日期或今天的数据预测5天后）
 echo "📈 [2/3] 预测一周涨跌 (horizon=5)..."
-python3 ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
+python3 ml_services/ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测一周涨跌失败"
     exit 1
@@ -142,7 +142,7 @@ echo ""
 
 # 预测一个月涨跌（基于指定日期或今天的数据预测20天后）
 echo "📈 [3/3] 预测一个月涨跌 (horizon=20)..."
-python3 ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测一个月涨跌失败"
     exit 1
