@@ -1040,7 +1040,9 @@ def main():
             print("🌳 训练 LightGBM 模型")
             print("="*70)
             lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
-            lgbm_model_path = args.model_path.replace('.pkl', '_lgbm.pkl')
+            # 添加周期后缀：_1d, _5d, _20d
+            horizon_suffix = f'_{args.horizon}d'
+            lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
@@ -1052,7 +1054,7 @@ def main():
             print("🌲 训练 GBDT + LR 模型")
             print("="*70)
             gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
-            gbdt_lr_model_path = args.model_path.replace('.pkl', '_gbdt_lr.pkl')
+            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
             gbdt_lr_model.save_model(gbdt_lr_model_path)
             gbdt_lr_importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
             gbdt_lr_feature_importance.to_csv(gbdt_lr_importance_path, index=False)
@@ -1075,16 +1077,19 @@ def main():
 
         else:
             # 训练单个模型
+            horizon_suffix = f'_{args.horizon}d'
             if lgbm_model:
                 feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
-                lgbm_model.save_model(args.model_path)
-                importance_path = args.model_path.replace('.pkl', '_importance.csv')
+                lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+                lgbm_model.save_model(lgbm_model_path)
+                importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
                 feature_importance.to_csv(importance_path, index=False)
                 print(f"\n特征重要性已保存到 {importance_path}")
             else:
-                feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date)
-                gbdt_lr_model.save_model(args.model_path)
-                importance_path = args.model_path.replace('.pkl', '_importance.csv')
+                feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
+                gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
+                gbdt_lr_model.save_model(gbdt_lr_model_path)
+                importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
                 feature_importance.to_csv(importance_path, index=False)
                 print(f"\n特征重要性已保存到 {importance_path}")
 
@@ -1119,24 +1124,13 @@ def main():
             lgbm_model.load_model(lgbm_model_path)
             gbdt_lr_model.load_model(gbdt_lr_model_path)
 
-            # 预测所有股票
-            print("\n开始预测...")
-            if args.predict_date:
-                print(f"基于日期: {args.predict_date}")
-            lgbm_predictions = []
-            gbdt_lr_predictions = []
-
-            for code in WATCHLIST:
-                lgbm_result = lgbm_model.predict(code, predict_date=args.predict_date)
-                gbdt_lr_result = gbdt_lr_model.predict(code, predict_date=args.predict_date)
-                
-                if lgbm_result and gbdt_lr_result:
-                    lgbm_predictions.append(lgbm_result)
-                    gbdt_lr_predictions.append(gbdt_lr_result)
-
-            # 合并预测结果
-            lgbm_pred_df = pd.DataFrame(lgbm_predictions)
-            gbdt_lr_pred_df = pd.DataFrame(gbdt_lr_predictions)
+            # 添加周期后缀：_1d, _5d, _20d
+            horizon_suffix = f'_{args.horizon}d'
+            lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
+            
+            lgbm_model.load_model(lgbm_model_path)
+            gbdt_lr_model.load_model(gbdt_lr_model_path)
 
             # 添加数据日期和目标日期
             lgbm_pred_df['data_date'] = lgbm_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
@@ -1218,18 +1212,24 @@ def main():
             print(f"\n对比结果已保存到 {comparison_path}")
 
             # 保存各自的预测结果
-            lgbm_pred_path = args.model_path.replace('.pkl', '_lgbm_predictions.csv')
+            horizon_suffix = f'_{args.horizon}d'
+            lgbm_pred_path = args.model_path.replace('.pkl', f'_lgbm_predictions{horizon_suffix}.csv')
             lgbm_pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']].to_csv(lgbm_pred_path, index=False)
             print(f"LGBM 预测结果已保存到 {lgbm_pred_path}")
 
-            gbdt_lr_pred_path = args.model_path.replace('.pkl', '_gbdt_lr_predictions.csv')
+            gbdt_lr_pred_path = args.model_path.replace('.pkl', f'_gbdt_lr_predictions{horizon_suffix}.csv')
             gbdt_lr_pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']].to_csv(gbdt_lr_pred_path, index=False)
             print(f"GBDT+LR 预测结果已保存到 {gbdt_lr_pred_path}")
 
         else:
             # 单个模型预测
             model = lgbm_model if lgbm_model else gbdt_lr_model
-            model.load_model(args.model_path)
+            horizon_suffix = f'_{args.horizon}d'
+            if lgbm_model:
+                model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+            else:
+                model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
+            model.load_model(model_path)
 
             # 预测所有股票
             predictions = []
@@ -1265,7 +1265,8 @@ def main():
             
             pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
             
-            pred_path = args.model_path.replace('.pkl', '_predictions.csv')
+            horizon_suffix = f'_{args.horizon}d'
+            pred_path = args.model_path.replace('.pkl', f'_predictions{horizon_suffix}.csv')
             pred_df_export.to_csv(pred_path, index=False)
             print(f"\n预测结果已保存到 {pred_path}")
 
@@ -1277,8 +1278,9 @@ def main():
         if train_both:
             # 加载两个模型
             print("\n加载模型...")
-            lgbm_model_path = args.model_path.replace('.pkl', '_lgbm.pkl')
-            gbdt_lr_model_path = args.model_path.replace('.pkl', '_gbdt_lr.pkl')
+            horizon_suffix = f'_{args.horizon}d'
+            lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
             
             lgbm_model.load_model(lgbm_model_path)
             gbdt_lr_model.load_model(gbdt_lr_model_path)
