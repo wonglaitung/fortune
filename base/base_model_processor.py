@@ -122,63 +122,95 @@ class BaseModelProcessor:
         """
         try:
             tree_df = booster.trees_to_dataframe()
-
+            
             # 筛选指定树
-            tree_data = tree_df[tree_df['tree_index'] == tree_index]
-
+            tree_data = tree_df[tree_df['tree_index'] == tree_index].copy()
+            
+            if tree_data.empty:
+                return None
+            
+            # 构建叶子节点的node_index：{tree_index}-L{leaf_index}
+            target_node_id = f"{tree_index}-L{leaf_index}"
+            
             # 查找叶子节点
-            leaf_node = tree_data[tree_data['node_depth'] == tree_data['node_depth'].max()]
-            leaf_node = leaf_node[leaf_node['node_index'] == leaf_index]
-
+            leaf_node = tree_data[tree_data['node_index'] == target_node_id]
+            
             if leaf_node.empty:
                 return None
-
+            
             # 向上追溯父节点
-            node_id = leaf_node['node_index'].values[0]
+            current_node_id = target_node_id
             path = []
-
-            while node_id != 0:  # 0 是根节点
-                node_info = tree_data[tree_data['node_index'] == node_id]
-                parent_id = node_info['parent_index'].values[0]
-
-                # 获取父节点的分裂信息
-                if parent_id >= 0:
-                    parent_info = tree_data[tree_data['node_index'] == parent_id]
-                    if not parent_info.empty:
-                        feature = parent_info['split_feature'].values[0]
-                        threshold = parent_info['threshold'].values[0]
-                        decision_type = parent_info['decision_type'].values[0]
-
-                        # 获取特征名称
-                        if feature < len(feature_names):
-                            feature_name = feature_names[feature]
-                        else:
-                            feature_name = f"Feature_{feature}"
-
-                        # 判断是否是左子节点还是右子节点
-                        if node_id == parent_info['left_child'].values[0]:
-                            operator = "<="
-                        else:
-                            operator = ">"
-
-                        # 格式化规则
-                        if category_prefixes and any(feature_name.startswith(prefix) for prefix in category_prefixes):
-                            # 类别特征
-                            rule = f"{feature_name} 是 {int(threshold)} 类"
-                        else:
-                            # 连续特征
-                            rule = f"{feature_name} {operator} {threshold:.4f}"
-
-                        path.append(rule)
-
-                node_id = parent_id
-
+            
+            while True:
+                node_info = tree_data[tree_data['node_index'] == current_node_id]
+                if node_info.empty:
+                    break
+                    
+                parent_id_str = node_info['parent_index'].values[0]
+                
+                # 检查是否到达根节点
+                if pd.isna(parent_id_str) or parent_id_str == '':
+                    break
+                    
+                # 获取父节点信息
+                parent_info = tree_data[tree_data['node_index'] == parent_id_str]
+                if parent_info.empty:
+                    break
+                
+                # 检查父节点是否有分裂信息
+                if pd.notna(parent_info['split_feature'].values[0]):
+                    feature_str = parent_info['split_feature'].values[0]
+                    threshold = parent_info['threshold'].values[0]
+                    left_child = parent_info['left_child'].values[0]
+                    right_child = parent_info['right_child'].values[0]
+                    
+                    # 解析特征索引（从 "Column_X" 格式中提取）
+                    if isinstance(feature_str, str) and feature_str.startswith('Column_'):
+                        try:
+                            feature_idx = int(feature_str.split('_')[1])
+                        except (ValueError, IndexError):
+                            feature_idx = -1
+                    else:
+                        feature_idx = -1
+                    
+                    # 获取特征名称
+                    if 0 <= feature_idx < len(feature_names):
+                        feature_name = feature_names[feature_idx]
+                    else:
+                        feature_name = f"Feature_{feature_str}"
+                    
+                    # 判断当前节点是左子节点还是右子节点
+                    if pd.notna(left_child) and current_node_id == left_child:
+                        operator = "<="
+                    elif pd.notna(right_child) and current_node_id == right_child:
+                        operator = ">"
+                    else:
+                        # 无法确定，跳过
+                        current_node_id = parent_id_str
+                        continue
+                    
+                    # 格式化规则
+                    if category_prefixes and any(feature_name.startswith(prefix) for prefix in category_prefixes):
+                        # 类别特征
+                        rule = f"{feature_name} 是 {int(threshold)} 类"
+                    else:
+                        # 连续特征
+                        rule = f"{feature_name} {operator} {threshold:.4f}"
+                    
+                    path.append(rule)
+                
+                # 移动到父节点
+                current_node_id = parent_id_str
+            
             # 反转路径，从根到叶子
             path.reverse()
-            return path
-
+            return path if path else None
+            
         except Exception as e:
+            import traceback
             print(f"⚠️ 解析叶子路径失败: {e}")
+            traceback.print_exc()
             return None
 
     def save_models(self, gbdt_model, lr_model, category_features, continuous_features):
