@@ -144,7 +144,7 @@ def get_hsi_data_tencent(period_days=90):
     """
     # 腾讯财经API URL (历史交易数据)
     # 首先尝试获取前复权数据
-    url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,300,qfq"
+    url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days},qfq"
     
     try:
         response = requests.get(url)
@@ -168,7 +168,7 @@ def get_hsi_data_tencent(period_days=90):
         
         # 如果前复权数据为空，尝试获取原始数据
         if not kline_data or len(kline_data) == 0:
-            url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,300"
+            url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days}"
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
