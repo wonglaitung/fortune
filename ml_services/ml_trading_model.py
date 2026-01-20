@@ -1041,6 +1041,9 @@ class GBDTLRModel:
                 else:
                     X_val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
 
+            # 填充所有 NaN 值为 0
+            X_val_onehot = X_val_onehot.fillna(0)
+
             # 训练 LR 模型
             lr_fold = LogisticRegression(
                 penalty='l2',
