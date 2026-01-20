@@ -78,42 +78,129 @@ class FeatureEngineer:
         self.tech_analyzer = TechnicalAnalyzer()
 
     def calculate_technical_features(self, df):
-        """计算技术指标特征"""
+        """计算技术指标特征（扩展版：80个指标）"""
         if df.empty or len(df) < 200:
             return df
 
-        # 移动平均线
+        # ========== 基础移动平均线 ==========
         df = self.tech_analyzer.calculate_moving_averages(df, periods=[5, 10, 20, 50, 100, 200])
 
-        # RSI
+        # ========== RSI (Wilder 平滑) ==========
         df = self.tech_analyzer.calculate_rsi(df, period=14)
+        # RSI 变化率
+        df['RSI_ROC'] = df['RSI'].pct_change()
 
-        # MACD
+        # ========== MACD ==========
         df = self.tech_analyzer.calculate_macd(df)
+        # MACD 柱状图
+        df['MACD_Hist'] = df['MACD'] - df['MACD_signal']
+        # MACD 柱状图变化率
+        df['MACD_Hist_ROC'] = df['MACD_Hist'].pct_change()
 
-        # 布林带
+        # ========== 布林带 ==========
         df = self.tech_analyzer.calculate_bollinger_bands(df, period=20, std_dev=2)
+        # 布林带宽度
+        df['BB_Width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
+        # 布林带突破
+        df['BB_Breakout'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'])
 
-        # ATR
+        # ========== ATR ==========
         df = self.tech_analyzer.calculate_atr(df, period=14)
+        # ATR 比率（ATR相对于10日均线的比率）
+        df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean()
+        df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
 
-        # 成交量比率
-        df['Vol_MA20'] = df['Volume'].rolling(window=20).mean()
+        # ========== 成交量相关 ==========
+        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean()
         df['Vol_Ratio'] = df['Volume'] / df['Vol_MA20']
+        # 成交量 z-score
+        df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean()
+        df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std()
+        df['Vol_Z_Score'] = (df['Volume'] - df['Vol_Mean_20']) / df['Vol_Std_20']
+        # 成交额
+        df['Turnover'] = df['Close'] * df['Volume']
+        # 成交额 z-score
+        df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean()
+        df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std()
+        df['Turnover_Z_Score'] = (df['Turnover'] - df['Turnover_Mean_20']) / df['Turnover_Std_20']
+        # 换手率（假设总股本为常数，这里使用成交额/价格作为近似）
+        df['Turnover_Rate'] = (df['Turnover'] / (df['Close'] * 1000000)) * 100
 
-        # 价格位置（相对于均线）
-        df['Price_Ratio_MA5'] = df['Close'] / df['MA5']
-        df['Price_Ratio_MA20'] = df['Close'] / df['MA20']
-        df['Price_Ratio_MA50'] = df['Close'] / df['MA50']
+        # ========== VWAP (成交量加权平均价) ==========
+        df['TP'] = (df['High'] + df['Low'] + df['Close']) / 3
+        df['VWAP'] = (df['TP'] * df['Volume']).rolling(window=20, min_periods=1).sum() / df['Volume'].rolling(window=20, min_periods=1).sum()
 
+        # ========== OBV (能量潮) ==========
+        df['OBV'] = 0.0
+        for i in range(1, len(df)):
+            if df['Close'].iloc[i] > df['Close'].iloc[i-1]:
+                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] + df['Volume'].iloc[i]
+            elif df['Close'].iloc[i] < df['Close'].iloc[i-1]:
+                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] - df['Volume'].iloc[i]
+            else:
+                df['OBV'].iloc[i] = df['OBV'].iloc[i-1]
+
+        # ========== CMF (Chaikin Money Flow) ==========
+        df['MF_Multiplier'] = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+        df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
+        df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume'].rolling(20, min_periods=1).sum()
+        # CMF 信号线
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean()
+
+        # ========== ADX (平均趋向指数) ==========
+        # +DM and -DM
+        up_move = df['High'].diff()
+        down_move = -df['Low'].diff()
+        df['+DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
+        df['-DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+        # +DI and -DI
+        df['+DI'] = 100 * (df['+DM'].ewm(alpha=1/14, adjust=False).mean() / df['ATR'])
+        df['-DI'] = 100 * (df['-DM'].ewm(alpha=1/14, adjust=False).mean() / df['ATR'])
+        # ADX
+        dx = 100 * (np.abs(df['+DI'] - df['-DI']) / (df['+DI'] + df['-DI']))
+        df['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
+
+        # ========== 随机振荡器 (Stochastic Oscillator) ==========
+        K_Period = 14
+        D_Period = 3
+        df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min()
+        df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max()
+        df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min']) / (df['High_Max'] - df['Low_Min'])
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean()
+
+        # ========== Williams %R ==========
+        df['Williams_R'] = (df['High_Max'] - df['Close']) / (df['High_Max'] - df['Low_Min']) * -100
+
+        # ========== ROC (价格变化率) ==========
+        df['ROC'] = df['Close'].pct_change(periods=12)
+
+        # ========== 波动率（年化） ==========
+        df['Returns'] = df['Close'].pct_change()
+        df['Volatility'] = df['Returns'].rolling(20, min_periods=10).std() * np.sqrt(252)
+
+        # ========== 价格位置特征 ==========
+        # 价格相对于均线的偏离
+        df['MA5_Deviation'] = (df['Close'] - df['MA5']) / df['MA5'] * 100
+        df['MA10_Deviation'] = (df['Close'] - df['MA10']) / df['MA10'] * 100
+        # 价格百分位（相对于60日窗口）
+        df['Price_Percentile'] = df['Close'].rolling(window=60, min_periods=1).apply(
+            lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100
+        )
         # 布林带位置
         df['BB_Position'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'])
 
-        # 涨跌幅
+        # ========== 多周期收益率 ==========
         df['Return_1d'] = df['Close'].pct_change()
+        df['Return_3d'] = df['Close'].pct_change(3)
         df['Return_5d'] = df['Close'].pct_change(5)
         df['Return_10d'] = df['Close'].pct_change(10)
         df['Return_20d'] = df['Close'].pct_change(20)
+        df['Return_60d'] = df['Close'].pct_change(60)
+
+        # ========== 价格相对于均线的比率 ==========
+        df['Price_Ratio_MA5'] = df['Close'] / df['MA5']
+        df['Price_Ratio_MA20'] = df['Close'] / df['MA20']
+        df['Price_Ratio_MA50'] = df['Close'] / df['MA50']
 
         return df
 
@@ -161,9 +248,85 @@ class FeatureEngineer:
 
         return df
 
+    def calculate_multi_period_metrics(self, df):
+        """计算多周期指标（趋势和相对强度）"""
+        if df.empty or len(df) < 60:
+            return df
+
+        periods = [3, 5, 10, 20, 60]
+
+        for period in periods:
+            if len(df) < period:
+                continue
+
+            # 计算收益率
+            return_col = f'Return_{period}d'
+            if return_col in df.columns:
+                # 计算趋势方向（1=上涨，0=下跌）
+                trend_col = f'{period}d_Trend'
+                df[trend_col] = (df[return_col] > 0).astype(int)
+
+                # 计算相对强度信号（基于收益率）
+                rs_signal_col = f'{period}d_RS_Signal'
+                df[rs_signal_col] = (df[return_col] > 0).astype(int)
+
+        # 计算多周期趋势评分
+        trend_cols = [f'{p}d_Trend' for p in periods]
+        if all(col in df.columns for col in trend_cols):
+            df['Multi_Period_Trend_Score'] = df[trend_cols].sum(axis=1)
+
+        # 计算多周期相对强度评分
+        rs_cols = [f'{p}d_RS_Signal' for p in periods]
+        if all(col in df.columns for col in rs_cols):
+            df['Multi_Period_RS_Score'] = df[rs_cols].sum(axis=1)
+
+        return df
+
+    def calculate_relative_strength(self, stock_df, hsi_df):
+        """计算相对强度指标（相对于恒生指数）"""
+        if stock_df.empty or hsi_df.empty:
+            return stock_df
+
+        # 确保索引对齐
+        stock_df = stock_df.copy()
+        hsi_df = hsi_df.copy()
+
+        # 计算恒生指数收益率
+        hsi_df['HSI_Return_1d'] = hsi_df['Close'].pct_change()
+        hsi_df['HSI_Return_3d'] = hsi_df['Close'].pct_change(3)
+        hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
+        hsi_df['HSI_Return_10d'] = hsi_df['Close'].pct_change(10)
+        hsi_df['HSI_Return_20d'] = hsi_df['Close'].pct_change(20)
+        hsi_df['HSI_Return_60d'] = hsi_df['Close'].pct_change(60)
+
+        # 合并恒生指数数据
+        hsi_cols = ['HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d', 'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d']
+        stock_df = stock_df.merge(hsi_df[hsi_cols], left_index=True, right_index=True, how='left')
+
+        # 计算相对强度（RS_ratio = (1+stock_ret)/(1+hsi_ret)-1）
+        periods = [1, 3, 5, 10, 20, 60]
+        for period in periods:
+            stock_ret_col = f'Return_{period}d'
+            hsi_ret_col = f'HSI_Return_{period}d'
+
+            if stock_ret_col in stock_df.columns and hsi_ret_col in stock_df.columns:
+                # RS_ratio（复合收益比）
+                rs_ratio_col = f'RS_Ratio_{period}d'
+                stock_df[rs_ratio_col] = (1 + stock_df[stock_ret_col]) / (1 + stock_df[hsi_ret_col]) - 1
+
+                # RS_diff（收益差值）
+                rs_diff_col = f'RS_Diff_{period}d'
+                stock_df[rs_diff_col] = stock_df[stock_ret_col] - stock_df[hsi_ret_col]
+
+        # 跑赢恒指（基于5日相对强度）
+        if 'RS_Ratio_5d' in stock_df.columns:
+            stock_df['Outperforms_HSI'] = (stock_df['RS_Ratio_5d'] > 0).astype(int)
+
+        return stock_df
+
     def create_market_environment_features(self, stock_df, hsi_df, us_market_df=None):
         """创建市场环境特征（包含港股和美股）
-        
+
         Args:
             stock_df: 股票数据
             hsi_df: 恒生指数数据
@@ -172,12 +335,13 @@ class FeatureEngineer:
         if stock_df.empty or hsi_df.empty:
             return stock_df
 
-        # 计算恒生指数收益率
-        hsi_df['HSI_Return'] = hsi_df['Close'].pct_change()
-        hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
-
-        # 合并恒生指数数据
-        stock_df = stock_df.merge(hsi_df[['HSI_Return', 'HSI_Return_5d']], left_index=True, right_index=True, how='left')
+        # 检查是否已经存在 HSI_Return_5d 列（由 calculate_relative_strength 创建）
+        if 'HSI_Return_5d' not in stock_df.columns:
+            # 如果不存在，则创建并合并
+            hsi_df = hsi_df.copy()
+            hsi_df['HSI_Return'] = hsi_df['Close'].pct_change()
+            hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
+            stock_df = stock_df.merge(hsi_df[['HSI_Return', 'HSI_Return_5d']], left_index=True, right_index=True, how='left')
 
         # 相对表现（相对于恒生指数）
         stock_df['Relative_Return'] = stock_df['Return_5d'] - stock_df['HSI_Return_5d']
@@ -195,8 +359,13 @@ class FeatureEngineer:
             # 只合并存在的特征
             existing_us_features = [f for f in us_features if f in us_market_df.columns]
             if existing_us_features:
+                # 对美股特征进行 shift(1)，确保不包含未来信息
+                # 因为美股数据比港股晚15小时开盘，所以在预测港股 T+1 日涨跌时，
+                # 只能使用 T 日及之前的美股数据
+                us_market_df_shifted = us_market_df[existing_us_features].shift(1)
+
                 stock_df = stock_df.merge(
-                    us_market_df[existing_us_features],
+                    us_market_df_shifted,
                     left_index=True, right_index=True, how='left'
                 )
 
@@ -228,7 +397,7 @@ class MLTradingModel:
         self.horizon = 1  # 默认预测周期
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
-        """准备训练数据
+        """准备训练数据（80个指标版本）
         
         Args:
             codes: 股票代码列表
@@ -264,8 +433,14 @@ class MLTradingModel:
                 if hsi_df is None or hsi_df.empty:
                     continue
 
-                # 计算技术指标
+                # 计算技术指标（80个指标）
                 stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+                # 计算多周期指标
+                stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+                # 计算相对强度指标
+                stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
 
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
@@ -298,6 +473,9 @@ class MLTradingModel:
 
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
+
+        return df
+
     def get_feature_columns(self, df):
         """获取特征列"""
         # 排除非特征列
@@ -397,7 +575,7 @@ class MLTradingModel:
         return feat_imp
 
     def predict(self, code, predict_date=None, horizon=None):
-        """预测单只股票
+        """预测单只股票（80个指标版本）
 
         Args:
             code: 股票代码
@@ -448,9 +626,19 @@ class MLTradingModel:
                     print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
-            # 计算特征
+            # 计算技术指标（80个指标）
             stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+            # 计算多周期指标
+            stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+            # 计算相对强度指标
+            stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+            # 创建资金流向特征
             stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+            # 创建市场环境特征（包含港股和美股）
             stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
             # 添加基本面特征
@@ -519,7 +707,7 @@ class GBDTLRModel:
         self.horizon = 1  # 默认预测周期
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
-        """准备训练数据
+        """准备训练数据（80个指标版本）
         
         Args:
             codes: 股票代码列表
@@ -555,8 +743,14 @@ class GBDTLRModel:
                 if hsi_df is None or hsi_df.empty:
                     continue
 
-                # 计算技术指标
+                # 计算技术指标（80个指标）
                 stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+                # 计算多周期指标
+                stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+                # 计算相对强度指标
+                stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
 
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
@@ -589,6 +783,9 @@ class GBDTLRModel:
 
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
+
+        return df
+
     def get_feature_columns(self, df):
         """获取特征列"""
         # 排除非特征列
@@ -853,7 +1050,7 @@ class GBDTLRModel:
         return feat_imp
 
     def predict(self, code, predict_date=None, horizon=None):
-        """预测单只股票
+        """预测单只股票（80个指标版本）
 
         Args:
             code: 股票代码
@@ -904,9 +1101,19 @@ class GBDTLRModel:
                     print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
-            # 计算特征
+            # 计算技术指标（80个指标）
             stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+            # 计算多周期指标
+            stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+            # 计算相对强度指标
+            stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+            # 创建资金流向特征
             stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+            # 创建市场环境特征（包含港股和美股）
             stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
             # 添加基本面特征
