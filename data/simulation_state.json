@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 1.189294051961042,
+  "capital": 11.189294051961042,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -27,11 +27,6 @@
       "avg_price": 5.27,
       "stop_loss_price": 5.0
     },
-    "0981.HK": {
-      "shares": 200,
-      "avg_price": 75.9,
-      "stop_loss_price": 74.5
-    },
     "3690.HK": {
       "shares": 1800,
       "avg_price": 99.79166666666667,
@@ -51,6 +46,11 @@
       "shares": 6800,
       "avg_price": 22.2,
       "stop_loss_price": 21.0
+    },
+    "0981.HK": {
+      "shares": 200,
+      "avg_price": 74.25,
+      "stop_loss_price": 68.5
     }
   },
   "transaction_history": [
@@ -18609,6 +18609,54 @@
       "current_price": 6.32,
       "target_price": 6.64,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20T10:23:54.112582",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1.189294051961042,
+      "reason": "出货信号强（评分6.0），价格高位（位置百分位74.92%），技术面超买（RSI 67.5），资金流出（CMF -0.1799），风险等级4级需及时止盈",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.35,
+      "target_price": 78.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-20T10:24:02.847141",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 200,
+      "price": 74.3,
+      "amount": 14860.0,
+      "capital_after": 14861.189294051961,
+      "reason": "止损触发: 当前价格HK$74.25 < 止损价格HK$74.50",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 74.3,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-20T10:24:07.713958",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 200,
+      "price": 74.25,
+      "amount": 14850.0,
+      "capital_after": 11.189294051961042,
+      "reason": "建仓信号较强（评分4.2），多周期趋势向上（评分37.8），技术指标协同（MACD交叉、OBV上升、CMF流入），适合平衡型投资者短期布局，但基本面差（PE 127.8）需控制仓位",
+      "success": true,
+      "stop_loss_price": 68.5,
+      "current_price": 74.25,
+      "target_price": 80.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -31421,89 +31469,118 @@
           "stop_loss_price": 21.0
         }
       }
+    },
+    {
+      "timestamp": "2026-01-20T10:24:03.878833",
+      "capital": 14861.189294051961,
+      "portfolio_value": 1005508.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19600,
+          "avg_price": 7.625,
+          "stop_loss_price": 7.6
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26900,
+          "avg_price": 5.639182156133829,
+          "stop_loss_price": 5.3
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "3690.HK": {
+          "shares": 1800,
+          "avg_price": 99.79166666666667,
+          "stop_loss_price": 94.7
+        },
+        "0941.HK": {
+          "shares": 100,
+          "avg_price": 79.4,
+          "stop_loss_price": 75.6
+        },
+        "0728.HK": {
+          "shares": 300,
+          "avg_price": 5.17,
+          "stop_loss_price": 4.92
+        },
+        "2533.HK": {
+          "shares": 6800,
+          "avg_price": 22.2,
+          "stop_loss_price": 21.0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-20T10:24:08.944966",
+      "capital": 11.189294051961042,
+      "portfolio_value": 1005249.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 19600,
+          "avg_price": 7.625,
+          "stop_loss_price": 7.6
+        },
+        "0883.HK": {
+          "shares": 7100,
+          "avg_price": 21.364225352112676,
+          "stop_loss_price": 19.8
+        },
+        "1288.HK": {
+          "shares": 26900,
+          "avg_price": 5.639182156133829,
+          "stop_loss_price": 5.3
+        },
+        "1330.HK": {
+          "shares": 200,
+          "avg_price": 5.27,
+          "stop_loss_price": 5.0
+        },
+        "3690.HK": {
+          "shares": 1800,
+          "avg_price": 99.79166666666667,
+          "stop_loss_price": 94.7
+        },
+        "0941.HK": {
+          "shares": 100,
+          "avg_price": 79.4,
+          "stop_loss_price": 75.6
+        },
+        "0728.HK": {
+          "shares": 300,
+          "avg_price": 5.17,
+          "stop_loss_price": 4.92
+        },
+        "2533.HK": {
+          "shares": 6800,
+          "avg_price": 22.2,
+          "stop_loss_price": 21.0
+        },
+        "0981.HK": {
+          "shares": 200,
+          "avg_price": 74.25,
+          "stop_loss_price": 68.5
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-19 13:40:59",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 160.5,
-      "amount": 0,
-      "reason": "多周期趋势评分36.8分（温和上升），技术指标协同可靠（OBV上升、CMF微流入、相对强度跑赢恒指），超跌反弹概率高，综合评分58.4分验证中期机会 (原因: 资金不足)",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": 155.0,
-      "current_price": 160.5,
-      "target_price": 170.0,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-01-19 14:44:32",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "超跌反弹，位置百分位10.71%超低位，基本面优质（PE 9.89），高分红低估值提供安全边际",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.8,
-          "target_price": 5.6,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分7.5分，RSI 75.7严重超买，估值泡沫巨大（PE 1674.4），短期回撤风险超30%",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分，RSI 79.61严重超买，CMF资金流-0.2424显著负向，资金加速流出",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-19 14:44:33",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，RSI 75.7严重超买，估值泡沫巨大（PE 1674.4），短期回撤风险超30%",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 104.2,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-19 14:44:35",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI 79.61严重超买，CMF资金流-0.2424显著负向，资金加速流出",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 12.92,
-      "target_price": 0,
-      "validity_period": 1
-    },
     {
       "timestamp": "2026-01-19 14:44:40",
       "type": "BUY",
@@ -31680,6 +31757,79 @@
       "current_price": 6.32,
       "target_price": 6.64,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20 10:23:53",
+      "buy": [
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "建仓信号较强（评分4.2），多周期趋势向上（评分37.8），技术指标协同（MACD交叉、OBV上升、CMF流入），适合平衡型投资者短期布局，但基本面差（PE 127.8）需控制仓位",
+          "allocation_pct": 15,
+          "stop_loss_price": 68.5,
+          "target_price": 80.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货信号强（评分6.0），价格高位（位置百分位74.92%），技术面超买（RSI 67.5），资金流出（CMF -0.1799），风险等级4级需及时止盈",
+          "stop_loss_triggered": false,
+          "target_price": 78.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-20 10:23:54",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号强（评分6.0），价格高位（位置百分位74.92%），技术面超买（RSI 67.5），资金流出（CMF -0.1799），风险等级4级需及时止盈",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 82.35,
+      "target_price": 78.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-20 10:24:02",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 200,
+      "price": 74.3,
+      "amount": 14860.0,
+      "reason": "止损触发: 当前价格HK$74.25 < 止损价格HK$74.50",
+      "capital_after": 14861.189294051961,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 74.3,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -320.0000000000017
+    },
+    {
+      "timestamp": "2026-01-20 10:24:07",
+      "type": "BUY",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 200,
+      "price": 74.25,
+      "amount": 14850.0,
+      "reason": "建仓信号较强（评分4.2），多周期趋势向上（评分37.8），技术指标协同（MACD交叉、OBV上升、CMF流入），适合平衡型投资者短期布局，但基本面差（PE 127.8）需控制仓位",
+      "capital_after": 11.189294051961042,
+      "success": true,
+      "stop_loss_price": 68.5,
+      "current_price": 74.25,
+      "target_price": 80.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
