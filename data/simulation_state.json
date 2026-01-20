@@ -18561,6 +18561,54 @@
       "current_price": 40.52,
       "target_price": 42.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20T09:55:45.531501",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.79,
+      "amount": 0,
+      "capital_after": 1.189294051961042,
+      "reason": "综合评分71.0分，基本面评分100分（低估值高股息），技术指标协同性强（成交量比率、CMF资金流、OBV趋势同向支持） (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 6.39,
+      "current_price": 7.79,
+      "target_price": 8.17,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-20T09:55:50.125046",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.2,
+      "amount": 0,
+      "capital_after": 1.189294051961042,
+      "reason": "综合评分68.5分，多周期趋势评分50.8分强向上，相对强度评分35.2分显著跑赢恒指，技术指标协同性佳 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.7,
+      "current_price": 22.2,
+      "target_price": 23.35,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20T09:55:56.107250",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.32,
+      "amount": 0,
+      "capital_after": 1.189294051961042,
+      "reason": "综合评分66.3分，基本面评分100分（低估值高股息防御属性），多周期趋势温和向上，技术指标协同性中等 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.85,
+      "current_price": 6.32,
+      "target_price": 6.64,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -31377,95 +31425,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-19 13:40:47",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "基本面评分100分（优质低估值，PE=9.89），建仓评分4.7分显示超跌反弹信号（价格低位、RSI接近超卖、OBV上升），技术指标协同良好，综合评分63.8分属推荐区间",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.9,
-          "target_price": 5.5,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "多周期趋势评分36.8分（温和上升），技术指标协同可靠（OBV上升、CMF微流入、相对强度跑赢恒指），超跌反弹概率高，综合评分58.4分验证中期机会",
-          "allocation_pct": 15,
-          "stop_loss_price": 155.0,
-          "target_price": 170.0,
-          "validity_period": 21
-        }
-      ],
-      "sell": [
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "出货评分6.0分（strong级别）由价格高位、MACD死叉预警、CMF资金流出驱动，位置百分位80.65%处于高位，基本面评分50分中等但PE偏高，综合评分57.9分受情绪支撑需防范回调",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 3
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "出货评分4.5分（weak级别）由价格高位、OBV下降、价格下跌驱动，资金分歧明显，基本面评分20分（PE 56.29偏高），综合评分57.4分缺乏基本面支撑需警惕波动风险",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-19 13:40:47",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（strong级别）由价格高位、MACD死叉预警、CMF资金流出驱动，位置百分位80.65%处于高位，基本面评分50分中等但PE偏高，综合评分57.9分受情绪支撑需防范回调",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 83.05,
-      "target_price": 0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-19 13:40:50",
-      "type": "SELL",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.5分（weak级别）由价格高位、OBV下降、价格下跌驱动，资金分歧明显，基本面评分20分（PE 56.29偏高），综合评分57.4分缺乏基本面支撑需警惕波动风险",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 9.36,
-      "target_price": 0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-19 13:40:56",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.14,
-      "amount": 0,
-      "reason": "基本面评分100分（优质低估值，PE=9.89），建仓评分4.7分显示超跌反弹信号（价格低位、RSI接近超卖、OBV上升），技术指标协同良好，综合评分63.8分属推荐区间 (原因: 资金不足)",
-      "capital_after": 1.189294051961042,
-      "success": false,
-      "stop_loss_price": 4.9,
-      "current_price": 5.14,
-      "target_price": 5.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-19 13:40:59",
       "type": "BUY",
       "code": "9988.HK",
@@ -31639,6 +31598,87 @@
       "stop_loss_price": 39.7,
       "current_price": 40.52,
       "target_price": 42.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20 09:55:43",
+      "buy": [
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "综合评分71.0分，基本面评分100分（低估值高股息），技术指标协同性强（成交量比率、CMF资金流、OBV趋势同向支持）",
+          "allocation_pct": 15,
+          "stop_loss_price": 6.39,
+          "target_price": 8.17,
+          "validity_period": 7
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "综合评分68.5分，多周期趋势评分50.8分强向上，相对强度评分35.2分显著跑赢恒指，技术指标协同性佳",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.7,
+          "target_price": 23.35,
+          "validity_period": 14
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "综合评分66.3分，基本面评分100分（低估值高股息防御属性），多周期趋势温和向上，技术指标协同性中等",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.85,
+          "target_price": 6.64,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-20 09:55:45",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.79,
+      "amount": 0,
+      "reason": "综合评分71.0分，基本面评分100分（低估值高股息），技术指标协同性强（成交量比率、CMF资金流、OBV趋势同向支持） (原因: 资金不足)",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": 6.39,
+      "current_price": 7.79,
+      "target_price": 8.17,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-20 09:55:50",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 22.2,
+      "amount": 0,
+      "reason": "综合评分68.5分，多周期趋势评分50.8分强向上，相对强度评分35.2分显著跑赢恒指，技术指标协同性佳 (原因: 资金不足)",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": 20.7,
+      "current_price": 22.2,
+      "target_price": 23.35,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-20 09:55:56",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.32,
+      "amount": 0,
+      "reason": "综合评分66.3分，基本面评分100分（低估值高股息防御属性），多周期趋势温和向上，技术指标协同性中等 (原因: 资金不足)",
+      "capital_after": 1.189294051961042,
+      "success": false,
+      "stop_loss_price": 4.85,
+      "current_price": 6.32,
+      "target_price": 6.64,
       "validity_period": 14
     }
   ],
