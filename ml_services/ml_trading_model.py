@@ -1027,11 +1027,17 @@ class GBDTLRModel:
                 onehot_feats = pd.get_dummies(X_train_leaf[col], prefix=col)
                 X_train_onehot = pd.concat([X_train_onehot, onehot_feats], axis=1)
 
-            # 使用训练集的编码方案对验证集进行编码
+            # 对验证集进行 One-Hot 编码
+            X_val_onehot_temp = pd.DataFrame()
+            for col in self.gbdt_leaf_names:
+                onehot_feats = pd.get_dummies(X_val_leaf[col], prefix=col)
+                X_val_onehot_temp = pd.concat([X_val_onehot_temp, onehot_feats], axis=1)
+
+            # 使用训练集的特征对齐验证集（缺失的特征设为 0）
             X_val_onehot = pd.DataFrame(columns=X_train_onehot.columns)
             for col in X_train_onehot.columns:
-                if col in X_val_leaf.columns:
-                    X_val_onehot[col] = X_val_leaf[col]
+                if col in X_val_onehot_temp.columns:
+                    X_val_onehot[col] = X_val_onehot_temp[col].values
                 else:
                     X_val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
 
