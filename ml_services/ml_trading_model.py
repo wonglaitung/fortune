@@ -384,6 +384,54 @@ class FeatureEngineer:
 
         return df
 
+    def create_interaction_features(self, df):
+        """创建所有可能的交叉特征（类别型 × 数值型）
+
+        生成策略：将所有类别型特征（13个）与所有数值型特征（90个）进行交叉，
+        形成 1170 个交叉特征。GBDT+LR 算法会自动过滤无用特征。
+        """
+        if df.empty:
+            return df
+
+        # 类别型特征（13个）
+        categorical_features = [
+            'Outperforms_HSI',
+            'Strong_Volume_Up',
+            'Weak_Volume_Down',
+            '3d_Trend', '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend',
+            '3d_RS_Signal', '5d_RS_Signal', '10d_RS_Signal', '20d_RS_Signal', '60d_RS_Signal'
+        ]
+
+        # 数值型特征（排除类别型特征、标签和原始价格数据）
+        exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
+                          'Future_Return', 'Label', 'Prev_Close',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Returns', 'TP', 'MF_Multiplier', 'MF_Volume',
+                          'High_Max', 'Low_Min'] + categorical_features
+
+        numeric_features = [col for col in df.columns if col not in exclude_columns]
+
+        print(f"生成交叉特征: {len(categorical_features)} 个类别 × {len(numeric_features)} 个数值 = {len(categorical_features) * len(numeric_features)} 个交叉特征")
+
+        # 生成所有交叉特征
+        interaction_count = 0
+        for cat_feat in categorical_features:
+            if cat_feat not in df.columns:
+                continue
+
+            for num_feat in numeric_features:
+                if num_feat not in df.columns:
+                    continue
+
+                # 交叉特征命名：类别_数值
+                interaction_name = f"{cat_feat}_{num_feat}"
+                df[interaction_name] = df[cat_feat] * df[num_feat]
+                interaction_count += 1
+
+        print(f"✅ 成功生成 {interaction_count} 个交叉特征")
+        return df
+
 
 class MLTradingModel:
     """机器学习交易模型"""
@@ -473,6 +521,10 @@ class MLTradingModel:
 
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
+
+        # 生成交叉特征（类别型 × 数值型）
+        print("\n🔗 生成交叉特征...")
+        df = self.feature_engineer.create_interaction_features(df)
 
         return df
 
@@ -646,6 +698,9 @@ class MLTradingModel:
             for key, value in fundamental_features.items():
                 stock_df[key] = value
 
+            # 生成交叉特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
             # 获取最新数据（或指定日期的数据）
             latest_data = stock_df.iloc[-1:]
 
@@ -783,6 +838,10 @@ class GBDTLRModel:
 
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
+
+        # 生成交叉特征（类别型 × 数值型）
+        print("\n🔗 生成交叉特征...")
+        df = self.feature_engineer.create_interaction_features(df)
 
         return df
 
@@ -952,11 +1011,44 @@ class GBDTLRModel:
         print("📈 Step 5: 训练 LR 模型（最终分类器）")
         print("="*70)
 
-        # 划分训练集和验证集
-        X_train_lr, X_val_lr, y_train_lr, y_val_lr = train_test_split(
-            df_gbdt_onehot, y, test_size=0.2, random_state=2020, stratify=y
-        )
+        # 使用时间序列交叉验证评估 LR 模型
+        tscv_lr = TimeSeriesSplit(n_splits=5)
+        lr_scores = []
+        lr_loglosses = []
+        lr_ks_scores = []
+        lr_aucs = []
 
+        print("   使用时间序列交叉验证评估 LR 模型...")
+
+        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(df_gbdt_onehot), 1):
+            X_train_fold, X_val_fold = df_gbdt_onehot.iloc[train_idx], df_gbdt_onehot.iloc[val_idx]
+            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
+
+            lr_fold = LogisticRegression(
+                penalty='l2',
+                C=0.1,
+                solver='liblinear',
+                random_state=2020,
+                max_iter=1000
+            )
+            lr_fold.fit(X_train_fold, y_train_fold)
+
+            y_pred_fold = lr_fold.predict(X_val_fold)
+            y_pred_prob_fold = lr_fold.predict_proba(X_val_fold)[:, 1]
+
+            score = accuracy_score(y_val_fold, y_pred_fold)
+            logloss = log_loss(y_val_fold, y_pred_prob_fold)
+            ks = self.processor.calculate_ks_statistic(y_val_fold, y_pred_prob_fold)
+            auc = roc_auc_score(y_val_fold, y_pred_prob_fold)
+
+            lr_scores.append(score)
+            lr_loglosses.append(logloss)
+            lr_ks_scores.append(ks)
+            lr_aucs.append(auc)
+
+            print(f"   Fold {fold} 验证准确率: {score:.4f}, LogLoss: {logloss:.4f}, KS: {ks:.4f}, AUC: {auc:.4f}")
+
+        # 使用全部数据训练最终的 LR 模型
         self.lr_model = LogisticRegression(
             penalty='l2',
             C=0.1,
@@ -964,31 +1056,30 @@ class GBDTLRModel:
             random_state=2020,
             max_iter=1000
         )
-        self.lr_model.fit(X_train_lr, y_train_lr)
+        self.lr_model.fit(df_gbdt_onehot, y)
 
-        # 评估
-        tr_pred_prob = self.lr_model.predict_proba(X_train_lr)[:, 1]
-        val_pred_prob = self.lr_model.predict_proba(X_val_lr)[:, 1]
+        # 在全部数据上评估
+        all_pred_prob = self.lr_model.predict_proba(df_gbdt_onehot)[:, 1]
+        all_pred = self.lr_model.predict(df_gbdt_onehot)
 
-        tr_logloss = log_loss(y_train_lr, tr_pred_prob)
-        val_logloss = log_loss(y_val_lr, val_pred_prob)
-
-        tr_ks = self.processor.calculate_ks_statistic(y_train_lr, tr_pred_prob)
-        val_ks = self.processor.calculate_ks_statistic(y_val_lr, val_pred_prob)
-
-        tr_auc = roc_auc_score(y_train_lr, tr_pred_prob)
-        val_auc = roc_auc_score(y_val_lr, val_pred_prob)
+        all_logloss = log_loss(y, all_pred_prob)
+        all_ks = self.processor.calculate_ks_statistic(y, all_pred_prob)
+        all_auc = roc_auc_score(y, all_pred_prob)
+        all_accuracy = accuracy_score(y, all_pred)
 
         print(f"\n✅ LR 训练完成")
-        print(f"   Train LogLoss: {tr_logloss:.4f}")
-        print(f"   Val LogLoss: {val_logloss:.4f}")
-        print(f"   Train KS: {tr_ks:.4f}")
-        print(f"   Val KS: {val_ks:.4f}")
-        print(f"   Train AUC: {tr_auc:.4f}")
-        print(f"   Val AUC: {val_auc:.4f}")
+        print(f"   平均验证准确率: {np.mean(lr_scores):.4f} (+/- {np.std(lr_scores):.4f})")
+        print(f"   平均 LogLoss: {np.mean(lr_loglosses):.4f} (+/- {np.std(lr_loglosses):.4f})")
+        print(f"   平均 KS: {np.mean(lr_ks_scores):.4f} (+/- {np.std(lr_ks_scores):.4f})")
+        print(f"   平均 AUC: {np.mean(lr_aucs):.4f} (+/- {np.std(lr_aucs):.4f})")
+        print(f"\n   全部数据训练指标:")
+        print(f"   Train LogLoss: {all_logloss:.4f}")
+        print(f"   Train KS: {all_ks:.4f}")
+        print(f"   Train AUC: {all_auc:.4f}")
+        print(f"   Train Accuracy: {all_accuracy:.4f}")
 
-        # 绘制 ROC 曲线
-        self.processor.plot_roc_curve(y_val_lr, val_pred_prob, "output/roc_curve.png")
+        # 绘制 ROC 曲线（使用最后一次交叉验证的预测结果）
+        self.processor.plot_roc_curve(y_val_fold, y_pred_prob_fold, "output/roc_curve.png")
 
         # ========== Step 6: 输出 LR 系数 ==========
         print("\n" + "="*70)
@@ -996,7 +1087,7 @@ class GBDTLRModel:
         print("="*70)
 
         lr_coef = pd.DataFrame({
-            'Leaf_Feature': X_train_lr.columns,
+            'Leaf_Feature': df_gbdt_onehot.columns,
             'Coefficient': self.lr_model.coef_[0]
         }).sort_values('Coefficient', key=abs, ascending=False)
 
@@ -1120,6 +1211,9 @@ class GBDTLRModel:
             fundamental_features = self.feature_engineer.create_fundamental_features(code)
             for key, value in fundamental_features.items():
                 stock_df[key] = value
+
+            # 生成交叉特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
             # 获取最新数据
             latest_data = stock_df.iloc[-1:]
