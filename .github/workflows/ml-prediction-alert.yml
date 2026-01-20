@@ -59,9 +59,9 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
           echo "🌳 开始训练模型..."
-          python ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
-          python ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
-          python ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
           echo "✅ 模型训练完成"
 
       - name: Run prediction for 1 day horizon
@@ -72,7 +72,7 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-          python ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
 
       - name: Run prediction for 5 days horizon
         if: github.event.inputs.horizon == '5' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
@@ -82,7 +82,7 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-          python ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
 
       - name: Run prediction for 20 days horizon
         if: github.event.inputs.horizon == '20' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
@@ -92,7 +92,7 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-          python ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+          python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
 
       - name: Send prediction email
         if: github.event.inputs.horizon != '0' || github.event_name == 'schedule'
@@ -103,7 +103,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           PREDICTION_HORIZONS: ${{ github.event.inputs.horizon == 'all' && '1,5,20' || github.event.inputs.horizon }}
         run: |
-          python ml_prediction_email.py
+          python ml_services/ml_prediction_email.py
 
       - name: Upload prediction results
         uses: actions/upload-artifact@v4
