@@ -1005,46 +1005,55 @@ class GBDTLRModel:
         print("📈 Step 5: 训练 LR 模型（最终分类器）")
         print("="*70)
 
-        # 使用时间序列交叉验证评估 LR 模型
+        # 使用时间序列交叉验证，在每个 Fold 内分别训练 GBDT 和 LR
         tscv_lr = TimeSeriesSplit(n_splits=5)
         lr_scores = []
         lr_loglosses = []
         lr_ks_scores = []
         lr_aucs = []
 
-        print("   使用时间序列交叉验证评估 LR 模型...")
-        print("   ✅ 在每个 Fold 内分别进行 One-Hot 编码，避免数据泄漏")
+        print("   使用时间序列交叉验证评估 GBDT + LR 模型...")
+        print("   ✅ 在每个 Fold 内分别训练 GBDT 和 LR，完全避免数据泄漏")
 
-        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(df_gbdt_leaf), 1):
-            # 获取训练集和验证集的叶子节点索引
-            X_train_leaf = df_gbdt_leaf.iloc[train_idx]
-            X_val_leaf = df_gbdt_leaf.iloc[val_idx]
+        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(X), 1):
+            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
-            # 在训练集上进行 One-Hot 编码（避免数据泄漏）
-            X_train_onehot = pd.DataFrame()
-            for col in self.gbdt_leaf_names:
-                onehot_feats = pd.get_dummies(X_train_leaf[col], prefix=col)
-                X_train_onehot = pd.concat([X_train_onehot, onehot_feats], axis=1)
+            # 1. 在训练集上训练 GBDT
+            gbdt_fold = lgb.LGBMClassifier(
+                objective='binary',
+                boosting_type='gbdt',
+                subsample=0.8,
+                min_child_weight=0.1,
+                min_child_samples=10,
+                colsample_bytree=0.7,
+                num_leaves=num_leaves,
+                learning_rate=0.05,
+                n_estimators=n_estimators,
+                random_state=2020,
+                n_jobs=-1,
+                verbose=-1
+            )
+            gbdt_fold.fit(
+                X_train_fold, y_train_fold,
+                eval_set=[(X_val_fold, y_val_fold)],
+                eval_metric='binary_logloss',
+                callbacks=[
+                    lgb.early_stopping(stopping_rounds=5, verbose=False)
+                ]
+            )
 
-            # 对验证集进行 One-Hot 编码
-            X_val_onehot_temp = pd.DataFrame()
-            for col in self.gbdt_leaf_names:
-                onehot_feats = pd.get_dummies(X_val_leaf[col], prefix=col)
-                X_val_onehot_temp = pd.concat([X_val_onehot_temp, onehot_feats], axis=1)
+            # 2. 生成训练集的叶子节点
+            train_leaf = gbdt_fold.booster_.predict(X_train_fold, pred_leaf=True)
+            train_leaf_df = pd.DataFrame(train_leaf, columns=[f'gbdt_leaf_{i}' for i in range(train_leaf.shape[1])])
 
-            # 使用训练集的特征对齐验证集（缺失的特征设为 0）
-            X_val_onehot = pd.DataFrame(columns=X_train_onehot.columns)
-            for col in X_train_onehot.columns:
-                if col in X_val_onehot_temp.columns:
-                    X_val_onehot[col] = X_val_onehot_temp[col].values
-                else:
-                    X_val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
+            # 3. 对训练集叶子节点进行 One-Hot 编码
+            train_onehot = pd.DataFrame()
+            for col in train_leaf_df.columns:
+                onehot_feats = pd.get_dummies(train_leaf_df[col], prefix=col)
+                train_onehot = pd.concat([train_onehot, onehot_feats], axis=1)
 
-            # 填充所有 NaN 值为 0
-            X_val_onehot = X_val_onehot.fillna(0)
-
-            # 训练 LR 模型
+            # 4. 在 One-Hot 编码后的特征上训练 LR
             lr_fold = LogisticRegression(
                 penalty='l2',
                 C=0.1,
@@ -1052,13 +1061,34 @@ class GBDTLRModel:
                 random_state=2020,
                 max_iter=1000
             )
-            lr_fold.fit(X_train_onehot, y_train_fold)
+            lr_fold.fit(train_onehot, y_train_fold)
 
-            # 预测验证集
-            y_pred_fold = lr_fold.predict(X_val_onehot)
-            y_pred_prob_fold = lr_fold.predict_proba(X_val_onehot)[:, 1]
+            # 5. 生成验证集的叶子节点
+            val_leaf = gbdt_fold.booster_.predict(X_val_fold, pred_leaf=True)
+            val_leaf_df = pd.DataFrame(val_leaf, columns=[f'gbdt_leaf_{i}' for i in range(val_leaf.shape[1])])
 
-            # 计算评估指标
+            # 6. 对验证集叶子节点进行 One-Hot 编码（使用训练集的方案）
+            val_onehot_temp = pd.DataFrame()
+            for col in val_leaf_df.columns:
+                onehot_feats = pd.get_dummies(val_leaf_df[col], prefix=col)
+                val_onehot_temp = pd.concat([val_onehot_temp, onehot_feats], axis=1)
+
+            # 使用训练集的特征对齐验证集
+            val_onehot = pd.DataFrame(columns=train_onehot.columns)
+            for col in train_onehot.columns:
+                if col in val_onehot_temp.columns:
+                    val_onehot[col] = val_onehot_temp[col].values
+                else:
+                    val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
+
+            # 填充所有 NaN 值为 0
+            val_onehot = val_onehot.fillna(0)
+
+            # 7. 预测验证集
+            y_pred_fold = lr_fold.predict(val_onehot)
+            y_pred_prob_fold = lr_fold.predict_proba(val_onehot)[:, 1]
+
+            # 8. 计算评估指标
             score = accuracy_score(y_val_fold, y_pred_fold)
             logloss = log_loss(y_val_fold, y_pred_prob_fold)
             ks = self.processor.calculate_ks_statistic(y_val_fold, y_pred_prob_fold)
@@ -1071,14 +1101,26 @@ class GBDTLRModel:
 
             print(f"   Fold {fold} 验证准确率: {score:.4f}, LogLoss: {logloss:.4f}, KS: {ks:.4f}, AUC: {auc:.4f}")
 
-        # 使用全部数据训练最终的 LR 模型（用于预测）
-        # 在全部数据上进行 One-Hot 编码
-        print("\n   在全部数据上进行 One-Hot 编码用于最终模型训练...")
-        df_gbdt_onehot = pd.DataFrame()
-        for col in self.gbdt_leaf_names:
-            onehot_feats = pd.get_dummies(df_gbdt_leaf[col], prefix=col)
-            df_gbdt_onehot = pd.concat([df_gbdt_onehot, onehot_feats], axis=1)
+        # 使用全部数据训练最终的 GBDT 模型（用于预测）
+        print("\n   在全部数据上训练最终的 GBDT 模型（用于预测）...")
+        self.gbdt_model.fit(X, y)
+        self.actual_n_estimators = self.gbdt_model.best_iteration_ if self.gbdt_model.best_iteration_ else n_estimators
 
+        # 生成全部数据的叶子节点
+        all_leaf = self.gbdt_model.booster_.predict(X, pred_leaf=True)
+        all_leaf_df = pd.DataFrame(all_leaf, columns=[f'gbdt_leaf_{i}' for i in range(all_leaf.shape[1])])
+        self.gbdt_leaf_names = list(all_leaf_df.columns)
+
+        # 对全部数据进行 One-Hot 编码
+        print("   对全部数据进行 One-Hot 编码...")
+        all_onehot = pd.DataFrame()
+        for col in all_leaf_df.columns:
+            onehot_feats = pd.get_dummies(all_leaf_df[col], prefix=col)
+            all_onehot = pd.concat([all_onehot, onehot_feats], axis=1)
+
+        print(f"   生成了 {all_onehot.shape[1]} 个叶子节点特征")
+
+        # 训练最终的 LR 模型
         self.lr_model = LogisticRegression(
             penalty='l2',
             C=0.1,
@@ -1086,88 +1128,39 @@ class GBDTLRModel:
             random_state=2020,
             max_iter=1000
         )
-        self.lr_model.fit(df_gbdt_onehot, y)
+        self.lr_model.fit(all_onehot, y)
 
-        # 在全部数据上评估
-        all_pred_prob = self.lr_model.predict_proba(df_gbdt_onehot)[:, 1]
-        all_pred = self.lr_model.predict(df_gbdt_onehot)
+        # 评估最终模型
+        tr_pred_prob = self.lr_model.predict_proba(all_onehot)[:, 1]
+        tr_logloss = log_loss(y, tr_pred_prob)
+        tr_ks = self.processor.calculate_ks_statistic(y, tr_pred_prob)
+        tr_auc = roc_auc_score(y, tr_pred_prob)
+        tr_pred = self.lr_model.predict(all_onehot)
+        tr_acc = accuracy_score(y, tr_pred)
 
-        all_logloss = log_loss(y, all_pred_prob)
-        all_ks = self.processor.calculate_ks_statistic(y, all_pred_prob)
-        all_auc = roc_auc_score(y, all_pred_prob)
-        all_accuracy = accuracy_score(y, all_pred)
-
-        print(f"\n✅ LR 训练完成")
+        print(f"\n✅ GBDT + LR 训练完成")
         print(f"   平均验证准确率: {np.mean(lr_scores):.4f} (+/- {np.std(lr_scores):.4f})")
         print(f"   平均 LogLoss: {np.mean(lr_loglosses):.4f} (+/- {np.std(lr_loglosses):.4f})")
         print(f"   平均 KS: {np.mean(lr_ks_scores):.4f} (+/- {np.std(lr_ks_scores):.4f})")
         print(f"   平均 AUC: {np.mean(lr_aucs):.4f} (+/- {np.std(lr_aucs):.4f})")
+
         print(f"\n   全部数据训练指标:")
-        print(f"   Train LogLoss: {all_logloss:.4f}")
-        print(f"   Train KS: {all_ks:.4f}")
-        print(f"   Train AUC: {all_auc:.4f}")
-        print(f"   Train Accuracy: {all_accuracy:.4f}")
+        print(f"   Train LogLoss: {tr_logloss:.4f}")
+        print(f"   Train KS: {tr_ks:.4f}")
+        print(f"   Train AUC: {tr_auc:.4f}")
+        print(f"   Train Accuracy: {tr_acc:.4f}")
 
-        # 绘制 ROC 曲线（使用最后一次交叉验证的预测结果）
+        # 绘制 ROC 曲线
         self.processor.plot_roc_curve(y_val_fold, y_pred_prob_fold, "output/roc_curve.png")
-
-        # ========== Step 6: 输出 LR 系数 ==========
-        print("\n" + "="*70)
-        print("🔍 Step 6: 分析 LR 系数")
-        print("="*70)
-
-        lr_coef = pd.DataFrame({
-            'Leaf_Feature': df_gbdt_onehot.columns,
-            'Coefficient': self.lr_model.coef_[0]
-        }).sort_values('Coefficient', key=abs, ascending=False)
-
-        lr_coef.to_csv('output/lr_leaf_coefficients.csv', index=False)
-        print("✅ 已保存 LR 系数至 output/lr_leaf_coefficients.csv")
-
-        print("\n📊 LR Top 10 重要叶子特征（按系数绝对值排序）:")
-        print(lr_coef.head(10))
-
-        # ========== Step 7: 解析高权重叶子规则 ==========
-        print("\n" + "="*70)
-        print("🧠 Step 7: 解析高权重叶子节点规则")
-        print("="*70)
-
-        top_leaves = lr_coef.head(5)
-
-        for idx, row in top_leaves.iterrows():
-            leaf_feat = row['Leaf_Feature']
-            coef = row['Coefficient']
-
-            if leaf_feat.startswith('gbdt_leaf_'):
-                parts = leaf_feat.split('_')
-                if len(parts) >= 4:
-                    tree_idx = int(parts[2])
-                    leaf_idx = int(parts[3])
-
-                    print(f"\n🔎 解析 {leaf_feat} (LR系数: {coef:.4f})")
-                    try:
-                        rule = self.processor.get_leaf_path_enhanced(
-                            self.gbdt_model.booster_,
-                            tree_index=tree_idx,
-                            leaf_index=leaf_idx,
-                            feature_names=self.feature_columns
-                        )
-                        if rule:
-                            for i, r in enumerate(rule, 1):
-                                print(f"   {i}. {r}")
-                        else:
-                            print("   ⚠️ 路径未找到")
-                    except Exception as e:
-                        print(f"   ⚠️ 解析失败: {e}")
 
         print("\n" + "="*70)
         print("✅ GBDT + LR 模型训练完成！")
         print("="*70)
-        print("📊 所有可解释性报告已生成在 output/ 目录下：")
-        print("   - gbdt_feature_importance.csv")
-        print("   - lr_leaf_coefficients.csv")
-        print("   - roc_curve.png")
+        print("⚠️  注意：由于每个 Fold 内分别训练 GBDT，无法统一分析特征重要性和叶子节点规则")
+        print("   最终模型使用全部数据训练，仅用于预测，不提供可解释性分析")
+        print("="*70)
 
+        # 返回特征重要性（使用 GBDT 模型的特征重要性）
         return feat_imp
 
     def predict(self, code, predict_date=None, horizon=None):
