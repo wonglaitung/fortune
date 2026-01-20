@@ -996,17 +996,11 @@ class GBDTLRModel:
         self.gbdt_leaf_names = [f'gbdt_leaf_{i}' for i in range(actual_trees)]
         df_gbdt_leaf = pd.DataFrame(gbdt_leaf_features, columns=self.gbdt_leaf_names)
 
-        # ========== Step 4: 对叶子节点做 One-Hot 编码 ==========
-        print("   对叶子节点进行 One-Hot 编码...")
-        df_gbdt_onehot = pd.DataFrame()
+        # ========== Step 4: 不再在全部数据上进行 One-Hot 编码 ==========
+        print("   ⚠️  跳过全局 One-Hot 编码（将在每个 Fold 内分别进行）")
+        print("   这是为了避免数据泄漏，确保验证集不受训练集信息污染")
 
-        for col in self.gbdt_leaf_names:
-            onehot_feats = pd.get_dummies(df_gbdt_leaf[col], prefix=col)
-            df_gbdt_onehot = pd.concat([df_gbdt_onehot, onehot_feats], axis=1)
-
-        print(f"   生成了 {df_gbdt_onehot.shape[1]} 个叶子节点特征")
-
-        # ========== Step 5: 训练 LR 模型 ==========
+        # ========== Step 5: 训练 LR 模型（修复数据泄漏版本） ==========
         print("\n" + "="*70)
         print("📈 Step 5: 训练 LR 模型（最终分类器）")
         print("="*70)
@@ -1019,11 +1013,29 @@ class GBDTLRModel:
         lr_aucs = []
 
         print("   使用时间序列交叉验证评估 LR 模型...")
+        print("   ✅ 在每个 Fold 内分别进行 One-Hot 编码，避免数据泄漏")
 
-        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(df_gbdt_onehot), 1):
-            X_train_fold, X_val_fold = df_gbdt_onehot.iloc[train_idx], df_gbdt_onehot.iloc[val_idx]
+        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(df_gbdt_leaf), 1):
+            # 获取训练集和验证集的叶子节点索引
+            X_train_leaf = df_gbdt_leaf.iloc[train_idx]
+            X_val_leaf = df_gbdt_leaf.iloc[val_idx]
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
+            # 在训练集上进行 One-Hot 编码（避免数据泄漏）
+            X_train_onehot = pd.DataFrame()
+            for col in self.gbdt_leaf_names:
+                onehot_feats = pd.get_dummies(X_train_leaf[col], prefix=col)
+                X_train_onehot = pd.concat([X_train_onehot, onehot_feats], axis=1)
+
+            # 使用训练集的编码方案对验证集进行编码
+            X_val_onehot = pd.DataFrame(columns=X_train_onehot.columns)
+            for col in X_train_onehot.columns:
+                if col in X_val_leaf.columns:
+                    X_val_onehot[col] = X_val_leaf[col]
+                else:
+                    X_val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
+
+            # 训练 LR 模型
             lr_fold = LogisticRegression(
                 penalty='l2',
                 C=0.1,
@@ -1031,11 +1043,13 @@ class GBDTLRModel:
                 random_state=2020,
                 max_iter=1000
             )
-            lr_fold.fit(X_train_fold, y_train_fold)
+            lr_fold.fit(X_train_onehot, y_train_fold)
 
-            y_pred_fold = lr_fold.predict(X_val_fold)
-            y_pred_prob_fold = lr_fold.predict_proba(X_val_fold)[:, 1]
+            # 预测验证集
+            y_pred_fold = lr_fold.predict(X_val_onehot)
+            y_pred_prob_fold = lr_fold.predict_proba(X_val_onehot)[:, 1]
 
+            # 计算评估指标
             score = accuracy_score(y_val_fold, y_pred_fold)
             logloss = log_loss(y_val_fold, y_pred_prob_fold)
             ks = self.processor.calculate_ks_statistic(y_val_fold, y_pred_prob_fold)
@@ -1048,7 +1062,14 @@ class GBDTLRModel:
 
             print(f"   Fold {fold} 验证准确率: {score:.4f}, LogLoss: {logloss:.4f}, KS: {ks:.4f}, AUC: {auc:.4f}")
 
-        # 使用全部数据训练最终的 LR 模型
+        # 使用全部数据训练最终的 LR 模型（用于预测）
+        # 在全部数据上进行 One-Hot 编码
+        print("\n   在全部数据上进行 One-Hot 编码用于最终模型训练...")
+        df_gbdt_onehot = pd.DataFrame()
+        for col in self.gbdt_leaf_names:
+            onehot_feats = pd.get_dummies(df_gbdt_leaf[col], prefix=col)
+            df_gbdt_onehot = pd.concat([df_gbdt_onehot, onehot_feats], axis=1)
+
         self.lr_model = LogisticRegression(
             penalty='l2',
             C=0.1,
