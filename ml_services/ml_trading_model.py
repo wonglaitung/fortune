@@ -1376,6 +1376,18 @@ def main():
             # 计算预测一致性
             comparison['预测一致'] = comparison['prediction_LGBM'] == comparison['prediction_GBDT_LR']
             comparison['概率差异'] = abs(comparison['probability_LGBM'] - comparison['probability_GBDT_LR'])
+            
+            # 按一致性和平均概率排序，体现模型识别"更可能上涨"股票的能力
+            comparison['avg_probability'] = (
+                comparison['probability_LGBM'] + 
+                comparison['probability_GBDT_LR']
+            ) / 2
+            
+            # 优先显示两个模型一致的股票，然后按平均概率降序排序
+            comparison = comparison.sort_values(
+                by=['预测一致', 'avg_probability'], 
+                ascending=[False, False]
+            )
 
             # 显示对比结果
             print("\n" + "=" * 140)
@@ -1433,6 +1445,18 @@ def main():
                 'prediction_GBDT_LR', 'probability_GBDT_LR', 'consistent', 'probability_diff',
                 'current_price', 'data_date', 'target_date'
             ]
+            
+            # 按一致性和平均概率排序，体现模型识别"更可能上涨"股票的能力
+            comparison_export['avg_probability'] = (
+                comparison_export['probability_LGBM'] + 
+                comparison_export['probability_GBDT_LR']
+            ) / 2
+            
+            # 优先显示两个模型一致的股票，然后按平均概率降序排序
+            comparison_export = comparison_export.sort_values(
+                by=['consistent', 'avg_probability'], 
+                ascending=[False, False]
+            )
             
             comparison_path = args.model_path.replace('.pkl', '_comparison.csv')
             comparison_export.to_csv(comparison_path, index=False)
