@@ -18833,6 +18833,22 @@
       "current_price": 5.43,
       "target_price": 5.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21T09:45:08.578811",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.2,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "技术指标显示超卖反弹机会（RSI超卖32.58<40、布林带超卖、OBV上升），基本面优质（PE 7.39），位置百分位8.55%处于60日低位，适合短期配置。 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 45.5,
+      "current_price": 47.2,
+      "target_price": 50.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -31758,54 +31774,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-20 11:46:13",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号明确（price_high + obv_down + price_down），RSI 62.26接近超买区，AI概念炒作退潮风险高，基本面市盈率负值缺乏支撑",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 54.35,
-      "target_price": 50.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-20 11:46:16",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号极强（price_high + macd_cross + rsi_high + cmf_out + bb_overbought + price_down），位置百分位100.0%历史最高位，CMF资金流-0.264显著流出，技术面顶背离",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 128.9,
-      "target_price": 122.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-20 11:46:19",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号强烈（price_high + macd_cross + cmf_out + price_down），CMF资金流-0.1826持续流出，估值偏高（市盈率18.51），保险行业新单增长放缓可能引发回调",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 82.95,
-      "target_price": 78.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-20 11:46:24",
       "type": "BUY",
       "code": "0939.HK",
@@ -31944,6 +31912,37 @@
       "current_price": 5.43,
       "target_price": 5.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21 09:45:06",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "技术指标显示超卖反弹机会（RSI超卖32.58<40、布林带超卖、OBV上升），基本面优质（PE 7.39），位置百分位8.55%处于60日低位，适合短期配置。",
+          "allocation_pct": 10,
+          "stop_loss_price": 45.5,
+          "target_price": 50.5,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-21 09:45:08",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.2,
+      "amount": 0,
+      "reason": "技术指标显示超卖反弹机会（RSI超卖32.58<40、布林带超卖、OBV上升），基本面优质（PE 7.39），位置百分位8.55%处于60日低位，适合短期配置。 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 45.5,
+      "current_price": 47.2,
+      "target_price": 50.5,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
