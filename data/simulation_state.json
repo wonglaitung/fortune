@@ -18961,6 +18961,22 @@
       "current_price": 7.73,
       "target_price": 8.1,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-21T11:49:09.081702",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.28,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "基本面顶级（PE仅5.76），低估值防御性强，建仓信号稳健（MACD金叉、OBV上升），风险等级2级适合平衡型 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.9,
+      "current_price": 6.28,
+      "target_price": 6.6,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -31886,53 +31902,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-20 15:41:39",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.43,
-      "amount": 0,
-      "reason": "强建仓信号（价格低位、RSI超卖、布林带超卖、OBV上升），基本面优异（PE 6.17，高股息），位置深度低估（百分位11.65%），风险等级中低（2级） (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 5.0,
-      "current_price": 5.43,
-      "target_price": 5.8,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-21 09:45:06",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "技术指标显示超卖反弹机会（RSI超卖32.58<40、布林带超卖、OBV上升），基本面优质（PE 7.39），位置百分位8.55%处于60日低位，适合短期配置。",
-          "allocation_pct": 10,
-          "stop_loss_price": 45.5,
-          "target_price": 50.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-21 09:45:08",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.2,
-      "amount": 0,
-      "reason": "技术指标显示超卖反弹机会（RSI超卖32.58<40、布林带超卖、OBV上升），基本面优质（PE 7.39），位置百分位8.55%处于60日低位，适合短期配置。 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 45.5,
-      "current_price": 47.2,
-      "target_price": 50.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-21 10:30:36",
       "buy": [
         {
@@ -32115,6 +32084,37 @@
       "current_price": 7.73,
       "target_price": 8.1,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-21 11:49:06",
+      "buy": [
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "基本面顶级（PE仅5.76），低估值防御性强，建仓信号稳健（MACD金叉、OBV上升），风险等级2级适合平衡型",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.9,
+          "target_price": 6.6,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-21 11:49:09",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.28,
+      "amount": 0,
+      "reason": "基本面顶级（PE仅5.76），低估值防御性强，建仓信号稳健（MACD金叉、OBV上升），风险等级2级适合平衡型 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 5.9,
+      "current_price": 6.28,
+      "target_price": 6.6,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
