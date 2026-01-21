@@ -18929,6 +18929,38 @@
       "current_price": 161.9,
       "target_price": 175.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21T10:57:13.018831",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.74,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "建仓信号强（MACD金叉、OBV上升、CMF资金流入）、趋势验证可靠（多周期趋势评分42.5>20）、基本面优质（市盈率7.93低于行业平均）、技术指标协同高（4个指标同向），风险等级2级适合平衡型 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.7,
+      "current_price": 21.74,
+      "target_price": 23.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21T10:57:17.516247",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.73,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "建仓信号明确（价格低位、MACD金叉）、基本面护航（市盈率5.66港股最低）、技术指标协同中等（3个指标同向）、相对强度修复（60日收益率跌幅收窄），风险等级3级但安全边际高 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 7.5,
+      "current_price": 7.73,
+      "target_price": 8.1,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -31854,98 +31886,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-20 11:46:33",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.31,
-      "amount": 0,
-      "reason": "基本面评分100分（市盈率5.76，港股最高分红银行），技术指标协同性强（OBV上升、CMF流入、价格低位），60日收益率4.29%趋势稳健，信号一致性佳 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 6.0,
-      "current_price": 6.31,
-      "target_price": 6.65,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-01-20 13:30:04",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-20 14:35:44",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "综合评分62.7分，基本面评分100分（PE=9.66）提供安全边际，技术指标协同支持超跌反弹",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.8,
-          "target_price": 5.8,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-20 14:35:47",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.14,
-      "amount": 0,
-      "reason": "综合评分62.7分，基本面评分100分（PE=9.66）提供安全边际，技术指标协同支持超跌反弹 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 4.8,
-      "current_price": 5.14,
-      "target_price": 5.8,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-20 15:41:31",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "强建仓信号（价格低位、RSI超卖、布林带超卖、OBV上升），基本面优异（PE 6.17，高股息），位置深度低估（百分位11.65%），风险等级中低（2级）",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.0,
-          "target_price": 5.8,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "强出货信号（价格高位、CMF资金流出、OBV下降、价格下跌），基本面脆弱（PE 34.42偏高），资金流出加速，风险等级中高（4级）",
-          "stop_loss_triggered": false,
-          "target_price": 34.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-20 15:41:31",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "强出货信号（价格高位、CMF资金流出、OBV下降、价格下跌），基本面脆弱（PE 34.42偏高），资金流出加速，风险等级中高（4级）",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 37.06,
-      "target_price": 34.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-20 15:41:39",
       "type": "BUY",
       "code": "1288.HK",
@@ -32119,6 +32059,62 @@
       "current_price": 161.9,
       "target_price": 175.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21 10:57:10",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "建仓信号强（MACD金叉、OBV上升、CMF资金流入）、趋势验证可靠（多周期趋势评分42.5>20）、基本面优质（市盈率7.93低于行业平均）、技术指标协同高（4个指标同向），风险等级2级适合平衡型",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.7,
+          "target_price": 23.5,
+          "validity_period": 14
+        },
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "建仓信号明确（价格低位、MACD金叉）、基本面护航（市盈率5.66港股最低）、技术指标协同中等（3个指标同向）、相对强度修复（60日收益率跌幅收窄），风险等级3级但安全边际高",
+          "allocation_pct": 10,
+          "stop_loss_price": 7.5,
+          "target_price": 8.1,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-21 10:57:13",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 21.74,
+      "amount": 0,
+      "reason": "建仓信号强（MACD金叉、OBV上升、CMF资金流入）、趋势验证可靠（多周期趋势评分42.5>20）、基本面优质（市盈率7.93低于行业平均）、技术指标协同高（4个指标同向），风险等级2级适合平衡型 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 20.7,
+      "current_price": 21.74,
+      "target_price": 23.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-21 10:57:17",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 7.73,
+      "amount": 0,
+      "reason": "建仓信号明确（价格低位、MACD金叉）、基本面护航（市盈率5.66港股最低）、技术指标协同中等（3个指标同向）、相对强度修复（60日收益率跌幅收窄），风险等级3级但安全边际高 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 7.5,
+      "current_price": 7.73,
+      "target_price": 8.1,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
