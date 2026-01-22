@@ -19489,6 +19489,22 @@
       "current_price": 7.64,
       "target_price": 8.2,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-22T13:35:37.420955",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.21,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "基本面稳健（PE 9.66，高分红），技术指标显示超跌反弹机会（位置百分位13.92%超跌，OBV上升，RSI接近超卖区），风险等级中，适合平衡型投资者短期配置。 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 3.7,
+      "current_price": 5.21,
+      "target_price": 5.8,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -32414,163 +32430,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 10:15:47",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "维持此前决策，行业监管政策不确定性加剧，RSI连续5日低于40显示弱势格局",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.94,
-      "target_price": 48.2,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-22 10:15:52",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 78.95,
-      "amount": 0,
-      "reason": "放量突破80港元关键阻力位，MACD金叉确认上升趋势，符合平衡型偏好中的稳定收益标的 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 75.57,
-      "current_price": 78.95,
-      "target_price": 85.28,
-      "validity_period": 10
-    },
-    {
-      "timestamp": "2026-01-22 10:15:55",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 22.92,
-      "amount": 0,
-      "reason": "国际油价企稳反弹，布林带收口后向上突破，股息率6.2%匹配平衡型风险收益需求 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 20.04,
-      "current_price": 22.92,
-      "target_price": 24.85,
-      "validity_period": 15
-    },
-    {
-      "timestamp": "2026-01-22 11:16:58",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-22 11:59:29",
-      "buy": [
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "综合评分58.6分，建仓评分6.4分（strong级别），技术指标超卖反弹信号，RSI 37.59深度超卖，OBV趋势上升，CMF资金流入0.2945，位置百分位7.58%历史低位，适合平衡型投资者捕捉短期反弹机会",
-          "allocation_pct": 15,
-          "stop_loss_price": 93.5,
-          "target_price": 102.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分7.5分，RSI 74.34超买，布林带高位，CMF资金流出-0.1658，位置百分位100.0%历史高位，基本面市盈率1876估值泡沫，系统性风险高",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 5
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分，RSI 76.56超买，CMF资金流出-0.2201，位置百分位98.13%高位，60日收益率29.48%涨幅过大，获利盘丰厚需了结",
-          "stop_loss_triggered": false,
-          "target_price": 11.8,
-          "validity_period": 5
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分7.5分，RSI 67.08超买，布林带高位，CMF资金流出-0.1806，位置百分位100.0%历史高位，60日收益率26.27%涨幅过大，利率政策不确定性上升",
-          "stop_loss_triggered": false,
-          "target_price": 124.0,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-22 11:59:29",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，RSI 74.34超买，布林带高位，CMF资金流出-0.1658，位置百分位100.0%历史高位，基本面市盈率1876估值泡沫，系统性风险高",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 107.8,
-      "target_price": 100.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-22 11:59:33",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI 76.56超买，CMF资金流出-0.2201，位置百分位98.13%高位，60日收益率29.48%涨幅过大，获利盘丰厚需了结",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 12.92,
-      "target_price": 11.8,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-22 11:59:35",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，RSI 67.08超买，布林带高位，CMF资金流出-0.1806，位置百分位100.0%历史高位，60日收益率26.27%涨幅过大，利率政策不确定性上升",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 128.9,
-      "target_price": 124.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-01-22 11:59:40",
-      "type": "BUY",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 96.4,
-      "amount": 0,
-      "reason": "综合评分58.6分，建仓评分6.4分（strong级别），技术指标超卖反弹信号，RSI 37.59深度超卖，OBV趋势上升，CMF资金流入0.2945，位置百分位7.58%历史低位，适合平衡型投资者捕捉短期反弹机会 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 93.5,
-      "current_price": 96.4,
-      "target_price": 102.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-22 13:08:36",
       "buy": [
         {
@@ -32771,6 +32630,37 @@
       "current_price": 7.64,
       "target_price": 8.2,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-22 13:35:35",
+      "buy": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "基本面稳健（PE 9.66，高分红），技术指标显示超跌反弹机会（位置百分位13.92%超跌，OBV上升，RSI接近超卖区），风险等级中，适合平衡型投资者短期配置。",
+          "allocation_pct": 15,
+          "stop_loss_price": 3.7,
+          "target_price": 5.8,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-22 13:35:37",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.21,
+      "amount": 0,
+      "reason": "基本面稳健（PE 9.66，高分红），技术指标显示超跌反弹机会（位置百分位13.92%超跌，OBV上升，RSI接近超卖区），风险等级中，适合平衡型投资者短期配置。 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 3.7,
+      "current_price": 5.21,
+      "target_price": 5.8,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
