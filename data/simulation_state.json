@@ -19569,6 +19569,38 @@
       "current_price": 78.9,
       "target_price": 83.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-22T15:48:00.913114",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 11.189294051961042,
+      "reason": "出货评分7.0分（strong），价格高位（位置百分位95.45%）、RSI超买（75.46）、CMF流出（-0.2104）、布林带超买，技术面超买且量价背离需获利了结",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.76,
+      "target_price": 12.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-22T15:48:04.556102",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 11.189294051961042,
+      "reason": "出货评分6.5分（strong），价格高位（位置百分位100%）、MACD死叉、RSI高位（68.21）、CMF流出（-0.2035），技术面超买且资金流入不持续需获利了结",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 129.5,
+      "target_price": 125.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -32494,70 +32526,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 13:08:48",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号显著（评分5.0），价格高位（位置百分位91.12%），资金大幅流出，量价背离，行业政策风险上升",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.16,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-22 13:08:50",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号确认（评分4.0），价格高位（位置百分位66.09%），量能萎缩，AI板块估值回调压力大",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 52.5,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-22 13:08:55",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 22.8,
-      "amount": 0,
-      "reason": "多周期趋势极强（评分98.8），基本面优质（PE 7.93低估值），技术指标高度协同（4个同向信号），风险等级中低，适合平衡型投资者捕捉中期收益 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 21.2,
-      "current_price": 22.8,
-      "target_price": 25.5,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-01-22 13:08:59",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.2,
-      "amount": 0,
-      "reason": "高股息防御性强，基本面卓越（PE 5.76港股最低之一），风险等级低，技术指标稳健协同，适合平衡型投资者稳健配置 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 5.9,
-      "current_price": 6.2,
-      "target_price": 6.8,
-      "validity_period": 30
-    },
-    {
       "timestamp": "2026-01-22 13:09:03",
       "type": "BUY",
       "code": "0939.HK",
@@ -32715,6 +32683,60 @@
       "current_price": 78.9,
       "target_price": 83.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-22 15:48:00",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分7.0分（strong），价格高位（位置百分位95.45%）、RSI超买（75.46）、CMF流出（-0.2104）、布林带超买，技术面超买且量价背离需获利了结",
+          "stop_loss_triggered": false,
+          "target_price": 12.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分6.5分（strong），价格高位（位置百分位100%）、MACD死叉、RSI高位（68.21）、CMF流出（-0.2035），技术面超买且资金流入不持续需获利了结",
+          "stop_loss_triggered": false,
+          "target_price": 125.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-22 15:48:00",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分（strong），价格高位（位置百分位95.45%）、RSI超买（75.46）、CMF流出（-0.2104）、布林带超买，技术面超买且量价背离需获利了结",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.76,
+      "target_price": 12.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-22 15:48:04",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分（strong），价格高位（位置百分位100%）、MACD死叉、RSI高位（68.21）、CMF流出（-0.2035），技术面超买且资金流入不持续需获利了结",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 129.5,
+      "target_price": 125.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
