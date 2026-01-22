@@ -19505,6 +19505,22 @@
       "current_price": 5.21,
       "target_price": 5.8,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-22T14:14:01.819167",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.16,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "建仓信号极强（评分4.9分），价格超低位（位置百分位5.43%），RSI超卖22.7，CMF资金流入+0.3035，技术指标协同性极佳（6指标中5个利好），适合平衡型投资者短期反弹配置 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.16,
+      "target_price": 5.65,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -32430,96 +32446,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 13:08:36",
-      "buy": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "多周期趋势极强（评分98.8），基本面优质（PE 7.93低估值），技术指标高度协同（4个同向信号），风险等级中低，适合平衡型投资者捕捉中期收益",
-          "allocation_pct": 15,
-          "stop_loss_price": 21.2,
-          "target_price": 25.5,
-          "validity_period": 21
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "高股息防御性强，基本面卓越（PE 5.76港股最低之一），风险等级低，技术指标稳健协同，适合平衡型投资者稳健配置",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.9,
-          "target_price": 6.8,
-          "validity_period": 30
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "高分红提供安全垫，基本面无敌（PE 5.66港股最低），技术指标协同性强，风险等级低，适合平衡型投资者长期持有",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.1,
-          "target_price": 8.2,
-          "validity_period": 30
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货信号极强（评分7.5），价格高位（位置百分位100%），RSI超买，资金流出，高估值风险",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货信号明确（评分6.0），价格高位（位置百分位98.4%），RSI严重超买，资金流出，短期过热不可持续",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货信号强烈（评分6.5），价格高位（位置百分位100%），RSI接近超买，资金流出，警惕汇率波动冲击",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货信号显著（评分5.0），价格高位（位置百分位91.12%），资金大幅流出，量价背离，行业政策风险上升",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货信号确认（评分4.0），价格高位（位置百分位66.09%），量能萎缩，AI板块估值回调压力大",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-22 13:08:36",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号极强（评分7.5），价格高位（位置百分位100%），RSI超买，资金流出，高估值风险",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 108.4,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-22 13:08:43",
       "type": "SELL",
       "code": "1138.HK",
@@ -32661,6 +32587,37 @@
       "current_price": 5.21,
       "target_price": 5.8,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-22 14:13:59",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "建仓信号极强（评分4.9分），价格超低位（位置百分位5.43%），RSI超卖22.7，CMF资金流入+0.3035，技术指标协同性极佳（6指标中5个利好），适合平衡型投资者短期反弹配置",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.9,
+          "target_price": 5.65,
+          "validity_period": 5
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-22 14:14:01",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.16,
+      "amount": 0,
+      "reason": "建仓信号极强（评分4.9分），价格超低位（位置百分位5.43%），RSI超卖22.7，CMF资金流入+0.3035，技术指标协同性极佳（6指标中5个利好），适合平衡型投资者短期反弹配置 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.16,
+      "target_price": 5.65,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
