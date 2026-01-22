@@ -19521,6 +19521,54 @@
       "current_price": 5.16,
       "target_price": 5.65,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-22T14:42:15.652697",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 11.189294051961042,
+      "reason": "出货评分6.5分，出货信号极强（价格高位、RSI高位、CMF流出、布林带超买），位置百分位100%显示短期见顶，技术面与基本面严重背离（PE 1876，评分20），风险等级4级(中高)超出平衡型承受范围，需防范获利回吐",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 108.3,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-22T14:42:20.653171",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 96.9,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "综合评分59.4分，建仓信号极强（评分6.4），技术指标协同满分（5个同向信号：价格低位、RSI超卖、OBV上升、CMF流入、布林带超卖），基本面稳健（业务复苏），适合平衡型投资者中期布局超跌反弹，风险等级3级(中)在可接受范围 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 92.0,
+      "current_price": 96.9,
+      "target_price": 102.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-22T14:42:25.046828",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.9,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "综合评分58.1分，建仓信号强（评分4.9），基本面良好（PE 11.23，高分红），技术指标协同良好（4个同向信号：价格低位、RSI超卖、CMF流入、布林带超卖），CMF资金流0.3826显著流入，适合平衡型投资者中期配置防御性通信股，风险等级3级(中)匹配风险偏好 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 74.0,
+      "current_price": 78.9,
+      "target_price": 83.0,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -32446,38 +32494,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 13:08:43",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号明确（评分6.0），价格高位（位置百分位98.4%），RSI严重超买，资金流出，短期过热不可持续",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 12.89,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-22 13:08:45",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号强烈（评分6.5），价格高位（位置百分位100%），RSI接近超买，资金流出，警惕汇率波动冲击",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 129.2,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-22 13:08:48",
       "type": "SELL",
       "code": "2269.HK",
@@ -32618,6 +32634,87 @@
       "current_price": 5.16,
       "target_price": 5.65,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-22 14:42:15",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "综合评分59.4分，建仓信号极强（评分6.4），技术指标协同满分（5个同向信号：价格低位、RSI超卖、OBV上升、CMF流入、布林带超卖），基本面稳健（业务复苏），适合平衡型投资者中期布局超跌反弹，风险等级3级(中)在可接受范围",
+          "allocation_pct": 15,
+          "stop_loss_price": 92.0,
+          "target_price": 102.0,
+          "validity_period": 14
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "综合评分58.1分，建仓信号强（评分4.9），基本面良好（PE 11.23，高分红），技术指标协同良好（4个同向信号：价格低位、RSI超卖、CMF流入、布林带超卖），CMF资金流0.3826显著流入，适合平衡型投资者中期配置防御性通信股，风险等级3级(中)匹配风险偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 74.0,
+          "target_price": 83.0,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分6.5分，出货信号极强（价格高位、RSI高位、CMF流出、布林带超买），位置百分位100%显示短期见顶，技术面与基本面严重背离（PE 1876，评分20），风险等级4级(中高)超出平衡型承受范围，需防范获利回吐",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-22 14:42:15",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，出货信号极强（价格高位、RSI高位、CMF流出、布林带超买），位置百分位100%显示短期见顶，技术面与基本面严重背离（PE 1876，评分20），风险等级4级(中高)超出平衡型承受范围，需防范获利回吐",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 108.3,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-22 14:42:20",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 96.9,
+      "amount": 0,
+      "reason": "综合评分59.4分，建仓信号极强（评分6.4），技术指标协同满分（5个同向信号：价格低位、RSI超卖、OBV上升、CMF流入、布林带超卖），基本面稳健（业务复苏），适合平衡型投资者中期布局超跌反弹，风险等级3级(中)在可接受范围 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 92.0,
+      "current_price": 96.9,
+      "target_price": 102.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-22 14:42:25",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.9,
+      "amount": 0,
+      "reason": "综合评分58.1分，建仓信号强（评分4.9），基本面良好（PE 11.23，高分红），技术指标协同良好（4个同向信号：价格低位、RSI超卖、CMF流入、布林带超卖），CMF资金流0.3826显著流入，适合平衡型投资者中期配置防御性通信股，风险等级3级(中)匹配风险偏好 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 74.0,
+      "current_price": 78.9,
+      "target_price": 83.0,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
