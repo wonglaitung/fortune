@@ -270,3 +270,63 @@
 
 ### 🌍 
 [2026-01-23 10:38:16] 正在请求大模型以固定格式输出买卖信号...
+[2026-01-23 10:40:29] 格式化输出结果:
+{
+    "buy": [
+        {
+            "code": "1330.HK",
+            "name": "绿色动力环保",
+            "reason": "综合评分67.1分，位置百分位18.99%低位，基本面优质（PE=9.66低估值+高分红），技术指标price_low、obv_up、macd_cross三信号协同",
+            "allocation_pct": 15,
+            "stop_loss_price": 4.80,
+            "target_price": 5.80,
+            "validity_period": 7
+        },
+        {
+            "code": "3968.HK",
+            "name": "招商银行",
+            "reason": "综合评分60.5分，位置百分位3.24%深度超卖，基本面强劲（PE=7.39行业最优），技术指标price_low、rsi_oversold、bb_oversold、obv_up四信号强协同",
+            "allocation_pct": 15,
+            "stop_loss_price": 44.50,
+            "target_price": 50.00,
+            "validity_period": 7
+        }
+    ],
+    "sell": [
+        {
+            "code": "0883.HK",
+            "name": "中国海洋石油",
+            "reason": "出货评分3.0分，位置百分位79.81%高位，技术面布林带超买+price_down，基本面虽优但油价波动风险",
+            "stop_loss_triggered": false,
+            "target_price": 20.50,
+            "validity_period": 7
+        },
+        {
+            "code": "9988.HK",
+            "name": "阿里巴巴-SW",
+            "reason": "出货评分4.0分，位置百分位89.49%高位，估值偏高（PE=23.09）且监管风险升温",
+            "stop_loss_triggered": false,
+            "target_price": 160.00,
+            "validity_period": 7
+        }
+    ]
+}
+[2026-01-23 10:40:29] 成功解析JSON格式的买卖信号
+[2026-01-23 10:40:29] 解析后推荐: 买入 [{'code': '1330.HK', 'name': '绿色动力环保', 'reason': '综合评分67.1分，位置百分位18.99%低位，基本面优质（PE=9.66低估值+高分红），技术指标price_low、obv_up、macd_cross三信号协同', 'allocation_pct': 15, 'stop_loss_price': 4.8, 'target_price': 5.8, 'validity_period': 7}, {'code': '3968.HK', 'name': '招商银行', 'reason': '综合评分60.5分，位置百分位3.24%深度超卖，基本面强劲（PE=7.39行业最优），技术指标price_low、rsi_oversold、bb_oversold、obv_up四信号强协同', 'allocation_pct': 15, 'stop_loss_price': 44.5, 'target_price': 50.0, 'validity_period': 7}], 卖出 [{'code': '0883.HK', 'name': '中国海洋石油', 'reason': '出货评分3.0分，位置百分位79.81%高位，技术面布林带超买+price_down，基本面虽优但油价波动风险', 'stop_loss_triggered': False, 'target_price': 20.5, 'validity_period': 7}, {'code': '9988.HK', 'name': '阿里巴巴-SW', 'reason': '出货评分4.0分，位置百分位89.49%高位，估值偏高（PE=23.09）且监管风险升温', 'stop_loss_triggered': False, 'target_price': 160.0, 'validity_period': 7}]
+[2026-01-23 10:40:29] 按大模型建议卖出 中国海洋石油 (0883.HK)，理由: 出货评分3.0分，位置百分位79.81%高位，技术面布林带超买+price_down，基本面虽优但油价波动风险，止损触发: False
+[2026-01-23 10:40:30] 卖出 7100 股 中国海洋石油 (0883.HK) @ HK$22.32, 总金额: HK$158472.00, 盈利: HK$6786.00
+[2026-01-23 10:40:33] 邮件发送成功: 【卖出通知】中国海洋石油 (0883.HK)
+[2026-01-23 10:40:33] 未持有 阿里巴巴-SW (9988.HK)，无法按大模型建议卖出
+[2026-01-23 10:40:36] 邮件发送成功: 【无法卖出通知】阿里巴巴-SW (9988.HK)
+[2026-01-23 10:40:36] 已发送无法卖出通知邮件: 阿里巴巴-SW (9988.HK)
+[2026-01-23 10:40:38] 调整买入股数以符合大模型建议的持仓比例: 28600 股 绿色动力环保 (1330.HK)
+[2026-01-23 10:40:39] 买入 28600 股 绿色动力环保 (1330.HK) @ HK$5.26, 总金额: HK$150436.00
+[2026-01-23 10:40:42] 邮件发送成功: 【加仓通知】绿色动力环保 (1330.HK)
+[2026-01-23 10:40:43] 按大模型建议的15.00%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-01-23 10:40:44] 买入 100 股 招商银行 (3968.HK) @ HK$46.56, 总金额: HK$4656.00
+[2026-01-23 10:40:46] 邮件发送成功: 【新买入通知】招商银行 (3968.HK)
+[2026-01-23 10:40:48] 当前资金: HK$3,391.19
+[2026-01-23 10:40:48] 投资组合价值: HK$1,010,034.19
+[2026-01-23 10:40:48] 持仓情况: {'1211.HK': {'shares': 2100, 'avg_price': 94.88809523809523, 'stop_loss_price': 94.0}, '0939.HK': {'shares': 19600, 'avg_price': 7.625, 'stop_loss_price': 7.6}, '1288.HK': {'shares': 26900, 'avg_price': 5.639182156133829, 'stop_loss_price': 5.3}, '1330.HK': {'shares': 28800, 'avg_price': np.float64(5.2600694444444445), 'stop_loss_price': 4.8}, '3690.HK': {'shares': 1800, 'avg_price': 99.79166666666667, 'stop_loss_price': 94.7}, '0941.HK': {'shares': 100, 'avg_price': 79.4, 'stop_loss_price': 75.6}, '0728.HK': {'shares': 300, 'avg_price': 5.17, 'stop_loss_price': 4.92}, '2533.HK': {'shares': 6800, 'avg_price': 22.2, 'stop_loss_price': 21.0}, '0981.HK': {'shares': 200, 'avg_price': np.float64(74.25), 'stop_loss_price': 68.5}, '3968.HK': {'shares': 100, 'avg_price': np.float64(46.56), 'stop_loss_price': 44.5}}
+[2026-01-23 10:40:48] 总收益率: 1.00%
+[2026-01-23 10:40:48] 下一次交易分析将在 2026-01-23 11:04:48 执行
