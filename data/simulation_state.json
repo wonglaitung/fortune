@@ -19729,6 +19729,38 @@
       "current_price": 6.18,
       "target_price": 6.65,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-23T13:44:59.838778",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 335.18929405196104,
+      "reason": "高位出货信号密集，位置百分位96.97%超买，RSI 72.95超买，CMF -0.1995强流出，基本面估值泡沫化（PE 1876）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 107.8,
+      "target_price": 98.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-23T13:45:06.842655",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.15,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "超卖反弹机会，位置百分位2.03%深度超卖，RSI 25.84超卖，基本面优质（PE 11.23，高股息率），技术指标协同强（OBV上升、CMF 0.3175流入） (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 76.0,
+      "current_price": 79.15,
+      "target_price": 83.5,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -32872,69 +32904,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 15:48:00",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分（strong），价格高位（位置百分位95.45%）、RSI超买（75.46）、CMF流出（-0.2104）、布林带超买，技术面超买且量价背离需获利了结",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 12.76,
-      "target_price": 12.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-22 15:48:04",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分（strong），价格高位（位置百分位100%）、MACD死叉、RSI高位（68.21）、CMF流出（-0.2035），技术面超买且资金流入不持续需获利了结",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 129.5,
-      "target_price": 125.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-23 09:42:05",
-      "buy": [
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "价格低位，OBV上升，基本面顶级",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.05,
-          "target_price": 6.5,
-          "validity_period": 14
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-23 09:42:08",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.19,
-      "amount": 0,
-      "reason": "价格低位，OBV上升，基本面顶级 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 6.05,
-      "current_price": 6.19,
-      "target_price": 6.5,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-23 10:40:29",
       "buy": [
         {
@@ -33119,6 +33088,62 @@
       "stop_loss_price": 6.0,
       "current_price": 6.18,
       "target_price": 6.65,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-23 13:44:59",
+      "buy": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "超卖反弹机会，位置百分位2.03%深度超卖，RSI 25.84超卖，基本面优质（PE 11.23，高股息率），技术指标协同强（OBV上升、CMF 0.3175流入）",
+          "allocation_pct": 15,
+          "stop_loss_price": 76.0,
+          "target_price": 83.5,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "高位出货信号密集，位置百分位96.97%超买，RSI 72.95超买，CMF -0.1995强流出，基本面估值泡沫化（PE 1876）",
+          "stop_loss_triggered": false,
+          "target_price": 98.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-23 13:44:59",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "高位出货信号密集，位置百分位96.97%超买，RSI 72.95超买，CMF -0.1995强流出，基本面估值泡沫化（PE 1876）",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 107.8,
+      "target_price": 98.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-01-23 13:45:06",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.15,
+      "amount": 0,
+      "reason": "超卖反弹机会，位置百分位2.03%深度超卖，RSI 25.84超卖，基本面优质（PE 11.23，高股息率），技术指标协同强（OBV上升、CMF 0.3175流入） (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 76.0,
+      "current_price": 79.15,
+      "target_price": 83.5,
       "validity_period": 14
     }
   ],
