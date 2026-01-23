@@ -19793,6 +19793,22 @@
       "current_price": 129.6,
       "target_price": 125.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T15:19:06.218921",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.8,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "维持超卖反弹逻辑，位置百分位2.03%深度超卖，RSI 25.84持续修复，高股息率(6.2%)与低PE(11.23)提供安全边际，符合平衡型配置需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 71.24,
+      "current_price": 79.8,
+      "target_price": 87.07,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -32936,71 +32952,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-23 10:40:38",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 28600,
-      "price": 5.26,
-      "amount": 150436.0,
-      "reason": "综合评分67.1分，位置百分位18.99%低位，基本面优质（PE=9.66低估值+高分红），技术指标price_low、obv_up、macd_cross三信号协同",
-      "capital_after": 8047.189294051961,
-      "success": true,
-      "stop_loss_price": 4.8,
-      "current_price": 5.26,
-      "target_price": 5.8,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-23 10:40:43",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 100,
-      "price": 46.56,
-      "amount": 4656.0,
-      "reason": "综合评分60.5分，位置百分位3.24%深度超卖，基本面强劲（PE=7.39行业最优），技术指标price_low、rsi_oversold、bb_oversold、obv_up四信号强协同",
-      "capital_after": 3391.189294051961,
-      "success": true,
-      "stop_loss_price": 44.5,
-      "current_price": 46.56,
-      "target_price": 50.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-23 11:12:49",
-      "buy": [
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "低估值高股息银行股（PE 5.66，股息率>7%），技术指标超卖反弹信号协同，风险等级中低",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.35,
-          "target_price": 8.1,
-          "validity_period": 14
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "港股四大行估值最低（PE 5.76），防御属性突出，OBV上升及资金流入信号确认",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.0,
-          "target_price": 6.65,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "高位出货信号密集（RSI超买、CMF资金大幅流出），基本面估值偏高且地缘政治风险上升",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
       "timestamp": "2026-01-23 11:12:50",
       "type": "SELL",
       "code": "2269.HK",
@@ -33156,6 +33107,37 @@
       "stop_loss_price": null,
       "current_price": 129.6,
       "target_price": 125.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 15:19:03",
+      "buy": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "维持超卖反弹逻辑，位置百分位2.03%深度超卖，RSI 25.84持续修复，高股息率(6.2%)与低PE(11.23)提供安全边际，符合平衡型配置需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 71.24,
+          "target_price": 87.07,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-23 15:19:06",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.8,
+      "amount": 0,
+      "reason": "维持超卖反弹逻辑，位置百分位2.03%深度超卖，RSI 25.84持续修复，高股息率(6.2%)与低PE(11.23)提供安全边际，符合平衡型配置需求 (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 71.24,
+      "current_price": 79.8,
+      "target_price": 87.07,
       "validity_period": 7
     }
   ],
