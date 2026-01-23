@@ -19601,6 +19601,22 @@
       "current_price": 129.5,
       "target_price": 125.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T09:42:08.236337",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.19,
+      "amount": 0,
+      "capital_after": 11.189294051961042,
+      "reason": "价格低位，OBV上升，基本面顶级 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 6.05,
+      "current_price": 6.19,
+      "target_price": 6.5,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -32526,53 +32542,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-22 13:09:03",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.64,
-      "amount": 0,
-      "reason": "高分红提供安全垫，基本面无敌（PE 5.66港股最低），技术指标协同性强，风险等级低，适合平衡型投资者长期持有 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 7.1,
-      "current_price": 7.64,
-      "target_price": 8.2,
-      "validity_period": 30
-    },
-    {
-      "timestamp": "2026-01-22 13:35:35",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "基本面稳健（PE 9.66，高分红），技术指标显示超跌反弹机会（位置百分位13.92%超跌，OBV上升，RSI接近超卖区），风险等级中，适合平衡型投资者短期配置。",
-          "allocation_pct": 15,
-          "stop_loss_price": 3.7,
-          "target_price": 5.8,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-22 13:35:37",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.21,
-      "amount": 0,
-      "reason": "基本面稳健（PE 9.66，高分红），技术指标显示超跌反弹机会（位置百分位13.92%超跌，OBV上升，RSI接近超卖区），风险等级中，适合平衡型投资者短期配置。 (原因: 资金不足)",
-      "capital_after": 11.189294051961042,
-      "success": false,
-      "stop_loss_price": 3.7,
-      "current_price": 5.21,
-      "target_price": 5.8,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-22 14:13:59",
       "buy": [
         {
@@ -32737,6 +32706,37 @@
       "current_price": 129.5,
       "target_price": 125.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 09:42:05",
+      "buy": [
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "价格低位，OBV上升，基本面顶级",
+          "allocation_pct": 15,
+          "stop_loss_price": 6.05,
+          "target_price": 6.5,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-23 09:42:08",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.19,
+      "amount": 0,
+      "reason": "价格低位，OBV上升，基本面顶级 (原因: 资金不足)",
+      "capital_after": 11.189294051961042,
+      "success": false,
+      "stop_loss_price": 6.05,
+      "current_price": 6.19,
+      "target_price": 6.5,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
