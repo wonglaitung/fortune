@@ -19809,6 +19809,54 @@
       "current_price": 79.8,
       "target_price": 87.07,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T15:43:11.279837",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 335.18929405196104,
+      "reason": "出货评分4.0分，价格高位布林带超买基本面估值缺乏支撑",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 168.7,
+      "target_price": 162.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T15:43:19.203822",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 22.4,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "高基本面评分90分，PE 7.93，高分红，趋势强劲向上，风险等级中低 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 20.8,
+      "current_price": 22.4,
+      "target_price": 23.5,
+      "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-23T15:43:22.360662",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.22,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "基本面评分100分，PE 9.66，高分红，位置百分位低位短期反弹动能 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.05,
+      "current_price": 5.22,
+      "target_price": 5.65,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -32952,38 +33000,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-23 11:12:50",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位出货信号密集（RSI超买、CMF资金大幅流出），基本面估值偏高且地缘政治风险上升",
-      "capital_after": 3391.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 39.2,
-      "target_price": 0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-23 11:12:57",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 400,
-      "price": 7.64,
-      "amount": 3056.0,
-      "reason": "低估值高股息银行股（PE 5.66，股息率>7%），技术指标超卖反弹信号协同，风险等级中低",
-      "capital_after": 335.18929405196104,
-      "success": true,
-      "stop_loss_price": 7.35,
-      "current_price": 7.64,
-      "target_price": 8.1,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-23 11:13:01",
       "type": "BUY",
       "code": "1398.HK",
@@ -33139,6 +33155,87 @@
       "current_price": 79.8,
       "target_price": 87.07,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 15:43:11",
+      "buy": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "高基本面评分90分，PE 7.93，高分红，趋势强劲向上，风险等级中低",
+          "allocation_pct": 15,
+          "stop_loss_price": 20.8,
+          "target_price": 23.5,
+          "validity_period": 21
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "基本面评分100分，PE 9.66，高分红，位置百分位低位短期反弹动能",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.05,
+          "target_price": 5.65,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "出货评分4.0分，价格高位布林带超买基本面估值缺乏支撑",
+          "stop_loss_triggered": false,
+          "target_price": 162.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-23 15:43:11",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分4.0分，价格高位布林带超买基本面估值缺乏支撑",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 168.7,
+      "target_price": 162.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 15:43:19",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 22.4,
+      "amount": 0,
+      "reason": "高基本面评分90分，PE 7.93，高分红，趋势强劲向上，风险等级中低 (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 20.8,
+      "current_price": 22.4,
+      "target_price": 23.5,
+      "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-23 15:43:22",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.22,
+      "amount": 0,
+      "reason": "基本面评分100分，PE 9.66，高分红，位置百分位低位短期反弹动能 (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.05,
+      "current_price": 5.22,
+      "target_price": 5.65,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
