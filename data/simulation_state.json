@@ -19761,6 +19761,38 @@
       "current_price": 79.15,
       "target_price": 83.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-23T14:12:32.837743",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 335.18929405196104,
+      "reason": "高位出货信号密集，RSI 76.17超买+CMF资金流出，位置百分位97.06%历史高位",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.81,
+      "target_price": 11.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T14:12:36.995535",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 335.18929405196104,
+      "reason": "六重出货信号共振，RSI 68.77超买+CMF资金流出，位置百分位100.0%历史最高位",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 129.6,
+      "target_price": 125.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -32904,80 +32936,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-23 10:40:29",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "综合评分67.1分，位置百分位18.99%低位，基本面优质（PE=9.66低估值+高分红），技术指标price_low、obv_up、macd_cross三信号协同",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.8,
-          "target_price": 5.8,
-          "validity_period": 7
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "综合评分60.5分，位置百分位3.24%深度超卖，基本面强劲（PE=7.39行业最优），技术指标price_low、rsi_oversold、bb_oversold、obv_up四信号强协同",
-          "allocation_pct": 15,
-          "stop_loss_price": 44.5,
-          "target_price": 50.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分3.0分，位置百分位79.81%高位，技术面布林带超买+price_down，基本面虽优但油价波动风险",
-          "stop_loss_triggered": false,
-          "target_price": 20.5,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "出货评分4.0分，位置百分位89.49%高位，估值偏高（PE=23.09）且监管风险升温",
-          "stop_loss_triggered": false,
-          "target_price": 160.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-23 10:40:29",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 7100,
-      "price": 22.32,
-      "amount": 158472.0,
-      "reason": "出货评分3.0分，位置百分位79.81%高位，技术面布林带超买+price_down，基本面虽优但油价波动风险",
-      "capital_after": 158483.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 22.32,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 6786.000000000002
-    },
-    {
-      "timestamp": "2026-01-23 10:40:33",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.0分，位置百分位89.49%高位，估值偏高（PE=23.09）且监管风险升温",
-      "capital_after": 158483.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 169.6,
-      "target_price": 160.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-23 10:40:38",
       "type": "BUY",
       "code": "1330.HK",
@@ -33145,6 +33103,60 @@
       "current_price": 79.15,
       "target_price": 83.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-23 14:12:32",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "高位出货信号密集，RSI 76.17超买+CMF资金流出，位置百分位97.06%历史高位",
+          "stop_loss_triggered": false,
+          "target_price": 11.5,
+          "validity_period": 7
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "六重出货信号共振，RSI 68.77超买+CMF资金流出，位置百分位100.0%历史最高位",
+          "stop_loss_triggered": false,
+          "target_price": 125.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-23 14:12:32",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "高位出货信号密集，RSI 76.17超买+CMF资金流出，位置百分位97.06%历史高位",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 12.81,
+      "target_price": 11.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 14:12:37",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "六重出货信号共振，RSI 68.77超买+CMF资金流出，位置百分位100.0%历史最高位",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 129.6,
+      "target_price": 125.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
