@@ -19857,6 +19857,54 @@
       "current_price": 5.22,
       "target_price": 5.65,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-23T16:06:47.997446",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 335.18929405196104,
+      "reason": "出货评分6.5分（strong），价格高位（位置百分位92.18%）、RSI 65.19超买、CMF资金流出-0.4055、价格下跌，多周期趋势评分88.8分但动能衰减，基本面PE 34.42偏高且行业政策风险未解除",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-23T16:06:52.855241",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.23,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "综合评分59.3分，建仓评分3.9分显著高于出货评分，基本面评分90分（高分红防御属性），技术指标三重验证（价格低位、RSI超卖、CMF资金流入），位置百分位11.96%接近历史底部，风险等级2级(中低)适合平衡型投资者 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.95,
+      "current_price": 5.23,
+      "target_price": 5.65,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23T16:06:56.273019",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.32,
+      "amount": 0,
+      "capital_after": 335.18929405196104,
+      "reason": "综合评分56.5分，建仓评分4.7分高于出货评分，基本面评分100分（低估值银行股提供强安全垫），技术指标协同性高（价格低位、RSI超卖、布林带超卖），风险等级3级(中)在平衡型可接受范围内 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.0,
+      "current_price": 5.32,
+      "target_price": 5.65,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -33000,78 +33048,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-23 11:13:01",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.18,
-      "amount": 0,
-      "reason": "港股四大行估值最低（PE 5.76），防御属性突出，OBV上升及资金流入信号确认 (原因: 资金不足)",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": 6.0,
-      "current_price": 6.18,
-      "target_price": 6.65,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-23 13:44:59",
-      "buy": [
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "超卖反弹机会，位置百分位2.03%深度超卖，RSI 25.84超卖，基本面优质（PE 11.23，高股息率），技术指标协同强（OBV上升、CMF 0.3175流入）",
-          "allocation_pct": 15,
-          "stop_loss_price": 76.0,
-          "target_price": 83.5,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "高位出货信号密集，位置百分位96.97%超买，RSI 72.95超买，CMF -0.1995强流出，基本面估值泡沫化（PE 1876）",
-          "stop_loss_triggered": false,
-          "target_price": 98.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-23 13:44:59",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位出货信号密集，位置百分位96.97%超买，RSI 72.95超买，CMF -0.1995强流出，基本面估值泡沫化（PE 1876）",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 107.8,
-      "target_price": 98.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-01-23 13:45:06",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 79.15,
-      "amount": 0,
-      "reason": "超卖反弹机会，位置百分位2.03%深度超卖，RSI 25.84超卖，基本面优质（PE 11.23，高股息率），技术指标协同强（OBV上升、CMF 0.3175流入） (原因: 资金不足)",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": 76.0,
-      "current_price": 79.15,
-      "target_price": 83.5,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-23 14:12:32",
       "buy": [],
       "sell": [
@@ -33236,6 +33212,87 @@
       "current_price": 5.22,
       "target_price": 5.65,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-23 16:06:47",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "综合评分59.3分，建仓评分3.9分显著高于出货评分，基本面评分90分（高分红防御属性），技术指标三重验证（价格低位、RSI超卖、CMF资金流入），位置百分位11.96%接近历史底部，风险等级2级(中低)适合平衡型投资者",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.95,
+          "target_price": 5.65,
+          "validity_period": 7
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "综合评分56.5分，建仓评分4.7分高于出货评分，基本面评分100分（低估值银行股提供强安全垫），技术指标协同性高（价格低位、RSI超卖、布林带超卖），风险等级3级(中)在平衡型可接受范围内",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.0,
+          "target_price": 5.65,
+          "validity_period": 21
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分6.5分（strong），价格高位（位置百分位92.18%）、RSI 65.19超买、CMF资金流出-0.4055、价格下跌，多周期趋势评分88.8分但动能衰减，基本面PE 34.42偏高且行业政策风险未解除",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-23 16:06:48",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分（strong），价格高位（位置百分位92.18%）、RSI 65.19超买、CMF资金流出-0.4055、价格下跌，多周期趋势评分88.8分但动能衰减，基本面PE 34.42偏高且行业政策风险未解除",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 39.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-01-23 16:06:52",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.23,
+      "amount": 0,
+      "reason": "综合评分59.3分，建仓评分3.9分显著高于出货评分，基本面评分90分（高分红防御属性），技术指标三重验证（价格低位、RSI超卖、CMF资金流入），位置百分位11.96%接近历史底部，风险等级2级(中低)适合平衡型投资者 (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.95,
+      "current_price": 5.23,
+      "target_price": 5.65,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-23 16:06:56",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.32,
+      "amount": 0,
+      "reason": "综合评分56.5分，建仓评分4.7分高于出货评分，基本面评分100分（低估值银行股提供强安全垫），技术指标协同性高（价格低位、RSI超卖、布林带超卖），风险等级3级(中)在平衡型可接受范围内 (原因: 资金不足)",
+      "capital_after": 335.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.0,
+      "current_price": 5.32,
+      "target_price": 5.65,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
