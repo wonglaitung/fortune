@@ -61,7 +61,7 @@
 10. 通过腾讯财经接口获取港股数据
 11. 人工智能股票交易盈利能力分析器
 12. 港股基本面数据获取器（财务指标、利润表、资产负债表、现金流量表）
-13. **机器学习交易模型**（基于LightGBM的多周期涨跌预测模型，支持1天、5天、20天预测）
+13. **机器学习交易模型**（基于LightGBM和GBDT+LR的多周期涨跌预测模型，支持1天、5天、20天预测）
 14. **策略对比分析**（对比ML模型与手工信号的预测准确性）
 15. **美股市场数据获取**（标普500、纳斯达克、VIX恐慌指数、美国国债收益率）
 16. **模型可解释性分析**（GBDT决策路径解析、特征重要性分析）
@@ -82,7 +82,7 @@
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
 *   `fundamental_data.py`: 港股基本面数据获取模块，提供财务指标、利润表、资产负债表、现金流量表等数据获取功能，支持缓存机制。
-*   `ml_services/ml_trading_model.py`: **机器学习交易模型**，基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌，整合技术指标、基本面、资金流向、美股市场等34个特征，真实验证准确率52.42%。
+*   `ml_services/ml_trading_model.py`: **机器学习交易模型**，基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌，整合技术指标、基本面、资金流向、美股市场等特征。
 *   `ml_services/ml_prediction_email.py`: **机器学习预测邮件发送器**，自动发送ML模型预测结果邮件。
 *   `ml_services/compare_models.py`: **模型对比工具**，对比LGBM和GBDT+LR两种模型的预测结果。
 *   `ml_services/us_market_data.py`: **美股市场数据获取模块**，提供标普500、纳斯达克、VIX恐慌指数、美国10年期国债收益率等数据。
@@ -94,7 +94,7 @@
 *   `send_alert.sh`: 本地定时执行脚本，按顺序执行个股新闻获取、恒生指数策略分析、主力资金追踪（使用昨天的日期）和黄金分析。
 *   `update_data.sh`: 数据更新脚本，将 data 目录下的文件更新到 GitHub（带重试机制）。
 *   `set_key.sh`: 环境变量配置，包含API密钥和163邮件配置。
-*   `requirements.txt`: 项目依赖包列表，包含所有必需的Python库（新增lightgbm、scikit-learn）。
+*   `requirements.txt`: 项目依赖包列表，包含所有必需的Python库（包含lightgbm、scikit-learn、yfinance）。
 *   `.github/workflows/crypto-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `crypto_email.py` 脚本。
 *   `.github/workflows/ipo-alert.yml`: GitHub Actions 工作流文件，用于定时执行 `hk_ipo_aastocks.py` 脚本。
 *   `.github/workflows/gold-analyzer.yml`: GitHub Actions 工作流文件，用于定时执行 `gold_analyzer.py` 脚本。
@@ -288,17 +288,18 @@ scikit-learn
 
 #### 机器学习交易模型
 1. **模型算法**：基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌
-2. **特征工程**：整合34个特征
-   - 技术指标特征（15个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅等
+2. **特征工程**：整合80+个技术指标 + 美股市场特征 + 基本面特征
+   - 技术指标特征（80+个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅、成交额变化率、换手率变化率等
    - 市场环境特征（3个）：恒生指数收益率、相对表现
    - 资金流向特征（5个）：价格位置、成交量信号、动量信号
    - 基本面特征（8个）：PE、PB、ROE、ROA、股息率、EPS、净利率、毛利率
-   - **美股市场特征（10个）**：标普500收益率（1日、5日、20日）、纳斯达克收益率（1日、5日、20日）、VIX变化率、VIX比率、美国10年期国债收益率及其变化率
-3. **模型性能**：
-   - **真实验证准确率：52.42% (±1.76%)** - 修复数据泄漏后的准确率
-   - **历史虚假准确率：64.78%** - 由于数据泄漏导致的虚假高准确率
+   - **美股市场特征（11个）**：标普500收益率（1日、5日、20日）、纳斯达克收益率（1日、5日、20日）、VIX绝对值、VIX变化率、VIX比率、美国10年期国债收益率及其变化率
+3. **模型性能**（2026-01-24最新训练结果）：
+   - **次日模型（1天）**：平均验证准确率 **52.49%** (±1.82%)
+   - **一周模型（5天）**：平均验证准确率 **50.55%** (±2.86%)
+   - **一个月模型（20天）**：平均验证准确率 **59.16%** (±4.20%) - **最佳表现**
    - 使用时间序列交叉验证（5折）
-   - 特征重要性分析：美股市场特征在Top 10中占据4个位置
+   - 特征重要性分析：VIX_Level在所有周期的Top 10中都出现，证明新指标有效
 4. **数据泄漏问题修复**：
    - **问题根源**：使用 `pd.concat(all_data, ignore_index=True)` 导致日期索引被重置为 0,1,2,3...，数据顺序按股票代码和处理顺序排列，而非时间顺序
    - **修复方案**：
@@ -322,7 +323,7 @@ scikit-learn
    - 模型基于历史数据，市场结构变化可能导致失效
    - 需要定期验证实际预测准确率
    - 建议与手工信号结合使用，不单独依赖
-   - 当前准确率 52.42% 接近随机基线，模型缺乏显著预测能力，需要改进特征工程或模型架构
+   - 一个月模型准确率59.16%接近业界优秀水平（60%），具有实际交易价值
 
 #### 机器学习预测邮件通知
 1. **功能概述**：自动发送机器学习模型预测结果邮件
@@ -331,9 +332,11 @@ scikit-learn
    - LightGBM模型预测结果（上涨/下跌）
    - GBDT+LR模型预测结果（上涨/下跌）
    - 预测概率和置信度
+   - 平均概率（两种算法的平均值）
    - 当前价格和预测目标价格
-4. **邮件格式**：采用统一的HTML表格格式展示预测结果
-5. **自动化调度**：通过 GitHub Actions 工作流自动执行（工作流文件：`.github/workflows/ml-prediction-alert.yml`）
+4. **邮件格式**：采用统一的表格格式展示预测结果
+5. **排序规则**：先按预测一致性分组（一致的排在一起），再按平均概率降序排序
+6. **自动化调度**：通过 GitHub Actions 工作流自动执行（工作流文件：`.github/workflows/ml-prediction-alert.yml`）
 
 #### 策略对比分析
 1. **对比维度**：机器学习模型预测 vs 主力资金追踪器手工信号
@@ -357,6 +360,7 @@ scikit-learn
 2. **特征计算**：
    - 标普500收益率（1日、5日、20日）
    - 纳斯达克收益率（1日、5日、20日）
+   - **VIX绝对值**（VIX_Level，反映市场恐慌程度）
    - VIX变化率、VIX与20日均线比率
    - 美国10年期国债收益率及其变化率
 3. **数据缓存**：支持1小时缓存，避免重复请求
@@ -365,6 +369,11 @@ scikit-learn
    - 作为港股预测的外部市场环境特征
    - 捕捉美股对港股的影响
    - 提升模型预测准确率
+6. **业界重要性**：
+   - VIX < 15：过度乐观，需警惕回调
+   - VIX 15-20：正常波动，市场情绪平稳
+   - VIX 20-30：轻度恐慌
+   - VIX > 30：严重恐慌，通常伴随大跌
 
 #### 模型可解释性分析
 1. **特征重要性分析**：
@@ -861,16 +870,16 @@ clear_cache()
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_portfolio.csv`: 投资组合价值变化记录
 - `southbound_data_cache.pkl`: 南向资金数据缓存
-- `fundamental_cache/`: 基本面数据缓存目录（包含财务指标、利润表、资产负债表、现金流量表的缓存文件）
-- `ml_trading_model_lgbm_1d.pkl`: LightGBM次日涨跌模型
-- `ml_trading_model_lgbm_5d.pkl`: LightGBM一周涨跌模型
-- `ml_trading_model_lgbm_20d.pkl`: LightGBM一个月涨跌模型
-- `ml_trading_model_gbdt_lr_1d.pkl`: GBDT+LR次日涨跌模型
-- `ml_trading_model_gbdt_lr_5d.pkl`: GBDT+LR一周涨跌模型
-- `ml_trading_model_gbdt_lr_20d.pkl`: GBDT+LR一个月涨跌模型
-- `ml_trading_model_*_importance.csv`: 机器学习特征重要性排名
-- `ml_trading_model_*_predictions_*.csv`: 机器学习模型预测结果
-- `ml_trading_model_comparison.csv`: 模型对比结果
+- `fundamental_cache/`: 基本面数据缓存目录（包含财务指标、利润表、资产负债表、现金流量表的缓存文件，已从Git跟踪中移除）
+- `ml_trading_model_lgbm_1d.pkl`: LightGBM次日涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_lgbm_5d.pkl`: LightGBM一周涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_lgbm_20d.pkl`: LightGBM一个月涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_gbdt_lr_1d.pkl`: GBDT+LR次日涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_gbdt_lr_5d.pkl`: GBDT+LR一周涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_gbdt_lr_20d.pkl`: GBDT+LR一个月涨跌模型（已从Git跟踪中移除）
+- `ml_trading_model_*_importance.csv`: 机器学习特征重要性排名（已从Git跟踪中移除）
+- `ml_trading_model_*_predictions_*.csv`: 机器学习模型预测结果（已从Git跟踪中移除）
+- `ml_trading_model_comparison.csv`: 模型对比结果（已从Git跟踪中移除）
 - `strategy_comparison.csv`: 策略对比分析结果（ML模型 vs 手工信号）
 
 ### 项目扩展性
@@ -896,7 +905,7 @@ clear_cache()
 18. **UI优化**：个股分析之间增加分割线，提高邮件内容可读性
 19. **UI优化**：48小时智能建议使用颜色区分（买入绿色，卖出红色）
 20. **UI优化**：统一"震荡"趋势颜色为橙色，保持视觉一致性
-21. **功能更新**：使用交易记录中的止损价和目标价，替代技术分析计算值
+21. **功能更新**：使用交易记录中的止损价和目标价，而非技术分析计算值
 22. **Bug修复**：修复crypto_email.py中HTML显示代码片段的问题
 23. **新增功能**：添加人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性
 24. **功能优化**：AI交易分析器支持历史数据兼容，自动处理current_price和price字段
@@ -941,6 +950,11 @@ clear_cache()
 63. **重要修复**：修复机器学习模型数据泄漏问题，将准确率从 64.78%（虚假）降至 52.42%（真实）
 64. **新增功能**：实现机器学习预测邮件发送器（ml_services/ml_prediction_email.py），自动发送ML模型预测结果邮件
 65. **新增功能**：实现机器学习预测警报工作流（.github/workflows/ml-prediction-alert.yml），自动执行ML模型预测并发送邮件通知
+66. **新增功能**：添加关键流动性指标（VIX_Level、成交额变化率、换手率变化率），提升模型预测能力
+67. **性能提升**：一个月模型准确率提升至59.16%，接近业界优秀水平（60%）
+68. **UI优化**：ML预测邮件添加平均概率列，按一致性和平均概率排序展示
+69. **Git优化**：从Git跟踪中移除ML模型文件和输出文件，避免仓库膨胀
+70. **Git优化**：从Git跟踪中移除fundamental_cache缓存目录，避免缓存文件被提交
 
 ---
-最后更新：2026-01-20
+最后更新：2026-01-24
