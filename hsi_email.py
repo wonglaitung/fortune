@@ -1536,6 +1536,84 @@ class HSIEmailSystem:
                 indicators['pe_ratio'] = None
                 indicators['pb_ratio'] = None
             
+            # 添加市场情绪和流动性指标（新增）
+            try:
+                # 1. 获取VIX恐慌指数
+                from ml_services.us_market_data import us_market_data
+                us_df = us_market_data.get_all_us_market_data(period_days=30)
+                if us_df is not None and not us_df.empty and 'VIX_Level' in us_df.columns:
+                    indicators['vix_level'] = us_df['VIX_Level'].iloc[-1]
+                else:
+                    indicators['vix_level'] = None
+                
+                # 2. 计算成交额变化率
+                if hist is not None and not hist.empty:
+                    # 计算成交额（价格 × 成交量）
+                    turnover = hist['Close'] * hist['Volume']
+                    
+                    # 计算成交额变化率
+                    turnover_change_1d = turnover.pct_change(1).iloc[-1] if len(turnover) > 1 else None
+                    turnover_change_5d = turnover.pct_change(5).iloc[-1] if len(turnover) > 5 else None
+                    turnover_change_10d = turnover.pct_change(10).iloc[-1] if len(turnover) > 10 else None
+                    turnover_change_20d = turnover.pct_change(20).iloc[-1] if len(turnover) > 20 else None
+                    
+                    # 转换为百分比
+                    indicators['turnover_change_1d'] = turnover_change_1d * 100 if turnover_change_1d is not None else None
+                    indicators['turnover_change_5d'] = turnover_change_5d * 100 if turnover_change_5d is not None else None
+                    indicators['turnover_change_10d'] = turnover_change_10d * 100 if turnover_change_10d is not None else None
+                    indicators['turnover_change_20d'] = turnover_change_20d * 100 if turnover_change_20d is not None else None
+                else:
+                    indicators['turnover_change_1d'] = None
+                    indicators['turnover_change_5d'] = None
+                    indicators['turnover_change_10d'] = None
+                    indicators['turnover_change_20d'] = None
+                
+                # 3. 计算换手率变化率
+                if hist is not None and not hist.empty and 'Volume' in hist.columns:
+                    # 获取已发行股本（从基本面数据）
+                    stock_code = data.get('symbol', '').replace('.HK', '')
+                    float_shares = None
+                    try:
+                        if FUNDAMENTAL_AVAILABLE and stock_code:
+                            fundamental_data = get_comprehensive_fundamental_data(stock_code)
+                            if fundamental_data is not None:
+                                issued_shares = fundamental_data.get('fi_issued_shares')
+                                if issued_shares is not None and issued_shares > 0:
+                                    float_shares = float(issued_shares)
+                    except Exception as e:
+                        print(f"⚠️ 获取已发行股本失败: {e}")
+                    
+                    # 计算换手率
+                    if float_shares is not None and float_shares > 0:
+                        turnover_rate = (hist['Volume'] / float_shares) * 100
+                        
+                        # 计算换手率变化率
+                        turnover_rate_change_5d = turnover_rate.pct_change(5).iloc[-1] if len(turnover_rate) > 5 else None
+                        turnover_rate_change_20d = turnover_rate.pct_change(20).iloc[-1] if len(turnover_rate) > 20 else None
+                        
+                        indicators['turnover_rate'] = turnover_rate.iloc[-1] if len(turnover_rate) > 0 else None
+                        indicators['turnover_rate_change_5d'] = turnover_rate_change_5d if turnover_rate_change_5d is not None else None
+                        indicators['turnover_rate_change_20d'] = turnover_rate_change_20d if turnover_rate_change_20d is not None else None
+                    else:
+                        indicators['turnover_rate'] = None
+                        indicators['turnover_rate_change_5d'] = None
+                        indicators['turnover_rate_change_20d'] = None
+                else:
+                    indicators['turnover_rate'] = None
+                    indicators['turnover_rate_change_5d'] = None
+                    indicators['turnover_rate_change_20d'] = None
+                    
+            except Exception as e:
+                print(f"⚠️ 计算市场情绪和流动性指标失败: {e}")
+                indicators['vix_level'] = None
+                indicators['turnover_change_1d'] = None
+                indicators['turnover_change_5d'] = None
+                indicators['turnover_change_10d'] = None
+                indicators['turnover_change_20d'] = None
+                indicators['turnover_rate'] = None
+                indicators['turnover_rate_change_5d'] = None
+                indicators['turnover_rate_change_20d'] = None
+            
             return indicators
         
         except Exception as e:
@@ -2025,6 +2103,35 @@ class HSIEmailSystem:
             pb_ratio = indicators.get('pb_ratio')
             if pb_ratio is not None and pb_ratio > 0:
                 tech_info.append(f"PB: {pb_ratio:.2f}")
+            
+            # 新增：市场情绪和流动性指标
+            vix_level = indicators.get('vix_level')
+            if vix_level is not None and vix_level > 0:
+                tech_info.append(f"VIX: {vix_level:.2f}")
+            
+            turnover_change_1d = indicators.get('turnover_change_1d')
+            if turnover_change_1d is not None:
+                tech_info.append(f"成交额变化1日: {turnover_change_1d:+.2f}%")
+            
+            turnover_change_5d = indicators.get('turnover_change_5d')
+            if turnover_change_5d is not None:
+                tech_info.append(f"成交额变化5日: {turnover_change_5d:+.2f}%")
+            
+            turnover_change_20d = indicators.get('turnover_change_20d')
+            if turnover_change_20d is not None:
+                tech_info.append(f"成交额变化20日: {turnover_change_20d:+.2f}%")
+            
+            turnover_rate = indicators.get('turnover_rate')
+            if turnover_rate is not None:
+                tech_info.append(f"换手率: {turnover_rate:.2f}%")
+            
+            turnover_rate_change_5d = indicators.get('turnover_rate_change_5d')
+            if turnover_rate_change_5d is not None:
+                tech_info.append(f"换手率变化5日: {turnover_rate_change_5d:+.2f}%")
+            
+            turnover_rate_change_20d = indicators.get('turnover_rate_change_20d')
+            if turnover_rate_change_20d is not None:
+                tech_info.append(f"换手率变化20日: {turnover_rate_change_20d:+.2f}%")
         
         return ', '.join(tech_info) if tech_info else 'N/A'
     
@@ -2327,6 +2434,75 @@ class HSIEmailSystem:
         
         # 添加分析要求
         prompt += f"""
+## 分析框架（业界惯例）
+请按照以下六层分析框架进行系统性分析：
+
+【第一层：风险控制检查（最高优先级）】
+⚠️ 必须首先检查所有股票的风险控制信号：
+- 止损触发：亏损≥15%，立即全部卖出，风险等级极高
+- 止盈触发：盈利≥10%，建议卖出30%，风险等级高
+- Trailing Stop触发：价格从高点回撤超过2.5倍ATR，建议卖出30%，风险等级高
+
+【第二层：市场环境评估（宏观层面）】
+🌍 评估整体市场环境，判断是否适合交易：
+- VIX恐慌指数：评估市场整体情绪
+  * VIX < 15：市场过度乐观，需警惕回调风险，降低仓位
+  * VIX 15-20：正常波动，市场情绪平稳，正常交易
+  * VIX 20-30：轻度恐慌，市场波动加大，谨慎交易
+  * VIX > 30：严重恐慌，通常伴随大跌，但可能存在反弹机会
+- 成交额变化率：评估市场流动性
+  * 正向变化率（1日/5日/20日）：资金持续流入，市场活跃，支持交易
+  * 负向变化率（1日/5日/20日）：资金持续流出，市场低迷，减少交易
+  * 多周期一致：1日、5日、20日变化率同向，信号更可靠
+- 换手率变化率：评估市场关注度
+  * 换手率上升+换手率变化率正向：关注度提升，流动性增强，适合交易
+  * 换手率下降+换手率变化率负向：关注度下降，流动性减弱，观望为主
+  * 换手率异常波动：可能预示重大消息或趋势转折，提高警惕
+
+【第三层：基本面质量评估（长期价值）】
+🔍 评估股票的长期投资价值：
+- 基本面评分评估：
+  * 基本面评分>60：优质股票，大幅提升建仓信号可靠性，优先配置
+  * 基本面评分40-60：良好股票，提升建仓信号可靠性，正常配置
+  * 基本面评分20-40：一般股票，建仓信号需谨慎，少量配置
+  * 基本面评分<20：差股票，建仓信号不可靠，避免配置
+- 估值水平（PE、PB）：
+  * 低估值（PE<15, PB<1）：安全边际高，适合长期持有
+  * 合理估值（PE 15-25, PB 1-2）：估值合理，正常交易
+  * 高估值（PE>25, PB>2）：估值偏高，谨慎交易
+
+【第四层：技术面分析（短期趋势）】
+📈 评估股票的短期技术面：
+- 多周期趋势验证：
+  * 多周期趋势评分>20：趋势向上，建仓信号可靠
+  * 多周期趋势评分<-20：趋势向下，建仓信号谨慎
+  * 多周期趋势评分-20到20：震荡趋势，建议观望
+- 相对强度验证：
+  * 多周期相对强度评分>20：跑赢恒指，优先选择
+  * 多周期相对强度评分<-20：跑输恒指，谨慎对待
+- 技术指标协同：
+  * RSI+MACD+布林带+成交量比率+CMF：至少3个指标同向才可靠
+  * 关注MACD信号、布林带突破、OBV趋势等关键信号
+
+【第五层：信号识别（交易时机）】
+🟢 建仓信号筛选：
+- 建仓级别=strong（评分≥5.0）：强烈建仓信号，结合基本面和技术面确认
+- 建仓级别=partial（3.0≤评分<5.0）：部分建仓信号，谨慎观察
+- 结合市场环境、基本面评分和技术面分析调整仓位
+
+🔴 出货信号筛选：
+- 出货级别=strong（评分≥5.0）：强烈出货信号，建议卖出60-100%
+- 出货级别=weak（3.0≤评分<5.0）：弱出货信号，建议卖出30-60%
+- 结合市场环境、基本面评分和技术面分析调整卖出比例
+
+【第六层：综合评分与决策（最终判断）】
+⭐ 综合所有维度进行最终决策：
+- 综合评分>70分：强烈推荐，建议仓位50-70%
+- 综合评分50-70分：推荐，建议仓位30-50%
+- 综合评分30-50分：观望，建议仓位10-30%
+- 综合评分<30分：不推荐，建议仓位0-10%
+- 综合评分构成：建仓评分25% + 多周期趋势20% + 相对强度15% + 基本面15% + 新闻影响15% + 技术指标协同10%
+
 ## 分析重点
 - {config['indicators']}
 
