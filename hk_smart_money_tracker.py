@@ -2105,32 +2105,21 @@ def analyze_stock(code, name, run_date=None):
 
         # 计算换手率 (使用实际流通股本)
         # 换手率 = 成交量 / 流通股本 * 100%
-        # 从 AKShare 获取已发行股本数据
+        # 使用 get_comprehensive_fundamental_data 获取已发行股本数据
         float_shares = None
         try:
-            # 使用 AKShare 获取港股财务指标数据
-            financial_df = ak.stock_hk_financial_indicator_em(symbol=stock_code)
-            # 检查数据是否有效
-            if financial_df is not None:
-                # 检查是否是DataFrame且不为空
-                if isinstance(financial_df, pd.DataFrame) and not financial_df.empty:
-                    # 检查是否包含所需列
-                    if '已发行股本(股)' in financial_df.columns:
-                        # 获取已发行股本字段
-                        issued_shares = financial_df['已发行股本(股)'].iloc[0]
-                        # 检查值是否有效
-                        if issued_shares is not None and not (isinstance(issued_shares, float) and pd.notna(issued_shares)) and issued_shares > 0:
-                            float_shares = float(issued_shares)
-                            if float_shares <= 0:
-                                float_shares = None
-                        else:
-                            print(f"  ⚠️ {code} 的已发行股本数据无效")
-                    else:
-                        print(f"  ⚠️ {code} 的财务指标数据中未找到已发行股本字段")
-                else:
-                    print(f"  ⚠️ {code} 的财务指标数据为空或不是DataFrame")
-            else:
-                print(f"  ⚠️ 无法获取 {code} 的财务指标数据")
+            fundamental_data = get_comprehensive_fundamental_data(stock_code)
+            if fundamental_data is not None:
+                # 优先使用已发行股本
+                issued_shares = fundamental_data.get('fi_issued_shares')
+                if issued_shares is not None and issued_shares > 0:
+                    float_shares = float(issued_shares)
+                # 如果没有已发行股本，使用市值推算
+                elif fundamental_data.get('fi_market_cap') is not None:
+                    market_cap = fundamental_data.get('fi_market_cap')
+                    current_price = main_hist['Close'].iloc[-1] if len(main_hist) > 0 else None
+                    if current_price is not None and current_price > 0:
+                        float_shares = market_cap / current_price
         except Exception as e:
             float_shares = None
             print(f"  ⚠️ 获取 {code} 已发行股本数据时出错: {e}")
