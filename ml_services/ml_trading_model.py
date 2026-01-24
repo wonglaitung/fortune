@@ -123,8 +123,16 @@ class FeatureEngineer:
         df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean()
         df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std()
         df['Turnover_Z_Score'] = (df['Turnover'] - df['Turnover_Mean_20']) / df['Turnover_Std_20']
+        # 成交额变化率（多周期）
+        df['Turnover_Change_1d'] = df['Turnover'].pct_change()
+        df['Turnover_Change_5d'] = df['Turnover'].pct_change(5)
+        df['Turnover_Change_10d'] = df['Turnover'].pct_change(10)
+        df['Turnover_Change_20d'] = df['Turnover'].pct_change(20)
         # 换手率（假设总股本为常数，这里使用成交额/价格作为近似）
         df['Turnover_Rate'] = (df['Turnover'] / (df['Close'] * 1000000)) * 100
+        # 换手率变化率
+        df['Turnover_Rate_Change_5d'] = df['Turnover_Rate'].pct_change(5)
+        df['Turnover_Rate_Change_20d'] = df['Turnover_Rate'].pct_change(20)
 
         # ========== VWAP (成交量加权平均价) ==========
         df['TP'] = (df['High'] + df['Low'] + df['Close']) / 3
@@ -352,7 +360,7 @@ class FeatureEngineer:
             us_features = [
                 'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
                 'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
-                'VIX_Change', 'VIX_Ratio_MA20',
+                'VIX_Change', 'VIX_Ratio_MA20', 'VIX_Level',
                 'US_10Y_Yield', 'US_10Y_Yield_Change'
             ]
 
