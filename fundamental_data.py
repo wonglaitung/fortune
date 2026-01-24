@@ -158,6 +158,14 @@ def get_stock_financial_indicator(stock_code):
         # 市值
         if '总市值' in df.columns:
             result["market_cap"] = safe_float(latest_data['总市值'])
+        elif '总市值(港元)' in df.columns:
+            result["market_cap"] = safe_float(latest_data['总市值(港元)'])
+        
+        # 已发行股本
+        if '已发行股本' in df.columns:
+            result["issued_shares"] = safe_float(latest_data['已发行股本'])
+        elif '已发行股本(股)' in df.columns:
+            result["issued_shares"] = safe_float(latest_data['已发行股本(股)'])
         
         # 保存到缓存
         save_cache(result, cache_path)
@@ -429,10 +437,12 @@ def get_comprehensive_fundamental_data(stock_code):
     # 合并数据
     result = {}
     
-    # 添加财务指标（只添加PE和PB）
+    # 添加财务指标（PE、PB、市值和已发行股本）
     if financial_indicator:
         result["fi_pe_ratio"] = financial_indicator.get("pe_ratio")
         result["fi_pb_ratio"] = financial_indicator.get("pb_ratio")
+        result["fi_market_cap"] = financial_indicator.get("market_cap")
+        result["fi_issued_shares"] = financial_indicator.get("issued_shares")
     
     # 如果没有有效的PE或PB数据，返回 None
     if not result.get("fi_pe_ratio") and not result.get("fi_pb_ratio"):
