@@ -232,9 +232,11 @@ class USMarketData:
 
         if vix_df is not None:
             merged_df = merged_df.merge(
-                vix_df[['VIX_Change', 'VIX_Ratio_MA20']],
+                vix_df[['VIX_Change', 'VIX_Ratio_MA20', 'Close']],
                 left_index=True, right_index=True, how='left'
             )
+            # 重命名VIX绝对值
+            merged_df.rename(columns={'Close': 'VIX_Level'}, inplace=True)
 
         if treasury_df is not None:
             merged_df = merged_df.merge(
