@@ -3954,7 +3954,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'VIX':<8} {'成交额变化1日':<12} {'换手率变化5日':<12} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'成交额变化1日':<12} {'换手率变化5日':<12} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -4006,7 +4006,6 @@ class HSIEmailSystem:
                         <th>基本面评分</th>
                         <th>PE(市盈率)</th>
                         <th>PB(市净率)</th>
-                        <th>VIX恐慌指数</th>
                         <th>成交额变化1日</th>
                         <th>换手率变化5日</th>
                         <th>上个交易日趋势</th>
@@ -4257,12 +4256,6 @@ class HSIEmailSystem:
                 pb_display = f"<span style=\"{pb_color}\">{pb_ratio:.2f}</span>"
             
             # 格式化新指标显示（HTML版本）
-            vix_level = stock_indicators.get('vix_level', None) if stock_indicators else None
-            vix_display = "N/A"
-            if vix_level is not None and vix_level > 0:
-                vix_color = "color: green;" if vix_level < 15 else "color: orange;" if vix_level < 20 else "color: red;"
-                vix_display = f"<span style=\"{vix_color}\">{vix_level:.2f}</span>"
-            
             turnover_change_1d = stock_indicators.get('turnover_change_1d', None) if stock_indicators else None
             turnover_change_1d_display = "N/A"
             if turnover_change_1d is not None:
@@ -4327,7 +4320,6 @@ class HSIEmailSystem:
                         <td>{fundamental_display}</td>
                         <td>{pe_display}</td>
                         <td>{pb_display}</td>
-                        <td>{vix_display}</td>
                         <td>{turnover_change_1d_display}</td>
                         <td>{turnover_rate_change_5d_display}</td>
                         <td>{prev_trend_arrow} {prev_trend_display}</td>
@@ -4432,11 +4424,6 @@ class HSIEmailSystem:
                 ma_alignment_text = f"{ma_alignment}"
             
             # 格式化新指标（文本版本）
-            vix_level = stock_indicators.get('vix_level', None) if stock_indicators else None
-            vix_text = "N/A"
-            if vix_level is not None and vix_level > 0:
-                vix_text = f"{vix_level:.2f}"
-            
             turnover_change_1d = stock_indicators.get('turnover_change_1d', None) if stock_indicators else None
             turnover_change_1d_text = "N/A"
             if turnover_change_1d is not None:
@@ -4447,7 +4434,7 @@ class HSIEmailSystem:
             if turnover_rate_change_5d is not None:
                 turnover_rate_change_5d_text = f"{turnover_rate_change_5d:+.2f}%"
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {price_display:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {trend:<12} {ma_alignment_text:<10} {medium_term_text:<12} {tav_display:<8} {buildup_text:<10} {distribution_text:<10} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {vix_text:<8} {turnover_change_1d_text:<12} {turnover_rate_change_5d_text:<12} {prev_trend_display:<12} {prev_tav_display:<15} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_price_display:<15}")
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {price_display:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {trend:<12} {ma_alignment_text:<10} {medium_term_text:<12} {tav_display:<8} {buildup_text:<10} {distribution_text:<10} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {turnover_change_1d_text:<12} {turnover_rate_change_5d_text:<12} {prev_trend_display:<12} {prev_tav_display:<15} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -4456,7 +4443,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="23">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="22">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
