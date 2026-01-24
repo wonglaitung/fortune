@@ -1577,9 +1577,16 @@ class HSIEmailSystem:
                         if FUNDAMENTAL_AVAILABLE and stock_code:
                             fundamental_data = get_comprehensive_fundamental_data(stock_code)
                             if fundamental_data is not None:
+                                # 优先使用已发行股本
                                 issued_shares = fundamental_data.get('fi_issued_shares')
                                 if issued_shares is not None and issued_shares > 0:
                                     float_shares = float(issued_shares)
+                                # 如果没有已发行股本，使用市值推算
+                                elif fundamental_data.get('fi_market_cap') is not None:
+                                    market_cap = fundamental_data.get('fi_market_cap')
+                                    current_price = hist['Close'].iloc[-1]
+                                    if current_price is not None and current_price > 0:
+                                        float_shares = market_cap / current_price
                     except Exception as e:
                         print(f"⚠️ 获取已发行股本失败: {e}")
                     
