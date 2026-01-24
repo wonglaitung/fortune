@@ -1587,13 +1587,21 @@ class HSIEmailSystem:
                     if float_shares is not None and float_shares > 0:
                         turnover_rate = (hist['Volume'] / float_shares) * 100
                         
-                        # 计算换手率变化率
-                        turnover_rate_change_5d = turnover_rate.pct_change(5).iloc[-1] if len(turnover_rate) > 5 else None
-                        turnover_rate_change_20d = turnover_rate.pct_change(20).iloc[-1] if len(turnover_rate) > 20 else None
+                        # 计算换手率变化率（需要检查NaN值）
+                        turnover_rate_change_5d = None
+                        turnover_rate_change_20d = None
+                        
+                        if len(turnover_rate) > 5:
+                            change_5d = turnover_rate.pct_change(5).iloc[-1]
+                            turnover_rate_change_5d = change_5d if pd.notna(change_5d) else None
+                        
+                        if len(turnover_rate) > 20:
+                            change_20d = turnover_rate.pct_change(20).iloc[-1]
+                            turnover_rate_change_20d = change_20d if pd.notna(change_20d) else None
                         
                         indicators['turnover_rate'] = turnover_rate.iloc[-1] if len(turnover_rate) > 0 else None
-                        indicators['turnover_rate_change_5d'] = turnover_rate_change_5d if turnover_rate_change_5d is not None else None
-                        indicators['turnover_rate_change_20d'] = turnover_rate_change_20d if turnover_rate_change_20d is not None else None
+                        indicators['turnover_rate_change_5d'] = turnover_rate_change_5d
+                        indicators['turnover_rate_change_20d'] = turnover_rate_change_20d
                     else:
                         indicators['turnover_rate'] = None
                         indicators['turnover_rate_change_5d'] = None
