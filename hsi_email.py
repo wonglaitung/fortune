@@ -3954,7 +3954,7 @@ class HSIEmailSystem:
             text_lines.append(dividend_text)
         
         text_lines.append("🔔 交易信号总结:")
-        header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
+        header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'VIX':<8} {'成交额变化1日':<12} {'换手率变化5日':<12} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
 
         html = f"""
@@ -4006,6 +4006,9 @@ class HSIEmailSystem:
                         <th>基本面评分</th>
                         <th>PE(市盈率)</th>
                         <th>PB(市净率)</th>
+                        <th>VIX恐慌指数</th>
+                        <th>成交额变化1日</th>
+                        <th>换手率变化5日</th>
                         <th>上个交易日趋势</th>
                         <th>上个交易日TAV评分</th>
                         <th>上个交易日建仓评分</th>
@@ -4253,6 +4256,25 @@ class HSIEmailSystem:
                 pb_color = "color: green;" if pb_ratio < 1.5 else "color: orange;" if pb_ratio < 3 else "color: red;"
                 pb_display = f"<span style=\"{pb_color}\">{pb_ratio:.2f}</span>"
             
+            # 格式化新指标显示（HTML版本）
+            vix_level = stock_indicators.get('vix_level', None) if stock_indicators else None
+            vix_display = "N/A"
+            if vix_level is not None and vix_level > 0:
+                vix_color = "color: green;" if vix_level < 15 else "color: orange;" if vix_level < 20 else "color: red;"
+                vix_display = f"<span style=\"{vix_color}\">{vix_level:.2f}</span>"
+            
+            turnover_change_1d = stock_indicators.get('turnover_change_1d', None) if stock_indicators else None
+            turnover_change_1d_display = "N/A"
+            if turnover_change_1d is not None:
+                turnover_change_1d_color = "color: green;" if turnover_change_1d > 0 else "color: red;"
+                turnover_change_1d_display = f"<span style=\"{turnover_change_1d_color}\">{turnover_change_1d:+.2f}%</span>"
+            
+            turnover_rate_change_5d = stock_indicators.get('turnover_rate_change_5d', None) if stock_indicators else None
+            turnover_rate_change_5d_display = "N/A"
+            if turnover_rate_change_5d is not None:
+                turnover_rate_change_5d_color = "color: green;" if turnover_rate_change_5d > 0 else "color: red;"
+                turnover_rate_change_5d_display = f"<span style=\"{turnover_rate_change_5d_color}\">{turnover_rate_change_5d:+.2f}%</span>"
+            
             # 格式化中期趋势评分显示
             medium_term_score = stock_indicators.get('medium_term_score', None) if stock_indicators else None
             medium_term_display = "N/A"
@@ -4305,6 +4327,9 @@ class HSIEmailSystem:
                         <td>{fundamental_display}</td>
                         <td>{pe_display}</td>
                         <td>{pb_display}</td>
+                        <td>{vix_display}</td>
+                        <td>{turnover_change_1d_display}</td>
+                        <td>{turnover_rate_change_5d_display}</td>
                         <td>{prev_trend_arrow} {prev_trend_display}</td>
                         <td>{prev_tav_arrow} {prev_tav_display}</td>
                         <td>{prev_buildup_arrow} {prev_buildup_display}</td>
@@ -4406,7 +4431,23 @@ class HSIEmailSystem:
             if ma_alignment is not None and ma_alignment != 'N/A' and ma_alignment != '数据不足':
                 ma_alignment_text = f"{ma_alignment}"
             
-            text_lines.append(f"{stock_name:<15} {stock_code:<10} {price_display:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {trend:<12} {ma_alignment_text:<10} {medium_term_text:<12} {tav_display:<8} {buildup_text:<10} {distribution_text:<10} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {prev_trend_display:<12} {prev_tav_display:<15} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_price_display:<15}")
+            # 格式化新指标（文本版本）
+            vix_level = stock_indicators.get('vix_level', None) if stock_indicators else None
+            vix_text = "N/A"
+            if vix_level is not None and vix_level > 0:
+                vix_text = f"{vix_level:.2f}"
+            
+            turnover_change_1d = stock_indicators.get('turnover_change_1d', None) if stock_indicators else None
+            turnover_change_1d_text = "N/A"
+            if turnover_change_1d is not None:
+                turnover_change_1d_text = f"{turnover_change_1d:+.2f}%"
+            
+            turnover_rate_change_5d = stock_indicators.get('turnover_rate_change_5d', None) if stock_indicators else None
+            turnover_rate_change_5d_text = "N/A"
+            if turnover_rate_change_5d is not None:
+                turnover_rate_change_5d_text = f"{turnover_rate_change_5d:+.2f}%"
+            
+            text_lines.append(f"{stock_name:<15} {stock_code:<10} {price_display:<10} {signal_display:<8} {continuous_signal_status:<20} {signal_description:<30} {trend:<12} {ma_alignment_text:<10} {medium_term_text:<12} {tav_display:<8} {buildup_text:<10} {distribution_text:<10} {fundamental_text:<12} {pe_text:<8} {pb_text:<8} {vix_text:<8} {turnover_change_1d_text:<12} {turnover_rate_change_5d_text:<12} {prev_trend_display:<12} {prev_tav_display:<15} {prev_buildup_display:<15} {prev_distribution_display:<15} {prev_price_display:<15}")
 
         # 检查过滤后是否有信号（使用新的过滤逻辑）
         has_filtered_signals = any(True for stock_name, stock_code, trend, signal, signal_type in target_date_signals
@@ -4415,7 +4456,7 @@ class HSIEmailSystem:
         if not has_filtered_signals:
             html += """
                     <tr>
-                        <td colspan="20">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
+                        <td colspan="23">当前没有检测到任何有效的交易信号（已过滤无信号股票）</td>
                     </tr>
             """
             text_lines.append("当前没有检测到任何有效的交易信号（已过滤无信号股票）")
@@ -5451,6 +5492,80 @@ class HSIEmailSystem:
                   <li><b>行业差异</b>：不同行业的PB水平不同，需结合行业平均水平判断</li>
                 </ul>
               </li>
+              <li><b>VIX恐慌指数</b>：衡量市场恐慌程度的指标，反映市场情绪和波动预期：
+                <ul>
+                  <li><b>计算方式</b>：基于标普500指数期权价格计算，反映未来30天的市场波动预期</li>
+                  <li><b>市场情绪判断</b>：
+                    <ul>
+                      <li>VIX<15：市场过度乐观，需警惕回调风险</li>
+                      <li>15≤VIX<20：正常波动，市场情绪平稳</li>
+                      <li>20≤VIX<30：轻度恐慌，市场波动加大</li>
+                      <li>VIX≥30：严重恐慌，通常伴随大跌，但可能存在反弹机会</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>VIX低时：市场情绪乐观，适合谨慎交易，降低仓位</li>
+                      <li>VIX高时：市场恐慌，可能存在反弹机会，适合分批建仓</li>
+                      <li>VIX急剧上升：市场恐慌加剧，建议观望或减仓</li>
+                    </ul>
+                  </li>
+                  <li><b>ML模型重要性</b>：VIX_Level在所有预测周期的Top 10特征中都出现，是重要的市场环境特征</li>
+                </ul>
+              </li>
+              <li><b>成交额变化率</b>：衡量资金流入流出的直接指标，反映市场流动性变化：
+                <ul>
+                  <li><b>计算方式</b>：成交额变化率 = (当前成交额 - N日前成交额) / N日前成交额 × 100%</li>
+                  <li><b>时间周期</b>：
+                    <ul>
+                      <li>1日变化率：反映短期资金流向，捕捉短期情绪变化</li>
+                      <li>5日变化率：反映中期资金流向，判断中期趋势</li>
+                      <li>20日变化率：反映长期资金流向，评估长期趋势</li>
+                    </ul>
+                  </li>
+                  <li><b>资金流向判断</b>：
+                    <ul>
+                      <li>正向变化率：资金持续流入，市场活跃，支持交易</li>
+                      <li>负向变化率：资金持续流出，市场低迷，减少交易</li>
+                      <li>多周期一致：1日、5日、20日变化率同向，信号更可靠</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>成交额持续增长：资金流入，市场活跃，适合交易</li>
+                      <li>成交额持续萎缩：资金流出，市场低迷，建议观望</li>
+                      <li>突发性成交额变化：可能预示重大消息或趋势转折</li>
+                    </ul>
+                  </li>
+                  <li><b>ML模型重要性</b>：成交额变化率在长期预测（20天）中显著提升准确率</li>
+                </ul>
+              </li>
+              <li><b>换手率变化率</b>：衡量市场关注度变化的指标，反映流动性增强或减弱：
+                <ul>
+                  <li><b>计算方式</b>：换手率 = 成交量 / 流通股本 × 100%；换手率变化率 = (当前换手率 - N日前换手率) / N日前换手率 × 100%</li>
+                  <li><b>时间周期</b>：
+                    <ul>
+                      <li>5日变化率：反映短期关注度变化，适合短期交易</li>
+                      <li>20日变化率：反映中期关注度变化，适合中期投资</li>
+                    </ul>
+                  </li>
+                  <li><b>关注度判断</b>：
+                    <ul>
+                      <li>换手率上升+换手率变化率正向：关注度提升，流动性增强，适合交易</li>
+                      <li>换手率下降+换手率变化率负向：关注度下降，流动性减弱，观望为主</li>
+                      <li>换手率异常波动：可能预示重大消息或趋势转折，提高警惕</li>
+                    </ul>
+                  </li>
+                  <li><b>应用场景</b>：
+                    <ul>
+                      <li>换手率持续上升：市场关注度提升，流动性增强，适合交易</li>
+                      <li>换手率持续下降：市场关注度下降，流动性减弱，建议观望</li>
+                      <li>换手率异常波动：可能预示重大消息或趋势转折</li>
+                    </ul>
+                  </li>
+                  <li><b>ML模型重要性</b>：换手率变化率在长期预测（20天）中显著提升准确率</li>
+                </ul>
+              </li>
               <li><b>成交量</b>：股票在特定时间段内的交易数量，反映市场活跃度和资金流向：
                 <ul>
                   <li><b>成交量放大</b>：通常表示市场关注度提高，可能预示趋势加速或反转</li>
@@ -5714,6 +5829,47 @@ class HSIEmailSystem:
         text += "    * PB≥3：高市净率，投资风险高\n"
         text += "  - 适用性：PB适用于周期性行业和亏损公司，比PE更稳健\n"
         text += "  - 行业差异：不同行业的PB水平不同，需结合行业平均水平判断\n"
+        text += "• VIX恐慌指数：衡量市场恐慌程度的指标，反映市场情绪和波动预期：\n"
+        text += "  - 计算方式：基于标普500指数期权价格计算，反映未来30天的市场波动预期\n"
+        text += "  - 市场情绪判断：\n"
+        text += "    * VIX<15：市场过度乐观，需警惕回调风险\n"
+        text += "    * 15≤VIX<20：正常波动，市场情绪平稳\n"
+        text += "    * 20≤VIX<30：轻度恐慌，市场波动加大\n"
+        text += "    * VIX≥30：严重恐慌，通常伴随大跌，但可能存在反弹机会\n"
+        text += "  - 应用场景：\n"
+        text += "    * VIX低时：市场情绪乐观，适合谨慎交易，降低仓位\n"
+        text += "    * VIX高时：市场恐慌，可能存在反弹机会，适合分批建仓\n"
+        text += "    * VIX急剧上升：市场恐慌加剧，建议观望或减仓\n"
+        text += "  - ML模型重要性：VIX_Level在所有预测周期的Top 10特征中都出现，是重要的市场环境特征\n"
+        text += "• 成交额变化率：衡量资金流入流出的直接指标，反映市场流动性变化：\n"
+        text += "  - 计算方式：成交额变化率 = (当前成交额 - N日前成交额) / N日前成交额 × 100%\n"
+        text += "  - 时间周期：\n"
+        text += "    * 1日变化率：反映短期资金流向，捕捉短期情绪变化\n"
+        text += "    * 5日变化率：反映中期资金流向，判断中期趋势\n"
+        text += "    * 20日变化率：反映长期资金流向，评估长期趋势\n"
+        text += "  - 资金流向判断：\n"
+        text += "    * 正向变化率：资金持续流入，市场活跃，支持交易\n"
+        text += "    * 负向变化率：资金持续流出，市场低迷，减少交易\n"
+        text += "    * 多周期一致：1日、5日、20日变化率同向，信号更可靠\n"
+        text += "  - 应用场景：\n"
+        text += "    * 成交额持续增长：资金流入，市场活跃，适合交易\n"
+        text += "    * 成交额持续萎缩：资金流出，市场低迷，建议观望\n"
+        text += "    * 突发性成交额变化：可能预示重大消息或趋势转折\n"
+        text += "  - ML模型重要性：成交额变化率在长期预测（20天）中显著提升准确率\n"
+        text += "• 换手率变化率：衡量市场关注度变化的指标，反映流动性增强或减弱：\n"
+        text += "  - 计算方式：换手率 = 成交量 / 流通股本 × 100%；换手率变化率 = (当前换手率 - N日前换手率) / N日前换手率 × 100%\n"
+        text += "  - 时间周期：\n"
+        text += "    * 5日变化率：反映短期关注度变化，适合短期交易\n"
+        text += "    * 20日变化率：反映中期关注度变化，适合中期投资\n"
+        text += "  - 关注度判断：\n"
+        text += "    * 换手率上升+换手率变化率正向：关注度提升，流动性增强，适合交易\n"
+        text += "    * 换手率下降+换手率变化率负向：关注度下降，流动性减弱，观望为主\n"
+        text += "    * 换手率异常波动：可能预示重大消息或趋势转折，提高警惕\n"
+        text += "  - 应用场景：\n"
+        text += "    * 换手率持续上升：市场关注度提升，流动性增强，适合交易\n"
+        text += "    * 换手率持续下降：市场关注度下降，流动性减弱，建议观望\n"
+        text += "    * 换手率异常波动：可能预示重大消息或趋势转折\n"
+        text += "  - ML模型重要性：换手率变化率在长期预测（20天）中显著提升准确率\n"
         text += "• 成交量：股票在特定时间段内的交易数量，反映市场活跃度和资金流向：\n"
         text += "  - 成交量放大：通常表示市场关注度提高，可能预示趋势加速或反转\n"
         text += "  - 成交量萎缩：通常表示市场观望情绪浓厚，可能预示趋势减弱\n"
