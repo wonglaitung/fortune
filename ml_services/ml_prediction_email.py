@@ -82,18 +82,21 @@ class MLPredictionEmailSender:
         # 计算概率差异
         comparison['probability_diff'] = abs(comparison['probability_lgbm'] - comparison['probability_gbdt_lr'])
 
-        # 排序
-        comparison = comparison.sort_values('probability_diff', ascending=False)
+        # 计算平均概率
+        comparison['avg_probability'] = (comparison['probability_lgbm'] + comparison['probability_gbdt_lr']) / 2
+
+        # 排序：先按一致性分组（一致的排在一起），再按平均概率降序排序
+        comparison = comparison.sort_values(['consistent', 'avg_probability'], ascending=[False, False])
 
         # 生成表格
         horizon_text = {1: '次日', 5: '一周', 20: '一个月'}[horizon]
         table = f"""
-{'=' * 136}
+{'=' * 148}
 📊 两种模型预测结果对比 - {horizon_text}涨跌预测
-{'=' * 136}
+{'=' * 148}
 
-{'代码':<12} {'股票名称':<14} {'LGBM预测':<10} {'LGBM概率':<10} {'GBDT+LR预测':<12} {'GBDT+LR概率':<12} {'是否一致':<8} {'概率差异':<10} {'当前价格':<10} {'预测目标'}
-{'-' * 136}
+{'代码':<12} {'股票名称':<14} {'LGBM预测':<10} {'LGBM概率':<10} {'GBDT+LR预测':<12} {'GBDT+LR概率':<12} {'平均概率':<10} {'是否一致':<8} {'概率差异':<10} {'当前价格':<10} {'预测目标'}
+{'-' * 148}
 """
 
         for _, row in comparison.iterrows():
@@ -101,7 +104,7 @@ class MLPredictionEmailSender:
             gbdt_lr_pred_label = "上涨" if row['prediction_gbdt_lr'] == 1 else "下跌"
             consistent = "✓" if row['consistent'] else "✗"
 
-            table += f"{row['code']:<12} {row['name_lgbm']:<14} {lgbm_pred_label:<10} {row['probability_lgbm']:<10.4f} {gbdt_lr_pred_label:<12} {row['probability_gbdt_lr']:<12.4f} {consistent:<8} {row['probability_diff']:<10.4f} {row['current_price']:<10} {row['target_lgbm']}\n"
+            table += f"{row['code']:<12} {row['name_lgbm']:<14} {lgbm_pred_label:<10} {row['probability_lgbm']:<10.4f} {gbdt_lr_pred_label:<12} {row['probability_gbdt_lr']:<12.4f} {row['avg_probability']:<10.4f} {consistent:<8} {row['probability_diff']:<10.4f} {row['current_price']:<10} {row['target_lgbm']}\n"
 
         # 统计摘要
         consistent_count = len(comparison[comparison['consistent']])
