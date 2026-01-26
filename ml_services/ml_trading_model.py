@@ -256,6 +256,144 @@ class FeatureEngineer:
 
         return df
 
+    def create_stock_type_features(self, code, df):
+        """创建股票类型特征（基于业界惯例）
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（用于计算流动性等动态特征）
+
+        Returns:
+            dict: 股票类型特征字典
+        """
+        # 股票类型分类（基于不同股票类型分析框架对比.md）
+        stock_type_mapping = {
+            # 银行股
+            '0005.HK': {'type': 'bank', 'name': '汇丰银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 70, 'risk': 20},
+            '0939.HK': {'type': 'bank', 'name': '建设银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 80, 'risk': 20},
+            '1288.HK': {'type': 'bank', 'name': '农业银行', 'defensive': 95, 'growth': 25, 'cyclical': 20, 'liquidity': 85, 'risk': 15},
+            '1398.HK': {'type': 'bank', 'name': '工商银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 85, 'risk': 20},
+            '3968.HK': {'type': 'bank', 'name': '招商银行', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 25},
+
+            # 公用事业股
+            '0728.HK': {'type': 'utility', 'name': '中国电信', 'defensive': 90, 'growth': 25, 'cyclical': 15, 'liquidity': 70, 'risk': 20},
+            '0941.HK': {'type': 'utility', 'name': '中国移动', 'defensive': 95, 'growth': 30, 'cyclical': 15, 'liquidity': 80, 'risk': 15},
+
+            # 科技股
+            '0700.HK': {'type': 'tech', 'name': '腾讯控股', 'defensive': 40, 'growth': 85, 'cyclical': 30, 'liquidity': 90, 'risk': 60},
+            '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW', 'defensive': 35, 'growth': 85, 'cyclical': 35, 'liquidity': 85, 'risk': 65},
+            '3690.HK': {'type': 'tech', 'name': '美团-W', 'defensive': 30, 'growth': 80, 'cyclical': 40, 'liquidity': 85, 'risk': 70},
+            '1810.HK': {'type': 'tech', 'name': '小米集团-W', 'defensive': 35, 'growth': 75, 'cyclical': 45, 'liquidity': 80, 'risk': 65},
+
+            # 半导体股
+            '0981.HK': {'type': 'semiconductor', 'name': '中芯国际', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
+            '1347.HK': {'type': 'semiconductor', 'name': '华虹半导体', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
+
+            # 人工智能股
+            '6682.HK': {'type': 'ai', 'name': '第四范式', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
+            '9660.HK': {'type': 'ai', 'name': '地平线机器人', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
+            '2533.HK': {'type': 'ai', 'name': '黑芝麻智能', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
+
+            # 新能源股
+            '1211.HK': {'type': 'new_energy', 'name': '比亚迪股份', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
+            '1330.HK': {'type': 'environmental', 'name': '绿色动力环保', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
+
+            # 能源/周期股
+            '0883.HK': {'type': 'energy', 'name': '中国海洋石油', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
+            '1088.HK': {'type': 'energy', 'name': '中国神华', 'defensive': 40, 'growth': 45, 'cyclical': 85, 'liquidity': 70, 'risk': 70},
+            '1138.HK': {'type': 'shipping', 'name': '中远海能', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
+            '0388.HK': {'type': 'exchange', 'name': '香港交易所', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
+
+            # 保险股
+            '1299.HK': {'type': 'insurance', 'name': '友邦保险', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 30},
+
+            # 生物医药股
+            '2269.HK': {'type': 'biotech', 'name': '药明生物', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
+
+            # 指数基金
+            '2800.HK': {'type': 'index', 'name': '盈富基金', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
+        }
+
+        # 获取股票类型信息
+        stock_info_mapping = {
+            # 银行股
+            '0005.HK': {'type': 'bank', 'name': '汇丰银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 70, 'risk': 20},
+            '0388.HK': {'type': 'exchange', 'name': '香港交易所', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
+            '0700.HK': {'type': 'tech', 'name': '腾讯控股', 'defensive': 40, 'growth': 85, 'cyclical': 30, 'liquidity': 90, 'risk': 60},
+            '0728.HK': {'type': 'utility', 'name': '中国电信', 'defensive': 90, 'growth': 25, 'cyclical': 15, 'liquidity': 70, 'risk': 20},
+            '0883.HK': {'type': 'energy', 'name': '中国海洋石油', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
+            '0939.HK': {'type': 'bank', 'name': '建设银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 80, 'risk': 20},
+            '0941.HK': {'type': 'utility', 'name': '中国移动', 'defensive': 95, 'growth': 30, 'cyclical': 15, 'liquidity': 80, 'risk': 15},
+            '0981.HK': {'type': 'semiconductor', 'name': '中芯国际', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
+            '1088.HK': {'type': 'energy', 'name': '中国神华', 'defensive': 40, 'growth': 45, 'cyclical': 85, 'liquidity': 70, 'risk': 70},
+            '1138.HK': {'type': 'shipping', 'name': '中远海能', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
+            '1211.HK': {'type': 'new_energy', 'name': '比亚迪股份', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
+            '1288.HK': {'type': 'bank', 'name': '农业银行', 'defensive': 95, 'growth': 25, 'cyclical': 20, 'liquidity': 85, 'risk': 15},
+            '1299.HK': {'type': 'insurance', 'name': '友邦保险', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 30},
+            '1330.HK': {'type': 'environmental', 'name': '绿色动力环保', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
+            '1347.HK': {'type': 'semiconductor', 'name': '华虹半导体', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
+            '1398.HK': {'type': 'bank', 'name': '工商银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 85, 'risk': 20},
+            '1810.HK': {'type': 'tech', 'name': '小米集团-W', 'defensive': 35, 'growth': 75, 'cyclical': 45, 'liquidity': 80, 'risk': 65},
+            '2269.HK': {'type': 'biotech', 'name': '药明生物', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
+            '2533.HK': {'type': 'ai', 'name': '黑芝麻智能', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
+            '2800.HK': {'type': 'index', 'name': '盈富基金', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
+            '3690.HK': {'type': 'tech', 'name': '美团-W', 'defensive': 30, 'growth': 80, 'cyclical': 40, 'liquidity': 85, 'risk': 70},
+            '3968.HK': {'type': 'bank', 'name': '招商银行', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 25},
+            '6682.HK': {'type': 'ai', 'name': '第四范式', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
+            '9660.HK': {'type': 'ai', 'name': '地平线机器人', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
+            '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW', 'defensive': 35, 'growth': 85, 'cyclical': 35, 'liquidity': 85, 'risk': 65},
+        }
+
+        # 获取股票类型信息
+        stock_info = stock_info_mapping.get(code, None)
+        if not stock_info:
+            print(f"⚠️ 未找到股票 {code} 的类型信息")
+            return {}
+
+        features = {
+            # 股票类型特征（字符串类型）
+            'Stock_Type': stock_info['type'],
+
+            # 综合评分特征（基于业界惯例）
+            'Stock_Defensive_Score': stock_info['defensive'] / 100.0,  # 防御性评分（0-1）
+            'Stock_Growth_Score': stock_info['growth'] / 100.0,          # 成长性评分（0-1）
+            'Stock_Cyclical_Score': stock_info['cyclical'] / 100.0,        # 周期性评分（0-1）
+            'Stock_Liquidity_Score': stock_info['liquidity'] / 100.0,      # 流动性评分（0-1）
+            'Stock_Risk_Score': stock_info['risk'] / 100.0,                # 风险评分（0-1）
+
+            # 衍生特征（基于业界分析权重）
+            # 银行股：基本面权重70%，技术分析权重30%
+            'Bank_Style_Fundamental_Weight': 0.7 if stock_info['type'] == 'bank' else 0.0,
+            'Bank_Style_Technical_Weight': 0.3 if stock_info['type'] == 'bank' else 0.0,
+
+            # 科技股：基本面权重40%，技术分析权重60%
+            'Tech_Style_Fundamental_Weight': 0.4 if stock_info['type'] == 'tech' else 0.0,
+            'Tech_Style_Technical_Weight': 0.6 if stock_info['type'] == 'tech' else 0.0,
+
+            # 周期股：基本面权重10%，技术分析权重70%，资金流向权重20%
+            'Cyclical_Style_Fundamental_Weight': 0.1 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
+            'Cyclical_Style_Technical_Weight': 0.7 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
+            'Cyclical_Style_Flow_Weight': 0.2 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
+        }
+
+        # 动态特征（基于历史数据计算）
+        if df is not None and not df.empty and len(df) >= 60:
+            # 历史波动率（基于60日数据）
+            returns = df['Close'].pct_change().dropna()
+            if len(returns) >= 30:
+                historical_volatility = returns.rolling(window=30, min_periods=10).std().iloc[-1]
+                features['Stock_Historical_Volatility'] = historical_volatility
+
+                # 实际流动性评分（基于成交额波动）
+                turnover_volatility = df['Turnover'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Turnover'].rolling(window=20, min_periods=10).mean().iloc[-1]
+                features['Stock_Actual_Liquidity_Score'] = max(0, min(1, 1 - turnover_volatility))
+
+                # 价格稳定性评分（基于价格波动）
+                price_volatility = df['Close'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Close'].rolling(window=20, min_periods=10).mean().iloc[-1]
+                features['Stock_Price_Stability_Score'] = max(0, min(1, 1 - price_volatility))
+
+        return features
+
     def calculate_multi_period_metrics(self, df):
         """计算多周期指标（趋势和相对强度）"""
         if df.empty or len(df) < 60:
@@ -512,6 +650,11 @@ class MLTradingModel:
                 for key, value in fundamental_features.items():
                     stock_df[key] = value
 
+                # 添加股票类型特征
+                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                for key, value in stock_type_features.items():
+                    stock_df[key] = value
+
                 # 添加股票代码
                 stock_df['Code'] = code
 
@@ -572,6 +715,20 @@ class MLTradingModel:
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
         print(f"使用 {len(self.feature_columns)} 个特征")
+
+        # 处理分类特征（将字符串转换为整数编码）
+        categorical_features = []
+        self.categorical_encoders = {}  # 存储编码器，用于预测时解码
+
+        for col in self.feature_columns:
+            if df[col].dtype == 'object' or df[col].dtype.name == 'category':
+                print(f"  编码分类特征: {col}")
+                categorical_features.append(col)
+                # 使用LabelEncoder进行编码
+                from sklearn.preprocessing import LabelEncoder
+                le = LabelEncoder()
+                df[col] = le.fit_transform(df[col].astype(str))
+                self.categorical_encoders[col] = le
 
         # 准备特征和标签
         X = df[self.feature_columns].values
@@ -706,6 +863,11 @@ class MLTradingModel:
             for key, value in fundamental_features.items():
                 stock_df[key] = value
 
+            # 添加股票类型特征
+            stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+            for key, value in stock_type_features.items():
+                stock_df[key] = value
+
             # 生成交叉特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
@@ -715,6 +877,17 @@ class MLTradingModel:
             # 准备特征
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
+
+            # 处理分类特征（使用训练时的编码器）
+            for col, encoder in self.categorical_encoders.items():
+                if col in latest_data.columns:
+                    # 如果遇到训练时未见过的类别，映射到0
+                    try:
+                        latest_data[col] = encoder.transform(latest_data[col].astype(str))
+                    except ValueError:
+                        # 处理未见过的类别
+                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
 
@@ -740,7 +913,8 @@ class MLTradingModel:
         model_data = {
             'model': self.model,
             'scaler': self.scaler,
-            'feature_columns': self.feature_columns
+            'feature_columns': self.feature_columns,
+            'categorical_encoders': self.categorical_encoders
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -753,6 +927,7 @@ class MLTradingModel:
         self.model = model_data['model']
         self.scaler = model_data['scaler']
         self.feature_columns = model_data['feature_columns']
+        self.categorical_encoders = model_data.get('categorical_encoders', {})
         print(f"模型已从 {filepath} 加载")
 
 
@@ -822,11 +997,21 @@ class GBDTLRModel:
                 stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
                 # 创建标签（使用指定的 horizon）
+                
+                # 添加股票类型特征
+                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                for key, value in stock_type_features.items():
+                    stock_df[key] = value
                 stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
                 for key, value in fundamental_features.items():
+                    stock_df[key] = value
+
+                # 添加股票类型特征
+                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                for key, value in stock_type_features.items():
                     stock_df[key] = value
 
                 # 添加股票代码
@@ -894,6 +1079,20 @@ class GBDTLRModel:
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
         print(f"✅ 使用 {len(self.feature_columns)} 个特征")
+
+        # 处理分类特征（将字符串转换为整数编码）
+        categorical_features = []
+        self.categorical_encoders = {}  # 存储编码器，用于预测时解码
+
+        for col in self.feature_columns:
+            if df[col].dtype == 'object' or df[col].dtype.name == 'category':
+                print(f"  编码分类特征: {col}")
+                categorical_features.append(col)
+                # 使用LabelEncoder进行编码
+                from sklearn.preprocessing import LabelEncoder
+                le = LabelEncoder()
+                df[col] = le.fit_transform(df[col].astype(str))
+                self.categorical_encoders[col] = le
 
         # 准备特征和标签
         X = df[self.feature_columns].values
@@ -1243,6 +1442,11 @@ class GBDTLRModel:
             for key, value in fundamental_features.items():
                 stock_df[key] = value
 
+            # 添加股票类型特征
+            stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+            for key, value in stock_type_features.items():
+                stock_df[key] = value
+
             # 生成交叉特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
@@ -1252,6 +1456,17 @@ class GBDTLRModel:
             # 准备特征
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
+
+            # 处理分类特征（使用训练时的编码器）
+            for col, encoder in self.categorical_encoders.items():
+                if col in latest_data.columns:
+                    # 如果遇到训练时未见过的类别，映射到0
+                    try:
+                        latest_data[col] = encoder.transform(latest_data[col].astype(str))
+                    except ValueError:
+                        # 处理未见过的类别
+                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
 
@@ -1298,7 +1513,8 @@ class GBDTLRModel:
             'lr_model': self.lr_model,
             'feature_columns': self.feature_columns,
             'actual_n_estimators': self.actual_n_estimators,
-            'gbdt_leaf_names': self.gbdt_leaf_names
+            'gbdt_leaf_names': self.gbdt_leaf_names,
+            'categorical_encoders': self.categorical_encoders
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -1313,6 +1529,7 @@ class GBDTLRModel:
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
         self.gbdt_leaf_names = model_data['gbdt_leaf_names']
+        self.categorical_encoders = model_data.get('categorical_encoders', {})
         print(f"GBDT + LR 模型已从 {filepath} 加载")
 
 
