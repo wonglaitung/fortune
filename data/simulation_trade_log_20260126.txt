@@ -1087,3 +1087,38 @@
 - 风险因素：  
   - 出货信号强（strong级别），"价格高位、RSI超买、CMF
 [2026-01-26 14:00:12] 正在请求大模型以固定格式输出买卖信号...
+[2026-01-26 14:02:10] 格式化输出结果:
+{
+    "buy": [],
+    "sell": [
+        {
+            "code": "1347.HK",
+            "name": "华虹半导体",
+            "reason": "出货信号极强，RSI严重超买，估值泡沫化",
+            "stop_loss_triggered": false,
+            "target_price": 102.0,
+            "validity_period": 7
+        },
+        {
+            "code": "1138.HK",
+            "name": "中远海能",
+            "reason": "出货信号强，价格高位，RSI超买，CMF资金流出",
+            "stop_loss_triggered": false,
+            "target_price": 12.0,
+            "validity_period": 7
+        }
+    ]
+}
+[2026-01-26 14:02:10] 成功解析JSON格式的买卖信号
+[2026-01-26 14:02:10] 解析后推荐: 买入 [], 卖出 [{'code': '1347.HK', 'name': '华虹半导体', 'reason': '出货信号极强，RSI严重超买，估值泡沫化', 'stop_loss_triggered': False, 'target_price': 102.0, 'validity_period': 7}, {'code': '1138.HK', 'name': '中远海能', 'reason': '出货信号强，价格高位，RSI超买，CMF资金流出', 'stop_loss_triggered': False, 'target_price': 12.0, 'validity_period': 7}]
+[2026-01-26 14:02:10] 未持有 华虹半导体 (1347.HK)，无法按大模型建议卖出
+[2026-01-26 14:02:13] 邮件发送成功: 【无法卖出通知】华虹半导体 (1347.HK)
+[2026-01-26 14:02:13] 已发送无法卖出通知邮件: 华虹半导体 (1347.HK)
+[2026-01-26 14:02:13] 未持有 中远海能 (1138.HK)，无法按大模型建议卖出
+[2026-01-26 14:02:16] 邮件发送成功: 【无法卖出通知】中远海能 (1138.HK)
+[2026-01-26 14:02:16] 已发送无法卖出通知邮件: 中远海能 (1138.HK)
+[2026-01-26 14:02:19] 当前资金: HK$296.19
+[2026-01-26 14:02:19] 投资组合价值: HK$1,003,126.19
+[2026-01-26 14:02:19] 持仓情况: {'1211.HK': {'shares': 2100, 'avg_price': 94.88809523809523, 'stop_loss_price': 94.0}, '0939.HK': {'shares': 20000, 'avg_price': np.float64(7.6253), 'stop_loss_price': 7.35}, '1288.HK': {'shares': 26900, 'avg_price': 5.639182156133829, 'stop_loss_price': 5.3}, '1330.HK': {'shares': 28800, 'avg_price': np.float64(5.2600694444444445), 'stop_loss_price': 4.8}, '3690.HK': {'shares': 1800, 'avg_price': 99.79166666666667, 'stop_loss_price': 94.7}, '0941.HK': {'shares': 100, 'avg_price': 79.4, 'stop_loss_price': 75.6}, '0728.HK': {'shares': 300, 'avg_price': 5.17, 'stop_loss_price': 4.92}, '0981.HK': {'shares': 200, 'avg_price': np.float64(74.25), 'stop_loss_price': 68.5}, '3968.HK': {'shares': 100, 'avg_price': np.float64(46.56), 'stop_loss_price': 44.5}, '1398.HK': {'shares': 22900, 'avg_price': np.float64(6.19), 'stop_loss_price': 5.25}}
+[2026-01-26 14:02:19] 总收益率: 0.31%
+[2026-01-26 14:02:19] 下一次交易分析将在 2026-01-26 14:46:19 执行
