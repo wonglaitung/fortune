@@ -20225,6 +20225,38 @@
       "current_price": 6.22,
       "target_price": 6.55,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-26T14:02:10.699772",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 296.18929405196104,
+      "reason": "出货信号极强，RSI严重超买，估值泡沫化",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 109.6,
+      "target_price": 102.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26T14:02:13.694062",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 296.18929405196104,
+      "reason": "出货信号强，价格高位，RSI超买，CMF资金流出",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 13.71,
+      "target_price": 12.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -33477,38 +33509,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-26 10:57:45",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分3.5分（weak级别），RSI 67.92接近超买，布林带突破上轨，位置百分位100.0%，涨幅透支商品价格波动风险",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 23.42,
-      "target_price": 21.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:57:50",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分（strong级别），RSI 70.79超买，CMF资金流-0.1728持续流出，60日收益率21.11%涨幅透支",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 130.6,
-      "target_price": 125.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-26 10:57:52",
       "type": "SELL",
       "code": "0388.HK",
@@ -33658,6 +33658,60 @@
       "current_price": 6.22,
       "target_price": 6.55,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-26 14:02:10",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货信号极强，RSI严重超买，估值泡沫化",
+          "stop_loss_triggered": false,
+          "target_price": 102.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货信号强，价格高位，RSI超买，CMF资金流出",
+          "stop_loss_triggered": false,
+          "target_price": 12.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-26 14:02:10",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号极强，RSI严重超买，估值泡沫化",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 109.6,
+      "target_price": 102.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26 14:02:13",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货信号强，价格高位，RSI超买，CMF资金流出",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 13.71,
+      "target_price": 12.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
