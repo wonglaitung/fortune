@@ -737,16 +737,22 @@ class MLTradingModel:
         # 时间序列分割
         tscv = TimeSeriesSplit(n_splits=5)
 
-        # 训练模型
+        # 训练模型（增加正则化以减少过拟合）
         print("训练LightGBM模型...")
         self.model = lgb.LGBMClassifier(
-            n_estimators=100,
-            learning_rate=0.05,
-            max_depth=6,
-            num_leaves=31,
-            min_child_samples=20,
-            subsample=0.8,
-            colsample_bytree=0.8,
+            n_estimators=50,           # 减少树的数量（100→50）
+            learning_rate=0.03,         # 降低学习率（0.05→0.03）
+            max_depth=4,                # 减少树深度（6→4）
+            num_leaves=15,              # 减少叶子节点数（31→15）
+            min_child_samples=30,        # 增加最小子样本数（20→30）
+            subsample=0.7,              # 减少行采样率（0.8→0.7）
+            colsample_bytree=0.7,       # 减少列采样率（0.8→0.7）
+            reg_alpha=0.1,              # L1正则化（新增）
+            reg_lambda=0.1,             # L2正则化（新增）
+            min_split_gain=0.1,         # 最小分割增益（新增）
+            feature_fraction=0.7,       # 特征采样率（新增）
+            bagging_fraction=0.7,       # Bagging采样率（新增）
+            bagging_freq=5,             # Bagging频率（新增）
             random_state=42,
             verbose=-1
         )
@@ -757,7 +763,15 @@ class MLTradingModel:
             X_train, X_val = X[train_idx], X[val_idx]
             y_train, y_val = y[train_idx], y[val_idx]
 
-            self.model.fit(X_train, y_train)
+            # 添加early_stopping以减少过拟合
+            self.model.fit(
+                X_train, y_train,
+                eval_set=[(X_val, y_val)],
+                eval_metric='binary_logloss',
+                callbacks=[
+                    lgb.early_stopping(stopping_rounds=10, verbose=False)  # 增加patience
+                ]
+            )
             y_pred = self.model.predict(X_val)
             score = accuracy_score(y_val, y_pred)
             scores.append(score)
@@ -1107,18 +1121,24 @@ class GBDTLRModel:
         print("="*70)
 
         n_estimators = 32
-        num_leaves = 64
+        num_leaves = 32  # 减少叶子节点数（64→32）
 
         self.gbdt_model = lgb.LGBMClassifier(
             objective='binary',
             boosting_type='gbdt',
-            subsample=0.8,
+            subsample=0.7,              # 减少行采样率（0.8→0.7）
             min_child_weight=0.1,
-            min_child_samples=10,
-            colsample_bytree=0.7,
+            min_child_samples=20,        # 增加最小子样本数（10→20）
+            colsample_bytree=0.6,       # 减少列采样率（0.7→0.6）
             num_leaves=num_leaves,
-            learning_rate=0.05,
+            learning_rate=0.03,         # 降低学习率（0.05→0.03）
             n_estimators=n_estimators,
+            reg_alpha=0.1,              # L1正则化（新增）
+            reg_lambda=0.1,             # L2正则化（新增）
+            min_split_gain=0.1,         # 最小分割增益（新增）
+            feature_fraction=0.7,       # 特征采样率（新增）
+            bagging_fraction=0.7,       # Bagging采样率（新增）
+            bagging_freq=5,             # Bagging频率（新增）
             random_state=2020,
             n_jobs=-1,
             verbose=-1
@@ -1137,7 +1157,7 @@ class GBDTLRModel:
                 eval_set=[(X_val_fold, y_val_fold)],
                 eval_metric='binary_logloss',
                 callbacks=[
-                    lgb.early_stopping(stopping_rounds=5, verbose=False)
+                    lgb.early_stopping(stopping_rounds=10, verbose=False)  # 增加patience（5→10）
                 ]
             )
 
