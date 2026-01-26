@@ -20177,6 +20177,54 @@
       "current_price": 7.65,
       "target_price": 8.05,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-26T11:52:02.195717",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 296.18929405196104,
+      "reason": "出货评分6.0分（strong级别），位置百分位78.21%高位，CMF资金流-0.0641持续流出，多周期趋势虽向上但60日收益率13.73%涨幅过快，相对强度跑输恒指，平衡型投资者应锁定利润控制风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.35,
+      "target_price": 80.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26T11:52:08.862982",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.18,
+      "amount": 0,
+      "capital_after": 296.18929405196104,
+      "reason": "建仓评分5.4分（strong级别），基本面评分90分（市盈率13.01，高分红低估值），位置百分位6.52%超跌提供安全边际，CMF资金流0.3056显著流入验证底部，适合平衡型投资者兼顾价值与风险控制 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.18,
+      "target_price": 5.6,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-26T13:30:02.866613",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.22,
+      "amount": 0,
+      "capital_after": 296.18929405196104,
+      "reason": "综合评分66.3分，基本面强劲（市盈率5.59，高分红防御属性），技术指标协同良好（CMF资金流0.0413、OBV趋势上升、RSI中性偏强），位置百分位40.0%处于价值低估区间，适合平衡型投资者风险收益平衡需求 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 5.95,
+      "current_price": 6.22,
+      "target_price": 6.55,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -33429,257 +33477,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-26 10:05:49",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "多重出货信号，RSI超买，基本面极差，风险等级5级",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 108.1,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:05:53",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "超买与资金流出，RSI严重超买，航运周期见顶风险，风险等级4级",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 13.57,
-      "target_price": 12.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:05:57",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买，布林带突破上轨，油价波动风险，风险等级3级",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 23.14,
-      "target_price": 21.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:06:00",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "全面出货信号，RSI超买，MACD死叉预警，风险等级4级",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 130.2,
-      "target_price": 125.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:06:03",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "资金大幅流出，CMF负值，地缘政治风险，风险等级4级",
-      "capital_after": 335.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.46,
-      "target_price": 35.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:06:11",
-      "type": "SELL",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 6800,
-      "price": 20.84,
-      "amount": 141712.0,
-      "reason": "止损触发: 当前价格HK$20.84 < 止损价格HK$21.00",
-      "capital_after": 142047.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 20.84,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -9247.999999999996
-    },
-    {
-      "timestamp": "2026-01-26 10:06:17",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 22900,
-      "price": 6.19,
-      "amount": 141751.0,
-      "reason": "极致低估基本面，PE 5.59，高股息率，技术面修复，风险等级2级",
-      "capital_after": 296.18929405196104,
-      "success": true,
-      "stop_loss_price": 5.25,
-      "current_price": 6.19,
-      "target_price": 6.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-26 10:06:22",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 165.8,
-      "amount": 0,
-      "reason": "趋势反转确认，多周期趋势向上，相对强度跑赢恒指，风险等级3级 (原因: 资金不足)",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": 155.0,
-      "current_price": 165.8,
-      "target_price": 175.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-26 10:06:26",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.6,
-      "amount": 0,
-      "reason": "极致安全边际，PE 5.52，高股息率，技术面低位企稳，风险等级2级 (原因: 资金不足)",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": 6.83,
-      "current_price": 7.6,
-      "target_price": 8.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-01-26 10:57:36",
-      "buy": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "基本面评分100分（市盈率9.89，高分红防御属性），位置百分位20.25%低位反弹，技术指标协同支持（OBV上升、RSI中性偏多）",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.95,
-          "target_price": 5.65,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "多周期趋势评分40.1分向上，相对强度跑赢恒指11.56%，技术指标协同（OBV上升、CMF转正、RSI中性偏强）",
-          "allocation_pct": 15,
-          "stop_loss_price": 158.0,
-          "target_price": 175.0,
-          "validity_period": 14
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "基本面评分100分（市盈率5.52，低估值高股息），位置百分位29.13%低位，技术指标隐现支撑（CMF转正、RSI接近超卖）",
-          "allocation_pct": 15,
-          "stop_loss_price": 7.35,
-          "target_price": 8.05,
-          "validity_period": 30
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分7.5分（strong级别），RSI 75.12严重超买，位置百分位99.31%历史高位，基本面估值泡沫化（市盈率2008）",
-          "stop_loss_triggered": false,
-          "target_price": 95.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分（strong级别），RSI 80.96极端超买，位置百分位100.0%，量价背离（OBV上升但成交量比率未配合）",
-          "stop_loss_triggered": false,
-          "target_price": 12.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分3.5分（weak级别），RSI 67.92接近超买，布林带突破上轨，位置百分位100.0%，涨幅透支商品价格波动风险",
-          "stop_loss_triggered": false,
-          "target_price": 21.5,
-          "validity_period": 7
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.5分（strong级别），RSI 70.79超买，CMF资金流-0.1728持续流出，60日收益率21.11%涨幅透支",
-          "stop_loss_triggered": false,
-          "target_price": 125.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分7.5分（strong级别），多周期趋势评分-4.2分转弱，综合评分44.9分<50，基本面估值偏高（市盈率31.11）",
-          "stop_loss_triggered": false,
-          "target_price": 400.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-26 10:57:36",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分（strong级别），RSI 75.12严重超买，位置百分位99.31%历史高位，基本面估值泡沫化（市盈率2008）",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 109.5,
-      "target_price": 95.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:57:40",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（strong级别），RSI 80.96极端超买，位置百分位100.0%，量价背离（OBV上升但成交量比率未配合）",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 13.65,
-      "target_price": 12.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-26 10:57:45",
       "type": "SELL",
       "code": "0883.HK",
@@ -33774,6 +33571,93 @@
       "current_price": 7.65,
       "target_price": 8.05,
       "validity_period": 30
+    },
+    {
+      "timestamp": "2026-01-26 11:52:02",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "建仓评分5.4分（strong级别），基本面评分90分（市盈率13.01，高分红低估值），位置百分位6.52%超跌提供安全边际，CMF资金流0.3056显著流入验证底部，适合平衡型投资者兼顾价值与风险控制",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.9,
+          "target_price": 5.6,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货评分6.0分（strong级别），位置百分位78.21%高位，CMF资金流-0.0641持续流出，多周期趋势虽向上但60日收益率13.73%涨幅过快，相对强度跑输恒指，平衡型投资者应锁定利润控制风险",
+          "stop_loss_triggered": false,
+          "target_price": 80.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-26 11:52:02",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（strong级别），位置百分位78.21%高位，CMF资金流-0.0641持续流出，多周期趋势虽向上但60日收益率13.73%涨幅过快，相对强度跑输恒指，平衡型投资者应锁定利润控制风险",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.35,
+      "target_price": 80.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26 11:52:08",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.18,
+      "amount": 0,
+      "reason": "建仓评分5.4分（strong级别），基本面评分90分（市盈率13.01，高分红低估值），位置百分位6.52%超跌提供安全边际，CMF资金流0.3056显著流入验证底部，适合平衡型投资者兼顾价值与风险控制 (原因: 资金不足)",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.18,
+      "target_price": 5.6,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-01-26 13:30:00",
+      "buy": [
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "综合评分66.3分，基本面强劲（市盈率5.59，高分红防御属性），技术指标协同良好（CMF资金流0.0413、OBV趋势上升、RSI中性偏强），位置百分位40.0%处于价值低估区间，适合平衡型投资者风险收益平衡需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.95,
+          "target_price": 6.55,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-26 13:30:02",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.22,
+      "amount": 0,
+      "reason": "综合评分66.3分，基本面强劲（市盈率5.59，高分红防御属性），技术指标协同良好（CMF资金流0.0413、OBV趋势上升、RSI中性偏强），位置百分位40.0%处于价值低估区间，适合平衡型投资者风险收益平衡需求 (原因: 资金不足)",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": 5.95,
+      "current_price": 6.22,
+      "target_price": 6.55,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
