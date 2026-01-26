@@ -20257,6 +20257,54 @@
       "current_price": 13.71,
       "target_price": 12.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26T14:53:39.784990",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 296.18929405196104,
+      "reason": "出货评分5.5分strong，价格高位(位置百分位100%)，RSI超买(68.15)，布林带突破上轨，技术面超买严重，短期回撤风险高，平衡型投资者应锁定利润避免回调",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 23.4,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26T14:53:43.308107",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 296.18929405196104,
+      "reason": "出货评分6.5分strong，价格高位(位置百分位100%)，RSI超买(70.25)，CMF资金流出(-0.1605)，技术面过热，短期回调压力大，平衡型投资者应减仓控制风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 130.4,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26T14:53:48.326862",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 46.48,
+      "amount": 0,
+      "capital_after": 296.18929405196104,
+      "reason": "综合评分61.3分>50分，建仓评分5.9分strong，基本面优质(PE 7.34历史低位)，技术指标协同性强(4分)，位置百分位2.43%历史最低位超跌，估值修复确定性高，适合平衡型投资者兼顾价值与风险控制 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 44.5,
+      "current_price": 46.48,
+      "target_price": 50.0,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -33509,54 +33557,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-26 10:57:52",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分（strong级别），多周期趋势评分-4.2分转弱，综合评分44.9分<50，基本面估值偏高（市盈率31.11）",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 421.6,
-      "target_price": 400.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:57:57",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.28,
-      "amount": 0,
-      "reason": "基本面评分100分（市盈率9.89，高分红防御属性），位置百分位20.25%低位反弹，技术指标协同支持（OBV上升、RSI中性偏多） (原因: 资金不足)",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.95,
-      "current_price": 5.28,
-      "target_price": 5.65,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-26 10:58:01",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 164.9,
-      "amount": 0,
-      "reason": "多周期趋势评分40.1分向上，相对强度跑赢恒指11.56%，技术指标协同（OBV上升、CMF转正、RSI中性偏强） (原因: 资金不足)",
-      "capital_after": 296.18929405196104,
-      "success": false,
-      "stop_loss_price": 158.0,
-      "current_price": 164.9,
-      "target_price": 175.0,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-01-26 10:58:04",
       "type": "BUY",
       "code": "0939.HK",
@@ -33712,6 +33712,86 @@
       "current_price": 13.71,
       "target_price": 12.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26 14:53:39",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "综合评分61.3分>50分，建仓评分5.9分strong，基本面优质(PE 7.34历史低位)，技术指标协同性强(4分)，位置百分位2.43%历史最低位超跌，估值修复确定性高，适合平衡型投资者兼顾价值与风险控制",
+          "allocation_pct": 15,
+          "stop_loss_price": 44.5,
+          "target_price": 50.0,
+          "validity_period": 21
+        }
+      ],
+      "sell": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "出货评分5.5分strong，价格高位(位置百分位100%)，RSI超买(68.15)，布林带突破上轨，技术面超买严重，短期回撤风险高，平衡型投资者应锁定利润避免回调",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分6.5分strong，价格高位(位置百分位100%)，RSI超买(70.25)，CMF资金流出(-0.1605)，技术面过热，短期回调压力大，平衡型投资者应减仓控制风险",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-26 14:53:39",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分strong，价格高位(位置百分位100%)，RSI超买(68.15)，布林带突破上轨，技术面超买严重，短期回撤风险高，平衡型投资者应锁定利润避免回调",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 23.4,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26 14:53:43",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分strong，价格高位(位置百分位100%)，RSI超买(70.25)，CMF资金流出(-0.1605)，技术面过热，短期回调压力大，平衡型投资者应减仓控制风险",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 130.4,
+      "target_price": 0.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-26 14:53:48",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 46.48,
+      "amount": 0,
+      "reason": "综合评分61.3分>50分，建仓评分5.9分strong，基本面优质(PE 7.34历史低位)，技术指标协同性强(4分)，位置百分位2.43%历史最低位超跌，估值修复确定性高，适合平衡型投资者兼顾价值与风险控制 (原因: 资金不足)",
+      "capital_after": 296.18929405196104,
+      "success": false,
+      "stop_loss_price": 44.5,
+      "current_price": 46.48,
+      "target_price": 50.0,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
