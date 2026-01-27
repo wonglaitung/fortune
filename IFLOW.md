@@ -156,14 +156,17 @@ scikit-learn
 7. 支持本地定时执行脚本 `send_alert.sh`。
 8. 集成基本面数据分析，结合财务指标进行综合判断。
 9. **新增功能**：集成ML模型关键指标（VIX_Level、成交额变化率、换手率变化率），提升分析准确性。
-10. **新增功能**：采用业界标准的6层分析框架（风险控制→市场环境→基本面质量→技术面分析→信号识别→综合评分），提供系统性分析。
+10. **新增功能**：采用业界标准的6层分析框架（风险控制→市场环境→基本面质量→技术面分析→信号识别→综合评分+新闻分析），提供系统性分析。
 11. **新增功能**：在技术指标展示中添加VIX恐慌指数、成交额变化率（1日/5日/20日）、换手率变化率（5日/20日）等关键流动性指标。
+12. **最新功能**：添加动态投资者类型支持，支持aggressive（进取型）、moderate（稳健型）、conservative（保守型）三种类型。
+13. **最新功能**：集成新闻分析功能，从 `data/all_stock_news_records.csv` 读取最新新闻，在第六层分析框架中辅助决策。
+14. **最新功能**：新闻权重根据投资者类型动态调整（进取型10%、稳健型20%、保守型30%）。
 
 #### 港股模拟交易系统
 1. 基于hk_smart_money_tracker的分析结果和大模型判断进行模拟交易。
 2. 默认每60分钟执行一次交易分析，频率可配置。
 3. 真实调用大模型进行股票分析，并要求以固定JSON格式输出买卖信号。
-4. 支持保守型、平衡型、进取型投资者风险偏好设置。
+4. 支持aggressive（进取型）、moderate（稳健型）、conservative（保守型）投资者风险偏好设置。
 5. 严格按照大模型建议执行交易，无随机操作。
 6. 交易记录和状态自动保存，支持中断后继续。
 7. 在无法按大模型建议执行交易时（如资金不足或无持仓），会发送邮件通知。
@@ -173,6 +176,8 @@ scikit-learn
 11. **最新功能**：将大模型建议的买卖原因添加到所有通知邮件中，使用户能够更好地理解交易决策的依据。
 12. **最新功能**：集成大模型多风格分析功能，支持四种投资风格和周期的分析报告（进取型短期、稳健型短期、稳健型中期、保守型中期）。
 13. **配置优化**：添加 `ENABLE_ALL_ANALYSIS_STYLES` 配置开关，默认只生成稳健型短期和稳健型中期两种分析，可通过配置切换生成全部四种分析。
+14. **最新功能**：统一投资者类型为英文（aggressive/moderate/conservative），与 hk_smart_money_tracker.py 保持一致。
+15. **最新功能**：添加类型转换函数，将中文投资者类型转换为英文，确保跨系统兼容性。
 
 #### 批量获取自选股新闻
 1. 获取自选股的最新新闻。
@@ -223,9 +228,12 @@ scikit-learn
 22. **新增功能**：集成ML模型关键指标（VIX_Level、成交额变化率、换手率变化率），在技术指标展示中添加这些关键流动性指标。
 23. **新增功能**：在交易信号总结表中添加成交额变化1日和换手率变化5日两个关键流动性指标。
 24. **新增功能**：在指标说明中添加VIX恐慌指数、成交额变化率、换手率变化率的详细解释。
-25. **新增功能**：采用业界标准的6层分析框架（风险控制→市场环境→基本面质量→技术面分析→信号识别→综合评分），提供系统性分析。
+25. **新增功能**：采用业界标准的6层分析框架（风险控制→市场环境→基本面质量→技术面分析→信号识别→综合评分+新闻分析），提供系统性分析。
 26. **新增功能**：针对短期和中期投资者提供不同的分析重点调整，短期投资者关注VIX短期变化、成交额1日/5日变化率、止损位3-5%、立即操作；中期投资者关注VIX中期趋势、成交额5日/20日变化率、基本面、止损位8-12%、分批建仓。
 27. **功能优化**：删除快速决策参考表和决策检查清单，简化邮件内容，提高可读性。
+28. **最新功能**：在LLM分析提示词中集成新闻数据，从 `data/all_stock_news_records.csv` 读取最新新闻（最近3条）。
+29. **最新功能**：在持仓分析和买入信号分析中显示新闻摘要，为大模型提供更全面的信息。
+30. **最新功能**：在第六层分析框架中添加新闻分析说明，提供新闻分析原则和投资者类型权重（进取型10%、稳健型20%、保守型30%）。
 
 #### AI交易分析日报
 1. 基于模拟交易数据进行多时间维度的盈利能力分析。
@@ -473,11 +481,16 @@ python hk_ipo_aastocks.py
 
 ##### 本地运行
 ```bash
-# 分析当天数据
+# 分析当天数据（默认投资者类型：稳健型）
 python hk_smart_money_tracker.py
 
 # 分析指定日期数据
 python hk_smart_money_tracker.py --date 2025-10-25
+
+# 指定投资者类型
+python hk_smart_money_tracker.py --investor-type aggressive  # 进取型
+python hk_smart_money_tracker.py --investor-type moderate    # 稳健型
+python hk_smart_money_tracker.py --investor-type conservative # 保守型
 ```
 
 ##### 本地定时执行
@@ -499,11 +512,16 @@ crontab -e
 
 ##### 本地运行
 ```bash
-# 运行模拟交易（默认持续运行）
+# 运行模拟交易（默认持续运行，默认投资者类型：稳健型）
 python simulation_trader.py
 
 # 运行指定天数的模拟交易
 python simulation_trader.py --duration-days 30
+
+# 指定投资者类型
+python simulation_trader.py --investor-type aggressive  # 进取型
+python simulation_trader.py --investor-type moderate    # 稳健型
+python simulation_trader.py --investor-type conservative # 保守型
 ```
 
 ##### 交易执行逻辑
@@ -798,17 +816,28 @@ clear_cache()
   - `VOL_RATIO_DISTRIBUTION`：出货信号量比阈值
   - `SOUTHBOUND_THRESHOLD`：南向资金阈值
 
+**命令行参数**：
+- `--date`：指定分析日期（YYYY-MM-DD格式）
+- `--investor-type`：投资者类型（aggressive进取型、moderate稳健型、conservative保守型），默认为稳健型
+
 #### 模拟交易系统参数
 在`simulation_trader.py`文件中可以调整以下参数：
 
-- `investor_type`：投资者风险偏好（"保守型"、"平衡型"、"进取型"）
+- `investor_type`：投资者风险偏好（"aggressive"进取型、"moderate"稳健型、"conservative"保守型），默认为"moderate"
 - `initial_capital`：初始资金（默认100万港元）
 - `analysis_frequency`：执行频率（默认每60分钟执行一次交易分析，可根据需要调整）
 
+**命令行参数**：
+- `--duration-days`：模拟交易天数
+- `--analysis-frequency`：分析频率（分钟）
+- `--investor-type`：投资者风险偏好（aggressive进取型、moderate稳健型、conservative保守型），默认为moderate
+- `--manual-sell`：手工卖出股票代码
+- `--sell-percentage`：卖出比例（0.0-1.0）
+
 不同投资者类型的风险偏好设置：
-- 保守型：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
-- 平衡型：平衡风险与收益，兼顾价值与成长，追求稳健增长
-- 进取型：偏好高风险、高收益的股票，如科技成长股，追求资本增值
+- 保守型（conservative）：偏好低风险、稳定收益的股票，如高股息银行股，注重资本保值
+- 稳健型（moderate）：平衡风险与收益，兼顾价值与成长，追求稳健增长
+- 进取型（aggressive）：偏好高风险、高收益的股票，如科技成长股，追求资本增值
 
 #### 大模型分析风格配置
 在`hsi_email.py`文件中可以调整以下参数：
@@ -833,7 +862,8 @@ clear_cache()
 │   ├── 黄金市场分析器 (@gold_analyzer.py)
 │   ├── 港股基本面数据获取器 (@fundamental_data.py)
 │   ├── 港股股息信息追踪器 (@hsi_email.py 中的股息功能)
-│   └── 美股市场数据获取器 (@ml_services/us_market_data.py)
+│   ├── 美股市场数据获取器 (@ml_services/us_market_data.py)
+│   └── 新闻数据源 (@data/all_stock_news_records.csv)
 ├── 分析层
 │   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
@@ -897,12 +927,15 @@ clear_cache()
 - **最新功能**：在 `hsi_email.py` 中，使用大模型进行持仓投资分析，提供专业的投资建议
 - **最新功能**：在 `hsi_email.py` 中，集成大模型多风格分析功能，支持四种投资风格和周期的分析报告
 - **最新功能**：在 `simulation_trader.py` 中，将大模型建议的买卖原因添加到所有通知邮件中
+- **最新功能**：在 `hk_smart_money_tracker.py` 中，集成新闻数据分析，从 `data/all_stock_news_records.csv` 读取最新新闻
+- **最新功能**：在 `hsi_email.py` 中，集成新闻数据分析，在持仓分析和买入信号分析中显示新闻摘要
+- **最新功能**：新闻分析采用"不进行情感分类，直接提供新闻内容"的方式，由大模型自主判断影响
 
 ### 数据文件结构
 
 项目生成的数据文件存储在 `data/` 目录中：
 - `actual_porfolio.csv`: 实际持仓数据文件，包含股票代码、一手股数、成本价、持有手数等信息
-- `all_stock_news_records.csv`: 所有股票相关新闻记录
+- `all_stock_news_records.csv`: 所有股票相关新闻记录（包含股票名称、股票代码、新闻时间、新闻标题、简要内容）
 - `all_dividends.csv`: 所有股息信息记录
 - `recent_dividends.csv`: 最近除净的股息信息
 - `upcoming_dividends.csv`: 即将除净的股息信息（未来90天）
@@ -1009,6 +1042,12 @@ clear_cache()
 80. **性能提升**：通过正则化提升模型泛化能力，验证准确率提升（次日+1.18%，一周+1.44%）
 81. **新增文档**：添加不同股票类型分析框架对比文档（不同股票类型分析框架对比.md），详细说明hsi_email.py和hk_smart_money_tracker.py的差异和适用场景
 82. **功能扩展**：机器学习模型支持52个特征（新增18个股票类型特征），提供更全面的股票分析能力
+83. **最新功能**：在hk_smart_money_tracker.py中添加动态投资者类型支持（aggressive/moderate/conservative），支持 `--investor-type` 命令行参数
+84. **最新功能**：在hk_smart_money_tracker.py中集成新闻分析功能，从 `data/all_stock_news_records.csv` 读取最新新闻，添加到第六层分析框架
+85. **最新功能**：在hk_smart_money_tracker.py中修复综合评分权重，符合策略权重（成交量25%、技术指标30%、南向资金15%、价格位置10%、MACD信号10%、RSI指标10%）
+86. **最新功能**：在simulation_trader.py中统一投资者类型为英文（aggressive/moderate/conservative），添加类型转换函数
+87. **最新功能**：在hsi_email.py的LLM分析提示词中集成新闻数据，在持仓分析和买入信号分析中显示新闻摘要
+88. **最新功能**：在hsi_email.py的第六层分析框架中添加新闻分析说明，提供新闻分析原则和投资者类型权重
 
 ---
-最后更新：2026-01-26
+最后更新：2026-01-27

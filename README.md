@@ -1116,7 +1116,7 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-01-24
+**最后更新**: 2026-01-27
 
 ## 🎉 最近更新
 
@@ -1195,6 +1195,7 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 ## 🚀 未来计划
 
 - [x] 机器学习模型准确率优化（目标：55-60%）- ✅ 一个月模型准确率已达57.24%
+- [x] 集成量化回测框架 - ✅ `ai_trading_analyzer.py` 已实现完整回测框架
 - [ ] 机器学习预测结果可视化优化
 - [ ] 新增更多美股市场特征（欧洲股市、商品期货）
 - [ ] 集成更多大模型服务提供商
@@ -1204,8 +1205,6 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 - [ ] 机器学习模型支持实时在线学习和增量更新
 - [ ] 实现投资组合优化算法
 - [ ] 添加风险管理和止损止盈优化功能
-- [ ] 集成量化回测框架
-- [ ] 实现策略回测和性能评估模块
 - [ ] 添加更多技术分析指标和信号
 - [ ] 实现机器学习模型自动超参数调优
 - [ ] 集成深度学习模型（LSTM、Transformer等）
