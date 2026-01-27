@@ -20652,6 +20652,38 @@
       "current_price": 5.18,
       "target_price": 5.5,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-27T14:36:56.287761",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 229.18929405195922,
+      "reason": "出货评分strong级别（6.5分），位置百分位100%历史新高，RSI 78.28严重超买，基本面评分仅20分估值泡沫化，多周期趋势虚高透支涨幅",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 114.5,
+      "target_price": 105.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-27T14:37:01.622216",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 229.18929405195922,
+      "reason": "出货评分weak级别（3.5分），位置百分位100%布林带超买，RSI 67.79接近超买，多周期趋势评分107.2分虚高透支油价涨幅",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 23.44,
+      "target_price": 21.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -34008,38 +34040,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-27 10:55:33",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面极端超买，资金流出，航运周期见顶风险",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 13.9,
-      "target_price": 12.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 10:55:38",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.42,
-      "amount": 0,
-      "reason": "基本面优质（PE 7.38），技术面超卖反弹信号明确，位置安全边际高 (原因: 资金不足)",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": 43.0,
-      "current_price": 47.42,
-      "target_price": 50.5,
-      "validity_period": 21
-    },
-    {
       "timestamp": "2026-01-27 11:38:55",
       "buy": [
         {
@@ -34203,6 +34203,60 @@
       "stop_loss_price": 4.95,
       "current_price": 5.18,
       "target_price": 5.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-27 14:36:56",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分strong级别（6.5分），位置百分位100%历史新高，RSI 78.28严重超买，基本面评分仅20分估值泡沫化，多周期趋势虚高透支涨幅",
+          "stop_loss_triggered": false,
+          "target_price": 105.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "出货评分weak级别（3.5分），位置百分位100%布林带超买，RSI 67.79接近超买，多周期趋势评分107.2分虚高透支油价涨幅",
+          "stop_loss_triggered": false,
+          "target_price": 21.5,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-27 14:36:56",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分strong级别（6.5分），位置百分位100%历史新高，RSI 78.28严重超买，基本面评分仅20分估值泡沫化，多周期趋势虚高透支涨幅",
+      "capital_after": 229.18929405195922,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 114.5,
+      "target_price": 105.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-27 14:37:01",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分weak级别（3.5分），位置百分位100%布林带超买，RSI 67.79接近超买，多周期趋势评分107.2分虚高透支油价涨幅",
+      "capital_after": 229.18929405195922,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 23.44,
+      "target_price": 21.5,
       "validity_period": 7
     }
   ],
