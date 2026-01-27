@@ -854,6 +854,109 @@ scikit-learn    # 机器学习工具库
 
 ---
 
+## 💾 数据存储与历史分析功能
+
+系统已实现完整的数据存储和历史分析能力，支持多种存储格式和灵活的历史分析方式。
+
+### 数据存储功能
+
+**1. 模拟交易数据存储**
+- **simulation_state.json** - 模拟交易状态持久化（持仓、资金、交易历史）
+- **simulation_transactions.csv** - 完整交易记录（买入、卖出、止损等）
+- **simulation_portfolio.csv** - 投资组合价值变化记录（每日快照）
+- **simulation_trade_log_*.txt** - 详细交易日志（按日期分割，包含所有操作细节）
+
+**2. 基本面数据缓存**
+- **fundamental_cache/** 目录 - 智能缓存机制，避免重复请求
+  - 财务指标缓存（PE、PB、ROE、ROA等）
+  - 利润表缓存（营业收入、净利润等）
+  - 资产负债表缓存（资产、负债、权益等）
+  - 现金流量表缓存（经营、投资、筹资现金流）
+- **7天缓存有效期**，自动过期更新，可手动清除
+
+**3. 其他数据缓存**
+- **southbound_data_cache.pkl** - 南向资金数据缓存
+- **ml_trading_model_*.pkl** - 机器学习模型文件（LightGBM、GBDT+LR）
+- **ml_trading_model_*_importance.csv** - 特征重要性排名
+- **ml_trading_model_*_predictions_*.csv** - 预测结果缓存
+
+### 历史分析功能
+
+**1. 基于指定日期的分析**
+支持基于任意历史日期进行分析，所有技术指标都基于截止到指定日期的数据进行计算：
+
+```bash
+# 分析指定日期的恒生指数
+python hsi_email.py --date 2025-10-25
+
+# 分析指定日期的主力资金追踪
+python hk_smart_money_tracker.py --date 2025-10-25
+```
+
+**2. 日期范围分析**
+支持指定日期范围进行多时间维度分析：
+
+```bash
+# 分析指定日期范围的AI交易表现
+python ai_trading_analyzer.py --start-date 2025-12-01 --end-date 2025-12-31
+
+# 分析1天数据
+python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05
+
+# 分析5天数据
+python ai_trading_analyzer.py --start-date 2025-12-31 --end-date 2026-01-05
+
+# 分析1个月数据
+python ai_trading_analyzer.py --start-date 2025-12-05 --end-date 2026-01-05
+```
+
+**3. 机器学习模型历史回测**
+支持基于历史数据的模型训练和预测回测：
+
+```bash
+# 使用指定日期范围训练模型
+python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 2024-01-01 --end-date 2025-12-31
+
+# 预测指定日期的股票涨跌
+python ml_services/ml_trading_model.py --mode predict --horizon 1 --predict-date 2026-01-15
+
+# 完整历史回测（使用train_and_predict_all.sh）
+./train_and_predict_all.sh --backtest --start-date 2024-01-01 --end-date 2024-12-31 --predict-date 2024-12-31
+```
+
+**4. 交易记录回溯**
+系统自动保存完整的交易历史记录，支持随时回溯和分析：
+
+```bash
+# 查看所有交易记录
+cat data/simulation_transactions.csv
+
+# 查看特定日期的交易日志
+cat data/simulation_trade_log_20260127.txt
+
+# 使用ai_trading_analyzer.py回溯分析历史交易表现
+python ai_trading_analyzer.py --file data/simulation_transactions.csv
+```
+
+### 技术特点
+
+1. **持久化存储**：所有关键数据都持久化存储，系统重启后可恢复
+2. **智能缓存**：基本面数据使用7天缓存机制，提高性能避免重复请求
+3. **时间序列完整**：所有历史数据按时间顺序存储，支持完整的时间序列分析
+4. **灵活查询**：支持按日期、日期范围、股票代码等多维度查询
+5. **可追溯性**：完整的交易日志和决策历史，支持审计和复盘
+
+### 应用场景
+
+- **策略回测**：基于历史数据验证交易策略的有效性
+- **性能分析**：分析AI推荐策略的历史盈利能力
+- **模型验证**：验证机器学习模型的历史准确率
+- **风险复盘**：回溯分析交易决策的风险控制效果
+- **趋势分析**：基于历史数据分析市场趋势变化
+- **持仓分析**：跟踪持仓变化和历史盈亏
+
+---
+
 ## ❓ 常见问题
 
 ### Q1: 如何获取 163 邮箱的应用专用密码？
@@ -1146,6 +1249,7 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 - [x] 添加风险管理和止损止盈优化功能 - ✅ `hsi_email.py` 已实现完整的风险管理和止损止盈功能
 - [x] 添加更多技术分析指标和信号 - ✅ 已实现50+技术分析指标和信号（风险、流动性、基本面、中期、综合评分等）
 - [x] 实现异常检测和风险预警系统 - ✅ 已实现市场环境异常预警（VIX>30警报、成交额萎缩预警、系统性崩盘风险评分）和股票行为异常检测（价格暴涨暴跌、成交量异常放大、技术指标异常值）
+- [x] 添加数据存储和历史分析功能 - ✅ 已实现完整的持久化存储系统（JSON/CSV/pickle缓存）和历史分析能力（指定日期分析、日期范围分析、历史回测）
 - [ ] 机器学习预测结果可视化优化
 - [ ] 新增更多美股市场特征（欧洲股市、商品期货）
 - [ ] 集成更多大模型服务提供商
