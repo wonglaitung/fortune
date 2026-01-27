@@ -107,7 +107,6 @@
 |------|------|------|
 | 机器学习交易模型 | `ml_services/ml_trading_model.py` | 基于LightGBM预测次日涨跌，集成股票类型特征，正则化增强后准确率52.27%（次日）、53.49%（一周）、57.24%（一个月） |
 | 机器学习预测邮件通知 | `ml_services/ml_prediction_email.py` | 自动发送ML模型预测结果邮件 |
-| 策略对比分析 | `compare_strategies.py` | 对比ML模型与手工信号的预测准确性 |
 | 模型对比工具 | `ml_services/compare_models.py` | 对比LGBM和GBDT+LR两种模型的预测结果 |
 
 ### 模拟交易
@@ -463,44 +462,7 @@ python ml_services/ml_prediction_email.py
   - 每天香港时间 16:30 (UTC 08:30)
 - 支持手动触发，可选择预测周期（1天/5天/20天/全部）
 
-### 8. 策略对比分析
-
-**功能**：
-- 对比机器学习模型预测与主力资金追踪器手工信号
-- 分析预测结果、置信度、信号一致性
-- 提供组合使用建议
-
-**对比维度**：
-- ML模型预测（上涨/下跌）
-- ML预测概率
-- 手工建仓信号
-- 手工出货信号
-- 信号一致性
-
-**使用方法**：
-```bash
-# 对比ML模型和手工信号
-python compare_strategies.py
-
-# 指定日期范围对比
-python compare_strategies.py --start-date 2025-01-01 --end-date 2025-12-31
-```
-
-**输出文件**：
-- `data/strategy_comparison.csv` - 策略对比结果
-
-**分析结果**：
-- 信号一致：ML预测下跌 + 无建仓信号
-- 信号不一致：ML预测上涨 + 无建仓信号（当前市场常见）
-- 一致性统计：百分比和数量
-
-**使用建议**：
-- 只在信号一致时交易（保守策略）
-- ML模型作为参考，手工信号作为确认
-- 关注高置信度预测（概率 > 60%）
-- 定期验证ML模型实际准确率
-
-### 9. 模型对比工具
+### 8. 模型对比工具
 
 **功能**：
 - 对比 LightGBM 和 GBDT+LR 两种模型的预测结果
@@ -516,7 +478,7 @@ python ml_services/compare_models.py
 - 控制台输出两种模型的预测对比
 - 包括预测一致性、概率差异等统计信息
 
-### 10. 通用技术分析工具
+### 9. 通用技术分析工具
 
 **支持的指标**：
 - 移动平均线（MA）
@@ -537,7 +499,7 @@ python ml_services/compare_models.py
   - 相对强弱指标（相对恒生指数的表现）
   - 中期趋势评分系统（综合趋势、动量、支撑阻力、相对强弱四维度评分）
 
-### 11. 基本面数据获取器
+### 10. 基本面数据获取器
 
 **支持的数据**：
 - **财务指标**：PE、PB、ROE、ROA、EPS、股息率、市值
@@ -554,7 +516,7 @@ data = get_comprehensive_fundamental_data("00700")
 print(data)
 ```
 
-### 12. 美股市场数据获取器
+### 11. 美股市场数据获取器
 
 **功能**：
 - 获取标普500指数 (^GSPC)、纳斯达克指数 (^IXIC)
@@ -645,7 +607,6 @@ fortune/
 ├── 📄 核心脚本
 │   ├── ai_trading_analyzer.py          # AI 交易分析器
 │   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
-│   ├── compare_strategies.py           # 策略对比分析
 │   ├── crypto_email.py                 # 加密货币监控器
 │   ├── fundamental_data.py             # 基本面数据获取器
 │   ├── gold_analyzer.py                # 黄金市场分析器
@@ -699,7 +660,6 @@ fortune/
 │   ├── simulation_portfolio.csv        # 投资组合价值变化记录
 │   ├── simulation_trade_log_*.txt      # 交易日志（按日期分割）
 │   ├── southbound_data_cache.pkl       # 南向资金数据缓存
-│   ├── strategy_comparison.csv         # 策略对比分析结果
 │   └── fundamental_cache/               # 基本面数据缓存
 │
 ├── 📈 图表输出
@@ -769,9 +729,6 @@ fortune/
 │   │   ├── 模型对比工具 (compare_models.py)
 │   │   ├── 美股市场数据获取器 (us_market_data.py)
 │   │   └── 模型处理器基类 (base_model_processor.py)
-│   ├── 策略对比分析 (compare_strategies.py)
-│   │   ├── ML模型预测 vs 手工信号对比
-│   │   └── 信号一致性分析
 │   └── 不同股票类型分析框架 (不同股票类型分析框架对比.md)
 │       ├── hsi_email.py vs hk_smart_money_tracker.py对比
 │       ├── 设计目标差异
@@ -853,7 +810,6 @@ fortune/
 | `ml_trading_model_comparison.csv` | 模型对比结果 | 按需 |
 | `fundamental_cache/` | 基本面数据缓存 | 7天有效期 |
 | `southbound_data_cache.pkl` | 南向资金数据缓存 | 按需 |
-| `strategy_comparison.csv` | 策略对比分析结果 | 按需 |
 | `output/gbdt_feature_importance.csv` | GBDT特征重要性 | 按需 |
 | `output/lr_leaf_coefficients.csv` | LR叶子节点系数 | 按需 |
 | `output/roc_curve.png` | ROC曲线图 | 按需 |
@@ -1018,23 +974,15 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 202
 4. 定期跟踪实际准确率，验证模型有效性
 5. 关注 GBDT+LR 模型的预测结果（准确率较高）
 
-### Q15: 策略对比分析有什么作用？
-
-**A**: 策略对比分析用于对比机器学习模型预测与主力资金追踪器手工信号的一致性。通过对比，可以：
-- 识别信号一致的股票（更可靠）
-- 了解两种方法的差异
-- 提供组合使用建议
-- 降低投资风险
-
-### Q16: 机器学习模型需要多久重新训练一次？
+### Q15: 机器学习模型需要多久重新训练一次？
 
 **A**: 建议每周或每月重新训练一次，以适应市场变化。市场风格切换时，模型可能需要更频繁的更新。
 
-### Q17: 机器学习模型支持哪些股票？
+### Q16: 机器学习模型支持哪些股票？
 
 **A**: 目前支持配置在 `ml_services/ml_trading_model.py` 中的24只自选股。可以在代码中添加或修改股票列表。
 
-### Q18: 机器学习模型的特征有哪些？
+### Q17: 机器学习模型的特征有哪些？
 
 **A**: 机器学习模型整合了52个特征：
 - **技术指标特征**（15个）：移动平均线、RSI、MACD、布林带、ATR、成交量比率、价格位置、涨跌幅等
@@ -1046,7 +994,7 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 202
 - **分类特征编码**：使用LabelEncoder将字符串类型的分类特征转换为整数编码
 - **正则化增强**：L1/L2正则化、早停、树深度控制等
 
-### Q19: 如何验证机器学习模型的有效性？
+### Q18: 如何验证机器学习模型的有效性？
 
 **A**: 
 1. **多维评估**：不仅看准确率，还要看 AUC、Log Loss、Precision、Recall、F1 等指标
@@ -1056,7 +1004,7 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 202
 5. **回测验证**：使用历史数据回测，验证模型历史表现
 6. **交叉验证**：使用时间序列交叉验证，避免普通 k-fold 分割
 
-### Q20: 如何发送机器学习预测邮件？
+### Q19: 如何发送机器学习预测邮件？
 
 **A**: 
 1. 本地运行：`python ml_services/ml_prediction_email.py`
@@ -1163,7 +1111,6 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 - **新增功能**：恒生指数价格监控器集成基本面指标和中期评估指标
 - **新增功能**：恒生指数价格监控器支持大模型多风格分析
 - **新增功能**：机器学习交易模型支持多周期预测
-- **新增功能**：策略对比分析工具
 - **新增功能**：模型对比工具
 - **新增功能**：机器学习预测邮件发送器
 
@@ -1196,6 +1143,9 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 - [x] 机器学习模型准确率优化（目标：55-60%）- ✅ 一个月模型准确率已达57.24%
 - [x] 集成量化回测框架 - ✅ `ai_trading_analyzer.py` 已实现完整回测框架
+- [x] 添加风险管理和止损止盈优化功能 - ✅ `hsi_email.py` 已实现完整的风险管理和止损止盈功能
+- [x] 添加更多技术分析指标和信号 - ✅ 已实现50+技术分析指标和信号（风险、流动性、基本面、中期、综合评分等）
+- [x] 实现异常检测和风险预警系统 - ✅ 已实现市场环境异常预警（VIX>30警报、成交额萎缩预警、系统性崩盘风险评分）和股票行为异常检测（价格暴涨暴跌、成交量异常放大、技术指标异常值）
 - [ ] 机器学习预测结果可视化优化
 - [ ] 新增更多美股市场特征（欧洲股市、商品期货）
 - [ ] 集成更多大模型服务提供商
@@ -1204,13 +1154,10 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 - [ ] 扩展更多数据源接口
 - [ ] 机器学习模型支持实时在线学习和增量更新
 - [ ] 实现投资组合优化算法
-- [ ] 添加风险管理和止损止盈优化功能
-- [ ] 添加更多技术分析指标和信号
 - [ ] 实现机器学习模型自动超参数调优
 - [ ] 集成深度学习模型（LSTM、Transformer等）
 - [ ] 实现强化学习交易系统
 - [ ] 添加情绪分析功能（新闻、社交媒体）
-- [ ] 实现异常检测和风险预警系统
 - [ ] 集成更多市场数据源（期权、期货、外汇等）
 - [ ] 实现智能推荐系统
 - [ ] 实现实时数据流处理能力
