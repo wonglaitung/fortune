@@ -20796,6 +20796,22 @@
       "current_price": 20.88,
       "target_price": 22.0,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-27T15:34:53.113979",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.14,
+      "amount": 0,
+      "capital_after": 229.18929405195922,
+      "reason": "价格超低位（位置百分位5.06%），MACD金叉，OBV趋势上升，低估值提供反弹机会 (原因: 资金不足)",
+      "success": false,
+      "stop_loss_price": 4.38,
+      "current_price": 5.14,
+      "target_price": 5.5,
+      "validity_period": 2
     }
   ],
   "portfolio_history": [
@@ -34152,123 +34168,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-01-27 13:38:39",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买（RSI 75.99），资金流出加剧（CMF -0.2847），多信号共振确认短期顶部",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 133.9,
-      "target_price": 130.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 13:38:42",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位滞涨（位置百分位100%），资金流出（CMF -0.0993），出货信号全面确认获利了结点",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 85.9,
-      "target_price": 82.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 14:13:44",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "超跌反弹机会，技术指标协同买入（价格低位、RSI超卖、CMF资金流入、布林带超卖），位置百分位低位提供安全边际",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.95,
-          "target_price": 5.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-27 14:13:46",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 5.18,
-      "amount": 0,
-      "reason": "超跌反弹机会，技术指标协同买入（价格低位、RSI超卖、CMF资金流入、布林带超卖），位置百分位低位提供安全边际 (原因: 资金不足)",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": 4.95,
-      "current_price": 5.18,
-      "target_price": 5.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 14:36:56",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分strong级别（6.5分），位置百分位100%历史新高，RSI 78.28严重超买，基本面评分仅20分估值泡沫化，多周期趋势虚高透支涨幅",
-          "stop_loss_triggered": false,
-          "target_price": 105.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分weak级别（3.5分），位置百分位100%布林带超买，RSI 67.79接近超买，多周期趋势评分107.2分虚高透支油价涨幅",
-          "stop_loss_triggered": false,
-          "target_price": 21.5,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-27 14:36:56",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分strong级别（6.5分），位置百分位100%历史新高，RSI 78.28严重超买，基本面评分仅20分估值泡沫化，多周期趋势虚高透支涨幅",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 114.5,
-      "target_price": 105.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 14:37:01",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分weak级别（3.5分），位置百分位100%布林带超买，RSI 67.79接近超买，多周期趋势评分107.2分虚高透支油价涨幅",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 23.44,
-      "target_price": 21.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-01-27 15:11:52",
       "buy": [],
       "sell": [
@@ -34451,6 +34350,37 @@
       "current_price": 20.88,
       "target_price": 22.0,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-01-27 15:34:51",
+      "buy": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "价格超低位（位置百分位5.06%），MACD金叉，OBV趋势上升，低估值提供反弹机会",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.38,
+          "target_price": 5.5,
+          "validity_period": 2
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-01-27 15:34:53",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.14,
+      "amount": 0,
+      "reason": "价格超低位（位置百分位5.06%），MACD金叉，OBV趋势上升，低估值提供反弹机会 (原因: 资金不足)",
+      "capital_after": 229.18929405195922,
+      "success": false,
+      "stop_loss_price": 4.38,
+      "current_price": 5.14,
+      "target_price": 5.5,
+      "validity_period": 2
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
