@@ -1617,6 +1617,51 @@ class HSIEmailSystem:
                     indicators['turnover_rate'] = None
                     indicators['turnover_rate_change_5d'] = None
                     indicators['turnover_rate_change_20d'] = None
+                
+                # 4. 计算系统性崩盘风险评分
+                try:
+                    # 收集市场指标
+                    crash_risk_indicators = {}
+                    
+                    # VIX恐慌指数
+                    if indicators.get('vix_level') is not None:
+                        crash_risk_indicators['VIX'] = indicators['vix_level']
+                    
+                    # 恒指收益率
+                    if hist is not None and not hist.empty:
+                        if len(hist) > 1:
+                            hsi_change = (hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100
+                            crash_risk_indicators['HSI_Return_1d'] = hsi_change
+                    
+                    # 平均成交量比率（从换手率变化率计算中获取）
+                    if hist is not None and not hist.empty and 'Volume' in hist.columns:
+                        vol_ma20 = hist['Volume'].rolling(20).mean()
+                        if len(vol_ma20) > 0:
+                            avg_vol_ratio = hist['Volume'].iloc[-1] / vol_ma20.iloc[-1] if vol_ma20.iloc[-1] > 0 else 1.0
+                            crash_risk_indicators['Avg_Vol_Ratio'] = avg_vol_ratio
+                    
+                    # 标普500收益率
+                    if us_df is not None and not us_df.empty and 'SP500_Return' in us_df.columns:
+                        crash_risk_indicators['SP500_Return_1d'] = us_df['SP500_Return'].iloc[-1] * 100 if pd.notna(us_df['SP500_Return'].iloc[-1]) else 0
+                    
+                    # 计算系统性崩盘风险评分
+                    if crash_risk_indicators:
+                        crash_risk_result = us_market_data.calculate_systemic_crash_risk(crash_risk_indicators)
+                        indicators['crash_risk_score'] = crash_risk_result.get('risk_score')
+                        indicators['crash_risk_level'] = crash_risk_result.get('risk_level')
+                        indicators['crash_risk_factors'] = crash_risk_result.get('factors', [])
+                        indicators['crash_risk_recommendations'] = crash_risk_result.get('recommendations', [])
+                    else:
+                        indicators['crash_risk_score'] = None
+                        indicators['crash_risk_level'] = None
+                        indicators['crash_risk_factors'] = []
+                        indicators['crash_risk_recommendations'] = []
+                except Exception as e:
+                    print(f"⚠️ 计算系统性崩盘风险评分失败: {e}")
+                    indicators['crash_risk_score'] = None
+                    indicators['crash_risk_level'] = None
+                    indicators['crash_risk_factors'] = []
+                    indicators['crash_risk_recommendations'] = []
                     
             except Exception as e:
                 print(f"⚠️ 计算市场情绪和流动性指标失败: {e}")
@@ -2308,6 +2353,103 @@ class HSIEmailSystem:
         
         return prompt
 
+    def _add_systemic_crash_risk_summary(self, prompt, stock_results):
+        """
+        添加系统性崩盘风险评分到提示词
+        
+        参数:
+        - prompt: 提示词字符串
+        - stock_results: 股票分析结果列表
+        
+        返回:
+        - str: 添加了系统性崩盘风险评分的提示词
+        """
+        if not stock_results:
+            return prompt
+        
+        # 从第一个股票的结果中获取风险评分信息
+        first_stock_result = stock_results[0] if isinstance(stock_results, list) else stock_results
+        
+        # 尝试获取风险评分
+        crash_risk_score = None
+        crash_risk_level = None
+        crash_risk_factors = []
+        crash_risk_recommendations = []
+        
+        # 从 stock_results 中查找风险评分信息
+        if isinstance(stock_results, list):
+            for result in stock_results:
+                if isinstance(result, dict):
+                    if 'indicators' in result:
+                        indicators = result['indicators']
+                        crash_risk_score = indicators.get('crash_risk_score')
+                        crash_risk_level = indicators.get('crash_risk_level')
+                        crash_risk_factors = indicators.get('crash_risk_factors', [])
+                        crash_risk_recommendations = indicators.get('crash_risk_recommendations', [])
+                        if crash_risk_score is not None:
+                            break
+        elif isinstance(stock_results, dict):
+            indicators = stock_results.get('indicators', {})
+            crash_risk_score = indicators.get('crash_risk_score')
+            crash_risk_level = indicators.get('crash_risk_level')
+            crash_risk_factors = indicators.get('crash_risk_factors', [])
+            crash_risk_recommendations = indicators.get('crash_risk_recommendations', [])
+        
+        # 如果没有找到风险评分，返回原提示词
+        if crash_risk_score is None:
+            return prompt
+        
+        # 添加风险评分信息
+        prompt += f"""
+## 系统性崩盘风险评分（市场环境评估）
+"""
+        
+        # 风险等级颜色标记
+        risk_level_colors = {
+            '低': '🟢',
+            '中': '🟡',
+            '高': '🟠',
+            '极高': '🔴'
+        }
+        risk_level_emoji = risk_level_colors.get(crash_risk_level, '⚪')
+        
+        prompt += f"""
+- **风险评分**: {crash_risk_score:.0f}/100
+- **风险等级**: {risk_level_emoji} {crash_risk_level}
+"""
+        
+        # 添加风险因素
+        if crash_risk_factors:
+            prompt += f"""
+- **风险因素**:
+"""
+            for factor in crash_risk_factors:
+                prompt += f"  * {factor}\n"
+        
+        # 添加建议措施
+        if crash_risk_recommendations:
+            prompt += f"""
+- **建议措施**:
+"""
+            for i, recommendation in enumerate(crash_risk_recommendations[:3], 1):  # 只显示前3条建议
+                prompt += f"  {i}. {recommendation}\n"
+        
+        # 根据风险等级添加操作建议
+        if crash_risk_level == '极高':
+            prompt += f"""
+⚠️ **重要提醒**: 市场风险极高，建议暂停所有买入操作，优先考虑止损减仓。
+"""
+        elif crash_risk_level == '高':
+            prompt += f"""
+⚠️ **重要提醒**: 市场风险较高，建议大幅降低仓位，谨慎选股。
+"""
+        elif crash_risk_level == '中':
+            prompt += f"""
+⚠️ **重要提醒**: 市场波动加大，建议降低仓位，谨慎交易。
+"""
+        
+        return prompt
+
     def _generate_analysis_prompt(self, investment_style='balanced', investment_horizon='short_term', 
                                   data_type='portfolio', stock_data=None, market_context=None, 
                                   stock_results=None, additional_info=None):
@@ -2510,6 +2652,15 @@ class HSIEmailSystem:
   * 换手率上升+换手率变化率正向：关注度提升，流动性增强，适合交易
   * 换手率下降+换手率变化率负向：关注度下降，流动性减弱，观望为主
   * 换手率异常波动：可能预示重大消息或趋势转折，提高警惕
+- 系统性崩盘风险评分：综合评估市场整体风险
+  * 评分范围：0-100分，分数越高风险越大
+  * 风险等级：
+    - 低风险（<40分）：市场环境良好，正常交易
+    - 中风险（40-60分）：市场波动加大，谨慎交易
+    - 高风险（60-80分）：市场风险较高，降低仓位
+    - 极高风险（≥80分）：市场风险极高，暂停交易
+  * 风险因素：包括VIX恐慌、指数跌幅、成交额萎缩、美股联动等
+  * 建议措施：根据风险等级提供具体的操作建议
 
 【第三层：基本面质量评估（长期价值）】
 🔍 评估股票的长期投资价值：
@@ -2750,6 +2901,9 @@ class HSIEmailSystem:
                 # 添加技术面信号摘要
                 prompt = self._add_technical_signals_summary(prompt, stock_list, stock_results)
                 
+                # 添加系统性崩盘风险评分
+                prompt = self._add_systemic_crash_risk_summary(prompt, stock_results)
+                
                 # 添加最近48小时模拟交易记录
                 prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
                 
@@ -2838,6 +2992,9 @@ class HSIEmailSystem:
             
             # 添加技术面信号摘要
             prompt = self._add_technical_signals_summary(prompt, buy_signals, stock_results)
+            
+            # 添加系统性崩盘风险评分
+            prompt = self._add_systemic_crash_risk_summary(prompt, stock_results)
             
             # 添加最近48小时模拟交易记录
             stock_codes = [stock['stock_code'] for stock in buy_signal_analysis]
