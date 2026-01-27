@@ -137,6 +137,9 @@ BUILDUP_WEIGHTS = {
     'cmf_in': 1.2,         # CMF资金流入
     'price_above_vwap': 0.8,  # 价格高于VWAP
     'bb_oversold': 1.0,    # 布林带超卖
+    'sentiment_improving': 1.2,  # 情感指标改善
+    'sentiment_ma3_up': 0.8,     # MA3上升
+    'sentiment_volatility_low': 0.5,  # 波动率低
 }
 
 # 建仓信号阈值
@@ -157,6 +160,9 @@ DISTRIBUTION_WEIGHTS = {
     'southbound_out': 2.0, # 南向资金流出
     'price_down': 1.0,     # 价格下跌
     'bb_overbought': 1.0,  # 布林带超买
+    'sentiment_deteriorating': 1.2,  # 情感指标恶化
+    'sentiment_ma3_down': 0.8,       # MA3下降
+    'sentiment_volatility_high': 0.5, # 波动率高
 }
 
 # 出货信号阈值
@@ -682,7 +688,12 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
                 "成交额变化20日(%)": stock.get('turnover_change_20d', 'N/A') or 'N/A',
                 "换手率(%)": stock.get('turnover_rate', 'N/A') or 'N/A',
                 "换手率变化5日(%)": stock.get('turnover_rate_change_5d', 'N/A') or 'N/A',
-                "换手率变化20日(%)": stock.get('turnover_rate_change_20d', 'N/A') or 'N/A'
+                "换手率变化20日(%)": stock.get('turnover_rate_change_20d', 'N/A') or 'N/A',
+                "情感MA3": round(stock.get('sentiment_ma3', 0), 2) if stock.get('sentiment_ma3') is not None else 'N/A',
+                "情感MA7": round(stock.get('sentiment_ma7', 0), 2) if stock.get('sentiment_ma7') is not None else 'N/A',
+                "情感MA14": round(stock.get('sentiment_ma14', 0), 2) if stock.get('sentiment_ma14') is not None else 'N/A',
+                "情感波动率": round(stock.get('sentiment_volatility', 0), 2) if stock.get('sentiment_volatility') is not None else 'N/A',
+                "情感变化率(%)": f"{stock.get('sentiment_change_rate', 0) * 100:.1f}%" if stock.get('sentiment_change_rate') is not None else 'N/A'
             },
             "基本面（重要）": {
                 "基本面评分": stock.get('fundamental_score', 'N/A') or 'N/A',
@@ -819,12 +830,20 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
   * 成交量比率>1.3：放量上涨，支持建仓
   * 成交量比率>2.0：异常放量，可能是出货信号
 - 技术指标协同（权重30%）：
-  * RSI+MACD+布林带+OBV+CMF：至少3个指标同向才可靠
+  * RSI+MACD+布林带+OBV+CMF+情感指标：至少3个指标同向才可靠
   * MACD金叉+RSI<50+布林带下轨：强烈建仓信号
   * MACD死叉+RSI>70+布林带上轨：强烈出货信号
 - 南向资金流向（权重15%）：
   * 南向资金流入>3000万：主力资金流入，支持建仓
   * 南向资金流出>1000万：主力资金流出，警惕出货
+- 情感指标分析（技术指标协同的一部分）：
+  * 情感MA3/MA7/MA14：反映短期/中期/长期市场情绪趋势
+  * 情感MA3>MA7：短期情绪改善，支持建仓
+  * 情感MA3<MA7：短期情绪恶化，警惕出货
+  * 情感波动率<1.0：情绪稳定，可靠性高
+  * 情感波动率>2.0：情绪不稳定，谨慎决策
+  * 情感变化率>0：情绪向好，正向驱动
+  * 情感变化率<0：情绪转差，负向驱动
 
 【第四层：TAV评分系统（趋势-动量-成交量综合评分）】
 ⭐ TAV评分说明：基于趋势(Trend)、动量(Momentum)、成交量(Volume)三个维度的综合评分系统，范围0-100分：
@@ -1658,6 +1677,78 @@ def analyze_stock(code, name, run_date=None):
                 else:
                     outperforms = bool(outperforms_by_diff)
 
+        # === 情感指标计算函数 ===
+        def calculate_sentiment_features(news_data):
+            """
+            计算情感指标特征
+
+            Args:
+                news_data (DataFrame): 新闻数据，包含新闻日期和情感分数
+
+            Returns:
+                dict: 包含情感指标MA3、MA7、MA14、波动率、变化率的字典
+            """
+            if news_data is None or news_data.empty:
+                return {
+                    'sentiment_ma3': np.nan,
+                    'sentiment_ma7': np.nan,
+                    'sentiment_ma14': np.nan,
+                    'sentiment_volatility': np.nan,
+                    'sentiment_change_rate': np.nan
+                }
+
+            try:
+                # 确保数据按日期排序
+                news_data = news_data.sort_values('新闻时间')
+
+                # 提取情感分数列（如果有）
+                if '情感分数' not in news_data.columns:
+                    # 如果没有情感分数列，使用新闻数量作为情感强度的代理
+                    news_data = news_data.copy()
+                    news_data['情感分数'] = 1  # 每条新闻给1分
+                else:
+                    # 使用现有的情感分数列
+                    news_data = news_data.copy()
+
+                # 转换日期格式
+                news_data['新闻时间'] = pd.to_datetime(news_data['新闻时间'])
+
+                # 按日期聚合情感分数
+                sentiment_by_date = news_data.groupby('新闻时间')['情感分数'].sum()
+
+                # 计算移动平均
+                sentiment_ma3 = sentiment_by_date.rolling(window=3, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
+                sentiment_ma7 = sentiment_by_date.rolling(window=7, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
+                sentiment_ma14 = sentiment_by_date.rolling(window=14, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
+
+                # 计算波动率（标准差）
+                sentiment_volatility = sentiment_by_date.rolling(window=14, min_periods=1).std().iloc[-1] if len(sentiment_by_date) >= 2 else np.nan
+
+                # 计算变化率
+                if len(sentiment_by_date) >= 2:
+                    latest_sentiment = sentiment_by_date.iloc[-1]
+                    prev_sentiment = sentiment_by_date.iloc[-2]
+                    sentiment_change_rate = (latest_sentiment - prev_sentiment) / abs(prev_sentiment) if prev_sentiment != 0 else np.nan
+                else:
+                    sentiment_change_rate = np.nan
+
+                return {
+                    'sentiment_ma3': sentiment_ma3,
+                    'sentiment_ma7': sentiment_ma7,
+                    'sentiment_ma14': sentiment_ma14,
+                    'sentiment_volatility': sentiment_volatility,
+                    'sentiment_change_rate': sentiment_change_rate
+                }
+            except Exception as e:
+                print(f"⚠️ 计算情感指标失败: {e}")
+                return {
+                    'sentiment_ma3': np.nan,
+                    'sentiment_ma7': np.nan,
+                    'sentiment_ma14': np.nan,
+                    'sentiment_volatility': np.nan,
+                    'sentiment_change_rate': np.nan
+                }
+
         # === 基本面质量评估函数 ===
         def evaluate_fundamental_quality():
             """评估基本面质量（简化版：只基于PE和PB），返回评分和关键指标"""
@@ -1836,6 +1927,23 @@ def analyze_stock(code, name, run_date=None):
                 score += BUILDUP_WEIGHTS['bb_oversold']
                 reasons.append('bb_oversold')
 
+            # 情感指标评分
+            if pd.notna(row.get('sentiment_ma3')) and pd.notna(row.get('sentiment_ma7')):
+                # 情感指标改善：MA3 > MA7表示短期情绪好转
+                if row['sentiment_ma3'] > row['sentiment_ma7']:
+                    score += BUILDUP_WEIGHTS['sentiment_improving']
+                    reasons.append('sentiment_improving')
+
+                # MA3上升：情感短期趋势向上
+                if pd.notna(row.get('sentiment_change_rate')) and row['sentiment_change_rate'] > 0:
+                    score += BUILDUP_WEIGHTS['sentiment_ma3_up']
+                    reasons.append('sentiment_ma3_up')
+
+                # 波动率低：情绪稳定
+                if pd.notna(row.get('sentiment_volatility')) and row['sentiment_volatility'] < 1.0:
+                    score += BUILDUP_WEIGHTS['sentiment_volatility_low']
+                    reasons.append('sentiment_volatility_low')
+
             # 基本面调整（示例：基本面越差，更容易做短线建仓；基本面好时偏长期持有）
             if fundamental_score is not None:
                 if fundamental_score > 60:
@@ -1993,6 +2101,23 @@ def analyze_stock(code, name, run_date=None):
             if (pd.notna(row.get('Prev_Close')) and row['Close'] < row['Prev_Close']) or (row['Close'] < row['Open']):
                 score += DISTRIBUTION_WEIGHTS['price_down']
                 reasons.append('price_down')
+
+            # 情感指标评分
+            if pd.notna(row.get('sentiment_ma3')) and pd.notna(row.get('sentiment_ma7')):
+                # 情感指标恶化：MA3 < MA7表示短期情绪恶化
+                if row['sentiment_ma3'] < row['sentiment_ma7']:
+                    score += DISTRIBUTION_WEIGHTS['sentiment_deteriorating']
+                    reasons.append('sentiment_deteriorating')
+
+                # MA3下降：情感短期趋势向下
+                if pd.notna(row.get('sentiment_change_rate')) and row['sentiment_change_rate'] < 0:
+                    score += DISTRIBUTION_WEIGHTS['sentiment_ma3_down']
+                    reasons.append('sentiment_ma3_down')
+
+                # 波动率高：情绪不稳定
+                if pd.notna(row.get('sentiment_volatility')) and row['sentiment_volatility'] > 2.0:
+                    score += DISTRIBUTION_WEIGHTS['sentiment_volatility_high']
+                    reasons.append('sentiment_volatility_high')
 
             # 基本面调整（不要完全阻止出货，而是调整阈值）
             if fundamental_score is not None:
@@ -2341,6 +2466,43 @@ def analyze_stock(code, name, run_date=None):
         main_hist['Turnover_Rate_Change_5d'] = full_hist['Turnover_Rate_Change_5d'].reindex(main_hist.index, method='ffill')
         main_hist['Turnover_Rate_Change_20d'] = full_hist['Turnover_Rate_Change_20d'].reindex(main_hist.index, method='ffill')
 
+        # === 情感指标计算 ===
+        # 计算情感指标并添加到main_hist
+        try:
+            news_file_path = "data/all_stock_news_records.csv"
+            if os.path.exists(news_file_path):
+                news_df = pd.read_csv(news_file_path)
+                stock_news = news_df[news_df['股票代码'] == code]
+                if not stock_news.empty:
+                    sentiment_features = calculate_sentiment_features(stock_news)
+                    # 为每一行添加相同的情感指标值（基于最新数据）
+                    main_hist['sentiment_ma3'] = sentiment_features.get('sentiment_ma3', np.nan)
+                    main_hist['sentiment_ma7'] = sentiment_features.get('sentiment_ma7', np.nan)
+                    main_hist['sentiment_ma14'] = sentiment_features.get('sentiment_ma14', np.nan)
+                    main_hist['sentiment_volatility'] = sentiment_features.get('sentiment_volatility', np.nan)
+                    main_hist['sentiment_change_rate'] = sentiment_features.get('sentiment_change_rate', np.nan)
+                else:
+                    # 如果没有新闻数据，设置情感指标为NaN
+                    main_hist['sentiment_ma3'] = np.nan
+                    main_hist['sentiment_ma7'] = np.nan
+                    main_hist['sentiment_ma14'] = np.nan
+                    main_hist['sentiment_volatility'] = np.nan
+                    main_hist['sentiment_change_rate'] = np.nan
+            else:
+                # 如果新闻文件不存在，设置情感指标为NaN
+                main_hist['sentiment_ma3'] = np.nan
+                main_hist['sentiment_ma7'] = np.nan
+                main_hist['sentiment_ma14'] = np.nan
+                main_hist['sentiment_volatility'] = np.nan
+                main_hist['sentiment_change_rate'] = np.nan
+        except Exception as e:
+            print(f"  ⚠️ 计算情感指标失败: {e}")
+            main_hist['sentiment_ma3'] = np.nan
+            main_hist['sentiment_ma7'] = np.nan
+            main_hist['sentiment_ma14'] = np.nan
+            main_hist['sentiment_volatility'] = np.nan
+            main_hist['sentiment_change_rate'] = np.nan
+
         # 返回结构（保留原始数值：RS 为小数，RS_diff 小数；展示时再乘100）
         last_close = main_hist['Close'].iloc[-1]
         prev_close = main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None
@@ -2384,6 +2546,28 @@ def analyze_stock(code, name, run_date=None):
         
         # 计算多周期相对强度综合评分
         multi_period_rs_score = get_multi_period_rs_score(multi_period_rs, periods=[3, 5, 10, 20, 60])
+
+        # === 情感指标计算 ===
+        # 读取新闻数据
+        news_file_path = "data/all_stock_news_records.csv"
+        sentiment_features = {
+            'sentiment_ma3': np.nan,
+            'sentiment_ma7': np.nan,
+            'sentiment_ma14': np.nan,
+            'sentiment_volatility': np.nan,
+            'sentiment_change_rate': np.nan
+        }
+
+        try:
+            if os.path.exists(news_file_path):
+                news_df = pd.read_csv(news_file_path)
+                # 筛选当前股票的新闻
+                stock_news = news_df[news_df['股票代码'] == code]
+                if not stock_news.empty:
+                    # 计算情感指标
+                    sentiment_features = calculate_sentiment_features(stock_news)
+        except Exception as e:
+            print(f"  ⚠️ 计算情感指标失败: {e}")
 
         result = {
             'code': code,
@@ -2490,6 +2674,12 @@ def analyze_stock(code, name, run_date=None):
             'turnover_rate': safe_round(main_hist['Turnover_Rate'].iloc[-1], 2) if pd.notna(main_hist['Turnover_Rate'].iloc[-1]) else None,
             'turnover_rate_change_5d': safe_round(main_hist['Turnover_Rate_Change_5d'].iloc[-1] * 100, 2) if pd.notna(main_hist['Turnover_Rate_Change_5d'].iloc[-1]) else None,
             'turnover_rate_change_20d': safe_round(main_hist['Turnover_Rate_Change_20d'].iloc[-1] * 100, 2) if pd.notna(main_hist['Turnover_Rate_Change_20d'].iloc[-1]) else None,
+            # 情感指标（新增）
+            'sentiment_ma3': safe_round(sentiment_features.get('sentiment_ma3', 0), 2) if pd.notna(sentiment_features.get('sentiment_ma3')) else None,
+            'sentiment_ma7': safe_round(sentiment_features.get('sentiment_ma7', 0), 2) if pd.notna(sentiment_features.get('sentiment_ma7')) else None,
+            'sentiment_ma14': safe_round(sentiment_features.get('sentiment_ma14', 0), 2) if pd.notna(sentiment_features.get('sentiment_ma14')) else None,
+            'sentiment_volatility': safe_round(sentiment_features.get('sentiment_volatility', 0), 2) if pd.notna(sentiment_features.get('sentiment_volatility')) else None,
+            'sentiment_change_rate': safe_round(sentiment_features.get('sentiment_change_rate', 0) * 100, 2) if pd.notna(sentiment_features.get('sentiment_change_rate')) else None,  # 百分比
             # 系统性崩盘风险评分（新增）
             'crash_risk_score': safe_round(crash_risk_score, 1) if crash_risk_score is not None else None,
             'crash_risk_level': crash_risk_level,
@@ -2803,6 +2993,8 @@ def main(run_date=None, investor_type='conservative'):
             'multi_period_trend_score',
             # 核心技术指标（重要）
             'rsi', 'macd', 'volume_ratio', 'atr', 'cmf', 'bb_oversold_overbought',
+            # 情感指标（技术指标协同的一部分）
+            'sentiment_ma3', 'sentiment_ma7', 'sentiment_ma14', 'sentiment_volatility', 'sentiment_change_rate',
             # 基本面（重要）
             'fundamental_score', 'pe_ratio', 'pb_ratio',
             # 相对强度（重要）
@@ -2865,6 +3057,8 @@ def main(run_date=None, investor_type='conservative'):
             '多周期趋势评分',
             # 核心技术指标（重要）
             'RSI', 'MACD', '成交量比率', 'ATR', 'CMF', '布林带超卖/超买',
+            # 情感指标（技术指标协同的一部分）
+            '情感MA3', '情感MA7', '情感MA14', '情感波动率', '情感变化率(%)',
             # 基本面（重要）
             '基本面评分', '市盈率', '市净率',
             # 相对强度（重要）
@@ -3168,7 +3362,7 @@ def main(run_date=None, investor_type='conservative'):
                 chunk = df_report.iloc[i:i+5]
                 
                 # 创建包含分类信息和字段名的完整表格
-                # 分类行（精简版：33个核心字段）
+                # 分类行（精简版：38个核心字段，增加了5个情感指标）
                 category_row = [
                     # 基本信息（核心）- 5列
                     '基本信息', '', '', '', '',
@@ -3178,8 +3372,8 @@ def main(run_date=None, investor_type='conservative'):
                     '风险控制', '', '',
                     # 多周期趋势（重要）- 6列
                     '多周期趋势', '', '', '', '', '',
-                    # 核心技术指标（重要）- 6列
-                    '核心技术指标', '', '', '', '', '',
+                    # 核心技术指标（重要）- 11列（增加了5个情感指标）
+                    '核心技术指标', '', '', '', '', '', '', '', '', '', '',
                     # 基本面（重要）- 3列
                     '基本面', '', '',
                     # 相对强度（重要）- 2列
@@ -3695,6 +3889,72 @@ def main(run_date=None, investor_type='conservative'):
                     <ul>
                       <li>True：资金流入趋势</li>
                       <li>False：资金流出趋势或趋势不明显</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>情感MA3</b>：
+                <ul>
+                  <li>计算：情感指标的3日移动平均</li>
+                  <li>含义：反映短期市场情绪趋势</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>情感MA3 > 情感MA7：短期情绪改善，支持建仓</li>
+                      <li>情感MA3 < 情感MA7：短期情绪恶化，警惕出货</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>情感MA7</b>：
+                <ul>
+                  <li>计算：情感指标的7日移动平均</li>
+                  <li>含义：反映中期市场情绪趋势</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>情感MA7上升：情绪持续改善</li>
+                      <li>情感MA7下降：情绪持续恶化</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>情感MA14</b>：
+                <ul>
+                  <li>计算：情感指标的14日移动平均</li>
+                  <li>含义：反映长期市场情绪趋势</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>情感MA14上升：长期情绪向好</li>
+                      <li>情感MA14下降：长期情绪转差</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>情感波动率</b>：
+                <ul>
+                  <li>计算：情感指标的标准差（14日窗口）</li>
+                  <li>含义：衡量市场情绪的不稳定性</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>情感波动率 < 1.0：情绪稳定，可靠性高</li>
+                      <li>情感波动率 1.0-2.0：情绪正常波动</li>
+                      <li>情感波动率 > 2.0：情绪不稳定，谨慎决策</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
+              <li><b>情感变化率</b>：
+                <ul>
+                  <li>计算：(当前情感值 - 前一期情感值) / 前一期情感值</li>
+                  <li>含义：反映情绪变化的快慢和方向</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>情感变化率 > 0：情绪向好，正向驱动</li>
+                      <li>情感变化率 < 0：情绪转差，负向驱动</li>
                     </ul>
                   </li>
                 </ul>
