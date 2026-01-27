@@ -2256,6 +2256,44 @@ def analyze_stock(code, name, run_date=None):
             vix_level = None
             print(f"  ⚠️ 获取VIX数据失败: {e}")
 
+        # 计算系统性崩盘风险评分（新增）
+        crash_risk_score = None
+        crash_risk_level = None
+        crash_risk_factors = []
+        crash_risk_recommendations = []
+        try:
+            from ml_services.us_market_data import us_market_data
+            crash_risk_indicators = {}
+            
+            # VIX恐慌指数
+            if vix_level is not None:
+                crash_risk_indicators['VIX'] = vix_level
+            
+            # 恒指收益率
+            if prev_close is not None and prev_close != 0:
+                hsi_change = ((last_close / prev_close) - 1) * 100
+                crash_risk_indicators['HSI_Return_1d'] = hsi_change
+            
+            # 平均成交量比率
+            if 'Vol_Ratio' in main_hist.columns and not main_hist['Vol_Ratio'].isna().all():
+                avg_vol_ratio = main_hist['Vol_Ratio'].iloc[-1] if pd.notna(main_hist['Vol_Ratio'].iloc[-1]) else 1.0
+                crash_risk_indicators['Avg_Vol_Ratio'] = avg_vol_ratio
+            
+            # 标普500收益率
+            if us_data is not None and not us_data.empty and 'SP500_Return' in us_data.columns:
+                sp500_return = us_data['SP500_Return'].iloc[-1] * 100 if pd.notna(us_data['SP500_Return'].iloc[-1]) else 0
+                crash_risk_indicators['SP500_Return_1d'] = sp500_return
+            
+            # 计算系统性崩盘风险评分
+            if crash_risk_indicators:
+                crash_risk_result = us_market_data.calculate_systemic_crash_risk(crash_risk_indicators)
+                crash_risk_score = crash_risk_result.get('risk_score')
+                crash_risk_level = crash_risk_result.get('risk_level')
+                crash_risk_factors = crash_risk_result.get('factors', [])
+                crash_risk_recommendations = crash_risk_result.get('recommendations', [])
+        except Exception as e:
+            print(f"  ⚠️ 计算系统性崩盘风险评分失败: {e}")
+
         # 将新指标 reindex 到 main_hist
         main_hist['Turnover_Change_1d'] = full_hist['Turnover_Change_1d'].reindex(main_hist.index, method='ffill')
         main_hist['Turnover_Change_5d'] = full_hist['Turnover_Change_5d'].reindex(main_hist.index, method='ffill')
@@ -2414,6 +2452,11 @@ def analyze_stock(code, name, run_date=None):
             'turnover_rate': safe_round(main_hist['Turnover_Rate'].iloc[-1], 2) if pd.notna(main_hist['Turnover_Rate'].iloc[-1]) else None,
             'turnover_rate_change_5d': safe_round(main_hist['Turnover_Rate_Change_5d'].iloc[-1] * 100, 2) if pd.notna(main_hist['Turnover_Rate_Change_5d'].iloc[-1]) else None,
             'turnover_rate_change_20d': safe_round(main_hist['Turnover_Rate_Change_20d'].iloc[-1] * 100, 2) if pd.notna(main_hist['Turnover_Rate_Change_20d'].iloc[-1]) else None,
+            # 系统性崩盘风险评分（新增）
+            'crash_risk_score': safe_round(crash_risk_score, 1) if crash_risk_score is not None else None,
+            'crash_risk_level': crash_risk_level,
+            'crash_risk_factors': crash_risk_factors,
+            'crash_risk_recommendations': crash_risk_recommendations,
         }
         
         # 重新获取上个交易日的评分数据（在所有评分计算完成后）
