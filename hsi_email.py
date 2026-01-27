@@ -2327,6 +2327,19 @@ class HSIEmailSystem:
         - str: 生成的提示词
         """
         
+        # 读取新闻数据（用于新闻分析）
+        news_data = {}
+        news_file_path = "data/all_stock_news_records.csv"
+        try:
+            if os.path.exists(news_file_path):
+                news_df = pd.read_csv(news_file_path)
+                if not news_df.empty:
+                    # 按股票代码分组新闻
+                    for code, group in news_df.groupby('股票代码'):
+                        news_data[code] = group.to_dict('records')
+        except Exception as e:
+            print(f"⚠️ 读取新闻数据失败: {e}")
+        
         # 定义不同风格和周期的分析重点
         style_focus = {
             'aggressive': {
@@ -2421,6 +2434,18 @@ class HSIEmailSystem:
 """
             for i, pos in enumerate(stock_data, 1):
                 position_pct = pos.get('position_pct', 0)
+                stock_code = pos['stock_code']
+                
+                # 获取新闻摘要
+                stock_news = news_data.get(stock_code, [])
+                news_summary_text = ""
+                if stock_news:
+                    news_summary_text = "   - 新闻摘要:\n"
+                    for news in stock_news[:3]:  # 只展示最近3条
+                        news_summary_text += f"     * {news.get('新闻时间', '')}: {news.get('新闻标题', '')} - {news.get('简要内容', '')}\n"
+                else:
+                    news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
+                
                 prompt += f"""
 {i}. {pos['stock_name']} ({pos['stock_code']})
    - 持仓占比: {position_pct:.1f}%
@@ -2429,7 +2454,7 @@ class HSIEmailSystem:
    - 当前价格: HK${pos['current_price']:.2f}
    - 浮动盈亏: HK${pos['profit_loss']:,.2f} ({pos['profit_loss_pct']:+.2f}%)
    - 技术指标: {pos['tech_info']}
-"""
+{news_summary_text}"""
         
         elif data_type == 'buy_signals' and stock_data:
             prompt += f"""
@@ -2439,13 +2464,25 @@ class HSIEmailSystem:
 ## 买入信号股票详情
 """
             for i, stock in enumerate(stock_data, 1):
+                stock_code = stock['stock_code']
+                
+                # 获取新闻摘要
+                stock_news = news_data.get(stock_code, [])
+                news_summary_text = ""
+                if stock_news:
+                    news_summary_text = "   - 新闻摘要:\n"
+                    for news in stock_news[:3]:  # 只展示最近3条
+                        news_summary_text += f"     * {news.get('新闻时间', '')}: {news.get('新闻标题', '')} - {news.get('简要内容', '')}\n"
+                else:
+                    news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
+                
                 prompt += f"""
 {i}. {stock['stock_name']} ({stock['stock_code']})
    - 当前价格: HK${stock['current_price']:.2f}
    - 技术趋势: {stock['trend']}
    - 技术指标: {stock['tech_info']}
    - 信号描述: {stock['signal_description']}
-"""
+{news_summary_text}"""
         
         # 添加分析要求
         prompt += f"""
@@ -2517,6 +2554,17 @@ class HSIEmailSystem:
 - 综合评分30-50分：观望，建议仓位10-30%
 - 综合评分<30分：不推荐，建议仓位0-10%
 - 综合评分构成：建仓评分25% + 多周期趋势20% + 相对强度15% + 基本面15% + 新闻影响15% + 技术指标协同10%
+
+【新闻分析（辅助）】
+📰 评估新闻对股价的影响（仅供参考，不改变核心技术分析决策）：
+- 新闻分析原则：
+  * 新闻作为辅助参考，不改变核心技术分析决策
+  * 如果出现重大负面新闻（如财务造假、监管处罚等），建议观望
+  * 如果出现重大正面新闻（如重大并购、业绩超预期等），可适当增加仓位
+  * 投资者类型权重：
+    - 进取型投资者：新闻权重10%
+    - 稳健型投资者：新闻权重20%
+    - 保守型投资者：新闻权重30%
 
 ## 针对{'短期' if investment_horizon == 'short_term' else '中期'}投资者的重点调整：
 
