@@ -4,13 +4,13 @@
 美股市场数据获取模块
 提供美股指数、VIX恐慌指数、美国国债收益率等数据
 
-数据源策略（混合方案）：
-- 标普500指数：yfinance (AKShare 接口不稳定)
-- 纳斯达克指数：yfinance (AKShare 接口不稳定)
-- VIX恐慌指数：yfinance (AKShare 暂不支持)
-- 美国国债收益率：AKShare (稳定可靠)
+数据源策略（AKShare 优先）：
+- 标普500指数：优先 AKShare，失败后使用 yfinance
+- 纳斯达克指数：优先 AKShare，失败后使用 yfinance
+- VIX恐慌指数：仅使用 yfinance（AKShare 暂不支持）
+- 美国国债收益率：仅使用 AKShare（稳定可靠）
 
-注：AKShare 虽然免费，但美股指数接口稳定性较差，建议使用 yfinance 配合缓存机制
+注：不使用缓存机制，每次都实时获取最新数据
 """
 
 import pandas as pd
@@ -22,11 +22,11 @@ warnings.filterwarnings('ignore')
 
 
 class USMarketData:
-    """美股市场数据获取类"""
+    """美股市场数据获取类（无缓存，AKShare 优先）"""
 
     def __init__(self):
-        self.cache = {}
-        self.cache_duration = timedelta(hours=1)  # 缓存1小时
+        # 不使用缓存
+        pass
 
     def get_sp500_data(self, period_days=730):
         """获取标普500指数数据
@@ -37,21 +37,42 @@ class USMarketData:
         Returns:
             DataFrame: 包含标普500指数数据
         """
-        cache_key = f'sp500_{period_days}'
-        if cache_key in self.cache:
-            cached_data, cached_time = self.cache[cache_key]
-            if datetime.now() - cached_time < self.cache_duration:
-                return cached_data
-
+        # 策略1: 优先尝试 AKShare
         try:
-            # 使用 yfinance 获取标普500指数数据（配合缓存减少请求频率）
+            from akshare.index import index_global_em
+            df = index_global_em.index_global_hist_em(symbol="标普500")
+            
+            if not df.empty:
+                # 重命名列以保持一致性
+                df.rename(columns={'日期': 'Date', '收盘': 'Close'}, inplace=True)
+                
+                # 转换日期格式并设置为UTC时区
+                df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
+                df.set_index('Date', inplace=True)
+                
+                # 只保留最近N天的数据
+                if len(df) > period_days:
+                    df = df.tail(period_days)
+                
+                # 计算收益率
+                df['SP500_Return'] = df['Close'].pct_change()
+                df['SP500_Return_5d'] = df['Close'].pct_change(5)
+                df['SP500_Return_20d'] = df['Close'].pct_change(20)
+                
+                print("✅ 使用 AKShare 获取标普500数据成功")
+                return df
+        except Exception as e:
+            print(f"⚠️ AKShare 获取标普500数据失败: {e}")
+        
+        # 策略2: AKShare 失败，使用 yfinance 作为备选
+        try:
             import yfinance as yf
             
             ticker = yf.Ticker('^GSPC')
             df = ticker.history(period=f'{period_days}d')
 
             if df.empty:
-                print("⚠️ 无法获取标普500指数数据")
+                print("⚠️ yfinance 也无法获取标普500指数数据")
                 return None
 
             # 重置索引，将日期作为列
@@ -65,13 +86,11 @@ class USMarketData:
             df['SP500_Return_5d'] = df['Close'].pct_change(5)
             df['SP500_Return_20d'] = df['Close'].pct_change(20)
 
-            # 缓存数据
-            self.cache[cache_key] = (df, datetime.now())
-
+            print("✅ 使用 yfinance 获取标普500数据成功")
             return df
 
         except Exception as e:
-            print(f"⚠️ 获取标普500指数数据失败: {e}")
+            print(f"⚠️ yfinance 获取标普500指数数据也失败: {e}")
             return None
 
     def get_nasdaq_data(self, period_days=730):
@@ -83,21 +102,42 @@ class USMarketData:
         Returns:
             DataFrame: 包含纳斯达克指数数据
         """
-        cache_key = f'nasdaq_{period_days}'
-        if cache_key in self.cache:
-            cached_data, cached_time = self.cache[cache_key]
-            if datetime.now() - cached_time < self.cache_duration:
-                return cached_data
-
+        # 策略1: 优先尝试 AKShare
         try:
-            # 使用 yfinance 获取纳斯达克指数数据（配合缓存减少请求频率）
+            from akshare.index import index_global_em
+            df = index_global_em.index_global_hist_em(symbol="纳斯达克")
+            
+            if not df.empty:
+                # 重命名列以保持一致性
+                df.rename(columns={'日期': 'Date', '收盘': 'Close'}, inplace=True)
+                
+                # 转换日期格式并设置为UTC时区
+                df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
+                df.set_index('Date', inplace=True)
+                
+                # 只保留最近N天的数据
+                if len(df) > period_days:
+                    df = df.tail(period_days)
+                
+                # 计算收益率
+                df['NASDAQ_Return'] = df['Close'].pct_change()
+                df['NASDAQ_Return_5d'] = df['Close'].pct_change(5)
+                df['NASDAQ_Return_20d'] = df['Close'].pct_change(20)
+                
+                print("✅ 使用 AKShare 获取纳斯达克数据成功")
+                return df
+        except Exception as e:
+            print(f"⚠️ AKShare 获取纳斯达克数据失败: {e}")
+        
+        # 策略2: AKShare 失败，使用 yfinance 作为备选
+        try:
             import yfinance as yf
             
             ticker = yf.Ticker('^IXIC')
             df = ticker.history(period=f'{period_days}d')
 
             if df.empty:
-                print("⚠️ 无法获取纳斯达克指数数据")
+                print("⚠️ yfinance 也无法获取纳斯达克指数数据")
                 return None
 
             # 重置索引，将日期作为列
@@ -111,19 +151,17 @@ class USMarketData:
             df['NASDAQ_Return_5d'] = df['Close'].pct_change(5)
             df['NASDAQ_Return_20d'] = df['Close'].pct_change(20)
 
-            # 缓存数据
-            self.cache[cache_key] = (df, datetime.now())
-
+            print("✅ 使用 yfinance 获取纳斯达克数据成功")
             return df
 
         except Exception as e:
-            print(f"⚠️ 获取纳斯达克指数数据失败: {e}")
+            print(f"⚠️ yfinance 获取纳斯达克指数数据也失败: {e}")
             return None
 
     def get_vix_data(self, period_days=730):
         """获取VIX恐慌指数数据
         
-        注意：AKShare 暂不支持 VIX 恐慌指数，使用 yfinance 作为备选方案
+        注意：AKShare 暂不支持 VIX 恐慌指数，仅使用 yfinance
         
         Args:
             period_days: 获取天数（默认730天，约2年）
@@ -131,14 +169,7 @@ class USMarketData:
         Returns:
             DataFrame: 包含VIX恐慌指数数据
         """
-        cache_key = f'vix_{period_days}'
-        if cache_key in self.cache:
-            cached_data, cached_time = self.cache[cache_key]
-            if datetime.now() - cached_time < self.cache_duration:
-                return cached_data
-
         try:
-            # 使用 yfinance 获取VIX恐慌指数数据（AKShare 暂不支持）
             import yfinance as yf
             
             ticker = yf.Ticker('^VIX')
@@ -162,9 +193,7 @@ class USMarketData:
             # VIX相对位置（相对于20日均值）
             df['VIX_Ratio_MA20'] = df['Close'] / df['VIX_MA20']
 
-            # 缓存数据
-            self.cache[cache_key] = (df, datetime.now())
-
+            print("✅ 使用 yfinance 获取VIX数据成功")
             return df
 
         except Exception as e:
@@ -180,12 +209,6 @@ class USMarketData:
         Returns:
             DataFrame: 包含美国10年期国债收益率数据
         """
-        cache_key = f'treasury_{period_days}'
-        if cache_key in self.cache:
-            cached_data, cached_time = self.cache[cache_key]
-            if datetime.now() - cached_time < self.cache_duration:
-                return cached_data
-
         try:
             # 使用 AKShare 获取中美国债收益率数据
             start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
@@ -211,9 +234,7 @@ class USMarketData:
             df['US_10Y_Yield_MA5'] = df['US_10Y_Yield'].rolling(window=5).mean()
             df['US_10Y_Yield_MA20'] = df['US_10Y_Yield'].rolling(window=20).mean()
 
-            # 缓存数据
-            self.cache[cache_key] = (df, datetime.now())
-
+            print("✅ 使用 AKShare 获取美国国债收益率数据成功")
             return df
 
         except Exception as e:
@@ -400,10 +421,7 @@ class USMarketData:
             'recommendations': recommendations
         }
 
-    def clear_cache(self):
-        """清除缓存"""
-        self.cache.clear()
-        print("✅ 美股数据缓存已清除")
+    # 移除 clear_cache 方法（不再使用缓存）
 
 
 # 全局实例
