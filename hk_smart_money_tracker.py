@@ -137,9 +137,9 @@ BUILDUP_WEIGHTS = {
     'cmf_in': 1.2,         # CMF资金流入
     'price_above_vwap': 0.8,  # 价格高于VWAP
     'bb_oversold': 1.0,    # 布林带超卖
-    'sentiment_improving': 1.2,  # 情感指标改善
-    'sentiment_ma3_up': 0.8,     # MA3上升
-    'sentiment_volatility_low': 0.5,  # 波动率低
+    'sentiment_improving': 0.8,  # 情感指标改善（业界标准权重）
+    'sentiment_ma3_up': 0.5,     # MA3上升（业界标准权重）
+    'sentiment_volatility_low': 0.3,  # 波动率低（业界标准权重）
 }
 
 # 建仓信号阈值
@@ -160,9 +160,9 @@ DISTRIBUTION_WEIGHTS = {
     'southbound_out': 2.0, # 南向资金流出
     'price_down': 1.0,     # 价格下跌
     'bb_overbought': 1.0,  # 布林带超买
-    'sentiment_deteriorating': 1.2,  # 情感指标恶化
-    'sentiment_ma3_down': 0.8,       # MA3下降
-    'sentiment_volatility_high': 0.5, # 波动率高
+    'sentiment_deteriorating': 0.8,  # 情感指标恶化（业界标准权重）
+    'sentiment_ma3_down': 0.5,       # MA3下降（业界标准权重）
+    'sentiment_volatility_high': 0.3, # 波动率高（业界标准权重）
 }
 
 # 出货信号阈值
