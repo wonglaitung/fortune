@@ -74,6 +74,24 @@ class SimulationTrader:
                 f.write(f"初始资金: HK${self.initial_capital:,.2f}\n")
                 f.write("="*50 + "\n")
     
+    @staticmethod
+    def convert_investor_type_to_english(investor_type):
+        """
+        将中文投资者类型转换为英文
+        
+        Args:
+            investor_type (str): 中文投资者类型（进取型、稳健型、保守型）
+            
+        Returns:
+            str: 英文投资者类型（aggressive、moderate、conservative）
+        """
+        type_mapping = {
+            '进取型': 'aggressive',
+            '稳健型': 'moderate',
+            '保守型': 'conservative'
+        }
+        return type_mapping.get(investor_type, 'moderate')
+    
     def send_email_notification(self, subject, content):
         """
         发送邮件通知
@@ -1125,7 +1143,9 @@ class SimulationTrader:
                 return
                 
             # 构建大模型分析提示
-            llm_prompt = hk_smart_money_tracker.build_llm_analysis_prompt(results, None, None)
+            # 转换投资者类型为英文
+            investor_type_english = self.convert_investor_type_to_english(self.investor_type)
+            llm_prompt = hk_smart_money_tracker.build_llm_analysis_prompt(results, None, None, investor_type_english)
             
             # 调用大模型分析（真实调用）
             self.log_message("正在调用大模型分析...")
@@ -1753,7 +1773,7 @@ if __name__ == "__main__":
     parser.add_argument('--analysis-frequency', type=int, default=DEFAULT_ANALYSIS_FREQUENCY, help=f'分析频率（分钟），默认{DEFAULT_ANALYSIS_FREQUENCY}分钟')
     parser.add_argument('--manual-sell', type=str, help='手工卖出股票代码（例如：0700.HK）')
     parser.add_argument('--sell-percentage', type=float, default=1.0, help='卖出比例（0.0-1.0），默认1.0（100%）')
-    parser.add_argument('--investor-type', type=str, default='进取型', choices=['保守型', '平衡型', '进取型'], help='投资者风险偏好，默认为"进取型"')
+    parser.add_argument('--investor-type', type=str, default='moderate', choices=['aggressive', 'moderate', 'conservative'], help='投资者风险偏好：aggressive(进取型)、moderate(稳健型)、conservative(保守型)，默认为稳健型')
     args = parser.parse_args()
     
     # 如果指定了手工卖出股票，则执行手工卖出
