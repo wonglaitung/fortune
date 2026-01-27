@@ -3,10 +3,18 @@
 """
 美股市场数据获取模块
 提供美股指数、VIX恐慌指数、美国国债收益率等数据
+
+数据源策略（混合方案）：
+- 标普500指数：yfinance (AKShare 接口不稳定)
+- 纳斯达克指数：yfinance (AKShare 接口不稳定)
+- VIX恐慌指数：yfinance (AKShare 暂不支持)
+- 美国国债收益率：AKShare (稳定可靠)
+
+注：AKShare 虽然免费，但美股指数接口稳定性较差，建议使用 yfinance 配合缓存机制
 """
 
 import pandas as pd
-import yfinance as yf
+import akshare as ak
 from datetime import datetime, timedelta
 import warnings
 
@@ -36,7 +44,9 @@ class USMarketData:
                 return cached_data
 
         try:
-            # 使用 yfinance 获取标普500指数数据 (^GSPC)
+            # 使用 yfinance 获取标普500指数数据（配合缓存减少请求频率）
+            import yfinance as yf
+            
             ticker = yf.Ticker('^GSPC')
             df = ticker.history(period=f'{period_days}d')
 
@@ -80,7 +90,9 @@ class USMarketData:
                 return cached_data
 
         try:
-            # 使用 yfinance 获取纳斯达克指数数据 (^IXIC)
+            # 使用 yfinance 获取纳斯达克指数数据（配合缓存减少请求频率）
+            import yfinance as yf
+            
             ticker = yf.Ticker('^IXIC')
             df = ticker.history(period=f'{period_days}d')
 
@@ -111,6 +123,8 @@ class USMarketData:
     def get_vix_data(self, period_days=730):
         """获取VIX恐慌指数数据
         
+        注意：AKShare 暂不支持 VIX 恐慌指数，使用 yfinance 作为备选方案
+        
         Args:
             period_days: 获取天数（默认730天，约2年）
         
@@ -124,7 +138,9 @@ class USMarketData:
                 return cached_data
 
         try:
-            # 使用 yfinance 获取VIX恐慌指数数据 (^VIX)
+            # 使用 yfinance 获取VIX恐慌指数数据（AKShare 暂不支持）
+            import yfinance as yf
+            
             ticker = yf.Ticker('^VIX')
             df = ticker.history(period=f'{period_days}d')
 
@@ -171,23 +187,24 @@ class USMarketData:
                 return cached_data
 
         try:
-            # 使用 yfinance 获取美国10年期国债收益率数据 (^TNX)
-            # 注意：^TNX 的数据是百分比形式，需要除以100
-            ticker = yf.Ticker('^TNX')
-            df = ticker.history(period=f'{period_days}d')
+            # 使用 AKShare 获取中美国债收益率数据
+            start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
+            
+            df = ak.bond_zh_us_rate(start_date=start_date_str)
 
             if df.empty:
                 print("⚠️ 无法获取美国10年期国债收益率数据")
                 return None
 
-            # 重置索引，将日期作为列
-            df = df.reset_index()
-            # 移除原始时区信息，然后设置为UTC时区（与港股数据一致）
-            df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize(None).dt.tz_localize('UTC')
+            # 重命名列以保持一致性
+            df.rename(columns={'日期': 'Date'}, inplace=True)
+            
+            # 提取美国10年期国债收益率（已经是百分比形式，需要除以100转换为小数）
+            df['US_10Y_Yield'] = df['美国国债收益率10年'] / 100
+            
+            # 转换日期格式并设置为UTC时区
+            df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
             df.set_index('Date', inplace=True)
-
-            # 转换为小数形式（百分比/100）
-            df['US_10Y_Yield'] = df['Close'] / 100
 
             # 计算收益率变化
             df['US_10Y_Yield_Change'] = df['US_10Y_Yield'].pct_change()
