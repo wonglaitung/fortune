@@ -489,7 +489,7 @@ def safe_round(v, ndigits=2):
 import json
 from datetime import datetime
 
-def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, investor_type='conservative'):
+def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, investor_type='conservative', current_time=None):
     """
     构建发送给大模型的股票数据分析提示词（完全优化版）
     
@@ -771,10 +771,31 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 
 【前置检查：市场环境评估（最高优先级）】
 ⚠️ 必须首先评估市场环境，如果触发极端条件，直接建议观望或清仓：
-- VIX恐慌指数检查：
+- **交易时段判断**：
+  * 当前时间：{current_time}
+  * 上午时段（9:30-12:00）：成交额和换手率还未累积，放宽变化率要求
+  * 下午时段（13:00-16:00）：成交额和换手率已充分累积，使用正常标准
+
+- VIX恐慌指数检查（全天适用）：
   * VIX > 30：严重恐慌，直接建议观望，避免建仓
   * VIX 20-30：轻度恐慌，谨慎交易，降低仓位至30%以下
   * VIX < 20：正常或乐观，正常交易
+
+- 成交额变化率检查（根据时段调整）：
+  * **上午时段标准**：
+    * 1日/5日/20日变化率全部<-30%：资金严重流出，直接建议观望
+    * 变化率<-20%：谨慎交易，降低仓位至20%以下
+    * 变化率>-20%：正常交易，参考其他指标
+  * **下午时段标准**：
+    * 1日/5日/20日变化率全部<-10%：资金持续流出，直接建议观望
+    * 变化率正向且多周期一致：资金流入，支持交易
+
+- 换手率变化率检查（根据时段调整）：
+  * **上午时段标准**：
+    * 换手率<-2%且换手率变化率<-20%：关注度严重下降，谨慎交易
+    * 换手率>-2%：正常交易，参考其他指标
+  * **下午时段标准**：
+    * 换手率<-1%且换手率变化率<-10%：关注度下降，流动性减弱，观望为主
 
 【第一层：风险控制检查（最高优先级）】
 ⚠️ 必须检查所有股票的风险控制信号：
@@ -3006,7 +3027,7 @@ def main(run_date=None, investor_type='conservative'):
         llm_analysis = None
         try:
             print("\n🤖 正在调用大模型分析股票数据（推理模式已启用）...")
-            llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics, investor_type)
+            llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics, investor_type, current_time=datetime.now().strftime("%H:%M"))
             llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=True)
             print("✅ 大模型分析完成")
             # 将大模型分析结果打印到屏幕
