@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 229.18929405195922,
+  "capital": 272.18929405196104,
   "positions": {
     "1211.HK": {
       "shares": 2100,
@@ -13,14 +13,9 @@
       "stop_loss_price": 7.35
     },
     "1288.HK": {
-      "shares": 26900,
-      "avg_price": 5.639182156133829,
-      "stop_loss_price": 5.3
-    },
-    "1330.HK": {
-      "shares": 31700,
-      "avg_price": 5.257318611987381,
-      "stop_loss_price": 4.8
+      "shares": 29200,
+      "avg_price": 5.635308219178082,
+      "stop_loss_price": 5.01
     },
     "3690.HK": {
       "shares": 1800,
@@ -33,9 +28,9 @@
       "stop_loss_price": 75.6
     },
     "0728.HK": {
-      "shares": 300,
-      "avg_price": 5.17,
-      "stop_loss_price": 4.92
+      "shares": 28700,
+      "avg_price": 5.3481184668989545,
+      "stop_loss_price": 4.55
     },
     "3968.HK": {
       "shares": 100,
@@ -20844,6 +20839,86 @@
       "current_price": 5.57,
       "target_price": 6.05,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28T11:40:15.284767",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 31700,
+      "price": 5.2,
+      "amount": 164840.0,
+      "capital_after": 165069.18929405196,
+      "reason": "出货信号显著（出货评分高），风险等级中高，技术指标显示动能减弱及超买区域，符合平均出货评分5.87分特征",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.2,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-01-28T11:40:21.397447",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 28400,
+      "price": 5.35,
+      "amount": 151940.0,
+      "capital_after": 13129.189294051961,
+      "reason": "位置低位区域（26.6%），技术指标协同看涨（MACD金叉、CMF资金流入、OBV上升），TAV中等共振（63.25分），基本面低PE（12.91）提供安全边际，适合波段布局",
+      "success": true,
+      "stop_loss_price": 4.55,
+      "current_price": 5.35,
+      "target_price": 5.85,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-28T13:53:06.852705",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 13129.189294051961,
+      "reason": "技术指标显示动能显著减弱（MACD死叉+RSI超买），出货评分达6.2分触发卖出信号，符合平均出货评分5.84分特征",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 20.72,
+      "target_price": 19.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28T13:53:12.520585",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 2300,
+      "price": 5.59,
+      "amount": 12857.0,
+      "capital_after": 272.18929405196104,
+      "reason": "位置低位区域（价格百分位低），OBV上升与CMF资金流入协同，基本面极强（PE 6.11提供高安全边际），符合平衡型投资者稳健收益需求",
+      "success": true,
+      "stop_loss_price": 5.01,
+      "current_price": 5.59,
+      "target_price": 6.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28T13:53:17.150329",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 81.05,
+      "amount": 0,
+      "capital_after": 272.18929405196104,
+      "reason": "技术指标协同性强（RSI超卖、CMF资金流入、OBV上升），位置低位提供安全边际，基本面优质（PE 11.16），适合平衡型投资者兼顾价值与成长",
+      "success": false,
+      "stop_loss_price": 71.64,
+      "current_price": 81.05,
+      "target_price": 85.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -34196,147 +34271,150 @@
           "stop_loss_price": 5.25
         }
       }
+    },
+    {
+      "timestamp": "2026-01-28T11:40:16.135718",
+      "capital": 165069.18929405196,
+      "portfolio_value": 1025992.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 20000,
+          "avg_price": 7.6253,
+          "stop_loss_price": 7.35
+        },
+        "1288.HK": {
+          "shares": 26900,
+          "avg_price": 5.639182156133829,
+          "stop_loss_price": 5.3
+        },
+        "3690.HK": {
+          "shares": 1800,
+          "avg_price": 99.79166666666667,
+          "stop_loss_price": 94.7
+        },
+        "0941.HK": {
+          "shares": 100,
+          "avg_price": 79.4,
+          "stop_loss_price": 75.6
+        },
+        "0728.HK": {
+          "shares": 28700,
+          "avg_price": 5.3481184668989545,
+          "stop_loss_price": 4.55
+        },
+        "3968.HK": {
+          "shares": 100,
+          "avg_price": 46.56,
+          "stop_loss_price": 44.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-28T11:40:22.213987",
+      "capital": 13129.189294051961,
+      "portfolio_value": 1026204.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 20000,
+          "avg_price": 7.6253,
+          "stop_loss_price": 7.35
+        },
+        "1288.HK": {
+          "shares": 26900,
+          "avg_price": 5.639182156133829,
+          "stop_loss_price": 5.3
+        },
+        "3690.HK": {
+          "shares": 1800,
+          "avg_price": 99.79166666666667,
+          "stop_loss_price": 94.7
+        },
+        "0941.HK": {
+          "shares": 100,
+          "avg_price": 79.4,
+          "stop_loss_price": 75.6
+        },
+        "0728.HK": {
+          "shares": 28700,
+          "avg_price": 5.3481184668989545,
+          "stop_loss_price": 4.55
+        },
+        "3968.HK": {
+          "shares": 100,
+          "avg_price": 46.56,
+          "stop_loss_price": 44.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        }
+      }
+    },
+    {
+      "timestamp": "2026-01-28T13:53:13.477216",
+      "capital": 272.18929405196104,
+      "portfolio_value": 1031626.189294052,
+      "positions": {
+        "1211.HK": {
+          "shares": 2100,
+          "avg_price": 94.88809523809523,
+          "stop_loss_price": 94.0
+        },
+        "0939.HK": {
+          "shares": 20000,
+          "avg_price": 7.6253,
+          "stop_loss_price": 7.35
+        },
+        "1288.HK": {
+          "shares": 29200,
+          "avg_price": 5.635308219178082,
+          "stop_loss_price": 5.01
+        },
+        "3690.HK": {
+          "shares": 1800,
+          "avg_price": 99.79166666666667,
+          "stop_loss_price": 94.7
+        },
+        "0941.HK": {
+          "shares": 100,
+          "avg_price": 79.4,
+          "stop_loss_price": 75.6
+        },
+        "0728.HK": {
+          "shares": 28700,
+          "avg_price": 5.3481184668989545,
+          "stop_loss_price": 4.55
+        },
+        "3968.HK": {
+          "shares": 100,
+          "avg_price": 46.56,
+          "stop_loss_price": 44.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-27 15:21:55",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "超卖反弹机会，技术指标协同买入（RSI超卖、CMF资金流入、OBV上升），低估值安全边际高",
-          "allocation_pct": 15,
-          "stop_loss_price": 40.12,
-          "target_price": 49.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "超卖反弹机会，技术指标协同买入（CMF资金流入、MACD金叉），极低估值提供防御性",
-          "allocation_pct": 15,
-          "stop_loss_price": 6.58,
-          "target_price": 7.95,
-          "validity_period": 7
-        },
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "低位反弹机会，OBV上升支持，AI芯片行业潜在政策利好催化",
-          "allocation_pct": 12,
-          "stop_loss_price": 17.7,
-          "target_price": 22.0,
-          "validity_period": 21
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "高位出货信号，资金大幅流出（CMF -0.4086），流动性枯竭，估值透支无新催化剂",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "高位滞涨信号，资金流出加剧（CMF -0.0673），利好兑现无新增催化",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "高位出货信号，资金持续流出（CMF -0.2277），估值质疑无基本面支撑",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-27 15:21:55",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位出货信号，资金大幅流出（CMF -0.4086），流动性枯竭，估值透支无新催化剂",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 37.98,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-27 15:21:58",
-      "type": "SELL",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位滞涨信号，资金流出加剧（CMF -0.0673），利好兑现无新增催化",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 8.9,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-27 15:22:01",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位出货信号，资金持续流出（CMF -0.2277），估值质疑无基本面支撑",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 429.2,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-01-27 15:22:06",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.16,
-      "amount": 0,
-      "reason": "超卖反弹机会，技术指标协同买入（RSI超卖、CMF资金流入、OBV上升），低估值安全边际高 (原因: 资金不足)",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": 40.12,
-      "current_price": 47.16,
-      "target_price": 49.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-27 15:22:11",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.75,
-      "amount": 0,
-      "reason": "超卖反弹机会，技术指标协同买入（CMF资金流入、MACD金叉），极低估值提供防御性 (原因: 资金不足)",
-      "capital_after": 229.18929405195922,
-      "success": false,
-      "stop_loss_price": 6.58,
-      "current_price": 7.75,
-      "target_price": 7.95,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-01-27 15:22:14",
       "type": "BUY",
@@ -34438,6 +34516,144 @@
       "stop_loss_price": 5.05,
       "current_price": 5.57,
       "target_price": 6.05,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28 11:40:15",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "位置低位区域（26.6%），技术指标协同看涨（MACD金叉、CMF资金流入、OBV上升），TAV中等共振（63.25分），基本面低PE（12.91）提供安全边际，适合波段布局",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.55,
+          "target_price": 5.85,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "出货信号显著（出货评分高），风险等级中高，技术指标显示动能减弱及超买区域，符合平均出货评分5.87分特征",
+          "stop_loss_triggered": false,
+          "target_price": 5.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-28 11:40:15",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 31700,
+      "price": 5.2,
+      "amount": 164840.0,
+      "reason": "出货信号显著（出货评分高），风险等级中高，技术指标显示动能减弱及超买区域，符合平均出货评分5.87分特征",
+      "capital_after": 165069.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.2,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -1816.9999999999839
+    },
+    {
+      "timestamp": "2026-01-28 11:40:21",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 28400,
+      "price": 5.35,
+      "amount": 151940.0,
+      "reason": "位置低位区域（26.6%），技术指标协同看涨（MACD金叉、CMF资金流入、OBV上升），TAV中等共振（63.25分），基本面低PE（12.91）提供安全边际，适合波段布局",
+      "capital_after": 13129.189294051961,
+      "success": true,
+      "stop_loss_price": 4.55,
+      "current_price": 5.35,
+      "target_price": 5.85,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-01-28 13:53:06",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "位置低位区域（价格百分位低），OBV上升与CMF资金流入协同，基本面极强（PE 6.11提供高安全边际），符合平衡型投资者稳健收益需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.01,
+          "target_price": 6.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "技术指标协同性强（RSI超卖、CMF资金流入、OBV上升），位置低位提供安全边际，基本面优质（PE 11.16），适合平衡型投资者兼顾价值与成长",
+          "allocation_pct": 15,
+          "stop_loss_price": 71.64,
+          "target_price": 85.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "技术指标显示动能显著减弱（MACD死叉+RSI超买），出货评分达6.2分触发卖出信号，符合平均出货评分5.84分特征",
+          "stop_loss_triggered": false,
+          "target_price": 19.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-28 13:53:06",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术指标显示动能显著减弱（MACD死叉+RSI超买），出货评分达6.2分触发卖出信号，符合平均出货评分5.84分特征",
+      "capital_after": 13129.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 20.72,
+      "target_price": 19.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28 13:53:12",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 2300,
+      "price": 5.59,
+      "amount": 12857.0,
+      "reason": "位置低位区域（价格百分位低），OBV上升与CMF资金流入协同，基本面极强（PE 6.11提供高安全边际），符合平衡型投资者稳健收益需求",
+      "capital_after": 272.18929405196104,
+      "success": true,
+      "stop_loss_price": 5.01,
+      "current_price": 5.59,
+      "target_price": 6.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-01-28 13:53:17",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 81.05,
+      "amount": 0,
+      "reason": "技术指标协同性强（RSI超卖、CMF资金流入、OBV上升），位置低位提供安全边际，基本面优质（PE 11.16），适合平衡型投资者兼顾价值与成长",
+      "capital_after": 272.18929405196104,
+      "success": false,
+      "stop_loss_price": 71.64,
+      "current_price": 81.05,
+      "target_price": 85.0,
       "validity_period": 7
     }
   ],
