@@ -1372,10 +1372,10 @@ class SimulationTrader:
                 if shares <= 0:
                     self.log_message(f"按大模型建议计算出的买入股数为0，跳过买入 {name} ({code})，原因: {calculation_reason}")
                     
-                    # 记录失败的交易
+                    # 记录失败的交易（只保存大模型的原始建议，不附加失败原因）
                     amount = 0 * current_price if 0 > 0 else 0
                     actual_current_price = current_price if current_price is not None else self.get_current_stock_price(code)
-                    self.record_transaction('BUY', code, name, 0, current_price, amount, f"{reason} (原因: {calculation_reason})", False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
+                    self.record_transaction('BUY', code, name, 0, current_price, amount, reason, False, stop_loss_price=stop_loss_price, current_price=actual_current_price, target_price=target_price, validity_period=validity_period)
                     
                     # 根据计算原因决定是否发送资金不足通知
                     if calculation_reason == "资金不足":
