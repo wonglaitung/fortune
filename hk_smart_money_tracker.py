@@ -2600,7 +2600,8 @@ def analyze_stock(code, name, run_date=None):
             'sentiment_ma7': np.nan,
             'sentiment_ma14': np.nan,
             'sentiment_volatility': np.nan,
-            'sentiment_change_rate': np.nan
+            'sentiment_change_rate': np.nan,
+            'sentiment_days': 0  # 初始化为 0，表示无数据
         }
 
         try:
