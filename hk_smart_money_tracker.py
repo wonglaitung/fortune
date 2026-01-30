@@ -1680,7 +1680,7 @@ def analyze_stock(code, name, run_date=None):
         # === 情感指标计算函数 ===
         def calculate_sentiment_features(news_data):
             """
-            计算情感指标特征
+            计算情感指标特征（使用大模型情感分析）
 
             Args:
                 news_data (DataFrame): 新闻数据，包含新闻日期和情感分数
@@ -1701,44 +1701,80 @@ def analyze_stock(code, name, run_date=None):
                 # 确保数据按日期排序
                 news_data = news_data.sort_values('新闻时间')
 
-                # 提取情感分数列（如果有）
-                if '情感分数' not in news_data.columns:
-                    # 如果没有情感分数列，使用新闻数量作为情感强度的代理
-                    news_data = news_data.copy()
-                    news_data['情感分数'] = 1  # 每条新闻给1分
-                else:
-                    # 使用现有的情感分数列
-                    news_data = news_data.copy()
-
                 # 转换日期格式
                 news_data['新闻时间'] = pd.to_datetime(news_data['新闻时间'])
 
-                # 按日期聚合情感分数
-                sentiment_by_date = news_data.groupby('新闻时间')['情感分数'].sum()
+                # 提取情感分数列（如果有）
+                if '情感分数' in news_data.columns:
+                    # 使用真实的情感分数（大模型分析）
+                    news_data = news_data.copy()
 
-                # 计算移动平均
-                sentiment_ma3 = sentiment_by_date.rolling(window=3, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
-                sentiment_ma7 = sentiment_by_date.rolling(window=7, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
-                sentiment_ma14 = sentiment_by_date.rolling(window=14, min_periods=1).mean().iloc[-1] if len(sentiment_by_date) >= 1 else np.nan
+                    # 过滤掉没有情感分数的记录
+                    news_data = news_data[news_data['情感分数'].notna()]
 
-                # 计算波动率（标准差）
-                sentiment_volatility = sentiment_by_date.rolling(window=14, min_periods=1).std().iloc[-1] if len(sentiment_by_date) >= 2 else np.nan
+                    if news_data.empty:
+                        # 如果没有情感分数，返回NaN
+                        return {
+                            'sentiment_ma3': np.nan,
+                            'sentiment_ma7': np.nan,
+                            'sentiment_ma14': np.nan,
+                            'sentiment_volatility': np.nan,
+                            'sentiment_change_rate': np.nan
+                        }
+                else:
+                    # 如果没有情感分数列，返回NaN（不再使用新闻数量作为代理）
+                    return {
+                        'sentiment_ma3': np.nan,
+                        'sentiment_ma7': np.nan,
+                        'sentiment_ma14': np.nan,
+                        'sentiment_volatility': np.nan,
+                        'sentiment_change_rate': np.nan
+                    }
 
-                # 计算变化率
-                if len(sentiment_by_date) >= 2:
+                # 按日期聚合情感分数（使用平均值，避免过度放大单日情绪）
+                sentiment_by_date = news_data.groupby('新闻时间')['情感分数'].mean()
+
+                # 获取实际数据天数
+                actual_days = len(sentiment_by_date)
+
+                # 动态调整移动平均窗口
+                # MA3：至少需要1天数据
+                window_ma3 = min(3, actual_days)
+                sentiment_ma3 = sentiment_by_date.rolling(window=window_ma3, min_periods=1).mean().iloc[-1]
+
+                # MA7：如果数据不足7天，使用实际天数
+                window_ma7 = min(7, actual_days)
+                sentiment_ma7 = sentiment_by_date.rolling(window=window_ma7, min_periods=1).mean().iloc[-1]
+
+                # MA14：如果数据不足14天，使用实际天数
+                window_ma14 = min(14, actual_days)
+                sentiment_ma14 = sentiment_by_date.rolling(window=window_ma14, min_periods=1).mean().iloc[-1]
+
+                # 波动率：至少需要2天数据
+                window_volatility = min(14, actual_days)
+                sentiment_volatility = sentiment_by_date.rolling(window=window_volatility, min_periods=2).std().iloc[-1] if actual_days >= 2 else np.nan
+
+                # 变化率：至少需要2天数据
+                if actual_days >= 2:
                     latest_sentiment = sentiment_by_date.iloc[-1]
                     prev_sentiment = sentiment_by_date.iloc[-2]
                     sentiment_change_rate = (latest_sentiment - prev_sentiment) / abs(prev_sentiment) if prev_sentiment != 0 else np.nan
                 else:
                     sentiment_change_rate = np.nan
 
-                return {
+                # 添加数据天数警告（如果数据不足）
+                result = {
                     'sentiment_ma3': sentiment_ma3,
                     'sentiment_ma7': sentiment_ma7,
                     'sentiment_ma14': sentiment_ma14,
                     'sentiment_volatility': sentiment_volatility,
                     'sentiment_change_rate': sentiment_change_rate
                 }
+
+                # 记录数据天数（用于调试）
+                result['_sentiment_days'] = actual_days
+
+                return result
             except Exception as e:
                 print(f"⚠️ 计算情感指标失败: {e}")
                 return {
@@ -2471,7 +2507,9 @@ def analyze_stock(code, name, run_date=None):
         try:
             news_file_path = "data/all_stock_news_records.csv"
             if os.path.exists(news_file_path):
+                # 读取新闻数据（情感分析已在batch_stock_news_fetcher.py中完成）
                 news_df = pd.read_csv(news_file_path)
+
                 stock_news = news_df[news_df['股票代码'] == code]
                 if not stock_news.empty:
                     sentiment_features = calculate_sentiment_features(stock_news)
@@ -2994,7 +3032,7 @@ def main(run_date=None, investor_type='conservative'):
             # 核心技术指标（重要）
             'rsi', 'macd', 'volume_ratio', 'atr', 'cmf', 'bb_oversold_overbought',
             # 情感指标（技术指标协同的一部分）
-            'sentiment_ma3', 'sentiment_ma7', 'sentiment_ma14', 'sentiment_volatility', 'sentiment_change_rate',
+            'sentiment_ma3', 'sentiment_ma7', 'sentiment_ma14', 'sentiment_volatility', 'sentiment_change_rate', 'sentiment_days',
             # 基本面（重要）
             'fundamental_score', 'pe_ratio', 'pb_ratio',
             # 相对强度（重要）
@@ -3058,7 +3096,7 @@ def main(run_date=None, investor_type='conservative'):
             # 核心技术指标（重要）
             'RSI', 'MACD', '成交量比率', 'ATR', 'CMF', '布林带超卖/超买',
             # 情感指标（技术指标协同的一部分）
-            '情感MA3', '情感MA7', '情感MA14', '情感波动率', '情感变化率(%)',
+            '情感MA3', '情感MA7', '情感MA14', '情感波动率', '情感变化率(%)', '情感数据天数',
             # 基本面（重要）
             '基本面评分', '市盈率', '市净率',
             # 相对强度（重要）
@@ -3894,9 +3932,23 @@ def main(run_date=None, investor_type='conservative'):
                 </ul>
               </li>
               
+              <li><b>情感数据天数</b>：
+                <ul>
+                  <li>含义：情感指标基于的新闻天数</li>
+                  <li>评估方法：
+                    <ul>
+                      <li>数据天数 ≥ 14天：情感指标参考价值高（MA3/MA7/MA14都准确）</li>
+                      <li>数据天数 7-13天：情感指标参考价值中等（MA3/MA7准确，MA14基于实际天数）</li>
+                      <li>数据天数 3-6天：情感指标参考价值较低（只有MA3准确，MA7/MA14基于实际天数）</li>
+                      <li>数据天数 < 3天：情感指标参考价值很低，建议谨慎参考</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              
               <li><b>情感MA3</b>：
                 <ul>
-                  <li>计算：情感指标的3日移动平均</li>
+                  <li>计算：情感指标的3日移动平均（如果数据不足3天，使用实际天数）</li>
                   <li>含义：反映短期市场情绪趋势</li>
                   <li>评估方法：
                     <ul>
@@ -3909,7 +3961,7 @@ def main(run_date=None, investor_type='conservative'):
               
               <li><b>情感MA7</b>：
                 <ul>
-                  <li>计算：情感指标的7日移动平均</li>
+                  <li>计算：情感指标的7日移动平均（如果数据不足7天，使用实际天数）</li>
                   <li>含义：反映中期市场情绪趋势</li>
                   <li>评估方法：
                     <ul>
@@ -3922,7 +3974,7 @@ def main(run_date=None, investor_type='conservative'):
               
               <li><b>情感MA14</b>：
                 <ul>
-                  <li>计算：情感指标的14日移动平均</li>
+                  <li>计算：情感指标的14日移动平均（如果数据不足14天，使用实际天数）</li>
                   <li>含义：反映长期市场情绪趋势</li>
                   <li>评估方法：
                     <ul>
