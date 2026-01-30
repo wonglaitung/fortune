@@ -1694,7 +1694,8 @@ def analyze_stock(code, name, run_date=None):
                     'sentiment_ma7': np.nan,
                     'sentiment_ma14': np.nan,
                     'sentiment_volatility': np.nan,
-                    'sentiment_change_rate': np.nan
+                    'sentiment_change_rate': np.nan,
+                    'sentiment_days': 0  # 无数据
                 }
 
             try:
@@ -1719,7 +1720,8 @@ def analyze_stock(code, name, run_date=None):
                             'sentiment_ma7': np.nan,
                             'sentiment_ma14': np.nan,
                             'sentiment_volatility': np.nan,
-                            'sentiment_change_rate': np.nan
+                            'sentiment_change_rate': np.nan,
+                            'sentiment_days': 0  # 无情感分数数据
                         }
                 else:
                     # 如果没有情感分数列，返回NaN（不再使用新闻数量作为代理）
@@ -1728,7 +1730,8 @@ def analyze_stock(code, name, run_date=None):
                         'sentiment_ma7': np.nan,
                         'sentiment_ma14': np.nan,
                         'sentiment_volatility': np.nan,
-                        'sentiment_change_rate': np.nan
+                        'sentiment_change_rate': np.nan,
+                        'sentiment_days': 0  # 无情感分数列
                     }
 
                 # 按日期聚合情感分数（使用平均值，避免过度放大单日情绪）
@@ -1762,17 +1765,15 @@ def analyze_stock(code, name, run_date=None):
                 else:
                     sentiment_change_rate = np.nan
 
-                # 添加数据天数警告（如果数据不足）
+                # 添加数据天数（用于显示实际使用的情感数据天数）
                 result = {
                     'sentiment_ma3': sentiment_ma3,
                     'sentiment_ma7': sentiment_ma7,
                     'sentiment_ma14': sentiment_ma14,
                     'sentiment_volatility': sentiment_volatility,
-                    'sentiment_change_rate': sentiment_change_rate
+                    'sentiment_change_rate': sentiment_change_rate,
+                    'sentiment_days': actual_days  # 添加实际数据天数
                 }
-
-                # 记录数据天数（用于调试）
-                result['_sentiment_days'] = actual_days
 
                 return result
             except Exception as e:
@@ -2523,6 +2524,7 @@ def analyze_stock(code, name, run_date=None):
                     main_hist['sentiment_ma14'] = sentiment_features.get('sentiment_ma14', np.nan)
                     main_hist['sentiment_volatility'] = sentiment_features.get('sentiment_volatility', np.nan)
                     main_hist['sentiment_change_rate'] = sentiment_features.get('sentiment_change_rate', np.nan)
+                    main_hist['sentiment_days'] = sentiment_features.get('sentiment_days', 0)
                 else:
                     # 如果没有新闻数据，设置情感指标为NaN
                     main_hist['sentiment_ma3'] = np.nan
@@ -2530,6 +2532,7 @@ def analyze_stock(code, name, run_date=None):
                     main_hist['sentiment_ma14'] = np.nan
                     main_hist['sentiment_volatility'] = np.nan
                     main_hist['sentiment_change_rate'] = np.nan
+                    main_hist['sentiment_days'] = 0  # 无新闻数据
             else:
                 # 如果新闻文件不存在，设置情感指标为NaN
                 main_hist['sentiment_ma3'] = np.nan
@@ -2537,6 +2540,7 @@ def analyze_stock(code, name, run_date=None):
                 main_hist['sentiment_ma14'] = np.nan
                 main_hist['sentiment_volatility'] = np.nan
                 main_hist['sentiment_change_rate'] = np.nan
+                main_hist['sentiment_days'] = 0  # 新闻文件不存在
         except Exception as e:
             print(f"  ⚠️ 计算情感指标失败: {e}")
             main_hist['sentiment_ma3'] = np.nan
@@ -2544,6 +2548,7 @@ def analyze_stock(code, name, run_date=None):
             main_hist['sentiment_ma14'] = np.nan
             main_hist['sentiment_volatility'] = np.nan
             main_hist['sentiment_change_rate'] = np.nan
+            main_hist['sentiment_days'] = 0  # 异常情况
 
         # 计算涨跌幅（使用已定义的 last_close 和 prev_close）
         change_pct = ((last_close / prev_close) - 1) * 100 if prev_close is not None and prev_close != 0 else None
@@ -2720,6 +2725,7 @@ def analyze_stock(code, name, run_date=None):
             'sentiment_ma14': safe_round(sentiment_features.get('sentiment_ma14', 0), 2) if pd.notna(sentiment_features.get('sentiment_ma14')) else None,
             'sentiment_volatility': safe_round(sentiment_features.get('sentiment_volatility', 0), 2) if pd.notna(sentiment_features.get('sentiment_volatility')) else None,
             'sentiment_change_rate': safe_round(sentiment_features.get('sentiment_change_rate', 0) * 100, 2) if pd.notna(sentiment_features.get('sentiment_change_rate')) else None,  # 百分比
+            'sentiment_days': sentiment_features.get('sentiment_days', 0),  # 实际使用的情感数据天数
             # 系统性崩盘风险评分（新增）
             'crash_risk_score': safe_round(crash_risk_score, 1) if crash_risk_score is not None else None,
             'crash_risk_level': crash_risk_level,
