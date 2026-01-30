@@ -213,23 +213,24 @@ class FeatureEngineer:
         return df
 
     def create_fundamental_features(self, code):
-        """创建基本面特征"""
+        """创建基本面特征（只使用实际可用的数据）"""
         try:
             # 移除代码中的.HK后缀
             stock_code = code.replace('.HK', '')
-            
+
             fundamental_data = get_comprehensive_fundamental_data(stock_code)
-            if fundamental_data and 'financial_indicator' in fundamental_data:
-                fi = fundamental_data['financial_indicator']
+            if fundamental_data:
+                # 只使用实际可用的基本面数据
                 return {
-                    'PE': fi.get('市盈率', np.nan),
-                    'PB': fi.get('市净率', np.nan),
-                    'ROE': fi.get('净资产收益率', np.nan) / 100 if fi.get('净资产收益率') else np.nan,
-                    'ROA': fi.get('总资产收益率', np.nan) / 100 if fi.get('总资产收益率') else np.nan,
-                    'Dividend_Yield': fi.get('股息率', np.nan) / 100 if fi.get('股息率') else np.nan,
-                    'EPS': fi.get('每股收益', np.nan),
-                    'Net_Margin': fi.get('净利率', np.nan) / 100 if fi.get('净利率') else np.nan,
-                    'Gross_Margin': fi.get('毛利率', np.nan) / 100 if fi.get('毛利率') else np.nan
+                    'PE': fundamental_data.get('fi_pe_ratio', np.nan),
+                    'PB': fundamental_data.get('fi_pb_ratio', np.nan),
+                    'Market_Cap': fundamental_data.get('fi_market_cap', np.nan),
+                    'ROE': np.nan,  # 暂不可用
+                    'ROA': np.nan,  # 暂不可用
+                    'Dividend_Yield': np.nan,  # 暂不可用
+                    'EPS': np.nan,  # 暂不可用
+                    'Net_Margin': np.nan,  # 暂不可用
+                    'Gross_Margin': np.nan  # 暂不可用
                 }
         except Exception as e:
             print(f"获取基本面数据失败 {code}: {e}")
@@ -530,6 +531,215 @@ class FeatureEngineer:
 
         return df
 
+    def create_technical_fundamental_interactions(self, df):
+        """创建技术指标与基本面的交互特征
+
+        根据业界最佳实践，技术指标与基本面的交互能够捕捉非线性关系，
+        提高模型预测准确率。参考：arXiv 2025论文、量化交易最佳实践。
+
+        交互特征列表：
+        1. RSI × PE：超卖+低估=强力买入，超买+高估=强力卖出
+        2. RSI × PB：超卖+低估值=价值机会
+        3. MACD × ROE：趋势向上+高盈利能力=强劲增长
+        4. MACD_Hist × ROE：动能增强+盈利能力强=加速上涨
+        5. BB_Position × Dividend_Yield：下轨附近+高股息=防守价值
+        6. Price_Pct_20d × PE：低位+低估=超跌反弹
+        7. Price_Pct_20d × PB：低位+低估值=价值修复
+        8. Price_Pct_20d × ROE：低位+高盈利=错杀机会
+        9. ATR × PE：高波动+低估=高风险高回报
+        10. ATR × ROE：高波动+高盈利=成长潜力
+        11. Vol_Ratio × PE：放量+低估=资金流入价值股
+        12. OBV_Slope × ROE：资金流入+高盈利=基本面驱动上涨
+        13. CMF × Dividend_Yield：资金流入+高股息=防御性买入
+        14. Return_5d × PE：短期上涨+低估值=可持续上涨
+        15. Return_5d × ROE：短期上涨+高盈利=盈利确认
+        """
+        if df.empty:
+            return df
+
+        # 基本面特征列表（只使用实际可用的）
+        fundamental_features = ['PE', 'PB']  # 目前只支持PE和PB
+
+        # 技术指标特征列表（使用实际存在的列名）
+        technical_features = ['RSI', 'RSI_ROC', 'MACD', 'MACD_Hist', 'MACD_Hist_ROC',
+                             'BB_Position', 'ATR', 'Vol_Ratio', 'CMF',
+                             'Return_5d', 'Price_Pct_20d', 'Momentum_5d']
+
+        # 预定义的高价值交互组合（基于业界实践，只使用实际可用的基本面特征）
+        high_value_interactions = [
+            # 超买超卖与估值的交互
+            ('RSI', 'PE'),           # RSI × PE
+            ('RSI', 'PB'),           # RSI × PB
+            # 趋势与估值的交互
+            ('MACD', 'PE'),         # MACD × PE
+            ('MACD', 'PB'),         # MACD × PB
+            ('MACD_Hist', 'PE'),    # MACD柱状图 × PE
+            ('MACD_Hist', 'PB'),    # MACD柱状图 × PB
+            # 位置与估值的交互
+            ('Price_Pct_20d', 'PE'), # 价格位置 × PE
+            ('Price_Pct_20d', 'PB'), # 价格位置 × PB
+            # 波动与估值的交互
+            ('ATR', 'PE'),           # ATR × PE
+            ('ATR', 'PB'),           # ATR × PB
+            # 成交量与估值的交互
+            ('Vol_Ratio', 'PE'),     # 成交量比率 × PE
+            ('Vol_Ratio', 'PB'),     # 成交量比率 × PB
+            # 资金流与估值的交互
+            ('CMF', 'PE'),           # CMF × PE
+            ('CMF', 'PB'),           # CMF × PB
+            # 收益与估值的交互
+            ('Return_5d', 'PE'),     # 5日收益 × PE
+            ('Return_5d', 'PB'),     # 5日收益 × PB
+            # 动量与估值的交互
+            ('Momentum_5d', 'PE'),   # 5日动量 × PE
+            ('Momentum_5d', 'PB'),   # 5日动量 × PB
+        ]
+
+        print(f"🔗 生成技术指标与基本面交互特征...")
+
+        interaction_count = 0
+        for tech_feat, fund_feat in high_value_interactions:
+            if tech_feat in df.columns and fund_feat in df.columns:
+                # 交互特征命名：技术_基本面
+                interaction_name = f"{tech_feat}_{fund_feat}"
+                df[interaction_name] = df[tech_feat] * df[fund_feat]
+                interaction_count += 1
+
+        print(f"✅ 成功生成 {interaction_count} 个技术指标与基本面交互特征")
+
+        # 删除所有值全为NaN的交互特征（基本面数据不可用导致的）
+        interaction_cols = [col for col in df.columns if any(sub in col for sub in ['_PE', '_PB', '_ROE', '_ROA', '_Dividend_Yield', '_EPS', '_Net_Margin', '_Gross_Margin'])]
+        cols_to_drop = [col for col in interaction_cols if df[col].isnull().all()]
+        if cols_to_drop:
+            df = df.drop(columns=cols_to_drop)
+            print(f"🗑️  删除 {len(cols_to_drop)} 个全为NaN的交互特征")
+
+        return df
+
+    def create_sentiment_features(self, code, df):
+        """创建情感指标特征（参考 hk_smart_money_tracker.py）
+
+        从新闻数据中计算情感趋势特征：
+        - sentiment_ma3: 3日情感移动平均（短期情绪）
+        - sentiment_ma7: 7日情感移动平均（中期情绪）
+        - sentiment_ma14: 14日情感移动平均（长期情绪）
+        - sentiment_volatility: 情感波动率（情绪稳定性）
+        - sentiment_change_rate: 情感变化率（情绪变化方向）
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（日期索引）
+
+        Returns:
+            dict: 包含情感特征的字典
+        """
+        try:
+            # 读取新闻数据
+            news_file_path = 'data/all_stock_news_records.csv'
+            if not os.path.exists(news_file_path):
+                # 没有新闻文件，返回默认值
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            news_df = pd.read_csv(news_file_path)
+            if news_df.empty:
+                # 新闻文件为空，返回默认值
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 筛选该股票的新闻
+            stock_news = news_df[news_df['股票代码'] == code].copy()
+            if stock_news.empty:
+                # 该股票没有新闻，返回默认值
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 转换日期格式
+            stock_news['新闻时间'] = pd.to_datetime(stock_news['新闻时间'])
+
+            # 只使用已分析情感分数的新闻
+            stock_news = stock_news[stock_news['情感分数'].notna()].copy()
+            if stock_news.empty:
+                # 没有情感分数数据，返回默认值
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 确保按日期排序
+            stock_news = stock_news.sort_values('新闻时间')
+
+            # 按日期聚合情感分数（使用平均值）
+            sentiment_by_date = stock_news.groupby('新闻时间')['情感分数'].mean()
+
+            # 获取实际数据天数
+            actual_days = len(sentiment_by_date)
+
+            # 动态调整移动平均窗口
+            window_ma3 = min(3, actual_days)
+            window_ma7 = min(7, actual_days)
+            window_ma14 = min(14, actual_days)
+            window_volatility = min(14, actual_days)
+
+            # 计算移动平均
+            sentiment_ma3 = sentiment_by_date.rolling(window=window_ma3, min_periods=1).mean().iloc[-1]
+            sentiment_ma7 = sentiment_by_date.rolling(window=window_ma7, min_periods=1).mean().iloc[-1]
+            sentiment_ma14 = sentiment_by_date.rolling(window=window_ma14, min_periods=1).mean().iloc[-1]
+
+            # 计算波动率
+            sentiment_volatility = sentiment_by_date.rolling(window=window_volatility, min_periods=2).std().iloc[-1] if actual_days >= 2 else np.nan
+
+            # 计算变化率
+            if actual_days >= 2:
+                latest_sentiment = sentiment_by_date.iloc[-1]
+                prev_sentiment = sentiment_by_date.iloc[-2]
+                sentiment_change_rate = (latest_sentiment - prev_sentiment) / abs(prev_sentiment) if prev_sentiment != 0 else np.nan
+            else:
+                sentiment_change_rate = np.nan
+
+            return {
+                'sentiment_ma3': sentiment_ma3,
+                'sentiment_ma7': sentiment_ma7,
+                'sentiment_ma14': sentiment_ma14,
+                'sentiment_volatility': sentiment_volatility,
+                'sentiment_change_rate': sentiment_change_rate,
+                'sentiment_days': actual_days
+            }
+
+        except Exception as e:
+            print(f"⚠️ 计算情感特征失败 {code}: {e}")
+            # 异常情况返回默认值
+            return {
+                'sentiment_ma3': 0.0,
+                'sentiment_ma7': 0.0,
+                'sentiment_ma14': 0.0,
+                'sentiment_volatility': 0.0,
+                'sentiment_change_rate': 0.0,
+                'sentiment_days': 0
+            }
+
     def create_interaction_features(self, df):
         """创建所有可能的交叉特征（类别型 × 数值型）
 
@@ -655,6 +865,11 @@ class MLTradingModel:
                 for key, value in stock_type_features.items():
                     stock_df[key] = value
 
+                # 添加情感特征
+                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
                 # 添加股票代码
                 stock_df['Code'] = code
 
@@ -672,6 +887,10 @@ class MLTradingModel:
 
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
+
+        # 生成技术指标与基本面交互特征（先执行，因为这是高价值特征）
+        print("\n🔗 生成技术指标与基本面交互特征...")
+        df = self.feature_engineer.create_technical_fundamental_interactions(df)
 
         # 生成交叉特征（类别型 × 数值型）
         print("\n🔗 生成交叉特征...")
@@ -702,6 +921,12 @@ class MLTradingModel:
         """
         print("准备训练数据...")
         df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
+
+        # 先删除全为NaN的列（避免dropna删除所有行）
+        cols_all_nan = df.columns[df.isnull().all()].tolist()
+        if cols_all_nan:
+            print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
+            df = df.drop(columns=cols_all_nan)
 
         # 删除包含NaN的行
         df = df.dropna()
@@ -1028,6 +1253,11 @@ class GBDTLRModel:
                 for key, value in stock_type_features.items():
                     stock_df[key] = value
 
+                # 添加情感特征
+                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
                 # 添加股票代码
                 stock_df['Code'] = code
 
@@ -1080,6 +1310,12 @@ class GBDTLRModel:
         # 准备数据
         print("📊 准备训练数据...")
         df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
+
+        # 先删除全为NaN的列（避免dropna删除所有行）
+        cols_all_nan = df.columns[df.isnull().all()].tolist()
+        if cols_all_nan:
+            print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
+            df = df.drop(columns=cols_all_nan)
 
         # 删除包含NaN的行
         df = df.dropna()
