@@ -2432,6 +2432,10 @@ def analyze_stock(code, name, run_date=None):
             print(f"  ℹ️ {code} 换手率计算: 成交量={main_hist['Volume'].iloc[-1]}, 已发行股本={float_shares}, 换手率={turnover_rate:.4f}%")
 
         # ===== 新增：ML模型关键指标计算 =====
+        # 先定义 last_close 和 prev_close（后续多处使用）
+        last_close = main_hist['Close'].iloc[-1] if len(main_hist) > 0 else None
+        prev_close = main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None
+        
         # 成交额变化率（反映资金流入流出的直接度量）
         full_hist['Turnover_Change_1d'] = full_hist['Turnover'].pct_change()
         full_hist['Turnover_Change_5d'] = full_hist['Turnover'].pct_change(5)
@@ -2541,9 +2545,7 @@ def analyze_stock(code, name, run_date=None):
             main_hist['sentiment_volatility'] = np.nan
             main_hist['sentiment_change_rate'] = np.nan
 
-        # 返回结构（保留原始数值：RS 为小数，RS_diff 小数；展示时再乘100）
-        last_close = main_hist['Close'].iloc[-1]
-        prev_close = main_hist['Close'].iloc[-2] if len(main_hist) >= 2 else None
+        # 计算涨跌幅（使用已定义的 last_close 和 prev_close）
         change_pct = ((last_close / prev_close) - 1) * 100 if prev_close is not None and prev_close != 0 else None
 
         # 计算放量上涨和缩量回调信号
