@@ -4,6 +4,7 @@
 批量获取自选股新闻脚本
 作者：AI 助手
 日期：2025-10-25
+更新：集成情感分析功能
 """
 
 import yfinance as yf
@@ -13,11 +14,15 @@ import csv
 import time
 import argparse
 import schedule
+import pandas as pd
 
 # 导入hk_smart_money_tracker.py中的WATCHLIST
 import sys
 sys.path.append('/data/fortune')
 from hk_smart_money_tracker import WATCHLIST
+
+# 导入情感分析模块
+from llm_services.sentiment_analyzer import batch_analyze_sentiment, get_sentiment_statistics
 
 
 
@@ -95,8 +100,13 @@ def get_stock_news(symbol, stock_name="", size=3):
 
 
 
-def fetch_all_stock_news():
-    """获取watch list中所有股票的新闻"""
+def fetch_all_stock_news(analyze_sentiment=True):
+    """
+    获取watch list中所有股票的新闻
+    
+    Args:
+        analyze_sentiment (bool): 是否执行情感分析（默认True）
+    """
     print("=" * 60)
     print("📈 批量获取自选股新闻")
     print(f"📅 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -148,20 +158,43 @@ def fetch_all_stock_news():
         # CSV文件路径
         csv_file = os.path.join(data_dir, "all_stock_news_records.csv")
         
-        with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            # 写入表头
-            writer.writerow(["股票名称", "股票代码", "新闻时间", "新闻标题", "简要内容", "查询时间"])
-            # 写入数据
-            for news in all_news_data:
-                writer.writerow([
-                    news["stock_name"],
-                    news["stock_code"],
-                    news["publishedAt"],
-                    news["title"],
-                    news["summary"],
-                    news["query_time"]
-                ])
+        # 使用pandas保存数据（支持情感分析列）
+        df = pd.DataFrame(all_news_data)
+        df.columns = ["股票名称", "股票代码", "新闻时间", "新闻标题", "简要内容", "查询时间"]
+        
+        # 检查是否存在旧数据，如果存在则合并
+        if os.path.exists(csv_file):
+            try:
+                old_df = pd.read_csv(csv_file)
+                # 合并新旧数据
+                merged_df = pd.concat([old_df, df], ignore_index=True)
+                
+                # 去重逻辑：保留有情感分数的记录
+                # 如果新旧数据中有相同新闻，优先保留已有情感分数的记录
+                def keep_best_record(group):
+                    # 按情感分数是否为空排序，有情感分数的优先
+                    group = group.sort_values(
+                        by=['情感分数'],
+                        na_position='last'  # 情感分数为空的排在最后
+                    )
+                    # 返回第一条（有情感分数的）
+                    return group.iloc[[0]]
+                
+                # 按股票代码、新闻时间、新闻标题分组，每组保留最好的记录
+                merged_df = merged_df.groupby(
+                    ['股票代码', '新闻时间', '新闻标题'],
+                    as_index=False
+                ).apply(keep_best_record).reset_index(drop=True)
+                
+                # 按时间排序
+                merged_df['新闻时间'] = pd.to_datetime(merged_df['新闻时间'])
+                merged_df = merged_df.sort_values('新闻时间', ascending=False)
+                df = merged_df
+            except Exception as e:
+                print(f"⚠️ 合并旧数据失败: {e}，使用新数据")
+        
+        # 保存数据
+        df.to_csv(csv_file, index=False, encoding='utf-8-sig')
         
         print(f"\n✅ 所有新闻数据已保存到 {csv_file}")
         
@@ -169,6 +202,31 @@ def fetch_all_stock_news():
         print("\n📋 新闻汇总:")
         for news in all_news_data:
             print(f"  • {news['stock_name']} ({news['stock_code']}) | {news['title']}")
+        
+        # 执行情感分析
+        if analyze_sentiment:
+            print("\n🤖 开始执行情感分析...")
+            try:
+                # 只分析最近3天的新闻
+                df = batch_analyze_sentiment(df, days_limit=3)
+                
+                # 显示统计信息
+                stats = get_sentiment_statistics(df)
+                print(f"\n📊 情感分析统计:")
+                print(f"  总新闻数: {stats['total']}")
+                print(f"  已分析: {stats['analyzed']}")
+                print(f"  未分析: {stats['unanalyzed']}")
+                if stats['analyzed'] > 0:
+                    print(f"  平均情感分数: {stats['sentiment_score_mean']:.2f}")
+                    print(f"  正面新闻: {stats['positive_count']}")
+                    print(f"  负面新闻: {stats['negative_count']}")
+                    print(f"  中性新闻: {stats['neutral_count']}")
+                
+                print("\n✅ 情感分析完成")
+            except Exception as e:
+                print(f"⚠️ 情感分析失败: {e}")
+                print("💡 提示：请检查 QWEN_API_KEY 环境变量是否设置")
+        
     else:
         print("\n❌ 未获取到任何新闻数据")
         
@@ -194,6 +252,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='批量获取自选股新闻')
     parser.add_argument('--schedule', '-s', action='store_true', 
                         help='启用定时任务模式（默认：单次运行）')
+    parser.add_argument('--no-sentiment', action='store_true',
+                        help='跳过情感分析（默认：执行情感分析）')
     
     # 解析参数
     args = parser.parse_args()
@@ -203,4 +263,5 @@ if __name__ == "__main__":
         run_scheduler()
     else:
         # 单次运行模式
-        fetch_all_stock_news()
+        analyze_sentiment = not args.no_sentiment
+        fetch_all_stock_news(analyze_sentiment=analyze_sentiment)
