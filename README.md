@@ -1256,11 +1256,11 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 参考 GitHub 上的优秀港股机器学习项目（`crownpku/hk_ipo_prediction`、`hengruiyun/AI-Stock-Master`、`zvtvz/zvt`、`jasperyeoh/Hybrid-Topic-LLM`），计划实现以下特征工程优化：
 
 #### 新特征开发
-- [ ] **情感趋势特征**：实现情感指标的移动平均（MA3、MA7、MA14）、波动率、变化率
+- [x] **情感趋势特征**：✅ 已实现情感指标的移动平均（MA3、MA7、MA14）、波动率、变化率
 - [ ] **主题分布特征**：使用LDA对新闻进行主题建模（10个主题），将主题分布作为特征输入
 - [ ] **交互特征**：创建主题与情感的交互特征（10个主题×情感分数）、技术指标与基本面的交互
 - [ ] **预期差距特征**：计算新闻相对于市场预期的差距，区分"预期内"和"超预期"新闻
-- [ ] **多维度情感分析**：实现类似 `jasperyeoh/Hybrid-Topic-LLM` 的四维情感评分（Relevance/Impact/Expectation_Gap/Sentiment）
+- [x] **多维度情感分析**：✅ 已实现四维情感评分（Relevance/Impact/Expectation_Gap/Sentiment），参考 `jasperyeoh/Hybrid-Topic-LLM`（`llm_services/sentiment_analyzer.py`）
 - [ ] **技术动量特征**：实现 `hengruiyun/AI-Stock-Master` 的TMA算法特征（趋势斜率、一致性、置信度、成交量因子）
 
 #### 特征工程优化
