@@ -98,7 +98,7 @@
 | 功能 | 脚本 | 说明 |
 |------|------|------|
 | 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析 |
-| 板块分析 | `hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析 |
+| 板块分析 | `data_services/hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析 |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
@@ -120,9 +120,9 @@
 
 | 功能 | 脚本 | 说明 |
 |------|------|------|
-| 批量新闻获取 | `batch_stock_news_fetcher.py` | 自选股新闻 |
-| 基本面数据 | `fundamental_data.py` | 财务指标、利润表等 |
-| 技术分析工具 | `technical_analysis.py` | 通用技术指标计算，含中期分析指标系统 |
+| 批量新闻获取 | `data_services/batch_stock_news_fetcher.py` | 自选股新闻 |
+| 基本面数据 | `data_services/fundamental_data.py` | 财务指标、利润表等 |
+| 技术分析工具 | `data_services/technical_analysis.py` | 通用技术指标计算，含中期分析指标系统 |
 | 美股市场数据 | `ml_services/us_market_data.py` | 标普500、纳斯达克、VIX、美国国债收益率 |
 
 ---
@@ -175,7 +175,7 @@ python crypto_email.py
 python hk_smart_money_tracker.py
 
 # 板块分析
-python hk_sector_analysis.py
+python data_services/hk_sector_analysis.py
 
 # 启动模拟交易
 python simulation_trader.py
@@ -250,22 +250,22 @@ python hk_smart_money_tracker.py --investor-type conservative # 保守型
 **使用方法**：
 ```bash
 # 生成完整板块分析报告（默认1日涨跌幅）
-python hk_sector_analysis.py
+python data_services/hk_sector_analysis.py
 
 # 指定分析周期
-python hk_sector_analysis.py --period 5
+python data_services/hk_sector_analysis.py --period 5
 
 # 分析指定板块
-python hk_sector_analysis.py --sector bank
+python data_services/hk_sector_analysis.py --sector bank
 
 # 识别板块龙头
-python hk_sector_analysis.py --leaders bank
+python data_services/hk_sector_analysis.py --leaders bank
 
 # 分析板块资金流向
-python hk_sector_analysis.py --flow bank
+python data_services/hk_sector_analysis.py --flow bank
 
 # 分析板块趋势
-python hk_sector_analysis.py --trend bank
+python data_services/hk_sector_analysis.py --trend bank
 ```
 
 **板块列表**：
@@ -663,18 +663,22 @@ ENABLE_ALL_ANALYSIS_STYLES = False
 fortune/
 ├── 📄 核心脚本
 │   ├── ai_trading_analyzer.py          # AI 交易分析器
-│   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
 │   ├── crypto_email.py                 # 加密货币监控器
-│   ├── fundamental_data.py             # 基本面数据获取器
 │   ├── gold_analyzer.py                # 黄金市场分析器
 │   ├── hk_ipo_aastocks.py              # IPO 信息获取器
-│   ├── hk_sector_analysis.py           # 板块分析器
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪器
 │   ├── hsi_email.py                    # 恒生指数价格监控器
 │   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
 │   ├── simulation_trader.py            # 模拟交易系统
-│   ├── technical_analysis.py           # 通用技术分析工具
-│   └── tencent_finance.py              # 腾讯财经接口
+│
+├── 📊 数据服务模块
+│   └── data_services/
+│       ├── __init__.py                 # 模块初始化
+│       ├── batch_stock_news_fetcher.py # 批量新闻获取器
+│       ├── fundamental_data.py         # 基本面数据获取器
+│       ├── hk_sector_analysis.py       # 板块分析器
+│       ├── technical_analysis.py       # 通用技术分析工具
+│       └── tencent_finance.py          # 腾讯财经接口
 │
 ├── 🔧 配置和脚本
 │   ├── send_alert.sh                   # 本地定时执行脚本
@@ -757,8 +761,8 @@ fortune/
 │   ├── IPO 数据 (AAStocks)
 │   └── 美股市场数据 (yfinance)
 │
-├── 🔍 分析层
-│   ├── 技术分析 (technical_analysis.py)
+├── 🔍 数据服务层
+│   ├── 技术分析 (data_services/technical_analysis.py)
 │   │   ├── 短期技术指标（RSI、MACD、布林带、ATR等）
 │   │   ├── TAV加权评分系统
 │   │   └── 中期分析指标系统
@@ -768,16 +772,19 @@ fortune/
 │   │       ├── 支撑阻力位识别
 │   │       ├── 相对强弱指标
 │   │       └── 中期趋势评分系统
-│   ├── 主力资金追踪 (hk_smart_money_tracker.py)
-│   ├── 板块分析 (hk_sector_analysis.py)
+│   ├── 新闻过滤 (data_services/batch_stock_news_fetcher.py)
+│   ├── 基本面分析 (data_services/fundamental_data.py)
+│   ├── 板块分析 (data_services/hk_sector_analysis.py)
 │   │   ├── 板块涨跌幅排名
 │   │   ├── 技术趋势分析
 │   │   ├── 龙头识别
 │   │   └── 资金流向分析
+│   └── 腾讯财经接口 (data_services/tencent_finance.py)
+│
+├── 🔍 分析层
+│   ├── 主力资金追踪 (hk_smart_money_tracker.py)
 │   ├── AI 交易分析 (ai_trading_analyzer.py)
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
-│   ├── 新闻过滤 (batch_stock_news_fetcher.py)
-│   ├── 基本面分析 (fundamental_data.py)
 │   ├── 机器学习模块 (ml_services/)
 │   │   ├── 机器学习交易模型 (ml_trading_model.py)
 │   │   │   ├── 特征工程（52个特征，含18个股票类型特征）
@@ -1235,7 +1242,9 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 ## 🎉 最近更新
 
 ### 2026-02-01
-- **新增功能**：实现港股板块分析模块（hk_sector_analysis.py），提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析
+- **新增功能**：实现港股板块分析模块（data_services/hk_sector_analysis.py），提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析
+- **架构重组**：将数据服务模块（batch_stock_news_fetcher.py、fundamental_data.py、hk_sector_analysis.py、technical_analysis.py、tencent_finance.py）移至 data_services/ 目录，提高代码组织性和可维护性
+- **导入更新**：更新所有文件中的导入语句，使用 `from data_services.xxx import` 格式，确保模块导入正确
 - **新增功能**：板块分析模块涵盖13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
 - **新增功能**：在hk_smart_money_tracker.py和hsi_email.py中集成板块分析数据，为大模型分析提供宏观市场背景
 - **提示词重构**：重构hk_smart_money_tracker.py的提示词结构，从混乱的"6层"重构为清晰的"0-5层"分析框架（前置检查→风险控制→核心信号识别→技术面分析→宏观环境→辅助信息）
