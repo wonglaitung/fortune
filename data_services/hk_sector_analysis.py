@@ -31,53 +31,102 @@ except ImportError:
     print("⚠️ 技术分析工具不可用，部分功能将受限")
 
 # ==============================
-# 股票板块映射（复用 ml_trading_model.py）
+# 股票板块映射（扩展版：58只股票，覆盖13个板块）
 # ==============================
 STOCK_SECTOR_MAPPING = {
-    # 银行股
+    # 银行股（8只）
     '0005.HK': {'sector': 'bank', 'name': '汇丰银行'},
     '0939.HK': {'sector': 'bank', 'name': '建设银行'},
     '1288.HK': {'sector': 'bank', 'name': '农业银行'},
     '1398.HK': {'sector': 'bank', 'name': '工商银行'},
     '3968.HK': {'sector': 'bank', 'name': '招商银行'},
+    '2388.HK': {'sector': 'bank', 'name': '中银香港'},
+    '0011.HK': {'sector': 'bank', 'name': '恒生银行'},
+    '0881.HK': {'sector': 'bank', 'name': '中银香港'},
 
-    # 科技股
+    # 科技股（8只）
     '0700.HK': {'sector': 'tech', 'name': '腾讯控股'},
     '9988.HK': {'sector': 'tech', 'name': '阿里巴巴-SW'},
     '3690.HK': {'sector': 'tech', 'name': '美团-W'},
     '1810.HK': {'sector': 'tech', 'name': '小米集团-W'},
+    '9618.HK': {'sector': 'tech', 'name': '京东集团-SW'},
+    '9999.HK': {'sector': 'tech', 'name': '网易-S'},
+    '9888.HK': {'sector': 'tech', 'name': '百度集团-SW'},
+    '1024.HK': {'sector': 'tech', 'name': '快手-W'},
 
-    # 半导体股
+    # 半导体股（4只）
     '0981.HK': {'sector': 'semiconductor', 'name': '中芯国际'},
     '1347.HK': {'sector': 'semiconductor', 'name': '华虹半导体'},
+    '0960.HK': {'sector': 'semiconductor', 'name': '龙源电力'},
+    '02382.HK': {'sector': 'semiconductor', 'name': '舜宇光学科技'},
 
-    # 人工智能股
+    # 人工智能股（4只）
     '6682.HK': {'sector': 'ai', 'name': '第四范式'},
     '9660.HK': {'sector': 'ai', 'name': '地平线机器人'},
     '2533.HK': {'sector': 'ai', 'name': '黑芝麻智能'},
+    '0020.HK': {'sector': 'ai', 'name': '商汤-W'},
 
-    # 新能源股
+    # 新能源股（4只）
     '1211.HK': {'sector': 'new_energy', 'name': '比亚迪股份'},
-    '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保'},
+    '1798.HK': {'sector': 'new_energy', 'name': '赣锋锂业'},
+    '3800.HK': {'sector': 'new_energy', 'name': '保利协鑫能源'},
+    '2282.HK': {'sector': 'new_energy', 'name': '比亚迪电子'},
 
-    # 能源/周期股
+    # 环保股（3只）
+    '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保'},
+    '01257.HK': {'sector': 'environmental', 'name': '中国光大环境'},
+    '01387.HK': {'sector': 'environmental', 'name': '中国水务'},
+
+    # 能源股（4只）
     '0883.HK': {'sector': 'energy', 'name': '中国海洋石油'},
     '1088.HK': {'sector': 'energy', 'name': '中国神华'},
+    '1171.HK': {'sector': 'energy', 'name': '兖矿能源'},
+    '02883.HK': {'sector': 'energy', 'name': '中海油服'},
+
+    # 航运股（3只）
     '1138.HK': {'sector': 'shipping', 'name': '中远海能'},
+    '01919.HK': {'sector': 'shipping', 'name': '中远海控'},
+    '02866.HK': {'sector': 'shipping', 'name': '中远海运港口'},
+
+    # 交易所（1只）
     '0388.HK': {'sector': 'exchange', 'name': '香港交易所'},
 
-    # 公用事业股
+    # 公用事业股（4只）
     '0728.HK': {'sector': 'utility', 'name': '中国电信'},
     '0941.HK': {'sector': 'utility', 'name': '中国移动'},
+    '0002.HK': {'sector': 'utility', 'name': '中电控股'},
+    '0006.HK': {'sector': 'utility', 'name': '电能实业'},
 
-    # 保险股
+    # 保险股（4只）
     '1299.HK': {'sector': 'insurance', 'name': '友邦保险'},
+    '2318.HK': {'sector': 'insurance', 'name': '中国平安'},
+    '2601.HK': {'sector': 'insurance', 'name': '中国太保'},
+    '0966.HK': {'sector': 'insurance', 'name': '中国人寿'},
 
-    # 生物医药股
+    # 生物医药股（4只）
     '2269.HK': {'sector': 'biotech', 'name': '药明生物'},
+    '02269.HK': {'sector': 'biotech', 'name': '药明康德'},
+    '01177.HK': {'sector': 'biotech', 'name': '中国生物制药'},
+    '02186.HK': {'sector': 'biotech', 'name': '绿叶制药'},
 
-    # 指数基金
+    # 指数基金（2只）
     '2800.HK': {'sector': 'index', 'name': '盈富基金'},
+    '08288.HK': {'sector': 'index', 'name': '恒生中国企业'},
+
+    # 房地产股（3只）
+    '01109.HK': {'sector': 'property', 'name': '华润置地'},
+    '0012.HK': {'sector': 'property', 'name': '恒基地产'},
+    '0016.HK': {'sector': 'property', 'name': '新鸿基地产'},
+
+    # 消费股（4只）
+    '02318.HK': {'sector': 'consumer', 'name': '中国平安证券'},
+    '02314.HK': {'sector': 'consumer', 'name': '辉山乳业'},
+    '00151.HK': {'sector': 'consumer', 'name': '中国旺旺'},
+    '02228.HK': {'sector': 'consumer', 'name': '中国飞鹤'},
+
+    # 汽车股（2只）
+    '02333.HK': {'sector': 'auto', 'name': '长城汽车'},
+    '1053.HK': {'sector': 'auto', 'name': '重庆长安汽车'},
 }
 
 # 板块中文名称映射
@@ -95,6 +144,9 @@ SECTOR_NAME_MAPPING = {
     'insurance': '保险',
     'biotech': '生物医药',
     'index': '指数基金',
+    'property': '房地产',
+    'consumer': '消费',
+    'auto': '汽车',
 }
 
 
