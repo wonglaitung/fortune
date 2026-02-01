@@ -20,11 +20,11 @@ import numpy as np
 warnings.filterwarnings('ignore')
 
 # 导入腾讯财经接口
-from tencent_finance import get_hk_stock_data_tencent
+from .tencent_finance import get_hk_stock_data_tencent
 
 # 导入技术分析工具
 try:
-    from technical_analysis import TechnicalAnalyzer
+    from .technical_analysis import TechnicalAnalyzer
     TECHNICAL_AVAILABLE = True
 except ImportError:
     TECHNICAL_AVAILABLE = False

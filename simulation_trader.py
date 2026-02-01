@@ -31,7 +31,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 导入hk_smart_money_tracker模块和腾讯财经接口
 import hk_smart_money_tracker
-from tencent_finance import get_hk_stock_data_tencent
+from data_services.tencent_finance import get_hk_stock_data_tencent
 
 class SimulationTrader:
     def __init__(self, initial_capital=1000000, analysis_frequency=DEFAULT_ANALYSIS_FREQUENCY, investor_type="进取型"):
