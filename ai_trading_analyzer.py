@@ -72,7 +72,7 @@ import os
 import math
 import re
 import time
-from tencent_finance import get_hk_stock_info_tencent
+from data_services.tencent_finance import get_hk_stock_info_tencent
 
 
 class AITradingAnalyzer:
@@ -896,7 +896,7 @@ class AITradingAnalyzer:
             基准收益率（百分比形式，例如5.0表示5%）
         """
         try:
-            from tencent_finance import get_hsi_data
+            from data_services.tencent_finance import get_hsi_data
             
             # 获取恒生指数数据
             hsi_df = get_hsi_data(start_date.strftime('%Y-%m-%d'), 

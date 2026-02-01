@@ -261,10 +261,10 @@ def send_email(to, subject, text, html=None):
     return False
 
 # 导入腾讯财经接口
-from tencent_finance import get_hsi_data_tencent
+from data_services.tencent_finance import get_hsi_data_tencent
 
 # 导入技术分析工具
-from technical_analysis import TechnicalAnalyzer
+from data_services.technical_analysis import TechnicalAnalyzer
 
 # 导入大模型服务
 try:

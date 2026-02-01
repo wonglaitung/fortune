@@ -772,14 +772,14 @@ python technical_analysis.py
 ##### 本地运行
 ```bash
 # 在其他脚本中导入使用
-from fundamental_data import get_comprehensive_fundamental_data
+from data_services.fundamental_data import get_comprehensive_fundamental_data
 
 # 获取综合基本面数据
 data = get_comprehensive_fundamental_data("00700")
 print(data)
 
 # 清除缓存
-from fundamental_data import clear_cache
+from data_services.fundamental_data import clear_cache
 clear_cache()
 ```
 

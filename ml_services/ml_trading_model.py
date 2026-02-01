@@ -26,9 +26,9 @@ from sklearn.linear_model import LogisticRegression
 import lightgbm as lgb
 
 # 导入项目模块
-from tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
-from technical_analysis import TechnicalAnalyzer
-from fundamental_data import get_comprehensive_fundamental_data
+from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
+from data_services.technical_analysis import TechnicalAnalyzer
+from data_services.fundamental_data import get_comprehensive_fundamental_data
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
 

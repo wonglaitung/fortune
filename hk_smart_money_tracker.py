@@ -36,17 +36,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 导入腾讯财经接口
-from tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
+from data_services.tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
 
 # 导入大模型服务
 from llm_services import qwen_engine
 
 # 导入基本面数据模块
-from fundamental_data import get_comprehensive_fundamental_data
+from data_services.fundamental_data import get_comprehensive_fundamental_data
 
 # 导入板块分析模块
 try:
-    from hk_sector_analysis import SectorAnalyzer
+    from data_services.hk_sector_analysis import SectorAnalyzer
     SECTOR_ANALYSIS_AVAILABLE = True
 except ImportError:
     SECTOR_ANALYSIS_AVAILABLE = False
@@ -54,7 +54,7 @@ except ImportError:
 
 # 导入技术分析工具和TAV系统
 try:
-    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
+    from data_services.technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
     TAV_AVAILABLE = True
 except ImportError:
@@ -191,7 +191,7 @@ USE_SCORED_SIGNALS = True   # True=使用新的评分系统，False=使用原有
 # 2. 获取恒生指数数据 (使用腾讯财经接口)
 # ==============================
 print("📈 获取恒生指数（HSI）用于对比...")
-from tencent_finance import get_hsi_data_tencent
+from data_services.tencent_finance import get_hsi_data_tencent
 hsi_hist = get_hsi_data_tencent(period_days=PRICE_WINDOW + 30)  # 余量更大以防节假日
 # 注意：如果无法获取恒生指数数据，hsi_hist 可能为 None
 # 在这种情况下，相对强度计算将不可用
@@ -552,7 +552,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
                 for stock in stock_data:
                     stock_code = stock['code']
                     # 从板块映射中获取股票所属板块
-                    from hk_sector_analysis import STOCK_SECTOR_MAPPING
+                    from data_services.hk_sector_analysis import STOCK_SECTOR_MAPPING
                     sector_info = STOCK_SECTOR_MAPPING.get(stock_code, {})
                     sector_code = sector_info.get('sector', 'unknown')
                     
