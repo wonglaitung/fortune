@@ -177,6 +177,10 @@ class HSIEmailSystem:
     VOL_RATIO_BUILDUP = 1.3
     VOL_RATIO_DISTRIBUTION = 2.0
 
+    # 板块分析配置
+    SECTOR_ANALYSIS_PERIOD = 5  # 板块分析计算周期（交易日）
+    SECTOR_ANALYSIS_PERIOD_NAME = "5日"  # 显示名称
+
     def __init__(self, stock_list=None):
         self.stock_list = stock_list or STOCK_LIST
         # 添加数据缓存机制
@@ -4219,12 +4223,15 @@ class HSIEmailSystem:
             print("📊 生成板块分析报告...")
             from data_services.hk_sector_analysis import SectorAnalyzer
             sector_analyzer = SectorAnalyzer()
-            sector_report = sector_analyzer.generate_sector_report(period=1)
+            sector_report = sector_analyzer.generate_sector_report(period=self.SECTOR_ANALYSIS_PERIOD)
             # 将文本报告转换为HTML格式
             sector_report_html = sector_report.replace('\n', '<br>\n').replace(' ', '&nbsp;')
-            html += """
+            html += f"""
             <div class="section">
-                <h3>📊 板块分析（1日涨跌幅排名）</h3>
+                <h3>📊 板块分析（{self.SECTOR_ANALYSIS_PERIOD_NAME}涨跌幅排名）</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                    <em>💡 说明：基于最近{self.SECTOR_ANALYSIS_PERIOD}个交易日的板块平均涨跌幅进行排名，反映短期板块轮动趋势</em>
+                </p>
                 <div style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
             """
             html += f"<p>{sector_report_html}</p>"
