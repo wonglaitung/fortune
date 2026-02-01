@@ -37,7 +37,7 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
-          python batch_stock_news_fetcher.py
+          python data_services/batch_stock_news_fetcher.py
           python hsi_llm_strategy.py
           python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
 

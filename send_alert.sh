@@ -9,7 +9,7 @@ cd /data/fortune
 source set_key.sh
 
 # 获取股票新闻(需yahoo finance)
-python batch_stock_news_fetcher.py
+python data_services/batch_stock_news_fetcher.py
 
 # 分析市场环境(需yahoo finance)
 python hsi_llm_strategy.py
