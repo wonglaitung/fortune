@@ -44,6 +44,14 @@ from llm_services import qwen_engine
 # 导入基本面数据模块
 from fundamental_data import get_comprehensive_fundamental_data
 
+# 导入板块分析模块
+try:
+    from hk_sector_analysis import SectorAnalyzer
+    SECTOR_ANALYSIS_AVAILABLE = True
+except ImportError:
+    SECTOR_ANALYSIS_AVAILABLE = False
+    print("⚠️ 板块分析模块不可用")
+
 # 导入技术分析工具和TAV系统
 try:
     from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
@@ -532,6 +540,37 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
     except Exception as e:
         print(f"⚠️ 读取新闻数据失败: {e}")
     
+    # 获取板块分析数据（用于大模型分析）
+    sector_trends = {}
+    if SECTOR_ANALYSIS_AVAILABLE:
+        try:
+            sector_analyzer = SectorAnalyzer()
+            # 计算板块涨跌幅排名
+            sector_perf_df = sector_analyzer.calculate_sector_performance(period=1)
+            if not sector_perf_df.empty:
+                # 构建股票到板块趋势的映射
+                for stock in stock_data:
+                    stock_code = stock['code']
+                    # 从板块映射中获取股票所属板块
+                    from hk_sector_analysis import STOCK_SECTOR_MAPPING
+                    sector_info = STOCK_SECTOR_MAPPING.get(stock_code, {})
+                    sector_code = sector_info.get('sector', 'unknown')
+                    
+                    # 获取板块趋势信息
+                    if not sector_perf_df.empty:
+                        sector_row = sector_perf_df[sector_perf_df['sector_code'] == sector_code]
+                        if not sector_row.empty:
+                            sector_trends[stock_code] = {
+                                'sector_code': sector_code,
+                                'sector_name': sector_analyzer.get_sector_name(sector_code),
+                                'avg_change_pct': sector_row.iloc[0]['avg_change_pct'],
+                                'trend': '强势上涨' if sector_row.iloc[0]['avg_change_pct'] > 2 else '温和上涨' if sector_row.iloc[0]['avg_change_pct'] > 0 else '温和下跌' if sector_row.iloc[0]['avg_change_pct'] > -2 else '强势下跌',
+                                'sector_rank': int(sector_row.index[0]) + 1,
+                                'total_sectors': len(sector_perf_df)
+                            }
+        except Exception as e:
+            print(f"⚠️ 获取板块分析数据失败: {e}")
+    
     # 构建JSON格式的股票数据
     stocks_json = []
     for stock in stock_data:
@@ -650,6 +689,10 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
             "基础信息（核心）": {
                 "股票代码": stock['code'],
                 "股票名称": stock['name'],
+                "所属板块": sector_trends.get(stock['code'], {}).get('sector_name', 'N/A'),
+                "板块趋势": sector_trends.get(stock['code'], {}).get('trend', 'N/A'),
+                "板块涨跌幅(%)": f"{sector_trends.get(stock['code'], {}).get('avg_change_pct', 0):.2f}" if stock['code'] in sector_trends else 'N/A',
+                "板块排名": f"{sector_trends.get(stock['code'], {}).get('sector_rank', 'N/A')}/{sector_trends.get(stock['code'], {}).get('total_sectors', 'N/A')}" if stock['code'] in sector_trends else 'N/A',
                 "最新价": stock['last_close'] or 'N/A',
                 "涨跌幅(%)": stock['change_pct'] or 'N/A',
                 "位置百分位(%)": stock['price_percentile'] or 'N/A'
@@ -739,6 +782,39 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 出货信号股票数：{market_metrics.get('distribution_stocks_count', 0)}
 """
     
+    # 获取板块背景信息
+    sector_context = ""
+    if SECTOR_ANALYSIS_AVAILABLE and sector_trends:
+        # 统计强势和弱势板块
+        strong_sectors = [t for t in sector_trends.values() if t['avg_change_pct'] > 1]
+        weak_sectors = [t for t in sector_trends.values() if t['avg_change_pct'] < -1]
+        
+        if strong_sectors or weak_sectors:
+            sector_context = f"""
+板块背景信息：
+- 强势板块（涨幅>1%）：{len(strong_sectors)}个
+"""
+            if strong_sectors:
+                top_strong = sorted(strong_sectors, key=lambda x: x['avg_change_pct'], reverse=True)[:3]
+                for s in top_strong:
+                    sector_context += f"  • {s['sector_name']}：{s['avg_change_pct']:.2f}%（趋势：{s['trend']}）\n"
+            
+            sector_context += f"- 弱势板块（跌幅<-1%）：{len(weak_sectors)}个\n"
+            if weak_sectors:
+                bottom_weak = sorted(weak_sectors, key=lambda x: x['avg_change_pct'])[:3]
+                for s in bottom_weak:
+                    sector_context += f"  • {s['sector_name']}：{s['avg_change_pct']:.2f}%（趋势：{s['trend']}）\n"
+            
+            # 板块轮动提示
+            if strong_sectors and weak_sectors:
+                top_strong_sector = max(strong_sectors, key=lambda x: x['avg_change_pct'])
+                bottom_weak_sector = min(weak_sectors, key=lambda x: x['avg_change_pct'])
+                sector_context += f"""
+板块轮动提示：
+- 热点板块：{top_strong_sector['sector_name']}（涨幅{top_strong_sector['avg_change_pct']:.2f}%），建议关注该板块内优质股票
+- 弱势板块：{bottom_weak_sector['sector_name']}（跌幅{bottom_weak_sector['avg_change_pct']:.2f}%），建议谨慎操作，等待企稳信号
+"""
+    
     # 根据投资者类型动态生成投资策略建议
     if investor_type == 'aggressive':
         strategy_suggestion = """
@@ -769,6 +845,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 持有期限：3天-3个月
 
 {market_context}
+{sector_context}
 
 📋 股票数据（JSON格式，已按重要性分类）：
 {stocks_json_str}
@@ -888,6 +965,25 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 综合评分30-50分：观望，建议仓位10-30%
 - 综合评分<30分：不推荐，建议仓位0-10%
 
+【第六层：板块分析（重要）】
+📊 评估股票所属板块的趋势，作为投资决策的宏观参考：
+- 板块趋势评估：
+  * 板块强势上涨（涨幅>2%）：板块整体趋势向上，个股建仓信号可靠性提升，可适当增加仓位
+  * 板块温和上涨（0%<涨幅≤2%）：板块整体趋势向好，个股建仓信号正常参考
+  * 板块震荡（-2%≤涨幅≤0%）：板块整体震荡，个股建仓信号需谨慎，降低仓位
+  * 板块温和下跌（-2%<涨幅<0%）：板块整体趋势向下，个股建仓信号可靠性降低，谨慎操作
+  * 板块强势下跌（涨幅<-2%）：板块整体趋势向下，个股建仓信号可能失效，建议观望
+
+- 板块轮动策略：
+  * 热点板块（涨幅>1%）：优先关注板块内龙头股，把握板块轮动机会
+  * 弱势板块（跌幅<-1%）：谨慎操作，等待板块企稳信号再考虑介入
+  * 板块内排名：优先关注板块内排名前3的股票，规避板块内排名垫底的股票
+
+- 投资者类型权重：
+  - 进取型投资者：板块权重10%
+  - 稳健型投资者：板块权重20%
+  - 保守型投资者：板块权重30%
+
 【第六层：新闻分析（辅助）】
 📰 评估新闻对股价的影响（仅供参考，不改变核心技术分析决策）：
 - 新闻分析原则：
@@ -906,7 +1002,8 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 4. 接着评估TAV评分系统（趋势-动量-成交量综合评分），判断技术面共振强度
 5. 再识别建仓/出货信号
 6. 接着综合评分进行决策
-7. 最后参考新闻分析辅助决策（不改变核心技术分析决策）
+7. 然后分析板块趋势，作为宏观参考，评估板块轮动机会
+8. 最后参考新闻分析辅助决策（不改变核心技术分析决策）
 
 【输出格式要求】
 ⚠️ 重要：请严格按照以下结构化文本格式输出，不要使用表格格式。
@@ -3490,7 +3587,23 @@ def main(run_date=None, investor_type='conservative'):
                 html += '  </tbody>\n'
                 html += '</table>\n'
 
-            
+            # 添加板块分析结果
+            if SECTOR_ANALYSIS_AVAILABLE:
+                try:
+                    print("\n📊 正在生成板块分析...")
+                    sector_analyzer = SectorAnalyzer()
+                    sector_report = sector_analyzer.generate_sector_report(period=1)
+                    # 将文本报告转换为HTML格式
+                    sector_report_html = sector_report.replace('\n', '<br>\n').replace(' ', '&nbsp;')
+                    html += "<h3>📊 板块分析（1日涨跌幅排名）</h3>"
+                    html += "<div style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>"
+                    html += f"<p>{sector_report_html}</p>"
+                    html += "</div>"
+                    print("✅ 板块分析完成")
+                except Exception as e:
+                    print(f"⚠️ 生成板块分析失败: {e}")
+                    html += "<h3>📊 板块分析</h3>"
+                    html += "<p>板块分析暂不可用</p>"
 
             # 添加大模型分析结果
             if llm_analysis:

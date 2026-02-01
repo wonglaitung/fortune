@@ -73,6 +73,14 @@ except ImportError:
     FUNDAMENTAL_AVAILABLE = False
     print("⚠️ 基本面数据模块不可用")
 
+# 导入板块分析模块
+try:
+    from hk_sector_analysis import SectorAnalyzer
+    SECTOR_ANALYSIS_AVAILABLE = True
+except ImportError:
+    SECTOR_ANALYSIS_AVAILABLE = False
+    print("⚠️ 板块分析模块不可用")
+
 # 从港股主力资金追踪器导入股票列表（可选）
 try:
     from hk_smart_money_tracker import WATCHLIST
@@ -4205,6 +4213,34 @@ class HSIEmailSystem:
         dividend_html = self.format_dividend_table_html(dividend_data)
         if dividend_html:
             html += dividend_html
+
+        # 添加板块分析
+        try:
+            print("📊 生成板块分析报告...")
+            from hk_sector_analysis import SectorAnalyzer
+            sector_analyzer = SectorAnalyzer()
+            sector_report = sector_analyzer.generate_sector_report(period=1)
+            # 将文本报告转换为HTML格式
+            sector_report_html = sector_report.replace('\n', '<br>\n').replace(' ', '&nbsp;')
+            html += """
+            <div class="section">
+                <h3>📊 板块分析（1日涨跌幅排名）</h3>
+                <div style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
+            """
+            html += f"<p>{sector_report_html}</p>"
+            html += """
+                </div>
+            </div>
+            """
+            print("✅ 板块分析完成")
+        except Exception as e:
+            print(f"⚠️ 生成板块分析失败: {e}")
+            html += """
+            <div class="section">
+                <h3>📊 板块分析</h3>
+                <p>板块分析暂不可用</p>
+            </div>
+            """
 
         html += f"""
             <div class="section">
