@@ -98,6 +98,7 @@
 | 功能 | 脚本 | 说明 |
 |------|------|------|
 | 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析 |
+| 板块分析 | `hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析 |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
@@ -173,6 +174,9 @@ python crypto_email.py
 # 追踪港股主力资金
 python hk_smart_money_tracker.py
 
+# 板块分析
+python hk_sector_analysis.py
+
 # 启动模拟交易
 python simulation_trader.py
 
@@ -224,9 +228,62 @@ python hk_smart_money_tracker.py
 
 # 分析指定日期数据
 python hk_smart_money_tracker.py --date 2025-10-25
+
+# 指定投资者类型
+python hk_smart_money_tracker.py --investor-type aggressive  # 进取型
+python hk_smart_money_tracker.py --investor-type moderate    # 稳健型
+python hk_smart_money_tracker.py --investor-type conservative # 保守型
 ```
 
-### 3. 恒生指数价格监控器（含基本面指标、中期评估指标和 AI 持仓分析）
+### 3. 港股板块分析器
+
+**功能**：
+- 批量分析13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
+- 板块涨跌幅排名，识别强势和弱势板块
+- 板块技术趋势分析（强势上涨、温和上涨、震荡整理、温和下跌、强势下跌）
+- 板块龙头股票识别（基于涨跌幅和成交量综合评分）
+- 板块资金流向分析（基于成交量和涨跌幅）
+- 生成板块分析报告，包括强势板块TOP 3和弱势板块BOTTOM 3
+- 使用腾讯财经接口获取板块内股票数据
+- 集成到 hk_smart_money_tracker.py 和 hsi_email.py 中，为大模型分析提供板块背景信息
+
+**使用方法**：
+```bash
+# 生成完整板块分析报告（默认1日涨跌幅）
+python hk_sector_analysis.py
+
+# 指定分析周期
+python hk_sector_analysis.py --period 5
+
+# 分析指定板块
+python hk_sector_analysis.py --sector bank
+
+# 识别板块龙头
+python hk_sector_analysis.py --leaders bank
+
+# 分析板块资金流向
+python hk_sector_analysis.py --flow bank
+
+# 分析板块趋势
+python hk_sector_analysis.py --trend bank
+```
+
+**板块列表**：
+- 银行股：汇丰银行、建设银行、农业银行、工商银行、招商银行
+- 科技股：腾讯控股、阿里巴巴-SW、美团-W、小米集团-W
+- 半导体：中芯国际、华虹半导体
+- 人工智能：第四范式、地平线机器人、黑芝麻智能
+- 新能源：比亚迪股份
+- 环保：绿色动力环保
+- 能源：中国海洋石油、中国神华
+- 航运：中远海能
+- 交易所：香港交易所
+- 公用事业：中国电信、中国移动
+- 保险：友邦保险
+- 生物医药：药明生物
+- 指数基金：盈富基金
+
+### 4. 恒生指数价格监控器（含基本面指标、中期评估指标和 AI 持仓分析）
 
 **功能**：
 - 实时获取恒生指数价格和交易数据
@@ -611,6 +668,7 @@ fortune/
 │   ├── fundamental_data.py             # 基本面数据获取器
 │   ├── gold_analyzer.py                # 黄金市场分析器
 │   ├── hk_ipo_aastocks.py              # IPO 信息获取器
+│   ├── hk_sector_analysis.py           # 板块分析器
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪器
 │   ├── hsi_email.py                    # 恒生指数价格监控器
 │   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
@@ -711,6 +769,11 @@ fortune/
 │   │       ├── 相对强弱指标
 │   │       └── 中期趋势评分系统
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
+│   ├── 板块分析 (hk_sector_analysis.py)
+│   │   ├── 板块涨跌幅排名
+│   │   ├── 技术趋势分析
+│   │   ├── 龙头识别
+│   │   └── 资金流向分析
 │   ├── AI 交易分析 (ai_trading_analyzer.py)
 │   ├── 恒生指数策略 (hsi_llm_strategy.py)
 │   ├── 新闻过滤 (batch_stock_news_fetcher.py)
@@ -1167,9 +1230,17 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-01-27
+**最后更新**: 2026-02-01
 
 ## 🎉 最近更新
+
+### 2026-02-01
+- **新增功能**：实现港股板块分析模块（hk_sector_analysis.py），提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析
+- **新增功能**：板块分析模块涵盖13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
+- **新增功能**：在hk_smart_money_tracker.py和hsi_email.py中集成板块分析数据，为大模型分析提供宏观市场背景
+- **提示词重构**：重构hk_smart_money_tracker.py的提示词结构，从混乱的"6层"重构为清晰的"0-5层"分析框架（前置检查→风险控制→核心信号识别→技术面分析→宏观环境→辅助信息）
+- **提示词优化**：简化JSON数据结构，移除重复字段，提高提示词可读性和效率
+- **文档更新**：更新IFLOW.md和README.md，添加板块分析模块和相关使用说明
 
 ### 2026-01-26
 - **新增功能**：机器学习模型集成股票类型特征（13种股票类型分类：bank/tech/energy/utility/semiconductor/ai/new_energy/shipping/exchange/insurance/biotech/environmental/index）
