@@ -74,18 +74,19 @@
 *   `crypto_email.py`: 主脚本，负责获取加密货币价格并通过邮件服务发送邮件。
 *   `hk_ipo_aastocks.py`: 通过爬取AAStocks网站获取香港股市IPO信息的脚本。
 *   `hk_smart_money_tracker.py`: 港股主力资金追踪器，分析股票的建仓和出货信号。
-*   `hk_sector_analysis.py`: **港股板块分析模块**，提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析。
 *   `simulation_trader.py`: 基于大模型分析的港股模拟交易系统。
-*   `batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
 *   `gold_analyzer.py`: 黄金市场分析器。
 *   `hsi_llm_strategy.py`: 恒生指数大模型策略分析器。
 *   `hsi_email.py`: 恒生指数价格监控器，基于技术分析指标生成买卖信号，只在有交易信号时发送邮件，集成股息信息追踪功能、基本面指标、中期评估指标和AI持仓分析功能。
-*   `technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能，包括VaR风险价值计算、TAV加权评分系统和中期分析指标系统。
-*   `tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
+*   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
+*   `data_services/__init__.py`: 数据服务模块初始化文件，使 data_services 成为 Python 包。
+*   `data_services/batch_stock_news_fetcher.py`: 批量获取自选股新闻脚本。
+*   `data_services/fundamental_data.py`: 港股基本面数据获取模块，提供财务指标、利润表、资产负债表、现金流量表等数据获取功能，支持缓存机制。
+*   `data_services/hk_sector_analysis.py`: **港股板块分析模块**，提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析。
+*   `data_services/technical_analysis.py`: 通用技术分析工具，提供多种技术指标计算功能，包括VaR风险价值计算、TAV加权评分系统和中期分析指标系统。
+*   `data_services/tencent_finance.py`: 通过腾讯财经接口获取港股和恒生指数数据。
 *   `llm_services/qwen_engine.py`: 大模型服务接口，提供聊天和嵌入功能。
 *   `llm_services/sentiment_analyzer.py`: **情感分析模块**，使用大模型对新闻进行四维情感评分（相关性、影响度、预期差、情感方向），支持批量分析和情感统计。
-*   `ai_trading_analyzer.py`: 人工智能股票交易盈利能力分析器，用于评估AI交易信号的有效性。
-*   `fundamental_data.py`: 港股基本面数据获取模块，提供财务指标、利润表、资产负债表、现金流量表等数据获取功能，支持缓存机制。
 *   `ml_services/ml_trading_model.py`: **机器学习交易模型**，基于LightGBM和GBDT+LR的二分类模型，预测1天、5天、20天后的涨跌，整合技术指标、基本面、资金流向、美股市场、股票类型、情感指标、技术-基本面交互特征。
 *   `ml_services/ml_prediction_email.py`: **机器学习预测邮件发送器**，自动发送ML模型预测结果邮件。
 *   `ml_services/compare_models.py`: **模型对比工具**，对比LGBM和GBDT+LR两种模型的预测结果。
@@ -515,22 +516,22 @@ crontab -e
 ##### 本地运行
 ```bash
 # 生成完整板块分析报告（默认1日涨跌幅）
-python hk_sector_analysis.py
+python data_services/hk_sector_analysis.py
 
 # 指定分析周期
-python hk_sector_analysis.py --period 5
+python data_services/hk_sector_analysis.py --period 5
 
 # 分析指定板块
-python hk_sector_analysis.py --sector bank
+python data_services/hk_sector_analysis.py --sector bank
 
 # 识别板块龙头
-python hk_sector_analysis.py --leaders bank
+python data_services/hk_sector_analysis.py --leaders bank
 
 # 分析板块资金流向
-python hk_sector_analysis.py --flow bank
+python data_services/hk_sector_analysis.py --flow bank
 
 # 分析板块趋势
-python hk_sector_analysis.py --trend bank
+python data_services/hk_sector_analysis.py --trend bank
 ```
 
 ##### 功能说明
@@ -573,10 +574,10 @@ python simulation_trader.py --investor-type conservative # 保守型
 ##### 本地运行
 ```bash
 # 单次运行
-python batch_stock_news_fetcher.py
+python data_services/batch_stock_news_fetcher.py
 
 # 启用定时任务模式
-python batch_stock_news_fetcher.py --schedule
+python data_services/batch_stock_news_fetcher.py --schedule
 ```
 
 #### 黄金市场分析器
@@ -764,7 +765,7 @@ python ml_services/compare_models.py
 
 ##### 本地运行
 ```bash
-python technical_analysis.py
+python data_services/technical_analysis.py
 ```
 
 #### 港股基本面数据获取器
@@ -850,22 +851,26 @@ clear_cache()
 │   ├── 加密货币价格监控器 (@crypto_email.py)
 │   ├── 港股IPO信息获取器 (@hk_ipo_aastocks.py)
 │   ├── 黄金市场分析器 (@gold_analyzer.py)
-│   ├── 港股基本面数据获取器 (@fundamental_data.py)
+│   ├── 港股基本面数据获取器 (@data_services/fundamental_data.py)
 │   ├── 港股股息信息追踪器 (@hsi_email.py 中的股息功能)
 │   ├── 美股市场数据获取器 (@ml_services/us_market_data.py)
-│   └── 新闻数据源 (@data/all_stock_news_records.csv)
-├── 分析层
-│   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
-│   ├── 批量获取自选股新闻 (@batch_stock_news_fetcher.py)
-│   ├── 港股板块分析器 (@hk_sector_analysis.py)
+│   ├── 新闻数据源 (@data/all_stock_news_records.csv)
+│   └── 腾讯财经数据接口 (@data_services/tencent_finance.py)
+├── 数据服务层
+│   ├── 港股基本面数据获取器 (@data_services/fundamental_data.py)
+│   ├── 批量获取自选股新闻 (@data_services/batch_stock_news_fetcher.py)
+│   ├── 港股板块分析器 (@data_services/hk_sector_analysis.py)
 │   │   ├── 板块涨跌幅排名
 │   │   ├── 技术趋势分析
 │   │   ├── 龙头识别
 │   │   └── 资金流向分析
-│   ├── 通用技术分析工具 (@technical_analysis.py)
+│   ├── 通用技术分析工具 (@data_services/technical_analysis.py)
 │   │   ├── 短期技术指标（RSI、MACD、布林带、ATR等）
 │   │   ├── TAV加权评分系统
 │   │   └── 中期分析指标系统（均线排列、均线斜率、乖离率、支撑阻力位、相对强弱、中期趋势评分）
+│   └── 腾讯财经数据接口 (@data_services/tencent_finance.py)
+├── 分析层
+│   ├── 港股主力资金追踪器 (@hk_smart_money_tracker.py)
 │   ├── 恒生指数大模型策略分析器 (@hsi_llm_strategy.py)
 │   ├── 恒生指数价格监控器 (@hsi_email.py)
 │   │   ├── 技术分析指标
@@ -899,8 +904,9 @@ clear_cache()
 ├── 交易层
 │   └── 港股模拟交易系统 (@simulation_trader.py)
 └── 服务层
-    ├── 大模型服务 (@llm_services/qwen_engine.py)
-    └── 腾讯财经数据接口 (@tencent_finance.py)
+    ├── 大模型服务 (@llm_services/)
+    │   ├── qwen_engine.py - 大模型接口
+    │   └── sentiment_analyzer.py - 情感分析模块
 ```
 
 ### 大模型集成
@@ -1046,11 +1052,8 @@ clear_cache()
 98. **新增功能**：在hk_smart_money_tracker.py和hsi_email.py中集成板块分析数据，为大模型分析提供宏观市场背景
 99. **提示词重构**：重构hk_smart_money_tracker.py的提示词结构，从混乱的"6层"重构为清晰的"0-5层"分析框架
 100. **提示词优化**：简化JSON数据结构，移除重复字段，提高提示词可读性和效率
-96. **新增功能**：实现港股板块分析模块（hk_sector_analysis.py），提供板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析
-97. **新增功能**：板块分析模块涵盖13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
-98. **新增功能**：在hk_smart_money_tracker.py和hsi_email.py中集成板块分析数据，为大模型分析提供宏观市场背景
-99. **提示词重构**：重构hk_smart_money_tracker.py的提示词结构，从混乱的"6层"重构为清晰的"0-5层"分析框架
-100. **提示词优化**：简化JSON数据结构，移除重复字段，提高提示词可读性和效率
+101. **架构重组**：将数据服务模块（batch_stock_news_fetcher.py、fundamental_data.py、hk_sector_analysis.py、technical_analysis.py、tencent_finance.py）移至 data_services/ 目录，提高代码组织性和可维护性
+102. **导入更新**：更新所有文件中的导入语句，使用 `from data_services.xxx import` 格式，确保模块导入正确
 
 ---
 最后更新：2026-02-01
