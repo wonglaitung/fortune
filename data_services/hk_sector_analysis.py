@@ -12,6 +12,7 @@
 
 import warnings
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 import pandas as pd
@@ -19,16 +20,31 @@ import numpy as np
 
 warnings.filterwarnings('ignore')
 
+# 支持直接运行和模块运行两种方式
+if __name__ == '__main__':
+    # 直接运行时，添加项目根目录到path
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
 # 导入腾讯财经接口
-from .tencent_finance import get_hk_stock_data_tencent
+try:
+    from .tencent_finance import get_hk_stock_data_tencent
+except ImportError:
+    # 直接运行时使用绝对导入
+    from data_services.tencent_finance import get_hk_stock_data_tencent
 
 # 导入技术分析工具
 try:
     from .technical_analysis import TechnicalAnalyzer
     TECHNICAL_AVAILABLE = True
 except ImportError:
-    TECHNICAL_AVAILABLE = False
-    print("⚠️ 技术分析工具不可用，部分功能将受限")
+    try:
+        from data_services.technical_analysis import TechnicalAnalyzer
+        TECHNICAL_AVAILABLE = True
+    except ImportError:
+        TECHNICAL_AVAILABLE = False
+        print("⚠️ 技术分析工具不可用，部分功能将受限")
 
 # ==============================
 # 股票板块映射（扩展版：58只股票，覆盖13个板块）
