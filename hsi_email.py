@@ -44,7 +44,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 # 导入技术分析工具（可选）
 try:
-    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
+    from data_services.technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
     TAV_AVAILABLE = True
 except ImportError:
@@ -52,7 +52,7 @@ except ImportError:
 
 # 导入中期分析指标
 try:
-    from technical_analysis import (
+    from data_services.technical_analysis import (
         calculate_ma_alignment,
         calculate_ma_slope,
         calculate_ma_deviation,
@@ -67,7 +67,7 @@ except ImportError:
 
 # 导入基本面数据模块
 try:
-    from fundamental_data import get_comprehensive_fundamental_data
+    from data_services.fundamental_data import get_comprehensive_fundamental_data
     FUNDAMENTAL_AVAILABLE = True
 except ImportError:
     FUNDAMENTAL_AVAILABLE = False
@@ -75,7 +75,7 @@ except ImportError:
 
 # 导入板块分析模块
 try:
-    from hk_sector_analysis import SectorAnalyzer
+    from data_services.hk_sector_analysis import SectorAnalyzer
     SECTOR_ANALYSIS_AVAILABLE = True
 except ImportError:
     SECTOR_ANALYSIS_AVAILABLE = False
@@ -4217,7 +4217,7 @@ class HSIEmailSystem:
         # 添加板块分析
         try:
             print("📊 生成板块分析报告...")
-            from hk_sector_analysis import SectorAnalyzer
+            from data_services.hk_sector_analysis import SectorAnalyzer
             sector_analyzer = SectorAnalyzer()
             sector_report = sector_analyzer.generate_sector_report(period=1)
             # 将文本报告转换为HTML格式

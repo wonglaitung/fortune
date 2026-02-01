@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 导入技术分析工具
 try:
-    from technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
+    from data_services.technical_analysis import TechnicalAnalyzer, TechnicalAnalyzerV2, TAVScorer, TAVConfig
     TECHNICAL_ANALYSIS_AVAILABLE = True
     TAV_AVAILABLE = True
 except ImportError:
