@@ -7,19 +7,21 @@
 更新：集成情感分析功能
 """
 
+# 添加项目根目录到 Python 路径
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import yfinance as yf
 from datetime import datetime, timedelta
-import os
 import csv
 import time
 import argparse
 import schedule
 import pandas as pd
 
-# 导入hk_smart_money_tracker.py中的WATCHLIST
-import sys
-sys.path.append('/data/fortune')
-from hk_smart_money_tracker import WATCHLIST
+# 导入全局配置
+from config import WATCHLIST
 
 # 导入情感分析模块
 from llm_services.sentiment_analyzer import batch_analyze_sentiment, get_sentiment_statistics
