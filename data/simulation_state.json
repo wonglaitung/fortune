@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 338.1892940519465,
+  "capital": 52238.18929405195,
   "positions": {
     "3968.HK": {
       "shares": 3200,
@@ -16,11 +16,6 @@
       "shares": 48800,
       "avg_price": 5.535245901639344,
       "stop_loss_price": 4.59
-    },
-    "1347.HK": {
-      "shares": 500,
-      "avg_price": 118.5,
-      "stop_loss_price": 10.45
     },
     "0941.HK": {
       "shares": 700,
@@ -21575,6 +21570,38 @@
       "current_price": 5.4,
       "target_price": 5.7,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02T16:01:40.015661",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 338.1892940519465,
+      "reason": "出货评分8.5分，成交量比率2.59异常放大但OBV下降显示主力借反弹出货，板块相对强度-8.38%显著跑输恒指",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 91.65,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-02T16:01:43.523895",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 500,
+      "price": 103.8,
+      "amount": 51900.0,
+      "capital_after": 52238.18929405195,
+      "reason": "出货评分8.0分，CMF资金流出-0.1624确认弱势，半导体板块大跌-5.29%且相对强度-3.33%跑输恒指",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 103.8,
+      "target_price": null,
+      "validity_period": null
     }
   ],
   "portfolio_history": [
@@ -35627,7 +35654,7 @@
           "stop_loss_price": 4.59
         },
         "1347.HK": {
-          "shares": 500,
+          "shares": 0,
           "avg_price": 118.5,
           "stop_loss_price": 10.45
         },
@@ -35674,9 +35701,51 @@
           "stop_loss_price": 4.59
         },
         "1347.HK": {
-          "shares": 500,
+          "shares": 0,
           "avg_price": 118.5,
           "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "1330.HK": {
+          "shares": 14000,
+          "avg_price": 5.31,
+          "stop_loss_price": 4.5
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-02T16:01:44.307295",
+      "capital": 52238.18929405195,
+      "portfolio_value": 1000265.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 48800,
+          "avg_price": 5.535245901639344,
+          "stop_loss_price": 4.59
         },
         "0941.HK": {
           "shares": 700,
@@ -35702,88 +35771,6 @@
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-02 10:07:06",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.43,
-      "amount": 0,
-      "reason": "建仓评分5.2，深度低位（8.74%），高股息安全垫，基本面强劲（PE 6.11），OBV量能累积确认吸筹",
-      "capital_after": 378266.18929405196,
-      "success": false,
-      "stop_loss_price": 4.6,
-      "current_price": 5.43,
-      "target_price": 5.85,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-02 10:07:07",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 14000,
-      "price": 5.31,
-      "amount": 74340.0,
-      "reason": "建仓评分4.0，低位区间（20.25%），环保政策利好，TAV中等共振（51.25），相对强度跑赢恒指",
-      "capital_after": 303926.18929405196,
-      "success": true,
-      "stop_loss_price": 4.5,
-      "current_price": 5.31,
-      "target_price": 5.7,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-02 10:38:44",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "价格低位逆势上涨，技术指标三重共振（MACD金叉、OBV上升、CMF流入），基本面强劲（PE=7.38），银行板块相对强势（跌幅仅-0.50%）",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.21,
-          "target_price": 51.2,
-          "validity_period": 5
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格极端低位（位置百分位10.68%），技术指标支持（MACD金叉、OBV上升、CMF流入），高股息安全边际（PE=6.1），银行板块抗跌",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.62,
-          "target_price": 5.85,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "出货评分6.0分，技术面矛盾显示放量下跌（OBV趋势下降），公用事业板块暴跌-5.85%拖累，资金流与价格背离风险",
-          "stop_loss_triggered": false,
-          "target_price": 4.8,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-02 10:38:44",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 11300,
-      "price": 4.95,
-      "amount": 55935.0,
-      "reason": "出货评分6.0分，技术面矛盾显示放量下跌（OBV趋势下降），公用事业板块暴跌-5.85%拖累，资金流与价格背离风险",
-      "capital_after": 359861.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 4.95,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -4745.999999999999
-    },
     {
       "timestamp": "2026-02-02 10:38:50",
       "type": "BUY",
@@ -35907,6 +35894,66 @@
       "current_price": 5.4,
       "target_price": 5.7,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02 14:54:58",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-02 16:01:39",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "出货评分8.5分，成交量比率2.59异常放大但OBV下降显示主力借反弹出货，板块相对强度-8.38%显著跑输恒指",
+          "stop_loss_triggered": false,
+          "target_price": 85.0,
+          "validity_period": 7
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分8.0分，CMF资金流出-0.1624确认弱势，半导体板块大跌-5.29%且相对强度-3.33%跑输恒指",
+          "stop_loss_triggered": false,
+          "target_price": 95.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-02 16:01:40",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分8.5分，成交量比率2.59异常放大但OBV下降显示主力借反弹出货，板块相对强度-8.38%显著跑输恒指",
+      "capital_after": 338.1892940519465,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 91.65,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-02 16:01:43",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 500,
+      "price": 103.8,
+      "amount": 51900.0,
+      "reason": "出货评分8.0分，CMF资金流出-0.1624确认弱势，半导体板块大跌-5.29%且相对强度-3.33%跑输恒指",
+      "capital_after": 52238.18929405195,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 103.8,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -7350.000000000002
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
