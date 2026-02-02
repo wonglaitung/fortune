@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 359861.18929405196,
+  "capital": 262589.18929405196,
   "positions": {
     "3968.HK": {
       "shares": 3200,
@@ -31,6 +31,11 @@
       "shares": 14000,
       "avg_price": 5.31,
       "stop_loss_price": 4.5
+    },
+    "2800.HK": {
+      "shares": 3600,
+      "avg_price": 27.02,
+      "stop_loss_price": 25.9
     }
   },
   "transaction_history": [
@@ -21517,6 +21522,22 @@
       "current_price": 5.43,
       "target_price": 5.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02T11:44:50.342399",
+      "type": "BUY",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 3600,
+      "price": 27.02,
+      "amount": 97272.0,
+      "capital_after": 262589.18929405196,
+      "reason": "指数基金避险属性，技术指标协同（OBV上升、CMF流入、RSI中性），相对抗跌于恒指下跌环境，适合中线波段对冲",
+      "success": true,
+      "stop_loss_price": 25.9,
+      "current_price": 27.02,
+      "target_price": 27.8,
+      "validity_period": 28
     }
   ],
   "portfolio_history": [
@@ -35505,73 +35526,51 @@
           "stop_loss_price": 4.5
         }
       }
+    },
+    {
+      "timestamp": "2026-02-02T11:44:51.109352",
+      "capital": 262589.18929405196,
+      "portfolio_value": 990448.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 27500,
+          "avg_price": 5.64,
+          "stop_loss_price": 4.8
+        },
+        "1347.HK": {
+          "shares": 500,
+          "avg_price": 118.5,
+          "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "1330.HK": {
+          "shares": 14000,
+          "avg_price": 5.31,
+          "stop_loss_price": 4.5
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-02 10:06:37",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5，资金大幅流出（CMF -0.2246），流动性萎缩（成交额变化率-86.96%），技术面五重确认出货",
-      "capital_after": 181811.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 427.4,
-      "target_price": 410.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-02 10:06:40",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5，资金大幅流出（CMF -0.3235），估值泡沫风险（相对强度-10.41%），板块弱势拖累",
-      "capital_after": 181811.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 36.42,
-      "target_price": 34.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-02 10:06:44",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0，超买（RSI 69.79），资金流出（CMF -0.1294），流动性枯竭（成交额变化率-79.5%）",
-      "capital_after": 181811.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 134.9,
-      "target_price": 130.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-02 10:06:47",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0，超买（RSI 70.1），高估值风险（PE 18.53），技术面五重确认出货",
-      "capital_after": 181811.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 89.95,
-      "target_price": 86.0,
-      "validity_period": 3
-    },
     {
       "timestamp": "2026-02-02 10:06:51",
       "type": "SELL",
@@ -35734,6 +35733,37 @@
       "current_price": 5.43,
       "target_price": 5.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02 11:44:48",
+      "buy": [
+        {
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "reason": "指数基金避险属性，技术指标协同（OBV上升、CMF流入、RSI中性），相对抗跌于恒指下跌环境，适合中线波段对冲",
+          "allocation_pct": 10,
+          "stop_loss_price": 25.9,
+          "target_price": 27.8,
+          "validity_period": 28
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-02 11:44:50",
+      "type": "BUY",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 3600,
+      "price": 27.02,
+      "amount": 97272.0,
+      "reason": "指数基金避险属性，技术指标协同（OBV上升、CMF流入、RSI中性），相对抗跌于恒指下跌环境，适合中线波段对冲",
+      "capital_after": 262589.18929405196,
+      "success": true,
+      "stop_loss_price": 25.9,
+      "current_price": 27.02,
+      "target_price": 27.8,
+      "validity_period": 28
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
