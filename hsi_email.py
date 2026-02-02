@@ -4193,29 +4193,164 @@ class HSIEmailSystem:
             print("📊 生成板块分析报告...")
             from data_services.hk_sector_analysis import SectorAnalyzer
             sector_analyzer = SectorAnalyzer()
-            sector_report = sector_analyzer.generate_sector_report(period=self.SECTOR_ANALYSIS_PERIOD)
-            # 将文本报告转换为HTML格式
-            sector_report_html = sector_report.replace('\n', '<br>\n').replace(' ', '&nbsp;')
-            html += f"""
+            perf_df = sector_analyzer.calculate_sector_performance(self.SECTOR_ANALYSIS_PERIOD)
+
+            if not perf_df.empty:
+                html += f"""
             <div class="section">
-                <h3>📊 板块分析（{self.SECTOR_ANALYSIS_PERIOD_NAME}涨跌幅排名）</h3>
-                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                <h3 style="color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px;">📊 板块分析（{self.SECTOR_ANALYSIS_PERIOD_NAME}涨跌幅排名）</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
                     <em>💡 说明：基于最近{self.SECTOR_ANALYSIS_PERIOD}个交易日的板块平均涨跌幅进行排名，反映短期板块轮动趋势</em>
                 </p>
-                <div style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
-            """
-            html += f"<p>{sector_report_html}</p>"
-            html += """
+                """
+                
+                # 强势板块TOP 3
+                html += """
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #4CAF50; font-size: 16px; margin-bottom: 10px;">📈 强势板块（TOP 3）</h4>
+                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
+                        <tr style="background-color: #4CAF50; color: white;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
+                        </tr>
+                """
+                
+                for idx, row in perf_df.head(3).iterrows():
+                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
+                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
+                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
+                    
+                    html += f"""
+                        <tr style="background-color: {'#e8f5e9' if idx % 2 == 0 else '#f1f8e9'};">
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{idx+1}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
+                        </tr>
+                    """
+                
+                html += """
+                    </table>
+                </div>
+                """
+                
+                # 弱势板块BOTTOM 3
+                html += """
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #f44336; font-size: 16px; margin-bottom: 10px;">📉 弱势板块（BOTTOM 3）</h4>
+                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
+                        <tr style="background-color: #f44336; color: white;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
+                        </tr>
+                """
+                
+                bottom_3 = perf_df.tail(3)
+                for i, (idx, row) in enumerate(bottom_3.iterrows(), 1):
+                    rank = len(perf_df) - len(bottom_3) + i
+                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
+                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
+                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
+                    
+                    html += f"""
+                        <tr style="background-color: {'#ffebee' if i % 2 == 0 else '#ffcdd2'};">
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{rank}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
+                        </tr>
+                    """
+                
+                html += """
+                    </table>
+                </div>
+                """
+                
+                # 板块详细排名
+                html += """
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #666; font-size: 16px; margin-bottom: 10px;">📊 板块详细排名</h4>
+                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
+                        <tr style="background-color: #666; color: white;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">排名</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 20%;">趋势</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 30%;">板块名称</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">平均涨跌幅</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">股票数量</th>
+                        </tr>
+                """
+                
+                for idx, row in perf_df.iterrows():
+                    trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
+                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
+                    
+                    html += f"""
+                        <tr style="background-color: {'#f9f9f9' if idx % 2 == 0 else '#fff'};">
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{idx+1}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 18px;">{trend_icon}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">{row['sector_name']}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{row['stock_count']}</td>
+                        </tr>
+                    """
+                
+                html += """
+                    </table>
+                </div>
+                """
+                
+                # 投资建议
+                html += """
+                <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; border-left: 4px solid #2196F3;">
+                    <h4 style="color: #1976D2; font-size: 16px; margin-top: 0; margin-bottom: 10px;">💡 投资建议</h4>
+                """
+                
+                top_sector = perf_df.iloc[0]
+                bottom_sector = perf_df.iloc[-1]
+                
+                if top_sector['avg_change_pct'] > 1:
+                    html += f"""
+                    <p style="margin: 5px 0; color: #333;">• <strong>当前热点板块：</strong>{top_sector['sector_name']}，平均涨幅 <span style="color: #4CAF50; font-weight: bold;">{top_sector['avg_change_pct']:.2f}%</span></p>
+                    """
+                    if top_sector['best_stock']:
+                        html += f"""
+                        <p style="margin: 5px 0; color: #333;">• 建议关注该板块的龙头股：<span style="color: #4CAF50; font-weight: bold;">{top_sector['best_stock']['name']}</span></p>
+                        """
+                
+                if bottom_sector['avg_change_pct'] < -1:
+                    html += f"""
+                    <p style="margin: 5px 0; color: #333;">• <strong>当前弱势板块：</strong>{bottom_sector['sector_name']}，平均跌幅 <span style="color: #f44336; font-weight: bold;">{bottom_sector['avg_change_pct']:.2f}%</span></p>
+                    <p style="margin: 5px 0; color: #333;">• 建议谨慎操作该板块，等待企稳信号</p>
+                    """
+                
+                html += """
                 </div>
             </div>
-            """
-            print("✅ 板块分析完成")
+                """
+                
+                print("✅ 板块分析完成")
+            else:
+                html += """
+            <div class="section">
+                <h3>📊 板块分析</h3>
+                <p style="color: #666;">⚠️ 暂无板块数据</p>
+            </div>
+                """
+                print("⚠️ 板块数据为空")
         except Exception as e:
             print(f"⚠️ 生成板块分析失败: {e}")
             html += """
             <div class="section">
                 <h3>📊 板块分析</h3>
-                <p>板块分析暂不可用</p>
+                <p style="color: #666;">⚠️ 板块分析暂不可用</p>
             </div>
             """
 
