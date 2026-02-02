@@ -1,12 +1,7 @@
 {
   "initial_capital": 1000000,
-  "capital": 181811.18929405196,
+  "capital": 303926.18929405196,
   "positions": {
-    "1211.HK": {
-      "shares": 2100,
-      "avg_price": 94.88809523809523,
-      "stop_loss_price": 94.0
-    },
     "3968.HK": {
       "shares": 3200,
       "avg_price": 47.664375,
@@ -36,6 +31,11 @@
       "shares": 700,
       "avg_price": 79.7,
       "stop_loss_price": 63.05
+    },
+    "1330.HK": {
+      "shares": 14000,
+      "avg_price": 5.31,
+      "stop_loss_price": 4.5
     }
   },
   "transaction_history": [
@@ -21330,6 +21330,150 @@
       "current_price": 79.7,
       "target_price": 72.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-02T10:06:37.048332",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 181811.18929405196,
+      "reason": "出货评分7.5，资金大幅流出（CMF -0.2246），流动性萎缩（成交额变化率-86.96%），技术面五重确认出货",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 427.4,
+      "target_price": 410.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02T10:06:40.388661",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 181811.18929405196,
+      "reason": "出货评分7.5，资金大幅流出（CMF -0.3235），估值泡沫风险（相对强度-10.41%），板块弱势拖累",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 36.42,
+      "target_price": 34.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02T10:06:44.290349",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 181811.18929405196,
+      "reason": "出货评分7.0，超买（RSI 69.79），资金流出（CMF -0.1294），流动性枯竭（成交额变化率-79.5%）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 134.9,
+      "target_price": 130.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02T10:06:47.426807",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 181811.18929405196,
+      "reason": "出货评分7.0，超买（RSI 70.1），高估值风险（PE 18.53），技术面五重确认出货",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 89.95,
+      "target_price": 86.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02T10:06:51.331835",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 181811.18929405196,
+      "reason": "出货评分6.0，半导体板块暴跌（-4.54%），高估值（PE 125.43），OBV趋势下降确认弱势",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 74.15,
+      "target_price": 70.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02T10:06:58.015503",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 2100,
+      "price": 93.55,
+      "amount": 196455.0,
+      "capital_after": 378266.18929405196,
+      "reason": "止损触发: 当前价格HK$93.55 < 止损价格HK$94.00",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 93.55,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-02-02T10:07:02.416155",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 48.38,
+      "amount": 0,
+      "capital_after": 378266.18929405196,
+      "reason": "建仓评分5.2，价格低位区间（25.41%），技术指标协同（RSI+OBV+CMF资金流入），低估值（PE 7.38），银行板块相对抗跌",
+      "success": false,
+      "stop_loss_price": 41.0,
+      "current_price": 48.38,
+      "target_price": 52.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02T10:07:06.041225",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.43,
+      "amount": 0,
+      "capital_after": 378266.18929405196,
+      "reason": "建仓评分5.2，深度低位（8.74%），高股息安全垫，基本面强劲（PE 6.11），OBV量能累积确认吸筹",
+      "success": false,
+      "stop_loss_price": 4.6,
+      "current_price": 5.43,
+      "target_price": 5.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-02T10:07:07.817619",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 14000,
+      "price": 5.31,
+      "amount": 74340.0,
+      "capital_after": 303926.18929405196,
+      "reason": "建仓评分4.0，低位区间（20.25%），环保政策利好，TAV中等共振（51.25），相对强度跑赢恒指",
+      "success": true,
+      "stop_loss_price": 4.5,
+      "current_price": 5.31,
+      "target_price": 5.7,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -35202,169 +35346,88 @@
           "stop_loss_price": 63.05
         }
       }
+    },
+    {
+      "timestamp": "2026-02-02T10:06:58.704796",
+      "capital": 378266.18929405196,
+      "portfolio_value": 994868.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 27500,
+          "avg_price": 5.64,
+          "stop_loss_price": 4.8
+        },
+        "0728.HK": {
+          "shares": 11300,
+          "avg_price": 5.37,
+          "stop_loss_price": 4.75
+        },
+        "1347.HK": {
+          "shares": 500,
+          "avg_price": 118.5,
+          "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-02T10:07:08.599698",
+      "capital": 303926.18929405196,
+      "portfolio_value": 994313.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 27500,
+          "avg_price": 5.64,
+          "stop_loss_price": 4.8
+        },
+        "0728.HK": {
+          "shares": 11300,
+          "avg_price": 5.37,
+          "stop_loss_price": 4.75
+        },
+        "1347.HK": {
+          "shares": 500,
+          "avg_price": 118.5,
+          "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "1330.HK": {
+          "shares": 14000,
+          "avg_price": 5.31,
+          "stop_loss_price": 4.5
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-01-29 13:48:53",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 27500,
-      "price": 5.64,
-      "amount": 155100.0,
-      "reason": "市场发生重大变化：MACD金叉信号形成技术反转（3.5小时前卖出后指标由死叉转金叉），价格低位（31.07%百分位），资金流入（CMF 0.0357），换手率变化5日+5.48%改善；适合平衡型投资者风险偏好",
-      "capital_after": 206584.18929405196,
-      "success": true,
-      "stop_loss_price": 4.8,
-      "current_price": 5.64,
-      "target_price": 6.15,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-01-29 14:29:03",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-29 14:58:27",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-29 15:31:37",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-30 09:45:19",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-30 10:14:26",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-30 10:58:55",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "市场发生重大变化：VIX指数升至32，成交额下降35%，触发风险控制止损",
-          "stop_loss_triggered": true,
-          "target_price": 33.1,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-01-30 10:58:55",
-      "type": "SELL",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 4200,
-      "price": 35.94,
-      "amount": 150948.0,
-      "reason": "市场发生重大变化：VIX指数升至32，成交额下降35%，触发风险控制止损",
-      "capital_after": 357532.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 35.94,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -3528.0000000000146
-    },
-    {
-      "timestamp": "2026-01-30 11:55:48",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-01-30 13:54:58",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "20日成交额增长128.81%，资金流入强劲，技术面支持建仓，符合平衡型偏好兼顾价值与成长",
-          "allocation_pct": 6.0,
-          "stop_loss_price": 4.75,
-          "target_price": 5.5,
-          "validity_period": 7
-        },
-        {
-          "code": "1347.HK",
-          "name": "好未来",
-          "reason": "换手率1.11%健康，关注度提升，建仓评分高，成长性符合平衡型稳健增长需求",
-          "allocation_pct": 6.0,
-          "stop_loss_price": 10.45,
-          "target_price": 12.1,
-          "validity_period": 7
-        },
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "技术指标金叉，市场情绪改善，龙头股平衡风险与收益",
-          "allocation_pct": 6.0,
-          "stop_loss_price": 332.5,
-          "target_price": 385.0,
-          "validity_period": 10
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "高股息率，价值低估，资金稳定，符合平衡型资本保值与收益需求",
-          "allocation_pct": 6.0,
-          "stop_loss_price": 63.05,
-          "target_price": 72.0,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰控股",
-          "reason": "成交额1日下降51.84%，资金流出明显，出货评分≥3.0",
-          "stop_loss_triggered": false,
-          "target_price": 60.0,
-          "validity_period": 5
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "出货评分高，技术面转弱，避免进一步下跌；与2.9小时前卖出决策一致，无重大变化",
-          "stop_loss_triggered": false,
-          "target_price": 36.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "成交额变化率负向，资金面分化，出货评分≥3.0",
-          "stop_loss_triggered": false,
-          "target_price": 260.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "关注度下降，出货评分高，避免短期波动",
-          "stop_loss_triggered": false,
-          "target_price": 15.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "成交额1日变化率负向，资金流出，出货信号明确",
-          "stop_loss_triggered": false,
-          "target_price": 5.5,
-          "validity_period": 5
-        }
-      ]
-    },
     {
       "timestamp": "2026-01-30 13:54:58",
       "type": "SELL",
@@ -35508,6 +35571,225 @@
       "current_price": 79.7,
       "target_price": 72.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-02 10:06:36",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "建仓评分5.2，价格低位区间（25.41%），技术指标协同（RSI+OBV+CMF资金流入），低估值（PE 7.38），银行板块相对抗跌",
+          "allocation_pct": 12.5,
+          "stop_loss_price": 41.0,
+          "target_price": 52.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "建仓评分5.2，深度低位（8.74%），高股息安全垫，基本面强劲（PE 6.11），OBV量能累积确认吸筹",
+          "allocation_pct": 10.0,
+          "stop_loss_price": 4.6,
+          "target_price": 5.85,
+          "validity_period": 14
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "建仓评分4.0，低位区间（20.25%），环保政策利好，TAV中等共振（51.25），相对强度跑赢恒指",
+          "allocation_pct": 7.5,
+          "stop_loss_price": 4.5,
+          "target_price": 5.7,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "出货评分7.5，资金大幅流出（CMF -0.2246），流动性萎缩（成交额变化率-86.96%），技术面五重确认出货",
+          "stop_loss_triggered": false,
+          "target_price": 410.0,
+          "validity_period": 3
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分7.5，资金大幅流出（CMF -0.3235），估值泡沫风险（相对强度-10.41%），板块弱势拖累",
+          "stop_loss_triggered": false,
+          "target_price": 34.0,
+          "validity_period": 3
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分7.0，超买（RSI 69.79），资金流出（CMF -0.1294），流动性枯竭（成交额变化率-79.5%）",
+          "stop_loss_triggered": false,
+          "target_price": 130.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货评分7.0，超买（RSI 70.1），高估值风险（PE 18.53），技术面五重确认出货",
+          "stop_loss_triggered": false,
+          "target_price": 86.0,
+          "validity_period": 3
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "出货评分6.0，半导体板块暴跌（-4.54%），高估值（PE 125.43），OBV趋势下降确认弱势",
+          "stop_loss_triggered": false,
+          "target_price": 70.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-02 10:06:37",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5，资金大幅流出（CMF -0.2246），流动性萎缩（成交额变化率-86.96%），技术面五重确认出货",
+      "capital_after": 181811.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 427.4,
+      "target_price": 410.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02 10:06:40",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5，资金大幅流出（CMF -0.3235），估值泡沫风险（相对强度-10.41%），板块弱势拖累",
+      "capital_after": 181811.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 36.42,
+      "target_price": 34.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02 10:06:44",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0，超买（RSI 69.79），资金流出（CMF -0.1294），流动性枯竭（成交额变化率-79.5%）",
+      "capital_after": 181811.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 134.9,
+      "target_price": 130.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02 10:06:47",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0，超买（RSI 70.1），高估值风险（PE 18.53），技术面五重确认出货",
+      "capital_after": 181811.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 89.95,
+      "target_price": 86.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02 10:06:51",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0，半导体板块暴跌（-4.54%），高估值（PE 125.43），OBV趋势下降确认弱势",
+      "capital_after": 181811.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 74.15,
+      "target_price": 70.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-02 10:06:58",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 2100,
+      "price": 93.55,
+      "amount": 196455.0,
+      "reason": "止损触发: 当前价格HK$93.55 < 止损价格HK$94.00",
+      "capital_after": 378266.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 93.55,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -2809.9999999999936
+    },
+    {
+      "timestamp": "2026-02-02 10:07:02",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 48.38,
+      "amount": 0,
+      "reason": "建仓评分5.2，价格低位区间（25.41%），技术指标协同（RSI+OBV+CMF资金流入），低估值（PE 7.38），银行板块相对抗跌",
+      "capital_after": 378266.18929405196,
+      "success": false,
+      "stop_loss_price": 41.0,
+      "current_price": 48.38,
+      "target_price": 52.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02 10:07:06",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.43,
+      "amount": 0,
+      "reason": "建仓评分5.2，深度低位（8.74%），高股息安全垫，基本面强劲（PE 6.11），OBV量能累积确认吸筹",
+      "capital_after": 378266.18929405196,
+      "success": false,
+      "stop_loss_price": 4.6,
+      "current_price": 5.43,
+      "target_price": 5.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-02 10:07:07",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 14000,
+      "price": 5.31,
+      "amount": 74340.0,
+      "reason": "建仓评分4.0，低位区间（20.25%），环保政策利好，TAV中等共振（51.25），相对强度跑赢恒指",
+      "capital_after": 303926.18929405196,
+      "success": true,
+      "stop_loss_price": 4.5,
+      "current_price": 5.31,
+      "target_price": 5.7,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
