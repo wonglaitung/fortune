@@ -26,6 +26,7 @@ import time
 import argparse
 from datetime import datetime, timedelta
 import re
+from config import WATCHLIST
 
 warnings.filterwarnings("ignore")
 os.environ['MPLBACKEND'] = 'Agg'
@@ -68,33 +69,7 @@ plt.rcParams['axes.unicode_minus'] = False
 # ==============================
 # 1. 用户设置区（所有重要阈值集中于此）
 # ==============================
-WATCHLIST = {
-    "0005.HK": "汇丰银行",
-    "0388.HK": "香港交易所",
-    "0700.HK": "腾讯控股",
-    "0728.HK": "中国电信",
-    "0883.HK": "中国海洋石油",
-    "0939.HK": "建设银行",
-    "0941.HK": "中国移动",
-    "0981.HK": "中芯国际",
-    "1088.HK": "中国神华",
-    "1138.HK": "中远海能",
-    "1288.HK": "农业银行",
-    "1330.HK": "绿色动力环保",
-    "1347.HK": "华虹半导体",
-    "1398.HK": "工商银行",
-    "1810.HK": "小米集团-W",
-    "2269.HK": "药明生物",
-    "2533.HK": "黑芝麻智能",
-    "2800.HK": "盈富基金",
-    "3690.HK": "美团-W",
-    "3968.HK": "招商银行",
-    "6682.HK": "第四范式",
-    "9660.HK": "地平线机器人",
-    "9988.HK": "阿里巴巴-SW",
-    "1211.HK": "比亚迪股份",
-    "1299.HK": "友邦保险"
-}
+# WATCHLIST 已从 config.py 导入
 
 # 窗口与样本
 DAYS_ANALYSIS = 12
