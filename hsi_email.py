@@ -81,39 +81,9 @@ except ImportError:
     SECTOR_ANALYSIS_AVAILABLE = False
     print("⚠️ 板块分析模块不可用")
 
-# 从港股主力资金追踪器导入股票列表（可选）
-try:
-    from hk_smart_money_tracker import WATCHLIST
-    STOCK_LIST = WATCHLIST
-except ImportError:
-    print("⚠️ 无法导入 hk_smart_money_tracker.WATCHLIST，使用默认股票列表")
-    STOCK_LIST = {
-        "2800.HK": "盈富基金",
-        "3968.HK": "招商银行",
-        "0939.HK": "建设银行",
-        "1398.HK": "工商银行",
-        "1288.HK": "农业银行",
-        "0005.HK": "汇丰银行",
-        "0728.HK": "中国电信",
-        "0941.HK": "中国移动",
-        "6682.HK": "第四范式",
-        "1347.HK": "华虹半导体",
-        "1138.HK": "中远海能",
-        "1088.HK": "中国神华",
-        "0883.HK": "中国海洋石油",
-        "0981.HK": "中芯国际",
-        "0388.HK": "香港交易所",
-        "0700.HK": "腾讯控股",
-        "9988.HK": "阿里巴巴-SW",
-        "3690.HK": "美团-W",
-        "1810.HK": "小米集团-W",
-        "9660.HK": "地平线机器人",
-        "2533.HK": "黑芝麻智能",
-        "1330.HK": "绿色动力环保",
-        "1211.HK": "比亚迪股份",
-        "2269.HK": "药明生物",
-        "1299.HK": "友邦保险"
-    }
+# 从全局配置导入股票列表
+from config import WATCHLIST
+STOCK_LIST = WATCHLIST
 
 
 class HSIEmailSystem:
