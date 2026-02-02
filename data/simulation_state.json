@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 262589.18929405196,
+  "capital": 338.1892940519465,
   "positions": {
     "3968.HK": {
       "shares": 3200,
@@ -13,9 +13,9 @@
       "stop_loss_price": 5.25
     },
     "1288.HK": {
-      "shares": 27500,
-      "avg_price": 5.64,
-      "stop_loss_price": 4.8
+      "shares": 48800,
+      "avg_price": 5.535245901639344,
+      "stop_loss_price": 4.59
     },
     "1347.HK": {
       "shares": 500,
@@ -36,6 +36,11 @@
       "shares": 3600,
       "avg_price": 27.02,
       "stop_loss_price": 25.9
+    },
+    "0939.HK": {
+      "shares": 18900,
+      "avg_price": 7.79,
+      "stop_loss_price": 6.61
     }
   },
   "transaction_history": [
@@ -21538,6 +21543,38 @@
       "current_price": 27.02,
       "target_price": 27.8,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-02-02T14:23:37.638242",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 18900,
+      "price": 7.79,
+      "amount": 147231.0,
+      "capital_after": 115358.18929405196,
+      "reason": "建仓评分5.2分，价格低位（位置百分位37.86%），OBV和CMF资金流入确认主力建仓，基本面强（PE 5.56，低估值），银行股板块相对抗跌（跌幅-1.26%），符合平衡型风险偏好稳健增长需求",
+      "success": true,
+      "stop_loss_price": 6.61,
+      "current_price": 7.79,
+      "target_price": 8.2,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02T14:23:42.362134",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 21300,
+      "price": 5.4,
+      "amount": 115020.00000000001,
+      "capital_after": 338.1892940519465,
+      "reason": "建仓评分5.2分，价格极低位（位置百分位7.77%），CMF资金流0.0917显著流入，基本面强（PE 6.11，港股最低估值之一），超跌反弹概率高，技术指标协同支持买入，符合平衡型风险偏好安全边际要求",
+      "success": true,
+      "stop_loss_price": 4.59,
+      "current_price": 5.4,
+      "target_price": 5.7,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -35568,58 +35605,103 @@
           "stop_loss_price": 25.9
         }
       }
+    },
+    {
+      "timestamp": "2026-02-02T14:23:38.571498",
+      "capital": 115358.18929405196,
+      "portfolio_value": 984563.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 48800,
+          "avg_price": 5.535245901639344,
+          "stop_loss_price": 4.59
+        },
+        "1347.HK": {
+          "shares": 500,
+          "avg_price": 118.5,
+          "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "1330.HK": {
+          "shares": 14000,
+          "avg_price": 5.31,
+          "stop_loss_price": 4.5
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-02T14:23:43.241227",
+      "capital": 338.1892940519465,
+      "portfolio_value": 984613.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 48800,
+          "avg_price": 5.535245901639344,
+          "stop_loss_price": 4.59
+        },
+        "1347.HK": {
+          "shares": 500,
+          "avg_price": 118.5,
+          "stop_loss_price": 10.45
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "1330.HK": {
+          "shares": 14000,
+          "avg_price": 5.31,
+          "stop_loss_price": 4.5
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-02 10:06:51",
-      "type": "SELL",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0，半导体板块暴跌（-4.54%），高估值（PE 125.43），OBV趋势下降确认弱势",
-      "capital_after": 181811.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 74.15,
-      "target_price": 70.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-02 10:06:58",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 2100,
-      "price": 93.55,
-      "amount": 196455.0,
-      "reason": "止损触发: 当前价格HK$93.55 < 止损价格HK$94.00",
-      "capital_after": 378266.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 93.55,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -2809.9999999999936
-    },
-    {
-      "timestamp": "2026-02-02 10:07:02",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 48.38,
-      "amount": 0,
-      "reason": "建仓评分5.2，价格低位区间（25.41%），技术指标协同（RSI+OBV+CMF资金流入），低估值（PE 7.38），银行板块相对抗跌",
-      "capital_after": 378266.18929405196,
-      "success": false,
-      "stop_loss_price": 41.0,
-      "current_price": 48.38,
-      "target_price": 52.0,
-      "validity_period": 5
-    },
     {
       "timestamp": "2026-02-02 10:07:06",
       "type": "BUY",
@@ -35764,6 +35846,67 @@
       "current_price": 27.02,
       "target_price": 27.8,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-02-02 13:22:15",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-02 14:23:35",
+      "buy": [
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "建仓评分5.2分，价格低位（位置百分位37.86%），OBV和CMF资金流入确认主力建仓，基本面强（PE 5.56，低估值），银行股板块相对抗跌（跌幅-1.26%），符合平衡型风险偏好稳健增长需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 6.61,
+          "target_price": 8.2,
+          "validity_period": 5
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "建仓评分5.2分，价格极低位（位置百分位7.77%），CMF资金流0.0917显著流入，基本面强（PE 6.11，港股最低估值之一），超跌反弹概率高，技术指标协同支持买入，符合平衡型风险偏好安全边际要求",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.59,
+          "target_price": 5.7,
+          "validity_period": 5
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-02 14:23:37",
+      "type": "BUY",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 18900,
+      "price": 7.79,
+      "amount": 147231.0,
+      "reason": "建仓评分5.2分，价格低位（位置百分位37.86%），OBV和CMF资金流入确认主力建仓，基本面强（PE 5.56，低估值），银行股板块相对抗跌（跌幅-1.26%），符合平衡型风险偏好稳健增长需求",
+      "capital_after": 115358.18929405196,
+      "success": true,
+      "stop_loss_price": 6.61,
+      "current_price": 7.79,
+      "target_price": 8.2,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-02 14:23:42",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 21300,
+      "price": 5.4,
+      "amount": 115020.00000000001,
+      "reason": "建仓评分5.2分，价格极低位（位置百分位7.77%），CMF资金流0.0917显著流入，基本面强（PE 6.11，港股最低估值之一），超跌反弹概率高，技术指标协同支持买入，符合平衡型风险偏好安全边际要求",
+      "capital_after": 338.1892940519465,
+      "success": true,
+      "stop_loss_price": 4.59,
+      "current_price": 5.4,
+      "target_price": 5.7,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
