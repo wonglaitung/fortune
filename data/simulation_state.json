@@ -21916,6 +21916,54 @@
       "current_price": 4.99,
       "target_price": 2.7,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-03T14:42:34.975455",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 82.18929405194649,
+      "reason": "成交量比率2.62>2异常放量下跌，OBV下降确认资金流出；科技股板块弱势下跌，出货评分8.5分",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 581.0,
+      "target_price": 550.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-03T14:42:41.129113",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.26,
+      "amount": 0,
+      "capital_after": 82.18929405194649,
+      "reason": "技术指标协同：RSI超卖、OBV上升、CMF流入；AI板块轮动中关注，建仓评分6.4分",
+      "success": false,
+      "stop_loss_price": 16.4,
+      "current_price": 19.26,
+      "target_price": 20.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-03T14:42:45.558302",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 23.44,
+      "amount": 0,
+      "capital_after": 82.18929405194649,
+      "reason": "MACD金叉、OBV上升、CMF流入；能源板块温和上涨，高分红低估值，建仓评分3.2分",
+      "success": false,
+      "stop_loss_price": 19.99,
+      "current_price": 23.44,
+      "target_price": 24.8,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -36237,38 +36285,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-03 11:53:15",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 400,
-      "price": 5.46,
-      "amount": 2184.0,
-      "reason": "价格低位（位置百分位13.59%）、MACD交叉、OBV上升，PE 6.11深度低估，银行板块温和上涨提供支撑",
-      "capital_after": 82.18929405194649,
-      "success": true,
-      "stop_loss_price": 4.64,
-      "current_price": 5.46,
-      "target_price": 5.8,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-03 11:53:20",
-      "type": "BUY",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 7.86,
-      "amount": 0,
-      "reason": "MACD交叉、OBV上升、CMF资金流流入，PE 5.56深度低估，银行板块温和上涨且跑赢恒指",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": 6.68,
-      "current_price": 7.86,
-      "target_price": 8.2,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-02-03 13:18:02",
       "buy": [
         {
@@ -36450,6 +36466,87 @@
       "stop_loss_price": 2.38,
       "current_price": 4.99,
       "target_price": 2.7,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-03 14:42:34",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "技术指标协同：RSI超卖、OBV上升、CMF流入；AI板块轮动中关注，建仓评分6.4分",
+          "allocation_pct": 15,
+          "stop_loss_price": 16.4,
+          "target_price": 20.8,
+          "validity_period": 5
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "MACD金叉、OBV上升、CMF流入；能源板块温和上涨，高分红低估值，建仓评分3.2分",
+          "allocation_pct": 15,
+          "stop_loss_price": 19.99,
+          "target_price": 24.8,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "reason": "成交量比率2.62>2异常放量下跌，OBV下降确认资金流出；科技股板块弱势下跌，出货评分8.5分",
+          "stop_loss_triggered": false,
+          "target_price": 550.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-03 14:42:34",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "成交量比率2.62>2异常放量下跌，OBV下降确认资金流出；科技股板块弱势下跌，出货评分8.5分",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 581.0,
+      "target_price": 550.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-03 14:42:41",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.26,
+      "amount": 0,
+      "reason": "技术指标协同：RSI超卖、OBV上升、CMF流入；AI板块轮动中关注，建仓评分6.4分",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": 16.4,
+      "current_price": 19.26,
+      "target_price": 20.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-03 14:42:45",
+      "type": "BUY",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 23.44,
+      "amount": 0,
+      "reason": "MACD金叉、OBV上升、CMF流入；能源板块温和上涨，高分红低估值，建仓评分3.2分",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": 19.99,
+      "current_price": 23.44,
+      "target_price": 24.8,
       "validity_period": 14
     }
   ],
