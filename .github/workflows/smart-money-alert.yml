@@ -38,8 +38,8 @@ jobs:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
           python data_services/batch_stock_news_fetcher.py
-          python hsi_llm_strategy.py
-          python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
+          # python hsi_llm_strategy.py
+          # python hk_smart_money_tracker.py --date ${{ env.YESTERDAY }}
 
       - name: Configure git and commit changes
         run: |
