@@ -22252,6 +22252,22 @@
       "current_price": 15.5,
       "target_price": 0.0,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-04T16:02:57.609611",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 82.18929405194649,
+      "reason": "出货评分8.0分，技术面超买（RSI 58.06接近超买且位置百分位82.64%高位），OBV下降与价格背离，板块轮动末期风险加剧",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 42.98,
+      "target_price": 40.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -36573,96 +36589,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-04 11:47:50",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "价格低位(17.03%)、MACD金叉、CMF资金流入(+0.2273)，银行板块轮动且Visa新闻间接提振",
-          "allocation_pct": 15,
-          "stop_loss_price": 40.4,
-          "target_price": 50.0,
-          "validity_period": 5
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格超低位(11.65%)、MACD金叉、OBV量能上升，高股息安全边际且跑赢恒指",
-          "allocation_pct": 12,
-          "stop_loss_price": 4.6,
-          "target_price": 5.7,
-          "validity_period": 5
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "价格低位(15.38%)、MACD金叉、TAV中等共振，环保板块轮动且低PE安全边际",
-          "allocation_pct": 9,
-          "stop_loss_price": 4.4,
-          "target_price": 5.5,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "CMF资金大幅流出(-0.2571)、MACD死叉、估值争议新闻加剧抛压",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "位置百分位97.63%高位、RSI超买(71.48)、成交额断崖下跌(-78.13%)",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "CMF资金流出(-0.1635)、位置高位回落、高PE(1891)估值风险",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-04 11:47:50",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "CMF资金大幅流出(-0.2571)、MACD死叉、估值争议新闻加剧抛压",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 36.22,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-04 11:47:54",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "位置百分位97.63%高位、RSI超买(71.48)、成交额断崖下跌(-78.13%)",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.2,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
       "timestamp": "2026-02-04 11:47:56",
       "type": "SELL",
       "code": "1347.HK",
@@ -36789,6 +36715,36 @@
       "current_price": 15.5,
       "target_price": 0.0,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-04 16:02:57",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分8.0分，技术面超买（RSI 58.06接近超买且位置百分位82.64%高位），OBV下降与价格背离，板块轮动末期风险加剧",
+          "stop_loss_triggered": false,
+          "target_price": 40.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-04 16:02:57",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分8.0分，技术面超买（RSI 58.06接近超买且位置百分位82.64%高位），OBV下降与价格背离，板块轮动末期风险加剧",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 42.98,
+      "target_price": 40.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
