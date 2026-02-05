@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 82.18929405194649,
+  "capital": 339266.18929405196,
   "positions": {
     "3968.HK": {
       "shares": 3200,
@@ -12,20 +12,10 @@
       "avg_price": 6.19,
       "stop_loss_price": 5.25
     },
-    "1288.HK": {
-      "shares": 49200,
-      "avg_price": 5.534634146341463,
-      "stop_loss_price": 4.64
-    },
     "0941.HK": {
       "shares": 700,
       "avg_price": 79.7,
       "stop_loss_price": 63.05
-    },
-    "1330.HK": {
-      "shares": 14000,
-      "avg_price": 5.31,
-      "stop_loss_price": 4.5
     },
     "2800.HK": {
       "shares": 3600,
@@ -22300,6 +22290,38 @@
       "current_price": 79.0,
       "target_price": 83.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05T11:07:02.789143",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 14000,
+      "price": 5.18,
+      "amount": 72520.0,
+      "capital_after": 72602.18929405195,
+      "reason": "市场发生重大变化：成交额变化率全部<-30%（-91.72/-96.23/-96.52），流动性萎缩触发风险控制，建议立即清仓观望",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.18,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-02-05T11:07:07.468473",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 49200,
+      "price": 5.42,
+      "amount": 266664.0,
+      "capital_after": 339266.18929405196,
+      "reason": "市场发生重大变化：成交额变化率全部<-30%（-83.83/-91.59/-88.65），流动性萎缩触发风险控制，建议立即清仓观望",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.42,
+      "target_price": null,
+      "validity_period": null
     }
   ],
   "portfolio_history": [
@@ -36347,7 +36369,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36362,7 +36384,7 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
         },
@@ -36394,7 +36416,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36409,7 +36431,7 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
         },
@@ -36441,7 +36463,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36451,7 +36473,7 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
         },
@@ -36483,7 +36505,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36493,7 +36515,7 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
         },
@@ -36530,7 +36552,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36540,7 +36562,7 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
         },
@@ -36582,7 +36604,7 @@
           "stop_loss_price": 5.25
         },
         "1288.HK": {
-          "shares": 49200,
+          "shares": 0,
           "avg_price": 5.534634146341463,
           "stop_loss_price": 4.64
         },
@@ -36592,9 +36614,98 @@
           "stop_loss_price": 63.05
         },
         "1330.HK": {
-          "shares": 14000,
+          "shares": 0,
           "avg_price": 5.31,
           "stop_loss_price": 4.5
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 95.3,
+          "stop_loss_price": 81.1
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-05T11:07:03.864065",
+      "capital": 72602.18929405195,
+      "portfolio_value": 988983.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "1288.HK": {
+          "shares": 0,
+          "avg_price": 5.534634146341463,
+          "stop_loss_price": 4.64
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 95.3,
+          "stop_loss_price": 81.1
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-05T11:07:08.269192",
+      "capital": 339266.18929405196,
+      "portfolio_value": 989008.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
         },
         "2800.HK": {
           "shares": 3600,
@@ -36620,43 +36731,6 @@
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-04 11:48:05",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.44,
-      "amount": 0,
-      "reason": "价格超低位(11.65%)、MACD金叉、OBV量能上升，高股息安全边际且跑赢恒指",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": 4.6,
-      "current_price": 5.44,
-      "target_price": 5.7,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-04 11:48:09",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.24,
-      "amount": 0,
-      "reason": "价格低位(15.38%)、MACD金叉、TAV中等共振，环保板块轮动且低PE安全边际",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": 4.4,
-      "current_price": 5.24,
-      "target_price": 5.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-04 13:28:33",
-      "buy": [],
-      "sell": []
-    },
     {
       "timestamp": "2026-02-04 13:53:40",
       "buy": [],
@@ -36801,6 +36875,62 @@
       "current_price": 79.0,
       "target_price": 83.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05 11:07:02",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "市场发生重大变化：成交额变化率全部<-30%（-91.72/-96.23/-96.52），流动性萎缩触发风险控制，建议立即清仓观望",
+          "stop_loss_triggered": true,
+          "target_price": 5.24,
+          "validity_period": 1
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "市场发生重大变化：成交额变化率全部<-30%（-83.83/-91.59/-88.65），流动性萎缩触发风险控制，建议立即清仓观望",
+          "stop_loss_triggered": true,
+          "target_price": 5.44,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-05 11:07:02",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 14000,
+      "price": 5.18,
+      "amount": 72520.0,
+      "reason": "市场发生重大变化：成交额变化率全部<-30%（-91.72/-96.23/-96.52），流动性萎缩触发风险控制，建议立即清仓观望",
+      "capital_after": 72602.18929405195,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.18,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -1819.9999999999984
+    },
+    {
+      "timestamp": "2026-02-05 11:07:07",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 49200,
+      "price": 5.42,
+      "amount": 266664.0,
+      "reason": "市场发生重大变化：成交额变化率全部<-30%（-83.83/-91.59/-88.65），流动性萎缩触发风险控制，建议立即清仓观望",
+      "capital_after": 339266.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.42,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -5639.999999999983
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
