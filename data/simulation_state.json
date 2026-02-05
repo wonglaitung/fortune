@@ -22268,6 +22268,38 @@
       "current_price": 42.98,
       "target_price": 40.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-05T10:05:12.479441",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 82.18929405194649,
+      "reason": "位置百分位97.05%高位，RSI超买（70.75），布林带超买，CMF资金流出（-0.1617）确认顶部风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 137.8,
+      "target_price": 132.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-05T10:05:17.281791",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.0,
+      "amount": 0,
+      "capital_after": 82.18929405194649,
+      "reason": "价格深度低位（9.22%） + MACD金叉，基本面稳健（评分80，PE 11.05），公用事业板块抗跌提供避险属性",
+      "success": false,
+      "stop_loss_price": 67.57,
+      "current_price": 79.0,
+      "target_price": 83.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -36589,38 +36621,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-04 11:47:56",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "CMF资金流出(-0.1635)、位置高位回落、高PE(1891)估值风险",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 102.2,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-04 11:48:01",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.6,
-      "amount": 0,
-      "reason": "价格低位(17.03%)、MACD金叉、CMF资金流入(+0.2273)，银行板块轮动且Visa新闻间接提振",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": 40.4,
-      "current_price": 47.6,
-      "target_price": 50.0,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-04 11:48:05",
       "type": "BUY",
       "code": "1288.HK",
@@ -36745,6 +36745,62 @@
       "current_price": 42.98,
       "target_price": 40.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-05 10:05:12",
+      "buy": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "价格深度低位（9.22%） + MACD金叉，基本面稳健（评分80，PE 11.05），公用事业板块抗跌提供避险属性",
+          "allocation_pct": 8,
+          "stop_loss_price": 67.57,
+          "target_price": 83.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "位置百分位97.05%高位，RSI超买（70.75），布林带超买，CMF资金流出（-0.1617）确认顶部风险",
+          "stop_loss_triggered": false,
+          "target_price": 132.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-05 10:05:12",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "位置百分位97.05%高位，RSI超买（70.75），布林带超买，CMF资金流出（-0.1617）确认顶部风险",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 137.8,
+      "target_price": 132.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-05 10:05:17",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 79.0,
+      "amount": 0,
+      "reason": "价格深度低位（9.22%） + MACD金叉，基本面稳健（评分80，PE 11.05），公用事业板块抗跌提供避险属性",
+      "capital_after": 82.18929405194649,
+      "success": false,
+      "stop_loss_price": 67.57,
+      "current_price": 79.0,
+      "target_price": 83.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
