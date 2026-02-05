@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 339266.18929405196,
+  "capital": 140678.18929405196,
   "positions": {
     "3968.HK": {
       "shares": 3200,
@@ -36,6 +36,16 @@
       "shares": 100,
       "avg_price": 23.22,
       "stop_loss_price": 19.75
+    },
+    "1288.HK": {
+      "shares": 21800,
+      "avg_price": 5.46,
+      "stop_loss_price": 4.64
+    },
+    "1330.HK": {
+      "shares": 15300,
+      "avg_price": 5.2,
+      "stop_loss_price": 4.42
     }
   },
   "transaction_history": [
@@ -22450,6 +22460,70 @@
       "current_price": 155.6,
       "target_price": 145.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-05T14:51:35.533440",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 48.7,
+      "amount": 0,
+      "capital_after": 339266.18929405196,
+      "reason": "银行股板块温和上涨+0.56%，位置百分位32.43%低位区域，TAV评分63.25中等共振，基本面评分90（PE 7.61低估值），南向资金流入确认（CMF+0.1734）",
+      "success": false,
+      "stop_loss_price": 41.4,
+      "current_price": 48.7,
+      "target_price": 52.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05T14:51:40.115639",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 21800,
+      "price": 5.46,
+      "amount": 119028.0,
+      "capital_after": 220238.18929405196,
+      "reason": "深度低位区域（位置百分位13.59%），基本面评分100（PE 6.17港股最低估值），银行股板块跑赢恒指+1.5%，信贷政策利好支撑",
+      "success": true,
+      "stop_loss_price": 4.64,
+      "current_price": 5.46,
+      "target_price": 5.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-05T14:51:44.892386",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 15300,
+      "price": 5.2,
+      "amount": 79560.0,
+      "capital_after": 140678.18929405196,
+      "reason": "新能源关联板块领涨+1.71%，位置百分位13.85%低位，基本面评分100（PE 9.76低估值），OBV资金流入确认",
+      "success": true,
+      "stop_loss_price": 4.42,
+      "current_price": 5.2,
+      "target_price": 5.65,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05T14:51:50.508255",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 80.1,
+      "amount": 0,
+      "capital_after": 140678.18929405196,
+      "reason": "公用事业板块温和上涨+0.82%，位置百分位19.35%低位，TAV评分51.25中等共振，基本面评分80（PE 11.05合理估值）",
+      "success": false,
+      "stop_loss_price": 68.1,
+      "current_price": 80.1,
+      "target_price": 84.0,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -36856,145 +36930,108 @@
           "stop_loss_price": 19.75
         }
       }
+    },
+    {
+      "timestamp": "2026-02-05T14:51:41.007982",
+      "capital": 220238.18929405196,
+      "portfolio_value": 995178.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 95.3,
+          "stop_loss_price": 81.1
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        },
+        "1288.HK": {
+          "shares": 21800,
+          "avg_price": 5.46,
+          "stop_loss_price": 4.64
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:51:45.951157",
+      "capital": 140678.18929405196,
+      "portfolio_value": 995180.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 3200,
+          "avg_price": 47.664375,
+          "stop_loss_price": 40.5
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        },
+        "3690.HK": {
+          "shares": 500,
+          "avg_price": 95.3,
+          "stop_loss_price": 81.1
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        },
+        "1288.HK": {
+          "shares": 21800,
+          "avg_price": 5.46,
+          "stop_loss_price": 4.64
+        },
+        "1330.HK": {
+          "shares": 15300,
+          "avg_price": 5.2,
+          "stop_loss_price": 4.42
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-05 10:05:12",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "位置百分位97.05%高位，RSI超买（70.75），布林带超买，CMF资金流出（-0.1617）确认顶部风险",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 137.8,
-      "target_price": 132.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-05 10:05:17",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 79.0,
-      "amount": 0,
-      "reason": "价格深度低位（9.22%） + MACD金叉，基本面稳健（评分80，PE 11.05），公用事业板块抗跌提供避险属性",
-      "capital_after": 82.18929405194649,
-      "success": false,
-      "stop_loss_price": 67.57,
-      "current_price": 79.0,
-      "target_price": 83.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-05 11:07:02",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "市场发生重大变化：成交额变化率全部<-30%（-91.72/-96.23/-96.52），流动性萎缩触发风险控制，建议立即清仓观望",
-          "stop_loss_triggered": true,
-          "target_price": 5.24,
-          "validity_period": 1
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "市场发生重大变化：成交额变化率全部<-30%（-83.83/-91.59/-88.65），流动性萎缩触发风险控制，建议立即清仓观望",
-          "stop_loss_triggered": true,
-          "target_price": 5.44,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-05 11:07:02",
-      "type": "SELL",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 14000,
-      "price": 5.18,
-      "amount": 72520.0,
-      "reason": "市场发生重大变化：成交额变化率全部<-30%（-91.72/-96.23/-96.52），流动性萎缩触发风险控制，建议立即清仓观望",
-      "capital_after": 72602.18929405195,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 5.18,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -1819.9999999999984
-    },
-    {
-      "timestamp": "2026-02-05 11:07:07",
-      "type": "SELL",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 49200,
-      "price": 5.42,
-      "amount": 266664.0,
-      "reason": "市场发生重大变化：成交额变化率全部<-30%（-83.83/-91.59/-88.65），流动性萎缩触发风险控制，建议立即清仓观望",
-      "capital_after": 339266.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 5.42,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -5639.999999999983
-    },
-    {
-      "timestamp": "2026-02-05 11:57:35",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "TAV评分58.25中等共振，银行股板块温和上涨(+0.06%)提供安全垫，位置百分位28.65%低位且短期动能显(3日收益率+2.24%)，技术指标OBV↑+CMF↑+RSI低位协同支持",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.16,
-          "target_price": 51.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分5.5分，技术面量价背离(MACD死叉+OBV下降+CMF流出)，交易所板块弱势下跌(-2.14%)且无估值支撑",
-          "stop_loss_triggered": false,
-          "target_price": 400.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "出货评分5.5分，半导体板块强势下跌(-3.64%)拖累，技术面空头主导(MACD死叉+布林带破下轨+CMF流出)且相对强度显著跑输恒指(-14.45%)",
-          "stop_loss_triggered": false,
-          "target_price": 63.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-05 11:57:35",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，技术面量价背离(MACD死叉+OBV下降+CMF流出)，交易所板块弱势下跌(-2.14%)且无估值支撑",
-      "capital_after": 339266.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 411.2,
-      "target_price": 400.0,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-02-05 11:57:39",
       "type": "SELL",
@@ -37152,6 +37189,117 @@
       "current_price": 155.6,
       "target_price": 145.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-05 13:57:58",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-05 14:51:33",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "银行股板块温和上涨+0.56%，位置百分位32.43%低位区域，TAV评分63.25中等共振，基本面评分90（PE 7.61低估值），南向资金流入确认（CMF+0.1734）",
+          "allocation_pct": 15,
+          "stop_loss_price": 41.4,
+          "target_price": 52.5,
+          "validity_period": 5
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "深度低位区域（位置百分位13.59%），基本面评分100（PE 6.17港股最低估值），银行股板块跑赢恒指+1.5%，信贷政策利好支撑",
+          "allocation_pct": 12,
+          "stop_loss_price": 4.64,
+          "target_price": 5.85,
+          "validity_period": 14
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "新能源关联板块领涨+1.71%，位置百分位13.85%低位，基本面评分100（PE 9.76低估值），OBV资金流入确认",
+          "allocation_pct": 8,
+          "stop_loss_price": 4.42,
+          "target_price": 5.65,
+          "validity_period": 5
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "公用事业板块温和上涨+0.82%，位置百分位19.35%低位，TAV评分51.25中等共振，基本面评分80（PE 11.05合理估值）",
+          "allocation_pct": 5,
+          "stop_loss_price": 68.1,
+          "target_price": 84.0,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-05 14:51:35",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 48.7,
+      "amount": 0,
+      "reason": "银行股板块温和上涨+0.56%，位置百分位32.43%低位区域，TAV评分63.25中等共振，基本面评分90（PE 7.61低估值），南向资金流入确认（CMF+0.1734）",
+      "capital_after": 339266.18929405196,
+      "success": false,
+      "stop_loss_price": 41.4,
+      "current_price": 48.7,
+      "target_price": 52.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05 14:51:40",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 21800,
+      "price": 5.46,
+      "amount": 119028.0,
+      "reason": "深度低位区域（位置百分位13.59%），基本面评分100（PE 6.17港股最低估值），银行股板块跑赢恒指+1.5%，信贷政策利好支撑",
+      "capital_after": 220238.18929405196,
+      "success": true,
+      "stop_loss_price": 4.64,
+      "current_price": 5.46,
+      "target_price": 5.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-05 14:51:44",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 15300,
+      "price": 5.2,
+      "amount": 79560.0,
+      "reason": "新能源关联板块领涨+1.71%，位置百分位13.85%低位，基本面评分100（PE 9.76低估值），OBV资金流入确认",
+      "capital_after": 140678.18929405196,
+      "success": true,
+      "stop_loss_price": 4.42,
+      "current_price": 5.2,
+      "target_price": 5.65,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-05 14:51:50",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 80.1,
+      "amount": 0,
+      "reason": "公用事业板块温和上涨+0.82%，位置百分位19.35%低位，TAV评分51.25中等共振，基本面评分80（PE 11.05合理估值）",
+      "capital_after": 140678.18929405196,
+      "success": false,
+      "stop_loss_price": 68.1,
+      "current_price": 80.1,
+      "target_price": 84.0,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
