@@ -709,6 +709,203 @@ class FeatureEngineer:
                 'sentiment_days': 0
             }
 
+    def create_sector_features(self, code, df):
+        """创建板块分析特征（参考 hk_sector_analysis.py）
+
+        从板块分析中提取板块涨跌幅、板块排名、板块趋势等特征：
+        - sector_avg_change: 板块平均涨跌幅（1日/5日/20日）
+        - sector_rank: 板块涨跌幅排名（1日/5日/20日）
+        - sector_rising_ratio: 板块上涨股票比例
+        - sector_total_volume: 板块总成交量
+        - sector_stock_count: 板块股票数量
+        - sector_trend: 板块趋势（量化为数值）
+        - sector_flow_score: 板块资金流向评分
+        - is_sector_leader: 是否为板块龙头
+        - sector_best_stock_change: 板块最佳股票涨跌幅
+        - sector_worst_stock_change: 板块最差股票涨跌幅
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（日期索引）
+
+        Returns:
+            dict: 包含板块特征的字典
+        """
+        try:
+            # 尝试导入板块分析模块
+            try:
+                from data_services.hk_sector_analysis import SectorAnalyzer
+            except ImportError:
+                # 模块不可用，返回默认值
+                return {
+                    'sector_avg_change_1d': 0.0,
+                    'sector_avg_change_5d': 0.0,
+                    'sector_avg_change_20d': 0.0,
+                    'sector_rank_1d': 0,
+                    'sector_rank_5d': 0,
+                    'sector_rank_20d': 0,
+                    'sector_rising_ratio_1d': 0.5,
+                    'sector_rising_ratio_5d': 0.5,
+                    'sector_rising_ratio_20d': 0.5,
+                    'sector_total_volume': 0.0,
+                    'sector_stock_count': 0,
+                    'sector_trend_score': 0.0,
+                    'sector_flow_score': 0.0,
+                    'is_sector_leader': 0,
+                    'sector_best_stock_change': 0.0,
+                    'sector_worst_stock_change': 0.0,
+                    'sector_outperform_hsi': 0
+                }
+
+            # 创建板块分析器
+            sector_analyzer = SectorAnalyzer()
+
+            # 获取股票所属板块
+            sector_info = sector_analyzer.stock_mapping.get(code)
+            if not sector_info:
+                # 未找到板块信息，返回默认值
+                return {
+                    'sector_avg_change_1d': 0.0,
+                    'sector_avg_change_5d': 0.0,
+                    'sector_avg_change_20d': 0.0,
+                    'sector_rank_1d': 0,
+                    'sector_rank_5d': 0,
+                    'sector_rank_20d': 0,
+                    'sector_rising_ratio_1d': 0.5,
+                    'sector_rising_ratio_5d': 0.5,
+                    'sector_rising_ratio_20d': 0.5,
+                    'sector_total_volume': 0.0,
+                    'sector_stock_count': 0,
+                    'sector_trend_score': 0.0,
+                    'sector_flow_score': 0.0,
+                    'is_sector_leader': 0,
+                    'sector_best_stock_change': 0.0,
+                    'sector_worst_stock_change': 0.0,
+                    'sector_outperform_hsi': 0
+                }
+
+            sector_code = sector_info['sector']
+
+            features = {}
+
+            # 计算不同周期的板块表现
+            for period in [1, 5, 20]:
+                try:
+                    perf_df = sector_analyzer.calculate_sector_performance(period)
+
+                    if not perf_df.empty:
+                        # 找到该板块的排名
+                        sector_row = perf_df[perf_df['sector_code'] == sector_code]
+
+                        if not sector_row.empty:
+                            sector_data = sector_row.iloc[0]
+
+                            # 板块平均涨跌幅
+                            features[f'sector_avg_change_{period}d'] = sector_data['avg_change_pct']
+
+                            # 板块排名
+                            sector_rank = perf_df[perf_df['sector_code'] == sector_code].index[0] + 1
+                            features[f'sector_rank_{period}d'] = sector_rank
+
+                            # 板块上涨股票比例
+                            rising_count = sum(1 for s in sector_data['stocks'] if s['change_pct'] > 0)
+                            total_count = len(sector_data['stocks'])
+                            features[f'sector_rising_ratio_{period}d'] = rising_count / total_count if total_count > 0 else 0.5
+
+                            # 板块总成交量
+                            features['sector_total_volume'] = sector_data['total_volume']
+
+                            # 板块股票数量
+                            features['sector_stock_count'] = sector_data['stock_count']
+
+                            # 最佳和最差股票表现
+                            if sector_data['best_stock']:
+                                features['sector_best_stock_change'] = sector_data['best_stock']['change_pct']
+                            if sector_data['worst_stock']:
+                                features['sector_worst_stock_change'] = sector_data['worst_stock']['change_pct']
+
+                            # 是否为板块龙头（前3名）
+                            features['is_sector_leader'] = 1 if sector_rank <= 3 else 0
+                        else:
+                            # 板块未找到，使用默认值
+                            features[f'sector_avg_change_{period}d'] = 0.0
+                            features[f'sector_rank_{period}d'] = 0
+                            features[f'sector_rising_ratio_{period}d'] = 0.5
+                    else:
+                        # 无法获取板块数据，使用默认值
+                        features[f'sector_avg_change_{period}d'] = 0.0
+                        features[f'sector_rank_{period}d'] = 0
+                        features[f'sector_rising_ratio_{period}d'] = 0.5
+
+                except Exception as e:
+                    print(f"⚠️ 计算板块表现失败 (period={period}): {e}")
+                    features[f'sector_avg_change_{period}d'] = 0.0
+                    features[f'sector_rank_{period}d'] = 0
+                    features[f'sector_rising_ratio_{period}d'] = 0.5
+
+            # 计算板块趋势
+            try:
+                trend_result = sector_analyzer.analyze_sector_trend(sector_code, days=20)
+
+                if 'trend' in trend_result:
+                    # 将趋势量化为数值
+                    trend_mapping = {
+                        '强势上涨': 2.0,
+                        '温和上涨': 1.0,
+                        '震荡整理': 0.0,
+                        '温和下跌': -1.0,
+                        '强势下跌': -2.0
+                    }
+                    features['sector_trend_score'] = trend_mapping.get(trend_result['trend'], 0.0)
+                else:
+                    features['sector_trend_score'] = 0.0
+            except Exception as e:
+                print(f"⚠️ 计算板块趋势失败: {e}")
+                features['sector_trend_score'] = 0.0
+
+            # 计算板块资金流向
+            try:
+                flow_result = sector_analyzer.analyze_sector_fund_flow(sector_code, days=5)
+
+                if 'avg_flow_score' in flow_result:
+                    features['sector_flow_score'] = flow_result['avg_flow_score']
+                else:
+                    features['sector_flow_score'] = 0.0
+            except Exception as e:
+                print(f"⚠️ 计算板块资金流向失败: {e}")
+                features['sector_flow_score'] = 0.0
+
+            # 判断板块是否跑赢恒指（基于板块平均涨跌幅）
+            if 'sector_avg_change_1d' in features and 'sector_avg_change_5d' in features:
+                # 简化处理：假设恒指涨跌幅为0（实际应该从恒指数据中获取）
+                # 这里使用板块自身的涨跌幅作为参考
+                features['sector_outperform_hsi'] = 1 if features['sector_avg_change_5d'] > 0 else 0
+
+            return features
+
+        except Exception as e:
+            print(f"⚠️ 计算板块特征失败 {code}: {e}")
+            # 异常情况返回默认值
+            return {
+                'sector_avg_change_1d': 0.0,
+                'sector_avg_change_5d': 0.0,
+                'sector_avg_change_20d': 0.0,
+                'sector_rank_1d': 0,
+                'sector_rank_5d': 0,
+                'sector_rank_20d': 0,
+                'sector_rising_ratio_1d': 0.5,
+                'sector_rising_ratio_5d': 0.5,
+                'sector_rising_ratio_20d': 0.5,
+                'sector_total_volume': 0.0,
+                'sector_stock_count': 0,
+                'sector_trend_score': 0.0,
+                'sector_flow_score': 0.0,
+                'is_sector_leader': 0,
+                'sector_best_stock_change': 0.0,
+                'sector_worst_stock_change': 0.0,
+                'sector_outperform_hsi': 0
+            }
+
     def create_interaction_features(self, df):
         """创建所有可能的交叉特征（类别型 × 数值型）
 
@@ -837,6 +1034,11 @@ class MLTradingModel:
                 # 添加情感特征
                 sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
                 for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
+                # 添加板块特征
+                sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                for key, value in sector_features.items():
                     stock_df[key] = value
 
                 # 添加股票代码
@@ -1225,6 +1427,11 @@ class GBDTLRModel:
                 # 添加情感特征
                 sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
                 for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
+                # 添加板块特征
+                sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                for key, value in sector_features.items():
                     stock_df[key] = value
 
                 # 添加股票代码
