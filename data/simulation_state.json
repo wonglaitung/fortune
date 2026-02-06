@@ -22849,6 +22849,22 @@
       "current_price": 35.36,
       "target_price": 38.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-06T15:55:27.586329",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 337.1892940519615,
+      "reason": "出货评分7.5分，保险板块强势下跌（-2.91%），单日暴跌5.15%且3日收益率-7.55%，成交量异常放大（比率1.95），CMF资金流-0.2638显著流出，OBV下降确认弱势，系统性风险主导",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.65,
+      "target_price": 0.0,
+      "validity_period": 1
     }
   ],
   "portfolio_history": [
@@ -37519,54 +37535,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-06 13:19:20",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0，RSI严重超买（71.37）、CMF资金大幅流出（-0.222）、流动性枯竭（成交额三连负<-79%），技术面见顶信号明确",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 14.79,
-      "target_price": 13.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-06 13:19:24",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5，CMF资金大幅流出（-0.2566）、OBV与价格背离、生物医药板块弱势，技术信号压倒新闻利好",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 37.52,
-      "target_price": 34.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-06 13:19:29",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0，CMF资金流出、MACD死叉、银行股高位补跌，奖金削减新闻强化盈利担忧",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 133.9,
-      "target_price": 128.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-06 13:19:33",
       "type": "SELL",
       "code": "0388.HK",
@@ -37681,6 +37649,41 @@
       "current_price": 35.36,
       "target_price": 38.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-06 15:02:51",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-06 15:55:27",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货评分7.5分，保险板块强势下跌（-2.91%），单日暴跌5.15%且3日收益率-7.55%，成交量异常放大（比率1.95），CMF资金流-0.2638显著流出，OBV下降确认弱势，系统性风险主导",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06 15:55:27",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5分，保险板块强势下跌（-2.91%），单日暴跌5.15%且3日收益率-7.55%，成交量异常放大（比率1.95），CMF资金流-0.2638显著流出，OBV下降确认弱势，系统性风险主导",
+      "capital_after": 337.1892940519615,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.65,
+      "target_price": 0.0,
+      "validity_period": 1
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
