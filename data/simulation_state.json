@@ -22673,6 +22673,38 @@
       "current_price": 35.12,
       "target_price": 36.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-06T11:07:43.337787",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 337.1892940519615,
+      "reason": "CMF资金流-0.2029大幅流出，PE 1891超高估值，技术面出货信号强烈（价格高位、MACD死叉），半导体板块跑输恒指",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 101.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-06T11:07:48.146142",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.24,
+      "amount": 0,
+      "capital_after": 337.1892940519615,
+      "reason": "价格低位（位置百分位20.0%）+ OBV上升 + MACD潜在金叉，环保板块唯一温和上涨（+0.13%），低估值（PE 9.76）提供防御性，适合震荡市",
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.24,
+      "target_price": 5.65,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -37343,238 +37375,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-05 13:20:50",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分，新闻聚焦估值评估引发获利了结，OBV下降+CMF资金流-0.0771流出，科技股板块分化加剧",
-      "capital_after": 339266.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 155.6,
-      "target_price": 145.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-05 13:57:58",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-05 14:51:33",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "银行股板块温和上涨+0.56%，位置百分位32.43%低位区域，TAV评分63.25中等共振，基本面评分90（PE 7.61低估值），南向资金流入确认（CMF+0.1734）",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.4,
-          "target_price": 52.5,
-          "validity_period": 5
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "深度低位区域（位置百分位13.59%），基本面评分100（PE 6.17港股最低估值），银行股板块跑赢恒指+1.5%，信贷政策利好支撑",
-          "allocation_pct": 12,
-          "stop_loss_price": 4.64,
-          "target_price": 5.85,
-          "validity_period": 14
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "新能源关联板块领涨+1.71%，位置百分位13.85%低位，基本面评分100（PE 9.76低估值），OBV资金流入确认",
-          "allocation_pct": 8,
-          "stop_loss_price": 4.42,
-          "target_price": 5.65,
-          "validity_period": 5
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "公用事业板块温和上涨+0.82%，位置百分位19.35%低位，TAV评分51.25中等共振，基本面评分80（PE 11.05合理估值）",
-          "allocation_pct": 5,
-          "stop_loss_price": 68.1,
-          "target_price": 84.0,
-          "validity_period": 14
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-05 14:51:35",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 48.7,
-      "amount": 0,
-      "reason": "银行股板块温和上涨+0.56%，位置百分位32.43%低位区域，TAV评分63.25中等共振，基本面评分90（PE 7.61低估值），南向资金流入确认（CMF+0.1734）",
-      "capital_after": 339266.18929405196,
-      "success": false,
-      "stop_loss_price": 41.4,
-      "current_price": 48.7,
-      "target_price": 52.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-05 14:51:40",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 21800,
-      "price": 5.46,
-      "amount": 119028.0,
-      "reason": "深度低位区域（位置百分位13.59%），基本面评分100（PE 6.17港股最低估值），银行股板块跑赢恒指+1.5%，信贷政策利好支撑",
-      "capital_after": 220238.18929405196,
-      "success": true,
-      "stop_loss_price": 4.64,
-      "current_price": 5.46,
-      "target_price": 5.85,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-05 14:51:44",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 15300,
-      "price": 5.2,
-      "amount": 79560.0,
-      "reason": "新能源关联板块领涨+1.71%，位置百分位13.85%低位，基本面评分100（PE 9.76低估值），OBV资金流入确认",
-      "capital_after": 140678.18929405196,
-      "success": true,
-      "stop_loss_price": 4.42,
-      "current_price": 5.2,
-      "target_price": 5.65,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-05 14:51:50",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 80.1,
-      "amount": 0,
-      "reason": "公用事业板块温和上涨+0.82%，位置百分位19.35%低位，TAV评分51.25中等共振，基本面评分80（PE 11.05合理估值）",
-      "capital_after": 140678.18929405196,
-      "success": false,
-      "stop_loss_price": 68.1,
-      "current_price": 80.1,
-      "target_price": 84.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-05 15:57:38",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "银行股板块温和上涨（+0.64%），CMF资金流入（0.1666）、OBV上升、MACD即将金叉，TAV中等共振（63.25），基本面优质（评分90，PE 7.61低估值），风险等级低（2级）适合平衡型偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.36,
-          "target_price": 51.0,
-          "validity_period": 28
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-05 15:57:40",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 48.68,
-      "amount": 0,
-      "reason": "银行股板块温和上涨（+0.64%），CMF资金流入（0.1666）、OBV上升、MACD即将金叉，TAV中等共振（63.25），基本面优质（评分90，PE 7.61低估值），风险等级低（2级）适合平衡型偏好",
-      "capital_after": 140678.18929405196,
-      "success": false,
-      "stop_loss_price": 41.36,
-      "current_price": 48.68,
-      "target_price": 51.0,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-02-06 10:18:28",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "技术指标协同：价格低位（位置百分位9.71%）、CMF资金流入、OBV上升；建仓评分5.2；基本面强（PE 6.17），适合平衡型风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.61,
-          "target_price": 5.65,
-          "validity_period": 14
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "技术指标协同：CMF资金流入（0.1632）、OBV上升、位置百分位；建仓评分5.2；板块跑赢恒指（相对强度3.93%），风险等级中等",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.29,
-          "target_price": 50.2,
-          "validity_period": 5
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "技术指标协同：RSI超卖、CMF资金流入、价格低位；建仓评分5.9；但风险等级中高，仅分配较低比例",
-          "allocation_pct": 10,
-          "stop_loss_price": 29.82,
-          "target_price": 36.85,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分7.5：价格高位（位置百分位71.67%）、CMF资金大幅流出（-0.2506）、技术面弱势；信号明确且历史SELL记录在24小时内有信号变化支持",
-          "stop_loss_triggered": false,
-          "target_price": 35.5,
-          "validity_period": 3
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分7.0：价格高位（位置百分位90.73%）、RSI超买、CMF流出；无历史交易记录，信号强",
-          "stop_loss_triggered": false,
-          "target_price": 13.8,
-          "validity_period": 3
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.0：价格高位（位置百分位84.37%）、CMF流出、新闻负面（缩减奖金池）；历史SELL记录在24小时内有信号变化支持",
-          "stop_loss_triggered": false,
-          "target_price": 128.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分5.5：布林带突破下轨、CMF流出、高估值（PE 31.27）；无历史交易记录，信号明确",
-          "stop_loss_triggered": false,
-          "target_price": 395.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "出货评分5.5：布林带突破下轨、CMF流出、新闻利空（美国限制）；无历史交易记录，高风险需及时出货",
-          "stop_loss_triggered": false,
-          "target_price": 62.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
       "timestamp": "2026-02-06 10:18:28",
       "type": "SELL",
       "code": "2269.HK",
@@ -37701,6 +37501,67 @@
       "current_price": 35.12,
       "target_price": 36.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-06 10:42:15",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-06 11:07:43",
+      "buy": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "价格低位（位置百分位20.0%）+ OBV上升 + MACD潜在金叉，环保板块唯一温和上涨（+0.13%），低估值（PE 9.76）提供防御性，适合震荡市",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.9,
+          "target_price": 5.65,
+          "validity_period": 21
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "CMF资金流-0.2029大幅流出，PE 1891超高估值，技术面出货信号强烈（价格高位、MACD死叉），半导体板块跑输恒指",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06 11:07:43",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "CMF资金流-0.2029大幅流出，PE 1891超高估值，技术面出货信号强烈（价格高位、MACD死叉），半导体板块跑输恒指",
+      "capital_after": 337.1892940519615,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 101.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-06 11:07:48",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.24,
+      "amount": 0,
+      "reason": "价格低位（位置百分位20.0%）+ OBV上升 + MACD潜在金叉，环保板块唯一温和上涨（+0.13%），低估值（PE 9.76）提供防御性，适合震荡市",
+      "capital_after": 337.1892940519615,
+      "success": false,
+      "stop_loss_price": 4.9,
+      "current_price": 5.24,
+      "target_price": 5.65,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
