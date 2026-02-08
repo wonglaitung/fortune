@@ -1426,6 +1426,16 @@ class MLTradingModel:
             for key, value in stock_type_features.items():
                 stock_df[key] = value
 
+            # 添加情感特征
+            sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+            for key, value in sentiment_features.items():
+                stock_df[key] = value
+
+            # 添加板块特征
+            sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+            for key, value in sector_features.items():
+                stock_df[key] = value
+
             # 生成交叉特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
@@ -2025,6 +2035,16 @@ class GBDTLRModel:
             # 添加股票类型特征
             stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
             for key, value in stock_type_features.items():
+                stock_df[key] = value
+
+            # 添加情感特征
+            sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+            for key, value in sentiment_features.items():
+                stock_df[key] = value
+
+            # 添加板块特征
+            sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+            for key, value in sector_features.items():
                 stock_df[key] = value
 
             # 生成交叉特征（与训练时保持一致）
