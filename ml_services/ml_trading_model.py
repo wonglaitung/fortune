@@ -11,6 +11,9 @@ import sys
 import argparse
 from datetime import datetime, timedelta
 import pickle
+import hashlib
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +27,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score
 from sklearn.linear_model import LogisticRegression
 import lightgbm as lgb
+
+# 缓存配置
+CACHE_DIR = 'data/stock_cache'
+STOCK_DATA_CACHE_DAYS = 7  # 股票历史数据缓存7天
+HSI_DATA_CACHE_HOURS = 1   # 恒生指数数据缓存1小时
 
 # 导入项目模块
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
@@ -40,11 +48,130 @@ STOCK_NAMES = STOCK_LIST
 WATCHLIST = list(STOCK_LIST.keys())
 
 
+# ========== 缓存辅助函数 ==========
+def _get_cache_key(stock_code, period_days):
+    """生成缓存键"""
+    return f"{stock_code}_{period_days}d"
+
+def _get_cache_file_path(cache_key):
+    """获取缓存文件路径"""
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    return os.path.join(CACHE_DIR, f"{cache_key}.pkl")
+
+def _is_cache_valid(cache_file_path, cache_hours):
+    """检查缓存是否有效"""
+    if not os.path.exists(cache_file_path):
+        return False
+    cache_time = os.path.getmtime(cache_file_path)
+    current_time = datetime.now().timestamp()
+    age_hours = (current_time - cache_time) / 3600
+    return age_hours < cache_hours
+
+def _save_cache(cache_file_path, data):
+    """保存缓存"""
+    try:
+        with open(cache_file_path, 'wb') as f:
+            pickle.dump({
+                'data': data,
+                'timestamp': datetime.now().isoformat()
+            }, f)
+    except Exception as e:
+        print(f"⚠️ 保存缓存失败: {e}")
+
+def _load_cache(cache_file_path):
+    """加载缓存"""
+    try:
+        with open(cache_file_path, 'rb') as f:
+            cache = pickle.load(f)
+            return cache['data']
+    except Exception as e:
+        print(f"⚠️ 加载缓存失败: {e}")
+        return None
+
+def get_stock_data_with_cache(stock_code, period_days=730):
+    """获取股票数据（带缓存）"""
+    cache_key = _get_cache_key(stock_code, period_days)
+    cache_file_path = _get_cache_file_path(cache_key)
+    
+    # 检查缓存
+    if _is_cache_valid(cache_file_path, STOCK_DATA_CACHE_DAYS * 24):
+        print(f"  📦 使用缓存的股票数据 {stock_code}")
+        cached_data = _load_cache(cache_file_path)
+        if cached_data is not None:
+            return cached_data
+    
+    # 从网络获取
+    print(f"  🌐 下载股票数据 {stock_code}")
+    stock_df = get_hk_stock_data_tencent(stock_code, period_days)
+    
+    # 保存缓存
+    if stock_df is not None and not stock_df.empty:
+        _save_cache(cache_file_path, stock_df)
+    
+    return stock_df
+
+def get_hsi_data_with_cache(period_days=730):
+    """获取恒生指数数据（带缓存）"""
+    cache_key = _get_cache_key("HSI", period_days)
+    cache_file_path = _get_cache_file_path(cache_key)
+    
+    # 检查缓存
+    if _is_cache_valid(cache_file_path, HSI_DATA_CACHE_HOURS):
+        print(f"  📦 使用缓存的恒生指数数据")
+        cached_data = _load_cache(cache_file_path)
+        if cached_data is not None:
+            return cached_data
+    
+    # 从网络获取
+    print(f"  🌐 下载恒生指数数据")
+    hsi_df = get_hsi_data_tencent(period_days)
+    
+    # 保存缓存
+    if hsi_df is not None and not hsi_df.empty:
+        _save_cache(cache_file_path, hsi_df)
+    
+    return hsi_df
+
+
 class FeatureEngineer:
     """特征工程类"""
 
     def __init__(self):
         self.tech_analyzer = TechnicalAnalyzer()
+        # 板块分析缓存（避免重复计算）
+        self._sector_analyzer = None
+        self._sector_performance_cache = {}
+
+    def _get_sector_analyzer(self):
+        """获取板块分析器（单例模式）"""
+        if self._sector_analyzer is None:
+            try:
+                from data_services.hk_sector_analysis import SectorAnalyzer
+                self._sector_analyzer = SectorAnalyzer()
+                print("  📊 板块分析器初始化成功")
+            except ImportError:
+                print("  ⚠️ 板块分析模块不可用")
+                return None
+        return self._sector_analyzer
+
+    def _get_sector_performance(self, period):
+        """获取板块表现数据（带缓存）"""
+        cache_key = f'period_{period}'
+        
+        if cache_key not in self._sector_performance_cache:
+            analyzer = self._get_sector_analyzer()
+            if analyzer is None:
+                return None
+            
+            try:
+                perf_df = analyzer.calculate_sector_performance(period)
+                self._sector_performance_cache[cache_key] = perf_df
+            except Exception as e:
+                print(f"  ⚠️ 获取板块表现失败 (period={period}): {e}")
+                return None
+        
+        return self._sector_performance_cache[cache_key]
 
     def calculate_technical_features(self, df):
         """计算技术指标特征（扩展版：80个指标）"""
@@ -710,7 +837,7 @@ class FeatureEngineer:
             }
 
     def create_sector_features(self, code, df):
-        """创建板块分析特征（参考 hk_sector_analysis.py）
+        """创建板块分析特征（优化版，使用缓存）
 
         从板块分析中提取板块涨跌幅、板块排名、板块趋势等特征：
         - sector_avg_change: 板块平均涨跌幅（1日/5日/20日）
@@ -732,10 +859,9 @@ class FeatureEngineer:
             dict: 包含板块特征的字典
         """
         try:
-            # 尝试导入板块分析模块
-            try:
-                from data_services.hk_sector_analysis import SectorAnalyzer
-            except ImportError:
+            # 获取板块分析器（单例）
+            sector_analyzer = self._get_sector_analyzer()
+            if sector_analyzer is None:
                 # 模块不可用，返回默认值
                 return {
                     'sector_avg_change_1d': 0.0,
@@ -756,9 +882,6 @@ class FeatureEngineer:
                     'sector_worst_stock_change': 0.0,
                     'sector_outperform_hsi': 0
                 }
-
-            # 创建板块分析器
-            sector_analyzer = SectorAnalyzer()
 
             # 获取股票所属板块
             sector_info = sector_analyzer.stock_mapping.get(code)
@@ -788,12 +911,12 @@ class FeatureEngineer:
 
             features = {}
 
-            # 计算不同周期的板块表现
+            # 计算不同周期的板块表现（使用缓存）
             for period in [1, 5, 20]:
                 try:
-                    perf_df = sector_analyzer.calculate_sector_performance(period)
+                    perf_df = self._get_sector_performance(period)
 
-                    if not perf_df.empty:
+                    if perf_df is not None and not perf_df.empty:
                         # 找到该板块的排名
                         sector_row = perf_df[perf_df['sector_code'] == sector_code]
 
@@ -967,7 +1090,7 @@ class MLTradingModel:
         self.horizon = 1  # 默认预测周期
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
-        """准备训练数据（80个指标版本）
+        """准备训练数据（80个指标版本，优化版）
         
         Args:
             codes: 股票代码列表
@@ -978,30 +1101,55 @@ class MLTradingModel:
         self.horizon = horizon
         all_data = []
 
+        # ========== 步骤1：获取共享数据（只获取一次） ==========
+        print("📊 获取共享数据...")
+        
         # 获取美股市场数据（只获取一次）
-        print("📊 获取美股市场数据...")
         us_market_df = us_market_data.get_all_us_market_data(period_days=730)
         if us_market_df is not None:
             print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
             print("⚠️ 无法获取美股市场数据，将只使用港股特征")
 
-        for code in codes:
+        # 获取恒生指数数据（只获取一次，所有股票共享）
+        hsi_df = get_hsi_data_with_cache(period_days=730)
+        if hsi_df is None or hsi_df.empty:
+            raise ValueError("无法获取恒生指数数据")
+
+        # ========== 步骤2：并行下载股票数据 ==========
+        print(f"\n🚀 并行下载 {len(codes)} 只股票数据...")
+        
+        def fetch_single_stock_data(code):
+            """获取单只股票数据"""
             try:
-                print(f"处理股票: {code}")
-
-                # 移除代码中的.HK后缀，腾讯财经接口不需要
                 stock_code = code.replace('.HK', '')
+                stock_df = get_stock_data_with_cache(stock_code, period_days=730)
+                if stock_df is not None and not stock_df.empty:
+                    return (code, stock_df)
+                return None
+            except Exception as e:
+                print(f"⚠️ 下载股票 {code} 失败: {e}")
+                return None
 
-                # 获取股票数据（2年约730天）
-                stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
-                if stock_df is None or stock_df.empty:
-                    continue
+        # 使用线程池并行下载（最多8个并发）
+        stock_data_list = []
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_code = {executor.submit(fetch_single_stock_data, code): code for code in codes}
+            
+            for i, future in enumerate(as_completed(future_to_code), 1):
+                result = future.result()
+                if result is not None:
+                    stock_data_list.append(result)
+                    print(f"  ✅ [{i}/{len(codes)}] {result[0]}")
 
-                # 获取恒生指数数据（2年约730天）
-                hsi_df = get_hsi_data_tencent(period_days=730)
-                if hsi_df is None or hsi_df.empty:
-                    continue
+        print(f"✅ 成功下载 {len(stock_data_list)} 只股票数据")
+
+        # ========== 步骤3：计算特征 ==========
+        print(f"\n🔧 计算特征...")
+        
+        for i, (code, stock_df) in enumerate(stock_data_list, 1):
+            try:
+                print(f"  [{i}/{len(stock_data_list)}] 处理股票: {code}")
 
                 # 计算技术指标（80个指标）
                 stock_df = self.feature_engineer.calculate_technical_features(stock_df)
@@ -1009,7 +1157,7 @@ class MLTradingModel:
                 # 计算多周期指标
                 stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
 
-                # 计算相对强度指标
+                # 计算相对强度指标（使用共享的恒生指数数据）
                 stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
 
                 # 创建资金流向特征
