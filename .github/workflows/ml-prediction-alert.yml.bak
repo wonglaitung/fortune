@@ -17,9 +17,8 @@ on:
   # 定时触发
   schedule:
     # 每天香港时间 09:00 (UTC 01:00) 执行预测
-    - cron: '0 1 * * 1-5'
+    - cron: '0 1 * * 6'
     # 每天香港时间 16:30 (UTC 08:30) 执行预测
-    - cron: '30 8 * * 1-5'
 
 jobs:
   predict-and-alert:
