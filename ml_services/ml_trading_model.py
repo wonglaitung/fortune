@@ -1436,6 +1436,9 @@ class MLTradingModel:
             for key, value in sector_features.items():
                 stock_df[key] = value
 
+            # 生成技术指标与基本面交互特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
             # 生成交叉特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
@@ -2046,6 +2049,9 @@ class GBDTLRModel:
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
             for key, value in sector_features.items():
                 stock_df[key] = value
+
+            # 生成技术指标与基本面交互特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
 
             # 生成交叉特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_interaction_features(stock_df)
