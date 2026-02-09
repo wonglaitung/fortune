@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 3037.189294051961,
+  "capital": 282.18929405196104,
   "positions": {
     "3968.HK": {
       "shares": 5400,
@@ -33,9 +33,9 @@
       "stop_loss_price": 19.75
     },
     "1288.HK": {
-      "shares": 27300,
-      "avg_price": 5.453956043956044,
-      "stop_loss_price": 4.61
+      "shares": 27800,
+      "avg_price": 5.4549640287769785,
+      "stop_loss_price": 4.68
     },
     "1330.HK": {
       "shares": 15300,
@@ -23089,6 +23089,54 @@
       "current_price": 139.2,
       "target_price": 0.0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09T15:45:08.552325",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 500,
+      "price": 5.51,
+      "amount": 2755.0,
+      "capital_after": 282.18929405196104,
+      "reason": "低位补涨逻辑，位置百分位19.79%为25只股票中最低，基本面评分100提供高安全边际，市盈率6.17低估值，CMF资金流0.0625持续流入，符合moderate风险偏好对稳健收益的需求",
+      "success": true,
+      "stop_loss_price": 4.68,
+      "current_price": 5.51,
+      "target_price": 5.85,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09T15:45:13.633677",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.14,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "技术指标协同性强（OBV↑、CMF↑、相对强度+5.46%跑赢恒指），位置百分位38.92%处于低位，银行板块温和上涨中抗跌性强，Visa支持Apple Pay利好支付生态",
+      "success": false,
+      "stop_loss_price": 41.8,
+      "current_price": 49.14,
+      "target_price": 52.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09T15:45:17.445539",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "中线布局机会，基本面评分100且市盈率9.76低估值提供安全边际，成交额1日变化+40.57%显著放量，相对强度+0.63%跑赢恒指，适合moderate偏好平衡收益与风险",
+      "success": false,
+      "stop_loss_price": 4.51,
+      "current_price": 5.31,
+      "target_price": 5.65,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -37636,9 +37684,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 27300,
-          "avg_price": 5.453956043956044,
-          "stop_loss_price": 4.61
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
         },
         "1330.HK": {
           "shares": 15300,
@@ -37688,9 +37736,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 27300,
-          "avg_price": 5.453956043956044,
-          "stop_loss_price": 4.61
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
         },
         "1330.HK": {
           "shares": 15300,
@@ -37740,9 +37788,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 27300,
-          "avg_price": 5.453956043956044,
-          "stop_loss_price": 4.61
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
         },
         "1330.HK": {
           "shares": 15300,
@@ -37792,9 +37840,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 27300,
-          "avg_price": 5.453956043956044,
-          "stop_loss_price": 4.61
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
         },
         "1330.HK": {
           "shares": 15300,
@@ -37844,9 +37892,66 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 27300,
-          "avg_price": 5.453956043956044,
-          "stop_loss_price": 4.61
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
+        },
+        "1330.HK": {
+          "shares": 15300,
+          "avg_price": 5.2,
+          "stop_loss_price": 4.42
+        },
+        "1810.HK": {
+          "shares": 100,
+          "avg_price": 35.12,
+          "stop_loss_price": 29.82
+        },
+        "1299.HK": {
+          "shares": 500,
+          "avg_price": 86.1,
+          "stop_loss_price": 65.1
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-09T15:45:09.707514",
+      "capital": 282.18929405196104,
+      "portfolio_value": 1003615.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 5400,
+          "avg_price": 48.053703703703704,
+          "stop_loss_price": 41.29
+        },
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 700,
+          "avg_price": 79.7,
+          "stop_loss_price": 63.05
+        },
+        "2800.HK": {
+          "shares": 3600,
+          "avg_price": 27.02,
+          "stop_loss_price": 25.9
+        },
+        "0939.HK": {
+          "shares": 18900,
+          "avg_price": 7.79,
+          "stop_loss_price": 6.61
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        },
+        "1288.HK": {
+          "shares": 27800,
+          "avg_price": 5.4549640287769785,
+          "stop_loss_price": 4.68
         },
         "1330.HK": {
           "shares": 15300,
@@ -37867,57 +37972,6 @@
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-09 10:48:19",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.34,
-      "amount": 0,
-      "reason": "环保板块突破信号，技术面共振，但风险等级中需谨慎",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": 4.56,
-      "current_price": 5.34,
-      "target_price": 5.85,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-09 11:51:09",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-09 13:58:25",
-      "buy": [],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分7.5分强烈出货，技术面RSI超买、资金流出、新闻负面（绩效奖金削减），位置百分位99.71%历史高位",
-          "stop_loss_triggered": false,
-          "target_price": 130.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-09 13:58:25",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分强烈出货，技术面RSI超买、资金流出、新闻负面（绩效奖金削减），位置百分位99.71%历史高位",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 139.2,
-      "target_price": 130.0,
-      "validity_period": 7
-    },
     {
       "timestamp": "2026-02-09 14:26:32",
       "buy": [
@@ -38100,6 +38154,87 @@
       "current_price": 139.2,
       "target_price": 0.0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09 15:45:06",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "低位补涨逻辑，位置百分位19.79%为25只股票中最低，基本面评分100提供高安全边际，市盈率6.17低估值，CMF资金流0.0625持续流入，符合moderate风险偏好对稳健收益的需求",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.68,
+          "target_price": 5.85,
+          "validity_period": 5
+        },
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "技术指标协同性强（OBV↑、CMF↑、相对强度+5.46%跑赢恒指），位置百分位38.92%处于低位，银行板块温和上涨中抗跌性强，Visa支持Apple Pay利好支付生态",
+          "allocation_pct": 15,
+          "stop_loss_price": 41.8,
+          "target_price": 52.5,
+          "validity_period": 5
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "中线布局机会，基本面评分100且市盈率9.76低估值提供安全边际，成交额1日变化+40.57%显著放量，相对强度+0.63%跑赢恒指，适合moderate偏好平衡收益与风险",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.51,
+          "target_price": 5.65,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-09 15:45:08",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 500,
+      "price": 5.51,
+      "amount": 2755.0,
+      "reason": "低位补涨逻辑，位置百分位19.79%为25只股票中最低，基本面评分100提供高安全边际，市盈率6.17低估值，CMF资金流0.0625持续流入，符合moderate风险偏好对稳健收益的需求",
+      "capital_after": 282.18929405196104,
+      "success": true,
+      "stop_loss_price": 4.68,
+      "current_price": 5.51,
+      "target_price": 5.85,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09 15:45:13",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.14,
+      "amount": 0,
+      "reason": "技术指标协同性强（OBV↑、CMF↑、相对强度+5.46%跑赢恒指），位置百分位38.92%处于低位，银行板块温和上涨中抗跌性强，Visa支持Apple Pay利好支付生态",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 41.8,
+      "current_price": 49.14,
+      "target_price": 52.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09 15:45:17",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "reason": "中线布局机会，基本面评分100且市盈率9.76低估值提供安全边际，成交额1日变化+40.57%显著放量，相对强度+0.63%跑赢恒指，适合moderate偏好平衡收益与风险",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.51,
+      "current_price": 5.31,
+      "target_price": 5.65,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
