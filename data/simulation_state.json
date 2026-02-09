@@ -22961,6 +22961,22 @@
       "current_price": 5.34,
       "target_price": 5.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09T13:58:25.736388",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 337.1892940519615,
+      "reason": "出货评分7.5分强烈出货，技术面RSI超买、资金流出、新闻负面（绩效奖金削减），位置百分位99.71%历史高位",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.2,
+      "target_price": 130.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -37631,93 +37647,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-06 13:19:47",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.44,
-      "amount": 0,
-      "reason": "价格超低位（位置百分位10.68%）、MACD金叉、OBV与CMF同步流入，超卖修复机会，基本面极强（PE 6.17港股最低）",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": 5.05,
-      "current_price": 5.44,
-      "target_price": 5.85,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-06 13:44:18",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-06 14:21:52",
-      "buy": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "价格低位（位置百分位14.37%），CMF资金流入验证资金回流，MACD潜在金叉，科技股板块弱势中显韧性，特斯拉中国EV销量增长利好小米智能生态",
-          "allocation_pct": 15,
-          "stop_loss_price": 30.06,
-          "target_price": 38.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-06 14:21:55",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 35.36,
-      "amount": 0,
-      "reason": "价格低位（位置百分位14.37%），CMF资金流入验证资金回流，MACD潜在金叉，科技股板块弱势中显韧性，特斯拉中国EV销量增长利好小米智能生态",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": 30.06,
-      "current_price": 35.36,
-      "target_price": 38.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-06 15:02:51",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-06 15:55:27",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "出货评分7.5分，保险板块强势下跌（-2.91%），单日暴跌5.15%且3日收益率-7.55%，成交量异常放大（比率1.95），CMF资金流-0.2638显著流出，OBV下降确认弱势，系统性风险主导",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-06 15:55:27",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，保险板块强势下跌（-2.91%），单日暴跌5.15%且3日收益率-7.55%，成交量异常放大（比率1.95），CMF资金流-0.2638显著流出，OBV下降确认弱势，系统性风险主导",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 83.65,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
       "timestamp": "2026-02-09 10:18:46",
       "buy": [
         {
@@ -37877,6 +37806,41 @@
       "current_price": 5.34,
       "target_price": 5.85,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-09 11:51:09",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-09 13:58:25",
+      "buy": [],
+      "sell": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分7.5分强烈出货，技术面RSI超买、资金流出、新闻负面（绩效奖金削减），位置百分位99.71%历史高位",
+          "stop_loss_triggered": false,
+          "target_price": 130.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-09 13:58:25",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5分强烈出货，技术面RSI超买、资金流出、新闻负面（绩效奖金削减），位置百分位99.71%历史高位",
+      "capital_after": 337.1892940519615,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.2,
+      "target_price": 130.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
