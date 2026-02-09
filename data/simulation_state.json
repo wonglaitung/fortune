@@ -22865,6 +22865,22 @@
       "current_price": 83.65,
       "target_price": 0.0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09T10:18:48.777185",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 18.92,
+      "amount": 0,
+      "capital_after": 337.1892940519615,
+      "reason": "技术指标协同：RSI超卖(37.46)、CMF资金流入(0.2045)、OBV趋势上升；位置百分位低位(15.21%)；人工智能板块强势上涨(+2.09%)提升可靠性",
+      "success": false,
+      "stop_loss_price": 16.09,
+      "current_price": 18.92,
+      "target_price": 20.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -37535,38 +37551,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-06 13:19:33",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5，布林带破位下跌、CMF资金流出、高估值（PE 31.27），交易所板块加速下跌",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 407.2,
-      "target_price": 385.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-06 13:19:35",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5，CMF资金大幅流出（-0.2017）、价格高位、超高估值（PE 1891），个股严重跑输板块",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 100.8,
-      "target_price": 95.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-06 13:19:39",
       "type": "BUY",
       "code": "3968.HK",
@@ -37684,6 +37668,37 @@
       "current_price": 83.65,
       "target_price": 0.0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09 10:18:46",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "技术指标协同：RSI超卖(37.46)、CMF资金流入(0.2045)、OBV趋势上升；位置百分位低位(15.21%)；人工智能板块强势上涨(+2.09%)提升可靠性",
+          "allocation_pct": 15.0,
+          "stop_loss_price": 16.09,
+          "target_price": 20.5,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-09 10:18:48",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 18.92,
+      "amount": 0,
+      "reason": "技术指标协同：RSI超卖(37.46)、CMF资金流入(0.2045)、OBV趋势上升；位置百分位低位(15.21%)；人工智能板块强势上涨(+2.09%)提升可靠性",
+      "capital_after": 337.1892940519615,
+      "success": false,
+      "stop_loss_price": 16.09,
+      "current_price": 18.92,
+      "target_price": 20.5,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
