@@ -23041,6 +23041,54 @@
       "current_price": 86.1,
       "target_price": 77.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-09T15:13:46.677597",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 3037.189294051961,
+      "reason": "出货评分6.5分，技术面恶化（CMF资金流-0.1919显著流出，量价背离），基本面评分20（PE 1891极高估值），风险等级5级",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 102.9,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09T15:13:50.765293",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 3037.189294051961,
+      "reason": "出货评分6.5分，技术面崩溃（CMF资金流-0.2777大幅流出，成交额1日/5日/20日变化全负），基本面评分20（PE 32.60偏高），风险等级5级",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.16,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09T15:13:53.124650",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 3037.189294051961,
+      "reason": "出货评分6.0分，技术面超买（RSI 67.57，布林带触及上轨），CMF资金流-0.2338持续流出，新闻利空（绩效奖金削减），建议卖出80%",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.2,
+      "target_price": 0.0,
+      "validity_period": 1
     }
   ],
   "portfolio_history": [
@@ -37820,120 +37868,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-09 10:47:59",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "银行股板块共振，基本面支撑，风险等级中低，符合平衡型偏好",
-          "allocation_pct": 7,
-          "stop_loss_price": 4.73,
-          "target_price": 5.85,
-          "validity_period": 21
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "银行股资金流入强劲，板块协同效应显著，估值合理",
-          "allocation_pct": 5,
-          "stop_loss_price": 42.01,
-          "target_price": 51.5,
-          "validity_period": 21
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "环保板块突破信号，技术面共振，但风险等级中需谨慎",
-          "allocation_pct": 4,
-          "stop_loss_price": 4.56,
-          "target_price": 5.85,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "技术面顶部确认，资金显著流出，出货评分高",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "缩量上涨不可持续，位置高位易触发获利回吐",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-09 10:47:59",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶部确认，资金显著流出，出货评分高",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.38,
-      "target_price": 0.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-09 10:48:02",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "缩量上涨不可持续，位置高位易触发获利回吐",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 15.41,
-      "target_price": 0.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-09 10:48:08",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.55,
-      "amount": 0,
-      "reason": "银行股板块共振，基本面支撑，风险等级中低，符合平衡型偏好",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": 4.73,
-      "current_price": 5.55,
-      "target_price": 5.85,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-02-09 10:48:14",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 49.32,
-      "amount": 0,
-      "reason": "银行股资金流入强劲，板块协同效应显著，估值合理",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": 42.01,
-      "current_price": 49.32,
-      "target_price": 51.5,
-      "validity_period": 21
-    },
-    {
       "timestamp": "2026-02-09 10:48:19",
       "type": "BUY",
       "code": "1330.HK",
@@ -38088,6 +38022,84 @@
       "current_price": 86.1,
       "target_price": 77.0,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-09 15:13:46",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分6.5分，技术面恶化（CMF资金流-0.1919显著流出，量价背离），基本面评分20（PE 1891极高估值），风险等级5级",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "出货评分6.5分，技术面崩溃（CMF资金流-0.2777大幅流出，成交额1日/5日/20日变化全负），基本面评分20（PE 32.60偏高），风险等级5级",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分6.0分，技术面超买（RSI 67.57，布林带触及上轨），CMF资金流-0.2338持续流出，新闻利空（绩效奖金削减），建议卖出80%",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-09 15:13:46",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，技术面恶化（CMF资金流-0.1919显著流出，量价背离），基本面评分20（PE 1891极高估值），风险等级5级",
+      "capital_after": 3037.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 102.9,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09 15:13:50",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，技术面崩溃（CMF资金流-0.2777大幅流出，成交额1日/5日/20日变化全负），基本面评分20（PE 32.60偏高），风险等级5级",
+      "capital_after": 3037.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.16,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-09 15:13:53",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，技术面超买（RSI 67.57，布林带触及上轨），CMF资金流-0.2338持续流出，新闻利空（绩效奖金削减），建议卖出80%",
+      "capital_after": 3037.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.2,
+      "target_price": 0.0,
+      "validity_period": 1
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
