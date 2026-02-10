@@ -23201,6 +23201,38 @@
       "current_price": 78.75,
       "target_price": 82.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-10T11:10:11.981562",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 282.18929405196104,
+      "reason": "MACD死叉信号、CMF资金流出（-0.1153）、OBV下降、价格下跌，4个出货原因触发；成交额变化率极端萎缩（-74.6/-81.96/-84.13），流动性危机；高估值（PE 31.27）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 417.4,
+      "target_price": 400.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-10T11:10:18.325378",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 282.18929405196104,
+      "reason": "MACD死叉信号、CMF资金流出（-0.0772）、OBV下降、价格下跌，4个出货原因触发；半导体板块下跌（-0.46%）；极高估值（PE 119.87）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 70.4,
+      "target_price": 65.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -38037,117 +38069,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-09 15:13:46",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分6.5分，技术面恶化（CMF资金流-0.1919显著流出，量价背离），基本面评分20（PE 1891极高估值），风险等级5级",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分6.5分，技术面崩溃（CMF资金流-0.2777大幅流出，成交额1日/5日/20日变化全负），基本面评分20（PE 32.60偏高），风险等级5级",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.0分，技术面超买（RSI 67.57，布林带触及上轨），CMF资金流-0.2338持续流出，新闻利空（绩效奖金削减），建议卖出80%",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-09 15:13:46",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，技术面恶化（CMF资金流-0.1919显著流出，量价背离），基本面评分20（PE 1891极高估值），风险等级5级",
-      "capital_after": 3037.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 102.9,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-09 15:13:50",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，技术面崩溃（CMF资金流-0.2777大幅流出，成交额1日/5日/20日变化全负），基本面评分20（PE 32.60偏高），风险等级5级",
-      "capital_after": 3037.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.16,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-09 15:13:53",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，技术面超买（RSI 67.57，布林带触及上轨），CMF资金流-0.2338持续流出，新闻利空（绩效奖金削减），建议卖出80%",
-      "capital_after": 3037.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 139.2,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-09 15:45:06",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "低位补涨逻辑，位置百分位19.79%为25只股票中最低，基本面评分100提供高安全边际，市盈率6.17低估值，CMF资金流0.0625持续流入，符合moderate风险偏好对稳健收益的需求",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.68,
-          "target_price": 5.85,
-          "validity_period": 5
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "技术指标协同性强（OBV↑、CMF↑、相对强度+5.46%跑赢恒指），位置百分位38.92%处于低位，银行板块温和上涨中抗跌性强，Visa支持Apple Pay利好支付生态",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.8,
-          "target_price": 52.5,
-          "validity_period": 5
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "中线布局机会，基本面评分100且市盈率9.76低估值提供安全边际，成交额1日变化+40.57%显著放量，相对强度+0.63%跑赢恒指，适合moderate偏好平衡收益与风险",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.51,
-          "target_price": 5.65,
-          "validity_period": 14
-        }
-      ],
-      "sell": []
-    },
-    {
       "timestamp": "2026-02-09 15:45:08",
       "type": "BUY",
       "code": "1288.HK",
@@ -38304,6 +38225,60 @@
       "current_price": 78.75,
       "target_price": 82.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-10 11:10:11",
+      "buy": [],
+      "sell": [
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "MACD死叉信号、CMF资金流出（-0.1153）、OBV下降、价格下跌，4个出货原因触发；成交额变化率极端萎缩（-74.6/-81.96/-84.13），流动性危机；高估值（PE 31.27）",
+          "stop_loss_triggered": false,
+          "target_price": 400.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "MACD死叉信号、CMF资金流出（-0.0772）、OBV下降、价格下跌，4个出货原因触发；半导体板块下跌（-0.46%）；极高估值（PE 119.87）",
+          "stop_loss_triggered": false,
+          "target_price": 65.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-10 11:10:12",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "MACD死叉信号、CMF资金流出（-0.1153）、OBV下降、价格下跌，4个出货原因触发；成交额变化率极端萎缩（-74.6/-81.96/-84.13），流动性危机；高估值（PE 31.27）",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 417.4,
+      "target_price": 400.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-10 11:10:18",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "MACD死叉信号、CMF资金流出（-0.0772）、OBV下降、价格下跌，4个出货原因触发；半导体板块下跌（-0.46%）；极高估值（PE 119.87）",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 70.4,
+      "target_price": 65.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
