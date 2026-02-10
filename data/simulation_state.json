@@ -23137,6 +23137,70 @@
       "current_price": 5.31,
       "target_price": 5.65,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-10T10:10:12.200024",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 282.18929405196104,
+      "reason": "RSI严重超买(74.98)，布林带超买，CMF资金流出(-0.1203)，价格高位(位置百分位100%)，获利回吐风险高",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 15.41,
+      "target_price": 14.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-10T10:10:15.339022",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 282.18929405196104,
+      "reason": "CMF资金流出(-0.0823)，OBV下降量价背离，MACD动能转弱，新闻利空影响AI业务运营",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 162.3,
+      "target_price": 158.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-10T10:10:21.240555",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 36.1,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "科技股板块强势上涨(2.21%)，RSI接近超卖(46.3)，CMF资金流入(+0.0513)，位置百分位低位(22.22%)，短期技术反弹机会",
+      "success": false,
+      "stop_loss_price": 33.76,
+      "current_price": 36.1,
+      "target_price": 38.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-10T10:10:24.481105",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.75,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "公用事业板块温和上涨，位置百分位超低位(9.18%)，MACD信号交叉，基本面估值合理(PE 11.05)，短期技术反弹",
+      "success": false,
+      "stop_loss_price": 75.02,
+      "current_price": 78.75,
+      "target_price": 82.5,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -37973,111 +38037,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-09 14:26:32",
-      "buy": [
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "建仓信号，保险板块轮动延续，估值处于历史低位，资金关注度提升",
-          "allocation_pct": 10,
-          "stop_loss_price": 65.1,
-          "target_price": 77.0,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "出货信号，RSI超买（>70），成交额连续3日下降，板块轮动导致资金流出",
-          "stop_loss_triggered": false,
-          "target_price": 350.0,
-          "validity_period": 7
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴",
-          "reason": "出货信号，技术面死叉，20日成交额变化率-45%，市场情绪转向谨慎",
-          "stop_loss_triggered": false,
-          "target_price": 85.0,
-          "validity_period": 7
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团",
-          "reason": "出货信号，位置百分位95%历史高位，资金流向转向防御性板块",
-          "stop_loss_triggered": false,
-          "target_price": 150.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-09 14:26:32",
-      "type": "SELL",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号，RSI超买（>70），成交额连续3日下降，板块轮动导致资金流出",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 558.5,
-      "target_price": 350.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-09 14:26:36",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号，技术面死叉，20日成交额变化率-45%，市场情绪转向谨慎",
-      "capital_after": 337.1892940519615,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 158.7,
-      "target_price": 85.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-09 14:26:39",
-      "type": "SELL",
-      "code": "3690.HK",
-      "name": "美团",
-      "shares": 500,
-      "price": 91.5,
-      "amount": 45750.0,
-      "reason": "出货信号，位置百分位95%历史高位，资金流向转向防御性板块",
-      "capital_after": 46087.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 91.5,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -1899.9999999999986
-    },
-    {
-      "timestamp": "2026-02-09 14:26:44",
-      "type": "BUY",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 500,
-      "price": 86.1,
-      "amount": 43050.0,
-      "reason": "建仓信号，保险板块轮动延续，估值处于历史低位，资金关注度提升",
-      "capital_after": 3037.189294051961,
-      "success": true,
-      "stop_loss_price": 65.1,
-      "current_price": 86.1,
-      "target_price": 77.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-09 15:13:46",
       "buy": [],
       "sell": [
@@ -38234,6 +38193,116 @@
       "stop_loss_price": 4.51,
       "current_price": 5.31,
       "target_price": 5.65,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-10 09:46:26",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-10 10:10:12",
+      "buy": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "科技股板块强势上涨(2.21%)，RSI接近超卖(46.3)，CMF资金流入(+0.0513)，位置百分位低位(22.22%)，短期技术反弹机会",
+          "allocation_pct": 12,
+          "stop_loss_price": 33.76,
+          "target_price": 38.5,
+          "validity_period": 5
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "公用事业板块温和上涨，位置百分位超低位(9.18%)，MACD信号交叉，基本面估值合理(PE 11.05)，短期技术反弹",
+          "allocation_pct": 8,
+          "stop_loss_price": 75.02,
+          "target_price": 82.5,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "RSI严重超买(74.98)，布林带超买，CMF资金流出(-0.1203)，价格高位(位置百分位100%)，获利回吐风险高",
+          "stop_loss_triggered": false,
+          "target_price": 14.5,
+          "validity_period": 3
+        },
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "CMF资金流出(-0.0823)，OBV下降量价背离，MACD动能转弱，新闻利空影响AI业务运营",
+          "stop_loss_triggered": false,
+          "target_price": 158.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-10 10:10:12",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI严重超买(74.98)，布林带超买，CMF资金流出(-0.1203)，价格高位(位置百分位100%)，获利回吐风险高",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 15.41,
+      "target_price": 14.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-10 10:10:15",
+      "type": "SELL",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "CMF资金流出(-0.0823)，OBV下降量价背离，MACD动能转弱，新闻利空影响AI业务运营",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 162.3,
+      "target_price": 158.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-10 10:10:21",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 36.1,
+      "amount": 0,
+      "reason": "科技股板块强势上涨(2.21%)，RSI接近超卖(46.3)，CMF资金流入(+0.0513)，位置百分位低位(22.22%)，短期技术反弹机会",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 33.76,
+      "current_price": 36.1,
+      "target_price": 38.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-10 10:10:24",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.75,
+      "amount": 0,
+      "reason": "公用事业板块温和上涨，位置百分位超低位(9.18%)，MACD信号交叉，基本面估值合理(PE 11.05)，短期技术反弹",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 75.02,
+      "current_price": 78.75,
+      "target_price": 82.5,
       "validity_period": 14
     }
   ],
