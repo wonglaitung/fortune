@@ -87,8 +87,8 @@ def get_stock_news(symbol, stock_name="", size=3):
                 url = click_through_url.get("url", "")
             
             articles.append({
-                "title": title[:80] + ("..." if len(title) > 80 else ""),
-                "summary": summary[:120] + ("..." if len(summary) > 120 else ""),
+                "title": title,
+                "summary": summary,
                 "url": url,
                 "publishedAt": pub_time
             })
