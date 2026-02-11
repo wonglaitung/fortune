@@ -23521,6 +23521,38 @@
       "current_price": 49.14,
       "target_price": 51.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-11T14:27:52.917491",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.58,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "技术指标协同支持建仓（RSI中性偏强、MACD金叉、OBV上升、CMF资金流正向），资金流入确认（成交额1日变化+49.11%），银行板块温和上涨且跑赢恒指，潜在涨幅8%",
+      "success": false,
+      "stop_loss_price": 4.74,
+      "current_price": 5.58,
+      "target_price": 6.03,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-11T14:27:57.304754",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.14,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "价格低位（位置百分位19.11%），OBV上升及CMF资金流显著流入（0.1744），人工智能板块强势上涨(1.95%)提供热点支撑，潜在涨幅10%",
+      "success": false,
+      "stop_loss_price": 16.27,
+      "current_price": 19.14,
+      "target_price": 21.05,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -38357,54 +38389,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-10 15:17:16",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，MACD潜在死叉，成交额断崖下跌且高估值",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 416.6,
-      "target_price": 405.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-10 15:17:21",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.51,
-      "amount": 0,
-      "reason": "价格低位、OBV上升、CMF资金流入正、低估值安全边际，技术面协同且风险等级低",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.68,
-      "current_price": 5.51,
-      "target_price": 6.2,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-10 15:17:24",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 78.35,
-      "amount": 0,
-      "reason": "价格低位、RSI超卖、布林带超卖信号，技术面协同但流动性风险需控制",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": 66.5,
-      "current_price": 78.35,
-      "target_price": 82.5,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-10 15:17:27",
       "type": "BUY",
       "code": "1810.HK",
@@ -38515,6 +38499,67 @@
       "stop_loss_price": 47.0,
       "current_price": 49.14,
       "target_price": 51.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-11 13:52:05",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-11 14:27:50",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "技术指标协同支持建仓（RSI中性偏强、MACD金叉、OBV上升、CMF资金流正向），资金流入确认（成交额1日变化+49.11%），银行板块温和上涨且跑赢恒指，潜在涨幅8%",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.74,
+          "target_price": 6.03,
+          "validity_period": 5
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "价格低位（位置百分位19.11%），OBV上升及CMF资金流显著流入（0.1744），人工智能板块强势上涨(1.95%)提供热点支撑，潜在涨幅10%",
+          "allocation_pct": 10,
+          "stop_loss_price": 16.27,
+          "target_price": 21.05,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-11 14:27:52",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.58,
+      "amount": 0,
+      "reason": "技术指标协同支持建仓（RSI中性偏强、MACD金叉、OBV上升、CMF资金流正向），资金流入确认（成交额1日变化+49.11%），银行板块温和上涨且跑赢恒指，潜在涨幅8%",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.74,
+      "current_price": 5.58,
+      "target_price": 6.03,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-11 14:27:57",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.14,
+      "amount": 0,
+      "reason": "价格低位（位置百分位19.11%），OBV上升及CMF资金流显著流入（0.1744），人工智能板块强势上涨(1.95%)提供热点支撑，潜在涨幅10%",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 16.27,
+      "current_price": 19.14,
+      "target_price": 21.05,
       "validity_period": 14
     }
   ],
