@@ -23505,6 +23505,22 @@
       "current_price": 8.12,
       "target_price": 8.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-11T11:34:54.046423",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.14,
+      "amount": 0,
+      "capital_after": 282.18929405196104,
+      "reason": "CMF资金流+0.0912显示资金流入，OBV趋势上升且MACD金叉信号明确，银行股中技术面最优，基本面稳健（PE合理），符合平衡型风险偏好",
+      "success": false,
+      "stop_loss_price": 47.0,
+      "current_price": 49.14,
+      "target_price": 51.5,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -38341,144 +38357,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-10 15:17:05",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格低位、OBV上升、CMF资金流入正、低估值安全边际，技术面协同且风险等级低",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.68,
-          "target_price": 6.2,
-          "validity_period": 14
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "价格低位、RSI超卖、布林带超卖信号，技术面协同但流动性风险需控制",
-          "allocation_pct": 12,
-          "stop_loss_price": 66.5,
-          "target_price": 82.5,
-          "validity_period": 5
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "价格低位、CMF资金流入、科技板块上涨支持，但波动率高需谨慎",
-          "allocation_pct": 10,
-          "stop_loss_price": 30.36,
-          "target_price": 40.0,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分7.5分，CMF资金大幅流出，高估值且无板块支撑",
-          "stop_loss_triggered": false,
-          "target_price": 95.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分7.0分，RSI超买，CMF资金流出且位置百分位高位",
-          "stop_loss_triggered": false,
-          "target_price": 135.0,
-          "validity_period": 3
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分6.5分，RSI超买，CMF资金流出且估值透支增长",
-          "stop_loss_triggered": false,
-          "target_price": 38.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分，RSI严重超买，涨幅过大且资金流出",
-          "stop_loss_triggered": false,
-          "target_price": 15.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分5.5分，MACD潜在死叉，成交额断崖下跌且高估值",
-          "stop_loss_triggered": false,
-          "target_price": 405.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-10 15:17:05",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，CMF资金大幅流出，高估值且无板块支撑",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 101.1,
-      "target_price": 95.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-10 15:17:08",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分，RSI超买，CMF资金流出且位置百分位高位",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 139.9,
-      "target_price": 135.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-10 15:17:11",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，RSI超买，CMF资金流出且估值透支增长",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 40.1,
-      "target_price": 38.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-02-10 15:17:13",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI严重超买，涨幅过大且资金流出",
-      "capital_after": 282.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 16.06,
-      "target_price": 15.0,
-      "validity_period": 3
-    },
-    {
       "timestamp": "2026-02-10 15:17:16",
       "type": "SELL",
       "code": "0388.HK",
@@ -38597,6 +38475,47 @@
       "current_price": 8.12,
       "target_price": 8.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-11 10:03:12",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-11 11:10:42",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-11 11:34:51",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "CMF资金流+0.0912显示资金流入，OBV趋势上升且MACD金叉信号明确，银行股中技术面最优，基本面稳健（PE合理），符合平衡型风险偏好",
+          "allocation_pct": 13.5,
+          "stop_loss_price": 47.0,
+          "target_price": 51.5,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-11 11:34:54",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.14,
+      "amount": 0,
+      "reason": "CMF资金流+0.0912显示资金流入，OBV趋势上升且MACD金叉信号明确，银行股中技术面最优，基本面稳健（PE合理），符合平衡型风险偏好",
+      "capital_after": 282.18929405196104,
+      "success": false,
+      "stop_loss_price": 47.0,
+      "current_price": 49.14,
+      "target_price": 51.5,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
