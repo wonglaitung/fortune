@@ -2608,6 +2608,33 @@ class HSIEmailSystem:
    - 信号描述: {stock['signal_description']}
 {news_summary_text}"""
         
+        elif data_type == 'watchlist' and stock_data:
+            prompt += f"""
+## 自选股概览
+- 自选股数量: {len(stock_data)}只
+- 分析范围: 全部26只自选股
+
+## 自选股详情
+"""
+            for i, stock in enumerate(stock_data, 1):
+                stock_code = stock['stock_code']
+                
+                # 获取新闻摘要
+                stock_news = news_data.get(stock_code, [])
+                news_summary_text = ""
+                if stock_news:
+                    news_summary_text = "   - 新闻摘要:\n"
+                    for news in stock_news[:3]:  # 只展示最近3条
+                        news_summary_text += f"     * {news.get('新闻时间', '')}: {news.get('新闻标题', '')} - {news.get('简要内容', '')}\n"
+                else:
+                    news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
+                
+                prompt += f"""
+{i}. {stock['stock_name']} ({stock['stock_code']})
+   - 当前价格: HK${stock['current_price']:.2f}
+   - 技术指标: {stock['tech_info']}
+{news_summary_text}"""
+        
         # 添加分析要求
         prompt += f"""
 ## 分析框架（业界惯例）
@@ -2730,112 +2757,218 @@ class HSIEmailSystem:
 ## 分析重点
 - {config['indicators']}
 
+## 评分体系（业界标准）
+
+**综合评分计算公式：**
+```
+综合评分 = 建仓评分×25% + 多周期趋势×20% + 相对强度×15% 
+         + 基本面×15% + 新闻影响×15% + 技术指标协同×10%
+```
+
+**评分构成说明：**
+- **建仓评分（0-100）**：基于价格位置、成交量比率、MACD信号、RSI指标等
+- **多周期趋势（-100到+100）**：短期、中期、长期趋势的综合评分
+- **相对强度（-100到+100）**：相对于恒生指数的表现
+- **基本面（0-100）**：PE、PB、基本面评分等
+- **新闻影响（-50到+50）**：新闻情感对股价的影响（根据投资者类型调整权重）
+- **技术指标协同（0-100）**：多个技术指标的一致性
+
+**分类标准：**
+- **买入机会**：
+  * 综合评分 > 70分：强烈推荐（建议仓位50-70%）
+  * 综合评分 50-70分：推荐（建议仓位30-50%）
+  * 综合评分 45-50分：观察列表（建议仓位10-30%）
+- **卖出机会**：
+  * 综合评分 < 30分：强烈推荐卖出（建议减仓50-100%）
+  * 综合评分 30-40分：推荐卖出（建议减仓30-50%）
+  * 综合评分 40-45分：观察列表（建议减仓10-30%）
+- **观望机会**：
+  * 综合评分 45-50分：震荡整理，建议观望
+  * 综合评分 < 45分且无卖出信号：趋势不明，建议观望
+
+## 组合约束（风险控制）
+
+**仓位管理原则：**
+1. **单只股票最大仓位**：不超过30%（强烈推荐）或20%（推荐）
+2. **单一行业最大仓位**：不超过30%（避免过度集中）
+3. **买入股票数量限制**：不超过5只（分散风险）
+4. **总体仓位控制**：根据市场环境调整
+   * VIX < 15：最大总仓位70%
+   * VIX 15-20：最大总仓位60%
+   * VIX 20-30：最大总仓位40%
+   * VIX > 30：最大总仓位20%
+
+**选股优先级：**
+1. 优先选择基本面评分 > 60的股票
+2. 优先选择相对强度评分 > 0的股票
+3. 避免高相关性股票同时重仓
+
 ## 分析要求
-请基于以上信息，对每只股票提供独立的投资分析和建议：
 
-对于每只股票，请提供：
+请基于以上信息，对全部26只自选股进行买卖建议分析：
 
-1. **操作建议**
-   - 明确建议：买入/持有/加仓/减仓/清仓/观望
-   - 具体的操作理由（基于技术面、基本面、交易信号）
-   - {config['focus']}
+**分析策略：**
+1. **计算每只股票的综合评分**：按照评分体系计算
+2. **筛选交易机会**：根据评分分类筛选
+3. **应用组合约束**：考虑仓位和行业集中度限制
+4. **优化输出**：聚焦于高置信度机会
 
-2. **价格指引**
-   - 建议的止损位（基于当前价格的百分比或具体价格）
-   - {config['stop_loss']}
-   - 建议的目标价（基于当前价格的百分比或具体价格）
-   - {config['take_profit']}
+**输出格式要求：**
 
-3. **操作时机**
-   - {config['timing']}
+### 🟢 买入机会推荐（强烈推荐/推荐）
 
-4. **风险提示**
-   - {config['risks']}
+对有买入机会的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：基于技术面、基本面、交易信号的综合分析
+4. **操作建议**：买入（建议仓位比例，如：30%仓位）
+5. **价格指引**：
+   - 建议买入价：HK$XX.XX（或基于当前价格的百分比）
+   - 止损位：HK$XX.XX（{config['stop_loss']}）
+   - 目标价：HK$XX.XX（{config['take_profit']}）
+6. **操作时机**：{config['timing']}
+7. **风险提示**：{config['risks']}
+8. **行业分类**：所属行业（用于评估行业集中度）
 
-5. **关键指标监控**
-   - 需要重点关注的指标变化
+### 🔴 卖出机会推荐（强烈推荐/推荐）
 
-请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
+对有卖出机会的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：基于技术面、基本面、交易信号的综合分析
+4. **操作建议**：卖出（建议卖出比例，如：清仓/减仓50%）
+5. **价格指引**：
+   - 建议卖出价：HK$XX.XX（或基于当前价格的百分比）
+   - 止损位（如适用）：HK$XX.XX
+6. **操作时机**：{config['timing']}
+7. **风险提示**：{config['risks']}
+
+### 🔶 观察列表（接近交易机会）
+
+对评分接近交易机会的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分
+3. **观察要点**：需要关注的关键指标变化
+4. **潜在机会**：可能变为买入/卖出的条件
+
+### 🟡 观望建议（无明确交易机会）
+
+对无明确交易机会的股票，请简要说明或分类：
+- **震荡整理**：综合评分45-50分，技术指标中性，建议观望
+- **趋势不明**：综合评分<45分，缺乏明确方向，建议观望
+- **风险过高**：市场环境风险高，建议观望
+
+**分析原则：**
+- 按照评分体系客观评估，避免主观偏见
+- 优先推荐基本面评分>60的股票
+- 考虑行业集中度，避免过度集中
+- {config['focus']}
+- 以简洁、专业的语言回答，重点突出可操作的建议，避免模糊表述
+
+**输出示例：**
+```
+🟢 买入机会推荐（强烈推荐）
+
+1. 腾讯控股 (0700.HK)
+   - 综合评分：75分（建仓评分80 + 多周期趋势70 + 相对强度75 + 基本面65 + 新闻影响70 + 技术指标协同75）
+   - 推荐理由：MACD金叉、RSI超卖反弹、成交量放大、基本面评分65、跑赢恒指
+   - 操作建议：买入（建议30%仓位）
+   - 价格指引：
+     * 建议买入价：HK$320.00
+     * 止损位：HK$300.00（-6.25%）
+     * 目标价：HK$380.00（+18.75%）
+   - 操作时机：立即或等待回调至320港元附近
+   - 风险提示：短期波动较大，需密切关注VIX变化
+   - 行业分类：科技
+
+2. 美团-W (3690.HK)
+   - 综合评分：68分（建仓评分70 + 多周期趋势65 + 相对强度70 + 基本面60 + 新闻影响65 + 技术指标协同70）
+   - 推荐理由：技术面反弹、基本面良好、行业景气度提升
+   - 操作建议：买入（建议25%仓位）
+   - 价格指引：
+     * 建议买入价：HK$150.00
+     * 止损位：HK$135.00（-10.00%）
+     * 目标价：HK$180.00（+20.00%）
+   - 操作时机：等待回调至150港元附近
+   - 风险提示：行业竞争加剧，需关注政策变化
+   - 行业分类：科技
+
+🔴 卖出机会推荐（推荐）
+
+1. 建设银行 (0939.HK)
+   - 综合评分：35分（建仓评分30 + 多周期趋势40 + 相对强度35 + 基本面45 + 新闻影响30 + 技术指标协同35）
+   - 推荐理由：MACD死叉、RSI超买、获利回吐压力、相对表现较弱
+   - 操作建议：减仓50%
+   - 价格指引：
+     * 建议卖出价：HK$5.80
+   - 操作时机：立即执行
+   - 风险提示：中期趋势可能反转，利率环境不利
+   - 行业分类：银行
+
+🔶 观察列表（接近交易机会）
+
+1. 小米集团-W (1810.HK)
+   - 综合评分：48分
+   - 观察要点：等待MACD金叉确认，关注成交量变化
+   - 潜在机会：若MACD金叉且成交量放大，可考虑买入
+
+🟡 观望建议（无明确交易机会）
+
+- 震荡整理：汇丰银行(0005.HK)、中国移动(0941.HK)、友邦保险(1299.HK)
+- 趋势不明：中芯国际(0981.HK)、华虹半导体(1347.HK)
+- 风险过高：无
+
+组合约束检查：
+- 单只股票最大仓位：30% ✅
+- 单一行业最大仓位：55%（科技55% > 30%）⚠️ 超过限制，建议降低科技股仓位
+- 买入股票数量：2只 ✅
+- 总仓位：55% ✅（当前市场环境VIX 18，允许最大总仓位60%）
+```"""
         
         return prompt
 
-    def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
+    def _analyze_portfolio_with_llm(self, stock_results, hsi_data=None):
         """
-        使用大模型分析持仓股票
+        使用大模型分析全部自选股，生成买入/卖出建议
         
         参数:
-        - portfolio: 持仓列表
         - stock_results: 股票分析结果列表
         - hsi_data: 恒生指数数据（可选）
         
         返回:
         - str: 大模型生成的分析报告
         """
-        if not portfolio:
-            return None
-        
         try:
             # 导入大模型服务
             from llm_services.qwen_engine import chat_with_llm
             
-            # 构建持仓分析数据
-            portfolio_analysis = []
-            total_cost = 0
-            total_current_value = 0
+            # 构建自选股分析数据
+            stock_analysis = []
             
-            for position in portfolio:
-                stock_code = position['stock_code']
-                total_cost += position['total_cost']
-                
+            for stock_code, stock_name in self.stock_list.items():
                 # 从 stock_results 中获取当前价格和技术指标
-                current_price, indicators, stock_name = self._get_stock_data_from_results(stock_code, stock_results)
+                current_price, indicators, _ = self._get_stock_data_from_results(stock_code, stock_results)
                 
                 if current_price is None:
                     print(f"⚠️ 无法获取 {stock_name} ({stock_code}) 的当前价格")
                     continue
                 
-                total_shares = position['total_shares']
-                current_value = current_price * total_shares
-                total_current_value += current_value
-                
-                profit_loss = current_value - position['total_cost']
-                profit_loss_pct = (profit_loss / position['total_cost']) * 100 if position['total_cost'] > 0 else 0
-                
-                portfolio_analysis.append({
+                stock_analysis.append({
                     'stock_code': stock_code,
                     'stock_name': stock_name,
-                    'total_shares': total_shares,
-                    'cost_price': position['cost_price'],
                     'current_price': current_price,
-                    'total_cost': position['total_cost'],
-                    'current_value': current_value,
-                    'profit_loss': profit_loss,
-                    'profit_loss_pct': profit_loss_pct,
                     'tech_info': self._format_tech_info(indicators, include_trend=True)
                 })
             
-            if not portfolio_analysis:
+            if not stock_analysis:
                 return None
-            
-            # 计算整体盈亏
-            total_profit_loss = total_current_value - total_cost
-            total_profit_loss_pct = (total_profit_loss / total_cost) * 100 if total_cost > 0 else 0
             
             # 获取市场环境
             market_context = self._get_market_context(hsi_data)
             
-            # 准备股票数据（包含持仓占比）
-            stock_data_with_pct = []
-            for pos in portfolio_analysis:
-                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
-                stock_data_with_pct.append({
-                    **pos,
-                    'position_pct': position_pct
-                })
-            
-            # 准备技术面信号摘要和交易记录
-            stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
-            stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
+            # 准备股票列表
+            stock_list = [(stock['stock_name'], stock['stock_code'], None, None, None) for stock in stock_analysis]
+            stock_codes = [stock['stock_code'] for stock in stock_analysis]
 
             # 配置开关：是否生成所有四种分析风格
             # True = 生成全部四种（进取型短期、稳健型短期、稳健型中期、保守型中期）
@@ -2869,15 +3002,10 @@ class HSIEmailSystem:
                 prompt = self._generate_analysis_prompt(
                     investment_style=style,
                     investment_horizon=horizon,
-                    data_type='portfolio',
-                    stock_data=stock_data_with_pct,
+                    data_type='watchlist',
+                    stock_data=stock_analysis,
                     market_context=market_context,
-                    additional_info={
-                        'total_cost': total_cost,
-                        'total_current_value': total_current_value,
-                        'total_profit_loss': total_profit_loss,
-                        'total_profit_loss_pct': total_profit_loss_pct
-                    }
+                    additional_info={}
                 )
                 
                 # 添加技术面信号摘要
@@ -2901,7 +3029,7 @@ class HSIEmailSystem:
             return ''.join(all_analysis)
             
         except Exception as e:
-            print(f"❌ 大模型持仓分析失败: {e}")
+            print(f"❌ 大模型自选股分析失败: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -4031,14 +4159,13 @@ class HSIEmailSystem:
         print("📊 获取即将除净的港股信息...")
         dividend_data = self.get_upcoming_dividends(days_ahead=90)
         
-        # 读取持仓数据并使用大模型分析
-        print("📊 读取持仓数据...")
-        portfolio = self._read_portfolio_data()
-        
+        # 针对全部自选股进行买入/卖出分析
+        print("📊 正在分析自选股买入/卖出建议...")
         portfolio_analysis = None
-        if portfolio:
-            print("🤖 使用大模型分析持仓...")
-            portfolio_analysis = self._analyze_portfolio_with_llm(portfolio, stock_results, hsi_data)
+        try:
+            portfolio_analysis = self._analyze_portfolio_with_llm(stock_results, hsi_data)
+        except Exception as e:
+            print(f"⚠️ 自选股分析失败: {e}")
         
         # 计算上个交易日的日期
         previous_trading_date = None
@@ -4839,21 +4966,21 @@ class HSIEmailSystem:
             
             text += f"\n🎯 买入信号股票分析（AI智能分析）:\n{buy_signals_analysis}\n\n"
 
-        # 添加持仓分析（如果有）
+        # 添加自选股买卖建议分析（如果有）
         if portfolio_analysis:
             # 将markdown转换为HTML
             portfolio_analysis_html = self._markdown_to_html(portfolio_analysis)
             
             html += """
         <div class="section">
-            <h3>💼 持仓投资分析（AI智能分析）</h3>
+            <h3>💼 自选股买卖建议分析（AI智能分析）</h3>
             <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 10px 0;">
                 <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + portfolio_analysis_html + """</div>
             </div>
         </div>
             """
             
-            text += f"\n💼 持仓投资分析（AI智能分析）:\n{portfolio_analysis}\n\n"
+            text += f"\n💼 自选股买卖建议分析（AI智能分析）:\n{portfolio_analysis}\n\n"
 
         # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
