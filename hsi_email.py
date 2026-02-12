@@ -1098,9 +1098,14 @@ class HSIEmailSystem:
             'reasons': ','.join(reasons) if reasons else ''
         }
 
-    def _calculate_technical_indicators_core(self, data, asset_type='stock'):
+    def _calculate_technical_indicators_core(self, data, asset_type='stock', us_df=None):
         """
         计算技术指标的核心方法（支持不同资产类型）- 修复版本
+
+        参数:
+        - data: 股票数据
+        - asset_type: 资产类型（'stock' 或 'hsi'）
+        - us_df: 美股市场数据（可选，避免重复获取）
         """
         try:
             if data is None:
@@ -1520,9 +1525,12 @@ class HSIEmailSystem:
             
             # 添加市场情绪和流动性指标（新增）
             try:
-                # 1. 获取VIX恐慌指数
-                from ml_services.us_market_data import us_market_data
-                us_df = us_market_data.get_all_us_market_data(period_days=30)
+                # 1. 获取VIX恐慌指数（使用传入的 us_df，避免重复获取）
+                if us_df is None:
+                    # 如果没有传入 us_df，则获取一次（向后兼容）
+                    from ml_services.us_market_data import us_market_data
+                    us_df = us_market_data.get_all_us_market_data(period_days=30)
+                
                 if us_df is not None and not us_df.empty and 'VIX_Level' in us_df.columns:
                     indicators['vix_level'] = us_df['VIX_Level'].iloc[-1]
                 else:
@@ -1732,17 +1740,25 @@ class HSIEmailSystem:
             else:
                 return None
 
-    def calculate_hsi_technical_indicators(self, data):
+    def calculate_hsi_technical_indicators(self, data, us_df=None):
         """
         计算恒生指数技术指标（使用HSI专用配置）
-        """
-        return self._calculate_technical_indicators_core(data, asset_type='hsi')
 
-    def calculate_technical_indicators(self, data):
+        参数:
+        - data: 股票数据
+        - us_df: 美股市场数据（可选，避免重复获取）
+        """
+        return self._calculate_technical_indicators_core(data, asset_type='hsi', us_df=us_df)
+
+    def calculate_technical_indicators(self, data, us_df=None):
         """
         计算技术指标（适用于个股）
+
+        参数:
+        - data: 股票数据
+        - us_df: 美股市场数据（可选，避免重复获取）
         """
-        return self._calculate_technical_indicators_core(data, asset_type='stock')
+        return self._calculate_technical_indicators_core(data, asset_type='stock', us_df=us_df)
 
     def calculate_var(self, hist_df, investment_style='medium_term', confidence_level=0.95, position_value=None):
         """
@@ -6681,6 +6697,19 @@ class HSIEmailSystem:
             print("📊 正在计算恒生指数技术指标...")
             hsi_indicators = self.calculate_hsi_technical_indicators(hsi_data)
 
+        # 获取美股市场数据（一次性获取，所有股票共享）
+        print("📊 正在获取美股市场数据...")
+        us_df = None
+        try:
+            from ml_services.us_market_data import us_market_data
+            us_df = us_market_data.get_all_us_market_data(period_days=30)
+            if us_df is not None and not us_df.empty:
+                print(f"✅ 美股数据获取成功（VIX: {us_df.get('VIX_Level', pd.Series([None])).iloc[-1] if 'VIX_Level' in us_df.columns else 'N/A'}）")
+            else:
+                print("⚠️ 美股数据为空")
+        except Exception as e:
+            print(f"⚠️ 获取美股数据失败: {e}")
+
         print(f"🔍 正在获取股票列表并分析 ({len(self.stock_list)} 只股票)...")
         stock_results = []
         for stock_code, stock_name in self.stock_list.items():
@@ -6688,7 +6717,7 @@ class HSIEmailSystem:
             stock_data = self.get_stock_data(stock_code, target_date=target_date)
             if stock_data:
                 print(f"📊 正在计算 {stock_name} ({stock_code}) 技术指标...")
-                indicators = self.calculate_technical_indicators(stock_data)
+                indicators = self.calculate_technical_indicators(stock_data, us_df=us_df)
                 stock_results.append({
                     'code': stock_code,
                     'name': stock_name,
