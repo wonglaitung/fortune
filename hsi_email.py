@@ -1525,10 +1525,12 @@ class HSIEmailSystem:
             
             # 添加市场情绪和流动性指标（新增）
             try:
+                # 导入 us_market_data（移到作用域开始处，确保在整个 try 块内可用）
+                from ml_services.us_market_data import us_market_data
+                
                 # 1. 获取VIX恐慌指数（使用传入的 us_df，避免重复获取）
                 if us_df is None:
                     # 如果没有传入 us_df，则获取一次（向后兼容）
-                    from ml_services.us_market_data import us_market_data
                     us_df = us_market_data.get_all_us_market_data(period_days=30)
                 
                 if us_df is not None and not us_df.empty and 'VIX_Level' in us_df.columns:
