@@ -7,7 +7,7 @@ from datetime import datetime
 api_key = os.getenv('QWEN_API_KEY', '')  # 从环境变量读取API密钥
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-max_tokens = int(os.getenv('MAX_TOKENS', 32768))
+max_tokens = int(os.getenv('MAX_TOKENS', 65536))
 
 def log_message(message, log_file="qwen_engine.log"):
     """
@@ -138,7 +138,18 @@ def chat_with_llm(query, enable_thinking=True):
         
         response.raise_for_status()  # Raise an exception for bad status codes
         
-        result = response.json()['choices'][0]['message']['content']  # Return the response text
+        response_data = response.json()
+        message = response_data['choices'][0]['message']
+        
+        # 如果 content 为空，尝试使用 reasoning_content 作为备用
+        content = message.get('content', '')
+        reasoning_content = message.get('reasoning_content', '')
+        
+        if not content and reasoning_content:
+            log_message(f"[WARN] chat_with_llm content is empty, using reasoning_content as fallback")
+            content = reasoning_content
+        
+        result = content  # Return the response text
         log_message(f"[DEBUG] chat_with_llm success, returning content: {repr(result)}")  # 打印完整的输出
         return result
     except requests.exceptions.HTTPError as http_err:
