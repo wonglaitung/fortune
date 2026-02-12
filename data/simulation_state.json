@@ -23868,6 +23868,38 @@
       "current_price": 19.2,
       "target_price": 21.0,
       "validity_period": 2
+    },
+    {
+      "timestamp": "2026-02-12T15:52:15.677487",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.24,
+      "target_price": 26.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-12T15:52:21.967961",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.54,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
+      "success": false,
+      "stop_loss_price": 4.72,
+      "current_price": 5.54,
+      "target_price": 5.85,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -39120,157 +39152,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-12 11:09:02",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-12 12:04:40",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "TAV评分58.25分中等共振，4项技术指标同向（价格低位、MACD金叉预期、OBV上升、CMF流入），银行股板块轮动资金避险需求，受益于Visa拓展中国支付合作新闻催化",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.73,
-          "target_price": 6.25,
-          "validity_period": 7
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "TAV评分53.0分中等共振，4项技术指标同向（价格低位、MACD金叉预期、OBV上升、CMF流入），个股相对强度+6.33%跑赢恒指，Visa合作强化零售业务预期",
-          "allocation_pct": 15,
-          "stop_loss_price": 41.66,
-          "target_price": 54.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分6.5分，技术指标同向出货（MACD死叉预期、CMF资金流出-0.1064、OBV下降），半导体板块资金撤离，产能扩张致毛利率承压新闻发酵",
-          "stop_loss_triggered": false,
-          "target_price": 90.0,
-          "validity_period": 7
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "出货评分6.5分，RSI超买72.41，CMF资金流出-0.2336，量价背离，Vertex合作新闻利好出尽且估值透支预期",
-          "stop_loss_triggered": false,
-          "target_price": 38.5,
-          "validity_period": 7
-        },
-        {
-          "code": "2800.HK",
-          "name": "盈富基金",
-          "reason": "出货评分6.5分，恒指科技股大跌-2.60%拖累，技术指标出货信号（MACD死叉预期、CMF流出），指数基金流动性不足放大波动",
-          "stop_loss_triggered": false,
-          "target_price": 26.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分，RSI严重超买84.22，CMF资金流出-0.3342，异常放量165.47%警惕主力出货，航运板块涨幅过大需技术修正",
-          "stop_loss_triggered": false,
-          "target_price": 16.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.0分，技术指标出货（MACD死叉预期、CMF流出），位置百分位96.02%历史高位，英国房贷利率上升新闻利空净息差",
-          "stop_loss_triggered": false,
-          "target_price": 130.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-12 12:04:40",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，技术指标同向出货（MACD死叉预期、CMF资金流出-0.1064、OBV下降），半导体板块资金撤离，产能扩张致毛利率承压新闻发酵",
-      "capital_after": 44.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 100.5,
-      "target_price": 90.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-12 12:04:43",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，RSI超买72.41，CMF资金流出-0.2336，量价背离，Vertex合作新闻利好出尽且估值透支预期",
-      "capital_after": 44.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 42.92,
-      "target_price": 38.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-12 12:04:47",
-      "type": "SELL",
-      "code": "2800.HK",
-      "name": "盈富基金",
-      "shares": 3600,
-      "price": 27.24,
-      "amount": 98064.0,
-      "reason": "出货评分6.5分，恒指科技股大跌-2.60%拖累，技术指标出货信号（MACD死叉预期、CMF流出），指数基金流动性不足放大波动",
-      "capital_after": 98108.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 27.24,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 791.9999999999959
-    },
-    {
-      "timestamp": "2026-02-12 12:04:52",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI严重超买84.22，CMF资金流出-0.3342，异常放量165.47%警惕主力出货，航运板块涨幅过大需技术修正",
-      "capital_after": 98108.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 17.86,
-      "target_price": 16.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-12 12:04:54",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，技术指标出货（MACD死叉预期、CMF流出），位置百分位96.02%历史高位，英国房贷利率上升新闻利空净息差",
-      "capital_after": 98108.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.9,
-      "target_price": 130.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-12 12:04:59",
       "type": "BUY",
       "code": "1288.HK",
@@ -39429,6 +39310,67 @@
       "current_price": 19.2,
       "target_price": 21.0,
       "validity_period": 2
+    },
+    {
+      "timestamp": "2026-02-12 14:48:00",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-12 15:52:15",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.72,
+          "target_price": 5.85,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
+          "stop_loss_triggered": false,
+          "target_price": 26.8,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-12 15:52:15",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.24,
+      "target_price": 26.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-12 15:52:21",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.54,
+      "amount": 0,
+      "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.72,
+      "current_price": 5.54,
+      "target_price": 5.85,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
