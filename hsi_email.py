@@ -3105,8 +3105,8 @@ class HSIEmailSystem:
                 # 调用大模型
                 style_analysis = chat_with_llm(prompt, enable_thinking=False)
                 
-                # 添加标题
-                all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
+                # 添加标题（使用简洁的Markdown格式）
+                all_analysis.append(f"\n\n### 📊 {title}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{style_analysis}")
                 
                 print(f"✅ {title}完成")
             
