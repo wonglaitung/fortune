@@ -3035,8 +3035,24 @@ class HSIEmailSystem:
             # 获取市场环境
             market_context = self._get_market_context(hsi_data)
             
-            # 准备股票列表
-            stock_list = [(stock['stock_name'], stock['stock_code'], None, None, None) for stock in stock_analysis]
+            # 准备股票列表，包含正确的趋势和信号信息
+            stock_list = []
+            for stock in stock_analysis:
+                stock_code = stock['stock_code']
+                # 从 stock_results 中获取趋势和信号信息
+                _, indicators, _ = self._get_stock_data_from_results(stock_code, stock_results)
+                if indicators:
+                    trend = indicators.get('trend', '未知')
+                    # 获取最近的一个信号
+                    recent_buy_signals = indicators.get('recent_buy_signals', [])
+                    recent_sell_signals = indicators.get('recent_sell_signals', [])
+                    signal = recent_buy_signals[0] if recent_buy_signals else (recent_sell_signals[0] if recent_sell_signals else None)
+                    signal_type = '买入' if recent_buy_signals else ('卖出' if recent_sell_signals else '无')
+                else:
+                    trend = '未知'
+                    signal = None
+                    signal_type = '无'
+                stock_list.append((stock['stock_name'], stock['stock_code'], trend, signal, signal_type))
             stock_codes = [stock['stock_code'] for stock in stock_analysis]
 
             # 配置开关：是否生成所有四种分析风格
