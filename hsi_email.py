@@ -3103,7 +3103,7 @@ class HSIEmailSystem:
                 prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
                 
                 # 调用大模型
-                style_analysis = chat_with_llm(prompt, enable_thinking=True)
+                style_analysis = chat_with_llm(prompt, enable_thinking=False)
                 
                 # 添加标题
                 all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
@@ -3219,7 +3219,7 @@ class HSIEmailSystem:
 请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
             
             print("🤖 正在使用大模型分析买入信号股票...")
-            analysis_result = chat_with_llm(prompt, enable_thinking=True)
+            analysis_result = chat_with_llm(prompt, enable_thinking=False)
             print("✅ 大模型分析完成")
             
             return analysis_result
