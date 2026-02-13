@@ -24119,6 +24119,22 @@
       "current_price": 78.35,
       "target_price": 81.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13T15:25:49.285073",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 28.189294051961042,
+      "reason": "1日成交额变化率<-10%，科技板块承压（核心板块弱势），出货评分高（平均4.82分），资金面流出，符合优先级最高卖出信号",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 532.0,
+      "target_price": 340.0,
+      "validity_period": 1
     }
   ],
   "portfolio_history": [
@@ -39512,54 +39528,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-13 11:03:56",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "CMF流出(-0.062)，OBV下降确认资金撤离，技术指标共振出货，位置低位但趋势向下，成交额异常萎缩放大风险",
-      "capital_after": 4942.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 405.2,
-      "target_price": 395.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-13 11:04:00",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 900,
-      "price": 5.46,
-      "amount": 4914.0,
-      "reason": "价格低位(21.67%)，MACD金叉，OBV上升，CMF流入四重确认，银行股板块温和下跌提供稳定性，基本面优质(PE 6.24，股息率高)，新闻显示信贷市场回暖预期",
-      "capital_after": 28.189294051961042,
-      "success": true,
-      "stop_loss_price": 5.18,
-      "current_price": 5.46,
-      "target_price": 5.75,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-13 11:04:04",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 49.0,
-      "amount": 0,
-      "reason": "TAV中等共振(53.0分)，MACD金叉，OBV上升三重确认，相对强度高(6.64%)跑赢恒指，基本面优质(PE 7.79)，新闻显示支付生态改善利好数字化业务",
-      "capital_after": 28.189294051961042,
-      "success": false,
-      "stop_loss_price": 46.56,
-      "current_price": 49.0,
-      "target_price": 51.2,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-02-13 11:52:40",
       "buy": [
         {
@@ -39704,6 +39672,36 @@
       "current_price": 78.35,
       "target_price": 81.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13 15:25:49",
+      "buy": [],
+      "sell": [
+        {
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "reason": "1日成交额变化率<-10%，科技板块承压（核心板块弱势），出货评分高（平均4.82分），资金面流出，符合优先级最高卖出信号",
+          "stop_loss_triggered": false,
+          "target_price": 340.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-13 15:25:49",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "1日成交额变化率<-10%，科技板块承压（核心板块弱势），出货评分高（平均4.82分），资金面流出，符合优先级最高卖出信号",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 532.0,
+      "target_price": 340.0,
+      "validity_period": 1
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
