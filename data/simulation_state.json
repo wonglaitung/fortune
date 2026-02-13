@@ -24039,6 +24039,54 @@
       "current_price": 49.0,
       "target_price": 51.2,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-13T11:52:42.178296",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.31,
+      "amount": 0,
+      "capital_after": 28.189294051961042,
+      "reason": "RSI超卖边缘(41.91)、OBV上升趋势、CMF强流入(+0.2812)确认资金持续流入，位置百分位24.74%接近60日低点提供安全边际",
+      "success": false,
+      "stop_loss_price": 16.39,
+      "current_price": 19.31,
+      "target_price": 20.5,
+      "validity_period": 2
+    },
+    {
+      "timestamp": "2026-02-13T13:38:03.023996",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 28.189294051961042,
+      "reason": "出货评分5.0分，技术面RSI超卖但价格暴跌-4.36%，MACD死叉+OBV下降确认空头趋势，资金面放量下跌（成交量比率1.31），新闻面叮咚卖菜出售中国业务利空本地生活板块",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 81.4,
+      "target_price": 78.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13T13:38:05.803650",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 28.189294051961042,
+      "reason": "出货评分5.0分，技术面位置中高位（64.49%），CMF流出-0.0825+OBV下降，资金面缩量（成交量比率0.4），新闻面特斯拉FSD在华审批加剧AI芯片竞争",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.81,
+      "target_price": 8.2,
+      "validity_period": 3
     }
   ],
   "portfolio_history": [
@@ -39432,156 +39480,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-12 14:48:00",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-12 15:52:15",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.72,
-          "target_price": 5.85,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "2800.HK",
-          "name": "盈富基金",
-          "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
-          "stop_loss_triggered": false,
-          "target_price": 26.8,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-12 15:52:15",
-      "type": "SELL",
-      "code": "2800.HK",
-      "name": "盈富基金",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.24,
-      "target_price": 26.8,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-12 15:52:21",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.54,
-      "amount": 0,
-      "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.72,
-      "current_price": 5.54,
-      "target_price": 5.85,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-13 10:05:35",
-      "buy": [
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "位置百分位历史低位，RSI超卖，基本面优质低估值",
-          "allocation_pct": 15,
-          "stop_loss_price": 76.5,
-          "target_price": 80.0,
-          "validity_period": 10
-        }
-      ],
-      "sell": [
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术指标共振出货，新闻质疑估值高估",
-          "stop_loss_triggered": false,
-          "target_price": 395.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "基本面恶化，技术面出货信号协同",
-          "stop_loss_triggered": false,
-          "target_price": 68.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "高位量能萎缩，能源板块强势下跌拖累",
-          "stop_loss_triggered": false,
-          "target_price": 41.5,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-13 10:05:35",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标共振出货，新闻质疑估值高估",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 404.8,
-      "target_price": 395.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-13 10:05:38",
-      "type": "SELL",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 1400,
-      "price": 70.25,
-      "amount": 98350.0,
-      "reason": "基本面恶化，技术面出货信号协同",
-      "capital_after": 98602.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 70.25,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 839.999999999992
-    },
-    {
-      "timestamp": "2026-02-13 10:05:43",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "高位量能萎缩，能源板块强势下跌拖累",
-      "capital_after": 98602.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 43.22,
-      "target_price": 41.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-13 10:05:46",
       "type": "BUY",
       "code": "0941.HK",
@@ -39725,6 +39623,91 @@
       "current_price": 49.0,
       "target_price": 51.2,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-13 11:52:40",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "RSI超卖边缘(41.91)、OBV上升趋势、CMF强流入(+0.2812)确认资金持续流入，位置百分位24.74%接近60日低点提供安全边际",
+          "allocation_pct": 15,
+          "stop_loss_price": 16.39,
+          "target_price": 20.5,
+          "validity_period": 2
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-13 11:52:42",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.31,
+      "amount": 0,
+      "reason": "RSI超卖边缘(41.91)、OBV上升趋势、CMF强流入(+0.2812)确认资金持续流入，位置百分位24.74%接近60日低点提供安全边际",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": 16.39,
+      "current_price": 19.31,
+      "target_price": 20.5,
+      "validity_period": 2
+    },
+    {
+      "timestamp": "2026-02-13 13:38:02",
+      "buy": [],
+      "sell": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "出货评分5.0分，技术面RSI超卖但价格暴跌-4.36%，MACD死叉+OBV下降确认空头趋势，资金面放量下跌（成交量比率1.31），新闻面叮咚卖菜出售中国业务利空本地生活板块",
+          "stop_loss_triggered": false,
+          "target_price": 78.0,
+          "validity_period": 3
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "出货评分5.0分，技术面位置中高位（64.49%），CMF流出-0.0825+OBV下降，资金面缩量（成交量比率0.4），新闻面特斯拉FSD在华审批加剧AI芯片竞争",
+          "stop_loss_triggered": false,
+          "target_price": 8.2,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-13 13:38:03",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分，技术面RSI超卖但价格暴跌-4.36%，MACD死叉+OBV下降确认空头趋势，资金面放量下跌（成交量比率1.31），新闻面叮咚卖菜出售中国业务利空本地生活板块",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 81.4,
+      "target_price": 78.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13 13:38:05",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分，技术面位置中高位（64.49%），CMF流出-0.0825+OBV下降，资金面缩量（成交量比率0.4），新闻面特斯拉FSD在华审批加剧AI芯片竞争",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.81,
+      "target_price": 8.2,
+      "validity_period": 3
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
