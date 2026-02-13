@@ -4415,9 +4415,60 @@ class HSIEmailSystem:
         # 添加板块分析
         try:
             print("📊 生成板块分析报告...")
-            from data_services.hk_sector_analysis import SectorAnalyzer
+            from data_services.hk_sector_analysis import SectorAnalyzer, DEFAULT_MIN_MARKET_CAP
             sector_analyzer = SectorAnalyzer()
             perf_df = sector_analyzer.calculate_sector_performance(self.SECTOR_ANALYSIS_PERIOD)
+
+            # 使用业界标准的龙头股识别方法
+            sector_leaders = {}
+            sector_top3_leaders = {}  # 存储每个板块的前3只龙头股
+            try:
+                print("📊 识别板块龙头股（业界标准：稳健型风格、5日周期、最小市值100亿港币）...")
+                top_sector_code = None
+                bottom_sector_code = None
+
+                if not perf_df.empty:
+                    # 获取所有板块的前3只龙头股
+                    for idx, row in perf_df.iterrows():
+                        sector_code = row['sector_code']
+                        # 获取前3只龙头股
+                        leaders_df = sector_analyzer.identify_sector_leaders(
+                            sector_code=sector_code,
+                            top_n=3,
+                            period=self.SECTOR_ANALYSIS_PERIOD,
+                            min_market_cap=DEFAULT_MIN_MARKET_CAP,
+                            style='moderate'  # 稳健型风格
+                        )
+                        if not leaders_df.empty:
+                            # 存储前3只龙头股
+                            sector_top3_leaders[sector_code] = []
+                            for _, leader_row in leaders_df.iterrows():
+                                sector_top3_leaders[sector_code].append({
+                                    'name': leader_row['name'],
+                                    'code': leader_row['code'],
+                                    'change_pct': leader_row['change_pct'],
+                                    'composite_score': leader_row['composite_score'],
+                                })
+
+                            # 存储第一只龙头股（用于表格显示）
+                            sector_leaders[sector_code] = {
+                                'name': leaders_df.iloc[0]['name'],
+                                'code': leaders_df.iloc[0]['code'],
+                                'change_pct': leaders_df.iloc[0]['change_pct'],
+                                'composite_score': leaders_df.iloc[0]['composite_score'],
+                                'investment_style': '稳健型',
+                            }
+
+                            if idx == 0:
+                                top_sector_code = sector_code
+                            if idx == len(perf_df) - 1:
+                                bottom_sector_code = sector_code
+
+                print(f"✅ 识别完成，共识别 {len(sector_leaders)} 个板块的龙头股，{len(sector_top3_leaders)} 个板块的前3名")
+            except Exception as e:
+                print(f"⚠️ 识别板块龙头股失败: {e}")
+                sector_leaders = {}
+                sector_top3_leaders = {}
 
             if not perf_df.empty:
                 html += f"""
@@ -4426,76 +4477,9 @@ class HSIEmailSystem:
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
                     <em>💡 说明：基于最近{self.SECTOR_ANALYSIS_PERIOD}个交易日的板块平均涨跌幅进行排名，反映短期板块轮动趋势</em>
                 </p>
-                """
-                
-                # 强势板块TOP 3
-                html += """
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #4CAF50; font-size: 16px; margin-bottom: 10px;">📈 强势板块（TOP 3）</h4>
-                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
-                        <tr style="background-color: #4CAF50; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
-                        </tr>
-                """
-                
-                for idx, row in perf_df.head(3).iterrows():
-                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
-                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
-                    
-                    html += f"""
-                        <tr style="background-color: {'#e8f5e9' if idx % 2 == 0 else '#f1f8e9'};">
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{idx+1}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
-                        </tr>
-                    """
-                
-                html += """
-                    </table>
-                </div>
-                """
-                
-                # 弱势板块BOTTOM 3
-                html += """
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #f44336; font-size: 16px; margin-bottom: 10px;">📉 弱势板块（BOTTOM 3）</h4>
-                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
-                        <tr style="background-color: #f44336; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
-                        </tr>
-                """
-                
-                bottom_3 = perf_df.tail(3)
-                for i, (idx, row) in enumerate(bottom_3.iterrows(), 1):
-                    rank = len(perf_df) - len(bottom_3) + i
-                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
-                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
-                    
-                    html += f"""
-                        <tr style="background-color: {'#ffebee' if i % 2 == 0 else '#ffcdd2'};">
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{rank}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
-                        </tr>
-                    """
-                
-                html += """
-                    </table>
-                </div>
+                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                    <em>🔍 龙头股识别：采用业界标准MVP模型（动量+成交量+基本面），稳健型风格，最小市值100亿港币，⭐表示使用专业方法识别的龙头股</em>
+                </p>
                 """
                 
                 # 板块详细排名
@@ -4504,18 +4488,36 @@ class HSIEmailSystem:
                     <h4 style="color: #666; font-size: 16px; margin-bottom: 10px;">📊 板块详细排名</h4>
                     <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
                         <tr style="background-color: #666; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 20%;">趋势</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 30%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">股票数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 8%;">排名</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 18%;">趋势</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 22%;">板块名称</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 12%;">平均涨跌幅</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 8%;">股票数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 32%;">龙头股TOP 3</th>
                         </tr>
                 """
-                
+
                 for idx, row in perf_df.iterrows():
                     trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
                     change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    
+
+                    # 获取该板块的前3只龙头股
+                    leaders_text = ""
+                    if row['sector_code'] in sector_top3_leaders:
+                        leaders = sector_top3_leaders[row['sector_code']]
+                        leader_lines = []
+                        for i, leader in enumerate(leaders, 1):
+                            leader_lines.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
+                        leaders_text = "<br>".join(leader_lines)
+                        leaders_text += " ⭐"  # 添加星号标记
+                    elif 'stocks' in row and row['stocks']:
+                        # 回退到原有逻辑（显示涨跌幅前3的股票）
+                        top_3 = row['stocks'][:3]
+                        leader_lines = []
+                        for i, stock in enumerate(top_3, 1):
+                            leader_lines.append(f"{i}. {stock['name']} ({stock['change_pct']:.2f}%)")
+                        leaders_text = "<br>".join(leader_lines)
+
                     html += f"""
                         <tr style="background-color: {'#f9f9f9' if idx % 2 == 0 else '#fff'};">
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{idx+1}</td>
@@ -4523,6 +4525,7 @@ class HSIEmailSystem:
                             <td style="border: 1px solid #ddd; padding: 8px;">{row['sector_name']}</td>
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{row['stock_count']}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px; line-height: 1.5;">{leaders_text}</td>
                         </tr>
                     """
                 
@@ -4539,12 +4542,19 @@ class HSIEmailSystem:
                 
                 top_sector = perf_df.iloc[0]
                 bottom_sector = perf_df.iloc[-1]
-                
+
                 if top_sector['avg_change_pct'] > 1:
                     html += f"""
                     <p style="margin: 5px 0; color: #333;">• <strong>当前热点板块：</strong>{top_sector['sector_name']}，平均涨幅 <span style="color: #4CAF50; font-weight: bold;">{top_sector['avg_change_pct']:.2f}%</span></p>
                     """
-                    if top_sector['best_stock']:
+                    # 使用业界标准识别的龙头股
+                    if top_sector['sector_code'] in sector_leaders:
+                        leader = sector_leaders[top_sector['sector_code']]
+                        html += f"""
+                        <p style="margin: 5px 0; color: #333;">• 建议关注该板块的龙头股：<span style="color: #4CAF50; font-weight: bold;">{leader['name']}</span> <span style="color: #666; font-size: 12px;">（基于MVP模型：动量+成交量+基本面，稳健型风格）</span></p>
+                        """
+                    elif top_sector['best_stock']:
+                        # 回退到原有逻辑
                         html += f"""
                         <p style="margin: 5px 0; color: #333;">• 建议关注该板块的龙头股：<span style="color: #4CAF50; font-weight: bold;">{top_sector['best_stock']['name']}</span></p>
                         """
