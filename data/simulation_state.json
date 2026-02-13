@@ -24087,6 +24087,38 @@
       "current_price": 8.81,
       "target_price": 8.2,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13T14:52:58.914376",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 28.189294051961042,
+      "reason": "出货评分7.0分，技术指标共振出货（price_high, rsi_high, cmf_out, bb_overbought），航运板块强势下跌（-3.71%）无缓冲空间，资金面流出（CMF -0.2123）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 16.17,
+      "target_price": 14.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13T14:53:04.827136",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.35,
+      "amount": 0,
+      "capital_after": 28.189294051961042,
+      "reason": "价格低位（位置百分位3.57%）、MACD金叉信号、RSI超卖（39.73），技术指标协同，公用事业板块跌幅最小（-0.03%）相对强势，基本面优质（PE 11.12，股息率稳定），适合平衡型投资者风险偏好",
+      "success": false,
+      "stop_loss_price": 76.0,
+      "current_price": 78.35,
+      "target_price": 81.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -39480,103 +39512,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-13 10:05:46",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 1200,
-      "price": 78.05,
-      "amount": 93660.0,
-      "reason": "位置百分位历史低位，RSI超卖，基本面优质低估值",
-      "capital_after": 4942.189294051961,
-      "success": true,
-      "stop_loss_price": 76.5,
-      "current_price": 78.05,
-      "target_price": 80.0,
-      "validity_period": 10
-    },
-    {
-      "timestamp": "2026-02-13 11:03:50",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格低位(21.67%)，MACD金叉，OBV上升，CMF流入四重确认，银行股板块温和下跌提供稳定性，基本面优质(PE 6.24，股息率高)，新闻显示信贷市场回暖预期",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.18,
-          "target_price": 5.75,
-          "validity_period": 5
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "TAV中等共振(53.0分)，MACD金叉，OBV上升三重确认，相对强度高(6.64%)跑赢恒指，基本面优质(PE 7.79)，新闻显示支付生态改善利好数字化业务",
-          "allocation_pct": 12,
-          "stop_loss_price": 46.56,
-          "target_price": 51.2,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "RSI超买(70.45)，CMF大幅流出(-0.2603)，价格高位(87.26%)与短期收益率背离，量价背离确认主力出货，航运板块强势下跌无缓冲",
-          "stop_loss_triggered": false,
-          "target_price": 15.8,
-          "validity_period": 5
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "CMF最大流出(-0.2842)，位置高位(89.2%)，OBV上升但价格下跌量价背离，个股显著跑输银行板块，新闻显示海外业务压力",
-          "stop_loss_triggered": false,
-          "target_price": 132.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "CMF流出(-0.062)，OBV下降确认资金撤离，技术指标共振出货，位置低位但趋势向下，成交额异常萎缩放大风险",
-          "stop_loss_triggered": false,
-          "target_price": 395.0,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-13 11:03:51",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "RSI超买(70.45)，CMF大幅流出(-0.2603)，价格高位(87.26%)与短期收益率背离，量价背离确认主力出货，航运板块强势下跌无缓冲",
-      "capital_after": 4942.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 16.61,
-      "target_price": 15.8,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-13 11:03:54",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "CMF最大流出(-0.2842)，位置高位(89.2%)，OBV上升但价格下跌量价背离，个股显著跑输银行板块，新闻显示海外业务压力",
-      "capital_after": 4942.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 136.5,
-      "target_price": 132.0,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-13 11:03:56",
       "type": "SELL",
       "code": "0388.HK",
@@ -39708,6 +39643,67 @@
       "current_price": 8.81,
       "target_price": 8.2,
       "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13 14:11:12",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-13 14:52:58",
+      "buy": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "价格低位（位置百分位3.57%）、MACD金叉信号、RSI超卖（39.73），技术指标协同，公用事业板块跌幅最小（-0.03%）相对强势，基本面优质（PE 11.12，股息率稳定），适合平衡型投资者风险偏好",
+          "allocation_pct": 4,
+          "stop_loss_price": 76.0,
+          "target_price": 81.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分7.0分，技术指标共振出货（price_high, rsi_high, cmf_out, bb_overbought），航运板块强势下跌（-3.71%）无缓冲空间，资金面流出（CMF -0.2123）",
+          "stop_loss_triggered": false,
+          "target_price": 14.8,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-13 14:52:58",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分，技术指标共振出货（price_high, rsi_high, cmf_out, bb_overbought），航运板块强势下跌（-3.71%）无缓冲空间，资金面流出（CMF -0.2123）",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 16.17,
+      "target_price": 14.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-02-13 14:53:04",
+      "type": "BUY",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 78.35,
+      "amount": 0,
+      "reason": "价格低位（位置百分位3.57%）、MACD金叉信号、RSI超卖（39.73），技术指标协同，公用事业板块跌幅最小（-0.03%）相对强势，基本面优质（PE 11.12，股息率稳定），适合平衡型投资者风险偏好",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": 76.0,
+      "current_price": 78.35,
+      "target_price": 81.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
