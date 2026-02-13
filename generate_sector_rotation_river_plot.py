@@ -52,19 +52,19 @@ def get_historical_sector_performance(days=180):
     }
     
     sector_names = {
-        'bank': '银行',
-        'tech': '科技',
-        'semiconductor': '半导体',
-        'ai': '人工智能',
-        'new_energy': '新能源',
-        'environmental': '环保',
-        'energy': '能源',
-        'shipping': '航运',
-        'exchange': '交易所',
-        'utility': '公用事业',
-        'insurance': '保险',
-        'biotech': '生物医药',
-        'index': '指数基金'
+        'bank': 'Banking',
+        'tech': 'Technology',
+        'semiconductor': 'Semiconductor',
+        'ai': 'AI',
+        'new_energy': 'New Energy',
+        'environmental': 'Environmental',
+        'energy': 'Energy',
+        'shipping': 'Shipping',
+        'exchange': 'Exchange',
+        'utility': 'Utility',
+        'insurance': 'Insurance',
+        'biotech': 'Biotech',
+        'index': 'Index Fund'
     }
     
     # 先获取所有股票的历史数据（避免重复请求）
