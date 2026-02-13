@@ -11,7 +11,7 @@
 
 </div>
 
-**项目状态**: ✅ 生产就绪 (Production Ready) | **最后更新**: 2026-02-08
+**项目状态**: ✅ 生产就绪 (Production Ready) | **最后更新**: 2026-02-13
 
 ## 📊 项目状态概览
 
@@ -137,7 +137,7 @@
 | 功能 | 脚本 | 说明 |
 |------|------|------|
 | 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析和0-5层分析框架 |
-| 板块分析 | `data_services/hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、龙头识别、资金流向分析（13个板块） |
+| 板块分析 | `data_services/hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、业界标准MVP模型龙头识别、资金流向分析（13个板块，支持多周期和投资风格配置） |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
@@ -275,38 +275,64 @@ python hk_smart_money_tracker.py --investor-type moderate    # 稳健型
 python hk_smart_money_tracker.py --investor-type conservative # 保守型
 ```
 
-### 3. 港股板块分析器
+### 3. 港股板块分析器（业界标准MVP模型）
 
 **功能**：
 - 批量分析13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
 - 板块涨跌幅排名，识别强势和弱势板块
 - 板块技术趋势分析（强势上涨、温和上涨、震荡整理、温和下跌、强势下跌）
-- 板块龙头股票识别（基于涨跌幅和成交量综合评分）
+- **业界标准龙头股票识别**（MVP模型：动量+成交量+基本面综合评分）
 - 板块资金流向分析（基于成交量和涨跌幅）
-- 生成板块分析报告，包括强势板块TOP 3和弱势板块BOTTOM 3
+- 生成板块分析报告，包含板块详细排名（含龙头股TOP 3）
+- 支持多周期分析（1日、5日、20天）
+- 支持投资风格配置（进取型、稳健型、保守型）
+- 支持市值筛选（默认100亿港币）
 - 使用腾讯财经接口获取板块内股票数据
 - 集成到 hk_smart_money_tracker.py 和 hsi_email.py 中，为大模型分析提供板块背景信息
 
+**业界标准MVP模型**（2026-02-13新增）：
+- 采用业界标准龙头股识别模型，综合评估动量、成交量、基本面
+- 支持多周期分析：1日、5日、20天
+- 支持投资风格配置：
+  - 进取型（aggressive）：动量60%、成交量30%、基本面10%，适合短线交易
+  - 稳健型（moderate）：动量40%、成交量30%、基本面30%，适合波段交易
+  - 保守型（conservative）：动量20%、成交量30%、基本面50%，适合中长期投资
+- 支持市值筛选：默认100亿港币，过滤小市值股票
+- 基本面评分计算：基于PE（市盈率）和PB（市净率）的综合评估
+- 动量排名：基于涨跌幅排序
+- 成交量排名：基于成交量排序
+- 综合评分：根据投资风格动态权重计算综合得分
+
 **使用方法**：
 ```bash
-# 生成完整板块分析报告（默认1日涨跌幅）
+# 生成完整板块分析报告（默认1日涨跌幅，稳健型风格）
 python data_services/hk_sector_analysis.py
 
-# 指定分析周期
+# 指定分析周期（1日、5日、20日）
 python data_services/hk_sector_analysis.py --period 5
 
 # 分析指定板块
 python data_services/hk_sector_analysis.py --sector bank
 
-# 识别板块龙头
-python data_services/hk_sector_analysis.py --leaders bank
+# 识别板块龙头（支持多周期和投资风格配置）
+python data_services/hk_sector_analysis.py --leaders bank --period 5 --style moderate
 
 # 分析板块资金流向
 python data_services/hk_sector_analysis.py --flow bank
 
 # 分析板块趋势
 python data_services/hk_sector_analysis.py --trend bank
+
+# 自定义配置（指定市值阈值和返回数量）
+python data_services/hk_sector_analysis.py --style aggressive --min-market-cap 50 --top-n 5
 ```
+
+**命令行参数**（2026-02-13新增）：
+- `--period`: 分析周期（1=1日，5=5日，20=20日），默认为1
+- `--sector`: 指定分析板块（如bank、tech、ai等）
+- `--style`: 投资风格（aggressive进取型、moderate稳健型、conservative保守型），默认为moderate
+- `--min-market-cap`: 最小市值阈值（亿港币），默认为100
+- `--top-n`: 返回前N只龙头股，默认为3
 
 **板块列表**：
 - 银行股：汇丰银行、建设银行、农业银行、工商银行、招商银行
@@ -1298,9 +1324,18 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-02-08
+**最后更新**: 2026-02-13
 
 ## 🎉 最近更新
+
+### 2026-02-13
+- **业界标准MVP模型**：板块龙头股识别功能升级为业界标准MVP模型（动量+成交量+基本面综合评分）
+- **多周期分析**：板块分析支持1日、5日、20天三个周期的龙头股识别
+- **投资风格配置**：支持进取型、稳健型、保守型三种投资风格，动态调整权重
+- **市值筛选**：支持设置最小市值阈值（默认100亿港币），过滤小市值股票
+- **邮件界面优化**：在板块详细排名表中添加"龙头股TOP 3"列
+- **邮件内容优化**：删除重复的强势板块（TOP 3）和弱势板块（BOTTOM 3）表格
+- **安全性改进**：更新.gitignore防止敏感文件被提交，清理git历史记录
 
 ### 2026-02-08
 - **项目优化**：完成模块化重组，数据服务（data_services）、大模型服务（llm_services）、机器学习服务（ml_services）模块化完成
