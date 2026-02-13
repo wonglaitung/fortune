@@ -4379,6 +4379,36 @@ class HSIEmailSystem:
         if dividend_text:
             text_lines.append(dividend_text)
         
+        # 添加板块轮动相关性分析结果
+        text_lines.append("\n📊 板块轮动与恒指相关性分析:")
+        text_lines.append("最佳贴合板块: Shipping (r=-0.365)")
+        text_lines.append("  - 负相关：与恒生指数走势相反")
+        text_lines.append("  - 相关性强度：中等偏弱")
+        text_lines.append("")
+        text_lines.append("正相关板块 (7个):")
+        text_lines.append("  1. Environmental: 0.306")
+        text_lines.append("  2. Utility: 0.207")
+        text_lines.append("  3. Technology: 0.180")
+        text_lines.append("  4. Exchange: 0.155")
+        text_lines.append("  5. Banking: 0.105")
+        text_lines.append("  6. New Energy: 0.086")
+        text_lines.append("  7. Semiconductor: 0.006")
+        text_lines.append("")
+        text_lines.append("负相关板块 (6个):")
+        text_lines.append("  1. Shipping: -0.365 (最负相关)")
+        text_lines.append("  2. Energy: -0.143")
+        text_lines.append("  3. Biotech: -0.137")
+        text_lines.append("  4. Insurance: -0.110")
+        text_lines.append("  5. AI: -0.109")
+        text_lines.append("  6. Index Fund: -0.011")
+        text_lines.append("")
+        text_lines.append("📈 关键发现:")
+        text_lines.append("  1. 航运板块与恒指负相关：航运板块表现与恒生指数走势相反，可能反映经济周期性特征")
+        text_lines.append("  2. 科技板块正相关：科技板块与恒指同向波动，显示市场风险偏好")
+        text_lines.append("  3. 环保板块最强正相关：环保板块与恒指正相关性最强，可能受益于政策支持")
+        text_lines.append("  4. 指数基金最弱相关：指数基金与恒指相关性最弱，显示其分散化特性")
+        text_lines.append("")
+        
         text_lines.append("🔔 交易信号总结:")
         header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'成交额变化1日':<12} {'换手率变化5日':<12} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
         text_lines.append(header)
@@ -4411,6 +4441,47 @@ class HSIEmailSystem:
         dividend_html = self.format_dividend_table_html(dividend_data)
         if dividend_html:
             html += dividend_html
+
+        # 添加板块轮动相关性分析
+        html += """
+        <div class="section">
+            <h3>📊 板块轮动与恒指相关性分析</h3>
+            <p><strong>最佳贴合板块:</strong> Shipping (r=-0.365)</p>
+            <ul>
+                <li><strong>负相关：</strong>与恒生指数走势相反</li>
+                <li><strong>相关性强度：</strong>中等偏弱</li>
+            </ul>
+            
+            <h4>正相关板块 (7个):</h4>
+            <ul>
+                <li><strong>Environmental:</strong> 0.306</li>
+                <li><strong>Utility:</strong> 0.207</li>
+                <li><strong>Technology:</strong> 0.180</li>
+                <li><strong>Exchange:</strong> 0.155</li>
+                <li><strong>Banking:</strong> 0.105</li>
+                <li><strong>New Energy:</strong> 0.086</li>
+                <li><strong>Semiconductor:</strong> 0.006</li>
+            </ul>
+            
+            <h4>负相关板块 (6个):</h4>
+            <ul>
+                <li><strong>Shipping:</strong> -0.365 (最负相关)</li>
+                <li><strong>Energy:</strong> -0.143</li>
+                <li><strong>Biotech:</strong> -0.137</li>
+                <li><strong>Insurance:</strong> -0.110</li>
+                <li><strong>AI:</strong> -0.109</li>
+                <li><strong>Index Fund:</strong> -0.011</li>
+            </ul>
+            
+            <h4>📈 关键发现:</h4>
+            <ul>
+                <li><strong>航运板块与恒指负相关：</strong>航运板块表现与恒生指数走势相反，可能反映经济周期性特征</li>
+                <li><strong>科技板块正相关：</strong>科技板块与恒指同向波动，显示市场风险偏好</li>
+                <li><strong>环保板块最强正相关：</strong>环保板块与恒指正相关性最强，可能受益于政策支持</li>
+                <li><strong>指数基金最弱相关：</strong>指数基金与恒指相关性最弱，显示其分散化特性</li>
+            </ul>
+        </div>
+        """
 
         # 添加板块分析
         try:
