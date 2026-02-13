@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 4942.189294051961,
+  "capital": 28.189294051961042,
   "positions": {
     "1398.HK": {
       "shares": 22900,
@@ -18,9 +18,9 @@
       "stop_loss_price": 19.75
     },
     "1288.HK": {
-      "shares": 59900,
-      "avg_price": 5.513672787979966,
-      "stop_loss_price": 4.73
+      "shares": 60800,
+      "avg_price": 5.512878289473684,
+      "stop_loss_price": 5.18
     },
     "1330.HK": {
       "shares": 15300,
@@ -23959,6 +23959,86 @@
       "current_price": 78.05,
       "target_price": 80.0,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-02-13T11:03:50.980387",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 4942.189294051961,
+      "reason": "RSI超买(70.45)，CMF大幅流出(-0.2603)，价格高位(87.26%)与短期收益率背离，量价背离确认主力出货，航运板块强势下跌无缓冲",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 16.61,
+      "target_price": 15.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13T11:03:53.982664",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 4942.189294051961,
+      "reason": "CMF最大流出(-0.2842)，位置高位(89.2%)，OBV上升但价格下跌量价背离，个股显著跑输银行板块，新闻显示海外业务压力",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 136.5,
+      "target_price": 132.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13T11:03:56.132642",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 4942.189294051961,
+      "reason": "CMF流出(-0.062)，OBV下降确认资金撤离，技术指标共振出货，位置低位但趋势向下，成交额异常萎缩放大风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 405.2,
+      "target_price": 395.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13T11:04:00.832600",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 900,
+      "price": 5.46,
+      "amount": 4914.0,
+      "capital_after": 28.189294051961042,
+      "reason": "价格低位(21.67%)，MACD金叉，OBV上升，CMF流入四重确认，银行股板块温和下跌提供稳定性，基本面优质(PE 6.24，股息率高)，新闻显示信贷市场回暖预期",
+      "success": true,
+      "stop_loss_price": 5.18,
+      "current_price": 5.46,
+      "target_price": 5.75,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13T11:04:04.507723",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.0,
+      "amount": 0,
+      "capital_after": 28.189294051961042,
+      "reason": "TAV中等共振(53.0分)，MACD金叉，OBV上升三重确认，相对强度高(6.64%)跑赢恒指，基本面优质(PE 7.79)，新闻显示支付生态改善利好数字化业务",
+      "success": false,
+      "stop_loss_price": 46.56,
+      "current_price": 49.0,
+      "target_price": 51.2,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -38506,9 +38586,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38558,9 +38638,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38610,9 +38690,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38662,9 +38742,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38714,9 +38794,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38771,9 +38851,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38823,9 +38903,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38870,9 +38950,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38917,9 +38997,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -38964,9 +39044,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39016,9 +39096,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39073,9 +39153,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39125,9 +39205,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39177,9 +39257,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39229,9 +39309,9 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39276,9 +39356,56 @@
           "stop_loss_price": 19.75
         },
         "1288.HK": {
-          "shares": 59900,
-          "avg_price": 5.513672787979966,
-          "stop_loss_price": 4.73
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
+        },
+        "1330.HK": {
+          "shares": 15300,
+          "avg_price": 5.2,
+          "stop_loss_price": 4.42
+        },
+        "1810.HK": {
+          "shares": 2700,
+          "avg_price": 37.026666666666664,
+          "stop_loss_price": 14.25
+        },
+        "1299.HK": {
+          "shares": 500,
+          "avg_price": 86.1,
+          "stop_loss_price": 65.1
+        },
+        "3968.HK": {
+          "shares": 3000,
+          "avg_price": 49.18,
+          "stop_loss_price": 41.84
+        }
+      }
+    },
+    {
+      "timestamp": "2026-02-13T11:04:01.710248",
+      "capital": 28.189294051961042,
+      "portfolio_value": 998854.189294052,
+      "positions": {
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 1900,
+          "avg_price": 78.65789473684211,
+          "stop_loss_price": 76.5
+        },
+        "0883.HK": {
+          "shares": 100,
+          "avg_price": 23.22,
+          "stop_loss_price": 19.75
+        },
+        "1288.HK": {
+          "shares": 60800,
+          "avg_price": 5.512878289473684,
+          "stop_loss_price": 5.18
         },
         "1330.HK": {
           "shares": 15300,
@@ -39304,86 +39431,6 @@
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-02-12 13:40:38",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(MACD死叉、CMF流出-0.1076、OBV下降、位置高位60.46%)，高估值风险(PE 1874.6)",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 101.0,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:41",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(RSI 71.74超买、布林带突破上轨、CMF流出-0.2175、位置高位100%)，估值透支(PE 34.8)",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 42.56,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:43",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(MACD死叉、CMF流出-0.2077、价格高位94.89%、短期加速下跌)，银行板块情绪转弱",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.7,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:45",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(RSI 83.91严重超买、布林带突破上轨、CMF流出-0.3271、位置高位100%)，涨幅过大需技术修正",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 17.61,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:49",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.2,
-      "amount": 0,
-      "reason": "CMF资金流显著流入(0.2214)驱动OBV上升，人工智能板块强势(1.59%)提供短期弹性，位置百分位20.59%低位反弹机会",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 16.3,
-      "current_price": 19.2,
-      "target_price": 21.0,
-      "validity_period": 2
-    },
     {
       "timestamp": "2026-02-12 14:48:00",
       "buy": [],
@@ -39549,6 +39596,135 @@
       "current_price": 78.05,
       "target_price": 80.0,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-02-13 11:03:50",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "价格低位(21.67%)，MACD金叉，OBV上升，CMF流入四重确认，银行股板块温和下跌提供稳定性，基本面优质(PE 6.24，股息率高)，新闻显示信贷市场回暖预期",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.18,
+          "target_price": 5.75,
+          "validity_period": 5
+        },
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "TAV中等共振(53.0分)，MACD金叉，OBV上升三重确认，相对强度高(6.64%)跑赢恒指，基本面优质(PE 7.79)，新闻显示支付生态改善利好数字化业务",
+          "allocation_pct": 12,
+          "stop_loss_price": 46.56,
+          "target_price": 51.2,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "RSI超买(70.45)，CMF大幅流出(-0.2603)，价格高位(87.26%)与短期收益率背离，量价背离确认主力出货，航运板块强势下跌无缓冲",
+          "stop_loss_triggered": false,
+          "target_price": 15.8,
+          "validity_period": 5
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "CMF最大流出(-0.2842)，位置高位(89.2%)，OBV上升但价格下跌量价背离，个股显著跑输银行板块，新闻显示海外业务压力",
+          "stop_loss_triggered": false,
+          "target_price": 132.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "CMF流出(-0.062)，OBV下降确认资金撤离，技术指标共振出货，位置低位但趋势向下，成交额异常萎缩放大风险",
+          "stop_loss_triggered": false,
+          "target_price": 395.0,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-13 11:03:51",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI超买(70.45)，CMF大幅流出(-0.2603)，价格高位(87.26%)与短期收益率背离，量价背离确认主力出货，航运板块强势下跌无缓冲",
+      "capital_after": 4942.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 16.61,
+      "target_price": 15.8,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13 11:03:54",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "CMF最大流出(-0.2842)，位置高位(89.2%)，OBV上升但价格下跌量价背离，个股显著跑输银行板块，新闻显示海外业务压力",
+      "capital_after": 4942.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 136.5,
+      "target_price": 132.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13 11:03:56",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "CMF流出(-0.062)，OBV下降确认资金撤离，技术指标共振出货，位置低位但趋势向下，成交额异常萎缩放大风险",
+      "capital_after": 4942.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 405.2,
+      "target_price": 395.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13 11:04:00",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 900,
+      "price": 5.46,
+      "amount": 4914.0,
+      "reason": "价格低位(21.67%)，MACD金叉，OBV上升，CMF流入四重确认，银行股板块温和下跌提供稳定性，基本面优质(PE 6.24，股息率高)，新闻显示信贷市场回暖预期",
+      "capital_after": 28.189294051961042,
+      "success": true,
+      "stop_loss_price": 5.18,
+      "current_price": 5.46,
+      "target_price": 5.75,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-13 11:04:04",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 49.0,
+      "amount": 0,
+      "reason": "TAV中等共振(53.0分)，MACD金叉，OBV上升三重确认，相对强度高(6.64%)跑赢恒指，基本面优质(PE 7.79)，新闻显示支付生态改善利好数字化业务",
+      "capital_after": 28.189294051961042,
+      "success": false,
+      "stop_loss_price": 46.56,
+      "current_price": 49.0,
+      "target_price": 51.2,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
