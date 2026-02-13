@@ -59,7 +59,7 @@ def embed_with_llm(query):
             'input': query
         }
         
-        response = requests.post(embedding_url, headers=headers, json=payload)
+        response = requests.post(embedding_url, headers=headers, json=payload, timeout=300)
         log_message(f"[DEBUG] embed_with_llm response status: {response.status_code}")  # 调试日志
         log_message(f"[DEBUG] embed_with_llm response headers: {response.headers}")  # 调试日志
         log_message(f"[DEBUG] embed_with_llm response text: {response.text}")  # 打印完整的输出
@@ -131,7 +131,7 @@ def chat_with_llm(query, enable_thinking=True):
         log_message(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm payload: {payload}")  # 打印完整的输入
         
-        response = requests.post(chat_url, headers=headers, json=payload)
+        response = requests.post(chat_url, headers=headers, json=payload, timeout=300)
         log_message(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm response text: {response.text}")  # 打印完整的输出

@@ -4269,11 +4269,23 @@ class HSIEmailSystem:
         previous_day_indicators = {}
         if previous_trading_date:
             print(f"📊 获取上个交易日 ({previous_trading_date}) 的指标数据...")
+            # 获取美股市场数据（一次性获取，所有股票共享）
+            previous_us_df = None
+            try:
+                from ml_services.us_market_data import us_market_data
+                previous_us_df = us_market_data.get_all_us_market_data(period_days=30)
+                if previous_us_df is not None and not previous_us_df.empty:
+                    print(f"✅ 美股数据获取成功（VIX: {previous_us_df.get('VIX_Level', pd.Series([None])).iloc[-1] if 'VIX_Level' in previous_us_df.columns else 'N/A'}）")
+                else:
+                    print("⚠️ 美股数据为空")
+            except Exception as e:
+                print(f"⚠️ 获取美股数据失败: {e}")
+
             for stock_code, stock_name in self.stock_list.items():
                 try:
                     stock_data = self.get_stock_data(stock_code, target_date=previous_trading_date.strftime('%Y-%m-%d'))
                     if stock_data:
-                        indicators = self.calculate_technical_indicators(stock_data)
+                        indicators = self.calculate_technical_indicators(stock_data, us_df=previous_us_df)
                         if indicators:
                             previous_day_indicators[stock_code] = {
                                 'trend': indicators.get('trend', '未知'),
