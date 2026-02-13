@@ -46,6 +46,46 @@ except ImportError:
         TECHNICAL_AVAILABLE = False
         print("⚠️ 技术分析工具不可用，部分功能将受限")
 
+# 导入基本面数据模块
+try:
+    from .fundamental_data import get_comprehensive_fundamental_data
+    FUNDAMENTAL_AVAILABLE = True
+except ImportError:
+    try:
+        from data_services.fundamental_data import get_comprehensive_fundamental_data
+        FUNDAMENTAL_AVAILABLE = True
+    except ImportError:
+        FUNDAMENTAL_AVAILABLE = False
+        print("⚠️ 基本面数据模块不可用，部分功能将受限")
+
+# ==============================
+# 业界标准权重配置（基于MVP模型）
+# ==============================
+# 投资风格权重配置
+INVESTMENT_STYLE_WEIGHTS = {
+    'aggressive': {  # 进取型：关注动量和成交量
+        'momentum': 0.6,
+        'volume': 0.3,
+        'fundamental': 0.1,
+        'description': '进取型：重点关注短期动量和成交量，适合短线交易'
+    },
+    'moderate': {  # 稳健型：平衡动量、成交量、基本面
+        'momentum': 0.4,
+        'volume': 0.3,
+        'fundamental': 0.3,
+        'description': '稳健型：平衡动量、成交量、基本面，适合波段交易'
+    },
+    'conservative': {  # 保守型：关注基本面和成交量
+        'momentum': 0.2,
+        'volume': 0.3,
+        'fundamental': 0.5,
+        'description': '保守型：重点关注基本面和成交量，适合中长期投资'
+    },
+}
+
+# 默认市值筛选阈值（亿港币）
+DEFAULT_MIN_MARKET_CAP = 100  # 100亿港币
+
 # ==============================
 # 股票板块映射（扩展版：58只股票，覆盖13个板块）
 # ==============================
@@ -343,13 +383,23 @@ class SectorAnalyzer:
             'stocks': sorted(all_data, key=lambda x: x['change_pct'], reverse=True),
         }
 
-    def identify_sector_leaders(self, sector_code: str, top_n: int = 3) -> pd.DataFrame:
+    def identify_sector_leaders(
+        self,
+        sector_code: str,
+        top_n: int = 3,
+        period: int = 1,
+        min_market_cap: float = DEFAULT_MIN_MARKET_CAP,
+        style: str = 'moderate'
+    ) -> pd.DataFrame:
         """
-        识别板块龙头（涨幅最大、成交量最大）
+        识别板块龙头（业界标准版本）
 
         Args:
             sector_code: 板块代码
             top_n: 返回前N只股票
+            period: 计算周期（天数），1=1日，5=5日，20=20日
+            min_market_cap: 最小市值阈值（亿港币）
+            style: 投资风格（aggressive进取型、moderate稳健型、conservative保守型）
 
         Returns:
             DataFrame: 板块龙头股票
@@ -359,24 +409,59 @@ class SectorAnalyzer:
         if not stocks:
             return pd.DataFrame()
 
+        # 验证投资风格
+        if style not in INVESTMENT_STYLE_WEIGHTS:
+            print(f"⚠️ 未知的投资风格 '{style}'，使用默认风格 'moderate'")
+            style = 'moderate'
+
+        weights = INVESTMENT_STYLE_WEIGHTS[style]
         stock_data = []
+
         for stock_code in stocks:
             try:
-                df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=5)
-                if df is not None and len(df) > 0:
-                    # 1日涨跌幅
-                    change_pct = (df['Close'].iloc[-1] - df['Close'].iloc[-2]) / df['Close'].iloc[-2] * 100 if len(df) > 1 else 0
+                # 获取股票数据（根据周期调整天数）
+                df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=period + 10)
+                if df is not None and len(df) > period:
+                    # 计算涨跌幅（支持多周期）
+                    if period == 1 and len(df) > 1:
+                        change_pct = (df['Close'].iloc[-1] - df['Close'].iloc[-2]) / df['Close'].iloc[-2] * 100
+                    elif len(df) > period:
+                        change_pct = (df['Close'].iloc[-1] - df['Close'].iloc[-1-period]) / df['Close'].iloc[-1-period] * 100
+                    else:
+                        change_pct = 0
 
-                    # 成交量
+                    # 成交量（使用最新交易日）
                     volume = df['Volume'].iloc[-1]
 
-                    stock_data.append({
+                    # 获取基本面数据
+                    fundamental_data = {}
+                    if FUNDAMENTAL_AVAILABLE:
+                        try:
+                            stock_num = stock_code.replace('.HK', '').replace('HK', '').lstrip('0')
+                            fd = get_comprehensive_fundamental_data(stock_num)
+                            if fd:
+                                fundamental_data = {
+                                    'market_cap': fd.get('fi_market_cap'),  # 市值（港币）
+                                    'pe_ratio': fd.get('fi_pe_ratio'),      # 市盈率
+                                    'pb_ratio': fd.get('fi_pb_ratio'),      # 市净率
+                                }
+                        except Exception as e:
+                            print(f"  ⚠️ 获取 {stock_code} 基本面数据失败: {e}")
+
+                    stock_info = {
                         'code': stock_code,
                         'name': self.stock_mapping[stock_code]['name'],
                         'price': df['Close'].iloc[-1],
                         'change_pct': change_pct,
                         'volume': volume,
-                    })
+                        'period': period,
+                    }
+
+                    # 添加基本面数据
+                    stock_info.update(fundamental_data)
+
+                    stock_data.append(stock_info)
+
             except Exception as e:
                 print(f"⚠️ 获取股票 {stock_code} 数据失败: {e}")
                 continue
@@ -387,24 +472,57 @@ class SectorAnalyzer:
         # 转换为DataFrame
         df = pd.DataFrame(stock_data)
 
-        # 排序（按涨跌幅）
-        df_sorted = df.sort_values('change_pct', ascending=False)
+        # 市值筛选（如果提供了最小市值）
+        if min_market_cap > 0 and 'market_cap' in df.columns:
+            # 转换市值为亿港币
+            df['market_cap_billion'] = df['market_cap'] / 1e8
+            # 筛选市值大于最小市值的股票
+            df = df[df['market_cap_billion'] >= min_market_cap]
+            if df.empty:
+                print(f"⚠️ 该板块没有市值 >= {min_market_cap}亿港币的股票")
+                return pd.DataFrame()
 
-        # 排名
-        df_sorted['rank_by_change'] = range(1, len(df_sorted) + 1)
+        # 计算各项排名
+        # 1. 动量排名（涨跌幅）
+        df_sorted_momentum = df.sort_values('change_pct', ascending=False)
+        df['rank_momentum'] = df_sorted_momentum.index.map(lambda x: list(df_sorted_momentum.index).index(x) + 1)
 
-        # 按成交量排序
-        df_sorted_vol = df.sort_values('volume', ascending=False)
-        df_sorted['rank_by_volume'] = df_sorted_vol.index.map(lambda x: list(df_sorted_vol.index).index(x) + 1)
+        # 2. 成交量排名
+        df_sorted_volume = df.sort_values('volume', ascending=False)
+        df['rank_volume'] = df_sorted_volume.index.map(lambda x: list(df_sorted_volume.index).index(x) + 1)
 
-        # 综合排名（涨跌幅权重60%，成交量权重40%）
-        df_sorted['composite_score'] = (
-            df_sorted['rank_by_change'] * 0.6 +
-            df_sorted['rank_by_volume'] * 0.4
+        # 3. 基本面排名（综合PE和PB）
+        if 'pe_ratio' in df.columns and 'pb_ratio' in df.columns:
+            # 计算基本面评分：PE和PB越低越好
+            df['pe_ratio_norm'] = df['pe_ratio'].rank()
+            df['pb_ratio_norm'] = df['pb_ratio'].rank()
+            df['fundamental_score'] = (df['pe_ratio_norm'] + df['pb_ratio_norm']) / 2
+            df_sorted_fundamental = df.sort_values('fundamental_score', ascending=True)
+            df['rank_fundamental'] = df_sorted_fundamental.index.map(lambda x: list(df_sorted_fundamental.index).index(x) + 1)
+        else:
+            # 如果没有基本面数据，给所有股票相同的排名
+            df['rank_fundamental'] = 1
+
+        # 4. 综合评分（根据投资风格动态权重）
+        df['composite_score'] = (
+            df['rank_momentum'] * weights['momentum'] +
+            df['rank_volume'] * weights['volume'] +
+            df['rank_fundamental'] * weights['fundamental']
         )
-        df_sorted = df_sorted.sort_values('composite_score')
 
-        return df_sorted.head(top_n).reset_index(drop=True)
+        # 按综合评分排序（分数越低越好）
+        df = df.sort_values('composite_score')
+
+        # 选择前N只股票
+        result = df.head(top_n).reset_index(drop=True)
+
+        # 添加投资风格信息
+        result['investment_style'] = style
+        result['style_description'] = weights['description']
+        result['min_market_cap'] = min_market_cap
+        result['period_days'] = period
+
+        return result
 
     def analyze_sector_fund_flow(self, sector_code: str, days: int = 5) -> Dict:
         """
@@ -563,12 +681,40 @@ def main():
     """命令行入口"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='港股板块分析工具')
-    parser.add_argument('--period', type=int, default=1, help='计算周期（天数）')
+    parser = argparse.ArgumentParser(
+        description='港股板块分析工具（业界标准版本）',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+投资风格说明：
+  aggressive  进取型：重点关注短期动量和成交量（动量60% 成交量30% 基本面10%）
+  moderate    稳健型：平衡动量、成交量、基本面（动量40% 成交量30% 基本面30%）
+  conservative 保守型：重点关注基本面和成交量（动量20% 成交量30% 基本面50%）
+
+示例用法：
+  # 识别科技板块龙头（1日周期，稳健型，市值>100亿）
+  python hk_sector_analysis.py --leaders tech
+
+  # 识别AI板块龙头（5日周期，进取型，市值>50亿）
+  python hk_sector_analysis.py --leaders ai --period 5 --style aggressive --min-market-cap 50
+
+  # 识别银行板块龙头（20日周期，保守型，市值>200亿）
+  python hk_sector_analysis.py --leaders bank --period 20 --style conservative --min-market-cap 200
+        """
+    )
+
+    parser.add_argument('--period', type=int, default=1,
+                        choices=[1, 5, 20],
+                        help='计算周期（天数）：1=1日（短线），5=5日（波段），20=20日（中线），默认：1')
     parser.add_argument('--sector', type=str, help='分析指定板块（板块代码）')
     parser.add_argument('--leaders', type=str, help='识别板块龙头（板块代码）')
     parser.add_argument('--flow', type=str, help='分析板块资金流向（板块代码）')
     parser.add_argument('--trend', type=str, help='分析板块趋势（板块代码）')
+    parser.add_argument('--min-market-cap', type=float, default=DEFAULT_MIN_MARKET_CAP,
+                        help=f'最小市值阈值（亿港币），默认：{DEFAULT_MIN_MARKET_CAP}亿')
+    parser.add_argument('--style', type=str, default='moderate',
+                        choices=['aggressive', 'moderate', 'conservative'],
+                        help='投资风格：aggressive=进取型，moderate=稳健型，conservative=保守型，默认：moderate')
+    parser.add_argument('--top-n', type=int, default=3, help='返回前N只龙头股，默认：3')
 
     args = parser.parse_args()
 
@@ -589,11 +735,54 @@ def main():
                 print(f"  {stock['name']}: {stock['change_pct']:.2f}%")
 
     elif args.leaders:
-        # 识别板块龙头
-        df = analyzer.identify_sector_leaders(args.leaders)
+        # 识别板块龙头（业界标准版本）
+        df = analyzer.identify_sector_leaders(
+            sector_code=args.leaders,
+            top_n=args.top_n,
+            period=args.period,
+            min_market_cap=args.min_market_cap,
+            style=args.style
+        )
+
         print(f"\n板块龙头：{analyzer.get_sector_name(args.leaders)}")
-        print("-" * 60)
-        print(df.to_string(index=False))
+        print("-" * 80)
+        print(f"配置：周期={args.period}日，投资风格={args.style}，最小市值={args.min_market_cap}亿港币，返回数量={args.top_n}")
+        print("-" * 80)
+
+        if df.empty:
+            print("⚠️ 未找到符合条件的龙头股")
+        else:
+            # 显示投资风格描述
+            style_desc = df.iloc[0]['style_description'] if 'style_description' in df.columns else ''
+            print(f"投资风格：{style_desc}")
+            print()
+
+            # 显示结果
+            columns_to_show = ['name', 'code', 'price', 'change_pct', 'volume', 'composite_score']
+            if 'market_cap_billion' in df.columns:
+                columns_to_show.insert(-1, 'market_cap_billion')
+            if 'pe_ratio' in df.columns:
+                columns_to_show.insert(-1, 'pe_ratio')
+            if 'pb_ratio' in df.columns:
+                columns_to_show.insert(-1, 'pb_ratio')
+
+            # 重命名列以提高可读性
+            display_df = df[columns_to_show].copy()
+            display_df = display_df.rename(columns={
+                'name': '股票名称',
+                'code': '股票代码',
+                'price': '最新价格',
+                'change_pct': f'{args.period}日涨跌幅(%)',
+                'volume': '成交量',
+                'market_cap_billion': '市值(亿)',
+                'pe_ratio': '市盈率',
+                'pb_ratio': '市净率',
+                'composite_score': '综合评分'
+            })
+
+            print(display_df.to_string(index=False))
+            print()
+            print("💡 综合评分越低表示表现越好（排名靠前）")
 
     elif args.flow:
         # 分析板块资金流向
