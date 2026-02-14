@@ -5,10 +5,8 @@ on:
   workflow_dispatch:
   # 定时触发
   schedule:
-    # 每天香港时间 09:00 (UTC 01:00) 执行综合分析
-    - cron: '0 1 * * 6'
-    # 每天香港时间 16:30 (UTC 08:30) 执行综合分析
-    - cron: '30 8 * * 1-5'
+    # 每周星期天上午9点香港时间 (UTC 01:00) 执行综合分析
+    - cron: '0 1 * * 0'
 
 jobs:
   comprehensive-analysis:
