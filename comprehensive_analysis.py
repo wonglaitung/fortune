@@ -63,22 +63,75 @@ def extract_llm_recommendations(filepath):
                     name_end = stock_info.find('(')
                     name = stock_info[stock_info.find(' ') + 1:name_end].strip()
                     
-                    # 获取推荐理由（下一行或几行）
-                    reason = ""
+                    # 获取推荐理由和操作建议（下一行或几行）
+                    reason_parts = []
+                    operation_advice = ""
+                    price_guide = ""
+                    risk_hint = ""
+                    
                     j = i + 1
                     while j < len(lines):
                         next_line = lines[j].strip()
+                        
+                        # 提取推荐理由
                         if next_line.startswith('- 推荐理由：'):
-                            reason = next_line.replace('- 推荐理由：', '').strip()
-                            break
+                            reason_text = next_line.replace('- 推荐理由：', '').strip()
+                            reason_parts.append(f"推荐理由: {reason_text}")
                         elif next_line.startswith('- ') and '推荐理由' in next_line:
-                            reason = next_line.replace('- 推荐理由：', '').strip()
+                            reason_text = next_line.replace('- 推荐理由：', '').strip()
+                            reason_parts.append(f"推荐理由: {reason_text}")
+                        
+                        # 提取操作建议
+                        elif next_line.startswith('- 操作建议：'):
+                            operation_advice = next_line.replace('- 操作建议：', '').strip()
+                        
+                        # 提取价格指引
+                        elif next_line.startswith('- 价格指引：'):
+                            # 收集后续的价格指引行
+                            price_guide_items = []
+                            k = j + 1
+                            while k < len(lines):
+                                price_line = lines[k].strip()
+                                if price_line.startswith('* '):
+                                    # 去掉前导符号和多余空格
+                                    price_item = price_line.replace('* ', '').strip()
+                                    # 移除可能的缩进空格
+                                    price_item = price_item.lstrip('· ')
+                                    price_guide_items.append(price_item)
+                                elif price_line.startswith('- ') or (price_line and not price_line.startswith('-') and not price_line.startswith('•')):
+                                    # 遇到其他章节，停止收集
+                                    break
+                                else:
+                                    break
+                                k += 1
+                            price_guide = " | ".join(price_guide_items)
+                        
+                        # 提取风险提示
+                        elif next_line.startswith('- 风险提示：'):
+                            risk_hint = next_line.replace('- 风险提示：', '').strip()
+                        
+                        # 遇到新股票或新章节，停止收集
+                        elif next_line and next_line[0].isdigit() and '.' in next_line and '(' in next_line and ')' in next_line:
                             break
+                        
                         j += 1
                     
-                    # 提取完整的推荐理由（去掉Markdown格式）
-                    reason = reason.replace('*', '').replace('**', '')
-                    recommendations.append(f"{current_section}: {code} {name} - {reason}")
+                    # 去掉Markdown格式
+                    reason_text = " ".join(reason_parts).replace('*', '').replace('**', '')
+                    price_guide = price_guide.replace('*', '').replace('**', '')
+                    operation_advice = operation_advice.replace('*', '').replace('**', '')
+                    risk_hint = risk_hint.replace('*', '').replace('**', '')
+                    
+                    # 组合所有信息
+                    full_info = f"{reason_text}"
+                    if operation_advice:
+                        full_info += f" | 操作建议: {operation_advice}"
+                    if price_guide:
+                        full_info += f" | 价格: {price_guide}"
+                    if risk_hint:
+                        full_info += f" | 风险: {risk_hint}"
+                    
+                    recommendations.append(f"{current_section}: {code} {name} - {full_info}")
         
         recommendations_text = "\n".join(recommendations) if recommendations else "未找到买卖建议"
         return recommendations_text
