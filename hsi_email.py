@@ -4371,6 +4371,9 @@ class HSIEmailSystem:
             print("🤖 使用大模型分析买入信号股票...")
             buy_signals_analysis = self._analyze_buy_signals_with_llm(buy_signals, stock_results, hsi_data)
 
+        # 保存大模型建议到文本文件
+        self.save_llm_recommendations(portfolio_analysis, buy_signals_analysis, target_date)
+
         # 文本版表头（修复原先被截断的 f-string）
         text_lines = []
         
@@ -6860,6 +6863,66 @@ class HSIEmailSystem:
 
         success = self.send_email(recipients, subject, text, html)
         return success
+
+    def save_llm_recommendations(self, portfolio_analysis, buy_signals_analysis, target_date=None):
+        """
+        保存大模型建议到文本文件，方便后续提取和对比
+
+        参数:
+        - portfolio_analysis: 持仓分析结果（大模型建议）
+        - buy_signals_analysis: 买入信号分析结果（大模型建议）
+        - target_date: 分析日期
+        """
+        try:
+            from datetime import datetime
+
+            # 生成文件名（使用日期）
+            if target_date:
+                if isinstance(target_date, str):
+                    date_str = target_date
+                else:
+                    date_str = target_date.strftime('%Y-%m-%d')
+            else:
+                date_str = datetime.now().strftime('%Y-%m-%d')
+
+            # 创建data目录（如果不存在）
+            if not os.path.exists('data'):
+                os.makedirs('data')
+
+            # 文件路径
+            filepath = f'data/llm_recommendations_{date_str}.txt'
+
+            # 构建内容
+            content = f"{'=' * 80}\n"
+            content += f"大模型买卖建议报告\n"
+            content += f"日期: {date_str}\n"
+            content += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            content += f"{'=' * 80}\n\n"
+
+            # 添加持仓分析（中期建议）
+            if portfolio_analysis:
+                content += "【中期建议】持仓分析\n"
+                content += "-" * 80 + "\n"
+                content += portfolio_analysis + "\n\n"
+
+            # 添加买入信号分析（短期建议）
+            if buy_signals_analysis:
+                content += "【短期建议】买入信号分析\n"
+                content += "-" * 80 + "\n"
+                content += buy_signals_analysis + "\n\n"
+
+            # 保存到文件
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            print(f"✅ 大模型建议已保存到 {filepath}")
+            return filepath
+
+        except Exception as e:
+            print(f"❌ 保存大模型建议失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 # === 主逻辑 ===
