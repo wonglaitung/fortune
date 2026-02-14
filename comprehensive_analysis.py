@@ -123,7 +123,67 @@ def extract_ml_predictions(filepath):
         return ""
 
 
-def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None):
+def send_email(subject, content, html_content=None):
+    """
+    发送邮件通知
+    
+    参数:
+    - subject: 邮件主题
+    - content: 邮件文本内容
+    - html_content: 邮件HTML内容（可选）
+    """
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # 从环境变量获取邮件配置
+        sender_email = os.environ.get("YAHOO_EMAIL")
+        email_password = os.environ.get("YAHOO_APP_PASSWORD")
+        smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
+        recipient_email = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
+        
+        if ',' in recipient_email:
+            recipients = [recipient.strip() for recipient in recipient_email.split(',')]
+        else:
+            recipients = [recipient_email]
+        
+        if not sender_email or not email_password:
+            print("❌ 邮件配置不完整，跳过邮件发送")
+            return False
+        
+        # 创建邮件对象
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = ', '.join(recipients)
+        
+        # 添加文本版本
+        text_part = MIMEText(content, 'plain', 'utf-8')
+        msg.attach(text_part)
+        
+        # 如果有HTML版本，添加HTML版本
+        if html_content:
+            html_part = MIMEText(html_content, 'html', 'utf-8')
+            msg.attach(html_part)
+        
+        # 发送邮件
+        with smtplib.SMTP(smtp_server, 587) as server:
+            server.starttls()
+            server.login(sender_email, email_password)
+            server.sendmail(sender_email, recipients, msg.as_string())
+        
+        print(f"✅ 邮件已发送到: {', '.join(recipients)}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ 发送邮件失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, send_email_flag=True):
     """
     运行综合分析
     
@@ -253,6 +313,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None):
             
             print(f"✅ 综合建议已保存到 {output_filepath}")
             
+            # 发送邮件通知
+            if send_email_flag:
+                print("\n📧 准备发送邮件通知...")
+                email_subject = f"【综合分析】港股买卖建议 - {date_str}"
+                email_content = response
+                send_email(email_subject, email_content)
+            
             return response
         else:
             print("❌ 大模型分析失败")
@@ -273,6 +340,8 @@ def main():
                        help='ML预测结果文件路径 (默认使用今天的文件)')
     parser.add_argument('--output', type=str, default=None,
                        help='输出文件路径 (默认保存到data/comprehensive_recommendations_YYYY-MM-DD.txt)')
+    parser.add_argument('--no-email', action='store_true',
+                       help='不发送邮件通知')
     
     args = parser.parse_args()
     
@@ -287,7 +356,8 @@ def main():
         args.ml_file = f'data/ml_predictions_20d_{date_str}.txt'
     
     # 运行综合分析
-    result = run_comprehensive_analysis(args.llm_file, args.ml_file, args.output)
+    result = run_comprehensive_analysis(args.llm_file, args.ml_file, args.output, 
+                                       send_email_flag=not args.no_email)
     
     if result:
         print("\n✅ 综合分析完成！")
