@@ -11,7 +11,7 @@
 
 </div>
 
-**项目状态**: ✅ 生产就绪 (Production Ready) | **最后更新**: 2026-02-13
+**项目状态**: ✅ 生产就绪 (Production Ready) | **最后更新**: 2026-02-14
 
 ## 📊 项目状态概览
 
@@ -20,7 +20,7 @@
 | **核心功能** | ✅ 完整 | 数据获取、分析、交易、通知全覆盖 |
 | **模块化架构** | ✅ 完成 | data_services、llm_services、ml_services |
 | **ML模型** | ✅ 优秀 | 2000+特征，准确率最高58%（接近业界优秀水平60%） |
-| **自动化** | ✅ 稳定 | 6个GitHub Actions工作流正常运行 |
+| **自动化** | ✅ 稳定 | 7个GitHub Actions工作流正常运行 |
 | **文档** | ✅ 完整 | README、IFLOW、分析报告齐全 |
 | **数据验证** | ✅ 严格 | 无数据泄漏，时间序列交叉验证 |
 | **风险管理** | ⚠️ 可优化 | 可添加VaR、止损止盈、仓位管理 |
@@ -29,9 +29,10 @@
 **关键指标**：
 - 📈 **ML模型准确率**：50.93%（次日）→ 54.05%（一周）→ 58.00%（一个月）
 - 🤖 **AI集成**：完整的Qwen大模型集成，支持多种分析风格
-- 📊 **板块分析**：13个板块，提供宏观市场背景
+- 📊 **板块分析**：16个板块，提供宏观市场背景
 - 💾 **特征工程**：2000+特征（技术、基本面、美股、情感、板块、交互）
 - 🔄 **自动化**：每小时/每天自动执行，邮件通知
+- 📈 **板块轮动河流图**：可视化展示板块排名变化，含恒生指数对比
 
 **使用建议**：
 - ✅ 优先使用一个月模型预测结果（准确率最高）
@@ -137,7 +138,8 @@
 | 功能 | 脚本 | 说明 |
 |------|------|------|
 | 主力资金追踪 | `hk_smart_money_tracker.py` | 识别建仓和出货信号，集成基本面分析和0-5层分析框架 |
-| 板块分析 | `data_services/hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、业界标准MVP模型龙头识别、资金流向分析（13个板块，支持多周期和投资风格配置） |
+| 板块分析 | `data_services/hk_sector_analysis.py` | 板块涨跌幅排名、技术趋势分析、业界标准MVP模型龙头识别、资金流向分析（16个板块，支持多周期和投资风格配置） |
+| 板块轮动河流图 | `generate_sector_rotation_river_plot.py` | 可视化板块排名变化，含恒生指数对比 |
 | 恒生指数策略 | `hsi_llm_strategy.py` | 大模型生成交易策略 |
 | AI 交易分析 | `ai_trading_analyzer.py` | 复盘 AI 推荐策略有效性 |
 
@@ -278,7 +280,7 @@ python hk_smart_money_tracker.py --investor-type conservative # 保守型
 ### 3. 港股板块分析器（业界标准MVP模型）
 
 **功能**：
-- 批量分析13个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金）
+- 批量分析16个板块（银行、科技、半导体、AI、新能源、环保、能源、航运、交易所、公用事业、保险、生物医药、指数基金、房地产、消费、汽车）
 - 板块涨跌幅排名，识别强势和弱势板块
 - 板块技术趋势分析（强势上涨、温和上涨、震荡整理、温和下跌、强势下跌）
 - **业界标准龙头股票识别**（MVP模型：动量+成交量+基本面综合评分）
@@ -334,7 +336,7 @@ python data_services/hk_sector_analysis.py --style aggressive --min-market-cap 5
 - `--min-market-cap`: 最小市值阈值（亿港币），默认为100
 - `--top-n`: 返回前N只龙头股，默认为3
 
-**板块列表**：
+**板块列表**（16个板块）：
 - 银行股：汇丰银行、建设银行、农业银行、工商银行、招商银行
 - 科技股：腾讯控股、阿里巴巴-SW、美团-W、小米集团-W
 - 半导体：中芯国际、华虹半导体
@@ -348,8 +350,29 @@ python data_services/hk_sector_analysis.py --style aggressive --min-market-cap 5
 - 保险：友邦保险
 - 生物医药：药明生物
 - 指数基金：盈富基金
+- 房地产：华润置地、恒基地产、新鸿基地产
+- 消费：中国旺旺、中国飞鹤
+- 汽车：长城汽车、重庆长安汽车
 
-### 4. 恒生指数价格监控器（含基本面指标、中期评估指标和 AI 持仓分析）
+### 4. 板块轮动河流图生成器
+
+**功能**：
+- 可视化展示过去一年板块排名变化
+- 含恒生指数对比曲线
+- 生成河流图（River Plot）和热力图（Heatmap）
+- 板块轮动特征分析（平均排名、排名波动性、近期强势/弱势板块）
+- 板块与恒生指数相关性分析
+
+**使用方法**：
+```bash
+python generate_sector_rotation_river_plot.py
+```
+
+**输出文件**：
+- `output/sector_rotation_river_plot.png` - 河流图
+- `output/sector_rotation_heatmap.png` - 热力图
+
+### 5. 恒生指数价格监控器（含基本面指标、中期评估指标和 AI 持仓分析）
 
 **功能**：
 - 实时获取恒生指数价格和交易数据
@@ -743,10 +766,11 @@ fortune/
 │   ├── hsi_email.py                    # 恒生指数价格监控器（含AI持仓分析）
 │   ├── hsi_llm_strategy.py             # 恒生指数策略分析器
 │   ├── simulation_trader.py            # 模拟交易系统
+│   ├── generate_sector_rotation_river_plot.py  # 板块轮动河流图生成器
 │   └── train_and_predict_all.sh        # 完整训练和预测脚本
 │
 ├── 🔧 配置和文档
-│   ├── config.py                       # 全局配置文件（自选股列表）
+│   ├── config.py                       # 全局配置文件（25只自选股）
 │   ├── send_alert.sh                   # 本地定时执行脚本
 │   ├── update_data.sh                  # 数据更新脚本
 │   ├── set_key.sh                      # 环境变量配置
@@ -760,7 +784,7 @@ fortune/
 │   ├── __init__.py                     # 模块初始化
 │   ├── batch_stock_news_fetcher.py     # 批量新闻获取器
 │   ├── fundamental_data.py             # 基本面数据获取器
-│   ├── hk_sector_analysis.py           # 板块分析器（13个板块）
+│   ├── hk_sector_analysis.py           # 板块分析器（16个板块）
 │   ├── technical_analysis.py           # 通用技术分析工具
 │   │   ├── 短期技术指标（RSI、MACD、布林带、ATR等）
 │   │   ├── TAV加权评分系统
@@ -815,7 +839,8 @@ fortune/
     ├── ipo-alert.yml                   # IPO 信息
     ├── hsi-email-alert-open_message.yml # 恒生指数监控（强制发送）
     ├── smart-money-alert.yml           # 主力资金追踪
-    └── ai-trading-analysis-daily.yml    # AI 交易分析日报
+    ├── ai-trading-analysis-daily.yml   # AI 交易分析日报
+    └── ml-prediction-alert.yml         # ML 预测警报
 ```
 
 ---
@@ -1203,7 +1228,7 @@ python ml_services/ml_trading_model.py --mode train --horizon 5 --model-type bot
 python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 2024-01-01 --end-date 2025-12-31
 ```
 
-模型会使用24只自选股的2年历史数据进行训练，并通过5折时间序列交叉验证。
+模型会使用25只自选股的2年历史数据进行训练，并通过5折时间序列交叉验证。
 
 ### Q13: 机器学习模型的准确率如何？
 
@@ -1236,7 +1261,7 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 202
 
 ### Q16: 机器学习模型支持哪些股票？
 
-**A**: 目前支持配置在 `ml_services/ml_trading_model.py` 中的24只自选股。可以在代码中添加或修改股票列表。
+**A**: 目前支持配置在 `config.py` 中的25只自选股。可以在代码中添加或修改股票列表。
 
 ### Q17: 机器学习模型的特征有哪些？
 
@@ -1324,9 +1349,15 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-02-13
+**最后更新**: 2026-02-14
 
 ## 🎉 最近更新
+
+### 2026-02-14
+- **板块轮动河流图**：新增可视化工具，展示过去一年板块排名变化，含恒生指数对比
+- **板块数量扩展**：板块分析从13个扩展到16个（新增房地产、消费、汽车）
+- **自选股数量更正**：实际配置为25只自选股
+- **文档精简**：优化 IFLOW.md 文档结构，使用表格化展示提高可读性
 
 ### 2026-02-13
 - **业界标准MVP模型**：板块龙头股识别功能升级为业界标准MVP模型（动量+成交量+基本面综合评分）
