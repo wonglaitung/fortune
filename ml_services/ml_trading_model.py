@@ -117,6 +117,12 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         content += "【统计信息】\n"
         content += "-" * 80 + "\n"
 
+        # 初始化变量
+        total_count = 0
+        up_count = 0
+        down_count = 0
+        consistent_count = 0
+
         if 'prediction' in predictions_df.columns:
             up_count = (predictions_df['prediction'] == 1).sum()
             down_count = (predictions_df['prediction'] == 0).sum()
@@ -124,11 +130,13 @@ def save_predictions_to_text(predictions_df, predict_date=None):
             content += f"预测上涨: {up_count} 只\n"
             content += f"预测下跌: {down_count} 只\n"
             content += f"总计: {total_count} 只\n"
-            content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
+            if total_count > 0:
+                content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
 
         if 'consistent' in predictions_df.columns:
             consistent_count = predictions_df['consistent'].sum()
-            content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
+            if total_count > 0:
+                content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
 
         if 'avg_probability' in predictions_df.columns:
             avg_prob = predictions_df['avg_probability'].mean()
