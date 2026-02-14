@@ -1342,25 +1342,53 @@ class MLTradingModel:
         # 时间序列分割
         tscv = TimeSeriesSplit(n_splits=5)
 
+        # 根据预测周期调整正则化参数（分周期优化策略）
+        # 次日模型：更强的正则化防止过拟合
+        # 一周/一个月模型：适度的正则化保持学习能力
+        if horizon == 1:
+            # 次日模型参数（强正则化）
+            print("使用次日模型参数（强正则化）...")
+            lgb_params = {
+                'n_estimators': 40,           # 减少树数量（50→40）
+                'learning_rate': 0.02,         # 降低学习率（0.03→0.02）
+                'max_depth': 3,                # 降低深度（4→3）
+                'num_leaves': 12,              # 减少叶子节点（15→12）
+                'min_child_samples': 40,       # 增加最小样本（30→40）
+                'subsample': 0.65,             # 减少行采样（0.7→0.65）
+                'colsample_bytree': 0.65,      # 减少列采样（0.7→0.65）
+                'reg_alpha': 0.2,              # 增强L1正则（0.1→0.2）
+                'reg_lambda': 0.2,             # 增强L2正则（0.1→0.2）
+                'min_split_gain': 0.15,        # 增加分割增益（0.1→0.15）
+                'feature_fraction': 0.65,      # 减少特征采样（0.7→0.65）
+                'bagging_fraction': 0.65,      # 减少Bagging采样（0.7→0.65）
+                'bagging_freq': 5,
+                'random_state': 42,
+                'verbose': -1
+            }
+        else:
+            # 一周/一个月模型参数（适度正则化）
+            print(f"使用{horizon}天模型参数（适度正则化）...")
+            lgb_params = {
+                'n_estimators': 50,           # 保持50
+                'learning_rate': 0.03,         # 保持0.03
+                'max_depth': 4,                # 保持4
+                'num_leaves': 15,              # 保持15
+                'min_child_samples': 30,       # 保持30
+                'subsample': 0.7,              # 保持0.7
+                'colsample_bytree': 0.7,       # 保持0.7
+                'reg_alpha': 0.1,              # 保持0.1
+                'reg_lambda': 0.1,             # 保持0.1
+                'min_split_gain': 0.1,         # 保持0.1
+                'feature_fraction': 0.7,       # 保持0.7
+                'bagging_fraction': 0.7,       # 保持0.7
+                'bagging_freq': 5,
+                'random_state': 42,
+                'verbose': -1
+            }
+
         # 训练模型（增加正则化以减少过拟合）
         print("训练LightGBM模型...")
-        self.model = lgb.LGBMClassifier(
-            n_estimators=50,           # 减少树的数量（100→50）
-            learning_rate=0.03,         # 降低学习率（0.05→0.03）
-            max_depth=4,                # 减少树深度（6→4）
-            num_leaves=15,              # 减少叶子节点数（31→15）
-            min_child_samples=30,        # 增加最小子样本数（20→30）
-            subsample=0.7,              # 减少行采样率（0.8→0.7）
-            colsample_bytree=0.7,       # 减少列采样率（0.8→0.7）
-            reg_alpha=0.1,              # L1正则化（新增）
-            reg_lambda=0.1,             # L2正则化（新增）
-            min_split_gain=0.1,         # 最小分割增益（新增）
-            feature_fraction=0.7,       # 特征采样率（新增）
-            bagging_fraction=0.7,       # Bagging采样率（新增）
-            bagging_freq=5,             # Bagging频率（新增）
-            random_state=42,
-            verbose=-1
-        )
+        self.model = lgb.LGBMClassifier(**lgb_params)
 
         # 使用时间序列交叉验证
         scores = []
@@ -1756,17 +1784,39 @@ class GBDTLRModel:
         print("🌲 Step 1: 训练 GBDT 模型（特征工程）")
         print("="*70)
 
-        n_estimators = 32
-        num_leaves = 32  # 减少叶子节点数（64→32）
+        # 根据预测周期调整叶子节点数量和早停耐心
+        # 一周模型：减少叶子节点数量以防止过拟合，增加早停耐心
+        # 次日/一个月模型：保持原有参数
+        if horizon == 5:
+            # 一周模型参数（防过拟合）
+            print("使用一周模型参数（减少叶子节点，增加早停耐心）...")
+            n_estimators = 32
+            num_leaves = 24  # 减少叶子节点（32→24）
+            stopping_rounds = 15  # 增加早停耐心（10→15）
+            min_child_samples = 30  # 增加最小样本（20→30）
+        elif horizon == 1:
+            # 次日模型参数（适度）
+            print("使用次日模型参数...")
+            n_estimators = 32
+            num_leaves = 28  # 适度减少（32→28）
+            stopping_rounds = 12  # 适度增加
+            min_child_samples = 25
+        else:
+            # 一个月模型参数（保持原样）
+            print(f"使用{horizon}天模型参数...")
+            n_estimators = 32
+            num_leaves = 32
+            stopping_rounds = 10
+            min_child_samples = 20
 
         self.gbdt_model = lgb.LGBMClassifier(
             objective='binary',
             boosting_type='gbdt',
             subsample=0.7,              # 减少行采样率（0.8→0.7）
             min_child_weight=0.1,
-            min_child_samples=20,        # 增加最小子样本数（10→20）
+            min_child_samples=min_child_samples,  # 根据周期调整
             colsample_bytree=0.6,       # 减少列采样率（0.7→0.6）
-            num_leaves=num_leaves,
+            num_leaves=num_leaves,      # 根据周期调整
             learning_rate=0.03,         # 降低学习率（0.05→0.03）
             n_estimators=n_estimators,
             reg_alpha=0.1,              # L1正则化（新增）
@@ -1793,7 +1843,7 @@ class GBDTLRModel:
                 eval_set=[(X_val_fold, y_val_fold)],
                 eval_metric='binary_logloss',
                 callbacks=[
-                    lgb.early_stopping(stopping_rounds=10, verbose=False)  # 增加patience（5→10）
+                    lgb.early_stopping(stopping_rounds=stopping_rounds, verbose=False)  # 根据周期调整早停耐心
                 ]
             )
 
