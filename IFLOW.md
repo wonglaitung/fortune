@@ -69,19 +69,19 @@
 
 ## 关键文件
 
-### 核心脚本
+### 核心脚本（11个）
 | 文件 | 说明 |
 |------|------|
 | `config.py` | 全局配置文件，包含自选股列表（25只股票） |
 | `hk_smart_money_tracker.py` | 港股主力资金追踪器 |
 | `hsi_email.py` | 恒生指数价格监控器，含AI持仓分析、大模型建议保存、--no-email参数 |
-| `simulation_trader.py` | 基于大模型的港股模拟交易系统 |
-| `gold_analyzer.py` | 黄金市场分析器 |
 | `hsi_llm_strategy.py` | 恒生指数大模型策略分析器 |
+| `simulation_trader.py` | 基于大模型的港股模拟交易系统 |
 | `ai_trading_analyzer.py` | AI 交易盈利能力分析器 |
-| `generate_sector_rotation_river_plot.py` | 板块轮动河流图生成工具 |
 | `crypto_email.py` | 加密货币价格监控器 |
+| `gold_analyzer.py` | 黄金市场分析器 |
 | `hk_ipo_aastocks.py` | 港股 IPO 信息获取器 |
+| `generate_sector_rotation_river_plot.py` | 板块轮动河流图生成工具 |
 | **`comprehensive_analysis.py`** | **综合分析脚本，整合大模型建议和ML预测结果** |
 
 ### 数据服务模块 (`data_services/`)
@@ -109,14 +109,15 @@
 | `qwen_engine.py` | 大模型服务接口 |
 | `sentiment_analyzer.py` | 情感分析模块（四维情感评分） |
 
-### 配置文件
+### 配置文件（5个）
 | 文件 | 说明 |
 |------|------|
 | `requirements.txt` | 项目依赖包列表 |
-| `train_and_predict_all.sh` | 完整训练和预测脚本 |
+| `train_and_predict_all.sh` | 完整训练和预测脚本（1天、5天、20天） |
 | **`run_comprehensive_analysis.sh`** | **综合分析自动化脚本** |
 | `send_alert.sh` | 本地定时执行脚本 |
 | `update_data.sh` | 数据更新脚本 |
+| `set_key.sh` | 环境变量配置脚本 |
 
 ### GitHub Actions 工作流 (`.github/workflows/`)
 | 文件 | 说明 | 执行时间 |
@@ -676,6 +677,8 @@ python comprehensive_analysis.py
    - 量价背离是经典反转信号
 
 ## 提交记录
+- commit cdb9218: chore: 更新综合分析生成的数据文件
+- commit f56e5f5: docs: 更新IFLOW.md，添加综合分析系统功能说明
 - commit e4e08c9: feat: 添加--no-email参数到hsi_email.py，并在综合分析脚本中使用
 - commit 76fd611: feat: 综合分析输出增加详细信息，包括推荐理由、操作建议、价格指引和风险提示
 - commit 00224ba: feat: 提取完整的操作信息，包括操作建议、价格指引和风险提示
