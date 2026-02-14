@@ -63,6 +63,8 @@
 13. **美股市场数据获取**（标普500、纳斯达克、VIX、美国国债收益率）
 14. **港股板块分析模块**（板块涨跌幅排名、技术趋势分析、龙头识别）
 15. **板块轮动河流图生成工具**（可视化板块轮动规律）
+16. **大模型建议保存功能**（自动保存短期和中期建议到文本文件）
+17. **ML预测结果保存功能**（自动保存20天预测结果到文本文件）
 
 ## 关键文件
 
@@ -71,7 +73,7 @@
 |------|------|
 | `config.py` | 全局配置文件，包含自选股列表（25只股票） |
 | `hk_smart_money_tracker.py` | 港股主力资金追踪器 |
-| `hsi_email.py` | 恒生指数价格监控器，含AI持仓分析 |
+| `hsi_email.py` | 恒生指数价格监控器，含AI持仓分析、大模型建议保存 |
 | `simulation_trader.py` | 基于大模型的港股模拟交易系统 |
 | `gold_analyzer.py` | 黄金市场分析器 |
 | `hsi_llm_strategy.py` | 恒生指数大模型策略分析器 |
@@ -92,12 +94,12 @@
 ### 机器学习模块 (`ml_services/`)
 | 文件 | 说明 |
 |------|------|
-| `ml_trading_model.py` | 机器学习交易模型 |
+| `ml_trading_model.py` | 机器学习交易模型，含预测结果保存功能 |
 | `ml_prediction_email.py` | 机器学习预测邮件发送器 |
 | `us_market_data.py` | 美股市场数据获取模块 |
 | `base_model_processor.py` | 模型处理器基类 |
 | `compare_models.py` | 模型对比工具 |
-| `test_regularization.py` | **正则化策略验证脚本**（2026-02-14新增） |
+| `test_regularization.py` | 正则化策略验证脚本 |
 
 ### 大模型服务模块 (`llm_services/`)
 | 文件 | 说明 |
@@ -163,6 +165,7 @@ lightgbm, scikit-learn
 - 中期评估指标（均线排列、乖离率、支撑阻力位等）
 - AI 智能持仓分析
 - 股息信息追踪
+- **大模型建议自动保存**：短期和中期建议保存到 `data/llm_recommendations_YYYY-MM-DD.txt`
 
 ### 机器学习交易模型
 - **算法**：LightGBM 和 GBDT+LR
@@ -176,6 +179,7 @@ lightgbm, scikit-learn
   - **LightGBM一个月模型**：reg_alpha=0.18, reg_lambda=0.18（降低波动）
   - **GBDT+LR一个月模型**：reg_alpha=0.15, reg_lambda=0.15（保持准确率）
   - **其他模型**：reg_alpha=0.15, reg_lambda=0.15
+- **预测结果自动保存**：20天预测结果保存到 `data/ml_predictions_20d_YYYY-MM-DD.txt`
 
 ### 模拟交易系统
 - 基于大模型分析的模拟交易
@@ -212,7 +216,7 @@ python hk_smart_money_tracker.py
 python hk_smart_money_tracker.py --investor-type aggressive
 python hk_smart_money_tracker.py --date 2025-10-25
 
-# 恒生指数监控
+# 恒生指数监控（自动保存大模型建议）
 python hsi_email.py
 python hsi_email.py --date 2025-10-25
 
@@ -222,9 +226,10 @@ python data_services/hk_sector_analysis.py --period 5 --style moderate
 # 板块轮动河流图
 python generate_sector_rotation_river_plot.py
 
-# ML 模型训练和预测
+# ML 模型训练和预测（自动保存预测结果）
 ./train_and_predict_all.sh
 python ml_services/ml_trading_model.py --mode train --horizon 1
+python ml_services/ml_trading_model.py --mode predict --horizon 20
 
 # 模拟交易
 python simulation_trader.py --investor-type moderate
@@ -259,6 +264,7 @@ python crypto_email.py
 │   ├── 港股主力资金追踪器 (hk_smart_money_tracker.py)
 │   ├── 恒生指数大模型策略分析器 (hsi_llm_strategy.py)
 │   ├── 恒生指数价格监控器 (hsi_email.py)
+│   │   └── 大模型建议保存功能 (save_llm_recommendations)
 │   ├── AI交易盈利能力分析器 (ai_trading_analyzer.py)
 │   └── 机器学习模块 (ml_services/)
 │       ├── 机器学习交易模型 (ml_trading_model.py)
@@ -270,7 +276,8 @@ python crypto_email.py
 │       │   ├── 分类特征编码（LabelEncoder）
 │       │   ├── **正则化配置差异化**（LightGBM一个月模型0.18，GBDT+LR一个月模型0.15）
 │       │   ├── 正则化增强（L1/L2正则化、早停、树深度控制）
-│       │   └── 特征重要性分析
+│       │   ├── 特征重要性分析
+│       │   └── **预测结果保存功能** (save_predictions_to_text)
 │       ├── 机器学习预测邮件发送器 (ml_prediction_email.py)
 │       ├── 美股市场数据获取模块 (us_market_data.py)
 │       ├── 模型处理器基类 (base_model_processor.py)
@@ -282,6 +289,95 @@ python crypto_email.py
     ├── 大模型接口 (qwen_engine.py)
     └── 情感分析模块 (sentiment_analyzer.py)
 ```
+
+## 数据保存功能
+
+### 大模型建议保存
+**功能说明**：自动保存短期和中期大模型建议到文本文件，方便后续提取和对比分析
+
+**保存位置**：`data/llm_recommendations_YYYY-MM-DD.txt`
+
+**保存时机**：`hsi_email.py` 生成大模型分析后立即保存
+
+**文件格式**：
+```
+================================================================================
+大模型买卖建议报告
+日期: 2026-02-14
+生成时间: 2026-02-14 22:07:47
+================================================================================
+
+【中期建议】持仓分析
+--------------------------------------------------------------------------------
+[大模型持仓分析内容...]
+
+【短期建议】买入信号分析
+--------------------------------------------------------------------------------
+[大模型买入信号分析内容...]
+```
+
+**使用方法**：
+```bash
+# 运行恒生指数监控，自动保存大模型建议
+python hsi_email.py
+
+# 建议内容会保存到 data/llm_recommendations_YYYY-MM-DD.txt
+```
+
+### ML预测结果保存
+**功能说明**：自动保存20天预测结果到文本文件，包含详细的预测结果和统计信息
+
+**保存位置**：`data/ml_predictions_20d_YYYY-MM-DD.txt`
+
+**保存时机**：`ml_services/ml_trading_model.py` 预测20天周期时自动保存
+
+**文件格式**：
+```
+================================================================================
+机器学习20天预测结果
+预测日期: 2026-02-14
+生成时间: 2026-02-14 22:07:48
+================================================================================
+
+【预测结果】
+--------------------------------------------------------------------------------
+股票代码       股票名称         预测方向       上涨概率         当前价格         数据日期            预测目标日期         
+--------------------------------------------------------------------------------
+0700.HK    腾讯控股         上涨         0.6500       380.50       2026-02-14      2026-03-14     
+
+--------------------------------------------------------------------------------
+【统计信息】
+--------------------------------------------------------------------------------
+预测上涨: 3 只
+预测下跌: 2 只
+总计: 5 只
+上涨比例: 60.0%
+
+两个模型一致性: 3/5 (60.0%)
+平均上涨概率: 0.5200
+```
+
+**使用方法**：
+```bash
+# 运行20天预测，自动保存预测结果
+python ml_services/ml_trading_model.py --mode predict --horizon 20
+
+# 或使用完整训练和预测脚本
+./train_and_predict_all.sh
+
+# 预测结果会保存到 data/ml_predictions_20d_YYYY-MM-DD.txt
+```
+
+### 综合对比分析
+**使用场景**：
+1. 从 `data/llm_recommendations_YYYY-MM-DD.txt` 中提取短期和中期买卖建议
+2. 从 `data/ml_predictions_20d_YYYY-MM-DD.txt` 中提取20天预测结果
+3. 进行综合对比分析，给出实质的买卖建议
+
+**对比维度**：
+- 大模型短期建议 vs ML 20天预测（概率高的一致信号优先）
+- 大模型中期建议 vs 股票基本面的匹配度
+- 技术分析信号与大模型、ML预测的一致性
 
 ## 项目当前状态
 
@@ -302,11 +398,20 @@ python crypto_email.py
 - ✅ **一个月模型**：LightGBM 58.97%（±7.17%），GBDT+LR 58.52%（±7.07%）
 - ✅ **正则化配置差异化**：LightGBM一个月模型0.18（降低波动），GBDT+LR一个月模型0.15（保持准确率）
 - ✅ **数据泄漏检测**：已修复
+- ✅ **预测结果保存**：自动保存20天预测结果到文本文件
+
+**大模型功能状态**:
+- ✅ 恒生指数监控集成大模型分析
+- ✅ AI智能持仓分析
+- ✅ 大模型建议自动保存（短期和中期建议）
+- ✅ 情感分析模块（四维情感评分）
+- ✅ 多风格分析支持（进取型短期、稳健型短期、稳健型中期、保守型中期）
 
 **自动化状态**:
 - ✅ GitHub Actions：7个工作流正常运行
 - ✅ 邮件通知：163邮箱服务稳定
 - ✅ 定时任务：支持本地cron和GitHub Actions
+- ✅ 数据保存：大模型建议和ML预测结果自动保存
 
 **待优化项**:
 - ⚠️ **一个月模型波动性仍然较大**（±7.17% / ±7.07%，目标±5%）
@@ -320,6 +425,7 @@ python crypto_email.py
 - 支持聊天和嵌入功能
 - 集成到主力资金追踪、模拟交易、新闻过滤、黄金分析等模块
 - 情感分析模块提供四维情感评分
+- **大模型建议自动保存**：短期和中期建议保存到文本文件，方便综合对比分析
 
 ## 数据文件结构
 
@@ -328,6 +434,8 @@ python crypto_email.py
 - `all_stock_news_records.csv`: 股票新闻记录
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_state.json`: 模拟交易状态
+- `llm_recommendations_YYYY-MM-DD.txt`: **大模型建议文件（新增）**
+- `ml_predictions_20d_YYYY-MM-DD.txt`: **ML预测结果文件（新增）**
 - `ml_trading_model_*.pkl`: ML 模型文件（已从 Git 移除）
 - `fundamental_cache/`: 基本面数据缓存（已从 Git 移除）
 
@@ -429,13 +537,16 @@ python crypto_email.py
    - 量价背离是经典反转信号
 
 ## 提交记录
-- commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
-- commit f809898: perf(ml): 分周期优化模型正则化参数
-- commit 60cd56c: feat(ml): 添加长期趋势特征优化一个月模型
-- commit cea7cc9: perf(ml): 针对一个月模型增强L1/L2正则化参数
-- commit 2705b61: feat(ml): 添加正则化策略验证脚本
-- commit c277f3e: perf(ml): 应用strong正则化配置到一个月模型
+- commit 094a0a1: docs: 更新README.md中的ML模型优化经验章节，添加2026-02-14最新性能数据和特征工程总结
+- commit 025a004: docs: 更新IFLOW.md中的ML模型优化信息
 - commit 976df17: perf(ml): GBDT+LR一个月模型恢复0.15正则化配置
+- commit c277f3e: perf(ml): 应用strong正则化配置到一个月模型
+- commit 2705b61: feat(ml): 添加正则化策略验证脚本
+- commit f7d0fac: docs: 添加ML模型优化经验章节到README
+- commit cea7cc9: perf(ml): 针对一个月模型增强L1/L2正则化参数
+- commit 60cd56c: feat(ml): 添加长期趋势特征优化一个月模型
+- commit f809898: perf(ml): 分周期优化模型正则化参数
+- commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
 
 ---
 最后更新：2026-02-14
