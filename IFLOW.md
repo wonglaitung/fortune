@@ -65,6 +65,7 @@
 15. **板块轮动河流图生成工具**（可视化板块轮动规律）
 16. **大模型建议保存功能**（自动保存短期和中期建议到文本文件）
 17. **ML预测结果保存功能**（自动保存20天预测结果到文本文件）
+18. **综合分析系统**（整合大模型建议和ML预测结果，生成实质买卖建议）
 
 ## 关键文件
 
@@ -73,7 +74,7 @@
 |------|------|
 | `config.py` | 全局配置文件，包含自选股列表（25只股票） |
 | `hk_smart_money_tracker.py` | 港股主力资金追踪器 |
-| `hsi_email.py` | 恒生指数价格监控器，含AI持仓分析、大模型建议保存 |
+| `hsi_email.py` | 恒生指数价格监控器，含AI持仓分析、大模型建议保存、--no-email参数 |
 | `simulation_trader.py` | 基于大模型的港股模拟交易系统 |
 | `gold_analyzer.py` | 黄金市场分析器 |
 | `hsi_llm_strategy.py` | 恒生指数大模型策略分析器 |
@@ -81,6 +82,7 @@
 | `generate_sector_rotation_river_plot.py` | 板块轮动河流图生成工具 |
 | `crypto_email.py` | 加密货币价格监控器 |
 | `hk_ipo_aastocks.py` | 港股 IPO 信息获取器 |
+| **`comprehensive_analysis.py`** | **综合分析脚本，整合大模型建议和ML预测结果** |
 
 ### 数据服务模块 (`data_services/`)
 | 文件 | 说明 |
@@ -112,6 +114,7 @@
 |------|------|
 | `requirements.txt` | 项目依赖包列表 |
 | `train_and_predict_all.sh` | 完整训练和预测脚本 |
+| **`run_comprehensive_analysis.sh`** | **综合分析自动化脚本** |
 | `send_alert.sh` | 本地定时执行脚本 |
 | `update_data.sh` | 数据更新脚本 |
 
@@ -124,7 +127,7 @@
 | `gold-analyzer.yml` | 黄金市场分析 | 每小时 |
 | `ipo-alert.yml` | IPO 信息 | 每天 UTC 2:00 |
 | `ai-trading-analysis-daily.yml` | AI 交易分析 | 周一到周五 UTC 8:30 |
-| `ml-prediction-alert.yml` | ML 预测 | 周六 UTC 1:00 |
+| **`ml-prediction-alert.yml`** | **综合分析** | **每周日 UTC 1:00** |
 
 ## 项目类型
 
@@ -166,6 +169,7 @@ lightgbm, scikit-learn
 - AI 智能持仓分析
 - 股息信息追踪
 - **大模型建议自动保存**：短期和中期建议保存到 `data/llm_recommendations_YYYY-MM-DD.txt`
+- **--no-email 参数**：支持禁用邮件发送，仅生成分析报告
 
 ### 机器学习交易模型
 - **算法**：LightGBM 和 GBDT+LR
@@ -186,6 +190,45 @@ lightgbm, scikit-learn
 - 支持三种投资者类型
 - 止损机制
 - 交易记录自动保存
+
+### 综合分析系统（新增）
+**功能说明**：整合大模型建议（短期和中期）与ML预测结果（20天），进行综合对比分析，生成实质的买卖建议
+
+**执行流程**：
+1. 调用 `hsi_email.py --force --no-email` 生成大模型建议（不发送邮件）
+2. 训练20天ML模型
+3. 生成20天ML预测
+4. 提取大模型建议中的买卖信息（包含推荐理由、操作建议、价格指引、风险提示）
+5. 提取ML预测结果中的上涨概率信息
+6. 提交给大模型进行综合分析
+7. 生成详细的综合买卖建议，包含：
+   - 强烈买入信号（2-3只）
+   - 买入信号（3-5只）
+   - 持有/观望
+   - 卖出信号（如有）
+   - 风险控制建议
+
+**运行方式**：
+```bash
+# 一键执行完整流程
+./run_comprehensive_analysis.sh
+
+# 或手动执行各步骤
+python3 hsi_email.py --force --no-email
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both
+python3 comprehensive_analysis.py
+```
+
+**输出文件**：
+- `data/llm_recommendations_YYYY-MM-DD.txt`：大模型建议（短期和中期）
+- `data/ml_predictions_20d_YYYY-MM-DD.txt`：ML 20天预测结果
+- `data/comprehensive_recommendations_YYYY-MM-DD.txt`：综合买卖建议
+
+**自动化调度**：
+- GitHub Actions 工作流：`ml-prediction-alert.yml`
+- 执行时间：每周日 UTC 01:00（香港时间上午9点）
+- 支持手动触发
 
 ## 配置参数
 
@@ -216,9 +259,10 @@ python hk_smart_money_tracker.py
 python hk_smart_money_tracker.py --investor-type aggressive
 python hk_smart_money_tracker.py --date 2025-10-25
 
-# 恒生指数监控（自动保存大模型建议）
+# 恒生指数监控（自动保存大模型建议，可选不发送邮件）
 python hsi_email.py
 python hsi_email.py --date 2025-10-25
+python hsi_email.py --no-email  # 仅生成报告，不发送邮件
 
 # 板块分析
 python data_services/hk_sector_analysis.py --period 5 --style moderate
@@ -242,6 +286,11 @@ python gold_analyzer.py
 
 # 加密货币监控
 python crypto_email.py
+
+# 综合分析（一键执行）
+./run_comprehensive_analysis.sh
+python comprehensive_analysis.py
+python comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 
 ## 项目架构
@@ -265,7 +314,13 @@ python crypto_email.py
 │   ├── 恒生指数大模型策略分析器 (hsi_llm_strategy.py)
 │   ├── 恒生指数价格监控器 (hsi_email.py)
 │   │   └── 大模型建议保存功能 (save_llm_recommendations)
+│   │   └── --no-email 参数（禁用邮件发送）
 │   ├── AI交易盈利能力分析器 (ai_trading_analyzer.py)
+│   ├── **综合分析脚本** (comprehensive_analysis.py)
+│   │   ├── 提取大模型建议（extract_llm_recommendations）
+│   │   ├── 提取ML预测结果（extract_ml_predictions）
+│   │   ├── 综合对比分析（run_comprehensive_analysis）
+│   │   └── 邮件发送功能（send_email）
 │   └── 机器学习模块 (ml_services/)
 │       ├── 机器学习交易模型 (ml_trading_model.py)
 │       │   ├── 特征工程（2936个特征，含54个新增特征）
@@ -368,20 +423,91 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 # 预测结果会保存到 data/ml_predictions_20d_YYYY-MM-DD.txt
 ```
 
-### 综合对比分析
-**使用场景**：
-1. 从 `data/llm_recommendations_YYYY-MM-DD.txt` 中提取短期和中期买卖建议
-2. 从 `data/ml_predictions_20d_YYYY-MM-DD.txt` 中提取20天预测结果
-3. 进行综合对比分析，给出实质的买卖建议
+### 综合分析结果保存
+**功能说明**：自动保存综合买卖建议到文本文件，包含详细的推荐理由、操作建议、价格指引和风险提示
 
-**对比维度**：
+**保存位置**：`data/comprehensive_recommendations_YYYY-MM-DD.txt`
+
+**保存时机**：`comprehensive_analysis.py` 综合分析完成后自动保存
+
+**文件格式**：
+```
+================================================================================
+综合买卖建议
+生成时间: 2026-02-14 23:19:13
+分析日期: 2026-02-14
+================================================================================
+
+# 综合买卖建议
+
+## 强烈买入信号（2-3只）
+1. [股票代码] [股票名称] 
+   - 推荐理由：[详细的推荐理由，包含技术面、基本面、资金面等分析]
+   - 操作建议：买入/卖出/持有/观望
+   - 建议仓位：[X]%
+   - 价格指引：
+     * 建议买入价：HK$XX.XX
+     * 止损位：HK$XX.XX（-X.X%）
+     * 目标价：HK$XX.XX（+X.X%）
+   - 操作时机：[具体的操作时机说明]
+   - 风险提示：[主要风险因素]
+
+## 买入信号（3-5只）
+[同上格式]
+
+## 持有/观望
+[同上格式]
+
+## 卖出信号（如有）
+[同上格式]
+
+## 风险控制建议
+- 当前市场整体风险：[高/中/低]
+- 建议仓位百分比：[X]%
+- 止损位设置：[策略]
+- 组合调整建议：[具体的组合调整建议]
+```
+
+**使用方法**：
+```bash
+# 一键执行完整综合分析流程
+./run_comprehensive_analysis.sh
+
+# 或手动执行
+python comprehensive_analysis.py
+
+# 综合建议会保存到 data/comprehensive_recommendations_YYYY-MM-DD.txt
+```
+
+## 综合对比分析流程
+
+### 完整流程
+1. **步骤1**：调用 `hsi_email.py --force --no-email` 生成大模型建议
+   - 不发送邮件，避免重复通知
+   - 保存到 `data/llm_recommendations_YYYY-MM-DD.txt`
+
+2. **步骤2**：训练20天ML模型
+   - 使用 LightGBM 和 GBDT+LR 算法
+   - 应用差异化正则化配置
+
+3. **步骤3**：生成20天ML预测
+   - 保存到 `data/ml_predictions_20d_YYYY-MM-DD.txt`
+
+4. **步骤4**：综合分析
+   - 提取大模型建议中的买卖信息（推荐理由、操作建议、价格指引、风险提示）
+   - 提取ML预测结果中的上涨概率信息
+   - 提交给大模型进行综合对比分析
+   - 生成详细的综合买卖建议
+   - 发送邮件通知（可通过 `--no-email` 参数禁用）
+
+### 对比维度
 - 大模型短期建议 vs ML 20天预测（概率高的一致信号优先）
 - 大模型中期建议 vs 股票基本面的匹配度
 - 技术分析信号与大模型、ML预测的一致性
 
 ## 项目当前状态
 
-**最后更新**: 2026-02-14
+**最后更新**: 2026-02-15
 
 **项目成熟度**: 生产就绪
 
@@ -389,6 +515,7 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 - ✅ 数据获取层：完整，支持多数据源
 - ✅ 数据服务层：完整，模块化架构
 - ✅ 分析层：完整，含技术分析、基本面、ML模型
+- ✅ **综合分析系统**：完整，整合大模型建议和ML预测结果
 - ✅ 交易层：完整，模拟交易系统正常运行
 - ✅ 服务层：完整，大模型服务集成
 
@@ -406,12 +533,22 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 - ✅ 大模型建议自动保存（短期和中期建议）
 - ✅ 情感分析模块（四维情感评分）
 - ✅ 多风格分析支持（进取型短期、稳健型短期、稳健型中期、保守型中期）
+- ✅ **--no-email 参数**：支持禁用邮件发送，仅生成分析报告
+
+**综合分析系统状态**:
+- ✅ 大模型建议提取功能（提取推荐理由、操作建议、价格指引、风险提示）
+- ✅ ML预测结果提取功能（提取预测上涨的股票）
+- ✅ 综合对比分析功能（整合两种信息源）
+- ✅ 邮件发送功能（SMTP_SSL + 重试机制）
+- ✅ 自动化脚本（run_comprehensive_analysis.sh）
+- ✅ GitHub Actions 工作流（每周日自动执行）
 
 **自动化状态**:
 - ✅ GitHub Actions：7个工作流正常运行
 - ✅ 邮件通知：163邮箱服务稳定
 - ✅ 定时任务：支持本地cron和GitHub Actions
-- ✅ 数据保存：大模型建议和ML预测结果自动保存
+- ✅ 数据保存：大模型建议、ML预测结果、综合建议自动保存
+- ✅ 综合分析：每周日自动执行，生成实质买卖建议
 
 **待优化项**:
 - ⚠️ **一个月模型波动性仍然较大**（±7.17% / ±7.07%，目标±5%）
@@ -426,6 +563,7 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 - 集成到主力资金追踪、模拟交易、新闻过滤、黄金分析等模块
 - 情感分析模块提供四维情感评分
 - **大模型建议自动保存**：短期和中期建议保存到文本文件，方便综合对比分析
+- **综合分析**：整合大模型建议和ML预测结果，生成实质买卖建议
 
 ## 数据文件结构
 
@@ -434,8 +572,9 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 - `all_stock_news_records.csv`: 股票新闻记录
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_state.json`: 模拟交易状态
-- `llm_recommendations_YYYY-MM-DD.txt`: **大模型建议文件（新增）**
-- `ml_predictions_20d_YYYY-MM-DD.txt`: **ML预测结果文件（新增）**
+- `llm_recommendations_YYYY-MM-DD.txt`: **大模型建议文件**
+- `ml_predictions_20d_YYYY-MM-DD.txt`: **ML预测结果文件**
+- `comprehensive_recommendations_YYYY-MM-DD.txt`: **综合买卖建议文件（新增）**
 - `ml_trading_model_*.pkl`: ML 模型文件（已从 Git 移除）
 - `fundamental_cache/`: 基本面数据缓存（已从 Git 移除）
 
@@ -537,6 +676,23 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
    - 量价背离是经典反转信号
 
 ## 提交记录
+- commit e4e08c9: feat: 添加--no-email参数到hsi_email.py，并在综合分析脚本中使用
+- commit 76fd611: feat: 综合分析输出增加详细信息，包括推荐理由、操作建议、价格指引和风险提示
+- commit 00224ba: feat: 提取完整的操作信息，包括操作建议、价格指引和风险提示
+- commit 9686799: fix: 提取完整的推荐理由，不再限制为50字符
+- commit 2ea5d83: fix: 修复LLM和ML预测结果提取函数，支持实际文件格式
+- commit 8c0bca7: chore: 添加综合分析生成的数据文件
+- commit 39cab47: fix: 修复邮件发送功能，参考其他代码使用SMTP_SSL和重试机制
+- commit 8d7097a: fix: 修复save_predictions_to_text函数中total_count未定义的错误
+- commit f6b70ec: feat: 添加综合分析邮件发送功能
+- commit 76dbf79: chore: 修改综合分析工作流执行时间为每周日上午9点
+- commit 03f8e19: refactor: 修改ML预测工作流为综合分析工作流，调用run_comprehensive_analysis.sh
+- commit 0b5bb3e: revert: 恢复1天、5天和20天的训练和预测功能
+- commit 2f90fda: fix: 在生成20天预测前先训练模型
+- commit 0e6135f: feat: 添加综合分析脚本，整合大模型建议和ML预测结果生成实质买卖建议
+- commit 1c14d1a: feat: 添加大模型建议保存和ML预测结果保存功能
+- commit 409e026: refactor: 简化train_and_predict_all.sh，只训练和预测20天模型
+- commit 1792716: docs: 更新IFLOW.md，添加大模型建议保存和ML预测结果保存功能的文档说明
 - commit 094a0a1: docs: 更新README.md中的ML模型优化经验章节，添加2026-02-14最新性能数据和特征工程总结
 - commit 025a004: docs: 更新IFLOW.md中的ML模型优化信息
 - commit 976df17: perf(ml): GBDT+LR一个月模型恢复0.15正则化配置
@@ -549,4 +705,4 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 - commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
 
 ---
-最后更新：2026-02-14
+最后更新：2026-02-15
