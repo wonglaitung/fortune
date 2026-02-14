@@ -95,11 +95,27 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         for _, row in predictions_df_sorted.iterrows():
             code = row.get('code', 'N/A')
             name = row.get('name', 'N/A')
-            prediction = row.get('prediction', None)
-            probability = row.get('probability', None)
             current_price = row.get('current_price', None)
             data_date = row.get('data_date', 'N/A')
             target_date = row.get('target_date', 'N/A')
+            
+            # 尝试获取预测和概率（支持多种列名格式）
+            prediction = None
+            probability = None
+            
+            # 优先使用平均概率和一致性判断
+            if 'avg_probability' in row and 'consistent' in row:
+                if row['consistent']:
+                    # 两个模型一致，使用平均概率
+                    probability = row['avg_probability']
+                    prediction = 1 if probability >= 0.5 else 0
+            elif 'prediction' in row:
+                prediction = row.get('prediction', None)
+                probability = row.get('probability', None)
+            elif 'prediction_LGBM' in row:
+                # 使用LGBM的预测
+                prediction = row.get('prediction_LGBM', None)
+                probability = row.get('probability_LGBM', None)
 
             if prediction is not None:
                 pred_label = "上涨" if prediction == 1 else "下跌"
@@ -122,21 +138,30 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         up_count = 0
         down_count = 0
         consistent_count = 0
-
-        if 'prediction' in predictions_df.columns:
+        
+        # 计算统计信息
+        total_count = len(predictions_df)
+        
+        # 计算上涨和下跌数量
+        if 'avg_probability' in predictions_df.columns:
+            up_count = (predictions_df['avg_probability'] >= 0.5).sum()
+            down_count = total_count - up_count
+        elif 'prediction' in predictions_df.columns:
             up_count = (predictions_df['prediction'] == 1).sum()
             down_count = (predictions_df['prediction'] == 0).sum()
-            total_count = len(predictions_df)
+        elif 'prediction_LGBM' in predictions_df.columns:
+            up_count = (predictions_df['prediction_LGBM'] == 1).sum()
+            down_count = total_count - up_count
+        
+        if total_count > 0:
             content += f"预测上涨: {up_count} 只\n"
             content += f"预测下跌: {down_count} 只\n"
             content += f"总计: {total_count} 只\n"
-            if total_count > 0:
-                content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
+            content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
 
         if 'consistent' in predictions_df.columns:
             consistent_count = predictions_df['consistent'].sum()
-            if total_count > 0:
-                content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
+            content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
 
         if 'avg_probability' in predictions_df.columns:
             avg_prob = predictions_df['avg_probability'].mean()

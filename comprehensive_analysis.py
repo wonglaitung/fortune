@@ -31,47 +31,55 @@ def extract_llm_recommendations(filepath):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # 提取【短期建议】部分
-        short_term_start = content.find("【短期建议】")
-        if short_term_start != -1:
-            short_term_end = content.find("\n\n", short_term_start + len("【短期建议】"))
-            if short_term_end != -1:
-                short_term_section = content[short_term_start:short_term_end]
-            else:
-                short_term_section = content[short_term_start:]
-        else:
-            short_term_section = ""
+        # 提取买入、卖出、观察部分的股票
+        recommendations = []
         
-        # 提取【中期建议】部分
-        medium_term_start = content.find("【中期建议】")
-        if medium_term_start != -1:
-            medium_term_end = content.find("\n\n", medium_term_start + len("【中期建议】"))
-            if medium_term_end != -1:
-                medium_term_section = content[medium_term_start:medium_term_end]
-            else:
-                medium_term_section = content[medium_term_start:]
-        else:
-            medium_term_section = ""
+        # 查找所有买入、卖出、观察股票
+        lines = content.split('\n')
+        current_section = None
+        capture_next = False
         
-        # 提取买入和卖出建议
-        buy_sell_recommendations = []
+        for i, line in enumerate(lines):
+            # 检测章节标记
+            if '买入机会推荐' in line:
+                current_section = '买入'
+                continue
+            elif '卖出机会推荐' in line:
+                current_section = '卖出'
+                continue
+            elif '观察列表' in line or '观望建议' in line:
+                current_section = '观察'
+                continue
+            
+            # 捕获股票代码行（格式：X. 股票名称 (股票代码)）
+            if current_section and line.strip() and line[0].isdigit() and '.' in line and '(' in line and ')' in line:
+                stock_info = line.strip()
+                # 提取股票代码
+                code_start = stock_info.find('(') + 1
+                code_end = stock_info.find(')')
+                if code_start > 0 and code_end > code_start:
+                    code = stock_info[code_start:code_end]
+                    # 提取股票名称
+                    name_end = stock_info.find('(')
+                    name = stock_info[stock_info.find(' ') + 1:name_end].strip()
+                    
+                    # 获取推荐理由（下一行或几行）
+                    reason = ""
+                    j = i + 1
+                    while j < len(lines):
+                        next_line = lines[j].strip()
+                        if next_line.startswith('- 推荐理由：'):
+                            reason = next_line.replace('- 推荐理由：', '').strip()
+                            break
+                        elif next_line.startswith('- ') and '推荐理由' in next_line:
+                            reason = next_line.replace('- 推荐理由：', '').strip()
+                            break
+                        j += 1
+                    
+                    recommendations.append(f"{current_section}: {code} {name} - {reason[:50]}...")
         
-        # 从短期建议中提取
-        if short_term_section:
-            lines = short_term_section.split('\n')
-            for line in lines:
-                if '买入' in line or '加仓' in line or '卖出' in line or '减仓' in line or '清仓' in line:
-                    buy_sell_recommendations.append(f"短期: {line.strip()}")
-        
-        # 从中期建议中提取
-        if medium_term_section:
-            lines = medium_term_section.split('\n')
-            for line in lines:
-                if '持有' in line or '加仓' in line or '减仓' in line or '清仓' in line or '买入' in line or '卖出' in line:
-                    buy_sell_recommendations.append(f"中期: {line.strip()}")
-        
-        recommendations_text = "\n".join(buy_sell_recommendations)
-        return recommendations_text if recommendations_text else "未找到买卖建议"
+        recommendations_text = "\n".join(recommendations) if recommendations else "未找到买卖建议"
+        return recommendations_text
         
     except Exception as e:
         print(f"❌ 提取大模型建议失败: {e}")
