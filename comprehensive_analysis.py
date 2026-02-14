@@ -152,6 +152,17 @@ def send_email(subject, content, html_content=None):
             print("❌ 邮件配置不完整，跳过邮件发送")
             return False
         
+        # 根据SMTP服务器类型选择端口和SSL
+        if "163.com" in smtp_server:
+            smtp_port = 465
+            use_ssl = True
+        elif "gmail.com" in smtp_server:
+            smtp_port = 587
+            use_ssl = False
+        else:
+            smtp_port = 587
+            use_ssl = False
+        
         # 创建邮件对象
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
@@ -167,14 +178,31 @@ def send_email(subject, content, html_content=None):
             html_part = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(html_part)
         
-        # 发送邮件
-        with smtplib.SMTP(smtp_server, 587) as server:
-            server.starttls()
-            server.login(sender_email, email_password)
-            server.sendmail(sender_email, recipients, msg.as_string())
+        # 重试机制（3次）
+        for attempt in range(3):
+            try:
+                if use_ssl:
+                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                    server.login(sender_email, email_password)
+                    server.sendmail(sender_email, recipients, msg.as_string())
+                    server.quit()
+                else:
+                    server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                    server.starttls()
+                    server.login(sender_email, email_password)
+                    server.sendmail(sender_email, recipients, msg.as_string())
+                    server.quit()
+                
+                print(f"✅ 邮件已发送到: {', '.join(recipients)}")
+                return True
+            except Exception as e:
+                print(f"❌ 发送邮件失败 (尝试 {attempt+1}/3): {e}")
+                if attempt < 2:
+                    import time
+                    time.sleep(5)
         
-        print(f"✅ 邮件已发送到: {', '.join(recipients)}")
-        return True
+        print("❌ 3次尝试后仍无法发送邮件")
+        return False
         
     except Exception as e:
         print(f"❌ 发送邮件失败: {e}")
