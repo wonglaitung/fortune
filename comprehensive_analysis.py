@@ -191,84 +191,26 @@ def generate_html_email(content, date_str, reference_info=None):
     生成HTML格式的邮件内容
     
     参数:
-    - content: 综合分析文本内容
+    - content: 综合分析文本内容（Markdown格式）
     - date_str: 分析日期
     - reference_info: 参考信息（大模型建议和ML预测结果）
     
     返回:
     - str: HTML格式的邮件内容
     """
-    # 将Markdown标题转换为HTML标题
-    lines = content.split('\n')
-    html_lines = []
+    try:
+        import markdown
+    except ImportError:
+        print("⚠️ 警告：未安装markdown库，使用简单转换")
+        # 如果没有安装markdown库，使用简单转换
+        simple_html = content.replace('\n', '<br>')
+        return simple_html
     
-    for line in lines:
-        line = line.strip()
-        
-        # 转换主标题
-        if line.startswith('# '):
-            html_lines.append(f'<h1 style="color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">{line[2:]}</h1>')
-        
-        # 转换二级标题
-        elif line.startswith('## '):
-            title = line[3:]
-            color = '#e74c3c' if '卖出' in title else '#27ae60' if '买入' in title else '#f39c12' if '持有' in title else '#3498db'
-            icon = '🔴' if '卖出' in title else '🟢' if '买入' in title else '🟡' if '持有' in title else '📊'
-            html_lines.append(f'<h2 style="color: {color}; border-left: 4px solid {color}; padding-left: 15px; margin-top: 30px; margin-bottom: 15px;">{icon} {title}</h2>')
-        
-        # 转换三级标题（风险控制建议）
-        elif line.startswith('### '):
-            html_lines.append(f'<h3 style="color: #8e44ad; margin-top: 25px; margin-bottom: 10px;">📌 {line[4:]}</h3>')
-        
-        # 转换列表项（股票推荐）
-        elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. ') or line.startswith('4. ') or line.startswith('5. '):
-            # 提取股票代码和名称
-            match = line.split(']')
-            if len(match) > 1:
-                stock_code_name = match[0].replace('[', '').replace(']', '')
-                html_lines.append(f'<div style="background: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 5px;">')
-                html_lines.append(f'<h4 style="color: #2c3e50; margin: 0 0 10px 0;">📈 {stock_code_name}</h4>')
-            else:
-                html_lines.append(f'<div style="padding: 10px;">')
-        
-        # 转换子项（推荐理由、操作建议等）
-        elif line.startswith('   - '):
-            item_text = line.replace('   - ', '')
-            
-            # 识别字段类型并添加图标
-            if '推荐理由' in item_text:
-                html_lines.append(f'<p style="color: #34495e; margin: 8px 0;"><strong>💡 {item_text}</strong></p>')
-            elif '操作建议' in item_text:
-                html_lines.append(f'<p style="color: #27ae60; margin: 8px 0;"><strong>⚡ {item_text}</strong></p>')
-            elif '建议仓位' in item_text:
-                html_lines.append(f'<p style="color: #e67e22; margin: 8px 0;"><strong>📊 {item_text}</strong></p>')
-            elif '价格指引' in item_text:
-                html_lines.append(f'<p style="color: #2980b9; margin: 8px 0;"><strong>💰 {item_text}</strong></p>')
-            elif '建议买入价' in item_text or '止损位' in item_text or '目标价' in item_text:
-                html_lines.append(f'<p style="color: #16a085; margin: 5px 0 5px 20px;">&nbsp;&nbsp;&nbsp;&nbsp;• {item_text}</p>')
-            elif '操作时机' in item_text:
-                html_lines.append(f'<p style="color: #8e44ad; margin: 8px 0;"><strong>⏰ {item_text}</strong></p>')
-            elif '风险提示' in item_text:
-                html_lines.append(f'<p style="color: #c0392b; margin: 8px 0;"><strong>⚠️ {item_text}</strong></p>')
-            elif '关注要点' in item_text:
-                html_lines.append(f'<p style="color: #7f8c8d; margin: 8px 0;"><strong>👀 {item_text}</strong></p>')
-            elif '建议卖出价' in item_text:
-                html_lines.append(f'<p style="color: #c0392b; margin: 8px 0;"><strong>💵 {item_text}</strong></p>')
-            else:
-                html_lines.append(f'<p style="color: #34495e; margin: 8px 0;">{item_text}</p>')
-        
-        # 转换分隔线
-        elif line.startswith('---'):
-            html_lines.append('<hr style="border: none; border-top: 2px solid #ecf0f1; margin: 20px 0;">')
-        
-        # 转换日期
-        elif line.startswith('分析日期：'):
-            html_lines.append(f'<p style="color: #7f8c8d; font-size: 14px; margin-top: 30px; text-align: right;">📅 {line}</p>')
-        
-        # 转换段落
-        elif line and not line.startswith('#') and not line.startswith('-'):
-            if not line.startswith('   '):  # 不是子项
-                html_lines.append(f'<p style="color: #34495e; line-height: 1.6; margin: 10px 0;">{line}</p>')
+    # 配置markdown扩展，使用更多功能以支持嵌套列表
+    md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'])
+    
+    # 将Markdown转换为HTML
+    html_content = md.convert(content)
     
     # 组装完整的HTML
     html = f"""
@@ -280,7 +222,7 @@ def generate_html_email(content, date_str, reference_info=None):
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
+            line-height: 1.8;
             color: #333;
             max-width: 900px;
             margin: 0 auto;
@@ -289,7 +231,7 @@ def generate_html_email(content, date_str, reference_info=None):
         }}
         .container {{
             background-color: #ffffff;
-            padding: 30px;
+            padding: 40px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
@@ -298,6 +240,7 @@ def generate_html_email(content, date_str, reference_info=None):
             border-bottom: 3px solid #3498db;
             padding-bottom: 15px;
             margin-bottom: 25px;
+            font-size: 28px;
         }}
         h2 {{
             color: #3498db;
@@ -305,11 +248,13 @@ def generate_html_email(content, date_str, reference_info=None):
             padding-left: 15px;
             margin-top: 35px;
             margin-bottom: 20px;
+            font-size: 22px;
         }}
         h3 {{
             color: #8e44ad;
             margin-top: 25px;
             margin-bottom: 15px;
+            font-size: 20px;
         }}
         h4 {{
             color: #2c3e50;
@@ -321,11 +266,24 @@ def generate_html_email(content, date_str, reference_info=None):
             line-height: 1.8;
             margin: 10px 0;
         }}
+        ul, ol {{
+            color: #34495e;
+            line-height: 1.8;
+            margin: 15px 0;
+            padding-left: 30px;
+        }}
+        li {{
+            margin: 8px 0;
+        }}
+        strong {{
+            color: #2c3e50;
+            font-weight: 600;
+        }}
         .reference-section {{
             background: #ecf0f1;
             padding: 20px;
             border-radius: 8px;
-            margin: 20px 0;
+            margin: 30px 0;
             border-left: 4px solid #95a5a6;
         }}
         .reference-title {{
@@ -334,6 +292,7 @@ def generate_html_email(content, date_str, reference_info=None):
             margin-bottom: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 600;
         }}
         .reference-content {{
             background: #ffffff;
@@ -345,18 +304,6 @@ def generate_html_email(content, date_str, reference_info=None):
             overflow-y: auto;
             border: 1px solid #ddd;
         }}
-        .stock-card {{
-            background: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 18px;
-            margin: 18px 0;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }}
-        .stock-card:hover {{
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }}
         .footer {{
             text-align: center;
             margin-top: 40px;
@@ -365,19 +312,32 @@ def generate_html_email(content, date_str, reference_info=None):
             color: #7f8c8d;
             font-size: 14px;
         }}
-        .highlight-buy {{
-            border-left-color: #27ae60;
-        }}
-        .highlight-sell {{
-            border-left-color: #e74c3c;
-        }}
-        .highlight-hold {{
-            border-left-color: #f39c12;
-        }}
         pre {{
             white-space: pre-wrap;
             word-wrap: break-word;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #555;
+        }}
+        hr {{
+            border: none;
+            border-top: 2px solid #ecf0f1;
+            margin: 30px 0;
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }}
+        th {{
+            background-color: #f8f9fa;
+            font-weight: 600;
         }}
     </style>
 </head>
@@ -386,7 +346,9 @@ def generate_html_email(content, date_str, reference_info=None):
         <h1>📊 港股综合买卖建议</h1>
         <p style="color: #7f8c8d; font-size: 14px;">📅 分析日期：{date_str}</p>
         
-        {''.join(html_lines)}
+        <div class="content">
+            {html_content}
+        </div>
         
         <div class="reference-section">
             <div class="reference-title">📋 信息参考（大模型建议 + ML预测）</div>
