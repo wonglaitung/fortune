@@ -45,7 +45,107 @@ from config import WATCHLIST as STOCK_LIST
 STOCK_NAMES = STOCK_LIST
 
 # 自选股列表（转换为列表格式）
-WATCHLIST = list(STOCK_LIST.keys())
+WATCHLIST = list(STOCK_NAMES.keys())
+
+
+# ========== 保存预测结果到文本文件 ==========
+def save_predictions_to_text(predictions_df, predict_date=None):
+    """
+    保存预测结果到文本文件，方便后续提取和对比
+
+    参数:
+    - predictions_df: 预测结果DataFrame
+    - predict_date: 预测日期
+    """
+    try:
+        from datetime import datetime
+
+        # 生成文件名（使用日期）
+        if predict_date:
+            date_str = predict_date
+        else:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
+        # 创建data目录（如果不存在）
+        if not os.path.exists('data'):
+            os.makedirs('data')
+
+        # 文件路径
+        filepath = f'data/ml_predictions_20d_{date_str}.txt'
+
+        # 构建内容
+        content = f"{'=' * 80}\n"
+        content += f"机器学习20天预测结果\n"
+        content += f"预测日期: {date_str}\n"
+        content += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        content += f"{'=' * 80}\n\n"
+
+        # 添加预测结果
+        content += "【预测结果】\n"
+        content += "-" * 80 + "\n"
+        content += f"{'股票代码':<10} {'股票名称':<12} {'预测方向':<10} {'上涨概率':<12} {'当前价格':<12} {'数据日期':<15} {'预测目标日期':<15}\n"
+        content += "-" * 80 + "\n"
+
+        # 按一致性排序（如果有consistent列）
+        if 'consistent' in predictions_df.columns:
+            predictions_df_sorted = predictions_df.sort_values(by=['consistent', 'avg_probability'], ascending=[False, False])
+        else:
+            predictions_df_sorted = predictions_df.sort_values(by='probability', ascending=False)
+
+        for _, row in predictions_df_sorted.iterrows():
+            code = row.get('code', 'N/A')
+            name = row.get('name', 'N/A')
+            prediction = row.get('prediction', None)
+            probability = row.get('probability', None)
+            current_price = row.get('current_price', None)
+            data_date = row.get('data_date', 'N/A')
+            target_date = row.get('target_date', 'N/A')
+
+            if prediction is not None:
+                pred_label = "上涨" if prediction == 1 else "下跌"
+                prob_str = f"{probability:.4f}" if probability is not None else "N/A"
+                price_str = f"{current_price:.2f}" if current_price is not None else "N/A"
+            else:
+                pred_label = "N/A"
+                prob_str = "N/A"
+                price_str = "N/A"
+
+            content += f"{code:<10} {name:<12} {pred_label:<10} {prob_str:<12} {price_str:<12} {data_date:<15} {target_date:<15}\n"
+
+        # 添加统计信息
+        content += "\n" + "-" * 80 + "\n"
+        content += "【统计信息】\n"
+        content += "-" * 80 + "\n"
+
+        if 'prediction' in predictions_df.columns:
+            up_count = (predictions_df['prediction'] == 1).sum()
+            down_count = (predictions_df['prediction'] == 0).sum()
+            total_count = len(predictions_df)
+            content += f"预测上涨: {up_count} 只\n"
+            content += f"预测下跌: {down_count} 只\n"
+            content += f"总计: {total_count} 只\n"
+            content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
+
+        if 'consistent' in predictions_df.columns:
+            consistent_count = predictions_df['consistent'].sum()
+            content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
+
+        if 'avg_probability' in predictions_df.columns:
+            avg_prob = predictions_df['avg_probability'].mean()
+            content += f"平均上涨概率: {avg_prob:.4f}\n"
+
+        # 保存到文件
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        print(f"✅ 20天预测结果已保存到 {filepath}")
+        return filepath
+
+    except Exception as e:
+        print(f"❌ 保存预测结果失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 # ========== 缓存辅助函数 ==========
@@ -2624,6 +2724,10 @@ def main():
             comparison_export.to_csv(comparison_path, index=False)
             print(f"\n对比结果已保存到 {comparison_path}")
 
+            # 保存20天预测结果到文本文件（便于后续提取和对比）
+            if args.horizon == 20:
+                save_predictions_to_text(comparison_export, args.predict_date)
+
             # 保存各自的预测结果
             horizon_suffix = f'_{args.horizon}d'
             lgbm_pred_path = args.model_path.replace('.pkl', f'_lgbm_predictions{horizon_suffix}.csv')
@@ -2682,6 +2786,10 @@ def main():
             pred_path = args.model_path.replace('.pkl', f'_predictions{horizon_suffix}.csv')
             pred_df_export.to_csv(pred_path, index=False)
             print(f"\n预测结果已保存到 {pred_path}")
+
+            # 保存20天预测结果到文本文件（便于后续提取和对比）
+            if args.horizon == 20:
+                save_predictions_to_text(pred_df_export, args.predict_date)
 
     elif args.mode == 'evaluate':
         print("=" * 50)
