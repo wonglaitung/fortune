@@ -306,6 +306,65 @@ class FeatureEngineer:
         df['Price_Ratio_MA20'] = df['Close'] / df['MA20']
         df['Price_Ratio_MA50'] = df['Close'] / df['MA50']
 
+        # ========== 高优先级：滚动统计特征 ==========
+        # 均线偏离度（标准化）
+        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std()
+        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std()
+
+        # 滚动波动率（多周期）
+        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std()
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std()
+        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std()
+
+        # 滚动偏度/峰度（业界常用）
+        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew()
+        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt()
+
+        # 动量加速度（业界重要特征）
+        df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
+        df['Momentum_Accel_10d'] = df['Return_10d'] - df['Return_10d'].shift(5)
+
+        # ========== 高优先级：价格形态特征 ==========
+        # N日高低点位置（0-1之间，1表示在最高点）
+        df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min()) / (df['High'].rolling(20).max() - df['Low'].rolling(20).min())
+        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min()) / (df['High'].rolling(60).max() - df['Low'].rolling(60).min())
+
+        # 距离近期高点/低点的天数（业界常用）
+        df['Days_Since_High_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
+        df['Days_Since_Low_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
+
+        # 日内特征（业界核心信号）
+        df['Intraday_Range'] = (df['High'] - df['Low']) / df['Close']
+        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean()
+        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean()
+
+        # 收盘位置（阳线/阴线强度，0-1之间）
+        df['Close_Position'] = (df['Close'] - df['Low']) / (df['High'] - df['Low'])
+        # 上影线/下影线比例
+        df['Upper_Shadow'] = (df['High'] - df[['Close', 'Open']].max(axis=1)) / (df['High'] - df['Low'] + 1e-10)
+        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low']) / (df['High'] - df['Low'] + 1e-10)
+
+        # 开盘缺口
+        df['Gap_Size'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
+        df['Gap_Up'] = (df['Gap_Size'] > 0.01).astype(int)  # 跳空高开 >1%
+        df['Gap_Down'] = (df['Gap_Size'] < -0.01).astype(int)  # 跳空低开 >1%
+
+        # ========== 中优先级：量价关系特征 ==========
+        # 量价背离（业界重要信号）
+        df['Price_Up_Volume_Down'] = ((df['Return_1d'] > 0) & (df['Turnover'].pct_change() < 0)).astype(int)
+        df['Price_Down_Volume_Up'] = ((df['Return_1d'] < 0) & (df['Turnover'].pct_change() > 0)).astype(int)
+
+        # OBV 趋势
+        df['OBV_MA5'] = df['OBV'].rolling(5).mean()
+        df['OBV_Trend'] = (df['OBV'] > df['OBV_MA5']).astype(int)
+
+        # 成交量波动率
+        df['Volume_Volatility'] = df['Turnover'].rolling(20).std() / (df['Turnover'].rolling(20).mean() + 1e-10)
+
+        # 成交量比率（多周期）
+        df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
+        df['Volume_Ratio_20d'] = df['Volume'] / df['Volume'].rolling(20).mean()
+
         return df
 
     def create_fundamental_features(self, code):
@@ -1219,11 +1278,13 @@ class MLTradingModel:
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列
+        # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
-                          'BB_upper', 'BB_lower', 'BB_middle']
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -1621,11 +1682,13 @@ class GBDTLRModel:
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列
+        # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
-                          'BB_upper', 'BB_lower', 'BB_middle']
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
