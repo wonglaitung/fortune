@@ -186,13 +186,14 @@ def extract_ml_predictions(filepath):
         return ""
 
 
-def generate_html_email(content, date_str):
+def generate_html_email(content, date_str, reference_info=None):
     """
     生成HTML格式的邮件内容
     
     参数:
     - content: 综合分析文本内容
     - date_str: 分析日期
+    - reference_info: 参考信息（大模型建议和ML预测结果）
     
     返回:
     - str: HTML格式的邮件内容
@@ -281,7 +282,7 @@ def generate_html_email(content, date_str):
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f7fa;
@@ -320,6 +321,30 @@ def generate_html_email(content, date_str):
             line-height: 1.8;
             margin: 10px 0;
         }}
+        .reference-section {{
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #95a5a6;
+        }}
+        .reference-title {{
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        .reference-content {{
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }}
         .stock-card {{
             background: #f8f9fa;
             border-left: 4px solid #3498db;
@@ -349,11 +374,27 @@ def generate_html_email(content, date_str):
         .highlight-hold {{
             border-left-color: #f39c12;
         }}
+        pre {{
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }}
     </style>
 </head>
 <body>
     <div class="container">
+        <h1>📊 港股综合买卖建议</h1>
+        <p style="color: #7f8c8d; font-size: 14px;">📅 分析日期：{date_str}</p>
+        
         {''.join(html_lines)}
+        
+        <div class="reference-section">
+            <div class="reference-title">📋 信息参考（大模型建议 + ML预测）</div>
+            <div class="reference-content">
+                <pre>{reference_info if reference_info else '暂无参考信息'}</pre>
+            </div>
+        </div>
+        
         <div class="footer">
             <p>📧 本邮件由港股综合分析系统自动生成</p>
             <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
@@ -617,9 +658,31 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
-                # 生成HTML格式邮件内容
-                html_content = generate_html_email(response, date_str)
-                send_email(email_subject, email_content, html_content)
+                # 构建完整的信息参考内容（包含大模型建议和ML预测）
+                reference_info = f"""【大模型短期和中期买卖建议】
+{llm_recommendations}
+
+【机器学习20天预测结果】
+{ml_predictions}
+"""
+                
+                # 构建完整的邮件文本内容（综合买卖建议在前，信息参考在后）
+                full_email_content = f"""{'=' * 80}
+综合买卖建议
+{'=' * 80}
+
+{response}
+
+{'=' * 80}
+信息参考
+{'=' * 80}
+
+{reference_info}
+"""
+                
+                # 生成HTML格式邮件内容（包含完整信息参考）
+                html_content = generate_html_email(response, date_str, reference_info)
+                send_email(email_subject, full_email_content, html_content)
             
             return response
         else:
