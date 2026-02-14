@@ -6782,12 +6782,13 @@ class HSIEmailSystem:
         
         return text
 
-    def run_analysis(self, target_date=None, force=False):
+    def run_analysis(self, target_date=None, force=False, send_email=True):
         """执行分析并发送邮件
 
         参数:
         - target_date: 分析日期，默认为今天
         - force: 是否强制发送邮件，即使没有交易信号，默认为 False
+        - send_email: 是否发送邮件，默认为 True
         """
         if target_date is None:
             target_date = datetime.now().date()
@@ -6854,15 +6855,21 @@ class HSIEmailSystem:
         else:
             recipients = [recipient_env]
 
-        if has_signals:
-            print("🔔 检测到交易信号，发送邮件到:", ", ".join(recipients))
-        else:
-            print("📊 发送市场分析报告到:", ", ".join(recipients))
-        print("📝 主题:", subject)
-        print("📄 文本预览:\n", text)
+        if send_email:
+            if has_signals:
+                print("🔔 检测到交易信号，发送邮件到:", ", ".join(recipients))
+            else:
+                print("📊 发送市场分析报告到:", ", ".join(recipients))
+            print("📝 主题:", subject)
+            print("📄 文本预览:\n", text)
 
-        success = self.send_email(recipients, subject, text, html)
-        return success
+            success = self.send_email(recipients, subject, text, html)
+            return success
+        else:
+            print("📄 仅生成模式：跳过邮件发送")
+            print("📝 主题:", subject)
+            print("📄 内容已生成，但未发送")
+            return True
 
     def save_llm_recommendations(self, portfolio_analysis, buy_signals_analysis, target_date=None):
         """
@@ -6930,6 +6937,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='恒生指数及港股主力资金追踪器股票交易信号邮件通知系统')
     parser.add_argument('--date', type=str, default=None, help='指定日期 (格式: YYYY-MM-DD)，默认为今天')
     parser.add_argument('--force', action='store_true', help='强制发送邮件，即使没有交易信号')
+    parser.add_argument('--no-email', action='store_true', help='不发送邮件，只生成分析报告')
     args = parser.parse_args()
 
     target_date = None
@@ -6945,9 +6953,12 @@ if __name__ == "__main__":
 
     if args.force:
         print("⚡ 强制模式：即使没有交易信号也会发送邮件")
+    
+    if args.no_email:
+        print("📄 仅生成模式：不发送邮件，只生成分析报告")
 
     email_system = HSIEmailSystem()
-    success = email_system.run_analysis(target_date, force=args.force)
+    success = email_system.run_analysis(target_date, force=args.force, send_email=not args.no_email)
 
     if not success:
         exit(1)

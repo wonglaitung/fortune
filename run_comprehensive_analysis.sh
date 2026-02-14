@@ -11,12 +11,12 @@ echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 
-# 步骤1: 调用hsi_email.py生成大模型建议（使用force参数）
+# 步骤1: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
 echo "=========================================="
 echo "📊 步骤 1/4: 生成大模型建议"
 echo "=========================================="
 echo ""
-python3 hsi_email.py --force
+python3 hsi_email.py --force --no-email
 if [ $? -ne 0 ]; then
     echo "❌ 步骤1失败: 生成大模型建议失败"
     exit 1
