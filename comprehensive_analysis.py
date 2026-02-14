@@ -186,6 +186,186 @@ def extract_ml_predictions(filepath):
         return ""
 
 
+def generate_html_email(content, date_str):
+    """
+    生成HTML格式的邮件内容
+    
+    参数:
+    - content: 综合分析文本内容
+    - date_str: 分析日期
+    
+    返回:
+    - str: HTML格式的邮件内容
+    """
+    # 将Markdown标题转换为HTML标题
+    lines = content.split('\n')
+    html_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        
+        # 转换主标题
+        if line.startswith('# '):
+            html_lines.append(f'<h1 style="color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">{line[2:]}</h1>')
+        
+        # 转换二级标题
+        elif line.startswith('## '):
+            title = line[3:]
+            color = '#e74c3c' if '卖出' in title else '#27ae60' if '买入' in title else '#f39c12' if '持有' in title else '#3498db'
+            icon = '🔴' if '卖出' in title else '🟢' if '买入' in title else '🟡' if '持有' in title else '📊'
+            html_lines.append(f'<h2 style="color: {color}; border-left: 4px solid {color}; padding-left: 15px; margin-top: 30px; margin-bottom: 15px;">{icon} {title}</h2>')
+        
+        # 转换三级标题（风险控制建议）
+        elif line.startswith('### '):
+            html_lines.append(f'<h3 style="color: #8e44ad; margin-top: 25px; margin-bottom: 10px;">📌 {line[4:]}</h3>')
+        
+        # 转换列表项（股票推荐）
+        elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. ') or line.startswith('4. ') or line.startswith('5. '):
+            # 提取股票代码和名称
+            match = line.split(']')
+            if len(match) > 1:
+                stock_code_name = match[0].replace('[', '').replace(']', '')
+                html_lines.append(f'<div style="background: #f8f9fa; border-left: 4px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 5px;">')
+                html_lines.append(f'<h4 style="color: #2c3e50; margin: 0 0 10px 0;">📈 {stock_code_name}</h4>')
+            else:
+                html_lines.append(f'<div style="padding: 10px;">')
+        
+        # 转换子项（推荐理由、操作建议等）
+        elif line.startswith('   - '):
+            item_text = line.replace('   - ', '')
+            
+            # 识别字段类型并添加图标
+            if '推荐理由' in item_text:
+                html_lines.append(f'<p style="color: #34495e; margin: 8px 0;"><strong>💡 {item_text}</strong></p>')
+            elif '操作建议' in item_text:
+                html_lines.append(f'<p style="color: #27ae60; margin: 8px 0;"><strong>⚡ {item_text}</strong></p>')
+            elif '建议仓位' in item_text:
+                html_lines.append(f'<p style="color: #e67e22; margin: 8px 0;"><strong>📊 {item_text}</strong></p>')
+            elif '价格指引' in item_text:
+                html_lines.append(f'<p style="color: #2980b9; margin: 8px 0;"><strong>💰 {item_text}</strong></p>')
+            elif '建议买入价' in item_text or '止损位' in item_text or '目标价' in item_text:
+                html_lines.append(f'<p style="color: #16a085; margin: 5px 0 5px 20px;">&nbsp;&nbsp;&nbsp;&nbsp;• {item_text}</p>')
+            elif '操作时机' in item_text:
+                html_lines.append(f'<p style="color: #8e44ad; margin: 8px 0;"><strong>⏰ {item_text}</strong></p>')
+            elif '风险提示' in item_text:
+                html_lines.append(f'<p style="color: #c0392b; margin: 8px 0;"><strong>⚠️ {item_text}</strong></p>')
+            elif '关注要点' in item_text:
+                html_lines.append(f'<p style="color: #7f8c8d; margin: 8px 0;"><strong>👀 {item_text}</strong></p>')
+            elif '建议卖出价' in item_text:
+                html_lines.append(f'<p style="color: #c0392b; margin: 8px 0;"><strong>💵 {item_text}</strong></p>')
+            else:
+                html_lines.append(f'<p style="color: #34495e; margin: 8px 0;">{item_text}</p>')
+        
+        # 转换分隔线
+        elif line.startswith('---'):
+            html_lines.append('<hr style="border: none; border-top: 2px solid #ecf0f1; margin: 20px 0;">')
+        
+        # 转换日期
+        elif line.startswith('分析日期：'):
+            html_lines.append(f'<p style="color: #7f8c8d; font-size: 14px; margin-top: 30px; text-align: right;">📅 {line}</p>')
+        
+        # 转换段落
+        elif line and not line.startswith('#') and not line.startswith('-'):
+            if not line.startswith('   '):  # 不是子项
+                html_lines.append(f'<p style="color: #34495e; line-height: 1.6; margin: 10px 0;">{line}</p>')
+    
+    # 组装完整的HTML
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }}
+        .container {{
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }}
+        h2 {{
+            color: #3498db;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+            margin-top: 35px;
+            margin-bottom: 20px;
+        }}
+        h3 {{
+            color: #8e44ad;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }}
+        h4 {{
+            color: #2c3e50;
+            margin: 0 0 12px 0;
+            font-size: 18px;
+        }}
+        p {{
+            color: #34495e;
+            line-height: 1.8;
+            margin: 10px 0;
+        }}
+        .stock-card {{
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 18px;
+            margin: 18px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }}
+        .stock-card:hover {{
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+            color: #7f8c8d;
+            font-size: 14px;
+        }}
+        .highlight-buy {{
+            border-left-color: #27ae60;
+        }}
+        .highlight-sell {{
+            border-left-color: #e74c3c;
+        }}
+        .highlight-hold {{
+            border-left-color: #f39c12;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        {''.join(html_lines)}
+        <div class="footer">
+            <p>📧 本邮件由港股综合分析系统自动生成</p>
+            <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </div>
+    </div>
+</body>
+</html>
+    """
+    
+    return html
+
+
 def send_email(subject, content, html_content=None):
     """
     发送邮件通知
@@ -436,7 +616,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 print("\n📧 准备发送邮件通知...")
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
-                send_email(email_subject, email_content)
+                
+                # 生成HTML格式邮件内容
+                html_content = generate_html_email(response, date_str)
+                send_email(email_subject, email_content, html_content)
             
             return response
         else:
