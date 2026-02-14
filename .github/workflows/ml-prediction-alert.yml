@@ -1,27 +1,17 @@
-name: ML Trading Model Prediction Alert
+name: Comprehensive Trading Analysis
 
 on:
   # 手动触发
   workflow_dispatch:
-    inputs:
-      horizon:
-        description: '预测周期 (1=次日, 5=一周, 20=一个月, all=全部)'
-        required: false
-        default: 'all'
-        type: choice
-        options:
-          - '1'
-          - '5'
-          - '20'
-          - 'all'
   # 定时触发
   schedule:
-    # 每天香港时间 09:00 (UTC 01:00) 执行预测
+    # 每天香港时间 09:00 (UTC 01:00) 执行综合分析
     - cron: '0 1 * * 6'
-    # 每天香港时间 16:30 (UTC 08:30) 执行预测
+    # 每天香港时间 16:30 (UTC 08:30) 执行综合分析
+    - cron: '30 8 * * 1-5'
 
 jobs:
-  predict-and-alert:
+  comprehensive-analysis:
     runs-on: ubuntu-latest
     
     steps:
@@ -38,81 +28,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check if models exist
-        id: check-models
-        run: |
-          if [ -f "data/ml_trading_model_lgbm_1d.pkl" ] && [ -f "data/ml_trading_model_lgbm_5d.pkl" ] && [ -f "data/ml_trading_model_lgbm_20d.pkl" ]; then
-            echo "models_exist=true" >> $GITHUB_OUTPUT
-            echo "✅ 模型文件已存在"
-          else
-            echo "models_exist=false" >> $GITHUB_OUTPUT
-            echo "⚠️  模型文件不存在，需要训练"
-          fi
-
-      - name: Train models if needed
-        if: steps.check-models.outputs.models_exist == 'false'
+      - name: Run comprehensive analysis
         env:
           YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
           YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
-          echo "🌳 开始训练模型..."
-          python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
-          python ml_services/ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
-          python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
-          echo "✅ 模型训练完成"
+          chmod +x run_comprehensive_analysis.sh
+          ./run_comprehensive_analysis.sh
 
-      - name: Run prediction for 1 day horizon
-        if: github.event.inputs.horizon == '1' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
-        env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: |
-          python ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl
-
-      - name: Run prediction for 5 days horizon
-        if: github.event.inputs.horizon == '5' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
-        env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: |
-          python ml_services/ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl
-
-      - name: Run prediction for 20 days horizon
-        if: github.event.inputs.horizon == '20' || github.event.inputs.horizon == 'all' || github.event_name == 'schedule'
-        env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: |
-          python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
-
-      - name: Send prediction email
-        if: github.event.inputs.horizon != '0' || github.event_name == 'schedule'
-        env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          PREDICTION_HORIZONS: ${{ github.event.inputs.horizon == 'all' && '1,5,20' || github.event.inputs.horizon }}
-        run: |
-          python ml_services/ml_prediction_email.py
-
-      - name: Upload prediction results
+      - name: Upload analysis results
         uses: actions/upload-artifact@v4
         with:
-          name: ml-predictions-${{ github.run_number }}
+          name: comprehensive-analysis-${{ github.run_number }}
           path: |
-            data/ml_trading_model_lgbm_predictions_1d.csv
-            data/ml_trading_model_lgbm_predictions_5d.csv
-            data/ml_trading_model_lgbm_predictions_20d.csv
-            data/ml_trading_model_gbdt_lr_predictions_1d.csv
-            data/ml_trading_model_gbdt_lr_predictions_5d.csv
-            data/ml_trading_model_gbdt_lr_predictions_20d.csv
+            data/llm_recommendations_*.txt
+            data/ml_predictions_20d_*.txt
+            data/comprehensive_recommendations_*.txt
+            data/ml_trading_model_*_20d.pkl
+            data/ml_trading_model_*_20d_importance.csv
           retention-days: 30
