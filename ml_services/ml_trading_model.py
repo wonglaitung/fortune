@@ -365,6 +365,70 @@ class FeatureEngineer:
         df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
         df['Volume_Ratio_20d'] = df['Volume'] / df['Volume'].rolling(20).mean()
 
+        # ========== 长期趋势特征（专门优化一个月模型） ==========
+        # 长期均线（120日半年线、250日年线）
+        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean()
+        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean()
+
+        # 价格相对长期均线的比率（业界长期趋势指标）
+        df['Price_Ratio_MA120'] = df['Close'] / df['MA120']
+        df['Price_Ratio_MA250'] = df['Close'] / df['MA250']
+
+        # 长期收益率（业界核心长期特征）
+        df['Return_120d'] = df['Close'].pct_change(120)
+        df['Return_250d'] = df['Close'].pct_change(250)
+
+        # 长期动量（Momentum = 当前价格 / N日前价格 - 1）
+        df['Momentum_120d'] = df['Close'] / df['Close'].shift(120) - 1
+        df['Momentum_250d'] = df['Close'] / df['Close'].shift(250) - 1
+
+        # 长期动量加速度（趋势变化的二阶导数）
+        df['Momentum_Accel_120d'] = df['Return_120d'] - df['Return_120d'].shift(30)
+
+        # 长期均线斜率（趋势强度指标）
+        df['MA120_Slope'] = (df['MA120'] - df['MA120'].shift(10)) / df['MA120'].shift(10)
+        df['MA250_Slope'] = (df['MA250'] - df['MA250'].shift(20)) / df['MA250'].shift(20)
+
+        # 长期均线排列（多头/空头/混乱）
+        df['MA_Alignment_Long'] = np.where(
+            (df['MA50'] > df['MA120']) & (df['MA120'] > df['MA250']), 1,  # 多头排列
+            np.where(
+                (df['MA50'] < df['MA120']) & (df['MA120'] < df['MA250']), -1,  # 空头排列
+                0  # 混乱排列
+            )
+        )
+
+        # 长期均线乖离率（价格偏离长期均线的程度）
+        df['MA120_Deviation'] = (df['Close'] - df['MA120']) / df['MA120'] * 100
+        df['MA250_Deviation'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
+
+        # 长期波动率（风险指标）
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std()
+        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std()
+
+        # 长期ATR（长期风险）
+        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean()
+        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean()
+        df['ATR_Ratio_60d'] = df['ATR'] / df['ATR_MA60']
+        df['ATR_Ratio_120d'] = df['ATR'] / df['ATR_MA120']
+
+        # 长期成交量趋势
+        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean()
+        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean()
+        df['Volume_Ratio_120d'] = df['Volume'] / df['Volume_MA120']
+        df['Volume_Trend_Long'] = np.where(
+            df['Volume_MA120'] > df['Volume_MA250'], 1, -1
+        )
+
+        # 长期支撑阻力位（基于120日高低点）
+        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min()
+        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max()
+        df['Distance_Support_120d'] = (df['Close'] - df['Support_120d']) / df['Close']
+        df['Distance_Resistance_120d'] = (df['Resistance_120d'] - df['Close']) / df['Close']
+
+        # 长期RSI（基于120日）
+        df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
+
         return df
 
     def create_fundamental_features(self, code):
