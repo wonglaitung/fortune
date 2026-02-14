@@ -13,7 +13,7 @@ echo ""
 
 # 步骤1: 调用hsi_email.py生成大模型建议（使用force参数）
 echo "=========================================="
-echo "📊 步骤 1/3: 生成大模型建议"
+echo "📊 步骤 1/4: 生成大模型建议"
 echo "=========================================="
 echo ""
 python3 hsi_email.py --force
@@ -24,30 +24,43 @@ fi
 echo "✅ 步骤1完成: 大模型建议已生成"
 echo ""
 
-# 步骤2: 调用ml_trading_model.py生成20天预测
+# 步骤2: 训练20天模型
 echo "=========================================="
-echo "📊 步骤 2/3: 生成20天预测"
+echo "📊 步骤 2/4: 训练20天模型"
 echo "=========================================="
 echo ""
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤2失败: 生成20天预测失败"
+    echo "❌ 步骤2失败: 训练20天模型失败"
     exit 1
 fi
-echo "✅ 步骤2完成: 20天预测已生成"
+echo "✅ 步骤2完成: 20天模型训练完成"
 echo ""
 
-# 步骤3: 调用comprehensive_analysis.py进行综合分析
+# 步骤3: 调用ml_trading_model.py生成20天预测
 echo "=========================================="
-echo "📊 步骤 3/3: 综合分析"
+echo "📊 步骤 3/4: 生成20天预测"
+echo "=========================================="
+echo ""
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+if [ $? -ne 0 ]; then
+    echo "❌ 步骤3失败: 生成20天预测失败"
+    exit 1
+fi
+echo "✅ 步骤3完成: 20天预测已生成"
+echo ""
+
+# 步骤4: 调用comprehensive_analysis.py进行综合分析
+echo "=========================================="
+echo "📊 步骤 4/4: 综合分析"
 echo "=========================================="
 echo ""
 python3 comprehensive_analysis.py
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤3失败: 综合分析失败"
+    echo "❌ 步骤4失败: 综合分析失败"
     exit 1
 fi
-echo "✅ 步骤3完成: 综合分析已生成"
+echo "✅ 步骤4完成: 综合分析已生成"
 echo ""
 
 echo "=========================================="
