@@ -76,7 +76,9 @@ def extract_llm_recommendations(filepath):
                             break
                         j += 1
                     
-                    recommendations.append(f"{current_section}: {code} {name} - {reason[:50]}...")
+                    # 提取完整的推荐理由（去掉Markdown格式）
+                    reason = reason.replace('*', '').replace('**', '')
+                    recommendations.append(f"{current_section}: {code} {name} - {reason}")
         
         recommendations_text = "\n".join(recommendations) if recommendations else "未找到买卖建议"
         return recommendations_text
