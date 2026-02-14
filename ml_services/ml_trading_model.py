@@ -1462,8 +1462,8 @@ class MLTradingModel:
                 'min_child_samples': 35,       # 增加最小样本（30→35）
                 'subsample': 0.65,             # 减少行采样（0.7→0.65）
                 'colsample_bytree': 0.65,      # 减少列采样（0.7→0.65）
-                'reg_alpha': 0.15,             # 增强L1正则（0.1→0.15）
-                'reg_lambda': 0.15,            # 增强L2正则（0.1→0.15）
+                'reg_alpha': 0.18,             # 增强L1正则（0.15→0.18）优先稳定性
+                'reg_lambda': 0.18,            # 增强L2正则（0.15→0.18）优先稳定性
                 'min_split_gain': 0.12,        # 增加分割增益（0.1→0.12）
                 'feature_fraction': 0.65,      # 减少特征采样（0.7→0.65）
                 'bagging_fraction': 0.65,      # 减少Bagging采样（0.7→0.65）
@@ -1898,14 +1898,15 @@ class GBDTLRModel:
             colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
         else:  # horizon == 20
             # 一个月模型参数（增强正则化）
-            # 原因：特征数量从2530增至2684（+6%），需要更强的正则化防止过拟合
+            # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
+            # 优化：根据正则化验证测试，使用0.18以降低模型波动性（Fold范围最小）
             print("使用20天模型参数（增强正则化，应对特征数量增长）...")
             n_estimators = 32
             num_leaves = 24  # 减少叶子节点（32→24）
             stopping_rounds = 12  # 增加早停耐心（10→12）
             min_child_samples = 30  # 增加最小样本（20→30）
-            reg_alpha = 0.15    # 增强L1正则（0.1→0.15）
-            reg_lambda = 0.15   # 增强L2正则（0.1→0.15）
+            reg_alpha = 0.18    # 增强L1正则（0.15→0.18）优先稳定性
+            reg_lambda = 0.18   # 增强L2正则（0.15→0.18）优先稳定性
             subsample = 0.65    # 减少行采样（0.7→0.65）
             colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
 
