@@ -2,14 +2,17 @@
 
 # 脚本功能：将 data 目录下的文件更新到 GitHub
 # 预定在每天下午五点运行
-# 0 17 * * * /data/fortune/update_data.sh
+# 0 17 * * * /path/to/fortune/update_data.sh
 
 # 设置重试次数和延迟时间
 MAX_RETRIES=3
 RETRY_DELAY=10
 
-# 进入项目根目录
-cd /data/fortune
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 进入项目根目录（使用相对路径）
+cd "$SCRIPT_DIR"
 
 retry_count=0
 while [ $retry_count -lt $MAX_RETRIES ]; do

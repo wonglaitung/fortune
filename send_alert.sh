@@ -2,10 +2,13 @@
 
 # 脚本功能：将 data 目录下的文件更新到 GitHub
 # 预定在每天下午五点运行
-# 0 6 * * * /data/fortune/send_alert.sh
+# 0 6 * * * /path/to/fortune/send_alert.sh
 
-# 进入项目根目录
-cd /data/fortune
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# 进入项目根目录（使用相对路径）
+cd "$SCRIPT_DIR"
 source set_key.sh
 
 # 获取股票新闻(需yahoo finance)
