@@ -717,8 +717,26 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
-                # 构建完整的邮件内容（只包含综合买卖建议）
+                # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 full_content = f"""{response}
+
+---
+
+# 信息参考
+
+## 大模型短期买卖建议（日内/数天）
+{llm_recommendations['short_term']}
+
+## 大模型中期买卖建议（数周-数月）
+{llm_recommendations['medium_term']}
+
+## 机器学习预测结果（20天）
+
+### LightGBM模型
+{ml_predictions['lgbm']}
+
+### GBDT+LR模型
+{ml_predictions['gbdt_lr']}
 """
                 
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
