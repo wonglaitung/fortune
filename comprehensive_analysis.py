@@ -37,37 +37,26 @@ def extract_llm_recommendations(filepath):
         
         import re
         
-        # 使用正则表达式提取短期建议（更灵活的匹配）
+        # 使用更精确的正则表达式提取短期建议
+        # 匹配"### 稳健型短期分析"标题后到下一个"###"标题之前的内容
         short_term_match = re.search(
-            r'(?:【短期建议】|稳健型短期分析|⚖️ 稳健型短期分析)(.*?)(?=【|稳健型中期|⚖️ 稳健型中期|$)',
+            r'^###.*稳健型短期分析.*?\n(.*?)(?=^###|\Z)',
             content,
-            re.DOTALL
+            re.DOTALL | re.MULTILINE
         )
         
-        # 使用正则表达式提取中期建议（更灵活的匹配）
+        # 使用更精确的正则表达式提取中期建议
+        # 匹配"### 稳健型中期分析"标题后到文件末尾或下一个"###"标题之前的内容
         medium_term_match = re.search(
-            r'(?:【中期建议】|稳健型中期分析|⚖️ 稳健型中期分析)(.*?)(?=【|$)',
+            r'^###.*稳健型中期分析.*?\n(.*?)(?=\Z|^###)',
             content,
-            re.DOTALL
+            re.DOTALL | re.MULTILINE
         )
         
         result = {
             'short_term': short_term_match.group(1).strip() if short_term_match else '',
             'medium_term': medium_term_match.group(1).strip() if medium_term_match else ''
         }
-        
-        # 如果正则匹配失败，尝试备用方案（基于标题模式）
-        if not result['short_term']:
-            # 查找"稳健型短期分析"标题后到"稳健型中期分析"前的内容
-            pattern1 = re.search(r'稳健型短期分析.*?\n(.*?)\n\n\n稳健型中期分析', content, re.DOTALL)
-            if pattern1:
-                result['short_term'] = "稳健型短期分析\n" + pattern1.group(1).strip()
-        
-        if not result['medium_term']:
-            # 查找"稳健型中期分析"标题后的所有内容
-            pattern2 = re.search(r'稳健型中期分析.*?\n(.*)', content, re.DOTALL)
-            if pattern2:
-                result['medium_term'] = "稳健型中期分析\n" + pattern2.group(1).strip()
         
         return result
         
