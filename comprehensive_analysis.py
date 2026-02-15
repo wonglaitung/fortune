@@ -157,14 +157,13 @@ def extract_ml_predictions(filepath):
         return {'lgbm': '', 'gbdt_lr': ''}
 
 
-def generate_html_email(content, date_str, reference_info=None):
+def generate_html_email(content, date_str):
     """
     生成HTML格式的邮件内容
     
     参数:
     - content: 综合分析文本内容（Markdown格式）
     - date_str: 分析日期
-    - reference_info: 参考信息（大模型建议和ML预测结果）
     
     返回:
     - str: HTML格式的邮件内容
@@ -319,13 +318,6 @@ def generate_html_email(content, date_str, reference_info=None):
         
         <div class="content">
             {html_content}
-        </div>
-        
-        <div class="reference-section">
-            <div class="reference-title">📋 信息参考（大模型建议 + ML预测）</div>
-            <div class="reference-content">
-                <pre>{reference_info if reference_info else '暂无参考信息'}</pre>
-            </div>
         </div>
         
         <div class="footer">
@@ -500,10 +492,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 大模型短期建议（日内/数天）仅用于判断操作时机，不影响中期买卖决策
 
 **规则2：一致性判断标准**
-- **强买入信号**：大模型中期建议买入 AND (LightGBM预测上涨概率>0.65 OR GBDT+LR预测上涨概率>0.65)
-- **买入信号**：大模型中期建议买入 OR (两个ML模型预测上涨概率>0.60)
-- **观望信号**：大模型中期建议观望 OR ML预测概率在0.40-0.60之间
-- **卖出信号**：大模型中期建议卖出 OR (两个ML模型预测下跌概率>0.60)
+- **强买入信号**：大模型中期建议买入 AND (ML模型prediction=1且probability>0.65)
+- **买入信号**：大模型中期建议买入 OR (ML模型prediction=1且probability>0.60)
+- **观望信号**：大模型中期建议观望 OR ML模型probability在0.40-0.60之间
+- **卖出信号**：大模型中期建议卖出 OR (ML模型prediction=0且probability<0.40)
+
+**重要说明 - LR算法probability含义**：
+- probability字段始终代表**上涨概率**P(y=1|x)
+- 当prediction=1时：probability > 0.5（上涨概率高）
+- 当prediction=0时：probability <= 0.5（上涨概率低，即下跌概率高）
+- 强烈下跌信号：prediction=0且probability < 0.40（即下跌概率 > 60%）
+- 中性信号：probability在0.40-0.60之间（上涨或下跌概率都不超过60%）
 
 **规则3：ML模型冲突处理**
 - 如果LightGBM和GBDT+LR预测冲突（一个上涨，一个下跌）：
@@ -611,8 +610,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         print("🤖 提交大模型进行综合分析...")
         print("")
         
-        # 调用大模型
-        response = chat_with_llm(prompt)
+        # 调用大模型（关闭思考模式，避免输出思考过程）
+        response = chat_with_llm(prompt, enable_thinking=False)
         
         if response:
             print("✅ 综合分析完成\n")
@@ -644,24 +643,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
-                # 构建完整的邮件内容（包含综合建议和信息参考）
+                # 构建完整的邮件内容（只包含综合买卖建议）
                 full_content = f"""{response}
-
----
-
-# 信息参考
-
-## 大模型短期买卖建议（日内/数天）
-{llm_recommendations['short_term']}
-
-## 大模型中期买卖建议（数周-数月）
-{llm_recommendations['medium_term']}
-
-## LightGBM模型20天预测结果
-{ml_predictions['lgbm']}
-
-## GBDT+LR模型20天预测结果
-{ml_predictions['gbdt_lr']}
 """
                 
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
