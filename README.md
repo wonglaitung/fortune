@@ -701,6 +701,9 @@ print(df)
   - 卖出信号（如有）
   - 风险控制建议
 - 邮件发送功能（SMTP_SSL + 重试机制）
+- 邮件包含完整信息参考章节：
+  - **第一部分：综合买卖建议**（强烈买入、买入、持有/观望、卖出、风险控制）
+  - **第二部分：信息参考**（大模型短期建议、大模型中期建议、LightGBM预测、GBDT+LR预测）
 - 自动保存综合建议到文本文件
 
 **使用方法**：
@@ -1393,6 +1396,10 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --start-date 202
 - 添加必要的注释和文档字符串
 - 确保代码通过测试
 - 更新相关文档
+- 避免硬编码路径，使用相对路径基于脚本目录构建
+  - **十二要素应用原则**：配置应该外化，不应硬编码
+  - **跨环境兼容性**：代码应能在不同环境中运行，不依赖特定路径
+  - **正确做法**：`script_dir = os.path.dirname(os.path.abspath(__file__)); data_dir = os.path.join(script_dir, 'data')`
 
 ---
 
@@ -1418,7 +1425,7 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 
 ---
 
-**最后更新**: 2026-02-14
+**最后更新**: 2026-02-15
 
 ## 🎓 ML模型优化经验
 
@@ -1627,6 +1634,16 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
    - 量价背离是经典反转信号
 
 #### 提交记录
+- commit e5f1423: feat: 邮件中添加完整信息参考章节
+- commit ffcd794: fix: 修复硬编码路径问题，使用相对路径替代绝对路径
+- commit 8143a36: refactor: 采用方案A（短期触发+中期确认）并优化提示词，使用正则表达式替代脆弱字符串匹配
+- commit 2644341: fix: 修正LR算法判断标准并关闭思考模式，删除邮件信息参考章节
+- commit 0239abb: refactor: 优化综合分析提示词，建立量化判断标准和明确信息源优先级
+- commit 0e84c3b: feat: 综合分析分离短期/中期建议和LightGBM/GBDT+LR预测，提升大模型决策透明度
+- commit 81eed22: refactor: 使用Markdown库替代正则表达式生成HTML邮件，提升格式兼容性
+- commit ce691db: feat: 综合分析邮件添加完整信息参考，包含大模型建议和ML预测结果
+- commit b7f74fa: chore: 添加综合分析生成的数据文件
+- commit e4f7bce: feat: 美化综合分析邮件样式，添加HTML格式支持
 - commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
 - commit f809898: perf(ml): 分周期优化模型正则化参数
 - commit 60cd56c: feat(ml): 添加长期趋势特征优化一个月模型
@@ -1641,6 +1658,10 @@ Made with ❤️ by [wonglaitung](https://github.com/wonglaitung)
 ## 🎉 最近更新
 
 ### 2026-02-15
+- **邮件信息参考章节**：在综合分析邮件中添加完整信息参考章节，包含大模型短期建议、大模型中期建议、LightGBM模型预测、GBDT+LR模型预测
+- **硬编码路径修复**：修复comprehensive_analysis.py、send_alert.sh、update_data.sh中的硬编码路径问题，使用相对路径替代绝对路径
+- **编码规范更新**：在IFLOW.md和README.md中添加"避免硬编码路径"编码规范，遵循十二要素应用原则
+- **文档更新**：更新IFLOW.md编码规范部分，添加相对路径构建示例
 - **综合分析系统**：新增综合分析脚本（comprehensive_analysis.py），整合大模型建议和ML预测结果生成实质买卖建议
 - **大模型建议保存**：自动保存短期和中期大模型建议到 `data/llm_recommendations_YYYY-MM-DD.txt`
 - **ML预测结果保存**：自动保存20天预测结果到 `data/ml_predictions_20d_YYYY-MM-DD.txt`

@@ -43,6 +43,11 @@
 4. **避免内联重复逻辑** - 严禁复制粘贴相同或相似的代码
 5. **需求分析优先** - 深入理解用户需求，不要急于编码
 6. **整体设计思维** - 考虑改动对整个系统的影响
+7. **避免硬编码路径** - 使用相对路径基于脚本目录构建路径
+   - **十二要素应用原则**：配置应该外化，不应硬编码
+   - **跨环境兼容性**：代码应能在不同环境中运行，不依赖特定路径
+   - **使用相对路径**：基于脚本所在目录构建路径，而非绝对路径
+   - **正确做法**：`script_dir = os.path.dirname(os.path.abspath(__file__)); data_dir = os.path.join(script_dir, 'data')`
 
 ## 目录概览
 
@@ -208,6 +213,7 @@ lightgbm, scikit-learn
    - 持有/观望
    - 卖出信号（如有）
    - 风险控制建议
+8. 发送邮件通知，包含完整信息参考章节
 
 **运行方式**：
 ```bash
@@ -219,12 +225,27 @@ python3 hsi_email.py --force --no-email
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both
 python3 comprehensive_analysis.py
+python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 
 **输出文件**：
 - `data/llm_recommendations_YYYY-MM-DD.txt`：大模型建议（短期和中期）
 - `data/ml_predictions_20d_YYYY-MM-DD.txt`：ML 20天预测结果
 - `data/comprehensive_recommendations_YYYY-MM-DD.txt`：综合买卖建议
+
+**邮件内容**：
+- **第一部分：综合买卖建议**
+  - 强烈买入信号
+  - 买入信号
+  - 持有/观望
+  - 卖出信号
+  - 风险控制建议
+- **第二部分：信息参考**
+  - 大模型短期买卖建议（日内/数天）
+  - 大模型中期买卖建议（数周-数月）
+  - 机器学习预测结果（20天）
+    - LightGBM模型
+    - GBDT+LR模型
 
 **自动化调度**：
 - GitHub Actions 工作流：`ml-prediction-alert.yml`
@@ -687,6 +708,16 @@ python comprehensive_analysis.py
    - **常见误区**：错误认为prediction=0时probability代表下跌概率，这会导致判断标准错误
 
 ## 提交记录
+- commit e5f1423: feat: 邮件中添加完整信息参考章节
+- commit ffcd794: fix: 修复硬编码路径问题，使用相对路径替代绝对路径
+- commit 8143a36: refactor: 采用方案A（短期触发+中期确认）并优化提示词，使用正则表达式替代脆弱字符串匹配
+- commit 2644341: fix: 修正LR算法判断标准并关闭思考模式，删除邮件信息参考章节
+- commit 0239abb: refactor: 优化综合分析提示词，建立量化判断标准和明确信息源优先级
+- commit 0e84c3b: feat: 综合分析分离短期/中期建议和LightGBM/GBDT+LR预测，提升大模型决策透明度
+- commit 81eed22: refactor: 使用Markdown库替代正则表达式生成HTML邮件，提升格式兼容性
+- commit ce691db: feat: 综合分析邮件添加完整信息参考，包含大模型建议和ML预测结果
+- commit b7f74fa: chore: 添加综合分析生成的数据文件
+- commit e4f7bce: feat: 美化综合分析邮件样式，添加HTML格式支持
 - commit cdb9218: chore: 更新综合分析生成的数据文件
 - commit f56e5f5: docs: 更新IFLOW.md，添加综合分析系统功能说明
 - commit e4e08c9: feat: 添加--no-email参数到hsi_email.py，并在综合分析脚本中使用
