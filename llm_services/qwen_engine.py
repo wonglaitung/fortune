@@ -59,7 +59,7 @@ def embed_with_llm(query):
             'input': query
         }
         
-        response = requests.post(embedding_url, headers=headers, json=payload)
+        response = requests.post(embedding_url, headers=headers, json=payload, timeout=300)
         log_message(f"[DEBUG] embed_with_llm response status: {response.status_code}")  # 调试日志
         log_message(f"[DEBUG] embed_with_llm response headers: {response.headers}")  # 调试日志
         log_message(f"[DEBUG] embed_with_llm response text: {response.text}")  # 打印完整的输出
@@ -131,14 +131,25 @@ def chat_with_llm(query, enable_thinking=True):
         log_message(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm payload: {payload}")  # 打印完整的输入
         
-        response = requests.post(chat_url, headers=headers, json=payload)
+        response = requests.post(chat_url, headers=headers, json=payload, timeout=300)
         log_message(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm response text: {response.text}")  # 打印完整的输出
         
         response.raise_for_status()  # Raise an exception for bad status codes
         
-        result = response.json()['choices'][0]['message']['content']  # Return the response text
+        response_data = response.json()
+        message = response_data['choices'][0]['message']
+        
+        # 如果 content 为空，尝试使用 reasoning_content 作为备用
+        content = message.get('content', '')
+        reasoning_content = message.get('reasoning_content', '')
+        
+        if not content and reasoning_content:
+            log_message(f"[WARN] chat_with_llm content is empty, using reasoning_content as fallback")
+            content = reasoning_content
+        
+        result = content  # Return the response text
         log_message(f"[DEBUG] chat_with_llm success, returning content: {repr(result)}")  # 打印完整的输出
         return result
     except requests.exceptions.HTTPError as http_err:

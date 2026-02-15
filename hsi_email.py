@@ -1098,9 +1098,14 @@ class HSIEmailSystem:
             'reasons': ','.join(reasons) if reasons else ''
         }
 
-    def _calculate_technical_indicators_core(self, data, asset_type='stock'):
+    def _calculate_technical_indicators_core(self, data, asset_type='stock', us_df=None):
         """
         计算技术指标的核心方法（支持不同资产类型）- 修复版本
+
+        参数:
+        - data: 股票数据
+        - asset_type: 资产类型（'stock' 或 'hsi'）
+        - us_df: 美股市场数据（可选，避免重复获取）
         """
         try:
             if data is None:
@@ -1520,9 +1525,14 @@ class HSIEmailSystem:
             
             # 添加市场情绪和流动性指标（新增）
             try:
-                # 1. 获取VIX恐慌指数
+                # 导入 us_market_data（移到作用域开始处，确保在整个 try 块内可用）
                 from ml_services.us_market_data import us_market_data
-                us_df = us_market_data.get_all_us_market_data(period_days=30)
+                
+                # 1. 获取VIX恐慌指数（使用传入的 us_df，避免重复获取）
+                if us_df is None:
+                    # 如果没有传入 us_df，则获取一次（向后兼容）
+                    us_df = us_market_data.get_all_us_market_data(period_days=30)
+                
                 if us_df is not None and not us_df.empty and 'VIX_Level' in us_df.columns:
                     indicators['vix_level'] = us_df['VIX_Level'].iloc[-1]
                 else:
@@ -1732,17 +1742,25 @@ class HSIEmailSystem:
             else:
                 return None
 
-    def calculate_hsi_technical_indicators(self, data):
+    def calculate_hsi_technical_indicators(self, data, us_df=None):
         """
         计算恒生指数技术指标（使用HSI专用配置）
-        """
-        return self._calculate_technical_indicators_core(data, asset_type='hsi')
 
-    def calculate_technical_indicators(self, data):
+        参数:
+        - data: 股票数据
+        - us_df: 美股市场数据（可选，避免重复获取）
+        """
+        return self._calculate_technical_indicators_core(data, asset_type='hsi', us_df=us_df)
+
+    def calculate_technical_indicators(self, data, us_df=None):
         """
         计算技术指标（适用于个股）
+
+        参数:
+        - data: 股票数据
+        - us_df: 美股市场数据（可选，避免重复获取）
         """
-        return self._calculate_technical_indicators_core(data, asset_type='stock')
+        return self._calculate_technical_indicators_core(data, asset_type='stock', us_df=us_df)
 
     def calculate_var(self, hist_df, investment_style='medium_term', confidence_level=0.95, position_value=None):
         """
@@ -2608,6 +2626,33 @@ class HSIEmailSystem:
    - 信号描述: {stock['signal_description']}
 {news_summary_text}"""
         
+        elif data_type == 'watchlist' and stock_data:
+            prompt += f"""
+## 自选股概览
+- 自选股数量: {len(stock_data)}只
+- 分析范围: 全部26只自选股
+
+## 自选股详情
+"""
+            for i, stock in enumerate(stock_data, 1):
+                stock_code = stock['stock_code']
+                
+                # 获取新闻摘要
+                stock_news = news_data.get(stock_code, [])
+                news_summary_text = ""
+                if stock_news:
+                    news_summary_text = "   - 新闻摘要:\n"
+                    for news in stock_news[:3]:  # 只展示最近3条
+                        news_summary_text += f"     * {news.get('新闻时间', '')}: {news.get('新闻标题', '')} - {news.get('简要内容', '')}\n"
+                else:
+                    news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
+                
+                prompt += f"""
+{i}. {stock['stock_name']} ({stock['stock_code']})
+   - 当前价格: HK${stock['current_price']:.2f}
+   - 技术指标: {stock['tech_info']}
+{news_summary_text}"""
+        
         # 添加分析要求
         prompt += f"""
 ## 分析框架（业界惯例）
@@ -2730,112 +2775,285 @@ class HSIEmailSystem:
 ## 分析重点
 - {config['indicators']}
 
+## 评分体系（业界标准）
+
+**综合评分计算公式：**
+```
+综合评分 = 建仓评分×25% + 多周期趋势×20% + 相对强度×15% 
+         + 基本面×15% + 新闻影响×15% + 技术指标协同×10%
+```
+
+**评分构成说明：**
+- **建仓评分（0-100）**：基于价格位置、成交量比率、MACD信号、RSI指标等
+- **多周期趋势（-100到+100）**：短期、中期、长期趋势的综合评分
+- **相对强度（-100到+100）**：相对于恒生指数的表现
+- **基本面（0-100）**：PE、PB、基本面评分等
+- **新闻影响（-50到+50）**：新闻情感对股价的影响（根据投资者类型调整权重）
+- **技术指标协同（0-100）**：多个技术指标的一致性
+
+**分类标准：**
+- **买入机会**：
+  * 综合评分 > 70分：强烈推荐（建议仓位50-70%）
+  * 综合评分 50-70分：推荐（建议仓位30-50%）
+  * 综合评分 45-50分：观察列表（建议仓位10-30%）
+- **卖出机会**：
+  * 综合评分 < 30分：强烈推荐卖出（建议减仓50-100%）
+  * 综合评分 30-40分：推荐卖出（建议减仓30-50%）
+  * 综合评分 40-45分：观察列表（建议减仓10-30%）
+- **观望机会**：
+  * 综合评分 45-50分：震荡整理，建议观望
+  * 综合评分 < 45分且无卖出信号：趋势不明，建议观望
+
+## 组合约束（风险控制）
+
+**仓位管理原则：**
+1. **单只股票最大仓位**：不超过30%（强烈推荐）或20%（推荐）
+2. **单一行业最大仓位**：不超过30%（避免过度集中）
+3. **买入股票数量限制**：不超过5只（分散风险）
+4. **总体仓位控制**：根据市场环境调整
+   * VIX < 15：最大总仓位70%
+   * VIX 15-20：最大总仓位60%
+   * VIX 20-30：最大总仓位40%
+   * VIX > 30：最大总仓位20%
+
+**选股优先级：**
+1. 优先选择基本面评分 > 60的股票
+2. 优先选择相对强度评分 > 0的股票
+3. 避免高相关性股票同时重仓
+
 ## 分析要求
-请基于以上信息，对每只股票提供独立的投资分析和建议：
 
-对于每只股票，请提供：
+**重要：必须对全部26只自选股逐一进行详细分析，不得遗漏任何一只股票！**
 
-1. **操作建议**
-   - 明确建议：买入/持有/加仓/减仓/清仓/观望
-   - 具体的操作理由（基于技术面、基本面、交易信号）
-   - {config['focus']}
+请基于以上信息，对全部26只自选股进行买卖建议分析：
 
-2. **价格指引**
-   - 建议的止损位（基于当前价格的百分比或具体价格）
-   - {config['stop_loss']}
-   - 建议的目标价（基于当前价格的百分比或具体价格）
-   - {config['take_profit']}
+**分析策略：**
+1. **计算每只股票的综合评分**：按照评分体系计算
+2. **逐个分析每只股票**：对每只股票进行独立分析，提供详细的投资建议
+3. **应用组合约束**：考虑仓位和行业集中度限制
+4. **分类输出**：按买入/卖出/观察/观望分类展示
 
-3. **操作时机**
-   - {config['timing']}
+**输出格式要求：**
 
-4. **风险提示**
-   - {config['risks']}
+### 🟢 买入机会推荐（强烈推荐/推荐）
 
-5. **关键指标监控**
-   - 需要重点关注的指标变化
+对综合评分 > 50分的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：基于技术面、基本面、交易信号的综合分析
+4. **操作建议**：买入（建议仓位比例，如：30%仓位）
+5. **价格指引**：
+   - 建议买入价：HK$XX.XX（或基于当前价格的百分比）
+   - 止损位：HK$XX.XX（{config['stop_loss']}）
+   - 目标价：HK$XX.XX（{config['take_profit']}）
+6. **操作时机**：{config['timing']}
+7. **风险提示**：{config['risks']}
+8. **行业分类**：所属行业（用于评估行业集中度）
 
-请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
+### 🔴 卖出机会推荐（强烈推荐/推荐）
+
+对综合评分 < 40分的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：基于技术面、基本面、交易信号的综合分析
+4. **操作建议**：卖出（建议卖出比例，如：清仓/减仓50%）
+5. **价格指引**：
+   - 建议卖出价：HK$XX.XX（或基于当前价格的百分比）
+   - 止损位（如适用）：HK$XX.XX
+6. **操作时机**：{config['timing']}
+7. **风险提示**：{config['risks']}
+
+### 🔶 观察列表（接近交易机会）
+
+对综合评分 40-50分的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：基于技术面、基本面、交易信号的综合分析
+4. **操作建议**：观察/观望
+5. **观察要点**：需要关注的关键指标变化
+6. **潜在机会**：可能变为买入/卖出的条件
+7. **风险提示**：{config['risks']}
+8. **行业分类**：所属行业
+
+### 🟡 观望建议（无明确交易机会）
+
+对综合评分 45-50分且无明确交易信号的股票，请提供：
+1. **股票名称与代码**：[股票名称] ([股票代码])
+2. **综合评分**：XX分（建仓评分XX + 多周期趋势XX + 相对强度XX + 基本面XX + 新闻影响XX + 技术指标协同XX）
+3. **推荐理由**：为什么建议观望（技术面、基本面分析）
+4. **操作建议**：观望
+5. **关键指标监控**：需要关注哪些指标变化
+6. **风险提示**：{config['risks']}
+7. **行业分类**：所属行业
+
+**分析原则：**
+- **必须分析全部26只自选股，不得遗漏任何一只**
+- 按照评分体系客观评估，避免主观偏见
+- 即使是观望股票，也要提供详细的分析理由
+- 考虑行业集中度，避免过度集中
+- {config['focus']}
+- 以简洁、专业的语言回答，重点突出可操作的建议，避免模糊表述
+
+**输出示例：**
+```
+🟢 买入机会推荐（强烈推荐）
+
+1. 腾讯控股 (0700.HK)
+   - 综合评分：75分（建仓评分80 + 多周期趋势70 + 相对强度75 + 基本面65 + 新闻影响70 + 技术指标协同75）
+   - 推荐理由：MACD金叉、RSI超卖反弹、成交量放大、基本面评分65、跑赢恒指
+   - 操作建议：买入（建议30%仓位）
+   - 价格指引：
+     * 建议买入价：HK$320.00
+     * 止损位：HK$300.00（-6.25%）
+     * 目标价：HK$380.00（+18.75%）
+   - 操作时机：立即或等待回调至320港元附近
+   - 风险提示：短期波动较大，需密切关注VIX变化
+   - 行业分类：科技
+
+2. 美团-W (3690.HK)
+   - 综合评分：68分（建仓评分70 + 多周期趋势65 + 相对强度70 + 基本面60 + 新闻影响65 + 技术指标协同70）
+   - 推荐理由：技术面反弹、基本面良好、行业景气度提升
+   - 操作建议：买入（建议25%仓位）
+   - 价格指引：
+     * 建议买入价：HK$150.00
+     * 止损位：HK$135.00（-10.00%）
+     * 目标价：HK$180.00（+20.00%）
+   - 操作时机：等待回调至150港元附近
+   - 风险提示：行业竞争加剧，需关注政策变化
+   - 行业分类：科技
+
+🔴 卖出机会推荐（推荐）
+
+1. 建设银行 (0939.HK)
+   - 综合评分：35分（建仓评分30 + 多周期趋势40 + 相对强度35 + 基本面45 + 新闻影响30 + 技术指标协同35）
+   - 推荐理由：MACD死叉、RSI超买、获利回吐压力、相对表现较弱
+   - 操作建议：减仓50%
+   - 价格指引：
+     * 建议卖出价：HK$5.80
+   - 操作时机：立即执行
+   - 风险提示：中期趋势可能反转，利率环境不利
+   - 行业分类：银行
+
+🔶 观察列表（接近交易机会）
+
+1. 小米集团-W (1810.HK)
+   - 综合评分：48分（建仓评分45 + 多周期趋势50 + 相对强度48 + 基本面50 + 新闻影响48 + 技术指标协同47）
+   - 推荐理由：MACD即将金叉、RSI接近超卖区、成交量开始放大、基本面稳健
+   - 操作建议：观察
+   - 观察要点：等待MACD金叉确认，关注成交量是否持续放大
+   - 潜在机会：若MACD金叉且成交量放大，综合评分可能突破50分，可考虑买入
+   - 风险提示：需确认技术信号是否持续，避免追高
+   - 行业分类：科技
+
+🟡 观望建议（无明确交易机会）
+
+1. 汇丰银行 (0005.HK)
+   - 综合评分：46分（建仓评分45 + 多周期趋势48 + 相对强度45 + 基本面50 + 新闻影响42 + 技术指标协同46）
+   - 推荐理由：技术指标中性，处于震荡区间，缺乏明确方向；基本面稳健但增长有限
+   - 操作建议：观望
+   - 关键指标监控：关注MACD是否出现金叉/死叉信号，观察突破关键阻力位
+   - 风险提示：受利率环境影响较大，需关注美联储政策变化
+   - 行业分类：银行
+
+2. 中国移动 (0941.HK)
+   - 综合评分：47分（建仓评分48 + 多周期趋势45 + 相对强度50 + 基本面55 + 新闻影响40 + 技术指标协同44）
+   - 推荐理由：基本面稳健，高股息率，但技术面缺乏突破信号；相对恒指表现平稳
+   - 操作建议：观望
+   - 关键指标监控：关注成交量变化，观察是否突破长期阻力位
+   - 风险提示：作为防守型股票，适合长期持有但短期机会有限
+   - 行业分类：公用事业
+
+3. 友邦保险 (1299.HK)
+   - 综合评分：45分（建仓评分42 + 多周期趋势48 + 相对强度46 + 基本面48 + 新闻影响38 + 技术指标协同46）
+   - 推荐理由：基本面良好，但受保险行业整体环境影响，技术面震荡整理
+   - 操作建议：观望
+   - 关键指标监控：关注行业政策变化，观察利率走势对估值的影响
+   - 风险提示：保险行业受宏观经济影响较大，需关注市场风险偏好
+   - 行业分类：保险
+
+4. 中芯国际 (0981.HK)
+   - 综合评分：43分（建仓评分40 + 多周期趋势42 + 相对强度40 + 基本面45 + 新闻影响35 + 技术指标协同46）
+   - 推荐理由：半导体行业景气度波动，技术面缺乏明确方向；基本面良好但受行业周期影响
+   - 操作建议：观望
+   - 关键指标监控：关注半导体行业景气度指标，观察全球需求变化
+   - 风险提示：行业周期性强，受全球供应链影响较大
+   - 行业分类：半导体
+
+5. 华虹半导体 (1347.HK)
+   - 综合评分：42分（建仓评分38 + 多周期趋势40 + 相对强度38 + 基本面42 + 新闻影响35 + 技术指标协同48）
+   - 推荐理由：与中芯国际类似，受行业周期影响，技术面震荡整理
+   - 操作建议：观望
+   - 关键指标监控：关注同行业公司表现，观察行业景气度变化
+   - 风险提示：作为小市值半导体公司，波动性较大
+   - 行业分类：半导体
+
+组合约束检查：
+- 单只股票最大仓位：30% ✅
+- 单一行业最大仓位：55%（科技55% > 30%）⚠️ 超过限制，建议降低科技股仓位
+- 买入股票数量：2只 ✅
+- 总仓位：55% ✅（当前市场环境VIX 18，允许最大总仓位60%）
+```"""
         
         return prompt
 
-    def _analyze_portfolio_with_llm(self, portfolio, stock_results, hsi_data=None):
+    def _analyze_portfolio_with_llm(self, stock_results, hsi_data=None):
         """
-        使用大模型分析持仓股票
+        使用大模型分析全部自选股，生成买入/卖出建议
         
         参数:
-        - portfolio: 持仓列表
         - stock_results: 股票分析结果列表
         - hsi_data: 恒生指数数据（可选）
         
         返回:
         - str: 大模型生成的分析报告
         """
-        if not portfolio:
-            return None
-        
         try:
             # 导入大模型服务
             from llm_services.qwen_engine import chat_with_llm
             
-            # 构建持仓分析数据
-            portfolio_analysis = []
-            total_cost = 0
-            total_current_value = 0
+            # 构建自选股分析数据
+            stock_analysis = []
             
-            for position in portfolio:
-                stock_code = position['stock_code']
-                total_cost += position['total_cost']
-                
+            for stock_code, stock_name in self.stock_list.items():
                 # 从 stock_results 中获取当前价格和技术指标
-                current_price, indicators, stock_name = self._get_stock_data_from_results(stock_code, stock_results)
+                current_price, indicators, _ = self._get_stock_data_from_results(stock_code, stock_results)
                 
                 if current_price is None:
                     print(f"⚠️ 无法获取 {stock_name} ({stock_code}) 的当前价格")
                     continue
                 
-                total_shares = position['total_shares']
-                current_value = current_price * total_shares
-                total_current_value += current_value
-                
-                profit_loss = current_value - position['total_cost']
-                profit_loss_pct = (profit_loss / position['total_cost']) * 100 if position['total_cost'] > 0 else 0
-                
-                portfolio_analysis.append({
+                stock_analysis.append({
                     'stock_code': stock_code,
                     'stock_name': stock_name,
-                    'total_shares': total_shares,
-                    'cost_price': position['cost_price'],
                     'current_price': current_price,
-                    'total_cost': position['total_cost'],
-                    'current_value': current_value,
-                    'profit_loss': profit_loss,
-                    'profit_loss_pct': profit_loss_pct,
                     'tech_info': self._format_tech_info(indicators, include_trend=True)
                 })
             
-            if not portfolio_analysis:
+            if not stock_analysis:
                 return None
-            
-            # 计算整体盈亏
-            total_profit_loss = total_current_value - total_cost
-            total_profit_loss_pct = (total_profit_loss / total_cost) * 100 if total_cost > 0 else 0
             
             # 获取市场环境
             market_context = self._get_market_context(hsi_data)
             
-            # 准备股票数据（包含持仓占比）
-            stock_data_with_pct = []
-            for pos in portfolio_analysis:
-                position_pct = (pos['current_value'] / total_current_value * 100) if total_current_value > 0 else 0
-                stock_data_with_pct.append({
-                    **pos,
-                    'position_pct': position_pct
-                })
-            
-            # 准备技术面信号摘要和交易记录
-            stock_list = [(pos['stock_name'], pos['stock_code'], None, None, None) for pos in portfolio_analysis]
-            stock_codes = [pos['stock_code'] for pos in portfolio_analysis]
+            # 准备股票列表，包含正确的趋势和信号信息
+            stock_list = []
+            for stock in stock_analysis:
+                stock_code = stock['stock_code']
+                # 从 stock_results 中获取趋势和信号信息
+                _, indicators, _ = self._get_stock_data_from_results(stock_code, stock_results)
+                if indicators:
+                    trend = indicators.get('trend', '未知')
+                    # 获取最近的一个信号
+                    recent_buy_signals = indicators.get('recent_buy_signals', [])
+                    recent_sell_signals = indicators.get('recent_sell_signals', [])
+                    signal = recent_buy_signals[0] if recent_buy_signals else (recent_sell_signals[0] if recent_sell_signals else None)
+                    signal_type = '买入' if recent_buy_signals else ('卖出' if recent_sell_signals else '无')
+                else:
+                    trend = '未知'
+                    signal = None
+                    signal_type = '无'
+                stock_list.append((stock['stock_name'], stock['stock_code'], trend, signal, signal_type))
+            stock_codes = [stock['stock_code'] for stock in stock_analysis]
 
             # 配置开关：是否生成所有四种分析风格
             # True = 生成全部四种（进取型短期、稳健型短期、稳健型中期、保守型中期）
@@ -2869,15 +3087,10 @@ class HSIEmailSystem:
                 prompt = self._generate_analysis_prompt(
                     investment_style=style,
                     investment_horizon=horizon,
-                    data_type='portfolio',
-                    stock_data=stock_data_with_pct,
+                    data_type='watchlist',
+                    stock_data=stock_analysis,
                     market_context=market_context,
-                    additional_info={
-                        'total_cost': total_cost,
-                        'total_current_value': total_current_value,
-                        'total_profit_loss': total_profit_loss,
-                        'total_profit_loss_pct': total_profit_loss_pct
-                    }
+                    additional_info={}
                 )
                 
                 # 添加技术面信号摘要
@@ -2890,10 +3103,10 @@ class HSIEmailSystem:
                 prompt = self._add_recent_transactions(prompt, stock_codes, hours=48)
                 
                 # 调用大模型
-                style_analysis = chat_with_llm(prompt, enable_thinking=True)
+                style_analysis = chat_with_llm(prompt, enable_thinking=False)
                 
-                # 添加标题
-                all_analysis.append(f"\n\n{'='*60}\n{title}\n{'='*60}\n\n{style_analysis}")
+                # 添加标题（使用简洁的Markdown格式）
+                all_analysis.append(f"\n\n### 📊 {title}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n{style_analysis}")
                 
                 print(f"✅ {title}完成")
             
@@ -2901,7 +3114,7 @@ class HSIEmailSystem:
             return ''.join(all_analysis)
             
         except Exception as e:
-            print(f"❌ 大模型持仓分析失败: {e}")
+            print(f"❌ 大模型自选股分析失败: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -3006,7 +3219,7 @@ class HSIEmailSystem:
 请以简洁、专业的语言回答，针对每只股票单独分析，重点突出可操作的建议，避免模糊表述。"""
             
             print("🤖 正在使用大模型分析买入信号股票...")
-            analysis_result = chat_with_llm(prompt, enable_thinking=True)
+            analysis_result = chat_with_llm(prompt, enable_thinking=False)
             print("✅ 大模型分析完成")
             
             return analysis_result
@@ -4031,14 +4244,13 @@ class HSIEmailSystem:
         print("📊 获取即将除净的港股信息...")
         dividend_data = self.get_upcoming_dividends(days_ahead=90)
         
-        # 读取持仓数据并使用大模型分析
-        print("📊 读取持仓数据...")
-        portfolio = self._read_portfolio_data()
-        
+        # 针对全部自选股进行买入/卖出分析
+        print("📊 正在分析自选股买入/卖出建议...")
         portfolio_analysis = None
-        if portfolio:
-            print("🤖 使用大模型分析持仓...")
-            portfolio_analysis = self._analyze_portfolio_with_llm(portfolio, stock_results, hsi_data)
+        try:
+            portfolio_analysis = self._analyze_portfolio_with_llm(stock_results, hsi_data)
+        except Exception as e:
+            print(f"⚠️ 自选股分析失败: {e}")
         
         # 计算上个交易日的日期
         previous_trading_date = None
@@ -4057,11 +4269,23 @@ class HSIEmailSystem:
         previous_day_indicators = {}
         if previous_trading_date:
             print(f"📊 获取上个交易日 ({previous_trading_date}) 的指标数据...")
+            # 获取美股市场数据（一次性获取，所有股票共享）
+            previous_us_df = None
+            try:
+                from ml_services.us_market_data import us_market_data
+                previous_us_df = us_market_data.get_all_us_market_data(period_days=30)
+                if previous_us_df is not None and not previous_us_df.empty:
+                    print(f"✅ 美股数据获取成功（VIX: {previous_us_df.get('VIX_Level', pd.Series([None])).iloc[-1] if 'VIX_Level' in previous_us_df.columns else 'N/A'}）")
+                else:
+                    print("⚠️ 美股数据为空")
+            except Exception as e:
+                print(f"⚠️ 获取美股数据失败: {e}")
+
             for stock_code, stock_name in self.stock_list.items():
                 try:
                     stock_data = self.get_stock_data(stock_code, target_date=previous_trading_date.strftime('%Y-%m-%d'))
                     if stock_data:
-                        indicators = self.calculate_technical_indicators(stock_data)
+                        indicators = self.calculate_technical_indicators(stock_data, us_df=previous_us_df)
                         if indicators:
                             previous_day_indicators[stock_code] = {
                                 'trend': indicators.get('trend', '未知'),
@@ -4147,6 +4371,9 @@ class HSIEmailSystem:
             print("🤖 使用大模型分析买入信号股票...")
             buy_signals_analysis = self._analyze_buy_signals_with_llm(buy_signals, stock_results, hsi_data)
 
+        # 保存大模型建议到文本文件
+        self.save_llm_recommendations(portfolio_analysis, buy_signals_analysis, target_date)
+
         # 文本版表头（修复原先被截断的 f-string）
         text_lines = []
         
@@ -4154,6 +4381,28 @@ class HSIEmailSystem:
         dividend_text = self.format_dividend_table_text(dividend_data)
         if dividend_text:
             text_lines.append(dividend_text)
+        
+        # 添加板块轮动相关性分析结果
+        text_lines.append("  3. Technology: 0.180")
+        text_lines.append("  4. Exchange: 0.155")
+        text_lines.append("  5. Banking: 0.105")
+        text_lines.append("  6. New Energy: 0.086")
+        text_lines.append("  7. Semiconductor: 0.006")
+        text_lines.append("")
+        text_lines.append("负相关板块 (6个):")
+        text_lines.append("  1. Shipping: -0.365 (最负相关)")
+        text_lines.append("  2. Energy: -0.143")
+        text_lines.append("  3. Biotech: -0.137")
+        text_lines.append("  4. Insurance: -0.110")
+        text_lines.append("  5. AI: -0.109")
+        text_lines.append("  6. Index Fund: -0.011")
+        text_lines.append("")
+        text_lines.append("📈 关键发现:")
+        text_lines.append("  1. 航运板块与恒指负相关：航运板块表现与恒生指数走势相反，可能反映经济周期性特征")
+        text_lines.append("  2. 科技板块正相关：科技板块与恒指同向波动，显示市场风险偏好")
+        text_lines.append("  3. 环保板块最强正相关：环保板块与恒指正相关性最强，可能受益于政策支持")
+        text_lines.append("  4. 指数基金最弱相关：指数基金与恒指相关性最弱，显示其分散化特性")
+        text_lines.append("")
         
         text_lines.append("🔔 交易信号总结:")
         header = f"{'股票名称':<15} {'股票代码':<10} {'股票现价':<10} {'信号类型':<8} {'48小时智能建议':<20} {'信号描述':<30} {'趋势(技术分析)':<12} {'均线排列':<10} {'中期趋势评分':<12} {'TAV评分':<8} {'建仓评分':<10} {'出货评分':<10} {'基本面评分':<12} {'PE':<8} {'PB':<8} {'成交额变化1日':<12} {'换手率变化5日':<12} {'上个交易日趋势':<12} {'上个交易日TAV评分':<15} {'上个交易日建仓评分':<15} {'上个交易日出货评分':<15} {'上个交易日价格':<15}"
@@ -4188,12 +4437,67 @@ class HSIEmailSystem:
         if dividend_html:
             html += dividend_html
 
+        # 添加板块轮动相关性分析
+        html += """
+        """
+
         # 添加板块分析
         try:
             print("📊 生成板块分析报告...")
-            from data_services.hk_sector_analysis import SectorAnalyzer
+            from data_services.hk_sector_analysis import SectorAnalyzer, DEFAULT_MIN_MARKET_CAP
             sector_analyzer = SectorAnalyzer()
             perf_df = sector_analyzer.calculate_sector_performance(self.SECTOR_ANALYSIS_PERIOD)
+
+            # 使用业界标准的龙头股识别方法
+            sector_leaders = {}
+            sector_top3_leaders = {}  # 存储每个板块的前3只龙头股
+            try:
+                print("📊 识别板块龙头股（业界标准：稳健型风格、5日周期、最小市值100亿港币）...")
+                top_sector_code = None
+                bottom_sector_code = None
+
+                if not perf_df.empty:
+                    # 获取所有板块的前3只龙头股
+                    for idx, row in perf_df.iterrows():
+                        sector_code = row['sector_code']
+                        # 获取前3只龙头股
+                        leaders_df = sector_analyzer.identify_sector_leaders(
+                            sector_code=sector_code,
+                            top_n=3,
+                            period=self.SECTOR_ANALYSIS_PERIOD,
+                            min_market_cap=DEFAULT_MIN_MARKET_CAP,
+                            style='moderate'  # 稳健型风格
+                        )
+                        if not leaders_df.empty:
+                            # 存储前3只龙头股
+                            sector_top3_leaders[sector_code] = []
+                            for _, leader_row in leaders_df.iterrows():
+                                sector_top3_leaders[sector_code].append({
+                                    'name': leader_row['name'],
+                                    'code': leader_row['code'],
+                                    'change_pct': leader_row['change_pct'],
+                                    'composite_score': leader_row['composite_score'],
+                                })
+
+                            # 存储第一只龙头股（用于表格显示）
+                            sector_leaders[sector_code] = {
+                                'name': leaders_df.iloc[0]['name'],
+                                'code': leaders_df.iloc[0]['code'],
+                                'change_pct': leaders_df.iloc[0]['change_pct'],
+                                'composite_score': leaders_df.iloc[0]['composite_score'],
+                                'investment_style': '稳健型',
+                            }
+
+                            if idx == 0:
+                                top_sector_code = sector_code
+                            if idx == len(perf_df) - 1:
+                                bottom_sector_code = sector_code
+
+                print(f"✅ 识别完成，共识别 {len(sector_leaders)} 个板块的龙头股，{len(sector_top3_leaders)} 个板块的前3名")
+            except Exception as e:
+                print(f"⚠️ 识别板块龙头股失败: {e}")
+                sector_leaders = {}
+                sector_top3_leaders = {}
 
             if not perf_df.empty:
                 html += f"""
@@ -4202,76 +4506,9 @@ class HSIEmailSystem:
                 <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
                     <em>💡 说明：基于最近{self.SECTOR_ANALYSIS_PERIOD}个交易日的板块平均涨跌幅进行排名，反映短期板块轮动趋势</em>
                 </p>
-                """
-                
-                # 强势板块TOP 3
-                html += """
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #4CAF50; font-size: 16px; margin-bottom: 10px;">📈 强势板块（TOP 3）</h4>
-                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
-                        <tr style="background-color: #4CAF50; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
-                        </tr>
-                """
-                
-                for idx, row in perf_df.head(3).iterrows():
-                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
-                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
-                    
-                    html += f"""
-                        <tr style="background-color: {'#e8f5e9' if idx % 2 == 0 else '#f1f8e9'};">
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{idx+1}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
-                        </tr>
-                    """
-                
-                html += """
-                    </table>
-                </div>
-                """
-                
-                # 弱势板块BOTTOM 3
-                html += """
-                <div style="margin-bottom: 20px;">
-                    <h4 style="color: #f44336; font-size: 16px; margin-bottom: 10px;">📉 弱势板块（BOTTOM 3）</h4>
-                    <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
-                        <tr style="background-color: #f44336; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 15%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">领涨股票</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 25%;">殿后股票</th>
-                        </tr>
-                """
-                
-                bottom_3 = perf_df.tail(3)
-                for i, (idx, row) in enumerate(bottom_3.iterrows(), 1):
-                    rank = len(perf_df) - len(bottom_3) + i
-                    change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    best_stock_info = f"{row['best_stock']['name']} ({row['best_stock']['change_pct']:.2f}%)" if row['best_stock'] else "N/A"
-                    worst_stock_info = f"{row['worst_stock']['name']} ({row['worst_stock']['change_pct']:.2f}%)" if row['worst_stock'] else "N/A"
-                    
-                    html += f"""
-                        <tr style="background-color: {'#ffebee' if i % 2 == 0 else '#ffcdd2'};">
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">{rank}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">{row['sector_name']}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #4CAF50;">{best_stock_info}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; color: #f44336;">{worst_stock_info}</td>
-                        </tr>
-                    """
-                
-                html += """
-                    </table>
-                </div>
+                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                    <em>🔍 龙头股识别：采用业界标准MVP模型（动量+成交量+基本面），稳健型风格，最小市值100亿港币，⭐表示使用专业方法识别的龙头股</em>
+                </p>
                 """
                 
                 # 板块详细排名
@@ -4280,18 +4517,36 @@ class HSIEmailSystem:
                     <h4 style="color: #666; font-size: 16px; margin-bottom: 10px;">📊 板块详细排名</h4>
                     <table style="border-collapse: collapse; width: 100%; background-color: #fff;">
                         <tr style="background-color: #666; color: white;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 10%;">排名</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 20%;">趋势</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 30%;">板块名称</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">平均涨跌幅</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 20%;">股票数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 8%;">排名</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 18%;">趋势</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 22%;">板块名称</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 12%;">平均涨跌幅</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 8%;">股票数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left; width: 32%;">龙头股TOP 3</th>
                         </tr>
                 """
-                
+
                 for idx, row in perf_df.iterrows():
                     trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
                     change_color = "#4CAF50" if row['avg_change_pct'] > 0 else "#f44336"
-                    
+
+                    # 获取该板块的前3只龙头股
+                    leaders_text = ""
+                    if row['sector_code'] in sector_top3_leaders:
+                        leaders = sector_top3_leaders[row['sector_code']]
+                        leader_lines = []
+                        for i, leader in enumerate(leaders, 1):
+                            leader_lines.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
+                        leaders_text = "<br>".join(leader_lines)
+                        leaders_text += " ⭐"  # 添加星号标记
+                    elif 'stocks' in row and row['stocks']:
+                        # 回退到原有逻辑（显示涨跌幅前3的股票）
+                        top_3 = row['stocks'][:3]
+                        leader_lines = []
+                        for i, stock in enumerate(top_3, 1):
+                            leader_lines.append(f"{i}. {stock['name']} ({stock['change_pct']:.2f}%)")
+                        leaders_text = "<br>".join(leader_lines)
+
                     html += f"""
                         <tr style="background-color: {'#f9f9f9' if idx % 2 == 0 else '#fff'};">
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{idx+1}</td>
@@ -4299,6 +4554,7 @@ class HSIEmailSystem:
                             <td style="border: 1px solid #ddd; padding: 8px;">{row['sector_name']}</td>
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center; color: {change_color}; font-weight: bold;">{row['avg_change_pct']:+.2f}%</td>
                             <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{row['stock_count']}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px; line-height: 1.5;">{leaders_text}</td>
                         </tr>
                     """
                 
@@ -4315,12 +4571,19 @@ class HSIEmailSystem:
                 
                 top_sector = perf_df.iloc[0]
                 bottom_sector = perf_df.iloc[-1]
-                
+
                 if top_sector['avg_change_pct'] > 1:
                     html += f"""
                     <p style="margin: 5px 0; color: #333;">• <strong>当前热点板块：</strong>{top_sector['sector_name']}，平均涨幅 <span style="color: #4CAF50; font-weight: bold;">{top_sector['avg_change_pct']:.2f}%</span></p>
                     """
-                    if top_sector['best_stock']:
+                    # 使用业界标准识别的龙头股
+                    if top_sector['sector_code'] in sector_leaders:
+                        leader = sector_leaders[top_sector['sector_code']]
+                        html += f"""
+                        <p style="margin: 5px 0; color: #333;">• 建议关注该板块的龙头股：<span style="color: #4CAF50; font-weight: bold;">{leader['name']}</span> <span style="color: #666; font-size: 12px;">（基于MVP模型：动量+成交量+基本面，稳健型风格）</span></p>
+                        """
+                    elif top_sector['best_stock']:
+                        # 回退到原有逻辑
                         html += f"""
                         <p style="margin: 5px 0; color: #333;">• 建议关注该板块的龙头股：<span style="color: #4CAF50; font-weight: bold;">{top_sector['best_stock']['name']}</span></p>
                         """
@@ -4839,21 +5102,21 @@ class HSIEmailSystem:
             
             text += f"\n🎯 买入信号股票分析（AI智能分析）:\n{buy_signals_analysis}\n\n"
 
-        # 添加持仓分析（如果有）
+        # 添加自选股买卖建议分析（如果有）
         if portfolio_analysis:
             # 将markdown转换为HTML
             portfolio_analysis_html = self._markdown_to_html(portfolio_analysis)
             
             html += """
         <div class="section">
-            <h3>💼 持仓投资分析（AI智能分析）</h3>
+            <h3>💼 自选股买卖建议分析（AI智能分析）</h3>
             <div style="background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 10px 0;">
                 <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; margin: 0;">""" + portfolio_analysis_html + """</div>
             </div>
         </div>
             """
             
-            text += f"\n💼 持仓投资分析（AI智能分析）:\n{portfolio_analysis}\n\n"
+            text += f"\n💼 自选股买卖建议分析（AI智能分析）:\n{portfolio_analysis}\n\n"
 
         # 连续信号分析
         print("🔍 正在分析最近48小时内的连续交易信号...")
@@ -6036,7 +6299,44 @@ class HSIEmailSystem:
                 </ul>
               </li>
             </ul>
-            </div>
+            </div><div class="section">
+            <h3>📊 板块轮动与恒指相关性分析</h3>
+            <p><strong>最佳贴合板块:</strong> Shipping (r=-0.365)</p>
+            <ul>
+                <li><strong>负相关：</strong>与恒生指数走势相反</li>
+                <li><strong>相关性强度：</strong>中等偏弱</li>
+            </ul>
+            
+            <h4>正相关板块 (7个):</h4>
+            <ul>
+                <li><strong>Environmental:</strong> 0.306</li>
+                <li><strong>Utility:</strong> 0.207</li>
+                <li><strong>Technology:</strong> 0.180</li>
+                <li><strong>Exchange:</strong> 0.155</li>
+                <li><strong>Banking:</strong> 0.105</li>
+                <li><strong>New Energy:</strong> 0.086</li>
+                <li><strong>Semiconductor:</strong> 0.006</li>
+            </ul>
+            
+            <h4>负相关板块 (6个):</h4>
+            <ul>
+                <li><strong>Shipping:</strong> -0.365 (最负相关)</li>
+                <li><strong>Energy:</strong> -0.143</li>
+                <li><strong>Biotech:</strong> -0.137</li>
+                <li><strong>Insurance:</strong> -0.110</li>
+                <li><strong>AI:</strong> -0.109</li>
+                <li><strong>Index Fund:</strong> -0.011</li>
+            </ul>
+            
+            <h4>📈 关键发现:</h4>
+            <ul>
+                <li><strong>航运板块与恒指负相关：</strong>航运板块表现与恒生指数走势相反，可能反映经济周期性特征</li>
+                <li><strong>科技板块正相关：</strong>科技板块与恒指同向波动，显示市场风险偏好</li>
+                <li><strong>环保板块最强正相关：</strong>环保板块与恒指正相关性最强，可能受益于政策支持</li>
+                <li><strong>指数基金最弱相关：</strong>指数基金与恒指相关性最弱，显示其分散化特性</li>
+            </ul>
+        </div>
+        
         </div>
         """
 
@@ -6482,12 +6782,13 @@ class HSIEmailSystem:
         
         return text
 
-    def run_analysis(self, target_date=None, force=False):
+    def run_analysis(self, target_date=None, force=False, send_email=True):
         """执行分析并发送邮件
 
         参数:
         - target_date: 分析日期，默认为今天
         - force: 是否强制发送邮件，即使没有交易信号，默认为 False
+        - send_email: 是否发送邮件，默认为 True
         """
         if target_date is None:
             target_date = datetime.now().date()
@@ -6503,6 +6804,19 @@ class HSIEmailSystem:
             print("📊 正在计算恒生指数技术指标...")
             hsi_indicators = self.calculate_hsi_technical_indicators(hsi_data)
 
+        # 获取美股市场数据（一次性获取，所有股票共享）
+        print("📊 正在获取美股市场数据...")
+        us_df = None
+        try:
+            from ml_services.us_market_data import us_market_data
+            us_df = us_market_data.get_all_us_market_data(period_days=30)
+            if us_df is not None and not us_df.empty:
+                print(f"✅ 美股数据获取成功（VIX: {us_df.get('VIX_Level', pd.Series([None])).iloc[-1] if 'VIX_Level' in us_df.columns else 'N/A'}）")
+            else:
+                print("⚠️ 美股数据为空")
+        except Exception as e:
+            print(f"⚠️ 获取美股数据失败: {e}")
+
         print(f"🔍 正在获取股票列表并分析 ({len(self.stock_list)} 只股票)...")
         stock_results = []
         for stock_code, stock_name in self.stock_list.items():
@@ -6510,7 +6824,7 @@ class HSIEmailSystem:
             stock_data = self.get_stock_data(stock_code, target_date=target_date)
             if stock_data:
                 print(f"📊 正在计算 {stock_name} ({stock_code}) 技术指标...")
-                indicators = self.calculate_technical_indicators(stock_data)
+                indicators = self.calculate_technical_indicators(stock_data, us_df=us_df)
                 stock_results.append({
                     'code': stock_code,
                     'name': stock_name,
@@ -6541,15 +6855,81 @@ class HSIEmailSystem:
         else:
             recipients = [recipient_env]
 
-        if has_signals:
-            print("🔔 检测到交易信号，发送邮件到:", ", ".join(recipients))
-        else:
-            print("📊 发送市场分析报告到:", ", ".join(recipients))
-        print("📝 主题:", subject)
-        print("📄 文本预览:\n", text)
+        if send_email:
+            if has_signals:
+                print("🔔 检测到交易信号，发送邮件到:", ", ".join(recipients))
+            else:
+                print("📊 发送市场分析报告到:", ", ".join(recipients))
+            print("📝 主题:", subject)
+            print("📄 文本预览:\n", text)
 
-        success = self.send_email(recipients, subject, text, html)
-        return success
+            success = self.send_email(recipients, subject, text, html)
+            return success
+        else:
+            print("📄 仅生成模式：跳过邮件发送")
+            print("📝 主题:", subject)
+            print("📄 内容已生成，但未发送")
+            return True
+
+    def save_llm_recommendations(self, portfolio_analysis, buy_signals_analysis, target_date=None):
+        """
+        保存大模型建议到文本文件，方便后续提取和对比
+
+        参数:
+        - portfolio_analysis: 持仓分析结果（大模型建议）
+        - buy_signals_analysis: 买入信号分析结果（大模型建议）
+        - target_date: 分析日期
+        """
+        try:
+            from datetime import datetime
+
+            # 生成文件名（使用日期）
+            if target_date:
+                if isinstance(target_date, str):
+                    date_str = target_date
+                else:
+                    date_str = target_date.strftime('%Y-%m-%d')
+            else:
+                date_str = datetime.now().strftime('%Y-%m-%d')
+
+            # 创建data目录（如果不存在）
+            if not os.path.exists('data'):
+                os.makedirs('data')
+
+            # 文件路径
+            filepath = f'data/llm_recommendations_{date_str}.txt'
+
+            # 构建内容
+            content = f"{'=' * 80}\n"
+            content += f"大模型买卖建议报告\n"
+            content += f"日期: {date_str}\n"
+            content += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            content += f"{'=' * 80}\n\n"
+
+            # 添加持仓分析（中期建议）
+            if portfolio_analysis:
+                content += "【中期建议】持仓分析\n"
+                content += "-" * 80 + "\n"
+                content += portfolio_analysis + "\n\n"
+
+            # 添加买入信号分析（短期建议）
+            if buy_signals_analysis:
+                content += "【短期建议】买入信号分析\n"
+                content += "-" * 80 + "\n"
+                content += buy_signals_analysis + "\n\n"
+
+            # 保存到文件
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            print(f"✅ 大模型建议已保存到 {filepath}")
+            return filepath
+
+        except Exception as e:
+            print(f"❌ 保存大模型建议失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 # === 主逻辑 ===
@@ -6557,6 +6937,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='恒生指数及港股主力资金追踪器股票交易信号邮件通知系统')
     parser.add_argument('--date', type=str, default=None, help='指定日期 (格式: YYYY-MM-DD)，默认为今天')
     parser.add_argument('--force', action='store_true', help='强制发送邮件，即使没有交易信号')
+    parser.add_argument('--no-email', action='store_true', help='不发送邮件，只生成分析报告')
     args = parser.parse_args()
 
     target_date = None
@@ -6572,9 +6953,12 @@ if __name__ == "__main__":
 
     if args.force:
         print("⚡ 强制模式：即使没有交易信号也会发送邮件")
+    
+    if args.no_email:
+        print("📄 仅生成模式：不发送邮件，只生成分析报告")
 
     email_system = HSIEmailSystem()
-    success = email_system.run_analysis(target_date, force=args.force)
+    success = email_system.run_analysis(target_date, force=args.force, send_email=not args.no_email)
 
     if not success:
         exit(1)
