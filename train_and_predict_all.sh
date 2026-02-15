@@ -81,12 +81,12 @@ if [ -n "$PREDICT_DATE" ]; then
 fi
 
 echo "=========================================="
-echo "📊 第一阶段: 训练模型"
+echo "📊 第一阶段: 训练预测模型"
 echo "=========================================="
 echo ""
 
 # 训练次日涨跌模型（预测1天后）
-echo "🌳 [1/3] 训练次日涨跌模型 (horizon=1)..."
+echo "🌳 训练次日涨跌模型 (horizon=1)..."
 python3 ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练次日涨跌模型失败"
@@ -96,7 +96,7 @@ echo "✅ 次日涨跌模型训练完成"
 echo ""
 
 # 训练一周涨跌模型（预测5天后）
-echo "🌳 [2/3] 训练一周涨跌模型 (horizon=5)..."
+echo "🌳 训练一周涨跌模型 (horizon=5)..."
 python3 ml_services/ml_trading_model.py --mode train --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练一周涨跌模型失败"
@@ -106,7 +106,7 @@ echo "✅ 一周涨跌模型训练完成"
 echo ""
 
 # 训练一个月涨跌模型（预测20天后）
-echo "🌳 [3/3] 训练一个月涨跌模型 (horizon=20)..."
+echo "🌳 训练一个月涨跌模型 (horizon=20)..."
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 训练一个月涨跌模型失败"
@@ -121,7 +121,7 @@ echo "=========================================="
 echo ""
 
 # 预测次日涨跌（基于指定日期或今天的数据预测1天后）
-echo "📈 [1/3] 预测次日涨跌 (horizon=1)..."
+echo "📈 预测次日涨跌 (horizon=1)..."
 python3 ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测次日涨跌失败"
@@ -131,7 +131,7 @@ echo "✅ 次日涨跌预测完成"
 echo ""
 
 # 预测一周涨跌（基于指定日期或今天的数据预测5天后）
-echo "📈 [2/3] 预测一周涨跌 (horizon=5)..."
+echo "📈 预测一周涨跌 (horizon=5)..."
 python3 ml_services/ml_trading_model.py --mode predict --horizon 5 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测一周涨跌失败"
@@ -141,7 +141,7 @@ echo "✅ 一周涨跌预测完成"
 echo ""
 
 # 预测一个月涨跌（基于指定日期或今天的数据预测20天后）
-echo "📈 [3/3] 预测一个月涨跌 (horizon=20)..."
+echo "📈 预测一个月涨跌 (horizon=20)..."
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
     echo "❌ 预测一个月涨跌失败"
@@ -156,10 +156,11 @@ echo "=========================================="
 echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
-echo "  - 模型文件: data/ml_trading_model_*.pkl"
-echo "  - 特征重要性: data/ml_trading_model_*_importance.csv"
-echo "  - 预测结果: data/ml_trading_model_*_predictions_*.csv"
+echo "  - 模型文件: data/ml_trading_model_*_1d.pkl, *_5d.pkl, *_20d.pkl"
+echo "  - 特征重要性: data/ml_trading_model_*_1d_importance.csv, *_5d_importance.csv, *_20d_importance.csv"
+echo "  - 预测结果: data/ml_trading_model_*_1d_predictions_*.csv, *_5d_predictions_*.csv, *_20d_predictions_*.csv"
 echo "  - 模型对比: data/ml_trading_model_comparison.csv"
+echo "  - 预测结果文本: data/ml_predictions_1d_YYYY-MM-DD.txt, ml_predictions_5d_YYYY-MM-DD.txt, ml_predictions_20d_YYYY-MM-DD.txt"
 echo "  - 可解释性报告: output/gbdt_feature_importance.csv"
 echo "  - LR系数: output/lr_leaf_coefficients.csv"
 echo "  - ROC曲线: output/roc_curve.png"

@@ -276,7 +276,61 @@ allowed-tools: read_file, glob, search_file_content, list_directory, replace, wr
 ### 7. 错误处理
 完善的异常处理和错误提示
 
-### 8. 持续验证
+### 8. 避免硬编码路径（2026-02-15新增）
+- **十二要素应用原则**：配置应该外化，不应硬编码
+- **跨环境兼容性**：代码应能在不同环境中运行，不依赖特定路径
+- **使用相对路径**：基于脚本所在目录构建路径，而非绝对路径
+- **配置外化**：路径配置应放在配置文件或环境变量中
+- **容错设计**：提供备用方案，当主要路径失败时尝试替代方案
+
+**常见错误：**
+```python
+# ❌ 错误：硬编码绝对路径
+base_path = '/data/fortune/data/'
+csv_file = f"{base_path}data.csv"
+
+# ❌ 错误：硬编码相对路径
+csv_file = 'data/data.csv'
+```
+
+**正确做法：**
+```python
+# ✅ 正确：基于脚本目录构建相对路径
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(script_dir, 'data')
+csv_file = os.path.join(data_dir, 'data.csv')
+
+# ✅ 正确：使用配置文件
+import configparser
+config = configparser.ConfigParser()
+config.read('config.ini')
+data_dir = config.get('paths', 'data_dir', fallback='data')
+csv_file = os.path.join(data_dir, 'data.csv')
+
+# ✅ 正确：使用环境变量
+import os
+data_dir = os.getenv('DATA_DIR', 'data')
+csv_file = os.path.join(data_dir, 'data.csv')
+```
+
+**Shell脚本示例：**
+```bash
+# ❌ 错误：硬编码路径
+cd /data/fortune
+
+# ✅ 正确：基于脚本目录
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+```
+
+**验证方法：**
+- 代码可在任何目录运行而不出错
+- 项目可以轻松部署到不同位置
+- 路径配置清晰，易于维护和修改
+- 支持多环境配置（开发、测试、生产）
+
+### 9. 持续验证
 每次修改后立即验证，避免累积错误
 
 ---

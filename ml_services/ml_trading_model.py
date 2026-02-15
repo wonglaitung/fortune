@@ -45,7 +45,140 @@ from config import WATCHLIST as STOCK_LIST
 STOCK_NAMES = STOCK_LIST
 
 # 自选股列表（转换为列表格式）
-WATCHLIST = list(STOCK_LIST.keys())
+WATCHLIST = list(STOCK_NAMES.keys())
+
+
+# ========== 保存预测结果到文本文件 ==========
+def save_predictions_to_text(predictions_df, predict_date=None):
+    """
+    保存预测结果到文本文件，方便后续提取和对比
+
+    参数:
+    - predictions_df: 预测结果DataFrame
+    - predict_date: 预测日期
+    """
+    try:
+        from datetime import datetime
+
+        # 生成文件名（使用日期）
+        if predict_date:
+            date_str = predict_date
+        else:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
+        # 创建data目录（如果不存在）
+        if not os.path.exists('data'):
+            os.makedirs('data')
+
+        # 文件路径
+        filepath = f'data/ml_predictions_20d_{date_str}.txt'
+
+        # 构建内容
+        content = f"{'=' * 80}\n"
+        content += f"机器学习20天预测结果\n"
+        content += f"预测日期: {date_str}\n"
+        content += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        content += f"{'=' * 80}\n\n"
+
+        # 添加预测结果
+        content += "【预测结果】\n"
+        content += "-" * 80 + "\n"
+        content += f"{'股票代码':<10} {'股票名称':<12} {'预测方向':<10} {'上涨概率':<12} {'当前价格':<12} {'数据日期':<15} {'预测目标日期':<15}\n"
+        content += "-" * 80 + "\n"
+
+        # 按一致性排序（如果有consistent列）
+        if 'consistent' in predictions_df.columns:
+            predictions_df_sorted = predictions_df.sort_values(by=['consistent', 'avg_probability'], ascending=[False, False])
+        else:
+            predictions_df_sorted = predictions_df.sort_values(by='probability', ascending=False)
+
+        for _, row in predictions_df_sorted.iterrows():
+            code = row.get('code', 'N/A')
+            name = row.get('name', 'N/A')
+            current_price = row.get('current_price', None)
+            data_date = row.get('data_date', 'N/A')
+            target_date = row.get('target_date', 'N/A')
+            
+            # 尝试获取预测和概率（支持多种列名格式）
+            prediction = None
+            probability = None
+            
+            # 优先使用平均概率和一致性判断
+            if 'avg_probability' in row and 'consistent' in row:
+                if row['consistent']:
+                    # 两个模型一致，使用平均概率
+                    probability = row['avg_probability']
+                    prediction = 1 if probability >= 0.5 else 0
+            elif 'prediction' in row:
+                prediction = row.get('prediction', None)
+                probability = row.get('probability', None)
+            elif 'prediction_LGBM' in row:
+                # 使用LGBM的预测
+                prediction = row.get('prediction_LGBM', None)
+                probability = row.get('probability_LGBM', None)
+
+            if prediction is not None:
+                pred_label = "上涨" if prediction == 1 else "下跌"
+                prob_str = f"{probability:.4f}" if probability is not None else "N/A"
+                price_str = f"{current_price:.2f}" if current_price is not None else "N/A"
+            else:
+                pred_label = "N/A"
+                prob_str = "N/A"
+                price_str = "N/A"
+
+            content += f"{code:<10} {name:<12} {pred_label:<10} {prob_str:<12} {price_str:<12} {data_date:<15} {target_date:<15}\n"
+
+        # 添加统计信息
+        content += "\n" + "-" * 80 + "\n"
+        content += "【统计信息】\n"
+        content += "-" * 80 + "\n"
+
+        # 初始化变量
+        total_count = 0
+        up_count = 0
+        down_count = 0
+        consistent_count = 0
+        
+        # 计算统计信息
+        total_count = len(predictions_df)
+        
+        # 计算上涨和下跌数量
+        if 'avg_probability' in predictions_df.columns:
+            up_count = (predictions_df['avg_probability'] >= 0.5).sum()
+            down_count = total_count - up_count
+        elif 'prediction' in predictions_df.columns:
+            up_count = (predictions_df['prediction'] == 1).sum()
+            down_count = (predictions_df['prediction'] == 0).sum()
+        elif 'prediction_LGBM' in predictions_df.columns:
+            up_count = (predictions_df['prediction_LGBM'] == 1).sum()
+            down_count = total_count - up_count
+        
+        if total_count > 0:
+            content += f"预测上涨: {up_count} 只\n"
+            content += f"预测下跌: {down_count} 只\n"
+            content += f"总计: {total_count} 只\n"
+            content += f"上涨比例: {up_count/total_count*100:.1f}%\n"
+
+        if 'consistent' in predictions_df.columns:
+            consistent_count = predictions_df['consistent'].sum()
+            content += f"\n两个模型一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)\n"
+
+        if 'avg_probability' in predictions_df.columns:
+            avg_prob = predictions_df['avg_probability'].mean()
+            content += f"平均上涨概率: {avg_prob:.4f}\n"
+
+        # 保存到文件
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        print(f"✅ 20天预测结果已保存到 {filepath}")
+        return filepath
+
+    except Exception as e:
+        print(f"❌ 保存预测结果失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 # ========== 缓存辅助函数 ==========
@@ -305,6 +438,129 @@ class FeatureEngineer:
         df['Price_Ratio_MA5'] = df['Close'] / df['MA5']
         df['Price_Ratio_MA20'] = df['Close'] / df['MA20']
         df['Price_Ratio_MA50'] = df['Close'] / df['MA50']
+
+        # ========== 高优先级：滚动统计特征 ==========
+        # 均线偏离度（标准化）
+        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std()
+        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std()
+
+        # 滚动波动率（多周期）
+        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std()
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std()
+        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std()
+
+        # 滚动偏度/峰度（业界常用）
+        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew()
+        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt()
+
+        # 动量加速度（业界重要特征）
+        df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
+        df['Momentum_Accel_10d'] = df['Return_10d'] - df['Return_10d'].shift(5)
+
+        # ========== 高优先级：价格形态特征 ==========
+        # N日高低点位置（0-1之间，1表示在最高点）
+        df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min()) / (df['High'].rolling(20).max() - df['Low'].rolling(20).min())
+        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min()) / (df['High'].rolling(60).max() - df['Low'].rolling(60).min())
+
+        # 距离近期高点/低点的天数（业界常用）
+        df['Days_Since_High_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
+        df['Days_Since_Low_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
+
+        # 日内特征（业界核心信号）
+        df['Intraday_Range'] = (df['High'] - df['Low']) / df['Close']
+        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean()
+        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean()
+
+        # 收盘位置（阳线/阴线强度，0-1之间）
+        df['Close_Position'] = (df['Close'] - df['Low']) / (df['High'] - df['Low'])
+        # 上影线/下影线比例
+        df['Upper_Shadow'] = (df['High'] - df[['Close', 'Open']].max(axis=1)) / (df['High'] - df['Low'] + 1e-10)
+        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low']) / (df['High'] - df['Low'] + 1e-10)
+
+        # 开盘缺口
+        df['Gap_Size'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
+        df['Gap_Up'] = (df['Gap_Size'] > 0.01).astype(int)  # 跳空高开 >1%
+        df['Gap_Down'] = (df['Gap_Size'] < -0.01).astype(int)  # 跳空低开 >1%
+
+        # ========== 中优先级：量价关系特征 ==========
+        # 量价背离（业界重要信号）
+        df['Price_Up_Volume_Down'] = ((df['Return_1d'] > 0) & (df['Turnover'].pct_change() < 0)).astype(int)
+        df['Price_Down_Volume_Up'] = ((df['Return_1d'] < 0) & (df['Turnover'].pct_change() > 0)).astype(int)
+
+        # OBV 趋势
+        df['OBV_MA5'] = df['OBV'].rolling(5).mean()
+        df['OBV_Trend'] = (df['OBV'] > df['OBV_MA5']).astype(int)
+
+        # 成交量波动率
+        df['Volume_Volatility'] = df['Turnover'].rolling(20).std() / (df['Turnover'].rolling(20).mean() + 1e-10)
+
+        # 成交量比率（多周期）
+        df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
+        df['Volume_Ratio_20d'] = df['Volume'] / df['Volume'].rolling(20).mean()
+
+        # ========== 长期趋势特征（专门优化一个月模型） ==========
+        # 长期均线（120日半年线、250日年线）
+        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean()
+        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean()
+
+        # 价格相对长期均线的比率（业界长期趋势指标）
+        df['Price_Ratio_MA120'] = df['Close'] / df['MA120']
+        df['Price_Ratio_MA250'] = df['Close'] / df['MA250']
+
+        # 长期收益率（业界核心长期特征）
+        df['Return_120d'] = df['Close'].pct_change(120)
+        df['Return_250d'] = df['Close'].pct_change(250)
+
+        # 长期动量（Momentum = 当前价格 / N日前价格 - 1）
+        df['Momentum_120d'] = df['Close'] / df['Close'].shift(120) - 1
+        df['Momentum_250d'] = df['Close'] / df['Close'].shift(250) - 1
+
+        # 长期动量加速度（趋势变化的二阶导数）
+        df['Momentum_Accel_120d'] = df['Return_120d'] - df['Return_120d'].shift(30)
+
+        # 长期均线斜率（趋势强度指标）
+        df['MA120_Slope'] = (df['MA120'] - df['MA120'].shift(10)) / df['MA120'].shift(10)
+        df['MA250_Slope'] = (df['MA250'] - df['MA250'].shift(20)) / df['MA250'].shift(20)
+
+        # 长期均线排列（多头/空头/混乱）
+        df['MA_Alignment_Long'] = np.where(
+            (df['MA50'] > df['MA120']) & (df['MA120'] > df['MA250']), 1,  # 多头排列
+            np.where(
+                (df['MA50'] < df['MA120']) & (df['MA120'] < df['MA250']), -1,  # 空头排列
+                0  # 混乱排列
+            )
+        )
+
+        # 长期均线乖离率（价格偏离长期均线的程度）
+        df['MA120_Deviation'] = (df['Close'] - df['MA120']) / df['MA120'] * 100
+        df['MA250_Deviation'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
+
+        # 长期波动率（风险指标）
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std()
+        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std()
+
+        # 长期ATR（长期风险）
+        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean()
+        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean()
+        df['ATR_Ratio_60d'] = df['ATR'] / df['ATR_MA60']
+        df['ATR_Ratio_120d'] = df['ATR'] / df['ATR_MA120']
+
+        # 长期成交量趋势
+        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean()
+        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean()
+        df['Volume_Ratio_120d'] = df['Volume'] / df['Volume_MA120']
+        df['Volume_Trend_Long'] = np.where(
+            df['Volume_MA120'] > df['Volume_MA250'], 1, -1
+        )
+
+        # 长期支撑阻力位（基于120日高低点）
+        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min()
+        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max()
+        df['Distance_Support_120d'] = (df['Close'] - df['Support_120d']) / df['Close']
+        df['Distance_Resistance_120d'] = (df['Resistance_120d'] - df['Close']) / df['Close']
+
+        # 长期RSI（基于120日）
+        df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
 
         return df
 
@@ -1219,11 +1475,13 @@ class MLTradingModel:
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列
+        # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
-                          'BB_upper', 'BB_lower', 'BB_middle']
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -1281,25 +1539,75 @@ class MLTradingModel:
         # 时间序列分割
         tscv = TimeSeriesSplit(n_splits=5)
 
+        # 根据预测周期调整正则化参数（分周期优化策略）
+        # 次日模型：最强的正则化防止过拟合
+        # 一周模型：适度正则化保持学习能力
+        # 一个月模型：增强正则化（特征数量多，需要更强的正则化）
+        if horizon == 1:
+            # 次日模型参数（最强正则化）
+            print("使用次日模型参数（强正则化）...")
+            lgb_params = {
+                'n_estimators': 40,           # 减少树数量（50→40）
+                'learning_rate': 0.02,         # 降低学习率（0.03→0.02）
+                'max_depth': 3,                # 降低深度（4→3）
+                'num_leaves': 12,              # 减少叶子节点（15→12）
+                'min_child_samples': 40,       # 增加最小样本（30→40）
+                'subsample': 0.65,             # 减少行采样（0.7→0.65）
+                'colsample_bytree': 0.65,      # 减少列采样（0.7→0.65）
+                'reg_alpha': 0.2,              # 增强L1正则（0.1→0.2）
+                'reg_lambda': 0.2,             # 增强L2正则（0.1→0.2）
+                'min_split_gain': 0.15,        # 增加分割增益（0.1→0.15）
+                'feature_fraction': 0.65,      # 减少特征采样（0.7→0.65）
+                'bagging_fraction': 0.65,      # 减少Bagging采样（0.7→0.65）
+                'bagging_freq': 5,
+                'random_state': 42,
+                'verbose': -1
+            }
+        elif horizon == 5:
+            # 一周模型参数（适度正则化）
+            print("使用5天模型参数（适度正则化）...")
+            lgb_params = {
+                'n_estimators': 50,           # 保持50
+                'learning_rate': 0.03,         # 保持0.03
+                'max_depth': 4,                # 保持4
+                'num_leaves': 15,              # 保持15
+                'min_child_samples': 30,       # 保持30
+                'subsample': 0.7,              # 保持0.7
+                'colsample_bytree': 0.7,       # 保持0.7
+                'reg_alpha': 0.1,              # 保持0.1
+                'reg_lambda': 0.1,             # 保持0.1
+                'min_split_gain': 0.1,         # 保持0.1
+                'feature_fraction': 0.7,       # 保持0.7
+                'bagging_fraction': 0.7,       # 保持0.7
+                'bagging_freq': 5,
+                'random_state': 42,
+                'verbose': -1
+            }
+        else:  # horizon == 20
+            # 一个月模型参数（增强正则化）
+            # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
+            print("使用20天模型参数（增强正则化，应对特征数量增长）...")
+            lgb_params = {
+                'n_estimators': 45,           # 减少树数量（50→45）
+                'learning_rate': 0.025,        # 降低学习率（0.03→0.025）
+                'max_depth': 4,                # 保持4
+                'num_leaves': 13,              # 减少叶子节点（15→13）
+                'min_child_samples': 35,       # 增加最小样本（30→35）
+                'subsample': 0.65,             # 减少行采样（0.7→0.65）
+                'colsample_bytree': 0.65,      # 减少列采样（0.7→0.65）
+                'reg_alpha': 0.18,             # 增强L1正则（0.15→0.18）优先稳定性
+                'reg_lambda': 0.18,            # 增强L2正则（0.15→0.18）优先稳定性
+                'min_split_gain': 0.12,        # 增加分割增益（0.1→0.12）
+                'feature_fraction': 0.65,      # 减少特征采样（0.7→0.65）
+                'bagging_fraction': 0.65,      # 减少Bagging采样（0.7→0.65）
+                'bagging_freq': 5,
+                'random_state': 42,
+                'verbose': -1
+            }
+
         # 训练模型（增加正则化以减少过拟合）
         print("训练LightGBM模型...")
-        self.model = lgb.LGBMClassifier(
-            n_estimators=50,           # 减少树的数量（100→50）
-            learning_rate=0.03,         # 降低学习率（0.05→0.03）
-            max_depth=4,                # 减少树深度（6→4）
-            num_leaves=15,              # 减少叶子节点数（31→15）
-            min_child_samples=30,        # 增加最小子样本数（20→30）
-            subsample=0.7,              # 减少行采样率（0.8→0.7）
-            colsample_bytree=0.7,       # 减少列采样率（0.8→0.7）
-            reg_alpha=0.1,              # L1正则化（新增）
-            reg_lambda=0.1,             # L2正则化（新增）
-            min_split_gain=0.1,         # 最小分割增益（新增）
-            feature_fraction=0.7,       # 特征采样率（新增）
-            bagging_fraction=0.7,       # Bagging采样率（新增）
-            bagging_freq=5,             # Bagging频率（新增）
-            random_state=42,
-            verbose=-1
-        )
+        self.model = lgb.LGBMClassifier(**lgb_params)
 
         # 使用时间序列交叉验证
         scores = []
@@ -1621,11 +1929,13 @@ class GBDTLRModel:
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列
+        # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
-                          'BB_upper', 'BB_lower', 'BB_middle']
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -1693,21 +2003,58 @@ class GBDTLRModel:
         print("🌲 Step 1: 训练 GBDT 模型（特征工程）")
         print("="*70)
 
-        n_estimators = 32
-        num_leaves = 32  # 减少叶子节点数（64→32）
+        # 根据预测周期调整叶子节点数量和早停耐心
+        # 次日模型：适度参数
+        # 一周模型：减少叶子节点数量以防止过拟合，增加早停耐心
+        # 一个月模型：增强正则化（特征数量增加，需要更强的正则化）
+        if horizon == 5:
+            # 一周模型参数（防过拟合）
+            print("使用一周模型参数（减少叶子节点，增加早停耐心）...")
+            n_estimators = 32
+            num_leaves = 24  # 减少叶子节点（32→24）
+            stopping_rounds = 15  # 增加早停耐心（10→15）
+            min_child_samples = 30  # 增加最小样本（20→30）
+            reg_alpha = 0.1     # 保持0.1
+            reg_lambda = 0.1    # 保持0.1
+            subsample = 0.7     # 保持0.7
+            colsample_bytree = 0.6  # 保持0.6
+        elif horizon == 1:
+            # 次日模型参数（适度）
+            print("使用次日模型参数...")
+            n_estimators = 32
+            num_leaves = 28  # 适度减少（32→28）
+            stopping_rounds = 12  # 适度增加
+            min_child_samples = 25
+            reg_alpha = 0.15    # 增强L1正则（0.1→0.15）
+            reg_lambda = 0.15   # 增强L2正则（0.1→0.15）
+            subsample = 0.65    # 减少行采样（0.7→0.65）
+            colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
+        else:  # horizon == 20
+            # 一个月模型参数（增强正则化）
+            # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
+            # 优化：GBDT+LR使用0.15（保持准确率），LightGBM使用0.18（降低波动）
+            print("使用20天模型参数（增强正则化，应对特征数量增长）...")
+            n_estimators = 32
+            num_leaves = 24  # 减少叶子节点（32→24）
+            stopping_rounds = 12  # 增加早停耐心（10→12）
+            min_child_samples = 30  # 增加最小样本（20→30）
+            reg_alpha = 0.15    # GBDT+LR使用0.15（保持准确率，之前表现良好）
+            reg_lambda = 0.15   # GBDT+LR使用0.15（保持准确率，之前表现良好）
+            subsample = 0.65    # 减少行采样（0.7→0.65）
+            colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
 
         self.gbdt_model = lgb.LGBMClassifier(
             objective='binary',
             boosting_type='gbdt',
-            subsample=0.7,              # 减少行采样率（0.8→0.7）
+            subsample=subsample,            # 根据周期调整
             min_child_weight=0.1,
-            min_child_samples=20,        # 增加最小子样本数（10→20）
-            colsample_bytree=0.6,       # 减少列采样率（0.7→0.6）
-            num_leaves=num_leaves,
+            min_child_samples=min_child_samples,  # 根据周期调整
+            colsample_bytree=colsample_bytree,  # 根据周期调整
+            num_leaves=num_leaves,      # 根据周期调整
             learning_rate=0.03,         # 降低学习率（0.05→0.03）
             n_estimators=n_estimators,
-            reg_alpha=0.1,              # L1正则化（新增）
-            reg_lambda=0.1,             # L2正则化（新增）
+            reg_alpha=reg_alpha,        # 根据周期调整L1正则
+            reg_lambda=reg_lambda,       # 根据周期调整L2正则
             min_split_gain=0.1,         # 最小分割增益（新增）
             feature_fraction=0.7,       # 特征采样率（新增）
             bagging_fraction=0.7,       # Bagging采样率（新增）
@@ -1730,7 +2077,7 @@ class GBDTLRModel:
                 eval_set=[(X_val_fold, y_val_fold)],
                 eval_metric='binary_logloss',
                 callbacks=[
-                    lgb.early_stopping(stopping_rounds=10, verbose=False)  # 增加patience（5→10）
+                    lgb.early_stopping(stopping_rounds=stopping_rounds, verbose=False)  # 根据周期调整早停耐心
                 ]
             )
 
@@ -2410,6 +2757,10 @@ def main():
             comparison_export.to_csv(comparison_path, index=False)
             print(f"\n对比结果已保存到 {comparison_path}")
 
+            # 保存20天预测结果到文本文件（便于后续提取和对比）
+            if args.horizon == 20:
+                save_predictions_to_text(comparison_export, args.predict_date)
+
             # 保存各自的预测结果
             horizon_suffix = f'_{args.horizon}d'
             lgbm_pred_path = args.model_path.replace('.pkl', f'_lgbm_predictions{horizon_suffix}.csv')
@@ -2468,6 +2819,10 @@ def main():
             pred_path = args.model_path.replace('.pkl', f'_predictions{horizon_suffix}.csv')
             pred_df_export.to_csv(pred_path, index=False)
             print(f"\n预测结果已保存到 {pred_path}")
+
+            # 保存20天预测结果到文本文件（便于后续提取和对比）
+            if args.horizon == 20:
+                save_predictions_to_text(pred_df_export, args.predict_date)
 
     elif args.mode == 'evaluate':
         print("=" * 50)
