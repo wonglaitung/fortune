@@ -676,6 +676,16 @@ python comprehensive_analysis.py
    - 120日/250日均线是趋势分析的生命线
    - 量价背离是经典反转信号
 
+6. **LR算法probability含义（2026-02-15修正）**
+   - **关键理解**：probability字段始终代表上涨概率P(y=1|x)，不会根据prediction改变含义
+   - **prediction=1时**：probability > 0.5（上涨概率高）
+   - **prediction=0时**：probability <= 0.5（上涨概率低，即下跌概率高）
+   - **强烈上涨信号**：prediction=1且probability > 0.65
+   - **强烈下跌信号**：prediction=0且probability < 0.40（即下跌概率 > 60%）
+   - **中性信号**：probability在0.40-0.60之间（上涨或下跌概率都不超过60%）
+   - **实际案例**：1299.HK友邦保险，prediction=0, probability=0.474，不是强烈下跌信号，而是观望信号（下跌概率52.6%，不强烈）
+   - **常见误区**：错误认为prediction=0时probability代表下跌概率，这会导致判断标准错误
+
 ## 提交记录
 - commit cdb9218: chore: 更新综合分析生成的数据文件
 - commit f56e5f5: docs: 更新IFLOW.md，添加综合分析系统功能说明
