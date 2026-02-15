@@ -35,32 +35,39 @@ def extract_llm_recommendations(filepath):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        import re
+        
+        # 使用正则表达式提取短期建议（更灵活的匹配）
+        short_term_match = re.search(
+            r'(?:【短期建议】|稳健型短期分析|⚖️ 稳健型短期分析)(.*?)(?=【|稳健型中期|⚖️ 稳健型中期|$)',
+            content,
+            re.DOTALL
+        )
+        
+        # 使用正则表达式提取中期建议（更灵活的匹配）
+        medium_term_match = re.search(
+            r'(?:【中期建议】|稳健型中期分析|⚖️ 稳健型中期分析)(.*?)(?=【|$)',
+            content,
+            re.DOTALL
+        )
+        
         result = {
-            'short_term': '',
-            'medium_term': ''
+            'short_term': short_term_match.group(1).strip() if short_term_match else '',
+            'medium_term': medium_term_match.group(1).strip() if medium_term_match else ''
         }
         
-        # 提取短期建议部分
-        short_term_start = content.find('【中期建议】持仓分析')
-        if short_term_start == -1:
-            # 如果没有找到中期建议标记，尝试查找短期建议标记
-            short_term_start = content.find('稳健型短期分析')
+        # 如果正则匹配失败，尝试备用方案（基于标题模式）
+        if not result['short_term']:
+            # 查找"稳健型短期分析"标题后到"稳健型中期分析"前的内容
+            pattern1 = re.search(r'稳健型短期分析.*?\n(.*?)\n\n\n稳健型中期分析', content, re.DOTALL)
+            if pattern1:
+                result['short_term'] = "稳健型短期分析\n" + pattern1.group(1).strip()
         
-        if short_term_start != -1:
-            # 查找下一个分析部分的开始
-            next_section_start = content.find('稳健型中期分析', short_term_start)
-            if next_section_start == -1:
-                next_section_start = len(content)
-            
-            short_term_content = content[short_term_start:next_section_start].strip()
-            result['short_term'] = short_term_content
-        
-        # 提取中期建议部分
-        medium_term_start = content.find('稳健型中期分析')
-        if medium_term_start != -1:
-            # 提取到文件末尾
-            medium_term_content = content[medium_term_start:].strip()
-            result['medium_term'] = medium_term_content
+        if not result['medium_term']:
+            # 查找"稳健型中期分析"标题后的所有内容
+            pattern2 = re.search(r'稳健型中期分析.*?\n(.*)', content, re.DOTALL)
+            if pattern2:
+                result['medium_term'] = "稳健型中期分析\n" + pattern2.group(1).strip()
         
         return result
         
@@ -487,15 +494,41 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 === 综合分析规则 ===
 
-**规则1：时间维度匹配**
-- 大模型中期建议（数周-数月）与ML 20天预测（约3-4周）时间范围匹配，是主要决策依据
-- 大模型短期建议（日内/数天）仅用于判断操作时机，不影响中期买卖决策
+**规则1：时间维度匹配（业界最佳实践）**
+- **短期信号（触发器）**：负责"何时做"（Timing）
+- **中期信号（确认器）**：负责"是否做"（Direction）
+- 只有短期和中期方向一致时，才采取行动
+- 短期和中期冲突时，选择观望（避免不确定性）
 
-**规则2：一致性判断标准**
-- **强买入信号**：大模型中期建议买入 AND (ML模型prediction=1且probability>0.65)
-- **买入信号**：大模型中期建议买入 OR (ML模型prediction=1且probability>0.60)
-- **观望信号**：大模型中期建议观望 OR ML模型probability在0.40-0.60之间
-- **卖出信号**：大模型中期建议卖出 OR (ML模型prediction=0且probability<0.40)
+**决策逻辑（短期触发 + 中期确认）**：
+- 短期建议买入 + 中期建议买入 → 强买入信号
+- 短期建议买入 + 中期建议观望 → 观望（等待中期确认）
+- 短期建议买入 + 中期建议卖出 → 不买入（冲突，信号无效）
+- 短期建议卖出 + 中期建议卖出 → 强卖出信号
+- 短期建议卖出 + 中期建议观望 → 观望
+- 短期建议卖出 + 中期建议买入 → 不卖出（冲突，信号无效）
+
+**规则2：一致性判断标准（基于业界最佳实践）**
+
+**核心原则：短期触发 + 中期确认 + ML验证**
+
+- **强买入信号**：短期建议买入 AND 中期建议买入 AND (至少一个ML模型预测上涨且probability>0.62)
+- **买入信号**：短期建议买入 AND 中期建议买入 AND (至少一个ML模型预测上涨且probability>0.60)
+- **观望信号**：
+  - 短期建议买入 AND 中期建议观望（等待中期确认）
+  - 短期建议卖出 AND 中期建议观望（等待中期确认）
+  - 短期建议买入 AND 中期建议卖出（冲突）
+  - 短期建议卖出 AND 中期建议买入（冲突）
+  - ML模型probability在0.45-0.55之间（低置信度）
+  - 两个ML模型预测冲突（信号不一致）
+- **卖出信号**：短期建议卖出 AND 中期建议卖出 AND (至少一个ML模型预测下跌且probability<0.40)
+
+**阈值优化说明**：
+- 当前20天模型准确率：58.97%（标准差±7.17%）
+- 强买入阈值0.62略高于准确率，确保高置信度
+- 买入阈值0.60接近准确率，平衡召回率和精确率
+- 卖出阈值0.40确保下跌概率>60%
+- 观望区间0.45-0.55避免低置信度决策
 
 **重要说明 - LR算法probability含义**：
 - probability字段始终代表**上涨概率**P(y=1|x)
@@ -503,6 +536,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 当prediction=0时：probability <= 0.5（上涨概率低，即下跌概率高）
 - 强烈下跌信号：prediction=0且probability < 0.40（即下跌概率 > 60%）
 - 中性信号：probability在0.40-0.60之间（上涨或下跌概率都不超过60%）
+
+**重要说明 - 信号优先级（业界标准）**：
+- **短期信号（触发器）**：负责"何时做"（Timing），权重100%（必须满足）
+- **中期信号（确认器）**：负责"是否做"（Direction），权重100%（必须满足）
+- **ML预测（验证器）**：负责提升置信度，权重50%（辅助验证）
+- **关键原则**：短期和中期必须一致（方向相同），ML预测用于验证和提升置信度
+
+**重要说明 - 模型不确定性**：
+- ML 20天模型准确率：58.97%（标准差±7.17%）
+- 由于标准差较大，一个月预测存在较高不确定性
+- 即使probability>0.62，实际准确率也可能在51.8% ~ 66.16%之间波动
+- 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
+- 对于probability在0.55-0.65之间的股票，建议降低仓位控制风险
+
+**重要说明 - 时间维度标准化**：
+- 短期：1-5个交易日（日内到一周）
+- 中期：10-20个交易日（2-4周）
+- 长期：>20个交易日（超过1个月）
+- 当前映射：大模型短期建议 ↔ ML次日模型（1天），大模型中期建议 ↔ ML 20天模型（20天）✅
 
 **规则3：ML模型冲突处理**
 - 如果LightGBM和GBDT+LR预测冲突（一个上涨，一个下跌）：
@@ -512,15 +564,24 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
   - 信号可靠性高，优先级提升
 
 **规则4：推荐理由格式**
-- 必须说明：基于大模型中期建议+哪个ML模型预测+一致性程度
-- 例如："大模型中期建议买入，LightGBM预测上涨概率0.72，GBDT+LR预测上涨概率0.68，双模型一致看好"
+- 必须说明：短期建议+中期建议+哪个ML模型预测+短期中期一致性程度
+- 例如："短期建议买入（触发器），中期建议买入（确认器），短期中期方向一致，LightGBM预测上涨概率0.72，GBDT+LR预测上涨概率0.68，三重确认买入，综合置信度高"
 
 请基于上述规则，完成以下任务：
 
-1. **一致性分析**：
-   - 对每只股票，分析大模型中期建议与ML预测的一致性
+1. **一致性分析**（方案A核心：短期触发 + 中期确认）：
+   - **第一步（核心）**：分析短期建议与中期建议的一致性
+     - 短期买入 + 中期买入 → 方向一致，考虑ML验证
+     - 短期买入 + 中期观望 → 等待中期确认
+     - 短期买入 + 中期卖出 → 冲突，观望
+     - 短期卖出 + 中期卖出 → 方向一致，考虑ML验证
+     - 短期卖出 + 中期观望 → 等待中期确认
+     - 短期卖出 + 中期买入 → 冲突，观望
+   - **第二步（验证）**：对短期中期一致的股票，分析ML预测验证
+     - 如果ML模型预测支持（probability>0.60），提升为强信号
+     - 如果ML模型预测冲突（probability<0.40），降低为弱信号或观望
+     - 如果ML模型不确定（0.45-0.55），保持中等置信度
    - 标注符合"强买入信号"、"买入信号"、"观望信号"、"卖出信号"的股票
-   - 特别说明ML模型冲突时的处理逻辑
 
 2. **个股建议排序**：
    - 优先级：强买入信号 > 买入信号 > 观望信号 > 卖出信号
@@ -549,10 +610,20 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 推荐卖出的股票清单（如有）
    - 需要关注的股票清单（观望）
 
-4. **风险提示**：
+4. **风险控制建议**：
    - 分析当前市场整体风险
    - 给出仓位控制建议（建议仓位百分比）
    - 给出止损位建议（如果有的话）
+   
+   **特别要求 - 考虑模型不确定性**：
+   - 由于ML 20天模型标准差±7.17%，必须采用保守的风险控制策略
+   - 对于probability在0.55-0.65之间的股票，建议仓位不超过2%
+   - 强买入信号（短期/中期一致买入且ML模型确认）建议仓位3-5%
+   - 总仓位控制在40%-50%（考虑模型不确定性）
+   - 必须设置止损位，单只股票最大亏损不超过-8%
+   - **严格遵循"短期触发 + 中期确认"原则**：只有短期和中期方向一致时才行动，冲突时选择观望
+   - 如果短期和中期建议冲突，优先选择观望，不进行交易
+   - 采用"三重确认"策略：短期、中期、ML模型三者一致时才重仓操作
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -560,7 +631,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[详细的推荐理由，包含技术面、基本面、资金面等分析]
+   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+ML预测+一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），LightGBM预测上涨概率0.72，GBDT+LR预测上涨概率0.68，短中长期方向一致（短期/中期一致买入，ML模型验证上涨），综合置信度高。注意ML模型存在±7.17%标准差，probability在0.72附近实际准确率可能在58% ~ 66%之间"]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
