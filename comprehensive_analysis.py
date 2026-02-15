@@ -19,171 +19,142 @@ from llm_services.qwen_engine import chat_with_llm
 
 def extract_llm_recommendations(filepath):
     """
-    从大模型建议文件中提取买卖建议
+    从大模型建议文件中提取买卖建议，分别提取短期和中期建议
     
     参数:
     - filepath: 文件路径
     
     返回:
-    - str: 提取的买卖建议文本
+    - dict: 包含短期和中期建议的字典
+      {
+        'short_term': str,  # 短期建议文本
+        'medium_term': str  # 中期建议文本
+      }
     """
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # 提取买入、卖出、观察部分的股票
-        recommendations = []
+        result = {
+            'short_term': '',
+            'medium_term': ''
+        }
         
-        # 查找所有买入、卖出、观察股票
-        lines = content.split('\n')
-        current_section = None
-        capture_next = False
+        # 提取短期建议部分
+        short_term_start = content.find('【中期建议】持仓分析')
+        if short_term_start == -1:
+            # 如果没有找到中期建议标记，尝试查找短期建议标记
+            short_term_start = content.find('稳健型短期分析')
         
-        for i, line in enumerate(lines):
-            # 检测章节标记
-            if '买入机会推荐' in line:
-                current_section = '买入'
-                continue
-            elif '卖出机会推荐' in line:
-                current_section = '卖出'
-                continue
-            elif '观察列表' in line or '观望建议' in line:
-                current_section = '观察'
-                continue
+        if short_term_start != -1:
+            # 查找下一个分析部分的开始
+            next_section_start = content.find('稳健型中期分析', short_term_start)
+            if next_section_start == -1:
+                next_section_start = len(content)
             
-            # 捕获股票代码行（格式：X. 股票名称 (股票代码)）
-            if current_section and line.strip() and line[0].isdigit() and '.' in line and '(' in line and ')' in line:
-                stock_info = line.strip()
-                # 提取股票代码
-                code_start = stock_info.find('(') + 1
-                code_end = stock_info.find(')')
-                if code_start > 0 and code_end > code_start:
-                    code = stock_info[code_start:code_end]
-                    # 提取股票名称
-                    name_end = stock_info.find('(')
-                    name = stock_info[stock_info.find(' ') + 1:name_end].strip()
-                    
-                    # 获取推荐理由和操作建议（下一行或几行）
-                    reason_parts = []
-                    operation_advice = ""
-                    price_guide = ""
-                    risk_hint = ""
-                    
-                    j = i + 1
-                    while j < len(lines):
-                        next_line = lines[j].strip()
-                        
-                        # 提取推荐理由
-                        if next_line.startswith('- 推荐理由：'):
-                            reason_text = next_line.replace('- 推荐理由：', '').strip()
-                            reason_parts.append(f"推荐理由: {reason_text}")
-                        elif next_line.startswith('- ') and '推荐理由' in next_line:
-                            reason_text = next_line.replace('- 推荐理由：', '').strip()
-                            reason_parts.append(f"推荐理由: {reason_text}")
-                        
-                        # 提取操作建议
-                        elif next_line.startswith('- 操作建议：'):
-                            operation_advice = next_line.replace('- 操作建议：', '').strip()
-                        
-                        # 提取价格指引
-                        elif next_line.startswith('- 价格指引：'):
-                            # 收集后续的价格指引行
-                            price_guide_items = []
-                            k = j + 1
-                            while k < len(lines):
-                                price_line = lines[k].strip()
-                                if price_line.startswith('* '):
-                                    # 去掉前导符号和多余空格
-                                    price_item = price_line.replace('* ', '').strip()
-                                    # 移除可能的缩进空格
-                                    price_item = price_item.lstrip('· ')
-                                    price_guide_items.append(price_item)
-                                elif price_line.startswith('- ') or (price_line and not price_line.startswith('-') and not price_line.startswith('•')):
-                                    # 遇到其他章节，停止收集
-                                    break
-                                else:
-                                    break
-                                k += 1
-                            price_guide = " | ".join(price_guide_items)
-                        
-                        # 提取风险提示
-                        elif next_line.startswith('- 风险提示：'):
-                            risk_hint = next_line.replace('- 风险提示：', '').strip()
-                        
-                        # 遇到新股票或新章节，停止收集
-                        elif next_line and next_line[0].isdigit() and '.' in next_line and '(' in next_line and ')' in next_line:
-                            break
-                        
-                        j += 1
-                    
-                    # 去掉Markdown格式
-                    reason_text = " ".join(reason_parts).replace('*', '').replace('**', '')
-                    price_guide = price_guide.replace('*', '').replace('**', '')
-                    operation_advice = operation_advice.replace('*', '').replace('**', '')
-                    risk_hint = risk_hint.replace('*', '').replace('**', '')
-                    
-                    # 组合所有信息
-                    full_info = f"{reason_text}"
-                    if operation_advice:
-                        full_info += f" | 操作建议: {operation_advice}"
-                    if price_guide:
-                        full_info += f" | 价格: {price_guide}"
-                    if risk_hint:
-                        full_info += f" | 风险: {risk_hint}"
-                    
-                    recommendations.append(f"{current_section}: {code} {name} - {full_info}")
+            short_term_content = content[short_term_start:next_section_start].strip()
+            result['short_term'] = short_term_content
         
-        recommendations_text = "\n".join(recommendations) if recommendations else "未找到买卖建议"
-        return recommendations_text
+        # 提取中期建议部分
+        medium_term_start = content.find('稳健型中期分析')
+        if medium_term_start != -1:
+            # 提取到文件末尾
+            medium_term_content = content[medium_term_start:].strip()
+            result['medium_term'] = medium_term_content
+        
+        return result
         
     except Exception as e:
         print(f"❌ 提取大模型建议失败: {e}")
         import traceback
         traceback.print_exc()
-        return ""
+        return {'short_term': '', 'medium_term': ''}
 
 
 def extract_ml_predictions(filepath):
     """
-    从ML预测文件中提取预测结果
+    从ML预测CSV文件中提取LightGBM和GBDT+LR的预测结果
     
     参数:
-    - filepath: 文件路径
+    - filepath: 文本预测文件路径（用于获取日期）
     
     返回:
-    - str: 提取的预测结果文本
+    - dict: 包含LightGBM和GBDT+LR预测结果的字典
+      {
+        'lgbm': str,      # LightGBM预测结果
+        'gbdt_lr': str   # GBDT+LR预测结果
+      }
     """
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
+        import pandas as pd
+        from datetime import datetime
         
-        # 提取预测结果部分
-        predictions_start = content.find("【预测结果】")
-        statistics_start = content.find("【统计信息】")
+        # 从文件路径中提取日期
+        date_str = filepath.split('_')[-1].replace('.txt', '')
         
-        if predictions_start != -1:
-            if statistics_start != -1:
-                predictions_section = content[predictions_start:statistics_start]
-            else:
-                predictions_section = content[predictions_start:]
-        else:
-            predictions_section = ""
+        # 构建CSV文件路径
+        base_path = '/data/fortune/data/'
+        lgbm_csv = f"{base_path}ml_trading_model_lgbm_predictions_20d.csv"
+        gbdt_lr_csv = f"{base_path}ml_trading_model_gbdt_lr_predictions_20d.csv"
         
-        # 提取预测上涨的股票
-        up_stocks = []
-        lines = predictions_section.split('\n')
-        for line in lines:
-            if '上涨' in line and not line.startswith('股票代码') and not line.startswith('-'):
-                up_stocks.append(line.strip())
+        result = {
+            'lgbm': '',
+            'gbdt_lr': ''
+        }
         
-        predictions_text = "\n".join(up_stocks[:10])  # 只取前10个
-        return predictions_text if predictions_text else "未找到预测上涨的股票"
+        # 读取LightGBM预测结果
+        if os.path.exists(lgbm_csv):
+            df_lgbm = pd.read_csv(lgbm_csv)
+            # 提取预测上涨的股票
+            up_stocks_lgbm = df_lgbm[df_lgbm['prediction'] == 1].sort_values('probability', ascending=False)
+            
+            lgbm_text = "【LightGBM模型预测结果】\n"
+            lgbm_text += f"预测日期: {date_str}\n\n"
+            lgbm_text += "预测上涨的股票（按概率排序）:\n"
+            lgbm_text += "-" * 80 + "\n"
+            lgbm_text += f"{'股票代码':<12} {'股票名称':<12} {'上涨概率':<10} {'当前价格':<12}\n"
+            lgbm_text += "-" * 80 + "\n"
+            
+            for _, row in up_stocks_lgbm.iterrows():
+                lgbm_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
+            
+            lgbm_text += "-" * 80 + "\n"
+            lgbm_text += f"预测上涨: {len(up_stocks_lgbm)} 只\n"
+            lgbm_text += f"预测下跌: {len(df_lgbm) - len(up_stocks_lgbm)} 只\n"
+            lgbm_text += f"平均上涨概率: {up_stocks_lgbm['probability'].mean():.4f}\n"
+            
+            result['lgbm'] = lgbm_text
+        
+        # 读取GBDT+LR预测结果
+        if os.path.exists(gbdt_lr_csv):
+            df_gbdt_lr = pd.read_csv(gbdt_lr_csv)
+            # 提取预测上涨的股票
+            up_stocks_gbdt_lr = df_gbdt_lr[df_gbdt_lr['prediction'] == 1].sort_values('probability', ascending=False)
+            
+            gbdt_lr_text = "【GBDT+LR模型预测结果】\n"
+            gbdt_lr_text += f"预测日期: {date_str}\n\n"
+            gbdt_lr_text += "预测上涨的股票（按概率排序）:\n"
+            gbdt_lr_text += "-" * 80 + "\n"
+            gbdt_lr_text += f"{'股票代码':<12} {'股票名称':<12} {'上涨概率':<10} {'当前价格':<12}\n"
+            gbdt_lr_text += "-" * 80 + "\n"
+            
+            for _, row in up_stocks_gbdt_lr.iterrows():
+                gbdt_lr_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
+            
+            gbdt_lr_text += "-" * 80 + "\n"
+            gbdt_lr_text += f"预测上涨: {len(up_stocks_gbdt_lr)} 只\n"
+            gbdt_lr_text += f"预测下跌: {len(df_gbdt_lr) - len(up_stocks_gbdt_lr)} 只\n"
+            gbdt_lr_text += f"平均上涨概率: {up_stocks_gbdt_lr['probability'].mean():.4f}\n"
+            
+            result['gbdt_lr'] = gbdt_lr_text
+        
+        return result
         
     except Exception as e:
         print(f"❌ 提取ML预测失败: {e}")
         import traceback
         traceback.print_exc()
-        return ""
+        return {'lgbm': '', 'gbdt_lr': ''}
 
 
 def generate_html_email(content, date_str, reference_info=None):
@@ -488,27 +459,52 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         print("📝 提取大模型买卖建议...")
         llm_recommendations = extract_llm_recommendations(llm_filepath)
         print(f"✅ 提取完成\n")
+        print(f"   - 短期建议长度: {len(llm_recommendations['short_term'])} 字符")
+        print(f"   - 中期建议长度: {len(llm_recommendations['medium_term'])} 字符\n")
         
         # 提取ML预测
         print("📝 提取ML预测结果...")
         ml_predictions = extract_ml_predictions(ml_filepath)
         print(f"✅ 提取完成\n")
+        print(f"   - LightGBM预测长度: {len(ml_predictions['lgbm'])} 字符")
+        print(f"   - GBDT+LR预测长度: {len(ml_predictions['gbdt_lr'])} 字符\n")
         
         # 生成日期
         date_str = datetime.now().strftime('%Y-%m-%d')
         
         # 构建综合分析提示词
-        prompt = f"""你是一位专业的投资分析师。请根据以下三部分信息，进行综合分析，给出实质的买卖建议。
+        prompt = f"""你是一位专业的投资分析师。请根据以下五部分信息，进行综合分析，给出实质的买卖建议。
 
 === 信息来源 ===
 
-【1. 大模型短期和中期买卖建议】
-{llm_recommendations}
+【1. 大模型短期买卖建议（日内/数天）】
+{llm_recommendations['short_term']}
 
-【2. 机器学习20天预测结果】
-{ml_predictions}
+【2. 大模型中期买卖建议（数周-数月）】
+{llm_recommendations['medium_term']}
 
-【3. 综合分析任务】
+【3. LightGBM模型20天预测结果】
+{ml_predictions['lgbm']}
+
+【4. GBDT+LR模型20天预测结果】
+{ml_predictions['gbdt_lr']}
+
+【5. 综合分析任务】
+**重要说明 - 时间维度**：
+- 你收到了两组大模型建议：短期建议（日内/数天）和中期建议（数周-数月）
+- 请在综合分析时明确区分这两种时间维度的建议
+- 说明短期建议适用于哪些操作（如短线交易、波段操作）
+- 说明中期建议适用于哪些操作（如价值投资、趋势跟踪）
+- 当短期和中期建议冲突时，如何权衡和决策
+
+**重要说明 - 模型多样性**：
+- 你收到了两组ML模型预测：LightGBM和GBDT+LR
+- 两个模型使用不同的算法，可能给出不同的预测结果
+- 请对比两个模型的预测一致性
+- 当两个模型预测一致时，说明信号更可靠
+- 当两个模型预测冲突时，请分析哪个模型的预测更可信（基于历史准确率、特征重要性等）
+- 最终推荐是基于哪个模型还是综合两个模型的预测
+
 请基于上述信息，完成以下任务：
 
 1. **一致性分析**：
@@ -620,31 +616,29 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
-                # 构建完整的信息参考内容（包含大模型建议和ML预测）
-                reference_info = f"""【大模型短期和中期买卖建议】
-{llm_recommendations}
+                # 构建完整的邮件内容（包含综合建议和信息参考）
+                full_content = f"""{response}
 
-【机器学习20天预测结果】
-{ml_predictions}
+---
+
+# 信息参考
+
+## 大模型短期买卖建议（日内/数天）
+{llm_recommendations['short_term']}
+
+## 大模型中期买卖建议（数周-数月）
+{llm_recommendations['medium_term']}
+
+## LightGBM模型20天预测结果
+{ml_predictions['lgbm']}
+
+## GBDT+LR模型20天预测结果
+{ml_predictions['gbdt_lr']}
 """
                 
-                # 构建完整的邮件文本内容（综合买卖建议在前，信息参考在后）
-                full_email_content = f"""{'=' * 80}
-综合买卖建议
-{'=' * 80}
-
-{response}
-
-{'=' * 80}
-信息参考
-{'=' * 80}
-
-{reference_info}
-"""
-                
-                # 生成HTML格式邮件内容（包含完整信息参考）
-                html_content = generate_html_email(response, date_str, reference_info)
-                send_email(email_subject, full_email_content, html_content)
+                # 生成HTML格式邮件内容（将完整内容转换为HTML）
+                html_content = generate_html_email(full_content, date_str)
+                send_email(email_subject, full_content, html_content)
             
             return response
         else:
