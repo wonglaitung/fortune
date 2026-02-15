@@ -95,14 +95,17 @@ def extract_ml_predictions(filepath):
     try:
         import pandas as pd
         from datetime import datetime
+        import os
         
         # 从文件路径中提取日期
         date_str = filepath.split('_')[-1].replace('.txt', '')
         
-        # 构建CSV文件路径
-        base_path = '/data/fortune/data/'
-        lgbm_csv = f"{base_path}ml_trading_model_lgbm_predictions_20d.csv"
-        gbdt_lr_csv = f"{base_path}ml_trading_model_gbdt_lr_predictions_20d.csv"
+        # 使用相对路径（从当前脚本位置推导data目录）
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(script_dir, 'data')
+        
+        lgbm_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
+        gbdt_lr_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_lr_predictions_20d.csv')
         
         result = {
             'lgbm': '',
