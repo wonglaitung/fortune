@@ -24,17 +24,17 @@ fi
 echo "✅ 步骤1完成: 大模型建议已生成"
 echo ""
 
-# 步骤2: 训练20天模型
+# 步骤2: 训练20天模型（使用特征选择，从2936个特征筛选出500个）
 echo "=========================================="
-echo "📊 步骤 2/4: 训练20天模型"
+echo "📊 步骤 2/4: 训练20天模型（使用特征选择）"
 echo "=========================================="
 echo ""
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type both --model-path data/ml_trading_model.pkl --use-feature-selection
 if [ $? -ne 0 ]; then
     echo "❌ 步骤2失败: 训练20天模型失败"
     exit 1
 fi
-echo "✅ 步骤2完成: 20天模型训练完成"
+echo "✅ 步骤2完成: 20天模型训练完成（使用500个特征）"
 echo ""
 
 # 步骤3: 调用ml_trading_model.py生成20天预测
