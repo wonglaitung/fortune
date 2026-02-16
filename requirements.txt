@@ -11,3 +11,5 @@ schedule
 markdown
 lightgbm
 scikit-learn
+jieba>=0.42.1
+nltk>=3.8

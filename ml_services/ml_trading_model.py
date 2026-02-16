@@ -1092,6 +1092,48 @@ class FeatureEngineer:
                 'sentiment_days': 0
             }
 
+    def create_topic_features(self, code, df):
+        """创建主题分布特征（LDA主题建模）
+
+        从新闻数据中提取主题分布特征：
+        - Topic_1 ~ Topic_10: 10个主题的概率分布（0-1之间，总和为1）
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（日期索引）
+
+        Returns:
+            dict: 包含主题特征的字典
+        """
+        try:
+            from ml_services.topic_modeling import TopicModeler
+
+            # 创建主题建模器
+            topic_modeler = TopicModeler(n_topics=10, language='mixed')
+
+            # 尝试加载已训练的模型
+            model_path = 'data/lda_topic_model.pkl'
+
+            if os.path.exists(model_path):
+                topic_modeler.load_model(model_path)
+
+                # 获取股票主题特征
+                topic_features = topic_modeler.get_stock_topic_features(code)
+
+                if topic_features:
+                    print(f"✅ 获取主题特征: {code}")
+                    return topic_features
+                else:
+                    print(f"⚠️  该股票没有新闻数据: {code}")
+                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
+            else:
+                print(f"⚠️  主题模型不存在，请先运行: python ml_services/topic_modeling.py")
+                return {f'Topic_{i+1}': 0.0 for i in range(10)}
+
+        except Exception as e:
+            print(f"❌ 创建主题特征失败 {code}: {e}")
+            return {f'Topic_{i+1}': 0.0 for i in range(10)}
+
     def create_sector_features(self, code, df):
         """创建板块分析特征（优化版，使用缓存）
 
