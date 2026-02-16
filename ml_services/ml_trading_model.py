@@ -1345,6 +1345,41 @@ class MLTradingModel:
         self.feature_columns = []
         self.horizon = 1  # 默认预测周期
 
+    def load_selected_features(self, filepath=None):
+        """加载选择的特征列表
+
+        Args:
+            filepath: 特征名称文件路径（可选，默认使用最新的）
+
+        Returns:
+            list: 特征名称列表（如果找到），否则返回None
+        """
+        import os
+        import glob
+
+        if filepath is None:
+            # 查找最新的特征名称文件
+            pattern = 'output/selected_features_*.csv'
+            files = glob.glob(pattern)
+            if not files:
+                return None
+            # 按修改时间排序，取最新的
+            filepath = max(files, key=os.path.getmtime)
+
+        try:
+            import pandas as pd
+            # 读取特征名称
+            df = pd.read_csv(filepath)
+            feature_names = df['Feature_Name'].tolist()
+
+            print(f"📂 加载特征列表文件: {filepath}")
+            print(f"✅ 加载了 {len(feature_names)} 个选择的特征")
+            return feature_names
+
+        except Exception as e:
+            print(f"⚠️ 加载特征列表失败: {e}")
+            return None
+
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
         """准备训练数据（80个指标版本，优化版）
         
@@ -1487,7 +1522,7 @@ class MLTradingModel:
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
         """训练模型
 
         Args:
@@ -1495,6 +1530,7 @@ class MLTradingModel:
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
+            use_feature_selection: 是否使用特征选择（默认False，使用全部特征）
         """
         print("准备训练数据...")
         df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
@@ -1517,6 +1553,17 @@ class MLTradingModel:
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
         print(f"使用 {len(self.feature_columns)} 个特征")
+
+        # 应用特征选择（可选）
+        if use_feature_selection:
+            print("\n🎯 应用特征选择...")
+            selected_features = self.load_selected_features()
+            if selected_features:
+                # 筛选特征列
+                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
+                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+            else:
+                print("⚠️ 未找到特征选择文件，使用全部特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -1824,6 +1871,41 @@ class GBDTLRModel:
         self.gbdt_leaf_names = []
         self.horizon = 1  # 默认预测周期
 
+    def load_selected_features(self, filepath=None):
+        """加载选择的特征列表
+
+        Args:
+            filepath: 特征名称文件路径（可选，默认使用最新的）
+
+        Returns:
+            list: 特征名称列表（如果找到），否则返回None
+        """
+        import os
+        import glob
+
+        if filepath is None:
+            # 查找最新的特征名称文件
+            pattern = 'output/selected_features_*.csv'
+            files = glob.glob(pattern)
+            if not files:
+                return None
+            # 按修改时间排序，取最新的
+            filepath = max(files, key=os.path.getmtime)
+
+        try:
+            import pandas as pd
+            # 读取特征名称
+            df = pd.read_csv(filepath)
+            feature_names = df['Feature_Name'].tolist()
+
+            print(f"📂 加载特征列表文件: {filepath}")
+            print(f"✅ 加载了 {len(feature_names)} 个选择的特征")
+            return feature_names
+
+        except Exception as e:
+            print(f"⚠️ 加载特征列表失败: {e}")
+            return None
+
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
         """准备训练数据（80个指标版本）
         
@@ -1942,7 +2024,7 @@ class GBDTLRModel:
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
         """训练 GBDT + LR 模型
 
         Args:
@@ -1950,6 +2032,7 @@ class GBDTLRModel:
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
+            use_feature_selection: 是否使用特征选择（默认False，使用全部特征）
         """
         print("="*70)
         print("🚀 开始训练 GBDT + LR 模型")
@@ -1977,6 +2060,17 @@ class GBDTLRModel:
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
         print(f"✅ 使用 {len(self.feature_columns)} 个特征")
+
+        # 应用特征选择（可选）
+        if use_feature_selection:
+            print("\n🎯 应用特征选择...")
+            selected_features = self.load_selected_features()
+            if selected_features:
+                # 筛选特征列
+                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
+                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+            else:
+                print("⚠️ 未找到特征选择文件，使用全部特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -2503,6 +2597,8 @@ def main():
                        help='预测日期：基于该日期的数据预测下一个交易日 (YYYY-MM-DD)，默认使用最新交易日')
     parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 20],
                        help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
+    parser.add_argument('--use-feature-selection', action='store_true',
+                       help='使用特征选择（只使用500个选择的特征，而不是全部2936个）')
 
     args = parser.parse_args()
 
@@ -2538,7 +2634,7 @@ def main():
             print("\n" + "="*70)
             print("🌳 训练 LightGBM 模型")
             print("="*70)
-            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
+            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
             # 添加周期后缀：_1d, _5d, _20d
             horizon_suffix = f'_{args.horizon}d'
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
@@ -2552,7 +2648,7 @@ def main():
             print("\n" + "="*70)
             print("🌲 训练 GBDT + LR 模型")
             print("="*70)
-            gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
+            gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
             gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
             gbdt_lr_model.save_model(gbdt_lr_model_path)
             gbdt_lr_importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
@@ -2589,14 +2685,14 @@ def main():
             # 训练单个模型
             horizon_suffix = f'_{args.horizon}d'
             if lgbm_model:
-                feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
+                feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
                 lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
                 lgbm_model.save_model(lgbm_model_path)
                 importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
                 feature_importance.to_csv(importance_path, index=False)
                 print(f"\n特征重要性已保存到 {importance_path}")
             else:
-                feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon)
+                feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
                 gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
                 gbdt_lr_model.save_model(gbdt_lr_model_path)
                 importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
