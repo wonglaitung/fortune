@@ -1344,6 +1344,7 @@ class MLTradingModel:
         self.scaler = StandardScaler()
         self.feature_columns = []
         self.horizon = 1  # 默认预测周期
+        self.model_type = 'lgbm'  # 模型类型标识
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -1571,8 +1572,9 @@ class MLTradingModel:
         print(f"使用 {len(self.feature_columns)} 个特征")
 
         # 应用特征选择（可选）
-        if use_feature_selection:
-            print("\n🎯 应用特征选择...")
+        # 注意：GBDT+LR对特征选择不敏感，建议不使用
+        if use_feature_selection and self.model_type == 'lgbm':
+            print("\n🎯 应用特征选择（LightGBM）...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -1580,6 +1582,10 @@ class MLTradingModel:
                 print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
                 print("⚠️ 未找到特征选择文件，使用全部特征")
+        elif use_feature_selection and self.model_type == 'gbdt_lr':
+            print("\n🎯 跳过特征选择（GBDT+LR）")
+            print("⚠️ GBDT+LR对特征选择不敏感，使用全部特征以保持性能")
+            print(f"✅ 使用全部 {len(self.feature_columns)} 个特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -1886,6 +1892,7 @@ class GBDTLRModel:
         self.actual_n_estimators = 0
         self.gbdt_leaf_names = []
         self.horizon = 1  # 默认预测周期
+        self.model_type = 'gbdt_lr'  # 模型类型标识
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -2094,8 +2101,9 @@ class GBDTLRModel:
         print(f"✅ 使用 {len(self.feature_columns)} 个特征")
 
         # 应用特征选择（可选）
-        if use_feature_selection:
-            print("\n🎯 应用特征选择...")
+        # 注意：GBDT+LR对特征选择不敏感，建议不使用
+        if use_feature_selection and self.model_type == 'lgbm':
+            print("\n🎯 应用特征选择（LightGBM）...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -2103,6 +2111,10 @@ class GBDTLRModel:
                 print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
                 print("⚠️ 未找到特征选择文件，使用全部特征")
+        elif use_feature_selection and self.model_type == 'gbdt_lr':
+            print("\n🎯 跳过特征选择（GBDT+LR）")
+            print("⚠️ GBDT+LR对特征选择不敏感，使用全部特征以保持性能")
+            print(f"✅ 使用全部 {len(self.feature_columns)} 个特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
