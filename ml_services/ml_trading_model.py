@@ -1534,6 +1534,11 @@ class MLTradingModel:
                 for key, value in sentiment_features.items():
                     stock_df[key] = value
 
+                # 添加主题特征（LDA主题建模）
+                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                for key, value in topic_features.items():
+                    stock_df[key] = value
+
                 # 添加板块特征
                 sector_features = self.feature_engineer.create_sector_features(code, stock_df)
                 for key, value in sector_features.items():
@@ -1851,6 +1856,11 @@ class MLTradingModel:
             for key, value in sentiment_features.items():
                 stock_df[key] = value
 
+            # 添加主题特征（LDA主题建模）
+            topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+            for key, value in topic_features.items():
+                stock_df[key] = value
+
             # 添加板块特征
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
             for key, value in sector_features.items():
@@ -2060,6 +2070,11 @@ class GBDTLRModel:
                 # 添加情感特征
                 sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
                 for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
+                # 添加主题特征（LDA主题建模）
+                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                for key, value in topic_features.items():
                     stock_df[key] = value
 
                 # 添加板块特征
@@ -2575,6 +2590,11 @@ class GBDTLRModel:
             # 添加情感特征
             sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
             for key, value in sentiment_features.items():
+                stock_df[key] = value
+
+            # 添加主题特征（LDA主题建模）
+            topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+            for key, value in topic_features.items():
                 stock_df[key] = value
 
             # 添加板块特征
