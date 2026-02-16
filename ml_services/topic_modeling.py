@@ -313,8 +313,8 @@ class TopicModeler:
             print(f"   - 词汇数量: {len(self.feature_names)}")
             print(f"   - 文档数量: {len(text_strings)}")
             
-            # 显示主题关键词
-            self._print_topic_keywords()
+            # 显示主题关键词（已禁用以减少输出）
+            # self._print_topic_keywords()
             
             return True
             
@@ -433,8 +433,8 @@ class TopicModeler:
             print(f"   - 保存时间: {model_data['saved_at']}")
             print(f"   - 主题数量: {self.n_topics}")
             
-            # 显示主题关键词
-            self._print_topic_keywords()
+            # 显示主题关键词（已禁用以减少输出）
+            # self._print_topic_keywords()
             
             return True
             
