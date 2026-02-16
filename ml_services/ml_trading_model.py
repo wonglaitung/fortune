@@ -663,6 +663,11 @@ class FeatureEngineer:
             # 生物医药股
             '2269.HK': {'type': 'biotech', 'name': '药明生物', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
 
+            # 房地产股
+            '0012.HK': {'type': 'real_estate', 'name': '恒基地产', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 85},
+            '0016.HK': {'type': 'real_estate', 'name': '新鸿基地产', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
+            '1109.HK': {'type': 'real_estate', 'name': '华润置地', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
+
             # 指数基金
             '2800.HK': {'type': 'index', 'name': '盈富基金', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
         }
@@ -695,6 +700,10 @@ class FeatureEngineer:
             '6682.HK': {'type': 'ai', 'name': '第四范式', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
             '9660.HK': {'type': 'ai', 'name': '地平线机器人', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
             '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW', 'defensive': 35, 'growth': 85, 'cyclical': 35, 'liquidity': 85, 'risk': 65},
+            # 房地产股
+            '0012.HK': {'type': 'real_estate', 'name': '恒基地产', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 85},
+            '0016.HK': {'type': 'real_estate', 'name': '新鸿基地产', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
+            '1109.HK': {'type': 'real_estate', 'name': '华润置地', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
         }
 
         # 获取股票类型信息
@@ -727,6 +736,11 @@ class FeatureEngineer:
             'Cyclical_Style_Fundamental_Weight': 0.1 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
             'Cyclical_Style_Technical_Weight': 0.7 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
             'Cyclical_Style_Flow_Weight': 0.2 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,
+
+            # 房地产股：基本面权重20%，技术分析权重60%，资金流向权重20%
+            'RealEstate_Style_Fundamental_Weight': 0.2 if stock_info['type'] == 'real_estate' else 0.0,
+            'RealEstate_Style_Technical_Weight': 0.6 if stock_info['type'] == 'real_estate' else 0.0,
+            'RealEstate_Style_Flow_Weight': 0.2 if stock_info['type'] == 'real_estate' else 0.0,
         }
 
         # 动态特征（基于历史数据计算）
