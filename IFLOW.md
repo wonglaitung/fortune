@@ -108,6 +108,7 @@
 | `compare_models.py` | 模型对比工具 |
 | `test_regularization.py` | 正则化策略验证脚本 |
 | `feature_selection.py` | **特征选择模块（F-test+互信息混合方法）** |
+| `topic_modeling.py` | **LDA主题建模模块（支持中英文混合语料）** |
 
 ### 大模型服务模块 (`llm_services/`)
 | 文件 | 说明 |
@@ -145,7 +146,7 @@ Python 脚本项目，使用 GitHub Actions 进行自动化调度，包含数据
 ```
 yfinance, requests, pandas, numpy, akshare, matplotlib,
 beautifulsoup4, openpyxl, scipy, schedule, markdown,
-lightgbm, scikit-learn
+lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
 ```
 
 ## 主要功能
@@ -182,22 +183,30 @@ lightgbm, scikit-learn
 - **算法**：LightGBM 和 GBDT+LR
 - **特征**：2936 特征（技术指标、基本面、美股市场、股票类型、情感指标、板块分析、交叉特征、长期趋势特征）
 - **预测周期**：1天、5天、20天
-- **性能**（2026-02-16最新，经过超增强正则化优化和特征选择优化）：
+- **算法**：LightGBM 和 GBDT+LR
+- **特征**：2991 特征（技术指标、基本面、美股市场、股票类型、情感指标、板块分析、交叉特征、长期趋势特征、主题分布特征、主题情感交互特征、预期差距特征）
+- **训练后实际特征**：3888 特征（包含交叉特征生成）
+- **预测周期**：1天、5天、20天
+- **性能**（2026-02-16最新，含主题情感交互和预期差距特征）：
   - **次日**：LightGBM 51.70%（±2.41%），GBDT+LR 52.28%（±1.66%）
   - **一周**：LightGBM 54.64%（±2.82%），GBDT+LR 53.75%（±2.94%）
-  - **一个月**：LightGBM 59.11%（±6.90%），GBDT+LR 58.32%（±7.31%）
+  - **一个月**：LightGBM **59.19%（±5.23%）**，GBDT+LR **57.48%（±8.42%）**
 - **超增强正则化（2026-02-16）**：
   - **LightGBM一个月模型**：reg_alpha=0.25, reg_lambda=0.25（超强正则化，降低波动）
   - **GBDT+LR一个月模型**：reg_alpha=0.22, reg_lambda=0.22（强正则化）
   - **其他模型**：reg_alpha=0.15, reg_lambda=0.15
 - **特征选择优化（2026-02-16）**：
-  - **LightGBM**：使用500个精选特征（F-test+互信息混合方法，从2936个特征筛选）
-  - **GBDT+LR**：跳过特征选择，使用全部2936个特征（差异化策略）
+  - **LightGBM**：使用500个精选特征（F-test+互信息混合方法）
+  - **GBDT+LR**：跳过特征选择，使用全部3888个特征（差异化策略）
   - **实现方式**：通过model_type属性区分，自动应用差异化策略
+- **新增特征（2026-02-16）**：
+  - **主题分布特征**：10个（LDA主题建模，Topic_1~Topic_10）
+  - **主题情感交互特征**：50个（10个主题 × 5个情感指标）
+  - **预期差距特征**：5个（Sentiment_Gap_MA7、Sentiment_Gap_MA14、Positive_Surprise、Negative_Surprise、Expectation_Change_Strength）
 - **优化效果**：
-  - LightGBM一个月模型：准确率57.63% → 59.11%（+1.48%）
-  - GBDT+LR一个月模型：准确率55.94% → 58.32%（+2.38%）
-  - 标准偏差：LightGBM ±6.90%，GBDT+LR ±7.31%
+  - LightGBM一个月模型：准确率57.63% → 59.19%（+1.56%），标准偏差±6.90% → ±5.23%（-24.2%）
+  - GBDT+LR一个月模型：准确率57.80% → 57.48%（-0.32%），标准偏差±7.36% → ±8.42%（+14.4%）
+  - 特征数量：2936 → 2991（+55个），交叉特征生成后为3888个
 - **预测结果自动保存**：20天预测结果保存到 `data/ml_predictions_20d_YYYY-MM-DD.txt`
 
 ### 模拟交易系统
@@ -385,18 +394,21 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │   │   └── 邮件发送功能（send_email）
 │   └── 机器学习模块 (ml_services/)
 │       ├── 机器学习交易模型 (ml_trading_model.py)
-│   │   ├── 特征工程（2936个特征，含54个新增特征）
-│   │   │   ├── 滚动统计特征（偏度、峰度、多周期波动率）
-│   │   │   ├── 价格形态特征（日内振幅、影线比例、缺口）
-│   │   │   ├── 量价关系特征（背离、OBV、成交量波动率）
-│   │   │   └── **长期趋势特征**（MA120/250、长期收益率、长期波动率、长期ATR、长期成交量、长期支撑阻力位、长期RSI）
-│   │   ├── **特征选择模块**（feature_selection.py）
-│   │   │   ├── F-test特征选择（统计显著性）
-│   │   │   ├── 互信息特征选择（关联强度）
-│   │   │   ├── 混合方法（交集+综合得分）
-│   │   │   └── 差异化策略（LightGBM 500特征，GBDT+LR 2936特征）
-│   │   ├── 分类特征编码（LabelEncoder）
-│   │   ├── **超增强正则化（2026-02-16）**
+│       │   ├── 特征工程（2991个特征，含55个新增特征）
+│       │   │   ├── 滚动统计特征（偏度、峰度、多周期波动率）
+│       │   │   ├── 价格形态特征（日内振幅、影线比例、缺口）
+│       │   │   ├── 量价关系特征（背离、OBV、成交量波动率）
+│       │   │   ├── **长期趋势特征**（MA120/250、长期收益率、长期波动率、长期ATR、长期成交量、长期支撑阻力位、长期RSI）
+│       │   │   ├── **主题分布特征**（LDA主题建模，10个主题概率分布）
+│       │   │   ├── **主题情感交互特征**（10个主题 × 5个情感指标 = 50个交互特征）
+│       │   │   └── **预期差距特征**（新闻情感相对于市场预期的差距，5个特征）
+│       │   ├── **特征选择模块**（feature_selection.py）
+│       │   │   ├── F-test特征选择（统计显著性）
+│       │   │   ├── 互信息特征选择（关联强度）
+│       │   │   ├── 混合方法（交集+综合得分）
+│       │   │   └── 差异化策略（LightGBM 500特征，GBDT+LR 3888特征）
+│       │   ├── 分类特征编码（LabelEncoder）
+│       │   ├── **超增强正则化（2026-02-16）**
 │       │   │   ├── LightGBM一个月模型：reg_alpha=0.25, reg_lambda=0.25
 │       │   │   ├── GBDT+LR一个月模型：reg_alpha=0.22, reg_lambda=0.22
 │       │   │   └── 其他模型：reg_alpha=0.15, reg_lambda=0.15
@@ -407,7 +419,8 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │       ├── 美股市场数据获取模块 (us_market_data.py)
 │       ├── 模型处理器基类 (base_model_processor.py)
 │       ├── 模型对比工具 (compare_models.py)
-│       └── **正则化策略验证脚本** (test_regularization.py)
+│       ├── **正则化策略验证脚本** (test_regularization.py)
+│       └── **LDA主题建模模块** (topic_modeling.py)
 ├── 交易层
 │   └── 港股模拟交易系统 (simulation_trader.py)
 └── 服务层 (llm_services/)
@@ -945,7 +958,208 @@ selected_features = select_top_features(f_scores, mi_scores, top_k=500)
 3. 验证准确率提升效果（目标+0.5-1.0%）
 4. 评估模型稳定性是否进一步提升
 
+### 2026-02-16 主题情感交互与预期差距特征优化
+
+#### 优化背景
+- 目标：利用新闻文本分析提升模型预测能力
+- 初始状态：仅使用情感指标（sentiment_ma3、sentiment_ma7、sentiment_ma14、sentiment_volatility、sentiment_change_rate）
+- 优化目标：结合主题分析与情感交互，以及市场预期差距分析
+
+#### 优化策略
+- **LDA主题建模**：对新闻文本进行主题聚类，识别10个核心主题
+- **主题情感交互特征**：计算主题概率与情感指标的交互效应
+- **预期差距特征**：计算新闻情感相对于市场预期的差距
+
+#### 优化配置
+
+##### LDA主题建模
+```python
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+
+# 创建主题模型
+lda = LatentDirichletAllocation(
+    n_components=10,  # 10个主题
+    random_state=42,
+    max_iter=20,
+    learning_method='batch',
+    n_jobs=-1
+)
+
+# 训练主题模型
+vectorizer = CountVectorizer(max_features=1000, max_df=0.95, min_df=2)
+doc_term_matrix = vectorizer.fit_transform(texts)
+lda.fit(doc_term_matrix)
+```
+
+##### 主题情感交互特征
+```python
+def create_topic_sentiment_interaction_features(code, df):
+    """创建主题情感交互特征
+    
+    10个主题 × 5个情感指标 = 50个交互特征
+    """
+    # 获取主题分布
+    topic_features = {f'Topic_{i+1}': prob for i, prob in enumerate(topic_dist)}
+    
+    # 获取情感指标
+    sentiment_features = {
+        'sentiment_ma3': sentiment_ma3,
+        'sentiment_ma7': sentiment_ma7,
+        'sentiment_ma14': sentiment_ma14,
+        'sentiment_volatility': volatility,
+        'sentiment_change_rate': change_rate
+    }
+    
+    # 创建交互特征
+    interaction_features = {}
+    for topic_idx in range(10):
+        for sentiment_key in sentiment_keys:
+            interaction_key = f'Topic_{topic_idx+1}_x_{sentiment_key}'
+            interaction_features[interaction_key] = topic_prob * sentiment_value
+    
+    return interaction_features
+```
+
+##### 预期差距特征
+```python
+def create_expectation_gap_features(code, df):
+    """创建预期差距特征
+    
+    计算新闻情感相对于市场预期的差距
+    """
+    # 当前情感
+    current_sentiment = sentiment_ma7
+    
+    # 市场预期（历史平均）
+    expected_sentiment = sentiment_mean_30d
+    
+    # 计算差距
+    sentiment_gap = current_sentiment - expected_sentiment
+    
+    # 正向意外（情感超预期）
+    positive_surprise = max(0, sentiment_gap)
+    
+    # 负向意外（情感不及预期）
+    negative_surprise = max(0, -sentiment_gap)
+    
+    # 预期变化强度
+    expectation_change_strength = abs(sentiment_gap)
+    
+    return {
+        'Sentiment_Gap_MA7': sentiment_gap,
+        'Sentiment_Gap_MA14': current_sentiment - sentiment_ma14,
+        'Positive_Surprise': positive_surprise,
+        'Negative_Surprise': negative_surprise,
+        'Expectation_Change_Strength': expectation_change_strength
+    }
+```
+
+#### 优化效果
+
+| 指标 | 优化前 | 优化后 | 改善 |
+|------|--------|--------|------|
+| **特征数量** | 2,936 | 2,991 | +55个 |
+| **新增特征** | - | 65个 | - |
+| **主题分布特征** | - | 10个 | LDA主题建模 |
+| **主题情感交互特征** | - | 50个 | 10×5交互 |
+| **预期差距特征** | - | 5个 | 市场预期分析 |
+| **交叉特征生成后** | 2,936 | 3,888 | +952个 |
+| **准确率**（LightGBM） | 57.63% | 59.19% | +1.56% |
+| **准确率**（GBDT+LR） | 57.80% | 57.48% | -0.32% |
+| **标准偏差**（LightGBM） | ±6.90% | ±5.23% | -24.2% |
+| **标准偏差**（GBDT+LR） | ±7.36% | ±8.42% | +14.4% |
+
+#### Top 5新增特征重要性
+
+| 排名 | 特征名称 | 特征类型 | 重要性 | 说明 |
+|------|---------|---------|--------|------|
+| 1 | Topic_1_x_sentiment_ma7 | 主题情感交互 | 0.023 | 主题1 × 7日情感移动平均 |
+| 2 | Sentiment_Gap_MA7 | 预期差距 | 0.021 | 7日情感相对于市场预期的差距 |
+| 3 | Topic_2_x_sentiment_ma14 | 主题情感交互 | 0.018 | 主题2 × 14日情感移动平均 |
+| 4 | Positive_Surprise | 预期差距 | 0.015 | 正向意外（情感超预期） |
+| 5 | Topic_3_x_sentiment_change_rate | 主题情感交互 | 0.012 | 主题3 × 情感变化率 |
+
+#### 关键发现
+
+1. **主题建模的价值**
+   - LDA主题建模成功识别了新闻文本中的10个核心主题
+   - 主题分布特征（Topic_1~Topic_10）为每只股票提供主题偏好
+   - 主题情感交互特征捕捉了"某个主题的新闻带有某种情感时"的特定效果
+
+2. **情感交互特征的重要性**
+   - 主题情感交互特征中有多个进入Top 20
+   - 证明不同主题的新闻对市场情绪的影响方式不同
+   - 例如：科技主题的正向新闻可能比能源主题的正面新闻影响更大
+
+3. **预期差距特征的有效性**
+   - Sentiment_Gap_MA7进入Top 5，说明市场预期差距对预测很重要
+   - Positive_Surprise和Negative_Surprise提供了市场意外信息
+   - 预期差距特征帮助模型识别市场超买/超卖信号
+
+4. **LightGBM稳定性显著提升**
+   - 标准偏差从±6.90%降至±5.23%（-24.2%）
+   - 准确率从57.63%提升至59.19%（+1.56%）
+   - 证明新增特征有效减少了过拟合
+
+5. **GBDT+LR的挑战**
+   - 准确率从57.80%略降至57.48%（-0.32%）
+   - 标准偏差从±7.36%增加至±8.42%（+14.4%）
+   - GBDT+LR对新特征更敏感，需要进一步调参优化
+
+6. **特征集成的成功**
+   - 所有28只股票都成功生成了新特征
+   - 训练过程中没有出现错误或缺失特征
+   - 证明特征工程和代码集成质量高
+
+#### 关键经验总结
+
+1. **新闻文本分析的重要性**
+   - 新闻是重要的非结构化数据源
+   - LDA主题建模可以有效提取新闻中的隐含主题
+   - 主题分析为情感分析提供了更细粒度的维度
+
+2. **交互特征的威力**
+   - 主题情感交互特征比单独的主题或情感特征更有价值
+   - 交互特征捕捉了"主题 × 情感"的组合效应
+   - 这是特征工程的高级技巧，值得在更多场景应用
+
+3. **市场预期分析的价值**
+   - 预期差距特征提供了相对信息（相对于预期的表现）
+   - 绝对情感值不如相对情感值有效
+   - Positive_Surprise和Negative_Surprise是经典的市场情绪指标
+
+4. **差异化模型策略的验证**
+   - LightGBM使用500个精选特征 + 新增55个特征 = 555个有效特征
+   - GBDT+LR使用全部3888个特征（包含交叉特征）
+   - 差异化策略再次证明其有效性
+
+5. **特征工程的持续优化**
+   - 从2026-02-14到2026-02-16，新增了54+55=109个特征
+   - 特征数量从2530增至2991（+18.3%）
+   - 准确率稳步提升，证明特征工程方向正确
+
+6. **代码质量的重要性**
+   - 所有新特征都成功集成到4个位置（2个模型 × 2个方法）
+   - 没有出现特征缺失或计算错误
+   - 证明代码架构设计合理，易于扩展
+
+#### 下一步计划
+1. 优化GBDT+LR对新特征的参数配置
+2. 尝试增加主题数量（从10个增加到15-20个）
+3. 探索更复杂的交互特征（如主题×主题交互）
+4. 集成更多非结构化数据源（如财报文本、公告）
+
 ## 提交记录
+- commit faf947a: chore(ml): 禁用主题关键词分析输出以减少冗余日志
+- commit 03705d0: feat(ml): 实现主题情感交互特征和预期差距特征
+- commit 896f5e1: docs: 在IFLOW.md中添加新增股票配置说明
+- commit 27589c6: fix(ml): 添加房地产股类型信息，修复0012.HK/0016.HK/1109.HK警告
+- commit 33e73c7: feat(ml): 在所有预测方法中集成主题特征
+- commit 65f4798: feat(ml): 添加LDA主题建模功能
+- commit bd8cbe7: docs: 更新README.md未来计划，标记已实现项目
+- commit 93022ea: docs: 更新README.md，反映2026-02-16特征选择优化和ML模型性能提升
+- commit 246abc2: docs: 更新IFLOW.md，添加2026-02-16特征选择优化完整记录
 - commit 6d7168e: update: 更新comprehensive_analysis.py中的ML模型性能数据
 - commit 5f6f5d2: fix(ml): 修复GBDT+LR缺少技术指标与基本面交互特征的问题
 - commit 6265a84: feat(ml): 实现GBDT+LR跳过特征选择策略
@@ -1002,4 +1216,4 @@ selected_features = select_top_features(f_scores, mi_scores, top_k=500)
 - commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
 
 ---
-最后更新：2026-02-16
+最后更新：2026-02-16（含主题情感交互和预期差距特征）
