@@ -273,6 +273,35 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - 房地产：0012.HK、0016.HK、1109.HK（新增）
 - 其他：0388.HK、0728.HK、0941.HK、1138.HK、1211.HK、1299.HK、1330.HK、2269.HK、2800.HK
 
+**⚠️ 重要配置说明（新增股票时必读）**：
+
+如果在 `config.py` 中增加新的股票代码，必须同时在 `ml_services/ml_trading_model.py` 的 `create_stock_type_features` 方法中补充股票类型信息：
+
+1. **在 `stock_type_mapping` 字典中添加股票类型**：
+   ```python
+   '股票代码.HK': {'type': '类型', 'name': '股票名称', 'defensive': XX, 'growth': XX, 'cyclical': XX, 'liquidity': XX, 'risk': XX},
+   ```
+   - **type**: 股票类型（bank/tech/utility/semiconductor/ai/energy/shipping/exchange/insurance/biotech/new_energy/environmental/real_estate/index）
+   - **defensive**: 防御性评分（0-100）
+   - **growth**: 成长性评分（0-100）
+   - **cyclical**: 周期性评分（0-100）
+   - **liquidity**: 流动性评分（0-100）
+   - **risk**: 风险评分（0-100）
+
+2. **在 `stock_info_mapping` 字典中添加相同的股票类型信息**
+
+3. **在衍生特征权重部分添加该股票类型的权重特征**：
+   - 必须在 `'Cyclical_Style_Flow_Weight': 0.2 if stock_info['type'] in ['energy', 'shipping', 'exchange'] else 0.0,` 这一行后面添加
+   - 格式示例：
+   ```python
+   # 房地产股：基本面权重20%，技术分析权重60%，资金流向权重20%
+   'RealEstate_Style_Fundamental_Weight': 0.2 if stock_info['type'] == 'real_estate' else 0.0,
+   'RealEstate_Style_Technical_Weight': 0.6 if stock_info['type'] == 'real_estate' else 0.0,
+   'RealEstate_Style_Flow_Weight': 0.2 if stock_info['type'] == 'real_estate' else 0.0,
+   ```
+
+**如果不配置股票类型信息，会出现"⚠️ 未找到股票 XXXX.HK 的类型信息"警告，并且该股票将无法生成股票类型相关特征。**
+
 ### 投资者类型
 - `aggressive`：进取型，关注动量
 - `moderate`：稳健型，平衡分析
