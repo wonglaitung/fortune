@@ -875,6 +875,12 @@ selected_features = select_top_features(f_scores, mi_scores, top_k=500)
    - 内存占用降低，可支持更多实验
    - 模型复杂度降低，过拟合风险减少
 
+5. **模型差异化特征选择策略**
+   - LightGBM：使用500个精选特征（F-test+互信息混合）
+   - GBDT+LR：跳过特征选择，使用全部2936个特征
+   - 差异化原因：GBDT+LR的LR层需要更多输入维度，对特征选择敏感（准确率下降2.20%）
+   - 实现方式：通过model_type属性区分，LightGBM应用特征选择，GBDT+LR自动跳过
+
 #### 下一步计划
 1. 将特征选择集成到训练流程中
 2. 使用选择的500个特征重新训练模型
