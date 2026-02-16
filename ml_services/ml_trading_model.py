@@ -1584,22 +1584,23 @@ class MLTradingModel:
                 'verbose': -1
             }
         else:  # horizon == 20
-            # 一个月模型参数（增强正则化）
+            # 一个月模型参数（超增强正则化 - 2026-02-16优化）
             # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
-            print("使用20天模型参数（增强正则化，应对特征数量增长）...")
+            # 优化目标：将训练/验证差距从±7.07%降至<5%
+            print("使用20天模型参数（超增强正则化，降低过拟合）...")
             lgb_params = {
-                'n_estimators': 45,           # 减少树数量（50→45）
-                'learning_rate': 0.025,        # 降低学习率（0.03→0.025）
-                'max_depth': 4,                # 保持4
-                'num_leaves': 13,              # 减少叶子节点（15→13）
-                'min_child_samples': 35,       # 增加最小样本（30→35）
-                'subsample': 0.65,             # 减少行采样（0.7→0.65）
-                'colsample_bytree': 0.65,      # 减少列采样（0.7→0.65）
-                'reg_alpha': 0.18,             # 增强L1正则（0.15→0.18）优先稳定性
-                'reg_lambda': 0.18,            # 增强L2正则（0.15→0.18）优先稳定性
-                'min_split_gain': 0.12,        # 增加分割增益（0.1→0.12）
-                'feature_fraction': 0.65,      # 减少特征采样（0.7→0.65）
-                'bagging_fraction': 0.65,      # 减少Bagging采样（0.7→0.65）
+                'n_estimators': 40,           # 进一步减少树数量（45→40）
+                'learning_rate': 0.02,         # 进一步降低学习率（0.025→0.02）
+                'max_depth': 3,                # 降低深度（4→3）减少过拟合
+                'num_leaves': 11,              # 进一步减少叶子节点（13→11）
+                'min_child_samples': 40,       # 进一步增加最小样本（35→40）
+                'subsample': 0.6,              # 进一步减少行采样（0.65→0.6）
+                'colsample_bytree': 0.6,       # 进一步减少列采样（0.65→0.6）
+                'reg_alpha': 0.25,             # 超增强L1正则（0.18→0.25）
+                'reg_lambda': 0.25,            # 超增强L2正则（0.18→0.25）
+                'min_split_gain': 0.15,        # 进一步增加分割增益（0.12→0.15）
+                'feature_fraction': 0.6,       # 进一步减少特征采样（0.65→0.6）
+                'bagging_fraction': 0.6,       # 进一步减少Bagging采样（0.65→0.6）
                 'bagging_freq': 5,
                 'random_state': 42,
                 'verbose': -1
@@ -1621,7 +1622,7 @@ class MLTradingModel:
                 eval_set=[(X_val, y_val)],
                 eval_metric='binary_logloss',
                 callbacks=[
-                    lgb.early_stopping(stopping_rounds=10, verbose=False)  # 增加patience
+                    lgb.early_stopping(stopping_rounds=15, verbose=False)  # 增加patience（10→15）
                 ]
             )
             y_pred = self.model.predict(X_val)
@@ -2030,18 +2031,18 @@ class GBDTLRModel:
             subsample = 0.65    # 减少行采样（0.7→0.65）
             colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
         else:  # horizon == 20
-            # 一个月模型参数（增强正则化）
+            # 一个月模型参数（超增强正则化 - 2026-02-16优化）
             # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
-            # 优化：GBDT+LR使用0.15（保持准确率），LightGBM使用0.18（降低波动）
-            print("使用20天模型参数（增强正则化，应对特征数量增长）...")
-            n_estimators = 32
-            num_leaves = 24  # 减少叶子节点（32→24）
-            stopping_rounds = 12  # 增加早停耐心（10→12）
-            min_child_samples = 30  # 增加最小样本（20→30）
-            reg_alpha = 0.15    # GBDT+LR使用0.15（保持准确率，之前表现良好）
-            reg_lambda = 0.15   # GBDT+LR使用0.15（保持准确率，之前表现良好）
-            subsample = 0.65    # 减少行采样（0.7→0.65）
-            colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
+            # 优化目标：将训练/验证差距从±7.07%降至<5%
+            print("使用20天模型参数（超增强正则化，降低过拟合）...")
+            n_estimators = 28           # 进一步减少树数量（32→28）
+            num_leaves = 20              # 进一步减少叶子节点（24→20）
+            stopping_rounds = 18         # 进一步增加早停耐心（12→18）
+            min_child_samples = 35       # 进一步增加最小样本（30→35）
+            reg_alpha = 0.22             # 增强L1正则（0.15→0.22）
+            reg_lambda = 0.22            # 增强L2正则（0.15→0.22）
+            subsample = 0.6              # 进一步减少行采样（0.65→0.6）
+            colsample_bytree = 0.6       # 进一步减少列采样（0.65→0.6）
 
         self.gbdt_model = lgb.LGBMClassifier(
             objective='binary',
@@ -2051,13 +2052,13 @@ class GBDTLRModel:
             min_child_samples=min_child_samples,  # 根据周期调整
             colsample_bytree=colsample_bytree,  # 根据周期调整
             num_leaves=num_leaves,      # 根据周期调整
-            learning_rate=0.03,         # 降低学习率（0.05→0.03）
+            learning_rate=0.025,        # 进一步降低学习率（0.03→0.025）
             n_estimators=n_estimators,
             reg_alpha=reg_alpha,        # 根据周期调整L1正则
             reg_lambda=reg_lambda,       # 根据周期调整L2正则
-            min_split_gain=0.1,         # 最小分割增益（新增）
-            feature_fraction=0.7,       # 特征采样率（新增）
-            bagging_fraction=0.7,       # Bagging采样率（新增）
+            min_split_gain=0.12,        # 进一步增加分割增益（0.1→0.12）
+            feature_fraction=0.6,       # 进一步减少特征采样（0.7→0.6）
+            bagging_fraction=0.6,       # 进一步减少Bagging采样（0.7→0.6）
             bagging_freq=5,             # Bagging频率（新增）
             random_state=2020,
             n_jobs=-1,
