@@ -1345,11 +1345,12 @@ class MLTradingModel:
         self.feature_columns = []
         self.horizon = 1  # 默认预测周期
 
-    def load_selected_features(self, filepath=None):
-        """加载选择的特征列表
+    def load_selected_features(self, filepath=None, current_feature_names=None):
+        """加载选择的特征列表（使用特征名称交集，确保特征存在）
 
         Args:
             filepath: 特征名称文件路径（可选，默认使用最新的）
+            current_feature_names: 当前数据集的特征名称列表（可选）
 
         Returns:
             list: 特征名称列表（如果找到），否则返回None
@@ -1370,11 +1371,26 @@ class MLTradingModel:
             import pandas as pd
             # 读取特征名称
             df = pd.read_csv(filepath)
-            feature_names = df['Feature_Name'].tolist()
+            selected_names = df['Feature_Name'].tolist()
 
             print(f"📂 加载特征列表文件: {filepath}")
-            print(f"✅ 加载了 {len(feature_names)} 个选择的特征")
-            return feature_names
+            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+
+            # 如果提供了当前特征名称，使用交集
+            if current_feature_names is not None:
+                current_set = set(current_feature_names)
+                selected_set = set(selected_names)
+                available_set = current_set & selected_set
+                
+                available_names = list(available_set)
+                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
+                print(f"📊 选择的特征数量: {len(selected_names)}")
+                print(f"📊 实际可用的特征数量: {len(available_names)}")
+                print(f"⚠️  {len(selected_set) - len(available_names)} 个特征在当前数据集中不存在")
+                
+                return available_names
+            else:
+                return selected_names
 
         except Exception as e:
             print(f"⚠️ 加载特征列表失败: {e}")
@@ -1557,7 +1573,7 @@ class MLTradingModel:
         # 应用特征选择（可选）
         if use_feature_selection:
             print("\n🎯 应用特征选择...")
-            selected_features = self.load_selected_features()
+            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
@@ -1871,11 +1887,12 @@ class GBDTLRModel:
         self.gbdt_leaf_names = []
         self.horizon = 1  # 默认预测周期
 
-    def load_selected_features(self, filepath=None):
-        """加载选择的特征列表
+    def load_selected_features(self, filepath=None, current_feature_names=None):
+        """加载选择的特征列表（使用特征名称交集，确保特征存在）
 
         Args:
             filepath: 特征名称文件路径（可选，默认使用最新的）
+            current_feature_names: 当前数据集的特征名称列表（可选）
 
         Returns:
             list: 特征名称列表（如果找到），否则返回None
@@ -1896,11 +1913,26 @@ class GBDTLRModel:
             import pandas as pd
             # 读取特征名称
             df = pd.read_csv(filepath)
-            feature_names = df['Feature_Name'].tolist()
+            selected_names = df['Feature_Name'].tolist()
 
             print(f"📂 加载特征列表文件: {filepath}")
-            print(f"✅ 加载了 {len(feature_names)} 个选择的特征")
-            return feature_names
+            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+
+            # 如果提供了当前特征名称，使用交集
+            if current_feature_names is not None:
+                current_set = set(current_feature_names)
+                selected_set = set(selected_names)
+                available_set = current_set & selected_set
+                
+                available_names = list(available_set)
+                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
+                print(f"📊 选择的特征数量: {len(selected_names)}")
+                print(f"📊 实际可用的特征数量: {len(available_names)}")
+                print(f"⚠️  {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                
+                return available_names
+            else:
+                return selected_names
 
         except Exception as e:
             print(f"⚠️ 加载特征列表失败: {e}")
@@ -2064,7 +2096,7 @@ class GBDTLRModel:
         # 应用特征选择（可选）
         if use_feature_selection:
             print("\n🎯 应用特征选择...")
-            selected_features = self.load_selected_features()
+            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
