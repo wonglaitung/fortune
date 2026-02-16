@@ -1148,6 +1148,117 @@ class FeatureEngineer:
             print(f"❌ 创建主题特征失败 {code}: {e}")
             return {f'Topic_{i+1}': 0.0 for i in range(10)}
 
+    def create_topic_sentiment_interaction_features(self, code, df):
+        """创建主题与情感交互特征
+
+        将主题分布与情感评分进行交互，捕捉"某个主题的新闻带有某种情感时"的特定效果：
+        - Topic_1 × sentiment_ma3: 主题1与3日移动平均情感的交互
+        - Topic_1 × sentiment_ma7: 主题1与7日移动平均情感的交互
+        - Topic_1 × sentiment_ma14: 主题1与14日移动平均情感的交互
+        - Topic_1 × sentiment_volatility: 主题1与情感波动率的交互
+        - Topic_1 × sentiment_change_rate: 主题1与情感变化率的交互
+        - ... 共10个主题 × 5个情感指标 = 50个交互特征
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（日期索引）
+
+        Returns:
+            dict: 包含主题情感交互特征的字典
+        """
+        try:
+            # 获取主题特征
+            topic_features = self.create_topic_features(code, df)
+
+            # 获取情感特征
+            sentiment_features = self.create_sentiment_features(code, df)
+
+            # 创建交互特征
+            interaction_features = {}
+
+            # 情感指标列表
+            sentiment_keys = ['sentiment_ma3', 'sentiment_ma7', 'sentiment_ma14',
+                            'sentiment_volatility', 'sentiment_change_rate']
+
+            # 为每个主题与每个情感指标创建交互特征
+            for topic_idx in range(10):
+                topic_key = f'Topic_{topic_idx + 1}'
+                topic_prob = topic_features.get(topic_key, 0.0)
+
+                for sentiment_key in sentiment_keys:
+                    sentiment_value = sentiment_features.get(sentiment_key, 0.0)
+
+                    # 交互特征 = 主题概率 × 情感值
+                    interaction_key = f'{topic_key}_x_{sentiment_key}'
+                    interaction_features[interaction_key] = topic_prob * sentiment_value
+
+            if interaction_features:
+                print(f"✅ 获取主题情感交互特征: {code} (共{len(interaction_features)}个)")
+                return interaction_features
+            else:
+                print(f"⚠️  无法创建主题情感交互特征: {code}")
+                return {}
+
+        except Exception as e:
+            print(f"❌ 创建主题情感交互特征失败 {code}: {e}")
+            return {}
+
+    def create_expectation_gap_features(self, code, df):
+        """创建预期差距特征
+
+        计算新闻情感相对于市场预期的差距：
+        - Sentiment_Gap_MA7: 当前情感与7日移动平均的差距
+        - Sentiment_Gap_MA14: 当前情感与14日移动平均的差距
+        - Positive_Surprise: 正向意外（情感超过预期的程度）
+        - Negative_Surprise: 负向意外（情感低于预期的程度）
+        - Expectation_Change_Strength: 预期变化强度
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame（日期索引）
+
+        Returns:
+            dict: 包含预期差距特征的字典
+        """
+        try:
+            # 获取情感特征
+            sentiment_features = self.create_sentiment_features(code, df)
+
+            # 创建预期差距特征
+            expectation_gap_features = {}
+
+            # 获取当前情感值（使用最新的情感值）
+            current_sentiment = sentiment_features.get('sentiment_ma3', 0.0)
+
+            # 计算与不同周期移动平均的差距
+            ma7 = sentiment_features.get('sentiment_ma7', 0.0)
+            ma14 = sentiment_features.get('sentiment_ma14', 0.0)
+
+            # 预期差距 = 当前情感 - 长期移动平均
+            expectation_gap_features['Sentiment_Gap_MA7'] = current_sentiment - ma7
+            expectation_gap_features['Sentiment_Gap_MA14'] = current_sentiment - ma14
+
+            # 正向意外（情感超预期，差距为正）
+            expectation_gap_features['Positive_Surprise'] = max(0, current_sentiment - ma14)
+
+            # 负向意外（情感不及预期，差距为负，取绝对值）
+            expectation_gap_features['Negative_Surprise'] = max(0, ma14 - current_sentiment)
+
+            # 使用情感变化率来衡量预期差距的强度
+            sentiment_change_rate = sentiment_features.get('sentiment_change_rate', 0.0)
+            expectation_gap_features['Expectation_Change_Strength'] = abs(sentiment_change_rate)
+
+            if expectation_gap_features:
+                print(f"✅ 获取预期差距特征: {code} (共{len(expectation_gap_features)}个)")
+                return expectation_gap_features
+            else:
+                print(f"⚠️  无法创建预期差距特征: {code}")
+                return {}
+
+        except Exception as e:
+            print(f"❌ 创建预期差距特征失败 {code}: {e}")
+            return {}
+
     def create_sector_features(self, code, df):
         """创建板块分析特征（优化版，使用缓存）
 
@@ -1552,6 +1663,14 @@ class MLTradingModel:
                 topic_features = self.feature_engineer.create_topic_features(code, stock_df)
                 for key, value in topic_features.items():
                     stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
 
                 # 添加板块特征
                 sector_features = self.feature_engineer.create_sector_features(code, stock_df)
@@ -1874,6 +1993,14 @@ class MLTradingModel:
             topic_features = self.feature_engineer.create_topic_features(code, stock_df)
             for key, value in topic_features.items():
                 stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
 
             # 添加板块特征
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
@@ -2089,6 +2216,14 @@ class GBDTLRModel:
                 # 添加主题特征（LDA主题建模）
                 topic_features = self.feature_engineer.create_topic_features(code, stock_df)
                 for key, value in topic_features.items():
+                    stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
                     stock_df[key] = value
 
                 # 添加板块特征
@@ -2610,6 +2745,14 @@ class GBDTLRModel:
             topic_features = self.feature_engineer.create_topic_features(code, stock_df)
             for key, value in topic_features.items():
                 stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
 
             # 添加板块特征
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
