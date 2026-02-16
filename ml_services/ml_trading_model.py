@@ -2043,6 +2043,10 @@ class GBDTLRModel:
         # 按日期索引排序，确保时间顺序正确
         df = df.sort_index()
 
+        # 生成技术指标与基本面交互特征（先执行，因为这是高价值特征）
+        print("\n🔗 生成技术指标与基本面交互特征...")
+        df = self.feature_engineer.create_technical_fundamental_interactions(df)
+
         # 生成交叉特征（类别型 × 数值型）
         print("\n🔗 生成交叉特征...")
         df = self.feature_engineer.create_interaction_features(df)
