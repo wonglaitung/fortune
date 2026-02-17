@@ -760,7 +760,7 @@ def generate_technical_indicators_table(stock_codes):
         if not stock_codes:
             return ""
         
-        table = "\n## 七、推荐股票技术指标详情\n\n"
+        table = "\n## 六、推荐股票技术指标详情\n\n"
         table += "| 股票代码 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 均线排列 | 布林带位置 | 成交量比率 | 趋势 |\n"
         table += "|---------|---------|--------|-----|------|-----|-----|---------|-----------|-----------|------|\n"
         
@@ -1184,7 +1184,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
-                # 获取板块分析、股息信息、恒生指数分析和AI持仓分析
+                # 构建板块分析、股息信息、恒生指数分析
                 print("📊 获取板块分析...")
                 sector_data = get_sector_analysis()
                 
@@ -1193,9 +1193,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 
                 print("📊 获取恒生指数分析...")
                 hsi_data = get_hsi_analysis()
-                
-                print("📊 获取AI持仓分析...")
-                ai_analysis = get_ai_portfolio_analysis()
                 
                 # 构建板块分析文本
                 sector_text = ""
@@ -1261,12 +1258,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                     hsi_text += f"- MA50：{hsi_data['ma50']:.2f}\n"
                     hsi_text += f"- 趋势：{hsi_data['trend']}\n"
                 
-                # 构建AI持仓分析文本
-                ai_text = ""
-                if ai_analysis:
-                    ai_text = "\n## 六、AI智能持仓分析\n"
-                    ai_text += ai_analysis
-                
                 # 从大模型响应中提取股票代码
                 import re
                 stock_codes = re.findall(r'\b\d{4}\.HK\b', response)
@@ -1297,7 +1288,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ## 二、机器学习预测结果（20天）
 
 ### LightGBM模型
-准确率：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}）
+准确率：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbdt']['std']:.2%}）
 {ml_predictions['lgbm']}
 
 ### GBDT模型
@@ -1306,9 +1297,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {sector_text}
 {dividend_text}
 {hsi_text}
-{ai_text}
 {technical_indicators_table}
-## 八、技术指标说明
+## 六、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1331,7 +1321,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 九、风险提示
+## 七、风险提示
 
 1. **模型不确定性**：
    - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
@@ -1349,7 +1339,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 概率在0.45-0.55之间 = 低置信度，不建议操作
    - 总仓位控制在45%-55%，分散风险
 
-## 十、数据来源
+## 八、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
