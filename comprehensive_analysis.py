@@ -1288,7 +1288,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ## 二、机器学习预测结果（20天）
 
 ### LightGBM模型
-准确率：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbdt']['std']:.2%}）
+准确率：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}）
 {ml_predictions['lgbm']}
 
 ### GBDT模型
