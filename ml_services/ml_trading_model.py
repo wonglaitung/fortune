@@ -2674,26 +2674,9 @@ class GBDTModel:
 
             X = latest_data[self.feature_columns].values
 
-            # Step 1: 使用 GBDT 获取叶子节点
-            gbdt_leaf = self.gbdt_model.booster_.predict(X, pred_leaf=True)[0]
-            df_gbdt_leaf = pd.DataFrame([gbdt_leaf], columns=self.gbdt_leaf_names)
-
-            # Step 2: One-Hot 编码
-            df_gbdt_onehot = pd.DataFrame()
-            for col in self.gbdt_leaf_names:
-                onehot_feats = pd.get_dummies(df_gbdt_leaf[col], prefix=col)
-                df_gbdt_onehot = pd.concat([df_gbdt_onehot, onehot_feats], axis=1)
-
-            # 确保特征列与训练时一致
-            for col in self.lr_model.feature_names_in_:
-                if col not in df_gbdt_onehot.columns:
-                    df_gbdt_onehot[col] = 0
-
-            df_gbdt_onehot = df_gbdt_onehot[self.lr_model.feature_names_in_]
-
-            # Step 3: 使用 LR 预测
-            proba = self.lr_model.predict_proba(df_gbdt_onehot)[0]
-            prediction = self.lr_model.predict(df_gbdt_onehot)[0]
+            # 使用GBDT模型直接预测
+            proba = self.gbdt_model.predict_proba(X)[0]
+            prediction = self.gbdt_model.predict(X)[0]
 
             return {
                 'code': code,
@@ -2703,6 +2686,12 @@ class GBDTModel:
                 'current_price': float(latest_data['Close'].values[0]),
                 'date': latest_data.index[0]
             }
+
+        except Exception as e:
+            print(f"预测失败 {code}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
         except Exception as e:
             print(f"预测失败 {code}: {e}")
