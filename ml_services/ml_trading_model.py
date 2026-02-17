@@ -2073,19 +2073,17 @@ class MLTradingModel:
         print(f"模型已从 {filepath} 加载")
 
 
-class GBDTLRModel:
-    """GBDT + LR 两阶段模型 - 提高准确度和可解释性"""
+class GBDTModel:
+    """GBDT 模型 - 基于梯度提升决策树的单一模型"""
 
     def __init__(self):
         self.feature_engineer = FeatureEngineer()
         self.processor = BaseModelProcessor()
         self.gbdt_model = None
-        self.lr_model = None
         self.feature_columns = []
         self.actual_n_estimators = 0
-        self.gbdt_leaf_names = []
         self.horizon = 1  # 默认预测周期
-        self.model_type = 'gbdt_lr'  # 模型类型标识
+        self.model_type = 'gbdt'  # 模型类型标识
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -2274,7 +2272,7 @@ class GBDTLRModel:
         return feature_columns
 
     def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
-        """训练 GBDT + LR 模型
+        """训练 GBDT 模型
 
         Args:
             codes: 股票代码列表
@@ -2284,7 +2282,7 @@ class GBDTLRModel:
             use_feature_selection: 是否使用特征选择（默认False，使用全部特征）
         """
         print("="*70)
-        print("🚀 开始训练 GBDT + LR 模型")
+        print("🚀 开始训练 GBDT 模型")
         print("="*70)
 
         # 准备数据
@@ -2311,9 +2309,8 @@ class GBDTLRModel:
         print(f"✅ 使用 {len(self.feature_columns)} 个特征")
 
         # 应用特征选择（可选）
-        # 注意：GBDT+LR对特征选择不敏感，建议不使用
-        if use_feature_selection and self.model_type == 'lgbm':
-            print("\n🎯 应用特征选择（LightGBM）...")
+        if use_feature_selection:
+            print("\n🎯 应用特征选择（GBDT）...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -2321,9 +2318,7 @@ class GBDTLRModel:
                 print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
                 print("⚠️ 未找到特征选择文件，使用全部特征")
-        elif use_feature_selection and self.model_type == 'gbdt_lr':
-            print("\n🎯 跳过特征选择（GBDT+LR）")
-            print("⚠️ GBDT+LR对特征选择不敏感，使用全部特征以保持性能")
+        else:
             print(f"✅ 使用全部 {len(self.feature_columns)} 个特征")
 
         # 处理分类特征（将字符串转换为整数编码）
@@ -2347,9 +2342,9 @@ class GBDTLRModel:
         # 创建输出目录
         os.makedirs('output', exist_ok=True)
 
-        # ========== Step 1: 训练 GBDT ==========
+        # ========== 训练 GBDT 模型 ==========
         print("\n" + "="*70)
-        print("🌲 Step 1: 训练 GBDT 模型（特征工程）")
+        print("🌲 训练 GBDT 模型")
         print("="*70)
 
         # 根据预测周期调整叶子节点数量和早停耐心
@@ -2477,186 +2472,10 @@ class GBDTLRModel:
             print(f"⚠️ 特征贡献分析失败: {e}")
             feat_imp['Impact_Direction'] = 'Unknown'
 
-        # ========== Step 3: 获取叶子节点索引 ==========
         print("\n" + "="*70)
-        print("🍃 Step 3: 生成叶子节点特征")
+        print("✅ GBDT 模型训练完成！")
         print("="*70)
 
-        gbdt_leaf_features = self.gbdt_model.booster_.predict(X, pred_leaf=True)
-
-        # 获取实际的树数量（基于叶子节点特征的实际形状）
-        actual_trees = gbdt_leaf_features.shape[1]
-        print(f"   实际叶子节点特征数量: {actual_trees}")
-
-        # 生成叶子节点特征名称
-        self.gbdt_leaf_names = [f'gbdt_leaf_{i}' for i in range(actual_trees)]
-        df_gbdt_leaf = pd.DataFrame(gbdt_leaf_features, columns=self.gbdt_leaf_names)
-
-        # ========== Step 4: 不再在全部数据上进行 One-Hot 编码 ==========
-        print("   ⚠️  跳过全局 One-Hot 编码（将在每个 Fold 内分别进行）")
-        print("   这是为了避免数据泄漏，确保验证集不受训练集信息污染")
-
-        # ========== Step 5: 训练 LR 模型（修复数据泄漏版本） ==========
-        print("\n" + "="*70)
-        print("📈 Step 5: 训练 LR 模型（最终分类器）")
-        print("="*70)
-
-        # 使用时间序列交叉验证，在每个 Fold 内分别训练 GBDT 和 LR
-        tscv_lr = TimeSeriesSplit(n_splits=5)
-        lr_scores = []
-        lr_loglosses = []
-        lr_ks_scores = []
-        lr_aucs = []
-
-        print("   使用时间序列交叉验证评估 GBDT + LR 模型...")
-        print("   ✅ 在每个 Fold 内分别训练 GBDT 和 LR，完全避免数据泄漏")
-
-        for fold, (train_idx, val_idx) in enumerate(tscv_lr.split(X), 1):
-            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-
-            # 1. 在训练集上训练 GBDT
-            gbdt_fold = lgb.LGBMClassifier(
-                objective='binary',
-                boosting_type='gbdt',
-                subsample=0.8,
-                min_child_weight=0.1,
-                min_child_samples=10,
-                colsample_bytree=0.7,
-                num_leaves=num_leaves,
-                learning_rate=0.05,
-                n_estimators=n_estimators,
-                random_state=2020,
-                n_jobs=-1,
-                verbose=-1
-            )
-            gbdt_fold.fit(
-                X_train_fold, y_train_fold,
-                eval_set=[(X_val_fold, y_val_fold)],
-                eval_metric='binary_logloss',
-                callbacks=[
-                    lgb.early_stopping(stopping_rounds=5, verbose=False)
-                ]
-            )
-
-            # 2. 生成训练集的叶子节点
-            train_leaf = gbdt_fold.booster_.predict(X_train_fold, pred_leaf=True)
-            train_leaf_df = pd.DataFrame(train_leaf, columns=[f'gbdt_leaf_{i}' for i in range(train_leaf.shape[1])])
-
-            # 3. 对训练集叶子节点进行 One-Hot 编码
-            train_onehot = pd.DataFrame()
-            for col in train_leaf_df.columns:
-                onehot_feats = pd.get_dummies(train_leaf_df[col], prefix=col)
-                train_onehot = pd.concat([train_onehot, onehot_feats], axis=1)
-
-            # 4. 在 One-Hot 编码后的特征上训练 LR
-            lr_fold = LogisticRegression(
-                penalty='l2',
-                C=0.1,
-                solver='liblinear',
-                random_state=2020,
-                max_iter=1000
-            )
-            lr_fold.fit(train_onehot, y_train_fold)
-
-            # 5. 生成验证集的叶子节点
-            val_leaf = gbdt_fold.booster_.predict(X_val_fold, pred_leaf=True)
-            val_leaf_df = pd.DataFrame(val_leaf, columns=[f'gbdt_leaf_{i}' for i in range(val_leaf.shape[1])])
-
-            # 6. 对验证集叶子节点进行 One-Hot 编码（使用训练集的方案）
-            val_onehot_temp = pd.DataFrame()
-            for col in val_leaf_df.columns:
-                onehot_feats = pd.get_dummies(val_leaf_df[col], prefix=col)
-                val_onehot_temp = pd.concat([val_onehot_temp, onehot_feats], axis=1)
-
-            # 使用训练集的特征对齐验证集
-            val_onehot = pd.DataFrame(columns=train_onehot.columns)
-            for col in train_onehot.columns:
-                if col in val_onehot_temp.columns:
-                    val_onehot[col] = val_onehot_temp[col].values
-                else:
-                    val_onehot[col] = 0  # 验证集中没有的叶子节点设为 0
-
-            # 填充所有 NaN 值为 0
-            val_onehot = val_onehot.fillna(0)
-
-            # 7. 预测验证集
-            y_pred_fold = lr_fold.predict(val_onehot)
-            y_pred_prob_fold = lr_fold.predict_proba(val_onehot)[:, 1]
-
-            # 8. 计算评估指标
-            score = accuracy_score(y_val_fold, y_pred_fold)
-            logloss = log_loss(y_val_fold, y_pred_prob_fold)
-            ks = self.processor.calculate_ks_statistic(y_val_fold, y_pred_prob_fold)
-            auc = roc_auc_score(y_val_fold, y_pred_prob_fold)
-
-            lr_scores.append(score)
-            lr_loglosses.append(logloss)
-            lr_ks_scores.append(ks)
-            lr_aucs.append(auc)
-
-            print(f"   Fold {fold} 验证准确率: {score:.4f}, LogLoss: {logloss:.4f}, KS: {ks:.4f}, AUC: {auc:.4f}")
-
-        # 使用全部数据训练最终的 GBDT 模型（用于预测）
-        print("\n   在全部数据上训练最终的 GBDT 模型（用于预测）...")
-        self.gbdt_model.fit(X, y)
-        self.actual_n_estimators = self.gbdt_model.best_iteration_ if self.gbdt_model.best_iteration_ else n_estimators
-
-        # 生成全部数据的叶子节点
-        all_leaf = self.gbdt_model.booster_.predict(X, pred_leaf=True)
-        all_leaf_df = pd.DataFrame(all_leaf, columns=[f'gbdt_leaf_{i}' for i in range(all_leaf.shape[1])])
-        self.gbdt_leaf_names = list(all_leaf_df.columns)
-
-        # 对全部数据进行 One-Hot 编码
-        print("   对全部数据进行 One-Hot 编码...")
-        all_onehot = pd.DataFrame()
-        for col in all_leaf_df.columns:
-            onehot_feats = pd.get_dummies(all_leaf_df[col], prefix=col)
-            all_onehot = pd.concat([all_onehot, onehot_feats], axis=1)
-
-        print(f"   生成了 {all_onehot.shape[1]} 个叶子节点特征")
-
-        # 训练最终的 LR 模型
-        self.lr_model = LogisticRegression(
-            penalty='l2',
-            C=0.1,
-            solver='liblinear',
-            random_state=2020,
-            max_iter=1000
-        )
-        self.lr_model.fit(all_onehot, y)
-
-        # 评估最终模型
-        tr_pred_prob = self.lr_model.predict_proba(all_onehot)[:, 1]
-        tr_logloss = log_loss(y, tr_pred_prob)
-        tr_ks = self.processor.calculate_ks_statistic(y, tr_pred_prob)
-        tr_auc = roc_auc_score(y, tr_pred_prob)
-        tr_pred = self.lr_model.predict(all_onehot)
-        tr_acc = accuracy_score(y, tr_pred)
-
-        print(f"\n✅ GBDT + LR 训练完成")
-        print(f"   平均验证准确率: {np.mean(lr_scores):.4f} (+/- {np.std(lr_scores):.4f})")
-        print(f"   平均 LogLoss: {np.mean(lr_loglosses):.4f} (+/- {np.std(lr_loglosses):.4f})")
-        print(f"   平均 KS: {np.mean(lr_ks_scores):.4f} (+/- {np.std(lr_ks_scores):.4f})")
-        print(f"   平均 AUC: {np.mean(lr_aucs):.4f} (+/- {np.std(lr_aucs):.4f})")
-
-        print(f"\n   全部数据训练指标:")
-        print(f"   Train LogLoss: {tr_logloss:.4f}")
-        print(f"   Train KS: {tr_ks:.4f}")
-        print(f"   Train AUC: {tr_auc:.4f}")
-        print(f"   Train Accuracy: {tr_acc:.4f}")
-
-        # 绘制 ROC 曲线
-        self.processor.plot_roc_curve(y_val_fold, y_pred_prob_fold, "output/roc_curve.png")
-
-        print("\n" + "="*70)
-        print("✅ GBDT + LR 模型训练完成！")
-        print("="*70)
-        print("⚠️  注意：由于每个 Fold 内分别训练 GBDT，无法统一分析特征重要性和叶子节点规则")
-        print("   最终模型使用全部数据训练，仅用于预测，不提供可解释性分析")
-        print("="*70)
-
-        # 返回特征重要性（使用 GBDT 模型的特征重要性）
         return feat_imp
 
     def predict(self, code, predict_date=None, horizon=None):
@@ -2825,35 +2644,31 @@ class GBDTLRModel:
         """保存模型"""
         model_data = {
             'gbdt_model': self.gbdt_model,
-            'lr_model': self.lr_model,
             'feature_columns': self.feature_columns,
             'actual_n_estimators': self.actual_n_estimators,
-            'gbdt_leaf_names': self.gbdt_leaf_names,
             'categorical_encoders': self.categorical_encoders
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
-        print(f"GBDT + LR 模型已保存到 {filepath}")
+        print(f"GBDT 模型已保存到 {filepath}")
 
     def load_model(self, filepath):
         """加载模型"""
         with open(filepath, 'rb') as f:
             model_data = pickle.load(f)
         self.gbdt_model = model_data['gbdt_model']
-        self.lr_model = model_data['lr_model']
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
-        self.gbdt_leaf_names = model_data['gbdt_leaf_names']
         self.categorical_encoders = model_data.get('categorical_encoders', {})
-        print(f"GBDT + LR 模型已从 {filepath} 加载")
+        print(f"GBDT 模型已从 {filepath} 加载")
 
 
 def main():
     parser = argparse.ArgumentParser(description='机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate'],
                        help='运行模式: train=训练, predict=预测, evaluate=评估')
-    parser.add_argument('--model-type', type=str, default='both', choices=['lgbm', 'gbdt_lr', 'both'],
-                       help='模型类型: lgbm=单一LightGBM模型, gbdt_lr=GBDT+LR两阶段模型, both=同时训练两种模型（默认）')
+    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt'],
+                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型（默认lgbm）')
     parser.add_argument('--model-path', type=str, default='data/ml_trading_model.pkl',
                        help='模型保存/加载路径')
     parser.add_argument('--start-date', type=str, default=None,
@@ -2869,275 +2684,105 @@ def main():
 
     args = parser.parse_args()
 
-    # 判断是否同时训练两种模型
-    train_both = args.model_type == 'both'
-
-    if train_both:
+    # 初始化模型
+    if args.model_type == 'gbdt':
         print("=" * 70)
-        print("🚀 同时训练两种模型进行对比")
-        print("=" * 70)
-        lgbm_model = MLTradingModel()
-        gbdt_lr_model = GBDTLRModel()
-    elif args.model_type == 'gbdt_lr':
-        print("=" * 70)
-        print("🚀 使用 GBDT + LR 两阶段模型")
+        print("🚀 使用单一 GBDT 模型")
         print("=" * 70)
         lgbm_model = None
-        gbdt_lr_model = GBDTLRModel()
+        gbdt_model = GBDTModel()
     else:
         print("=" * 70)
         print("🚀 使用单一 LightGBM 模型")
         print("=" * 70)
         lgbm_model = MLTradingModel()
-        gbdt_lr_model = None
+        gbdt_model = None
 
     if args.mode == 'train':
         print("=" * 50)
         print("训练模式")
         print("=" * 50)
 
-        if train_both:
-            # 训练 LGBM 模型
-            print("\n" + "="*70)
-            print("🌳 训练 LightGBM 模型")
-            print("="*70)
-            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
-            # 添加周期后缀：_1d, _5d, _20d
-            horizon_suffix = f'_{args.horizon}d'
+        # 训练模型
+        horizon_suffix = f'_{args.horizon}d'
+        if lgbm_model:
+            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
-            lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
-            lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
-            print(f"\nLightGBM 模型已保存到 {lgbm_model_path}")
-            print(f"特征重要性已保存到 {lgbm_importance_path}")
-
-            # 训练 GBDT + LR 模型
-            print("\n" + "="*70)
-            print("🌲 训练 GBDT + LR 模型")
-            print("="*70)
-            gbdt_lr_feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
-            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
-            gbdt_lr_model.save_model(gbdt_lr_model_path)
-            gbdt_lr_importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
-            gbdt_lr_feature_importance.to_csv(gbdt_lr_importance_path, index=False)
-            print(f"\nGBDT + LR 模型已保存到 {gbdt_lr_model_path}")
-            print(f"特征重要性已保存到 {gbdt_lr_importance_path}")
-
-            # 对比特征重要性
-            print("\n" + "="*70)
-            print("📊 特征重要性对比")
-            print("="*70)
-
-            # 确保 Impact_Direction 列存在
-            if 'Impact_Direction' not in lgbm_feature_importance.columns:
-                lgbm_feature_importance['Impact_Direction'] = 'Unknown'
-            if 'Impact_Direction' not in gbdt_lr_feature_importance.columns:
-                gbdt_lr_feature_importance['Impact_Direction'] = 'Unknown'
-
-            # 合并特征重要性
-            comparison = lgbm_feature_importance.merge(
-                gbdt_lr_feature_importance[['Feature', 'Gain_Importance', 'Impact_Direction']],
-                on='Feature',
-                suffixes=('_LGBM', '_GBDT_LR')
-            )
-
-            # 计算重要性差异（使用 Gain_Importance）
-            comparison['Importance_Diff'] = abs(comparison['Gain_Importance_LGBM'] - comparison['Gain_Importance_GBDT_LR'])
-            comparison = comparison.sort_values('Importance_Diff', ascending=False)
-
-            print("\nTop 10 特征重要性差异:")
-            print(comparison[['Feature', 'Gain_Importance_LGBM', 'Gain_Importance_GBDT_LR', 'Impact_Direction_LGBM', 'Impact_Direction_GBDT_LR']].head(10))
-
+            importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
+            feature_importance.to_csv(importance_path, index=False)
+            print(f"\n特征重要性已保存到 {importance_path}")
         else:
-            # 训练单个模型
-            horizon_suffix = f'_{args.horizon}d'
-            if lgbm_model:
-                feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
-                lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
-                lgbm_model.save_model(lgbm_model_path)
-                importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
-                feature_importance.to_csv(importance_path, index=False)
-                print(f"\n特征重要性已保存到 {importance_path}")
-            else:
-                feature_importance = gbdt_lr_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
-                gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
-                gbdt_lr_model.save_model(gbdt_lr_model_path)
-                importance_path = gbdt_lr_model_path.replace('.pkl', '_importance.csv')
-                feature_importance.to_csv(importance_path, index=False)
-                print(f"\n特征重要性已保存到 {importance_path}")
+            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
+            gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
+            gbdt_model.save_model(gbdt_model_path)
+            importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
+            feature_importance.to_csv(importance_path, index=False)
+            print(f"\n特征重要性已保存到 {importance_path}")
 
     elif args.mode == 'predict':
         print("=" * 50)
         print("预测模式")
         print("=" * 50)
 
-        # 辅助函数：计算指定交易日后的目标日期
-        def get_target_date(date, horizon=1):
-            """计算指定交易日后的目标日期，跳过周末
-            
-            Args:
-                date: 起始日期
-                horizon: 预测周期（1=次日，5=一周，20=一个月）
-            
-            Returns:
-                目标日期字符串 (YYYY-MM-DD)
-            """
-            target_day = date + pd.Timedelta(days=horizon)
-            # 跳过周末
-            while target_day.weekday() >= 5:
-                target_day += pd.Timedelta(days=1)
-            return target_day.strftime('%Y-%m-%d')
-
-        if train_both:
-            # 加载两个模型
-            print("\n加载模型...")
-            # 添加周期后缀：_1d, _5d, _20d
-            horizon_suffix = f'_{args.horizon}d'
+        # 加载模型
+        horizon_suffix = f'_{args.horizon}d'
+        if lgbm_model:
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
-            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
-            
             lgbm_model.load_model(lgbm_model_path)
-            gbdt_lr_model.load_model(gbdt_lr_model_path)
-
-            # 预测所有股票
-            print("\n开始预测...")
-            if args.predict_date:
-                print(f"基于日期: {args.predict_date}")
-            lgbm_predictions = []
-            gbdt_lr_predictions = []
-
-            for code in WATCHLIST:
-                lgbm_result = lgbm_model.predict(code, predict_date=args.predict_date)
-                gbdt_lr_result = gbdt_lr_model.predict(code, predict_date=args.predict_date)
-                
-                if lgbm_result and gbdt_lr_result:
-                    lgbm_predictions.append(lgbm_result)
-                    gbdt_lr_predictions.append(gbdt_lr_result)
-
-            # 合并预测结果
-            lgbm_pred_df = pd.DataFrame(lgbm_predictions)
-            gbdt_lr_pred_df = pd.DataFrame(gbdt_lr_predictions)
-
-            # 添加数据日期和目标日期
-            lgbm_pred_df['data_date'] = lgbm_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            lgbm_pred_df['target_date'] = lgbm_pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
-
-            gbdt_lr_pred_df['data_date'] = gbdt_lr_pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            gbdt_lr_pred_df['target_date'] = gbdt_lr_pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
-
-            # 合并对比
-            comparison = lgbm_pred_df.merge(
-                gbdt_lr_pred_df,
-                on='code',
-                suffixes=('_LGBM', '_GBDT_LR')
-            )
-
-            # 计算预测一致性
-            comparison['预测一致'] = comparison['prediction_LGBM'] == comparison['prediction_GBDT_LR']
-            comparison['概率差异'] = abs(comparison['probability_LGBM'] - comparison['probability_GBDT_LR'])
-            
-            # 按一致性和平均概率排序，体现模型识别"更可能上涨"股票的能力
-            comparison['avg_probability'] = (
-                comparison['probability_LGBM'] + 
-                comparison['probability_GBDT_LR']
-            ) / 2
-            
-            # 优先显示两个模型一致的股票，然后按平均概率降序排序
-            comparison = comparison.sort_values(
-                by=['预测一致', 'avg_probability'], 
-                ascending=[False, False]
-            )
-
-            # 显示对比结果
-            print("\n" + "=" * 140)
-            print("📊 两种模型预测结果对比")
-            print("=" * 140)
-            print(f"\n{'代码':<10} {'股票名称':<12} {'LGBM预测':<10} {'LGBM概率':<10} {'GBDT+LR预测':<12} {'GBDT+LR概率':<12} {'是否一致':<8} {'概率差异':<10} {'当前价格':<10} {'预测目标':<12}")
-            print("-" * 140)
-
-            for _, row in comparison.iterrows():
-                lgbm_pred_label = "上涨" if row['prediction_LGBM'] == 1 else "下跌"
-                gbdt_lr_pred_label = "上涨" if row['prediction_GBDT_LR'] == 1 else "下跌"
-                consistent = "✓" if row['预测一致'] else "✗"
-
-                print(f"{row['code']:<10} {row['name_LGBM']:<12} {lgbm_pred_label:<10} {row['probability_LGBM']:<10.4f} {gbdt_lr_pred_label:<12} {row['probability_GBDT_LR']:<12.4f} {consistent:<8} {row['概率差异']:<10.4f} {row['current_price_LGBM']:<10.2f} {row['target_date_LGBM']:<12}")
-
-            # 统计摘要
-            print("\n" + "=" * 140)
-            print("📈 统计摘要")
-            print("=" * 140)
-
-            consistent_count = comparison['预测一致'].sum()
-            total_count = len(comparison)
-            print(f"\n预测一致性: {consistent_count}/{total_count} ({consistent_count/total_count*100:.1f}%)")
-
-            lgbm_up = (comparison['prediction_LGBM'] == 1).sum()
-            lgbm_down = (comparison['prediction_LGBM'] == 0).sum()
-            print(f"\nLGBM 模型: 上涨 {lgbm_up} 只, 下跌 {lgbm_down} 只")
-
-            gbdt_lr_up = (comparison['prediction_GBDT_LR'] == 1).sum()
-            gbdt_lr_down = (comparison['prediction_GBDT_LR'] == 0).sum()
-            print(f"GBDT+LR 模型: 上涨 {gbdt_lr_up} 只, 下跌 {gbdt_lr_down} 只")
-
-            avg_prob_diff = comparison['概率差异'].mean()
-            print(f"\n平均概率差异: {avg_prob_diff:.4f}")
-
-            # 显示不一致的预测
-            inconsistent = comparison[~comparison['预测一致']]
-            if len(inconsistent) > 0:
-                print("\n" + "=" * 140)
-                print("⚠️  预测不一致的股票")
-                print("=" * 140)
-                for _, row in inconsistent.iterrows():
-                    lgbm_pred_label = "上涨" if row['prediction_LGBM'] == 1 else "下跌"
-                    gbdt_lr_pred_label = "上涨" if row['prediction_GBDT_LR'] == 1 else "下跌"
-                    print(f"{row['code']:<10} {row['name_LGBM']:<12} LGBM: {lgbm_pred_label} ({row['probability_LGBM']:.4f})  vs  GBDT+LR: {gbdt_lr_pred_label} ({row['probability_GBDT_LR']:.4f})")
-
-            # 保存对比结果
-            comparison_export = comparison[[
-                'code', 'name_LGBM', 'prediction_LGBM', 'probability_LGBM',
-                'prediction_GBDT_LR', 'probability_GBDT_LR', '预测一致', '概率差异',
-                'current_price_LGBM', 'data_date_LGBM', 'target_date_LGBM'
-            ]]
-            comparison_export.columns = [
-                'code', 'name', 'prediction_LGBM', 'probability_LGBM',
-                'prediction_GBDT_LR', 'probability_GBDT_LR', 'consistent', 'probability_diff',
-                'current_price', 'data_date', 'target_date'
-            ]
-            
-            # 按一致性和平均概率排序，体现模型识别"更可能上涨"股票的能力
-            comparison_export['avg_probability'] = (
-                comparison_export['probability_LGBM'] + 
-                comparison_export['probability_GBDT_LR']
-            ) / 2
-            
-            # 优先显示两个模型一致的股票，然后按平均概率降序排序
-            comparison_export = comparison_export.sort_values(
-                by=['consistent', 'avg_probability'], 
-                ascending=[False, False]
-            )
-            
-            comparison_path = args.model_path.replace('.pkl', '_comparison.csv')
-            comparison_export.to_csv(comparison_path, index=False)
-            print(f"\n对比结果已保存到 {comparison_path}")
-
-            # 保存20天预测结果到文本文件（便于后续提取和对比）
-            if args.horizon == 20:
-                save_predictions_to_text(comparison_export, args.predict_date)
-
-            # 保存各自的预测结果
-            horizon_suffix = f'_{args.horizon}d'
-            lgbm_pred_path = args.model_path.replace('.pkl', f'_lgbm_predictions{horizon_suffix}.csv')
-            lgbm_pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']].to_csv(lgbm_pred_path, index=False)
-            print(f"LGBM 预测结果已保存到 {lgbm_pred_path}")
-
-            gbdt_lr_pred_path = args.model_path.replace('.pkl', f'_gbdt_lr_predictions{horizon_suffix}.csv')
-            gbdt_lr_pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']].to_csv(gbdt_lr_pred_path, index=False)
-            print(f"GBDT+LR 预测结果已保存到 {gbdt_lr_pred_path}")
-
+            model = lgbm_model
+            model_name = "LightGBM"
+            model_file_suffix = "lgbm"
         else:
-            # 单个模型预测
-            model = lgbm_model if lgbm_model else gbdt_lr_model
+            gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
+            gbdt_model.load_model(gbdt_model_path)
+            model = gbdt_model
+            model_name = "GBDT"
+            model_file_suffix = "gbdt"
+
+        print(f"已加载 {model_name} 模型")
+
+        # 预测所有股票
+        predictions = []
+        if args.predict_date:
+            print(f"基于日期: {args.predict_date}")
+        for code in WATCHLIST:
+            result = model.predict(code, predict_date=args.predict_date)
+            if result:
+                predictions.append(result)
+
+        # 显示预测结果
+        print("\n预测结果:")
+        horizon_text = {1: "次日", 5: "一周", 20: "一个月"}.get(args.horizon, f"{args.horizon}天")
+        if args.predict_date:
+            print(f"说明: 基于 {args.predict_date} 的数据预测{horizon_text}后的涨跌")
+        else:
+            print(f"说明: 基于最新交易日的数据预测{horizon_text}后的涨跌")
+        print("-" * 100)
+        print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
+        print("-" * 100)
+
+        for pred in predictions:
+            pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
+            data_date = pred['date'].strftime('%Y-%m-%d')
+            target_date = get_target_date(pred['date'], horizon=args.horizon)
+
+            print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
+
+        # 保存预测结果
+        pred_df = pd.DataFrame(predictions)
+        pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+        pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
+
+        pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
+
+        pred_path = args.model_path.replace('.pkl', f'_{model_file_suffix}_predictions{horizon_suffix}.csv')
+        pred_df_export.to_csv(pred_path, index=False)
+        print(f"\n预测结果已保存到 {pred_path}")
+
+        # 保存20天预测结果到文本文件（便于后续提取和对比）
+        if args.horizon == 20:
+            save_predictions_to_text(pred_df_export, args.predict_date)
             horizon_suffix = f'_{args.horizon}d'
             if lgbm_model:
                 model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')

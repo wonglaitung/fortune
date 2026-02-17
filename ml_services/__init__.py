@@ -7,7 +7,7 @@
 
 from .ml_trading_model import (
     MLTradingModel,
-    GBDTLRModel,
+    GBDTModel,
     FeatureEngineer,
     WATCHLIST,
     STOCK_NAMES
@@ -18,7 +18,7 @@ from .base_model_processor import BaseModelProcessor
 
 __all__ = [
     'MLTradingModel',
-    'GBDTLRModel',
+    'GBDTModel',
     'FeatureEngineer',
     'WATCHLIST',
     'STOCK_NAMES',
