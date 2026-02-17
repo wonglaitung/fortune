@@ -1312,10 +1312,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 stock_codes = re.findall(r'\b\d{4}\.HK\b', response)
                 # 去重
                 stock_codes = list(set(stock_codes))
+                print(f"📊 从大模型响应中提取到 {len(stock_codes)} 个股票代码: {stock_codes}")
                 
                 # 生成技术指标表格
                 print("📊 生成推荐股票技术指标表格...")
                 technical_indicators_table = generate_technical_indicators_table(stock_codes)
+                if not technical_indicators_table:
+                    print("⚠️ 技术指标表格为空，可能是未提取到股票代码或股票数据获取失败")
                 
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 # 注意：不添加标题，因为HTML模板已经有了标题
