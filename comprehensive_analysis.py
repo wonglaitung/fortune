@@ -17,6 +17,66 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_services.qwen_engine import chat_with_llm
 
 
+def load_model_accuracy(horizon=20):
+    """
+    从文件加载模型准确率信息
+    
+    参数:
+    - horizon: 预测周期（默认20天）
+    
+    返回:
+    - dict: 包含LightGBM和GBDT准确率的字典
+      {
+        'lgbm': {'accuracy': float, 'std': float},
+        'gbdt': {'accuracy': float, 'std': float}
+      }
+    """
+    # 默认准确率值（如果文件不存在）
+    default_accuracy = {
+        'lgbm': {'accuracy': 0.6015, 'std': 0.0518},
+        'gbdt': {'accuracy': 0.6069, 'std': 0.0500}
+    }
+    
+    accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
+    
+    try:
+        if os.path.exists(accuracy_file):
+            import json
+            with open(accuracy_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            result = {}
+            lgbm_key = f'lgbm_{horizon}d'
+            gbdt_key = f'gbdt_{horizon}d'
+            
+            if lgbm_key in data:
+                result['lgbm'] = {
+                    'accuracy': data[lgbm_key].get('accuracy', default_accuracy['lgbm']['accuracy']),
+                    'std': data[lgbm_key].get('std', default_accuracy['lgbm']['std'])
+                }
+            else:
+                result['lgbm'] = default_accuracy['lgbm']
+            
+            if gbdt_key in data:
+                result['gbdt'] = {
+                    'accuracy': data[gbdt_key].get('accuracy', default_accuracy['gbdt']['accuracy']),
+                    'std': data[gbdt_key].get('std', default_accuracy['gbdt']['std'])
+                }
+            else:
+                result['gbdt'] = default_accuracy['gbdt']
+            
+            print(f"✅ 已加载模型准确率: {accuracy_file}")
+            print(f"   LightGBM: {result['lgbm']['accuracy']:.2%} (±{result['lgbm']['std']:.2%})")
+            print(f"   GBDT: {result['gbdt']['accuracy']:.2%} (±{result['gbdt']['std']:.2%})")
+            return result
+        else:
+            print(f"⚠️ 准确率文件不存在: {accuracy_file}，使用默认值")
+            return default_accuracy
+    except Exception as e:
+        print(f"⚠️ 读取准确率文件失败: {e}，使用默认值")
+        return default_accuracy
+
+
 def extract_llm_recommendations(filepath):
     """
     从大模型建议文件中提取买卖建议，分别提取短期和中期建议
@@ -69,16 +129,16 @@ def extract_llm_recommendations(filepath):
 
 def extract_ml_predictions(filepath):
     """
-    从ML预测CSV文件中提取LightGBM和GBDT+LR的预测结果
+    从ML预测CSV文件中提取LightGBM和GBDT的预测结果
     
     参数:
     - filepath: 文本预测文件路径（用于获取日期）
     
     返回:
-    - dict: 包含LightGBM和GBDT+LR预测结果的字典
+    - dict: 包含LightGBM和GBDT预测结果的字典
       {
         'lgbm': str,      # LightGBM预测结果
-        'gbdt_lr': str   # GBDT+LR预测结果
+        'gbdt': str   # GBDT预测结果
       }
     """
     try:
@@ -94,11 +154,11 @@ def extract_ml_predictions(filepath):
         data_dir = os.path.join(script_dir, 'data')
         
         lgbm_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
-        gbdt_lr_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_lr_predictions_20d.csv')
+        gbdt_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_predictions_20d.csv')
         
         result = {
             'lgbm': '',
-            'gbdt_lr': ''
+            'gbdt': ''
         }
         
         # 读取LightGBM预测结果
@@ -124,28 +184,28 @@ def extract_ml_predictions(filepath):
             
             result['lgbm'] = lgbm_text
         
-        # 读取GBDT+LR预测结果
-        if os.path.exists(gbdt_lr_csv):
-            df_gbdt_lr = pd.read_csv(gbdt_lr_csv)
+        # 读取GBDT预测结果
+        if os.path.exists(gbdt_csv):
+            df_gbdt = pd.read_csv(gbdt_csv)
             # 提取预测上涨的股票
-            up_stocks_gbdt_lr = df_gbdt_lr[df_gbdt_lr['prediction'] == 1].sort_values('probability', ascending=False)
+            up_stocks_gbdt = df_gbdt[df_gbdt['prediction'] == 1].sort_values('probability', ascending=False)
             
-            gbdt_lr_text = "【GBDT+LR模型预测结果】\n"
-            gbdt_lr_text += f"预测日期: {date_str}\n\n"
-            gbdt_lr_text += "预测上涨的股票（按概率排序）:\n"
-            gbdt_lr_text += "-" * 80 + "\n"
-            gbdt_lr_text += f"{'股票代码':<12} {'股票名称':<12} {'上涨概率':<10} {'当前价格':<12}\n"
-            gbdt_lr_text += "-" * 80 + "\n"
+            gbdt_text = "【GBDT模型预测结果】\n"
+            gbdt_text += f"预测日期: {date_str}\n\n"
+            gbdt_text += "预测上涨的股票（按概率排序）:\n"
+            gbdt_text += "-" * 80 + "\n"
+            gbdt_text += f"{'股票代码':<12} {'股票名称':<12} {'上涨概率':<10} {'当前价格':<12}\n"
+            gbdt_text += "-" * 80 + "\n"
             
-            for _, row in up_stocks_gbdt_lr.iterrows():
-                gbdt_lr_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
+            for _, row in up_stocks_gbdt.iterrows():
+                gbdt_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
             
-            gbdt_lr_text += "-" * 80 + "\n"
-            gbdt_lr_text += f"预测上涨: {len(up_stocks_gbdt_lr)} 只\n"
-            gbdt_lr_text += f"预测下跌: {len(df_gbdt_lr) - len(up_stocks_gbdt_lr)} 只\n"
-            gbdt_lr_text += f"平均上涨概率: {up_stocks_gbdt_lr['probability'].mean():.4f}\n"
+            gbdt_text += "-" * 80 + "\n"
+            gbdt_text += f"预测上涨: {len(up_stocks_gbdt)} 只\n"
+            gbdt_text += f"预测下跌: {len(df_gbdt) - len(up_stocks_gbdt)} 只\n"
+            gbdt_text += f"平均上涨概率: {up_stocks_gbdt['probability'].mean():.4f}\n"
             
-            result['gbdt_lr'] = gbdt_lr_text
+            result['gbdt'] = gbdt_text
         
         return result
         
@@ -458,7 +518,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         ml_predictions = extract_ml_predictions(ml_filepath)
         print(f"✅ 提取完成\n")
         print(f"   - LightGBM预测长度: {len(ml_predictions['lgbm'])} 字符")
-        print(f"   - GBDT+LR预测长度: {len(ml_predictions['gbdt_lr'])} 字符\n")
+        print(f"   - GBDT预测长度: {len(ml_predictions['gbdt'])} 字符\n")
+        
+        # 加载模型准确率
+        print("📝 加载模型准确率...")
+        model_accuracy = load_model_accuracy(horizon=20)
+        print(f"✅ 准确率加载完成\n")
         
         # 生成日期
         date_str = datetime.now().strftime('%Y-%m-%d')
@@ -476,8 +541,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 【2. LightGBM模型20天预测结果】
 {ml_predictions['lgbm']}
 
-【3. GBDT+LR模型20天预测结果】
-{ml_predictions['gbdt_lr']}
+【3. GBDT模型20天预测结果】
+{ml_predictions['gbdt']}
 
 【辅助信息源 - 操作时机参考】
 
@@ -516,7 +581,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **卖出信号**：短期建议卖出 AND 中期建议卖出 AND (至少一个ML模型预测下跌且probability<0.40)
 
 - **阈值优化说明**：
-- 当前20天模型准确率：LightGBM 59.19%（标准差±5.23%），GBDT+LR 57.48%（标准差±8.42%）
+- 当前20天模型准确率：LightGBM {model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}），GBDT {model_accuracy['gbdt']['accuracy']:.2%}（标准差±{model_accuracy['gbdt']['std']:.2%}）
 - 强买入阈值0.62略高于准确率，确保高置信度
 - 买入阈值0.60接近准确率，平衡召回率和精确率
 - 卖出阈值0.40确保下跌概率>60%
@@ -536,8 +601,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **关键原则**：短期和中期必须一致（方向相同），ML预测用于验证和提升置信度
 
 **重要说明 - 模型不确定性**：
-- ML 20天模型准确率：LightGBM 59.19%（标准差±5.23%），GBDT+LR 57.48%（标准差±8.42%）
-- 即使probability>0.62，实际准确率也可能在53.96% ~ 64.42%（LightGBM）或49.06% ~ 65.90%（GBDT+LR）之间波动
+- ML 20天模型准确率：LightGBM {model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}），GBDT {model_accuracy['gbdt']['accuracy']:.2%}（标准差±{model_accuracy['gbdt']['std']:.2%}）
+- 即使probability>0.62，实际准确率也可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}（LightGBM）或{model_accuracy['gbdt']['accuracy']-model_accuracy['gbdt']['std']:.2%} ~ {model_accuracy['gbdt']['accuracy']+model_accuracy['gbdt']['std']:.2%}（GBDT）之间波动
 - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 - 对于probability在0.55-0.65之间的股票，建议降低仓位控制风险
 
@@ -548,7 +613,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 当前映射：大模型短期建议 ↔ ML次日模型（1天），大模型中期建议 ↔ ML 20天模型（20天）✅
 
 **规则3：ML模型冲突处理**
-- 如果LightGBM和GBDT+LR预测冲突（一个上涨，一个下跌）：
+- 如果LightGBM和GBDT预测冲突（一个上涨，一个下跌）：
   - 优先相信预测概率更高的模型
   - 如果概率相近（相差<0.10），则参考大模型中期建议
 - 如果两个ML模型预测一致（都上涨或都下跌）：
@@ -556,7 +621,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 **规则4：推荐理由格式**
 - 必须说明：短期建议+中期建议+哪个ML模型预测+短期中期一致性程度
-- 例如："短期建议买入（触发器），中期建议买入（确认器），短期中期方向一致，LightGBM预测上涨概率0.72，GBDT+LR预测上涨概率0.68，三重确认买入，综合置信度高"
+- 例如："短期建议买入（触发器），中期建议买入（确认器），短期中期方向一致，LightGBM预测上涨概率0.72，GBDT预测上涨概率0.68，三重确认买入，综合置信度高"
 
 请基于上述规则，完成以下任务：
 
@@ -607,7 +672,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 给出止损位建议（如果有的话）
    
    **特别要求 - 考虑模型不确定性**：
-   - ML 20天模型标准差为±5.23%（LightGBM）/±8.42%（GBDT+LR）
+   - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
    - 对于probability在0.55-0.65之间的股票，建议仓位不超过2-3%
    - 强买入信号（短期/中期一致买入且ML模型确认）建议仓位4-6%
    - 总仓位控制在45%-55%
@@ -622,7 +687,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+ML预测+一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），LightGBM预测上涨概率0.72，GBDT+LR预测上涨概率0.68，短中长期方向一致（短期/中期一致买入，ML模型验证上涨），综合置信度高。注意ML模型当前准确率59.19%（标准差±5.23%），probability在0.72附近实际准确率可能在59% ~ 66%之间"]
+   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+ML预测+一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），LightGBM预测上涨概率0.72，GBDT预测上涨概率0.68，短中长期方向一致（短期/中期一致买入，ML模型验证上涨），综合置信度高。注意ML模型当前准确率{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间"]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -723,8 +788,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ### LightGBM模型
 {ml_predictions['lgbm']}
 
-### GBDT+LR模型
-{ml_predictions['gbdt_lr']}
+### GBDT模型
+{ml_predictions['gbdt']}
 """
                 
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）

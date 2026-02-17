@@ -1882,7 +1882,38 @@ class MLTradingModel:
         # 使用全部数据重新训练
         self.model.fit(X, y)
 
-        print(f"\n平均验证准确率: {np.mean(scores):.4f} (+/- {np.std(scores):.4f})")
+        mean_accuracy = np.mean(scores)
+        std_accuracy = np.std(scores)
+        print(f"\n平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+
+        # 保存准确率到文件（供综合分析使用）
+        accuracy_info = {
+            'model_type': 'lgbm',
+            'horizon': horizon,
+            'accuracy': float(mean_accuracy),
+            'std': float(std_accuracy),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        import json
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            # 读取现有数据
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+            else:
+                existing_data = {}
+            
+            # 更新当前模型的准确率
+            key = f'lgbm_{horizon}d'
+            existing_data[key] = accuracy_info
+            
+            # 保存回文件
+            with open(accuracy_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            print(f"✅ 准确率已保存到 {accuracy_file}")
+        except Exception as e:
+            print(f"⚠️ 保存准确率失败: {e}")
 
         # 特征重要性（使用 BaseModelProcessor 统一格式）
         feat_imp = self.processor.analyze_feature_importance(
@@ -2437,9 +2468,40 @@ class GBDTModel:
         # 注意：在使用全部数据重新训练时，如果没有使用早停，best_iteration_ 可能为 None
         # 这种情况下使用 n_estimators
         self.actual_n_estimators = self.gbdt_model.best_iteration_ if self.gbdt_model.best_iteration_ else n_estimators
+        mean_accuracy = np.mean(gbdt_scores)
+        std_accuracy = np.std(gbdt_scores)
         print(f"\n✅ GBDT 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
-        print(f"   平均验证准确率: {np.mean(gbdt_scores):.4f} (+/- {np.std(gbdt_scores):.4f})")
+        print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+
+        # 保存准确率到文件（供综合分析使用）
+        accuracy_info = {
+            'model_type': 'gbdt',
+            'horizon': horizon,
+            'accuracy': float(mean_accuracy),
+            'std': float(std_accuracy),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        import json
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            # 读取现有数据
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+            else:
+                existing_data = {}
+            
+            # 更新当前模型的准确率
+            key = f'gbdt_{horizon}d'
+            existing_data[key] = accuracy_info
+            
+            # 保存回文件
+            with open(accuracy_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            print(f"✅ 准确率已保存到 {accuracy_file}")
+        except Exception as e:
+            print(f"⚠️ 保存准确率失败: {e}")
 
         # ========== Step 2: 输出 GBDT 特征重要性 ==========
         print("\n" + "="*70)
