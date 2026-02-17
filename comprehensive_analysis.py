@@ -1278,7 +1278,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 technical_indicators_table = generate_technical_indicators_table(stock_codes)
                 
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
-                full_content = f"""{response}
+                full_content = f"""# 综合买卖建议
+
+{response}
 
 ---
 
