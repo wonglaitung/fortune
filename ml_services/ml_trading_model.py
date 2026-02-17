@@ -2846,7 +2846,7 @@ def main():
             if lgbm_model:
                 model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             else:
-                model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
+                model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             model.load_model(model_path)
 
             # 预测所有股票
