@@ -368,6 +368,56 @@ def generate_html_email(content, date_str):
             background-color: #f8f9fa;
             font-weight: 600;
         }}
+        .metric-section {{
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }}
+        .metric-title {{
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }}
+        .metric-item {{
+            margin: 8px 0;
+            padding-left: 15px;
+            border-left: 2px solid #ddd;
+        }}
+        .risk-section {{
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }}
+        .data-source {{
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #6c757d;
+            font-size: 13px;
+            line-height: 1.6;
+        }}
+        .model-accuracy {{
+            background: #d4edda;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+            font-size: 14px;
+        }}
+        .warning {{
+            background: #fff3cd;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+            font-size: 14px;
+        }}
     </style>
 </head>
 <body>
@@ -777,19 +827,82 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 大模型短期买卖建议（日内/数天）
+## 一、大模型建议
+
+### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
 
-## 大模型中期买卖建议（数周-数月）
+### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
 
-## 机器学习预测结果（20天）
+## 二、机器学习预测结果（20天）
 
 ### LightGBM模型
+准确率：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}）
 {ml_predictions['lgbm']}
 
 ### GBDT模型
+准确率：{model_accuracy['gbdt']['accuracy']:.2%}（标准差±{model_accuracy['gbdt']['std']:.2%}）
 {ml_predictions['gbdt']}
+
+## 三、技术指标说明
+
+**短期技术指标（日内/数天）**：
+- RSI（相对强弱指数）：超买>70，超卖<30
+- MACD：金叉（上涨信号），死叉（下跌信号）
+- 布林带：价格突破上下轨预示反转
+- 成交量：放大配合价格上涨=买入信号
+- OBV（能量潮）：反映资金流向
+
+**中期技术指标（数周-数月）**：
+- 均线排列：多头排列（MA5>MA10>MA20>MA50）= 上升趋势
+- 均线斜率：上升=趋势向上，下降=趋势向下
+- 乖离率：价格偏离均线的程度
+- 支撑阻力位：重要价格支撑和阻力
+- 相对强度：相对于恒生指数的表现
+- 中期趋势评分：0-100分，≥80买入，30-45卖出
+
+**重要说明**：
+- 短期指标用于捕捉买卖时机（Timing）
+- 中期指标用于确认趋势方向（Direction）
+- 短期和中期方向一致时，信号最可靠
+- 短期和中期冲突时，选择观望
+
+## 四、风险提示
+
+1. **模型不确定性**：
+   - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
+   - 即使probability>0.62，实际准确率也可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间波动
+   - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
+
+2. **市场风险**：
+   - 当前市场整体风险：[高/中/低]（需根据恒生指数技术指标判断）
+   - 建议仓位：45%-55%
+   - 必须设置止损位，单只股票最大亏损不超过-8%
+
+3. **投资原则**：
+   - 短期触发 + 中期确认 + ML验证 = 高置信度信号
+   - 短期和中期冲突 = 观望（避免不确定性）
+   - 概率在0.45-0.55之间 = 低置信度，不建议操作
+   - 总仓位控制在45%-55%，分散风险
+
+## 五、数据来源
+
+- 大模型分析：Qwen大模型
+- ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
+- 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
+- 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
+- 美股市场：标普500、纳斯达克、VIX、美国国债收益率等11个指标
+- 股票类型：18个行业分类及衍生评分
+- 情感分析：四维情感评分（Relevance/Impact/Expectation_Gap/Sentiment）
+- 板块分析：16个板块涨跌幅排名、技术趋势分析、龙头识别
+- 主题建模：LDA主题建模（10个主题）
+- 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
+- 预期差距：新闻情感相对于市场预期的差距（5个特征）
+
+---
+生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+分析日期：{date_str}
 """
                 
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
