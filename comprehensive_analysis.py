@@ -9,12 +9,30 @@ import os
 import sys
 import argparse
 from datetime import datetime
+import yfinance as yf
+import pandas as pd
+import numpy as np
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入大模型服务
 from llm_services.qwen_engine import chat_with_llm
+
+# 导入必要的模块
+try:
+    from data_services.hk_sector_analysis import SectorAnalyzer
+    SECTOR_ANALYSIS_AVAILABLE = True
+except ImportError:
+    SECTOR_ANALYSIS_AVAILABLE = False
+    print("⚠️ 板块分析模块不可用")
+
+try:
+    from akshare import stock_a_div_em
+    AKSHARE_AVAILABLE = True
+except ImportError:
+    AKSHARE_AVAILABLE = False
+    print("⚠️ AKShare模块不可用")
 
 
 def load_model_accuracy(horizon=20):
@@ -441,6 +459,166 @@ def generate_html_email(content, date_str):
     return html
 
 
+def get_sector_analysis():
+    """
+    获取板块分析数据
+    
+    返回:
+    - dict: 包含板块分析结果
+    """
+    if not SECTOR_ANALYSIS_AVAILABLE:
+        return None
+    
+    try:
+        sector_analyzer = SectorAnalyzer()
+        perf_df = sector_analyzer.calculate_sector_performance(period=5)
+        
+        if perf_df is None or perf_df.empty:
+            return None
+        
+        # 识别龙头股（前3名）
+        sector_leaders = {}
+        for idx, row in perf_df.iterrows():
+            sector_code = row['sector_code']
+            leaders_df = sector_analyzer.identify_sector_leaders(
+                sector_code=sector_code,
+                top_n=3,
+                period=5,
+                min_market_cap=100,
+                style='moderate'
+            )
+            
+            if not leaders_df.empty:
+                sector_leaders[sector_code] = []
+                for _, leader_row in leaders_df.iterrows():
+                    sector_leaders[sector_code].append({
+                        'name': leader_row['name'],
+                        'code': leader_row['code'],
+                        'change_pct': leader_row['change_pct'],
+                    })
+        
+        return {
+            'performance': perf_df,
+            'leaders': sector_leaders
+        }
+    except Exception as e:
+        print(f"⚠️ 获取板块分析失败: {e}")
+        return None
+
+
+def get_dividend_info():
+    """
+    获取股息信息
+    
+    返回:
+    - dict: 包含即将除净的港股信息
+    """
+    if not AKSHARE_AVAILABLE:
+        return None
+    
+    try:
+        # 获取即将除净的港股
+        df_dividend = stock_a_div_em(em="hk", start_date=datetime.now().strftime('%Y%m%d'), end_date=(datetime.now() + timedelta(days=90)).strftime('%Y%m%d'))
+        
+        if df_dividend is None or df_dividend.empty:
+            return None
+        
+        # 只取前10个
+        df_dividend = df_dividend.head(10)
+        
+        return df_dividend.to_dict('records')
+    except Exception as e:
+        print(f"⚠️ 获取股息信息失败: {e}")
+        return None
+
+
+def get_hsi_analysis():
+    """
+    获取恒生指数分析
+    
+    返回:
+    - dict: 包含恒生指数技术分析结果
+    """
+    try:
+        hsi_ticker = yf.Ticker("^HSI")
+        hist = hsi_ticker.history(period="6mo")
+        
+        if hist.empty:
+            return None
+        
+        latest = hist.iloc[-1]
+        prev = hist.iloc[-2] if len(hist) > 1 else latest
+        
+        # 计算基本指标
+        current_price = latest['Close']
+        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+        
+        # 计算RSI
+        delta = hist['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1]
+        
+        # 计算移动平均线
+        ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
+        ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
+        
+        # 趋势判断
+        if current_price > ma20 > ma50:
+            trend = "强势多头"
+        elif current_price > ma20:
+            trend = "短期上涨"
+        elif current_price > ma50:
+            trend = "震荡整理"
+        else:
+            trend = "弱势空头"
+        
+        return {
+            'current_price': current_price,
+            'change_pct': change_pct,
+            'rsi': current_rsi,
+            'ma20': ma20,
+            'ma50': ma50,
+            'trend': trend
+        }
+    except Exception as e:
+        print(f"⚠️ 获取恒生指数分析失败: {e}")
+        return None
+
+
+def get_ai_portfolio_analysis():
+    """
+    获取AI持仓分析
+    
+    返回:
+    - dict: 包含AI持仓分析结果
+    """
+    try:
+        # 读取大模型建议文件
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        llm_file = f'data/llm_recommendations_{date_str}.txt'
+        
+        if not os.path.exists(llm_file):
+            return None
+        
+        with open(llm_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 提取AI持仓分析部分
+        import re
+        ai_analysis_match = re.search(r'【大模型持仓分析】(.*?)(?=\n\n【|$)', content, re.DOTALL)
+        
+        if ai_analysis_match:
+            return ai_analysis_match.group(1).strip()
+        
+        return None
+    except Exception as e:
+        print(f"⚠️ 获取AI持仓分析失败: {e}")
+        return None
+
+
 def send_email(subject, content, html_content=None):
     """
     发送邮件通知
@@ -820,6 +998,89 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 email_subject = f"【综合分析】港股买卖建议 - {date_str}"
                 email_content = response
                 
+                # 获取板块分析、股息信息、恒生指数分析和AI持仓分析
+                print("📊 获取板块分析...")
+                sector_data = get_sector_analysis()
+                
+                print("📊 获取股息信息...")
+                dividend_data = get_dividend_info()
+                
+                print("📊 获取恒生指数分析...")
+                hsi_data = get_hsi_analysis()
+                
+                print("📊 获取AI持仓分析...")
+                ai_analysis = get_ai_portfolio_analysis()
+                
+                # 构建板块分析文本
+                sector_text = ""
+                if sector_data and sector_data['performance'] is not None:
+                    sector_text = "\n## 六、板块分析（5日涨跌幅排名）\n"
+                    perf_df = sector_data['performance']
+                    sector_leaders = sector_data['leaders']
+                    
+                    sector_text += "| 排名 | 板块名称 | 平均涨跌幅 | 龙头股TOP 3 |\n"
+                    sector_text += "|------|---------|-----------|-------------|\n"
+                    
+                    for idx, row in perf_df.iterrows():
+                        trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
+                        change_color = "+" if row['avg_change_pct'] > 0 else ""
+                        
+                        leaders_text = ""
+                        if row['sector_code'] in sector_leaders:
+                            leaders = sector_leaders[row['sector_code']]
+                            leader_lines = []
+                            for i, leader in enumerate(leaders, 1):
+                                leader_lines.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
+                            leaders_text = "\n".join(leader_lines)
+                        
+                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{row['avg_change_pct']:.2f}% | {leaders_text} |\n"
+                    
+                    # 添加投资建议
+                    top_sector = perf_df.iloc[0]
+                    bottom_sector = perf_df.iloc[-1]
+                    
+                    sector_text += "\n**投资建议**：\n"
+                    if top_sector['avg_change_pct'] > 1:
+                        sector_text += f"- 当前热点板块：{top_sector['sector_name']}，平均涨幅 {top_sector['avg_change_pct']:.2f}%\n"
+                        if top_sector['sector_code'] in sector_leaders and sector_leaders[top_sector['sector_code']]:
+                            leader = sector_leaders[top_sector['sector_code']][0]
+                            sector_text += f"- 建议关注该板块的龙头股：{leader['name']} ⭐\n"
+                    
+                    if bottom_sector['avg_change_pct'] < -1:
+                        sector_text += f"- 当前弱势板块：{bottom_sector['sector_name']}，平均跌幅 {bottom_sector['avg_change_pct']:.2f}%\n"
+                        sector_text += "- 建议谨慎操作该板块，等待企稳信号\n"
+                
+                # 构建股息信息文本
+                dividend_text = ""
+                if dividend_data:
+                    dividend_text = "\n## 七、股息信息（即将除净）\n"
+                    dividend_text += "| 股票代码 | 股票名称 | 除净日 | 股息率 |\n"
+                    dividend_text += "|---------|---------|-------|--------|\n"
+                    
+                    for stock in dividend_data[:10]:
+                        code = stock.get('A股代码', 'N/A')
+                        name = stock.get('A股简称', 'N/A')
+                        ex_date = stock.get('除权除息日', 'N/A')
+                        div_rate = stock.get('股息率', 'N/A')
+                        dividend_text += f"| {code} | {name} | {ex_date} | {div_rate} |\n"
+                
+                # 构建恒生指数分析文本
+                hsi_text = ""
+                if hsi_data:
+                    hsi_text = "\n## 八、恒生指数技术分析\n"
+                    hsi_text += f"- 当前价格：{hsi_data['current_price']:.2f}\n"
+                    hsi_text += f"- 日涨跌幅：{hsi_data['change_pct']:+.2f}%\n"
+                    hsi_text += f"- RSI（14日）：{hsi_data['rsi']:.2f}\n"
+                    hsi_text += f"- MA20：{hsi_data['ma20']:.2f}\n"
+                    hsi_text += f"- MA50：{hsi_data['ma50']:.2f}\n"
+                    hsi_text += f"- 趋势：{hsi_data['trend']}\n"
+                
+                # 构建AI持仓分析文本
+                ai_text = ""
+                if ai_analysis:
+                    ai_text = "\n## 九、AI智能持仓分析\n"
+                    ai_text += ai_analysis
+                
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 full_content = f"""{response}
 
@@ -844,7 +1105,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ### GBDT模型
 准确率：{model_accuracy['gbdt']['accuracy']:.2%}（标准差±{model_accuracy['gbdt']['std']:.2%}）
 {ml_predictions['gbdt']}
-
+{sector_text}
+{dividend_text}
+{hsi_text}
+{ai_text}
 ## 三、技术指标说明
 
 **短期技术指标（日内/数天）**：
