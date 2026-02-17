@@ -1259,11 +1259,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                         leaders_text = ""
                         if row['sector_code'] in sector_leaders:
                             leaders = sector_leaders[row['sector_code']]
-                            # 将多行改为单行，用竖线分隔
+                            # 只显示前2个龙头股，使用更简洁的格式
                             leader_items = []
-                            for i, leader in enumerate(leaders, 1):
-                                leader_items.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
+                            for i, leader in enumerate(leaders[:2], 1):
+                                leader_items.append(f"{leader['name']}({leader['change_pct']:+.1f}%)")
                             leaders_text = " | ".join(leader_items)
+                            if len(leaders) > 2:
+                                leaders_text += " 等"
                         
                         sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{row['avg_change_pct']:.2f}% | {leaders_text} |\n"
                     
