@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # 导入大模型服务
 from llm_services.qwen_engine import chat_with_llm
 
+# 导入配置
+from config import WATCHLIST, STOCK_NAMES
+
 # 导入必要的模块
 try:
     from data_services.hk_sector_analysis import SectorAnalyzer
@@ -1307,18 +1310,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                     hsi_text += f"- MA50：{hsi_data['ma50']:.2f}\n"
                     hsi_text += f"- 趋势：{hsi_data['trend']}\n"
                 
-                # 从大模型响应中提取股票代码
-                import re
-                stock_codes = re.findall(r'\b\d{4}\.HK\b', response)
-                # 去重
-                stock_codes = list(set(stock_codes))
-                print(f"📊 从大模型响应中提取到 {len(stock_codes)} 个股票代码: {stock_codes}")
+                # 使用配置文件中的所有自选股
+                stock_codes = list(WATCHLIST.keys())
+                print(f"📊 使用配置文件中的 {len(stock_codes)} 只自选股生成技术指标表格")
                 
                 # 生成技术指标表格
                 print("📊 生成推荐股票技术指标表格...")
                 technical_indicators_table = generate_technical_indicators_table(stock_codes)
                 if not technical_indicators_table:
-                    print("⚠️ 技术指标表格为空，可能是未提取到股票代码或股票数据获取失败")
+                    print("⚠️ 技术指标表格为空，可能是股票数据获取失败")
                 
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 # 注意：不添加标题，因为HTML模板已经有了标题
