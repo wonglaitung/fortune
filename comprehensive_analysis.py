@@ -619,6 +619,192 @@ def get_ai_portfolio_analysis():
         return None
 
 
+def get_stock_technical_indicators(stock_code):
+    """
+    获取单只股票的详细技术指标
+    
+    参数:
+    - stock_code: 股票代码（如 "0700.HK"）
+    
+    返回:
+    - dict: 包含详细技术指标的字典
+    """
+    try:
+        # 移除.HK后缀
+        symbol = stock_code.replace('.HK', '')
+        
+        # 获取股票数据
+        ticker = yf.Ticker(stock_code)
+        hist = ticker.history(period="6mo")
+        
+        if hist.empty:
+            return None
+        
+        latest = hist.iloc[-1]
+        prev = hist.iloc[-2] if len(hist) > 1 else latest
+        
+        # 基本指标
+        current_price = latest['Close']
+        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+        
+        # 技术指标
+        # RSI
+        delta = hist['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1]
+        
+        # MACD
+        exp12 = hist['Close'].ewm(span=12, adjust=False).mean()
+        exp26 = hist['Close'].ewm(span=26, adjust=False).mean()
+        macd = exp12 - exp26
+        signal = macd.ewm(span=9, adjust=False).mean()
+        macd_hist = macd - signal
+        current_macd = macd.iloc[-1]
+        current_signal = signal.iloc[-1]
+        current_macd_hist = macd_hist.iloc[-1]
+        
+        # 移动平均线
+        ma5 = hist['Close'].rolling(window=5).mean().iloc[-1]
+        ma10 = hist['Close'].rolling(window=10).mean().iloc[-1]
+        ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
+        ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
+        
+        # 均线排列
+        if ma5 > ma10 > ma20 > ma50:
+            ma_alignment = "多头排列"
+        elif ma5 < ma10 < ma20 < ma50:
+            ma_alignment = "空头排列"
+        else:
+            ma_alignment = "震荡整理"
+        
+        # 布林带
+        bb_period = 20
+        bb_std = 2
+        bb_middle = hist['Close'].rolling(window=bb_period).mean()
+        bb_std_dev = hist['Close'].rolling(window=bb_period).std()
+        bb_upper = bb_middle + (bb_std_dev * bb_std)
+        bb_lower = bb_middle - (bb_std_dev * bb_std)
+        current_bb_upper = bb_upper.iloc[-1]
+        current_bb_lower = bb_lower.iloc[-1]
+        
+        # 布林带位置
+        bb_position = (current_price - current_bb_lower) / (current_bb_upper - current_bb_lower) * 100
+        
+        # ATR
+        high = hist['High'].astype(float)
+        low = hist['Low'].astype(float)
+        close = hist['Close'].astype(float)
+        prev_close = close.shift(1)
+        tr1 = high - low
+        tr2 = (high - prev_close).abs()
+        tr3 = (low - prev_close).abs()
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        atr = true_range.ewm(alpha=1/14, adjust=False).mean()
+        current_atr = atr.dropna().iloc[-1] if not atr.dropna().empty else 0
+        
+        # 成交量
+        volume = latest['Volume']
+        avg_volume_20 = hist['Volume'].rolling(window=20).mean().iloc[-1]
+        volume_ratio = volume / avg_volume_20 if avg_volume_20 > 0 else 0
+        
+        # 趋势判断
+        if current_price > ma20 > ma50:
+            trend = "强势多头"
+        elif current_price > ma20:
+            trend = "短期上涨"
+        elif current_price > ma50:
+            trend = "震荡整理"
+        else:
+            trend = "弱势空头"
+        
+        return {
+            'current_price': current_price,
+            'change_pct': change_pct,
+            'rsi': current_rsi,
+            'macd': current_macd,
+            'macd_signal': current_signal,
+            'macd_hist': current_macd_hist,
+            'ma5': ma5,
+            'ma10': ma10,
+            'ma20': ma20,
+            'ma50': ma50,
+            'ma_alignment': ma_alignment,
+            'bb_upper': current_bb_upper,
+            'bb_lower': current_bb_lower,
+            'bb_position': bb_position,
+            'atr': current_atr,
+            'volume': volume,
+            'avg_volume_20': avg_volume_20,
+            'volume_ratio': volume_ratio,
+            'trend': trend
+        }
+    except Exception as e:
+        print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
+        return None
+
+
+def generate_technical_indicators_table(stock_codes):
+    """
+    为推荐股票生成技术指标表格
+    
+    参数:
+    - stock_codes: 股票代码列表（从推荐建议中提取）
+    
+    返回:
+    - str: Markdown格式的技术指标表格
+    """
+    try:
+        if not stock_codes:
+            return ""
+        
+        table = "\n## 十、推荐股票技术指标详情\n\n"
+        table += "| 股票代码 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 均线排列 | 布林带位置 | 成交量比率 | 趋势 |\n"
+        table += "|---------|---------|--------|-----|------|-----|-----|---------|-----------|-----------|------|\n"
+        
+        for stock_code in stock_codes:
+            indicators = get_stock_technical_indicators(stock_code)
+            
+            if indicators:
+                # 格式化数据
+                price = f"{indicators['current_price']:.2f}"
+                change = f"{indicators['change_pct']:+.2f}%"
+                rsi = f"{indicators['rsi']:.2f}"
+                macd = f"{indicators['macd']:.2f}"
+                ma20 = f"{indicators['ma20']:.2f}"
+                ma50 = f"{indicators['ma50']:.2f}"
+                ma_align = indicators['ma_alignment']
+                bb_pos = f"{indicators['bb_position']:.1f}%"
+                vol_ratio = f"{indicators['volume_ratio']:.2f}x"
+                trend = indicators['trend']
+                
+                # 根据数值添加颜色标记（文本用括号标注）
+                if indicators['rsi'] > 70:
+                    rsi += " (超买)"
+                elif indicators['rsi'] < 30:
+                    rsi += " (超卖)"
+                
+                if indicators['change_pct'] > 0:
+                    change = f"📈 {change}"
+                else:
+                    change = f"📉 {change}"
+                
+                if indicators['trend'] == "强势多头":
+                    trend = f"🟢 {trend}"
+                elif indicators['trend'] == "弱势空头":
+                    trend = f"🔴 {trend}"
+                
+                table += f"| {stock_code} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma_align} | {bb_pos} | {vol_ratio} | {trend} |\n"
+        
+        return table
+        
+    except Exception as e:
+        print(f"⚠️ 生成技术指标表格失败: {e}")
+        return ""
+
+
 def send_email(subject, content, html_content=None):
     """
     发送邮件通知
@@ -1081,6 +1267,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                     ai_text = "\n## 九、AI智能持仓分析\n"
                     ai_text += ai_analysis
                 
+                # 从大模型响应中提取股票代码
+                import re
+                stock_codes = re.findall(r'\b\d{4}\.HK\b', response)
+                # 去重
+                stock_codes = list(set(stock_codes))
+                
+                # 生成技术指标表格
+                print("📊 生成推荐股票技术指标表格...")
+                technical_indicators_table = generate_technical_indicators_table(stock_codes)
+                
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 full_content = f"""{response}
 
@@ -1109,7 +1305,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {dividend_text}
 {hsi_text}
 {ai_text}
-## 三、技术指标说明
+{technical_indicators_table}
+## 五、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1132,7 +1329,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 四、风险提示
+## 六、风险提示
 
 1. **模型不确定性**：
    - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
@@ -1150,7 +1347,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 概率在0.45-0.55之间 = 低置信度，不建议操作
    - 总仓位控制在45%-55%，分散风险
 
-## 五、数据来源
+## 七、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
