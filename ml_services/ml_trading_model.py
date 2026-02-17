@@ -181,6 +181,14 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         return None
 
 
+def get_target_date(date, horizon):
+    """计算目标日期（数据日期 + 预测周期）"""
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d')
+    target_date = date + timedelta(days=horizon)
+    return target_date.strftime('%Y-%m-%d')
+
+
 # ========== 缓存辅助函数 ==========
 def _get_cache_key(stock_code, period_days):
     """生成缓存键"""
