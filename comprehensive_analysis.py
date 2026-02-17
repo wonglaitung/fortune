@@ -1346,7 +1346,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {dividend_text}
 {hsi_text}
 {technical_indicators_table}
-## 六、技术指标说明
+## 七、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1369,7 +1369,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 七、风险提示
+## 八、风险提示
 
 1. **模型不确定性**：
    - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
@@ -1387,7 +1387,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 概率在0.45-0.55之间 = 低置信度，不建议操作
    - 总仓位控制在45%-55%，分散风险
 
-## 八、数据来源
+## 九、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
