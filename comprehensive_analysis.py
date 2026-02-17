@@ -762,14 +762,20 @@ def generate_technical_indicators_table(stock_codes):
         if not stock_codes:
             return ""
         
-        table = "\n## 六、推荐股票技术指标详情\n\n"
-        table += "| 股票代码 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 均线排列 | 布林带位置 | 成交量比率 | 趋势 |\n"
-        table += "|---------|---------|--------|-----|------|-----|-----|---------|-----------|-----------|------|\n"
+        # 按股票代码排序
+        stock_codes_sorted = sorted(stock_codes)
         
-        for stock_code in stock_codes:
+        table = "\n## 六、推荐股票技术指标详情\n\n"
+        table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 均线排列 | 布林带位置 | 成交量比率 | 趋势 |\n"
+        table += "|---------|---------|---------|--------|-----|------|-----|-----|---------|-----------|-----------|------|\n"
+        
+        for stock_code in stock_codes_sorted:
             indicators = get_stock_technical_indicators(stock_code)
             
             if indicators:
+                # 获取股票名称
+                stock_name = STOCK_NAMES.get(stock_code, stock_code)
+                
                 # 格式化数据
                 price = f"{indicators['current_price']:.2f}"
                 change = f"{indicators['change_pct']:+.2f}%"
@@ -798,7 +804,7 @@ def generate_technical_indicators_table(stock_codes):
                 elif indicators['trend'] == "弱势空头":
                     trend = f"🔴 {trend}"
                 
-                table += f"| {stock_code} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma_align} | {bb_pos} | {vol_ratio} | {trend} |\n"
+                table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma_align} | {bb_pos} | {vol_ratio} | {trend} |\n"
         
         return table
         
