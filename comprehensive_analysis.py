@@ -1213,10 +1213,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                         leaders_text = ""
                         if row['sector_code'] in sector_leaders:
                             leaders = sector_leaders[row['sector_code']]
-                            leader_lines = []
+                            # 将多行改为单行，用竖线分隔
+                            leader_items = []
                             for i, leader in enumerate(leaders, 1):
-                                leader_lines.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
-                            leaders_text = "\n".join(leader_lines)
+                                leader_items.append(f"{i}. {leader['name']} ({leader['change_pct']:+.2f}%)")
+                            leaders_text = " | ".join(leader_items)
                         
                         sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{row['avg_change_pct']:.2f}% | {leaders_text} |\n"
                     
