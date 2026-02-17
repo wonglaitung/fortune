@@ -187,16 +187,19 @@ def extract_ml_predictions(filepath):
             
             lgbm_text = "【LightGBM模型预测结果】\n"
             lgbm_text += f"预测日期: {date_str}\n\n"
-            lgbm_text += "预测上涨的股票（按概率排序）:\n"
-            lgbm_text += "-" * 50 + "\n"
+            lgbm_text += "预测上涨的股票（按概率排序）:\n\n"
+            
+            # 构建Markdown表格
+            lgbm_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
+            lgbm_text += "|----------|----------|----------|----------|\n"
             
             for _, row in up_stocks_lgbm.iterrows():
-                lgbm_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
+                lgbm_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
-            lgbm_text += "-" * 50 + "\n"
-            lgbm_text += f"预测上涨: {len(up_stocks_lgbm)} 只\n"
-            lgbm_text += f"预测下跌: {len(df_lgbm) - len(up_stocks_lgbm)} 只\n"
-            lgbm_text += f"平均上涨概率: {up_stocks_lgbm['probability'].mean():.4f}\n"
+            lgbm_text += f"\n**统计信息**：\n"
+            lgbm_text += f"- 预测上涨: {len(up_stocks_lgbm)} 只\n"
+            lgbm_text += f"- 预测下跌: {len(df_lgbm) - len(up_stocks_lgbm)} 只\n"
+            lgbm_text += f"- 平均上涨概率: {up_stocks_lgbm['probability'].mean():.4f}\n"
             
             result['lgbm'] = lgbm_text
         
@@ -208,16 +211,19 @@ def extract_ml_predictions(filepath):
             
             gbdt_text = "【GBDT模型预测结果】\n"
             gbdt_text += f"预测日期: {date_str}\n\n"
-            gbdt_text += "预测上涨的股票（按概率排序）:\n"
-            gbdt_text += "-" * 50 + "\n"
+            gbdt_text += "预测上涨的股票（按概率排序）:\n\n"
+            
+            # 构建Markdown表格
+            gbdt_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
+            gbdt_text += "|----------|----------|----------|----------|\n"
             
             for _, row in up_stocks_gbdt.iterrows():
-                gbdt_text += f"{row['code']:<12} {row['name']:<12} {row['probability']:<10.4f} {row['current_price']:<12}\n"
+                gbdt_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
-            gbdt_text += "-" * 50 + "\n"
-            gbdt_text += f"预测上涨: {len(up_stocks_gbdt)} 只\n"
-            gbdt_text += f"预测下跌: {len(df_gbdt) - len(up_stocks_gbdt)} 只\n"
-            gbdt_text += f"平均上涨概率: {up_stocks_gbdt['probability'].mean():.4f}\n"
+            gbdt_text += f"\n**统计信息**：\n"
+            gbdt_text += f"- 预测上涨: {len(up_stocks_gbdt)} 只\n"
+            gbdt_text += f"- 预测下跌: {len(df_gbdt) - len(up_stocks_gbdt)} 只\n"
+            gbdt_text += f"- 平均上涨概率: {up_stocks_gbdt['probability'].mean():.4f}\n"
             
             result['gbdt'] = gbdt_text
         
