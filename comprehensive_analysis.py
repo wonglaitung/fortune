@@ -20,7 +20,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_services.qwen_engine import chat_with_llm
 
 # 导入配置
-from config import WATCHLIST, STOCK_NAMES
+from config import WATCHLIST
+
+# 从WATCHLIST提取股票名称映射
+STOCK_NAMES = WATCHLIST
 
 # 导入必要的模块
 try:
