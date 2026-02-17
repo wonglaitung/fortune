@@ -673,6 +673,7 @@ def get_stock_technical_indicators(stock_code):
         ma10 = hist['Close'].rolling(window=10).mean().iloc[-1]
         ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
         ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
+        ma200 = hist['Close'].rolling(window=200).mean().iloc[-1]
         
         # 均线排列
         if ma5 > ma10 > ma20 > ma50:
@@ -681,6 +682,13 @@ def get_stock_technical_indicators(stock_code):
             ma_alignment = "空头排列"
         else:
             ma_alignment = "震荡整理"
+        
+        # 均线斜率
+        ma_slope_20 = (ma20 - hist['Close'].rolling(window=20).mean().iloc[-2]) / ma20 * 100 if len(hist) > 20 else 0
+        ma_slope_50 = (ma50 - hist['Close'].rolling(window=50).mean().iloc[-2]) / ma50 * 100 if len(hist) > 50 else 0
+        
+        # 均线乖离率
+        ma_deviation = ((current_price - ma20) / ma20 * 100) if ma20 > 0 else 0
         
         # 布林带
         bb_period = 20
@@ -722,6 +730,22 @@ def get_stock_technical_indicators(stock_code):
         else:
             trend = "弱势空头"
         
+        # 支撑阻力位
+        recent_highs = hist['High'].rolling(window=20).max()
+        recent_lows = hist['Low'].rolling(window=20).min()
+        support_level = recent_lows.iloc[-1]
+        resistance_level = recent_highs.iloc[-1]
+        support_distance = ((current_price - support_level) / current_price * 100) if current_price > 0 else 0
+        resistance_distance = ((resistance_level - current_price) / current_price * 100) if current_price > 0 else 0
+        
+        # OBV（能量潮）
+        obv_change = (latest['Close'] - prev['Close']) * latest['Volume']
+        obv = (obv_change.cumsum() / 1e6).iloc[-1] if len(hist) > 0 else 0
+        
+        # 价格位置（基于20日区间）
+        price_range_20d = hist['Close'].rolling(window=20).max() - hist['Close'].rolling(window=20).min()
+        price_position = ((current_price - hist['Close'].rolling(window=20).min().iloc[-1]) / price_range_20d.iloc[-1] * 100) if price_range_20d.iloc[-1] > 0 else 50
+        
         return {
             'current_price': current_price,
             'change_pct': change_pct,
@@ -733,7 +757,11 @@ def get_stock_technical_indicators(stock_code):
             'ma10': ma10,
             'ma20': ma20,
             'ma50': ma50,
+            'ma200': ma200,
             'ma_alignment': ma_alignment,
+            'ma_slope_20': ma_slope_20,
+            'ma_slope_50': ma_slope_50,
+            'ma_deviation': ma_deviation,
             'bb_upper': current_bb_upper,
             'bb_lower': current_bb_lower,
             'bb_position': bb_position,
@@ -741,7 +769,13 @@ def get_stock_technical_indicators(stock_code):
             'volume': volume,
             'avg_volume_20': avg_volume_20,
             'volume_ratio': volume_ratio,
-            'trend': trend
+            'trend': trend,
+            'support_level': support_level,
+            'resistance_level': resistance_level,
+            'support_distance': support_distance,
+            'resistance_distance': resistance_distance,
+            'obv': obv,
+            'price_position': price_position
         }
     except Exception as e:
         print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
@@ -766,8 +800,8 @@ def generate_technical_indicators_table(stock_codes):
         stock_codes_sorted = sorted(stock_codes)
         
         table = "\n## 六、推荐股票技术指标详情\n\n"
-        table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 均线排列 | 布林带位置 | 成交量比率 | 趋势 |\n"
-        table += "|---------|---------|---------|--------|-----|------|-----|-----|---------|-----------|-----------|------|\n"
+        table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
+        table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
         for stock_code in stock_codes_sorted:
             indicators = get_stock_technical_indicators(stock_code)
@@ -783,10 +817,16 @@ def generate_technical_indicators_table(stock_codes):
                 macd = f"{indicators['macd']:.2f}"
                 ma20 = f"{indicators['ma20']:.2f}"
                 ma50 = f"{indicators['ma50']:.2f}"
+                ma200 = f"{indicators['ma200']:.2f}" if pd.notna(indicators['ma200']) else "N/A"
                 ma_align = indicators['ma_alignment']
+                ma_slope = f"{indicators['ma_slope_20']:.4f}"
+                ma_dev = f"{indicators['ma_deviation']:.2f}%"
                 bb_pos = f"{indicators['bb_position']:.1f}%"
+                atr = f"{indicators['atr']:.2f}"
                 vol_ratio = f"{indicators['volume_ratio']:.2f}x"
                 trend = indicators['trend']
+                support = f"{indicators['support_level']:.2f} ({indicators['support_distance']:.2f}%)"
+                resistance = f"{indicators['resistance_level']:.2f} ({indicators['resistance_distance']:.2f}%)"
                 
                 # 根据数值添加颜色标记（文本用括号标注）
                 if indicators['rsi'] > 70:
@@ -804,7 +844,7 @@ def generate_technical_indicators_table(stock_codes):
                 elif indicators['trend'] == "弱势空头":
                     trend = f"🔴 {trend}"
                 
-                table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma_align} | {bb_pos} | {vol_ratio} | {trend} |\n"
+                table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma200} | {ma_align} | {ma_slope} | {ma_dev} | {bb_pos} | {atr} | {vol_ratio} | {trend} | {support} | {resistance} |\n"
         
         return table
         
