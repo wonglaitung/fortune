@@ -1,14 +1,29 @@
 #!/bin/bash
 
 # 综合分析自动化脚本
+# 0. 运行特征选择脚本，生成500个精选特征
 # 1. 调用hsi_email.py生成大模型建议（使用force参数）
-# 2. 调用ml_trading_model.py生成20天预测
-# 3. 调用comprehensive_analysis.py进行综合分析
+# 2. 训练20天模型（使用特征选择）
+# 3. 生成20天预测
+# 4. 调用comprehensive_analysis.py进行综合分析
 
 echo "=========================================="
 echo "🚀 综合分析自动化流程"
 echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+echo ""
+
+# 步骤0: 运行特征选择脚本，生成包含特征名称的CSV文件
+echo "=========================================="
+echo "📊 步骤 0/4: 运行特征选择（生成500个精选特征）"
+echo "=========================================="
+echo ""
+python3 ml_services/feature_selection.py --top-k 500 --output-dir output
+if [ $? -ne 0 ]; then
+    echo "❌ 步骤0失败: 特征选择失败"
+    exit 1
+fi
+echo "✅ 步骤0完成: 特征选择完成，已生成500个精选特征"
 echo ""
 
 # 步骤1: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
