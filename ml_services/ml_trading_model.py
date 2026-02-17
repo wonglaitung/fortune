@@ -1770,10 +1770,15 @@ class MLTradingModel:
                 print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
                 print("⚠️ 未找到特征选择文件，使用全部特征")
-        elif use_feature_selection and self.model_type == 'gbdt_lr':
-            print("\n🎯 跳过特征选择（GBDT+LR）")
-            print("⚠️ GBDT+LR对特征选择不敏感，使用全部特征以保持性能")
-            print(f"✅ 使用全部 {len(self.feature_columns)} 个特征")
+        elif use_feature_selection and self.model_type == 'gbdt':
+            print("\n🎯 应用特征选择（GBDT）...")
+            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
+            if selected_features:
+                # 筛选特征列
+                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
+                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+            else:
+                print("⚠️ 未找到特征选择文件，使用全部特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -2902,10 +2907,10 @@ def main():
             print("\n加载模型...")
             horizon_suffix = f'_{args.horizon}d'
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
-            gbdt_lr_model_path = args.model_path.replace('.pkl', f'_gbdt_lr{horizon_suffix}.pkl')
+            gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             
             lgbm_model.load_model(lgbm_model_path)
-            gbdt_lr_model.load_model(gbdt_lr_model_path)
+            gbdt_model.load_model(gbdt_model_path)
 
             # 准备测试数据
             print("准备测试数据...")
@@ -2927,50 +2932,37 @@ def main():
             lgbm_accuracy = accuracy_score(y_test, y_pred_lgbm)
             print(f"\n准确率: {lgbm_accuracy:.4f}")
 
-            # GBDT + LR 模型评估
+            # GBDT 模型评估
             print("\n" + "="*70)
-            print("🌲 GBDT + LR 模型评估")
+            print("🌲 GBDT 模型评估")
             print("="*70)
-            gbdt_leaf_test = gbdt_lr_model.gbdt_model.booster_.predict(X_test, pred_leaf=True)
-            df_gbdt_leaf_test = pd.DataFrame(gbdt_leaf_test, columns=gbdt_lr_model.gbdt_leaf_names)
-
-            df_gbdt_onehot_test = pd.DataFrame()
-            for col in gbdt_lr_model.gbdt_leaf_names:
-                onehot_feats = pd.get_dummies(df_gbdt_leaf_test[col], prefix=col)
-                df_gbdt_onehot_test = pd.concat([df_gbdt_onehot_test, onehot_feats], axis=1)
-
-            for col in gbdt_lr_model.lr_model.feature_names_in_:
-                if col not in df_gbdt_onehot_test.columns:
-                    df_gbdt_onehot_test[col] = 0
-
-            df_gbdt_onehot_test = df_gbdt_onehot_test[gbdt_lr_model.lr_model.feature_names_in_]
-            y_pred_gbdt_lr = gbdt_lr_model.lr_model.predict(df_gbdt_onehot_test)
+            y_pred_gbdt = gbdt_model.gbdt_model.predict(X_test)
 
             print("\n分类报告:")
-            print(classification_report(y_test, y_pred_gbdt_lr))
+            print(classification_report(y_test, y_pred_gbdt))
             print("\n混淆矩阵:")
-            print(confusion_matrix(y_test, y_pred_gbdt_lr))
-            gbdt_lr_accuracy = accuracy_score(y_test, y_pred_gbdt_lr)
-            print(f"\n准确率: {gbdt_lr_accuracy:.4f}")
+            print(confusion_matrix(y_test, y_pred_gbdt))
+            gbdt_accuracy = accuracy_score(y_test, y_pred_gbdt)
+            print(f"\n准确率: {gbdt_accuracy:.4f}")
 
             # 对比结果
             print("\n" + "="*70)
             print("📊 模型对比")
             print("="*70)
             print(f"LightGBM 准确率: {lgbm_accuracy:.4f}")
-            print(f"GBDT + LR 准确率: {gbdt_lr_accuracy:.4f}")
-            print(f"准确率差异: {abs(lgbm_accuracy - gbdt_lr_accuracy):.4f}")
+            print(f"GBDT 准确率: {gbdt_accuracy:.4f}")
+            print(f"准确率差异: {abs(lgbm_accuracy - gbdt_accuracy):.4f}")
             
-            if gbdt_lr_accuracy > lgbm_accuracy:
-                print(f"\n✅ GBDT + LR 模型表现更好，提升 {gbdt_lr_accuracy - lgbm_accuracy:.4f} ({(gbdt_lr_accuracy - lgbm_accuracy)/lgbm_accuracy*100:.2f}%)")
-            elif lgbm_accuracy > gbdt_lr_accuracy:
-                print(f"\n✅ LightGBM 模型表现更好，提升 {lgbm_accuracy - gbdt_lr_accuracy:.4f} ({(lgbm_accuracy - gbdt_lr_accuracy)/gbdt_lr_accuracy*100:.2f}%)")
+            if gbdt_accuracy > lgbm_accuracy:
+                print(f"\n✅ GBDT 模型表现更好，提升 {gbdt_accuracy - lgbm_accuracy:.4f} ({(gbdt_accuracy - lgbm_accuracy)/lgbm_accuracy*100:.2f}%)")
+            elif lgbm_accuracy > gbdt_accuracy:
+                print(f"\n✅ LightGBM 模型表现更好，提升 {lgbm_accuracy - gbdt_accuracy:.4f} ({(lgbm_accuracy - gbdt_accuracy)/gbdt_accuracy*100:.2f}%)")
             else:
                 print(f"\n⚖️  两种模型表现相同")
 
         else:
             # 单个模型评估
-            model = lgbm_model if lgbm_model else gbdt_lr_model
+            model = lgbm_model if lgbm_model else gbdt_model
             model.load_model(args.model_path)
 
             # 准备测试数据
@@ -2981,30 +2973,8 @@ def main():
             X_test = test_df[model.feature_columns].values
             y_test = test_df['Label'].values
 
-            # 根据模型类型进行预测
-            if gbdt_lr_model:
-                # GBDT + LR 模型需要先通过 GBDT 获取叶子节点特征
-                gbdt_leaf_test = model.gbdt_model.booster_.predict(X_test, pred_leaf=True)
-                df_gbdt_leaf_test = pd.DataFrame(gbdt_leaf_test, columns=model.gbdt_leaf_names)
-
-                # One-Hot 编码
-                df_gbdt_onehot_test = pd.DataFrame()
-                for col in model.gbdt_leaf_names:
-                    onehot_feats = pd.get_dummies(df_gbdt_leaf_test[col], prefix=col)
-                    df_gbdt_onehot_test = pd.concat([df_gbdt_onehot_test, onehot_feats], axis=1)
-
-                # 确保特征列与训练时一致
-                for col in model.lr_model.feature_names_in_:
-                    if col not in df_gbdt_onehot_test.columns:
-                        df_gbdt_onehot_test[col] = 0
-
-                df_gbdt_onehot_test = df_gbdt_onehot_test[model.lr_model.feature_names_in_]
-
-                # 使用 LR 预测
-                y_pred = model.lr_model.predict(df_gbdt_onehot_test)
-            else:
-                # 单一 LightGBM 模型
-                y_pred = model.model.predict(X_test)
+            # 使用模型直接预测
+            y_pred = model.gbdt_model.predict(X_test)
 
             # 评估
             print("\n分类报告:")
