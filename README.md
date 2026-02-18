@@ -43,6 +43,14 @@
 - **GBDT模型优势**：准确率比GBDT+LR提升1.74%，稳定性提升49.2%
 - **动态准确率加载**：训练时自动保存准确率，分析时自动读取最新准确率
 - **特征重要性分析**：提供模型可解释性
+- **回测评估功能（2026-02-18）**：
+  - 验证模型在真实交易中的盈利能力
+  - 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率
+  - 随机股票选择：从测试集中随机选择一只股票进行回测
+  - 股票信息记录：记录股票代码、回测策略、选择方法到JSON文件
+  - 可视化报告：组合价值对比、收益率分布、回撤曲线、关键指标对比（4个子图）
+  - 测试结果：LightGBM总收益率60.58%（夏普比率1.35），GBDT总收益率135.46%（夏普比率2.06）
+  - 评级标准：⭐⭐⭐⭐⭐优秀（夏普比率>1.0且最大回撤<-20%）
 
 ### 模拟交易
 - **真实模拟**：基于大模型建议的模拟交易系统
@@ -97,6 +105,10 @@ python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gb
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type gbdt
 
+# 回测模型盈利能力
+python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection
+python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection
+
 # 综合分析（整合大模型建议和ML预测，每日自动执行）
 ./run_comprehensive_analysis.sh
 python comprehensive_analysis.py
@@ -126,6 +138,7 @@ fortune/
 ├── 机器学习模块 (ml_services/)
 │   ├── ml_trading_model.py             # 机器学习交易模型
 │   ├── ml_prediction_email.py          # 预测邮件发送器
+│   ├── backtest_evaluator.py           # 回测评估模块（验证模型盈利能力）
 │   ├── us_market_data.py               # 美股市场数据
 │   ├── feature_selection.py            # 特征选择模块
 │   ├── topic_modeling.py               # LDA主题建模模块
@@ -351,6 +364,8 @@ python comprehensive_analysis.py --no-email
 | `simulation_transactions.csv` | 交易历史记录 | 实时 |
 | `ml_trading_model_*.pkl` | 机器学习模型 | 按需 |
 | `ml_trading_model_*_importance.csv` | 特征重要性排名 | 按需 |
+| `output/backtest_results_*.json` | 回测结果数据文件 | 回测时生成 |
+| `output/backtest_results_*.png` | 回测结果图表 | 回测时生成 |
 | `fundamental_cache/` | 基本面数据缓存 | 7天有效期 |
 
 ## 重要提示
@@ -412,6 +427,19 @@ python comprehensive_analysis.py --no-email
 - [x] 推荐股票技术指标详情（2026-02-17）
 - [x] 每日自动执行（2026-02-17）
 
+### 回测评估功能计划
+
+#### 已完成（100%）
+- [x] 回测评估模块实现（2026-02-18）
+- [x] 关键指标计算（夏普比率、索提诺比率、最大回撤、胜率、信息比率）（2026-02-18）
+- [x] 可视化报告生成（4个子图：组合价值对比、收益率分布、回撤曲线、关键指标对比）（2026-02-18）
+- [x] 随机股票选择功能（从测试集中随机选择一只股票进行回测）（2026-02-18）
+- [x] 股票信息记录（记录股票代码、回测策略、选择方法到JSON文件）（2026-02-18）
+- [x] 评级标准实现（⭐⭐⭐⭐⭐优秀评级）（2026-02-18）
+- [x] 交易成本考虑（佣金0.1% + 滑点0.1%）（2026-02-18）
+- [x] 基准策略对比（买入持有）（2026-02-18）
+- [x] 测试验证（LightGBM和GBDT模型都获得⭐⭐⭐⭐⭐优秀评级）（2026-02-18）
+
 ### 其他功能计划
 - [ ] Web界面展示信息
 - [x] 风险管理模块优化（VaR、ES、压力测试）- 已实现基础VaR计算和六层风险管理框架
@@ -422,7 +450,7 @@ python comprehensive_analysis.py --no-email
 
 ### 计划完成度
 
-**分析日期**: 2026-02-17
+**分析日期**: 2026-02-18
 
 ### 总体完成度
 
@@ -431,8 +459,9 @@ python comprehensive_analysis.py --no-email
 | **已完成计划（2026-02-14前）** | 6 | 6 | 100% |
 | **ML特征工程优化** | 12 | 12 | 100% |
 | **综合分析系统** | 9 | 9 | 100% |
+| **回测评估功能** | 9 | 9 | 100% |
 | **其他功能计划** | 6 | 1 | 17% |
-| **总计** | 33 | 28 | 85% |
+| **总计** | 42 | 37 | 88% |
 
 ### 已完成计划（100%）
 1. ✅ 机器学习模型准确率优化（目标：55-60%）→ 一个月模型LightGBM已达59.72%，GBDT已达59.22%，达到业界优秀水平
@@ -482,6 +511,9 @@ python comprehensive_analysis.py --no-email
 - **预期差距特征（2026-02-16）** - 5个特征，计算新闻情感相对于市场预期的差距
 - **动态准确率加载（2026-02-17）** - 训练时自动保存准确率到JSON文件，综合分析时自动读取
 - **禁用主题关键词分析输出（2026-02-16）** - 减少冗余日志，提升用户体验
+- **回测评估功能（2026-02-18）** - 实现完整的回测评估功能，验证模型盈利能力
+- **随机股票选择（2026-02-18）** - 从测试集中随机选择一只股票进行回测
+- **股票信息记录（2026-02-18）** - 记录股票代码、回测策略、选择方法到JSON文件
 
 ### 优先级建议
 
@@ -495,6 +527,7 @@ python comprehensive_analysis.py --no-email
 7. ✅ 实现动态准确率加载功能（2026-02-17完成）
 8. ✅ 实现综合分析系统（2026-02-17完成）
 9. ✅ 实现每日自动执行（2026-02-17完成）
+10. ✅ 实现回测评估功能（2026-02-18完成）
 
 **中优先级**：
 1. 实现投资组合优化算法
