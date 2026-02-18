@@ -2902,7 +2902,7 @@ def main():
         print("评估模式")
         print("=" * 50)
 
-        if train_both:
+        if args.model_type == 'both':
             # 加载两个模型
             print("\n加载模型...")
             horizon_suffix = f'_{args.horizon}d'
