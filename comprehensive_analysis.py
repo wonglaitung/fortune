@@ -645,8 +645,20 @@ def get_stock_technical_indicators(stock_code):
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
         
+        # 确保 hist 是 DataFrame
+        if not isinstance(hist, pd.DataFrame):
+            print(f"⚠️ 警告: {stock_code} 返回的数据类型不是 DataFrame: {type(hist)}")
+            return None
+        
         if hist.empty:
             print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")
+            return None
+        
+        # 检查是否有必要的列
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        missing_columns = [col for col in required_columns if col not in hist.columns]
+        if missing_columns:
+            print(f"⚠️ 警告: {stock_code} 缺少必要的列: {missing_columns}")
             return None
         
         latest = hist.iloc[-1]
