@@ -2729,8 +2729,8 @@ class GBDTModel:
 
 def main():
     parser = argparse.ArgumentParser(description='机器学习交易模型')
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate'],
-                       help='运行模式: train=训练, predict=预测, evaluate=评估')
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate', 'backtest'],
+                       help='运行模式: train=训练, predict=预测, evaluate=评估, backtest=回测')
     parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt'],
                        help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型（默认lgbm）')
     parser.add_argument('--model-path', type=str, default='data/ml_trading_model.pkl',
@@ -2984,6 +2984,75 @@ def main():
             print(confusion_matrix(y_test, y_pred))
 
             print(f"\n准确率: {accuracy_score(y_test, y_pred):.4f}")
+
+    elif args.mode == 'backtest':
+            # 回测模式
+            print("=" * 50)
+            print("回测模式")
+            print("=" * 50)
+            
+            from backtest_evaluator import BacktestEvaluator
+            
+            # 加载模型
+            print("\n加载模型...")
+            horizon_suffix = f'_{args.horizon}d'
+            
+            if args.model_type == 'lgbm':
+                model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+                lgbm_model.load_model(model_path)
+                model = lgbm_model.model
+            else:
+                model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
+                gbdt_model.load_model(model_path)
+                model = gbdt_model.gbdt_model
+            
+            # 准备测试数据
+            print("准备测试数据...")
+            test_df = lgbm_model.prepare_data(WATCHLIST)
+            test_df = test_df.dropna()
+            
+            # 按时间排序
+            test_df = test_df.sort_index()
+            
+            # 获取特征和标签
+            X_test = test_df[lgbm_model.feature_columns].values
+            y_test = test_df['Label'].values
+            
+            # 获取价格数据（用于回测）
+            prices = test_df['Close']
+            
+            print(f"测试数据: {len(test_df)} 条")
+            print(f"测试时间段: {test_df.index[0]} 到 {test_df.index[-1]}")
+            
+            # 运行回测
+            print("\n开始回测...")
+            evaluator = BacktestEvaluator(initial_capital=100000)
+            results = evaluator.backtest_model(
+                model=model,
+                test_data=pd.DataFrame(X_test, index=test_df.index),
+                test_labels=pd.Series(y_test, index=test_df.index),
+                test_prices=prices,
+                confidence_threshold=0.55
+            )
+            
+            # 绘制回测结果
+            output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
+            os.makedirs(output_dir, exist_ok=True)
+            plot_path = os.path.join(output_dir, f'backtest_results_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
+            evaluator.plot_backtest_results(results, save_path=plot_path)
+            
+            # 保存回测结果
+            result_path = os.path.join(output_dir, f'backtest_results_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
+            import json
+            with open(result_path, 'w') as f:
+                # 转换numpy类型为Python类型
+                results_for_json = {
+                    k: float(v) if isinstance(v, (np.float64, np.float32, np.int64, np.int32)) else v
+                    for k, v in results.items()
+                    if k not in ['portfolio_values', 'benchmark_values', 'trades']
+                }
+                json.dump(results_for_json, f, indent=2)
+            print(f"\n📊 回测结果已保存到: {result_path}")
 
 
 if __name__ == '__main__':
