@@ -676,6 +676,11 @@ def get_stock_technical_indicators(stock_code):
         latest = hist.iloc[-1]
         prev = hist.iloc[-2] if len(hist) > 1 else latest
         
+        # 调试：检查 iloc 操作后 hist 类型
+        if not isinstance(hist, pd.DataFrame):
+            print(f"  DEBUG {stock_code}: iloc 操作后 hist 类型变为 {type(hist)}")
+            raise TypeError(f"hist 类型在 iloc 后变为 {type(hist)}")
+        
         # 基本指标
         current_price = latest['Close']
         change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
@@ -738,6 +743,12 @@ def get_stock_technical_indicators(stock_code):
         high = hist['High'].astype(float)
         low = hist['Low'].astype(float)
         close = hist['Close'].astype(float)
+        
+        # 调试：检查 hist 类型是否被改变
+        if not isinstance(hist, pd.DataFrame):
+            print(f"  DEBUG {stock_code}: astype 操作后 hist 类型变为 {type(hist)}")
+            raise TypeError(f"hist 类型在 astype 后变为 {type(hist)}")
+        
         prev_close = close.shift(1)
         tr1 = high - low
         tr2 = (high - prev_close).abs()
@@ -809,7 +820,11 @@ def get_stock_technical_indicators(stock_code):
             'price_position': price_position
         }
     except Exception as e:
+        import traceback
         print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  堆栈跟踪:")
+        traceback.print_exc()
         return None
 
 
