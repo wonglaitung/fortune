@@ -194,13 +194,13 @@ def extract_ml_predictions(filepath):
             lgbm_text = "【LightGBM模型预测结果】\n"
             lgbm_text += f"预测日期: {date_str}\n\n"
             lgbm_text += "高置信度上涨信号（probability > 0.60，按概率排序）:\n\n"
-            
+
             # 构建Markdown表格
-            lgbm_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-            lgbm_text += "|----------|----------|----------|----------|----------|\n"
-            
+            lgbm_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
+            lgbm_text += "|----------|----------|----------|----------|\n"
+
             for _, row in up_stocks_lgbm.iterrows():
-                lgbm_text += f"| {row['code']} | {row['name']} | 上涨 | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                lgbm_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
             lgbm_text += f"\n**统计信息**：\n"
             lgbm_text += f"- 高置信度上涨（probability > 0.60）: {len(up_stocks_lgbm)} 只\n"
@@ -219,13 +219,13 @@ def extract_ml_predictions(filepath):
             gbdt_text = "【GBDT模型预测结果】\n"
             gbdt_text += f"预测日期: {date_str}\n\n"
             gbdt_text += "高置信度上涨信号（probability > 0.60，按概率排序）:\n\n"
-            
+
             # 构建Markdown表格
-            gbdt_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-            gbdt_text += "|----------|----------|----------|----------|----------|\n"
-            
+            gbdt_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
+            gbdt_text += "|----------|----------|----------|----------|\n"
+
             for _, row in up_stocks_gbdt.iterrows():
-                gbdt_text += f"| {row['code']} | {row['name']} | 上涨 | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                gbdt_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
             gbdt_text += f"\n**统计信息**：\n"
             gbdt_text += f"- 高置信度上涨（probability > 0.60）: {len(up_stocks_gbdt)} 只\n"
