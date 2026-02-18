@@ -3022,6 +3022,13 @@ def main():
             prices = test_df['Close']
             
             print(f"测试数据: {len(test_df)} 条")
+            
+            # 检查是否有测试数据
+            if len(test_df) == 0:
+                print("⚠️ 警告: 没有测试数据，无法进行回测")
+                print("请确保数据准备正确，并且有足够的历史数据")
+                return
+            
             print(f"测试时间段: {test_df.index[0]} 到 {test_df.index[-1]}")
             
             # 运行回测
