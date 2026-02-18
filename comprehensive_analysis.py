@@ -40,15 +40,6 @@ except ImportError:
     AKSHARE_AVAILABLE = False
     print("⚠️ AKShare模块不可用")
 
-# 测试 yfinance 是否正常工作
-print("🔍 测试 yfinance 导入后的行为...")
-try:
-    test_ticker = yf.Ticker('0700.HK')
-    test_hist = test_ticker.history(period='1mo')
-    print(f"  ✓ yfinance 测试成功: hist 类型 = {type(test_hist)}, 行数 = {len(test_hist)}")
-except Exception as e:
-    print(f"  ✗ yfinance 测试失败: {e}")
-
 
 def load_model_accuracy(horizon=20):
     """
@@ -654,32 +645,12 @@ def get_stock_technical_indicators(stock_code):
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
         
-        # 调试：打印 hist 类型
-        print(f"  DEBUG {stock_code}: hist 初始类型 = {type(hist)}, 是否为DataFrame = {isinstance(hist, pd.DataFrame)}")
-        
-        # 确保 hist 是 DataFrame
-        if not isinstance(hist, pd.DataFrame):
-            print(f"⚠️ 警告: {stock_code} 返回的数据类型不是 DataFrame: {type(hist)}")
-            return None
-        
         if hist.empty:
             print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")
             return None
         
-        # 检查是否有必要的列
-        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-        missing_columns = [col for col in required_columns if col not in hist.columns]
-        if missing_columns:
-            print(f"⚠️ 警告: {stock_code} 缺少必要的列: {missing_columns}")
-            return None
-        
         latest = hist.iloc[-1]
         prev = hist.iloc[-2] if len(hist) > 1 else latest
-        
-        # 调试：检查 iloc 操作后 hist 类型
-        if not isinstance(hist, pd.DataFrame):
-            print(f"  DEBUG {stock_code}: iloc 操作后 hist 类型变为 {type(hist)}")
-            raise TypeError(f"hist 类型在 iloc 后变为 {type(hist)}")
         
         # 基本指标
         current_price = latest['Close']
@@ -743,12 +714,6 @@ def get_stock_technical_indicators(stock_code):
         high = hist['High'].astype(float)
         low = hist['Low'].astype(float)
         close = hist['Close'].astype(float)
-        
-        # 调试：检查 hist 类型是否被改变
-        if not isinstance(hist, pd.DataFrame):
-            print(f"  DEBUG {stock_code}: astype 操作后 hist 类型变为 {type(hist)}")
-            raise TypeError(f"hist 类型在 astype 后变为 {type(hist)}")
-        
         prev_close = close.shift(1)
         tr1 = high - low
         tr2 = (high - prev_close).abs()
@@ -781,8 +746,9 @@ def get_stock_technical_indicators(stock_code):
         resistance_distance = ((resistance_level - current_price) / current_price * 100) if current_price > 0 else 0
         
         # OBV（能量潮）
-        obv_change = (latest['Close'] - prev['Close']) * latest['Volume']
-        obv = (obv_change.cumsum() / 1e6).iloc[-1] if len(hist) > 0 else 0
+        # OBV 需要对整个历史数据计算，而不是只计算最新一天
+        obv_series = ((hist['Close'].diff() > 0).astype(int) * 2 - 1) * hist['Volume']
+        obv = (obv_series.cumsum() / 1e6).iloc[-1] if len(hist) > 0 else 0
         
         # 价格位置（基于20日区间）
         price_range_20d = hist['Close'].rolling(window=20).max() - hist['Close'].rolling(window=20).min()
@@ -820,11 +786,7 @@ def get_stock_technical_indicators(stock_code):
             'price_position': price_position
         }
     except Exception as e:
-        import traceback
         print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
-        print(f"  错误类型: {type(e).__name__}")
-        print(f"  堆栈跟踪:")
-        traceback.print_exc()
         return None
 
 
