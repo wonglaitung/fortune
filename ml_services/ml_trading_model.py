@@ -892,8 +892,14 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_label(self, df, horizon=1):
-        """创建标签：次日涨跌"""
+    def create_label(self, df, horizon, for_backtest=False):
+        """创建标签：次日涨跌
+        
+        Args:
+            df: 股票数据
+            horizon: 预测周期
+            for_backtest: 是否为回测准备数据（True时不移除最后horizon行）
+        """
         if df.empty or len(df) < horizon + 1:
             return df
 
@@ -902,6 +908,10 @@ class FeatureEngineer:
 
         # 二分类标签：1=上涨，0=下跌
         df['Label'] = (df['Future_Return'] > 0).astype(int)
+
+        # 如果不是回测模式，移除最后horizon行（没有标签的数据）
+        if not for_backtest:
+            df = df.iloc[:-horizon]
 
         return df
 
@@ -1572,7 +1582,7 @@ class MLTradingModel:
             print(f"⚠️ 加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
         """准备训练数据（80个指标版本，优化版）
         
         Args:
@@ -1580,6 +1590,7 @@ class MLTradingModel:
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
+            for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
         """
         self.horizon = horizon
         all_data = []
@@ -2238,7 +2249,7 @@ class GBDTModel:
                 stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
                 for key, value in stock_type_features.items():
                     stock_df[key] = value
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon)
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -3006,9 +3017,10 @@ def main():
                 gbdt_model.load_model(model_path)
                 model = gbdt_model.gbdt_model
             
-            # 准备测试数据
+            # 准备测试数据（用于回测）
             print("准备测试数据...")
-            test_df = lgbm_model.prepare_data(WATCHLIST)
+            # 回测使用所有可用数据，不应用预测周期的标签过滤
+            test_df = lgbm_model.prepare_data(WATCHLIST, for_backtest=True)
             test_df = test_df.dropna()
             
             # 按时间排序
