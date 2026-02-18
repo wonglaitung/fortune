@@ -188,48 +188,50 @@ def extract_ml_predictions(filepath):
         # 读取LightGBM预测结果
         if os.path.exists(lgbm_csv):
             df_lgbm = pd.read_csv(lgbm_csv)
-            # 提取预测上涨的股票
-            up_stocks_lgbm = df_lgbm[df_lgbm['prediction'] == 1].sort_values('probability', ascending=False)
+            # 提取预测上涨的股票（应用动态阈值：只显示probability > 0.60的股票）
+            up_stocks_lgbm = df_lgbm[df_lgbm['probability'] > 0.60].sort_values('probability', ascending=False)
             
             lgbm_text = "【LightGBM模型预测结果】\n"
             lgbm_text += f"预测日期: {date_str}\n\n"
-            lgbm_text += "预测上涨的股票（按概率排序）:\n\n"
+            lgbm_text += "高置信度上涨信号（probability > 0.60，按概率排序）:\n\n"
             
             # 构建Markdown表格
-            lgbm_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
-            lgbm_text += "|----------|----------|----------|----------|\n"
+            lgbm_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
+            lgbm_text += "|----------|----------|----------|----------|----------|\n"
             
             for _, row in up_stocks_lgbm.iterrows():
-                lgbm_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                lgbm_text += f"| {row['code']} | {row['name']} | 上涨 | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
             lgbm_text += f"\n**统计信息**：\n"
-            lgbm_text += f"- 预测上涨: {len(up_stocks_lgbm)} 只\n"
-            lgbm_text += f"- 预测下跌: {len(df_lgbm) - len(up_stocks_lgbm)} 只\n"
-            lgbm_text += f"- 平均上涨概率: {up_stocks_lgbm['probability'].mean():.4f}\n"
+            lgbm_text += f"- 高置信度上涨（probability > 0.60）: {len(up_stocks_lgbm)} 只\n"
+            lgbm_text += f"- 中等置信度（0.50 < probability ≤ 0.60）: {len(df_lgbm[(df_lgbm['probability'] > 0.50) & (df_lgbm['probability'] <= 0.60)])} 只\n"
+            lgbm_text += f"- 预测下跌（probability ≤ 0.50）: {len(df_lgbm[df_lgbm['probability'] <= 0.50])} 只\n"
+            lgbm_text += f"- 高置信度平均上涨概率: {up_stocks_lgbm['probability'].mean():.4f}\n"
             
             result['lgbm'] = lgbm_text
         
         # 读取GBDT预测结果
         if os.path.exists(gbdt_csv):
             df_gbdt = pd.read_csv(gbdt_csv)
-            # 提取预测上涨的股票
-            up_stocks_gbdt = df_gbdt[df_gbdt['prediction'] == 1].sort_values('probability', ascending=False)
+            # 提取预测上涨的股票（应用动态阈值：只显示probability > 0.60的股票）
+            up_stocks_gbdt = df_gbdt[df_gbdt['probability'] > 0.60].sort_values('probability', ascending=False)
             
             gbdt_text = "【GBDT模型预测结果】\n"
             gbdt_text += f"预测日期: {date_str}\n\n"
-            gbdt_text += "预测上涨的股票（按概率排序）:\n\n"
+            gbdt_text += "高置信度上涨信号（probability > 0.60，按概率排序）:\n\n"
             
             # 构建Markdown表格
-            gbdt_text += "| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |\n"
-            gbdt_text += "|----------|----------|----------|----------|\n"
+            gbdt_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
+            gbdt_text += "|----------|----------|----------|----------|----------|\n"
             
             for _, row in up_stocks_gbdt.iterrows():
-                gbdt_text += f"| {row['code']} | {row['name']} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                gbdt_text += f"| {row['code']} | {row['name']} | 上涨 | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
             
             gbdt_text += f"\n**统计信息**：\n"
-            gbdt_text += f"- 预测上涨: {len(up_stocks_gbdt)} 只\n"
-            gbdt_text += f"- 预测下跌: {len(df_gbdt) - len(up_stocks_gbdt)} 只\n"
-            gbdt_text += f"- 平均上涨概率: {up_stocks_gbdt['probability'].mean():.4f}\n"
+            gbdt_text += f"- 高置信度上涨（probability > 0.60）: {len(up_stocks_gbdt)} 只\n"
+            gbdt_text += f"- 中等置信度（0.50 < probability ≤ 0.60）: {len(df_gbdt[(df_gbdt['probability'] > 0.50) & (df_gbdt['probability'] <= 0.60)])} 只\n"
+            gbdt_text += f"- 预测下跌（probability ≤ 0.50）: {len(df_gbdt[df_gbdt['probability'] <= 0.50])} 只\n"
+            gbdt_text += f"- 高置信度平均上涨概率: {up_stocks_gbdt['probability'].mean():.4f}\n"
             
             result['gbdt'] = gbdt_text
         
