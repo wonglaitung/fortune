@@ -641,11 +641,12 @@ def get_stock_technical_indicators(stock_code):
         # 移除.HK后缀
         symbol = stock_code.replace('.HK', '')
         
-        # 获取股票数据
+        # 获取股票数据 - 使用完整的股票代码（带.HK）
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
         
         if hist.empty:
+            print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")
             return None
         
         latest = hist.iloc[-1]
@@ -809,12 +810,13 @@ def generate_technical_indicators_table(stock_codes):
         table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
         table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
+        success_count = 0
         for stock_code in stock_codes_sorted:
             indicators = get_stock_technical_indicators(stock_code)
             
             if indicators:
                 # 获取股票名称
-                stock_name = STOCK_NAMES.get(stock_code, stock_code)
+                stock_name = WATCHLIST.get(stock_code, stock_code)
                 
                 # 格式化数据
                 price = f"{indicators['current_price']:.2f}"
@@ -851,7 +853,9 @@ def generate_technical_indicators_table(stock_codes):
                     trend = f"🔴 {trend}"
                 
                 table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma200} | {ma_align} | {ma_slope} | {ma_dev} | {bb_pos} | {atr} | {vol_ratio} | {trend} | {support} | {resistance} |\n"
+                success_count += 1
         
+        print(f"📊 技术指标表格: 成功获取 {success_count}/{len(stock_codes)} 只股票的数据")
         return table
         
     except Exception as e:
