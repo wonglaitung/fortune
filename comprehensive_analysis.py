@@ -40,6 +40,15 @@ except ImportError:
     AKSHARE_AVAILABLE = False
     print("⚠️ AKShare模块不可用")
 
+# 测试 yfinance 是否正常工作
+print("🔍 测试 yfinance 导入后的行为...")
+try:
+    test_ticker = yf.Ticker('0700.HK')
+    test_hist = test_ticker.history(period='1mo')
+    print(f"  ✓ yfinance 测试成功: hist 类型 = {type(test_hist)}, 行数 = {len(test_hist)}")
+except Exception as e:
+    print(f"  ✗ yfinance 测试失败: {e}")
+
 
 def load_model_accuracy(horizon=20):
     """
@@ -644,6 +653,9 @@ def get_stock_technical_indicators(stock_code):
         # 获取股票数据 - 使用完整的股票代码（带.HK）
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
+        
+        # 调试：打印 hist 类型
+        print(f"  DEBUG {stock_code}: hist 初始类型 = {type(hist)}, 是否为DataFrame = {isinstance(hist, pd.DataFrame)}")
         
         # 确保 hist 是 DataFrame
         if not isinstance(hist, pd.DataFrame):
