@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import pickle
 import hashlib
 import json
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 添加项目根目录到 Python 路径
@@ -3117,11 +3118,14 @@ def main():
                 raise ValueError("无法过滤所有非数值类型的列")
 
             # 获取价格数据（用于回测）
-            # 注意：当前回测逻辑不支持多股票回测，暂时使用第一只股票的数据
-            first_code = test_df['Code'].iloc[0]
-            single_stock_df = test_df[test_df['Code'] == first_code].sort_index()
+            # 注意：当前回测逻辑不支持多股票回测，随机选择一只股票进行回测
+            unique_stocks = test_df['Code'].unique()
+            random.seed(datetime.now().timestamp())
+            selected_code = random.choice(list(unique_stocks))
+            single_stock_df = test_df[test_df['Code'] == selected_code].sort_index()
             prices = single_stock_df['Close']
-            print(f"价格数据: {len(prices)} 条（股票: {first_code}）")
+            print(f"价格数据: {len(prices)} 条（股票: {selected_code}）")
+            print(f"📌 回测策略说明：从 {len(unique_stocks)} 只股票中随机选择 {selected_code} 进行单股票回测")
             print(f"价格数据索引类型: {type(prices.index)}")
             print(f"价格数据索引唯一值: {prices.index.nunique()}")
             print(f"价格数据前5行:\n{prices.head()}")
@@ -3171,6 +3175,12 @@ def main():
                     for k, v in results.items()
                     if k not in ['portfolio_values', 'benchmark_values', 'trades']
                 }
+                # 添加股票信息
+                results_for_json['stock_code'] = selected_code
+                results_for_json['stock_name'] = selected_code  # 可以扩展为查询股票名称
+                results_for_json['backtest_strategy'] = 'single_stock_random'
+                results_for_json['total_stocks_in_test'] = len(unique_stocks)
+                results_for_json['selection_method'] = f'random_selection_from_{len(unique_stocks)}_stocks'
                 json.dump(results_for_json, f, indent=2)
             print(f"\n📊 回测结果已保存到: {result_path}")
 
