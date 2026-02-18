@@ -1661,7 +1661,7 @@ class MLTradingModel:
                 stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
                 # 创建标签（使用指定的 horizon）
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon)
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -2191,7 +2191,7 @@ class GBDTModel:
             print(f"⚠️ 加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
         """准备训练数据（80个指标版本）
         
         Args:
@@ -2199,6 +2199,7 @@ class GBDTModel:
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
+            for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
         """
         self.horizon = horizon
         all_data = []
@@ -3008,37 +3009,127 @@ def main():
             print("\n加载模型...")
             horizon_suffix = f'_{args.horizon}d'
             
+            # 根据模型类型选择模型
             if args.model_type == 'lgbm':
                 model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
                 lgbm_model.load_model(model_path)
                 model = lgbm_model.model
+                active_model = lgbm_model
+                active_feature_columns = lgbm_model.feature_columns
             else:
                 model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
-                gbdt_model.load_model(model_path)
+                import pickle
+                with open(model_path, 'rb') as f:
+                    model_data = pickle.load(f)
+                    gbdt_model.gbdt_model = model_data['gbdt_model']
+                    gbdt_model.feature_columns = model_data['feature_columns']
+                    gbdt_model.actual_n_estimators = model_data['actual_n_estimators']
+                    gbdt_model.categorical_encoders = model_data['categorical_encoders']
                 model = gbdt_model.gbdt_model
+                active_model = gbdt_model
+                active_feature_columns = gbdt_model.feature_columns
             
             # 准备测试数据（用于回测）
             print("准备测试数据...")
             # 回测使用所有可用数据，不应用预测周期的标签过滤
-            test_df = lgbm_model.prepare_data(WATCHLIST, for_backtest=True)
+            test_df = active_model.prepare_data(WATCHLIST, for_backtest=True)
             print(f"准备数据后: {len(test_df)} 条（dropna前）")
-            
-            test_df = test_df.dropna()
-            print(f"dropna后: {len(test_df)} 条")
-            
+
             # 按时间排序
             test_df = test_df.sort_index()
-            
-            # 过滤出有标签的数据（Label不为NaN）
-            test_df = test_df[~test_df['Label'].isna()]
-            print(f"过滤Label为NaN后: {len(test_df)} 条")
-            
-            # 获取特征和标签
-            X_test = test_df[lgbm_model.feature_columns].values
-            y_test = test_df['Label'].values
-            
+
+            # 获取特征列
+            # 使用模型的特征列，而不是重新计算
+            feature_columns = active_feature_columns
+            print(f"特征列数量: {len(feature_columns)}")
+
+            # 先删除全为NaN的列（避免dropna删除所有行）
+            cols_all_nan = test_df[feature_columns].columns[test_df[feature_columns].isnull().all()].tolist()
+            if cols_all_nan:
+                print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的特征列")
+                feature_columns = [col for col in feature_columns if col not in cols_all_nan]
+
+            # 检查特征列中的NaN情况
+            nan_cols = test_df[feature_columns].isnull().sum()
+            cols_with_nan = nan_cols[nan_cols > 0]
+            if len(cols_with_nan) > 0:
+                print(f"⚠️ 以下 {len(cols_with_nan)} 个特征列包含NaN值:")
+                for col, count in cols_with_nan.head(10).items():
+                    print(f"  - {col}: {count} 条NaN")
+                print(f"  ... (共 {len(cols_with_nan)} 列)")
+
+            # 只删除特征列中的NaN，不删除Future_Return和Label为NaN的行
+            test_df = test_df.dropna(subset=feature_columns)
+            print(f"dropna特征列后: {len(test_df)} 条")
+
+            # 检查哪些列是object类型，并尝试转换
+            object_cols = [col for col in feature_columns if test_df[col].dtype == 'object']
+            if object_cols:
+                print(f"⚠️ 发现 {len(object_cols)} 个object类型列，尝试转换...")
+
+            # 转换object类型列，转换后删除仍然是object的列
+            valid_feature_columns = []
+            for col in feature_columns:
+                if test_df[col].dtype == 'object':
+                    # 尝试转换为数值类型
+                    test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
+                    # 如果转换后仍然是object，说明包含无法转换的值，删除该列
+                    if test_df[col].dtype == 'object':
+                        continue  # 跳过这个列
+                valid_feature_columns.append(col)
+
+            feature_columns = valid_feature_columns
+            print(f"✅ 类型转换后保留 {len(feature_columns)} 个数值特征列")
+
+            # 过滤出有标签的数据（Label不为NaN）用于验证回测准确性
+            test_df_with_label = test_df[~test_df['Label'].isna()]
+            print(f"过滤Label为NaN后: {len(test_df_with_label)} 条")
+
+            # 使用有标签的数据进行回测
+            test_df = test_df_with_label
+
+            # 检查特征列的数据类型
+            non_numeric_cols = []
+            for col in feature_columns:
+                dtype = test_df[col].dtype
+                if dtype not in ['int64', 'float64', 'int32', 'float32', 'bool']:
+                    non_numeric_cols.append((col, dtype))
+
+            if non_numeric_cols:
+                print(f"⚠️ 以下特征列包含非数值类型:")
+                for col, dtype in non_numeric_cols:
+                    print(f"  - {col}: {dtype}")
+                # 过滤掉非数值类型的列
+                feature_columns = [col for col in feature_columns if col not in [c for c, _ in non_numeric_cols]]
+                print(f"🗑️  过滤后剩余 {len(feature_columns)} 个数值特征列")
+
+            # 再次检查过滤后的特征列
+            final_non_numeric = []
+            for col in feature_columns:
+                dtype = test_df[col].dtype
+                if dtype not in ['int64', 'float64', 'int32', 'float32', 'bool']:
+                    final_non_numeric.append((col, dtype))
+
+            if final_non_numeric:
+                print(f"❌ 错误：过滤后仍然有 {len(final_non_numeric)} 个非数值类型列:")
+                for col, dtype in final_non_numeric[:5]:
+                    print(f"  - {col}: {dtype}")
+                raise ValueError("无法过滤所有非数值类型的列")
+
             # 获取价格数据（用于回测）
-            prices = test_df['Close']
+            # 注意：当前回测逻辑不支持多股票回测，暂时使用第一只股票的数据
+            first_code = test_df['Code'].iloc[0]
+            single_stock_df = test_df[test_df['Code'] == first_code].sort_index()
+            prices = single_stock_df['Close']
+            print(f"价格数据: {len(prices)} 条（股票: {first_code}）")
+            print(f"价格数据索引类型: {type(prices.index)}")
+            print(f"价格数据索引唯一值: {prices.index.nunique()}")
+            print(f"价格数据前5行:\n{prices.head()}")
+
+            # 获取特征和标签（使用清理后的特征列）
+            # 只使用第一只股票的数据
+            X_test = single_stock_df[feature_columns]  # 不使用.values，保留DataFrame以保留dtype信息
+            y_test = single_stock_df['Label'].values
             
             print(f"测试数据: {len(test_df)} 条")
             
@@ -3058,8 +3149,8 @@ def main():
             evaluator = BacktestEvaluator(initial_capital=100000)
             results = evaluator.backtest_model(
                 model=model,
-                test_data=pd.DataFrame(X_test, index=test_df.index),
-                test_labels=pd.Series(y_test, index=test_df.index),
+                test_data=X_test,  # 直接使用DataFrame
+                test_labels=pd.Series(y_test, index=single_stock_df.index),
                 test_prices=prices,
                 confidence_threshold=0.55
             )

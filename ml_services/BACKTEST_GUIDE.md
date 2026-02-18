@@ -46,16 +46,18 @@
 
 ```bash
 # 回测20天预测模型（LightGBM）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection 
 
 # 回测20天预测模型（GBDT）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection 
 
 # 回测5天预测模型
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 5 --model-type lgbm
+python3 ml_services/ml_trading_model.py --mode backtest --horizon 5 --model-type lgbm --use-feature-selection 
 
 # 回测1天预测模型
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 1 --model-type lgbm
+python3 ml_services/ml_trading_model.py --mode backtest --horizon 1 --model-type lgbm --use-feature-selection 
 ```
 
 ### 方法2: 直接使用回测评估器

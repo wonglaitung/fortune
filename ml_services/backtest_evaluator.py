@@ -121,9 +121,9 @@ class BacktestEvaluator:
         else:
             # 对于不支持 predict_proba 的模型，使用 predict
             predictions = model.predict(test_data)
-        
-        # 计算实际收益率
-        actual_returns = test_labels.pct_change().fillna(0)
+
+        # 计算实际收益率（使用价格数据）
+        actual_returns = test_prices.pct_change().fillna(0)
         
         # 基准（买入持有策略）
         benchmark_capital = self.initial_capital
@@ -269,6 +269,38 @@ class BacktestEvaluator:
         print(f"  亏损交易: {losing_trades}")
         print(f"  胜率: {win_rate:.2%}")
         print(f"  信息比率: {information_ratio:.2f}")
+        
+        # 计算并显示盈亏比
+        if len(self.trades) > 0:
+            # 提取买卖对
+            buy_sell_pairs = []
+            for i in range(len(self.trades) - 1):
+                if self.trades[i]['action'] == 'buy' and self.trades[i+1]['action'] == 'sell':
+                    profit = self.trades[i+1]['proceeds'] - self.trades[i]['cost']
+                    buy_sell_pairs.append({
+                        'buy_price': self.trades[i]['price'],
+                        'sell_price': self.trades[i+1]['price'],
+                        'shares': self.trades[i]['shares'],
+                        'profit': profit
+                    })
+            
+            if buy_sell_pairs:
+                winning_trades = [t for t in buy_sell_pairs if t['profit'] > 0]
+                losing_trades = [t for t in buy_sell_pairs if t['profit'] < 0]
+                
+                if winning_trades:
+                    avg_profit = sum(t['profit'] for t in winning_trades) / len(winning_trades)
+                    print(f"  平均盈利: HK${avg_profit:.2f}")
+                if losing_trades:
+                    avg_loss = sum(t['profit'] for t in losing_trades) / len(losing_trades)
+                    print(f"  平均亏损: HK${avg_loss:.2f}")
+                
+                if winning_trades and losing_trades:
+                    profit_loss_ratio = avg_profit / abs(avg_loss)
+                    print(f"  盈亏比: {profit_loss_ratio:.2f}:1")
+                    print(f"  说明: 平均盈利是平均亏损的 {profit_loss_ratio:.2f} 倍")
+                    print(f"  解释: 胜率{win_rate:.1%}虽然低，但每笔盈利交易赚的钱是亏损交易的{profit_loss_ratio:.2f}倍")
+                    print(f"  结果: 总盈利 HK${sum(t['profit'] for t in winning_trades):.2f} > 总亏损 HK${abs(sum(t['profit'] for t in losing_trades)):.2f}")
         
         # 评估
         print(f"\n【综合评价】")
