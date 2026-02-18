@@ -3021,10 +3021,17 @@ def main():
             print("准备测试数据...")
             # 回测使用所有可用数据，不应用预测周期的标签过滤
             test_df = lgbm_model.prepare_data(WATCHLIST, for_backtest=True)
+            print(f"准备数据后: {len(test_df)} 条（dropna前）")
+            
             test_df = test_df.dropna()
+            print(f"dropna后: {len(test_df)} 条")
             
             # 按时间排序
             test_df = test_df.sort_index()
+            
+            # 过滤出有标签的数据（Label不为NaN）
+            test_df = test_df[~test_df['Label'].isna()]
+            print(f"过滤Label为NaN后: {len(test_df)} 条")
             
             # 获取特征和标签
             X_test = test_df[lgbm_model.feature_columns].values
@@ -3034,6 +3041,9 @@ def main():
             prices = test_df['Close']
             
             print(f"测试数据: {len(test_df)} 条")
+            
+            if len(test_df) > 0:
+                print(f"测试时间段: {test_df.index[0]} 到 {test_df.index[-1]}")
             
             # 检查是否有测试数据
             if len(test_df) == 0:
