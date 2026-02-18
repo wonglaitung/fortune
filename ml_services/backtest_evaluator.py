@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Optional
 import matplotlib.pyplot as plt
 from datetime import datetime
 import matplotlib
-matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'WenQuanYi Micro Hei']
+matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 
@@ -345,15 +345,15 @@ class BacktestEvaluator:
         - save_path: 保存路径（可选）
         """
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-        fig.suptitle(f'回测结果评估 - {datetime.now().strftime("%Y-%m-%d")}', fontsize=16)
+        fig.suptitle(f'Backtest Results - {datetime.now().strftime("%Y-%m-%d")}', fontsize=16)
         
         # 1. 组合价值对比
         ax1 = axes[0, 0]
-        ax1.plot(results['portfolio_values'], label='模型策略', linewidth=2)
-        ax1.plot(results['benchmark_values'], label='基准策略（买入持有）', linewidth=2, linestyle='--')
-        ax1.set_title('组合价值对比', fontsize=12, fontweight='bold')
-        ax1.set_xlabel('交易天数')
-        ax1.set_ylabel('资金（HK$）')
+        ax1.plot(results['portfolio_values'], label='Model Strategy', linewidth=2)
+        ax1.plot(results['benchmark_values'], label='Benchmark (Buy & Hold)', linewidth=2, linestyle='--')
+        ax1.set_title('Portfolio Value Comparison', fontsize=12, fontweight='bold')
+        ax1.set_xlabel('Trading Days')
+        ax1.set_ylabel('Capital (HK$)')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
         
@@ -361,10 +361,10 @@ class BacktestEvaluator:
         ax2 = axes[0, 1]
         portfolio_returns = np.diff(results['portfolio_values']) / np.array(results['portfolio_values'][:-1])
         ax2.hist(portfolio_returns, bins=50, alpha=0.7, edgecolor='black')
-        ax2.axvline(portfolio_returns.mean(), color='red', linestyle='--', linewidth=2, label=f'均值: {portfolio_returns.mean():.4f}')
-        ax2.set_title('收益率分布', fontsize=12, fontweight='bold')
-        ax2.set_xlabel('日收益率')
-        ax2.set_ylabel('频数')
+        ax2.axvline(portfolio_returns.mean(), color='red', linestyle='--', linewidth=2, label=f'Mean: {portfolio_returns.mean():.4f}')
+        ax2.set_title('Return Distribution', fontsize=12, fontweight='bold')
+        ax2.set_xlabel('Daily Return')
+        ax2.set_ylabel('Frequency')
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         
@@ -375,14 +375,14 @@ class BacktestEvaluator:
         drawdown = (cumulative - running_max) / running_max
         ax3.fill_between(range(len(drawdown)), drawdown, 0, alpha=0.3, color='red')
         ax3.plot(drawdown, color='red', linewidth=1)
-        ax3.set_title(f'回撤曲线 (最大回撤: {results["max_drawdown"]:.2%})', fontsize=12, fontweight='bold')
-        ax3.set_xlabel('交易天数')
-        ax3.set_ylabel('回撤')
+        ax3.set_title(f'Drawdown Curve (Max Drawdown: {results["max_drawdown"]:.2%})', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Trading Days')
+        ax3.set_ylabel('Drawdown')
         ax3.grid(True, alpha=0.3)
         
         # 4. 关键指标对比
         ax4 = axes[1, 1]
-        metrics = ['年化收益率', '夏普比率', '最大回撤', '胜率']
+        metrics = ['Annual Return', 'Sharpe Ratio', 'Max Drawdown', 'Win Rate']
         model_values = [
             results['annual_return'],
             results['sharpe_ratio'],
@@ -399,11 +399,11 @@ class BacktestEvaluator:
         x = np.arange(len(metrics))
         width = 0.35
         
-        bars1 = ax4.bar(x - width/2, model_values, width, label='模型策略', alpha=0.8)
-        bars2 = ax4.bar(x + width/2, benchmark_values, width, label='基准策略', alpha=0.8)
+        bars1 = ax4.bar(x - width/2, model_values, width, label='Model Strategy', alpha=0.8)
+        bars2 = ax4.bar(x + width/2, benchmark_values, width, label='Benchmark Strategy', alpha=0.8)
         
-        ax4.set_title('关键指标对比', fontsize=12, fontweight='bold')
-        ax4.set_ylabel('数值')
+        ax4.set_title('Key Metrics Comparison', fontsize=12, fontweight='bold')
+        ax4.set_ylabel('Value')
         ax4.set_xticks(x)
         ax4.set_xticklabels(metrics)
         ax4.legend()
