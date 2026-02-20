@@ -3987,7 +3987,11 @@ def main():
             # 准备测试数据（用于回测）
             print("准备测试数据...")
             # 回测使用所有可用数据，不应用预测周期的标签过滤
-            test_df = active_model.prepare_data(WATCHLIST, for_backtest=True)
+            # 如果是融合模型，使用LightGBM的prepare_data方法
+            if args.model_type == 'ensemble':
+                test_df = ensemble_model.lgbm_model.prepare_data(WATCHLIST, for_backtest=True)
+            else:
+                test_df = active_model.prepare_data(WATCHLIST, for_backtest=True)
             print(f"准备数据后: {len(test_df)} 条（dropna前）")
 
             # 按时间排序
