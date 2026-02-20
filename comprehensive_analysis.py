@@ -1022,8 +1022,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         print("📝 提取ML预测结果...")
         ml_predictions = extract_ml_predictions(ml_filepath)
         print(f"✅ 提取完成\n")
-        print(f"   - LightGBM预测长度: {len(ml_predictions['lgbm'])} 字符")
-        print(f"   - GBDT预测长度: {len(ml_predictions['gbdt'])} 字符\n")
+        print(f"   - 融合模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
         
         # 加载模型准确率
         print("📝 加载模型准确率...")
