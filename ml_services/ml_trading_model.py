@@ -3522,20 +3522,24 @@ class EnsembleModel:
             # 只有一个模型
             consistency_pct = 100
         
-        # 计算置信度（基于融合概率）
+        # 计算置信度和预测方向（基于融合概率）
+        # 三分类：上涨(1)、观望(0.5)、下跌(0)
         if fused_prob > 0.60:
             confidence = "高"
+            fused_direction = 1  # 上涨
         elif fused_prob > 0.50:
             confidence = "中"
+            fused_direction = 0.5  # 观望
         else:
             confidence = "低"
+            fused_direction = 0  # 下跌
         
         # 构建结果
         result = {
             'code': code,
             'name': STOCK_NAMES.get(code, code),
             'fusion_method': method_name,
-            'fused_prediction': int(fused_pred),
+            'fused_prediction': fused_direction,  # 上涨=1, 观望=0.5, 下跌=0
             'fused_probability': float(fused_prob),
             'confidence': confidence,
             'consistency': f"{consistency_pct}%",
@@ -3859,7 +3863,13 @@ def main():
             print("-" * 140)
             
             for pred in predictions:
-                pred_label = "上涨" if pred['fused_prediction'] == 1 else "下跌"
+                # 三分类：上涨=1, 观望=0.5, 下跌=0
+                if pred['fused_prediction'] == 1:
+                    pred_label = "上涨"
+                elif pred['fused_prediction'] == 0.5:
+                    pred_label = "观望"
+                else:
+                    pred_label = "下跌"
                 data_date = pred['date'].strftime('%Y-%m-%d')
                 
                 print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<10} {pred['fused_probability']:.4f}   {pred['confidence']:<15} {pred['consistency']:<10} {pred['current_price']:.2f}        {data_date:<15}")
