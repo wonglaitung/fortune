@@ -3508,25 +3508,27 @@ class EnsembleModel:
             # 三个模型，检查一致性
             if predictions.count(predictions[0]) == 3:
                 consistency_pct = 100  # 三模型一致
-                confidence = "高（三模型一致）"
             elif predictions.count(predictions[0]) == 2 or predictions.count(predictions[1]) == 2:
                 consistency_pct = 67  # 两模型一致
-                confidence = "中（多数一致）"
             else:
                 consistency_pct = 33  # 三模型不一致
-                confidence = "低（不一致）"
         elif len(valid_results) == 2:
             # 两个模型，检查一致性
             if predictions.count(predictions[0]) == 2:
                 consistency_pct = 100  # 两模型一致
-                confidence = "高（两模型一致）"
             else:
                 consistency_pct = 50  # 两模型不一致
-                confidence = "低（不一致）"
         else:
             # 只有一个模型
             consistency_pct = 100
-            confidence = "单模型"
+        
+        # 计算置信度（基于融合概率）
+        if fused_prob > 0.60:
+            confidence = "高"
+        elif fused_prob > 0.50:
+            confidence = "中"
+        else:
+            confidence = "低"
         
         # 构建结果
         result = {
