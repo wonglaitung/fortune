@@ -1161,6 +1161,19 @@ class FeatureEngineer:
                 if self._news_data_cache is None:
                     self._news_data_cache = topic_modeler.load_news_data(days=self._news_data_days)
                 
+                # 检查新闻数据是否有效
+                if self._news_data_cache is None:
+                    print(f"⚠️  新闻数据加载失败（返回None）")
+                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
+                
+                if len(self._news_data_cache) == 0:
+                    print(f"⚠️  新闻数据为空")
+                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
+                
+                if '文本' not in self._news_data_cache.columns:
+                    print(f"⚠️  新闻数据缺少'文本'列，可用列: {self._news_data_cache.columns.tolist()}")
+                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
+                
                 # 获取股票主题特征
                 topic_features = topic_modeler.get_stock_topic_features(code, self._news_data_cache)
 
@@ -1173,7 +1186,9 @@ class FeatureEngineer:
                 return {f'Topic_{i+1}': 0.0 for i in range(10)}
 
         except Exception as e:
+            import traceback
             print(f"❌ 创建主题特征失败 {code}: {e}")
+            print(f"详细错误信息:\n{traceback.format_exc()}")
             return {f'Topic_{i+1}': 0.0 for i in range(10)}
 
     def create_topic_sentiment_interaction_features(self, code, df):
