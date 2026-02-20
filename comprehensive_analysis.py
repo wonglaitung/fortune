@@ -985,7 +985,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
     
     参数:
     - llm_filepath: 大模型建议文件路径
-    - ml_filepath: ML预测结果文件路径
+    - ml_filepath: ML预测结果文件路径（已废弃，保留用于兼容性）
     - output_filepath: 输出文件路径（可选）
     """
     try:
@@ -993,17 +993,22 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         print("🤖 综合分析开始")
         print("=" * 80)
         
-        # 检查文件是否存在
+        # 检查大模型建议文件是否存在
         if not os.path.exists(llm_filepath):
             print(f"❌ 大模型建议文件不存在: {llm_filepath}")
             return None
         
-        if not os.path.exists(ml_filepath):
-            print(f"❌ ML预测结果文件不存在: {ml_filepath}")
+        # 检查融合模型预测文件是否存在
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(script_dir, 'data')
+        ensemble_csv = os.path.join(data_dir, 'ml_trading_model_ensemble_predictions_20d.csv')
+        
+        if not os.path.exists(ensemble_csv):
+            print(f"❌ 融合模型预测文件不存在: {ensemble_csv}")
             return None
         
         print(f"📊 大模型建议文件: {llm_filepath}")
-        print(f"📊 ML预测结果文件: {ml_filepath}")
+        print(f"📊 融合模型预测文件: {ensemble_csv}")
         print("")
         
         # 提取大模型建议
