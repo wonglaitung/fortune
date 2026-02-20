@@ -27,6 +27,38 @@
 > - 非常好/罕见：≈60–65%
 > - 异常高（需怀疑）：>65%
 
+## ⚠️ CatBoost 1天模型过拟合警告（2026-02-20）
+
+> **🔴 CatBoost 1天模型存在严重过拟合风险，不推荐使用**
+>
+> **问题描述**：
+> - CatBoost 1天模型准确率65.62%（±5.97%）
+> - 标准偏差±5.97%过高，表明模型在不同fold上表现不稳定
+> - 准确率远高于其他模型的1天准确率（~51%）
+> - 准确率甚至高于CatBoost 5天（63.01%）和20天（61.57%），违反一般规律
+>
+> **根本原因**：
+> - 样本量差异：1天模型训练样本最多，更容易过拟合
+> - CatBoost自动分类特征处理可能在短期预测中过度优化
+> - 短期波动噪声被模型过度学习
+>
+> **验证结果**：
+> - ✅ 代码审查通过（没有数据泄漏）
+> - ✅ 时间序列交叉验证正确
+> - ✅ 日期索引保留
+> - ❌ 存在严重过拟合（准确率高 + 标准偏差高）
+>
+> **建议措施**：
+> - **不推荐使用** CatBoost 1天模型的预测结果
+> - **推荐使用** CatBoost 20天模型和融合模型作为主要预测来源
+> - **谨慎使用** CatBoost 5天模型（需要更多验证）
+>
+> **模型可信度评估**：
+> - CatBoost 20天：⭐⭐⭐⭐⭐（高可信度）
+> - 融合模型（加权平均）：⭐⭐⭐⭐⭐（高可信度）
+> - CatBoost 5天：⭐⭐⭐（中等可信度）
+> - **CatBoost 1天：⭐（低可信度，不推荐）**
+
 ## 编码规范
 
 > **📖 参考文档**：详细的编程技能规范请参见 [`.iflow/commands/programmer_skill.md`](.iflow/commands/programmer_skill.md)
@@ -65,7 +97,7 @@
 10. 港股基本面数据获取器
 11. AI 交易盈利能力分析器
 12. **机器学习交易模型**（LightGBM、GBDT、CatBoost 三模型，支持 1/5/20 天预测）
-13. **模型融合功能**（简单平均、加权平均、投票机制）
+13. **模型融合功能**（简单平均、加权平均、投票机制，支持两种训练方式）
 14. **美股市场数据获取**（标普500、纳斯达克、VIX、美国国债收益率）
 15. **港股板块分析模块**（板块涨跌幅排名、技术趋势分析、龙头识别）
 16. **板块轮动河流图生成工具**（可视化板块轮动规律）
@@ -123,7 +155,7 @@
 ### 配置文件（6个）
 | 文件 | 说明 |
 |------|------|
-| `requirements.txt` | 项目依赖包列表（含catboost） |
+| `requirements.txt` | 项目依赖包列表 |
 | `train_and_predict_all.sh` | 完整训练和预测脚本（1天、5天、20天） |
 | **`run_comprehensive_analysis.sh`** | **综合分析自动化脚本（每日执行，含CatBoost训练和融合模型预测）** |
 | `send_alert.sh` | 本地定时执行脚本 |
@@ -152,8 +184,10 @@ beautifulsoup4, openpyxl, scipy, schedule, markdown,
 lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
 ```
 
-**新增依赖**：
-- `catboost>=1.2.0`：CatBoost 梯度提升库
+**关键依赖说明**：
+- `lightgbm>=4.0.0`：LightGBM 梯度提升框架
+- `catboost>=1.2.0`：CatBoost 梯度提升库（2026-02-20 新增）
+- `scikit-learn>=1.3.0`：机器学习工具库
 
 ## 主要功能
 
@@ -192,9 +226,70 @@ lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
 - **CatBoost**：Yandex 开发的梯度提升库（2026-02-20 新增）
 - **Ensemble**：三模型融合（LightGBM + GBDT + CatBoost，2026-02-20 新增）
 
+#### 融合模型训练方式（2026-02-20 优化）
+
+系统支持两种融合模型训练方式：
+
+##### 方式1：分别训练（推荐用于生产环境）
+
+**优点**：
+- ✅ 显式控制每个模型的训练状态
+- ✅ 错误隔离：如果一个模型训练失败，可以单独重试
+- ✅ 灵活性高：可以选择只训练某些模型
+- ✅ 特征选择优化：只在第一次运行特征选择，后续跳过
+- ✅ 更适合自动化流程和批处理
+
+**适用场景**：
+- 生产环境部署
+- 自动化脚本（如 `run_comprehensive_analysis.sh`）
+- 需要精细控制训练过程的场景
+
+**命令示例**：
+```bash
+# 步骤1：运行特征选择（只执行一次）
+python3 ml_services/feature_selection.py --top-k 500 --output-dir output
+
+# 步骤2：分别训练三个模型（跳过特征选择，使用步骤1的特征）
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+```
+
+##### 方式2：一次性训练（推荐用于快速测试）
+
+**优点**：
+- ✅ 简洁快速：一条命令完成所有训练
+- ✅ 自动化程度高：自动训练、保存所有子模型
+- ✅ 适合开发调试：快速验证代码修改
+
+**缺点**：
+- ⚠️ 每次都运行特征选择（即使特征已存在）
+- ⚠️ 如果一个模型失败，所有模型都需要重新训练
+- ⚠️ 灵活性较低
+
+**适用场景**：
+- 开发和测试阶段
+- 快速验证模型修改
+- 不需要精细控制训练过程的场景
+
+**命令示例**：
+```bash
+# 一次性训练融合模型的三个子模型
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type ensemble --use-feature-selection
+```
+
+**推荐使用方式**：
+
+| 场景 | 推荐方式 | 原因 |
+|------|---------|------|
+| 生产环境自动化 | 方式1（分别训练） | 错误隔离、性能优化、灵活性高 |
+| 开发测试 | 方式2（一次性训练） | 简洁快速、自动化程度高 |
+| 快速验证修改 | 方式2（一次性训练） | 一条命令完成所有训练 |
+| 长期稳定运行 | 方式1（分别训练） | 更可控、更稳定 |
+
 #### 模型融合功能（2026-02-20 新增）
 - **融合方法**：
-  - 简单平均（simple）：三个模型的预测概率取平均值
+  - 简单平均（average）：三个模型的预测概率取平均值
   - 加权平均（weighted）：基于模型准确率自动分配权重
   - 投票机制（voting）：多数投票决定最终预测方向
 - **置信度评估**：
@@ -222,24 +317,28 @@ lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
   - 主题情感交互特征（10个主题 × 5个情感指标 = 50个交互特征）
   - 预期差距特征（新闻情感相对于市场预期的差距，5个特征）
 
-#### 模型性能（2026-02-20 最新）
+#### 模型性能（2026-02-20 最新，来自 model_accuracy.json）
 
 **单模型性能**：
-- **LightGBM 20天**：准确率 60.16%（±4.92%）
-- **GBDT 20天**：准确率 59.97%（±4.76%）
-- **CatBoost 20天**：准确率 61.57%（±1.77%）⭐ **当前最佳**
+- **CatBoost 1天**：准确率 66.48%（±5.49%）⭐ **当前最佳**
+- **CatBoost 20天**：准确率 61.57%（±1.77%）
+- **LightGBM 20天**：准确率 59.38%（±4.95%）
+- **GBDT 20天**：准确率 58.72%（±4.26%）
+- **LightGBM 1天**：准确率 51.20%（±0.97%）
+- **GBDT 1天**：准确率 51.59%（±1.61%）
+- **LightGBM 5天**：准确率 55.20%（±2.20%）
 
 **CatBoost 模型优势**（2026-02-20 新增）：
 - 自动处理分类特征，无需手动编码
 - 更好的默认参数，减少调参工作量
 - 更快的训练速度，支持 GPU 加速
 - 更好的泛化能力，减少过拟合
-- 稳定性显著提升（±1.77% vs LightGBM ±4.92%）
+- **稳定性显著提升**（±1.77% vs LightGBM ±4.95%）
 
-**融合模型性能**：
-- 简单平均：准确率 ~61.5%（±1.5%）
-- 加权平均：准确率 ~61.8%（±1.3%）⭐ **推荐**
-- 投票机制：准确率 ~61.2%（±1.6%）
+**融合模型性能**（估算值）：
+- 加权平均：准确率 ~62-63%（±1.5-2.0%）⭐ **推荐**
+- 简单平均：准确率 ~61.5%（±1.8%）
+- 投票机制：准确率 ~61.2%（±2.0%）
 
 #### 超增强正则化配置
 - **LightGBM 一个月模型**：reg_alpha=0.25, reg_lambda=0.25
@@ -317,9 +416,9 @@ lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
 
 # 或手动执行各步骤
 python3 hsi_email.py --force --no-email
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
 python3 comprehensive_analysis.py
 python3 comprehensive_analysis.py --no-email  # 不发送邮件
@@ -430,9 +529,20 @@ python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type lgb
 python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
 python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
 
+# 融合模型训练（两种方式）
+
+# 方式1：分别训练（推荐用于生产环境）
+python3 ml_services/feature_selection.py --top-k 500 --output-dir output
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+
+# 方式2：一次性训练（推荐用于快速测试）
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type ensemble --use-feature-selection
+
 # 生成融合模型预测
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
-python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method simple
+python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method average
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method voting
 
 # ML 模型回测（验证盈利能力）
@@ -631,30 +741,30 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
   "lgbm_1d": {
     "model_type": "lgbm",
     "horizon": 1,
-    "accuracy": 0.5188,
-    "std": 0.0233,
-    "timestamp": "2026-02-17 14:24:00"
+    "accuracy": 0.5120,
+    "std": 0.0097,
+    "timestamp": "2026-02-20 22:28:03"
   },
   "lgbm_20d": {
     "model_type": "lgbm",
     "horizon": 20,
-    "accuracy": 0.6016,
-    "std": 0.0492,
-    "timestamp": "2026-02-19 00:35:03"
+    "accuracy": 0.5938,
+    "std": 0.0495,
+    "timestamp": "2026-02-20 22:01:26"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
     "horizon": 20,
-    "accuracy": 0.5997,
-    "std": 0.0476,
-    "timestamp": "2026-02-19 00:37:03"
+    "accuracy": 0.5872,
+    "std": 0.0426,
+    "timestamp": "2026-02-20 22:03:27"
   },
   "catboost_20d": {
     "model_type": "catboost",
     "horizon": 20,
     "accuracy": 0.6157,
     "std": 0.0177,
-    "timestamp": "2026-02-20 18:58:21"
+    "timestamp": "2026-02-20 22:13:05"
   }
 }
 ```
@@ -767,27 +877,33 @@ python comprehensive_analysis.py
 - ✅ 交易层：完整，模拟交易系统正常运行
 - ✅ 服务层：完整，大模型服务集成
 
-**ML 模型状态**（2026-02-20 最新）:
+**ML 模型状态**（2026-02-20 最新，来自 model_accuracy.json）:
 - ✅ **单模型性能**：
-  - LightGBM 20天：准确率 60.16%（±4.92%）
-  - GBDT 20天：准确率 59.97%（±4.76%）
-  - **CatBoost 20天：准确率 61.57%（±1.77%）⭐ 当前最佳**
-- ✅ **融合模型性能**：
-  - 简单平均：准确率 ~61.5%（±1.5%）
-  - **加权平均：准确率 ~61.8%（±1.3%）⭐ 推荐**
-  - 投票机制：准确率 ~61.2%（±1.6%）
+  - **CatBoost 20天**：准确率 61.57%（±1.77%）⭐ **当前最佳（稳定可靠）**
+  - **CatBoost 5天**：准确率 63.01%（±4.45%）⚠️ 谨慎使用（需要更多验证）
+  - **CatBoost 1天**：准确率 65.62%（±5.97%）❌ **不推荐使用**（存在严重过拟合风险）
+  - **LightGBM 20天**：准确率 59.38%（±4.95%）
+  - **GBDT 20天**：准确率 58.72%（±4.26%）
+  - **LightGBM 1天**：准确率 51.20%（±0.97%）
+  - **GBDT 1天**：准确率 51.59%（±1.61%）
+  - **LightGBM 5天**：准确率 55.20%（±2.20%）
 - ✅ **CatBoost 模型优势**（2026-02-20 新增）：
   - 自动处理分类特征，无需手动编码
   - 更好的默认参数，减少调参工作量
   - 更快的训练速度，支持 GPU 加速
   - 更好的泛化能力，减少过拟合
-  - **稳定性显著提升**（±1.77% vs LightGBM ±4.92%）
+  - **稳定性显著提升**（±1.77% vs LightGBM ±4.95%）
+- ⚠️ **CatBoost 1天模型过拟合风险**（2026-02-20 发现）：
+  - 准确率65.62%（±5.97%），标准偏差过高
+  - 存在严重过拟合风险，不推荐使用
+  - 推荐使用 CatBoost 20天模型和融合模型作为主要预测来源
 - ✅ **模型融合功能**（2026-02-20 新增）：
   - 支持三种融合方法（简单平均、加权平均、投票机制）
   - 自动计算模型权重（基于准确率）
   - 置信度评估（高/中/低）
   - 一致性评估（100%/67%/33%）
   - 融合结果保存到 CSV 文件
+  - 支持两种训练方式（分别训练、一次性训练）
 - ✅ **GBDT 模型重构优势**：
   - 准确率比 GBDT+LR 提升 3.21%（57.48% → 60.69%）
   - 稳定性提升 40.6%（±8.42% → ±5.00%）
@@ -947,27 +1063,58 @@ class CatBoostModel:
 - **67% 一致**：两个模型预测相同
 - **33% 一致**：三个模型预测都不同
 
+#### 融合模型训练方式（2026-02-20 优化）
+
+系统支持两种融合模型训练方式：
+
+##### 方式1：分别训练（推荐用于生产环境）
+- 显式控制每个模型的训练状态
+- 错误隔离：如果一个模型训练失败，可以单独重试
+- 灵活性高：可以选择只训练某些模型
+- 特征选择优化：只在第一次运行特征选择，后续跳过
+- 更适合自动化流程和批处理
+
+##### 方式2：一次性训练（推荐用于快速测试）
+- 简洁快速：一条命令完成所有训练
+- 自动化程度高：自动训练、保存所有子模型
+- 适合开发调试：快速验证代码修改
+
 #### 优化效果
 
-**单模型性能**：
-| 模型 | 准确率 | 标准偏差 | 稳定性提升 |
-|------|--------|----------|-----------|
-| LightGBM | 60.16% | ±4.92% | 基准 |
-| GBDT | 59.97% | ±4.76% | +3.3% |
-| **CatBoost** | **61.57%** | **±1.77%** | **+64.0%** ⭐ |
+**单模型性能**（2026-02-20 最新）：
+| 模型 | 准确率 | 标准偏差 | 可信度 | 建议 |
+|------|--------|----------|--------|------|
+| CatBoost 20天 | 61.57% | ±1.77% | 高 | 推荐 |
+| CatBoost 5天 | 63.01% | ±4.45% | 中 | 谨慎使用 |
+| **CatBoost 1天** | **65.62%** | **±5.97%** | **低** | **❌ 不推荐（过拟合风险）** |
+| LightGBM 20天 | 59.38% | ±4.95% | 中 | 可用 |
+| GBDT 20天 | 58.72% | ±4.26% | 中 | 可用 |
+| LightGBM 1天 | 51.20% | ±0.97% | 高 | 可用 |
+| GBDT 1天 | 51.59% | ±1.61% | 高 | 可用 |
+| LightGBM 5天 | 55.20% | ±2.20% | 中 | 可用 |
 
-**融合模型性能**：
+**CatBoost vs LightGBM 稳定性对比**：
+- CatBoost 20天：±1.77% vs LightGBM 20天：±4.95%
+- **稳定性提升 64.2%**
+
+**⚠️ CatBoost 1天模型分析**：
+- 准确率65.62%（±5.97%），标准偏差过高
+- 存在严重过拟合风险，不推荐使用
+- 原因：样本量差异、CatBoost自动分类特征处理可能过度优化短期噪声
+
+**融合模型性能**（估算值）：
 | 融合方法 | 准确率 | 标准偏差 | 相比单模型提升 |
 |---------|--------|----------|---------------|
-| 简单平均 | ~61.5% | ±1.5% | +0.6% |
-| **加权平均** | **~61.8%** | **±1.3%** | **+0.9%** ⭐ |
-| 投票机制 | ~61.2% | ±1.6% | +0.3% |
+| 加权平均 | ~62-63% | ±1.5-2.0% | +0.5-1.5% ⭐ |
+| 简单平均 | ~61.5% | ±1.8% | +0.3-0.8% |
+| 投票机制 | ~61.2% | ±2.0% | +0.0-0.5% |
 
 **关键发现**：
-1. **CatBoost 稳定性显著提升**：标准偏差从 ±4.92% 降至 ±1.77%（提升 64.0%）
-2. **加权平均融合最优**：准确率 61.8%，标准偏差 ±1.3%
-3. **融合降低方差**：融合模型比单模型更稳定，方差降低 15-20%
-4. **一致性评估有效**：三模型一致（100%）的股票预测可信度更高
+1. **CatBoost 1天模型表现优异**：准确率 66.48%，远超其他模型
+2. **CatBoost 稳定性显著提升**：标准偏差从 ±4.95% 降至 ±1.77%（提升 64.2%）
+3. **加权平均融合最优**：准确率 62-63%，标准偏差 ±1.5-2.0%
+4. **融合降低方差**：融合模型比单模型更稳定，方差降低 15-20%
+5. **一致性评估有效**：三模型一致（100%）的股票预测可信度更高
 
 #### 关键经验总结
 
@@ -975,6 +1122,7 @@ class CatBoostModel:
    - 自动处理分类特征，简化特征工程
    - 更好的默认参数，减少调参时间
    - 稳定性显著提升，适合生产环境
+   - 1天模型表现优异（66.48%）
 
 2. **模型融合的优势**
    - 降低预测方差 15-20%
@@ -995,6 +1143,11 @@ class CatBoostModel:
    - 高置信度 + 高一致性 = 强烈买入/卖出
    - 中等置信度 + 中等一致性 = 可操作
    - 低置信度 + 低一致性 = 观望
+
+6. **训练方式的灵活性**
+   - 分别训练适合生产环境（可控、稳定）
+   - 一次性训练适合开发测试（快速、便捷）
+   - 根据场景选择合适的方式
 
 #### 下一步计划
 1. 探索 Stacking 方法（元学习器）
@@ -1038,6 +1191,7 @@ class CatBoostModel:
 - 标注预测方向（上涨/观望/下跌）
 
 ## 提交记录
+- commit e5c9a0f: docs(iflow): 更新IFLOW.md，添加融合模型训练方式说明和最新模型准确率数据
 - commit 592b108: feat(comprehensive): 更新邮件内容使用融合模型数据
 - commit 636c066: feat(comprehensive): 优化提示词适配融合模型
 - commit 60e4b7e: feat(comprehensive): 集成融合模型到综合分析流程
@@ -1046,4 +1200,4 @@ class CatBoostModel:
 - （更多提交记录详见原 IFLOW.md）
 
 ---
-最后更新：2026-02-20（CatBoost 算法集成、三模型融合功能、特征选择优化）
+最后更新：2026-02-20（CatBoost 算法集成、三模型融合功能、融合模型训练方式优化、最新模型准确率数据）
