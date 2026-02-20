@@ -3566,7 +3566,7 @@ class EnsembleModel:
         
         return probabilities
     
-    def predict(self, X):
+    def predict_classes(self, X):
         """预测类别（用于回测评估器）
         
         Args:
