@@ -2996,11 +2996,26 @@ class CatBoostModel:
 
         print(f"✅ 最终使用 {len(self.feature_columns)} 个特征")
 
-        # 准备训练数据
+        # 准备训练数据 - 先处理分类特征
+        from sklearn.preprocessing import LabelEncoder
+        
+        # 识别分类特征（字符串类型）
+        self.categorical_encoders = {}
+        categorical_features = []
+        
+        for col in self.feature_columns:
+            if df[col].dtype == 'object':
+                print(f"  检测到分类特征: {col}")
+                encoder = LabelEncoder()
+                df[col] = encoder.fit_transform(df[col].astype(str))
+                self.categorical_encoders[col] = encoder
+                categorical_features.append(self.feature_columns.index(col))
+        
         X = df[self.feature_columns].values
         y = df['Label'].values
 
         print(f"训练数据形状: X={X.shape}, y={y.shape}")
+        print(f"分类特征数量: {len(categorical_features)}")
 
         # ========== 训练 CatBoost 模型 ==========
         print("\n" + "="*70)
@@ -3054,7 +3069,8 @@ class CatBoostModel:
             verbose=100,
             early_stopping_rounds=stopping_rounds,
             thread_count=-1,
-            allow_writing_files=False
+            allow_writing_files=False,
+            cat_features=categorical_features if categorical_features else None
         )
 
         # 使用时间序列交叉验证
@@ -3066,8 +3082,8 @@ class CatBoostModel:
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
             # 创建 Pool 对象（CatBoost 推荐）
-            train_pool = Pool(data=X_train_fold, label=y_train_fold)
-            val_pool = Pool(data=X_val_fold, label=y_val_fold)
+            train_pool = Pool(data=X_train_fold, label=y_train_fold, cat_features=categorical_features if categorical_features else None)
+            val_pool = Pool(data=X_val_fold, label=y_val_fold, cat_features=categorical_features if categorical_features else None)
 
             self.catboost_model.fit(
                 train_pool,
@@ -3081,7 +3097,7 @@ class CatBoostModel:
             print(f"   Fold {fold} 验证准确率: {score:.4f}")
 
         # 使用全部数据重新训练
-        full_pool = Pool(data=X, label=y)
+        full_pool = Pool(data=X, label=y, cat_features=categorical_features if categorical_features else None)
         self.catboost_model.fit(full_pool, verbose=100)
 
         # 获取实际训练的树数量
@@ -3259,11 +3275,25 @@ class CatBoostModel:
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
 
+            # 处理分类特征（使用训练时的编码器）
+            for col, encoder in self.categorical_encoders.items():
+                if col in latest_data.columns:
+                    try:
+                        latest_data[col] = encoder.transform(latest_data[col].astype(str))
+                    except ValueError:
+                        # 处理未见过的类别，映射到0
+                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        latest_data[col] = 0
+
             X = latest_data[self.feature_columns].values
 
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
-            test_pool = Pool(data=X)
+            
+            # 获取分类特征索引
+            categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
+            
+            test_pool = Pool(data=X, cat_features=categorical_features if categorical_features else None)
             proba = self.catboost_model.predict_proba(test_pool)[0]
             prediction = self.catboost_model.predict(test_pool)[0]
 
@@ -3289,7 +3319,8 @@ class CatBoostModel:
             'feature_columns': self.feature_columns,
             'actual_n_estimators': self.actual_n_estimators,
             'horizon': self.horizon,
-            'model_type': self.model_type
+            'model_type': self.model_type,
+            'categorical_encoders': self.categorical_encoders
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -3304,15 +3335,294 @@ class CatBoostModel:
         self.actual_n_estimators = model_data['actual_n_estimators']
         self.horizon = model_data.get('horizon', 1)
         self.model_type = model_data.get('model_type', 'catboost')
+        self.categorical_encoders = model_data.get('categorical_encoders', {})
         print(f"CatBoost 模型已从 {filepath} 加载")
+
+
+class EnsembleModel:
+    """融合模型 - 整合 LightGBM、GBDT、CatBoost 三个模型
+    
+    支持多种融合方法：
+    1. 简单平均：三个模型的概率平均
+    2. 加权平均：根据准确率加权
+    3. 投票机制：多数投票
+    """
+
+    def __init__(self, fusion_method='weighted'):
+        """
+        Args:
+            fusion_method: 融合方法 ('average'/'weighted'/'voting')
+        """
+        self.lgbm_model = MLTradingModel()
+        self.gbdt_model = GBDTModel()
+        self.catboost_model = CatBoostModel()
+        self.fusion_method = fusion_method
+        self.model_accuracies = {}
+        self.horizon = 1
+
+    def load_model_accuracy(self):
+        """加载模型准确率"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                self.model_accuracies = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
+                }
+                print(f"✅ 已加载模型准确率: {self.model_accuracies}")
+            else:
+                print("⚠️ 未找到准确率文件，使用默认值")
+                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+        except Exception as e:
+            print(f"⚠️ 加载准确率失败: {e}")
+            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+
+    def load_models(self, horizon=1):
+        """加载三个模型"""
+        self.horizon = horizon
+        horizon_suffix = f'_{horizon}d'
+        
+        print("\n" + "="*70)
+        print("📦 加载融合模型")
+        print("="*70)
+        
+        # 加载 LightGBM 模型
+        lgbm_path = f'data/ml_trading_model_lgbm{horizon_suffix}.pkl'
+        if os.path.exists(lgbm_path):
+            self.lgbm_model.load_model(lgbm_path)
+            print(f"✅ LightGBM 模型已加载")
+        else:
+            print(f"⚠️ LightGBM 模型文件不存在: {lgbm_path}")
+        
+        # 加载 GBDT 模型
+        gbdt_path = f'data/ml_trading_model_gbdt{horizon_suffix}.pkl'
+        if os.path.exists(gbdt_path):
+            self.gbdt_model.load_model(gbdt_path)
+            print(f"✅ GBDT 模型已加载")
+        else:
+            print(f"⚠️ GBDT 模型文件不存在: {gbdt_path}")
+        
+        # 加载 CatBoost 模型
+        catboost_path = f'data/ml_trading_model_catboost{horizon_suffix}.pkl'
+        if os.path.exists(catboost_path):
+            self.catboost_model.load_model(catboost_path)
+            print(f"✅ CatBoost 模型已加载")
+        else:
+            print(f"⚠️ CatBoost 模型文件不存在: {catboost_path}")
+        
+        # 加载模型准确率
+        self.load_model_accuracy()
+        
+        print("="*70)
+
+    def predict(self, code, predict_date=None):
+        """融合预测
+        
+        Args:
+            code: 股票代码
+            predict_date: 预测日期
+            
+        Returns:
+            dict: 融合预测结果
+        """
+        # 获取三个模型的预测结果
+        lgbm_result = self.lgbm_model.predict(code, predict_date, self.horizon)
+        gbdt_result = self.gbdt_model.predict(code, predict_date, self.horizon)
+        catboost_result = self.catboost_model.predict(code, predict_date, self.horizon)
+        
+        # 检查是否有模型预测失败
+        results = {'lgbm': lgbm_result, 'gbdt': gbdt_result, 'catboost': catboost_result}
+        valid_results = {k: v for k, v in results.items() if v is not None}
+        
+        if len(valid_results) == 0:
+            print(f"❌ 所有模型预测失败: {code}")
+            return None
+        
+        # 获取概率和预测
+        probabilities = []
+        predictions = []
+        
+        for model_name, result in valid_results.items():
+            probabilities.append(result['probability'])
+            predictions.append(result['prediction'])
+        
+        # 融合
+        if self.fusion_method == 'average':
+            # 简单平均
+            fused_prob = np.mean(probabilities)
+            fused_pred = 1 if fused_prob > 0.5 else 0
+            method_name = "简单平均"
+        elif self.fusion_method == 'weighted':
+            # 加权平均（基于准确率）
+            weights = []
+            for model_name in valid_results.keys():
+                weights.append(self.model_accuracies.get(model_name, 0.5))
+            
+            total_weight = sum(weights)
+            if total_weight > 0:
+                fused_prob = sum(p * w for p, w in zip(probabilities, weights)) / total_weight
+            else:
+                fused_prob = np.mean(probabilities)
+            
+            fused_pred = 1 if fused_prob > 0.5 else 0
+            method_name = "加权平均"
+        else:  # voting
+            # 投票机制
+            fused_pred = 1 if sum(predictions) >= len(predictions) / 2 else 0
+            fused_prob = sum(predictions) / len(predictions)
+            method_name = "投票机制"
+        
+        # 计算置信度
+        consistency = len(set(predictions)) == 1
+        if len(valid_results) == 3 and consistency:
+            confidence = "高（三模型一致）"
+        elif len(valid_results) >= 2 and predictions.count(predictions[0]) >= 2:
+            confidence = "中（多数一致）"
+        else:
+            confidence = "低（不一致）"
+        
+        # 构建结果
+        result = {
+            'code': code,
+            'name': STOCK_NAMES.get(code, code),
+            'fusion_method': method_name,
+            'fused_prediction': int(fused_pred),
+            'fused_probability': float(fused_prob),
+            'confidence': confidence,
+            'consistency': f"{int(consistency * 100)}%",
+            'current_price': valid_results[list(valid_results.keys())[0]]['current_price'],
+            'date': valid_results[list(valid_results.keys())[0]]['date'],
+            'model_predictions': {}
+        }
+        
+        # 添加各模型的预测结果
+        for model_name, pred_result in valid_results.items():
+            result['model_predictions'][model_name] = {
+                'prediction': int(pred_result['prediction']),
+                'probability': float(pred_result['probability'])
+            }
+        
+        return result
+    
+    def predict_batch(self, codes, predict_date=None):
+        """批量预测
+        
+        Args:
+            codes: 股票代码列表
+            predict_date: 预测日期
+            
+        Returns:
+            list: 融合预测结果列表
+        """
+        results = []
+        for code in codes:
+            result = self.predict(code, predict_date)
+            if result:
+                results.append(result)
+        return results
+    
+    def predict_proba(self, X):
+        """预测概率（用于回测评估器）
+        
+        Args:
+            X: 特征数据（numpy array 或 DataFrame）
+            
+        Returns:
+            numpy array: 概率数组，形状为 (n_samples, 2)
+        """
+        # 使用加权平均融合预测概率
+        n_samples = len(X)
+        probabilities = np.zeros((n_samples, 2))
+        
+        # 获取每个模型的预测概率
+        lgbm_probs = self.lgbm_model.model.predict_proba(X)
+        gbdt_probs = self.gbdt_model.gbdt_model.predict_proba(X)
+        catboost_probs = self.catboost_model.catboost_model.predict_proba(X)
+        
+        # 计算权重
+        if self.fusion_method == 'weighted':
+            lgbm_weight = self.model_accuracies['lgbm']['accuracy']
+            gbdt_weight = self.model_accuracies['gbdt']['accuracy']
+            catboost_weight = self.model_accuracies['catboost']['accuracy']
+            total_weight = lgbm_weight + gbdt_weight + catboost_weight
+            
+            lgbm_weight /= total_weight
+            gbdt_weight /= total_weight
+            catboost_weight /= total_weight
+        else:
+            # 简单平均
+            lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
+        
+        # 加权融合
+        probabilities = (
+            lgbm_weight * lgbm_probs +
+            gbdt_weight * gbdt_probs +
+            catboost_weight * catboost_probs
+        )
+        
+        return probabilities
+    
+    def predict(self, X):
+        """预测类别（用于回测评估器）
+        
+        Args:
+            X: 特征数据
+            
+        Returns:
+            numpy array: 预测类别（0或1）
+        """
+        probabilities = self.predict_proba(X)
+        return (probabilities[:, 1] > 0.5).astype(int)
+    
+    def save_predictions(self, predictions, filepath=None):
+        """保存预测结果到 CSV
+        
+        Args:
+            predictions: 预测结果列表
+            filepath: 保存路径（可选）
+        """
+        if filepath is None:
+            filepath = f'data/ml_trading_model_ensemble_predictions_{self.horizon}d.csv'
+        
+        # 转换为 DataFrame
+        data = []
+        for pred in predictions:
+            row = {
+                'code': pred['code'],
+                'name': pred['name'],
+                'fusion_method': pred['fusion_method'],
+                'fused_prediction': pred['fused_prediction'],
+                'fused_probability': pred['fused_probability'],
+                'confidence': pred['confidence'],
+                'consistency': pred['consistency'],
+                'current_price': pred['current_price'],
+                'date': pred['date'].strftime('%Y-%m-%d')
+            }
+            
+            # 添加各模型的预测结果
+            for model_name, model_pred in pred['model_predictions'].items():
+                row[f'{model_name}_prediction'] = model_pred['prediction']
+                row[f'{model_name}_probability'] = model_pred['probability']
+            
+            data.append(row)
+        
+        df = pd.DataFrame(data)
+        df.to_csv(filepath, index=False)
+        print(f"✅ 融合预测结果已保存到 {filepath}")
+        
+        return df
 
 
 def main():
     parser = argparse.ArgumentParser(description='机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate', 'backtest'],
                        help='运行模式: train=训练, predict=预测, evaluate=评估, backtest=回测')
-    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt', 'catboost'],
-                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型, catboost=单一CatBoost模型（默认lgbm）')
+    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt', 'catboost', 'ensemble'],
+                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型, catboost=单一CatBoost模型, ensemble=融合模型（默认lgbm）')
     parser.add_argument('--model-path', type=str, default='data/ml_trading_model.pkl',
                        help='模型保存/加载路径')
     parser.add_argument('--start-date', type=str, default=None,
@@ -3325,17 +3635,28 @@ def main():
                        help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（只使用500个选择的特征，而不是全部2936个）')
+    parser.add_argument('--fusion-method', type=str, default='weighted', choices=['average', 'weighted', 'voting'],
+                       help='融合方法: average=简单平均, weighted=加权平均（基于准确率）, voting=投票机制（默认weighted）')
 
     args = parser.parse_args()
 
     # 初始化模型
-    if args.model_type == 'gbdt':
+    if args.model_type == 'ensemble':
+        print("=" * 70)
+        print(f"🎭 使用融合模型（方法: {args.fusion_method}）")
+        print("=" * 70)
+        lgbm_model = None
+        gbdt_model = None
+        catboost_model = None
+        ensemble_model = EnsembleModel(fusion_method=args.fusion_method)
+    elif args.model_type == 'gbdt':
         print("=" * 70)
         print("🚀 使用单一 GBDT 模型")
         print("=" * 70)
         lgbm_model = None
         gbdt_model = GBDTModel()
         catboost_model = None
+        ensemble_model = None
     elif args.model_type == 'catboost':
         print("=" * 70)
         print("🐱 使用单一 CatBoost 模型")
@@ -3343,6 +3664,7 @@ def main():
         lgbm_model = None
         gbdt_model = None
         catboost_model = CatBoostModel()
+        ensemble_model = None
     else:
         print("=" * 70)
         print("🚀 使用单一 LightGBM 模型")
@@ -3350,6 +3672,7 @@ def main():
         lgbm_model = MLTradingModel()
         gbdt_model = None
         catboost_model = None
+        ensemble_model = None
 
     if args.mode == 'train':
         print("=" * 50)
@@ -3387,7 +3710,12 @@ def main():
 
         # 加载模型
         horizon_suffix = f'_{args.horizon}d'
-        if lgbm_model:
+        if ensemble_model:
+            # 加载融合模型
+            ensemble_model.load_models(args.horizon)
+            model_name = f"融合模型（{ensemble_model.fusion_method}）"
+            model_file_suffix = "ensemble"
+        elif lgbm_model:
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.load_model(lgbm_model_path)
             model = lgbm_model
@@ -3412,10 +3740,16 @@ def main():
         predictions = []
         if args.predict_date:
             print(f"基于日期: {args.predict_date}")
-        for code in WATCHLIST:
-            result = model.predict(code, predict_date=args.predict_date)
-            if result:
-                predictions.append(result)
+        
+        if ensemble_model:
+            # 使用融合模型预测
+            predictions = ensemble_model.predict_batch(WATCHLIST, args.predict_date)
+        else:
+            # 使用单一模型预测
+            for code in WATCHLIST:
+                result = model.predict(code, predict_date=args.predict_date)
+                if result:
+                    predictions.append(result)
 
         # 显示预测结果
         print("\n预测结果:")
@@ -3424,40 +3758,58 @@ def main():
             print(f"说明: 基于 {args.predict_date} 的数据预测{horizon_text}后的涨跌")
         else:
             print(f"说明: 基于最新交易日的数据预测{horizon_text}后的涨跌")
-        print("-" * 100)
-        print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
-        print("-" * 100)
+        
+        if ensemble_model:
+            # 融合模型输出格式
+            print("-" * 140)
+            print(f"{'代码':<10} {'股票名称':<12} {'融合预测':<10} {'融合概率':<12} {'置信度':<15} {'一致性':<10} {'当前价格':<12} {'数据日期':<15}")
+            print("-" * 140)
+            
+            for pred in predictions:
+                pred_label = "上涨" if pred['fused_prediction'] == 1 else "下跌"
+                data_date = pred['date'].strftime('%Y-%m-%d')
+                
+                print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<10} {pred['fused_probability']:.4f}   {pred['confidence']:<15} {pred['consistency']:<10} {pred['current_price']:.2f}        {data_date:<15}")
+                
+                # 显示各模型预测详情
+                print(f"         各模型: ", end="")
+                for model_name, model_pred in pred['model_predictions'].items():
+                    model_pred_label = "上涨" if model_pred['prediction'] == 1 else "下跌"
+                    print(f"{model_name}={model_pred_label}({model_pred['probability']:.4f}) ", end="")
+                print()
+        else:
+            # 单一模型输出格式
+            print("-" * 100)
+            print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
+            print("-" * 100)
 
-        for pred in predictions:
-            pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
-            data_date = pred['date'].strftime('%Y-%m-%d')
-            target_date = get_target_date(pred['date'], horizon=args.horizon)
+            for pred in predictions:
+                pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
+                data_date = pred['date'].strftime('%Y-%m-%d')
+                target_date = get_target_date(pred['date'], horizon=args.horizon)
 
-            print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
+                print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
 
         # 保存预测结果
-        pred_df = pd.DataFrame(predictions)
-        pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-        pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
+        if ensemble_model:
+            # 保存融合预测结果
+            ensemble_model.save_predictions(predictions)
+            print(f"\n融合预测结果已保存到 data/ml_trading_model_ensemble_predictions_{args.horizon}d.csv")
+        else:
+            # 保存单一模型预测结果
+            pred_df = pd.DataFrame(predictions)
+            pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
+            pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
 
-        pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
+            pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
 
-        pred_path = args.model_path.replace('.pkl', f'_{model_file_suffix}_predictions{horizon_suffix}.csv')
-        pred_df_export.to_csv(pred_path, index=False)
-        print(f"\n预测结果已保存到 {pred_path}")
+            pred_path = args.model_path.replace('.pkl', f'_{model_file_suffix}_predictions{horizon_suffix}.csv')
+            pred_df_export.to_csv(pred_path, index=False)
+            print(f"\n预测结果已保存到 {pred_path}")
 
-        # 保存20天预测结果到文本文件（便于后续提取和对比）
-        if args.horizon == 20:
-            save_predictions_to_text(pred_df_export, args.predict_date)
-            horizon_suffix = f'_{args.horizon}d'
-            if lgbm_model:
-                model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
-            else:
-                model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
-            model.load_model(model_path)
-
-            # 预测所有股票
-            predictions = []
+            # 保存20天预测结果到文本文件（便于后续提取和对比）
+            if args.horizon == 20:
+                save_predictions_to_text(pred_df_export, args.predict_date)
             if args.predict_date:
                 print(f"基于日期: {args.predict_date}")
             for code in WATCHLIST:
@@ -3600,12 +3952,25 @@ def main():
             horizon_suffix = f'_{args.horizon}d'
             
             # 根据模型类型选择模型
-            if args.model_type == 'lgbm':
+            if args.model_type == 'ensemble':
+                # 加载融合模型
+                ensemble_model.load_models(args.horizon)
+                active_model = ensemble_model
+                print("✅ 已加载融合模型（包含 LightGBM、GBDT、CatBoost）")
+                # 使用 LightGBM 的特征列作为参考
+                active_feature_columns = ensemble_model.lgbm_model.feature_columns
+            elif args.model_type == 'lgbm':
                 model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
                 lgbm_model.load_model(model_path)
                 model = lgbm_model.model
                 active_model = lgbm_model
                 active_feature_columns = lgbm_model.feature_columns
+            elif args.model_type == 'catboost':
+                model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+                catboost_model.load_model(model_path)
+                model = catboost_model.catboost_model
+                active_model = catboost_model
+                active_feature_columns = catboost_model.feature_columns
             else:
                 model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
                 import pickle
@@ -3740,13 +4105,27 @@ def main():
             # 运行回测
             print("\n开始回测...")
             evaluator = BacktestEvaluator(initial_capital=100000)
-            results = evaluator.backtest_model(
-                model=model,
-                test_data=X_test,  # 直接使用DataFrame
-                test_labels=pd.Series(y_test, index=single_stock_df.index),
-                test_prices=prices,
-                confidence_threshold=0.55
-            )
+            
+            if args.model_type == 'ensemble':
+                # 使用融合模型回测
+                results = evaluator.backtest_model(
+                    model=ensemble_model,
+                    test_data=X_test,
+                    test_labels=pd.Series(y_test, index=single_stock_df.index),
+                    test_prices=prices,
+                    confidence_threshold=0.55
+                )
+                results_for_json['backtest_strategy'] = 'ensemble_fusion'
+            else:
+                # 使用单一模型回测
+                results = evaluator.backtest_model(
+                    model=model,
+                    test_data=X_test,  # 直接使用DataFrame
+                    test_labels=pd.Series(y_test, index=single_stock_df.index),
+                    test_prices=prices,
+                    confidence_threshold=0.55
+                )
+                results_for_json['backtest_strategy'] = f'single_{args.model_type}'
             
             # 绘制回测结果
             output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
