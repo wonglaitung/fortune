@@ -77,6 +77,11 @@ python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-typ
 
 # 回测融合模型（投票机制）
 python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type ensemble --fusion-method voting --use-feature-selection
+
+# 批量训练时跳过特征选择（综合分析脚本使用）
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 ```
 
 **融合策略说明**：
@@ -258,6 +263,14 @@ JSON文件包含所有关键指标：
 - **--fusion-method average**: 简单平均（默认weighted）
 - **--fusion-method weighted**: 加权平均（推荐）
 - **--fusion-method voting**: 投票机制
+
+### 特征选择优化参数
+
+- **--skip-feature-selection**: 跳过特征选择，直接使用已有的特征文件（适用于批量训练多个模型）
+  - 配合 `--use-feature-selection` 使用
+  - 在 `run_comprehensive_analysis.sh` 中用于避免重复执行特征选择
+  - 特征选择只需执行一次（步骤0），后续模型训练都跳过特征选择（步骤2）
+  - 性能提升：减少执行时间 50-70%
 
 ## 注意事项
 

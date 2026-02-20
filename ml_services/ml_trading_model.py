@@ -3545,9 +3545,9 @@ class EnsembleModel:
         
         # 计算权重
         if self.fusion_method == 'weighted':
-            lgbm_weight = self.model_accuracies['lgbm']['accuracy']
-            gbdt_weight = self.model_accuracies['gbdt']['accuracy']
-            catboost_weight = self.model_accuracies['catboost']['accuracy']
+            lgbm_weight = self.model_accuracies['lgbm']
+            gbdt_weight = self.model_accuracies['gbdt']
+            catboost_weight = self.model_accuracies['catboost']
             total_weight = lgbm_weight + gbdt_weight + catboost_weight
             
             lgbm_weight /= total_weight
@@ -3635,6 +3635,8 @@ def main():
                        help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（只使用500个选择的特征，而不是全部2936个）')
+    parser.add_argument('--skip-feature-selection', action='store_true',
+                       help='跳过特征选择，直接使用已有的特征文件（适用于批量训练多个模型）')
     parser.add_argument('--fusion-method', type=str, default='weighted', choices=['average', 'weighted', 'voting'],
                        help='融合方法: average=简单平均, weighted=加权平均（基于准确率）, voting=投票机制（默认weighted）')
 
@@ -3681,22 +3683,26 @@ def main():
 
         # 训练模型
         horizon_suffix = f'_{args.horizon}d'
+        
+        # 检查是否跳过特征选择
+        run_feature_selection = args.use_feature_selection and not args.skip_feature_selection
+        
         if lgbm_model:
-            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
+            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         elif catboost_model:
-            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
+            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
             catboost_model.save_model(catboost_model_path)
             importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         else:
-            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
+            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.save_model(gbdt_model_path)
             importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
@@ -4094,22 +4100,23 @@ def main():
             y_test = single_stock_df['Label'].values
             
             print(f"测试数据: {len(test_df)} 条")
-            
+
             if len(test_df) > 0:
                 print(f"测试时间段: {test_df.index[0]} 到 {test_df.index[-1]}")
-            
+
             # 检查是否有测试数据
             if len(test_df) == 0:
                 print("⚠️ 警告: 没有测试数据，无法进行回测")
                 print("请确保数据准备正确，并且有足够的历史数据")
                 return
-            
+
             print(f"测试时间段: {test_df.index[0]} 到 {test_df.index[-1]}")
-            
+
             # 运行回测
             print("\n开始回测...")
             evaluator = BacktestEvaluator(initial_capital=100000)
-            
+
+            # 确定回测策略类型
             if args.model_type == 'ensemble':
                 # 使用融合模型回测
                 results = evaluator.backtest_model(
@@ -4119,7 +4126,7 @@ def main():
                     test_prices=prices,
                     confidence_threshold=0.55
                 )
-                results_for_json['backtest_strategy'] = 'ensemble_fusion'
+                backtest_strategy = 'ensemble_fusion'
             else:
                 # 使用单一模型回测
                 results = evaluator.backtest_model(
@@ -4129,14 +4136,14 @@ def main():
                     test_prices=prices,
                     confidence_threshold=0.55
                 )
-                results_for_json['backtest_strategy'] = f'single_{args.model_type}'
-            
+                backtest_strategy = f'single_{args.model_type}'
+
             # 绘制回测结果
             output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output')
             os.makedirs(output_dir, exist_ok=True)
             plot_path = os.path.join(output_dir, f'backtest_results_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png')
             evaluator.plot_backtest_results(results, save_path=plot_path)
-            
+
             # 保存回测结果
             result_path = os.path.join(output_dir, f'backtest_results_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
             import json
@@ -4147,10 +4154,10 @@ def main():
                     for k, v in results.items()
                     if k not in ['portfolio_values', 'benchmark_values', 'trades']
                 }
-                # 添加股票信息
+                # 添加股票信息和回测策略
                 results_for_json['stock_code'] = selected_code
                 results_for_json['stock_name'] = selected_code  # 可以扩展为查询股票名称
-                results_for_json['backtest_strategy'] = 'single_stock_random'
+                results_for_json['backtest_strategy'] = backtest_strategy
                 results_for_json['total_stocks_in_test'] = len(unique_stocks)
                 results_for_json['selection_method'] = f'random_selection_from_{len(unique_stocks)}_stocks'
                 json.dump(results_for_json, f, indent=2)
