@@ -3687,7 +3687,49 @@ def main():
         # 检查是否跳过特征选择
         run_feature_selection = args.use_feature_selection and not args.skip_feature_selection
         
-        if lgbm_model:
+        if ensemble_model:
+            # 融合模型需要训练三个子模型
+            print("\n" + "=" * 70)
+            print("🎭 训练融合模型的三个子模型")
+            print("=" * 70)
+            
+            # 训练 LightGBM 模型
+            print("\n📊 训练 LightGBM 模型...")
+            lgbm_model = MLTradingModel()
+            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
+            lgbm_model.save_model(lgbm_model_path)
+            lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
+            lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
+            print(f"✅ LightGBM 模型已保存到 {lgbm_model_path}")
+            print(f"✅ 特征重要性已保存到 {lgbm_importance_path}")
+            
+            # 训练 GBDT 模型
+            print("\n📊 训练 GBDT 模型...")
+            gbdt_model = GBDTModel()
+            gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
+            gbdt_model.save_model(gbdt_model_path)
+            gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
+            gbdt_feature_importance.to_csv(gbdt_importance_path, index=False)
+            print(f"✅ GBDT 模型已保存到 {gbdt_model_path}")
+            print(f"✅ 特征重要性已保存到 {gbdt_importance_path}")
+            
+            # 训练 CatBoost 模型
+            print("\n📊 训练 CatBoost 模型...")
+            catboost_model = CatBoostModel()
+            catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+            catboost_model.save_model(catboost_model_path)
+            catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
+            catboost_feature_importance.to_csv(catboost_importance_path, index=False)
+            print(f"✅ CatBoost 模型已保存到 {catboost_model_path}")
+            print(f"✅ 特征重要性已保存到 {catboost_importance_path}")
+            
+            print("\n" + "=" * 70)
+            print("✅ 融合模型的所有子模型训练完成！")
+            print("=" * 70)
+        elif lgbm_model:
             feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
