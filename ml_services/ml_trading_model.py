@@ -284,6 +284,9 @@ class FeatureEngineer:
         # 板块分析缓存（避免重复计算）
         self._sector_analyzer = None
         self._sector_performance_cache = {}
+        # 新闻数据缓存（避免重复加载）
+        self._news_data_cache = None
+        self._news_data_days = 30
 
     def _get_sector_analyzer(self):
         """获取板块分析器（单例模式）"""
@@ -1032,7 +1035,11 @@ class FeatureEngineer:
                     'sentiment_days': 0
                 }
 
-            news_df = pd.read_csv(news_file_path)
+            # 使用缓存的新闻数据（如果存在）
+            if self._news_data_cache is None:
+                self._news_data_cache = pd.read_csv(news_file_path)
+            
+            news_df = self._news_data_cache
             if news_df.empty:
                 # 新闻文件为空，返回默认值
                 return {
@@ -1150,14 +1157,16 @@ class FeatureEngineer:
             if os.path.exists(model_path):
                 topic_modeler.load_model(model_path)
 
+                # 使用缓存的新闻数据（如果存在）
+                if self._news_data_cache is None:
+                    self._news_data_cache = topic_modeler.load_news_data(days=self._news_data_days)
+                
                 # 获取股票主题特征
-                topic_features = topic_modeler.get_stock_topic_features(code)
+                topic_features = topic_modeler.get_stock_topic_features(code, self._news_data_cache)
 
                 if topic_features:
-                    print(f"✅ 获取主题特征: {code}")
                     return topic_features
                 else:
-                    print(f"⚠️  该股票没有新闻数据: {code}")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
             else:
                 print(f"⚠️  主题模型不存在，请先运行: python ml_services/topic_modeling.py")
