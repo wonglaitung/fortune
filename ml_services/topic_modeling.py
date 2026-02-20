@@ -429,9 +429,10 @@ class TopicModeler:
             self.topic_names = model_data['topic_names']
             self.feature_names = model_data['feature_names']
             
-            print(f"✅ 模型已从 {filepath} 加载")
-            print(f"   - 保存时间: {model_data['saved_at']}")
-            print(f"   - 主题数量: {self.n_topics}")
+            # 调试信息已删除以减少输出
+            # print(f"✅ 模型已从 {filepath} 加载")
+            # print(f"   - 保存时间: {model_data['saved_at']}")
+            # print(f"   - 主题数量: {self.n_topics}")
             
             # 显示主题关键词（已禁用以减少输出）
             # self._print_topic_keywords()
