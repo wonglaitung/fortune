@@ -9,7 +9,7 @@
 """
 
 # 全局参数配置
-DEFAULT_ANALYSIS_FREQUENCY = 120  # 默认分析频率（分钟）
+DEFAULT_ANALYSIS_FREQUENCY = 180  # 默认分析频率（分钟，3小时）
 
 import os
 import sys
@@ -1746,8 +1746,11 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
     trader.log_message("启动时执行首次交易分析...")
     trader.run_hourly_analysis()
     
-    # 计划随机间隔执行交易分析（每15-60分钟之间随机）
-    next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
+    # 计划随机间隔执行交易分析（基于DEFAULT_ANALYSIS_FREQUENCY，在基准±30分钟之间随机）
+    min_interval = DEFAULT_ANALYSIS_FREQUENCY - 30
+    max_interval = DEFAULT_ANALYSIS_FREQUENCY + 30
+    random_minutes = random.randint(min_interval, max_interval)
+    next_analysis_time = datetime.now() + timedelta(minutes=random_minutes)
     
     # 计划每天收盘后生成总结
     schedule.every().day.at("16:05").do(trader.run_daily_summary)
@@ -1760,9 +1763,10 @@ def run_simulation(duration_days=30, analysis_frequency=DEFAULT_ANALYSIS_FREQUEN
             # 检查是否到了随机交易时间
             if datetime.now() >= next_analysis_time:
                 trader.run_hourly_analysis()
-                # 设置下一次随机交易时间（15-60分钟之间）
-                next_analysis_time = datetime.now() + timedelta(minutes=random.randint(15, 60))
-                trader.log_message(f"下一次交易分析将在 {next_analysis_time.strftime('%Y-%m-%d %H:%M:%S')} 执行")
+                # 设置下一次随机交易时间（基于DEFAULT_ANALYSIS_FREQUENCY，在基准±30分钟之间随机）
+                random_minutes = random.randint(min_interval, max_interval)
+                next_analysis_time = datetime.now() + timedelta(minutes=random_minutes)
+                trader.log_message(f"下一次交易分析将在 {next_analysis_time.strftime('%Y-%m-%d %H:%M:%S')} 执行（间隔约 {random_minutes/60:.1f} 小时，基准 {DEFAULT_ANALYSIS_FREQUENCY/60:.1f} 小时）")
             
             # 运行计划任务（用于每日总结等）
             schedule.run_pending()
