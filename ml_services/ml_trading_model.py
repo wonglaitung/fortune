@@ -2740,12 +2740,579 @@ class GBDTModel:
         print(f"GBDT 模型已从 {filepath} 加载")
 
 
+class CatBoostModel:
+    """CatBoost 模型 - 基于 CatBoost 梯度提升算法的单一模型
+    
+    CatBoost 是 Yandex 开发的梯度提升库，具有以下优势：
+    1. 自动处理分类特征，无需手动编码
+    2. 更好的默认参数，减少调参工作量
+    3. 更快的训练速度（GPU 支持）
+    4. 更好的泛化能力，减少过拟合
+    """
+
+    def __init__(self):
+        self.feature_engineer = FeatureEngineer()
+        self.processor = BaseModelProcessor()
+        self.catboost_model = None
+        self.feature_columns = []
+        self.actual_n_estimators = 0
+        self.horizon = 1  # 默认预测周期
+        self.model_type = 'catboost'  # 模型类型标识
+
+    def load_selected_features(self, filepath=None, current_feature_names=None):
+        """加载选择的特征列表（使用特征名称交集，确保特征存在）
+
+        Args:
+            filepath: 特征名称文件路径（可选，默认使用最新的）
+            current_feature_names: 当前数据集的特征名称列表（可选）
+
+        Returns:
+            list: 特征名称列表（如果找到），否则返回None
+        """
+        import os
+        import glob
+
+        if filepath is None:
+            # 查找最新的特征名称文件
+            pattern = 'output/selected_features_*.csv'
+            files = glob.glob(pattern)
+            if not files:
+                return None
+            # 按修改时间排序，取最新的
+            filepath = max(files, key=os.path.getmtime)
+
+        try:
+            import pandas as pd
+            # 读取特征名称
+            df = pd.read_csv(filepath)
+            selected_names = df['Feature_Name'].tolist()
+
+            print(f"📂 加载特征列表文件: {filepath}")
+            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+
+            # 如果提供了当前特征名称，使用交集
+            if current_feature_names is not None:
+                current_set = set(current_feature_names)
+                selected_set = set(selected_names)
+                available_set = current_set & selected_set
+                
+                available_names = list(available_set)
+                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
+                print(f"📊 选择的特征数量: {len(selected_names)}")
+                print(f"📊 实际可用的特征数量: {len(available_names)}")
+                print(f"⚠️  {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                
+                return available_names
+            else:
+                return selected_names
+
+        except Exception as e:
+            print(f"⚠️ 加载特征列表失败: {e}")
+            return None
+
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
+        """准备训练数据
+        
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+            for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
+        """
+        self.horizon = horizon
+        all_data = []
+
+        # 获取美股市场数据（只获取一次）
+        print("📊 获取美股市场数据...")
+        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        if us_market_df is not None:
+            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+        else:
+            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
+
+        for code in codes:
+            try:
+                print(f"处理股票: {code}")
+
+                # 移除代码中的.HK后缀，腾讯财经接口不需要
+                stock_code = code.replace('.HK', '')
+
+                # 获取股票数据（2年约730天）
+                stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+                if stock_df is None or stock_df.empty:
+                    continue
+
+                # 获取恒生指数数据（2年约730天）
+                hsi_df = get_hsi_data_tencent(period_days=730)
+                if hsi_df is None or hsi_df.empty:
+                    continue
+
+                # 计算技术指标（80个指标）
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+                # 计算多周期指标
+                stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+                # 计算相对强度指标
+                stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+                # 创建资金流向特征
+                stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+                # 创建市场环境特征（包含港股和美股）
+                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+
+                # 创建标签（使用指定的 horizon）
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
+
+                # 添加基本面特征
+                fundamental_features = self.feature_engineer.create_fundamental_features(code)
+                for key, value in fundamental_features.items():
+                    stock_df[key] = value
+
+                # 添加股票类型特征
+                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                for key, value in stock_type_features.items():
+                    stock_df[key] = value
+
+                # 添加情感特征
+                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
+                # 添加主题特征（LDA主题建模）
+                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                for key, value in topic_features.items():
+                    stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
+
+                # 添加板块特征
+                sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                for key, value in sector_features.items():
+                    stock_df[key] = value
+
+                # 生成技术指标与基本面交互特征（与训练时保持一致）
+                stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
+                # 生成交叉特征（与训练时保持一致）
+                stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                # 添加股票代码
+                stock_df['Code'] = code
+
+                all_data.append(stock_df)
+
+            except Exception as e:
+                print(f"⚠️ 处理股票 {code} 失败: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+        if len(all_data) == 0:
+            raise ValueError("没有可用的数据")
+
+        # 合并所有数据
+        df = pd.concat(all_data, ignore_index=False)
+
+        # 转换索引为 datetime
+        df.index = pd.to_datetime(df.index)
+
+        # 过滤日期范围（如果指定）
+        if start_date:
+            start_date = pd.to_datetime(start_date)
+            df = df[df.index >= start_date]
+        if end_date:
+            end_date = pd.to_datetime(end_date)
+            df = df[df.index <= end_date]
+
+        print(f"✅ 数据准备完成，共 {len(df)} 条记录")
+
+        return df
+
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
+        """训练 CatBoost 模型
+
+        Args:
+            codes: 股票代码列表
+            start_date: 训练开始日期
+            end_date: 训练结束日期
+            horizon: 预测周期（1=次日，5=一周，20=一个月）
+            use_feature_selection: 是否使用特征选择（只使用500个选择的特征）
+
+        Returns:
+            DataFrame: 特征重要性数据
+        """
+        print("\n" + "="*70)
+        print("🚀 开始训练 CatBoost 模型")
+        print("="*70)
+        print(f"预测周期: {horizon} 天")
+        print(f"股票数量: {len(codes)}")
+        print(f"特征选择: {'是' if use_feature_selection else '否'}")
+
+        # ========== 准备数据 ==========
+        print("\n" + "="*70)
+        print("📊 准备训练数据")
+        print("="*70)
+
+        df = self.prepare_data(codes, start_date, end_date, horizon)
+
+        # 删除包含 NaN 的行
+        df = df.dropna(subset=['Label'])
+        print(f"删除 NaN 后: {len(df)} 条记录")
+
+        # ========== 特征选择（可选）==========
+        if use_feature_selection:
+            print("\n" + "="*70)
+            print("🔍 应用特征选择")
+            print("="*70)
+
+            # 加载选择的特征
+            selected_features = self.load_selected_features(current_feature_names=df.columns.tolist())
+
+            if selected_features:
+                # 过滤特征
+                self.feature_columns = selected_features
+                print(f"✅ 使用特征选择后的 {len(self.feature_columns)} 个特征")
+            else:
+                print("⚠️ 特征选择失败，使用所有特征")
+                self.feature_columns = [col for col in df.columns if col not in ['Code', 'Label', 'Future_Return']]
+        else:
+            # 使用所有特征（排除标签和目标列）
+            self.feature_columns = [col for col in df.columns if col not in ['Code', 'Label', 'Future_Return']]
+
+        # 检查特征列是否存在
+        missing_features = [col for col in self.feature_columns if col not in df.columns]
+        if missing_features:
+            print(f"⚠️ 以下特征列不存在，将被跳过: {missing_features[:10]}")
+            self.feature_columns = [col for col in self.feature_columns if col in df.columns]
+
+        print(f"✅ 最终使用 {len(self.feature_columns)} 个特征")
+
+        # 准备训练数据
+        X = df[self.feature_columns].values
+        y = df['Label'].values
+
+        print(f"训练数据形状: X={X.shape}, y={y.shape}")
+
+        # ========== 训练 CatBoost 模型 ==========
+        print("\n" + "="*70)
+        print("🐱 训练 CatBoost 模型")
+        print("="*70)
+
+        # 根据预测周期调整参数
+        if horizon == 5:
+            # 一周模型参数（防过拟合）
+            print("使用一周模型参数（减少树深度，增加早停耐心）...")
+            n_estimators = 500
+            depth = 6  # 减少深度（7→6）
+            learning_rate = 0.05
+            stopping_rounds = 50  # 增加早停耐心（30→50）
+            l2_leaf_reg = 3  # 增加L2正则（2→3）
+            subsample = 0.7
+            colsample_bylevel = 0.6
+        elif horizon == 1:
+            # 次日模型参数（适度）
+            print("使用次日模型参数...")
+            n_estimators = 500
+            depth = 7
+            learning_rate = 0.05
+            stopping_rounds = 40
+            l2_leaf_reg = 3
+            subsample = 0.75
+            colsample_bylevel = 0.7
+        else:  # horizon == 20
+            # 一个月模型参数（超增强正则化）
+            print("使用20天模型参数（超增强正则化，降低过拟合）...")
+            n_estimators = 400  # 减少树数量（500→400）
+            depth = 5  # 减少深度（6→5）
+            learning_rate = 0.04  # 降低学习率（0.05→0.04）
+            stopping_rounds = 60  # 增加早停耐心（40→60）
+            l2_leaf_reg = 5  # 增强L2正则（3→5）
+            subsample = 0.6  # 减少行采样（0.75→0.6）
+            colsample_bylevel = 0.6  # 减少列采样（0.7→0.6）
+
+        from catboost import CatBoostClassifier, Pool
+
+        self.catboost_model = CatBoostClassifier(
+            loss_function='Logloss',
+            eval_metric='Accuracy',
+            depth=depth,
+            learning_rate=learning_rate,
+            n_estimators=n_estimators,
+            l2_leaf_reg=l2_leaf_reg,
+            subsample=subsample,
+            colsample_bylevel=colsample_bylevel,
+            random_seed=2020,
+            verbose=100,
+            early_stopping_rounds=stopping_rounds,
+            thread_count=-1,
+            allow_writing_files=False
+        )
+
+        # 使用时间序列交叉验证
+        tscv = TimeSeriesSplit(n_splits=5)
+        catboost_scores = []
+
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
+            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
+
+            # 创建 Pool 对象（CatBoost 推荐）
+            train_pool = Pool(data=X_train_fold, label=y_train_fold)
+            val_pool = Pool(data=X_val_fold, label=y_val_fold)
+
+            self.catboost_model.fit(
+                train_pool,
+                eval_set=val_pool,
+                verbose=False
+            )
+
+            y_pred_fold = self.catboost_model.predict(X_val_fold)
+            score = accuracy_score(y_val_fold, y_pred_fold)
+            catboost_scores.append(score)
+            print(f"   Fold {fold} 验证准确率: {score:.4f}")
+
+        # 使用全部数据重新训练
+        full_pool = Pool(data=X, label=y)
+        self.catboost_model.fit(full_pool, verbose=100)
+
+        # 获取实际训练的树数量
+        self.actual_n_estimators = self.catboost_model.tree_count_
+        mean_accuracy = np.mean(catboost_scores)
+        std_accuracy = np.std(catboost_scores)
+        print(f"\n✅ CatBoost 训练完成")
+        print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
+        print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+
+        # 保存准确率到文件（供综合分析使用）
+        accuracy_info = {
+            'model_type': 'catboost',
+            'horizon': horizon,
+            'accuracy': float(mean_accuracy),
+            'std': float(std_accuracy),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            # 读取现有数据
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+            else:
+                existing_data = {}
+            
+            # 更新当前模型的准确率
+            key = f'catboost_{horizon}d'
+            existing_data[key] = accuracy_info
+            
+            # 保存回文件
+            with open(accuracy_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            print(f"✅ 准确率已保存到 {accuracy_file}")
+        except Exception as e:
+            print(f"⚠️ 保存准确率失败: {e}")
+
+        # ========== 输出 CatBoost 特征重要性 ==========
+        print("\n" + "="*70)
+        print("📊 分析 CatBoost 特征重要性")
+        print("="*70)
+
+        # CatBoost 提供多种特征重要性计算方法
+        feature_importance = self.catboost_model.get_feature_importance(prettified=True)
+        feat_imp = pd.DataFrame({
+            'Feature': [self.feature_columns[i] for i in range(len(self.feature_columns))],
+            'Importance': self.catboost_model.feature_importances_
+        })
+        feat_imp = feat_imp.sort_values('Importance', ascending=False)
+
+        # 保存特征重要性
+        feat_imp.to_csv('output/catboost_feature_importance.csv', index=False)
+        print("✅ 已保存特征重要性至 output/catboost_feature_importance.csv")
+
+        # 显示前20个重要特征
+        print("\n📊 CatBoost Top 20 重要特征:")
+        print(feat_imp[['Feature', 'Importance']].head(20))
+
+        print("\n" + "="*70)
+        print("✅ CatBoost 模型训练完成！")
+        print("="*70)
+
+        return feat_imp
+
+    def predict(self, code, predict_date=None, horizon=None):
+        """预测单只股票
+
+        Args:
+            code: 股票代码
+            predict_date: 预测日期 (YYYY-MM-DD)，基于该日期的数据预测下一个交易日，默认使用最新交易日
+            horizon: 预测周期（1=次日，5=一周，20=一个月），默认使用训练时的周期
+        """
+        if horizon is None:
+            horizon = self.horizon
+
+        try:
+            # 移除代码中的.HK后缀
+            stock_code = code.replace('.HK', '')
+
+            # 获取股票数据
+            stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+            if stock_df is None or stock_df.empty:
+                return None
+
+            # 获取恒生指数数据
+            hsi_df = get_hsi_data_tencent(period_days=730)
+            if hsi_df is None or hsi_df.empty:
+                return None
+
+            # 获取美股市场数据
+            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+
+            # 如果指定了预测日期，过滤数据到该日期
+            if predict_date:
+                predict_date = pd.to_datetime(predict_date)
+                predict_date_str = predict_date.strftime('%Y-%m-%d')
+
+                # 确保索引是 datetime 类型
+                if not isinstance(stock_df.index, pd.DatetimeIndex):
+                    stock_df.index = pd.to_datetime(stock_df.index)
+                if not isinstance(hsi_df.index, pd.DatetimeIndex):
+                    hsi_df.index = pd.to_datetime(hsi_df.index)
+                if us_market_df is not None and not isinstance(us_market_df.index, pd.DatetimeIndex):
+                    us_market_df.index = pd.to_datetime(us_market_df.index)
+
+                # 使用字符串比较避免时区问题
+                stock_df = stock_df[stock_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+                hsi_df = hsi_df[hsi_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+                if us_market_df is not None:
+                    us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+
+                if stock_df.empty:
+                    print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
+                    return None
+
+            # 计算技术指标（80个指标）
+            stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+
+            # 计算多周期指标
+            stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+            # 计算相对强度指标
+            stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+            # 创建资金流向特征
+            stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+            # 创建市场环境特征（包含港股和美股）
+            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+
+            # 添加基本面特征
+            fundamental_features = self.feature_engineer.create_fundamental_features(code)
+            for key, value in fundamental_features.items():
+                stock_df[key] = value
+
+            # 添加股票类型特征
+            stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+            for key, value in stock_type_features.items():
+                stock_df[key] = value
+
+            # 添加情感特征
+            sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+            for key, value in sentiment_features.items():
+                stock_df[key] = value
+
+            # 添加主题特征（LDA主题建模）
+            topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+            for key, value in topic_features.items():
+                stock_df[key] = value
+                # 添加主题情感交互特征
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+                # 添加预期差距特征
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
+
+            # 添加板块特征
+            sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+            for key, value in sector_features.items():
+                stock_df[key] = value
+
+            # 生成技术指标与基本面交互特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
+            # 生成交叉特征（与训练时保持一致）
+            stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+            # 获取最新数据
+            latest_data = stock_df.iloc[-1:]
+
+            # 准备特征
+            if len(self.feature_columns) == 0:
+                raise ValueError("模型未训练，请先调用train()方法")
+
+            X = latest_data[self.feature_columns].values
+
+            # 使用 CatBoost 模型直接预测
+            from catboost import Pool
+            test_pool = Pool(data=X)
+            proba = self.catboost_model.predict_proba(test_pool)[0]
+            prediction = self.catboost_model.predict(test_pool)[0]
+
+            return {
+                'code': code,
+                'name': STOCK_NAMES.get(code, code),
+                'prediction': int(prediction),
+                'probability': float(proba[1]),
+                'current_price': float(latest_data['Close'].values[0]),
+                'date': latest_data.index[0]
+            }
+
+        except Exception as e:
+            print(f"预测失败 {code}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def save_model(self, filepath):
+        """保存模型"""
+        model_data = {
+            'catboost_model': self.catboost_model,
+            'feature_columns': self.feature_columns,
+            'actual_n_estimators': self.actual_n_estimators,
+            'horizon': self.horizon,
+            'model_type': self.model_type
+        }
+        with open(filepath, 'wb') as f:
+            pickle.dump(model_data, f)
+        print(f"CatBoost 模型已保存到 {filepath}")
+
+    def load_model(self, filepath):
+        """加载模型"""
+        with open(filepath, 'rb') as f:
+            model_data = pickle.load(f)
+        self.catboost_model = model_data['catboost_model']
+        self.feature_columns = model_data['feature_columns']
+        self.actual_n_estimators = model_data['actual_n_estimators']
+        self.horizon = model_data.get('horizon', 1)
+        self.model_type = model_data.get('model_type', 'catboost')
+        print(f"CatBoost 模型已从 {filepath} 加载")
+
+
 def main():
     parser = argparse.ArgumentParser(description='机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict', 'evaluate', 'backtest'],
                        help='运行模式: train=训练, predict=预测, evaluate=评估, backtest=回测')
-    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt'],
-                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型（默认lgbm）')
+    parser.add_argument('--model-type', type=str, default='lgbm', choices=['lgbm', 'gbdt', 'catboost'],
+                       help='模型类型: lgbm=单一LightGBM模型, gbdt=单一GBDT模型, catboost=单一CatBoost模型（默认lgbm）')
     parser.add_argument('--model-path', type=str, default='data/ml_trading_model.pkl',
                        help='模型保存/加载路径')
     parser.add_argument('--start-date', type=str, default=None,
@@ -2768,12 +3335,21 @@ def main():
         print("=" * 70)
         lgbm_model = None
         gbdt_model = GBDTModel()
+        catboost_model = None
+    elif args.model_type == 'catboost':
+        print("=" * 70)
+        print("🐱 使用单一 CatBoost 模型")
+        print("=" * 70)
+        lgbm_model = None
+        gbdt_model = None
+        catboost_model = CatBoostModel()
     else:
         print("=" * 70)
         print("🚀 使用单一 LightGBM 模型")
         print("=" * 70)
         lgbm_model = MLTradingModel()
         gbdt_model = None
+        catboost_model = None
 
     if args.mode == 'train':
         print("=" * 50)
@@ -2787,6 +3363,13 @@ def main():
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
+            feature_importance.to_csv(importance_path, index=False)
+            print(f"\n特征重要性已保存到 {importance_path}")
+        elif catboost_model:
+            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=args.use_feature_selection)
+            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+            catboost_model.save_model(catboost_model_path)
+            importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         else:
@@ -2810,6 +3393,12 @@ def main():
             model = lgbm_model
             model_name = "LightGBM"
             model_file_suffix = "lgbm"
+        elif catboost_model:
+            catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+            catboost_model.load_model(catboost_model_path)
+            model = catboost_model
+            model_name = "CatBoost"
+            model_file_suffix = "catboost"
         else:
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.load_model(gbdt_model_path)
