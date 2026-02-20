@@ -45,7 +45,7 @@ echo "📊 步骤 2/5: 训练20天模型（LightGBM、GBDT和CatBoost）"
 echo "=========================================="
 echo ""
 echo "训练 LightGBM 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --model-path data/ml_trading_model.pkl --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
 if [ $? -ne 0 ]; then
     echo "❌ 步骤2失败: 训练20天LightGBM模型失败"
     exit 1
@@ -54,7 +54,7 @@ echo "✅ LightGBM模型训练完成"
 echo ""
 
 echo "训练 GBDT 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --model-path data/ml_trading_model.pkl --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
 if [ $? -ne 0 ]; then
     echo "❌ 步骤2失败: 训练20天GBDT模型失败"
     exit 1
@@ -63,7 +63,7 @@ echo "✅ GBDT模型训练完成"
 echo ""
 
 echo "训练 CatBoost 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --model-path data/ml_trading_model.pkl --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
 if [ $? -ne 0 ]; then
     echo "❌ 步骤2失败: 训练20天CatBoost模型失败"
     exit 1

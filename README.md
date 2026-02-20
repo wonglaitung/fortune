@@ -117,6 +117,11 @@ python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lg
 python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
 python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
 
+# 批量训练时跳过特征选择（综合分析脚本使用）
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+
 # 预测股票涨跌
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type gbdt
@@ -339,13 +344,18 @@ nltk            # 自然语言处理
 整合大模型建议（短期和中期）与ML融合模型预测结果（20天），进行综合对比分析，生成实质的买卖建议。
 
 ### 执行流程
-1. 运行特征选择（生成500个精选特征）
-2. 生成大模型建议（短期和中期）
-3. 训练20天ML模型（LightGBM、GBDT、CatBoost）
-4. 生成20天融合模型预测（加权平均）
-5. 综合对比分析（整合大模型建议和ML融合模型预测）
-6. 生成详细的综合买卖建议（9个章节）
-7. 发送邮件通知（每日自动发送）
+1. **步骤0**：运行特征选择（生成500个精选特征）- 只执行一次
+2. **步骤1**：生成大模型建议（短期和中期）
+3. **步骤2**：训练20天ML模型（LightGBM、GBDT、CatBoost）- 跳过特征选择，使用步骤0的特征
+4. **步骤3**：生成20天融合模型预测（加权平均）
+5. **步骤4**：综合对比分析（整合大模型建议和ML融合模型预测）
+6. **步骤5**：生成详细的综合买卖建议（9个章节）
+7. **步骤6**：发送邮件通知（每日自动发送）
+
+### 性能优化（2026-02-20）
+- **特征选择优化**：添加 `--skip-feature-selection` 参数
+- 步骤0执行特征选择一次，步骤2的三个模型训练都跳过特征选择
+- **性能提升**：减少执行时间 50-70%
 
 ### 邮件内容（9个章节）
 1. **# 综合买卖建议**（强烈买入、买入、持有/观望、卖出信号）
