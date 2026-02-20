@@ -9,7 +9,7 @@
 """
 
 # 全局参数配置
-DEFAULT_ANALYSIS_FREQUENCY = 180  # 默认分析频率（分钟，3小时）
+DEFAULT_ANALYSIS_FREQUENCY = 120  # 默认分析频率（分钟，2小时）
 
 import os
 import sys
