@@ -3502,14 +3502,31 @@ class EnsembleModel:
             fused_prob = sum(predictions) / len(predictions)
             method_name = "投票机制"
         
-        # 计算置信度
-        consistency = len(set(predictions)) == 1
-        if len(valid_results) == 3 and consistency:
-            confidence = "高（三模型一致）"
-        elif len(valid_results) >= 2 and predictions.count(predictions[0]) >= 2:
-            confidence = "中（多数一致）"
+        # 计算一致性和置信度
+        # 计算预测一致性比例
+        if len(valid_results) == 3:
+            # 三个模型，检查一致性
+            if predictions.count(predictions[0]) == 3:
+                consistency_pct = 100  # 三模型一致
+                confidence = "高（三模型一致）"
+            elif predictions.count(predictions[0]) == 2 or predictions.count(predictions[1]) == 2:
+                consistency_pct = 67  # 两模型一致
+                confidence = "中（多数一致）"
+            else:
+                consistency_pct = 33  # 三模型不一致
+                confidence = "低（不一致）"
+        elif len(valid_results) == 2:
+            # 两个模型，检查一致性
+            if predictions.count(predictions[0]) == 2:
+                consistency_pct = 100  # 两模型一致
+                confidence = "高（两模型一致）"
+            else:
+                consistency_pct = 50  # 两模型不一致
+                confidence = "低（不一致）"
         else:
-            confidence = "低（不一致）"
+            # 只有一个模型
+            consistency_pct = 100
+            confidence = "单模型"
         
         # 构建结果
         result = {
@@ -3519,7 +3536,7 @@ class EnsembleModel:
             'fused_prediction': int(fused_pred),
             'fused_probability': float(fused_prob),
             'confidence': confidence,
-            'consistency': f"{int(consistency * 100)}%",
+            'consistency': f"{consistency_pct}%",
             'current_price': valid_results[list(valid_results.keys())[0]]['current_price'],
             'date': valid_results[list(valid_results.keys())[0]]['date'],
             'model_predictions': {}
