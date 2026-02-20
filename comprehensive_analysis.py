@@ -49,16 +49,18 @@ def load_model_accuracy(horizon=20):
     - horizon: 预测周期（默认20天）
     
     返回:
-    - dict: 包含LightGBM和GBDT准确率的字典
+    - dict: 包含LightGBM、GBDT和CatBoost准确率的字典
       {
         'lgbm': {'accuracy': float, 'std': float},
-        'gbdt': {'accuracy': float, 'std': float}
+        'gbdt': {'accuracy': float, 'std': float},
+        'catboost': {'accuracy': float, 'std': float}
       }
     """
     # 默认准确率值（如果文件不存在）
     default_accuracy = {
         'lgbm': {'accuracy': 0.6015, 'std': 0.0518},
-        'gbdt': {'accuracy': 0.6069, 'std': 0.0500}
+        'gbdt': {'accuracy': 0.6069, 'std': 0.0500},
+        'catboost': {'accuracy': 0.6000, 'std': 0.0500}
     }
     
     accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
@@ -72,6 +74,7 @@ def load_model_accuracy(horizon=20):
             result = {}
             lgbm_key = f'lgbm_{horizon}d'
             gbdt_key = f'gbdt_{horizon}d'
+            catboost_key = f'catboost_{horizon}d'
             
             if lgbm_key in data:
                 result['lgbm'] = {
@@ -89,9 +92,18 @@ def load_model_accuracy(horizon=20):
             else:
                 result['gbdt'] = default_accuracy['gbdt']
             
+            if catboost_key in data:
+                result['catboost'] = {
+                    'accuracy': data[catboost_key].get('accuracy', default_accuracy['catboost']['accuracy']),
+                    'std': data[catboost_key].get('std', default_accuracy['catboost']['std'])
+                }
+            else:
+                result['catboost'] = default_accuracy['catboost']
+            
             print(f"✅ 已加载模型准确率: {accuracy_file}")
             print(f"   LightGBM: {result['lgbm']['accuracy']:.2%} (±{result['lgbm']['std']:.2%})")
             print(f"   GBDT: {result['gbdt']['accuracy']:.2%} (±{result['gbdt']['std']:.2%})")
+            print(f"   CatBoost: {result['catboost']['accuracy']:.2%} (±{result['catboost']['std']:.2%})")
             return result
         else:
             print(f"⚠️ 准确率文件不存在: {accuracy_file}，使用默认值")
@@ -153,16 +165,15 @@ def extract_llm_recommendations(filepath):
 
 def extract_ml_predictions(filepath):
     """
-    从ML预测CSV文件中提取LightGBM和GBDT的预测结果
+    从ML预测CSV文件中提取融合模型的预测结果
     
     参数:
     - filepath: 文本预测文件路径（用于获取日期）
     
     返回:
-    - dict: 包含LightGBM和GBDT预测结果的字典
+    - dict: 包含融合模型预测结果的字典
       {
-        'lgbm': str,      # LightGBM预测结果
-        'gbdt': str   # GBDT预测结果
+        'ensemble': str,  # 融合模型预测结果
       }
     """
     try:
@@ -177,77 +188,77 @@ def extract_ml_predictions(filepath):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
         
-        lgbm_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
-        gbdt_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_predictions_20d.csv')
+        # 优先读取融合模型预测结果
+        ensemble_csv = os.path.join(data_dir, 'ml_trading_model_ensemble_predictions_20d.csv')
         
         result = {
-            'lgbm': '',
-            'gbdt': ''
+            'ensemble': ''
         }
         
-        # 读取LightGBM预测结果
-        if os.path.exists(lgbm_csv):
-            df_lgbm = pd.read_csv(lgbm_csv)
-            # 显示全部股票，按概率排序
-            df_lgbm_sorted = df_lgbm.sort_values('probability', ascending=False)
+        # 读取融合模型预测结果
+        if os.path.exists(ensemble_csv):
+            df_ensemble = pd.read_csv(ensemble_csv)
+            # 显示全部股票，按融合概率排序
+            df_ensemble_sorted = df_ensemble.sort_values('fused_probability', ascending=False)
 
-            lgbm_text = "【LightGBM模型预测结果】\n"
-            lgbm_text += f"预测日期: {date_str}\n\n"
-            lgbm_text += "全部股票预测结果（按概率排序）:\n\n"
+            ensemble_text = "【融合模型预测结果（LightGBM + GBDT + CatBoost，加权平均）】\n"
+            ensemble_text += f"预测日期: {date_str}\n\n"
+            ensemble_text += "全部股票预测结果（按融合概率排序）:\n\n"
 
             # 构建Markdown表格
-            lgbm_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-            lgbm_text += "|----------|----------|----------|----------|----------|\n"
+            ensemble_text += "| 股票代码 | 股票名称 | 融合预测 | 融合概率 | 置信度 | 一致性 | 当前价格 |\n"
+            ensemble_text += "|----------|----------|----------|----------|--------|--------|----------|\n"
 
-            for _, row in df_lgbm_sorted.iterrows():
+            for _, row in df_ensemble_sorted.iterrows():
                 # 确定预测方向
-                if row['probability'] > 0.60:
+                fused_pred = row['fused_prediction']
+                if fused_pred == 1:
                     direction = "上涨"
-                elif row['probability'] > 0.50:
-                    direction = "观望"
                 else:
                     direction = "下跌"
 
-                lgbm_text += f"| {row['code']} | {row['name']} | {direction} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                ensemble_text += f"| {row['code']} | {row['name']} | {direction} | {row['fused_probability']:.4f} | {row['confidence']} | {row['consistency']} | {row['current_price']:.2f} |\n"
 
-            lgbm_text += f"\n**统计信息**：\n"
-            lgbm_text += f"- 高置信度上涨（probability > 0.60）: {len(df_lgbm[df_lgbm['probability'] > 0.60])} 只\n"
-            lgbm_text += f"- 中等置信度观望（0.50 < probability ≤ 0.60）: {len(df_lgbm[(df_lgbm['probability'] > 0.50) & (df_lgbm['probability'] <= 0.60)])} 只\n"
-            lgbm_text += f"- 预测下跌（probability ≤ 0.50）: {len(df_lgbm[df_lgbm['probability'] <= 0.50])} 只\n"
+            ensemble_text += f"\n**统计信息**：\n"
+            ensemble_text += f"- 高置信度上涨（融合概率 > 0.60）: {len(df_ensemble[df_ensemble['fused_probability'] > 0.60])} 只\n"
+            ensemble_text += f"- 中等置信度观望（0.50 < 融合概率 ≤ 0.60）: {len(df_ensemble[(df_ensemble['fused_probability'] > 0.50) & (df_ensemble['fused_probability'] <= 0.60)])} 只\n"
+            ensemble_text += f"- 预测下跌（融合概率 ≤ 0.50）: {len(df_ensemble[df_ensemble['fused_probability'] <= 0.50])} 只\n"
+            ensemble_text += f"\n**模型一致性**：\n"
+            ensemble_text += f"- 三模型一致: {len(df_ensemble[df_ensemble['consistency'] == '100%'])} 只\n"
+            ensemble_text += f"- 两模型一致: {len(df_ensemble[df_ensemble['consistency'].str.contains('67%')])} 只\n"
+            ensemble_text += f"- 三模型不一致: {len(df_ensemble[df_ensemble['consistency'] == '33%'])} 只\n"
 
-            result['lgbm'] = lgbm_text
-        
-        # 读取GBDT预测结果
-        if os.path.exists(gbdt_csv):
-            df_gbdt = pd.read_csv(gbdt_csv)
-            # 显示全部股票，按概率排序
-            df_gbdt_sorted = df_gbdt.sort_values('probability', ascending=False)
+            result['ensemble'] = ensemble_text
+        else:
+            print(f"⚠️ 融合模型预测文件不存在: {ensemble_csv}")
+            
+            # 回退：尝试读取单独的模型预测结果
+            lgbm_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
+            gbdt_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_predictions_20d.csv')
+            
+            # 读取LightGBM预测结果
+            if os.path.exists(lgbm_csv):
+                df_lgbm = pd.read_csv(lgbm_csv)
+                df_lgbm_sorted = df_lgbm.sort_values('probability', ascending=False)
 
-            gbdt_text = "【GBDT模型预测结果】\n"
-            gbdt_text += f"预测日期: {date_str}\n\n"
-            gbdt_text += "全部股票预测结果（按概率排序）:\n\n"
+                lgbm_text = "【LightGBM模型预测结果（回退模式）】\n"
+                lgbm_text += f"预测日期: {date_str}\n\n"
+                lgbm_text += "全部股票预测结果（按概率排序）:\n\n"
 
-            # 构建Markdown表格
-            gbdt_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-            gbdt_text += "|----------|----------|----------|----------|----------|\n"
+                lgbm_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
+                lgbm_text += "|----------|----------|----------|----------|----------|\n"
 
-            for _, row in df_gbdt_sorted.iterrows():
-                # 确定预测方向
-                if row['probability'] > 0.60:
-                    direction = "上涨"
-                elif row['probability'] > 0.50:
-                    direction = "观望"
-                else:
-                    direction = "下跌"
+                for _, row in df_lgbm_sorted.iterrows():
+                    if row['probability'] > 0.60:
+                        direction = "上涨"
+                    elif row['probability'] > 0.50:
+                        direction = "观望"
+                    else:
+                        direction = "下跌"
 
-                gbdt_text += f"| {row['code']} | {row['name']} | {direction} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                    lgbm_text += f"| {row['code']} | {row['name']} | {direction} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
 
-            gbdt_text += f"\n**统计信息**：\n"
-            gbdt_text += f"- 高置信度上涨（probability > 0.60）: {len(df_gbdt[df_gbdt['probability'] > 0.60])} 只\n"
-            gbdt_text += f"- 中等置信度观望（0.50 < probability ≤ 0.60）: {len(df_gbdt[(df_gbdt['probability'] > 0.50) & (df_gbdt['probability'] <= 0.60)])} 只\n"
-            gbdt_text += f"- 预测下跌（probability ≤ 0.50）: {len(df_gbdt[df_gbdt['probability'] <= 0.50])} 只\n"
-
-            result['gbdt'] = gbdt_text
+                result['ensemble'] = lgbm_text
         
         return result
         
@@ -255,7 +266,7 @@ def extract_ml_predictions(filepath):
         print(f"❌ 提取ML预测失败: {e}")
         import traceback
         traceback.print_exc()
-        return {'lgbm': '', 'gbdt_lr': ''}
+        return {'ensemble': ''}
 
 
 def generate_html_email(content, date_str):
