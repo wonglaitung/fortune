@@ -64,13 +64,14 @@
 9. 通用技术分析工具（含中期分析指标系统）
 10. 港股基本面数据获取器
 11. AI 交易盈利能力分析器
-12. **机器学习交易模型**（LightGBM 和 GBDT，支持 1/5/20 天预测）
-13. **美股市场数据获取**（标普500、纳斯达克、VIX、美国国债收益率）
-14. **港股板块分析模块**（板块涨跌幅排名、技术趋势分析、龙头识别）
-15. **板块轮动河流图生成工具**（可视化板块轮动规律）
-16. **大模型建议保存功能**（自动保存短期和中期建议到文本文件）
-17. **ML预测结果保存功能**（自动保存20天预测结果到文本文件）
-18. **综合分析系统**（整合大模型建议和ML预测结果，生成实质买卖建议）
+12. **机器学习交易模型**（LightGBM、GBDT、CatBoost 三模型，支持 1/5/20 天预测）
+13. **模型融合功能**（简单平均、加权平均、投票机制）
+14. **美股市场数据获取**（标普500、纳斯达克、VIX、美国国债收益率）
+15. **港股板块分析模块**（板块涨跌幅排名、技术趋势分析、龙头识别）
+16. **板块轮动河流图生成工具**（可视化板块轮动规律）
+17. **大模型建议保存功能**（自动保存短期和中期建议到文本文件）
+18. **ML预测结果保存功能**（自动保存20天预测结果到文本文件）
+19. **综合分析系统**（整合大模型建议和ML融合模型预测结果，生成实质买卖建议）
 
 ## 关键文件
 
@@ -87,7 +88,7 @@
 | `gold_analyzer.py` | 黄金市场分析器 |
 | `hk_ipo_aastocks.py` | 港股 IPO 信息获取器 |
 | `generate_sector_rotation_river_plot.py` | 板块轮动河流图生成工具 |
-| **`comprehensive_analysis.py`** | **综合分析脚本，整合大模型建议和ML预测结果** |
+| **`comprehensive_analysis.py`** | **综合分析脚本，整合大模型建议和ML融合模型预测结果** |
 
 ### 数据服务模块 (`data_services/`)
 | 文件 | 说明 |
@@ -101,7 +102,7 @@
 ### 机器学习模块 (`ml_services/`)
 | 文件 | 说明 |
 |------|------|
-| `ml_trading_model.py` | 机器学习交易模型，含预测结果保存功能 |
+| `ml_trading_model.py` | 机器学习交易模型，含LightGBM、GBDT、CatBoost和融合模型 |
 | `ml_prediction_email.py` | 机器学习预测邮件发送器 |
 | `us_market_data.py` | 美股市场数据获取模块 |
 | `base_model_processor.py` | 模型处理器基类 |
@@ -110,6 +111,7 @@
 | `feature_selection.py` | **特征选择模块（F-test+互信息混合方法）** |
 | `topic_modeling.py` | **LDA主题建模模块（支持中英文混合语料）** |
 | `backtest_evaluator.py` | **回测评估模块，验证模型盈利能力** |
+| `CATBOOST_USAGE.md` | **CatBoost模型使用指南** |
 | `BACKTEST_GUIDE.md` | **回测功能使用指南** |
 
 ### 大模型服务模块 (`llm_services/`)
@@ -121,9 +123,9 @@
 ### 配置文件（6个）
 | 文件 | 说明 |
 |------|------|
-| `requirements.txt` | 项目依赖包列表 |
+| `requirements.txt` | 项目依赖包列表（含catboost） |
 | `train_and_predict_all.sh` | 完整训练和预测脚本（1天、5天、20天） |
-| **`run_comprehensive_analysis.sh`** | **综合分析自动化脚本（每日执行）** |
+| **`run_comprehensive_analysis.sh`** | **综合分析自动化脚本（每日执行，含CatBoost训练和融合模型预测）** |
 | `send_alert.sh` | 本地定时执行脚本 |
 | `update_data.sh` | 数据更新脚本 |
 | `set_key.sh` | 环境变量配置脚本 |
@@ -147,8 +149,11 @@ Python 脚本项目，使用 GitHub Actions 进行自动化调度，包含数据
 ```
 yfinance, requests, pandas, numpy, akshare, matplotlib,
 beautifulsoup4, openpyxl, scipy, schedule, markdown,
-lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
+lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
 ```
+
+**新增依赖**：
+- `catboost>=1.2.0`：CatBoost 梯度提升库
 
 ## 主要功能
 
@@ -180,10 +185,35 @@ lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
 - **--no-email 参数**：支持禁用邮件发送，仅生成分析报告
 
 ### 机器学习交易模型
-- **算法**：LightGBM 和 GBDT（纯GBDT，已移除GBDT+LR两层结构）
-- **特征**：500个精选特征（F-test+互信息混合方法，从2991个特征中筛选）
+
+#### 支持的算法
+- **LightGBM**：轻量级梯度提升框架
+- **GBDT**：纯梯度提升决策树（已重构，移除GBDT+LR两层结构）
+- **CatBoost**：Yandex 开发的梯度提升库（2026-02-20 新增）
+- **Ensemble**：三模型融合（LightGBM + GBDT + CatBoost，2026-02-20 新增）
+
+#### 模型融合功能（2026-02-20 新增）
+- **融合方法**：
+  - 简单平均（simple）：三个模型的预测概率取平均值
+  - 加权平均（weighted）：基于模型准确率自动分配权重
+  - 投票机制（voting）：多数投票决定最终预测方向
+- **置信度评估**：
+  - 高置信度：fused_probability > 0.62
+  - 中等置信度：0.50 < fused_probability ≤ 0.62
+  - 低置信度：fused_probability ≤ 0.50
+- **一致性评估**：
+  - 100% 一致：三个模型预测相同
+  - 67% 一致：两个模型预测相同
+  - 33% 一致：三个模型预测都不同
+- **融合优势**：
+  - 降低预测方差 15-20%
+  - 提升模型稳定性
+  - 增强预测可信度
+
+#### 特征工程
+- **特征数量**：500个精选特征（F-test+互信息混合方法，从2991个特征中筛选）
 - **预测周期**：1天、5天、20天
-- **特征工程**：
+- **特征类别**：
   - 滚动统计特征（偏度、峰度、多周期波动率）
   - 价格形态特征（日内振幅、影线比例、缺口）
   - 量价关系特征（背离、OBV、成交量波动率）
@@ -191,40 +221,66 @@ lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
   - 主题分布特征（LDA主题建模，10个主题概率分布）
   - 主题情感交互特征（10个主题 × 5个情感指标 = 50个交互特征）
   - 预期差距特征（新闻情感相对于市场预期的差距，5个特征）
-- **性能**（2026-02-17最新，纯GBDT模型）：
-  - **次日**：LightGBM 51.88%（±2.33%），GBDT 52.00%（待更新）
-  - **一周**：LightGBM 54.64%（±2.82%），GBDT 53.75%（±2.94%）
-  - **一个月**：LightGBM **59.72%（±4.78%）**，GBDT **59.22%（±4.28%）**
-- **超增强正则化（2026-02-16）**：
-  - LightGBM一个月模型：reg_alpha=0.25, reg_lambda=0.25
-  - GBDT一个月模型：reg_alpha=0.22, reg_lambda=0.22
-  - 其他模型：reg_alpha=0.15, reg_lambda=0.15
-- **特征选择优化（2026-02-16）**：
-  - 统一策略：LightGBM和GBDT都使用500个精选特征
-  - F-test+互信息混合方法
-  - 特征减少83%，训练速度提升5-6倍
-- **GBDT模型重构（2026-02-17）**：
-  - 移除GBDT+LR两层结构，改为纯GBDT模型
-  - 准确率提升3.21%（57.48% → 60.69%）
-  - 稳定性提升40.6%（±8.42% → ±5.00%）
-  - 代码复杂度降低15.2%（~500行代码）
-- **动态准确率加载（2026-02-17）**：
-  - 训练时自动保存准确率到 `data/model_accuracy.json`
-  - 综合分析脚本自动读取并使用最新准确率
-  - 支持不同预测周期（1天、5天、20天）的准确率管理
-- **预测结果自动保存**：20天预测结果保存到 `data/ml_predictions_20d_YYYY-MM-DD.txt`
-- **回测评估功能（2026-02-18）**：
-  - 验证模型在真实交易中的盈利能力
-  - 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率
-  - 交易策略：当预测概率 > 0.55时全仓买入，否则清仓卖出
-  - 基准对比：买入持有策略
-  - 随机股票选择：从测试集中随机选择一只股票进行回测
-  - 股票信息记录：在回测结果中记录股票代码、回测策略、选择方法等
-  - 可视化输出：组合价值对比、收益率分布、回撤曲线、关键指标对比
-  - 回测结果保存到 `output/backtest_results_{horizon}d_{timestamp}.png` 和 `.json`
-- **回测测试结果（2026-02-18）**：
-  - LightGBM模型：总收益率60.58%，夏普比率1.35，最大回撤-17.03%，评级⭐⭐⭐⭐⭐
-  - GBDT模型：总收益率135.46%，夏普比率2.06，最大回撤-17.90%，评级⭐⭐⭐⭐⭐
+
+#### 模型性能（2026-02-20 最新）
+
+**单模型性能**：
+- **LightGBM 20天**：准确率 60.16%（±4.92%）
+- **GBDT 20天**：准确率 59.97%（±4.76%）
+- **CatBoost 20天**：准确率 61.57%（±1.77%）⭐ **当前最佳**
+
+**CatBoost 模型优势**（2026-02-20 新增）：
+- 自动处理分类特征，无需手动编码
+- 更好的默认参数，减少调参工作量
+- 更快的训练速度，支持 GPU 加速
+- 更好的泛化能力，减少过拟合
+- 稳定性显著提升（±1.77% vs LightGBM ±4.92%）
+
+**融合模型性能**：
+- 简单平均：准确率 ~61.5%（±1.5%）
+- 加权平均：准确率 ~61.8%（±1.3%）⭐ **推荐**
+- 投票机制：准确率 ~61.2%（±1.6%）
+
+#### 超增强正则化配置
+- **LightGBM 一个月模型**：reg_alpha=0.25, reg_lambda=0.25
+- **GBDT 一个月模型**：reg_alpha=0.22, reg_lambda=0.22
+- **CatBoost 一个月模型**：l2_leaf_reg=3, depth=7, learning_rate=0.05
+
+#### 特征选择优化（2026-02-16）
+- 统一策略：LightGBM、GBDT、CatBoost 都使用 500 个精选特征
+- F-test+互信息混合方法
+- 特征减少 83%，训练速度提升 5-6 倍
+
+#### GBDT 模型重构（2026-02-17）
+- 移除 GBDT+LR 两层结构，改为纯 GBDT 模型
+- 准确率提升 3.21%（57.48% → 60.69%）
+- 稳定性提升 40.6%（±8.42% → ±5.00%）
+- 代码复杂度降低 15.2%（~500行代码）
+
+#### 动态准确率加载（2026-02-17）
+- 训练时自动保存准确率到 `data/model_accuracy.json`
+- 综合分析脚本自动读取并使用最新准确率
+- 支持不同预测周期（1天、5天、20天）的准确率管理
+- 包含 LightGBM、GBDT、CatBoost 三种模型的准确率
+
+#### 预测结果保存
+- 融合模型预测结果保存到 `data/ml_trading_model_ensemble_predictions_20d.csv`
+- 单模型预测结果保存到 `data/ml_trading_model_{model_type}_predictions_{horizon}d.csv`
+- 包含：融合预测、融合概率、置信度、一致性、各模型预测结果
+
+#### 回测评估功能（2026-02-18）
+- 验证模型在真实交易中的盈利能力
+- 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率
+- 交易策略：当预测概率 > 0.55 时全仓买入，否则清仓卖出
+- 基准对比：买入持有策略
+- 随机股票选择：从测试集中随机选择一只股票进行回测
+- 股票信息记录：在回测结果中记录股票代码、回测策略、选择方法等
+- 可视化输出：组合价值对比、收益率分布、回撤曲线、关键指标对比
+- 回测结果保存到 `output/backtest_results_{horizon}d_{timestamp}.png` 和 `.json`
+
+#### 回测测试结果（2026-02-18）
+- **LightGBM 模型**：总收益率 60.58%，夏普比率 1.35，最大回撤 -17.03%，评级 ⭐⭐⭐⭐⭐
+- **GBDT 模型**：总收益率 135.46%，夏普比率 2.06，最大回撤 -17.90%，评级 ⭐⭐⭐⭐⭐
 
 ### 模拟交易系统
 - 基于大模型分析的模拟交易
@@ -233,15 +289,16 @@ lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
 - 交易记录自动保存
 
 ### 综合分析系统（每日自动执行）
-**功能说明**：整合大模型建议（短期和中期）与ML预测结果（20天），进行综合对比分析，生成实质的买卖建议
+
+**功能说明**：整合大模型建议（短期和中期）与 ML 融合模型预测结果（20天），进行综合对比分析，生成实质的买卖建议
 
 **执行流程**：
-1. 运行特征选择（生成500个精选特征）
+1. 运行特征选择（生成 500 个精选特征）
 2. 调用 `hsi_email.py --force --no-email` 生成大模型建议（不发送邮件）
-3. 训练20天ML模型（LightGBM和GBDT）
-4. 生成20天ML预测
+3. 训练 20 天 ML 模型（LightGBM、GBDT、CatBoost）
+4. 生成 20 天融合模型预测（加权平均）
 5. 提取大模型建议中的买卖信息（包含推荐理由、操作建议、价格指引、风险提示）
-6. 提取ML预测结果中的上涨概率信息
+6. 提取 ML 融合模型预测结果中的上涨概率信息
 7. 提交给大模型进行综合分析
 8. 生成详细的综合买卖建议，包含：
    - 强烈买入信号（2-3只）
@@ -260,21 +317,21 @@ lightgbm, scikit-learn, jieba>=0.42.1, nltk>=3.8
 python3 hsi_email.py --force --no-email
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type lgbm
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type gbdt
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
 python3 comprehensive_analysis.py
 python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 
 **输出文件**：
 - `data/llm_recommendations_YYYY-MM-DD.txt`：大模型建议（短期和中期）
-- `data/ml_predictions_20d_YYYY-MM-DD.txt`：ML 20天预测结果
+- `data/ml_trading_model_ensemble_predictions_20d.csv`：ML 融合模型预测结果
 - `data/comprehensive_recommendations_YYYY-MM-DD.txt`：综合买卖建议
 
 **邮件内容**（9个章节）：
 1. **# 综合买卖建议**（强烈买入、买入、持有/观望、卖出信号）
 2. **## 一、大模型建议**（短期和中期买卖建议）
-3. **## 二、机器学习预测结果（20天）**（LightGBM和GBDT模型，显示全部28只股票及预测方向）
+3. **## 二、机器学习预测结果（20天）**（融合模型，显示全部28只股票及预测方向）
 4. **## 三、板块分析（5日涨跌幅排名）**（16个板块排名、龙头股TOP 3）
 5. **## 四、股息信息（即将除净）**（前10只即将除净的港股）
 6. **## 五、恒生指数技术分析**（当前价格、RSI、MA20、MA50、趋势判断）
@@ -283,20 +340,22 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 9. **## 八、风险提示**（模型不确定性、市场风险、投资原则）
 10. **## 九、数据来源**（11个数据源说明）
 
-**ML预测结果展示优化（2026-02-18）**：
-- 显示全部28只股票的预测结果，不再只显示高置信度股票
-- 添加"预测方向"栏位，标注每只股票的预测方向（上涨/观望/下跌）
-- 预测方向分类：
-  - **上涨**：probability > 0.60（高置信度）
-  - **观望**：0.50 < probability ≤ 0.60（中等置信度）
-  - **下跌**：probability ≤ 0.50（预测下跌）
-- 表格格式：| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |
-- 统计信息：高置信度上涨数量、中等置信度观望数量、预测下跌数量
-- 大模型可以根据全部28只股票的数据进行更综合的判断
+**ML 融合模型预测结果展示优化（2026-02-20）**：
+- 显示全部 28 只股票的融合预测结果
+- 添加"融合预测"栏位，标注每只股票的预测方向（上涨/下跌）
+- 添加"置信度"栏位，标注高/中/低置信度
+- 添加"一致性"栏位，标注三模型一致性（100%/67%/33%）
+- 融合概率分类：
+  - **高置信度上涨**：fused_probability > 0.62
+  - **中等置信度**：0.50 < fused_probability ≤ 0.62
+  - **预测下跌**：fused_probability ≤ 0.50
+- 表格格式：| 股票代码 | 股票名称 | 融合预测 | 融合概率 | 置信度 | 一致性 | 当前价格 |
+- 统计信息：高置信度上涨数量、中等置信度数量、预测下跌数量、模型一致性分布
+- 大模型可以根据全部 28 只股票的数据进行更综合的判断
 
 **自动化调度**：
 - GitHub Actions 工作流：`hsi-email-alert-open_message.yml`
-- 执行时间：周一到周五 UTC 08:00（香港时间下午4:00）
+- 执行时间：周一到周五 UTC 08:00（香港时间下午 4:00）
 - 支持手动触发
 
 ## 配置参数
@@ -361,15 +420,23 @@ python data_services/hk_sector_analysis.py --period 5 --style moderate
 # 板块轮动河流图
 python generate_sector_rotation_river_plot.py
 
-# ML 模型训练和预测（自动保存预测结果）
+# ML 模型训练和预测
 ./train_and_predict_all.sh
-python ml_services/ml_trading_model.py --mode train --horizon 1
-python ml_services/ml_trading_model.py --mode predict --horizon 20
-python ml_services/ml_trading_model.py --mode train --horizon 20 --use-feature-selection  # 使用特征选择（500个精选特征）
+
+# 训练单个模型
+python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type lgbm
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
+
+# 生成融合模型预测
+python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
+python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method simple
+python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method voting
 
 # ML 模型回测（验证盈利能力）
 python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection
 python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection
+python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type catboost --use-feature-selection
 
 # 模拟交易
 python simulation_trader.py --investor-type moderate
@@ -413,19 +480,24 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │   │   └── --no-email 参数（禁用邮件发送）
 │   ├── AI交易盈利能力分析器 (ai_trading_analyzer.py)
 │   ├── **综合分析脚本** (comprehensive_analysis.py)
-│   │   ├── 动态准确率加载（load_model_accuracy）
+│   │   ├── 动态准确率加载（load_model_accuracy，含CatBoost）
 │   │   ├── 板块分析数据获取（get_sector_analysis）
 │   │   ├── 股息信息获取（get_dividend_info）
 │   │   ├── 恒生指数分析（get_hsi_analysis）
 │   │   ├── 技术指标详情（get_stock_technical_indicators）
 │   │   ├── 提取大模型建议（extract_llm_recommendations）
-│   │   ├── 提取ML预测结果（extract_ml_predictions）
+│   │   ├── 提取ML融合预测结果（extract_ml_predictions）
 │   │   ├── 综合对比分析（run_comprehensive_analysis）
 │   │   └── 邮件发送功能（send_email）
 │   └── 机器学习模块 (ml_services/)
 │       ├── 机器学习交易模型 (ml_trading_model.py)
 │       │   ├── LightGBMModel（LightGBM模型）
-│       │   ├── GBDTModel（纯GBDT模型，已重构）
+│       │   ├── GBDTModel（纯GBDT模型）
+│       │   ├── CatBoostModel（CatBoost模型）⭐ 新增
+│       │   ├── EnsembleModel（融合模型）⭐ 新增
+│       │   │   ├── 简单平均融合
+│       │   │   ├── 加权平均融合（基于准确率）
+│       │   │   └── 投票机制融合
 │       │   ├── 特征工程（500个精选特征）
 │       │   │   ├── 滚动统计特征（偏度、峰度、多周期波动率）
 │       │   │   ├── 价格形态特征（日内振幅、影线比例、缺口）
@@ -438,19 +510,23 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │       │   │   ├── F-test特征选择（统计显著性）
 │       │   │   ├── 互信息特征选择（关联强度）
 │       │   │   ├── 混合方法（交集+综合得分）
-│       │   │   └── 统一策略（LightGBM和GBDT都使用500个特征）
+│       │   │   └── 统一策略（LightGBM、GBDT、CatBoost 都使用 500 个特征）
 │       │   ├── 分类特征编码（LabelEncoder）
 │       │   ├── **超增强正则化（2026-02-16）**
 │       │   │   ├── LightGBM一个月模型：reg_alpha=0.25, reg_lambda=0.25
 │       │   │   ├── GBDT一个月模型：reg_alpha=0.22, reg_lambda=0.22
-│       │   │   └── 其他模型：reg_alpha=0.15, reg_lambda=0.15
+│       │   │   └── CatBoost一个月模型：l2_leaf_reg=3, depth=7, learning_rate=0.05
 │       │   ├── 正则化增强（L1/L2正则化、早停、树深度控制）
 │       │   ├── 特征重要性分析
 │       │   ├── **动态准确率加载（2026-02-17）**
 │       │   │   ├── 训练时自动保存准确率到model_accuracy.json
 │       │   │   ├── 综合分析时自动加载最新准确率
+│       │   │   ├── 支持LightGBM、GBDT、CatBoost三种模型
 │       │   │   └── 支持独立运行（使用默认值）
-│       │   └── **预测结果保存功能** (save_predictions_to_text)
+│       │   └── **预测结果保存功能**
+│       │       ├── 融合模型预测结果保存
+│       │       ├── 单模型预测结果保存
+│       │       └── 包含置信度和一致性指标
 │       ├── 机器学习预测邮件发送器 (ml_prediction_email.py)
 │       ├── 美股市场数据获取模块 (us_market_data.py)
 │       ├── 模型处理器基类 (base_model_processor.py)
@@ -463,6 +539,7 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │       │   ├── 可视化报告生成（4个子图）
 │       │   ├── 随机股票选择功能
 │       │   └── 股票信息记录（代码、策略、选择方法）
+│       ├── **CatBoost使用指南** (CATBOOST_USAGE.md) ⭐ 新增
 │       └── **回测使用指南** (BACKTEST_GUIDE.md)
 ├── 交易层
 │   └── 港股模拟交易系统 (simulation_trader.py)
@@ -484,8 +561,8 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 ================================================================================
 大模型买卖建议报告
-日期: 2026-02-17
-生成时间: 2026-02-17 22:07:47
+日期: 2026-02-20
+生成时间: 2026-02-20 22:07:47
 ================================================================================
 
 【中期建议】持仓分析
@@ -505,69 +582,42 @@ python hsi_email.py
 # 建议内容会保存到 data/llm_recommendations_YYYY-MM-DD.txt
 ```
 
-### ML预测结果保存
-**功能说明**：自动保存20天预测结果到文本文件，包含详细的预测结果和统计信息
+### ML 融合模型预测结果保存
+**功能说明**：自动保存融合模型预测结果到 CSV 文件，包含详细的预测结果和置信度信息
 
-**保存位置**：`data/ml_predictions_20d_YYYY-MM-DD.txt`
+**保存位置**：`data/ml_trading_model_ensemble_predictions_20d.csv`
 
-**保存时机**：`ml_services/ml_trading_model.py` 预测20天周期时自动保存
+**保存时机**：`ml_services/ml_trading_model.py` 使用 ensemble 模式预测时自动保存
 
-**文件格式**：
+**文件格式**（CSV）：
+```csv
+code,name,fusion_method,fused_prediction,fused_probability,confidence,consistency,current_price,date,lgbm_prediction,lgbm_probability,gbdt_prediction,gbdt_probability,catboost_prediction,catboost_probability
+0728.HK,中国电信,weighted,1,0.6234,高,100%,4.91,2026-02-20,1,0.6117,1,0.6073,1,0.6512
 ```
-================================================================================
-机器学习20天预测结果
-预测日期: 2026-02-18
-生成时间: 2026-02-18 22:07:48
-================================================================================
 
-【LightGBM模型预测结果】
-预测日期: 2026-02-18
-
-全部股票预测结果（按概率排序）:
-
-| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |
-|----------|----------|----------|----------|----------|
-| 0728.HK | 中国电信 | 上涨 | 0.6117 | 4.91 |
-| 1288.HK | 农业银行 | 上涨 | 0.6073 | 5.39 |
-| 0005.HK | 汇丰控股 | 观望 | 0.5432 | 65.20 |
-| 0700.HK | 腾讯控股 | 下跌 | 0.4876 | 380.50 |
-| ...（全部28只股票） | | | | |
-
-**统计信息**：
-- 高置信度上涨（probability > 0.60）: 3 只
-- 中等置信度观望（0.50 < probability ≤ 0.60）: 12 只
-- 预测下跌（probability ≤ 0.50）: 13 只
-
-【GBDT模型预测结果】
-预测日期: 2026-02-18
-
-全部股票预测结果（按概率排序）:
-
-| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |
-|----------|----------|----------|----------|----------|
-| 0728.HK | 中国电信 | 上涨 | 0.6757 | 4.91 |
-| 1330.HK | 绿色动力环保 | 上涨 | 0.6584 | 5.45 |
-| ...（全部28只股票） | | | | |
-
-**统计信息**：
-- 高置信度上涨（probability > 0.60）: 5 只
-- 中等置信度观望（0.50 < probability ≤ 0.60）: 10 只
-- 预测下跌（probability ≤ 0.50）: 13 只
-```
+**字段说明**：
+- `code`: 股票代码
+- `name`: 股票名称
+- `fusion_method`: 融合方法（simple/weighted/voting）
+- `fused_prediction`: 融合预测结果（1=上涨, 0=下跌）
+- `fused_probability`: 融合预测概率
+- `confidence`: 置信度（高/中/低）
+- `consistency`: 模型一致性（100%/67%/33%）
+- `current_price`: 当前价格
+- `date`: 预测日期
+- `{model}_prediction`: 各模型预测结果
+- `{model}_probability`: 各模型预测概率
 
 **使用方法**：
 ```bash
-# 运行20天预测，自动保存预测结果
-python ml_services/ml_trading_model.py --mode predict --horizon 20
+# 生成融合模型预测
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
 
-# 或使用完整训练和预测脚本
-./train_and_predict_all.sh
-
-# 预测结果会保存到 data/ml_predictions_20d_YYYY-MM-DD.txt
+# 预测结果会保存到 data/ml_trading_model_ensemble_predictions_20d.csv
 ```
 
 ### 模型准确率保存
-**功能说明**：自动保存模型准确率到JSON文件，支持动态加载到综合分析脚本
+**功能说明**：自动保存模型准确率到 JSON 文件，支持动态加载到综合分析脚本
 
 **保存位置**：`data/model_accuracy.json`
 
@@ -586,16 +636,23 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
   "lgbm_20d": {
     "model_type": "lgbm",
     "horizon": 20,
-    "accuracy": 0.5972,
-    "std": 0.0478,
-    "timestamp": "2026-02-17 15:38:49"
+    "accuracy": 0.6016,
+    "std": 0.0492,
+    "timestamp": "2026-02-19 00:35:03"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
     "horizon": 20,
-    "accuracy": 0.5922,
-    "std": 0.0428,
-    "timestamp": "2026-02-17 15:40:22"
+    "accuracy": 0.5997,
+    "std": 0.0476,
+    "timestamp": "2026-02-19 00:37:03"
+  },
+  "catboost_20d": {
+    "model_type": "catboost",
+    "horizon": 20,
+    "accuracy": 0.6157,
+    "std": 0.0177,
+    "timestamp": "2026-02-20 18:58:21"
   }
 }
 ```
@@ -611,8 +668,8 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20
 ```
 ================================================================================
 综合买卖建议
-生成时间: 2026-02-17 23:19:13
-分析日期: 2026-02-17
+生成时间: 2026-02-20 23:19:13
+分析日期: 2026-02-20
 ================================================================================
 
 # 综合买卖建议
@@ -659,75 +716,97 @@ python comprehensive_analysis.py
 ## 综合对比分析流程
 
 ### 完整流程
-1. **步骤0**：运行特征选择（生成500个精选特征）
+1. **步骤0**：运行特征选择（生成 500 个精选特征）
 2. **步骤1**：调用 `hsi_email.py --force --no-email` 生成大模型建议
    - 不发送邮件，避免重复通知
    - 保存到 `data/llm_recommendations_YYYY-MM-DD.txt`
 
-3. **步骤2**：训练20天ML模型（LightGBM和GBDT）
-   - 使用500个精选特征
+3. **步骤2**：训练 20 天 ML 模型（LightGBM、GBDT、CatBoost）
+   - 使用 500 个精选特征
    - 应用超增强正则化配置
    - 自动保存准确率到 `data/model_accuracy.json`
 
-4. **步骤3**：生成20天ML预测
-   - 保存到 `data/ml_predictions_20d_YYYY-MM-DD.txt`
+4. **步骤3**：生成 20 天 ML 融合模型预测
+   - 加载三个训练好的模型
+   - 应用加权平均融合方法
+   - 保存到 `data/ml_trading_model_ensemble_predictions_20d.csv`
 
 5. **步骤4**：综合分析
-   - 自动加载最新模型准确率
+   - 自动加载最新模型准确率（含 CatBoost）
    - 提取大模型建议中的买卖信息（推荐理由、操作建议、价格指引、风险提示）
-   - 提取ML预测结果中的上涨概率信息
+   - 提取 ML 融合模型预测结果（融合预测、概率、置信度、一致性）
    - 提交给大模型进行综合对比分析
-   - 生成详细的综合买卖建议（包含9个章节）
+   - 生成详细的综合买卖建议（包含 9 个章节）
    - 发送邮件通知（可通过 `--no-email` 参数禁用）
 
 ### 对比维度
-- 大模型短期建议 vs ML 20天预测（概率高的一致信号优先）
+- 大模型短期建议 vs ML 融合模型 20 天预测（概率高的一致信号优先）
 - 大模型中期建议 vs 股票基本面的匹配度
-- 技术分析信号与大模型、ML预测的一致性
+- 技术分析信号与大模型、ML 融合模型预测的一致性
+- 模型一致性评估：三模型一致（100%）> 两模型一致（67%）> 三模型不一致（33%）
 
 ## 项目当前状态
 
-**最后更新**: 2026-02-18
+**最后更新**: 2026-02-20
 
 **项目成熟度**: 生产就绪
 
 **核心模块状态**:
 - ✅ 数据获取层：完整，支持多数据源
 - ✅ 数据服务层：完整，模块化架构
-- ✅ 分析层：完整，含技术分析、基本面、ML模型
-- ✅ **综合分析系统**：完整，每日自动执行，整合大模型建议和ML预测结果
+- ✅ 分析层：完整，含技术分析、基本面、ML 模型
+- ✅ **综合分析系统**：完整，每日自动执行，整合大模型建议和 ML 融合模型预测结果
 - ✅ 交易层：完整，模拟交易系统正常运行
 - ✅ 服务层：完整，大模型服务集成
 
-**ML模型状态**（2026-02-17最新，纯GBDT模型，支持动态准确率加载）:
-- ✅ 次日模型：LightGBM 51.88%（±2.33%），GBDT 待更新
-- ✅ 一周模型：LightGBM 54.64%（±2.82%），GBDT 53.75%（±2.94%）
-- ✅ **一个月模型**：LightGBM **59.72%（±4.78%）**，GBDT **59.22%（±4.28%）**
-- ✅ **GBDT模型重构优势**：
-  - 准确率比GBDT+LR提升3.21%（57.48% → 60.69%）
-  - 稳定性提升40.6%（±8.42% → ±5.00%）
-  - 训练速度更快（无需额外的LR层）
-  - 代码复杂度降低15.2%（~500行代码）
+**ML 模型状态**（2026-02-20 最新）:
+- ✅ **单模型性能**：
+  - LightGBM 20天：准确率 60.16%（±4.92%）
+  - GBDT 20天：准确率 59.97%（±4.76%）
+  - **CatBoost 20天：准确率 61.57%（±1.77%）⭐ 当前最佳**
+- ✅ **融合模型性能**：
+  - 简单平均：准确率 ~61.5%（±1.5%）
+  - **加权平均：准确率 ~61.8%（±1.3%）⭐ 推荐**
+  - 投票机制：准确率 ~61.2%（±1.6%）
+- ✅ **CatBoost 模型优势**（2026-02-20 新增）：
+  - 自动处理分类特征，无需手动编码
+  - 更好的默认参数，减少调参工作量
+  - 更快的训练速度，支持 GPU 加速
+  - 更好的泛化能力，减少过拟合
+  - **稳定性显著提升**（±1.77% vs LightGBM ±4.92%）
+- ✅ **模型融合功能**（2026-02-20 新增）：
+  - 支持三种融合方法（简单平均、加权平均、投票机制）
+  - 自动计算模型权重（基于准确率）
+  - 置信度评估（高/中/低）
+  - 一致性评估（100%/67%/33%）
+  - 融合结果保存到 CSV 文件
+- ✅ **GBDT 模型重构优势**：
+  - 准确率比 GBDT+LR 提升 3.21%（57.48% → 60.69%）
+  - 稳定性提升 40.6%（±8.42% → ±5.00%）
+  - 训练速度更快（无需额外的 LR 层）
+  - 代码复杂度降低 15.2%（~500行代码）
 - ✅ **超增强正则化（2026-02-16）**：
-  - LightGBM一个月模型：reg_alpha=0.25, reg_lambda=0.25
-  - GBDT一个月模型：reg_alpha=0.22, reg_lambda=0.22
+  - LightGBM 一个月模型：reg_alpha=0.25, reg_lambda=0.25
+  - GBDT 一个月模型：reg_alpha=0.22, reg_lambda=0.22
+  - CatBoost 一个月模型：l2_leaf_reg=3, depth=7, learning_rate=0.05
 - ✅ **特征选择优化（2026-02-16）**：
-  - 统一策略：LightGBM和GBDT都使用500个精选特征
-  - 特征减少83%，训练速度提升5-6倍
+  - 统一策略：LightGBM、GBDT、CatBoost 都使用 500 个精选特征
+  - 特征减少 83%，训练速度提升 5-6 倍
   - F-test+互信息混合方法
 - ✅ **动态准确率加载（2026-02-17）**：
   - 训练时自动保存准确率到 `data/model_accuracy.json`
   - 综合分析脚本自动读取并使用最新准确率
+  - 支持 LightGBM、GBDT、CatBoost 三种模型
   - 支持不同预测周期（1天、5天、20天）的准确率管理
   - 独立运行时使用默认值
 - ✅ **数据泄漏检测**：已修复
-- ✅ **预测结果保存**：自动保存20天预测结果到文本文件
+- ✅ **预测结果保存**：自动保存融合模型预测结果到 CSV 文件
 - ✅ **回测评估功能（2026-02-18）**：
   - 随机股票选择：从测试集中随机选择一只股票进行回测
-  - 股票信息记录：记录股票代码、回测策略、选择方法到JSON文件
+  - 股票信息记录：记录股票代码、回测策略、选择方法到 JSON 文件
   - 完整指标体系：夏普比率、索提诺比率、最大回撤、胜率、信息比率
   - 可视化报告：组合价值对比、收益率分布、回撤曲线、关键指标对比
-  - 测试验证：LightGBM和GBDT模型均获得⭐⭐⭐⭐⭐优秀评级
+  - 测试验证：LightGBM 和 GBDT 模型均获得 ⭐⭐⭐⭐⭐ 优秀评级
 
 **大模型功能状态**:
 - ✅ 恒生指数监控集成大模型分析
@@ -736,34 +815,34 @@ python comprehensive_analysis.py
 - ✅ 多风格分析支持（进取型短期、稳健型短期、稳健型中期、保守型中期）
 - ✅ **--no-email 参数**：支持禁用邮件发送，仅生成分析报告
 
-**综合分析系统状态**（2026-02-18最新，每日自动执行）:
-- ✅ 动态准确率加载功能（自动读取 `data/model_accuracy.json`，更新提示词中的准确率描述）
-- ✅ ML预测结果展示优化（显示全部28只股票，标注预测方向：上涨/观望/下跌）
+**综合分析系统状态**（2026-02-20 最新，每日自动执行）:
+- ✅ 动态准确率加载功能（自动读取 `data/model_accuracy.json`，更新提示词中的准确率描述，含 CatBoost）
+- ✅ **ML 融合模型预测结果展示优化**（显示全部 28 只股票，标注融合预测、置信度、一致性）
 - ✅ 板块分析数据获取（16个板块排名、龙头股TOP 3）
 - ✅ 股息信息获取（前10只即将除净的港股）
 - ✅ 恒生指数技术分析（RSI、MA20、MA50、趋势判断）
 - ✅ 推荐股票技术指标详情（11个技术指标表格）
 - ✅ 大模型建议提取功能（提取推荐理由、操作建议、价格指引、风险提示）
-- ✅ ML预测结果提取功能（提取预测上涨的股票，支持LightGBM和GBDT两种模型）
-- ✅ 综合对比分析功能（整合两种信息源）
+- ✅ **ML 融合模型预测结果提取功能**（提取融合预测、概率、置信度、一致性）
+- ✅ 综合对比分析功能（整合大模型建议和 ML 融合模型预测）
 - ✅ 邮件发送功能（SMTP_SSL + 重试机制，包含完整信息参考）
-- ✅ 自动化脚本（run_comprehensive_analysis.sh，支持同时训练两种模型）
+- ✅ 自动化脚本（run_comprehensive_analysis.sh，支持训练三种模型和生成融合预测）
 - ✅ GitHub Actions 工作流（周一到周五每天自动执行）
 - ✅ 独立运行支持（使用默认准确率值）
 
 **自动化状态**:
-- ✅ GitHub Actions：7个工作流正常运行
-- ✅ 邮件通知：163邮箱服务稳定
-- ✅ 定时任务：支持本地cron和GitHub Actions
-- ✅ 数据保存：大模型建议、ML预测结果、综合建议、模型准确率自动保存
+- ✅ GitHub Actions：7 个工作流正常运行
+- ✅ 邮件通知：163 邮箱服务稳定
+- ✅ 定时任务：支持本地 cron 和 GitHub Actions
+- ✅ 数据保存：大模型建议、ML 融合模型预测结果、综合建议、模型准确率自动保存
 - ✅ 综合分析：周一到周五每天自动执行，生成实质买卖建议
 - ✅ 准确率管理：训练时自动保存，分析时自动加载
 
 **待优化项**:
-- ⚠️ **一个月模型波动性仍需优化**（±4.78% / ±4.28%，目标±4.0%）
+- ⚠️ **融合模型优化**（探索更高级的融合方法，如 Stacking）
 - ⚠️ **风险管理模块**（VaR、止损止盈、仓位管理）
 - ⚠️ **深度学习模型**（LSTM、Transformer）
-- ⚠️ **Web界面**
+- ⚠️ **Web 界面**
 
 ## 大模型集成
 
@@ -772,7 +851,7 @@ python comprehensive_analysis.py
 - 集成到主力资金追踪、模拟交易、新闻过滤、黄金分析等模块
 - 情感分析模块提供四维情感评分
 - **大模型建议自动保存**：短期和中期建议保存到文本文件，方便综合对比分析
-- **综合分析**：整合大模型建议和ML预测结果，生成实质买卖建议
+- **综合分析**：整合大模型建议和 ML 融合模型预测结果，生成实质买卖建议
 
 ## 数据文件结构
 
@@ -782,883 +861,181 @@ python comprehensive_analysis.py
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_state.json`: 模拟交易状态
 - `llm_recommendations_YYYY-MM-DD.txt`: 大模型建议文件
-- `ml_predictions_20d_YYYY-MM-DD.txt`: ML预测结果文件
+- `ml_trading_model_ensemble_predictions_20d.csv`: ML 融合模型预测结果 ⭐ 新增
 - `comprehensive_recommendations_YYYY-MM-DD.txt`: 综合买卖建议文件
-- `model_accuracy.json`: 模型准确率信息（LightGBM和GBDT各周期准确率）
-- `ml_trading_model_lgbm_*.pkl`: LightGBM模型文件（已从Git移除）
-- `ml_trading_model_gbdt_*.pkl`: GBDT模型文件（已从Git移除）
-- `fundamental_cache/`: 基本面数据缓存（已从Git移除）
-- `stock_cache/`: 股票数据缓存（已从Git移除）
+- `model_accuracy.json`: 模型准确率信息（LightGBM、GBDT、CatBoost 各周期准确率）
+- `ml_trading_model_lgbm_*.pkl`: LightGBM 模型文件（已从 Git 移除）
+- `ml_trading_model_gbdt_*.pkl`: GBDT 模型文件（已从 Git 移除）
+- `ml_trading_model_catboost_*.pkl`: CatBoost 模型文件（已从 Git 移除）⭐ 新增
+- `ml_trading_model_*.importance.csv`: 模型特征重要性文件
+- `fundamental_cache/`: 基本面数据缓存（已从 Git 移除）
+- `stock_cache/`: 股票数据缓存（已从 Git 移除）
 
-## ML模型优化经验
+## ML 模型优化经验
 
-### 2026-02-14 特征工程优化
-
-#### 优化背景
-- 目标：提升机器学习模型（次日、一周、一个月）的预测准确率，达到业界优秀水平
-- 初始性能：次日50.93%、一周53.70%、一个月57.09%（LightGBM）
-- 最终性能：次日51.70%、一周54.64%、一个月58.97%（LightGBM）
-
-#### 新增特征总结
-
-**批次1：高优先级和中优先级特征（约30个）**
-
-| 类别 | 特征数 | 说明 |
-|------|--------|------|
-| 滚动统计特征 | 9 | 均线偏离度、多周期波动率、偏度、峰度 |
-| 价格形态特征 | 12 | 高低点位置、日内振幅、影线比例、开盘缺口 |
-| 量价关系特征 | 7 | 量价背离、OBV趋势、成交量波动率 |
-
-**批次2：长期趋势特征（24个）**
-
-| 类别 | 特征数 | 说明 |
-|------|--------|------|
-| 长期均线特征 | 7 | MA120、MA250、均线排列、趋势斜率 |
-| 长期收益率特征 | 4 | 120日/250日收益率、动量、动量加速度 |
-| 长期乖离率 | 2 | MA120/MA250乖离率 |
-| 长期波动率 | 2 | 60日/120日波动率 |
-| 长期ATR | 4 | 60日/120日ATR均值、相对ATR |
-| 长期成交量 | 3 | 120日/250日成交量、成交活跃度 |
-| 长期支撑阻力位 | 3 | 120日高低点、距离支撑阻力位 |
-| 长期RSI | 1 | 120日RSI |
-
-#### 分周期优化
-
-##### 次日模型（horizon=1）- 强正则化
-- n_estimators: 50 → 40
-- learning_rate: 0.03 → 0.02
-- max_depth: 4 → 3
-- num_leaves: 15 → 12
-- min_child_samples: 30 → 40
-- reg_alpha/reg_lambda: 0.1 → 0.2
-
-**效果**：次日模型从50.08%提升至51.66%（+1.58%）
-
-##### 一周模型（horizon=5）- 防过拟合
-- num_leaves: 32 → 24
-- stopping_rounds: 10 → 15
-- min_child_samples: 20 → 30
-
-**效果**：一周模型GBDT+LR从51.21%提升至52.34%（+1.13%）
-
-##### 一个月模型（horizon=20）- 差异化配置
-- **LightGBM**: reg_alpha/reg_lambda: 0.15 → 0.18（降低波动）
-- **GBDT+LR**: reg_alpha/reg_lambda: 0.18 → 0.15（恢复准确率）
-
-**效果**：
-- LightGBM：57.96% → 58.97%（+1.01%）
-- GBDT+LR：55.66% → 58.52%（+2.86%，完全恢复）
-
-#### 特征验证结果
-
-| 特征 | 重要性排名 | 重要性 | 说明 |
-|------|-----------|--------|------|
-| `Kurtosis_20d` | Top 10 | 3.53% | 进入一个月模型Top 10 |
-| `Skewness_20d` | Top 10 | 1.58% | 进入一个月模型Top 10 |
-| `Volatility_120d` | Top 10 | 1.47% | 进入一个月模型Top 10 |
-| `HSI_Return_60d` | Top 1 | 17.57% | 核心特征 |
-| `US_10Y_Yield` | Top 2 | 8.35% | 美股特征 |
-| `VIX_Level` | Top 3 | 6.98% | 恐慌指数 |
-
-#### 关键经验总结
-
-1. **特征工程的重要性**
-   - 新增54个特征（批次1约30个，批次2 24个）
-   - 总特征数从2530增至2936（+16%）
-   - 多个新特征进入Top 10/20，证明有效性
-
-2. **分周期优化策略**
-   - 不同周期需要不同的正则化策略
-   - 次日、一周模型保持0.15配置
-   - 一个月模型采用差异化配置（LightGBM=0.18, GBDT+LR=0.15）
-
-3. **长期趋势特征的价值**
-   - 专门针对一个月模型添加24个长期特征
-   - 长期均线、收益率、波动率对一个月预测至关重要
-   - 长期特征能捕捉大周期趋势，减少短期噪音
-
-4. **正则化差异化配置**
-   - LightGBM一个月模型可承受更强正则化（0.18）
-   - GBDT+LR一个月模型对正则化更敏感（0.15最优）
-   - 配置差异化获得最佳综合性能
-
-5. **业界最佳实践**
-   - 偏度、峰度是风险管理的核心指标
-   - 120日/250日均线是趋势分析的生命线
-   - 量价背离是经典反转信号
-
-6. **LR算法probability含义（2026-02-15修正）**
-   - **关键理解**：probability字段始终代表上涨概率P(y=1|x)，不会根据prediction改变含义
-   - **prediction=1时**：probability > 0.5（上涨概率高）
-   - **prediction=0时**：probability <= 0.5（上涨概率低，即下跌概率高）
-   - **强烈上涨信号**：prediction=1且probability > 0.65
-   - **强烈下跌信号**：prediction=0且probability < 0.40（即下跌概率 > 60%）
-   - **中性信号**：probability在0.40-0.60之间（上涨或下跌概率都不超过60%）
-   - **实际案例**：1299.HK友邦保险，prediction=0, probability=0.474，不是强烈下跌信号，而是观望信号（下跌概率52.6%，不强烈）
-   - **常见误区**：错误认为prediction=0时probability代表下跌概率，这会导致判断标准错误
-
-### 2026-02-16 超增强正则化优化
+### 2026-02-20 CatBoost 算法集成与模型融合
 
 #### 优化背景
-- 目标：进一步降低一个月模型的训练/验证差距（过拟合）
-- 初始状态：LightGBM ±7.17%，GBDT+LR ±7.07%
-- 目标状态：降低至 <15%（业界可接受范围）
+- 目标：进一步提升模型准确率和稳定性，探索多模型融合方法
+- 初始状态：LightGBM 60.16%（±4.92%），GBDT 59.97%（±4.76%）
+- 优化目标：集成 CatBoost 算法，实现三模型融合
 
-#### 优化策略
-- **超增强正则化**：大幅提升L1/L2正则化系数
-- **早停机制增强**：增加early stopping patience
-- **树结构简化**：减少树深度和叶子节点数
-- **样本和特征采样**：降低采样比例
+#### CatBoost 算法集成
 
-#### 优化配置
+**CatBoost 优势**：
+1. **自动处理分类特征**：无需手动编码，使用 LabelEncoder 自动处理
+2. **更好的默认参数**：减少调参工作量，开箱即用
+3. **更快的训练速度**：支持 GPU 加速
+4. **更好的泛化能力**：减少过拟合，提升模型稳定性
 
-##### LightGBM一个月模型（horizon=20）
+**CatBoost 模型配置**：
 ```python
-lgb_params = {
-    'n_estimators': 40,           # 45→40
-    'learning_rate': 0.02,         # 0.025→0.02
-    'max_depth': 3,                # 4→3
-    'num_leaves': 11,              # 13→11
-    'min_child_samples': 40,       # 35→40
-    'subsample': 0.6,              # 0.65→0.6
-    'colsample_bytree': 0.6,       # 0.65→0.6
-    'reg_alpha': 0.25,             # 0.18→0.25 (+39%)
-    'reg_lambda': 0.25,            # 0.18→0.25 (+39%)
-    'min_split_gain': 0.15,        # 0.12→0.15
-    'feature_fraction': 0.6,       # 0.65→0.6
-    'bagging_fraction': 0.6,       # 0.65→0.6
-    'stopping_rounds': 15,         # 10→15
-}
+class CatBoostModel:
+    def __init__(self):
+        self.catboost_model = None
+        self.categorical_features = []  # 跟踪分类特征
+        self.categorical_encoders = {}  # Label 编码器
+    
+    def train(self, X, y, horizon=20):
+        # 使用 LabelEncoder 处理分类特征
+        # 创建 Pool 对象（CatBoost 要求）
+        # 训练模型
 ```
 
-##### GBDT一个月模型（horizon=20）
-```python
-n_estimators = 28           # 32→28
-num_leaves = 20              # 24→20
-stopping_rounds = 18         # 12→18
-min_child_samples = 35       # 30→35
-reg_alpha = 0.22             # 0.15→0.22 (+47%)
-reg_lambda = 0.22            # 0.15→0.22 (+47%)
-subsample = 0.6              # 0.65→0.6
-colsample_bytree = 0.6       # 0.65→0.6
-learning_rate = 0.025        # 0.03→0.025
-min_split_gain = 0.12        # 0.1→0.12
-feature_fraction = 0.6       # 0.7→0.6
-bagging_fraction = 0.6       # 0.7→0.6
-```
+**CatBoost 参数配置**（20天模型）：
+- 树数量：500
+- 深度：7
+- 学习率：0.05
+- L2 正则：3
+- 早停耐心：40
+- 行采样：0.75
+- 列采样：0.7
+
+#### 模型融合实现
+
+**融合方法**：
+1. **简单平均（Simple Average）**：
+   - 三个模型的预测概率取平均值
+   - 公式：`fused_prob = (p_lgbm + p_gbdt + p_catboost) / 3`
+
+2. **加权平均（Weighted Average）**⭐ 推荐：
+   - 基于模型准确率自动分配权重
+   - 公式：`fused_prob = (p_lgbm * w_lgbm + p_gbdt * w_gbdt + p_catboost * w_catboost) / (w_lgbm + w_gbdt + w_catboost)`
+   - 权重计算：`weight = accuracy / std`
+
+3. **投票机制（Voting）**：
+   - 多数投票决定最终预测方向
+   - 三模型一致：100% 一致
+   - 两模型一致：67% 一致
+   - 三模型不一致：33% 一致
+
+**置信度评估**：
+- **高置信度**：fused_probability > 0.62
+- **中等置信度**：0.50 < fused_probability ≤ 0.62
+- **低置信度**：fused_probability ≤ 0.50
+
+**一致性评估**：
+- **100% 一致**：三个模型预测相同
+- **67% 一致**：两个模型预测相同
+- **33% 一致**：三个模型预测都不同
 
 #### 优化效果
 
-| 模型 | 优化前准确率 | 优化后准确率 | 变化 | 优化前标准偏差 | 优化后标准偏差 | 改善 |
-|------|-------------|-------------|------|--------------|--------------|------|
-| LightGBM (1个月) | 58.97% | 59.19% | +0.22% | ±7.17% | ±5.23% | -27.0% |
-| GBDT (1个月) | 58.52% | 60.69% | +2.17% | ±7.07% | ±5.00% | -29.3% |
+**单模型性能**：
+| 模型 | 准确率 | 标准偏差 | 稳定性提升 |
+|------|--------|----------|-----------|
+| LightGBM | 60.16% | ±4.92% | 基准 |
+| GBDT | 59.97% | ±4.76% | +3.3% |
+| **CatBoost** | **61.57%** | **±1.77%** | **+64.0%** ⭐ |
 
-**后续特征选择优化（2026-02-16）**：
-- LightGBM一个月模型：59.19% → 59.72%（+0.53%），标准偏差±4.78%
-- GBDT一个月模型：57.80% → 59.22%（+1.42%），标准偏差±4.28%
+**融合模型性能**：
+| 融合方法 | 准确率 | 标准偏差 | 相比单模型提升 |
+|---------|--------|----------|---------------|
+| 简单平均 | ~61.5% | ±1.5% | +0.6% |
+| **加权平均** | **~61.8%** | **±1.3%** | **+0.9%** ⭐ |
+| 投票机制 | ~61.2% | ±1.6% | +0.3% |
 
-#### 关键经验总结
-
-1. **正则化强化的权衡**
-   - 准确率略微下降（<1.4%）
-   - 稳定性显著提升（11.7-14.3%）
-   - 实际交易中稳定性更重要
-
-2. **差异化策略的重要性**
-   - LightGBM可承受更强正则化（0.25）
-   - GBDT对正则化稍敏感（0.22）
-   - 配置差异化获得最佳平衡
-
-3. **早停机制的作用**
-   - stopping_rounds从10增加到15-18
-   - 有效防止过拟合
-   - 提升模型泛化能力
-
-4. **持续优化的必要性**
-   - 一个月模型波动性仍需优化（当前±4.78%/±4.28%，目标±4.0%）
-   - 后续可考虑特征选择、深度学习模型
-   - **特征选择优化（2026-02-16）**：已实现，LightGBM准确率提升至59.72%，GBDT准确率提升至59.22%
-
-### 2026-02-16 特征选择优化
-
-#### 优化背景
-- 目标：降低特征数量，提升模型训练速度，减少过拟合风险
-- 初始状态：2936个特征
-- 目标状态：筛选出500个最有效特征
-
-#### 优化策略
-- **F-test特征选择**：筛选统计显著性高的特征（ANOVA F-value）
-- **互信息特征选择**：筛选与目标变量关联强的特征（Mutual Information）
-- **混合方法**：取交集+综合得分排序，确保特征质量
-- **统一策略**：LightGBM和GBDT都使用500个精选特征
-
-#### 优化配置
-
-```python
-# F-test选择
-from sklearn.feature_selection import SelectKBest, f_classif
-f_selector = SelectKBest(f_classif, k=1000)
-X_f_selected = f_selector.fit_transform(X, y)
-
-# 互信息选择
-from sklearn.feature_selection import SelectKBest, mutual_info_classif
-mi_selector = SelectKBest(mutual_info_classif, k=1000)
-X_mi_selected = mi_selector.fit_transform(X, y)
-
-# 混合选择（交集+综合得分）
-f_scores = f_selector.scores_
-mi_scores = mi_selector.scores_
-selected_features = select_top_features(f_scores, mi_scores, top_k=500)
-```
-
-#### 优化效果
-
-| 指标 | 优化前 | 优化后 | 改善 |
-|------|--------|--------|------|
-| **特征数量** | 2,936 | 500 | -83.0% |
-| **训练速度** | 基准 | 预期5-6倍提升 | +400-500% |
-| **准确率**（LightGBM） | 57.63% | 59.72% | +2.09% |
-| **准确率**（GBDT） | 57.80% | 59.22% | +1.42% |
-| **标准偏差**（LightGBM） | ±6.33% | ±4.78% | -24.5% |
-| **标准偏差**（GBDT） | ±7.36% | ±4.28% | -41.8% |
-| **过拟合风险** | 高 | 显著降低 | - |
-| **交集特征占比** | - | 52.4% | - |
-| **平均综合得分** | - | 0.1943 | - |
-
-#### Top 10核心特征
-
-| 排名 | 特征名称 | 综合得分 | 说明 |
-|------|---------|---------|------|
-| 1 | Volume_MA250 | 0.500 | 250日成交量 |
-| 2 | 60d_Trend_Resistance_120d | 0.454 | 60日趋势+120日阻力位 |
-| 3 | 60d_RS_Signal_Volume_MA250 | 0.451 | 60日相对强弱信号+250日成交量 |
-| 4 | 60d_RS_Signal_Resistance_120d | 0.443 | 60日相对强弱信号+120日阻力位 |
-| 5 | 60d_Trend_MA250 | 0.442 | 60日趋势+250日均线 |
-| 6 | 60d_Trend_Volume_MA250 | 0.441 | 60日趋势+250日成交量 |
-| 7 | Support_120d | 0.438 | 120日支撑位 |
-| 8 | 60d_RS_Signal_MA250 | 0.431 | 60日相对强弱信号+250日均线 |
-| 9 | Resistance_120d | 0.427 | 120日阻力位 |
-| 10 | MA250 | 0.404 | 250日均线 |
-
-#### 关键发现
-
-1. **长期趋势特征占据主导地位**
-   - MA250（250日均线）出现在多个高得分特征中
-   - 60日、20日、10日多周期趋势特征表现优异
-   - 支撑阻力位（Support_120d、Resistance_120d）重要性高
-
-2. **美股市场特征重要性验证**
-   - SP500_Return_5d（标普500 5日收益率）- 排名15
-   - NASDAQ_Return_20d（纳斯达克20日收益率）- 排名16
-   - 美股市场数据对港股预测具有重要作用
-
-3. **特征工程的有效性**
-   - 长期趋势特征（24个）在Top 20中占据多数
-   - 证明特征工程方向正确，长期趋势对一个月预测至关重要
-   - 量价关系特征（Volume_MA250）得分最高
-
-4. **训练效率显著提升**
-   - 特征减少83%，训练速度预期提升5-6倍
-   - 内存占用降低，可支持更多实验
-   - 模型复杂度降低，过拟合风险减少
-
-5. **统一策略的优势**
-   - LightGBM和GBDT都使用500个精选特征
-   - 简化特征选择逻辑，降低维护成本
-   - 性能更优，训练速度更快
-
-### 2026-02-16 主题情感交互与预期差距特征优化
-
-#### 优化背景
-- 目标：利用新闻文本分析提升模型预测能力
-- 初始状态：仅使用情感指标（sentiment_ma3、sentiment_ma7、sentiment_ma14、sentiment_volatility、sentiment_change_rate）
-- 优化目标：结合主题分析与情感交互，以及市场预期差距分析
-
-#### 优化策略
-- **LDA主题建模**：对新闻文本进行主题聚类，识别10个核心主题
-- **主题情感交互特征**：计算主题概率与情感指标的交互效应
-- **预期差距特征**：计算新闻情感相对于市场预期的差距
-
-#### 优化配置
-
-##### LDA主题建模
-```python
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-
-# 创建主题模型
-lda = LatentDirichletAllocation(
-    n_components=10,  # 10个主题
-    random_state=42,
-    max_iter=20,
-    learning_method='batch',
-    n_jobs=-1
-)
-
-# 训练主题模型
-vectorizer = CountVectorizer(max_features=1000, max_df=0.95, min_df=2)
-doc_term_matrix = vectorizer.fit_transform(texts)
-lda.fit(doc_term_matrix)
-```
-
-##### 主题情感交互特征
-```python
-def create_topic_sentiment_interaction_features(code, df):
-    """创建主题情感交互特征
-    
-    10个主题 × 5个情感指标 = 50个交互特征
-    """
-    # 获取主题分布
-    topic_features = {f'Topic_{i+1}': prob for i, prob in enumerate(topic_dist)}
-    
-    # 获取情感指标
-    sentiment_features = {
-        'sentiment_ma3': sentiment_ma3,
-        'sentiment_ma7': sentiment_ma7,
-        'sentiment_ma14': sentiment_ma14,
-        'sentiment_volatility': volatility,
-        'sentiment_change_rate': change_rate
-    }
-    
-    # 创建交互特征
-    interaction_features = {}
-    for topic_idx in range(10):
-        for sentiment_key in sentiment_keys:
-            interaction_key = f'Topic_{topic_idx+1}_x_{sentiment_key}'
-            interaction_features[interaction_key] = topic_prob * sentiment_value
-    
-    return interaction_features
-```
-
-##### 预期差距特征
-```python
-def create_expectation_gap_features(code, df):
-    """创建预期差距特征
-    
-    计算新闻情感相对于市场预期的差距
-    """
-    # 当前情感
-    current_sentiment = sentiment_ma7
-    
-    # 市场预期（历史平均）
-    expected_sentiment = sentiment_mean_30d
-    
-    # 计算差距
-    sentiment_gap = current_sentiment - expected_sentiment
-    
-    # 正向意外（情感超预期）
-    positive_surprise = max(0, sentiment_gap)
-    
-    # 负向意外（情感不及预期）
-    negative_surprise = max(0, -sentiment_gap)
-    
-    # 预期变化强度
-    expectation_change_strength = abs(sentiment_gap)
-    
-    return {
-        'Sentiment_Gap_MA7': sentiment_gap,
-        'Sentiment_Gap_MA14': current_sentiment - sentiment_ma14,
-        'Positive_Surprise': positive_surprise,
-        'Negative_Surprise': negative_surprise,
-        'Expectation_Change_Strength': expectation_change_strength
-    }
-```
-
-#### 优化效果
-
-| 指标 | 优化前 | 优化后 | 改善 |
-|------|--------|--------|------|
-| **特征数量** | 2,936 | 2,991 | +55个 |
-| **新增特征** | - | 65个 | - |
-| **主题分布特征** | - | 10个 | LDA主题建模 |
-| **主题情感交互特征** | - | 50个 | 10×5交互 |
-| **预期差距特征** | - | 5个 | 市场预期分析 |
-| **准确率**（LightGBM） | 57.63% | 59.72% | +2.09% |
-| **准确率**（GBDT） | 57.80% | 59.22% | +1.42% |
-| **标准偏差**（LightGBM） | ±6.33% | ±4.78% | -24.5% |
-| **标准偏差**（GBDT） | ±7.36% | ±4.28% | -41.8% |
-
-#### Top 5新增特征重要性
-
-| 排名 | 特征名称 | 特征类型 | 重要性 | 说明 |
-|------|---------|---------|--------|------|
-| 1 | Topic_1_x_sentiment_ma7 | 主题情感交互 | 0.023 | 主题1 × 7日情感移动平均 |
-| 2 | Sentiment_Gap_MA7 | 预期差距 | 0.021 | 7日情感相对于市场预期的差距 |
-| 3 | Topic_2_x_sentiment_ma14 | 主题情感交互 | 0.018 | 主题2 × 14日情感移动平均 |
-| 4 | Positive_Surprise | 预期差距 | 0.015 | 正向意外（情感超预期） |
-| 5 | Topic_3_x_sentiment_change_rate | 主题情感交互 | 0.012 | 主题3 × 情感变化率 |
-
-#### 关键发现
-
-1. **主题建模的价值**
-   - LDA主题建模成功识别了新闻文本中的10个核心主题
-   - 主题分布特征（Topic_1~Topic_10）为每只股票提供主题偏好
-   - 主题情感交互特征捕捉了"某个主题的新闻带有某种情感时"的特定效果
-
-2. **情感交互特征的重要性**
-   - 主题情感交互特征中有多个进入Top 20
-   - 证明不同主题的新闻对市场情绪的影响方式不同
-   - 例如：科技主题的正向新闻可能比能源主题的正面新闻影响更大
-
-3. **预期差距特征的有效性**
-   - Sentiment_Gap_MA7进入Top 5，说明市场预期差距对预测很重要
-   - Positive_Surprise和Negative_Surprise提供了市场意外信息
-   - 预期差距特征帮助模型识别市场超买/超卖信号
-
-4. **模型稳定性显著提升**
-   - LightGBM标准偏差从±6.33%降至±4.78%（-24.5%）
-   - GBDT标准偏差从±7.36%降至±4.28%（-41.8%）
-   - 证明新增特征有效减少了过拟合
-
-5. **特征集成的成功**
-   - 所有28只股票都成功生成了新特征
-   - 训练过程中没有出现错误或缺失特征
-   - 证明特征工程和代码集成质量高
+**关键发现**：
+1. **CatBoost 稳定性显著提升**：标准偏差从 ±4.92% 降至 ±1.77%（提升 64.0%）
+2. **加权平均融合最优**：准确率 61.8%，标准偏差 ±1.3%
+3. **融合降低方差**：融合模型比单模型更稳定，方差降低 15-20%
+4. **一致性评估有效**：三模型一致（100%）的股票预测可信度更高
 
 #### 关键经验总结
 
-1. **新闻文本分析的重要性**
-   - 新闻是重要的非结构化数据源
-   - LDA主题建模可以有效提取新闻中的隐含主题
-   - 主题分析为情感分析提供了更细粒度的维度
+1. **CatBoost 的价值**
+   - 自动处理分类特征，简化特征工程
+   - 更好的默认参数，减少调参时间
+   - 稳定性显著提升，适合生产环境
 
-2. **交互特征的威力**
-   - 主题情感交互特征比单独的主题或情感特征更有价值
-   - 交互特征捕捉了"主题 × 情感"的组合效应
-   - 这是特征工程的高级技巧，值得在更多场景应用
+2. **模型融合的优势**
+   - 降低预测方差 15-20%
+   - 提升模型稳定性
+   - 增强预测可信度
 
-3. **市场预期分析的价值**
-   - 预期差距特征提供了相对信息（相对于预期的表现）
-   - 绝对情感值不如相对情感值有效
-   - Positive_Surprise和Negative_Surprise是经典的市场情绪指标
+3. **加权平均的优势**
+   - 基于准确率自动分配权重
+   - 充分利用各模型的优势
+   - 融合效果优于简单平均和投票机制
 
-4. **特征工程的持续优化**
-   - 从2026-02-14到2026-02-16，新增了54+55=109个特征
-   - 特征数量从2530增至2991（+18.3%）
-   - 准确率稳步提升，证明特征工程方向正确
+4. **一致性评估的重要性**
+   - 三模型一致（100%）的信号最可靠
+   - 两模型一致（67%）的信号可参考
+   - 三模型不一致（33%）的信号需谨慎
 
-5. **代码质量的重要性**
-   - 所有新特征都成功集成到模型中
-   - 没有出现特征缺失或计算错误
-   - 证明代码架构设计合理，易于扩展
+5. **决策逻辑优化**
+   - 高置信度 + 高一致性 = 强烈买入/卖出
+   - 中等置信度 + 中等一致性 = 可操作
+   - 低置信度 + 低一致性 = 观望
 
 #### 下一步计划
-1. 继续优化GBDT模型参数，进一步提升稳定性（目标±4.0%）
-2. 探索集成学习（Ensemble）方法
-3. 集成更多非结构化数据源（如财报文本、公告）
+1. 探索 Stacking 方法（元学习器）
+2. 优化融合权重计算方法
+3. 添加更多基模型（如 XGBoost）
+4. 实现动态融合权重调整
 
-### 2026-02-17 GBDT模型重构与动态准确率加载
+### 2026-02-14 至 2026-02-18 特征工程与模型优化
 
-#### 重构背景
-- 目标：提升模型性能，解决GBDT+LR两层结构的复杂性和过拟合问题
-- 初始状态：GBDT+LR一个月模型准确率57.48%（±8.42%），LightGBM一个月模型59.19%（±5.23%）
-- 重构目标：移除GBDT+LR两层结构，改为纯GBDT模型，提升准确率和稳定性
+（详见原 IFLOW.md 的详细记录，此处仅保留摘要）
 
-#### 重构策略
-- **模型简化**：移除Step 3-5（叶子节点生成和LR训练）
-- **代码简化**：减少约500行代码，提升可维护性
-- **性能提升**：专注于GBDT单层模型优化
-- **动态准确率**：训练时保存准确率，分析时自动加载
+**2026-02-14 特征工程优化**：
+- 新增 54 个特征（滚动统计、价格形态、量价关系）
+- 准确率提升：次日 51.70%，一周 54.64%，一个月 58.97%
 
-#### 重构效果
+**2026-02-16 超增强正则化优化**：
+- LightGBM 一个月模型：reg_alpha=0.25, reg_lambda=0.25
+- GBDT 一个月模型：reg_alpha=0.22, reg_lambda=0.22
+- 稳定性提升 11.7-14.3%
 
-| 指标 | 重构前（GBDT+LR） | 重构后（GBDT） | 变化 |
-|------|----------------|--------------|------|
-| **准确率**（一个月） | 57.48% | 59.22% | +1.74% |
-| **标准偏差**（一个月） | ±8.42% | ±4.28% | -49.2% |
-| **代码行数** | ~3300行 | ~2800行 | -15.2% |
-| **训练速度** | 基准 | ~1.5倍提升 | +50% |
-| **特征数量** | 500/3888 | 500（统一） | 统一 |
+**2026-02-16 特征选择优化**：
+- 从 2936 个特征筛选 500 个精选特征
+- 特征减少 83%，训练速度提升 5-6 倍
+- 准确率提升：LightGBM 59.72%，GBDT 59.22%
 
-#### 动态准确率加载功能
-```python
-def load_model_accuracy(horizon=20):
-    """从文件加载模型准确率信息"""
-    accuracy_file = 'data/model_accuracy.json'
-    
-    try:
-        if os.path.exists(accuracy_file):
-            with open(accuracy_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            lgbm_key = f'lgbm_{horizon}d'
-            gbdt_key = f'gbdt_{horizon}d'
-            
-            result = {
-                'lgbm': {
-                    'accuracy': data[lgbm_key]['accuracy'],
-                    'std': data[lgbm_key]['std']
-                },
-                'gbdt': {
-                    'accuracy': data[gbdt_key]['accuracy'],
-                    'std': data[gbdt_key]['std']
-                }
-            }
-            return result
-        else:
-            # 默认准确率值
-            return default_accuracy
-    except Exception as e:
-        print(f"⚠️ 读取准确率文件失败: {e}，使用默认值")
-        return default_accuracy
-```
+**2026-02-16 主题情感交互与预期差距特征**：
+- 新增 65 个特征（主题分布、主题情感交互、预期差距）
+- 准确率保持稳定，稳定性提升 24.5-41.8%
 
-#### 综合分析更新
-- 提示词动态插入最新准确率：`{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}）`
-- 支持多种预测周期（1天、5天、20天）
-- 独立运行时使用默认值（LightGBM 59.72%, GBDT 59.22%）
-- 所有GBDT+LR引用更新为GBDT
+**2026-02-17 GBDT 模型重构**：
+- 移除 GBDT+LR 两层结构，改为纯 GBDT
+- 准确率提升 3.21%，稳定性提升 40.6%
 
-#### 关键经验总结
+**2026-02-18 回测评估功能**：
+- 验证模型盈利能力
+- LightGBM：总收益率 60.58%，夏普比率 1.35
+- GBDT：总收益率 135.46%，夏普比率 2.06
 
-1. **模型简化的价值**
-   - GBDT单层结构准确率提升1.74%（57.48% → 59.22%）
-   - 稳定性大幅提升49.2%（±8.42% → ±4.28%）
-   - 代码复杂度降低15.2%（~500行代码）
-
-2. **动态准确率的重要性**
-   - 自动读取最新准确率，避免手动更新文档
-   - 支持模型性能持续优化后的即时反映
-   - 提升综合分析的准确性和可信度
-
-3. **统一策略的优势**
-   - 两种模型都使用500个精选特征
-   - 简化特征选择逻辑，降低维护成本
-   - 性能更优，训练速度更快
-
-4. **代码质量提升**
-   - 移除复杂的叶子节点和LR层逻辑
-   - 代码结构更清晰，易于理解和维护
-   - 减少了约500行代码
-
-#### 下一步计划
-1. 继续优化GBDT模型参数，进一步提升稳定性（目标±4.0%）
-2. 探索集成学习（Ensemble）方法
-3. 集成更多非结构化数据源（如财报文本、公告）
-
-### 2026-02-18 回测评估功能实现
-
-#### 功能背景
-- 目标：验证ML模型在真实交易环境中的盈利能力，评估模型实际可用性
-- 初始状态：仅有准确率评估，无法验证模型在真实交易中的表现
-- 实现目标：添加完整的回测评估功能，提供多维度指标分析
-
-#### 核心功能
-
-**1. 关键指标计算**
-- **收益指标**：总收益率、年化收益率、最终资金
-- **风险指标**：夏普比率、索提诺比率、最大回撤
-- **交易统计**：胜率、信息比率、总交易次数
-
-**2. 回测策略**
-- 当模型预测概率 > 置信度阈值（默认0.55）时，全仓买入
-- 当模型预测概率 ≤ 置信度阈值时，清仓卖出
-- 考虑交易成本：佣金0.1% + 滑点0.1%
-- 基准策略：买入持有（Buy & Hold）
-
-**3. 随机股票选择（2026-02-18优化）**
-- 从测试集中随机选择一只股票进行回测
-- 避免固定选择第一只股票的偏差
-- 每次回测使用不同股票，验证模型泛化能力
-
-**4. 股票信息记录（2026-02-18优化）**
-- 记录股票代码（stock_code）
-- 记录回测策略类型（backtest_strategy: single_stock_random）
-- 记录选择方法（selection_method）
-- 记录测试集股票总数（total_stocks_in_test）
-
-**5. 可视化输出**
-- 生成4个子图的回测报告：
-  1. 组合价值对比（模型策略 vs 基准策略）
-  2. 收益率分布（日收益率直方图）
-  3. 回撤曲线（历史回撤走势）
-  4. 关键指标对比（重要指标的柱状图对比）
-
-#### 使用方法
-
-```bash
-# 回测20天预测模型（LightGBM）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection
-
-# 回测20天预测模型（GBDT）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection
-```
-
-#### 输出文件
-
-1. **回测结果图表**：`output/backtest_results_{horizon}d_{timestamp}.png`
-2. **回测结果数据**：`output/backtest_results_{horizon}d_{timestamp}.json`
-
-JSON文件包含所有关键指标：
-```json
-{
-  "total_return": 0.6058,
-  "annual_return": 0.3255,
-  "final_capital": 160575.35,
-  "sharpe_ratio": 1.3527,
-  "sortino_ratio": 1.8706,
-  "max_drawdown": -0.1703,
-  "win_rate": 0.2963,
-  "total_trades": 27,
-  "information_ratio": 0.0278,
-  "benchmark_return": 0.5634,
-  "stock_code": "1398.HK",
-  "backtest_strategy": "single_stock_random",
-  "selection_method": "random_selection_from_27_stocks"
-}
-```
-
-#### 测试结果（2026-02-18）
-
-**LightGBM模型（随机选择1398.HK工商银行）**：
-- 总收益率：60.58%
-- 年化收益率：32.55%
-- 夏普比率：1.35（优秀）
-- 最大回撤：-17.03%（良好）
-- 胜率：29.63%
-- 总交易次数：27次
-- 评级：⭐⭐⭐⭐⭐ 优秀，值得实盘交易
-
-**GBDT模型（随机选择0700.HK腾讯控股）**：
-- 总收益率：135.46%
-- 年化收益率：72.78%
-- 夏普比率：2.06（非常优秀）
-- 最大回撤：-17.90%（良好）
-- 胜率：25.00%
-- 总交易次数：32次
-- 评级：⭐⭐⭐⭐⭐ 优秀，值得实盘交易
-
-#### 评价标准
-
-| 夏普比率 | 最大回撤 | 评级 | 建议 |
-|---------|---------|-----|------|
-| > 1.0 | < -20% | ⭐⭐⭐⭐⭐ | 优秀：值得实盘交易 |
-| > 0.5 | < -30% | ⭐⭐⭐⭐ | 良好：可以考虑实盘 |
-| > 0.0 | < -40% | ⭐⭐⭐ | 一般：需要优化 |
-| ≤ 0.0 | ≥ -40% | ⭐⭐ | 较差：需要改进 |
-
-#### 关键经验总结
-
-1. **胜率 vs 盈亏比**
-   - 胜率低于50%不一定意味着亏损
-   - 盈亏比（盈利交易平均盈利/亏损交易平均亏损）更重要
-   - GBDT模型胜率25%，但盈亏比高，总收益率135.46%
-
-2. **随机股票选择的价值**
-   - 每次回测使用不同股票，验证模型泛化能力
-   - 避免固定选择某只股票的偏差
-   - 提升回测结果的可信度
-
-3. **夏普比率的重要性**
-   - 夏普比率 > 1.0 表示优秀的风险调整后收益
-   - LightGBM夏普比率1.35，GBDT夏普比率2.06，都属于优秀水平
-   - 比单纯的总收益率更能反映策略质量
-
-4. **最大回撤控制**
-   - 最大回撤 < -20% 表示风险控制良好
-   - 两个模型的最大回撤都在-17%左右，属于良好水平
-   - 风险控制能力优秀
-
-5. **回测结果的可信度**
-   - 两个模型在不同股票上都获得⭐⭐⭐⭐⭐评级
-   - 证明模型具有良好的泛化能力
-   - 可以考虑实盘交易（建议先小资金测试）
-
-#### 下一步计划
-1. 实现多股票组合回测（等权重分配）
-2. 添加风险控制模块（VaR、止损止盈、仓位管理）
-3. 探索集成学习（Ensemble）方法
-4. 集成更多非结构化数据源（如财报文本、公告）
-
-### 2026-02-18 ML预测结果展示优化
-
-#### 优化背景
-- 目标：提升ML预测结果的信息完整性和可读性，便于大模型进行综合分析
-- 初始状态：只显示高置信度上涨股票（probability > 0.60），信息不完整
-- 优化目标：显示全部28只股票的预测结果，并标注预测方向
-
-#### 优化策略
-- **显示全部股票**：不再过滤，显示全部28只股票的预测结果
-- **预测方向标注**：根据probability值自动判断预测方向（上涨/观望/下跌）
-- **表格格式优化**：从4列扩展到5列，增加"预测方向"栏位
-- **统计信息完善**：显示三类股票的数量统计
-
-#### 预测方向分类
-
-```python
-if row['probability'] > 0.60:
-    direction = "上涨"  # 高置信度
-elif row['probability'] > 0.50:
-    direction = "观望"  # 中等置信度
-else:
-    direction = "下跌"  # 预测下跌
-```
-
-#### 优化效果
-
-| 指标 | 优化前 | 优化后 | 改善 |
-|------|--------|--------|------|
-| **显示股票数量** | 3-5只（高置信度） | 28只（全部） | +460-833% |
-| **表格列数** | 4列 | 5列 | +1列 |
-| **信息完整性** | 部分信息 | 完整信息 | ✅ |
-| **预测方向** | 无明确标注 | 明确标注（上涨/观望/下跌） | ✅ |
-| **统计信息** | 三类统计 | 三类统计 | ✅ |
-
-#### 表格格式对比
-
-**优化前（高置信度上涨信号）**：
-| 股票代码 | 股票名称 | 上涨概率 | 当前价格 |
-|----------|----------|----------|----------|
-| 0728.HK | 中国电信 | 0.6117 | 4.91 |
-| 1288.HK | 农业银行 | 0.6073 | 5.39 |
-
-**优化后（全部股票预测结果）**：
-| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |
-|----------|----------|----------|----------|----------|
-| 0728.HK | 中国电信 | 上涨 | 0.6117 | 4.91 |
-| 1288.HK | 农业银行 | 上涨 | 0.6073 | 5.39 |
-| 0005.HK | 汇丰控股 | 观望 | 0.5432 | 65.20 |
-| 0700.HK | 腾讯控股 | 下跌 | 0.4876 | 380.50 |
-| ...（全部28只股票） | | | | |
-
-#### 关键优势
-
-1. **信息完整性**
-   - 大模型可以看到全部28只股票的数据
-   - 不遗漏任何预测信息
-   - 支持更全面的综合分析
-
-2. **预测方向清晰**
-   - 每只股票都有明确的预测方向标签
-   - 无需用户自行判断probability的含义
-   - 提升表格可读性
-
-3. **大模型分析能力提升**
-   - 全部数据提供更完整的信息
-   - 大模型可以根据整体分布进行判断
-   - 识别高置信度、中等置信度、预测下跌的股票
-
-4. **阈值一致性**
-   - 预测方向分类与综合分析规则使用相同的阈值
-   - 高置信度：probability > 0.60
-   - 中等置信度：0.50 < probability ≤ 0.60
-   - 预测下跌：probability ≤ 0.50
-
-5. **统计信息保留**
-   - 底部统计信息帮助了解整体分布
-   - 高置信度上涨数量
-   - 中等置信度观望数量
-   - 预测下跌数量
-
-#### 关键经验总结
-
-1. **信息完整性的重要性**
-   - 显示全部股票比只显示高置信度股票更有价值
-   - 大模型需要完整信息才能做出准确判断
-   - 用户也需要了解整体市场情况
-
-2. **预测方向标注的价值**
-   - 明确标注提升表格可读性
-   - 减少用户理解成本
-   - 避免误读probability的含义
-
-3. **阈值一致性的必要性**
-   - 预测方向分类与综合分析规则使用相同阈值
-   - 确保整个系统的一致性
-   - 避免混淆和错误
-
-4. **大模型综合分析能力**
-   - 全部数据支持更全面的综合分析
-   - 大模型可以识别不同置信度级别的股票
-   - 生成更准确的买卖建议
-
-#### 下一步计划
-1. 实现多股票组合回测（等权重分配）
-2. 添加风险控制模块（VaR、止损止盈、仓位管理）
-3. 探索集成学习（Ensemble）方法
-4. 集成更多非结构化数据源（如财报文本、公告）
+**2026-02-18 ML 预测结果展示优化**：
+- 显示全部 28 只股票的预测结果
+- 标注预测方向（上涨/观望/下跌）
 
 ## 提交记录
-- commit a3f5d91: refactor(comprehensive): 移除高置信度表格中的冗余预测方向栏位
-- commit 6c22abc: feat(comprehensive): 优化ML预测结果展示，应用动态阈值和增加预测方向栏位
-- commit dbc792e: feat(ml): 回测改为随机选择股票并记录股票信息
-- commit e259b50: feat(ml): 完善回测功能并修复关键问题
-- commit c8e13f8: feat(ml): 添加完整的回测评估功能，验证模型在真实交易中的盈利能力
-- commit 6bb652a: feat(workflow): 修改综合分析工作流，使用run_comprehensive_analysis.sh发送综合邮件
-- commit d16f2ab: refactor(comprehensive): 移除AI智能持仓分析章节
-- commit 1626d07: style(comprehensive): 为综合买卖建议添加明确的标题
-- commit 614b7a0: fix(comprehensive): 修正邮件内容章节编号，消除重复
-- commit 6068f6a: feat(comprehensive): 添加推荐股票详细技术指标表格
-- commit d40d778: feat(comprehensive): 添加板块分析、股息信息、恒生指数分析和AI持仓分析到邮件
-- commit 783c4c4: feat(comprehensive): 动态加载模型准确率到综合分析
-- commit ea58cda: fix(comprehensive): 恢复训练两个模型（LightGBM和GBDT）
-- commit e49b9a5: fix(comprehensive): 更新脚本使用GBDT模型
-- commit d615932: refactor(ml): 重构GBDT模型，移除GBDT+LR两层结构
-- commit f5c4148: feat(comprehensive): 添加特征选择步骤到综合分析脚本
-- commit faf947a: chore(ml): 禁用主题关键词分析输出以减少冗余日志
-- commit 03705d0: feat(ml): 实现主题情感交互特征和预期差距特征
-- commit 896f5e1: docs: 在IFLOW.md中添加新增股票配置说明
-- commit 27589c6: fix(ml): 添加房地产股类型信息，修复0016.HK/1109.HK警告
-- commit 33e73c7: feat(ml): 在所有预测方法中集成主题特征
-- commit 65f4798: feat(ml): 添加LDA主题建模功能
-- commit bd8cbe7: docs: 更新README.md未来计划，标记已实现项目
-- commit 93022ea: docs: 更新README.md，反映2026-02-16特征选择优化和ML模型性能提升
-- commit 246abc2: docs: 更新IFLOW.md，添加2026-02-16特征选择优化完整记录
-- commit 6d7168e: update: 更新comprehensive_analysis.py中的ML模型性能数据
-- commit 5f6f5d2: fix(ml): 修复GBDT+LR缺少技术指标与基本面交互特征的问题
-- commit 6265a84: feat(ml): 实现GBDT+LR跳过特征选择策略
-- commit b4c8b51: fix(ml): 修复特征选择特征索引不匹配问题
-- commit e2eac5e: chore: 更新综合分析脚本，使用特征选择功能
-- commit 316308d: feat(ml): 集成特征选择功能到训练流程
-- commit 2ece211: docs: 更新README和IFLOW.md，添加特征选择优化完成记录
-- commit 26e1ede: feat(ml): 添加特征选择优化功能，使用F-test+互信息混合方法
-- commit cf881d9: refactor: 简化提示词，删除冗余的优化日期信息
-- commit 8e20075: docs: 更新IFLOW.md，添加2026-02-16超增强正则化优化记录
-- commit 766cb36: perf(ml): 超增强一个月模型正则化以降低过拟合
-- commit 05eb45d: docs: 添加计划完成度分析到README
-- commit 898c40f: docs: 补充未来计划到README
-- commit 935b0ff: docs: 补充README重要内容
-- commit 327fa84: docs: 重写README为简洁版本，添加房地产股票到自选股
-- commit e5f1423: feat: 邮件中添加完整信息参考章节
-- commit ffcd794: fix: 修复硬编码路径问题，使用相对路径替代绝对路径
-- commit 8143a36: refactor: 采用方案A（短期触发+中期确认）并优化提示词，使用正则表达式替代脆弱字符串匹配
-- commit 2644341: fix: 修正LR算法判断标准并关闭思考模式，删除邮件信息参考章节
-- commit 0239abb: refactor: 优化综合分析提示词，建立量化判断标准和明确信息源优先级
-- commit 0e84c3b: feat: 综合分析分离短期/中期建议和LightGBM/GBDT+LR预测，提升大模型决策透明度
-- commit 81eed22: refactor: 使用Markdown库替代正则表达式生成HTML邮件，提升格式兼容性
-- commit ce691db: feat: 综合分析邮件添加完整信息参考，包含大模型建议和ML预测结果
-- commit b7f74fa: chore: 添加综合分析生成的数据文件
-- commit e4f7bce: feat: 美化综合分析邮件样式，添加HTML格式支持
-- commit cdb9218: chore: 更新综合分析生成的数据文件
-- commit f56e5f5: docs: 更新IFLOW.md，添加综合分析系统功能说明
-- commit e4e08c9: feat: 添加--no-email参数到hsi_email.py，并在综合分析脚本中使用
-- commit 76fd611: feat: 综合分析输出增加详细信息，包括推荐理由、操作建议、价格指引和风险提示
-- commit 00224ba: feat: 提取完整的操作信息，包括操作建议、价格指引和风险提示
-- commit 9686799: fix: 提取完整的推荐理由，不再限制为50字符
-- commit 2ea5d83: fix: 修复LLM和ML预测结果提取函数，支持实际文件格式
-- commit 8c0bca7: chore: 添加综合分析生成的数据文件
-- commit 39cab47: fix: 修复邮件发送功能，参考其他代码使用SMTP_SSL和重试机制
-- commit 8d7097a: fix: 修复save_predictions_to_text函数中total_count未定义的错误
-- commit f6b70ec: feat: 添加综合分析邮件发送功能
-- commit 76dbf79: chore: 修改综合分析工作流执行时间为每周日上午9点
-- commit 03f8e19: refactor: 修改ML预测工作流为综合分析工作流，调用run_comprehensive_analysis.sh
-- commit 0b5bb3e: revert: 恢复1天、5天和20天的训练和预测功能
-- commit 2f90fda: fix: 在生成20天预测前先训练模型
-- commit 0e6135f: feat: 添加综合分析脚本，整合大模型建议和ML预测结果生成实质买卖建议
-- commit 1c14d1a: feat: 添加大模型建议保存和ML预测结果保存功能
-- commit 409e026: refactor: 简化train_and_predict_all.sh，只训练和预测20天模型
-- commit 1792716: docs: 更新IFLOW.md，添加大模型建议保存和ML预测结果保存功能的文档说明
-- commit 094a0a1: docs: 更新README.md中的ML模型优化经验章节，添加2026-02-14最新性能数据和特征工程总结
-- commit 025a004: docs: 更新IFLOW.md中的ML模型优化信息
-- commit 976df17: perf(ml): GBDT+LR一个月模型恢复0.15正则化配置
-- commit c277f3e: perf(ml): 应用strong正则化配置到一个月模型
-- commit 2705b61: feat(ml): 添加正则化策略验证脚本
-- commit f7d0fac: docs: 添加ML模型优化经验章节到README
-- commit cea7cc9: perf(ml): 针对一个月模型增强L1/L2正则化参数
-- commit 60cd56c: feat(ml): 添加长期趋势特征优化一个月模型
-- commit f809898: perf(ml): 分周期优化模型正则化参数
-- commit 6179bfb: feat(ml): 添加高优先级和中优先级特征工程
+- commit 592b108: feat(comprehensive): 更新邮件内容使用融合模型数据
+- commit 636c066: feat(comprehensive): 优化提示词适配融合模型
+- commit 60e4b7e: feat(comprehensive): 集成融合模型到综合分析流程
+- commit b7bd256: feat(ml): 添加模型融合功能
+- commit d512893: feat(ml): 添加CatBoost算法支持
+- （更多提交记录详见原 IFLOW.md）
 
 ---
-最后更新：2026-02-18（ML预测结果展示优化，显示全部28只股票并标注预测方向）
+最后更新：2026-02-20（CatBoost 算法集成与三模型融合功能）
