@@ -834,7 +834,7 @@ def generate_technical_indicators_table(stock_codes):
         # 按股票代码排序
         stock_codes_sorted = sorted(stock_codes)
         
-        table = "\n## 六、股票技术指标详情\n\n"
+        table = "\n## 七、股票技术指标详情\n\n"
         table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
         table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
@@ -1360,15 +1360,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 一、大模型建议
-
-### 短期买卖建议（日内/数天）
-{llm_recommendations['short_term']}
-
-### 中期买卖建议（数周-数月）
-{llm_recommendations['medium_term']}
-
-## 二、机器学习预测结果（20天）
+## 一、机器学习预测结果（20天）
 
 ### 融合模型（LightGBM + GBDT + CatBoost，加权平均）
 **模型准确率**：
@@ -1382,11 +1374,19 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 模型一致性评估提升预测可信度
 
 {ml_predictions['ensemble']}
+
+## 二、大模型建议
+
+### 短期买卖建议（日内/数天）
+{llm_recommendations['short_term']}
+
+### 中期买卖建议（数周-数月）
+{llm_recommendations['medium_term']}
 {sector_text}
 {dividend_text}
 {hsi_text}
 {technical_indicators_table}
-## 七、技术指标说明
+## 八、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1409,7 +1409,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 八、风险提示
+## 九、风险提示
 
 1. **模型不确定性**：
    - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
@@ -1427,7 +1427,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 概率在0.45-0.55之间 = 低置信度，不建议操作
    - 总仓位控制在45%-55%，分散风险
 
-## 九、数据来源
+## 十、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
