@@ -3520,7 +3520,7 @@ class EnsembleModel:
         """
         results = []
         for code in codes:
-            result = self.predict(code, predict_date)
+            result = self.predict(code, predict_date=predict_date)
             if result:
                 results.append(result)
         return results
