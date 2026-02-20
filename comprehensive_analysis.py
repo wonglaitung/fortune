@@ -210,10 +210,12 @@ def extract_ml_predictions(filepath):
             ensemble_text += "|----------|----------|----------|----------|--------|--------|----------|\n"
 
             for _, row in df_ensemble_sorted.iterrows():
-                # 确定预测方向
+                # 确定预测方向（三分类：上涨=1, 观望=0.5, 下跌=0）
                 fused_pred = row['fused_prediction']
                 if fused_pred == 1:
                     direction = "上涨"
+                elif fused_pred == 0.5:
+                    direction = "观望"
                 else:
                     direction = "下跌"
 
