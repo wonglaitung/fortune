@@ -1038,6 +1038,8 @@ class FeatureEngineer:
             # 使用缓存的新闻数据（如果存在）
             if self._news_data_cache is None:
                 self._news_data_cache = pd.read_csv(news_file_path)
+                # 创建'文本'列（合并标题和内容）
+                self._news_data_cache['文本'] = self._news_data_cache['新闻标题'].astype(str) + ' ' + self._news_data_cache['简要内容'].astype(str)
             
             news_df = self._news_data_cache
             if news_df.empty:
