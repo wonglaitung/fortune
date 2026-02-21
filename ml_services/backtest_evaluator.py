@@ -114,10 +114,65 @@ class BacktestEvaluator:
         self.position = 0
         self.trades = []
         self.portfolio_values = [self.initial_capital]
-        
+
+        # 调试信息：检查模型对象
+        print(f"🔍 模型对象调试信息:")
+        print(f"   模型类型: {type(model)}")
+        print(f"   有 predict_proba: {hasattr(model, 'predict_proba')}")
+        print(f"   有 catboost_model: {hasattr(model, 'catboost_model')}")
+        print(f"   有 model_type: {hasattr(model, 'model_type')}")
+        if hasattr(model, 'model_type'):
+            print(f"   model_type 值: {model.model_type}")
+        if hasattr(model, 'catboost_model'):
+            print(f"   catboost_model 类型: {type(model.catboost_model)}")
+
         # 生成预测
         if hasattr(model, 'predict_proba'):
-            predictions = model.predict_proba(test_data)[:, 1]
+            # 检查是否是 CatBoost 模型对象（包含 catboost_model 属性）
+            if hasattr(model, 'catboost_model') and hasattr(model, 'model_type') and model.model_type == 'catboost':
+                # CatBoost 模型需要使用 Pool 对象
+                from catboost import Pool
+                import numpy as np
+
+                categorical_encoders = getattr(model, 'categorical_encoders', {})
+                feature_columns = getattr(model, 'feature_columns', [])
+                catboost_model = model.catboost_model
+
+# 确保 test_data 是 DataFrame
+                if isinstance(test_data, pd.DataFrame):
+                    # 使用 test_data 的实际列名，过滤出模型需要的特征
+                    available_features = [col for col in feature_columns if col in test_data.columns]
+                    if len(available_features) < len(feature_columns):
+                        missing_cols = [col for col in feature_columns if col not in test_data.columns]
+                        print(f"   ⚠️  缺失 {len(missing_cols)} 个特征，将补齐为 0")
+                    
+                    # 补齐缺失的特征
+                    test_df = test_data[available_features].copy()
+                    for col in feature_columns:
+                        if col not in test_df.columns:
+                            test_df[col] = 0.0
+                    
+                    # 确保列的顺序与训练时一致
+                    test_df = test_df[feature_columns]
+                else:
+                    # 如果是 numpy 数组，转换为 DataFrame
+                    test_df = pd.DataFrame(test_data, columns=feature_columns)
+
+                # 获取分类特征索引
+                categorical_features = [feature_columns.index(col) for col in categorical_encoders.keys() if col in feature_columns]
+
+                # 确保分类特征列是整数类型
+                for cat_idx in categorical_features:
+                    col_name = feature_columns[cat_idx]
+                    if col_name in test_df.columns:
+                        test_df[col_name] = test_df[col_name].astype(np.int32)
+
+                # 使用 Pool 对象进行预测
+                test_pool = Pool(data=test_df)
+                predictions = catboost_model.predict_proba(test_pool)[:, 1]
+            else:
+                # 其他模型直接使用 predict_proba
+                predictions = model.predict_proba(test_data)[:, 1]
         else:
             # 对于不支持 predict_proba 的模型，使用 predict
             predictions = model.predict(test_data)
