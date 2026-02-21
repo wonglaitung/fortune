@@ -3364,6 +3364,35 @@ class CatBoostModel:
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         print(f"CatBoost 模型已从 {filepath} 加载")
 
+    def predict_proba(self, X):
+        """
+        预测概率（用于回测评估器）
+
+        Args:
+            X: 测试数据（DataFrame 或 numpy 数组）
+
+        Returns:
+            numpy.ndarray: 预测概率数组
+        """
+        from catboost import Pool
+        import numpy as np
+
+        # 确保 test_data 是 DataFrame
+        if isinstance(X, pd.DataFrame):
+            test_df = X[self.feature_columns].copy()
+        else:
+            # 如果是 numpy 数组，转换为 DataFrame
+            test_df = pd.DataFrame(X, columns=self.feature_columns)
+
+        # 获取分类特征索引
+        categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
+
+        # 创建 Pool 对象
+        test_pool = Pool(data=test_df, cat_features=categorical_features if categorical_features else None)
+
+        # 返回预测概率
+        return self.catboost_model.predict_proba(test_pool)
+
 
 class EnsembleModel:
     """融合模型 - 整合 LightGBM、GBDT、CatBoost 三个模型
@@ -4129,19 +4158,54 @@ def main():
             if object_cols:
                 print(f"⚠️ 发现 {len(object_cols)} 个object类型列，尝试转换...")
 
-            # 转换object类型列，转换后删除仍然是object的列
-            valid_feature_columns = []
-            for col in feature_columns:
-                if test_df[col].dtype == 'object':
-                    # 尝试转换为数值类型
-                    test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
-                    # 如果转换后仍然是object，说明包含无法转换的值，删除该列
-                    if test_df[col].dtype == 'object':
-                        continue  # 跳过这个列
-                valid_feature_columns.append(col)
+            # 对于 CatBoost 模型，保留分类特征（object类型），不转换为数值类型
+            # 注意：此时 model 还没有被加载，所以只能通过 args.model_type 判断
+            if args.model_type == 'catboost':
+                # 先加载模型以获取分类特征信息
+                import pickle
+                from sklearn.preprocessing import LabelEncoder
+                model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
+                try:
+                    with open(model_path, 'rb') as f:
+                        model_data_temp = pickle.load(f)
+                        categorical_feature_names = set(model_data_temp.get('categorical_encoders', {}).keys())
+                        print(f"🔧 CatBoost 模型：保留 {len(categorical_feature_names)} 个分类特征，不转换为数值类型")
+                except Exception as e:
+                    print(f"⚠️ 无法加载 CatBoost 模型文件，将转换所有 object 类型列: {e}")
+                    categorical_feature_names = set()
 
-            feature_columns = valid_feature_columns
-            print(f"✅ 类型转换后保留 {len(feature_columns)} 个数值特征列")
+                # 转换非分类特征的 object 类型列
+                valid_feature_columns = []
+                for col in feature_columns:
+                    if test_df[col].dtype == 'object':
+                        if col in categorical_feature_names:
+                            # 保留分类特征，不转换
+                            valid_feature_columns.append(col)
+                        else:
+                            # 尝试转换为数值类型
+                            test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
+                            # 如果转换后仍然是object，说明包含无法转换的值，删除该列
+                            if test_df[col].dtype == 'object':
+                                continue  # 跳过这个列
+                            valid_feature_columns.append(col)
+                    else:
+                        valid_feature_columns.append(col)
+                feature_columns = valid_feature_columns
+                print(f"✅ 类型转换后保留 {len(feature_columns)} 个特征列（包含 {len([c for c in feature_columns if c in categorical_feature_names])} 个分类特征）")
+            else:
+                # 对于其他模型，转换所有 object 类型列
+                valid_feature_columns = []
+                for col in feature_columns:
+                    if test_df[col].dtype == 'object':
+                        # 尝试转换为数值类型
+                        test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
+                        # 如果转换后仍然是object，说明包含无法转换的值，删除该列
+                        if test_df[col].dtype == 'object':
+                            continue  # 跳过这个列
+                    valid_feature_columns.append(col)
+
+                feature_columns = valid_feature_columns
+                print(f"✅ 类型转换后保留 {len(feature_columns)} 个数值特征列")
 
             # 过滤出有标签的数据（Label不为NaN）用于验证回测准确性
             test_df_with_label = test_df[~test_df['Label'].isna()]
@@ -4161,22 +4225,32 @@ def main():
                 print(f"⚠️ 以下特征列包含非数值类型:")
                 for col, dtype in non_numeric_cols:
                     print(f"  - {col}: {dtype}")
-                # 过滤掉非数值类型的列
-                feature_columns = [col for col in feature_columns if col not in [c for c, _ in non_numeric_cols]]
-                print(f"🗑️  过滤后剩余 {len(feature_columns)} 个数值特征列")
 
-            # 再次检查过滤后的特征列
-            final_non_numeric = []
-            for col in feature_columns:
-                dtype = test_df[col].dtype
-                if dtype not in ['int64', 'float64', 'int32', 'float32', 'bool']:
-                    final_non_numeric.append((col, dtype))
+                # 对于 CatBoost 模型，保留分类特征（object 类型）
+                if args.model_type == 'catboost':
+                    # 保留分类特征，只过滤掉其他非数值类型的列
+                    categorical_feature_names = set([c for c, _ in non_numeric_cols])
+                    print(f"🔧 CatBoost 模型：保留 {len(categorical_feature_names)} 个分类特征（object 类型）")
+                    # 不进行过滤，保留所有特征列
+                    print(f"✅ 保留所有 {len(feature_columns)} 个特征列（包含 {len(categorical_feature_names)} 个分类特征）")
+                else:
+                    # 对于其他模型，过滤掉非数值类型的列
+                    feature_columns = [col for col in feature_columns if col not in [c for c, _ in non_numeric_cols]]
+                    print(f"🗑️  过滤后剩余 {len(feature_columns)} 个数值特征列")
 
-            if final_non_numeric:
-                print(f"❌ 错误：过滤后仍然有 {len(final_non_numeric)} 个非数值类型列:")
-                for col, dtype in final_non_numeric[:5]:
-                    print(f"  - {col}: {dtype}")
-                raise ValueError("无法过滤所有非数值类型的列")
+            # 再次检查过滤后的特征列（仅对非 CatBoost 模型）
+            if args.model_type != 'catboost':
+                final_non_numeric = []
+                for col in feature_columns:
+                    dtype = test_df[col].dtype
+                    if dtype not in ['int64', 'float64', 'int32', 'float32', 'bool']:
+                        final_non_numeric.append((col, dtype))
+
+                if final_non_numeric:
+                    print(f"❌ 错误：过滤后仍然有 {len(final_non_numeric)} 个非数值类型列:")
+                    for col, dtype in final_non_numeric[:5]:
+                        print(f"  - {col}: {dtype}")
+                    raise ValueError("无法过滤所有非数值类型的列")
 
             # 获取价格数据（用于回测）
             # 注意：当前回测逻辑不支持多股票回测，随机选择一只股票进行回测
@@ -4193,9 +4267,32 @@ def main():
 
             # 获取特征和标签（使用清理后的特征列）
             # 只使用第一只股票的数据
-            X_test = single_stock_df[feature_columns]  # 不使用.values，保留DataFrame以保留dtype信息
+            X_test = single_stock_df[feature_columns].copy()  # 使用副本以避免修改原始数据
+
+            # 如果是 CatBoost 模型，使用模型中的编码器来编码分类特征
+            if args.model_type == 'catboost' and hasattr(catboost_model, 'categorical_encoders'):
+                print("🔧 使用 CatBoost 模型的编码器来编码分类特征...")
+                print(f"   模型中的分类特征: {list(catboost_model.categorical_encoders.keys())}")
+                for col, encoder in catboost_model.categorical_encoders.items():
+                    if col in X_test.columns:
+                        print(f"   编码前 {col} 数据类型: {X_test[col].dtype}")
+                        print(f"   编码前 {col} 唯一值: {X_test[col].unique()[:5]}")
+                        try:
+                            X_test[col] = encoder.transform(X_test[col].astype(str))
+                            print(f"   编码后 {col} 数据类型: {X_test[col].dtype}")
+                            print(f"   编码后 {col} 唯一值: {X_test[col].unique()[:5]}")
+                            print(f"   ✅ 编码分类特征: {col}")
+                        except ValueError as e:
+                            print(f"   ⚠️  编码分类特征失败: {col} - {e}")
+                            # 处理未见过的类别，映射到0
+                            X_test[col] = 0
+                    else:
+                        print(f"   ⚠️  分类特征 {col} 不在测试数据中")
+            elif args.model_type == 'catboost':
+                print("⚠️  CatBoost 模型没有 categorical_encoders 属性")
+
             y_test = single_stock_df['Label'].values
-            
+
             print(f"测试数据: {len(test_df)} 条")
 
             if len(test_df) > 0:
@@ -4226,13 +4323,23 @@ def main():
                 backtest_strategy = 'ensemble_fusion'
             else:
                 # 使用单一模型回测
-                results = evaluator.backtest_model(
-                    model=model,
-                    test_data=X_test,  # 直接使用DataFrame
-                    test_labels=pd.Series(y_test, index=single_stock_df.index),
-                    test_prices=prices,
-                    confidence_threshold=0.55
-                )
+                # 对于 CatBoost 模型，传递完整的 catboost_model 对象
+                if args.model_type == 'catboost':
+                    results = evaluator.backtest_model(
+                        model=catboost_model,  # 传递完整的 catboost_model 对象
+                        test_data=X_test,
+                        test_labels=pd.Series(y_test, index=single_stock_df.index),
+                        test_prices=prices,
+                        confidence_threshold=0.55
+                    )
+                else:
+                    results = evaluator.backtest_model(
+                        model=model,
+                        test_data=X_test,  # 直接使用DataFrame
+                        test_labels=pd.Series(y_test, index=single_stock_df.index),
+                        test_prices=prices,
+                        confidence_threshold=0.55
+                    )
                 backtest_strategy = f'single_{args.model_type}'
 
             # 绘制回测结果
