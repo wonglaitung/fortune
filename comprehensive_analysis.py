@@ -1414,8 +1414,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ## 八、风险提示
 
 1. **模型不确定性**：
-   - ML 20天模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）
-   - 即使probability>0.62，实际准确率也可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间波动
+   - ML 20天融合模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）/±{model_accuracy['catboost']['std']:.2%}（CatBoost）
+   - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
 2. **市场风险**：
@@ -1426,13 +1426,14 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 3. **投资原则**：
    - 短期触发 + 中期确认 + ML验证 = 高置信度信号
    - 短期和中期冲突 = 观望（避免不确定性）
-   - 概率在0.45-0.55之间 = 低置信度，不建议操作
+   - 融合概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
 ## 九、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：LightGBM + GBDT（2991个特征，500个精选特征）
+- ML预测：LightGBM + GBDT + CatBoost（融合模型，加权平均）
+- 特征工程：2991个原始特征，500个精选特征（F-test+互信息混合方法）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
 - 美股市场：标普500、纳斯达克、VIX、美国国债收益率等11个指标
@@ -1442,6 +1443,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
+- 融合策略：加权平均（基于模型准确率分配权重）
+- 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）
+- 一致性评估：100%（三模型一致）、67%（两模型一致）、33%（三模型不一致）
 
 ---
 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
