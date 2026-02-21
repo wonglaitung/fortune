@@ -517,6 +517,8 @@ def get_sector_analysis():
         sector_leaders = {}
         for idx, row in perf_df.iterrows():
             sector_code = row['sector_code']
+            
+            # 先尝试使用默认市值阈值
             leaders_df = sector_analyzer.identify_sector_leaders(
                 sector_code=sector_code,
                 top_n=3,
@@ -524,6 +526,22 @@ def get_sector_analysis():
                 min_market_cap=100,
                 style='moderate'
             )
+            
+            # 如果没有找到龙头股，可能是市值太小，降低阈值重试
+            if leaders_df.empty:
+                print(f"  ⚠️ 板块 {row['sector_name']}({sector_code}) 首次查询未找到龙头股，尝试降低市值阈值")
+                # 尝试降低市值阈值
+                for min_cap in [50, 20, 10, 5, 1]:
+                    leaders_df = sector_analyzer.identify_sector_leaders(
+                        sector_code=sector_code,
+                        top_n=3,
+                        period=5,
+                        min_market_cap=min_cap,
+                        style='moderate'
+                    )
+                    if not leaders_df.empty:
+                        print(f"    找到 {len(leaders_df)} 只龙头股（市值阈值 {min_cap}亿港币）")
+                        break
             
             if not leaders_df.empty:
                 sector_leaders[sector_code] = []
