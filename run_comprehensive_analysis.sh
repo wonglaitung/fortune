@@ -92,7 +92,10 @@ echo "=========================================="
 echo "📊 步骤 4/5: 综合分析"
 echo "=========================================="
 echo ""
-python3 comprehensive_analysis.py
+# 获取步骤1生成的大模型建议文件（使用最新日期）
+LLM_FILE=$(ls -t data/llm_recommendations_*.txt | head -1)
+echo "📊 使用大模型建议文件: $LLM_FILE"
+python3 comprehensive_analysis.py --llm-file "$LLM_FILE"
 if [ $? -ne 0 ]; then
     echo "❌ 步骤4失败: 综合分析失败"
     exit 1
