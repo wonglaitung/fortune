@@ -3379,7 +3379,21 @@ class CatBoostModel:
 
         # 确保 test_data 是 DataFrame
         if isinstance(X, pd.DataFrame):
-            test_df = X[self.feature_columns].copy()
+            # 检查 X 是否包含所有需要的特征列
+            if all(col in X.columns for col in self.feature_columns):
+                # 情况1：X 包含所有需要的特征列（可能是原始 DataFrame）
+                test_df = X[self.feature_columns].copy()
+            elif len(X.columns) == len(self.feature_columns):
+                # 情况2：X 已经是只包含特征列的 DataFrame（列数匹配）
+                test_df = X.copy()
+                test_df.columns = self.feature_columns  # 确保列名正确
+            else:
+                # 情况3：X 的列数不匹配，尝试提取存在的列
+                available_cols = [col for col in self.feature_columns if col in X.columns]
+                if available_cols:
+                    test_df = X[available_cols].copy()
+                else:
+                    raise ValueError(f"无法从输入数据中提取特征列。需要的列：{self.feature_columns[:10]}...")
         else:
             # 如果是 numpy 数组，转换为 DataFrame
             test_df = pd.DataFrame(X, columns=self.feature_columns)
@@ -3605,43 +3619,87 @@ class EnsembleModel:
     
     def predict_proba(self, X):
         """预测概率（用于回测评估器）
-        
+
         Args:
             X: 特征数据（numpy array 或 DataFrame）
-            
+
         Returns:
             numpy array: 概率数组，形状为 (n_samples, 2)
         """
+        import numpy as np
+
         # 使用加权平均融合预测概率
         n_samples = len(X)
         probabilities = np.zeros((n_samples, 2))
-        
+
         # 获取每个模型的预测概率
+        # LightGBM 和 GBDT 可以直接使用 X
         lgbm_probs = self.lgbm_model.model.predict_proba(X)
         gbdt_probs = self.gbdt_model.gbdt_model.predict_proba(X)
-        catboost_probs = self.catboost_model.catboost_model.predict_proba(X)
-        
+
+        # CatBoost 需要特殊处理分类特征
+        # 检查 X 是否包含所有需要的特征列
+        if isinstance(X, pd.DataFrame):
+            # 检查 X 是否包含所有特征列
+            if all(col in X.columns for col in self.catboost_model.feature_columns):
+                # X 包含所有特征列
+                test_df = X[self.catboost_model.feature_columns].copy()
+            elif len(X.columns) == len(self.catboost_model.feature_columns):
+                # X 已经是只包含特征列的 DataFrame（列数匹配）
+                test_df = X.copy()
+                test_df.columns = self.catboost_model.feature_columns  # 确保列名正确
+            else:
+                # X 的列数不匹配，提取存在的列
+                available_cols = [col for col in self.catboost_model.feature_columns if col in X.columns]
+                if available_cols:
+                    test_df = X[available_cols].copy()
+                    # 补齐缺失的特征
+                    for col in self.catboost_model.feature_columns:
+                        if col not in test_df.columns:
+                            test_df[col] = 0.0
+                    test_df = test_df[self.catboost_model.feature_columns]
+                else:
+                    raise ValueError(f"无法从输入数据中提取特征列")
+        else:
+            # 如果是 numpy 数组，转换为 DataFrame
+            test_df = pd.DataFrame(X, columns=self.catboost_model.feature_columns)
+
+        # 获取分类特征索引
+        categorical_features = [self.catboost_model.feature_columns.index(col) for col in self.catboost_model.categorical_encoders.keys() if col in self.catboost_model.feature_columns]
+
+        # 确保分类特征列是整数类型
+        import numpy as np
+        for cat_idx in categorical_features:
+            col_name = self.catboost_model.feature_columns[cat_idx]
+            if col_name in test_df.columns:
+                test_df[col_name] = test_df[col_name].astype(np.int32)
+
+        # 使用 Pool 对象进行预测
+        from catboost import Pool
+        test_pool = Pool(data=test_df)
+        catboost_probs = self.catboost_model.catboost_model.predict_proba(test_pool)
+
         # 计算权重
         if self.fusion_method == 'weighted':
             lgbm_weight = self.model_accuracies['lgbm']
             gbdt_weight = self.model_accuracies['gbdt']
             catboost_weight = self.model_accuracies['catboost']
             total_weight = lgbm_weight + gbdt_weight + catboost_weight
-            
+
             lgbm_weight /= total_weight
             gbdt_weight /= total_weight
             catboost_weight /= total_weight
         else:
             # 简单平均
             lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
-        
+
         # 加权融合
         probabilities = (
             lgbm_weight * lgbm_probs +
             gbdt_weight * gbdt_probs +
             catboost_weight * catboost_probs
         )
-        
+
         return probabilities
     
     def predict_classes(self, X):
@@ -4269,7 +4327,7 @@ def main():
             # 只使用第一只股票的数据
             X_test = single_stock_df[feature_columns].copy()  # 使用副本以避免修改原始数据
 
-            # 如果是 CatBoost 模型，使用模型中的编码器来编码分类特征
+            # 如果是 CatBoost 模型或融合模型，使用模型中的编码器来编码分类特征
             if args.model_type == 'catboost' and hasattr(catboost_model, 'categorical_encoders'):
                 print("🔧 使用 CatBoost 模型的编码器来编码分类特征...")
                 print(f"   模型中的分类特征: {list(catboost_model.categorical_encoders.keys())}")
@@ -4284,12 +4342,36 @@ def main():
                             print(f"   ✅ 编码分类特征: {col}")
                         except ValueError as e:
                             print(f"   ⚠️  编码分类特征失败: {col} - {e}")
-                            # 处理未见过的类别，映射到0
+                            # 处理未见过的类别，映射到0（整数类型）
                             X_test[col] = 0
+                            X_test[col] = X_test[col].astype('int64')
+                            print(f"   ✅ 将 {col} 映射为整数 0")
                     else:
                         print(f"   ⚠️  分类特征 {col} 不在测试数据中")
             elif args.model_type == 'catboost':
                 print("⚠️  CatBoost 模型没有 categorical_encoders 属性")
+            elif args.model_type == 'ensemble' and hasattr(ensemble_model, 'catboost_model') and hasattr(ensemble_model.catboost_model, 'categorical_encoders'):
+                print("🔧 使用融合模型中 CatBoost 子模型的编码器来编码分类特征...")
+                print(f"   模型中的分类特征: {list(ensemble_model.catboost_model.categorical_encoders.keys())}")
+                for col, encoder in ensemble_model.catboost_model.categorical_encoders.items():
+                    if col in X_test.columns:
+                        print(f"   编码前 {col} 数据类型: {X_test[col].dtype}")
+                        print(f"   编码前 {col} 唯一值: {X_test[col].unique()[:5]}")
+                        try:
+                            X_test[col] = encoder.transform(X_test[col].astype(str))
+                            print(f"   编码后 {col} 数据类型: {X_test[col].dtype}")
+                            print(f"   编码后 {col} 唯一值: {X_test[col].unique()[:5]}")
+                            print(f"   ✅ 编码分类特征: {col}")
+                        except ValueError as e:
+                            print(f"   ⚠️  编码分类特征失败: {col} - {e}")
+                            # 处理未见过的类别，映射到0（整数类型）
+                            X_test[col] = 0
+                            X_test[col] = X_test[col].astype('int64')
+                            print(f"   ✅ 将 {col} 映射为整数 0")
+                    else:
+                        print(f"   ⚠️  分类特征 {col} 不在测试数据中")
+            elif args.model_type == 'ensemble':
+                print("⚠️  融合模型的 CatBoost 子模型没有 categorical_encoders 属性")
 
             y_test = single_stock_df['Label'].values
 
