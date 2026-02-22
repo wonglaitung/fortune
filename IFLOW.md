@@ -331,9 +331,9 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type e
 #### 模型性能（2026-02-22 最新，来自 model_accuracy.json）
 
 **单模型性能**：
-- **CatBoost 1天**：准确率 65.62%（±5.97%）⭐ **当前最佳（过拟合风险高）**
-- **CatBoost 20天**：准确率 62.07%（±1.78%）⭐ **稳定可靠（最佳）**
+- **CatBoost 20天**：准确率 62.07%（±1.78%）⭐ **当前最佳（稳定可靠）**
 - **CatBoost 5天**：准确率 63.01%（±4.45%）⚠️ 谨慎使用（需要更多验证）
+- **CatBoost 1天**：准确率 65.62%（±5.97%）❌ **不推荐使用**（存在严重过拟合风险）
 - **LightGBM 20天**：准确率 58.56%（±4.15%）
 - **GBDT 20天**：准确率 59.30%（±4.63%）
 - **LightGBM 1天**：准确率 51.20%（±0.97%）
@@ -385,8 +385,6 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type e
 - 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率
 - 交易策略：当预测概率 > 置信度阈值（默认0.55）时全仓买入，否则清仓卖出
 - 基准对比：买入持有策略
-- 随机股票选择：从测试集中随机选择一只股票进行回测
-- 股票信息记录：在回测结果中记录股票代码、回测策略、选择方法等
 - 可视化输出：组合价值对比、收益率分布、回撤曲线、关键指标对比
 - 回测结果保存到 `output/backtest_results_{horizon}d_{timestamp}.png` 和 `.json`
 
@@ -405,6 +403,21 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type e
 - **LightGBM 20天**：平均总收益率-8.22%，夏普比率-0.18，胜率29.57%，**优秀股票2只（收益率>50%）**
 
 **批量回测结果**（置信度0.60，28只股票，2026-02-22）：
+- **CatBoost 20天**：平均总收益率206.72%，夏普比率1.52，胜率31.84%，**优秀股票23只（收益率>50%）**
+- **融合模型（加权平均）**：平均总收益率75.97%，夏普比率0.86，胜率30.97%，**优秀股票15只（收益率>50%）**
+- **GBDT 20天**：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%，**优秀股票1只（收益率>50%）**
+- **LightGBM 20天**：平均总收益率-14.96%，夏普比率-0.24%，胜率26.47%，**优秀股票0只（收益率>50%）**
+
+**CatBoost 批量回测详细表现**（置信度0.60，28只股票）：
+- 最高收益率：878.98%（1347.HK 华虹半导体）
+- 最低收益率：16.73%（0941.HK 中国移动）
+- 收益率中位数：133.93%
+- 收益率标准差：194.64%
+- **优秀股票（收益率>50%）**：23只
+- **一般股票（收益率20-50%）**：3只
+- **表现不佳（收益率<20%）**：2只（0728.HK 中国电信 26.66%、0941.HK 中国移动 16.73%）
+
+**批量回测结果**（置信度0.60，28只股票，2026-02-22）：
 - **CatBoost 20天**：平均总收益率206.72%，夏普比率1.52，胜率31.84%
 - **融合模型（加权平均）**：平均总收益率75.97%，夏普比率0.86，胜率30.97%
 - **GBDT 20天**：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%
@@ -421,6 +434,8 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type e
 - **GBDT 20天模型**：总收益率 73.99%，夏普比率 1.48，最大回撤 -9.69%，评级 ⭐⭐⭐⭐⭐ 优秀
 - **CatBoost 20天模型**：总收益率 184.00%，夏普比率 1.62，最大回撤 -23.32%，评级 ⭐⭐⭐⭐ 良好
 - **融合模型（加权平均）**：总收益率 543.17%，夏普比率 2.30，最大回撤 -18.52%，评级 ⭐⭐⭐⭐⭐ 优秀
+
+**注意**：以上为单只股票回测结果（已删除该功能，仅保留批量回测）。批量回测结果见"批量回测功能"章节。
 
 ### 模拟交易系统
 - 基于大模型分析的模拟交易
@@ -461,8 +476,8 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type l
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
-python comprehensive_analysis.py
-python comprehensive_analysis.py --no-email  # 不发送邮件
+python3 comprehensive_analysis.py
+python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 
 **输出文件**：
@@ -547,28 +562,28 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 pip install -r requirements.txt
 
 # 主力资金追踪（默认稳健型）
-python hk_smart_money_tracker.py
-python hk_smart_money_tracker.py --investor-type aggressive
-python hk_smart_money_tracker.py --date 2025-10-25
+python3 hk_smart_money_tracker.py
+python3 hk_smart_money_tracker.py --investor-type aggressive
+python3 hk_smart_money_tracker.py --date 2025-10-25
 
 # 恒生指数监控（自动保存大模型建议，可选不发送邮件）
-python hsi_email.py
-python hsi_email.py --date 2025-10-25
-python hsi_email.py --no-email  # 仅生成报告，不发送邮件
+python3 hsi_email.py
+python3 hsi_email.py --date 2025-10-25
+python3 hsi_email.py --no-email  # 仅生成报告，不发送邮件
 
 # 板块分析
-python data_services/hk_sector_analysis.py --period 5 --style moderate
+python3 data_services/hk_sector_analysis.py --period 5 --style moderate
 
 # 板块轮动河流图
-python generate_sector_rotation_river_plot.py
+python3 generate_sector_rotation_river_plot.py
 
 # ML 模型训练和预测
 ./train_and_predict_all.sh
 
 # 训练单个模型
-python ml_services/ml_trading_model.py --mode train --horizon 1 --model-type lgbm
-python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
-python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 1 --model-type lgbm
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
 
 # 融合模型训练（两种方式）
 
@@ -582,14 +597,9 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type ensemble --use-feature-selection
 
 # 生成融合模型预测
-python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
-python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method average
-python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method voting
-
-# ML 模型回测（验证盈利能力）
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type catboost --use-feature-selection
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method average
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method voting
 
 # 批量回测（28只股票）⭐ 2026-02-22新增
 python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
@@ -597,22 +607,26 @@ python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-featu
 python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55
 
+# 批量回测不同置信度阈值
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.60
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.60
+
 # 模拟交易
-python simulation_trader.py --investor-type moderate
+python3 simulation_trader.py --investor-type moderate
 
 # AI 交易分析
-python ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05
+python3 ai_trading_analyzer.py --start-date 2026-01-05 --end-date 2026-01-05
 
 # 黄金分析
-python gold_analyzer.py
+python3 gold_analyzer.py
 
 # 加密货币监控
-python crypto_email.py
+python3 crypto_email.py
 
 # 综合分析（一键执行，每日自动运行）
 ./run_comprehensive_analysis.sh
-python comprehensive_analysis.py
-python comprehensive_analysis.py --no-email  # 不发送邮件
+python3 comprehensive_analysis.py
+python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 
 ## 项目架构
@@ -698,9 +712,7 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │       ├── **回测评估模块** (backtest_evaluator.py)
 │       │   ├── 夏普比率、索提诺比率、最大回撤计算
 │       │   ├── 胜率、信息比率统计
-│       │   ├── 可视化报告生成（4个子图）
-│       │   ├── 随机股票选择功能
-│       │   └── 股票信息记录（代码、策略、选择方法）
+│       │   └── 可视化报告生成（4个子图）
 │       ├── **批量回测脚本** (batch_backtest.py) ⭐ 2026-02-22新增
 │       │   ├── 对所有股票逐一进行回测
 │       │   ├── 支持单一模型和融合模型
@@ -709,6 +721,13 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 │       │   └── 支持股票名称显示
 │       ├── **CatBoost使用指南** (CATBOOST_USAGE.md) ⭐ 新增
 │       └── **回测使用指南** (BACKTEST_GUIDE.md) ⭐ 含CatBoost vs GBDT差异分析
+
+**回测策略说明**（2026-02-22更新）：
+- **批量回测优先**：现在只支持批量回测功能，可以对所有28只股票逐一进行回测
+- **置信度阈值优化**：支持不同置信度阈值（0.55、0.60等）的测试和对比
+- **完整性能评估**：批量回测提供更全面的模型性能评估，包括平均表现、收益分布、夏普比率分布等
+- **优秀股票识别**：自动识别并标记收益率>50%的优秀股票
+- **详细数据保存**：每只股票的回测结果保存为独立JSON文件，方便后续分析
 ├── 交易层
 │   └── 港股模拟交易系统 (simulation_trader.py)
 └── 服务层 (llm_services/)
@@ -745,7 +764,7 @@ python comprehensive_analysis.py --no-email  # 不发送邮件
 **使用方法**：
 ```bash
 # 运行恒生指数监控，自动保存大模型建议
-python hsi_email.py
+python3 hsi_email.py
 
 # 建议内容会保存到 data/llm_recommendations_YYYY-MM-DD.txt
 ```
@@ -876,7 +895,7 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 ./run_comprehensive_analysis.sh
 
 # 或手动执行
-python comprehensive_analysis.py
+python3 comprehensive_analysis.py
 
 # 综合建议会保存到 data/comprehensive_recommendations_YYYY-MM-DD.txt
 ```
@@ -997,6 +1016,11 @@ python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-f
   - 准确率65.62%（±5.97%），标准偏差过高
   - 存在严重过拟合风险，不推荐使用
   - 推荐使用 CatBoost 20天模型和融合模型作为主要预测来源
+- ✅ **已删除单只股票回测功能**（2026-02-22）：
+  - 删除了 ml_trading_model.py 中的单只股票回测逻辑（约300行代码）
+  - 删除了 --mode backtest 参数选项
+  - 现在只支持批量回测功能（batch_backtest.py）
+  - 回测评估更加完整，可以对所有股票逐一回测
 - ✅ **模型融合功能**（2026-02-20 新增）：
   - 支持三种融合方法（简单平均、加权平均、投票机制）
   - 自动计算模型权重（基于准确率）
@@ -1035,8 +1059,6 @@ python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-f
 - ✅ **预测结果保存**：自动保存融合模型预测结果到 CSV 文件
 - ✅ **新闻数据缓存（2026-02-20）**：避免重复加载，提升性能
 - ✅ **回测评估功能（2026-02-22）**：
-  - 随机股票选择：从测试集中随机选择一只股票进行回测
-  - 股票信息记录：记录股票代码、回测策略、选择方法到 JSON 文件
   - 完整指标体系：夏普比率、索提诺比率、最大回撤、胜率、信息比率
   - 可视化报告：组合价值对比、收益率分布、回撤曲线、关键指标对比
   - 测试验证（置信度阈值 0.55）：
@@ -1046,6 +1068,7 @@ python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-f
     - 融合模型（加权平均）：⭐⭐⭐⭐⭐ 优秀（总收益率 543.17%，夏普比率 2.30）
   - 支持单一模型和融合模型回测
   - 支持三分类预测（上涨/观望/下跌）
+  - **已删除单只股票回测功能**，现在只支持批量回测
 - ✅ **批量回测功能（2026-02-22 新增）**：
   - 对自选股列表中的所有股票（28只）进行批量回测
   - 支持单一模型和融合模型批量回测
@@ -1109,6 +1132,7 @@ python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-f
 - ✅ 准确率管理：训练时自动保存，分析时自动加载
 
 **待优化项**:
+- ✅ **删除单只股票回测功能**（已完成，现在只支持批量回测）
 - ⚠️ **融合模型优化**（探索更高级的融合方法，如 Stacking）
 - ⚠️ **风险管理模块**（VaR、止损止盈、仓位管理）
 - ⚠️ **深度学习模型**（LSTM、Transformer）
@@ -1142,8 +1166,6 @@ python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-f
 - `stock_cache/`: 股票数据缓存（已从 Git 移除）
 
 **输出文件存储在 `output/` 目录**：
-- `backtest_results_{horizon}d_{timestamp}.png`: 单只股票回测图表
-- `backtest_results_{horizon}d_{timestamp}.json`: 单只股票回测数据
 - `batch_backtest_{model_type}_{horizon}d_{timestamp}.json`: 批量回测详细数据 ⭐ 2026-02-22新增
 - `batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt`: 批量回测汇总报告 ⭐ 2026-02-22新增
 - `sector_rotation_river_plot.png`: 板块轮动河流图
@@ -1415,10 +1437,19 @@ python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusio
 - LightGBM 20天：平均总收益率-8.22%，夏普比率-0.18，胜率29.57%
 
 **批量回测结果**（置信度0.60，28只股票，2026-02-22）：
-- CatBoost 20天：平均总收益率206.72%，夏普比率1.52，胜率31.84%
-- 融合模型：平均总收益率75.97%，夏普比率0.86，胜率30.97%
-- GBDT 20天：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%
-- LightGBM 20天：平均总收益率-14.96%，夏普比率-0.24%，胜率26.47%
+- **CatBoost 20天**：平均总收益率206.72%，夏普比率1.52，胜率31.84%，**优秀股票23只（收益率>50%）**
+- **融合模型（加权平均）**：平均总收益率75.97%，夏普比率0.86，胜率30.97%，**优秀股票15只（收益率>50%）**
+- **GBDT 20天**：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%，**优秀股票1只（收益率>50%）**
+- **LightGBM 20天**：平均总收益率-14.96%，夏普比率-0.24%，胜率26.47%，**优秀股票0只（收益率>50%）**
+
+**CatBoost 批量回测详细表现**（置信度0.60，28只股票）：
+- 最高收益率：878.98%（1347.HK 华虹半导体）
+- 最低收益率：16.73%（0941.HK 中国移动）
+- 收益率中位数：133.93%
+- 收益率标准差：194.64%
+- **优秀股票（收益率>50%）**：23只
+- **一般股票（收益率20-50%）**：3只
+- **表现不佳（收益率<20%）**：2只（0728.HK 中国电信 26.66%、0941.HK 中国移动 16.73%）
 
 **置信度阈值对比分析**：
 - 提高置信度阈值（0.55 → 0.60）导致所有模型的收益率和胜率都下降
@@ -1603,6 +1634,8 @@ python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusio
 - 标注预测方向（上涨/观望/下跌）
 
 ## 提交记录
+- commit 657e218: refactor(ml): 删除单只股票回测代码，只保留批量回测功能
+- commit 245594c: docs: 更新项目文档，添加CatBoost vs GBDT差异分析和优秀股票标记
 - commit 8a9ff79: docs(BacktestGuide): 在表格中将各模型表现优秀股票用黑体标出来
 - commit 62beef4: Remove invalid import
 - commit d63cff0: docs: 更新项目文档（IFLOW.md和README.md），添加批量回测功能和置信度阈值对比分析
@@ -1629,4 +1662,4 @@ python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusio
 - commit fa91e20: perf(ml): 添加新闻数据缓存，避免重复加载提升性能
 
 ---
-最后更新：2026-02-22（CatBoost 算法集成、三模型融合、三分类预测、小市值板块支持、置信度和一致性计算优化、批量回测功能、置信度阈值对比分析、CatBoost vs GBDT 表现差异分析、优秀股票标记、最新模型准确率数据）
+最后更新：2026-02-22（CatBoost 算法集成、三模型融合、三分类预测、小市值板块支持、置信度和一致性计算优化、批量回测功能、置信度阈值对比分析、CatBoost vs GBDT 表现差异分析、优秀股票标记、删除单只股票回测功能、最新模型准确率数据、CatBoost批量回测详细表现）
