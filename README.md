@@ -62,36 +62,26 @@
 - **GBDT模型优势**：准确率比GBDT+LR提升3.21%，稳定性提升40.6%
 - **动态准确率加载**：训练时自动保存准确率，分析时自动读取最新准确率（含CatBoost）
 - **特征重要性分析**：提供模型可解释性
-- **回测评估功能（2026-02-22）**：
-  - 验证模型在真实交易中的盈利能力
-  - 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率
-  - 随机股票选择：从测试集中随机选择一只股票进行回测
-  - 股票信息记录：记录股票代码、回测策略、选择方法到JSON文件
-  - 可视化报告：组合价值对比、收益率分布、回撤曲线、关键指标对比（4个子图）
-  - 支持单一模型和融合模型回测
-  - 支持三分类预测（上涨/观望/下跌）
-  - 测试结果（置信度阈值 0.55）：
-    - LightGBM 20天模型：总收益率11.73%（夏普比率0.36，评级⭐⭐⭐）
-    - GBDT 20天模型：总收益率73.99%（夏普比率1.48，评级⭐⭐⭐⭐⭐）
-    - CatBoost 20天模型：总收益率184.00%（夏普比率1.62，评级⭐⭐⭐⭐）
-    - **融合模型（加权平均）：总收益率543.17%（夏普比率2.30，索提诺比率4.02，最大回撤-18.52%，评级⭐⭐⭐⭐⭐）** ⭐
-  - 评级标准：⭐⭐⭐⭐⭐优秀（夏普比率>1.0且最大回撤<-20%）
-- **批量回测功能（2026-02-22新增）**：
+- **批量回测功能（2026-02-22）**：
   - 对自选股列表中的所有股票（28只）进行批量回测
   - 支持单一模型和融合模型批量回测
   - 支持不同置信度阈值（0.55、0.60等）
   - 生成汇总报告，包含平均表现和排名
   - 支持股票名称显示
   - 批量回测结果（置信度0.55，28只股票）：
-    - CatBoost 20天：平均总收益率238.76%，夏普比率1.51，胜率32.81%
-    - 融合模型：平均总收益率115.13%，夏普比率1.00，胜率31.89%
-    - GBDT 20天：平均总收益率-1.86%，夏普比率-0.06，胜率29.88%
-    - LightGBM 20天：平均总收益率-8.22%，夏普比率-0.18，胜率29.57%
+    - **CatBoost 20天**：平均总收益率238.76%，夏普比率1.51，胜率32.81%，**优秀股票24只（收益率>50%）**
+    - **融合模型**：平均总收益率115.13%，夏普比率1.00，胜率31.89%，**优秀股票22只（收益率>50%）**
+    - GBDT 20天：平均总收益率-1.86%，夏普比率-0.06，胜率29.88%，**优秀股票4只（收益率>50%）**
+    - LightGBM 20天：平均总收益率-8.22%，夏普比率-0.18，胜率29.57%，**优秀股票2只（收益率>50%）**
   - 批量回测结果（置信度0.60，28只股票）：
     - CatBoost 20天：平均总收益率206.72%，夏普比率1.52，胜率31.84%
     - 融合模型：平均总收益率75.97%，夏普比率0.86，胜率30.97%
     - GBDT 20天：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%
     - LightGBM 20天：平均总收益率-14.96%，夏普比率-0.24%，胜率26.47%
+  - **CatBoost vs GBDT 表现差异分析**（详见 BACKTEST_GUIDE.md）：
+    - CatBoost在24只股票上收益率>50%，而GBDT只有4只
+    - 五大关键原因：自动分类特征处理、Ordered Boosting算法、更好正则化、更强大特征工程、更好泛化能力
+    - CatBoost找到的重要特征：市场环境特征（HSI_Return）、技术指标（成交量、布林带、ATR）、动量特征（MACD、RSI）
   - **置信度阈值对比分析**：
     - 提高置信度阈值（0.55 → 0.60）导致所有模型的收益率和胜率都下降
     - CatBoost模型最稳定（胜率仅下降0.97%）
@@ -168,16 +158,16 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type 
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method simple
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method voting
 
-# 回测模型盈利能力（单只股票）
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection
-python ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type catboost --use-feature-selection
-
 # 批量回测所有股票（28只）⭐ 2026-02-22新增
 python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55
+
+# 批量回测结果会保存到：
+# - output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json（详细数据）
+# - output/batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt（汇总报告）
+# 详细分析请参见：ml_services/BACKTEST_GUIDE.md
 
 # 综合分析（整合大模型建议和ML预测，每日自动执行）
 ./run_comprehensive_analysis.sh
@@ -228,8 +218,6 @@ fortune/
 ├── 输出文件 (output/)
 │   ├── batch_backtest_*.json           # 批量回测详细数据 ⭐ 2026-02-22新增
 │   ├── batch_backtest_summary_*.txt    # 批量回测汇总报告 ⭐ 2026-02-22新增
-│   ├── backtest_results_*.png          # 单只股票回测图表
-│   ├── backtest_results_*.json         # 单只股票回测数据
 │   └── ...
 │
 └── 数据文件 (data/)
@@ -266,7 +254,6 @@ fortune/
 │   ├── 机器学习模型
 │   │   ├── 单一模型（LightGBM、GBDT、CatBoost）
 │   │   ├── 融合模型（简单平均、加权平均、投票机制）
-│   │   ├── 单只股票回测
 │   │   └── 批量回测（28只股票） ⭐ 2026-02-22新增
 │   └── 综合分析（每日自动执行）
 │
@@ -610,8 +597,6 @@ python comprehensive_analysis.py --no-email
 | `simulation_transactions.csv` | 交易历史记录 | 实时 |
 | `ml_trading_model_*.pkl` | 机器学习模型 | 按需 |
 | `ml_trading_model_*_importance.csv` | 特征重要性排名 | 按需 |
-| `output/backtest_results_*.json` | 单只股票回测数据文件 | 回测时生成 |
-| `output/backtest_results_*.png` | 单只股票回测图表 | 回测时生成 |
 | `output/batch_backtest_*.json` | 批量回测详细数据 ⭐ 2026-02-22新增 | 批量回测时生成 |
 | `output/batch_backtest_summary_*.txt` | 批量回测汇总报告 ⭐ 2026-02-22新增 | 批量回测时生成 |
 | `fundamental_cache/` | 基本面数据缓存 | 7天有效期 |
@@ -730,17 +715,18 @@ python comprehensive_analysis.py --no-email
 - 增强预测可信度
 - 加权平均融合最优（准确率~62.5%，标准偏差±1.3%）
 
-**回测评估（单只股票）**：
-- LightGBM：总收益率11.73%，夏普比率0.36，评级⭐⭐⭐
-- GBDT：总收益率73.99%，夏普比率1.48，评级⭐⭐⭐⭐⭐
-- CatBoost：总收益率184.00%，夏普比率1.62，评级⭐⭐⭐⭐
-- **融合模型（加权平均）：总收益率543.17%，夏普比率2.30，索提诺比率4.02，最大回撤-18.52%，评级⭐⭐⭐⭐⭐** ⭐
-
 **批量回测（28只股票，2026-02-22）**：
-- CatBoost 20天（置信度0.55）：平均总收益率238.76%，夏普比率1.51，胜率32.81%
-- 融合模型（置信度0.55）：平均总收益率115.13%，夏普比率1.00，胜率31.89%
+- CatBoost 20天（置信度0.55）：平均总收益率238.76%，夏普比率1.51，胜率32.81%，**优秀股票24只（收益率>50%）**
+- 融合模型（置信度0.55）：平均总收益率115.13%，夏普比率1.00，胜率31.89%，**优秀股票22只（收益率>50%）**
+- GBDT 20天（置信度0.55）：平均总收益率-1.86%，夏普比率-0.06，胜率29.88%，**优秀股票4只（收益率>50%）**
+- LightGBM 20天（置信度0.55）：平均总收益率-8.22%，夏普比率-0.18%，胜率29.57%，**优秀股票2只（收益率>50%）**
 - CatBoost 20天（置信度0.60）：平均总收益率206.72%，夏普比率1.52，胜率31.84%
 - 融合模型（置信度0.60）：平均总收益率75.97%，夏普比率0.86，胜率30.97%
+
+**CatBoost vs GBDT 表现差异分析**（详见 BACKTEST_GUIDE.md）：
+- CatBoost在24只股票上收益率>50%，而GBDT只有4只
+- 五大关键原因：自动分类特征处理、Ordered Boosting算法、更好正则化、更强大特征工程、更好泛化能力
+- CatBoost找到的重要特征：市场环境特征（HSI_Return）、技术指标（成交量、布林带、ATR）、动量特征（MACD、RSI）
 
 **置信度阈值对比分析（2026-02-22）**：
 - 提高置信度阈值（0.55 → 0.60）导致所有模型的收益率和胜率都下降
@@ -748,7 +734,7 @@ python comprehensive_analysis.py --no-email
 - 置信度阈值 ≠ 预测准确率
 - 置信度0.55是更好的平衡点
 
-**当前状态**：CatBoost和融合模型已突破62%准确率，达到业界顶尖水平，稳定性显著提升，回测验证模型具备实际盈利能力，批量回测功能全面评估模型在不同股票上的表现。
+**当前状态**：CatBoost和融合模型已突破62%准确率，达到业界顶尖水平，稳定性显著提升，批量回测功能全面评估模型在不同股票上的表现，CatBoost在24只股票上实现收益率>50%，远超GBDT的4只。
 
 ## 贡献指南
 
