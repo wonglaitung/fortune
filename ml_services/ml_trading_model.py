@@ -3640,26 +3640,36 @@ class EnsembleModel:
         # CatBoost 需要特殊处理分类特征
         # 检查 X 是否包含所有需要的特征列
         if isinstance(X, pd.DataFrame):
-            # 检查 X 是否包含所有特征列
+            # 检查 X 是否包含所有特征列（按名称匹配）
             if all(col in X.columns for col in self.catboost_model.feature_columns):
-                # X 包含所有特征列
+                # X 包含所有特征列，按顺序提取
                 test_df = X[self.catboost_model.feature_columns].copy()
             elif len(X.columns) == len(self.catboost_model.feature_columns):
-                # X 已经是只包含特征列的 DataFrame（列数匹配）
+                # X 的列数匹配但列名可能不同
+                # 假设 X 的列顺序与训练时一致（这是回测评估器的默认行为）
                 test_df = X.copy()
-                test_df.columns = self.catboost_model.feature_columns  # 确保列名正确
+                test_df.columns = self.catboost_model.feature_columns
             else:
-                # X 的列数不匹配，提取存在的列
+                # X 的列数不匹配，尝试提取存在的列
                 available_cols = [col for col in self.catboost_model.feature_columns if col in X.columns]
-                if available_cols:
+                if len(available_cols) == len(self.catboost_model.feature_columns):
+                    # 所有特征都存在，按顺序提取
+                    test_df = X[self.catboost_model.feature_columns].copy()
+                elif len(available_cols) > 0:
+                    # 部分特征存在，补齐缺失的特征
                     test_df = X[available_cols].copy()
-                    # 补齐缺失的特征
                     for col in self.catboost_model.feature_columns:
                         if col not in test_df.columns:
                             test_df[col] = 0.0
                     test_df = test_df[self.catboost_model.feature_columns]
                 else:
-                    raise ValueError(f"无法从输入数据中提取特征列")
+                    # 无法提取特征列，假设列顺序一致
+                    test_df = X.copy()
+                    if len(test_df.columns) >= len(self.catboost_model.feature_columns):
+                        test_df = test_df.iloc[:, :len(self.catboost_model.feature_columns)]
+                        test_df.columns = self.catboost_model.feature_columns
+                    else:
+                        raise ValueError(f"无法从输入数据中提取特征列: X 有 {len(X.columns)} 列，需要 {len(self.catboost_model.feature_columns)} 列")
         else:
             # 如果是 numpy 数组，转换为 DataFrame
             test_df = pd.DataFrame(X, columns=self.catboost_model.feature_columns)
@@ -3668,7 +3678,6 @@ class EnsembleModel:
         categorical_features = [self.catboost_model.feature_columns.index(col) for col in self.catboost_model.categorical_encoders.keys() if col in self.catboost_model.feature_columns]
 
         # 确保分类特征列是整数类型
-        import numpy as np
         for cat_idx in categorical_features:
             col_name = self.catboost_model.feature_columns[cat_idx]
             if col_name in test_df.columns:
@@ -3681,14 +3690,17 @@ class EnsembleModel:
 
         # 计算权重
         if self.fusion_method == 'weighted':
-            lgbm_weight = self.model_accuracies['lgbm']
-            gbdt_weight = self.model_accuracies['gbdt']
-            catboost_weight = self.model_accuracies['catboost']
+            lgbm_weight = self.model_accuracies.get('lgbm', 0.5)
+            gbdt_weight = self.model_accuracies.get('gbdt', 0.5)
+            catboost_weight = self.model_accuracies.get('catboost', 0.5)
             total_weight = lgbm_weight + gbdt_weight + catboost_weight
 
-            lgbm_weight /= total_weight
-            gbdt_weight /= total_weight
-            catboost_weight /= total_weight
+            if total_weight > 0:
+                lgbm_weight /= total_weight
+                gbdt_weight /= total_weight
+                catboost_weight /= total_weight
+            else:
+                lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
         else:
             # 简单平均
             lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
@@ -3820,7 +3832,10 @@ def main():
         # 训练模型
         horizon_suffix = f'_{args.horizon}d'
         
-        # 检查是否跳过特征选择
+        # 检查是否应用特征选择
+        # --use-feature-selection: 应用特征选择（加载已有特征文件或运行特征选择）
+        # --skip-feature-selection: 跳过运行特征选择过程，但仍加载已有特征文件
+        apply_feature_selection = args.use_feature_selection
         run_feature_selection = args.use_feature_selection and not args.skip_feature_selection
         
         if ensemble_model:
@@ -3832,7 +3847,7 @@ def main():
             # 训练 LightGBM 模型
             print("\n📊 训练 LightGBM 模型...")
             lgbm_model = MLTradingModel()
-            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
@@ -3843,7 +3858,7 @@ def main():
             # 训练 GBDT 模型
             print("\n📊 训练 GBDT 模型...")
             gbdt_model = GBDTModel()
-            gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.save_model(gbdt_model_path)
             gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
@@ -3854,7 +3869,7 @@ def main():
             # 训练 CatBoost 模型
             print("\n📊 训练 CatBoost 模型...")
             catboost_model = CatBoostModel()
-            catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
             catboost_model.save_model(catboost_model_path)
             catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
@@ -3866,21 +3881,21 @@ def main():
             print("✅ 融合模型的所有子模型训练完成！")
             print("=" * 70)
         elif lgbm_model:
-            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         elif catboost_model:
-            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
             catboost_model.save_model(catboost_model_path)
             importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         else:
-            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=run_feature_selection)
+            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.save_model(gbdt_model_path)
             importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')

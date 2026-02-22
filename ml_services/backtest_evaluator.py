@@ -171,7 +171,43 @@ class BacktestEvaluator:
                 predictions = catboost_model.predict_proba(test_pool)[:, 1]
             else:
                 # 其他模型直接使用 predict_proba
-                predictions = model.predict_proba(test_data)[:, 1]
+                # 需要检查是否有 object 类型的列
+                if isinstance(test_data, pd.DataFrame):
+                    test_df = test_data.copy()
+                    # 将 object 类型的列转换为数值类型
+                    for col in test_df.columns:
+                        if test_df[col].dtype == 'object':
+                            # 尝试转换为字符串，再转换为类别编码
+                            test_df[col] = pd.Categorical(test_df[col]).codes
+                    predictions = model.predict_proba(test_df)[:, 1]
+                else:
+                    predictions = model.predict_proba(test_data)[:, 1]
+        elif hasattr(model, 'gbdt_model') and hasattr(model.gbdt_model, 'predict_proba'):
+            # GBDTModel 需要使用 model.gbdt_model.predict_proba
+            # 需要检查是否有 object 类型的列
+            if isinstance(test_data, pd.DataFrame):
+                test_df = test_data.copy()
+                # 将 object 类型的列转换为数值类型
+                for col in test_df.columns:
+                    if test_df[col].dtype == 'object':
+                        # 尝试转换为字符串，再转换为类别编码
+                        test_df[col] = pd.Categorical(test_df[col]).codes
+                predictions = model.gbdt_model.predict_proba(test_df)[:, 1]
+            else:
+                predictions = model.gbdt_model.predict_proba(test_data)[:, 1]
+        elif hasattr(model, 'model') and hasattr(model.model, 'predict_proba'):
+            # MLTradingModel (LightGBM) 需要使用 model.model.predict_proba
+            # 需要检查是否有 object 类型的列
+            if isinstance(test_data, pd.DataFrame):
+                test_df = test_data.copy()
+                # 将 object 类型的列转换为数值类型
+                for col in test_df.columns:
+                    if test_df[col].dtype == 'object':
+                        # 尝试转换为字符串，再转换为类别编码
+                        test_df[col] = pd.Categorical(test_df[col]).codes
+                predictions = model.model.predict_proba(test_df)[:, 1]
+            else:
+                predictions = model.model.predict_proba(test_data)[:, 1]
         else:
             # 对于不支持 predict_proba 的模型，使用 predict
             predictions = model.predict(test_data)
