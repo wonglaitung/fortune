@@ -12,7 +12,6 @@ from .ml_trading_model import (
     WATCHLIST,
     STOCK_NAMES
 )
-from .ml_prediction_email import MLPredictionEmailSender
 from .us_market_data import us_market_data
 from .base_model_processor import BaseModelProcessor
 
@@ -22,7 +21,6 @@ __all__ = [
     'FeatureEngineer',
     'WATCHLIST',
     'STOCK_NAMES',
-    'MLPredictionEmailSender',
     'us_market_data',
     'BaseModelProcessor'
 ]
