@@ -94,58 +94,45 @@
 
 ## 使用方法
 
-### 方法1: 通过主脚本使用
+### 批量回测（推荐）
 
-#### 单一模型回测
+**批量回测功能**（2026-02-22）支持对自选股列表中的所有股票进行批量回测，全面评估模型在不同股票上的表现。这是**唯一推荐的回测方式**，可以提供更全面的模型性能评估。
 
-```bash
-# 回测20天预测模型（LightGBM）
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection 
-
-# 回测20天预测模型（GBDT）
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection 
-
-# 回测20天预测模型（CatBoost）
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type catboost --use-feature-selection
-
-# 回测5天预测模型
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 5 --model-type lgbm --use-feature-selection 
-
-# 回测1天预测模型
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 1 --model-type lgbm --use-feature-selection 
-```
-
-#### 融合模型回测（推荐）
+#### 批量回测单一模型
 
 ```bash
-# 回测融合模型（加权平均 - 推荐）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type ensemble --use-feature-selection
+# 批量回测 LightGBM 20天模型
+python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
-# 回测融合模型（简单平均）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type ensemble --fusion-method average --use-feature-selection
+# 批量回测 GBDT 20天模型
+python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
-# 回测融合模型（投票机制）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type ensemble --fusion-method voting --use-feature-selection
-
-# 批量训练时跳过特征选择（综合分析脚本使用）
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+# 批量回测 CatBoost 20天模型
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 ```
 
-**融合策略说明**：
-- **加权平均（推荐）**：基于模型准确率自动分配权重
-  - LightGBM权重：~30.2%
-  - GBDT权重：~29.3%
-  - CatBoost权重：~30.7%
-  - 当前最佳性能：预计准确率61-62%（±1.5-2.0%）
-  - 支持三分类预测（上涨/观望/下跌）
-  - 提供置信度和一致性评估
-- **简单平均**：三个模型权重相等（各33.3%）
-- **投票机制**：多数投票决定最终预测
+#### 批量回测融合模型
+
+```bash
+# 批量回测融合模型（加权平均 - 推荐）
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55
+
+# 批量回测融合模型（简单平均）
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method average --use-feature-selection --confidence-threshold 0.55
+
+# 批量回测融合模型（投票机制）
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method voting --use-feature-selection --confidence-threshold 0.55
+```
+
+#### 不同置信度阈值测试
+
+```bash
+# 置信度0.55（推荐，平衡点）
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
+
+# 置信度0.60（保守型投资者）
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.60
+```
 
 ### 方法2: 直接使用回测评估器
 
@@ -175,16 +162,36 @@ cd ml_services
 python3 backtest_evaluator.py
 ```
 
+### ⚠️ 单只股票回测功能已删除（2026-02-22）
+
+**重要提示**：单只股票回测功能已被删除，现在只支持批量回测功能。
+
+**删除原因**：
+- 单只股票回测结果具有随机性，无法全面评估模型性能
+- 批量回测可以对所有28只股票逐一回测，提供更可靠的评估
+- 批量回测生成的汇总报告包含平均表现和排名，更便于分析和决策
+
+**替代方案**：使用批量回测功能（`batch_backtest.py`），它可以对所有股票逐一进行回测，并提供详细的汇总报告。
+
 ## 输出文件
 
-回测完成后会生成以下文件：
+批量回测完成后会生成以下文件：
 
-1. **回测结果图表**: `output/backtest_results_{horizon}d_{timestamp}.png`
-2. **回测结果数据**: `output/backtest_results_{horizon}d_{timestamp}.json`
+1. **汇总报告**：`output/batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt`
+   - 包含所有股票的回测结果汇总
+   - 平均表现统计
+   - 优秀/良好/一般/较差股票数量
+   - 股票排名（按夏普比率、总收益率等）
+
+2. **详细数据**：`output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json`
+   - 包含所有股票的详细回测数据
+   - 每只股票的关键指标、交易记录等
 
 JSON文件包含所有关键指标：
 ```json
 {
+  "stock_code": "0700.HK",
+  "stock_name": "腾讯控股",
   "total_return": 0.1523,
   "annual_return": 0.1523,
   "final_capital": 115230.0,
@@ -199,10 +206,7 @@ JSON文件包含所有关键指标：
   "benchmark_return": 0.0856,
   "benchmark_annual_return": 0.0856,
   "benchmark_sharpe": 0.52,
-  "benchmark_max_drawdown": -0.2534,
-  "stock_code": "0700.HK",
-  "backtest_strategy": "single_stock_random",
-  "selection_method": "random_selection_from_27_stocks"
+  "benchmark_max_drawdown": -0.2534
 }
 ```
 
@@ -276,6 +280,8 @@ JSON文件包含所有关键指标：
 - 评级：⭐⭐⭐⭐⭐ 优秀
 
 ### 回测结果示例（置信度阈值 0.55）
+
+**注意**：以下为历史单只股票回测结果（已删除该功能，仅保留批量回测）。批量回测结果见"批量回测"章节。
 
 **LightGBM 20天模型（1398.HK工商银行）**：
 - 总收益率：11.73%
@@ -394,6 +400,7 @@ JSON文件包含所有关键指标：
    - 高置信度上涨：fused_probability > 0.60
    - 中等置信度观望：0.50 < fused_probability ≤ 0.60
    - 预测下跌：fused_probability ≤ 0.50
+8. **批量回测优先**：推荐使用批量回测功能（`batch_backtest.py`），可以全面评估模型在不同股票上的表现
 
 ## 完整工作流程
 
@@ -411,18 +418,15 @@ python3 ml_services/ml_trading_model.py --mode evaluate --horizon 20 --model-typ
 python3 ml_services/ml_trading_model.py --mode evaluate --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
 python3 ml_services/ml_trading_model.py --mode evaluate --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 
-# 4. 回测模型盈利能力
-# 单一模型回测
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type lgbm --use-feature-selection --skip-feature-selection
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type gbdt --use-feature-selection --skip-feature-selection
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
-
-# 融合模型回测（推荐）
-python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-type ensemble --fusion-method weighted --use-feature-selection --skip-feature-selection
+# 4. 批量回测所有股票（推荐）
+python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --skip-feature-selection --confidence-threshold 0.55
+python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --skip-feature-selection --confidence-threshold 0.55
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --skip-feature-selection --confidence-threshold 0.55
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --skip-feature-selection --confidence-threshold 0.55
 
 # 5. 查看回测结果
-# - 图表: output/backtest_results_20d_YYYYMMDD_HHMMSS.png
-# - 数据: output/backtest_results_20d_YYYYMMDD_HHMMSS.json
+# - 汇总报告: output/batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt
+# - 详细数据: output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json
 ```
 
 ## 实际应用建议
@@ -469,9 +473,9 @@ python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-typ
 - 观望为主
 - 等待更强的信号
 
-## 批量回测
+## 批量回测功能（2026-02-22）
 
-批量回测功能 (`batch_backtest.py`) 支持对自选股列表中的所有股票进行批量回测，全面评估模型在不同股票上的表现。
+批量回测功能 (`batch_backtest.py`) 支持对自选股列表中的所有股票进行批量回测，全面评估模型在不同股票上的表现。这是**唯一推荐的回测方式**。
 
 ### 功能特点
 
@@ -479,7 +483,8 @@ python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-typ
 2. **多模型支持**：支持 LightGBM、GBDT、CatBoost、融合模型
 3. **股票名称显示**：回测结果同时显示股票代码和股票名称
 4. **结果汇总**：自动生成汇总报告，包括平均表现和排名
-5. **JSON数据保存**：每只股票的回测结果保存为独立JSON文件
+5. **置信度阈值支持**：支持不同置信度阈值（0.55、0.60等）
+6. **JSON数据保存**：每只股票的回测结果保存为独立JSON文件
 
 ### 使用方法
 
@@ -487,26 +492,36 @@ python3 ml_services/ml_trading_model.py --mode backtest --horizon 20 --model-typ
 
 ```bash
 # 批量回测 LightGBM 20天模型
-python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
 # 批量回测 GBDT 20天模型
-python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
 # 批量回测 CatBoost 20天模型
-python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 ```
 
 #### 批量回测融合模型
 
 ```bash
 # 批量回测融合模型（加权平均 - 推荐）
-python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55
 
 # 批量回测融合模型（简单平均）
-python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method average --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method average --use-feature-selection --confidence-threshold 0.55
 
 # 批量回测融合模型（投票机制）
-python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method voting --use-feature-selection
+python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method voting --use-feature-selection --confidence-threshold 0.55
+```
+
+#### 不同置信度阈值测试
+
+```bash
+# 置信度0.55（推荐，平衡点）
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
+
+# 置信度0.60（保守型投资者）
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.60
 ```
 
 ### 输出文件
@@ -523,21 +538,33 @@ python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusio
    - 包含所有股票的详细回测数据
    - 每只股票的关键指标、交易记录等
 
-3. **单只股票回测结果**（可选）：`output/backtest_results_{stock_code}_{horizon}d_{timestamp}.json`
+### 批量回测结果（置信度0.55，28只股票，2026-02-22）
 
-### 回测结果示例
+| 模型 | 平均总收益率 | 平均夏普比率 | 平均最大回撤 | 平均胜率 | 优秀股票（收益率>50%） | 建议 |
+|------|------------|------------|------------|---------|---------------------|------|
+| **CatBoost 20天** | **238.76%** | **1.51** | -19.08% | **32.81%** | **24只** | ⭐⭐⭐⭐⭐ 最佳 |
+| 融合模型（加权平均） | 115.13% | 1.00 | -23.07% | 31.89% | 22只 | ⭐⭐⭐⭐⭐ 推荐 |
+| GBDT 20天 | -1.86% | -0.06 | -37.93% | 29.88% | 4只 | ⭐⭐⭐ 一般 |
+| LightGBM 20天 | -8.22% | -0.18 | -37.12% | 29.57% | 2只 | ⭐⭐ 较差 |
 
-**置信度0.55（推荐）批量回测**（28只股票，2026-02-22）：
-- CatBoost 20天：平均总收益率238.76%，夏普比率1.51，胜率32.81%
-- 融合模型：平均总收益率115.13%，夏普比率1.00，胜率31.89%
-- GBDT 20天：平均总收益率-1.86%，夏普比率-0.06，胜率29.88%
-- LightGBM 20天：平均总收益率-8.22%，夏普比率-0.18，胜率29.57%
+### 批量回测结果（置信度0.60，28只股票，2026-02-22）
 
-**置信度0.60（保守）批量回测**（28只股票，2026-02-22）：
-- CatBoost 20天：平均总收益率206.72%，夏普比率1.52，胜率31.84%
-- 融合模型：平均总收益率75.97%，夏普比率0.86，胜率30.97%
-- GBDT 20天：平均总收益率-13.02%，夏普比率-0.31，胜率25.11%
-- LightGBM 20天：平均总收益率-14.96%，夏普比率-0.24，胜率26.47%
+| 模型 | 平均总收益率 | 平均夏普比率 | 平均最大回撤 | 平均胜率 | 优秀股票（收益率>50%） | 建议 |
+|------|------------|------------|------------|---------|---------------------|------|
+| **CatBoost 20天** | **206.72%** | **1.52** | -17.29% | **31.84%** | **23只** | ⭐⭐⭐⭐⭐ 最佳 |
+| 融合模型（加权平均） | 75.97% | 0.86 | -23.07% | 30.97% | 15只 | ⭐⭐⭐⭐ 推荐 |
+| GBDT 20天 | -13.02% | -0.31 | -37.93% | 25.11% | 1只 | ⭐⭐ 较差 |
+| LightGBM 20天 | -14.96% | -0.24 | -37.12% | 26.47% | 0只 | ⭐ 较差 |
+
+### CatBoost 批量回测详细表现（置信度0.60，28只股票）
+
+- 最高收益率：878.98%（1347.HK 华虹半导体）
+- 最低收益率：16.73%（0941.HK 中国移动）
+- 收益率中位数：133.93%
+- 收益率标准差：194.64%
+- **优秀股票（收益率>50%）**：23只
+- **一般股票（收益率20-50%）**：3只
+- **表现不佳（收益率<20%）**：2只（0728.HK 中国电信 26.66%、0941.HK 中国移动 16.73%）
 
 ### 置信度阈值对比分析（2026-02-22）
 
@@ -693,6 +720,7 @@ python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusio
 2. **数据要求**：需要完整的历史价格数据
 3. **模型加载**：确保模型文件存在且正确
 4. **结果解读**：批量回测结果仅供参考，实盘需要考虑更多因素
+5. **推荐使用批量回测**：批量回测是唯一推荐的回测方式，可以全面评估模型在不同股票上的表现
 
 ## CatBoost vs GBDT 表现差异分析
 
@@ -971,6 +999,13 @@ A: 加权平均融合方法基于模型准确率自动分配权重：weight = ac
 A: 置信度反映预测的可信程度（基于融合概率），一致性反映多模型的意见统一程度（基于模型预测一致性）。两者独立评估，高置信度 + 高一致性 = 强烈信号。
 
 ## 更新日志
+
+- **2026-02-22**: 删除单只股票回测功能，只保留批量回测功能
+  - 删除 `--mode backtest` 参数选项
+  - 删除随机股票选择功能
+  - 更新使用方法，推荐使用批量回测功能
+  - 添加置信度0.60的批量回测结果数据
+  - 添加 CatBoost 批量回测详细表现（23只优秀股票）
 
 - **2026-02-21**: 更新模型性能数据至最新（来自 `data/model_accuracy.json`）
   - CatBoost 20天：61.09%（±1.50%）⭐ 当前最佳（稳定可靠）
