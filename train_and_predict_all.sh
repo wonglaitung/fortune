@@ -2,7 +2,6 @@
 
 # 机器学习交易模型 - 完整训练和预测脚本
 # 用于训练1天、5天、20天后的涨跌预测模型，并进行预测
-# 支持历史回测功能
 
 echo "=========================================="
 echo "🚀 机器学习交易模型 - 完整训练和预测"
@@ -18,10 +17,6 @@ END_DATE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --backtest)
-            MODE="backtest"
-            shift
-            ;;
         --predict-date)
             PREDICT_DATE="$2"
             shift 2
@@ -36,7 +31,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "未知参数: $1"
-            echo "用法: $0 [--backtest] [--predict-date YYYY-MM-DD] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD]"
+            echo "用法: $0 [--predict-date YYYY-MM-DD] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD]"
             exit 1
             ;;
     esac
@@ -49,19 +44,15 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # 显示运行模式
-if [ "$MODE" = "backtest" ]; then
-    echo "📊 运行模式: 历史回测"
-    if [ -n "$PREDICT_DATE" ]; then
-        echo "📅 预测日期: $PREDICT_DATE"
-    fi
-    if [ -n "$START_DATE" ]; then
-        echo "📅 训练起始日期: $START_DATE"
-    fi
-    if [ -n "$END_DATE" ]; then
-        echo "📅 训练结束日期: $END_DATE"
-    fi
-else
-    echo "📊 运行模式: 当前日期"
+echo "📊 运行模式: 当前日期"
+if [ -n "$PREDICT_DATE" ]; then
+    echo "📅 预测日期: $PREDICT_DATE"
+fi
+if [ -n "$START_DATE" ]; then
+    echo "📅 训练起始日期: $START_DATE"
+fi
+if [ -n "$END_DATE" ]; then
+    echo "📅 训练结束日期: $END_DATE"
 fi
 echo ""
 
@@ -169,5 +160,9 @@ echo "💡 使用提示:"
 echo "  - 当前日期预测: ./train_and_predict_all.sh"
 echo "  - 历史日期预测: ./train_and_predict_all.sh --predict-date 2026-01-15"
 echo "  - 限制训练数据: ./train_and_predict_all.sh --start-date 2024-01-01 --end-date 2024-12-31"
-echo "  - 完整历史回测: ./train_and_predict_all.sh --backtest --start-date 2024-01-01 --end-date 2024-12-31 --predict-date 2024-12-31"
+echo ""
+echo "🔧 批量回测（推荐用于评估模型在所有股票上的表现）:"
+echo "  python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55"
+echo "  python3 ml_services/batch_backtest.py --model-type ensemble --horizon 20 --fusion-method weighted --use-feature-selection --confidence-threshold 0.55"
+echo "  详细文档请参见: ml_services/BACKTEST_GUIDE.md"
 echo "=========================================="
