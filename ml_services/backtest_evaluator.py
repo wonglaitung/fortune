@@ -132,7 +132,6 @@ class BacktestEvaluator:
             if hasattr(model, 'catboost_model') and hasattr(model, 'model_type') and model.model_type == 'catboost':
                 # CatBoost 模型需要使用 Pool 对象
                 from catboost import Pool
-                import numpy as np
 
                 categorical_encoders = getattr(model, 'categorical_encoders', {})
                 feature_columns = getattr(model, 'feature_columns', [])
