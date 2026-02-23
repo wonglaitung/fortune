@@ -25,6 +25,9 @@ import lightgbm as lgb
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
 from ml_services.ml_trading_model import MLTradingModel
+from ml_services.logger_config import get_logger
+
+logger = get_logger('feature_selection')
 
 
 def load_training_data():
@@ -36,16 +39,16 @@ def load_training_data():
     - y: 目标变量
     - feature_names: 特征名称列表
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("📊 加载训练数据")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     # 创建模型实例
     model = MLTradingModel()
 
     # 准备数据（使用20天预测horizon）
     codes = list(STOCK_LIST.keys())
-    print(f"📈 准备加载 {len(codes)} 只股票的数据...")
+    logger.info(f"准备加载 {len(codes)} 只股票的数据...")
 
     # 调用prepare_data方法（返回DataFrame）
     df = model.prepare_data(codes, horizon=20)
@@ -80,7 +83,7 @@ def load_training_data():
     X = df[feature_columns]
     y = df['Label']
 
-    print(f"✅ 数据加载完成")
+    logger.info(f"数据加载完成")
     print(f"   - 样本数量: {len(X)}")
     print(f"   - 特征数量: {len(feature_columns)}")
     print(f"   - 目标变量分布: {y.value_counts().to_dict()}")
@@ -102,9 +105,9 @@ def feature_selection_f_test(X, y, k=1000):
     - selected_features: 选择的特征索引
     - scores: F-test分数
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("🔬 F-test特征选择")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     selector = SelectKBest(f_classif, k=k)
     X_selected = selector.fit_transform(X, y)
@@ -112,7 +115,7 @@ def feature_selection_f_test(X, y, k=1000):
     selected_features = selector.get_support(indices=True)
     scores = selector.scores_
 
-    print(f"✅ F-test选择完成")
+    logger.info(f"F-test选择完成")
     print(f"   - 选择特征数量: {len(selected_features)}")
     print(f"   - 平均F-test分数: {np.mean(scores):.2f}")
     print(f"   - 最高F-test分数: {np.max(scores):.2f}")
@@ -134,9 +137,9 @@ def feature_selection_mutual_info(X, y, k=1000):
     - selected_features: 选择的特征索引
     - scores: 互信息分数
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("🔬 互信息特征选择")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     selector = SelectKBest(mutual_info_classif, k=k)
     X_selected = selector.fit_transform(X, y)
@@ -144,7 +147,7 @@ def feature_selection_mutual_info(X, y, k=1000):
     selected_features = selector.get_support(indices=True)
     scores = selector.scores_
 
-    print(f"✅ 互信息选择完成")
+    logger.info(f"互信息选择完成")
     print(f"   - 选择特征数量: {len(selected_features)}")
     print(f"   - 平均互信息分数: {np.mean(scores):.4f}")
     print(f"   - 最高互信息分数: {np.max(scores):.4f}")
@@ -172,9 +175,9 @@ def feature_selection_hybrid(X, y, feature_names, top_k=500):
     - selected_features: 选择的特征索引
     - feature_scores: 特征得分DataFrame
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("🔬 F-test + 互信息混合特征选择")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     # 1. F-test选择
     f_selected, f_scores = feature_selection_f_test(X, y, k=1000)
@@ -187,7 +190,7 @@ def feature_selection_hybrid(X, y, feature_names, top_k=500):
     mi_set = set(mi_selected)
     intersection = f_set.intersection(mi_set)
 
-    print(f"📊 选择结果统计")
+    logger.info(f"选择结果统计")
     print(f"   - F-test选择: {len(f_selected)} 个特征")
     print(f"   - 互信息选择: {len(mi_selected)} 个特征")
     print(f"   - 交集: {len(intersection)} 个特征")
@@ -226,7 +229,7 @@ def feature_selection_hybrid(X, y, feature_names, top_k=500):
     feature_scores_sorted = feature_scores.sort_values('Combined_Score', ascending=False)
     selected_features = feature_scores_sorted.head(top_k)['Feature_Index'].values
 
-    print(f"✅ 混合选择完成")
+    logger.info(f"混合选择完成")
     print(f"   - 最终选择特征数量: {len(selected_features)}")
     print(f"   - 交集特征数量: {feature_scores_sorted.head(top_k)['In_Intersection'].sum()}")
     print(f"   - 平均综合得分: {feature_scores_sorted.head(top_k)['Combined_Score'].mean():.4f}")
@@ -248,9 +251,9 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
     返回:
     - performance: 性能指标
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("📈 评估特征选择效果")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     try:
         # 选择特征
@@ -282,7 +285,7 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
         )
 
         # 检查cv_results的键名
-        print(f"📊 cv_results键名: {list(cv_results.keys())}")
+        logger.info(f"cv_results键名: {list(cv_results.keys())}")
 
         # 尝试找到正确的键名
         mean_key = None
@@ -297,7 +300,7 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
             avg_logloss = np.mean(cv_results[mean_key])
             std_logloss = np.std(cv_results[stdv_key])
 
-            print(f"✅ 评估完成")
+            logger.info(f"评估完成")
             print(f"   - 平均{mean_key}: {avg_logloss:.4f}")
             print(f"   - {stdv_key}: {std_logloss:.4f}")
             print("")
@@ -310,7 +313,7 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
 
             return performance
         else:
-            print(f"⚠️ 无法找到正确的键名，使用默认值")
+            logger.warning(f"无法找到正确的键名，使用默认值")
             performance = {
                 'avg_logloss': 0.0,
                 'std_logloss': 0.0,
@@ -319,7 +322,7 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
             return performance
 
     except Exception as e:
-        print(f"⚠️ 评估失败: {e}")
+        logger.warning(f"评估失败: {e}")
         print("使用默认值继续...")
         performance = {
             'avg_logloss': 0.0,
@@ -338,9 +341,9 @@ def save_results(feature_scores, selected_features, output_dir='output'):
     - selected_features: 选择的特征索引
     - output_dir: 输出目录
     """
-    print("=" * 80)
+    logger.info("=" * 50)
     print("💾 保存结果")
-    print("=" * 80)
+    logger.info("=" * 50)
 
     # 创建输出目录
     os.makedirs(output_dir, exist_ok=True)
@@ -349,19 +352,19 @@ def save_results(feature_scores, selected_features, output_dir='output'):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     feature_scores_path = os.path.join(output_dir, f'feature_selection_scores_{timestamp}.csv')
     feature_scores.to_csv(feature_scores_path, index=False, encoding='utf-8-sig')
-    print(f"✅ 特征得分已保存至: {feature_scores_path}")
+    logger.info(f"特征得分已保存至: {feature_scores_path}")
 
     # 保存选择的特征
     selected_features_path = os.path.join(output_dir, f'selected_features_{timestamp}.csv')
     selected_df = feature_scores[feature_scores['Feature_Index'].isin(selected_features)].copy()
     selected_df.to_csv(selected_features_path, index=False, encoding='utf-8-sig')
-    print(f"✅ 选择的特征已保存至: {selected_features_path}")
+    logger.info(f"选择的特征已保存至: {selected_features_path}")
 
     # 保存特征索引列表（方便后续使用）
     selected_indices_path = os.path.join(output_dir, f'selected_feature_indices_{timestamp}.txt')
     with open(selected_indices_path, 'w', encoding='utf-8') as f:
         f.write(','.join(map(str, selected_features)))
-    print(f"✅ 特征索引已保存至: {selected_indices_path}")
+    logger.info(f"特征索引已保存至: {selected_indices_path}")
 
     print("")
 
@@ -377,7 +380,7 @@ def main():
 
     print("\n" + "=" * 80)
     print("🚀 特征选择优化开始")
-    print("=" * 80)
+    logger.info("=" * 50)
     print(f"⚙️  参数配置:")
     print(f"   - 目标特征数量: {args.top_k}")
     print(f"   - 输出目录: {args.output_dir}")
@@ -399,17 +402,17 @@ def main():
         save_results(feature_scores, selected_features, args.output_dir)
 
         # 步骤5: 显示Top 20特征
-        print("=" * 80)
+        logger.info("=" * 50)
         print("🏆 Top 20特征")
-        print("=" * 80)
+        logger.info("=" * 50)
         top_20 = feature_scores.head(20)
         print(top_20[['Feature_Name', 'Combined_Score', 'In_Intersection']].to_string(index=False))
         print("")
 
-        print("=" * 80)
-        print("✅ 特征选择优化完成！")
-        print("=" * 80)
-        print(f"📊 优化总结:")
+        logger.info("=" * 50)
+        logger.info("特征选择优化完成！")
+        logger.info("=" * 50)
+        logger.info(f"优化总结:")
         print(f"   - 原始特征数量: {len(feature_names)}")
         print(f"   - 优化后特征数量: {len(selected_features)}")
         print(f"   - 特征减少比例: {(1 - len(selected_features)/len(feature_names))*100:.1f}%")
@@ -424,7 +427,8 @@ def main():
         print("")
 
     except Exception as e:
-        print(f"❌ 特征选择失败: {e}")
+        logger.error(f"特征选择失败: {e}")
+    except Exception as e:
         import traceback
         traceback.print_exc()
         sys.exit(1)

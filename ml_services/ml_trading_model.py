@@ -40,6 +40,7 @@ from data_services.technical_analysis import TechnicalAnalyzer
 from data_services.fundamental_data import get_comprehensive_fundamental_data
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
+from ml_services.logger_config import get_logger
 from config import WATCHLIST as STOCK_LIST
 
 # 股票名称映射
@@ -47,6 +48,9 @@ STOCK_NAMES = STOCK_LIST
 
 # 自选股列表（转换为列表格式）
 WATCHLIST = list(STOCK_NAMES.keys())
+
+# 获取日志记录器
+logger = get_logger('ml_trading_model')
 
 
 # ========== 保存预测结果到文本文件 ==========
@@ -172,13 +176,13 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
 
-        print(f"✅ 20天预测结果已保存到 {filepath}")
+        logger.info(f"20天预测结果已保存到 {filepath}")
         return filepath
 
     except Exception as e:
-        print(f"❌ 保存预测结果失败: {e}")
+        logger.error(f"保存预测结果失败: {e}")
         import traceback
-        traceback.print_exc()
+        logger.debug(traceback.format_exc())
         return None
 
 
@@ -219,7 +223,7 @@ def _save_cache(cache_file_path, data):
                 'timestamp': datetime.now().isoformat()
             }, f)
     except Exception as e:
-        print(f"⚠️ 保存缓存失败: {e}")
+        logger.warning(f"保存缓存失败: {e}")
 
 def _load_cache(cache_file_path):
     """加载缓存"""
@@ -228,7 +232,7 @@ def _load_cache(cache_file_path):
             cache = pickle.load(f)
             return cache['data']
     except Exception as e:
-        print(f"⚠️ 加载缓存失败: {e}")
+        logger.warning(f"加载缓存失败: {e}")
         return None
 
 def get_stock_data_with_cache(stock_code, period_days=730):
@@ -238,13 +242,13 @@ def get_stock_data_with_cache(stock_code, period_days=730):
     
     # 检查缓存
     if _is_cache_valid(cache_file_path, STOCK_DATA_CACHE_DAYS * 24):
-        print(f"  📦 使用缓存的股票数据 {stock_code}")
+        logger.debug(f"使用缓存的股票数据 {stock_code}")
         cached_data = _load_cache(cache_file_path)
         if cached_data is not None:
             return cached_data
-    
+
     # 从网络获取
-    print(f"  🌐 下载股票数据 {stock_code}")
+        logger.debug(f"下载股票数据 {stock_code}")
     stock_df = get_hk_stock_data_tencent(stock_code, period_days)
     
     # 保存缓存
@@ -260,13 +264,13 @@ def get_hsi_data_with_cache(period_days=730):
     
     # 检查缓存
     if _is_cache_valid(cache_file_path, HSI_DATA_CACHE_HOURS):
-        print(f"  📦 使用缓存的恒生指数数据")
+        logger.debug("使用缓存的恒生指数数据")
         cached_data = _load_cache(cache_file_path)
         if cached_data is not None:
             return cached_data
-    
+
     # 从网络获取
-    print(f"  🌐 下载恒生指数数据")
+        logger.debug("下载恒生指数数据")
     hsi_df = get_hsi_data_tencent(period_days)
     
     # 保存缓存
@@ -294,9 +298,9 @@ class FeatureEngineer:
             try:
                 from data_services.hk_sector_analysis import SectorAnalyzer
                 self._sector_analyzer = SectorAnalyzer()
-                print("  📊 板块分析器初始化成功")
+                logger.debug("板块分析器初始化成功")
             except ImportError:
-                print("  ⚠️ 板块分析模块不可用")
+                logger.warning("板块分析模块不可用")
                 return None
         return self._sector_analyzer
 
@@ -721,7 +725,7 @@ class FeatureEngineer:
         # 获取股票类型信息
         stock_info = stock_info_mapping.get(code, None)
         if not stock_info:
-            print(f"⚠️ 未找到股票 {code} 的类型信息")
+            logger.warning(f"未找到股票 {code} 的类型信息")
             return {}
 
         features = {
@@ -993,7 +997,7 @@ class FeatureEngineer:
                 df[interaction_name] = df[tech_feat] * df[fund_feat]
                 interaction_count += 1
 
-        print(f"✅ 成功生成 {interaction_count} 个技术指标与基本面交互特征")
+        logger.info(f"成功生成 {interaction_count} 个技术指标与基本面交互特征")
 
         # 删除所有值全为NaN的交互特征（基本面数据不可用导致的）
         interaction_cols = [col for col in df.columns if any(sub in col for sub in ['_PE', '_PB', '_ROE', '_ROA', '_Dividend_Yield', '_EPS', '_Net_Margin', '_Gross_Margin'])]
@@ -1123,7 +1127,7 @@ class FeatureEngineer:
             }
 
         except Exception as e:
-            print(f"⚠️ 计算情感特征失败 {code}: {e}")
+            logger.warning(f"计算情感特征失败 {code}: {e}")
             # 异常情况返回默认值
             return {
                 'sentiment_ma3': 0.0,
@@ -1165,15 +1169,15 @@ class FeatureEngineer:
                 
                 # 检查新闻数据是否有效
                 if self._news_data_cache is None:
-                    print(f"⚠️  新闻数据加载失败（返回None）")
+                    logger.warning(f" 新闻数据加载失败（返回None）")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
                 
                 if len(self._news_data_cache) == 0:
-                    print(f"⚠️  新闻数据为空")
+                    logger.warning(f" 新闻数据为空")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
                 
                 if '文本' not in self._news_data_cache.columns:
-                    print(f"⚠️  新闻数据缺少'文本'列，可用列: {self._news_data_cache.columns.tolist()}")
+                    logger.warning(f" 新闻数据缺少'文本'列，可用列: {self._news_data_cache.columns.tolist()}")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
                 
                 # 获取股票主题特征
@@ -1184,12 +1188,12 @@ class FeatureEngineer:
                 else:
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
             else:
-                print(f"⚠️  主题模型不存在，请先运行: python ml_services/topic_modeling.py")
+                logger.warning(f" 主题模型不存在，请先运行: python ml_services/topic_modeling.py")
                 return {f'Topic_{i+1}': 0.0 for i in range(10)}
 
         except Exception as e:
             import traceback
-            print(f"❌ 创建主题特征失败 {code}: {e}")
+            logger.error(f"创建主题特征失败 {code}: {e}")
             print(f"详细错误信息:\n{traceback.format_exc()}")
             return {f'Topic_{i+1}': 0.0 for i in range(10)}
 
@@ -1238,14 +1242,14 @@ class FeatureEngineer:
                     interaction_features[interaction_key] = topic_prob * sentiment_value
 
             if interaction_features:
-                print(f"✅ 获取主题情感交互特征: {code} (共{len(interaction_features)}个)")
+                logger.info(f"获取主题情感交互特征: {code} (共{len(interaction_features)}个)")
                 return interaction_features
             else:
-                print(f"⚠️  无法创建主题情感交互特征: {code}")
+                logger.warning(f" 无法创建主题情感交互特征: {code}")
                 return {}
 
         except Exception as e:
-            print(f"❌ 创建主题情感交互特征失败 {code}: {e}")
+            logger.error(f"创建主题情感交互特征失败 {code}: {e}")
             return {}
 
     def create_expectation_gap_features(self, code, df):
@@ -1294,14 +1298,14 @@ class FeatureEngineer:
             expectation_gap_features['Expectation_Change_Strength'] = abs(sentiment_change_rate)
 
             if expectation_gap_features:
-                print(f"✅ 获取预期差距特征: {code} (共{len(expectation_gap_features)}个)")
+                logger.info(f"获取预期差距特征: {code} (共{len(expectation_gap_features)}个)")
                 return expectation_gap_features
             else:
-                print(f"⚠️  无法创建预期差距特征: {code}")
+                logger.warning(f" 无法创建预期差距特征: {code}")
                 return {}
 
         except Exception as e:
-            print(f"❌ 创建预期差距特征失败 {code}: {e}")
+            logger.error(f"创建预期差距特征失败 {code}: {e}")
             return {}
 
     def create_sector_features(self, code, df):
@@ -1429,7 +1433,7 @@ class FeatureEngineer:
                         features[f'sector_rising_ratio_{period}d'] = 0.5
 
                 except Exception as e:
-                    print(f"⚠️ 计算板块表现失败 (period={period}): {e}")
+                    logger.warning(f"计算板块表现失败 (period={period}): {e}")
                     features[f'sector_avg_change_{period}d'] = 0.0
                     features[f'sector_rank_{period}d'] = 0
                     features[f'sector_rising_ratio_{period}d'] = 0.5
@@ -1451,7 +1455,7 @@ class FeatureEngineer:
                 else:
                     features['sector_trend_score'] = 0.0
             except Exception as e:
-                print(f"⚠️ 计算板块趋势失败: {e}")
+                logger.warning(f"计算板块趋势失败: {e}")
                 features['sector_trend_score'] = 0.0
 
             # 计算板块资金流向
@@ -1463,7 +1467,7 @@ class FeatureEngineer:
                 else:
                     features['sector_flow_score'] = 0.0
             except Exception as e:
-                print(f"⚠️ 计算板块资金流向失败: {e}")
+                logger.warning(f"计算板块资金流向失败: {e}")
                 features['sector_flow_score'] = 0.0
 
             # 判断板块是否跑赢恒指（基于板块平均涨跌幅）
@@ -1475,7 +1479,7 @@ class FeatureEngineer:
             return features
 
         except Exception as e:
-            print(f"⚠️ 计算板块特征失败 {code}: {e}")
+            logger.warning(f"计算板块特征失败 {code}: {e}")
             # 异常情况返回默认值
             return {
                 'sector_avg_change_1d': 0.0,
@@ -1542,7 +1546,7 @@ class FeatureEngineer:
                 df[interaction_name] = df[cat_feat] * df[num_feat]
                 interaction_count += 1
 
-        print(f"✅ 成功生成 {interaction_count} 个交叉特征")
+        logger.info(f"成功生成 {interaction_count} 个交叉特征")
         return df
 
 
@@ -1586,8 +1590,8 @@ class MLTradingModel:
             df = pd.read_csv(filepath)
             selected_names = df['Feature_Name'].tolist()
 
-            print(f"📂 加载特征列表文件: {filepath}")
-            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+            logger.debug(f"加载特征列表文件: {filepath}")
+            logger.info(f"加载了 {len(selected_names)} 个选择的特征")
 
             # 如果提供了当前特征名称，使用交集
             if current_feature_names is not None:
@@ -1596,17 +1600,17 @@ class MLTradingModel:
                 available_set = current_set & selected_set
                 
                 available_names = list(available_set)
-                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
-                print(f"📊 选择的特征数量: {len(selected_names)}")
-                print(f"📊 实际可用的特征数量: {len(available_names)}")
-                print(f"⚠️  {len(selected_set) - len(available_names)} 个特征在当前数据集中不存在")
+                logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
+                logger.info(f"选择的特征数量: {len(selected_names)}")
+                logger.info(f"实际可用的特征数量: {len(available_names)}")
+                logger.warning(f" {len(selected_set) - len(available_names)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
                 return selected_names
 
         except Exception as e:
-            print(f"⚠️ 加载特征列表失败: {e}")
+            logger.warning(f"加载特征列表失败: {e}")
             return None
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
@@ -1623,14 +1627,14 @@ class MLTradingModel:
         all_data = []
 
         # ========== 步骤1：获取共享数据（只获取一次） ==========
-        print("📊 获取共享数据...")
+        logger.info("获取共享数据...")
         
         # 获取美股市场数据（只获取一次）
         us_market_df = us_market_data.get_all_us_market_data(period_days=730)
         if us_market_df is not None:
-            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+            logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
-            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
+            logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
         # 获取恒生指数数据（只获取一次，所有股票共享）
         hsi_df = get_hsi_data_with_cache(period_days=730)
@@ -1649,7 +1653,7 @@ class MLTradingModel:
                     return (code, stock_df)
                 return None
             except Exception as e:
-                print(f"⚠️ 下载股票 {code} 失败: {e}")
+                logger.warning(f"下载股票 {code} 失败: {e}")
                 return None
 
         # 使用线程池并行下载（最多8个并发）
@@ -1663,7 +1667,7 @@ class MLTradingModel:
                     stock_data_list.append(result)
                     print(f"  ✅ [{i}/{len(codes)}] {result[0]}")
 
-        print(f"✅ 成功下载 {len(stock_data_list)} 只股票数据")
+        logger.info(f"成功下载 {len(stock_data_list)} 只股票数据")
 
         # ========== 步骤3：计算特征 ==========
         print(f"\n🔧 计算特征...")
@@ -1805,18 +1809,18 @@ class MLTradingModel:
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
-                print("⚠️ 未找到特征选择文件，使用全部特征")
+                logger.warning(r"未找到特征选择文件，使用全部特征")
         elif use_feature_selection and self.model_type == 'gbdt':
             print("\n🎯 应用特征选择（GBDT）...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
-                print("⚠️ 未找到特征选择文件，使用全部特征")
+                logger.warning(r"未找到特征选择文件，使用全部特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -1962,9 +1966,9 @@ class MLTradingModel:
             # 保存回文件
             with open(accuracy_file, 'w', encoding='utf-8') as f:
                 json.dump(existing_data, f, indent=2, ensure_ascii=False)
-            print(f"✅ 准确率已保存到 {accuracy_file}")
+            logger.info(f"准确率已保存到 {accuracy_file}")
         except Exception as e:
-            print(f"⚠️ 保存准确率失败: {e}")
+            logger.warning(f"保存准确率失败: {e}")
 
         # 特征重要性（使用 BaseModelProcessor 统一格式）
         feat_imp = self.processor.analyze_feature_importance(
@@ -1981,7 +1985,7 @@ class MLTradingModel:
                 lambda x: 'Positive' if x > 0 else 'Negative'
             )
         except Exception as e:
-            print(f"⚠️ 特征贡献分析失败: {e}")
+            logger.warning(f"特征贡献分析失败: {e}")
             feat_imp['Impact_Direction'] = 'Unknown'
 
         print("\n特征重要性 Top 10:")
@@ -2038,7 +2042,7 @@ class MLTradingModel:
                     us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 if stock_df.empty:
-                    print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
+                    logger.warning(f"股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
             # 计算技术指标（80个指标）
@@ -2110,7 +2114,7 @@ class MLTradingModel:
                         latest_data[col] = encoder.transform(latest_data[col].astype(str))
                     except ValueError:
                         # 处理未见过的类别
-                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        logger.warning(f"警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
                         latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
@@ -2195,8 +2199,8 @@ class GBDTModel:
             df = pd.read_csv(filepath)
             selected_names = df['Feature_Name'].tolist()
 
-            print(f"📂 加载特征列表文件: {filepath}")
-            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+            logger.debug(f"加载特征列表文件: {filepath}")
+            logger.info(f"加载了 {len(selected_names)} 个选择的特征")
 
             # 如果提供了当前特征名称，使用交集
             if current_feature_names is not None:
@@ -2205,17 +2209,17 @@ class GBDTModel:
                 available_set = current_set & selected_set
                 
                 available_names = list(available_set)
-                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
-                print(f"📊 选择的特征数量: {len(selected_names)}")
-                print(f"📊 实际可用的特征数量: {len(available_names)}")
-                print(f"⚠️  {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
+                logger.info(f"选择的特征数量: {len(selected_names)}")
+                logger.info(f"实际可用的特征数量: {len(available_names)}")
+                logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
                 return selected_names
 
         except Exception as e:
-            print(f"⚠️ 加载特征列表失败: {e}")
+            logger.warning(f"加载特征列表失败: {e}")
             return None
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
@@ -2232,12 +2236,12 @@ class GBDTModel:
         all_data = []
 
         # 获取美股市场数据（只获取一次）
-        print("📊 获取美股市场数据...")
+        logger.info("获取美股市场数据...")
         us_market_df = us_market_data.get_all_us_market_data(period_days=730)
         if us_market_df is not None:
-            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+            logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
-            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
+            logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
         for code in codes:
             try:
@@ -2365,11 +2369,11 @@ class GBDTModel:
             use_feature_selection: 是否使用特征选择（默认False，使用全部特征）
         """
         print("="*70)
-        print("🚀 开始训练 GBDT 模型")
+        logger.info("开始训练 GBDT 模型")
         print("="*70)
 
         # 准备数据
-        print("📊 准备训练数据...")
+        logger.info("准备训练数据...")
         df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
 
         # 先删除全为NaN的列（避免dropna删除所有行）
@@ -2389,7 +2393,7 @@ class GBDTModel:
 
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
-        print(f"✅ 使用 {len(self.feature_columns)} 个特征")
+        logger.info(f"使用 {len(self.feature_columns)} 个特征")
 
         # 应用特征选择（可选）
         if use_feature_selection:
@@ -2398,11 +2402,11 @@ class GBDTModel:
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
-                print("⚠️ 未找到特征选择文件，使用全部特征")
+                logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
-            print(f"✅ 使用全部 {len(self.feature_columns)} 个特征")
+            logger.info(f"使用全部 {len(self.feature_columns)} 个特征")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
@@ -2551,13 +2555,13 @@ class GBDTModel:
             # 保存回文件
             with open(accuracy_file, 'w', encoding='utf-8') as f:
                 json.dump(existing_data, f, indent=2, ensure_ascii=False)
-            print(f"✅ 准确率已保存到 {accuracy_file}")
+            logger.info(f"准确率已保存到 {accuracy_file}")
         except Exception as e:
-            print(f"⚠️ 保存准确率失败: {e}")
+            logger.warning(f"保存准确率失败: {e}")
 
         # ========== Step 2: 输出 GBDT 特征重要性 ==========
         print("\n" + "="*70)
-        print("📊 Step 2: 分析 GBDT 特征重要性")
+        logger.info("Step 2: 分析 GBDT 特征重要性")
         print("="*70)
 
         feat_imp = self.processor.analyze_feature_importance(
@@ -2576,18 +2580,18 @@ class GBDTModel:
 
             # 保存特征重要性
             feat_imp.to_csv('output/gbdt_feature_importance.csv', index=False)
-            print("✅ 已保存特征重要性至 output/gbdt_feature_importance.csv")
+            logger.info(r"已保存特征重要性至 output/gbdt_feature_importance.csv")
 
             # 显示前20个重要特征
             print("\n📊 GBDT Top 20 重要特征 (含影响方向):")
             print(feat_imp[['Feature', 'Gain_Importance', 'Impact_Direction']].head(20))
 
         except Exception as e:
-            print(f"⚠️ 特征贡献分析失败: {e}")
+            logger.warning(f"特征贡献分析失败: {e}")
             feat_imp['Impact_Direction'] = 'Unknown'
 
         print("\n" + "="*70)
-        print("✅ GBDT 模型训练完成！")
+        logger.info(r"GBDT 模型训练完成！")
         print("="*70)
 
         return feat_imp
@@ -2641,7 +2645,7 @@ class GBDTModel:
                     us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 if stock_df.empty:
-                    print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
+                    logger.warning(f"股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
             # 计算技术指标（80个指标）
@@ -2713,7 +2717,7 @@ class GBDTModel:
                         latest_data[col] = encoder.transform(latest_data[col].astype(str))
                     except ValueError:
                         # 处理未见过的类别
-                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        logger.warning(f"警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
                         latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
@@ -2813,8 +2817,8 @@ class CatBoostModel:
             df = pd.read_csv(filepath)
             selected_names = df['Feature_Name'].tolist()
 
-            print(f"📂 加载特征列表文件: {filepath}")
-            print(f"✅ 加载了 {len(selected_names)} 个选择的特征")
+            logger.debug(f"加载特征列表文件: {filepath}")
+            logger.info(f"加载了 {len(selected_names)} 个选择的特征")
 
             # 如果提供了当前特征名称，使用交集
             if current_feature_names is not None:
@@ -2823,17 +2827,17 @@ class CatBoostModel:
                 available_set = current_set & selected_set
                 
                 available_names = list(available_set)
-                print(f"📊 当前数据集特征数量: {len(current_feature_names)}")
-                print(f"📊 选择的特征数量: {len(selected_names)}")
-                print(f"📊 实际可用的特征数量: {len(available_names)}")
-                print(f"⚠️  {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
+                logger.info(f"选择的特征数量: {len(selected_names)}")
+                logger.info(f"实际可用的特征数量: {len(available_names)}")
+                logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
                 return selected_names
 
         except Exception as e:
-            print(f"⚠️ 加载特征列表失败: {e}")
+            logger.warning(f"加载特征列表失败: {e}")
             return None
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
@@ -2850,12 +2854,12 @@ class CatBoostModel:
         all_data = []
 
         # 获取美股市场数据（只获取一次）
-        print("📊 获取美股市场数据...")
+        logger.info("获取美股市场数据...")
         us_market_df = us_market_data.get_all_us_market_data(period_days=730)
         if us_market_df is not None:
-            print(f"✅ 成功获取 {len(us_market_df)} 天的美股市场数据")
+            logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
-            print("⚠️ 无法获取美股市场数据，将只使用港股特征")
+            logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
         for code in codes:
             try:
@@ -2937,7 +2941,7 @@ class CatBoostModel:
                 all_data.append(stock_df)
 
             except Exception as e:
-                print(f"⚠️ 处理股票 {code} 失败: {e}")
+                logger.warning(f"处理股票 {code} 失败: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
@@ -2959,7 +2963,7 @@ class CatBoostModel:
             end_date = pd.to_datetime(end_date)
             df = df[df.index <= end_date]
 
-        print(f"✅ 数据准备完成，共 {len(df)} 条记录")
+        logger.info(f"数据准备完成，共 {len(df)} 条记录")
 
         return df
 
@@ -2977,7 +2981,7 @@ class CatBoostModel:
             DataFrame: 特征重要性数据
         """
         print("\n" + "="*70)
-        print("🚀 开始训练 CatBoost 模型")
+        logger.info("开始训练 CatBoost 模型")
         print("="*70)
         print(f"预测周期: {horizon} 天")
         print(f"股票数量: {len(codes)}")
@@ -2985,7 +2989,7 @@ class CatBoostModel:
 
         # ========== 准备数据 ==========
         print("\n" + "="*70)
-        print("📊 准备训练数据")
+        logger.info("准备训练数据")
         print("="*70)
 
         df = self.prepare_data(codes, start_date, end_date, horizon)
@@ -3006,9 +3010,9 @@ class CatBoostModel:
             if selected_features:
                 # 过滤特征
                 self.feature_columns = selected_features
-                print(f"✅ 使用特征选择后的 {len(self.feature_columns)} 个特征")
+                logger.info(f"使用特征选择后的 {len(self.feature_columns)} 个特征")
             else:
-                print("⚠️ 特征选择失败，使用所有特征")
+                logger.warning(r"特征选择失败，使用所有特征")
                 self.feature_columns = [col for col in df.columns if col not in ['Code', 'Label', 'Future_Return']]
         else:
             # 使用所有特征（排除标签和目标列）
@@ -3017,10 +3021,10 @@ class CatBoostModel:
         # 检查特征列是否存在
         missing_features = [col for col in self.feature_columns if col not in df.columns]
         if missing_features:
-            print(f"⚠️ 以下特征列不存在，将被跳过: {missing_features[:10]}")
+            logger.warning(f"以下特征列不存在，将被跳过: {missing_features[:10]}")
             self.feature_columns = [col for col in self.feature_columns if col in df.columns]
 
-        print(f"✅ 最终使用 {len(self.feature_columns)} 个特征")
+        logger.info(f"最终使用 {len(self.feature_columns)} 个特征")
 
         # 准备训练数据 - 先处理分类特征
         from sklearn.preprocessing import LabelEncoder
@@ -3158,13 +3162,13 @@ class CatBoostModel:
             # 保存回文件
             with open(accuracy_file, 'w', encoding='utf-8') as f:
                 json.dump(existing_data, f, indent=2, ensure_ascii=False)
-            print(f"✅ 准确率已保存到 {accuracy_file}")
+            logger.info(f"准确率已保存到 {accuracy_file}")
         except Exception as e:
-            print(f"⚠️ 保存准确率失败: {e}")
+            logger.warning(f"保存准确率失败: {e}")
 
         # ========== 输出 CatBoost 特征重要性 ==========
         print("\n" + "="*70)
-        print("📊 分析 CatBoost 特征重要性")
+        logger.info("分析 CatBoost 特征重要性")
         print("="*70)
 
         # CatBoost 提供多种特征重要性计算方法
@@ -3177,14 +3181,14 @@ class CatBoostModel:
 
         # 保存特征重要性
         feat_imp.to_csv('output/catboost_feature_importance.csv', index=False)
-        print("✅ 已保存特征重要性至 output/catboost_feature_importance.csv")
+        logger.info(r"已保存特征重要性至 output/catboost_feature_importance.csv")
 
         # 显示前20个重要特征
         print("\n📊 CatBoost Top 20 重要特征:")
         print(feat_imp[['Feature', 'Importance']].head(20))
 
         print("\n" + "="*70)
-        print("✅ CatBoost 模型训练完成！")
+        logger.info(r"CatBoost 模型训练完成！")
         print("="*70)
 
         return feat_imp
@@ -3237,7 +3241,7 @@ class CatBoostModel:
                     us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 if stock_df.empty:
-                    print(f"⚠️ 股票 {code} 在日期 {predict_date_str} 之前没有数据")
+                    logger.warning(f"股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
             # 计算技术指标（80个指标）
@@ -3308,7 +3312,7 @@ class CatBoostModel:
                         latest_data[col] = encoder.transform(latest_data[col].astype(str))
                     except ValueError:
                         # 处理未见过的类别，映射到0
-                        print(f"⚠️ 警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
+                        logger.warning(f"警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
                         latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
@@ -3442,12 +3446,12 @@ class EnsembleModel:
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
                     'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
                 }
-                print(f"✅ 已加载模型准确率: {self.model_accuracies}")
+                logger.info(f"已加载模型准确率: {self.model_accuracies}")
             else:
-                print("⚠️ 未找到准确率文件，使用默认值")
+                logger.warning(r"未找到准确率文件，使用默认值")
                 self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
         except Exception as e:
-            print(f"⚠️ 加载准确率失败: {e}")
+            logger.warning(f"加载准确率失败: {e}")
             self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
 
     def load_models(self, horizon=1):
@@ -3463,25 +3467,25 @@ class EnsembleModel:
         lgbm_path = f'data/ml_trading_model_lgbm{horizon_suffix}.pkl'
         if os.path.exists(lgbm_path):
             self.lgbm_model.load_model(lgbm_path)
-            print(f"✅ LightGBM 模型已加载")
+            logger.info(f"LightGBM 模型已加载")
         else:
-            print(f"⚠️ LightGBM 模型文件不存在: {lgbm_path}")
+            logger.warning(f"LightGBM 模型文件不存在: {lgbm_path}")
         
         # 加载 GBDT 模型
         gbdt_path = f'data/ml_trading_model_gbdt{horizon_suffix}.pkl'
         if os.path.exists(gbdt_path):
             self.gbdt_model.load_model(gbdt_path)
-            print(f"✅ GBDT 模型已加载")
+            logger.info(f"GBDT 模型已加载")
         else:
-            print(f"⚠️ GBDT 模型文件不存在: {gbdt_path}")
+            logger.warning(f"GBDT 模型文件不存在: {gbdt_path}")
         
         # 加载 CatBoost 模型
         catboost_path = f'data/ml_trading_model_catboost{horizon_suffix}.pkl'
         if os.path.exists(catboost_path):
             self.catboost_model.load_model(catboost_path)
-            print(f"✅ CatBoost 模型已加载")
+            logger.info(f"CatBoost 模型已加载")
         else:
-            print(f"⚠️ CatBoost 模型文件不存在: {catboost_path}")
+            logger.warning(f"CatBoost 模型文件不存在: {catboost_path}")
         
         # 加载模型准确率
         self.load_model_accuracy()
@@ -3508,7 +3512,7 @@ class EnsembleModel:
         valid_results = {k: v for k, v in results.items() if v is not None}
         
         if len(valid_results) == 0:
-            print(f"❌ 所有模型预测失败: {code}")
+            logger.error(f"所有模型预测失败: {code}")
             return None
         
         # 获取概率和预测
@@ -3760,7 +3764,7 @@ class EnsembleModel:
         
         df = pd.DataFrame(data)
         df.to_csv(filepath, index=False)
-        print(f"✅ 融合预测结果已保存到 {filepath}")
+        logger.info(f"融合预测结果已保存到 {filepath}")
         
         return df
 
@@ -3792,42 +3796,42 @@ def main():
 
     # 初始化模型
     if args.model_type == 'ensemble':
-        print("=" * 70)
+        logger.info("=" * 70)
         print(f"🎭 使用融合模型（方法: {args.fusion_method}）")
-        print("=" * 70)
+        logger.info("=" * 70)
         lgbm_model = None
         gbdt_model = None
         catboost_model = None
         ensemble_model = EnsembleModel(fusion_method=args.fusion_method)
     elif args.model_type == 'gbdt':
-        print("=" * 70)
-        print("🚀 使用单一 GBDT 模型")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("使用单一 GBDT 模型")
+        logger.info("=" * 70)
         lgbm_model = None
         gbdt_model = GBDTModel()
         catboost_model = None
         ensemble_model = None
     elif args.model_type == 'catboost':
-        print("=" * 70)
+        logger.info("=" * 70)
         print("🐱 使用单一 CatBoost 模型")
-        print("=" * 70)
+        logger.info("=" * 70)
         lgbm_model = None
         gbdt_model = None
         catboost_model = CatBoostModel()
         ensemble_model = None
     else:
-        print("=" * 70)
-        print("🚀 使用单一 LightGBM 模型")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("使用单一 LightGBM 模型")
+        logger.info("=" * 70)
         lgbm_model = MLTradingModel()
         gbdt_model = None
         catboost_model = None
         ensemble_model = None
 
     if args.mode == 'train':
-        print("=" * 50)
+        logger.info("=" * 50)
         print("训练模式")
-        print("=" * 50)
+        logger.info("=" * 50)
 
         # 训练模型
         horizon_suffix = f'_{args.horizon}d'
@@ -3842,7 +3846,7 @@ def main():
             # 融合模型需要训练三个子模型
             print("\n" + "=" * 70)
             print("🎭 训练融合模型的三个子模型")
-            print("=" * 70)
+            logger.info("=" * 70)
             
             # 训练 LightGBM 模型
             print("\n📊 训练 LightGBM 模型...")
@@ -3852,8 +3856,8 @@ def main():
             lgbm_model.save_model(lgbm_model_path)
             lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
-            print(f"✅ LightGBM 模型已保存到 {lgbm_model_path}")
-            print(f"✅ 特征重要性已保存到 {lgbm_importance_path}")
+            logger.info(f"LightGBM 模型已保存到 {lgbm_model_path}")
+            logger.info(f"特征重要性已保存到 {lgbm_importance_path}")
             
             # 训练 GBDT 模型
             print("\n📊 训练 GBDT 模型...")
@@ -3863,8 +3867,8 @@ def main():
             gbdt_model.save_model(gbdt_model_path)
             gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
             gbdt_feature_importance.to_csv(gbdt_importance_path, index=False)
-            print(f"✅ GBDT 模型已保存到 {gbdt_model_path}")
-            print(f"✅ 特征重要性已保存到 {gbdt_importance_path}")
+            logger.info(f"GBDT 模型已保存到 {gbdt_model_path}")
+            logger.info(f"特征重要性已保存到 {gbdt_importance_path}")
             
             # 训练 CatBoost 模型
             print("\n📊 训练 CatBoost 模型...")
@@ -3874,12 +3878,12 @@ def main():
             catboost_model.save_model(catboost_model_path)
             catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
             catboost_feature_importance.to_csv(catboost_importance_path, index=False)
-            print(f"✅ CatBoost 模型已保存到 {catboost_model_path}")
-            print(f"✅ 特征重要性已保存到 {catboost_importance_path}")
+            logger.info(f"CatBoost 模型已保存到 {catboost_model_path}")
+            logger.info(f"特征重要性已保存到 {catboost_importance_path}")
             
             print("\n" + "=" * 70)
-            print("✅ 融合模型的所有子模型训练完成！")
-            print("=" * 70)
+            logger.info(r"融合模型的所有子模型训练完成！")
+            logger.info("=" * 70)
         elif lgbm_model:
             feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
@@ -3903,9 +3907,9 @@ def main():
             print(f"\n特征重要性已保存到 {importance_path}")
 
     elif args.mode == 'predict':
-        print("=" * 50)
+        logger.info("=" * 50)
         print("预测模式")
-        print("=" * 50)
+        logger.info("=" * 50)
 
         # 加载模型
         horizon_suffix = f'_{args.horizon}d'
@@ -4017,9 +4021,9 @@ def main():
                 save_predictions_to_text(pred_df_export, args.predict_date)
 
     elif args.mode == 'evaluate':
-        print("=" * 50)
+        logger.info("=" * 50)
         print("评估模式")
-        print("=" * 50)
+        logger.info("=" * 50)
 
         if args.model_type == 'both':
             # 加载两个模型
@@ -4066,7 +4070,7 @@ def main():
 
             # 对比结果
             print("\n" + "="*70)
-            print("📊 模型对比")
+            logger.info("模型对比")
             print("="*70)
             print(f"LightGBM 准确率: {lgbm_accuracy:.4f}")
             print(f"GBDT 准确率: {gbdt_accuracy:.4f}")
@@ -4105,7 +4109,7 @@ def main():
             print(f"\n准确率: {accuracy_score(y_test, y_pred):.4f}")
 
     else:
-        print(f"❌ 不支持的运行模式: {args.mode}")
+        logger.error(f"不支持的运行模式: {args.mode}")
         print("请使用以下模式之一: train, evaluate, predict")
         sys.exit(1)
 

@@ -20,7 +20,7 @@ try:
     import jieba.analyse
     from jieba import posseg
 except ImportError:
-    print("⚠️  警告：未安装jieba，使用英文分词")
+    logger.warning(" 警告：未安装jieba，使用英文分词")
     jieba = None
 
 # LDA主题建模
@@ -34,6 +34,9 @@ import re
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from ml_services.logger_config import get_logger
+logger = get_logger('topic_modeling')
 
 
 class TopicModeler:
@@ -239,12 +242,12 @@ class TopicModeler:
             # 移除空文本
             df = df[df['文本'].str.strip() != '']
             
-            print(f"✅ 加载了 {len(df)} 条新闻数据（最近{days}天）")
+            logger.info(f"加载了 {len(df)} 条新闻数据（最近{days}天）")
             
             return df
             
         except Exception as e:
-            print(f"❌ 加载新闻数据失败: {e}")
+            logger.error(f"加载新闻数据失败: {e}")
             return None
     
     def train_model(self, texts, max_features=1000, max_df=0.95, min_df=2):
@@ -261,7 +264,7 @@ class TopicModeler:
             bool: 是否训练成功
         """
         try:
-            print(f"🚀 开始训练LDA主题模型（{self.n_topics}个主题）...")
+            logger.info(f"开始训练LDA主题模型（{self.n_topics}个主题）...")
             
             # 文本预处理
             print("📝 文本预处理...")
@@ -280,7 +283,7 @@ class TopicModeler:
             tokenized_texts = [tokens for tokens in tokenized_texts if tokens]
             
             if len(tokenized_texts) < self.n_topics * 2:
-                print(f"⚠️  警告：文档数量不足（{len(tokenized_texts)}），建议至少{self.n_topics * 2}条")
+                logger.warning(f" 警告：文档数量不足（{len(tokenized_texts)}），建议至少{self.n_topics * 2}条")
             
             # 将词列表转换为字符串
             text_strings = [' '.join(tokens) for tokens in tokenized_texts]
@@ -308,7 +311,7 @@ class TopicModeler:
             # 保存特征名称
             self.feature_names = self.vectorizer.get_feature_names_out()
             
-            print(f"✅ LDA模型训练完成！")
+            logger.info(f"LDA模型训练完成！")
             print(f"   - 主题数量: {self.n_topics}")
             print(f"   - 词汇数量: {len(self.feature_names)}")
             print(f"   - 文档数量: {len(text_strings)}")
@@ -319,15 +322,16 @@ class TopicModeler:
             return True
             
         except Exception as e:
-            print(f"❌ 训练LDA模型失败: {e}")
+            logger.error(f"训练LDA模型失败: {e}")
             import traceback
+            logger.debug(traceback.format_exc())
             traceback.print_exc()
             return False
     
     def _print_topic_keywords(self, n_words=10):
         """打印每个主题的关键词"""
         print("\n📊 主题关键词分析：")
-        print("=" * 80)
+        logger.info("=" * 50)
         
         for topic_idx, topic in enumerate(self.lda_model.components_):
             # 获取每个主题的前N个关键词
@@ -350,7 +354,7 @@ class TopicModeler:
             np.array: 主题分布（长度为n_topics）
         """
         if self.lda_model is None or self.vectorizer is None:
-            print("❌ 模型未训练，请先调用train_model()")
+            logger.error("模型未训练，请先调用train_model()")
             return None
         
         try:
@@ -377,7 +381,7 @@ class TopicModeler:
             return topic_dist
             
         except Exception as e:
-            print(f"❌ 获取主题分布失败: {e}")
+            logger.error(f"获取主题分布失败: {e}")
             return np.zeros(self.n_topics)
     
     def save_model(self, filepath='data/lda_topic_model.pkl'):
@@ -401,11 +405,11 @@ class TopicModeler:
             with open(filepath, 'wb') as f:
                 pickle.dump(model_data, f)
             
-            print(f"✅ 模型已保存到 {filepath}")
+            logger.info(f"模型已保存到 {filepath}")
             return True
             
         except Exception as e:
-            print(f"❌ 保存模型失败: {e}")
+            logger.error(f"保存模型失败: {e}")
             return False
     
     def load_model(self, filepath='data/lda_topic_model.pkl'):
@@ -430,7 +434,7 @@ class TopicModeler:
             self.feature_names = model_data['feature_names']
             
             # 调试信息已删除以减少输出
-            # print(f"✅ 模型已从 {filepath} 加载")
+            # logger.info(f"模型已从 {filepath} 加载")
             # print(f"   - 保存时间: {model_data['saved_at']}")
             # print(f"   - 主题数量: {self.n_topics}")
             
@@ -440,7 +444,7 @@ class TopicModeler:
             return True
             
         except Exception as e:
-            print(f"❌ 加载模型失败: {e}")
+            logger.error(f"加载模型失败: {e}")
             return False
     
     def get_stock_topic_features(self, stock_code, df_news=None):
@@ -487,9 +491,9 @@ class TopicModeler:
 
 def main():
     """主函数：训练LDA主题模型"""
-    print("=" * 80)
+    logger.info("=" * 50)
     print("🚀 LDA主题建模训练")
-    print("=" * 80)
+    logger.info("=" * 50)
     
     # 创建主题建模器
     topic_modeler = TopicModeler(n_topics=10, language='mixed')
@@ -499,7 +503,7 @@ def main():
     df_news = topic_modeler.load_news_data(days=30)
     
     if df_news is None or len(df_news) == 0:
-        print("❌ 没有可用的新闻数据")
+        logger.error("没有可用的新闻数据")
         return
     
     # 训练模型
@@ -527,8 +531,8 @@ def main():
             print(f"   {topic}: {prob:.4f}")
     
     print("\n" + "=" * 80)
-    print("✅ 训练完成！")
-    print("=" * 80)
+    logger.info("训练完成！")
+    logger.info("=" * 50)
 
 
 if __name__ == "__main__":
