@@ -10,7 +10,7 @@ import json
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from backtest_evaluator import BacktestEvaluator
+from ml_services.backtest_evaluator import BacktestEvaluator
 
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,6 +18,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ml_services.ml_trading_model import (
     MLTradingModel, GBDTModel, CatBoostModel, EnsembleModel
 )
+from ml_services.logger_config import get_logger
+
+logger = get_logger('batch_backtest')
 from config import WATCHLIST as STOCK_LIST
 
 # 股票名称映射
@@ -38,7 +41,7 @@ def batch_backtest_all_stocks(model, test_df, feature_columns, confidence_thresh
         list: 所有股票的回测结果列表
     """
     unique_stocks = test_df['Code'].unique()
-    print(f"📊 开始批量回测，共 {len(unique_stocks)} 只股票")
+    logger.info(f"开始批量回测，共 {len(unique_stocks)} 只股票")
 
     results = []
     evaluator = BacktestEvaluator(initial_capital=100000)
@@ -53,7 +56,7 @@ def batch_backtest_all_stocks(model, test_df, feature_columns, confidence_thresh
         prices = single_stock_df['Close']
 
         if len(prices) < 50:  # 数据太少，跳过
-            print(f"⚠️  跳过 {stock_code}：数据量不足（{len(prices)} 条）")
+            logger.warning(f" 跳过 {stock_code}：数据量不足（{len(prices)} 条）")
             continue
 
         print(f"价格数据: {len(prices)} 条")
@@ -80,14 +83,14 @@ def batch_backtest_all_stocks(model, test_df, feature_columns, confidence_thresh
             results.append(stock_result)
 
             # 打印简要结果
-            print(f"✅ {stock_code} 回测完成:")
+            logger.info(f"{stock_code} 回测完成:")
             print(f"   总收益率: {stock_result['total_return']*100:.2f}%")
             print(f"   夏普比率: {stock_result['sharpe_ratio']:.2f}")
             print(f"   最大回撤: {stock_result['max_drawdown']*100:.2f}%")
             print(f"   胜率: {stock_result['win_rate']*100:.2f}%")
 
         except Exception as e:
-            print(f"❌ {stock_code} 回测失败: {e}")
+            logger.error(f"{stock_code} 回测失败: {e}")
             continue
 
     return results
@@ -172,7 +175,7 @@ def save_batch_results(results, model_type, horizon, fusion_method=None):
     with open(summary_filepath, 'w', encoding='utf-8') as f:
         f.write(summary)
 
-    print(f"✅ 汇总报告已保存到: {summary_filepath}")
+    logger.info(f"汇总报告已保存到: {summary_filepath}")
 
     return results_summary
 
@@ -277,7 +280,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"🚀 开始批量回测")
+    logger.info(f"开始批量回测")
     print(f"   模型类型: {args.model_type}")
     print(f"   预测周期: {args.horizon} 天")
     print(f"   置信度阈值: {args.confidence_threshold}")
@@ -307,9 +310,9 @@ def main():
         model.load_models(horizon=args.horizon)
         # 使用 LightGBM 子模型来准备数据（因为 LightGBM 模型有完整的数据准备逻辑）
         data_prep_model = model.lgbm_model
-        print("✅ 融合模型已加载（包含3个子模型和准确率）")
+        logger.info("融合模型已加载（包含3个子模型和准确率）")
 
-    print(f"✅ 模型已加载")
+    logger.info(f"模型已加载")
 
     # 加载特征选择结果
     selected_features = None
@@ -317,15 +320,15 @@ def main():
         try:
             selected_features = data_prep_model.load_selected_features()
             if selected_features is None:
-                print("❌ 错误：未找到特征选择结果，请先运行特征选择")
+                logger.error("错误：未找到特征选择结果，请先运行特征选择")
                 return
-            print(f"✅ 已加载 {len(selected_features)} 个精选特征")
+            logger.info(f"已加载 {len(selected_features)} 个精选特征")
         except Exception as e:
-            print(f"⚠️  无法加载特征选择结果: {e}")
+            logger.warning(f" 无法加载特征选择结果: {e}")
             selected_features = None
 
     # 准备测试数据 - 使用主脚本的数据准备逻辑
-    print(f"📊 准备测试数据...")
+    logger.info(f"准备测试数据...")
     from config import WATCHLIST
 
     # 使用主脚本的数据准备逻辑
@@ -337,7 +340,7 @@ def main():
     )
 
     if test_df is None or len(test_df) == 0:
-        print("❌ 错误：没有可用数据")
+        logger.error("错误：没有可用数据")
         return
 
     # 获取特征列
@@ -346,7 +349,7 @@ def main():
     else:
         feature_columns = data_prep_model.feature_columns
 
-    print(f"✅ 测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}")
+    logger.info(f"测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}")
 
     # 运行批量回测
     results = batch_backtest_all_stocks(
@@ -365,7 +368,7 @@ def main():
         summary = generate_summary(results)
         print(summary)
     else:
-        print("❌ 没有回测结果")
+        logger.error("没有回测结果")
 
 
 if __name__ == '__main__':

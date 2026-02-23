@@ -12,6 +12,9 @@ from datetime import datetime
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
 matplotlib.rcParams['axes.unicode_minus'] = False
+from ml_services.logger_config import get_logger
+
+logger = get_logger('backtest_evaluator')
 
 
 class BacktestEvaluator:
@@ -102,9 +105,9 @@ class BacktestEvaluator:
         返回:
         - 回测结果字典
         """
-        print("=" * 70)
+        logger.info("=" * 50)
         print("📊 开始回测评估")
-        print("=" * 70)
+        logger.info("=" * 50)
         print(f"初始资金: HK${self.initial_capital:,.2f}")
         print(f"置信度阈值: {confidence_threshold:.2%}")
         print(f"交易成本: 佣金{commission:.2%} + 滑点{slippage:.2%}")
@@ -116,7 +119,7 @@ class BacktestEvaluator:
         self.portfolio_values = [self.initial_capital]
 
         # 调试信息：检查模型对象
-        print(f"🔍 模型对象调试信息:")
+        logger.debug(f"模型对象调试信息:")
         print(f"   模型类型: {type(model)}")
         print(f"   有 predict_proba: {hasattr(model, 'predict_proba')}")
         print(f"   有 catboost_model: {hasattr(model, 'catboost_model')}")
@@ -331,7 +334,7 @@ class BacktestEvaluator:
         # 打印结果
         print("\n" + "=" * 70)
         print("📈 回测结果")
-        print("=" * 70)
+        logger.info("=" * 50)
         print(f"\n【收益指标】")
         print(f"  模型策略:")
         print(f"    总收益率: {total_return:.2%}")
@@ -403,7 +406,7 @@ class BacktestEvaluator:
         else:
             print("  ⭐⭐ 较差：模型表现不佳，需要改进")
         
-        print("=" * 70)
+        logger.info("=" * 50)
         
         return {
             'total_return': total_return,

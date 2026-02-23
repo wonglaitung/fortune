@@ -11,6 +11,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 import lightgbm as lgb
+from ml_services.logger_config import get_logger
+
+logger = get_logger('base_model_processor')
 
 
 class BaseModelProcessor:
@@ -28,7 +31,7 @@ class BaseModelProcessor:
         """
         if not os.path.exists(config_path):
             # 如果配置文件不存在，使用默认配置
-            print(f"⚠️ 配置文件不存在: {config_path}")
+            logger.warning(f"配置文件不存在: {config_path}")
             print("ℹ️  将使用默认配置（所有特征视为连续特征）")
             return True
 
@@ -39,14 +42,14 @@ class BaseModelProcessor:
             self.continuous_features = config.get('continuous_features', [])
             self.category_features = config.get('category_features', [])
 
-            print(f"✅ 成功加载特征配置:")
+            logger.info(f"成功加载特征配置:")
             print(f"   - 连续特征: {len(self.continuous_features)} 个")
             print(f"   - 类别特征: {len(self.category_features)} 个")
 
             return True
 
         except Exception as e:
-            print(f"❌ 加载特征配置失败: {e}")
+            logger.error(f"加载特征配置失败: {e}")
             return False
 
     def analyze_feature_importance(self, booster, feature_names):
@@ -113,7 +116,7 @@ class BaseModelProcessor:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         plt.close()
 
-        print(f"✅ ROC 曲线已保存至 {save_path}")
+        logger.info(f"ROC 曲线已保存至 {save_path}")
 
     def get_leaf_path_enhanced(self, booster, tree_index, leaf_index, feature_names, category_prefixes=None):
         """
@@ -209,7 +212,7 @@ class BaseModelProcessor:
             
         except Exception as e:
             import traceback
-            print(f"⚠️ 解析叶子路径失败: {e}")
+            logger.warning(f"解析叶子路径失败: {e}")
             traceback.print_exc()
             return None
 
@@ -222,36 +225,36 @@ class BaseModelProcessor:
         # 保存 GBDT 模型
         gbdt_model_path = os.path.join(self.output_dir, 'gbdt_model.txt')
         gbdt_model.booster_.save_model(gbdt_model_path)
-        print(f"✅ GBDT 模型已保存至 {gbdt_model_path}")
+        logger.info(f"GBDT 模型已保存至 {gbdt_model_path}")
 
         # 保存 LR 模型
         import pickle
         lr_model_path = os.path.join(self.output_dir, 'lr_model.pkl')
         with open(lr_model_path, 'wb') as f:
             pickle.dump(lr_model, f)
-        print(f"✅ LR 模型已保存至 {lr_model_path}")
+        logger.info(f"LR 模型已保存至 {lr_model_path}")
 
         # 保存实际训练的树数量
         actual_n_estimators = gbdt_model.best_iteration_
         with open(os.path.join(self.output_dir, 'actual_n_estimators.csv'), 'w') as f:
             f.write(f"actual_n_estimators,{actual_n_estimators}\n")
-        print(f"✅ 实际树数量已保存至 {self.output_dir}/actual_n_estimators.csv")
+        logger.info(f"实际树数量已保存至 {self.output_dir}/actual_n_estimators.csv")
 
         # 保存特征配置
         with open(os.path.join(self.output_dir, 'category_features.csv'), 'w') as f:
             f.write(','.join(category_features))
-        print(f"✅ 类别特征已保存至 {self.output_dir}/category_features.csv")
+        logger.info(f"类别特征已保存至 {self.output_dir}/category_features.csv")
 
         with open(os.path.join(self.output_dir, 'continuous_features.csv'), 'w') as f:
             f.write(','.join(continuous_features))
-        print(f"✅ 连续特征已保存至 {self.output_dir}/continuous_features.csv")
+        logger.info(f"连续特征已保存至 {self.output_dir}/continuous_features.csv")
 
     def show_model_interpretation_prompt(self):
         """
         显示模型解读提示
         """
         print("\n" + "="*70)
-        print("🧠 模型可解释性分析提示")
+        logger.info("模型可解释性分析提示")
         print("="*70)
         print("训练完成后，将生成以下可解释性报告：")
         print("1. gbdt_feature_importance.csv - GBDT 特征重要性（含影响方向）")
