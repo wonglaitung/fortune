@@ -1,0 +1,156 @@
+{
+  "total_return": 4.483818494036716,
+  "annual_return": 2.4724775940858916,
+  "final_capital": 548381.8494036716,
+  "sharpe_ratio": 1.9928917540979745,
+  "sortino_ratio": 3.751145367595856,
+  "max_drawdown": -0.3553919059565294,
+  "win_rate": 0.25,
+  "total_trades": 44,
+  "winning_trades": [
+    {
+      "buy_price": 15.795779999999997,
+      "sell_price": 18.00198,
+      "shares": 6127,
+      "profit": 13310.308524480031
+    },
+    {
+      "buy_price": 19.399379999999997,
+      "sell_price": 20.879099999999998,
+      "shares": 5381,
+      "profit": 7745.634819120009
+    },
+    {
+      "buy_price": 20.770749999999996,
+      "sell_price": 21.12885,
+      "shares": 4522,
+      "profit": 1429.8582088000257
+    },
+    {
+      "buy_price": 20.420399999999997,
+      "sell_price": 40.259699999999995,
+      "shares": 4669,
+      "profit": 92346.37631309999
+    },
+    {
+      "buy_price": 25.77575,
+      "sell_price": 34.7652,
+      "shares": 7282,
+      "profit": 65020.31570210002
+    },
+    {
+      "buy_price": 32.48245,
+      "sell_price": 35.11485,
+      "shares": 7355,
+      "profit": 18864.12385850001
+    },
+    {
+      "buy_price": 35.7357,
+      "sell_price": 72.02789999999999,
+      "shares": 7213,
+      "profit": 260998.33975319998
+    },
+    {
+      "buy_price": 75.87579999999998,
+      "sell_price": 77.62230000000001,
+      "shares": 6837,
+      "profit": 10891.35399030021
+    },
+    {
+      "buy_price": 76.12604999999999,
+      "sell_price": 91.15875,
+      "shares": 6589,
+      "profit": 97948.22075280017
+    },
+    {
+      "buy_price": 93.64354999999999,
+      "sell_price": 99.35055,
+      "shares": 6248,
+      "profit": 34451.508863200084
+    },
+    {
+      "buy_price": 105.90579999999999,
+      "sell_price": 109.0908,
+      "shares": 5487,
+      "profit": 16296.408655800158
+    }
+  ],
+  "losing_trades": [
+    {
+      "buy_price": 16.996979999999997,
+      "sell_price": 16.4835,
+      "shares": 5883,
+      "profit": -3217.768503839965
+    },
+    {
+      "buy_price": 19.239219999999996,
+      "sell_price": 18.2817,
+      "shares": 5722,
+      "profit": -5693.624144239948
+    },
+    {
+      "buy_price": 22.422399999999996,
+      "sell_price": 20.879099999999998,
+      "shares": 5001,
+      "profit": -7934.594101499984
+    },
+    {
+      "buy_price": 23.07305,
+      "sell_price": 21.22875,
+      "shares": 4516,
+      "profit": -8528.925728799979
+    },
+    {
+      "buy_price": 20.97095,
+      "sell_price": 20.62935,
+      "shares": 4562,
+      "profit": -1748.1597685999877
+    },
+    {
+      "buy_price": 35.035,
+      "sell_price": 34.31565,
+      "shares": 7213,
+      "profit": -5688.897788449976
+    },
+    {
+      "buy_price": 36.336299999999994,
+      "sell_price": 35.21475,
+      "shares": 6798,
+      "profit": -8110.700937899877
+    },
+    {
+      "buy_price": 73.32324999999999,
+      "sell_price": 69.58035000000001,
+      "shares": 7223,
+      "profit": -28067.159402799793
+    },
+    {
+      "buy_price": 91.64154999999998,
+      "sell_price": 89.61030000000001,
+      "shares": 6542,
+      "profit": -14474.187102699652
+    },
+    {
+      "buy_price": 106.90679999999999,
+      "sell_price": 100.4994,
+      "shares": 5795,
+      "profit": -38332.80192899995
+    },
+    {
+      "buy_price": 107.8077,
+      "sell_price": 99.15075,
+      "shares": 5542,
+      "profit": -49123.780629899935
+    }
+  ],
+  "information_ratio": -0.30987660822323787,
+  "benchmark_return": 4.754889975550124,
+  "benchmark_annual_return": 2.621952459165495,
+  "benchmark_sharpe": 1.6346754115594107,
+  "benchmark_max_drawdown": -0.403379416282642,
+  "stock_code": "1347.HK",
+  "stock_name": "1347.HK",
+  "backtest_strategy": "single_gbdt",
+  "total_stocks_in_test": 21,
+  "selection_method": "random_selection_from_21_stocks"
+}
