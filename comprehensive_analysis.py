@@ -1406,7 +1406,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {dividend_text}
 {hsi_text}
 {technical_indicators_table}
-## 七、决策框架
+## 八、技术指标说明
 
 ### ✦ 买入策略
 - 确认邮件中有**强烈买入信号**
@@ -1448,7 +1448,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 卖出谨慎决策（多重信号验证，避免过早清仓）
 - 风险控制优先（严格执行止损，控制总仓位）
 
-## 八、技术指标说明
+## 七、决策框架
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
