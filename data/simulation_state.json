@@ -24028,6 +24028,54 @@
       "current_price": 19.22,
       "target_price": 21.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-23T14:37:56.730520",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "技术面超买（RSI 65.24），CMF资金流出-0.0206，成交额大幅缩量-51.13%，生物医药板块涨幅透支",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 41.62,
+      "target_price": 39.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-23T14:38:01.792379",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 85.4,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "技术指标协同（RSI超卖35.23、CMF资金流入0.1298、1日成交额激增91.15%），科技板块强势上涨3.76%，超跌反弹空间大",
+      "success": false,
+      "stop_loss_price": 72.72,
+      "current_price": 85.4,
+      "target_price": 92.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-23T14:38:05.502454",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 4.98,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "价格低位（位置百分位9.48%），MACD金叉信号，1日成交额增长12.85%，基本面强劲（PE=12.21），公用事业板块温和上涨1.11%",
+      "success": false,
+      "stop_loss_price": 4.24,
+      "current_price": 4.98,
+      "target_price": 5.25,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -39280,147 +39328,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-12 13:40:38",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(MACD死叉、CMF流出-0.1076、OBV下降、位置高位60.46%)，高估值风险(PE 1874.6)",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 101.0,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:41",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(RSI 71.74超买、布林带突破上轨、CMF流出-0.2175、位置高位100%)，估值透支(PE 34.8)",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 42.56,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:43",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(MACD死叉、CMF流出-0.2077、价格高位94.89%、短期加速下跌)，银行板块情绪转弱",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.7,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:45",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术指标四重共振出货信号(RSI 83.91严重超买、布林带突破上轨、CMF流出-0.3271、位置高位100%)，涨幅过大需技术修正",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 17.61,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-12 13:40:49",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.2,
-      "amount": 0,
-      "reason": "CMF资金流显著流入(0.2214)驱动OBV上升，人工智能板块强势(1.59%)提供短期弹性，位置百分位20.59%低位反弹机会",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 16.3,
-      "current_price": 19.2,
-      "target_price": 21.0,
-      "validity_period": 2
-    },
-    {
-      "timestamp": "2026-02-12 14:48:00",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-12 15:52:15",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.72,
-          "target_price": 5.85,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "2800.HK",
-          "name": "盈富基金",
-          "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
-          "stop_loss_triggered": false,
-          "target_price": 26.8,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-12 15:52:15",
-      "type": "SELL",
-      "code": "2800.HK",
-      "name": "盈富基金",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面MACD死叉+CMF资金流出+价格高位回落，流动性急剧萎缩（成交额变化率-72.13%），板块动能转弱",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.24,
-      "target_price": 26.8,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-12 15:52:21",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.54,
-      "amount": 0,
-      "reason": "技术面强协同（MACD金叉+OBV上升+CMF资金流入），银行板块低估值安全垫（PE 6.24），TAV中等共振且跑赢恒指，符合平衡型投资者风险偏好",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.72,
-      "current_price": 5.54,
-      "target_price": 5.85,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-23 10:31:04",
       "buy": [
         {
@@ -39621,6 +39528,87 @@
       "current_price": 19.22,
       "target_price": 21.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-23 14:37:56",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "技术指标协同（RSI超卖35.23、CMF资金流入0.1298、1日成交额激增91.15%），科技板块强势上涨3.76%，超跌反弹空间大",
+          "allocation_pct": 15,
+          "stop_loss_price": 72.72,
+          "target_price": 92.5,
+          "validity_period": 5
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "价格低位（位置百分位9.48%），MACD金叉信号，1日成交额增长12.85%，基本面强劲（PE=12.21），公用事业板块温和上涨1.11%",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.24,
+          "target_price": 5.25,
+          "validity_period": 14
+        }
+      ],
+      "sell": [
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "技术面超买（RSI 65.24），CMF资金流出-0.0206，成交额大幅缩量-51.13%，生物医药板块涨幅透支",
+          "stop_loss_triggered": false,
+          "target_price": 39.5,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-23 14:37:56",
+      "type": "SELL",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面超买（RSI 65.24），CMF资金流出-0.0206，成交额大幅缩量-51.13%，生物医药板块涨幅透支",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 41.62,
+      "target_price": 39.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-23 14:38:01",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 85.4,
+      "amount": 0,
+      "reason": "技术指标协同（RSI超卖35.23、CMF资金流入0.1298、1日成交额激增91.15%），科技板块强势上涨3.76%，超跌反弹空间大",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 72.72,
+      "current_price": 85.4,
+      "target_price": 92.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-23 14:38:05",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 4.98,
+      "amount": 0,
+      "reason": "价格低位（位置百分位9.48%），MACD金叉信号，1日成交额增长12.85%，基本面强劲（PE=12.21），公用事业板块温和上涨1.11%",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.24,
+      "current_price": 4.98,
+      "target_price": 5.25,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
