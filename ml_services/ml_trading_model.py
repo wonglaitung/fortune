@@ -4105,17 +4105,10 @@ def main():
             print(f"\n准确率: {accuracy_score(y_test, y_pred):.4f}")
 
     else:
+        print(f"❌ 不支持的运行模式: {args.mode}")
+        print("请使用以下模式之一: train, evaluate, predict")
+        sys.exit(1)
 
-            print(f"❌ 不支持的运行模式: {args.mode}")
 
-            print("请使用以下模式之一: train, evaluate, predict")
-
-            sys.exit(1)
-
-    
-
-    
-
-    if __name__ == '__main__':
-
-        main()
+if __name__ == '__main__':
+    main()
