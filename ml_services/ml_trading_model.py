@@ -4015,46 +4015,6 @@ def main():
             # 保存20天预测结果到文本文件（便于后续提取和对比）
             if args.horizon == 20:
                 save_predictions_to_text(pred_df_export, args.predict_date)
-            if args.predict_date:
-                print(f"基于日期: {args.predict_date}")
-            for code in WATCHLIST:
-                result = model.predict(code, predict_date=args.predict_date)
-                if result:
-                    predictions.append(result)
-
-            # 显示预测结果
-            print("\n预测结果:")
-            horizon_text = {1: "次日", 5: "一周", 20: "一个月"}.get(args.horizon, f"{args.horizon}天")
-            if args.predict_date:
-                print(f"说明: 基于 {args.predict_date} 的数据预测{horizon_text}后的涨跌")
-            else:
-                print(f"说明: 基于最新交易日的数据预测{horizon_text}后的涨跌")
-            print("-" * 100)
-            print(f"{'代码':<10} {'股票名称':<12} {'预测':<8} {'概率':<10} {'当前价格':<12} {'数据日期':<15} {'预测目标':<15}")
-            print("-" * 100)
-
-            for pred in predictions:
-                pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
-                data_date = pred['date'].strftime('%Y-%m-%d')
-                target_date = get_target_date(pred['date'], horizon=args.horizon)
-
-                print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
-
-            # 保存预测结果
-            pred_df = pd.DataFrame(predictions)
-            pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
-            
-            pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
-            
-            horizon_suffix = f'_{args.horizon}d'
-            pred_path = args.model_path.replace('.pkl', f'_predictions{horizon_suffix}.csv')
-            pred_df_export.to_csv(pred_path, index=False)
-            print(f"\n预测结果已保存到 {pred_path}")
-
-            # 保存20天预测结果到文本文件（便于后续提取和对比）
-            if args.horizon == 20:
-                save_predictions_to_text(pred_df_export, args.predict_date)
 
     elif args.mode == 'evaluate':
         print("=" * 50)
