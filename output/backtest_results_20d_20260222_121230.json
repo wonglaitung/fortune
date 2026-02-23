@@ -1,0 +1,90 @@
+{
+  "total_return": 0.6259854591537029,
+  "annual_return": 0.34293116457985456,
+  "final_capital": 162598.54591537028,
+  "sharpe_ratio": 1.0883893900773147,
+  "sortino_ratio": 1.514208505847643,
+  "max_drawdown": -0.18838340173449122,
+  "win_rate": 0.34782608695652173,
+  "total_trades": 23,
+  "winning_trades": [
+    {
+      "buy_price": 31.181149999999995,
+      "sell_price": 33.866099999999996,
+      "shares": 3207,
+      "profit": 8402.028119249997
+    },
+    {
+      "buy_price": 34.48445,
+      "sell_price": 36.4635,
+      "shares": 3143,
+      "profit": 5997.164743150017
+    },
+    {
+      "buy_price": 34.28424999999999,
+      "sell_price": 35.664300000000004,
+      "shares": 3314,
+      "profit": 4341.676205300042
+    },
+    {
+      "buy_price": 32.98295,
+      "sell_price": 34.81515,
+      "shares": 3577,
+      "profit": 6311.265596300014
+    },
+    {
+      "buy_price": 34.784749999999995,
+      "sell_price": 34.965,
+      "shares": 3573,
+      "profit": 394.8173932500358
+    },
+    {
+      "buy_price": 32.1321,
+      "sell_price": 34.01595,
+      "shares": 3880,
+      "profit": 7052.683566000007
+    },
+    {
+      "buy_price": 33.7337,
+      "sell_price": 34.565400000000004,
+      "shares": 3905,
+      "profit": 2981.080514500063
+    },
+    {
+      "buy_price": 29.929899999999996,
+      "sell_price": 30.71925,
+      "shares": 3780,
+      "profit": 2754.4892130000226
+    }
+  ],
+  "losing_trades": [
+    {
+      "buy_price": 38.2382,
+      "sell_price": 38.0619,
+      "shares": 2991,
+      "profit": -755.5268990999903
+    },
+    {
+      "buy_price": 35.135099999999994,
+      "sell_price": 34.6653,
+      "shares": 3834,
+      "profit": -2068.8279335999687
+    },
+    {
+      "buy_price": 34.534499999999994,
+      "sell_price": 29.52045,
+      "shares": 3841,
+      "profit": -19505.001112949976
+    }
+  ],
+  "information_ratio": 0.42029949204988293,
+  "benchmark_return": 0.38785942492012776,
+  "benchmark_annual_return": 0.2124795110432004,
+  "benchmark_sharpe": 0.6728890468184108,
+  "benchmark_max_drawdown": -0.29280397022332577,
+  "stock_code": "1088.HK",
+  "stock_name": "1088.HK",
+  "backtest_strategy": "single_lgbm",
+  "total_stocks_in_test": 21,
+  "selection_method": "random_selection_from_21_stocks"
+}

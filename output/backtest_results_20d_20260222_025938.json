@@ -1,0 +1,162 @@
+{
+  "total_return": 1.9413153581275087,
+  "annual_return": 1.0635031961915915,
+  "final_capital": 294131.53581275087,
+  "sharpe_ratio": 2.462349299154155,
+  "sortino_ratio": 5.162883090547495,
+  "max_drawdown": -0.09273378062213708,
+  "win_rate": 0.32608695652173914,
+  "total_trades": 46,
+  "winning_trades": [
+    {
+      "buy_price": 188.188,
+      "sell_price": 222.3774,
+      "shares": 531,
+      "profit": 17936.56117260002
+    },
+    {
+      "buy_price": 217.81759999999997,
+      "sell_price": 228.9708,
+      "shares": 532,
+      "profit": 5695.81097120003
+    },
+    {
+      "buy_price": 228.62839999999997,
+      "sell_price": 233.16660000000002,
+      "shares": 532,
+      "profit": 2168.6474600000365
+    },
+    {
+      "buy_price": 236.43619999999996,
+      "sell_price": 237.3624,
+      "shares": 523,
+      "profit": 236.60593220003648
+    },
+    {
+      "buy_price": 243.24299999999997,
+      "sell_price": 245.754,
+      "shares": 510,
+      "profit": 1031.221530000039
+    },
+    {
+      "buy_price": 219.41919999999996,
+      "sell_price": 283.5162,
+      "shares": 550,
+      "profit": 34976.735530000034
+    },
+    {
+      "buy_price": 266.06579999999997,
+      "sell_price": 268.33140000000003,
+      "shares": 585,
+      "profit": 1012.7536380000238
+    },
+    {
+      "buy_price": 270.0698,
+      "sell_price": 389.41020000000003,
+      "shares": 574,
+      "profit": 68122.84808000003
+    },
+    {
+      "buy_price": 315.51519999999994,
+      "sell_price": 384.01559999999995,
+      "shares": 689,
+      "profit": 46714.79887880004
+    },
+    {
+      "buy_price": 103.30319999999999,
+      "sell_price": 104.6952,
+      "shares": 2555,
+      "profit": 3025.1240880000405
+    },
+    {
+      "buy_price": 92.84275,
+      "sell_price": 94.75515,
+      "shares": 2839,
+      "profit": 4896.7131619000575
+    },
+    {
+      "buy_price": 96.09599999999999,
+      "sell_price": 97.0029,
+      "shares": 2771,
+      "profit": 1977.9428481000941
+    },
+    {
+      "buy_price": 95.44534999999999,
+      "sell_price": 98.65125,
+      "shares": 2811,
+      "profit": 8466.179357400048
+    },
+    {
+      "buy_price": 97.097,
+      "sell_price": 98.95094999999999,
+      "shares": 2850,
+      "profit": 4725.020842499973
+    },
+    {
+      "buy_price": 91.091,
+      "sell_price": 95.35455,
+      "shares": 3090,
+      "profit": 12598.252750500105
+    }
+  ],
+  "losing_trades": [
+    {
+      "buy_price": 223.22299999999998,
+      "sell_price": 222.3774,
+      "shares": 528,
+      "profit": -681.7538111999747
+    },
+    {
+      "buy_price": 208.20799999999997,
+      "sell_price": 206.39339999999999,
+      "shares": 563,
+      "profit": -1255.0403881999664
+    },
+    {
+      "buy_price": 234.43419999999998,
+      "sell_price": 226.5732,
+      "shares": 533,
+      "profit": -4435.629944199958
+    },
+    {
+      "buy_price": 258.85859999999997,
+      "sell_price": 256.743,
+      "shares": 605,
+      "profit": -1591.8769679999677
+    },
+    {
+      "buy_price": 371.97159999999997,
+      "sell_price": 363.2364,
+      "shares": 600,
+      "profit": -5682.244799999986
+    },
+    {
+      "buy_price": 386.1858,
+      "sell_price": 386.613,
+      "shares": 684,
+      "profit": -236.389579199953
+    },
+    {
+      "buy_price": 96.9969,
+      "sell_price": 95.95394999999999,
+      "shares": 2753,
+      "profit": -3402.4350400499534
+    },
+    {
+      "buy_price": 97.84774999999999,
+      "sell_price": 97.25264999999999,
+      "shares": 2744,
+      "profit": -2168.3098975999746
+    }
+  ],
+  "information_ratio": 1.1563213446875962,
+  "benchmark_return": -0.49336518046709127,
+  "benchmark_annual_return": -0.2702783162558848,
+  "benchmark_sharpe": -0.122837806337098,
+  "benchmark_max_drawdown": -0.806534823731728,
+  "stock_code": "1211.HK",
+  "stock_name": "1211.HK",
+  "backtest_strategy": "single_catboost",
+  "total_stocks_in_test": 21,
+  "selection_method": "random_selection_from_21_stocks"
+}

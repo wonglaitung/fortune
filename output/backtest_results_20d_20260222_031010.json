@@ -1,0 +1,90 @@
+{
+  "total_return": 4.520146293406006,
+  "annual_return": 2.4762540563876376,
+  "final_capital": 552014.6293406006,
+  "sharpe_ratio": 2.6822464770234196,
+  "sortino_ratio": 3.864257059152944,
+  "max_drawdown": -0.20766584223282802,
+  "win_rate": 0.3181818181818182,
+  "total_trades": 22,
+  "winning_trades": [
+    {
+      "buy_price": 13.093079999999999,
+      "sell_price": 18.0819,
+      "shares": 7637,
+      "profit": 37861.535017740054
+    },
+    {
+      "buy_price": 19.1191,
+      "sell_price": 19.380599999999998,
+      "shares": 7210,
+      "profit": 1607.8321629999846
+    },
+    {
+      "buy_price": 16.85684,
+      "sell_price": 23.976,
+      "shares": 8138,
+      "profit": 57603.42642808001
+    },
+    {
+      "buy_price": 25.575549999999996,
+      "sell_price": 56.2437,
+      "shares": 7174,
+      "profit": 219426.33680050002
+    },
+    {
+      "buy_price": 45.945899999999995,
+      "sell_price": 58.89105,
+      "shares": 8769,
+      "profit": 112596.70513545006
+    },
+    {
+      "buy_price": 50.85079999999999,
+      "sell_price": 53.4465,
+      "shares": 10131,
+      "profit": 25240.400753700058
+    },
+    {
+      "buy_price": 53.2532,
+      "sell_price": 55.79415,
+      "shares": 10147,
+      "profit": 24676.516189550166
+    }
+  ],
+  "losing_trades": [
+    {
+      "buy_price": 17.717699999999997,
+      "sell_price": 17.46252,
+      "shares": 7871,
+      "profit": -2285.425291619962
+    },
+    {
+      "buy_price": 25.87585,
+      "sell_price": 24.425549999999998,
+      "shares": 7527,
+      "profit": -11295.026737799984
+    },
+    {
+      "buy_price": 60.009949999999996,
+      "sell_price": 60.08985,
+      "shares": 8590,
+      "profit": -345.316281999927
+    },
+    {
+      "buy_price": 54.7547,
+      "sell_price": 53.59635,
+      "shares": 10320,
+      "profit": -13072.354835999897
+    }
+  ],
+  "information_ratio": 1.3086539225782445,
+  "benchmark_return": 1.7625,
+  "benchmark_annual_return": 0.9655434782608694,
+  "benchmark_sharpe": 1.410905670640762,
+  "benchmark_max_drawdown": -0.4354114713216941,
+  "stock_code": "1810.HK",
+  "stock_name": "1810.HK",
+  "backtest_strategy": "single_catboost",
+  "total_stocks_in_test": 21,
+  "selection_method": "random_selection_from_21_stocks"
+}

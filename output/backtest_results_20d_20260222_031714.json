@@ -1,0 +1,78 @@
+{
+  "total_return": 0.1173008839515035,
+  "annual_return": 0.06426048425169321,
+  "final_capital": 111730.08839515035,
+  "sharpe_ratio": 0.36370645107452615,
+  "sortino_ratio": 0.47621325722731134,
+  "max_drawdown": -0.13676010938066452,
+  "win_rate": 0.42105263157894735,
+  "total_trades": 19,
+  "winning_trades": [
+    {
+      "buy_price": 67.76769999999999,
+      "sell_price": 73.926,
+      "shares": 1475,
+      "profit": 8874.494292500021
+    },
+    {
+      "buy_price": 73.9739,
+      "sell_price": 76.1238,
+      "shares": 1471,
+      "profit": 2941.7091833000304
+    },
+    {
+      "buy_price": 70.07,
+      "sell_price": 72.4275,
+      "shares": 1539,
+      "profit": 3408.8888474999985
+    },
+    {
+      "buy_price": 72.57249999999999,
+      "sell_price": 73.926,
+      "shares": 1532,
+      "profit": 1849.1262980000174
+    },
+    {
+      "buy_price": 74.17409999999998,
+      "sell_price": 74.47545,
+      "shares": 1524,
+      "profit": 232.7154858000431
+    },
+    {
+      "buy_price": 74.12404999999998,
+      "sell_price": 78.921,
+      "shares": 1528,
+      "profit": 7095.886763600065
+    },
+    {
+      "buy_price": 83.68359999999998,
+      "sell_price": 85.86405,
+      "shares": 1439,
+      "profit": 2893.6884816500533
+    },
+    {
+      "buy_price": 86.08599999999998,
+      "sell_price": 87.26265,
+      "shares": 1432,
+      "profit": 1436.7275332000427
+    }
+  ],
+  "losing_trades": [
+    {
+      "buy_price": 75.92584999999998,
+      "sell_price": 73.37655000000001,
+      "shares": 1472,
+      "profit": -3972.3427327999525
+    }
+  ],
+  "information_ratio": -0.2882910014792726,
+  "benchmark_return": 0.16382505559673824,
+  "benchmark_annual_return": 0.08974763915299572,
+  "benchmark_sharpe": 0.46193791111111254,
+  "benchmark_max_drawdown": -0.13669064748201495,
+  "stock_code": "0941.HK",
+  "stock_name": "0941.HK",
+  "backtest_strategy": "single_lgbm",
+  "total_stocks_in_test": 21,
+  "selection_method": "random_selection_from_21_stocks"
+}
