@@ -253,8 +253,8 @@ def generate_summary(results):
    最大回撤: {result['max_drawdown']*100:.2f}%
    胜率: {result['win_rate']*100:.2f}%
    总交易次数: {result['total_trades']}
-   盈利交易: {result['winning_trades_count']}
-   亏损交易: {result['losing_trades_count']}
+   盈利交易: {result.get('winning_trades_count', 0)}
+   亏损交易: {result.get('losing_trades_count', 0)}
    数据点数: {result.get('data_points', 'N/A')}
 """
 
