@@ -12,7 +12,7 @@ from datetime import datetime
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial']
 matplotlib.rcParams['axes.unicode_minus'] = False
-from ml_services.logger_config import get_logger
+from logger_config import get_logger
 
 logger = get_logger('backtest_evaluator')
 
