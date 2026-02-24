@@ -10,7 +10,7 @@ import json
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from ml_services.backtest_evaluator import BacktestEvaluator
+from backtest_evaluator import BacktestEvaluator
 
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -290,10 +290,17 @@ def main():
     # 加载模型
     model = None
     data_prep_model = None  # 用于准备数据的模型
-    
+
     if args.model_type == 'lgbm':
         model = MLTradingModel()
-        model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
+        # 优先使用新训练的模型，否则使用旧路径
+        new_model_path = f'output/models_with_feature_selection/lightgbm_stable_high_100_h5.pkl'
+        if os.path.exists(new_model_path):
+            logger.info(f"使用推荐模型: {new_model_path}")
+            model.load_model(new_model_path)
+        else:
+            logger.info(f"使用标准模型: data/ml_trading_model_lgbm_{args.horizon}d.pkl")
+            model.load_model(f'data/ml_trading_model_lgbm_{args.horizon}d.pkl')
         data_prep_model = model
     elif args.model_type == 'gbdt':
         model = GBDTModel()

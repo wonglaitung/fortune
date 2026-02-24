@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 综合分析自动化脚本
-# 0. 运行特征选择脚本，生成500个精选特征
+# 0. 运行特征选择脚本，生成500个精选特征（优先使用模型重要性法）
 # 1. 调用hsi_email.py生成大模型建议（使用force参数）
 # 2. 训练20天模型（LightGBM、GBDT和CatBoost）
 # 3. 生成20天融合模型预测
@@ -13,17 +13,24 @@ echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 
-# 步骤0: 运行特征选择脚本，生成包含特征名称的CSV文件
+# 步骤0: 运行特征选择脚本，生成500个精选特征（使用模型重要性法）
 echo "=========================================="
-echo "📊 步骤 0/5: 运行特征选择（生成500个精选特征）"
+echo "📊 步骤 0/5: 运行特征选择（使用模型重要性法）"
 echo "=========================================="
 echo ""
-python3 ml_services/feature_selection.py --top-k 500 --output-dir output
+python3 ml_services/feature_selection.py --method model --top-k 500 --horizon 20 --output-dir output
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤0失败: 特征选择失败"
-    exit 1
+    echo "❌ 步骤0失败: 模型重要性法特征选择失败，尝试统计方法..."
+    # 如果模型重要性法失败，回退到统计方法
+    python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
+    if [ $? -ne 0 ]; then
+        echo "❌ 步骤0失败: 统计方法特征选择也失败"
+        exit 1
+    fi
+    echo "⚠️  步骤0完成: 使用统计方法（模型重要性法失败）"
+else
+    echo "✅ 步骤0完成: 模型重要性法特征选择完成，已生成500个精选特征"
 fi
-echo "✅ 步骤0完成: 特征选择完成，已生成500个精选特征"
 echo ""
 
 # 步骤1: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
@@ -93,14 +100,18 @@ echo "📊 步骤 4/5: 综合分析"
 echo "=========================================="
 echo ""
 # 获取步骤1生成的大模型建议文件（使用最新日期）
-LLM_FILE=$(ls -t data/llm_recommendations_*.txt | head -1)
-echo "📊 使用大模型建议文件: $LLM_FILE"
-python3 comprehensive_analysis.py --llm-file "$LLM_FILE"
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤4失败: 综合分析失败"
-    exit 1
+LLM_FILE=$(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)
+if [ -z "$LLM_FILE" ]; then
+    echo "⚠️  警告: 未找到大模型建议文件，跳过综合分析"
+else
+    echo "📊 使用大模型建议文件: $LLM_FILE"
+    python3 comprehensive_analysis.py --llm-file "$LLM_FILE"
+    if [ $? -ne 0 ]; then
+        echo "❌ 步骤4失败: 综合分析失败"
+        exit 1
+    fi
+    echo "✅ 步骤4完成: 综合分析已生成"
 fi
-echo "✅ 步骤4完成: 综合分析已生成"
 echo ""
 
 echo "=========================================="
@@ -109,10 +120,19 @@ echo "=========================================="
 echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
-echo "  - 大模型建议: data/llm_recommendations_YYYY-MM-DD.txt"
-echo "  - ML预测结果: data/ml_predictions_20d_YYYY-MM-DD.txt"
-echo "  - 融合预测结果: data/ml_trading_model_ensemble_predictions_20d.csv"
-echo "  - 综合买卖建议: data/comprehensive_recommendations_YYYY-MM-DD.txt"
+echo "  - 特征选择结果:"
+FEATURE_FILE=$(ls -t output/model_importance_features_latest.txt 2>/dev/null | head -1)
+if [ -n "$FEATURE_FILE" ]; then
+    echo "    * $FEATURE_FILE (模型重要性法)"
+fi
+FEATURE_FILE=$(ls -t output/statistical_features_latest.txt 2>/dev/null | head -1)
+if [ -n "$FEATURE_FILE" ]; then
+    echo "    * $FEATURE_FILE (统计方法)"
+fi
+echo "  - 大模型建议: $(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)"
+echo "  - ML预测结果: $(ls -t data/ml_predictions_20d_*.txt 2>/dev/null | head -1)"
+echo "  - 融合预测结果: $(ls -t data/ml_trading_model_ensemble_predictions_20d.csv 2>/dev/null | head -1)"
+echo "  - 综合买卖建议: $(ls -t data/comprehensive_recommendations_*.txt 2>/dev/null | head -1)"
 echo ""
 echo "💡 提示: 查看综合买卖建议了解最终投资建议"
 echo "=========================================="

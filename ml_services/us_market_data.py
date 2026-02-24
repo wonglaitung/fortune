@@ -17,8 +17,59 @@ import pandas as pd
 import akshare as ak
 from datetime import datetime, timedelta
 import warnings
+import signal
+from functools import wraps
 
 warnings.filterwarnings('ignore')
+
+
+def timeout_handler(signum, frame):
+    raise TimeoutError("Function call timed out")
+
+
+def timeout(seconds):
+    """装饰器：为函数添加超时控制"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # 检查是否支持SIGALRM（Unix系统）
+            if hasattr(signal, 'SIGALRM'):
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(seconds)
+                try:
+                    result = func(*args, **kwargs)
+                    signal.alarm(0)  # 取消闹钟
+                    return result
+                finally:
+                    signal.signal(signal.SIGALRM, old_handler)
+            else:
+                # Windows 系统或其他不支持 SIGALRM 的系统使用线程方法
+                import threading
+                from queue import Queue
+                
+                def target(queue):
+                    try:
+                        result = func(*args, **kwargs)
+                        queue.put((True, result))
+                    except Exception as e:
+                        queue.put((False, e))
+                
+                queue = Queue()
+                thread = threading.Thread(target=target, args=(queue,))
+                thread.daemon = True
+                thread.start()
+                thread.join(timeout=seconds)
+                
+                if thread.is_alive():
+                    # 线程仍在运行，视为超时
+                    raise TimeoutError(f"Function call timed out after {seconds} seconds")
+                
+                success, result = queue.get()
+                if not success:
+                    raise result
+                return result
+        return wrapper
+    return decorator
 
 
 class USMarketData:
@@ -40,7 +91,13 @@ class USMarketData:
         # 策略1: 优先尝试 AKShare
         try:
             from akshare.index import index_global_em
-            df = index_global_em.index_global_hist_em(symbol="标普500")
+            
+            # 使用超时控制包装器
+            @timeout(30)  # 30秒超时
+            def fetch_data():
+                return index_global_em.index_global_hist_em(symbol="标普500")
+            
+            df = fetch_data()
             
             if not df.empty:
                 # 重命名列以保持一致性
@@ -61,6 +118,8 @@ class USMarketData:
                 
                 print("✅ 使用 AKShare 获取标普500数据成功")
                 return df
+        except TimeoutError as e:
+            print(f"⚠️ AKShare 获取标普500数据超时: {e}")
         except Exception as e:
             print(f"⚠️ AKShare 获取标普500数据失败: {e}")
         
@@ -105,7 +164,13 @@ class USMarketData:
         # 策略1: 优先尝试 AKShare
         try:
             from akshare.index import index_global_em
-            df = index_global_em.index_global_hist_em(symbol="纳斯达克")
+            
+            # 使用超时控制包装器
+            @timeout(30)  # 30秒超时
+            def fetch_data():
+                return index_global_em.index_global_hist_em(symbol="纳斯达克")
+            
+            df = fetch_data()
             
             if not df.empty:
                 # 重命名列以保持一致性
@@ -126,6 +191,8 @@ class USMarketData:
                 
                 print("✅ 使用 AKShare 获取纳斯达克数据成功")
                 return df
+        except TimeoutError as e:
+            print(f"⚠️ AKShare 获取纳斯达克数据超时: {e}")
         except Exception as e:
             print(f"⚠️ AKShare 获取纳斯达克数据失败: {e}")
         
@@ -210,10 +277,13 @@ class USMarketData:
             DataFrame: 包含美国10年期国债收益率数据
         """
         try:
-            # 使用 AKShare 获取中美国债收益率数据
-            start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
-            
-            df = ak.bond_zh_us_rate(start_date=start_date_str)
+            # 使用超时控制包装器
+            @timeout(30)  # 30秒超时
+            def fetch_data():
+                start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
+                return ak.bond_zh_us_rate(start_date=start_date_str)
+
+            df = fetch_data()
 
             if df.empty:
                 print("⚠️ 无法获取美国10年期国债收益率数据")
@@ -237,6 +307,9 @@ class USMarketData:
             print("✅ 使用 AKShare 获取美国国债收益率数据成功")
             return df
 
+        except TimeoutError as e:
+            print(f"⚠️ 获取美国10年期国债收益率数据超时: {e}")
+            return None
         except Exception as e:
             print(f"⚠️ 获取美国10年期国债收益率数据失败: {e}")
             return None
