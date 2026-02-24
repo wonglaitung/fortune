@@ -24172,6 +24172,86 @@
       "current_price": 5.46,
       "target_price": 5.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-24T14:16:13.578200",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "出货评分9.0分，RSI超买75.26，布林带突破上轨，CMF资金流-0.1582，放量滞涨显示主力出货",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.43,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24T14:16:18.273455",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "出货评分8.5分，布林带突破下轨，RSI超卖但无效，异常放量2.54，恐慌抛售信号",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.78,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24T14:16:22.240620",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "出货评分6.0分，价格高位80.9%，CMF资金流-0.2511，流动性萎缩且板块弱势",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 134.1,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24T14:16:24.368817",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "出货评分6.0分，RSI超买75.79，布林带突破上轨，CMF资金流-0.3645，高位派发特征",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 35.3,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24T14:16:28.741106",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 252.18929405196104,
+      "reason": "出货评分6.0分，RSI严重超买79.47，CMF资金流-0.2803，量价背离且流动性枯竭",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 138.8,
+      "target_price": 0,
+      "validity_period": 1
     }
   ],
   "portfolio_history": [
@@ -39424,71 +39504,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-23 14:37:56",
-      "buy": [
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "技术指标协同（RSI超卖35.23、CMF资金流入0.1298、1日成交额激增91.15%），科技板块强势上涨3.76%，超跌反弹空间大",
-          "allocation_pct": 15,
-          "stop_loss_price": 72.72,
-          "target_price": 92.5,
-          "validity_period": 5
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格低位（位置百分位9.48%），MACD金叉信号，1日成交额增长12.85%，基本面强劲（PE=12.21），公用事业板块温和上涨1.11%",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.24,
-          "target_price": 5.25,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "技术面超买（RSI 65.24），CMF资金流出-0.0206，成交额大幅缩量-51.13%，生物医药板块涨幅透支",
-          "stop_loss_triggered": false,
-          "target_price": 39.5,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-23 14:37:56",
-      "type": "SELL",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买（RSI 65.24），CMF资金流出-0.0206，成交额大幅缩量-51.13%，生物医药板块涨幅透支",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 41.62,
-      "target_price": 39.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-23 14:38:01",
-      "type": "BUY",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 85.4,
-      "amount": 0,
-      "reason": "技术指标协同（RSI超卖35.23、CMF资金流入0.1298、1日成交额激增91.15%），科技板块强势上涨3.76%，超跌反弹空间大",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 72.72,
-      "current_price": 85.4,
-      "target_price": 92.5,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-23 14:38:05",
       "type": "BUY",
       "code": "0728.HK",
@@ -39664,6 +39679,132 @@
       "current_price": 5.46,
       "target_price": 5.8,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-02-24 14:16:13",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分9.0分，RSI超买75.26，布林带突破上轨，CMF资金流-0.1582，放量滞涨显示主力出货",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "出货评分8.5分，布林带突破下轨，RSI超卖但无效，异常放量2.54，恐慌抛售信号",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分6.0分，价格高位80.9%，CMF资金流-0.2511，流动性萎缩且板块弱势",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "出货评分6.0分，RSI超买75.79，布林带突破上轨，CMF资金流-0.3645，高位派发特征",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0016.HK",
+          "name": "新鸿基地产",
+          "reason": "出货评分6.0分，RSI严重超买79.47，CMF资金流-0.2803，量价背离且流动性枯竭",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-24 14:16:13",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分9.0分，RSI超买75.26，布林带突破上轨，CMF资金流-0.1582，放量滞涨显示主力出货",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.43,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24 14:16:18",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分8.5分，布林带突破下轨，RSI超卖但无效，异常放量2.54，恐慌抛售信号",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.78,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24 14:16:22",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，价格高位80.9%，CMF资金流-0.2511，流动性萎缩且板块弱势",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 134.1,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24 14:16:24",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，RSI超买75.79，布林带突破上轨，CMF资金流-0.3645，高位派发特征",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 35.3,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24 14:16:28",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，RSI严重超买79.47，CMF资金流-0.2803，量价背离且流动性枯竭",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 138.8,
+      "target_price": 0,
+      "validity_period": 1
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
