@@ -24252,6 +24252,38 @@
       "current_price": 138.8,
       "target_price": 0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24T16:08:18.645707",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.46,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "价格低位（位置百分位26.79%），MACD金叉与OBV上升协同，基本面优质（PE 6.13），适合平衡型偏好",
+      "success": false,
+      "stop_loss_price": 4.65,
+      "current_price": 5.46,
+      "target_price": 5.95,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-24T16:08:22.419588",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.42,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "MACD金叉、OBV上升及VWAP量能配合，TAV中等共振，基本面良好（PE 10.25），适合平衡型偏好",
+      "success": false,
+      "stop_loss_price": 4.61,
+      "current_price": 5.42,
+      "target_price": 5.85,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -39504,127 +39536,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-23 14:38:05",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 4.98,
-      "amount": 0,
-      "reason": "价格低位（位置百分位9.48%），MACD金叉信号，1日成交额增长12.85%，基本面强劲（PE=12.21），公用事业板块温和上涨1.11%",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.24,
-      "current_price": 4.98,
-      "target_price": 5.25,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-02-24 09:49:51",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "建仓评分5.7分，技术指标4项同向共振（价格低位、MACD金叉、OBV上升、CMF资金流入），符合超跌反弹条件，相对强度跑赢恒指",
-          "allocation_pct": 15,
-          "stop_loss_price": 16.57,
-          "target_price": 21.2,
-          "validity_period": 5
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "建仓评分4.0分，技术指标3项同向（价格低位、MACD金叉、OBV上升），低估值防御属性，基本面评分100提供安全边际",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.64,
-          "target_price": 5.75,
-          "validity_period": 10
-        }
-      ],
-      "sell": [
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货评分6.0分，高位区域（位置百分位89.08%），CMF资金流出且OBV下降，动能衰竭",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分5.5分，CMF资金流出且OBV下降，高估值风险（PE 30.06），新闻质疑估值合理性",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-24 09:49:52",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，高位区域（位置百分位89.08%），CMF资金流出且OBV下降，动能衰竭",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 43.86,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 09:49:56",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，CMF资金流出且OBV下降，高估值风险（PE 30.06），新闻质疑估值合理性",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 411.6,
-      "target_price": 0.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 09:50:00",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.47,
-      "amount": 0,
-      "reason": "建仓评分5.7分，技术指标4项同向共振（价格低位、MACD金叉、OBV上升、CMF资金流入），符合超跌反弹条件，相对强度跑赢恒指",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 16.57,
-      "current_price": 19.47,
-      "target_price": 21.2,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-24 09:50:06",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.47,
-      "amount": 0,
-      "reason": "建仓评分4.0分，技术指标3项同向（价格低位、MACD金叉、OBV上升），低估值防御属性，基本面评分100提供安全边际",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.64,
-      "current_price": 5.47,
-      "target_price": 5.75,
-      "validity_period": 10
-    },
-    {
       "timestamp": "2026-02-24 11:41:21",
       "buy": [
         {
@@ -39805,6 +39716,62 @@
       "current_price": 138.8,
       "target_price": 0,
       "validity_period": 1
+    },
+    {
+      "timestamp": "2026-02-24 16:08:16",
+      "buy": [
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "价格低位（位置百分位26.79%），MACD金叉与OBV上升协同，基本面优质（PE 6.13），适合平衡型偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.65,
+          "target_price": 5.95,
+          "validity_period": 7
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "MACD金叉、OBV上升及VWAP量能配合，TAV中等共振，基本面良好（PE 10.25），适合平衡型偏好",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.61,
+          "target_price": 5.85,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-24 16:08:18",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.46,
+      "amount": 0,
+      "reason": "价格低位（位置百分位26.79%），MACD金叉与OBV上升协同，基本面优质（PE 6.13），适合平衡型偏好",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.65,
+      "current_price": 5.46,
+      "target_price": 5.95,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-02-24 16:08:22",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.42,
+      "amount": 0,
+      "reason": "MACD金叉、OBV上升及VWAP量能配合，TAV中等共振，基本面良好（PE 10.25），适合平衡型偏好",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.61,
+      "current_price": 5.42,
+      "target_price": 5.85,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
