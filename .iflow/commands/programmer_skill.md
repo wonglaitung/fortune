@@ -330,7 +330,78 @@ cd "$SCRIPT_DIR"
 - 路径配置清晰，易于维护和修改
 - 支持多环境配置（开发、测试、生产）
 
-### 9. 持续验证
+### 9. HTTP API超时处理（2026-02-24新增）
+- 调用任何HTTP API时必须设置合理的超时时间
+- 使用超时装饰器或内置超时参数防止请求无限等待
+- 实现备用方案，当API调用超时时使用缓存数据或默认值
+- 记录超时事件以供后续分析和优化
+- 考虑跨平台兼容性，确保超时机制在不同操作系统上都能正常工作
+
+**实现示例：**
+```python
+import signal
+from functools import wraps
+
+def timeout_handler(signum, frame):
+    raise TimeoutError("Function call timed out")
+
+def timeout(seconds):
+    """装饰器：为函数添加超时控制"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # 仅在 Unix 系统上使用信号
+            if hasattr(signal, 'SIGALRM'):
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(seconds)
+                try:
+                    result = func(*args, **kwargs)
+                    signal.alarm(0)  # 取消闹钟
+                    return result
+                finally:
+                    signal.signal(signal.SIGALRM, old_handler)
+            else:
+                # Windows 系统或其他不支持 SIGALRM 的系统使用线程方法
+                import threading
+                from queue import Queue
+                
+                def target(queue):
+                    try:
+                        result = func(*args, **kwargs)
+                        queue.put((True, result))
+                    except Exception as e:
+                        queue.put((False, e))
+                
+                queue = Queue()
+                thread = threading.Thread(target=target, args=(queue,))
+                thread.daemon = True
+                thread.start()
+                thread.join(timeout=seconds)
+                
+                if thread.is_alive():
+                    # 线程仍在运行，视为超时
+                    raise TimeoutError(f"Function call timed out after {seconds} seconds")
+                
+                success, result = queue.get()
+                if not success:
+                    raise result
+                return result
+        return wrapper
+    return decorator
+
+# 使用示例
+@timeout(30)  # 30秒超时
+def fetch_data_from_api():
+    # API调用代码
+    pass
+```
+
+**验证方法：**
+- API调用在指定时间内完成或正确抛出超时异常
+- 备用方案在超时情况下正常工作
+- 跨平台兼容性测试通过
+
+### 10. 持续验证
 每次修改后立即验证，避免累积错误
 
 ---
