@@ -2,16 +2,16 @@
   "lgbm_20d": {
     "model_type": "lgbm",
     "horizon": 20,
-    "accuracy": 0.5952893674293406,
-    "std": 0.047314670963223435,
-    "timestamp": "2026-02-24 11:02:08"
+    "accuracy": 0.5970390309555855,
+    "std": 0.052846564111511174,
+    "timestamp": "2026-02-24 12:40:49"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
     "horizon": 20,
     "accuracy": 0.6041722745625842,
     "std": 0.051480088669208814,
-    "timestamp": "2026-02-24 11:03:46"
+    "timestamp": "2026-02-24 12:42:28"
   },
   "lgbm_1d": {
     "model_type": "lgbm",
@@ -23,9 +23,9 @@
   "catboost_20d": {
     "model_type": "catboost",
     "horizon": 20,
-    "accuracy": 0.6121997471554994,
-    "std": 0.025603236888226005,
-    "timestamp": "2026-02-24 11:06:36"
+    "accuracy": 0.6120733249051834,
+    "std": 0.025784870932653574,
+    "timestamp": "2026-02-24 12:45:15"
   },
   "gbdt_1d": {
     "model_type": "gbdt",
