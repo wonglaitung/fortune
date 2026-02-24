@@ -24140,6 +24140,38 @@
       "current_price": 5.47,
       "target_price": 5.75,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-02-24T11:41:23.431113",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.71,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "建仓评分5.7分，位置百分位33.62%低位支撑、MACD金叉、OBV上升及CMF资金流入，跑赢恒指7.08%，技术面趋势-动量-成交量协同",
+      "success": false,
+      "stop_loss_price": 16.75,
+      "current_price": 19.71,
+      "target_price": 22.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-24T11:41:29.155068",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.46,
+      "amount": 0,
+      "capital_after": 252.18929405196104,
+      "reason": "建仓评分4.0分，位置百分位26.79%历史低位、MACD金叉、OBV上升，低估值PE 6.13提供安全边际，跑赢恒指2.77%",
+      "success": false,
+      "stop_loss_price": 4.65,
+      "current_price": 5.46,
+      "target_price": 5.8,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -39392,86 +39424,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-23 10:31:14",
-      "type": "SELL",
-      "code": "2800.HK",
-      "name": "盈富基金",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，资金面恶化（CMF流出+MACD金叉失效），量能不足",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.34,
-      "target_price": 26.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-23 10:31:16",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分，三重出货信号（高位+MACD死叉+CMF流出），量价背离",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 135.8,
-      "target_price": 130.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-23 10:31:21",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.52,
-      "amount": 0,
-      "reason": "TAV中等共振，基本面稳健（市盈率6.13），低位区域（位置百分位35.71%），银行板块资金回流提供支撑",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.69,
-      "current_price": 5.52,
-      "target_price": 5.85,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-02-23 10:31:26",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 79.6,
-      "amount": 0,
-      "reason": "TAV中等共振，公用事业避险属性，技术面低位（位置百分位16.84%），相对强度跑赢恒指",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 67.7,
-      "current_price": 79.6,
-      "target_price": 83.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-02-23 10:31:29",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.22,
-      "amount": 0,
-      "reason": "CMF资金流入验证低位吸筹，人工智能板块温和上涨支持，短期反弹概率高",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 16.36,
-      "current_price": 19.22,
-      "target_price": 21.5,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-02-23 14:37:56",
       "buy": [
         {
@@ -39656,6 +39608,62 @@
       "current_price": 5.47,
       "target_price": 5.75,
       "validity_period": 10
+    },
+    {
+      "timestamp": "2026-02-24 11:41:21",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "建仓评分5.7分，位置百分位33.62%低位支撑、MACD金叉、OBV上升及CMF资金流入，跑赢恒指7.08%，技术面趋势-动量-成交量协同",
+          "allocation_pct": 15,
+          "stop_loss_price": 16.75,
+          "target_price": 22.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "建仓评分4.0分，位置百分位26.79%历史低位、MACD金叉、OBV上升，低估值PE 6.13提供安全边际，跑赢恒指2.77%",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.65,
+          "target_price": 5.8,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-02-24 11:41:23",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.71,
+      "amount": 0,
+      "reason": "建仓评分5.7分，位置百分位33.62%低位支撑、MACD金叉、OBV上升及CMF资金流入，跑赢恒指7.08%，技术面趋势-动量-成交量协同",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 16.75,
+      "current_price": 19.71,
+      "target_price": 22.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-24 11:41:29",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.46,
+      "amount": 0,
+      "reason": "建仓评分4.0分，位置百分位26.79%历史低位、MACD金叉、OBV上升，低估值PE 6.13提供安全边际，跑赢恒指2.77%",
+      "capital_after": 252.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.65,
+      "current_price": 5.46,
+      "target_price": 5.8,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
