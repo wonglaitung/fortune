@@ -1043,7 +1043,7 @@ def format_hsi_email_indicators(hsi_email_data):
     hsi_indicators = hsi_email_data.get('hsi_indicators')
     
     if hsi_data:
-        text_format += "## 六、恒生指数实时技术指标\n\n"
+        text_format += "## 恒生指数实时技术指标\n\n"
         text_format += f"- 当前指数：{hsi_data['current_price']:,.2f}\n"
         text_format += f"- 24小时变化：{hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)\n"
         text_format += f"- 当日开盘：{hsi_data['open']:,.2f}\n"
@@ -1066,7 +1066,7 @@ def format_hsi_email_indicators(hsi_email_data):
     stock_results = hsi_email_data.get('stock_results', [])
     
     if stock_results:
-        text_format += "## 七、自选股实时技术指标\n\n"
+        text_format += "## 自选股实时技术指标\n\n"
         text_format += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 趋势 | ATR | 成交量比率 |\n"
         text_format += "|---------|---------|---------|--------|-----|------|-----|-----|------|-----|-----------|\n"
         
@@ -1646,13 +1646,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 一、实时技术指标（来自 hsi_email.py）
-{hsi_email_text if hsi_email_text else ''}
-
-## 二、最近48小时模拟交易记录
-{recent_transactions_text}
-
-## 三、机器学习预测结果（20天）
+## 一、机器学习预测结果（20天）
 
 ### 融合模型（LightGBM + GBDT + CatBoost，加权平均）
 **模型准确率**：
@@ -1667,7 +1661,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 {ml_predictions['ensemble']}
 
-## 四、大模型建议
+## 二、大模型建议
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
@@ -1678,6 +1672,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {dividend_text}
 {hsi_text}
 {technical_indicators_table}
+
+## 三、实时技术指标（来自 hsi_email.py）
+{hsi_email_text if hsi_email_text else ''}
+
+## 四、最近48小时模拟交易记录
+{recent_transactions_text}
 """
                 
                 # 继续添加其他内容
