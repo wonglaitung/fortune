@@ -1,0 +1,6 @@
+feature_set,num_features,validation_accuracy,validation_std,training_time,model_path,timestamp,description
+all_features,all,,,67.229388,output/models_with_feature_selection/lightgbm_all_features_h5.pkl,2026-02-24T07:18:29.834512,全部特征（3972个）
+top_50,50,,,52.086969,output/models_with_feature_selection/lightgbm_top_50_h5.pkl,2026-02-24T07:19:21.924458,Top 50 特征
+top_100,100,,,49.771296,output/models_with_feature_selection/lightgbm_top_100_h5.pkl,2026-02-24T07:20:11.699731,Top 100 特征
+top_200,200,,,50.824873,output/models_with_feature_selection/lightgbm_top_200_h5.pkl,2026-02-24T07:21:02.527914,Top 200 特征
+stable_high_100,6,,,47.940715,output/models_with_feature_selection/lightgbm_stable_high_100_h5.pkl,2026-02-24T07:21:50.473132,高重要性且稳定的100个特征

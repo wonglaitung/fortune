@@ -1,0 +1,10 @@
+HSI_Return_60d
+VIX_Level
+US_10Y_Yield
+Distance_Support_120d
+VWAP
+Vol_Mean_20
+60d_Trend_HSI_Return_60d
+Volatility_120d
+Volatility_60d
+Skewness_20d
