@@ -1023,9 +1023,9 @@ class HSI_Predictor:
             msg['From'] = sender_email
             msg['To'] = ', '.join(recipients)
 
-            # 添加文本版本
-            text_part = MIMEText(content, 'plain', 'utf-8')
-            msg.attach(text_part)
+            # 添加HTML版本
+            html_part = MIMEText(content, 'html', 'utf-8')
+            msg.attach(html_part)
 
             # 重试机制（3次）
             for attempt in range(3):

@@ -28,6 +28,7 @@
 - 📧 自动邮件通知重要信息
 - 🎯 获取每日综合买卖建议（整合大模型和ML预测）
 - 🔄 批量回测所有股票，全面评估模型表现
+- 📊 **恒生指数涨跌预测**：基于特征重要性的加权评分模型（新增 hsi_prediction.py）
 
 ## 核心功能
 
@@ -36,6 +37,7 @@
 - **港股IPO信息**：最新IPO信息（每天）
 - **黄金市场分析**：黄金价格和投资建议（每小时）
 - **恒生指数监控**：价格、技术指标、交易信号（交易时段）
+- **恒生指数涨跌预测**：基于特征重要性的加权评分模型，预测短期走势（新增 hsi_prediction.py）
 - **美股市场数据**：标普500、纳斯达克、VIX、美国国债收益率
 - **基本面数据**：财务指标、利润表、资产负债表、现金流量表
 - **股息信息**：自动获取股息和除净日信息
@@ -121,6 +123,7 @@ fortune/
 │   ├── hk_ipo_aastocks.py              # IPO信息获取器
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪器
 │   ├── hsi_email.py                    # 恒生指数监控器
+│   ├── hsi_prediction.py               # 恒生指数涨跌预测器（基于特征重要性加权评分模型）
 │   ├── simulation_trader.py            # 模拟交易系统
 │   ├── comprehensive_analysis.py       # 综合分析脚本（每日自动执行）
 │   └── ...
@@ -157,6 +160,7 @@ fortune/
 │       ├── daily-ipo-monitor.yml            # IPO信息监控
 │       ├── hourly-crypto-monitor.yml        # 每小时加密货币监控
 │       ├── hourly-gold-monitor.yml          # 每小时黄金监控
+│       ├── hsi-prediction.yml               # 恒生指数涨跌预测（新增）
 │       ├── weekly-comprehensive-analysis.yml # 周综合交易分析
 │       ├── hsi-email-alert.yml.bak          # HSI邮件提醒（备份）
 │       └── ml-train-models.yml.bak          # ML模型训练（备份）
@@ -227,6 +231,12 @@ python data_services/hk_sector_analysis.py
 
 # 恒生指数价格监控
 python hsi_email.py
+
+# 恒生指数涨跌预测
+python hsi_prediction.py
+
+# 恒生指数涨跌预测（不发送邮件）
+python hsi_prediction.py --no-email
 
 # 启动模拟交易
 python simulation_trader.py
@@ -383,6 +393,7 @@ python comprehensive_analysis.py --no-email
 |--------|------|----------|
 | hourly-crypto-monitor.yml | 每小时加密货币监控 | 每小时 |
 | hourly-gold-monitor.yml | 每小时黄金监控 | 每小时 |
+| hsi-prediction.yml | **恒生指数涨跌预测** | **周一到周五 UTC 22:00（香港时间上午6:00）** |
 | comprehensive-analysis.yml | **综合分析邮件** | **周一到周五 UTC 08:00（香港时间下午4:00）** |
 | batch-stock-news-fetcher.yml | 批量股票新闻获取 | 每天 UTC 22:00 |
 | daily-ipo-monitor.yml | IPO 信息监控 | 每天 UTC 02:00 |
@@ -451,6 +462,7 @@ python comprehensive_analysis.py --no-email
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **核心功能** | ✅ 完整 | 数据获取、分析、交易、通知全覆盖 |
+| **恒生指数预测** | ✅ 新增 | 基于特征重要性的加权评分模型，预测短期走势 |
 | **模块化架构** | ✅ 完成 | data_services、llm_services、ml_services |
 | **ML模型** | ✅ 顶尖 | CatBoost准确率62.07%，融合模型62-63%，达到业界顶尖水平 |
 | **模型融合** | ✅ 稳定 | 三模型融合（LightGBM+GBDT+CatBoost），加权平均最优 |
@@ -523,6 +535,9 @@ nltk            # 自然语言处理
 - ✅ **批量回测功能**：支持28只股票批量回测，全面评估模型表现
 - ✅ **置信度阈值对比分析**：对比三种置信度（0.50、0.55、0.60），发现CatBoost年化收益率88%表现最佳
 
+**恒生指数预测**：
+- ✅ **恒生指数涨跌预测器**：新增 hsi_prediction.py，基于特征重要性的加权评分模型，预测短期走势
+
 **综合分析系统**：
 - ✅ 整合大模型建议和ML融合模型预测结果
 - ✅ 动态准确率加载功能（含CatBoost）
@@ -560,9 +575,10 @@ nltk            # 自然语言处理
 | 实时指标集成 | 100% |
 | 交易记录展示 | 100% |
 | 工作流优化 | 100% |
+| 恒生指数涨跌预测 | 100% |
 | 风险管理模块 | 0% |
 | 其他功能 | 17% |
-| **总体** | **94%** |
+| **总体** | **95%** |
 
 ## 贡献指南
 
@@ -575,3 +591,5 @@ MIT License
 ## 联系方式
 
 如有问题，请提交 Issue 或联系项目维护者。
+
+联系邮件：wonglaitung@gmail.com
