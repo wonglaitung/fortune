@@ -6962,3 +6962,113 @@ if __name__ == "__main__":
 
     if not success:
         exit(1)
+
+
+# 为其他模块提供访问接口的函数
+def get_hsi_and_stock_indicators(stock_list=None, target_date=None):
+    """
+    为其他模块提供获取恒生指数和股票指标的接口
+    
+    参数:
+    - stock_list: 股票列表，默认使用全局配置
+    - target_date: 目标日期，默认为今天
+    
+    返回:
+    - dict: 包含恒生指数数据和股票分析结果
+    """
+    email_system = HSIEmailSystem(stock_list=stock_list)
+    
+    # 获取恒生指数数据
+    hsi_data = email_system.get_hsi_data(target_date=target_date)
+    
+    # 获取美股市场数据（一次性获取，所有股票共享）
+    us_df = None
+    try:
+        from ml_services.us_market_data import us_market_data
+        us_df = us_market_data.get_all_us_market_data(period_days=30)
+        if us_df is not None and not us_df.empty:
+            print(f"✅ 美股数据获取成功（VIX: {us_df.get('VIX_Level', pd.Series([None])).iloc[-1] if 'VIX_Level' in us_df.columns else 'N/A'}）")
+        else:
+            print("⚠️ 美股数据为空")
+    except Exception as e:
+        print(f"⚠️ 获取美股数据失败: {e}")
+
+    # 获取股票分析结果
+    stock_results = []
+    for stock_code, stock_name in email_system.stock_list.items():
+        print(f"🔍 正在分析 {stock_name} ({stock_code}) ...")
+        stock_data = email_system.get_stock_data(stock_code, target_date=target_date)
+        if stock_data:
+            print(f"📊 正在计算 {stock_name} ({stock_code}) 技术指标...")
+            indicators = email_system.calculate_technical_indicators(stock_data, us_df=us_df)
+            stock_results.append({
+                'code': stock_code,
+                'name': stock_name,
+                'data': stock_data,
+                'indicators': indicators
+            })
+    
+    return {
+        'hsi_data': hsi_data,
+        'hsi_indicators': email_system.calculate_hsi_technical_indicators(hsi_data) if hsi_data else None,
+        'stock_results': stock_results
+    }
+
+
+def get_stock_technical_indicators(stock_code, target_date=None):
+    """
+    获取单只股票的详细技术指标（与comprehensive_analysis.py兼容的函数）
+    
+    参数:
+    - stock_code: 股票代码（如 "0700.HK"）
+    - target_date: 目标日期
+    
+    返回:
+    - dict: 包含详细技术指标的字典
+    """
+    email_system = HSIEmailSystem()
+    stock_data = email_system.get_stock_data(stock_code, target_date=target_date)
+    
+    if stock_data:
+        # 获取美股数据
+        us_df = None
+        try:
+            from ml_services.us_market_data import us_market_data
+            us_df = us_market_data.get_all_us_market_data(period_days=30)
+        except Exception:
+            pass
+        
+        indicators = email_system.calculate_technical_indicators(stock_data, us_df=us_df)
+        return {
+            'current_price': indicators.get('current_price', stock_data.get('current_price')),
+            'change_pct': stock_data.get('change_1d'),
+            'rsi': indicators.get('rsi'),
+            'macd': indicators.get('macd'),
+            'macd_signal': indicators.get('macd_signal'),
+            'ma20': indicators.get('ma20'),
+            'ma50': indicators.get('ma50'),
+            'ma200': indicators.get('ma200'),
+            'ma_alignment': indicators.get('ma_alignment'),
+            'ma_slope_20': indicators.get('ma20_slope'),
+            'ma_slope_50': indicators.get('ma50_slope'),
+            'ma_deviation': indicators.get('ma_deviation_avg'),
+            'bb_upper': indicators.get('bb_position'),  # 实际是布林带位置，不是上轨
+            'bb_lower': indicators.get('bb_position'),
+            'bb_position': indicators.get('bb_position'),
+            'atr': indicators.get('atr'),
+            'volume': stock_data.get('volume'),
+            'trend': indicators.get('trend'),
+            'support_level': indicators.get('nearest_support'),
+            'resistance_level': indicators.get('nearest_resistance'),
+            'fundamental_score': indicators.get('fundamental_score'),
+            'pe_ratio': indicators.get('pe_ratio'),
+            'pb_ratio': indicators.get('pb_ratio'),
+            'medium_term_score': indicators.get('medium_term_score'),
+            'vix_level': indicators.get('vix_level'),
+            'turnover_change_1d': indicators.get('turnover_change_1d'),
+            'turnover_rate_change_5d': indicators.get('turnover_rate_change_5d'),
+            'buildup_score': indicators.get('buildup_score'),
+            'distribution_score': indicators.get('distribution_score'),
+            'tav_score': indicators.get('tav_score'),
+        }
+    return None

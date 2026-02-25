@@ -51,7 +51,9 @@ def load_training_data(horizon=20):
     model = MLTradingModel()
 
     # 准备数据（使用指定horizon）
-    codes = list(STOCK_LIST.keys())[:10]  # 使用前10只股票以提高速度
+    import random
+    all_codes = list(STOCK_LIST.keys())
+    codes = random.sample(all_codes, min(10, len(all_codes)))  # 随机选择10只股票以提高速度
     logger.info(f"准备加载 {len(codes)} 只股票的数据...")
 
     # 调用prepare_data方法（返回DataFrame）

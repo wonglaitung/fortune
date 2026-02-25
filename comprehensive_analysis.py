@@ -24,6 +24,7 @@ from config import WATCHLIST
 
 # 从WATCHLIST提取股票名称映射
 STOCK_NAMES = WATCHLIST
+STOCK_LIST = WATCHLIST  # 为兼容 hsi_email 模块添加别名
 
 # 导入必要的模块
 try:
@@ -681,6 +682,22 @@ def get_ai_portfolio_analysis():
         return None
 
 
+def get_hsi_email_indicators():
+    """
+    从 hsi_email.py 获取实时指标
+    """
+    try:
+        from hsi_email import get_hsi_and_stock_indicators
+        # 调用hsi_email模块的指标获取函数
+        indicators = get_hsi_and_stock_indicators()
+        return indicators
+    except Exception as e:
+        print(f"⚠️ 获取 hsi_email.py 实时指标失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def get_stock_technical_indicators(stock_code):
     """
     获取单只股票的详细技术指标
@@ -842,6 +859,236 @@ def get_stock_technical_indicators(stock_code):
     except Exception as e:
         print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
         return None
+
+
+def get_recent_transactions(hours=48):
+    """
+    获取最近指定小时数的模拟交易记录
+    
+    参数:
+    - hours: 查询的小时数，默认48小时
+    
+    返回:
+    - DataFrame: 交易记录数据框
+    """
+    try:
+        import pandas as pd
+        import numpy as np
+        from datetime import datetime, timedelta
+        
+        # 交易记录文件路径
+        transactions_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'simulation_transactions.csv')
+        
+        if not os.path.exists(transactions_file):
+            print(f"⚠️ 交易记录文件不存在: {transactions_file}")
+            return pd.DataFrame()
+        
+        # 读取交易记录
+        df = pd.read_csv(transactions_file, dtype=str, low_memory=False)
+        if df.empty:
+            return pd.DataFrame()
+        
+        # 找到时间列
+        cols_lower = [c.lower() for c in df.columns]
+        timestamp_col = None
+        for candidate in ['timestamp', 'time', 'datetime', 'date']:
+            if candidate in cols_lower:
+                timestamp_col = df.columns[cols_lower.index(candidate)]
+                break
+        if timestamp_col is None:
+            # fallback to first column
+            timestamp_col = df.columns[0]
+
+        # parse timestamp to UTC
+        df[timestamp_col] = pd.to_datetime(df[timestamp_col].astype(str), utc=True, errors='coerce')
+
+        # normalize key columns names to common names
+        def find_col(possibilities):
+            for p in possibilities:
+                if p in cols_lower:
+                    return df.columns[cols_lower.index(p)]
+            return None
+
+        type_col = find_col(['type', 'trans_type', 'action'])
+        code_col = find_col(['code', 'symbol', 'ticker'])
+        name_col = find_col(['name', 'stock_name'])
+        reason_col = find_col(['reason', 'desc', 'description'])
+        current_price_col = find_col(['current_price', 'price', 'currentprice', 'last_price'])
+        stop_loss_col = find_col(['stop_loss', 'stoploss', 'stop_loss_price'])
+
+        # rename to standard columns
+        rename_map = {}
+        if timestamp_col:
+            rename_map[timestamp_col] = 'timestamp'
+        if type_col:
+            rename_map[type_col] = 'type'
+        if code_col:
+            rename_map[code_col] = 'code'
+        if name_col:
+            rename_map[name_col] = 'name'
+        if reason_col:
+            rename_map[reason_col] = 'reason'
+        if current_price_col:
+            rename_map[current_price_col] = 'current_price'
+        if stop_loss_col:
+            rename_map[stop_loss_col] = 'stop_loss_price'
+
+        df = df.rename(columns=rename_map)
+
+        # ensure required columns exist
+        for c in ['type', 'code', 'name', 'reason', 'current_price', 'stop_loss_price']:
+            if c not in df.columns:
+                df[c] = ''
+
+        # normalize type column
+        df['type'] = df['type'].fillna('').astype(str).str.upper()
+        # coerce numeric price columns where possible
+        df['current_price'] = pd.to_numeric(df['current_price'].replace('', np.nan), errors='coerce')
+        df['stop_loss_price'] = pd.to_numeric(df['stop_loss_price'].replace('', np.nan), errors='coerce')
+
+        # drop rows without timestamp
+        df = df[~df['timestamp'].isna()].copy()
+
+        # 筛选最近指定小时的交易记录
+        reference_time = pd.Timestamp.now(tz='UTC')
+        time_threshold = reference_time - pd.Timedelta(hours=hours)
+        df_recent = df[df['timestamp'] >= time_threshold].copy()
+        
+        return df_recent
+        
+    except Exception as e:
+        print(f"⚠️ 读取交易记录失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
+
+
+def format_recent_transactions(transactions_df):
+    """
+    格式化最近的交易记录为文本
+    
+    参数:
+    - transactions_df: 交易记录数据框
+    
+    返回:
+    - str: 格式化的交易记录文本
+    """
+    if transactions_df is None or transactions_df.empty:
+        return "  最近48小时内没有交易记录\n"
+    
+    # 按股票代码和时间排序
+    transactions_df = transactions_df.sort_values(by=['code', 'timestamp'])
+    
+    text = "## 八、最近48小时模拟交易记录\n\n"
+    
+    # 按股票代码分组
+    for code in sorted(transactions_df['code'].unique()):
+        stock_transactions = transactions_df[transactions_df['code'] == code]
+        stock_name = stock_transactions.iloc[0]['name'] if stock_transactions.iloc[0]['name'] else code
+        
+        text += f"### {stock_name} ({code})\n"
+        
+        for _, trans in stock_transactions.iterrows():
+            trans_type = trans.get('type', '')
+            timestamp = pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')
+            price = trans.get('current_price', np.nan)
+            price_display = f"{price:,.2f}" if not pd.isna(price) and price is not None else ''
+            reason = trans.get('reason', '') or ''
+            
+            # 格式化止损价和目标价
+            stop_loss = trans.get('stop_loss_price', np.nan)
+            stop_loss_display = f"止损:{stop_loss:.2f}" if not pd.isna(stop_loss) and stop_loss is not None else ''
+            
+            # 获取目标价（根据可能的目标价列名）
+            target_price = trans.get('target_price', np.nan) or trans.get('target_price', np.nan)
+            target_price_display = f"目标:{target_price:.2f}" if not pd.isna(target_price) and target_price is not None else ''
+            
+            # 构建价格信息
+            price_info_parts = []
+            if target_price_display:
+                price_info_parts.append(target_price_display)
+            if stop_loss_display:
+                price_info_parts.append(stop_loss_display)
+            
+            price_info_str = ", ".join(price_info_parts) if price_info_parts else ""
+            
+            if price_info_str:
+                text += f"  - {timestamp} {trans_type} @ {price_display} ({price_info_str}) - {reason}\n"
+            else:
+                text += f"  - {timestamp} {trans_type} @ {price_display} - {reason}\n"
+        
+        text += "\n"
+    
+    return text
+
+
+def format_hsi_email_indicators(hsi_email_data):
+    """
+    格式化 hsi_email.py 的指标为文本和表格格式
+    
+    参数:
+    - hsi_email_data: get_hsi_email_indicators 函数返回的数据
+    
+    返回:
+    - tuple: (text_format, table_format) 格式化的文本和表格
+    """
+    if not hsi_email_data:
+        return "", ""
+    
+    text_format = ""
+    table_format = ""
+    
+    # 格式化恒生指数数据
+    hsi_data = hsi_email_data.get('hsi_data')
+    hsi_indicators = hsi_email_data.get('hsi_indicators')
+    
+    if hsi_data:
+        text_format += "## 六、恒生指数实时技术指标\n\n"
+        text_format += f"- 当前指数：{hsi_data['current_price']:,.2f}\n"
+        text_format += f"- 24小时变化：{hsi_data['change_1d']:+.2f}% ({hsi_data['change_1d_points']:+.2f} 点)\n"
+        text_format += f"- 当日开盘：{hsi_data['open']:,.2f}\n"
+        text_format += f"- 当日最高：{hsi_data['high']:,.2f}\n"
+        text_format += f"- 当日最低：{hsi_data['low']:,.2f}\n"
+        text_format += f"- 成交量：{hsi_data['volume']:,.0f}\n\n"
+        
+        if hsi_indicators:
+            text_format += f"- RSI（14日）：{hsi_indicators.get('rsi', 0):.2f}\n"
+            text_format += f"- MACD：{hsi_indicators.get('macd', 0):.4f}\n"
+            text_format += f"- MACD信号线：{hsi_indicators.get('macd_signal', 0):.4f}\n"
+            text_format += f"- MA20：{hsi_indicators.get('ma20', 0):,.2f}\n"
+            text_format += f"- MA50：{hsi_indicators.get('ma50', 0):,.2f}\n"
+            text_format += f"- MA200：{hsi_indicators.get('ma200', 0):,.2f}\n"
+            text_format += f"- 布林带位置：{hsi_indicators.get('bb_position', 0):.2f}\n"
+            text_format += f"- ATR（14日）：{hsi_indicators.get('atr', 0):.2f}\n"
+            text_format += f"- 趋势：{hsi_indicators.get('trend', '未知')}\n\n"
+    
+    # 格式化自选股数据
+    stock_results = hsi_email_data.get('stock_results', [])
+    
+    if stock_results:
+        text_format += "## 七、自选股实时技术指标\n\n"
+        text_format += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | 趋势 | ATR | 成交量比率 |\n"
+        text_format += "|---------|---------|---------|--------|-----|------|-----|-----|------|-----|-----------|\n"
+        
+        for stock_result in stock_results:
+            code = stock_result.get('code', 'N/A')
+            name = stock_result.get('name', 'N/A')
+            data = stock_result.get('data', {})
+            indicators = stock_result.get('indicators', {})
+            
+            current_price = data.get('current_price', 0)
+            change_pct = data.get('change_1d', 0)
+            rsi = indicators.get('rsi', 0)
+            macd = indicators.get('macd', 0)
+            ma20 = indicators.get('ma20', 0)
+            ma50 = indicators.get('ma50', 0)
+            trend = indicators.get('trend', '未知')
+            atr = indicators.get('atr', 0)
+            volume_ratio = indicators.get('volume_ratio', 0)
+            
+            text_format += f"| {code} | {name} | {current_price:.2f} | {change_pct:+.2f}% | {rsi:.2f} | {macd:.4f} | {ma20:.2f} | {ma50:.2f} | {trend} | {atr:.2f} | {volume_ratio:.2f}x |\n"
+    
+    return text_format, table_format
 
 
 def generate_technical_indicators_table(stock_codes):
@@ -1304,6 +1551,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 print("📊 获取恒生指数分析...")
                 hsi_data = get_hsi_analysis()
                 
+                print("📊 获取 hsi_email.py 实时指标...")
+                hsi_email_indicators = get_hsi_email_indicators()
+                
                 # 构建板块分析文本
                 sector_text = ""
                 if sector_data and sector_data['performance'] is not None:
@@ -1379,6 +1629,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 if not technical_indicators_table:
                     print("⚠️ 技术指标表格为空，可能是股票数据获取失败")
                 
+                # 添加 hsi_email.py 的实时指标内容
+                hsi_email_text = ""
+                if hsi_email_indicators:
+                    hsi_email_text, _ = format_hsi_email_indicators(hsi_email_indicators)
+                
+                # 添加最近48小时模拟交易记录
+                recent_transactions_df = get_recent_transactions(hours=48)
+                recent_transactions_text = format_recent_transactions(recent_transactions_df)
+                
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 # 注意：不添加标题，因为HTML模板已经有了标题
                 full_content = f"""{response}
@@ -1387,7 +1646,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 一、机器学习预测结果（20天）
+## 一、实时技术指标（来自 hsi_email.py）
+{hsi_email_text if hsi_email_text else ''}
+
+## 二、最近48小时模拟交易记录
+{recent_transactions_text}
+
+## 三、机器学习预测结果（20天）
 
 ### 融合模型（LightGBM + GBDT + CatBoost，加权平均）
 **模型准确率**：
@@ -1402,7 +1667,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 {ml_predictions['ensemble']}
 
-## 二、大模型建议
+## 四、大模型建议
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
@@ -1413,7 +1678,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {dividend_text}
 {hsi_text}
 {technical_indicators_table}
-## 七、技术指标说明
+"""
+                
+                # 继续添加其他内容
+                full_content += f"""## 十、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1436,7 +1704,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 八、决策框架
+## 十一、决策框架
 
 ### ✦ 买入策略
 - 确认邮件中有**强烈买入信号**
@@ -1465,7 +1733,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **67% 一致**：三个模型中两个预测相同（如两个上涨，一个下跌）
 - **33% 一致**：三个模型预测都不同（如一个上涨、一个下跌、一个观望）
 
-## 九、风险提示
+## 十二、风险提示
 
 1. **模型不确定性**：
    - ML 20天融合模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）/±{model_accuracy['catboost']['std']:.2%}（CatBoost）
@@ -1483,7 +1751,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 融合概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
-## 十、数据来源
+## 十三、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT + CatBoost（融合模型，加权平均）
@@ -1500,6 +1768,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 融合策略：加权平均（基于模型准确率分配权重）
 - 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）
 - 一致性评估：100%（三模型一致）、67%（两模型一致）、33%（三模型不一致）
+"""
+                
+                # 如果有hsi_email.py指标，添加到数据源部分
+                if hsi_email_indicators:
+                    full_content += f"""
+- **hsi_email.py实时指标**：恒生指数及自选股实时技术指标，包括TAV评分、建仓/出货评分、基本面评分等高级分析指标
+"""
+                
+                full_content += f"""
 
 ---
 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
