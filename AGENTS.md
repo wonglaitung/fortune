@@ -28,6 +28,7 @@
 - 🔄 批量回测所有股票，全面评估模型表现
 - 📊 集成实时技术指标（来自 hsi_email.py）
 - 📈 展示最近48小时模拟交易记录
+- 📊 **恒生指数涨跌预测**：基于特征重要性的加权评分模型（新增 hsi_prediction.py）
 
 ## 重要警告
 
@@ -107,6 +108,7 @@
 │   ├── 港股IPO信息获取器 (hk_ipo_aastocks.py)
 │   ├── 黄金市场分析器 (gold_analyzer.py)
 │   ├── 美股市场数据获取器 (ml_services/us_market_data.py)
+│   ├── 恒生指数涨跌预测器 (hsi_prediction.py) ⭐ 新增
 │   └── 腾讯财经数据接口 (data_services/tencent_finance.py)
 ├── 数据服务层 (data_services/)
 │   ├── 基本面数据获取器 (fundamental_data.py)
@@ -236,6 +238,16 @@
 - 支持三种投资者类型
 - 止损机制
 - 交易记录自动保存
+
+### 恒生指数涨跌预测（2026-02-25 新增）
+- **hsi_prediction.py**：基于特征重要性的加权评分模型
+- 使用 20 个关键特征，权重范围 0.1729% - 0.0099%
+- 特征类别：技术面、宏观面、情绪面
+- 预测方法：多因素加权综合评分
+- 预测结果：0-1 区间得分，反映看涨/看跌概率
+- 预测分类：强烈看涨、看涨、中性偏涨、中性偏跌、看跌、强烈看跌
+- 支持邮件发送和控制台报告生成
+- 保存预测结果到 JSON 和 CSV 文件
 
 ### 综合分析系统增强功能（2026-02-25）
 - **实时指标获取**：从 `hsi_email.py` 获取恒生指数及自选股实时技术指标
@@ -518,10 +530,11 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 7. **## 六、股息信息（即将除净）**（前10只即将除净的港股）
 8. **## 七、恒生指数技术分析**（当前价格、RSI、MA20、MA50、趋势判断）
 9. **## 八、股票技术指标详情**（推荐股票的技术指标表格）
-10. **## 十、技术指标说明**（短期、中期技术指标说明）
-11. **## 十一、决策框架**（买入、持有、卖出策略说明）
-12. **## 十二、风险提示**（模型不确定性、市场风险、投资原则）
-13. **## 十三、数据来源**（11个数据源说明）
+10. **## 九、恒生指数涨跌预测**（基于特征重要性的加权评分模型）
+11. **## 十、技术指标说明**（短期、中期技术指标说明）
+12. **## 十一、决策框架**（买入、持有、卖出策略说明）
+13. **## 十二、风险提示**（模型不确定性、市场风险、投资原则）
+14. **## 十三、数据来源**（11个数据源说明）
 
 #### ML 融合模型预测结果展示优化（2026-02-21）
 - 显示全部 28 只股票的融合预测结果
@@ -550,6 +563,7 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
   - 二、大模型建议
   - 三、实时技术指标（来自 hsi_email.py）
   - 四、最近48小时模拟交易记录
+  - 五、恒生指数涨跌预测
 
 ### 综合分析系统状态（2026-02-25 最新，每日自动执行）
 - ✅ 动态准确率加载功能（自动读取 `data/model_accuracy.json`，更新提示词中的准确率描述，含 CatBoost）
@@ -561,6 +575,7 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - ✅ 推荐股票技术指标详情（股票的技术指标表格）
 - ✅ **实时技术指标集成**（从 hsi_email.py 获取恒生指数及自选股实时技术指标）
 - ✅ **模拟交易记录展示**（最近48小时模拟交易记录）
+- ✅ **恒生指数涨跌预测**（新增 hsi_prediction.py 的预测结果）
 - ✅ 邮件发送功能（SMTP + 重试机制，包含完整信息参考）
 - ✅ 自动化脚本（run_comprehensive_analysis.sh，支持训练三种模型和生成融合预测）
 - ✅ GitHub Actions 工作流（周一到周五每天自动执行）
@@ -581,6 +596,7 @@ lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
 - `lightgbm>=4.0.0`：LightGBM 梯度提升框架
 - `catboost>=1.2.0`：CatBoost 梯度提升库（2026-02-20 新增）
 - `scikit-learn>=1.3.0`：机器学习工具库
+- `yfinance>=0.2.0`：用于恒生指数涨跌预测（hsi_prediction.py）
 
 ### 自选股配置（28只）
 在 `config.py` 中配置：
@@ -633,6 +649,10 @@ python3 hk_smart_money_tracker.py --date 2025-10-25
 python3 hsi_email.py
 python3 hsi_email.py --date 2025-10-25
 python3 hsi_email.py --no-email  # 仅生成报告，不发送邮件
+
+# 恒生指数涨跌预测（2026-02-25 新增）
+python3 hsi_prediction.py
+python3 hsi_prediction.py --no-email  # 仅生成报告，不发送邮件
 
 # 板块分析
 python3 data_services/hk_sector_analysis.py --period 5 --style moderate
@@ -703,6 +723,8 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - `ml_trading_model_ensemble_predictions_20d.csv`: ML 融合模型预测结果 ⭐ 新增
 - `comprehensive_recommendations_YYYY-MM-DD.txt`: 综合买卖建议文件
 - `model_accuracy.json`: 模型准确率信息（LightGBM、GBDT、CatBoost 各周期准确率）
+- `hsi_prediction_features_*.csv`: 恒生指数预测特征数据 ⭐ 2026-02-25新增
+- `hsi_prediction_report_*.json`: 恒生指数预测报告数据 ⭐ 2026-02-25新增
 - `ml_trading_model_lgbm_*.pkl`: LightGBM 模型文件（已从 Git 移除）
 - `ml_trading_model_gbdt_*.pkl`: GBDT 模型文件（已从 Git 移除）
 - `ml_trading_model_catboost_*.pkl`: CatBoost 模型文件（已从 Git 移除）⭐ 新增
@@ -717,6 +739,7 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - `selected_features_*.csv`: 精选特征列表
 - `model_importance_features_latest.txt`: 模型重要性法特征选择结果 ⭐ 2026-02-25新增
 - `statistical_features_latest.txt`: 统计方法特征选择结果 ⭐ 2026-02-25新增
+- `email_preview.txt`: 邮件预览内容 ⭐ 2026-02-25新增
 
 ## 模型优化经验
 
@@ -959,6 +982,7 @@ else:
 - **TAV评分集成**：集成恒生指数及自选股的TAV评分、建仓/出货评分、基本面评分等高级分析指标
 - **正则表达式修复**：修复 comprehensive_analysis.py 中提取大模型建议的正则表达式问题
 - **随机抽样优化**：在特征选择时使用随机抽样提升速度
+- **恒生指数涨跌预测集成**：新增 hsi_prediction.py 的预测结果展示
 
 ## 自动化调度
 
@@ -972,17 +996,19 @@ else:
 | `hourly-gold-monitor.yml` | 每小时黄金监控 | 每小时 |
 | `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 2:00 |
 | `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 8:30 |
+| `hsi-prediction.yml` | **恒生指数涨跌预测** | **周一到周五 UTC 22:00（香港时间早上6:00）** ⭐ 新增 |
 | `hsi-email-alert.yml.bak` | HSI邮件提醒（备份）| - |
 | `ml-train-models.yml.bak` | ML模型训练（备份）| - |
 
 ### 自动化状态
-- ✅ GitHub Actions：7 个工作流正常运行 + 2 个备份文件（batch-stock-news-fetcher.yml, comprehensive-analysis.yml, weekly-comprehensive-analysis.yml, hourly-crypto-monitor.yml, hourly-gold-monitor.yml, daily-ipo-monitor.yml, daily-ai-trading-analysis.yml）
+- ✅ GitHub Actions：8 个工作流正常运行 + 2 个备份文件（batch-stock-news-fetcher.yml, comprehensive-analysis.yml, weekly-comprehensive-analysis.yml, hourly-crypto-monitor.yml, hourly-gold-monitor.yml, daily-ipo-monitor.yml, daily-ai-trading-analysis.yml, hsi-prediction.yml）
 - ✅ 邮件通知：163 邮件服务稳定
 - ✅ 定时任务：支持本地 cron 和 GitHub Actions
 - ✅ 数据保存：大模型建议、ML 融合模型预测结果、综合建议、模型准确率、批量回测结果自动保存
 - ✅ 综合分析：周一到周五每天自动执行，生成实质买卖建议
 - ✅ 周综合分析：每周日自动执行，生成更全面的综合分析报告
 - ✅ 准确率管理：训练时自动保存，分析时自动加载
+- ✅ **恒生指数预测**：周一到周五早上6点自动执行，生成加权评分预测
 
 ### 项目当前状态
 
@@ -999,6 +1025,7 @@ else:
 - ✅ 服务层：完整，大模型服务集成
 - ✅ **实时指标集成**：完整，集成 hsi_email.py 的实时技术指标
 - ✅ **交易记录展示**：完整，展示最近48小时模拟交易记录
+- ✅ **恒生指数涨跌预测**：完整，基于特征重要性的加权评分模型（hsi_prediction.py）
 
 ### 待优化项
 - ⚠️ **融合模型优化**（探索更高级的融合方法，如 Stacking）
@@ -1016,4 +1043,4 @@ else:
 - **综合分析**：整合大模型建议和 ML 融合模型预测结果，生成实质买卖建议
 
 ---
-最后更新：2026-02-25（集成实时指标和交易记录、更新模型准确率、新增综合交易分析工作流、修复正则表达式问题、优化特征选择速度、更新GitHub Actions工作流文件名以更准确反映功能）
+最后更新：2026-02-25（集成恒生指数涨跌预测 hsi_prediction.py、集成预测结果到综合分析邮件、更新GitHub Actions工作流、更新数据文件结构、更新文档架构）
