@@ -1,4 +1,4 @@
-name: Gold Market Analyzer
+name: 黄金市场分析
 
 on:
   schedule:

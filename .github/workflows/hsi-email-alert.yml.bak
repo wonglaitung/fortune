@@ -1,4 +1,4 @@
-name: HSI Email Alert
+name: 恒生指数邮件提醒
 
 on:
   schedule:
