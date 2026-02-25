@@ -117,9 +117,9 @@ def chat_with_llm(query, enable_thinking=True):
             query = query.encode('utf-8').decode('utf-8')
         
         payload = {
-            # 'model': 'qwen-plus-2025-07-28',
+            'model': 'qwen-plus-2025-12-01',
             # 'model': 'qwen3-max',
-            'model': 'qwen3.5-plus',
+            # 'model': 'qwen3.5-plus',
             'messages': [{'role': 'user', 'content': query}],
             'stream': False,
             'top_p': 0.2,
