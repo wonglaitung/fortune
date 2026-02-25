@@ -199,7 +199,7 @@ class BacktestEvaluator:
             else:
                 predictions = model.gbdt_model.predict_proba(test_data)[:, 1]
         elif hasattr(model, 'model') and hasattr(model.model, 'predict_proba'):
-            # MLTradingModel (LightGBM) 需要使用 model.model.predict_proba
+            # LightGBMModel 需要使用 model.model.predict_proba
             # 需要检查是否有 object 类型的列
             if isinstance(test_data, pd.DataFrame):
                 test_df = test_data.copy()
