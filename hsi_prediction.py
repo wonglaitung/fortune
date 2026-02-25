@@ -749,7 +749,7 @@ class HSI_Predictor:
 
         # 根据预测得分生成投资建议
         if score >= 0.65:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e;">
                 <h3 style="color: #166534;">✅ 强烈看涨（得分 ≥ 0.65）</h3>
                 <ul>
@@ -764,7 +764,7 @@ class HSI_Predictor:
             </div>
 """
         elif score >= 0.55:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e;">
                 <h3 style="color: #166534;">✅ 看涨（得分 0.55-0.65）</h3>
                 <ul>
@@ -779,7 +779,7 @@ class HSI_Predictor:
             </div>
 """
         elif score >= 0.50:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
                 <h3 style="color: #92400e;">⚠️ 中性偏涨（得分 0.50-0.55）</h3>
                 <ul>
@@ -794,7 +794,7 @@ class HSI_Predictor:
             </div>
 """
         elif score >= 0.45:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%); border-left: 4px solid #f97316;">
                 <h3 style="color: #9a3412;">⚠️ 中性偏跌（得分 0.45-0.50）</h3>
                 <ul>
@@ -809,7 +809,7 @@ class HSI_Predictor:
             </div>
 """
         elif score >= 0.35:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #ef4444;">
                 <h3 style="color: #991b1b;">🔴 看跌（得分 0.35-0.45）</h3>
                 <ul>
@@ -824,7 +824,7 @@ class HSI_Predictor:
             </div>
 """
         else:
-            content += """
+            content += f"""
             <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #dc2626;">
                 <h3 style="color: #7f1d1d;">🔴 强烈看跌（得分 < 0.35）</h3>
                 <ul>
@@ -839,7 +839,7 @@ class HSI_Predictor:
             </div>
 """
 
-        content += """
+        content += f"""
         </div>
 
         <!-- 第五部分：模型说明 -->
