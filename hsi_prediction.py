@@ -653,7 +653,7 @@ class HSI_Predictor:
                     </tr>
 """
 
-        content += """
+        content += f"""
                 </tbody>
             </table>
 
@@ -682,7 +682,7 @@ class HSI_Predictor:
                     </tr>
 """
 
-        content += """
+        content += f"""
                 </tbody>
             </table>
         </div>
