@@ -149,7 +149,17 @@ fortune/
 │   ├── config.py                       # 全局配置
 │   ├── requirements.txt                # 项目依赖
 │   ├── run_comprehensive_analysis.sh   # 综合分析自动化脚本
-│   └── set_key.sh                      # 环境变量配置
+│   ├── set_key.sh                      # 环境变量配置
+│   └── .github/workflows/              # GitHub Actions工作流配置
+│       ├── batch-stock-news-fetcher.yml     # 批量股票新闻获取
+│       ├── comprehensive-analysis.yml       # 综合分析邮件
+│       ├── daily-ai-trading-analysis.yml    # AI交易分析日报
+│       ├── daily-ipo-monitor.yml            # IPO信息监控
+│       ├── hourly-crypto-monitor.yml        # 每小时加密货币监控
+│       ├── hourly-gold-monitor.yml          # 每小时黄金监控
+│       ├── weekly-comprehensive-analysis.yml # 周综合交易分析
+│       ├── hsi-email-alert.yml.bak          # HSI邮件提醒（备份）
+│       └── ml-train-models.yml.bak          # ML模型训练（备份）
 │
 ├── 输出文件 (output/)
 │   ├── batch_backtest_*.json           # 批量回测详细数据
@@ -371,22 +381,23 @@ python comprehensive_analysis.py --no-email
 
 | 工作流 | 功能 | 执行时间 |
 |--------|------|----------|
-| crypto-alert.yml | 加密货币监控 | 每小时 |
-| gold-analyzer.yml | 黄金市场分析 | 每小时 |
-| hsi-email-alert-open_message.yml | **综合分析邮件** | **周一到周五 UTC 08:00（香港时间下午4:00）** |
-| smart-money-alert.yml | 主力资金追踪 | 每天 UTC 22:00 |
-| ipo-alert.yml | IPO 信息 | 每天 UTC 02:00 |
-| ai-trading-analysis-daily.yml | AI 交易分析 | 周一到周五 UTC 08:30 |
+| hourly-crypto-monitor.yml | 每小时加密货币监控 | 每小时 |
+| hourly-gold-monitor.yml | 每小时黄金监控 | 每小时 |
+| comprehensive-analysis.yml | **综合分析邮件** | **周一到周五 UTC 08:00（香港时间下午4:00）** |
+| batch-stock-news-fetcher.yml | 批量股票新闻获取 | 每天 UTC 22:00 |
+| daily-ipo-monitor.yml | IPO 信息监控 | 每天 UTC 02:00 |
+| daily-ai-trading-analysis.yml | AI 交易分析日报 | 周一到周五 UTC 08:30 |
+| weekly-comprehensive-analysis.yml | 周综合交易分析 | 每周日 UTC 01:00（香港时间上午9:00） |
 
 ## 性能数据
 
-### 最新准确率（2026-02-22）
+### 最新准确率（2026-02-25）
 
 | 预测周期 | LightGBM | GBDT | CatBoost | 融合模型（加权平均） | 说明 |
 |---------|----------|------|----------|---------------------|------|
-| 次日（1天） | 51.20%（±0.97%） | 51.59%（±1.61%） | **65.62%（±5.97%）** ❌ | - | **CatBoost 1天模型存在过拟合风险，不推荐使用** |
-| 一周（5天） | 55.20%（±2.20%） | 55.19%（±2.54%） | 63.01%（±4.45%）⚠️ | - | CatBoost 5天模型需要更多验证 |
-| 一个月（20天） | **58.56%（±4.15%）** | 59.30%（±4.63%） | **62.07%（±1.78%）** ⭐ | **~62-63%（±1.5-2.0%）** ⭐⭐ | **CatBoost 20天和融合模型达到业界顶尖水平** |
+| 次日（1天） | 51.91%（±2.25%） | 51.59%（±1.61%） | **65.62%（±5.97%）** ❌ | - | **CatBoost 1天模型存在过拟合风险，不推荐使用** |
+| 一周（5天） | 56.47%（±2.27%） | 55.19%（±2.54%） | 63.01%（±4.45%）⚠️ | - | CatBoost 5天模型需要更多验证 |
+| 一个月（20天） | 60.17%（±5.65%） | 61.38%（±5.51%） | **61.56%（±2.25%）** ⭐ | **~62-63%（±1.5-2.0%）** ⭐⭐ | **CatBoost 20天和融合模型达到业界顶尖水平** |
 
 ### 批量回测性能（置信度0.55）
 
@@ -546,9 +557,12 @@ nltk            # 自然语言处理
 | 回测评估功能 | 100% |
 | 批量回测功能 | 100% |
 | 置信度阈值优化 | 100% |
+| 实时指标集成 | 100% |
+| 交易记录展示 | 100% |
+| 工作流优化 | 100% |
 | 风险管理模块 | 0% |
 | 其他功能 | 17% |
-| **总体** | **92%** |
+| **总体** | **94%** |
 
 ## 贡献指南
 

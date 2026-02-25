@@ -1,0 +1,116 @@
+================================================================================
+特征重要性评估报告
+================================================================================
+
+生成时间: 2026-02-24 06:14:09
+配置: 10只股票, 5天周期
+特征过滤: NaN < 30%
+
+数据集统计:
+  样本数量: 7252
+  特征数量: 3832
+  原始特征数: 3972
+  过滤特征数: 140
+
+================================================================================
+Top 50 特征（按平均重要性排序）
+================================================================================
+
+排名     特征名称                                               平均重要性           变异系数           
+--------------------------------------------------------------------------------
+126    HSI_Return_20d                                     31.33           0.2636         
+149    SP500_Return_20d                                   13.33           0.8155         
+90     MA120_Slope                                        11.67           0.2650         
+101    Volume_MA120                                       10.33           0.5550         
+155    VIX_Level                                          10.33           0.7342         
+424    Outperforms_HSI_NASDAQ_Return_5d                   8.33            0.9516         
+154    VIX_Ratio_MA20                                     8.33            0.7859         
+127    HSI_Return_60d                                     8.33            1.1607         
+151    NASDAQ_Return_5d                                   7.00            0.6494         
+96     Volatility_120d                                    6.67            0.5657         
+34     ADX                                                6.33            0.8584         
+321    Outperforms_HSI_ADX                                6.00            0.6236         
+53     Price_Ratio_MA50                                   5.67            0.2201         
+16     Vol_Mean_20                                        5.67            0.5823         
+422    Outperforms_HSI_SP500_Return_20d                   5.00            0.7118         
+125    HSI_Return_10d                                     4.33            0.9669         
+402    Outperforms_HSI_HSI_Return_20d                     4.33            0.7134         
+123    HSI_Return_3d                                      3.33            1.0198         
+287    Outperforms_HSI_MACD_signal                        3.33            0.6164         
+316    Outperforms_HSI_CMF_Signal                         3.00            0.9813         
+69     Intraday_Range_MA20                                3.00            1.4142         
+1924   20d_Trend_MACD                                     2.67            0.9354         
+124    HSI_Return_5d                                      2.67            1.4142         
+2343   60d_Trend_Stock_Type                               2.67            1.4142         
+136    RS_Ratio_20d                                       2.67            1.4142         
+2293   60d_Trend_Volatility_120d                          2.67            0.4677         
+68     Intraday_Range_MA5                                 2.33            0.8806         
+59     Skewness_20d                                       2.33            0.5345         
+148    SP500_Return_5d                                    2.33            1.4142         
+20     Turnover_Mean_20                                   2.33            0.8806         
+272    Price_Pct_20d_PE                                   2.33            0.8806         
+270    MACD_Hist_PE                                       2.33            0.5345         
+1406   5d_Trend_OBV                                       2.00            1.4142         
+259    sector_rising_ratio_5d                             2.00            1.4142         
+177    Stock_Price_Stability_Score                        2.00            1.4142         
+40     Volatility                                         2.00            0.8165         
+1      RSI                                                2.00            1.0801         
+4      MACD_signal                                        2.00            1.0801         
+31     OBV                                                2.00            0.8165         
+1925   20d_Trend_MACD_signal                              2.00            1.4142         
+1941   20d_Trend_Turnover_Mean_20                         1.67            1.4142         
+1504   5d_Trend_RS_Ratio_20d                              1.67            1.4142         
+2      RSI_ROC                                            1.67            1.4142         
+1787   10d_Trend_SP500_Return_20d                         1.67            0.7483         
+62     Momentum_Accel_10d                                 1.67            0.7483         
+296    Outperforms_HSI_ATR_MA                             1.67            0.5657         
+276    Vol_Ratio_PE                                       1.67            0.7483         
+1494   5d_Trend_HSI_Return_20d                            1.67            1.4142         
+95     Volatility_60d                                     1.67            0.5657         
+30     VWAP                                               1.67            1.4142         
+
+================================================================================
+特征选择建议
+================================================================================
+
+1. 保留 Top 100 特征:
+   - 阈值: 重要性 >= 0.67
+   - 数量: 100 个
+
+2. 保留 Top 200 特征:
+   - 阈值: 重要性 >= 0.33
+   - 数量: 200 个
+
+3. 最稳定的 Top 20 特征（最低变异系数）:
+   14. ATR_Ratio                                          CV=0.0000
+   2572. 3d_RS_Signal_Volume_MA250                          CV=0.0000
+   2590. 3d_RS_Signal_RS_Ratio_3d                           CV=0.0000
+   2591. 3d_RS_Signal_RS_Diff_3d                            CV=0.0000
+   2592. 3d_RS_Signal_RS_Ratio_5d                           CV=0.0000
+   2593. 3d_RS_Signal_RS_Diff_5d                            CV=0.0000
+   2587. 3d_RS_Signal_HSI_Return_60d                        CV=0.0000
+   2589. 3d_RS_Signal_RS_Diff_1d                            CV=0.0000
+   2588. 3d_RS_Signal_RS_Ratio_1d                           CV=0.0000
+   2579. 3d_RS_Signal_RSI_120                               CV=0.0000
+   2578. 3d_RS_Signal_Distance_Resistance_120d              CV=0.0000
+   2580. 3d_RS_Signal_Multi_Period_Trend_Score              CV=0.0000
+   2595. 3d_RS_Signal_RS_Diff_10d                           CV=0.0000
+   2581. 3d_RS_Signal_Multi_Period_RS_Score                 CV=0.0000
+   2577. 3d_RS_Signal_Distance_Support_120d                 CV=0.0000
+   2582. 3d_RS_Signal_HSI_Return_1d                         CV=0.0000
+   2576. 3d_RS_Signal_Resistance_120d                       CV=0.0000
+   2575. 3d_RS_Signal_Support_120d                          CV=0.0000
+   2583. 3d_RS_Signal_HSI_Return_3d                         CV=0.0000
+   2574. 3d_RS_Signal_Volume_Trend_Long                     CV=0.0000
+
+================================================================================
+详细分析
+================================================================================
+
+特征重要性分布:
+  - 平均值: 0.09
+  - 中位数: 0.00
+  - 标准差: 0.76
+  - 最大值: 31.33
+  - 最小值: 0.00
+

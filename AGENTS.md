@@ -965,16 +965,18 @@ else:
 ### GitHub Actions 工作流 (`.github/workflows/`)
 | 文件 | 功能 | 执行时间 |
 |------|------|----------|
-| `smart-money-alert.yml` | 主力资金追踪 | 每天 UTC 22:00 |
-| `hsi-email-alert-open_message.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
-| `comprehensive-trading-analysis.yml` | **综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** ⭐ 2026-02-25新增 |
-| `crypto-alert.yml` | 加密货币价格 | 每小时 |
-| `gold-analyzer.yml` | 黄金市场分析 | 每小时 |
-| `ipo-alert.yml` | IPO 信息 | 每天 UTC 2:00 |
-| `ai-trading-analysis-daily.yml` | AI 交易分析 | 周一到周五 UTC 8:30 |
+| `batch-stock-news-fetcher.yml` | 批量股票新闻获取 | 每天 UTC 22:00 |
+| `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
+| `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
+| `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
+| `hourly-gold-monitor.yml` | 每小时黄金监控 | 每小时 |
+| `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 2:00 |
+| `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 8:30 |
+| `hsi-email-alert.yml.bak` | HSI邮件提醒（备份）| - |
+| `ml-train-models.yml.bak` | ML模型训练（备份）| - |
 
 ### 自动化状态
-- ✅ GitHub Actions：8 个工作流正常运行（新增 comprehensive-trading-analysis.yml）
+- ✅ GitHub Actions：7 个工作流正常运行 + 2 个备份文件（batch-stock-news-fetcher.yml, comprehensive-analysis.yml, weekly-comprehensive-analysis.yml, hourly-crypto-monitor.yml, hourly-gold-monitor.yml, daily-ipo-monitor.yml, daily-ai-trading-analysis.yml）
 - ✅ 邮件通知：163 邮件服务稳定
 - ✅ 定时任务：支持本地 cron 和 GitHub Actions
 - ✅ 数据保存：大模型建议、ML 融合模型预测结果、综合建议、模型准确率、批量回测结果自动保存
@@ -1014,4 +1016,4 @@ else:
 - **综合分析**：整合大模型建议和 ML 融合模型预测结果，生成实质买卖建议
 
 ---
-最后更新：2026-02-25（集成实时指标和交易记录、更新模型准确率、新增综合交易分析工作流、修复正则表达式问题、优化特征选择速度）
+最后更新：2026-02-25（集成实时指标和交易记录、更新模型准确率、新增综合交易分析工作流、修复正则表达式问题、优化特征选择速度、更新GitHub Actions工作流文件名以更准确反映功能）
