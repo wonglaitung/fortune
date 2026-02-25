@@ -3,15 +3,15 @@
     "model_type": "lgbm",
     "horizon": 20,
     "accuracy": 0.6017391304347827,
-    "std": 0.054179675194146085,
-    "timestamp": "2026-02-25 13:50:26"
+    "std": 0.05645929273799451,
+    "timestamp": "2026-02-25 14:20:22"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
     "horizon": 20,
     "accuracy": 0.6137549407114624,
     "std": 0.05511554064171383,
-    "timestamp": "2026-02-25 13:52:22"
+    "timestamp": "2026-02-25 14:22:23"
   },
   "lgbm_1d": {
     "model_type": "lgbm",
@@ -25,7 +25,7 @@
     "horizon": 20,
     "accuracy": 0.6156082148499211,
     "std": 0.022513793879512467,
-    "timestamp": "2026-02-25 13:55:41"
+    "timestamp": "2026-02-25 14:25:41"
   },
   "gbdt_1d": {
     "model_type": "gbdt",
