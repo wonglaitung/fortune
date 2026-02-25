@@ -1,4 +1,4 @@
-name: IPO Alert
+name: IPO上市提醒
 
 on:
   schedule:

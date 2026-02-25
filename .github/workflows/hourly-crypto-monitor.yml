@@ -1,4 +1,4 @@
-name: Crypto Price Alert
+name: 加密货币价格提醒
 
 on:
   schedule:

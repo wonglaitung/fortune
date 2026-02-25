@@ -1,4 +1,4 @@
-name: Comprehensive Analysis Email Alert
+name: 综合分析邮件提醒
 
 on:
   schedule:
