@@ -1550,17 +1550,16 @@ class FeatureEngineer:
         return df
 
 
-class MLTradingModel:
-    """机器学习交易模型"""
+class BaseTradingModel:
+    """交易模型基类 - 提供公共方法和属性"""
 
     def __init__(self):
         self.feature_engineer = FeatureEngineer()
         self.processor = BaseModelProcessor()
-        self.model = None
-        self.scaler = StandardScaler()
         self.feature_columns = []
         self.horizon = 1  # 默认预测周期
-        self.model_type = 'lgbm'  # 模型类型标识
+        self.model_type = None  # 子类必须设置
+        self.categorical_encoders = {}
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -1612,6 +1611,30 @@ class MLTradingModel:
         except Exception as e:
             logger.warning(f"加载特征列表失败: {e}")
             return None
+
+    def get_feature_columns(self, df):
+        """获取特征列（排除中间计算列）"""
+        # 排除非特征列（包括中间计算列）
+        exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
+                          'Future_Return', 'Label', 'Prev_Close',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
+
+        feature_columns = [col for col in df.columns if col not in exclude_columns]
+
+        return feature_columns
+
+
+class LightGBMModel(BaseTradingModel):
+    """LightGBM 模型 - 基于 LightGBM 梯度提升算法的单一模型"""
+
+    def __init__(self):
+        super().__init__()  # 调用基类初始化
+        self.model = None
+        self.scaler = StandardScaler()
+        self.model_type = 'lgbm'  # 模型类型标识
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
         """准备训练数据（80个指标版本，优化版）
@@ -1802,18 +1825,8 @@ class MLTradingModel:
         print(f"使用 {len(self.feature_columns)} 个特征")
 
         # 应用特征选择（可选）
-        # 注意：GBDT+LR对特征选择不敏感，建议不使用
-        if use_feature_selection and self.model_type == 'lgbm':
+        if use_feature_selection:
             print("\n🎯 应用特征选择（LightGBM）...")
-            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
-            if selected_features:
-                # 筛选特征列
-                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
-            else:
-                logger.warning(r"未找到特征选择文件，使用全部特征")
-        elif use_feature_selection and self.model_type == 'gbdt':
-            print("\n🎯 应用特征选择（GBDT）...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -2159,16 +2172,13 @@ class MLTradingModel:
         print(f"模型已从 {filepath} 加载")
 
 
-class GBDTModel:
+class GBDTModel(BaseTradingModel):
     """GBDT 模型 - 基于梯度提升决策树的单一模型"""
 
     def __init__(self):
-        self.feature_engineer = FeatureEngineer()
-        self.processor = BaseModelProcessor()
+        super().__init__()  # 调用基类初始化
         self.gbdt_model = None
-        self.feature_columns = []
         self.actual_n_estimators = 0
-        self.horizon = 1  # 默认预测周期
         self.model_type = 'gbdt'  # 模型类型标识
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
@@ -2770,7 +2780,7 @@ class GBDTModel:
         print(f"GBDT 模型已从 {filepath} 加载")
 
 
-class CatBoostModel:
+class CatBoostModel(BaseTradingModel):
     """CatBoost 模型 - 基于 CatBoost 梯度提升算法的单一模型
     
     CatBoost 是 Yandex 开发的梯度提升库，具有以下优势：
@@ -2781,12 +2791,9 @@ class CatBoostModel:
     """
 
     def __init__(self):
-        self.feature_engineer = FeatureEngineer()
-        self.processor = BaseModelProcessor()
+        super().__init__()  # 调用基类初始化
         self.catboost_model = None
-        self.feature_columns = []
         self.actual_n_estimators = 0
-        self.horizon = 1  # 默认预测周期
         self.model_type = 'catboost'  # 模型类型标识
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
@@ -2967,6 +2974,20 @@ class CatBoostModel:
 
         return df
 
+    def get_feature_columns(self, df):
+        """获取特征列"""
+        # 排除非特征列（包括中间计算列）
+        exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
+                          'Future_Return', 'Label', 'Prev_Close',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'BB_upper', 'BB_lower', 'BB_middle',
+                          'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
+                          'TP', 'MF_Multiplier', 'MF_Volume']
+
+        feature_columns = [col for col in df.columns if col not in exclude_columns]
+
+        return feature_columns
+
     def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
         """训练 CatBoost 模型
 
@@ -2998,6 +3019,10 @@ class CatBoostModel:
         df = df.dropna(subset=['Label'])
         print(f"删除 NaN 后: {len(df)} 条记录")
 
+        # 获取特征列
+        self.feature_columns = self.get_feature_columns(df)
+        logger.info(f"使用 {len(self.feature_columns)} 个特征")
+
         # ========== 特征选择（可选）==========
         if use_feature_selection:
             print("\n" + "="*70)
@@ -3005,18 +3030,16 @@ class CatBoostModel:
             print("="*70)
 
             # 加载选择的特征
-            selected_features = self.load_selected_features(current_feature_names=df.columns.tolist())
+            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
 
             if selected_features:
-                # 过滤特征
-                self.feature_columns = selected_features
-                logger.info(f"使用特征选择后的 {len(self.feature_columns)} 个特征")
+                # 筛选特征列
+                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
+                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
             else:
-                logger.warning(r"特征选择失败，使用所有特征")
-                self.feature_columns = [col for col in df.columns if col not in ['Code', 'Label', 'Future_Return']]
+                logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
-            # 使用所有特征（排除标签和目标列）
-            self.feature_columns = [col for col in df.columns if col not in ['Code', 'Label', 'Future_Return']]
+            logger.info(f"使用全部 {len(self.feature_columns)} 个特征")
 
         # 检查特征列是否存在
         missing_features = [col for col in self.feature_columns if col not in df.columns]
@@ -3426,7 +3449,7 @@ class EnsembleModel:
         Args:
             fusion_method: 融合方法 ('average'/'weighted'/'voting')
         """
-        self.lgbm_model = MLTradingModel()
+        self.lgbm_model = LightGBMModel()
         self.gbdt_model = GBDTModel()
         self.catboost_model = CatBoostModel()
         self.fusion_method = fusion_method
@@ -3850,7 +3873,7 @@ def main():
             
             # 训练 LightGBM 模型
             print("\n📊 训练 LightGBM 模型...")
-            lgbm_model = MLTradingModel()
+            lgbm_model = LightGBMModel()
             lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
@@ -4112,6 +4135,10 @@ def main():
         logger.error(f"不支持的运行模式: {args.mode}")
         print("请使用以下模式之一: train, evaluate, predict")
         sys.exit(1)
+
+
+# 向后兼容别名
+MLTradingModel = LightGBMModel
 
 
 if __name__ == '__main__':

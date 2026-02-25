@@ -6,8 +6,11 @@
 """
 
 from .ml_trading_model import (
-    MLTradingModel,
+    LightGBMModel,
+    MLTradingModel,  # 向后兼容别名
     GBDTModel,
+    CatBoostModel,
+    EnsembleModel,
     FeatureEngineer,
     WATCHLIST,
     STOCK_NAMES
@@ -16,8 +19,11 @@ from .us_market_data import us_market_data
 from .base_model_processor import BaseModelProcessor
 
 __all__ = [
-    'MLTradingModel',
+    'LightGBMModel',
+    'MLTradingModel',  # 向后兼容别名
     'GBDTModel',
+    'CatBoostModel',
+    'EnsembleModel',
     'FeatureEngineer',
     'WATCHLIST',
     'STOCK_NAMES',
