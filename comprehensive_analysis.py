@@ -131,27 +131,34 @@ def extract_llm_recommendations(filepath):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        import re
+        # 查找"稳健型短期分析"和"稳健型中期分析"的位置
+        short_start = content.find("### 📊 ⚖️ 稳健型短期分析（日内/数天）")
+        medium_start = content.find("### 📊 📊 稳健型中期分析（数周-数月）")
         
-        # 使用更精确的正则表达式提取短期建议
-        # 匹配"### 稳健型短期分析"标题后到下一个"###"标题之前的内容
-        short_term_match = re.search(
-            r'^###.*稳健型短期分析.*?\n(.*?)(?=^###|\Z)',
-            content,
-            re.DOTALL | re.MULTILINE
-        )
+        if short_start == -1:
+            short_start = content.find("### 稳健型短期分析")
         
-        # 使用更精确的正则表达式提取中期建议
-        # 匹配"### 稳健型中期分析"标题后到文件末尾或下一个"###"标题之前的内容
-        medium_term_match = re.search(
-            r'^###.*稳健型中期分析.*?\n(.*?)(?=\Z|^###)',
-            content,
-            re.DOTALL | re.MULTILINE
-        )
+        if medium_start == -1:
+            medium_start = content.find("### 稳健型中期分析")
+        
+        short_content = ""
+        medium_content = ""
+        
+        if short_start != -1:
+            if medium_start != -1:
+                # 提取短期分析内容（从短期分析标题后到中期分析标题前）
+                short_content = content[short_start:medium_start].split('\n', 1)[-1].strip()  # 去掉标题行
+            else:
+                # 如果没有中期分析，提取到文件末尾
+                short_content = content[short_start:].split('\n', 1)[-1].strip()  # 去掉标题行
+        
+        if medium_start != -1:
+            # 提取中期分析内容（从中期分析标题后到文件末尾）
+            medium_content = content[medium_start:].split('\n', 1)[-1].strip()  # 去掉标题行
         
         result = {
-            'short_term': short_term_match.group(1).strip() if short_term_match else '',
-            'medium_term': medium_term_match.group(1).strip() if medium_term_match else ''
+            'short_term': short_content,
+            'medium_term': medium_content
         }
         
         return result
