@@ -42,6 +42,30 @@ except ImportError:
     print("⚠️ AKShare模块不可用")
 
 
+def safe_float_format(value, format_spec='.2f', default=''):
+    """
+    安全地格式化浮点数值，处理可能的字符串或非数值类型
+    
+    参数:
+    - value: 要格式化的值
+    - format_spec: 格式化规格，默认为'.2f'
+    - default: 格式化失败时的默认返回值，默认为空字符串
+    
+    返回:
+    - 格式化后的字符串，或默认值
+    """
+    try:
+        if pd.isna(value) or value is None or value == '':
+            return default
+        # 尝试转换为浮点数并格式化
+        float_value = float(value)
+        format_str = f"{{:.{format_spec}}}"
+        return format_str.format(float_value)
+    except (ValueError, TypeError):
+        # 如果转换失败，返回默认值
+        return default
+
+
 def load_model_accuracy(horizon=20):
     """
     从文件加载模型准确率信息
@@ -227,7 +251,7 @@ def extract_ml_predictions(filepath):
                 else:
                     direction = "下跌"
 
-                ensemble_text += f"| {row['code']} | {row['name']} | {direction} | {row['fused_probability']:.4f} | {row['confidence']} | {row['consistency']} | {row['current_price']:.2f} |\n"
+                ensemble_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['fused_probability'], '4f')} | {row['confidence']} | {row['consistency']} | {safe_float_format(row['current_price'], '2f')} |\n"
 
             ensemble_text += f"\n**统计信息**：\n"
             ensemble_text += f"- 高置信度上涨（融合概率 > 0.60）: {len(df_ensemble[df_ensemble['fused_probability'] > 0.60])} 只\n"
@@ -266,7 +290,7 @@ def extract_ml_predictions(filepath):
                     else:
                         direction = "下跌"
 
-                    lgbm_text += f"| {row['code']} | {row['name']} | {direction} | {row['probability']:.4f} | {row['current_price']:.2f} |\n"
+                    lgbm_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} |\n"
 
                 result['ensemble'] = lgbm_text
         
@@ -997,11 +1021,11 @@ def format_recent_transactions(transactions_df):
             
             # 格式化止损价和目标价
             stop_loss = trans.get('stop_loss_price', np.nan)
-            stop_loss_display = f"止损:{stop_loss:.2f}" if not pd.isna(stop_loss) and stop_loss is not None else ''
+            stop_loss_display = f"止损:{safe_float_format(stop_loss, '2f')}" if safe_float_format(stop_loss, '2f') else ''
             
             # 获取目标价（根据可能的目标价列名）
             target_price = trans.get('target_price', np.nan) or trans.get('target_price', np.nan)
-            target_price_display = f"目标:{target_price:.2f}" if not pd.isna(target_price) and target_price is not None else ''
+            target_price_display = f"目标:{safe_float_format(target_price, '2f')}" if safe_float_format(target_price, '2f') else ''
             
             # 构建价格信息
             price_info_parts = []
@@ -1052,14 +1076,14 @@ def format_hsi_email_indicators(hsi_email_data):
         text_format += f"- 成交量：{hsi_data['volume']:,.0f}\n\n"
         
         if hsi_indicators:
-            text_format += f"- RSI（14日）：{hsi_indicators.get('rsi', 0):.2f}\n"
-            text_format += f"- MACD：{hsi_indicators.get('macd', 0):.4f}\n"
-            text_format += f"- MACD信号线：{hsi_indicators.get('macd_signal', 0):.4f}\n"
-            text_format += f"- MA20：{hsi_indicators.get('ma20', 0):,.2f}\n"
-            text_format += f"- MA50：{hsi_indicators.get('ma50', 0):,.2f}\n"
-            text_format += f"- MA200：{hsi_indicators.get('ma200', 0):,.2f}\n"
-            text_format += f"- 布林带位置：{hsi_indicators.get('bb_position', 0):.2f}\n"
-            text_format += f"- ATR（14日）：{hsi_indicators.get('atr', 0):.2f}\n"
+            text_format += f"- RSI（14日）：{safe_float_format(hsi_indicators.get('rsi', 0), '2f')}\n"
+            text_format += f"- MACD：{safe_float_format(hsi_indicators.get('macd', 0), '4f')}\n"
+            text_format += f"- MACD信号线：{safe_float_format(hsi_indicators.get('macd_signal', 0), '4f')}\n"
+            text_format += f"- MA20：{safe_float_format(hsi_indicators.get('ma20', 0), ',.2f')}\n"
+            text_format += f"- MA50：{safe_float_format(hsi_indicators.get('ma50', 0), ',.2f')}\n"
+            text_format += f"- MA200：{safe_float_format(hsi_indicators.get('ma200', 0), ',.2f')}\n"
+            text_format += f"- 布林带位置：{safe_float_format(hsi_indicators.get('bb_position', 0), '2f')}\n"
+            text_format += f"- ATR（14日）：{safe_float_format(hsi_indicators.get('atr', 0), '2f')}\n"
             text_format += f"- 趋势：{hsi_indicators.get('trend', '未知')}\n\n"
     
     # 格式化自选股数据
@@ -1086,7 +1110,7 @@ def format_hsi_email_indicators(hsi_email_data):
             atr = indicators.get('atr', 0)
             volume_ratio = indicators.get('volume_ratio', 0)
             
-            text_format += f"| {code} | {name} | {current_price:.2f} | {change_pct:+.2f}% | {rsi:.2f} | {macd:.4f} | {ma20:.2f} | {ma50:.2f} | {trend} | {atr:.2f} | {volume_ratio:.2f}x |\n"
+            text_format += f"| {code} | {name} | {safe_float_format(current_price, '2f')} | {safe_float_format(change_pct, '+.2f')}% | {safe_float_format(rsi, '2f')} | {safe_float_format(macd, '4f')} | {safe_float_format(ma20, '2f')} | {safe_float_format(ma50, '2f')} | {trend} | {safe_float_format(atr, '2f')} | {safe_float_format(volume_ratio, '2f')}x |\n"
     
     return text_format, table_format
 
@@ -1121,22 +1145,22 @@ def generate_technical_indicators_table(stock_codes):
                 stock_name = WATCHLIST.get(stock_code, stock_code)
                 
                 # 格式化数据
-                price = f"{indicators['current_price']:.2f}"
-                change = f"{indicators['change_pct']:+.2f}%"
-                rsi = f"{indicators['rsi']:.2f}"
-                macd = f"{indicators['macd']:.2f}"
-                ma20 = f"{indicators['ma20']:.2f}"
-                ma50 = f"{indicators['ma50']:.2f}"
-                ma200 = f"{indicators['ma200']:.2f}" if pd.notna(indicators['ma200']) else "N/A"
+                price = safe_float_format(indicators['current_price'], '2f')
+                change = safe_float_format(indicators['change_pct'], '+.2f') + "%"
+                rsi = safe_float_format(indicators['rsi'], '2f')
+                macd = safe_float_format(indicators['macd'], '2f')
+                ma20 = safe_float_format(indicators['ma20'], '2f')
+                ma50 = safe_float_format(indicators['ma50'], '2f')
+                ma200 = safe_float_format(indicators['ma200'], '2f') if pd.notna(indicators['ma200']) else "N/A"
                 ma_align = indicators['ma_alignment']
-                ma_slope = f"{indicators['ma_slope_20']:.4f}"
-                ma_dev = f"{indicators['ma_deviation']:.2f}%"
-                bb_pos = f"{indicators['bb_position']:.1f}%"
-                atr = f"{indicators['atr']:.2f}"
-                vol_ratio = f"{indicators['volume_ratio']:.2f}x"
+                ma_slope = safe_float_format(indicators['ma_slope_20'], '4f')
+                ma_dev = safe_float_format(indicators['ma_deviation'], '2f') + "%"
+                bb_pos = safe_float_format(indicators['bb_position'], '1f') + "%"
+                atr = safe_float_format(indicators['atr'], '2f')
+                vol_ratio = safe_float_format(indicators['volume_ratio'], '2f') + "x"
                 trend = indicators['trend']
-                support = f"{indicators['support_level']:.2f} ({indicators['support_distance']:.2f}%)"
-                resistance = f"{indicators['resistance_level']:.2f} ({indicators['resistance_distance']:.2f}%)"
+                support = f"{safe_float_format(indicators['support_level'], '2f')} ({safe_float_format(indicators['support_distance'], '2f')}%)"
+                resistance = f"{safe_float_format(indicators['resistance_level'], '2f')} ({safe_float_format(indicators['resistance_distance'], '2f')}%)"
                 
                 # 根据数值添加颜色标记（文本用括号标注）
                 if indicators['rsi'] > 70:
@@ -1577,21 +1601,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                                 leader_items.append(f"{leader['name']}({leader['change_pct']:+.1f}%)")
                             leaders_text = " / ".join(leader_items)
                         
-                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{row['avg_change_pct']:.2f}% | {leaders_text} |\n"
+                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
                     
                     # 添加投资建议
                     top_sector = perf_df.iloc[0]
                     bottom_sector = perf_df.iloc[-1]
                     
                     sector_text += "\n**投资建议**：\n"
-                    if top_sector['avg_change_pct'] > 1:
-                        sector_text += f"- 当前热点板块：{top_sector['sector_name']}，平均涨幅 {top_sector['avg_change_pct']:.2f}%\n"
+                    if float(top_sector['avg_change_pct']) > 1 if not pd.isna(top_sector['avg_change_pct']) else False:
+                        sector_text += f"- 当前热点板块：{top_sector['sector_name']}，平均涨幅 {safe_float_format(top_sector['avg_change_pct'], '2f')}%\n"
                         if top_sector['sector_code'] in sector_leaders and sector_leaders[top_sector['sector_code']]:
                             leader = sector_leaders[top_sector['sector_code']][0]
                             sector_text += f"- 建议关注该板块的龙头股：{leader['name']} ⭐\n"
                     
-                    if bottom_sector['avg_change_pct'] < -1:
-                        sector_text += f"- 当前弱势板块：{bottom_sector['sector_name']}，平均跌幅 {bottom_sector['avg_change_pct']:.2f}%\n"
+                    if float(bottom_sector['avg_change_pct']) < -1 if not pd.isna(bottom_sector['avg_change_pct']) else False:
+                        sector_text += f"- 当前弱势板块：{bottom_sector['sector_name']}，平均跌幅 {safe_float_format(bottom_sector['avg_change_pct'], '2f')}%\n"
                         sector_text += "- 建议谨慎操作该板块，等待企稳信号\n"
                 
                 # 构建股息信息文本
@@ -1612,11 +1636,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 hsi_text = ""
                 if hsi_data:
                     hsi_text = "\n## 五、恒生指数技术分析\n"
-                    hsi_text += f"- 当前价格：{hsi_data['current_price']:.2f}\n"
-                    hsi_text += f"- 日涨跌幅：{hsi_data['change_pct']:+.2f}%\n"
-                    hsi_text += f"- RSI（14日）：{hsi_data['rsi']:.2f}\n"
-                    hsi_text += f"- MA20：{hsi_data['ma20']:.2f}\n"
-                    hsi_text += f"- MA50：{hsi_data['ma50']:.2f}\n"
+                    hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
+                    hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}%\n"
+                    hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
+                    hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
+                    hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
                     hsi_text += f"- 趋势：{hsi_data['trend']}\n"
                 
                 # 使用配置文件中的所有自选股
