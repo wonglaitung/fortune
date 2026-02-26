@@ -36,6 +36,7 @@ try:
 except ImportError:
     PYTORCH_AVAILABLE = False
     print("⚠️ PyTorch未安装，请运行: pip install torch")
+    nn = None  # 防止NameError
 
 # 导入项目模块
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
@@ -51,6 +52,16 @@ logger = get_logger('lstm_experiment')
 
 # 初始化特征工程器（复用CatBoost的特征）
 feature_engineer = FeatureEngineer()
+
+def setup_reproducibility(seed=42):
+    """设置可复现性"""
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 # ========== 配置参数 ==========
 SEQUENCE_LENGTH = 30  # LSTM输入序列长度（使用过去30天数据）
@@ -212,8 +223,8 @@ class LSTMDataPreprocessor:
         except Exception as e:
             logger.warning(f"  生成市场环境特征失败: {e}")
 
-        # 缺失值处理
-        df = df.fillna(method='ffill').fillna(method='bfill')
+        # 缺失值处理 - 使用新方法替代已废弃的方法
+        df = df.ffill().bfill()
         df = df.fillna(0)  # 剩余的缺失值填充为0
 
         logger.info(f"  特征生成完成，共 {len(df.columns)} 列")
@@ -239,13 +250,6 @@ class LSTMDataPreprocessor:
 
         # 裁剪极端值（防止数值溢出）
         feature_data = np.clip(feature_data, -1e6, 1e6)
-
-        # 标准化
-        feature_data = self.feature_scaler.fit_transform(feature_data)
-
-        # 再次检查无穷大值
-        if np.any(np.isinf(feature_data)):
-            feature_data = np.nan_to_num(feature_data, nan=0.0, posinf=0.0, neginf=0.0)
 
         # 创建序列
         sequences = []
@@ -293,6 +297,18 @@ class LSTMTrainer:
         self.train_losses = []
         self.val_losses = []
         
+        # 模型元数据
+        self.model_metadata = {
+            'model_type': 'lstm',
+            'input_size': input_size,
+            'hidden_size': model_params.get('hidden_size', HIDDEN_SIZE),
+            'num_layers': model_params.get('num_layers', NUM_LAYERS),
+            'dropout': model_params.get('dropout', DROPOUT),
+            'horizon': getattr(self, 'horizon', 1),  # 预测期
+            'sequence_length': SEQUENCE_LENGTH,
+            'timestamp': datetime.now().isoformat(),
+        }
+        
     def train(self, train_loader: DataLoader, val_loader: DataLoader = None):
         """训练模型"""
         self.model.train()
@@ -333,8 +349,8 @@ class LSTMTrainer:
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     patience_counter = 0
-                    # 保存最佳模型
-                    torch.save(self.model.state_dict(), 'best_lstm_model.pth')
+                    # 保存最佳模型（包含模型状态和元数据）
+                    self.save_model_with_metadata('best_lstm_model.pth')
                 else:
                     patience_counter += 1
                     if patience_counter >= EARLY_STOPPING_PATIENCE:
@@ -345,8 +361,46 @@ class LSTMTrainer:
         
         # 加载最佳模型
         if val_loader and os.path.exists('best_lstm_model.pth'):
-            self.model.load_state_dict(torch.load('best_lstm_model.pth'))
+            self.load_model_with_metadata('best_lstm_model.pth')
             os.remove('best_lstm_model.pth')
+    
+    def save_model_with_metadata(self, path: str):
+        """保存模型及其元数据"""
+        model_data = {
+            'state_dict': self.model.state_dict(),
+            'metadata': self.model_metadata,
+            'train_losses': self.train_losses,
+            'val_losses': self.val_losses if hasattr(self, 'val_losses') else [],
+            'optimizer_state_dict': self.optimizer.state_dict()
+        }
+        torch.save(model_data, path)
+        logger.info(f"模型已保存到: {path}")
+    
+    def load_model_with_metadata(self, path: str):
+        """加载模型及其元数据"""
+        if not os.path.exists(path):
+            logger.error(f"模型文件不存在: {path}")
+            return False
+        
+        model_data = torch.load(path, map_location=self.device)
+        self.model.load_state_dict(model_data['state_dict'])
+        
+        # 更新元数据
+        if 'metadata' in model_data:
+            self.model_metadata.update(model_data['metadata'])
+        
+        # 恢复训练历史
+        if 'train_losses' in model_data:
+            self.train_losses = model_data['train_losses']
+        if 'val_losses' in model_data:
+            self.val_losses = model_data['val_losses']
+        
+        # 恢复优化器状态（可选）
+        if 'optimizer_state_dict' in model_data:
+            self.optimizer.load_state_dict(model_data['optimizer_state_dict'])
+        
+        logger.info(f"模型已从 {path} 加载")
+        return True
     
     def validate(self, val_loader: DataLoader) -> float:
         """验证模型"""
@@ -419,33 +473,70 @@ class LSTMExperiment:
                 logger.warning(f"数据量不足: {len(sequences)} < 100")
                 return None
             
-            # 时间序列分割
-            split_idx = int(len(sequences) * 0.8)
-            train_sequences = sequences[:split_idx]
-            train_labels = labels[:split_idx]
-            test_sequences = sequences[split_idx:]
-            test_labels = labels[split_idx:]
+            # 使用时间序列交叉验证
+            from sklearn.model_selection import TimeSeriesSplit
+            tscv = TimeSeriesSplit(n_splits=5)
             
-            # 训练集再分割为训练集和验证集
-            val_split_idx = int(len(train_sequences) * 0.8)
-            val_sequences = train_sequences[val_split_idx:]
-            val_labels = train_labels[val_split_idx:]
-            train_sequences = train_sequences[:val_split_idx]
-            train_labels = train_labels[:val_split_idx]
+            # 为简单起见，我们仍使用80/20分割，但使用TimeSeriesSplit来确保正确的分割方式
+            # 在实际应用中，可以使用多个fold进行更稳健的评估
+            splits = list(tscv.split(sequences))
+            if len(splits) > 0:
+                # 使用最后一个split作为最终的train/test分割
+                train_idx, test_idx = splits[-1]
+                train_sequences = sequences[train_idx]
+                train_labels = labels[train_idx]
+                test_sequences = sequences[test_idx]
+                test_labels = labels[test_idx]
+            else:
+                # 如果数据量太少无法进行TimeSeriesSplit，则使用简单的80/20分割
+                split_idx = int(len(sequences) * 0.8)
+                train_sequences = sequences[:split_idx]
+                train_labels = labels[:split_idx]
+                test_sequences = sequences[split_idx:]
+                test_labels = labels[split_idx:]
+            
+            # 训练集再分割为训练集和验证集（保持时间顺序）
+            if len(train_sequences) > 0:
+                val_split_idx = int(len(train_sequences) * 0.8)
+                val_sequences = train_sequences[val_split_idx:]
+                val_labels = train_labels[val_split_idx:]
+                train_sequences = train_sequences[:val_split_idx]
+                train_labels = train_labels[:val_split_idx]
+            
+            # 处理特征标准化 - 只在训练集上拟合，然后应用到验证集和测试集
+            # 首先重塑数据以便标准化
+            seq_shape = train_sequences.shape
+            reshaped_train = train_sequences.reshape(-1, seq_shape[2])
+            
+            # 在训练数据上拟合并变换
+            normalized_train = self.preprocessor.feature_scaler.fit_transform(reshaped_train)
+            normalized_train = normalized_train.reshape(seq_shape)
+            
+            # 对验证集进行标准化
+            val_seq_shape = val_sequences.shape
+            reshaped_val = val_sequences.reshape(-1, val_seq_shape[2])
+            normalized_val = self.preprocessor.feature_scaler.transform(reshaped_val)
+            normalized_val = normalized_val.reshape(val_seq_shape)
+            
+            # 对测试集进行标准化
+            test_seq_shape = test_sequences.shape
+            reshaped_test = test_sequences.reshape(-1, test_seq_shape[2])
+            normalized_test = self.preprocessor.feature_scaler.transform(reshaped_test)
+            normalized_test = normalized_test.reshape(test_seq_shape)
             
             # 创建数据加载器
-            train_dataset = StockPriceDataset(train_sequences, train_labels)
-            val_dataset = StockPriceDataset(val_sequences, val_labels)
-            train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+            train_dataset = StockPriceDataset(normalized_train, train_labels)
+            val_dataset = StockPriceDataset(normalized_val, val_labels)
+            train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)  # 时间序列不应shuffle
             val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
             
             # 训练LSTM
-            input_size = sequences.shape[2]
+            input_size = normalized_train.shape[2]
             trainer = LSTMTrainer(input_size)
             trainer.train(train_loader, val_loader)
             
             # 预测
-            lstm_predictions = trainer.predict_proba(test_sequences)
+            lstm_predictions = trainer.predict_proba(normalized_test)
             lstm_pred_labels = (lstm_predictions > 0.5).astype(int)
             
             # 计算指标
@@ -460,8 +551,47 @@ class LSTMExperiment:
             logger.info(f"召回率: {lstm_recall:.4f}")
             logger.info(f"F1分数: {lstm_f1:.4f}")
             
+            # 进行回测评估
+            from ml_services.backtest_evaluator import BacktestEvaluator
+            
+            # 提取测试期间的价格数据用于回测
+            test_price_data = stock_df['Close'].iloc[-len(test_labels):]  # 使用Close价格
+            
+            evaluator = BacktestEvaluator(initial_capital=100000)
+            
+            # 将LSTM预测作为模型输入
+            class MockLSTMModel:
+                def __init__(self, predictions):
+                    self.predictions = predictions
+                    self.model_type = 'lstm'
+                
+                def predict_proba(self, X):
+                    # 返回LSTM预测概率的二维数组
+                    return np.column_stack([1 - self.predictions, self.predictions])
+            
+            mock_lstm_model = MockLSTMModel(lstm_predictions)
+            
+            try:
+                backtest_results = evaluator.backtest_model(
+                    model=mock_lstm_model,
+                    test_data=test_sequences,  # 使用测试特征数据
+                    test_labels=pd.Series(test_labels),  # 测试标签
+                    test_prices=test_price_data,  # 测试价格数据
+                    confidence_threshold=0.55  # 置信度阈值
+                )
+                
+                logger.info(f"回测评估完成 - 模型策略年化收益率: {backtest_results['annual_return']:.2%}")
+                logger.info(f"基准策略年化收益率: {backtest_results['benchmark_annual_return']:.2%}")
+                logger.info(f"超额收益: {backtest_results['annual_return'] - backtest_results['benchmark_annual_return']:.2%}")
+            except Exception as e:
+                logger.error(f"回测评估出错: {e}")
+                backtest_results = None
+            
+            # 保存训练好的模型
+            self.save_model(trainer, stock_code)
+            
             # 加载CatBoost模型对比
-            catboost_result = self.compare_with_catboost(stock_code, test_sequences, test_labels)
+            catboost_result = self.compare_with_catboost(stock_code, normalized_test, test_labels)
             
             return {
                 'stock_code': stock_code,
@@ -472,7 +602,8 @@ class LSTMExperiment:
                     'f1': lstm_f1,
                     'predictions': lstm_predictions.tolist(),
                     'pred_labels': lstm_pred_labels.tolist(),
-                    'true_labels': test_labels.tolist()
+                    'true_labels': test_labels.tolist(),
+                    'backtest_results': backtest_results
                 },
                 'catboost': catboost_result
             }
@@ -487,8 +618,6 @@ class LSTMExperiment:
                              test_labels: np.ndarray) -> Dict:
         """与CatBoost模型对比"""
         try:
-            from ml_services.ml_trading_model import load_model
-            
             # 尝试加载CatBoost模型
             model_file = f'data/ml_trading_model_catboost_{self.horizon}d.pkl'
             
@@ -496,8 +625,8 @@ class LSTMExperiment:
                 logger.warning(f"CatBoost模型不存在: {model_file}")
                 return None
             
-            # 这里简化处理，实际需要完整的CatBoost预测逻辑
             # 由于CatBoost使用不同的特征工程，这里只记录模型文件存在
+            # 如果需要完整对比，需要重构CatBoost模型的预测逻辑
             logger.info(f"CatBoost模型文件存在: {model_file}")
             
             # 返回占位符，实际需要完整的CatBoost预测流程
@@ -569,6 +698,28 @@ class LSTMExperiment:
     
     def save_results(self, results: Dict):
         """保存结果"""
+        import pandas as pd
+        
+        def make_serializable(obj):
+            """将对象转换为JSON可序列化格式"""
+            if isinstance(obj, dict):
+                return {key: make_serializable(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [make_serializable(item) for item in obj]
+            elif isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+            elif hasattr(obj, 'isoformat'):  # datetime对象
+                return obj.isoformat()
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.integer, np.floating)):
+                return obj.item()  # 转换numpy标量为Python原生类型
+            else:
+                return obj
+        
+        # 转换结果为可序列化格式
+        serializable_results = make_serializable(results)
+        
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_dir = 'output'
         
@@ -578,9 +729,31 @@ class LSTMExperiment:
         # 保存JSON结果
         json_file = os.path.join(output_dir, f'lstm_experiment_{self.horizon}d_{timestamp}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(serializable_results, f, indent=2, ensure_ascii=False)
         
         logger.info(f"\n结果已保存到: {json_file}")
+    
+    def save_model(self, trainer: LSTMTrainer, stock_code: str):
+        """保存训练好的模型"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = 'data'
+        
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        # 更新模型元数据
+        trainer.model_metadata.update({
+            'stock_code': stock_code,
+            'horizon': self.horizon,
+            'training_date': datetime.now().isoformat(),
+            'data_version': '1.0'  # 数据版本
+        })
+        
+        # 保存模型
+        model_file = os.path.join(output_dir, f'ml_trading_model_lstm_{self.horizon}d_{stock_code.replace(".", "_")}_{timestamp}.pth')
+        trainer.save_model_with_metadata(model_file)
+        
+        logger.info(f"模型已保存到: {model_file}")
 
 
 # ========== 主函数 ==========
@@ -596,12 +769,17 @@ def main():
                        help='训练轮数')
     parser.add_argument('--batch-size', type=int, default=BATCH_SIZE,
                        help='批次大小')
+    parser.add_argument('--seed', type=int, default=42,
+                       help='随机种子（默认42）')
     
     args = parser.parse_args()
     
     if not PYTORCH_AVAILABLE:
         print("❌ PyTorch未安装，请运行: pip install torch")
         return
+    
+    # 设置随机种子以确保可复现性
+    setup_reproducibility(args.seed)
     
     logger.info("LSTM对比实验开始")
     

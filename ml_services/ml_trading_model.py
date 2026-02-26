@@ -25,7 +25,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score, f1_score, precision_score, recall_score
 from sklearn.linear_model import LogisticRegression
 import lightgbm as lgb
 
@@ -1956,6 +1956,7 @@ class LightGBMModel(BaseTradingModel):
 
         # 使用时间序列交叉验证
         scores = []
+        f1_scores = []
         for train_idx, val_idx in tscv.split(X):
             X_train, X_val = X[train_idx], X[val_idx]
             y_train, y_val = y[train_idx], y[val_idx]
@@ -1971,15 +1972,20 @@ class LightGBMModel(BaseTradingModel):
             )
             y_pred = self.model.predict(X_val)
             score = accuracy_score(y_val, y_pred)
+            f1 = f1_score(y_val, y_pred, zero_division=0)
             scores.append(score)
-            print(f"验证准确率: {score:.4f}")
+            f1_scores.append(f1)
+            print(f"验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         self.model.fit(X, y)
 
         mean_accuracy = np.mean(scores)
         std_accuracy = np.std(scores)
+        mean_f1 = np.mean(f1_scores)
+        std_f1 = np.std(f1_scores)
         print(f"\n平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -1987,6 +1993,8 @@ class LightGBMModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         import json
@@ -2562,6 +2570,7 @@ class GBDTModel(BaseTradingModel):
         # 使用时间序列交叉验证
         tscv = TimeSeriesSplit(n_splits=5)
         gbdt_scores = []
+        gbdt_f1_scores = []
 
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
@@ -2578,8 +2587,10 @@ class GBDTModel(BaseTradingModel):
 
             y_pred_fold = self.gbdt_model.predict(X_val_fold)
             score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
             gbdt_scores.append(score)
-            print(f"   Fold {fold} 验证准确率: {score:.4f}")
+            gbdt_f1_scores.append(f1)
+            print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         self.gbdt_model.fit(X, y)
@@ -2590,9 +2601,12 @@ class GBDTModel(BaseTradingModel):
         self.actual_n_estimators = self.gbdt_model.best_iteration_ if self.gbdt_model.best_iteration_ else n_estimators
         mean_accuracy = np.mean(gbdt_scores)
         std_accuracy = np.std(gbdt_scores)
+        mean_f1 = np.mean(gbdt_f1_scores)
+        std_f1 = np.std(gbdt_f1_scores)
         print(f"\n✅ GBDT 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
         print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -2600,6 +2614,8 @@ class GBDTModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         import json
@@ -3210,6 +3226,7 @@ class CatBoostModel(BaseTradingModel):
         # 使用时间序列交叉验证
         tscv = TimeSeriesSplit(n_splits=5)
         catboost_scores = []
+        catboost_f1_scores = []
 
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
@@ -3227,8 +3244,10 @@ class CatBoostModel(BaseTradingModel):
 
             y_pred_fold = self.catboost_model.predict(X_val_fold)
             score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
             catboost_scores.append(score)
-            print(f"   Fold {fold} 验证准确率: {score:.4f}")
+            catboost_f1_scores.append(f1)
+            print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         full_pool = Pool(data=X, label=y, cat_features=categorical_features if categorical_features else None)
@@ -3238,9 +3257,12 @@ class CatBoostModel(BaseTradingModel):
         self.actual_n_estimators = self.catboost_model.tree_count_
         mean_accuracy = np.mean(catboost_scores)
         std_accuracy = np.std(catboost_scores)
+        mean_f1 = np.mean(catboost_f1_scores)
+        std_f1 = np.std(catboost_f1_scores)
         print(f"\n✅ CatBoost 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
         print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -3248,6 +3270,8 @@ class CatBoostModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         accuracy_file = 'data/model_accuracy.json'
@@ -4173,7 +4197,9 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred_lgbm))
             lgbm_accuracy = accuracy_score(y_test, y_pred_lgbm)
+            lgbm_f1 = f1_score(y_test, y_pred_lgbm, zero_division=0)
             print(f"\n准确率: {lgbm_accuracy:.4f}")
+            print(f"F1分数: {lgbm_f1:.4f}")
 
             # GBDT 模型评估
             print("\n" + "="*70)
@@ -4186,22 +4212,29 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred_gbdt))
             gbdt_accuracy = accuracy_score(y_test, y_pred_gbdt)
+            gbdt_f1 = f1_score(y_test, y_pred_gbdt, zero_division=0)
             print(f"\n准确率: {gbdt_accuracy:.4f}")
+            print(f"F1分数: {gbdt_f1:.4f}")
 
             # 对比结果
             print("\n" + "="*70)
             logger.info("模型对比")
             print("="*70)
-            print(f"LightGBM 准确率: {lgbm_accuracy:.4f}")
-            print(f"GBDT 准确率: {gbdt_accuracy:.4f}")
+            print(f"LightGBM 准确率: {lgbm_accuracy:.4f}, F1分数: {lgbm_f1:.4f}")
+            print(f"GBDT 准确率: {gbdt_accuracy:.4f}, F1分数: {gbdt_f1:.4f}")
             print(f"准确率差异: {abs(lgbm_accuracy - gbdt_accuracy):.4f}")
+            print(f"F1分数差异: {abs(lgbm_f1 - gbdt_f1):.4f}")
             
-            if gbdt_accuracy > lgbm_accuracy:
-                print(f"\n✅ GBDT 模型表现更好，提升 {gbdt_accuracy - lgbm_accuracy:.4f} ({(gbdt_accuracy - lgbm_accuracy)/lgbm_accuracy*100:.2f}%)")
+            if gbdt_accuracy > lgbm_accuracy and gbdt_f1 > lgbm_f1:
+                print(f"\n✅ GBDT 模型在准确率和F1分数上都表现更好")
+            elif lgbm_accuracy > gbdt_accuracy and lgbm_f1 > gbdt_f1:
+                print(f"\n✅ LightGBM 模型在准确率和F1分数上都表现更好")
+            elif gbdt_accuracy > lgbm_accuracy:
+                print(f"\n✅ GBDT 模型准确率更高，但F1分数比较...")
             elif lgbm_accuracy > gbdt_accuracy:
-                print(f"\n✅ LightGBM 模型表现更好，提升 {lgbm_accuracy - gbdt_accuracy:.4f} ({(lgbm_accuracy - gbdt_accuracy)/gbdt_accuracy*100:.2f}%)")
+                print(f"\n✅ LightGBM 模型准确率更高，但F1分数比较...")
             else:
-                print(f"\n⚖️  两种模型表现相同")
+                print(f"\n⚖️  两种模型准确率相同，比较F1分数...")
 
         else:
             # 单个模型评估
@@ -4226,7 +4259,10 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred))
 
-            print(f"\n准确率: {accuracy_score(y_test, y_pred):.4f}")
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, zero_division=0)
+            print(f"\n准确率: {accuracy:.4f}")
+            print(f"F1分数: {f1:.4f}")
 
     else:
         logger.error(f"不支持的运行模式: {args.mode}")
