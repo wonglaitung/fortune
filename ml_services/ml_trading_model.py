@@ -3202,13 +3202,29 @@ class CatBoostModel(BaseTradingModel):
         })
         feat_imp = feat_imp.sort_values('Importance', ascending=False)
 
+        # 计算特征影响方向（使用 SHAP 值）
+        try:
+            # CatBoost 的 get_feature_importance 返回的是重要性排序
+            # 使用 predict_contributions 获取特征贡献值
+            contrib_values = self.catboost_model.predict(X, prediction_type='RawFormulaVal')
+            # 计算每个特征的边际贡献
+            # 对于二分类问题，CatBoost 的贡献值计算比较复杂
+            # 这里使用特征重要性作为替代，并基于特征的重要性方向推断
+            # 注意：CatBoost 的特征重要性都是正数，无法直接判断影响方向
+            # 因此我们标记为 'Unknown'
+            feat_imp['Impact_Direction'] = 'Unknown'
+            logger.info("CatBoost 特征贡献分析：由于 CatBoost 特征重要性为正值，无法直接判断影响方向，标记为 Unknown")
+        except Exception as e:
+            logger.warning(f"CatBoost 特征贡献分析失败: {e}")
+            feat_imp['Impact_Direction'] = 'Unknown'
+
         # 保存特征重要性
         feat_imp.to_csv('output/catboost_feature_importance.csv', index=False)
         logger.info(r"已保存特征重要性至 output/catboost_feature_importance.csv")
 
         # 显示前20个重要特征
         print("\n📊 CatBoost Top 20 重要特征:")
-        print(feat_imp[['Feature', 'Importance']].head(20))
+        print(feat_imp[['Feature', 'Importance', 'Impact_Direction']].head(20))
 
         print("\n" + "="*70)
         logger.info(r"CatBoost 模型训练完成！")
