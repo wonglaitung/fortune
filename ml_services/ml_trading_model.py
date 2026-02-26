@@ -2643,8 +2643,8 @@ class GBDTModel(BaseTradingModel):
             )
 
             # 保存特征重要性
-            feat_imp.to_csv('output/gbdt_feature_importance.csv', index=False)
-            logger.info(r"已保存特征重要性至 output/gbdt_feature_importance.csv")
+            feat_imp.to_csv('output/ml_trading_model_gbdt_20d_importance.csv', index=False)
+            logger.info(r"已保存特征重要性至 output/ml_trading_model_gbdt_20d_importance.csv")
 
             # 显示前20个重要特征
             print("\n📊 GBDT Top 20 重要特征 (含影响方向):")
@@ -3300,8 +3300,8 @@ class CatBoostModel(BaseTradingModel):
             feat_imp['Impact_Direction'] = 'Unknown'
 
         # 保存特征重要性
-        feat_imp.to_csv('output/catboost_feature_importance.csv', index=False)
-        logger.info(r"已保存特征重要性至 output/catboost_feature_importance.csv")
+        feat_imp.to_csv('output/ml_trading_model_catboost_20d_importance.csv', index=False)
+        logger.info(r"已保存特征重要性至 output/ml_trading_model_catboost_20d_importance.csv")
 
         # 显示前20个重要特征
         print("\n📊 CatBoost Top 20 重要特征:")
