@@ -1004,7 +1004,7 @@ def format_recent_transactions(transactions_df):
     transactions_df = transactions_df.sort_values(by=['code', 'timestamp'])
      
     # 构建Markdown表格
-    text += "| 股票名称 | 股票代码 | 时间 | 类型 | 价格 | 目标价 | 止损价 | 有效期 | 理由 |\n"
+    text = "| 股票名称 | 股票代码 | 时间 | 类型 | 价格 | 目标价 | 止损价 | 有效期 | 理由 |\n"
     text += "|---------|---------|------|------|------|--------|--------|--------|------|\n"
     
     for _, trans in transactions_df.iterrows():
@@ -1119,7 +1119,7 @@ def generate_technical_indicators_table(stock_codes):
         # 按股票代码排序
         stock_codes_sorted = sorted(stock_codes)
         
-        table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
+        table = "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
         table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
         success_count = 0
