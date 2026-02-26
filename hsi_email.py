@@ -84,6 +84,7 @@ except ImportError:
 # 从全局配置导入股票列表
 from config import WATCHLIST
 STOCK_LIST = WATCHLIST
+TOTAL_STOCKS_COUNT = len(WATCHLIST)  # 动态计算自选股总数
 
 
 class HSIEmailSystem:
@@ -2638,7 +2639,7 @@ class HSIEmailSystem:
             prompt += f"""
 ## 自选股概览
 - 自选股数量: {len(stock_data)}只
-- 分析范围: 全部26只自选股
+- 分析范围: 全部{TOTAL_STOCKS_COUNT}只自选股
 
 ## 自选股详情
 """
@@ -2831,9 +2832,9 @@ class HSIEmailSystem:
 
 ## 分析要求
 
-**重要：必须对全部26只自选股逐一进行详细分析，不得遗漏任何一只股票！**
+**重要：必须对全部{TOTAL_STOCKS_COUNT}只自选股逐一进行详细分析，不得遗漏任何一只股票！**
 
-请基于以上信息，对全部26只自选股进行买卖建议分析：
+请基于以上信息，对全部{TOTAL_STOCKS_COUNT}只自选股进行买卖建议分析：
 
 **分析策略：**
 1. **计算每只股票的综合评分**：按照评分体系计算
@@ -2895,7 +2896,7 @@ class HSIEmailSystem:
 7. **行业分类**：所属行业
 
 **分析原则：**
-- **必须分析全部26只自选股，不得遗漏任何一只**
+- **必须分析全部{TOTAL_STOCKS_COUNT}只自选股，不得遗漏任何一只**
 - 按照评分体系客观评估，避免主观偏见
 - 即使是观望股票，也要提供详细的分析理由
 - 考虑行业集中度，避免过度集中
