@@ -24417,6 +24417,38 @@
       "current_price": 5.0,
       "target_price": 5.5,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-02-26T11:15:40.551428",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 52519.18929405196,
+      "reason": "技术面严重超买（RSI 74.85，位置百分位99.78%），CMF资金流流出（-0.2524），板块动能衰竭，估值检查新闻强化回调压力",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.8,
+      "target_price": 135.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-26T11:15:44.032030",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 52519.18929405196,
+      "reason": "技术面见顶（位置百分位81.23%），CMF资金流流出（-0.0843），OBV趋势下降，能源股板块弱势（-2.42%）系统性拖累",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 43.26,
+      "target_price": 41.0,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -39825,188 +39857,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-02-24 14:16:13",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分9.0分，RSI超买75.26，布林带突破上轨，CMF资金流-0.1582，放量滞涨显示主力出货",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "出货评分8.5分，布林带突破下轨，RSI超卖但无效，异常放量2.54，恐慌抛售信号",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分6.0分，价格高位80.9%，CMF资金流-0.2511，流动性萎缩且板块弱势",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "出货评分6.0分，RSI超买75.79，布林带突破上轨，CMF资金流-0.3645，高位派发特征",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0016.HK",
-          "name": "新鸿基地产",
-          "reason": "出货评分6.0分，RSI严重超买79.47，CMF资金流-0.2803，量价背离且流动性枯竭",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-24 14:16:13",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分9.0分，RSI超买75.26，布林带突破上轨，CMF资金流-0.1582，放量滞涨显示主力出货",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 18.43,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 14:16:18",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分8.5分，布林带突破下轨，RSI超卖但无效，异常放量2.54，恐慌抛售信号",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.78,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 14:16:22",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，价格高位80.9%，CMF资金流-0.2511，流动性萎缩且板块弱势",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 134.1,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 14:16:24",
-      "type": "SELL",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI超买75.79，布林带突破上轨，CMF资金流-0.3645，高位派发特征",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 35.3,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 14:16:28",
-      "type": "SELL",
-      "code": "0016.HK",
-      "name": "新鸿基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI严重超买79.47，CMF资金流-0.2803，量价背离且流动性枯竭",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.8,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-02-24 16:08:16",
-      "buy": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格低位（位置百分位26.79%），MACD金叉与OBV上升协同，基本面优质（PE 6.13），适合平衡型偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.65,
-          "target_price": 5.95,
-          "validity_period": 7
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "MACD金叉、OBV上升及VWAP量能配合，TAV中等共振，基本面良好（PE 10.25），适合平衡型偏好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.61,
-          "target_price": 5.85,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-02-24 16:08:18",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.46,
-      "amount": 0,
-      "reason": "价格低位（位置百分位26.79%），MACD金叉与OBV上升协同，基本面优质（PE 6.13），适合平衡型偏好",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.65,
-      "current_price": 5.46,
-      "target_price": 5.95,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-02-24 16:08:22",
-      "type": "BUY",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 5.42,
-      "amount": 0,
-      "reason": "MACD金叉、OBV上升及VWAP量能配合，TAV中等共振，基本面良好（PE 10.25），适合平衡型偏好",
-      "capital_after": 252.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.61,
-      "current_price": 5.42,
-      "target_price": 5.85,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-02-25 14:21:28",
       "buy": [
         {
@@ -40208,6 +40058,60 @@
       "current_price": 5.0,
       "target_price": 5.5,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-02-26 11:15:40",
+      "buy": [],
+      "sell": [
+        {
+          "code": "0016.HK",
+          "name": "新鸿基地产",
+          "reason": "技术面严重超买（RSI 74.85，位置百分位99.78%），CMF资金流流出（-0.2524），板块动能衰竭，估值检查新闻强化回调压力",
+          "stop_loss_triggered": false,
+          "target_price": 135.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "技术面见顶（位置百分位81.23%），CMF资金流流出（-0.0843），OBV趋势下降，能源股板块弱势（-2.42%）系统性拖累",
+          "stop_loss_triggered": false,
+          "target_price": 41.0,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26 11:15:40",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面严重超买（RSI 74.85，位置百分位99.78%），CMF资金流流出（-0.2524），板块动能衰竭，估值检查新闻强化回调压力",
+      "capital_after": 52519.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 139.8,
+      "target_price": 135.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-02-26 11:15:44",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面见顶（位置百分位81.23%），CMF资金流流出（-0.0843），OBV趋势下降，能源股板块弱势（-2.42%）系统性拖累",
+      "capital_after": 52519.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 43.26,
+      "target_price": 41.0,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
