@@ -273,6 +273,24 @@ class HSI_Predictor:
         }
         trend_color = trend_colors.get(trend, '#6b7280')
 
+        # 预计算特征值格式化字符串
+        hsi_return_60d = self.features['HSI_Return_60d'] * 100
+        us_10y_yield = self.features['US_10Y_Yield'] * 100
+        vix_level = self.features['VIX_Level']
+        turnover_std_20 = self.features['Turnover_Std_20'] / 1e8
+        obv = self.features['OBV'] / 1e8
+        distance_support_120d = self.features['Distance_Support_120d'] * 100
+        
+        # 格式化描述文本
+        hsi_return_desc = f"恒指近60日上涨{abs(hsi_return_60d):.2f}%，根据历史数据，涨幅过高通常预示回调压力"
+        us_yield_desc = f"美债收益率处于{us_10y_yield:.2f}%水平，上升会增加资金成本，压制股市估值"
+        vix_desc = '市场情绪平静（低VIX）' if vix_level < 20 else '市场情绪紧张（高VIX）' if vix_level > 30 else '市场情绪正常'
+        turnover_desc = '市场活跃度高' if self.features['Turnover_Std_20'] > 1e9 else '市场活跃度正常'
+        obv_flow = '资金净流入' if self.features['OBV'] > 0 else '资金净流出'
+        obv_impact = '支撑股价' if self.features['OBV'] > 0 else '压制股价'
+        obv_desc = f"{obv_flow}，{obv_impact}"
+        support_desc = '距离支撑位较远，安全边际一般' if abs(self.features['Distance_Support_120d']) > 0.1 else '距离支撑位适中，安全边际良好'
+
         # 构建HTML邮件内容
         content = f"""<!DOCTYPE html>
 <html>
@@ -676,67 +694,67 @@ class HSI_Predictor:
             <div class="info-grid">
                 <div class="info-card">
                     <h3>📊 恒指60日收益率</h3>
-                    <div class="value">{self.features['HSI_Return_60d']*100:+.2f}%</div>
+                    <div class="value">{hsi_return_60d:+.2f}%</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：17.29% | 方向：负面</strong>
                     </div>
                     <div class="feature-explanation">
-                        恒指近60日上涨{abs(self.features['HSI_Return_60d']*100):.2f}%，根据历史数据，涨幅过高通常预示回调压力
+                        {hsi_return_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
                     <h3>💰 美国10年期国债收益率</h3>
-                    <div class="value">{self.features['US_10Y_Yield']*100:.2f}%</div>
+                    <div class="value">{us_10y_yield:.2f}%</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：6.16% | 方向：负面</strong>
                     </div>
                     <div class="feature-explanation">
-                        美债收益率处于{self.features['US_10Y_Yield']*100:.2f}%水平，上升会增加资金成本，压制股市估值
+                        {us_yield_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
                     <h3>😰 VIX恐慌指数</h3>
-                    <div class="value">{self.features['VIX_Level']:.2f}</div>
+                    <div class="value">{vix_level:.2f}</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：4.93% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {'市场情绪平静（低VIX）' if self.features['VIX_Level'] < 20 else '市场情绪紧张（高VIX）' if self.features['VIX_Level'] > 30 else '市场情绪正常'}
+                        {vix_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
                     <h3>💵 成交额标准差（20日）</h3>
-                    <div class="value">{self.features['Turnover_Std_20']/1e8:.2f}亿</div>
+                    <div class="value">{turnover_std_20:.2f}亿</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：1.73% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {'市场活跃度高' if self.features['Turnover_Std_20'] > 1e9 else '市场活跃度正常'}
+                        {turnover_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
                     <h3>⚡ OBV能量潮</h3>
-                    <div class="value">{self.features['OBV']/1e8:.2f}亿</div>
+                    <div class="value">{obv:.2f}亿</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：1.69% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {'资金净流入' if self.features['OBV'] > 0 else '资金净流出'}，{'支撑股价' if self.features['OBV'] > 0 else '压制股价'}
+                        {obv_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
                     <h3>📍 距离120日支撑位</h3>
-                    <div class="value">{self.features['Distance_Support_120d']*100:+.2f}%</div>
+                    <div class="value">{distance_support_120d:+.2f}%</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
                         <strong>权重：1.33% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {'距离支撑位较远，安全边际一般' if abs(self.features['Distance_Support_120d']) > 0.1 else '距离支撑位适中，安全边际良好'}
+                        {support_desc}
                     </div>
                 </div>
             </div>
