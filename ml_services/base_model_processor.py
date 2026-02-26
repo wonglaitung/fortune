@@ -257,7 +257,7 @@ class BaseModelProcessor:
         logger.info("模型可解释性分析提示")
         print("="*70)
         print("训练完成后，将生成以下可解释性报告：")
-        print("1. gbdt_feature_importance.csv - GBDT 特征重要性（含影响方向）")
+        print("1. ml_trading_model_gbdt_20d_importance.csv - GBDT 特征重要性（含影响方向）")
         print("2. lr_leaf_coefficients.csv - LR 模型的叶子节点系数")
         print("3. roc_curve.png - ROC 曲线图")
         print("4. 叶子规则解析 - 高权重叶子节点的决策路径")

@@ -152,7 +152,7 @@ echo "  - 特征重要性: data/ml_trading_model_*_1d_importance.csv, *_5d_impor
 echo "  - 预测结果: data/ml_trading_model_*_1d_predictions_*.csv, *_5d_predictions_*.csv, *_20d_predictions_*.csv"
 echo "  - 模型对比: data/ml_trading_model_comparison.csv"
 echo "  - 预测结果文本: data/ml_predictions_1d_YYYY-MM-DD.txt, ml_predictions_5d_YYYY-MM-DD.txt, ml_predictions_20d_YYYY-MM-DD.txt"
-echo "  - 可解释性报告: output/gbdt_feature_importance.csv"
+echo "  - 可解释性报告: output/ml_trading_model_gbdt_20d_importance.csv, output/ml_trading_model_catboost_20d_importance.csv"
 echo "  - LR系数: output/lr_leaf_coefficients.csv"
 echo "  - ROC曲线: output/roc_curve.png"
 echo ""
