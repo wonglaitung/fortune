@@ -1576,8 +1576,14 @@ class BaseTradingModel:
 
         if filepath is None:
             # 查找最新的特征名称文件
-            pattern = 'output/selected_features_*.csv'
+            # 优先查找 model_importance_selected_*.csv（模型重要性法）
+            pattern = 'output/model_importance_selected_*.csv'
             files = glob.glob(pattern)
+            if not files:
+                # 回退到 selected_features_*.csv（统计方法）
+                pattern = 'output/selected_features_*.csv'
+                files = glob.glob(pattern)
+            
             if not files:
                 return None
             # 按修改时间排序，取最新的
