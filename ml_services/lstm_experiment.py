@@ -79,22 +79,36 @@ TEST_STOCKS = ['0700.HK', '0939.HK', '1347.HK']  # 腾讯（科技）、建行�
 
 # ========== LSTM模型定义 ==========
 class LSTMModel(nn.Module):
-    """LSTM模型用于股价涨跌预测 - 优化版"""
+    """LSTM模型用于股价涨跌预测 - 优化版，支持股票标识符"""
 
     def __init__(self, input_size: int, hidden_size: int = HIDDEN_SIZE,
-                 num_layers: int = NUM_LAYERS, dropout: float = DROPOUT):
+                 num_layers: int = NUM_LAYERS, dropout: float = DROPOUT, 
+                 num_stocks: int = None):
         super(LSTMModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-
-        # LSTM层
-        self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            dropout=dropout if num_layers > 1 else 0,
-            batch_first=True
-        )
+        self.num_stocks = num_stocks
+        
+        # 如果提供了股票数量，增加股票嵌入层
+        if num_stocks is not None:
+            self.stock_embedding = nn.Embedding(num_stocks, hidden_size // 4)  # 股票嵌入维度
+            # 调整LSTM的输入维度，加入股票嵌入
+            self.lstm = nn.LSTM(
+                input_size=input_size + (hidden_size // 4),  # 原始特征 + 股票嵌入
+                hidden_size=hidden_size,
+                num_layers=num_layers,
+                dropout=dropout if num_layers > 1 else 0,
+                batch_first=True
+            )
+        else:
+            # 保持原有结构
+            self.lstm = nn.LSTM(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                num_layers=num_layers,
+                dropout=dropout if num_layers > 1 else 0,
+                batch_first=True
+            )
 
         # 注意力机制
         self.attention = nn.Sequential(
@@ -117,8 +131,26 @@ class LSTMModel(nn.Module):
         self.bn2 = nn.BatchNorm1d(hidden_size // 2)
         self.bn3 = nn.BatchNorm1d(hidden_size // 4)
 
-    def forward(self, x):
+    def forward(self, x, stock_ids=None):
         # x shape: (batch_size, sequence_length, input_size)
+        # stock_ids shape: (batch_size, sequence_length) or (batch_size,) - 可选的股票标识符
+
+        # 如果提供了股票ID，则添加股票嵌入
+        if hasattr(self, 'stock_embedding') and stock_ids is not None:
+            # 确保stock_ids是整数类型
+            if stock_ids.dim() == 2:  # (batch_size, sequence_length)
+                stock_ids = stock_ids[:, 0]  # 取第一个时间步的股票ID作为代表
+            elif stock_ids.dim() == 1:  # (batch_size,)
+                pass  # 直接使用
+            else:
+                stock_ids = stock_ids.squeeze()
+            
+            # 获取股票嵌入 (batch_size, embedding_dim)
+            stock_embedded = self.stock_embedding(stock_ids.long())
+            # 扩展为 (batch_size, sequence_length, embedding_dim)
+            stock_embedded = stock_embedded.unsqueeze(1).repeat(1, x.size(1), 1)
+            # 连接特征和股票嵌入
+            x = torch.cat([x, stock_embedded], dim=2)
 
         # LSTM前向传播
         lstm_out, (h_n, c_n) = self.lstm(x)
@@ -157,15 +189,19 @@ class LSTMModel(nn.Module):
 class StockPriceDataset(Dataset):
     """股票价格数据集"""
     
-    def __init__(self, sequences: np.ndarray, labels: np.ndarray):
+    def __init__(self, sequences: np.ndarray, labels: np.ndarray, stock_ids: np.ndarray = None):
         self.sequences = torch.FloatTensor(sequences)
         self.labels = torch.FloatTensor(labels)
+        self.stock_ids = torch.LongTensor(stock_ids) if stock_ids is not None else None
         
     def __len__(self):
         return len(self.sequences)
     
     def __getitem__(self, idx):
-        return self.sequences[idx], self.labels[idx]
+        if self.stock_ids is not None:
+            return self.sequences[idx], self.labels[idx], self.stock_ids[idx]
+        else:
+            return self.sequences[idx], self.labels[idx]
 
 
 # ========== 数据预处理 ==========
@@ -274,7 +310,7 @@ class LSTMDataPreprocessor:
 class LSTMTrainer:
     """LSTM模型训练器"""
     
-    def __init__(self, input_size: int, model_params: Dict = None):
+    def __init__(self, input_size: int, model_params: Dict = None, num_stocks: int = None):
         if not PYTORCH_AVAILABLE:
             raise ImportError("PyTorch未安装，请运行: pip install torch")
         
@@ -286,8 +322,11 @@ class LSTMTrainer:
             model_params = {
                 'hidden_size': HIDDEN_SIZE,
                 'num_layers': NUM_LAYERS,
-                'dropout': DROPOUT
+                'dropout': DROPOUT,
+                'num_stocks': num_stocks
             }
+        else:
+            model_params['num_stocks'] = num_stocks
         
         self.model = LSTMModel(input_size, **model_params).to(self.device)
         self.criterion = nn.BCELoss()
@@ -304,6 +343,7 @@ class LSTMTrainer:
             'hidden_size': model_params.get('hidden_size', HIDDEN_SIZE),
             'num_layers': model_params.get('num_layers', NUM_LAYERS),
             'dropout': model_params.get('dropout', DROPOUT),
+            'num_stocks': num_stocks,
             'horizon': getattr(self, 'horizon', 1),  # 预测期
             'sequence_length': SEQUENCE_LENGTH,
             'timestamp': datetime.now().isoformat(),
@@ -319,14 +359,27 @@ class LSTMTrainer:
         for epoch in range(EPOCHS):
             epoch_loss = 0.0
             
-            for batch_X, batch_y in train_loader:
-                batch_X = batch_X.to(self.device)
-                batch_y = batch_y.to(self.device)
-                
-                # 前向传播
-                self.optimizer.zero_grad()
-                outputs = self.model(batch_X)
-                loss = self.criterion(outputs, batch_y)
+            for batch_data in train_loader:
+                # 检查是否包含股票ID
+                if isinstance(batch_data, (list, tuple)) and len(batch_data) == 3:
+                    batch_X, batch_y, batch_stock_ids = batch_data
+                    batch_X = batch_X.to(self.device)
+                    batch_y = batch_y.to(self.device)
+                    batch_stock_ids = batch_stock_ids.to(self.device)
+                    
+                    # 前向传播，传入股票ID
+                    self.optimizer.zero_grad()
+                    outputs = self.model(batch_X, batch_stock_ids)
+                    loss = self.criterion(outputs, batch_y)
+                else:
+                    batch_X, batch_y = batch_data
+                    batch_X = batch_X.to(self.device)
+                    batch_y = batch_y.to(self.device)
+                    
+                    # 前向传播
+                    self.optimizer.zero_grad()
+                    outputs = self.model(batch_X)
+                    loss = self.criterion(outputs, batch_y)
                 
                 # 反向传播
                 loss.backward()
@@ -408,32 +461,48 @@ class LSTMTrainer:
         val_loss = 0.0
         
         with torch.no_grad():
-            for batch_X, batch_y in val_loader:
-                batch_X = batch_X.to(self.device)
-                batch_y = batch_y.to(self.device)
+            for batch_data in val_loader:
+                # 检查是否包含股票ID
+                if isinstance(batch_data, (list, tuple)) and len(batch_data) == 3:
+                    batch_X, batch_y, batch_stock_ids = batch_data
+                    batch_X = batch_X.to(self.device)
+                    batch_y = batch_y.to(self.device)
+                    batch_stock_ids = batch_stock_ids.to(self.device)
+                    
+                    outputs = self.model(batch_X, batch_stock_ids)
+                    loss = self.criterion(outputs, batch_y)
+                else:
+                    batch_X, batch_y = batch_data
+                    batch_X = batch_X.to(self.device)
+                    batch_y = batch_y.to(self.device)
+                    
+                    outputs = self.model(batch_X)
+                    loss = self.criterion(outputs, batch_y)
                 
-                outputs = self.model(batch_X)
-                loss = self.criterion(outputs, batch_y)
                 val_loss += loss.item()
         
         self.model.train()
         return val_loss / len(val_loader)
     
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray, stock_ids: np.ndarray = None) -> np.ndarray:
         """预测"""
         self.model.eval()
         
         X_tensor = torch.FloatTensor(X).to(self.device)
         
         with torch.no_grad():
-            predictions = self.model(X_tensor)
+            if stock_ids is not None:
+                stock_ids_tensor = torch.LongTensor(stock_ids).to(self.device)
+                predictions = self.model(X_tensor, stock_ids_tensor)
+            else:
+                predictions = self.model(X_tensor)
             predictions = predictions.cpu().numpy()
         
         return predictions
     
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray, stock_ids: np.ndarray = None) -> np.ndarray:
         """预测概率"""
-        return self.predict(X)
+        return self.predict(X, stock_ids)
 
 
 # ========== 对比实验 ==========
@@ -503,6 +572,12 @@ class LSTMExperiment:
                 train_sequences = train_sequences[:val_split_idx]
                 train_labels = train_labels[:val_split_idx]
             
+            # 为单个股票创建股票ID（始终为0，因为只训练一个股票）
+            stock_id = 0  # 单个股票的ID始终为0
+            train_stock_ids = np.full((len(train_sequences),), stock_id)
+            val_stock_ids = np.full((len(val_sequences),), stock_id)
+            test_stock_ids = np.full((len(test_sequences),), stock_id)
+            
             # 处理特征标准化 - 只在训练集上拟合，然后应用到验证集和测试集
             # 首先重塑数据以便标准化
             seq_shape = train_sequences.shape
@@ -524,19 +599,19 @@ class LSTMExperiment:
             normalized_test = self.preprocessor.feature_scaler.transform(reshaped_test)
             normalized_test = normalized_test.reshape(test_seq_shape)
             
-            # 创建数据加载器
-            train_dataset = StockPriceDataset(normalized_train, train_labels)
-            val_dataset = StockPriceDataset(normalized_val, val_labels)
+            # 创建数据加载器，包含股票ID
+            train_dataset = StockPriceDataset(normalized_train, train_labels, train_stock_ids)
+            val_dataset = StockPriceDataset(normalized_val, val_labels, val_stock_ids)
             train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)  # 时间序列不应shuffle
             val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
             
-            # 训练LSTM
+            # 训练LSTM，指定只有1只股票
             input_size = normalized_train.shape[2]
-            trainer = LSTMTrainer(input_size)
+            trainer = LSTMTrainer(input_size, num_stocks=1)
             trainer.train(train_loader, val_loader)
             
             # 预测
-            lstm_predictions = trainer.predict_proba(normalized_test)
+            lstm_predictions = trainer.predict_proba(normalized_test, test_stock_ids)
             lstm_pred_labels = (lstm_predictions > 0.5).astype(int)
             
             # 计算指标
@@ -647,12 +722,8 @@ class LSTMExperiment:
         logger.info(f"序列长度: {SEQUENCE_LENGTH}天")
         logger.info(f"训练轮数: {EPOCHS}\n")
         
-        all_results = {}
-        
-        for stock_code in self.stock_codes:
-            result = self.run_single_stock(stock_code)
-            if result:
-                all_results[stock_code] = result
+        # 选择训练方式：合并所有股票数据训练单个模型
+        all_results = self.run_combined_model()
         
         # 汇总结果
         self.summarize_results(all_results)
@@ -661,6 +732,251 @@ class LSTMExperiment:
         self.save_results(all_results)
         
         return all_results
+    
+    def run_combined_model(self) -> Dict:
+        """使用合并后的所有股票数据训练单个LSTM模型"""
+        logger.info(f"\n{'='*80}")
+        logger.info(f"开始合并所有股票数据训练LSTM模型")
+        logger.info(f"{'='*80}\n")
+        
+        # 创建股票代码到ID的映射
+        stock_to_id = {stock_code: idx for idx, stock_code in enumerate(self.stock_codes)}
+        logger.info(f"股票到ID的映射: {stock_to_id}")
+        
+        all_sequences = []
+        all_labels = []
+        all_stock_ids = []  # 保存每条序列对应的股票ID
+        stock_data_dict = {}  # 保存每只股票的数据用于测试
+        
+        for stock_code in self.stock_codes:
+            logger.info(f"\n处理股票: {stock_code}")
+            
+            # 转换股票代码格式（从"0700.HK"到"00700"）
+            stock_code_num = stock_code.replace('.HK', '').zfill(5)
+            
+            # 获取数据
+            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=730)
+            if stock_df is None or stock_df.empty:
+                logger.error(f"无法获取股票数据: {stock_code}")
+                continue
+            
+            # 准备特征（传入stock_code用于生成股票类型特征）
+            stock_df = self.preprocessor.prepare_features(stock_df, stock_code)
+            
+            # 创建序列
+            sequences, labels = self.preprocessor.create_sequences(stock_df, self.horizon)
+            logger.info(f"股票 {stock_code} 序列数据形状: {sequences.shape}, 标签形状: {labels.shape}")
+            
+            if len(sequences) < 100:
+                logger.warning(f"股票 {stock_code} 数据量不足: {len(sequences)} < 100")
+                continue
+            
+            # 获取当前股票的ID
+            stock_id = stock_to_id[stock_code]
+            stock_ids = np.full((len(sequences),), stock_id)  # 为每个序列分配股票ID
+            
+            # 保存股票数据用于后续测试
+            stock_data_dict[stock_code] = {
+                'df': stock_df,
+                'sequences': sequences,
+                'labels': labels,
+                'stock_ids': stock_ids
+            }
+            
+            # 将数据添加到总数据集中
+            all_sequences.append(sequences)
+            all_labels.append(labels)
+            all_stock_ids.append(stock_ids)
+        
+        if not all_sequences:
+            logger.error("没有足够的数据进行训练")
+            return {}
+        
+        # 合并所有股票的数据
+        combined_sequences = np.concatenate(all_sequences, axis=0)
+        combined_labels = np.concatenate(all_labels, axis=0)
+        combined_stock_ids = np.concatenate(all_stock_ids, axis=0)
+        
+        logger.info(f"合并后总数据形状: 序列 {combined_sequences.shape}, 标签 {combined_labels.shape}, 股票ID {combined_stock_ids.shape}")
+        
+        # 使用时间序列交叉验证进行数据分割
+        from sklearn.model_selection import TimeSeriesSplit
+        tscv = TimeSeriesSplit(n_splits=5)
+        
+        # 使用最后一个split作为train/test分割，保留时间顺序
+        splits = list(tscv.split(combined_sequences))
+        if len(splits) > 0:
+            train_idx, test_idx = splits[-1]
+            train_sequences = combined_sequences[train_idx]
+            train_labels = combined_labels[train_idx]
+            train_stock_ids = combined_stock_ids[train_idx]
+            test_sequences = combined_sequences[test_idx]
+            test_labels = combined_labels[test_idx]
+            test_stock_ids = combined_stock_ids[test_idx]
+        else:
+            # 如果数据量不够分5折，则使用简单的80/20分割
+            split_idx = int(len(combined_sequences) * 0.8)
+            train_sequences = combined_sequences[:split_idx]
+            train_labels = combined_labels[:split_idx]
+            train_stock_ids = combined_stock_ids[:split_idx]
+            test_sequences = combined_sequences[split_idx:]
+            test_labels = combined_labels[split_idx:]
+            test_stock_ids = combined_stock_ids[split_idx:]
+        
+        # 训练集再分割为训练集和验证集（保持时间顺序）
+        val_split_idx = int(len(train_sequences) * 0.8)
+        val_sequences = train_sequences[val_split_idx:]
+        val_labels = train_labels[val_split_idx:]
+        val_stock_ids = train_stock_ids[val_split_idx:]
+        train_sequences = train_sequences[:val_split_idx]
+        train_labels = train_labels[:val_split_idx]
+        train_stock_ids = train_stock_ids[:val_split_idx]
+        
+        # 进行特征标准化 - 只在训练集上拟合，然后应用到验证集和测试集
+        seq_shape = train_sequences.shape
+        reshaped_train = train_sequences.reshape(-1, seq_shape[2])
+        
+        # 在训练数据上拟合并变换
+        normalized_train = self.preprocessor.feature_scaler.fit_transform(reshaped_train)
+        normalized_train = normalized_train.reshape(seq_shape)
+        
+        # 对验证集进行标准化
+        val_seq_shape = val_sequences.shape
+        reshaped_val = val_sequences.reshape(-1, val_seq_shape[2])
+        normalized_val = self.preprocessor.feature_scaler.transform(reshaped_val)
+        normalized_val = normalized_val.reshape(val_seq_shape)
+        
+        # 对测试集进行标准化
+        test_seq_shape = test_sequences.shape
+        reshaped_test = test_sequences.reshape(-1, test_seq_shape[2])
+        normalized_test = self.preprocessor.feature_scaler.transform(reshaped_test)
+        normalized_test = normalized_test.reshape(test_seq_shape)
+        
+        # 创建数据加载器
+        train_dataset = StockPriceDataset(normalized_train, train_labels, train_stock_ids)
+        val_dataset = StockPriceDataset(normalized_val, val_labels, val_stock_ids)
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)  # 时间序列不应shuffle
+        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        
+        # 训练LSTM - 使用合并后的数据训练单个模型，包含股票数量信息
+        input_size = normalized_train.shape[2]
+        trainer = LSTMTrainer(input_size, num_stocks=len(self.stock_codes))
+        trainer.train(train_loader, val_loader)
+        
+        # 在测试集上评估模型性能
+        combined_predictions = trainer.predict_proba(normalized_test, test_stock_ids)
+        combined_pred_labels = (combined_predictions > 0.5).astype(int)
+        
+        # 计算整体性能
+        combined_accuracy = accuracy_score(test_labels, combined_pred_labels)
+        combined_precision = precision_score(test_labels, combined_pred_labels, zero_division=0)
+        combined_recall = recall_score(test_labels, combined_pred_labels, zero_division=0)
+        combined_f1 = f1_score(test_labels, combined_pred_labels, zero_division=0)
+        
+        logger.info(f"\n合并模型整体性能 (horizon={self.horizon}天):")
+        logger.info(f"准确率: {combined_accuracy:.4f}")
+        logger.info(f"精确率: {combined_precision:.4f}")
+        logger.info(f"召回率: {combined_recall:.4f}")
+        logger.info(f"F1分数: {combined_f1:.4f}")
+        
+        # 对每只股票分别评估模型性能
+        all_results = {}
+        for stock_code, stock_data in stock_data_dict.items():
+            stock_df = stock_data['df']
+            stock_sequences = stock_data['sequences']
+            stock_labels = stock_data['labels']
+            stock_stock_ids = stock_data['stock_ids']
+            
+            # 为每只股票的序列数据进行标准化
+            stock_seq_shape = stock_sequences.shape
+            reshaped_stock = stock_sequences.reshape(-1, stock_seq_shape[2])
+            normalized_stock = self.preprocessor.feature_scaler.transform(reshaped_stock)
+            normalized_stock = normalized_stock.reshape(stock_seq_shape)
+            
+            # 使用训练好的模型对单只股票进行预测，传入股票ID
+            stock_predictions = trainer.predict_proba(normalized_stock, stock_stock_ids)
+            stock_pred_labels = (stock_predictions > 0.5).astype(int)
+            
+            # 计算单只股票的性能
+            stock_accuracy = accuracy_score(stock_labels, stock_pred_labels)
+            stock_precision = precision_score(stock_labels, stock_pred_labels, zero_division=0)
+            stock_recall = recall_score(stock_labels, stock_pred_labels, zero_division=0)
+            stock_f1 = f1_score(stock_labels, stock_pred_labels, zero_division=0)
+            
+            # 进行回测评估
+            backtest_results = None
+            try:
+                # 提取测试期间的价格数据用于回测
+                test_price_data = stock_df['Close'].iloc[-len(stock_labels):]  # 使用Close价格
+                
+                evaluator = BacktestEvaluator(initial_capital=100000)
+                
+                # 将LSTM预测作为模型输入
+                class MockLSTMModel:
+                    def __init__(self, predictions):
+                        self.predictions = predictions
+                        self.model_type = 'lstm'
+                    
+                    def predict_proba(self, X):
+                        # 返回LSTM预测概率的二维数组
+                        return np.column_stack([1 - self.predictions, self.predictions])
+                
+                mock_lstm_model = MockLSTMModel(stock_predictions)
+                
+                backtest_results = evaluator.backtest_model(
+                    model=mock_lstm_model,
+                    test_data=stock_sequences,  # 使用测试特征数据
+                    test_labels=pd.Series(stock_labels),  # 测试标签
+                    test_prices=test_price_data,  # 测试价格数据
+                    confidence_threshold=0.55  # 置信度阈值
+                )
+                
+                logger.info(f"股票 {stock_code} 回测评估完成 - 模型策略年化收益率: {backtest_results['annual_return']:.2%}")
+            except Exception as e:
+                logger.error(f"股票 {stock_code} 回测评估出错: {e}")
+            
+            # 保存单只股票的结果
+            all_results[stock_code] = {
+                'lstm': {
+                    'accuracy': stock_accuracy,
+                    'precision': stock_precision,
+                    'recall': stock_recall,
+                    'f1': stock_f1,
+                    'predictions': stock_predictions.tolist(),
+                    'pred_labels': stock_pred_labels.tolist(),
+                    'true_labels': stock_labels.tolist(),
+                    'backtest_results': backtest_results
+                },
+                'catboost': self.compare_with_catboost(stock_code, normalized_stock, stock_labels)
+            }
+        
+        # 保存训练好的合并模型
+        self.save_combined_model(trainer)
+        
+        return all_results
+    
+    def save_combined_model(self, trainer: LSTMTrainer):
+        """保存训练好的合并模型"""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = 'data'
+        
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        # 更新模型元数据
+        trainer.model_metadata.update({
+            'stock_codes': self.stock_codes,
+            'horizon': self.horizon,
+            'training_date': datetime.now().isoformat(),
+            'data_version': '1.0',  # 数据版本
+            'training_method': 'combined_all_stocks'  # 训练方法标识
+        })
+        
+        # 保存模型
+        model_file = os.path.join(output_dir, f'ml_trading_model_lstm_{self.horizon}d_combined_{timestamp}.pth')
+        trainer.save_model_with_metadata(model_file)
+        
+        logger.info(f"合并模型已保存到: {model_file}")
     
     def summarize_results(self, results: Dict):
         """汇总结果"""
@@ -771,6 +1087,8 @@ def main():
                        help='批次大小')
     parser.add_argument('--seed', type=int, default=42,
                        help='随机种子（默认42）')
+    parser.add_argument('--training-method', type=str, choices=['combined', 'individual'], 
+                       default='combined', help='训练方法: combined(合并所有股票数据训练单个模型) 或 individual(逐个股票训练)')
     
     args = parser.parse_args()
     
@@ -785,7 +1103,21 @@ def main():
     
     # 运行实验
     experiment = LSTMExperiment(stock_codes=args.stocks, horizon=args.horizon)
-    results = experiment.run_all()
+    
+    if args.training_method == 'combined':
+        logger.info("使用合并所有股票数据的训练方法")
+        all_results = experiment.run_combined_model()
+        experiment.summarize_results(all_results)
+        experiment.save_results(all_results)
+    else:
+        logger.info("使用逐个股票的训练方法")
+        all_results = {}
+        for stock_code in experiment.stock_codes:
+            result = experiment.run_single_stock(stock_code)
+            if result:
+                all_results[stock_code] = result
+        experiment.summarize_results(all_results)
+        experiment.save_results(all_results)
     
     logger.info("\n实验完成！")
 
