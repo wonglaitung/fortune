@@ -1576,13 +1576,22 @@ class BaseTradingModel:
 
         if filepath is None:
             # 查找最新的特征名称文件
-            # 优先查找 model_importance_selected_*.csv（模型重要性法）
-            pattern = 'output/model_importance_selected_*.csv'
-            files = glob.glob(pattern)
-            if not files:
-                # 回退到 selected_features_*.csv（统计方法）
-                pattern = 'output/selected_features_*.csv'
-                files = glob.glob(pattern)
+            # 支持多种文件格式和命名
+            patterns = [
+                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'output/selected_features_*.csv',          # 统计方法（CSV格式）
+                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'output/model_importance_features_latest.txt',  # 最新模型重要性特征
+                'output/statistical_features_latest.txt'   # 最新统计特征
+            ]
+            
+            files = []
+            for pattern in patterns:
+                found_files = glob.glob(pattern)
+                files.extend(found_files)
+                if found_files:
+                    break  # 找到文件就停止
             
             if not files:
                 return None
@@ -1590,10 +1599,21 @@ class BaseTradingModel:
             filepath = max(files, key=os.path.getmtime)
 
         try:
-            import pandas as pd
-            # 读取特征名称
-            df = pd.read_csv(filepath)
-            selected_names = df['Feature_Name'].tolist()
+            selected_names = []
+            
+            # 根据文件扩展名选择不同的读取方式
+            if filepath.endswith('.csv'):
+                import pandas as pd
+                # 读取特征名称
+                df = pd.read_csv(filepath)
+                selected_names = df['Feature_Name'].tolist()
+            elif filepath.endswith('.txt'):
+                # 读取TXT文件（每行一个特征名称）
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    selected_names = [line.strip() for line in f if line.strip()]
+            else:
+                logger.error(f"不支持的文件格式: {filepath}")
+                return None
 
             logger.debug(f"加载特征列表文件: {filepath}")
             logger.info(f"加载了 {len(selected_names)} 个选择的特征")
@@ -1608,7 +1628,8 @@ class BaseTradingModel:
                 logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
                 logger.info(f"选择的特征数量: {len(selected_names)}")
                 logger.info(f"实际可用的特征数量: {len(available_names)}")
-                logger.warning(f" {len(selected_set) - len(available_names)} 个特征在当前数据集中不存在")
+                if len(selected_set) - len(available_names) > 0:
+                    logger.warning(f" {len(selected_set) - len(available_names)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
@@ -2202,18 +2223,44 @@ class GBDTModel(BaseTradingModel):
 
         if filepath is None:
             # 查找最新的特征名称文件
-            pattern = 'output/selected_features_*.csv'
-            files = glob.glob(pattern)
+            # 支持多种文件格式和命名
+            patterns = [
+                'output/selected_features_*.csv',          # 统计方法（CSV格式）
+                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'output/statistical_features_latest.txt',   # 最新统计特征
+                'output/model_importance_features_latest.txt'  # 最新模型重要性特征
+            ]
+            
+            files = []
+            for pattern in patterns:
+                found_files = glob.glob(pattern)
+                files.extend(found_files)
+                if found_files:
+                    break  # 找到文件就停止
+            
             if not files:
                 return None
             # 按修改时间排序，取最新的
             filepath = max(files, key=os.path.getmtime)
 
         try:
-            import pandas as pd
-            # 读取特征名称
-            df = pd.read_csv(filepath)
-            selected_names = df['Feature_Name'].tolist()
+            selected_names = []
+            
+            # 根据文件扩展名选择不同的读取方式
+            if filepath.endswith('.csv'):
+                import pandas as pd
+                # 读取特征名称
+                df = pd.read_csv(filepath)
+                selected_names = df['Feature_Name'].tolist()
+            elif filepath.endswith('.txt'):
+                # 读取TXT文件（每行一个特征名称）
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    selected_names = [line.strip() for line in f if line.strip()]
+            else:
+                logger.error(f"不支持的文件格式: {filepath}")
+                return None
 
             logger.debug(f"加载特征列表文件: {filepath}")
             logger.info(f"加载了 {len(selected_names)} 个选择的特征")
@@ -2228,7 +2275,8 @@ class GBDTModel(BaseTradingModel):
                 logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
                 logger.info(f"选择的特征数量: {len(selected_names)}")
                 logger.info(f"实际可用的特征数量: {len(available_names)}")
-                logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                if len(selected_set) - len(available_set) > 0:
+                    logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
@@ -2817,18 +2865,44 @@ class CatBoostModel(BaseTradingModel):
 
         if filepath is None:
             # 查找最新的特征名称文件
-            pattern = 'output/selected_features_*.csv'
-            files = glob.glob(pattern)
+            # 支持多种文件格式和命名
+            patterns = [
+                'output/selected_features_*.csv',          # 统计方法（CSV格式）
+                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'output/statistical_features_latest.txt',   # 最新统计特征
+                'output/model_importance_features_latest.txt'  # 最新模型重要性特征
+            ]
+            
+            files = []
+            for pattern in patterns:
+                found_files = glob.glob(pattern)
+                files.extend(found_files)
+                if found_files:
+                    break  # 找到文件就停止
+            
             if not files:
                 return None
             # 按修改时间排序，取最新的
             filepath = max(files, key=os.path.getmtime)
 
         try:
-            import pandas as pd
-            # 读取特征名称
-            df = pd.read_csv(filepath)
-            selected_names = df['Feature_Name'].tolist()
+            selected_names = []
+            
+            # 根据文件扩展名选择不同的读取方式
+            if filepath.endswith('.csv'):
+                import pandas as pd
+                # 读取特征名称
+                df = pd.read_csv(filepath)
+                selected_names = df['Feature_Name'].tolist()
+            elif filepath.endswith('.txt'):
+                # 读取TXT文件（每行一个特征名称）
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    selected_names = [line.strip() for line in f if line.strip()]
+            else:
+                logger.error(f"不支持的文件格式: {filepath}")
+                return None
 
             logger.debug(f"加载特征列表文件: {filepath}")
             logger.info(f"加载了 {len(selected_names)} 个选择的特征")
@@ -2843,7 +2917,8 @@ class CatBoostModel(BaseTradingModel):
                 logger.info(f"当前数据集特征数量: {len(current_feature_names)}")
                 logger.info(f"选择的特征数量: {len(selected_names)}")
                 logger.info(f"实际可用的特征数量: {len(available_names)}")
-                logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
+                if len(selected_set) - len(available_set) > 0:
+                    logger.warning(f" {len(selected_set) - len(available_set)} 个特征在当前数据集中不存在")
                 
                 return available_names
             else:
