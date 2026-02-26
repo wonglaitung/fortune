@@ -989,59 +989,46 @@ def get_recent_transactions(hours=48):
 
 def format_recent_transactions(transactions_df):
     """
-    格式化最近的交易记录为文本
+    格式化最近的交易记录为表格格式
     
     参数:
     - transactions_df: 交易记录数据框
     
     返回:
-    - str: 格式化的交易记录文本
+    - str: 格式化的交易记录文本（表格格式）
     """
     if transactions_df is None or transactions_df.empty:
         return "  最近48小时内没有交易记录\n"
     
     # 按股票代码和时间排序
     transactions_df = transactions_df.sort_values(by=['code', 'timestamp'])
+     
+    # 构建Markdown表格
+    text += "| 股票名称 | 股票代码 | 时间 | 类型 | 价格 | 目标价 | 止损价 | 有效期 | 理由 |\n"
+    text += "|---------|---------|------|------|------|--------|--------|--------|------|\n"
     
-    text = "## 八、最近48小时模拟交易记录\n\n"
-    
-    # 按股票代码分组
-    for code in sorted(transactions_df['code'].unique()):
-        stock_transactions = transactions_df[transactions_df['code'] == code]
-        stock_name = stock_transactions.iloc[0]['name'] if stock_transactions.iloc[0]['name'] else code
+    for _, trans in transactions_df.iterrows():
+        stock_name = trans.get('name', '')
+        code = trans.get('code', '')
+        trans_type = trans.get('type', '')
+        timestamp = pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')
+        price = trans.get('current_price', np.nan)
+        price_display = f"{price:,.2f}" if not pd.isna(price) and price is not None else ''
+        reason = trans.get('reason', '') or ''
         
-        text += f"### {stock_name} ({code})\n"
+        # 格式化止损价和目标价
+        stop_loss = trans.get('stop_loss_price', np.nan)
+        stop_loss_display = safe_float_format(stop_loss, '2f') if safe_float_format(stop_loss, '2f') else ''
         
-        for _, trans in stock_transactions.iterrows():
-            trans_type = trans.get('type', '')
-            timestamp = pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')
-            price = trans.get('current_price', np.nan)
-            price_display = f"{price:,.2f}" if not pd.isna(price) and price is not None else ''
-            reason = trans.get('reason', '') or ''
-            
-            # 格式化止损价和目标价
-            stop_loss = trans.get('stop_loss_price', np.nan)
-            stop_loss_display = f"止损:{safe_float_format(stop_loss, '2f')}" if safe_float_format(stop_loss, '2f') else ''
-            
-            # 获取目标价（根据可能的目标价列名）
-            target_price = trans.get('target_price', np.nan) or trans.get('target_price', np.nan)
-            target_price_display = f"目标:{safe_float_format(target_price, '2f')}" if safe_float_format(target_price, '2f') else ''
-            
-            # 构建价格信息
-            price_info_parts = []
-            if target_price_display:
-                price_info_parts.append(target_price_display)
-            if stop_loss_display:
-                price_info_parts.append(stop_loss_display)
-            
-            price_info_str = ", ".join(price_info_parts) if price_info_parts else ""
-            
-            if price_info_str:
-                text += f"  - {timestamp} {trans_type} @ {price_display} ({price_info_str}) - {reason}\n"
-            else:
-                text += f"  - {timestamp} {trans_type} @ {price_display} - {reason}\n"
+        # 获取目标价
+        target_price = trans.get('target_price', np.nan)
+        target_price_display = safe_float_format(target_price, '2f') if safe_float_format(target_price, '2f') else ''
         
-        text += "\n"
+        # 获取有效期
+        validity_period = trans.get('validity_period', np.nan)
+        validity_period_display = safe_float_format(validity_period, '0f') if safe_float_format(validity_period, '0f') else ''
+        
+        text += f"| {stock_name} | {code} | {timestamp} | {trans_type} | {price_display} | {target_price_display} | {stop_loss_display} | {validity_period_display} | {reason} |\n"
     
     return text
 
@@ -1132,7 +1119,6 @@ def generate_technical_indicators_table(stock_codes):
         # 按股票代码排序
         stock_codes_sorted = sorted(stock_codes)
         
-        table = "\n## 六、股票技术指标详情\n\n"
         table += "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
         table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
@@ -1581,7 +1567,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 # 构建板块分析文本
                 sector_text = ""
                 if sector_data and sector_data['performance'] is not None:
-                    sector_text = "\n## 三、板块分析（5日涨跌幅排名）\n"
                     perf_df = sector_data['performance']
                     sector_leaders = sector_data['leaders']
                     
@@ -1621,7 +1606,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 # 构建股息信息文本
                 dividend_text = ""
                 if dividend_data:
-                    dividend_text = "\n## 四、股息信息（即将除净）\n"
                     dividend_text += "| 股票代码 | 股票名称 | 除净日 | 股息率 |\n"
                     dividend_text += "|---------|---------|-------|--------|\n"
                     
@@ -1635,7 +1619,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 # 构建恒生指数分析文本
                 hsi_text = ""
                 if hsi_data:
-                    hsi_text = "\n## 五、恒生指数技术分析\n"
                     hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
                     hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}%\n"
                     hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
@@ -1692,20 +1675,29 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
+
+## 三、板块分析（5日涨跌幅排名）
+
 {sector_text}
+
+## 四、股息信息（即将除净）
+
 {dividend_text}
+
+## 五、恒生指数技术分析
+
 {hsi_text}
+
+## 六、股票技术指标详情
+
 {technical_indicators_table}
 
-## 三、实时技术指标（来自 hsi_email.py）
-{hsi_email_text if hsi_email_text else ''}
+## 七、最近48小时模拟交易记录
 
-## 四、最近48小时模拟交易记录
 {recent_transactions_text}
 """
-                
                 # 继续添加其他内容
-                full_content += f"""## 十、技术指标说明
+                full_content += f"""## 八、技术指标说明
 
 **短期技术指标（日内/数天）**：
 - RSI（相对强弱指数）：超买>70，超卖<30
@@ -1728,7 +1720,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 十一、决策框架
+## 九、**决策框架**
 
 ### ✦ 买入策略
 - 确认邮件中有**强烈买入信号**
@@ -1757,7 +1749,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **67% 一致**：三个模型中两个预测相同（如两个上涨，一个下跌）
 - **33% 一致**：三个模型预测都不同（如一个上涨、一个下跌、一个观望）
 
-## 十二、风险提示
+## 十、风险提示
 
 1. **模型不确定性**：
    - ML 20天融合模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）/±{model_accuracy['catboost']['std']:.2%}（CatBoost）
@@ -1775,7 +1767,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 融合概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
-## 十三、数据来源
+## 十一、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：LightGBM + GBDT + CatBoost（融合模型，加权平均）
