@@ -2,9 +2,9 @@
   "lgbm_20d": {
     "model_type": "lgbm",
     "horizon": 20,
-    "accuracy": 0.6017391304347827,
-    "std": 0.05645929273799451,
-    "timestamp": "2026-02-25 14:20:22"
+    "accuracy": 0.5920805369127516,
+    "std": 0.04410044592871154,
+    "timestamp": "2026-02-26 11:20:53"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
