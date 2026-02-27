@@ -170,14 +170,21 @@ class LSTMDataPreprocessor:
     def prepare_features(self, df: pd.DataFrame, stock_code: str) -> pd.DataFrame:
         """准备LSTM特征 - 复用CatBoost的500+特征"""
         df = df.copy()
-        
+
         # 复用CatBoost的特征工程
         logger.info(f"  生成技术指标特征...")
         df = self.feature_engineer.calculate_technical_features(df)
-        
+
         logger.info(f"  生成资金流向特征...")
         df = self.feature_engineer.create_smart_money_features(df)
-        
+
+        # 生成基本面特征
+        logger.info(f"  生成基本面特征...")
+        fundamental_features = self.feature_engineer.create_fundamental_features(stock_code)
+        if fundamental_features:
+            for key, value in fundamental_features.items():
+                df[f'Fundamental_{key}'] = value
+
         # 生成股票类型特征
         logger.info(f"  生成股票类型特征...")
         stock_type_features = self.feature_engineer.create_stock_type_features(stock_code, df)
@@ -185,11 +192,30 @@ class LSTMDataPreprocessor:
             for key, value in stock_type_features.items():
                 if key != 'name':  # 排除股票名称
                     df[f'StockType_{key}'] = value
-        
+
+        # 添加市场环境特征（恒生指数）
+        logger.info(f"  生成市场环境特征...")
+        try:
+            hsi_df = get_hsi_data_tencent(period_days=730)
+            if hsi_df is not None and not hsi_df.empty:
+                # 计算恒生指数收益率
+                hsi_df['HSI_Return_1d'] = hsi_df['Close'].pct_change()
+                hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
+                hsi_df['HSI_Return_20d'] = hsi_df['Close'].pct_change(20)
+
+                # 按日期对齐
+                df = df.reset_index()
+                hsi_df = hsi_df.reset_index()
+                df = df.merge(hsi_df[['Date', 'HSI_Return_1d', 'HSI_Return_5d', 'HSI_Return_20d']],
+                             on='Date', how='left')
+                df = df.set_index('Date')
+        except Exception as e:
+            logger.warning(f"  生成市场环境特征失败: {e}")
+
         # 缺失值处理
         df = df.fillna(method='ffill').fillna(method='bfill')
         df = df.fillna(0)  # 剩余的缺失值填充为0
-        
+
         logger.info(f"  特征生成完成，共 {len(df.columns)} 列")
         return df
     
