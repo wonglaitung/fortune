@@ -109,46 +109,51 @@ for model in "${BASE_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤3：训练融合模型
+# 步骤3：确保子模型存在（为融合模型准备）
 # ==============================================================================
-print_header "步骤3: 训练融合模型"
+print_header "步骤3: 确保子模型存在"
+
+# 检查子模型是否都已存在
+ALL_SUBMODELS_EXIST=true
+for submodel in "${BASE_MODELS[@]}"; do
+    SUBMODEL_FILE="data/ml_trading_model_${submodel}_${HORIZON}d.pkl"
+    if [ ! -f "$SUBMODEL_FILE" ]; then
+        ALL_SUBMODELS_EXIST=false
+        break
+    fi
+done
+
+if [ "$ALL_SUBMODELS_EXIST" = true ]; then
+    print_info "所有子模型已存在，跳过子模型训练"
+else
+    print_info "部分子模型不存在，训练缺失的子模型..."
+    for submodel in "${BASE_MODELS[@]}"; do
+        SUBMODEL_FILE="data/ml_trading_model_${submodel}_${HORIZON}d.pkl"
+        if [ ! -f "$SUBMODEL_FILE" ]; then
+            print_info "训练 ${submodel^^} ${HORIZON}天模型..."
+            python3 ml_services/ml_trading_model.py \
+                --mode train \
+                --horizon $HORIZON \
+                --model-type "$submodel" \
+                --use-feature-selection \
+                --skip-feature-selection
+            print_success "${submodel^^} ${HORIZON}天模型训练完成"
+        else
+            print_info "${submodel^^} ${HORIZON}天模型已存在，跳过"
+        fi
+    done
+fi
+
+# ==============================================================================
+# 步骤4：训练融合模型
+# ==============================================================================
+print_header "步骤4: 训练融合模型"
 
 for fusion in "${FUSION_MODELS[@]}"; do
     FUSION_FILE="data/ml_trading_model_${fusion}_${HORIZON}d.pkl"
     
     if [ ! -f "$FUSION_FILE" ] || [ "$FORCE_TRAIN" = true ]; then
         print_info "训练 ${fusion^^} ${HORIZON}天模型..."
-        
-        # 检查子模型是否都已存在
-        ALL_SUBMODELS_EXIST=true
-        for submodel in "${BASE_MODELS[@]}"; do
-            SUBMODEL_FILE="data/ml_trading_model_${submodel}_${HORIZON}d.pkl"
-            if [ ! -f "$SUBMODEL_FILE" ]; then
-                ALL_SUBMODELS_EXIST=false
-                break
-            fi
-        done
-        
-        if [ "$ALL_SUBMODELS_EXIST" = true ]; then
-            print_info "所有子模型已存在，跳过子模型训练"
-        else
-            print_info "部分子模型不存在，训练缺失的子模型..."
-            for submodel in "${BASE_MODELS[@]}"; do
-                SUBMODEL_FILE="data/ml_trading_model_${submodel}_${HORIZON}d.pkl"
-                if [ ! -f "$SUBMODEL_FILE" ] || [ "$FORCE_TRAIN" = true ]; then
-                    print_info "训练 ${submodel^^} ${HORIZON}天模型..."
-                    python3 ml_services/ml_trading_model.py \
-                        --mode train \
-                        --horizon $HORIZON \
-                        --model-type "$submodel" \
-                        --use-feature-selection \
-                        --skip-feature-selection
-                    print_success "${submodel^^} ${HORIZON}天模型训练完成"
-                else
-                    print_info "${submodel^^} ${HORIZON}天模型已存在，跳过"
-                fi
-            done
-        fi
         
         # 提取融合方法
         FUSION_METHOD=$(echo "$fusion" | sed 's/ensemble_//')
@@ -168,9 +173,9 @@ for fusion in "${FUSION_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤4：批量回测基本模型
+# 步骤5：批量回测基本模型
 # ==============================================================================
-print_header "步骤4: 批量回测基本模型"
+print_header "步骤5: 批量回测基本模型"
 
 for model in "${BASE_MODELS[@]}"; do
     print_info "回测 ${model^^} ${HORIZON}天模型..."
@@ -186,9 +191,9 @@ for model in "${BASE_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤5：批量回测融合模型
+# 步骤6：批量回测融合模型
 # ==============================================================================
-print_header "步骤5: 批量回测融合模型"
+print_header "步骤6: 批量回测融合模型"
 
 for fusion in "${FUSION_MODELS[@]}"; do
     print_info "回测 ${fusion^^} ${HORIZON}天模型..."
@@ -208,9 +213,9 @@ for fusion in "${FUSION_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤6：生成汇总对比报告
+# 步骤7：生成汇总对比报告
 # ==============================================================================
-print_header "步骤6: 生成汇总对比报告"
+print_header "步骤7: 生成汇总对比报告"
 
 REPORT_FILE="$OUTPUT_DIR/model_comparison_report_${TIMESTAMP}.txt"
 
