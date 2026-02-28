@@ -304,13 +304,22 @@ for model in "${ALL_MODELS[@]}"; do
 done
 
 # 按年化收益率排序
-IFS=$'\n' SORTED_MODELS=$(sort -t'|' -k1 -nr <<<"${RANK_DATA[*]}")
-RANK=1
-
-while IFS='|' read -r annual_return sharpe excellent model; do
-    echo "| $RANK | ${model^^} | ${annual_return}% | ${sharpe} | ${excellent} 只 |" >> "$REPORT_FILE"
-    ((RANK++))
-done
+if [ ${#RANK_DATA[@]} -gt 0 ]; then
+    # 使用临时文件进行排序
+    TEMP_SORT_FILE=$(mktemp)
+    printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr > "$TEMP_SORT_FILE"
+    
+    RANK=1
+    while IFS='|' read -r annual_return sharpe excellent model; do
+        echo "| $RANK | ${model^^} | ${annual_return}% | ${sharpe} | ${excellent} 只 |" >> "$REPORT_FILE"
+        ((RANK++))
+    done < "$TEMP_SORT_FILE"
+    
+    # 清理临时文件
+    rm -f "$TEMP_SORT_FILE"
+else
+    echo "| - | 无有效数据 | - | - | - |" >> "$REPORT_FILE"
+fi
 
 echo "" >> "$REPORT_FILE"
 echo "## 四、推荐模型" >> "$REPORT_FILE"
