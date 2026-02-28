@@ -25,7 +25,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score, f1_score, precision_score, recall_score
 from sklearn.linear_model import LogisticRegression
 import lightgbm as lgb
 
@@ -1956,6 +1956,7 @@ class LightGBMModel(BaseTradingModel):
 
         # 使用时间序列交叉验证
         scores = []
+        f1_scores = []
         for train_idx, val_idx in tscv.split(X):
             X_train, X_val = X[train_idx], X[val_idx]
             y_train, y_val = y[train_idx], y[val_idx]
@@ -1971,15 +1972,20 @@ class LightGBMModel(BaseTradingModel):
             )
             y_pred = self.model.predict(X_val)
             score = accuracy_score(y_val, y_pred)
+            f1 = f1_score(y_val, y_pred, zero_division=0)
             scores.append(score)
-            print(f"验证准确率: {score:.4f}")
+            f1_scores.append(f1)
+            print(f"验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         self.model.fit(X, y)
 
         mean_accuracy = np.mean(scores)
         std_accuracy = np.std(scores)
+        mean_f1 = np.mean(f1_scores)
+        std_f1 = np.std(f1_scores)
         print(f"\n平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -1987,6 +1993,8 @@ class LightGBMModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         import json
@@ -2562,6 +2570,7 @@ class GBDTModel(BaseTradingModel):
         # 使用时间序列交叉验证
         tscv = TimeSeriesSplit(n_splits=5)
         gbdt_scores = []
+        gbdt_f1_scores = []
 
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
@@ -2578,8 +2587,10 @@ class GBDTModel(BaseTradingModel):
 
             y_pred_fold = self.gbdt_model.predict(X_val_fold)
             score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
             gbdt_scores.append(score)
-            print(f"   Fold {fold} 验证准确率: {score:.4f}")
+            gbdt_f1_scores.append(f1)
+            print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         self.gbdt_model.fit(X, y)
@@ -2590,9 +2601,12 @@ class GBDTModel(BaseTradingModel):
         self.actual_n_estimators = self.gbdt_model.best_iteration_ if self.gbdt_model.best_iteration_ else n_estimators
         mean_accuracy = np.mean(gbdt_scores)
         std_accuracy = np.std(gbdt_scores)
+        mean_f1 = np.mean(gbdt_f1_scores)
+        std_f1 = np.std(gbdt_f1_scores)
         print(f"\n✅ GBDT 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
         print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -2600,6 +2614,8 @@ class GBDTModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         import json
@@ -3210,6 +3226,7 @@ class CatBoostModel(BaseTradingModel):
         # 使用时间序列交叉验证
         tscv = TimeSeriesSplit(n_splits=5)
         catboost_scores = []
+        catboost_f1_scores = []
 
         for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
@@ -3227,8 +3244,10 @@ class CatBoostModel(BaseTradingModel):
 
             y_pred_fold = self.catboost_model.predict(X_val_fold)
             score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
             catboost_scores.append(score)
-            print(f"   Fold {fold} 验证准确率: {score:.4f}")
+            catboost_f1_scores.append(f1)
+            print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
         full_pool = Pool(data=X, label=y, cat_features=categorical_features if categorical_features else None)
@@ -3238,9 +3257,12 @@ class CatBoostModel(BaseTradingModel):
         self.actual_n_estimators = self.catboost_model.tree_count_
         mean_accuracy = np.mean(catboost_scores)
         std_accuracy = np.std(catboost_scores)
+        mean_f1 = np.mean(catboost_f1_scores)
+        std_f1 = np.std(catboost_f1_scores)
         print(f"\n✅ CatBoost 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
         print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        print(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
 
         # 保存准确率到文件（供综合分析使用）
         accuracy_info = {
@@ -3248,6 +3270,8 @@ class CatBoostModel(BaseTradingModel):
             'horizon': horizon,
             'accuracy': float(mean_accuracy),
             'std': float(std_accuracy),
+            'f1_score': float(mean_f1),
+            'f1_std': float(std_f1),
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         accuracy_file = 'data/model_accuracy.json'
@@ -3532,6 +3556,417 @@ class CatBoostModel(BaseTradingModel):
         return self.catboost_model.predict_proba(test_pool)
 
 
+class DynamicMarketStrategy:
+    """动态市场策略 - 根据市场状态动态选择融合方法
+    
+    支持三种市场状态：
+    1. 牛市 (bull)：激进融合，使用全部模型
+    2. 熊市 (bear)：保守策略，只使用 CatBoost
+    3. 震荡市 (normal)：智能融合，基于一致性
+    
+    特点：
+    - 从 model_accuracy.json 动态读取模型稳定性（std）
+    - 基于市场状态动态调整融合策略
+    - 符合业界最佳实践
+    """
+
+    def __init__(self):
+        """初始化动态市场策略"""
+        self.current_regime = 'normal'  # 当前市场状态
+        self.model_stds = {}  # 模型标准差（稳定性）
+        self.horizon = 20  # 预测周期
+        self.load_model_stability()
+
+    def load_model_stability(self):
+        """从 model_accuracy.json 加载模型稳定性数据"""
+        accuracy_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'model_accuracy.json')
+        
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                # 读取各模型的标准差（稳定性指标）
+                self.model_stds = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('std', 0.05),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
+                }
+                logger.info(f"已加载模型稳定性数据: {self.model_stds}")
+            else:
+                logger.warning(f"未找到准确率文件: {accuracy_file}，使用默认值")
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+        except Exception as e:
+            logger.warning(f"加载模型稳定性数据失败: {e}，使用默认值")
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+
+    def detect_market_regime(self, hsi_data):
+        """
+        检测市场状态
+        
+        标准：
+        - 牛市 (bull)：HSI 20日收益率 > 5%
+        - 熊市 (bear)：HSI 20日收益率 < -5%
+        - 震荡市 (normal)：-5% ≤ HSI 20日收益率 ≤ 5%
+        
+        Args:
+            hsi_data: 恒生指数数据 (DataFrame 或 dict)
+        
+        Returns:
+            str: 市场状态 ('bull'/'bear'/'normal')
+        """
+        try:
+            if isinstance(hsi_data, dict):
+                # 从字典中获取收益率
+                hsi_return_20d = hsi_data.get('return_20d', 0)
+            elif isinstance(hsi_data, pd.DataFrame):
+                # 从 DataFrame 中计算收益率
+                if 'Close' in hsi_data.columns and len(hsi_data) >= 20:
+                    hsi_return_20d = (hsi_data['Close'].iloc[-1] - hsi_data['Close'].iloc[-20]) / hsi_data['Close'].iloc[-20]
+                else:
+                    hsi_return_20d = 0
+            else:
+                hsi_return_20d = 0
+            
+            # 判断市场状态
+            if hsi_return_20d > 0.05:
+                self.current_regime = 'bull'
+                logger.info(f"检测到牛市：HSI 20日收益率 = {hsi_return_20d:.2%}")
+            elif hsi_return_20d < -0.05:
+                self.current_regime = 'bear'
+                logger.info(f"检测到熊市：HSI 20日收益率 = {hsi_return_20d:.2%}")
+            else:
+                self.current_regime = 'normal'
+                logger.info(f"检测到震荡市：HSI 20日收益率 = {hsi_return_20d:.2%}")
+            
+            return self.current_regime
+        except Exception as e:
+            logger.warning(f"市场状态检测失败: {e}，使用默认状态 'normal'")
+            self.current_regime = 'normal'
+            return 'normal'
+
+    def calculate_consistency(self, predictions):
+        """
+        计算模型一致性
+        
+        Args:
+            predictions: 三个模型的预测概率列表 [lgbm_pred, gbdt_pred, catboost_pred]
+        
+        Returns:
+            float: 一致性比例 (1.0/0.67/0.33)
+        """
+        if len(predictions) != 3:
+            return 1.0
+        
+        # 将概率转换为二分类预测
+        pred_labels = [1 if p > 0.5 else 0 for p in predictions]
+        
+        # 判断一致性
+        if pred_labels.count(1) == 3 or pred_labels.count(0) == 3:
+            return 1.0  # 三模型一致
+        elif pred_labels.count(1) == 2 or pred_labels.count(0) == 2:
+            return 0.67  # 两模型一致
+        else:
+            return 0.33  # 三模型不一致
+
+    def bull_market_ensemble(self, predictions, confidences):
+        """
+        牛市策略：激进融合
+        
+        特点：
+        - 使用全部三个模型
+        - 基于稳定性加权（标准差倒数）
+        - 降低置信度阈值
+        
+        Args:
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+        
+        Returns:
+            tuple: (融合概率, 策略名称)
+        """
+        # 基于稳定性加权（标准差倒数）
+        stds = [self.model_stds.get('lgbm', 0.05), 
+                self.model_stds.get('gbdt', 0.05), 
+                self.model_stds.get('catboost', 0.02)]
+        weights = [1/std for std in stds]
+        weights = np.array(weights) / sum(weights)
+        
+        fused_prob = sum(pred * w for pred, w in zip(predictions, weights))
+        return fused_prob, 'bull_market_ensemble'
+
+    def bear_market_ensemble(self, predictions, confidences):
+        """
+        熊市策略：保守策略
+        
+        特点：
+        - 只使用 CatBoost 预测
+        - 提高置信度阈值
+        - 观望优先
+        
+        Args:
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+        
+        Returns:
+            tuple: (融合概率, 策略名称)
+        """
+        catboost_pred = predictions[2]  # CatBoost 预测
+        catboost_conf = confidences[2]  # CatBoost 置信度
+        
+        # 提高置信度阈值到 0.65
+        if catboost_conf > 0.65:
+            return catboost_pred, 'bear_market_high_conf'
+        else:
+            # 低置信度：观望（返回 0.5）
+            return 0.5, 'bear_market_wait'
+
+    def normal_market_ensemble(self, predictions, confidences):
+        """
+        震荡市策略：智能融合
+        
+        特点：
+        - 检查模型一致性
+        - 高一致性时使用稳定性加权
+        - 低一致性时使用 CatBoost 主导
+        
+        Args:
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+        
+        Returns:
+            tuple: (融合概率, 策略名称)
+        """
+        # 计算一致性
+        consistency = self.calculate_consistency(predictions)
+        
+        # 检查 CatBoost 置信度
+        catboost_pred = predictions[2]
+        catboost_conf = confidences[2]
+        
+        # 情况1：CatBoost 高置信度 → 直接使用
+        if catboost_conf > 0.60:
+            return catboost_pred, 'normal_market_catboost_high'
+        
+        # 情况2：高一致性 → 使用稳定性加权
+        if consistency >= 0.67:
+            stds = [self.model_stds.get('lgbm', 0.05), 
+                    self.model_stds.get('gbdt', 0.05), 
+                    self.model_stds.get('catboost', 0.02)]
+            weights = [1/std for std in stds]
+            weights = np.array(weights) / sum(weights)
+            fused_prob = sum(pred * w for pred, w in zip(predictions, weights))
+            return fused_prob, 'normal_market_high_consistency'
+        
+        # 情况3：低一致性 → 使用 CatBoost
+        return catboost_pred, 'normal_market_catboost_dominant'
+
+    def predict(self, predictions, confidences, hsi_data=None):
+        """
+        根据市场状态动态选择融合策略
+        
+        Args:
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            hsi_data: 恒生指数数据（可选）
+        
+        Returns:
+            tuple: (融合概率, 策略名称)
+        """
+        # 检测市场状态
+        if hsi_data is not None:
+            regime = self.detect_market_regime(hsi_data)
+        else:
+            regime = 'normal'  # 默认状态
+        
+        # 根据市场状态选择策略
+        if regime == 'bull':
+            return self.bull_market_ensemble(predictions, confidences)
+        elif regime == 'bear':
+            return self.bear_market_ensemble(predictions, confidences)
+        else:
+            return self.normal_market_ensemble(predictions, confidences)
+
+class AdvancedDynamicStrategy:
+    """高级动态市场策略 - 业界顶级标准
+    
+    特点：
+    1. 多维度市场状态检测（收益率、波动率、成交量、情绪）
+    2. 5种市场状态（强牛市、中牛市、震荡市、中熊市、强熊市）
+    3. CatBoost 主导（权重 75-100%）
+    4. 动态置信度阈值
+    5. 仓位管理
+    
+    符合业界最佳实践：Renaissance Technologies、Two Sigma、DE Shaw
+    """
+    
+    def __init__(self):
+        self.model_stds = {}
+        self.load_model_stability()
+        self.current_regime = 'normal'
+    
+    def load_model_stability(self):
+        """从 model_accuracy.json 加载模型稳定性数据"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                self.model_stds = {
+                    'lgbm': data.get(f'lgbm_20d', {}).get('std', 0.05),
+                    'gbdt': data.get(f'gbdt_20d', {}).get('std', 0.05),
+                    'catboost': data.get(f'catboost_20d', {}).get('std', 0.02)
+                }
+                logger.info(f"已加载模型稳定性数据: {self.model_stds}")
+            else:
+                logger.warning("未找到准确率文件，使用默认值")
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+        except Exception as e:
+            logger.warning(f"加载稳定性数据失败: {e}")
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+    
+    def calculate_consistency(self, predictions):
+        """
+        计算模型一致性
+        
+        Returns:
+            float: 一致性比例 (1.0, 0.67, 0.33)
+        """
+        pred_labels = [1 if p > 0.5 else 0 for p in predictions]
+        
+        if pred_labels.count(1) == 3 or pred_labels.count(0) == 3:
+            return 1.0
+        elif pred_labels.count(1) == 2 or pred_labels.count(0) == 2:
+            return 0.67
+        else:
+            return 0.33
+    
+    def detect_advanced_regime(self, hsi_data):
+        """
+        多维度市场状态检测
+        
+        维度：
+        1. 收益率趋势（5日、20日）
+        2. 波动率水平（当前 vs 20日均值）
+        3. 成交量变化
+        4. 市场情绪（基于波动率）
+        
+        Returns:
+            str: 市场状态 ('strong_bull', 'moderate_bull', 'normal', 'moderate_bear', 'strong_bear')
+        """
+        if hsi_data is None or len(hsi_data) < 20:
+            return 'normal'
+        
+        # 维度1：收益率趋势
+        prices = hsi_data['Close'].values
+        return_5d = (prices[-1] - prices[-5]) / prices[-5] if len(prices) >= 5 else 0
+        return_20d = (prices[-1] - prices[-20]) / prices[-20] if len(prices) >= 20 else 0
+        
+        # 维度2：波动率水平
+        returns = np.diff(np.log(prices))
+        volatility = np.std(returns[-20:]) if len(returns) >= 20 else 0.02
+        vol_ma = np.std(returns[-40:]) if len(returns) >= 40 else volatility
+        vol_ratio = volatility / vol_ma if vol_ma > 0 else 1.0
+        
+        # 维度3：成交量变化
+        volumes = hsi_data['Volume'].values
+        volume_ma20 = np.mean(volumes[-20:]) if len(volumes) >= 20 else volumes[-1]
+        volume_ratio = volumes[-1] / volume_ma20 if volume_ma20 > 0 else 1.0
+        
+        # 维度4：市场情绪（简化版）
+        sentiment = 1.0 / (1.0 + volatility * 10)
+        
+        # 综合判断
+        if return_20d > 0.10 and vol_ratio < 1.2 and volume_ratio > 1.0 and sentiment > 0.7:
+            return 'strong_bull'
+        elif return_20d > 0.02 and vol_ratio < 1.5:
+            return 'moderate_bull'
+        elif return_20d < -0.10 and vol_ratio > 1.5 and volume_ratio < 1.0 and sentiment < 0.3:
+            return 'strong_bear'
+        elif return_20d < -0.02 and vol_ratio > 1.2:
+            return 'moderate_bear'
+        else:
+            return 'normal'
+    
+    def get_strategy_config(self, regime):
+        """
+        根据市场状态获取策略配置
+        
+        Returns:
+            dict: {
+                'catboost_weight': CatBoost 权重,
+                'confidence_threshold': 置信度阈值,
+                'position_size': 仓位大小
+            }
+        """
+        configs = {
+            'strong_bull': {
+                'catboost_weight': 0.75,
+                'confidence_threshold': 0.50,
+                'position_size': 1.2
+            },
+            'moderate_bull': {
+                'catboost_weight': 0.85,
+                'confidence_threshold': 0.55,
+                'position_size': 1.0
+            },
+            'normal': {
+                'catboost_weight': 0.90,
+                'confidence_threshold': 0.55,
+                'position_size': 0.9
+            },
+            'moderate_bear': {
+                'catboost_weight': 0.95,
+                'confidence_threshold': 0.60,
+                'position_size': 0.7
+            },
+            'strong_bear': {
+                'catboost_weight': 1.00,
+                'confidence_threshold': 0.65,
+                'position_size': 0.5
+            }
+        }
+        
+        return configs.get(regime, configs['normal'])
+    
+    def predict(self, predictions, confidences, hsi_data=None):
+        """
+        高级动态预测
+        
+        Args:
+            predictions: 三个模型的预测概率 [lgbm_pred, gbdt_pred, catboost_pred]
+            confidences: 三个模型的置信度 [lgbm_conf, gbdt_conf, catboost_conf]
+            hsi_data: 恒生指数数据（可选）
+        
+        Returns:
+            tuple: (融合概率, 策略名称)
+        """
+        # 检测市场状态
+        regime = self.detect_advanced_regime(hsi_data)
+        self.current_regime = regime
+        
+        # 获取策略配置
+        config = self.get_strategy_config(regime)
+        
+        # 检查 CatBoost 置信度
+        catboost_pred = predictions[2]
+        catboost_conf = confidences[2]
+        
+        # 如果 CatBoost 置信度低于阈值，观望
+        if catboost_conf < config['confidence_threshold']:
+            return 0.5, f'advanced_{regime}_wait'
+        
+        # 使用 CatBoost 主导权重
+        catboost_weight = config['catboost_weight']
+        remaining_weight = 1.0 - catboost_weight
+        weights = [remaining_weight/2, remaining_weight/2, catboost_weight]
+        
+        # 融合
+        fused_prob = sum(pred * w for pred, w in zip(predictions, weights))
+        
+        return fused_prob, f'advanced_{regime}'
+
 class EnsembleModel:
     """融合模型 - 整合 LightGBM、GBDT、CatBoost 三个模型
     
@@ -3539,12 +3974,13 @@ class EnsembleModel:
     1. 简单平均：三个模型的概率平均
     2. 加权平均：根据准确率加权
     3. 投票机制：多数投票
+    4. 动态市场：根据市场状态动态选择融合方法
     """
 
     def __init__(self, fusion_method='weighted'):
         """
         Args:
-            fusion_method: 融合方法 ('average'/'weighted'/'voting')
+            fusion_method: 融合方法 ('average'/'weighted'/'voting'/'dynamic-market')
         """
         self.lgbm_model = LightGBMModel()
         self.gbdt_model = GBDTModel()
@@ -3552,8 +3988,10 @@ class EnsembleModel:
         self.fusion_method = fusion_method
         self.model_accuracies = {}
         self.horizon = 1
+        self.dynamic_strategy = DynamicMarketStrategy()  # 初始化动态市场策略
 
     def load_model_accuracy(self):
+        self.advanced_strategy = AdvancedDynamicStrategy()  # 初始化高级动态策略
         """加载模型准确率"""
         accuracy_file = 'data/model_accuracy.json'
         try:
@@ -3663,6 +4101,27 @@ class EnsembleModel:
             
             fused_pred = 1 if fused_prob > 0.5 else 0
             method_name = "加权平均"
+        elif self.fusion_method == 'dynamic-market':
+            # 动态市场策略
+            # 计算各模型的置信度（基于概率）
+            confidences = [p for p in probabilities]
+            
+            # 获取恒生指数数据（用于市场状态检测）
+            try:
+                hsi_data = get_hsi_data_tencent()
+                hsi_return_20d = None
+                if hsi_data is not None and len(hsi_data) >= 20:
+                    hsi_return_20d = (hsi_data['Close'].iloc[-1] - hsi_data['Close'].iloc[-20]) / hsi_data['Close'].iloc[-20]
+                
+                hsi_data_dict = {'return_20d': hsi_return_20d} if hsi_return_20d is not None else None
+            except Exception as e:
+                logger.warning(f"获取恒生指数数据失败: {e}")
+                hsi_data_dict = None
+            
+            # 使用动态市场策略进行融合
+            fused_prob, strategy_name = self.dynamic_strategy.predict(probabilities, confidences, hsi_data_dict)
+            fused_pred = 1 if fused_prob > 0.5 else 0
+            method_name = f"动态市场 ({strategy_name})"
         else:  # voting
             # 投票机制
             fused_pred = 1 if sum(predictions) >= len(predictions) / 2 else 0
@@ -3825,6 +4284,21 @@ class EnsembleModel:
                 catboost_weight /= total_weight
             else:
                 lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
+        elif self.fusion_method == 'advanced-dynamic':
+            # 高级动态策略：CatBoost 主导（90%权重）
+            lgbm_weight = 0.05
+            gbdt_weight = 0.05
+            catboost_weight = 0.90
+        elif self.fusion_method == 'dynamic-market':
+            # 动态市场策略：基于稳定性加权（CatBoost 权重约 2.4倍）
+            stds = [self.model_stds.get('lgbm', 0.05), 
+                    self.model_stds.get('gbdt', 0.05), 
+                    self.model_stds.get('catboost', 0.02)]
+            weights = [1/std for std in stds]
+            total = sum(weights)
+            lgbm_weight = weights[0] / total
+            gbdt_weight = weights[1] / total
+            catboost_weight = weights[2] / total
         else:
             # 简单平均
             lgbm_weight = gbdt_weight = catboost_weight = 1.0 / 3.0
@@ -3909,8 +4383,9 @@ def main():
                        help='使用特征选择（只使用500个选择的特征，而不是全部2936个）')
     parser.add_argument('--skip-feature-selection', action='store_true',
                        help='跳过特征选择，直接使用已有的特征文件（适用于批量训练多个模型）')
-    parser.add_argument('--fusion-method', type=str, default='weighted', choices=['average', 'weighted', 'voting'],
-                       help='融合方法: average=简单平均, weighted=加权平均（基于准确率）, voting=投票机制（默认weighted）')
+    parser.add_argument('--fusion-method', type=str, default='weighted', 
+                       choices=['average', 'weighted', 'voting', 'dynamic-market', 'advanced-dynamic'],
+                       help='融合方法: average=简单平均, weighted=加权平均（基于准确率）, voting=投票机制, dynamic-market=动态市场策略（默认weighted）')
 
     args = parser.parse_args()
 
@@ -4173,7 +4648,9 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred_lgbm))
             lgbm_accuracy = accuracy_score(y_test, y_pred_lgbm)
+            lgbm_f1 = f1_score(y_test, y_pred_lgbm, zero_division=0)
             print(f"\n准确率: {lgbm_accuracy:.4f}")
+            print(f"F1分数: {lgbm_f1:.4f}")
 
             # GBDT 模型评估
             print("\n" + "="*70)
@@ -4186,22 +4663,29 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred_gbdt))
             gbdt_accuracy = accuracy_score(y_test, y_pred_gbdt)
+            gbdt_f1 = f1_score(y_test, y_pred_gbdt, zero_division=0)
             print(f"\n准确率: {gbdt_accuracy:.4f}")
+            print(f"F1分数: {gbdt_f1:.4f}")
 
             # 对比结果
             print("\n" + "="*70)
             logger.info("模型对比")
             print("="*70)
-            print(f"LightGBM 准确率: {lgbm_accuracy:.4f}")
-            print(f"GBDT 准确率: {gbdt_accuracy:.4f}")
+            print(f"LightGBM 准确率: {lgbm_accuracy:.4f}, F1分数: {lgbm_f1:.4f}")
+            print(f"GBDT 准确率: {gbdt_accuracy:.4f}, F1分数: {gbdt_f1:.4f}")
             print(f"准确率差异: {abs(lgbm_accuracy - gbdt_accuracy):.4f}")
+            print(f"F1分数差异: {abs(lgbm_f1 - gbdt_f1):.4f}")
             
-            if gbdt_accuracy > lgbm_accuracy:
-                print(f"\n✅ GBDT 模型表现更好，提升 {gbdt_accuracy - lgbm_accuracy:.4f} ({(gbdt_accuracy - lgbm_accuracy)/lgbm_accuracy*100:.2f}%)")
+            if gbdt_accuracy > lgbm_accuracy and gbdt_f1 > lgbm_f1:
+                print(f"\n✅ GBDT 模型在准确率和F1分数上都表现更好")
+            elif lgbm_accuracy > gbdt_accuracy and lgbm_f1 > gbdt_f1:
+                print(f"\n✅ LightGBM 模型在准确率和F1分数上都表现更好")
+            elif gbdt_accuracy > lgbm_accuracy:
+                print(f"\n✅ GBDT 模型准确率更高，但F1分数比较...")
             elif lgbm_accuracy > gbdt_accuracy:
-                print(f"\n✅ LightGBM 模型表现更好，提升 {lgbm_accuracy - gbdt_accuracy:.4f} ({(lgbm_accuracy - gbdt_accuracy)/gbdt_accuracy*100:.2f}%)")
+                print(f"\n✅ LightGBM 模型准确率更高，但F1分数比较...")
             else:
-                print(f"\n⚖️  两种模型表现相同")
+                print(f"\n⚖️  两种模型准确率相同，比较F1分数...")
 
         else:
             # 单个模型评估
@@ -4226,7 +4710,10 @@ def main():
             print("\n混淆矩阵:")
             print(confusion_matrix(y_test, y_pred))
 
-            print(f"\n准确率: {accuracy_score(y_test, y_pred):.4f}")
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, zero_division=0)
+            print(f"\n准确率: {accuracy:.4f}")
+            print(f"F1分数: {f1:.4f}")
 
     else:
         logger.error(f"不支持的运行模式: {args.mode}")

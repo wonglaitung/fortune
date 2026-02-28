@@ -83,9 +83,7 @@ def load_model_accuracy(horizon=20):
     """
     # 默认准确率值（如果文件不存在）
     default_accuracy = {
-        'lgbm': {'accuracy': 0.6015, 'std': 0.0518},
-        'gbdt': {'accuracy': 0.6069, 'std': 0.0500},
-        'catboost': {'accuracy': 0.6000, 'std': 0.0500}
+        'catboost': {'accuracy': 0.6101, 'std': 0.0219}
     }
     
     accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
@@ -97,25 +95,7 @@ def load_model_accuracy(horizon=20):
                 data = json.load(f)
             
             result = {}
-            lgbm_key = f'lgbm_{horizon}d'
-            gbdt_key = f'gbdt_{horizon}d'
             catboost_key = f'catboost_{horizon}d'
-            
-            if lgbm_key in data:
-                result['lgbm'] = {
-                    'accuracy': data[lgbm_key].get('accuracy', default_accuracy['lgbm']['accuracy']),
-                    'std': data[lgbm_key].get('std', default_accuracy['lgbm']['std'])
-                }
-            else:
-                result['lgbm'] = default_accuracy['lgbm']
-            
-            if gbdt_key in data:
-                result['gbdt'] = {
-                    'accuracy': data[gbdt_key].get('accuracy', default_accuracy['gbdt']['accuracy']),
-                    'std': data[gbdt_key].get('std', default_accuracy['gbdt']['std'])
-                }
-            else:
-                result['gbdt'] = default_accuracy['gbdt']
             
             if catboost_key in data:
                 result['catboost'] = {
@@ -126,8 +106,6 @@ def load_model_accuracy(horizon=20):
                 result['catboost'] = default_accuracy['catboost']
             
             print(f"✅ 已加载模型准确率: {accuracy_file}")
-            print(f"   LightGBM: {result['lgbm']['accuracy']:.2%} (±{result['lgbm']['std']:.2%})")
-            print(f"   GBDT: {result['gbdt']['accuracy']:.2%} (±{result['gbdt']['std']:.2%})")
             print(f"   CatBoost: {result['catboost']['accuracy']:.2%} (±{result['catboost']['std']:.2%})")
             return result
         else:
@@ -220,79 +198,46 @@ def extract_ml_predictions(filepath):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
         
-        # 优先读取融合模型预测结果
-        ensemble_csv = os.path.join(data_dir, 'ml_trading_model_ensemble_predictions_20d.csv')
+        # 读取 CatBoost 单模型预测结果
+        catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
         
         result = {
             'ensemble': ''
         }
         
-        # 读取融合模型预测结果
-        if os.path.exists(ensemble_csv):
-            df_ensemble = pd.read_csv(ensemble_csv)
-            # 显示全部股票，按融合概率排序
-            df_ensemble_sorted = df_ensemble.sort_values('fused_probability', ascending=False)
+        # 读取 CatBoost 预测结果
+        if os.path.exists(catboost_csv):
+            df_catboost = pd.read_csv(catboost_csv)
+            df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 
-            ensemble_text = "【融合模型预测结果（LightGBM + GBDT + CatBoost，加权平均）】\n"
-            ensemble_text += f"预测日期: {date_str}\n\n"
-            ensemble_text += "全部股票预测结果（按融合概率排序）:\n\n"
+            catboost_text = "【CatBoost模型预测结果（20天）】\n"
+            catboost_text += f"预测日期: {date_str}\n\n"
+            catboost_text += "全部股票预测结果（按概率排序）:\n\n"
 
             # 构建Markdown表格
-            ensemble_text += "| 股票代码 | 股票名称 | 融合预测 | 融合概率 | 置信度 | 一致性 | 当前价格 |\n"
-            ensemble_text += "|----------|----------|----------|----------|--------|--------|----------|\n"
+            catboost_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
+            catboost_text += "|----------|----------|----------|----------|----------|\n"
 
-            for _, row in df_ensemble_sorted.iterrows():
-                # 确定预测方向（三分类：上涨=1, 观望=0.5, 下跌=0）
-                fused_pred = row['fused_prediction']
-                if fused_pred == 1:
+            for _, row in df_catboost_sorted.iterrows():
+                if row['probability'] > 0.60:
                     direction = "上涨"
-                elif fused_pred == 0.5:
+                elif row['probability'] > 0.50:
                     direction = "观望"
                 else:
                     direction = "下跌"
 
-                ensemble_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['fused_probability'], '4f')} | {row['confidence']} | {row['consistency']} | {safe_float_format(row['current_price'], '2f')} |\n"
+                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} |\n"
 
-            ensemble_text += f"\n**统计信息**：\n"
-            ensemble_text += f"- 高置信度上涨（融合概率 > 0.60）: {len(df_ensemble[df_ensemble['fused_probability'] > 0.60])} 只\n"
-            ensemble_text += f"- 中等置信度观望（0.50 < 融合概率 ≤ 0.60）: {len(df_ensemble[(df_ensemble['fused_probability'] > 0.50) & (df_ensemble['fused_probability'] <= 0.60)])} 只\n"
-            ensemble_text += f"- 预测下跌（融合概率 ≤ 0.50）: {len(df_ensemble[df_ensemble['fused_probability'] <= 0.50])} 只\n"
-            ensemble_text += f"\n**模型一致性**：\n"
-            ensemble_text += f"- 三模型一致: {len(df_ensemble[df_ensemble['consistency'] == '100%'])} 只\n"
-            ensemble_text += f"- 两模型一致: {len(df_ensemble[df_ensemble['consistency'].str.contains('67%')])} 只\n"
-            ensemble_text += f"- 三模型不一致: {len(df_ensemble[df_ensemble['consistency'] == '33%'])} 只\n"
+            catboost_text += f"\n**统计信息**：\n"
+            catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
+            catboost_text += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
+            catboost_text += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
 
-            result['ensemble'] = ensemble_text
+            result['ensemble'] = catboost_text
         else:
-            print(f"⚠️ 融合模型预测文件不存在: {ensemble_csv}")
+            print(f"⚠️ CatBoost 预测文件不存在: {catboost_csv}")
             
-            # 回退：尝试读取单独的模型预测结果
-            lgbm_csv = os.path.join(data_dir, 'ml_trading_model_lgbm_predictions_20d.csv')
-            gbdt_csv = os.path.join(data_dir, 'ml_trading_model_gbdt_predictions_20d.csv')
-            
-            # 读取LightGBM预测结果
-            if os.path.exists(lgbm_csv):
-                df_lgbm = pd.read_csv(lgbm_csv)
-                df_lgbm_sorted = df_lgbm.sort_values('probability', ascending=False)
-
-                lgbm_text = "【LightGBM模型预测结果（回退模式）】\n"
-                lgbm_text += f"预测日期: {date_str}\n\n"
-                lgbm_text += "全部股票预测结果（按概率排序）:\n\n"
-
-                lgbm_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-                lgbm_text += "|----------|----------|----------|----------|----------|\n"
-
-                for _, row in df_lgbm_sorted.iterrows():
-                    if row['probability'] > 0.60:
-                        direction = "上涨"
-                    elif row['probability'] > 0.50:
-                        direction = "观望"
-                    else:
-                        direction = "下跌"
-
-                    lgbm_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} |\n"
-
-                result['ensemble'] = lgbm_text
+            result['ensemble'] = ''
         
         return result
         
@@ -1282,17 +1227,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
             print(f"❌ 大模型建议文件不存在: {llm_filepath}")
             return None
         
-        # 检查融合模型预测文件是否存在
+        # 检查CatBoost单模型预测文件是否存在
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
-        ensemble_csv = os.path.join(data_dir, 'ml_trading_model_ensemble_predictions_20d.csv')
+        catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
         
-        if not os.path.exists(ensemble_csv):
-            print(f"❌ 融合模型预测文件不存在: {ensemble_csv}")
+        if not os.path.exists(catboost_csv):
+            print(f"❌ CatBoost预测文件不存在: {catboost_csv}")
             return None
         
         print(f"📊 大模型建议文件: {llm_filepath}")
-        print(f"📊 融合模型预测文件: {ensemble_csv}")
+        print(f"📊 CatBoost预测文件: {catboost_csv}")
         print("")
         
         # 提取大模型建议
@@ -1306,7 +1251,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
         print("📝 提取ML预测结果...")
         ml_predictions = extract_ml_predictions(ml_filepath)
         print(f"✅ 提取完成\n")
-        print(f"   - 融合模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
+        print(f"   - CatBoost模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
         
         # 加载模型准确率
         print("📝 加载模型准确率...")
@@ -1326,7 +1271,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_recommendations['medium_term']}
 
-【2. 融合模型20天预测结果（LightGBM + GBDT + CatBoost，加权平均）】
+【2. CatBoost模型20天预测结果】
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -1339,105 +1284,93 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 **规则1：时间维度匹配（业界最佳实践）**
 - **短期信号（触发器）**：负责"何时做"（Timing）
 - **中期信号（确认器）**：负责"是否做"（Direction）
-- **融合模型（验证器）**：负责提升置信度，权重60%（三模型融合更可靠）
+- **CatBoost模型（验证器）**：负责提升置信度
 - 只有短期和中期方向一致时，才采取行动
 - 短期和中期冲突时，选择观望（避免不确定性）
 
-**决策逻辑（短期触发 + 中期确认 + 融合模型验证）**：
-- 短期建议买入 + 中期建议买入 + 融合模型高置信度上涨（fused_probability>0.62）→ 强买入信号
-- 短期建议买入 + 中期建议买入 + 融合模型中等置信度上涨（0.60<fused_probability≤0.62）→ 买入信号
-- 短期建议买入 + 中期建议买入 + 融合模型低置信度（fused_probability≤0.60）→ 观望（等待确认）
+**决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
+- 短期建议买入 + 中期建议买入 + CatBoost高置信度上涨（probability>0.60）→ 强买入信号
+- 短期建议买入 + 中期建议买入 + CatBoost中等置信度上涨（0.50<probability≤0.60）→ 买入信号
+- 短期建议买入 + 中期建议买入 + CatBoost低置信度（probability≤0.50）→ 观望（等待确认）
 - 短期建议买入 + 中期建议观望 → 观望（等待中期确认）
 - 短期建议买入 + 中期建议卖出 → 不买入（冲突，信号无效）
-- 短期建议卖出 + 中期建议卖出 + 融合模型高置信度下跌（fused_probability<0.38）→ 强卖出信号
-- 短期建议卖出 + 中期建议卖出 + 融合模型中等置信度下跌（0.38≤fused_probability<0.40）→ 卖出信号
-- 短期建议卖出 + 中期建议卖出 + 融合模型低置信度（fused_probability≥0.40）→ 观望（等待确认）
+- 短期建议卖出 + 中期建议卖出 + CatBoost高置信度下跌（probability<0.40）→ 强卖出信号
+- 短期建议卖出 + 中期建议卖出 + CatBoost中等置信度下跌（0.40≤probability<0.50）→ 卖出信号
+- 短期建议卖出 + 中期建议卖出 + CatBoost低置信度（probability≥0.50）→ 观望（等待确认）
 - 短期建议卖出 + 中期建议观望 → 观望（等待中期确认）
 - 短期建议卖出 + 中期建议买入 → 不卖出（冲突，信号无效）
 
-**规则2：融合模型置信度评估**
+**规则2：CatBoost概率评估**
 
-**三模型一致性（关键指标）**：
-- **高置信度（三模型一致）**：一致性=100%，fused_probability可靠性最高
-- **中等置信度（两模型一致）**：一致性=67%，fused_probability可靠性中等
-- **低置信度（三模型不一致）**：一致性=33%，fused_probability可靠性低，建议观望
-
-**融合概率阈值（基于三模型加权平均）**：
-- **高置信度上涨**：fused_probability > 0.62（三模型一致或两模型一致且权重高）
-- **中等置信度上涨**：0.60 < fused_probability ≤ 0.62（需要短期中期一致支持）
-- **观望区间**：0.45 ≤ fused_probability ≤ 0.60（不确定性高，建议观望）
-- **中等置信度下跌**：0.40 ≤ fused_probability < 0.45（需要短期中期一致支持）
-- **高置信度下跌**：fused_probability < 0.40（三模型一致或两模型一致且权重高）
+**CatBoost概率阈值**：
+- **高置信度上涨**：probability > 0.60
+- **中等置信度观望**：0.50 < probability ≤ 0.60
+- **预测下跌**：probability ≤ 0.50
 
 **阈值优化说明**：
-- 当前20天融合模型综合准确率：约{model_accuracy['lgbm']['accuracy']:.2%}（基于LightGBM、GBDT、CatBoost加权平均）
-- 单模型准确率：LightGBM {model_accuracy['lgbm']['accuracy']:.2%}（±{model_accuracy['lgbm']['std']:.2%}），GBDT {model_accuracy['gbdt']['accuracy']:.2%}（±{model_accuracy['gbdt']['std']:.2%}），CatBoost {model_accuracy['catboost']['accuracy']:.2%}（±{model_accuracy['catboost']['std']:.2%}）
-- 融合模型优势：降低方差约15-20%，提升稳定性，减少极端错误
-- 强买入阈值0.62略高于融合准确率，确保高置信度
-- 买入阈值0.60接近融合准确率，平衡召回率和精确率
-- 卖出阈值0.40确保下跌概率>60%
-- 观望区间0.45-0.60避免低置信度决策
+- 当前CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
+- CatBoost模型准确率：{model_accuracy['catboost']['accuracy']:.2%}（±{model_accuracy['catboost']['std']:.2%}）
+- 强买入阈值0.60略高于CatBoost准确率，确保高置信度
+- 买入阈值0.50接近CatBoost准确率，平衡召回率和精确率
+- 卖出阈值0.50确保下跌概率>50%
+- 观望区间0.45-0.50避免低置信度决策
 
-**重要说明 - 融合模型优势**：
-- **三模型融合**：LightGBM（梯度提升）+ GBDT（梯度提升）+ CatBoost（对称树提升）
-- **加权平均**：基于模型准确率自动计算权重，给高准确率模型更多权重
-- **模型多样性**：不同算法捕捉不同特征模式，降低单一模型偏差
-- **稳定性提升**：标准差降低约15-20%，减少极端错误预测
-- **置信度评估**：通过三模型一致性评估预测可靠性
+**重要说明 - CatBoost模型优势**：
+- **单模型策略**：CatBoost 单模型表现最佳（回测收益率 276.74%）
+- **自动分类特征处理**：无需手动编码，使用 LabelEncoder 自动处理
+- **更好的默认参数**：减少调参工作量，开箱即用
+- **稳定性优异**：标准差 ±{model_accuracy['catboost']['std']:.2%}，表现稳定
+- **置信度评估**：通过预测概率评估预测可靠性
 
 **重要说明 - 模型不确定性**：
-- 融合模型20天准确率：约{model_accuracy['lgbm']['accuracy']:.2%}（基于三模型加权平均）
-- 单模型标准差：LightGBM ±{model_accuracy['lgbm']['std']:.2%}，GBDT ±{model_accuracy['gbdt']['std']:.2%}，CatBoost ±{model_accuracy['catboost']['std']:.2%}
-- 融合模型标准差：约±{(model_accuracy['lgbm']['std'] + model_accuracy['gbdt']['std'] + model_accuracy['catboost']['std'])/3:.2%}（降低约15-20%）
-- 即使fused_probability>0.62，实际准确率也可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间波动
-- 建议：短期和中期一致是主要决策依据，融合模型用于验证和提升置信度
-- 对于fused_probability在0.55-0.65之间的股票，建议降低仓位控制风险
-- 对于一致性=33%（三模型不一致）的股票，建议观望，不进行交易
+- CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
+- CatBoost模型标准差：±{model_accuracy['catboost']['std']:.2%}
+- 即使probability>0.62，实际准确率也可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间波动
+- 建议：短期和中期一致是主要决策依据，CatBoost模型用于验证和提升置信度
+- 对于probability在0.55-0.65之间的股票，建议降低仓位控制风险
 
 **重要说明 - 信号优先级（业界标准）**：
 - **短期信号（触发器）**：负责"何时做"（Timing），权重100%（必须满足）
 - **中期信号（确认器）**：负责"是否做"（Direction），权重100%（必须满足）
-- **融合模型（验证器）**：负责提升置信度，权重60%（辅助验证，三模型融合更可靠）
-- **关键原则**：短期和中期必须一致（方向相同），融合模型用于验证和提升置信度
-- **一致性优先**：三模型一致（100%）> 两模型一致（67%）> 三模型不一致（33%）
+- **CatBoost模型（验证器）**：负责提升置信度
+- **关键原则**：短期和中期必须一致（方向相同），CatBoost模型用于验证和提升置信度
 
 **重要说明 - 时间维度标准化**：
 - 短期：1-5个交易日（日内到一周）
 - 中期：10-20个交易日（2-4周）
 - 长期：>20个交易日（超过1个月）
-- 当前映射：大模型短期建议 ↔ 融合模型预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
+- 当前映射：大模型短期建议 ↔ CatBoost模型预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
 
-**规则3：融合模型一致性处理**
-- **三模型一致（一致性=100%）**：信号可靠性最高，优先级提升
-- **两模型一致（一致性=67%）**：信号可靠性中等，需要短期中期一致支持
-- **三模型不一致（一致性=33%）**：信号可靠性低，建议观望，不进行交易
-- 如果fused_probability和一致性都高（fused_probability>0.62且一致性=100%），综合置信度最高
-- 如果fused_probability高但一致性低（fused_probability>0.62但一致性=33%），降低为中等置信度
+**规则3：CatBoost概率评估**
+- **高置信度上涨（probability > 0.60）**：信号可靠性最高，优先级提升
+- **中等置信度观望（0.50 < probability ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
+- **预测下跌（probability ≤ 0.50）**：信号可靠性低，建议观望，不进行交易
+- 如果probability高（>0.60），综合置信度最高
+- 如果probability低（≤0.50），降低为中等置信度
 
 **规则4：推荐理由格式**
-- 必须说明：短期建议+中期建议+融合模型预测（fused_probability+一致性+置信度）
-- 例如："短期建议买入（触发器），中期建议买入（确认器），融合模型预测上涨概率0.72（一致性100%，高置信度），LightGBM/GBDT/CatBoost三模型一致，综合置信度高。注意融合模型当前准确率约{model_accuracy['lgbm']['accuracy']:.2%}（标准差约±{(model_accuracy['lgbm']['std'] + model_accuracy['gbdt']['std'] + model_accuracy['catboost']['std'])/3:.2%}），fused_probability在0.72附近实际准确率可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间"
+- 必须说明：短期建议+中期建议+CatBoost预测（probability）
+- 例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测上涨概率0.72（高置信度），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"
 
 请基于上述规则，完成以下任务：
 
-1. **一致性分析**（方案A核心：短期触发 + 中期确认 + 融合模型验证）：
+1. **一致性分析**（方案A核心：短期触发 + 中期确认 + CatBoost验证）：
    - **第一步（核心）**：分析短期建议与中期建议的一致性
-     - 短期买入 + 中期买入 → 方向一致，考虑融合模型验证
+     - 短期买入 + 中期买入 → 方向一致，考虑CatBoost验证
      - 短期买入 + 中期观望 → 等待中期确认
      - 短期买入 + 中期卖出 → 冲突，观望
-     - 短期卖出 + 中期卖出 → 方向一致，考虑融合模型验证
+     - 短期卖出 + 中期卖出 → 方向一致，考虑CatBoost验证
      - 短期卖出 + 中期观望 → 等待中期确认
      - 短期卖出 + 中期买入 → 冲突，观望
-   - **第二步（验证）**：对短期中期一致的股票，分析融合模型预测验证
-     - 如果融合模型高置信度支持（fused_probability>0.62且一致性=100%），提升为强信号
-     - 如果融合模型中等置信度支持（0.60<fused_probability≤0.62且一致性≥67%），提升为中等信号
-     - 如果融合模型低置信度（一致性=33%），降低为弱信号或观望
-     - 如果融合模型不确定（0.45≤fused_probability≤0.60），保持中等置信度
+   - **第二步（验证）**：对短期中期一致的股票，分析CatBoost预测验证
+     - 如果CatBoost高置信度支持（probability>0.60），提升为强信号
+     - 如果CatBoost中等置信度支持（0.50<probability≤0.60），提升为中等信号
+     - 如果CatBoost低置信度（probability≤0.50），降低为弱信号或观望
    - 标注符合"强买入信号"、"买入信号"、"观望信号"、"卖出信号"的股票
 
 2. **个股建议排序**：
-   - 优先级：强买入信号（三模型一致）> 买入信号（两模型一致）> 观望信号 > 卖出信号
-   - 在相同优先级内，按fused_probability排序
+   - 优先级：强买入信号 > 买入信号 > 观望信号 > 卖出信号
+   - 在相同优先级内，按probability排序
    - 对每个股票给出明确的操作建议：强烈买入、买入、持有、卖出、强烈卖出
 
 3. **综合推荐清单**：
@@ -1451,16 +1384,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 给出仓位控制建议（建议仓位百分比，总仓位45%-55%）
    - 给出止损位建议（单只股票最大亏损不超过-8%）
    
-   **特别要求 - 考虑融合模型不确定性**：
-   - 融合模型20天标准差约±{(model_accuracy['lgbm']['std'] + model_accuracy['gbdt']['std'] + model_accuracy['catboost']['std'])/3:.2%}（比单模型降低15-20%）
-   - 对于fused_probability在0.55-0.65之间的股票，建议仓位不超过2-3%
-   - 强买入信号（短期/中期一致且融合模型高置信度）建议仓位4-6%
-   - 对于一致性=33%（三模型不一致）的股票，建议观望，不进行交易
+   **特别要求 - 考虑CatBoost模型不确定性**：
+   - CatBoost模型20天标准差约±{model_accuracy['catboost']['std']:.2%}
+   - 对于probability在0.55-0.65之间的股票，建议仓位不超过2-3%
+   - 强买入信号（短期/中期一致且CatBoost高置信度）建议仓位4-6%
    - 总仓位控制在45%-55%
    - **必须设置止损位，单只股票最大亏损不超过-8%**
-   - **严格遵循"短期触发 + 中期确认 + 融合模型验证"原则**：只有短期和中期方向一致且融合模型验证时才行动
+   - **严格遵循"短期触发 + 中期确认 + CatBoost验证"原则**：只有短期和中期方向一致且CatBoost验证时才行动
    - 如果短期和中期建议冲突，优先选择观望，不进行交易
-   - 采用"三重确认"策略：短期、中期、融合模型三者一致时才重仓操作
+   - 采用"三重确认"策略：短期、中期、CatBoost三者一致时才重仓操作
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -1468,7 +1400,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+融合模型预测（fused_probability+一致性+置信度）+短期中期一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），融合模型预测上涨概率0.72（一致性100%，高置信度），LightGBM/GBDT/CatBoost三模型一致，短期中期方向一致（短期/中期一致买入，融合模型验证上涨），综合置信度高。注意融合模型当前准确率约{model_accuracy['lgbm']['accuracy']:.2%}（标准差约±{(model_accuracy['lgbm']['std'] + model_accuracy['gbdt']['std'] + model_accuracy['catboost']['std'])/3:.2%}），fused_probability在0.72附近实际准确率可能在{model_accuracy['lgbm']['accuracy']-model_accuracy['lgbm']['std']:.2%} ~ {model_accuracy['lgbm']['accuracy']+model_accuracy['lgbm']['std']:.2%}之间"]
+   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+CatBoost预测（probability+置信度）+短期中期一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测上涨概率0.72（高置信度），短期中期方向一致（短期/中期一致买入，CatBoost验证上涨），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -1655,16 +1587,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 一、机器学习预测结果（20天）
 
-### 融合模型（LightGBM + GBDT + CatBoost，加权平均）
+### CatBoost模型（20天预测）
+
+
+
 **模型准确率**：
-- LightGBM：{model_accuracy['lgbm']['accuracy']:.2%}（标准差±{model_accuracy['lgbm']['std']:.2%}）
-- GBDT：{model_accuracy['gbdt']['accuracy']:.2%}（标准差±{model_accuracy['gbdt']['std']:.2%}）
+
 - CatBoost：{model_accuracy['catboost']['accuracy']:.2%}（标准差±{model_accuracy['catboost']['std']:.2%}）
 
-**融合优势**：
-- 三模型融合可降低预测方差15-20%
-- 加权平均基于模型准确率自动分配权重
-- 模型一致性评估提升预测可信度
+
 
 {ml_predictions['ensemble']}
 
@@ -1727,32 +1658,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 检查该股票的**一致性≥67%**
 
 ### ✦ 持有策略
-- **融合概率 > 0.60** + **一致性≥67%** → 强烈持有
-- **0.50 < 融合概率 ≤ 0.60** + **一致性≥67%** → 观望持有
-- **大模型建议继续持有** → 继续持有
+- **CatBoost概率 > 0.60** + **大模型建议买入** → 强烈持有
+- **0.50 < CatBoost概率 ≤ 0.60** + **大模型建议买入** → 观望持有
+- **CatBoost概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
 
 ### ✦ 卖出策略
-- **融合概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
-- **一致性=33%**（三模型不一致）→ 降低仓位或观望
+- **CatBoost概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
 
 ### ✦ 强烈买入信号
 **强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
 - **股票代码和名称**：如"0700.HK 腾讯控股"
-- **推荐理由**：详细的分析，说明短期建议+中期建议+融合模型预测
+- **推荐理由**：详细的分析，说明短期建议+中期建议+CatBoost预测
 - **操作建议**：明确的买入/持有/卖出建议
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
 
-### ✦ 一致性
-**一致性**是指三个机器学习模型（LightGBM、GBDT、CatBoost）预测结果的一致程度：
-- **100% 一致**：三个模型预测相同（如都预测上涨）
-- **67% 一致**：三个模型中两个预测相同（如两个上涨，一个下跌）
-- **33% 一致**：三个模型预测都不同（如一个上涨、一个下跌、一个观望）
-
 ## 十、风险提示
 
 1. **模型不确定性**：
-   - ML 20天融合模型标准差为±{model_accuracy['lgbm']['std']:.2%}（LightGBM）/±{model_accuracy['gbdt']['std']:.2%}（GBDT）/±{model_accuracy['catboost']['std']:.2%}（CatBoost）
+   - ML 20天 CatBoost模型标准差为±{model_accuracy['catboost']['std']:.2%}
    - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
@@ -1764,13 +1688,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 3. **投资原则**：
    - 短期触发 + 中期确认 + ML验证 = 高置信度信号
    - 短期和中期冲突 = 观望（避免不确定性）
-   - 融合概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
+   - CatBoost概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
 ## 十一、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：LightGBM + GBDT + CatBoost（融合模型，加权平均）
+- ML预测：CatBoost（单模型）
 - 特征工程：2991个原始特征，500个精选特征（F-test+互信息混合方法）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
@@ -1781,9 +1705,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
-- 融合策略：加权平均（基于模型准确率分配权重）
+- 模型策略：CatBoost 单模型
 - 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）
-- 一致性评估：100%（三模型一致）、67%（两模型一致）、33%（三模型不一致）
+
 """
                 
                 # 如果有hsi_email.py指标，添加到数据源部分
