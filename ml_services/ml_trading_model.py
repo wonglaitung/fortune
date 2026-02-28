@@ -3987,12 +3987,51 @@ class EnsembleModel:
         self.catboost_model = CatBoostModel()
         self.fusion_method = fusion_method
         self.model_accuracies = {}
+        self.model_stds = {}  # 模型标准差（稳定性）
         self.horizon = 1
         self.dynamic_strategy = DynamicMarketStrategy()  # 初始化动态市场策略
 
     def load_model_accuracy(self):
-        self.advanced_strategy = AdvancedDynamicStrategy()  # 初始化高级动态策略
         """加载模型准确率"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                self.model_accuracies = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
+                }
+                logger.info(f"已加载模型准确率: {self.model_accuracies}")
+            else:
+                logger.warning(r"未找到准确率文件，使用默认值")
+                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+        except Exception as e:
+            logger.warning(f"加载准确率失败: {e}")
+            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+
+    def load_model_stds(self):
+        """加载模型稳定性数据（标准差）"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                self.model_stds = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('std', 0.05),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
+                }
+                logger.info(f"已加载模型稳定性数据: {self.model_stds}")
+            else:
+                logger.warning(r"未找到稳定性数据文件，使用默认值")
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+        except Exception as e:
+            logger.warning(f"加载稳定性数据失败: {e}")
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
         accuracy_file = 'data/model_accuracy.json'
         try:
             if os.path.exists(accuracy_file):
@@ -4045,10 +4084,12 @@ class EnsembleModel:
         else:
             logger.warning(f"CatBoost 模型文件不存在: {catboost_path}")
         
-        # 加载模型准确率
+        # 加载模型准确率和稳定性数据
         self.load_model_accuracy()
-        
+        self.load_model_stds()
+
         print("="*70)
+        logger.info("融合模型已加载（包含3个子模型和准确率）")
 
     def predict(self, code, predict_date=None):
         """融合预测
