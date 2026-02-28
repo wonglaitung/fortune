@@ -271,7 +271,7 @@ def main():
     parser.add_argument('--confidence-threshold', type=float, default=0.55,
                         help='置信度阈值')
     parser.add_argument('--fusion-method', type=str, default='weighted',
-                        choices=['average', 'weighted', 'voting'],
+                        choices=['average', 'weighted', 'voting', 'dynamic-market', 'advanced-dynamic'],
                         help='融合方法（仅用于融合模型）')
     parser.add_argument('--use-feature-selection', action='store_true',
                         help='使用特征选择')

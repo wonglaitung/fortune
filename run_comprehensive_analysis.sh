@@ -1,97 +1,71 @@
 #!/bin/bash
 
 # 综合分析自动化脚本
-# 0. 运行特征选择脚本，生成500个精选特征（优先使用模型重要性法）
+# 0. 运行特征选择脚本，生成500个精选特征（使用F-test方法）
 # 1. 调用hsi_email.py生成大模型建议（使用force参数）
-# 2. 训练20天模型（LightGBM、GBDT和CatBoost）
-# 3. 生成20天融合模型预测
+# 2. 训练CatBoost 20天模型
+# 3. 生成CatBoost单模型预测
 # 4. 调用comprehensive_analysis.py进行综合分析
 
 echo "=========================================="
-echo "🚀 综合分析自动化流程（使用融合模型）"
+echo "🚀 综合分析自动化流程（使用 CatBoost 单模型）"
 echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 
-# 步骤0: 运行特征选择脚本，生成500个精选特征（使用模型重要性法）
+# 步骤0: 运行特征选择脚本，生成500个精选特征（使用F-test方法）
 echo "=========================================="
-echo "📊 步骤 0/5: 运行特征选择（使用模型重要性法）"
+echo "📊 步骤 0/5: 运行特征选择（使用statistical方法）"
 echo "=========================================="
 echo ""
-python3 ml_services/feature_selection.py --method model --top-k 500 --horizon 20 --output-dir output
+python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤0失败: 模型重要性法特征选择失败，尝试统计方法..."
-    # 如果模型重要性法失败，回退到统计方法
-    python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
-    if [ $? -ne 0 ]; then
-        echo "❌ 步骤0失败: 统计方法特征选择也失败"
-        exit 1
-    fi
-    echo "⚠️  步骤0完成: 使用统计方法（模型重要性法失败）"
-else
-    echo "✅ 步骤0完成: 模型重要性法特征选择完成，已生成500个精选特征"
-fi
-echo ""
-
-# 步骤1: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
-echo "=========================================="
-echo "📊 步骤 1/5: 生成大模型建议"
-echo "=========================================="
-echo ""
-python3 hsi_email.py --force --no-email
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤1失败: 生成大模型建议失败"
+    echo "❌ 步骤0失败: F-test特征选择失败"
     exit 1
 fi
-echo "✅ 步骤1完成: 大模型建议已生成"
+echo "✅ 步骤0完成: statistical特征选择完成，已生成500个精选特征"
 echo ""
 
-# 步骤2: 训练20天模型（LightGBM、GBDT和CatBoost）
+# 步骤1: 训练 CatBoost 20天模型
 echo "=========================================="
-echo "📊 步骤 2/5: 训练20天模型（LightGBM、GBDT和CatBoost）"
+echo "📊 步骤 1/5: 训练 CatBoost 20天模型"
 echo "=========================================="
 echo ""
-echo "训练 LightGBM 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type lgbm --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤2失败: 训练20天LightGBM模型失败"
-    exit 1
-fi
-echo "✅ LightGBM模型训练完成"
-echo ""
-
-echo "训练 GBDT 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type gbdt --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤2失败: 训练20天GBDT模型失败"
-    exit 1
-fi
-echo "✅ GBDT模型训练完成"
-echo ""
-
-echo "训练 CatBoost 模型..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --model-path data/ml_trading_model.pkl --use-feature-selection --skip-feature-selection
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤2失败: 训练20天CatBoost模型失败"
+    echo "❌ 步骤1失败: 训练20天CatBoost模型失败"
     exit 1
 fi
 echo "✅ CatBoost模型训练完成"
 echo ""
 
-echo "✅ 步骤2完成: 20天模型训练完成（使用500个特征）"
+echo "✅ 步骤1完成: CatBoost模型训练完成（使用500个特征）"
 echo ""
 
-# 步骤3: 生成20天融合模型预测
+# 步骤2: 生成 CatBoost 单模型预测
 echo "=========================================="
-echo "📊 步骤 3/5: 生成20天融合模型预测（加权平均）"
+echo "📊 步骤 2/5: 生成 CatBoost 单模型预测"
 echo "=========================================="
 echo ""
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type ensemble --fusion-method weighted --model-path data/ml_trading_model.pkl
+python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost
 if [ $? -ne 0 ]; then
-    echo "❌ 步骤3失败: 生成20天融合模型预测失败"
+    echo "❌ 步骤2失败: 生成 CatBoost 预测失败"
     exit 1
 fi
-echo "✅ 融合模型预测完成"
+echo "✅ CatBoost 预测完成"
+echo ""
+
+# 步骤3: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
+echo "=========================================="
+echo "📊 步骤 3/5: 生成大模型建议"
+echo "=========================================="
+echo ""
+python3 hsi_email.py --force --no-email
+if [ $? -ne 0 ]; then
+    echo "❌ 步骤3失败: 生成大模型建议失败"
+    exit 1
+fi
+echo "✅ 步骤3完成: 大模型建议已生成"
 echo ""
 
 # 步骤4: 调用comprehensive_analysis.py进行综合分析
@@ -99,7 +73,7 @@ echo "=========================================="
 echo "📊 步骤 4/5: 综合分析"
 echo "=========================================="
 echo ""
-# 获取步骤1生成的大模型建议文件（使用最新日期）
+# 获取步骤3生成的大模型建议文件（使用最新日期）
 LLM_FILE=$(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)
 if [ -z "$LLM_FILE" ]; then
     echo "⚠️  警告: 未找到大模型建议文件，跳过综合分析"
@@ -130,8 +104,7 @@ if [ -n "$FEATURE_FILE" ]; then
     echo "    * $FEATURE_FILE (统计方法)"
 fi
 echo "  - 大模型建议: $(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)"
-echo "  - ML预测结果: $(ls -t data/ml_predictions_20d_*.txt 2>/dev/null | head -1)"
-echo "  - 融合预测结果: $(ls -t data/ml_trading_model_ensemble_predictions_20d.csv 2>/dev/null | head -1)"
+echo "  - ML预测结果: $(ls -t data/ml_trading_model_catboost_predictions_20d.csv 2>/dev/null | head -1)"
 echo "  - 综合买卖建议: $(ls -t data/comprehensive_recommendations_*.txt 2>/dev/null | head -1)"
 echo ""
 echo "💡 提示: 查看综合买卖建议了解最终投资建议"
