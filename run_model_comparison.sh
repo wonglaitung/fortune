@@ -279,15 +279,27 @@ print_info "找到 ${#FUSION_ARRAY[@]} 个融合模型文件"
 # 为每个融合模型找到对应的文件
 declare -A FUSION_FILE_MAP
 for fusion in "${FUSION_MODELS[@]}"; do
-    # 从文件名中提取融合方法（ensemble_weighted -> weighted）
+    # 从变量名中提取融合方法（ensemble_weighted -> weighted）
     FUSION_METHOD=$(echo "$fusion" | sed 's/ensemble_//')
-    
-    # 查找包含该融合方法的最新文件
-    LATEST_FUSION_FILE=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*"$FUSION_METHOD"*".txt" 2>/dev/null | head -1)
-    
-    if [ -n "$LATEST_FUSION_FILE" ]; then
-        FUSION_FILE_MAP[$fusion]=$LATEST_FUSION_FILE
-        print_info "  - ${fusion^^}: $LATEST_FUSION_FILE"
+
+    # 查找包含该融合方法的最新JSON文件
+    LATEST_FUSION_JSON=$(ls -t "$OUTPUT_DIR/batch_backtest_ensemble_${FUSION_METHOD}_${HORIZON}d_"*.json 2>/dev/null | head -1)
+
+    if [ -n "$LATEST_FUSION_JSON" ]; then
+        # 从JSON文件名中提取时间戳，构建对应的summary文件名
+        TIMESTAMP=$(basename "$LATEST_FUSION_JSON" | grep -oP '20\d{6}_\d{6}')
+        if [ -n "$TIMESTAMP" ]; then
+            # 使用JSON文件对应的时间戳来查找summary文件
+            SUMMARY_TIMESTAMP=$(basename "$LATEST_FUSION_JSON" | sed "s/batch_backtest_ensemble_${FUSION_METHOD}_${HORIZON}d_//; s/.json//")
+            LATEST_SUMMARY="$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_${SUMMARY_TIMESTAMP}.txt"
+
+            if [ -f "$LATEST_SUMMARY" ]; then
+                FUSION_FILE_MAP[$fusion]=$LATEST_SUMMARY
+                print_info "  - ${fusion^^}: $LATEST_SUMMARY (from JSON: $LATEST_FUSION_JSON)"
+            else
+                print_warning "  - ${fusion^^}: 找到JSON文件但未找到对应的summary文件"
+            fi
+        fi
     fi
 done
 
