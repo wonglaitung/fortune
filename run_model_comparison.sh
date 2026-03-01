@@ -241,16 +241,21 @@ echo "|------|-------------|-----------|---------|---------|------|-------------
 for model in "${BASE_MODELS[@]}"; do
     # 查找最新的回测结果文件
     LATEST_SUMMARY=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_${model}_${HORIZON}d_"*.txt 2>/dev/null | head -1)
-    
+
     if [ -n "$LATEST_SUMMARY" ]; then
         # 提取关键指标
         TOTAL_RETURN=$(grep "平均总收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        ANNUAL_RETURN=$(grep "年化收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=\))' | head -1)
+
+        # 从"收益分布"部分提取年化收益率中位数
+        ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+
+        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+' | head -1)
         MAX_DRAWDOWN=$(grep "平均最大回撤" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=%)' | head -1)
         WIN_RATE=$(grep "平均胜率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        EXCELLENT=$(grep "优秀股票" "$LATEST_SUMMARY" | grep -oP '\d+(?=只)' | head -1)
-        
+
+        # 统计优秀股票数量（收益率 > 50%）
+        EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
+
         echo "| ${model^^} | ${TOTAL_RETURN}% | ${ANNUAL_RETURN}% | ${SHARPE} | ${MAX_DRAWDOWN} | ${WIN_RATE}% | ${EXCELLENT} 只 |" >> "$REPORT_FILE"
     else
         echo "| ${model^^} | N/A | N/A | N/A | N/A | N/A | N/A |" >> "$REPORT_FILE"
@@ -263,20 +268,33 @@ echo "" >> "$REPORT_FILE"
 echo "| 模型 | 平均总收益率 | 年化收益率 | 夏普比率 | 最大回撤 | 胜率 | 优秀股票数量 |" >> "$REPORT_FILE"
 echo "|------|-------------|-----------|---------|---------|------|-------------|" >> "$REPORT_FILE"
 
+# 获取最新的5个融合模型文件（按时间倒序）
+FUSION_FILES=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*.txt 2>/dev/null | head -5)
+FUSION_ARRAY=($FUSION_FILES)
+
+# 按顺序分配给融合模型
+INDEX=0
 for fusion in "${FUSION_MODELS[@]}"; do
-    # 查找最新的回测结果文件
-    LATEST_SUMMARY=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_${fusion}_${HORIZON}d_"*.txt 2>/dev/null | head -1)
-    
-    if [ -n "$LATEST_SUMMARY" ]; then
+    if [ $INDEX -lt ${#FUSION_ARRAY[@]} ]; then
+        LATEST_SUMMARY="${FUSION_ARRAY[$INDEX]}"
+
         # 提取关键指标
         TOTAL_RETURN=$(grep "平均总收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        ANNUAL_RETURN=$(grep "年化收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=\))' | head -1)
+
+        # 从"收益分布"部分提取年化收益率中位数
+        ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+
+        # 夏普比率没有百分号
+        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+' | head -1)
         MAX_DRAWDOWN=$(grep "平均最大回撤" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=%)' | head -1)
         WIN_RATE=$(grep "平均胜率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        EXCELLENT=$(grep "优秀股票" "$LATEST_SUMMARY" | grep -oP '\d+(?=只)' | head -1)
-        
+
+        # 统计优秀股票数量（收益率 > 50%）
+        EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
+
         echo "| ${fusion^^} | ${TOTAL_RETURN}% | ${ANNUAL_RETURN}% | ${SHARPE} | ${MAX_DRAWDOWN} | ${WIN_RATE}% | ${EXCELLENT} 只 |" >> "$REPORT_FILE"
+
+        ((INDEX++))
     else
         echo "| ${fusion^^} | N/A | N/A | N/A | N/A | N/A | N/A |" >> "$REPORT_FILE"
     fi
@@ -293,13 +311,49 @@ ALL_MODELS=("${BASE_MODELS[@]}" "${FUSION_MODELS[@]}")
 RANK_DATA=()
 
 for model in "${ALL_MODELS[@]}"; do
-    LATEST_SUMMARY=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_${model}_${HORIZON}d_"*.txt 2>/dev/null | head -1)
-    
+    if [[ "$model" == ensemble_* ]]; then
+        # 融合模型：跳过，单独处理
+        continue
+    else
+        # 基本模型文件查找
+        LATEST_SUMMARY=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_${model}_${HORIZON}d_"*.txt 2>/dev/null | head -1)
+    fi
+
     if [ -n "$LATEST_SUMMARY" ]; then
-        ANNUAL_RETURN=$(grep "年化收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=\))' | head -1)
-        EXCELLENT=$(grep "优秀股票" "$LATEST_SUMMARY" | grep -oP '\d+(?=只)' | head -1)
-        RANK_DATA+=("$ANNUAL_RETURN|$SHARPE|$EXCELLENT|$model")
+        # 从"收益分布"部分提取年化收益率中位数
+        ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+
+        # 统计优秀股票数量（收益率 > 50%）
+        EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
+
+        if [ -n "$ANNUAL_RETURN" ]; then
+            RANK_DATA+=("$ANNUAL_RETURN|$SHARPE|$EXCELLENT|$model")
+        fi
+    fi
+done
+
+# 添加融合模型数据
+FUSION_FILES=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*.txt 2>/dev/null | head -5)
+FUSION_ARRAY=($FUSION_FILES)
+
+INDEX=0
+for fusion in "${FUSION_MODELS[@]}"; do
+    if [ $INDEX -lt ${#FUSION_ARRAY[@]} ]; then
+        LATEST_SUMMARY="${FUSION_ARRAY[$INDEX]}"
+
+        # 从"收益分布"部分提取年化收益率中位数
+        ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+
+        # 统计优秀股票数量（收益率 > 50%）
+        EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
+
+        if [ -n "$ANNUAL_RETURN" ]; then
+            RANK_DATA+=("$ANNUAL_RETURN|$SHARPE|$EXCELLENT|$fusion")
+        fi
+
+        ((INDEX++))
     fi
 done
 
@@ -326,9 +380,15 @@ echo "## 四、推荐模型" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
 # 找出最佳模型
-BEST_MODEL=$(head -1 <<<"$SORTED_MODELS" | cut -d'|' -f4)
-BEST_RETURN=$(head -1 <<<"$SORTED_MODELS" | cut -d'|' -f1)
-BEST_SHARPE=$(head -1 <<<"$SORTED_MODELS" | cut -d'|' -f2)
+if [ ${#RANK_DATA[@]} -gt 0 ]; then
+    BEST_MODEL=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f4)
+    BEST_RETURN=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f1)
+    BEST_SHARPE=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f2)
+else
+    BEST_MODEL=""
+    BEST_RETURN=""
+    BEST_SHARPE=""
+fi
 
 echo "**最佳模型**: ${BEST_MODEL^^}" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
