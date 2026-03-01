@@ -263,6 +263,9 @@ def send_email(to, subject, text, html=None):
 # 导入腾讯财经接口
 from data_services.tencent_finance import get_hsi_data_tencent
 
+# 导入A50期货替代指标获取
+from data_services.a50_replacement_hist import get_a50_replacement_with_history
+
 # 导入技术分析工具
 from data_services.technical_analysis import TechnicalAnalyzer
 
@@ -355,34 +358,20 @@ def get_overseas_market_data():
                 'volume': 0
             }
         
-        # 获取A50期货数据 - 尝试不同的可能代码
-        a50_symbols = ["CHI50.MI", "05101.HK", "FU50.CFE"]  # 尝试不同的A50期货代码
-        a50_found = False
-        
-        for symbol in a50_symbols:
-            try:
-                a50_futures = yf.Ticker(symbol)
-                hist = a50_futures.history(period="5d")
-                if not hist.empty:
-                    latest = hist.iloc[-1]
-                    prev_close = hist.iloc[-2]['Close'] if len(hist) > 1 else latest['Close']
-                    change_pct = ((latest['Close'] - prev_close) / prev_close) * 100
-                    overseas_data['A50_FUTURES'] = {
-                        'name': f'富时中国A50指数期货({symbol})',
-                        'price': latest['Close'],
-                        'change_pct': change_pct,
-                        'volume': latest['Volume']
-                    }
-                    print(f"✅ A50期货({symbol}): {latest['Close']:.2f}, 涨跌: {change_pct:+.2f}%")
-                    a50_found = True
-                    break
-                else:
-                    print(f"⚠️ 无法获取 {symbol} 数据")
-            except Exception as e:
-                print(f"⚠️ 获取 {symbol} 数据失败: {e}")
-        
-        if not a50_found:
-            print(f"⚠️ 无法获取 A50期货 数据，所有尝试的代码均失败")
+        # 获取A50期货替代指标（上证50指数）
+        # 注意：由于无法直接获取A50期货指数点数，使用上证50指数作为替代指标
+        # 上证50指数与A50期货高度相关，是可靠的替代方案
+        a50_data = get_a50_replacement_with_history()
+
+        if a50_data and a50_data['price'] > 0:
+            overseas_data['A50_FUTURES'] = {
+                'name': a50_data['name'],
+                'price': a50_data['price'],
+                'change_pct': a50_data['change_pct'],
+                'volume': a50_data['volume']
+            }
+        else:
+            print("❌ 无法获取 A50期货替代指标 数据")
             overseas_data['A50_FUTURES'] = {
                 'name': '富时中国A50指数期货',
                 'price': 0,
