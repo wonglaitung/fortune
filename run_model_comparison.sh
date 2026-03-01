@@ -232,6 +232,8 @@ echo "" >> "$REPORT_FILE"
 
 # 提取所有回测结果
 print_info "提取回测结果..."
+print_info "正在生成汇总对比报告..."
+print_info "正在生成汇总对比报告..."
 
 echo "## 一、基本模型性能对比" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
@@ -268,34 +270,61 @@ echo "" >> "$REPORT_FILE"
 echo "| 模型 | 平均总收益率 | 年化收益率 | 夏普比率 | 最大回撤 | 胜率 | 优秀股票数量 |" >> "$REPORT_FILE"
 echo "|------|-------------|-----------|---------|---------|------|-------------|" >> "$REPORT_FILE"
 
-# 获取最新的5个融合模型文件（按时间倒序）
-FUSION_FILES=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*.txt 2>/dev/null | head -5)
+# 获取所有融合模型文件（按时间倒序）
+print_info "查找融合模型文件..."
+FUSION_FILES=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*.txt 2>/dev/null)
 FUSION_ARRAY=($FUSION_FILES)
+print_info "找到 ${#FUSION_ARRAY[@]} 个融合模型文件"
 
-# 按顺序分配给融合模型
-INDEX=0
+# 为每个融合模型找到对应的文件
+declare -A FUSION_FILE_MAP
 for fusion in "${FUSION_MODELS[@]}"; do
-    if [ $INDEX -lt ${#FUSION_ARRAY[@]} ]; then
-        LATEST_SUMMARY="${FUSION_ARRAY[$INDEX]}"
+    # 从文件名中提取融合方法（ensemble_weighted -> weighted）
+    FUSION_METHOD=$(echo "$fusion" | sed 's/ensemble_//')
+    
+    # 查找包含该融合方法的最新文件
+    LATEST_FUSION_FILE=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*"$FUSION_METHOD"*".txt" 2>/dev/null | head -1)
+    
+    if [ -n "$LATEST_FUSION_FILE" ]; then
+        FUSION_FILE_MAP[$fusion]=$LATEST_FUSION_FILE
+        print_info "  - ${fusion^^}: $LATEST_FUSION_FILE"
+    fi
+done
+
+# 按顺序处理融合模型
+for fusion in "${FUSION_MODELS[@]}"; do
+    print_info "处理 ${fusion^^} 模型..."
+    
+    if [[ -v FUSION_FILE_MAP[$fusion] ]]; then
+        LATEST_SUMMARY="${FUSION_FILE_MAP[$fusion]}"
+        print_info "  - 使用文件: $LATEST_SUMMARY"
 
         # 提取关键指标
         TOTAL_RETURN=$(grep "平均总收益率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        print_info "  - 平均总收益率: ${TOTAL_RETURN}%"
 
         # 从"收益分布"部分提取年化收益率中位数
         ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        print_info "  - 年化收益率: ${ANNUAL_RETURN}%"
 
         # 夏普比率没有百分号
         SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+' | head -1)
+        print_info "  - 夏普比率: ${SHARPE}"
+        
         MAX_DRAWDOWN=$(grep "平均最大回撤" "$LATEST_SUMMARY" | grep -oP '[-+]?\d+\.\d+(?=%)' | head -1)
+        print_info "  - 最大回撤: ${MAX_DRAWDOWN}"
+        
         WIN_RATE=$(grep "平均胜率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        print_info "  - 胜率: ${WIN_RATE}%"
 
         # 统计优秀股票数量（收益率 > 50%）
         EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
+        print_info "  - 优秀股票数量: ${EXCELLENT} 只"
 
         echo "| ${fusion^^} | ${TOTAL_RETURN}% | ${ANNUAL_RETURN}% | ${SHARPE} | ${MAX_DRAWDOWN} | ${WIN_RATE}% | ${EXCELLENT} 只 |" >> "$REPORT_FILE"
-
-        ((INDEX++))
+        print_success "${fusion^^} 模型数据提取完成"
     else
+        print_warning "未找到 ${fusion^^} 模型回测结果文件"
         echo "| ${fusion^^} | N/A | N/A | N/A | N/A | N/A | N/A |" >> "$REPORT_FILE"
     fi
 done
@@ -334,26 +363,26 @@ for model in "${ALL_MODELS[@]}"; do
 done
 
 # 添加融合模型数据
-FUSION_FILES=$(ls -t "$OUTPUT_DIR/batch_backtest_summary_ensemble_${HORIZON}d_"*.txt 2>/dev/null | head -5)
-FUSION_ARRAY=($FUSION_FILES)
-
-INDEX=0
+print_info "添加融合模型数据..."
 for fusion in "${FUSION_MODELS[@]}"; do
-    if [ $INDEX -lt ${#FUSION_ARRAY[@]} ]; then
-        LATEST_SUMMARY="${FUSION_ARRAY[$INDEX]}"
+    print_info "收集 ${fusion^^} 模型数据..."
+    
+    if [[ -v FUSION_FILE_MAP[$fusion] ]]; then
+        LATEST_SUMMARY="${FUSION_FILE_MAP[$fusion]}"
 
         # 从"收益分布"部分提取年化收益率中位数
         ANNUAL_RETURN=$(grep "收益率中位数" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
-        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+(?=%)' | head -1)
+        SHARPE=$(grep "平均夏普比率" "$LATEST_SUMMARY" | grep -oP '\d+\.\d+' | head -1)
 
         # 统计优秀股票数量（收益率 > 50%）
         EXCELLENT=$(grep "总收益率:" "$LATEST_SUMMARY" | awk -F': ' '{if ($2+0 > 50) count++} END {print count+0}')
 
         if [ -n "$ANNUAL_RETURN" ]; then
+            print_info "  - 添加到排名数据: ${ANNUAL_RETURN}% | ${SHARPE} | ${EXCELLENT} | ${fusion}"
             RANK_DATA+=("$ANNUAL_RETURN|$SHARPE|$EXCELLENT|$fusion")
         fi
-
-        ((INDEX++))
+    else
+        print_warning "未找到 ${fusion^^} 模型数据"
     fi
 done
 
@@ -371,8 +400,10 @@ if [ ${#RANK_DATA[@]} -gt 0 ]; then
     
     # 清理临时文件
     rm -f "$TEMP_SORT_FILE"
+    print_success "排名数据已生成"
 else
     echo "| - | 无有效数据 | - | - | - |" >> "$REPORT_FILE"
+    print_warning "没有找到有效的回测数据"
 fi
 
 echo "" >> "$REPORT_FILE"
@@ -381,13 +412,16 @@ echo "" >> "$REPORT_FILE"
 
 # 找出最佳模型
 if [ ${#RANK_DATA[@]} -gt 0 ]; then
+    print_info "正在分析最佳模型..."
     BEST_MODEL=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f4)
     BEST_RETURN=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f1)
     BEST_SHARPE=$(printf '%s\n' "${RANK_DATA[@]}" | sort -t'|' -k1 -nr | head -1 | cut -d'|' -f2)
+    print_success "最佳模型分析完成: ${BEST_MODEL^^}"
 else
     BEST_MODEL=""
     BEST_RETURN=""
     BEST_SHARPE=""
+    print_warning "没有找到有效的回测数据，无法确定最佳模型"
 fi
 
 echo "**最佳模型**: ${BEST_MODEL^^}" >> "$REPORT_FILE"
