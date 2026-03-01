@@ -3987,12 +3987,51 @@ class EnsembleModel:
         self.catboost_model = CatBoostModel()
         self.fusion_method = fusion_method
         self.model_accuracies = {}
+        self.model_stds = {}  # 模型标准差（稳定性）
         self.horizon = 1
         self.dynamic_strategy = DynamicMarketStrategy()  # 初始化动态市场策略
 
     def load_model_accuracy(self):
-        self.advanced_strategy = AdvancedDynamicStrategy()  # 初始化高级动态策略
         """加载模型准确率"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                self.model_accuracies = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
+                }
+                logger.info(f"已加载模型准确率: {self.model_accuracies}")
+            else:
+                logger.warning(r"未找到准确率文件，使用默认值")
+                self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+        except Exception as e:
+            logger.warning(f"加载准确率失败: {e}")
+            self.model_accuracies = {'lgbm': 0.5, 'gbdt': 0.5, 'catboost': 0.5}
+
+    def load_model_stds(self):
+        """加载模型稳定性数据（标准差）"""
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                self.model_stds = {
+                    'lgbm': data.get(f'lgbm_{self.horizon}d', {}).get('std', 0.05),
+                    'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
+                    'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
+                }
+                logger.info(f"已加载模型稳定性数据: {self.model_stds}")
+            else:
+                logger.warning(r"未找到稳定性数据文件，使用默认值")
+                self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
+        except Exception as e:
+            logger.warning(f"加载稳定性数据失败: {e}")
+            self.model_stds = {'lgbm': 0.05, 'gbdt': 0.05, 'catboost': 0.02}
         accuracy_file = 'data/model_accuracy.json'
         try:
             if os.path.exists(accuracy_file):
@@ -4045,10 +4084,12 @@ class EnsembleModel:
         else:
             logger.warning(f"CatBoost 模型文件不存在: {catboost_path}")
         
-        # 加载模型准确率
+        # 加载模型准确率和稳定性数据
         self.load_model_accuracy()
-        
+        self.load_model_stds()
+
         print("="*70)
+        logger.info("融合模型已加载（包含3个子模型和准确率）")
 
     def predict(self, code, predict_date=None):
         """融合预测
@@ -4438,46 +4479,93 @@ def main():
         run_feature_selection = args.use_feature_selection and not args.skip_feature_selection
         
         if ensemble_model:
-            # 融合模型需要训练三个子模型
+            # 融合模型需要三个子模型
             print("\n" + "=" * 70)
-            print("🎭 训练融合模型的三个子模型")
+            print("🎭 准备融合模型的三个子模型")
             logger.info("=" * 70)
             
-            # 训练 LightGBM 模型
-            print("\n📊 训练 LightGBM 模型...")
-            lgbm_model = LightGBMModel()
-            lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+            # 检查子模型文件是否存在
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
-            lgbm_model.save_model(lgbm_model_path)
-            lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
-            lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
-            logger.info(f"LightGBM 模型已保存到 {lgbm_model_path}")
-            logger.info(f"特征重要性已保存到 {lgbm_importance_path}")
-            
-            # 训练 GBDT 模型
-            print("\n📊 训练 GBDT 模型...")
-            gbdt_model = GBDTModel()
-            gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
-            gbdt_model.save_model(gbdt_model_path)
-            gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
-            gbdt_feature_importance.to_csv(gbdt_importance_path, index=False)
-            logger.info(f"GBDT 模型已保存到 {gbdt_model_path}")
-            logger.info(f"特征重要性已保存到 {gbdt_importance_path}")
-            
-            # 训练 CatBoost 模型
-            print("\n📊 训练 CatBoost 模型...")
-            catboost_model = CatBoostModel()
-            catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
-            catboost_model.save_model(catboost_model_path)
-            catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
-            catboost_feature_importance.to_csv(catboost_importance_path, index=False)
-            logger.info(f"CatBoost 模型已保存到 {catboost_model_path}")
-            logger.info(f"特征重要性已保存到 {catboost_importance_path}")
+            
+            all_submodels_exist = os.path.exists(lgbm_model_path) and os.path.exists(gbdt_model_path) and os.path.exists(catboost_model_path)
+            
+            if all_submodels_exist:
+                print("\n✅ 所有子模型已存在，直接加载")
+                logger.info("所有子模型已存在，直接加载")
+                
+                # 加载 LightGBM 模型
+                print("\n📊 加载 LightGBM 模型...")
+                lgbm_model = LightGBMModel()
+                lgbm_model.load_model(lgbm_model_path)
+                logger.info(f"LightGBM 模型已从 {lgbm_model_path} 加载")
+                
+                # 加载 GBDT 模型
+                print("\n📊 加载 GBDT 模型...")
+                gbdt_model = GBDTModel()
+                gbdt_model.load_model(gbdt_model_path)
+                logger.info(f"GBDT 模型已从 {gbdt_model_path} 加载")
+                
+                # 加载 CatBoost 模型
+                print("\n📊 加载 CatBoost 模型...")
+                catboost_model = CatBoostModel()
+                catboost_model.load_model(catboost_model_path)
+                logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
+            else:
+                print("\n⚠️ 部分子模型不存在，开始训练缺失的子模型")
+                logger.info("部分子模型不存在，开始训练缺失的子模型")
+                
+                # 训练或加载 LightGBM 模型
+                print("\n📊 处理 LightGBM 模型...")
+                lgbm_model = LightGBMModel()
+                if os.path.exists(lgbm_model_path):
+                    print(f"  ✅ LightGBM 模型已存在，直接加载")
+                    lgbm_model.load_model(lgbm_model_path)
+                    logger.info(f"LightGBM 模型已从 {lgbm_model_path} 加载")
+                else:
+                    print(f"  ⚠️ LightGBM 模型不存在，开始训练")
+                    lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    lgbm_model.save_model(lgbm_model_path)
+                    lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
+                    lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
+                    logger.info(f"LightGBM 模型已保存到 {lgbm_model_path}")
+                    logger.info(f"特征重要性已保存到 {lgbm_importance_path}")
+                
+                # 训练或加载 GBDT 模型
+                print("\n📊 处理 GBDT 模型...")
+                gbdt_model = GBDTModel()
+                if os.path.exists(gbdt_model_path):
+                    print(f"  ✅ GBDT 模型已存在，直接加载")
+                    gbdt_model.load_model(gbdt_model_path)
+                    logger.info(f"GBDT 模型已从 {gbdt_model_path} 加载")
+                else:
+                    print(f"  ⚠️ GBDT 模型不存在，开始训练")
+                    gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    gbdt_model.save_model(gbdt_model_path)
+                    gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
+                    gbdt_feature_importance.to_csv(gbdt_importance_path, index=False)
+                    logger.info(f"GBDT 模型已保存到 {gbdt_model_path}")
+                    logger.info(f"特征重要性已保存到 {gbdt_importance_path}")
+                
+                # 训练或加载 CatBoost 模型
+                print("\n📊 处理 CatBoost 模型...")
+                catboost_model = CatBoostModel()
+                if os.path.exists(catboost_model_path):
+                    print(f"  ✅ CatBoost 模型已存在，直接加载")
+                    catboost_model.load_model(catboost_model_path)
+                    logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
+                else:
+                    print(f"  ⚠️ CatBoost 模型不存在，开始训练")
+                    catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    catboost_model.save_model(catboost_model_path)
+                    catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
+                    catboost_feature_importance.to_csv(catboost_importance_path, index=False)
+                    logger.info(f"CatBoost 模型已保存到 {catboost_model_path}")
+                    logger.info(f"特征重要性已保存到 {catboost_importance_path}")
             
             print("\n" + "=" * 70)
-            logger.info(r"融合模型的所有子模型训练完成！")
+            logger.info(r"融合模型的所有子模型已就绪！")
             logger.info("=" * 70)
         elif lgbm_model:
             feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
