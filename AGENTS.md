@@ -24,12 +24,12 @@
 - 📈 验证交易策略的有效性
 - 💰 获取股息信息和基本面数据
 - 📧 自动邮件通知重要信息
-- 🎯 获取每日综合买卖建议（整合大模型和ML预测）
+- 🎯 获取每日综合买卖建议（整合大模型和CatBoost预测）
 - 🔄 批量回测所有股票，全面评估模型表现
 - 📊 集成实时技术指标（来自 hsi_email.py）
 - 📈 展示最近48小时模拟交易记录
-- 📊 **恒生指数涨跌预测**：基于特征重要性的加权评分模型（新增 hsi_prediction.py）
-- 🔄 **LSTM模型对比实验**：验证时序模型在股价预测上的表现（新增 lstm_experiment.py）
+- 📊 **恒生指数涨跌预测**：基于特征重要性的加权评分模型（hsi_prediction.py）
+- 🔄 **模型对比回测脚本**：定期回测多种模型并生成汇总对比报告（run_model_comparison.sh）⭐ 2026-03-01新增
 - 📊 **F1分数计算**：新增F1分数评估模型性能
 
 ## 重要警告
@@ -54,7 +54,7 @@
 > **🔴 CatBoost 1天模型存在严重过拟合风险，不推荐使用**
 >
 > **问题描述**：
-> - CatBoost 1天模型准确率65.10%（±5.63%）（来自model_accuracy.json）
+> - CatBoost 1天模型准确率65.10%（±5.63%）
 > - 标准偏差±5.63%过高，表明模型在不同fold上表现不稳定
 > - 准确率远高于其他模型的1天准确率（~53%）
 > - 准确率甚至高于CatBoost 5天（63.96%）和20天（60.94%），违反一般规律
@@ -80,28 +80,33 @@
 > - CatBoost 5天：⭐⭐⭐（中等可信度）
 > - **CatBoost 1天：⭐（低可信度，不推荐）**
 
-### 融合模型弃用警告（2026-02-28）
-> **🔴 融合模型已弃用，改用 CatBoost 单模型**
+### 融合模型性能警告（2026-03-01）
+> **🔴 融合模型表现不如CatBoost单模型，建议优先使用CatBoost单模型**
 >
-> **回测结果对比**（置信度0.55，28只股票）：
-> - CatBoost 单模型：平均收益率 238.76%，夏普比率 1.51，胜率 32.81%
-> - 融合模型（加权平均）：平均收益率 -4.72%，夏普比率 -0.05，胜率 29.20%
+> **最新回测结果**（2026-03-01，置信度0.55，28只股票）：
+> - **CatBoost单模型**：年化收益率 79.54%，夏普比率 1.14，胜率 30.96%，优秀股票 20/28（71%）
+> - 融合模型（加权平均）：年化收益率 3.16%，夏普比率 0.32，胜率 22.75%，优秀股票 2/28（7%）
 >
 > **根本原因：信号稀释问题**
-> - CatBoost 单模型表现优异（24只股票收益率>50%）
+> - CatBoost 单模型识别出高质量的强信号（真实可交易信号）
+> - GBDT/LightGBM 识别出低质量的弱信号（噪声）
 > - 融合模型将 CatBoost 的强信号与 GBDT/LightGBM 的弱信号混合
 > - 导致强信号被稀释，整体表现大幅下降
 >
 > **验证结果**：
-> - ✅ DynamicMarketStrategy 测试：收益率 0.50%（失败）
-> - ✅ AdvancedDynamicStrategy 测试：收益率 -0.29%（失败）
-> - ✅ 结论：所有融合方法均失败，CatBoost 单模型最优
+> - ✅ DynamicMarketStrategy 测试：收益率 2.40%（失败）
+> - ✅ AdvancedDynamicStrategy 测试：收益率 2.40%（失败）
+> - ✅ 所有融合方法均不如CatBoost单模型
 >
-> **模型可信度评估**：
-> - CatBoost 20天单模型：⭐⭐⭐⭐⭐（高可信度）
-> - 融合模型（加权平均）：⭐（低可信度，已弃用）
-> - 融合模型（动态市场）：⭐（低可信度，已弃用）
-> - 融合模型（高级动态）：⭐（低可信度，已弃用）
+> **模型推荐**：
+> - ⭐⭐⭐⭐⭐ **CatBoost 20天单模型**（高可信度，推荐使用）
+> - ⭐ 融合模型（加权平均）：低可信度，表现不佳
+> - ⭐ 融合模型（动态市场）：低可信度，表现不佳
+> - ⭐ 融合模型（高级动态）：低可信度，表现不佳
+>
+> **使用建议**：
+> - 优先使用 CatBoost 单模型进行预测和回测
+> - 融合模型仅用于对比研究，不建议用于实际交易
 
 ## 编码规范
 
@@ -132,8 +137,8 @@
 │   ├── 港股IPO信息获取器 (hk_ipo_aastocks.py)
 │   ├── 黄金市场分析器 (gold_analyzer.py)
 │   ├── 美股市场数据获取器 (ml_services/us_market_data.py)
-│   ├── 恒生指数涨跌预测器 (hsi_prediction.py) ⭐ 新增
-│   ├── LSTM模型对比实验器 (ml_services/lstm_experiment.py) ⭐ 2026-02-26新增
+│   ├── 恒生指数涨跌预测器 (hsi_prediction.py)
+│   ├── LSTM模型对比实验器 (ml_services/lstm_experiment.py) ⚠️ 实验性
 │   └── 腾讯财经数据接口 (data_services/tencent_finance.py)
 ├── 数据服务层 (data_services/)
 │   ├── 基本面数据获取器 (fundamental_data.py)
@@ -163,12 +168,17 @@
 │   └── 机器学习模块 (ml_services/)
 │       ├── 机器学习交易模型 (ml_trading_model.py)
 │       │   ├── LightGBMModel（LightGBM模型）
-│       │   ├── GBDTModel（纯GBDT模型）
-│       │   ├── CatBoostModel（CatBoost模型）⭐ 2026-02-20新增
-│       │   ├── LSTMModel（LSTM模型）⭐ 2026-02-26新增
-│       │   ├── EnsembleModel（融合模型）⭐ 2026-02-20新增，2026-02-28弃用
-│       │   ├── DynamicMarketStrategy（动态市场策略）⭐ 2026-02-28新增，已弃用
-│       │   ├── AdvancedDynamicStrategy（高级动态策略）⭐ 2026-02-28新增，已弃用
+│       │   ├── GBDTModel（GBDT模型）
+│       │   ├── CatBoostModel（CatBoost模型）⭐ 最佳表现
+│       │   ├── LSTMModel（LSTM模型）⚠️ 实验性
+│       │   ├── EnsembleModel（融合模型）
+│       │   │   ├── 简单平均融合（average）
+│       │   │   ├── 加权平均融合（weighted）
+│       │   │   ├── 投票机制融合（voting）
+│       │   │   ├── 动态市场融合（dynamic-market）⭐ 新增
+│       │   │   └── 高级动态融合（advanced-dynamic）⭐ 新增
+│       │   ├── DynamicMarketStrategy（动态市场策略）⭐ 新增
+│       │   ├── AdvancedDynamicStrategy（高级动态策略）⭐ 新增
 │       │   ├── 特征工程（500个精选特征）
 │       │   │   ├── 滚动统计特征（偏度、峰度、多周期波动率）
 │       │   │   ├── 价格形态特征（日内振幅、影线比例、缺口）
@@ -182,7 +192,7 @@
 │       │   │   ├── 互信息特征选择（关联强度）
 │       │   │   ├── 模型重要性法（基于特征对模型预测的贡献）
 │       │   │   ├── 混合方法（交集+综合得分）
-│       │   │   ├── 统计方法（F-test+互信息混合，当前使用）⭐ 2026-02-28更新
+│       │   │   ├── 统计方法（F-test+互信息混合，当前使用）⭐
 │       │   │   └── 统一策略：CatBoost 使用 500 个特征
 │       │   ├── 分类特征编码（LabelEncoder）
 │       │   ├── **超增强正则化（2026-02-16）**
@@ -194,14 +204,13 @@
 │       │   ├── **动态准确率加载（2026-02-17）**
 │       │   │   ├── 训练时自动保存准确率到model_accuracy.json
 │       │   │   ├── 综合分析时自动加载最新准确率
-│       │   │   ├── 仅支持 CatBoost 模型（2026-02-28更新）
-│       │   │   ├── 支持LSTM模型（2026-02-26新增）
+│       │   │   ├── 仅支持 CatBoost 模型
 │       │   │   └── 支持独立运行（使用默认值）
 │       │   ├── **预测结果保存功能**
 │       │   │   ├── CatBoost 预测结果保存
-│       │   │   ├── 包含预测概率和预测方向
+│       │   │   └── 包含预测概率和预测方向
 │       │   ├── **新闻数据缓存（2026-02-20）**：避免重复加载，提升性能
-│       │   └── **置信度计算优化（2026-02-28）**：基于 CatBoost 概率的两分类预测
+│       │   └── **置信度计算优化**：基于 CatBoost 概率的两分类预测
 │       ├── 机器学习预测邮件发送器 (ml_prediction_email.py)
 │       ├── 美股市场数据获取模块 (us_market_data.py)
 │       ├── 模型处理器基类 (base_model_processor.py)
@@ -211,26 +220,37 @@
 │       ├── **回测评估模块** (backtest_evaluator.py)
 │       │   ├── 夏普比率、索提诺比率、最大回撤计算
 │       │   ├── 胜率、信息比率统计
-│       │   ├── F1分数计算（2026-02-26新增）
+│       │   ├── F1分数计算
 │       │   └── 可视化报告生成（4个子图）
-│       ├── **批量回测脚本** (batch_backtest.py) ⭐ 2026-02-22新增
+│       ├── **批量回测脚本** (batch_backtest.py)
 │       │   ├── 对所有股票逐一进行回测
 │       │   ├── 支持单一模型和融合模型
 │       │   ├── 支持不同置信度阈值
 │       │   ├── 生成汇总报告和排名
 │       │   └── 支持股票名称显示
-│       ├── **LSTM对比实验脚本** (lstm_experiment.py) ⭐ 2026-02-26新增
+│       ├── **LSTM对比实验脚本** (lstm_experiment.py) ⚠️ 实验性
 │       │   ├── LSTM模型架构（含注意力机制）
 │       │   ├── 与CatBoost等模型对比评估
 │       │   ├── 支持不同预测周期（1-20天）
 │       │   └── 生成详细对比报告
-│       ├── **CatBoost使用指南** (CATBOOST_USAGE.md) ⭐ 新增
-│       └── **回测使用指南** (BACKTEST_GUIDE.md) ⭐ 含CatBoost vs GBDT差异分析
+│       ├── **CatBoost使用指南** (CATBOOST_USAGE.md)
+│       └── **回测使用指南** (BACKTEST_GUIDE.md)
 ├── 交易层
 │   └── 港股模拟交易系统 (simulation_trader.py)
-└── 服务层 (llm_services/)
-    ├── 大模型接口 (qwen_engine.py)
-    └── 情感分析模块 (sentiment_analyzer.py)
+├── 服务层 (llm_services/)
+│   ├── 大模型接口 (qwen_engine.py)
+│   └── 情感分析模块 (sentiment_analyzer.py)
+├── 工具脚本 (scripts/) ⭐ 2026-03-01新增
+│   ├── 数据诊断工具 (data_diagnostic.py)
+│   ├── 特征评估工具 (feature_evaluation.py, feature_eval_v2.py)
+│   └── 训练工具 (train_with_feature_selection.py)
+├── 测试脚本 ⭐ 2026-03-01新增
+│   ├── 模型对比测试 (test_step7.sh, test_generate_report.sh)
+│   ├── 动态策略测试 (test_dynamic_strategy.py)
+│   └── 简化测试报告 (simple_test_report.sh)
+└── 自动化脚本
+    ├── 综合分析 (run_comprehensive_analysis.sh)
+    └── 模型对比 ⭐ 2026-03-01新增 (run_model_comparison.sh)
 ```
 
 ## 核心功能模块
@@ -247,7 +267,7 @@
 - 业界标准 MVP 模型识别龙头股
 - 支持多周期分析（1日/5日/20日）
 - 支持投资风格配置
-- **小市值板块支持**（2026-02-21 新增）：动态调整市值阈值，支持环保等小市值板块的龙头股识别
+- **小市值板块支持**：动态调整市值阈值，支持环保等小市值板块的龙头股识别
 
 ### 板块轮动河流图
 - 可视化展示过去一年板块排名变化
@@ -270,7 +290,7 @@
 - 止损机制
 - 交易记录自动保存
 
-### 恒生指数涨跌预测（2026-02-25 新增）
+### 恒生指数涨跌预测
 - **hsi_prediction.py**：基于特征重要性的加权评分模型
 - 使用 20 个关键特征，权重范围 0.1729% - 0.0099%
 - 特征类别：技术面、宏观面、情绪面
@@ -280,42 +300,49 @@
 - 支持邮件发送和控制台报告生成
 - 保存预测结果到 JSON 和 CSV 文件
 
-### LSTM模型对比实验（2026-02-26 新增）
+### LSTM模型对比实验（实验性）
 - **ml_services/lstm_experiment.py**：LSTM模型对比实验脚本
 - 基于PyTorch的LSTM架构（包含注意力机制和批归一化）
 - 与CatBoost等模型进行性能对比
 - 支持不同预测周期（1-20天）
 - 实现F1分数评估指标
 - 生成详细的对比实验报告
+- **注意**：需要额外安装 PyTorch（requirements.txt 中未包含）
 
-### 综合分析系统增强功能（2026-02-26）
-- **实时指标获取**：从 `hsi_email.py` 获取恒生指数及自选股实时技术指标
-- **交易记录展示**：显示最近 48 小时的模拟交易记录（**2026-02-26 优化为表格格式**）
-  - 表格列：股票名称、股票代码、时间、类型、价格、目标价、止损价、有效期、理由
-  - 参考格式：`hsi_email.py` 的表格展示方式
-- **TAV评分集成**：恒生指数及自选股的TAV评分、建仓/出货评分、基本面评分等高级分析指标
+### 模型对比回测脚本（2026-03-01 新增）
+- **run_model_comparison.sh**：定期回测多种模型并生成汇总对比报告
+- 支持7个步骤的完整工作流程
+- 支持3种基本模型（LightGBM、GBDT、CatBoost）
+- 支持5种融合方法（average、weighted、voting、dynamic-market、advanced-dynamic）
+- 自动生成汇总对比报告，包含性能对比和综合排名
+- 支持跳过已存在的模型（默认模式）
+- 支持 `--force-train` 参数强制重新训练
 
 ## 机器学习模型
 
 ### 支持的算法
 - **LightGBM**：轻量级梯度提升框架
 - **GBDT**：纯梯度提升决策树（已重构，移除GBDT+LR两层结构）
-- **CatBoost**：Yandex 开发的梯度提升库（2026-02-20 新增）⭐ **当前主要模型**
-- **LSTM**：基于PyTorch的长短期记忆网络（2026-02-26 新增）
-- **Ensemble**：三模型融合（LightGBM + GBDT + CatBoost，2026-02-20 新增，2026-02-28 弃用）
+- **CatBoost**：Yandex 开发的梯度提升库（⭐ **当前主要模型**）
+- **LSTM**：基于PyTorch的长短期记忆网络（⚠️ 实验性）
+- **Ensemble**：三模型融合（LightGBM + GBDT + CatBoost）
 
-### CatBoost 单模型策略（2026-02-28 更新）
+### CatBoost 单模型策略（2026-03-01 更新）
 
 **为什么选择 CatBoost 单模型？**
 
 经过严格的回测验证，CatBoost 单模型表现远优于所有融合方法：
 
-| 模型类型 | 平均收益率 | 夏普比率 | 胜率 | 优秀股票占比 |
+| 模型类型 | 年化收益率 | 夏普比率 | 胜率 | 优秀股票占比 |
 |---------|-----------|---------|------|-------------|
-| **CatBoost 单模型** | 238.76% | 1.51 | 32.81% | 86% (24/28) |
-| 融合模型（加权平均） | -4.72% | -0.05 | 29.20% | - |
-| 融合模型（动态市场） | 0.50% | - | - | - |
-| 融合模型（高级动态） | -0.29% | - | - | - |
+| **CatBoost 单模型** | **79.54%** | **1.14** | **30.96%** | **71% (20/28)** ⭐ |
+| 融合模型（加权平均） | 3.16% | 0.32 | 22.75% | 7% (2/28) |
+| 融合模型（平均） | 4.01% | 0.40 | 23.63% | 4% (1/28) |
+| 融合模型（投票） | 2.31% | 0.36 | 22.58% | 4% (1/28) |
+| 融合模型（动态市场） | 2.40% | 0.33 | 22.96% | 7% (2/28) |
+| 融合模型（高级动态） | 2.40% | 0.33 | 22.96% | 7% (2/28) |
+| GBDT 单模型 | 7.67% | 0.17 | 29.53% | 4% (1/28) |
+| LightGBM 单模型 | 13.56% | 0.26 | 32.41% | 11% (3/28) |
 
 **CatBoost 核心优势**：
 1. **自动分类特征处理**：无需手动编码，使用 Ordered Target Statistics 避免 Target Leakage
@@ -323,6 +350,24 @@
 3. **更好的正则化配置**：depth=7, learning_rate=0.05, l2_leaf_reg=3
 4. **更强的特征交互学习能力**：特别擅长识别市场环境特征与技术指标的交互
 5. **稳定性显著提升**：标准偏差 ±1.95% vs LightGBM ±3.50%，提升 44.3%
+
+### 融合模型方法（2026-03-01 更新）
+
+系统支持5种融合方法：
+
+1. **简单平均（average）**：三个模型的预测概率取平均值
+2. **加权平均（weighted）**：基于模型准确率自动分配权重
+3. **投票机制（voting）**：多数投票决定最终预测方向
+4. **动态市场融合（dynamic-market）**：⭐ 新增
+   - 根据市场状态动态选择融合方法
+   - 支持三种市场状态：牛市（激进）、熊市（保守）、震荡市（智能）
+   - 使用 DynamicMarketStrategy 类实现
+5. **高级动态融合（advanced-dynamic）**：⭐ 新增
+   - CatBoost主导策略（90%权重）
+   - LightGBM 和 GBDT 各占 5% 权重
+   - 针对CatBoost表现优异的场景优化
+
+**注意**：根据2026-03-01回测结果，所有融合方法的表现均不如CatBoost单模型，建议优先使用CatBoost单模型。
 
 ### CatBoost 模型配置（20天）
 
@@ -348,7 +393,7 @@ class CatBoostModel:
 - 行采样：0.75
 - 列采样：0.7
 
-### LSTM模型对比实验（2026-02-26 新增）
+### LSTM模型对比实验（实验性）
 
 - **架构特点**：
   - 3层LSTM（NUM_LAYERS = 3）
@@ -369,7 +414,12 @@ class CatBoostModel:
   - 更适合时序数据建模
   - 对长期依赖关系建模能力强
 
-### 特征选择方法（2026-02-28 更新）
+- **注意事项**：
+  - 需要额外安装 PyTorch（`pip install torch`）
+  - 目前为实验性功能，未集成到主工作流
+  - 没有自动化GitHub工作流
+
+### 特征选择方法
 - **统计方法（statistical）**：F-test + 互信息混合方法（当前使用）⭐
 - **模型重要性法**：基于特征对模型预测的贡献度进行选择
 - **随机抽样优化**：在特征选择时使用随机抽样提升速度（从固定前10只股票改为随机选择10只股票）
@@ -389,9 +439,9 @@ class CatBoostModel:
 ### 模型性能（2026-03-01 最新，来自 model_accuracy.json）
 
 #### 单模型性能（含F1分数）
-- **CatBoost 20天**：准确率 60.94%（±1.95%），F1分数 0.6823（±0.0404）⭐ **当前最佳（稳定可靠）**
-- **GBDT 20天**：准确率 58.91%（±4.00%），F1分数 0.7146（±0.0234）
-- **LightGBM 20天**：准确率 58.37%（±3.50%），F1分数 0.7151（±0.0400）
+- **CatBoost 20天**：准确率 61.88%（±2.56%），F1分数 0.6748（±0.0379）⭐ **当前最佳（稳定可靠）**
+- **GBDT 20天**：准确率 59.99%（±4.71%），F1分数 0.7301（±0.0274）
+- **LightGBM 20天**：准确率 58.98%（±3.87%），F1分数 0.7179（±0.0355）
 - **CatBoost 5天**：准确率 63.96%（±4.22%），F1分数 0.6785（±0.0175）⚠️ 谨慎使用（需要更多验证）
 - **CatBoost 1天**：准确率 65.10%（±5.63%），F1分数 0.6361（±0.0474）❌ **不推荐使用**（存在严重过拟合风险）
 - **LightGBM 1天**：准确率 50.91%（±1.07%），F1分数 0.4995（±0.1907）
@@ -399,10 +449,20 @@ class CatBoostModel:
 - **LightGBM 5天**：准确率 55.12%（±2.17%），F1分数 0.6924（±0.0413）
 - **GBDT 5天**：准确率 55.31%（±2.45%），F1分数 0.6943（±0.0316）
 
+#### 融合模型性能对比（2026-03-01 最新回测）
+
+| 融合方法 | 年化收益率 | 夏普比率 | 胜率 | 优秀股票数量 |
+|---------|-----------|---------|------|-------------|
+| 融合模型（加权平均） | 3.16% | 0.32 | 22.75% | 2/28 (7%) |
+| 融合模型（平均） | 4.01% | 0.40 | 23.63% | 1/28 (4%) |
+| 融合模型（投票） | 2.31% | 0.36 | 22.58% | 1/28 (4%) |
+| 融合模型（动态市场） | 2.40% | 0.33 | 22.96% | 2/28 (7%) |
+| 融合模型（高级动态） | 2.40% | 0.33 | 22.96% | 2/28 (7%) |
+
 ### 超增强正则化配置
-- **LightGBM 一个月模型**：reg_alpha=0.25, reg_lambda=0.25
-- **GBDT 一个月模型**：reg_alpha=0.22, reg_lambda=0.22
-- **CatBoost 一个月模型**：l2_leaf_reg=3, depth=7, learning_rate=0.05
+- **LightGBM一个月模型**：reg_alpha=0.25, reg_lambda=0.25
+- **GBDT一个月模型**：reg_alpha=0.22, reg_lambda=0.22
+- **CatBoost一个月模型**：l2_leaf_reg=3, depth=7, learning_rate=0.05
 
 ### 特征选择优化（2026-02-16）
 - 统一策略：CatBoost 使用 500 个精选特征
@@ -420,20 +480,20 @@ class CatBoostModel:
 - 综合分析脚本自动读取并使用最新准确率
 - 支持不同预测周期（1天、5天、20天）的准确率管理
 - 仅包含 CatBoost 模型的准确率和F1分数（2026-02-28更新）
-- 包含 LSTM 模型信息（2026-02-26新增）
+- 支持独立运行（使用默认值）
 
 ### 预测结果保存
 - CatBoost 预测结果保存到 `data/ml_trading_model_catboost_predictions_20d.csv`
 - 包含：预测方向、预测概率、当前价格
 
-### 回测评估功能（2026-02-18）
+### 回测评估功能
 - 验证模型在真实交易中的盈利能力
 - 关键指标：夏普比率、索提诺比率、最大回撤、胜率、信息比率、F1分数
 - 交易策略：当预测概率 > 置信度阈值（默认0.55）时全仓买入，否则清仓卖出
 - 基准对比：买入持有策略
 - 可视化输出：组合价值对比、收益率分布、回撤曲线、关键指标对比
 
-### 批量回测功能（2026-02-22 新增）
+### 批量回测功能
 - 对自选股列表中的所有股票（28只）进行批量回测
 - 支持单一模型和融合模型批量回测
 - 支持不同置信度阈值（0.55、0.60等）
@@ -446,7 +506,7 @@ class CatBoostModel:
 - 最低收益率：9.45%（0941.HK 中国移动）
 - 收益率中位数：160.12%
 - 收益率标准差：259.76%
-- **优秀股票（收益率>50%）**：24只（86%）
+- **优秀股票（收益率>50%）**：20只（71%）
 - **一般股票（收益率20-50%）**：3只（11%）
 - **表现不佳（收益率<20%）**：1只（0941.HK 中国移动 9.45%）
 
@@ -508,7 +568,7 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 14. **## 十三、数据来源**（11个数据源说明）
 15. **## 十四、LSTM模型对比实验**（新增LSTM模型性能与传统模型对比信息）
 
-#### CatBoost 预测结果展示（2026-02-28 更新）
+#### CatBoost 预测结果展示
 - 显示全部 28 只股票的 CatBoost 预测结果
 - 添加"预测方向"栏位，标注每只股票的预测方向（上涨/下跌）
 - 添加"预测概率"栏位，标注上涨概率
@@ -520,7 +580,7 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - 表格格式：| 股票代码 | 股票名称 | 预测方向 | 预测概率 | 置信度 | 当前价格 |
 - 统计信息：高置信度上涨数量、中等置信度上涨数量、预测下跌数量
 
-#### 实时技术指标与模拟交易记录集成（2026-02-26）
+#### 实时技术指标与模拟交易记录集成
 - **实时技术指标集成**：从 hsi_email.py 获取恒生指数及自选股实时技术指标
   - 恒生指数实时指标：当前指数、24小时变化、开盘/最高/最低价、成交量、RSI、MACD等
   - 自选股实时指标：当前价格、涨跌幅、RSI、MACD、MA20、MA50、趋势、ATR、成交量比率等
@@ -556,16 +616,16 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```
 yfinance, requests, pandas, numpy, akshare, matplotlib,
 beautifulsoup4, openpyxl, scipy, schedule, markdown,
-lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8,
-torch  # LSTM模型所需（2026-02-26新增）
+lightgbm, catboost, scikit-learn, jieba>=0.42.1, nltk>=3.8
+torch  # LSTM模型额外依赖（需要单独安装）
 ```
 
 **关键依赖说明**：
 - `lightgbm>=4.0.0`：LightGBM 梯度提升框架
-- `catboost>=1.2.0`：CatBoost 梯度提升库（2026-02-20 新增）⭐ **主要模型**
+- `catboost>=1.2.0`：CatBoost 梯度提升库⭐ **主要模型**
 - `scikit-learn>=1.3.0`：机器学习工具库
 - `yfinance>=0.2.0`：用于恒生指数涨跌预测（hsi_prediction.py）
-- `torch>=2.0.0`：PyTorch深度学习框架（LSTM模型所需，2026-02-26新增）
+- `torch>=2.0.0`：PyTorch深度学习框架（LSTM模型所需，需要单独安装）
 
 ### 自选股配置（28只）
 在 `config.py` 中配置：
@@ -608,7 +668,7 @@ torch  # LSTM模型所需（2026-02-26新增）
 ```bash
 # 安装依赖
 pip install -r requirements.txt
-pip install torch  # LSTM模型额外依赖（2026-02-26新增）
+pip install torch  # LSTM模型额外依赖（需要单独安装）
 
 # 主力资金追踪（默认稳健型）
 python3 hk_smart_money_tracker.py
@@ -620,11 +680,11 @@ python3 hsi_email.py
 python3 hsi_email.py --date 2025-10-25
 python3 hsi_email.py --no-email  # 仅生成报告，不发送邮件
 
-# 恒生指数涨跌预测（2026-02-25 新增）
+# 恒生指数涨跌预测
 python3 hsi_prediction.py
 python3 hsi_prediction.py --no-email  # 仅生成报告，不发送邮件
 
-# LSTM模型对比实验（2026-02-26 新增）
+# LSTM模型对比实验（实验性）
 python3 ml_services/lstm_experiment.py --horizon 1  # 1天预测
 python3 ml_services/lstm_experiment.py --horizon 5  # 5天预测
 python3 ml_services/lstm_experiment.py --horizon 20 --stocks 0700.HK 0939.HK 1347.HK  # 20天预测
@@ -635,25 +695,29 @@ python3 data_services/hk_sector_analysis.py --period 5 --style moderate
 # 板块轮动河流图
 python3 generate_sector_rotation_river_plot.py
 
-# ML 模型训练和预测（CatBoost 单模型）⭐ 2026-02-28更新
+# ML 模型训练和预测（CatBoost 单模型）⭐ 推荐
 ./train_and_predict_all.sh
 
 # 特征选择（statistical方法）
 python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
 
-# 训练 CatBoost 模型
+# 训练 CatBoost 模型（跳过特征选择）
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
 
 # 生成 CatBoost 预测
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost
 
-# 批量回测（28只股票）⭐ 2026-02-22新增
+# 批量回测（28只股票）
 python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
 python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
 # 批量回测不同置信度阈值
 python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.60
+
+# 模型对比回测（3个基本模型 + 5个融合模型）⭐ 2026-03-01新增
+./run_model_comparison.sh
+python3 run_model_comparison.sh --force-train  # 强制重新训练所有模型
 
 # 模拟交易
 python3 simulation_trader.py --investor-type moderate
@@ -667,7 +731,7 @@ python3 gold_analyzer.py
 # 加密货币监控
 python3 crypto_email.py
 
-# 综合分析（一键执行，每日自动运行）⭐ 2026-02-28更新
+# 综合分析（一键执行，每日自动运行）⭐ 推荐
 ./run_comprehensive_analysis.sh
 python3 comprehensive_analysis.py
 python3 comprehensive_analysis.py --no-email  # 不发送邮件
@@ -681,42 +745,45 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_state.json`: 模拟交易状态
 - `llm_recommendations_YYYY-MM-DD.txt`: 大模型建议文件
-- `ml_trading_model_catboost_predictions_20d.csv`: CatBoost 单模型预测结果 ⭐ 2026-02-28更新
+- `ml_trading_model_catboost_predictions_20d.csv`: CatBoost 单模型预测结果
 - `comprehensive_recommendations_YYYY-MM-DD.txt`: 综合买卖建议文件
-- `model_accuracy.json`: 模型准确率信息（CatBoost 各周期准确率和F1分数，包含LSTM信息）
-- `hsi_prediction_features_*.csv`: 恒生指数预测特征数据 ⭐ 2026-02-25新增
-- `hsi_prediction_report_*.json`: 恒生指数预测报告数据 ⭐ 2026-02-25新增
-- `ml_trading_model_lstm_*.pth`: LSTM 模型文件（PyTorch格式）⭐ 2026-02-26新增
+- `model_accuracy.json`: 模型准确率信息（CatBoost 各周期准确率和F1分数）
+- `hsi_prediction_features_*.csv`: 恒生指数预测特征数据
+- `hsi_prediction_report_*.json`: 恒生指数预测报告数据
+- `ml_trading_model_lstm_*.pth`: LSTM 模型文件（PyTorch格式）
 - `ml_trading_model_lgbm_*.pkl`: LightGBM 模型文件（已从 Git 移除）
 - `ml_trading_model_gbdt_*.pkl`: GBDT 模型文件（已从 Git 移除）
-- `ml_trading_model_catboost_*.pkl`: CatBoost 模型文件（已从 Git 移除）⭐ 新增
+- `ml_trading_model_catboost_*.pkl`: CatBoost 模型文件（已从 Git 移除）
 - `ml_trading_model_*.importance.csv`: 模型特征重要性文件
 - `fundamental_cache/`: 基本面数据缓存（已从 Git 移除）
 - `stock_cache/`: 股票数据缓存（已从 Git 移除）
 
 ### 输出文件存储在 `output/` 目录
-- `batch_backtest_{model_type}_{horizon}d_{timestamp}.json`: 批量回测详细数据 ⭐ 2026-02-22新增
-- `batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt`: 批量回测汇总报告 ⭐ 2026-02-22新增
-- `lstm_experiment_{horizon}d_{timestamp}.json`: LSTM对比实验详细数据 ⭐ 2026-02-26新增
+- `batch_backtest_{model_type}_{horizon}d_{timestamp}.json`: 批量回测详细数据
+- `batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt`: 批量回测汇总报告
+- `model_comparison_report_{timestamp}.txt`: 模型对比汇总报告⭐ 2026-03-01新增
+- `lstm_experiment_{horizon}d_{timestamp}.json`: LSTM对比实验详细数据
 - `sector_rotation_river_plot.png`: 板块轮动河流图
 - `selected_features_*.csv`: 精选特征列表
-- `statistical_features_latest.txt`: 统计方法特征选择结果 ⭐ 2026-02-28更新
-- `email_preview.txt`: 邮件预览内容 ⭐ 2026-02-25新增
+- `statistical_features_latest.txt`: 统计方法特征选择结果
+- `email_preview.txt`: 邮件预览内容
 
 ## 模型优化经验
 
-### CatBoost 单模型优势（2026-02-28）
+### CatBoost 单模型优势（2026-03-01）
 
 **回测表现对比**（置信度0.55，28只股票）：
 
-| 模型类型 | 平均收益率 | 夏普比率 | 胜率 | 优秀股票占比 |
+| 模型类型 | 年化收益率 | 夏普比率 | 胜率 | 优秀股票占比 |
 |---------|-----------|---------|------|-------------|
-| **CatBoost 单模型** | 238.76% | 1.51 | 32.81% | 86% (24/28) |
-| GBDT 单模型 | -1.86% | -0.06 | 29.88% | 14% (4/28) |
-| LightGBM 单模型 | -8.22% | -0.18 | 29.57% | 7% (2/28) |
-| 融合模型（加权平均） | -4.72% | -0.05 | 29.20% | - |
-| 融合模型（动态市场） | 0.50% | - | - | - |
-| 融合模型（高级动态） | -0.29% | - | - | - |
+| **CatBoost 单模型** | **79.54%** | **1.14** | **30.96%** | **71% (20/28)** ⭐ |
+| GBDT 单模型 | 7.67% | 0.17 | 29.53% | 4% (1/28) |
+| LightGBM 单模型 | 13.56% | 0.26 | 32.41% | 11% (3/28) |
+| 融合模型（加权平均） | 3.16% | 0.32 | 22.75% | 7% (2/28) |
+| 融合模型（平均） | 4.01% | 0.40 | 23.63% | 4% (1/28) |
+| 融合模型（投票） | 2.31% | 0.36 | 22.58% | 4% (1/28) |
+| 融合模型（动态市场） | 2.40% | 0.33 | 22.96% | 7% (2/28) |
+| 融合模型（高级动态） | 2.40% | 0.33 | 22.96% | 7% (2/28) |
 
 **CatBoost 核心优势**：
 
@@ -743,25 +810,25 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 
 5. **更好的泛化能力和稳定性**
    - 在不同股票上的表现更加稳定一致
-   - 24/28只股票收益率>50%
+   - 20/28只股票收益率>50%
 
 **CatBoost 批量回测详细表现（置信度0.55，28只股票）**：
 - 最高收益率：1353.20%（1347.HK 华虹半导体）
 - 最低收益率：9.45%（0941.HK 中国移动）
 - 收益率中位数：160.12%
 - 收益率标准差：259.76%
-- **优秀股票（收益率>50%）**：24只（86%）
+- **优秀股票（收益率>50%）**：20只（71%）
 - **一般股票（收益率20-50%）**：3只（11%）
 - **表现不佳（收益率<20%）**：1只（0941.HK 中国移动 9.45%）
 
-### 信号稀释问题分析（2026-02-28）
+### 信号稀释问题分析（2026-03-01）
 
 **问题描述**：
 尽管所有模型在训练集上的准确率相似（~60%），但在实际回测中表现差异巨大：
-- CatBoost：238.76% 收益率
-- GBDT：-1.86% 收益率
-- LightGBM：-8.22% 收益率
-- 融合模型：-4.72% 收益率
+- CatBoost：79.54% 年化收益率
+- GBDT：7.67% 年化收益率
+- LightGBM：13.56% 年化收益率
+- 融合模型：2.31-4.01% 年化收益率
 
 **根本原因：信号质量差异**
 - CatBoost 识别出的是高质量的强信号（真实可交易信号）
@@ -769,31 +836,15 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - 融合模型将强信号与弱信号混合，导致强信号被稀释
 
 **验证结果**：
-- DynamicMarketStrategy（动态市场策略）：收益率 0.50%（失败）
-- AdvancedDynamicStrategy（高级动态策略）：收益率 -0.29%（失败）
+- DynamicMarketStrategy（动态市场策略）：收益率 2.40%（失败）
+- AdvancedDynamicStrategy（高级动态策略）：收益率 2.40%（失败）
 - 结论：所有融合方法均失败，无法通过动态权重或市场 regime 检测解决问题
 
 **解决方案**：
-- 放弃融合模型，使用 CatBoost 单模型
-- 特征选择使用 statistical 方法（F-test+互信息）
-- 训练时跳过特征选择（`--skip-feature-selection`）
-
-### 2026-02-20 至 2026-03-01 CatBoost 算法集成与单模型切换
-
-#### 优化历程
-1. **2026-02-20**：集成 CatBoost 算法，实现三模型融合
-2. **2026-02-21**：实现三分类预测（上涨/观望/下跌）
-3. **2026-02-22**：批量回测发现融合模型表现不佳
-4. **2026-02-26**：实现 LSTM 模型对比实验
-5. **2026-02-28**：测试 DynamicMarketStrategy 和 AdvancedDynamicStrategy，均失败
-6. **2026-02-28**：决定切换到 CatBoost 单模型
-7. **2026-03-01**：更新综合分析系统，使用 CatBoost 单模型 + statistical 特征选择
-
-#### 最终决策
-- ✅ 使用 CatBoost 20天单模型
+- ✅ 使用 CatBoost 20天单模型作为主要预测模型
 - ✅ 特征选择方法：statistical（F-test+互信息混合）
-- ✅ 弃用所有融合模型
-- ✅ 弃用 DynamicMarketStrategy 和 AdvancedDynamicStrategy
+- ✅ 训练时跳过特征选择（`--skip-feature-selection`）
+- ⚠️ 融合模型仅用于对比研究，不建议用于实际交易
 
 ### CatBoost 模型训练命令
 
@@ -807,6 +858,24 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 # 生成 CatBoost 预测
 python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost
 ```
+
+### 融合模型方法对比（2026-03-01）
+
+系统支持5种融合方法，用于对比研究：
+
+| 融合方法 | 年化收益率 | 夏普比率 | 胜率 | 说明 |
+|---------|-----------|---------|------|------|
+| CatBoost 单模型 | 79.54% | 1.14 | 30.96% | ⭐ **推荐使用** |
+| 加权平均 | 3.16% | 0.32 | 22.75% | 基于模型准确率加权 |
+| 简单平均 | 4.01% | 0.40 | 23.63% | 三个模型概率平均 |
+| 投票机制 | 2.31% | 0.36 | 22.58% | 多数投票决定方向 |
+| 动态市场 | 2.40% | 0.33 | 22.96% | 根据市场状态动态选择 |
+| 高级动态 | 2.40% | 0.33 | 22.96% | CatBoost主导（90%权重） |
+
+**使用建议**：
+- ✅ **CatBoost 单模型**：用于实际交易和预测
+- ⚠️ **融合模型**：仅用于对比研究和实验
+- ❌ **动态市场策略**：表现不佳，不推荐使用
 
 ### 综合分析系统更新（2026-03-01）
 
@@ -834,19 +903,17 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 | `hourly-gold-monitor.yml` | 每小时黄金监控 | 每小时 |
 | `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 2:00 |
 | `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 8:30 |
-| `hsi-prediction.yml` | **恒生指数涨跌预测** | **周一到周五 UTC 22:00（香港时间早上6:00）** ⭐ 新增 |
-| `lstm-experiment.yml` | **LSTM对比实验** | **每周一 UTC 2:00（香港时间上午10:00）** ⭐ 2026-02-26新增 |
+| `hsi-prediction.yml` | **恒生指数涨跌预测** | **周一到周五 UTC 22:00（香港时间早上6:00）** |
 | `hsi-email-alert.yml.bak` | HSI邮件提醒（备份）| - |
 | `ml-train-models.yml.bak` | ML模型训练（备份）| - |
 
 ### 自动化状态
-- ✅ GitHub Actions：9 个工作流正常运行 + 2 个备份文件（batch-stock-news-fetcher.yml, comprehensive-analysis.yml, weekly-comprehensive-analysis.yml, hourly-crypto-monitor.yml, hourly-gold-monitor.yml, daily-ipo-monitor.yml, daily-ai-trading-analysis.yml, hsi-prediction.yml, lstm-experiment.yml）
+- ✅ GitHub Actions：8 个工作流正常运行 + 2 个备份文件
 - ✅ 邮件通知：163 邮件服务稳定
 - ✅ 定时任务：支持本地 cron 和 GitHub Actions
 - ✅ 数据保存：大模型建议、CatBoost 预测结果、综合建议、模型准确率、批量回测结果自动保存
 - ✅ 综合分析：周一到周五每天自动执行，生成实质买卖建议
 - ✅ 周综合分析：每周日自动执行，生成更全面的综合分析报告
-- ✅ LSTM对比实验：每周一自动执行，生成模型对比报告
 - ✅ 准确率管理：训练时自动保存，分析时自动加载
 - ✅ **恒生指数预测**：周一到周五早上6点自动执行，生成加权评分预测
 
@@ -867,11 +934,12 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 - ✅ **交易记录展示**：完整，展示最近48小时模拟交易记录
 - ✅ **恒生指数涨跌预测**：完整，基于特征重要性的加权评分模型（hsi_prediction.py）
 - ✅ **LSTM模型对比实验**：完整，PyTorch实现的LSTM模型对比评估（lstm_experiment.py）
+- ✅ **模型对比回测脚本**：完整，支持3个基本模型和5个融合模型的批量回测（run_model_comparison.sh）
 - ✅ **F1分数计算**：完整，模型评估中的F1分数计算和报告
 
 ### 待优化项
 - ⚠️ **风险管理模块**（VaR、止损止盈、仓位管理）
-- ⚠️ **深度学习模型**（LSTM、Transformer）
+- ⚠️ **深度学习模型**（LSTM、Transformer）- 当前仅为实验性功能
 - ⚠️ **Web 界面**
 
 ### 大模型集成
@@ -883,5 +951,15 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 - **大模型建议自动保存**：短期和中期建议保存到文本文件，方便综合对比分析
 - **综合分析**：整合大模型建议和 CatBoost 单模型预测结果，生成实质买卖建议
 
+### 文档目录（docs/）
+- `CATBOOST_SIGNAL_QUALITY_ANALYSIS.md`：CatBoost 信号质量分析文档
+- `model_importance_std_analysis.md`：模型重要性标准差分析
+- `feature_selection_methods_comparison.md`：特征选择方法对比
+- `feature_selection_summary.md`：特征选择总结
+- `不同股票类型分析框架对比.md`：股票类型分析框架对比
+- `backtest_results_report.md`：回测结果报告
+- `backtest_horizon_explanation.md`：回测周期说明
+- `LSTM_EXPERIMENT_README.md`：LSTM实验使用指南
+
 ---
-最后更新：2026-03-01（切换到 CatBoost 单模型、使用 statistical 特征选择、弃用融合模型）
+最后更新：2026-03-01（切换到 CatBoost 单模型、使用 statistical 特征选择、新增模型对比回测脚本、弃用融合模型、更新模型性能数据）
