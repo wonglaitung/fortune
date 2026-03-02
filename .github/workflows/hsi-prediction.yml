@@ -3,7 +3,7 @@ name: 恒生指数涨跌预测
 on:
   schedule:
     # 香港时间周一至周五上午6点运行 (UTC时间 22:00)
-    - cron: '0 22 * * 1-5'
+    - cron: '0 22 * * 0-4'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
