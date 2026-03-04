@@ -236,10 +236,10 @@ class StockPriceTransformerDataset(Dataset):
 class TransformerDataPreprocessor:
     """Transformer数据预处理器 - 支持分类特征嵌入和特征选择"""
     
-    def __init__(self, sequence_length: int = SEQUENCE_LENGTH, use_feature_selection: bool = False):
+    def __init__(self, sequence_length: int = SEQUENCE_LENGTH, use_feature_selection: bool = True):
         self.sequence_length = sequence_length
         self.feature_scaler = MinMaxScaler()
-        self.use_feature_selection = use_feature_selection
+        self.use_feature_selection = use_feature_selection  # 默认启用特征选择
         
         # 分类特征编码器
         self.stock_type_encoder = LabelEncoder()
@@ -744,17 +744,17 @@ class TransformerExperiment:
     """Transformer对比实验"""
     
     def __init__(self, stock_codes: List[str] = None, horizon: int = 1, 
-                 use_feature_selection: bool = False, features_file: str = None):
+                 use_feature_selection: bool = True, features_file: str = None):
         self.stock_codes = stock_codes or TEST_STOCKS
         self.horizon = horizon
-        self.use_feature_selection = use_feature_selection
-        self.features_file = features_file
+        self.use_feature_selection = use_feature_selection  # 默认启用特征选择
+        self.features_file = features_file or 'output/statistical_features_latest.txt'  # 默认特征文件
         self.preprocessor = TransformerDataPreprocessor(use_feature_selection=use_feature_selection)
         self.results = {}
         
         # 如果启用特征选择，加载精选特征
-        if use_feature_selection and features_file:
-            self.preprocessor.load_selected_features(features_file)
+        if use_feature_selection and self.features_file:
+            self.preprocessor.load_selected_features(self.features_file)
     
     def run_single_stock(self, stock_code: str) -> Dict:
         """对单只股票运行实验"""
@@ -1115,10 +1115,12 @@ def main():
                        help='批次大小')
     parser.add_argument('--seed', type=int, default=42,
                        help='随机种子（默认42）')
-    parser.add_argument('--use-feature-selection', action='store_true',
-                       help='使用特征选择（与CatBoost一致）')
+    parser.add_argument('--use-feature-selection', action='store_true', default=True,
+                       help='使用特征选择（与CatBoost一致，默认启用）')
+    parser.add_argument('--no-feature-selection', action='store_true',
+                       help='禁用特征选择（使用所有特征）')
     parser.add_argument('--features-file', type=str, default='output/statistical_features_latest.txt',
-                       help='精选特征文件路径')
+                       help='精选特征文件路径（默认: output/statistical_features_latest.txt）')
     
     args = parser.parse_args()
     
@@ -1126,16 +1128,22 @@ def main():
         print("❌ PyTorch未安装，请运行: pip install torch")
         return
     
+    # 处理特征选择参数
+    use_feature_selection = args.use_feature_selection and not args.no_feature_selection
+    
     # 设置随机种子
     setup_reproducibility(args.seed)
     
     logger.info("Transformer对比实验开始")
+    logger.info(f"特征选择: {'启用' if use_feature_selection else '禁用'}")
+    if use_feature_selection:
+        logger.info(f"特征文件: {args.features_file}")
     
     # 运行实验
     experiment = TransformerExperiment(
         stock_codes=args.stocks, 
         horizon=args.horizon,
-        use_feature_selection=args.use_feature_selection,
+        use_feature_selection=use_feature_selection,
         features_file=args.features_file
     )
     all_results = experiment.run_all()
