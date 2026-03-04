@@ -202,6 +202,7 @@ def calculate_performance_metrics(all_trades):
         return {}
 
     df = pd.DataFrame(all_trades)
+    df['buy_date'] = pd.to_datetime(df['buy_date'])
 
     # 基本统计
     total_trades = len(df)
@@ -236,6 +237,31 @@ def calculate_performance_metrics(all_trades):
         drawdown = (cumulative_returns - running_max) / running_max
         max_drawdown = drawdown.min()
 
+        # 每日性能统计
+        daily_metrics = []
+        for buy_date in sorted(buy_signals['buy_date'].unique()):
+            daily_df = buy_signals[buy_signals['buy_date'] == buy_date]
+            daily_total = len(daily_df)
+            daily_correct = daily_df['prediction_correct'].sum()
+            daily_accuracy = daily_correct / daily_total if daily_total > 0 else 0
+            daily_avg_return = daily_df['actual_change'].mean()
+            daily_median_return = daily_df['actual_change'].median()
+            daily_std_return = daily_df['actual_change'].std()
+            daily_positive = (daily_df['actual_change'] > 0).sum()
+            daily_win_rate = daily_positive / daily_total if daily_total > 0 else 0
+
+            daily_metrics.append({
+                'buy_date': buy_date.strftime('%Y-%m-%d'),
+                'total_trades': daily_total,
+                'correct_predictions': int(daily_correct),
+                'accuracy': float(daily_accuracy),
+                'avg_return': float(daily_avg_return) if not np.isnan(daily_avg_return) else 0.0,
+                'median_return': float(daily_median_return) if not np.isnan(daily_median_return) else 0.0,
+                'std_return': float(daily_std_return) if not np.isnan(daily_std_return) else 0.0,
+                'positive_trades': int(daily_positive),
+                'win_rate': float(daily_win_rate)
+            })
+
         return {
             'total_trades': total_trades,
             'buy_signals': len(buy_signals),
@@ -251,7 +277,8 @@ def calculate_performance_metrics(all_trades):
             'negative_trades': negative_trades,
             'win_rate': win_rate,
             'sharpe_ratio': sharpe_ratio,
-            'max_drawdown': max_drawdown
+            'max_drawdown': max_drawdown,
+            'daily_metrics': daily_metrics
         }
     else:
         return {
@@ -261,7 +288,8 @@ def calculate_performance_metrics(all_trades):
             'precision': 0,
             'recall': 0,
             'f1_score': 0,
-            'win_rate': 0
+            'win_rate': 0,
+            'daily_metrics': []
         }
 
 
