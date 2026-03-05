@@ -1601,10 +1601,10 @@ class HSIEmailSystem:
                     turnover_change_20d = turnover.pct_change(20).iloc[-1] if len(turnover) > 20 else None
                     
                     # 检查并处理 inf 和 -inf 值（分母为0的情况）
-                    turnover_change_1d = turnover_change_1d if pd.notna(turnover_change_1d) and not pd.isinf(turnover_change_1d) else None
-                    turnover_change_5d = turnover_change_5d if pd.notna(turnover_change_5d) and not pd.isinf(turnover_change_5d) else None
-                    turnover_change_10d = turnover_change_10d if pd.notna(turnover_change_10d) and not pd.isinf(turnover_change_10d) else None
-                    turnover_change_20d = turnover_change_20d if pd.notna(turnover_change_20d) and not pd.isinf(turnover_change_20d) else None
+                    turnover_change_1d = turnover_change_1d if pd.notna(turnover_change_1d) and not np.isinf(turnover_change_1d) else None
+                    turnover_change_5d = turnover_change_5d if pd.notna(turnover_change_5d) and not np.isinf(turnover_change_5d) else None
+                    turnover_change_10d = turnover_change_10d if pd.notna(turnover_change_10d) and not np.isinf(turnover_change_10d) else None
+                    turnover_change_20d = turnover_change_20d if pd.notna(turnover_change_20d) and not np.isinf(turnover_change_20d) else None
                     
                     # 转换为百分比
                     indicators['turnover_change_1d'] = turnover_change_1d * 100 if turnover_change_1d is not None else None
@@ -1650,12 +1650,12 @@ class HSIEmailSystem:
                         if len(turnover_rate) > 5:
                             change_5d = turnover_rate.pct_change(5).iloc[-1]
                             # 检查并处理 inf 和 -inf 值（分母为0的情况）
-                            turnover_rate_change_5d = change_5d if pd.notna(change_5d) and not pd.isinf(change_5d) else None
+                            turnover_rate_change_5d = change_5d if pd.notna(change_5d) and not np.isinf(change_5d) else None
                         
                         if len(turnover_rate) > 20:
                             change_20d = turnover_rate.pct_change(20).iloc[-1]
                             # 检查并处理 inf 和 -inf 值（分母为0的情况）
-                            turnover_rate_change_20d = change_20d if pd.notna(change_20d) and not pd.isinf(change_20d) else None
+                            turnover_rate_change_20d = change_20d if pd.notna(change_20d) and not np.isinf(change_20d) else None
                         
                         indicators['turnover_rate'] = turnover_rate.iloc[-1] if len(turnover_rate) > 0 else None
                         indicators['turnover_rate_change_5d'] = turnover_rate_change_5d
