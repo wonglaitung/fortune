@@ -8,7 +8,7 @@
 import os
 import sys
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -35,7 +35,7 @@ except ImportError:
     print("⚠️ 板块分析模块不可用")
 
 try:
-    from akshare import stock_a_div_em
+    import akshare as ak
     AKSHARE_AVAILABLE = True
 except ImportError:
     AKSHARE_AVAILABLE = False
@@ -549,18 +549,96 @@ def get_dividend_info():
         return None
     
     try:
-        # 获取即将除净的港股
-        df_dividend = stock_a_div_em(em="hk", start_date=datetime.now().strftime('%Y%m%d'), end_date=(datetime.now() + timedelta(days=90)).strftime('%Y%m%d'))
+        import time
         
-        if df_dividend is None or df_dividend.empty:
+        # 获取自选股列表
+        stock_list = WATCHLIST
+        all_dividends = []
+        
+        # 对每只自选股查询股息信息
+        for stock_code, stock_name in stock_list.items():
+            try:
+                # 提取数字部分并格式化为5位（与hsi_email.py保持一致）
+                symbol = stock_code.replace('.HK', '')
+                if len(symbol) < 5:
+                    symbol = symbol.zfill(5)
+                elif len(symbol) > 5:
+                    symbol = symbol[-5:]
+                
+                # 使用港股股息接口
+                df_dividend = ak.stock_hk_dividend_payout_em(symbol=symbol)
+                
+                if df_dividend is not None and not df_dividend.empty:
+                    # 检查数据列
+                    available_columns = df_dividend.columns.tolist()
+                    
+                    # 创建结果列表
+                    result_data = []
+                    for _, row in df_dividend.iterrows():
+                        try:
+                            # 提取关键信息（与hsi_email.py保持一致）
+                            ex_date = row.get('除净日', None)
+                            dividend_plan = row.get('分红方案', None)
+                            record_date = row.get('截至过户日', None)
+                            announcement_date = row.get('最新公告日期', None)
+                            fiscal_year = row.get('财政年度', None)
+                            distribution_type = row.get('分配类型', None)
+                            payment_date = row.get('发放日', None)
+                            
+                            # 只处理有除净日的记录
+                            if pd.notna(ex_date):
+                                result_data.append({
+                                    '股票代码': stock_code,
+                                    '股票名称': stock_name,
+                                    '除净日': ex_date,
+                                    '分红方案': dividend_plan,
+                                    '截至过户日': record_date,
+                                    '最新公告日期': announcement_date,
+                                    '财政年度': fiscal_year,
+                                    '分配类型': distribution_type,
+                                    '发放日': payment_date
+                                })
+                        except Exception as e:
+                            print(f"⚠️ 处理 {stock_name} 股息数据时出错: {e}")
+                            continue
+                    
+                    if result_data:
+                        all_dividends.append(pd.DataFrame(result_data))
+                
+                # 避免请求过于频繁
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"⚠️ 获取 {stock_name}({stock_code}) 股息信息失败: {e}")
+                continue
+        
+        if not all_dividends:
             return None
         
-        # 只取前10个
-        df_dividend = df_dividend.head(10)
+        # 合并所有数据
+        all_dividends_df = pd.concat(all_dividends, ignore_index=True)
         
-        return df_dividend.to_dict('records')
+        # 转换日期格式
+        all_dividends_df['除净日'] = pd.to_datetime(all_dividends_df['除净日'])
+        
+        # 筛选未来90天内的除净日
+        today = datetime.now()
+        future_date = today + timedelta(days=90)
+        
+        upcoming_dividends = all_dividends_df[
+            (all_dividends_df['除净日'] >= today) & 
+            (all_dividends_df['除净日'] <= future_date)
+        ].sort_values('除净日')
+        
+        if upcoming_dividends.empty:
+            return None
+        
+        # 只取前10个，转换为字典列表
+        return upcoming_dividends.head(10).to_dict('records')
+        
     except Exception as e:
         print(f"⚠️ 获取股息信息失败: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -1538,15 +1616,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 # 构建股息信息文本
                 dividend_text = ""
                 if dividend_data:
-                    dividend_text += "| 股票代码 | 股票名称 | 除净日 | 股息率 |\n"
-                    dividend_text += "|---------|---------|-------|--------|\n"
+                    dividend_text += "| 股票代码 | 股票名称 | 除净日 | 分红方案 |\n"
+                    dividend_text += "|---------|---------|-------|----------|\n"
                     
                     for stock in dividend_data[:10]:
-                        code = stock.get('A股代码', 'N/A')
-                        name = stock.get('A股简称', 'N/A')
-                        ex_date = stock.get('除权除息日', 'N/A')
-                        div_rate = stock.get('股息率', 'N/A')
-                        dividend_text += f"| {code} | {name} | {ex_date} | {div_rate} |\n"
+                        code = stock.get('股票代码', 'N/A')
+                        name = stock.get('股票名称', 'N/A')
+                        ex_date = stock.get('除净日', 'N/A')
+                        dividend_plan = stock.get('分红方案', 'N/A')
+                        # 格式化除净日
+                        if isinstance(ex_date, pd.Timestamp):
+                            ex_date = ex_date.strftime('%Y-%m-%d')
+                        # 截断过长的分红方案
+                        if dividend_plan != 'N/A' and len(str(dividend_plan)) > 30:
+                            dividend_plan = str(dividend_plan)[:28] + '...'
+                        dividend_text += f"| {code} | {name} | {ex_date} | {dividend_plan} |\n"
                 
                 # 构建恒生指数分析文本
                 hsi_text = ""
