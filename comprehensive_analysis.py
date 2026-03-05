@@ -558,14 +558,52 @@ def get_dividend_info():
         # 对每只自选股查询股息信息
         for stock_code, stock_name in stock_list.items():
             try:
-                # 提取数字部分
+                # 提取数字部分并格式化为5位（与hsi_email.py保持一致）
                 symbol = stock_code.replace('.HK', '')
+                if len(symbol) < 5:
+                    symbol = symbol.zfill(5)
+                elif len(symbol) > 5:
+                    symbol = symbol[-5:]
                 
                 # 使用港股股息接口
                 df_dividend = ak.stock_hk_dividend_payout_em(symbol=symbol)
                 
                 if df_dividend is not None and not df_dividend.empty:
-                    all_dividends.append(df_dividend)
+                    # 检查数据列
+                    available_columns = df_dividend.columns.tolist()
+                    
+                    # 创建结果列表
+                    result_data = []
+                    for _, row in df_dividend.iterrows():
+                        try:
+                            # 提取关键信息（与hsi_email.py保持一致）
+                            ex_date = row.get('除净日', None)
+                            dividend_plan = row.get('分红方案', None)
+                            record_date = row.get('截至过户日', None)
+                            announcement_date = row.get('最新公告日期', None)
+                            fiscal_year = row.get('财政年度', None)
+                            distribution_type = row.get('分配类型', None)
+                            payment_date = row.get('发放日', None)
+                            
+                            # 只处理有除净日的记录
+                            if pd.notna(ex_date):
+                                result_data.append({
+                                    '股票代码': stock_code,
+                                    '股票名称': stock_name,
+                                    '除净日': ex_date,
+                                    '分红方案': dividend_plan,
+                                    '截至过户日': record_date,
+                                    '最新公告日期': announcement_date,
+                                    '财政年度': fiscal_year,
+                                    '分配类型': distribution_type,
+                                    '发放日': payment_date
+                                })
+                        except Exception as e:
+                            print(f"⚠️ 处理 {stock_name} 股息数据时出错: {e}")
+                            continue
+                    
+                    if result_data:
+                        all_dividends.append(pd.DataFrame(result_data))
                 
                 # 避免请求过于频繁
                 time.sleep(0.5)
@@ -594,7 +632,7 @@ def get_dividend_info():
         if upcoming_dividends.empty:
             return None
         
-        # 只取前10个
+        # 只取前10个，转换为字典列表
         return upcoming_dividends.head(10).to_dict('records')
         
     except Exception as e:
