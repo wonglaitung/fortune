@@ -342,6 +342,189 @@ class TechnicalAnalyzer:
         
         return df
     
+    def calculate_intraday_amplitude(self, df):
+        """
+        计算日内振幅
+        
+        公式：(最高价 - 最低价) / 开盘价 × 100%
+        使用方法：
+          - 振幅 > 5% → 高波动
+          - 振幅 < 2% → 低波动
+        
+        参数:
+        - df: 包含OHLCV数据的DataFrame
+        
+        返回:
+        - 包含日内振幅列的DataFrame
+        """
+        if df.empty or len(df) < 1:
+            return df
+        
+        # 计算日内振幅（以百分比表示）
+        df['Intraday_Amplitude'] = ((df['High'] - df['Low']) / df['Open']) * 100
+        
+        return df
+    
+    def calculate_trend_slope(self, df, period=20):
+        """
+        计算趋势斜率（线性回归斜率）
+        
+        使用方法：
+          - 斜率 > 0 → 上升趋势
+          - 斜率 < 0 → 下降趋势
+          - 斜率 = 0 → 横盘震荡
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - period: 计算周期，默认20
+        
+        返回:
+        - 包含趋势斜率列的DataFrame
+        """
+        if df.empty or len(df) < period:
+            return df
+        
+        # 使用线性回归计算斜率
+        def calc_slope(prices):
+            x = np.arange(len(prices))
+            slope, _ = np.polyfit(x, prices, 1)
+            # 标准化斜率（相对于平均价格）
+            normalized_slope = slope / np.mean(prices) * 100
+            return normalized_slope
+        
+        df['Trend_Slope'] = df['Close'].rolling(window=period).apply(calc_slope, raw=True)
+        
+        return df
+    
+    def calculate_bias(self, df, periods=[6, 12, 24]):
+        """
+        计算乖离率
+        
+        公式：(当前价格 - MA) / MA × 100%
+        使用方法：
+          - 正乖离过大 → 回调风险
+          - 负乖离过大 → 反弹机会
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - periods: 计算周期列表，默认[6, 12, 24]
+        
+        返回:
+        - 包含乖离率列的DataFrame
+        """
+        if df.empty:
+            return df
+        
+        for period in periods:
+            ma_col = f'MA{period}'
+            bias_col = f'BIAS{period}'
+            
+            # 如果MA不存在，先计算
+            if ma_col not in df.columns:
+                df[ma_col] = df['Close'].rolling(window=period).mean()
+            
+            # 计算乖离率
+            df[bias_col] = ((df['Close'] - df[ma_col]) / df[ma_col]) * 100
+        
+        return df
+    
+    def calculate_ma_alignment(self, df, short_period=20, medium_period=50, long_period=200):
+        """
+        计算均线排列
+        
+        使用方法：
+          - 多头排列：短期均线 > 中期均线 > 长期均线
+          - 空头排列：短期均线 < 中期均线 < 长期均线
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - short_period: 短期均线周期，默认20
+        - medium_period: 中期均线周期，默认50
+        - long_period: 长期均线周期，默认200
+        
+        返回:
+        - 包含均线排列列的DataFrame
+        """
+        if df.empty:
+            return df
+        
+        # 确保均线存在
+        short_ma = f'MA{short_period}'
+        medium_ma = f'MA{medium_period}'
+        long_ma = f'MA{long_period}'
+        
+        if short_ma not in df.columns:
+            df[short_ma] = df['Close'].rolling(window=short_period).mean()
+        if medium_ma not in df.columns:
+            df[medium_ma] = df['Close'].rolling(window=medium_period).mean()
+        if long_ma not in df.columns:
+            df[long_ma] = df['Close'].rolling(window=long_period).mean()
+        
+        # 判断均线排列
+        df['MA_Alignment_Bullish'] = (df[short_ma] > df[medium_ma]) & (df[medium_ma] > df[long_ma])
+        df['MA_Alignment_Bearish'] = (df[short_ma] < df[medium_ma]) & (df[medium_ma] < df[long_ma])
+        
+        # 均线排列强度（多头排列的数量减去空头排列的数量）
+        df['MA_Alignment_Strength'] = (
+            df[short_ma] > df[medium_ma]
+        ).astype(int) + (
+            df[medium_ma] > df[long_ma]
+        ).astype(int) - (
+            df[short_ma] < df[medium_ma]
+        ).astype(int) - (
+            df[medium_ma] < df[long_ma]
+        ).astype(int)
+        
+        return df
+    
+    def calculate_skewness(self, df, period=20):
+        """
+        计算偏度（Skewness）
+        
+        使用方法：
+          - 偏度 > 0 → 正偏（右尾长）
+          - 偏度 < 0 → 负偏（左尾长）
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - period: 计算周期，默认20
+        
+        返回:
+        - 包含偏度列的DataFrame
+        """
+        if df.empty or len(df) < period:
+            return df
+        
+        # 计算收益率的偏度
+        returns = df['Close'].pct_change()
+        df['Returns_Skewness'] = returns.rolling(window=period).skew()
+        
+        return df
+    
+    def calculate_kurtosis(self, df, period=20):
+        """
+        计算峰度（Kurtosis）
+        
+        使用方法：
+          - 峰度 > 0 → 尖峰分布
+          - 峰度 < 0 → 扁平分布
+        
+        参数:
+        - df: 包含价格数据的DataFrame
+        - period: 计算周期，默认20
+        
+        返回:
+        - 包含峰度列的DataFrame
+        """
+        if df.empty or len(df) < period:
+            return df
+        
+        # 计算收益率的峰度
+        returns = df['Close'].pct_change()
+        df['Returns_Kurtosis'] = returns.rolling(window=period).kurt()
+        
+        return df
+    
     def calculate_all_indicators(self, df):
         """计算所有技术指标"""
         if df.empty:
@@ -376,6 +559,26 @@ class TechnicalAnalyzer:
         
         # 计算成交量指标
         df = self.calculate_volume_indicators(df)
+        
+        # ========== 新增指标 ==========
+        # 计算日内振幅
+        df = self.calculate_intraday_amplitude(df)
+        
+        # 计算趋势斜率
+        df = self.calculate_trend_slope(df)
+        
+        # 计算乖离率
+        df = self.calculate_bias(df)
+        
+        # 计算均线排列
+        df = self.calculate_ma_alignment(df)
+        
+        # 计算偏度
+        df = self.calculate_skewness(df)
+        
+        # 计算峰度
+        df = self.calculate_kurtosis(df)
+        # ==========================
         
         return df
     
