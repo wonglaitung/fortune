@@ -25319,6 +25319,22 @@
       "current_price": 5.0,
       "target_price": 5.35,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-03-05T15:43:17.453971",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.02,
+      "amount": 0,
+      "capital_after": 178.18929405196104,
+      "reason": "建仓评分5.7分（港股最高），价格低位（位置百分位15.61%），MACD金叉信号，CMF资金流连续流入（0.1565），技术指标协同性强，适合短线波段交易且风险可控",
+      "success": false,
+      "stop_loss_price": 16.24,
+      "current_price": 19.02,
+      "target_price": 20.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -41314,38 +41330,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-04 10:49:11",
-      "type": "SELL",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.5分，价格高位、CMF资金流大幅流出、OBV下降，房地产板块弱势下跌且流动性枯竭",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 34.2,
-      "target_price": 32.5,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-04 10:49:14",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.5分，价格高位、布林带超买、CMF资金流流出，能源股板块下跌拖累且流动性风险",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 45.0,
-      "target_price": 43.0,
-      "validity_period": 3
-    },
-    {
       "timestamp": "2026-03-04 10:49:17",
       "type": "BUY",
       "code": "0728.HK",
@@ -41521,6 +41505,37 @@
       "current_price": 5.0,
       "target_price": 5.35,
       "validity_period": 21
+    },
+    {
+      "timestamp": "2026-03-05 15:43:15",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "建仓评分5.7分（港股最高），价格低位（位置百分位15.61%），MACD金叉信号，CMF资金流连续流入（0.1565），技术指标协同性强，适合短线波段交易且风险可控",
+          "allocation_pct": 15,
+          "stop_loss_price": 16.24,
+          "target_price": 20.5,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-05 15:43:17",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.02,
+      "amount": 0,
+      "reason": "建仓评分5.7分（港股最高），价格低位（位置百分位15.61%），MACD金叉信号，CMF资金流连续流入（0.1565），技术指标协同性强，适合短线波段交易且风险可控",
+      "capital_after": 178.18929405196104,
+      "success": false,
+      "stop_loss_price": 16.24,
+      "current_price": 19.02,
+      "target_price": 20.5,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
