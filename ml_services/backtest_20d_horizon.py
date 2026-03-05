@@ -330,6 +330,39 @@ def save_results(all_trades, metrics, output_dir='output'):
 
     print(f"✅ 性能指标已保存到: {metrics_file}")
 
+    # 生成股票级别汇总CSV
+    stock_summary_file = os.path.join(output_dir, f"backtest_20d_stock_summary_{timestamp}.csv")
+    
+    stock_summary = []
+    for stock_code in df['stock_code'].unique():
+        stock_df = df[df['stock_code'] == stock_code]
+        
+        total_trades = len(stock_df)
+        buy_signals = stock_df[stock_df['prediction'] == 1]
+        
+        if len(buy_signals) > 0:
+            avg_return = buy_signals['actual_change'].mean()
+            win_rate = (buy_signals['actual_change'] > 0).mean()
+        else:
+            avg_return = 0
+            win_rate = 0
+        
+        accuracy = stock_df['prediction_correct'].mean()
+        
+        stock_summary.append({
+            '股票代码': stock_code,
+            '股票名称': STOCK_NAMES.get(stock_code, stock_code),
+            '交易次数': total_trades,
+            '平均收益率': avg_return,
+            '胜率': win_rate,
+            '准确率': accuracy
+        })
+    
+    stock_summary_df = pd.DataFrame(stock_summary)
+    stock_summary_df = stock_summary_df.sort_values('平均收益率', ascending=False)
+    stock_summary_df.to_csv(stock_summary_file, index=False, encoding='utf-8')
+    print(f"✅ 股票汇总已保存到: {stock_summary_file}")
+
     # 生成文本报告
     report_file = os.path.join(output_dir, f"backtest_20d_report_{timestamp}.txt")
 
@@ -340,7 +373,7 @@ def save_results(all_trades, metrics, output_dir='output'):
 
     print(f"✅ 文本报告已保存到: {report_file}")
 
-    return trades_file, metrics_file, report_file
+    return trades_file, metrics_file, report_file, stock_summary_file
 
 
 def generate_text_report(metrics, df):
