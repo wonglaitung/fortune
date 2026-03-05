@@ -3294,9 +3294,9 @@ def main(run_date=None, investor_type='conservative'):
         # 调用大模型分析股票数据
         llm_analysis = None
         try:
-            print("\n🤖 正在调用大模型分析股票数据（推理模式已启用）...")
+            print("\n🤖 正在调用大模型分析股票数据（推理模式已关闭）...")
             llm_prompt = build_llm_analysis_prompt(results, run_date, market_metrics, investor_type, current_time=datetime.now().strftime("%H:%M"))
-            llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=True)
+            llm_analysis = qwen_engine.chat_with_llm(llm_prompt, enable_thinking=False)
             print("✅ 大模型分析完成")
             # 将大模型分析结果打印到屏幕
             if llm_analysis:
