@@ -25303,6 +25303,22 @@
       "current_price": 19.12,
       "target_price": 21.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-05T13:59:35.270121",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.0,
+      "amount": 0,
+      "capital_after": 178.18929405196104,
+      "reason": "建仓评分4.2分，MACD金叉信号，CMF资金流正向（+0.1133），成交额5日变化率+14.26%，公用事业板块稳健且温和上涨，60日收益率-17.22%超跌反弹机会",
+      "success": false,
+      "stop_loss_price": 4.75,
+      "current_price": 5.0,
+      "target_price": 5.35,
+      "validity_period": 21
     }
   ],
   "portfolio_history": [
@@ -41298,142 +41314,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-03 14:39:43",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 1000,
-      "price": 78.75,
-      "amount": 78750.0,
-      "reason": "公用事业板块温和上涨，TAV评分47.75（弱共振），建仓信号strong，基本面优秀（PE 11.14，评分80），位置百分位9.18%低位，受益于行业稳定需求",
-      "capital_after": 7633.189294051961,
-      "success": true,
-      "stop_loss_price": 64.86,
-      "current_price": 78.75,
-      "target_price": 78.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-03 14:39:46",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 1500,
-      "price": 4.97,
-      "amount": 7455.0,
-      "reason": "公用事业板块温和上涨，TAV评分41.25（弱共振），建仓信号partial，基本面稳健（PE 12.31，评分90），位置百分位8.62%低位，中美贸易缓和利好",
-      "capital_after": 178.18929405196104,
-      "success": true,
-      "stop_loss_price": 4.14,
-      "current_price": 4.97,
-      "target_price": 5.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-04 10:48:58",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格低位（位置百分位8.62%）、MACD金叉信号、布林带超卖、技术指标协同（RSI接近超卖、OBV上升、CMF资金流流入），板块温和上涨且跑赢恒指，风险等级中等适合平衡型投资者",
-          "allocation_pct": 12,
-          "stop_loss_price": 4.4,
-          "target_price": 5.25,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.5分，RSI高位、CMF资金流流出、价格高位，航运板块暴跌-8.01%拖累，风险等级高",
-          "stop_loss_triggered": false,
-          "target_price": 17.5,
-          "validity_period": 3
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分6.0分，RSI超买、布林带超买、CMF资金流流出，能源股板块暴跌-2.06%且流动性风险加剧",
-          "stop_loss_triggered": false,
-          "target_price": 25.5,
-          "validity_period": 3
-        },
-        {
-          "code": "0016.HK",
-          "name": "新鸿基地产",
-          "reason": "出货评分5.0分，RSI高位、价格高位、CMF资金流流出，房地产板块暴跌-2.01%且估值过高风险",
-          "stop_loss_triggered": false,
-          "target_price": 130.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "出货评分4.5分，价格高位、CMF资金流大幅流出、OBV下降，房地产板块弱势下跌且流动性枯竭",
-          "stop_loss_triggered": false,
-          "target_price": 32.5,
-          "validity_period": 3
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货评分4.5分，价格高位、布林带超买、CMF资金流流出，能源股板块下跌拖累且流动性风险",
-          "stop_loss_triggered": false,
-          "target_price": 43.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-04 10:48:58",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.5分，RSI高位、CMF资金流流出、价格高位，航运板块暴跌-8.01%拖累，风险等级高",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 19.18,
-      "target_price": 17.5,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-04 10:49:04",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，RSI超买、布林带超买、CMF资金流流出，能源股板块暴跌-2.06%且流动性风险加剧",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 26.92,
-      "target_price": 25.5,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-04 10:49:06",
-      "type": "SELL",
-      "code": "0016.HK",
-      "name": "新鸿基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分，RSI高位、价格高位、CMF资金流流出，房地产板块暴跌-2.01%且估值过高风险",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 139.2,
-      "target_price": 130.0,
-      "validity_period": 3
-    },
-    {
       "timestamp": "2026-03-04 10:49:11",
       "type": "SELL",
       "code": "0012.HK",
@@ -41610,6 +41490,37 @@
       "current_price": 19.12,
       "target_price": 21.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-05 13:59:32",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "建仓评分4.2分，MACD金叉信号，CMF资金流正向（+0.1133），成交额5日变化率+14.26%，公用事业板块稳健且温和上涨，60日收益率-17.22%超跌反弹机会",
+          "allocation_pct": 15,
+          "stop_loss_price": 4.75,
+          "target_price": 5.35,
+          "validity_period": 21
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-05 13:59:35",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 5.0,
+      "amount": 0,
+      "reason": "建仓评分4.2分，MACD金叉信号，CMF资金流正向（+0.1133），成交额5日变化率+14.26%，公用事业板块稳健且温和上涨，60日收益率-17.22%超跌反弹机会",
+      "capital_after": 178.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.75,
+      "current_price": 5.0,
+      "target_price": 5.35,
+      "validity_period": 21
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
