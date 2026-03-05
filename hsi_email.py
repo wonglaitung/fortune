@@ -116,6 +116,10 @@ class HSIEmailSystem:
         'cmf_in': 1.2,         # CMF资金流入
         'price_above_vwap': 0.8,  # 价格高于VWAP
         'bb_oversold': 1.0,    # 布林带超卖
+        # 新增指标
+        'trend_slope_positive': 1.5,  # 趋势斜率>0（量化趋势强度）
+        'bias_oversold': 1.2,         # 乖离率<-5%（超卖）
+        'ma_alignment_bullish': 2.0,  # 均线多头排列（长期趋势确认）
     }
 
     # 建仓信号阈值
@@ -134,6 +138,10 @@ class HSIEmailSystem:
         'vwap_vol': 1.5,       # 价格低于VWAP且放量
         'price_down': 1.0,     # 价格下跌
         'bb_overbought': 1.0,  # 布林带超买
+        # 新增指标
+        'trend_slope_negative': 1.5,  # 趋势斜率<0（量化趋势强度）
+        'bias_overbought': 1.2,       # 乖离率>+5%（超买）
+        'ma_alignment_bearish': 2.0,  # 均线空头排列（长期趋势确认）
     }
 
     # 出货信号阈值
@@ -147,6 +155,12 @@ class HSIEmailSystem:
     # 成交量阈值
     VOL_RATIO_BUILDUP = 1.3
     VOL_RATIO_DISTRIBUTION = 2.0
+
+    # 新增指标阈值
+    TREND_SLOPE_THRESHOLD = 0.1  # 趋势斜率阈值（正/负0.1）
+    BIAS_OVERSOLD_THRESHOLD = -5.0  # 乖离率超卖阈值（%）
+    BIAS_OVERBOUGHT_THRESHOLD = 5.0  # 乖离率超买阈值（%）
+    MA_ALIGNMENT_THRESHOLD = 1  # 均线排列强度阈值（多头>0，空头<0）
 
     # 板块分析配置
     SECTOR_ANALYSIS_PERIOD = 5  # 板块分析计算周期（交易日）
@@ -989,6 +1003,24 @@ class HSIEmailSystem:
             score += self.BUILDUP_WEIGHTS['cmf_in']
             reasons.append('cmf_in')
 
+        # 新增：趋势斜率>0（量化趋势强度）
+        trend_slope = row.get('Trend_Slope_20d', 0.0)
+        if pd.notna(trend_slope) and trend_slope > self.TREND_SLOPE_THRESHOLD:
+            score += self.BUILDUP_WEIGHTS['trend_slope_positive']
+            reasons.append('trend_slope_positive')
+
+        # 新增：乖离率<-5%（超卖）
+        bias = row.get('BIAS6', 0.0)
+        if pd.notna(bias) and bias < self.BIAS_OVERSOLD_THRESHOLD:
+            score += self.BUILDUP_WEIGHTS['bias_oversold']
+            reasons.append('bias_oversold')
+
+        # 新增：均线多头排列（长期趋势确认）
+        ma_alignment = row.get('MA_Alignment_Strength', -1)
+        if pd.notna(ma_alignment) and ma_alignment > 0:
+            score += self.BUILDUP_WEIGHTS['ma_alignment_bullish']
+            reasons.append('ma_alignment_bullish')
+
         # 返回分数与分层建议
         signal = None
         if score >= self.BUILDUP_THRESHOLD_STRONG:
@@ -1083,6 +1115,24 @@ class HSIEmailSystem:
         if pd.notna(cmf) and cmf < -0.05:
             score += self.DISTRIBUTION_WEIGHTS['cmf_out']
             reasons.append('cmf_out')
+
+        # 新增：趋势斜率<0（量化趋势强度）
+        trend_slope = row.get('Trend_Slope_20d', 0.0)
+        if pd.notna(trend_slope) and trend_slope < -self.TREND_SLOPE_THRESHOLD:
+            score += self.DISTRIBUTION_WEIGHTS['trend_slope_negative']
+            reasons.append('trend_slope_negative')
+
+        # 新增：乖离率>+5%（超买）
+        bias = row.get('BIAS6', 0.0)
+        if pd.notna(bias) and bias > self.BIAS_OVERBOUGHT_THRESHOLD:
+            score += self.DISTRIBUTION_WEIGHTS['bias_overbought']
+            reasons.append('bias_overbought')
+
+        # 新增：均线空头排列（长期趋势确认）
+        ma_alignment = row.get('MA_Alignment_Strength', -1)
+        if pd.notna(ma_alignment) and ma_alignment < 0:
+            score += self.DISTRIBUTION_WEIGHTS['ma_alignment_bearish']
+            reasons.append('ma_alignment_bearish')
 
         # 返回分数与分层建议
         signal = None
@@ -2148,6 +2198,16 @@ class HSIEmailSystem:
             medium_term_score = indicators.get('medium_term_score', 0)
             if medium_term_score > 0:
                 tech_info.append(f"中期评分: {medium_term_score:.1f}")
+            
+            # 新增：趋势斜率
+            trend_slope = indicators.get('Trend_Slope_20d')
+            if trend_slope is not None:
+                tech_info.append(f"趋势斜率: {trend_slope:.4f}")
+            
+            # 新增：乖离率
+            bias = indicators.get('BIAS6')
+            if bias is not None:
+                tech_info.append(f"乖离率: {bias:.2f}%")
             
             ma_alignment = indicators.get('ma_alignment', 'N/A')
             if ma_alignment != 'N/A':

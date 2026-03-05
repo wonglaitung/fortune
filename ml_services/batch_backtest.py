@@ -80,6 +80,9 @@ def batch_backtest_all_stocks(model, test_df, feature_columns, confidence_thresh
             stock_result['stock_name'] = STOCK_NAMES.get(stock_code, stock_code)
             stock_result['data_points'] = len(prices)
 
+            # 添加详细交易记录
+            stock_result['trades'] = convert_to_serializable(evaluator.trades)
+
             results.append(stock_result)
 
             # 打印简要结果
@@ -133,10 +136,15 @@ def save_batch_results(results, model_type, horizon, fusion_method=None):
 
     filepath = os.path.join(output_dir, filename)
 
-    # 转换为可序列化的格式
-    # 只保存关键指标，不保存详细的交易记录
+    # 转换为可序列化的格式 - 保存完整结果（包含详细交易记录）
+    results_full = []
     results_summary = []
     for result in results:
+        # 完整结果（包含交易记录）
+        result_full = convert_to_serializable(result)
+        results_full.append(result_full)
+
+        # 汇总结果（仅关键指标）
         result_summary = {
             'stock_code': result['stock_code'],
             'stock_name': result.get('stock_name', result['stock_code']),
@@ -161,10 +169,18 @@ def save_batch_results(results, model_type, horizon, fusion_method=None):
         }
         results_summary.append(result_summary)
 
+    # 保存完整结果（包含详细交易记录）
+    detailed_filename = f"batch_backtest_detailed_{model_type}_{horizon}d_{timestamp}.json"
+    detailed_filepath = os.path.join(output_dir, detailed_filename)
+    with open(detailed_filepath, 'w', encoding='utf-8') as f:
+        json.dump(results_full, f, indent=2, ensure_ascii=False)
+
+    # 保存汇总结果（仅关键指标）
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(results_summary, f, indent=2, ensure_ascii=False)
 
     print(f"\n✅ 批量回测结果已保存到: {filepath}")
+    print(f"✅ 详细交易记录已保存到: {detailed_filepath}")
     print(f"   回测股票数量: {len(results_summary)}")
 
     # 生成汇总报告

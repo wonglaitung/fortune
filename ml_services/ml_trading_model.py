@@ -519,6 +519,59 @@ class FeatureEngineer:
         df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean()
         df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean()
 
+        # ========== 新增指标：趋势斜率 ==========
+        # 计算趋势斜率（线性回归斜率）
+        def calc_trend_slope(prices):
+            if len(prices) < 2:
+                return 0.0
+            x = np.arange(len(prices))
+            try:
+                slope, _ = np.polyfit(x, prices, 1)
+                # 标准化斜率（相对于平均价格）
+                normalized_slope = slope / (np.mean(np.abs(prices)) + 1e-10) * 100
+                return normalized_slope
+            except:
+                return 0.0
+
+        df['Trend_Slope_5d'] = df['Close'].rolling(window=5, min_periods=2).apply(calc_trend_slope, raw=True)
+        df['Trend_Slope_20d'] = df['Close'].rolling(window=20, min_periods=2).apply(calc_trend_slope, raw=True)
+        df['Trend_Slope_60d'] = df['Close'].rolling(window=60, min_periods=2).apply(calc_trend_slope, raw=True)
+
+        # ========== 新增指标：乖离率 ==========
+        # 计算乖离率
+        df['BIAS6'] = ((df['Close'] - df['MA5']) / (df['MA5'] + 1e-10)) * 100
+        df['BIAS12'] = ((df['Close'] - df['MA10']) / (df['MA10'] + 1e-10)) * 100
+        df['BIAS24'] = ((df['Close'] - df['MA20']) / (df['MA20'] + 1e-10)) * 100
+
+        # ========== 新增指标：均线排列 ==========
+        # 判断均线排列
+        df['MA_Alignment_Bullish_20_50'] = (df['MA20'] > df['MA50']) & (df['MA50'] > df['MA200'])
+        df['MA_Alignment_Bearish_20_50'] = (df['MA20'] < df['MA50']) & (df['MA50'] < df['MA200'])
+
+        # 均线排列强度（多头排列的数量减去空头排列的数量）
+        df['MA_Alignment_Strength'] = (
+            (df['MA20'] > df['MA50']).astype(int) +
+            (df['MA50'] > df['MA200']).astype(int) -
+            (df['MA20'] < df['MA50']).astype(int) -
+            (df['MA50'] < df['MA200']).astype(int)
+        )
+
+        # ========== 新增指标：日内振幅（更精确的计算） ==========
+        # 计算日内振幅（相对于开盘价）
+        df['Intraday_Amplitude'] = ((df['High'] - df['Low']) / (df['Open'] + 1e-10)) * 100
+
+        # ========== 新增指标：多周期波动率 ==========
+        # 补充10日和60日波动率
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std()
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std()
+
+        # ========== 新增指标：多周期偏度和峰度 ==========
+        # 补充多周期偏度和峰度
+        df['Skewness_5d'] = df['Close'].pct_change().rolling(5).skew()
+        df['Skewness_10d'] = df['Close'].pct_change().rolling(10).skew()
+        df['Kurtosis_5d'] = df['Close'].pct_change().rolling(5).kurt()
+        df['Kurtosis_10d'] = df['Close'].pct_change().rolling(10).kurt()
+
         # 价格相对长期均线的比率（业界长期趋势指标）
         df['Price_Ratio_MA120'] = df['Close'] / df['MA120']
         df['Price_Ratio_MA250'] = df['Close'] / df['MA250']

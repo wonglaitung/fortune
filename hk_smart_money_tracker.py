@@ -123,12 +123,21 @@ BUILDUP_WEIGHTS = {
     'sentiment_improving': 0.8,  # 情感指标改善（业界标准权重）
     'sentiment_ma3_up': 0.5,     # MA3上升（业界标准权重）
     'sentiment_volatility_low': 0.3,  # 波动率低（业界标准权重）
+    'trend_slope_positive': 1.5,  # 趋势斜率>0（量化趋势强度）
+    'bias_oversold': 1.2,         # 乖离率<-5%（超卖）
+    'ma_alignment_bullish': 2.0,  # 均线多头排列（长期趋势确认）
 }
 
 # 建仓信号阈值
 BUILDUP_THRESHOLD_STRONG = 5.0   # 强烈建仓信号阈值
 BUILDUP_THRESHOLD_PARTIAL = 3.0  # 部分建仓信号阈值
 SOUTHBOUND_THRESHOLD_IN = 1000.0  # 南向资金流入阈值（万）
+
+# 新增指标阈值
+TREND_SLOPE_THRESHOLD = 0.1  # 趋势斜率阈值（正/负0.1）
+BIAS_OVERSOLD_THRESHOLD = -5.0  # 乖离率超卖阈值（%）
+BIAS_OVERBOUGHT_THRESHOLD = 5.0  # 乖离率超买阈值（%）
+MA_ALIGNMENT_THRESHOLD = 1  # 均线排列强度阈值（多头>0，空头<0）
 
 # 出货信号权重配置
 DISTRIBUTION_WEIGHTS = {
@@ -146,6 +155,9 @@ DISTRIBUTION_WEIGHTS = {
     'sentiment_deteriorating': 0.8,  # 情感指标恶化（业界标准权重）
     'sentiment_ma3_down': 0.5,       # MA3下降（业界标准权重）
     'sentiment_volatility_high': 0.3, # 波动率高（业界标准权重）
+    'trend_slope_negative': 1.5,  # 趋势斜率<0（量化趋势强度）
+    'bias_overbought': 1.2,       # 乖离率>+5%（超买）
+    'ma_alignment_bearish': 2.0,  # 均线空头排列（长期趋势确认）
 }
 
 # 出货信号阈值
@@ -696,6 +708,8 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
                 "VIX恐慌指数": stock.get('vix_level', 'N/A') or 'N/A',
                 "成交额变化(1日/5日/20日)": f"{stock.get('turnover_change_1d', 'N/A') or 'N/A'}/{stock.get('turnover_change_5d', 'N/A') or 'N/A'}/{stock.get('turnover_change_20d', 'N/A') or 'N/A'}",
                 "换手率(%)": stock.get('turnover_rate', 'N/A') or 'N/A',
+                "趋势斜率": f"{stock.get('Trend_Slope_20d', 'N/A'):.4f}" if stock.get('Trend_Slope_20d') is not None else 'N/A',
+                "乖离率(%)": f"{stock.get('BIAS6', 'N/A'):.2f}" if stock.get('BIAS6') is not None else 'N/A',
                 "情感指标": f"MA3:{round(stock.get('sentiment_ma3', 0), 2) if stock.get('sentiment_ma3') is not None else 'N/A'} MA7:{round(stock.get('sentiment_ma7', 0), 2) if stock.get('sentiment_ma7') is not None else 'N/A'} 波动:{round(stock.get('sentiment_volatility', 0), 2) if stock.get('sentiment_volatility') is not None else 'N/A'}"
             },
             "多周期趋势（重要）": {
@@ -1958,6 +1972,24 @@ def analyze_stock(code, name, run_date=None):
                     score += BUILDUP_WEIGHTS['sentiment_volatility_low']
                     reasons.append('sentiment_volatility_low')
 
+            # 新增：趋势斜率>0（量化趋势强度）
+            trend_slope = row.get('Trend_Slope_20d', 0.0)
+            if pd.notna(trend_slope) and trend_slope > TREND_SLOPE_THRESHOLD:
+                score += BUILDUP_WEIGHTS['trend_slope_positive']
+                reasons.append('trend_slope_positive')
+
+            # 新增：乖离率<-5%（超卖）
+            bias = row.get('BIAS6', 0.0)
+            if pd.notna(bias) and bias < BIAS_OVERSOLD_THRESHOLD:
+                score += BUILDUP_WEIGHTS['bias_oversold']
+                reasons.append('bias_oversold')
+
+            # 新增：均线多头排列（长期趋势确认）
+            ma_alignment = row.get('MA_Alignment_Strength', -1)
+            if pd.notna(ma_alignment) and ma_alignment > MA_ALIGNMENT_THRESHOLD:
+                score += BUILDUP_WEIGHTS['ma_alignment_bullish']
+                reasons.append('ma_alignment_bullish')
+
             # 基本面调整（示例：基本面越差，更容易做短线建仓；基本面好时偏长期持有）
             if fundamental_score is not None:
                 if fundamental_score > 60:
@@ -2132,6 +2164,24 @@ def analyze_stock(code, name, run_date=None):
                 if pd.notna(row.get('sentiment_volatility')) and row['sentiment_volatility'] > 2.0:
                     score += DISTRIBUTION_WEIGHTS['sentiment_volatility_high']
                     reasons.append('sentiment_volatility_high')
+
+            # 新增：趋势斜率<0（量化趋势强度）
+            trend_slope = row.get('Trend_Slope_20d', 0.0)
+            if pd.notna(trend_slope) and trend_slope < -TREND_SLOPE_THRESHOLD:
+                score += DISTRIBUTION_WEIGHTS['trend_slope_negative']
+                reasons.append('trend_slope_negative')
+
+            # 新增：乖离率>+5%（超买）
+            bias = row.get('BIAS6', 0.0)
+            if pd.notna(bias) and bias > BIAS_OVERBOUGHT_THRESHOLD:
+                score += DISTRIBUTION_WEIGHTS['bias_overbought']
+                reasons.append('bias_overbought')
+
+            # 新增：均线空头排列（长期趋势确认）
+            ma_alignment = row.get('MA_Alignment_Strength', 1)
+            if pd.notna(ma_alignment) and ma_alignment < -MA_ALIGNMENT_THRESHOLD:
+                score += DISTRIBUTION_WEIGHTS['ma_alignment_bearish']
+                reasons.append('ma_alignment_bearish')
 
             # 基本面调整（不要完全阻止出货，而是调整阈值）
             if fundamental_score is not None:
