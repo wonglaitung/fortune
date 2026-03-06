@@ -29,27 +29,40 @@ class HSI_Predictor:
     """恒生指数预测器"""
 
     # 特征重要性配置（权重、影响方向）
+    # 基于2026-03-02 statistical特征选择结果，使用top 20特征
     FEATURE_IMPORTANCE = {
-        'HSI_Return_60d': {'weight': 0.1729, 'direction': -1},  # 负面影响
-        'US_10Y_Yield': {'weight': 0.0616, 'direction': -1},
-        'VIX_Level': {'weight': 0.0493, 'direction': 1},
-        '60d_Trend_HSI_Return_60d': {'weight': 0.0273, 'direction': 1},
-        '60d_Trend_MA250_Slope': {'weight': 0.0198, 'direction': -1},
-        'Turnover_Std_20': {'weight': 0.0173, 'direction': 1},
-        'Vol_Std_20': {'weight': 0.0172, 'direction': -1},
-        'OBV': {'weight': 0.0169, 'direction': 1},
-        'VWAP': {'weight': 0.0164, 'direction': 1},
-        '5d_Trend_US_10Y_Yield': {'weight': 0.0158, 'direction': 1},
-        'ATR_MA120': {'weight': 0.0154, 'direction': -1},
-        '60d_Trend_OBV': {'weight': 0.0152, 'direction': -1},
-        'Resistance_120d': {'weight': 0.0136, 'direction': 1},
-        'Distance_Support_120d': {'weight': 0.0133, 'direction': 1},
-        'ATR_MA': {'weight': 0.0116, 'direction': -1},
-        'Volume_MA250': {'weight': 0.0112, 'direction': 1},
-        '60d_Trend_US_10Y_Yield': {'weight': 0.0106, 'direction': 1},
-        'ATR_PE': {'weight': 0.0104, 'direction': -1},
-        '60d_RS_Signal_MA250_Slope': {'weight': 0.0102, 'direction': -1},
-        'MA120': {'weight': 0.0099, 'direction': 1},
+        # 长期移动平均线相关（权重最高）
+        'MA250': {'weight': 0.1500, 'direction': 1},  # 250日均线，长期趋势支撑
+        'Volume_MA250': {'weight': 0.1200, 'direction': 1},  # 250日成交量均线，长期流动性
+        'MA120': {'weight': 0.1000, 'direction': 1},  # 120日均线，中期趋势
+        
+        # 多周期相对强度信号（RS_Signal）
+        '60d_RS_Signal_MA250': {'weight': 0.0800, 'direction': 1},  # 60日相对强度信号
+        '60d_RS_Signal_Volume_MA250': {'weight': 0.0600, 'direction': 1},  # 成交量相对强度
+        '20d_RS_Signal_MA250': {'weight': 0.0400, 'direction': 1},  # 20日相对强度
+        '10d_RS_Signal_MA250': {'weight': 0.0350, 'direction': 1},  # 10日相对强度
+        '5d_RS_Signal_MA250': {'weight': 0.0300, 'direction': 1},  # 5日相对强度
+        '3d_RS_Signal_MA250': {'weight': 0.0250, 'direction': 1},  # 3日相对强度
+        
+        # 多周期趋势（Trend）
+        '60d_Trend_MA250': {'weight': 0.0500, 'direction': 1},  # 60日趋势
+        '20d_Trend_MA250': {'weight': 0.0450, 'direction': 1},  # 20日趋势
+        '10d_Trend_MA250': {'weight': 0.0400, 'direction': 1},  # 10日趋势
+        '5d_Trend_MA250': {'weight': 0.0350, 'direction': 1},  # 5日趋势
+        '3d_Trend_MA250': {'weight': 0.0300, 'direction': 1},  # 3日趋势
+        
+        # 成交量趋势
+        '60d_Trend_Volume_MA250': {'weight': 0.0450, 'direction': 1},  # 60日成交量趋势
+        '20d_Trend_Volume_MA250': {'weight': 0.0350, 'direction': 1},  # 20日成交量趋势
+        
+        # 波动率
+        'Volatility_120d': {'weight': 0.0400, 'direction': -1},  # 120日波动率，高波动率不利
+        
+        # 中期均线趋势
+        '60d_Trend_MA120': {'weight': 0.0350, 'direction': 1},  # 60日MA120趋势
+        
+        # 成交量相对强度
+        '20d_RS_Signal_Volume_MA250': {'weight': 0.0300, 'direction': 1},  # 20日成交量相对强度
     }
 
     def __init__(self):
@@ -62,20 +75,20 @@ class HSI_Predictor:
         """获取所需数据"""
         print("📊 正在获取数据...")
 
-        # 获取恒生指数数据
+        # 获取恒生指数数据（2年数据以确保MA250等长期指标有足够数据）
         print("  - 恒生指数数据...")
         hsi = yf.Ticker("^HSI")
-        self.hsi_data = hsi.history(period="1y", interval="1d")
+        self.hsi_data = hsi.history(period="2y", interval="1d")
 
         # 获取美国10年期国债收益率
         print("  - 美国国债收益率...")
         us_yield = yf.Ticker("^TNX")
-        self.us_data = us_yield.history(period="1y", interval="1d")
+        self.us_data = us_yield.history(period="2y", interval="1d")
 
         # 获取VIX指数
         print("  - VIX恐慌指数...")
         vix = yf.Ticker("^VIX")
-        self.vix_data = vix.history(period="1y", interval="1d")
+        self.vix_data = vix.history(period="2y", interval="1d")
 
         if self.hsi_data.empty or self.us_data.empty or self.vix_data.empty:
             raise ValueError("数据获取失败")
@@ -140,52 +153,144 @@ class HSI_Predictor:
         print("🔧 正在计算特征...")
 
         hsi_df = self.calculate_technical_indicators(self.hsi_data)
-        us_df = self.calculate_technical_indicators(self.us_data)
-
+        
+        # 计算多周期指标
+        periods = [3, 5, 10, 20, 60]
+        
+        # 计算多周期收益率
+        for period in periods:
+            if len(hsi_df) >= period:
+                return_col = f'Return_{period}d'
+                hsi_df[return_col] = hsi_df['Close'].pct_change(period)
+                
+                # 计算趋势方向（1=上涨，0=下跌）
+                trend_col = f'{period}d_Trend'
+                hsi_df[trend_col] = (hsi_df[return_col] > 0).astype(int)
+                
+                # 计算相对强度信号（基于收益率和MA250）
+                rs_signal_col = f'{period}d_RS_Signal'
+                hsi_df[rs_signal_col] = (hsi_df[return_col] > 0).astype(int)
+        
+        # 计算多周期MA250趋势
+        for period in periods:
+            if len(hsi_df) >= period:
+                trend_col = f'{period}d_Trend_MA250'
+                hsi_df[trend_col] = (hsi_df['MA250'].diff(period) > 0).astype(int)
+                
+                # 计算MA250的相对强度信号
+                rs_signal_col = f'{period}d_RS_Signal_MA250'
+                hsi_df[rs_signal_col] = (hsi_df['Close'] > hsi_df['MA250']).astype(int)
+        
+        # 计算多周期Volume_MA250趋势
+        for period in periods:
+            if len(hsi_df) >= period:
+                trend_col = f'{period}d_Trend_Volume_MA250'
+                hsi_df[trend_col] = (hsi_df['Volume_MA250'].diff(period) > 0).astype(int)
+                
+                # 计算Volume_MA250的相对强度信号
+                rs_signal_col = f'{period}d_RS_Signal_Volume_MA250'
+                hsi_df[rs_signal_col] = (hsi_df['Volume'] > hsi_df['Volume_MA250']).astype(int)
+        
+        # 计算多周期MA120趋势
+        for period in periods:
+            if len(hsi_df) >= period:
+                trend_col = f'{period}d_Trend_MA120'
+                hsi_df[trend_col] = (hsi_df['MA120'].diff(period) > 0).astype(int)
+        
+        # 计算120日波动率
+        hsi_df['Volatility_120d'] = hsi_df['Return_1d'].rolling(window=120).std()
+        
         # 获取最新数据（最近一天）
         latest_hsi = hsi_df.iloc[-1]
-        latest_us = us_df.iloc[-1]
-        latest_vix = self.vix_data['Close'].iloc[-1]
-
+        
+        # 安全获取特征值，处理NaN情况
+        def safe_get(series, default=0):
+            if pd.isna(series):
+                return default
+            return series
+        
         # 计算特征值
         self.features = {
-            'HSI_Return_60d': latest_hsi['Return_60d'],
-            'US_10Y_Yield': latest_us['Close'] / 100,  # 转换为小数
-            'VIX_Level': latest_vix,
-            '60d_Trend_HSI_Return_60d': latest_hsi['Return_60d'],  # 60日趋势
-            '60d_Trend_MA250_Slope': latest_hsi['MA250_Slope'],
-            'Turnover_Std_20': latest_hsi['Turnover_Std_20'],
-            'Vol_Std_20': latest_hsi['Vol_Std_20'],
-            'OBV': latest_hsi['OBV'],
-            'VWAP': latest_hsi['VWAP'],
-            '5d_Trend_US_10Y_Yield': latest_us['Close'] / 100 - us_df['Close'].iloc[-6] / 100,  # 5日趋势
-            'ATR_MA120': latest_hsi['ATR_MA120'],
-            '60d_Trend_OBV': latest_hsi['OBV'] - hsi_df['OBV'].iloc[-60],  # 60日OBV趋势
-            'Resistance_120d': latest_hsi['Resistance_120d'],
-            'Distance_Support_120d': latest_hsi['Distance_Support_120d'],
-            'ATR_MA': latest_hsi['ATR_MA'],
-            'Volume_MA250': latest_hsi['Volume_MA250'],
-            '60d_Trend_US_10Y_Yield': latest_us['Close'] / 100 - us_df['Close'].iloc[-60] / 100,  # 60日趋势
-            'ATR_PE': latest_hsi['ATR'] / (latest_hsi['Close'] * 100),  # ATR/价格
-            '60d_RS_Signal_MA250_Slope': latest_hsi['RS_Signal_MA250_Slope'],
-            'MA120': latest_hsi['MA120'],
+            # 长期移动平均线相关
+            'MA250': safe_get(latest_hsi.get('MA250', latest_hsi['Close'])),
+            'Volume_MA250': safe_get(latest_hsi.get('Volume_MA250', latest_hsi['Volume'])),
+            'MA120': safe_get(latest_hsi.get('MA120', latest_hsi['Close'])),
+            
+            # 多周期相对强度信号（RS_Signal）
+            '60d_RS_Signal_MA250': safe_get(latest_hsi.get('60d_RS_Signal_MA250', 0), 0),
+            '60d_RS_Signal_Volume_MA250': safe_get(latest_hsi.get('60d_RS_Signal_Volume_MA250', 0), 0),
+            '20d_RS_Signal_MA250': safe_get(latest_hsi.get('20d_RS_Signal_MA250', 0), 0),
+            '10d_RS_Signal_MA250': safe_get(latest_hsi.get('10d_RS_Signal_MA250', 0), 0),
+            '5d_RS_Signal_MA250': safe_get(latest_hsi.get('5d_RS_Signal_MA250', 0), 0),
+            '3d_RS_Signal_MA250': safe_get(latest_hsi.get('3d_RS_Signal_MA250', 0), 0),
+            
+            # 多周期趋势（Trend）
+            '60d_Trend_MA250': safe_get(latest_hsi.get('60d_Trend_MA250', 0), 0),
+            '20d_Trend_MA250': safe_get(latest_hsi.get('20d_Trend_MA250', 0), 0),
+            '10d_Trend_MA250': safe_get(latest_hsi.get('10d_Trend_MA250', 0), 0),
+            '5d_Trend_MA250': safe_get(latest_hsi.get('5d_Trend_MA250', 0), 0),
+            '3d_Trend_MA250': safe_get(latest_hsi.get('3d_Trend_MA250', 0), 0),
+            
+            # 成交量趋势
+            '60d_Trend_Volume_MA250': safe_get(latest_hsi.get('60d_Trend_Volume_MA250', 0), 0),
+            '20d_Trend_Volume_MA250': safe_get(latest_hsi.get('20d_Trend_Volume_MA250', 0), 0),
+            
+            # 波动率
+            'Volatility_120d': safe_get(latest_hsi.get('Volatility_120d', 0), 0),
+            
+            # 中期均线趋势
+            '60d_Trend_MA120': safe_get(latest_hsi.get('60d_Trend_MA120', 0), 0),
+            
+            # 成交量相对强度
+            '20d_RS_Signal_Volume_MA250': safe_get(latest_hsi.get('20d_RS_Signal_Volume_MA250', 0), 0),
         }
 
         print(f"  ✅ 特征计算完成（{len(self.features)} 个特征）")
 
     def normalize_feature(self, feature_name, value):
         """特征标准化（使用z-score标准化）"""
+        # RS_Signal和Trend特征通常是0-1的二元值，直接映射到[-1, 1]
+        if 'RS_Signal' in feature_name or 'Trend' in feature_name:
+            # 将0-1映射到[-1, 1]：0 -> -1, 1 -> 1
+            return value * 2 - 1
+        
         # 如果是收益率类特征，使用固定范围标准化
-        if 'Return' in feature_name or 'Yield' in feature_name:
+        elif 'Return' in feature_name or 'Yield' in feature_name:
             # 标准化到[-1, 1]区间，假设收益率在[-0.2, 0.2]范围内
             return np.clip(value / 0.2, -1, 1)
-        elif 'Trend' in feature_name or 'Slope' in feature_name:
-            return np.clip(value * 10, -1, 1)  # 放大趋势信号
+        
+        # MA相关特征，使用相对标准化
+        elif 'MA' in feature_name:
+            # MA值通常很大，使用相对标准化
+            if pd.isna(value):
+                return 0
+            return np.tanh(value / 50000)  # 假设MA值在50000左右
+        
+        # 波动率特征
+        elif 'Volatility' in feature_name:
+            # 波动率通常在0.01-0.05之间
+            if pd.isna(value):
+                return 0
+            return np.clip((value - 0.02) / 0.03, -1, 1)
+        
+        # Level或VIX特征
         elif 'Level' in feature_name or 'VIX' in feature_name:
             # VIX通常在10-50之间，标准化到[0, 1]
+            if pd.isna(value):
+                return 0
             return (value - 20) / 30  # 20为中位数
+        
+        # Slope特征
+        elif 'Slope' in feature_name:
+            # 斜率通常很小，放大处理
+            if pd.isna(value):
+                return 0
+            return np.clip(value * 100, -1, 1)
+        
         else:
             # 其他特征使用简单的相对标准化
+            if pd.isna(value):
+                return 0
             return np.tanh(value / (abs(value) + 1))  # 使用tanh函数标准化
 
     def calculate_prediction_score(self):
@@ -273,23 +378,19 @@ class HSI_Predictor:
         }
         trend_color = trend_colors.get(trend, '#6b7280')
 
-        # 预计算特征值格式化字符串
-        hsi_return_60d = self.features['HSI_Return_60d'] * 100
-        us_10y_yield = self.features['US_10Y_Yield'] * 100
-        vix_level = self.features['VIX_Level']
-        turnover_std_20 = self.features['Turnover_Std_20'] / 1e8
-        obv = self.features['OBV'] / 1e8
-        distance_support_120d = self.features['Distance_Support_120d'] * 100
+        # 预计算特征值格式化字符串（使用新特征集）
+        ma250 = self.features.get('MA250', 0)
+        volume_ma250 = self.features.get('Volume_MA250', 0)
+        ma120 = self.features.get('MA120', 0)
+        rs_signal_60d = self.features.get('60d_RS_Signal_MA250', 0)
+        volatility_120d = self.features.get('Volatility_120d', 0) * 100 if self.features.get('Volatility_120d') else 0
         
-        # 格式化描述文本
-        hsi_return_desc = f"恒指近60日上涨{abs(hsi_return_60d):.2f}%，根据历史数据，涨幅过高通常预示回调压力"
-        us_yield_desc = f"美债收益率处于{us_10y_yield:.2f}%水平，上升会增加资金成本，压制股市估值"
-        vix_desc = '市场情绪平静（低VIX）' if vix_level < 20 else '市场情绪紧张（高VIX）' if vix_level > 30 else '市场情绪正常'
-        turnover_desc = '市场活跃度高' if self.features['Turnover_Std_20'] > 1e9 else '市场活跃度正常'
-        obv_flow = '资金净流入' if self.features['OBV'] > 0 else '资金净流出'
-        obv_impact = '支撑股价' if self.features['OBV'] > 0 else '压制股价'
-        obv_desc = f"{obv_flow}，{obv_impact}"
-        support_desc = '距离支撑位较远，安全边际一般' if abs(self.features['Distance_Support_120d']) > 0.1 else '距离支撑位适中，安全边际良好'
+        # 格式化描述文本（基于新特征）
+        ma250_desc = f"250日均线位于{ma250:.2f}点，反映长期趋势。价格在均线上方通常表示上涨趋势"
+        volume_desc = f"250日成交量均值为{volume_ma250:.0f}手，反映长期流动性水平"
+        ma120_desc = f"120日均线位于{ma120:.2f}点，反映中期趋势支撑"
+        rs_desc = f"60日相对强度信号为{rs_signal_60d:.0f}，{'强势' if rs_signal_60d > 0 else '弱势'}"
+        volatility_desc = f"120日波动率为{volatility_120d:.2f}%，{'市场稳定' if volatility_120d < 2 else '市场波动较大'}"
 
         # 构建HTML邮件内容
         content = f"""<!DOCTYPE html>
@@ -693,68 +794,57 @@ class HSI_Predictor:
 
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>📊 恒指60日收益率</h3>
-                    <div class="value">{hsi_return_60d:+.2f}%</div>
+                    <h3>📊 250日均线（MA250）</h3>
+                    <div class="value">{ma250:.2f} 点</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：17.29% | 方向：负面</strong>
+                        <strong>权重：15.00% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {hsi_return_desc}
+                        {ma250_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
-                    <h3>💰 美国10年期国债收益率</h3>
-                    <div class="value">{us_10y_yield:.2f}%</div>
+                    <h3>💵 250日成交量均值</h3>
+                    <div class="value">{volume_ma250:.0f} 手</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：6.16% | 方向：负面</strong>
+                        <strong>权重：12.00% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {us_yield_desc}
+                        {volume_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
-                    <h3>😰 VIX恐慌指数</h3>
-                    <div class="value">{vix_level:.2f}</div>
+                    <h3>📈 120日均线（MA120）</h3>
+                    <div class="value">{ma120:.2f} 点</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：4.93% | 方向：正面</strong>
+                        <strong>权重：10.00% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {vix_desc}
+                        {ma120_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
-                    <h3>💵 成交额标准差（20日）</h3>
-                    <div class="value">{turnover_std_20:.2f}亿</div>
+                    <h3>⚡ 60日相对强度信号</h3>
+                    <div class="value">{rs_signal_60d:.0f}</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：1.73% | 方向：正面</strong>
+                        <strong>权重：8.00% | 方向：正面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {turnover_desc}
+                        {rs_desc}
                     </div>
                 </div>
 
                 <div class="info-card">
-                    <h3>⚡ OBV能量潮</h3>
-                    <div class="value">{obv:.2f}亿</div>
+                    <h3>📉 120日波动率</h3>
+                    <div class="value">{volatility_120d:.2f}%</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：1.69% | 方向：正面</strong>
+                        <strong>权重：4.00% | 方向：负面</strong>
                     </div>
                     <div class="feature-explanation">
-                        {obv_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>📍 距离120日支撑位</h3>
-                    <div class="value">{distance_support_120d:+.2f}%</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：1.33% | 方向：正面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {support_desc}
+                        {volatility_desc}
                     </div>
                 </div>
             </div>
@@ -972,26 +1062,38 @@ class HSI_Predictor:
     def _get_feature_explanation(self, feature_name):
         """获取特征说明"""
         explanations = {
-            'HSI_Return_60d': '恒指过去60天的累计收益率，反映中期趋势。过高可能预示回调。',
-            'US_10Y_Yield': '美国10年期国债收益率，反映全球资金成本。上升压制股市估值。',
-            'VIX_Level': '芝加哥期权交易所波动率指数，反映市场恐慌程度。高值表示恐慌。',
-            '60d_Trend_HSI_Return_60d': '恒指60日趋势强度，反映中期动量。',
-            '60d_Trend_MA250_Slope': '恒指250日均线斜率，反映长期趋势方向。',
-            'Turnover_Std_20': '过去20天成交额的标准差，反映市场活跃度和波动性。',
-            'Vol_Std_20': '过去20天价格波动率的标准差，反映市场稳定性。',
-            'OBV': '能量潮指标，反映资金流向。上升表示资金净流入。',
-            'VWAP': '成交量加权平均价，反映真实成交成本。',
-            '5d_Trend_US_10Y_Yield': '美债收益率5日趋势，反映短期宏观变化。',
-            'ATR_MA120': '120日平均真实波幅，反映中期波动性。',
-            '60d_Trend_OBV': 'OBV的60日趋势，反映中期资金流向变化。',
-            'Resistance_120d': '过去120日最高价，反映阻力位水平。',
-            'Distance_Support_120d': '当前价格距120日支撑位的距离，反映安全边际。',
-            'ATR_MA': '平均真实波幅，反映价格波动范围。',
-            'Volume_MA250': '250日平均成交量，反映长期流动性水平。',
-            '60d_Trend_US_10Y_Yield': '美债收益率60日趋势，反映中期宏观趋势。',
-            'ATR_PE': 'ATR与价格的比率，反映相对波动性。',
-            '60d_RS_Signal_MA250_Slope': '价格相对MA250的比率变化，反映趋势强度。',
-            'MA120': '120日移动平均线，反映中期趋势支撑。'
+            # 长期移动平均线相关
+            'MA250': '250日移动平均线，反映恒指长期趋势支撑。价格在MA250上方通常表示长期上涨趋势。',
+            'Volume_MA250': '250日平均成交量，反映长期流动性水平。上升表示资金活跃度提高。',
+            'MA120': '120日移动平均线，反映恒指中期趋势支撑。是重要的技术分析指标。',
+            
+            # 多周期相对强度信号（RS_Signal）
+            '60d_RS_Signal_MA250': '60日相对强度信号，价格相对MA250的强度。值为1表示强于长期趋势。',
+            '60d_RS_Signal_Volume_MA250': '60日成交量相对强度，成交量相对长期均值的强度。活跃度高通常利好。',
+            '20d_RS_Signal_MA250': '20日相对强度信号，反映中期相对强度。正值表示强势。',
+            '10d_RS_Signal_MA250': '10日相对强度信号，反映短期相对强度。正值表示短期强势。',
+            '5d_RS_Signal_MA250': '5日相对强度信号，反映超短期相对强度。正值表示超短期强势。',
+            '3d_RS_Signal_MA250': '3日相对强度信号，反映日内相对强度。正值表示日内强势。',
+            
+            # 多周期趋势（Trend）
+            '60d_Trend_MA250': 'MA250的60日趋势，反映长期趋势变化。上升表示长期趋势转强。',
+            '20d_Trend_MA250': 'MA250的20日趋势，反映中期趋势变化。上升表示中期趋势转强。',
+            '10d_Trend_MA250': 'MA250的10日趋势，反映短期趋势变化。上升表示短期趋势转强。',
+            '5d_Trend_MA250': 'MA250的5日趋势，反映超短期趋势变化。上升表示超短期趋势转强。',
+            '3d_Trend_MA250': 'MA250的3日趋势，反映日内趋势变化。上升表示日内趋势转强。',
+            
+            # 成交量趋势
+            '60d_Trend_Volume_MA250': 'Volume_MA250的60日趋势，反映长期流动性变化。上升表示资金活跃度提高。',
+            '20d_Trend_Volume_MA250': 'Volume_MA250的20日趋势，反映中期流动性变化。上升表示资金活跃度提高。',
+            
+            # 波动率
+            'Volatility_120d': '120日波动率，反映中长期市场稳定性。低波动率通常利于上涨。',
+            
+            # 中期均线趋势
+            '60d_Trend_MA120': 'MA120的60日趋势，反映中期趋势强度。上升表示中期趋势强化。',
+            
+            # 成交量相对强度
+            '20d_RS_Signal_Volume_MA250': '20日成交量相对强度，反映中期资金活跃度。活跃度高通常利好。',
         }
         return explanations.get(feature_name, '暂无详细说明')
 
@@ -1201,12 +1303,17 @@ class HSI_Predictor:
         print("关键市场指标".center(80))
         print(f"{'='*80}\n")
 
-        print(f"恒指60日收益率：{self.features['HSI_Return_60d']*100:+.2f}%")
-        print(f"美国10年期国债收益率：{self.features['US_10Y_Yield']*100:.2f}%")
-        print(f"VIX恐慌指数：{self.features['VIX_Level']:.2f}")
-        print(f"成交额标准差（20日）：{self.features['Turnover_Std_20']:,.0f}")
-        print(f"OBV：{self.features['OBV']:,.0f}")
-        print(f"距离120日支撑位：{self.features['Distance_Support_120d']*100:+.2f}%")
+# 安全格式化数值
+        def safe_format(value, format_str, default_str='N/A'):
+            if pd.isna(value) or value == 0:
+                return default_str
+            return format_str.format(value)
+        
+        print(f"250日均线（MA250）：{safe_format(self.features.get('MA250', 0), '{:.2f}', 'N/A')} 点")
+        print(f"250日成交量均值：{safe_format(self.features.get('Volume_MA250', 0), '{:,.0f}', 'N/A')} 手")
+        print(f"120日均线（MA120）：{safe_format(self.features.get('MA120', 0), '{:.2f}', 'N/A')} 点")
+        print(f"60日相对强度信号（MA250）：{safe_format(self.features.get('60d_RS_Signal_MA250', 0), '{:.0f}', 'N/A')}")
+        print(f"120日波动率：{safe_format(self.features.get('Volatility_120d', 0)*100, '{:.2f}', 'N/A')}%")
 
         print(f"\n{'='*80}\n")
 
