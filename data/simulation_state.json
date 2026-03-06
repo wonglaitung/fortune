@@ -25447,6 +25447,22 @@
       "current_price": 78.8,
       "target_price": 82.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-06T13:10:24.324934",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1311.189294051961,
+      "reason": "出货评分5.5分，价格高位（位置百分位96.78%），CMF资金流-0.283大幅流出，成交额持续萎缩（1日/5日/20日变化率<-70%），板块趋势温和下跌强化风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.06,
+      "target_price": 42.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -41578,132 +41594,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-04 15:01:33",
-      "type": "SELL",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分8.5分，技术指标强烈看跌（成交量异常放量下跌、CMF资金流出、板块弱势），市场环境谨慎需规避高风险科技股",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 129.1,
-      "target_price": 75.5,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-04 15:01:36",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5分，银行股板块强势下跌（-2.34%）叠加MACD死叉信号，与当前谨慎市场环境高度不符",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 130.1,
-      "target_price": 65.5,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-04 15:01:42",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.13,
-      "amount": 0,
-      "reason": "建仓评分5.9分，技术指标显示超卖反弹信号（RSI 35.28超卖、布林带突破下轨、CMF资金流入），银行股板块相对稳定，适合平衡型投资者风险偏好",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.37,
-      "current_price": 5.13,
-      "target_price": 5.65,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-04 15:01:45",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 77.85,
-      "amount": 0,
-      "reason": "建仓评分5.2分，技术指标超卖（RSI 39.54、布林带超卖），公用事业板块抗跌性强，高股息特性符合平衡型投资者稳健需求",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": 73.92,
-      "current_price": 77.85,
-      "target_price": 82.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-04 15:01:48",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.12,
-      "amount": 0,
-      "reason": "建仓评分5.7分，价格低位（位置百分位15.16%）叠加CMF资金流入，AI板块温和上涨提供支撑，适度配置成长股平衡收益风险",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": 17.18,
-      "current_price": 19.12,
-      "target_price": 21.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-05 13:59:32",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "建仓评分4.2分，MACD金叉信号，CMF资金流正向（+0.1133），成交额5日变化率+14.26%，公用事业板块稳健且温和上涨，60日收益率-17.22%超跌反弹机会",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.75,
-          "target_price": 5.35,
-          "validity_period": 21
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-05 13:59:35",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 5.0,
-      "amount": 0,
-      "reason": "建仓评分4.2分，MACD金叉信号，CMF资金流正向（+0.1133），成交额5日变化率+14.26%，公用事业板块稳健且温和上涨，60日收益率-17.22%超跌反弹机会",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.75,
-      "current_price": 5.0,
-      "target_price": 5.35,
-      "validity_period": 21
-    },
-    {
-      "timestamp": "2026-03-05 15:43:15",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "建仓评分5.7分（港股最高），价格低位（位置百分位15.61%），MACD金叉信号，CMF资金流连续流入（0.1565），技术指标协同性强，适合短线波段交易且风险可控",
-          "allocation_pct": 15,
-          "stop_loss_price": 16.24,
-          "target_price": 20.5,
-          "validity_period": 7
-        }
-      ],
-      "sell": []
-    },
-    {
       "timestamp": "2026-03-05 15:43:17",
       "type": "BUY",
       "code": "2533.HK",
@@ -41896,6 +41786,36 @@
       "current_price": 78.8,
       "target_price": 82.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-06 13:10:24",
+      "buy": [],
+      "sell": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分5.5分，价格高位（位置百分位96.78%），CMF资金流-0.283大幅流出，成交额持续萎缩（1日/5日/20日变化率<-70%），板块趋势温和下跌强化风险",
+          "stop_loss_triggered": false,
+          "target_price": 42.0,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-06 13:10:24",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分，价格高位（位置百分位96.78%），CMF资金流-0.283大幅流出，成交额持续萎缩（1日/5日/20日变化率<-70%），板块趋势温和下跌强化风险",
+      "capital_after": 1311.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.06,
+      "target_price": 42.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
