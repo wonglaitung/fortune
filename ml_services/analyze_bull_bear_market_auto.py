@@ -331,6 +331,10 @@ def walk_forward_validation(trades_df, market_env_df, train_window_months=6, tes
         test_start_date = test_env['Start_Date'].min()
         test_end_date = test_env['End_Date'].max()
         
+        # 确保日期是 tz-naive（移除时区信息）
+        test_start_date = pd.Timestamp(test_start_date).tz_localize(None) if hasattr(pd.Timestamp(test_start_date), 'tz') and pd.Timestamp(test_start_date).tz is not None else pd.Timestamp(test_start_date)
+        test_end_date = pd.Timestamp(test_end_date).tz_localize(None) if hasattr(pd.Timestamp(test_end_date), 'tz') and pd.Timestamp(test_end_date).tz is not None else pd.Timestamp(test_end_date)
+        
         test_trades = trades_df[
             (trades_df['buy_date'] >= test_start_date) &
             (trades_df['buy_date'] <= test_end_date)
