@@ -10,9 +10,16 @@ set -e  # 遇到错误立即退出
 # 获取脚本所在目录（项目根目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 默认参数
-START_DATE=${1:-2024-01-01}
-END_DATE=${2:-2025-12-31}
+# 默认参数（自动计算最近一年）
+if [ -z "$1" ]; then
+    # 未提供日期参数，自动计算最近一年
+    END_DATE=$(date +%Y-%m-%d)
+    START_DATE=$(date -d "1 year ago" +%Y-%m-%d)
+else
+    # 提供了日期参数，使用用户指定的日期
+    START_DATE=$1
+    END_DATE=${2:-$(date +%Y-%m-%d)}
+fi
 OUTPUT_FORMAT=${3:-all}
 OUTPUT_DIR="${PROJECT_DIR}/output"
 
