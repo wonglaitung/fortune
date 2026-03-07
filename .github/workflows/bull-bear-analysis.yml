@@ -21,7 +21,7 @@ jobs:
     
     steps:
       - name: 检出代码
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: 设置Python环境
         uses: actions/setup-python@v4
@@ -69,7 +69,7 @@ jobs:
           echo "=========================================="
       
       - name: 上传分析报告
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bull-bear-analysis-report-${{ github.run_number }}
           path: output/bull_bear_analysis_*.md
