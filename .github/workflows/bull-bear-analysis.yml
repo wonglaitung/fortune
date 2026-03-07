@@ -32,7 +32,7 @@ jobs:
         run: |
           pip install -r requirements.txt
       
-- name: 计算日期范围
+      - name: 计算日期范围
         id: date_range
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
