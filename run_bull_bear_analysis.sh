@@ -7,9 +7,8 @@
 
 set -e  # 遇到错误立即退出
 
-# 获取脚本所在目录
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# 获取脚本所在目录（项目根目录）
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 默认参数
 START_DATE=${1:-2024-01-01}
@@ -37,15 +36,14 @@ echo "=========================================="
 echo "回测日期范围: $START_DATE 至 $END_DATE"
 
 # 运行回测（使用CatBoost 20天模型）
-BACKTEST_OUTPUT=$(python3 ml_services/backtest_20d_horizon.py \
+python3 ml_services/backtest_20d_horizon.py \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --horizon 20 \
-    --model-type catboost \
     --confidence-threshold 0.55 \
     --use-feature-selection \
     --skip-feature-selection \
-    2>&1 | tee /tmp/backtest_output.log)
+    --enable-dynamic-risk-control
 
 echo "✅ 回测完成"
 
