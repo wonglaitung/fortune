@@ -645,7 +645,7 @@ def save_results(all_trades, metrics, output_dir='output'):
         })
     
     stock_summary_df = pd.DataFrame(stock_summary)
-    stock_summary_df = stock_summary_df.sort_values('平均收益率', ascending=False)
+    stock_summary_df = stock_summary_df.sort_values('平均收益率(无成本)', ascending=False)
     stock_summary_df.to_csv(stock_summary_file, index=False, encoding='utf-8')
     print(f"✅ 股票汇总已保存到: {stock_summary_file}")
 
