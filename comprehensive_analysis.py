@@ -1710,6 +1710,51 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                     hsi_text += f"**恒生指数**: {current_market['current_hsi']:.2f} (截至 {current_market['date']})\n\n"
                     hsi_text += f"**最近20天收益率**: {current_market['recent_20d_return']:.2%}\n\n"
                     hsi_text += f"**最近5天收益率**: {current_market['recent_5d_return']:.2%}\n\n"
+                    
+                    # 添加市场状态说明表格
+                    hsi_text += "### 市场状态说明\n\n"
+                    hsi_text += "| 市场状态 | 20天收益率范围 | 说明 |\n"
+                    hsi_text += "|---------|--------------|------|\n"
+                    hsi_text += "| 📈 牛市 | > 5% | 市场强劲上涨，适合积极配置 |\n"
+                    hsi_text += "| ⬆️ 震荡偏涨 | 2% - 5% | 市场温和上涨，可以谨慎配置 |\n"
+                    hsi_text += "| ➡️ 震荡市 | -2% - 2% | 市场横盘整理，建议观望 |\n"
+                    hsi_text += "| ⬇️ 震荡偏跌 | -5% - -2% | 市场温和下跌，建议减仓 |\n"
+                    hsi_text += "| 📉 熊市 | < -5% | 市场强劲下跌，建议空仓 |\n\n"
+                    
+                    # 添加投资建议
+                    hsi_text += "### 投资建议\n\n"
+                    
+                    if current_market['market_state'] == 'bull':
+                        hsi_text += "**牛市策略**:\n\n"
+                        hsi_text += "- ✅ **重仓高市场关联性股票**: 牛市中高关联性股票平均收益率可达 +9.35%\n"
+                        hsi_text += "- ✅ **关注科技、半导体板块**: 这些板块通常在牛市中表现优异\n"
+                        hsi_text += "- ✅ **使用100%仓位**: 市场信号强烈，可全仓操作\n\n"
+                    elif current_market['market_state'] == 'bear':
+                        hsi_text += "**熊市策略**:\n\n"
+                        hsi_text += "- ⚠️ **重仓低市场关联性股票**: 熊市中低关联性股票平均收益率为 +4.15%\n"
+                        hsi_text += "- ⚠️ **配置银行、公用事业**: 这些股票具有防御性\n"
+                        hsi_text += "- ⚠️ **降低仓位至30%**: 市场风险较高，控制仓位\n\n"
+                    elif current_market['market_state'] in ['neutral_bull', 'neutral_bear']:
+                        hsi_text += "**震荡市策略**:\n\n"
+                        hsi_text += "- 🔄 **均衡配置**: 高低关联性股票各占50%\n"
+                        hsi_text += "- 🔄 **动态调整**: 根据市场信号及时调整仓位\n"
+                        hsi_text += "- 🔄 **关注波段机会**: 震荡市适合波段操作\n\n"
+                        
+                        # 额外的风险提示
+                        if current_market['market_state'] == 'neutral_bear':
+                            hsi_text += "**风险提示**:\n\n"
+                            hsi_text += "- ⚠️ 市场温和下跌，建议保持谨慎\n"
+                            hsi_text += "- ⚠️ 可考虑降低仓位至70%\n"
+                        else:
+                            hsi_text += "**机会提示**:\n\n"
+                            hsi_text += "- ✅ 市场温和上涨，可考虑逐步加仓\n"
+                            hsi_text += "- ✅ 建议仓位可提升至80%\n\n"
+                    else:  # neutral
+                        hsi_text += "**横盘策略**:\n\n"
+                        hsi_text += "- ⏸️ **观望为主**: 市场缺乏明确方向，建议保持观望\n"
+                        hsi_text += "- ⏸️ **低仓位试探**: 可用30%仓位试探性配置\n"
+                        hsi_text += "- ⏸️ **等待信号**: 等待市场明确方向后再做决策\n\n"
+                    
                     hsi_text += "---\n\n"
                     hsi_text += "**技术指标**:\n\n"
                 
