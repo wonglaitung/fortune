@@ -1,0 +1,107 @@
+name: 牛熊市分析自动化报告
+
+on:
+  schedule:
+    # 每月1号凌晨2点运行（香港时间UTC 18:00）
+    - cron: '0 18 1 * *'
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: '开始日期 (YYYY-MM-DD)'
+        required: true
+        default: '2024-01-01'
+      end_date:
+        description: '结束日期 (YYYY-MM-DD)'
+        required: true
+        default: '2025-12-31'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 设置Python环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+      
+- name: 计算日期范围
+        id: date_range
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # 定时任务：分析上个月之前的一年
+            END_DATE=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)
+            # 获取一年前的同一天
+            START_DATE=$(date -d "$END_DATE -1 year" +%Y-%m-%d)
+            echo "start_date=$START_DATE" >> $GITHUB_OUTPUT
+            echo "end_date=$END_DATE" >> $GITHUB_OUTPUT
+          else
+            # 手动触发：使用用户输入的日期
+            echo "start_date=${{ github.event.inputs.start_date }}" >> $GITHUB_OUTPUT
+            echo "end_date=${{ github.event.inputs.end_date }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 运行特征选择
+        run: |
+          echo "=========================================="
+          echo "运行特征选择"
+          echo "=========================================="
+          python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
+          echo "✅ 特征选择完成"
+      
+      - name: 训练 CatBoost 模型
+        run: |
+          echo "=========================================="
+          echo "训练 CatBoost 模型"
+          echo "=========================================="
+          python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+          echo "✅ CatBoost 模型训练完成"
+      
+      - name: 运行牛熊市分析（含回测）
+        env:
+          START_DATE: ${{ steps.date_range.outputs.start_date }}
+          END_DATE: ${{ steps.date_range.outputs.end_date }}
+        run: |
+          echo "=========================================="
+          echo "牛熊市分析（GitHub Actions）"
+          echo "=========================================="
+          echo "分析日期范围: $START_DATE 至 $END_DATE"
+          echo "=========================================="
+          
+          # 使用自动化脚本（包含回测）
+          ./run_bull_bear_analysis.sh "$START_DATE" "$END_DATE" all
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ 分析完成"
+          echo "=========================================="
+      
+      - name: 上传分析报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: bull-bear-analysis-report-${{ github.run_number }}
+          path: output/bull_bear_analysis_*.md
+          retention-days: 90
+      
+      - name: 提交报告到仓库
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 添加报告文件
+          git add output/bull_bear_analysis_*.md || true
+          
+          # 检查是否有更改
+          if git diff --staged --quiet; then
+            echo "没有新的报告需要提交"
+          else
+            git commit -m "📊 更新牛熊市分析报告 $(date +'%Y-%m-%d')" || true
+            git push || true
+          fi
