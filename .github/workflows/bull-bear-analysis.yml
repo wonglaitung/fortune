@@ -30,7 +30,7 @@ jobs:
       
       - name: 安装依赖
         run: |
-          pip install pandas numpy yfinance catboost lightgbm scikit-learn scikit-plot matplotlib seaborn akshare
+          pip install -r requirements.txt
       
       - name: 计算日期范围
         id: date_range
