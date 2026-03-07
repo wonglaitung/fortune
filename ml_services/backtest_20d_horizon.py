@@ -159,9 +159,20 @@ class Backtest20DHoldPeriod:
             if buy_date > end_ts or sell_date > end_ts:
                 continue
 
-            # 计算实际涨跌（必须在决策之前计算）
+            # 计算实际涨跌（不考虑交易成本，用于预测准确性评估）
             actual_change = (sell_price - buy_price) / buy_price
             actual_direction = 1 if actual_change > 0 else 0
+
+            # 计算实际交易价格（考虑滑点和佣金）
+            # 买入：价格通常比收盘价高（滑点），还需要支付佣金
+            actual_buy_price = buy_price * (1 + self.slippage) * (1 + self.commission / 2)
+            
+            # 卖出：价格通常比收盘价低（滑点），还需要支付佣金
+            actual_sell_price = sell_price * (1 - self.slippage) * (1 - self.commission / 2)
+            
+            # 计算实际收益率（考虑交易成本）
+            actual_change_with_cost = (actual_sell_price - actual_buy_price) / actual_buy_price
+            actual_direction_with_cost = 1 if actual_change_with_cost > 0 else 0
 
             # 模型预测
             prob = predictions[i]
@@ -209,14 +220,19 @@ class Backtest20DHoldPeriod:
                     'stock_code': stock_code,
                     'buy_date': buy_date.strftime('%Y-%m-%d'),
                     'sell_date': sell_date.strftime('%Y-%m-%d'),
-                    'buy_price': buy_price,
-                    'sell_price': sell_price,
+                    'buy_price': buy_price,  # 原始买入价格
+                    'sell_price': sell_price,  # 原始卖出价格
+                    'actual_buy_price': actual_buy_price,  # 实际买入价格（考虑滑点和佣金）
+                    'actual_sell_price': actual_sell_price,  # 实际卖出价格（考虑滑点和佣金）
                     'prediction': signal,
                     'probability': prob,
                     'adjusted_probability': adjusted_prob,
-                    'actual_change': actual_change,
-                    'actual_direction': actual_direction,
-                    'prediction_correct': signal == actual_direction,
+                    'actual_change': actual_change,  # 原始收益率（不考虑成本）
+                    'actual_change_with_cost': actual_change_with_cost,  # 实际收益率（考虑成本）
+                    'actual_direction': actual_direction,  # 原始方向
+                    'actual_direction_with_cost': actual_direction_with_cost,  # 实际方向（考虑成本）
+                    'prediction_correct': signal == actual_direction,  # 基于原始方向判断
+                    'prediction_correct_with_cost': signal == actual_direction_with_cost,  # 基于实际方向判断
                     'position_size': position_size,
                     'risk_level': risk_level,
                     'market_env_score': market_env_score,
@@ -230,13 +246,18 @@ class Backtest20DHoldPeriod:
                     'stock_code': stock_code,
                     'buy_date': buy_date.strftime('%Y-%m-%d'),
                     'sell_date': sell_date.strftime('%Y-%m-%d'),
-                    'buy_price': buy_price,
-                    'sell_price': sell_price,
+                    'buy_price': buy_price,  # 原始买入价格
+                    'sell_price': sell_price,  # 原始卖出价格
+                    'actual_buy_price': actual_buy_price,  # 实际买入价格（考虑滑点和佣金）
+                    'actual_sell_price': actual_sell_price,  # 实际卖出价格（考虑滑点和佣金）
                     'prediction': signal,
                     'probability': prob,
-                    'actual_change': actual_change,
-                    'actual_direction': actual_direction,
-                    'prediction_correct': signal == actual_direction
+                    'actual_change': actual_change,  # 原始收益率（不考虑成本）
+                    'actual_change_with_cost': actual_change_with_cost,  # 实际收益率（考虑成本）
+                    'actual_direction': actual_direction,  # 原始方向
+                    'actual_direction_with_cost': actual_direction_with_cost,  # 实际方向（考虑成本）
+                    'prediction_correct': signal == actual_direction,  # 基于原始方向判断
+                    'prediction_correct_with_cost': signal == actual_direction_with_cost  # 基于实际方向判断
                 })
 
         return trades
@@ -426,33 +447,58 @@ def calculate_performance_metrics(all_trades):
     correct_predictions = df['prediction_correct'].sum()
     accuracy = correct_predictions / total_trades if total_trades > 0 else 0
 
-    # 收益统计
+    # 收益统计（不考虑交易成本 - 用于预测准确性评估）
     buy_signals = df[df['prediction'] == 1]
 
     if len(buy_signals) > 0:
+        # 不考虑交易成本的指标
         avg_return = buy_signals['actual_change'].mean()
         median_return = buy_signals['actual_change'].median()
         std_return = buy_signals['actual_change'].std()
         positive_trades = (buy_signals['actual_change'] > 0).sum()
         negative_trades = (buy_signals['actual_change'] <= 0).sum()
 
-        # 夏普比率（年化）
+        # 考虑交易成本的指标
+        avg_return_with_cost = buy_signals['actual_change_with_cost'].mean()
+        median_return_with_cost = buy_signals['actual_change_with_cost'].median()
+        std_return_with_cost = buy_signals['actual_change_with_cost'].std()
+        positive_trades_with_cost = (buy_signals['actual_change_with_cost'] > 0).sum()
+        negative_trades_with_cost = (buy_signals['actual_change_with_cost'] <= 0).sum()
+
+        # 夏普比率（年化）- 不考虑成本
         returns = buy_signals['actual_change'].values
         sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252/20) if returns.std() > 0 else 0
 
+        # 夏普比率（年化）- 考虑成本
+        returns_with_cost = buy_signals['actual_change_with_cost'].values
+        sharpe_ratio_with_cost = returns_with_cost.mean() / returns_with_cost.std() * np.sqrt(252/20) if returns_with_cost.std() > 0 else 0
+
         # 胜率（基于买入信号）
         win_rate = positive_trades / len(buy_signals) if len(buy_signals) > 0 else 0
+        win_rate_with_cost = positive_trades_with_cost / len(buy_signals) if len(buy_signals) > 0 else 0
 
-        # F1分数
+        # F1分数（不考虑成本）
         precision = correct_predictions / len(buy_signals) if len(buy_signals) > 0 else 0
         recall = correct_predictions / (df['actual_direction'] == 1).sum() if (df['actual_direction'] == 1).sum() > 0 else 0
         f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
-        # 最大回撤
+        # F1分数（考虑成本）
+        correct_predictions_with_cost = df['prediction_correct_with_cost'].sum()
+        precision_with_cost = correct_predictions_with_cost / len(buy_signals) if len(buy_signals) > 0 else 0
+        recall_with_cost = correct_predictions_with_cost / (df['actual_direction_with_cost'] == 1).sum() if (df['actual_direction_with_cost'] == 1).sum() > 0 else 0
+        f1_score_with_cost = 2 * precision_with_cost * recall_with_cost / (precision_with_cost + recall_with_cost) if (precision_with_cost + recall_with_cost) > 0 else 0
+
+        # 最大回撤（不考虑成本）
         cumulative_returns = (1 + buy_signals.sort_values('buy_date')['actual_change']).cumprod()
         running_max = cumulative_returns.expanding().max()
         drawdown = (cumulative_returns - running_max) / running_max
         max_drawdown = drawdown.min()
+
+        # 最大回撤（考虑成本）
+        cumulative_returns_with_cost = (1 + buy_signals.sort_values('buy_date')['actual_change_with_cost']).cumprod()
+        running_max_with_cost = cumulative_returns_with_cost.expanding().max()
+        drawdown_with_cost = (cumulative_returns_with_cost - running_max_with_cost) / running_max_with_cost
+        max_drawdown_with_cost = drawdown_with_cost.min()
 
         # 每日性能统计
         daily_metrics = []
@@ -495,6 +541,20 @@ def calculate_performance_metrics(all_trades):
             'win_rate': win_rate,
             'sharpe_ratio': sharpe_ratio,
             'max_drawdown': max_drawdown,
+            # 考虑交易成本的指标
+            'correct_predictions_with_cost': correct_predictions_with_cost,
+            'accuracy_with_cost': correct_predictions_with_cost / total_trades if total_trades > 0 else 0,
+            'precision_with_cost': precision_with_cost,
+            'recall_with_cost': recall_with_cost,
+            'f1_score_with_cost': f1_score_with_cost,
+            'avg_return_with_cost': avg_return_with_cost,
+            'median_return_with_cost': median_return_with_cost,
+            'std_return_with_cost': std_return_with_cost,
+            'positive_trades_with_cost': positive_trades_with_cost,
+            'negative_trades_with_cost': negative_trades_with_cost,
+            'win_rate_with_cost': win_rate_with_cost,
+            'sharpe_ratio_with_cost': sharpe_ratio_with_cost,
+            'max_drawdown_with_cost': max_drawdown_with_cost,
             'daily_metrics': daily_metrics
         }
     else:
@@ -558,11 +618,18 @@ def save_results(all_trades, metrics, output_dir='output'):
         buy_signals = stock_df[stock_df['prediction'] == 1]
         
         if len(buy_signals) > 0:
+            # 不考虑交易成本
             avg_return = buy_signals['actual_change'].mean()
             win_rate = (buy_signals['actual_change'] > 0).mean()
+            
+            # 考虑交易成本
+            avg_return_with_cost = buy_signals['actual_change_with_cost'].mean()
+            win_rate_with_cost = (buy_signals['actual_change_with_cost'] > 0).mean()
         else:
             avg_return = 0
             win_rate = 0
+            avg_return_with_cost = 0
+            win_rate_with_cost = 0
         
         accuracy = stock_df['prediction_correct'].mean()
         
@@ -570,8 +637,10 @@ def save_results(all_trades, metrics, output_dir='output'):
             '股票代码': stock_code,
             '股票名称': STOCK_NAMES.get(stock_code, stock_code),
             '交易次数': total_trades,
-            '平均收益率': avg_return,
-            '胜率': win_rate,
+            '平均收益率(无成本)': avg_return,
+            '平均收益率(含成本)': avg_return_with_cost,
+            '胜率(无成本)': win_rate,
+            '胜率(含成本)': win_rate_with_cost,
             '准确率': accuracy
         })
     
@@ -613,28 +682,48 @@ def generate_text_report(metrics, df):
   模型类型: CatBoost 20天
   持有期: 20个交易日
   评估方式: 买入后持有20天（符合模型预测周期）
+  交易成本: 滑点 0.1% + 佣金 0.1% (双边 0.4%)
 
 【性能指标】
   总交易机会: {metrics.get('total_trades', 0)}
   买入信号数: {metrics.get('buy_signals', 0)}
 
-【预测准确率】
+【预测准确率】（不考虑交易成本）
   准确率: {metrics.get('accuracy', 0):.2%} ({metrics.get('correct_predictions', 0)}/{metrics.get('total_trades', 0)})
   精确率: {metrics.get('precision', 0):.2%}
   召回率: {metrics.get('recall', 0):.2%}
   F1分数: {metrics.get('f1_score', 0):.4f}
 
 【收益统计】（仅买入信号）
-  平均收益率: {metrics.get('avg_return', 0):.2%}
-  收益率中位数: {metrics.get('median_return', 0):.2%}
-  收益率标准差: {metrics.get('std_return', 0):.2%}
-  上涨交易: {metrics.get('positive_trades', 0)} 笔
-  下跌交易: {metrics.get('negative_trades', 0)} 笔
-  胜率: {metrics.get('win_rate', 0):.2%}
+  不考虑交易成本:
+    平均收益率: {metrics.get('avg_return', 0):.2%}
+    收益率中位数: {metrics.get('median_return', 0):.2%}
+    收益率标准差: {metrics.get('std_return', 0):.2%}
+    上涨交易: {metrics.get('positive_trades', 0)} 笔
+    下跌交易: {metrics.get('negative_trades', 0)} 笔
+    胜率: {metrics.get('win_rate', 0):.2%}
+
+  考虑交易成本:
+    平均收益率: {metrics.get('avg_return_with_cost', 0):.2%} ⚠️
+    收益率中位数: {metrics.get('median_return_with_cost', 0):.2%}
+    收益率标准差: {metrics.get('std_return_with_cost', 0):.2%}
+    上涨交易: {metrics.get('positive_trades_with_cost', 0)} 笔
+    下跌交易: {metrics.get('negative_trades_with_cost', 0)} 笔
+    胜率: {metrics.get('win_rate_with_cost', 0):.2%}
 
 【风险指标】
-  夏普比率（年化）: {metrics.get('sharpe_ratio', 0):.2f}
-  最大回撤: {metrics.get('max_drawdown', 0):.2%}
+  不考虑交易成本:
+    夏普比率（年化）: {metrics.get('sharpe_ratio', 0):.2f}
+    最大回撤: {metrics.get('max_drawdown', 0):.2%}
+
+  考虑交易成本:
+    夏普比率（年化）: {metrics.get('sharpe_ratio_with_cost', 0):.2f} ⚠️
+    最大回撤: {metrics.get('max_drawdown_with_cost', 0):.2%} ⚠️
+
+【交易成本影响分析】
+  成本对收益率的影响: {metrics.get('avg_return', 0):.2%} → {metrics.get('avg_return_with_cost', 0):.2%}
+  成本对胜率的影响: {metrics.get('win_rate', 0):.2%} → {metrics.get('win_rate_with_cost', 0):.2%}
+  成本对夏普比率的影响: {metrics.get('sharpe_ratio', 0):.2f} → {metrics.get('sharpe_ratio_with_cost', 0):.2f}
 
 {'='*80}
 """
