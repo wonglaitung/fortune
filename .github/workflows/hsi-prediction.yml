@@ -9,6 +9,8 @@ on:
 jobs:
   hsi-prediction:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     
     steps:
     - name: 检出代码

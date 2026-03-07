@@ -11,6 +11,8 @@ on:
 jobs:
   comprehensive-analysis:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     
     steps:
       - name: Checkout repository

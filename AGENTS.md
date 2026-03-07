@@ -34,6 +34,7 @@
 - 📊 **深度学习模型对比实验**：LSTM、Transformer与CatBoost对比评估（2026-03-04新增）
 - 📊 **月度趋势分析**：2024-2026年跨年度回测月度分析（2026-03-06新增）
 - 📊 **股票月度趋势对比**：单个股票与总体趋势相关性分析（2026-03-06新增）
+- 📊 **牛熊市分析自动化**：分析市场环境分布和股票表现，每周一自动运行（2026-03-07新增）
 
 ## 重要警告
 
@@ -586,6 +587,78 @@ python3 ml_services/backtest_monthly_analysis.py
 # 运行股票月度趋势对比分析
 python3 ml_services/stock_monthly_trend_analysis.py
 ```
+
+### 牛熊市分析自动化（2026-03-07新增）
+- **ml_services/analyze_bull_bear_market_auto.py**：牛熊市市场环境分析脚本
+- **run_bull_bear_analysis.sh**：牛熊市分析自动化脚本
+- **.github/workflows/bull-bear-analysis.yml**：牛熊市分析 GitHub Actions 工作流
+
+**功能特点**：
+- 自动化流程：回测 → 分析 → 报告生成
+- 支持自定义日期范围（默认：上个月之前的一年）
+- 动态日期计算（基于香港时区）
+- 分析市场环境分布（牛市/熊市/震荡市）
+- 评估每个股票在不同市场环境下的表现
+- 计算股票与市场的关联性
+- 生成多种格式的报告（CSV、JSON、Markdown）
+
+**分析维度**：
+- 市场环境分类：牛市（HSI 20天涨幅 > 3%）、熊市（HSI 20天涨幅 < -3%）、震荡市
+- 股票表现：牛市收益率、熊市收益率、震荡市收益率
+- 胜率统计：牛市胜率、熊市胜率、震荡市胜率
+- 准确率统计：牛市准确率、熊市准确率、震荡市准确率
+- 正确决策比例：牛市、熊市、震荡市
+- 市场关联性：衡量股票对市场环境的敏感度
+
+**市场关联性计算公式**：
+```
+关联性 = (牛市收益率 - 熊市收益率) / |牛市收益率 + 熊市收益率|
+```
+- 关联性 > 0.3：高市场关联性（跟随市场趋势）
+- 关联性 < 0.3：低市场关联性（相对独立）
+- 关联性 < 0：负相关性（与市场趋势相反）
+
+**报告输出格式**：
+- CSV格式：详细的股票表现数据
+- JSON格式：结构化数据（含市场环境统计）
+- Markdown格式：可读性强的分析报告
+
+**使用命令**：
+```bash
+# 使用默认参数（上个月之前的一年）
+./run_bull_bear_analysis.sh
+
+# 自定义日期范围
+./run_bull_bear_analysis.sh 2024-01-01 2025-12-31
+
+# 自定义输出格式（csv/json/markdown/all）
+./run_bull_bear_analysis.sh 2024-01-01 2025-12-31 markdown
+
+# 直接运行分析脚本
+python3 ml_services/analyze_bull_bear_market_auto.py
+python3 ml_services/analyze_bull_bear_market_auto.py --start-date 2024-01-01 --end-date 2025-12-31
+python3 ml_services/analyze_bull_bear_market_auto.py --trades-file output/backtest_20d_trades_20260307_002039.csv
+python3 ml_services/analyze_bull_bear_market_auto.py --output-format all
+```
+
+**自动化调度**：
+- **GitHub Actions**：每周星期一上午1点香港时间运行（UTC 17:00）
+- **日期范围**：动态计算上个月之前的一年
+- **时区配置**：已设置 `TZ: Asia/Hong_Kong` 确保正确计算日期
+- **支持手动触发**：可通过 GitHub Actions 界面手动执行
+
+**输出文件**：
+- `output/bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.csv`：CSV格式数据
+- `output/bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.json`：JSON格式数据
+- `output/bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.md`：Markdown格式报告
+
+**报告内容包括**：
+1. 分析概况（日期范围、股票数量、市场环境分布）
+2. 市场环境统计（牛市、熊市、震荡市交易次数）
+3. 整体表现统计（平均收益率、胜率、准确率）
+4. 高市场关联性股票（关联性 > 0.3，含详细表格）
+5. 低市场关联性股票（关联性 < 0.3，含详细表格）
+6. 市场环境敏感性分析
 
 ### 模型对比回测脚本
 - **run_model_comparison.sh**：定期回测多种模型并生成汇总对比报告
@@ -1147,6 +1220,9 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - `backtest_2025_analysis_report.txt`: 2025年全年回测多角度分析报告（2025年回测新增）
 - `backtest_20d_monthly_analysis_report_{timestamp}.txt`: 月度趋势分析报告（2026-03-06新增）
 - `backtest_20d_stock_monthly_trend_analysis_{timestamp}.txt`: 股票月度趋势对比报告（2026-03-06新增）
+- `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.csv`: 牛熊市分析CSV数据（2026-03-07新增）
+- `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.json`: 牛熊市分析JSON数据（2026-03-07新增）
+- `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.md`: 牛熊市分析Markdown报告（2026-03-07新增）
 - `sector_rotation_river_plot.png`: 板块轮动河流图
 - `selected_features_*.csv`: 精选特征列表
 - `statistical_features_latest.txt`: 统计方法特征选择结果
@@ -1447,6 +1523,7 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 | 文件 | 功能 | 执行时间 |
 |------|------|----------|
 | `batch-stock-news-fetcher.yml` | 批量股票新闻获取 | 每天 UTC 22:00 |
+| `bull-bear-analysis.yml` | **牛熊市分析** | **每周星期一上午1点香港时间 (UTC 17:00)** |
 | `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
 | `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
 | `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
@@ -1456,6 +1533,50 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 | `hsi-prediction.yml` | **恒生指数涨跌预测** | **周一到周五 UTC 22:00（香港时间早上6:00）** |
 | `hsi-email-alert.yml.bak` | HSI邮件提醒（备份）| - |
 | `ml-train-models.yml.bak` | ML模型训练（备份）| - |
+
+### GitHub Actions 时区配置要求
+> **⚠️ 所有 GitHub Actions 工作流必须在 job 级别设置 `env: TZ: Asia_Hong_Kong`**
+
+**原因**：
+- GitHub Actions 运行器默认使用 UTC 时区
+- 香港股市交易时间为香港时间
+- 日期计算（如"上个月"、"一年前"）必须基于香港时区
+- 确保日志时间、报告时间与本地时间一致
+
+**配置方式**：
+```yaml
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # ... 其他步骤
+```
+
+**已配置的 workflow**：
+- ✅ `batch-stock-news-fetcher.yml`
+- ✅ `comprehensive-analysis.yml`
+- ✅ `daily-ai-trading-analysis.yml`
+- ✅ `daily-ipo-monitor.yml`
+- ✅ `hourly-crypto-monitor.yml`
+- ✅ `hourly-gold-monitor.yml`
+- ✅ `hsi-prediction.yml`
+- ✅ `weekly-comprehensive-analysis.yml`
+- ✅ `bull-bear-analysis.yml`
+
+**验证方法**：
+在 workflow 中添加调试步骤验证时区：
+```yaml
+- name: Verify timezone
+  run: |
+    echo "Current timezone: $TZ"
+    echo "Current time: $(date)"
+    echo "Current time (HK): $(TZ=Asia/Hong_Kong date)"
+```
 
 ### 自动化状态
 - ✅ GitHub Actions：8 个工作流正常运行 + 2 个备份文件
@@ -1470,7 +1591,7 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 
 ### 项目当前状态
 
-**最后更新**: 2026-03-06
+**最后更新**: 2026-03-07
 
 **项目成熟度**: 生产就绪
 
@@ -1491,6 +1612,7 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 - ✅ **20天持有期回测**：完整，支持自定义日期范围的回测（2026-03-05新增）
 - ✅ **月度趋势分析**：完整，2024-2026年跨年度回测月度分析（2026-03-06新增）
 - ✅ **股票月度趋势对比**：完整，单个股票与总体趋势相关性分析（2026-03-06新增）
+- ✅ **牛熊市分析自动化**：完整，每周一自动执行，分析市场环境和股票表现（2026-03-07新增）
 
 ### 待优化项
 - ⚠️ **风险管理模块**（VaR、止损止盈、仓位管理）
