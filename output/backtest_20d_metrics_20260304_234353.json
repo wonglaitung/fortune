@@ -1,0 +1,17 @@
+{
+  "total_trades": 616,
+  "buy_signals": 383,
+  "correct_predictions": 485.0,
+  "accuracy": 0.7873376623376623,
+  "precision": 1.2663185378590078,
+  "recall": 1.2125,
+  "f1_score": 1.2388250319284804,
+  "avg_return": 0.09062368997239083,
+  "median_return": 0.06187290969899652,
+  "std_return": 0.12264422753495864,
+  "positive_trades": 326.0,
+  "negative_trades": 57.0,
+  "win_rate": 0.8511749347258486,
+  "sharpe_ratio": 2.6263197977720956,
+  "max_drawdown": -0.20827217721414973
+}
