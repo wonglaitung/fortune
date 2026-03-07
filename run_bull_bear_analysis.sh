@@ -10,15 +10,17 @@ set -e  # 遇到错误立即退出
 # 获取脚本所在目录（项目根目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 默认参数（自动计算最近一年）
+# 默认参数（自动计算上个月之前的一年）
 if [ -z "$1" ]; then
-    # 未提供日期参数，自动计算最近一年
-    END_DATE=$(date +%Y-%m-%d)
-    START_DATE=$(date -d "1 year ago" +%Y-%m-%d)
+    # 未提供日期参数，自动计算上个月之前的一年
+    # 获取上个月的最后一天
+    END_DATE=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)
+    # 获取一年前的同一天
+    START_DATE=$(date -d "$END_DATE -1 year" +%Y-%m-%d)
 else
     # 提供了日期参数，使用用户指定的日期
     START_DATE=$1
-    END_DATE=${2:-$(date +%Y-%m-%d)}
+    END_DATE=${2:-$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)}
 fi
 OUTPUT_FORMAT=${3:-all}
 OUTPUT_DIR="${PROJECT_DIR}/output"
