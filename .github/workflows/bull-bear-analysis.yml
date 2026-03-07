@@ -32,12 +32,11 @@ jobs:
         run: |
           pip install -r requirements.txt
       
-      - name: 计算日期范围
+- name: 计算日期范围
         id: date_range
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
             # 定时任务：分析上个月之前的一年
-            # 获取上个月的最后一天
             END_DATE=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)
             # 获取一年前的同一天
             START_DATE=$(date -d "$END_DATE -1 year" +%Y-%m-%d)
@@ -48,6 +47,22 @@ jobs:
             echo "start_date=${{ github.event.inputs.start_date }}" >> $GITHUB_OUTPUT
             echo "end_date=${{ github.event.inputs.end_date }}" >> $GITHUB_OUTPUT
           fi
+      
+      - name: 运行特征选择
+        run: |
+          echo "=========================================="
+          echo "运行特征选择"
+          echo "=========================================="
+          python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
+          echo "✅ 特征选择完成"
+      
+      - name: 训练 CatBoost 模型
+        run: |
+          echo "=========================================="
+          echo "训练 CatBoost 模型"
+          echo "=========================================="
+          python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+          echo "✅ CatBoost 模型训练完成"
       
       - name: 运行牛熊市分析（含回测）
         env:
