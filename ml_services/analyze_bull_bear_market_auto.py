@@ -457,7 +457,7 @@ def save_markdown_report(market_env_df, stock_performance_df, output_file):
         f.write("## 四、分析结论\n\n")
         
         # 高市场关联性股票
-        high_corr_stocks = valid_stocks[valid_stocks['market_correlation'] > 0.3]
+        high_corr_stocks = valid_stocks[valid_stocks['market_correlation'] > 0.3].sort_values('market_correlation', ascending=False)
         f.write(f"### 高市场关联性股票（关联性 > 0.3）\n\n")
         f.write(f"- **数量**: {len(high_corr_stocks)} 只\n")
         if len(high_corr_stocks) > 0:
@@ -465,14 +465,36 @@ def save_markdown_report(market_env_df, stock_performance_df, output_file):
             f.write(f"- **平均熊市收益率**: {high_corr_stocks['bear_avg_return'].mean():.2%}\n")
         
         f.write("\n")
+        f.write("| 股票代码 | 股票名称 | 市场关联性 | 牛市收益率 | 熊市收益率 |\n")
+        f.write("|---------|---------|-----------|-----------|-----------|\n")
+        for _, row in high_corr_stocks.iterrows():
+            stock_code = row['stock_code']
+            stock_name = STOCK_NAMES.get(stock_code, stock_code)
+            corr = row['market_correlation']
+            bull_return = row['bull_avg_return']
+            bear_return = row['bear_avg_return']
+            f.write(f"| {stock_code} | {stock_name} | {corr:.2f} | {bull_return:.2%} | {bear_return:.2%} |\n")
+        
+        f.write("\n")
         
         # 低市场关联性股票
-        low_corr_stocks = valid_stocks[abs(valid_stocks['market_correlation']) < 0.2]
+        low_corr_stocks = valid_stocks[abs(valid_stocks['market_correlation']) < 0.2].sort_values('bear_avg_return', ascending=False)
         f.write(f"### 低市场关联性股票（|关联性| < 0.2）\n\n")
         f.write(f"- **数量**: {len(low_corr_stocks)} 只\n")
         if len(low_corr_stocks) > 0:
             f.write(f"- **平均牛市收益率**: {low_corr_stocks['bull_avg_return'].mean():.2%}\n")
             f.write(f"- **平均熊市收益率**: {low_corr_stocks['bear_avg_return'].mean():.2%}\n")
+        
+        f.write("\n")
+        f.write("| 股票代码 | 股票名称 | 市场关联性 | 牛市收益率 | 熊市收益率 |\n")
+        f.write("|---------|---------|-----------|-----------|-----------|\n")
+        for _, row in low_corr_stocks.iterrows():
+            stock_code = row['stock_code']
+            stock_name = STOCK_NAMES.get(stock_code, stock_code)
+            corr = row['market_correlation']
+            bull_return = row['bull_avg_return']
+            bear_return = row['bear_avg_return']
+            f.write(f"| {stock_code} | {stock_name} | {corr:.2f} | {bull_return:.2%} | {bear_return:.2%} |\n")
         
         f.write("\n")
         
