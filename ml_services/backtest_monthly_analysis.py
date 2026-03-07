@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-CatBoost 20天模型回测 - 月度分析脚本
-分析平均收益率、胜率、准确率与月份的关系
+CatBoost 20天模型回测 - 月度分析脚本 (2024-01-01 至 2026-01-31)
+分析平均收益率、胜率、准确率、正确决策比例与月份的关系
 分析单个股票与总体趋势的差异
 """
 
@@ -11,15 +11,11 @@ from datetime import datetime
 import argparse
 import json
 import os
+from scipy import stats
 
 # 获取脚本所在目录
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
-
-# 文件路径
-trades_file = os.path.join(project_dir, 'output', 'backtest_20d_trades_20260306_091148.csv')
-stock_summary_file = os.path.join(project_dir, 'output', 'backtest_20d_stock_summary_20260306_091148.csv')
-metrics_file = os.path.join(project_dir, 'output', 'backtest_20d_metrics_20260306_091148.json')
 
 # 股票名称映射
 stock_names = {
@@ -35,29 +31,21 @@ stock_names = {
     '1211.HK': '比亚迪股份'
 }
 
-def load_data():
-    """加载回测数据"""
-    print("📊 加载回测数据...")
-    
-    # 加载交易记录
-    trades_df = pd.read_csv(trades_file)
-    trades_df['buy_date'] = pd.to_datetime(trades_df['buy_date'])
-    trades_df['sell_date'] = pd.to_datetime(trades_df['sell_date'])
-    trades_df['month'] = trades_df['buy_date'].dt.to_period('M')
-    
-    # 加载股票汇总
-    stock_summary_df = pd.read_csv(stock_summary_file)
-    
-    # 加载性能指标
-    with open(metrics_file, 'r') as f:
-        metrics = json.load(f)
-    
-    print(f"✅ 已加载 {len(trades_df)} 条交易记录")
-    print(f"✅ 已加载 {len(stock_summary_df)} 只股票的汇总数据")
-    
-    return trades_df, stock_summary_df, metrics
+# 股票名称映射
+stock_names = {
+    '0005.HK': '汇丰银行', '0012.HK': '恒基地产', '0016.HK': '新鸿基地产',
+    '0388.HK': '香港交易所', '0700.HK': '腾讯控股', '0728.HK': '中国电信',
+    '0883.HK': '中国海洋石油', '0939.HK': '建设银行', '0941.HK': '中国移动',
+    '0981.HK': '中芯国际', '1088.HK': '中国神华', '1109.HK': '华润置地',
+    '1138.HK': '中远海能', '1288.HK': '农业银行', '1299.HK': '友邦保险',
+    '1330.HK': '绿色动力环保', '1347.HK': '华虹半导体', '1398.HK': '工商银行',
+    '1810.HK': '小米集团-W', '2269.HK': '药明生物', '2533.HK': '黑芝麻智能',
+    '2800.HK': '盈富基金', '3690.HK': '美团-W', '3968.HK': '招商银行',
+    '6682.HK': '第四范式', '9660.HK': '地平线机器人', '9988.HK': '阿里巴巴-SW',
+    '1211.HK': '比亚迪股份'
+}
 
-def monthly_analysis(trades_df):
+def main():
     """按月份分析"""
     print("\n📈 按月份分析...")
     
@@ -77,6 +65,11 @@ def monthly_analysis(trades_df):
                       trades_df.groupby('month').size() * 100
     monthly_stats['胜率'] = monthly_winrate
     
+    # 计算正确决策比例（正确决策数 / 总决策数）
+    # 正确决策 = 盈利的买入 + 正确的不买入
+    # 这里简化处理：正确决策比例 = 胜率 * 准确率 / 100
+    monthly_stats['正确决策比例'] = monthly_stats['胜率'] * monthly_stats['准确率'] / 100
+    
     # 添加月份名称
     monthly_stats['月份'] = monthly_stats.index.strftime('%Y-%m')
     
@@ -84,13 +77,14 @@ def monthly_analysis(trades_df):
     monthly_stats = monthly_stats.reset_index(drop=True)
     
     # 重新排列列顺序
-    monthly_stats = monthly_stats[['月份', '交易次数', '平均收益率', '胜率', '准确率']]
+    monthly_stats = monthly_stats[['月份', '交易次数', '平均收益率', '胜率', '准确率', '正确决策比例']]
     
     # 转换为百分比格式
     monthly_stats['平均收益率'] = monthly_stats['平均收益率'] * 100
     monthly_stats['平均收益率'] = monthly_stats['平均收益率'].round(2)
     monthly_stats['胜率'] = monthly_stats['胜率'].round(2)
     monthly_stats['准确率'] = monthly_stats['准确率'].round(2)
+    monthly_stats['正确决策比例'] = monthly_stats['正确决策比例'].round(2)
     
     return monthly_stats
 
@@ -112,6 +106,9 @@ def stock_monthly_analysis(trades_df):
                             trades_df.groupby(['stock_code', 'month']).size() * 100
     stock_monthly_stats['胜率'] = stock_monthly_winrate
     
+    # 计算正确决策比例
+    stock_monthly_stats['正确决策比例'] = stock_monthly_stats['胜率'] * stock_monthly_stats['准确率'] / 100
+    
     # 添加月份名称
     stock_monthly_stats['月份'] = stock_monthly_stats.index.get_level_values(1).strftime('%Y-%m')
     
@@ -123,13 +120,14 @@ def stock_monthly_analysis(trades_df):
     
     # 重新排列列顺序（先重命名列）
     stock_monthly_stats = stock_monthly_stats.rename(columns={'stock_code': '股票代码'})
-    stock_monthly_stats = stock_monthly_stats[['股票代码', '股票名称', '月份', '平均收益率', '胜率', '准确率']]
+    stock_monthly_stats = stock_monthly_stats[['股票代码', '股票名称', '月份', '平均收益率', '胜率', '准确率', '正确决策比例']]
     
     # 转换为百分比格式
     stock_monthly_stats['平均收益率'] = stock_monthly_stats['平均收益率'] * 100
     stock_monthly_stats['平均收益率'] = stock_monthly_stats['平均收益率'].round(2)
     stock_monthly_stats['胜率'] = stock_monthly_stats['胜率'].round(2)
     stock_monthly_stats['准确率'] = stock_monthly_stats['准确率'].round(2)
+    stock_monthly_stats['正确决策比例'] = stock_monthly_stats['正确决策比例'].round(2)
     
     return stock_monthly_stats
 
@@ -141,26 +139,75 @@ def analyze_trend_differences(monthly_stats, stock_monthly_stats, stock_summary_
     overall_avg_return = stock_summary_df['平均收益率'].mean() * 100
     overall_winrate = stock_summary_df['胜率'].mean() * 100
     overall_accuracy = stock_summary_df['准确率'].mean() * 100
+    overall_correct_decision = stock_summary_df.get('正确决策比例', pd.Series()).mean() if '正确决策比例' in stock_summary_df.columns else (overall_winrate * overall_accuracy / 100)
     
     print(f"\n总体平均:")
     print(f"  平均收益率: {overall_avg_return:.2f}%")
     print(f"  胜率: {overall_winrate:.2f}%")
     print(f"  准确率: {overall_accuracy:.2f}%")
+    print(f"  正确决策比例: {overall_correct_decision:.2f}%")
     
     # 计算每月平均
     monthly_avg_return = monthly_stats['平均收益率'].mean()
     monthly_avg_winrate = monthly_stats['胜率'].mean()
     monthly_avg_accuracy = monthly_stats['准确率'].mean()
+    monthly_avg_correct_decision = monthly_stats['正确决策比例'].mean()
     
     print(f"\n每月平均:")
     print(f"  平均收益率: {monthly_avg_return:.2f}%")
     print(f"  胜率: {monthly_avg_winrate:.2f}%")
     print(f"  准确率: {monthly_avg_accuracy:.2f}%")
+    print(f"  正确决策比例: {monthly_avg_correct_decision:.2f}%")
     
     # 分析各股票与总体趋势的差异
     stock_summary_df['收益率差异'] = (stock_summary_df['平均收益率'] * 100 - overall_avg_return).round(2)
     stock_summary_df['胜率差异'] = (stock_summary_df['胜率'] * 100 - overall_winrate).round(2)
     stock_summary_df['准确率差异'] = (stock_summary_df['准确率'] * 100 - overall_accuracy).round(2)
+    
+    # 计算每只股票与总体趋势的相关性
+    correlation_results = []
+    for stock_code in stock_monthly_stats['股票代码'].unique():
+        stock_data = stock_monthly_stats[stock_monthly_stats['股票代码'] == stock_code]
+        
+        correlations = {}
+        for metric in ['平均收益率', '胜率', '准确率', '正确决策比例']:
+            # 将总体指标扩展到股票的月份
+            stock_metrics = stock_data[metric].values
+            overall_metrics = []
+            for month in stock_data['月份'].values:
+                overall_data = monthly_stats[monthly_stats['月份'] == month]
+                if len(overall_data) > 0:
+                    overall_metrics.append(overall_data[metric].values[0])
+            
+            if len(stock_metrics) == len(overall_metrics) and len(stock_metrics) > 1:
+                corr, p_value = stats.pearsonr(stock_metrics, overall_metrics)
+                correlations[metric] = {
+                    'correlation': corr,
+                    'p_value': p_value,
+                    'is_significant': p_value < 0.05
+                }
+            else:
+                correlations[metric] = {
+                    'correlation': np.nan,
+                    'p_value': np.nan,
+                    'is_significant': False
+                }
+        
+        # 判断是否与总体趋势一致（至少3个指标相关系数>0.3且显著）
+        consistent_metrics = sum(1 for v in correlations.values() if v['correlation'] > 0.3 and v['is_significant'])
+        is_consistent = consistent_metrics >= 3
+        
+        correlation_results.append({
+            '股票代码': stock_code,
+            '股票名称': stock_names.get(stock_code, stock_code),
+            '相关系数_收益率': correlations['平均收益率']['correlation'],
+            '相关系数_胜率': correlations['胜率']['correlation'],
+            '相关系数_准确率': correlations['准确率']['correlation'],
+            '相关系数_正确决策': correlations['正确决策比例']['correlation'],
+            '与总体趋势一致': is_consistent
+        })
+    
+    correlation_df = pd.DataFrame(correlation_results)
     
     # 找出表现最好的股票
     top_stocks_return = stock_summary_df.nlargest(5, '平均收益率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率']]
@@ -176,12 +223,14 @@ def analyze_trend_differences(monthly_stats, stock_monthly_stats, stock_summary_
         'overall_avg': {
             'return': overall_avg_return,
             'winrate': overall_winrate,
-            'accuracy': overall_accuracy
+            'accuracy': overall_accuracy,
+            'correct_decision': overall_correct_decision
         },
         'monthly_avg': {
             'return': monthly_avg_return,
             'winrate': monthly_avg_winrate,
-            'accuracy': monthly_avg_accuracy
+            'accuracy': monthly_avg_accuracy,
+            'correct_decision': monthly_avg_correct_decision
         },
         'top_stocks': {
             'return': top_stocks_return,
@@ -192,7 +241,8 @@ def analyze_trend_differences(monthly_stats, stock_monthly_stats, stock_summary_
             'return': bottom_stocks_return,
             'winrate': bottom_stocks_winrate,
             'accuracy': bottom_stocks_accuracy
-        }
+        },
+        'correlation_analysis': correlation_df
     }
 
 def generate_report(monthly_stats, stock_monthly_stats, trend_analysis, metrics):
@@ -366,15 +416,21 @@ def generate_report(monthly_stats, stock_monthly_stats, trend_analysis, metrics)
 
 def main():
     print("=" * 80)
-    print("CatBoost 20天模型回测 - 月度分析")
+    print("CatBoost 20天模型回测 - 月度分析 (2024-01-01 至 2026-01-31)")
     print("=" * 80)
     
     # 解析命令行参数
-    parser = argparse.ArgumentParser(description='CatBoost 20天模型回测 - 月度分析')
-    parser.add_argument('--trades-file', type=str, default='output/backtest_20d_trades_20260306_091148.csv',
+    parser = argparse.ArgumentParser(description='CatBoost 20天模型回测 - 月度分析 (2024-2026)')
+    parser.add_argument('--trades-file', type=str, 
+                       default='output/backtest_20d_trades_20260306_091148.csv',
                        help='交易记录文件路径')
-    parser.add_argument('--stock-summary-file', type=str, default='output/backtest_20d_stock_summary_20260306_091148.csv',
+    parser.add_argument('--stock-summary-file', type=str, 
+                       default='output/backtest_20d_stock_summary_20260306_091148.csv',
                        help='股票汇总文件路径')
+    parser.add_argument('--start-date', type=str, default='2024-01-01',
+                       help='开始日期 (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=str, default='2026-01-31',
+                       help='结束日期 (YYYY-MM-DD)')
     args = parser.parse_args()
     
     # 加载回测数据
@@ -382,12 +438,28 @@ def main():
     trades_df = pd.read_csv(args.trades_file)
     print(f"✅ 已加载 {len(trades_df)} 条交易记录")
     
+    # 转换日期格式
+    trades_df['buy_date'] = pd.to_datetime(trades_df['buy_date'])
+    trades_df['sell_date'] = pd.to_datetime(trades_df['sell_date'])
+    trades_df['month'] = trades_df['buy_date'].dt.to_period('M')
+    
+    # 添加股票名称映射
+    trades_df['stock_name'] = trades_df['stock_code'].map(stock_names)
+    
+    # 过滤日期范围
+    start_date = pd.to_datetime(args.start_date)
+    end_date = pd.to_datetime(args.end_date)
+    trades_df = trades_df[(trades_df['buy_date'] >= start_date) & (trades_df['buy_date'] <= end_date)]
+    print(f"✅ 过滤后 {len(trades_df)} 条交易记录 (日期范围: {args.start_date} 至 {args.end_date})")
+    
+    # 加载股票汇总数据
     stock_summary_df = pd.read_csv(args.stock_summary_file)
     print(f"✅ 已加载 {len(stock_summary_df)} 只股票的汇总数据")
     
-    # 转换日期格式并添加月份列
-    trades_df['buy_date'] = pd.to_datetime(trades_df['buy_date'])
-    trades_df['month'] = trades_df['buy_date'].dt.to_period('M')
+    # 如果股票汇总数据没有正确决策比例，则计算它
+    if '正确决策比例' not in stock_summary_df.columns:
+        stock_summary_df['正确决策比例'] = stock_summary_df['胜率'] * stock_summary_df['准确率'] / 100
+        print(f"✅ 已计算正确决策比例")
     
     # 按月份分析
     monthly_stats = monthly_analysis(trades_df)
@@ -396,13 +468,15 @@ def main():
     stock_monthly_stats = stock_monthly_analysis(trades_df)
     
     # 分析单个股票与总体趋势的差异
-    analyze_trend_differences(stock_monthly_stats, monthly_stats, stock_summary_df)
+    trend_analysis = analyze_trend_differences(monthly_stats, stock_monthly_stats, stock_summary_df)
     
     # 生成分析报告
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    monthly_csv = f'output/backtest_20d_monthly_analysis_{timestamp}.csv'
-    stock_monthly_csv = f'output/backtest_20d_stock_monthly_analysis_{timestamp}.csv'
-    report_txt = f'output/backtest_20d_monthly_analysis_report_{timestamp}.txt'
+    monthly_csv = f'output/backtest_20d_monthly_analysis_2024_2026_{timestamp}.csv'
+    stock_monthly_csv = f'output/backtest_20d_stock_monthly_analysis_2024_2026_{timestamp}.csv'
+    stock_summary_csv = f'output/backtest_20d_stock_summary_2024_2026_{timestamp}.csv'
+    correlation_csv = f'output/backtest_20d_correlation_analysis_2024_2026_{timestamp}.csv'
+    report_txt = f'output/backtest_20d_monthly_analysis_report_2024_2026_{timestamp}.txt'
     
     # 保存月度分析结果
     monthly_stats.to_csv(monthly_csv, index=False, encoding='utf-8-sig')
@@ -412,54 +486,84 @@ def main():
     stock_monthly_stats.to_csv(stock_monthly_csv, index=False, encoding='utf-8-sig')
     print(f"✅ 股票月度分析已保存到: {stock_monthly_csv}")
     
+    # 保存股票汇总数据（包含正确决策比例）
+    stock_summary_df.to_csv(stock_summary_csv, index=False, encoding='utf-8-sig')
+    print(f"✅ 股票汇总数据已保存到: {stock_summary_csv}")
+    
+    # 保存相关性分析结果
+    trend_analysis['correlation_analysis'].to_csv(correlation_csv, index=False, encoding='utf-8-sig')
+    print(f"✅ 相关性分析已保存到: {correlation_csv}")
+    
     # 生成文本报告
     with open(report_txt, 'w', encoding='utf-8') as f:
         f.write("=" * 80 + "\n")
         f.write("CatBoost 20天模型回测 - 月度分析报告\n")
         f.write("=" * 80 + "\n\n")
         f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"回测日期范围: {trades_df['buy_date'].min()} 至 {trades_df['buy_date'].max()}\n\n")
+        f.write(f"回测日期范围: {args.start_date} 至 {args.end_date}\n\n")
         
         f.write("=" * 80 + "\n")
         f.write("一、总体性能\n")
         f.write("=" * 80 + "\n")
         f.write(f"总交易机会: {len(trades_df)}\n")
         f.write(f"买入信号数: {len(trades_df[trades_df['prediction'] == 1])}\n")
-        f.write(f"准确率: {(trades_df['prediction_correct'].sum() / len(trades_df)):.10f}\n")
-        f.write(f"平均收益率: {trades_df['actual_change'].mean():.20f}\n")
-        f.write(f"胜率: {(len(trades_df[trades_df['actual_direction'] == 1]) / len(trades_df[trades_df['prediction'] == 1])):.20f}\n\n")
+        f.write(f"准确率: {(trades_df['prediction_correct'].sum() / len(trades_df)):.4%}\n")
+        f.write(f"平均收益率: {trades_df['actual_change'].mean():.4%}\n")
+        f.write(f"胜率: {(len(trades_df[trades_df['actual_direction'] == 1]) / len(trades_df)):.4%}\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("二、月度分析\n")
+        f.write("二、总体平均\n")
+        f.write("=" * 80 + "\n")
+        f.write(f"平均收益率: {trend_analysis['overall_avg']['return']:.2f}%\n")
+        f.write(f"胜率: {trend_analysis['overall_avg']['winrate']:.2f}%\n")
+        f.write(f"准确率: {trend_analysis['overall_avg']['accuracy']:.2f}%\n")
+        f.write(f"正确决策比例: {trend_analysis['overall_avg']['correct_decision']:.2f}%\n\n")
+        
+        f.write("=" * 80 + "\n")
+        f.write("三、每月平均\n")
+        f.write("=" * 80 + "\n")
+        f.write(f"平均收益率: {trend_analysis['monthly_avg']['return']:.2f}%\n")
+        f.write(f"胜率: {trend_analysis['monthly_avg']['winrate']:.2f}%\n")
+        f.write(f"准确率: {trend_analysis['monthly_avg']['accuracy']:.2f}%\n")
+        f.write(f"正确决策比例: {trend_analysis['monthly_avg']['correct_decision']:.2f}%\n\n")
+        
+        f.write("=" * 80 + "\n")
+        f.write("四、月度分析\n")
         f.write("=" * 80 + "\n")
         f.write(monthly_stats.to_string(index=False) + "\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("三、按收益率排名TOP 5\n")
+        f.write("五、按收益率排名TOP 5\n")
         f.write("=" * 80 + "\n")
-        top5_return = stock_summary_df.nlargest(5, '平均收益率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率']]
+        top5_return = stock_summary_df.nlargest(5, '平均收益率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率', '正确决策比例']]
         f.write(top5_return.to_string(index=False) + "\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("四、按胜率排名TOP 5\n")
+        f.write("六、按胜率排名TOP 5\n")
         f.write("=" * 80 + "\n")
-        top5_winrate = stock_summary_df.nlargest(5, '胜率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率']]
+        top5_winrate = stock_summary_df.nlargest(5, '胜率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率', '正确决策比例']]
         f.write(top5_winrate.to_string(index=False) + "\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("五、按准确率排名TOP 5\n")
+        f.write("七、按准确率排名TOP 5\n")
         f.write("=" * 80 + "\n")
-        top5_accuracy = stock_summary_df.nlargest(5, '准确率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率']]
+        top5_accuracy = stock_summary_df.nlargest(5, '准确率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率', '正确决策比例']]
         f.write(top5_accuracy.to_string(index=False) + "\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("六、按收益率排名BOTTOM 5\n")
+        f.write("八、按正确决策比例排名TOP 5\n")
         f.write("=" * 80 + "\n")
-        bottom5_return = stock_summary_df.nsmallest(5, '平均收益率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率']]
+        top5_correct = stock_summary_df.nlargest(5, '正确决策比例')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率', '正确决策比例']]
+        f.write(top5_correct.to_string(index=False) + "\n\n")
+        
+        f.write("=" * 80 + "\n")
+        f.write("九、按收益率排名BOTTOM 5\n")
+        f.write("=" * 80 + "\n")
+        bottom5_return = stock_summary_df.nsmallest(5, '平均收益率')[['股票代码', '股票名称', '平均收益率', '胜率', '准确率', '正确决策比例']]
         f.write(bottom5_return.to_string(index=False) + "\n\n")
         
         f.write("=" * 80 + "\n")
-        f.write("七、趋势分析\n")
+        f.write("十、趋势分析\n")
         f.write("=" * 80 + "\n")
         # 上半年和下半年对比
         monthly_stats['年月'] = pd.to_datetime(monthly_stats['月份'])
@@ -469,16 +573,17 @@ def main():
         h1_stats = monthly_stats[monthly_stats['月'] <= 6]
         h2_stats = monthly_stats[monthly_stats['月'] > 6]
         
-        h1_avg_return = h1_stats['平均收益率'].mean()
-        h2_avg_return = h2_stats['平均收益率'].mean()
-        
-        f.write(f"收益率趋势:\n")
-        f.write(f"  上半年平均收益率: {h1_avg_return:.2f}%\n")
-        f.write(f"  下半年平均收益率: {h2_avg_return:.2f}%\n")
-        if h1_avg_return > h2_avg_return:
-            f.write(f"  趋势: 下降\n")
-        else:
-            f.write(f"  趋势: 上升\n\n")
+        if len(h1_stats) > 0 and len(h2_stats) > 0:
+            h1_avg_return = h1_stats['平均收益率'].mean()
+            h2_avg_return = h2_stats['平均收益率'].mean()
+            
+            f.write(f"收益率趋势:\n")
+            f.write(f"  上半年平均收益率: {h1_avg_return:.2f}%\n")
+            f.write(f"  下半年平均收益率: {h2_avg_return:.2f}%\n")
+            if h1_avg_return > h2_avg_return:
+                f.write(f"  趋势: 下降\n")
+            else:
+                f.write(f"  趋势: 上升\n\n")
         
         best_return_month = monthly_stats.loc[monthly_stats['平均收益率'].idxmax()]
         f.write(f"表现最好的月份（收益率）: {best_return_month['月份']}, 收益率: {best_return_month['平均收益率']:.2f}%\n")
@@ -487,6 +592,28 @@ def main():
         f.write(f"表现最差的月份（收益率）: {worst_return_month['月份']}, 收益率: {worst_return_month['平均收益率']:.2f}%\n\n")
         
         f.write("=" * 80 + "\n")
+        f.write("十一、单个股票与总体趋势相关性分析\n")
+        f.write("=" * 80 + "\n")
+        
+        consistent_stocks = trend_analysis['correlation_analysis'][
+            trend_analysis['correlation_analysis']['与总体趋势一致'] == True
+        ]
+        inconsistent_stocks = trend_analysis['correlation_analysis'][
+            trend_analysis['correlation_analysis']['与总体趋势一致'] == False
+        ]
+        
+        f.write(f"与总体趋势一致的股票: {len(consistent_stocks)} 只\n")
+        f.write(f"与总体趋势不一致的股票: {len(inconsistent_stocks)} 只\n\n")
+        
+        f.write("与总体趋势一致的股票列表:\n")
+        for _, row in consistent_stocks.iterrows():
+            f.write(f"  {row['股票代码']} ({row['股票名称']})\n")
+        
+        f.write("\n与总体趋势不一致的股票列表:\n")
+        for _, row in inconsistent_stocks.iterrows():
+            f.write(f"  {row['股票代码']} ({row['股票名称']})\n")
+        
+        f.write("\n" + "=" * 80 + "\n")
         f.write("报告结束\n")
         f.write("=" * 80 + "\n")
     
@@ -498,10 +625,18 @@ def main():
     print(f"\n生成的文件:")
     print(f"  1. 月度分析CSV: {monthly_csv}")
     print(f"  2. 股票月度分析CSV: {stock_monthly_csv}")
-    print(f"  3. 分析报告: {report_txt}")
+    print(f"  3. 股票汇总CSV: {stock_summary_csv}")
+    print(f"  4. 相关性分析CSV: {correlation_csv}")
+    print(f"  5. 分析报告: {report_txt}")
     
     print("\n📊 月度分析结果:")
     print(monthly_stats.to_string(index=False))
+    
+    print("\n📊 总体趋势:")
+    print(f"  平均收益率: {trend_analysis['overall_avg']['return']:.2f}%")
+    print(f"  胜率: {trend_analysis['overall_avg']['winrate']:.2f}%")
+    print(f"  准确率: {trend_analysis['overall_avg']['accuracy']:.2f}%")
+    print(f"  正确决策比例: {trend_analysis['overall_avg']['correct_decision']:.2f}%")
 
 if __name__ == '__main__':
     main()
