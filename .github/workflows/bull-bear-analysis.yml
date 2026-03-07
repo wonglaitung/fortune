@@ -36,10 +36,11 @@ jobs:
         id: date_range
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            # 定时任务：分析上一年全年的数据
-            START_YEAR=$(date -d 'last year' +%Y)
-            START_DATE="${START_YEAR}-01-01"
-            END_DATE="${START_YEAR}-12-31"
+            # 定时任务：分析上个月之前的一年
+            # 获取上个月的最后一天
+            END_DATE=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)
+            # 获取一年前的同一天
+            START_DATE=$(date -d "$END_DATE -1 year" +%Y-%m-%d)
             echo "start_date=$START_DATE" >> $GITHUB_OUTPUT
             echo "end_date=$END_DATE" >> $GITHUB_OUTPUT
           else
