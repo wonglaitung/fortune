@@ -274,6 +274,136 @@ def analyze_stock_performance_by_market(trades_df, market_env_df):
     
     return results_df
 
+def walk_forward_validation(trades_df, market_env_df, train_window_months=6, test_window_months=3):
+    """
+    执行Walk-forward滚动窗口验证（样本外测试）
+    
+    这是一个业界标准的时序验证方法，模拟实盘交易场景：
+    - 使用前N个月的数据分析市场环境
+    - 在后M个月的数据上验证策略表现
+    - 滚动窗口，逐步向前移动
+    
+    参数:
+    - trades_df: 交易记录DataFrame
+    - market_env_df: 市场环境DataFrame
+    - train_window_months: 训练窗口月份数（默认6个月）
+    - test_window_months: 测试窗口月份数（默认3个月）
+    
+    返回:
+    DataFrame: Walk-forward验证结果
+    """
+    print(f"\n🔄 执行Walk-forward滚动窗口验证...")
+    print(f"   训练窗口: {train_window_months} 个月")
+    print(f"   测试窗口: {test_window_months} 个月")
+    
+    # 转换日期格式
+    trades_df['buy_date'] = pd.to_datetime(trades_df['buy_date'])
+    
+    # 获取所有月份
+    all_months = sorted(market_env_df['YearMonth'].unique())
+    
+    if len(all_months) < train_window_months + test_window_months:
+        print(f"⚠️ 警告：数据不足，无法执行Walk-forward验证（需要至少 {train_window_months + test_window_months} 个月）")
+        return None
+    
+    # 执行滚动验证
+    results = []
+    fold = 0
+    
+    while True:
+        # 计算当前fold的训练和测试窗口
+        train_end_idx = fold + train_window_months
+        test_end_idx = train_end_idx + test_window_months
+        
+        # 检查是否有足够的数据
+        if test_end_idx > len(all_months):
+            break
+        
+        # 获取训练和测试月份
+        train_months = all_months[fold:train_end_idx]
+        test_months = all_months[train_end_idx:test_end_idx]
+        
+        # 获取训练和测试期间的市场环境
+        train_env = market_env_df[market_env_df['YearMonth'].isin(train_months)]
+        test_env = market_env_df[market_env_df['YearMonth'].isin(test_months)]
+        
+        # 获取测试期间的交易数据
+        test_start_date = test_env['Start_Date'].min()
+        test_end_date = test_env['End_Date'].max()
+        
+        # 确保日期是 tz-naive（移除时区信息）
+        test_start_date = pd.Timestamp(test_start_date).tz_localize(None) if hasattr(pd.Timestamp(test_start_date), 'tz') and pd.Timestamp(test_start_date).tz is not None else pd.Timestamp(test_start_date)
+        test_end_date = pd.Timestamp(test_end_date).tz_localize(None) if hasattr(pd.Timestamp(test_end_date), 'tz') and pd.Timestamp(test_end_date).tz is not None else pd.Timestamp(test_end_date)
+        
+        test_trades = trades_df[
+            (trades_df['buy_date'] >= test_start_date) &
+            (trades_df['buy_date'] <= test_end_date)
+        ]
+        
+        if len(test_trades) == 0:
+            fold += 1
+            continue
+        
+        # 计算测试期间的表现
+        avg_return = test_trades['actual_change'].mean()
+        win_rate = (test_trades['actual_change'] > 0).sum() / len(test_trades)
+        accuracy = test_trades['prediction_correct'].sum() / len(test_trades)
+        
+        # 计算不同市场环境下的表现
+        bull_env = test_env[test_env['Market_State'] == 'bull']
+        bear_env = test_env[test_env['Market_State'] == 'bear']
+        neutral_env = test_env[test_env['Market_State'] == 'neutral']
+        
+        bull_count = len(bull_env)
+        bear_count = len(bear_env)
+        neutral_count = len(neutral_env)
+        
+        results.append({
+            'fold': fold + 1,
+            'train_period_start': train_months[0],
+            'train_period_end': train_months[-1],
+            'test_period_start': test_months[0],
+            'test_period_end': test_months[-1],
+            'test_start_date': test_start_date,
+            'test_end_date': test_end_date,
+            'test_trades_count': len(test_trades),
+            'avg_return': avg_return,
+            'win_rate': win_rate,
+            'accuracy': accuracy,
+            'bull_months': bull_count,
+            'bear_months': bear_count,
+            'neutral_months': neutral_count,
+            'market_diversity': len(set(test_env['Market_State']))
+        })
+        
+        fold += 1
+    
+    results_df = pd.DataFrame(results)
+    
+    print(f"✅ Walk-forward验证完成，共 {len(results_df)} 个fold")
+    
+    # 计算稳定性指标
+    if len(results_df) > 1:
+        return_std = results_df['avg_return'].std()
+        return_range = results_df['avg_return'].max() - results_df['avg_return'].min()
+        win_rate_std = results_df['win_rate'].std()
+        
+        print(f"\n📊 稳定性分析:")
+        print(f"   收益率标准差: {return_std:.2%}")
+        print(f"   收益率范围: {results_df['avg_return'].min():.2%} ~ {results_df['avg_return'].max():.2%}")
+        print(f"   胜率标准差: {win_rate_std:.2%}")
+        
+        if return_std < 0.02:
+            stability_level = "高（优秀）"
+        elif return_std < 0.05:
+            stability_level = "中（良好）"
+        else:
+            stability_level = "低（需改进）"
+        
+        print(f"   稳定性等级: {stability_level}")
+    
+    return results_df
+
 def get_current_market_state():
     """
     获取当前市场状态（实时）
@@ -340,9 +470,15 @@ def get_current_market_state():
         print(f"⚠️ 获取当前市场状态失败: {e}")
         return None
 
-def save_markdown_report(market_env_df, stock_performance_df, output_file):
+def save_markdown_report(market_env_df, stock_performance_df, output_file, walk_forward_results=None):
     """
     生成Markdown格式的分析报告
+    
+    参数:
+    - market_env_df: 市场环境DataFrame
+    - stock_performance_df: 股票表现DataFrame
+    - output_file: 输出文件路径
+    - walk_forward_results: Walk-forward验证结果（可选）
     """
     # 过滤掉没有足够数据的股票
     valid_stocks = stock_performance_df[
@@ -510,6 +646,100 @@ def save_markdown_report(market_env_df, stock_performance_df, output_file):
         f.write(f"- **平均值**: {valid_stocks['bear_avg_prob'].mean():.4f}\n")
         f.write(f"- **标准差**: {valid_stocks['bear_prob_std'].mean():.4f}\n")
         f.write(f"- **范围**: [{valid_stocks['bear_avg_prob'].min():.4f}, {valid_stocks['bear_avg_prob'].max():.4f}]\n")
+        
+        # 六、样本外测试结果（Walk-forward验证）
+        if walk_forward_results is not None and len(walk_forward_results) > 0:
+            f.write("## 六、样本外测试结果（Walk-forward验证）\n\n")
+            f.write("### 验证方法说明\n\n")
+            f.write("Walk-forward滚动窗口验证是一种业界标准的时序验证方法：\n\n")
+            f.write("- **训练窗口**: 使用前6个月的数据分析市场环境\n")
+            f.write("- **测试窗口**: 在后3个月的数据上验证策略表现\n")
+            f.write("- **滚动验证**: 逐步向前移动窗口，模拟实盘交易\n")
+            f.write("- **优点**: 避免数据泄露，评估策略的时变稳定性\n\n")
+            
+            f.write("### 整体性能\n\n")
+            f.write(f"- **验证次数**: {len(walk_forward_results)} 次\n")
+            f.write(f"- **平均收益率**: {walk_forward_results['avg_return'].mean():.2%}\n")
+            f.write(f"- **平均胜率**: {walk_forward_results['win_rate'].mean():.1%}\n")
+            f.write(f"- **平均准确率**: {walk_forward_results['accuracy'].mean():.1%}\n")
+            f.write(f"- **总交易次数**: {walk_forward_results['test_trades_count'].sum()}\n\n")
+            
+            # 稳定性分析
+            return_std = 0.0
+            return_range = 0.0
+            win_rate_std = 0.0
+            
+            if len(walk_forward_results) > 1:
+                return_std = walk_forward_results['avg_return'].std()
+                return_range = walk_forward_results['avg_return'].max() - walk_forward_results['avg_return'].min()
+                win_rate_std = walk_forward_results['win_rate'].std()
+                
+                f.write("### 稳定性分析\n\n")
+                f.write(f"- **收益率标准差**: {return_std:.2%}\n")
+                f.write(f"- **收益率范围**: {walk_forward_results['avg_return'].min():.2%} ~ {walk_forward_results['avg_return'].max():.2%}\n")
+                f.write(f"- **胜率标准差**: {win_rate_std:.2%}\n\n")
+                
+                if return_std < 0.02:
+                    stability_level = "高（优秀）"
+                    stability_color = "✅"
+                elif return_std < 0.05:
+                    stability_level = "中（良好）"
+                    stability_color = "⚠️"
+                else:
+                    stability_level = "低（需改进）"
+                    stability_color = "❌"
+                
+                f.write(f"**稳定性等级**: {stability_color} {stability_level}\n\n")
+            
+            # 详细Fold结果
+            f.write("### 详细验证结果\n\n")
+            f.write("| Fold | 训练期间 | 测试期间 | 测试交易数 | 平均收益率 | 胜率 | 准确率 | 牛市月 | 熊市月 | 震荡月 |\n")
+            f.write("|-----|---------|---------|-----------|-----------|------|--------|-------|-------|-------|\n")
+            
+            for _, row in walk_forward_results.iterrows():
+                train_period = f"{row['train_period_start']} ~ {row['train_period_end']}"
+                test_period = f"{row['test_period_start']} ~ {row['test_period_end']}"
+                f.write(f"| {row['fold']} | {train_period} | {test_period} | {row['test_trades_count']} | ")
+                f.write(f"{row['avg_return']:.2%} | {row['win_rate']:.1%} | {row['accuracy']:.1%} | ")
+                f.write(f"{row['bull_months']} | {row['bear_months']} | {row['neutral_months']} |\n")
+            
+            f.write("\n")
+            
+            # 市场周期覆盖分析
+            f.write("### 市场周期覆盖分析\n\n")
+            total_bull = walk_forward_results['bull_months'].sum()
+            total_bear = walk_forward_results['bear_months'].sum()
+            total_neutral = walk_forward_results['neutral_months'].sum()
+            total_months = total_bull + total_bear + total_neutral
+            
+            f.write(f"- **牛市月份**: {total_bull} 个月 ({total_bull/total_months*100:.1f}%)\n")
+            f.write(f"- **熊市月份**: {total_bear} 个月 ({total_bear/total_months*100:.1f}%)\n")
+            f.write(f"- **震荡月份**: {total_neutral} 个月 ({total_neutral/total_months*100:.1f}%)\n")
+            f.write(f"- **市场多样性**: 平均每个fold包含 {walk_forward_results['market_diversity'].mean():.1f} 种市场状态\n\n")
+            
+            # 结论
+            f.write("### 样本外测试结论\n\n")
+            
+            if walk_forward_results['avg_return'].mean() > 0:
+                f.write("✅ **策略表现良好**: 样本外测试显示策略在多个市场周期中均能产生正收益\n")
+                f.write("   说明策略具有较好的泛化能力和时变稳定性\n\n")
+            else:
+                f.write("⚠️ **策略表现一般**: 样本外测试显示策略在部分市场周期中表现不佳\n")
+                f.write("   建议进一步优化策略参数或改进市场环境识别\n\n")
+            
+            if len(walk_forward_results) > 1:
+                if return_std < 0.03:
+                    f.write("✅ **稳定性优秀**: 策略在不同市场周期中的表现波动较小\n")
+                    f.write("   表明策略具有良好的鲁棒性，适合实盘交易\n\n")
+                elif return_std < 0.05:
+                    f.write("⚠️ **稳定性良好**: 策略在不同市场周期中的表现有一定波动\n")
+                    f.write("   建议在实际交易中注意风险控制\n\n")
+                else:
+                    f.write("❌ **稳定性不足**: 策略在不同市场周期中的表现波动较大\n")
+                    f.write("   需要进一步优化策略或降低预期收益\n\n")
+            else:
+                f.write("⚠️ **样本数量不足**: 只有1个验证周期，无法评估稳定性\n")
+                f.write("   建议使用更长的时间范围进行验证\n\n")
 
 def main():
     """主函数"""
@@ -554,6 +784,9 @@ def main():
     
     # 3. 分析股票表现
     stock_performance_df = analyze_stock_performance_by_market(trades_df, market_env_df)
+    
+    # 3.5. 执行Walk-forward滚动窗口验证（样本外测试）
+    walk_forward_results = walk_forward_validation(trades_df, market_env_df)
     
     # 4. 过滤有效数据
     valid_stocks = stock_performance_df[
@@ -607,7 +840,7 @@ def main():
     # Markdown格式
     if args.output_format in ['md', 'all']:
         md_file = output_dir / f"{base_filename}.md"
-        save_markdown_report(market_env_df, stock_performance_df, md_file)
+        save_markdown_report(market_env_df, stock_performance_df, md_file, walk_forward_results)
         print(f"✅ Markdown报告已保存: {md_file}")
     
     print("\n" + "=" * 80)

@@ -21,6 +21,8 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -45,9 +47,6 @@ jobs:
     - name: Calculate trading dates
       id: dates
       run: |
-        # 设置时区为香港时间，确保与港股交易时间一致
-        export TZ='Asia/Hong_Kong'
-        
         if [ -n "${{ github.event.inputs.trading_day }}" ]; then
           TRADING_DAY="${{ github.event.inputs.trading_day }}"
         else
