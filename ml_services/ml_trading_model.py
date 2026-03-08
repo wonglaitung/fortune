@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import TimeSeriesSplit, train_test_split
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, log_loss, roc_auc_score, f1_score, precision_score, recall_score
 from sklearn.linear_model import LogisticRegression
@@ -1933,8 +1933,8 @@ class LightGBMModel(BaseTradingModel):
         X = df[self.feature_columns].values
         y = df['Label'].values
 
-        # 时间序列分割
-        tscv = TimeSeriesSplit(n_splits=5)
+        # 时间序列分割（添加 gap 参数避免短期依赖）
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
 
         # 根据预测周期调整正则化参数（分周期优化策略）
         # 次日模型：最强的正则化防止过拟合
@@ -2620,8 +2620,8 @@ class GBDTModel(BaseTradingModel):
             verbose=-1
         )
 
-        # 使用时间序列交叉验证
-        tscv = TimeSeriesSplit(n_splits=5)
+        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         gbdt_scores = []
         gbdt_f1_scores = []
 
@@ -3276,8 +3276,8 @@ class CatBoostModel(BaseTradingModel):
             cat_features=categorical_features if categorical_features else None
         )
 
-        # 使用时间序列交叉验证
-        tscv = TimeSeriesSplit(n_splits=5)
+        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         catboost_scores = []
         catboost_f1_scores = []
 

@@ -2,8 +2,8 @@ name: 牛熊市分析自动化报告
 
 on:
   schedule:
-    # 每月1号凌晨2点运行（香港时间UTC 18:00）
-    - cron: '0 18 1 * *'
+    # 每周星期一上午1点香港时间 (UTC 17:00) 执行牛熊市分析
+    - cron: '0 17 * * 0'
   workflow_dispatch:
     inputs:
       start_date:
@@ -18,6 +18,8 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
     
     steps:
       - name: 检出代码
@@ -32,7 +34,7 @@ jobs:
         run: |
           pip install -r requirements.txt
       
-- name: 计算日期范围
+      - name: 计算日期范围
         id: date_range
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then

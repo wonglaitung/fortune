@@ -698,6 +698,73 @@ def get_hsi_analysis():
         return None
 
 
+def get_current_market_state():
+    """
+    获取当前市场状态（实时）
+    
+    返回:
+    dict: 当前市场状态信息
+    """
+    try:
+        # 获取最近30天的恒生指数数据
+        hsi_ticker = yf.Ticker("^HSI")
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        hsi_df = hsi_ticker.history(start=start_date.strftime('%Y-%m-%d'), 
+                                    end=end_date.strftime('%Y-%m-%d'))
+        
+        if len(hsi_df) < 10:
+            return None
+        
+        # 计算最近20天收益率
+        if len(hsi_df) >= 20:
+            recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-20]) / hsi_df['Close'].iloc[-20]
+        else:
+            recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
+        
+        # 计算最近5天收益率
+        if len(hsi_df) >= 5:
+            recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-5]) / hsi_df['Close'].iloc[-5]
+        else:
+            recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
+        
+        # 计算当前市场状态
+        if recent_20d_return > 0.05:
+            market_state = 'bull'
+            market_state_cn = '牛市'
+            market_signal = '📈 强烈看涨'
+        elif recent_20d_return < -0.05:
+            market_state = 'bear'
+            market_state_cn = '熊市'
+            market_signal = '📉 强烈看跌'
+        elif recent_20d_return > 0.02:
+            market_state = 'neutral_bull'
+            market_state_cn = '震荡偏涨'
+            market_signal = '⬆️ 温和上涨'
+        elif recent_20d_return < -0.02:
+            market_state = 'neutral_bear'
+            market_state_cn = '震荡偏跌'
+            market_signal = '⬇️ 温和下跌'
+        else:
+            market_state = 'neutral'
+            market_state_cn = '震荡市'
+            market_signal = '➡️ 横盘整理'
+        
+        return {
+            'market_state': market_state,
+            'market_state_cn': market_state_cn,
+            'market_signal': market_signal,
+            'recent_20d_return': recent_20d_return,
+            'recent_5d_return': recent_5d_return,
+            'current_hsi': hsi_df['Close'].iloc[-1],
+            'date': hsi_df.index[-1].strftime('%Y-%m-%d')
+        }
+    except Exception as e:
+        print(f"⚠️ 获取当前市场状态失败: {e}")
+        return None
+
+
 def get_ai_portfolio_analysis():
     """
     获取AI持仓分析
@@ -1632,8 +1699,65 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                             dividend_plan = str(dividend_plan)[:28] + '...'
                         dividend_text += f"| {code} | {name} | {ex_date} | {dividend_plan} |\n"
                 
+                # 获取当前市场状态
+                current_market = get_current_market_state()
+                
                 # 构建恒生指数分析文本
                 hsi_text = ""
+                if current_market:
+                    hsi_text += f"**市场信号**: {current_market['market_signal']}\n\n"
+                    hsi_text += f"**市场状态**: {current_market['market_state_cn']}\n\n"
+                    hsi_text += f"**恒生指数**: {current_market['current_hsi']:.2f} (截至 {current_market['date']})\n\n"
+                    hsi_text += f"**最近20天收益率**: {current_market['recent_20d_return']:.2%}\n\n"
+                    hsi_text += f"**最近5天收益率**: {current_market['recent_5d_return']:.2%}\n\n"
+                    
+                    # 添加市场状态说明表格
+                    hsi_text += "### 市场状态说明\n\n"
+                    hsi_text += "| 市场状态 | 20天收益率范围 | 说明 |\n"
+                    hsi_text += "|---------|--------------|------|\n"
+                    hsi_text += "| 📈 牛市 | > 5% | 市场强劲上涨，适合积极配置 |\n"
+                    hsi_text += "| ⬆️ 震荡偏涨 | 2% - 5% | 市场温和上涨，可以谨慎配置 |\n"
+                    hsi_text += "| ➡️ 震荡市 | -2% - 2% | 市场横盘整理，建议观望 |\n"
+                    hsi_text += "| ⬇️ 震荡偏跌 | -5% - -2% | 市场温和下跌，建议减仓 |\n"
+                    hsi_text += "| 📉 熊市 | < -5% | 市场强劲下跌，建议空仓 |\n\n"
+                    
+                    # 添加投资建议
+                    hsi_text += "### 投资建议\n\n"
+                    
+                    if current_market['market_state'] == 'bull':
+                        hsi_text += "**牛市策略**:\n\n"
+                        hsi_text += "- ✅ **重仓高市场关联性股票**: 牛市中高关联性股票平均收益率可达 +9.35%\n"
+                        hsi_text += "- ✅ **关注科技、半导体板块**: 这些板块通常在牛市中表现优异\n"
+                        hsi_text += "- ✅ **使用100%仓位**: 市场信号强烈，可全仓操作\n\n"
+                    elif current_market['market_state'] == 'bear':
+                        hsi_text += "**熊市策略**:\n\n"
+                        hsi_text += "- ⚠️ **重仓低市场关联性股票**: 熊市中低关联性股票平均收益率为 +4.15%\n"
+                        hsi_text += "- ⚠️ **配置银行、公用事业**: 这些股票具有防御性\n"
+                        hsi_text += "- ⚠️ **降低仓位至30%**: 市场风险较高，控制仓位\n\n"
+                    elif current_market['market_state'] in ['neutral_bull', 'neutral_bear']:
+                        hsi_text += "**震荡市策略**:\n\n"
+                        hsi_text += "- 🔄 **均衡配置**: 高低关联性股票各占50%\n"
+                        hsi_text += "- 🔄 **动态调整**: 根据市场信号及时调整仓位\n"
+                        hsi_text += "- 🔄 **关注波段机会**: 震荡市适合波段操作\n\n"
+                        
+                        # 额外的风险提示
+                        if current_market['market_state'] == 'neutral_bear':
+                            hsi_text += "**风险提示**:\n\n"
+                            hsi_text += "- ⚠️ 市场温和下跌，建议保持谨慎\n"
+                            hsi_text += "- ⚠️ 可考虑降低仓位至70%\n"
+                        else:
+                            hsi_text += "**机会提示**:\n\n"
+                            hsi_text += "- ✅ 市场温和上涨，可考虑逐步加仓\n"
+                            hsi_text += "- ✅ 建议仓位可提升至80%\n\n"
+                    else:  # neutral
+                        hsi_text += "**横盘策略**:\n\n"
+                        hsi_text += "- ⏸️ **观望为主**: 市场缺乏明确方向，建议保持观望\n"
+                        hsi_text += "- ⏸️ **低仓位试探**: 可用30%仓位试探性配置\n"
+                        hsi_text += "- ⏸️ **等待信号**: 等待市场明确方向后再做决策\n\n"
+                    
+                    hsi_text += "---\n\n"
+                    hsi_text += "**技术指标**:\n\n"
+                
                 if hsi_data:
                     hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
                     hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}%\n"
