@@ -319,3 +319,75 @@
 - **买入建议**：3只（建仓评分≥3.0且出货评分<2.0）  
 - **卖出建议**：5只（出货评分≥3.0，
 [2026-03-09 15:29:03] 正在请求大模型以固定格式输出买卖信号...
+[2026-03-09 15:33:51] 格式化输出结果:
+{
+    "buy": [
+        {
+            "code": "0883.HK",
+            "name": "中国海洋石油",
+            "reason": "市场发生重大变化：成交额显著增加至486.99亿，能源板块温和上涨且资金流向正向，建仓信号触发（评分≥3.0），符合平衡型风险偏好",
+            "allocation_pct": 12,
+            "stop_loss_price": 13.50,
+            "target_price": 18.00,
+            "validity_period": 7
+        },
+        {
+            "code": "1088.HK",
+            "name": "中国神华",
+            "reason": "市场发生重大变化：成交额变化率正向，能源板块强势表现持续，建仓信号触发（评分≥3.0），适合平衡型投资者",
+            "allocation_pct": 10,
+            "stop_loss_price": 20.00,
+            "target_price": 25.00,
+            "validity_period": 7
+        },
+        {
+            "code": "1138.HK",
+            "name": "中远海能",
+            "reason": "市场发生重大变化：成交额大幅增加，能源运输板块转强，建仓信号触发（评分≥3.0），风险收益比合理",
+            "allocation_pct": 8,
+            "stop_loss_price": 6.30,
+            "target_price": 8.40,
+            "validity_period": 7
+        }
+    ],
+    "sell": [
+        {
+            "code": "0001.HK",
+            "name": "长江和记实业",
+            "reason": "地产及综合板块弱势下跌（跌幅<-1%），出货信号触发（评分≥3.0），符合谨慎策略",
+            "stop_loss_triggered": false,
+            "target_price": 50.00,
+            "validity_period": 1
+        },
+        {
+            "code": "0002.HK",
+            "name": "中电控股",
+            "reason": "公用事业板块承压下行，出货信号触发（评分≥3.0），需降低仓位应对市场分化",
+            "stop_loss_triggered": false,
+            "target_price": 70.00,
+            "validity_period": 1
+        },
+        {
+            "code": "0003.HK",
+            "name": "香港电灯集团",
+            "reason": "公用事业板块弱势明显，出货信号触发（评分≥3.0），符合整体谨慎环境",
+            "stop_loss_triggered": false,
+            "target_price": 80.00,
+            "validity_period": 1
+        },
+        {
+            "code": "0004.HK",
+            "name": "九龙仓集团",
+            "reason": "地产板块持续下跌，出货信号触发（评分≥3.0），避免进一步风险",
+            "stop_loss_triggered": false,
+            "target_price": 50.00,
+            "validity_period": 1
+        },
+        {
+            "code": "0006.HK",
+            "name
+[2026-03-09 15:33:51] 解析JSON格式失败: Expecting ',' delimiter: line 63 column 10 (char 1947)
+[2026-03-09 15:33:51] JSON格式解析失败，跳过本次交易
+[2026-03-09 15:33:51] 解析后推荐: 买入 [], 卖出 []
+[2026-03-09 15:33:51] 大模型未提供明确推荐，跳过本次交易
+[2026-03-09 15:33:51] 下一次交易分析将在 2026-03-09 17:27:51 执行（间隔约 1.9 小时，基准 2.0 小时）
