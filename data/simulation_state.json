@@ -25591,6 +25591,70 @@
       "current_price": 4.99,
       "target_price": 5.15,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-10T10:22:59.808706",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 291.18929405196116,
+      "reason": "位置百分位65.31%高位风险、CMF资金流流出（-0.1432）、MACD交叉转弱，成交额变化率-96.7%流动性枯竭",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.43,
+      "target_price": 5.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-10T10:23:04.601658",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 79.1,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "价格低位（位置百分位15.19%）、RSI超卖（38.44）、CMF资金流显著流入（0.2049），技术指标协同性强，板块环境温和上涨",
+      "success": false,
+      "stop_loss_price": 67.4,
+      "current_price": 79.1,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-10T10:23:08.030117",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 532.0,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "价格低位（位置百分位23.66%）、RSI接近超卖（46.73）、CMF资金流流入（0.1265），板块龙头且相对强度高（5.96%）",
+      "success": false,
+      "stop_loss_price": 453.1,
+      "current_price": 532.0,
+      "target_price": 560.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-10T10:23:12.277677",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.69,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "价格低位（位置百分位28.96%）、MACD交叉信号、OBV趋势上升，人工智能热点板块强势上涨（2.24%）",
+      "success": false,
+      "stop_loss_price": 16.7,
+      "current_price": 19.69,
+      "target_price": 21.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -41769,148 +41833,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-06 11:01:18",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "获利回吐压力（60日收益率90.82%），CMF资金流出，中东冲突新闻间接冲击航运需求",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 17.86,
-      "target_price": 17.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-06 11:01:21",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "销售下滑新闻确认弱势（销售下降36%），OBV下降及CMF资金流出",
-      "capital_after": 178.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 93.15,
-      "target_price": 90.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-06 11:01:25",
-      "type": "SELL",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 15300,
-      "price": 5.51,
-      "amount": 84303.0,
-      "reason": "价格高位（位置百分位78.85%），CMF资金流出-0.1846，技术面动能减弱",
-      "capital_after": 84481.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 5.51,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 4742.999999999994
-    },
-    {
-      "timestamp": "2026-03-06 11:01:31",
-      "type": "BUY",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 100,
-      "price": 516.5,
-      "amount": 51650.0,
-      "reason": "技术指标协同（RSI超卖+CMF资金流入+布林带超跌），科技股板块强势上涨（3.21%）提升信号可靠性",
-      "capital_after": 32831.18929405196,
-      "success": true,
-      "stop_loss_price": 437.75,
-      "current_price": 516.5,
-      "target_price": 550.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-06 11:01:35",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 400,
-      "price": 78.8,
-      "amount": 31520.0,
-      "reason": "CMF资金流入+价格低位+布林带超跌，公用事业板块温和上涨提供安全垫，低估值修复机会",
-      "capital_after": 1311.189294051961,
-      "success": true,
-      "stop_loss_price": 67.02,
-      "current_price": 78.8,
-      "target_price": 82.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-06 13:10:24",
-      "buy": [],
-      "sell": [
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货评分5.5分，价格高位（位置百分位96.78%），CMF资金流-0.283大幅流出，成交额持续萎缩（1日/5日/20日变化率<-70%），板块趋势温和下跌强化风险",
-          "stop_loss_triggered": false,
-          "target_price": 42.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-06 13:10:24",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.5分，价格高位（位置百分位96.78%），CMF资金流-0.283大幅流出，成交额持续萎缩（1日/5日/20日变化率<-70%），板块趋势温和下跌强化风险",
-      "capital_after": 1311.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 45.06,
-      "target_price": 42.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-06 14:53:32",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格低位（位置百分位20.0%），MACD金叉信号，CMF资金流流入（0.0752），板块温和上涨（0.64%），基本面低估值（PE 12.34）",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.33,
-          "target_price": 5.65,
-          "validity_period": 5
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-06 14:53:35",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 200,
-      "price": 5.1,
-      "amount": 1019.9999999999999,
-      "reason": "价格低位（位置百分位20.0%），MACD金叉信号，CMF资金流流入（0.0752），板块温和上涨（0.64%），基本面低估值（PE 12.34）",
-      "capital_after": 291.18929405196116,
-      "success": true,
-      "stop_loss_price": 4.33,
-      "current_price": 5.1,
-      "target_price": 5.65,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-03-09 10:41:57",
       "buy": [
         {
@@ -42085,6 +42007,117 @@
       "stop_loss_price": 4.23,
       "current_price": 4.99,
       "target_price": 5.15,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-09 15:33:51",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-10 10:22:59",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "价格低位（位置百分位15.19%）、RSI超卖（38.44）、CMF资金流显著流入（0.2049），技术指标协同性强，板块环境温和上涨",
+          "allocation_pct": 15,
+          "stop_loss_price": 67.4,
+          "target_price": 85.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "reason": "价格低位（位置百分位23.66%）、RSI接近超卖（46.73）、CMF资金流流入（0.1265），板块龙头且相对强度高（5.96%）",
+          "allocation_pct": 15,
+          "stop_loss_price": 453.1,
+          "target_price": 560.0,
+          "validity_period": 7
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "价格低位（位置百分位28.96%）、MACD交叉信号、OBV趋势上升，人工智能热点板块强势上涨（2.24%）",
+          "allocation_pct": 15,
+          "stop_loss_price": 16.7,
+          "target_price": 21.5,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "位置百分位65.31%高位风险、CMF资金流流出（-0.1432）、MACD交叉转弱，成交额变化率-96.7%流动性枯竭",
+          "stop_loss_triggered": false,
+          "target_price": 5.0,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-10 10:22:59",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "位置百分位65.31%高位风险、CMF资金流流出（-0.1432）、MACD交叉转弱，成交额变化率-96.7%流动性枯竭",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.43,
+      "target_price": 5.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-10 10:23:04",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 79.1,
+      "amount": 0,
+      "reason": "价格低位（位置百分位15.19%）、RSI超卖（38.44）、CMF资金流显著流入（0.2049），技术指标协同性强，板块环境温和上涨",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 67.4,
+      "current_price": 79.1,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-10 10:23:08",
+      "type": "BUY",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 532.0,
+      "amount": 0,
+      "reason": "价格低位（位置百分位23.66%）、RSI接近超卖（46.73）、CMF资金流流入（0.1265），板块龙头且相对强度高（5.96%）",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 453.1,
+      "current_price": 532.0,
+      "target_price": 560.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-10 10:23:12",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 19.69,
+      "amount": 0,
+      "reason": "价格低位（位置百分位28.96%）、MACD交叉信号、OBV趋势上升，人工智能热点板块强势上涨（2.24%）",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 16.7,
+      "current_price": 19.69,
+      "target_price": 21.5,
       "validity_period": 7
     }
   ],
