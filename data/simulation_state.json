@@ -25847,6 +25847,38 @@
       "current_price": 79.0,
       "target_price": 83.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-11T15:09:13.468389",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 291.18929405196116,
+      "reason": "出货评分7.0分，技术面顶背离，RSI高位，60日涨幅过大短期回调压力大，新闻面政策风险累积",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.98,
+      "target_price": 26.6,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-11T15:09:17.225706",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 291.18929405196116,
+      "reason": "出货评分6.0分，技术面超买，RSI高位，位置百分位100%已透支涨幅",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 47.36,
+      "target_price": 45.07,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -42025,144 +42057,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-10 14:21:38",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "人工智能板块强势上涨+技术指标协同（MACD金叉、OBV上升）+位置低位提供安全边际",
-          "allocation_pct": 10,
-          "stop_loss_price": 16.71,
-          "target_price": 22.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "高基本面评分+低估值（PE 12.34）+CMF资金流入+中美贸易缓和利好",
-          "allocation_pct": 15,
-          "stop_loss_price": 4.28,
-          "target_price": 5.54,
-          "validity_period": 15
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "低估值优势（PE 11.10）+资金面强劲（CMF 0.1492）+位置深度超卖（8.82%）",
-          "allocation_pct": 15,
-          "stop_loss_price": 66.94,
-          "target_price": 86.63,
-          "validity_period": 15
-        }
-      ],
-      "sell": [
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "技术面恶化（CMF资金流出、布林带超买）+能源板块弱势下跌（-2.14%）+中东冲突影响",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 1
-        },
-        {
-          "code": "0016.HK",
-          "name": "新鸿基地产",
-          "reason": "技术面顶背离（RSI高位钝化）+房地产板块获利盘沉重+融资压力新闻",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "技术面破位（加速下跌）+航运板块估值过高+资金面量价背离",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 1
-        },
-        {
-          "code": "2800.HK",
-          "name": "盈富基金",
-          "reason": "技术面共振（MACD死叉、CMF流出）+量价背离+信号质量差（TAV 33.75）",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "技术面破位（CMF大幅流出）+新能源板块竞争加剧+特斯拉FSD获批利空",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-10 14:21:38",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（CMF资金流出、布林带超买）+能源板块弱势下跌（-2.14%）+中东冲突影响",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 45.64,
-      "target_price": 100.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-10 14:21:41",
-      "type": "SELL",
-      "code": "0016.HK",
-      "name": "新鸿基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶背离（RSI高位钝化）+房地产板块获利盘沉重+融资压力新闻",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 138.6,
-      "target_price": 100.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-10 14:21:45",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面破位（加速下跌）+航运板块估值过高+资金面量价背离",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 17.81,
-      "target_price": 100.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-10 14:21:47",
-      "type": "SELL",
-      "code": "2800.HK",
-      "name": "盈富基金",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面共振（MACD死叉、CMF流出）+量价背离+信号质量差（TAV 33.75）",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 26.06,
-      "target_price": 100.0,
-      "validity_period": 1
-    },
-    {
       "timestamp": "2026-03-10 14:21:50",
       "type": "SELL",
       "code": "1211.HK",
@@ -42330,6 +42224,60 @@
       "current_price": 79.0,
       "target_price": 83.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-11 15:09:13",
+      "buy": [],
+      "sell": [
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "出货评分7.0分，技术面顶背离，RSI高位，60日涨幅过大短期回调压力大，新闻面政策风险累积",
+          "stop_loss_triggered": false,
+          "target_price": 26.6,
+          "validity_period": 7
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分6.0分，技术面超买，RSI高位，位置百分位100%已透支涨幅",
+          "stop_loss_triggered": false,
+          "target_price": 45.07,
+          "validity_period": 7
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-11 15:09:13",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分，技术面顶背离，RSI高位，60日涨幅过大短期回调压力大，新闻面政策风险累积",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.98,
+      "target_price": 26.6,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-11 15:09:17",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，技术面超买，RSI高位，位置百分位100%已透支涨幅",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 47.36,
+      "target_price": 45.07,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
