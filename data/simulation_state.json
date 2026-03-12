@@ -25879,6 +25879,54 @@
       "current_price": 47.36,
       "target_price": 45.07,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-12T10:42:33.086139",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.17,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "技术指标协同：RSI超卖、布林带突破下轨、OBV上升、CMF资金流入；银行股板块内相对强势，基本面稳健提供安全边际",
+      "success": false,
+      "stop_loss_price": 5.25,
+      "current_price": 6.17,
+      "target_price": 6.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-12T10:42:36.951484",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 75.8,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "价格低位、RSI超卖、CMF资金流入、情感指标改善；科技股板块下跌但相对强度显弹性，超卖反弹机会",
+      "success": false,
+      "stop_loss_price": 64.9,
+      "current_price": 75.8,
+      "target_price": 82.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-12T10:42:40.116879",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.12,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "RSI超卖、CMF资金流入、布林带正常范围；银行股板块内相对强势，基本面评分100分提供安全边际",
+      "success": false,
+      "stop_loss_price": 4.36,
+      "current_price": 5.12,
+      "target_price": 5.6,
+      "validity_period": 14
     }
   ],
   "portfolio_history": [
@@ -42057,54 +42105,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-10 14:21:50",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面破位（CMF大幅流出）+新能源板块竞争加剧+特斯拉FSD获批利空",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 96.6,
-      "target_price": 100.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-03-10 14:21:54",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 19.56,
-      "amount": 0,
-      "reason": "人工智能板块强势上涨+技术指标协同（MACD金叉、OBV上升）+位置低位提供安全边际",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 16.71,
-      "current_price": 19.56,
-      "target_price": 22.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-10 14:21:58",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 5.04,
-      "amount": 0,
-      "reason": "高基本面评分+低估值（PE 12.34）+CMF资金流入+中美贸易缓和利好",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 4.28,
-      "current_price": 5.04,
-      "target_price": 5.54,
-      "validity_period": 15
-    },
-    {
       "timestamp": "2026-03-10 14:22:02",
       "type": "BUY",
       "code": "0941.HK",
@@ -42278,6 +42278,87 @@
       "current_price": 47.36,
       "target_price": 45.07,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-12 10:42:30",
+      "buy": [
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "技术指标协同：RSI超卖、布林带突破下轨、OBV上升、CMF资金流入；银行股板块内相对强势，基本面稳健提供安全边际",
+          "allocation_pct": 15,
+          "stop_loss_price": 5.25,
+          "target_price": 6.85,
+          "validity_period": 14
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "价格低位、RSI超卖、CMF资金流入、情感指标改善；科技股板块下跌但相对强度显弹性，超卖反弹机会",
+          "allocation_pct": 12,
+          "stop_loss_price": 64.9,
+          "target_price": 82.5,
+          "validity_period": 7
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "RSI超卖、CMF资金流入、布林带正常范围；银行股板块内相对强势，基本面评分100分提供安全边际",
+          "allocation_pct": 8,
+          "stop_loss_price": 4.36,
+          "target_price": 5.6,
+          "validity_period": 14
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-12 10:42:33",
+      "type": "BUY",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 6.17,
+      "amount": 0,
+      "reason": "技术指标协同：RSI超卖、布林带突破下轨、OBV上升、CMF资金流入；银行股板块内相对强势，基本面稳健提供安全边际",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 5.25,
+      "current_price": 6.17,
+      "target_price": 6.85,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-12 10:42:36",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 75.8,
+      "amount": 0,
+      "reason": "价格低位、RSI超卖、CMF资金流入、情感指标改善；科技股板块下跌但相对强度显弹性，超卖反弹机会",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 64.9,
+      "current_price": 75.8,
+      "target_price": 82.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-12 10:42:40",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.12,
+      "amount": 0,
+      "reason": "RSI超卖、CMF资金流入、布林带正常范围；银行股板块内相对强势，基本面评分100分提供安全边际",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 4.36,
+      "current_price": 5.12,
+      "target_price": 5.6,
+      "validity_period": 14
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
