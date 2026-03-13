@@ -44,6 +44,7 @@ except ImportError:
 # 导入技术分析工具（用于筹码分布分析）
 try:
     from data_services.technical_analysis import TechnicalAnalyzer
+    from data_services.tencent_finance import get_hk_stock_data_tencent
     TECHNICAL_ANALYSIS_AVAILABLE = True
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
