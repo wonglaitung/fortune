@@ -850,15 +850,9 @@ MIT License
 
 ---
 
-![GitHub Stars](https://img.shields.io/github/stars/wonglaitung/fortune)
+## Star History
 
----
-
-
-
-![GitHub Stars](https://img.shields.io/github/stars/wonglaitung/fortune)
-
-
+![Star History Chart](https://api.star-history.com/svg?repos=wonglaitung/fortune&type=Date)
 
 ---
 
