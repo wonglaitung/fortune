@@ -7,7 +7,6 @@
 ## 📋 目录
 
 - [核心优势](#核心优势)
-- [快速开始](#快速开始)
 - [核心功能](#核心功能)
 - [机器学习模型](#机器学习模型)
 - [技术架构](#技术架构)
@@ -19,6 +18,7 @@
 - [注意事项](#注意事项)
 - [依赖项](#依赖项)
 - [未来计划](#未来计划)
+- [快速开始](#快速开始)
 
 ---
 
@@ -54,170 +54,6 @@
 2. **融合模型表现不如CatBoost单模型**：所有融合方法年化收益率均低于5%，建议优先使用CatBoost单模型
 3. **深度学习模型（LSTM、Transformer）表现远不如CatBoost**：F1分数极低，回测无交易，**不推荐用于实际交易**
 4. **推荐使用 CatBoost 20天模型**：准确率61.88%，标准偏差仅±2.56%，稳定性最强
-
----
-
-## 快速开始
-
-### 环境要求
-
-- Python 3.10 或更高版本
-- pip 包管理器
-
-### 安装步骤
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/wonglaitung/fortune.git
-cd fortune
-
-# 2. 安装依赖
-pip install -r requirements.txt
-
-# 3. 配置环境变量
-# 编辑 set_key.sh 文件，设置邮件和大模型API密钥
-source set_key.sh
-
-# 4.（可选）安装PyTorch用于深度学习模型对比实验（不推荐）
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-```
-
-### 环境变量配置
-
-`set_key.sh` 脚本用于配置系统运行所需的环境变量。
-
-**必填变量**：
-
-| 变量名 | 说明 | 示例值 |
-|--------|------|--------|
-| `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
-| `YAHOO_EMAIL` | 发件人邮箱 | `your-email@163.com` |
-| `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
-| `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
-| `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
-
-**配置步骤**：
-
-1. 编辑 `set_key.sh` 文件，填写配置信息
-2. 激活配置：`source set_key.sh`
-3. 验证配置：`echo $YAHOO_EMAIL`
-
-**邮箱授权码获取方法**：
-
-- **163邮箱**：设置 → POP3/SMTP/IMAP → 开启POP3/SMTP服务 → 生成授权码
-- **Gmail**：Google账户设置 → 安全性 → 两步验证 → 应用密码 → 生成新密码
-- **QQ邮箱**：设置 → 账户 → POP3/IMAP/SMTP服务 → 生成授权码
-
-### 快速体验
-
-```bash
-# 监控加密货币价格
-python crypto_email.py
-
-# 追踪港股主力资金
-python hk_smart_money_tracker.py
-
-# 恒生指数价格监控
-python hsi_email.py
-
-# 综合分析（一键执行）
-./run_comprehensive_analysis.sh
-```
-
-### 🌟 无服务器部署 - GitHub Actions 自动化
-
-> **⚡ 无需部署服务器，即刻拥有功能完整的金融资产智能量化分析系统**
-
-本项目通过 GitHub Actions 实现全自动化运行，**无需购买服务器、无需维护运维**，只需配置一次即可享受完整的智能分析服务。
-
-**核心优势**：
-
-| 优势 | 说明 |
-|------|------|
-| **零成本** | GitHub Actions 免费额度充足，每月2000分钟免费运行时间 |
-| **零运维** | 无需服务器维护、无需监控、无需备份 |
-| **自动化** | 9个工作流自动运行，覆盖全天候市场监控 |
-| **稳定性** | GitHub 提供高可用基础设施，99.9%在线率 |
-| **可扩展** | 轻松扩展到更多数据源和分析功能 |
-| **安全性** | GitHub Secrets 加密存储环境变量 |
-
-**使用方法**：
-
-**方式一：Fork项目后启用（推荐）**
-
-```bash
-# 1. Fork本项目到你的GitHub账号
-# 2. 进入你Fork的仓库 → Settings → Secrets and variables → Actions
-# 3. 添加以下Secrets：
-#    - YAHOO_EMAIL: 你的邮箱地址
-#    - YAHOO_APP_PASSWORD: 邮箱授权码
-#    - YAHOO_SMTP: SMTP服务器地址
-#    - RECIPIENT_EMAIL: 收件人邮箱列表（逗号分隔）
-#    - QWEN_API_KEY: 通义千问API密钥
-# 4. 启用GitHub Actions工作流
-# 5. 完成！系统将自动运行，分析结果会发送到你的邮箱
-```
-
-**方式二：克隆到自己的GitHub仓库**
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/wonglaitung/fortune.git
-cd fortune
-
-# 2. 推送到你的GitHub仓库
-git remote set-url origin https://github.com/YOUR_USERNAME/fortune.git
-git push -u origin main
-
-# 3. 在GitHub仓库中配置Secrets（同方式一）
-# 4. 启用GitHub Actions工作流
-# 5. 完成！
-```
-
-**详细配置步骤**：
-
-1. **配置邮箱服务**：
-   - **163邮箱**：设置 → POP3/SMTP/IMAP → 开启POP3/SMTP服务 → 生成授权码
-   - **Gmail**：Google账户设置 → 安全性 → 两步验证 → 应用密码 → 生成新密码
-   - **QQ邮箱**：设置 → 账户 → POP3/IMAP/SMTP服务 → 生成授权码
-
-2. **配置大模型API**：
-   - 访问通义千问官网：https://dashscope.aliyun.com/
-   - 注册账号并创建API Key
-   - 复制API Key用于配置
-
-3. **添加GitHub Secrets**：
-   - 进入仓库 → Settings → Secrets and variables → Actions
-   - 点击"New repository secret"
-   - 逐个添加以下Secrets：
-     - `YAHOO_EMAIL`: 你的发件人邮箱
-     - `YAHOO_APP_PASSWORD`: 邮箱授权码（不是登录密码）
-     - `YAHOO_SMTP`: SMTP服务器地址（如smtp.163.com）
-     - `RECIPIENT_EMAIL`: 收件人邮箱列表，多个邮箱用逗号分隔
-     - `QWEN_API_KEY`: 通义千问API Key
-
-4. **启用工作流**：
-   - 进入仓库 → Actions
-   - 确认所有工作流已启用
-   - 可以查看工作流运行日志
-
-5. **手动触发（可选）**：
-   - 进入任一工作流 → Run workflow
-   - 选择分支并点击"Run workflow"按钮
-   - 等待运行完成，查看结果
-
-**工作流状态监控**：
-
-- **查看运行日志**：进入仓库 → Actions → 选择任一工作流查看运行历史
-- **接收分析结果**：所有分析结果会自动发送到 `RECIPIENT_EMAIL` 配置的邮箱
-
-**注意事项**：
-
-- **GitHub Actions 免费额度**：每月2000分钟，对于本项目绰绰有余
-- **时区配置**：所有工作流已配置为香港时区，确保运行时间准确
-- **数据保密**：使用GitHub Secrets加密存储敏感信息，安全可靠
-- **运行频率**：可根据需要调整工作流的触发时间和频率
-- **错误通知**：如工作流运行失败，GitHub会自动发送通知
 
 ---
 
@@ -648,7 +484,7 @@ fortune/
 
 ### 时区配置
 
-所有工作流已配置为香港时区（`TZ: Asia/Hong_Kong`），确保运行时间准确。在workflow文件中可以看到以下配置：
+所有工作流已配置为香港时区（`TZ: Asia_Hong_Kong`），确保运行时间准确。在workflow文件中可以看到以下配置：
 
 ```yaml
 jobs:
@@ -931,6 +767,170 @@ MIT License
 如有问题，请提交 Issue 或联系项目维护者。
 
 联系邮件：wonglaitung@gmail.com
+
+---
+
+## 快速开始
+
+### 环境要求
+
+- Python 3.10 或更高版本
+- pip 包管理器
+
+### 安装步骤
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/wonglaitung/fortune.git
+cd fortune
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置环境变量
+# 编辑 set_key.sh 文件，设置邮件和大模型API密钥
+source set_key.sh
+
+# 4.（可选）安装PyTorch用于深度学习模型对比实验（不推荐）
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+```
+
+### 环境变量配置
+
+`set_key.sh` 脚本用于配置系统运行所需的环境变量。
+
+**必填变量**：
+
+| 变量名 | 说明 | 示例值 |
+|--------|------|--------|
+| `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
+| `YAHOO_EMAIL` | 发件人邮箱 | `your-email@163.com` |
+| `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
+| `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
+| `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
+
+**配置步骤**：
+
+1. 编辑 `set_key.sh` 文件，填写配置信息
+2. 激活配置：`source set_key.sh`
+3. 验证配置：`echo $YAHOO_EMAIL`
+
+**邮箱授权码获取方法**：
+
+- **163邮箱**：设置 → POP3/SMTP/IMAP → 开启POP3/SMTP服务 → 生成授权码
+- **Gmail**：Google账户设置 → 安全性 → 两步验证 → 应用密码 → 生成新密码
+- **QQ邮箱**：设置 → 账户 → POP3/IMAP/SMTP服务 → 生成授权码
+
+### 快速体验
+
+```bash
+# 监控加密货币价格
+python crypto_email.py
+
+# 追踪港股主力资金
+python hk_smart_money_tracker.py
+
+# 恒生指数价格监控
+python hsi_email.py
+
+# 综合分析（一键执行）
+./run_comprehensive_analysis.sh
+```
+
+### 🌟 无服务器部署 - GitHub Actions 自动化
+
+> **⚡ 无需部署服务器，即刻拥有功能完整的金融资产智能量化分析系统**
+
+本项目通过 GitHub Actions 实现全自动化运行，**无需购买服务器、无需维护运维**，只需配置一次即可享受完整的智能分析服务。
+
+**核心优势**：
+
+| 优势 | 说明 |
+|------|------|
+| **零成本** | GitHub Actions 免费额度充足，每月2000分钟免费运行时间 |
+| **零运维** | 无需服务器维护、无需监控、无需备份 |
+| **自动化** | 9个工作流自动运行，覆盖全天候市场监控 |
+| **稳定性** | GitHub 提供高可用基础设施，99.9%在线率 |
+| **可扩展** | 轻松扩展到更多数据源和分析功能 |
+| **安全性** | GitHub Secrets 加密存储环境变量 |
+
+**使用方法**：
+
+**方式一：Fork项目后启用（推荐）**
+
+```bash
+# 1. Fork本项目到你的GitHub账号
+# 2. 进入你Fork的仓库 → Settings → Secrets and variables → Actions
+# 3. 添加以下Secrets：
+#    - YAHOO_EMAIL: 你的邮箱地址
+#    - YAHOO_APP_PASSWORD: 邮箱授权码
+#    - YAHOO_SMTP: SMTP服务器地址
+#    - RECIPIENT_EMAIL: 收件人邮箱列表（逗号分隔）
+#    - QWEN_API_KEY: 通义千问API密钥
+# 4. 启用GitHub Actions工作流
+# 5. 完成！系统将自动运行，分析结果会发送到你的邮箱
+```
+
+**方式二：克隆到自己的GitHub仓库**
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/wonglaitung/fortune.git
+cd fortune
+
+# 2. 推送到你的GitHub仓库
+git remote set-url origin https://github.com/YOUR_USERNAME/fortune.git
+git push -u origin main
+
+# 3. 在GitHub仓库中配置Secrets（同方式一）
+# 4. 启用GitHub Actions工作流
+# 5. 完成！
+```
+
+**详细配置步骤**：
+
+1. **配置邮箱服务**：
+   - **163邮箱**：设置 → POP3/SMTP/IMAP → 开启POP3/SMTP服务 → 生成授权码
+   - **Gmail**：Google账户设置 → 安全性 → 两步验证 → 应用密码 → 生成新密码
+   - **QQ邮箱**：设置 → 账户 → POP3/IMAP/SMTP服务 → 生成授权码
+
+2. **配置大模型API**：
+   - 访问通义千问官网：https://dashscope.aliyun.com/
+   - 注册账号并创建API Key
+   - 复制API Key用于配置
+
+3. **添加GitHub Secrets**：
+   - 进入仓库 → Settings → Secrets and variables → Actions
+   - 点击"New repository secret"
+   - 逐个添加以下Secrets：
+     - `YAHOO_EMAIL`: 你的发件人邮箱
+     - `YAHOO_APP_PASSWORD`: 邮箱授权码（不是登录密码）
+     - `YAHOO_SMTP`: SMTP服务器地址（如smtp.163.com）
+     - `RECIPIENT_EMAIL`: 收件人邮箱列表，多个邮箱用逗号分隔
+     - `QWEN_API_KEY`: 通义千问API Key
+
+4. **启用工作流**：
+   - 进入仓库 → Actions
+   - 确认所有工作流已启用
+   - 可以查看工作流运行日志
+
+5. **手动触发（可选）**：
+   - 进入任一工作流 → Run workflow
+   - 选择分支并点击"Run workflow"按钮
+   - 等待运行完成，查看结果
+
+**工作流状态监控**：
+
+- **查看运行日志**：进入仓库 → Actions → 选择任一工作流查看运行历史
+- **接收分析结果**：所有分析结果会自动发送到 `RECIPIENT_EMAIL` 配置的邮箱
+
+**注意事项**：
+
+- **GitHub Actions 免费额度**：每月2000分钟，对于本项目绰绰有余
+- **时区配置**：所有工作流已配置为香港时区，确保运行时间准确
+- **数据保密**：使用GitHub Secrets加密存储敏感信息，安全可靠
+- **运行频率**：可根据需要调整工作流的触发时间和频率
+- **错误通知**：如工作流运行失败，GitHub会自动发送通知
 
 ---
 
