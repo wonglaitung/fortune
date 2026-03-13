@@ -1620,7 +1620,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[详细的推荐理由，必须说明：短期建议+中期建议+CatBoost预测（probability+置信度）+短期中期一致性程度。例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测上涨概率0.72（高置信度），短期中期方向一致（短期/中期一致买入，CatBoost验证上涨），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"]
+   - 推荐理由：[简短理由，例如：短期买入，中期买入，CatBoost预测上涨概率0.72（高置信度），方向一致]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -1632,7 +1632,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 ## 买入信号（3-5只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[详细的推荐理由]
+   - 推荐理由：[简短理由]
    - 操作建议：买入/持有
    - 建议仓位：[X]%
    - 价格指引：
