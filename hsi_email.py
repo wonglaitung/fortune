@@ -2687,13 +2687,35 @@ class HSIEmailSystem:
                 else:
                     news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
                 
+                # 计算筹码分布（仅中期分析）
+                chip_analysis_text = ""
+                if investment_horizon == 'medium_term' and TECHNICAL_ANALYSIS_AVAILABLE:
+                    try:
+                        # 获取股票历史数据（60天）
+                        from data_services.tencent_finance import get_hk_stock_data_tencent
+                        stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=60)
+                        if not stock_df.empty and len(stock_df) >= 20:
+                            chip_result = self.technical_analyzer.get_chip_distribution(stock_df)
+                            if chip_result:
+                                resistance_ratio = chip_result['resistance_ratio']
+                                concentration = chip_result['concentration']
+                                concentration_level = chip_result['concentration_level']
+                                resistance_level = chip_result['resistance_level']
+                                
+                                chip_analysis_text = f"   - 筹码分布分析:\n"
+                                chip_analysis_text += f"     * 上方筹码比例: {resistance_ratio:.1%} ({resistance_level})\n"
+                                chip_analysis_text += f"     * 筹码集中度: {concentration:.3f} ({concentration_level})\n"
+                                chip_analysis_text += f"     * 拉升阻力: {'高（突破困难）' if resistance_ratio > 0.6 else '中（注意风险）' if resistance_ratio > 0.3 else '低（拉升容易）'}\n"
+                    except Exception as e:
+                        print(f"  ⚠️ 计算 {stock_code} 筹码分布失败: {e}")
+                
                 prompt += f"""
 {i}. {stock['stock_name']} ({stock['stock_code']})
    - 当前价格: HK${stock['current_price']:.2f}
    - 技术趋势: {stock['trend']}
    - 技术指标: {stock['tech_info']}
    - 信号描述: {stock['signal_description']}
-{news_summary_text}"""
+{news_summary_text}{chip_analysis_text}"""
         
         elif data_type == 'watchlist' and stock_data:
             prompt += f"""
@@ -2716,11 +2738,33 @@ class HSIEmailSystem:
                 else:
                     news_summary_text = "   - 新闻摘要: 暂无相关新闻\n"
                 
+                # 计算筹码分布（仅中期分析）
+                chip_analysis_text = ""
+                if investment_horizon == 'medium_term' and TECHNICAL_ANALYSIS_AVAILABLE:
+                    try:
+                        # 获取股票历史数据（60天）
+                        from data_services.tencent_finance import get_hk_stock_data_tencent
+                        stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=60)
+                        if not stock_df.empty and len(stock_df) >= 20:
+                            chip_result = self.technical_analyzer.get_chip_distribution(stock_df)
+                            if chip_result:
+                                resistance_ratio = chip_result['resistance_ratio']
+                                concentration = chip_result['concentration']
+                                concentration_level = chip_result['concentration_level']
+                                resistance_level = chip_result['resistance_level']
+                                
+                                chip_analysis_text = f"   - 筹码分布分析:\n"
+                                chip_analysis_text += f"     * 上方筹码比例: {resistance_ratio:.1%} ({resistance_level})\n"
+                                chip_analysis_text += f"     * 筹码集中度: {concentration:.3f} ({concentration_level})\n"
+                                chip_analysis_text += f"     * 拉升阻力: {'高（突破困难）' if resistance_ratio > 0.6 else '中（注意风险）' if resistance_ratio > 0.3 else '低（拉升容易）'}\n"
+                    except Exception as e:
+                        print(f"  ⚠️ 计算 {stock_code} 筹码分布失败: {e}")
+                
                 prompt += f"""
 {i}. {stock['stock_name']} ({stock['stock_code']})
    - 当前价格: HK${stock['current_price']:.2f}
    - 技术指标: {stock['tech_info']}
-{news_summary_text}"""
+{news_summary_text}{chip_analysis_text}"""
         
         # 添加分析要求
         prompt += f"""
@@ -2782,6 +2826,12 @@ class HSIEmailSystem:
 - 技术指标协同：
   * RSI+MACD+布林带+成交量比率+CMF：至少3个指标同向才可靠
   * 关注MACD信号、布林带突破、OBV趋势等关键信号
+- 筹码分布分析（中期投资重点关注）：
+  * 上方筹码比例<30%：拉升阻力低，突破容易，建仓信号可靠性高
+  * 上方筹码比例30-60%：拉升阻力中等，需要注意风险，建议谨慎建仓
+  * 上方筹码比例>60%：拉升阻力高，突破困难，建仓信号可靠性低，建议观望
+  * 筹码集中度>0.3：筹码高度集中，主力控盘明显，中期走势更稳定
+  * 筹码集中度<0.15：筹码分散，缺乏主力支持，中期走势波动较大
 
 【第五层：信号识别（交易时机）】
 🟢 建仓信号筛选：
