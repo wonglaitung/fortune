@@ -33,3 +33,13 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
         run: |
           python hk_ipo_aastocks.py
+          
+      - name: Check execution status
+        if: success()
+        run: |
+          echo "✅ IPO监控任务执行成功"
+          
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ IPO监控任务执行失败，请检查日志"
