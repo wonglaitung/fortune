@@ -32,5 +32,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
+          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
           python gold_analyzer.py

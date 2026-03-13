@@ -4,10 +4,14 @@ import json
 from datetime import datetime
 
 # Configuration
-api_key = os.getenv('QWEN_API_KEY', '')  # 从环境变量读取API密钥
-embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
-chat_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+api_key = os.getenv('QWEN_API_KEY', '')
+chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
+chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
 max_tokens = int(os.getenv('MAX_TOKENS', 32768))
+
+# Embedding API 配置（项目未使用，保留硬编码）
+embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
+embedding_model = "text-embedding-v4"
 
 def log_message(message, log_file="qwen_engine.log"):
     """
@@ -55,7 +59,7 @@ def embed_with_llm(query):
             query = query.encode('utf-8').decode('utf-8')
         
         payload = {
-            'model': 'text-embedding-v4',
+            'model': embedding_model,
             'input': query
         }
         
@@ -117,16 +121,14 @@ def chat_with_llm(query, enable_thinking=True):
             query = query.encode('utf-8').decode('utf-8')
         
         payload = {
-            'model': 'qwen-plus-2025-12-01',
-            # 'model': 'qwen3-max',
-            # 'model': 'qwen3.5-plus',
+            'model': chat_model,
             'messages': [{'role': 'user', 'content': query}],
             'stream': False,
             'top_p': 0.2,
             'temperature': 0.05,
             'max_tokens': max_tokens,
             'seed': 1368,
-            'enable_thinking': enable_thinking  # 使用传入的参数
+            'enable_thinking': enable_thinking
         }
         
         log_message(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志

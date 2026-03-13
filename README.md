@@ -689,6 +689,8 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 | `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
 | `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
+| `QWEN_CHAT_URL` | 通义千问chat API地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
+| `QWEN_CHAT_MODEL` | 通义千问chat模型名称 | `qwen-plus-2025-12-01` |
 
 **配置步骤**：
 
