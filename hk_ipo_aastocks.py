@@ -143,8 +143,8 @@ def send_ipo_email(data, to):
     """
     发送IPO信息邮件
     """
-    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-    smtp_port = 587
+    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
+    smtp_port = 465
     smtp_user = os.environ.get("YAHOO_EMAIL")
     smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
     sender_email = smtp_user
@@ -186,8 +186,12 @@ def send_ipo_email(data, to):
     msg.attach(MIMEText(html, "html"))
 
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
+        # 使用 163 邮件服务器（SSL 端口 465）
+        if smtp_server == "smtp.163.com":
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
         server.login(smtp_user, smtp_pass)
         server.sendmail(sender_email, to, msg.as_string())
         server.quit()
