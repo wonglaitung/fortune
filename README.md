@@ -848,6 +848,16 @@ MIT License
 
 联系邮件：wonglaitung@gmail.com
 
+---
+
+![GitHub Stars](https://img.shields.io/github/stars/wonglaitung/fortune)
+
+---
+
+
+
+![GitHub Stars](https://img.shields.io/github/stars/wonglaitung/fortune)
+
 
 
 ---
