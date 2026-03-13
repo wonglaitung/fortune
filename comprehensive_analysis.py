@@ -1492,6 +1492,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 {llm_recommendations['medium_term']}
 
 【2. CatBoost模型20天预测结果】
+**重要：probability = 上涨概率（不是下跌概率）**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -1526,6 +1527,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **高置信度上涨**：probability > 0.60
 - **中等置信度观望**：0.50 < probability ≤ 0.60
 - **预测下跌**：probability ≤ 0.50
+
+**重要说明 - CatBoost probability 定义**：
+- `probability` = **上涨概率**（模型预测股票上涨的概率）
+- 下跌概率 = 1 - probability
+- 例如：probability = 0.35 表示上涨概率35%，下跌概率65%
+- 例如：probability = 0.68 表示上涨概率68%，下跌概率32%
+- **切勿将 probability 误解为下跌概率**
 
 **阈值优化说明**：
 - 当前CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
