@@ -26055,6 +26055,70 @@
       "current_price": 5.17,
       "target_price": 5.73,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-13T11:27:52.950251",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 291.18929405196116,
+      "reason": "CMF资金流出、MACD交叉；恒指弱势导致流动性萎缩；作为指数ETF被动承压",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 25.88,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-13T11:27:58.761940",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 291.18929405196116,
+      "reason": "MACD交叉、OBV下降；人工智能板块暴跌形成系统性风险；板块环境强势下跌拖累个股",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 7.39,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-13T11:28:06.778732",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 76.4,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "技术指标协同性强：RSI超卖、MACD金叉、CMF资金流入；科技股板块温和上涨提升信号可靠性；位置百分位低位反弹概率高",
+      "success": false,
+      "stop_loss_price": 65.0,
+      "current_price": 76.4,
+      "target_price": 84.1,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-13T11:28:13.270575",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 33.4,
+      "amount": 0,
+      "capital_after": 291.18929405196116,
+      "reason": "MACD金叉、CMF资金流入；特斯拉中国交付量增长新闻提振电动车产业链情绪；技术指标两同向买入信号",
+      "success": false,
+      "stop_loss_price": 28.36,
+      "current_price": 33.4,
+      "target_price": 36.7,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -42233,173 +42297,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-11 11:10:36",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 5.02,
-      "amount": 0,
-      "reason": "风险等级3级（中），价格低位+MACD金叉+CMF资金流入，公用事业板块相对强度+6.28%跑赢恒指，适合平衡型偏好",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 4.27,
-      "current_price": 5.02,
-      "target_price": 5.35,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-11 11:10:39",
-      "type": "BUY",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 79.0,
-      "amount": 0,
-      "reason": "风险等级3级（中），TAV评分54.75中等共振，价格低位+MACD金叉+CMF资金流入，公用事业板块相对强度+4.75%提供安全边际",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 67.02,
-      "current_price": 79.0,
-      "target_price": 83.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-11 15:09:13",
-      "buy": [],
-      "sell": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分7.0分，技术面顶背离，RSI高位，60日涨幅过大短期回调压力大，新闻面政策风险累积",
-          "stop_loss_triggered": false,
-          "target_price": 26.6,
-          "validity_period": 7
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货评分6.0分，技术面超买，RSI高位，位置百分位100%已透支涨幅",
-          "stop_loss_triggered": false,
-          "target_price": 45.07,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-11 15:09:13",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分，技术面顶背离，RSI高位，60日涨幅过大短期回调压力大，新闻面政策风险累积",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.98,
-      "target_price": 26.6,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-11 15:09:17",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，技术面超买，RSI高位，位置百分位100%已透支涨幅",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 47.36,
-      "target_price": 45.07,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-12 10:42:30",
-      "buy": [
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "技术指标协同：RSI超卖、布林带突破下轨、OBV上升、CMF资金流入；银行股板块内相对强势，基本面稳健提供安全边际",
-          "allocation_pct": 15,
-          "stop_loss_price": 5.25,
-          "target_price": 6.85,
-          "validity_period": 14
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "价格低位、RSI超卖、CMF资金流入、情感指标改善；科技股板块下跌但相对强度显弹性，超卖反弹机会",
-          "allocation_pct": 12,
-          "stop_loss_price": 64.9,
-          "target_price": 82.5,
-          "validity_period": 7
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "RSI超卖、CMF资金流入、布林带正常范围；银行股板块内相对强势，基本面评分100分提供安全边际",
-          "allocation_pct": 8,
-          "stop_loss_price": 4.36,
-          "target_price": 5.6,
-          "validity_period": 14
-        }
-      ],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-12 10:42:33",
-      "type": "BUY",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 6.17,
-      "amount": 0,
-      "reason": "技术指标协同：RSI超卖、布林带突破下轨、OBV上升、CMF资金流入；银行股板块内相对强势，基本面稳健提供安全边际",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 5.25,
-      "current_price": 6.17,
-      "target_price": 6.85,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-12 10:42:36",
-      "type": "BUY",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 75.8,
-      "amount": 0,
-      "reason": "价格低位、RSI超卖、CMF资金流入、情感指标改善；科技股板块下跌但相对强度显弹性，超卖反弹机会",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 64.9,
-      "current_price": 75.8,
-      "target_price": 82.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-12 10:42:40",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.12,
-      "amount": 0,
-      "reason": "RSI超卖、CMF资金流入、布林带正常范围；银行股板块内相对强势，基本面评分100分提供安全边际",
-      "capital_after": 291.18929405196116,
-      "success": false,
-      "stop_loss_price": 4.36,
-      "current_price": 5.12,
-      "target_price": 5.6,
-      "validity_period": 14
-    },
-    {
       "timestamp": "2026-03-12 14:56:41",
       "buy": [
         {
@@ -42600,6 +42497,111 @@
       "current_price": 5.17,
       "target_price": 5.73,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-13 11:27:52",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "技术指标协同性强：RSI超卖、MACD金叉、CMF资金流入；科技股板块温和上涨提升信号可靠性；位置百分位低位反弹概率高",
+          "allocation_pct": 15,
+          "stop_loss_price": 65.0,
+          "target_price": 84.1,
+          "validity_period": 5
+        },
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "MACD金叉、CMF资金流入；特斯拉中国交付量增长新闻提振电动车产业链情绪；技术指标两同向买入信号",
+          "allocation_pct": 10,
+          "stop_loss_price": 28.36,
+          "target_price": 36.7,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "reason": "CMF资金流出、MACD交叉；恒指弱势导致流动性萎缩；作为指数ETF被动承压",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 3
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "MACD交叉、OBV下降；人工智能板块暴跌形成系统性风险；板块环境强势下跌拖累个股",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-13 11:27:53",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "CMF资金流出、MACD交叉；恒指弱势导致流动性萎缩；作为指数ETF被动承压",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 25.88,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-13 11:27:58",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "MACD交叉、OBV下降；人工智能板块暴跌形成系统性风险；板块环境强势下跌拖累个股",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 7.39,
+      "target_price": 0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-13 11:28:06",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 76.4,
+      "amount": 0,
+      "reason": "技术指标协同性强：RSI超卖、MACD金叉、CMF资金流入；科技股板块温和上涨提升信号可靠性；位置百分位低位反弹概率高",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 65.0,
+      "current_price": 76.4,
+      "target_price": 84.1,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-13 11:28:13",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 33.4,
+      "amount": 0,
+      "reason": "MACD金叉、CMF资金流入；特斯拉中国交付量增长新闻提振电动车产业链情绪；技术指标两同向买入信号",
+      "capital_after": 291.18929405196116,
+      "success": false,
+      "stop_loss_price": 28.36,
+      "current_price": 33.4,
+      "target_price": 36.7,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
