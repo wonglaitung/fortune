@@ -134,64 +134,32 @@ daily_stock_analysis 是一个基于 AI 大模型的 A股/港股/美股自选股
 
 ### 6. 筹码分布分析 ⭐⭐⭐⭐⭐
 
-**当前状态**：❌ 完全缺失  
+**当前状态**：✅ 已实现（2026-03-13实现）  
 **重要性**：极高  
 **实现难度**：中等
 
-**daily_stock_analysis 的实现**：
-- 筹码集中度（如 35.15%）
-- 筹码分散程度判断
-- 拉升阻力分析
+**你的项目实现**：
+- **筹码集中度（HHI指数）**：基于 Herfindahl-Hirschman 指数计算
+- **筹码分散程度判断**：低/中/高三个等级
+- **拉升阻力分析**：上方筹码比例、阻力等级（低/中/高）
+- **筹码集中区**：识别筹码最集中的价格区间
+- **阻力标识系统**：✅低阻力/⚠️中等阻力/🔴高阻力
+- **高阻力股票列表**：在综合分析报告中展示
 
-**实现建议**：
-```python
-# 添加到 data_services/technical_analysis.py
-def get_chip_distribution(stock_data):
-    """
-    计算筹码分布
-    分析筹码集中度和分散程度
-    
-    参数:
-    - stock_data: 股票数据（包含 Close、Volume）
-    
-    返回:
-    - 筹码集中度
-    - 筹码分散程度
-    - 拉升阻力分析
-    """
-    # 按价格区间统计成交量
-    price_ranges = np.linspace(stock_data['Close'].min(), stock_data['Close'].max(), 10)
-    
-    volume_by_range = []
-    for i in range(len(price_ranges)-1):
-        mask = (stock_data['Close'] >= price_ranges[i]) & (stock_data['Close'] < price_ranges[i+1])
-        volume_by_range.append(stock_data.loc[mask, 'Volume'].sum())
-    
-    total_volume = sum(volume_by_range)
-    
-    # 计算筹码集中度（Herfindahl-Hirschman指数）
-    if total_volume > 0:
-        concentration = sum([(v/total_volume)**2 for v in volume_by_range])
-    else:
-        concentration = 0
-    
-    # 判断拉升阻力
-    # 如果大部分筹码集中在当前价格上方，拉升阻力大
-    current_price_idx = np.searchsorted(price_ranges, stock_data['Close'].iloc[-1])
-    resistance_volume = sum(volume_by_range[current_price_idx:])
-    resistance_ratio = resistance_volume / total_volume if total_volume > 0 else 0
-    
-    return {
-        'concentration': concentration,  # 0-1，越接近1越集中
-        'resistance_ratio': resistance_ratio,  # 0-1，越接近1阻力越大
-        'analysis': {
-            'high_concentration': concentration > 0.3,
-            'high_resistance': resistance_ratio > 0.5
-        }
-    }
-```
+**对比 daily_stock_analysis**：
+- 你的实现：更完善，包含集中度、阻力等级、集中区等多维度分析
+- daily_stock_analysis：仅筹码集中度
 
-**影响**：无法识别拉升阻力，难以判断股价上涨的可持续性
+**文件位置**：
+- `data_services/technical_analysis.py` 第 792-847 行（get_chip_distribution 函数）
+- `hk_smart_money_tracker.py` 第 2343-2363 行（筹码分布计算）
+- `hk_smart_money_tracker.py` 第 2848-2858 行（保存到stock字典）
+- `hk_smart_money_tracker.py` 第 713-717 行（集成到LLM提示词）
+- `comprehensive_analysis.py` 第 44-50 行（导入TechnicalAnalyzer）
+- `comprehensive_analysis.py` 第 221-232 行（计算筹码分布）
+- `comprehensive_analysis.py` 第 240-284 行（添加阻力标识和筹码分布摘要）
+
+**影响**：能够识别拉升阻力，准确判断股价上涨的可持续性
 
 ---
 
@@ -321,7 +289,7 @@ def filter_news_by_age(news_list, max_age_days=3):
 | 功能 | 当前状态 | 优先级 | 实现难度 | 预期收益 | 建议 |
 |------|---------|--------|---------|---------|------|
 | **主力资金流向** | ✅ 已实现 | - | - | - | 无需改进 |
-| **筹码分布分析** | ❌ 缺失 | 🔥 最高 | 中等 | 极高 | 强烈推荐实现 |
+| **筹码分布分析** | ✅ 已实现（2026-03-13） | 🔥 最高 | 中等 | 极高 | ✅ 已实现 |
 | **乖离率监控** | ✅ 已实现 | - | - | - | 无需改进 |
 | **精确买卖点位** | ✅ 已实现 | - | - | - | 无需改进 |
 | **多头排列判断** | ✅ 已实现 | - | - | - | 无需改进 |
@@ -332,11 +300,11 @@ def filter_news_by_age(news_list, max_age_days=3):
 ## 🎯 实施路线图
 
 ### 第一阶段（强烈推荐实现）
-1. ✅ **筹码分布分析**（实现难度中等，收益极高）
-2. ✅ **检查清单系统**（实现难度中等，收益高）
+1. ✅ **筹码分布分析**（实现难度中等，收益极高）- ✅ 已完成（2026-03-13）
+2. ⚠️ **检查清单系统**（实现难度中等，收益高）- 待实现
 
 ### 第二阶段（可选实现）
-3. ⚠️ **新闻时效控制**（实现难度低，收益中等）
+3. ⚠️ **新闻时效控制**（实现难度低，收益中等）- 待实现
 
 ## 💡 关键发现
 
@@ -349,9 +317,11 @@ def filter_news_by_age(news_list, max_age_days=3):
 4. **精确买卖点位已实现**：止损价、目标价、支撑阻力位、有效期完整
 
 ### ❌ 真正缺失的功能
-1. **筹码分布分析**：这是 daily_stock_analysis 的重要功能，用于分析拉升阻力
-2. **检查清单系统**：结构化的决策依据展示，提升用户体验
-3. **新闻时效控制**：避免使用过时新闻影响分析准确性
+1. **检查清单系统**：结构化的决策依据展示，提升用户体验
+2. **新闻时效控制**：避免使用过时新闻影响分析准确性
+
+### ✅ 已实现的改进
+1. **筹码分布分析**：已实现（2026-03-13），包括筹码集中度、拉升阻力分析、阻力标识系统等，功能比 daily_stock_analysis 更完善
 
 ## 📚 参考资料
 
@@ -362,4 +332,4 @@ def filter_news_by_age(news_list, max_age_days=3):
 ---
 
 **最后更新**：2026-03-13  
-**分析结论**：你的项目在评分系统、乖离率监控、主力资金追踪、精确买卖点位、多头排列判断等方面已经比 daily_stock_analysis 更完善或相当。真正需要补充的功能是筹码分布分析、检查清单系统和新闻时效控制。
+**分析结论**：你的项目在评分系统、乖离率监控、主力资金追踪、精确买卖点位、多头排列判断等方面已经比 daily_stock_analysis 更完善或相当。筹码分布分析已于 2026-03-13 实现，功能比 daily_stock_analysis 更完善。真正需要补充的功能是检查清单系统和新闻时效控制。
