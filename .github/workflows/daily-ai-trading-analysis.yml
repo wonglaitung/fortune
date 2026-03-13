@@ -43,6 +43,8 @@ jobs:
         echo "YAHOO_SMTP=${{ secrets.YAHOO_SMTP }}" >> $GITHUB_ENV
         echo "RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}" >> $GITHUB_ENV
         echo "QWEN_API_KEY=${{ secrets.QWEN_API_KEY }}" >> $GITHUB_ENV
+        echo "QWEN_CHAT_URL=${{ secrets.QWEN_CHAT_URL }}" >> $GITHUB_ENV
+        echo "QWEN_CHAT_MODEL=${{ secrets.QWEN_CHAT_MODEL }}" >> $GITHUB_ENV
         
     - name: Calculate trading dates
       id: dates

@@ -35,6 +35,8 @@ jobs:
           YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
+          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
           chmod +x run_comprehensive_analysis.sh
           ./run_comprehensive_analysis.sh
