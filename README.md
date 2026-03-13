@@ -418,38 +418,7 @@ fortune/
 | **weekly-comprehensive-analysis.yml** | 周综合交易分析 | 每周日 UTC 01:00（香港时间上午9:00） | 全面周度分析 |
 | **bull-bear-analysis.yml** | 牛熊市分析自动化 | 每周日 UTC 17:00（香港时间周一上午1:00） | 分析市场环境和股票表现 |
 
-### 配置 GitHub Actions
-
-**前提条件**：
-1. 拥有 GitHub 账号
-2. Fork本项目或克隆到你的GitHub仓库
-3. 配置好邮箱服务和大模型API
-
-**配置步骤**：
-
-1. **添加 GitHub Secrets**：
-   - 进入你的GitHub仓库
-   - 点击 **Settings** → **Secrets and variables** → **Actions**
-   - 点击 **New repository secret**
-   - 逐个添加以下Secrets：
-
-   | Secret 名称 | 说明 | 示例值 |
-   |------------|------|--------|
-   | `YAHOO_EMAIL` | 发件人邮箱地址 | `your-email@163.com` |
-   | `YAHOO_APP_PASSWORD` | 邮箱授权码（不是登录密码） | 从邮箱设置中生成 |
-   | `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
-   | `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
-   | `QWEN_API_KEY` | 通义千问API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
-
-2. **启用工作流**：
-   - 进入仓库 → **Actions**
-   - 确认所有工作流已启用
-   - 可以查看工作流运行日志
-
-3. **手动触发工作流（可选）**：
-   - 进入任一工作流 → **Run workflow**
-   - 选择分支并点击 **Run workflow** 按钮
-   - 等待运行完成，查看结果
+**配置说明**：详细的配置步骤请参考文档末尾的[快速开始](#快速开始)章节中的"🌟 无服务器部署 - GitHub Actions 自动化"部分。
 
 ### 工作流文件说明
 
