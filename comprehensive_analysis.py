@@ -41,6 +41,14 @@ except ImportError:
     AKSHARE_AVAILABLE = False
     print("⚠️ AKShare模块不可用")
 
+# 导入技术分析工具（用于筹码分布分析）
+try:
+    from data_services.technical_analysis import TechnicalAnalyzer
+    TECHNICAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    TECHNICAL_ANALYSIS_AVAILABLE = False
+    print("⚠️ 技术分析模块不可用")
+
 
 def safe_float_format(value, format_spec='.2f', default=''):
     """
@@ -210,13 +218,36 @@ def extract_ml_predictions(filepath):
             df_catboost = pd.read_csv(catboost_csv)
             df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 
+            # 计算筹码分布（如果技术分析模块可用）
+            chip_data = {}
+            if TECHNICAL_ANALYSIS_AVAILABLE:
+                try:
+                    analyzer = TechnicalAnalyzer()
+                    for stock_code in df_catboost['code'].tolist():
+                        try:
+                            # 获取股票数据（60天）
+                            stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=60)
+                            if not stock_df.empty and len(stock_df) >= 20:
+                                chip_result = analyzer.get_chip_distribution(stock_df)
+                                if chip_result:
+                                    chip_data[stock_code] = chip_result
+                        except Exception as e:
+                            print(f"  ⚠️ 计算 {stock_code} 筹码分布失败: {e}")
+                            chip_data[stock_code] = None
+                except Exception as e:
+                    print(f"  ⚠️ 筹码分布计算失败: {e}")
+
             catboost_text = "【CatBoost模型预测结果（20天）】\n"
             catboost_text += f"预测日期: {date_str}\n\n"
             catboost_text += "全部股票预测结果（按概率排序）:\n\n"
 
-            # 构建Markdown表格
-            catboost_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 |\n"
-            catboost_text += "|----------|----------|----------|----------|----------|\n"
+            # 构建Markdown表格（添加阻力标识列）
+            catboost_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 | 阻力标识 |\n"
+            catboost_text += "|----------|----------|----------|----------|----------|----------|\n"
+
+            # 统计筹码分布
+            resistance_stats = {'low': 0, 'medium': 0, 'high': 0}
+            high_resistance_stocks = []
 
             for _, row in df_catboost_sorted.iterrows():
                 if row['probability'] > 0.60:
@@ -226,12 +257,54 @@ def extract_ml_predictions(filepath):
                 else:
                     direction = "下跌"
 
-                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} |\n"
+                # 计算阻力标识
+                resistance_icon = 'N/A'
+                if TECHNICAL_ANALYSIS_AVAILABLE and row['code'] in chip_data and chip_data[row['code']]:
+                    chip_result = chip_data[row['code']]
+                    resistance_ratio = chip_result.get('resistance_ratio', 0)
+                    if resistance_ratio < 0.3:
+                        resistance_stats['low'] += 1
+                        resistance_icon = '✅'
+                    elif resistance_ratio < 0.6:
+                        resistance_stats['medium'] += 1
+                        resistance_icon = '⚠️'
+                    else:
+                        resistance_stats['high'] += 1
+                        resistance_icon = '🔴'
+                        # 记录高阻力股票
+                        high_resistance_stocks.append({
+                            'code': row['code'],
+                            'name': row['name'],
+                            'resistance_ratio': resistance_ratio
+                        })
+
+                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
 
             catboost_text += f"\n**统计信息**：\n"
             catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
             catboost_text += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
             catboost_text += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
+
+            # 添加筹码分布摘要
+            if TECHNICAL_ANALYSIS_AVAILABLE and resistance_stats['low'] + resistance_stats['medium'] + resistance_stats['high'] > 0:
+                catboost_text += f"\n**筹码分布摘要**：\n"
+                catboost_text += f"- 低阻力股票（上方筹码 < 30%）: {resistance_stats['low']} 只 ✅\n"
+                catboost_text += f"- 中等阻力股票（30-60%）: {resistance_stats['medium']} 只 ⚠️\n"
+                catboost_text += f"- 高阻力股票（上方筹码 > 60%）: {resistance_stats['high']} 只 🔴\n"
+
+                # 列出高阻力股票
+                if high_resistance_stocks:
+                    catboost_text += f"\n**高阻力股票列表**：\n"
+                    catboost_text += f"| 股票代码 | 股票名称 | 上方筹码比例 | 拉升难度 |\n"
+                    catboost_text += "|----------|----------|-------------|----------|\n"
+                    for stock in high_resistance_stocks:
+                        difficulty = "困难" if stock['resistance_ratio'] > 0.6 else "中等" if stock['resistance_ratio'] > 0.3 else "容易"
+                        catboost_text += f"| {stock['code']} | {stock['name']} | {stock['resistance_ratio']:.1%} | {difficulty} |\n"
+
+                catboost_text += f"\n**阻力标识说明**：\n"
+                catboost_text += "- ✅：低阻力（< 30%），拉升容易\n"
+                catboost_text += "- ⚠️：中等阻力（30-60%），注意风险\n"
+                catboost_text += "- 🔴：高阻力（> 60%），拉升困难\n"
 
             result['ensemble'] = catboost_text
         else:
