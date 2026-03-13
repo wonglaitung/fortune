@@ -366,7 +366,8 @@ fortune/
 │   ├── requirements.txt                # 项目依赖
 │   ├── run_comprehensive_analysis.sh   # 综合分析自动化脚本
 │   ├── run_model_comparison.sh         # 模型对比自动化脚本
-│   ├── set_key.sh                      # 环境变量配置
+│   ├── set_key.sh                      # 环境变量配置（已加入.gitignore）
+│   ├── set_key.sh.sample               # 环境变量配置模板
 │   └── .github/workflows/              # GitHub Actions工作流配置
 │
 ├── 文档目录 (docs/)
@@ -669,6 +670,7 @@ cd fortune
 pip install -r requirements.txt
 
 # 3. 配置环境变量
+# 复制配置模板：cp set_key.sh.sample set_key.sh
 # 编辑 set_key.sh 文件，设置邮件和大模型API密钥
 source set_key.sh
 
@@ -689,14 +691,27 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 | `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
 | `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
+
+**可选变量（大模型配置）**：
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
 | `QWEN_CHAT_URL` | 通义千问chat API地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
 | `QWEN_CHAT_MODEL` | 通义千问chat模型名称 | `qwen-plus-2025-12-01` |
+| `MAX_TOKENS` | 最大token数 | `32768` |
 
 **配置步骤**：
 
-1. 编辑 `set_key.sh` 文件，填写配置信息
-2. 激活配置：`source set_key.sh`
-3. 验证配置：`echo $YAHOO_EMAIL`
+1. 复制配置模板：`cp set_key.sh.sample set_key.sh`
+2. 编辑 `set_key.sh` 文件，填写配置信息
+3. 激活配置：`source set_key.sh`
+4. 验证配置：`echo $YAHOO_EMAIL`
+
+**注意事项**：
+- `set_key.sh` 已添加到 `.gitignore`，不会提交到仓库
+- 敏感信息请妥善保管，不要泄露
+- 未设置可选变量时，系统将使用默认值
+- GitHub Actions 需要在 Secrets 中配置相同的环境变量
 
 **邮箱授权码获取方法**：
 
@@ -744,14 +759,18 @@ python hsi_email.py
 ```bash
 # 1. Fork本项目到你的GitHub账号
 # 2. 进入你Fork的仓库 → Settings → Secrets and variables → Actions
-# 3. 添加以下Secrets：
+# 3. 添加以下Secrets（必填）：
 #    - YAHOO_EMAIL: 你的邮箱地址
 #    - YAHOO_APP_PASSWORD: 邮箱授权码
 #    - YAHOO_SMTP: SMTP服务器地址
 #    - RECIPIENT_EMAIL: 收件人邮箱列表（逗号分隔）
 #    - QWEN_API_KEY: 通义千问API密钥
-# 4. 启用GitHub Actions工作流
-# 5. 完成！系统将自动运行，分析结果会发送到你的邮箱
+# 4. 可选添加以下Secrets（使用默认值）：
+#    - QWEN_CHAT_URL: Chat API地址（默认：https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions）
+#    - QWEN_CHAT_MODEL: Chat模型名称（默认：qwen-plus-2025-12-01）
+#    - MAX_TOKENS: 最大token数（默认：32768）
+# 5. 启用GitHub Actions工作流
+# 6. 完成！系统将自动运行，分析结果会发送到你的邮箱
 ```
 
 **方式二：克隆到自己的GitHub仓库**
