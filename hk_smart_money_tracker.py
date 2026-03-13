@@ -710,7 +710,12 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
                 "换手率(%)": stock.get('turnover_rate', 'N/A') or 'N/A',
                 "趋势斜率": f"{stock.get('Trend_Slope_20d', 'N/A'):.4f}" if stock.get('Trend_Slope_20d') is not None else 'N/A',
                 "乖离率(%)": f"{stock.get('BIAS6', 'N/A'):.2f}" if stock.get('BIAS6') is not None else 'N/A',
-                "情感指标": f"MA3:{round(stock.get('sentiment_ma3', 0), 2) if stock.get('sentiment_ma3') is not None else 'N/A'} MA7:{round(stock.get('sentiment_ma7', 0), 2) if stock.get('sentiment_ma7') is not None else 'N/A'} 波动:{round(stock.get('sentiment_volatility', 0), 2) if stock.get('sentiment_volatility') is not None else 'N/A'}"
+                "情感指标": f"MA3:{round(stock.get('sentiment_ma3', 0), 2) if stock.get('sentiment_ma3') is not None else 'N/A'} MA7:{round(stock.get('sentiment_ma7', 0), 2) if stock.get('sentiment_ma7') is not None else 'N/A'} 波动:{round(stock.get('sentiment_volatility', 0), 2) if stock.get('sentiment_volatility') is not None else 'N/A'}",
+                "筹码集中度": f"{stock.get('chip_concentration', 'N/A'):.3f}" if stock.get('chip_concentration') is not None else 'N/A',
+                "筹码集中度等级": stock.get('chip_concentration_level', 'N/A') or 'N/A',
+                "上方筹码比例": f"{stock.get('chip_resistance_ratio', 'N/A'):.1%}" if stock.get('chip_resistance_ratio') is not None else 'N/A',
+                "上方筹码阻力等级": stock.get('chip_resistance_level', 'N/A') or 'N/A',
+                "拉升难度": "容易" if stock.get('chip_resistance_ratio', 1) < 0.3 else "中等" if stock.get('chip_resistance_ratio', 1) < 0.6 else "困难"
             },
             "多周期趋势（重要）": {
                 "3日收益率(%)": multi_period_3d_return or 'N/A',
@@ -817,7 +822,7 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 
 ⚠️ 重要说明：
 - 🔴 核心字段（必须关注）：建仓/出货评分、风险控制信号、成交量、技术指标、南向资金
-- 🟡 重要字段（重点关注）：价格位置、RSI、MACD、布林带、TAV评分
+- 🟡 重要字段（重点关注）：价格位置、RSI、MACD、布林带、TAV评分、筹码分布（拉升阻力）
 - 🟢 辅助字段（参考即可）：基本面、上个交易日指标、新闻
 
 📊 分析框架（0-5层）：
@@ -871,6 +876,13 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 情感指标：情感MA3/MA7/MA14反映情绪趋势；MA3>MA7→改善，<MA7→恶化
 - 南向资金：流入>3000万→支持建仓；流出>1000万→警惕出货
 
+⭐ 筹码分布分析：
+- 筹码集中度：高集中度(>0.3)→筹码集中，拉升难度大；中集中度(0.15-0.3)→中等；低集中度(<0.15)→筹码分散，拉升容易
+- 上方筹码比例：<30%→低阻力，拉升容易；30-60%→中等阻力；>60%→高阻力，拉升困难
+- 拉升难度判断：上方筹码比例<30%且筹码集中度低→拉升容易；上方筹码比例>60%→拉升困难
+- 建仓信号调整：低阻力+高建仓评分→强烈建仓；高阻力+高建仓评分→降低建仓评分或观望
+- 出货信号调整：高阻力+出货信号→强化卖出建议；低阻力+出货信号→谨慎卖出
+
 【第4层：宏观环境】
 📊 板块趋势评估：
 - 板块强势上涨（涨幅>2%）：板块整体趋势向上，个股建仓信号可靠性提升
@@ -906,8 +918,8 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 1. **优先级规则**：每只股票只能出现在一个建议类别中（买入/卖出/持有），不能重复
 2. **第0层优先**：如果市场环境评估建议观望，所有股票都归入"持有建议"
 3. **第1层优先**：如果触发止损/止盈/Trailing Stop，强制归入卖出建议，优先级最高
-4. **买入建议**：建仓评分≥3.0 且 出货评分<2.0 且 风险控制未触发
-5. **卖出建议**：出货评分≥3.0 或 风险控制触发
+4. **买入建议**：建仓评分≥3.0 且 出货评分<2.0 且 风险控制未触发 且 筹码阻力不严重（上方筹码比例<60%或拉升难度非"困难"）
+5. **卖出建议**：出货评分≥3.0 或 风险控制触发 或 筹码阻力严重（上方筹码比例>60%且拉升难度为"困难"）
 6. **持有建议**：建仓评分<3.0 且 出货评分<3.0
 
 🎯 买入建议（建仓评分 ≥ 3.0 且 出货评分 < 2.0 且 风险控制未触发）
@@ -921,8 +933,8 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 止损价格：XX港元（基于ATR或支撑位，止损15%）
 - 持仓时间：超短线(<3天)/短线(3-7天)/中线(1-4周)
 - 风险等级：1级(低)/2级(中低)/3级(中)/4级(中高)/5级(高)
-- 买入理由：详细说明各维度得分和协同性，重点突出成交量、技术指标、南向资金、TAV评分，参考新闻摘要（如有重大新闻影响）
-- 风险因素：详细说明潜在风险，包括市场环境、技术面、资金面、新闻面（如有重大负面新闻）
+- 买入理由：详细说明各维度得分和协同性，重点突出成交量、技术指标、南向资金、TAV评分、筹码分布阻力，参考新闻摘要（如有重大新闻影响）
+- 风险因素：详细说明潜在风险，包括市场环境、技术面、资金面、筹码阻力（上方筹码比例高则拉升困难）、新闻面（如有重大负面新闻）
 - 新闻影响：简要说明最新新闻摘要（如果有新闻）
 
 ⚠️ 卖出建议（出货评分 ≥ 3.0 或 风险控制触发）
@@ -933,13 +945,13 @@ def build_llm_analysis_prompt(stock_data, run_date=None, market_metrics=None, in
 - 建议卖出比例：XX%
 - 目标价格：XX港元（如适用）
 - 风险等级：X级
-- 风险因素：详细说明，解释为什么需要卖出，包括技术面、资金面、新闻面（如有重大负面新闻）
+- 风险因素：详细说明，解释为什么需要卖出，包括技术面、资金面、筹码阻力（上方筹码比例高则拉升困难）、新闻面（如有重大负面新闻）
 - 新闻影响：简要说明最新新闻摘要（如果有新闻）
 
 📊 持有建议（建仓评分 < 3.0 且 出货评分 < 3.0）
 
 股票代码 股票名称
-- 持有理由：详细说明，解释为什么建仓评分<3.0且出货评分<3.0（信号模糊，建议观望）
+- 持有理由：详细说明，解释为什么建仓评分<3.0且出货评分<3.0（信号模糊，建议观望），说明筹码分布阻力情况（上方筹码比例高则建议观望）
 - 建议仓位：XX%
 - 风险等级：X级
 
@@ -2331,6 +2343,26 @@ def analyze_stock(code, name, run_date=None):
                 print(f"  ⛔ {name} {profit_take_result['reason']}")
             if profit_take_result['trailing_stop']:
                 print(f"  📉 {name} {profit_take_result['reason']}")
+
+            # ====== 筹码分布分析======
+            chip_result = None  # 初始化筹码分布结果
+            if TECHNICAL_ANALYSIS_AVAILABLE:
+                print(f"  📊 计算 {name} 筹码分布...")
+                try:
+                    analyzer = TechnicalAnalyzer()
+                    chip_result = analyzer.get_chip_distribution(main_hist)
+                    
+                    if chip_result:
+                        print(f"    当前价格: {chip_result['current_price']:.2f} 港元")
+                        print(f"    筹码集中度: {chip_result['concentration']:.3f} ({chip_result['concentration_level']})")
+                        print(f"    筹码集中区: {chip_result['concentration_area'][0]:.2f} - {chip_result['concentration_area'][1]:.2f} 港元")
+                        print(f"    上方筹码比例: {chip_result['resistance_ratio']:.1%} ({chip_result['resistance_level']}阻力)")
+                        print(f"    拉升难度: {'容易' if chip_result['resistance_ratio'] < 0.3 else '中等' if chip_result['resistance_ratio'] < 0.6 else '困难'}")
+                    else:
+                        print(f"    ⚠️ 无法计算筹码分布（数据不足或价格为常数）")
+                except Exception as e:
+                    print(f"    ❌ 筹码分布分析失败: {e}")
+
         else:
             # 使用原有的布尔逻辑（向后兼容）
             latest_buildup_score = None
@@ -2815,6 +2847,16 @@ def analyze_stock(code, name, run_date=None):
         
         # 添加上个交易日指标信息
         result['prev_day_indicators'] = previous_day_indicators
+        
+        # 添加筹码分布数据
+        if chip_result:
+            result['chip_distribution'] = chip_result
+            result['chip_concentration'] = safe_round(chip_result['concentration'], 3)
+            result['chip_concentration_level'] = chip_result['concentration_level']
+            result['chip_resistance_ratio'] = safe_round(chip_result['resistance_ratio'], 3)
+            result['chip_resistance_level'] = chip_result['resistance_level']
+            result['chip_concentration_area'] = chip_result['concentration_area']
+            result['chip_current_price'] = safe_round(chip_result['current_price'], 2)
         
         # 添加基本面数据
         if fundamental_data:

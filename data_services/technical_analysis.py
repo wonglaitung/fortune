@@ -789,6 +789,69 @@ class TechnicalAnalyzer:
         
         return df
     
+    def get_chip_distribution(self, df, num_bins=20):
+        """
+        计算筹码分布 - 基于成交量的简单分箱法
+        
+        参数:
+        - df: DataFrame，必须包含 Close 和 Volume 列
+        - num_bins: 价格区间数量（默认 20）
+        
+        返回:
+        - dict: 包含筹码分布分析结果
+        """
+        if df.empty or 'Close' not in df.columns or 'Volume' not in df.columns:
+            return None
+        
+        # 获取价格范围
+        price_min = df['Close'].min()
+        price_max = df['Close'].max()
+        
+        # 如果价格范围太小，避免除零错误
+        if price_max - price_min < 1e-6:
+            return None
+        
+        # 创建价格区间
+        price_bins = np.linspace(price_min, price_max, num_bins + 1)
+        
+        # 统计每个价格区间的成交量
+        volume_by_bin = []
+        for i in range(num_bins):
+            mask = (df['Close'] >= price_bins[i]) & (df['Close'] < price_bins[i + 1])
+            volume_by_bin.append(df.loc[mask, 'Volume'].sum())
+        
+        volume_by_bin = np.array(volume_by_bin)
+        total_volume = volume_by_bin.sum()
+        
+        if total_volume == 0:
+            return None
+        
+        # 计算筹码集中度（HHI指数）
+        concentration = np.sum((volume_by_bin / total_volume) ** 2)
+        
+        # 找出筹码最集中的区间
+        max_bin_idx = np.argmax(volume_by_bin)
+        concentration_area = (price_bins[max_bin_idx], price_bins[max_bin_idx + 1])
+        
+        # 计算当前价格上方的筹码比例
+        current_price = df['Close'].iloc[-1]
+        current_bin_idx = np.searchsorted(price_bins, current_price) - 1
+        
+        if current_bin_idx >= 0:
+            resistance_volume = volume_by_bin[current_bin_idx:].sum()
+            resistance_ratio = resistance_volume / total_volume
+        else:
+            resistance_ratio = 0
+        
+        return {
+            'concentration': concentration,
+            'concentration_level': '高' if concentration > 0.3 else '中' if concentration > 0.15 else '低',
+            'concentration_area': concentration_area,
+            'resistance_ratio': resistance_ratio,
+            'resistance_level': '高' if resistance_ratio > 0.6 else '中' if resistance_ratio > 0.3 else '低',
+            'current_price': current_price
+        }
+    
     def analyze_trend(self, df):
         """分析趋势"""
         if df.empty or len(df) < 50:  # 降低最小数据要求
