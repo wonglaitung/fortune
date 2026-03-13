@@ -126,6 +126,131 @@ python hsi_email.py
 
 ---
 
+## 🌟 无服务器部署 - GitHub Actions 自动化
+
+> **⚡ 无需部署服务器，即刻拥有功能完整的金融资产智能量化分析系统**
+
+本项目通过 GitHub Actions 实现全自动化运行，**无需购买服务器、无需维护运维**，只需配置一次即可享受完整的智能分析服务。
+
+### 核心优势
+
+| 优势 | 说明 |
+|------|------|
+| **零成本** | GitHub Actions 免费额度充足，每月2000分钟免费运行时间 |
+| **零运维** | 无需服务器维护、无需监控、无需备份 |
+| **自动化** | 9个工作流自动运行，覆盖全天候市场监控 |
+| **稳定性** | GitHub 提供高可用基础设施，99.9%在线率 |
+| **可扩展** | 轻松扩展到更多数据源和分析功能 |
+| **安全性** | GitHub Secrets 加密存储环境变量 |
+
+### 自动化功能
+
+**🕐 全天候市场监控**：
+- **每小时**：加密货币价格、黄金价格
+- **每日**：IPO信息、股票新闻
+- **工作日**：恒生指数涨跌预测、综合分析、AI交易分析
+- **每周**：周综合分析、牛熊市分析
+
+**📊 智能分析服务**：
+- **恒生指数涨跌预测**：每天早上6点，预测恒生指数短期走势
+- **综合分析邮件**：每天下午4点，整合大模型建议和CatBoost预测结果
+- **AI交易分析日报**：每天上午8:30，AI驱动的交易策略分析
+- **牛熊市分析**：每周一上午1点，市场环境分析
+- **周综合分析**：每周日上午9点，全面周度分析
+
+**🎯 实时推送服务**：
+- **邮件通知**：重要分析结果自动发送到邮箱
+- **多渠道覆盖**：支持多个收件人邮箱
+- **定时推送**：根据分析周期自动推送
+
+### 使用方法
+
+**方式一：Fork项目后启用（推荐）**
+
+```bash
+# 1. Fork本项目到你的GitHub账号
+# 2. 进入你Fork的仓库 → Settings → Secrets and variables → Actions
+# 3. 添加以下Secrets：
+#    - YAHOO_EMAIL: 你的邮箱地址
+#    - YAHOO_APP_PASSWORD: 邮箱授权码
+#    - YAHOO_SMTP: SMTP服务器地址
+#    - RECIPIENT_EMAIL: 收件人邮箱列表（逗号分隔）
+#    - QWEN_API_KEY: 通义千问API密钥
+# 4. 启用GitHub Actions工作流
+# 5. 完成！系统将自动运行，分析结果会发送到你的邮箱
+```
+
+**方式二：克隆到自己的GitHub仓库**
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/wonglaitung/fortune.git
+cd fortune
+
+# 2. 推送到你的GitHub仓库
+git remote set-url origin https://github.com/YOUR_USERNAME/fortune.git
+git push -u origin main
+
+# 3. 在GitHub仓库中配置Secrets（同方式一）
+# 4. 启用GitHub Actions工作流
+# 5. 完成！
+```
+
+### 详细配置步骤
+
+1. **配置邮箱服务**：
+   - **163邮箱**：设置 → POP3/SMTP/IMAP → 开启POP3/SMTP服务 → 生成授权码
+   - **Gmail**：Google账户设置 → 安全性 → 两步验证 → 应用密码 → 生成新密码
+   - **QQ邮箱**：设置 → 账户 → POP3/IMAP/SMTP服务 → 生成授权码
+
+2. **配置大模型API**：
+   - 访问通义千问官网：https://dashscope.aliyun.com/
+   - 注册账号并创建API Key
+   - 复制API Key用于配置
+
+3. **添加GitHub Secrets**：
+   - 进入仓库 → Settings → Secrets and variables → Actions
+   - 点击"New repository secret"
+   - 逐个添加以下Secrets：
+     - `YAHOO_EMAIL`: 你的发件人邮箱
+     - `YAHOO_APP_PASSWORD`: 邮箱授权码（不是登录密码）
+     - `YAHOO_SMTP`: SMTP服务器地址（如smtp.163.com）
+     - `RECIPIENT_EMAIL`: 收件人邮箱列表，多个邮箱用逗号分隔
+     - `QWEN_API_KEY`: 通义千问API Key
+
+4. **启用工作流**：
+   - 进入仓库 → Actions
+   - 确认所有工作流已启用
+   - 可以查看工作流运行日志
+
+5. **手动触发（可选）**：
+   - 进入任一工作流 → Run workflow
+   - 选择分支并点击"Run workflow"按钮
+   - 等待运行完成，查看结果
+
+### 工作流状态监控
+
+**查看运行日志**：
+- 进入仓库 → Actions
+- 选择任一工作流查看运行历史
+- 点击具体的运行记录查看详细日志
+- 可以看到每个步骤的执行情况
+
+**接收分析结果**：
+- 所有分析结果会自动发送到 `RECIPIENT_EMAIL` 配置的邮箱
+- 包含综合买卖建议、技术指标、风险评估等信息
+- 邮件格式清晰，易于阅读和理解
+
+### 注意事项
+
+- **GitHub Actions 免费额度**：每月2000分钟，对于本项目绰绰有余
+- **时区配置**：所有工作流已配置为香港时区，确保运行时间准确
+- **数据保密**：使用GitHub Secrets加密存储敏感信息，安全可靠
+- **运行频率**：可根据需要调整工作流的触发时间和频率
+- **错误通知**：如工作流运行失败，GitHub会自动发送通知
+
+---
+
 ## 核心功能
 
 ### 数据获取与监控
@@ -554,31 +679,131 @@ fortune/
 
 ## 自动化调度
 
-系统使用 GitHub Actions 进行自动化调度，目前有9个工作流正常运行。
+### GitHub Actions 工作流
 
-| 工作流 | 功能 | 执行时间 |
-|--------|------|----------|
-| hourly-crypto-monitor.yml | 每小时加密货币监控 | 每小时 |
-| hourly-gold-monitor.yml | 每小时黄金监控 | 每小时 |
-| hsi-prediction.yml | 恒生指数涨跌预测 | 周一到周五 UTC 22:00（香港时间上午6:00） |
-| comprehensive-analysis.yml | 综合分析邮件 | 周一到周五 UTC 08:00（香港时间下午4:00） |
-| batch-stock-news-fetcher.yml | 批量股票新闻获取 | 每天 UTC 22:00 |
-| daily-ipo-monitor.yml | IPO 信息监控 | 每天 UTC 02:00 |
-| daily-ai-trading-analysis.yml | AI 交易分析日报 | 周一到周五 UTC 08:30 |
-| weekly-comprehensive-analysis.yml | 周综合交易分析 | 每周日 UTC 01:00（香港时间上午9:00） |
-| bull-bear-analysis.yml | 牛熊市分析自动化 | 每周日 UTC 17:00（香港时间周一上午1:00） |
+系统使用 **GitHub Actions** 进行全自动化调度，无需服务器部署，零成本运行。目前有9个工作流正常运行，覆盖全天候市场监控和智能分析。
 
-**GitHub Actions 配置**：
+| 工作流 | 功能 | 执行时间 | 说明 |
+|--------|------|----------|------|
+| **hourly-crypto-monitor.yml** | 每小时加密货币监控 | 每小时 | 监控比特币、以太坊价格和技术分析 |
+| **hourly-gold-monitor.yml** | 每小时黄金监控 | 每小时 | 监控黄金价格和投资建议 |
+| **hsi-prediction.yml** | 恒生指数涨跌预测 | 周一到周五 UTC 22:00（香港时间上午6:00） | 预测恒生指数短期走势 |
+| **comprehensive-analysis.yml** | 综合分析邮件 | 周一到周五 UTC 08:00（香港时间下午4:00） | 整合大模型建议和CatBoost预测结果 |
+| **batch-stock-news-fetcher.yml** | 批量股票新闻获取 | 每天 UTC 22:00 | 批量获取自选股新闻，用于情感分析 |
+| **daily-ipo-monitor.yml** | IPO 信息监控 | 每天 UTC 02:00 | 获取最新IPO信息 |
+| **daily-ai-trading-analysis.yml** | AI 交易分析日报 | 周一到周五 UTC 08:30 | AI驱动的交易策略分析 |
+| **weekly-comprehensive-analysis.yml** | 周综合交易分析 | 每周日 UTC 01:00（香港时间上午9:00） | 全面周度分析 |
+| **bull-bear-analysis.yml** | 牛熊市分析自动化 | 每周日 UTC 17:00（香港时间周一上午1:00） | 分析市场环境和股票表现 |
 
-如果使用 GitHub Actions 自动化，需要在仓库设置中配置 Secrets：
+### 配置 GitHub Actions
 
-1. 进入仓库 → Settings → Secrets and variables → Actions
-2. 添加以下 Secrets：
-   - `YAHOO_EMAIL`
-   - `YAHOO_APP_PASSWORD`
-   - `YAHOO_SMTP`
-   - `RECIPIENT_EMAIL`
-   - `QWEN_API_KEY`
+**前提条件**：
+1. 拥有 GitHub 账号
+2. Fork本项目或克隆到你的GitHub仓库
+3. 配置好邮箱服务和大模型API
+
+**配置步骤**：
+
+1. **添加 GitHub Secrets**：
+   - 进入你的GitHub仓库
+   - 点击 **Settings** → **Secrets and variables** → **Actions**
+   - 点击 **New repository secret**
+   - 逐个添加以下Secrets：
+
+   | Secret 名称 | 说明 | 示例值 |
+   |------------|------|--------|
+   | `YAHOO_EMAIL` | 发件人邮箱地址 | `your-email@163.com` |
+   | `YAHOO_APP_PASSWORD` | 邮箱授权码（不是登录密码） | 从邮箱设置中生成 |
+   | `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
+   | `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
+   | `QWEN_API_KEY` | 通义千问API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
+
+2. **启用工作流**：
+   - 进入仓库 → **Actions**
+   - 确认所有工作流已启用
+   - 可以查看工作流运行日志
+
+3. **手动触发工作流（可选）**：
+   - 进入任一工作流 → **Run workflow**
+   - 选择分支并点击 **Run workflow** 按钮
+   - 等待运行完成，查看结果
+
+### 工作流文件说明
+
+所有工作流文件位于 `.github/workflows/` 目录下：
+
+```
+.github/workflows/
+├── hourly-crypto-monitor.yml          # 每小时加密货币监控
+├── hourly-gold-monitor.yml            # 每小时黄金监控
+├── hsi-prediction.yml                 # 恒生指数涨跌预测
+├── comprehensive-analysis.yml         # 综合分析邮件
+├── batch-stock-news-fetcher.yml       # 批量股票新闻获取
+├── daily-ipo-monitor.yml              # IPO 信息监控
+├── daily-ai-trading-analysis.yml      # AI 交易分析日报
+├── weekly-comprehensive-analysis.yml  # 周综合交易分析
+└── bull-bear-analysis.yml             # 牛熊市分析自动化
+```
+
+### 运行日志查看
+
+**查看运行历史**：
+- 进入仓库 → **Actions**
+- 左侧选择任一工作流
+- 可以看到该工作流的运行历史
+- 点击具体的运行记录查看详细日志
+
+**日志内容**：
+- 每个步骤的执行情况
+- 环境变量使用情况
+- 错误信息（如果有）
+- 运行时间统计
+
+### 时区配置
+
+所有工作流已配置为香港时区（`TZ: Asia/Hong_Kong`），确保运行时间准确。在workflow文件中可以看到以下配置：
+
+```yaml
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # ... 其他步骤
+```
+
+### 运行成本
+
+**GitHub Actions 免费额度**：
+- 公开仓库：无限制
+- 私有仓库：每月2000分钟免费
+- 每个工作流运行时间通常在1-5分钟
+- 本项目总运行时间每月约150-300分钟
+- **结论**：免费额度充足，完全够用
+
+### 故障排查
+
+**工作流运行失败**：
+1. 查看 Actions 运行日志，找出失败原因
+2. 检查 Secrets 配置是否正确
+3. 确认代码库中的脚本文件是否存在
+4. 检查依赖项是否完整安装
+5. 查看GitHub Status页面，确认GitHub服务是否正常
+
+**邮件未收到**：
+1. 检查 `RECIPIENT_EMAIL` 配置是否正确
+2. 确认邮箱设置中的SPAM过滤规则
+3. 查看工作流日志，确认邮件发送步骤是否成功
+4. 检查邮箱授权码是否过期
+
+**大模型调用失败**：
+1. 检查 `QWEN_API_KEY` 配置是否正确
+2. 确认API Key是否有效且未过期
+3. 查看API调用次数是否超出限制
+4. 检查网络连接是否正常
 
 ## 性能数据
 
