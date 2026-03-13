@@ -1,6 +1,6 @@
 # 港股智能分析与交易系统
 
-**⭐ 如果您觉得这个项目有用，请先给项目STAR再FORK，以支持项目发展！⭐**
+**⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
 
 一个基于 Python 的生产级港股智能分析系统，集成11个数据源、CatBoost机器学习模型和大模型智能决策。CatBoost单模型回测年化收益率79.54%（置信度0.55，71%优秀股票，28只股票平均总收益率185.49%），支持实时技术指标、板块轮动分析、综合买卖建议和自动化调度，为投资者提供全面的市场分析和交易策略验证工具。
 
@@ -92,7 +92,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 | `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
 | `YAHOO_EMAIL` | 发件人邮箱 | `your-email@163.com` |
 | `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
-| `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@icbcasia.com` |
+| `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
 | `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
 
 **配置步骤**：
