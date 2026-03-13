@@ -296,11 +296,12 @@ def extract_ml_predictions(filepath):
                 # 列出高阻力股票
                 if high_resistance_stocks:
                     catboost_text += f"\n**高阻力股票列表**：\n"
-                    catboost_text += f"| 股票代码 | 股票名称 | 上方筹码比例 | 拉升难度 |\n"
-                    catboost_text += "|----------|----------|-------------|----------|\n"
+                    catboost_text += '<table>\n'
+                    catboost_text += '<tr><th>股票代码</th><th>股票名称</th><th>上方筹码比例</th><th>拉升难度</th></tr>\n'
                     for stock in high_resistance_stocks:
                         difficulty = "困难" if stock['resistance_ratio'] > 0.6 else "中等" if stock['resistance_ratio'] > 0.3 else "容易"
-                        catboost_text += f"| {stock['code']} | {stock['name']} | {stock['resistance_ratio']:.1%} | {difficulty} |\n"
+                        catboost_text += f'<tr><td>{stock["code"]}</td><td>{stock["name"]}</td><td>{stock["resistance_ratio"]:.1%}</td><td>{difficulty}</td></tr>\n'
+                    catboost_text += '</table>\n'
 
                 catboost_text += f"\n**阻力标识说明**：\n"
                 catboost_text += "- ✅：低阻力（< 30%），拉升容易\n"
