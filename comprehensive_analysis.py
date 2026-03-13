@@ -293,12 +293,14 @@ def extract_ml_predictions(filepath):
                 catboost_text += f"- 中等阻力股票（30-60%）: {resistance_stats['medium']} 只 ⚠️\n"
                 catboost_text += f"- 高阻力股票（上方筹码 > 60%）: {resistance_stats['high']} 只 🔴\n"
 
-                # 列出高阻力股票
+                # 列出高阻力股票（按上方筹码比例降序）
                 if high_resistance_stocks:
-                    catboost_text += f"\n**高阻力股票列表**：\n"
+                    # 按上方筹码比例降序排序
+                    high_resistance_stocks_sorted = sorted(high_resistance_stocks, key=lambda x: x['resistance_ratio'], reverse=True)
+                    catboost_text += f"\n**高阻力股票列表**（按上方筹码比例降序）：\n"
                     catboost_text += '<table>\n'
                     catboost_text += '<tr><th>股票代码</th><th>股票名称</th><th>上方筹码比例</th><th>拉升难度</th></tr>\n'
-                    for stock in high_resistance_stocks:
+                    for stock in high_resistance_stocks_sorted:
                         difficulty = "困难" if stock['resistance_ratio'] > 0.6 else "中等" if stock['resistance_ratio'] > 0.3 else "容易"
                         catboost_text += f'<tr><td>{stock["code"]}</td><td>{stock["name"]}</td><td>{stock["resistance_ratio"]:.1%}</td><td>{difficulty}</td></tr>\n'
                     catboost_text += '</table>\n'
