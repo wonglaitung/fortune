@@ -1,0 +1,18 @@
+#export YAHOO_SMTP=smtp.gmail.com
+#export YAHOO_EMAIL=xxx@gmail.com
+#export YAHOO_APP_PASSWORD=xxx
+#export RECIPIENT_EMAIL=xxx@yahoo.com.hk,xxx@ic.com
+#export QWEN_API_KEY=sk-ccxxx
+#export QWEN_CHAT_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+#export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
+#echo $QWEN_API_KEY
+#
+
+export YAHOO_SMTP=smtp.163.com
+export YAHOO_EMAIL=xxx@163.com
+export YAHOO_APP_PASSWORD=xxx
+export RECIPIENT_EMAIL=xxx@gmail.com,xxx@ic.com
+export QWEN_API_KEY=sk-ccxxx
+export QWEN_CHAT_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
+echo $QWEN_API_KEY
