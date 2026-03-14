@@ -90,7 +90,7 @@ jobs:
           echo "✅ 回测完成"
           
           # 运行板块表现分析（使用最新的回测文件）
-          ./run_sector_analysis.sh markdown
+          ./scripts/run_sector_analysis.sh markdown
           
           echo ""
           echo "=========================================="

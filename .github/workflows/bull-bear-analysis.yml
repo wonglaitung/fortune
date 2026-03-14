@@ -78,7 +78,7 @@ jobs:
           echo "=========================================="
           
           # 使用自动化脚本（包含回测）
-          ./run_bull_bear_analysis.sh "$START_DATE" "$END_DATE" all
+          ./scripts/run_bull_bear_analysis.sh "$START_DATE" "$END_DATE" all
           
           echo ""
           echo "=========================================="

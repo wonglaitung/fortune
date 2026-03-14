@@ -271,7 +271,7 @@ python hk_smart_money_tracker.py
 python hsi_email.py
 
 # 综合分析（一键执行）
-./run_comprehensive_analysis.sh
+./scripts/run_comprehensive_analysis.sh
 ```
 
 ### 模型训练和预测
@@ -303,8 +303,8 @@ python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-featu
 
 ```bash
 # 模型对比回测（3个基本模型 + 5个融合方法）
-./run_model_comparison.sh
-python3 run_model_comparison.sh --force-train  # 强制重新训练所有模型
+./scripts/run_model_comparison.sh
+python3 scripts/run_model_comparison.sh --force-train  # 强制重新训练所有模型
 ```
 
 ### 月度趋势分析
@@ -335,7 +335,7 @@ python3 ml_services/transformer_experiment.py --stocks 0700.HK 0939.HK  # 自定
 
 ```bash
 # 一键执行完整流程
-./run_comprehensive_analysis.sh
+./scripts/run_comprehensive_analysis.sh
 
 # 或手动执行
 python comprehensive_analysis.py
@@ -769,7 +769,7 @@ python hk_smart_money_tracker.py
 python hsi_email.py
 
 # 综合分析（一键执行）
-./run_comprehensive_analysis.sh
+./scripts/run_comprehensive_analysis.sh
 ```
 
 ### 🌟 无服务器部署 - GitHub Actions 自动化

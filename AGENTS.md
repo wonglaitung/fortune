@@ -731,13 +731,13 @@ python3 ml_services/stock_monthly_trend_analysis.py
 **使用命令**：
 ```bash
 # 使用默认参数（上个月之前的一年）
-./run_bull_bear_analysis.sh
+./scripts/run_bull_bear_analysis.sh
 
 # 自定义日期范围
-./run_bull_bear_analysis.sh 2024-01-01 2025-12-31
+./scripts/run_bull_bear_analysis.sh 2024-01-01 2025-12-31
 
 # 自定义输出格式（csv/json/markdown/all）
-./run_bull_bear_analysis.sh 2024-01-01 2025-12-31 markdown
+./scripts/run_bull_bear_analysis.sh 2024-01-01 2025-12-31 markdown
 
 # 直接运行分析脚本
 python3 ml_services/analyze_bull_bear_market_auto.py
@@ -1068,7 +1068,7 @@ python3 ml_services/stock_monthly_trend_analysis.py
 ### 运行方式
 ```bash
 # 一键执行完整流程
-./run_comprehensive_analysis.sh
+./scripts/run_comprehensive_analysis.sh
 
 # 或手动执行各步骤
 python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
@@ -1320,8 +1320,8 @@ python3 ml_services/backtest_monthly_analysis.py
 python3 ml_services/stock_monthly_trend_analysis.py
 
 # 模型对比回测（3个基本模型 + 5个融合模型）
-./run_model_comparison.sh
-python3 run_model_comparison.sh --force-train  # 强制重新训练所有模型
+./scripts/run_model_comparison.sh
+python3 scripts/run_model_comparison.sh --force-train  # 强制重新训练所有模型
 
 # 模拟交易
 python3 simulation_trader.py --investor-type moderate
@@ -1336,7 +1336,7 @@ python3 gold_analyzer.py
 python3 crypto_email.py
 
 # 综合分析（一键执行，每日自动运行）⭐ 推荐
-./run_comprehensive_analysis.sh
+./scripts/run_comprehensive_analysis.sh
 python3 comprehensive_analysis.py
 python3 comprehensive_analysis.py --no-email  # 不发送邮件
 ```

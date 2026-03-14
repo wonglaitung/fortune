@@ -26,13 +26,13 @@ output/
 
 ```bash
 # 使用默认参数（2024-01-01 至 2025-12-31）
-./run_bull_bear_analysis.sh
+./scripts/run_bull_bear_analysis.sh
 
 # 自定义日期范围
-./run_bull_bear_analysis.sh 2024-01-01 2025-12-31
+./scripts/run_bull_bear_analysis.sh 2024-01-01 2025-12-31
 
 # 自定义日期范围和输出格式
-./run_bull_bear_analysis.sh 2024-01-01 2025-12-31 md
+./scripts/run_bull_bear_analysis.sh 2024-01-01 2025-12-31 md
 ```
 
 **执行流程**：
