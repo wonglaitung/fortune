@@ -7,8 +7,8 @@
 
 set -e  # 遇到错误立即退出
 
-# 获取脚本所在目录（项目根目录）
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 获取项目根目录（脚本所在目录的父目录）
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # 默认参数（自动计算上个月之前的一年）
 if [ -z "$1" ]; then

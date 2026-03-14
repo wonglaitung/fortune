@@ -50,9 +50,9 @@ if [ "$1" == "--force-train" ]; then
     print_warning "强制重新训练所有模型"
 fi
 
-# 项目根目录
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# 项目根目录（脚本所在目录的父目录）
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
 # 输出目录
 OUTPUT_DIR="output"
