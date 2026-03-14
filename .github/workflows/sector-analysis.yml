@@ -88,10 +88,10 @@ jobs:
             --enable-dynamic-risk-control
           
           echo "✅ 回测完成"
-          
+
           # 运行板块表现分析（使用最新的回测文件）
-          ./scripts/run_sector_analysis.sh markdown
-          
+          ./scripts/run_sector_analysis.sh "" markdown
+
           echo ""
           echo "=========================================="
           echo "✅ 分析完成"
