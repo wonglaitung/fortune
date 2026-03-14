@@ -29,12 +29,14 @@
 - 📊 集成实时技术指标（来自 hsi_email.py）
 - 📈 展示最近48小时模拟交易记录
 - 📊 **恒生指数涨跌预测**：基于特征重要性的加权评分模型（hsi_prediction.py）
-- 🔄 **模型对比回测脚本**：定期回测多种模型并生成汇总对比报告（run_model_comparison.sh）
+- 🔄 **模型对比回测脚本**：定期回测多种模型并生成汇总对比报告
 - 📊 **F1分数计算**：评估模型性能的关键指标
 - 📊 **深度学习模型对比实验**：LSTM、Transformer与CatBoost对比评估
 - 📊 **月度趋势分析**：2024-2026年跨年度回测月度分析
 - 📊 **股票月度趋势对比**：单个股票与总体趋势相关性分析
 - 📊 **牛熊市分析自动化**：分析市场环境分布和股票表现，每周一自动运行
+- 📊 **板块表现分析自动化**：分析不同股票类型（板块）的模型准确度，每月1号自动运行
+- 📊 **股票表现TOP 10排名分析**：按不同指标（平均收益率、正确决策比例、准确率）排名，每月1号自动运行
 - 📊 **筹码分布分析**：基于成交量的简单分箱法，计算筹码集中度、拉升阻力，集成到主力资金追踪、恒生指数及自选股分析和综合分析系统
 
 ## 重要警告
@@ -407,14 +409,17 @@
 ├── 工具脚本 (scripts/)
 │   ├── 数据诊断工具 (data_diagnostic.py)
 │   ├── 特征评估工具 (feature_evaluation.py, feature_eval_v2.py)
-│   └── 训练工具 (train_with_feature_selection.py)
+│   ├── 训练工具 (train_with_feature_selection.py)
+│   ├── 综合分析 (run_comprehensive_analysis.sh)
+│   ├── 模型对比 (run_model_comparison.sh)
+│   ├── 牛熊市分析 (run_bull_bear_analysis.sh)
+│   ├── 板块表现分析 (run_sector_analysis.sh) ⭐ 新增
+│   ├── 股票表现排名分析 (run_ranking_analysis.sh) ⭐ 新增
+│   ├── 训练和预测 (train_and_predict_all.sh)
 ├── 测试脚本
 │   ├── 模型对比测试 (test_step7.sh, test_generate_report.sh)
 │   ├── 动态策略测试 (test_dynamic_strategy.py)
 │   └── 简化测试报告 (simple_test_report.sh)
-└── 自动化脚本
-    ├── 综合分析 (run_comprehensive_analysis.sh)
-    └── 模型对比 (run_model_comparison.sh)
 ```
 
 ## 核心功能模块
@@ -773,6 +778,131 @@ python3 ml_services/analyze_bull_bear_market_auto.py --output-format all
 - 自动生成汇总对比报告，包含性能对比和综合排名
 - 支持跳过已存在的模型（默认模式）
 - 支持 `--force-train` 参数强制重新训练
+
+### 板块表现分析自动化
+- **ml_services/sector_performance_analysis.py**：板块表现分析脚本
+- **run_sector_analysis.sh**：板块表现分析自动化脚本
+- **.github/workflows/sector-analysis.yml**：板块表现分析 GitHub Actions 工作流
+
+**功能特点**：
+- 按股票类型（板块）分析模型准确度和表现
+- 支持14个股票类型：银行股、科技股、半导体股、人工智能股、新能源股、环保股、能源股、航运股、交易所、保险股、生物医药股、房地产股、公用事业股、指数基金
+- 计算每个板块的关键指标：准确率、胜率、平均收益率、夏普比率、最大回撤
+- 识别表现最佳和最差的板块
+- 生成多种格式的报告（CSV、JSON、Markdown）
+
+**分析维度**：
+- 板块统计：股票数量、交易次数、准确率、胜率
+- 收益率分析：平均收益率、收益率中位数、收益率标准差
+- 风险指标：夏普比率、最大回撤
+- 板块排名：按准确率、胜率、平均收益率排序
+
+**使用命令**：
+```bash
+# 使用默认参数（上个月之前的一年）
+./scripts/run_sector_analysis.sh
+
+# 自定义日期范围
+./scripts/run_sector_analysis.sh 2024-01-01 2025-12-31
+
+# 自定义输出格式（csv/json/markdown/all）
+./scripts/run_sector_analysis.sh 2024-01-01 2025-12-31 markdown
+
+# 直接运行分析脚本
+python3 ml_services/sector_performance_analysis.py
+python3 ml_services/sector_performance_analysis.py --start-date 2024-01-01 --end-date 2025-12-31
+python3 ml_services/sector_performance_analysis.py --trades-file output/backtest_20d_trades_20260307_002039.csv
+python3 ml_services/sector_performance_analysis.py --output-format all
+```
+
+**自动化调度**：
+- **GitHub Actions**：每月1号上午2点香港时间运行（UTC 19:00）
+- **日期范围**：动态计算上个月之前的一年
+- **时区配置**：已设置 `TZ: Asia_Hong_Kong` 确保正确计算日期
+- **支持手动触发**：可通过 GitHub Actions 界面手动执行
+
+**输出文件**：
+- `output/sector_performance_analysis_{timestamp}.csv`：CSV格式数据
+- `output/sector_performance_analysis_{timestamp}.json`：JSON格式数据
+- `output/sector_performance_analysis_{timestamp}.md`：Markdown格式报告
+
+**报告内容包括**：
+1. 分析概况（日期范围、股票数量、板块数量）
+2. 板块表现统计（每个板块的详细指标）
+3. 板块排名（按准确率、胜率、平均收益率）
+4. 表现最佳/最差板块分析
+5. 板块间对比分析
+
+**测试结果示例**：
+```
+关键发现:
+  🏆 表现最佳板块: 生物医药股 (准确率: 91.15%)
+  ⚠️  表现最差板块: 公用事业股 (准确率: 69.47%)
+```
+
+### 股票表现TOP 10排名分析
+- **ml_services/ranking_analysis.py**：股票表现排名分析脚本
+- **run_ranking_analysis.sh**：股票表现排名分析自动化脚本
+- **.github/workflows/ranking-analysis.yml**：股票表现排名分析 GitHub Actions 工作流
+
+**功能特点**：
+- 按不同指标对股票进行TOP 10排名
+- 支持三种排名维度：平均收益率、正确决策比例、准确率
+- 识别综合优秀股票（在所有三个指标中都排名前15）
+- 生成详细的排名报告和统计对比
+- 支持自定义日期范围和输出格式
+
+**分析维度**：
+- **按平均收益率排名**：识别收益率最高的股票
+- **按正确决策比例排名**：识别决策质量最高的股票
+- **按准确率排名**：识别预测方向最准确的股票
+- **综合优秀股票**：在所有三个指标中表现均衡的股票
+
+**使用命令**：
+```bash
+# 使用默认参数（上个月之前的一年）
+./scripts/run_ranking_analysis.sh
+
+# 自定义日期范围
+./scripts/run_ranking_analysis.sh 2024-01-01 2025-12-31
+
+# 自定义输出格式（csv/json/markdown/all）
+./scripts/run_ranking_analysis.sh 2024-01-01 2025-12-31 markdown
+
+# 直接运行分析脚本
+python3 ml_services/ranking_analysis.py
+python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-12-31
+python3 ml_services/ranking_analysis.py --trades-file output/backtest_20d_trades_20260307_002039.csv
+python3 ml_services/ranking_analysis.py --output-format all
+```
+
+**自动化调度**：
+- **GitHub Actions**：每月1号上午3点香港时间运行（UTC 19:00）
+- **日期范围**：动态计算上个月之前的一年
+- **时区配置**：已设置 `TZ: Asia_Hong_Kong` 确保正确计算日期
+- **支持手动触发**：可通过 GitHub Actions 界面手动执行
+
+**输出文件**：
+- `output/ranking_analysis_{timestamp}.csv`：CSV格式数据
+- `output/ranking_analysis_{timestamp}.json`：JSON格式数据
+- `output/ranking_analysis_{timestamp}.md`：Markdown格式报告
+
+**报告内容包括**：
+1. 分析概况（日期范围、股票数量、交易机会）
+2. 按平均收益率TOP 10排名
+3. 按正确决策比例TOP 10排名
+4. 按准确率TOP 10排名
+5. 综合优秀股票识别
+6. 股票表现对比分析
+
+**测试结果示例**：
+```
+关键发现:
+  💰 平均收益率最高: 华虹半导体 (11.91%)
+  🎯 胜率最高: 汇丰银行 (75.66%)
+  🎯 准确率最高: 汇丰银行 (92.48%)
+  🏆 综合优秀股票数量: 7
+```
 
 ## 机器学习模型
 
@@ -1339,6 +1469,20 @@ python3 crypto_email.py
 ./scripts/run_comprehensive_analysis.sh
 python3 comprehensive_analysis.py
 python3 comprehensive_analysis.py --no-email  # 不发送邮件
+
+# 板块表现分析（分析不同股票类型的准确度）⭐ 新功能
+./scripts/run_sector_analysis.sh
+./scripts/run_sector_analysis.sh 2024-01-01 2025-12-31  # 自定义日期范围
+./scripts/run_sector_analysis.sh 2024-01-01 2025-12-31 markdown  # 自定义输出格式
+python3 ml_services/sector_performance_analysis.py
+python3 ml_services/sector_performance_analysis.py --start-date 2024-01-01 --end-date 2025-12-31
+
+# 股票表现TOP 10排名分析（按不同指标排名）⭐ 新功能
+./scripts/run_ranking_analysis.sh
+./scripts/run_ranking_analysis.sh 2024-01-01 2025-12-31  # 自定义日期范围
+./scripts/run_ranking_analysis.sh 2024-01-01 2025-12-31 markdown  # 自定义输出格式
+python3 ml_services/ranking_analysis.py
+python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-12-31
 ```
 
 ## 数据文件结构
@@ -1378,6 +1522,12 @@ python3 comprehensive_analysis.py --no-email  # 不发送邮件
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.csv`: 牛熊市分析CSV数据
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.json`: 牛熊市分析JSON数据
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.md`: 牛熊市分析Markdown报告
+- `sector_performance_analysis_{timestamp}.csv`: 板块表现分析CSV数据 ⭐ 新增
+- `sector_performance_analysis_{timestamp}.json`: 板块表现分析JSON数据 ⭐ 新增
+- `sector_performance_analysis_{timestamp}.md`: 板块表现分析Markdown报告 ⭐ 新增
+- `ranking_analysis_{timestamp}.csv`: 股票表现排名分析CSV数据 ⭐ 新增
+- `ranking_analysis_{timestamp}.json`: 股票表现排名分析JSON数据 ⭐ 新增
+- `ranking_analysis_{timestamp}.md`: 股票表现排名分析Markdown报告 ⭐ 新增
 - `sector_rotation_river_plot.png`: 板块轮动河流图
 - `selected_features_*.csv`: 精选特征列表
 - `statistical_features_latest.txt`: 统计方法特征选择结果
@@ -1679,6 +1829,8 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 |------|------|----------|
 | `batch-stock-news-fetcher.yml` | 批量股票新闻获取 | 每天 UTC 22:00 |
 | `bull-bear-analysis.yml` | **牛熊市分析** | **每周星期一上午1点香港时间 (UTC 17:00)** |
+| `sector-analysis.yml` | **板块表现分析** | **每月1号上午2点香港时间 (UTC 19:00)** ⭐ 新增 |
+| `ranking-analysis.yml` | **股票表现TOP 10排名分析** | **每月1号上午3点香港时间 (UTC 19:00)** ⭐ 新增 |
 | `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
 | `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
 | `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
@@ -1734,7 +1886,7 @@ jobs:
 ```
 
 ### 自动化状态
-- ✅ GitHub Actions：8 个工作流正常运行 + 2 个备份文件
+- ✅ GitHub Actions：10 个工作流正常运行 + 2 个备份文件
 - ✅ 邮件通知：163 邮件服务稳定
 - ✅ 定时任务：支持本地 cron 和 GitHub Actions
 - ✅ 数据保存：大模型建议、CatBoost 预测结果、综合建议、模型准确率、批量回测结果自动保存
@@ -1743,6 +1895,9 @@ jobs:
 - ✅ 准确率管理：训练时自动保存，分析时自动加载
 - ✅ **恒生指数预测**：周一到周五早上6点自动执行，生成加权评分预测
 - ✅ **深度学习模型对比**：LSTM、Transformer与CatBoost对比实验
+- ✅ **牛熊市分析**：每周一上午1点自动执行，分析市场环境和股票表现
+- ✅ **板块表现分析**：每月1号上午2点自动执行，分析不同股票类型的准确度 ⭐ 新增
+- ✅ **股票表现TOP 10排名分析**：每月1号上午3点自动执行，按不同指标排名 ⭐ 新增
 
 ### 项目当前状态
 
@@ -1761,13 +1916,15 @@ jobs:
 - ✅ **交易记录展示**：完整，展示最近48小时模拟交易记录
 - ✅ **恒生指数涨跌预测**：完整，基于特征重要性的加权评分模型（hsi_prediction.py）
 - ✅ **深度学习模型对比实验**：完整，LSTM、Transformer与CatBoost对比评估（不推荐深度学习模型）
-- ✅ **模型对比回测脚本**：完整，支持3个基本模型和5个融合模型的批量回测（run_model_comparison.sh）
+- ✅ **模型对比回测脚本**：完整，支持3个基本模型和5个融合模型的批量回测
 - ✅ **F1分数计算**：完整，模型评估中的F1分数计算和报告
 - ✅ **2025年全年回测分析**：完整，包含多角度分析和TOP 10排名
 - ✅ **20天持有期回测**：完整，支持自定义日期范围的回测
 - ✅ **月度趋势分析**：完整，2024-2026年跨年度回测月度分析
 - ✅ **股票月度趋势对比**：完整，单个股票与总体趋势相关性分析
 - ✅ **牛熊市分析自动化**：完整，每周一自动执行，分析市场环境和股票表现
+- ✅ **板块表现分析自动化**：完整，每月1号自动执行，分析不同股票类型的准确度 ⭐ 新增
+- ✅ **股票表现TOP 10排名分析**：完整，每月1号自动执行，按不同指标排名 ⭐ 新增
 - ✅ **筹码分布分析**：完整，基于成交量的简单分箱法，计算筹码集中度和拉升阻力，集成到主力资金追踪、恒生指数及自选股分析和综合分析系统
 
 ### 待优化项
