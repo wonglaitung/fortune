@@ -164,11 +164,11 @@ class WalkForwardValidator:
             train_months = all_months[train_start_idx:train_end_idx]
             test_months = all_months[test_start_idx:test_end_idx]
 
-            # 计算日期范围
-            train_start_date = pd.to_datetime(train_months[0] + '-01')
-            train_end_date = pd.to_datetime(train_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)
-            test_start_date = pd.to_datetime(test_months[0] + '-01')
-            test_end_date = pd.to_datetime(test_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)
+            # 计算日期范围（转换为带时区的UTC格式）
+            train_start_date = pd.to_datetime(train_months[0] + '-01').tz_localize('UTC')
+            train_end_date = (pd.to_datetime(train_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
+            test_start_date = pd.to_datetime(test_months[0] + '-01').tz_localize('UTC')
+            test_end_date = (pd.to_datetime(test_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
 
             print(f"训练期间: {train_start_date.strftime('%Y-%m-%d')} 至 {train_end_date.strftime('%Y-%m-%d')}")
             print(f"测试期间: {test_start_date.strftime('%Y-%m-%d')} 至 {test_end_date.strftime('%Y-%m-%d')}")
