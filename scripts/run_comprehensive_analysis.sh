@@ -7,10 +7,18 @@
 # 3. 生成CatBoost单模型预测
 # 4. 调用comprehensive_analysis.py进行综合分析
 
+# 获取项目根目录（脚本所在目录的父目录）
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# 切换到项目目录
+cd "$PROJECT_DIR"
+
 echo "=========================================="
 echo "🚀 综合分析自动化流程（使用 CatBoost 单模型）"
 echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "📍 项目根目录: $PROJECT_DIR"
+echo "📍 当前工作目录: $(pwd)"
 echo ""
 
 # 步骤0: 运行特征选择脚本，生成500个精选特征（使用F-test方法）
