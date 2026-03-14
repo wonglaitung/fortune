@@ -16,78 +16,13 @@ from collections import defaultdict
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import WATCHLIST as STOCK_LIST
+from config import STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING
 
-# 股票类型映射（从 ml_trading_model.py 复制）
-STOCK_TYPE_MAPPING = {
-    # 银行股
-    '0005.HK': {'type': 'bank', 'name': '汇丰银行'},
-    '0939.HK': {'type': 'bank', 'name': '建设银行'},
-    '1288.HK': {'type': 'bank', 'name': '农业银行'},
-    '1398.HK': {'type': 'bank', 'name': '工商银行'},
-    '3968.HK': {'type': 'bank', 'name': '招商银行'},
-    
-    # 公用事业股
-    '0728.HK': {'type': 'utility', 'name': '中国电信'},
-    '0941.HK': {'type': 'utility', 'name': '中国移动'},
-    
-    # 科技股
-    '0700.HK': {'type': 'tech', 'name': '腾讯控股'},
-    '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW'},
-    '3690.HK': {'type': 'tech', 'name': '美团-W'},
-    '1810.HK': {'type': 'tech', 'name': '小米集团-W'},
-    
-    # 半导体股
-    '0981.HK': {'type': 'semiconductor', 'name': '中芯国际'},
-    '1347.HK': {'type': 'semiconductor', 'name': '华虹半导体'},
-    
-    # 人工智能股
-    '6682.HK': {'type': 'ai', 'name': '第四范式'},
-    '9660.HK': {'type': 'ai', 'name': '地平线机器人'},
-    '2533.HK': {'type': 'ai', 'name': '黑芝麻智能'},
-    
-    # 新能源股
-    '1211.HK': {'type': 'new_energy', 'name': '比亚迪股份'},
-    '1330.HK': {'type': 'environmental', 'name': '绿色动力环保'},
-    
-    # 能源/周期股
-    '0883.HK': {'type': 'energy', 'name': '中国海洋石油'},
-    '1088.HK': {'type': 'energy', 'name': '中国神华'},
-    '1138.HK': {'type': 'shipping', 'name': '中远海能'},
-    '0388.HK': {'type': 'exchange', 'name': '香港交易所'},
-    
-    # 保险股
-    '1299.HK': {'type': 'insurance', 'name': '友邦保险'},
-    
-    # 生物医药股
-    '2269.HK': {'type': 'biotech', 'name': '药明生物'},
-    
-    # 房地产股
-    '0012.HK': {'type': 'real_estate', 'name': '恒基地产'},
-    '0016.HK': {'type': 'real_estate', 'name': '新鸿基地产'},
-    '1109.HK': {'type': 'real_estate', 'name': '华润置地'},
-    
-    # 指数基金
-    '2800.HK': {'type': 'index', 'name': '盈富基金'},
-}
+# 股票类型映射（从 config.py 导入）
+STOCK_TYPE_MAPPING = STOCK_SECTOR_MAPPING
 
-# 板块名称映射
-SECTOR_NAMES = {
-    'bank': '银行股',
-    'utility': '公用事业股',
-    'tech': '科技股',
-    'semiconductor': '半导体股',
-    'ai': '人工智能股',
-    'new_energy': '新能源股',
-    'environmental': '环保股',
-    'energy': '能源股',
-    'shipping': '航运股',
-    'exchange': '交易所',
-    'insurance': '保险股',
-    'biotech': '生物医药股',
-    'real_estate': '房地产股',
-    'index': '指数基金',
-}
+# 板块名称映射（从 config.py 导入）
+SECTOR_NAMES = SECTOR_NAME_MAPPING
 
 
 def load_backtest_results(trades_file):

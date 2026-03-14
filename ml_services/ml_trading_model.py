@@ -41,10 +41,13 @@ from data_services.fundamental_data import get_comprehensive_fundamental_data
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
 from ml_services.logger_config import get_logger
-from config import WATCHLIST as STOCK_LIST
+from config import WATCHLIST as STOCK_LIST, STOCK_SECTOR_MAPPING
 
 # 股票名称映射
 STOCK_NAMES = STOCK_LIST
+
+# 股票板块映射（用于特征工程）
+STOCK_TYPE_MAPPING = STOCK_SECTOR_MAPPING
 
 # 自选股列表（转换为列表格式）
 WATCHLIST = list(STOCK_NAMES.keys())
@@ -688,95 +691,8 @@ class FeatureEngineer:
         Returns:
             dict: 股票类型特征字典
         """
-        # 股票类型分类（基于不同股票类型分析框架对比.md）
-        stock_type_mapping = {
-            # 银行股
-            '0005.HK': {'type': 'bank', 'name': '汇丰银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 70, 'risk': 20},
-            '0939.HK': {'type': 'bank', 'name': '建设银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 80, 'risk': 20},
-            '1288.HK': {'type': 'bank', 'name': '农业银行', 'defensive': 95, 'growth': 25, 'cyclical': 20, 'liquidity': 85, 'risk': 15},
-            '1398.HK': {'type': 'bank', 'name': '工商银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 85, 'risk': 20},
-            '3968.HK': {'type': 'bank', 'name': '招商银行', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 25},
-
-            # 公用事业股
-            '0728.HK': {'type': 'utility', 'name': '中国电信', 'defensive': 90, 'growth': 25, 'cyclical': 15, 'liquidity': 70, 'risk': 20},
-            '0941.HK': {'type': 'utility', 'name': '中国移动', 'defensive': 95, 'growth': 30, 'cyclical': 15, 'liquidity': 80, 'risk': 15},
-
-            # 科技股
-            '0700.HK': {'type': 'tech', 'name': '腾讯控股', 'defensive': 40, 'growth': 85, 'cyclical': 30, 'liquidity': 90, 'risk': 60},
-            '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW', 'defensive': 35, 'growth': 85, 'cyclical': 35, 'liquidity': 85, 'risk': 65},
-            '3690.HK': {'type': 'tech', 'name': '美团-W', 'defensive': 30, 'growth': 80, 'cyclical': 40, 'liquidity': 85, 'risk': 70},
-            '1810.HK': {'type': 'tech', 'name': '小米集团-W', 'defensive': 35, 'growth': 75, 'cyclical': 45, 'liquidity': 80, 'risk': 65},
-
-            # 半导体股
-            '0981.HK': {'type': 'semiconductor', 'name': '中芯国际', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
-            '1347.HK': {'type': 'semiconductor', 'name': '华虹半导体', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
-
-            # 人工智能股
-            '6682.HK': {'type': 'ai', 'name': '第四范式', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
-            '9660.HK': {'type': 'ai', 'name': '地平线机器人', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
-            '2533.HK': {'type': 'ai', 'name': '黑芝麻智能', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
-
-            # 新能源股
-            '1211.HK': {'type': 'new_energy', 'name': '比亚迪股份', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
-            '1330.HK': {'type': 'environmental', 'name': '绿色动力环保', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
-
-            # 能源/周期股
-            '0883.HK': {'type': 'energy', 'name': '中国海洋石油', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
-            '1088.HK': {'type': 'energy', 'name': '中国神华', 'defensive': 40, 'growth': 45, 'cyclical': 85, 'liquidity': 70, 'risk': 70},
-            '1138.HK': {'type': 'shipping', 'name': '中远海能', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
-            '0388.HK': {'type': 'exchange', 'name': '香港交易所', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
-
-            # 保险股
-            '1299.HK': {'type': 'insurance', 'name': '友邦保险', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 30},
-
-            # 生物医药股
-            '2269.HK': {'type': 'biotech', 'name': '药明生物', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
-
-            # 房地产股
-            '0012.HK': {'type': 'real_estate', 'name': '恒基地产', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 85},
-            '0016.HK': {'type': 'real_estate', 'name': '新鸿基地产', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
-            '1109.HK': {'type': 'real_estate', 'name': '华润置地', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
-
-            # 指数基金
-            '2800.HK': {'type': 'index', 'name': '盈富基金', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
-        }
-
-        # 获取股票类型信息
-        stock_info_mapping = {
-            # 银行股
-            '0005.HK': {'type': 'bank', 'name': '汇丰银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 70, 'risk': 20},
-            '0388.HK': {'type': 'exchange', 'name': '香港交易所', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
-            '0700.HK': {'type': 'tech', 'name': '腾讯控股', 'defensive': 40, 'growth': 85, 'cyclical': 30, 'liquidity': 90, 'risk': 60},
-            '0728.HK': {'type': 'utility', 'name': '中国电信', 'defensive': 90, 'growth': 25, 'cyclical': 15, 'liquidity': 70, 'risk': 20},
-            '0883.HK': {'type': 'energy', 'name': '中国海洋石油', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
-            '0939.HK': {'type': 'bank', 'name': '建设银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 80, 'risk': 20},
-            '0941.HK': {'type': 'utility', 'name': '中国移动', 'defensive': 95, 'growth': 30, 'cyclical': 15, 'liquidity': 80, 'risk': 15},
-            '0981.HK': {'type': 'semiconductor', 'name': '中芯国际', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
-            '1088.HK': {'type': 'energy', 'name': '中国神华', 'defensive': 40, 'growth': 45, 'cyclical': 85, 'liquidity': 70, 'risk': 70},
-            '1138.HK': {'type': 'shipping', 'name': '中远海能', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
-            '1211.HK': {'type': 'new_energy', 'name': '比亚迪股份', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
-            '1288.HK': {'type': 'bank', 'name': '农业银行', 'defensive': 95, 'growth': 25, 'cyclical': 20, 'liquidity': 85, 'risk': 15},
-            '1299.HK': {'type': 'insurance', 'name': '友邦保险', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 30},
-            '1330.HK': {'type': 'environmental', 'name': '绿色动力环保', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
-            '1347.HK': {'type': 'semiconductor', 'name': '华虹半导体', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
-            '1398.HK': {'type': 'bank', 'name': '工商银行', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 85, 'risk': 20},
-            '1810.HK': {'type': 'tech', 'name': '小米集团-W', 'defensive': 35, 'growth': 75, 'cyclical': 45, 'liquidity': 80, 'risk': 65},
-            '2269.HK': {'type': 'biotech', 'name': '药明生物', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
-            '2533.HK': {'type': 'ai', 'name': '黑芝麻智能', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
-            '2800.HK': {'type': 'index', 'name': '盈富基金', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
-            '3690.HK': {'type': 'tech', 'name': '美团-W', 'defensive': 30, 'growth': 80, 'cyclical': 40, 'liquidity': 85, 'risk': 70},
-            '3968.HK': {'type': 'bank', 'name': '招商银行', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 25},
-            '6682.HK': {'type': 'ai', 'name': '第四范式', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
-            '9660.HK': {'type': 'ai', 'name': '地平线机器人', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
-            '9988.HK': {'type': 'tech', 'name': '阿里巴巴-SW', 'defensive': 35, 'growth': 85, 'cyclical': 35, 'liquidity': 85, 'risk': 65},
-            # 房地产股
-            '0012.HK': {'type': 'real_estate', 'name': '恒基地产', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 85},
-            '0016.HK': {'type': 'real_estate', 'name': '新鸿基地产', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
-            '1109.HK': {'type': 'real_estate', 'name': '华润置地', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
-        }
-
-        # 获取股票类型信息
-        stock_info = stock_info_mapping.get(code, None)
+        # 获取股票类型信息（从 config.py 导入）
+        stock_info = STOCK_TYPE_MAPPING.get(code, None)
         if not stock_info:
             logger.warning(f"未找到股票 {code} 的类型信息")
             return {}
