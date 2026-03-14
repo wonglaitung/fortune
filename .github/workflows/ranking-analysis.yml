@@ -66,7 +66,7 @@ jobs:
           python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
           echo "✅ CatBoost 模型训练完成"
       
-      - name: 运行排名分析（含回测）
+- name: 运行排名分析（含回测）
         env:
           START_DATE: ${{ steps.date_range.outputs.start_date }}
           END_DATE: ${{ steps.date_range.outputs.end_date }}
@@ -78,7 +78,7 @@ jobs:
           echo "=========================================="
           
           # 使用自动化脚本（包含回测）
-          ./run_ranking_analysis.sh "$START_DATE" "$END_DATE" markdown
+          ./scripts/run_ranking_analysis.sh "$START_DATE" "$END_DATE" all
           
           echo ""
           echo "=========================================="

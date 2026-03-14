@@ -38,8 +38,8 @@ jobs:
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
-          chmod +x run_comprehensive_analysis.sh
-          ./run_comprehensive_analysis.sh
+          chmod +x scripts/run_comprehensive_analysis.sh
+          ./scripts/run_comprehensive_analysis.sh
 
       - name: Upload analysis results
         uses: actions/upload-artifact@v4

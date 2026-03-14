@@ -35,4 +35,4 @@ jobs:
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
-          bash run_comprehensive_analysis.sh
+          bash scripts/run_comprehensive_analysis.sh
