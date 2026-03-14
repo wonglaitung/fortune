@@ -282,8 +282,7 @@ class WalkForwardValidator:
                 start_date=train_start_date,
                 end_date=train_end_date,
                 horizon=self.horizon,
-                use_feature_selection=self.use_feature_selection,
-                skip_feature_selection=True  # 跳过特征选择，使用已有的特征
+                use_feature_selection=self.use_feature_selection
             )
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
