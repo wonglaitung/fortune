@@ -34,22 +34,6 @@ jobs:
         run: |
           pip install -r requirements.txt
       
-      - name: 运行特征选择
-        run: |
-          echo "=========================================="
-          echo "运行特征选择"
-          echo "=========================================="
-          python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
-          echo "✅ 特征选择完成"
-      
-      - name: 训练 CatBoost 模型
-        run: |
-          echo "=========================================="
-          echo "训练 CatBoost 模型"
-          echo "=========================================="
-          python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
-          echo "✅ CatBoost 模型训练完成"
-      
       - name: 计算日期范围
         id: date_range
         run: |
@@ -66,6 +50,22 @@ jobs:
             echo "end_date=${{ github.event.inputs.end_date }}" >> $GITHUB_OUTPUT
           fi
       
+      - name: 运行特征选择
+        run: |
+          echo "=========================================="
+          echo "运行特征选择"
+          echo "=========================================="
+          python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20 --output-dir output
+          echo "✅ 特征选择完成"
+      
+      - name: 训练 CatBoost 模型
+        run: |
+          echo "=========================================="
+          echo "训练 CatBoost 模型"
+          echo "=========================================="
+          python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+          echo "✅ CatBoost 模型训练完成"
+      
       - name: 运行排名分析（含回测）
         env:
           START_DATE: ${{ steps.date_range.outputs.start_date }}
@@ -77,20 +77,8 @@ jobs:
           echo "分析日期范围: $START_DATE 至 $END_DATE"
           echo "=========================================="
           
-          # 运行回测
-          python3 ml_services/backtest_20d_horizon.py \
-            --start-date "$START_DATE" \
-            --end-date "$END_DATE" \
-            --horizon 20 \
-            --confidence-threshold 0.55 \
-            --use-feature-selection \
-            --skip-feature-selection \
-            --enable-dynamic-risk-control
-          
-          echo "✅ 回测完成"
-          
-          # 运行排名分析（使用最新的回测文件）
-          ./run_ranking_analysis.sh markdown
+          # 使用自动化脚本（包含回测）
+          ./run_ranking_analysis.sh "$START_DATE" "$END_DATE" markdown
           
           echo ""
           echo "=========================================="
