@@ -771,6 +771,90 @@ python3 ml_services/analyze_bull_bear_market_auto.py --output-format all
 5. 低市场关联性股票（关联性 < 0.3，含详细表格）
 6. 市场环境敏感性分析
 
+### Walk-forward 验证（模型预测能力验证）
+- **ml_services/walk_forward_validation.py**：业界标准的 Walk-forward 验证脚本
+
+**功能特点**：
+- 业界标准的 Walk-forward 验证方法
+- 每个fold重新训练模型，评估真实预测能力
+- 多维度评估指标（夏普比率、索提诺比率、信息比率、最大回撤）
+- 严格的时序分割，避免数据泄露
+- 稳定性分析，评估模型在不同时期的一致性
+- 生成多种格式的报告（CSV、JSON、Markdown）
+
+**业界标准参数**：
+- 训练窗口：12个月（业界通常12-24个月）
+- 测试窗口：1个月（业界通常1-3个月）
+- 滚动步长：1个月（业界标准）
+
+**分析维度**：
+- 基础指标：平均收益率、累计收益率、胜率、准确率
+- 风险指标：收益率标准差、年化收益率、年化标准差、最大回撤
+- 风险调整收益：
+  - 夏普比率：收益/波动率，衡量单位风险的收益
+  - 索提诺比率：收益/下行波动率，只考虑下行风险
+  - 信息比率：超额收益/跟踪误差，相对于基准的表现
+- 稳定性分析：收益率标准差、收益率范围、胜率标准差、夏普比率标准差
+
+**稳定性评级**：
+- 高（优秀）：收益率标准差 < 2%
+- 中（良好）：收益率标准差 < 5%
+- 低（需改进）：收益率标准差 >= 5%
+
+**与 analyze_bull_bear_market_auto.py 的对比**：
+| 维度 | analyze_bull_bear_market_auto.py | walk_forward_validation.py |
+|------|--------------------------------|----------------------------|
+| **核心目的** | 牛熊市分析 + 策略稳定性验证 | 模型预测能力验证 |
+| **数据来源** | 已有的回测交易记录 | 实时获取股票数据 + 重新训练模型 |
+| **模型重训练** | ❌ 不重新训练 | ✅ 每个fold重新训练 |
+| **训练窗口** | 6个月 | 12个月（业界标准） |
+| **测试窗口** | 3个月 | 1个月（业界标准） |
+| **滚动步长** | 3个月 | 1个月（业界标准） |
+| **评估指标** | 基础指标（收益、胜率、准确率） | 多维度（包含风险调整收益） |
+| **验证目标** | 策略在牛市/熊市的表现 | 模型的泛化能力和预测准确性 |
+| **符合程度** | ⚠️ 部分符合业界标准 | ✅ 完全符合业界标准 |
+
+**使用命令**：
+```bash
+# 使用默认参数
+python3 ml_services/walk_forward_validation.py
+
+# 自定义参数
+python3 ml_services/walk_forward_validation.py --model-type catboost --start-date 2024-01-01 --end-date 2025-12-31
+
+# 调整Walk-forward参数
+python3 ml_services/walk_forward_validation.py --train-window 12 --test-window 1 --step-window 1
+
+# 使用特征选择
+python3 ml_services/walk_forward_validation.py --use-feature-selection
+
+# 调整置信度阈值
+python3 ml_services/walk_forward_validation.py --confidence-threshold 0.60
+
+# 只测试特定股票
+python3 ml_services/walk_forward_validation.py --stocks 0700.HK 0939.HK 1347.HK
+```
+
+**输出文件**：
+- `output/walk_forward_{model_type}_{horizon}d_{timestamp}.json`：JSON格式数据
+- `output/walk_forward_{model_type}_{horizon}d_{timestamp}.csv`：CSV格式数据
+- `output/walk_forward_{model_type}_{horizon}d_{timestamp}.md`：Markdown格式报告
+
+**报告内容包括**：
+1. 验证配置（模型类型、窗口参数、日期范围、Fold数量）
+2. 整体性能指标（平均收益率、胜率、准确率、夏普比率、最大回撤、索提诺比率、信息比率）
+3. 稳定性分析（收益率标准差、收益率范围、稳定性评级）
+4. Fold详细结果（每个fold的训练期间、测试期间、样本数、各项指标）
+5. 结论（模型表现评级和优化建议）
+
+**与 ml_trading_model.py 的关系**：
+- `walk_forward_validation.py` 导入并使用 `ml_trading_model.py` 中的核心类：
+  - `FeatureEngineer`：特征工程
+  - `CatBoostModel`、`LightGBMModel`、`GBDTModel`：模型类
+- `walk_forward_validation.py` 使用相同的特征工程和模型训练流程
+- 但每个fold都重新训练模型，使用不同的训练数据（滚动窗口）
+- 不保存模型文件，只评估性能并记录指标
+
 ### 模型对比回测脚本
 - **run_model_comparison.sh**：定期回测多种模型并生成汇总对比报告
 - 支持7个步骤的完整工作流程
