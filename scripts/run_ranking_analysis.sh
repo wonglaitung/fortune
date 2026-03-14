@@ -37,7 +37,20 @@ echo "输出目录: $OUTPUT_DIR"
 echo "=========================================="
 
 # 切换到项目目录
+echo "📍 当前目录: $(pwd)"
+echo "📍 项目根目录: $PROJECT_DIR"
+echo "📍 输出目录: $OUTPUT_DIR"
+
+if [ ! -d "$PROJECT_DIR" ]; then
+    echo "❌ 错误：项目根目录不存在: $PROJECT_DIR"
+    exit 1
+fi
+
 cd "$PROJECT_DIR"
+echo "✅ 已切换到项目根目录: $(pwd)"
+
+# 确保输出目录存在
+mkdir -p "$OUTPUT_DIR"
 
 # 步骤1：运行回测（生成新的交易记录）
 echo ""
@@ -45,9 +58,16 @@ echo "=========================================="
 echo "步骤 1/2: 运行20天持有期回测"
 echo "=========================================="
 echo "回测日期范围: $START_DATE 至 $END_DATE"
+echo "当前工作目录: $(pwd)"
+echo "回测脚本路径: $PROJECT_DIR/ml_services/backtest_20d_horizon.py"
+
+if [ ! -f "$PROJECT_DIR/ml_services/backtest_20d_horizon.py" ]; then
+    echo "❌ 错误：回测脚本不存在: $PROJECT_DIR/ml_services/backtest_20d_horizon.py"
+    exit 1
+fi
 
 # 运行回测（使用CatBoost 20天模型）
-python3 ml_services/backtest_20d_horizon.py \
+python3 "$PROJECT_DIR/ml_services/backtest_20d_horizon.py" \
     --start-date "$START_DATE" \
     --end-date "$END_DATE" \
     --horizon 20 \
@@ -65,7 +85,7 @@ echo "步骤 2/2: 查找回测交易记录文件"
 echo "=========================================="
 
 # 查找最新的交易记录文件
-LATEST_TRADES_FILE=$(find output -name "backtest_20d_trades_*.csv" -type f -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+LATEST_TRADES_FILE=$(find "$OUTPUT_DIR" -name "backtest_20d_trades_*.csv" -type f -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
 
 if [ -z "$LATEST_TRADES_FILE" ]; then
     echo "❌ 错误：未找到回测交易记录文件"
