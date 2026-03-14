@@ -413,8 +413,8 @@
 │   ├── 综合分析 (run_comprehensive_analysis.sh)
 │   ├── 模型对比 (run_model_comparison.sh)
 │   ├── 牛熊市分析 (run_bull_bear_analysis.sh)
-│   ├── 板块表现分析 (run_sector_analysis.sh) ⭐ 新增
-│   ├── 股票表现排名分析 (run_ranking_analysis.sh) ⭐ 新增
+│   ├── 板块表现分析 (run_sector_analysis.sh)
+│   ├── 股票表现排名分析 (run_ranking_analysis.sh)
 │   ├── 训练和预测 (train_and_predict_all.sh)
 ├── 测试脚本
 │   ├── 模型对比测试 (test_step7.sh, test_generate_report.sh)
@@ -1522,12 +1522,12 @@ python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.csv`: 牛熊市分析CSV数据
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.json`: 牛熊市分析JSON数据
 - `bull_bear_analysis_{start_date}_to_{end_date}_{timestamp}.md`: 牛熊市分析Markdown报告
-- `sector_performance_analysis_{timestamp}.csv`: 板块表现分析CSV数据 ⭐ 新增
-- `sector_performance_analysis_{timestamp}.json`: 板块表现分析JSON数据 ⭐ 新增
-- `sector_performance_analysis_{timestamp}.md`: 板块表现分析Markdown报告 ⭐ 新增
-- `ranking_analysis_{timestamp}.csv`: 股票表现排名分析CSV数据 ⭐ 新增
-- `ranking_analysis_{timestamp}.json`: 股票表现排名分析JSON数据 ⭐ 新增
-- `ranking_analysis_{timestamp}.md`: 股票表现排名分析Markdown报告 ⭐ 新增
+- `sector_performance_analysis_{timestamp}.csv`: 板块表现分析CSV数据
+- `sector_performance_analysis_{timestamp}.json`: 板块表现分析JSON数据
+- `sector_performance_analysis_{timestamp}.md`: 板块表现分析Markdown报告
+- `ranking_analysis_{timestamp}.csv`: 股票表现排名分析CSV数据
+- `ranking_analysis_{timestamp}.json`: 股票表现排名分析JSON数据
+- `ranking_analysis_{timestamp}.md`: 股票表现排名分析Markdown报告
 - `sector_rotation_river_plot.png`: 板块轮动河流图
 - `selected_features_*.csv`: 精选特征列表
 - `statistical_features_latest.txt`: 统计方法特征选择结果
@@ -1829,8 +1829,8 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 |------|------|----------|
 | `batch-stock-news-fetcher.yml` | 批量股票新闻获取 | 每天 UTC 22:00 |
 | `bull-bear-analysis.yml` | **牛熊市分析** | **每周星期一上午1点香港时间 (UTC 17:00)** |
-| `sector-analysis.yml` | **板块表现分析** | **每月1号上午2点香港时间 (UTC 19:00)** ⭐ 新增 |
-| `ranking-analysis.yml` | **股票表现TOP 10排名分析** | **每月1号上午3点香港时间 (UTC 19:00)** ⭐ 新增 |
+| `sector-analysis.yml` | **板块表现分析** | **每月1号上午2点香港时间 (UTC 19:00)** |
+| `ranking-analysis.yml` | **股票表现TOP 10排名分析** | **每月1号上午3点香港时间 (UTC 19:00)** |
 | `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
 | `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
 | `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
@@ -1896,8 +1896,8 @@ jobs:
 - ✅ **恒生指数预测**：周一到周五早上6点自动执行，生成加权评分预测
 - ✅ **深度学习模型对比**：LSTM、Transformer与CatBoost对比实验
 - ✅ **牛熊市分析**：每周一上午1点自动执行，分析市场环境和股票表现
-- ✅ **板块表现分析**：每月1号上午2点自动执行，分析不同股票类型的准确度 ⭐ 新增
-- ✅ **股票表现TOP 10排名分析**：每月1号上午3点自动执行，按不同指标排名 ⭐ 新增
+- ✅ **板块表现分析**：每月1号上午2点自动执行，分析不同股票类型的准确度
+- ✅ **股票表现TOP 10排名分析**：每月1号上午3点自动执行，按不同指标排名
 
 ### 项目当前状态
 
@@ -1923,8 +1923,8 @@ jobs:
 - ✅ **月度趋势分析**：完整，2024-2026年跨年度回测月度分析
 - ✅ **股票月度趋势对比**：完整，单个股票与总体趋势相关性分析
 - ✅ **牛熊市分析自动化**：完整，每周一自动执行，分析市场环境和股票表现
-- ✅ **板块表现分析自动化**：完整，每月1号自动执行，分析不同股票类型的准确度 ⭐ 新增
-- ✅ **股票表现TOP 10排名分析**：完整，每月1号自动执行，按不同指标排名 ⭐ 新增
+- ✅ **板块表现分析自动化**：完整，每月1号自动执行，分析不同股票类型的准确度
+- ✅ **股票表现TOP 10排名分析**：完整，每月1号自动执行，按不同指标排名
 - ✅ **筹码分布分析**：完整，基于成交量的简单分箱法，计算筹码集中度和拉升阻力，集成到主力资金追踪、恒生指数及自选股分析和综合分析系统
 
 ### 待优化项
