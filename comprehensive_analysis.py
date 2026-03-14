@@ -1502,6 +1502,22 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 【3. 大模型短期买卖建议（日内/数天）】
 {llm_recommendations['short_term']}
 
+**🔴 核心硬性约束（不可违反）**
+
+⚠️ **CatBoost概率约束（最高优先级，无例外）**：
+- CatBoost概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
+- CatBoost概率 < 0.40 → **绝对禁止推荐持有或观望**
+- CatBoost概率 ≥ 0.50 → 可以考虑买入
+- CatBoost概率 ≥ 0.60 → 可以考虑强烈买入
+- **即使短期和中期方向一致，也绝对不允许违反此约束**
+- **违反此约束的建议将被视为错误**
+
+🔥 **决策顺序（严格遵守）**：
+第一步：检查CatBoost概率 → 不满足则直接排除
+第二步：检查短期和中期一致性
+第三步：评估技术面和基本面
+第四步：生成综合建议
+
 === 综合分析规则 ===
 
 **规则1：时间维度匹配（业界最佳实践）**
@@ -1512,16 +1528,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - 短期和中期冲突时，选择观望（避免不确定性）
 
 **决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
-- 短期建议买入 + 中期建议买入 + CatBoost高置信度上涨（probability>0.60）→ 强买入信号
-- 短期建议买入 + 中期建议买入 + CatBoost中等置信度上涨（0.50<probability≤0.60）→ 买入信号
-- 短期建议买入 + 中期建议买入 + CatBoost低置信度（probability≤0.50）→ 观望（等待确认）
-- 短期建议买入 + 中期建议观望 → 观望（等待中期确认）
-- 短期建议买入 + 中期建议卖出 → 不买入（冲突，信号无效）
-- 短期建议卖出 + 中期建议卖出 + CatBoost高置信度下跌（probability<0.40）→ 强卖出信号
-- 短期建议卖出 + 中期建议卖出 + CatBoost中等置信度下跌（0.40≤probability<0.50）→ 卖出信号
-- 短期建议卖出 + 中期建议卖出 + CatBoost低置信度（probability≥0.50）→ 观望（等待确认）
-- 短期建议卖出 + 中期建议观望 → 观望（等待中期确认）
-- 短期建议卖出 + 中期建议买入 → 不卖出（冲突，信号无效）
+- **第一步：检查CatBoost概率（硬约束）**
+  - probability ≤ 0.50 → 排除买入或强烈买入
+  - probability ≥ 0.50 → 进入下一步
+- **第二步：检查短期和中期一致性**
+  - 短期看好，中期看好 → 进入下一步
+  - 方向不一致 → 观望
+- **第三步：生成建议**
+  - 强烈买入：短期看好，中期看好，CatBoost probability ≥ 0.60
+  - 买入：短期看好，中期看好，0.50 < CatBoost probability < 0.60
+  - 持有/观望：CatBoost probability ≤ 0.50 或 方向不一致
+  - 卖出：短期看跌，中期看跌
+
+**硬约束检查清单（必须逐项核对）**：
+- [ ] CatBoost probability ≤ 0.50 → 绝对禁止推荐买入或强烈买入
+- [ ] CatBoost probability < 0.40 → 绝对禁止推荐持有或观望
+- [ ] CatBoost probability ≥ 0.50 → 可以考虑买入
+- [ ] CatBoost probability ≥ 0.60 → 可以考虑强烈买入
+- [ ] 短期和中期方向是否一致？
+- [ ] 三重确认是否全部满足？
 
 **规则2：CatBoost概率评估**
 
@@ -1552,18 +1577,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 - **稳定性优异**：标准差 ±{model_accuracy['catboost']['std']:.2%}，表现稳定
 - **置信度评估**：通过预测概率评估预测可靠性
 
-**重要说明 - 模型不确定性**：
-- CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
-- CatBoost模型标准差：±{model_accuracy['catboost']['std']:.2%}
-- 即使probability>0.62，实际准确率也可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间波动
-- 建议：短期和中期一致是主要决策依据，CatBoost模型用于验证和提升置信度
-- 对于probability在0.55-0.65之间的股票，建议降低仓位控制风险
+**重要说明 - 模型不确定性（风险提示）**：
+- CatBoost模型存在标准差（±{model_accuracy['catboost']['std']:.2%}），实际准确率可能波动
+- 但这**不能**作为降低CatBoost概率标准的理由
+- 对于probability在0.50-0.60之间的股票，建议观望而非买入
+- 对于probability在0.60-0.70之间的股票，建议降低仓位（2-3%）而非4-6%
 
-**重要说明 - 信号优先级（业界标准）**：
-- **短期信号（触发器）**：负责"何时做"（Timing），权重100%（必须满足）
-- **中期信号（确认器）**：负责"是否做"（Direction），权重100%（必须满足）
-- **CatBoost模型（验证器）**：负责提升置信度
-- **关键原则**：短期和中期必须一致（方向相同），CatBoost模型用于验证和提升置信度
+**重要说明 - 信号协同（必须同时满足）**：
+- **短期信号（触发器）**：负责"何时做"（Timing）→ 必须100%满足
+- **中期信号（确认器）**：负责"是否做"（Direction）→ 必须100%满足
+- **CatBoost概率（硬性约束）**：负责验证方向性→ 必须100%满足
+- **三重确认：短期、中期、CatBoost三者必须同时满足，缺一不可**
 
 **重要说明 - 时间维度标准化**：
 - 短期：1-5个交易日（日内到一周）
@@ -1608,6 +1632,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
    - 买入信号（3-5只）：次优先级，建议仓位2-4%
    - 持有/观望（如有）：第三优先级
    - 卖出信号（如有）：最低优先级
+
+3.1. **特殊处理（CatBoost probability ≤ 0.50的股票）**：
+   - **绝对禁止**： probability ≤ 0.50 的股票不能出现在"强烈买入信号"或"买入信号"中
+   - **正确处理**： probability ≤ 0.50 的股票应该出现在"持有/观望"或"卖出信号"中
+   - **理由说明**：在"推荐理由"中必须明确说明"CatBoost probability ≤ 0.50，违反硬约束，建议观望"
+   - **示例**："短期建议买入，中期建议买入，但CatBoost预测上涨概率0.48（≤0.50），违反硬约束，建议观望"
 
 4. **风险提示**：
    - 分析当前市场整体风险
