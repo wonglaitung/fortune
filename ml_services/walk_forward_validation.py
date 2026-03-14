@@ -302,16 +302,18 @@ class WalkForwardValidator:
 
         print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
 
-        # 生成预测
+        # 生成预测（使用 predict_proba 方法批量预测）
         print(f"  🔄 生成预测...")
-        predictions = model.predict(
-            train_codes,
-            start_date=test_start_date,
-            end_date=test_end_date,
-            horizon=self.horizon
-        )
-
-        print(f"  ✅ 预测生成完成")
+        X_test = test_data[model.feature_columns]
+        prediction_proba = model.predict_proba(X_test)
+        
+        # 根据置信度阈值转换为预测标签
+        predictions = pd.DataFrame({
+            'prediction': (prediction_proba[:, 1] >= self.confidence_threshold).astype(int),
+            'probability': prediction_proba[:, 1]
+        }, index=test_data.index)
+        
+        print(f"  ✅ 预测生成完成 ({len(predictions)} 条预测)")
 
         # 计算评估指标
         print(f"  🔄 计算评估指标...")
