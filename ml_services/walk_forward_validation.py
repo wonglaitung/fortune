@@ -227,13 +227,19 @@ class WalkForwardValidator:
         print("📊 Walk-forward 验证完成")
         print(f"{'='*80}")
         print(f"总 Fold 数: {len(all_fold_results)}")
-        print(f"平均收益率: {overall_result['avg_return']:.2%}")
-        print(f"平均胜率: {overall_result['avg_win_rate']:.2%}")
-        print(f"平均准确率: {overall_result['avg_accuracy']:.2%}")
-        print(f"平均夏普比率: {overall_result['avg_sharpe_ratio']:.4f}")
-        print(f"平均最大回撤: {overall_result['avg_max_drawdown']:.2%}")
-        print(f"收益率标准差: {overall_result['return_std']:.2%}")
-        print(f"稳定性评级: {overall_result['stability_rating']}")
+        
+        if len(all_fold_results) == 0:
+            print("⚠️  所有 Fold 验证失败，无法计算整体指标")
+            print(f"可能原因：训练样本不足（需要至少 {self.min_train_samples} 个样本）")
+            print(f"建议：增加训练窗口长度或延长验证日期范围")
+        else:
+            print(f"平均收益率: {overall_result['avg_return']:.2%}")
+            print(f"平均胜率: {overall_result['avg_win_rate']:.2%}")
+            print(f"平均准确率: {overall_result['avg_accuracy']:.2%}")
+            print(f"平均夏普比率: {overall_result['avg_sharpe_ratio']:.4f}")
+            print(f"平均最大回撤: {overall_result['avg_max_drawdown']:.2%}")
+            print(f"收益率标准差: {overall_result['return_std']:.2%}")
+            print(f"稳定性评级: {overall_result['stability_rating']}")
         print(f"{'='*80}")
 
         return report
@@ -271,6 +277,14 @@ class WalkForwardValidator:
         # 检查训练样本数量
         if len(train_data) < self.min_train_samples:
             raise ValueError(f"训练样本不足: {len(train_data)} < {self.min_train_samples}")
+
+        # 检查目标变量多样性
+        if 'Label' in train_data.columns:
+            unique_labels = train_data['Label'].nunique()
+            if unique_labels < 2:
+                raise ValueError(f"目标变量多样性不足：只有 {unique_labels} 个唯一值，需要至少 2 个（上涨/下跌）")
+        else:
+            raise ValueError("训练数据中没有 'Label' 列")
 
         print(f"  ✅ 训练数据准备完成: {len(train_data)} 条记录")
 
@@ -313,6 +327,13 @@ class WalkForwardValidator:
             'probability': prediction_proba[:, 1]
         }, index=test_data.index)
         
+        # 添加 Code 列（从列中提取）
+        if 'Code' in test_data.columns:
+            predictions['Code'] = test_data['Code'].values
+        else:
+            # 如果 Code 列不存在，使用 train_codes
+            predictions['Code'] = [train_codes[0]] * len(predictions)  # 单股票情况下使用第一个股票代码
+        
         print(f"  ✅ 预测生成完成 ({len(predictions)} 条预测)")
 
         # 计算评估指标
@@ -345,8 +366,15 @@ class WalkForwardValidator:
         if predictions is None or predictions.empty:
             raise ValueError("预测结果为空")
 
-        # 合并数据
-        df = test_data.merge(predictions, on=['Code', 'Date'], how='inner')
+        # 合并数据（简单方法：直接添加预测列）
+        # predictions 的索引是日期，test_data 的索引也是日期
+        # 直接添加预测列，假设索引是对齐的
+        df = test_data.copy()
+        df['prediction'] = predictions['prediction']
+        df['probability'] = predictions['probability']
+        
+        # 确保索引对齐（删除预测中不存在于 test_data 的索引）
+        df = df[df.index.isin(predictions.index)]
 
         if df.empty:
             raise ValueError("合并后的数据为空")
@@ -553,22 +581,28 @@ class WalkForwardValidator:
 
             # 整体指标
             f.write("## 📊 整体性能指标\n\n")
-            f.write(f"- **Fold数量**: {overall['num_folds']}\n")
-            f.write(f"- **平均收益率**: {overall['avg_return']:.2%}\n")
-            f.write(f"- **平均胜率**: {overall['avg_win_rate']:.2%}\n")
-            f.write(f"- **平均准确率**: {overall['avg_accuracy']:.2%}\n")
-            f.write(f"- **平均夏普比率**: {overall['avg_sharpe_ratio']:.4f}\n")
-            f.write(f"- **平均最大回撤**: {overall['avg_max_drawdown']:.2%}\n")
-            f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
-            f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n\n")
+            if not overall:
+                f.write("⚠️  所有 Fold 验证失败，无法计算整体指标\n\n")
+            else:
+                f.write(f"- **Fold数量**: {overall['num_folds']}\n")
+                f.write(f"- **平均收益率**: {overall['avg_return']:.2%}\n")
+                f.write(f"- **平均胜率**: {overall['avg_win_rate']:.2%}\n")
+                f.write(f"- **平均准确率**: {overall['avg_accuracy']:.2%}\n")
+                f.write(f"- **平均夏普比率**: {overall['avg_sharpe_ratio']:.4f}\n")
+                f.write(f"- **平均最大回撤**: {overall['avg_max_drawdown']:.2%}\n")
+                f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
+                f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n\n")
 
             # 稳定性分析
             f.write("## 🔬 稳定性分析\n\n")
-            f.write(f"- **收益率标准差**: {overall['return_std']:.2%}\n")
-            f.write(f"- **收益率范围**: {overall['return_range']:.2%}\n")
-            f.write(f"- **胜率标准差**: {overall['win_rate_std']:.2%}\n")
-            f.write(f"- **夏普比率标准差**: {overall['sharpe_std']:.4f}\n")
-            f.write(f"- **稳定性评级**: {overall['stability_rating']}\n\n")
+            if not overall:
+                f.write("⚠️  所有 Fold 验证失败，无法计算稳定性指标\n\n")
+            else:
+                f.write(f"- **收益率标准差**: {overall['return_std']:.2%}\n")
+                f.write(f"- **收益率范围**: {overall['return_range']:.2%}\n")
+                f.write(f"- **胜率标准差**: {overall['win_rate_std']:.2%}\n")
+                f.write(f"- **夏普比率标准差**: {overall['sharpe_std']:.4f}\n")
+                f.write(f"- **稳定性评级**: {overall['stability_rating']}\n\n")
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
@@ -585,7 +619,17 @@ class WalkForwardValidator:
 
             # 结论
             f.write("## 💡 结论\n\n")
-            if overall['stability_rating'] == "高（优秀）":
+            if not overall:
+                f.write("⚠️  所有 Fold 验证失败，无法给出结论。\n\n")
+                f.write(f"可能原因：\n")
+                f.write(f"- 训练样本不足（需要至少 {self.min_train_samples} 个样本）\n")
+                f.write(f"- 目标变量多样性不足（需要同时包含上涨和下跌样本）\n")
+                f.write(f"- 数据质量问题（缺失值、异常值等）\n\n")
+                f.write(f"建议：\n")
+                f.write(f"- 增加训练窗口长度\n")
+                f.write(f"- 延长验证日期范围\n")
+                f.write(f"- 检查数据质量\n")
+            elif overall['stability_rating'] == "高（优秀）":
                 f.write(f"✅ 模型表现**优秀**，稳定性高，适合实盘交易。\n\n")
                 f.write(f"- 平均收益率: {overall['avg_return']:.2%}\n")
                 f.write(f"- 夏普比率: {overall['avg_sharpe_ratio']:.4f}\n")
