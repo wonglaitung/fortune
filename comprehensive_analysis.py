@@ -2036,7 +2036,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 # 如果有hsi_email.py指标，添加到数据源部分
                 if hsi_email_indicators:
                     full_content += f"""
-- **hsi_email.py实时指标**：恒生指数及自选股实时技术指标，包括TAV评分、建仓/出货评分、基本面评分等高级分析指标
+- **实时指标**：恒生指数及自选股实时技术指标，包括TAV评分、建仓/出货评分、基本面评分等高级分析指标
 """
                 
                 full_content += f"""
