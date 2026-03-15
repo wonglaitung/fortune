@@ -14,8 +14,6 @@ STOCK_SECTOR_MAPPING = {
     '1398.HK': {'sector': 'bank', 'name': '工商银行', 'type': 'bank', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 85, 'risk': 20},
     '3968.HK': {'sector': 'bank', 'name': '招商银行', 'type': 'bank', 'defensive': 85, 'growth': 40, 'cyclical': 25, 'liquidity': 75, 'risk': 25},
     '2388.HK': {'sector': 'bank', 'name': '中银香港', 'type': 'bank', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 75, 'risk': 20},
-    '0011.HK': {'sector': 'bank', 'name': '恒生银行', 'type': 'bank', 'defensive': 95, 'growth': 25, 'cyclical': 15, 'liquidity': 70, 'risk': 15},
-    '0881.HK': {'sector': 'bank', 'name': '中银香港', 'type': 'bank', 'defensive': 90, 'growth': 30, 'cyclical': 20, 'liquidity': 75, 'risk': 20},
 
     # 科技股 (tech)
     '0700.HK': {'sector': 'tech', 'name': '腾讯控股', 'type': 'tech', 'defensive': 40, 'growth': 85, 'cyclical': 30, 'liquidity': 90, 'risk': 60},
@@ -30,7 +28,6 @@ STOCK_SECTOR_MAPPING = {
     # 半导体股 (semiconductor)
     '0981.HK': {'sector': 'semiconductor', 'name': '中芯国际', 'type': 'semiconductor', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
     '1347.HK': {'sector': 'semiconductor', 'name': '华虹半导体', 'type': 'semiconductor', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
-    '0960.HK': {'sector': 'semiconductor', 'name': '龙源电力', 'type': 'semiconductor', 'defensive': 30, 'growth': 70, 'cyclical': 65, 'liquidity': 65, 'risk': 70},
     '02382.HK': {'sector': 'semiconductor', 'name': '舜宇光学科技', 'type': 'semiconductor', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
 
     # 人工智能股 (ai)
@@ -44,6 +41,7 @@ STOCK_SECTOR_MAPPING = {
     '1798.HK': {'sector': 'new_energy', 'name': '赣锋锂业', 'type': 'new_energy', 'defensive': 20, 'growth': 90, 'cyclical': 70, 'liquidity': 65, 'risk': 80},
     '3800.HK': {'sector': 'new_energy', 'name': '保利协鑫能源', 'type': 'new_energy', 'defensive': 15, 'growth': 85, 'cyclical': 75, 'liquidity': 60, 'risk': 85},
     '2282.HK': {'sector': 'new_energy', 'name': '比亚迪电子', 'type': 'new_energy', 'defensive': 25, 'growth': 80, 'cyclical': 65, 'liquidity': 70, 'risk': 75},
+    '0960.HK': {'sector': 'new_energy', 'name': '龙源电力', 'type': 'new_energy', 'defensive': 30, 'growth': 70, 'cyclical': 65, 'liquidity': 65, 'risk': 70},
 
     # 环保股 (environmental)
     '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保', 'type': 'environmental', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
@@ -75,6 +73,7 @@ STOCK_SECTOR_MAPPING = {
     '2318.HK': {'sector': 'insurance', 'name': '中国平安', 'type': 'insurance', 'defensive': 80, 'growth': 45, 'cyclical': 30, 'liquidity': 70, 'risk': 35},
     '2601.HK': {'sector': 'insurance', 'name': '中国太保', 'type': 'insurance', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
     '0966.HK': {'sector': 'insurance', 'name': '中国人寿', 'type': 'insurance', 'defensive': 85, 'growth': 35, 'cyclical': 25, 'liquidity': 70, 'risk': 30},
+    '02318.HK': {'sector': 'insurance', 'name': '中国平安证券', 'type': 'insurance', 'defensive': 75, 'growth': 50, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
 
     # 生物医药股 (biotech)
     '2269.HK': {'sector': 'biotech', 'name': '药明生物', 'type': 'biotech', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
@@ -92,8 +91,6 @@ STOCK_SECTOR_MAPPING = {
     '0016.HK': {'sector': 'real_estate', 'name': '新鸿基地产', 'type': 'real_estate', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
 
     # 消费股 (consumer)
-    '02318.HK': {'sector': 'consumer', 'name': '中国平安证券', 'type': 'consumer', 'defensive': 40, 'growth': 50, 'cyclical': 50, 'liquidity': 70, 'risk': 50},
-    '02314.HK': {'sector': 'consumer', 'name': '辉山乳业', 'type': 'consumer', 'defensive': 35, 'growth': 55, 'cyclical': 55, 'liquidity': 65, 'risk': 55},
     '00151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
     '02228.HK': {'sector': 'consumer', 'name': '中国飞鹤', 'type': 'consumer', 'defensive': 45, 'growth': 50, 'cyclical': 50, 'liquidity': 65, 'risk': 50},
 
