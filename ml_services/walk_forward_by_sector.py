@@ -615,6 +615,7 @@ class SectorWalkForwardValidator:
                     'num_stocks': report['num_stocks'],
                     'num_folds': report['overall_metrics']['num_folds'],
                     'avg_return': report['overall_metrics']['avg_return'],
+                    'annualized_return': report['overall_metrics']['annualized_return'],
                     'avg_win_rate': report['overall_metrics']['avg_win_rate'],
                     'avg_accuracy': report['overall_metrics']['avg_accuracy'],
                     'avg_sharpe_ratio': report['overall_metrics']['avg_sharpe_ratio'],
@@ -644,16 +645,17 @@ class SectorWalkForwardValidator:
                 f.write(f"- **预测周期**: {first_config['horizon']} 天\n")
                 f.write(f"- **置信度阈值**: {first_config['confidence_threshold']}\n")
                 f.write(f"- **特征选择**: {'是' if first_config['use_feature_selection'] else '否'}\n")
-                f.write(f"- **验证日期**: {first_config['start_date']} 至 {first_config['end_date']}\n\n")
+                f.write(f"- **验证日期**: {first_config['start_date']} 至 {first_config['end_date']}\n")
+                f.write(f"- **收益率说明**: 平均收益率为{first_config['horizon']}天持有期收益率，年化收益率 = 平均收益率 × 12.6\n\n")
 
             # 板块对比表格
             f.write("## 📊 板块性能对比\n\n")
-            f.write("| 排名 | 板块 | 股票数 | Fold数 | 平均收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | 收益率标准差 | 稳定性 |\n")
-            f.write("|------|------|-------|-------|-----------|------|-------|---------|--------|-----------|--------|\n")
+            f.write("| 排名 | 板块 | 股票数 | Fold数 | 平均收益率 | 年化收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | 收益率标准差 | 稳定性 |\n")
+            f.write("|------|------|-------|-------|-----------|-----------|------|-------|---------|--------|-----------|--------|\n")
 
             for idx, row in sector_summary_df.iterrows():
                 f.write(f"| {int(idx) + 1} | {row['sector_name']} ({row['sector_code']}) | {row['num_stocks']} | "
-                       f"{row['num_folds']} | {row['avg_return']:.2%} | {row['avg_win_rate']:.2%} | "
+                       f"{row['num_folds']} | {row['avg_return']:.2%} | {row['annualized_return']:.2%} | {row['avg_win_rate']:.2%} | "
                        f"{row['avg_accuracy']:.2%} | {row['avg_sharpe_ratio']:.4f} | {row['avg_max_drawdown']:.2%} | "
                        f"{row['return_std']:.2%} | {row['stability_rating']} |\n")
 
@@ -667,14 +669,14 @@ class SectorWalkForwardValidator:
             f.write("### 夏普比率 TOP 5\n\n")
             for idx, row in top_sharpe.iterrows():
                 f.write(f"{int(idx) + 1}. **{row['sector_name']}**: 夏普比率 {row['avg_sharpe_ratio']:.4f}, "
-                       f"收益率 {row['avg_return']:.2%}, 胜率 {row['avg_win_rate']:.2%}\n")
+                       f"收益率 {row['avg_return']:.2%}, 年化收益率 {row['annualized_return']:.2%}, 胜率 {row['avg_win_rate']:.2%}\n")
             f.write("\n")
 
             # TOP 5 收益率
             top_return = sector_summary_df.nlargest(5, 'avg_return')
             f.write("### 平均收益率 TOP 5\n\n")
             for idx, row in top_return.iterrows():
-                f.write(f"{int(idx) + 1}. **{row['sector_name']}**: 收益率 {row['avg_return']:.2%}, "
+                f.write(f"{int(idx) + 1}. **{row['sector_name']}**: 收益率 {row['avg_return']:.2%}, 年化收益率 {row['annualized_return']:.2%}, "
                        f"夏普比率 {row['avg_sharpe_ratio']:.4f}, 胜率 {row['avg_win_rate']:.2%}\n")
             f.write("\n")
 
@@ -694,6 +696,7 @@ class SectorWalkForwardValidator:
                 f.write(f"**{best_sector['sector_name']}** ({best_sector['sector_code']})\n\n")
                 f.write(f"- 夏普比率: {best_sector['avg_sharpe_ratio']:.4f}\n")
                 f.write(f"- 平均收益率: {best_sector['avg_return']:.2%}\n")
+                f.write(f"- 年化收益率: {best_sector['annualized_return']:.2%}\n")
                 f.write(f"- 胜率: {best_sector['avg_win_rate']:.2%}\n")
                 f.write(f"- 准确率: {best_sector['avg_accuracy']:.2%}\n")
                 f.write(f"- 稳定性: {best_sector['stability_rating']}\n\n")
