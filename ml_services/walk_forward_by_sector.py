@@ -459,6 +459,9 @@ class SectorWalkForwardValidator:
         avg_sortino_ratio = np.mean([r['sortino_ratio'] for r in fold_results])
         avg_information_ratio = np.mean([r['information_ratio'] for r in fold_results])
 
+        # 计算年化收益率（基于平均收益率）
+        annualized_return = avg_return * (252 / self.horizon)
+
         # 稳定性分析
         return_std = np.std([r['avg_return'] for r in fold_results])
         return_range = np.max([r['avg_return'] for r in fold_results]) - np.min([r['avg_return'] for r in fold_results])
@@ -476,6 +479,7 @@ class SectorWalkForwardValidator:
         return {
             'num_folds': len(fold_results),
             'avg_return': avg_return,
+            'annualized_return': annualized_return,
             'avg_win_rate': avg_win_rate,
             'avg_accuracy': avg_accuracy,
             'avg_correct_decision_ratio': avg_correct_decision_ratio,
