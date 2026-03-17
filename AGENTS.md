@@ -1052,6 +1052,65 @@ threshold = model.get_dynamic_threshold(
 
 **结论**：方案B（Balanced + Fixed 0.55）买入信号准确率最高（77.18%），推荐作为默认配置。
 
+### 板块特定模型
+
+> **为不同板块训练独立模型可以显著提升买入胜率**
+
+**背景与动机**：
+- 统一模型预测所有股票时，不同板块的市场特征和股票行为差异导致效果不佳
+- 板块特定模型可以充分捕捉各板块的独特模式
+- 方案B（Balanced + Fixed 0.55）在多个板块验证成功
+
+**已训练板块模型性能汇总**：
+
+| 板块 | 股票数量 | 整体准确率 | 买入胜率 | F1分数 | 训练时间 | 排名 |
+|------|---------|-----------|---------|--------|----------|------|
+| 交易所 | 1 | 88.46% | **90.21%** | 0.8978 | 45.14s | 🥇 |
+| 银行股 | 6 | 83.71% | **89.78%** | 0.8682 | 103.29s | 🥈 |
+| 半导体股 | 3 | 78.36% | **83.89%** | 0.8118 | 52.09s | 🥉 |
+| 人工智能股 | 4 | 77.21% | **78.49%** | 0.7911 | 53.74s | 4️⃣ |
+| 科技股 | 8 | 75.17% | **76.02%** | 0.7605 | 88.22s | 5️⃣ |
+
+**关键指标**：
+- 平均买入胜率：**84.68%**
+- 平均整体准确率：**80.58%**
+- 平均F1分数：**0.8259**
+- 所有板块买入胜率都超过76%
+
+**板块特定模型的优势**：
+1. **针对性强**：特征重要性更准确，更符合板块特点
+2. **买入胜率更高**：相比统一模型有显著提升（平均84.68%）
+3. **适应性强**：可独立优化每个板块的参数
+4. **灵活性高**：可针对不同板块调整策略
+
+**共同特征**（所有板块都高度关注）：
+- 波动率指标：Volatility_120d、Volatility_60d
+- VIX指数：市场恐慌指数
+- 价格趋势：MA250_Slope、MA120_Slope
+- 支撑阻力位：Distance_Resistance_120d、Distance_Support_120d
+- 成交量：Volume_MA120、Volume_MA250
+
+**使用方法**：
+```bash
+# 训练特定板块模型
+python3 ml_services/train_sector_model.py --sector bank --horizon 20
+
+# 评估板块模型性能
+python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20
+```
+
+**支持板块**：
+- 银行股（bank）、科技股（tech）、半导体股（semiconductor）
+- 人工智能股（ai）、新能源股（new_energy）、环保股（environmental）
+- 能源股（energy）、航运股（shipping）、交易所（exchange）
+- 公用事业股（utility）、保险股（insurance）、生物医药股（biotech）
+- 指数基金（index）、房地产股（real_estate）、消费股（consumer）、汽车股（auto）
+
+**建议**：
+- 优先为高市值、高交易量的板块建立独立模型
+- 交易所、银行股、半导体股表现卓越，可优先使用
+- 建议覆盖所有16个板块，实现精细化管理
+
 ### 特征选择方法
 - **统计方法（statistical）**：F-test + 互信息混合方法（当前使用）⭐
 - **模型重要性法**：基于特征对模型预测的贡献度进行选择
@@ -1193,6 +1252,61 @@ python3 ml_services/backtest_monthly_analysis.py
 # 股票月度趋势对比分析
 python3 ml_services/stock_monthly_trend_analysis.py
 ```
+
+### 板块模型训练和评估
+
+> **为不同板块训练独立模型，显著提升买入胜率**
+
+**功能特点**：
+- 支持为16个板块训练独立的CatBoost模型
+- 使用方案B（Balanced + Fixed 0.55）配置
+- 自动应用特征选择（500个精选特征）
+- 评估板块模型的买入胜率、准确率、F1分数
+
+**训练命令**：
+```bash
+# 训练特定板块模型
+python3 ml_services/train_sector_model.py --sector bank --horizon 20 --use-feature-selection --skip-feature-selection
+
+# 支持板块
+python3 ml_services/train_sector_model.py --sector tech --horizon 20           # 科技股
+python3 ml_services/train_sector_model.py --sector semiconductor --horizon 20  # 半导体股
+python3 ml_services/train_sector_model.py --sector ai --horizon 20              # 人工智能股
+python3 ml_services/train_sector_model.py --sector index --horizon 20           # 指数基金
+python3 ml_services/train_sector_model.py --sector exchange --horizon 20       # 交易所
+# ... 其他10个板块
+```
+
+**评估命令**：
+```bash
+# 评估板块模型性能
+python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confidence-threshold 0.55
+
+# 不同置信度阈值测试
+python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confidence-threshold 0.60
+python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confidence-threshold 0.65
+```
+
+**已验证板块性能**（2026-03-17）：
+
+| 板块 | 股票数量 | 整体准确率 | 买入胜率 | F1分数 | 推荐指数 |
+|------|---------|-----------|---------|--------|----------|
+| 交易所 | 1 | 88.46% | 90.21% | 0.8978 | ⭐⭐⭐⭐⭐ |
+| 银行股 | 6 | 83.71% | 89.78% | 0.8682 | ⭐⭐⭐⭐⭐ |
+| 半导体股 | 3 | 78.36% | 83.89% | 0.8118 | ⭐⭐⭐⭐⭐ |
+| 人工智能股 | 4 | 77.21% | 78.49% | 0.7911 | ⭐⭐⭐⭐ |
+| 科技股 | 8 | 75.17% | 76.02% | 0.7605 | ⭐⭐⭐⭐ |
+
+**输出文件**：
+- 模型文件：`data/ml_trading_model_catboost_20d_*.pkl`
+- 特征重要性：`output/ml_trading_model_catboost_20d_importance.csv`
+- 评估结果：`output/sector_model_evaluation_{sector}_20d_{timestamp}.json`
+- 性能汇总：`output/sector_model_performance_summary_*.md`
+
+**建议**：
+- 优先使用交易所、银行股、半导体股的板块模型
+- 科技股、人工智能股表现良好，可正常使用
+- 建议为所有16个板块建立独立模型，实现精细化管理
 
 ## 综合分析系统
 
