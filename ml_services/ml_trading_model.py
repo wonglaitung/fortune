@@ -295,6 +295,39 @@ class FeatureEngineer:
         self._news_data_cache = None
         self._news_data_days = 30
 
+    def detect_market_regime(self, df):
+        """
+        市场环境识别 - 基于ADX固定阈值
+        
+        使用传统ADX阈值识别市场环境：
+        - ADX > 25：趋势市（严格过滤）
+        - ADX < 20：震荡市（放宽过滤）
+        - 20 ≤ ADX ≤ 25：正常市（标准过滤）
+        
+        参数:
+            df: 包含ADX列的DataFrame
+            
+        返回:
+            regime: 'trending' | 'ranging' | 'normal'
+            
+        注意：实验性方案，需通过Walk-forward验证
+        """
+        if len(df) < 14:  # ADX需要至少14个数据点
+            return 'normal'
+        
+        adx_current = df['ADX'].iloc[-1]
+        
+        if pd.isna(adx_current):
+            return 'normal'
+        
+        # 固定阈值方法（传统做法）
+        if adx_current > 25:
+            return 'trending'  # 趋势市：严格过滤
+        elif adx_current < 20:
+            return 'ranging'   # 震荡市：放宽过滤
+        else:
+            return 'normal'    # 正常市：标准过滤
+
     def _get_sector_analyzer(self):
         """获取板块分析器（单例模式）"""
         if self._sector_analyzer is None:
@@ -634,13 +667,31 @@ class FeatureEngineer:
         # 长期RSI（基于120日）
         df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
 
-        # ========== 新增特征：成交量确认过滤器（符合Binance/LuxAlgo标准）==========
+        # ========== 自适应成交量确认过滤器（实验性方案）==========
         # 7日成交量均值（业界常用周期）
         df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean()
         # 成交量比率（当前成交量/7日均量）
         df['Volume_Ratio_7d'] = df['Volume'] / df['Volume_MA7']
-        # 成交量确认信号：成交量>1.2倍7日均量（符合业界标准）
-        df['Volume_Confirmation'] = (df['Volume_Ratio_7d'] >= 1.2).astype(int)
+        
+        # 市场环境识别（基于ADX）
+        market_regime = self.detect_market_regime(df)
+        
+        # 根据市场环境动态调整阈值
+        if market_regime == 'ranging':
+            # 震荡市：放宽过滤（1.2倍 → 1.0倍）
+            volume_threshold = 1.0
+            df['Market_Regime'] = 2  # 标记为震荡市
+        elif market_regime == 'trending':
+            # 趋势市：严格过滤（1.2倍 → 1.4倍）
+            volume_threshold = 1.4
+            df['Market_Regime'] = 1  # 标记为趋势市
+        else:
+            # 正常市：标准过滤
+            volume_threshold = 1.2
+            df['Market_Regime'] = 0  # 标记为正常市
+        
+        # 成交量确认信号：根据市场环境动态调整阈值
+        df['Volume_Confirmation'] = (df['Volume_Ratio_7d'] >= volume_threshold).astype(int)
         # 成交量确认强度（0-1标准化）
         df['Volume_Confirmation_Strength'] = np.minimum(df['Volume_Ratio_7d'] / 2.0, 1.0)
 
@@ -674,9 +725,17 @@ class FeatureEngineer:
             (df['RSI'] < 50)  # 只在RSI<50时检测底背离
         ).astype(int)
 
-        # 综合假突破信号（3点检查清单中有2点满足即触发）
+        # 自适应假突破检测（根据市场环境动态调整阈值）
+        if market_regime == 'ranging':
+            # 震荡市：提高触发阈值（2点 → 3点），避免过度过滤
+            breakout_threshold = 3
+        else:
+            # 趋势市/正常市：保持原阈值
+            breakout_threshold = 2
+        
+        # 综合假突破信号（3点检查清单满足阈值即触发）
         df['False_Breakout_Signal'] = (
-            (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= 2
+            (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= breakout_threshold
         ).astype(int)
 
         # ========== 新增特征：增强的MA排列（符合掘金量化多周期共振标准）==========
