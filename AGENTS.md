@@ -1289,6 +1289,9 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confid
 
 **已验证板块性能**（2026-03-17）：
 
+⚠️ **重要警告**：以下性能数据来自简单评估方法，可能存在数据泄漏，**仅供参考，不作为实际决策依据**。
+> **真实性能需要使用Walk-forward验证方法评估**（见下文"Walk-forward 验证"章节）
+
 | 板块 | 股票数量 | 整体准确率 | 买入胜率 | F1分数 | 推荐指数 |
 |------|---------|-----------|---------|--------|----------|
 | 交易所 | 1 | 88.46% | 90.21% | 0.8978 | ⭐⭐⭐⭐⭐ |
@@ -1297,6 +1300,12 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confid
 | 人工智能股 | 4 | 77.21% | 78.49% | 0.7911 | ⭐⭐⭐⭐ |
 | 科技股 | 8 | 75.17% | 76.02% | 0.7605 | ⭐⭐⭐⭐ |
 
+**Walk-forward 验证真实性能**（银行股板块，前5个fold）：
+- 胜率范围：22.00%-56.00%
+- 准确率范围：55.00%-85.00%
+- 平均收益率：5.15%-6.54%
+- 模型稳定性：较差（波动大）
+
 **输出文件**：
 - 模型文件：`data/ml_trading_model_catboost_20d_*.pkl`
 - 特征重要性：`output/ml_trading_model_catboost_20d_importance.csv`
@@ -1304,9 +1313,9 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20 --confid
 - 性能汇总：`output/sector_model_performance_summary_*.md`
 
 **建议**：
-- 优先使用交易所、银行股、半导体股的板块模型
-- 科技股、人工智能股表现良好，可正常使用
-- 建议为所有16个板块建立独立模型，实现精细化管理
+- ⚠️ 等待Walk-forward验证完成后重新评估
+- 不要基于当前性能数据做出重要决策
+- Walk-forward验证是唯一可信的评估方法
 
 ## 综合分析系统
 
