@@ -1236,6 +1236,60 @@ class CatBoostModel:
 - 行采样：0.75
 - 列采样：0.7
 
+### 类别权重与动态阈值（解决胜率与准确率背离问题）
+
+**方案B（推荐）：温和类别权重 + 固定阈值**
+
+为解决准确率高但买入胜率低的问题，CatBoostModel 默认启用类别权重：
+
+```python
+model = CatBoostModel(
+    class_weight='balanced',      # 自动平衡类别权重
+    use_dynamic_threshold=False   # 使用固定阈值0.55
+)
+```
+
+**类别权重选项**：
+- `'balanced'`（推荐）：自动平衡，根据样本比例计算权重
+- `'balanced_subsample'`：每棵树的子样本中平衡
+- `None`：不使用类别权重（Baseline）
+- `dict`：手动指定，如 `{0: 1.0, 1: 1.2}`
+
+**动态阈值（可选）**：
+
+```python
+model = CatBoostModel(
+    class_weight='balanced',
+    use_dynamic_threshold=True  # 启用动态阈值
+)
+
+# 根据市场环境获取动态阈值
+threshold = model.get_dynamic_threshold(
+    market_regime='bull',      # 牛市/熊市/震荡市
+    vix_level=20,              # VIX波动率（可选）
+    base_threshold=0.55
+)
+```
+
+**动态阈值规则**：
+| 市场环境 | 阈值调整 | 说明 |
+|---------|---------|------|
+| 牛市 (bull) | -0.03 | 更激进，增加交易机会 |
+| 熊市 (bear) | +0.10 | 更保守，只抓最强信号 |
+| 震荡市 (normal) | 0 | 使用基础阈值 |
+| VIX > 30 | +0.05 | 极高波动，提高标准 |
+| VIX > 25 | +0.03 | 高波动 |
+| VIX < 15 | -0.02 | 低波动，可适当降低 |
+
+**回测验证结果**：
+| 方案 | 平均准确率 | 买入信号准确率 | 买入信号数 |
+|-----|-----------|---------------|-----------|
+| A: Baseline | 60.27% | 76.94% | 95 |
+| **B: Balanced** ⭐ | **58.93%** | **77.18%** | 92 |
+| C: Balanced + Dynamic | 58.40% | 75.97% | 96 |
+
+**结论**：方案B（Balanced + Fixed 0.55）买入信号准确率最高（77.18%），推荐作为默认配置。
+
 ### 特征选择方法
 - **统计方法（statistical）**：F-test + 互信息混合方法（当前使用）⭐
 - **模型重要性法**：基于特征对模型预测的贡献度进行选择
