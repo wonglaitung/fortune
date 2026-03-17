@@ -170,8 +170,10 @@ class SectorWalkForwardValidator:
                 # 打印fold结果
                 print(f"\n✅ Fold {fold + 1} 结果:")
                 print(f"  样本数: {fold_result['num_samples']}")
+                print(f"  买入信号数: {fold_result['num_buy_signals']}")
                 print(f"  平均收益率: {fold_result['avg_return']:.2%}")
-                print(f"  胜率: {fold_result['win_rate']:.2%}")
+                print(f"  买入信号胜率: {fold_result['win_rate']:.2%}")
+                print(f"  正确决策比例: {fold_result['correct_decision_ratio']:.2%}")
                 print(f"  准确率: {fold_result['accuracy']:.2%}")
                 print(f"  夏普比率: {fold_result['sharpe_ratio']:.4f}")
                 print(f"  最大回撤: {fold_result['max_drawdown']:.2%}")
@@ -216,7 +218,8 @@ class SectorWalkForwardValidator:
             print("⚠️  所有 Fold 验证失败，无法计算整体指标")
         else:
             print(f"平均收益率: {overall_result['avg_return']:.2%}")
-            print(f"平均胜率: {overall_result['avg_win_rate']:.2%}")
+            print(f"买入信号胜率: {overall_result['avg_win_rate']:.2%}")
+            print(f"正确决策比例: {overall_result['avg_correct_decision_ratio']:.2%}")
             print(f"平均准确率: {overall_result['avg_accuracy']:.2%}")
             print(f"平均夏普比率: {overall_result['avg_sharpe_ratio']:.4f}")
             print(f"平均最大回撤: {overall_result['avg_max_drawdown']:.2%}")
@@ -366,9 +369,24 @@ class SectorWalkForwardValidator:
         # 基础指标
         avg_return = df['strategy_return'].mean()
         cumulative_return = (1 + df['strategy_return']).prod() - 1
-        win_rate = (df['strategy_return'] > 0).sum() / len(df)
         accuracy = (df['prediction'] == df['Label']).sum() / len(df)
         num_samples = len(df)
+
+        # 买入信号相关指标
+        buy_signals = df[df['signal'] == 1]
+        num_buy_signals = len(buy_signals)
+        if num_buy_signals > 0:
+            # 买入信号胜率：盈利买入数 / 买入信号总数
+            win_rate = (buy_signals['strategy_return'] > 0).sum() / num_buy_signals
+            buy_signal_return = buy_signals['strategy_return'].mean()
+        else:
+            win_rate = 0.0
+            buy_signal_return = 0.0
+
+        # 正确决策比例 = (盈利买入数 + 正确不买入数) / 总决策数
+        correct_buys = ((df['signal'] == 1) & (df['strategy_return'] > 0)).sum()
+        correct_no_buys = ((df['signal'] == 0) & (df['actual_return'] < 0)).sum()
+        correct_decision_ratio = (correct_buys + correct_no_buys) / len(df) if len(df) > 0 else 0.0
 
         # 风险指标
         return_std = df['strategy_return'].std()
@@ -409,10 +427,13 @@ class SectorWalkForwardValidator:
 
         return {
             'num_samples': num_samples,
+            'num_buy_signals': num_buy_signals,
             'avg_return': avg_return,
             'cumulative_return': cumulative_return,
             'win_rate': win_rate,
+            'buy_signal_return': buy_signal_return,
             'accuracy': accuracy,
+            'correct_decision_ratio': correct_decision_ratio,
             'return_std': return_std,
             'annualized_return': annualized_return,
             'annualized_std': annualized_std,
@@ -432,6 +453,7 @@ class SectorWalkForwardValidator:
         avg_return = np.mean([r['avg_return'] for r in fold_results])
         avg_win_rate = np.mean([r['win_rate'] for r in fold_results])
         avg_accuracy = np.mean([r['accuracy'] for r in fold_results])
+        avg_correct_decision_ratio = np.mean([r['correct_decision_ratio'] for r in fold_results])
         avg_sharpe_ratio = np.mean([r['sharpe_ratio'] for r in fold_results])
         avg_max_drawdown = np.mean([r['max_drawdown'] for r in fold_results])
         avg_sortino_ratio = np.mean([r['sortino_ratio'] for r in fold_results])
@@ -456,6 +478,7 @@ class SectorWalkForwardValidator:
             'avg_return': avg_return,
             'avg_win_rate': avg_win_rate,
             'avg_accuracy': avg_accuracy,
+            'avg_correct_decision_ratio': avg_correct_decision_ratio,
             'avg_sharpe_ratio': avg_sharpe_ratio,
             'avg_max_drawdown': avg_max_drawdown,
             'avg_sortino_ratio': avg_sortino_ratio,
@@ -541,9 +564,10 @@ class SectorWalkForwardValidator:
                 f.write("⚠️  所有 Fold 验证失败，无法计算整体指标\n\n")
             else:
                 f.write(f"- **Fold数量**: {overall['num_folds']}\n")
-                f.write(f"- **平均收益率**: {overall['avg_return']:.2%}\n")
-                f.write(f"- **平均胜率**: {overall['avg_win_rate']:.2%}\n")
+                f.write(f"- **年化收益率**: {overall['avg_return'] * (252 / config['horizon']):.2%}\n")
+                f.write(f"- **买入信号胜率**: {overall['avg_win_rate']:.2%} （仅统计实际买入的交易）\n")
                 f.write(f"- **平均准确率**: {overall['avg_accuracy']:.2%}\n")
+                f.write(f"- **正确决策比例**: {overall['avg_correct_decision_ratio']:.2%} （盈利买入 + 正确不买入）\n")
                 f.write(f"- **平均夏普比率**: {overall['avg_sharpe_ratio']:.4f}\n")
                 f.write(f"- **平均最大回撤**: {overall['avg_max_drawdown']:.2%}\n")
                 f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
@@ -562,14 +586,14 @@ class SectorWalkForwardValidator:
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
-            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 |\n")
-            f.write("|------|---------|---------|-------|-------|------|-------|---------|--------|\n")
+            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 买入信号 | 收益率 | 买入胜率 | 准确率 | 正确决策率 | 夏普比率 |\n")
+            f.write("|------|---------|---------|-------|---------|-------|---------|-------|-----------|---------|\n")
 
             for fold in folds:
                 f.write(f"| {fold['fold'] + 1} | {fold['train_start_date']} 至 {fold['train_end_date']} | "
                        f"{fold['test_start_date']} 至 {fold['test_end_date']} | {fold['num_test_samples']} | "
-                       f"{fold['avg_return']:.2%} | {fold['win_rate']:.2%} | {fold['accuracy']:.2%} | "
-                       f"{fold['sharpe_ratio']:.4f} | {fold['max_drawdown']:.2%} |\n")
+                       f"{fold.get('num_buy_signals', 0)} | {fold['avg_return']:.2%} | {fold['win_rate']:.2%} | "
+                       f"{fold['accuracy']:.2%} | {fold.get('correct_decision_ratio', 0):.2%} | {fold['sharpe_ratio']:.4f} |\n")
 
             f.write("\n")
 
@@ -618,6 +642,7 @@ class SectorWalkForwardValidator:
                     'annualized_return': report['overall_metrics']['annualized_return'],
                     'avg_win_rate': report['overall_metrics']['avg_win_rate'],
                     'avg_accuracy': report['overall_metrics']['avg_accuracy'],
+                    'avg_correct_decision_ratio': report['overall_metrics']['avg_correct_decision_ratio'],
                     'avg_sharpe_ratio': report['overall_metrics']['avg_sharpe_ratio'],
                     'avg_max_drawdown': report['overall_metrics']['avg_max_drawdown'],
                     'return_std': report['overall_metrics']['return_std'],
@@ -646,18 +671,18 @@ class SectorWalkForwardValidator:
                 f.write(f"- **置信度阈值**: {first_config['confidence_threshold']}\n")
                 f.write(f"- **特征选择**: {'是' if first_config['use_feature_selection'] else '否'}\n")
                 f.write(f"- **验证日期**: {first_config['start_date']} 至 {first_config['end_date']}\n")
-                f.write(f"- **收益率说明**: 平均收益率为{first_config['horizon']}天持有期收益率，年化收益率 = 平均收益率 × 12.6\n\n")
+                f.write(f"- **指标说明**: 收益率为年化，胜率仅统计买入信号，正确决策比例 = (盈利买入 + 正确不买入) / 总决策\n\n")
 
             # 板块对比表格
             f.write("## 📊 板块性能对比\n\n")
-            f.write("| 排名 | 板块 | 股票数 | Fold数 | 平均收益率 | 年化收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | 收益率标准差 | 稳定性 |\n")
-            f.write("|------|------|-------|-------|-----------|-----------|------|-------|---------|--------|-----------|--------|\n")
+            f.write("| 排名 | 板块 | 股票数 | Fold数 | 年化收益率 | 买入胜率 | 准确率 | 正确决策率 | 夏普比率 | 最大回撤 | 稳定性 |\n")
+            f.write("|------|------|-------|-------|-----------|---------|-------|-----------|---------|--------|--------|\n")
 
             for idx, row in sector_summary_df.iterrows():
                 f.write(f"| {int(idx) + 1} | {row['sector_name']} ({row['sector_code']}) | {row['num_stocks']} | "
-                       f"{row['num_folds']} | {row['avg_return']:.2%} | {row['annualized_return']:.2%} | {row['avg_win_rate']:.2%} | "
-                       f"{row['avg_accuracy']:.2%} | {row['avg_sharpe_ratio']:.4f} | {row['avg_max_drawdown']:.2%} | "
-                       f"{row['return_std']:.2%} | {row['stability_rating']} |\n")
+                       f"{row['num_folds']} | {row['annualized_return']:.2%} | {row['avg_win_rate']:.2%} | "
+                       f"{row['avg_accuracy']:.2%} | {row['avg_correct_decision_ratio']:.2%} | "
+                       f"{row['avg_sharpe_ratio']:.4f} | {row['avg_max_drawdown']:.2%} | {row['stability_rating']} |\n")
 
             f.write("\n")
 
