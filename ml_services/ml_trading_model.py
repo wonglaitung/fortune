@@ -2829,11 +2829,25 @@ class CatBoostModel(BaseTradingModel):
     4. 更好的泛化能力，减少过拟合
     """
 
-    def __init__(self):
+    def __init__(self, class_weight='balanced', use_dynamic_threshold=False):
+        """初始化 CatBoost 模型
+        
+        Args:
+            class_weight: 类别权重策略
+                - 'balanced': 自动平衡类别权重（推荐，温和调整）
+                - 'balanced_subsample': 每棵树的子样本中平衡
+                - None: 不使用类别权重
+                - dict: 手动指定权重，如 {0: 1.0, 1: 1.2}
+            use_dynamic_threshold: 是否使用动态阈值策略
+        """
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
         self.actual_n_estimators = 0
         self.model_type = 'catboost'  # 模型类型标识
+        self.class_weight = class_weight
+        self.use_dynamic_threshold = use_dynamic_threshold
+        
+        logger.info(f"CatBoostModel 初始化: class_weight={class_weight}, use_dynamic_threshold={use_dynamic_threshold}")
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -3175,22 +3189,40 @@ class CatBoostModel(BaseTradingModel):
 
         from catboost import CatBoostClassifier, Pool
 
-        self.catboost_model = CatBoostClassifier(
-            loss_function='Logloss',
-            eval_metric='Accuracy',
-            depth=depth,
-            learning_rate=learning_rate,
-            n_estimators=n_estimators,
-            l2_leaf_reg=l2_leaf_reg,
-            subsample=subsample,
-            colsample_bylevel=colsample_bylevel,
-            random_seed=2020,
-            verbose=100,
-            early_stopping_rounds=stopping_rounds,
-            thread_count=-1,
-            allow_writing_files=False,
-            cat_features=categorical_features if categorical_features else None
-        )
+        # 准备类别权重参数
+        catboost_params = {
+            'loss_function': 'Logloss',
+            'eval_metric': 'Accuracy',
+            'depth': depth,
+            'learning_rate': learning_rate,
+            'n_estimators': n_estimators,
+            'l2_leaf_reg': l2_leaf_reg,
+            'subsample': subsample,
+            'colsample_bylevel': colsample_bylevel,
+            'random_seed': 2020,
+            'verbose': 100,
+            'early_stopping_rounds': stopping_rounds,
+            'thread_count': -1,
+            'allow_writing_files': False,
+            'cat_features': categorical_features if categorical_features else None
+        }
+        
+        # 添加类别权重（温和调整）
+        if self.class_weight == 'balanced':
+            # 自动平衡类别权重（温和）
+            catboost_params['auto_class_weights'] = 'Balanced'
+            logger.info("使用自动平衡类别权重 (Balanced)")
+        elif self.class_weight == 'balanced_subsample':
+            catboost_params['auto_class_weights'] = 'Balanced'
+            logger.info("使用子样本平衡类别权重 (Balanced)")
+        elif isinstance(self.class_weight, dict):
+            # 手动指定权重
+            catboost_params['class_weights'] = [self.class_weight.get(0, 1.0), self.class_weight.get(1, 1.0)]
+            logger.info(f"使用手动类别权重: {self.class_weight}")
+        else:
+            logger.info("不使用类别权重")
+
+        self.catboost_model = CatBoostClassifier(**catboost_params)
 
         # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
         tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
@@ -3523,6 +3555,64 @@ class CatBoostModel(BaseTradingModel):
 
         # 返回预测概率
         return self.catboost_model.predict_proba(test_pool)
+
+    def get_dynamic_threshold(self, market_regime=None, vix_level=None, base_threshold=0.55):
+        """获取动态阈值（基于市场环境调整）
+        
+        这是业界推荐的温和方案：模型内部使用类别权重，预测时使用动态阈值
+        
+        Args:
+            market_regime: 市场状态 ('bull', 'bear', 'normal')
+                - bull: 牛市，降低阈值增加交易机会
+                - bear: 熊市，提高阈值只抓最强信号
+                - normal: 震荡市，使用中等阈值
+            vix_level: VIX指数水平（波动率指标）
+                - high (>25): 高波动，提高阈值
+                - normal (15-25): 正常波动
+                - low (<15): 低波动，可降低阈值
+            base_threshold: 基础阈值（默认0.55）
+            
+        Returns:
+            float: 动态调整后的阈值
+            
+        示例:
+            >>> model = CatBoostModel(class_weight='balanced', use_dynamic_threshold=True)
+            >>> threshold = model.get_dynamic_threshold(market_regime='bull')
+            >>> print(f"牛市阈值: {threshold}")  # 0.52
+            >>> threshold = model.get_dynamic_threshold(market_regime='bear')
+            >>> print(f"熊市阈值: {threshold}")  # 0.65
+        """
+        if not self.use_dynamic_threshold:
+            return base_threshold
+            
+        threshold = base_threshold
+        
+        # 基于市场状态调整
+        if market_regime == 'bull':
+            # 牛市：降低阈值，增加交易机会（更激进）
+            threshold = max(0.50, base_threshold - 0.03)
+            logger.debug(f"牛市模式: 阈值 {base_threshold} -> {threshold}")
+        elif market_regime == 'bear':
+            # 熊市：提高阈值，只抓最强信号（更保守）
+            threshold = min(0.70, base_threshold + 0.10)
+            logger.debug(f"熊市模式: 阈值 {base_threshold} -> {threshold}")
+        else:
+            # 震荡市：使用基础阈值，轻微调整
+            threshold = base_threshold
+            
+        # 基于VIX（波动率）二次调整
+        if vix_level is not None:
+            if vix_level > 30:  # 极高波动
+                threshold = min(0.70, threshold + 0.05)
+                logger.debug(f"高波动(VIX={vix_level}): 阈值调整 -> {threshold}")
+            elif vix_level > 25:  # 高波动
+                threshold = min(0.68, threshold + 0.03)
+                logger.debug(f"较高波动(VIX={vix_level}): 阈值调整 -> {threshold}")
+            elif vix_level < 15:  # 低波动
+                threshold = max(0.50, threshold - 0.02)
+                logger.debug(f"低波动(VIX={vix_level}): 阈值调整 -> {threshold}")
+                
+        return round(threshold, 2)
 
 
 class DynamicMarketStrategy:
