@@ -18,6 +18,7 @@
 - [x] 解决胜率与准确率背离问题（准确率高50-70%但买入胜率低20-55%，买入信号质量需提升）
   - [x] 实现温和类别权重（auto_class_weights='Balanced'）
   - [x] 实现动态阈值策略（基于市场状态调整）
+  - [x] 将方案B（Balanced + Fixed 0.55）设为CatBoostModel默认配置
 
 ## 备注
 - 详细功能状态请参考 AGENTS.md
