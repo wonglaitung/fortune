@@ -1884,6 +1884,21 @@ jobs:
 | [docs/BACKTEST_GUIDE.md](docs/BACKTEST_GUIDE.md) | 回测系统使用指南 | 进行回测评估时 |
 | [progress.txt](progress.txt) | 项目进度跟踪、待办事项 | 了解当前进度和下一步计划 |
 
+### 文档使用原则
+
+> **重要：请按以下原则使用文档，确保信息的一致性和可维护性**
+
+| 信息类型 | 存放位置 | 原因 |
+|---------|---------|------|
+| **经过验证的、通用的经验** | [lessons.md](lessons.md) | 长期价值，供未来参考，避免重复错误 |
+| **项目进度、临时性记录** | [progress.txt](progress.txt) | 短期跟踪，完成后归档，不污染长期文档 |
+
+**示例**：
+- ✅ Walk-forward验证**结论** → 写入 `lessons.md`
+- ✅ Walk-forward验证**进行中的进度** → 写入 `progress.txt`
+- ✅ 类别权重测试**最终结论** → 写入 `lessons.md`
+- ✅ 当日完成的**具体任务清单** → 写入 `progress.txt`
+
 ### 快速链接
 - **开发前必读**：编码规范 → `.iflow/commands/programmer_skill.md`
 - **开发中参考**：经验教训 → `lessons.md`
