@@ -56,7 +56,8 @@ class SectorWalkForwardValidator:
         horizon: int = 20,
         confidence_threshold: float = 0.55,
         use_feature_selection: bool = True,
-        min_train_samples: int = 100
+        min_train_samples: int = 100,
+        class_weight='balanced'
     ):
         """
         初始化板块Walk-forward验证器
@@ -70,6 +71,7 @@ class SectorWalkForwardValidator:
             confidence_threshold: 置信度阈值
             use_feature_selection: 是否使用特征选择
             min_train_samples: 最小训练样本数
+            class_weight: 类别权重策略（'balanced', None, 或字典如{0:1.0, 1:1.5}）
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -79,6 +81,7 @@ class SectorWalkForwardValidator:
         self.confidence_threshold = confidence_threshold
         self.use_feature_selection = use_feature_selection
         self.min_train_samples = min_train_samples
+        self.class_weight = class_weight
 
         self.feature_engineer = FeatureEngineer()
 
@@ -246,8 +249,8 @@ class SectorWalkForwardValidator:
         """
         print(f"\n  🔄 准备训练数据...")
 
-        # 创建模型实例
-        model = CatBoostModel()
+        # 创建模型实例（传入类别权重参数）
+        model = CatBoostModel(class_weight=self.class_weight)
 
         # 准备训练数据
         train_data = model.prepare_data(
@@ -772,6 +775,8 @@ def main():
                        help='预测周期（天，默认: 20）')
     parser.add_argument('--confidence-threshold', type=float, default=0.55,
                        help='置信度阈值（默认: 0.55）')
+    parser.add_argument('--class-weight', type=str, default='balanced',
+                       help='类别权重策略（balanced/none/custom，默认: balanced）')
 
     # 特征参数
     parser.add_argument('--use-feature-selection', action='store_true',
@@ -815,6 +820,20 @@ def main():
         print(f"\n可用板块：{', '.join(sorted(set([info['sector'] for info in STOCK_SECTOR_MAPPING.values() if 'sector' in info])))}")
         sys.exit(1)
 
+    # 处理类别权重参数
+    class_weight = args.class_weight
+    if class_weight.lower() == 'none':
+        class_weight = None
+    elif class_weight.lower() == 'balanced':
+        class_weight = 'balanced'
+    elif ':' in class_weight:  # 格式如 "0:1.0,1:1.5"
+        weight_dict = {}
+        for pair in class_weight.split(','):
+            key, val = pair.split(':')
+            weight_dict[int(key)] = float(val)
+        class_weight = weight_dict
+        print(f"使用自定义类别权重: {class_weight}")
+    
     # 创建验证器
     validator = SectorWalkForwardValidator(
         model_type='catboost',
@@ -823,7 +842,8 @@ def main():
         step_window_months=args.step_window,
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
-        use_feature_selection=args.use_feature_selection
+        use_feature_selection=args.use_feature_selection,
+        class_weight=class_weight
     )
 
     # 存储所有板块的报告
