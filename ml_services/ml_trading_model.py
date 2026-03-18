@@ -634,6 +634,83 @@ class FeatureEngineer:
         # 长期RSI（基于120日）
         df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
 
+        # ========== 新增特征：成交量确认过滤器（符合Binance/LuxAlgo标准）==========
+        # 7日成交量均值（业界常用周期）
+        df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean()
+        # 成交量比率（当前成交量/7日均量）
+        df['Volume_Ratio_7d'] = df['Volume'] / df['Volume_MA7']
+        # 成交量确认信号：成交量>1.2倍7日均量（符合业界标准）
+        df['Volume_Confirmation'] = (df['Volume_Ratio_7d'] >= 1.2).astype(int)
+        # 成交量确认强度（0-1标准化）
+        df['Volume_Confirmation_Strength'] = np.minimum(df['Volume_Ratio_7d'] / 2.0, 1.0)
+
+        # ========== 新增特征：假突破检测（符合Bookmap 3点检查清单）==========
+        # 1. 价格突破但成交量萎缩检测
+        df['Price_Breakout'] = (df['Close'] > df['BB_upper'].shift(1)).astype(int)
+        df['False_Breakout_Volume'] = (
+            (df['Price_Breakout'] == 1) & (df['Volume_Ratio_7d'] < 0.8)
+        ).astype(int)
+
+        # 2. MACD顶背离检测（价格新高但MACD未新高）
+        df['Price_Higher_High'] = (df['Close'] > df['Close'].rolling(5, min_periods=1).max().shift(1)).astype(int)
+        df['MACD_Higher_High'] = (df['MACD_Hist'] > df['MACD_Hist'].rolling(5, min_periods=1).max().shift(1)).astype(int)
+        df['MACD_Top_Divergence'] = (
+            (df['Price_Higher_High'] == 1) & (df['MACD_Higher_High'] == 0) &
+            (df['MACD_Hist'] > 0)  # 只在MACD正值区域检测顶背离
+        ).astype(int)
+
+        # 3. RSI背离检测（价格新高但RSI未新高，或价格新低但RSI未新低）
+        df['RSI_Higher_High'] = (df['RSI'] > df['RSI'].rolling(5, min_periods=1).max().shift(1)).astype(int)
+        df['RSI_Lower_Low'] = (df['RSI'] < df['RSI'].rolling(5, min_periods=1).min().shift(1)).astype(int)
+        df['Price_Lower_Low'] = (df['Close'] < df['Close'].rolling(5, min_periods=1).min().shift(1)).astype(int)
+
+        df['RSI_Top_Divergence'] = (
+            (df['Price_Higher_High'] == 1) & (df['RSI_Higher_High'] == 0) &
+            (df['RSI'] > 50)  # 只在RSI>50时检测顶背离
+        ).astype(int)
+
+        df['RSI_Bottom_Divergence'] = (
+            (df['Price_Lower_Low'] == 1) & (df['RSI_Lower_Low'] == 0) &
+            (df['RSI'] < 50)  # 只在RSI<50时检测底背离
+        ).astype(int)
+
+        # 综合假突破信号（3点检查清单中有2点满足即触发）
+        df['False_Breakout_Signal'] = (
+            (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= 2
+        ).astype(int)
+
+        # ========== 新增特征：增强的MA排列（符合掘金量化多周期共振标准）==========
+        # 三周期均线排列（5/20/60日MA，与业界标准一致）
+        df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean()
+        df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean()
+
+        # 三周期多头排列（5>20>60）
+        df['MA_Alignment_Bullish_5_20_60'] = (
+            (df['MA5'] > df['MA20']) & (df['MA20'] > df['MA60'])
+        ).astype(int)
+
+        # 三周期空头排列（5<20<60）
+        df['MA_Alignment_Bearish_5_20_60'] = (
+            (df['MA5'] < df['MA20']) & (df['MA20'] < df['MA60'])
+        ).astype(int)
+
+        # 多周期共振得分（0-3分，多头排列数量）
+        df['MA_Bullish_Resonance'] = (
+            (df['MA5'] > df['MA20']).astype(int) +
+            (df['MA20'] > df['MA50']).astype(int) +
+            (df['MA50'] > df['MA200']).astype(int)
+        )
+
+        # 趋势一致性得分（-3到3分，多头排列减去空头排列）
+        df['MA_Trend_Consistency'] = (
+            (df['MA5'] > df['MA20']).astype(int) -
+            (df['MA5'] < df['MA20']).astype(int) +
+            (df['MA20'] > df['MA50']).astype(int) -
+            (df['MA20'] < df['MA50']).astype(int) +
+            (df['MA50'] > df['MA200']).astype(int) -
+            (df['MA50'] < df['MA200']).astype(int)
+        )
+
         return df
 
     def create_fundamental_features(self, code):
