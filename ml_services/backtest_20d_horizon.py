@@ -240,8 +240,38 @@ class Backtest20DHoldPeriod:
                     'vix_level': market_data['vix_level']
                 })
             else:
-                # 传统模式：使用固定置信度阈值
-                signal = 1 if prob > self.confidence_threshold else 0
+                # 传统模式：使用自适应置信度阈值（符合业界标准）
+                # 从特征数据中获取市场状态（如果可用）
+                market_regime = 'normal'  # 默认正常市
+                adaptive_threshold = self.confidence_threshold
+                
+                # 检查是否有市场状态特征
+                if 'Market_Regime' in single_stock_df.columns:
+                    regime_value = single_stock_df.iloc[i].get('Market_Regime', 'normal')
+                    if isinstance(regime_value, str):
+                        market_regime = regime_value
+                    else:
+                        # 数值编码转换
+                        regime_map = {0: 'ranging', 1: 'normal', 2: 'trending'}
+                        market_regime = regime_map.get(int(regime_value), 'normal')
+                
+                # 检查是否有动态阈值乘数
+                if 'Confidence_Threshold_Multiplier' in single_stock_df.columns:
+                    multiplier = single_stock_df.iloc[i].get('Confidence_Threshold_Multiplier', 1.0)
+                    adaptive_threshold = self.confidence_threshold * float(multiplier)
+                else:
+                    # 根据市场状态手动计算阈值
+                    regime_multipliers = {
+                        'ranging': 1.09,    # 震荡市更严格
+                        'normal': 1.0,      # 正常市标准
+                        'trending': 0.91    # 趋势市更宽松
+                    }
+                    multiplier = regime_multipliers.get(market_regime, 1.0)
+                    adaptive_threshold = self.confidence_threshold * multiplier
+                
+                # 生成交易信号
+                signal = 1 if prob > adaptive_threshold else 0
+                
                 trades.append({
                     'stock_code': stock_code,
                     'buy_date': buy_date.strftime('%Y-%m-%d'),
@@ -252,6 +282,8 @@ class Backtest20DHoldPeriod:
                     'actual_sell_price': actual_sell_price,  # 实际卖出价格（考虑滑点和佣金）
                     'prediction': signal,
                     'probability': prob,
+                    'adaptive_threshold': adaptive_threshold,  # 记录实际使用的阈值
+                    'market_regime': market_regime,  # 记录市场状态
                     'actual_change': actual_change,  # 原始收益率（不考虑成本）
                     'actual_change_with_cost': actual_change_with_cost,  # 实际收益率（考虑成本）
                     'actual_direction': actual_direction,  # 原始方向

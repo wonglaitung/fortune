@@ -321,10 +321,37 @@ class WalkForwardValidator:
         X_test = test_data[model.feature_columns]
         prediction_proba = model.predict_proba(X_test)
         
-        # 根据置信度阈值转换为预测标签
+        # 根据市场状态使用自适应置信度阈值（符合业界标准）
+        base_threshold = self.confidence_threshold
+        
+        # 检查测试数据中是否有市场状态特征
+        if 'Confidence_Threshold_Multiplier' in test_data.columns:
+            # 使用特征中的动态阈值乘数
+            multipliers = test_data['Confidence_Threshold_Multiplier'].values
+            adaptive_thresholds = base_threshold * multipliers
+        elif 'Market_Regime' in test_data.columns:
+            # 根据市场状态计算阈值
+            regime_multipliers = {
+                'ranging': 1.09,    # 震荡市更严格
+                'normal': 1.0,      # 正常市标准
+                'trending': 0.91    # 趋势市更宽松
+            }
+            multipliers = test_data['Market_Regime'].map(regime_multipliers).fillna(1.0).values
+            adaptive_thresholds = base_threshold * multipliers
+        elif 'Market_Regime_Encoded' in test_data.columns:
+            # 使用数值编码的市场状态
+            regime_map = {0: 1.09, 1: 1.0, 2: 0.91}  # ranging, normal, trending
+            multipliers = test_data['Market_Regime_Encoded'].map(regime_map).fillna(1.0).values
+            adaptive_thresholds = base_threshold * multipliers
+        else:
+            # 无市场状态信息，使用固定阈值
+            adaptive_thresholds = np.full(len(prediction_proba), base_threshold)
+        
+        # 根据自适应阈值生成预测标签
         predictions = pd.DataFrame({
-            'prediction': (prediction_proba[:, 1] >= self.confidence_threshold).astype(int),
-            'probability': prediction_proba[:, 1]
+            'prediction': (prediction_proba[:, 1] >= adaptive_thresholds).astype(int),
+            'probability': prediction_proba[:, 1],
+            'adaptive_threshold': adaptive_thresholds
         }, index=test_data.index)
         
         # 添加 Code 列（从列中提取）
