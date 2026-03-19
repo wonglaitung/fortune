@@ -397,10 +397,23 @@ class SectorWalkForwardValidator:
         annualized_std = return_std * np.sqrt(252 / self.horizon)
 
         # 计算最大回撤
-        cumulative_returns = (1 + df['strategy_return']).cumprod()
-        peak = cumulative_returns.expanding(min_periods=1).max()
-        drawdown = (cumulative_returns - peak) / peak
-        max_drawdown = drawdown.min()
+        # 对于多周期预测（horizon>1），使用非重叠样本避免持有期重叠导致的回撤虚高
+        if self.horizon > 1:
+            # 每隔horizon天取一个样本，确保持有期不重叠
+            non_overlapping = df.iloc[::self.horizon].copy()
+            if len(non_overlapping) > 1:
+                cumulative_returns = (1 + non_overlapping['strategy_return']).cumprod()
+                peak = cumulative_returns.expanding(min_periods=1).max()
+                drawdown = (cumulative_returns - peak) / peak
+                max_drawdown = drawdown.min()
+            else:
+                max_drawdown = 0.0
+        else:
+            # 1天预测使用原有逻辑
+            cumulative_returns = (1 + df['strategy_return']).cumprod()
+            peak = cumulative_returns.expanding(min_periods=1).max()
+            drawdown = (cumulative_returns - peak) / peak
+            max_drawdown = drawdown.min()
 
         # 夏普比率
         if return_std > 0:
