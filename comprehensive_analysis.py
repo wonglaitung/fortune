@@ -1908,21 +1908,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 一、机器学习预测结果（20天）
+## 一、恒生指数技术分析
+
+{hsi_text}
+
+## 二、机器学习预测结果（20天）
 
 ### CatBoost模型（20天预测）
-
-
 
 **模型准确率**：
 
 - CatBoost：{model_accuracy['catboost']['accuracy']:.2%}（标准差±{model_accuracy['catboost']['std']:.2%}）
 
-
-
 {ml_predictions['ensemble']}
 
-## 二、大模型建议
+## 三、大模型建议
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
@@ -1930,17 +1930,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
 
-## 三、板块分析（5日涨跌幅排名）
+## 四、板块分析（5日涨跌幅排名）
 
 {sector_text}
 
-## 四、股息信息（即将除净）
+## 五、股息信息（即将除净）
 
 {dividend_text}
-
-## 五、恒生指数技术分析
-
-{hsi_text}
 
 ## 六、股票技术指标详情
 
