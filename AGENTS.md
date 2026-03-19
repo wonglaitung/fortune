@@ -11,6 +11,8 @@
 | 生成预测 | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost` |
 | 综合分析（一键执行） | `./scripts/run_comprehensive_analysis.sh` |
 | 批量回测 | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55` |
+| **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
+| **训练板块模型** | `python3 ml_services/train_sector_model.py --sector bank --horizon 20` |
 | 恒生指数监控 | `python3 hsi_email.py` |
 | 主力资金追踪 | `python3 hk_smart_money_tracker.py` |
 | 语法检查 | `python3 -m py_compile <file_path>` |
@@ -89,6 +91,10 @@ python3 hsi_email.py --no-email
 - 📊 **股票表现TOP 10排名分析**：按不同指标（平均收益率、正确决策比例、准确率）排名，每月1号自动运行
 - 📊 **筹码分布分析**：基于成交量的简单分箱法，计算筹码集中度、拉升阻力，集成到主力资金追踪、恒生指数及自选股分析和综合分析系统
 - 📊 **统一配置管理**：62只股票和16个板块的完整映射集中在 config.py，消除重复定义
+- 🎯 **市场环境自适应过滤**：基于ADX+波动率双因子识别市场状态（震荡市/正常市/趋势市），动态调整过滤条件
+- 🛡️ **风险管理特征集**：ATR动态止损、连续市场状态记忆、盈亏比评估等18个新特征
+- ✅ **数据泄漏修正**：系统性修正10+个存在数据泄漏的特征，使用.shift(1)确保滞后数据
+- 🔄 **板块Walk-forward验证**：业界标准的板块模型验证方法，每个fold重新训练评估真实预测能力
 
 ## 重要警告
 
@@ -97,9 +103,11 @@ python3 hsi_email.py --no-email
 | 警告类型 | 严重程度 | 关键信息 | 详见 |
 |---------|---------|---------|------|
 | **数据泄漏** | 🔴 高 | 准确率>65%通常是数据泄漏信号 | [lessons.md](lessons.md) |
+| **多周期回撤计算** | 🔴 高 | horizon>1时必须使用非重叠样本计算回撤 | [lessons.md](lessons.md) |
 | **CatBoost 1天模型** | 🔴 高 | 严重过拟合，标准偏差±4.33%，不推荐使用 | [lessons.md](lessons.md) |
 | **融合模型** | 🔴 高 | 信号稀释，表现远不如CatBoost单模型 | [lessons.md](lessons.md) |
 | **深度学习** | 🔴 高 | LSTM/Transformer表现远不如CatBoost，F1分数接近0 | [lessons.md](lessons.md) |
+| **板块模型评估** | 🟡 中 | 简单评估方法存在数据泄漏，使用Walk-forward验证 | [lessons.md](lessons.md) |
 | **胜率vs准确率** | 🟡 中 | 准确率高≠买入胜率高，需综合评估 | [lessons.md](lessons.md) |
 
 ### 模型可信度评估
@@ -115,6 +123,38 @@ python3 hsi_email.py --no-email
 > **📚 详细说明**：以上警告的详细分析、验证过程和解决方案，请参阅 [lessons.md](lessons.md) 文档。
 
 > **📊 关键指标说明**：胜率、准确率、正确决策比例的定义和差异，以及收益率计算规范，请参阅 [lessons.md](lessons.md) 文档。
+
+---
+
+### 多周期策略回撤计算最佳实践 ⭐
+
+> **多周期（horizon>1）持有策略必须使用非重叠样本计算回撤**
+
+**问题**：多周期策略使用重叠样本计算回撤会导致极端回撤值（如-90%以上），不符合实际。
+
+**原因**：
+- 20天持有期每天产生一个信号，收益重叠
+- 回撤计算使用 `(1+R1)*(1+R2)*...`，重叠收益被复利放大
+
+**解决方案**：
+```python
+# 对于多周期预测(horizon>1)，使用非重叠样本
+if self.horizon > 1:
+    non_overlapping = df.iloc[::self.horizon].copy()
+    cumulative_returns = (1 + non_overlapping['strategy_return']).cumprod()
+    peak = cumulative_returns.expanding(min_periods=1).max()
+    drawdown = (cumulative_returns - peak) / peak
+    max_drawdown = drawdown.min()
+```
+
+**验证结果**（银行股板块）：
+- 修正前平均回撤：-65.45%（不合理）
+- 修正后平均回撤：-13.12%（符合银行股特性）
+- 夏普比率提升：0.0525 → 0.1546
+
+**适用范围**：所有持有期>1天的策略（20天、5天）
+
+---
 
 ## 项目架构
 ```
@@ -247,6 +287,21 @@ python3 hsi_email.py --no-email
 │       │   ├── 生成详细交易记录和性能指标
 │       │   ├── 输出CSV和JSON格式数据
 │       │   └── 生成可视化报告
+│       ├── **板块Walk-forward验证** (walk_forward_by_sector.py)
+│       │   ├── 业界标准的板块模型验证方法
+│       │   ├── 每个fold重新训练模型
+│       │   ├── 严格的时序分割避免数据泄漏
+│       │   ├── 多维度评估（夏普比率、回撤、胜率等）
+│       │   └── 支持16个板块的独立验证
+│       ├── **板块模型训练** (train_sector_model.py)
+│       │   ├── 为特定板块训练独立CatBoost模型
+│       │   ├── 支持16个板块（银行、科技、半导体等）
+│       │   ├── 自动应用特征选择（500个精选特征）
+│       │   └── 保存板块特定模型文件
+│       ├── **板块模型评估** (evaluate_sector_model.py)
+│       │   ├── 评估板块模型性能（胜率、准确率、F1）
+│       │   ├── 生成详细评估报告
+│       │   └── 支持不同置信度阈值测试
 │   ├── **2025年全年回测分析** (backtest_analysis_2025.py)
 │   │   ├── 多角度性能指标分析
 │   │   ├── 股票表现排名和可视化
@@ -1056,15 +1111,76 @@ threshold = model.get_dynamic_threshold(
 
 > **⚠️ 板块特定模型的价值已被重新评估**
 
-**重要发现**（2026-03-18）：
+**重要发现**（2026-03-19）：
 - **Walk-forward 验证结果**：5个板块验证完成，真实买入胜率 29-50%
 - **错误数据已被删除**：之前报告的买入胜率 83-90% 是基于数据泄漏的错误评估（详见 lessons.md）
+- **回撤计算已修正**：多周期策略回撤从-65.45%修正至-13.12%（符合银行股特性）
 - **当前建议**：板块特定模型仍有价值，但需配合严格的风险控制和市场环境识别
 
-**Walk-forward 验证真实性能**：
-- 银行股（6只）：胜率50.44%，收益率3.14%，夏普0.074
-- 半导体股（3只）：胜率49.87%，收益率1.06%，夏普0.126（最佳）
-- 所有板块真实胜率仅29-50%
+**Walk-forward 验证真实性能**（银行股板块，2026-03-19）：
+- **买入胜率**：50.44%（突破50%盈亏线）
+- **平均收益率**：3.64%（20天持有期）
+- **年化收益率**：45.92%
+- **夏普比率**：0.1546
+- **最大回撤**：-13.12%（修正后，符合银行股低风险特性）
+- **稳定性评级**：中（良好）
+
+**板块表现对比**（Walk-forward验证）：
+| 板块 | 股票数 | 胜率 | 收益率 | 夏普 | 回撤 | 推荐度 |
+|------|-------|------|--------|------|------|--------|
+| **半导体股** | 3 | 49.87% | 1.06% | **0.126** | -21.36% | ⭐⭐⭐⭐⭐ |
+| **银行股** | 6 | **50.44%** | **3.64%** | 0.155 | **-13.12%** | ⭐⭐⭐⭐⭐ |
+| AI股 | 4 | 48.33% | 0.09% | 0.059 | -54.88% | ⭐⭐⭐ |
+| 科技股 | 8 | 47.07% | 0.03% | -0.090 | -68.18% | ⭐⭐ |
+| 交易所 | 1 | 20.00% | -0.27% | -5.909 | -0.30% | ⭐ |
+
+**关键洞察**：
+- ✅ 银行股和半导体股表现最佳，推荐继续使用板块模型
+- ✅ 银行股回撤修正后仅-13.12%，符合防御性资产特性
+- ⚠️ 所有板块真实胜率仅29-50%，需配合市场环境识别和风险控制
+
+### 板块Walk-forward验证使用指南
+
+**什么是Walk-forward验证？**
+业界标准的模型验证方法，每个fold重新训练模型，评估真实预测能力。
+
+**与简单评估的区别**：
+| 维度 | 简单评估 | Walk-forward验证 |
+|------|---------|-----------------|
+| 模型重训练 | ❌ 不重新训练 | ✅ 每个fold重新训练 |
+| 数据泄漏 | ⚠️ 使用训练数据评估 | ✅ 严格的时序分割 |
+| 可信度 | ❌ 结果虚高 | ✅ 真实预测能力 |
+| 符合业界标准 | ❌ 否 | ✅ 是 |
+
+**使用命令**：
+```bash
+# 运行银行股板块Walk-forward验证
+python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
+
+# 运行半导体板块验证
+python3 ml_services/walk_forward_by_sector.py --sector semiconductor --horizon 20
+
+# 自定义参数
+python3 ml_services/walk_forward_by_sector.py \
+    --sector bank \
+    --horizon 20 \
+    --train-window 12 \
+    --test-window 1 \
+    --confidence-threshold 0.55
+```
+
+**支持板块**：
+- `bank`：银行股（6只）
+- `semiconductor`：半导体股（3只）
+- `tech`：科技股（8只）
+- `ai`：人工智能股（4只）
+- `exchange`：交易所（1只）
+- 以及其他11个板块
+
+**输出文件**：
+- `output/walk_forward_sector_{sector}_catboost_20d_{timestamp}.md`：详细报告
+- `output/walk_forward_sector_{sector}_catboost_20d_{timestamp}.csv`：CSV数据
+- `output/walk_forward_sector_{sector}_catboost_20d_{timestamp}.json`：JSON数据
 
 **使用方法**：
 ```bash
@@ -1088,7 +1204,7 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20
 - **随机抽样优化**：在特征选择时使用随机抽样提升速度（从固定前10只股票改为随机选择10只股票）
 
 ### 特征工程
-- **特征数量**：500个精选特征（F-test+互信息混合方法，从2991个特征中筛选）
+- **特征数量**：500个精选特征（F-test+互信息混合方法，从4200+特征中筛选）
 - **预测周期**：1天、5天、20天
 - **特征类别**：
   - 滚动统计特征（偏度、峰度、多周期波动率）
@@ -1098,6 +1214,16 @@ python3 ml_services/evaluate_sector_model.py --sector bank --horizon 20
   - 主题分布特征（LDA主题建模，10个主题概率分布）
   - 主题情感交互特征（10个主题 × 5个情感指标 = 50个交互特征）
   - 预期差距特征（新闻情感相对于市场预期的差距，5个特征）
+  - **市场环境自适应特征**（8个，2026-03-19新增）：
+    - Market_Regime：市场状态（ranging/normal/trending）
+    - Volume_Confirmation_Adaptive：自适应成交量确认
+    - False_Breakout_Signal_Adaptive：自适应假突破检测
+    - Confidence_Threshold_Multiplier：置信度阈值乘数
+    - ATR_Risk_Score：ATR风险评分
+  - **风险管理特征**（18个，2026-03-19新增）：
+    - ATR动态止损特征（6个）：ATR_Stop_Loss_Distance、ATR_Change_5d/10d等
+    - 连续市场状态记忆（6个）：Consecutive_Ranging_Days、Ranging_Fatigue_Index等
+    - 盈亏比与交易质量（6个）：Risk_Reward_Ratio、Expected_Value_Score等
 
 ### 模型性能（来自 model_accuracy.json）
 
@@ -1656,9 +1782,13 @@ python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-
 ### 关键优化结论
 
 1. **推荐使用 CatBoost 20天单模型**：年化收益率79.54%，夏普比率1.14，71%的股票收益率>50%
-2. **不推荐使用融合模型**：信号稀释问题导致表现远不如CatBoost单模型
-3. **不推荐使用深度学习模型**：LSTM F1分数为0，Transformer F1分数0.1303，无法实际交易
-4. **特征选择方法**：statistical（F-test+互信息混合），500个精选特征
+2. **板块模型真实性能**（Walk-forward验证）：银行股胜率50.44%，回撤-13.12%，夏普0.155
+3. **不推荐使用融合模型**：信号稀释问题导致表现远不如CatBoost单模型
+4. **不推荐使用深度学习模型**：LSTM F1分数为0，Transformer F1分数0.1303，无法实际交易
+5. **特征选择方法**：statistical（F-test+互信息混合），500个精选特征
+6. **市场环境自适应**：ADX+波动率双因子识别，Fold 7收益率从-1.16%提升至+6.24%
+7. **数据泄漏修正**：系统性修正10+个特征，使用.shift(1)确保滞后数据
+8. **回撤计算修正**：多周期策略使用非重叠样本，回撤从-65.45%修正至-13.12%
 
 ### 投资建议要点
 
@@ -1776,7 +1906,7 @@ jobs:
 
 ### 项目当前状态
 
-**最后更新**: 2026-03-13
+**最后更新**: 2026-03-19
 
 **项目成熟度**: 生产就绪
 
@@ -1909,9 +2039,10 @@ jobs:
 
 ### 快速链接
 - **开发前必读**：编码规范 → `.iflow/commands/programmer_skill.md`
-- **开发中参考**：经验教训 → `lessons.md`
+- **开发中参考**：经验教训 → `lessons.md`（含回撤计算修正、数据泄漏修正详细说明）
 - **性能评估**：回测指南 → `docs/BACKTEST_GUIDE.md`
-- **项目状态**：进度跟踪 → `progress.txt`
+- **项目状态**：进度跟踪 → `progress.txt`（含2026-03-19最新验证结果）
+- **板块验证**：Walk-forward板块验证报告 → `output/walk_forward_sector_*.md`
 
 ---
-最后更新：2026-03-18
+最后更新：2026-03-19
