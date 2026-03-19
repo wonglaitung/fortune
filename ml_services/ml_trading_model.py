@@ -397,7 +397,8 @@ class FeatureEngineer:
                 df['OBV'].iloc[i] = df['OBV'].iloc[i-1]
 
         # ========== CMF (Chaikin Money Flow) ==========
-        df['MF_Multiplier'] = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
+        # 使用滞后High/Low避免数据泄漏
+        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1))
         df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
         df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume'].rolling(20, min_periods=1).sum()
         # CMF 信号线
@@ -419,8 +420,9 @@ class FeatureEngineer:
         # ========== 随机振荡器 (Stochastic Oscillator) ==========
         K_Period = 14
         D_Period = 3
-        df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min()
-        df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max()
+        # 使用滞后数据避免数据泄漏（昨日的14日高低点）
+        df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min().shift(1)
+        df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max().shift(1)
         df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min']) / (df['High_Max'] - df['Low_Min'])
         df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean()
 
@@ -477,24 +479,24 @@ class FeatureEngineer:
         df['Momentum_Accel_10d'] = df['Return_10d'] - df['Return_10d'].shift(5)
 
         # ========== 高优先级：价格形态特征 ==========
-        # N日高低点位置（0-1之间，1表示在最高点）
-        df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min()) / (df['High'].rolling(20).max() - df['Low'].rolling(20).min())
-        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min()) / (df['High'].rolling(60).max() - df['Low'].rolling(60).min())
+        # N日高低点位置（0-1之间，1表示在最高点，使用滞后数据避免泄漏）
+        df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min().shift(1)) / (df['High'].rolling(20).max().shift(1) - df['Low'].rolling(20).min().shift(1))
+        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min().shift(1)) / (df['High'].rolling(60).max().shift(1) - df['Low'].rolling(60).min().shift(1))
 
         # 距离近期高点/低点的天数（业界常用）
         df['Days_Since_High_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
         df['Days_Since_Low_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
 
-        # 日内特征（业界核心信号）
-        df['Intraday_Range'] = (df['High'] - df['Low']) / df['Close']
+        # 日内特征（业界核心信号，使用滞后High/Low避免数据泄漏）
+        df['Intraday_Range'] = (df['High'].shift(1) - df['Low'].shift(1)) / df['Close']
         df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean()
         df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean()
 
-        # 收盘位置（阳线/阴线强度，0-1之间）
-        df['Close_Position'] = (df['Close'] - df['Low']) / (df['High'] - df['Low'])
-        # 上影线/下影线比例
-        df['Upper_Shadow'] = (df['High'] - df[['Close', 'Open']].max(axis=1)) / (df['High'] - df['Low'] + 1e-10)
-        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low']) / (df['High'] - df['Low'] + 1e-10)
+        # 收盘位置（阳线/阴线强度，0-1之间，使用滞后High/Low避免数据泄漏）
+        df['Close_Position'] = (df['Close'] - df['Low'].shift(1)) / (df['High'].shift(1) - df['Low'].shift(1))
+        # 上影线/下影线比例（使用滞后High/Low）
+        df['Upper_Shadow'] = (df['High'].shift(1) - df[['Close', 'Open']].max(axis=1)) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low'].shift(1)) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
 
         # 开盘缺口
         df['Gap_Size'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
@@ -625,9 +627,9 @@ class FeatureEngineer:
             df['Volume_MA120'] > df['Volume_MA250'], 1, -1
         )
 
-        # 长期支撑阻力位（基于120日高低点）
-        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min()
-        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max()
+        # 长期支撑阻力位（基于120日高低点，使用滞后数据避免数据泄漏）
+        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min().shift(1)
+        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max().shift(1)
         df['Distance_Support_120d'] = (df['Close'] - df['Support_120d']) / df['Close']
         df['Distance_Resistance_120d'] = (df['Resistance_120d'] - df['Close']) / df['Close']
 
@@ -709,6 +711,163 @@ class FeatureEngineer:
             (df['MA20'] < df['MA50']).astype(int) +
             (df['MA50'] > df['MA200']).astype(int) -
             (df['MA50'] < df['MA200']).astype(int)
+        )
+
+        # ========== 新增特征：市场环境自适应过滤（符合QuantInsti HMM标准）==========
+        # 多维度市场状态识别（ADX + 波动率双因子）
+        # 计算波动率分位数（基于60日滚动窗口）
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std() * np.sqrt(252)
+        df['Volatility_30pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.3)
+        df['Volatility_70pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.7)
+
+        # 市场状态分类（ADX + 波动率）
+        df['Market_Regime'] = np.where(
+            (df['ADX'] < 20) & (df['Volatility_60d'] < df['Volatility_30pct']), 'ranging',
+            np.where(
+                (df['ADX'] > 30) & (df['Volatility_60d'] > df['Volatility_70pct']), 'trending',
+                'normal'
+            )
+        )
+
+        # 动态成交量阈值（根据市场状态调整）
+        df['Volume_Threshold_Adaptive'] = np.where(
+            df['Market_Regime'] == 'ranging', 1.0,      # 震荡市放宽至1.0倍
+            np.where(
+                df['Market_Regime'] == 'trending', 1.1,  # 趋势市略放宽至1.1倍（趋势已确认）
+                1.2                                      # 正常市标准1.2倍
+            )
+        )
+
+        # 自适应成交量确认信号
+        df['Volume_Confirmation_Adaptive'] = (
+            df['Volume_Ratio_7d'] >= df['Volume_Threshold_Adaptive']
+        ).astype(int)
+
+        # 自适应成交量确认强度（0-1标准化，考虑市场状态）
+        df['Volume_Confirmation_Strength_Adaptive'] = np.where(
+            df['Market_Regime'] == 'ranging',
+            np.minimum(df['Volume_Ratio_7d'] / 1.5, 1.0),   # 震荡市更容易达到满强度
+            np.where(
+                df['Market_Regime'] == 'trending',
+                np.minimum(df['Volume_Ratio_7d'] / 1.8, 1.0),  # 趋势市标准
+                np.minimum(df['Volume_Ratio_7d'] / 2.0, 1.0)   # 正常市严格标准
+            )
+        )
+
+        # 自适应假突破检测（震荡市放宽假突破检测）
+        df['False_Breakout_Signal_Adaptive'] = np.where(
+            df['Market_Regime'] == 'ranging',
+            # 震荡市：更宽松的假突破检测（3点中满足1点即触发）
+            (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= 1,
+            np.where(
+                df['Market_Regime'] == 'trending',
+                # 趋势市：更严格的假突破检测（3点中满足2点才触发，但减少假信号）
+                (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= 2,
+                # 正常市：标准假突破检测
+                (df['False_Breakout_Volume'] + df['MACD_Top_Divergence'] + df['RSI_Top_Divergence']) >= 2
+            )
+        ).astype(int)
+
+        # 动态置信度阈值乘数（用于后续模型预测）
+        df['Confidence_Threshold_Multiplier'] = np.where(
+            df['Market_Regime'] == 'ranging', 1.09,   # 震荡市提高阈值（更严格）
+            np.where(
+                df['Market_Regime'] == 'trending', 0.91,  # 趋势市降低阈值（更宽松）
+                1.0                                       # 正常市标准
+            )
+        )
+
+        # 市场状态编码（数值型，用于机器学习）
+        df['Market_Regime_Encoded'] = np.where(
+            df['Market_Regime'] == 'ranging', 0,
+            np.where(df['Market_Regime'] == 'normal', 1, 2)
+        )
+
+        # ========== 新增特征：ATR动态止损与风险管理（解决盈亏比问题）==========
+        # ATR止损距离（基于2倍ATR的止损位与当前价格距离）
+        df['ATR_Stop_Loss_Distance'] = (df['Close'] - (df['Close'] - 2 * df['ATR'])) / df['Close']
+        
+        # 近期ATR变化率（ATR趋势）
+        df['ATR_Change_5d'] = df['ATR'].pct_change(5)
+        df['ATR_Change_10d'] = df['ATR'].pct_change(10)
+        
+        # 波动率扩张/收缩信号
+        df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].rolling(20).mean() * 1.2).astype(int)
+        df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].rolling(20).mean() * 0.8).astype(int)
+        
+        # 基于ATR的动态风险评分（0-1，越高风险越大）
+        atr_percentile = df['ATR'].rolling(60, min_periods=20).apply(
+            lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10), raw=False
+        )
+        df['ATR_Risk_Score'] = atr_percentile.fillna(0.5)
+
+        # ========== 新增特征：连续市场状态记忆（解决连续震荡市问题）==========
+        # 连续震荡市天数（过去20天内）
+        df['Consecutive_Ranging_Days'] = df['Market_Regime_Encoded'].rolling(20).apply(
+            lambda x: (x == 0).sum(), raw=True
+        )
+        
+        # 连续趋势市天数（过去20天内）
+        df['Consecutive_Trending_Days'] = df['Market_Regime_Encoded'].rolling(20).apply(
+            lambda x: (x == 2).sum(), raw=True
+        )
+        
+        # 市场状态转换频率（过去20天内状态变化次数）
+        df['Market_Regime_Change_Freq'] = df['Market_Regime_Encoded'].diff().rolling(20).apply(
+            lambda x: (x != 0).sum(), raw=True
+        )
+        
+        # 近期市场状态连续性评分（简化版：当前状态与前一日一致的比例）
+        df['Market_Continuity_Score'] = (
+            df['Market_Regime_Encoded'] == df['Market_Regime_Encoded'].shift(1)
+        ).rolling(10).mean()
+        
+        # 震荡市疲劳指数（在震荡市中停留时间占比，0-1连续值，避免硬阈值）
+        df['Ranging_Fatigue_Index'] = df['Consecutive_Ranging_Days'] / 20.0
+
+        # ========== 新增特征：盈亏比与交易质量评估（解决高胜率低收益问题）==========
+        # 基于支撑阻力位的潜在盈亏比（Support_120d和Resistance_120d已滞后，无需额外shift）
+        potential_reward = df['Resistance_120d'] - df['Close']
+        potential_risk = df['Close'] - df['Support_120d']
+        df['Risk_Reward_Ratio'] = np.where(
+            potential_risk > 0,
+            potential_reward / potential_risk,
+            0
+        )
+        
+        # 盈亏比质量评分（0-1）
+        df['RR_Quality_Score'] = np.where(
+            df['Risk_Reward_Ratio'] >= 2.0, 1.0,
+            np.where(df['Risk_Reward_Ratio'] >= 1.0, 0.5, 0.0)
+        )
+        
+        # 价格位置风险评分（接近支撑位=低风险，接近阻力位=高风险）
+        # Distance_Support_120d和Distance_Resistance_120d已基于滞后数据计算
+        df['Price_Position_Risk'] = (
+            df['Distance_Support_120d'] / 
+            (df['Distance_Support_120d'] + df['Distance_Resistance_120d'] + 1e-10)
+        )
+        
+        # 综合交易质量评分（结合胜率预期和盈亏比）
+        # 假设模型准确率约60%，计算期望收益
+        win_prob = 0.6
+        df['Expected_Value_Score'] = (
+            win_prob * df['Risk_Reward_Ratio'] - (1 - win_prob)
+        ) * df['Volume_Confirmation_Adaptive']
+        
+        # 高潜力交易标记（盈亏比>2且成交量确认）
+        df['High_Potential_Trade'] = (
+            (df['Risk_Reward_Ratio'] >= 2.0) & 
+            (df['Volume_Confirmation_Adaptive'] == 1)
+        ).astype(int)
+        
+        # 趋势强度与风险匹配度（强趋势应配低波动，弱趋势应配高波动）
+        trend_strength = np.abs(df['Trend_Slope_20d'])
+        volatility_normalized = df['ATR_Risk_Score']
+        df['Trend_Vol_Match'] = np.where(
+            trend_strength > 0.01,
+            1 - np.abs(volatility_normalized - 0.5) * 2,  # 趋势强时，中等波动最佳
+            volatility_normalized  # 趋势弱时，高波动可能有机会
         )
 
         return df
