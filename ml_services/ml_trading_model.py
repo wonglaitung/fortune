@@ -2126,6 +2126,15 @@ class LightGBMModel(BaseTradingModel):
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
 
+        # 对Market_Regime进行One-Hot编码（LightGBM专用）
+        if 'Market_Regime' in df.columns:
+            print("  对Market_Regime进行One-Hot编码(LightGBM)...")
+            df = pd.get_dummies(df, columns=['Market_Regime'], prefix='Market_Regime')
+            # 更新feature_columns
+            self.feature_columns = [col for col in self.feature_columns if col != 'Market_Regime']
+            self.feature_columns.extend([col for col in df.columns if col.startswith('Market_Regime_')])
+            print(f"  One-Hot编码后特征数量: {len(self.feature_columns)}")
+
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
         self.categorical_encoders = {}  # 存储编码器，用于预测时解码
@@ -2743,6 +2752,15 @@ class GBDTModel(BaseTradingModel):
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
             logger.info(f"使用全部 {len(self.feature_columns)} 个特征")
+
+        # 对Market_Regime进行One-Hot编码（GBDT专用）
+        if 'Market_Regime' in df.columns:
+            print("  对Market_Regime进行One-Hot编码(GBDT)...")
+            df = pd.get_dummies(df, columns=['Market_Regime'], prefix='Market_Regime')
+            # 更新feature_columns
+            self.feature_columns = [col for col in self.feature_columns if col != 'Market_Regime']
+            self.feature_columns.extend([col for col in df.columns if col.startswith('Market_Regime_')])
+            print(f"  One-Hot编码后特征数量: {len(self.feature_columns)}")
 
         # 处理分类特征（将字符串转换为整数编码）
         categorical_features = []
