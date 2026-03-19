@@ -438,9 +438,9 @@ class FeatureEngineer:
         df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean()
 
         # ========== ADX (平均趋向指数) ==========
-        # +DM and -DM
-        up_move = df['High'].diff()
-        down_move = -df['Low'].diff()
+        # +DM and -DM (使用滞后数据避免数据泄漏)
+        up_move = df['High'].diff().shift(1)
+        down_move = -df['Low'].diff().shift(1)
         df['+DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
         df['-DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
         # +DI and -DI
