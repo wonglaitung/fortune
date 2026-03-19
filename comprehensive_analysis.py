@@ -739,6 +739,7 @@ def get_hsi_analysis():
         
         # 计算基本指标
         current_price = latest['Close']
+        change_points = latest['Close'] - prev['Close']
         change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
         
         # 计算RSI
@@ -765,6 +766,7 @@ def get_hsi_analysis():
         
         return {
             'current_price': current_price,
+            'change_points': change_points,
             'change_pct': change_pct,
             'rsi': current_rsi,
             'ma20': ma20,
@@ -1897,7 +1899,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 
                 if hsi_data:
                     hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
-                    hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}%\n"
+                    hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}% ({safe_float_format(hsi_data['change_points'], '+.2f')} 点)\n"
                     hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
                     hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
