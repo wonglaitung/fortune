@@ -1155,11 +1155,50 @@ def calculate_features(df):
 **生产环境**：
 - ✅ **首选CatBoost**：自动处理分类特征，稳定性最佳
 - ⚠️ **备选GBDT**：需要预处理分类特征
-- ❌ **不推荐LightGBM**：在新特征集上表现最不稳定
+- ⚠️ **LightGBM**：经过One-Hot编码优化后可用（准确率58.93%）
 
 **特征工程重点**：
 1. 分类特征优先（Market_Regime等）
 2. 连续特征标准化（ATR、波动率等）
 3. 滞后数据统一（所有High/Low/Close特征使用`.shift(1)`）
+
+### One-Hot编码优化经验（2026-03-19）
+
+> **GBDT/LightGBM的分类特征编码策略：One-Hot编码优于LabelEncoder**
+
+**问题描述**：
+- GBDT和LightGBM无法自动处理分类特征（如Market_Regime: ranging/normal/trending）
+- 使用LabelEncoder将分类特征转为数值（0/1/2）会引入虚假的序数关系
+- LightGBM在添加520+特征后性能下降（58.98%→57.40%）
+
+**解决方案对比**：
+
+| 编码方式 | LightGBM准确率 | GBDT准确率 | 说明 |
+|---------|--------------|-----------|------|
+| LabelEncoder | 57.40% | 58.01% | 默认方式，引入虚假序数关系 |
+| **One-Hot编码** | **58.93%** ✅ | **57.94%** | 消除序数关系，LightGBM提升1.53% |
+
+**One-Hot编码实现**（ml_services/ml_trading_model.py）：
+```python
+# GBDTModel和LightGBMModel的train方法中
+if 'Market_Regime' in df.columns:
+    print("  对Market_Regime进行One-Hot编码...")
+    df = pd.get_dummies(df, columns=['Market_Regime'], prefix='Market_Regime')
+    # 更新特征列列表
+    self.feature_columns = [col for col in self.feature_columns if col != 'Market_Regime']
+    self.feature_columns.extend([col for col in df.columns if col.startswith('Market_Regime_')])
+```
+
+**关键洞察**：
+1. **LightGBM显著受益于One-Hot编码**：准确率提升1.53个百分点（57.40%→58.93%）
+2. **GBDT对编码方式不敏感**：性能基本持平（-0.07%）
+3. **CatBoost不受影响**：使用Ordered Target Statistics，无需One-Hot编码
+
+**模型选择更新建议**：
+| 模型 | 分类特征处理方式 | 20天准确率 | 推荐指数 |
+|------|----------------|-----------|---------|
+| **CatBoost** | Ordered Target Statistics（内置）| 60.88% | ⭐⭐⭐⭐⭐ |
+| **LightGBM** | One-Hot编码 | 58.93% | ⭐⭐⭐ |
+| **GBDT** | One-Hot或LabelEncoder | 57.94% | ⭐⭐⭐ |
 
 ---

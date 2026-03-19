@@ -383,3 +383,40 @@ if self.horizon > 1:
 - 提交1：`9d33108` - 特征工程优化与性能数据更新
 - 提交2：`851d800` - 文档措辞优化
 - 所有修改已推送到远程仓库
+
+### 2026-03-19 晚间完成工作
+
+#### 4. GBDT/LightGBM One-Hot编码优化
+- [x] **分析GBDT/LightGBM分类特征处理需求**
+  - CatBoost使用Ordered Target Statistics自动处理分类特征
+  - GBDT/LightGBM需要显式编码分类特征（Market_Regime）
+  - 确定使用One-Hot编码替代LabelEncoder
+
+- [x] **实现One-Hot编码**
+  - 修改`GBDTModel.train()`：对Market_Regime进行One-Hot编码
+  - 修改`LightGBMModel.train()`：对Market_Regime进行One-Hot编码
+  - 保持CatBoost不变（使用LabelEncoder）
+  - 特征数量变化：500 → 505（增加Market_Regime_ranging/normal/trending）
+
+- [x] **重新训练模型并验证**
+  - **GBDT 20天**：准确率57.94%（原58.01%，-0.07%），F1: 0.7007
+  - **LightGBM 20天**：准确率58.93%（原57.40%，+1.53%）✅，F1: 0.7102
+  - **CatBoost 20天**：未改动，保持60.88%（验证确认无影响）
+
+- [x] **更新文档**
+  - 更新README.md模型性能表格
+  - 添加One-Hot编码优化说明
+  - 更新关键发现部分
+
+#### 关键发现
+1. **One-Hot编码对LightGBM有效**：准确率提升1.53个百分点（57.40%→58.93%）
+2. **GBDT对编码方式不敏感**：性能基本持平（-0.07%）
+3. **CatBoost不受影响**：使用Ordered Target Statistics，无需One-Hot编码
+4. **编码策略总结**：
+   - CatBoost：使用LabelEncoder（内置自动处理）
+   - LightGBM：使用One-Hot编码（提升性能）
+   - GBDT：One-Hot或LabelEncoder均可（性能差异小）
+
+#### 提交记录
+- 提交：`f4d2244` - Add One-Hot encoding for Market_Regime in GBDT/LightGBM models
+- 已推送到远程仓库
