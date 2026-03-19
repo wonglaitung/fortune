@@ -370,6 +370,27 @@ class FeatureEngineer:
         df = self.tech_analyzer.calculate_rsi(df, period=14)
         # RSI 变化率
         df['RSI_ROC'] = df['RSI'].pct_change()
+        # RSI偏离度（震荡市超买超卖识别特征）
+        df['RSI_Deviation'] = abs(df['RSI'] - 50)  # RSI偏离50的程度
+        df['RSI_Deviation_MA20'] = df['RSI_Deviation'].rolling(window=20, min_periods=1).mean().shift(1)
+        df['RSI_Deviation_Normalized'] = (df['RSI_Deviation'].shift(1) - df['RSI_Deviation_MA20']) / (df['RSI_Deviation'].rolling(20, min_periods=1).std().shift(1) + 1e-10)
+        # 价格高低点定义（用于背离检测）
+        lookback = 5
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min()
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max()
+        # RSI背离检测（震荡市假突破识别特征，使用滞后数据避免数据泄漏）
+        # 看涨背离：价格创新低，但RSI未创新低
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['RSI_Bullish_Divergence'] = (
+            (df['Close'] == df['Price_Low_5d']) &  # 价格创5日新低
+            (df['RSI'] > df['RSI_Low_5d_History'])  # RSI未创5日新低（对比历史最低点）
+        ).astype(int)
+        # 看跌背离：价格创新高，但RSI未创新高
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['RSI_Bearish_Divergence'] = (
+            (df['Close'] == df['Price_High_5d']) &  # 价格创5日新高
+            (df['RSI'] < df['RSI_High_5d_History'])  # RSI未创5日新高（对比历史最高点）
+        ).astype(int)
 
         # ========== MACD ==========
         df = self.tech_analyzer.calculate_macd(df)
@@ -377,13 +398,31 @@ class FeatureEngineer:
         df['MACD_Hist'] = df['MACD'] - df['MACD_signal']
         # MACD 柱状图变化率
         df['MACD_Hist_ROC'] = df['MACD_Hist'].pct_change()
+        # MACD背离检测（震荡市假突破识别特征，使用滞后数据避免数据泄漏）
+        # 使用5日窗口检测背离
+        lookback = 5
+        # 看涨背离：价格创新低，但MACD未创新低
+        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['MACD_Bullish_Divergence'] = (
+            (df['Close'] == df['Price_Low_5d']) &  # 价格创5日新低
+            (df['MACD'] > df['MACD_Low_5d_History'])  # MACD未创5日新低（对比历史最低点）
+        ).astype(int)
+        # 看跌背离：价格创新高，但MACD未创新高
+        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['MACD_Bearish_Divergence'] = (
+            (df['Close'] == df['Price_High_5d']) &  # 价格创5日新高
+            (df['MACD'] < df['MACD_High_5d_History'])  # MACD未创5日新高（对比历史最高点）
+        ).astype(int)
 
         # ========== 布林带 ==========
         df = self.tech_analyzer.calculate_bollinger_bands(df, period=20, std_dev=2)
-        # 布林带宽度
+        # 布林带宽度（震荡市识别特征）
         df['BB_Width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
-        # 布林带突破
-        df['BB_Breakout'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'])
+        # 布林带宽度归一化（相对于60日均值，使用滞后数据避免数据泄漏）
+        df['BB_Width_MA60'] = df['BB_Width'].rolling(window=60, min_periods=1).mean().shift(1)
+        df['BB_Width_Normalized'] = (df['BB_Width'].shift(1) - df['BB_Width_MA60']) / (df['BB_Width'].rolling(60, min_periods=1).std().shift(1) + 1e-10)
+        # 布林带突破（使用滞后数据避免数据泄漏）
+        df['BB_Breakout'] = (df['Close'] - df['BB_lower'].shift(1)) / (df['BB_upper'].shift(1) - df['BB_lower'].shift(1) + 1e-10)
 
         # ========== ATR ==========
         df = self.tech_analyzer.calculate_atr(df, period=14)
@@ -415,8 +454,8 @@ class FeatureEngineer:
         df['Turnover_Rate_Change_5d'] = df['Turnover_Rate'].pct_change(5)
         df['Turnover_Rate_Change_20d'] = df['Turnover_Rate'].pct_change(20)
 
-        # ========== VWAP (成交量加权平均价) ==========
-        df['TP'] = (df['High'] + df['Low'] + df['Close']) / 3
+        # ========== VWAP (成交量加权平均价，使用滞后数据避免数据泄漏) ==========
+        df['TP'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
         df['VWAP'] = (df['TP'] * df['Volume']).rolling(window=20, min_periods=1).sum() / df['Volume'].rolling(window=20, min_periods=1).sum()
 
         # ========== OBV (能量潮) ==========
@@ -473,12 +512,24 @@ class FeatureEngineer:
         # 价格相对于均线的偏离
         df['MA5_Deviation'] = (df['Close'] - df['MA5']) / df['MA5'] * 100
         df['MA10_Deviation'] = (df['Close'] - df['MA10']) / df['MA10'] * 100
-        # 价格百分位（相对于60日窗口）
+        # 价格百分位（相对于60日窗口，使用滞后数据避免数据泄漏）
         df['Price_Percentile'] = df['Close'].rolling(window=60, min_periods=1).apply(
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100
+        ).shift(1)
+        # 价格通道位置（震荡市识别特征，使用滞后数据避免数据泄漏）
+        df['Channel_High_20d'] = df['High'].rolling(window=20, min_periods=1).max().shift(1)
+        df['Channel_Low_20d'] = df['Low'].rolling(window=20, min_periods=1).min().shift(1)
+        df['Price_Channel_Position_20d'] = (df['Close'] - df['Channel_Low_20d']) / (df['Channel_High_20d'] - df['Channel_Low_20d'] + 1e-10)
+        # 价格在通道中的位置（靠近上轨/下轨/中轨）
+        df['Price_Channel_Zone'] = np.where(
+            df['Price_Channel_Position_20d'] > 0.7, 1,  # 靠近上轨
+            np.where(
+                df['Price_Channel_Position_20d'] < 0.3, -1,  # 靠近下轨
+                0  # 中轨
+            )
         )
-        # 布林带位置
-        df['BB_Position'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'])
+        # 布林带位置（使用滞后数据避免数据泄漏）
+        df['BB_Position'] = (df['Close'] - df['BB_lower'].shift(1)) / (df['BB_upper'].shift(1) - df['BB_lower'].shift(1) + 1e-10)
 
         # ========== 多周期收益率 ==========
         df['Return_1d'] = df['Close'].pct_change()
@@ -488,10 +539,10 @@ class FeatureEngineer:
         df['Return_20d'] = df['Close'].pct_change(20)
         df['Return_60d'] = df['Close'].pct_change(60)
 
-        # ========== 价格相对于均线的比率 ==========
-        df['Price_Ratio_MA5'] = df['Close'] / df['MA5']
-        df['Price_Ratio_MA20'] = df['Close'] / df['MA20']
-        df['Price_Ratio_MA50'] = df['Close'] / df['MA50']
+        # ========== 价格相对于均线的比率（使用滞后Close避免数据泄漏） ==========
+        df['Price_Ratio_MA5'] = df['Close'].shift(1) / df['MA5']
+        df['Price_Ratio_MA20'] = df['Close'].shift(1) / df['MA20']
+        df['Price_Ratio_MA50'] = df['Close'].shift(1) / df['MA50']
 
         # ========== 高优先级：滚动统计特征 ==========
         # 均线偏离度（标准化）
@@ -516,9 +567,9 @@ class FeatureEngineer:
         df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min().shift(1)) / (df['High'].rolling(20).max().shift(1) - df['Low'].rolling(20).min().shift(1))
         df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min().shift(1)) / (df['High'].rolling(60).max().shift(1) - df['Low'].rolling(60).min().shift(1))
 
-        # 距离近期高点/低点的天数（业界常用）
-        df['Days_Since_High_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
-        df['Days_Since_Low_20d'] = df['Close'].rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
+        # 距离近期高点/低点的天数（业界常用，使用滞后数据避免数据泄漏）
+        df['Days_Since_High_20d'] = df['Close'].shift(1).rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
+        df['Days_Since_Low_20d'] = df['Close'].shift(1).rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
 
         # 日内特征（业界核心信号，使用滞后High/Low避免数据泄漏）
         df['Intraday_Range'] = (df['High'].shift(1) - df['Low'].shift(1)) / df['Close']
@@ -595,8 +646,8 @@ class FeatureEngineer:
         )
 
         # ========== 新增指标：日内振幅（更精确的计算） ==========
-        # 计算日内振幅（相对于开盘价）
-        df['Intraday_Amplitude'] = ((df['High'] - df['Low']) / (df['Open'] + 1e-10)) * 100
+        # 计算日内振幅（相对于开盘价，使用滞后数据避免数据泄漏）
+        df['Intraday_Amplitude'] = ((df['High'].shift(1) - df['Low'].shift(1)) / (df['Open'] + 1e-10)) * 100
 
         # ========== 新增指标：多周期波动率 ==========
         # 补充10日和60日波动率
@@ -960,8 +1011,8 @@ class FeatureEngineer:
         if df.empty or len(df) < 50:
             return df
 
-        # 价格相对位置
-        df['Price_Pct_20d'] = df['Close'].rolling(window=20).apply(lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()))
+        # 价格相对位置（使用滞后数据避免数据泄漏）
+        df['Price_Pct_20d'] = df['Close'].shift(1).rolling(window=20).apply(lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10))
 
         # 放量上涨信号
         df['Strong_Volume_Up'] = (df['Close'] > df['Open']) & (df['Vol_Ratio'] > 1.5)

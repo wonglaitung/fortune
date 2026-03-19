@@ -52,6 +52,15 @@ python3 hsi_email.py --no-email
 - **数据文件目录**：`data/`
 - **模型文件**：存储在 `data/` 目录，已从 git 移除
 
+## Session Workflow
+
+- **会话开始时必须执行以下操作：**
+  - 读取 `progress.txt` 文件，了解项目当前进展
+  - 审查 `lessons.md` 文件，检查是否有错误需要纠正
+- **功能更新后：**
+  - 更新 `progress.txt`，记录新的进展
+  - 如有新的学习心得或经验教训，更新 `lessons.md`
+
 ## 📋 目录
 1. [项目概述](#项目概述)
 2. [重要警告](#重要警告)

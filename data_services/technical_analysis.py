@@ -123,16 +123,17 @@ class TechnicalAnalyzer:
         return df
     
     def calculate_bollinger_bands(self, df, period=20, std_dev=2):
-        """计算布林带"""
+        """计算布林带（使用滞后数据避免数据泄漏）"""
         if df.empty:
             return df
         
-        df['BB_middle'] = df['Close'].rolling(window=period).mean()
-        bb_std = df['Close'].rolling(window=period).std()
+        # 使用过去N天的数据计算布林带（避免使用当天数据）
+        df['BB_middle'] = df['Close'].rolling(window=period).mean().shift(1)
+        bb_std = df['Close'].rolling(window=period).std().shift(1)
         df['BB_upper'] = df['BB_middle'] + (bb_std * std_dev)
         df['BB_lower'] = df['BB_middle'] - (bb_std * std_dev)
-        df['BB_width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
-        df['BB_position'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'])
+        df['BB_width'] = (df['BB_upper'] - df['BB_lower']) / (df['BB_middle'] + 1e-10)
+        df['BB_position'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'] + 1e-10)
         
         return df
     
