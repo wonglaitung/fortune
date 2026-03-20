@@ -25,19 +25,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ml_services.ml_trading_model import CatBoostModel
 from ml_services.backtest_evaluator import BacktestEvaluator
 from ml_services.logger_config import get_logger
+from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 from config import WATCHLIST as STOCK_LIST
 
 logger = get_logger('test_class_weight')
 
 # 选择测试股票（代表性样本：消费股、银行股、科技股各一只）
+# 基于Walk-forward报告选择：消费股(夏普0.3670)、银行股(夏普0.1392)
 TEST_STOCKS = ['00151.HK', '0939.HK', '0700.HK']
 
-# 回测参数
+# 回测参数（快速回测：6个月测试期）
 HORIZON = 20
-TEST_START = '2024-01-01'
-TEST_END = '2025-06-30'
-TRAIN_START = '2022-01-01'
-TRAIN_END = '2023-12-31'
+TRAIN_START = '2023-01-01'
+TRAIN_END = '2024-06-30'
+TEST_START = '2024-07-01'
+TEST_END = '2024-12-31'
 
 
 class ModelConfig:
@@ -65,7 +67,7 @@ def prepare_data(codes: List[str], start_date: str, end_date: str, horizon: int)
 
 
 def train_model(config: ModelConfig, train_df: pd.DataFrame) -> CatBoostModel:
-    """训练模型"""
+    """训练模型（快速模式）"""
     print(f"\n{'='*70}")
     print(f"训练模型: {config.name}")
     print(f"  class_weight: {config.class_weight}")
@@ -77,19 +79,8 @@ def train_model(config: ModelConfig, train_df: pd.DataFrame) -> CatBoostModel:
         use_dynamic_threshold=config.use_dynamic_threshold
     )
     
-    # 获取特征列
-    feature_columns = model.get_feature_columns(train_df)
-    model.feature_columns = feature_columns
-    
-    # 准备训练数据
-    X_train = train_df[feature_columns]
-    y_train = train_df['Label']
-    
-    print(f"训练数据: {len(X_train)} 条")
-    print(f"类别分布: 上涨={sum(y_train==1)}, 下跌={sum(y_train==0)}")
-    
-    # 这里简化处理，直接调用内部训练逻辑
-    # 实际训练中应该调用 model.train()，但为了快速测试，我们使用简化版
+    # 直接调用 train 方法，CatBoost 内部已经设置了合理的参数
+    print("开始训练（快速模式，约2-3分钟）...")
     model.train(
         codes=TEST_STOCKS,
         start_date=TRAIN_START,
