@@ -392,8 +392,14 @@ class SectorWalkForwardValidator:
         correct_decision_ratio = (correct_buys + correct_no_buys) / len(df) if len(df) > 0 else 0.0
 
         # 风险指标
-        return_std = df['strategy_return'].std()
+        # 修正：使用买入信号的收益率计算标准差，避免非买入信号的0值稀释标准差
+        if num_buy_signals > 1:
+            return_std = buy_signals['strategy_return'].std()
+        else:
+            return_std = df['strategy_return'].std()
+        
         annualized_return = avg_return * (252 / self.horizon)
+        # 修正：20天收益率年化时，标准差应该乘以sqrt(252/20)
         annualized_std = return_std * np.sqrt(252 / self.horizon)
 
         # 计算最大回撤

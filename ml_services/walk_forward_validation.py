@@ -432,9 +432,15 @@ class WalkForwardValidator:
         num_samples = len(df)
 
         # 风险指标
-        return_std = df['strategy_return'].std()
+        # 修正：使用有信号的样本计算标准差，避免无信号的0值稀释标准差
+        signals = df[df['signal'] == 1]
+        if len(signals) > 1:
+            return_std = signals['strategy_return'].std()
+        else:
+            return_std = df['strategy_return'].std()
+        
         annualized_return = avg_return * (252 / self.horizon)
-        annualized_std = return_std * np.sqrt(252 / self.horizon)
+        annualized_std = return_std * np.sqrt(252 / self.horizon)  # 修正：标准差年化
 
         # 计算最大回撤
         cumulative_returns = (1 + df['strategy_return']).cumprod()
