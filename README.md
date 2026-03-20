@@ -253,7 +253,7 @@
 
 > **Walk-forward验证是业界标准的模型验证方法，每个fold重新训练模型，评估真实预测能力**
 
-**银行股板块**（6只股票，12-fold验证，2026-03-20修复后）：
+**银行股板块**（6只股票，12-fold验证）：
 - 买入胜率：**50.72%**（突破50%盈亏线）
 - 平均收益率：2.98%（20天持有期）
 - 年化收益率：35.82%
@@ -561,7 +561,7 @@ python3 ml_services/sector_performance_analysis.py --trades-file output/backtest
 python3 ml_services/sector_performance_analysis.py --output-format all
 ```
 
-**测试结果示例**（2026-03-14）：
+**测试结果示例**：
 ```
 关键发现:
   🏆 表现最佳板块: 生物医药股 (准确率: 91.15%)
@@ -590,7 +590,7 @@ python3 ml_services/ranking_analysis.py --trades-file output/backtest_20d_trades
 python3 ml_services/ranking_analysis.py --output-format all
 ```
 
-**测试结果示例**（2026-03-14）：
+**测试结果示例**：
 ```
 关键发现:
   💰 平均收益率最高: 华虹半导体 (11.91%)
@@ -793,7 +793,7 @@ fortune/
 
 ## 性能数据
 
-### 最新模型准确率（2026-03-19）
+### 最新模型准确率
 
 **CatBoost 20天模型（推荐）**：
 - 准确率：60.88%
@@ -1107,4 +1107,4 @@ MIT License
 
 ---
 
-**最后更新**: 2026-03-20（重构内容结构，突出大模型智能决策）
+**最后更新**: 重构内容结构，突出大模型智能决策
