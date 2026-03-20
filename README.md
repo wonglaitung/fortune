@@ -454,12 +454,12 @@ python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type 
 ### 批量回测
 
 ```bash
-# CatBoost 批量回测（推荐）
-python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
+# CatBoost 批量回测（推荐，使用阈值0.6）
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.6
 
 # 其他模型回测
-python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.55
-python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.55
+python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.6
+python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.6
 
 # 回测结果会保存到：
 # - output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json（详细数据）
@@ -513,8 +513,8 @@ python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20 --use-f
 # 验证多个板块
 python3 ml_services/walk_forward_by_sector.py --sectors tech bank consumer --horizon 20 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 
-# 自定义参数
-python3 ml_services/walk_forward_by_sector.py --all-sectors --train-window 12 --test-window 1 --step-window 1 --horizon 20 --confidence-threshold 0.55 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
+# 自定义参数（推荐使用阈值0.6）
+python3 ml_services/walk_forward_by_sector.py --all-sectors --train-window 12 --test-window 1 --step-window 1 --horizon 20 --confidence-threshold 0.6 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 ```
 
 **支持板块**：`bank`（银行）、`semiconductor`（半导体）、`tech`（科技）、`ai`（人工智能）、`exchange`（交易所）等16个板块
