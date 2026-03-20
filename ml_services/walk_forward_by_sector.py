@@ -415,9 +415,10 @@ class SectorWalkForwardValidator:
             drawdown = (cumulative_returns - peak) / peak
             max_drawdown = drawdown.min()
 
-        # 夏普比率
+        # 夏普比率（修正：添加无风险利率）
+        risk_free_rate = 0.02  # 2%无风险利率
         if return_std > 0:
-            sharpe_ratio = annualized_return / annualized_std
+            sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std
         else:
             sharpe_ratio = 0.0
 
