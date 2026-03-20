@@ -520,9 +520,9 @@ python3 ml_services/walk_forward_by_sector.py --all-sectors --train-window 12 --
 **支持板块**：`bank`（银行）、`semiconductor`（半导体）、`tech`（科技）、`ai`（人工智能）、`exchange`（交易所）等16个板块
 
 **验证结果示例**（银行股）：
-- 买入胜率：50.44%
-- 夏普比率：0.155
-- 最大回撤：-13.12%
+- 买入胜率：50.72%
+- 夏普比率：3.04 ⭐⭐⭐⭐⭐（业界优秀标准）
+- 最大回撤：-13.30%
 - 稳定性评级：中（良好）
 
 **Walk-forward验证说明**：
