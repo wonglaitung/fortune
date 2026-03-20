@@ -783,7 +783,7 @@ def get_current_market_state():
     dict: 当前市场状态信息
     """
     try:
-        # 获取最近30天的恒生指数数据
+        # 获取最近30天的恒生指数数据（日线数据用于计算20天收益率）
         hsi_ticker = yf.Ticker("^HSI")
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
@@ -794,17 +794,34 @@ def get_current_market_state():
         if len(hsi_df) < 10:
             return None
         
-        # 计算最近20天收益率
+        # 获取实时数据（1分钟间隔，用于显示当前价格）
+        real_time_df = hsi_ticker.history(period='1d', interval='1m')
+        
+        # 计算最近20天收益率（使用日线数据）
         if len(hsi_df) >= 20:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-20]) / hsi_df['Close'].iloc[-20]
         else:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
         
-        # 计算最近5天收益率
+        # 计算最近5天收益率（使用日线数据）
         if len(hsi_df) >= 5:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-5]) / hsi_df['Close'].iloc[-5]
         else:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
+        
+        # 获取实时价格（优先使用分钟级数据）
+        current_hsi = None
+        current_time = None
+        
+        if not real_time_df.empty:
+            current_hsi = real_time_df['Close'].iloc[-1]
+            # 转换时区到香港时间
+            current_time = real_time_df.index[-1].tz_convert('Asia/Hong_Kong')
+        
+        # 如果没有实时数据，使用日线数据
+        if current_hsi is None and not hsi_df.empty:
+            current_hsi = hsi_df['Close'].iloc[-1]
+            current_time = hsi_df.index[-1].tz_convert('Asia/Hong_Kong')
         
         # 计算当前市场状态
         if recent_20d_return > 0.05:
@@ -828,14 +845,17 @@ def get_current_market_state():
             market_state_cn = '震荡市'
             market_signal = '➡️ 横盘整理'
         
+        # 格式化时间（如果存在）
+        date_str = current_time.strftime('%Y-%m-%d %H:%M:%S HKT') if current_time else 'N/A'
+        
         return {
             'market_state': market_state,
             'market_state_cn': market_state_cn,
             'market_signal': market_signal,
             'recent_20d_return': recent_20d_return,
             'recent_5d_return': recent_5d_return,
-            'current_hsi': hsi_df['Close'].iloc[-1],
-            'date': hsi_df.index[-1].strftime('%Y-%m-%d')
+            'current_hsi': current_hsi,
+            'date': date_str
         }
     except Exception as e:
         print(f"⚠️ 获取当前市场状态失败: {e}")
@@ -1822,7 +1842,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
                 if current_market:
                     hsi_text += f"**市场信号**: {current_market['market_signal']}\n\n"
                     hsi_text += f"**市场状态**: {current_market['market_state_cn']}\n\n"
-                    hsi_text += f"**恒生指数**: {current_market['current_hsi']:.2f} (截至 {current_market['date']})\n\n"
+                    hsi_text += f"**恒生指数**: {current_market['current_hsi']:.2f} (实时)\n\n"
+                    hsi_text += f"**数据更新时间**: {current_market['date']}\n\n"
                     hsi_text += f"**最近20天收益率**: {current_market['recent_20d_return']:.2%}\n\n"
                     hsi_text += f"**最近5天收益率**: {current_market['recent_5d_return']:.2%}\n\n"
                     
@@ -1908,21 +1929,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 
 # 信息参考
 
-## 一、机器学习预测结果（20天）
+## 一、恒生指数技术分析
+
+{hsi_text}
+
+## 二、机器学习预测结果（20天）
 
 ### CatBoost模型（20天预测）
-
-
 
 **模型准确率**：
 
 - CatBoost：{model_accuracy['catboost']['accuracy']:.2%}（标准差±{model_accuracy['catboost']['std']:.2%}）
 
-
-
 {ml_predictions['ensemble']}
 
-## 二、大模型建议
+## 三、大模型建议
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
@@ -1930,17 +1951,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
 ### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
 
-## 三、板块分析（5日涨跌幅排名）
+## 四、板块分析（5日涨跌幅排名）
 
 {sector_text}
 
-## 四、股息信息（即将除净）
+## 五、股息信息（即将除净）
 
 {dividend_text}
-
-## 五、恒生指数技术分析
-
-{hsi_text}
 
 ## 六、股票技术指标详情
 
