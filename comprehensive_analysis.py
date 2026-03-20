@@ -57,7 +57,7 @@ def safe_float_format(value, format_spec='.2f', default=''):
     
     参数:
     - value: 要格式化的值
-    - format_spec: 格式化规格，默认为'.2f'
+    - format_spec: 格式化规格，默认为'.2f'（可以是 '+.2f' 等带符号的格式）
     - default: 格式化失败时的默认返回值，默认为空字符串
     
     返回:
@@ -68,7 +68,8 @@ def safe_float_format(value, format_spec='.2f', default=''):
             return default
         # 尝试转换为浮点数并格式化
         float_value = float(value)
-        format_str = f"{{:.{format_spec}}}"
+        # 直接使用 format_spec 作为格式说明符
+        format_str = f"{{:{format_spec}}}"
         return format_str.format(float_value)
     except (ValueError, TypeError):
         # 如果转换失败，返回默认值
