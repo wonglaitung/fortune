@@ -3,7 +3,7 @@ name: 综合分析邮件提醒
 on:
   schedule:
     # 每天港股交易时段执行 (周一到周五，下午4:00 HK时间)
-    - cron: '0 8 * * 1-5'
+    - cron: 18 8 * * 1-5'
   # 可选：允许手动触发
   workflow_dispatch:
 
