@@ -329,6 +329,108 @@ def feature_selection_model_importance(X, y, feature_names, top_k=500):
     return selected_features, feature_scores_sorted
 
 
+def feature_selection_cumulative_importance(X, y, feature_names, score_method='f_test', target_importance=0.95, min_features=100, max_features=1000):
+    """
+    基于累积重要性自动决定特征数量
+    
+    策略：
+    1. 使用F-test或互信息选择所有特征
+    2. 按重要性排序
+    3. 计算累积重要性
+    4. 选择累积重要性达到目标的特征
+    5. 自动决定特征数量（在min_features和max_features之间）
+
+    参数:
+    - X: 特征矩阵
+    - y: 目标变量
+    - feature_names: 特征名称列表
+    - score_method: 评分方法 ('f_test' 或 'mutual_info')
+    - target_importance: 目标累积重要性 (0.95或0.99)
+    - min_features: 最小特征数量
+    - max_features: 最大特征数量
+
+    返回:
+    - selected_features: 选择的特征索引
+    - feature_scores: 特征得分DataFrame
+    """
+    logger.info("=" * 50)
+    print(f"🔬 基于累积重要性自动决定特征数量（{score_method}）")
+    logger.info("=" * 50)
+    
+    # 1. 选择所有特征并获取分数
+    if score_method == 'f_test':
+        selector = SelectKBest(f_classif, k='all')
+        X_selected = selector.fit_transform(X, y)
+        scores = selector.scores_
+        score_name = 'F_Test_Score'
+    else:  # mutual_info
+        selector = SelectKBest(mutual_info_classif, k='all')
+        X_selected = selector.fit_transform(X, y)
+        scores = selector.scores_
+        score_name = 'MI_Score'
+    
+    # 2. 处理NaN和无限大值
+    valid_mask = np.isfinite(scores)
+    valid_indices = np.where(valid_mask)[0]
+    
+    logger.info(f"有效特征数量: {len(valid_indices)} / {len(scores)}")
+    
+    if len(valid_indices) < min_features:
+        logger.warning(f"有效特征数量({len(valid_indices)})小于最小特征数({min_features})")
+        # 使用所有有效特征
+        min_features = max(50, len(valid_indices) // 2)
+    
+    # 只使用有效特征
+    valid_scores = scores[valid_mask]
+    valid_feature_names = [feature_names[i] for i in range(len(feature_names)) if valid_mask[i]]
+    
+    # 3. 按重要性排序
+    sorted_indices = np.argsort(valid_scores)[::-1]  # 降序
+    sorted_scores = valid_scores[sorted_indices]
+    sorted_feature_names = [valid_feature_names[i] for i in sorted_indices]
+    
+    # 4. 计算累积重要性
+    total_importance = np.sum(sorted_scores)
+    cumulative_importance = np.cumsum(sorted_scores) / total_importance
+    
+    # 5. 找到达到目标累积重要性的特征数
+    num_features = np.searchsorted(cumulative_importance, target_importance) + 1
+    
+    # 6. 确保特征数量在范围内
+    num_features = max(num_features, min_features)
+    num_features = min(num_features, max_features)
+    num_features = min(num_features, len(valid_scores))
+    
+    # 7. 选择特征（使用原始索引）
+    original_indices = valid_indices[sorted_indices[:num_features]]
+    
+    # 8. 创建DataFrame（使用原始特征名）
+    feature_data = []
+    for i in range(len(original_indices)):
+        idx = original_indices[i]
+        feature_data.append({
+            'Feature_Index': idx,
+            'Feature_Name': feature_names[idx],
+            score_name: scores[idx],
+            'Normalized_Score': scores[idx] / np.max(valid_scores) if np.max(valid_scores) > 0 else 0,
+            'Cumulative_Importance': cumulative_importance[i] if i < len(cumulative_importance) else 1.0
+        })
+    
+    feature_scores = pd.DataFrame(feature_data)
+    
+    logger.info(f"累积重要性特征选择完成")
+    print(f"   - 目标累积重要性: {target_importance:.2%}")
+    print(f"   - 实际累积重要性: {cumulative_importance[num_features-1]:.2%}")
+    print(f"   - 自动选择特征数量: {num_features}")
+    print(f"   - 最小特征数: {min_features}")
+    print(f"   - 最大特征数: {max_features}")
+    print(f"   - 平均{score_name}: {np.mean(sorted_scores[:num_features]):.4f}")
+    print(f"   - 最高{score_name}: {np.max(sorted_scores[:num_features]):.4f}")
+    print("")
+    
+    return original_indices, feature_scores
+
+
 def evaluate_feature_selection(X, y, selected_features, feature_names):
     """
     评估特征选择效果
@@ -485,31 +587,47 @@ def save_results(feature_scores, selected_features, output_dir='output', method_
 
 
 def main():
-    parser = argparse.ArgumentParser(description='特征选择优化 - 支持统计方法和模型重要性法')
+    parser = argparse.ArgumentParser(description='特征选择优化 - 支持统计方法、模型重要性法和累积重要性法')
     parser.add_argument('--method', type=str, default='model',
-                       choices=['statistical', 'model'],
-                       help='特征选择方法: statistical(统计方法), model(模型重要性法, 默认)')
+                       choices=['statistical', 'model', 'cumulative_importance'],
+                       help='特征选择方法: statistical(统计方法), model(模型重要性法), cumulative_importance(累积重要性法)')
     parser.add_argument('--top-k', type=int, default=500,
-                       help='最终选择的特征数量 (默认: 500)')
+                       help='最终选择的特征数量 (默认: 500, 仅用于statistical和model方法)')
     parser.add_argument('--horizon', type=int, default=20,
                        choices=[1, 5, 20],
                        help='预测周期 (默认: 20)')
     parser.add_argument('--output-dir', type=str, default='output',
                        help='输出目录 (默认: output)')
+    parser.add_argument('--target-importance', type=float, default=0.95,
+                       help='目标累积重要性 (默认: 0.95, 仅用于cumulative_importance方法)')
+    parser.add_argument('--min-features', type=int, default=100,
+                       help='最小特征数量 (默认: 100, 仅用于cumulative_importance方法)')
+    parser.add_argument('--max-features', type=int, default=1000,
+                       help='最大特征数量 (默认: 1000, 仅用于cumulative_importance方法)')
+    parser.add_argument('--score-method', type=str, default='f_test',
+                       choices=['f_test', 'mutual_info'],
+                       help='评分方法 (默认: f_test, 仅用于cumulative_importance方法)')
 
     args = parser.parse_args()
 
     method_name = {
         'statistical': 'statistical',
-        'model': 'model_importance'
+        'model': 'model_importance',
+        'cumulative_importance': 'cumulative_importance'
     }[args.method]
 
     print("\n" + "=" * 80)
     print("🚀 特征选择优化开始")
     logger.info("=" * 50)
     print(f"⚙️  参数配置:")
-    print(f"   - 特征选择方法: {args.method} ({'统计方法' if args.method == 'statistical' else '模型重要性法'})")
-    print(f"   - 目标特征数量: {args.top_k}")
+    print(f"   - 特征选择方法: {args.method}")
+    if args.method == 'cumulative_importance':
+        print(f"   - 评分方法: {args.score_method}")
+        print(f"   - 目标累积重要性: {args.target_importance:.2%}")
+        print(f"   - 最小特征数: {args.min_features}")
+        print(f"   - 最大特征数: {args.max_features}")
+    else:
+        print(f"   - 目标特征数量: {args.top_k}")
     print(f"   - 预测周期: {args.horizon}天")
     print(f"   - 输出目录: {args.output_dir}")
     print("")
@@ -522,6 +640,14 @@ def main():
         if args.method == 'statistical':
             selected_features, feature_scores = feature_selection_statistical(
                 X, y, feature_names, top_k=args.top_k
+            )
+        elif args.method == 'cumulative_importance':
+            selected_features, feature_scores = feature_selection_cumulative_importance(
+                X, y, feature_names,
+                score_method=args.score_method,
+                target_importance=args.target_importance,
+                min_features=args.min_features,
+                max_features=args.max_features
             )
         else:  # model
             selected_features, feature_scores = feature_selection_model_importance(
@@ -541,7 +667,12 @@ def main():
 
         if args.method == 'statistical':
             print_cols = ['Feature_Name', 'Combined_Score', 'In_Intersection']
-        else:
+        elif args.method == 'cumulative_importance':
+            if args.score_method == 'f_test':
+                print_cols = ['Feature_Name', 'F_Test_Score', 'Cumulative_Importance']
+            else:
+                print_cols = ['Feature_Name', 'MI_Score', 'Cumulative_Importance']
+        else:  # model
             print_cols = ['Feature_Name', 'Importance', 'Importance_Normalized']
 
         top_20 = feature_scores.head(20)
@@ -555,9 +686,20 @@ def main():
         print(f"   - 原始特征数量: {len(feature_names)}")
         print(f"   - 优化后特征数量: {len(selected_features)}")
         print(f"   - 特征减少比例: {(1 - len(selected_features)/len(feature_names))*100:.1f}%")
-        if args.method == 'statistical':
+        if args.method == 'cumulative_importance':
+            print(f"   - 目标累积重要性: {args.target_importance:.2%}")
+            if args.score_method == 'f_test':
+                print(f"   - 实际累积重要性: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Cumulative_Importance'].max():.2%}")
+                print(f"   - 平均F-test分数: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['F_Test_Score'].mean():.4f}")
+            else:
+                print(f"   - 实际累积重要性: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Cumulative_Importance'].max():.2%}")
+                print(f"   - 平均互信息分数: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['MI_Score'].mean():.4f}")
+        elif args.method == 'statistical':
             print(f"   - 交集特征占比: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['In_Intersection'].sum()/len(selected_features)*100:.1f}%")
-        print(f"   - 平均重要性: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Importance'].mean() if 'Importance' in feature_scores.columns else feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Combined_Score'].mean():.4f}")
+            print(f"   - 平均综合得分: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Combined_Score'].mean():.4f}")
+        else:  # model
+            print(f"   - 平均重要性: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Importance'].mean():.4f}")
+            print(f"   - 最低重要性: {feature_scores[feature_scores['Feature_Index'].isin(selected_features)]['Importance'].min():.4f}")
         print("")
         print(f"💡 下一步:")
         print(f"   1. 检查选择的特征列表（保存到 {result_paths['features_path']}）")
