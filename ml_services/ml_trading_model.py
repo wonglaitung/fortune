@@ -1816,11 +1816,16 @@ class FeatureEngineer:
                 'sector_outperform_hsi': 0
             }
 
-    def create_interaction_features(self, df):
-        """创建所有可能的交叉特征（类别型 × 数值型）
+    def create_interaction_features(self, df, limit_interaction_features=True):
+        """创建交叉特征（类别型 × 数值型）
 
-        生成策略：将所有类别型特征（13个）与所有数值型特征（90个）进行交叉，
-        形成 1170 个交叉特征。GBDT+LR 算法会自动过滤无用特征。
+        生成策略（优化版）：
+        - 方案1：只对重要的数值型特征生成交叉特征（100-150个）
+        - 方案3：通过特征选择筛选出最重要的交叉特征
+        
+        参数:
+            df: 数据框
+            limit_interaction_features: 是否限制交叉特征数量（默认True，启用优化）
         """
         if df.empty:
             return df
@@ -1834,7 +1839,63 @@ class FeatureEngineer:
             '3d_RS_Signal', '5d_RS_Signal', '10d_RS_Signal', '20d_RS_Signal', '60d_RS_Signal'
         ]
 
-        # 数值型特征（排除类别型特征、标签和原始价格数据）
+        # 方案1：定义重要的数值型特征（120个精选特征）
+        # 基于特征重要性实验和历史数据选择
+        important_numeric_features = [
+            # 技术指标（40个）
+            'RSI_14d', 'MACD', 'MACD_Signal', 'ATR_14d', 'BB_Width', 'BB_Position',
+            'Volume_MA20', 'Volume_Ratio_7d', 'Volume_Trend_5d', 'OBV',
+            'MA_Slope_20d', 'MA_Slope_60d', 'Price_Ratio_MA5', 'Price_Ratio_MA20',
+            'Distance_MA20', 'Distance_MA60', 'Above_MA20', 'Above_MA60',
+            'Volatility_20d', 'Volatility_60d', 'Kurtosis_20d', 'Skewness_20d',
+            'Price_Percentile_20d', 'Price_ZScore_20d', 'High_Low_Range_5d',
+            'Upper_Shadow_Ratio', 'Lower_Shadow_Ratio', 'Intraday_Amplitude',
+            'Gap_Up', 'Gap_Down', 'Gap_Size', 'Gap_Sign',
+            'RSI_Overbought', 'RSI_Oversold', 'MACD_Bullish', 'MACD_Bearish',
+            
+            # 市场环境特征（20个）
+            'VIX', 'VIX_Change_5d', 'VIX_Level',
+            'HSI_Return_5d', 'HSI_Return_20d', 'HSI_Return_60d',
+            'SP500_Return_5d', 'SP500_Return_20d', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
+            'US10Y_Yield', 'US10Y_Yield_Change_5d',
+            'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
+            'Volume_Confirmation_Adaptive', 'False_Breakout_Signal_Adaptive',
+            'Confidence_Threshold_Multiplier', 'ATR_Risk_Score',
+            
+            # 基本面特征（20个）
+            'PE_Ratio', 'PB_Ratio', 'ROE', 'ROA', 'Net_Margin',
+            'Gross_Margin', 'EPS_Growth', 'Revenue_Growth',
+            'Dividend_Yield', 'Beta',
+            'PE_vs_Mean', 'PB_vs_Mean', 'ROE_vs_Mean', 'ROA_vs_Mean',
+            'PE_Ranking_Percentile', 'PB_Ranking_Percentile',
+            'Fundamental_Score', 'Valuation_Score', 'Growth_Score', 'Quality_Score',
+            
+            # 资金流向特征（15个）
+            'Net_Flow_Ratio_5d', 'Net_Flow_Ratio_20d', 'Smart_Money_Indicator',
+            'Price_Position_5d', 'Price_Position_20d', 'Price_Position_60d',
+            'Volume_Signal_5d', 'Volume_Signal_20d', 'Momentum_Signal_5d',
+            'Institutional_Holding', 'Insider_Trading_Signal',
+            'Short_Interest_Ratio', 'Margin_Debt_Ratio', 'Put_Call_Ratio',
+            'Money_Flow_Index', 'Accumulation_Distribution',
+            
+            # 风险管理特征（15个）
+            'ATR_Stop_Loss_Distance', 'ATR_Change_5d', 'ATR_Change_10d',
+            'Consecutive_Ranging_Days', 'Ranging_Fatigue_Index',
+            'Consecutive_Trending_Days', 'Trending_Momentum_Index',
+            'Risk_Reward_Ratio', 'Expected_Value_Score',
+            'Win_Loss_Ratio_5d', 'Win_Loss_Ratio_20d',
+            'Max_Drawdown_20d', 'Max_Drawdown_60d',
+            'Value_at_Risk_5d', 'Value_at_Risk_20d',
+            'Expected_Shortfall_5d', 'Expected_Shortfall_20d',
+            
+            # 股票类型特征（10个）
+            'Stock_Type_Bank', 'Stock_Type_Tech', 'Stock_Type_Semiconductor',
+            'Stock_Type_AI', 'Stock_Type_Energy', 'Stock_Type_Insurance',
+            'Stock_Type_Biotech', 'Stock_Type_RealEstate', 'Stock_Type_Utility',
+            'Sector_Leader'
+        ]
+
+        # 排除列表
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
@@ -1842,9 +1903,17 @@ class FeatureEngineer:
                           'Returns', 'TP', 'MF_Multiplier', 'MF_Volume',
                           'High_Max', 'Low_Min'] + categorical_features
 
-        numeric_features = [col for col in df.columns if col not in exclude_columns]
+        if limit_interaction_features:
+            # 方案1：只对重要的数值型特征生成交叉特征
+            numeric_features = [col for col in important_numeric_features if col in df.columns and col not in exclude_columns]
+        else:
+            # 原始方法：对所有数值型特征生成交叉特征
+            numeric_features = [col for col in df.columns if col not in exclude_columns]
 
         print(f"生成交叉特征: {len(categorical_features)} 个类别 × {len(numeric_features)} 个数值 = {len(categorical_features) * len(numeric_features)} 个交叉特征")
+
+        if limit_interaction_features:
+            print(f"  💡 优化模式：只对 {len(numeric_features)} 个重要数值型特征生成交叉特征")
 
         # 生成所有交叉特征
         interaction_count = 0
