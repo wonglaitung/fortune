@@ -86,13 +86,48 @@ def load_training_data(horizon=20):
             df[col] = le.fit_transform(df[col].astype(str))
 
     # 准备特征和标签
-    X = df[feature_columns]
-    y = df['Label']
+    X = df[feature_columns].values  # 转换为numpy数组
+    y = df['Label'].values
+
+    # 确保X是数值类型
+    if X.dtype == object:
+        print("   - 转换特征矩阵为数值类型...")
+        X = np.array(X, dtype=np.float64)
+
+    # 检查并处理异常值（在特征选择前清理）
+    print("   - 检查特征矩阵中的异常值...")
+    inf_mask = np.isinf(X)
+    large_mask = np.abs(X) > 1e10
+    invalid_mask = inf_mask | large_mask
+    
+    if np.any(invalid_mask):
+        invalid_count = np.sum(invalid_mask)
+        invalid_features = np.sum(invalid_mask, axis=0)
+        print(f"   - 发现 {invalid_count} 个异常值（无穷大或过大），将替换为0")
+        print(f"   - 受影响的特征数量: {np.sum(invalid_features > 0)}")
+        # 将异常值替换为0
+        X = X.copy()
+        X[invalid_mask] = 0.0
+    
+    # 检查NaN值
+    nan_mask = np.isnan(X)
+    if np.any(nan_mask):
+        nan_count = np.sum(nan_mask)
+        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
+        X = np.nan_to_num(X, nan=0.0)
+    
+    # 删除全为0的列（这些列可能是无效的）
+    all_zero_cols = (X == 0).all(axis=0)
+    if np.any(all_zero_cols):
+        zero_col_count = np.sum(all_zero_cols)
+        print(f"   - 删除 {zero_col_count} 个全为0的特征列")
+        X = X[:, ~all_zero_cols]
+        feature_columns = [feature_columns[i] for i in range(len(feature_columns)) if not all_zero_cols[i]]
 
     logger.info(f"数据加载完成")
     print(f"   - 样本数量: {len(X)}")
     print(f"   - 特征数量: {len(feature_columns)}")
-    print(f"   - 目标变量分布: {y.value_counts().to_dict()}")
+    print(f"   - 目标变量分布: {y}")
     print("")
 
     return X, y, feature_columns
@@ -117,16 +152,46 @@ def feature_selection_f_test(X, y, k=1000):
     print("🔬 F-test特征选择")
     logger.info("=" * 50)
 
+    # 检查并处理无穷大值和过大的值
+    print("   - 检查异常值...")
+    inf_mask = np.isinf(X)
+    large_mask = np.abs(X) > 1e10
+    invalid_mask = inf_mask | large_mask
+    
+    if np.any(invalid_mask):
+        invalid_count = np.sum(invalid_mask)
+        invalid_features = np.sum(invalid_mask, axis=0)
+        print(f"   - 发现 {invalid_count} 个异常值，将替换为0")
+        print(f"   - 受影响的特征数量: {np.sum(invalid_features > 0)}")
+        X = X.copy()
+        X[invalid_mask] = 0.0  # 将异常值替换为0
+    
+    # 检查NaN值
+    nan_mask = np.isnan(X)
+    if np.any(nan_mask):
+        nan_count = np.sum(nan_mask)
+        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
+        X = np.nan_to_num(X, nan=0.0)
+
     selector = SelectKBest(f_classif, k=k)
     X_selected = selector.fit_transform(X, y)
 
     selected_features = selector.get_support(indices=True)
     scores = selector.scores_
 
+    # 处理NaN分数
+    valid_scores = scores[~np.isnan(scores)]
+    if len(valid_scores) > 0:
+        mean_score = np.mean(valid_scores)
+        max_score = np.max(valid_scores)
+    else:
+        mean_score = 0
+        max_score = 0
+
     logger.info(f"F-test选择完成")
     print(f"   - 选择特征数量: {len(selected_features)}")
-    print(f"   - 平均F-test分数: {np.mean(scores):.2f}")
-    print(f"   - 最高F-test分数: {np.max(scores):.2f}")
+    print(f"   - 平均F-test分数: {mean_score:.2f}")
+    print(f"   - 最高F-test分数: {max_score:.2f}")
     print("")
 
     return selected_features, scores
@@ -149,15 +214,41 @@ def feature_selection_mutual_info(X, y, k=1000):
     print("🔬 互信息特征选择")
     logger.info("=" * 50)
 
+    # 检查并处理无穷大值和过大的值
+    print("   - 检查异常值...")
+    inf_mask = np.isinf(X)
+    large_mask = np.abs(X) > 1e10
+    invalid_mask = inf_mask | large_mask
+    
+    if np.any(invalid_mask):
+        invalid_count = np.sum(invalid_mask)
+        print(f"   - 发现 {invalid_count} 个异常值，将替换为0")
+        X = X.copy()
+        X[invalid_mask] = 0.0  # 将异常值替换为0
+    
+    # 检查NaN值
+    nan_mask = np.isnan(X)
+    if np.any(nan_mask):
+        nan_count = np.sum(nan_mask)
+        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
+        X = np.nan_to_num(X, nan=0.0)
+
     selector = SelectKBest(mutual_info_classif, k=k)
     X_selected = selector.fit_transform(X, y)
 
     selected_features = selector.get_support(indices=True)
     scores = selector.scores_
 
+    # 处理NaN分数
+    valid_scores = scores[~np.isnan(scores)]
+    if len(valid_scores) > 0:
+        mean_score = np.mean(valid_scores)
+    else:
+        mean_score = 0
+
     logger.info(f"互信息选择完成")
     print(f"   - 选择特征数量: {len(selected_features)}")
-    print(f"   - 平均互信息分数: {np.mean(scores):.4f}")
+    print(f"   - 平均互信息分数: {mean_score:.4f}")
     print(f"   - 最高互信息分数: {np.max(scores):.4f}")
     print("")
 
