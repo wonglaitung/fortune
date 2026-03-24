@@ -392,13 +392,18 @@ class SectorWalkForwardValidator:
         correct_decision_ratio = (correct_buys + correct_no_buys) / len(df) if len(df) > 0 else 0.0
 
         # 风险指标
-        # 修正：使用买入信号的收益率计算标准差，避免非买入信号的0值稀释标准差
+        # 修正：统一使用买入信号的收益率计算平均收益率和标准差
         if num_buy_signals > 1:
+            avg_return_for_sharpe = buy_signals['strategy_return'].mean()
             return_std = buy_signals['strategy_return'].std()
+        elif num_buy_signals == 1:
+            avg_return_for_sharpe = buy_signals['strategy_return'].mean()
+            return_std = 0.0
         else:
-            return_std = df['strategy_return'].std()
+            avg_return_for_sharpe = 0.0
+            return_std = 0.0
         
-        annualized_return = avg_return * (252 / self.horizon)
+        annualized_return = avg_return_for_sharpe * (252 / self.horizon)
         # 修正：20天收益率年化时，标准差应该乘以sqrt(252/20)
         annualized_std = return_std * np.sqrt(252 / self.horizon)
 
