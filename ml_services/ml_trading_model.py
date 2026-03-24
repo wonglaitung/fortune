@@ -374,21 +374,21 @@ class FeatureEngineer:
         df['RSI_Deviation'] = abs(df['RSI'] - 50)  # RSI偏离50的程度
         df['RSI_Deviation_MA20'] = df['RSI_Deviation'].rolling(window=20, min_periods=1).mean().shift(1)
         df['RSI_Deviation_Normalized'] = (df['RSI_Deviation'].shift(1) - df['RSI_Deviation_MA20']) / (df['RSI_Deviation'].rolling(20, min_periods=1).std().shift(1) + 1e-10)
-        # 价格高低点定义（用于背离检测）
+        # 价格高低点定义（用于背离检测，使用滞后数据避免数据泄漏）
         lookback = 5
-        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min()
-        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max()
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
         # RSI背离检测（震荡市假突破识别特征，使用滞后数据避免数据泄漏）
         # 看涨背离：价格创新低，但RSI未创新低
         df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
         df['RSI_Bullish_Divergence'] = (
-            (df['Close'] == df['Price_Low_5d']) &  # 价格创5日新低
+            (df['Close'].shift(1) == df['Price_Low_5d']) &  # 昨日价格创5日新低
             (df['RSI'] > df['RSI_Low_5d_History'])  # RSI未创5日新低（对比历史最低点）
         ).astype(int)
         # 看跌背离：价格创新高，但RSI未创新高
         df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
         df['RSI_Bearish_Divergence'] = (
-            (df['Close'] == df['Price_High_5d']) &  # 价格创5日新高
+            (df['Close'].shift(1) == df['Price_High_5d']) &  # 昨日价格创5日新高
             (df['RSI'] < df['RSI_High_5d_History'])  # RSI未创5日新高（对比历史最高点）
         ).astype(int)
 
@@ -506,7 +506,7 @@ class FeatureEngineer:
 
         # ========== 波动率（年化） ==========
         df['Returns'] = df['Close'].pct_change()
-        df['Volatility'] = df['Returns'].rolling(20, min_periods=10).std() * np.sqrt(252)
+        df['Volatility'] = df['Returns'].shift(1).rolling(20, min_periods=10).std() * np.sqrt(252)
 
         # ========== 价格位置特征 ==========
         # 价格相对于均线的偏离
@@ -596,8 +596,8 @@ class FeatureEngineer:
         df['OBV_MA5'] = df['OBV'].rolling(5).mean()
         df['OBV_Trend'] = (df['OBV'] > df['OBV_MA5']).astype(int)
 
-        # 成交量波动率
-        df['Volume_Volatility'] = df['Turnover'].rolling(20).std() / (df['Turnover'].rolling(20).mean() + 1e-10)
+        # 成交量波动率（使用滞后数据避免数据泄漏）
+        df['Volume_Volatility'] = df['Turnover'].shift(1).rolling(20).std() / (df['Turnover'].shift(1).rolling(20).mean() + 1e-10)
 
         # 成交量比率（多周期）
         df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
@@ -661,9 +661,9 @@ class FeatureEngineer:
         df['Kurtosis_5d'] = df['Close'].pct_change().rolling(5).kurt()
         df['Kurtosis_10d'] = df['Close'].pct_change().rolling(10).kurt()
 
-        # 价格相对长期均线的比率（业界长期趋势指标）
-        df['Price_Ratio_MA120'] = df['Close'] / df['MA120']
-        df['Price_Ratio_MA250'] = df['Close'] / df['MA250']
+        # 价格相对长期均线的比率（业界长期趋势指标，使用滞后数据避免数据泄漏）
+        df['Price_Ratio_MA120'] = df['Close'].shift(1) / df['MA120']
+        df['Price_Ratio_MA250'] = df['Close'].shift(1) / df['MA250']
 
         # 长期收益率（业界核心长期特征）
         df['Return_120d'] = df['Close'].pct_change(120)
@@ -901,9 +901,9 @@ class FeatureEngineer:
         df['ATR_Change_5d'] = df['ATR'].pct_change(5)
         df['ATR_Change_10d'] = df['ATR'].pct_change(10)
         
-        # 波动率扩张/收缩信号
-        df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].rolling(20).mean() * 1.2).astype(int)
-        df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].rolling(20).mean() * 0.8).astype(int)
+        # 波动率扩张/收缩信号（使用滞后数据避免数据泄漏）
+        df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].shift(1).rolling(20).mean() * 1.2).astype(int)
+        df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].shift(1).rolling(20).mean() * 0.8).astype(int)
         
         # 基于ATR的动态风险评分（0-1，越高风险越大）
         atr_percentile = df['ATR'].rolling(60, min_periods=20).apply(
