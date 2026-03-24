@@ -26818,6 +26818,118 @@
       "current_price": 4.97,
       "target_price": 5.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-24T10:41:37.538331",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术面恶化（RSI超买、CMF资金流出、布林带超买、价格高位），量价背离，高位风险积聚",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 20.6,
+      "target_price": 19.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24T10:41:40.069222",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术面恶化（RSI高位、CMF资金流出、布林带超买、价格高位），量价背离，板块轮动风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 103.9,
+      "target_price": 98.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24T10:41:42.143019",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术面恶化（RSI超买、CMF资金大幅流出、价格高位），主力资金撤离，能源板块弱势",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 29.88,
+      "target_price": 28.45,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24T10:41:44.229184",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术面恶化（CMF资金流出、价格高位、价格下跌），动能减弱，能源板块拖累",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 48.22,
+      "target_price": 46.77,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24T10:41:46.103793",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术面恶化（MACD潜在死叉、CMF资金流出、OBV趋势下降、价格下跌），筹码高阻力（上方筹码比例79.3%>60%）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 388.8,
+      "target_price": 375.82,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24T10:41:49.230573",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 4.91,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术指标协同（RSI超卖、MACD潜在金叉、布林带超卖），筹码分布优势（上方筹码比例0.0%），基本面支撑（PE 12.76）",
+      "success": false,
+      "stop_loss_price": 4.19,
+      "current_price": 4.91,
+      "target_price": 5.42,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-24T10:41:53.442268",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.2,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "技术指标协同（MACD潜在金叉、CMF资金流入），筹码分布良好（上方筹码比例42.1%<60%），基本面支撑（高股息、PE 6.05）",
+      "success": false,
+      "stop_loss_price": 4.44,
+      "current_price": 5.2,
+      "target_price": 5.74,
+      "validity_period": 28
     }
   ],
   "portfolio_history": [
@@ -43258,245 +43370,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-19 15:32:13",
-      "buy": [
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "技术指标协同：RSI超卖（34.82）、CMF资金流入（0.1891）、MACD金叉三重信号共振，符合\"至少3个同向指标\"要求；筹码分布极佳（上方筹码比例0.0%，拉升难度\"容易\"），突破阻力小。TAV评分：30.75（弱共振），但结合超卖反弹逻辑，信号质量可接受；板块虽弱势（人工智能股-3.81%），但个股位置百分位3.28%处于绝对低位，提供安全边际。成交量与资金：成交额变化1日+14.48%（5日-17.83%），短期放量支持反弹；CMF资金流0.1891验证主力流入。",
-          "allocation_pct": 30,
-          "stop_loss_price": 30.8,
-          "target_price": 40.0,
-          "validity_period": 5
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "技术指标协同：MACD金叉、OBV上升、CMF资金流入三重信号；筹码分布良好（上方筹码比例57.8% < 60%，拉升难度\"中等\"），突破阻力可控。TAV评分：39.25（弱共振），但60日收益率33.38%显示中期趋势向上，相对强度+3.12%跑赢恒指；半导体板块虽跌（-3.10%），但新闻显示7nm技术突破（2026-03-16），基本面催化潜在。成交量与资金：成交额变化20日+211.31%，长期资金累积；CMF 0.1666确认资金流入，换手率1.04%高于板块均值。",
-          "allocation_pct": 25,
-          "stop_loss_price": 81.6,
-          "target_price": 95.0,
-          "validity_period": 14
-        },
-        {
-          "code": "3690.HK",
-          "name": "美团-W",
-          "reason": "技术指标协同：MACD金叉、CMF资金流入、情感指标MA3改善（-1.82）三重信号；筹码分布极佳（上方筹码比例0.0%，拉升难度\"容易\"），突破无阻力。TAV评分：56.25（中等共振），趋势-动量-成交量协同良好；相对强度+6.12%显著跑赢恒指，60日收益率-20.41%但短期企稳（3日+0.88%）。成交量与资金：成交额变化1日+47.27%（5日+9.15%），短期放量；CMF 0.0687验证资金流入，换手率0.64%健康。",
-          "allocation_pct": 20,
-          "stop_loss_price": 68.6,
-          "target_price": 86.0,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "技术面：出货原因包括成交量异常（比率1.55 > 1.3但OBV下降，量价背离）、价格下跌（-6.54%）、CMF资金流出（-0.2055）；筹码分布差（上方筹码比例84.0% > 60%，拉升难度\"困难\"），突破阻力大。资金面：南向资金缺失，但CMF -0.2055确认主力流出；成交额变化1日+124.99%属异常放量出货。板块环境：科技股板块弱势下跌（-2.39%），AI竞争加剧（新闻显示腾讯AI挑战阿里，但市场反应过度）。新闻面：Q4财报后市场情绪过热（2026-03-18新闻），短期获利回吐压力大。",
-          "stop_loss_triggered": false,
-          "target_price": 480.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术面：出货原因包括MACD死叉、CMF资金流出（-0.1267）、OBV下降、价格下跌；TAV评分23.75（无共振），缺乏方向。筹码分布：上方筹码比例0.0%虽低，但筹码集中度0.176（中等），短期抛压集中。板块环境：交易所板块温和下跌（-0.99%），但成交额变化20日+77.0%显示资金撤离；VIX缺失但市场情绪谨慎。新闻面：LME交易重启（2026-03-16）短期利好出尽，基本面PE 29.0偏高（评分20）。",
-          "stop_loss_triggered": false,
-          "target_price": 380.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "技术面：出货原因包括成交量异常（比率1.92 > 1.3但OBV下降）、布林带超买、价格下跌；RSI 59.79接近超买区，反弹动能衰竭。资金面：CMF -0.212确认资金流出，成交额变化1日+130.57%属高位放量滞涨。板块环境：科技股弱势（-2.39%），但相对强度+12.66%跑赢恒指，板块拖累下难独善其身。新闻面：EV行业复苏新闻（2026-03-18）已反映在3.47%涨幅中，短期利好兑现。",
-          "stop_loss_triggered": false,
-          "target_price": 34.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-19 15:32:13",
-      "type": "SELL",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 100,
-      "price": 514.0,
-      "amount": 51400.0,
-      "reason": "技术面：出货原因包括成交量异常（比率1.55 > 1.3但OBV下降，量价背离）、价格下跌（-6.54%）、CMF资金流出（-0.2055）；筹码分布差（上方筹码比例84.0% > 60%，拉升难度\"困难\"），突破阻力大。资金面：南向资金缺失，但CMF -0.2055确认主力流出；成交额变化1日+124.99%属异常放量出货。板块环境：科技股板块弱势下跌（-2.39%），AI竞争加剧（新闻显示腾讯AI挑战阿里，但市场反应过度）。新闻面：Q4财报后市场情绪过热（2026-03-18新闻），短期获利回吐压力大。",
-      "capital_after": 51415.18929405196,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 514.0,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": -250.0
-    },
-    {
-      "timestamp": "2026-03-19 15:32:17",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面：出货原因包括MACD死叉、CMF资金流出（-0.1267）、OBV下降、价格下跌；TAV评分23.75（无共振），缺乏方向。筹码分布：上方筹码比例0.0%虽低，但筹码集中度0.176（中等），短期抛压集中。板块环境：交易所板块温和下跌（-0.99%），但成交额变化20日+77.0%显示资金撤离；VIX缺失但市场情绪谨慎。新闻面：LME交易重启（2026-03-16）短期利好出尽，基本面PE 29.0偏高（评分20）。",
-      "capital_after": 51415.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 398.6,
-      "target_price": 380.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-19 15:32:19",
-      "type": "SELL",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面：出货原因包括成交量异常（比率1.92 > 1.3但OBV下降）、布林带超买、价格下跌；RSI 59.79接近超买区，反弹动能衰竭。资金面：CMF -0.212确认资金流出，成交额变化1日+130.57%属高位放量滞涨。板块环境：科技股弱势（-2.39%），但相对强度+12.66%跑赢恒指，板块拖累下难独善其身。新闻面：EV行业复苏新闻（2026-03-18）已反映在3.47%涨幅中，短期利好兑现。",
-      "capital_after": 51415.18929405196,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 36.28,
-      "target_price": 34.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-19 15:32:24",
-      "type": "BUY",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 1400,
-      "price": 36.14,
-      "amount": 50596.0,
-      "reason": "技术指标协同：RSI超卖（34.82）、CMF资金流入（0.1891）、MACD金叉三重信号共振，符合\"至少3个同向指标\"要求；筹码分布极佳（上方筹码比例0.0%，拉升难度\"容易\"），突破阻力小。TAV评分：30.75（弱共振），但结合超卖反弹逻辑，信号质量可接受；板块虽弱势（人工智能股-3.81%），但个股位置百分位3.28%处于绝对低位，提供安全边际。成交量与资金：成交额变化1日+14.48%（5日-17.83%），短期放量支持反弹；CMF资金流0.1891验证主力流入。",
-      "capital_after": 819.189294051961,
-      "success": true,
-      "stop_loss_price": 30.8,
-      "current_price": 36.14,
-      "target_price": 40.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-19 15:32:27",
-      "type": "BUY",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 89.35,
-      "amount": 0,
-      "reason": "技术指标协同：MACD金叉、OBV上升、CMF资金流入三重信号；筹码分布良好（上方筹码比例57.8% < 60%，拉升难度\"中等\"），突破阻力可控。TAV评分：39.25（弱共振），但60日收益率33.38%显示中期趋势向上，相对强度+3.12%跑赢恒指；半导体板块虽跌（-3.10%），但新闻显示7nm技术突破（2026-03-16），基本面催化潜在。成交量与资金：成交额变化20日+211.31%，长期资金累积；CMF 0.1666确认资金流入，换手率1.04%高于板块均值。",
-      "capital_after": 819.189294051961,
-      "success": false,
-      "stop_loss_price": 81.6,
-      "current_price": 89.35,
-      "target_price": 95.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-19 15:32:30",
-      "type": "BUY",
-      "code": "3690.HK",
-      "name": "美团-W",
-      "shares": 0,
-      "price": 80.6,
-      "amount": 0,
-      "reason": "技术指标协同：MACD金叉、CMF资金流入、情感指标MA3改善（-1.82）三重信号；筹码分布极佳（上方筹码比例0.0%，拉升难度\"容易\"），突破无阻力。TAV评分：56.25（中等共振），趋势-动量-成交量协同良好；相对强度+6.12%显著跑赢恒指，60日收益率-20.41%但短期企稳（3日+0.88%）。成交量与资金：成交额变化1日+47.27%（5日+9.15%），短期放量；CMF 0.0687验证资金流入，换手率0.64%健康。",
-      "capital_after": 819.189294051961,
-      "success": false,
-      "stop_loss_price": 68.6,
-      "current_price": 80.6,
-      "target_price": 86.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-20 10:24:17",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-20 14:46:43",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-23 10:53:16",
-      "buy": [
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "技术指标协同：RSI+OBV+CMF+布林带4项同向超卖信号（RSI<35、OBV上升、CMF>0、布林带突破下轨），筹码分布极佳（上方筹码比例0.0%、拉升难度容易），基本面低估值（PE 7.15）",
-          "allocation_pct": 50,
-          "stop_loss_price": 26.5,
-          "target_price": 32.5,
-          "validity_period": 5
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "技术指标协同：RSI+OBV+布林带3项同向超卖信号（RSI<40、OBV上升、布林带接近下轨），筹码分布完美（上方筹码比例0.0%、拉升难度容易），基本面低估值（PE 7.74）",
-          "allocation_pct": 40,
-          "stop_loss_price": 43.5,
-          "target_price": 52.0,
-          "validity_period": 14
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "技术指标协同：价格低位+MACD金叉+OBV上升3项同向信号，筹码分布极佳（上方筹码比例0.0%、拉升难度容易），基本面低估值（PE 12.76）",
-          "allocation_pct": 30,
-          "stop_loss_price": 4.65,
-          "target_price": 5.5,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "价格高位（位置百分位96.33%）+RSI超买（67.12>65）+CMF资金流出（-0.1986）+布林带超买+价格下跌，5项出货信号共振，涨幅过大（60日收益率44.33%）",
-          "stop_loss_triggered": false,
-          "target_price": 28.5,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "MACD死叉+CMF资金流出（-0.0555）+OBV下降+价格下跌，4项出货信号，技术面混乱（布林带突破下轨但RSI 30.78超卖）",
-          "stop_loss_triggered": false,
-          "target_price": 365.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "MACD死叉+CMF资金流出（-0.0713）+OBV下降+价格下跌，4项出货信号，保险股板块系统性风险（板块-6.09%）",
-          "stop_loss_triggered": false,
-          "target_price": 75.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "价格高位（位置百分位85.29%）+MACD死叉+CMF资金流出（-0.0698），3项出货信号，涨幅过大回调（60日收益率92.11%）",
-          "stop_loss_triggered": false,
-          "target_price": 18.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "价格高位（位置百分位95.44%）+CMF资金流出（-0.0855）+价格下跌，3项出货信号，涨幅过大需获利了结（60日收益率22.62%）",
-          "stop_loss_triggered": false,
-          "target_price": 45.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
       "timestamp": "2026-03-23 10:53:16",
       "type": "SELL",
       "code": "0883.HK",
@@ -43623,6 +43496,188 @@
       "current_price": 4.97,
       "target_price": 5.5,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-03-23 14:34:30",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-24 10:41:37",
+      "buy": [
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "技术指标协同（RSI超卖、MACD潜在金叉、布林带超卖），筹码分布优势（上方筹码比例0.0%），基本面支撑（PE 12.76）",
+          "allocation_pct": 60,
+          "stop_loss_price": 4.19,
+          "target_price": 5.42,
+          "validity_period": 7
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "技术指标协同（MACD潜在金叉、CMF资金流入），筹码分布良好（上方筹码比例42.1%<60%），基本面支撑（高股息、PE 6.05）",
+          "allocation_pct": 40,
+          "stop_loss_price": 4.44,
+          "target_price": 5.74,
+          "validity_period": 28
+        }
+      ],
+      "sell": [
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "技术面恶化（RSI超买、CMF资金流出、布林带超买、价格高位），量价背离，高位风险积聚",
+          "stop_loss_triggered": false,
+          "target_price": 19.5,
+          "validity_period": 3
+        },
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "技术面恶化（RSI高位、CMF资金流出、布林带超买、价格高位），量价背离，板块轮动风险",
+          "stop_loss_triggered": false,
+          "target_price": 98.8,
+          "validity_period": 3
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "技术面恶化（RSI超买、CMF资金大幅流出、价格高位），主力资金撤离，能源板块弱势",
+          "stop_loss_triggered": false,
+          "target_price": 28.45,
+          "validity_period": 3
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "技术面恶化（CMF资金流出、价格高位、价格下跌），动能减弱，能源板块拖累",
+          "stop_loss_triggered": false,
+          "target_price": 46.77,
+          "validity_period": 3
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "技术面恶化（MACD潜在死叉、CMF资金流出、OBV趋势下降、价格下跌），筹码高阻力（上方筹码比例79.3%>60%）",
+          "stop_loss_triggered": false,
+          "target_price": 375.82,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-24 10:41:37",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化（RSI超买、CMF资金流出、布林带超买、价格高位），量价背离，高位风险积聚",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 20.6,
+      "target_price": 19.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24 10:41:40",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化（RSI高位、CMF资金流出、布林带超买、价格高位），量价背离，板块轮动风险",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 103.9,
+      "target_price": 98.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24 10:41:42",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化（RSI超买、CMF资金大幅流出、价格高位），主力资金撤离，能源板块弱势",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 29.88,
+      "target_price": 28.45,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24 10:41:44",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化（CMF资金流出、价格高位、价格下跌），动能减弱，能源板块拖累",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 48.22,
+      "target_price": 46.77,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24 10:41:46",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化（MACD潜在死叉、CMF资金流出、OBV趋势下降、价格下跌），筹码高阻力（上方筹码比例79.3%>60%）",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 388.8,
+      "target_price": 375.82,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-03-24 10:41:49",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 4.91,
+      "amount": 0,
+      "reason": "技术指标协同（RSI超卖、MACD潜在金叉、布林带超卖），筹码分布优势（上方筹码比例0.0%），基本面支撑（PE 12.76）",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.19,
+      "current_price": 4.91,
+      "target_price": 5.42,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-24 10:41:53",
+      "type": "BUY",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 5.2,
+      "amount": 0,
+      "reason": "技术指标协同（MACD潜在金叉、CMF资金流入），筹码分布良好（上方筹码比例42.1%<60%），基本面支撑（高股息、PE 6.05）",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.44,
+      "current_price": 5.2,
+      "target_price": 5.74,
+      "validity_period": 28
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
