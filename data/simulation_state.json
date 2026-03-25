@@ -27010,6 +27010,38 @@
       "current_price": 5.24,
       "target_price": 5.45,
       "validity_period": 18
+    },
+    {
+      "timestamp": "2026-03-25T10:26:41.701571",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 80.35,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "TAV评分58.25分中等共振，筹码分布阻力低（上方筹码比例8.9%），科技股板块温和上涨1.18%支持，估值被低估",
+      "success": false,
+      "stop_loss_price": 76.2,
+      "current_price": 80.35,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-25T10:26:47.574134",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 124.3,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "成交量比率0.2可接受，技术指标协同性较好（3个同向），银行股板块稳定上涨0.34%",
+      "success": false,
+      "stop_loss_price": 105.7,
+      "current_price": 124.3,
+      "target_price": 128.0,
+      "validity_period": 28
     }
   ],
   "portfolio_history": [
@@ -43450,140 +43482,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-23 14:34:30",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-24 10:41:37",
-      "buy": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "技术指标协同（RSI超卖、MACD潜在金叉、布林带超卖），筹码分布优势（上方筹码比例0.0%），基本面支撑（PE 12.76）",
-          "allocation_pct": 60,
-          "stop_loss_price": 4.19,
-          "target_price": 5.42,
-          "validity_period": 7
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "技术指标协同（MACD潜在金叉、CMF资金流入），筹码分布良好（上方筹码比例42.1%<60%），基本面支撑（高股息、PE 6.05）",
-          "allocation_pct": 40,
-          "stop_loss_price": 4.44,
-          "target_price": 5.74,
-          "validity_period": 28
-        }
-      ],
-      "sell": [
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "技术面恶化（RSI超买、CMF资金流出、布林带超买、价格高位），量价背离，高位风险积聚",
-          "stop_loss_triggered": false,
-          "target_price": 19.5,
-          "validity_period": 3
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "技术面恶化（RSI高位、CMF资金流出、布林带超买、价格高位），量价背离，板块轮动风险",
-          "stop_loss_triggered": false,
-          "target_price": 98.8,
-          "validity_period": 3
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "技术面恶化（RSI超买、CMF资金大幅流出、价格高位），主力资金撤离，能源板块弱势",
-          "stop_loss_triggered": false,
-          "target_price": 28.45,
-          "validity_period": 3
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "技术面恶化（CMF资金流出、价格高位、价格下跌），动能减弱，能源板块拖累",
-          "stop_loss_triggered": false,
-          "target_price": 46.77,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术面恶化（MACD潜在死叉、CMF资金流出、OBV趋势下降、价格下跌），筹码高阻力（上方筹码比例79.3%>60%）",
-          "stop_loss_triggered": false,
-          "target_price": 375.82,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-24 10:41:37",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（RSI超买、CMF资金流出、布林带超买、价格高位），量价背离，高位风险积聚",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 20.6,
-      "target_price": 19.5,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-24 10:41:40",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（RSI高位、CMF资金流出、布林带超买、价格高位），量价背离，板块轮动风险",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 103.9,
-      "target_price": 98.8,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-24 10:41:42",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（RSI超买、CMF资金大幅流出、价格高位），主力资金撤离，能源板块弱势",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 29.88,
-      "target_price": 28.45,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-24 10:41:44",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（CMF资金流出、价格高位、价格下跌），动能减弱，能源板块拖累",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 48.22,
-      "target_price": 46.77,
-      "validity_period": 3
-    },
-    {
       "timestamp": "2026-03-24 10:41:46",
       "type": "SELL",
       "code": "0388.HK",
@@ -43759,6 +43657,62 @@
       "current_price": 5.24,
       "target_price": 5.45,
       "validity_period": 18
+    },
+    {
+      "timestamp": "2026-03-25 10:26:39",
+      "buy": [
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "TAV评分58.25分中等共振，筹码分布阻力低（上方筹码比例8.9%），科技股板块温和上涨1.18%支持，估值被低估",
+          "allocation_pct": 30,
+          "stop_loss_price": 76.2,
+          "target_price": 85.0,
+          "validity_period": 7
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "成交量比率0.2可接受，技术指标协同性较好（3个同向），银行股板块稳定上涨0.34%",
+          "allocation_pct": 25,
+          "stop_loss_price": 105.7,
+          "target_price": 128.0,
+          "validity_period": 28
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-25 10:26:41",
+      "type": "BUY",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 80.35,
+      "amount": 0,
+      "reason": "TAV评分58.25分中等共振，筹码分布阻力低（上方筹码比例8.9%），科技股板块温和上涨1.18%支持，估值被低估",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 76.2,
+      "current_price": 80.35,
+      "target_price": 85.0,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-03-25 10:26:47",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 124.3,
+      "amount": 0,
+      "reason": "成交量比率0.2可接受，技术指标协同性较好（3个同向），银行股板块稳定上涨0.34%",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 105.7,
+      "current_price": 124.3,
+      "target_price": 128.0,
+      "validity_period": 28
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
