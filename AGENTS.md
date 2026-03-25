@@ -13,6 +13,7 @@
 | 批量回测 | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.6` ⭐ 推荐 |
 | **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **训练板块模型** | `python3 ml_services/train_sector_model.py --sector bank --horizon 20` |
+| **预测性能监控** ⭐ 新增 | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
 | 恒生指数监控 | `python3 hsi_email.py` |
 | 主力资金追踪 | `python3 hk_smart_money_tracker.py` |
 | 语法检查 | `python3 -m py_compile <file_path>` |
@@ -27,6 +28,7 @@
 | `hk_smart_money_tracker.py` | 主力资金追踪 | 资金流向分析，建仓出货信号 |
 | `ml_services/batch_backtest.py` | 批量回测 | 模型性能评估 |
 | `hsi_prediction.py` | 恒生指数涨跌预测 | 短期走势预测 |
+| `ml_services/performance_monitor.py` | **预测性能监控** ⭐ 新增 | 评估预测准确率，生成月度报告 |
 
 ### 验证命令
 
@@ -104,6 +106,7 @@ python3 hsi_email.py --no-email
 - 🛡️ **风险管理特征集**：ATR动态止损、连续市场状态记忆、盈亏比评估等18个新特征
 - ✅ **数据泄漏修正**：系统性修正10+个存在数据泄漏的特征，使用.shift(1)确保滞后数据
 - 🔄 **板块Walk-forward验证**：业界标准的板块模型验证方法，每个fold重新训练评估真实预测能力
+- 📊 **预测性能监控**：每日预测自动保存，每月评估准确率，生成性能报告并发送邮件 ⭐ 新增
 
 ## 重要警告
 
@@ -341,6 +344,12 @@ if self.horizon > 1:
 │       │   ├── 与CatBoost等模型对比评估
 │       │   ├── 支持不同预测周期（1-20天）
 │       │   └── 生成详细对比报告
+│       ├── **预测性能监控** (performance_monitor.py) ⭐ 新增
+│       │   ├── 保存每日预测结果到历史记录
+│       │   ├── 评估预测准确性（20天持有期）
+│       │   ├── 生成月度性能报告
+│       │   ├── 自动发送邮件通知
+│       │   └── 支持手动触发评估
 │       ├── **CatBoost使用指南** (CATBOOST_USAGE.md)
 │       └── **回测使用指南** (BACKTEST_GUIDE.md)
 ├── 交易层
@@ -2044,6 +2053,12 @@ python3 ml_services/sector_performance_analysis.py --start-date 2024-01-01 --end
 ./scripts/run_ranking_analysis.sh 2024-01-01 2025-12-31 markdown  # 自定义输出格式
 python3 ml_services/ranking_analysis.py
 python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-12-31
+
+# 预测性能监控 ⭐ 新功能
+python3 ml_services/performance_monitor.py --mode evaluate --horizon 20  # 评估预测
+python3 ml_services/performance_monitor.py --mode report --horizon 20    # 生成月度报告
+python3 ml_services/performance_monitor.py --mode all --horizon 20       # 评估+报告
+python3 ml_services/performance_monitor.py --mode all --no-email         # 不发送邮件
 ```
 
 ## 数据文件结构
@@ -2053,6 +2068,7 @@ python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-
 - `all_stock_news_records.csv`: 股票新闻记录
 - `simulation_transactions.csv`: 交易历史记录
 - `simulation_state.json`: 模拟交易状态
+- `prediction_history.json`: 预测历史记录（用于性能监控）⭐ 新增
 - `llm_recommendations_YYYY-MM-DD.txt`: 大模型建议文件
 - `ml_trading_model_catboost_predictions_20d.csv`: CatBoost 单模型预测结果
 - `comprehensive_recommendations_YYYY-MM-DD.txt`: 综合买卖建议文件
@@ -2090,6 +2106,7 @@ python3 ml_services/ranking_analysis.py --start-date 2024-01-01 --end-date 2025-
 - `ranking_analysis_{timestamp}.json`: 股票表现排名分析JSON数据
 - `ranking_analysis_{timestamp}.md`: 股票表现排名分析Markdown报告
 - `sector_rotation_river_plot.png`: 板块轮动河流图
+- `performance_report_*.md`: 预测性能月度报告 ⭐ 新增
 - `selected_features_*.csv`: 精选特征列表
 - `statistical_features_latest.txt`: 统计方法特征选择结果
 - `email_preview.txt`: 邮件预览内容
@@ -2160,6 +2177,7 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 | `ranking-analysis.yml` | **股票表现TOP 10排名分析** | **每月1号上午3点香港时间 (UTC 19:00)** |
 | `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
 | `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
+| `performance-monitor.yml` | **预测性能月度报告** ⭐ 新增 | **每月1号上午4点香港时间 (UTC 20:00)** |
 | `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
 | `hourly-gold-monitor.yml` | 每小时黄金监控 | 每小时 |
 | `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 2:00 |
@@ -2213,7 +2231,7 @@ jobs:
 ```
 
 ### 自动化状态
-- ✅ GitHub Actions：10 个工作流正常运行 + 2 个备份文件
+- ✅ GitHub Actions：11 个工作流正常运行 + 2 个备份文件
 - ✅ 邮件通知：163 邮件服务稳定
 - ✅ 定时任务：支持本地 cron 和 GitHub Actions
 - ✅ 数据保存：大模型建议、CatBoost 预测结果、综合建议、模型准确率、批量回测结果自动保存
@@ -2225,10 +2243,11 @@ jobs:
 - ✅ **牛熊市分析**：每周一上午1点自动执行，分析市场环境和股票表现
 - ✅ **板块表现分析**：每月1号上午2点自动执行，分析不同股票类型的准确度
 - ✅ **股票表现TOP 10排名分析**：每月1号上午3点自动执行，按不同指标排名
+- ✅ **预测性能监控**：每月1号上午4点自动执行，评估预测准确率并发送报告 ⭐ 新增
 
 ### 项目当前状态
 
-**最后更新**: 2026-03-22
+**最后更新**: 2026-03-25
 
 **项目成熟度**: 生产就绪
 
@@ -2367,4 +2386,4 @@ jobs:
 - **板块验证**：Walk-forward板块验证报告 → `output/walk_forward_sector_*.md`
 
 ---
-最后更新：2026-03-23
+最后更新：2026-03-25
