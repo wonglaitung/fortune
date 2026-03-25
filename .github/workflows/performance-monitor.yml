@@ -1,0 +1,63 @@
+name: 预测性能月度报告
+
+on:
+  schedule:
+    # 每月1号上午4:00 HK时间 (UTC 20:00 前一天)
+    - cron: '0 20 28-31 * *'
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  check-date:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check if tomorrow is 1st
+        id: check
+        run: |
+          tomorrow=$(date -d "+1 day" +%d)
+          if [ "$tomorrow" = "01" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  performance-report:
+    needs: check-date
+    if: needs.check-date.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install markdown
+
+      - name: Run performance monitor
+        env:
+          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
+          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
+          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+        run: |
+          python3 ml_services/performance_monitor.py --mode all --horizon 20
+
+      - name: Commit updated history
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/prediction_history.json output/performance_report_*.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update performance monitoring data [skip ci]"
+          git push

@@ -36,3 +36,11 @@ jobs:
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
           bash scripts/run_comprehensive_analysis.sh
+
+      - name: Commit prediction history
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/prediction_history.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update prediction history [skip ci]"
+          git push
