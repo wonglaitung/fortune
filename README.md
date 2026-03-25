@@ -594,6 +594,26 @@ python3 ml_services/ranking_analysis.py --output-format all
   📊 分析股票总数: 28只
 ```
 
+### 预测性能监控
+
+```bash
+# 评估预测准确率
+python3 ml_services/performance_monitor.py --mode evaluate --horizon 20
+
+# 生成月度报告
+python3 ml_services/performance_monitor.py --mode report --horizon 20
+
+# 评估+报告（推荐）
+python3 ml_services/performance_monitor.py --mode all --horizon 20
+
+# 不发送邮件
+python3 ml_services/performance_monitor.py --mode all --horizon 20 --no-email
+```
+
+**输出文件**：
+- `data/prediction_history.json`：预测历史记录
+- `output/performance_report_YYYY-MM.md`：月度性能报告
+
 ### 综合分析
 
 ```bash
@@ -654,6 +674,7 @@ fortune/
 │   ├── transformer_experiment.py       # Transformer对比实验脚本
 │   ├── sector_performance_analysis.py  # 板块表现分析脚本
 │   ├── ranking_analysis.py             # 股票表现排名分析脚本
+│   ├── performance_monitor.py          # 预测性能监控脚本
 │   ├── BACKTEST_GUIDE.md               # 回测功能使用指南
 │   └── ...
 │
@@ -706,10 +727,12 @@ fortune/
 │   ├── ranking_analysis_*.csv              # 股票表现排名分析CSV数据
 │   ├── ranking_analysis_*.json             # 股票表现排名分析JSON数据
 │   ├── ranking_analysis_*.md                # 股票表现排名分析Markdown报告
+│   ├── performance_report_*.md              # 预测性能月度报告
 │   └── ...
 │
 └── 数据文件 (data/)
     ├── actual_porfolio.csv             # 实际持仓数据
+    ├── prediction_history.json         # 预测历史记录
     ├── llm_recommendations_*.txt       # 大模型建议文件
     ├── ml_trading_model_catboost_predictions_20d.csv  # CatBoost预测结果
     ├── comprehensive_recommendations_*.txt  # 综合买卖建议文件
@@ -756,7 +779,7 @@ fortune/
 
 ### GitHub Actions 工作流
 
-系统使用 **GitHub Actions** 进行全自动化调度，无需服务器部署，零硬件成本运行。目前有11个工作流正常运行，覆盖全天候市场监控和智能分析。
+系统使用 **GitHub Actions** 进行全自动化调度，无需服务器部署，零硬件成本运行。目前有12个工作流正常运行，覆盖全天候市场监控和智能分析。
 
 | 工作流 | 功能 | 执行时间 | 说明 |
 |--------|------|----------|------|
@@ -771,6 +794,7 @@ fortune/
 | **bull-bear-analysis.yml** | 牛熊市分析自动化 | 每周日 UTC 17:00（香港时间周一上午1:00） | 分析市场环境和股票表现 |
 | **sector-analysis.yml** | 板块表现分析自动化 | 每月1号 UTC 19:00（香港时间上午2:00） | 按股票类型分析模型准确度 |
 | **ranking-analysis.yml** | 股票表现TOP 10排名分析 | 每月1号 UTC 19:00（香港时间上午3:00） | 按不同指标排名 |
+| **performance-monitor.yml** | 预测性能月度报告 | 每月1号 UTC 20:00（香港时间上午4:00） | 评估预测准确率并发送报告 |
 
 **配置说明**：详细的配置步骤请参考文档末尾的[快速开始](#快速开始)章节中的"🌟 无服务器部署 - GitHub Actions 自动化"部分。
 
@@ -832,6 +856,7 @@ fortune/
 | **牛熊市分析自动化** | ✅ 完整 | 每周一自动执行，分析市场环境和股票表现 |
 | **板块表现分析自动化** | ✅ 完整 | 每月1号自动执行，按股票类型分析模型准确度 |
 | **股票表现TOP 10排名分析** | ✅ 完整 | 每月1号自动执行，按不同指标排名 |
+| **预测性能监控** | ✅ 完整 | 每月1号自动执行，评估预测准确率并发送报告 |
 | **筹码分布分析** | ✅ 完整 | 基于成交量的简单分箱法，计算筹码集中度和拉升阻力 |
 | **板块Walk-forward验证** | ✅ 完整 | 业界标准的板块模型验证，评估真实预测能力 |
 | **市场环境自适应过滤** | ✅ 完整 | 基于ADX+波动率双因子，动态调整过滤条件 |
@@ -842,7 +867,7 @@ fortune/
 | **综合分析** | ✅ 稳定 | 每日自动执行，整合大模型建议和CatBoost预测 |
 | **交易记录展示** | ✅ 完整 | 最近48小时模拟交易记录以表格格式展示 |
 | **实时指标集成** | ✅ 完整 | 集成 hsi_email.py 的实时技术指标 |
-| **自动化** | ✅ 稳定 | 11个GitHub Actions工作流正常运行 |
+| **自动化** | ✅ 稳定 | 12个GitHub Actions工作流正常运行 |
 | **文档** | ✅ 完整 | README、AGENTS、BACKTEST_GUIDE齐全 |
 | **数据验证** | ✅ 严格 | 无数据泄漏，时间序列交叉验证 |
 | **风险管理** | ⚠️ 可优化 | 可添加VaR、ES、压力测试 |
@@ -1172,4 +1197,4 @@ MIT License
 
 ---
 
-**最后更新**: 重构内容结构，突出大模型智能决策
+**最后更新**: 2026-03-25 - 新增预测性能监控系统
