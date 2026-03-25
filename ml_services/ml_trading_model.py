@@ -189,6 +189,91 @@ def save_predictions_to_text(predictions_df, predict_date=None):
         return None
 
 
+def save_prediction_to_history(predictions, horizon=20, predict_date=None):
+    """
+    保存预测结果到历史记录文件，用于后续性能监控
+    
+    参数:
+    - predictions: 预测结果列表（字典格式）
+    - horizon: 预测周期（天）
+    - predict_date: 预测日期字符串
+    """
+    try:
+        # 历史文件路径
+        history_file = 'data/prediction_history.json'
+        
+        # 加载现有历史
+        if os.path.exists(history_file):
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        else:
+            history = {'predictions': [], 'metadata': {}}
+        
+        # 当前时间戳
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%dT%H:%M:%S')
+        date_str = predict_date if predict_date else now.strftime('%Y-%m-%d')
+        
+        # 为每个预测创建记录
+        new_records = []
+        for pred in predictions:
+            stock_code = pred.get('code', '')
+            stock_name = pred.get('name', '')
+            
+            # 获取板块信息
+            stock_info = STOCK_TYPE_MAPPING.get(stock_code, {})
+            if isinstance(stock_info, dict):
+                sector = stock_info.get('sector', 'unknown')
+            else:
+                sector = 'unknown'
+            
+            # 创建预测记录
+            record = {
+                'prediction_id': f"{date_str}_{stock_code}",
+                'timestamp': timestamp,
+                'stock_code': stock_code,
+                'stock_name': stock_name,
+                'sector': sector,
+                'horizon': horizon,
+                'predicted_direction': 'up' if pred.get('prediction', 0) == 1 else 'down',
+                'prediction_probability': float(pred.get('probability', 0.5)),
+                'confidence_level': 'high' if pred.get('probability', 0) > 0.6 else ('medium' if pred.get('probability', 0) > 0.5 else 'low'),
+                'entry_price': float(pred.get('current_price', 0)),
+                'model_type': 'catboost',
+                'data_date': pred.get('data_date', date_str),
+                'target_date': pred.get('target_date', ''),
+                'outcome': None,
+                'actual_return': None,
+                'actual_direction': None,
+                'evaluated_at': None
+            }
+            
+            # 检查是否已存在相同 prediction_id 的记录
+            existing_ids = {p['prediction_id'] for p in history['predictions']}
+            if record['prediction_id'] not in existing_ids:
+                new_records.append(record)
+        
+        # 添加新记录
+        history['predictions'].extend(new_records)
+        
+        # 更新元数据
+        history['metadata']['last_updated'] = timestamp
+        history['metadata']['total_predictions'] = len(history['predictions'])
+        
+        # 保存历史
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"已保存 {len(new_records)} 条预测记录到 {history_file}")
+        return len(new_records)
+        
+    except Exception as e:
+        logger.error(f"保存预测历史失败: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
+        return 0
+
+
 def get_target_date(date, horizon):
     """计算目标日期（数据日期 + 预测周期）"""
     if isinstance(date, str):
@@ -5194,6 +5279,8 @@ def main():
             # 保存20天预测结果到文本文件（便于后续提取和对比）
             if args.horizon == 20:
                 save_predictions_to_text(pred_df_export, args.predict_date)
+                # 保存预测到历史记录（用于性能监控）
+                save_prediction_to_history(predictions, horizon=args.horizon, predict_date=args.predict_date)
 
     elif args.mode == 'evaluate':
         logger.info("=" * 50)
