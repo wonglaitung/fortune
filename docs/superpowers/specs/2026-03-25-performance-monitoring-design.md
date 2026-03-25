@@ -228,15 +228,53 @@ BOTTOM 10 需关注:
 
 ## 5. 实现细节
 
-### 5.1 ml_trading_model.py 修改
+### 5.1 集成点说明
 
-在 `CatBoostModel.predict()` 方法末尾添加：
+**重要**: `save_prediction_to_history()` 不应在 `predict()` 方法内部调用，而是在**批量预测编排层**调用。这样可以：
+- 保持 `predict()` 方法的纯粹性
+- 允许批量处理所有股票后再统一保存
+- 便于错误处理和事务管理
+
+**调用位置**: 在 `ml_trading_model.py` 的主函数中，遍历所有股票生成预测后，调用保存函数：
 
 ```python
-def save_prediction_to_history(self, stock_code, stock_name, sector, 
-                                predicted_direction, probability, entry_price):
-    """保存预测到历史记录"""
-    history_file = os.path.join(self.data_dir, 'prediction_history.json')
+# 在 main() 函数的 predict 分支中
+for stock_code in watchlist:
+    # 生成预测
+    prediction = model.predict(...)
+    
+    # 获取股票信息
+    stock_info = get_stock_info(stock_code)  # 从 config.STOCK_SECTOR_MAPPING 获取
+    stock_name = stock_info.get('name', stock_code)
+    sector = stock_info.get('sector', 'unknown')
+    
+    # 保存到历史
+    save_prediction_to_history(
+        stock_code=stock_code,
+        stock_name=stock_name,
+        sector=sector,
+        predicted_direction=prediction['direction'],
+        probability=prediction['probability'],
+        entry_price=prediction['price'],
+        horizon=args.horizon,
+        data_dir=data_dir
+    )
+```
+
+### 5.2 ml_trading_model.py 新增函数
+
+```python
+from config import STOCK_SECTOR_MAPPING
+
+def get_stock_info(stock_code):
+    """从配置获取股票信息"""
+    return STOCK_SECTOR_MAPPING.get(stock_code, {})
+
+def save_prediction_to_history(stock_code, stock_name, sector, 
+                                predicted_direction, probability, entry_price,
+                                horizon=20, data_dir='data'):
+    """保存预测到历史记录（独立函数，从批量预测编排层调用）"""
+    history_file = os.path.join(data_dir, 'prediction_history.json')
     
     # 读取现有历史
     if os.path.exists(history_file):
@@ -245,6 +283,9 @@ def save_prediction_to_history(self, stock_code, stock_name, sector,
     else:
         history = {'predictions': []}
     
+    # 从 model_accuracy.json 获取当前模型准确率
+    accuracy = load_model_accuracy('catboost', horizon)
+    
     # 构建预测记录
     prediction = {
         'prediction_id': f"{datetime.now().strftime('%Y%m%d')}_{stock_code}",
@@ -252,13 +293,13 @@ def save_prediction_to_history(self, stock_code, stock_name, sector,
         'stock_code': stock_code,
         'stock_name': stock_name,
         'sector': sector,
-        'horizon': self.horizon,
+        'horizon': horizon,
         'predicted_direction': predicted_direction,
         'prediction_probability': probability,
         'confidence_level': 'high' if probability > 0.60 else ('low' if probability <= 0.50 else 'medium'),
         'entry_price': entry_price,
         'model_type': 'catboost',
-        'model_accuracy': self.accuracy,
+        'model_accuracy': accuracy,
         'outcome': None,
         'actual_return': None,
         'actual_direction': None,
@@ -278,36 +319,93 @@ def save_prediction_to_history(self, stock_code, stock_name, sector,
         json.dump(history, f, indent=2, ensure_ascii=False)
 ```
 
-### 5.2 performance_monitor.py 主要函数
+### 5.3 performance_monitor.py 主要函数
 
 ```python
+import yfinance as yf
+from datetime import datetime, timedelta
+
+def fetch_price(stock_code, target_date):
+    """获取股票在指定日期的收盘价
+    
+    使用 yfinance 获取港股历史价格：
+    - 股票代码格式：0700.HK (yfinance 格式)
+    - 返回收盘价，失败返回 None
+    """
+    try:
+        ticker = yf.Ticker(stock_code)
+        # 获取目标日期前后的数据（避免时区问题）
+        start_date = target_date - timedelta(days=5)
+        end_date = target_date + timedelta(days=1)
+        df = ticker.history(start=start_date, end=end_date)
+        
+        if df.empty:
+            return None
+        
+        # 获取最接近目标日期的收盘价
+        closest_date = df.index[df.index <= target_date]
+        if len(closest_date) == 0:
+            return None
+        
+        return df.loc[closest_date[-1], 'Close']
+    except Exception as e:
+        print(f"Error fetching price for {stock_code}: {e}")
+        return None
+
+def count_trading_days(stock_code, start_date, end_date):
+    """计算两个日期之间的实际交易日数
+    
+    使用 yfinance 获取股票数据，计算实际交易日
+    """
+    try:
+        ticker = yf.Ticker(stock_code)
+        df = ticker.history(start=start_date, end=end_date)
+        return len(df)
+    except Exception:
+        return 0
+
 def evaluate_predictions(history_file, horizon=20):
-    """评估已满持有期的预测"""
+    """评估已满持有期的预测
+    
+    使用实际交易日数而非日历天数来判断是否可以评估
+    """
     # 读取历史
     with open(history_file, 'r') as f:
         history = json.load(f)
     
     today = datetime.now()
+    evaluated_count = 0
+    
     for pred in history['predictions']:
         if pred['outcome'] is not None:
             continue
         
         pred_date = datetime.fromisoformat(pred['timestamp'])
-        days_passed = (today - pred_date).days
         
-        if days_passed >= horizon:
-            # 获取实际价格
-            actual_price = fetch_price(pred['stock_code'], today)
-            pred['actual_return'] = (actual_price - pred['entry_price']) / pred['entry_price']
-            pred['actual_direction'] = 'up' if pred['actual_return'] > 0 else 'down'
-            pred['outcome'] = 'correct' if pred['predicted_direction'] == pred['actual_direction'] else 'incorrect'
-            pred['evaluated_at'] = today.isoformat()
+        # 计算实际交易日数（更准确）
+        trading_days = count_trading_days(pred['stock_code'], pred_date, today)
+        
+        # 需要至少 horizon 个交易日才能评估
+        if trading_days >= horizon:
+            # 获取预测期结束时的价格
+            # 找到第 horizon 个交易日后的价格
+            ticker = yf.Ticker(pred['stock_code'])
+            df = ticker.history(start=pred_date, end=today + timedelta(days=1))
+            
+            if len(df) >= horizon:
+                # 获取第 horizon 个交易日的收盘价
+                exit_price = df.iloc[horizon - 1]['Close']
+                pred['actual_return'] = (exit_price - pred['entry_price']) / pred['entry_price']
+                pred['actual_direction'] = 'up' if pred['actual_return'] > 0 else 'down'
+                pred['outcome'] = 'correct' if pred['predicted_direction'] == pred['actual_direction'] else 'incorrect'
+                pred['evaluated_at'] = today.isoformat()
+                evaluated_count += 1
     
     # 保存更新后的历史
     with open(history_file, 'w') as f:
         json.dump(history, f, indent=2, ensure_ascii=False)
     
-    return history
+    return history, evaluated_count
 
 def calculate_metrics(history, start_date, end_date):
     """计算指定时间范围内的指标"""
