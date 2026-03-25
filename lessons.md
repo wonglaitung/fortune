@@ -294,3 +294,50 @@ df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().s
 - ✅ 强烈推荐使用 CatBoost 20天模型
 - ⚠️ LightGBM和GBDT需要修复数据泄漏后重新评估
 - ❌ 不推荐使用未修复的模型进行实际交易
+
+---
+
+## 📈 预测性能监控系统（2026-03-25）
+
+### 系统架构
+
+| 组件 | 文件 | 功能 |
+|------|------|------|
+| 数据存储 | `data/prediction_history.json` | 存储所有预测记录 |
+| 核心脚本 | `ml_services/performance_monitor.py` | 评估预测、生成报告 |
+| 日常集成 | `ml_trading_model.py` | 保存预测到历史 |
+| 工作流 | `performance-monitor.yml` | 每月1号自动运行 |
+
+### 关键设计决策
+
+1. **使用交易日而非日历日**
+   - 港股有节假日，必须使用实际交易日
+   - 使用 yfinance 获取历史数据计算实际交易日数
+
+2. **Git 持久化**
+   - GitHub Actions 运行器是临时的
+   - prediction_history.json 必须提交到 git
+   - comprehensive-analysis.yml 已添加 git commit 步骤
+
+3. **集成点选择**
+   - 在 main() 函数的 predict 分支调用
+   - 不在 predict() 方法内部调用（保持方法职责单一）
+
+### 使用命令
+
+```bash
+# 评估已到期的预测
+python3 ml_services/performance_monitor.py --mode evaluate --no-email
+
+# 生成月度报告
+python3 ml_services/performance_monitor.py --mode report --no-email
+
+# 完整流程
+python3 ml_services/performance_monitor.py --mode all --no-email
+```
+
+### 经验教训
+
+1. **预测追踪是验证模型的必要手段**：没有追踪就无法知道模型真实表现
+2. **自动化是关键**：每月自动运行，避免人工遗忘
+3. **数据持久化要考虑 CI 环境**：GitHub Actions 运行器临时性要求 git 提交
