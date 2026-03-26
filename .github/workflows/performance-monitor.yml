@@ -58,6 +58,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+          git pull --rebase origin main
           git add data/prediction_history.json output/performance_report_*.md
           git diff --quiet && git diff --staged --quiet || git commit -m "Update performance monitoring data [skip ci]"
           git push
