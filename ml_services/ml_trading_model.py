@@ -3657,8 +3657,10 @@ class CatBoostModel(BaseTradingModel):
         for col in self.feature_columns:
             if df[col].dtype == 'object':
                 print(f"  检测到分类特征: {col}")
+                # 先填充NaN值为'unknown'，避免CatBoost分类特征NaN错误
+                df[col] = df[col].fillna('unknown').astype(str)
                 encoder = LabelEncoder()
-                df[col] = encoder.fit_transform(df[col].astype(str))
+                df[col] = encoder.fit_transform(df[col])
                 self.categorical_encoders[col] = encoder
                 categorical_features.append(self.feature_columns.index(col))
         
@@ -3972,14 +3974,21 @@ class CatBoostModel(BaseTradingModel):
             for col, encoder in self.categorical_encoders.items():
                 if col in latest_data.columns:
                     try:
-                        latest_data[col] = encoder.transform(latest_data[col].astype(str))
+                        # 先填充NaN值为'unknown'，避免CatBoost分类特征NaN错误
+                        latest_data[col] = latest_data[col].fillna('unknown').astype(str)
+                        latest_data[col] = encoder.transform(latest_data[col])
                     except ValueError:
                         # 处理未见过的类别，映射到0
                         logger.warning(f"警告: 分类特征 {col} 包含训练时未见过的类别，使用默认值")
                         latest_data[col] = 0
 
             X = latest_data[self.feature_columns].values
-
+            # 确保X中没有NaN值（除了分类特征已处理，数值特征可能也有NaN）
+            import numpy as np
+            if np.isnan(X).any():
+                # 填充数值特征的NaN值为0
+                X = np.nan_to_num(X, nan=0.0)
+            
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
             
