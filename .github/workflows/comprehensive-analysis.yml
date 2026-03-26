@@ -41,7 +41,11 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git pull --rebase origin main
-          git add data/prediction_history.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update prediction history [skip ci]"
-          git push
+          git pull --rebase origin main || true
+          git add data/prediction_history.json || true
+          if ! git diff --staged --quiet; then
+            git commit -m "Update prediction history [skip ci]"
+            git push
+          else
+            echo "没有新的预测历史需要提交"
+          fi
