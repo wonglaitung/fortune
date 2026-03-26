@@ -27042,6 +27042,118 @@
       "current_price": 124.3,
       "target_price": 128.0,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-03-26T14:50:25.912367",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "出货评分6.0分，位置高位、资金流出、放量滞涨",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 47.76,
+      "target_price": 45.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:30.866785",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "出货评分6.0分，单日暴跌-7.79%、资金流出、缩量下跌",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 19.43,
+      "target_price": 18.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:33.746724",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "出货评分5.5分，资金流出、持续缩量、高阻力",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 391.4,
+      "target_price": 380.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:38.479239",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "出货评分5.5分，资金大幅流出、板块拖累",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.7,
+      "target_price": 84.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:40.106522",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 322.18929405196104,
+      "reason": "出货评分5.0分，位置高位、资金流出、严重缩量",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 130.2,
+      "target_price": 125.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:43.793800",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 28.1,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "建仓评分5.9分，由price_low、rsi_oversold、obv_up、cmf_in、bb_oversold五重因素驱动，RSI超卖+资金流入+筹码无阻力",
+      "success": false,
+      "stop_loss_price": 23.85,
+      "current_price": 28.1,
+      "target_price": 30.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26T14:50:47.209788",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "capital_after": 322.18929405196104,
+      "reason": "建仓评分4.7分，由price_low、obv_up、cmf_in、bb_oversold驱动，资金流入+OBV上升+筹码无阻力",
+      "success": false,
+      "stop_loss_price": 4.53,
+      "current_price": 5.31,
+      "target_price": 5.85,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -43482,119 +43594,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-03-24 10:41:46",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化（MACD潜在死叉、CMF资金流出、OBV趋势下降、价格下跌），筹码高阻力（上方筹码比例79.3%>60%）",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 388.8,
-      "target_price": 375.82,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-24 10:41:49",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 4.91,
-      "amount": 0,
-      "reason": "技术指标协同（RSI超卖、MACD潜在金叉、布林带超卖），筹码分布优势（上方筹码比例0.0%），基本面支撑（PE 12.76）",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.19,
-      "current_price": 4.91,
-      "target_price": 5.42,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-03-24 10:41:53",
-      "type": "BUY",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 5.2,
-      "amount": 0,
-      "reason": "技术指标协同（MACD潜在金叉、CMF资金流入），筹码分布良好（上方筹码比例42.1%<60%），基本面支撑（高股息、PE 6.05）",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.44,
-      "current_price": 5.2,
-      "target_price": 5.74,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-03-24 14:03:24",
-      "buy": [
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "价格低位（位置百分位31.51%）、RSI超卖、成交量比率1.99显著放量、OBV上升、CMF资金流入，技术指标协同性高；房地产板块温和上涨；90日回报27.83%显示中长期动能改善",
-          "allocation_pct": 60,
-          "stop_loss_price": 29.5,
-          "target_price": 32.5,
-          "validity_period": 5
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格低位（位置百分位15.71%）、MACD金叉、CMF资金流入；筹码分布优势显著（上方筹码比例43.6%<60%且拉升难度中等）；银行板块温和上涨；基本面评分100分，估值安全边际高",
-          "allocation_pct": 40,
-          "stop_loss_price": 5.05,
-          "target_price": 5.45,
-          "validity_period": 18
-        }
-      ],
-      "sell": [
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "成交量比率异常（1.99>1.3）、MACD死叉、VWAP量能背离，高位放量滞涨；筹码阻力极强（上方筹码比例90.0%且拉升难度困难）；个股60日收益率4.82%透支动能，相对强度-4.79%跑输恒指",
-          "stop_loss_triggered": false,
-          "target_price": 30.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "价格高位（位置百分位95.57%）、RSI超买、CMF资金流出、布林带超买，指标协同确认顶部；能源板块弱势下跌（-1.30%）；高位放量滞涨风险高（成交额20日+104.69%但1日-44.5%）",
-          "stop_loss_triggered": false,
-          "target_price": 29.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "价格高位（位置百分位98.94%）、MACD死叉、CMF资金流出、布林带超买；短期涨幅过大（3日收益率8.17%），相对强度19.36%偏离均值；历史高位回调风险高",
-          "stop_loss_triggered": false,
-          "target_price": 20.0,
-          "validity_period": 2
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-24 14:03:24",
-      "type": "SELL",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "成交量比率异常（1.99>1.3）、MACD死叉、VWAP量能背离，高位放量滞涨；筹码阻力极强（上方筹码比例90.0%且拉升难度困难）；个股60日收益率4.82%透支动能，相对强度-4.79%跑输恒指",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 30.54,
-      "target_price": 30.0,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-03-24 14:03:27",
       "type": "SELL",
       "code": "0883.HK",
@@ -43713,6 +43712,193 @@
       "current_price": 124.3,
       "target_price": 128.0,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-03-25 15:11:10",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-26 09:53:05",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-26 14:50:25",
+      "buy": [
+        {
+          "code": "1109.HK",
+          "name": "华润置地",
+          "reason": "建仓评分5.9分，由price_low、rsi_oversold、obv_up、cmf_in、bb_oversold五重因素驱动，RSI超卖+资金流入+筹码无阻力",
+          "allocation_pct": 50,
+          "stop_loss_price": 23.85,
+          "target_price": 30.5,
+          "validity_period": 5
+        },
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "建仓评分4.7分，由price_low、obv_up、cmf_in、bb_oversold驱动，资金流入+OBV上升+筹码无阻力",
+          "allocation_pct": 40,
+          "stop_loss_price": 4.53,
+          "target_price": 5.85,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分6.0分，位置高位、资金流出、放量滞涨",
+          "stop_loss_triggered": false,
+          "target_price": 45.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分6.0分，单日暴跌-7.79%、资金流出、缩量下跌",
+          "stop_loss_triggered": false,
+          "target_price": 18.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "出货评分5.5分，资金流出、持续缩量、高阻力",
+          "stop_loss_triggered": false,
+          "target_price": 380.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货评分5.5分，资金大幅流出、板块拖累",
+          "stop_loss_triggered": false,
+          "target_price": 84.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0016.HK",
+          "name": "新鸿基地产",
+          "reason": "出货评分5.0分，位置高位、资金流出、严重缩量",
+          "stop_loss_triggered": false,
+          "target_price": 125.0,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-26 14:50:25",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，位置高位、资金流出、放量滞涨",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 47.76,
+      "target_price": 45.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:30",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，单日暴跌-7.79%、资金流出、缩量下跌",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 19.43,
+      "target_price": 18.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:33",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分，资金流出、持续缩量、高阻力",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 391.4,
+      "target_price": 380.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:38",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.5分，资金大幅流出、板块拖累",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.7,
+      "target_price": 84.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:40",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分，位置高位、资金流出、严重缩量",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 130.2,
+      "target_price": 125.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:43",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 28.1,
+      "amount": 0,
+      "reason": "建仓评分5.9分，由price_low、rsi_oversold、obv_up、cmf_in、bb_oversold五重因素驱动，RSI超卖+资金流入+筹码无阻力",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 23.85,
+      "current_price": 28.1,
+      "target_price": 30.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-26 14:50:47",
+      "type": "BUY",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 5.31,
+      "amount": 0,
+      "reason": "建仓评分4.7分，由price_low、obv_up、cmf_in、bb_oversold驱动，资金流入+OBV上升+筹码无阻力",
+      "capital_after": 322.18929405196104,
+      "success": false,
+      "stop_loss_price": 4.53,
+      "current_price": 5.31,
+      "target_price": 5.85,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
