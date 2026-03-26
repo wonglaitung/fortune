@@ -30,9 +30,9 @@ jobs:
 
       - name: Run comprehensive analysis
         env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}

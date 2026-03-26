@@ -38,9 +38,9 @@ jobs:
         
     - name: Set up environment variables
       run: |
-        echo "YAHOO_EMAIL=${{ secrets.YAHOO_EMAIL }}" >> $GITHUB_ENV
-        echo "YAHOO_APP_PASSWORD=${{ secrets.YAHOO_APP_PASSWORD }}" >> $GITHUB_ENV
-        echo "YAHOO_SMTP=${{ secrets.YAHOO_SMTP }}" >> $GITHUB_ENV
+        echo "EMAIL_SENDER=${{ secrets.EMAIL_SENDER }}" >> $GITHUB_ENV
+        echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> $GITHUB_ENV
+        echo "SMTP_SERVER=${{ secrets.SMTP_SERVER }}" >> $GITHUB_ENV
         echo "RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}" >> $GITHUB_ENV
         echo "QWEN_API_KEY=${{ secrets.QWEN_API_KEY }}" >> $GITHUB_ENV
         echo "QWEN_CHAT_URL=${{ secrets.QWEN_CHAT_URL }}" >> $GITHUB_ENV

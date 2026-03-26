@@ -538,9 +538,9 @@ class GoldMarketAnalyzer:
         """发送邮件报告"""
         try:
             # 获取SMTP配置
-            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
-            smtp_user = os.environ.get("YAHOO_EMAIL")
-            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
+            smtp_user = os.environ.get("EMAIL_SENDER")
+            smtp_pass = os.environ.get("EMAIL_PASSWORD")
             sender_email = smtp_user
             
             if not smtp_user or not smtp_pass:

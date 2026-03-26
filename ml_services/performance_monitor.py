@@ -469,9 +469,9 @@ def send_email_report(report: str, subject: str) -> bool:
     from email.mime.text import MIMEText
     import markdown
     
-    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
-    smtp_user = os.environ.get("YAHOO_EMAIL")
-    smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
+    smtp_user = os.environ.get("EMAIL_SENDER")
+    smtp_pass = os.environ.get("EMAIL_PASSWORD")
     recipient = os.environ.get("RECIPIENT_EMAIL", "")
     
     if not smtp_user or not smtp_pass:

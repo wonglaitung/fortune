@@ -1171,7 +1171,7 @@ cp set_key.sh.sample set_key.sh
 source set_key.sh
 
 # 验证配置（可选）
-echo $YAHOO_EMAIL
+echo $EMAIL_SENDER
 ```
 
 **步骤 5：验证安装**
@@ -1191,9 +1191,9 @@ python hsi_email.py --no-email
 
 | 变量名 | 说明 | 示例值 |
 |--------|------|--------|
-| `YAHOO_SMTP` | SMTP服务器地址 | `smtp.163.com` |
-| `YAHOO_EMAIL` | 发件人邮箱 | `your-email@163.com` |
-| `YAHOO_APP_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
+| `SMTP_SERVER` | SMTP服务器地址 | `smtp.163.com` |
+| `EMAIL_SENDER` | 发件人邮箱 | `your-email@163.com` |
+| `EMAIL_PASSWORD` | 邮箱应用密码 | 从邮箱设置中生成的授权码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱列表（逗号分隔） | `user1@gmail.com,user2@yahoo.com.hk` |
 | `QWEN_API_KEY` | 通义千问大模型API密钥 | `sk-xxxxxxxxxxxxxxxxxxxx` |
 
@@ -1215,9 +1215,9 @@ python hsi_email.py --no-email
 2. **编辑配置文件**：
    使用文本编辑器打开 `set_key.sh`，填写以下信息：
    ```bash
-   export YAHOO_SMTP="smtp.163.com"           # SMTP服务器
-   export YAHOO_EMAIL="your-email@163.com"    # 你的邮箱
-   export YAHOO_APP_PASSWORD="your-auth-code" # 邮箱授权码（不是登录密码）
+   export SMTP_SERVER="smtp.163.com"           # SMTP服务器
+   export EMAIL_SENDER="your-email@163.com"    # 你的邮箱
+   export EMAIL_PASSWORD="your-auth-code" # 邮箱授权码（不是登录密码）
    export RECIPIENT_EMAIL="recipient@gmail.com" # 收件人邮箱
    export QWEN_API_KEY="sk-your-api-key"      # 通义千问API密钥
    ```
@@ -1229,7 +1229,7 @@ python hsi_email.py --no-email
 
 4. **验证配置**：
    ```bash
-   echo $YAHOO_EMAIL
+   echo $EMAIL_SENDER
    echo $QWEN_API_KEY
    ```
 
@@ -1297,7 +1297,7 @@ pip install -r requirements.txt
 
 **问题 3：邮件发送失败**
 
-- 检查 `YAHOO_APP_PASSWORD` 是否正确（不是邮箱登录密码）
+- 检查 `EMAIL_PASSWORD` 是否正确（不是邮箱登录密码）
 - 确认邮箱已开启SMTP服务
 - 检查SMTP服务器地址是否正确
 
@@ -1336,9 +1336,9 @@ pip install -r requirements.txt
 # 1. Fork本项目到你的GitHub账号
 # 2. 进入你Fork的仓库 → Settings → Secrets and variables → Actions
 # 3. 添加以下Secrets（必填）：
-#    - YAHOO_EMAIL: 你的邮箱地址
-#    - YAHOO_APP_PASSWORD: 邮箱授权码
-#    - YAHOO_SMTP: SMTP服务器地址
+#    - EMAIL_SENDER: 你的邮箱地址
+#    - EMAIL_PASSWORD: 邮箱授权码
+#    - SMTP_SERVER: SMTP服务器地址
 #    - RECIPIENT_EMAIL: 收件人邮箱列表（逗号分隔）
 #    - QWEN_API_KEY: 通义千问API密钥
 # 4. 可选添加以下Secrets（使用默认值）：
@@ -1381,9 +1381,9 @@ git push -u origin main
    - 进入仓库 → Settings → Secrets and variables → Actions
    - 点击"New repository secret"
    - 逐个添加以下Secrets：
-     - `YAHOO_EMAIL`: 你的发件人邮箱
-     - `YAHOO_APP_PASSWORD`: 邮箱授权码（不是登录密码）
-     - `YAHOO_SMTP`: SMTP服务器地址（如smtp.163.com）
+     - `EMAIL_SENDER`: 你的发件人邮箱
+     - `EMAIL_PASSWORD`: 邮箱授权码（不是登录密码）
+     - `SMTP_SERVER`: SMTP服务器地址（如smtp.163.com）
      - `RECIPIENT_EMAIL`: 收件人邮箱列表，多个邮箱用逗号分隔
      - `QWEN_API_KEY`: 通义千问API Key
 

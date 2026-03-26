@@ -29,8 +29,8 @@ jobs:
         
     - name: 运行恒生指数预测脚本
       env:
-        YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-        YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+        EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
       run: |
         python hsi_prediction.py

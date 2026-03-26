@@ -4309,13 +4309,13 @@ class HSIEmailSystem:
         return html
 
     def send_email(self, to, subject, text, html):
-        smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-        smtp_user = os.environ.get("YAHOO_EMAIL")
-        smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.mail.yahoo.com")
+        smtp_user = os.environ.get("EMAIL_SENDER")
+        smtp_pass = os.environ.get("EMAIL_PASSWORD")
         sender_email = smtp_user
 
         if not smtp_user or not smtp_pass:
-            print("❌ 缺少YAHOO_EMAIL或YAHOO_APP_PASSWORD环境变量")
+            print("❌ 缺少EMAIL_SENDER或EMAIL_PASSWORD环境变量")
             return False
 
         if isinstance(to, str):
