@@ -3985,20 +3985,23 @@ class CatBoostModel(BaseTradingModel):
             X = latest_data[self.feature_columns].values
             # 确保X中没有NaN值（除了分类特征已处理，数值特征可能也有NaN）
             import numpy as np
-            # 只对数值特征检查NaN，避免字符串类型分类特征导致的错误
-            categorical_indices = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
-            if categorical_indices:
-                # 创建掩码，跳过分类特征索引
-                numeric_mask = np.ones(len(X[0]), dtype=bool)
-                numeric_mask[categorical_indices] = False
-                # 只检查数值列是否有NaN
-                numeric_values = X[:, numeric_mask].astype(float)
-                if np.isnan(numeric_values).any():
-                    X[:, numeric_mask] = np.nan_to_num(numeric_values, nan=0.0)
-            else:
-                # 如果没有分类特征，直接检查所有列
-                if np.isnan(X).any():
-                    X = np.nan_to_num(X, nan=0.0)
+            import pandas as pd
+
+            # 使用 DataFrame 来安全处理混合类型数据
+            df_temp = pd.DataFrame(X, columns=self.feature_columns)
+
+            # 分别处理数值列和分类列
+            categorical_cols = list(self.categorical_encoders.keys())
+            numeric_cols = [col for col in self.feature_columns if col not in categorical_cols]
+
+            # 填充数值列的 NaN
+            for col in numeric_cols:
+                if col in df_temp.columns:
+                    df_temp[col] = df_temp[col].fillna(0.0)
+
+            # 分类列已经在前面处理过（用 LabelEncoder 转换），这里不需要再处理
+            # 转换回 numpy 数组
+            X = df_temp.values
             
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
