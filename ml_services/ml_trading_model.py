@@ -511,22 +511,22 @@ class FeatureEngineer:
 
         # ========== ATR ==========
         df = self.tech_analyzer.calculate_atr(df, period=14)
-        # ATR 比率（ATR相对于10日均线的比率）
-        df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean()
+        # ATR 比率（ATR相对于10日均线的比率，使用滞后数据避免数据泄漏）
+        df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean().shift(1)
         df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
 
         # ========== 成交量相关 ==========
-        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean()
+        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean().shift(1)
         df['Vol_Ratio'] = df['Volume'] / df['Vol_MA20']
-        # 成交量 z-score
-        df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean()
-        df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std()
+        # 成交量 z-score（使用滞后数据避免数据泄漏）
+        df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean().shift(1)
+        df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std().shift(1)
         df['Vol_Z_Score'] = (df['Volume'] - df['Vol_Mean_20']) / df['Vol_Std_20']
         # 成交额
         df['Turnover'] = df['Close'] * df['Volume']
-        # 成交额 z-score
-        df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean()
-        df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std()
+        # 成交额 z-score（使用滞后数据避免数据泄漏）
+        df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean().shift(1)
+        df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std().shift(1)
         df['Turnover_Z_Score'] = (df['Turnover'] - df['Turnover_Mean_20']) / df['Turnover_Std_20']
         # 成交额变化率（多周期）
         df['Turnover_Change_1d'] = df['Turnover'].pct_change()
@@ -558,8 +558,8 @@ class FeatureEngineer:
         df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1))
         df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
         df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume'].rolling(20, min_periods=1).sum()
-        # CMF 信号线
-        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean()
+        # CMF 信号线（使用滞后数据避免数据泄漏）
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
 
         # ========== ADX (平均趋向指数) ==========
         # +DM and -DM (使用滞后数据避免数据泄漏)
@@ -581,7 +581,7 @@ class FeatureEngineer:
         df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min().shift(1)
         df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max().shift(1)
         df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min']) / (df['High_Max'] - df['Low_Min'])
-        df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean()
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean().shift(1)
 
         # ========== Williams %R ==========
         df['Williams_R'] = (df['High_Max'] - df['Close']) / (df['High_Max'] - df['Low_Min']) * -100
@@ -630,18 +630,18 @@ class FeatureEngineer:
         df['Price_Ratio_MA50'] = df['Close'].shift(1) / df['MA50']
 
         # ========== 高优先级：滚动统计特征 ==========
-        # 均线偏离度（标准化）
-        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std()
-        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std()
+        # 均线偏离度（标准化，使用滞后数据避免数据泄漏）
+        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std().shift(1)
+        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std().shift(1)
 
-        # 滚动波动率（多周期）
-        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std()
-        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std()
-        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std()
+        # 滚动波动率（多周期，使用滞后数据避免数据泄漏）
+        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std().shift(1)
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(1)
+        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std().shift(1)
 
-        # 滚动偏度/峰度（业界常用）
-        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew()
-        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt()
+        # 滚动偏度/峰度（业界常用，使用滞后数据避免数据泄漏）
+        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew().shift(1)
+        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt().shift(1)
 
         # 动量加速度（业界重要特征）
         df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
@@ -658,8 +658,8 @@ class FeatureEngineer:
 
         # 日内特征（业界核心信号，使用滞后High/Low避免数据泄漏）
         df['Intraday_Range'] = (df['High'].shift(1) - df['Low'].shift(1)) / df['Close']
-        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean()
-        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean()
+        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean().shift(1)
+        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean().shift(1)
 
         # 收盘位置（阳线/阴线强度，0-1之间，使用滞后High/Low避免数据泄漏）
         df['Close_Position'] = (df['Close'] - df['Low'].shift(1)) / (df['High'].shift(1) - df['Low'].shift(1))
@@ -677,8 +677,8 @@ class FeatureEngineer:
         df['Price_Up_Volume_Down'] = ((df['Return_1d'] > 0) & (df['Turnover'].pct_change() < 0)).astype(int)
         df['Price_Down_Volume_Up'] = ((df['Return_1d'] < 0) & (df['Turnover'].pct_change() > 0)).astype(int)
 
-        # OBV 趋势
-        df['OBV_MA5'] = df['OBV'].rolling(5).mean()
+        # OBV 趋势（使用滞后数据避免数据泄漏）
+        df['OBV_MA5'] = df['OBV'].rolling(5).mean().shift(1)
         df['OBV_Trend'] = (df['OBV'] > df['OBV_MA5']).astype(int)
 
         # 成交量波动率（使用滞后数据避免数据泄漏）
@@ -689,9 +689,9 @@ class FeatureEngineer:
         df['Volume_Ratio_20d'] = df['Volume'] / df['Volume'].rolling(20).mean()
 
         # ========== 长期趋势特征（专门优化一个月模型） ==========
-        # 长期均线（120日半年线、250日年线）
-        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean()
-        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean()
+        # 长期均线（120日半年线、250日年线，使用滞后数据避免数据泄漏）
+        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean().shift(1)
+        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean().shift(1)
 
         # ========== 新增指标：趋势斜率 ==========
         # 计算趋势斜率（线性回归斜率）
@@ -735,9 +735,9 @@ class FeatureEngineer:
         df['Intraday_Amplitude'] = ((df['High'].shift(1) - df['Low'].shift(1)) / (df['Open'] + 1e-10)) * 100
 
         # ========== 新增指标：多周期波动率 ==========
-        # 补充10日和60日波动率
-        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std()
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std()
+        # 补充10日和60日波动率（使用滞后数据避免数据泄漏）
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(1)
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1)
 
         # ========== 新增指标：多周期偏度和峰度 ==========
         # 补充多周期偏度和峰度
@@ -778,19 +778,19 @@ class FeatureEngineer:
         df['MA120_Deviation'] = (df['Close'] - df['MA120']) / df['MA120'] * 100
         df['MA250_Deviation'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
 
-        # 长期波动率（风险指标）
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std()
-        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std()
+        # 长期波动率（风险指标，使用滞后数据避免数据泄漏）
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1)
+        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std().shift(1)
 
-        # 长期ATR（长期风险）
-        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean()
-        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean()
+        # 长期ATR（长期风险，使用滞后数据避免数据泄漏）
+        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean().shift(1)
+        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean().shift(1)
         df['ATR_Ratio_60d'] = df['ATR'] / df['ATR_MA60']
         df['ATR_Ratio_120d'] = df['ATR'] / df['ATR_MA120']
 
-        # 长期成交量趋势
-        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean()
-        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean()
+        # 长期成交量趋势（使用滞后数据避免数据泄漏）
+        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean().shift(1)
+        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean().shift(1)
         df['Volume_Ratio_120d'] = df['Volume'] / df['Volume_MA120']
         df['Volume_Trend_Long'] = np.where(
             df['Volume_MA120'] > df['Volume_MA250'], 1, -1
@@ -806,8 +806,8 @@ class FeatureEngineer:
         df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
 
         # ========== 自适应成交量确认过滤器（实验性方案）==========
-        # 7日成交量均值（业界常用周期）
-        df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean()
+        # 7日成交量均值（业界常用周期，使用滞后数据避免数据泄漏）
+        df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean().shift(1)
         # 成交量比率（当前成交量/7日均量）
         df['Volume_Ratio_7d'] = df['Volume'] / df['Volume_MA7']
         
@@ -878,8 +878,8 @@ class FeatureEngineer:
 
         # ========== 新增特征：增强的MA排列（符合掘金量化多周期共振标准）==========
         # 三周期均线排列（5/20/60日MA，与业界标准一致）
-        df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean()
-        df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean()
+        df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean().shift(1)
+        df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean().shift(1)
 
         # 三周期多头排列（5>20>60）
         df['MA_Alignment_Bullish_5_20_60'] = (
@@ -910,10 +910,10 @@ class FeatureEngineer:
 
         # ========== 新增特征：市场环境自适应过滤（符合QuantInsti HMM标准）==========
         # 多维度市场状态识别（ADX + 波动率双因子）
-        # 计算波动率分位数（基于60日滚动窗口）
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std() * np.sqrt(252)
-        df['Volatility_30pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.3)
-        df['Volatility_70pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.7)
+        # 计算波动率分位数（基于60日滚动窗口，使用滞后数据避免数据泄漏）
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1) * np.sqrt(252)
+        df['Volatility_30pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.3).shift(1)
+        df['Volatility_70pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.7).shift(1)
 
         # 市场状态分类（ADX + 波动率）
         df['Market_Regime'] = np.where(
@@ -990,10 +990,10 @@ class FeatureEngineer:
         df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].shift(1).rolling(20).mean() * 1.2).astype(int)
         df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].shift(1).rolling(20).mean() * 0.8).astype(int)
         
-        # 基于ATR的动态风险评分（0-1，越高风险越大）
+        # 基于ATR的动态风险评分（0-1，越高风险越大，使用滞后数据避免数据泄漏）
         atr_percentile = df['ATR'].rolling(60, min_periods=20).apply(
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10), raw=False
-        )
+        ).shift(1)
         df['ATR_Risk_Score'] = atr_percentile.fillna(0.5)
 
         # ========== 新增特征：连续市场状态记忆（解决连续震荡市问题）==========
