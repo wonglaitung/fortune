@@ -385,3 +385,110 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 在"快速入门"中包含过多细节
 - 在"详细指南"中重复"快速入门"的内容
 - 缺少清晰的导航和分层
+
+---
+
+## 🔧 环境变量命名经验（2026-03-26）
+
+### 避免厂商特定的命名
+
+**问题**：使用 `YAHOO_*` 前缀命名邮件相关环境变量，但实际使用的是163邮箱
+
+**错误做法**：
+```bash
+export YAHOO_SMTP=smtp.163.com
+export YAHOO_EMAIL=xxx@163.com
+export YAHOO_APP_PASSWORD=xxx
+```
+
+**正确做法**：
+```bash
+export SMTP_SERVER=smtp.163.com
+export EMAIL_SENDER=xxx@163.com
+export EMAIL_PASSWORD=xxx
+```
+
+**经验教训**：
+1. 环境变量名称应该反映**功能**而非**厂商**
+2. 使用通用的命名（如 `SMTP_SERVER`、`EMAIL_SENDER`）而非厂商特定的命名（如 `YAHOO_EMAIL`）
+3. 即使最初使用某个厂商的服务，未来可能更换，通用命名可避免重命名成本
+4. 更新环境变量时需要同步更新：Python代码、文档、GitHub Actions Secrets
+
+**影响范围**：
+- 11个Python脚本需要修改
+- 3个文档文件需要更新
+- 9个GitHub Actions工作流需要更新
+- GitHub仓库的Secrets需要删除旧的并添加新的
+
+---
+
+## 🚀 GitHub Actions推送冲突处理（2026-03-26）
+
+### 多工作流并行推送冲突
+
+**问题**：多个GitHub Actions工作流同时尝试推送到同一分支，或工作流与手动提交冲突
+
+**错误信息**：
+```
+error: failed to push some refs to https://github.com/...
+hint: Updates were rejected because the remote contains work that you do not have locally.
+```
+
+**解决方案1：在推送前先拉取**（推荐）
+
+```yaml
+- name: Commit changes
+  run: |
+    git config --local user.email "github-actions[bot]@users.noreply.github.com"
+    git config --local user.name "github-actions[bot]"
+    git pull --rebase origin main  # 先拉取远程更改
+    git add file.txt
+    git commit -m "Update data [skip ci]"
+    git push
+```
+
+**解决方案2：使用stash处理冲突**（复杂场景）
+
+```yaml
+- name: Configure git and commit changes
+  run: |
+    git config --global user.name 'github-actions[bot]'
+    git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+    
+    # 检查是否有未暂存的更改
+    if ! git diff --quiet; then
+      git stash push -m "Temporary stash before pull"
+    fi
+    
+    # 拉取远程更改
+    git pull --rebase origin main || true
+    
+    # 恢复本地更改
+    if git stash list | grep -q "Temporary stash"; then
+      git stash pop
+    fi
+    
+    # 添加并提交更改
+    git add data/file.txt
+    git diff --staged --quiet || git commit -m "Update data"
+    git push origin main
+```
+
+**解决方案3：容忍推送失败**（非关键任务）
+
+```yaml
+- name: Commit and push
+  run: |
+    git config --local user.email "github-actions[bot]@users.noreply.github.com"
+    git config --local user.name "github-actions[bot]"
+    git add output/*.md || true
+    git diff --staged --quiet || git commit -m "Update report" || true
+    git push || true  # 如果推送失败也不报错
+```
+
+**经验教训**：
+1. **多个工作流可能同时运行**：特别是定时任务和手动触发
+2. **手动提交可能与工作流冲突**：本地push时工作流正在执行
+3. **使用`git pull --rebase`而非merge**：rebase可以保持线性历史，避免merge commit
+4. **添加`|| true`处理非关键推送**：对于报告类文件，推送失败也不影响主要功能
+5. **使用`[skip ci]`跳过CI**：避免数据更新触发新的工作流运行
