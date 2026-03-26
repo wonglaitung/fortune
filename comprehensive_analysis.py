@@ -1380,9 +1380,9 @@ def send_email(subject, content, html_content=None):
         from email.mime.multipart import MIMEMultipart
         
         # 从环境变量获取邮件配置
-        sender_email = os.environ.get("YAHOO_EMAIL")
-        email_password = os.environ.get("YAHOO_APP_PASSWORD")
-        smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
+        sender_email = os.environ.get("EMAIL_SENDER")
+        email_password = os.environ.get("EMAIL_PASSWORD")
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
         recipient_email = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
         
         if ',' in recipient_email:

@@ -27,9 +27,9 @@ jobs:
 
       - name: Run crypto email script
         env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         run: |
           python crypto_email.py

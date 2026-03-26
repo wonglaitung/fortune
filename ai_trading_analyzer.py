@@ -169,13 +169,13 @@ class AITradingAnalyzer:
             bool: 发送成功返回True，失败返回False
         """
         try:
-            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.163.com")
-            smtp_user = os.environ.get("YAHOO_EMAIL")
-            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
+            smtp_user = os.environ.get("EMAIL_SENDER")
+            smtp_pass = os.environ.get("EMAIL_PASSWORD")
             sender_email = smtp_user
 
             if not smtp_user or not smtp_pass:
-                print("警告: 缺少 YAHOO_EMAIL 或 YAHOO_APP_PASSWORD 环境变量，无法发送邮件")
+                print("警告: 缺少 EMAIL_SENDER 或 EMAIL_PASSWORD 环境变量，无法发送邮件")
                 return False
 
             recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")

@@ -101,13 +101,13 @@ class SimulationTrader:
             content (str): 邮件内容
         """
         try:
-            smtp_server = os.environ.get("YAHOO_SMTP", "smtp.gmail.com")
-            smtp_user = os.environ.get("YAHOO_EMAIL")
-            smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+            smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+            smtp_user = os.environ.get("EMAIL_SENDER")
+            smtp_pass = os.environ.get("EMAIL_PASSWORD")
             sender_email = smtp_user
 
             if not smtp_user or not smtp_pass:
-                self.log_message("警告: 缺少 YAHOO_EMAIL 或 YAHOO_APP_PASSWORD 环境变量，无法发送邮件")
+                self.log_message("警告: 缺少 EMAIL_SENDER 或 EMAIL_PASSWORD 环境变量，无法发送邮件")
                 return False
 
             recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")

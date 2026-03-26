@@ -417,13 +417,13 @@ def resolve_conflicting_signals(buy_signals, sell_signals, tav_score=None, buy_t
 
 
 def send_email(to, subject, text, html):
-    smtp_server = os.environ.get("YAHOO_SMTP", "smtp.mail.yahoo.com")
-    smtp_user = os.environ.get("YAHOO_EMAIL")
-    smtp_pass = os.environ.get("YAHOO_APP_PASSWORD")
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.mail.yahoo.com")
+    smtp_user = os.environ.get("EMAIL_SENDER")
+    smtp_pass = os.environ.get("EMAIL_PASSWORD")
     sender_email = smtp_user
 
     if not smtp_user or not smtp_pass:
-        print("Error: Missing YAHOO_EMAIL or YAHOO_APP_PASSWORD in environment variables.")
+        print("Error: Missing EMAIL_SENDER or EMAIL_PASSWORD in environment variables.")
         return False
 
     # 如果to是字符串，转换为列表

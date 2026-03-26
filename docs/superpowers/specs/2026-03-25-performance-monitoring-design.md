@@ -476,10 +476,10 @@ jobs:
 
       - name: Run performance monitor
         env:
-          YAHOO_EMAIL: ${{ secrets.YAHOO_EMAIL }}
-          YAHOO_APP_PASSWORD: ${{ secrets.YAHOO_APP_PASSWORD }}
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
-          YAHOO_SMTP: ${{ secrets.YAHOO_SMTP }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         run: |
           python3 ml_services/performance_monitor.py
 ```
