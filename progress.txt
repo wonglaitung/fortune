@@ -2,7 +2,7 @@
 
 **项目**：港股智能分析系统  
 **状态**：生产就绪  
-**最后更新**：2026-03-25
+**最后更新**：2026-03-26
 
 ---
 
@@ -43,6 +43,24 @@
 ---
 
 ## 最近完成（2026-03-26）
+
+- ✅ 环境变量重命名（65fd8c6）
+  - 将邮件相关环境变量从 `YAHOO_*` 改为通用命名：
+    - `YAHOO_SMTP` → `SMTP_SERVER`
+    - `YAHOO_EMAIL` → `EMAIL_SENDER`
+    - `YAHOO_APP_PASSWORD` → `EMAIL_PASSWORD`
+  - 影响范围：11个Python脚本、3个文档文件、9个GitHub Actions工作流
+  - 理由：实际使用的是163邮箱而非Yahoo，命名更准确
+
+- ✅ 修复GitHub Actions推送冲突（637aea5）
+  - 在6个工作流中添加 `git pull --rebase origin main`：
+    - comprehensive-analysis.yml
+    - performance-monitor.yml
+    - daily-ai-trading-analysis.yml
+    - ranking-analysis.yml
+    - sector-analysis.yml
+    - bull-bear-analysis.yml
+  - 解决多工作流并行或手动提交导致的推送冲突问题
 
 - ✅ README.md 文档结构优化
   - 重新组织"快速开始"章节，分为极简使用方法和完整安装配置步骤
