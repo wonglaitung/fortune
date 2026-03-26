@@ -3985,9 +3985,20 @@ class CatBoostModel(BaseTradingModel):
             X = latest_data[self.feature_columns].values
             # 确保X中没有NaN值（除了分类特征已处理，数值特征可能也有NaN）
             import numpy as np
-            if np.isnan(X).any():
-                # 填充数值特征的NaN值为0
-                X = np.nan_to_num(X, nan=0.0)
+            # 只对数值特征检查NaN，避免字符串类型分类特征导致的错误
+            categorical_indices = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
+            if categorical_indices:
+                # 创建掩码，跳过分类特征索引
+                numeric_mask = np.ones(len(X[0]), dtype=bool)
+                numeric_mask[categorical_indices] = False
+                # 只检查数值列是否有NaN
+                numeric_values = X[:, numeric_mask].astype(float)
+                if np.isnan(numeric_values).any():
+                    X[:, numeric_mask] = np.nan_to_num(numeric_values, nan=0.0)
+            else:
+                # 如果没有分类特征，直接检查所有列
+                if np.isnan(X).any():
+                    X = np.nan_to_num(X, nan=0.0)
             
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
