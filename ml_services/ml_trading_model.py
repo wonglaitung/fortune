@@ -2300,6 +2300,9 @@ class LightGBMModel(BaseTradingModel):
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
 
         Returns:
+        # 设置固定随机种子（确保模型训练的可重现性）
+        np.random.seed(42)
+        random.seed(42)
             特征重要性
         """
         # 检查是否需要显示弃用警告
@@ -2930,6 +2933,9 @@ class GBDTModel(BaseTradingModel):
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
         """
+        # 设置固定随机种子（确保模型训练的可重现性）
+        np.random.seed(42)
+        random.seed(42)
         # 检查是否需要显示弃用警告
         if use_feature_selection and not GBDTModel._deprecation_warning_shown:
             print("⚠️  警告：特征选择功能已弃用，建议使用全量特征（892个）。Walk-forward验证显示全量特征性能更好。")
@@ -3623,6 +3629,9 @@ class CatBoostModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+        # 设置固定随机种子（确保模型训练的可重现性）
+        np.random.seed(42)
+        random.seed(42)
 
         Returns:
             DataFrame: 特征重要性数据
