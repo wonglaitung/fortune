@@ -41,6 +41,19 @@
 - 信息保留完整，避免特征选择导致的信息丢失
 - 特征组合（520个交叉特征）可能包含重要非线性关系
 
+**特征数量验证**：
+可以通过以下命令确认实际特征数量：
+```bash
+# 方法1：通过特征工程模块验证
+python3 -c "from ml_services.ml_trading_model import FeatureEngineer; fe = FeatureEngineer(); df = fe.get_sample_data('0005.HK'); features = fe.create_features(df, horizon=20); print(f'实际特征数量: {len(features.columns)}')"
+
+# 方法2：通过Walk-forward验证日志查看
+# 运行Walk-forward验证时会显示："特征数量: XXX（全量特征）"
+python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
+```
+
+**注意**：实际特征数量可能会因数据质量而略有变化，预期范围为890-895个特征。
+
 ---
 
 ## 2. 设计方案
@@ -283,7 +296,7 @@ ls -lt data/comprehensive_recommendations_*.txt
 - `ml_services/train_sector_model.py`
 - `ml_services/batch_backtest.py`
 - `ml_services/backtest_20d_horizon.py`
-- `ml_services/cluster_three_models_20d.py`
+- `ml_services/compare_three_models_20d.py`
 
 **阶段3 - 自动化脚本**（2个文件）：
 - `scripts/run_comprehensive_analysis.sh`
