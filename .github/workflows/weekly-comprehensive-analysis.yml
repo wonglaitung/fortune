@@ -52,3 +52,45 @@ jobs:
             data/ml_trading_model_*_20d.pkl
             data/ml_trading_model_*_20d_importance.csv
           retention-days: 30
+
+      - name: Commit prediction history
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # 先拉取远程更新
+          git fetch origin main
+          # 如果本地有未提交的更改，先暂存
+          if ! git diff --quiet; then
+            git stash push -m "Temporarily stash changes before rebase"
+          fi
+          # 尝试rebase
+          if git rebase origin/main; then
+            # rebase成功，恢复之前暂存的更改
+            if git stash list | grep -q "Temporarily stash changes before rebase"; then
+              git stash pop
+            fi
+          else
+            # rebase失败，中止rebase
+            git rebase --abort
+            # 恢复之前暂存的更改
+            if git stash list | grep -q "Temporarily stash changes before rebase"; then
+              git stash pop
+            fi
+            # 使用merge代替rebase
+            git merge origin/main -m "Merge remote changes before updating prediction history"
+          fi
+          # 添加prediction_history.json
+          git add data/prediction_history.json
+          # 检查是否有更改需要提交
+          if ! git diff --staged --quiet; then
+            git commit -m "Update prediction history (weekly) [skip ci]"
+            # 推送时处理可能的冲突
+            if ! git push; then
+              # 推送失败，拉取最新更改
+              git pull --rebase origin main
+              # 再次尝试推送
+              git push
+            fi
+          else
+            echo "没有新的预测历史需要提交"
+          fi
