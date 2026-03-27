@@ -67,40 +67,19 @@ BASE_MODELS=("lgbm" "gbdt" "catboost")
 FUSION_MODELS=("ensemble_weighted" "ensemble_average" "ensemble_voting" "ensemble_dynamic-market" "ensemble_advanced-dynamic")
 
 # ==============================================================================
-# 步骤1：特征选择（只执行一次）
+# 步骤1：训练基本模型
 # ==============================================================================
-print_header "步骤1: 特征选择"
-
-FEATURES_FILE="$OUTPUT_DIR/statistical_features_20d_${TIMESTAMP}.txt"
-if [ ! -f "$FEATURES_FILE" ] || [ "$FORCE_TRAIN" = true ]; then
-    print_info "运行特征选择（statistical方法）..."
-    python3 ml_services/feature_selection.py \
-        --method statistical \
-        --top-k 500 \
-        --horizon $HORIZON \
-        --output-dir "$OUTPUT_DIR"
-    
-    print_success "特征选择完成"
-else
-    print_info "特征选择文件已存在，跳过: $FEATURES_FILE"
-fi
-
-# ==============================================================================
-# 步骤2：训练基本模型
-# ==============================================================================
-print_header "步骤2: 训练基本模型"
+print_header "步骤1: 训练基本模型"
 
 for model in "${BASE_MODELS[@]}"; do
     MODEL_FILE="data/ml_trading_model_${model}_${HORIZON}d.pkl"
     
     if [ ! -f "$MODEL_FILE" ] || [ "$FORCE_TRAIN" = true ]; then
-        print_info "训练 ${model^^} ${HORIZON}天模型..."
+        print_info "训练 ${model^^} ${HORIZON}天模型（使用全量特征）..."
         python3 ml_services/ml_trading_model.py \
             --mode train \
             --horizon $HORIZON \
-            --model-type "$model" \
-            --use-feature-selection \
-            --skip-feature-selection
+            --model-type "$model"
         
         print_success "${model^^} ${HORIZON}天模型训练完成"
     else
@@ -109,9 +88,9 @@ for model in "${BASE_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤3：确保子模型存在（为融合模型准备）
+# 步骤2：确保子模型存在（为融合模型准备）
 # ==============================================================================
-print_header "步骤3: 确保子模型存在"
+print_header "步骤2: 确保子模型存在"
 
 # 检查子模型是否都已存在
 ALL_SUBMODELS_EXIST=true
@@ -130,13 +109,11 @@ else
     for submodel in "${BASE_MODELS[@]}"; do
         SUBMODEL_FILE="data/ml_trading_model_${submodel}_${HORIZON}d.pkl"
         if [ ! -f "$SUBMODEL_FILE" ]; then
-            print_info "训练 ${submodel^^} ${HORIZON}天模型..."
+            print_info "训练 ${submodel^^} ${HORIZON}天模型（使用全量特征）..."
             python3 ml_services/ml_trading_model.py \
                 --mode train \
                 --horizon $HORIZON \
-                --model-type "$submodel" \
-                --use-feature-selection \
-                --skip-feature-selection
+                --model-type "$submodel"
             print_success "${submodel^^} ${HORIZON}天模型训练完成"
         else
             print_info "${submodel^^} ${HORIZON}天模型已存在，跳过"
@@ -145,15 +122,15 @@ else
 fi
 
 # ==============================================================================
-# 步骤4：训练融合模型
+# 步骤3：训练融合模型
 # ==============================================================================
-print_header "步骤4: 训练融合模型"
+print_header "步骤3: 训练融合模型"
 
 for fusion in "${FUSION_MODELS[@]}"; do
     FUSION_FILE="data/ml_trading_model_${fusion}_${HORIZON}d.pkl"
     
     if [ ! -f "$FUSION_FILE" ] || [ "$FORCE_TRAIN" = true ]; then
-        print_info "训练 ${fusion^^} ${HORIZON}天模型..."
+        print_info "训练 ${fusion^^} ${HORIZON}天模型（使用全量特征）..."
         
         # 提取融合方法
         FUSION_METHOD=$(echo "$fusion" | sed 's/ensemble_//')
@@ -162,9 +139,7 @@ for fusion in "${FUSION_MODELS[@]}"; do
             --mode train \
             --horizon $HORIZON \
             --model-type ensemble \
-            --fusion-method "$FUSION_METHOD" \
-            --use-feature-selection \
-            --skip-feature-selection
+            --fusion-method "$FUSION_METHOD"
         
         print_success "${fusion^^} ${HORIZON}天模型训练完成"
     else
@@ -173,30 +148,28 @@ for fusion in "${FUSION_MODELS[@]}"; do
 done
 
 # ==============================================================================
-# 步骤5：批量回测基本模型
+# 步骤4：批量回测基本模型
 # ==============================================================================
-print_header "步骤5: 批量回测基本模型"
+print_header "步骤4: 批量回测基本模型"
 
 for model in "${BASE_MODELS[@]}"; do
-    print_info "回测 ${model^^} ${HORIZON}天模型..."
+    print_info "回测 ${model^^} ${HORIZON}天模型（使用全量特征）..."
     
     python3 ml_services/batch_backtest.py \
         --model-type "$model" \
         --horizon $HORIZON \
-        --use-feature-selection \
-        --skip-feature-selection \
         --confidence-threshold $CONFIDENCE_THRESHOLD
     
     print_success "${model^^} ${HORIZON}天模型回测完成"
 done
 
 # ==============================================================================
-# 步骤6：批量回测融合模型
+# 步骤5：批量回测融合模型
 # ==============================================================================
-print_header "步骤6: 批量回测融合模型"
+print_header "步骤5: 批量回测融合模型"
 
 for fusion in "${FUSION_MODELS[@]}"; do
-    print_info "回测 ${fusion^^} ${HORIZON}天模型..."
+    print_info "回测 ${fusion^^} ${HORIZON}天模型（使用全量特征）..."
     
     # 提取融合方法
     FUSION_METHOD=$(echo "$fusion" | sed 's/ensemble_//')
@@ -205,17 +178,15 @@ for fusion in "${FUSION_MODELS[@]}"; do
         --model-type ensemble \
         --horizon $HORIZON \
         --fusion-method "$FUSION_METHOD" \
-        --use-feature-selection \
-        --skip-feature-selection \
         --confidence-threshold $CONFIDENCE_THRESHOLD
     
     print_success "${fusion^^} ${HORIZON}天模型回测完成"
 done
 
 # ==============================================================================
-# 步骤7：生成汇总对比报告
+# 步骤6：生成汇总对比报告
 # ==============================================================================
-print_header "步骤7: 生成汇总对比报告"
+print_header "步骤6: 生成汇总对比报告"
 
 REPORT_FILE="$OUTPUT_DIR/model_comparison_report_${TIMESTAMP}.txt"
 
