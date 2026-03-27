@@ -3562,10 +3562,20 @@ class CatBoostModel(BaseTradingModel):
 
         # 过滤日期范围（如果指定）
         if start_date:
-            start_date = pd.to_datetime(start_date).tz_localize('UTC')
+            start_date = pd.to_datetime(start_date)
+            # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
+            if start_date.tzinfo is not None:
+                start_date = start_date.tz_convert('UTC')
+            else:
+                start_date = start_date.tz_localize('UTC')
             df = df[df.index >= start_date]
         if end_date:
-            end_date = pd.to_datetime(end_date).tz_localize('UTC')
+            end_date = pd.to_datetime(end_date)
+            # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
+            if end_date.tzinfo is not None:
+                end_date = end_date.tz_convert('UTC')
+            else:
+                end_date = end_date.tz_localize('UTC')
             df = df[df.index <= end_date]
 
         logger.info(f"数据准备完成，共 {len(df)} 条记录")
