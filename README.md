@@ -239,7 +239,7 @@
 - **板块特定模型**：为16个板块训练独立模型（银行、半导体、科技等）
 - **多周期预测**：预测1天、5天、20天后的涨跌
 - **特征工程**：520+个特征（技术指标、基本面、美股市场、情感指标等）
-- **特征选择**：使用500个精选特征（statistical方法：F-test+互信息混合）
+- **特征选择**：使用全量特征（892个），依赖CatBoost的自动特征选择机制
 
 ### CatBoost 模型优势
 
@@ -313,13 +313,13 @@
 
 ### 执行流程
 
-1. **步骤0**：运行特征选择（statistical方法，生成500个精选特征）- 只执行一次
-2. **步骤1**：训练 CatBoost 20天模型（使用步骤0的特征，跳过特征选择）
-3. **步骤2**：生成 CatBoost 单模型预测
-4. **步骤3**：生成大模型建议（短期和中期）
-5. **步骤4**：综合对比分析（整合大模型建议和CatBoost预测）
-6. **步骤5**：生成详细的综合买卖建议
-7. **步骤6**：发送邮件通知（每日自动发送）
+1. **步骤0**：训练 CatBoost 20天模型（使用全量特征）
+2. **步骤1**：生成 CatBoost 单模型预测
+3. **步骤2**：生成大模型建议（短期和中期）
+4. **步骤3**：综合对比分析（整合大模型建议和CatBoost预测）
+5. **步骤4**：生成详细的综合买卖建议
+6. **步骤5**：发送邮件通知（每日自动发送）
+
 
 ### 邮件内容结构
 
@@ -923,13 +923,13 @@ python crypto_email.py
 
 ```bash
 # 训练 CatBoost 20天模型（推荐）
-python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection --skip-feature-selection
+python ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost 
 
 # 生成预测
 python ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost
 
 # 批量回测（28只股票）
-python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.6
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6
 ```
 
 **常用分析工具**：
@@ -955,11 +955,11 @@ python3 ml_services/backtest_monthly_analysis.py
 
 ```bash
 # CatBoost 批量回测（推荐，使用阈值0.6）
-python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.6
+python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6
 
 # 其他模型回测
-python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --use-feature-selection --confidence-threshold 0.6
-python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --use-feature-selection --confidence-threshold 0.6
+python3 ml_services/batch_backtest.py --model-type lgbm --horizon 20 --confidence-threshold 0.6
+python3 ml_services/batch_backtest.py --model-type gbdt --horizon 20 --confidence-threshold 0.6
 
 # 回测结果会保存到：
 # - output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json（详细数据）
@@ -984,7 +984,7 @@ python3 ml_services/lstm_experiment.py --horizon 20 --stocks 0700.HK 0939.HK 134
 
 # Transformer模型对比实验（实验性，不推荐）
 python3 ml_services/transformer_experiment.py --horizon 1  # 1天预测
-python3 ml_services/transformer_experiment.py --use-feature-selection  # 使用特征选择
+python3 ml_services/transformer_experiment.py  # 使用特征选择
 python3 ml_services/transformer_experiment.py --stocks 0700.HK 0939.HK  # 自定义测试股票
 ```
 
@@ -995,16 +995,16 @@ python3 ml_services/transformer_experiment.py --stocks 0700.HK 0939.HK  # 自定
 
 ```bash
 # 验证所有板块（16个板块，推荐）
-python3 ml_services/walk_forward_by_sector.py --all-sectors --horizon 20 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
+python3 ml_services/walk_forward_by_sector.py --all-sectors --horizon 20 --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 
 # 验证单个板块（如银行股）
-python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
+python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20 --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 
 # 验证多个板块
-python3 ml_services/walk_forward_by_sector.py --sectors tech bank consumer --horizon 20 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
+python3 ml_services/walk_forward_by_sector.py --sectors tech bank consumer --horizon 20 --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 
 # 自定义参数（推荐使用阈值0.6）
-python3 ml_services/walk_forward_by_sector.py --all-sectors --train-window 12 --test-window 1 --step-window 1 --horizon 20 --confidence-threshold 0.6 --use-feature-selection --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
+python3 ml_services/walk_forward_by_sector.py --all-sectors --train-window 12 --test-window 1 --step-window 1 --horizon 20 --confidence-threshold 0.6 --start-date 2024-01-01 --end-date 2025-12-31 --output-dir output
 ```
 
 **支持板块**：`bank`（银行）、`semiconductor`（半导体）、`tech`（科技）、`ai`（人工智能）、`exchange`（交易所）等16个板块
