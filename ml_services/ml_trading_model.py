@@ -3363,6 +3363,7 @@ class CatBoostModel(BaseTradingModel):
     3. 更快的训练速度（GPU 支持）
     4. 更好的泛化能力，减少过拟合
     """
+    _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False):
         """初始化 CatBoost 模型
@@ -3614,18 +3615,23 @@ class CatBoostModel(BaseTradingModel):
         return feature_columns
 
     def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
-        """训练 CatBoost 模型
+        """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（只使用500个选择的特征）
+            use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
 
         Returns:
             DataFrame: 特征重要性数据
         """
+        # 检查是否需要显示弃用警告
+        if use_feature_selection and not CatBoostModel._deprecation_warning_shown:
+            print("⚠️  警告：特征选择功能已弃用，建议使用全量特征（892个）。Walk-forward验证显示全量特征性能更好。")
+            CatBoostModel._deprecation_warning_shown = True
+
         print("\n" + "="*70)
         logger.info("开始训练 CatBoost 模型")
         print("="*70)
@@ -3651,7 +3657,7 @@ class CatBoostModel(BaseTradingModel):
         # ========== 特征选择（可选）==========
         if use_feature_selection:
             print("\n" + "="*70)
-            print("🔍 应用特征选择")
+            print("🔍 应用特征选择（已弃用）")
             print("="*70)
 
             # 加载选择的特征
@@ -3660,11 +3666,11 @@ class CatBoostModel(BaseTradingModel):
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                logger.info(f"特征选择应用完成：使用 {len(self.feature_columns)} 个特征")
+                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择 - 已弃用）")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
-            logger.info(f"使用全部 {len(self.feature_columns)} 个特征")
+            print(f"\n✅ 特征数量: {len(self.feature_columns)}（全量特征）")
 
         # 检查特征列是否存在
         missing_features = [col for col in self.feature_columns if col not in df.columns]
