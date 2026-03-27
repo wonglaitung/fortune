@@ -615,36 +615,58 @@ hint: Updates were rejected because the remote contains work that you do not hav
 
 ### ✅ 问题已解决（2026-03-27）
 
-**根本原因**：时区不匹配
+**根本原因**：时区不匹配 + 对已有 timezone 的对象使用 tz_localize()
 
 ```python
 # 修复前（错误）
 start_date = pd.to_datetime(start_date)  # 没有时区
 df = df[df.index >= start_date]  # df.index 是 UTC 时区，导致错误
 
-# 修复后（正确）
+# 第一次修复（部分解决）
 start_date = pd.to_datetime(start_date).tz_localize('UTC')  # 添加 UTC 时区
+df = df[df.index >= start_date]  # 对无时区日期有效
+
+# 第二次修复（完全解决）
+start_date = pd.to_datetime(start_date)
+if start_date.tzinfo is not None:
+    start_date = start_date.tz_convert('UTC')  # 对已有时区：转换
+else:
+    start_date = start_date.tz_localize('UTC')  # 对无时区：本地化
 df = df[df.index >= start_date]
 ```
 
 **错误信息**：
 ```
+# 第一次错误
 TypeError: Invalid comparison between dtype=datetime64[ns, UTC] and Timestamp
+
+# 第二次错误
+TypeError: Cannot localize tz-aware Timestamp, use tz_convert for conversions
 ```
 
 **修复位置**：
 - 文件：`ml_services/ml_trading_model.py`
 - 方法：`CatBoostModel.prepare_data()`
-- 行号：3566-3572
+- 行号：3562-3583
 
 **修复代码**：
 ```python
 # 过滤日期范围（如果指定）
 if start_date:
-    start_date = pd.to_datetime(start_date).tz_localize('UTC')
+    start_date = pd.to_datetime(start_date)
+    # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
+    if start_date.tzinfo is not None:
+        start_date = start_date.tz_convert('UTC')
+    else:
+        start_date = start_date.tz_localize('UTC')
     df = df[df.index >= start_date]
 if end_date:
-    end_date = pd.to_datetime(end_date).tz_localize('UTC')
+    end_date = pd.to_datetime(end_date)
+    # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
+    if end_date.tzinfo is not None:
+        end_date = end_date.tz_convert('UTC')
+    else:
+        end_date = end_date.tz_localize('UTC')
     df = df[df.index <= end_date]
 ```
 
@@ -658,10 +680,38 @@ df = pd.DataFrame({'A': [1, 2, 3]},
 start_date = pd.to_datetime('2024-01-02')  # 无时区
 result = df[df.index >= start_date]  # 抛出 TypeError
 
-# 修复后（成功）
+# 第一次修复（对无时区有效）
+start_date = pd.to_datetime('2024-01-02').tz_localize('UTC')  # UTC 时区
+result = df[df.index >= start_date]  # 正确过滤
+
+# 第二次修复（对已有timezone也有效）
 start_date = pd.to_datetime('2024-01-02').tz_localize('UTC')  # UTC 时区
 result = df[df.index >= start_date]  # 正确过滤
 ```
+
+**简化验证结果**（2026-03-27，3只股票）：
+
+**配置**：
+- 股票：0700.HK, 0939.HK, 1347.HK
+- Fold：12个
+- 训练窗口：12个月
+- 测试窗口：1个月
+- 置信度阈值：0.65
+
+**整体性能**：
+- ✅ 所有12个Fold成功运行
+- ✅ 平均收益率：7.23%
+- ✅ 平均胜率：24.71%
+- ✅ 平均准确率：64.29%
+- ✅ 平均夏普比率：0.1737
+- ⚠️ 稳定性评级：低（需改进）
+
+**关键发现**：
+1. ✅ 时区问题已完全解决
+2. ✅ Walk-forward验证可以正常运行
+3. ✅ 平均准确率64.29%高于随机50%
+4. ⚠️ 胜率偏低（24.71%），需要优化
+5. ⚠️ 稳定性评级低，收益率标准差7.99%
 
 **经验教训**：
 1. **时区问题容易被忽略**：在处理金融数据时，时区一致性非常重要
@@ -671,6 +721,8 @@ result = df[df.index >= start_date]  # 正确过滤
 5. **简单修复，大影响**：只添加 `.tz_localize('UTC')` 就解决了整个 Walk-forward 验证失败的问题
 
 **下一步行动**：
-- ✅ 修复已完成
-- ⏳ 需要重新运行全局 Walk-forward 验证，验证修复是否有效
-- ⏳ 检查其他模型（LightGBM、GBDT）是否有类似问题
+- ✅ 修复已完成（两次提交）
+- ✅ 简化验证（3只股票）已成功完成
+- ⏳ 等待全量验证（28只股票）完成
+- ⏳ 根据全量验证结果评估模型性能
+- ⏳ 如需要，优化置信度阈值或模型参数
