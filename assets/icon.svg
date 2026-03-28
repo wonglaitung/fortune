@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240">
+  <!-- 头部 -->
+  <ellipse cx="100" cy="60" rx="55" ry="50" fill="#F5F5F5" stroke="#D0D0D0" stroke-width="2"/>
+  
+  <!-- 黑色屏幕面部 -->
+  <rect x="55" y="35" width="90" height="50" rx="25" fill="#1a1a1a"/>
+  
+  <!-- 蓝色发光眼睛（左） -->
+  <circle cx="80" cy="60" r="12" fill="#00ffff" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="80" cy="60" r="8" fill="#0099ff"/>
+  <circle cx="80" cy="60" r="4" fill="#ffffff"/>
+  
+  <!-- 蓝色发光眼睛（右） -->
+  <circle cx="120" cy="60" r="12" fill="#00ffff" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+  <circle cx="120" cy="60" r="8" fill="#0099ff"/>
+  <circle cx="120" cy="60" r="4" fill="#ffffff"/>
+  
+  <!-- 头部侧边装饰 -->
+  <ellipse cx="45" cy="60" rx="8" ry="15" fill="#e0e0e0" stroke="#c0c0c0" stroke-width="1"/>
+  <ellipse cx="155" cy="60" rx="8" ry="15" fill="#e0e0e0" stroke="#c0c0c0" stroke-width="1"/>
+  
+  <!-- 颈部 -->
+  <rect x="85" y="85" width="30" height="15" fill="#d0d0d0"/>
+  
+  <!-- 身体 -->
+  <ellipse cx="100" cy="130" rx="40" ry="35" fill="#F5F5F5" stroke="#D0D0D0" stroke-width="2"/>
+  <path d="M 70 125 Q 100 140 130 125" stroke="#00ccff" stroke-width="3" fill="none" opacity="0.6"/>
+  
+  <!-- 左臂（挥手） -->
+  <ellipse cx="60" cy="115" rx="12" ry="10" fill="#e8e8e8" stroke="#c8c8c8" stroke-width="1"/>
+  <path d="M 50 110 Q 35 95 40 80" stroke="#d0d0d0" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 38 78 Q 30 70 35 65" stroke="#e8e8e8" stroke-width="6" fill="none" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" values="0 35 65; -15 35 65; 0 35 65" dur="1.5s" repeatCount="indefinite"/>
+  </path>
+  <!-- 手掌 -->
+  <ellipse cx="32" cy="62" rx="8" ry="6" fill="#f0f0f0" stroke="#c0c0c0" stroke-width="1">
+    <animateTransform attributeName="transform" type="rotate" values="0 35 65; -15 35 65; 0 35 65" dur="1.5s" repeatCount="indefinite"/>
+  </ellipse>
+  <!-- 手指 -->
+  <line x1="28" y1="58" x2="26" y2="52" stroke="#d0d0d0" stroke-width="2" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" values="0 35 65; -15 35 65; 0 35 65" dur="1.5s" repeatCount="indefinite"/>
+  </line>
+  <line x1="32" y1="57" x2="30" y2="50" stroke="#d0d0d0" stroke-width="2" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" values="0 35 65; -15 35 65; 0 35 65" dur="1.5s" repeatCount="indefinite"/>
+  </line>
+  <line x1="36" y1="58" x2="35" y2="52" stroke="#d0d0d0" stroke-width="2" stroke-linecap="round">
+    <animateTransform attributeName="transform" type="rotate" values="0 35 65; -15 35 65; 0 35 65" dur="1.5s" repeatCount="indefinite"/>
+  </line>
+  
+  <!-- 右臂 -->
+  <ellipse cx="140" cy="115" rx="12" ry="10" fill="#e8e8e8" stroke="#c8c8c8" stroke-width="1"/>
+  <path d="M 150 120 Q 160 140 155 155" stroke="#d0d0d0" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="156" cy="158" rx="7" ry="5" fill="#f0f0f0" stroke="#c0c0c0" stroke-width="1"/>
+  
+  <!-- 左腿 -->
+  <path d="M 75 160 Q 70 185 75 200" stroke="#d0d0d0" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <ellipse cx="75" cy="205" rx="12" ry="6" fill="#e8e8e8" stroke="#c0c0c0" stroke-width="1"/>
+  
+  <!-- 右腿 -->
+  <path d="M 125 160 Q 130 185 125 200" stroke="#d0d0d0" stroke-width="14" fill="none" stroke-linecap="round"/>
+  <ellipse cx="125" cy="205" rx="12" ry="6" fill="#e8e8e8" stroke="#c0c0c0" stroke-width="1"/>
+  
+  <!-- 身体装饰 -->
+  <circle cx="100" cy="130" r="3" fill="#00ccff" opacity="0.6"/>
+</svg>
