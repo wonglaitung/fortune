@@ -289,10 +289,6 @@ def main():
     parser.add_argument('--fusion-method', type=str, default='weighted',
                         choices=['average', 'weighted', 'voting', 'dynamic-market', 'advanced-dynamic'],
                         help='融合方法（仅用于融合模型）')
-    parser.add_argument('--use-feature-selection', action='store_true',
-                        help='使用特征选择')
-    parser.add_argument('--skip-feature-selection', action='store_true',
-                        help='跳过特征选择（配合 --use-feature-selection 使用）')
 
     args = parser.parse_args()
 
@@ -337,19 +333,6 @@ def main():
 
     logger.info(f"模型已加载")
 
-    # 加载特征选择结果
-    selected_features = None
-    if args.use_feature_selection:
-        try:
-            selected_features = data_prep_model.load_selected_features()
-            if selected_features is None:
-                logger.error("错误：未找到特征选择结果，请先运行特征选择")
-                return
-            logger.info(f"已加载 {len(selected_features)} 个精选特征")
-        except Exception as e:
-            logger.warning(f" 无法加载特征选择结果: {e}")
-            selected_features = None
-
     # 准备测试数据 - 使用主脚本的数据准备逻辑
     logger.info(f"准备测试数据...")
     from config import WATCHLIST
@@ -367,12 +350,8 @@ def main():
         return
 
     # 获取特征列
-    if args.use_feature_selection and selected_features is not None:
-        feature_columns = selected_features
-    else:
-        feature_columns = data_prep_model.feature_columns
-
-    logger.info(f"测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}")
+    feature_columns = data_prep_model.feature_columns
+    logger.info(f"测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}（全量特征）")
 
     # 运行批量回测
     results = batch_backtest_all_stocks(

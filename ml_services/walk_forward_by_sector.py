@@ -803,10 +803,6 @@ def main():
     parser.add_argument('--class-weight', type=str, default='balanced',
                        help='类别权重策略（balanced/none/custom，默认: balanced）')
 
-    # 特征参数
-    parser.add_argument('--use-feature-selection', action='store_true',
-                       help='使用特征选择')
-
     # 数据参数
     parser.add_argument('--start-date', type=str, default='2024-01-01',
                        help='验证开始日期（默认: 2024-01-01）')
@@ -867,7 +863,7 @@ def main():
         step_window_months=args.step_window,
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
-        use_feature_selection=args.use_feature_selection,
+        use_feature_selection=False,  # 默认使用全量特征
         class_weight=class_weight
     )
 
