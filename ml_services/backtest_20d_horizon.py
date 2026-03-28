@@ -783,8 +783,6 @@ def main():
     parser.add_argument('--confidence-threshold', type=float, default=0.55, help='置信度阈值')
     parser.add_argument('--start-date', type=str, default='2026-01-01', help='开始日期 (YYYY-MM-DD)')
     parser.add_argument('--end-date', type=str, default='2026-01-31', help='结束日期 (YYYY-MM-DD)')
-    parser.add_argument('--use-feature-selection', action='store_true', help='使用特征选择')
-    parser.add_argument('--skip-feature-selection', action='store_true', help='跳过特征选择')
     parser.add_argument('--enable-dynamic-risk-control', action='store_true', help='启用动态风险控制（业界标准）')
 
     args = parser.parse_args()
@@ -805,19 +803,6 @@ def main():
     model.load_model(f'data/ml_trading_model_catboost_{args.horizon}d.pkl')
     print(f"✅ 模型已加载")
 
-    # 加载特征选择结果
-    selected_features = None
-    if args.use_feature_selection:
-        try:
-            selected_features = model.load_selected_features()
-            if selected_features is None:
-                logger.error("错误：未找到特征选择结果，请先运行特征选择")
-                return
-            print(f"✅ 已加载 {len(selected_features)} 个精选特征")
-        except Exception as e:
-            logger.warning(f" 无法加载特征选择结果: {e}")
-            selected_features = None
-
     # 准备测试数据
     print("\n📊 准备测试数据...")
     from config import WATCHLIST
@@ -833,12 +818,8 @@ def main():
         return
 
     # 获取特征列
-    if args.use_feature_selection and selected_features is not None:
-        feature_columns = selected_features
-    else:
-        feature_columns = model.feature_columns
-
-    print(f"✅ 测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}")
+    feature_columns = model.feature_columns
+    print(f"✅ 测试数据准备完成: {len(test_df)} 条，特征列数: {len(feature_columns)}（全量特征）")
 
     # 创建回测器
     backtester = Backtest20DHoldPeriod(

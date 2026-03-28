@@ -45,10 +45,6 @@ def main():
                        help='板块类型: bank, tech, semiconductor, ai, consumer, index, exchange 等')
     parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
                        help='预测周期: 1=次日, 5=一周, 20=一个月')
-    parser.add_argument('--use-feature-selection', action='store_true',
-                       help='使用特征选择')
-    parser.add_argument('--skip-feature-selection', action='store_true',
-                       help='跳过特征选择，直接使用已有的特征文件')
 
     args = parser.parse_args()
 
@@ -76,7 +72,7 @@ def main():
         feature_importance = model.train(
             stock_codes,
             horizon=args.horizon,
-            use_feature_selection=args.use_feature_selection or args.skip_feature_selection
+            use_feature_selection=False  # 默认使用全量特征
         )
 
         end_time = datetime.now()

@@ -280,7 +280,17 @@ def extract_ml_predictions(filepath):
                             'resistance_ratio': resistance_ratio
                         })
 
-                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {safe_float_format(row['probability'], '4f')} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
+                # 为上涨概率添加颜色标记
+                probability = row['probability']
+                probability_formatted = safe_float_format(probability, '4f')
+                if probability > 0.60:
+                    probability_colored = f'<span style="color: green; font-weight: bold;">{probability_formatted}</span>'
+                elif probability > 0.55:
+                    probability_colored = f'<span style="color: orange; font-weight: bold;">{probability_formatted}</span>'
+                else:
+                    probability_colored = f'<span style="color: red; font-weight: bold;">{probability_formatted}</span>'
+
+                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
 
             catboost_text += f"\n**统计信息**：\n"
             catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
