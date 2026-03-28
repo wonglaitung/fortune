@@ -1,4 +1,4 @@
-<img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产和港股智能分析与交易系统
+# <img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产和港股智能分析与交易系统
 
 **⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
 
