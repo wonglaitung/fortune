@@ -4352,6 +4352,17 @@ class CatBoostModel(BaseTradingModel):
             # 获取最新数据
             latest_data = stock_df.iloc[-1:]
 
+            # 确保所有事件驱动特征都存在（容错处理）
+            event_features = [
+                'Ex_Dividend_In_7d', 'Ex_Dividend_In_30d', 'Dividend_Frequency_12m',
+                'Earnings_Announcement_In_7d', 'Earnings_Announcement_In_30d', 'Days_Since_Last_Earnings',
+                'Earnings_Surprise_Score', 'Earnings_Surprise_Avg_3', 'Earnings_Surprise_Trend'
+            ]
+            for feat in event_features:
+                if feat not in latest_data.columns:
+                    logger.warning(f"警告: 事件驱动特征 {feat} 不存在，使用默认值0")
+                    latest_data[feat] = 0.0
+
             # 准备特征
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
