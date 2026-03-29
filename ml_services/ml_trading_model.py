@@ -4340,6 +4340,9 @@ class CatBoostModel(BaseTradingModel):
             for key, value in sector_features.items():
                 stock_df[key] = value
 
+            # 添加事件驱动特征（9个，与训练时保持一致）
+            stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+
             # 生成技术指标与基本面交互特征（与训练时保持一致）
             stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
 
