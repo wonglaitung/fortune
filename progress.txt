@@ -68,6 +68,17 @@
 - **结论**：事件驱动特征在风险控制和震荡市表现优异，值得保留
 - **文件**：`docs/event_driven_features_design.md`、`test_event_features.py`、`test_yahoo_earnings.py`
 
+### ✅ CatBoost预测功能修复（2026-03-29）
+- **问题**：CatBoostModel的predict方法缺少事件驱动特征生成，导致KeyError
+- **根本原因**：训练时包含9个事件驱动特征，但预测时未生成这些特征，导致feature_columns不匹配
+- **修复方案**：在CatBoostModel.predict方法中添加事件驱动特征生成
+- **验证结果**：
+  - ✅ 19只股票全部预测成功
+  - ✅ 预测结果包含概率和方向信息
+  - ✅ 没有KeyError错误
+  - ✅ 模型正常工作
+- **提交**：commit 03a80c3，已推送到远程仓库
+
 ---
 
 ## 项目当前状态
