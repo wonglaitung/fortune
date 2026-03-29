@@ -1975,12 +1975,31 @@
       "actual_return": null,
       "actual_direction": null,
       "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-03-29_1109.HK",
+      "timestamp": "2026-03-29T22:49:43",
+      "stock_code": "1109.HK",
+      "stock_name": "华润置地",
+      "sector": "real_estate",
+      "horizon": 20,
+      "predicted_direction": "up",
+      "prediction_probability": 0.7011192043339116,
+      "confidence_level": "high",
+      "entry_price": 27.9,
+      "model_type": "catboost",
+      "data_date": "2026-03-29",
+      "target_date": "",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
     }
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-03-29T22:38:43",
+    "last_updated": "2026-03-29T22:57:10",
     "version": "1.0",
-    "total_predictions": 104
+    "total_predictions": 105
   }
 }
