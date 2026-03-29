@@ -86,7 +86,7 @@ STOCK_SECTOR_MAPPING = {
     '08288.HK': {'sector': 'index', 'name': '恒生中国企业', 'type': 'index', 'defensive': 75, 'growth': 45, 'cyclical': 35, 'liquidity': 85, 'risk': 30},
 
     # 房地产股 (real_estate)
-    '01109.HK': {'sector': 'real_estate', 'name': '华润置地', 'type': 'real_estate', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
+    '1109.HK': {'sector': 'real_estate', 'name': '华润置地', 'type': 'real_estate', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
     '0012.HK': {'sector': 'real_estate', 'name': '恒基地产', 'type': 'real_estate', 'defensive': 20, 'growth': 30, 'cyclical': 95, 'liquidity': 50, 'risk': 85},
     '0016.HK': {'sector': 'real_estate', 'name': '新鸿基地产', 'type': 'real_estate', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
 
