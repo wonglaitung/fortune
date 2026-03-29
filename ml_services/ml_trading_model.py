@@ -1901,6 +1901,354 @@ class FeatureEngineer:
                 'sector_outperform_hsi': 0
             }
 
+    def create_event_driven_features(self, code, df):
+        """
+        创建事件驱动特征（9个）
+
+        特征列表：
+        1. 除净日和分红特征（3个）：
+           - Ex_Dividend_In_7d: 未来7天内是否有除净日
+           - Ex_Dividend_In_30d: 未来30天内是否有除净日
+           - Dividend_Frequency_12m: 过去12个月分红次数
+
+        2. 财报公告日特征（3个）：
+           - Earnings_Announcement_In_7d: 未来7天内是否有财报公告
+           - Earnings_Announcement_In_30d: 未来30天内是否有财报公告
+           - Days_Since_Last_Earnings: 距离上次财报公告的天数
+
+        3. 财报超预期特征（3个）：
+           - Earnings_Surprise_Score: 最新财报超预期评分（基于Surprise(%)）
+           - Earnings_Surprise_Avg_3: 过去3次财报超预期平均
+           - Earnings_Surprise_Trend: 近期财报超预期趋势
+
+        参数:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        返回:
+            df: 添加事件驱动特征的DataFrame
+        """
+        if len(df) < 30:  # 需要足够的历史数据
+            return df
+
+        # ========== 阶段3.1：除净日和分红特征（3个）==========
+        try:
+            dividend_info = self._get_dividend_calendar(code)
+            if dividend_info is not None and not dividend_info.empty:
+                df = self._add_dividend_features(df, dividend_info)
+        except Exception as e:
+            print(f"  ⚠️ 添加分红特征失败 {code}: {e}")
+
+        # ========== 阶段3.2：财报公告日特征（3个）==========
+        try:
+            earnings_calendar = self._get_earnings_calendar(code)
+            if earnings_calendar is not None:
+                df = self._add_earnings_date_features(df, earnings_calendar)
+        except Exception as e:
+            print(f"  ⚠️ 添加财报公告日特征失败 {code}: {e}")
+
+        # ========== 阶段3.2：财报超预期特征（3个）==========
+        try:
+            earnings_surprise = self._get_earnings_surprise(code)
+            if earnings_surprise is not None and not earnings_surprise.empty:
+                df = self._add_earnings_surprise_features(df, earnings_surprise)
+        except Exception as e:
+            print(f"  ⚠️ 添加财报超预期特征失败 {code}: {e}")
+
+        return df
+
+    def _get_dividend_calendar(self, code):
+        """
+        获取股息日历（使用AKShare）
+
+        参数:
+            code: 股票代码（格式：0700.HK）
+
+        返回:
+            DataFrame: 包含除净日等信息的DataFrame
+        """
+        try:
+            import akshare as ak
+
+            # 移除.HK后缀，转换为5位数字格式
+            symbol = code.replace('.HK', '')
+            if len(symbol) < 5:
+                symbol = symbol.zfill(5)
+            elif len(symbol) > 5:
+                symbol = symbol[-5:]
+
+            # 获取股息数据
+            df_dividend = ak.stock_hk_dividend_payout_em(symbol=symbol)
+
+            if df_dividend is None or df_dividend.empty:
+                return None
+
+            # 提取关键列
+            result = []
+            for _, row in df_dividend.iterrows():
+                ex_date = row.get('除净日', None)
+                if pd.notna(ex_date):
+                    result.append({
+                        '除净日': ex_date,
+                        '分红方案': row.get('分红方案', None),
+                        '财政年度': row.get('财政年度', None)
+                    })
+
+            if not result:
+                return None
+
+            return pd.DataFrame(result)
+        except Exception as e:
+            print(f"  ⚠️ 获取股息日历失败 {code}: {e}")
+            return None
+
+    def _add_dividend_features(self, df, dividend_info):
+        """
+        添加除净日和分红特征（3个）
+
+        参数:
+            df: 股票数据DataFrame
+            dividend_info: 股息信息DataFrame
+
+        返回:
+            df: 添加除净日特征的DataFrame
+        """
+        # 确保日期索引是datetime类型
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+
+        # 移除时区信息，统一为无时区datetime
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+
+        # 转换除净日为datetime（无时区）
+        dividend_info['除净日'] = pd.to_datetime(dividend_info['除净日'])
+        if dividend_info['除净日'].dt.tz is not None:
+            dividend_info['除净日'] = dividend_info['除净日'].dt.tz_localize(None)
+
+        # 特征1：未来7天内是否有除净日
+        df['Ex_Dividend_In_7d'] = df.index.to_series().apply(
+            lambda x: any(0 <= (date - x).days <= 7 for date in dividend_info['除净日'])
+        ).astype(int)
+
+        # 特征2：未来30天内是否有除净日
+        df['Ex_Dividend_In_30d'] = df.index.to_series().apply(
+            lambda x: any(0 <= (date - x).days <= 30 for date in dividend_info['除净日'])
+        ).astype(int)
+
+        # 特征3：过去12个月分红次数
+        df['Dividend_Frequency_12m'] = df.index.to_series().apply(
+            lambda x: sum(1 for date in dividend_info['除净日'] if -365 <= (date - x).days <= 0)
+        )
+
+        # 使用滞后数据避免数据泄漏
+        df['Ex_Dividend_In_7d'] = df['Ex_Dividend_In_7d'].shift(1)
+        df['Ex_Dividend_In_30d'] = df['Ex_Dividend_In_30d'].shift(1)
+        df['Dividend_Frequency_12m'] = df['Dividend_Frequency_12m'].shift(1)
+
+        return df
+
+    def _get_earnings_calendar(self, code):
+        """
+        获取财报公告日（使用雅虎财经）
+
+        参数:
+            code: 股票代码（格式：0700.HK）
+
+        返回:
+            dict: 包含财报公告日等信息的字典
+        """
+        try:
+            import yfinance as yf
+
+            # 雅虎财经需要完整的股票代码
+            symbol = code
+            if not symbol.endswith('.HK'):
+                symbol = code.replace('.HK', '').lstrip('0') + '.HK'
+
+            ticker = yf.Ticker(symbol)
+
+            # 获取财报日历
+            calendar = ticker.calendar
+
+            if calendar is None or not calendar:
+                return None
+
+            return calendar
+        except Exception as e:
+            print(f"  ⚠️ 获取财报公告日失败 {code}: {e}")
+            return None
+
+    def _add_earnings_date_features(self, df, earnings_calendar):
+        """
+        添加财报公告日特征（3个）
+
+        参数:
+            df: 股票数据DataFrame
+            earnings_calendar: 财报日历字典
+
+        返回:
+            df: 添加财报公告日特征的DataFrame
+        """
+        # 确保日期索引是datetime类型
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+
+        # 移除时区信息，统一为无时区datetime
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+
+        # 获取财报公告日列表
+        earnings_dates = earnings_calendar.get('Earnings Date', [])
+        if not earnings_dates:
+            # 没有财报数据，添加默认值
+            df['Earnings_Announcement_In_7d'] = 0
+            df['Earnings_Announcement_In_30d'] = 0
+            df['Days_Since_Last_Earnings'] = 120  # 默认120天
+            return df
+
+        # 转换财报日期为datetime（无时区）
+        earnings_dates_clean = []
+        for date in earnings_dates:
+            if isinstance(date, datetime):
+                dt = pd.to_datetime(date)
+            else:
+                dt = pd.to_datetime(date)
+            if dt.tz is not None:
+                dt = dt.tz_localize(None)
+            earnings_dates_clean.append(dt)
+        earnings_dates = earnings_dates_clean
+
+        # 特征1：未来7天内是否有财报公告
+        df['Earnings_Announcement_In_7d'] = df.index.to_series().apply(
+            lambda x: any(0 <= (date - x).days <= 7 for date in earnings_dates)
+        ).astype(int)
+
+        # 特征2：未来30天内是否有财报公告
+        df['Earnings_Announcement_In_30d'] = df.index.to_series().apply(
+            lambda x: any(0 <= (date - x).days <= 30 for date in earnings_dates)
+        ).astype(int)
+
+        # 特征3：距离上次财报公告的天数
+        df['Days_Since_Last_Earnings'] = df.index.to_series().apply(
+            lambda x: min(
+                [(x - date).days for date in earnings_dates if (x - date).days >= 0],
+                default=120
+            )
+        )
+
+        # 使用滞后数据避免数据泄漏
+        df['Earnings_Announcement_In_7d'] = df['Earnings_Announcement_In_7d'].shift(1)
+        df['Earnings_Announcement_In_30d'] = df['Earnings_Announcement_In_30d'].shift(1)
+        df['Days_Since_Last_Earnings'] = df['Days_Since_Last_Earnings'].shift(1)
+
+        return df
+
+    def _get_earnings_surprise(self, code):
+        """
+        获取财报超预期数据（使用雅虎财经）
+
+        参数:
+            code: 股票代码（格式：0700.HK）
+
+        返回:
+            DataFrame: 包含EPS预期、实际EPS、超预期百分比的DataFrame
+        """
+        try:
+            import yfinance as yf
+
+            # 雅虎财经需要完整的股票代码
+            symbol = code
+            if not symbol.endswith('.HK'):
+                symbol = code.replace('.HK', '').lstrip('0') + '.HK'
+
+            ticker = yf.Ticker(symbol)
+
+            # 获取财报超预期数据
+            earnings_dates = ticker.earnings_dates
+
+            if earnings_dates is None or earnings_dates.empty:
+                return None
+
+            return earnings_dates
+        except Exception as e:
+            print(f"  ⚠️ 获取财报超预期数据失败 {code}: {e}")
+            return None
+
+    def _add_earnings_surprise_features(self, df, earnings_surprise):
+        """
+        添加财报超预期特征（3个）
+
+        参数:
+            df: 股票数据DataFrame
+            earnings_surprise: 财报超预期DataFrame（包含Surprise(%)列）
+
+        返回:
+            df: 添加财报超预期特征的DataFrame
+        """
+        # 确保日期索引是datetime类型
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+
+        # 移除时区信息，统一为无时区datetime
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+
+        # 确保earnings_surprise的索引也是datetime且无时区
+        if not isinstance(earnings_surprise.index, pd.DatetimeIndex):
+            earnings_surprise.index = pd.to_datetime(earnings_surprise.index)
+        if earnings_surprise.index.tz is not None:
+            earnings_surprise.index = earnings_surprise.index.tz_localize(None)
+
+        # 检查是否有Surprise(%)列
+        if 'Surprise(%)' not in earnings_surprise.columns:
+            # 没有超预期数据，添加默认值
+            df['Earnings_Surprise_Score'] = 0.0
+            df['Earnings_Surprise_Avg_3'] = 0.0
+            df['Earnings_Surprise_Trend'] = 0.0
+            return df
+
+        # 初始化特征列
+        df['Earnings_Surprise_Score'] = 0.0
+        df['Earnings_Surprise_Avg_3'] = 0.0
+        df['Earnings_Surprise_Trend'] = 0.0
+
+        # 为每个交易日分配超预期评分
+        for idx, date in enumerate(df.index):
+            # 特征1：最新财报超预期评分（相对于当前日期）
+            # 查找距离当前日期最近的已发布财报
+            past_earnings = earnings_surprise[earnings_surprise.index <= date]
+
+            if not past_earnings.empty:
+                # 取最近一次财报的超预期百分比
+                latest_surprise = past_earnings.iloc[-1]['Surprise(%)']
+
+                # 将超预期百分比转换为评分（-1到+1）
+                # 超预期>10%为+1，不及预期<-10%为-1，中间按比例缩放
+                if pd.notna(latest_surprise):
+                    df.loc[date, 'Earnings_Surprise_Score'] = np.clip(latest_surprise / 10.0, -1.0, 1.0)
+
+                    # 特征2：过去3次财报超预期平均
+                    if len(past_earnings) >= 3:
+                        avg_surprise = past_earnings.tail(3)['Surprise(%)'].mean()
+                        if pd.notna(avg_surprise):
+                            df.loc[date, 'Earnings_Surprise_Avg_3'] = np.clip(avg_surprise / 10.0, -1.0, 1.0)
+
+                    # 特征3：近期财报超预期趋势
+                    if len(past_earnings) >= 2:
+                        recent_surprises = past_earnings.tail(2)['Surprise(%)'].tolist()
+                        if all(pd.notna(s) for s in recent_surprises):
+                            # 计算趋势（最近一次 - 上一次）
+                            trend = recent_surprises[-1] - recent_surprises[0]
+                            df.loc[date, 'Earnings_Surprise_Trend'] = np.clip(trend / 10.0, -1.0, 1.0)
+
+        # 使用滞后数据避免数据泄漏
+        df['Earnings_Surprise_Score'] = df['Earnings_Surprise_Score'].shift(1)
+        df['Earnings_Surprise_Avg_3'] = df['Earnings_Surprise_Avg_3'].shift(1)
+        df['Earnings_Surprise_Trend'] = df['Earnings_Surprise_Trend'].shift(1)
+
+        return df
+
     def create_interaction_features(self, df, limit_interaction_features=True):
         """创建交叉特征（类别型 × 数值型）
 
@@ -3558,6 +3906,9 @@ class CatBoostModel(BaseTradingModel):
                 for key, value in sector_features.items():
                     stock_df[key] = value
 
+                # 添加事件驱动特征（9个）
+                stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+
                 # 生成技术指标与基本面交互特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
 
@@ -3581,25 +3932,15 @@ class CatBoostModel(BaseTradingModel):
         # 合并所有数据
         df = pd.concat(all_data, ignore_index=False)
 
-        # 转换索引为 datetime
-        df.index = pd.to_datetime(df.index)
+        # 转换索引为 datetime（统一为UTC时区）
+        df.index = pd.to_datetime(df.index, utc=True)
 
         # 过滤日期范围（如果指定）
         if start_date:
-            start_date = pd.to_datetime(start_date)
-            # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
-            if start_date.tzinfo is not None:
-                start_date = start_date.tz_convert('UTC')
-            else:
-                start_date = start_date.tz_localize('UTC')
+            start_date = pd.to_datetime(start_date, utc=True)
             df = df[df.index >= start_date]
         if end_date:
-            end_date = pd.to_datetime(end_date)
-            # 处理时区：如果有时区，转换到UTC；如果没有时区，本地化为UTC
-            if end_date.tzinfo is not None:
-                end_date = end_date.tz_convert('UTC')
-            else:
-                end_date = end_date.tz_localize('UTC')
+            end_date = pd.to_datetime(end_date, utc=True)
             df = df[df.index <= end_date]
 
         logger.info(f"数据准备完成，共 {len(df)} 条记录")
