@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 322.18929405196104,
+  "capital": 32.18929405196104,
   "positions": {
     "1398.HK": {
       "shares": 22900,
@@ -27,15 +27,20 @@
       "avg_price": 5.205111111111111,
       "stop_loss_price": 4.42
     },
-    "2533.HK": {
-      "shares": 7600,
-      "avg_price": 18.56,
-      "stop_loss_price": 15.82
-    },
     "6682.HK": {
       "shares": 2500,
       "avg_price": 36.9936,
       "stop_loss_price": 30.8
+    },
+    "1347.HK": {
+      "shares": 1400,
+      "avg_price": 80.95,
+      "stop_loss_price": 73.1
+    },
+    "2533.HK": {
+      "shares": 400,
+      "avg_price": 15.7,
+      "stop_loss_price": 14.2
     }
   },
   "transaction_history": [
@@ -27410,6 +27415,54 @@
       "current_price": 36.54,
       "target_price": 40.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-30T14:41:51.273279",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 7600,
+      "price": 15.7,
+      "amount": 119320.0,
+      "capital_after": 119642.18929405196,
+      "reason": "止损触发: 当前价格HK$15.70 < 止损价格HK$15.82",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 15.7,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-03-30T14:41:59.038406",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 1400,
+      "price": 80.95,
+      "amount": 113330.0,
+      "capital_after": 6312.189294051961,
+      "reason": "技术指标协同：RSI+OBV+CMF+布林带4项同向超卖/资金流入；筹码分布上方筹码比例0.0%无阻力；TAV评分23.75分弱共振但建仓评分6.4高；利好AI芯片新闻强化反弹逻辑",
+      "success": true,
+      "stop_loss_price": 73.1,
+      "current_price": 80.95,
+      "target_price": 88.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-30T14:42:05.546977",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 15.7,
+      "amount": 6280.0,
+      "capital_after": 32.18929405196104,
+      "reason": "技术指标协同：RSI+布林带+OBV 3项同向超卖；筹码分布上方筹码比例0.0%无阻力；人工智能板块弱势但个股超卖显著波段反弹概率高",
+      "success": true,
+      "stop_loss_price": 14.2,
+      "current_price": 15.7,
+      "target_price": 17.2,
+      "validity_period": 2
     }
   ],
   "portfolio_history": [
@@ -43846,121 +43899,135 @@
           "stop_loss_price": 30.8
         }
       }
+    },
+    {
+      "timestamp": "2026-03-30T14:41:52.372985",
+      "capital": 119642.18929405196,
+      "portfolio_value": 947336.189294052,
+      "positions": {
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "1288.HK": {
+          "shares": 18000,
+          "avg_price": 5.205111111111111,
+          "stop_loss_price": 4.42
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-30T14:42:00.679406",
+      "capital": 6312.189294051961,
+      "portfolio_value": 947336.189294052,
+      "positions": {
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "1288.HK": {
+          "shares": 18000,
+          "avg_price": 5.205111111111111,
+          "stop_loss_price": 4.42
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-30T14:42:07.498971",
+      "capital": 32.18929405196104,
+      "portfolio_value": 947231.189294052,
+      "positions": {
+        "1398.HK": {
+          "shares": 22900,
+          "avg_price": 6.19,
+          "stop_loss_price": 5.25
+        },
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "1288.HK": {
+          "shares": 18000,
+          "avg_price": 5.205111111111111,
+          "stop_loss_price": 4.42
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-03-27 11:59:30",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "位置历史高位（100.0%），资金流出（CMF -0.1312），超买风险（RSI 60.66）",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 107.1,
-      "target_price": 104.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-27 11:59:34",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号（macd_cross,obv_down,price_down），资金撤离（CMF -0.0296），高阻力（上方比例78.6%）",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 389.8,
-      "target_price": 380.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-27 11:59:39",
-      "type": "BUY",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 29.76,
-      "amount": 0,
-      "reason": "技术指标高度协同（RSI超卖+OBV上升+CMF流入+布林带超卖），筹码无阻力（上方比例0.0%），超跌反弹机会",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 28.5,
-      "current_price": 29.76,
-      "target_price": 31.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-27 11:59:44",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 16.5,
-      "amount": 0,
-      "reason": "技术指标协同（RSI超卖+OBV上升+布林带突破下轨），筹码无阻力（上方比例0.0%），人工智能板块轮动超跌反弹",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 15.5,
-      "current_price": 16.5,
-      "target_price": 17.8,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-27 11:59:46",
-      "type": "BUY",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 4.86,
-      "amount": 0,
-      "reason": "技术指标协同（RSI超卖+CMF流入+布林带超卖），筹码无阻力（上方比例0.0%），公用事业股超跌反弹",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 4.6,
-      "current_price": 4.86,
-      "target_price": 5.1,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-03-27 11:59:50",
-      "type": "BUY",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 27.84,
-      "amount": 0,
-      "reason": "技术指标协同（RSI超卖+CMF流入+布林带超卖），筹码无阻力（上方比例0.0%），房地产股超跌反弹",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 26.5,
-      "current_price": 27.84,
-      "target_price": 29.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-03-27 11:59:52",
-      "type": "BUY",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 36.94,
-      "amount": 0,
-      "reason": "技术指标协同（价格低位+CMF流入+MACD交叉），筹码低阻力（上方比例30.0%），人工智能板块轮动短期强势",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": 35.0,
-      "current_price": 36.94,
-      "target_price": 39.0,
-      "validity_period": 14
-    },
     {
       "timestamp": "2026-03-27 14:25:23",
       "buy": [],
@@ -44122,6 +44189,79 @@
       "current_price": 36.54,
       "target_price": 40.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-30 14:41:45",
+      "buy": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "技术指标协同：RSI+OBV+CMF+布林带4项同向超卖/资金流入；筹码分布上方筹码比例0.0%无阻力；TAV评分23.75分弱共振但建仓评分6.4高；利好AI芯片新闻强化反弹逻辑",
+          "allocation_pct": 15.0,
+          "stop_loss_price": 73.1,
+          "target_price": 88.5,
+          "validity_period": 5
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "技术指标协同：RSI+布林带+OBV 3项同向超卖；筹码分布上方筹码比例0.0%无阻力；人工智能板块弱势但个股超卖显著波段反弹概率高",
+          "allocation_pct": 15.0,
+          "stop_loss_price": 14.2,
+          "target_price": 17.2,
+          "validity_period": 2
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-30 14:41:51",
+      "type": "SELL",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 7600,
+      "price": 15.7,
+      "amount": 119320.0,
+      "reason": "止损触发: 当前价格HK$15.70 < 止损价格HK$15.82",
+      "capital_after": 119642.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 15.7,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": -21735.999999999996
+    },
+    {
+      "timestamp": "2026-03-30 14:41:59",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 1400,
+      "price": 80.95,
+      "amount": 113330.0,
+      "reason": "技术指标协同：RSI+OBV+CMF+布林带4项同向超卖/资金流入；筹码分布上方筹码比例0.0%无阻力；TAV评分23.75分弱共振但建仓评分6.4高；利好AI芯片新闻强化反弹逻辑",
+      "capital_after": 6312.189294051961,
+      "success": true,
+      "stop_loss_price": 73.1,
+      "current_price": 80.95,
+      "target_price": 88.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-30 14:42:05",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 400,
+      "price": 15.7,
+      "amount": 6280.0,
+      "reason": "技术指标协同：RSI+布林带+OBV 3项同向超卖；筹码分布上方筹码比例0.0%无阻力；人工智能板块弱势但个股超卖显著波段反弹概率高",
+      "capital_after": 32.18929405196104,
+      "success": true,
+      "stop_loss_price": 14.2,
+      "current_price": 15.7,
+      "target_price": 17.2,
+      "validity_period": 2
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
