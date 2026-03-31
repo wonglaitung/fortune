@@ -1,12 +1,7 @@
 {
   "initial_capital": 1000000,
-  "capital": 32.18929405196104,
+  "capital": 772.189294051961,
   "positions": {
-    "1398.HK": {
-      "shares": 22900,
-      "avg_price": 6.19,
-      "stop_loss_price": 5.25
-    },
     "0941.HK": {
       "shares": 2100,
       "avg_price": 79.07619047619048,
@@ -41,6 +36,11 @@
       "shares": 400,
       "avg_price": 15.7,
       "stop_loss_price": 14.2
+    },
+    "1109.HK": {
+      "shares": 5400,
+      "avg_price": 28.7,
+      "stop_loss_price": 24.31
     }
   },
   "transaction_history": [
@@ -27463,6 +27463,118 @@
       "current_price": 15.7,
       "target_price": 17.2,
       "validity_period": 2
+    },
+    {
+      "timestamp": "2026-03-31T13:28:51.893470",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 32.18929405196104,
+      "reason": "出货评分7.0分（price_high, macd_cross, cmf_out, obv_down, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），宏观环境恶化",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.88,
+      "target_price": 42.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31T13:28:54.772466",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 32.18929405196104,
+      "reason": "出货评分6.0分（price_high, macd_cross, cmf_out, price_down），技术指标共振恶化；航运股板块强势下跌（-2.94%），资金加速撤离",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.14,
+      "target_price": 16.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31T13:28:57.853980",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 32.18929405196104,
+      "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标恶化；筹码分布上方比例85.2%>60%，拉升难度困难",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 128.6,
+      "target_price": 120.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31T13:29:01.101973",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 32.18929405196104,
+      "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），基本面净利下滑",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.92,
+      "target_price": 25.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31T13:29:06.382229",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 22900,
+      "price": 6.8,
+      "amount": 155720.0,
+      "capital_after": 155752.18929405196,
+      "reason": "出货评分5.0分（price_high, rsi_high, cmf_out, bb_overbought），技术指标超买；位置百分位100.0%绝对高位，资金流出",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 6.8,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-03-31T13:29:13.918067",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 5400,
+      "price": 28.7,
+      "amount": 154980.0,
+      "capital_after": 772.189294051961,
+      "reason": "建仓评分3.7分（price_low, obv_up, cmf_in），出货评分0.5分<2.0，无风险控制触发；筹码分布阻力可控（上方筹码比例57.8%<60%），成交量放大支持短期反弹；房地产股板块温和上涨（0.32%）",
+      "success": true,
+      "stop_loss_price": 24.31,
+      "current_price": 28.7,
+      "target_price": 31.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-31T13:29:18.798006",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 32.88,
+      "amount": 0,
+      "capital_after": 772.189294051961,
+      "reason": "建仓评分3.0分（price_low, obv_up），出货评分1.5分<2.0，无风险控制触发；技术指标协同性强（OBV上升+成交量放大+位置低位），筹码分布上方阻力中等（54.1%<60%）；生物医药股板块强势上涨（2.46%）",
+      "success": false,
+      "stop_loss_price": 27.88,
+      "current_price": 32.88,
+      "target_price": 36.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -43906,7 +44018,7 @@
       "portfolio_value": 947336.189294052,
       "positions": {
         "1398.HK": {
-          "shares": 22900,
+          "shares": 0,
           "avg_price": 6.19,
           "stop_loss_price": 5.25
         },
@@ -43943,7 +44055,7 @@
       "portfolio_value": 947336.189294052,
       "positions": {
         "1398.HK": {
-          "shares": 22900,
+          "shares": 0,
           "avg_price": 6.19,
           "stop_loss_price": 5.25
         },
@@ -43985,7 +44097,7 @@
       "portfolio_value": 947231.189294052,
       "positions": {
         "1398.HK": {
-          "shares": 22900,
+          "shares": 0,
           "avg_price": 6.19,
           "stop_loss_price": 5.25
         },
@@ -44025,107 +44137,98 @@
           "stop_loss_price": 14.2
         }
       }
+    },
+    {
+      "timestamp": "2026-03-31T13:29:07.537764",
+      "capital": 155752.18929405196,
+      "portfolio_value": 946204.189294052,
+      "positions": {
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "1288.HK": {
+          "shares": 18000,
+          "avg_price": 5.205111111111111,
+          "stop_loss_price": 4.42
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-31T13:29:15.451004",
+      "capital": 772.189294051961,
+      "portfolio_value": 946326.189294052,
+      "positions": {
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "1288.HK": {
+          "shares": 18000,
+          "avg_price": 5.205111111111111,
+          "stop_loss_price": 4.42
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 5400,
+          "avg_price": 28.7,
+          "stop_loss_price": 24.31
+        }
+      }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-03-27 14:25:23",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-30 09:51:06",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-03-30 12:02:40",
-      "buy": [
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "建仓评分3.0分，出货评分1.0分<2.0，风险控制未触发；筹码分布优势显著（上方筹码比例40.0%<60%），拉升难度中等；个股跑赢板块（相对强度+2.34%）",
-          "allocation_pct": 30,
-          "stop_loss_price": 33.5,
-          "target_price": 40.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货评分6.0分，位置百分位84.63%（高位），CMF资金流-0.1218（显著流出），上方筹码比例76.9%>60%，板块弱势下跌",
-          "stop_loss_triggered": false,
-          "target_price": 45.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1138.HK",
-          "name": "中远海能",
-          "reason": "出货评分6.0分，位置百分位74.94%（高位），CMF资金流-0.054（流出），60日收益率+90.73%超涨，上方筹码比例86.6%>60%",
-          "stop_loss_triggered": false,
-          "target_price": 17.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "出货评分6.0分，位置百分位95.88%（历史高位），布林带超买，CMF资金流-0.1008（流出），新闻显示利润下降",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "出货评分5.0分，位置百分位81.5%（高位），CMF资金流-0.1792（显著流出），上方筹码比例78.1%>60%，新闻显示净利润下降",
-          "stop_loss_triggered": false,
-          "target_price": 27.5,
-          "validity_period": 3
-        },
-        {
-          "code": "2800.HK",
-          "name": "盈富基金",
-          "reason": "出货评分4.5分，CMF资金流-0.0896（流出），上方筹码比例86.7%>60%，作为指数基金受大盘拖累",
-          "stop_loss_triggered": false,
-          "target_price": 24.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-03-30 12:02:41",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，位置百分位84.63%（高位），CMF资金流-0.1218（显著流出），上方筹码比例76.9%>60%，板块弱势下跌",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 47.32,
-      "target_price": 45.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-03-30 12:02:44",
-      "type": "SELL",
-      "code": "1138.HK",
-      "name": "中远海能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分，位置百分位74.94%（高位），CMF资金流-0.054（流出），60日收益率+90.73%超涨，上方筹码比例86.6%>60%",
-      "capital_after": 322.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 18.43,
-      "target_price": 17.0,
-      "validity_period": 3
-    },
     {
       "timestamp": "2026-03-30 12:02:47",
       "type": "SELL",
@@ -44262,6 +44365,189 @@
       "current_price": 15.7,
       "target_price": 17.2,
       "validity_period": 2
+    },
+    {
+      "timestamp": "2026-03-31 11:24:33",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-03-31 13:28:51",
+      "buy": [
+        {
+          "code": "1109.HK",
+          "name": "华润置地",
+          "reason": "建仓评分3.7分（price_low, obv_up, cmf_in），出货评分0.5分<2.0，无风险控制触发；筹码分布阻力可控（上方筹码比例57.8%<60%），成交量放大支持短期反弹；房地产股板块温和上涨（0.32%）",
+          "allocation_pct": 30,
+          "stop_loss_price": 24.31,
+          "target_price": 31.5,
+          "validity_period": 5
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "建仓评分3.0分（price_low, obv_up），出货评分1.5分<2.0，无风险控制触发；技术指标协同性强（OBV上升+成交量放大+位置低位），筹码分布上方阻力中等（54.1%<60%）；生物医药股板块强势上涨（2.46%）",
+          "allocation_pct": 40,
+          "stop_loss_price": 27.88,
+          "target_price": 36.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分7.0分（price_high, macd_cross, cmf_out, obv_down, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），宏观环境恶化",
+          "stop_loss_triggered": false,
+          "target_price": 42.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分6.0分（price_high, macd_cross, cmf_out, price_down），技术指标共振恶化；航运股板块强势下跌（-2.94%），资金加速撤离",
+          "stop_loss_triggered": false,
+          "target_price": 16.5,
+          "validity_period": 1
+        },
+        {
+          "code": "0016.HK",
+          "name": "新鸿基地产",
+          "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标恶化；筹码分布上方比例85.2%>60%，拉升难度困难",
+          "stop_loss_triggered": false,
+          "target_price": 120.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），基本面净利下滑",
+          "stop_loss_triggered": false,
+          "target_price": 25.5,
+          "validity_period": 1
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "出货评分5.0分（price_high, rsi_high, cmf_out, bb_overbought），技术指标超买；位置百分位100.0%绝对高位，资金流出",
+          "stop_loss_triggered": false,
+          "target_price": 6.3,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-31 13:28:51",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分（price_high, macd_cross, cmf_out, obv_down, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），宏观环境恶化",
+      "capital_after": 32.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.88,
+      "target_price": 42.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31 13:28:54",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（price_high, macd_cross, cmf_out, price_down），技术指标共振恶化；航运股板块强势下跌（-2.94%），资金加速撤离",
+      "capital_after": 32.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.14,
+      "target_price": 16.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31 13:28:57",
+      "type": "SELL",
+      "code": "0016.HK",
+      "name": "新鸿基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标恶化；筹码分布上方比例85.2%>60%，拉升难度困难",
+      "capital_after": 32.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 128.6,
+      "target_price": 120.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31 13:29:01",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（price_high, macd_cross, cmf_out, price_down），技术指标全面恶化；能源股板块强势下跌（-4.08%），基本面净利下滑",
+      "capital_after": 32.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 27.92,
+      "target_price": 25.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-03-31 13:29:06",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 22900,
+      "price": 6.8,
+      "amount": 155720.0,
+      "reason": "出货评分5.0分（price_high, rsi_high, cmf_out, bb_overbought），技术指标超买；位置百分位100.0%绝对高位，资金流出",
+      "capital_after": 155752.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 6.8,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 13968.999999999987
+    },
+    {
+      "timestamp": "2026-03-31 13:29:14",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 5400,
+      "price": 28.7,
+      "amount": 154980.0,
+      "reason": "建仓评分3.7分（price_low, obv_up, cmf_in），出货评分0.5分<2.0，无风险控制触发；筹码分布阻力可控（上方筹码比例57.8%<60%），成交量放大支持短期反弹；房地产股板块温和上涨（0.32%）",
+      "capital_after": 772.189294051961,
+      "success": true,
+      "stop_loss_price": 24.31,
+      "current_price": 28.7,
+      "target_price": 31.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-03-31 13:29:18",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 32.88,
+      "amount": 0,
+      "reason": "建仓评分3.0分（price_low, obv_up），出货评分1.5分<2.0，无风险控制触发；技术指标协同性强（OBV上升+成交量放大+位置低位），筹码分布上方阻力中等（54.1%<60%）；生物医药股板块强势上涨（2.46%）",
+      "capital_after": 772.189294051961,
+      "success": false,
+      "stop_loss_price": 27.88,
+      "current_price": 32.88,
+      "target_price": 36.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
