@@ -1,4 +1,5 @@
 import os
+import argparse
 import requests
 import smtplib
 import json
@@ -335,12 +336,14 @@ def calculate_technical_indicators(prices):
     
     return indicators
 
-def run_anomaly_detection(prices):
+def run_anomaly_detection(prices, use_deep_analysis=False):
     """
     Run anomaly detection on Ethereum data.
     
     Args:
         prices: Price data from CoinGecko API
+        use_deep_analysis: If True, run full analysis (Z-Score + Isolation Forest).
+                         If False, run only Z-Score detection (faster).
     
     Returns:
         Anomaly detection results dict or None if no anomalies
@@ -355,8 +358,15 @@ def run_anomaly_detection(prices):
     try:
         # Initialize components
         zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
-        if_detector = IsolationForestDetector(contamination=0.05, random_state=42)
-        feature_extractor = FeatureExtractor()
+        
+        # 只在深度分析模式下初始化 Isolation Forest
+        if_detector = None
+        feature_extractor = None
+        
+        if use_deep_analysis:
+            if_detector = IsolationForestDetector(contamination=0.05, random_state=42)
+            feature_extractor = FeatureExtractor()
+        
         cache = AnomalyCache()
         integrator = AnomalyIntegrator(cache)
         
@@ -368,7 +378,7 @@ def run_anomaly_detection(prices):
             print("⚠️ No historical data available for anomaly detection")
             return None
         
-        # Run Z-Score detection (Layer 1)
+        # Run Z-Score detection (Layer 1) - 始终执行
         zscore_anomalies = []
         current_price = prices['ethereum']['usd']
         
@@ -392,22 +402,23 @@ def run_anomaly_detection(prices):
             if volume_anomaly:
                 zscore_anomalies.append(volume_anomaly)
         
-        # Run Isolation Forest detection (Layer 2)
+        # Run Isolation Forest detection (Layer 2) - 仅在深度分析模式下执行
         if_anomalies = []
         
-        # Extract features
-        features, timestamps = feature_extractor.extract_features(eth_hist)
-        
-        if not features.empty:
-            # Train model
-            if_detector.train(features)
+        if use_deep_analysis and if_detector and feature_extractor:
+            # Extract features
+            features, timestamps = feature_extractor.extract_features(eth_hist)
             
-            # Detect anomalies (last 7 days)
-            if_anomalies = if_detector.detect_anomalies(
-                features=features,
-                timestamps=timestamps,
-                lookback_days=7
-            )
+            if not features.empty:
+                # Train model
+                if_detector.train(features)
+                
+                # Detect anomalies (last 7 days)
+                if_anomalies = if_detector.detect_anomalies(
+                    features=features,
+                    timestamps=timestamps,
+                    lookback_days=7
+                )
         
         # Integrate results
         result = integrator.integrate(
@@ -641,6 +652,22 @@ def send_email(to, subject, text, html):
 
 # === 主逻辑 ===
 if __name__ == "__main__":
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='加密货币价格监控和异常检测')
+    parser.add_argument('--mode', type=str, choices=['quick', 'deep'], default='quick',
+                       help='异常检测模式: quick (Z-Score only) 或 deep (Z-Score + Isolation Forest)')
+    args = parser.parse_args()
+    
+    # 从参数获取异常检测模式
+    # quick: 只执行 Z-Score 检测（快速）
+    # deep: 执行完整分析（Z-Score + Isolation Forest）
+    use_deep_analysis = (args.mode == 'deep')
+    
+    if use_deep_analysis:
+        print("🔍 深度异常检测模式（Z-Score + Isolation Forest）")
+    else:
+        print("⚡ 快速异常检测模式（Z-Score only）")
+    
     # 可以通过修改这里的参数来控制是否包含市值和24小时交易量
     prices = get_cryptocurrency_prices(include_market_cap=True, include_24hr_vol=True)
 
@@ -654,7 +681,7 @@ if __name__ == "__main__":
     # 运行异常检测
     anomaly_result = None
     if ANOMALY_DETECTION_AVAILABLE:
-        anomaly_result = run_anomaly_detection(prices)
+        anomaly_result = run_anomaly_detection(prices, use_deep_analysis=use_deep_analysis)
 
     # 检查是否存在当天的交易信号
     has_signals = False
@@ -698,12 +725,32 @@ if __name__ == "__main__":
                 has_signals = True
                 break
 
-    # 如果没有交易信号，则不发送邮件
-    if not has_signals:
-        print("⚠️ 没有检测到任何交易信号，跳过发送邮件。")
+    # 检查是否有重要内容需要发送（交易信号或异常检测）
+    has_important_content = has_signals  # 有交易信号
+    
+    # 检查异常检测结果
+    if anomaly_result and anomaly_result['has_anomaly']:
+        severity = anomaly_result.get('severity', 'low')
+        # 只发送 high 或 medium 级别的异常
+        if severity in ['high', 'medium']:
+            has_important_content = True
+    
+    # 如果没有重要内容，则不发送邮件
+    if not has_important_content:
+        print("⚠️ 没有检测到交易信号或重要异常，跳过发送邮件。")
         exit(0)
 
-    subject = "Ethereum and Bitcoin Price Update - 交易信号提醒"
+    # 根据内容类型调整邮件标题
+    if has_signals and anomaly_result and anomaly_result['has_anomaly']:
+        subject = "加密货币更新 - 交易信号 + 异常检测"
+    elif has_signals:
+        subject = "加密货币更新 - 交易信号提醒"
+    elif anomaly_result and anomaly_result['has_anomaly']:
+        severity = anomaly_result.get('severity', 'low')
+        severity_emoji = '🔴' if severity == 'high' else '🟡' if severity == 'medium' else '🟢'
+        subject = f"加密货币更新 - 异常检测提醒 [{severity_emoji} {severity.upper()}]"
+    else:
+        subject = "加密货币更新 - 价格更新"
 
     text = ""
     html = f"""
