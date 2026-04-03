@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.stats import pearsonr, spearmanr
-from statsmodels.tsa.stattools import grangercausalitytests
+from statsmodels.tsa.stattools import grangercausalitytests, ccf
 import yfinance as yf
 
 # 添加项目根目录到路径
@@ -269,6 +269,223 @@ class SignalAnomalyCorrelationValidator:
             'anomaly_days': int(df_merged['has_anomaly'].sum()),
             'signal_days': int(df_merged['has_signal'].sum())
         }
+    
+    def granger_causality_test(self, max_lag: int = 5, significance_level: float = 0.05) -> Dict:
+        """
+        2. Granger因果检验
+        
+        检验异常是否是信号变化的Granger原因
+        
+        Args:
+            max_lag: 最大滞后期
+            significance_level: 显著性水平
+        
+        Returns:
+            Granger因果检验结果
+        """
+        logger.info("开始Granger因果检验...")
+        
+        if self.anomalies.empty or self.signals.empty:
+            return {
+                'status': 'skip',
+                'reason': '异常或信号数据不足'
+            }
+        
+        # 准备时间序列数据
+        # 创建每日异常标记和信号标记的序列
+        df_merged = self.df.copy()
+        df_merged['has_anomaly'] = 0
+        df_merged['has_signal'] = 0
+        
+        # 标记异常
+        for idx, row in self.anomalies.iterrows():
+            if row['date'] in df_merged.index:
+                df_merged.loc[row['date'], 'has_anomaly'] = 1
+        
+        # 标记信号
+        for idx, row in self.signals.iterrows():
+            if row['date'] in df_merged.index:
+                df_merged.loc[row['date'], 'has_signal'] = 1
+        
+        # 提取时间序列
+        anomaly_series = df_merged['has_anomaly'].values.reshape(-1, 1)
+        signal_series = df_merged['has_signal'].values.reshape(-1, 1)
+        
+        # 合并为二维数组 [anomaly, signal]
+        data = np.hstack([anomaly_series, signal_series])
+        
+        # 执行Granger因果检验
+        try:
+            test_result = grangercausalitytests(data, maxlag=max_lag, verbose=False)
+            
+            # 提取检验结果
+            results = {}
+            for lag in range(1, max_lag + 1):
+                lag_result = test_result[lag][0]
+                
+                # F检验结果
+                ssr_ftest = lag_result['ssr_ftest']
+                param_ftest = lag_result['params_ftest']
+                
+                results[f'lag_{lag}'] = {
+                    'ssr_ftest_statistic': float(ssr_ftest[0]),
+                    'ssr_ftest_pvalue': float(ssr_ftest[1]),
+                    'ssr_ftest_critical_value': float(ssr_ftest[2]),
+                    'ssr_ftest_significant': ssr_ftest[1] < significance_level,
+                    'param_ftest_statistic': float(param_ftest[0]),
+                    'param_ftest_pvalue': float(param_ftest[1]),
+                    'param_ftest_significant': param_ftest[1] < significance_level
+                }
+            
+            # 判断整体因果关系
+            significant_lags = [
+                lag for lag, result in results.items()
+                if result['ssr_ftest_significant']
+            ]
+            
+            overall_significant = len(significant_lags) > 0
+            
+            return {
+                'status': 'success',
+                'max_lag': max_lag,
+                'significance_level': significance_level,
+                'overall_significant': overall_significant,
+                'significant_lags': significant_lags,
+                'lag_results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"Granger因果检验失败: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+    
+    def cross_correlation_analysis(self, max_lags: int = 10) -> Dict:
+        """
+        3. 时间序列交叉相关分析
+        
+        分析异常与信号之间的前置/滞后效应
+        
+        Args:
+            max_lags: 最大滞后期数
+        
+        Returns:
+            交叉相关分析结果
+        """
+        logger.info(f"开始时间序列交叉相关分析（最大滞后期：{max_lags}）...")
+        
+        if self.anomalies.empty or self.signals.empty:
+            return {
+                'status': 'skip',
+                'reason': '异常或信号数据不足'
+            }
+        
+        # 准备时间序列数据
+        df_merged = self.df.copy()
+        df_merged['has_anomaly'] = 0
+        df_merged['has_signal'] = 0
+        df_merged['anomaly_severity'] = 0
+        
+        # 标记异常
+        for idx, row in self.anomalies.iterrows():
+            if row['date'] in df_merged.index:
+                df_merged.loc[row['date'], 'has_anomaly'] = 1
+                severity_map = {'low': 1, 'medium': 2, 'high': 3}
+                df_merged.loc[row['date'], 'anomaly_severity'] = severity_map[row['severity']]
+        
+        # 标记信号
+        for idx, row in self.signals.iterrows():
+            if row['date'] in df_merged.index:
+                df_merged.loc[row['date'], 'has_signal'] = 1
+        
+        # 提取时间序列
+        anomaly_series = df_merged['has_anomaly'].values
+        signal_series = df_merged['has_signal'].values
+        severity_series = df_merged['anomaly_severity'].values
+        
+        # 计算交叉相关（异常 -> 信号）
+        try:
+            cross_corr = []
+            for lag in range(-max_lags, max_lags + 1):
+                if lag < 0:
+                    # 异常滞后于信号（异常是结果）
+                    corr = np.corrcoef(anomaly_series[-lag:], signal_series[:lag])[0, 1]
+                elif lag > 0:
+                    # 异常领先于信号（异常是原因）
+                    corr = np.corrcoef(anomaly_series[:-lag], signal_series[lag:])[0, 1]
+                else:
+                    # 同期相关
+                    corr = np.corrcoef(anomaly_series, signal_series)[0, 1]
+                
+                cross_corr.append({
+                    'lag': lag,
+                    'correlation': float(corr) if not np.isnan(corr) else 0.0
+                })
+            
+            # 找出最强的相关系数
+            df_cross_corr = pd.DataFrame(cross_corr)
+            max_corr = df_cross_corr.loc[df_cross_corr['correlation'].abs().idxmax()]
+            
+            # 识别前置/滞后模式
+            leading_lags = df_cross_corr[df_cross_corr['lag'] > 0]
+            lagging_lags = df_cross_corr[df_cross_corr['lag'] < 0]
+            
+            max_leading_corr = leading_lags.loc[leading_lags['correlation'].idxmax()] if not leading_lags.empty else None
+            max_lagging_corr = lagging_lags.loc[lagging_lags['correlation'].idxmax()] if not lagging_lags.empty else None
+            
+            # 严重程度与信号的交叉相关
+            severity_corr = []
+            for lag in range(-max_lags, max_lags + 1):
+                if lag < 0:
+                    corr = np.corrcoef(severity_series[-lag:], signal_series[:lag])[0, 1]
+                elif lag > 0:
+                    corr = np.corrcoef(severity_series[:-lag], signal_series[lag:])[0, 1]
+                else:
+                    corr = np.corrcoef(severity_series, signal_series)[0, 1]
+                
+                severity_corr.append({
+                    'lag': lag,
+                    'correlation': float(corr) if not np.isnan(corr) else 0.0
+                })
+            
+            return {
+                'status': 'success',
+                'max_lags': max_lags,
+                'max_correlation': {
+                    'lag': int(max_corr['lag']),
+                    'correlation': float(max_corr['correlation']),
+                    'interpretation': self._interpret_lag(max_corr['lag'])
+                },
+                'leading_effect': {
+                    'max_lag': int(max_leading_corr['lag']) if max_leading_corr is not None else None,
+                    'max_correlation': float(max_leading_corr['correlation']) if max_leading_corr is not None else None,
+                    'interpretation': '异常领先于信号（异常可能是信号的原因）' if max_leading_corr is not None and abs(max_leading_corr['correlation']) > 0.1 else None
+                } if max_leading_corr is not None else None,
+                'lagging_effect': {
+                    'max_lag': int(max_lagging_corr['lag']) if max_lagging_corr is not None else None,
+                    'max_correlation': float(max_lagging_corr['correlation']) if max_lagging_corr is not None else None,
+                    'interpretation': '异常滞后于信号（异常可能是信号的结果）' if max_lagging_corr is not None and abs(max_lagging_corr['correlation']) > 0.1 else None
+                } if max_lagging_corr is not None else None,
+                'cross_correlation_series': cross_corr,
+                'severity_correlation_series': severity_corr
+            }
+            
+        except Exception as e:
+            logger.error(f"交叉相关分析失败: {e}")
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+    
+    def _interpret_lag(self, lag: int) -> str:
+        """解释滞后期"""
+        if lag > 0:
+            return f"异常领先{lag}天"
+        elif lag < 0:
+            return f"异常滞后{abs(lag)}天"
+        else:
+            return "同期"
     
     def event_study_analysis(self, window: int = 5) -> Dict:
         """
@@ -569,6 +786,91 @@ class SignalAnomalyCorrelationValidator:
         report += """
 ---
 
+## 4. Granger因果检验
+
+验证异常是否是信号变化的Granger原因
+
+"""
+
+        granger_results = self.granger_causality_test()
+        
+        if granger_results.get('status') == 'skip':
+            report += f"⚠️ {granger_results.get('reason')}\n\n"
+        elif granger_results.get('status') == 'error':
+            report += f"❌ 检验失败: {granger_results.get('error')}\n\n"
+        else:
+            report += f"""### 总体结果
+- **最大滞后期**: {granger_results['max_lag']}
+- **显著性水平**: {granger_results['significance_level']}
+- **整体显著**: {'✅ 是' if granger_results['overall_significant'] else '❌ 否'}
+- **显著滞后期**: {', '.join(granger_results['significant_lags']) if granger_results['significant_lags'] else '无'}
+
+### 滞后期详情
+| 滞后期 | F统计量 | P值 | 显著性 |
+|--------|---------|-----|--------|
+"""
+            for lag, result in granger_results['lag_results'].items():
+                report += f"| {lag} | {result['ssr_ftest_statistic']:.4f} | {result['ssr_ftest_pvalue']:.4f} | {'✅ 显著' if result['ssr_ftest_significant'] else '❌ 不显著'} |\n"
+            
+            report += "\n### 结论\n"
+            if granger_results['overall_significant']:
+                report += "✅ 异常是信号变化的Granger原因（存在显著的前导关系）\n"
+            else:
+                report += "❌ 异常不是信号变化的Granger原因（无显著的前导关系）\n"
+
+        report += """
+---
+
+## 5. 时间序列交叉相关分析
+
+分析异常与信号之间的前置/滞后效应
+
+"""
+
+        cross_corr_results = self.cross_correlation_analysis()
+        
+        if cross_corr_results.get('status') == 'skip':
+            report += f"⚠️ {cross_corr_results.get('reason')}\n\n"
+        elif cross_corr_results.get('status') == 'error':
+            report += f"❌ 分析失败: {cross_corr_results.get('error')}\n\n"
+        else:
+            max_corr = cross_corr_results['max_correlation']
+            
+            report += f"""### 最大相关系数
+- **滞后期**: {max_corr['lag']}天
+- **相关系数**: {max_corr['correlation']:.4f}
+- **解释**: {max_corr['interpretation']}
+
+### 前置效应（异常领先于信号）
+"""
+            
+            if cross_corr_results['leading_effect']:
+                leading = cross_corr_results['leading_effect']
+                report += f"- **最大滞后期**: {leading['max_lag']}天\n"
+                report += f"- **最大相关系数**: {leading['max_correlation']:.4f}\n"
+                report += f"- **解释**: {leading['interpretation']}\n"
+            else:
+                report += "- ❌ 无显著前置效应\n"
+            
+            report += "\n### 滞后效应（异常滞后于信号）\n"
+            
+            if cross_corr_results['lagging_effect']:
+                lagging = cross_corr_results['lagging_effect']
+                report += f"- **最大滞后期**: {lagging['max_lag']}天\n"
+                report += f"- **最大相关系数**: {lagging['max_correlation']:.4f}\n"
+                report += f"- **解释**: {lagging['interpretation']}\n"
+            else:
+                report += "- ❌ 无显著滞后效应\n"
+            
+            report += "\n### 交叉相关系数序列\n"
+            report += "| 滞后期 | 相关系数 |\n"
+            report += "|--------|----------|\n"
+            for item in cross_corr_results['cross_correlation_series']:
+                report += f"| {item['lag']:3d} | {item['correlation']:8.4f} |\n"
+
+        report += """
+---
+
 ## 3. 回测对比
 
 对比有异常vs无异常的信号表现（持有期：5天）
@@ -741,7 +1043,7 @@ def main():
     parser.add_argument(
         '--mode',
         type=str,
-        choices=['correlation', 'event_study', 'backtest', 'all', 'compare'],
+        choices=['correlation', 'event_study', 'granger', 'cross_corr', 'backtest', 'all', 'compare'],
         default='all',
         help='验证模式'
     )
@@ -775,6 +1077,14 @@ def main():
         results = validator.backtest_comparison()
         print(json.dumps(results, indent=2, ensure_ascii=False, cls=NumpyJSONEncoder))
     
+    elif args.mode == 'granger':
+        results = validator.granger_causality_test()
+        print(json.dumps(results, indent=2, ensure_ascii=False, cls=NumpyJSONEncoder))
+    
+    elif args.mode == 'cross_corr':
+        results = validator.cross_correlation_analysis()
+        print(json.dumps(results, indent=2, ensure_ascii=False, cls=NumpyJSONEncoder))
+    
     elif args.mode == 'compare':
         # 对比模式：运行所有分析并输出摘要
         print("=" * 80)
@@ -783,6 +1093,8 @@ def main():
         
         correlation_results = validator.analyze_correlation()
         event_study_results = validator.event_study_analysis()
+        granger_results = validator.granger_causality_test()
+        cross_corr_results = validator.cross_correlation_analysis()
         backtest_results = validator.backtest_comparison()
         
         print("\n【相关性分析】")
@@ -793,6 +1105,33 @@ def main():
                   f"({'显著' if correlation_results['pearson_correlation']['significant'] else '不显著'})")
             print(f"Spearman相关系数: {correlation_results['spearman_correlation']['coefficient']:.4f} "
                   f"({'显著' if correlation_results['spearman_correlation']['significant'] else '不显著'})")
+        
+        print("\n【Granger因果检验】")
+        if granger_results.get('status') == 'skip':
+            print(f"⚠️ {granger_results.get('reason')}")
+        elif granger_results.get('status') == 'error':
+            print(f"❌ 检验失败: {granger_results.get('error')}")
+        else:
+            print(f"整体显著: {'✅ 是' if granger_results['overall_significant'] else '❌ 否'}")
+            print(f"显著滞后期: {', '.join(granger_results['significant_lags']) if granger_results['significant_lags'] else '无'}")
+        
+        print("\n【时间序列交叉相关分析】")
+        if cross_corr_results.get('status') == 'skip':
+            print(f"⚠️ {cross_corr_results.get('reason')}")
+        elif cross_corr_results.get('status') == 'error':
+            print(f"❌ 分析失败: {cross_corr_results.get('error')}")
+        else:
+            max_corr = cross_corr_results['max_correlation']
+            print(f"最大相关系数: {max_corr['correlation']:.4f} (滞后期: {max_corr['lag']}天)")
+            print(f"解释: {max_corr['interpretation']}")
+            
+            if cross_corr_results['leading_effect']:
+                leading = cross_corr_results['leading_effect']
+                print(f"前置效应: 最大相关系数 {leading['max_correlation']:.4f} (滞后期: {leading['max_lag']}天)")
+            
+            if cross_corr_results['lagging_effect']:
+                lagging = cross_corr_results['lagging_effect']
+                print(f"滞后效应: 最大相关系数 {lagging['max_correlation']:.4f} (滞后期: {lagging['max_lag']}天)")
         
         print("\n【事件研究】")
         if event_study_results.get('status') == 'skip':
