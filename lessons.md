@@ -561,3 +561,133 @@ def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_se
 - 2026-03-19：添加数据泄漏修正、回撤计算修正
 - 2026-03-18：更新板块模型价值评估
 - 2026-03-17：创建文档
+---
+
+## 📝 工作流优化经验（2026-04-03）
+
+### 功能重复检查的重要性
+**问题**：多个工作流执行相同脚本导致资源浪费和维护困难
+
+**案例**：
+- `ethereum-anomaly-detection.yml` 和 `hourly-crypto-monitor.yml` 都执行 `crypto_email.py`
+- 执行频率重叠（每小时+凌晨2点）
+- 依赖重复，难以维护
+
+**解决方案**：
+1. 合并工作流到一个文件
+2. 通过调度时间和参数区分执行模式
+3. 使用 `if` 条件判断执行不同的步骤
+
+**最佳实践**：
+```yaml
+- name: Quick mode (hourly)
+  if: github.event.schedule != '0 2 * * *'
+  run: python3 script.py --mode quick
+
+- name: Deep mode (2 AM)
+  if: github.event.schedule == '0 2 * * *'
+  run: python3 script.py --mode deep
+```
+
+### 参数传递优化：命令行参数 vs 环境变量
+
+**环境变量的缺点**：
+1. 依赖 `set_key.sh` 配置，用户需要手动设置
+2. 不直观，难以在命令行看到传递的参数
+3. 测试时需要手动导出变量
+
+**命令行参数的优势**：
+1. 更灵活，可以手动指定任意值
+2. 更清晰，参数直接在命令行可见
+3. 更标准，符合 Unix 工具最佳实践
+4. 更易于测试和调试
+
+**迁移示例**：
+```python
+# 旧方法（环境变量）
+detection_mode = os.environ.get('ANOMALY_DETECTION_MODE', 'quick')
+use_deep_analysis = (detection_mode == 'deep')
+
+# 新方法（命令行参数）
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--mode', choices=['quick', 'deep'], default='quick')
+args = parser.parse_args()
+use_deep_analysis = (args.mode == 'deep')
+```
+
+**结论**：对于脚本运行模式、配置选项等，优先使用命令行参数而非环境变量
+
+### 异常检测分层策略
+
+**双层检测架构**：
+| 层级 | 频率 | 方法 | 目的 | 性能 |
+|------|------|------|------|------|
+| Layer 1 | 每小时 | Z-Score | 实时检测价格/成交量异常 | 快速 |
+| Layer 2 | 凌晨2点 | Isolation Forest | 深度分析7天数据，发现复杂异常 | 全面 |
+
+**关键要点**：
+1. 基础检测（Z-Score）始终执行，覆盖范围广
+2. 深度检测（Isolation Forest）仅在某些时机执行，避免计算成本
+3. 两层检测结果整合，确保异常不会遗漏
+4. 动态邮件标题反映实际检测内容
+
+**实现方式**：
+```python
+def run_anomaly_detection(prices, use_deep_analysis=False):
+    # 始终执行 Z-Score
+    zscore_detector = ZScoreDetector()
+    zscore_anomalies = zscore_detector.detect()
+    
+    # 仅在深度模式执行 Isolation Forest
+    if use_deep_analysis:
+        if_detector = IsolationForestDetector()
+        if_anomalies = if_detector.detect()
+```
+
+### 邮件发送条件优化
+
+**问题**：只检查交易信号，忽略异常检测结果
+
+**解决方案**：同时检查交易信号和异常
+```python
+has_important_content = has_signals
+
+# 检查异常（只发送 high/medium 级别）
+if anomaly_result and anomaly_result['has_anomaly']:
+    severity = anomaly_result.get('severity', 'low')
+    if severity in ['high', 'medium']:
+        has_important_content = True
+```
+
+**动态邮件标题**：
+```python
+if has_signals and anomaly_result and anomaly_result['has_anomaly']:
+    subject = "加密货币更新 - 交易信号 + 异常检测"
+elif has_signals:
+    subject = "加密货币更新 - 交易信号提醒"
+elif anomaly_result and anomaly_result['has_anomaly']:
+    subject = f"加密货币更新 - 异常检测提醒 [{severity_emoji} {severity.upper()}]"
+```
+
+**关键要点**：
+1. 邮件标题应准确反映内容类型
+2. 过滤低优先级异常（low级别），避免垃圾邮件
+3. 优先发送重要信息（交易信号、高/中级别异常）
+
+### 配置清理原则
+
+**删除无用配置**：
+- ❌ `ANOMALY_DETECTION_ENABLED` - 从未使用
+- ❌ `ZSCORE_WINDOW_SIZE` - 代码中硬编码
+- ❌ `ZSCORE_THRESHOLD` - 代码中硬编码
+- ❌ `ISOLATION_FOREST_CONTAMINATION` - 代码中硬编码
+- ❌ `ANOMALY_CACHE_HOURS` - 代码中硬编码
+- ❌ `ANOMALY_DETECTION_MODE` - 改用命令行参数
+
+**最佳实践**：
+1. 定期审查 `set_key.sh.sample`，删除未使用的配置
+2. 优先使用命令行参数而非环境变量
+3. 硬编码合理的默认值，避免过度配置化
+4. 只保留必需的配置（如密钥、API地址）
+

@@ -13,7 +13,8 @@
 | 批量回测 | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6` ⭐ 推荐 |
 | **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **训练板块模型** | `python3 ml_services/train_sector_model.py --sector bank --horizon 20` |
-| **预测性能监控** ⭐ 新增 | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
+| **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
+| **加密货币异常检测** | `python3 crypto_email.py --mode quick` (快速) / `--mode deep` (深度) ⭐ 新增 |
 | 恒生指数监控 | `python3 hsi_email.py` |
 | 主力资金追踪 | `python3 hk_smart_money_tracker.py` |
 | 语法检查 | `python3 -m py_compile <file_path>` |
@@ -108,7 +109,8 @@ python3 hsi_email.py --no-email
 - ✅ **数据泄漏修正**：系统性修正10+个存在数据泄漏的特征，使用.shift(1)确保滞后数据
 - 🔄 **板块Walk-forward验证**：业界标准的板块模型验证方法，每个fold重新训练评估真实预测能力
 - 📊 **预测性能监控**：每日预测自动保存，每月评估准确率，生成性能报告并发送邮件
-- ⭐ **事件驱动特征**（2026-03-29）：9个新特征（分红、财报日期、财报超预期），索提诺比率+51%，震荡市胜率显著提升 ⭐ 新增
+- ⭐ **事件驱动特征**（2026-03-29）：9个新特征（分红、财报日期、财报超预期），索提诺比率+51%，震荡市胜率显著提升
+- ⭐ **加密货币异常检测**（2026-04-03）：双层异常检测系统（Z-Score实时 + Isolation Forest深度），智能去重和严重性分类，每小时监控 + 每天深度分析 ⭐ 新增
 
 ## 重要警告
 
@@ -175,6 +177,11 @@ if self.horizon > 1:
 金融信息监控与智能交易系统
 ├── 数据获取层
 │   ├── 加密货币价格监控器 (crypto_email.py)
+│   │   ├── **双层异常检测** ⭐ 新增
+│   │   │   ├── Layer 1：Z-Score 实时检测（每小时执行）
+│   │   │   ├── Layer 2：Isolation Forest 深度分析（凌晨2点执行）
+│   │   │   ├── 异常整合器：去重和严重性分类
+│   │   │   └── 异常缓存：避免重复通知
 │   ├── 港股IPO信息获取器 (hk_ipo_aastocks.py)
 │   ├── 黄金市场分析器 (gold_analyzer.py)
 │   ├── 美股市场数据获取器 (ml_services/us_market_data.py)
@@ -182,6 +189,13 @@ if self.horizon > 1:
 │   ├── LSTM模型对比实验器 (ml_services/lstm_experiment.py) ⚠️ 实验性（不推荐）
 │   ├── Transformer模型对比实验器 (ml_services/transformer_experiment.py) ⚠️ 实验性（不推荐）
 │   └── 腾讯财经数据接口 (data_services/tencent_finance.py)
+├── **异常检测模块** (anomaly_detector/) ⭐ 新增
+│   ├── zscore_detector.py：Z-Score统计检测器
+│   ├── isolation_forest_detector.py：Isolation Forest机器学习检测器
+│   ├── feature_extractor.py：价格和成交量特征提取器
+│   ├── anomaly_integrator.py：异常结果整合器
+│   ├── cache.py：异常缓存管理（文件持久化）
+│   └── __init__.py：模块入口
 ├── 数据服务层 (data_services/)
 │   ├── 基本面数据获取器 (fundamental_data.py)
 │   ├── 批量获取自选股新闻 (batch_stock_news_fetcher.py)
@@ -480,6 +494,57 @@ if self.horizon > 1:
 - **hsi_prediction.py**：基于特征重要性的加权评分模型
 - 使用 20 个关键特征，权重范围 0.1729% - 0.0099%
 - 特征类别：技术面、宏观面、情绪面
+- 预测方法：多因素加权综合评分
+- 预测结果：0-1 区间得分，反映看涨/看跌概率
+- 预测分类：强烈看涨、看涨、中性偏涨、中性偏跌、看跌、强烈看跌
+- 支持邮件发送和控制台报告生成
+- 保存预测结果到 JSON 和 CSV 文件
+
+### 加密货币异常检测 ⭐ 新增
+- **crypto_email.py**：加密货币价格监控与异常检测系统
+- **双层检测架构**：
+  - **Layer 1：Z-Score 实时检测**
+    - 执行频率：每小时
+    - 检测方法：统计方法，基于价格和成交量
+    - 检测范围：价格异常、成交量异常、价格波动异常
+    - 性能：快速响应，适合实时监控
+  - **Layer 2：Isolation Forest 深度分析**
+    - 执行频率：每天凌晨2点
+    - 检测方法：无监督机器学习，基于多维特征
+    - 检测范围：复杂异常模式、非线性行为
+    - 性能：全面分析，适合深度挖掘
+- **核心模块** (`anomaly_detector/`)：
+  - `zscore_detector.py`：Z-Score检测器实现
+  - `isolation_forest_detector.py`：Isolation Forest检测器实现
+  - `feature_extractor.py`：特征提取器（价格、成交量、波动率等）
+  - `anomaly_integrator.py`：异常整合器（去重、严重性分类）
+  - `cache.py`：异常缓存管理（文件持久化到 `data/anomaly_cache.json`）
+- **功能特点**：
+  - 自动去重：避免重复通知相同异常
+  - 严重性分类：high（高）、medium（中）、low（低）三级
+  - 智能邮件：动态标题反映检测内容（交易信号+异常检测）
+  - 双模式支持：`--mode quick`（快速）和 `--mode deep`（深度）
+- **使用命令**：
+  ```bash
+  # 快速模式（每小时）
+  python3 crypto_email.py --mode quick
+  
+  # 深度模式（凌晨2点）
+  python3 crypto_email.py --mode deep
+  
+  # 手动执行深度分析
+  python3 crypto_email.py --mode deep
+  ```
+- **GitHub Actions**：
+  - 文件：`.github/workflows/hourly-crypto-monitor.yml`
+  - 调度：每小时（快速模式）、每天凌晨2点（深度模式）
+  - 环境：`TZ: Asia/Hong_Kong`（香港时区）
+- **关键经验**：
+  - 工作流重复检查：删除重复的 `ethereum-anomaly-detection.yml`，合并到 `hourly-crypto-monitor.yml`
+  - 参数传递优化：使用命令行参数 `--mode` 替代环境变量
+  - 异常检测分层策略：快速+深度，兼顾性能和准确性
+  - 邮件发送优化：同时检查交易信号和异常（high/medium级别）
+  - 配置清理：删除 `set_key.sh.sample` 中未使用的异常检测配置
 - 预测方法：多因素加权综合评分
 - 预测结果：0-1 区间得分，反映看涨/看跌概率
 - 预测分类：强烈看涨、看涨、中性偏涨、中性偏跌、看跌、强烈看跌
@@ -2291,8 +2356,8 @@ python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type
 | `ranking-analysis.yml` | **股票表现TOP 10排名分析** | **每月1号上午3点香港时间 (UTC 19:00)** |
 | `comprehensive-analysis.yml` | **综合分析邮件** | **周一到周五 UTC 8:00（香港时间下午4:00）** |
 | `weekly-comprehensive-analysis.yml` | **周综合交易分析** | **每周星期天上午9点香港时间 (UTC 01:00)** |
-| `performance-monitor.yml` | **预测性能月度报告** ⭐ 新增 | **每月1号上午4点香港时间 (UTC 20:00)** |
-| `hourly-crypto-monitor.yml` | 每小时加密货币监控 | 每小时 |
+| `performance-monitor.yml` | **预测性能月度报告** | **每月1号上午4点香港时间 (UTC 20:00)** |
+| `hourly-crypto-monitor.yml` | **加密货币异常检测** | 每小时（快速模式）+ 凌晨2点（深度模式） ⭐ 新增 |
 | `hourly-gold-monitor.yml` | 每小时黄金监控 | 每小时 |
 | `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 2:00 |
 | `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 8:30 |
