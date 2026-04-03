@@ -1,4 +1,4 @@
-name: Stock Anomaly Detection
+name: 港股异常检测
 
 on:
   # 每天凌晨2点执行（香港时间）
