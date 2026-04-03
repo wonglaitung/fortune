@@ -80,14 +80,23 @@ class IsolationForestDetector:
         
         # Identify anomalies (prediction = -1)
         anomalies = []
-        cutoff_date = datetime.now() - timedelta(days=lookback_days)
+        # Use UTC datetime for comparison to avoid timezone issues
+        from datetime import timezone
+        utc_now = datetime.now(timezone.utc)
+        cutoff_date = utc_now - timedelta(days=lookback_days)
         
         for i, (score, pred) in enumerate(zip(anomaly_scores, predictions)):
             if pred == -1:  # Anomaly
                 timestamp = timestamps[i]
                 
+                # Normalize timestamp to UTC for comparison
+                if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
+                    timestamp_utc = timestamp.astimezone(timezone.utc)
+                else:
+                    timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
+                
                 # Only include recent anomalies
-                if timestamp >= cutoff_date:
+                if timestamp_utc >= cutoff_date:
                     severity = self._get_severity(score)
                     
                     # Get feature values

@@ -5,11 +5,9 @@ import json
 import math
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
-
-
 
 # 导入技术分析工具
 try:
@@ -20,6 +18,18 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     TAV_AVAILABLE = False
     print("⚠️ 技术分析工具不可用，将使用简化指标计算")
+
+# Anomaly detection imports
+try:
+    from anomaly_detector.zscore_detector import ZScoreDetector
+    from anomaly_detector.isolation_forest_detector import IsolationForestDetector
+    from anomaly_detector.feature_extractor import FeatureExtractor
+    from anomaly_detector.anomaly_integrator import AnomalyIntegrator
+    from anomaly_detector.cache import AnomalyCache
+    ANOMALY_DETECTION_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Anomaly detection not available: {e}")
+    ANOMALY_DETECTION_AVAILABLE = False
 
 def get_cryptocurrency_prices(include_market_cap=False, include_24hr_vol=False):
     # 注意：原 URL 末尾有空格，已修正
@@ -325,6 +335,155 @@ def calculate_technical_indicators(prices):
     
     return indicators
 
+def run_anomaly_detection(prices):
+    """
+    Run anomaly detection on Ethereum data.
+    
+    Args:
+        prices: Price data from CoinGecko API
+    
+    Returns:
+        Anomaly detection results dict or None if no anomalies
+    """
+    if not ANOMALY_DETECTION_AVAILABLE:
+        print("⚠️ Anomaly detection not available")
+        return None
+    
+    if 'ethereum' not in prices:
+        return None
+    
+    try:
+        # Initialize components
+        zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
+        if_detector = IsolationForestDetector(contamination=0.05, random_state=42)
+        feature_extractor = FeatureExtractor()
+        cache = AnomalyCache()
+        integrator = AnomalyIntegrator(cache)
+        
+        # Get historical data
+        eth_ticker = yf.Ticker("ETH-USD")
+        eth_hist = eth_ticker.history(period="6mo")
+        
+        if eth_hist.empty:
+            print("⚠️ No historical data available for anomaly detection")
+            return None
+        
+        # Run Z-Score detection (Layer 1)
+        zscore_anomalies = []
+        current_price = prices['ethereum']['usd']
+        
+        # Price anomaly
+        price_anomaly = zscore_detector.detect_price_anomaly(
+            current_price=current_price,
+            price_history=eth_hist['Close'],
+            timestamp=datetime.now().replace(tzinfo=None)
+        )
+        if price_anomaly:
+            zscore_anomalies.append(price_anomaly)
+        
+        # Volume anomaly
+        if 'usd_24hr_vol' in prices['ethereum']:
+            current_volume = prices['ethereum']['usd_24hr_vol']
+            volume_anomaly = zscore_detector.detect_volume_anomaly(
+                current_volume=current_volume,
+                volume_history=eth_hist['Volume'],
+                timestamp=datetime.now().replace(tzinfo=None)
+            )
+            if volume_anomaly:
+                zscore_anomalies.append(volume_anomaly)
+        
+        # Run Isolation Forest detection (Layer 2)
+        if_anomalies = []
+        
+        # Extract features
+        features, timestamps = feature_extractor.extract_features(eth_hist)
+        
+        if not features.empty:
+            # Train model
+            if_detector.train(features)
+            
+            # Detect anomalies (last 7 days)
+            if_anomalies = if_detector.detect_anomalies(
+                features=features,
+                timestamps=timestamps,
+                lookback_days=7
+            )
+        
+        # Integrate results
+        result = integrator.integrate(
+            zscore_anomalies=zscore_anomalies,
+            if_anomalies=if_anomalies,
+            timestamp=datetime.now()
+        )
+        
+        # Cleanup old cache entries
+        cache.cleanup_expired(max_age_hours=48)
+        
+        return result
+    
+    except Exception as e:
+        print(f"⚠️ Anomaly detection failed: {e}")
+        return None
+
+
+def format_anomaly_results(anomaly_result):
+    """
+    Format anomaly detection results for email.
+    
+    Args:
+        anomaly_result: Anomaly detection result dict
+    
+    Returns:
+        Formatted HTML string
+    """
+    if not anomaly_result or not anomaly_result['has_anomaly']:
+        return None
+    
+    severity_emoji = {
+        'high': '🔴',
+        'medium': '🟡',
+        'low': '🟢'
+    }
+    
+    html = """
+        <div class="section">
+            <h3>🚨 异常检测报告</h3>
+    """
+    
+    # Add severity
+    severity = anomaly_result['severity']
+    html += f"<p><strong>严重程度:</strong> {severity_emoji.get(severity, '')} {severity.upper()}</p>"
+    
+    # Add anomalies list
+    html += "<table><tr><th>类型</th><th>检测时间</th><th>严重程度</th><th>详情</th></tr>"
+    
+    for anomaly in anomaly_result['anomalies']:
+        anomaly_type = anomaly['type']
+        timestamp = anomaly['timestamp']
+        anomaly_severity = anomaly['severity']
+        
+        # Format details
+        if anomaly_type == 'isolation_forest':
+            score = anomaly.get('anomaly_score', 0)
+            details = f"异常评分: {score:.3f}"
+        else:
+            z_score = anomaly.get('z_score', 0)
+            value = anomaly.get('value', 0)
+            details = f"Z-Score: {z_score:.2f}, 值: {value:.2f}"
+        
+        html += f"""
+            <tr>
+                <td>{anomaly_type}</td>
+                <td>{timestamp.strftime('%Y-%m-%d %H:%M')}</td>
+                <td>{anomaly_severity}</td>
+                <td>{details}</td>
+            </tr>
+        """
+    
+    html += "</table></div>"
+    
+    return html
+
 def calculate_rsi(change_pct):
     """
     简化RSI计算（基于24小时变化率）
@@ -491,6 +650,11 @@ if __name__ == "__main__":
 
     # 计算技术指标
     indicators = calculate_technical_indicators(prices)
+
+    # 运行异常检测
+    anomaly_result = None
+    if ANOMALY_DETECTION_AVAILABLE:
+        anomaly_result = run_anomaly_detection(prices)
 
     # 检查是否存在当天的交易信号
     has_signals = False
@@ -940,10 +1104,42 @@ if __name__ == "__main__":
                 tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
                 text += f"    {c['date']}: {c['description']}{tav_info}\n"
     
+    # 添加异常检测结果到文本版本
+    if anomaly_result and anomaly_result['has_anomaly']:
+        text += "\n\n🚨 异常检测报告\n"
+        text += f"严重程度: {anomaly_result['severity'].upper()}\n"
+        text += f"检测到异常数量: {len(anomaly_result['anomalies'])}\n"
+        
+        for anomaly in anomaly_result['anomalies']:
+            anomaly_type = anomaly['type']
+            timestamp = anomaly['timestamp']
+            anomaly_severity = anomaly['severity']
+            
+            if anomaly_type == 'isolation_forest':
+                score = anomaly.get('anomaly_score', 0)
+                text += f"\n- 类型: Isolation Forest"
+                text += f"\n  时间: {timestamp.strftime('%Y-%m-%d %H:%M')}"
+                text += f"\n  严重程度: {anomaly_severity}"
+                text += f"\n  异常评分: {score:.3f}"
+            else:
+                z_score = anomaly.get('z_score', 0)
+                value = anomaly.get('value', 0)
+                text += f"\n- 类型: {anomaly_type}"
+                text += f"\n  时间: {timestamp.strftime('%Y-%m-%d %H:%M')}"
+                text += f"\n  严重程度: {anomaly_severity}"
+                text += f"\n  Z-Score: {z_score:.2f}"
+                text += f"\n  值: {value:.2f}"
+    
     html += """
             </table>
         </div>
     """
+
+    # 添加异常检测结果（如果有）
+    if anomaly_result and anomaly_result['has_anomaly']:
+        anomaly_html = format_anomaly_results(anomaly_result)
+        if anomaly_html:
+            html += anomaly_html
 
     # 添加指标说明到文本版本
     text += "\n📋 指标说明:\n"
