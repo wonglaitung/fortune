@@ -12,13 +12,5 @@ export QWEN_API_KEY=sk-ccxxx
 export QWEN_CHAT_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
 
-# Anomaly Detection Configuration
-export ANOMALY_DETECTION_ENABLED="true"
-export ZSCORE_WINDOW_SIZE="30"
-export ZSCORE_THRESHOLD="3.0"
-export ISOLATION_FOREST_CONTAMINATION="0.05"
-export ANOMALY_CACHE_HOURS="24"
-
-# Verify configuration
 echo "Configuration loaded successfully"
 echo "QWEN_API_KEY: $QWEN_API_KEY"
