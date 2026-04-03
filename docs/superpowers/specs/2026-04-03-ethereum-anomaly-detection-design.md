@@ -220,6 +220,10 @@ predictions = model.predict(features)
 | 趋势特征 | ma20_diff | 价格与MA20的差值 |
 | | ma50_diff | 价格与MA50的差值 |
 | | ma20_ma50_diff | MA20与MA50的差值 |
+| TAV特征 | tav_score | TAV评分（趋势-动量-成交量） |
+| | tav_status | TAV状态（强共振/中等共振/弱共振/无共振） |
+
+**说明**：TAV特征复用现有的TAVScorer计算结果，避免重复计算。
 
 #### 输出
 ```python
@@ -400,6 +404,13 @@ if cache_key in reported_anomalies:
     }
 }
 ```
+
+**缓存实现**：
+- 存储位置：`data/anomaly_cache.json`
+- 加载函数：`cache.load()`
+- 保存函数：`cache.save()`
+- 并发控制：使用文件锁（fcntl）避免冲突
+- 清理策略：启动时清理>48小时的记录
 
 #### 缓存清理
 - 48小时后自动清理过期记录
@@ -613,37 +624,83 @@ logger.error(f"模型训练失败: {error}", exc_info=True)
 - GitHub Actions配置
 - 生产部署
 
+**GitHub Actions工作流配置**：
+
+创建`.github/workflows/ethereum-anomaly-detection.yml`：
+
+```yaml
+name: Ethereum Anomaly Detection
+
+on:
+  schedule:
+    # 每小时运行Z-Score实时检测
+    - cron: '0 * * * *'  # 每小时
+    # 每天凌晨2点运行Isolation Forest深度分析
+    - cron: '0 2 * * *'  # 每天凌晨2点（香港时间）
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  anomaly-detection:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run anomaly detection
+        run: |
+          python3 crypto_email.py --anomaly-detection
+```
+
 ### 7.2 文件结构
 
 ```
 /data/fortune/
 ├── crypto_email.py                    # 主入口（修改）
-├── anomaly_detector/                  # 新增模块
-│   ├── __init__.py
+├── anomaly_detector/                  # 新增Python包
+│   ├── __init__.py                    # 包初始化文件
 │   ├── zscore_detector.py            # Z-Score检测器
 │   ├── isolation_forest_detector.py  # Isolation Forest检测器
 │   ├── feature_extractor.py          # 特征提取器
-│   └── anomaly_integrator.py         # 异常整合器
+│   ├── anomaly_integrator.py         # 异常整合器
+│   └── cache.py                      # 缓存管理模块
 └── tests/
     ├── test_zscore_detector.py       # Z-Score测试
     ├── test_isolation_forest.py      # Isolation Forest测试
+    ├── test_feature_extractor.py     # 特征提取测试
+    ├── test_anomaly_integrator.py    # 异常整合测试
+    ├── test_cache.py                 # 缓存测试
     └── test_integration.py           # 集成测试
 ```
 
+**说明**：
+- `anomaly_detector/`是一个Python包，包含`__init__.py`文件
+- 每个模块都有明确的职责和接口
+- 测试模块对应实现模块，便于维护
+
 ### 7.3 依赖项
 
-**新增依赖**：
+**现有依赖**（已满足）：
 ```txt
-scikit-learn>=1.3.0
-```
-
-**现有依赖**（保持不变）：
-```txt
+scikit-learn>=1.3.0  # 已在requirements.txt中
 pandas
 numpy
 yfinance
 requests
 ```
+
+**说明**：scikit-learn已在项目的requirements.txt中，无需添加新的依赖。
 
 ### 7.4 配置参数
 
