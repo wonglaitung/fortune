@@ -336,7 +336,7 @@ def calculate_technical_indicators(prices):
     
     return indicators
 
-def run_anomaly_detection(prices, use_deep_analysis=False):
+def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
     """
     Run anomaly detection on Ethereum data.
     
@@ -344,6 +344,7 @@ def run_anomaly_detection(prices, use_deep_analysis=False):
         prices: Price data from CoinGecko API
         use_deep_analysis: If True, run full analysis (Z-Score + Isolation Forest).
                          If False, run only Z-Score detection (faster).
+        target_date: Target date for anomaly detection (YYYY-MM-DD format), None for current date.
     
     Returns:
         Anomaly detection results dict or None if no anomalies
@@ -354,6 +355,21 @@ def run_anomaly_detection(prices, use_deep_analysis=False):
     
     if 'ethereum' not in prices:
         return None
+    
+    # 确定目标日期
+    if target_date:
+        try:
+            from datetime import timezone
+            target_dt = datetime.strptime(target_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            print(f"⚠️ 无效的日期格式: {target_date}，使用今天")
+            target_dt = datetime.now(timezone.utc)
+    else:
+        from datetime import timezone
+        target_dt = datetime.now(timezone.utc)
+    
+    target_date_str = target_dt.strftime('%Y-%m-%d')
+    print(f"🔍 检测 {target_date_str} 的异常")
     
     try:
         # Initialize components
@@ -386,7 +402,7 @@ def run_anomaly_detection(prices, use_deep_analysis=False):
         price_anomaly = zscore_detector.detect_price_anomaly(
             current_price=current_price,
             price_history=eth_hist['Close'],
-            timestamp=datetime.now().replace(tzinfo=None)
+            timestamp=target_dt
         )
         if price_anomaly:
             zscore_anomalies.append(price_anomaly)
@@ -397,7 +413,7 @@ def run_anomaly_detection(prices, use_deep_analysis=False):
             volume_anomaly = zscore_detector.detect_volume_anomaly(
                 current_volume=current_volume,
                 volume_history=eth_hist['Volume'],
-                timestamp=datetime.now().replace(tzinfo=None)
+                timestamp=target_dt
             )
             if volume_anomaly:
                 zscore_anomalies.append(volume_anomaly)
@@ -413,19 +429,41 @@ def run_anomaly_detection(prices, use_deep_analysis=False):
                 # Train model
                 if_detector.train(features)
                 
-                # Detect anomalies (last 7 days)
-                if_anomalies = if_detector.detect_anomalies(
+                # Detect anomalies (指定日期)
+                if_anomalies = if_detector.detect_anomalies_by_date(
                     features=features,
                     timestamps=timestamps,
-                    lookback_days=7
+                    target_date=target_dt
                 )
         
         # Integrate results
         result = integrator.integrate(
             zscore_anomalies=zscore_anomalies,
             if_anomalies=if_anomalies,
-            timestamp=datetime.now()
+            timestamp=target_dt
         )
+        
+        # 为每个异常添加异常日期和原因
+        if result['has_anomaly']:
+            for anomaly in result['anomalies']:
+                # 获取异常发生的时间戳
+                anomaly_timestamp = anomaly.get('timestamp', target_dt)
+                anomaly_date_str = anomaly_timestamp.strftime('%Y-%m-%d') if hasattr(anomaly_timestamp, 'strftime') else target_date_str
+                
+                # 添加异常日期和原因
+                anomaly['anomaly_date'] = anomaly_date_str
+                anomaly['anomaly_reason'] = _analyze_anomaly_reason(anomaly)
+                
+                # 计算异常日期的技术指标
+                df_anomaly = eth_hist[eth_hist.index.normalize() == pd.Timestamp(anomaly_timestamp).normalize()]
+                if df_anomaly.empty:
+                    # 如果找不到精确匹配，尝试按日期匹配
+                    target_date_only = pd.to_datetime(anomaly_date_str).date()
+                    df_anomaly = eth_hist[eth_hist.index.date == target_date_only]
+                
+                if not df_anomaly.empty:
+                    df_anomaly_row = df_anomaly.iloc[0]
+                    anomaly['indicators'] = _calculate_anomaly_indicators(eth_hist, df_anomaly_row)
         
         # Cleanup old cache entries
         cache.cleanup_expired(max_age_hours=48)
@@ -465,35 +503,221 @@ def format_anomaly_results(anomaly_result):
     severity = anomaly_result['severity']
     html += f"<p><strong>严重程度:</strong> {severity_emoji.get(severity, '')} {severity.upper()}</p>"
     
-    # Add anomalies list
-    html += "<table><tr><th>类型</th><th>检测时间</th><th>严重程度</th><th>详情</th></tr>"
+    # Add anomalies table with detailed columns
+    html += "<table><tr><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
     
     for anomaly in anomaly_result['anomalies']:
         anomaly_type = anomaly['type']
-        timestamp = anomaly['timestamp']
-        anomaly_severity = anomaly['severity']
+        anomaly_date = anomaly.get('anomaly_date', 'N/A')
+        anomaly_reason = anomaly.get('anomaly_reason', '未知')
+        indicators = anomaly.get('indicators', {})
         
-        # Format details
+        # Format score/value
         if anomaly_type == 'isolation_forest':
             score = anomaly.get('anomaly_score', 0)
-            details = f"异常评分: {score:.3f}"
+            score_value = f"{score:.3f}"
         else:
             z_score = anomaly.get('z_score', 0)
             value = anomaly.get('value', 0)
-            details = f"Z-Score: {z_score:.2f}, 值: {value:.2f}"
+            score_value = f"Z: {z_score:.2f}, 值: {value:.2f}"
+        
+        # Get indicator values
+        current_price = indicators.get('current_price', 0)
+        change_1d = indicators.get('change_1d', 0)
+        change_5d = indicators.get('change_5d', 0)
+        rsi = indicators.get('rsi', 0)
+        bb_position = indicators.get('bollinger_position', 'middle')
+        macd_signal = indicators.get('macd_signal', 'neutral')
+        
+        # Format position and signal
+        bb_position_cn = get_bollinger_position_cn(bb_position)
+        macd_signal_cn = get_macd_signal_cn(macd_signal)
+        
+        # Format change icons
+        change_1d_icon = "📈" if change_1d > 0 else "📉"
+        change_5d_icon = "📈" if change_5d > 0 else "📉"
         
         html += f"""
             <tr>
                 <td>{anomaly_type}</td>
-                <td>{timestamp.strftime('%Y-%m-%d %H:%M')}</td>
-                <td>{anomaly_severity}</td>
-                <td>{details}</td>
+                <td>{anomaly_date}</td>
+                <td>{anomaly_reason}</td>
+                <td>{score_value}</td>
+                <td>{current_price:.2f}</td>
+                <td>{change_1d_icon} {change_1d:+.2f}%</td>
+                <td>{change_5d_icon} {change_5d:+.2f}%</td>
+                <td>{rsi:.1f}</td>
+                <td>{bb_position_cn}</td>
+                <td>{macd_signal_cn}</td>
             </tr>
         """
     
     html += "</table></div>"
     
     return html
+
+
+def _analyze_anomaly_reason(anomaly):
+    """
+    分析异常原因
+    
+    Args:
+        anomaly: 异常字典
+    
+    Returns:
+        异常原因描述
+    """
+    anomaly_type = anomaly.get('type', 'price')
+    
+    if anomaly_type == 'price':
+        return '价格异常波动（收盘价显著偏离历史均值）'
+    elif anomaly_type == 'volume':
+        return '成交量异常（成交量显著偏离历史均值）'
+    elif anomaly_type == 'isolation_forest':
+        # Isolation Forest 异常：分析哪个特征异常
+        features = anomaly.get('features', {})
+        if not features:
+            return '多维特征异常（综合指标异常）'
+        
+        # 特征名称映射
+        feature_names = {
+            'price_change_1d': '1日涨跌幅',
+            'price_change_5d': '5日涨跌幅',
+            'volume_ratio': '成交量比率',
+            'rsi': 'RSI指标',
+            'macd': 'MACD指标',
+            'bb_position': '布林带位置',
+            'volatility_5d': '5日波动率',
+            'volume_spike': '成交量激增',
+            'price_gap': '价格缺口',
+            'trend_strength': '趋势强度'
+        }
+        
+        # 找出异常值最大的特征
+        abnormal_features = []
+        for feature_name, feature_value in features.items():
+            # 如果特征值偏离中位数较多（假设标准化后的特征）
+            if abs(feature_value) > 2:
+                feature_cn = feature_names.get(feature_name, feature_name)
+                abnormal_features.append(feature_cn)
+        
+        if abnormal_features:
+            return f'多维特征异常（{", ".join(abnormal_features[:3])}异常）'
+        else:
+            return '多维特征异常（综合指标异常，需关注）'
+    
+    return '异常（原因未知）'
+
+
+def _calculate_anomaly_indicators(eth_hist, df_anomaly_row):
+    """
+    计算异常日期的技术指标
+    
+    Args:
+        eth_hist: 完整的历史数据
+        df_anomaly_row: 异常日期的数据行
+    
+    Returns:
+        技术指标字典
+    """
+    try:
+        # 检查数据量
+        if len(eth_hist) < 20:
+            print("⚠️ 数据量不足（少于20天），计算指标可能不准确")
+        
+        # 使用技术分析工具计算指标
+        if TECHNICAL_ANALYSIS_AVAILABLE:
+            analyzer = TechnicalAnalyzer()
+            indicators_df = analyzer.calculate_all_indicators(eth_hist.copy())
+            
+            # 获取异常日期的指标
+            anomaly_date = df_anomaly_row.name
+            if anomaly_date in indicators_df.index:
+                latest = indicators_df.loc[anomaly_date]
+            else:
+                # 如果找不到精确匹配，使用最接近的日期
+                idx = indicators_df.index.get_indexer([anomaly_date], method='nearest')[0]
+                latest = indicators_df.iloc[idx]
+            
+            rsi = latest.get('RSI', 50.0)
+            # 如果RSI是nan或inf，使用默认值50
+            if pd.isna(rsi) or not np.isfinite(rsi):
+                print(f"⚠️ RSI计算无效（{rsi}），使用默认值50")
+                rsi = 50.0
+            
+            return {
+                'rsi': rsi,
+                'bollinger_position': _get_bollinger_position(latest),
+                'macd_signal': _get_macd_signal(latest),
+                'current_price': df_anomaly_row['Close'],
+                'change_1d': 0,
+                'change_5d': 0
+            }
+        else:
+            # 简化计算
+            return {
+                'rsi': 50.0,
+                'bollinger_position': 'middle',
+                'macd_signal': 'neutral',
+                'current_price': df_anomaly_row['Close'],
+                'change_1d': 0,
+                'change_5d': 0
+            }
+    except Exception as e:
+        print(f"⚠️ 计算技术指标失败: {e}")
+        return {
+            'rsi': 50.0,
+            'bollinger_position': 'middle',
+            'macd_signal': 'neutral',
+            'current_price': df_anomaly_row['Close'],
+            'change_1d': 0,
+            'change_5d': 0
+        }
+
+
+def _get_bollinger_position(latest_row):
+    """
+    获取布林带位置
+    
+    Args:
+        latest_row: 最新数据行
+    
+    Returns:
+        位置：'upper', 'middle', 'lower'
+    """
+    close = latest_row.get('Close', 0)
+    bb_upper = latest_row.get('BB_Upper', 0)
+    bb_lower = latest_row.get('BB_Lower', 0)
+    bb_middle = latest_row.get('BB_Middle', 0)
+    
+    if close > bb_middle + (bb_upper - bb_middle) * 0.8:
+        return 'upper'
+    elif close < bb_middle - (bb_middle - bb_lower) * 0.8:
+        return 'lower'
+    else:
+        return 'middle'
+
+
+def _get_macd_signal(latest_row):
+    """
+    获取MACD信号
+    
+    Args:
+        latest_row: 最新数据行
+    
+    Returns:
+        信号：'bullish', 'bearish', 'neutral'
+    """
+    macd = latest_row.get('MACD', 0)
+    macd_signal = latest_row.get('MACD_signal', 0)
+    
+    if macd > macd_signal:
+        return 'bullish'
+    elif macd < macd_signal:
+        return 'bearish'
+    else:
+        return 'neutral'
+
 
 def calculate_rsi(change_pct):
     """
@@ -518,6 +742,71 @@ def calculate_price_position(price):
     """
     # 这是一个非常简化的计算，实际需要历史价格数据
     return 50.0  # 假设在中位
+
+
+# Helper functions for Bollinger Bands and MACD
+def get_bollinger_position_cn(position: str) -> str:
+    """获取布林带位置描述（中文）"""
+    if position == 'upper':
+        return "上轨（强势）"
+    elif position == 'lower':
+        return "下轨（弱势）"
+    else:
+        return "中轨（正常）"
+
+
+def get_macd_signal_cn(signal: str) -> str:
+    """获取MACD信号描述（中文）"""
+    if signal == 'bullish':
+        return "金叉（上涨）"
+    elif signal == 'bearish':
+        return "死叉（下跌）"
+    else:
+        return "中性"
+
+
+def _get_bollinger_position(latest_row):
+    """
+    获取布林带位置
+    
+    Args:
+        latest_row: 最新数据行
+    
+    Returns:
+        位置：'upper', 'middle', 'lower'
+    """
+    close = latest_row.get('Close', 0)
+    bb_upper = latest_row.get('BB_Upper', 0)
+    bb_lower = latest_row.get('BB_Lower', 0)
+    bb_middle = latest_row.get('BB_Middle', 0)
+    
+    if close > bb_middle + (bb_upper - bb_middle) * 0.8:
+        return 'upper'
+    elif close < bb_middle - (bb_middle - bb_lower) * 0.8:
+        return 'lower'
+    else:
+        return 'middle'
+
+
+def _get_macd_signal(latest_row):
+    """
+    获取MACD信号
+    
+    Args:
+        latest_row: 最新数据行
+    
+    Returns:
+        信号：'bullish', 'bearish', 'neutral'
+    """
+    macd = latest_row.get('MACD', 0)
+    macd_signal = latest_row.get('MACD_signal', 0)
+    
+    if macd > macd_signal:
+        return 'bullish'
+    elif macd < macd_signal:
+        return 'bearish'
+    else:
+        return 'neutral'
 
 
 # --- 新增：信号冲突解析辅助函数 ---
@@ -656,17 +945,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='加密货币价格监控和异常检测')
     parser.add_argument('--mode', type=str, choices=['quick', 'deep'], default='quick',
                        help='异常检测模式: quick (Z-Score only) 或 deep (Z-Score + Isolation Forest)')
+    parser.add_argument('--date', help='指定检测日期（YYYY-MM-DD格式），默认检测当天异常')
     args = parser.parse_args()
     
     # 从参数获取异常检测模式
     # quick: 只执行 Z-Score 检测（快速）
     # deep: 执行完整分析（Z-Score + Isolation Forest）
     use_deep_analysis = (args.mode == 'deep')
+    target_date = args.date
     
     if use_deep_analysis:
         print("🔍 深度异常检测模式（Z-Score + Isolation Forest）")
     else:
         print("⚡ 快速异常检测模式（Z-Score only）")
+    
+    if target_date:
+        print(f"📅 检测日期: {target_date}")
+    else:
+        print("📅 检测日期: 今天")
     
     # 可以通过修改这里的参数来控制是否包含市值和24小时交易量
     prices = get_cryptocurrency_prices(include_market_cap=True, include_24hr_vol=True)
@@ -681,7 +977,7 @@ if __name__ == "__main__":
     # 运行异常检测
     anomaly_result = None
     if ANOMALY_DETECTION_AVAILABLE:
-        anomaly_result = run_anomaly_detection(prices, use_deep_analysis=use_deep_analysis)
+        anomaly_result = run_anomaly_detection(prices, use_deep_analysis=use_deep_analysis, target_date=target_date)
 
     # 检查是否存在当天的交易信号
     has_signals = False

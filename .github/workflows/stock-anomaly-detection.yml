@@ -1,0 +1,68 @@
+name: Stock Anomaly Detection
+
+on:
+  # 每天凌晨2点执行（香港时间）
+  schedule:
+    - cron: '0 2 * * *'
+  # 支持手动触发
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: '测试模式（仅检测指定股票）'
+        required: false
+        default: 'false'
+      test_stocks:
+        description: '测试股票列表（逗号分隔）'
+        required: false
+        default: ''
+
+env:
+  TZ: Asia/Hong_Kong
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Configure environment variables
+        run: |
+          echo "SMTP_SERVER=${{ secrets.SMTP_SERVER }}" >> $GITHUB_ENV
+          echo "EMAIL_SENDER=${{ secrets.EMAIL_SENDER }}" >> $GITHUB_ENV
+          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> $GITHUB_ENV
+          echo "RECIPIENT_EMAIL=${{ secrets.RECIPIENT_EMAIL }}" >> $GITHUB_ENV
+      
+      - name: Run anomaly detection
+        id: detect
+        run: |
+          if [ "${{ github.event.inputs.test_mode }}" = "true" ]; then
+            echo "运行测试模式..."
+            python3 detect_stock_anomalies.py \
+              --mode test \
+              --stocks ${{ github.event.inputs.test_stocks }} \
+              --verbose
+          else
+            echo "运行正常模式..."
+            python3 detect_stock_anomalies.py \
+              --mode standalone \
+              --verbose
+          fi
+      
+      - name: Check results
+        if: always()
+        run: |
+          echo "异常检测完成"
+          echo "检测时间：$(date)"
+          echo "时区：$TZ"

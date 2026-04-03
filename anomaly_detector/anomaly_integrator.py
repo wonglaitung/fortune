@@ -53,13 +53,25 @@ class AnomalyIntegrator:
             all_anomalies.append(anomaly)
         
         # Add Isolation Forest anomalies
+        # 按日期去重：每个股票每个日期只保留一个异常
+        seen_dates = set()
         for anomaly in if_anomalies:
+            # 获取异常日期
+            anomaly_date = anomaly['timestamp'].strftime('%Y-%m-%d')
+            
+            # 检查是否已经处理过这个日期
+            if anomaly_date in seen_dates:
+                logger.info(f"Skipping duplicate Isolation Forest anomaly for date {anomaly_date}")
+                continue
+            
+            seen_dates.add(anomaly_date)
+            
             # Use 'isolation_forest' as type for deduplication
-            cache_key = f"if_{anomaly['timestamp'].strftime('%Y-%m-%d')}"
+            cache_key = f"if_{anomaly_date}"
             
             # Check if already reported (check cache directly)
             if cache_key in self.cache.cache:
-                logger.info(f"Skipping duplicate Isolation Forest anomaly")
+                logger.info(f"Skipping cached Isolation Forest anomaly for {anomaly_date}")
                 continue
             
             all_anomalies.append(anomaly)
