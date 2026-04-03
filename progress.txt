@@ -407,3 +407,257 @@ target_position = 20% / 23.97% = 83.37%
    - 建议使用动态止损（1.5-2.0×ATR）
    - 避免异常期间的大幅亏损
 
+---
+
+## 港股异常检测改进（2026-04-04）
+
+### ✅ detect_stock_anomalies.py 改进完成
+
+### ✅ detect_stock_anomalies.py 改进完成
+- **参考 crypto_email.py 做法**：使用 anomaly_detector 模块
+- **双异常检测**：价格 + 成交量（原版本仅检测价格）
+- **深度分析模式**：支持 Z-Score + Isolation Forest（原版本仅 Z-Score）
+- **异常类型区分**：添加 `type` 字段（'price', 'volume', 'isolation_forest'）
+- **邮件格式优化**：按类型和严重程度分组显示
+
+### ✅ comprehensive_analysis.py 集成新功能
+- **get_stock_anomalies() 增强**：添加 `use_deep_analysis` 参数（默认 False）
+- **异常显示逻辑更新**：按类型和严重程度分类（价格/成交量/IF）
+- **新增命令行参数**：`--deep-analysis`（启用深度分析模式）
+- **成交量异常显示**：独立表格显示成交量异常，包含成交量数据
+- **Isolation Forest 显示**：仅深度分析模式下显示，标注为 🔬
+
+### 使用方法
+
+```bash
+# 深度模式（Z-Score + Isolation Forest，默认）
+python3 comprehensive_analysis.py
+
+# 快速模式（Z-Score only）
+python3 comprehensive_analysis.py --no-deep-analysis
+
+# 测试模式（不发送邮件）
+python3 comprehensive_analysis.py --no-email
+
+# 快速模式 + 不发送邮件
+python3 comprehensive_analysis.py --no-deep-analysis --no-email
+```
+
+### 邮件显示效果
+
+**快速模式**：
+- 🔴 高异常（价格）：价格 Z-Score 异常
+- 🔴 高异常（成交量）：成交量 Z-Score 异常
+- ⚠️ 中异常（价格/成交量）：中等级别异常
+
+**深度模式**（额外显示）：
+- 🔬 Isolation Forest 异常：多维特征异常检测
+
+### 关键改进点
+
+1. **向后兼容性**：完全兼容现有接口和数据结构
+2. **性能优化**：默认使用快速模式（Z-Score only），提升速度
+3. **数据结构兼容**：新增字段（`type`, `value`）不影响现有代码
+4. **显示逻辑增强**：按类型分组，便于区分价格和成交量异常
+5. **灵活配置**：通过命令行参数控制深度分析模式
+
+### 文件状态
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `detect_stock_anomalies.py.bak` | ✅ 已备份 | 原文件备份 |
+| `detect_stock_anomalies.py` | ✅ 已更新 | 改进版（609行） |
+| `comprehensive_analysis.py` | ✅ 已更新 | 集成新功能 |
+
+### 测试状态
+
+- ✅ 语法检查通过
+- ⏳ 功能测试待进行
+
+---
+
+## 港股异常检测改进（2026-04-04）
+
+### ✅ 改进内容
+- **参考文件**：crypto_email.py 的异常检测实现
+- **改进文件**：detect_stock_anomalies.py
+- **备份文件**：detect_stock_anomalies.py.bak
+
+### ✅ 主要改进点
+
+#### 1. 使用 anomaly_detector 模块
+- **导入模块**：
+  - `ZScoreDetector`：Z-Score异常检测器（价格+成交量）
+  - `IsolationForestDetector`：Isolation Forest异常检测器（深度分析）
+  - `FeatureExtractor`：特征提取器
+  - `AnomalyIntegrator`：异常整合器
+  - `AnomalyCache`：异常缓存
+
+#### 2. 双异常检测（价格+成交量）
+- **价格异常**：基于Close价格计算Z-Score
+- **成交量异常**：基于Volume计算Z-Score
+- **阈值**：高异常（Z-Score >= 4.0）、中异常（Z-Score >= 3.0）
+
+#### 3. 支持深度分析模式
+- **快速模式（quick）**：仅使用Z-Score检测
+- **深度模式（deep）**：Z-Score + Isolation Forest检测
+- **命令行参数**：`--mode-type quick/deep`
+
+#### 4. 异常类型分类
+- **type字段**：'price'（价格）、'volume'（成交量）、'isolation_forest'（深度分析）
+- **邮件格式**：按类型和严重程度分组显示
+- **风险提示**：针对不同类型提供具体操作建议
+
+#### 5. 邮件格式优化
+- **高异常（价格）**：🔴 标记，包含风险提示
+- **高异常（成交量）**：🔴 标记，包含风险提示
+- **中异常（价格/成交量）**：⚠️ 标记，包含操作建议
+- **Isolation Forest异常**：🔬 标记，包含说明
+
+### ✅ 使用方法
+
+```bash
+# 快速模式（Z-Score only）
+python3 detect_stock_anomalies.py --mode standalone --mode-type quick
+
+# 深度模式（Z-Score + Isolation Forest）
+python3 detect_stock_anomalies.py --mode standalone --mode-type deep
+
+# 测试模式
+python3 detect_stock_anomalies.py --mode test --stocks 0700.HK 0939.HK
+
+# 集成模式（返回JSON）
+python3 detect_stock_anomalies.py --mode integrated --mode-type quick
+```
+
+### ✅ 与crypto_email.py的一致性
+- **相同模块**：使用相同的anomaly_detector模块
+- **相同逻辑**：Layer 1（Z-Score）+ Layer 2（Isolation Forest）
+- **相同格式**：异常数据结构一致，包含type字段
+- **相同缓存**：使用AnomalyCache避免重复警报
+
+### ✅ 向后兼容性
+- **保持相同接口**：StockAnomalyDetector类方法签名不变
+- **保持相同参数**：window_size、threshold_high、threshold_medium
+- **保持相同输出**：异常列表格式兼容集成模式
+- **新增可选参数**：use_deep_analysis（深度分析开关）
+
+---
+
+## 异常检测系统全面优化（2026-04-04）
+
+### ✅ detect_stock_anomalies.py 改进完成
+- **参考 crypto_email.py 做法**：使用 anomaly_detector 模块
+- **双异常检测**：价格 + 成交量（原版本仅检测价格）
+- **深度分析模式**：支持 Z-Score + Isolation Forest（原版本仅 Z-Score）
+- **异常类型区分**：添加 `type` 字段（'price', 'volume', 'isolation_forest'）
+- **邮件格式优化**：按类型和严重程度分组显示
+- **异常原因分析**：新增 `_analyze_anomaly_reason()` 方法
+- **异常日期支持**：支持检测指定日期的异常（`--date` 参数）
+- **异常日期数据**：使用异常发生日期的技术指标（RSI、布林带、MACD等）
+- **邮件表格增强**：新增"异常日期"和"异常原因"列
+
+### ✅ crypto_email.py 同步改进
+- **参考 detect_stock_anomalies.py**：使用相同的异常检测方案
+- **日期参数支持**：`run_anomaly_detection()` 支持 `target_date` 参数
+- **异常原因分析**：新增 `_analyze_anomaly_reason()` 方法
+- **异常日期指标**：新增 `_calculate_anomaly_indicators()` 方法
+- **邮件表格增强**：显示异常日期、异常原因、技术指标（RSI、布林带、MACD、涨跌幅）
+- **中文描述支持**：新增 `get_bollinger_position_cn()` 和 `get_macd_signal_cn()` 方法
+- **使用异常日期检测**：调用 `detect_anomalies_by_date()` 方法（而非 `detect_anomalies()`）
+- **只展示指定日期异常**：从检测7天内异常改为只展示当天或指定日期异常
+
+### ✅ comprehensive_analysis.py 集成新功能
+- **get_stock_anomalies() 增强**：添加 `use_deep_analysis` 参数（默认 False）
+- **异常显示逻辑更新**：按类型和严重程度分类（价格/成交量/IF）
+- **新增命令行参数**：`--deep-analysis`（启用深度分析模式）
+- **成交量异常显示**：独立表格显示成交量异常，包含成交量数据
+- **Isolation Forest 显示**：仅深度分析模式下显示，标注为 🔬
+
+### ✅ 工作流优化
+- **stock-anomaly-detection.yml**：修改调度时间
+  - **原调度**：工作日每小时执行（9:00-16:00，共8次）
+  - **新调度**：每天凌晨2点执行（1次）
+- **优化原因**：
+  1. **避免交易时段误报**：凌晨2点时，前一日的完整交易数据已经可用
+  2. **数据完整性**：收盘价、成交量等数据都是完整的当日数据
+  3. **减少邮件干扰**：从每天8次减少到1次，避免频繁报警
+  4. **更准确**：使用完整的日线数据，技术指标计算更准确
+
+### 使用方法
+
+```bash
+# detect_stock_anomalies.py - 快速模式（Z-Score only）
+python3 detect_stock_anomalies.py --mode standalone --mode-type quick
+
+# detect_stock_anomalies.py - 深度模式（Z-Score + Isolation Forest）
+python3 detect_stock_anomalies.py --mode standalone --mode-type deep
+
+# detect_stock_anomalies.py - 检测指定日期的异常
+python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-01
+
+# comprehensive_analysis.py - 深度模式（默认）
+python3 comprehensive_analysis.py
+
+# comprehensive_analysis.py - 快速模式
+python3 comprehensive_analysis.py --no-deep-analysis
+
+# crypto_email.py - 快速模式（默认）
+python3 crypto_email.py --mode quick
+
+# crypto_email.py - 深度模式
+python3 crypto_email.py --mode deep
+
+# crypto_email.py - 检测指定日期的异常
+python3 crypto_email.py --mode deep --date 2026-04-01
+```
+
+### 关键改进点
+
+1. **统一异常检测方案**：crypto_email.py 和 detect_stock_anomalies.py 使用相同的异常检测逻辑
+2. **日期参数支持**：两个脚本都支持 `--date` 参数，检测指定日期的异常
+3. **异常原因分析**：两个脚本都提供异常原因分析（价格异常、成交量异常、多维特征异常）
+4. **异常日期数据**：使用异常发生日期的技术指标，而非当前日期的指标
+5. **邮件表格增强**：显示异常日期、异常原因、技术指标等详细信息
+6. **工作流优化**：避免交易时段误报，使用完整数据，减少邮件干扰
+7. **向后兼容性**：完全兼容现有接口和数据结构
+
+### 关键经验总结
+
+#### 异常检测设计经验
+1. **交易时段误报问题**：交易时段数据不完整（开盘价、部分成交量）导致误报
+2. **数据完整性重要性**：必须使用完整的日线数据（收盘价、全天成交量）
+3. **最佳检测时间**：收盘后或开盘前（数据已完整，技术指标计算准确）
+4. **减少邮件干扰**：从每小时检测改为每天一次，提高用户体验
+5. **异常是"放大器"而非"方向指示器"**：异常后波动率增加，胜率接近50%
+
+#### 代码一致性经验
+1. **统一模块使用**：crypto_email.py 和 detect_stock_anomalies.py 使用相同的 anomaly_detector 模块
+2. **统一接口设计**：相同的函数签名、参数命名、返回格式
+3. **统一增强路径**：同步添加日期参数、异常原因分析、异常日期数据
+4. **代码复用优先**：避免重复实现相同功能，提高代码一致性
+
+#### 异常原因分析经验
+1. **价格异常**：价格显著偏离历史均值
+2. **成交量异常**：成交量显著偏离历史均值
+3. **多维特征异常**：多个技术指标同时异常（RSI、MACD、布林带、波动率等）
+4. **特征名称映射**：提供中文描述，提升可读性
+5. **异常分类显示**：按类型和严重程度分组，便于快速定位
+
+### 文件状态
+
+| 文件 | 状态 | 说明 |
+|------|------|------|
+| `detect_stock_anomalies.py.bak` | ✅ 已备份 | 原文件备份 |
+| `detect_stock_anomalies.py` | ✅ 已更新 | 改进版（支持日期参数、异常原因分析、异常日期数据） |
+| `crypto_email.py` | ✅ 已更新 | 同步改进（支持日期参数、异常原因分析、异常日期数据） |
+| `comprehensive_analysis.py` | ✅ 已更新 | 集成新功能（支持深度分析模式） |
+| `.github/workflows/stock-anomaly-detection.yml` | ✅ 已更新 | 修改调度时间（每天凌晨2点） |
+
+### 测试状态
+
+- ✅ 语法检查通过（crypto_email.py）
+- ✅ 语法检查通过（detect_stock_anomalies.py）
+- ✅ 语法检查通过（comprehensive_analysis.py）
+- ⏳ 功能测试待进行
+
