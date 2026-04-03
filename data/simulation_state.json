@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 772.189294051961,
+  "capital": 524.189294051961,
   "positions": {
     "0941.HK": {
       "shares": 2100,
@@ -16,11 +16,6 @@
       "shares": 25600,
       "avg_price": 4.9994140625,
       "stop_loss_price": 4.65
-    },
-    "1288.HK": {
-      "shares": 18000,
-      "avg_price": 5.205111111111111,
-      "stop_loss_price": 4.42
     },
     "6682.HK": {
       "shares": 2500,
@@ -38,9 +33,14 @@
       "stop_loss_price": 14.2
     },
     "1109.HK": {
-      "shares": 5400,
-      "avg_price": 28.7,
-      "stop_loss_price": 24.31
+      "shares": 5800,
+      "avg_price": 28.701379310344826,
+      "stop_loss_price": 24.5
+    },
+    "0005.HK": {
+      "shares": 700,
+      "avg_price": 130.0,
+      "stop_loss_price": 110.5
     }
   },
   "transaction_history": [
@@ -27975,6 +27975,118 @@
       "current_price": 49.12,
       "target_price": 55.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-03T10:50:26.752657",
+      "type": "SELL",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 772.189294051961,
+      "reason": "RSI 65.17超买，布林带突破上轨，CMF资金流-0.3965大幅流出；筹码虽上方比例0.0%（低阻力），但银行板块涨幅有限（0.52%），个股已透支动能；新闻面无利好（2026-04-01估值讨论），基本面PE 5.64虽低，但技术面超买。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.45,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03T10:50:29.826764",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 772.189294051961,
+      "reason": "RSI 70.85进入超买区，布林带突破上轨，CMF资金流-0.2989流出；板块虽上涨，但个股60日收益率12.08%已高位，相对强度10.92%难持续；新闻面网络安全担忧（2026-03-03）或引发回调。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.96,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03T10:50:32.773611",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 18000,
+      "price": 5.68,
+      "amount": 102240.0,
+      "capital_after": 103012.18929405196,
+      "reason": "RSI 66.51超买，CMF资金流-0.2948流出，OBV虽上升但动能减弱；筹码上方比例0.0%（低阻力），但银行板块涨幅收窄，60日收益率仅2.16%；成交额变化率-32.39/15.68/43.62，资金流入不可持续。",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.68,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-04-03T10:50:35.979796",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 103012.18929405196,
+      "reason": "出货评分5.0分（强烈出货），建仓/出货双高，信号冲突但出货优先",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 30.88,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03T10:50:41.187165",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 700,
+      "price": 130.0,
+      "amount": 91000.0,
+      "capital_after": 12012.189294051961,
+      "reason": "TAV评分58.25（中等共振），银行板块温和上涨(0.52%)提升信号可靠性；筹码分布：上方筹码比例8.9%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.184（中）；技术指标协同：RSI 52.26中性、OBV上升、情感指标MA3>MA7（改善），3项同向；南向资金无数据，但CMF虽流出，OBV上升显示短期资金关注。",
+      "success": true,
+      "stop_loss_price": 110.5,
+      "current_price": 130.0,
+      "target_price": 135.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-04-03T10:50:45.180560",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 400,
+      "price": 28.72,
+      "amount": 11488.0,
+      "capital_after": 524.189294051961,
+      "reason": "TAV状态\"无共振\"，但筹码分布优势：上方筹码比例49.3%<60%（中等阻力），拉升难度\"中等\"；技术指标协同：CMF资金流入、OBV上升、位置百分位低位，3项同向；基本面评分100（低PE 7.07），提供安全边际；板块虽弱势（房地产股-1.96%），但个股超跌反弹机会。",
+      "success": true,
+      "stop_loss_price": 24.5,
+      "current_price": 28.72,
+      "target_price": 30.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-03T10:50:50.694423",
+      "type": "BUY",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 37.42,
+      "amount": 0,
+      "capital_after": 524.189294051961,
+      "reason": "TAV评分58.25（中等共振），筹码分布优异：上方筹码比例27.3%<30%（低阻力），拉升难度\"容易\"；技术指标协同：MACD金叉、位置百分位低位、情感指标波动稳定，3项同向；3日收益率6.43%强势，跑赢恒指潜力；南向资金无数据，但换手率0.74%高于板块均值。",
+      "success": false,
+      "stop_loss_price": 34.0,
+      "current_price": 37.42,
+      "target_price": 40.0,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -44438,7 +44550,7 @@
           "stop_loss_price": 4.65
         },
         "1288.HK": {
-          "shares": 18000,
+          "shares": 0,
           "avg_price": 5.205111111111111,
           "stop_loss_price": 4.42
         },
@@ -44475,7 +44587,7 @@
           "stop_loss_price": 4.65
         },
         "1288.HK": {
-          "shares": 18000,
+          "shares": 0,
           "avg_price": 5.205111111111111,
           "stop_loss_price": 4.42
         },
@@ -44517,7 +44629,7 @@
           "stop_loss_price": 4.65
         },
         "1288.HK": {
-          "shares": 18000,
+          "shares": 0,
           "avg_price": 5.205111111111111,
           "stop_loss_price": 4.42
         },
@@ -44559,7 +44671,7 @@
           "stop_loss_price": 4.65
         },
         "1288.HK": {
-          "shares": 18000,
+          "shares": 0,
           "avg_price": 5.205111111111111,
           "stop_loss_price": 4.42
         },
@@ -44601,7 +44713,7 @@
           "stop_loss_price": 4.65
         },
         "1288.HK": {
-          "shares": 18000,
+          "shares": 0,
           "avg_price": 5.205111111111111,
           "stop_loss_price": 4.42
         },
@@ -44621,314 +44733,150 @@
           "stop_loss_price": 14.2
         },
         "1109.HK": {
-          "shares": 5400,
-          "avg_price": 28.7,
-          "stop_loss_price": 24.31
+          "shares": 5800,
+          "avg_price": 28.701379310344826,
+          "stop_loss_price": 24.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-03T10:50:33.562737",
+      "capital": 103012.18929405196,
+      "portfolio_value": 960693.189294052,
+      "positions": {
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 5800,
+          "avg_price": 28.701379310344826,
+          "stop_loss_price": 24.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-03T10:50:42.140565",
+      "capital": 12012.189294051961,
+      "portfolio_value": 960693.189294052,
+      "positions": {
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 5800,
+          "avg_price": 28.701379310344826,
+          "stop_loss_price": 24.5
+        },
+        "0005.HK": {
+          "shares": 700,
+          "avg_price": 130.0,
+          "stop_loss_price": 110.5
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-03T10:50:46.093920",
+      "capital": 524.189294051961,
+      "portfolio_value": 960693.189294052,
+      "positions": {
+        "0941.HK": {
+          "shares": 2100,
+          "avg_price": 79.07619047619048,
+          "stop_loss_price": 67.02
+        },
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25600,
+          "avg_price": 4.9994140625,
+          "stop_loss_price": 4.65
+        },
+        "6682.HK": {
+          "shares": 2500,
+          "avg_price": 36.9936,
+          "stop_loss_price": 30.8
+        },
+        "1347.HK": {
+          "shares": 1400,
+          "avg_price": 80.95,
+          "stop_loss_price": 73.1
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 5800,
+          "avg_price": 28.701379310344826,
+          "stop_loss_price": 24.5
+        },
+        "0005.HK": {
+          "shares": 700,
+          "avg_price": 130.0,
+          "stop_loss_price": 110.5
         }
       }
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-04-01 13:35:36",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买，资金面主力撤离明显，保险股估值偏高",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 87.35,
-      "target_price": 83.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:39",
-      "type": "SELL",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买，资金面主力撤离，银行股流动性风险上升",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.86,
-      "target_price": 6.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:42",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶部确认，基本面恶化，获利盘回吐压力大",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.68,
-      "target_price": 26.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:45",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶部确认，量价背离，上方筹码高阻力",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 46.86,
-      "target_price": 44.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:46",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶部确认，资金分歧，基本面利润压力大",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 103.1,
-      "target_price": 98.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:50",
-      "type": "BUY",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 34.9,
-      "amount": 0,
-      "reason": "技术指标协同支持反弹，筹码分布低阻力，生物医药板块强势上涨",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": 32.8,
-      "current_price": 34.9,
-      "target_price": 38.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:52",
-      "type": "BUY",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 129.2,
-      "amount": 0,
-      "reason": "技术指标协同确认底部，筹码分布无阻力，银行股低估值提供安全边际",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": 122.8,
-      "current_price": 129.2,
-      "target_price": 135.0,
-      "validity_period": 28
-    },
-    {
-      "timestamp": "2026-04-01 13:35:55",
-      "type": "BUY",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 29.48,
-      "amount": 0,
-      "reason": "技术指标确认反弹，筹码分布低阻力，房地产板块强势上涨",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": 27.9,
-      "current_price": 29.48,
-      "target_price": 31.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 13:35:57",
-      "type": "BUY",
-      "code": "6682.HK",
-      "name": "第四范式",
-      "shares": 0,
-      "price": 37.28,
-      "amount": 0,
-      "reason": "技术指标支持反弹，筹码分布低阻力，AI板块强势上涨",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": 34.7,
-      "current_price": 37.28,
-      "target_price": 40.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-01 16:07:36",
-      "buy": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "TAV评分62.5分中等共振，筹码阻力极低上方筹码比例16.1%，生物医药板块涨幅6.66%，获2026亚太生物制药卓越奖",
-          "allocation_pct": 65,
-          "stop_loss_price": 29.6,
-          "target_price": 42.5,
-          "validity_period": 5
-        },
-        {
-          "code": "6682.HK",
-          "name": "第四范式",
-          "reason": "TAV评分68.25分中等共振，筹码阻力低上方筹码比例21.3%，人工智能板块涨幅2.68%，被列为可能被低估的亚洲股票",
-          "allocation_pct": 60,
-          "stop_loss_price": 31.72,
-          "target_price": 45.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "TAV评分63.25分中等共振，筹码阻力极低上方筹码比例0.0%，银行股温和上涨，负面新闻已消化",
-          "allocation_pct": 45,
-          "stop_loss_price": 110.59,
-          "target_price": 142.0,
-          "validity_period": 14
-        },
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "TAV评分28.75分弱共振，筹码阻力中等上方筹码比例31.7%，房地产板块涨幅2.37%，估值分析显示1年回报率29.57%",
-          "allocation_pct": 35,
-          "stop_loss_price": 24.7,
-          "target_price": 32.5,
-          "validity_period": 5
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "TAV评分50.5分中等共振，筹码阻力中等上方筹码比例47.8%，基本面评分90低估值PE 7.43，Visa支持Apple Pay利好",
-          "allocation_pct": 30,
-          "stop_loss_price": 41.7,
-          "target_price": 55.0,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "能源股弱势下跌跌幅-1.90%，CMF资金流流出，2025年净利润下降11.5%",
-          "stop_loss_triggered": false,
-          "target_price": 24.5,
-          "validity_period": 1
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "能源股弱势下跌，CMF资金流流出，成交额变化率全负，上方筹码比例100.0%高阻力",
-          "stop_loss_triggered": false,
-          "target_price": 43.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1398.HK",
-          "name": "工商银行",
-          "reason": "技术面超买RSI 68.23，CMF资金流大幅流出，位置百分位100.0%高位",
-          "stop_loss_triggered": false,
-          "target_price": 6.5,
-          "validity_period": 1
-        },
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "技术面超买RSI 55.17接近超买，CMF资金流流出，位置百分位70.26%高位",
-          "stop_loss_triggered": false,
-          "target_price": 83.0,
-          "validity_period": 1
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "技术面超买RSI 56.17，位置百分位86.47%高位，CMF资金流流出，新能源板块分化",
-          "stop_loss_triggered": false,
-          "target_price": 98.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-01 16:07:36",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "能源股弱势下跌跌幅-1.90%，CMF资金流流出，2025年净利润下降11.5%",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 27.1,
-      "target_price": 24.5,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-01 16:07:39",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "能源股弱势下跌，CMF资金流流出，成交额变化率全负，上方筹码比例100.0%高阻力",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 46.64,
-      "target_price": 43.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-01 16:07:41",
-      "type": "SELL",
-      "code": "1398.HK",
-      "name": "工商银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买RSI 68.23，CMF资金流大幅流出，位置百分位100.0%高位",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.92,
-      "target_price": 6.5,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-01 16:07:44",
-      "type": "SELL",
-      "code": "1299.HK",
-      "name": "友邦保险",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买RSI 55.17接近超买，CMF资金流流出，位置百分位70.26%高位",
-      "capital_after": 772.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 87.7,
-      "target_price": 83.0,
-      "validity_period": 1
-    },
     {
       "timestamp": "2026-04-01 16:07:45",
       "type": "SELL",
@@ -45024,6 +44972,200 @@
       "current_price": 49.12,
       "target_price": 55.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-02 10:15:29",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-02 14:21:18",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-02 16:04:37",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-03 10:50:26",
+      "buy": [
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "TAV评分58.25（中等共振），银行板块温和上涨(0.52%)提升信号可靠性；筹码分布：上方筹码比例8.9%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.184（中）；技术指标协同：RSI 52.26中性、OBV上升、情感指标MA3>MA7（改善），3项同向；南向资金无数据，但CMF虽流出，OBV上升显示短期资金关注。",
+          "allocation_pct": 40,
+          "stop_loss_price": 110.5,
+          "target_price": 135.0,
+          "validity_period": 5
+        },
+        {
+          "code": "1109.HK",
+          "name": "华润置地",
+          "reason": "TAV状态\"无共振\"，但筹码分布优势：上方筹码比例49.3%<60%（中等阻力），拉升难度\"中等\"；技术指标协同：CMF资金流入、OBV上升、位置百分位低位，3项同向；基本面评分100（低PE 7.07），提供安全边际；板块虽弱势（房地产股-1.96%），但个股超跌反弹机会。",
+          "allocation_pct": 30,
+          "stop_loss_price": 24.5,
+          "target_price": 30.0,
+          "validity_period": 14
+        },
+        {
+          "code": "6682.HK",
+          "name": "第四范式",
+          "reason": "TAV评分58.25（中等共振），筹码分布优异：上方筹码比例27.3%<30%（低阻力），拉升难度\"容易\"；技术指标协同：MACD金叉、位置百分位低位、情感指标波动稳定，3项同向；3日收益率6.43%强势，跑赢恒指潜力；南向资金无数据，但换手率0.74%高于板块均值。",
+          "allocation_pct": 30,
+          "stop_loss_price": 34.0,
+          "target_price": 40.0,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "RSI 65.17超买，布林带突破上轨，CMF资金流-0.3965大幅流出；筹码虽上方比例0.0%（低阻力），但银行板块涨幅有限（0.52%），个股已透支动能；新闻面无利好（2026-04-01估值讨论），基本面PE 5.64虽低，但技术面超买。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "RSI 70.85进入超买区，布林带突破上轨，CMF资金流-0.2989流出；板块虽上涨，但个股60日收益率12.08%已高位，相对强度10.92%难持续；新闻面网络安全担忧（2026-03-03）或引发回调。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "RSI 66.51超买，CMF资金流-0.2948流出，OBV虽上升但动能减弱；筹码上方比例0.0%（低阻力），但银行板块涨幅收窄，60日收益率仅2.16%；成交额变化率-32.39/15.68/43.62，资金流入不可持续。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "出货评分5.0分（强烈出货），建仓/出货双高，信号冲突但出货优先",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-04-03 10:50:26",
+      "type": "SELL",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI 65.17超买，布林带突破上轨，CMF资金流-0.3965大幅流出；筹码虽上方比例0.0%（低阻力），但银行板块涨幅有限（0.52%），个股已透支动能；新闻面无利好（2026-04-01估值讨论），基本面PE 5.64虽低，但技术面超买。",
+      "capital_after": 772.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.45,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03 10:50:29",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI 70.85进入超买区，布林带突破上轨，CMF资金流-0.2989流出；板块虽上涨，但个股60日收益率12.08%已高位，相对强度10.92%难持续；新闻面网络安全担忧（2026-03-03）或引发回调。",
+      "capital_after": 772.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.96,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03 10:50:32",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 18000,
+      "price": 5.68,
+      "amount": 102240.0,
+      "reason": "RSI 66.51超买，CMF资金流-0.2948流出，OBV虽上升但动能减弱；筹码上方比例0.0%（低阻力），但银行板块涨幅收窄，60日收益率仅2.16%；成交额变化率-32.39/15.68/43.62，资金流入不可持续。",
+      "capital_after": 103012.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 5.68,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 8547.999999999996
+    },
+    {
+      "timestamp": "2026-04-03 10:50:36",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（强烈出货），建仓/出货双高，信号冲突但出货优先",
+      "capital_after": 103012.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 30.88,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-03 10:50:41",
+      "type": "BUY",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 700,
+      "price": 130.0,
+      "amount": 91000.0,
+      "reason": "TAV评分58.25（中等共振），银行板块温和上涨(0.52%)提升信号可靠性；筹码分布：上方筹码比例8.9%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.184（中）；技术指标协同：RSI 52.26中性、OBV上升、情感指标MA3>MA7（改善），3项同向；南向资金无数据，但CMF虽流出，OBV上升显示短期资金关注。",
+      "capital_after": 12012.189294051961,
+      "success": true,
+      "stop_loss_price": 110.5,
+      "current_price": 130.0,
+      "target_price": 135.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-04-03 10:50:45",
+      "type": "BUY",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 400,
+      "price": 28.72,
+      "amount": 11488.0,
+      "reason": "TAV状态\"无共振\"，但筹码分布优势：上方筹码比例49.3%<60%（中等阻力），拉升难度\"中等\"；技术指标协同：CMF资金流入、OBV上升、位置百分位低位，3项同向；基本面评分100（低PE 7.07），提供安全边际；板块虽弱势（房地产股-1.96%），但个股超跌反弹机会。",
+      "capital_after": 524.189294051961,
+      "success": true,
+      "stop_loss_price": 24.5,
+      "current_price": 28.72,
+      "target_price": 30.0,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-03 10:50:50",
+      "type": "BUY",
+      "code": "6682.HK",
+      "name": "第四范式",
+      "shares": 0,
+      "price": 37.42,
+      "amount": 0,
+      "reason": "TAV评分58.25（中等共振），筹码分布优异：上方筹码比例27.3%<30%（低阻力），拉升难度\"容易\"；技术指标协同：MACD金叉、位置百分位低位、情感指标波动稳定，3项同向；3日收益率6.43%强势，跑赢恒指潜力；南向资金无数据，但换手率0.74%高于板块均值。",
+      "capital_after": 524.189294051961,
+      "success": false,
+      "stop_loss_price": 34.0,
+      "current_price": 37.42,
+      "target_price": 40.0,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
