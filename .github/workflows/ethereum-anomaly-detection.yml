@@ -1,0 +1,32 @@
+name: Ethereum Anomaly Detection
+
+on:
+  schedule:
+    # 每小时运行Z-Score实时检测
+    - cron: '0 * * * *'  # 每小时
+    # 每天凌晨2点运行Isolation Forest深度分析
+    - cron: '0 2 * * *'  # 每天凌晨2点（香港时间）
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  anomaly-detection:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run anomaly detection
+        run: |
+          python3 crypto_email.py
