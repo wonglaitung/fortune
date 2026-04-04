@@ -31,7 +31,7 @@ STOCK_SECTOR_MAPPING = {
     '02382.HK': {'sector': 'semiconductor', 'name': '舜宇光学科技', 'type': 'semiconductor', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
 
     # 人工智能股 (ai)
-    '6682.HK': {'sector': 'ai', 'name': '第四范式', 'type': 'ai', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
+    '6682.HK': {'sector': 'ai', 'name': '范式智能', 'type': 'ai', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
     '9660.HK': {'sector': 'ai', 'name': '地平线机器人', 'type': 'ai', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
     '2533.HK': {'sector': 'ai', 'name': '黑芝麻智能', 'type': 'ai', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
     '0020.HK': {'sector': 'ai', 'name': '商汤-W', 'type': 'ai', 'defensive': 15, 'growth': 90, 'cyclical': 55, 'liquidity': 55, 'risk': 85},
@@ -144,7 +144,7 @@ WATCHLIST = {
     "2800.HK": "盈富基金",
     "3690.HK": "美团-W",
     "3968.HK": "招商银行",
-    "6682.HK": "第四范式",
+    "6682.HK": "范式智能",
     "9660.HK": "地平线机器人",
     "9988.HK": "阿里巴巴-SW",
     "1211.HK": "比亚迪股份",
