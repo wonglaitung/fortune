@@ -2195,9 +2195,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     full_content += "- 综合考虑基本面和市场情绪\n"
                 else:
                     full_content += "✅ 未检测到异常，市场波动正常\n\n"
-                    full_content += "说明：异常检测基于Z-Score方法，\n"
-                    full_content += "- 高异常（Z-Score ≥ 4.0）：需要立即关注\n"
-                    full_content += "- 中异常（Z-Score ≥ 3.0）：保持关注\n\n"
                 
                 # 继续添加其他内容
                 full_content += f"""## 九、技术指标说明
