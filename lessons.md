@@ -234,6 +234,129 @@ def get_detection_threshold(current_time=None):
 
 ---
 
+## 📅 每小时监控与交易时段检测（2026-04-04）⭐ 新增
+
+### 每小时监控策略
+
+#### 双模式对比
+
+| 模式 | 加密货币 | 港股 |
+|------|----------|------|
+| **之前** | 每小时快速 + 凌晨2点深度 | 每天凌晨2点深度 |
+| **现在** | 每小时深度 | 交易时段每小时深度 |
+| **优势** | 及时性提升，避免分层策略 | 实时监控，避免交易时段误报 |
+
+#### 参数配置
+
+| 资产类型 | 时间间隔 | Window Size | Period | Mode |
+|----------|---------|-------------|--------|------|
+| **加密货币** | hour | 72 | 1mo | deep (每小时) |
+| **港股（每日）** | day | 30 | 3mo | deep (凌晨2点) |
+| **港股（每小时）** | hour | 72 | 1mo | deep (交易时段) |
+
+### 交易时段检测实现
+
+#### 港股交易时段定义
+```python
+# 上午时段：09:30 - 12:00
+# 下午时段：13:00 - 16:00
+# 午休时段：12:00 - 13:00
+# 非交易时段：00:00 - 09:30, 16:00 - 23:59
+```
+
+#### GitHub Actions 实现方式
+```yaml
+- name: Check trading hours
+  id: check_trading_hours
+  run: |
+    # 获取当前时间（分钟数）
+    current_hour=$(date +%H)
+    current_minute=$(date +%M)
+    current_time=$((current_hour * 60 + current_minute))
+    
+    # 定义交易时段（分钟数）
+    morning_start=$((9 * 60 + 30))  # 09:30
+    morning_end=$((12 * 60))          # 12:00
+    afternoon_start=$((13 * 60))       # 13:00
+    afternoon_end=$((16 * 60))        # 16:00
+    
+    # 判断是否在交易时段
+    if [[ $current_time -ge $morning_start && $current_time -lt $morning_end ]] || \
+       [[ $current_time -ge $afternoon_start && $current_time -lt $afternoon_end ]]; then
+      echo "is_trading_hours=true" >> $GITHUB_OUTPUTS
+    else
+      echo "is_trading_hours=false" >> $GITHUB_OUTPUTS
+    fi
+  outputs:
+    is_trading_hours: ${{ steps.check_trading_hours.outputs.is_trading_hours }}
+
+- name: Run anomaly detection
+  if: ${{ github.event_name == 'workflow_dispatch' || steps.check_trading_hours.outputs.is_trading_hours == 'true' }}
+  run: |
+    python3 detect_stock_anomalies.py --mode standalone --mode-type deep --time-interval hour
+```
+
+### 关键经验总结
+
+#### 每小时监控经验
+1. **实时性与成本平衡**：
+   - 加密货币：24小时监控，使用小时级数据（精度提升24倍）
+   - 港股：交易时段监控，避免非交易时段计算浪费
+
+2. **分层策略 vs 统一深度模式**：
+   - **之前**：每小时快速（Z-Score）+ 凌晨深度（Z-Score + IF）
+   - **现在**：每小时深度（Z-Score + IF）
+   - **优势**：代码更简单、逻辑更清晰、及时性更好
+
+3. **参数自动适配**：
+   - 每小时模式：window_size=72（3天），period='1mo'（720个数据点）
+   - 每日模式：window_size=30（1个月），period='3mo'（约90个数据点）
+   - **关键**：数据量至少是窗口大小的10倍
+
+#### 交易时段检测经验
+1. **数据完整性优先于实时性**：
+   - 交易时段早期（如9:30 AM）数据不完整
+   - 收盘后（16:30后）数据完整，适合检测
+   - 使用完整数据可以减少误报
+
+2. **GitHub Actions 输出变量**：
+   - 使用 `GITHUB_OUTPUTS`（注意是复数）设置输出
+   - 下一任务通过 `steps.xxx.outputs.yyy` 引用输出
+   - 语法错误会导致工作流失败
+
+3. **手动触发不受限制**：
+   - `if: ${{ github.event_name == 'workflow_dispatch' || ... }}`
+   - 允许测试时手动运行，不受时间限制
+   - 提供调试和测试便利
+
+4. **交易时段的时区考虑**：
+   - 必须明确设置时区：`env: TZ: Asia/Hong_Kong`
+   - GitHub Actions 默认是 UTC 时间
+   - 时区错误会导致错误的检测判断
+
+5. **执行效率优化**：
+   - 非交易时段直接跳过，不下载数据、不计算指标
+   - 节省计算资源，减少不必要的API调用
+   - 通过条件判断避免邮件发送
+
+#### 统一配置经验
+1. **detect_stock_anomalies.py 统一支持**：
+   - 添加 `time_interval` 参数（'day' 或 'hour'）
+   - `get_stock_data()` 支持 `interval` 参数
+   - `ZScoreDetector` 根据时间间隔初始化
+
+2. **工作流配置简化**：
+   - 删除分层策略（快速/深度）
+   - 统一使用深度模式，通过调度控制频率
+   - 参数传递通过命令行而非环境变量
+
+3. **AGENTS.md 文档同步更新**：
+   - 命令示例更新为包含 `--time-interval hour`
+   - 详细说明增加时间间隔支持
+   - 保持与实际实现一致
+
+---
+
 ## 🔧 代码一致性最佳实践 ⭐ 新增（2026-04-04）
 
 ### 统一异常检测方案

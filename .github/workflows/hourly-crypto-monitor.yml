@@ -2,10 +2,8 @@ name: 加密货币价格提醒（含异常检测）
 
 on:
   schedule:
-    # 每小时执行一次 - Z-Score实时检测
+    # 每小时执行一次 - 深度分析模式
     - cron: '0 * * * *'
-    # 每天凌晨2点 - Isolation Forest深度分析
-    - cron: '0 2 * * *'
   # 可选：允许手动触发
   workflow_dispatch:
 
@@ -27,18 +25,7 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run crypto email script with anomaly detection (quick mode)
-        if: github.event.schedule != '0 2 * * *'
-        env:
-          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        run: |
-          python3 crypto_email.py --mode quick
-
       - name: Run crypto email script with anomaly detection (deep mode)
-        if: github.event.schedule == '0 2 * * *'
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}

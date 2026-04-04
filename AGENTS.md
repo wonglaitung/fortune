@@ -15,7 +15,7 @@
 | **生成预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` |
 | **批量回测** | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6` |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-03` |
+| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-03` (每日) 或 `--time-interval hour` (每小时) |
 | **加密货币异常检测** | `python3 crypto_email.py --mode deep --date 2026-04-03` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
@@ -111,6 +111,7 @@
 ### 港股异常检测
 - **双异常检测**：价格 + 成交量异常（基于Z-Score）
 - **深度分析模式**：Z-Score + Isolation Forest（多维特征检测）
+- **时间间隔支持**：支持每日（`--time-interval day`，默认）和每小时（`--time-interval hour`）两种检测模式
 - **日期参数支持**：支持检测指定日期的异常（`--date` 参数）
 - **异常原因分析**：分析价格、成交量、多维特征异常的具体原因
 - **异常日期数据**：使用异常发生日期的技术指标（RSI、布林带、MACD、涨跌幅）
