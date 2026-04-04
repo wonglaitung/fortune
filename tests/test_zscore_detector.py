@@ -34,7 +34,12 @@ def test_detect_price_anomaly_no_anomaly(detector, price_history):
     current_price = price_history.iloc[-1]
     timestamp = datetime(2026, 3, 1, 10, 0, 0)
     
-    result = detector.detect_price_anomaly(current_price, price_history, timestamp)
+    result = detector.detect_anomaly(
+        metric_name='price',
+        current_value=current_price,
+        history=price_history,
+        timestamp=timestamp
+    )
     
     assert result is None
 
@@ -48,7 +53,12 @@ def test_detect_price_anomaly_with_anomaly(detector, price_history):
     
     timestamp = datetime(2026, 3, 1, 10, 0, 0)
     
-    result = detector.detect_price_anomaly(extreme_price, price_history, timestamp)
+    result = detector.detect_anomaly(
+        metric_name='price',
+        current_value=extreme_price,
+        history=price_history,
+        timestamp=timestamp
+    )
     
     assert result is not None
     assert result['type'] == 'price'
@@ -62,7 +72,12 @@ def test_detect_price_anomaly_insufficient_data(detector):
     current_price = 105
     timestamp = datetime(2026, 1, 4, 10, 0, 0)
     
-    result = detector.detect_price_anomaly(current_price, short_history, timestamp)
+    result = detector.detect_anomaly(
+        metric_name='price',
+        current_value=current_price,
+        history=short_history,
+        timestamp=timestamp
+    )
     
     assert result is None
 
@@ -80,7 +95,12 @@ def test_detect_volume_anomaly(detector):
     
     timestamp = datetime(2026, 3, 1, 10, 0, 0)
     
-    result = detector.detect_volume_anomaly(extreme_volume, volume_history, timestamp)
+    result = detector.detect_anomaly(
+        metric_name='volume',
+        current_value=extreme_volume,
+        history=volume_history,
+        timestamp=timestamp
+    )
     
     assert result is not None
     assert result['type'] == 'volume'

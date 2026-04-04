@@ -169,9 +169,10 @@ class StockAnomalyDetector:
                 
                 # Price anomaly
                 current_price = df['Close'].iloc[-1]
-                price_anomaly = self.zscore_detector.detect_price_anomaly(
-                    current_price=current_price,
-                    price_history=df['Close'],
+                price_anomaly = self.zscore_detector.detect_anomaly(
+                    metric_name='price',
+                    current_value=current_price,
+                    history=df['Close'],
                     timestamp=target_dt
                 )
                 if price_anomaly:
@@ -180,9 +181,10 @@ class StockAnomalyDetector:
                 # Volume anomaly（如果有成交量数据）
                 if 'Volume' in df.columns and len(df['Volume']) > 0:
                     current_volume = df['Volume'].iloc[-1]
-                    volume_anomaly = self.zscore_detector.detect_volume_anomaly(
-                        current_volume=current_volume,
-                        volume_history=df['Volume'],
+                    volume_anomaly = self.zscore_detector.detect_anomaly(
+                        metric_name='volume',
+                        current_value=current_volume,
+                        history=df['Volume'],
                         timestamp=target_dt
                     )
                     if volume_anomaly:

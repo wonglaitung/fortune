@@ -1,31 +1,62 @@
 """
 Isolation Forest anomaly detector for deep analysis.
 Uses sklearn IsolationForest for multi-dimensional anomaly detection.
+Supports multiple time intervals (minute, hour, day, week) and is scenario-agnostic.
 """
 
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
+from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class IsolationForestDetector:
-    """Detects anomalies using Isolation Forest algorithm."""
+class TimeInterval(Enum):
+    """Time interval for lookback window."""
+    MINUTE = 'minute'
+    HOUR = 'hour'
+    DAY = 'day'
+    WEEK = 'week'
     
-    def __init__(self, contamination: float = 0.05, random_state: int = 42):
+    @classmethod
+    def from_string(cls, value: str) -> 'TimeInterval':
+        """Convert string to TimeInterval."""
+        for interval in cls:
+            if interval.value.lower() == value.lower():
+                return interval
+        raise ValueError(f"Invalid time interval: {value}")
+
+
+class IsolationForestDetector:
+    """Generic Isolation Forest anomaly detector for multi-dimensional data."""
+    
+    def __init__(
+        self,
+        contamination: float = 0.05,
+        random_state: int = 42,
+        anomaly_type: str = 'isolation_forest'
+    ):
         """
         Initialize Isolation Forest detector.
         
         Args:
             contamination: Expected proportion of outliers (default: 0.05)
             random_state: Random seed for reproducibility (default: 42)
+            anomaly_type: Type label for anomalies (default: 'isolation_forest')
+        
+        Example:
+            >>> detector = IsolationForestDetector(
+            ...     contamination=0.05,
+            ...     anomaly_type='multi_feature'
+            ... )
         """
         self.contamination = contamination
         self.random_state = random_state
+        self.anomaly_type = anomaly_type
         self.model = None
     
     def train(self, features: pd.DataFrame):
@@ -53,7 +84,8 @@ class IsolationForestDetector:
         self,
         features: pd.DataFrame,
         timestamps: List[datetime],
-        lookback_days: int = 7
+        lookback_days: int = 7,
+        time_interval: Optional[Union[str, TimeInterval]] = None
     ) -> List[Dict]:
         """
         Detect anomalies using trained model.
@@ -62,9 +94,19 @@ class IsolationForestDetector:
             features: Feature matrix
             timestamps: Corresponding timestamps
             lookback_days: Only return anomalies from last N days (default: 7)
+            time_interval: Time interval type for the data (for metadata)
         
         Returns:
-            List of anomaly dicts
+            List of anomaly dicts with enhanced metadata
+            
+        Example:
+            >>> detector = IsolationForestDetector(anomaly_type='multi_feature')
+            >>> anomalies = detector.detect_anomalies(
+            ...     features=feature_matrix,
+            ...     timestamps=timestamps,
+            ...     lookback_days=7,
+            ...     time_interval='day'
+            ... )
         """
         if self.model is None:
             logger.error("Model not trained. Call train() first.")
@@ -102,13 +144,24 @@ class IsolationForestDetector:
                     # Get feature values
                     feature_values = features.iloc[i].to_dict()
                     
+                    # Determine time interval string
+                    interval_str = (
+                        time_interval.value if isinstance(time_interval, TimeInterval)
+                        else time_interval if time_interval
+                        else 'unknown'
+                    )
+                    
                     anomalies.append({
                         'timestamp': timestamp,
                         'anomaly_score': score,
                         'severity': severity,
                         'features': feature_values,
                         'detection_method': 'isolation_forest',
-                        'type': 'isolation_forest'
+                        'type': self.anomaly_type,
+                        'lookback_days': lookback_days,
+                        'time_interval': interval_str,
+                        'feature_count': len(feature_values),
+                        'feature_names': list(feature_values.keys())
                     })
         
         logger.info(f"Detected {len(anomalies)} anomalies in last {lookback_days} days")
@@ -119,7 +172,8 @@ class IsolationForestDetector:
         self,
         features: pd.DataFrame,
         timestamps: List[datetime],
-        target_date: datetime
+        target_date: datetime,
+        time_interval: Optional[Union[str, TimeInterval]] = None
     ) -> List[Dict]:
         """
         Detect anomalies on a specific date.
@@ -128,9 +182,19 @@ class IsolationForestDetector:
             features: Feature matrix
             timestamps: Corresponding timestamps
             target_date: Target date to check for anomalies
+            time_interval: Time interval type for the data (for metadata)
         
         Returns:
-            List of anomaly dicts
+            List of anomaly dicts with enhanced metadata
+            
+        Example:
+            >>> detector = IsolationForestDetector(anomaly_type='crypto_features')
+            >>> anomalies = detector.detect_anomalies_by_date(
+            ...     features=feature_matrix,
+            ...     timestamps=timestamps,
+            ...     target_date=datetime(2026, 4, 4),
+            ...     time_interval='hour'
+            ... )
         """
         if self.model is None:
             logger.error("Model not trained. Call train() first.")
@@ -179,13 +243,23 @@ class IsolationForestDetector:
                     # Get feature values
                     feature_values = features.iloc[i].to_dict()
                     
+                    # Determine time interval string
+                    interval_str = (
+                        time_interval.value if isinstance(time_interval, TimeInterval)
+                        else time_interval if time_interval
+                        else 'unknown'
+                    )
+                    
                     anomalies.append({
                         'timestamp': timestamp,
                         'anomaly_score': score,
                         'severity': severity,
                         'features': feature_values,
                         'detection_method': 'isolation_forest',
-                        'type': 'isolation_forest'
+                        'type': self.anomaly_type,
+                        'time_interval': interval_str,
+                        'feature_count': len(feature_values),
+                        'feature_names': list(feature_values.keys())
                     })
         
         # 调整日志消息：明确显示目标日期和实际检测结果
