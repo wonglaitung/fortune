@@ -1503,9 +1503,10 @@ def run_anomaly_detection(prices):
         current_price = prices['ethereum']['usd']
         
         # Price anomaly
-        price_anomaly = zscore_detector.detect_price_anomaly(
-            current_price=current_price,
-            price_history=eth_hist['Close'],
+        price_anomaly = zscore_detector.detect_anomaly(
+            metric_name='price',
+            current_value=current_price,
+            history=eth_hist['Close'],
             timestamp=datetime.now()
         )
         if price_anomaly:
@@ -1514,9 +1515,10 @@ def run_anomaly_detection(prices):
         # Volume anomaly
         if 'usd_24hr_vol' in prices['ethereum']:
             current_volume = prices['ethereum']['usd_24hr_vol']
-            volume_anomaly = zscore_detector.detect_volume_anomaly(
-                current_volume=current_volume,
-                volume_history=eth_hist['Volume'],
+            volume_anomaly = zscore_detector.detect_anomaly(
+                metric_name='volume',
+                current_value=current_volume,
+                history=eth_hist['Volume'],
                 timestamp=datetime.now()
             )
             if volume_anomaly:

@@ -392,7 +392,12 @@ from anomaly_detector.isolation_forest_detector import IsolationForestDetector
 zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
 if_detector = IsolationForestDetector(contamination=0.05)
 
-anomaly = zscore_detector.detect_price_anomaly(...)
+anomaly = zscore_detector.detect_anomaly(
+    metric_name='price',
+    current_value=current_price,
+    history=price_history,
+    timestamp=timestamp
+)
 if anomaly:
     # 动态调整阈值（提高而非降低）
     severity_map = {'high': 0.08, 'medium': 0.04, 'low': 0.02}

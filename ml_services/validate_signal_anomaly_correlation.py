@@ -152,9 +152,10 @@ class SignalAnomalyCorrelationValidator:
         
         # 使用Z-Score检测器
         for idx, row in df_with_enough_data.iterrows():
-            price_anomaly = self.zscore_detector.detect_price_anomaly(
-                current_price=row['Close'],
-                price_history=self.df.loc[:idx, 'Close'],
+            price_anomaly = self.zscore_detector.detect_anomaly(
+                metric_name='price',
+                current_value=row['Close'],
+                history=self.df.loc[:idx, 'Close'],
                 timestamp=idx
             )
             

@@ -99,7 +99,7 @@ def calculate_technical_indicators(prices):
     # 获取比特币历史数据
     try:
         btc_ticker = yf.Ticker("BTC-USD")
-        btc_hist = btc_ticker.history(period="6mo")  # 获取6个月的历史数据
+        btc_hist = btc_ticker.history(period="1mo")  # 获取1个月的历史数据
         if not btc_hist.empty:
             # 计算技术指标（包含TAV分析）
             btc_indicators = analyzer.calculate_all_indicators(btc_hist.copy(), asset_type='crypto')
@@ -218,7 +218,7 @@ def calculate_technical_indicators(prices):
     # 获取以太坊历史数据
     try:
         eth_ticker = yf.Ticker("ETH-USD")
-        eth_hist = eth_ticker.history(period="6mo")  # 获取6个月的历史数据
+        eth_hist = eth_ticker.history(period="1mo")  # 获取1个月的历史数据
         if not eth_hist.empty:
             # 计算技术指标（包含TAV分析）
             eth_indicators = analyzer.calculate_all_indicators(eth_hist.copy(), asset_type='crypto')
@@ -373,22 +373,28 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
     
     try:
         # Initialize components
-        zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
+        # Z-Score：小时级监控，3天窗口（72小时）
+        zscore_detector = ZScoreDetector(window_size=72, threshold=3.0, time_interval='hour')
         
         # 只在深度分析模式下初始化 Isolation Forest
         if_detector = None
         feature_extractor = None
         
         if use_deep_analysis:
-            if_detector = IsolationForestDetector(contamination=0.05, random_state=42)
+            # Isolation Forest：小时级监控，关注最近1天
+            if_detector = IsolationForestDetector(
+                contamination=0.05,
+                random_state=42,
+                anomaly_type='crypto_hourly'
+            )
             feature_extractor = FeatureExtractor()
         
         cache = AnomalyCache()
         integrator = AnomalyIntegrator(cache)
         
-        # Get historical data
+        # Get historical data (小时级数据，1个月)
         eth_ticker = yf.Ticker("ETH-USD")
-        eth_hist = eth_ticker.history(period="6mo")
+        eth_hist = eth_ticker.history(period="1mo", interval='1h')
         
         if eth_hist.empty:
             print("⚠️ No historical data available for anomaly detection")
@@ -398,22 +404,26 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
         zscore_anomalies = []
         current_price = prices['ethereum']['usd']
         
-        # Price anomaly
-        price_anomaly = zscore_detector.detect_price_anomaly(
-            current_price=current_price,
-            price_history=eth_hist['Close'],
-            timestamp=target_dt
+        # Price anomaly (小时级)
+        price_anomaly = zscore_detector.detect_anomaly(
+            metric_name='price',
+            current_value=current_price,
+            history=eth_hist['Close'],
+            timestamp=target_dt,
+            time_interval='hour'
         )
         if price_anomaly:
             zscore_anomalies.append(price_anomaly)
         
-        # Volume anomaly
+        # Volume anomaly (小时级)
         if 'usd_24hr_vol' in prices['ethereum']:
             current_volume = prices['ethereum']['usd_24hr_vol']
-            volume_anomaly = zscore_detector.detect_volume_anomaly(
-                current_volume=current_volume,
-                volume_history=eth_hist['Volume'],
-                timestamp=target_dt
+            volume_anomaly = zscore_detector.detect_anomaly(
+                metric_name='volume',
+                current_value=current_volume,
+                history=eth_hist['Volume'],
+                timestamp=target_dt,
+                time_interval='hour'
             )
             if volume_anomaly:
                 zscore_anomalies.append(volume_anomaly)
@@ -429,11 +439,12 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
                 # Train model
                 if_detector.train(features)
                 
-                # Detect anomalies (指定日期)
+                # Detect anomalies (指定日期，小时级)
                 if_anomalies = if_detector.detect_anomalies_by_date(
                     features=features,
                     timestamps=timestamps,
-                    target_date=target_dt
+                    target_date=target_dt,
+                    time_interval='hour'
                 )
         
         # Integrate results
