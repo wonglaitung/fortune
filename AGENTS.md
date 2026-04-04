@@ -256,8 +256,9 @@ output/
 
 | 文件 | 功能 | 执行时间 |
 |------|------|----------|
-| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点（香港时间） |
-| `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时（快速）+ 凌晨2点（深度） |
+| `stock-anomaly-detection.yml` | 港股异常检测（每日） | 每天凌晨2点（香港时间） |
+| `hourly-stock-monitor.yml` | 港股异常检测（每小时） | 交易日每小时（09:30-12:00, 13:00-16:00） |
+| `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时（深度模式） |
 | `hourly-gold-monitor.yml` | 黄金监控 | 每小时 |
 | `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 UTC 8:00（香港时间16:00） |
 | `hsi-prediction.yml` | 恒生指数涨跌预测 | 周一到周五 UTC 22:00（香港时间早上6:00） |
