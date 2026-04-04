@@ -1,0 +1,94 @@
+name: 港股异常检测（每小时）
+
+on:
+  schedule:
+    # 每小时执行一次 - 仅交易日
+    - cron: '0 * * * 1-5'
+  # 可选：允许手动触发
+  workflow_dispatch:
+    inputs:
+      time_interval:
+        description: '时间间隔（day 或 hour）'
+        required: false
+        default: 'hour'
+        type: choice
+        options:
+          - hour
+          - day
+      mode_type:
+        description: '检测模式（quick 或 deep）'
+        required: false
+        default: 'deep'
+        type: choice
+        options:
+          - quick
+          - deep
+
+jobs:
+  detect-anomalies:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Check trading hours
+        id: check_trading_hours
+        run: |
+          # 获取当前香港时间的小时和分钟
+          current_hour=$(date +%H)
+          current_minute=$(date +%M)
+          echo "当前时间: ${current_hour}:${current_minute} HKT"
+          
+          # 港股交易时段：09:30-12:00, 13:00-16:00
+          # 将时间转换为分钟数进行比较
+          current_time=$((current_hour * 60 + current_minute))
+          morning_start=$((9 * 60 + 30))  # 09:30
+          morning_end=$((12 * 60))          # 12:00
+          afternoon_start=$((13 * 60))       # 13:00
+          afternoon_end=$((16 * 60))        # 16:00
+          
+          # 检查是否在交易时段内
+          if [[ $current_time -ge $morning_start && $current_time -lt $morning_end ]] || \
+             [[ $current_time -ge $afternoon_start && $current_time -lt $afternoon_end ]]; then
+            echo "✅ 在交易时段内，继续执行异常检测"
+            echo "is_trading_hours=true" >> $GITHUB_OUTPUTS
+          else
+            echo "⏰ 不在交易时段内，跳过异常检测"
+            echo "is_trading_hours=false" >> $GITHUB_OUTPUTS
+          fi
+        outputs:
+          is_trading_hours: ${{ steps.check_trading_hours.outputs.is_trading_hours }}
+
+      - name: Run stock anomaly detection (deep mode)
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.check_trading_hours.outputs.is_trading_hours == 'true' }}
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        run: |
+          python3 detect_stock_anomalies.py --mode standalone --mode-type deep --time-interval hour
+
+      - name: Manual trigger mode
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        run: |
+          python3 detect_stock_anomalies.py \
+            --mode standalone \
+            --mode-type ${{ github.event.inputs.mode_type }} \
+            --time-interval ${{ github.event.inputs.time_interval }}

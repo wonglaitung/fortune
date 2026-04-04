@@ -64,29 +64,37 @@ logger = logging.getLogger(__name__)
 class StockAnomalyDetector:
     """股票异常检测器（使用 anomaly_detector 模块）"""
 
-    def __init__(self, window_size: int = 30, threshold_high: float = 4.0, threshold_medium: float = 3.0, use_deep_analysis: bool = False):
+    def __init__(self, window_size: int = 30, threshold_high: float = 4.0, threshold_medium: float = 3.0, use_deep_analysis: bool = False, time_interval: str = 'day'):
         """
         初始化异常检测器
         
         Args:
-            window_size: 滚动窗口大小（天）
+            window_size: 滚动窗口大小（天或小时，取决于time_interval）
             threshold_high: 高异常Z-Score阈值
             threshold_medium: 中异常Z-Score阈值
             use_deep_analysis: 是否使用深度分析（Z-Score + Isolation Forest）
+            time_interval: 时间间隔类型（'day' 或 'hour'）
         """
         self.window_size = window_size
         self.threshold_high = threshold_high
         self.threshold_medium = threshold_medium
         self.use_deep_analysis = use_deep_analysis
+        self.time_interval = time_interval
         self.technical_analyzer = TechnicalAnalyzerV2()
         
         # 使用 anomaly_detector 模块
         if ANOMALY_DETECTION_AVAILABLE:
-            self.zscore_detector = ZScoreDetector(window_size=window_size, threshold=threshold_medium)
+            self.zscore_detector = ZScoreDetector(window_size=window_size, threshold=threshold_medium, time_interval=time_interval)
             
             # 只在深度分析模式下初始化 Isolation Forest
             if use_deep_analysis:
-                self.if_detector = IsolationForestDetector(contamination=0.05, random_state=42)
+                # 根据时间间隔设置异常类型
+                anomaly_type = f"crypto_{time_interval}" if time_interval == 'hour' else 'stock'
+                self.if_detector = IsolationForestDetector(
+                    contamination=0.05,
+                    random_state=42,
+                    anomaly_type=anomaly_type
+                )
                 self.feature_extractor = FeatureExtractor()
                 self.cache = AnomalyCache()
                 self.integrator = AnomalyIntegrator(self.cache)
@@ -324,21 +332,26 @@ class StockAnomalyDetector:
         
         return anomalies
 
-    def get_stock_data(self, stock: str, period: str = '3mo') -> Optional[pd.DataFrame]:
+    def get_stock_data(self, stock: str, period: str = '3mo', interval: str = None) -> Optional[pd.DataFrame]:
         """
         获取股票数据
         
         Args:
             stock: 股票代码（如 '0700.HK'）
             period: 数据周期（默认3个月）
+            interval: 数据间隔（如 '1d'、'1h'），默认为 None（使用 self.time_interval）
             
         Returns:
             DataFrame 包含价格数据，或 None
         """
         try:
-            logger.info(f"下载 {stock} 数据（周期：{period}）...")
+            # 如果没有指定 interval，使用实例的 time_interval
+            if interval is None:
+                interval = '1h' if self.time_interval == 'hour' else '1d'
+            
+            logger.info(f"下载 {stock} 数据（周期：{period}，间隔：{interval}）...")
             ticker = yf.Ticker(stock)
-            df = ticker.history(period=period, auto_adjust=True)
+            df = ticker.history(period=period, interval=interval, auto_adjust=True)
             
             if df.empty:
                 logger.warning(f"{stock} 数据下载失败：无数据")
@@ -733,6 +746,8 @@ def main():
                        help='运行模式：standalone（独立运行，发送邮件）、integrated（集成模式，返回数据）、test（测试模式）')
     parser.add_argument('--mode-type', choices=['quick', 'deep'], default='quick',
                        help='异常检测模式：quick（Z-Score only，快速）、deep（Z-Score + Isolation Forest，深度）')
+    parser.add_argument('--time-interval', choices=['day', 'hour'], default='day',
+                       help='时间间隔：day（每日）、hour（每小时）')
     parser.add_argument('--stocks', nargs='+', help='股票代码列表（如 0700.HK 0939.HK）')
     parser.add_argument('--date', help='指定检测日期（YYYY-MM-DD格式），默认检测当天异常')
     parser.add_argument('--no-email', action='store_true', help='不发送邮件')
@@ -747,21 +762,30 @@ def main():
         # 使用配置文件中的WATCHLIST
         stocks = list(WATCHLIST.keys())
     
+    # 根据时间间隔设置参数
+    if args.time_interval == 'hour':
+        window_size = 72  # 3天 = 72小时
+        period = '1mo'    # 1个月数据
+    else:  # day
+        window_size = 30  # 30天
+        period = '3mo'    # 3个月数据
+    
     logger.info(f"开始检测异常，股票数量：{len(stocks)}")
-    logger.info(f"检测模式：{args.mode}，分析模式：{args.mode_type}")
+    logger.info(f"检测模式：{args.mode}，分析模式：{args.mode_type}，时间间隔：{args.time_interval}")
     if args.date:
         logger.info(f"检测日期：{args.date}")
     
     # 创建检测器实例
     detector = StockAnomalyDetector(
-        window_size=30,
+        window_size=window_size,
         threshold_high=4.0,
         threshold_medium=3.0,
-        use_deep_analysis=(args.mode_type == 'deep')
+        use_deep_analysis=(args.mode_type == 'deep'),
+        time_interval=args.time_interval
     )
     
     # 检测异常
-    anomalies = detector.detect_anomalies(stocks, period='3mo', target_date=args.date)
+    anomalies = detector.detect_anomalies(stocks, period=period, target_date=args.date)
     
     # 根据模式处理结果
     if args.mode == 'standalone':
