@@ -62,13 +62,11 @@ jobs:
           if [[ $current_time -ge $morning_start && $current_time -lt $morning_end ]] || \
              [[ $current_time -ge $afternoon_start && $current_time -lt $afternoon_end ]]; then
             echo "✅ 在交易时段内，继续执行异常检测"
-            echo "is_trading_hours=true" >> $GITHUB_OUTPUTS
+            echo "is_trading_hours=true" >> $GITHUB_OUTPUT
           else
             echo "⏰ 不在交易时段内，跳过异常检测"
-            echo "is_trading_hours=false" >> $GITHUB_OUTPUTS
+            echo "is_trading_hours=false" >> $GITHUB_OUTPUT
           fi
-        outputs:
-          is_trading_hours: ${{ steps.check_trading_hours.outputs.is_trading_hours }}
 
       - name: Run stock anomaly detection (deep mode)
         if: ${{ github.event_name == 'workflow_dispatch' || steps.check_trading_hours.outputs.is_trading_hours == 'true' }}
