@@ -2223,7 +2223,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 短期和中期方向一致时，信号最可靠
 - 短期和中期冲突时，选择观望
 
-## 九、**决策框架**
+## 十、**决策框架**
 
 
 
@@ -2307,7 +2307,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
 
-## 十、风险提示
+## 十一、风险提示
 
 1. **模型不确定性**：
    - ML 20天 CatBoost模型标准差为±{model_accuracy['catboost']['std']:.2%}
@@ -2325,7 +2325,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - CatBoost概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
-## 十一、数据来源
+## 十二、数据来源
 
 - 大模型分析：Qwen大模型
 - ML预测：CatBoost（单模型）
