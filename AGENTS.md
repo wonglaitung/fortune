@@ -15,13 +15,14 @@
 | **生成预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` |
 | **批量回测** | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6` |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
-| **加密货币异常检测** | `python3 crypto_email.py --mode quick` (快速) / `--mode deep` (深度) |
+| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-03` |
+| **加密货币异常检测** | `python3 crypto_email.py --mode deep --date 2026-04-03` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **恒生指数监控** | `python3 hsi_email.py` |
 | **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
 | **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
+| **信号与异常关联性验证** | `python3 ml_services/validate_signal_anomaly_correlation.py --symbol ETH-USD --mode all` |
 
 ### 主要入口脚本
 
@@ -66,11 +67,11 @@
 │   ├── 恒生指数预测 (hsi_prediction.py)
 │   └── 黄金监控 (gold_analyzer.py)
 ├── 异常检测模块 (anomaly_detector/)
-│   ├── zscore_detector.py
-│   ├── isolation_forest_detector.py
-│   ├── feature_extractor.py
-│   ├── anomaly_integrator.py
-│   └── cache.py
+│   ├── zscore_detector.py           # Z-Score检测器（支持分钟/小时/天/周）
+│   ├── isolation_forest_detector.py # Isolation Forest检测器（支持通用时间区间）
+│   ├── feature_extractor.py         # 特征提取器
+│   ├── anomaly_integrator.py        # 异常整合器
+│   └── cache.py                    # 异常缓存
 ├── 数据服务层 (data_services/)
 │   ├── 技术分析工具 (technical_analysis.py)
 │   ├── 基本面数据 (fundamental_data.py)
@@ -80,6 +81,13 @@
 │   ├── 恒生指数监控 (hsi_email.py)
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
 │   └── ML 模块 (ml_services/)
+│       ├── 机器学习模型 (ml_trading_model.py)
+│       ├── 批量回测 (batch_backtest.py)
+│       ├── Walk-forward验证 (walk_forward_validation.py)
+│       ├── 板块Walk-forward验证 (walk_forward_by_sector.py)
+│       ├── 异常策略验证 (walk_forward_anomaly_strategy_validation.py)
+│       ├── 信号异常关联性验证 (validate_signal_anomaly_correlation.py)
+│       └── 预测性能监控 (performance_monitor.py)
 ├── 交易层
 │   └── 模拟交易 (simulation_trader.py)
 ├── 服务层 (llm_services/)
@@ -107,6 +115,7 @@
 - **异常原因分析**：分析价格、成交量、多维特征异常的具体原因
 - **异常日期数据**：使用异常发生日期的技术指标（RSI、布林带、MACD、涨跌幅）
 - **邮件表格增强**：显示异常日期、异常原因、技术指标等详细信息
+- **交易时段误报防护**：每天凌晨2点检测，避免交易时段数据不完整导致误报
 - **详细指南**：[docs/ANOMALY_DETECTION_GUIDE.md](docs/ANOMALY_DETECTION_GUIDE.md)
 
 ### 加密货币异常检测
@@ -116,10 +125,42 @@
 - **异常日期数据**：使用异常发生日期的技术指标（RSI、布林带、MACD、涨跌幅）
 - **邮件表格增强**：显示异常日期、异常原因、技术指标等详细信息
 - **只展示指定日期异常**：从检测7天内异常改为只展示当天或指定日期异常
+- **小时级监控优化**：使用1个月小时级数据（720个数据点），精度提升24倍
+
+### 交易信号与异常关联性验证
+- **验证脚本**：`ml_services/validate_signal_anomaly_correlation.py`
+- **验证方法**：
+  - 相关性分析（Pearson + Spearman）
+  - Granger因果检验（异常是否预示信号变化）
+  - 时间序列交叉相关分析（异常前置/滞后效应）
+  - 事件研究法（异常前后信号表现）
+  - 回测对比（有/无异常信号收益率对比）
+- **关键发现**：
+  - 异常与交易信号显著相关（相关系数0.1843）
+  - 异常是信号变化的Granger原因（4个滞后期显著）
+  - 异常后信号数量增加+65%
+  - 异常期间收益率提升+245%，但波动率增加+79%
+- **动态阈值策略**：
+  - 高异常：阈值 +0.08，仓位 40%
+  - 中异常：阈值 +0.04，仓位 60%
+  - 低异常：阈值 +0.02，仓位 80%
+
+### Walk-forward 异常策略验证
+- **验证脚本**：`ml_services/walk_forward_anomaly_strategy_validation.py`
+- **验证方法**：业界标准 Walk-forward 验证（每个fold重新训练）
+- **验证结果**：
+  - 无异常信号：平均收益率 -0.31%，胜率 47.94%，标准差 3.77%
+  - 有异常信号：平均收益率 +0.45%，胜率 52.38%，标准差 6.76%（+79%）
+- **关键发现**：
+  - 异常期间波动率显著增加（+79%），需降低仓位
+  - 当前策略（40%仓位）过于保守，应提高至55-60%
+  - 阈值调整+0.08过于严格，应降至+0.02-0.03
+  - 必须引入动态止损机制（基于ATR）
 
 ### 港股主力资金追踪
 - 建仓/出货信号分析
 - 筹码分布分析集成
+- 1-6层分析框架
 
 ### 恒生指数及自选股分析
 - 实时技术指标监控
@@ -130,6 +171,7 @@
 - 整合大模型建议和CatBoost预测
 - 每日自动执行，生成买卖建议
 - 集成异常检测功能（可选用深度分析模式）
+- 支持深度分析模式（`--deep-analysis` 参数）
 
 ---
 
@@ -147,7 +189,7 @@
 
 ### CatBoost 配置（推荐）
 - **准确率**：60.99%（±2.00%）
-- **置信度阈值**：0.60
+- **置信度阈值**：0.65
 - **特征数量**：892个全量特征
 - **随机种子**：42（固定）
 - **事件驱动特征**：9个（分红3个、财报日期3个、财报超预期3个）
@@ -191,18 +233,18 @@
 
 ```
 data/
-├── model_accuracy.json          # 模型准确率信息
-├── prediction_history.json        # 预测历史记录
-├── anomaly_cache.json            # 异常缓存
-├── llm_recommendations_*.txt    # 大模型建议
-└── simulation_transactions.csv    # 交易历史记录
+├── model_accuracy.json              # 模型准确率信息
+├── prediction_history.json          # 预测历史记录
+├── anomaly_cache.json              # 异常缓存
+├── llm_recommendations_*.txt       # 大模型建议
+└── simulation_transactions.csv      # 交易历史记录
 
 output/
-├── batch_backtest_*.json         # 批量回测数据
+├── batch_backtest_*.json           # 批量回测数据
 ├── walk_forward_sector_*.md        # Walk-forward验证报告
-├── walk_forward_anomaly_*.md      # 异常策略Walk-forward验证报告
+├── walk_forward_anomaly_*.md       # 异常策略Walk-forward验证报告
 ├── signal_anomaly_correlation_*.md # 交易信号与异常关联性验证报告
-└── performance_report_*.md       # 性能月度报告
+└── performance_report_*.md         # 性能月度报告
 ```
 
 ---
@@ -215,12 +257,17 @@ output/
 |------|------|----------|
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点（香港时间） |
 | `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时（快速）+ 凌晨2点（深度） |
+| `hourly-gold-monitor.yml` | 黄金监控 | 每小时 |
 | `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 UTC 8:00（香港时间16:00） |
 | `hsi-prediction.yml` | 恒生指数涨跌预测 | 周一到周五 UTC 22:00（香港时间早上6:00） |
-| `bull-bear-analysis.yml` | 牛熊市分析 | 每周一 UTC 17:00（香港时间凌晨1:00） |
+| `bull-bear-analysis.yml` | 牛熊市分析 | 每周日 UTC 17:00（香港时间凌晨1:00） |
 | `sector-analysis.yml` | 板块表现分析 | 每月1号 UTC 19:00（香港时间凌晨3:00） |
 | `ranking-analysis.yml` | 股票表现排名分析 | 每月1号 UTC 19:00（香港时间凌晨3:00） |
 | `performance-monitor.yml` | 预测性能月度报告 | 每月1号 UTC 20:00（香港时间凌晨4:00） |
+| `batch-stock-news-fetcher.yml` | 批量股票新闻获取 | 每天 UTC 22:00 |
+| `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 02:00 |
+| `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 08:30 |
+| `weekly-comprehensive-analysis.yml` | 周综合交易分析 | 每周日 UTC 01:00 |
 
 ---
 
@@ -244,8 +291,8 @@ output/
 - [docs/CATBOOST_USAGE.md](docs/CATBOOST_USAGE.md) - CatBoost 使用指南
 
 **分析与策略**：
-- [lessons.md](lessons.md) - 经验教训和最佳实践（含交易时段误报问题）⭐ 新增
-- [progress.txt](progress.txt) - 项目进度跟踪（含异常检测改进详情）⭐ 新增
+- [lessons.md](lessons.md) - 经验教训和最佳实践（含交易时段误报问题）
+- [progress.txt](progress.txt) - 项目进度跟踪（含异常检测改进详情）
 
 ---
 

@@ -466,11 +466,9 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
                 anomaly['anomaly_reason'] = _analyze_anomaly_reason(anomaly)
                 
                 # 计算异常日期的技术指标
-                df_anomaly = eth_hist[eth_hist.index.normalize() == pd.Timestamp(anomaly_timestamp).normalize()]
-                if df_anomaly.empty:
-                    # 如果找不到精确匹配，尝试按日期匹配
-                    target_date_only = pd.to_datetime(anomaly_date_str).date()
-                    df_anomaly = eth_hist[eth_hist.index.date == target_date_only]
+                # 修复：使用 .date() 方法替代 .normalize()，确保时区兼容性
+                target_date_only = anomaly_timestamp.date() if hasattr(anomaly_timestamp, 'date') else pd.to_datetime(anomaly_date_str).date()
+                df_anomaly = eth_hist[eth_hist.index.date == target_date_only]
                 
                 if not df_anomaly.empty:
                     df_anomaly_row = df_anomaly.iloc[0]
