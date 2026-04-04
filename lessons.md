@@ -1298,6 +1298,259 @@ elif anomaly_result and anomaly_result['has_anomaly']:
 - ❌ `ANOMALY_CACHE_HOURS` - 代码中硬编码
 - ❌ `ANOMALY_DETECTION_MODE` - 改用命令行参数
 
+---
+
+## 异常检测器通用化重构经验（2026-04-04）
+
+### 为什么需要通用化？
+
+**问题**：
+- Z-Score 检测器只有 `detect_price_anomaly()` 和 `detect_volume_anomaly()` 两个特定方法
+- 无法检测其他指标（RSI、MACD、布林带等）
+- 硬编码为日级数据，不支持小时级/分钟级
+- Isolation Forest 的异常类型硬编码为 `'isolation_forest'`
+
+**影响**：
+- 无法扩展到新场景（如外汇、指标监控）
+- 代码重复：每个新指标都要添加新方法
+- 配置混乱：不同场景的时间区间参数不明确
+
+### 通用化设计原则
+
+#### 1. 统一接口设计
+
+**之前**：
+```python
+# 价格异常
+anomaly = detector.detect_price_anomaly(
+    current_price=150.0,
+    price_history=history,
+    timestamp=timestamp
+)
+
+# 成交量异常
+anomaly = detector.detect_volume_anomaly(
+    current_volume=1000000,
+    volume_history=history,
+    timestamp=timestamp
+)
+```
+
+**现在**：
+```python
+# 任何指标异常
+anomaly = detector.detect_anomaly(
+    metric_name='price',  # 可以是 'price', 'volume', 'RSI', 'MACD' 等
+    current_value=150.0,
+    history=history,
+    timestamp=timestamp
+)
+```
+
+**优势**：
+- ✅ 单一接口，易于记忆和使用
+- ✅ 支持任意指标，无需修改代码
+- ✅ 参数命名一致（`current_value` 而非 `current_price`/`current_volume`）
+- ✅ 易于测试和扩展
+
+#### 2. 时间区间明确化
+
+**问题**：
+- `window_size=30` 的含义不明确（30天？30小时？30周？）
+- 不同场景需要不同的时间区间
+
+**解决方案**：
+```python
+class TimeInterval(Enum):
+    MINUTE = 'minute'
+    HOUR = 'hour'
+    DAY = 'day'
+    WEEK = 'week'
+
+detector = ZScoreDetector(
+    window_size=72,
+    time_interval='hour'  # 明确标注为小时级
+)
+```
+
+**优势**：
+- ✅ 语义清晰，避免歧义
+- ✅ 支持多种时间粒度
+- ✅ 在异常结果中记录，便于调试
+
+#### 3. 增强元数据
+
+**之前**：
+```python
+{
+    'type': 'price',
+    'timestamp': timestamp,
+    'z_score': 3.5,
+    'value': 150.0
+}
+```
+
+**现在**：
+```python
+{
+    'type': 'price',
+    'timestamp': timestamp,
+    'z_score': 3.5,
+    'value': 150.0,
+    'window_size': 72,              # 新增：窗口大小
+    'time_interval': 'hour',        # 新增：时间区间
+    'detection_method': 'zscore'    # 新增：检测方法
+}
+```
+
+**优势**：
+- ✅ 便于调试和追踪
+- ✅ 了解检测配置
+- ✅ 支持多场景混合使用
+
+#### 4. 可配置的异常类型
+
+**问题**：
+- Isolation Forest 的异常类型硬编码为 `'isolation_forest'`
+- 无法区分不同场景的异常
+
+**解决方案**：
+```python
+detector = IsolationForestDetector(
+    contamination=0.05,
+    anomaly_type='crypto_hourly'  # 可配置
+)
+```
+
+**优势**：
+- ✅ 语义化标签
+- ✅ 便于区分不同场景
+- ✅ 支持多类型混合分析
+
+### 参数选择最佳实践
+
+#### Z-Score window_size
+
+| 时间频率 | 推荐窗口 | 理由 | 最小值 |
+|---------|---------|------|--------|
+| **分钟级** | 60-1440 | 捕捉日内波动 | 10 |
+| **小时级** | 48-168 | 2-7天 | 10 |
+| **日级** | 20-30 | 约1个月 | 10 |
+| **周级** | 8-12 | 约2-3个月 | 5 |
+
+**原则**：
+- 最小不少于 10 个数据点（保证统计稳定性）
+- 最好覆盖 1-2 个完整周期
+- 太小 → 误报多（噪声被当异常）
+- 太大 → 漏检多（反应迟钝）
+
+#### Isolation Forest lookback_days
+
+| 场景 | 推荐天数 | 理由 |
+|------|---------|------|
+| **实时监控/告警** | 1-3天 | 只关注最新异常 |
+| **每日报告** | 7天 | 覆盖本周 |
+| **周度分析** | 7-14天 | 覆盖最近两周 |
+| **月度报告** | 30天 | 覆盖全月 |
+
+**注意**：这是展示过滤，不影响模型训练
+
+#### 数据获取优化
+
+**加密货币监控优化示例**：
+
+| 配置项 | 之前 | 现在 | 改进 |
+|--------|------|------|------|
+| 时间范围 | `period='6mo'` | `period='1mo'` | 数据减少 83% |
+| 时间频率 | 默认（日级） | `interval='1h'` | 精度提升 24 倍 |
+| 数据点 | ~180 | ~720 | 增加 4 倍 |
+| Z-Score window | 30（天） | 72（小时） | 匹配小时级 |
+| IF lookback | 7（天） | 1（天） | 关注最新异常 |
+
+**为什么这样优化？**
+1. **时间精度优于数据量**：从天级 → 小时级，捕捉日内波动
+2. **数据新鲜度优先**：只保留最近1个月，反映当前市场
+3. **性能与数据量平衡**：数据量相近，但精度大幅提升
+
+### 代码迁移策略
+
+#### 1. 全面搜索引用
+
+使用 `grep` 找到所有旧方法调用：
+```bash
+grep -r "detect_price_anomaly" .
+grep -r "detect_volume_anomaly" .
+```
+
+#### 2. 统一迁移模式
+
+**之前**：
+```python
+anomaly = detector.detect_price_anomaly(
+    current_price=current_price,
+    price_history=history,
+    timestamp=timestamp
+)
+```
+
+**现在**：
+```python
+anomaly = detector.detect_anomaly(
+    metric_name='price',
+    current_value=current_price,
+    history=history,
+    timestamp=timestamp,
+    time_interval='hour'  # 明确时间区间
+)
+```
+
+#### 3. 测试先行
+
+- 先更新测试用例
+- 确保测试通过后，再更新生产代码
+- 使用 `git diff` 检查所有更改
+
+#### 4. 文档同步更新
+
+- 更新 `lessons.md` 中的示例代码
+- 更新计划文档中的实现细节
+- 更新 README 中的使用说明
+
+### 关键经验总结
+
+#### 设计原则
+1. **通用化优于特化**：从特定方法改为通用接口
+2. **枚举类型优于字符串**：使用 `TimeInterval` 枚举避免拼写错误
+3. **元数据重要性**：在异常结果中包含配置信息
+4. **向后兼容优先**：确保所有调用方都已迁移
+
+#### 参数选择
+1. **window_size 与数据频率匹配**：参考业界最佳实践
+2. **数据量与窗口大小关系**：数据量应至少是窗口大小的 10 倍
+3. **lookback_days 与报告周期匹配**：根据使用场景选择
+
+#### 数据获取
+1. **时间精度优于数据量**：优先选择更精细的数据
+2. **数据新鲜度优先**：只保留最近数据
+3. **性能与数据量平衡**：在数据量相近时选择精度更高的
+
+#### 代码迁移
+1. **全面搜索引用**：使用 `grep` 找到所有旧方法调用
+2. **测试先行**：先更新测试，再更新生产代码
+3. **文档同步更新**：更新所有相关文档
+4. **分步提交**：每次提交一个主要改进
+
+### 验证清单
+
+- [ ] 所有旧方法调用都已迁移到新接口
+- [ ] 所有测试用例都已更新
+- [ ] 文档中的示例代码已更新
+- [ ] 参数选择符合业界最佳实践
+- [ ] 元数据包含必要信息
+- [ ] 时间区间明确标注
+- [ ] 向后兼容性测试通过
+- [ ] 性能测试通过
+
 **最佳实践**：
 1. 定期审查 `set_key.sh.sample`，删除未使用的配置
 2. 优先使用命令行参数而非环境变量
