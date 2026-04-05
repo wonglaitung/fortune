@@ -42,6 +42,131 @@
 
 ---
 
+## 🎯 异常原因分析经验 ⭐ 新增（2026-04-05）
+
+### 问题：异常检测只显示"异常（原因未知）"
+- **问题描述**：`detect_stock_anomalies.py` 和 `crypto_email.py` 的异常检测只显示"异常（原因未知）"，没有提供具体的异常原因
+- **根本原因**：
+  1. `_analyze_anomaly_reason()` 函数没有正确处理实际的异常类型（'stock'/'crypto'）
+  2. 特征名称映射与实际的特征名称不匹配
+  3. 特征分析逻辑过于简单，没有充分利用Isolation Forest提供的丰富特征数据
+- **影响**：用户无法了解异常的具体原因，无法做出明智的交易决策
+
+### 解决方案
+1. **修复异常类型处理**：
+   - 支持 'stock' 类型异常（来自 detect_stock_anomalies.py）
+   - 支持 'crypto' 类型异常（来自 crypto_email.py）
+   - 统一处理 'isolation_forest' 类型异常
+
+2. **使用实际的特征名称**：
+   - 修复前：使用 `price_change_1d`, `price_change_5d` 等不存在的特征名
+   - 修复后：使用 `return_rate`, `volatility_20d`, `volume_ratio`, `rsi` 等实际特征名
+
+3. **详细的特征分析逻辑**：
+   - **涨跌幅分析**：单日涨跌幅、5日涨跌幅（>5%才显示）
+   - **波动率分析**：高波动率检测（>3%）
+   - **成交量分析**：成交量比率检测（>2倍）
+   - **技术指标分析**：
+     - RSI：超买（>70）、超卖（<30）
+     - 布林带：上轨（>0.9）、下轨（<0.1）
+     - MACD：强势（绝对值>5）
+     - 均线偏离：偏离20日均线（>5%）
+
+### 修复效果对比
+- **修复前**：
+  ```
+  0700.HK 2026-03-16 检测到 stock low级异常: 异常（原因未知）
+  ```
+- **修复后**：
+  ```
+  0700.HK 2026-03-16 检测到 stock low级异常: 多维特征异常（接近布林带上轨, 偏离20日均线5.8%）
+  ```
+
+### 测试验证
+- **测试日期**：2026-03-15 至 2026-03-30（16天）
+- **总异常数**：41次
+- **异常原因展示**：100%成功显示详细原因
+- **示例异常原因**：
+  - "单日涨跌幅7.80%"
+  - "RSI超买(70.4)"
+  - "成交量4.3倍"
+  - "高波动率5.2%"
+  - "接近布林带下轨, 偏离20日均线-9.7%"
+
+### 关键经验总结
+1. **特征名称必须准确**：
+   - 不能假设特征名称，必须使用实际的特征名称
+   - 在调试时添加日志，输出实际的 `features.keys()`
+
+2. **异常类型必须完整**：
+   - 不同的脚本可能使用不同的异常类型标签
+   - 必须支持所有可能的类型（'price', 'volume', 'stock', 'crypto', 'isolation_forest'）
+
+3. **阈值必须合理**：
+   - 不是所有特征值都需要显示，只显示有意义的值
+   - 使用绝对值阈值（如 >5%, >0.9）过滤噪音
+
+4. **用户友好的描述**：
+   - 使用中文描述（"RSI超买" vs "rsi > 70"）
+   - 提供具体的数值（"5.8%" vs "偏高"）
+   - 按重要性排序（显示前3个异常特征）
+
+5. **代码一致性**：
+   - `detect_stock_anomalies.py` 和 `crypto_email.py` 使用相同的特征分析逻辑
+   - 确保两个脚本的异常原因显示格式一致
+
+### GitHub Actions工作流语法经验 ⭐ 新增（2026-04-05）
+
+### 问题：每小时异常检测工作流语法错误
+- **问题描述**：`.github/workflows/hourly-stock-monitor.yml` 有语法错误
+  - 第70行的 `outputs` 部分无效
+  - 使用了错误的环境变量名 `$GITHUB_OUTPUTS`
+- **错误信息**：
+  ```
+  Unexpected value 'outputs'
+  Line: 70, Col: 9
+  ```
+
+### 解决方案
+1. **移除无效的 `outputs` 部分**：
+   - GitHub Actions不支持在作业（job）级别定义outputs
+   - outputs只能在步骤（step）级别定义，通过 `$GITHUB_OUTPUT` 文件设置
+
+2. **修复环境变量名称**：
+   - 错误：`$GITHUB_OUTPUTS`
+   - 正确：`$GITHUB_OUTPUT`
+
+### 正确的使用方法
+```yaml
+steps:
+  - name: Check trading hours
+    id: check_trading_hours
+    run: |
+      echo "is_trading_hours=true" >> $GITHUB_OUTPUT  # 正确
+
+# 错误示例：
+# jobs:
+#   detect-anomalies:
+#     outputs:  # 错误：作业级别不支持outputs
+#       is_trading_hours: ${{ steps.check_trading_hours.outputs.is_trading_hours }}
+```
+
+### 关键经验总结
+1. **GitHub Actions outputs的限制**：
+   - outputs只能在步骤级别定义
+   - 通过写入 `$GITHUB_OUTPUT` 文件来设置
+   - 不能在作业级别定义outputs
+
+2. **环境变量名称必须准确**：
+   - `$GITHUB_OUTPUT`（正确）
+   - `$GITHUB_OUTPUTS`（错误，多了's'）
+
+3. **调试工作流错误**：
+   - 仔细阅读错误信息，定位到具体的行和列
+   - 查阅GitHub Actions官方文档，确认正确的语法
+
+---
+
 ## 🎯 交易信号与异常关联性验证经验 ⭐ 新增（2026-04-03）
 
 ### 验证方法论

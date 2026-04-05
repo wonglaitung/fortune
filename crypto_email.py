@@ -569,15 +569,82 @@ def format_anomaly_results(anomaly_result):
 def _analyze_anomaly_reason(anomaly):
     """
     分析异常原因
-    
+
     Args:
         anomaly: 异常字典
-    
+
     Returns:
         异常原因描述
     """
     anomaly_type = anomaly.get('type', 'price')
-    
+    features = anomaly.get('features', {})
+
+    # 处理'crypto'类型异常（来自Isolation Forest）
+    if anomaly_type == 'crypto' or anomaly_type == 'isolation_forest':
+        if not features:
+            return '多维特征异常（综合指标异常）'
+
+        # 特征名称映射和分析
+        feature_analysis = []
+
+        # 涨跌幅 (return_rate)
+        if 'return_rate' in features:
+            return_rate = features['return_rate']
+            if abs(return_rate) > 0.05:  # 超过5%
+                feature_analysis.append(f'单日涨跌幅{return_rate*100:.2f}%')
+
+        # 波动率 (volatility_20d)
+        if 'volatility_20d' in features:
+            volatility = features['volatility_20d']
+            if volatility > 0.03:  # 超过3%
+                feature_analysis.append(f'高波动率{volatility*100:.1f}%')
+
+        # 成交量比率 (volume_ratio)
+        if 'volume_ratio' in features:
+            vol_ratio = features['volume_ratio']
+            if vol_ratio > 2.0:
+                feature_analysis.append(f'成交量{vol_ratio:.1f}倍')
+
+        # RSI指标 (rsi)
+        if 'rsi' in features:
+            rsi = features['rsi']
+            if rsi > 70:
+                feature_analysis.append(f'RSI超买({rsi:.1f})')
+            elif rsi < 30:
+                feature_analysis.append(f'RSI超卖({rsi:.1f})')
+
+        # 布林带位置 (bb_position)
+        if 'bb_position' in features:
+            bb_pos = features['bb_position']
+            if bb_pos > 0.9:
+                feature_analysis.append('接近布林带上轨')
+            elif bb_pos < 0.1:
+                feature_analysis.append('接近布林带下轨')
+
+        # MACD
+        if 'macd' in features:
+            macd = features['macd']
+            if abs(macd) > 5:
+                feature_analysis.append(f'MACD强势({macd:.2f})')
+
+        # 均线差价 (ma20_diff, ma50_diff)
+        if 'ma20_diff' in features:
+            ma20_diff = features['ma20_diff']
+            if abs(ma20_diff) > 0.05:
+                feature_analysis.append(f'偏离20日均线{ma20_diff*100:.1f}%')
+
+        if feature_analysis:
+            return f'多维特征异常（{", ".join(feature_analysis[:3])}）'
+        else:
+            # 如果没有明显异常特征，显示原始特征值
+            feature_values = []
+            for key, value in features.items():
+                if abs(value) > 0.05 or key in ['rsi', 'bb_position']:  # 显示有意义的值
+                    feature_values.append(f"{key}={value:.3f}")
+            if feature_values:
+                return f'多维特征异常（关键特征: {", ".join(feature_values[:3])}）'
+            return '多维特征异常（综合指标异常，需关注）'
+
     if anomaly_type == 'price':
         return '价格异常波动（收盘价显著偏离历史均值）'
     elif anomaly_type == 'volume':
@@ -587,7 +654,7 @@ def _analyze_anomaly_reason(anomaly):
         features = anomaly.get('features', {})
         if not features:
             return '多维特征异常（综合指标异常）'
-        
+
         # 特征名称映射
         feature_names = {
             'price_change_1d': '1日涨跌幅',
@@ -601,7 +668,7 @@ def _analyze_anomaly_reason(anomaly):
             'price_gap': '价格缺口',
             'trend_strength': '趋势强度'
         }
-        
+
         # 找出异常值最大的特征
         abnormal_features = []
         for feature_name, feature_value in features.items():
@@ -609,12 +676,12 @@ def _analyze_anomaly_reason(anomaly):
             if abs(feature_value) > 2:
                 feature_cn = feature_names.get(feature_name, feature_name)
                 abnormal_features.append(feature_cn)
-        
+
         if abnormal_features:
             return f'多维特征异常（{", ".join(abnormal_features[:3])}异常）'
         else:
             return '多维特征异常（综合指标异常，需关注）'
-    
+
     return '异常（原因未知）'
 
 
