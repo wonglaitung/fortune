@@ -36,7 +36,7 @@ class IsolationForestDetector:
     
     def __init__(
         self,
-        contamination: float = 0.05,
+        contamination: float = 0.03,
         random_state: int = 42,
         anomaly_type: str = 'isolation_forest'
     ):
@@ -44,13 +44,13 @@ class IsolationForestDetector:
         Initialize Isolation Forest detector.
         
         Args:
-            contamination: Expected proportion of outliers (default: 0.05)
+            contamination: Expected proportion of outliers (default: 0.03)
             random_state: Random seed for reproducibility (default: 42)
             anomaly_type: Type label for anomalies (default: 'isolation_forest')
         
         Example:
             >>> detector = IsolationForestDetector(
-            ...     contamination=0.05,
+            ...     contamination=0.03,
             ...     anomaly_type='multi_feature'
             ... )
         """
