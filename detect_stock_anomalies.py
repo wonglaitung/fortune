@@ -256,7 +256,9 @@ class StockAnomalyDetector:
                             severity = anomaly.get('severity', self.get_severity(z_score))
                             
                             # 分析异常原因
+                            logger.info(f"分析异常: stock={stock}, anomaly_type={anomaly.get('type')}, features={anomaly.get('features', {})}")
                             anomaly_reason = self._analyze_anomaly_reason(anomaly, df_anomaly_row)
+                            logger.info(f"异常原因: {anomaly_reason}")
                             
                             # 计算异常日期的涨跌幅
                             current_price = df_anomaly_row['Close']
@@ -404,58 +406,117 @@ class StockAnomalyDetector:
     def _analyze_anomaly_reason(self, anomaly: Dict, row_data) -> str:
         """
         分析异常原因
-        
+
         Args:
             anomaly: 异常字典
             row_data: 异常日期的数据行
-            
+
         Returns:
             异常原因描述
         """
         anomaly_type = anomaly.get('type', 'price')
-        
-        if anomaly_type == 'price':
-            return '价格异常波动（收盘价显著偏离历史均值）'
-        elif anomaly_type == 'volume':
-            return '成交量异常（成交量显著偏离历史均值）'
-        elif anomaly_type == 'isolation_forest':
-            # Isolation Forest 异常：分析哪个特征异常
-            features = anomaly.get('features', {})
+        features = anomaly.get('features', {})
+
+        logger.debug(f"分析异常原因: type={anomaly_type}, features keys={list(features.keys()) if features else 'empty'}")
+        logger.debug(f"Row data columns: {list(row_data.index)}")
+
+        # 处理'stock'类型异常（来自Isolation Forest）
+        if anomaly_type == 'stock' or anomaly_type == 'isolation_forest':
             if not features:
+                logger.warning("异常但没有特征数据")
                 return '多维特征异常（综合指标异常）'
-            
-            # 找出异常值最大的特征
-            # 特征名称映射
-            feature_names = {
-                'price_change_1d': '1日涨跌幅',
-                'price_change_5d': '5日涨跌幅',
-                'volume_ratio': '成交量比率',
-                'rsi': 'RSI指标',
-                'macd': 'MACD指标',
-                'bb_position': '布林带位置',
-                'volatility_5d': '5日波动率',
-                'volume_spike': '成交量激增',
-                'price_gap': '价格缺口',
-                'trend_strength': '趋势强度'
-            }
-            
-            # 计算每个特征的Z-Score（简化版本，使用标准差）
-            # 这里我们使用异常分数来推断
-            anomaly_score = abs(anomaly.get('anomaly_score', 0))
-            
-            # 找出异常评分较大的特征
-            abnormal_features = []
-            for feature_name, feature_value in features.items():
-                # 如果特征值偏离中位数较多
-                if abs(feature_value) > 2:  # 假设标准化后的特征
-                    feature_cn = feature_names.get(feature_name, feature_name)
-                    abnormal_features.append(feature_cn)
-            
-            if abnormal_features:
-                return f'多维特征异常（{", ".join(abnormal_features[:3])}异常）'
+
+            # 特征名称映射和分析
+            feature_analysis = []
+
+            # 涨跌幅 (return_rate)
+            if 'return_rate' in features:
+                return_rate = features['return_rate']
+                if abs(return_rate) > 0.05:  # 超过5%
+                    feature_analysis.append(f'单日涨跌幅{return_rate*100:.2f}%')
+
+            # 波动率 (volatility_20d)
+            if 'volatility_20d' in features:
+                volatility = features['volatility_20d']
+                if volatility > 0.03:  # 超过3%
+                    feature_analysis.append(f'高波动率{volatility*100:.1f}%')
+
+            # 成交量比率 (volume_ratio)
+            if 'volume_ratio' in features:
+                vol_ratio = features['volume_ratio']
+                if vol_ratio > 2.0:
+                    feature_analysis.append(f'成交量{vol_ratio:.1f}倍')
+
+            # RSI指标 (rsi)
+            if 'rsi' in features:
+                rsi = features['rsi']
+                if rsi > 70:
+                    feature_analysis.append(f'RSI超买({rsi:.1f})')
+                elif rsi < 30:
+                    feature_analysis.append(f'RSI超卖({rsi:.1f})')
+
+            # 布林带位置 (bb_position)
+            if 'bb_position' in features:
+                bb_pos = features['bb_position']
+                if bb_pos > 0.9:
+                    feature_analysis.append('接近布林带上轨')
+                elif bb_pos < 0.1:
+                    feature_analysis.append('接近布林带下轨')
+
+            # MACD
+            if 'macd' in features:
+                macd = features['macd']
+                if abs(macd) > 5:
+                    feature_analysis.append(f'MACD强势({macd:.2f})')
+
+            # 均线差价 (ma20_diff, ma50_diff)
+            if 'ma20_diff' in features:
+                ma20_diff = features['ma20_diff']
+                if abs(ma20_diff) > 0.05:
+                    feature_analysis.append(f'偏离20日均线{ma20_diff*100:.1f}%')
+
+            logger.debug(f"特征分析结果: {feature_analysis}")
+
+            if feature_analysis:
+                return f'多维特征异常（{", ".join(feature_analysis[:3])}）'
             else:
+                # 如果没有明显异常特征，显示原始特征值
+                feature_values = []
+                for key, value in features.items():
+                    if abs(value) > 0.05 or key in ['rsi', 'bb_position']:  # 显示有意义的值
+                        feature_values.append(f"{key}={value:.3f}")
+                if feature_values:
+                    return f'多维特征异常（关键特征: {", ".join(feature_values[:3])}）'
                 return '多维特征异常（综合指标异常，需关注）'
-        
+
+        if anomaly_type == 'price':
+            # 价格异常：分析涨跌幅
+            if 'Change %' in row_data.index:
+                change_pct = row_data['Change %']
+                if abs(change_pct) > 5:
+                    return f'价格异常（单日涨跌幅{change_pct:.2f}%，大幅波动）'
+                elif abs(change_pct) > 3:
+                    return f'价格异常（单日涨跌幅{change_pct:.2f}%，显著波动）'
+                else:
+                    return '价格异常（收盘价显著偏离历史均值）'
+            return '价格异常（收盘价显著偏离历史均值）'
+
+        elif anomaly_type == 'volume':
+            # 成交量异常
+            if 'Volume' in row_data.index and len(row_data.index) > 1:
+                volume = row_data['Volume']
+                volume_mean = row_data.get('Volume_MA', volume)
+                volume_ratio = volume / volume_mean if volume_mean > 0 else 1
+
+                if volume_ratio > 3:
+                    return f'成交量异常（成交量{volume:,.0f}，为均值的{volume_ratio:.1f}倍，巨量）'
+                elif volume_ratio > 2:
+                    return f'成交量异常（成交量{volume:,.0f}，为均值的{volume_ratio:.1f}倍，放量）'
+                else:
+                    return '成交量异常（成交量显著偏离历史均值）'
+            return '成交量异常（成交量显著偏离历史均值）'
+
+        logger.warning(f"未知的异常类型: {anomaly_type}")
         return '异常（原因未知）'
 
     def calculate_indicators(self, df: pd.DataFrame) -> Dict:
