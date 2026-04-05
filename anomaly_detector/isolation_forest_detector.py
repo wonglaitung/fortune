@@ -286,7 +286,7 @@ class IsolationForestDetector:
         Returns:
             Severity level ('high', 'medium', 'low')
         """
-        if anomaly_score < -0.7:
+        if anomaly_score < -0.5:
             return 'high'
         elif anomaly_score < -0.5:
             return 'medium'
