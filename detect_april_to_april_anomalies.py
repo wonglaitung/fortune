@@ -31,7 +31,7 @@ def detect_anomalies_for_date_range(start_date, end_date):
     while current_date <= end_date:
         date_str = current_date.strftime('%Y-%m-%d')
 
-        # 跳过周末
+        # 检测所有交易日
         if current_date.weekday() < 5:  # 0=周一, 4=周五
             # 检测异常
             cmd = [
@@ -74,12 +74,13 @@ def detect_anomalies_for_date_range(start_date, end_date):
                         'total_anomalies': anomaly_count
                     })
                 else:
-                    if current_date.day in [1, 15]:  # 只显示每月1号和15号的无异常信息
-                        print(f"  {date_str}: 无异常")
+                    print(f"  {date_str}: 无异常")
             except subprocess.TimeoutExpired:
                 print(f"⚠️ {date_str}: 检测超时")
             except Exception as e:
                 print(f"❌ {date_str}: 错误 - {e}")
+
+        current_date += timedelta(days=1)
 
         current_date += timedelta(days=1)
 
@@ -261,7 +262,7 @@ def main():
     print("开始检测去年4月1日到今年4月1日的异常...")
     print("="*60)
 
-    # 定义日期范围
+    # 定义日期范围（去年4月1日到今年4月1日）
     start_date = datetime(2025, 4, 1)
     end_date = datetime(2026, 4, 1)
 
