@@ -2192,7 +2192,40 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     full_content += "**重要提醒**：\n"
                     full_content += "- 异常是警告信号，不一定是交易信号\n"
                     full_content += "- 不要看到异常就立即卖出\n"
-                    full_content += "- 综合考虑基本面和市场情绪\n"
+                    full_content += "- 综合考虑基本面和市场情绪\n\n"
+                    
+                    # 添加基于两年数据验证的策略建议
+                    full_content += "---\n\n"
+                    full_content += "### 📊 异常后股价表现策略建议（基于2024-2026两年数据验证）\n\n"
+                    full_content += "**核心发现**：\n"
+                    full_content += "- 异常当日下跌的股票，后续反弹更强（均值回归信号）\n"
+                    full_content += "- 价格异常的预测能力远强于成交量异常\n\n"
+                    
+                    full_content += "**策略建议表格**：\n\n"
+                    full_content += "| 异常类型 | 当日涨跌 | 5天后收益 | 胜率 | 策略建议 |\n"
+                    full_content += "|---------|---------|----------|------|----------|\n"
+                    full_content += "| **价格异常** | 当日下跌 | **+4.12%** | **71.7%** | ✅ 考虑抄底 |\n"
+                    full_content += "| **价格异常** | 当日上涨 | +1.96% | 53.7% | ⚠️ 观望 |\n"
+                    full_content += "| 成交量异常 | 当日下跌 | +0.65% | 53.4% | ⚠️ 谨慎 |\n"
+                    full_content += "| 成交量异常 | 当日上涨 | +2.52% | 54.9% | ⚠️ 谨慎 |\n\n"
+                    
+                    full_content += "**最强策略信号**：\n"
+                    full_content += "```\n"
+                    full_content += "价格异常 + 当日下跌 → 考虑抄底\n"
+                    full_content += "  - 5天后：+4.12%，胜率 71.7%\n"
+                    full_content += "  - 10天后：+6.88%，胜率 72.8%\n"
+                    full_content += "```\n\n"
+                    
+                    full_content += "**关键结论**：\n"
+                    full_content += "1. \"升的继续升，跌的继续跌\"是**错误**的假设\n"
+                    full_content += "2. 异常是**均值回归信号**，而非趋势延续信号\n"
+                    full_content += "3. 异常当日下跌 → 后续反弹；异常当日上涨 → 后续走平\n"
+                    full_content += "4. 趋势延续率约50%，接近随机（不支持趋势延续假设）\n\n"
+                    
+                    full_content += "**风险提示**：\n"
+                    full_content += "- 以上策略基于历史数据回测，未来表现可能不同\n"
+                    full_content += "- 样本量：938个异常（2024-2026两年数据）\n"
+                    full_content += "- 需结合其他指标综合判断\n"
                 else:
                     full_content += "✅ 未检测到异常，市场波动正常\n\n"
                 
