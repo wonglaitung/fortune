@@ -23,6 +23,8 @@
 | **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
 | **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
 | **信号与异常关联性验证** | `python3 ml_services/validate_signal_anomaly_correlation.py --symbol ETH-USD --mode all` |
+| **港股异常因果分析** | `python3 analyze_hk_stock_anomaly_causality.py --start-date 2024-04-01 --end-date 2026-04-01` |
+| **趋势延续性验证** | `python3 analyze_trend_continuation.py --start-date 2024-04-01 --end-date 2026-04-01` |
 
 ### 主要入口脚本
 
@@ -40,6 +42,8 @@
 | `ml_services/validate_signal_anomaly_correlation.py` | 交易信号与异常关联性验证 |
 | `ml_services/walk_forward_by_sector.py` | 板块Walk-forward验证 |
 | `ml_services/walk_forward_anomaly_strategy_validation.py` | 异常策略Walk-forward验证 |
+| `analyze_hk_stock_anomaly_causality.py` | 港股异常因果关系分析（两年数据） |
+| `analyze_trend_continuation.py` | 趋势延续性验证工具 |
 
 ### 核心警告 ⚠️
 
@@ -52,6 +56,7 @@
 | **Walk-forward验证** | 唯一可信的模型验证方法 |
 | **交易时段误报** | 交易时段数据不完整，应在收盘后检测 |
 | **异常是"放大器"** | 异常后波动率增加+79%，胜率接近50%，需降低仓位 |
+| **趋势延续假设** | "升的继续升，跌的继续跌"假设**错误**，实际是均值回归 |
 
 > **详细说明**：参阅 [lessons.md](lessons.md)
 
@@ -145,6 +150,19 @@
   - 高异常：阈值 +0.08，仓位 40%
   - 中异常：阈值 +0.04，仓位 60%
   - 低异常：阈值 +0.02，仓位 80%
+
+### 港股异常因果关系分析（两年数据验证）
+- **分析脚本**：`analyze_hk_stock_anomaly_causality.py`
+- **分析周期**：2024-04-01 至 2026-04-01（938个异常）
+- **验证方法**：
+  - 趋势延续性分析（验证"升的继续升"假设）
+  - Granger因果检验
+  - 交叉相关分析
+  - 事件研究法
+- **关键发现**：
+  - **趋势延续假设错误**：延续率49-51%（接近随机），相关系数-0.10至-0.14（均值回归）
+  - **最强抄底信号**：价格异常+当日下跌，5天胜率71.7%，10天胜率72.8%
+  - 波动率下降28.5%（异常后市场趋于平静）
 
 ### Walk-forward 异常策略验证
 - **验证脚本**：`ml_services/walk_forward_anomaly_strategy_validation.py`
@@ -310,4 +328,4 @@ output/
 
 ---
 
-**最后更新**：2026-04-04
+**最后更新**：2026-04-07
