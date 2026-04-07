@@ -25,6 +25,7 @@
 | **信号与异常关联性验证** | `python3 ml_services/validate_signal_anomaly_correlation.py --symbol ETH-USD --mode all` |
 | **港股异常因果分析** | `python3 analyze_hk_stock_anomaly_causality.py --start-date 2024-04-01 --end-date 2026-04-01` |
 | **趋势延续性验证** | `python3 analyze_trend_continuation.py --start-date 2024-04-01 --end-date 2026-04-01` |
+| **异常后表现分析** | `python3 analyze_anomaly_post_performance.py` |
 
 ### 主要入口脚本
 
@@ -36,7 +37,7 @@
 | `hk_smart_money_tracker.py` | 主力资金追踪 |
 | `ml_services/batch_backtest.py` | 批量回测 |
 | `ml_services/performance_monitor.py` | 预测性能监控 |
-| `detect_stock_anomalies.py` | 港股异常检测 |
+| `detect_stock_anomalies.py` | 港股异常检测（支持每日/每小时，交易时段检测） |
 | `crypto_email.py` | 加密货币异常检测 |
 | `ml_services/walk_forward_validation.py` | Walk-forward验证 |
 | `ml_services/validate_signal_anomaly_correlation.py` | 交易信号与异常关联性验证 |
@@ -44,6 +45,7 @@
 | `ml_services/walk_forward_anomaly_strategy_validation.py` | 异常策略Walk-forward验证 |
 | `analyze_hk_stock_anomaly_causality.py` | 港股异常因果关系分析（两年数据） |
 | `analyze_trend_continuation.py` | 趋势延续性验证工具 |
+| `analyze_anomaly_post_performance.py` | 异常后股价表现分析 |
 
 ### 核心警告 ⚠️
 
@@ -56,7 +58,8 @@
 | **Walk-forward验证** | 唯一可信的模型验证方法 |
 | **交易时段误报** | 交易时段数据不完整，应在收盘后检测 |
 | **异常是"放大器"** | 异常后波动率增加+79%，胜率接近50%，需降低仓位 |
-| **趋势延续假设** | "升的继续升，跌的继续跌"假设**错误**，实际是均值回归 |
+| **趋势延续假设错误** | "升的继续升，跌的继续跌"假设**错误**，实际是均值回归信号（两年数据验证） |
+| **最强抄底信号** | 价格异常+当日下跌，5天胜率71.7%，10天胜率72.8% |
 
 > **详细说明**：参阅 [lessons.md](lessons.md)
 
@@ -162,7 +165,11 @@
 - **关键发现**：
   - **趋势延续假设错误**：延续率49-51%（接近随机），相关系数-0.10至-0.14（均值回归）
   - **最强抄底信号**：价格异常+当日下跌，5天胜率71.7%，10天胜率72.8%
-  - 波动率下降28.5%（异常后市场趋于平静）
+  - **波动率下降**：异常后波动率下降28.5%（市场趋于平静）
+- **策略建议**：
+  - 价格异常+当日下跌 → 考虑抄底（胜率71.7%）
+  - 价格异常+当日上涨 → 观望（胜率53.7%）
+  - 成交量异常 → 谨慎使用（预测能力较弱）
 
 ### Walk-forward 异常策略验证
 - **验证脚本**：`ml_services/walk_forward_anomaly_strategy_validation.py`
@@ -278,7 +285,7 @@ output/
 | `hourly-stock-monitor.yml` | 港股异常检测（每小时） | 交易日每小时（09:30-12:00, 13:00-16:00） |
 | `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时（深度模式） |
 | `hourly-gold-monitor.yml` | 黄金监控 | 每小时 |
-| `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 UTC 8:00（香港时间16:00） |
+| `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 UTC 08:00（香港时间16:00） |
 | `hsi-prediction.yml` | 恒生指数涨跌预测 | 周一到周五 UTC 22:00（香港时间早上6:00） |
 | `bull-bear-analysis.yml` | 牛熊市分析 | 每周日 UTC 17:00（香港时间凌晨1:00） |
 | `sector-analysis.yml` | 板块表现分析 | 每月1号 UTC 19:00（香港时间凌晨3:00） |
@@ -288,6 +295,8 @@ output/
 | `daily-ipo-monitor.yml` | IPO 信息监控 | 每天 UTC 02:00 |
 | `daily-ai-trading-analysis.yml` | AI 交易分析日报 | 周一到周五 UTC 08:30 |
 | `weekly-comprehensive-analysis.yml` | 周综合交易分析 | 每周日 UTC 01:00 |
+
+**注意**：工作流调度时间基于 UTC 时间，已转换为香港时间便于理解。
 
 ---
 
@@ -328,4 +337,4 @@ output/
 
 ---
 
-**最后更新**：2026-04-07
+**最后更新**：2026-04-07（同步最新异常分析发现）

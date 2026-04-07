@@ -893,6 +893,88 @@ if anomaly:
 
 ---
 
+## 🔬 异常检测特征作为ML特征经验 ⭐ 新增（2026-04-08）
+
+### 问题背景
+异常检测结果是否可以作为机器学习模型的特征？如何防止数据泄漏？
+
+### 实施方案
+将异常检测结果作为特征添加到 `ml_trading_model.py` 的特征工程中，共新增26个异常检测特征。
+
+### 数据泄漏防护（关键）
+| 特征类型 | 数据泄漏防护方法 | 示例代码 |
+|---------|-----------------|---------|
+| 价格异常 | 使用 `.shift(1)` 确保用昨日数据 | `df['Close'].pct_change().shift(1)` |
+| 成交量异常 | 使用 `.shift(1)` 的成交量数据 | `df['Volume'].shift(1).rolling(20).mean()` |
+| 波动率异常 | 使用 `.shift(1)` 的波动率数据 | `df['Close'].pct_change().shift(1).rolling(20).std()` |
+| 综合信号 | 基于已滞后的特征组合 | `Price_Anomaly_Flag.shift(1) & Returns.shift(1) < 0` |
+
+### 新增特征列表
+| 特征名称 | 逻辑 | 预期效果 |
+|---------|------|----------|
+| `Price_Anomaly_Flag` | 昨日价格 Z-Score > 3.0 | 价格异常信号 |
+| `Price_Anomaly_ZScore` | 昨日价格异常程度 | 异常强度量化 |
+| `Volume_Anomaly_Flag` | 昨日成交量 > 2倍均值 | 成交量异常信号 |
+| `Volume_Anomaly_ZScore` | 昨日成交量异常程度 | 异常强度量化 |
+| `Volatility_Anomaly_Flag` | 昨日波动率 > 2倍均值 | 波动率异常信号 |
+| `Anomaly_Severity_Score` | 综合异常评分（0-1） | 整体异常程度 |
+| `Consecutive_Anomaly_Days` | 连续异常天数 | 异常持续性 |
+| `Anomaly_Buy_Signal` | 价格异常+昨日下跌 | 抄底信号（胜率71.7%） |
+| `Anomaly_Wait_Signal` | 价格异常+昨日上涨 | 观望信号 |
+| `Volume_Anomaly_Caution` | 成交量异常警告 | 谨慎信号 |
+
+### 验证结果
+| 指标 | 数值 | 说明 |
+|------|------|------|
+| 特征总数 | 892 → 918 | +26个特征（+2.9%） |
+| 模型准确率 | 61.44%（±1.75%） | 与之前60.99%接近，无数据泄漏 |
+| 数据泄漏风险 | ✅ 无 | 所有特征使用 shift(1) |
+| 被识别特征 | Volume_Anomaly_ZScore (0.165) | 成交量异常被模型认可 |
+| 被识别特征 | Volatility_Anomaly_Flag (0.062) | 波动率异常被模型认可 |
+
+### 关键经验总结
+
+#### 1. 数据泄漏防护是首要任务
+```python
+# ❌ 错误：使用当日数据（数据泄漏）
+df['Price_Anomaly'] = (df['Close'].pct_change().abs() > 0.05).astype(int)
+
+# ✅ 正确：使用昨日数据（无泄漏）
+df['Price_Anomaly'] = (df['Close'].pct_change().shift(1).abs() > 0.05).astype(int)
+```
+
+#### 2. 特征重要性不一定高
+- 成交量异常和波动率异常被模型识别为有价值
+- 价格异常相关特征重要性为0，可能被强特征（VIX、美股数据）覆盖
+- 不代表特征无用，可能是共线性或信号被吸收
+
+#### 3. 验证方法
+```python
+# 检查特征与当日/次日收益的相关性
+corr_same_day = df[feature_name].corr(df['Returns'])
+corr_next_day = df[feature_name].corr(df['Returns'].shift(-1))
+
+# 如果当日相关性显著高于次日相关性，可能存在泄漏
+if abs(corr_same_day) > abs(corr_next_day) * 1.5:
+    print("⚠️ 警告：可能存在数据泄漏！")
+```
+
+#### 4. 业界最佳实践
+| 实践 | 说明 |
+|------|------|
+| 使用滞后数据 | 所有异常特征必须基于昨日及之前数据 |
+| 模型准确率稳定 | 准确率不应因新特征大幅提升（否则可能泄漏） |
+| 特征重要性验证 | 检查新特征是否被模型识别 |
+| Walk-forward验证 | 使用严格的时序交叉验证评估效果 |
+
+### 后续优化方向
+1. 在板块模型中测试异常检测特征
+2. 使用 Walk-forward 验证进一步评估
+3. 考虑与其他特征组合使用
+4. 动态调整异常阈值（基于市场环境）
+
+---
+
 ## 🔧 编码规范
 
 ### 路径硬编码
