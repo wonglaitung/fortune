@@ -52,11 +52,13 @@ jobs:
             python3 detect_stock_anomalies.py \
               --mode test \
               --stocks ${{ github.event.inputs.test_stocks }} \
+              --mode-type deep \
               --verbose
           else
             echo "运行正常模式..."
             python3 detect_stock_anomalies.py \
               --mode standalone \
+              --mode-type deep \
               --verbose
           fi
       

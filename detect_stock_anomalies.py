@@ -11,9 +11,8 @@
 - 集成到综合分析系统
 
 使用方法：
-  python3 detect_stock_anomalies.py --mode standalone --mode-type quick  # 快速模式（Z-Score only）
   python3 detect_stock_anomalies.py --mode standalone --mode-type deep   # 深度模式（Z-Score + Isolation Forest）
-  python3 detect_stock_anomalies.py --mode integrated --mode-type quick # 集成模式（返回数据）
+  python3 detect_stock_anomalies.py --mode integrated --mode-type deep   # 集成模式（返回数据）
   python3 detect_stock_anomalies.py --mode test --stocks 0700.HK 0939.HK  # 测试模式
 
 依赖：
@@ -1003,8 +1002,8 @@ def main():
     parser = argparse.ArgumentParser(description='港股异常检测脚本')
     parser.add_argument('--mode', choices=['standalone', 'integrated', 'test'], default='standalone',
                        help='运行模式：standalone（独立运行，发送邮件）、integrated（集成模式，返回数据）、test（测试模式）')
-    parser.add_argument('--mode-type', choices=['quick', 'deep'], default='quick',
-                       help='异常检测模式：quick（Z-Score only，快速）、deep（Z-Score + Isolation Forest，深度）')
+    parser.add_argument('--mode-type', choices=['quick', 'deep'], default='deep',
+                       help='异常检测模式：deep（Z-Score + Isolation Forest，深度，推荐）')
     parser.add_argument('--time-interval', choices=['day', 'hour'], default='day',
                        help='时间间隔：day（每日）、hour（每小时）')
     parser.add_argument('--stocks', nargs='+', help='股票代码列表（如 0700.HK 0939.HK）')
