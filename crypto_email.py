@@ -565,14 +565,48 @@ def format_anomaly_results(anomaly_result):
             <h3>🚨 异常检测报告</h3>
     """
     
-    # Add severity
-    severity = anomaly_result['severity']
-    html += f"<p><strong>严重程度:</strong> {severity_emoji.get(severity, '')} {severity.upper()}</p>"
+    # 按类型和严重程度分组（与股票异常检测保持一致）
+    anomalies = anomaly_result['anomalies']
     
-    # Add anomalies table with detailed columns（增加加密货币名称列）
-    html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+    # 分离 Z-Score 异常和 Isolation Forest 异常
+    zscore_anomalies = [a for a in anomalies if a['type'] in ('price', 'volume')]
+    if_anomalies = [a for a in anomalies if a['type'] in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock')]
     
-    for anomaly in anomaly_result['anomalies']:
+    # Isolation Forest 异常去重：每个加密货币只显示一次（选择最严重的）
+    if_anomalies_dedup = {}
+    for a in if_anomalies:
+        crypto_symbol = a.get('crypto_symbol', a.get('crypto_name', 'unknown'))
+        if crypto_symbol not in if_anomalies_dedup:
+            if_anomalies_dedup[crypto_symbol] = a
+        else:
+            # 如果已有记录，选择更严重的
+            existing = if_anomalies_dedup[crypto_symbol]
+            severity_order = {'high': 3, 'medium': 2, 'low': 1}
+            existing_severity = severity_order.get(existing.get('severity', 'low'), 1)
+            new_severity = severity_order.get(a.get('severity', 'low'), 1)
+            
+            # 如果新异常更严重，或者同级别但异常评分更高，则替换
+            if new_severity > existing_severity:
+                if_anomalies_dedup[crypto_symbol] = a
+            elif new_severity == existing_severity:
+                existing_score = abs(existing.get('anomaly_score', 0))
+                new_score = abs(a.get('anomaly_score', 0))
+                if new_score > existing_score:
+                    if_anomalies_dedup[crypto_symbol] = a
+    
+    if_anomalies = list(if_anomalies_dedup.values())
+    
+    # Z-Score 异常按严重程度分组
+    high_zscore_anomalies = [a for a in zscore_anomalies if a.get('severity') == 'high']
+    medium_zscore_anomalies = [a for a in zscore_anomalies if a.get('severity') == 'medium']
+    
+    # Isolation Forest 异常按严重程度分组
+    if_high_anomalies = [a for a in if_anomalies if a.get('severity') == 'high']
+    if_medium_anomalies = [a for a in if_anomalies if a.get('severity') == 'medium']
+    if_low_anomalies = [a for a in if_anomalies if a.get('severity') == 'low']
+    
+    # 辅助函数：生成异常表格行
+    def format_anomaly_row(anomaly):
         anomaly_type = anomaly['type']
         anomaly_date = anomaly.get('anomaly_date', 'N/A')
         anomaly_reason = anomaly.get('anomaly_reason', '未知')
@@ -582,7 +616,6 @@ def format_anomaly_results(anomaly_result):
         crypto_display = anomaly.get('crypto_display', '未知')
         
         # Format score/value
-        # Isolation Forest 类型包括: isolation_forest, crypto_hourly, stock 等
         if anomaly_type in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock'):
             score = anomaly.get('anomaly_score', 0)
             score_value = f"IF Score: {score:.3f}"
@@ -607,7 +640,7 @@ def format_anomaly_results(anomaly_result):
         change_1d_icon = "📈" if change_1d > 0 else "📉"
         change_5d_icon = "📈" if change_5d > 0 else "📉"
         
-        html += f"""
+        return f"""
             <tr>
                 <td><strong>{crypto_display}</strong></td>
                 <td>{anomaly_type}</td>
@@ -623,9 +656,234 @@ def format_anomaly_results(anomaly_result):
             </tr>
         """
     
-    html += "</table></div>"
+    # 高异常（Z-Score）
+    if high_zscore_anomalies:
+        html += "<h4>🔴 高异常（Z-Score）</h4>"
+        html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+        for a in high_zscore_anomalies:
+            html += format_anomaly_row(a)
+        html += "</table>"
+        html += '<div class="warning">⚠️ 价格或成交量异常波动，风险显著增加<br>⚠️ 可能是突发利空消息或市场恐慌<br>⚠️ 建议立即检查持仓，考虑减仓或止损</div>'
+    
+    # 中异常（Z-Score）
+    if medium_zscore_anomalies:
+        html += "<h4>🟡 中异常（Z-Score）</h4>"
+        html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+        for a in medium_zscore_anomalies:
+            html += format_anomaly_row(a)
+        html += "</table>"
+        html += '<div class="warning">- 观察价格是否能突破阻力位<br>- 注意止损位设置<br>- 避免在异常期间加仓</div>'
+    
+    # 高严重度 Isolation Forest 异常
+    if if_high_anomalies:
+        html += "<h4>🔴 Isolation Forest 异常（高）</h4>"
+        html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+        for a in if_high_anomalies:
+            html += format_anomaly_row(a)
+        html += "</table>"
+        html += '<div class="warning">🔴 多维特征严重偏离正常模式<br>🔴 可能存在价格操纵或重大消息<br>🔴 建议立即检查持仓，考虑减仓</div>'
+    
+    # 中等严重度 Isolation Forest 异常
+    if if_medium_anomalies:
+        html += "<h4>🟡 Isolation Forest 异常（中）</h4>"
+        html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+        for a in if_medium_anomalies:
+            html += format_anomaly_row(a)
+        html += "</table>"
+        html += '<div class="warning">- 多维特征出现异常，值得关注<br>- 观察后续价格走势确认<br>- 避免在异常期间加仓</div>'
+    
+    # 低严重度 Isolation Forest 异常
+    if if_low_anomalies:
+        html += "<h4>🟢 Isolation Forest 异常（低）</h4>"
+        html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+        for a in if_low_anomalies:
+            html += format_anomaly_row(a)
+        html += "</table>"
+        html += '<div class="warning">- 基于多维特征检测的轻微异常<br>- 可能是价格模式轻微变化<br>- 建议结合基本面分析</div>'
+    
+    html += "</div>"
     
     return html
+
+
+def format_anomaly_results_markdown(anomaly_result):
+    """
+    Format anomaly detection results for email (Markdown format).
+    
+    Args:
+        anomaly_result: Anomaly detection result dict
+    
+    Returns:
+        Formatted Markdown string
+    """
+    if not anomaly_result or not anomaly_result['has_anomaly']:
+        lines = []
+        lines.append("✅ 未检测到异常")
+        lines.append("\n" + "=" * 80)
+        lines.append("💡 提醒")
+        lines.append("  - 异常是警告信号，不一定是交易信号")
+        lines.append("  - 不要看到异常就立即卖出")
+        lines.append("  - 综合考虑基本面和市场情绪")
+        lines.append("=" * 80)
+        return "\n".join(lines)
+    
+    lines = []
+    lines.append("🚨 异常检测报告\n")
+    
+    # 按类型和严重程度分组（与股票异常检测保持一致）
+    anomalies = anomaly_result['anomalies']
+    
+    # 分离 Z-Score 异常和 Isolation Forest 异常
+    zscore_anomalies = [a for a in anomalies if a['type'] in ('price', 'volume')]
+    if_anomalies = [a for a in anomalies if a['type'] in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock')]
+    
+    # Isolation Forest 异常去重：每个加密货币只显示一次（选择最严重的）
+    if_anomalies_dedup = {}
+    for a in if_anomalies:
+        crypto_symbol = a.get('crypto_symbol', a.get('crypto_name', 'unknown'))
+        if crypto_symbol not in if_anomalies_dedup:
+            if_anomalies_dedup[crypto_symbol] = a
+        else:
+            # 如果已有记录，选择更严重的
+            existing = if_anomalies_dedup[crypto_symbol]
+            severity_order = {'high': 3, 'medium': 2, 'low': 1}
+            existing_severity = severity_order.get(existing.get('severity', 'low'), 1)
+            new_severity = severity_order.get(a.get('severity', 'low'), 1)
+            
+            # 如果新异常更严重，或者同级别但异常评分更高，则替换
+            if new_severity > existing_severity:
+                if_anomalies_dedup[crypto_symbol] = a
+            elif new_severity == existing_severity:
+                existing_score = abs(existing.get('anomaly_score', 0))
+                new_score = abs(a.get('anomaly_score', 0))
+                if new_score > existing_score:
+                    if_anomalies_dedup[crypto_symbol] = a
+    
+    if_anomalies = list(if_anomalies_dedup.values())
+    
+    # Z-Score 异常按严重程度分组
+    high_zscore_anomalies = [a for a in zscore_anomalies if a.get('severity') == 'high']
+    medium_zscore_anomalies = [a for a in zscore_anomalies if a.get('severity') == 'medium']
+    
+    # Isolation Forest 异常按严重程度分组
+    if_high_anomalies = [a for a in if_anomalies if a.get('severity') == 'high']
+    if_medium_anomalies = [a for a in if_anomalies if a.get('severity') == 'medium']
+    if_low_anomalies = [a for a in if_anomalies if a.get('severity') == 'low']
+    
+    # 辅助函数：生成异常表格行
+    def format_anomaly_row_md(anomaly):
+        anomaly_type = anomaly['type']
+        anomaly_date = anomaly.get('anomaly_date', 'N/A')
+        anomaly_reason = anomaly.get('anomaly_reason', '未知')
+        indicators = anomaly.get('indicators', {})
+        
+        # 获取加密货币名称
+        crypto_display = anomaly.get('crypto_display', '未知')
+        
+        # Format score/value
+        if anomaly_type in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock'):
+            score = anomaly.get('anomaly_score', 0)
+            score_value = f"**{score:.3f}**"
+        else:
+            z_score = anomaly.get('z_score', 0)
+            score_value = f"**{z_score:.2f}**"
+        
+        # Get indicator values
+        current_price = indicators.get('current_price', 0)
+        change_1d = indicators.get('change_1d', 0)
+        change_5d = indicators.get('change_5d', 0)
+        rsi = indicators.get('rsi', 0)
+        bb_position = indicators.get('bollinger_position', 'middle')
+        macd_signal = indicators.get('macd_signal', 'neutral')
+        
+        # Format position and signal
+        bb_position_cn = get_bollinger_position_cn(bb_position)
+        macd_signal_cn = get_macd_signal_cn(macd_signal)
+        
+        # Format change icons
+        change_1d_icon = "📈" if change_1d > 0 else "📉"
+        change_5d_icon = "📈" if change_5d > 0 else "📉"
+        
+        return f"| {crypto_display} | {anomaly_type} | {anomaly_date} | {anomaly_reason} | {score_value} | {current_price:.2f} | {change_1d_icon} {change_1d:+.2f}% | {change_5d_icon} {change_5d:+.2f}% | {rsi:.1f} | {bb_position_cn} | {macd_signal_cn} |"
+    
+    # 高异常（Z-Score）
+    if high_zscore_anomalies:
+        lines.append("\n## 🔴 高异常（Z-Score）\n")
+        lines.append("| 加密货币 | 类型 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 1日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in high_zscore_anomalies:
+            lines.append(format_anomaly_row_md(a))
+        
+        lines.append("\n**风险提示**：")
+        lines.append("⚠️ 价格或成交量异常波动，风险显著增加")
+        lines.append("⚠️ 可能是突发利空消息或市场恐慌")
+        lines.append("⚠️ 建议立即检查持仓，考虑减仓或止损")
+    
+    # 中异常（Z-Score）
+    if medium_zscore_anomalies:
+        lines.append("\n## 🟡 中异常（Z-Score）\n")
+        lines.append("| 加密货币 | 类型 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 1日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in medium_zscore_anomalies:
+            lines.append(format_anomaly_row_md(a))
+        
+        lines.append("\n**操作建议**：")
+        lines.append("- 观察价格是否能突破阻力位")
+        lines.append("- 注意止损位设置")
+        lines.append("- 避免在异常期间加仓")
+    
+    # 高严重度 Isolation Forest 异常
+    if if_high_anomalies:
+        lines.append("\n## 🔴 Isolation Forest 异常（高）\n")
+        lines.append("| 加密货币 | 类型 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 1日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in if_high_anomalies:
+            lines.append(format_anomaly_row_md(a))
+        
+        lines.append("\n**风险提示**：")
+        lines.append("🔴 多维特征严重偏离正常模式")
+        lines.append("🔴 可能存在价格操纵或重大消息")
+        lines.append("🔴 建议立即检查持仓，考虑减仓")
+    
+    # 中等严重度 Isolation Forest 异常
+    if if_medium_anomalies:
+        lines.append("\n## 🟡 Isolation Forest 异常（中）\n")
+        lines.append("| 加密货币 | 类型 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 1日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in if_medium_anomalies:
+            lines.append(format_anomaly_row_md(a))
+        
+        lines.append("\n**操作建议**：")
+        lines.append("- 多维特征出现异常，值得关注")
+        lines.append("- 观察后续价格走势确认")
+        lines.append("- 避免在异常期间加仓")
+    
+    # 低严重度 Isolation Forest 异常
+    if if_low_anomalies:
+        lines.append("\n## 🟢 Isolation Forest 异常（低）\n")
+        lines.append("| 加密货币 | 类型 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 1日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in if_low_anomalies:
+            lines.append(format_anomaly_row_md(a))
+        
+        lines.append("\n**说明**：")
+        lines.append("- 基于多维特征检测的轻微异常")
+        lines.append("- 可能是价格模式轻微变化")
+        lines.append("- 建议结合基本面分析")
+    
+    lines.append("\n" + "=" * 80)
+    lines.append("💡 提醒")
+    lines.append("  - 异常是警告信号，不一定是交易信号")
+    lines.append("  - 不要看到异常就立即卖出")
+    lines.append("  - 综合考虑基本面和市场情绪")
+    lines.append("=" * 80)
+    
+    return "\n".join(lines)
 
 
 def _analyze_anomaly_reason(anomaly, row_data=None):
@@ -1170,11 +1428,22 @@ if __name__ == "__main__":
     has_important_content = has_signals  # 有交易信号
     
     # 检查异常检测结果
+    anomaly_result_filtered = None  # 过滤后的异常结果（只包含 high/medium）
     if anomaly_result and anomaly_result['has_anomaly']:
-        severity = anomaly_result.get('severity', 'low')
-        # 只发送 high 或 medium 级别的异常
-        if severity in ['high', 'medium']:
+        # 过滤低严重度异常（与股票异常检测保持一致，只发送 high 和 medium）
+        significant_anomalies = [a for a in anomaly_result['anomalies'] if a.get('severity') in ('high', 'medium')]
+        
+        if significant_anomalies:
+            # 创建过滤后的异常结果
+            anomaly_result_filtered = {
+                'has_anomaly': True,
+                'severity': anomaly_result['severity'],  # 保持整体严重程度
+                'anomalies': significant_anomalies
+            }
             has_important_content = True
+            print(f"📊 过滤后剩余 {len(significant_anomalies)} 个高/中严重度异常（原始 {len(anomaly_result['anomalies'])} 个）")
+        else:
+            print("⚠️ 所有异常均为低严重度，不发送邮件")
     
     # 如果没有重要内容，则不发送邮件
     if not has_important_content:
@@ -1182,12 +1451,12 @@ if __name__ == "__main__":
         exit(0)
 
     # 根据内容类型调整邮件标题
-    if has_signals and anomaly_result and anomaly_result['has_anomaly']:
+    if has_signals and anomaly_result_filtered and anomaly_result_filtered['has_anomaly']:
         subject = "加密货币更新 - 交易信号 + 异常检测"
     elif has_signals:
         subject = "加密货币更新 - 交易信号提醒"
-    elif anomaly_result and anomaly_result['has_anomaly']:
-        severity = anomaly_result.get('severity', 'low')
+    elif anomaly_result_filtered and anomaly_result_filtered['has_anomaly']:
+        severity = anomaly_result_filtered.get('severity', 'low')
         severity_emoji = '🔴' if severity == 'high' else '🟡' if severity == 'medium' else '🟢'
         subject = f"加密货币更新 - 异常检测提醒 [{severity_emoji} {severity.upper()}]"
     else:
@@ -1592,43 +1861,23 @@ if __name__ == "__main__":
                 tav_info = f" TAV={c.get('tav_score')}" if c.get('tav_score') is not None else ""
                 text += f"    {c['date']}: {c['description']}{tav_info}\n"
     
-    # 添加异常检测结果到文本版本
-    if anomaly_result and anomaly_result['has_anomaly']:
-        text += "\n\n🚨 异常检测报告\n"
-        text += f"严重程度: {anomaly_result['severity'].upper()}\n"
-        text += f"检测到异常数量: {len(anomaly_result['anomalies'])}\n"
-        
-        for anomaly in anomaly_result['anomalies']:
-            anomaly_type = anomaly['type']
-            timestamp = anomaly['timestamp']
-            anomaly_severity = anomaly['severity']
-            
-            # Isolation Forest 类型包括: isolation_forest, crypto_hourly, crypto, stock 等
-            if anomaly_type in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock'):
-                score = anomaly.get('anomaly_score', 0)
-                text += f"\n- 类型: {anomaly_type}"
-                text += f"\n  时间: {timestamp.strftime('%Y-%m-%d %H:%M')}"
-                text += f"\n  严重程度: {anomaly_severity}"
-                text += f"\n  异常评分: {score:.3f}"
-            else:
-                z_score = anomaly.get('z_score', 0)
-                value = anomaly.get('value', 0)
-                text += f"\n- 类型: {anomaly_type}"
-                text += f"\n  时间: {timestamp.strftime('%Y-%m-%d %H:%M')}"
-                text += f"\n  严重程度: {anomaly_severity}"
-                text += f"\n  Z-Score: {z_score:.2f}"
-                text += f"\n  值: {value:.2f}"
-    
     html += """
             </table>
         </div>
     """
 
     # 添加异常检测结果（如果有）
-    if anomaly_result and anomaly_result['has_anomaly']:
-        anomaly_html = format_anomaly_results(anomaly_result)
+    # 使用过滤后的异常结果（只包含 high/medium 级别）
+    if anomaly_result_filtered and anomaly_result_filtered['has_anomaly']:
+        anomaly_html = format_anomaly_results(anomaly_result_filtered)
         if anomaly_html:
             html += anomaly_html
+        
+        # 添加 Markdown 格式的异常报告到文本版本
+        anomaly_text = format_anomaly_results_markdown(anomaly_result_filtered)
+        if anomaly_text:
+            text += "\n\n"
+            text += anomaly_text
 
     # 添加指标说明到文本版本
     text += "\n📋 指标说明:\n"
