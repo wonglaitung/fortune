@@ -99,7 +99,7 @@ def calculate_technical_indicators(prices):
     # 获取比特币历史数据
     try:
         btc_ticker = yf.Ticker("BTC-USD")
-        btc_hist = btc_ticker.history(period="1mo")  # 获取1个月的历史数据
+        btc_hist = btc_ticker.history(period="3mo")  # 获取3个月的历史数据（需要足够数据计算MA50）
         if not btc_hist.empty:
             # 计算技术指标（包含TAV分析）
             btc_indicators = analyzer.calculate_all_indicators(btc_hist.copy(), asset_type='crypto')
@@ -218,7 +218,7 @@ def calculate_technical_indicators(prices):
     # 获取以太坊历史数据
     try:
         eth_ticker = yf.Ticker("ETH-USD")
-        eth_hist = eth_ticker.history(period="1mo")  # 获取1个月的历史数据
+        eth_hist = eth_ticker.history(period="3mo")  # 获取3个月的历史数据（需要足够数据计算MA50）
         if not eth_hist.empty:
             # 计算技术指标（包含TAV分析）
             eth_indicators = analyzer.calculate_all_indicators(eth_hist.copy(), asset_type='crypto')
