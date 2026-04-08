@@ -1,9 +1,9 @@
 name: 港股异常检测
 
 on:
-  # 每天凌晨2点执行（香港时间）
+  # 每天香港时间凌晨2点执行（UTC 18:00）
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 18 * * *'
   # 支持手动触发
   workflow_dispatch:
     inputs:
