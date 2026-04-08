@@ -2121,10 +2121,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
                             full_content += f"| {anomaly['stock']} | {anomaly['name']} | **{anomaly['z_score']:.2f}** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} | {get_bollinger_position_cn(anomaly['bollinger_position'])} |\n"
                         
-                        full_content += "\n**风险提示**：\n"
-                        full_content += "⚠️ 价格波动率异常，风险显著增加\n"
-                        full_content += "⚠️ 可能是突发利空消息或市场恐慌\n"
-                        full_content += "⚠️ 建议立即检查持仓，考虑减仓或止损\n\n"
+                        full_content += "\n**📊 Z-Score 价格异常策略建议**：\n"
+                        full_content += "- **抄底信号**：价格异常 + 当日下跌 → 5日收益 +4.12%，胜率 71.7%\n"
+                        full_content += "- 价格大幅偏离均值，可能是短期超跌/超涨\n"
+                        full_content += "- **如果当日下跌**：考虑抄底（均值回归信号）\n"
+                        full_content += "- **如果当日上涨**：观望，等待确认\n\n"
                     
                     # 高异常（成交量）
                     if high_volume_anomalies:
@@ -2184,10 +2185,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             # Isolation Forest 异常的 z_score 设为 0，使用其他指标
                             full_content += f"| {anomaly['stock']} | {anomaly['name']} | **异常** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
                         
-                        full_content += "\n**说明**：\n"
-                        full_content += "- 基于机器学习的多维特征异常检测\n"
-                        full_content += "- 可能检测到传统统计方法遗漏的异常\n"
-                        full_content += "- 建议结合其他指标综合判断\n\n"
+                        full_content += "\n**⚠️ IF 异常策略建议**：\n"
+                        full_content += "- **风险信号**：IF high 异常后续5日收益 -3.04%，胜率 43%\n"
+                        full_content += "- 多维特征同时异常，可能是系统性风险\n"
+                        full_content += "- **策略**：考虑减仓/止损，避免逆势操作\n\n"
                     
                     full_content += "**重要提醒**：\n"
                     full_content += "- 异常是警告信号，不一定是交易信号\n"
@@ -2197,11 +2198,29 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     # 添加基于两年数据验证的策略建议
                     full_content += "---\n\n"
                     full_content += "### 📊 异常后股价表现策略建议（基于2024-2026两年数据验证）\n\n"
-                    full_content += "**核心发现**：\n"
-                    full_content += "- 异常当日下跌的股票，后续反弹更强（均值回归信号）\n"
-                    full_content += "- 价格异常的预测能力远强于成交量异常\n\n"
                     
-                    full_content += "**策略建议表格**：\n\n"
+                    # ⭐ 新增：Isolation Forest vs Z-Score 区分
+                    full_content += "**⚠️ 重要区分：Isolation Forest vs Z-Score**\n\n"
+                    full_content += "两种异常类型**完全不同，互补而非矛盾**：\n\n"
+                    full_content += "| 检测方法 | 检测内容 | 异常含义 | 样本数 | 5日收益 | 胜率 | 策略 |\n"
+                    full_content += "|---------|---------|---------|--------|---------|------|------|\n"
+                    full_content += "| **Isolation Forest** | 多维特征（价格+成交量+波动率+技术指标） | 系统性风险 | 86 | **-3.04%** | **43.0%** | 🔴 减仓 |\n"
+                    full_content += "| **Z-Score 价格异常** | 单维度价格偏离均值 | 价格超跌/超涨 | 11 | +0.40% | 72.7% | 🟡 观望 |\n"
+                    full_content += "| **Z-Score + 当日下跌** | 价格超跌 | 抄底机会 | 5 | **+7.02%** | **100%** | 🟢 买入 |\n\n"
+                    
+                    full_content += "**Isolation Forest high 异常**：\n"
+                    full_content += "- 多维特征同时异常（价格、成交量、波动率、RSI等）\n"
+                    full_content += "- 可能是系统性风险、流动性危机、重大利空\n"
+                    full_content += "- **策略**：减仓/止损，避免逆势操作\n\n"
+                    
+                    full_content += "**Z-Score 价格异常**：\n"
+                    full_content += "- 单一价格大幅偏离均值\n"
+                    full_content += "- 可能是短期超跌/超涨\n"
+                    full_content += "- **策略**：如果当日下跌，考虑抄底\n\n"
+                    
+                    # 保留原有的 Z-Score 策略表格
+                    full_content += "---\n\n"
+                    full_content += "**Z-Score 价格异常策略（均值回归信号）**：\n\n"
                     full_content += "| 异常类型 | 当日涨跌 | 5天后收益 | 胜率 | 策略建议 |\n"
                     full_content += "|---------|---------|----------|------|----------|\n"
                     full_content += "| **价格异常** | 当日下跌 | **+4.12%** | **71.7%** | ✅ 考虑抄底 |\n"
@@ -2209,22 +2228,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     full_content += "| 成交量异常 | 当日下跌 | +0.65% | 53.4% | ⚠️ 谨慎 |\n"
                     full_content += "| 成交量异常 | 当日上涨 | +2.52% | 54.9% | ⚠️ 谨慎 |\n\n"
                     
-                    full_content += "**最强策略信号**：\n"
+                    full_content += "**最强抄底信号**：\n"
                     full_content += "```\n"
-                    full_content += "价格异常 + 当日下跌 → 考虑抄底\n"
+                    full_content += "Z-Score 价格异常 + 当日下跌 → 考虑抄底\n"
                     full_content += "  - 5天后：+4.12%，胜率 71.7%\n"
                     full_content += "  - 10天后：+6.88%，胜率 72.8%\n"
                     full_content += "```\n\n"
                     
                     full_content += "**关键结论**：\n"
-                    full_content += "1. \"升的继续升，跌的继续跌\"是**错误**的假设\n"
-                    full_content += "2. 异常是**均值回归信号**，而非趋势延续信号\n"
-                    full_content += "3. 异常当日下跌 → 后续反弹；异常当日上涨 → 后续走平\n"
-                    full_content += "4. 趋势延续率约50%，接近随机（不支持趋势延续假设）\n\n"
+                    full_content += "1. **IF high = 风险信号**：多维异常，后续下跌（-3.04%），减仓\n"
+                    full_content += "2. **Z-Score 价格异常 + 当日下跌 = 抄底机会**：单维度超跌，后续反弹\n"
+                    full_content += "3. 两种方法**互补**：IF预警风险，Z-Score发现机会\n\n"
                     
                     full_content += "**风险提示**：\n"
                     full_content += "- 以上策略基于历史数据回测，未来表现可能不同\n"
-                    full_content += "- 样本量：938个异常（2024-2026两年数据）\n"
+                    full_content += "- 样本量：IF 86个，Z-Score 11个（2024-2026两年数据）\n"
                     full_content += "- 需结合其他指标综合判断\n"
                 else:
                     full_content += "✅ 未检测到异常，市场波动正常\n\n"
