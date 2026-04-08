@@ -1049,13 +1049,23 @@ def main():
     # 根据模式处理结果
     if args.mode == 'standalone':
         # 独立模式：发送邮件
+        # 过滤低严重度异常（与 Z-Score 保持一致，只发送 high 和 medium）
+        significant_anomalies = [a for a in anomalies if a['severity'] in ('high', 'medium')]
+        
         if anomalies:
-            print(f"\n🚨 检测到 {len(anomalies)} 个异常\n")
+            print(f"\n🚨 检测到 {len(anomalies)} 个异常")
+            if len(significant_anomalies) < len(anomalies):
+                print(f"   其中 {len(significant_anomalies)} 个需要关注（已过滤 {len(anomalies) - len(significant_anomalies)} 个低严重度异常）\n")
+            else:
+                print()
             print(format_anomaly_email(anomalies))
             
-            # 发送邮件（除非 --no-email）
+            # 只发送高/中严重度异常的邮件（除非 --no-email）
             if not args.no_email:
-                send_email_alert(anomalies)
+                if significant_anomalies:
+                    send_email_alert(significant_anomalies)
+                else:
+                    logger.info("没有高/中严重度异常，跳过邮件发送")
         else:
             print("\n✅ 未检测到异常")
     
