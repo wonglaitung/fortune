@@ -264,23 +264,57 @@ class StockAnomalyDetector:
                             change_1d = 0
                             change_5d = 0
                             
-                            if len(df_anomaly) > 1:
-                                idx = df_anomaly.index.get_loc(df_anomaly_row.name)
-                                if idx > 0:
-                                    prev_close = df_anomaly.iloc[idx-1]['Close']
-                                    change_1d = (current_price / prev_close - 1) * 100
+                            # 对于小时级别数据，计算当日涨跌（昨天收盘到今天收盘）
+                            # 对于日级别数据，计算前一交易日到当前交易日的涨跌
+                            try:
+                                full_idx = df.index.get_loc(df_anomaly_row.name)
                                 
-                                if idx >= 5:
-                                    prev_5d_close = df_anomaly.iloc[idx-5]['Close']
-                                    change_5d = (current_price / prev_5d_close - 1) * 100
+                                # 找到前一个交易日的收盘价
+                                # 对于小时数据，需要找到昨天最后一小时
+                                current_date = df_anomaly_row.name.date() if hasattr(df_anomaly_row.name, 'date') else pd.Timestamp(df_anomaly_row.name).date()
+                                
+                                # 获取今天和昨天的数据
+                                today_data = df[df.index.date == current_date] if hasattr(df.index[0], 'date') else df
+                                yesterday_data = df[df.index.date < current_date] if hasattr(df.index[0], 'date') else df
+                                
+                                if not yesterday_data.empty:
+                                    yesterday_close = yesterday_data.iloc[-1]['Close']
+                                    today_close = today_data.iloc[-1]['Close'] if not today_data.empty else current_price
+                                    change_1d = (today_close / yesterday_close - 1) * 100
+                                
+                                # 计算5日涨跌
+                                if len(yesterday_data) >= 5:
+                                    # 找到5个交易日前的收盘价（小时数据需要跨天找）
+                                    dates = sorted(set(d.date() if hasattr(d, 'date') else d for d in df.index))
+                                    if current_date in dates:
+                                        current_date_idx = dates.index(current_date)
+                                        if current_date_idx >= 5:
+                                            prev_5d_date = dates[current_date_idx - 5]
+                                            prev_5d_data = df[df.index.date == prev_5d_date] if hasattr(df.index[0], 'date') else df
+                                            if not prev_5d_data.empty:
+                                                prev_5d_close = prev_5d_data.iloc[-1]['Close']
+                                                today_close = today_data.iloc[-1]['Close'] if not today_data.empty else current_price
+                                                change_5d = (today_close / prev_5d_close - 1) * 100
+                            except (KeyError, IndexError, ValueError):
+                                # 如果计算失败，保持默认值0
+                                pass
+                            
+                            # 获取异常评分（支持多种异常类型）
+                            anomaly_type = anomaly.get('type', 'price')
+                            if anomaly_type in ('isolation_forest', 'stock_hour', 'stock', 'crypto_hour', 'crypto_hourly'):
+                                # Isolation Forest 类型使用 anomaly_score
+                                anomaly_value = anomaly.get('anomaly_score', 0)
+                            else:
+                                # Z-Score 类型使用 value
+                                anomaly_value = anomaly.get('value', current_price)
                             
                             anomalies.append({
                                 'stock': stock,
                                 'name': self.get_stock_name(stock),
                                 'type': anomaly.get('type', 'price'),
                                 'severity': severity,
-                                'z_score': abs(z_score) if anomaly.get('type') != 'isolation_forest' else 0,
-                                'value': anomaly.get('anomaly_score', 0) if anomaly.get('type') == 'isolation_forest' else anomaly.get('value', current_price),
+                                'z_score': abs(z_score) if anomaly_type not in ('isolation_forest', 'stock_hour', 'stock', 'crypto_hour', 'crypto_hourly') else 0,
+                                'value': anomaly_value,
                                 'current_price': current_price,
                                 'change_1d': change_1d,
                                 'change_5d': change_5d,
