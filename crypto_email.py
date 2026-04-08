@@ -1603,9 +1603,10 @@ if __name__ == "__main__":
             timestamp = anomaly['timestamp']
             anomaly_severity = anomaly['severity']
             
-            if anomaly_type == 'isolation_forest':
+            # Isolation Forest 类型包括: isolation_forest, crypto_hourly, crypto, stock 等
+            if anomaly_type in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock'):
                 score = anomaly.get('anomaly_score', 0)
-                text += f"\n- 类型: Isolation Forest"
+                text += f"\n- 类型: {anomaly_type}"
                 text += f"\n  时间: {timestamp.strftime('%Y-%m-%d %H:%M')}"
                 text += f"\n  严重程度: {anomaly_severity}"
                 text += f"\n  异常评分: {score:.3f}"
