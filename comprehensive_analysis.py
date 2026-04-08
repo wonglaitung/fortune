@@ -2109,7 +2109,26 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     high_volume_anomalies = [a for a in anomaly_data if a['severity'] == 'high' and a.get('type') == 'volume']
                     medium_price_anomalies = [a for a in anomaly_data if a['severity'] == 'medium' and a.get('type') == 'price']
                     medium_volume_anomalies = [a for a in anomaly_data if a['severity'] == 'medium' and a.get('type') == 'volume']
-                    if_anomalies = [a for a in anomaly_data if a.get('type') == 'isolation_forest']
+                    if_anomalies = [a for a in anomaly_data if a.get('type') in ('isolation_forest', 'stock_hour', 'stock')]
+                    
+                    # Isolation Forest 异常去重：每个股票只显示一次（选择最严重的）
+                    if_anomalies_dedup = {}
+                    for a in if_anomalies:
+                        stock = a['stock']
+                        if stock not in if_anomalies_dedup:
+                            if_anomalies_dedup[stock] = a
+                        else:
+                            # 如果已有记录，选择更严重的
+                            existing = if_anomalies_dedup[stock]
+                            if (existing['severity'] == 'low' and a['severity'] != 'low') or \
+                               (existing['severity'] == a['severity'] and abs(a.get('value', 0)) > abs(existing.get('value', 0))):
+                                if_anomalies_dedup[stock] = a
+                    if_anomalies = list(if_anomalies_dedup.values())
+                    
+                    # 按严重程度分组 IF 异常
+                    if_high_anomalies = [a for a in if_anomalies if a['severity'] == 'high']
+                    if_medium_anomalies = [a for a in if_anomalies if a['severity'] == 'medium']
+                    if_low_anomalies = [a for a in if_anomalies if a['severity'] == 'low']
                     
                     # 高异常（价格）
                     if high_price_anomalies:
@@ -2174,21 +2193,60 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         full_content += "- 结合价格方向判断趋势\n"
                         full_content += "- 谨慎操作，避免追涨杀跌\n\n"
                     
-                    # Isolation Forest 异常（仅深度分析模式）
-                    if if_anomalies:
-                        full_content += "### 🔬 Isolation Forest 异常\n\n"
-                        full_content += "| 股票代码 | 股票名称 | 异常得分 | 当前价格 | 当日变化 | RSI |\n"
-                        full_content += "|---------|---------|---------|---------|---------|-----|\n"
+                    # Isolation Forest 异常（仅深度分析模式）- 按严重程度分组
+                    # 高严重度 IF 异常
+                    if if_high_anomalies:
+                        full_content += "### 🔴 Isolation Forest 异常（高）\n\n"
+                        full_content += "| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | RSI |\n"
+                        full_content += "|---------|---------|---------|---------|---------|---------|---------|-----|\n"
                         
-                        for anomaly in if_anomalies:
+                        for anomaly in if_high_anomalies:
                             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
-                            # Isolation Forest 异常的 z_score 设为 0，使用其他指标
-                            full_content += f"| {anomaly['stock']} | {anomaly['name']} | **异常** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
+                            anomaly_date = anomaly.get('anomaly_date', 'N/A')
+                            anomaly_reason = anomaly.get('anomaly_reason', '未知')
+                            anomaly_score = anomaly.get('value', 0)
+                            full_content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | **{anomaly_score:.3f}** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
                         
-                        full_content += "\n**⚠️ IF 异常策略建议**：\n"
-                        full_content += "- **风险信号**：IF high 异常后续5日收益 -3.04%，胜率 43%\n"
-                        full_content += "- 多维特征同时异常，可能是系统性风险\n"
-                        full_content += "- **策略**：考虑减仓/止损，避免逆势操作\n\n"
+                        full_content += "\n**风险提示**：\n"
+                        full_content += "🔴 多维特征严重偏离正常模式\n"
+                        full_content += "🔴 可能存在价格操纵或重大消息\n"
+                        full_content += "🔴 建议立即检查持仓，考虑减仓\n\n"
+                    
+                    # 中等严重度 IF 异常
+                    if if_medium_anomalies:
+                        full_content += "### ⚠️ Isolation Forest 异常（中）\n\n"
+                        full_content += "| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | RSI |\n"
+                        full_content += "|---------|---------|---------|---------|---------|---------|---------|-----|\n"
+                        
+                        for anomaly in if_medium_anomalies:
+                            change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
+                            anomaly_date = anomaly.get('anomaly_date', 'N/A')
+                            anomaly_reason = anomaly.get('anomaly_reason', '未知')
+                            anomaly_score = anomaly.get('value', 0)
+                            full_content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | {anomaly_score:.3f} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
+                        
+                        full_content += "\n**操作建议**：\n"
+                        full_content += "- 多维特征出现异常，值得关注\n"
+                        full_content += "- 观察后续价格走势确认\n"
+                        full_content += "- 避免在异常期间加仓\n\n"
+                    
+                    # 低严重度 IF 异常
+                    if if_low_anomalies:
+                        full_content += "### 🔬 Isolation Forest 异常（低）\n\n"
+                        full_content += "| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | RSI |\n"
+                        full_content += "|---------|---------|---------|---------|---------|---------|---------|-----|\n"
+                        
+                        for anomaly in if_low_anomalies:
+                            change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
+                            anomaly_date = anomaly.get('anomaly_date', 'N/A')
+                            anomaly_reason = anomaly.get('anomaly_reason', '未知')
+                            anomaly_score = anomaly.get('value', 0)
+                            full_content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | {anomaly_score:.3f} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
+                        
+                        full_content += "\n**说明**：\n"
+                        full_content += "- 基于多维特征检测的轻微异常\n"
+                        full_content += "- 可能是价格模式轻微变化\n"
+                        full_content += "- 建议结合基本面分析\n\n"
                     
                     full_content += "**重要提醒**：\n"
                     full_content += "- 异常是警告信号，不一定是交易信号\n"
