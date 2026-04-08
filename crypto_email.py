@@ -336,9 +336,147 @@ def calculate_technical_indicators(prices):
     
     return indicators
 
+def _detect_single_crypto_anomaly(crypto_name, crypto_symbol, prices, use_deep_analysis, target_dt, target_date_str):
+    """
+    检测单个加密货币的异常
+    
+    Args:
+        crypto_name: 加密货币名称（'bitcoin' 或 'ethereum'）
+        crypto_symbol: 加密货币符号（'BTC-USD' 或 'ETH-USD'）
+        prices: 价格数据
+        use_deep_analysis: 是否使用深度分析
+        target_dt: 目标日期时间
+        target_date_str: 目标日期字符串
+        
+    Returns:
+        异常检测结果列表
+    """
+    if crypto_name not in prices:
+        print(f"⚠️ {crypto_name} 价格数据不可用")
+        return []
+    
+    print(f"🔍 检测 {crypto_name.upper()} ({crypto_symbol}) 的异常...")
+    
+    try:
+        # Initialize components
+        zscore_detector = ZScoreDetector(window_size=72, threshold=3.0, time_interval='hour')
+        
+        # 只在深度分析模式下初始化 Isolation Forest
+        if_detector = None
+        feature_extractor = None
+        
+        if use_deep_analysis:
+            if_detector = IsolationForestDetector(
+                contamination=0.05,
+                random_state=42,
+                anomaly_type='crypto_hourly'
+            )
+            feature_extractor = FeatureExtractor()
+        
+        cache = AnomalyCache()
+        integrator = AnomalyIntegrator(cache)
+        
+        # Get historical data (小时级数据，1个月)
+        ticker = yf.Ticker(crypto_symbol)
+        hist = ticker.history(period="1mo", interval='1h')
+        
+        if hist.empty:
+            print(f"⚠️ {crypto_symbol} 历史数据不可用")
+            return []
+        
+        # Run Z-Score detection (Layer 1)
+        zscore_anomalies = []
+        current_price = prices[crypto_name]['usd']
+        
+        # Price anomaly
+        price_anomaly = zscore_detector.detect_anomaly(
+            metric_name='price',
+            current_value=current_price,
+            history=hist['Close'],
+            timestamp=target_dt,
+            time_interval='hour'
+        )
+        if price_anomaly:
+            zscore_anomalies.append(price_anomaly)
+        
+        # Volume anomaly
+        if 'usd_24hr_vol' in prices[crypto_name]:
+            current_volume = prices[crypto_name]['usd_24hr_vol']
+            volume_anomaly = zscore_detector.detect_anomaly(
+                metric_name='volume',
+                current_value=current_volume,
+                history=hist['Volume'],
+                timestamp=target_dt,
+                time_interval='hour'
+            )
+            if volume_anomaly:
+                zscore_anomalies.append(volume_anomaly)
+        
+        # Run Isolation Forest detection (Layer 2)
+        if_anomalies = []
+        
+        if use_deep_analysis and if_detector and feature_extractor:
+            features, timestamps = feature_extractor.extract_features(hist)
+            
+            if not features.empty:
+                if_detector.train(features)
+                if_anomalies = if_detector.detect_anomalies_by_date(
+                    features=features,
+                    timestamps=timestamps,
+                    target_date=target_dt,
+                    time_interval='hour'
+                )
+        
+        # Integrate results
+        result = integrator.integrate(
+            zscore_anomalies=zscore_anomalies,
+            if_anomalies=if_anomalies,
+            timestamp=target_dt
+        )
+        
+        anomalies = []
+        # 为每个异常添加异常日期和原因
+        if result['has_anomaly']:
+            for anomaly in result['anomalies']:
+                # 获取异常发生的时间戳
+                anomaly_timestamp = anomaly.get('timestamp', target_dt)
+                anomaly_date_str = anomaly_timestamp.strftime('%Y-%m-%d') if hasattr(anomaly_timestamp, 'strftime') else target_date_str
+                
+                # 添加加密货币标识
+                anomaly['crypto_name'] = crypto_name
+                anomaly['crypto_symbol'] = crypto_symbol
+                anomaly['crypto_display'] = '比特币 (BTC)' if crypto_name == 'bitcoin' else '以太币 (ETH)'
+                
+                # 添加异常日期
+                anomaly['anomaly_date'] = anomaly_date_str
+                
+                # 计算异常日期的技术指标
+                target_date_only = anomaly_timestamp.date() if hasattr(anomaly_timestamp, 'date') else pd.to_datetime(anomaly_date_str).date()
+                df_anomaly = hist[hist.index.date == target_date_only]
+                
+                df_anomaly_row = None
+                if not df_anomaly.empty:
+                    df_anomaly_row = df_anomaly.iloc[0]
+                    anomaly['indicators'] = _calculate_anomaly_indicators(hist, df_anomaly_row)
+                
+                # 分析异常原因
+                anomaly['anomaly_reason'] = _analyze_anomaly_reason(anomaly, df_anomaly_row)
+                
+                anomalies.append(anomaly)
+        
+        # Cleanup old cache entries
+        cache.cleanup_expired(max_age_hours=48)
+        
+        return anomalies
+    
+    except Exception as e:
+        print(f"⚠️ {crypto_name} 异常检测失败: {e}")
+        return []
+
+
 def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
     """
-    Run anomaly detection on Ethereum data.
+    Run anomaly detection on Bitcoin and Ethereum data.
     
     Args:
         prices: Price data from CoinGecko API
@@ -351,9 +489,6 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
     """
     if not ANOMALY_DETECTION_AVAILABLE:
         print("⚠️ Anomaly detection not available")
-        return None
-    
-    if 'ethereum' not in prices:
         return None
     
     # 确定目标日期
@@ -371,117 +506,38 @@ def run_anomaly_detection(prices, use_deep_analysis=False, target_date=None):
     target_date_str = target_dt.strftime('%Y-%m-%d')
     print(f"🔍 检测 {target_date_str} 的异常")
     
-    try:
-        # Initialize components
-        # Z-Score：小时级监控，3天窗口（72小时）
-        zscore_detector = ZScoreDetector(window_size=72, threshold=3.0, time_interval='hour')
-        
-        # 只在深度分析模式下初始化 Isolation Forest
-        if_detector = None
-        feature_extractor = None
-        
-        if use_deep_analysis:
-            # Isolation Forest：小时级监控，关注最近1天
-            if_detector = IsolationForestDetector(
-                contamination=0.05,
-                random_state=42,
-                anomaly_type='crypto_hourly'
-            )
-            feature_extractor = FeatureExtractor()
-        
-        cache = AnomalyCache()
-        integrator = AnomalyIntegrator(cache)
-        
-        # Get historical data (小时级数据，1个月)
-        eth_ticker = yf.Ticker("ETH-USD")
-        eth_hist = eth_ticker.history(period="1mo", interval='1h')
-        
-        if eth_hist.empty:
-            print("⚠️ No historical data available for anomaly detection")
-            return None
-        
-        # Run Z-Score detection (Layer 1) - 始终执行
-        zscore_anomalies = []
-        current_price = prices['ethereum']['usd']
-        
-        # Price anomaly (小时级)
-        price_anomaly = zscore_detector.detect_anomaly(
-            metric_name='price',
-            current_value=current_price,
-            history=eth_hist['Close'],
-            timestamp=target_dt,
-            time_interval='hour'
-        )
-        if price_anomaly:
-            zscore_anomalies.append(price_anomaly)
-        
-        # Volume anomaly (小时级)
-        if 'usd_24hr_vol' in prices['ethereum']:
-            current_volume = prices['ethereum']['usd_24hr_vol']
-            volume_anomaly = zscore_detector.detect_anomaly(
-                metric_name='volume',
-                current_value=current_volume,
-                history=eth_hist['Volume'],
-                timestamp=target_dt,
-                time_interval='hour'
-            )
-            if volume_anomaly:
-                zscore_anomalies.append(volume_anomaly)
-        
-        # Run Isolation Forest detection (Layer 2) - 仅在深度分析模式下执行
-        if_anomalies = []
-        
-        if use_deep_analysis and if_detector and feature_extractor:
-            # Extract features
-            features, timestamps = feature_extractor.extract_features(eth_hist)
-            
-            if not features.empty:
-                # Train model
-                if_detector.train(features)
-                
-                # Detect anomalies (指定日期，小时级)
-                if_anomalies = if_detector.detect_anomalies_by_date(
-                    features=features,
-                    timestamps=timestamps,
-                    target_date=target_dt,
-                    time_interval='hour'
-                )
-        
-        # Integrate results
-        result = integrator.integrate(
-            zscore_anomalies=zscore_anomalies,
-            if_anomalies=if_anomalies,
-            timestamp=target_dt
-        )
-        
-        # 为每个异常添加异常日期和原因
-        if result['has_anomaly']:
-            for anomaly in result['anomalies']:
-                # 获取异常发生的时间戳
-                anomaly_timestamp = anomaly.get('timestamp', target_dt)
-                anomaly_date_str = anomaly_timestamp.strftime('%Y-%m-%d') if hasattr(anomaly_timestamp, 'strftime') else target_date_str
-                
-                # 添加异常日期和原因
-                anomaly['anomaly_date'] = anomaly_date_str
-                anomaly['anomaly_reason'] = _analyze_anomaly_reason(anomaly)
-                
-                # 计算异常日期的技术指标
-                # 修复：使用 .date() 方法替代 .normalize()，确保时区兼容性
-                target_date_only = anomaly_timestamp.date() if hasattr(anomaly_timestamp, 'date') else pd.to_datetime(anomaly_date_str).date()
-                df_anomaly = eth_hist[eth_hist.index.date == target_date_only]
-                
-                if not df_anomaly.empty:
-                    df_anomaly_row = df_anomaly.iloc[0]
-                    anomaly['indicators'] = _calculate_anomaly_indicators(eth_hist, df_anomaly_row)
-        
-        # Cleanup old cache entries
-        cache.cleanup_expired(max_age_hours=48)
-        
-        return result
+    all_anomalies = []
     
-    except Exception as e:
-        print(f"⚠️ Anomaly detection failed: {e}")
+    # 检测比特币异常
+    btc_anomalies = _detect_single_crypto_anomaly(
+        'bitcoin', 'BTC-USD', prices, use_deep_analysis, target_dt, target_date_str
+    )
+    all_anomalies.extend(btc_anomalies)
+    
+    # 检测以太币异常
+    eth_anomalies = _detect_single_crypto_anomaly(
+        'ethereum', 'ETH-USD', prices, use_deep_analysis, target_dt, target_date_str
+    )
+    all_anomalies.extend(eth_anomalies)
+    
+    if not all_anomalies:
         return None
+    
+    # 计算整体严重程度（取最高）
+    severity_order = {'high': 3, 'medium': 2, 'low': 1}
+    max_severity = 'low'
+    for anomaly in all_anomalies:
+        anomaly_severity = anomaly.get('severity', 'low')
+        if severity_order.get(anomaly_severity, 0) > severity_order.get(max_severity, 0):
+            max_severity = anomaly_severity
+    
+    print(f"✅ 检测到 {len(all_anomalies)} 个异常（BTC: {len(btc_anomalies)}, ETH: {len(eth_anomalies)}）")
+    
+    return {
+        'has_anomaly': True,
+        'severity': max_severity,
+        'anomalies': all_anomalies
+    }
 
 
 def format_anomaly_results(anomaly_result):
@@ -512,14 +568,17 @@ def format_anomaly_results(anomaly_result):
     severity = anomaly_result['severity']
     html += f"<p><strong>严重程度:</strong> {severity_emoji.get(severity, '')} {severity.upper()}</p>"
     
-    # Add anomalies table with detailed columns
-    html += "<table><tr><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
+    # Add anomalies table with detailed columns（增加加密货币名称列）
+    html += "<table><tr><th>加密货币</th><th>类型</th><th>异常日期</th><th>异常原因</th><th>异常评分/值</th><th>当前价格</th><th>1日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>"
     
     for anomaly in anomaly_result['anomalies']:
         anomaly_type = anomaly['type']
         anomaly_date = anomaly.get('anomaly_date', 'N/A')
         anomaly_reason = anomaly.get('anomaly_reason', '未知')
         indicators = anomaly.get('indicators', {})
+        
+        # 获取加密货币名称
+        crypto_display = anomaly.get('crypto_display', '未知')
         
         # Format score/value
         if anomaly_type == 'isolation_forest':
@@ -548,6 +607,7 @@ def format_anomaly_results(anomaly_result):
         
         html += f"""
             <tr>
+                <td><strong>{crypto_display}</strong></td>
                 <td>{anomaly_type}</td>
                 <td>{anomaly_date}</td>
                 <td>{anomaly_reason}</td>
@@ -566,12 +626,13 @@ def format_anomaly_results(anomaly_result):
     return html
 
 
-def _analyze_anomaly_reason(anomaly):
+def _analyze_anomaly_reason(anomaly, row_data=None):
     """
     分析异常原因
 
     Args:
         anomaly: 异常字典
+        row_data: 异常日期的数据行（pandas Series），包含实际价格、成交量等数据
 
     Returns:
         异常原因描述
@@ -582,6 +643,7 @@ def _analyze_anomaly_reason(anomaly):
     # 处理'crypto'类型异常（来自Isolation Forest）
     if anomaly_type == 'crypto' or anomaly_type == 'isolation_forest':
         if not features:
+            print("⚠️ 异常但没有特征数据")
             return '多维特征异常（综合指标异常）'
 
         # 特征名称映射和分析
@@ -633,6 +695,8 @@ def _analyze_anomaly_reason(anomaly):
             if abs(ma20_diff) > 0.05:
                 feature_analysis.append(f'偏离20日均线{ma20_diff*100:.1f}%')
 
+        print(f"特征分析结果: {feature_analysis}")
+
         if feature_analysis:
             return f'多维特征异常（{", ".join(feature_analysis[:3])}）'
         else:
@@ -646,42 +710,45 @@ def _analyze_anomaly_reason(anomaly):
             return '多维特征异常（综合指标异常，需关注）'
 
     if anomaly_type == 'price':
-        return '价格异常波动（收盘价显著偏离历史均值）'
+        # 价格异常：分析涨跌幅
+        if row_data is not None and len(row_data) > 0:
+            # 尝试从 row_data 获取涨跌幅
+            if 'Change %' in row_data.index:
+                change_pct = row_data['Change %']
+                if abs(change_pct) > 5:
+                    return f'价格异常（单日涨跌幅{change_pct:.2f}%，大幅波动）'
+                elif abs(change_pct) > 3:
+                    return f'价格异常（单日涨跌幅{change_pct:.2f}%，显著波动）'
+            # 尝试计算涨跌幅
+            if 'Close' in row_data.index:
+                current_price = row_data['Close']
+                # 从 features 获取 return_rate（如果有）
+                if 'return_rate' in features:
+                    return_rate = features['return_rate']
+                    change_pct = return_rate * 100
+                    if abs(change_pct) > 5:
+                        return f'价格异常（单日涨跌幅{change_pct:.2f}%，大幅波动）'
+                    elif abs(change_pct) > 3:
+                        return f'价格异常（单日涨跌幅{change_pct:.2f}%，显著波动）'
+                return f'价格异常（收盘价{current_price:.2f}，显著偏离历史均值）'
+        return '价格异常（收盘价显著偏离历史均值）'
+
     elif anomaly_type == 'volume':
+        # 成交量异常：分析成交量变化
+        if row_data is not None and len(row_data) > 0:
+            if 'Volume' in row_data.index:
+                volume = row_data['Volume']
+                # 从 features 获取 volume_ratio（如果有）
+                if 'volume_ratio' in features:
+                    vol_ratio = features['volume_ratio']
+                    if vol_ratio > 3:
+                        return f'成交量异常（成交量{volume:,.0f}，为均值的{vol_ratio:.1f}倍，巨量）'
+                    elif vol_ratio > 2:
+                        return f'成交量异常（成交量{volume:,.0f}，为均值的{vol_ratio:.1f}倍，放量）'
+                return f'成交量异常（成交量{volume:,.0f}，显著偏离历史均值）'
         return '成交量异常（成交量显著偏离历史均值）'
-    elif anomaly_type == 'isolation_forest':
-        # Isolation Forest 异常：分析哪个特征异常
-        features = anomaly.get('features', {})
-        if not features:
-            return '多维特征异常（综合指标异常）'
 
-        # 特征名称映射
-        feature_names = {
-            'price_change_1d': '1日涨跌幅',
-            'price_change_5d': '5日涨跌幅',
-            'volume_ratio': '成交量比率',
-            'rsi': 'RSI指标',
-            'macd': 'MACD指标',
-            'bb_position': '布林带位置',
-            'volatility_5d': '5日波动率',
-            'volume_spike': '成交量激增',
-            'price_gap': '价格缺口',
-            'trend_strength': '趋势强度'
-        }
-
-        # 找出异常值最大的特征
-        abnormal_features = []
-        for feature_name, feature_value in features.items():
-            # 如果特征值偏离中位数较多（假设标准化后的特征）
-            if abs(feature_value) > 2:
-                feature_cn = feature_names.get(feature_name, feature_name)
-                abnormal_features.append(feature_cn)
-
-        if abnormal_features:
-            return f'多维特征异常（{", ".join(abnormal_features[:3])}异常）'
-        else:
-            return '多维特征异常（综合指标异常，需关注）'
-
+    print(f"未知的异常类型: {anomaly_type}")
     return '异常（原因未知）'
 
 
