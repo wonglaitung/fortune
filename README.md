@@ -147,6 +147,7 @@
 **港股异常检测**：
 - **双异常检测**：价格 + 成交量异常（基于Z-Score）
 - **深度分析模式**：Z-Score + Isolation Forest（多维特征检测）
+- **市场整体异常检测**：恒指涨跌 ≥ 2% 时显示市场整体异常提示，帮助区分市场驱动与个股异常
 - **时间间隔支持**：支持每日（`--time-interval day`）和每小时（`--time-interval hour`）两种检测模式
 - **自动参数适配**：每日模式（window_size=30, period='3mo'）、每小时模式（window_size=72, period='1mo'）
 - **日期参数支持**：支持检测指定日期的异常（`--date` 参数）
@@ -625,8 +626,6 @@ fortune/
 │   ├── performance_monitor.py          # 预测性能监控脚本
 │   ├── validate_signal_anomaly_correlation.py # 交易信号与异常关联性验证
 │   ├── walk_forward_anomaly_strategy_validation.py # 异常策略Walk-forward验证
-│   ├── analyze_hk_stock_anomaly_causality.py # 港股异常因果关系分析
-│   ├── analyze_trend_continuation.py   # 趋势延续性验证工具
 │   ├── BACKTEST_GUIDE.md               # 回测功能使用指南
 │   └── ...
 │
@@ -825,6 +824,7 @@ fortune/
 | **文档** | ✅ 完整 | README、AGENTS、BACKTEST_GUIDE、lessons.md齐全 |
 | **数据验证** | ✅ 严格 | 无数据泄漏，时间序列交叉验证 |
 | **异常策略** | ✅ 验证完成 | 两年数据验证，均值回归信号确认 |
+| **市场整体异常检测** | ✅ 完成 | 恒指涨跌≥2%时显示市场提示 |
 | **风险管理** | ⚠️ 可优化 | 可添加VaR、ES、压力测试 |
 | **Web界面** | ❌ 未实现 | 可考虑添加可视化界面 |
 
@@ -1005,12 +1005,6 @@ python3 ml_services/backtest_analysis_2025.py
 
 # 月度趋势分析
 python3 ml_services/backtest_monthly_analysis.py
-
-# 港股异常因果关系分析（两年数据）
-python3 analyze_hk_stock_anomaly_causality.py --start-date 2024-04-01 --end-date 2026-04-01
-
-# 趋势延续性验证
-python3 analyze_trend_continuation.py --start-date 2024-04-01 --end-date 2026-04-01
 ```
 
 ---
@@ -1500,4 +1494,4 @@ MIT License
 
 ---
 
-**最后更新**: 2026-04-07 - 新增异常策略验证（两年数据）、趋势延续性分析、"价格异常+当日下跌"抄底策略
+**最后更新**: 2026-04-08 - 新增市场整体异常检测、小时数据涨跌幅修复、异常评分修复
