@@ -979,31 +979,39 @@ def get_stock_anomalies(use_deep_analysis=True):
             for anomaly in anomalies:
                 anomaly_type = anomaly.get('type', 'unknown')
                 if anomaly_type not in type_stats:
-                    type_stats[anomaly_type] = {'high': 0, 'medium': 0}
-                type_stats[anomaly_type][anomaly['severity']] += 1
+                    type_stats[anomaly_type] = {'high': 0, 'medium': 0, 'low': 0}
+                severity = anomaly.get('severity', 'low')
+                if severity in type_stats[anomaly_type]:
+                    type_stats[anomaly_type][severity] += 1
             
             # 打印统计信息
             for anomaly_type, stats in type_stats.items():
                 type_name = {
                     'price': '价格',
                     'volume': '成交量',
-                    'isolation_forest': 'Isolation Forest'
+                    'isolation_forest': 'Isolation Forest',
+                    'stock': '多维特征',
+                    'stock_hour': '多维特征(小时)'
                 }.get(anomaly_type, anomaly_type)
-                print(f"   {type_name}异常：高 {stats['high']} 个，中 {stats['medium']} 个")
+                print(f"   {type_name}异常：高 {stats['high']} 个，中 {stats['medium']} 个，低 {stats['low']} 个")
         
         # 打印异常详情
         for anomaly in anomalies:
-            severity_icon = '🔴' if anomaly['severity'] == 'high' else '⚠️'
+            severity = anomaly.get('severity', 'low')
+            severity_icon = '🔴' if severity == 'high' else ('⚠️' if severity == 'medium' else 'ℹ️')
+            anomaly_type = anomaly.get('type', 'unknown')
             type_name = {
                 'price': '价格',
                 'volume': '成交量',
-                'isolation_forest': 'IF'
-            }.get(anomaly.get('type', 'unknown'), '未知')
+                'isolation_forest': 'IF',
+                'stock': '多维特征',
+                'stock_hour': '多维特征(小时)'
+            }.get(anomaly_type, anomaly_type)
             
-            if anomaly.get('type') == 'isolation_forest':
-                print(f"   {severity_icon} {anomaly['name']}（{anomaly['stock']}）：{type_name}{anomaly['severity']}（Z-Score: N/A）")
+            if anomaly_type in ('isolation_forest', 'stock', 'stock_hour'):
+                print(f"   {severity_icon} {anomaly['name']}（{anomaly['stock']}）：{type_name}{severity}级异常")
             else:
-                print(f"   {severity_icon} {anomaly['name']}（{anomaly['stock']}）：{type_name}{anomaly['severity']}（Z-Score: {anomaly['z_score']:.2f}）")
+                print(f"   {severity_icon} {anomaly['name']}（{anomaly['stock']}）：{type_name}{severity}级异常（Z-Score: {anomaly['z_score']:.2f}）")
         
         return anomalies
         
