@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
+import numpy as np
 
 # 导入技术分析工具
 try:
@@ -581,9 +582,10 @@ def format_anomaly_results(anomaly_result):
         crypto_display = anomaly.get('crypto_display', '未知')
         
         # Format score/value
-        if anomaly_type == 'isolation_forest':
+        # Isolation Forest 类型包括: isolation_forest, crypto_hourly, stock 等
+        if anomaly_type in ('isolation_forest', 'crypto_hourly', 'crypto', 'stock'):
             score = anomaly.get('anomaly_score', 0)
-            score_value = f"{score:.3f}"
+            score_value = f"IF Score: {score:.3f}"
         else:
             z_score = anomaly.get('z_score', 0)
             value = anomaly.get('value', 0)
@@ -641,7 +643,7 @@ def _analyze_anomaly_reason(anomaly, row_data=None):
     features = anomaly.get('features', {})
 
     # 处理'crypto'类型异常（来自Isolation Forest）
-    if anomaly_type == 'crypto' or anomaly_type == 'isolation_forest':
+    if anomaly_type in ('crypto', 'crypto_hourly', 'isolation_forest'):
         if not features:
             print("⚠️ 异常但没有特征数据")
             return '多维特征异常（综合指标异常）'

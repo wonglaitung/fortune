@@ -103,7 +103,8 @@ class AnomalyCache:
         Args:
             max_age_hours: Maximum age in hours before cleanup (default: 48)
         """
-        now = datetime.now()
+        from datetime import timezone
+        now = datetime.now(timezone.utc)  # 使用 UTC 时区
         expired_keys = []
         
         for key, entry in self.cache.items():
@@ -114,6 +115,9 @@ class AnomalyCache:
             
             try:
                 timestamp = datetime.fromisoformat(timestamp_str)
+                # 如果时间戳没有时区信息，假设是 UTC
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=timezone.utc)
                 age = now - timestamp
                 
                 if age > timedelta(hours=max_age_hours):
