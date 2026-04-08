@@ -720,20 +720,57 @@ def format_anomaly_email(anomalies: List[Dict]) -> str:
         lines.append("- 注意止损位设置")
         lines.append("- 避免在异常期间加仓")
     
-    # Isolation Forest 异常
-    if if_anomalies:
-        lines.append("\n## 🔬 Isolation Forest 异常\n")
+    # Isolation Forest 异常分组
+    if_high_anomalies = [a for a in if_anomalies if a['severity'] == 'high']
+    if_medium_anomalies = [a for a in if_anomalies if a['severity'] == 'medium']
+    if_low_anomalies = [a for a in if_anomalies if a['severity'] == 'low']
+    
+    # 高严重度 Isolation Forest 异常
+    if if_high_anomalies:
+        lines.append("\n## 🔴 Isolation Forest 异常（高）\n")
         lines.append("| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | 5日变化 | RSI | 布林带 | MACD |")
         lines.append("|---------|---------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
         
-        for a in if_anomalies:
+        for a in if_high_anomalies:
+            change_1d_icon = "📈" if a['change_1d'] > 0 else "📉"
+            change_5d_icon = "📈" if a['change_5d'] > 0 else "📉"
+            lines.append(f"| {a['stock']} | {a['name']} | {a.get('anomaly_date', 'N/A')} | {a.get('anomaly_reason', '未知')} | **{a['value']:.3f}** | {a['current_price']:.2f} | {change_1d_icon} {a['change_1d']:+.2f}% | {change_5d_icon} {a['change_5d']:+.2f}% | {a['rsi']:.1f} | {get_bollinger_position_cn(a['bollinger_position'])} | {get_macd_signal_cn(a['macd_signal'])} |")
+        
+        lines.append("\n**风险提示**：")
+        lines.append("🔴 多维特征严重偏离正常模式")
+        lines.append("🔴 可能存在价格操纵或重大消息")
+        lines.append("🔴 建议立即检查持仓，考虑减仓")
+    
+    # 中等严重度 Isolation Forest 异常
+    if if_medium_anomalies:
+        lines.append("\n## ⚠️ Isolation Forest 异常（中）\n")
+        lines.append("| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|---------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in if_medium_anomalies:
+            change_1d_icon = "📈" if a['change_1d'] > 0 else "📉"
+            change_5d_icon = "📈" if a['change_5d'] > 0 else "📉"
+            lines.append(f"| {a['stock']} | {a['name']} | {a.get('anomaly_date', 'N/A')} | {a.get('anomaly_reason', '未知')} | {a['value']:.3f} | {a['current_price']:.2f} | {change_1d_icon} {a['change_1d']:+.2f}% | {change_5d_icon} {a['change_5d']:+.2f}% | {a['rsi']:.1f} | {get_bollinger_position_cn(a['bollinger_position'])} | {get_macd_signal_cn(a['macd_signal'])} |")
+        
+        lines.append("\n**操作建议**：")
+        lines.append("- 多维特征出现异常，值得关注")
+        lines.append("- 观察后续价格走势确认")
+        lines.append("- 避免在异常期间加仓")
+    
+    # 低严重度 Isolation Forest 异常
+    if if_low_anomalies:
+        lines.append("\n## 🔬 Isolation Forest 异常（低）\n")
+        lines.append("| 股票代码 | 股票名称 | 异常日期 | 异常原因 | 异常评分 | 当前价格 | 当日变化 | 5日变化 | RSI | 布林带 | MACD |")
+        lines.append("|---------|---------|---------|---------|---------|---------|---------|---------|-----|--------|------|")
+        
+        for a in if_low_anomalies:
             change_1d_icon = "📈" if a['change_1d'] > 0 else "📉"
             change_5d_icon = "📈" if a['change_5d'] > 0 else "📉"
             lines.append(f"| {a['stock']} | {a['name']} | {a.get('anomaly_date', 'N/A')} | {a.get('anomaly_reason', '未知')} | {a['value']:.3f} | {a['current_price']:.2f} | {change_1d_icon} {a['change_1d']:+.2f}% | {change_5d_icon} {a['change_5d']:+.2f}% | {a['rsi']:.1f} | {get_bollinger_position_cn(a['bollinger_position'])} | {get_macd_signal_cn(a['macd_signal'])} |")
         
         lines.append("\n**说明**：")
-        lines.append("- 基于多维特征检测的异常")
-        lines.append("- 可能是价格模式异常或结构变化")
+        lines.append("- 基于多维特征检测的轻微异常")
+        lines.append("- 可能是价格模式轻微变化")
         lines.append("- 建议结合基本面分析")
     
     lines.append("\n" + "=" * 80)
@@ -879,14 +916,37 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
         html_parts.append("</table>")
         html_parts.append('<div class="warning">- 观察价格是否能突破阻力位<br>- 注意止损位设置<br>- 避免在异常期间加仓</div>')
     
-    # Isolation Forest 异常
-    if if_anomalies:
-        html_parts.append("<h2>🔬 Isolation Forest 异常</h2>")
+    # Isolation Forest 异常分组
+    if_high_anomalies = [a for a in if_anomalies if a['severity'] == 'high']
+    if_medium_anomalies = [a for a in if_anomalies if a['severity'] == 'medium']
+    if_low_anomalies = [a for a in if_anomalies if a['severity'] == 'low']
+    
+    # 高严重度 Isolation Forest 异常
+    if if_high_anomalies:
+        html_parts.append("<h2>🔴 Isolation Forest 异常（高）</h2>")
         html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>异常日期</th><th>异常原因</th><th>异常评分</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
-        for a in if_anomalies:
+        for a in if_high_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td>{a.get('anomaly_date', 'N/A')}</td><td>{a.get('anomaly_reason', '未知')}</td><td class='high'>{a['value']:.3f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">🔴 多维特征严重偏离正常模式<br>🔴 可能存在价格操纵或重大消息<br>🔴 建议立即检查持仓，考虑减仓</div>')
+    
+    # 中等严重度 Isolation Forest 异常
+    if if_medium_anomalies:
+        html_parts.append("<h2>⚠️ Isolation Forest 异常（中）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>异常日期</th><th>异常原因</th><th>异常评分</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in if_medium_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td>{a.get('anomaly_date', 'N/A')}</td><td>{a.get('anomaly_reason', '未知')}</td><td class='medium'>{a['value']:.3f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">- 多维特征出现异常，值得关注<br>- 观察后续价格走势确认<br>- 避免在异常期间加仓</div>')
+    
+    # 低严重度 Isolation Forest 异常
+    if if_low_anomalies:
+        html_parts.append("<h2>🔬 Isolation Forest 异常（低）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>异常日期</th><th>异常原因</th><th>异常评分</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in if_low_anomalies:
             html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td>{a.get('anomaly_date', 'N/A')}</td><td>{a.get('anomaly_reason', '未知')}</td><td>{a['value']:.3f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
         html_parts.append("</table>")
-        html_parts.append('<div class="warning">- 基于多维特征检测的异常<br>- 可能是价格模式异常或结构变化<br>- 建议结合基本面分析</div>')
+        html_parts.append('<div class="warning">- 基于多维特征检测的轻微异常<br>- 可能是价格模式轻微变化<br>- 建议结合基本面分析</div>')
     
     # 添加尾部
     html_parts.append(html_footer)
