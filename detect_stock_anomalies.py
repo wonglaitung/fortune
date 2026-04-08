@@ -622,7 +622,15 @@ def format_anomaly_email(anomalies: List[Dict]) -> str:
         格式化的邮件内容（Markdown格式）
     """
     if not anomalies:
-        return "✅ 未检测到异常"
+        lines = []
+        lines.append("✅ 未检测到异常")
+        lines.append("\n" + "=" * 80)
+        lines.append("💡 提醒")
+        lines.append("  - 异常是警告信号，不一定是交易信号")
+        lines.append("  - 不要看到异常就立即卖出")
+        lines.append("  - 综合考虑基本面和市场情绪")
+        lines.append("=" * 80)
+        return "\n".join(lines)
     
     lines = []
     
@@ -767,11 +775,8 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
     Returns:
         格式化的邮件内容（HTML格式）
     """
-    if not anomalies:
-        return "<p>✅ 未检测到异常</p>"
-    
-    html_parts = []
-    html_parts.append("""
+    # HTML 头部和样式
+    html_header = """
     <html>
     <head>
         <style>
@@ -786,10 +791,30 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
             .warning { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
             .positive { color: #28a745; }
             .negative { color: #dc3545; }
+            .no-anomaly { text-align: center; padding: 20px; color: #28a745; font-size: 18px; }
         </style>
     </head>
     <body>
-    """)
+    """
+    
+    # HTML 尾部
+    html_footer = """
+    <hr>
+    <p><strong>💡 提醒</strong></p>
+    <ul>
+        <li>异常是警告信号，不一定是交易信号</li>
+        <li>不要看到异常就立即卖出</li>
+        <li>综合考虑基本面和市场情绪</li>
+    </ul>
+    </body>
+    </html>
+    """
+    
+    if not anomalies:
+        return html_header + '<p class="no-anomaly">✅ 未检测到异常</p>' + html_footer
+    
+    html_parts = []
+    html_parts.append(html_header)
     
     # 按严重程度和类型分组
     high_price_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'price']
@@ -862,17 +887,8 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
         html_parts.append("</table>")
         html_parts.append('<div class="warning">- 基于多维特征检测的异常<br>- 可能是价格模式异常或结构变化<br>- 建议结合基本面分析</div>')
     
-    html_parts.append("""
-    <hr>
-    <p><strong>💡 提醒</strong></p>
-    <ul>
-        <li>异常是警告信号，不一定是交易信号</li>
-        <li>不要看到异常就立即卖出</li>
-        <li>综合考虑基本面和市场情绪</li>
-    </ul>
-    </body>
-    </html>
-    """)
+    # 添加尾部
+    html_parts.append(html_footer)
     
     return "".join(html_parts)
 
