@@ -640,8 +640,8 @@ def format_anomaly_email(anomalies: List[Dict]) -> str:
     high_volume_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'volume']
     medium_price_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'price']
     medium_volume_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'volume']
-    if_anomalies = [a for a in anomalies if a['type'] == 'isolation_forest']
-    
+    if_anomalies = [a for a in anomalies if a['type'] in ('isolation_forest', 'stock_hour', 'stock')]
+
     # Isolation Forest 异常去重：每个股票只显示一次（选择最严重的）
     if_anomalies_dedup = {}
     for a in if_anomalies:
@@ -822,8 +822,8 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
     high_volume_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'volume']
     medium_price_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'price']
     medium_volume_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'volume']
-    if_anomalies = [a for a in anomalies if a['type'] == 'isolation_forest']
-    
+    if_anomalies = [a for a in anomalies if a['type'] in ('isolation_forest', 'stock_hour', 'stock')]
+
     # Isolation Forest 异常去重
     if_anomalies_dedup = {}
     for a in if_anomalies:
