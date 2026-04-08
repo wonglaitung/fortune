@@ -88,8 +88,8 @@ class StockAnomalyDetector:
             
             # 只在深度分析模式下初始化 Isolation Forest
             if use_deep_analysis:
-                # 根据时间间隔设置异常类型
-                anomaly_type = f"crypto_{time_interval}" if time_interval == 'hour' else 'stock'
+                # 根据时间间隔设置异常类型（股票检测应使用 stock 前缀）
+                anomaly_type = f"stock_{time_interval}" if time_interval == 'hour' else 'stock'
                 self.if_detector = IsolationForestDetector(
                     contamination=0.05,
                     random_state=42,
@@ -420,8 +420,9 @@ class StockAnomalyDetector:
         logger.debug(f"分析异常原因: type={anomaly_type}, features keys={list(features.keys()) if features else 'empty'}")
         logger.debug(f"Row data columns: {list(row_data.index)}")
 
-        # 处理'stock'类型异常（来自Isolation Forest）
-        if anomaly_type == 'stock' or anomaly_type == 'isolation_forest':
+        # 处理'stock'类型异常（来自Isolation Forest，包括 stock_hour 小时级别）
+        # 同时支持 crypto_hour/crypto_hourly 以兼容旧缓存数据
+        if anomaly_type in ('stock', 'stock_hour', 'isolation_forest', 'crypto_hour', 'crypto_hourly'):
             if not features:
                 logger.warning("异常但没有特征数据")
                 return '多维特征异常（综合指标异常）'
