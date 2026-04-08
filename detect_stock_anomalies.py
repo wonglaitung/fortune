@@ -757,6 +757,126 @@ def get_macd_signal_cn(signal: str) -> str:
         return "中性"
 
 
+def format_anomaly_email_html(anomalies: List[Dict]) -> str:
+    """
+    格式化异常邮件内容（HTML格式）
+    
+    Args:
+        anomalies: 异常列表
+        
+    Returns:
+        格式化的邮件内容（HTML格式）
+    """
+    if not anomalies:
+        return "<p>✅ 未检测到异常</p>"
+    
+    html_parts = []
+    html_parts.append("""
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; }
+            h2 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #007bff; color: white; }
+            tr:nth-child(even) { background-color: #f2f2f2; }
+            .high { color: #dc3545; font-weight: bold; }
+            .medium { color: #ffc107; font-weight: bold; }
+            .warning { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
+            .positive { color: #28a745; }
+            .negative { color: #dc3545; }
+        </style>
+    </head>
+    <body>
+    """)
+    
+    # 按严重程度和类型分组
+    high_price_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'price']
+    high_volume_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'volume']
+    medium_price_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'price']
+    medium_volume_anomalies = [a for a in anomalies if a['severity'] == 'medium' and a['type'] == 'volume']
+    if_anomalies = [a for a in anomalies if a['type'] == 'isolation_forest']
+    
+    # Isolation Forest 异常去重
+    if_anomalies_dedup = {}
+    for a in if_anomalies:
+        stock = a['stock']
+        if stock not in if_anomalies_dedup:
+            if_anomalies_dedup[stock] = a
+        else:
+            existing = if_anomalies_dedup[stock]
+            if (existing['severity'] == 'low' and a['severity'] != 'low') or \
+               (existing['severity'] == a['severity'] and abs(a.get('value', 0)) > abs(existing.get('value', 0))):
+                if_anomalies_dedup[stock] = a
+    if_anomalies = list(if_anomalies_dedup.values())
+    
+    def format_change(value: float) -> str:
+        """格式化涨跌幅"""
+        css_class = 'positive' if value > 0 else 'negative'
+        icon = '📈' if value > 0 else '📉'
+        return f'<span class="{css_class}">{icon} {value:+.2f}%</span>'
+    
+    # 高异常（价格）
+    if high_price_anomalies:
+        html_parts.append("<h2>🔴 高异常（价格）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>Z-Score</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in high_price_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td class='high'>{a['z_score']:.2f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">⚠️ 价格异常波动，风险显著增加<br>⚠️ 可能是突发利空消息或市场恐慌<br>⚠️ 建议立即检查持仓，考虑减仓或止损</div>')
+    
+    # 高异常（成交量）
+    if high_volume_anomalies:
+        html_parts.append("<h2>🔴 高异常（成交量）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>Z-Score</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in high_volume_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td class='high'>{a['z_score']:.2f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">⚠️ 成交量异常放大，可能有大户进出<br>⚠️ 需要关注价格是否伴随成交量变化<br>⚠️ 避免在异常期间加仓</div>')
+    
+    # 中异常（价格）
+    if medium_price_anomalies:
+        html_parts.append("<h2>⚠️ 中异常（价格）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>Z-Score</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in medium_price_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td class='medium'>{a['z_score']:.2f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">- 观察价格是否能突破阻力位<br>- 注意止损位设置<br>- 避免在异常期间加仓</div>')
+    
+    # 中异常（成交量）
+    if medium_volume_anomalies:
+        html_parts.append("<h2>⚠️ 中异常（成交量）</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>Z-Score</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in medium_volume_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td class='medium'>{a['z_score']:.2f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">- 观察价格是否能突破阻力位<br>- 注意止损位设置<br>- 避免在异常期间加仓</div>')
+    
+    # Isolation Forest 异常
+    if if_anomalies:
+        html_parts.append("<h2>🔬 Isolation Forest 异常</h2>")
+        html_parts.append("<table><tr><th>股票代码</th><th>股票名称</th><th>异常日期</th><th>异常原因</th><th>异常评分</th><th>当前价格</th><th>当日变化</th><th>5日变化</th><th>RSI</th><th>布林带</th><th>MACD</th></tr>")
+        for a in if_anomalies:
+            html_parts.append(f"<tr><td><strong>{a['stock']}</strong></td><td>{a['name']}</td><td>{a.get('anomaly_date', 'N/A')}</td><td>{a.get('anomaly_reason', '未知')}</td><td>{a['value']:.3f}</td><td>{a['current_price']:.2f}</td><td>{format_change(a['change_1d'])}</td><td>{format_change(a['change_5d'])}</td><td>{a['rsi']:.1f}</td><td>{get_bollinger_position_cn(a['bollinger_position'])}</td><td>{get_macd_signal_cn(a['macd_signal'])}</td></tr>")
+        html_parts.append("</table>")
+        html_parts.append('<div class="warning">- 基于多维特征检测的异常<br>- 可能是价格模式异常或结构变化<br>- 建议结合基本面分析</div>')
+    
+    html_parts.append("""
+    <hr>
+    <p><strong>💡 提醒</strong></p>
+    <ul>
+        <li>异常是警告信号，不一定是交易信号</li>
+        <li>不要看到异常就立即卖出</li>
+        <li>综合考虑基本面和市场情绪</li>
+    </ul>
+    </body>
+    </html>
+    """)
+    
+    return "".join(html_parts)
+
+
 def send_email_alert(anomalies: List[Dict], recipient_email: str = None) -> bool:
     """
     发送异常警报邮件
@@ -782,13 +902,14 @@ def send_email_alert(anomalies: List[Dict], recipient_email: str = None) -> bool
             print("⚠️ 未配置收件人邮箱，跳过发送邮件")
             return False
         
-        # 格式化邮件内容
+        # 格式化邮件内容（文本和HTML）
         content = format_anomaly_email(anomalies)
+        html_content = format_anomaly_email_html(anomalies)
         
-        # 发送邮件
+        # 发送邮件（修正参数顺序：subject, content, html_content）
         subject = f"🚨 港股异常检测警报 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
-        success = send_email(recipient_email, subject, content)
+        success = send_email(subject, content, html_content)
         
         if success:
             logger.info("📧 邮件警报已发送")
