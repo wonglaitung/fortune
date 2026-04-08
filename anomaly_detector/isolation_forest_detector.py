@@ -285,10 +285,16 @@ class IsolationForestDetector:
         
         Returns:
             Severity level ('high', 'medium', 'low')
+        
+        Note:
+            Based on 2-year HK stock data analysis (2024-04-01 to 2026-04-01):
+            - All anomaly scores fall in range [-0.2, 0]
+            - Original thresholds (< -0.6, < -0.4) were too strict
+            - New thresholds calibrated to actual distribution
         """
-        if anomaly_score < -0.6:
+        if anomaly_score < -0.10:
             return 'high'
-        elif anomaly_score < -0.4:
+        elif anomaly_score < -0.02:
             return 'medium'
         else:
             return 'low'
