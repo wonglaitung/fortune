@@ -611,6 +611,54 @@ class StockAnomalyDetector:
             return 'neutral'
 
 
+def get_market_status() -> Dict:
+    """
+    获取市场整体状态（恒生指数）
+    
+    Returns:
+        市场状态字典：
+        {
+            'hsi_change': 3.09,  # 恒指涨跌幅%
+            'hsi_price': 25893.02,
+            'is_market_anomaly': True,  # 是否市场整体异常
+            'anomaly_type': '大涨'  # 异常类型
+        }
+    """
+    try:
+        hsi = yf.Ticker('^HSI')
+        hist = hsi.history(period='5d')
+        
+        if hist.empty or len(hist) < 2:
+            return {'hsi_change': 0, 'hsi_price': 0, 'is_market_anomaly': False, 'anomaly_type': None}
+        
+        latest = hist.iloc[-1]
+        prev = hist.iloc[-2]
+        hsi_change = (latest['Close'] - prev['Close']) / prev['Close'] * 100
+        hsi_price = latest['Close']
+        
+        # 判断市场整体异常（涨跌超过 2%）
+        is_market_anomaly = abs(hsi_change) >= 2.0
+        anomaly_type = None
+        if hsi_change >= 3.0:
+            anomaly_type = '大涨'
+        elif hsi_change >= 2.0:
+            anomaly_type = '上涨'
+        elif hsi_change <= -3.0:
+            anomaly_type = '大跌'
+        elif hsi_change <= -2.0:
+            anomaly_type = '下跌'
+        
+        return {
+            'hsi_change': hsi_change,
+            'hsi_price': hsi_price,
+            'is_market_anomaly': is_market_anomaly,
+            'anomaly_type': anomaly_type
+        }
+    except Exception as e:
+        logger.warning(f"获取恒生指数失败: {e}")
+        return {'hsi_change': 0, 'hsi_price': 0, 'is_market_anomaly': False, 'anomaly_type': None}
+
+
 def format_anomaly_email(anomalies: List[Dict]) -> str:
     """
     格式化异常邮件内容
@@ -621,6 +669,9 @@ def format_anomaly_email(anomalies: List[Dict]) -> str:
     Returns:
         格式化的邮件内容（Markdown格式）
     """
+    # 获取市场整体状态
+    market_status = get_market_status()
+    
     if not anomalies:
         lines = []
         lines.append("✅ 未检测到异常")
@@ -633,6 +684,19 @@ def format_anomaly_email(anomalies: List[Dict]) -> str:
         return "\n".join(lines)
     
     lines = []
+    
+    # 市场整体异常提示
+    if market_status['is_market_anomaly']:
+        anomaly_icon = '📈' if market_status['hsi_change'] > 0 else '📉'
+        lines.append(f"\n{'=' * 80}")
+        lines.append(f"🌐 市场整体{market_status['anomaly_type']}")
+        lines.append(f"{'=' * 80}")
+        lines.append(f"  恒生指数: {market_status['hsi_price']:.2f}")
+        lines.append(f"  当日涨跌: {anomaly_icon} {market_status['hsi_change']:+.2f}%")
+        lines.append("")
+        lines.append("  ⚠️ 以下异常可能由市场整体波动引发，非个股特有问题")
+        lines.append("  ⚠️ 请结合市场情况判断，避免过度反应")
+        lines.append(f"{'=' * 80}\n")
     
     # 按严重程度和类型分组
     high_price_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'price']
@@ -812,6 +876,9 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
     Returns:
         格式化的邮件内容（HTML格式）
     """
+    # 获取市场整体状态
+    market_status = get_market_status()
+    
     # HTML 头部和样式
     html_header = """
     <html>
@@ -829,6 +896,9 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
             .positive { color: #28a745; }
             .negative { color: #dc3545; }
             .no-anomaly { text-align: center; padding: 20px; color: #28a745; font-size: 18px; }
+            .market-alert { background-color: #cce5ff; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0; border-radius: 4px; }
+            .market-alert h3 { margin-top: 0; color: #004085; }
+            .market-alert .hsi-info { font-size: 16px; margin: 10px 0; }
         </style>
     </head>
     <body>
@@ -852,6 +922,24 @@ def format_anomaly_email_html(anomalies: List[Dict]) -> str:
     
     html_parts = []
     html_parts.append(html_header)
+    
+    # 市场整体异常提示（HTML）
+    if market_status['is_market_anomaly']:
+        anomaly_icon = '📈' if market_status['hsi_change'] > 0 else '📉'
+        css_class = 'positive' if market_status['hsi_change'] > 0 else 'negative'
+        html_parts.append(f'''
+        <div class="market-alert">
+            <h3>🌐 市场整体{market_status['anomaly_type']}</h3>
+            <div class="hsi-info">
+                恒生指数: <strong>{market_status['hsi_price']:.2f}</strong> | 
+                当日涨跌: <span class="{css_class}">{anomaly_icon} {market_status['hsi_change']:+.2f}%</span>
+            </div>
+            <div class="warning" style="margin-top: 10px; margin-bottom: 0;">
+                ⚠️ 以下异常可能由市场整体波动引发，非个股特有问题<br>
+                ⚠️ 请结合市场情况判断，避免过度反应
+            </div>
+        </div>
+        ''')
     
     # 按严重程度和类型分组
     high_price_anomalies = [a for a in anomalies if a['severity'] == 'high' and a['type'] == 'price']
