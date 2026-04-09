@@ -15,31 +15,24 @@
 | **生成预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` |
 | **批量回测** | `python3 ml_services/batch_backtest.py --model-type catboost --horizon 20 --confidence-threshold 0.6` |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-08` (每日) 或 `--time-interval hour` (每小时) |
+| **港股异常检测（每日）** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --date 2026-04-08` |
+| **港股异常检测（每小时）** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep --time-interval hour` |
 | **加密货币异常检测** | `python3 crypto_email.py --mode deep --date 2026-04-08` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
-| **板块Walk-forward验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **恒生指数监控** | `python3 hsi_email.py` |
 | **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
 | **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
-| **信号与异常关联性验证** | `python3 ml_services/validate_signal_anomaly_correlation.py --symbol ETH-USD --mode all` |
 
 ### 主要入口脚本
 
 | 脚本 | 用途 |
 |------|------|
 | `comprehensive_analysis.py` | 综合分析（每日交易信号生成） |
+| `detect_stock_anomalies.py` | 港股异常检测（统一入口） |
+| `crypto_email.py` | 加密货币异常检测 |
 | `ml_services/ml_trading_model.py` | ML模型训练/预测 |
 | `hsi_email.py` | 恒生指数监控 |
 | `hk_smart_money_tracker.py` | 主力资金追踪 |
-| `ml_services/batch_backtest.py` | 批量回测 |
-| `ml_services/performance_monitor.py` | 预测性能监控 |
-| `detect_stock_anomalies.py` | 港股异常检测（支持每日/每小时） |
-| `crypto_email.py` | 加密货币异常检测 |
-| `ml_services/walk_forward_validation.py` | Walk-forward验证 |
-| `ml_services/validate_signal_anomaly_correlation.py` | 交易信号与异常关联性验证 |
-| `ml_services/walk_forward_by_sector.py` | 板块Walk-forward验证 |
-| `ml_services/walk_forward_anomaly_strategy_validation.py` | 异常策略Walk-forward验证 |
 
 ### 核心警告 ⚠️
 
@@ -51,9 +44,8 @@
 | **深度学习** | LSTM/Transformer表现远不如CatBoost，不推荐 |
 | **Walk-forward验证** | 唯一可信的模型验证方法 |
 | **交易时段误报** | 交易时段数据不完整，应在收盘后检测 |
-| **异常是"放大器"** | 异常后波动率增加+79%，胜率接近50%，需降低仓位 |
-| **趋势延续假设错误** | "升的继续升，跌的继续跌"假设**错误**，实际是均值回归信号 |
-| **最强抄底信号** | 价格异常+当日下跌，5天胜率71.7%，10天胜率72.8% |
+| **异常是"放大器"** | 异常后波动率增加+79%，需降低仓位 |
+| **最强抄底信号** | 价格异常+当日下跌，5天胜率72% |
 
 > **详细说明**：参阅 [lessons.md](lessons.md)
 
@@ -83,13 +75,6 @@
 │   ├── 恒生指数监控 (hsi_email.py)
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
 │   └── ML 模块 (ml_services/)
-│       ├── 机器学习模型 (ml_trading_model.py)
-│       ├── 批量回测 (batch_backtest.py)
-│       ├── Walk-forward验证 (walk_forward_validation.py)
-│       ├── 板块Walk-forward验证 (walk_forward_by_sector.py)
-│       ├── 异常策略验证 (walk_forward_anomaly_strategy_validation.py)
-│       ├── 信号异常关联性验证 (validate_signal_anomaly_correlation.py)
-│       └── 预测性能监控 (performance_monitor.py)
 ├── 交易层
 │   └── 模拟交易 (simulation_trader.py)
 ├── 服务层 (llm_services/)
@@ -105,41 +90,27 @@
 ## 🎯 核心功能模块
 
 ### 港股异常检测
-- **双异常检测**：价格 + 成交量异常（基于Z-Score）
-- **深度分析模式**：Z-Score + Isolation Forest（多维特征检测）
-- **市场整体异常检测**：恒指涨跌 ≥ 2% 时显示市场整体异常提示，帮助区分市场驱动与个股异常
-- **时间间隔支持**：支持每日（`--time-interval day`）和每小时（`--time-interval hour`）
+- **统一入口函数**：`run_stock_anomaly_detection()` 封装完整检测逻辑
+- **双层检测**：Z-Score + Isolation Forest（多维特征检测）
+- **市场整体异常检测**：恒指涨跌 ≥ 2% 时显示提示，区分市场驱动与个股异常
+- **时间间隔支持**：每日（`--time-interval day`）和每小时（`--time-interval hour`）
 - **日期参数支持**：支持检测指定日期的异常（`--date` 参数）
-- **异常原因分析**：分析价格、成交量、多维特征异常的具体原因
+- **异常严重级别**：high（🔴）、medium（⚠️）、low（ℹ️）
 - **ML特征集成**：26个异常检测特征已集成到CatBoost模型
+
+### 异常策略（两年数据验证）
+
+| 异常类型 | 含义 | 5日收益 | 胜率 | 策略 |
+|---------|------|---------|------|------|
+| **IF high** | 多维异常（系统风险） | -3.04% | 43% | 🔴 减仓 |
+| **价格异常+当日下跌** | 超跌反弹 | +4.12% | 72% | 🟢 抄底 |
+| 价格异常+当日上涨 | 追涨风险 | +1.96% | 54% | ⚠️ 观望 |
+
+**核心逻辑**：IF high 预警风险，Z-Score 价格异常+当日下跌 = 抄底机会
 
 ### 加密货币异常检测
 - **双层检测**：Z-Score + Isolation Forest
-- **日期参数支持**：支持检测指定日期的异常
-- **小时级监控优化**：使用1个月小时级数据（720个数据点）
-
-### 交易信号与异常关联性验证
-- **验证脚本**：`ml_services/validate_signal_anomaly_correlation.py`
-- **关键发现**：
-  - 异常与交易信号显著相关（相关系数0.1843）
-  - 异常后信号数量增加+65%
-  - 异常期间收益率提升+245%，但波动率增加+79%
-- **动态阈值策略**：
-  - 高异常：阈值 +0.08，仓位 40%
-  - 中异常：阈值 +0.04，仓位 60%
-  - 低异常：阈值 +0.02，仓位 80%
-
-### 异常检测特征作为ML特征
-- **特征数量**：26个异常检测特征
-- **数据泄漏防护**：所有特征使用`.shift(1)`
-- **主要特征**：价格异常、成交量异常、波动率异常、抄底信号
-- **验证结果**：准确率 61.44%（±1.75%），无数据泄漏
-
-### Walk-forward 异常策略验证
-- **验证结果**：
-  - 无异常信号：平均收益率 -0.31%，胜率 47.94%
-  - 有异常信号：平均收益率 +0.45%，胜率 52.38%，波动率 +79%
-- **关键发现**：异常期间波动率显著增加，需降低仓位
+- **小时级监控**：使用1个月小时级数据（720个数据点）
 
 ---
 
@@ -153,7 +124,6 @@
 | CatBoost 5天 | 中等可信度 |
 | CatBoost 1天 | 低可信度，**不推荐** |
 | LSTM/Transformer | 低可信度，**不推荐** |
-| 融合模型 | 低可信度，**不推荐** |
 
 ### CatBoost 配置（推荐）
 - **准确率**：61.44%（±1.75%）
@@ -163,7 +133,6 @@
 
 ### Walk-forward 验证结果
 
-#### 全局验证（12 Fold，28只股票）
 | 指标 | 数值 |
 |------|------|
 | **夏普比率** | 0.1455 |
@@ -175,7 +144,7 @@
 | 板块 | 夏普比率 | 胜率 | 推荐度 |
 |------|---------|------|--------|
 | 消费股 | 0.7445 | 54.80% | 强烈推荐 |
-| 银行股 | -0.0296 | 50.26% | 推荐 |
+| 银行股 | 0.1546 | 50.44% | 推荐 |
 | 半导体股 | 0.1260 | 49.87% | 推荐 |
 | 保险股 | -0.3160 | 49.02% | 谨慎使用 |
 | 房地产股 | -0.1352 | 47.75% | 谨慎使用 |
@@ -203,7 +172,7 @@
 | 文件 | 功能 | 执行时间 |
 |------|------|----------|
 | `stock-anomaly-detection.yml` | 港股异常检测（每日） | 每天凌晨2点 |
-| `hourly-stock-monitor.yml` | 港股异常检测（每小时） | 交易日每小时 |
+| `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
 | `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时 |
 | `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 16:00 |
 | `hsi-prediction.yml` | 恒生指数预测 | 周一到周五 06:00 |
@@ -215,7 +184,6 @@
 
 - **经验教训**：[lessons.md](lessons.md)
 - **进度跟踪**：[progress.txt](progress.txt)
-- **编码规范**：[.iflow/commands/programmer_skill.md](.iflow/commands/programmer_skill.md)
 - **详细文档**：[docs/](docs/)
 
 ---
@@ -232,4 +200,4 @@
 
 ---
 
-**最后更新**：2026-04-08（市场整体异常检测、小时数据涨跌幅修复）
+**最后更新**：2026-04-09（重构统一入口函数、精简异常策略说明）
