@@ -1178,55 +1178,18 @@ def generate_anomaly_report_content(anomaly_data):
     content += "- 不要看到异常就立即卖出\n"
     content += "- 综合考虑基本面和市场情绪\n\n"
     
-    # 添加基于两年数据验证的策略建议
+    # 添加基于两年数据验证的策略建议（精简版）
     content += "---\n\n"
-    content += "### 📊 异常后股价表现策略建议（基于2024-2026两年数据验证）\n\n"
+    content += "### 📊 异常策略建议（2024-2026两年验证）\n\n"
     
-    # ⭐ 新增：Isolation Forest vs Z-Score 区分
-    content += "**⚠️ 重要区分：Isolation Forest vs Z-Score**\n\n"
-    content += "两种异常类型**完全不同，互补而非矛盾**：\n\n"
-    content += "| 检测方法 | 检测内容 | 异常含义 | 样本数 | 5日收益 | 胜率 | 策略 |\n"
-    content += "|---------|---------|---------|--------|---------|------|------|\n"
-    content += "| **Isolation Forest** | 多维特征（价格+成交量+波动率+技术指标） | 系统性风险 | 86 | **-3.04%** | **43.0%** | 🔴 减仓 |\n"
-    content += "| **Z-Score 价格异常** | 单维度价格偏离均值 | 价格超跌/超涨 | 11 | +0.40% | 72.7% | 🟡 观望 |\n"
-    content += "| **Z-Score + 当日下跌** | 价格超跌 | 抄底机会 | 5 | **+7.02%** | **100%** | 🟢 买入 |\n\n"
+    content += "| 异常类型 | 含义 | 5日收益 | 胜率 | 策略 |\n"
+    content += "|---------|------|---------|------|------|\n"
+    content += "| **IF high** | 多维异常（系统风险） | -3.04% | 43% | 🔴 减仓 |\n"
+    content += "| **价格异常+当日下跌** | 超跌反弹 | +4.12% | 72% | 🟢 抄底 |\n"
+    content += "| 价格异常+当日上涨 | 追涨风险 | +1.96% | 54% | ⚠️ 观望 |\n\n"
     
-    content += "**Isolation Forest high 异常**：\n"
-    content += "- 多维特征同时异常（价格、成交量、波动率、RSI等）\n"
-    content += "- 可能是系统性风险、流动性危机、重大利空\n"
-    content += "- **策略**：减仓/止损，避免逆势操作\n\n"
-    
-    content += "**Z-Score 价格异常**：\n"
-    content += "- 单一价格大幅偏离均值\n"
-    content += "- 可能是短期超跌/超涨\n"
-    content += "- **策略**：如果当日下跌，考虑抄底\n\n"
-    
-    # 保留原有的 Z-Score 策略表格
-    content += "---\n\n"
-    content += "**Z-Score 价格异常策略（均值回归信号）**：\n\n"
-    content += "| 异常类型 | 当日涨跌 | 5天后收益 | 胜率 | 策略建议 |\n"
-    content += "|---------|---------|----------|------|----------|\n"
-    content += "| **价格异常** | 当日下跌 | **+4.12%** | **71.7%** | ✅ 考虑抄底 |\n"
-    content += "| **价格异常** | 当日上涨 | +1.96% | 53.7% | ⚠️ 观望 |\n"
-    content += "| 成交量异常 | 当日下跌 | +0.65% | 53.4% | ⚠️ 谨慎 |\n"
-    content += "| 成交量异常 | 当日上涨 | +2.52% | 54.9% | ⚠️ 谨慎 |\n\n"
-    
-    content += "**最强抄底信号**：\n"
-    content += "```\n"
-    content += "Z-Score 价格异常 + 当日下跌 → 考虑抄底\n"
-    content += "  - 5天后：+4.12%，胜率 71.7%\n"
-    content += "  - 10天后：+6.88%，胜率 72.8%\n"
-    content += "```\n\n"
-    
-    content += "**关键结论**：\n"
-    content += "1. **IF high = 风险信号**：多维异常，后续下跌（-3.04%），减仓\n"
-    content += "2. **Z-Score 价格异常 + 当日下跌 = 抄底机会**：单维度超跌，后续反弹\n"
-    content += "3. 两种方法**互补**：IF预警风险，Z-Score发现机会\n\n"
-    
-    content += "**风险提示**：\n"
-    content += "- 以上策略基于历史数据回测，未来表现可能不同\n"
-    content += "- 样本量：IF 86个，Z-Score 11个（2024-2026两年数据）\n"
-    content += "- 需结合其他指标综合判断\n"
+    content += "**核心逻辑**：IF high 预警风险，Z-Score 价格异常+当日下跌 = 抄底机会\n"
+    content += "*基于86个IF样本、11个Z-Score样本回测，需结合其他指标*\n"
     
     return content
 
@@ -2184,12 +2147,17 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 current_market = get_current_market_state()
                 
                 # 构建恒生指数分析文本
-                hsi_text = ""
+                hsi_text = "**技术指标**:\n\n"
+                if hsi_data:
+                    hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
+                    hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}% ({safe_float_format(hsi_data['change_points'], '+.2f')} 点)\n"
+                    hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
+                    hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
+                    hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
+
                 if current_market:
                     hsi_text += f"**市场信号**: {current_market['market_signal']}\n\n"
                     hsi_text += f"**市场状态**: {current_market['market_state_cn']}\n\n"
-                    hsi_text += f"**恒生指数**: {current_market['current_hsi']:.2f} (实时)\n\n"
-                    hsi_text += f"**数据更新时间**: {current_market['date']}\n\n"
                     hsi_text += f"**最近20天收益率**: {current_market['recent_20d_return']:.2%}\n\n"
                     hsi_text += f"**最近5天收益率**: {current_market['recent_5d_return']:.2%}\n\n"
                     
@@ -2237,16 +2205,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += "- ⏸️ **低仓位试探**: 可用30%仓位试探性配置\n"
                         hsi_text += "- ⏸️ **等待信号**: 等待市场明确方向后再做决策\n\n"
                     
-                    hsi_text += "---\n\n"
-                    hsi_text += "**技术指标**:\n\n"
-                
-                if hsi_data:
-                    hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
-                    hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}% ({safe_float_format(hsi_data['change_points'], '+.2f')} 点)\n"
-                    hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
-                    hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
-                    hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
-                    hsi_text += f"- 趋势：{hsi_data['trend']}\n"
                 
                 # 使用配置文件中的所有自选股
                 stock_codes = list(WATCHLIST.keys())
