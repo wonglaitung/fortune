@@ -35,7 +35,7 @@ except ImportError:
     print("⚠️ 板块分析模块不可用")
 
 try:
-    from detect_stock_anomalies import StockAnomalyDetector
+    from detect_stock_anomalies import StockAnomalyDetector, run_stock_anomaly_detection
     ANOMALY_DETECTION_AVAILABLE = True
 except ImportError:
     ANOMALY_DETECTION_AVAILABLE = False
@@ -956,22 +956,14 @@ def get_stock_anomalies(use_deep_analysis=True):
             print("⚠️ 异常检测模块不可用，跳过异常检测")
             return None
         
-        # 创建检测器实例（支持深度分析模式）
-        detector = StockAnomalyDetector(
-            window_size=30,
-            threshold_high=4.0,
-            threshold_medium=3.0,
-            use_deep_analysis=use_deep_analysis  # 新增参数
+        # 调用统一的异常检测入口函数
+        result = run_stock_anomaly_detection(
+            mode_type='deep' if use_deep_analysis else 'quick',
+            time_interval='day',
+            verbose=True
         )
         
-        # 获取自选股列表
-        from config import WATCHLIST
-        stocks = list(WATCHLIST.keys())
-        
-        # 检测异常（使用较短的数据周期以提高速度）
-        anomalies = detector.detect_anomalies(stocks, period='3mo')
-        
-        print(f"📊 异常检测完成（模式: {'深度' if use_deep_analysis else '快速'}）：检测到 {len(anomalies)} 个异常")
+        anomalies = result['anomalies']
         
         # 按类型和严重程度统计
         if anomalies:

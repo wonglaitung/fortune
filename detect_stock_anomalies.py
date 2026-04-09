@@ -1119,6 +1119,128 @@ def send_email_alert(anomalies: List[Dict], recipient_email: str = None) -> bool
         return False
 
 
+def run_stock_anomaly_detection(
+    stocks: List[str] = None,
+    mode_type: str = 'deep',
+    time_interval: str = 'day',
+    target_date: str = None,
+    send_email: bool = False,
+    return_formatted: bool = False,
+    verbose: bool = False
+) -> Dict:
+    """
+    股票异常检测统一入口函数
+    
+    将整个检测逻辑封装成一个函数，方便在其他模块调用。
+    
+    Args:
+        stocks: 股票代码列表（如 ['0700.HK', '0939.HK']），为None时使用WATCHLIST
+        mode_type: 检测模式，'deep'（深度模式：Z-Score + Isolation Forest）或 'quick'（快速模式：仅Z-Score）
+        time_interval: 时间间隔，'day'（每日）或 'hour'（每小时）
+        target_date: 检测日期（YYYY-MM-DD格式），为None时检测当天
+        send_email: 是否发送邮件警报
+        return_formatted: 是否返回格式化内容（文本和HTML）
+        verbose: 是否输出详细信息
+        
+    Returns:
+        检测结果字典：
+        {
+            'has_anomaly': bool,           # 是否检测到异常
+            'anomaly_count': int,          # 异常总数
+            'significant_count': int,      # 高/中严重度异常数量
+            'anomalies': List[Dict],       # 异常列表
+            'text_content': str,           # 格式化文本内容（仅当 return_formatted=True）
+            'html_content': str,           # 格式化HTML内容（仅当 return_formatted=True）
+            'email_sent': bool,            # 邮件是否发送成功（仅当 send_email=True）
+            'timestamp': str               # 检测时间戳
+        }
+        
+    Example:
+        # 基本用法
+        result = run_stock_anomaly_detection()
+        if result['has_anomaly']:
+            print(f"检测到 {result['anomaly_count']} 个异常")
+        
+        # 检测特定日期并发送邮件
+        result = run_stock_anomaly_detection(
+            target_date='2026-04-08',
+            send_email=True,
+            verbose=True
+        )
+        
+        # 获取格式化内容
+        result = run_stock_anomaly_detection(return_formatted=True)
+        print(result['text_content'])
+    """
+    from config import WATCHLIST
+    
+    # 确定股票列表
+    if stocks is None:
+        stocks = list(WATCHLIST.keys())
+    
+    # 根据时间间隔设置参数
+    if time_interval == 'hour':
+        window_size = 72  # 3天 = 72小时
+        period = '1mo'    # 1个月数据
+    else:  # day
+        window_size = 30  # 30天
+        period = '3mo'    # 3个月数据
+    
+    if verbose:
+        logger.info(f"开始检测异常，股票数量：{len(stocks)}")
+        logger.info(f"检测模式：{mode_type}，时间间隔：{time_interval}")
+        if target_date:
+            logger.info(f"检测日期：{target_date}")
+    
+    # 创建检测器实例
+    detector = StockAnomalyDetector(
+        window_size=window_size,
+        threshold_high=4.0,
+        threshold_medium=3.0,
+        use_deep_analysis=(mode_type == 'deep'),
+        time_interval=time_interval
+    )
+    
+    # 检测异常
+    anomalies = detector.detect_anomalies(stocks, period=period, target_date=target_date)
+    
+    # 过滤高/中严重度异常
+    significant_anomalies = [a for a in anomalies if a['severity'] in ('high', 'medium')]
+    
+    if verbose:
+        if anomalies:
+            print(f"\n🚨 检测到 {len(anomalies)} 个异常")
+            if len(significant_anomalies) < len(anomalies):
+                print(f"   其中 {len(significant_anomalies)} 个需要关注（已过滤 {len(anomalies) - len(significant_anomalies)} 个低严重度异常）")
+        else:
+            print("\n✅ 未检测到异常")
+    
+    # 构建结果
+    result = {
+        'has_anomaly': len(anomalies) > 0,
+        'anomaly_count': len(anomalies),
+        'significant_count': len(significant_anomalies),
+        'anomalies': anomalies,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # 格式化内容（如果需要）
+    if return_formatted:
+        result['text_content'] = format_anomaly_email(anomalies)
+        result['html_content'] = format_anomaly_email_html(anomalies)
+    
+    # 发送邮件（如果需要且有高/中严重度异常）
+    if send_email and significant_anomalies:
+        email_sent = send_email_alert(significant_anomalies)
+        result['email_sent'] = email_sent
+    elif send_email:
+        result['email_sent'] = False
+        if verbose:
+            logger.info("没有高/中严重度异常，跳过邮件发送")
+    
+    return result
+
+
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(description='港股异常检测脚本')
