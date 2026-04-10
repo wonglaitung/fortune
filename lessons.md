@@ -1174,6 +1174,119 @@ if abs(corr_same_day) > abs(corr_next_day) * 1.5:
 
 ---
 
+## 🛠️ iFlow CLI 技能开发经验 ⭐ 新增（2026-04-10）
+
+### 技能结构规范
+
+```
+.iflow/skills/{skill-name}/
+├── SKILL.md              # 技能文档（必需）
+├── requirements.txt      # Python依赖（可选）
+├── {skill-name}.bat      # Windows入口（可选）
+└── scripts/
+    └── {skill-name}.py   # 核心脚本（必需）
+```
+
+### 关键经验
+
+#### 1. 路径解析
+技能脚本位于 `.iflow/skills/` 的深层子目录，需要正确计算项目根路径：
+
+```python
+# ❌ 错误：路径层级不足
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent  # 指向 .iflow/
+
+# ✅ 正确：4层向上
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # 指向项目根目录
+```
+
+#### 2. 默认行为设计
+用户期望工具开箱即用，而非配置繁琐选项：
+
+```python
+# ❌ 用户需要选择方法
+parser.add_argument('--method', default='zscore', choices=['zscore', 'isolation-forest'])
+
+# ✅ 默认运行所有方法
+parser.add_argument('--method', default='both', choices=['zscore', 'isolation-forest', 'both'])
+```
+
+#### 3. 参数智能设置
+减少用户配置负担，根据上下文自动调整：
+
+```python
+def get_optimal_params(time_interval: str) -> dict:
+    """根据时间维度自动选择最佳参数"""
+    params = {
+        'minute': {'window_size': 60, 'threshold': 3.0, 'contamination': 0.02},
+        'hour': {'window_size': 24, 'threshold': 3.0, 'contamination': 0.03},
+        'day': {'window_size': 30, 'threshold': 3.0, 'contamination': 0.03},
+        'week': {'window_size': 12, 'threshold': 3.0, 'contamination': 0.05}
+    }
+    return params.get(time_interval, params['day'])
+```
+
+#### 4. 自动时间维度识别
+分析数据的时间间隔，自动判断维度：
+
+```python
+def detect_time_interval(df: pd.DataFrame) -> str:
+    """自动检测时间维度"""
+    time_diffs = df.index.to_series().diff().dropna()
+    median_diff = time_diffs.median()
+    
+    if median_diff <= timedelta(hours=1):
+        return 'minute' if median_diff <= timedelta(minutes=5) else 'hour'
+    elif median_diff <= timedelta(days=1):
+        return 'day'
+    else:
+        return 'week'
+```
+
+#### 5. SKILL.md 文档规范
+
+```markdown
+# 技能名称
+
+## 功能描述
+简要说明技能用途。
+
+## 使用方法
+用{技能名称}检测 /path/to/file.csv 的 column 列
+
+## 参数说明
+列出主要参数及其默认值。
+
+## 最佳实践
+使用建议和注意事项。
+```
+
+### 技能调用方式
+
+用户通过自然语言调用：
+
+```
+用异常检测技能检测 /tmp/data.csv 的 value 列
+以小时维度，用异常检测技能检测 /tmp/data.csv 的 price 和 volume 列
+```
+
+### 开发流程
+
+1. **分析现有代码**：找到可复用的核心逻辑
+2. **设计技能结构**：遵循 iFlow CLI 技能规范
+3. **编写核心脚本**：实现独立功能，处理参数
+4. **编写文档**：SKILL.md 说明用途和使用方法
+5. **测试验证**：使用测试数据验证功能
+
+### 注意事项
+
+1. **依赖隔离**：技能的 `requirements.txt` 应与项目主依赖分离
+2. **错误处理**：提供清晰的错误提示
+3. **输出格式**：结构化输出，便于阅读
+4. **跨平台**：同时支持 Linux/macOS 和 Windows
+
+---
+
 ## ⚠️ 常见错误
 
 ### 数据泄漏检查
