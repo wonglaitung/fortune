@@ -2156,10 +2156,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
 
                 if current_market:
-                    hsi_text += f"**市场信号**: {current_market['market_signal']}\n\n"
-                    hsi_text += f"**市场状态**: {current_market['market_state_cn']}\n\n"
-                    hsi_text += f"**最近20天收益率**: {current_market['recent_20d_return']:.2%}\n\n"
-                    hsi_text += f"**最近5天收益率**: {current_market['recent_5d_return']:.2%}\n\n"
+                    hsi_text += f"- 市场信号: {current_market['market_signal']}\n"
+                    hsi_text += f"- 市场状态: {current_market['market_state_cn']}\n"
+                    hsi_text += f"- 最近20天收益率: {current_market['recent_20d_return']:.2%}\n"
+                    hsi_text += f"最近5天收益率: {current_market['recent_5d_return']:.2%}\n"
                     
                     # 添加市场状态说明表格
                     hsi_text += "### 市场状态说明\n\n"
