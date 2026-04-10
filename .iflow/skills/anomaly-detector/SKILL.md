@@ -177,6 +177,9 @@ pip install pandas numpy scikit-learn openpyxl
 # 同时使用两种方法检测（默认）
 \full\path\to\skills\anomaly-detector\detect_anomaly.bat data.csv --column price
 
+# 指定时间戳列名（当自动检测失败时）
+\full\path\to\skills\anomaly-detector\detect_anomaly.bat data.csv --column price --timestamp-column 日期
+
 # 仅使用 Z-Score 检测
 \full\path\to\skills\anomaly-detector\detect_anomaly.bat data.csv --column price --method zscore
 
@@ -208,6 +211,15 @@ python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv
 # 日级数据检测（默认）
 python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv --column price
 
+# 指定时间戳列名（当自动检测失败时）
+python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv --column price --timestamp-column 日期
+
+# 多维特征提取（使用所有数值列）
+python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv --column sales --multi-column --method isolation-forest
+
+# 检测全部数据（不限制回溯天数）
+python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv --column price --lookback-days 0
+
 # 仅使用 Z-Score 检测
 python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py data.csv --column price --method zscore
 
@@ -232,6 +244,9 @@ python3 /full/path/to/skills/anomaly-detector/scripts/detect_anomaly.py --help
 | `--threshold` | `-t` | ❌ | Z-Score 阈值（默认 3.0） |
 | `--contamination` | - | ❌ | Isolation Forest 异常比例（默认根据时间间隔自动设置） |
 | `--time-interval` | - | ❌ | 时间间隔：minute、hour、day（默认）、week |
+| `--timestamp-column` | - | ❌ | 时间戳列名（可选，不指定则自动检测） |
+| `--multi-column` | - | ❌ | 使用所有数值列进行多维特征提取（仅 Isolation Forest 有效） |
+| `--lookback-days` | - | ❌ | Isolation Forest 回溯天数（默认 30，设为 0 检测全部数据） |
 | `--sheet` | `-s` | ❌ | Excel 工作表名称（默认第一个工作表） |
 | `--output` | `-o` | ❌ | 输出文件路径（默认打印到控制台） |
 | `--help` | `-h` | ❌ | 显示帮助信息 |
@@ -257,7 +272,8 @@ timestamp,price,volume
 ### 时间戳要求
 
 - 支持格式：`YYYY-MM-DD`、`YYYY-MM-DD HH:MM:SS`、ISO 8601
-- 时间戳列名可以是：`timestamp`、`date`、`datetime`、`time`
+- 自动检测列名：`timestamp`、`date`、`datetime`、`time`（不区分大小写）
+- 如果列名不在自动检测列表中，请使用 `--timestamp-column` 参数手动指定
 
 ## 输出格式
 

@@ -54,7 +54,12 @@ def setup_logging(verbose: bool = False) -> logging.Logger:
     return logger
 
 
-def load_data(file_path: str, column: str, sheet: Optional[str] = None) -> pd.DataFrame:
+def load_data(
+    file_path: str, 
+    column: str, 
+    sheet: Optional[str] = None,
+    timestamp_column: Optional[str] = None
+) -> pd.DataFrame:
     """
     加载数据文件
     
@@ -62,6 +67,7 @@ def load_data(file_path: str, column: str, sheet: Optional[str] = None) -> pd.Da
         file_path: 文件路径
         column: 要检测的列名
         sheet: Excel 工作表名称
+        timestamp_column: 时间戳列名（可选，不指定则自动检测）
     
     Returns:
         DataFrame 包含时间戳和目标列
@@ -86,18 +92,32 @@ def load_data(file_path: str, column: str, sheet: Optional[str] = None) -> pd.Da
     if column not in df.columns:
         raise ValueError(f"列 '{column}' 不存在于数据中。可用列: {list(df.columns)}")
     
-    # 尝试识别时间戳列
-    timestamp_cols = ['timestamp', 'date', 'datetime', 'time', 'Timestamp', 'Date', 'DateTime', 'Time']
+    # 处理时间戳列
     timestamp_col = None
     
-    for col in timestamp_cols:
-        if col in df.columns:
-            timestamp_col = col
-            break
+    if timestamp_column:
+        # 用户手动指定时间戳列名
+        if timestamp_column not in df.columns:
+            raise ValueError(f"时间戳列 '{timestamp_column}' 不存在于数据中。可用列: {list(df.columns)}")
+        timestamp_col = timestamp_column
+    else:
+        # 自动检测时间戳列（常见英文列名）
+        common_timestamp_cols = ['timestamp', 'date', 'datetime', 'time']
+        for col in common_timestamp_cols:
+            # 不区分大小写匹配
+            for actual_col in df.columns:
+                if actual_col.lower() == col.lower():
+                    timestamp_col = actual_col
+                    break
+            if timestamp_col:
+                break
     
     if timestamp_col:
-        df[timestamp_col] = pd.to_datetime(df[timestamp_col])
-        df = df.set_index(timestamp_col)
+        try:
+            df[timestamp_col] = pd.to_datetime(df[timestamp_col])
+            df = df.set_index(timestamp_col)
+        except Exception as e:
+            logger.warning(f"无法解析时间戳列 '{timestamp_col}': {e}")
     
     return df
 
@@ -122,6 +142,9 @@ def detect_zscore(
     Returns:
         异常列表
     """
+    if column not in df.columns:
+        raise ValueError(f"列 '{column}' 不存在于数据中。可用列: {list(df.columns)}")
+    
     detector = ZScoreDetector(
         window_size=window_size,
         threshold=threshold,
@@ -155,7 +178,8 @@ def detect_isolation_forest(
     df: pd.DataFrame,
     column: str,
     contamination: float = 0.03,
-    lookback_days: int = 7
+    lookback_days: int = 7,
+    use_all_columns: bool = False
 ) -> List[Dict]:
     """
     使用 Isolation Forest 方法检测异常
@@ -165,24 +189,30 @@ def detect_isolation_forest(
         column: 要检测的列名
         contamination: 异常比例
         lookback_days: 回溯天数
+        use_all_columns: 是否使用所有数值列进行多维特征提取（默认 False，仅使用指定列）
     
     Returns:
         异常列表
     """
-    # 检查是否有 OHLCV 数据（用于特征提取）
-    ohlcv_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-    has_ohlcv = all(col in df.columns for col in ohlcv_cols)
+    # 检查列是否存在
+    if column not in df.columns:
+        raise ValueError(f"列 '{column}' 不存在于数据中。可用列: {list(df.columns)}")
     
-    if has_ohlcv:
-        # 使用 FeatureExtractor 提取多维特征
-        extractor = FeatureExtractor()
-        features, timestamps = extractor.extract_features(df)
+    # 使用 FeatureExtractor 提取特征
+    # 会自动检测 OHLCV 列或通用数值列
+    extractor = FeatureExtractor()
+    
+    if use_all_columns:
+        # 使用所有数值列进行多维特征提取
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        print(f"INFO: 使用多维特征提取，列: {numeric_cols}")
+        features, timestamps = extractor.extract_features(df, columns=numeric_cols)
     else:
-        # 使用单列数据
-        data = df[[column]].dropna()
-        features = data.copy()
-        features.columns = ['value']
-        timestamps = data.index.tolist()
+        # 仅使用指定列
+        features, timestamps = extractor.extract_features(df, columns=[column])
+    
+    if features.empty:
+        raise ValueError(f"无法从列 '{column}' 提取特征，请检查数据")
     
     # 训练 Isolation Forest
     detector = IsolationForestDetector(
@@ -358,6 +388,12 @@ def main():
   # 日级数据检测（默认）
   python detect_anomaly.py data.csv --column price
   
+  # 指定时间戳列名（当自动检测失败时）
+  python detect_anomaly.py data.csv --column price --timestamp-column 日期
+  
+  # 多维特征提取（使用所有数值列）
+  python detect_anomaly.py data.csv --column sales --multi-column --method isolation-forest
+  
   # 手动指定参数（覆盖自动设置）
   python detect_anomaly.py data.csv --column price --window-size 60 --threshold 2.5
   
@@ -419,6 +455,11 @@ def main():
     )
     
     parser.add_argument(
+        '--timestamp-column',
+        help='时间戳列名（可选，不指定则自动检测）'
+    )
+    
+    parser.add_argument(
         '--sheet', '-s',
         help='Excel 工作表名称'
     )
@@ -426,6 +467,19 @@ def main():
     parser.add_argument(
         '--output', '-o',
         help='输出文件路径（JSON 或 CSV）'
+    )
+    
+    parser.add_argument(
+        '--multi-column',
+        action='store_true',
+        help='使用所有数值列进行多维特征提取（仅 Isolation Forest 有效）'
+    )
+    
+    parser.add_argument(
+        '--lookback-days',
+        type=int,
+        default=30,
+        help='Isolation Forest 回溯天数（默认 30 天，设为 0 检测全部数据）'
     )
     
     parser.add_argument(
@@ -456,7 +510,7 @@ def main():
     try:
         # 加载数据
         logger.info(f"加载数据: {args.input_file}")
-        df = load_data(args.input_file, args.column, args.sheet)
+        df = load_data(args.input_file, args.column, args.sheet, args.timestamp_column)
         logger.info(f"数据行数: {len(df)}")
         
         # 检测异常
@@ -486,11 +540,15 @@ def main():
         
         # Isolation Forest 检测
         if args.method in ['isolation-forest', 'both']:
-            logger.info(f"使用 Isolation Forest 方法检测 (异常比例: {args.contamination})")
+            logger.info(f"使用 Isolation Forest 方法检测 (异常比例: {args.contamination}, 回溯: {args.lookback_days} 天)")
+            if args.multi_column:
+                logger.info("多维特征提取模式：使用所有数值列")
             if_anomalies = detect_isolation_forest(
                 df=df,
                 column=args.column,
-                contamination=args.contamination
+                contamination=args.contamination,
+                lookback_days=args.lookback_days,
+                use_all_columns=args.multi_column
             )
             
             output = format_output(
