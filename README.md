@@ -483,21 +483,6 @@ python hsi_email.py --no-email
 4. 启用GitHub Actions工作流
 
 **运行成本**：公开仓库无限制，私有仓库每月2000分钟免费
-```
-
-**问题 3：邮件发送失败**
-
-- 检查 `EMAIL_PASSWORD` 是否正确（不是邮箱登录密码）
-- 确认邮箱已开启SMTP服务
-- 检查SMTP服务器地址是否正确
-
-**问题 4：大模型API调用失败**
-
-- 检查 `QWEN_API_KEY` 是否正确
-- 确认API密钥是否已激活
-- 检查网络连接是否正常
-
----
 
 ### 🌟 无服务器部署 - GitHub Actions 自动化
 
