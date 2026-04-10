@@ -131,11 +131,17 @@ class IsolationForestDetector:
             if pred == -1:  # Anomaly
                 timestamp = timestamps[i]
                 
-                # Normalize timestamp to UTC for comparison
-                if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
-                    timestamp_utc = timestamp.astimezone(timezone.utc)
+                # Handle different timestamp types (datetime, int, str, etc.)
+                if isinstance(timestamp, datetime):
+                    # Normalize timestamp to UTC for comparison
+                    if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
+                        timestamp_utc = timestamp.astimezone(timezone.utc)
+                    else:
+                        timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
                 else:
-                    timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
+                    # For non-datetime types (int index, string, etc.), skip time filtering
+                    # Use current time as placeholder (all anomalies will be included)
+                    timestamp_utc = utc_now
                 
                 # Only include recent anomalies
                 if timestamp_utc >= cutoff_date:
@@ -225,16 +231,25 @@ class IsolationForestDetector:
             if pred == -1:  # Anomaly
                 timestamp = timestamps[i]
                 
-                # 不转换到UTC，直接使用原始时区比较日期
-                # 如果timestamp没有时区，假设是香港时间（数据源默认）
-                if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
-                    timestamp_date = timestamp.date()
+                # Handle different timestamp types
+                if isinstance(timestamp, datetime):
+                    # 不转换到UTC，直接使用原始时区比较日期
+                    # 如果timestamp没有时区，假设是香港时间（数据源默认）
+                    if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo is not None:
+                        timestamp_date = timestamp.date()
+                    else:
+                        # 没有时区，假设是本地时间
+                        timestamp_date = timestamp.date()
+                    
+                    # 获取目标日期的date部分（不转换时区）
+                    target_date_only = target_date.date() if hasattr(target_date, 'date') else target_date
+                    
+                    # Only include anomalies on the target date
+                    if timestamp_date != target_date_only:
+                        continue
                 else:
-                    # 没有时区，假设是本地时间
-                    timestamp_date = timestamp.date()
-                
-                # 获取目标日期的date部分（不转换时区）
-                target_date_only = target_date.date() if hasattr(target_date, 'date') else target_date
+                    # For non-datetime types, skip date filtering and include all anomalies
+                    pass
                 
                 # Only include anomalies on the target date
                 if timestamp_date == target_date_only:
