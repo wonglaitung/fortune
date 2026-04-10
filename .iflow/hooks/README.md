@@ -137,7 +137,7 @@ chmod +x .iflow/hooks/post-test.sh
 ## 相关文件
 
 - `set_key.sh`：项目根目录下的环境变量配置文件
-- `.iflow/commands/programmer_skill.md`：编程规范和开发流程
+- `docs/programmer_skill.md`：编程规范和开发流程
 - `requirements.txt`：Python 依赖包列表
 
 ## 更新日志

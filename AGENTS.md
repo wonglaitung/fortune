@@ -2,6 +2,7 @@
 
 > **📚 详细文档**：特征工程、验证方法、异常检测等完整指南请查看 [docs/](docs/) 目录
 > **⚠️ 经验教训**：所有关键警告和最佳实践请参阅 [lessons.md](lessons.md)
+> **🔧 编程规范**：规范化开发流程、系统设计决策、测试验证要求请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
 
 ---
 
