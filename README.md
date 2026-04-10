@@ -130,17 +130,11 @@
 
 ---
 
-
-
 ## 技术架构
-
-
 
 ```
 
 数据获取层 → 数据服务层 → 分析层 → 交易层 → 服务层
-
-
 
 数据获取层：加密货币、港股、黄金、美股市场、基本面、股息、IPO、新闻
 
@@ -154,147 +148,69 @@
 
 ```
 
-
-
 ---
-
-
-
-
-
-
 
 ## 项目结构
 
-
-
-
-
-
-
 ```
-
-
 
 fortune/
 
-
-
 ├── 核心脚本
-
-
 
 │   ├── comprehensive_analysis.py       # 综合分析（每日自动执行）
 
-
-
 │   ├── detect_stock_anomalies.py       # 港股异常检测
-
-
 
 │   ├── hsi_email.py                    # 恒生指数监控
 
-
-
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪
-
-
 
 │   └── crypto_email.py                 # 加密货币监控
 
-
-
 ├── 数据服务模块 (data_services/)
-
-
 
 │   ├── technical_analysis.py           # 技术分析工具
 
-
-
 │   ├── fundamental_data.py             # 基本面数据
-
-
 
 │   └── hk_sector_analysis.py           # 板块分析
 
-
-
 ├── 机器学习模块 (ml_services/)
-
-
 
 │   ├── ml_trading_model.py             # ML交易模型
 
-
-
 │   ├── batch_backtest.py               # 批量回测
-
-
 
 │   └── walk_forward_by_sector.py       # Walk-forward验证
 
-
-
 ├── 大模型服务 (llm_services/)
-
-
 
 │   ├── qwen_engine.py                  # Qwen大模型接口
 
-
-
 │   └── sentiment_analyzer.py           # 情感分析
-
-
 
 ├── 异常检测模块 (anomaly_detector/)
 
-
-
 │   ├── zscore_detector.py              # Z-Score检测器
-
-
 
 │   └── isolation_forest_detector.py    # Isolation Forest检测器
 
-
-
 ├── 文档目录 (docs/)
-
-
 
 ├── 输出文件 (output/)
 
-
-
 ├── 数据文件 (data/)
-
-
 
 └── 配置文件
 
-
-
     ├── config.py                       # 全局配置
-
-
 
     ├── requirements.txt                # 项目依赖
 
-
-
     └── .github/workflows/              # GitHub Actions工作流
 
-
-
 ```
-
-
-
-
-
-
 
 ---
 
