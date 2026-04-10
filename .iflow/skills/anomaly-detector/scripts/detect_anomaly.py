@@ -21,11 +21,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-# 添加项目根目录到路径，以便导入 anomaly_detector 模块
-# 路径: scripts -> anomaly-detector -> skills -> .iflow -> fortune (项目根目录)
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+# 添加技能目录到路径，从技能内部导入 anomaly_detector 模块
+# 路径: scripts -> anomaly-detector (技能根目录)
+SCRIPT_DIR = Path(__file__).parent.parent  # skills/anomaly-detector/
+sys.path.insert(0, str(SCRIPT_DIR))
 
 try:
     from anomaly_detector.zscore_detector import ZScoreDetector, TimeInterval
@@ -33,7 +32,7 @@ try:
     from anomaly_detector.feature_extractor import FeatureExtractor
 except ImportError:
     print("错误：无法导入 anomaly_detector 模块")
-    print("请确保 anomaly_detector 模块在项目根目录下")
+    print("请确保 anomaly_detector 模块在技能目录下")
     sys.exit(1)
 
 
