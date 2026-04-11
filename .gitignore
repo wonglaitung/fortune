@@ -92,3 +92,9 @@ qwen_engine.log
 hk_smart_charts/
 /test_step7_only.sh
 /test_dynamic_strategy.py
+
+# ICBC Stock Data Downloader (临时脚本)
+download_icbc_stock_data.py
+
+# ICBC Stock Data Files (生成的数据文件)
+data/工商银行股票数据_*.xlsx
