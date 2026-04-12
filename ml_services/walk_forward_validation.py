@@ -432,7 +432,9 @@ class WalkForwardValidator:
         # 基础指标 - 只计算有交易信号的样本
         if len(trades) > 0:
             avg_return = trades['strategy_return'].mean()
-            cumulative_return = (1 + trades['strategy_return']).prod() - 1
+            # 对于固定持有期策略，累积收益应该用简单平均，而不是顺序累乘
+            # 因为多笔交易是同时持有的，不是顺序平仓的
+            cumulative_return = avg_return * len(trades) / max(len(trades), 1)  # 近似
             win_rate = (trades['strategy_return'] > 0).sum() / len(trades)
             return_std = trades['strategy_return'].std()
         else:
@@ -450,21 +452,28 @@ class WalkForwardValidator:
         annualized_return = avg_return * (252 / self.horizon)
         annualized_std = return_std * np.sqrt(252 / self.horizon) if return_std > 0 else 0.0
 
-        # 计算最大回撤（只计算有交易信号的样本）
+        # 计算最大回撤（修正：按日期分组计算组合价值）
+        # 关键修正：20天持有期意味着多笔交易同时持有，不能顺序累乘
         if len(trades) > 0:
-            trade_returns = trades['strategy_return'].values
-            cumulative = 1.0
-            peak_value = 1.0
-            max_drawdown = 0.0
-            for r in trade_returns:
-                cumulative *= (1 + r)
-                if cumulative > peak_value:
-                    peak_value = cumulative
-                dd = (peak_value - cumulative) / peak_value
-                if dd > max_drawdown:
-                    max_drawdown = dd
-            # 转换为负数表示亏损
-            max_drawdown = -max_drawdown
+            # 方法：按日期分组，计算每个日期的平均收益（假设等权重分配资金）
+            # 每天的策略收益 = 当天所有交易的平均收益 / 交易数量占比
+            trades_by_date = trades.groupby(trades.index)['strategy_return'].mean()
+
+            if len(trades_by_date) > 1:
+                # 组合净值曲线：每天等权分配资金给当天产生的信号
+                # 简化计算：使用每日平均收益的累积
+                daily_returns = trades_by_date.values
+                # 组合收益 = 平均收益（因为资金分散到多笔交易）
+                portfolio_returns = daily_returns / len(daily_returns)  # 每笔交易分配 1/n 资金
+
+                # 计算累积净值
+                cumulative_values = np.cumsum(portfolio_returns) + 1.0
+                peak_values = np.maximum.accumulate(cumulative_values)
+                drawdowns = (peak_values - cumulative_values) / peak_values
+                max_drawdown = -np.max(drawdowns) if len(drawdowns) > 0 else 0.0
+            else:
+                # 只有一天的交易
+                max_drawdown = -abs(trades['strategy_return'].mean()) if trades['strategy_return'].mean() < 0 else 0.0
         else:
             max_drawdown = 0.0
 
