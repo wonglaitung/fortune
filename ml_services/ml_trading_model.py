@@ -227,6 +227,14 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
             else:
                 sector = 'unknown'
             
+            # 获取数据日期
+            data_date = pred.get('data_date', date_str)
+            
+            # 计算 target_date（如果没有提供）
+            target_date = pred.get('target_date', '')
+            if not target_date and data_date:
+                target_date = get_target_date(data_date, horizon)
+            
             # 创建预测记录
             record = {
                 'prediction_id': f"{date_str}_{stock_code}",
@@ -240,8 +248,8 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
                 'confidence_level': 'high' if pred.get('probability', 0) > 0.6 else ('medium' if pred.get('probability', 0) > 0.5 else 'low'),
                 'entry_price': float(pred.get('current_price', 0)),
                 'model_type': 'catboost',
-                'data_date': pred.get('data_date', date_str),
-                'target_date': pred.get('target_date', ''),
+                'data_date': data_date,
+                'target_date': target_date,
                 'outcome': None,
                 'actual_return': None,
                 'actual_direction': None,

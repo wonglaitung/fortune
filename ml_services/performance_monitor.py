@@ -154,10 +154,26 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
             continue
         
         # 检查是否已到期
+        # 步骤1：使用已存储的 target_date
         target_date = pred.get('target_date')
+        
+        # 步骤2：如果没有存储，则根据 data_date + horizon 计算
         if not target_date:
-            stats['pending'] += 1
-            continue
+            data_date = pred.get('data_date', pred.get('timestamp', '').split('T')[0])
+            if data_date:
+                try:
+                    data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
+                    # 简单计算：data_date + horizon 天（近似交易日）
+                    target_date_obj = data_date_obj + timedelta(days=horizon)
+                    target_date = target_date_obj.strftime('%Y-%m-%d')
+                    # 更新预测记录
+                    pred['target_date'] = target_date
+                except ValueError:
+                    stats['pending'] += 1
+                    continue
+            else:
+                stats['pending'] += 1
+                continue
         
         target_date_obj = datetime.strptime(target_date, '%Y-%m-%d')
         
