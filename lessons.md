@@ -1174,6 +1174,70 @@ if abs(corr_same_day) > abs(corr_next_day) * 1.5:
 
 ---
 
+## 🚀 GitHub Actions 工作流最佳实践 ⭐ 新增（2026-04-12）
+
+### 核心原则：排程控制在 cron，不在代码中重复判断
+
+**问题**：部分工作流在代码中检查运行条件，但 cron 已经设置了相同的条件，造成冗余。
+
+**错误示例**：
+```yaml
+# ❌ 冗余：cron 已经设置为每月1号，代码还检查日期
+schedule:
+  - cron: '0 20 28-31 * *'  # 每月28-31号运行
+
+jobs:
+  check-date:  # 额外的 job 检查明天是否是1号
+    steps:
+      - name: Check if tomorrow is 1st
+        run: |
+          tomorrow=$(date -d "+1 day" +%d)
+          if [ "$tomorrow" = "01" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          fi
+```
+
+**正确做法**：
+```yaml
+# ✅ 简洁：让 cron 控制运行时机
+schedule:
+  - cron: '0 20 28-31 * *'  # 由 GitHub 自动判断是否在月末
+
+jobs:
+  performance-report:  # 直接运行，无需额外检查
+    runs-on: ubuntu-latest
+```
+
+### 已简化的工作流
+
+| 工作流 | 原逻辑 | 简化后 |
+|--------|--------|--------|
+| `performance-monitor.yml` | check-date job 检查明天是否1号 | 直接运行，由 cron 控制 |
+| `hourly-stock-monitor.yml` | Check trading hours 步骤检查交易时段 | 直接运行，由 cron 控制 |
+
+### 关键经验
+
+1. **cron 表达式已足够精确**：
+   - `'0 20 28-31 * *'` 只在每月末几天运行
+   - `'0 2,3,4,5,6,7 * * 1-5'` 只在工作日特定时段运行
+   - GitHub Actions 会自动处理这些条件
+
+2. **手动触发不受影响**：
+   - `workflow_dispatch` 允许手动运行，无需条件判断
+   - 调试时可直接触发，灵活性更好
+
+3. **代码更简洁**：
+   - 减少约20-30行冗余代码
+   - 维护成本降低
+   - 出错可能性减少
+
+4. **调试更方便**：
+   - 逻辑集中在 cron 表达式
+   - 一眼就能看出运行时机
+   - 无需追踪多步骤的条件传递
+
+---
+
 ## 🛠️ iFlow CLI 技能开发经验 ⭐ 新增（2026-04-10）
 
 ### 技能结构规范
