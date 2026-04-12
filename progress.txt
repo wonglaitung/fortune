@@ -76,6 +76,23 @@
 
 **关键经验**：排程条件应在 GitHub Actions cron 表达式中控制，避免在代码中重复判断
 
+### 预测性能监控修复
+
+**问题**：`prediction_history.json` 中 401 条预测记录缺少 `target_date` 字段
+
+**解决方案**：
+1. `ml_trading_model.py`：保存预测时自动计算 `target_date = data_date + horizon`
+2. `performance_monitor.py`：评估时如果缺少 `target_date`，动态计算
+
+**中期性能统计（10 个交易日）**：
+| 置信度 | 预测方向 | 准确率 | 平均收益 |
+|--------|---------|--------|----------|
+| high | up | 84.56% | 3.14% |
+| medium | up | 80.65% | 3.53% |
+| low | down | 24.11% | 2.83% |
+
+**关键发现**：置信度 = 预测方向（high/medium = 预测上涨，low = 预测下跌）
+
 ---
 
 ## 最新进展（2026-04-08）
