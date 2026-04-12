@@ -44,34 +44,7 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Check trading hours
-        id: check_trading_hours
-        run: |
-          # 获取当前香港时间的小时和分钟
-          current_hour=$(date +%H)
-          current_minute=$(date +%M)
-          echo "当前时间: ${current_hour}:${current_minute} HKT"
-          
-          # 港股交易时段：09:30-12:00, 13:00-16:00
-          # 将时间转换为分钟数进行比较
-          current_time=$((current_hour * 60 + current_minute))
-          morning_start=$((9 * 60 + 30))  # 09:30
-          morning_end=$((12 * 60))          # 12:00
-          afternoon_start=$((13 * 60))       # 13:00
-          afternoon_end=$((16 * 60))        # 16:00
-          
-          # 检查是否在交易时段内
-          if [[ $current_time -ge $morning_start && $current_time -lt $morning_end ]] || \
-             [[ $current_time -ge $afternoon_start && $current_time -lt $afternoon_end ]]; then
-            echo "✅ 在交易时段内，继续执行异常检测"
-            echo "is_trading_hours=true" >> $GITHUB_OUTPUT
-          else
-            echo "⏰ 不在交易时段内，跳过异常检测"
-            echo "is_trading_hours=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Run stock anomaly detection (deep mode)
-        if: ${{ github.event_name == 'workflow_dispatch' || steps.check_trading_hours.outputs.is_trading_hours == 'true' }}
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
