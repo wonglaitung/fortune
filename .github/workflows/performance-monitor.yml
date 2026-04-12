@@ -8,26 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-date:
-    runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Hong_Kong
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-    steps:
-      - name: Check if tomorrow is 1st
-        id: check
-        run: |
-          tomorrow=$(date -d "+1 day" +%d)
-          if [ "$tomorrow" = "01" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
-
   performance-report:
-    needs: check-date
-    if: needs.check-date.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Hong_Kong
