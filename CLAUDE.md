@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # 港股智能分析系统 - 快速参考
 
 > **📚 详细文档**：特征工程、验证方法、异常检测等完整指南请查看 [docs/](docs/) 目录
@@ -7,6 +11,15 @@
 ---
 
 ## ⚡ 快速参考
+
+### 测试命令
+
+| 测试类型 | 命令 |
+|---------|------|
+| **语法检查** | `python3 -m py_compile <文件路径>` |
+| **运行所有测试** | `python3 -m pytest tests/ -v` |
+| **运行单个测试** | `python3 -m pytest tests/test_zscore_detector.py -v` |
+| **测试异常检测模块** | `python3 -m pytest tests/test_*.py -v` |
 
 ### 常用命令速查
 
@@ -34,6 +47,16 @@
 | `ml_services/ml_trading_model.py` | ML模型训练/预测 |
 | `hsi_email.py` | 恒生指数监控 |
 | `hk_smart_money_tracker.py` | 主力资金追踪 |
+
+
+### 语言规范
+- 所有的对话沟通、代码解释和文档注释必须使用 **简体中文**。
+- 如果输出包含技术术语，建议在中文后用括号标注英文（例如：异步处理 (Asynchronous)）。
+
+### 代码风格
+- 遵循 PEP8 规范。
+- 变量名和函数名必须使用英文，但注释必须是中文。
+
 
 ### 核心警告 ⚠️
 
@@ -201,4 +224,44 @@
 
 ---
 
-**最后更新**：2026-04-09（重构统一入口函数、精简异常策略说明）
+## 🔧 开发规范要点
+
+### 代码修改原则（来自 programmer_skill.md）
+
+1. **修改完即测试**：每次代码修改后立即验证
+   - 语法检查：`python3 -m py_compile <文件路径>`
+   - 功能测试：验证修改是否符合预期
+   - 回归测试：确保没有破坏现有功能
+
+2. **避免硬编码路径**：使用相对路径
+   ```python
+   # ✅ 正确
+   script_dir = os.path.dirname(os.path.abspath(__file__))
+   data_dir = os.path.join(script_dir, 'data')
+   ```
+
+3. **HTTP API超时处理**：调用API时必须设置超时时间
+
+4. **公共代码提取**：识别可复用逻辑，创建通用函数
+
+### 数据泄漏防护
+
+高风险特征必须使用 `.shift(1)` 避免使用当日数据：
+- 所有 `.rolling()` 计算的特征
+- BB_Position、Price_Percentile、Intraday_Amplitude
+- Price_Ratio_MA5/20/50、Support_120d、Resistance_120d
+
+### 测试文件结构
+
+```
+tests/
+├── test_zscore_detector.py      # Z-Score检测器测试
+├── test_isolation_forest.py     # Isolation Forest测试
+├── test_feature_extractor.py    # 特征提取器测试
+├── test_anomaly_integrator.py   # 异常整合器测试
+└── test_cache.py                # 缓存测试
+```
+
+---
+
+**最后更新**：2026-04-12（添加测试命令、开发规范要点）
