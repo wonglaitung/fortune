@@ -189,6 +189,7 @@ class WalkForwardValidator:
                 # 打印fold结果
                 print(f"\n✅ Fold {fold + 1} 结果:")
                 print(f"  样本数: {fold_result['num_samples']}")
+                print(f"  交易次数: {fold_result.get('num_trades', 'N/A')}")
                 print(f"  平均收益率: {fold_result['avg_return']:.2%}")
                 print(f"  胜率: {fold_result['win_rate']:.2%}")
                 print(f"  准确率: {fold_result['accuracy']:.2%}")
@@ -424,60 +425,88 @@ class WalkForwardValidator:
         if len(df) == 0:
             raise ValueError("没有有效的样本")
 
-        # 基础指标
-        avg_return = df['strategy_return'].mean()
-        cumulative_return = (1 + df['strategy_return']).prod() - 1
-        win_rate = (df['strategy_return'] > 0).sum() / len(df)
+        # 分离有交易信号和无交易信号的样本
+        trades = df[df['signal'] == 1].copy()
+        no_trades = df[df['signal'] == 0].copy()
+
+        # 基础指标 - 只计算有交易信号的样本
+        if len(trades) > 0:
+            avg_return = trades['strategy_return'].mean()
+            cumulative_return = (1 + trades['strategy_return']).prod() - 1
+            win_rate = (trades['strategy_return'] > 0).sum() / len(trades)
+            return_std = trades['strategy_return'].std()
+        else:
+            avg_return = 0.0
+            cumulative_return = 0.0
+            win_rate = 0.0
+            return_std = 0.0
+
+        # 准确率：使用全部样本（因为预测是针对所有样本的）
         accuracy = (df['prediction'] == df['Label']).sum() / len(df)
         num_samples = len(df)
+        num_trades = len(trades)
 
-        # 风险指标
-        # 修正：使用有信号的样本计算标准差，避免无信号的0值稀释标准差
-        signals = df[df['signal'] == 1]
-        if len(signals) > 1:
-            return_std = signals['strategy_return'].std()
-        else:
-            return_std = df['strategy_return'].std()
-        
+        # 年化收益（基于交易信号的平均收益）
         annualized_return = avg_return * (252 / self.horizon)
-        annualized_std = return_std * np.sqrt(252 / self.horizon)  # 修正：标准差年化
+        annualized_std = return_std * np.sqrt(252 / self.horizon) if return_std > 0 else 0.0
 
-        # 计算最大回撤
-        cumulative_returns = (1 + df['strategy_return']).cumprod()
-        peak = cumulative_returns.expanding(min_periods=1).max()
-        drawdown = (cumulative_returns - peak) / peak
-        max_drawdown = drawdown.min()
+        # 计算最大回撤（只计算有交易信号的样本）
+        if len(trades) > 0:
+            trade_returns = trades['strategy_return'].values
+            cumulative = 1.0
+            peak_value = 1.0
+            max_drawdown = 0.0
+            for r in trade_returns:
+                cumulative *= (1 + r)
+                if cumulative > peak_value:
+                    peak_value = cumulative
+                dd = (peak_value - cumulative) / peak_value
+                if dd > max_drawdown:
+                    max_drawdown = dd
+            # 转换为负数表示亏损
+            max_drawdown = -max_drawdown
+        else:
+            max_drawdown = 0.0
 
         # 风险调整收益指标
         # 夏普比率（修正：添加无风险利率）
         risk_free_rate = 0.02  # 2%无风险利率
-        if return_std > 0:
+        if annualized_std > 0:
             sharpe_ratio = (annualized_return - risk_free_rate) / annualized_std
         else:
             sharpe_ratio = 0.0
 
-        # 索提诺比率（只考虑下行风险）
-        downside_returns = df['strategy_return'][df['strategy_return'] < 0]
-        if len(downside_returns) > 0:
-            downside_std = downside_returns.std()
-            if downside_std > 0:
-                sortino_ratio = annualized_return / (downside_std * np.sqrt(252 / self.horizon))
+        # 索提诺比率（只考虑下行风险，仅计算有交易的样本）
+        if len(trades) > 0:
+            downside_returns = trades['strategy_return'][trades['strategy_return'] < 0]
+            if len(downside_returns) > 0:
+                downside_std = downside_returns.std()
+                if downside_std > 0:
+                    sortino_ratio = annualized_return / (downside_std * np.sqrt(252 / self.horizon))
+                else:
+                    sortino_ratio = 0.0
             else:
-                sortino_ratio = 0.0
+                sortino_ratio = float('inf') if annualized_return > 0 else 0.0
         else:
-            sortino_ratio = float('inf') if annualized_return > 0 else 0.0
+            sortino_ratio = 0.0
 
         # 信息比率（相对于基准：买入持有策略）
+        # 基准收益：所有样本的平均收益（代表买入持有）
         benchmark_return = df['actual_return'].mean()
-        excess_returns = df['strategy_return'] - df['actual_return']
-        tracking_error = excess_returns.std()
-        if tracking_error > 0:
-            information_ratio = excess_returns.mean() / tracking_error * np.sqrt(252 / self.horizon)
+        # 策略收益与基准的差异（只比较有交易的样本）
+        if len(trades) > 0:
+            excess_returns = trades['strategy_return'] - trades['actual_return']
+            tracking_error = excess_returns.std()
+            if tracking_error > 0:
+                information_ratio = excess_returns.mean() / tracking_error * np.sqrt(252 / self.horizon)
+            else:
+                information_ratio = 0.0
         else:
             information_ratio = 0.0
 
         return {
             'num_samples': num_samples,
+            'num_trades': num_trades,
             'avg_return': avg_return,
             'cumulative_return': cumulative_return,
             'win_rate': win_rate,
@@ -640,12 +669,13 @@ class WalkForwardValidator:
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
-            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 |\n")
-            f.write("|------|---------|---------|-------|-------|------|-------|---------|--------|\n")
+            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 |\n")
+            f.write("|------|---------|---------|-------|---------|-------|------|-------|---------|--------|\n")
 
             for fold in folds:
                 f.write(f"| {fold['fold'] + 1} | {fold['train_start_date']} 至 {fold['train_end_date']} | "
                        f"{fold['test_start_date']} 至 {fold['test_end_date']} | {fold['num_test_samples']} | "
+                       f"{fold.get('num_trades', 'N/A')} | "
                        f"{fold['avg_return']:.2%} | {fold['win_rate']:.2%} | {fold['accuracy']:.2%} | "
                        f"{fold['sharpe_ratio']:.4f} | {fold['max_drawdown']:.2%} |\n")
 
