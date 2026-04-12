@@ -30,7 +30,7 @@ jobs:
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         run: |
           python3 ml_services/performance_monitor.py --mode all --horizon 20
