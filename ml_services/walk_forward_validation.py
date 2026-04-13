@@ -408,6 +408,9 @@ class WalkForwardValidator:
             raise ValueError("合并后的数据为空")
 
         # 计算实际收益率
+        # 注意: pct_change().shift(-horizon) 是未来第 horizon 天的单日收益率
+        # 这对于 ML 分类任务是合理的：预测未来某一天的涨跌方向
+        # 如果需要预测累积收益，应使用: df['Close'].shift(-horizon) / df['Close'] - 1
         df['actual_return'] = df['Close'].pct_change().shift(-self.horizon)
 
         # 计算预测收益
@@ -448,55 +451,67 @@ class WalkForwardValidator:
         num_samples = len(df)
         num_trades = len(trades)
 
-        # 年化收益（基于交易信号的平均收益）
-        annualized_return = avg_return * (252 / self.horizon)
-        annualized_std = return_std * np.sqrt(252 / self.horizon) if return_std > 0 else 0.0
-
-        # 计算最大回撤（修正：对于固定持有期策略，使用批次回撤）
-        # 核心问题：20天持有期意味着收益在未来实现，不能按信号日期计算时间序列回撤
-        # 正确方法：计算连续亏损交易批次的最大累积亏损
+        # ========== 批次分析（合并计算，避免重复） ==========
+        # 对于固定持有期策略，按信号日期分组形成"批次"
+        # 每个批次 = 当天产生的所有信号，等权重分配资金
         if len(trades) > 0:
-            # 方法1：按信号日期分组（每个日期视为一个独立投资批次）
-            # 每个批次 = 当天产生的所有信号，等权重分配资金
             batches = trades.groupby(trades.index).agg({
                 'strategy_return': 'mean',  # 批次平均收益
                 'signal': 'count'  # 批次内信号数量
             }).rename(columns={'signal': 'batch_size'})
+            batch_returns = batches['strategy_return'].values
+        else:
+            batches = None
+            batch_returns = np.array([])
 
-            if len(batches) > 1:
-                # 对于固定持有期策略，每个批次是独立的投资决策
-                # 回撤 = 连续亏损批次的最大累积亏损比例
-                # 假设每个批次分配 1/N 的资金（N = 总批次数）
+        # ========== 年化收益和夏普比率计算（修正版） ==========
+        # 问题：之前用 avg_return * (252/horizon) 年化，假设一年可做12.6次交易
+        # 实际：固定持有期策略的多笔交易是同时持有的，不能这样年化
+        # 正确方法：基于批次收益的时间序列，月度收益 * 12 年化
 
-                # 方法A：简单累积收益回撤（适用于独立批次）
-                batch_returns = batches['strategy_return'].values
-                batch_weights = np.ones(len(batch_returns)) / len(batch_returns)  # 等权重
+        # 月度组合收益
+        monthly_return = avg_return
 
-                # 累积净值曲线
-                cumulative_values = np.cumsum(batch_returns * batch_weights) + 1.0
-                peak_values = np.maximum.accumulate(cumulative_values)
-                drawdowns = (peak_values - cumulative_values) / peak_values
-                max_drawdown = -np.max(drawdowns) if np.max(drawdowns) > 0 else 0.0
+        # 年化收益
+        annualized_return = monthly_return * 12
 
-                # 限制回撤范围在合理区间
-                # 对于月度测试（约20个交易日），合理的最大回撤应该 < 30%
-                # 如果计算出的回撤 > 50%，说明计算方法有问题
-                if abs(max_drawdown) > 0.5:
-                    # 使用更保守的方法：最大单批次亏损
-                    max_single_loss = batch_returns.min()
-                    # 或者使用连续亏损批次的最大累积
-                    cumulative_loss = 0.0
-                    max_cumulative_loss = 0.0
-                    for ret in batch_returns:
-                        if ret < 0:
-                            cumulative_loss += ret * (1.0 / len(batch_returns))
-                        else:
-                            cumulative_loss = 0.0
-                        max_cumulative_loss = min(max_cumulative_loss, cumulative_loss)
-                    max_drawdown = max_cumulative_loss
-            else:
-                # 只有一个批次
-                max_drawdown = -abs(batches['strategy_return'].iloc[0]) if batches['strategy_return'].iloc[0] < 0 else 0.0
+        # 标准差：基于批次收益的波动
+        if len(batch_returns) > 1:
+            batch_std = np.std(batch_returns, ddof=1)
+            monthly_std = batch_std
+        elif return_std > 0:
+            monthly_std = return_std
+        else:
+            monthly_std = 0.0
+
+        # 年化标准差
+        annualized_std = monthly_std * np.sqrt(12) if monthly_std > 0 else 0.0
+
+        # ========== 最大回撤计算（批次回撤） ==========
+        if len(batch_returns) > 1:
+            # 每个批次分配等权重资金 (1/N)
+            batch_weights = np.ones(len(batch_returns)) / len(batch_returns)
+
+            # 累积净值曲线
+            cumulative_values = np.cumsum(batch_returns * batch_weights) + 1.0
+            peak_values = np.maximum.accumulate(cumulative_values)
+            drawdowns = (peak_values - cumulative_values) / peak_values
+            max_drawdown = -np.max(drawdowns) if np.max(drawdowns) > 0 else 0.0
+
+            # 限制回撤范围在合理区间
+            if abs(max_drawdown) > 0.5:
+                # 使用更保守的方法：连续亏损批次的最大累积
+                cumulative_loss = 0.0
+                max_cumulative_loss = 0.0
+                for ret in batch_returns:
+                    if ret < 0:
+                        cumulative_loss += ret * (1.0 / len(batch_returns))
+                    else:
+                        cumulative_loss = 0.0
+                    max_cumulative_loss = min(max_cumulative_loss, cumulative_loss)
+                max_drawdown = max_cumulative_loss
+        elif len(batch_returns) == 1:
+            max_drawdown = -abs(batch_returns[0]) if batch_returns[0] < 0 else 0.0
         else:
             max_drawdown = 0.0
 
@@ -509,12 +524,15 @@ class WalkForwardValidator:
             sharpe_ratio = 0.0
 
         # 索提诺比率（只考虑下行风险，仅计算有交易的样本）
+        # 修正：使用与夏普比率一致的年化因子 sqrt(12)
         if len(trades) > 0:
             downside_returns = trades['strategy_return'][trades['strategy_return'] < 0]
             if len(downside_returns) > 0:
                 downside_std = downside_returns.std()
                 if downside_std > 0:
-                    sortino_ratio = annualized_return / (downside_std * np.sqrt(252 / self.horizon))
+                    # 月度下行标准差 * sqrt(12) 年化
+                    annualized_downside_std = downside_std * np.sqrt(12)
+                    sortino_ratio = annualized_return / annualized_downside_std
                 else:
                     sortino_ratio = 0.0
             else:
@@ -526,11 +544,14 @@ class WalkForwardValidator:
         # 基准收益：所有样本的平均收益（代表买入持有）
         benchmark_return = df['actual_return'].mean()
         # 策略收益与基准的差异（只比较有交易的样本）
+        # 修正：使用与夏普比率一致的年化因子 sqrt(12)
         if len(trades) > 0:
             excess_returns = trades['strategy_return'] - trades['actual_return']
             tracking_error = excess_returns.std()
             if tracking_error > 0:
-                information_ratio = excess_returns.mean() / tracking_error * np.sqrt(252 / self.horizon)
+                # 月度跟踪误差 * sqrt(12) 年化
+                annualized_tracking_error = tracking_error * np.sqrt(12)
+                information_ratio = (excess_returns.mean() * 12) / annualized_tracking_error
             else:
                 information_ratio = 0.0
         else:
