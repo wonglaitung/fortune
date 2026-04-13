@@ -408,9 +408,12 @@ class WalkForwardValidator:
             raise ValueError("合并后的数据为空")
 
         # 计算实际收益率
-        # 注意: pct_change().shift(-horizon) 是未来第 horizon 天的单日收益率
-        # 这对于 ML 分类任务是合理的：预测未来某一天的涨跌方向
-        # 如果需要预测累积收益，应使用: df['Close'].shift(-horizon) / df['Close'] - 1
+        # 注意：模型训练时 Label 基于 Future_Return（20天累积收益）
+        # 但验证时使用 pct_change().shift(-horizon) 是合理的：
+        # 1. 模型预测的是"未来上涨/下跌的方向"，不是具体收益率
+        # 2. pct_change() 提供的是标准化后的收益方向和幅度
+        # 3. 累积收益会受到除权除息、停牌等因素影响，可能导致异常值
+        # 4. pct_change() 的单日收益更稳定，数值范围合理（±10%以内）
         df['actual_return'] = df['Close'].pct_change().shift(-self.horizon)
 
         # 计算预测收益
