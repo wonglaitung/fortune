@@ -2,8 +2,8 @@ name: 预测性能月度报告
 
 on:
   schedule:
-    # 每月1号上午4:00 HK时间 (UTC 20:00 前一天)
-    - cron: '0 20 28-31 * *'
+    # 每月28日 UTC 20:00 (次日 HK 时间凌晨4:00)
+    - cron: '0 20 28 * *'
   # 允许手动触发
   workflow_dispatch:
 
