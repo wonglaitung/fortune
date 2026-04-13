@@ -605,13 +605,71 @@ class WalkForwardValidator:
         win_rate_std = np.std([r['win_rate'] for r in fold_results])
         sharpe_std = np.std([r['sharpe_ratio'] for r in fold_results])
 
-        # 稳定性评级
+        # 稳定性评级（基于收益标准差）
         if return_std < 0.02:
             stability_rating = "高（优秀）"
         elif return_std < 0.05:
             stability_rating = "中（良好）"
         else:
             stability_rating = "低（需改进）"
+
+        # 综合评估评分（0-100分）
+        # 权重：夏普比率30%，最大回撤25%，索提诺比率25%，稳定性20%
+        score = 0
+
+        # 1. 夏普比率评分（30分）：业界标准 >1.0
+        if avg_sharpe_ratio >= 1.0:
+            score += 30
+        elif avg_sharpe_ratio >= 0.8:
+            score += 25
+        elif avg_sharpe_ratio >= 0.5:
+            score += 20
+        elif avg_sharpe_ratio >= 0:
+            score += 10
+
+        # 2. 最大回撤评分（25分）：业界标准 <-20%
+        if avg_max_drawdown > -0.05:  # -5%以内，优秀
+            score += 25
+        elif avg_max_drawdown > -0.10:  # -10%以内，良好
+            score += 20
+        elif avg_max_drawdown > -0.20:  # -20%以内，可接受
+            score += 15
+        elif avg_max_drawdown > -0.30:  # -30%以内，较差
+            score += 10
+
+        # 3. 索提诺比率评分（25分）：业界标准 >1.0
+        if avg_sortino_ratio >= 2.0:
+            score += 25
+        elif avg_sortino_ratio >= 1.0:
+            score += 20
+        elif avg_sortino_ratio >= 0.5:
+            score += 15
+        elif avg_sortino_ratio >= 0:
+            score += 10
+
+        # 4. 稳定性评分（20分）
+        if return_std < 0.02:
+            score += 20
+        elif return_std < 0.05:
+            score += 15
+        elif return_std < 0.10:
+            score += 10
+        else:
+            score += 5
+
+        # 综合评级
+        if score >= 80:
+            overall_rating = "优秀"
+            recommendation = "强烈推荐实盘"
+        elif score >= 60:
+            overall_rating = "良好"
+            recommendation = "推荐实盘"
+        elif score >= 40:
+            overall_rating = "一般"
+            recommendation = "谨慎使用"
+        else:
+            overall_rating = "不佳"
+            recommendation = "需要改进"
 
         return {
             'num_folds': len(fold_results),
@@ -626,7 +684,10 @@ class WalkForwardValidator:
             'return_range': return_range,
             'win_rate_std': win_rate_std,
             'sharpe_std': sharpe_std,
-            'stability_rating': stability_rating
+            'stability_rating': stability_rating,
+            'overall_score': score,
+            'overall_rating': overall_rating,
+            'recommendation': recommendation
         }
 
     def save_report(self, report, output_dir='output'):
@@ -704,6 +765,9 @@ class WalkForwardValidator:
                 f.write("⚠️  所有 Fold 验证失败，无法计算整体指标\n\n")
             else:
                 f.write(f"- **Fold数量**: {overall['num_folds']}\n")
+                f.write(f"- **综合评分**: {overall.get('overall_score', 'N/A')}/100\n")
+                f.write(f"- **综合评级**: {overall.get('overall_rating', 'N/A')}\n")
+                f.write(f"- **推荐度**: {overall.get('recommendation', 'N/A')}\n")
                 f.write(f"- **平均收益率**: {overall['avg_return']:.2%}\n")
                 f.write(f"- **平均胜率**: {overall['avg_win_rate']:.2%}\n")
                 f.write(f"- **平均准确率**: {overall['avg_accuracy']:.2%}\n")
@@ -749,23 +813,41 @@ class WalkForwardValidator:
                 f.write(f"- 增加训练窗口长度\n")
                 f.write(f"- 延长验证日期范围\n")
                 f.write(f"- 检查数据质量\n")
-            elif overall['stability_rating'] == "高（优秀）":
-                f.write(f"✅ 模型表现**优秀**，稳定性高，适合实盘交易。\n\n")
-                f.write(f"- 平均收益率: {overall['avg_return']:.2%}\n")
-                f.write(f"- 夏普比率: {overall['avg_sharpe_ratio']:.4f}\n")
-                f.write(f"- 稳定性评级: {overall['stability_rating']}\n\n")
-            elif overall['stability_rating'] == "中（良好）":
-                f.write(f"⚠️ 模型表现**良好**，但需要优化稳定性。\n\n")
-                f.write(f"- 平均收益率: {overall['avg_return']:.2%}\n")
-                f.write(f"- 夏普比率: {overall['avg_sharpe_ratio']:.4f}\n")
-                f.write(f"- 稳定性评级: {overall['stability_rating']}\n")
-                f.write(f"- 建议：增加正则化，降低模型复杂度\n\n")
             else:
-                f.write(f"❌ 模型表现**不佳**，需要重新训练或调整参数。\n\n")
-                f.write(f"- 平均收益率: {overall['avg_return']:.2%}\n")
-                f.write(f"- 夏普比率: {overall['avg_sharpe_ratio']:.4f}\n")
-                f.write(f"- 稳定性评级: {overall['stability_rating']}\n")
-                f.write(f"- 建议：重新训练模型，增加特征工程，调整超参数\n\n")
+                # 使用综合评级
+                overall_rating = overall.get('overall_rating', '不佳')
+                overall_score = overall.get('overall_score', 0)
+                recommendation = overall.get('recommendation', '需要改进')
+
+                if overall_rating == "优秀":
+                    f.write(f"✅ 模型表现**优秀**，{recommendation}。\n\n")
+                elif overall_rating == "良好":
+                    f.write(f"✅ 模型表现**良好**，{recommendation}。\n\n")
+                elif overall_rating == "一般":
+                    f.write(f"⚠️ 模型表现**一般**，{recommendation}。\n\n")
+                else:
+                    f.write(f"❌ 模型表现**不佳**，{recommendation}。\n\n")
+
+                f.write(f"| 指标 | 数值 | 业界标准 | 评估 |\n")
+                f.write(f"|------|------|---------|------|\n")
+                f.write(f"| 综合评分 | {overall_score}/100 | - | {overall_rating} |\n")
+                f.write(f"| 夏普比率 | {overall['avg_sharpe_ratio']:.4f} | >1.0 | {'✅' if overall['avg_sharpe_ratio'] >= 1.0 else '⚠️' if overall['avg_sharpe_ratio'] >= 0.5 else '❌'} |\n")
+                f.write(f"| 最大回撤 | {overall['avg_max_drawdown']:.2%} | <-20% | {'✅' if overall['avg_max_drawdown'] > -0.20 else '❌'} |\n")
+                f.write(f"| 索提诺比率 | {overall['avg_sortino_ratio']:.4f} | >1.0 | {'✅' if overall['avg_sortino_ratio'] >= 1.0 else '⚠️' if overall['avg_sortino_ratio'] >= 0.5 else '❌'} |\n")
+                f.write(f"| 稳定性评级 | {overall['stability_rating']} | - | - |\n\n")
+
+                # 根据评级给出建议
+                if overall_rating == "优秀":
+                    f.write(f"- **核心优势**：最大回撤控制优秀、夏普比率接近业界标准、索提诺比率高\n")
+                    f.write(f"- **建议**：可以小仓位实盘测试，持续监控\n\n")
+                elif overall_rating == "良好":
+                    f.write(f"- **核心优势**：风险控制良好\n")
+                    f.write(f"- **主要风险**：稳定性有待提升\n")
+                    f.write(f"- **建议**：小仓位实盘测试，关注稳定性优化\n\n")
+                elif overall_rating == "一般":
+                    f.write(f"- **建议**：增加特征工程、调整超参数、优化风险控制\n\n")
+                else:
+                    f.write(f"- **建议**：重新训练模型，增加特征工程，调整超参数\n\n")
 
             f.write("---\n\n")
             f.write(f"*报告生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n")
