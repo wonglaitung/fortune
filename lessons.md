@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v2.0 (2026-04-12) | **状态**：当前有效
+> **版本**：v2.1 (2026-04-13) | **状态**：当前有效
 
 本文档记录开发过程中遇到的问题和解决方案，帮助避免重复错误。
 
@@ -239,17 +239,38 @@ annualized_return = avg_return * (252 / horizon)
 return_std = buy_signals['strategy_return'].std()
 ```
 
-### 3. 回撤计算错误
+### 3. 回撤计算错误（固定持有期策略）
+
+**问题**：Walk-forward 验证显示最大回撤 -84%，明显不合理
+
+**原因分析**：
+- `actual_return = Close.pct_change().shift(-20)` = 未来20天的收益率
+- 旧代码假设收益在信号当天实现，但实际收益在20天后才实现
+- 时间序列回撤计算对于固定持有期策略是错误的
+
+**修复方法**：使用批次回撤计算
 
 ```python
-# ❌ 错误：使用重叠样本（极端回撤值）
-drawdown = (1 + df['strategy_return']).cumprod() - 1
+# ❌ 错误：按信号日期计算时间序列回撤
+trades_by_date = trades.groupby(trades.index)['strategy_return'].mean()
+cumulative_values = np.cumsum(daily_returns) + 1.0
 
-# ✅ 正确：horizon>1时使用非重叠样本
-if horizon > 1:
-    non_overlapping = df.iloc[::horizon].copy()
-    drawdown = (1 + non_overlapping['strategy_return']).cumprod() - 1
+# ✅ 正确：每个信号日期视为独立投资批次
+batches = trades.groupby(trades.index).agg({
+    'strategy_return': 'mean',
+    'signal': 'count'
+})
+batch_returns = batches['strategy_return'].values
+batch_weights = np.ones(len(batch_returns)) / len(batch_returns)
+cumulative_values = np.cumsum(batch_returns * batch_weights) + 1.0
 ```
+
+**验证结果**：
+| 指标 | 修复前 | 修复后 |
+|------|--------|--------|
+| 平均最大回撤 | -84.06% ❌ | -0.55% ✅ |
+
+**关键教训**：固定持有期策略的多笔交易是同时持有的，不能使用顺序累乘的回撤计算方法
 
 ### 4. 时区问题
 
@@ -318,6 +339,7 @@ steps:
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-04-13 | v2.1 | 修正：回撤计算错误（固定持有期策略） |
 | 2026-04-12 | v2.0 | 重构：精简至~300行，分层组织，去重 |
 | 2026-04-08 | v1.8 | 添加：加密货币策略验证、IF阈值校准 |
 | 2026-04-05 | v1.7 | 添加：异常原因分析、工作流语法 |
