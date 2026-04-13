@@ -5599,10 +5599,12 @@ class HSIEmailSystem:
                     except (ValueError, TypeError):
                         pass
 
+                # 成交量：当为0时显示更有意义的提示
+                volume_display = f"{hsi_data['volume']:,.0f}" if hsi_data['volume'] > 0 else "N/A（数据暂未更新）"
                 html += f"""
                     <tr>
                         <td>成交量</td>
-                        <td>{hsi_data['volume']:,.0f}</td>
+                        <td>{volume_display}</td>
                     </tr>
                     <tr>
                         <td>趋势(技术分析)</td>
@@ -5706,8 +5708,10 @@ class HSIEmailSystem:
                     text += f"  建议止损价: {stop_loss:,.2f}\n"
                 if take_profit is not None:
                     text += f"  建议止盈价: {take_profit:,.2f}\n"
-                
-                text += f"  成交量: {hsi_data['volume']:,.0f}\n"
+
+                # 成交量：当为0时显示更有意义的提示
+                volume_text = f"{hsi_data['volume']:,.0f}" if hsi_data['volume'] > 0 else "N/A（数据暂未更新）"
+                text += f"  成交量: {volume_text}\n"
                 text += f"  趋势(技术分析): {trend}\n"
                 text += f"  RSI: {rsi:.2f}\n"
                 text += f"  MACD: {macd:.4f} (信号线: {macd_signal:.4f})\n"
