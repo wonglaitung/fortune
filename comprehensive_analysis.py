@@ -1495,46 +1495,55 @@ def get_recent_transactions(hours=48):
 def format_recent_transactions(transactions_df):
     """
     格式化最近的交易记录为表格格式
-    
+
     参数:
     - transactions_df: 交易记录数据框
-    
+
     返回:
     - str: 格式化的交易记录文本（表格格式）
     """
     if transactions_df is None or transactions_df.empty:
         return "  最近48小时内没有交易记录\n"
-    
+
     # 按股票代码和时间排序
     transactions_df = transactions_df.sort_values(by=['code', 'timestamp'])
-     
+
     # 构建Markdown表格
     text = "| 股票名称 | 股票代码 | 时间 | 类型 | 价格 | 目标价 | 止损价 | 有效期 | 理由 |\n"
     text += "|---------|---------|------|------|------|--------|--------|--------|------|\n"
-    
+
     for _, trans in transactions_df.iterrows():
         stock_name = trans.get('name', '')
         code = trans.get('code', '')
-        trans_type = trans.get('type', '')
+        trans_type = trans.get('type', '').upper()
+
+        # BUY用绿色，SELL用红色
+        if trans_type == 'BUY':
+            trans_type_display = '<span style="color: green;">**BUY**</span>'
+        elif trans_type == 'SELL':
+            trans_type_display = '<span style="color: red;">**SELL**</span>'
+        else:
+            trans_type_display = trans_type
+
         timestamp = pd.Timestamp(trans['timestamp']).strftime('%m-%d %H:%M:%S')
         price = trans.get('current_price', np.nan)
         price_display = f"{price:,.2f}" if not pd.isna(price) and price is not None else ''
         reason = trans.get('reason', '') or ''
-        
+
         # 格式化止损价和目标价
         stop_loss = trans.get('stop_loss_price', np.nan)
-        stop_loss_display = safe_float_format(stop_loss, '2f') if safe_float_format(stop_loss, '2f') else ''
-        
+        stop_loss_display = safe_float_format(stop_loss, '.2f') if safe_float_format(stop_loss, '.2f') else ''
+
         # 获取目标价
         target_price = trans.get('target_price', np.nan)
-        target_price_display = safe_float_format(target_price, '2f') if safe_float_format(target_price, '2f') else ''
-        
+        target_price_display = safe_float_format(target_price, '.2f') if safe_float_format(target_price, '.2f') else ''
+
         # 获取有效期
         validity_period = trans.get('validity_period', np.nan)
-        validity_period_display = safe_float_format(validity_period, '0f') if safe_float_format(validity_period, '0f') else ''
-        
-        text += f"| {stock_name} | {code} | {timestamp} | {trans_type} | {price_display} | {target_price_display} | {stop_loss_display} | {validity_period_display} | {reason} |\n"
-    
+        validity_period_display = safe_float_format(validity_period, '.0f') if safe_float_format(validity_period, '.0f') else ''
+
+        text += f"| {stock_name} | {code} | {timestamp} | {trans_type_display} | {price_display} | {target_price_display} | {stop_loss_display} | {validity_period_display} | {reason} |\n"
+
     return text
 
 
@@ -2166,17 +2175,22 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 # 构建恒生指数分析文本
                 hsi_text = "**技术指标**:\n\n"
                 if hsi_data:
-                    hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '2f')}\n"
+                    hsi_text += f"- 当前价格：{safe_float_format(hsi_data['current_price'], '.2f')}\n"
                     hsi_text += f"- 日涨跌幅：{safe_float_format(hsi_data['change_pct'], '+.2f')}% ({safe_float_format(hsi_data['change_points'], '+.2f')} 点)\n"
-                    hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
-                    hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
-                    hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
+                    hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '.2f')}\n"
+                    hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '.2f')}\n"
+                    hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '.2f')}\n"
                     # 成交量相关数据
-                    hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
-                    volume_ratio = hsi_data.get('volume_ratio', 0)
-                    volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
-                    volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
-                    hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
+                    # 当成交量为0时（数据未更新），显示更有意义的提示
+                    if hsi_data['volume'] > 0:
+                        hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
+                        volume_ratio = hsi_data.get('volume_ratio', 0)
+                        volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
+                        volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
+                        hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
+                    else:
+                        hsi_text += "- 成交量：N/A（数据暂未更新）\n"
+                        hsi_text += "- 成交量比率：N/A\n"
 
                 if current_market:
                     hsi_text += f"- 市场信号: {current_market['market_signal']}\n"
