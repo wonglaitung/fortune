@@ -770,7 +770,19 @@ def get_hsi_analysis():
         # 计算移动平均线
         ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
         ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
-        
+
+        # 计算成交量相关指标
+        current_volume = latest['Volume']
+        # 5日平均成交量
+        volume_ma5 = hist['Volume'].rolling(window=5).mean().iloc[-1]
+        # 20日平均成交量
+        volume_ma20 = hist['Volume'].rolling(window=20).mean().iloc[-1]
+        # 成交量比率（当前成交量 / 20日平均成交量）
+        volume_ratio = current_volume / volume_ma20 if volume_ma20 > 0 else 0
+        # 成交量变化（相对前一日）
+        prev_volume = prev['Volume']
+        volume_change_pct = ((current_volume - prev_volume) / prev_volume * 100) if prev_volume > 0 else 0
+
         # 趋势判断
         if current_price > ma20 > ma50:
             trend = "强势多头"
@@ -780,7 +792,7 @@ def get_hsi_analysis():
             trend = "震荡整理"
         else:
             trend = "弱势空头"
-        
+
         return {
             'current_price': current_price,
             'change_points': change_points,
@@ -788,7 +800,12 @@ def get_hsi_analysis():
             'rsi': current_rsi,
             'ma20': ma20,
             'ma50': ma50,
-            'trend': trend
+            'trend': trend,
+            'volume': current_volume,
+            'volume_ma5': volume_ma5,
+            'volume_ma20': volume_ma20,
+            'volume_ratio': volume_ratio,
+            'volume_change_pct': volume_change_pct
         }
     except Exception as e:
         print(f"⚠️ 获取恒生指数分析失败: {e}")
@@ -2154,12 +2171,18 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '2f')}\n"
                     hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '2f')}\n"
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '2f')}\n"
+                    # 成交量相关数据
+                    hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
+                    volume_ratio = hsi_data.get('volume_ratio', 0)
+                    volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
+                    volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
+                    hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
 
                 if current_market:
                     hsi_text += f"- 市场信号: {current_market['market_signal']}\n"
                     hsi_text += f"- 市场状态: {current_market['market_state_cn']}\n"
                     hsi_text += f"- 最近20天收益率: {current_market['recent_20d_return']:.2%}\n"
-                    hsi_text += f"最近5天收益率: {current_market['recent_5d_return']:.2%}\n"
+                    hsi_text += f"- 最近5天收益率: {current_market['recent_5d_return']:.2%}\n"
                     
                     # 添加市场状态说明表格
                     hsi_text += "### 市场状态说明\n\n"
