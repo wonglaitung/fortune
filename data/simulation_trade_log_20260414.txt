@@ -2151,3 +2151,1038 @@ Sell list:
 [2026-04-14 13:30:19] 解析后推荐: 买入 [], 卖出 []
 [2026-04-14 13:30:19] 大模型未提供明确推荐，跳过本次交易
 [2026-04-14 13:30:19] 下一次交易分析将在 2026-04-14 15:46:19 执行（间隔约 2.3 小时，基准 2.0 小时）
+[2026-04-14 15:46:19] 开始每120分钟分析...
+[2026-04-14 15:46:19] 开始执行交易决策...
+[2026-04-14 15:46:19] 正在分析股票...
+[2026-04-14 15:49:16] 正在调用大模型分析...
+[2026-04-14 15:54:05] 大模型分析调用成功
+[2026-04-14 15:54:05] 大模型分析结果:
+首先，我需要按照分析框架的0-5层逐步处理。当前时间是2026-04-14 15:49:16，属于下午时段（13:00-16:00），所以成交额和换手率检查要用下午时段的标准。
+
+### 第0层：前置检查（市场环境）
+- **交易时段判断**：当前时间15:49:16，是下午时段（13:00-16:00），所以成交额和换手率检查用下午标准。
+- **VIX恐慌指数检查**：在数据中，所有股票的VIX恐慌指数都是"N/A"，没有提供具体值。所以无法判断VIX。但根据规则，如果VIX缺失，可能默认正常，但框架说必须检查。既然数据中没有，我假设VIX < 20，正常或乐观。
+- **成交额变化率检查**：下午时段，1日/5日/20日变化率全部<-10%→观望；正向且一致→支持交易。
+  - 我需要检查所有股票的成交额变化(1日/5日/20日)。但框架是针对整体市场，不是单个股票。问题：框架说"成交额变化率检查"，但数据是每个股票的。可能是指市场整体，但数据中没有市场整体数据。或许需要看多数股票的情况。
+  - 看数据：例如，0005.HK成交额变化: "3.25/-3.0/16.2"，有正有负；0012.HK: "13.45/0.62/-45.55"，20日负；0016.HK: "-13.04/-48.96/-68.28"，全负；0388.HK: "-28.27/-2.9/-43.53"，全负；0700.HK: "-23.64/-5.05/-26.39"，全负；等等。
+  - 多数股票的成交额变化率在20日是负的，但1日和5日有正有负。框架说"全部<-10%→观望"，但这里不是全部，有些1日是正的。例如，1109.HK: "86.29/131.94/9.84"，全正；1330.HK: "197.43/60.73/-88.38"，20日负；6682.HK: "218.44/160.52/166.05"，全正。
+  - 所以，不是全部<-10%，有些股票成交额正向。因此，不触发观望条件。
+- **换手率变化率检查**：下午时段，换手率<-1%且变化率<-10%→观望。
+  - 换手率是每个股票的，变化率可能指换手率的变化，但数据中只有换手率(%)，没有变化率。数据中是"换手率(%)"，例如0.09, 0.14等，都是正数，但没给变化率。
+  - 框架说"换手率变化率"，但数据中没有提供变化率，只有当前换手率。可能是个问题。
+  - 看数据：换手率(%)值，如0.09, 0.14, 0.08等，都小于1%（因为0.09% <1%），但框架说"换手率<-1%"，但换手率是百分比，值小表示低换手。例如0.09% <1%，但变化率未知。
+  - 由于数据中没有换手率变化率，我假设无法检查，或者默认不触发。
+  - 框架：下午时段，换手率<-1%且变化率<-10%→观望。但换手率值如0.09% <1%，但变化率缺失。或许在上下文中，换手率低可能表示观望，但规则要求变化率。
+  - 保守起见，既然数据缺失，不触发观望。
+
+结论：第0层，市场环境正常，无极端条件，建议正常交易。
+
+### 第1层：风险控制（最高优先级）
+检查所有股票的风险控制信号：
+- 止损触发(1)：亏损≥15%，立即全部卖出
+- 止盈触发(1)：盈利≥10%，建议卖出30%
+- Trailing Stop触发(1)：价格从高点回撤超过2.5倍ATR，建议卖出30%
+
+在数据中，所有股票的"风险控制（最高优先级）"字段：
+- 止损触发: 0
+- 止盈触发: 0
+- Trailing Stop触发: 0
+
+所有股票都是0，表示没有触发。所以，风险控制未触发。
+
+### 第2层：核心信号识别
+- 建仓信号：建仓级别=strong（评分≥5.0）或partial（3.0≤评分<5.0）
+- 出货信号：出货级别=strong（评分≥5.0）或weak（3.0≤评分<5.0）
+
+我需要筛选：
+- 买入建议：建仓评分≥3.0 且 出货评分<2.0 且 风险控制未触发（已满足）且 筹码阻力不严重（上方筹码比例<60%或拉升难度非"困难"）
+- 卖出建议：出货评分≥3.0 或 风险控制触发（未触发）或 筹码阻力严重（上方筹码比例>60%且拉升难度为"困难"）
+- 持有建议：建仓评分<3.0 且 出货评分<3.0
+
+先列出所有股票的建仓评分、出货评分、筹码分布等。
+
+从JSON数据中提取关键字段：
+
+1. 0005.HK 汇丰银行
+   - 建仓评分: 2.0 (none)
+   - 出货评分: 4.5 (weak)
+   - 上方筹码比例: "0.0%"
+   - 拉升难度: "容易"
+   - 出货评分≥3.0，所以卖出建议
+
+2. 0012.HK 恒基地产
+   - 建仓评分: 5.2 (strong)
+   - 出货评分: "N/A" (none)
+   - 上方筹码比例: "14.6%"
+   - 拉升难度: "容易"
+   - 建仓评分≥3.0, 出货评分<2.0 (since "N/A" probably means no outflow signal), 筹码阻力低，买入建议
+
+3. 0016.HK 新鸿基地产
+   - 建仓评分: 3.2 (partial)
+   - 出货评分: 2.0 (none)
+   - 上方筹码比例: "30.1%"
+   - 拉升难度: "中等"
+   - 建仓评分≥3.0, 出货评分<2.0? 出货评分=2.0, 但规则是出货评分<2.0 for 买入建议。规则说"出货评分<2.0"，2.0 is not less than 2.0, so probably not. 出货评分=2.0, 级别"none"，但评分=2.0，规则是<2.0 for 买入建议。严格来说，2.0 not <2.0, so may not qualify. 但级别是"none"，可能视为<2.0。需要检查规则。
+
+规则：买入建议条件：建仓评分≥3.0 且 出货评分<2.0
+
+出货评分=2.0，不满足<2.0。所以可能不满足买入建议。
+
+4. 0388.HK 香港交易所
+   - 建仓评分: 4.0 (partial)
+   - 出货评分: 4.0 (weak)
+   - 出货评分≥3.0，卖出建议
+
+5. 0700.HK 腾讯控股
+   - 建仓评分: 4.7 (partial)
+   - 出货评分: 2.0 (none)
+   - 出货评分=2.0, not <2.0? 同上，可能不满足<2.0
+   - 上方筹码比例: "64.9%", 拉升难度: "困难" — 筹码阻力严重（>60% and 困难），所以即使建仓评分高，也可能不买入
+
+6. 0728.HK 中国电信
+   - 建仓评分: 3.0 (partial)
+   - 出货评分: 1.0 (none)
+   - 出货评分=1.0 <2.0, 建仓评分=3.0≥3.0
+   - 上方筹码比例: "10.9%", 拉升难度: "容易" — 阻力低，买入建议
+
+7. 0883.HK 中国海洋石油
+   - 建仓评分: 1.5 (none)
+   - 出货评分: 3.0 (weak)
+   - 出货评分≥3.0，卖出建议
+
+8. 0939.HK 建设银行
+   - 建仓评分: 2.0 (none)
+   - 出货评分: 3.5 (weak)
+   - 出货评分≥3.0，卖出建议
+
+9. 0941.HK 中国移动
+   - 建仓评分: 1.0 (none)
+   - 出货评分: 6.0 (strong)
+   - 出货评分≥3.0，卖出建议
+
+10. 0981.HK 中芯国际
+    - 建仓评分: 4.7 (partial)
+    - 出货评分: 2.0 (none)
+    - 出货评分=2.0, not <2.0? 
+    - 上方筹码比例: "5.6%", 拉升难度: "容易" — 阻力低
+
+11. 1088.HK 中国神华
+    - 建仓评分: 2.0 (none)
+    - 出货评分: 4.0 (weak)
+    - 出货评分≥3.0，卖出建议
+
+12. 1109.HK 华润置地
+    - 建仓评分: 7.4 (strong)
+    - 出货评分: 2.0 (none)
+    - 出货评分=2.0, not <2.0? 
+    - 上方筹码比例: "0.0%", 拉升难度: "容易" — 阻力低
+
+13. 1138.HK 中远海能
+    - 建仓评分: 1.0 (none)
+    - 出货评分: 4.5 (weak)
+    - 出货评分≥3.0，卖出建议
+
+14. 1288.HK 农业银行
+    - 建仓评分: 2.0 (none)
+    - 出货评分: 5.0 (strong)
+    - 出货评分≥3.0，卖出建议
+
+15. 1330.HK 绿色动力环保
+    - 建仓评分: 3.2 (partial)
+    - 出货评分: 2.0 (none)
+    - 出货评分=2.0, not <2.0? 
+    - 上方筹码比例: "0.0%", 拉升难度: "容易" — 阻力低
+
+16. 1347.HK 华虹半导体
+    - 建仓评分: 5.7 (strong)
+    - 出货评分: 1.0 (none)
+    - 出货评分=1.0 <2.0, 建仓评分=5.7≥3.0
+    - 上方筹码比例: "35.7%", 拉升难度: "中等" — 阻力中等，但<60%，拉升难度中等，可能不算严重阻力
+
+17. 1398.HK 工商银行
+    - 建仓评分: 2.0 (none)
+    - 出货评分: 5.0 (strong)
+    - 出货评分≥3.0，卖出建议
+
+18. 1810.HK 小米集团-W
+    - 建仓评分: 4.4 (partial)
+    - 出货评分: 3.5 (weak)
+    - 出货评分≥3.0，卖出建议
+
+19. 2269.HK 药明生物
+    - 建仓评分: 2.5 (none)
+    - 出货评分: 1.0 (none)
+    - 建仓评分<3.0, 出货评分<3.0, 持有建议
+
+20. 2533.HK 黑芝麻智能
+    - 建仓评分: 4.5 (partial)
+    - 出货评分: "N/A" (none)
+    - 出货评分<2.0 (since "N/A" probably means no signal), 建仓评分=4.5≥3.0
+    - 上方筹码比例: "9.1%", 拉升难度: "容易" — 阻力低，买入建议
+
+21. 2800.HK 盈富基金
+    - 建仓评分: 3.0 (partial)
+    - 出货评分: 1.5 (none)
+    - 出货评分=1.5<2.0, 建仓评分=3.0≥3.0
+    - 上方筹码比例: "16.4%", 拉升难度: "容易" — 阻力低，买入建议
+
+22. 3690.HK 美团-W
+    - 建仓评分: 3.0 (partial)
+    - 出货评分: 1.0 (none)
+    - 出货评分=1.0<2.0, 建仓评分=3.0≥3.0
+    - 上方筹码比例: "68.5%", 拉升难度: "困难" — 阻力严重（>60% and 困难），所以不买入，可能卖出或持有
+
+23. 3968.HK 招商银行
+    - 建仓评分: 2.0 (none)
+    - 出货评分: 1.0 (none)
+    - 建仓评分<3.0, 出货评分<3.0, 持有建议
+
+24. 6682.HK 范式智能
+    - 建仓评分: 7.2 (strong)
+    - 出货评分: 4.5 (weak)
+    - 出货评分≥3.0，卖出建议
+
+25. 9660.HK 地平线机器人
+    - 建仓评分: 4.7 (partial)
+    - 出货评分: 2.0 (none)
+    - 出货评分=2.0, not <2.0? 
+    - 上方筹码比例: "26.8%", 拉升难度: "容易" — 阻力低
+
+26. 9988.HK 阿里巴巴-SW
+    - 建仓评分: 4.7 (partial)
+    - 出货评分: 2.0 (none)
+    - 出货评分=2.0, not <2.0? 
+    - 上方筹码比例: "34.3%", 拉升难度: "中等" — 阻力中等
+
+27. 1211.HK 比亚迪股份
+    - 建仓评分: 3.0 (partial)
+    - 出货评分: 4.5 (weak)
+    - 出货评分≥3.0，卖出建议
+
+28. 1299.HK 友邦保险
+    - 建仓评分: 2.7 (none)
+    - 出货评分: 4.0 (weak)
+    - 出货评分≥3.0，卖出建议
+
+现在，处理出货评分=2.0的情况。规则说"出货评分<2.0" for 买入建议。出货评分=2.0 is not less than 2.0, so strictly speaking, it does not satisfy the condition. However, the outflow level is "none", which might imply it's not a strong signal. But the rule is clear: <2.0.
+
+Similarly, for outflow, ≥3.0 for strong or weak.
+
+In the data, outflow score of 2.0 is labeled as "none", so perhaps it's considered less than 3.0, but for buy condition, it needs <2.0.
+
+To be precise, I'll assume that outflow score <2.0 means strictly less than 2.0, so 2.0 does not qualify.
+
+Thus, for buy suggestions, outflow score must be <2.0.
+
+List potential buy candidates:
+
+- 0012.HK: 建仓评分=5.2≥3.0, 出货评分="N/A" (none, assume <2.0), 筹码阻力低 (14.6%<60%, easy)
+- 0728.HK: 建仓评分=3.0≥3.0, 出货评分=1.0<2.0, 筹码阻力低 (10.9%<60%, easy)
+- 1347.HK: 建仓评分=5.7≥3.0, 出货评分=1.0<2.0, 筹码阻力中等 (35.7%<60%, medium) — since <60%, not severe, so ok
+- 2533.HK: 建仓评分=4.5≥3.0, 出货评分="N/A" (none, <2.0), 筹码阻力低 (9.1%<60%, easy)
+- 2800.HK: 建仓评分=3.0≥3.0, 出货评分=1.5<2.0, 筹码阻力低 (16.4%<60%, easy)
+
+Now, 0016.HK: 建仓评分=3.2, 出货评分=2.0 not <2.0, so not buy
+0700.HK: 出货评分=2.0 not <2.0, and 筹码阻力严重 (64.9%>60%, difficult), so not buy
+0981.HK: 出货评分=2.0 not <2.0
+1109.HK: 出货评分=2.0 not <2.0
+1330.HK: 出货评分=2.0 not <2.0
+9660.HK: 出货评分=2.0 not <2.0
+9988.HK: 出货评分=2.0 not <2.0
+
+So only the above 5 are potential buy candidates.
+
+But output should be top 3-5, so we can list them.
+
+For sell suggestions: outflow score ≥3.0 or severe resistance.
+
+Severe resistance: 上方筹码比例>60% and 拉升难度="困难"
+
+Check:
+
+- 0700.HK: 上方筹码比例=64.9%>60%, 拉升难度="困难" — severe resistance, so sell suggestion even if outflow score not ≥3.0? But outflow score=2.0<3.0, but rule says "筹码阻力严重（上方筹码比例>60%且拉升难度为"困难"）" for sell suggestion.
+
+Rule: 卖出建议：出货评分≥3.0 或 风险控制触发 或 筹码阻力严重（上方筹码比例>60%且拉升难度为"困难"）
+
+So for 0700.HK, severe resistance, so sell suggestion.
+
+Similarly, 3690.HK: 上方筹码比例=68.5%>60%, 拉升难度="困难" — severe resistance, and outflow score=1.0<3.0, but due to resistance, sell suggestion.
+
+Also, outflow score ≥3.0 stocks:
+
+- 0005.HK: outflow=4.5≥3.0
+- 0388.HK: outflow=4.0≥3.0
+- 0883.HK: outflow=3.0≥3.0
+- 0939.HK: outflow=3.5≥3.0
+- 0941.HK: outflow=6.0≥3.0
+- 1088.HK: outflow=4.0≥3.0
+- 1138.HK: outflow=4.5≥3.0
+- 1288.HK: outflow=5.0≥3.0
+- 1398.HK: outflow=5.0≥3.0
+- 1810.HK: outflow=3.5≥3.0
+- 27. 1211.HK: outflow=4.5≥3.0
+- 28. 1299.HK: outflow=4.0≥3.0
+- 24. 6682.HK: outflow=4.5≥3.0
+
+Plus severe resistance stocks: 0700.HK and 3690.HK
+
+But 0700.HK outflow score=2.0<3.0, but due to resistance, sell.
+
+Similarly, 3690.HK outflow=1.0<3.0, but resistance.
+
+Now, for hold suggestions: 建仓评分<3.0 and 出货评分<3.0
+
+- 0005.HK: 建仓=2.0<3.0, but 出货=4.5≥3.0, so not hold (it's sell)
+- 0016.HK: 建仓=3.2≥3.0, 出货=2.0<3.0? 2.0<3.0 yes, but for hold, need both <3.0. 建仓=3.2≥3.0, so not hold.
+- 02269.HK: 建仓=2.5<3.0, 出货=1.0<3.0, hold
+- 03968.HK: 建仓=2.0<3.0, 出货=1.0<3.0, hold
+- Others: 0700.HK: 建仓=4.7≥3.0, not hold; etc.
+
+List hold candidates:
+
+- 2269.HK: 建仓=2.5<3.0, 出货=1.0<3.0
+- 3968.HK: 建仓=2.0<3.0, 出货=1.0<3.0
+- 0016.HK: 建仓=3.2≥3.0, not <3.0, so not hold
+- 0981.HK: 建仓=4.7≥3.0, not hold
+- 1109.HK: 建仓=7.4≥3.0, not hold
+- 1330.HK: 建仓=3.2≥3.0, not hold
+- 9660.HK: 建仓=4.7≥3.0, not hold
+- 9988.HK: 建仓=4.7≥3.0, not hold
+
+Also, 0005.HK: 建仓=2.0<3.0, but 出货=4.5≥3.0, so sell, not hold
+
+So only 2269.HK and 3968.HK for hold? But there might be more.
+
+Check all:
+
+- 0005.HK: 建仓=2.0<3.0, 出货=4.5≥3.0 → sell
+- 0012.HK: buy
+- 0016.HK: 建仓=3.2≥3.0, 出货=2.0<3.0 → but for buy, outflow not <2.0, so not buy; for hold, 建仓≥3.0, so not hold. What category? Rule: if not buy and not sell, then hold? But rule says 持有建议：建仓评分<3.0 且 出货评分<3.0
+
+For 0016.HK, 建仓=3.2≥3.0, so not <3.0, thus not hold. And outflow=2.0<3.0, so not sell. But it doesn't fit buy because outflow not <2.0.
+
+Similarly, others.
+
+The rule might have gaps. Perhaps for stocks with 建仓≥3.0 but outflow not <2.0, they are not buy, and if outflow<3.0, not sell, so hold.
+
+But the hold condition is specifically 建仓<3.0 and 出货<3.0.
+
+To avoid confusion, I'll follow the rules strictly.
+
+For 0016.HK: 建仓=3.2≥3.0, so not eligible for hold (since hold requires 建仓<3.0). Outflow=2.0<3.0, so not sell. But not buy because outflow not <2.0. So it might be in a gray area, but according to output format, only buy/sell/hold, so perhaps hold if not buy or sell.
+
+But the rule says 持有建议：建仓评分<3.0 且 出货评分<3.0
+
+So if 建仓≥3.0, it doesn't qualify for hold.
+
+Similarly, if outflow≥3.0, it's sell.
+
+So for stocks with 建仓≥3.0 and outflow<3.0 but outflow≥2.0, they are not buy (since outflow not <2.0), and not sell (outflow<3.0), so they should be hold? But the hold condition requires 建仓<3.0.
+
+This is inconsistent.
+
+Perhaps the outflow score for buy is <2.0, but for hold, it's when no clear signal.
+
+I think for practical purposes, if 建仓≥3.0 and outflow<3.0, it might be a buy candidate but with caution, but the rule specifies outflow<2.0 for buy.
+
+To resolve, I'll assume that outflow score <2.0 is required for buy, so if outflow is 2.0, it's not buy, and if outflow<3.0, not sell, so it should be hold, but hold requires 建仓<3.0.
+
+For example, 0016.HK: 建仓=3.2≥3.0, outflow=2.0<3.0.
+
+Since 建仓≥3.0, it doesn't meet hold condition, so it must be either buy or sell. But it doesn't meet buy condition (outflow not <2.0), and not sell (outflow<3.0), so perhaps it's not included in any, but the output should cover all stocks.
+
+The priority rules say: 每只股票只能出现在一个建议类别中
+
+And 买入建议: 建仓评分≥3.0 且 出货评分<2.0 且 ... 
+
+卖出建议: 出货评分≥3.0 or ... 
+
+持有建议: 建仓评分<3.0 且 出货评分<3.0
+
+So for a stock with 建仓≥3.0 and 2.0≤出货评分<3.0, it doesn't fit any category.
+
+But in reality, outflow score of 2.0 is "none", so it might be considered for buy with lower confidence, but the rule is strict.
+
+Perhaps "出货评分<2.0" includes scores less than 2.0, so 2.0 is not included.
+
+For such stocks, they should be in hold, but hold requires 建仓<3.0.
+
+This is a problem.
+
+Looking back at the data, outflow score of 2.0 is labeled as "none", and for buy condition, it might be acceptable if outflow level is "none".
+
+But the rule says "出货评分<2.0", not level.
+
+To simplify, I'll consider outflow score <2.0 for buy, so 2.0 does not qualify.
+
+For stocks with 建仓≥3.0 and outflow<3.0 but outflow≥2.0, they are not buy, not sell, so perhaps hold, but since 建仓≥3.0, it doesn't meet hold condition.
+
+Perhaps the hold condition is for when both scores are low.
+
+I think for this analysis, I'll include them in hold if outflow<3.0, even if 建仓≥3.0, but the rule specifies 建仓<3.0.
+
+Let's count the stocks.
+
+From the list, stocks with 建仓<3.0 and outflow<3.0:
+- 2269.HK: 建仓=2.5<3.0, outflow=1.0<3.0
+- 3968.HK: 建仓=2.0<3.0, outflow=1.0<3.0
+- 0005.HK: 建仓=2.0<3.0, but outflow=4.5≥3.0, so not
+- 0883.HK: 建仓=1.5<3.0, outflow=3.0≥3.0, not
+- 0941.HK: 建仓=1.0<3.0, outflow=6.0≥3.0, not
+- 1088.HK: 建仓=2.0<3.0, outflow=4.0≥3.0, not
+- 1138.HK: 建仓=1.0<3.0, outflow=4.5≥3.0, not
+- 1288.HK: 建仓=2.0<3.0, outflow=5.0≥3.0, not
+- 1398.HK: 建仓=2.0<3.0, outflow=5.0≥3.0, not
+- 1810.HK: 建仓=4.4≥3.0, not <3.0
+- 27. 1211.HK: 建仓=3.0≥3.0, not <3.0
+- 28. 1299.HK: 建仓=2.7<3.0? 2.7<3.0 yes, outflow=4.0≥3.0, so not hold
+
+1299.HK 建仓评分=2.7<3.0, outflow=4.0≥3.0, so sell.
+
+So only 2269.HK and 3968.HK for hold.
+
+But there might be more with 建仓<3.0 and outflow<3.0.
+
+0016.HK: 建仓=3.2≥3.0, not <3.0
+
+0981.HK: 建仓=4.7≥3.0
+
+ etc.
+
+What about 0700.HK: 建仓=4.7≥3.0, outflow=2.0<3.0, but severe resistance, so sell.
+
+For stocks like 0016.HK, since 建仓≥3.0 and outflow<3.0, and no severe resistance, it might be a buy candidate, but outflow not <2.0.
+
+Perhaps in practice, outflow score of 2.0 is considered low, so for buy.
+
+But to follow the rule, I'll stick to the strict interpretation.
+
+For the output, I'll list buy candidates only if outflow<2.0.
+
+So buy candidates:
+- 0012.HK: outflow="N/A", assume <2.0
+- 0728.HK: outflow=1.0<2.0
+- 1347.HK: outflow=1.0<2.0
+- 2533.HK: outflow="N/A", assume <2.0
+- 2800.HK: outflow=1.5<2.0
+
+Top 5 by 建仓评分: 1347.HK (5.7), 0012.HK (5.2), 2533.HK (4.5), 2800.HK (3.0), 0728.HK (3.0)
+
+2800.HK and 0728.HK both 3.0, but 0728.HK has lower score? 0728.HK 建仓评分=3.0, 2800.HK=3.0, same.
+
+Sort by 建仓评分 descending.
+
+1347.HK: 5.7
+0012.HK: 5.2
+2533.HK: 4.5
+0728.HK: 3.0
+2800.HK: 3.0
+
+But 2800.HK and 0728.HK both 3.0, so order by code or something.
+
+For sell, outflow≥3.0 or severe resistance.
+
+Severe resistance: 0700.HK and 3690.HK
+
+Outflow≥3.0: many, sort by outflow score descending.
+
+Top sell candidates:
+- 0941.HK: outflow=6.0
+- 1288.HK: 5.0
+- 1398.HK: 5.0
+- 0005.HK: 4.5
+- 1138.HK: 4.5
+- 6682.HK: 4.5
+- 1211.HK: 4.5
+- 0388.HK: 4.0
+- 1088.HK: 4.0
+- 1299.HK: 4.0
+- 0883.HK: 3.0
+- 0939.HK: 3.5
+- 1810.HK: 3.5
+
+Also severe resistance: 0700.HK and 3690.HK, outflow scores 2.0 and 1.0, but due to resistance.
+
+For sell, list top 5 by outflow score or severity.
+
+Since severe resistance is also sell, include them.
+
+Top sell: 0941.HK (6.0), 1288.HK (5.0), 1398.HK (5.0), then 0005.HK (4.5), 1138.HK (4.5), etc.
+
+But 0700.HK has severe resistance, outflow=2.0, but resistance might make it high priority.
+
+Similarly, 3690.HK.
+
+Perhaps list outflow score high first, then severe resistance.
+
+For hold: 2269.HK and 3968.HK
+
+Now, for the output, I need to select top 3-5 for buy and sell.
+
+Buy: top 5 by 建仓评分: 1347.HK, 0012.HK, 2533.HK, then 0728.HK and 2800.HK (both 3.0)
+
+Sell: top 5 by outflow score: 0941.HK (6.0), 1288.HK (5.0), 1398.HK (5.0), 0005.HK (4.5), 1138.HK (4.5) — but 0005.HK and 1138.HK both 4.5, so include 0700.HK for severe resistance? But outflow score lower.
+
+Since 0700.HK has severe resistance, it might be high priority sell.
+
+Similarly, 3690.HK.
+
+But for consistency, list by outflow score.
+
+Top outflow: 0941.HK (6.0), 1288.HK (5.0), 1398.HK (5.0), then 0005.HK, 1138.HK, 6682.HK, 1211.HK all 4.5.
+
+Choose 0941.HK, 1288.HK, 1398.HK, 0005.HK, 1138.HK for sell.
+
+But 0700.HK has severe resistance, outflow=2.0, but resistance might be more important.
+
+The rule says "或", so severe resistance qualifies.
+
+So perhaps include 0700.HK in sell.
+
+Similarly, 3690.HK.
+
+For top 5 sell, include high outflow and severe resistance.
+
+List: 0941.HK (outflow 6.0), 1288.HK (5.0), 1398.HK (5.0), 0700.HK (severe resistance), 3690.HK (severe resistance)
+
+Or by outflow score.
+
+I think for sell, outflow score is primary.
+
+So top 5 outflow: 0941.HK, 1288.HK, 1398.HK, then 0005.HK, 1138.HK (both 4.5)
+
+0700.HK outflow=2.0<3.0, so not in outflow≥3.0, but due to resistance, it is sell, but for top list, outflow high might be priority.
+
+Similarly, 3690.HK outflow=1.0<3.0.
+
+So for the "most priority" sell, outflow high score.
+
+So I'll list 0941.HK, 1288.HK, 1398.HK, 0005.HK, 1138.HK.
+
+But 0005.HK and 1138.HK both 4.5, so ok.
+
+Now for buy, top 5: 1347.HK, 0012.HK, 2533.HK, 0728.HK, 2800.HK
+
+2800.HK is盈富基金, an ETF, might be good for diversification.
+
+### 第3层：技术面分析
+For each buy candidate, need to analyze TAV, technical indicators, etc.
+
+Also, 第4层：板块趋势
+- 强势板块（涨幅>1%）：生物医药股、人工智能股（2.41%），房地产股涨幅2.17%>1%，所以强势上涨
+- 温和上涨：银行股1.30%, 科技股0.78%, etc.
+
+For buy candidates:
+- 0012.HK 恒基地产: 房地产股, 板块涨幅2.17%>1%, 强势上涨, good
+- 0728.HK 中国电信: 公用事业股, 板块趋势"温和下跌", 涨幅-0.34%, so weak, not good for buy
+- 1347.HK 华虹半导体: 半导体股, 板块趋势"温和上涨", 涨幅0.78%, so ok
+- 2533.HK 黑芝麻智能: 人工智能股, 板块涨幅2.41%>1%, 强势上涨, good
+- 2800.HK 盈富基金: 指数基金, 板块涨幅0.35%, 温和上涨, ok
+
+0728.HK is in weak sector, so might not be ideal for buy.
+
+Similarly, for sell, sectors.
+
+But for buy, prioritize stocks in strong sectors.
+
+So for buy, 0012.HK, 2533.HK, 1347.HK, 2800.HK are in strong or ok sectors.
+
+0728.HK in weak sector, so perhaps not top.
+
+So top buy: 2533.HK (AI, strong sector), 0012.HK (real estate, strong), 1347.HK (semiconductor, ok), then 2800.HK (ETF), and 0728.HK less priority.
+
+But 0728.HK has good technicals.
+
+Now, for the output, I'll select top 3-5 buy.
+
+Similarly, for sell, in weak sectors or strong but overbought.
+
+### 第5层：辅助信息
+News and fundamentals.
+
+Now, for the output format.
+
+First, market environment: since VIX not available, assume normal.成交额: some positive, so normal.换手率: low but not specified change, so normal. Overall, normal market.
+
+Strategy: neutral or cautious.
+
+Now, for buy suggestions, need to provide details.
+
+Let's take the top buy candidates.
+
+1. 1347.HK 华虹半导体
+   - 建仓评分: 5.7 (strong)
+   - 建仓原因: price_low,macd_cross,obv_up,cmf_in
+   - TAV评分: 51.25, "建议关注，TAV中等共振"
+   - 板块: 半导体股, 温和上涨 (0.78%)
+   - 技术指标: RSI=51.45 (normal), MACD无信号, OBV上升, CMF=0.1027 (inflow), 成交量比率=0.59 (<1, not strong volume), 但建仓原因有obv_up and cmf_in
+   - 筹码: 上方筹码比例=35.7%<60%, 拉升难度中等, 阻力中等
+   - 新闻: positive on Chinese semiconductors
+   - 基本面: PE high, but for tech, ok
+
+2. 0012.HK 恒基地产
+   - 建仓评分: 5.2 (strong)
+   - 建仓原因: price_low,macd_cross,obv_up,cmf_in
+   - TAV: 51.25, medium
+   - 板块: 房地产股, 强势上涨 (2.17%)
+   - 技术指标: RSI=47.57, OBV上升, CMF=0.0932, 成交量比率=0.56, 但成交额变化1日=13.45% (up), good
+   - 筹码: 上方筹码比例=14.6%, easy
+   - 新闻: none, but sector strong
+
+3. 2533.HK 黑芝麻智能
+   - 建仓评分: 4.5 (partial)
+   - 建仓原因: price_low,macd_cross,obv_up
+   - TAV: 51.25, medium
+   - 板块: 人工智能股, 强势上涨 (2.41%)
+   - 技术指标: RSI=48.11, OBV上升, CMF=0.0017 (slight inflow), 成交量比率=0.67, 但成交额变化5日=63.4% (up), good
+   - 筹码: 上方筹码比例=9.1%, easy
+   - 新闻: none
+
+4. 2800.HK 盈富基金
+   - 建仓评分: 3.0 (partial)
+   - 建仓原因: macd_cross,obv_up
+   - TAV: 58.25, medium
+   - 板块: 指数基金, 温和上涨 (0.35%)
+   - 技术指标: RSI=53.7, OBV上升, CMF=-0.0176 (slight outflow), but obv_up, 成交量比率=0.69, 但成交额变化1日=59.45% (up), good
+   - 筹码: 上方筹码比例=16.4%, easy
+   - 新闻: none
+
+5. 0728.HK 中国电信
+   - 建仓评分: 3.0 (partial)
+   - 建仓原因: price_low,macd_cross
+   - TAV: 51.25, medium
+   - 板块: 公用事业股, 温和下跌 (-0.34%), weak sector
+   - 技术指标: RSI=50.74, CMF=0.0247 (inflow), OBV下降? Wait, OBV趋势="下降", but 建仓原因 has macd_cross, but not obv_up. In data, OBV趋势="下降", but 建仓原因="price_low,macd_cross", no obv_up. So OBV down, which is negative.
+   - So not strong buy signal.
+
+For 0728.HK, OBV trend is "下降" (down), but 建仓原因 includes "price_low,macd_cross", but not obv_up, so OBV down is negative.
+
+Similarly, CMF inflow, but OBV down.
+
+So might not be strong.
+
+Whereas for others, OBV up.
+
+So better to exclude 0728.HK.
+
+Top buy: 1347.HK, 0012.HK, 2533.HK, 2800.HK
+
+2800.HK is ETF, good for hedging.
+
+For sell, top outflow:
+- 0941.HK 中国移动: outflow=6.0 strong, RSI=66.51 (overbought), CMF outflow, etc.
+- 1288.HK 农业银行: outflow=5.0 strong, RSI=75.91 (high), BB overbought, etc.
+- 1398.HK 工商银行: outflow=5.0 strong, RSI=69.7, CMF outflow
+- 0005.HK 汇丰银行: outflow=4.5 weak, but price_high, cmf_out, etc.
+- 1138.HK 中远海能: outflow=4.5 weak, price_high, etc.
+
+Also 0700.HK 腾讯: severe resistance, outflow=2.0, but might be included.
+
+But for top 5, outflow high.
+
+Now for the output.
+
+First, market environment assessment.
+
+VIX not available, so assume normal.
+
+成交额: for the market, but data is per stock. Average or something. Since some stocks have positive volume change, assume normal.
+
+换手率: low, but not specified change.
+
+Overall, market environment: normal, VIX assumed <20.
+
+Strategy: neutral.
+
+Now, for buy suggestions, output top 3-5.
+
+I'll choose 1347.HK, 0012.HK, 2533.HK as top 3, since 2800.HK is ETF, might be less exciting.
+
+Or include 2800.HK.
+
+But 2533.HK has higher 建仓评分 than 2800.HK.
+
+1347.HK 5.7, 0012.HK 5.2, 2533.HK 4.5, 2800.HK 3.0.
+
+So top 3: 1347, 0012, 2533.
+
+For sell, top 3: 0941.HK (6.0), 1288.HK (5.0), 1398.HK (5.0)
+
+Then 0005.HK and 1138.HK for 4-5.
+
+But 0700.HK has severe resistance, outflow=2.0, but resistance might make it high risk.
+
+Similarly, 3690.HK.
+
+But for consistency, stick to outflow score.
+
+Now, for each, need to provide details.
+
+Also, for buy, suggest target price, stop loss, etc.
+
+Target price: based on technical analysis, e.g., resistance levels.
+
+But data doesn't provide, so estimate from position or something.
+
+Position percent: e.g., 0012.HK position=24.7%, so low, potential upside.
+
+Similarly, for stop loss, based on ATR or support.
+
+ATR given, e.g., 0.98 for 0012.HK.
+
+Stop loss: current price - 1.5*ATR or something, but rule says "止损15%", so perhaps 15% below current.
+
+Similarly, target price: for strong buy, 10-15% upside.
+
+But need to estimate.
+
+For example, 0012.HK latest price 30.5, position 24.7%, so might go to 50% or something, but vague.
+
+Perhaps use the position percent to estimate.
+
+But for simplicity, assume target based on historical resistance.
+
+Since not specified, I'll use generic.
+
+For risk level, based on volatility, ATR, etc.
+
+Now, let's draft for one stock.
+
+For 1347.HK 华虹半导体:
+
+- 建仓评分: 5.7分（强烈建仓）
+- 建仓原因: 价格低位（位置百分位27.75%），MACD金叉，OBV上升，CMF资金流入（0.1027），成交量比率0.59（虽未放量但稳定），TAV评分51.25中等共振
+- 建议仓位: 50% (since strong)
+- 目标价格: 95.0港元（基于布林带上轨和位置百分位估算）
+- 止损价格: 85.0港元（当前价90.15 - 15% ≈ 76.6, but better use ATR; ATR=0.96, so stop loss at 90.15 - 1.5*0.96 ≈ 88.7, but rule says "止损15%", so 90.15 * 0.85 = 76.63)
+- 持仓时间: 短线(3-7天) (since short-term analysis)
+- 风险等级: 3级(中) (due to high PE, but tech sector)
+- 买入理由: 建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等（上方筹码比例35.7%），TAV中等共振。新闻显示中国半导体行业增长。
+- 风险因素: 市盈率高（322.85），市场波动风险，上方筹码阻力中等。
+- 新闻影响: 新闻提到中国半导体收入创新高，但技术能力仍落后。
+
+Similarly for others.
+
+For sell, e.g., 0941.HK 中国移动:
+
+- 卖出原因: 出货评分6.0分（强烈出货），RSI高位（66.51），布林带超买，CMF流出，OBV下降
+- 建议卖出比例: 100%
+- 目标价格: N/A (sell now)
+- 风险等级: 5级(高)
+- 风险因素: 价格高位（位置百分位100%），技术指标显示超买，资金流出，板块温和下跌。
+- 新闻影响: 无重大新闻
+
+For hold, 2269.HK and 3968.HK.
+
+Now, statistics.
+
+Number of buy suggestions: 3 (top 3)
+Sell suggestions: 3 or 5
+Hold: 2
+
+Average 建仓评分 for all stocks, but only for buy candidates or all?
+
+The output says "平均建仓评分：XX分" for all stocks.
+
+Similarly for outflow.
+
+First, list all 建仓评分:
+
+From data:
+0005:2.0, 0012:5.2, 0016:3.2, 0388:4.0, 0700:4.7, 0728:3.0, 0883:1.5, 0939:2.0, 0941:1.0, 0981:4.7, 1088:2.0, 1109:7.4, 1138:1.0, 1288:2.0, 1330:3.2, 1347:5.7, 1398:2.0, 1810:4.4, 2269:2.5, 2533:4.5, 2800:3.0, 3690:3.0, 3968:2.0, 6682:7.2, 9660:4.7, 9988:4.7, 1211:3.0, 1299:2.7
+
+Calculate average: sum all / 28
+
+Sum = 2.0+5.2+3.2+4.0+4.7+3.0+1.5+2.0+1.0+4.7+2.0+7.4+1.0+2.0+3.2+5.7+2.0+4.4+2.5+4.5+3.0+3.0+2.0+7.2+4.7+4.7+3.0+2.7
+
+Calculate step by step:
+
+Group:
+Low: 0005:2, 0883:1.5, 0939:2, 0941:1, 1088:2, 1138:1, 1288:2, 1398:2, 2269:2.5, 3968:2, 1299:2.7 → sum=2+1.5+2+1+2+1+2+2+2.5+2+2.7=18.7
+
+Medium: 0016:3.2, 0728:3, 1330:3.2, 2800:3, 3690:3, 1211:3 → sum=3.2+3+3.2+3+3+3=18.4
+
+High: 0388:4, 0700:4.7, 0981:4.7, 1810:4.4, 2533:4.5, 9660:4.7, 9988:4.7 → sum=4+4.7+4.7+4.4+4.5+4.7+4.7=31.7
+
+Strong: 0012:5.2, 1347:5.7, 6682:7.2, 1109:7.4 → sum=5.2+5.7+7.2+7.4=25.5
+
+Total sum = 18.7 + 18.4 + 31.7 + 25.5 = let's add: 18.7+18.4=37.1, +31.7=68.8, +25.5=94.3
+
+Number of stocks: 28
+
+Average = 94.3 / 28 ≈ 3.367
+
+Similarly for outflow score, but some are "N/A", treat as 0 or ignore? In data, outflow score is number or "N/A".
+
+For outflow, when "N/A", it's "none", so score 0 or low.
+
+In the field, outflow score is given as number or "N/A", e.g., 0012.HK outflow="N/A", so probably 0.
+
+Similarly, 2533.HK "N/A".
+
+So assume "N/A" means 0.
+
+List outflow scores:
+0005:4.5, 0012:N/A→0, 0016:2.0, 0388:4.0, 0700:2.0, 0728:1.0, 0883:3.0, 0939:3.5, 0941:6.0, 0981:2.0, 1088:4.0, 1109:2.0, 1138:4.5, 1288:5.0, 1330:2.0, 1347:1.0, 1398:5.0, 1810:3.5, 2269:1.0, 2533:N/A→0, 2800:1.5, 3690:1.0, 3968:1.0, 6682:4.5, 9660:2.0, 9988:2.0, 1211:4.5, 1299:4.0
+
+Sum = 4.5+0+2.0+4.0+2.0+1.0+3.0+3.5+6.0+2.0+4.0+2.0+4.5+5.0+2.0+1.0+5.0+3.5+1.0+0+1.5+1.0+1.0+4.5+2.0+2.0+4.5+4.0
+
+Calculate:
+High: 0941:6, 1288:5, 1398:5, 0005:4.5, 1138:4.5, 1088:4, 0388:4, 1299:4, 1211:4.5 → sum=6+5+5+4.5+4.5+4+4+4+4.5= let's see: 6+5+5=16, +4.5+4.5=9, total 25, +4+4=8, total 33, +4.5=37.5
+
+Medium: 0883:3, 0939:3.5, 1810:3.5 → sum=3+3.5+3.5=10
+
+Low: 0016:2, 0700:2, 0981:2, 1109:2, 1330:2, 9660:2, 9988:2 → sum=2*7=14
+
+Very low: 0728:1, 1347:1, 2269:1, 3690:1, 3968:1, 2800:1.5, 0012:0, 2533:0 → sum=1+1+1+1+1+1.5+0+0=6.5
+
+Total sum = 37.5 + 10 + 14 + 6.5 = 68
+
+Average = 68 / 28  2.428
+
+Risk level average: but risk level not defined, perhaps from the suggestions.
+
+For output, "平均风险等级"
+[2026-04-14 15:54:05] 正在请求大模型以固定格式输出买卖信号...
+[2026-04-14 15:58:11] 格式化输出结果:
+{
+    "buy": [
+        {
+            "code": "1347.HK",
+            "name": "华虹半导体",
+            "reason": "建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等",
+            "allocation_pct": 11.4,
+            "stop_loss_price": 76.63,
+            "target_price": 99.17,
+            "validity_period": 7
+        },
+        {
+            "code": "0012.HK",
+            "name": "恒基地产",
+            "reason": "建仓评分高，板块强势上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力低",
+            "allocation_pct": 10.4,
+            "stop_loss_price": 25.93,
+            "target_price": 33.55,
+            "validity_period": 7
+        },
+        {
+            "code": "2533.HK",
+            "name": "黑芝麻智能",
+            "reason": "建仓评分较高，板块强势上涨，技术指标支持（价格低位、MACD金叉、OBV上升），筹码阻力低",
+            "allocation_pct": 9.0,
+            "stop_loss_price": 10.63,
+            "target_price": 13.75,
+            "validity_period": 7
+        },
+        {
+            "code": "0728.HK",
+            "name": "中国电信",
+            "reason": "建仓评分达标，板块温和下跌但技术指标支持（价格低位、MACD金叉），筹码阻力低",
+            "allocation_pct": 6.0,
+            "stop_loss_price": 3.83,
+            "target_price": 4.95,
+            "validity_period": 7
+        },
+        {
+            "code": "2800.HK",
+            "name": "盈富基金",
+            "reason": "建仓评分达标，板块温和上涨，技术指标支持（MACD金叉、OBV上升），筹码阻力低",
+            "allocation_pct": 6.0,
+            "stop_loss_price": 17.43,
+            "target_price": 22.55,
+            "validity_period": 7
+        }
+    ],
+    "sell": [
+        {
+            "code": "0941.HK",
+            "name": "中国移动",
+            "reason": "出货评分高，板块温和下跌，技术指标超买（RSI高位、布林带超买、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 75.5,
+            "validity_period": 1
+        },
+        {
+            "code": "1288.HK",
+            "name": "农业银行",
+            "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、布林带超买）",
+            "stop_loss_triggered": false,
+            "target_price": 3.5,
+            "validity_period": 1
+        },
+        {
+            "code": "1398.HK",
+            "name": "工商银行",
+            "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 5.2,
+            "validity_period": 1
+        },
+        {
+            "code": "0005.HK",
+            "name": "汇丰银行",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 65.0,
+            "validity_period": 1
+        },
+        {
+            "code": "1138.HK",
+            "name": "中远海能",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 12.5,
+            "validity_period": 1
+        },
+        {
+            "code": "1211.HK",
+            "name": "比亚迪股份",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+            "stop_loss_triggered": false,
+            "target_price": 250.0,
+            "validity_period": 1
+        },
+        {
+            "code": "6682.HK",
+            "name": "范式智能",
+            "reason": "出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降）",
+            "stop_loss_triggered": false,
+            "target_price": 15.0,
+            "validity_period": 1
+        },
+        {
+            "code": "0388.HK",
+            "name": "香港交易所",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 350.0,
+            "validity_period": 1
+        },
+        {
+            "code": "1088.HK",
+            "name": "中国神华",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、布林带超买）",
+            "stop_loss_triggered": false,
+            "target_price": 30.0,
+            "validity_period": 1
+        },
+        {
+            "code": "1299.HK",
+            "name": "友邦保险",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+            "stop_loss_triggered": false,
+            "target_price": 60.0,
+            "validity_period": 1
+        },
+        {
+            "code": "1810.HK",
+            "name": "小米集团-W",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+            "stop_loss_triggered": false,
+            "target_price": 15.0,
+            "validity_period": 1
+        },
+        {
+            "code": "0939.HK",
+            "name": "建设银行",
+            "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+            "stop_loss_triggered": false,
+            "target_price": 6.5,
+            "validity_period": 1
+        },
+        {
+            "code": "0883.HK",
+            "name": "中国海洋石油",
+            "reason": "出货评分达标，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+            "stop_loss_triggered": false,
+            "target_price": 18.0,
+            "validity_period": 1
+        },
+        {
+            "code": "0700.HK",
+            "name": "腾讯控股",
+            "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+            "stop_loss_triggered": false,
+            "target_price": 350.0,
+            "validity_period": 1
+        },
+        {
+            "code": "3690.HK",
+            "name": "美团-W",
+            "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+            "stop_loss_triggered": false,
+            "target_price": 120.0,
+            "validity_period": 1
+        }
+    ]
+}
+[2026-04-14 15:58:11] 成功解析JSON格式的买卖信号
+[2026-04-14 15:58:11] 解析后推荐: 买入 [{'code': '1347.HK', 'name': '华虹半导体', 'reason': '建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等', 'allocation_pct': 11.4, 'stop_loss_price': 76.63, 'target_price': 99.17, 'validity_period': 7}, {'code': '0012.HK', 'name': '恒基地产', 'reason': '建仓评分高，板块强势上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力低', 'allocation_pct': 10.4, 'stop_loss_price': 25.93, 'target_price': 33.55, 'validity_period': 7}, {'code': '2533.HK', 'name': '黑芝麻智能', 'reason': '建仓评分较高，板块强势上涨，技术指标支持（价格低位、MACD金叉、OBV上升），筹码阻力低', 'allocation_pct': 9.0, 'stop_loss_price': 10.63, 'target_price': 13.75, 'validity_period': 7}, {'code': '0728.HK', 'name': '中国电信', 'reason': '建仓评分达标，板块温和下跌但技术指标支持（价格低位、MACD金叉），筹码阻力低', 'allocation_pct': 6.0, 'stop_loss_price': 3.83, 'target_price': 4.95, 'validity_period': 7}, {'code': '2800.HK', 'name': '盈富基金', 'reason': '建仓评分达标，板块温和上涨，技术指标支持（MACD金叉、OBV上升），筹码阻力低', 'allocation_pct': 6.0, 'stop_loss_price': 17.43, 'target_price': 22.55, 'validity_period': 7}], 卖出 [{'code': '0941.HK', 'name': '中国移动', 'reason': '出货评分高，板块温和下跌，技术指标超买（RSI高位、布林带超买、CMF流出）', 'stop_loss_triggered': False, 'target_price': 75.5, 'validity_period': 1}, {'code': '1288.HK', 'name': '农业银行', 'reason': '出货评分高，板块温和上涨但技术指标超买（RSI高位、布林带超买）', 'stop_loss_triggered': False, 'target_price': 3.5, 'validity_period': 1}, {'code': '1398.HK', 'name': '工商银行', 'reason': '出货评分高，板块温和上涨但技术指标超买（RSI高位、CMF流出）', 'stop_loss_triggered': False, 'target_price': 5.2, 'validity_period': 1}, {'code': '0005.HK', 'name': '汇丰银行', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）', 'stop_loss_triggered': False, 'target_price': 65.0, 'validity_period': 1}, {'code': '1138.HK', 'name': '中远海能', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）', 'stop_loss_triggered': False, 'target_price': 12.5, 'validity_period': 1}, {'code': '1211.HK', 'name': '比亚迪股份', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）', 'stop_loss_triggered': False, 'target_price': 250.0, 'validity_period': 1}, {'code': '6682.HK', 'name': '范式智能', 'reason': '出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降）', 'stop_loss_triggered': False, 'target_price': 15.0, 'validity_period': 1}, {'code': '0388.HK', 'name': '香港交易所', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）', 'stop_loss_triggered': False, 'target_price': 350.0, 'validity_period': 1}, {'code': '1088.HK', 'name': '中国神华', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、布林带超买）', 'stop_loss_triggered': False, 'target_price': 30.0, 'validity_period': 1}, {'code': '1299.HK', 'name': '友邦保险', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）', 'stop_loss_triggered': False, 'target_price': 60.0, 'validity_period': 1}, {'code': '1810.HK', 'name': '小米集团-W', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）', 'stop_loss_triggered': False, 'target_price': 15.0, 'validity_period': 1}, {'code': '0939.HK', 'name': '建设银行', 'reason': '出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）', 'stop_loss_triggered': False, 'target_price': 6.5, 'validity_period': 1}, {'code': '0883.HK', 'name': '中国海洋石油', 'reason': '出货评分达标，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）', 'stop_loss_triggered': False, 'target_price': 18.0, 'validity_period': 1}, {'code': '0700.HK', 'name': '腾讯控股', 'reason': '筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力', 'stop_loss_triggered': False, 'target_price': 350.0, 'validity_period': 1}, {'code': '3690.HK', 'name': '美团-W', 'reason': '筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力', 'stop_loss_triggered': False, 'target_price': 120.0, 'validity_period': 1}]
+[2026-04-14 15:58:11] 未持有 中国移动 (0941.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:14] 邮件发送成功: 【无法卖出通知】中国移动 (0941.HK)
+[2026-04-14 15:58:14] 已发送无法卖出通知邮件: 中国移动 (0941.HK)
+[2026-04-14 15:58:14] 未持有 农业银行 (1288.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:17] 邮件发送成功: 【无法卖出通知】农业银行 (1288.HK)
+[2026-04-14 15:58:17] 已发送无法卖出通知邮件: 农业银行 (1288.HK)
+[2026-04-14 15:58:17] 未持有 工商银行 (1398.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:20] 邮件发送成功: 【无法卖出通知】工商银行 (1398.HK)
+[2026-04-14 15:58:20] 已发送无法卖出通知邮件: 工商银行 (1398.HK)
+[2026-04-14 15:58:20] 未持有 汇丰银行 (0005.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:22] 邮件发送成功: 【无法卖出通知】汇丰银行 (0005.HK)
+[2026-04-14 15:58:22] 已发送无法卖出通知邮件: 汇丰银行 (0005.HK)
+[2026-04-14 15:58:22] 未持有 中远海能 (1138.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:24] 邮件发送成功: 【无法卖出通知】中远海能 (1138.HK)
+[2026-04-14 15:58:24] 已发送无法卖出通知邮件: 中远海能 (1138.HK)
+[2026-04-14 15:58:24] 未持有 比亚迪股份 (1211.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:25] 邮件发送成功: 【无法卖出通知】比亚迪股份 (1211.HK)
+[2026-04-14 15:58:25] 已发送无法卖出通知邮件: 比亚迪股份 (1211.HK)
+[2026-04-14 15:58:25] 按大模型建议卖出 范式智能 (6682.HK)，理由: 出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降），止损触发: False
+[2026-04-14 15:58:26] 卖出 2500 股 范式智能 (6682.HK) @ HK$39.74, 总金额: HK$99350.00, 盈利: HK$6866.00
+[2026-04-14 15:58:27] 邮件发送成功: 【卖出通知】范式智能 (6682.HK)
+[2026-04-14 15:58:27] 未持有 香港交易所 (0388.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:30] 邮件发送成功: 【无法卖出通知】香港交易所 (0388.HK)
+[2026-04-14 15:58:30] 已发送无法卖出通知邮件: 香港交易所 (0388.HK)
+[2026-04-14 15:58:30] 未持有 中国神华 (1088.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:32] 邮件发送成功: 【无法卖出通知】中国神华 (1088.HK)
+[2026-04-14 15:58:32] 已发送无法卖出通知邮件: 中国神华 (1088.HK)
+[2026-04-14 15:58:32] 未持有 友邦保险 (1299.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:34] 邮件发送成功: 【无法卖出通知】友邦保险 (1299.HK)
+[2026-04-14 15:58:34] 已发送无法卖出通知邮件: 友邦保险 (1299.HK)
+[2026-04-14 15:58:34] 未持有 小米集团-W (1810.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:35] 邮件发送成功: 【无法卖出通知】小米集团-W (1810.HK)
+[2026-04-14 15:58:35] 已发送无法卖出通知邮件: 小米集团-W (1810.HK)
+[2026-04-14 15:58:35] 未持有 建设银行 (0939.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:36] 邮件发送成功: 【无法卖出通知】建设银行 (0939.HK)
+[2026-04-14 15:58:36] 已发送无法卖出通知邮件: 建设银行 (0939.HK)
+[2026-04-14 15:58:36] 未持有 中国海洋石油 (0883.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:38] 邮件发送成功: 【无法卖出通知】中国海洋石油 (0883.HK)
+[2026-04-14 15:58:38] 已发送无法卖出通知邮件: 中国海洋石油 (0883.HK)
+[2026-04-14 15:58:38] 未持有 腾讯控股 (0700.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:40] 邮件发送成功: 【无法卖出通知】腾讯控股 (0700.HK)
+[2026-04-14 15:58:40] 已发送无法卖出通知邮件: 腾讯控股 (0700.HK)
+[2026-04-14 15:58:40] 未持有 美团-W (3690.HK)，无法按大模型建议卖出
+[2026-04-14 15:58:42] 邮件发送成功: 【无法卖出通知】美团-W (3690.HK)
+[2026-04-14 15:58:42] 已发送无法卖出通知邮件: 美团-W (3690.HK)
+[2026-04-14 15:58:44] 按大模型建议的11.40%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-04-14 15:58:45] 买入 1100 股 华虹半导体 (1347.HK) @ HK$90.35, 总金额: HK$99385.00
+[2026-04-14 15:58:46] 邮件发送成功: 【加仓通知】华虹半导体 (1347.HK)
+[2026-04-14 15:58:47] 按大模型建议的10.40%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-04-14 15:58:47] 资金不足买入 恒基地产 (0012.HK)，即使买入100股也不够资金（目标投资: HK$1492.19, 当前资金: HK$1492.19, 股价: HK$30.60）
+[2026-04-14 15:58:47] 按大模型建议计算出的买入股数为0，跳过买入 恒基地产 (0012.HK)，原因: 资金不足
+[2026-04-14 15:58:49] 邮件发送成功: 【无法买入通知】恒基地产 (0012.HK)
+[2026-04-14 15:58:50] 按大模型建议的9.00%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-04-14 15:58:50] 资金不足买入 黑芝麻智能 (2533.HK)，即使买入100股也不够资金（目标投资: HK$1492.19, 当前资金: HK$1492.19, 股价: HK$17.19）
+[2026-04-14 15:58:50] 按大模型建议计算出的买入股数为0，跳过买入 黑芝麻智能 (2533.HK)，原因: 资金不足
+[2026-04-14 15:58:51] 邮件发送成功: 【无法买入通知】黑芝麻智能 (2533.HK)
+[2026-04-14 15:58:52] 按大模型建议的6.00%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-04-14 15:58:53] 买入 200 股 中国电信 (0728.HK) @ HK$4.98, 总金额: HK$996.00
+[2026-04-14 15:58:57] 邮件发送成功: 【加仓通知】中国电信 (0728.HK)
+[2026-04-14 15:58:59] 按大模型建议的6.00%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-04-14 15:58:59] 资金不足买入 盈富基金 (2800.HK)，即使买入100股也不够资金（目标投资: HK$496.19, 当前资金: HK$496.19, 股价: HK$26.18）
+[2026-04-14 15:58:59] 按大模型建议计算出的买入股数为0，跳过买入 盈富基金 (2800.HK)，原因: 资金不足
+[2026-04-14 15:59:02] 邮件发送成功: 【无法买入通知】盈富基金 (2800.HK)
+[2026-04-14 15:59:03] 当前资金: HK$496.19
+[2026-04-14 15:59:03] 投资组合价值: HK$1,012,840.19
+[2026-04-14 15:59:03] 持仓情况: {'3968.HK': {'shares': 4000, 'avg_price': 49.12, 'stop_loss_price': 41.6}, '0728.HK': {'shares': 25800, 'avg_price': 4.999263565891472, 'stop_loss_price': 3.83}, '1347.HK': {'shares': 4300, 'avg_price': 87.3313953488372, 'stop_loss_price': 76.63}, '2533.HK': {'shares': 400, 'avg_price': 15.7, 'stop_loss_price': 14.2}, '1109.HK': {'shares': 6000, 'avg_price': 28.72533333333333, 'stop_loss_price': 28.0}, '9660.HK': {'shares': 300, 'avg_price': 7.16, 'stop_loss_price': 5.64}, '2269.HK': {'shares': 2700, 'avg_price': 35.3, 'stop_loss_price': 30.06}}
+[2026-04-14 15:59:03] 总收益率: 1.28%
+[2026-04-14 15:59:03] 下一次交易分析将在 2026-04-14 18:23:03 执行（间隔约 2.4 小时，基准 2.0 小时）
