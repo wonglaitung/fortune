@@ -1,6 +1,6 @@
 {
   "initial_capital": 1000000,
-  "capital": 1527.189294051961,
+  "capital": 496.1892940519609,
   "positions": {
     "3968.HK": {
       "shares": 4000,
@@ -8,19 +8,14 @@
       "stop_loss_price": 41.6
     },
     "0728.HK": {
-      "shares": 25600,
-      "avg_price": 4.9994140625,
-      "stop_loss_price": 4.65
-    },
-    "6682.HK": {
-      "shares": 2500,
-      "avg_price": 36.9936,
-      "stop_loss_price": 30.8
+      "shares": 25800,
+      "avg_price": 4.999263565891472,
+      "stop_loss_price": 3.83
     },
     "1347.HK": {
-      "shares": 3200,
-      "avg_price": 86.29375,
-      "stop_loss_price": 88.5
+      "shares": 4300,
+      "avg_price": 87.3313953488372,
+      "stop_loss_price": 76.63
     },
     "2533.HK": {
       "shares": 400,
@@ -28663,6 +28658,326 @@
       "current_price": 25.92,
       "target_price": 27.5,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-04-14T15:58:11.308289",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分高，板块温和下跌，技术指标超买（RSI高位、布林带超买、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 81.45,
+      "target_price": 75.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:14.307346",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、布林带超买）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.94,
+      "target_price": 3.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:17.434576",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 7.04,
+      "target_price": 5.2,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:21.140432",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 140.9,
+      "target_price": 65.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:22.813792",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.64,
+      "target_price": 12.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:24.353905",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1527.189294051961,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 109.6,
+      "target_price": 250.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:25.852476",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "范式智能",
+      "shares": 2500,
+      "price": 39.74,
+      "amount": 99350.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 39.74,
+      "target_price": null,
+      "validity_period": null
+    },
+    {
+      "timestamp": "2026-04-14T15:58:28.074720",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 407.0,
+      "target_price": 350.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:30.357863",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、布林带超买）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.5,
+      "target_price": 30.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:32.859816",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 87.35,
+      "target_price": 60.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:34.211510",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 30.86,
+      "target_price": 15.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:35.500757",
+      "type": "SELL",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.48,
+      "target_price": 6.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:37.031858",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "出货评分达标，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 26.56,
+      "target_price": 18.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:38.858885",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 493.6,
+      "target_price": 350.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:40.783659",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 100877.18929405196,
+      "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 85.1,
+      "target_price": 120.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14T15:58:44.245597",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 1100,
+      "price": 90.35,
+      "amount": 99385.0,
+      "capital_after": 1492.189294051961,
+      "reason": "建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等",
+      "success": true,
+      "stop_loss_price": 76.63,
+      "current_price": 90.35,
+      "target_price": 99.17,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14T15:58:47.710217",
+      "type": "BUY",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 30.6,
+      "amount": 0,
+      "capital_after": 1492.189294051961,
+      "reason": "建仓评分高，板块强势上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力低",
+      "success": false,
+      "stop_loss_price": 25.93,
+      "current_price": 30.6,
+      "target_price": 33.55,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14T15:58:50.606288",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.19,
+      "amount": 0,
+      "capital_after": 1492.189294051961,
+      "reason": "建仓评分较高，板块强势上涨，技术指标支持（价格低位、MACD金叉、OBV上升），筹码阻力低",
+      "success": false,
+      "stop_loss_price": 10.63,
+      "current_price": 17.19,
+      "target_price": 13.75,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14T15:58:52.767117",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 200,
+      "price": 4.98,
+      "amount": 996.0000000000001,
+      "capital_after": 496.1892940519609,
+      "reason": "建仓评分达标，板块温和下跌但技术指标支持（价格低位、MACD金叉），筹码阻力低",
+      "success": true,
+      "stop_loss_price": 3.83,
+      "current_price": 4.98,
+      "target_price": 4.95,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14T15:58:59.161152",
+      "type": "BUY",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 26.18,
+      "amount": 0,
+      "capital_after": 496.1892940519609,
+      "reason": "建仓评分达标，板块温和上涨，技术指标支持（MACD金叉、OBV上升），筹码阻力低",
+      "success": false,
+      "stop_loss_price": 17.43,
+      "current_price": 26.18,
+      "target_price": 22.55,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -45462,19 +45777,19 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45504,19 +45819,19 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45546,19 +45861,19 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45588,19 +45903,19 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45635,19 +45950,19 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45677,19 +45992,145 @@
           "stop_loss_price": 41.6
         },
         "0728.HK": {
-          "shares": 25600,
-          "avg_price": 4.9994140625,
-          "stop_loss_price": 4.65
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
         },
         "6682.HK": {
-          "shares": 2500,
+          "shares": 0,
           "avg_price": 36.9936,
           "stop_loss_price": 30.8
         },
         "1347.HK": {
-          "shares": 3200,
-          "avg_price": 86.29375,
-          "stop_loss_price": 88.5
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 6000,
+          "avg_price": 28.72533333333333,
+          "stop_loss_price": 28.0
+        },
+        "9660.HK": {
+          "shares": 300,
+          "avg_price": 7.16,
+          "stop_loss_price": 5.64
+        },
+        "2269.HK": {
+          "shares": 2700,
+          "avg_price": 35.3,
+          "stop_loss_price": 30.06
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-14T15:58:26.744160",
+      "capital": 100877.18929405196,
+      "portfolio_value": 1012912.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
+        },
+        "1347.HK": {
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 6000,
+          "avg_price": 28.72533333333333,
+          "stop_loss_price": 28.0
+        },
+        "9660.HK": {
+          "shares": 300,
+          "avg_price": 7.16,
+          "stop_loss_price": 5.64
+        },
+        "2269.HK": {
+          "shares": 2700,
+          "avg_price": 35.3,
+          "stop_loss_price": 30.06
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-14T15:58:45.278492",
+      "capital": 1492.189294051961,
+      "portfolio_value": 1012840.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
+        },
+        "1347.HK": {
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
+        },
+        "2533.HK": {
+          "shares": 400,
+          "avg_price": 15.7,
+          "stop_loss_price": 14.2
+        },
+        "1109.HK": {
+          "shares": 6000,
+          "avg_price": 28.72533333333333,
+          "stop_loss_price": 28.0
+        },
+        "9660.HK": {
+          "shares": 300,
+          "avg_price": 7.16,
+          "stop_loss_price": 5.64
+        },
+        "2269.HK": {
+          "shares": 2700,
+          "avg_price": 35.3,
+          "stop_loss_price": 30.06
+        }
+      }
+    },
+    {
+      "timestamp": "2026-04-14T15:58:53.607530",
+      "capital": 496.1892940519609,
+      "portfolio_value": 1012559.189294052,
+      "positions": {
+        "3968.HK": {
+          "shares": 4000,
+          "avg_price": 49.12,
+          "stop_loss_price": 41.6
+        },
+        "0728.HK": {
+          "shares": 25800,
+          "avg_price": 4.999263565891472,
+          "stop_loss_price": 3.83
+        },
+        "1347.HK": {
+          "shares": 4300,
+          "avg_price": 87.3313953488372,
+          "stop_loss_price": 76.63
         },
         "2533.HK": {
           "shares": 400,
@@ -45715,128 +46156,6 @@
     }
   ],
   "decision_history": [
-    {
-      "timestamp": "2026-04-10 13:55:40",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分5.0分，MACD死叉、CMF流出（-0.1037）、OBV下降，能源股弱势（-0.40%）",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 45.18,
-      "target_price": 0.0,
-      "validity_period": 2
-    },
-    {
-      "timestamp": "2026-04-10 13:55:43",
-      "type": "SELL",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.5分，价格高位、CMF流出（-0.3947）、布林带超买，成交额变化率负值大，量能萎缩",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 8.47,
-      "target_price": 0.0,
-      "validity_period": 2
-    },
-    {
-      "timestamp": "2026-04-10 13:55:46",
-      "type": "BUY",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 93.4,
-      "amount": 0,
-      "reason": "TAV评分51.25分，技术指标协同良好（MACD金叉、OBV上升、CMF流入），筹码分布低阻力（上方筹码比例0.0%），半导体板块强势上涨4.05%",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": 54.5,
-      "current_price": 93.4,
-      "target_price": 65.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-10 13:55:48",
-      "type": "BUY",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 30.8,
-      "amount": 0,
-      "reason": "TAV评分47.75分，技术指标协同（MACD金叉、OBV上升、CMF流入），筹码分布低阻力（上方筹码比例0.0%），房地产股温和上涨0.79%",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": 28.5,
-      "current_price": 30.8,
-      "target_price": 33.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-04-10 13:55:51",
-      "type": "BUY",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 29.7,
-      "amount": 0,
-      "reason": "TAV评分51.25分，技术指标协同，筹码分布低阻力（上方筹码比例0.0%），房地产股温和上涨0.79%，基本面安全边际高（PE仅7.28）",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": 27.5,
-      "current_price": 29.7,
-      "target_price": 32.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-04-10 13:55:57",
-      "type": "BUY",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 59.4,
-      "amount": 0,
-      "reason": "TAV评分56.25分，动量突出（3日收益率5.79%），成交量比率0.95，半导体板块强势上涨4.05%，国产替代逻辑强化",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": 54.0,
-      "current_price": 59.4,
-      "target_price": 64.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-10 13:56:00",
-      "type": "BUY",
-      "code": "9660.HK",
-      "name": "地平线机器人",
-      "shares": 0,
-      "price": 7.23,
-      "amount": 0,
-      "reason": "TAV评分51.25分，RSI超卖，CMF资金流流入，人工智能板块温和上涨1.72%，情绪修复信号",
-      "capital_after": 97.18929405196104,
-      "success": false,
-      "stop_loss_price": 6.5,
-      "current_price": 7.23,
-      "target_price": 8.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-10 15:40:57",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-04-13 10:33:42",
-      "buy": [],
-      "sell": []
-    },
     {
       "timestamp": "2026-04-13 14:22:43",
       "buy": [
@@ -45991,6 +46310,509 @@
       "current_price": 25.92,
       "target_price": 27.5,
       "validity_period": 28
+    },
+    {
+      "timestamp": "2026-04-14 10:48:47",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-14 13:30:19",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-14 15:58:11",
+      "buy": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等",
+          "allocation_pct": 11.4,
+          "stop_loss_price": 76.63,
+          "target_price": 99.17,
+          "validity_period": 7
+        },
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "建仓评分高，板块强势上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力低",
+          "allocation_pct": 10.4,
+          "stop_loss_price": 25.93,
+          "target_price": 33.55,
+          "validity_period": 7
+        },
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "建仓评分较高，板块强势上涨，技术指标支持（价格低位、MACD金叉、OBV上升），筹码阻力低",
+          "allocation_pct": 9.0,
+          "stop_loss_price": 10.63,
+          "target_price": 13.75,
+          "validity_period": 7
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "建仓评分达标，板块温和下跌但技术指标支持（价格低位、MACD金叉），筹码阻力低",
+          "allocation_pct": 6.0,
+          "stop_loss_price": 3.83,
+          "target_price": 4.95,
+          "validity_period": 7
+        },
+        {
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "reason": "建仓评分达标，板块温和上涨，技术指标支持（MACD金叉、OBV上升），筹码阻力低",
+          "allocation_pct": 6.0,
+          "stop_loss_price": 17.43,
+          "target_price": 22.55,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "出货评分高，板块温和下跌，技术指标超买（RSI高位、布林带超买、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 75.5,
+          "validity_period": 1
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、布林带超买）",
+          "stop_loss_triggered": false,
+          "target_price": 3.5,
+          "validity_period": 1
+        },
+        {
+          "code": "1398.HK",
+          "name": "工商银行",
+          "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 5.2,
+          "validity_period": 1
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 65.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1138.HK",
+          "name": "中远海能",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 12.5,
+          "validity_period": 1
+        },
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+          "stop_loss_triggered": false,
+          "target_price": 250.0,
+          "validity_period": 1
+        },
+        {
+          "code": "6682.HK",
+          "name": "范式智能",
+          "reason": "出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降）",
+          "stop_loss_triggered": false,
+          "target_price": 15.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 350.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、布林带超买）",
+          "stop_loss_triggered": false,
+          "target_price": 30.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1299.HK",
+          "name": "友邦保险",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+          "stop_loss_triggered": false,
+          "target_price": 60.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+          "stop_loss_triggered": false,
+          "target_price": 15.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0939.HK",
+          "name": "建设银行",
+          "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+          "stop_loss_triggered": false,
+          "target_price": 6.5,
+          "validity_period": 1
+        },
+        {
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "reason": "出货评分达标，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+          "stop_loss_triggered": false,
+          "target_price": 18.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+          "stop_loss_triggered": false,
+          "target_price": 350.0,
+          "validity_period": 1
+        },
+        {
+          "code": "3690.HK",
+          "name": "美团-W",
+          "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+          "stop_loss_triggered": false,
+          "target_price": 120.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-04-14 15:58:11",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分高，板块温和下跌，技术指标超买（RSI高位、布林带超买、CMF流出）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 81.45,
+      "target_price": 75.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:14",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、布林带超买）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.94,
+      "target_price": 3.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:17",
+      "type": "SELL",
+      "code": "1398.HK",
+      "name": "工商银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分高，板块温和上涨但技术指标超买（RSI高位、CMF流出）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 7.04,
+      "target_price": 5.2,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:21",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 140.9,
+      "target_price": 65.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:22",
+      "type": "SELL",
+      "code": "1138.HK",
+      "name": "中远海能",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（价格高位、CMF流出）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 18.64,
+      "target_price": 12.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:24",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "capital_after": 1527.189294051961,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 109.6,
+      "target_price": 250.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:25",
+      "type": "SELL",
+      "code": "6682.HK",
+      "name": "范式智能",
+      "shares": 2500,
+      "price": 39.74,
+      "amount": 99350.0,
+      "reason": "出货评分较高，板块强势上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "capital_after": 100877.18929405196,
+      "success": true,
+      "stop_loss_price": null,
+      "current_price": 39.74,
+      "target_price": null,
+      "validity_period": null,
+      "profit_loss": 6866.000000000004
+    },
+    {
+      "timestamp": "2026-04-14 15:58:28",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 407.0,
+      "target_price": 350.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:30",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、布林带超买）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 45.5,
+      "target_price": 30.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:32",
+      "type": "SELL",
+      "code": "1299.HK",
+      "name": "友邦保险",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（RSI高位、CMF流出）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 87.35,
+      "target_price": 60.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:34",
+      "type": "SELL",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 30.86,
+      "target_price": 15.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:35",
+      "type": "SELL",
+      "code": "0939.HK",
+      "name": "建设银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分较高，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 8.48,
+      "target_price": 6.5,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:37",
+      "type": "SELL",
+      "code": "0883.HK",
+      "name": "中国海洋石油",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分达标，板块温和上涨但技术指标显示压力（CMF流出、OBV下降）",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 26.56,
+      "target_price": 18.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:38",
+      "type": "SELL",
+      "code": "0700.HK",
+      "name": "腾讯控股",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 493.6,
+      "target_price": 350.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:40",
+      "type": "SELL",
+      "code": "3690.HK",
+      "name": "美团-W",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "筹码阻力严重（上方筹码比例>60%且拉升难度困难），技术指标显示压力",
+      "capital_after": 100877.18929405196,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 85.1,
+      "target_price": 120.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-14 15:58:44",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 1100,
+      "price": 90.35,
+      "amount": 99385.0,
+      "reason": "建仓评分高，板块温和上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力中等",
+      "capital_after": 1492.189294051961,
+      "success": true,
+      "stop_loss_price": 76.63,
+      "current_price": 90.35,
+      "target_price": 99.17,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14 15:58:47",
+      "type": "BUY",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 30.6,
+      "amount": 0,
+      "reason": "建仓评分高，板块强势上涨，技术指标协同（OBV上升、CMF流入、MACD金叉），筹码阻力低",
+      "capital_after": 1492.189294051961,
+      "success": false,
+      "stop_loss_price": 25.93,
+      "current_price": 30.6,
+      "target_price": 33.55,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14 15:58:50",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.19,
+      "amount": 0,
+      "reason": "建仓评分较高，板块强势上涨，技术指标支持（价格低位、MACD金叉、OBV上升），筹码阻力低",
+      "capital_after": 1492.189294051961,
+      "success": false,
+      "stop_loss_price": 10.63,
+      "current_price": 17.19,
+      "target_price": 13.75,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14 15:58:52",
+      "type": "BUY",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 200,
+      "price": 4.98,
+      "amount": 996.0000000000001,
+      "reason": "建仓评分达标，板块温和下跌但技术指标支持（价格低位、MACD金叉），筹码阻力低",
+      "capital_after": 496.1892940519609,
+      "success": true,
+      "stop_loss_price": 3.83,
+      "current_price": 4.98,
+      "target_price": 4.95,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-14 15:58:59",
+      "type": "BUY",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 26.18,
+      "amount": 0,
+      "reason": "建仓评分达标，板块温和上涨，技术指标支持（MACD金叉、OBV上升），筹码阻力低",
+      "capital_after": 496.1892940519609,
+      "success": false,
+      "stop_loss_price": 17.43,
+      "current_price": 26.18,
+      "target_price": 22.55,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
