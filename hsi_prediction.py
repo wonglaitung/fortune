@@ -32,6 +32,7 @@ class HSI_Predictor:
     # 基于2026-03-02 statistical特征选择结果，使用top 20特征
     # 2026-04-16: 新增宏观因子（美债、VIX）和港股通资金流向
     # 2026-04-16: 新增RSI/MACD/布林带/动量特征
+    # 2026-04-16: 新增多周期均线组合、均线斜率分析、价格距离分析
     FEATURE_IMPORTANCE = {
         # ========== 宏观因子（新增，业界最重要的预测因子）==========
         'US_10Y_Yield': {'weight': 0.07, 'direction': -1},  # 美债10年期收益率，利率上升不利股市
@@ -47,6 +48,29 @@ class HSI_Predictor:
         'MA250': {'weight': 0.08, 'direction': 1},  # 250日均线，长期趋势支撑
         'Volume_MA250': {'weight': 0.06, 'direction': 1},  # 250日成交量均线，长期流动性
         'MA120': {'weight': 0.05, 'direction': 1},  # 120日均线，中期趋势
+        'MA60': {'weight': 0.04, 'direction': 1},  # 60日均线，季线
+        'MA20': {'weight': 0.03, 'direction': 1},  # 20日均线，月线
+
+        # ========== 均线斜率分析（新增）==========
+        'MA250_Slope': {'weight': 0.03, 'direction': 1},  # MA250每日斜率
+        'MA250_Slope_5d': {'weight': 0.025, 'direction': 1},  # MA250的5日斜率变化
+        'MA250_Slope_20d': {'weight': 0.02, 'direction': 1},  # MA250的20日斜率变化
+        'MA250_Slope_Direction': {'weight': 0.02, 'direction': 1},  # MA250斜率方向
+
+        # ========== 价格与均线距离（新增，超买超卖指标）==========
+        'Price_Distance_MA250': {'weight': 0.03, 'direction': 1},  # 价格与MA250距离%
+        'Price_Distance_MA60': {'weight': 0.02, 'direction': 1},  # 价格与MA60距离%
+        'Price_Distance_MA20': {'weight': 0.015, 'direction': 1},  # 价格与MA20距离%
+
+        # ========== 均线排列信号（新增）==========
+        'MA_Bullish_Alignment': {'weight': 0.04, 'direction': 1},  # 多头排列
+        'MA_Bearish_Alignment': {'weight': 0.04, 'direction': -1},  # 空头排列
+
+        # ========== 交叉信号（新增）==========
+        'MA20_Golden_Cross_MA60': {'weight': 0.03, 'direction': 1},  # MA20金叉MA60
+        'MA20_Death_Cross_MA60': {'weight': 0.03, 'direction': -1},  # MA20死叉MA60
+        'MA60_Golden_Cross_MA250': {'weight': 0.04, 'direction': 1},  # MA60金叉MA250
+        'MA60_Death_Cross_MA250': {'weight': 0.04, 'direction': -1},  # MA60死叉MA250
 
         # ========== RSI 系列（新增）==========
         'RSI': {'weight': 0.03, 'direction': -1},  # RSI > 70 超买，不利
@@ -266,14 +290,55 @@ class HSI_Predictor:
         """计算技术指标"""
         df = data.copy()
 
-        # 移动平均线
+        # ========== 多周期移动平均线（业界标准组合）==========
+        # 短期趋势：20日均线（月线）
         df['MA20'] = df['Close'].rolling(window=20).mean()
+        # 中期趋势：60日均线（季线）
         df['MA60'] = df['Close'].rolling(window=60).mean()
+        # 半年线：120日均线
         df['MA120'] = df['Close'].rolling(window=120).mean()
+        # 长期趋势：250日均线（年线）
         df['MA250'] = df['Close'].rolling(window=250).mean()
 
-        # MA250斜率（趋势强度）
+        # ========== 均线斜率分析（趋势强度）==========
+        # MA250斜率（每日变化）
         df['MA250_Slope'] = df['MA250'].diff()
+        # MA250的5日斜率变化（短期趋势加速/减速）
+        df['MA250_Slope_5d'] = df['MA250'].diff(5) / 5
+        # MA250的20日斜率变化（中期趋势强度）
+        df['MA250_Slope_20d'] = df['MA250'].diff(20) / 20
+        # MA250斜率方向（1=上升，-1=下降，0=持平）
+        df['MA250_Slope_Direction'] = np.sign(df['MA250_Slope'])
+
+        # ========== 价格与均线距离分析（超买超卖）==========
+        # 价格与MA250的距离百分比（正值=高于年线，负值=低于年线）
+        df['Price_Distance_MA250'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
+        # 价格与MA60的距离百分比
+        df['Price_Distance_MA60'] = (df['Close'] - df['MA60']) / df['MA60'] * 100
+        # 价格与MA20的距离百分比
+        df['Price_Distance_MA20'] = (df['Close'] - df['MA20']) / df['MA20'] * 100
+
+        # ========== 多周期均线排列信号 ==========
+        # 多头排列：MA20 > MA60 > MA250（强势上涨趋势）
+        df['MA_Bullish_Alignment'] = ((df['MA20'] > df['MA60']) &
+                                      (df['MA60'] > df['MA250'])).astype(int)
+        # 空头排列：MA20 < MA60 < MA250（强势下跌趋势）
+        df['MA_Bearish_Alignment'] = ((df['MA20'] < df['MA60']) &
+                                      (df['MA60'] < df['MA250'])).astype(int)
+
+        # ========== 黄金交叉/死亡交叉信号 ==========
+        # MA20上穿MA60（黄金交叉）
+        df['MA20_Golden_Cross_MA60'] = ((df['MA20'] > df['MA60']) &
+                                        (df['MA20'].shift(1) <= df['MA60'].shift(1))).astype(int)
+        # MA20下穿MA60（死亡交叉）
+        df['MA20_Death_Cross_MA60'] = ((df['MA20'] < df['MA60']) &
+                                       (df['MA20'].shift(1) >= df['MA60'].shift(1))).astype(int)
+        # MA60上穿MA250（黄金交叉）
+        df['MA60_Golden_Cross_MA250'] = ((df['MA60'] > df['MA250']) &
+                                         (df['MA60'].shift(1) <= df['MA250'].shift(1))).astype(int)
+        # MA60下穿MA250（死亡交叉）
+        df['MA60_Death_Cross_MA250'] = ((df['MA60'] < df['MA250']) &
+                                        (df['MA60'].shift(1) >= df['MA250'].shift(1))).astype(int)
 
         # 收益率（使用昨日值，实盘中预测时只能用昨天收盘价计算）
         df['Return_1d'] = df['Close'].pct_change().shift(1)
@@ -426,10 +491,33 @@ class HSI_Predictor:
             'Southbound_Net_Inflow': self.southbound_data.get('net_inflow', 0),  # 南向资金净流入（亿）
             'Southbound_Net_Buy': self.southbound_data.get('net_buy', 0),  # 南向资金净买入（亿）
 
-            # ========== 长期移动平均线相关 ==========
+            # ========== 多周期移动平均线（业界标准组合）==========
+            'MA20': safe_get(latest_hsi.get('MA20', latest_hsi['Close'])),
+            'MA60': safe_get(latest_hsi.get('MA60', latest_hsi['Close'])),
+            'MA120': safe_get(latest_hsi.get('MA120', latest_hsi['Close'])),
             'MA250': safe_get(latest_hsi.get('MA250', latest_hsi['Close'])),
             'Volume_MA250': safe_get(latest_hsi.get('Volume_MA250', latest_hsi['Volume'])),
-            'MA120': safe_get(latest_hsi.get('MA120', latest_hsi['Close'])),
+
+            # ========== 均线斜率分析（新增）==========
+            'MA250_Slope': safe_get(latest_hsi.get('MA250_Slope', 0), 0),
+            'MA250_Slope_5d': safe_get(latest_hsi.get('MA250_Slope_5d', 0), 0),
+            'MA250_Slope_20d': safe_get(latest_hsi.get('MA250_Slope_20d', 0), 0),
+            'MA250_Slope_Direction': safe_get(latest_hsi.get('MA250_Slope_Direction', 0), 0),
+
+            # ========== 价格与均线距离（新增，超买超卖指标）==========
+            'Price_Distance_MA250': safe_get(latest_hsi.get('Price_Distance_MA250', 0), 0),
+            'Price_Distance_MA60': safe_get(latest_hsi.get('Price_Distance_MA60', 0), 0),
+            'Price_Distance_MA20': safe_get(latest_hsi.get('Price_Distance_MA20', 0), 0),
+
+            # ========== 均线排列信号（新增）==========
+            'MA_Bullish_Alignment': safe_get(latest_hsi.get('MA_Bullish_Alignment', 0), 0),
+            'MA_Bearish_Alignment': safe_get(latest_hsi.get('MA_Bearish_Alignment', 0), 0),
+
+            # ========== 交叉信号（新增）==========
+            'MA20_Golden_Cross_MA60': safe_get(latest_hsi.get('MA20_Golden_Cross_MA60', 0), 0),
+            'MA20_Death_Cross_MA60': safe_get(latest_hsi.get('MA20_Death_Cross_MA60', 0), 0),
+            'MA60_Golden_Cross_MA250': safe_get(latest_hsi.get('MA60_Golden_Cross_MA250', 0), 0),
+            'MA60_Death_Cross_MA250': safe_get(latest_hsi.get('MA60_Death_Cross_MA250', 0), 0),
 
             # ========== 多周期相对强度信号（RS_Signal）==========
             '60d_RS_Signal_MA250': safe_get(latest_hsi.get('60d_RS_Signal_MA250', 0), 0),
@@ -541,6 +629,57 @@ class HSI_Predictor:
                 return 0
             # 标准化：30亿为强买入，-30亿为强卖出
             return np.clip(value / 30, -1, 1)
+
+        # ========== 新增：均线斜率特征标准化 ==========
+        # MA250斜率（每日变化，通常在 -100 到 +100 点范围）
+        elif feature_name == 'MA250_Slope':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 50, -1, 1)
+
+        # MA250的5日斜率变化
+        elif feature_name == 'MA250_Slope_5d':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 20, -1, 1)
+
+        # MA250的20日斜率变化
+        elif feature_name == 'MA250_Slope_20d':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 10, -1, 1)
+
+        # MA250斜率方向（已经是 -1, 0, 1）
+        elif feature_name == 'MA250_Slope_Direction':
+            if pd.isna(value):
+                return 0
+            return value
+
+        # ========== 新增：价格与均线距离标准化 ==========
+        # 价格与MA250距离（通常在 -20% 到 +20% 范围）
+        elif feature_name == 'Price_Distance_MA250':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 15, -1, 1)
+
+        # 价格与MA60距离
+        elif feature_name == 'Price_Distance_MA60':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 10, -1, 1)
+
+        # 价格与MA20距离
+        elif feature_name == 'Price_Distance_MA20':
+            if pd.isna(value):
+                return 0
+            return np.clip(value / 8, -1, 1)
+
+        # ========== 新增：均线排列信号标准化 ==========
+        # 多头/空头排列（已经是0或1）
+        elif 'Alignment' in feature_name or 'Cross' in feature_name:
+            if pd.isna(value):
+                return 0
+            return value * 2 - 1  # 0 -> -1, 1 -> 1
 
         # 如果是收益率类特征，使用固定范围标准化
         elif 'Return' in feature_name or 'Yield' in feature_name:
@@ -1663,10 +1802,33 @@ class HSI_Predictor:
             'Southbound_Net_Inflow': '港股通南向资金净流入，内地资金流入港股的最重要指标。净流入利好恒指。',
             'Southbound_Net_Buy': '港股通南向资金净买入，反映内地投资者的实际买入力度。净买入利好。',
 
-            # ========== 长期移动平均线相关 ==========
-            'MA250': '250日移动平均线，反映恒指长期趋势支撑。价格在MA250上方通常表示长期上涨趋势。',
+            # ========== 多周期移动平均线（业界标准组合）==========
+            'MA20': '20日移动平均线（月线），反映短期趋势。价格在MA20上方通常表示短期上涨趋势。',
+            'MA60': '60日移动平均线（季线），反映中期趋势。价格在MA60上方通常表示中期上涨趋势。',
+            'MA120': '120日移动平均线（半年线），反映中期趋势支撑。是重要的技术分析指标。',
+            'MA250': '250日移动平均线（年线），反映长期趋势支撑。价格在MA250上方通常表示长期上涨趋势。',
             'Volume_MA250': '250日平均成交量，反映长期流动性水平。上升表示资金活跃度提高。',
-            'MA120': '120日移动平均线，反映恒指中期趋势支撑。是重要的技术分析指标。',
+
+            # ========== 均线斜率分析（新增）==========
+            'MA250_Slope': 'MA250每日斜率，反映长期趋势变化速度。正值表示年线上升，负值表示下降。',
+            'MA250_Slope_5d': 'MA250的5日斜率变化，反映短期趋势加速或减速。',
+            'MA250_Slope_20d': 'MA250的20日斜率变化，反映中期趋势强度。',
+            'MA250_Slope_Direction': 'MA250斜率方向，1=上升，-1=下降，0=持平。',
+
+            # ========== 价格与均线距离（新增）==========
+            'Price_Distance_MA250': '价格与年线的距离百分比。正值表示高于年线，负值表示低于年线。偏离过大可能回调。',
+            'Price_Distance_MA60': '价格与季线的距离百分比。正值表示高于季线，负值表示低于季线。',
+            'Price_Distance_MA20': '价格与月线的距离百分比。正值表示高于月线，负值表示低于月线。',
+
+            # ========== 均线排列信号（新增）==========
+            'MA_Bullish_Alignment': '多头排列信号。MA20>MA60>MA250，表示强势上涨趋势。',
+            'MA_Bearish_Alignment': '空头排列信号。MA20<MA60<MA250，表示强势下跌趋势。',
+
+            # ========== 交叉信号（新增）==========
+            'MA20_Golden_Cross_MA60': 'MA20上穿MA60黄金交叉，短期趋势转强信号。',
+            'MA20_Death_Cross_MA60': 'MA20下穿MA60死亡交叉，短期趋势转弱信号。',
+            'MA60_Golden_Cross_MA250': 'MA60上穿MA250黄金交叉，中期趋势转强信号。',
+            'MA60_Death_Cross_MA250': 'MA60下穿MA250死亡交叉，中期趋势转弱信号。',
 
             # ========== 多周期相对强度信号（RS_Signal）==========
             '60d_RS_Signal_MA250': '60日相对强度信号，价格相对MA250的强度。值为1表示强于长期趋势。',
@@ -1689,12 +1851,41 @@ class HSI_Predictor:
 
             # ========== 波动率 ==========
             'Volatility_120d': '120日波动率，反映中长期市场稳定性。低波动率通常利于上涨。',
+            'Volatility_20d': '20日波动率，反映短期市场稳定性。低波动率通常利于上涨。',
+            'Volatility_60d': '60日波动率，反映中期市场稳定性。低波动率通常利于上涨。',
 
             # ========== 中期均线趋势 ==========
             '60d_Trend_MA120': 'MA120的60日趋势，反映中期趋势强度。上升表示中期趋势强化。',
 
             # ========== 成交量相对强度 ==========
             '20d_RS_Signal_Volume_MA250': '20日成交量相对强度，反映中期资金活跃度。活跃度高通常利好。',
+
+            # ========== RSI 系列 ==========
+            'RSI': 'RSI相对强弱指数，>70超买风险，<30超卖机会。中性区间50左右。',
+            'RSI_ROC': 'RSI变化率，反映动能变化方向。',
+            'RSI_Deviation': 'RSI偏离度，偏离50越大表示超买超卖程度越深。',
+
+            # ========== MACD 系列 ==========
+            'MACD': 'MACD指标，反映趋势动能。正值表示上涨动能，负值表示下跌动能。',
+            'MACD_Signal': 'MACD信号线，用于判断买卖时机。',
+            'MACD_Hist': 'MACD柱状图，正值表示动能增强，负值表示动能减弱。',
+            'MACD_Hist_ROC': 'MACD柱状图变化率，反映动能变化速度。',
+
+            # ========== 布林带 ==========
+            'BB_Width': '布林带宽度，反映波动率。宽度收窄可能预示突破。',
+            'BB_Position': '布林带位置，>0.8超买，<0.2超卖。',
+
+            # ========== 动量加速度 ==========
+            'Momentum_Accel_5d': '5日动量加速度，正值表示上涨加速，负值表示上涨减速。',
+            'Momentum_Accel_10d': '10日动量加速度，反映中期动能变化。',
+
+            # ========== 多周期收益率 ==========
+            'Return_1d': '1日收益率，反映短期表现。',
+            'Return_3d': '3日收益率，反映超短期表现。',
+            'Return_5d': '5日收益率，反映短期表现。',
+            'Return_10d': '10日收益率，反映短期表现。',
+            'Return_20d': '20日收益率，反映中期表现。',
+            'Return_60d': '60日收益率，反映中期表现。',
         }
         return explanations.get(feature_name, '暂无详细说明')
 
