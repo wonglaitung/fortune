@@ -28,19 +28,31 @@ def timeout_handler(signum, frame):
 
 
 def timeout(seconds):
-    """装饰器：为函数添加超时控制"""
+    """装饰器：为函数添加超时控制
+
+    注意：使用 SIGALRM 信号实现，在多线程环境下可能有问题。
+    如果超时触发，会抛出 TimeoutError。
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # 检查是否支持SIGALRM（Unix系统）
             if hasattr(signal, 'SIGALRM'):
+                # 保存旧的信号处理器
                 old_handler = signal.signal(signal.SIGALRM, timeout_handler)
                 signal.alarm(seconds)
                 try:
                     result = func(*args, **kwargs)
-                    signal.alarm(0)  # 取消闹钟
                     return result
+                except TimeoutError:
+                    # 重新抛出 TimeoutError，让调用者处理
+                    raise
+                except Exception as e:
+                    # 其他异常也要重新抛出
+                    raise
                 finally:
+                    # 确保取消闹钟并恢复旧的信号处理器
+                    signal.alarm(0)
                     signal.signal(signal.SIGALRM, old_handler)
             else:
                 # Windows 系统或其他不支持 SIGALRM 的系统使用线程方法
@@ -92,8 +104,8 @@ class USMarketData:
         try:
             from akshare.index import index_global_em
             
-            # 使用超时控制包装器
-            @timeout(30)  # 30秒超时
+            # 使用超时控制包装器（60秒超时，适应 GitHub Actions 网络环境）
+            @timeout(60)
             def fetch_data():
                 return index_global_em.index_global_hist_em(symbol="标普500")
             
@@ -166,7 +178,7 @@ class USMarketData:
             from akshare.index import index_global_em
             
             # 使用超时控制包装器
-            @timeout(30)  # 30秒超时
+            @timeout(60)  # 60秒超时，适应 GitHub Actions 网络环境
             def fetch_data():
                 return index_global_em.index_global_hist_em(symbol="纳斯达克")
             
@@ -278,7 +290,7 @@ class USMarketData:
         """
         try:
             # 使用超时控制包装器
-            @timeout(30)  # 30秒超时
+            @timeout(60)  # 60秒超时，适应 GitHub Actions 网络环境
             def fetch_data():
                 start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
                 return ak.bond_zh_us_rate(start_date=start_date_str)
@@ -316,18 +328,46 @@ class USMarketData:
 
     def get_all_us_market_data(self, period_days=730):
         """获取所有美股市场数据
-        
+
         Args:
             period_days: 获取天数（默认730天，约2年）
-        
+
         Returns:
             DataFrame: 合并后的美股市场数据
         """
-        # 获取各项数据
-        sp500_df = self.get_sp500_data(period_days)
-        nasdaq_df = self.get_nasdaq_data(period_days)
-        vix_df = self.get_vix_data(period_days)
-        treasury_df = self.get_us_treasury_yield(period_days)
+        # 获取各项数据（每个都有独立的超时处理和备选方案）
+        sp500_df = None
+        nasdaq_df = None
+        vix_df = None
+        treasury_df = None
+
+        try:
+            sp500_df = self.get_sp500_data(period_days)
+        except TimeoutError:
+            print("⚠️ 获取标普500数据超时，跳过")
+        except Exception as e:
+            print(f"⚠️ 获取标普500数据失败: {e}")
+
+        try:
+            nasdaq_df = self.get_nasdaq_data(period_days)
+        except TimeoutError:
+            print("⚠️ 获取纳斯达克数据超时，跳过")
+        except Exception as e:
+            print(f"⚠️ 获取纳斯达克数据失败: {e}")
+
+        try:
+            vix_df = self.get_vix_data(period_days)
+        except TimeoutError:
+            print("⚠️ 获取VIX数据超时，跳过")
+        except Exception as e:
+            print(f"⚠️ 获取VIX数据失败: {e}")
+
+        try:
+            treasury_df = self.get_us_treasury_yield(period_days)
+        except TimeoutError:
+            print("⚠️ 获取国债收益率数据超时，跳过")
+        except Exception as e:
+            print(f"⚠️ 获取国债收益率数据失败: {e}")
 
         # 合并数据
         if sp500_df is not None:

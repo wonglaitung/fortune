@@ -88,6 +88,34 @@ FEATURE_CONFIG = {
     'bb_features': [
         'BB_Width', 'BB_Position'
     ],
+    # ATR（真实波幅）
+    'atr_features': [
+        'ATR', 'ATR_Ratio'
+    ],
+    # ADX（平均趋向指数，趋势强度）
+    'adx_features': [
+        'ADX', 'Plus_DI', 'Minus_DI'
+    ],
+    # KDJ随机振荡器
+    'kdj_features': [
+        'Stoch_K', 'Stoch_D'
+    ],
+    # Williams %R
+    'williams_features': [
+        'Williams_R'
+    ],
+    # CMF（Chaikin资金流）
+    'cmf_features': [
+        'CMF', 'CMF_Signal'
+    ],
+    # RSI背离
+    'rsi_divergence_features': [
+        'RSI_Bullish_Divergence', 'RSI_Bearish_Divergence'
+    ],
+    # MACD背离
+    'macd_divergence_features': [
+        'MACD_Bullish_Divergence', 'MACD_Bearish_Divergence'
+    ],
     # 多周期收益率
     'return_features': [
         'Return_1d', 'Return_3d', 'Return_5d', 'Return_10d', 'Return_20d', 'Return_60d'
@@ -331,6 +359,78 @@ class HSICatBoostModel:
         # 6. 波动率扩展
         df['Volatility_20d'] = df['Return_1d'].rolling(window=20).std()
         df['Volatility_60d'] = df['Return_1d'].rolling(window=60).std()
+
+        # ========== 新增技术指标（从 ml_trading_model.py 借鉴）==========
+
+        # 7. ATR（真实波幅，使用昨日高低价避免数据泄漏）
+        high_prev = df['High'].shift(1)
+        low_prev = df['Low'].shift(1)
+        close_prev = df['Close'].shift(1)
+        tr1 = high_prev - low_prev
+        tr2 = abs(high_prev - close_prev)
+        tr3 = abs(low_prev - close_prev)
+        df['TR'] = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        df['ATR'] = df['TR'].rolling(window=14).mean()
+        df['ATR_MA'] = df['ATR'].rolling(window=10).mean().shift(1)
+        df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
+
+        # 8. ADX（平均趋向指数，趋势强度识别）
+        up_move = df['High'].diff().shift(1)
+        down_move = -df['Low'].diff().shift(1)
+        df['Plus_DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
+        df['Minus_DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+        df['Plus_DI'] = 100 * (df['Plus_DM'].ewm(alpha=1/14, adjust=False).mean() / df['ATR'])
+        df['Minus_DI'] = 100 * (df['Minus_DM'].ewm(alpha=1/14, adjust=False).mean() / df['ATR'])
+        dx = 100 * (np.abs(df['Plus_DI'] - df['Minus_DI']) / (df['Plus_DI'] + df['Minus_DI'] + 1e-10))
+        df['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
+
+        # 9. KDJ随机振荡器（使用昨日高低价避免数据泄漏）
+        k_period = 14
+        d_period = 3
+        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min().shift(1)
+        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max().shift(1)
+        df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min_14']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10)
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean().shift(1)
+
+        # 10. Williams %R（使用昨日高低价避免数据泄漏）
+        df['Williams_R'] = (df['High_Max_14'] - df['Close']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10) * -100
+
+        # 11. CMF（Chaikin资金流，使用昨日高低价避免数据泄漏）
+        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
+        df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / (df['Volume'].rolling(20, min_periods=1).sum() + 1e-10)
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
+
+        # 12. RSI背离检测（价格创新低但RSI未创新低 = 看涨背离）
+        lookback = 5
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        # 看涨背离：价格创新低，但RSI未创新低
+        df['RSI_Bullish_Divergence'] = (
+            (df['Close'].shift(1) == df['Price_Low_5d']) &
+            (df['RSI'] > df['RSI_Low_5d_History'])
+        ).astype(int)
+        # 看跌背离：价格创新高，但RSI未创新高
+        df['RSI_Bearish_Divergence'] = (
+            (df['Close'].shift(1) == df['Price_High_5d']) &
+            (df['RSI'] < df['RSI_High_5d_History'])
+        ).astype(int)
+
+        # 13. MACD背离检测（价格创新低但MACD未创新低 = 看涨背离）
+        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(1)
+        # 看涨背离：价格创新低，但MACD未创新低
+        df['MACD_Bullish_Divergence'] = (
+            (df['Close'] == df['Price_Low_5d']) &
+            (df['MACD'] > df['MACD_Low_5d_History'])
+        ).astype(int)
+        # 看跌背离：价格创新高，但MACD未创新高
+        df['MACD_Bearish_Divergence'] = (
+            (df['Close'] == df['Price_High_5d']) &
+            (df['MACD'] < df['MACD_High_5d_History'])
+        ).astype(int)
 
         # ========== 多周期相对强度信号（与 hsi_prediction.py 对齐）==========
         periods = [3, 5, 10, 20, 60]

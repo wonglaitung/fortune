@@ -34,6 +34,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **加密货币异常检测** | `python3 crypto_email.py --mode deep --date 2026-04-08` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **恒生指数监控** | `python3 hsi_email.py` |
+| **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
+| **恒生指数预测验证** | `python3 hsi_prediction.py --verify` |
+| **恒指模型滚动训练** | `python3 ml_services/hsi_ml_model.py --mode rolling --window 18` |
+| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --horizon 20` |
 | **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
 | **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
 
@@ -46,7 +50,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `crypto_email.py` | 加密货币异常检测 |
 | `ml_services/ml_trading_model.py` | ML模型训练/预测 |
 | `hsi_email.py` | 恒生指数监控 |
+| `hsi_prediction.py` | 恒生指数预测（双模型对比） |
 | `hk_smart_money_tracker.py` | 主力资金追踪 |
+| `ml_services/hsi_ml_model.py` | 恒指CatBoost模型训练/预测 |
+| `ml_services/hsi_walk_forward.py` | 恒指Walk-forward验证 |
 
 
 ### 语言规范
@@ -70,6 +77,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **交易时段误报** | 交易时段数据不完整，应在收盘后检测 |
 | **异常是"放大器"** | 异常后波动率增加+79%，需降低仓位 |
 | **最强抄底信号** | 价格异常+当日下跌，5天胜率72% |
+| **三周期一致策略** | 1天/5天/20天预测一致时，至少一周期正确率89% |
 
 > **详细说明**：参阅 [lessons.md](lessons.md)
 
@@ -116,10 +124,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ├── 数据服务层 (data_services/)
 │   ├── 技术分析工具 (technical_analysis.py)
 │   ├── 基本面数据 (fundamental_data.py)
-│   └── 板块分析 (hk_sector_analysis.py)
+│   ├── 板块分析 (hk_sector_analysis.py)
+│   └── 南向资金数据 (southbound_data.py)
 ├── 分析层
 │   ├── 综合分析 (comprehensive_analysis.py)
 │   ├── 恒生指数监控 (hsi_email.py)
+│   ├── 恒指预测双模型 (hsi_prediction.py + hsi_ml_model.py)
 │   ├── 主力资金追踪 (hk_smart_money_tracker.py)
 │   └── ML 模块 (ml_services/)
 ├── 交易层
@@ -158,6 +168,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 加密货币异常检测
 - **双层检测**：Z-Score + Isolation Forest
 - **小时级监控**：使用1个月小时级数据（720个数据点）
+
+### 恒生指数预测系统（2026-04-16 新增）
+
+**双模型架构**：
+- **评分模型**：基于特征重要性加权的规则模型
+- **CatBoost模型**：机器学习自动学习权重
+
+**核心功能**：
+- 多周期预测（1天/5天/20天）
+- 三周期一致预测策略
+- 预测历史记录与验证
+
+**三周期一致预测策略** ⭐ 重要发现：
+
+| 场景 | 占比 | 至少一周期正确率 | 建议操作 |
+|------|------|-----------------|---------|
+| **三周期一致看涨** | 17.4% | **92.00%** | 强烈买入 |
+| **三周期一致看跌** | 24.0% | **87.28%** | 强烈卖出 |
+| 不一致 | 58.6% | - | 观望 |
+
+**各周期特点**：
+
+| 周期 | 准确率 | AUC | 适用场景 |
+|------|--------|-----|---------|
+| 1天 | ~46% | 0.52 | ❌ 噪音大，不推荐 |
+| 5天 | **~58%** | 0.66 | ✅ 准确率最高 |
+| 20天 | ~55% | **0.75** | ✅ 趋势判断能力强 |
+
+**最优持有期**：
+- 一致看涨时：持有20天（准确率71.2%）
+- 一致看跌时：持有5天（准确率67.1%）
+
+**特征配置**（73个特征）：
+- 宏观因子：美债收益率、VIX恐慌指数
+- 港股通资金：南向资金净流入/净买入
+- 技术指标：MA、RSI、MACD、布林带、ATR、ADX等
+- RS信号：相对强度信号
 
 ---
 
@@ -226,7 +273,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
 | `hourly-crypto-monitor.yml` | 加密货币异常检测 | 每小时 |
 | `comprehensive-analysis.yml` | 综合分析邮件 | 周一到周五 16:00 |
-| `hsi-prediction.yml` | 恒生指数预测 | 周一到周五 06:00 |
+| `hsi-prediction.yml` | 恒生指数预测（双模型） | 周一到周五 06:00 |
 | `performance-monitor.yml` | 性能月度报告 | 每月1号 |
 
 ---
@@ -291,4 +338,4 @@ tests/
 
 ---
 
-**最后更新**：2026-04-13（更新Walk-forward验证结果、指标计算修正说明）
+**最后更新**：2026-04-16（新增恒生指数预测系统、三周期一致预测策略）
