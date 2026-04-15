@@ -87,6 +87,34 @@ class HSI_Predictor:
         'BB_Width': {'weight': 0.01, 'direction': 1},  # 布林带宽度
         'BB_Position': {'weight': 0.02, 'direction': 1},  # 布林带位置
 
+        # ========== ATR（真实波幅，新增）==========
+        'ATR': {'weight': 0.01, 'direction': -1},  # ATR，高波动不利
+        'ATR_Ratio': {'weight': 0.015, 'direction': -1},  # ATR比率，高波动不利
+
+        # ========== ADX（趋势强度，新增）==========
+        'ADX': {'weight': 0.02, 'direction': 1},  # ADX>25表示趋势市场
+        'Plus_DI': {'weight': 0.01, 'direction': 1},  # +DI，多头力量
+        'Minus_DI': {'weight': 0.01, 'direction': -1},  # -DI，空头力量
+
+        # ========== KDJ随机振荡器（新增）==========
+        'Stoch_K': {'weight': 0.015, 'direction': -1},  # K值，超买区不利
+        'Stoch_D': {'weight': 0.01, 'direction': -1},  # D值，超买区不利
+
+        # ========== Williams %R（新增）==========
+        'Williams_R': {'weight': 0.01, 'direction': 1},  # Williams %R，超卖区利好
+
+        # ========== CMF资金流（新增）==========
+        'CMF': {'weight': 0.02, 'direction': 1},  # CMF正值表示资金流入
+        'CMF_Signal': {'weight': 0.01, 'direction': 1},  # CMF信号线
+
+        # ========== RSI背离（新增）==========
+        'RSI_Bullish_Divergence': {'weight': 0.03, 'direction': 1},  # RSI看涨背离
+        'RSI_Bearish_Divergence': {'weight': 0.03, 'direction': -1},  # RSI看跌背离
+
+        # ========== MACD背离（新增）==========
+        'MACD_Bullish_Divergence': {'weight': 0.03, 'direction': 1},  # MACD看涨背离
+        'MACD_Bearish_Divergence': {'weight': 0.03, 'direction': -1},  # MACD看跌背离
+
         # ========== 动量加速度（新增）==========
         'Momentum_Accel_5d': {'weight': 0.02, 'direction': 1},  # 5日动量加速度
         'Momentum_Accel_10d': {'weight': 0.015, 'direction': 1},  # 10日动量加速度
@@ -416,6 +444,69 @@ class HSI_Predictor:
         df['Volatility_20d'] = df['Return_1d'].rolling(window=20).std()
         df['Volatility_60d'] = df['Return_1d'].rolling(window=60).std()
 
+        # ========== 新增技术指标（从 ml_trading_model.py 借鉴）==========
+
+        # ATR比率（相对于10日均线）
+        df['ATR_Ratio'] = df['ATR'] / (df['ATR_MA'] + 1e-10)
+
+        # ADX（平均趋向指数，趋势强度识别）
+        up_move = df['High'].diff().shift(1)
+        down_move = -df['Low'].diff().shift(1)
+        df['Plus_DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
+        df['Minus_DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
+        df['Plus_DI'] = 100 * (df['Plus_DM'].ewm(alpha=1/14, adjust=False).mean() / (df['ATR'] + 1e-10))
+        df['Minus_DI'] = 100 * (df['Minus_DM'].ewm(alpha=1/14, adjust=False).mean() / (df['ATR'] + 1e-10))
+        dx = 100 * (np.abs(df['Plus_DI'] - df['Minus_DI']) / (df['Plus_DI'] + df['Minus_DI'] + 1e-10))
+        df['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
+
+        # KDJ随机振荡器（使用昨日高低价避免数据泄漏）
+        k_period = 14
+        d_period = 3
+        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min().shift(1)
+        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max().shift(1)
+        df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min_14']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10)
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean().shift(1)
+
+        # Williams %R（使用昨日高低价避免数据泄漏）
+        df['Williams_R'] = (df['High_Max_14'] - df['Close']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10) * -100
+
+        # CMF（Chaikin资金流，使用昨日高低价避免数据泄漏）
+        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
+        df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / (df['Volume'].rolling(20, min_periods=1).sum() + 1e-10)
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
+
+        # RSI背离检测（价格创新低但RSI未创新低 = 看涨背离）
+        lookback = 5
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        # 看涨背离：价格创新低，但RSI未创新低
+        df['RSI_Bullish_Divergence'] = (
+            (df['Close'].shift(1) == df['Price_Low_5d']) &
+            (df['RSI'] > df['RSI_Low_5d_History'])
+        ).astype(int)
+        # 看跌背离：价格创新高，但RSI未创新高
+        df['RSI_Bearish_Divergence'] = (
+            (df['Close'].shift(1) == df['Price_High_5d']) &
+            (df['RSI'] < df['RSI_High_5d_History'])
+        ).astype(int)
+
+        # MACD背离检测（价格创新低但MACD未创新低 = 看涨背离）
+        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(1)
+        # 看涨背离：价格创新低，但MACD未创新低
+        df['MACD_Bullish_Divergence'] = (
+            (df['Close'] == df['Price_Low_5d']) &
+            (df['MACD'] > df['MACD_Low_5d_History'])
+        ).astype(int)
+        # 看跌背离：价格创新高，但MACD未创新高
+        df['MACD_Bearish_Divergence'] = (
+            (df['Close'] == df['Price_High_5d']) &
+            (df['MACD'] < df['MACD_High_5d_History'])
+        ).astype(int)
+
         return df
 
     def calculate_features(self):
@@ -564,6 +655,34 @@ class HSI_Predictor:
             'BB_Width': safe_get(latest_hsi.get('BB_Width', 0), 0),
             'BB_Position': safe_get(latest_hsi.get('BB_Position', 0.5), 0.5),
 
+            # ========== ATR（真实波幅，新增）==========
+            'ATR': safe_get(latest_hsi.get('ATR', 0), 0),
+            'ATR_Ratio': safe_get(latest_hsi.get('ATR_Ratio', 1), 1),
+
+            # ========== ADX（趋势强度，新增）==========
+            'ADX': safe_get(latest_hsi.get('ADX', 25), 25),
+            'Plus_DI': safe_get(latest_hsi.get('Plus_DI', 20), 20),
+            'Minus_DI': safe_get(latest_hsi.get('Minus_DI', 20), 20),
+
+            # ========== KDJ随机振荡器（新增）==========
+            'Stoch_K': safe_get(latest_hsi.get('Stoch_K', 50), 50),
+            'Stoch_D': safe_get(latest_hsi.get('Stoch_D', 50), 50),
+
+            # ========== Williams %R（新增）==========
+            'Williams_R': safe_get(latest_hsi.get('Williams_R', -50), -50),
+
+            # ========== CMF资金流（新增）==========
+            'CMF': safe_get(latest_hsi.get('CMF', 0), 0),
+            'CMF_Signal': safe_get(latest_hsi.get('CMF_Signal', 0), 0),
+
+            # ========== RSI背离（新增）==========
+            'RSI_Bullish_Divergence': safe_get(latest_hsi.get('RSI_Bullish_Divergence', 0), 0),
+            'RSI_Bearish_Divergence': safe_get(latest_hsi.get('RSI_Bearish_Divergence', 0), 0),
+
+            # ========== MACD背离（新增）==========
+            'MACD_Bullish_Divergence': safe_get(latest_hsi.get('MACD_Bullish_Divergence', 0), 0),
+            'MACD_Bearish_Divergence': safe_get(latest_hsi.get('MACD_Bearish_Divergence', 0), 0),
+
             # ========== 动量加速度（新增）==========
             'Momentum_Accel_5d': safe_get(latest_hsi.get('Momentum_Accel_5d', 0), 0),
             'Momentum_Accel_10d': safe_get(latest_hsi.get('Momentum_Accel_10d', 0), 0),
@@ -699,6 +818,59 @@ class HSI_Predictor:
             if pd.isna(value):
                 return 0
             return np.clip((value - 0.02) / 0.03, -1, 1)
+
+        # ========== 新增：ATR特征标准化 ==========
+        elif feature_name == 'ATR':
+            if pd.isna(value):
+                return 0
+            # ATR通常在200-500点范围（恒指）
+            return np.clip(value / 500, -1, 1)
+
+        elif feature_name == 'ATR_Ratio':
+            if pd.isna(value):
+                return 0
+            # ATR比率通常在0.5-1.5范围
+            return np.clip((value - 1) / 0.5, -1, 1)
+
+        # ========== 新增：ADX特征标准化 ==========
+        elif feature_name == 'ADX':
+            if pd.isna(value):
+                return 0
+            # ADX: <20无趋势，20-25趋势形成，25-50强趋势，50+极强趋势
+            return np.clip((value - 25) / 25, -1, 1)
+
+        elif feature_name in ['Plus_DI', 'Minus_DI']:
+            if pd.isna(value):
+                return 0
+            # DI通常在0-50范围
+            return np.clip(value / 25 - 1, -1, 1)
+
+        # ========== 新增：KDJ特征标准化 ==========
+        elif feature_name in ['Stoch_K', 'Stoch_D']:
+            if pd.isna(value):
+                return 0
+            # 随机振荡器在0-100范围，50为中性
+            return np.clip((value - 50) / 50, -1, 1)
+
+        # ========== 新增：Williams %R标准化 ==========
+        elif feature_name == 'Williams_R':
+            if pd.isna(value):
+                return 0
+            # Williams %R在-100到0范围，-50为中性
+            return np.clip((value + 50) / 50, -1, 1)
+
+        # ========== 新增：CMF特征标准化 ==========
+        elif feature_name in ['CMF', 'CMF_Signal']:
+            if pd.isna(value):
+                return 0
+            # CMF在-1到1范围
+            return np.clip(value, -1, 1)
+
+        # ========== 新增：背离信号标准化 ==========
+        elif 'Divergence' in feature_name:
+            if pd.isna(value):
+                return 0
+            return value * 2 - 1  # 0 -> -1, 1 -> 1
 
         # Level特征
         elif 'Level' in feature_name:
@@ -937,7 +1109,7 @@ class HSI_Predictor:
         return anomalies
 
     def generate_email_content(self, score, trend, feature_details, multi_horizon_results=None):
-        """生成邮件内容（HTML格式）"""
+        """生成邮件内容（HTML格式）- 精简版，专注于投资决策参考"""
         current_price = self.hsi_data['Close'].iloc[-1]
         previous_price = self.hsi_data['Close'].iloc[-2]
         price_change = ((current_price - previous_price) / previous_price) * 100
@@ -947,167 +1119,119 @@ class HSI_Predictor:
         # 检测成交量异常
         volume_anomalies = self.detect_volume_anomalies()
         volume_anomaly = volume_anomalies.get('volume_anomaly')
+        amount_anomaly = volume_anomalies.get('amount_anomaly')
         if_anomaly = volume_anomalies.get('if_anomaly')
         data_warning = volume_anomalies.get('data_warning', '')
 
-        # 构建异常检测HTML
-        has_any_anomaly = volume_anomaly or if_anomaly
-
-        if has_any_anomaly:
-            # 确定最高严重级别
-            severities = []
-            if volume_anomaly:
-                severities.append(volume_anomaly['severity'])
-            if if_anomaly:
-                severities.append(if_anomaly['severity'])
-
-            has_high = 'high' in severities
-            has_medium = 'medium' in severities
-
-            if has_high:
-                anomaly_bg = 'background: #fef2f2; border-left: 4px solid #dc2626;'
-                anomaly_title_color = 'color: #dc2626;'
-                anomaly_title = '🔴 检测到高风险异常'
-            elif has_medium:
-                anomaly_bg = 'background: #fff7ed; border-left: 4px solid #f97316;'
-                anomaly_title_color = 'color: #f97316;'
-                anomaly_title = '🟠 检测到中等风险异常'
-            else:
-                anomaly_bg = 'background: #fefce8; border-left: 4px solid #eab308;'
-                anomaly_title_color = 'color: #ca8a04;'
-                anomaly_title = '🟡 检测到低风险异常'
-
-            # 构建异常详情
-            anomaly_details = []
-            if volume_anomaly:
-                anomaly_details.append(f'<div style="font-size: 12px; margin-bottom: 5px;"><strong>📊 成交量异常：</strong>当日成交量 <span style="color: #dc2626; font-weight: 600;">{volume_anomaly["direction"]}</span>（Z-Score: {volume_anomaly["z_score"]:.2f}，{volume_anomaly["severity"]}级别）</div>')
-            if if_anomaly:
-                anomaly_details.append(f'<div style="font-size: 12px; margin-bottom: 5px;"><strong>🎯 多维特征异常：</strong>Isolation Forest检测到成交模式异常（异常分数: {if_anomaly["anomaly_score"]:.4f}，{if_anomaly["severity"]}级别）</div>')
-
-            # 构建提示信息
-            if volume_anomaly and if_anomaly:
-                anomaly_hint = '多维度验证检测到异常，预示市场可能出现显著波动，建议密切关注。'
-            elif volume_anomaly:
-                anomaly_hint = '成交量异常通常预示重要变盘信号。'
-            else:
-                anomaly_hint = '多维特征异常表明成交模式发生变化，建议关注后续走势。'
-
-            anomaly_html = f"""
-            <div style="margin-top: 20px; padding: 15px; border-radius: 8px; {anomaly_bg}">
-                <h4 style="margin: 0 0 10px 0; {anomaly_title_color} font-size: 14px;">
-                    {anomaly_title}
-                </h4>
-                {''.join(anomaly_details)}
-                <div style="font-size: 11px; color: #6b7280; margin-top: 8px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-                    {anomaly_hint}<br/>
-                    <span style="color: #f59e0b;">⚠️ {data_warning}</span>
-                </div>
-            </div>
-            """
-        else:
-            anomaly_html = f"""
-            <div style="margin-top: 20px; padding: 15px; border-radius: 8px; background: #f0fdf4; border-left: 4px solid #22c55e;">
-                <h4 style="margin: 0 0 10px 0; color: #16a34a; font-size: 14px;">
-                    ✅ 成交数据正常
-                </h4>
-                <div style="font-size: 12px; color: #6b7280;">
-                    当日成交量在正常范围内，无异常信号<br/>
-                    <span style="color: #f59e0b; font-size: 11px;">⚠️ {data_warning}</span>
-                </div>
-            </div>
-            """
-
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        # 按贡献度排序特征
-        sorted_features = sorted(feature_details, key=lambda x: abs(x['contribution']), reverse=True)
-
-        # 统计正面和负面因素
-        positive_features = [f for f in feature_details if f['contribution'] > 0]
-        negative_features = [f for f in feature_details if f['contribution'] < 0]
-        positive_score = sum(f['contribution'] for f in positive_features)
-        negative_score = sum(abs(f['contribution']) for f in negative_features)
-
         # 趋势颜色
         trend_colors = {
-            '强烈看涨': '#16a34a',      # 绿色
-            '看涨': '#22c55e',         # 浅绿色
-            '中性偏涨': '#84cc16',     # 黄绿色
-            '中性偏跌': '#f59e0b',     # 橙色
-            '看跌': '#f97316',         # 深橙色
-            '强烈看跌': '#dc2626'      # 红色
+            '强烈看涨': '#16a34a',
+            '看涨': '#22c55e',
+            '中性偏涨': '#84cc16',
+            '中性偏跌': '#f59e0b',
+            '看跌': '#f97316',
+            '强烈看跌': '#dc2626'
         }
         trend_color = trend_colors.get(trend, '#6b7280')
 
-        # 预计算特征值格式化字符串（使用新特征集）
-        ma250 = self.features.get('MA250', 0)
-        volume_ma250 = self.features.get('Volume_MA250', 0)
+        # 预计算核心指标
+        ma20 = self.features.get('MA20', 0)
+        ma60 = self.features.get('MA60', 0)
         ma120 = self.features.get('MA120', 0)
-        rs_signal_60d = self.features.get('60d_RS_Signal_MA250', 0)
-        volatility_120d = self.features.get('Volatility_120d', 0) * 100 if self.features.get('Volatility_120d') else 0
-        
-        # 格式化描述文本（基于新特征）
-        ma250_desc = f"250日均线位于{ma250:.2f}点，反映长期趋势。价格在均线上方通常表示上涨趋势"
+        ma250 = self.features.get('MA250', 0)
+        rsi_val = self.features.get('RSI', 50)
+        adx_val = self.features.get('ADX', 0)
 
-        # 成交额数据（优先使用腾讯财经历史数据）
+        # 成交额数据
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
-            # 使用腾讯财经的准确历史成交额数据
             current_amount = self.tencent_amount['amount'] if hasattr(self, 'tencent_amount') and self.tencent_amount else self.tencent_hsi_data['Amount'].iloc[-1]
-            # 计算250日成交额均值
-            amount_data = self.tencent_hsi_data['Amount'].tail(250)
-            amount_ma250 = amount_data.mean() if len(amount_data) > 0 else 0
-            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：腾讯财经API"
-            volume_ma250_yi = None  # 不使用成交量
-            volume_desc = None
+            amount_ma20 = self.tencent_hsi_data['Amount'].tail(20).mean() if len(self.tencent_hsi_data) >= 20 else 0
+            amount_ma60 = self.tencent_hsi_data['Amount'].tail(60).mean() if len(self.tencent_hsi_data) >= 60 else 0
+            amount_ma120 = self.tencent_hsi_data['Amount'].tail(120).mean() if len(self.tencent_hsi_data) >= 120 else 0
+
+            # 计算成交额对比
+            if amount_ma20 > 0:
+                amount_vs_ma20 = (current_amount - amount_ma20) / amount_ma20 * 100
+                amount_vs_ma20_str = f"+{amount_vs_ma20:.1f}%" if amount_vs_ma20 > 0 else f"{amount_vs_ma20:.1f}%"
+                amount_vs_ma20_color = '#22c55e' if amount_vs_ma20 > 0 else '#dc2626'
+            else:
+                amount_vs_ma20_str = "N/A"
+                amount_vs_ma20_color = '#6b7280'
+
+            if amount_ma60 > 0:
+                amount_vs_ma60 = (current_amount - amount_ma60) / amount_ma60 * 100
+                amount_vs_ma60_str = f"+{amount_vs_ma60:.1f}%" if amount_vs_ma60 > 0 else f"{amount_vs_ma60:.1f}%"
+                amount_vs_ma60_color = '#22c55e' if amount_vs_ma60 > 0 else '#dc2626'
+            else:
+                amount_vs_ma60_str = "N/A"
+                amount_vs_ma60_color = '#6b7280'
+
+            if amount_ma120 > 0:
+                amount_vs_ma120 = (current_amount - amount_ma120) / amount_ma120 * 100
+                amount_vs_ma120_str = f"+{amount_vs_ma120:.1f}%" if amount_vs_ma120 > 0 else f"{amount_vs_ma120:.1f}%"
+                amount_vs_ma120_color = '#22c55e' if amount_vs_ma120 > 0 else '#dc2626'
+            else:
+                amount_vs_ma120_str = "N/A"
+                amount_vs_ma120_color = '#6b7280'
         else:
-            #  fallback：使用成交量数据（yfinance）
             current_amount = None
-            amount_ma250 = None
-            amount_desc = None
-            volume_ma250_yi = volume_ma250 / 100000000  # 转换为亿股
-            volume_desc = f"250日成交量均值为{volume_ma250_yi:.1f}亿股，反映长期流动性水平。注：yfinance数据源可能存在单位偏差"
+            amount_ma20 = amount_ma60 = amount_ma120 = 0
+            amount_vs_ma20_str = amount_vs_ma60_str = amount_vs_ma120_str = "N/A"
+            amount_vs_ma20_color = amount_vs_ma60_color = amount_vs_ma120_color = '#6b7280'
 
-        ma120_desc = f"120日均线位于{ma120:.2f}点，反映中期趋势支撑"
-        rs_desc = f"60日相对强度信号为{rs_signal_60d:.0f}，{'强势' if rs_signal_60d > 0 else '弱势'}"
-        volatility_desc = f"120日波动率为{volatility_120d:.2f}%，{'市场稳定' if volatility_120d < 2 else '市场波动较大'}"
+        # 价格位置计算
+        ma20_pos = (current_price - ma20) / ma20 * 100 if ma20 > 0 else 0
+        ma60_pos = (current_price - ma60) / ma60 * 100 if ma60 > 0 else 0
+        ma120_pos = (current_price - ma120) / ma120 * 100 if ma120 > 0 else 0
+        ma250_pos = (current_price - ma250) / ma250 * 100 if ma250 > 0 else 0
 
-        # 构建信息卡HTML（根据数据可用性选择成交额或成交量）
-        if amount_ma250:
-            amount_card_html = f"""
-                <div class="info-card">
-                    <h3>成交额均值</h3>
-                    <div class="value">{amount_ma250:.0f} 亿港元</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {amount_desc}
-                    </div>
-                </div>
-            """
-            volume_card_html = ""
-        else:
-            amount_card_html = ""
-            volume_card_html = f"""
-                <div class="info-card">
-                    <h3>成交量均值</h3>
-                    <div class="value">{volume_ma250_yi:.1f} 亿股</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {volume_desc}
-                    </div>
-                </div>
-            """
+        # ADX趋势判断
+        adx_trend = "趋势市场" if adx_val >= 25 else "震荡市场"
+        adx_color = '#22c55e' if adx_val >= 25 else '#f59e0b'
 
-        # 构建HTML邮件内容
+        # RSI状态
+        rsi_status = "超买" if rsi_val >= 70 else ("超卖" if rsi_val <= 30 else "中性")
+        rsi_color = '#dc2626' if rsi_val >= 70 else ('#22c55e' if rsi_val <= 30 else '#6b7280')
+
+        # 异常检测汇总
+        anomaly_list = []
+        if volume_anomaly:
+            anomaly_list.append(f"成交量异常（{volume_anomaly['direction']}）")
+        if amount_anomaly:
+            anomaly_list.append(f"成交额异常（{amount_anomaly['direction']}）")
+        if if_anomaly:
+            anomaly_list.append("多维特征异常")
+
+        # 多周期预测一致性判断
+        consistency_signal = ""
+        if multi_horizon_results:
+            predictions = [multi_horizon_results[h]['prediction'] for h in [1, 5, 20] if h in multi_horizon_results]
+            all_up = all(p == '上涨' for p in predictions)
+            all_down = all(p == '下跌' for p in predictions)
+            if all_up:
+                consistency_signal = "📈 三周期一致看涨"
+            elif all_down:
+                consistency_signal = "📉 三周期一致看跌"
+
+        # 统计正面和负面因素数量
+        positive_count = sum(1 for f in feature_details if f['contribution'] > 0)
+        negative_count = sum(1 for f in feature_details if f['contribution'] < 0)
+
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # 构建HTML邮件内容 - 精简版，专注于投资决策参考
         content = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>恒生指数涨跌预测报告</title>
+    <title>恒生指数分析报告</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
             line-height: 1.6;
             color: #1f2937;
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f9fafb;
@@ -1121,338 +1245,81 @@ class HSI_Predictor:
         .header {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 25px;
             text-align: center;
         }}
-        .header h1 {{
-            margin: 0;
-            font-size: 28px;
-            font-weight: 700;
-        }}
-        .header .subtitle {{
-            margin-top: 8px;
-            font-size: 14px;
-            opacity: 0.9;
-        }}
-        .section {{
-            padding: 30px;
-            border-bottom: 1px solid #e5e7eb;
-        }}
-        .section:last-child {{
-            border-bottom: none;
-        }}
+        .header h1 {{ margin: 0; font-size: 24px; font-weight: 700; }}
+        .header .subtitle {{ margin-top: 8px; font-size: 13px; opacity: 0.9; }}
+        .section {{ padding: 20px 25px; border-bottom: 1px solid #e5e7eb; }}
+        .section:last-child {{ border-bottom: none; }}
         .section-title {{
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 600;
             color: #374151;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #e5e7eb;
-            display: flex;
-            align-items: center;
         }}
-        .section-title::before {{
-            content: '';
-            width: 4px;
-            height: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-right: 12px;
-            border-radius: 2px;
-        }}
-        .info-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }}
-        .info-card {{
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        .signal-box {{
             padding: 20px;
             border-radius: 8px;
-            border-left: 4px solid #6366f1;
-        }}
-        .info-card.highlight {{
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border-left-color: #f59e0b;
-        }}
-        .info-card h3 {{
-            margin: 0 0 8px 0;
-            font-size: 13px;
-            color: #6b7280;
-            font-weight: 500;
-        }}
-        .info-card .value {{
-            font-size: 24px;
-            font-weight: 700;
-            color: #1f2937;
-        }}
-        .info-card .trend {{
-            font-size: 28px;
-            font-weight: 700;
-            color: {trend_color};
             text-align: center;
+            margin-bottom: 15px;
         }}
-        .score-bar {{
-            background: #e5e7eb;
-            height: 30px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 20px 0;
-        }}
-        .score-fill {{
-            height: 100%;
-            background: linear-gradient(90deg, #dc2626 0%, #f59e0b 50%, #22c55e 100%);
-            transition: width 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 13px;
-        }}
-        th {{
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            padding: 12px 10px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 12px;
-        }}
-        th:first-child {{
-            border-top-left-radius: 8px;
-        }}
-        th:last-child {{
-            border-top-right-radius: 8px;
-        }}
-        td {{
-            padding: 12px 10px;
-            border-bottom: 1px solid #e5e7eb;
-        }}
-        tr:nth-child(even) {{
-            background-color: #f9fafb;
-        }}
-        tr:hover {{
-            background-color: #f3f4f6;
-        }}
-        .badge {{
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin: 2px;
-        }}
-        .badge-positive {{
-            background-color: #dcfce7;
-            color: #166534;
-        }}
-        .badge-negative {{
-            background-color: #fee2e2;
-            color: #991b1b;
-        }}
-        .badge-neutral {{
-            background-color: #f3f4f6;
-            color: #374151;
-        }}
-        .feature-explanation {{
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 4px;
-            padding: 8px;
-            background-color: #f8fafc;
-            border-radius: 4px;
-            border-left: 3px solid #6366f1;
-        }}
-        .summary-box {{
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }}
-        .summary-box h3 {{
-            margin: 0 0 10px 0;
-            color: #92400e;
-            font-size: 16px;
-        }}
-        .alert-box {{
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #dc2626;
-        }}
-        .alert-box h3 {{
-            margin: 0 0 10px 0;
-            color: #991b1b;
-            font-size: 16px;
-        }}
-        .footer {{
-            background-color: #1f2937;
-            color: #9ca3af;
-            padding: 20px 30px;
-            text-align: center;
-            font-size: 12px;
-        }}
-        .footer a {{
-            color: #60a5fa;
-            text-decoration: none;
-        }}
-        .indicator {{
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }}
-        .indicator.green {{
-            background-color: #22c55e;
-        }}
-        .indicator.red {{
-            background-color: #dc2626;
-        }}
-        .indicator.yellow {{
-            background-color: #f59e0b;
-        }}
-        .ranking {{
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 24px;
-            font-size: 12px;
-            font-weight: 700;
-            margin-right: 8px;
-        }}
-        ul {{
-            padding-left: 20px;
-            margin: 10px 0;
-        }}
-        li {{
-            margin: 8px 0;
-            line-height: 1.6;
-        }}
-        .risk-item {{
-            display: flex;
-            align-items: flex-start;
-            margin: 10px 0;
-        }}
-        .risk-item::before {{
-            content: '⚠️';
-            margin-right: 10px;
-            flex-shrink: 0;
-        }}
+        .signal-box.bullish {{ background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 2px solid #22c55e; }}
+        .signal-box.bearish {{ background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 2px solid #dc2626; }}
+        .signal-box.neutral {{ background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; }}
+        .signal-box .signal-text {{ font-size: 28px; font-weight: 700; }}
+        .signal-box.bullish .signal-text {{ color: #166534; }}
+        .signal-box.bearish .signal-text {{ color: #991b1b; }}
+        .signal-box.neutral .signal-text {{ color: #92400e; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 13px; }}
+        th {{ background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 10px 8px; text-align: left; font-weight: 600; font-size: 12px; }}
+        td {{ padding: 10px 8px; border-bottom: 1px solid #e5e7eb; }}
+        tr:nth-child(even) {{ background-color: #f9fafb; }}
+        .data-grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }}
+        .data-card {{ background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #6366f1; }}
+        .data-card h4 {{ margin: 0 0 8px 0; font-size: 12px; color: #6b7280; font-weight: 500; }}
+        .data-card .value {{ font-size: 20px; font-weight: 700; color: #1f2937; }}
+        .footer {{ background-color: #1f2937; color: #9ca3af; padding: 15px 25px; text-align: center; font-size: 11px; }}
+        .consistency {{ padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; font-weight: 600; text-align: center; }}
+        .consistency.up {{ background: #dcfce7; color: #166534; }}
+        .consistency.down {{ background: #fee2e2; color: #991b1b; }}
     </style>
 </head>
 <body>
     <div class="container">
         <!-- 头部 -->
         <div class="header">
-            <h1>📊 恒生指数涨跌预测报告</h1>
-            <div class="subtitle">基于特征重要性加权评分模型 | {current_date} {current_time}</div>
+            <h1>📊 恒生指数分析报告</h1>
+            <div class="subtitle">{current_date} {current_time}</div>
         </div>
 
-        <!-- 第一部分：预测结果概览（合并多周期预测） -->
+        <!-- 第一部分：预测信号 -->
         <div class="section">
-            <div class="section-title">一、预测结果概览</div>
+            <div class="section-title">🎯 预测信号</div>
 
-            <div class="info-grid">
-                <div class="info-card">
-                    <h3>📈 恒指收盘</h3>
-                    <div class="value">{current_price:.2f} 点</div>
-                    <div style="color: { '#dc2626' if price_change < 0 else '#22c55e' }; font-size: 14px; margin-top: 5px;">
-                        {price_change:+.2f}%
-                    </div>
-                </div>
-                <div class="info-card highlight">
-                    <h3>🎯 预测趋势</h3>
-                    <div class="trend">{trend}</div>
-                </div>
-                <div class="info-card">
-                    <h3>📊 预测得分</h3>
-                    <div class="value">{score:.4f}</div>
-                    <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">满分 1.0000</div>
+            <div class="signal-box {'bullish' if score >= 0.55 else 'bearish' if score < 0.45 else 'neutral'}">
+                <div class="signal-text">{trend}</div>
+                <div style="font-size: 14px; margin-top: 8px;">
+                    得分 {score:.2%} | {'正面因素 ' + str(positive_count) + ' 个' if positive_count > negative_count else '负面因素 ' + str(negative_count) + ' 个'}
                 </div>
             </div>
 
-            <div style="margin: 30px 0;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #6b7280;">
-                    <span>强烈看跌 (0.35)</span>
-                    <span>中性 (0.50)</span>
-                    <span>强烈看涨 (0.65)</span>
-                </div>
-                <div class="score-bar">
-                    <div class="score-fill" style="width: {score * 100}%; background: linear-gradient(90deg, #dc2626 0%, #f59e0b 50%, #22c55e 100%);">
-                        {score:.1%}
-                    </div>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; font-size: 12px;">
-                <div style="background: #fee2e2; padding: 12px; border-radius: 6px; color: #991b1b; text-align: center; font-weight: 600;">
-                    强烈看跌 (<0.35)
-                </div>
-                <div style="background: #fef3c7; padding: 12px; border-radius: 6px; color: #92400e; text-align: center; font-weight: 600;">
-                    中性区间 (0.35-0.65)
-                </div>
-                <div style="background: #dcfce7; padding: 12px; border-radius: 6px; color: #166534; text-align: center; font-weight: 600;">
-                    强烈看涨 (>0.65)
-                </div>
-            </div>
-
-            <!-- 多周期预测分析 -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
-                <div style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 15px;">📅 多周期预测分析 ⭐</div>
+            {'<div class="consistency up">' + consistency_signal + ' - 强信号</div>' if consistency_signal and '看涨' in consistency_signal else '<div class="consistency down">' + consistency_signal + ' - 强信号</div>' if consistency_signal else ''}
 """
 
-        # 添加多周期预测内容
+        # 多周期预测表格
         if multi_horizon_results:
-            # 判断三周期是否一致
-            predictions = [multi_horizon_results[h]['prediction'] for h in [1, 5, 20] if h in multi_horizon_results]
-            all_up = all(p == '上涨' for p in predictions)
-            all_down = all(p == '下跌' for p in predictions)
-
-            if all_up:
-                consistency_html = """
-                <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e; margin-bottom: 20px;">
-                    <h3 style="color: #166534;">📈 三周期一致看涨 - 强烈买入信号</h3>
-                    <p style="margin: 10px 0; font-size: 14px;">历史验证：三周期一致看涨时，至少一个周期实际上涨概率 <strong>92%</strong></p>
-                </div>
-"""
-            elif all_down:
-                consistency_html = """
-                <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #dc2626; margin-bottom: 20px;">
-                    <h3 style="color: #991b1b;">📉 三周期一致看跌 - 强烈卖出信号</h3>
-                    <p style="margin: 10px 0; font-size: 14px;">历史验证：三周期一致看跌时，至少一个周期实际下跌概率 <strong>87%</strong></p>
-                </div>
-"""
-            else:
-                consistency_html = """
-                <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; margin-bottom: 20px;">
-                    <h3 style="color: #92400e;">⚠️ 三周期方向分歧 - 建议观望</h3>
-                    <p style="margin: 10px 0; font-size: 14px;">模型意见不一致时，单一周期准确率约 45-64%，信号可靠性较低</p>
-                </div>
-"""
-            content += consistency_html
-
             content += """
-            <table style="margin-top: 15px;">
+            <table>
                 <thead>
                     <tr>
-                        <th style="width: 15%;">预测周期</th>
-                        <th style="width: 15%;">预测方向</th>
-                        <th style="width: 15%;">上涨概率</th>
-                        <th style="width: 15%;">置信度</th>
-                        <th style="width: 20%;">历史准确率</th>
-                        <th style="width: 20%;">历史AUC</th>
+                        <th>预测周期</th>
+                        <th>方向</th>
+                        <th>上涨概率</th>
+                        <th>置信度</th>
+                        <th>历史准确率</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1461,326 +1328,139 @@ class HSI_Predictor:
                 if horizon in multi_horizon_results:
                     r = multi_horizon_results[horizon]
                     pred_color = '#22c55e' if r['prediction'] == '上涨' else '#dc2626'
-                    conf_color = '#22c55e' if r['confidence'] == '高' else '#f59e0b' if r['confidence'] == '中' else '#6b7280'
                     content += f"""
                     <tr>
-                        <td style="text-align: center; font-weight: 600;">{horizon}天</td>
-                        <td style="text-align: center; color: {pred_color}; font-weight: 600;">{r['prediction']}</td>
-                        <td style="text-align: center;">{r['probability']:.2%}</td>
-                        <td style="text-align: center; color: {conf_color}; font-weight: 600;">{r['confidence']}</td>
-                        <td style="text-align: center;">{r['historical_accuracy']:.2%}</td>
-                        <td style="text-align: center;">{r['historical_auc']:.4f}</td>
+                        <td style="font-weight: 600;">{horizon}天</td>
+                        <td style="color: {pred_color}; font-weight: 600;">{r['prediction']}</td>
+                        <td>{r['probability']:.1%}</td>
+                        <td>{r['confidence']}</td>
+                        <td>{r['historical_accuracy']:.1%}</td>
                     </tr>
 """
             content += """
                 </tbody>
             </table>
-
-            <div style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #6b7280;">
-                <strong>建议：</strong>5天周期准确率最高（57.65%）| 20天周期趋势判断最强（AUC 0.75）| 1天周期噪音大，仅供参考
-            </div>
 """
         else:
-            content += """
-            <div style="padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center; color: #6b7280;">
-                多周期预测数据暂未获取
-            </div>
-"""
+            content += """<div style="padding: 15px; background: #f8fafc; border-radius: 8px; text-align: center; color: #6b7280;">多周期预测数据暂未获取</div>"""
 
+        # 价格信息
+        price_change_color = '#dc2626' if price_change < 0 else '#22c55e'
         content += f"""
         </div>
 
-        <!-- 第二部分：预测原因分析 -->
+        <!-- 第二部分：市场数据 -->
         <div class="section">
-            <div class="section-title">二、预测原因分析</div>
+            <div class="section-title">📊 市场数据</div>
 
-            <div class="summary-box">
-                <h3>📊 因素汇总</h3>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <li><span class="badge badge-positive">正面因素 {len(positive_features)} 个</span> 总贡献：<strong style="color: #22c55e;">+{positive_score:.6f}</strong></li>
-                    <li><span class="badge badge-negative">负面因素 {len(negative_features)} 个</span> 总贡献：<strong style="color: #dc2626;">-{negative_score:.6f}</strong></li>
-                    <li>净得分：<strong style="font-size: 18px;">{positive_score - negative_score:+.6f}</strong></li>
-                </ul>
+            <div class="data-grid">
+                <div class="data-card">
+                    <h4>恒指收盘</h4>
+                    <div class="value">{current_price:.2f}</div>
+                    <div style="color: {price_change_color}; font-size: 14px; margin-top: 4px;">{price_change:+.2f}%</div>
+                </div>
+                <div class="data-card">
+                    <h4>RSI</h4>
+                    <div class="value">{rsi_val:.1f}</div>
+                    <div style="color: {rsi_color}; font-size: 14px; margin-top: 4px;">{rsi_status}</div>
+                </div>
             </div>
 
-            <h3 style="font-size: 16px; color: #374151; margin: 20px 0 15px 0;">🔍 关键因素分析（Top 5）</h3>
-
-            <table>
+            <table style="margin-top: 15px;">
                 <thead>
                     <tr>
-                        <th style="width: 8%;">排名</th>
-                        <th style="width: 28%;">特征名称</th>
-                        <th style="width: 12%;">当前值</th>
-                        <th style="width: 10%;">权重</th>
-                        <th style="width: 10%;">方向</th>
-                        <th style="width: 12%;">贡献度</th>
-                        <th style="width: 20%;">特征说明</th>
-                    </tr>
-                </thead>
-                <tbody>
-"""
-
-        # 添加前5个最重要特征
-        for i, feature in enumerate(sorted_features[:5], 1):
-            direction_str = "正面" if feature['direction'] > 0 else "负面"
-            direction_class = "badge-positive" if feature['direction'] > 0 else "badge-negative"
-            contribution_color = "#22c55e" if feature['contribution'] > 0 else "#dc2626"
-
-            content += f"""
-                    <tr>
-                        <td style="text-align: center;"><span class="ranking">{i}</span></td>
-                        <td><strong>{feature['feature']}</strong></td>
-                        <td>{feature['value']:.4f}</td>
-                        <td>{feature['weight']:.2%}</td>
-                        <td><span class="badge {direction_class}">{direction_str}</span></td>
-                        <td style="color: {contribution_color}; font-weight: 600;">{feature['contribution']:+.6f}</td>
-                        <td style="font-size: 11px; color: #6b7280;">{self._get_feature_explanation(feature['feature'])}</td>
-                    </tr>
-"""
-
-        content += f"""
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 第三部分：核心市场指标 -->
-        <div class="section">
-            <div class="section-title">三、核心市场指标</div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h3>📊 250日均线</h3>
-                    <div class="value">{ma250:.2f} 点</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {ma250_desc}
-                    </div>
-                </div>
-
-                {amount_card_html if amount_ma250 else volume_card_html}
-
-                <div class="info-card">
-                    <h3>📈 120日均线</h3>
-                    <div class="value">{ma120:.2f} 点</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {ma120_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>📉 波动率</h3>
-                    <div class="value">{volatility_120d:.2f}%</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {volatility_desc}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 成交量/金额异常检测 -->
-            {anomaly_html}
-
-        </div>
-
-        <!-- 第四部分：投资建议 -->
-        <div class="section">
-            <div class="section-title">四、投资建议</div>
-"""
-
-        # 根据预测得分生成投资建议
-        if score >= 0.65:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e;">
-                <h3 style="color: #166534;">✅ 强烈看涨（得分 ≥ 0.65）</h3>
-                <ul>
-                    <li>建议积极配置港股</li>
-                    <li>优先关注权重股和科技股</li>
-                    <li>可考虑适当增加仓位</li>
-                    <li>注意风险控制，设置止损</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #166534;">
-                    <strong>理由：</strong>多个正面因素占据主导，市场技术面和情绪面均向好
-                </p>
-            </div>
-"""
-        elif score >= 0.55:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e;">
-                <h3 style="color: #166534;">✅ 看涨（得分 0.55-0.65）</h3>
-                <ul>
-                    <li>可适度增加港股配置</li>
-                    <li>选择性买入优质个股</li>
-                    <li>保持谨慎乐观态度</li>
-                    <li>不要盲目追高</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #166534;">
-                    <strong>理由：</strong>正面因素较多，但仍需关注潜在风险
-                </p>
-            </div>
-"""
-        elif score >= 0.50:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
-                <h3 style="color: #92400e;">⚠️ 中性偏涨（得分 0.50-0.55）</h3>
-                <ul>
-                    <li>市场多空平衡，观望为主</li>
-                    <li>可择机低吸优质个股</li>
-                    <li>控制仓位，不要追高</li>
-                    <li>等待更明确信号</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #92400e;">
-                    <strong>理由：</strong>市场情绪谨慎，正面和负面因素基本平衡
-                </p>
-            </div>
-"""
-        elif score >= 0.45:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%); border-left: 4px solid #f97316;">
-                <h3 style="color: #9a3412;">⚠️ 中性偏跌（得分 0.45-0.50）</h3>
-                <ul>
-                    <li>市场情绪偏谨慎</li>
-                    <li>建议减仓或持币观望</li>
-                    <li>等待更明确的信号</li>
-                    <li>不要盲目抄底</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #9a3412;">
-                    <strong>理由：</strong>负面因素略占上风，市场面临下行压力
-                </p>
-            </div>
-"""
-        elif score >= 0.35:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #ef4444;">
-                <h3 style="color: #991b1b;">🔴 看跌（得分 0.35-0.45）</h3>
-                <ul>
-                    <li>建议减仓或离场</li>
-                    <li>避免追涨杀跌</li>
-                    <li>关注防御性品种</li>
-                    <li>严格控制风险</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #991b1b;">
-                    <strong>理由：</strong>负面因素明显，市场情绪偏空
-                </p>
-            </div>
-"""
-        else:
-            content += f"""
-            <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #dc2626;">
-                <h3 style="color: #7f1d1d;">🔴 强烈看跌（得分 < 0.35）</h3>
-                <ul>
-                    <li>建议清仓或空仓</li>
-                    <li>严格控制风险</li>
-                    <li>等待市场企稳信号</li>
-                    <li>避免盲目抄底</li>
-                </ul>
-                <p style="margin: 15px 0 0 0; padding: 10px; background: white; border-radius: 4px; font-size: 13px; color: #7f1d1d;">
-                    <strong>理由：</strong>多个负面因素叠加，市场面临较大下行风险
-                </p>
-            </div>
-"""
-
-        content += f"""
-        </div>
-
-        <!-- 第五部分：模型说明 -->
-        <div class="section">
-            <div class="section-title">五、模型说明</div>
-
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #6366f1;">
-                    <h4 style="margin: 0 0 10px 0; color: #374151;">🎯 特征重要性来源</h4>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #6b7280;">
-                        <li>来自机器学习模型的特征重要性分析</li>
-                        <li>包含技术面、宏观面、情绪面三个维度</li>
-                        <li>20个关键特征，权重 17.29% - 0.99%</li>
-                    </ul>
-                </div>
-
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #8b5cf6;">
-                    <h4 style="margin: 0 0 10px 0; color: #374151;">📊 加权评分方法</h4>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #6b7280;">
-                        <li>对每个特征进行标准化处理（-1 到 1）</li>
-                        <li>按权重加权，考虑影响方向</li>
-                        <li>综合得分映射到 0-1 区间</li>
-                        <li>得分 > 0.5 为看涨，< 0.5 为看跌</li>
-                    </ul>
-                </div>
-
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #a855f7;">
-                    <h4 style="margin: 0 0 10px 0; color: #374151;">📈 特征类别</h4>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #6b7280;">
-                        <li><strong>技术面特征（60%）</strong>：趋势、动量、成交量、支撑阻力</li>
-                        <li><strong>宏观面特征（20%）</strong>：美债收益率、VIX恐慌指数</li>
-                        <li><strong>情绪面特征（20%）</strong>：OBV、成交额波动率</li>
-                    </ul>
-                </div>
-
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #d946ef;">
-                    <h4 style="margin: 0 0 10px 0; color: #374151;">⏱️ 预测周期</h4>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #6b7280;">
-                        <li>短期预测：1-5 个交易日</li>
-                        <li>基于最新数据和特征计算</li>
-                        <li>每日更新预测结果</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 第六部分：风险提示 -->
-        <div class="section">
-            <div class="section-title">六、风险提示</div>
-
-            <div class="alert-box">
-                <h3>⚠️ 重要提醒</h3>
-                <div class="risk-item">本预测基于历史数据和统计模型，仅供参考，不构成投资建议</div>
-                <div class="risk-item">股市有风险，投资需谨慎，请根据自身风险承受能力做出决策</div>
-                <div class="risk-item">请结合基本面分析、市场情绪、政策面等多方面因素综合判断</div>
-                <div class="risk-item">模型预测存在不确定性，不应作为唯一投资依据</div>
-                <div class="risk-item">市场环境变化可能导致模型失效，需要持续监控和调整</div>
-                <div class="risk-item">过去表现不代表未来收益，历史数据可能无法预测极端事件</div>
-            </div>
-        </div>
-
-        <!-- 第七部分：数据来源 -->
-        <div class="section">
-            <div class="section-title">七、数据来源</div>
-
-            <table style="font-size: 13px;">
-                <thead>
-                    <tr>
-                        <th style="width: 50%;">数据项</th>
-                        <th style="width: 50%;">数据源</th>
+                        <th>均线</th>
+                        <th>价格</th>
+                        <th>位置</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>📊 恒生指数数据</td>
-                        <td>Yahoo Finance (^HSI)</td>
+                        <td><strong>MA20</strong> 月线</td>
+                        <td>{ma20:.2f}</td>
+                        <td style="color: {'#22c55e' if ma20_pos >= 0 else '#dc2626'}; font-weight: 600;">{'+' if ma20_pos >= 0 else ''}{ma20_pos:.1f}%</td>
                     </tr>
                     <tr>
-                        <td>💰 美国国债收益率</td>
-                        <td>Yahoo Finance (^TNX)</td>
+                        <td><strong>MA60</strong> 季线</td>
+                        <td>{ma60:.2f}</td>
+                        <td style="color: {'#22c55e' if ma60_pos >= 0 else '#dc2626'}; font-weight: 600;">{'+' if ma60_pos >= 0 else ''}{ma60_pos:.1f}%</td>
                     </tr>
                     <tr>
-                        <td>😰 VIX恐慌指数</td>
-                        <td>Yahoo Finance (^VIX)</td>
+                        <td><strong>MA120</strong> 半年线</td>
+                        <td>{ma120:.2f}</td>
+                        <td style="color: {'#22c55e' if ma120_pos >= 0 else '#dc2626'}; font-weight: 600;">{'+' if ma120_pos >= 0 else ''}{ma120_pos:.1f}%</td>
                     </tr>
                     <tr>
-                        <td>📅 数据周期</td>
-                        <td>过去 1 年历史数据</td>
-                    </tr>
-                    <tr>
-                        <td>⚡ 数据频率</td>
-                        <td>日频数据</td>
+                        <td><strong>MA250</strong> 年线</td>
+                        <td>{ma250:.2f}</td>
+                        <td style="color: {'#22c55e' if ma250_pos >= 0 else '#dc2626'}; font-weight: 600;">{'+' if ma250_pos >= 0 else ''}{ma250_pos:.1f}%</td>
                     </tr>
                 </tbody>
             </table>
+"""
+
+        # 成交额对比
+        if current_amount and amount_ma20 > 0:
+            content += f"""
+            <div style="margin-top: 20px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">💰 成交额对比</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>周期</th>
+                            <th>金额</th>
+                            <th>对比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>今日成交额</td>
+                            <td style="font-weight: 600;">{current_amount:.0f} 亿港元</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>20日均值</td>
+                            <td>{amount_ma20:.0f} 亿</td>
+                            <td style="color: {amount_vs_ma20_color}; font-weight: 600;">{amount_vs_ma20_str}</td>
+                        </tr>
+                        <tr>
+                            <td>60日均值</td>
+                            <td>{amount_ma60:.0f} 亿</td>
+                            <td style="color: {amount_vs_ma60_color}; font-weight: 600;">{amount_vs_ma60_str}</td>
+                        </tr>
+                        <tr>
+                            <td>120日均值</td>
+                            <td>{amount_ma120:.0f} 亿</td>
+                            <td style="color: {amount_vs_ma120_color}; font-weight: 600;">{amount_vs_ma120_str}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+"""
+
+        # 异常检测
+        if anomaly_list:
+            content += f"""
+            <div style="margin-top: 20px; padding: 12px; background: #fee2e2; border-radius: 8px; border-left: 4px solid #dc2626;">
+                <strong style="color: #991b1b;">⚠️ 检测到异常：</strong>
+                <span style="color: #991b1b;">{', '.join(anomaly_list)}</span>
+            </div>
+"""
+
+        content += f"""
+        </div>
+
+        <!-- 第三部分：风险提示 -->
+        <div class="section">
+            <div class="section-title">⚠️ 风险提示</div>
+            <div style="font-size: 13px; color: #6b7280; line-height: 1.8;">
+                本报告基于历史数据和统计模型，仅供参考，不构成投资建议。股市有风险，投资需谨慎。模型预测存在不确定性，请结合基本面分析、市场情绪、政策面等多方面因素综合判断。
+            </div>
         </div>
 
         <!-- 页脚 -->
         <div class="footer">
-            <p style="margin: 5px 0;">📊 预测模型：基于特征重要性的加权评分模型</p>
-            <p style="margin: 5px 0;">🔢 特征数量：26 个关键特征（含宏观因子、港股通）</p>
-            <p style="margin: 5px 0;">📈 预测方法：多因素加权综合评分</p>
-            <p style="margin: 15px 0 5px 0;">⏰ 报告生成时间：{timestamp}</p>
+            <p style="margin: 5px 0;">⏰ 报告生成时间：{timestamp}</p>
             <p style="margin: 5px 0; color: #6b7280;">本报告由 AI 智能分析系统自动生成 | 仅供参考</p>
         </div>
     </div>
@@ -1789,6 +1469,7 @@ class HSI_Predictor:
 """
 
         return content
+
     def _get_feature_explanation(self, feature_name):
         """获取特征说明"""
         explanations = {
@@ -2443,9 +2124,50 @@ class HSI_Predictor:
             if pd.isna(value) or value == 0:
                 return default_str
             return format_str.format(value)
-        
-        print(f"250日均线（MA250）：{safe_format(self.features.get('MA250', 0), '{:.2f}', 'N/A')} 点")
-        current_price_val = self.features.get('Close', current_price)
+
+        # ========== 多周期均线表格 ==========
+        print("📊 多周期均线系统")
+        print("┌───────┬────────┬──────────┬──────────────┬─────────────────────────────────┐")
+        print("│ 均线  │  周期  │  价格    │  价格位置    │  用途                           │")
+        print("├───────┼────────┼──────────┼──────────────┼─────────────────────────────────┤")
+
+        ma20_val = self.features.get('MA20', 0)
+        ma60_val = self.features.get('MA60', 0)
+        ma120_val = self.features.get('MA120', 0)
+        ma250_val = self.features.get('MA250', 0)
+
+        # 计算价格与均线的距离
+        if current_price and ma20_val > 0:
+            ma20_dist = (current_price - ma20_val) / ma20_val * 100
+            ma20_pos = f"+{ma20_dist:.1f}%" if ma20_dist > 0 else f"{ma20_dist:.1f}%"
+        else:
+            ma20_pos = "N/A"
+
+        if current_price and ma60_val > 0:
+            ma60_dist = (current_price - ma60_val) / ma60_val * 100
+            ma60_pos = f"+{ma60_dist:.1f}%" if ma60_dist > 0 else f"{ma60_dist:.1f}%"
+        else:
+            ma60_pos = "N/A"
+
+        if current_price and ma120_val > 0:
+            ma120_dist = (current_price - ma120_val) / ma120_val * 100
+            ma120_pos = f"+{ma120_dist:.1f}%" if ma120_dist > 0 else f"{ma120_dist:.1f}%"
+        else:
+            ma120_pos = "N/A"
+
+        if current_price and ma250_val > 0:
+            ma250_dist = (current_price - ma250_val) / ma250_val * 100
+            ma250_pos = f"+{ma250_dist:.1f}%" if ma250_dist > 0 else f"{ma250_dist:.1f}%"
+        else:
+            ma250_pos = "N/A"
+
+        print(f"│ MA20  │ 月线   │ {safe_format(ma20_val, '{:.2f}', 'N/A'):>8} │ {ma20_pos:>12} │ 短期趋势                       │")
+        print(f"│ MA60  │ 季线   │ {safe_format(ma60_val, '{:.2f}', 'N/A'):>8} │ {ma60_pos:>12} │ 中期趋势                       │")
+        print(f"│ MA120 │ 半年线 │ {safe_format(ma120_val, '{:.2f}', 'N/A'):>8} │ {ma120_pos:>12} │ 中期支撑                       │")
+        print(f"│ MA250 │ 年线   │ {safe_format(ma250_val, '{:.2f}', 'N/A'):>8} │ {ma250_pos:>12} │ 长期趋势                       │")
+        print("└───────┴────────┴──────────┴──────────────┴─────────────────────────────────┘")
+
+        # 成交额数据
         volume_ma250_val = self.features.get('Volume_MA250', 0)
         # 优先使用腾讯财经成交额数据
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
@@ -2453,16 +2175,48 @@ class HSI_Predictor:
             # 计算250日成交额均值
             amount_data = self.tencent_hsi_data['Amount'].tail(250)
             amount_ma250_val = amount_data.mean() if len(amount_data) > 0 else 0
-            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：腾讯财经API）")
-            print(f"今日成交额：{safe_format(current_amount, '{:.0f}', 'N/A')} 亿港元")
+            print(f"\n💰 成交额：今日 {safe_format(current_amount, '{:.0f}', 'N/A')} 亿港元 | 250日均值 {safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元")
         else:
             # fallback：使用成交量
             volume_ma250_val = self.features.get('Volume_MA250', 0)
             volume_ma250_yi_val = volume_ma250_val / 100000000
-            print(f"250日成交量均值：{safe_format(volume_ma250_yi_val, '{:.1f}', 'N/A')} 亿股（yfinance数据）")
-        print(f"120日均线（MA120）：{safe_format(self.features.get('MA120', 0), '{:.2f}', 'N/A')} 点")
-        print(f"60日相对强度信号（MA250）：{safe_format(self.features.get('60d_RS_Signal_MA250', 0), '{:.0f}', 'N/A')}")
-        print(f"120日波动率：{safe_format(self.features.get('Volatility_120d', 0)*100, '{:.2f}', 'N/A')}%")
+            print(f"\n💰 成交量：250日均值 {safe_format(volume_ma250_yi_val, '{:.1f}', 'N/A')} 亿股（yfinance数据）")
+
+        # 波动率指标
+        vol_20d = self.features.get('Volatility_20d', 0)
+        vol_60d = self.features.get('Volatility_60d', 0)
+        vol_120d = self.features.get('Volatility_120d', 0)
+        print(f"\n📉 波动率：20日 {safe_format(vol_20d*100, '{:.2f}', 'N/A')}% | 60日 {safe_format(vol_60d*100, '{:.2f}', 'N/A')}% | 120日 {safe_format(vol_120d*100, '{:.2f}', 'N/A')}%")
+
+        # 新增技术指标
+        adx_val = self.features.get('ADX', 0)
+        rsi_val = self.features.get('RSI', 50)
+        stoch_k = self.features.get('Stoch_K', 50)
+        cmf_val = self.features.get('CMF', 0)
+        atr_val = self.features.get('ATR', 0)
+        atr_ratio = self.features.get('ATR_Ratio', 1)
+
+        # ADX趋势判断
+        if adx_val >= 50:
+            adx_trend = "极强趋势"
+        elif adx_val >= 25:
+            adx_trend = "趋势市场"
+        else:
+            adx_trend = "震荡市场"
+
+        # RSI超买超卖判断
+        if rsi_val >= 70:
+            rsi_status = "超买"
+        elif rsi_val <= 30:
+            rsi_status = "超卖"
+        else:
+            rsi_status = "中性"
+
+        print(f"\n📊 技术指标：")
+        print(f"   ADX {safe_format(adx_val, '{:.1f}', 'N/A')} ({adx_trend}) | RSI {safe_format(rsi_val, '{:.1f}', 'N/A')} ({rsi_status}) | KDJ-K {safe_format(stoch_k, '{:.1f}', 'N/A')}")
+        print(f"   CMF {safe_format(cmf_val, '{:.2f}', 'N/A')} | ATR {safe_format(atr_val, '{:.1f}', 'N/A')} (比率 {safe_format(atr_ratio, '{:.2f}', 'N/A')})")
+
+        print(f"\n📍 60日相对强度信号（MA250）：{safe_format(self.features.get('60d_RS_Signal_MA250', 0), '{:.0f}', 'N/A')}")
 
         # 检测并显示成交异常
         volume_anomalies = self.detect_volume_anomalies()
