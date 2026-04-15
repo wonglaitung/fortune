@@ -40,6 +40,7 @@ OUTPUT_DIR = "output"
 MODEL_DIR = "data/hsi_models"
 
 # 特征配置（2026-04-16 优化：新增RSI/MACD/布林带/动量特征）
+# 2026-04-16 同步 hsi_prediction.py 新增特征：均线斜率、价格距离、排列信号、交叉信号
 FEATURE_CONFIG = {
     # 宏观因子
     'macro_features': [
@@ -50,28 +51,48 @@ FEATURE_CONFIG = {
     'southbound_features': [
         'Southbound_Net_Inflow', 'Southbound_Net_Buy'
     ],
-    # 技术指标（与评分模型对齐）
-    'technical_features': [
-        'MA250', 'Volume_MA250', 'MA120',
+    # 多周期移动平均线（业界标准组合）
+    'ma_features': [
+        'MA20', 'MA60', 'MA120', 'MA250', 'Volume_MA250'
+    ],
+    # 均线斜率分析（新增）
+    'slope_features': [
+        'MA250_Slope', 'MA250_Slope_5d', 'MA250_Slope_20d', 'MA250_Slope_Direction'
+    ],
+    # 价格与均线距离（新增，超买超卖指标）
+    'distance_features': [
+        'Price_Distance_MA250', 'Price_Distance_MA60', 'Price_Distance_MA20'
+    ],
+    # 均线排列信号（新增）
+    'alignment_features': [
+        'MA_Bullish_Alignment', 'MA_Bearish_Alignment'
+    ],
+    # 交叉信号（新增）
+    'cross_features': [
+        'MA20_Golden_Cross_MA60', 'MA20_Death_Cross_MA60',
+        'MA60_Golden_Cross_MA250', 'MA60_Death_Cross_MA250'
+    ],
+    # 波动率
+    'volatility_features': [
         'Volatility_120d', 'Volatility_20d', 'Volatility_60d'
     ],
-    # RSI 系列（新增）
+    # RSI 系列
     'rsi_features': [
         'RSI', 'RSI_ROC', 'RSI_Deviation'
     ],
-    # MACD 系列（新增）
+    # MACD 系列
     'macd_features': [
         'MACD', 'MACD_Signal', 'MACD_Hist', 'MACD_Hist_ROC'
     ],
-    # 布林带（新增）
+    # 布林带
     'bb_features': [
         'BB_Width', 'BB_Position'
     ],
-    # 多周期收益率（新增）
+    # 多周期收益率
     'return_features': [
         'Return_1d', 'Return_3d', 'Return_5d', 'Return_10d', 'Return_20d', 'Return_60d'
     ],
-    # 动量加速度（新增）
+    # 动量加速度
     'momentum_features': [
         'Momentum_Accel_5d', 'Momentum_Accel_10d'
     ],
@@ -184,6 +205,46 @@ class HSICatBoostModel:
         for window in [20, 60, 120, 250]:
             df[f'MA{window}'] = df['Close'].rolling(window=window).mean()
             df[f'Volume_MA{window}'] = df['Volume'].rolling(window=window).mean()
+
+        # ========== 均线斜率分析（新增，趋势强度）==========
+        # MA250斜率（每日变化）
+        df['MA250_Slope'] = df['MA250'].diff()
+        # MA250的5日斜率变化（短期趋势加速/减速）
+        df['MA250_Slope_5d'] = df['MA250'].diff(5) / 5
+        # MA250的20日斜率变化（中期趋势强度）
+        df['MA250_Slope_20d'] = df['MA250'].diff(20) / 20
+        # MA250斜率方向（1=上升，-1=下降，0=持平）
+        df['MA250_Slope_Direction'] = np.sign(df['MA250_Slope'])
+
+        # ========== 价格与均线距离分析（新增，超买超卖）==========
+        # 价格与MA250的距离百分比（正值=高于年线，负值=低于年线）
+        df['Price_Distance_MA250'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
+        # 价格与MA60的距离百分比
+        df['Price_Distance_MA60'] = (df['Close'] - df['MA60']) / df['MA60'] * 100
+        # 价格与MA20的距离百分比
+        df['Price_Distance_MA20'] = (df['Close'] - df['MA20']) / df['MA20'] * 100
+
+        # ========== 多周期均线排列信号（新增）==========
+        # 多头排列：MA20 > MA60 > MA250（强势上涨趋势）
+        df['MA_Bullish_Alignment'] = ((df['MA20'] > df['MA60']) &
+                                      (df['MA60'] > df['MA250'])).astype(int)
+        # 空头排列：MA20 < MA60 < MA250（强势下跌趋势）
+        df['MA_Bearish_Alignment'] = ((df['MA20'] < df['MA60']) &
+                                      (df['MA60'] < df['MA250'])).astype(int)
+
+        # ========== 黄金交叉/死亡交叉信号（新增）==========
+        # MA20上穿MA60（黄金交叉）
+        df['MA20_Golden_Cross_MA60'] = ((df['MA20'] > df['MA60']) &
+                                        (df['MA20'].shift(1) <= df['MA60'].shift(1))).astype(int)
+        # MA20下穿MA60（死亡交叉）
+        df['MA20_Death_Cross_MA60'] = ((df['MA20'] < df['MA60']) &
+                                       (df['MA20'].shift(1) >= df['MA60'].shift(1))).astype(int)
+        # MA60上穿MA250（黄金交叉）
+        df['MA60_Golden_Cross_MA250'] = ((df['MA60'] > df['MA250']) &
+                                         (df['MA60'].shift(1) <= df['MA250'].shift(1))).astype(int)
+        # MA60下穿MA250（死亡交叉）
+        df['MA60_Death_Cross_MA250'] = ((df['MA60'] < df['MA250']) &
+                                        (df['MA60'].shift(1) >= df['MA250'].shift(1))).astype(int)
 
         # ========== 收益率（使用昨日值）==========
         df['Return_1d'] = df['Close'].pct_change().shift(1)  # 使用昨日值
