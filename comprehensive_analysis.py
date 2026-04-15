@@ -287,15 +287,15 @@ def extract_ml_predictions(filepath):
                             'resistance_ratio': resistance_ratio
                         })
 
-                # 为上涨概率添加颜色标记
+                # 为上涨概率添加颜色标记（使用 font 标签，邮件客户端兼容性更好）
                 probability = row['probability']
                 probability_formatted = safe_float_format(probability, '4f')
                 if probability > 0.60:
-                    probability_colored = f'<span style="color: green; font-weight: bold;">{probability_formatted}</span>'
+                    probability_colored = f'<font color="green"><b>{probability_formatted}</b></font>'
                 elif probability > 0.55:
-                    probability_colored = f'<span style="color: orange; font-weight: bold;">{probability_formatted}</span>'
+                    probability_colored = f'<font color="orange"><b>{probability_formatted}</b></font>'
                 else:
-                    probability_colored = f'<span style="color: red; font-weight: bold;">{probability_formatted}</span>'
+                    probability_colored = f'<font color="red"><b>{probability_formatted}</b></font>'
 
                 catboost_text += f"| {row['code']} | {row['name']} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
 
@@ -737,10 +737,58 @@ def get_dividend_info():
         return None
 
 
+def get_hsi_data_tencent():
+    """
+    从腾讯财经获取恒生指数实时数据（备用数据源）
+
+    返回:
+    - dict: 包含实时成交额数据，或 None（如果获取失败）
+      {
+        'amount': float,  # 成交额（亿元）
+        'amount_raw': float,  # 成交额原始值（万元）
+        'price': float,  # 最新价
+        'prev_close': float,  # 昨收
+        'open': float,  # 今开
+        'high': float,  # 最高
+        'change_points': float,  # 涨跌点数
+        'change_pct': float,  # 涨跌幅
+        'update_time': str  # 更新时间
+      }
+    """
+    try:
+        import requests
+        url = 'https://web.sqt.gtimg.cn/q=r_hkHSI'
+        resp = requests.get(url, timeout=10)
+
+        if resp.status_code != 200:
+            return None
+
+        # 解析响应数据
+        data_str = resp.text.split('\"')[1]
+        fields = data_str.split('~')
+
+        # 腾讯财经字段说明：
+        # [3] 最新价, [4] 昨收, [5] 今开, [6] 成交额(万元), [21] 涨跌点数, [22] 涨跌幅, [23] 最高
+        return {
+            'amount': float(fields[6]) / 10000,  # 转换为亿元
+            'amount_raw': float(fields[6]),  # 万元
+            'price': float(fields[3]),
+            'prev_close': float(fields[4]),
+            'open': float(fields[5]),
+            'high': float(fields[23]),
+            'change_points': float(fields[21]),
+            'change_pct': float(fields[22]),
+            'update_time': fields[20] if len(fields) > 20 else ''
+        }
+    except Exception as e:
+        print(f"⚠️ 腾讯财经获取恒指数据失败: {e}")
+        return None
+
+
 def get_hsi_analysis():
     """
     获取恒生指数分析
-    
+
     返回:
     - dict: 包含恒生指数技术分析结果
     """
@@ -783,6 +831,21 @@ def get_hsi_analysis():
         prev_volume = prev['Volume']
         volume_change_pct = ((current_volume - prev_volume) / prev_volume * 100) if prev_volume > 0 else 0
 
+        # 成交额数据（从腾讯财经获取，作为备用数据源）
+        amount = None
+        amount_ratio = None
+        if current_volume == 0:
+            # yfinance 数据未更新，使用腾讯财经获取成交额
+            tencent_data = get_hsi_data_tencent()
+            if tencent_data:
+                amount = tencent_data['amount']
+                # 计算前一天的成交额（从 yfinance 的 prev_volume 估算）
+                # yfinance volume 单位可能与腾讯不同，但比率计算仍然有效
+                # 使用前一天 yfinance 成交量估算成交额
+                prev_amount_estimate = amount * (prev_volume / volume_ma20) if volume_ma20 > 0 else amount
+                amount_ratio = amount / (prev_amount_estimate) if prev_amount_estimate > 0 else 1.0
+                print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿")
+
         # 趋势判断
         if current_price > ma20 > ma50:
             trend = "强势多头"
@@ -805,7 +868,9 @@ def get_hsi_analysis():
             'volume_ma5': volume_ma5,
             'volume_ma20': volume_ma20,
             'volume_ratio': volume_ratio,
-            'volume_change_pct': volume_change_pct
+            'volume_change_pct': volume_change_pct,
+            'amount': amount,  # 成交额（亿元），从腾讯财经获取
+            'amount_ratio': amount_ratio  # 成交额比率
         }
     except Exception as e:
         print(f"⚠️ 获取恒生指数分析失败: {e}")
@@ -1517,11 +1582,11 @@ def format_recent_transactions(transactions_df):
         code = trans.get('code', '')
         trans_type = trans.get('type', '').upper()
 
-        # BUY用绿色，SELL用红色
+        # BUY用绿色，SELL用红色（使用 font 标签，邮件客户端兼容性更好）
         if trans_type == 'BUY':
-            trans_type_display = '<span style="color: green;">**BUY**</span>'
+            trans_type_display = '<font color="green"><b>BUY</b></font>'
         elif trans_type == 'SELL':
-            trans_type_display = '<span style="color: red;">**SELL**</span>'
+            trans_type_display = '<font color="red"><b>SELL</b></font>'
         else:
             trans_type_display = trans_type
 
@@ -2181,13 +2246,18 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '.2f')}\n"
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '.2f')}\n"
                     # 成交量相关数据
-                    # 当成交量为0时（数据未更新），显示更有意义的提示
+                    # 当成交量为0时（数据未更新），使用腾讯财经成交额
                     if hsi_data['volume'] > 0:
                         hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
                         volume_ratio = hsi_data.get('volume_ratio', 0)
                         volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
                         volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
                         hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
+                    elif hsi_data.get('amount') is not None:
+                        # yfinance 数据未更新，使用腾讯财经成交额
+                        hsi_text += f"- 成交额：{hsi_data['amount']:.2f}亿港元（腾讯财经实时数据）\n"
+                        if hsi_data.get('amount_ratio'):
+                            hsi_text += f"- 成交额比率：{hsi_data['amount_ratio']:.2f}x\n"
                     else:
                         hsi_text += "- 成交量：N/A（数据暂未更新）\n"
                         hsi_text += "- 成交量比率：N/A\n"
