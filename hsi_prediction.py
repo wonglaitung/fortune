@@ -905,10 +905,11 @@ class HSI_Predictor:
             # 使用腾讯财经的准确成交额数据
             current_amount = self.tencent_amount['amount']  # 亿港元
             # 计算250日成交额均值（使用历史数据估算）
+            # yfinance的Volume单位是"百元"，需要转换为亿港元：Volume * 100 / 1亿
             df = self.hsi_data.copy()
-            df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000  # 亿港元（估算）
+            df['Amount_Estimated'] = df['Volume'] * 100 / 100000000  # 百元 -> 亿港元
             amount_ma250 = df['Amount_Estimated'].tail(250).mean() if len(df) >= 250 else df['Amount_Estimated'].mean()
-            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：腾讯财经API"
+            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：yfinance（仅供参考）"
             volume_ma250_yi = None  # 不使用成交量
             volume_desc = None
         else:
@@ -2250,11 +2251,11 @@ class HSI_Predictor:
         # 优先使用腾讯财经成交额数据
         if hasattr(self, 'tencent_amount') and self.tencent_amount:
             current_amount = self.tencent_amount['amount']  # 亿港元
-            # 计算250日成交额均值
+            # 计算250日成交额均值（yfinance的Volume单位是"百元"）
             df_temp = self.hsi_data.copy()
-            df_temp['Amount_Estimated'] = df_temp['Volume'] * df_temp['Close'] / 100000000
+            df_temp['Amount_Estimated'] = df_temp['Volume'] * 100 / 100000000  # 百元 -> 亿港元
             amount_ma250_val = df_temp['Amount_Estimated'].tail(250).mean() if len(df_temp) >= 250 else df_temp['Amount_Estimated'].mean()
-            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：腾讯财经API）")
+            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：yfinance，仅供参考）")
             print(f"今日成交额：{safe_format(current_amount, '{:.0f}', 'N/A')} 亿港元")
         else:
             # fallback：使用成交量
