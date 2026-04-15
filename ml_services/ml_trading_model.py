@@ -2707,7 +2707,7 @@ class LightGBMModel(BaseTradingModel):
         """获取特征列"""
         # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
-                          'Future_Return', 'Label', 'Prev_Close',
+                          'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
@@ -3341,7 +3341,7 @@ class GBDTModel(BaseTradingModel):
         """获取特征列"""
         # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
-                          'Future_Return', 'Label', 'Prev_Close',
+                          'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
@@ -4033,7 +4033,7 @@ class CatBoostModel(BaseTradingModel):
         """获取特征列"""
         # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
-                          'Future_Return', 'Label', 'Prev_Close',
+                          'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
