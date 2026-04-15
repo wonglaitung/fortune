@@ -135,29 +135,29 @@ def get_hk_stock_info_tencent(stock_code):
 def get_hsi_data_tencent(period_days=90):
     """
     通过腾讯财经接口获取恒生指数数据
-    
+
     Args:
         period_days (int): 获取数据的天数，默认90天
-    
+
     Returns:
-        pandas.DataFrame: 包含恒生指数数据的DataFrame，列包括Date, Open, High, Low, Close, Volume
+        pandas.DataFrame: 包含恒生指数数据的DataFrame，列包括Date, Open, High, Low, Close, Volume, Amount
     """
     # 腾讯财经API URL (历史交易数据)
     # 首先尝试获取前复权数据
     url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days},qfq"
-    
+
     try:
         response = requests.get(url)
         response.raise_for_status()
-        
+
         # 解析返回的JSON数据
         data = response.json()
-        
+
         # 检查数据是否有效
         if 'data' not in data or 'hkHSI' not in data['data']:
             print("无法获取恒生指数的数据")
             return None
-            
+
         # 提取K线数据
         # 尝试不同的数据键名
         kline_data = None
@@ -165,42 +165,52 @@ def get_hsi_data_tencent(period_days=90):
             kline_data = data['data']['hkHSI']['qfqday']
         elif 'day' in data['data']['hkHSI']:
             kline_data = data['data']['hkHSI']['day']
-        
+
         # 如果前复权数据为空，尝试获取原始数据
         if not kline_data or len(kline_data) == 0:
             url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days}"
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-            
+
             # 检查数据是否有效
             if 'data' not in data or 'hkHSI' not in data['data']:
                 print("无法获取恒生指数的数据")
                 return None
-            
+
             # 提取K线数据
             if 'day' in data['data']['hkHSI']:
                 kline_data = data['data']['hkHSI']['day']
-        
+
         if kline_data is None or len(kline_data) == 0:
             print("无法获取恒生指数的K线数据")
             return None
-        
+
         # 解析数据
         parsed_data = []
         for item in kline_data:
-            # 数据格式: ["2023-10-26", "320.00", "325.00", "318.00", "322.00", "1000000", {}]
-            # 日期,开盘价,收盘价,最高价,最低价,成交量,其他数据
+            # 腾讯财经API数据格式（恒生指数）:
+            # [0] 日期, [1] 开盘, [2] 收盘, [3] 最高, [4] 最低, [5] 成交额(元), [6] {}, [7] ?, [8] 成交额(万元)
+            # 示例: ['2026-04-16', '26122.801', '26394.260', '26403.070', '26122.801', '256227932806.00', {}, '0.00', '25622793.28', ...]
             if len(item) >= 6:
-                parsed_data.append({
+                row_data = {
                     'Date': pd.to_datetime(item[0], utc=True),
                     'Open': float(item[1]),
                     'Close': float(item[2]),
                     'High': float(item[3]),
                     'Low': float(item[4]),
-                    'Volume': int(float(item[5]))  # 成交量可能是浮点数字符串
-                })
-        
+                    'Volume': int(float(item[5]))  # 成交额（元）
+                }
+                # 添加成交额字段（如果有第8个字段，单位是万元）
+                if len(item) >= 9:
+                    # 字段[8]是成交额（万元），转换为亿港元
+                    row_data['Amount'] = float(item[8]) / 10000  # 万元 -> 亿港元
+                else:
+                    # 从字段[5]计算（成交额元 -> 亿港元）
+                    row_data['Amount'] = float(item[5]) / 100000000
+
+                parsed_data.append(row_data)
+
         # 创建DataFrame
         if parsed_data:
             df = pd.DataFrame(parsed_data)
@@ -211,7 +221,7 @@ def get_hsi_data_tencent(period_days=90):
         else:
             print("恒生指数数据为空")
             return None
-            
+
     except Exception as e:
         print(f"获取恒生指数数据失败: {e}")
         return None
