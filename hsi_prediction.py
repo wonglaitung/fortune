@@ -111,6 +111,7 @@ class HSI_Predictor:
         self.us_data = None
         self.vix_data = None
         self.features = {}
+        self.tencent_hsi_data = None  # 腾讯财经的历史数据（包含准确的成交额）
 
     def fetch_data(self):
         """获取所需数据"""
@@ -120,6 +121,15 @@ class HSI_Predictor:
         print("  - 恒生指数数据...")
         hsi = yf.Ticker("^HSI")
         self.hsi_data = hsi.history(period="2y", interval="1d")
+
+        # 获取腾讯财经的历史数据（包含准确的成交额）
+        print("  - 恒生指数成交额数据（腾讯财经）...")
+        from data_services.tencent_finance import get_hsi_data_tencent
+        self.tencent_hsi_data = get_hsi_data_tencent(period_days=400)
+        if self.tencent_hsi_data is not None:
+            print(f"    ✅ 获取到 {len(self.tencent_hsi_data)} 天成交额数据")
+        else:
+            print("    ⚠️ 腾讯财经成交额数据获取失败，将使用yfinance估算")
 
         # 获取美国10年期国债收益率
         print("  - 美国国债收益率...")
@@ -900,16 +910,14 @@ class HSI_Predictor:
         # 格式化描述文本（基于新特征）
         ma250_desc = f"250日均线位于{ma250:.2f}点，反映长期趋势。价格在均线上方通常表示上涨趋势"
 
-        # 成交额数据（优先使用腾讯财经API）
-        if hasattr(self, 'tencent_amount') and self.tencent_amount:
-            # 使用腾讯财经的准确成交额数据
-            current_amount = self.tencent_amount['amount']  # 亿港元
-            # 计算250日成交额均值（使用历史数据估算）
-            # yfinance的Volume单位是"百元"，需要转换为亿港元：Volume * 100 / 1亿
-            df = self.hsi_data.copy()
-            df['Amount_Estimated'] = df['Volume'] * 100 / 100000000  # 百元 -> 亿港元
-            amount_ma250 = df['Amount_Estimated'].tail(250).mean() if len(df) >= 250 else df['Amount_Estimated'].mean()
-            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：yfinance（仅供参考）"
+        # 成交额数据（优先使用腾讯财经历史数据）
+        if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
+            # 使用腾讯财经的准确历史成交额数据
+            current_amount = self.tencent_amount['amount'] if hasattr(self, 'tencent_amount') and self.tencent_amount else self.tencent_hsi_data['Amount'].iloc[-1]
+            # 计算250日成交额均值
+            amount_data = self.tencent_hsi_data['Amount'].tail(250)
+            amount_ma250 = amount_data.mean() if len(amount_data) > 0 else 0
+            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：腾讯财经API"
             volume_ma250_yi = None  # 不使用成交量
             volume_desc = None
         else:
@@ -2249,13 +2257,12 @@ class HSI_Predictor:
         current_price_val = self.features.get('Close', current_price)
         volume_ma250_val = self.features.get('Volume_MA250', 0)
         # 优先使用腾讯财经成交额数据
-        if hasattr(self, 'tencent_amount') and self.tencent_amount:
-            current_amount = self.tencent_amount['amount']  # 亿港元
-            # 计算250日成交额均值（yfinance的Volume单位是"百元"）
-            df_temp = self.hsi_data.copy()
-            df_temp['Amount_Estimated'] = df_temp['Volume'] * 100 / 100000000  # 百元 -> 亿港元
-            amount_ma250_val = df_temp['Amount_Estimated'].tail(250).mean() if len(df_temp) >= 250 else df_temp['Amount_Estimated'].mean()
-            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：yfinance，仅供参考）")
+        if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
+            current_amount = self.tencent_amount['amount'] if hasattr(self, 'tencent_amount') and self.tencent_amount else self.tencent_hsi_data['Amount'].iloc[-1]
+            # 计算250日成交额均值
+            amount_data = self.tencent_hsi_data['Amount'].tail(250)
+            amount_ma250_val = amount_data.mean() if len(amount_data) > 0 else 0
+            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：腾讯财经API）")
             print(f"今日成交额：{safe_format(current_amount, '{:.0f}', 'N/A')} 亿港元")
         else:
             # fallback：使用成交量
