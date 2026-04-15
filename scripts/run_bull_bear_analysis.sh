@@ -70,8 +70,6 @@ python3 "$PROJECT_DIR/ml_services/backtest_20d_horizon.py" \
     --end-date "$END_DATE" \
     --horizon 20 \
     --confidence-threshold 0.55 \
-    --use-feature-selection \
-    --skip-feature-selection \
     --enable-dynamic-risk-control
 
 echo "✅ 回测完成"
