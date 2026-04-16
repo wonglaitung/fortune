@@ -562,16 +562,17 @@ class HSI_Predictor:
 
     def detect_volume_anomalies(self, window_size=30, threshold=2.5):
         """
-        检测成交量和成交金额的异常
+        检测成交量的异常
 
-        使用现有的Z-Score和Isolation Forest检测器检测当日成交量和成交金额是否异常
+        使用现有的Z-Score和Isolation Forest检测器检测当日成交量是否异常
+        注：成交金额因yfinance数据源单位问题暂不检测
 
         Args:
             window_size: 滚动窗口大小（默认30天）
             threshold: Z-Score阈值（默认2.5，即约99%置信区间）
 
         Returns:
-            dict: 包含成交量和成交金额异常检测结果的字典
+            dict: 包含成交量异常检测结果的字典
         """
         from anomaly_detector.zscore_detector import ZScoreDetector
         from anomaly_detector.isolation_forest_detector import IsolationForestDetector
@@ -580,26 +581,23 @@ class HSI_Predictor:
         if self.hsi_data is None or len(self.hsi_data) < window_size:
             return {
                 'volume_anomaly': None,
-                'amount_anomaly': None,
-                'if_anomaly': None
+                'if_anomaly': None,
+                'data_warning': 'yfinance数据源可能存在单位偏差，异常检测结果仅供参考'
             }
 
         # 获取历史数据
         df = self.hsi_data.copy()
 
-        # 计算成交金额（亿港元）
-        df['Amount'] = df['Volume'] * df['Close'] / 100000000
-
         # 获取当日数据
         current_volume = df['Volume'].iloc[-1]
-        current_amount = df['Amount'].iloc[-1]
         current_timestamp = df.index[-1]
 
         # 获取历史窗口数据（排除当日）
         volume_history = df['Volume'].iloc[:-1]
-        amount_history = df['Amount'].iloc[:-1]
 
-        anomalies = {}
+        anomalies = {
+            'data_warning': 'yfinance数据源可能存在单位偏差，异常检测结果仅供参考'
+        }
 
         # ========== Z-Score检测 ==========
         zscore_detector = ZScoreDetector(
@@ -630,51 +628,26 @@ class HSI_Predictor:
         else:
             anomalies['volume_anomaly'] = None
 
-        # 检测成交金额异常
-        amount_zscore_result = zscore_detector.detect_anomaly(
-            metric_name='amount',
-            current_value=current_amount,
-            history=amount_history,
-            timestamp=current_timestamp
-        )
-
-        if amount_zscore_result:
-            anomalies['amount_anomaly'] = {
-                'type': '成交金额异常',
-                'z_score': amount_zscore_result['z_score'],
-                'current_value': current_amount,
-                'mean': amount_zscore_result['mean'],
-                'std': amount_zscore_result['std'],
-                'severity': amount_zscore_result['severity'],
-                'direction': '放大' if amount_zscore_result['z_score'] > 0 else '萎缩',
-                'detection_method': 'zscore'
-            }
-        else:
-            anomalies['amount_anomaly'] = None
-
         # ========== Isolation Forest检测（多维特征） ==========
-        # 准备特征数据（包含成交量相关特征）
+        # 准备特征数据
         feature_df = df[['Close', 'Volume']].copy()
-        feature_df['Amount'] = feature_df['Volume'] * feature_df['Close'] / 100000000
         feature_df['Volume_MA20'] = feature_df['Volume'].rolling(20).mean()
-        feature_df['Amount_MA20'] = feature_df['Amount'].rolling(20).mean()
         feature_df['Volume_Ratio'] = feature_df['Volume'] / feature_df['Volume_MA20']
-        feature_df['Amount_Ratio'] = feature_df['Amount'] / feature_df['Amount_MA20']
 
         # 使用FeatureExtractor提取标准化特征
         extractor = FeatureExtractor()
         features, timestamps = extractor.extract_features(feature_df)
 
         if len(features) >= window_size:
-            # 训练Isolation Forest模型（使用历史数据）
+            # 训练Isolation Forest模型
             if_detector = IsolationForestDetector(
-                contamination=0.05,  # 5%异常比例
+                contamination=0.05,
                 random_state=42,
                 anomaly_type='volume_features'
             )
 
-            # 使用历史数据训练（排除最后一条）
-            train_features = features.iloc[:-1].tail(window_size * 3)  # 使用3倍窗口数据训练
+            # 使用历史数据训练
+            train_features = features.iloc[:-1].tail(window_size * 3)
             if_detector.train(train_features)
 
             # 检测最近7天的异常
@@ -711,22 +684,20 @@ class HSI_Predictor:
         current_date = self.hsi_data.index[-1].strftime('%Y-%m-%d')
         current_time = self.hsi_data.index[-1].strftime('%H:%M:%S')
 
-        # 检测成交量和成交金额异常
+        # 检测成交量异常
         volume_anomalies = self.detect_volume_anomalies()
         volume_anomaly = volume_anomalies.get('volume_anomaly')
-        amount_anomaly = volume_anomalies.get('amount_anomaly')
         if_anomaly = volume_anomalies.get('if_anomaly')
+        data_warning = volume_anomalies.get('data_warning', '')
 
         # 构建异常检测HTML
-        has_any_anomaly = volume_anomaly or amount_anomaly or if_anomaly
+        has_any_anomaly = volume_anomaly or if_anomaly
 
         if has_any_anomaly:
             # 确定最高严重级别
             severities = []
             if volume_anomaly:
                 severities.append(volume_anomaly['severity'])
-            if amount_anomaly:
-                severities.append(amount_anomaly['severity'])
             if if_anomaly:
                 severities.append(if_anomaly['severity'])
 
@@ -750,20 +721,14 @@ class HSI_Predictor:
             anomaly_details = []
             if volume_anomaly:
                 anomaly_details.append(f'<div style="font-size: 12px; margin-bottom: 5px;"><strong>📊 成交量异常：</strong>当日成交量 <span style="color: #dc2626; font-weight: 600;">{volume_anomaly["direction"]}</span>（Z-Score: {volume_anomaly["z_score"]:.2f}，{volume_anomaly["severity"]}级别）</div>')
-            if amount_anomaly:
-                anomaly_details.append(f'<div style="font-size: 12px; margin-bottom: 5px;"><strong>💰 成交金额异常：</strong>当日成交金额 <span style="color: #dc2626; font-weight: 600;">{amount_anomaly["direction"]}</span>（Z-Score: {amount_anomaly["z_score"]:.2f}，{amount_anomaly["severity"]}级别）</div>')
             if if_anomaly:
                 anomaly_details.append(f'<div style="font-size: 12px; margin-bottom: 5px;"><strong>🎯 多维特征异常：</strong>Isolation Forest检测到成交模式异常（异常分数: {if_anomaly["anomaly_score"]:.4f}，{if_anomaly["severity"]}级别）</div>')
 
             # 构建提示信息
-            if volume_anomaly and amount_anomaly and if_anomaly:
-                anomaly_hint = '量价特征同时异常，多维度验证市场即将发生重大变化，建议高度重视。'
-            elif (volume_anomaly and amount_anomaly) or (volume_anomaly and if_anomaly) or (amount_anomaly and if_anomaly):
-                anomaly_hint = '多指标异常相互验证，预示市场可能出现显著波动，建议密切关注。'
+            if volume_anomaly and if_anomaly:
+                anomaly_hint = '多维度验证检测到异常，预示市场可能出现显著波动，建议密切关注。'
             elif volume_anomaly:
                 anomaly_hint = '成交量异常通常预示重要变盘信号。'
-            elif amount_anomaly:
-                anomaly_hint = '成交金额异常通常伴随价格大幅波动。'
             else:
                 anomaly_hint = '多维特征异常表明成交模式发生变化，建议关注后续走势。'
 
@@ -774,18 +739,20 @@ class HSI_Predictor:
                 </h4>
                 {''.join(anomaly_details)}
                 <div style="font-size: 11px; color: #6b7280; margin-top: 8px; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-                    {anomaly_hint}
+                    {anomaly_hint}<br/>
+                    <span style="color: #f59e0b;">⚠️ {data_warning}</span>
                 </div>
             </div>
             """
         else:
-            anomaly_html = """
+            anomaly_html = f"""
             <div style="margin-top: 20px; padding: 15px; border-radius: 8px; background: #f0fdf4; border-left: 4px solid #22c55e;">
                 <h4 style="margin: 0 0 10px 0; color: #16a34a; font-size: 14px;">
                     ✅ 成交数据正常
                 </h4>
                 <div style="font-size: 12px; color: #6b7280;">
-                    当日成交量和成交金额均在正常范围内，无异常信号
+                    当日成交量在正常范围内，无异常信号<br/>
+                    <span style="color: #f59e0b; font-size: 11px;">⚠️ {data_warning}</span>
                 </div>
             </div>
             """
@@ -821,9 +788,9 @@ class HSI_Predictor:
         
         # 格式化描述文本（基于新特征）
         ma250_desc = f"250日均线位于{ma250:.2f}点，反映长期趋势。价格在均线上方通常表示上涨趋势"
-        # 计算成交金额均值（亿港元）：成交量（手）× 当前价格 / 1亿
-        amount_ma250 = volume_ma250 * current_price / 100000000
-        amount_desc = f"250日成交金额均值为{amount_ma250:.1f}亿港元，反映长期市场活跃度"
+        # 成交量均值（亿股）：yfinance返回的Volume单位是股数
+        volume_ma250_yi = volume_ma250 / 100000000  # 转换为亿股
+        volume_desc = f"250日成交量均值为{volume_ma250_yi:.1f}亿股，反映长期流动性水平。注：yfinance数据源可能存在单位偏差"
         ma120_desc = f"120日均线位于{ma120:.2f}点，反映中期趋势支撑"
         rs_desc = f"60日相对强度信号为{rs_signal_60d:.0f}，{'强势' if rs_signal_60d > 0 else '弱势'}"
         volatility_desc = f"120日波动率为{volatility_120d:.2f}%，{'市场稳定' if volatility_120d < 2 else '市场波动较大'}"
@@ -1290,10 +1257,10 @@ class HSI_Predictor:
                 </div>
 
                 <div class="info-card">
-                    <h3>💵 成交金额均值</h3>
-                    <div class="value">{amount_ma250:.1f} 亿港元</div>
+                    <h3>📊 成交量均值</h3>
+                    <div class="value">{volume_ma250_yi:.1f} 亿股</div>
                     <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {amount_desc}
+                        {volume_desc}
                     </div>
                 </div>
 
@@ -2135,45 +2102,46 @@ class HSI_Predictor:
         current_price_val = self.features.get('Close', current_price)
         volume_ma250_val = self.features.get('Volume_MA250', 0)
         amount_ma250_val = volume_ma250_val * current_price_val / 100000000
-        print(f"250日成交金额均值：{safe_format(amount_ma250_val, '{:.1f}', 'N/A')} 亿港元")
+        # 成交量均值（亿股）
+        volume_ma250_val = self.features.get('Volume_MA250', 0)
+        volume_ma250_yi_val = volume_ma250_val / 100000000
+        print(f"250日成交量均值：{safe_format(volume_ma250_yi_val, '{:.1f}', 'N/A')} 亿股")
         print(f"120日均线（MA120）：{safe_format(self.features.get('MA120', 0), '{:.2f}', 'N/A')} 点")
         print(f"60日相对强度信号（MA250）：{safe_format(self.features.get('60d_RS_Signal_MA250', 0), '{:.0f}', 'N/A')}")
         print(f"120日波动率：{safe_format(self.features.get('Volatility_120d', 0)*100, '{:.2f}', 'N/A')}%")
 
-        # 检测并显示成交量/金额异常
+        # 检测并显示成交量异常
         volume_anomalies = self.detect_volume_anomalies()
         volume_anomaly = volume_anomalies.get('volume_anomaly')
-        amount_anomaly = volume_anomalies.get('amount_anomaly')
         if_anomaly = volume_anomalies.get('if_anomaly')
+        data_warning = volume_anomalies.get('data_warning', '')
 
-        has_any_anomaly = volume_anomaly or amount_anomaly or if_anomaly
+        has_any_anomaly = volume_anomaly or if_anomaly
 
         if has_any_anomaly:
             print(f"\n⚠️  成交数据异常检测：")
             if volume_anomaly:
                 severity_icon = "🔴" if volume_anomaly['severity'] == 'high' else ("🟠" if volume_anomaly['severity'] == 'medium' else "🟡")
                 print(f"    {severity_icon} 【Z-Score】成交量异常：当日成交量{volume_anomaly['direction']}（Z-Score: {volume_anomaly['z_score']:.2f}，{volume_anomaly['severity']}级别）")
-            if amount_anomaly:
-                severity_icon = "🔴" if amount_anomaly['severity'] == 'high' else ("🟠" if amount_anomaly['severity'] == 'medium' else "🟡")
-                print(f"    {severity_icon} 【Z-Score】成交金额异常：当日成交金额{amount_anomaly['direction']}（Z-Score: {amount_anomaly['z_score']:.2f}，{amount_anomaly['severity']}级别）")
             if if_anomaly:
                 severity_icon = "🔴" if if_anomaly['severity'] == 'high' else ("🟠" if if_anomaly['severity'] == 'medium' else "🟡")
                 print(f"    {severity_icon} 【Isolation Forest】多维特征异常：成交模式异常（异常分数: {if_anomaly['anomaly_score']:.4f}，{if_anomaly['severity']}级别）")
 
             # 智能提示
-            anomaly_count = sum([bool(volume_anomaly), bool(amount_anomaly), bool(if_anomaly)])
-            if anomaly_count >= 3:
-                print(f"    💡 量价特征同时异常，多维度验证市场即将发生重大变化，建议高度重视")
-            elif anomaly_count >= 2:
-                print(f"    💡 多指标异常相互验证，预示市场可能出现显著波动，建议密切关注")
+            anomaly_count = sum([bool(volume_anomaly), bool(if_anomaly)])
+            if anomaly_count >= 2:
+                print(f"    💡 多维度验证检测到异常，预示市场可能出现显著波动，建议密切关注")
             elif volume_anomaly:
                 print(f"    💡 成交量异常通常预示重要变盘信号")
-            elif amount_anomaly:
-                print(f"    💡 成交金额异常通常伴随价格大幅波动")
             else:
                 print(f"    💡 多维特征异常表明成交模式发生变化，建议关注后续走势")
+
+            if data_warning:
+                print(f"    ⚠️ {data_warning}")
         else:
-            print(f"\n✅ 成交数据正常：当日成交量和成交金额均在正常范围内，无异常信号")
+            print(f"\n✅ 成交数据正常：当日成交量在正常范围内，无异常信号")
+            if data_warning:
+                print(f"   ⚠️ {data_warning}")
 
         print(f"\n{'='*80}\n")
 
