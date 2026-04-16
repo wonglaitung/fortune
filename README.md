@@ -84,6 +84,31 @@
 - 最大回撤计算
 - 风险控制检查（止损/止盈/Trailing Stop）
 
+### 模拟交易系统
+
+基于主力资金追踪和大模型判断的港股模拟交易系统。
+
+**核心功能**：
+- **智能决策**：整合主力资金追踪分析和大模型判断，自动生成买卖建议
+- **投资者类型**：支持进取型、稳健型、保守型三种风险偏好
+- **自动止损**：根据建议的止损价格自动触发卖出
+- **决策一致性**：3小时窗口内禁止相反操作，24小时窗口内需明确信号变化
+- **邮件通知**：实时推送买入、卖出、止损触发等交易通知
+
+**风控措施**：
+- 单只股票投资比例限制（保守型≤10%，稳健型≤15%，进取型≤20%）
+- 建议止损价格自动跟踪
+- 目标价格和有效期管理
+
+**运行方式**：
+```bash
+# 启动模拟交易（默认90天）
+python3 simulation_trader.py --duration-days 90 --investor-type moderate
+
+# 手动卖出
+python3 simulation_trader.py --manual-sell 0700.HK --sell-percentage 1.0
+```
+
 ### 自动化调度
 
 - 12个GitHub Actions工作流全自动运行
@@ -207,6 +232,7 @@ fortune/
 │   ├── hsi_email.py                    # 恒生指数监控
 │   ├── hsi_prediction.py               # 恒生指数预测（双模型）
 │   ├── hk_smart_money_tracker.py       # 主力资金追踪
+│   ├── simulation_trader.py            # 模拟交易系统
 │   └── crypto_email.py                 # 加密货币监控
 ├── 数据服务模块 (data_services/)
 │   ├── technical_analysis.py           # 技术分析工具
