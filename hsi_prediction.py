@@ -917,153 +917,9 @@ class HSI_Predictor:
             </div>
         </div>
 
-        <!-- 第二部分：预测原因分析 -->
+        <!-- 第二部分：多周期预测分析 -->
         <div class="section">
-            <div class="section-title">二、预测原因分析</div>
-
-            <div class="summary-box">
-                <h3>📊 因素汇总</h3>
-                <ul style="margin: 0; padding-left: 20px;">
-                    <li><span class="badge badge-positive">正面因素 {len(positive_features)} 个</span> 总贡献：<strong style="color: #22c55e;">+{positive_score:.6f}</strong></li>
-                    <li><span class="badge badge-negative">负面因素 {len(negative_features)} 个</span> 总贡献：<strong style="color: #dc2626;">-{negative_score:.6f}</strong></li>
-                    <li>净得分：<strong style="font-size: 18px;">{positive_score - negative_score:+.6f}</strong></li>
-                </ul>
-            </div>
-
-            <h3 style="font-size: 16px; color: #374151; margin: 20px 0 15px 0;">🔍 关键因素分析（按贡献度排序）</h3>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 8%;">排名</th>
-                        <th style="width: 28%;">特征名称</th>
-                        <th style="width: 12%;">当前值</th>
-                        <th style="width: 10%;">权重</th>
-                        <th style="width: 10%;">方向</th>
-                        <th style="width: 12%;">贡献度</th>
-                        <th style="width: 20%;">特征说明</th>
-                    </tr>
-                </thead>
-                <tbody>
-"""
-
-        # 添加前10个最重要特征
-        for i, feature in enumerate(sorted_features[:10], 1):
-            direction_str = "正面" if feature['direction'] > 0 else "负面"
-            direction_class = "badge-positive" if feature['direction'] > 0 else "badge-negative"
-            contribution_color = "#22c55e" if feature['contribution'] > 0 else "#dc2626"
-
-            content += f"""
-                    <tr>
-                        <td style="text-align: center;"><span class="ranking">{i}</span></td>
-                        <td><strong>{feature['feature']}</strong></td>
-                        <td>{feature['value']:.4f}</td>
-                        <td>{feature['weight']:.2%}</td>
-                        <td><span class="badge {direction_class}">{direction_str}</span></td>
-                        <td style="color: {contribution_color}; font-weight: 600;">{feature['contribution']:+.6f}</td>
-                        <td style="font-size: 11px; color: #6b7280;">{self._get_feature_explanation(feature['feature'])}</td>
-                    </tr>
-"""
-
-        content += f"""
-                </tbody>
-            </table>
-
-            <h3 style="font-size: 14px; color: #374151; margin: 20px 0 10px 0;">📋 其他重要特征</h3>
-            <table style="font-size: 12px;">
-                <thead>
-                    <tr>
-                        <th style="width: 40%;">特征名称</th>
-                        <th style="width: 20%;">贡献度</th>
-                        <th style="width: 40%;">影响方向</th>
-                    </tr>
-                </thead>
-                <tbody>
-"""
-
-        # 添加其他特征
-        for feature in sorted_features[10:]:
-            contribution_color = "#22c55e" if feature['contribution'] > 0 else "#dc2626"
-            impact_str = "📈 推动上涨" if feature['contribution'] > 0 else "📉 推动下跌"
-
-            content += f"""
-                    <tr>
-                        <td>{feature['feature']}</td>
-                        <td style="color: {contribution_color}; font-weight: 600;">{feature['contribution']:+.6f}</td>
-                        <td>{impact_str}</td>
-                    </tr>
-"""
-
-        content += f"""
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 第三部分：核心市场指标解读 -->
-        <div class="section">
-            <div class="section-title">三、核心市场指标解读</div>
-
-            <div class="info-grid">
-                <div class="info-card">
-                    <h3>📊 250日均线（MA250）</h3>
-                    <div class="value">{ma250:.2f} 点</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：15.00% | 方向：正面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {ma250_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>💵 250日成交量均值</h3>
-                    <div class="value">{volume_ma250:.0f} 手</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：12.00% | 方向：正面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {volume_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>📈 120日均线（MA120）</h3>
-                    <div class="value">{ma120:.2f} 点</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：10.00% | 方向：正面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {ma120_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>⚡ 60日相对强度信号</h3>
-                    <div class="value">{rs_signal_60d:.0f}</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：8.00% | 方向：正面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {rs_desc}
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>📉 120日波动率</h3>
-                    <div class="value">{volatility_120d:.2f}%</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        <strong>权重：4.00% | 方向：负面</strong>
-                    </div>
-                    <div class="feature-explanation">
-                        {volatility_desc}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 第四部分：多周期预测 -->
-        <div class="section">
-            <div class="section-title">四、多周期预测分析</div>
+            <div class="section-title">二、多周期预测分析 ⭐</div>
 """
 
         # 添加多周期预测内容
@@ -1076,22 +932,22 @@ class HSI_Predictor:
             if all_up:
                 consistency_html = """
                 <div class="summary-box" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-left: 4px solid #22c55e; margin-bottom: 20px;">
-                    <h3 style="color: #166534;">📈 三周期一致看涨</h3>
-                    <p style="margin: 10px 0; font-size: 14px;"><strong>强烈买入信号</strong> - 历史数据显示，三周期一致看涨时，至少一个周期实际上涨的概率高达 <strong>92%</strong></p>
+                    <h3 style="color: #166534;">📈 三周期一致看涨 - 强烈买入信号</h3>
+                    <p style="margin: 10px 0; font-size: 14px;">历史验证：三周期一致看涨时，至少一个周期实际上涨概率 <strong>92%</strong></p>
                 </div>
 """
             elif all_down:
                 consistency_html = """
                 <div class="summary-box" style="background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); border-left: 4px solid #dc2626; margin-bottom: 20px;">
-                    <h3 style="color: #991b1b;">📉 三周期一致看跌</h3>
-                    <p style="margin: 10px 0; font-size: 14px;"><strong>强烈卖出信号</strong> - 历史数据显示，三周期一致看跌时，至少一个周期实际下跌的概率高达 <strong>87%</strong></p>
+                    <h3 style="color: #991b1b;">📉 三周期一致看跌 - 强烈卖出信号</h3>
+                    <p style="margin: 10px 0; font-size: 14px;">历史验证：三周期一致看跌时，至少一个周期实际下跌概率 <strong>87%</strong></p>
                 </div>
 """
             else:
                 consistency_html = """
                 <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; margin-bottom: 20px;">
-                    <h3 style="color: #92400e;">⚠️ 三周期方向分歧</h3>
-                    <p style="margin: 10px 0; font-size: 14px;">模型意见不一致，建议谨慎决策。三周期不一致时，单一周期准确率约 <strong>45-64%</strong></p>
+                    <h3 style="color: #92400e;">⚠️ 三周期方向分歧 - 建议观望</h3>
+                    <p style="margin: 10px 0; font-size: 14px;">模型意见不一致时，单一周期准确率约 45-64%，信号可靠性较低</p>
                 </div>
 """
             content += consistency_html
@@ -1129,13 +985,8 @@ class HSI_Predictor:
                 </tbody>
             </table>
 
-            <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 13px;">
-                <h4 style="margin: 0 0 10px 0; color: #374151;">📊 周期特点说明</h4>
-                <ul style="margin: 0; padding-left: 20px; color: #6b7280;">
-                    <li><strong>5天周期</strong>：历史准确率最高（57.65%），适合短期交易参考</li>
-                    <li><strong>20天周期</strong>：AUC最高（0.75），趋势判断能力最强</li>
-                    <li><strong>1天周期</strong>：噪音较大，准确率接近随机，仅供参考</li>
-                </ul>
+            <div style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #6b7280;">
+                <strong>建议：</strong>5天周期准确率最高（57.65%）| 20天周期趋势判断最强（AUC 0.75）| 1天周期噪音大，仅供参考
             </div>
 """
         else:
@@ -1145,12 +996,104 @@ class HSI_Predictor:
             </div>
 """
 
-        content += """
+        content += f"""
+        </div>
+
+        <!-- 第四部分：预测原因分析 -->
+        <div class="section">
+            <div class="section-title">三、预测原因分析</div>
+
+            <div class="summary-box">
+                <h3>📊 因素汇总</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li><span class="badge badge-positive">正面因素 {len(positive_features)} 个</span> 总贡献：<strong style="color: #22c55e;">+{positive_score:.6f}</strong></li>
+                    <li><span class="badge badge-negative">负面因素 {len(negative_features)} 个</span> 总贡献：<strong style="color: #dc2626;">-{negative_score:.6f}</strong></li>
+                    <li>净得分：<strong style="font-size: 18px;">{positive_score - negative_score:+.6f}</strong></li>
+                </ul>
+            </div>
+
+            <h3 style="font-size: 16px; color: #374151; margin: 20px 0 15px 0;">🔍 关键因素分析（Top 5）</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">排名</th>
+                        <th style="width: 28%;">特征名称</th>
+                        <th style="width: 12%;">当前值</th>
+                        <th style="width: 10%;">权重</th>
+                        <th style="width: 10%;">方向</th>
+                        <th style="width: 12%;">贡献度</th>
+                        <th style="width: 20%;">特征说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+
+        # 添加前5个最重要特征
+        for i, feature in enumerate(sorted_features[:5], 1):
+            direction_str = "正面" if feature['direction'] > 0 else "负面"
+            direction_class = "badge-positive" if feature['direction'] > 0 else "badge-negative"
+            contribution_color = "#22c55e" if feature['contribution'] > 0 else "#dc2626"
+
+            content += f"""
+                    <tr>
+                        <td style="text-align: center;"><span class="ranking">{i}</span></td>
+                        <td><strong>{feature['feature']}</strong></td>
+                        <td>{feature['value']:.4f}</td>
+                        <td>{feature['weight']:.2%}</td>
+                        <td><span class="badge {direction_class}">{direction_str}</span></td>
+                        <td style="color: {contribution_color}; font-weight: 600;">{feature['contribution']:+.6f}</td>
+                        <td style="font-size: 11px; color: #6b7280;">{self._get_feature_explanation(feature['feature'])}</td>
+                    </tr>
+"""
+
+        content += f"""
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 第五部分：核心市场指标 -->
+        <div class="section">
+            <div class="section-title">四、核心市场指标</div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>📊 250日均线</h3>
+                    <div class="value">{ma250:.2f} 点</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {ma250_desc}
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>💵 成交量均值</h3>
+                    <div class="value">{volume_ma250/100000000:.1f} 亿手</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {volume_desc}
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>📈 120日均线</h3>
+                    <div class="value">{ma120:.2f} 点</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {ma120_desc}
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>📉 波动率</h3>
+                    <div class="value">{volatility_120d:.2f}%</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {volatility_desc}
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 第五部分：投资建议 -->
         <div class="section">
-            <div class="section-title">四、投资建议</div>
+            <div class="section-title">五、投资建议</div>
 """
 
         # 根据预测得分生成投资建议
