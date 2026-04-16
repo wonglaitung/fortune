@@ -1369,22 +1369,33 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_label(self, df, horizon, for_backtest=False):
-        """创建标签：次日涨跌
-        
+    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.005):
+        """创建标签：未来涨跌（考虑交易成本）
+
+        根据业界最佳实践，标签定义应考虑交易成本，避免"纸上盈利"变成实际亏损。
+        只有当预期收益 > 交易成本 + 最小盈利目标时才标记为正例。
+
         Args:
             df: 股票数据
             horizon: 预测周期
             for_backtest: 是否为回测准备数据（True时不移除最后horizon行）
+            min_return_threshold: 最小收益阈值（默认0.5%），用于过滤小额波动
+                                 推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
+                                 注意：对于20天预测周期，0.5%是合理阈值
         """
         if df.empty or len(df) < horizon + 1:
             return df
 
-        # 计算未来收益率
+        # 计算未来收益率（累积收益）
         df['Future_Return'] = df['Close'].shift(-horizon) / df['Close'] - 1
 
-        # 二分类标签：1=上涨，0=下跌
-        df['Label'] = (df['Future_Return'] > 0).astype(int)
+        # 阈值化标签：只有当收益超过阈值时才标记为正例
+        # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
+        # 业界标准：min_return_threshold = 交易成本 + 最小盈利目标
+        df['Label'] = (df['Future_Return'] > min_return_threshold).astype(int)
+
+        # 记录使用的阈值（用于后续分析）
+        df['Label_Threshold'] = min_return_threshold
 
         # 如果不是回测模式，移除最后horizon行（没有标签的数据）
         if not for_backtest:
@@ -2628,8 +2639,8 @@ class LightGBMModel(BaseTradingModel):
                 # 创建市场环境特征（包含港股和美股）
                 stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
-                # 创建标签（使用指定的 horizon）
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
+                # 创建标签（使用指定的 horizon 和阈值）
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -3886,17 +3897,19 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
         """准备训练数据
-        
+
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
+            min_return_threshold: 最小收益阈值（默认1%），用于标签定义
         """
         self.horizon = horizon
+        self.min_return_threshold = min_return_threshold
         all_data = []
 
         # 获取美股市场数据（只获取一次）
@@ -3939,8 +3952,8 @@ class CatBoostModel(BaseTradingModel):
                 # 创建市场环境特征（包含港股和美股）
                 stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
 
-                # 创建标签（使用指定的 horizon）
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
+                # 创建标签（使用指定的 horizon 和阈值）
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -4030,7 +4043,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -4039,6 +4052,7 @@ class CatBoostModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            min_return_threshold: 最小收益阈值（默认1%），用于标签定义
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
         random.seed(42)
@@ -4057,13 +4071,14 @@ class CatBoostModel(BaseTradingModel):
         print(f"预测周期: {horizon} 天")
         print(f"股票数量: {len(codes)}")
         print(f"特征选择: {'是' if use_feature_selection else '否'}")
+        print(f"最小收益阈值: {min_return_threshold:.2%}")
 
         # ========== 准备数据 ==========
         print("\n" + "="*70)
         logger.info("准备训练数据")
         print("="*70)
 
-        df = self.prepare_data(codes, start_date, end_date, horizon)
+        df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold)
 
         # 删除包含 NaN 的行
         df = df.dropna(subset=['Label'])

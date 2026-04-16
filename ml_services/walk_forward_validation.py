@@ -390,6 +390,13 @@ class WalkForwardValidator:
         Returns:
             dict: 评估指标
         """
+        # ========== 交易成本定义（业界标准）==========
+        # 双边交易成本 = 佣金 + 印花税 + 滑点
+        COMMISSION = 0.001     # 单边佣金 0.1%
+        STAMP_DUTY = 0.001     # 印花税 0.1%（港股卖出时收取）
+        SLIPPAGE = 0.001       # 滑点 0.1%
+        TOTAL_COST = (COMMISSION + SLIPPAGE) * 2 + STAMP_DUTY  # 双边成本约 0.5%
+
         # 合并测试数据和预测结果
         if predictions is None or predictions.empty:
             raise ValueError("预测结果为空")
@@ -400,7 +407,7 @@ class WalkForwardValidator:
         df = test_data.copy()
         df['prediction'] = predictions['prediction']
         df['probability'] = predictions['probability']
-        
+
         # 确保索引对齐（删除预测中不存在于 test_data 的索引）
         df = df[df.index.isin(predictions.index)]
 
@@ -419,11 +426,26 @@ class WalkForwardValidator:
         # 计算预测收益
         df['predicted_return'] = df['actual_return'] * df['prediction']
 
-        # 计算交易信号
-        df['signal'] = (df['prediction'] >= self.confidence_threshold).astype(int)
+        # ========== 风险过滤（业界最佳实践）==========
+        # 过滤高风险信号：ATR_Risk_Score > 0.8 表示极端高波动期
+        df['risk_filter'] = True  # 默认通过
+        if 'ATR_Risk_Score' in df.columns:
+            # 高波动期（ATR处于历史高位80%以上）不交易
+            df['risk_filter'] = df['ATR_Risk_Score'] <= 0.8
 
-        # 计算收益率（仅在有信号时）
+        # 震荡市低置信度信号过滤
+        if 'Market_Regime' in df.columns and 'probability' in df.columns:
+            # 震荡市中，只有高置信度信号才通过
+            ranging_filter = (df['Market_Regime'] != 'ranging') | (df['probability'] >= 0.75)
+            df['risk_filter'] = df['risk_filter'] & ranging_filter
+
+        # 计算交易信号（应用风险过滤）
+        df['signal'] = ((df['prediction'] >= self.confidence_threshold) & df['risk_filter']).astype(int)
+
+        # 计算收益率（扣除交易成本）
         df['strategy_return'] = df['signal'] * df['actual_return']
+        # 扣除交易成本后的净收益
+        df['strategy_return_net'] = df['strategy_return'] - df['signal'] * TOTAL_COST
 
         # 移除NaN
         df = df.dropna(subset=['actual_return', 'strategy_return'])
@@ -441,13 +463,19 @@ class WalkForwardValidator:
             # 对于固定持有期策略，累积收益应该用简单平均，而不是顺序累乘
             # 因为多笔交易是同时持有的，不是顺序平仓的
             cumulative_return = avg_return * len(trades) / max(len(trades), 1)  # 近似
-            win_rate = (trades['strategy_return'] > 0).sum() / len(trades)
+            # 胜率计算使用扣除交易成本后的净收益
+            win_rate = (trades['strategy_return_net'] > 0).sum() / len(trades)
             return_std = trades['strategy_return'].std()
+            # 净收益指标
+            avg_return_net = trades['strategy_return_net'].mean()
+            return_std_net = trades['strategy_return_net'].std()
         else:
             avg_return = 0.0
             cumulative_return = 0.0
             win_rate = 0.0
             return_std = 0.0
+            avg_return_net = 0.0
+            return_std_net = 0.0
 
         # 准确率：使用全部样本（因为预测是针对所有样本的）
         accuracy = (df['prediction'] == df['Label']).sum() / len(df)
@@ -460,12 +488,15 @@ class WalkForwardValidator:
         if len(trades) > 0:
             batches = trades.groupby(trades.index).agg({
                 'strategy_return': 'mean',  # 批次平均收益
+                'strategy_return_net': 'mean',  # 批次净收益
                 'signal': 'count'  # 批次内信号数量
             }).rename(columns={'signal': 'batch_size'})
             batch_returns = batches['strategy_return'].values
+            batch_returns_net = batches['strategy_return_net'].values
         else:
             batches = None
             batch_returns = np.array([])
+            batch_returns_net = np.array([])
 
         # ========== 年化收益和夏普比率计算（修正版） ==========
         # 问题：之前用 avg_return * (252/horizon) 年化，假设一年可做12.6次交易
@@ -564,17 +595,20 @@ class WalkForwardValidator:
             'num_samples': num_samples,
             'num_trades': num_trades,
             'avg_return': avg_return,
+            'avg_return_net': avg_return_net,  # 扣除交易成本后的净收益
             'cumulative_return': cumulative_return,
-            'win_rate': win_rate,
+            'win_rate': win_rate,  # 基于净收益计算的胜率
             'accuracy': accuracy,
             'return_std': return_std,
+            'return_std_net': return_std_net,  # 净收益标准差
             'annualized_return': annualized_return,
             'annualized_std': annualized_std,
             'max_drawdown': max_drawdown,
             'sharpe_ratio': sharpe_ratio,
             'sortino_ratio': sortino_ratio,
             'information_ratio': information_ratio,
-            'benchmark_return': benchmark_return
+            'benchmark_return': benchmark_return,
+            'transaction_cost': TOTAL_COST  # 记录使用的交易成本
         }
 
     def _calculate_overall_metrics(self, fold_results):
