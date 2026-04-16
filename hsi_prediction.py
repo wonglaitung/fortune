@@ -135,10 +135,76 @@ class HSI_Predictor:
         print("  - 港股通资金流向...")
         self.southbound_data = self._fetch_southbound_data()
 
+        # 获取腾讯财经实时成交额数据（更准确的成交额）
+        print("  - 腾讯财经成交额...")
+        self.tencent_amount = self._fetch_tencent_amount()
+
         if self.hsi_data.empty or self.us_data.empty or self.vix_data.empty:
             raise ValueError("数据获取失败")
 
         print(f"  ✅ 数据获取完成（恒指：{len(self.hsi_data)} 条，美债：{len(self.us_data)} 条，VIX：{len(self.vix_data)} 条）")
+
+    def _fetch_tencent_amount(self):
+        """
+        从腾讯财经获取恒生指数实时成交额数据
+
+        返回:
+        - dict: 包含成交额数据，或 None（如果获取失败）
+          {
+            'amount': float,      # 成交额（亿港元）
+            'amount_raw': float,  # 成交额原始值（万元）
+            'price': float,       # 最新价
+            'prev_close': float,  # 昨收
+            'volume_ratio': float # 成交量比率
+          }
+        """
+        try:
+            import requests
+            url = 'https://web.sqt.gtimg.cn/q=r_hkHSI'
+            resp = requests.get(url, timeout=10)
+
+            if resp.status_code != 200:
+                print("    ⚠️ 腾讯财经API请求失败")
+                return None
+
+            # 解析响应数据
+            data_str = resp.text.split('"')[1]
+            fields = data_str.split('~')
+
+            if len(fields) < 24:
+                print("    ⚠️ 腾讯财经API返回数据格式异常")
+                return None
+
+            # 提取数据
+            # [3] 最新价, [4] 昨收, [5] 今开, [6] 成交额(万元), [21] 涨跌点数, [22] 涨跌幅, [23] 最高
+            amount_raw = float(fields[6])  # 万元
+            amount = amount_raw / 10000     # 转换为亿港元
+            price = float(fields[3])
+            prev_close = float(fields[4])
+
+            # 计算成交量比率（与yfinance的Volume_MA20对比）
+            volume_ratio = None
+            if hasattr(self, 'hsi_data') and self.hsi_data is not None and len(self.hsi_data) >= 20:
+                avg_volume = self.hsi_data['Volume'].tail(20).mean()
+                # 估算当日成交量（用成交额/价格）
+                estimated_volume = (amount_raw * 10000) / price  # 转为股数
+                if avg_volume > 0:
+                    volume_ratio = estimated_volume / avg_volume
+
+            result = {
+                'amount': amount,           # 亿港元
+                'amount_raw': amount_raw,   # 万元
+                'price': price,
+                'prev_close': prev_close,
+                'volume_ratio': volume_ratio
+            }
+
+            print(f"    ✅ 腾讯财经：成交额 {amount:.1f} 亿港元")
+            return result
+
+        except Exception as e:
+            print(f"    ⚠️ 腾讯财经数据获取失败: {e}")
+            return None
 
     def _fetch_southbound_data(self):
         """
@@ -562,17 +628,18 @@ class HSI_Predictor:
 
     def detect_volume_anomalies(self, window_size=30, threshold=2.5):
         """
-        检测成交量的异常
+        检测成交量和成交额的异常
 
-        使用现有的Z-Score和Isolation Forest检测器检测当日成交量是否异常
-        注：成交金额因yfinance数据源单位问题暂不检测
+        使用现有的Z-Score和Isolation Forest检测器进行检测
+        - 成交量：使用yfinance数据
+        - 成交额：使用腾讯财经API数据（更准确）
 
         Args:
             window_size: 滚动窗口大小（默认30天）
             threshold: Z-Score阈值（默认2.5，即约99%置信区间）
 
         Returns:
-            dict: 包含成交量异常检测结果的字典
+            dict: 包含成交量和成交额异常检测结果的字典
         """
         from anomaly_detector.zscore_detector import ZScoreDetector
         from anomaly_detector.isolation_forest_detector import IsolationForestDetector
@@ -581,32 +648,76 @@ class HSI_Predictor:
         if self.hsi_data is None or len(self.hsi_data) < window_size:
             return {
                 'volume_anomaly': None,
+                'amount_anomaly': None,
                 'if_anomaly': None,
-                'data_warning': 'yfinance数据源可能存在单位偏差，异常检测结果仅供参考'
+                'data_source': '腾讯财经API + yfinance'
             }
 
         # 获取历史数据
         df = self.hsi_data.copy()
-
-        # 获取当日数据
-        current_volume = df['Volume'].iloc[-1]
         current_timestamp = df.index[-1]
 
-        # 获取历史窗口数据（排除当日）
-        volume_history = df['Volume'].iloc[:-1]
-
         anomalies = {
-            'data_warning': 'yfinance数据源可能存在单位偏差，异常检测结果仅供参考'
+            'data_source': '腾讯财经API + yfinance'
         }
 
-        # ========== Z-Score检测 ==========
+        # ========== 成交额异常检测（使用腾讯财经数据）==========
+        if hasattr(self, 'tencent_amount') and self.tencent_amount:
+            current_amount = self.tencent_amount['amount']  # 亿港元
+
+            # 获取历史成交额数据（从yfinance估算）
+            # 使用 Volume * Close / 1亿 作为历史成交额估计
+            df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000
+            amount_history = df['Amount_Estimated'].iloc[:-1]
+
+            # 使用Z-Score检测
+            zscore_detector = ZScoreDetector(
+                window_size=window_size,
+                threshold=threshold,
+                time_interval='day'
+            )
+
+            amount_zscore_result = zscore_detector.detect_anomaly(
+                metric_name='amount',
+                current_value=current_amount,
+                history=amount_history,
+                timestamp=current_timestamp
+            )
+
+            if amount_zscore_result:
+                anomalies['amount_anomaly'] = {
+                    'type': '成交额异常',
+                    'z_score': amount_zscore_result['z_score'],
+                    'current_value': current_amount,
+                    'mean': amount_zscore_result['mean'],
+                    'std': amount_zscore_result['std'],
+                    'severity': amount_zscore_result['severity'],
+                    'direction': '放大' if amount_zscore_result['z_score'] > 0 else '萎缩',
+                    'detection_method': 'zscore_tencent',
+                    'data_source': '腾讯财经API'
+                }
+            else:
+                anomalies['amount_anomaly'] = None
+
+            # 记录成交额数据用于后续显示
+            anomalies['amount_data'] = {
+                'current': current_amount,
+                'ma250': amount_history.tail(250).mean() if len(amount_history) >= 250 else amount_history.mean()
+            }
+        else:
+            anomalies['amount_anomaly'] = None
+            anomalies['amount_data'] = None
+
+        # ========== 成交量异常检测（使用yfinance数据）==========
+        current_volume = df['Volume'].iloc[-1]
+        volume_history = df['Volume'].iloc[:-1]
+
         zscore_detector = ZScoreDetector(
             window_size=window_size,
             threshold=threshold,
             time_interval='day'
         )
 
-        # 检测成交量异常
         volume_zscore_result = zscore_detector.detect_anomaly(
             metric_name='volume',
             current_value=current_volume,
@@ -628,29 +739,30 @@ class HSI_Predictor:
         else:
             anomalies['volume_anomaly'] = None
 
-        # ========== Isolation Forest检测（多维特征） ==========
-        # 准备特征数据
+        # ========== Isolation Forest检测（多维特征）==========
         feature_df = df[['Close', 'Volume']].copy()
         feature_df['Volume_MA20'] = feature_df['Volume'].rolling(20).mean()
         feature_df['Volume_Ratio'] = feature_df['Volume'] / feature_df['Volume_MA20']
 
-        # 使用FeatureExtractor提取标准化特征
+        # 如果有腾讯财经成交额数据，添加成交额特征
+        if hasattr(self, 'tencent_amount') and self.tencent_amount and anomalies['amount_data']:
+            feature_df['Amount'] = anomalies['amount_data']['current']
+            feature_df['Amount_MA20'] = feature_df['Amount'].rolling(20).mean()
+            feature_df['Amount_Ratio'] = feature_df['Amount'] / feature_df['Amount_MA20']
+
         extractor = FeatureExtractor()
         features, timestamps = extractor.extract_features(feature_df)
 
         if len(features) >= window_size:
-            # 训练Isolation Forest模型
             if_detector = IsolationForestDetector(
                 contamination=0.05,
                 random_state=42,
                 anomaly_type='volume_features'
             )
 
-            # 使用历史数据训练
             train_features = features.iloc[:-1].tail(window_size * 3)
             if_detector.train(train_features)
 
-            # 检测最近7天的异常
             if_anomalies = if_detector.detect_anomalies(
                 features=features,
                 timestamps=timestamps,
@@ -658,7 +770,6 @@ class HSI_Predictor:
                 time_interval='day'
             )
 
-            # 检查当日是否有异常
             today_anomalies = [a for a in if_anomalies if a['timestamp'] == current_timestamp]
             if today_anomalies:
                 anomaly = today_anomalies[0]
@@ -788,12 +899,53 @@ class HSI_Predictor:
         
         # 格式化描述文本（基于新特征）
         ma250_desc = f"250日均线位于{ma250:.2f}点，反映长期趋势。价格在均线上方通常表示上涨趋势"
-        # 成交量均值（亿股）：yfinance返回的Volume单位是股数
-        volume_ma250_yi = volume_ma250 / 100000000  # 转换为亿股
-        volume_desc = f"250日成交量均值为{volume_ma250_yi:.1f}亿股，反映长期流动性水平。注：yfinance数据源可能存在单位偏差"
+
+        # 成交额数据（优先使用腾讯财经API）
+        if hasattr(self, 'tencent_amount') and self.tencent_amount:
+            # 使用腾讯财经的准确成交额数据
+            current_amount = self.tencent_amount['amount']  # 亿港元
+            # 计算250日成交额均值（使用历史数据估算）
+            df = self.hsi_data.copy()
+            df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000  # 亿港元（估算）
+            amount_ma250 = df['Amount_Estimated'].tail(250).mean() if len(df) >= 250 else df['Amount_Estimated'].mean()
+            amount_desc = f"250日成交额均值为{amount_ma250:.0f}亿港元，反映长期市场活跃度。数据来源：腾讯财经API"
+            volume_ma250_yi = None  # 不使用成交量
+            volume_desc = None
+        else:
+            #  fallback：使用成交量数据（yfinance）
+            current_amount = None
+            amount_ma250 = None
+            amount_desc = None
+            volume_ma250_yi = volume_ma250 / 100000000  # 转换为亿股
+            volume_desc = f"250日成交量均值为{volume_ma250_yi:.1f}亿股，反映长期流动性水平。注：yfinance数据源可能存在单位偏差"
+
         ma120_desc = f"120日均线位于{ma120:.2f}点，反映中期趋势支撑"
         rs_desc = f"60日相对强度信号为{rs_signal_60d:.0f}，{'强势' if rs_signal_60d > 0 else '弱势'}"
         volatility_desc = f"120日波动率为{volatility_120d:.2f}%，{'市场稳定' if volatility_120d < 2 else '市场波动较大'}"
+
+        # 构建信息卡HTML（根据数据可用性选择成交额或成交量）
+        if amount_ma250:
+            amount_card_html = f"""
+                <div class="info-card">
+                    <h3>成交额均值</h3>
+                    <div class="value">{amount_ma250:.0f} 亿港元</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {amount_desc}
+                    </div>
+                </div>
+            """
+            volume_card_html = ""
+        else:
+            amount_card_html = ""
+            volume_card_html = f"""
+                <div class="info-card">
+                    <h3>成交量均值</h3>
+                    <div class="value">{volume_ma250_yi:.1f} 亿股</div>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
+                        {volume_desc}
+                    </div>
+                </div>
+            """
 
         # 构建HTML邮件内容
         content = f"""<!DOCTYPE html>
@@ -1256,13 +1408,7 @@ class HSI_Predictor:
                     </div>
                 </div>
 
-                <div class="info-card">
-                    <h3>📊 成交量均值</h3>
-                    <div class="value">{volume_ma250_yi:.1f} 亿股</div>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 8px;">
-                        {volume_desc}
-                    </div>
-                </div>
+                {amount_card_html if amount_ma250 else volume_card_html}
 
                 <div class="info-card">
                     <h3>📈 120日均线</h3>
@@ -2101,47 +2247,57 @@ class HSI_Predictor:
         print(f"250日均线（MA250）：{safe_format(self.features.get('MA250', 0), '{:.2f}', 'N/A')} 点")
         current_price_val = self.features.get('Close', current_price)
         volume_ma250_val = self.features.get('Volume_MA250', 0)
-        amount_ma250_val = volume_ma250_val * current_price_val / 100000000
-        # 成交量均值（亿股）
-        volume_ma250_val = self.features.get('Volume_MA250', 0)
-        volume_ma250_yi_val = volume_ma250_val / 100000000
-        print(f"250日成交量均值：{safe_format(volume_ma250_yi_val, '{:.1f}', 'N/A')} 亿股")
+        # 优先使用腾讯财经成交额数据
+        if hasattr(self, 'tencent_amount') and self.tencent_amount:
+            current_amount = self.tencent_amount['amount']  # 亿港元
+            # 计算250日成交额均值
+            df_temp = self.hsi_data.copy()
+            df_temp['Amount_Estimated'] = df_temp['Volume'] * df_temp['Close'] / 100000000
+            amount_ma250_val = df_temp['Amount_Estimated'].tail(250).mean() if len(df_temp) >= 250 else df_temp['Amount_Estimated'].mean()
+            print(f"250日成交额均值：{safe_format(amount_ma250_val, '{:.0f}', 'N/A')} 亿港元（数据来源：腾讯财经API）")
+            print(f"今日成交额：{safe_format(current_amount, '{:.0f}', 'N/A')} 亿港元")
+        else:
+            # fallback：使用成交量
+            volume_ma250_val = self.features.get('Volume_MA250', 0)
+            volume_ma250_yi_val = volume_ma250_val / 100000000
+            print(f"250日成交量均值：{safe_format(volume_ma250_yi_val, '{:.1f}', 'N/A')} 亿股（yfinance数据）")
         print(f"120日均线（MA120）：{safe_format(self.features.get('MA120', 0), '{:.2f}', 'N/A')} 点")
         print(f"60日相对强度信号（MA250）：{safe_format(self.features.get('60d_RS_Signal_MA250', 0), '{:.0f}', 'N/A')}")
         print(f"120日波动率：{safe_format(self.features.get('Volatility_120d', 0)*100, '{:.2f}', 'N/A')}%")
 
-        # 检测并显示成交量异常
+        # 检测并显示成交异常
         volume_anomalies = self.detect_volume_anomalies()
         volume_anomaly = volume_anomalies.get('volume_anomaly')
+        amount_anomaly = volume_anomalies.get('amount_anomaly')
         if_anomaly = volume_anomalies.get('if_anomaly')
-        data_warning = volume_anomalies.get('data_warning', '')
+        data_source = volume_anomalies.get('data_source', 'yfinance')
 
-        has_any_anomaly = volume_anomaly or if_anomaly
+        has_any_anomaly = volume_anomaly or amount_anomaly or if_anomaly
 
         if has_any_anomaly:
-            print(f"\n⚠️  成交数据异常检测：")
+            print(f"\n⚠️  成交数据异常检测（数据源：{data_source}）：")
+            if amount_anomaly:
+                severity_icon = "🔴" if amount_anomaly['severity'] == 'high' else ("🟠" if amount_anomaly['severity'] == 'medium' else "🟡")
+                print(f"    {severity_icon} 【成交额异常】当日成交额{amount_anomaly['direction']}（Z-Score: {amount_anomaly['z_score']:.2f}，{amount_anomaly['severity']}级别）")
             if volume_anomaly:
                 severity_icon = "🔴" if volume_anomaly['severity'] == 'high' else ("🟠" if volume_anomaly['severity'] == 'medium' else "🟡")
-                print(f"    {severity_icon} 【Z-Score】成交量异常：当日成交量{volume_anomaly['direction']}（Z-Score: {volume_anomaly['z_score']:.2f}，{volume_anomaly['severity']}级别）")
+                print(f"    {severity_icon} 【成交量异常】当日成交量{volume_anomaly['direction']}（Z-Score: {volume_anomaly['z_score']:.2f}，{volume_anomaly['severity']}级别）")
             if if_anomaly:
                 severity_icon = "🔴" if if_anomaly['severity'] == 'high' else ("🟠" if if_anomaly['severity'] == 'medium' else "🟡")
-                print(f"    {severity_icon} 【Isolation Forest】多维特征异常：成交模式异常（异常分数: {if_anomaly['anomaly_score']:.4f}，{if_anomaly['severity']}级别）")
+                print(f"    {severity_icon} 【Isolation Forest】多维特征异常（异常分数: {if_anomaly['anomaly_score']:.4f}，{if_anomaly['severity']}级别）")
 
             # 智能提示
-            anomaly_count = sum([bool(volume_anomaly), bool(if_anomaly)])
+            anomaly_count = sum([bool(volume_anomaly), bool(amount_anomaly), bool(if_anomaly)])
             if anomaly_count >= 2:
                 print(f"    💡 多维度验证检测到异常，预示市场可能出现显著波动，建议密切关注")
+            elif amount_anomaly:
+                print(f"    💡 成交额异常通常伴随价格大幅波动")
             elif volume_anomaly:
                 print(f"    💡 成交量异常通常预示重要变盘信号")
             else:
                 print(f"    💡 多维特征异常表明成交模式发生变化，建议关注后续走势")
-
-            if data_warning:
-                print(f"    ⚠️ {data_warning}")
         else:
-            print(f"\n✅ 成交数据正常：当日成交量在正常范围内，无异常信号")
-            if data_warning:
-                print(f"   ⚠️ {data_warning}")
+            print(f"\n✅ 成交数据正常（数据源：{data_source}）：当日成交额/成交量在正常范围内，无异常信号")
 
         print(f"\n{'='*80}\n")
 
