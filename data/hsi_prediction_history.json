@@ -1,0 +1,1776 @@
+{
+  "predictions": [
+    {
+      "timestamp": "2026-04-16T09:27:54",
+      "prediction_date": "2026-04-15",
+      "current_price": 25947.3203125,
+      "prediction_score": 0.7386893662276375,
+      "prediction_trend": "强烈看涨",
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 0.49303400000000003,
+        "MA250": 25219.2588984375,
+        "Volume_MA250": 3371669200.0,
+        "MA120": 26100.82197265625,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012675404315515903,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3371669200.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25219.2588984375,
+          "contribution": 0.04655588739492821
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "target_date": "2026-05-05"
+    },
+    {
+      "timestamp": "2026-04-16T09:38:50",
+      "prediction_date": "2026-04-15",
+      "current_price": 25947.3203125,
+      "prediction_score": 0.7371260322276376,
+      "prediction_trend": "强烈看涨",
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -1.0703,
+        "MA250": 25219.2588984375,
+        "Volume_MA250": 3371669200.0,
+        "MA120": 26100.82197265625,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012675404315515903,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3371669200.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25219.2588984375,
+          "contribution": 0.04655588739492821
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "target_date": "2026-05-05"
+    },
+    {
+      "timestamp": "2026-04-16T09:57:31",
+      "prediction_date": "2026-04-16",
+      "current_price": 26193.369140625,
+      "prediction_score": 0.7400411419460897,
+      "prediction_trend": "强烈看涨",
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 1.8389419999999999,
+        "MA250": 25243.52165625,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.362467447918,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012704016460406822,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.52165625,
+          "contribution": 0.046593886656929484
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "target_date": "2026-05-06"
+    },
+    {
+      "timestamp": "2026-04-16T09:59:41",
+      "prediction_date": "2026-04-16",
+      "current_price": 26204.009765625,
+      "prediction_score": 0.7385305137552167,
+      "prediction_trend": "强烈看涨",
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 0.32952899999999985,
+        "MA250": 25243.56421875,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.451139322915,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012706595448822479,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.56421875,
+          "contribution": 0.04659395330134835
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "target_date": "2026-05-06"
+    },
+    {
+      "timestamp": "2026-04-16T10:06:14",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26177.189453125,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.737589736486177,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": null,
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -0.614206,
+        "MA250": 25243.4569375,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.22763671875,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012700305414802984,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.4569375,
+          "contribution": 0.04659378532012372
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:07:15",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26163.779296875,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.7372234834581303,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.3667070606861847,
+        "confidence": "高",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_095930.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -0.9818070000000001,
+        "MA250": 25243.403296875,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.115885416668,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.01269742218438902,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.403296875,
+          "contribution": 0.04659370132938546
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:07:50",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26158.0390625,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.737366067767148,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.3667070606861847,
+        "confidence": "高",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_100739.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -0.8397729999999999,
+        "MA250": 25243.3803359375,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.06805013021,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012696241398033442,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.3803359375,
+          "contribution": 0.04659366537701787
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:12:15",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26148.609375,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.7370579270291279,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.34427922034437647,
+        "confidence": "高",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_101205.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -1.1487829999999999,
+        "MA250": 25243.3426171875,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26102.98946940104,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.01269437117859697,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.3426171875,
+          "contribution": 0.046593606316749414
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:19:40",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26178.390625,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.7376873624857848,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48627487623861015,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_101931.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -0.5164550000000001,
+        "MA250": 25243.4617421875,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.237646484376,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012700572191162586,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.4617421875,
+          "contribution": 0.04659379284332149
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:44:10",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26196.98046875,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.7366898356751468,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48902316327984124,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_104210.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -1.511958,
+        "MA250": 25243.5361015625,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.39256184896,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012704879438021364,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.05
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.5361015625,
+          "contribution": 0.046593909275424845
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.04
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.035
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.035
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "10d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:57:15",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26245.880859375,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6955854483131734,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_104210.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 1.8519150000000002,
+        "MA250": 25243.731703125,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.800065104166,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012717808737928911,
+        "Volatility_20d": 0.016006242210517725,
+        "Volatility_60d": 0.013956434762197583,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 66.2162792130468,
+        "RSI_ROC": -0.04623425449105123,
+        "RSI_Deviation": 16.216279213046803,
+        "MACD": 27.8847560490467,
+        "MACD_Signal": -126.82898496081366,
+        "MACD_Hist": 154.71374100986037,
+        "MACD_Hist_ROC": 0.1105606979811058,
+        "BB_Width": 0.08133516692347129,
+        "BB_Position": 0.8975256831641115,
+        "Momentum_Accel_5d": -0.021305350664284628,
+        "Momentum_Accel_10d": 0.0024061814114959557,
+        "Return_3d": 0.022798592365634862,
+        "Return_10d": 0.06040582355171131
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.731703125,
+          "contribution": 0.037275372438472947
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26103.800065104166,
+          "contribution": 0.023965034293913973
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T10:59:08",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26225.240234375,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6954960397038481,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 1.840306,
+        "MA250": 25243.649140625,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.628059895833,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012712068974026273,
+        "Volatility_20d": 0.015979498985782804,
+        "Volatility_60d": 0.013945328915444864,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 66.02388238898939,
+        "RSI_ROC": -0.04900549900239359,
+        "RSI_Deviation": 16.023882388989392,
+        "MACD": 26.23821046500234,
+        "MACD_Signal": -127.15829407762253,
+        "MACD_Hist": 153.39650454262488,
+        "MACD_Hist_ROC": 0.10110535780956953,
+        "BB_Width": 0.08106947731310793,
+        "BB_Position": 0.8893306405367286,
+        "Momentum_Accel_5d": -0.022106853618840905,
+        "Momentum_Accel_10d": 0.001607210698671535,
+        "Return_3d": 0.021994229871243443,
+        "Return_10d": 0.05957188549228709
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.649140625,
+          "contribution": 0.03727526901757976
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26103.628059895833,
+          "contribution": 0.023964901803097058
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T11:07:13",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26217.099609375,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6957643965336491,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 1.912631,
+        "MA250": 25243.616578125,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26103.560221354168,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012709918594279189,
+        "Volatility_20d": 0.015969483993560095,
+        "Volatility_60d": 0.013941154377142051,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 65.94739750114783,
+        "RSI_ROC": -0.05010717168680501,
+        "RSI_Deviation": 15.947397501147833,
+        "MACD": 25.588815878109017,
+        "MACD_Signal": -127.28817299500119,
+        "MACD_Hist": 152.8769888731102,
+        "MACD_Hist_ROC": 0.09737618882443355,
+        "BB_Width": 0.08096622913132293,
+        "BB_Position": 0.8860761886898862,
+        "Momentum_Accel_5d": -0.022422964927942823,
+        "Momentum_Accel_10d": 0.0012920981011079746,
+        "Return_1d": 0.010397192990485138,
+        "Return_3d": 0.021676990764825543,
+        "Return_5d": 0.018044889474426284,
+        "Return_10d": 0.05924298183675325,
+        "Return_20d": 0.014828512367640156,
+        "Return_60d": -0.02898949739447676
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.616578125,
+          "contribution": 0.037275228228523624
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26103.560221354168,
+          "contribution": 0.023964849548839436
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T11:52:44",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26295.5,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6941835791339395,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": -0.22125699999999993,
+        "MA250": 25243.9301796875,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26104.21355794271,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.01273329081140965,
+        "Volatility_20d": 0.016078402994826355,
+        "Volatility_60d": 0.013986182223582989,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 66.66999709246014,
+        "RSI_ROC": -0.039698994934755705,
+        "RSI_Deviation": 16.669997092460136,
+        "MACD": 31.84297809320924,
+        "MACD_Signal": -126.03734055198115,
+        "MACD_Hist": 157.88031864519039,
+        "MACD_Hist_ROC": 0.1332909134483884,
+        "BB_Width": 0.08199648421664488,
+        "BB_Position": 0.9168907359258235,
+        "Momentum_Accel_5d": -0.019378573359165374,
+        "Momentum_Accel_10d": 0.004326871320589509,
+        "Return_1d": 0.013418714661346698,
+        "Return_3d": 0.02473224387680184,
+        "Return_5d": 0.021089281043203734,
+        "Return_10d": 0.06241057340027978,
+        "Return_20d": 0.01786328558712169,
+        "Return_60d": -0.026085758848278906
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.9301796875,
+          "contribution": 0.03727562105702993
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26104.21355794271,
+          "contribution": 0.023965352794132762
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T12:49:02",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26306.55078125,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6944097600544938,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 0.7032810000000002,
+        "MA250": 25243.9743828125,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26104.30564778646,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012675404315515903,
+        "Volatility_20d": 0.016122651707980825,
+        "Volatility_60d": 0.01389215631023547,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 69.42614528236433,
+        "RSI_ROC": 0.23672406334762375,
+        "RSI_Deviation": 19.42614528236433,
+        "MACD": -26.196042374034732,
+        "MACD_Signal": -165.50742021327872,
+        "MACD_Hist": 139.311377839244,
+        "MACD_Hist_ROC": 0.025159575573435067,
+        "BB_Width": 0.0821480571908882,
+        "BB_Position": 0.7491566648151808,
+        "Momentum_Accel_5d": -0.035621024996339345,
+        "Momentum_Accel_10d": 0.013646932522438426,
+        "Return_1d": 0.002898850937763209,
+        "Return_3d": 0.0020770142648398604,
+        "Return_5d": 0.002097120468490088,
+        "Return_10d": 0.039894365428207346,
+        "Return_20d": 0.018916527021325624,
+        "Return_60d": -0.0335643098852596
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.9743828125,
+          "contribution": 0.03727567642725683
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26104.30564778646,
+          "contribution": 0.023965423727630268
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T13:03:45",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26306.55078125,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6967760690544939,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 3.0695900000000003,
+        "MA250": 25243.9743828125,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26104.30564778646,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012675404315515903,
+        "Volatility_20d": 0.016122651707980825,
+        "Volatility_60d": 0.01389215631023547,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 69.42614528236433,
+        "RSI_ROC": 0.23672406334762375,
+        "RSI_Deviation": 19.42614528236433,
+        "MACD": -26.196042374034732,
+        "MACD_Signal": -165.50742021327872,
+        "MACD_Hist": 139.311377839244,
+        "MACD_Hist_ROC": 0.025159575573435067,
+        "BB_Width": 0.0821480571908882,
+        "BB_Position": 0.7491566648151808,
+        "Momentum_Accel_5d": -0.035621024996339345,
+        "Momentum_Accel_10d": 0.013646932522438426,
+        "Return_1d": 0.002898850937763209,
+        "Return_3d": 0.0020770142648398604,
+        "Return_5d": 0.002097120468490088,
+        "Return_10d": 0.039894365428207346,
+        "Return_20d": 0.018916527021325624,
+        "Return_60d": -0.0335643098852596
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25243.9743828125,
+          "contribution": 0.03727567642725683
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26104.30564778646,
+          "contribution": 0.023965423727630268
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "timestamp": "2026-04-16T13:41:05",
+      "prediction_date": "2026-04-16",
+      "target_date": "2026-05-06",
+      "current_price": 26313.439453125,
+      "horizon": 20,
+      "score_model": {
+        "score": 0.6997957472455028,
+        "trend": "强烈看涨"
+      },
+      "catboost_model": {
+        "trend": "下跌",
+        "probability": 0.48753957044871854,
+        "confidence": "低",
+        "consistency": "⚠️ 不一致",
+        "model_path": "/data/fortune/data/hsi_models/hsi_catboost_20260416_105811.cbm"
+      },
+      "features": {
+        "US_10Y_Yield": 0.42820000648498535,
+        "US_10Y_Yield_Change_5d": -0.002097372350489457,
+        "VIX": 18.170000076293945,
+        "VIX_Change_5d": -0.13640687805842067,
+        "Southbound_Net_Inflow": 840.0,
+        "Southbound_Net_Buy": 6.0900739999999995,
+        "MA250": 25244.0019375,
+        "Volume_MA250": 3337986400.0,
+        "MA120": 26104.363053385416,
+        "60d_RS_Signal_MA250": 1.0,
+        "60d_RS_Signal_Volume_MA250": 0.0,
+        "20d_RS_Signal_MA250": 1.0,
+        "10d_RS_Signal_MA250": 1.0,
+        "5d_RS_Signal_MA250": 1.0,
+        "3d_RS_Signal_MA250": 1.0,
+        "60d_Trend_MA250": 1.0,
+        "20d_Trend_MA250": 1.0,
+        "10d_Trend_MA250": 1.0,
+        "5d_Trend_MA250": 1.0,
+        "3d_Trend_MA250": 1.0,
+        "60d_Trend_Volume_MA250": 0.0,
+        "20d_Trend_Volume_MA250": 0.0,
+        "Volatility_120d": 0.012675404315515903,
+        "Volatility_20d": 0.016122651707980825,
+        "Volatility_60d": 0.01389215631023547,
+        "60d_Trend_MA120": 1.0,
+        "20d_RS_Signal_Volume_MA250": 0.0,
+        "RSI": 69.42614528236433,
+        "RSI_ROC": 0.23672406334762375,
+        "RSI_Deviation": 19.42614528236433,
+        "MACD": -26.196042374034732,
+        "MACD_Signal": -165.50742021327872,
+        "MACD_Hist": 139.311377839244,
+        "MACD_Hist_ROC": 0.025159575573435067,
+        "BB_Width": 0.08224332411076388,
+        "BB_Position": 0.7486999773547975,
+        "Momentum_Accel_5d": -0.035621024996339345,
+        "Momentum_Accel_10d": 0.013646932522438426,
+        "Return_1d": 0.002898850937763209,
+        "Return_3d": 0.0020770142648398604,
+        "Return_5d": 0.002097120468490088,
+        "Return_10d": 0.039894365428207346,
+        "Return_20d": 0.018916527021325624,
+        "Return_60d": -0.0335643098852596
+      },
+      "top_features": [
+        {
+          "feature": "Southbound_Net_Inflow",
+          "value": 840.0,
+          "contribution": 0.08
+        },
+        {
+          "feature": "US_10Y_Yield",
+          "value": 0.42820000648498535,
+          "contribution": 0.07
+        },
+        {
+          "feature": "Volume_MA250",
+          "value": 3337986400.0,
+          "contribution": 0.06
+        },
+        {
+          "feature": "60d_RS_Signal_MA250",
+          "value": 1.0,
+          "contribution": 0.04
+        },
+        {
+          "feature": "MA250",
+          "value": 25244.0019375,
+          "contribution": 0.037275710943103356
+        },
+        {
+          "feature": "60d_RS_Signal_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "60d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.03
+        },
+        {
+          "feature": "60d_Trend_Volume_MA250",
+          "value": 0.0,
+          "contribution": -0.03
+        },
+        {
+          "feature": "20d_Trend_MA250",
+          "value": 1.0,
+          "contribution": 0.025
+        },
+        {
+          "feature": "MA120",
+          "value": 26104.363053385416,
+          "contribution": 0.023965467945036976
+        }
+      ],
+      "verified": false,
+      "actual_return": null,
+      "actual_direction": null
+    }
+  ],
+  "metadata": {
+    "last_updated": "2026-04-16T13:41:05",
+    "total_predictions": 17,
+    "last_verified": "2026-04-16T10:04:21"
+  }
+}
