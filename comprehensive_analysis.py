@@ -57,6 +57,44 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析模块不可用")
 
+# 板块类型定义（周期性/防御性）
+# 来源：SECTOR_ROTATION_ANALYSIS.md
+SECTOR_TYPES = {
+    # 周期性板块
+    'semiconductor': {'name': '半导体', 'type': '周期'},
+    'biotech': {'name': '生物医药', 'type': '周期'},
+    'tech': {'name': '科技', 'type': '周期'},
+    'consumer': {'name': '消费', 'type': '周期'},
+    'real_estate': {'name': '房地产', 'type': '周期'},
+    'energy': {'name': '能源', 'type': '周期'},
+    'shipping': {'name': '航运', 'type': '周期'},
+    'auto': {'name': '汽车', 'type': '周期'},
+    'new_energy': {'name': '新能源', 'type': '周期'},
+    'ai': {'name': '人工智能', 'type': '周期'},
+    # 防御性板块
+    'bank': {'name': '银行', 'type': '防御'},
+    'insurance': {'name': '保险', 'type': '防御'},
+    'utility': {'name': '公用事业', 'type': '防御'},
+    'environmental': {'name': '环保', 'type': '防御'},
+    'exchange': {'name': '交易所', 'type': '防御'},
+    'index': {'name': '指数', 'type': '防御'},
+}
+
+
+def get_sector_type(sector_code):
+    """
+    获取板块类型（周期/防御）
+
+    参数:
+    - sector_code: 板块代码
+
+    返回:
+    - str: '周期' 或 '防御'，未知则返回 '-'
+    """
+    if sector_code in SECTOR_TYPES:
+        return SECTOR_TYPES[sector_code]['type']
+    return '-'
+
 
 def safe_float_format(value, format_spec='.2f', default=''):
     """
@@ -839,12 +877,23 @@ def get_hsi_analysis():
             tencent_data = get_hsi_data_tencent()
             if tencent_data:
                 amount = tencent_data['amount']
-                # 计算前一天的成交额（从 yfinance 的 prev_volume 估算）
-                # yfinance volume 单位可能与腾讯不同，但比率计算仍然有效
-                # 使用前一天 yfinance 成交量估算成交额
-                prev_amount_estimate = amount * (prev_volume / volume_ma20) if volume_ma20 > 0 else amount
-                amount_ratio = amount / (prev_amount_estimate) if prev_amount_estimate > 0 else 1.0
-                print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿")
+                # 计算成交额比率：当天成交额 / 20日平均成交额
+                # 需要获取历史成交额数据来计算20日均值
+                try:
+                    from data_services.tencent_finance import get_hsi_data_tencent as get_hsi_history
+                    hsi_history = get_hsi_history(period_days=30)
+                    if hsi_history is not None and 'Amount' in hsi_history.columns and len(hsi_history) >= 20:
+                        # 计算20日平均成交额
+                        amount_ma20 = hsi_history['Amount'].tail(20).mean()
+                        amount_ratio = amount / amount_ma20 if amount_ma20 > 0 else 1.0
+                        print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿, 20日均值: {amount_ma20:.2f}亿, 比率: {amount_ratio:.2f}x")
+                    else:
+                        # 无法获取历史数据，比率设为 N/A
+                        amount_ratio = None
+                        print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿（无法计算比率）")
+                except Exception as e:
+                    print(f"  ⚠️ 获取历史成交额失败: {e}")
+                    amount_ratio = None
 
         # 趋势判断
         if current_price > ma20 > ma50:
@@ -2181,14 +2230,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 if sector_data and sector_data['performance'] is not None:
                     perf_df = sector_data['performance']
                     sector_leaders = sector_data['leaders']
-                    
-                    sector_text += "| 排名 | 板块名称 | 平均涨跌幅 | 龙头股TOP 3 |\n"
-                    sector_text += "|------|---------|-----------|-------------|\n"
-                    
+
+                    sector_text += "| 排名 | 板块名称 | 类型 | 平均涨跌幅 | 龙头股TOP 3 |\n"
+                    sector_text += "|------|---------|------|-----------|-------------|\n"
+
                     for idx, row in perf_df.iterrows():
                         trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
                         change_color = "+" if row['avg_change_pct'] > 0 else ""
-                        
+                        sector_type = get_sector_type(row['sector_code'])
+
                         leaders_text = ""
                         if row['sector_code'] in sector_leaders:
                             leaders = sector_leaders[row['sector_code']]
@@ -2197,23 +2247,80 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             for i, leader in enumerate(leaders, 1):
                                 leader_items.append(f"{leader['name']}({leader['change_pct']:+.1f}%)")
                             leaders_text = " / ".join(leader_items)
-                        
-                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
+
+                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {sector_type} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
                     
-                    # 添加投资建议
-                    top_sector = perf_df.iloc[0]
-                    bottom_sector = perf_df.iloc[-1]
-                    
-                    sector_text += "\n**投资建议**：\n"
-                    if float(top_sector['avg_change_pct']) > 1 if not pd.isna(top_sector['avg_change_pct']) else False:
-                        sector_text += f"- 当前热点板块：{top_sector['sector_name']}，平均涨幅 {safe_float_format(top_sector['avg_change_pct'], '2f')}%\n"
-                        if top_sector['sector_code'] in sector_leaders and sector_leaders[top_sector['sector_code']]:
-                            leader = sector_leaders[top_sector['sector_code']][0]
-                            sector_text += f"- 建议关注该板块的龙头股：{leader['name']} ⭐\n"
-                    
-                    if float(bottom_sector['avg_change_pct']) < -1 if not pd.isna(bottom_sector['avg_change_pct']) else False:
-                        sector_text += f"- 当前弱势板块：{bottom_sector['sector_name']}，平均跌幅 {safe_float_format(bottom_sector['avg_change_pct'], '2f')}%\n"
-                        sector_text += "- 建议谨慎操作该板块，等待企稳信号\n"
+                    # 添加投资建议（基于板块轮动规律）
+                    sector_text += "\n**投资建议（基于板块轮动规律）**：\n\n"
+
+                    # 获取当前市场状态
+                    current_market = get_current_market_state()
+
+                    if current_market:
+                        market_state = current_market['market_state']
+                        market_state_cn = current_market['market_state_cn']
+                        recent_20d_return = current_market['recent_20d_return']
+
+                        sector_text += f"**当前市场状态**：{market_state_cn}（HSI 20日收益：{recent_20d_return*100:+.2f}%）\n\n"
+
+                        # 统计周期/防御板块表现
+                        cyclical_avg = 0
+                        defensive_avg = 0
+                        cyclical_count = 0
+                        defensive_count = 0
+
+                        for idx, row in perf_df.iterrows():
+                            sector_type = get_sector_type(row['sector_code'])
+                            change = row['avg_change_pct'] if not pd.isna(row['avg_change_pct']) else 0
+                            if sector_type == '周期':
+                                cyclical_avg += change
+                                cyclical_count += 1
+                            elif sector_type == '防御':
+                                defensive_avg += change
+                                defensive_count += 1
+
+                        if cyclical_count > 0:
+                            cyclical_avg = cyclical_avg / cyclical_count
+                        if defensive_count > 0:
+                            defensive_avg = defensive_avg / defensive_count
+
+                        sector_text += f"**板块表现对比**：\n"
+                        sector_text += f"- 周期板块平均：{'+' if cyclical_avg > 0 else ''}{cyclical_avg:.2f}%\n"
+                        sector_text += f"- 防御板块平均：{'+' if defensive_avg > 0 else ''}{defensive_avg:.2f}%\n\n"
+
+                        # 根据市场状态给出配置建议
+                        if market_state == 'bull':
+                            sector_text += "**牛市配置建议**：\n"
+                            sector_text += "- ✅ **重仓周期板块**：牛市中周期板块占优比例74.3%\n"
+                            sector_text += "- ✅ **推荐配置**：半导体30%、生物医药25%、科技20%、消费15%\n"
+                            sector_text += "- ✅ **总仓位建议**：90%\n"
+                            if cyclical_avg > defensive_avg:
+                                sector_text += f"- 📈 当前周期板块表现优于防御板块，符合牛市规律\n"
+                        elif market_state == 'bear':
+                            sector_text += "**熊市配置建议**：\n"
+                            sector_text += "- 🛡️ **重仓防御板块**：熊市中防御板块占优比例65.9%\n"
+                            sector_text += "- 🛡️ **推荐配置**：保险30%、公用事业25%、银行20%\n"
+                            sector_text += "- 🛡️ **总仓位建议**：75%（保留25%现金）\n"
+                            sector_text += "- ⚠️ **注意**：银行股Walk-forward夏普-0.053，不宜重仓\n"
+                            if defensive_avg > cyclical_avg:
+                                sector_text += f"- 📉 当前防御板块表现优于周期板块，符合熊市规律\n"
+                        else:
+                            sector_text += "**震荡市配置建议**：\n"
+                            sector_text += "- 🔄 **均衡配置**：周期/防御各50%\n"
+                            sector_text += "- 🔄 **动态调整**：根据相对强弱排名选择前3板块\n"
+                            sector_text += "- 🔄 **总仓位建议**：60%（保留40%现金）\n"
+                            sector_text += "- 📊 关注相对强势板块，每5日重新评估\n"
+
+                        sector_text += "\n**⚠️ 重要提醒**：\n"
+                        sector_text += "- 领涨频率高≠策略收益高，需以Walk-forward验证结果为准\n"
+                        sector_text += "- 动量/反转策略效果有限，不建议单独使用\n"
+                        sector_text += "- 板块轮动周期约28天，每2-3周评估轮动时机\n"
+
+                    else:
+                        # 无法获取市场状态时的默认建议
+                        sector_text += "- 📊 请结合恒生指数20日收益判断市场状态\n"
+                        sector_text += "- 牛市配置周期板块，熊市配置防御板块\n"
+                        sector_text += "- 单股仓位不超过15%，单板块不超过30%\n"
                 
                 # 构建股息信息文本
                 dividend_text = ""
@@ -2256,8 +2363,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     elif hsi_data.get('amount') is not None:
                         # yfinance 数据未更新，使用腾讯财经成交额
                         hsi_text += f"- 成交额：{hsi_data['amount']:.2f}亿港元（腾讯财经实时数据）\n"
-                        if hsi_data.get('amount_ratio'):
-                            hsi_text += f"- 成交额比率：{hsi_data['amount_ratio']:.2f}x\n"
+                        if hsi_data.get('amount_ratio') is not None:
+                            hsi_text += f"- 成交额比率：{hsi_data['amount_ratio']:.2f}x（相对20日均值）\n"
+                        else:
+                            hsi_text += "- 成交额比率：N/A（无法获取历史数据）\n"
                     else:
                         hsi_text += "- 成交量：N/A（数据暂未更新）\n"
                         hsi_text += "- 成交量比率：N/A\n"
