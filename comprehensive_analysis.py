@@ -823,6 +823,60 @@ def get_hsi_data_tencent():
         return None
 
 
+def get_stock_realtime_data(stock_code):
+    """
+    从腾讯财经获取个股实时数据
+
+    参数:
+    - stock_code: 股票代码（如 "0005.HK"）
+
+    返回:
+    - dict: 包含实时价格数据，或 None（如果获取失败）
+      {
+        'price': float,  # 最新价
+        'prev_close': float,  # 昨收
+        'open': float,  # 今开
+        'high': float,  # 最高
+        'low': float,  # 最低
+        'change_points': float,  # 涨跌点数
+        'change_pct': float,  # 涨跌幅
+        'volume': float  # 成交量
+      }
+    """
+    try:
+        import requests
+        # 移除 .HK 后缀，补零到5位
+        symbol = stock_code.replace('.HK', '').zfill(5)
+        url = f'https://web.sqt.gtimg.cn/q=r_hk{symbol}'
+        resp = requests.get(url, timeout=10)
+
+        if resp.status_code != 200:
+            return None
+
+        # 解析响应数据
+        data_str = resp.text.split('\"')[1]
+        fields = data_str.split('~')
+
+        # 腾讯财经港股字段说明：
+        # [3] 最新价, [4] 昨收, [5] 今开, [6] 成交量
+        # [31] 涨跌点数, [32] 涨跌幅, [33] 最高, [34] 最低
+        price = float(fields[3])
+        prev_close = float(fields[4])
+        return {
+            'price': price,
+            'prev_close': prev_close,
+            'open': float(fields[5]),
+            'high': float(fields[33]) if len(fields) > 33 else 0,
+            'low': float(fields[34]) if len(fields) > 34 else 0,
+            'change_points': float(fields[31]) if len(fields) > 31 else price - prev_close,
+            'change_pct': float(fields[32]) if len(fields) > 32 else (price - prev_close) / prev_close * 100,
+            'volume': float(fields[6]) if len(fields) > 6 else 0
+        }
+    except Exception as e:
+        print(f"⚠️ 腾讯财经获取 {stock_code} 数据失败: {e}")
+        return None
+
+
 def get_hsi_analysis():
     """
     获取恒生指数分析
@@ -1380,11 +1434,17 @@ def get_stock_technical_indicators(stock_code):
                 return None
 
         prev = hist.iloc[-2] if len(hist) > 1 else latest
-        
-        # 基本指标
-        current_price = latest['Close']
-        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
-        
+
+        # 优先使用腾讯财经实时价格
+        realtime_data = get_stock_realtime_data(stock_code)
+        if realtime_data and realtime_data.get('price', 0) > 0:
+            current_price = realtime_data['price']
+            change_pct = realtime_data['change_pct']
+        else:
+            # 回退到 yfinance 数据
+            current_price = latest['Close']
+            change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+
         # 技术指标
         # RSI
         delta = hist['Close'].diff()
