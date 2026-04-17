@@ -1349,26 +1349,36 @@ def get_hsi_email_indicators():
 def get_stock_technical_indicators(stock_code):
     """
     获取单只股票的详细技术指标
-    
+
     参数:
     - stock_code: 股票代码（如 "0700.HK"）
-    
+
     返回:
     - dict: 包含详细技术指标的字典
     """
     try:
         # 移除.HK后缀
         symbol = stock_code.replace('.HK', '')
-        
+
         # 获取股票数据 - 使用完整的股票代码（带.HK）
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
-        
+
         if hist.empty:
             print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")
             return None
-        
+
+        # 检查最后一天是否是 NaN（今日数据未更新）
         latest = hist.iloc[-1]
+        if pd.isna(latest['Close']):
+            # 使用倒数第二天作为最新数据
+            if len(hist) > 1:
+                latest = hist.iloc[-2]
+                hist = hist.iloc[:-1]  # 移除最后一行 NaN 数据
+            else:
+                print(f"⚠️ 警告: {stock_code} 无有效数据")
+                return None
+
         prev = hist.iloc[-2] if len(hist) > 1 else latest
         
         # 基本指标
