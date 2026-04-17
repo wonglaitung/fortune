@@ -929,46 +929,43 @@ def get_hsi_analysis():
 def get_current_market_state():
     """
     获取当前市场状态（实时）
-    
+
     返回:
     dict: 当前市场状态信息
     """
     try:
-        # 获取最近30天的恒生指数数据（日线数据用于计算20天收益率）
+        # 使用 period 方式获取数据，确保包含最新数据
+        # history(start=..., end=...) 方式可能不包含今天的实时数据
         hsi_ticker = yf.Ticker("^HSI")
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        
-        hsi_df = hsi_ticker.history(start=start_date.strftime('%Y-%m-%d'), 
-                                    end=end_date.strftime('%Y-%m-%d'))
-        
+        hsi_df = hsi_ticker.history(period="2mo")  # 获取最近2个月数据，确保足够
+
         if len(hsi_df) < 10:
             return None
-        
+
         # 获取实时数据（1分钟间隔，用于显示当前价格）
         real_time_df = hsi_ticker.history(period='1d', interval='1m')
-        
+
         # 计算最近20天收益率（使用日线数据）
         if len(hsi_df) >= 20:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-20]) / hsi_df['Close'].iloc[-20]
         else:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
-        
+
         # 计算最近5天收益率（使用日线数据）
         if len(hsi_df) >= 5:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-5]) / hsi_df['Close'].iloc[-5]
         else:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
-        
+
         # 获取实时价格（优先使用分钟级数据）
         current_hsi = None
         current_time = None
-        
+
         if not real_time_df.empty:
             current_hsi = real_time_df['Close'].iloc[-1]
             # 转换时区到香港时间
             current_time = real_time_df.index[-1].tz_convert('Asia/Hong_Kong')
-        
+
         # 如果没有实时数据，使用日线数据
         if current_hsi is None and not hsi_df.empty:
             current_hsi = hsi_df['Close'].iloc[-1]
