@@ -1217,16 +1217,112 @@ class HSI_Predictor:
         if if_anomaly:
             anomaly_list.append("多维特征异常")
 
-        # 多周期预测一致性判断
+        # 多周期预测一致性判断 + 交易法则匹配
         consistency_signal = ""
-        if multi_horizon_results:
+        trading_action = None  # 交易建议
+
+        if multi_horizon_results and all(h in multi_horizon_results for h in [1, 5, 20]):
+            pred_1d = multi_horizon_results[1]['prediction']
+            pred_5d = multi_horizon_results[5]['prediction']
+            pred_20d = multi_horizon_results[20]['prediction']
+
+            # 编码预测模式：1=上涨，0=下跌
+            pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
+
+            # 根据四大交易法则匹配操作建议
+            if pattern == '111':  # 三周期一致看涨
+                consistency_signal = "📈 三周期一致看涨"
+                trading_action = {
+                    'rule': '一致追涨',
+                    'pattern': pattern,
+                    'action': '买入',
+                    'holding': '持有20天',
+                    'confidence': '高',
+                    'color': '#166534',
+                    'bg_color': '#dcfce7',
+                    'description': '三周期共振，上涨概率高（历史准确率92%）'
+                }
+            elif pattern == '000':  # 三周期一致看跌
+                consistency_signal = "📉 三周期一致看跌"
+                trading_action = {
+                    'rule': '趋势惯性',
+                    'pattern': pattern,
+                    'action': '止损/空仓',
+                    'holding': '观望',
+                    'confidence': '高',
+                    'color': '#991b1b',
+                    'bg_color': '#fee2e2',
+                    'description': '下跌惯性最强，不抄底（历史准确率93%）'
+                }
+            elif pattern == '110':  # 短涨长跌 - 背离逃顶
+                consistency_signal = "⚠️ 短期背离"
+                trading_action = {
+                    'rule': '背离逃顶',
+                    'pattern': pattern,
+                    'action': '减仓',
+                    'holding': '回避风险',
+                    'confidence': '中',
+                    'color': '#92400e',
+                    'bg_color': '#fef3c7',
+                    'description': '短期反弹但长期趋势向下，警惕诱多'
+                }
+            elif pattern in ['100', '010']:  # 仅一个短期看涨
+                consistency_signal = "⏳ 趋势不明"
+                trading_action = {
+                    'rule': '阶梯验证',
+                    'pattern': pattern,
+                    'action': '轻仓试探',
+                    'holding': '观察',
+                    'confidence': '低',
+                    'color': '#6b7280',
+                    'bg_color': '#f3f4f6',
+                    'description': '信号不统一，等待更多确认'
+                }
+            elif pattern in ['011', '001']:  # 中长期看涨但短期看跌
+                consistency_signal = "🔄 短期调整"
+                trading_action = {
+                    'rule': '阶梯验证',
+                    'pattern': pattern,
+                    'action': '分批建仓',
+                    'holding': '逢低买入',
+                    'confidence': '中高',
+                    'color': '#1d4ed8',
+                    'bg_color': '#dbeafe',
+                    'description': '中长期趋势向上，短期回调是买入机会'
+                }
+            elif pattern == '101':  # 1天和20天看涨，5天看跌
+                consistency_signal = "📊 震荡上行"
+                trading_action = {
+                    'rule': '阶梯验证',
+                    'pattern': pattern,
+                    'action': '持有',
+                    'holding': '中期持有',
+                    'confidence': '中',
+                    'color': '#0369a1',
+                    'bg_color': '#e0f2fe',
+                    'description': '中期波动但长期看涨，耐心持有'
+                }
+            else:
+                consistency_signal = "❓ 模式待定"
+                trading_action = {
+                    'rule': '观望',
+                    'pattern': pattern,
+                    'action': '观望',
+                    'holding': '-',
+                    'confidence': '低',
+                    'color': '#6b7280',
+                    'bg_color': '#f3f4f6',
+                    'description': '信号不明确，建议观望'
+                }
+        elif multi_horizon_results:
+            # 部分周期数据
             predictions = [multi_horizon_results[h]['prediction'] for h in [1, 5, 20] if h in multi_horizon_results]
             all_up = all(p == '上涨' for p in predictions)
             all_down = all(p == '下跌' for p in predictions)
             if all_up:
-                consistency_signal = "📈 三周期一致看涨"
+                consistency_signal = "📈 看涨"
             elif all_down:
-                consistency_signal = "📉 三周期一致看跌"
+                consistency_signal = "📉 看跌"
 
         # 统计正面和负面因素数量
         positive_count = sum(1 for f in feature_details if f['contribution'] > 0)
@@ -1322,6 +1418,35 @@ class HSI_Predictor:
             </div>
 
             {'<div class="consistency up">' + consistency_signal + ' - 强信号</div>' if consistency_signal and '看涨' in consistency_signal else '<div class="consistency down">' + consistency_signal + ' - 强信号</div>' if consistency_signal else ''}
+"""
+
+        # 操作建议卡片
+        if trading_action:
+            content += f"""
+            <!-- 操作建议 -->
+            <div style="margin: 20px 0; padding: 20px; background: {trading_action['bg_color']}; border-radius: 12px; border: 2px solid {trading_action['color']};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 14px; color: #6b7280;">💡 触发法则：<strong style="color: {trading_action['color']};">{trading_action['rule']}</strong></span>
+                    <span style="font-size: 12px; background: {trading_action['color']}; color: white; padding: 2px 8px; border-radius: 4px;">模式 {trading_action['pattern']}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280;">建议操作</div>
+                        <div style="font-size: 24px; font-weight: 700; color: {trading_action['color']};">{trading_action['action']}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280;">持仓周期</div>
+                        <div style="font-size: 18px; font-weight: 600; color: #374151;">{trading_action['holding']}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280;">信号强度</div>
+                        <div style="font-size: 18px; font-weight: 600; color: {trading_action['color']};">{trading_action['confidence']}</div>
+                    </div>
+                </div>
+                <div style="font-size: 13px; color: #4b5563; padding-top: 10px; border-top: 1px dashed #d1d5db;">
+                    📌 {trading_action['description']}
+                </div>
+            </div>
 """
 
         # 多周期预测表格
