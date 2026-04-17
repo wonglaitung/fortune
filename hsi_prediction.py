@@ -4,6 +4,21 @@
 恒生指数涨跌预测脚本
 
 基于模型特征重要性，使用加权评分模型预测恒生指数短期走势
+
+四大交易法则（基于 Walk-forward 回测验证，2020-2024年，938个样本）：
+┌──────────┬────────────────────────┬──────────────────┐
+│   法则   │          描述          │       操作       │
+├──────────┼────────────────────────┼──────────────────┤
+│ 一致追涨 │ 三周期一致看涨         │ 买入，持有20天   │
+├──────────┼────────────────────────┼──────────────────┤
+│ 背离逃顶 │ 短涨长跌（模式110）    │ 减仓，回避风险   │
+├──────────┼────────────────────────┼──────────────────┤
+│ 阶梯验证 │ 1天→5天→20天逐级确认   │ 前两周期对则重仓 │
+├──────────┼────────────────────────┼──────────────────┤
+│ 趋势惯性 │ 一致看跌时下跌惯性最强 │ 果断止损，不抄底 │
+└──────────┴────────────────────────┴──────────────────┘
+
+详细分析报告：THREE_HORIZON_ANALYSIS.md
 """
 
 import os
@@ -1448,6 +1463,48 @@ class HSI_Predictor:
 """
 
         content += f"""
+        </div>
+
+        <!-- 交易法则参考 -->
+        <div class="section">
+            <div class="section-title">💡 四大交易法则</div>
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+                基于 Walk-forward 回测验证（2020-2024年，938个样本）
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">法则</th>
+                        <th style="width: 40%;">描述</th>
+                        <th style="width: 40%;">操作建议</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 600; color: #166534;">📈 一致追涨</td>
+                        <td>三周期一致看涨（占比12.3%，准确率92%）</td>
+                        <td style="color: #166534;">买入，持有20天</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; color: #92400e;">⚡ 背离逃顶</td>
+                        <td>短涨长跌（模式110：1天↑ 5天↑ 20天↓）</td>
+                        <td style="color: #92400e;">减仓，回避风险</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; color: #1d4ed8;">🔄 阶梯验证</td>
+                        <td>1天→5天→20天逐级确认趋势</td>
+                        <td style="color: #1d4ed8;">前两周期正确则可重仓</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600; color: #991b1b;">📉 趋势惯性</td>
+                        <td>一致看跌时下跌惯性最强（占比23.4%，准确率93%）</td>
+                        <td style="color: #991b1b;">果断止损，不抄底</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
+                <strong>模式说明：</strong>110 = 1天涨、5天涨、20天跌，表示短期反弹但长期趋势向下，需警惕
+            </div>
         </div>
 
         <!-- 第三部分：风险提示 -->
