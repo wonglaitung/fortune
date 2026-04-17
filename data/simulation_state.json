@@ -29752,6 +29752,22 @@
       "current_price": 35.76,
       "target_price": 38.5,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-17T15:06:33.861584",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.71,
+      "amount": 0,
+      "capital_after": 720.189294051961,
+      "reason": "价格低位区域(33.46%)，MACD金叉，OBV趋势上升，成交额变化1日+33.32%显著放量",
+      "success": false,
+      "stop_loss_price": 15.05,
+      "current_price": 17.71,
+      "target_price": 20.5,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -47128,176 +47144,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-04-17 11:04:20",
-      "buy": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "建仓评分最高（6.2分），技术指标强协同（OBV、CMF、情感指标3项同向），TAV中等共振提供趋势支持。筹码阻力中等（上方筹码41.3%），结合60日收益率-15.17%但相对强度6.55%跑赢恒指，超跌反弹概率高。板块虽弱（半导体股-0.52%），但个股独立性较强，新闻显示中国半导体加速投资（\"Record revenues from Chinese semiconductors\"），短期情绪修复可期。",
-          "allocation_pct": 25,
-          "stop_loss_price": 87.5,
-          "target_price": 92.5,
-          "validity_period": 7
-        },
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "TAV评分最高（58.25分），筹码阻力极低（上方筹码0.0%），拉升难度\"容易\"，技术面优势显著。相对强度7.03%跑赢恒指，60日收益率-22.46%超跌，反弹动能充足；OBV上升与CMF微流入（-0.0305，接近平衡）显示资金试探性介入。人工智能板块弱势（-0.89%），但个股3日收益率2.43%领先，独立行情可期。",
-          "allocation_pct": 20,
-          "stop_loss_price": 16.5,
-          "target_price": 18.8,
-          "validity_period": 7
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "筹码阻力最低（上方筹码23.0%，拉升难度\"容易\"），技术指标强协同（OBV、CMF、情感3项同向），TAV中等共振提供短期支撑。相对强度9.79%显著跑赢恒指，60日收益率-9.7%超跌，生物医药板块虽跌-2.84%，但个股独立性较强（新闻显示\"Record haul of trophies\"）。CMF资金流入（0.0361）与OBV上升，显示资金逢低介入。",
-          "allocation_pct": 15,
-          "stop_loss_price": 33.5,
-          "target_price": 37.2,
-          "validity_period": 2
-        }
-      ],
-      "sell": [
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "出货信号全面：价格高位（位置百分位100.0%）、RSI 66.9超买、CMF流出（-0.1408）、OBV下降、布林带超买。筹码分布：上方筹码比例14.8%低阻力，但板块弱势（公用事业股-0.23%）压制反弹空间；60日收益率仅1.87%，动能衰竭。基本面：PE 11.61合理，但新闻无利好，市场偏好转向防御。",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "1088.HK",
-          "name": "中国神华",
-          "reason": "出货信号：价格高位（位置百分位63.59%）、MACD死叉预警、CMF流出（-0.1551）、价格下跌。技术面：RSI 47.94中性，但60日收益率12.36%后动能衰竭；相对强度-8.08%跑输恒指，板块弱势（能源股-1.05%）。筹码分布：上方筹码比例39.2%中等阻力，但拉升难度\"中等\"，反弹空间有限。",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "出货信号：价格高位（位置百分位100.0%）、RSI 68.63超买、CMF流出（-0.369）、布林带超买。矛盾点：银行板块温和上涨（+0.13%），但个股60日收益率9.96%后动能衰竭；OBV上升但CMF大幅流出，资金分歧。基本面：PE 5.91低估，但市场偏好转向成长股，银行股吸引力下降。",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "出货信号：价格高位（位置百分位100.0%）、RSI 78.53严重超买、CMF流出（-0.4038）、布林带超买。技术面：3日收益率1.17%但60日动能衰竭；相对强度7.74%跑赢恒指，但超买信号压制持续性。筹码分布：上方筹码比例0.0%，但CMF流出显著，资金短期离场。",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "成交额变化率-74.98/-84.08/-73.34，触发谨慎条件，市场流动性不足，交易信号可靠性降低。",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-17 11:04:21",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号全面：价格高位（位置百分位100.0%）、RSI 66.9超买、CMF流出（-0.1408）、OBV下降、布林带超买。筹码分布：上方筹码比例14.8%低阻力，但板块弱势（公用事业股-0.23%）压制反弹空间；60日收益率仅1.87%，动能衰竭。基本面：PE 11.61合理，但新闻无利好，市场偏好转向防御。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 81.6,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-17 11:04:23",
-      "type": "SELL",
-      "code": "1088.HK",
-      "name": "中国神华",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号：价格高位（位置百分位63.59%）、MACD死叉预警、CMF流出（-0.1551）、价格下跌。技术面：RSI 47.94中性，但60日收益率12.36%后动能衰竭；相对强度-8.08%跑输恒指，板块弱势（能源股-1.05%）。筹码分布：上方筹码比例39.2%中等阻力，但拉升难度\"中等\"，反弹空间有限。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 45.7,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-17 11:04:26",
-      "type": "SELL",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号：价格高位（位置百分位100.0%）、RSI 68.63超买、CMF流出（-0.369）、布林带超买。矛盾点：银行板块温和上涨（+0.13%），但个股60日收益率9.96%后动能衰竭；OBV上升但CMF大幅流出，资金分歧。基本面：PE 5.91低估，但市场偏好转向成长股，银行股吸引力下降。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 8.62,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-17 11:04:29",
-      "type": "SELL",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货信号：价格高位（位置百分位100.0%）、RSI 78.53严重超买、CMF流出（-0.4038）、布林带超买。技术面：3日收益率1.17%但60日动能衰竭；相对强度7.74%跑赢恒指，但超买信号压制持续性。筹码分布：上方筹码比例0.0%，但CMF流出显著，资金短期离场。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.05,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-17 11:04:31",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "成交额变化率-74.98/-84.08/-73.34，触发谨慎条件，市场流动性不足，交易信号可靠性降低。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 141.0,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-17 11:04:36",
-      "type": "BUY",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 90.4,
-      "amount": 0,
-      "reason": "建仓评分最高（6.2分），技术指标强协同（OBV、CMF、情感指标3项同向），TAV中等共振提供趋势支持。筹码阻力中等（上方筹码41.3%），结合60日收益率-15.17%但相对强度6.55%跑赢恒指，超跌反弹概率高。板块虽弱（半导体股-0.52%），但个股独立性较强，新闻显示中国半导体加速投资（\"Record revenues from Chinese semiconductors\"），短期情绪修复可期。",
-      "capital_after": 2472.189294051961,
-      "success": false,
-      "stop_loss_price": 87.5,
-      "current_price": 90.4,
-      "target_price": 92.5,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-04-17 11:04:38",
       "type": "BUY",
       "code": "2533.HK",
@@ -47481,6 +47327,37 @@
       "stop_loss_price": 32.5,
       "current_price": 35.76,
       "target_price": 38.5,
+      "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-17 15:06:32",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "价格低位区域(33.46%)，MACD金叉，OBV趋势上升，成交额变化1日+33.32%显著放量",
+          "allocation_pct": 40,
+          "stop_loss_price": 15.05,
+          "target_price": 20.5,
+          "validity_period": 7
+        }
+      ],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-17 15:06:33",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.71,
+      "amount": 0,
+      "reason": "价格低位区域(33.46%)，MACD金叉，OBV趋势上升，成交额变化1日+33.32%显著放量",
+      "capital_after": 720.189294051961,
+      "success": false,
+      "stop_loss_price": 15.05,
+      "current_price": 17.71,
+      "target_price": 20.5,
       "validity_period": 7
     }
   ],
