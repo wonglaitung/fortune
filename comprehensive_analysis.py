@@ -833,18 +833,36 @@ def get_hsi_analysis():
     try:
         hsi_ticker = yf.Ticker("^HSI")
         hist = hsi_ticker.history(period="6mo")
-        
+
         if hist.empty:
             return None
-        
+
         latest = hist.iloc[-1]
         prev = hist.iloc[-2] if len(hist) > 1 else latest
-        
-        # 计算基本指标
-        current_price = latest['Close']
-        change_points = latest['Close'] - prev['Close']
-        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
-        
+
+        # 成交额数据（优先使用腾讯财经实时数据）
+        amount = None
+        amount_ratio = None
+        amount_ma20 = None
+        tencent_data = get_hsi_data_tencent()
+        if tencent_data:
+            amount = tencent_data['amount']
+
+        # 计算基本指标 - 优先使用腾讯财经实时数据
+        if tencent_data and tencent_data.get('price', 0) > 0:
+            # 使用腾讯财经实时数据
+            current_price = tencent_data['price']
+            prev_close = tencent_data['prev_close']
+            # 腾讯财经接口的涨跌字段可能为0，手动计算
+            change_points = current_price - prev_close
+            change_pct = (change_points / prev_close * 100) if prev_close != 0 else 0
+        else:
+            # 回退到 yfinance 数据
+            current_price = latest['Close']
+            change_points = latest['Close'] - prev['Close']
+            change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+            prev_close = prev['Close']
+
         # 计算RSI
         delta = hist['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
@@ -852,7 +870,7 @@ def get_hsi_analysis():
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         current_rsi = rsi.iloc[-1]
-        
+
         # 计算移动平均线
         ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
         ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
@@ -869,31 +887,21 @@ def get_hsi_analysis():
         prev_volume = prev['Volume']
         volume_change_pct = ((current_volume - prev_volume) / prev_volume * 100) if prev_volume > 0 else 0
 
-        # 成交额数据（从腾讯财经获取，作为备用数据源）
-        amount = None
-        amount_ratio = None
-        if current_volume == 0:
-            # yfinance 数据未更新，使用腾讯财经获取成交额
-            tencent_data = get_hsi_data_tencent()
-            if tencent_data:
-                amount = tencent_data['amount']
-                # 计算成交额比率：当天成交额 / 20日平均成交额
-                # 需要获取历史成交额数据来计算20日均值
-                try:
-                    from data_services.tencent_finance import get_hsi_data_tencent as get_hsi_history
-                    hsi_history = get_hsi_history(period_days=30)
-                    if hsi_history is not None and 'Amount' in hsi_history.columns and len(hsi_history) >= 20:
-                        # 计算20日平均成交额
-                        amount_ma20 = hsi_history['Amount'].tail(20).mean()
-                        amount_ratio = amount / amount_ma20 if amount_ma20 > 0 else 1.0
-                        print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿, 20日均值: {amount_ma20:.2f}亿, 比率: {amount_ratio:.2f}x")
-                    else:
-                        # 无法获取历史数据，比率设为 N/A
-                        amount_ratio = None
-                        print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿（无法计算比率）")
-                except Exception as e:
-                    print(f"  ⚠️ 获取历史成交额失败: {e}")
+        # 计算成交额比率
+        if tencent_data:
+            try:
+                from data_services.tencent_finance import get_hsi_data_tencent as get_hsi_history
+                hsi_history = get_hsi_history(period_days=30)
+                if hsi_history is not None and 'Amount' in hsi_history.columns and len(hsi_history) >= 20:
+                    amount_ma20 = hsi_history['Amount'].tail(20).mean()
+                    amount_ratio = amount / amount_ma20 if amount_ma20 > 0 else 1.0
+                    print(f"  📊 成交金额: {amount:.2f}亿, 20日均值: {amount_ma20:.2f}亿, 比率: {amount_ratio:.2f}x")
+                else:
                     amount_ratio = None
+                    print(f"  📊 成交金额: {amount:.2f}亿（无法计算比率）")
+            except Exception as e:
+                print(f"  ⚠️ 获取历史成交额失败: {e}")
+                amount_ratio = None
 
         # 趋势判断
         if current_price > ma20 > ma50:
@@ -2349,24 +2357,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '.2f')}\n"
                     hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '.2f')}\n"
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '.2f')}\n"
-                    # 成交量相关数据
-                    # 当成交量为0时（数据未更新），使用腾讯财经成交额
-                    if hsi_data['volume'] > 0:
-                        hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
-                        volume_ratio = hsi_data.get('volume_ratio', 0)
-                        volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
-                        volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
-                        hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
-                    elif hsi_data.get('amount') is not None:
-                        # yfinance 数据未更新，使用腾讯财经成交额
-                        hsi_text += f"- 成交额：{hsi_data['amount']:.2f}亿港元（腾讯财经实时数据）\n"
+                    # 成交金额数据（优先显示）
+                    if hsi_data.get('amount') is not None:
+                        hsi_text += f"- 成交金额：{hsi_data['amount']:.2f}亿港元\n"
                         if hsi_data.get('amount_ratio') is not None:
-                            hsi_text += f"- 成交额比率：{hsi_data['amount_ratio']:.2f}x（相对20日均值）\n"
+                            hsi_text += f"- 成交金额比率：{hsi_data['amount_ratio']:.2f}x（相对20日均值）\n"
                         else:
-                            hsi_text += "- 成交额比率：N/A（无法获取历史数据）\n"
+                            hsi_text += "- 成交金额比率：N/A（无法获取历史数据）\n"
                     else:
-                        hsi_text += "- 成交量：N/A（数据暂未更新）\n"
-                        hsi_text += "- 成交量比率：N/A\n"
+                        hsi_text += "- 成交金额：N/A（数据暂未更新）\n"
+                        hsi_text += "- 成交金额比率：N/A\n"
 
                 if current_market:
                     hsi_text += f"- 市场信号: {current_market['market_signal']}\n"
