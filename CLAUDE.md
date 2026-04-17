@@ -37,7 +37,8 @@ python3 -m pytest tests/test_zscore_detector.py -v
 | **恒指预测验证** | `python3 hsi_prediction.py --verify` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
-
+| **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
+| **板块分析** | `./scripts/run_sector_analysis.sh` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -55,6 +56,7 @@ python3 -m pytest tests/test_zscore_detector.py -v
 | **深度学习模型** | LSTM/Transformer 表现远不如 CatBoost，**不推荐** |
 | **Walk-forward验证** | **唯一可信**的模型验证方法 |
 | **交易时段检测** | 交易时段数据不完整，应在收盘后检测 |
+| **加密货币策略** | 股票异常策略**不适用于**加密货币 |
 
 ### 异常策略（两年数据验证）
 
@@ -67,11 +69,12 @@ python3 -m pytest tests/test_zscore_detector.py -v
 
 | 场景 | 占比 | 至少一周期正确率 | 操作 |
 |------|------|-----------------|------|
-| **三周期一致看涨** | 17.4% | **92%** | 强烈买入 |
-| **三周期一致看跌** | 24.0% | **87%** | 强烈卖出 |
-| 不一致 | 58.6% | - | 观望 |
+| **三周期一致看涨** | 12.3% | **92%** | 强烈买入 |
+| **三周期一致看跌** | 23.4% | **93%** | 强烈卖出 |
+| 不一致 | 64.4% | - | 观望 |
 
-> **详细说明**：参阅 [lessons.md](lessons.md)
+> **数据来源**: Walk-forward回测验证（2020-2024年，938个样本）
+> **详细说明**: 参阅 [lessons.md](lessons.md)
 
 ---
 
@@ -80,27 +83,35 @@ python3 -m pytest tests/test_zscore_detector.py -v
 ```
 fortune/
 ├── 核心入口
-│   ├── comprehensive_analysis.py     # 综合分析（每日信号生成）
-│   ├── detect_stock_anomalies.py     # 港股异常检测
-│   ├── hsi_prediction.py             # 恒生指数预测（双模型）
-│   └── crypto_email.py               # 加密货币监控
-├── anomaly_detector/                 # 异常检测模块
-│   ├── zscore_detector.py            # Z-Score 检测器
-│   ├── isolation_forest_detector.py  # Isolation Forest 检测器
-│   └── anomaly_integrator.py         # 异常整合器
-├── data_services/                    # 数据服务层
-│   ├── technical_analysis.py         # 技术分析工具
-│   ├── fundamental_data.py           # 基本面数据
-│   └── southbound_data.py            # 南向资金数据
-├── ml_services/                      # 机器学习模块
-│   ├── ml_trading_model.py           # ML 模型训练/预测
-│   ├── hsi_ml_model.py               # 恒指 CatBoost 模型
-│   ├── walk_forward_validation.py    # Walk-forward 验证
-│   └── performance_monitor.py        # 预测性能监控
-├── llm_services/                     # 大模型服务
-│   └── qwen_engine.py                # 通义千问接口
-├── tests/                            # 测试脚本
-└── docs/                             # 文档
+│   ├── comprehensive_analysis.py       # 综合分析（每日信号生成）
+│   ├── detect_stock_anomalies.py       # 港股异常检测
+│   ├── hsi_prediction.py               # 恒生指数预测（双模型）
+│   ├── hk_smart_money_tracker.py       # 主力资金追踪
+│   ├── simulation_trader.py            # 模拟交易系统
+│   └── crypto_email.py                 # 加密货币监控
+├── anomaly_detector/                   # 异常检测模块
+│   ├── zscore_detector.py              # Z-Score 检测器
+│   ├── isolation_forest_detector.py    # Isolation Forest 检测器
+│   └── anomaly_integrator.py           # 异常整合器
+├── data_services/                      # 数据服务层
+│   ├── technical_analysis.py           # 技术分析工具
+│   ├── fundamental_data.py             # 基本面数据
+│   ├── southbound_data.py              # 南向资金数据
+│   └── tencent_finance.py              # 腾讯财经数据源
+├── ml_services/                        # 机器学习模块
+│   ├── ml_trading_model.py             # ML 模型训练/预测
+│   ├── hsi_ml_model.py                 # 恒指 CatBoost 模型
+│   ├── walk_forward_validation.py      # Walk-forward 验证
+│   ├── walk_forward_by_sector.py       # 板块验证
+│   └── performance_monitor.py          # 预测性能监控
+├── llm_services/                       # 大模型服务
+│   ├── qwen_engine.py                  # 通义千问接口
+│   └── sentiment_analyzer.py           # 情感分析
+├── tests/                              # 测试脚本
+├── docs/                               # 文档
+├── output/                             # 输出报告
+├── data/                               # 数据文件
+└── scripts/                            # 运行脚本
 ```
 
 ---
@@ -246,4 +257,4 @@ pandas      # 数据处理
 
 ---
 
-**最后更新**：2026-04-16
+**最后更新**：2026-04-17
