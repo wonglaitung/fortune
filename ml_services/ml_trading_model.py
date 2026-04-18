@@ -231,11 +231,11 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
             
             # 获取数据日期
             data_date = pred.get('data_date', date_str)
-            
-            # 计算 target_date（如果没有提供）
+
+            # 计算 target_date（如果没有提供，使用交易日计算）
             target_date = pred.get('target_date', '')
             if not target_date and data_date:
-                target_date = get_target_date(data_date, horizon)
+                target_date = get_target_date_trading_days(data_date, horizon, stock_code)
             
             # 创建预测记录（添加周期标识，用于传导律检测）
             record = {
@@ -285,11 +285,58 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
 
 
 def get_target_date(date, horizon):
-    """计算目标日期（数据日期 + 预测周期）"""
+    """计算目标日期（数据日期 + 预测周期，自然日，已弃用）
+
+    注意：此函数使用自然日计算，与模型预测的交易日不一致。
+    推荐使用 get_target_date_trading_days() 获取更准确的结果。
+    """
     if isinstance(date, str):
         date = datetime.strptime(date, '%Y-%m-%d')
     target_date = date + timedelta(days=horizon)
     return target_date.strftime('%Y-%m-%d')
+
+
+def get_target_date_trading_days(date, horizon, stock_code='^HSI'):
+    """计算目标日期（数据日期 + N个交易日）
+
+    参数:
+    - date: 数据日期（datetime 或 'YYYY-MM-DD' 字符串）
+    - horizon: 交易日数量
+    - stock_code: 股票代码，用于获取交易日历（默认使用恒生指数）
+
+    返回:
+    - 目标日期字符串 (YYYY-MM-DD)
+    """
+    import yfinance as yf
+
+    if isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d')
+
+    # 计算查询范围（自然日约是交易日的1.4倍，加一些缓冲）
+    end_date = date + timedelta(days=int(horizon * 2) + 30)
+
+    try:
+        # 使用 yfinance 获取交易日历
+        ticker = yf.Ticker(stock_code)
+        df = ticker.history(start=date.strftime('%Y-%m-%d'),
+                           end=end_date.strftime('%Y-%m-%d'))
+
+        if len(df) > horizon:
+            # 返回第 horizon+1 个交易日（因为第一个是 start_date 当天或之后最近的交易日）
+            target_idx = horizon
+            if target_idx < len(df):
+                return df.index[target_idx].strftime('%Y-%m-%d')
+
+        # 如果数据不足，回退到自然日
+        logger.warning(f"交易日数据不足，回退到自然日计算: {stock_code}")
+        target_date = date + timedelta(days=horizon)
+        return target_date.strftime('%Y-%m-%d')
+
+    except Exception as e:
+        # 出错时回退到自然日
+        logger.warning(f"获取交易日历失败，回退到自然日计算: {e}")
+        target_date = date + timedelta(days=horizon)
+        return target_date.strftime('%Y-%m-%d')
 
 
 # ========== 缓存辅助函数 ==========
@@ -5884,7 +5931,7 @@ def main():
             for pred in predictions:
                 pred_label = "上涨" if pred['prediction'] == 1 else "下跌"
                 data_date = pred['date'].strftime('%Y-%m-%d')
-                target_date = get_target_date(pred['date'], horizon=args.horizon)
+                target_date = get_target_date_trading_days(pred['date'], horizon=args.horizon, stock_code=pred['code'])
 
                 print(f"{pred['code']:<10} {pred['name']:<12} {pred_label:<8} {pred['probability']:.4f}    {pred['current_price']:.2f}        {data_date:<15} {target_date:<15}")
 
@@ -5897,7 +5944,10 @@ def main():
             # 保存单一模型预测结果
             pred_df = pd.DataFrame(predictions)
             pred_df['data_date'] = pred_df['date'].apply(lambda x: x.strftime('%Y-%m-%d'))
-            pred_df['target_date'] = pred_df['date'].apply(lambda x: get_target_date(x, horizon=args.horizon))
+            pred_df['target_date'] = pred_df.apply(
+                lambda row: get_target_date_trading_days(row['date'], horizon=args.horizon, stock_code=row['code']),
+                axis=1
+            )
 
             pred_df_export = pred_df[['code', 'name', 'prediction', 'probability', 'current_price', 'data_date', 'target_date']]
 
