@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v3.5 (2026-04-19) | **状态**：当前有效
+> **版本**：v3.6 (2026-04-19) | **状态**：当前有效
 
 本文档记录开发过程中遇到的问题和解决方案，帮助避免重复错误。
 
@@ -323,7 +323,7 @@ annualized_std = batch_std * np.sqrt(12)
 
 **教训**：配置数据来源必须与注释一致，避免误导决策
 
-### 6. 流程重复计算 ⭐ 新增
+### 6. 流程重复计算
 
 **问题**：`run_comprehensive_analysis.sh` 脚本中，步骤2已生成三周期预测CSV文件，步骤4又重新加载模型预测。
 
@@ -340,12 +340,49 @@ annualized_std = batch_std * np.sqrt(12)
 - 多步骤流程中，后续步骤应复用前序步骤的输出
 - 提供"使用缓存"选项，兼容单独运行场景
 
+### 7. 交易日 vs 自然日计算 ⭐ 重要
+
+**问题**：`target_date` 使用自然日计算，与模型训练的交易日周期不一致。
+
+**发现过程**：
+1. 检查 `ml_trading_model.py` 发现 `timedelta(days=horizon)` 使用自然日
+2. 模型训练使用交易日（yfinance 历史数据），但预测评估用自然日
+3. 20天预测差异可达9-11天
+
+**影响**：
+- 预测评估检查错误日期的价格数据
+- 准确率统计可能失真
+
+**修复**：
+- 改用 akshare 交易日历（`ak.tool_trade_date_hist_sina()`）
+- 8797个交易日，完整到 2026-12-31
+
+**代码对比**：
+```python
+# ❌ 错误：自然日计算
+target_date = date + timedelta(days=horizon)
+
+# ✅ 正确：交易日计算
+import akshare as ak
+df = ak.tool_trade_date_hist_sina()
+trading_dates = set(df['trade_date'].astype(str).tolist())
+count = 0
+current = date
+while count < horizon:
+    current += timedelta(days=1)
+    if current.strftime('%Y-%m-%d') in trading_dates:
+        count += 1
+```
+
+**教训**：金融时间序列必须使用交易日，自然日计算会导致评估偏差
+
 ---
 
 ## 五、更新日志
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-04-19 | v3.6 | 添加：交易日 vs 自然日计算问题 |
 | 2026-04-19 | v3.5 | 添加：流程重复计算问题、三周期模式显示优化 |
 | 2026-04-18 | v3.4 | 添加：配置与模型不一致问题 |
 | 2026-04-18 | v3.3 | 添加：特征缓存机制（170x加速）、缓存配置说明 |

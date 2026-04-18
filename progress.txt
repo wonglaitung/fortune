@@ -8,17 +8,34 @@
 
 ## 最新进展（2026-04-19）
 
-### 综合分析脚本性能优化 ⭐ 重要
+### 交易日计算修复 ⭐ 重要
+
+**问题**：`target_date` 使用自然日计算，与模型训练的交易日周期不一致。
+
+**影响**：
+- 预测评估检查错误日期的价格数据
+- 准确率统计可能失真
+
+**修复**：
+- `get_target_date_trading_days()` 改用 akshare 交易日历（8797个交易日，完整到2026-12-31）
+- 更新 `prediction_history.json` 中 590 条记录的 target_date
+
+**差异示例**：
+| 数据日期 | 周期 | 自然日结果 | 交易日结果 | 差异 |
+|----------|------|-----------|-----------|------|
+| 2026-03-25 | 20天 | 2026-04-14 | 2026-04-23 | **+9天** |
+| 2026-03-27 | 20天 | 2026-04-16 | 2026-04-27 | +11天 |
+
+**代码位置**：
+- `ml_services/ml_trading_model.py:299` - `get_target_date_trading_days()` 函数
+
+### 综合分析脚本性能优化
 
 **问题**：`run_comprehensive_analysis.sh` 步骤2已生成三周期预测CSV，步骤4又重新加载模型预测，造成重复计算。
 
 **解决方案**：
 - 新增 `--use-cached-predictions` 参数
 - 脚本调用时直接读取已有CSV文件，跳过模型预测
-
-**代码位置**：
-- `comprehensive_analysis.py`: `extract_ml_predictions()` 函数新增 `use_cached_predictions` 参数
-- `scripts/run_comprehensive_analysis.sh`: 步骤4添加 `--use-cached-predictions`
 
 **使用场景**：
 | 场景 | 命令 |
