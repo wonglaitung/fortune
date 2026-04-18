@@ -98,12 +98,12 @@ SIMPLE_CATBOOST_PARAMS = {
 
 # CatBoost 参数（完整版，按周期调整）
 def get_full_catboost_params(horizon):
-    """根据预测周期返回完整模型参数"""
+    """根据预测周期返回完整模型参数（优化版：减少迭代次数）"""
     if horizon == 1:
         return {
-            'iterations': 500,
-            'learning_rate': 0.05,
-            'depth': 7,
+            'iterations': 100,
+            'learning_rate': 0.15,
+            'depth': 5,
             'l2_leaf_reg': 3,
             'random_seed': RANDOM_SEED,
             'loss_function': 'Logloss',
@@ -112,9 +112,9 @@ def get_full_catboost_params(horizon):
         }
     elif horizon == 5:
         return {
-            'iterations': 500,
-            'learning_rate': 0.05,
-            'depth': 6,
+            'iterations': 100,
+            'learning_rate': 0.15,
+            'depth': 4,
             'l2_leaf_reg': 3,
             'subsample': 0.7,
             'random_seed': RANDOM_SEED,
@@ -124,9 +124,9 @@ def get_full_catboost_params(horizon):
         }
     else:  # 20天
         return {
-            'iterations': 500,
-            'learning_rate': 0.05,
-            'depth': 6,
+            'iterations': 100,
+            'learning_rate': 0.15,
+            'depth': 4,
             'l2_leaf_reg': 3,
             'subsample': 0.8,
             'random_seed': RANDOM_SEED,
@@ -348,21 +348,52 @@ class StockThreeHorizonAnalyzer:
                               'BB_upper', 'BB_lower', 'BB_middle', 'Dividends', 'Stock Splits']
             available_features = [col for col in df.columns if col not in exclude_columns]
 
+            # 过滤非数值特征（分类特征需要特殊处理，这里简化排除）
+            numeric_features = [col for col in available_features
+                               if df[col].dtype in ['int64', 'float64', 'int32', 'float32']]
+            if len(numeric_features) < len(available_features):
+                removed = len(available_features) - len(numeric_features)
+                print(f"  🔧 排除 {removed} 个非数值特征")
+            available_features = numeric_features
+
+            # 过滤高NaN率特征（>50% NaN）
+            nan_ratio = df[available_features].isna().sum() / len(df)
+            valid_features = nan_ratio[nan_ratio <= 0.5].index.tolist()
+            if len(valid_features) < len(available_features):
+                removed = len(available_features) - len(valid_features)
+                print(f"  🔧 移除 {removed} 个高NaN率特征（>50% NaN）")
+            available_features = valid_features
+
         if len(available_features) < 10:
             print(f"  ⚠️ {stock_code} 特征不足（{len(available_features)}），跳过")
             return None
 
         print(f"  📊 使用 {len(available_features)} 个特征")
 
-        # Walk-forward 参数
+        # 填充剩余NaN值
+        for col in available_features:
+            if df[col].isna().any():
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+        # Walk-forward 参数（优化版：减少folds数量）
         train_days = 252
-        step_days = 5
+        # 完整模型使用更大的step_days以加速（从5改为40）
+        step_days = 40 if self.model_type == 'full' else 5
         total_days = len(df)
         num_folds = (total_days - train_days) // step_days
 
         if num_folds < 5:
             print(f"  ⚠️ {stock_code} 样本不足（{num_folds} folds），跳过")
             return None
+
+        print(f"  📊 Walk-forward: {num_folds} folds, step={step_days}天")
+
+        # 预先计算所有周期的目标
+        for horizon in horizons:
+            target_col = f'Target_{horizon}d'
+            return_col = f'Future_Return_{horizon}d'
+            df[return_col] = df['Close'].pct_change(horizon).shift(-horizon)
+            df[target_col] = (df[return_col] > 0).astype(int)
 
         for fold in range(num_folds):
             train_start = fold * step_days
@@ -377,26 +408,12 @@ class StockThreeHorizonAnalyzer:
             test_df = df.iloc[test_start:test_end]
 
             for horizon in horizons:
-                # 创建目标（未来N天收益）
                 target_col = f'Target_{horizon}d'
                 return_col = f'Future_Return_{horizon}d'
 
-                df_h = df.copy()
-                df_h[return_col] = df_h['Close'].pct_change(horizon).shift(-horizon)
-                df_h[target_col] = (df_h[return_col] > 0).astype(int)
-
                 # 移除 NaN
-                train_clean = train_df.copy()
-                train_clean[target_col] = df_h.loc[train_df.index, target_col]
-                train_clean[return_col] = df_h.loc[train_df.index, return_col]
-
-                test_clean = test_df.copy()
-                test_clean[target_col] = df_h.loc[test_df.index, target_col]
-                test_clean[return_col] = df_h.loc[test_df.index, return_col]
-
-                # 移除 NaN
-                train_clean = train_clean.dropna(subset=available_features + [target_col])
-                test_clean = test_clean.dropna(subset=available_features + [target_col])
+                train_clean = train_df.dropna(subset=available_features + [target_col])
+                test_clean = test_df.dropna(subset=available_features + [target_col, return_col])
 
                 if len(train_clean) < 50 or len(test_clean) < 1:
                     continue
@@ -413,23 +430,22 @@ class StockThreeHorizonAnalyzer:
 
                     model.fit(X_train, y_train)
 
-                    for idx, row in test_clean.iterrows():
-                        X = row[available_features].values.reshape(1, -1)
-                        if np.isnan(X).any():
-                            continue
+                    # 批量预测提高效率
+                    X_test = test_clean[available_features]
+                    probs = model.predict_proba(X_test)[:, 1]
+                    preds = (probs > 0.5).astype(int)
 
-                        prob = model.predict_proba(X)[0, 1]
-                        pred = 1 if prob > 0.5 else 0
-
+                    for i, (idx, row) in enumerate(test_clean.iterrows()):
                         all_predictions[horizon].append({
                             'date': idx,
-                            'prediction': pred,
-                            'probability': prob,
+                            'prediction': preds[i],
+                            'probability': probs[i],
                             'actual_direction': row[target_col],
                             'actual_return': row[return_col],
                             'close': row['Close']
                         })
                 except Exception as e:
+                    print(f"  ⚠️ Fold {fold} horizon {horizon} 错误: {e}")
                     continue
 
         return all_predictions
