@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # 综合分析自动化脚本
-# 1. 调用hsi_email.py生成大模型建议（使用force参数）
-# 2. 训练CatBoost 20天模型
-# 3. 生成CatBoost单模型预测
-# 4. 调用comprehensive_analysis.py进行综合分析
+# 1. 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 2. 生成 CatBoost 三周期预测
+# 3. 调用 hsi_email.py 生成大模型建议（使用force参数）
+# 4. 调用 comprehensive_analysis.py 进行综合分析（含三周期预测）
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,40 +13,67 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 echo "=========================================="
-echo "🚀 综合分析自动化流程（使用 CatBoost 单模型）"
+echo "🚀 综合分析自动化流程（使用 CatBoost 三周期模型）"
 echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "📍 项目根目录: $PROJECT_DIR"
 echo "📍 当前工作目录: $(pwd)"
 echo ""
 
-# 步骤1: 训练 CatBoost 20天模型
+# 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
 echo "=========================================="
-echo "📊 步骤 1/4: 训练 CatBoost 20天模型（使用全量特征）"
+echo "📊 步骤 1/4: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
 echo "=========================================="
-echo ""
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤1失败: 训练20天CatBoost模型失败"
-    exit 1
-fi
-echo "✅ CatBoost模型训练完成"
 echo ""
 
-echo "✅ 步骤1完成: CatBoost模型训练完成（使用全量特征）"
-echo ""
+TRAIN_SUCCESS=0
+TRAIN_FAILED=0
+for horizon in 1 5 20; do
+    echo "  🔄 训练 ${horizon}d 模型..."
+    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type catboost
+    if [ $? -ne 0 ]; then
+        echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
+        TRAIN_FAILED=$((TRAIN_FAILED + 1))
+    else
+        echo "  ✅ ${horizon}d 模型训练完成"
+        TRAIN_SUCCESS=$((TRAIN_SUCCESS + 1))
+    fi
+done
 
-# 步骤2: 生成 CatBoost 单模型预测
-echo "=========================================="
-echo "📊 步骤 2/4: 生成 CatBoost 单模型预测"
-echo "=========================================="
-echo ""
-python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost
-if [ $? -ne 0 ]; then
-    echo "❌ 步骤2失败: 生成 CatBoost 预测失败"
+if [ $TRAIN_SUCCESS -eq 0 ]; then
+    echo "❌ 步骤1失败: 所有模型训练失败"
     exit 1
 fi
-echo "✅ CatBoost 预测完成"
+echo ""
+echo "✅ 步骤1完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
+echo ""
+
+# 步骤2: 生成 CatBoost 三周期预测
+echo "=========================================="
+echo "📊 步骤 2/4: 生成 CatBoost 三周期预测"
+echo "=========================================="
+echo ""
+
+PREDICT_SUCCESS=0
+PREDICT_FAILED=0
+for horizon in 1 5 20; do
+    echo "  🔄 生成 ${horizon}d 预测..."
+    python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type catboost
+    if [ $? -ne 0 ]; then
+        echo "  ⚠️ 生成 ${horizon}d 预测失败（继续执行其他周期）"
+        PREDICT_FAILED=$((PREDICT_FAILED + 1))
+    else
+        echo "  ✅ ${horizon}d 预测完成"
+        PREDICT_SUCCESS=$((PREDICT_SUCCESS + 1))
+    fi
+done
+
+if [ $PREDICT_SUCCESS -eq 0 ]; then
+    echo "❌ 步骤2失败: 所有预测生成失败"
+    exit 1
+fi
+echo ""
+echo "✅ 步骤2完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
 echo ""
 
 # 步骤3: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
@@ -89,8 +116,11 @@ echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
 echo "  - 大模型建议: $(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)"
-echo "  - ML预测结果: $(ls -t data/ml_trading_model_catboost_predictions_20d.csv 2>/dev/null | head -1)"
+echo "  - ML预测结果:"
+echo "    - 1d: $(ls -t data/ml_trading_model_catboost_predictions_1d.csv 2>/dev/null | head -1)"
+echo "    - 5d: $(ls -t data/ml_trading_model_catboost_predictions_5d.csv 2>/dev/null | head -1)"
+echo "    - 20d: $(ls -t data/ml_trading_model_catboost_predictions_20d.csv 2>/dev/null | head -1)"
 echo "  - 综合买卖建议: $(ls -t data/comprehensive_recommendations_*.txt 2>/dev/null | head -1)"
 echo ""
-echo "💡 提示: 查看综合买卖建议了解最终投资建议"
+echo "💡 提示: 查看综合买卖建议了解最终投资建议（含三周期模式分析）"
 echo "=========================================="
