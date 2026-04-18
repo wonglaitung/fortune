@@ -57,6 +57,14 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析模块不可用")
 
+# 导入 ML 模型（用于三周期预测）
+try:
+    from ml_services.ml_trading_model import CatBoostModel
+    ML_MODEL_AVAILABLE = True
+except ImportError:
+    ML_MODEL_AVAILABLE = False
+    print("⚠️ ML模型模块不可用")
+
 # 板块类型定义（周期性/防御性）
 # 来源：SECTOR_ROTATION_ANALYSIS.md
 SECTOR_TYPES = {
@@ -80,6 +88,19 @@ SECTOR_TYPES = {
     'index': {'name': '指数', 'type': '防御'},
 }
 
+# 三周期预测模式配置（基于个股验证结果）
+# 来源：docs/THREE_HORIZON_ANALYSIS.md 第10章
+THREE_HORIZON_PATTERNS = {
+    '111': {'name': '一致看涨', 'action': '买入', 'win_rate': '80.22%', 'avg_return': '+7.69%', 'confidence': '高'},
+    '000': {'name': '一致看跌', 'action': '减仓', 'win_rate': '78.86%', 'avg_return': '-5.09%', 'confidence': '高'},
+    '110': {'name': '震荡回调', 'action': '谨慎', 'win_rate': '79.87%', 'avg_return': '-5.26%', 'confidence': '中高'},
+    '100': {'name': '冲高回落⭐', 'action': '观望/轻仓空', 'win_rate': '81.62%', 'avg_return': '-5.64%', 'confidence': '高'},
+    '011': {'name': '探底回升', 'action': '买入', 'win_rate': '81.34%', 'avg_return': '+7.92%', 'confidence': '高'},
+    '101': {'name': '假突破⭐', 'action': '买入', 'win_rate': '81.02%', 'avg_return': '+7.85%', 'confidence': '高'},
+    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '80.76%', 'avg_return': '-5.29%', 'confidence': '中高'},
+    '001': {'name': '下跌中继', 'action': '谨慎', 'win_rate': '79.60%', 'avg_return': '+7.61%', 'confidence': '中'},
+}
+
 
 def get_sector_type(sector_code):
     """
@@ -94,6 +115,142 @@ def get_sector_type(sector_code):
     if sector_code in SECTOR_TYPES:
         return SECTOR_TYPES[sector_code]['type']
     return '-'
+
+
+def get_pattern_action(pattern):
+    """
+    根据三周期模式获取交易建议
+
+    参数:
+    - pattern: 三周期模式字符串（如 '111', '110' 等）
+
+    返回:
+    - dict: 包含模式名称、操作建议、胜率等信息
+    """
+    if pattern in THREE_HORIZON_PATTERNS:
+        return THREE_HORIZON_PATTERNS[pattern]
+    return {'name': '未知', 'action': '观望', 'win_rate': '-', 'avg_return': '-', 'confidence': '低'}
+
+
+# 全局模型缓存（避免重复加载）
+_model_cache = {}
+
+
+def load_multi_horizon_models():
+    """
+    加载三周期预测模型（1d, 5d, 20d）
+
+    返回:
+    - dict: 包含三个模型的字典，失败则为 None
+    """
+    global _model_cache
+
+    if not ML_MODEL_AVAILABLE:
+        print("⚠️ ML模型模块不可用，无法进行三周期预测")
+        return None
+
+    # 检查缓存
+    if _model_cache.get('loaded'):
+        return _model_cache
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(script_dir, 'data')
+
+    models = {}
+    model_files = {
+        1: os.path.join(data_dir, 'ml_trading_model_catboost_1d.pkl'),
+        5: os.path.join(data_dir, 'ml_trading_model_catboost_5d.pkl'),
+        20: os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl'),
+    }
+
+    missing_models = []
+    for horizon, filepath in model_files.items():
+        if os.path.exists(filepath):
+            try:
+                model = CatBoostModel()
+                model.load_model(filepath)
+                models[horizon] = model
+                print(f"  ✅ 加载 {horizon}d 模型成功")
+            except Exception as e:
+                print(f"  ⚠️ 加载 {horizon}d 模型失败: {e}")
+                missing_models.append(horizon)
+        else:
+            print(f"  ⚠️ {horizon}d 模型文件不存在: {filepath}")
+            missing_models.append(horizon)
+
+    if len(models) < 3:
+        print(f"⚠️ 缺少模型: {missing_models}，将使用可用的模型进行预测")
+
+    if len(models) == 0:
+        return None
+
+    # 缓存模型
+    _model_cache = models
+    _model_cache['loaded'] = True
+
+    return models
+
+
+def predict_three_horizons(stock_code, models=None):
+    """
+    对单只股票进行三周期预测
+
+    参数:
+    - stock_code: 股票代码（如 '0005.HK'）
+    - models: 模型字典（如果为 None 则自动加载）
+
+    返回:
+    - dict: 包含三个周期预测结果和模式，失败返回 None
+    """
+    if models is None:
+        models = load_multi_horizon_models()
+
+    if models is None:
+        return None
+
+    result = {
+        'code': stock_code,
+        'predictions': {},
+        'pattern': None,
+        'pattern_info': None
+    }
+
+    # 对每个周期进行预测
+    success_count = 0
+    for horizon in [1, 5, 20]:
+        if horizon in models:
+            try:
+                pred = models[horizon].predict(stock_code)
+                if pred:
+                    result['predictions'][horizon] = {
+                        'prediction': pred.get('prediction', 0),
+                        'probability': pred.get('probability', 0.5),
+                        'direction': '↑' if pred.get('prediction') == 1 else '↓'
+                    }
+                    success_count += 1
+            except KeyError as e:
+                # 特征不匹配，跳过此周期
+                print(f"  ⚠️ {stock_code} {horizon}d 模型特征不匹配，跳过")
+                result['predictions'][horizon] = None
+            except Exception as e:
+                print(f"  ⚠️ 预测 {stock_code} {horizon}d 失败: {str(e)[:50]}")
+                result['predictions'][horizon] = None
+        else:
+            result['predictions'][horizon] = None
+
+    # 只有当所有三个周期都成功预测时才计算模式
+    if success_count == 3 and all(result['predictions'].get(h) for h in [1, 5, 20]):
+        pred_1d = result['predictions'][1]['prediction']
+        pred_5d = result['predictions'][5]['prediction']
+        pred_20d = result['predictions'][20]['prediction']
+
+        pattern = f"{'1' if pred_1d == 1 else '0'}{'1' if pred_5d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
+        result['pattern'] = pattern
+        result['pattern_info'] = get_pattern_action(pattern)
+        return result
+
+    # 如果有任何预测失败，返回 None
+    return None
 
 
 def safe_float_format(value, format_spec='.2f', default=''):
@@ -230,11 +387,11 @@ def extract_llm_recommendations(filepath):
 
 def extract_ml_predictions(filepath):
     """
-    从ML预测CSV文件中提取融合模型的预测结果
-    
+    从ML预测CSV文件中提取融合模型的预测结果，并进行三周期预测
+
     参数:
     - filepath: 文本预测文件路径（用于获取日期）
-    
+
     返回:
     - dict: 包含融合模型预测结果的字典
       {
@@ -245,25 +402,48 @@ def extract_ml_predictions(filepath):
         import pandas as pd
         from datetime import datetime
         import os
-        
+
         # 从文件路径中提取日期
         date_str = filepath.split('_')[-1].replace('.txt', '')
-        
+
         # 使用相对路径（从当前脚本位置推导data目录）
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
-        
+
         # 读取 CatBoost 单模型预测结果
         catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
-        
+
         result = {
             'ensemble': ''
         }
-        
+
         # 读取 CatBoost 预测结果
         if os.path.exists(catboost_csv):
             df_catboost = pd.read_csv(catboost_csv)
             df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
+
+            # 尝试加载三周期模型
+            three_horizon_models = None
+            if ML_MODEL_AVAILABLE:
+                print("  🔄 加载三周期预测模型...")
+                three_horizon_models = load_multi_horizon_models()
+                if three_horizon_models:
+                    print(f"  ✅ 成功加载 {len([k for k in three_horizon_models.keys() if k != 'loaded'])} 个模型")
+                else:
+                    print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
+
+            # 进行三周期预测
+            three_horizon_results = {}
+            if three_horizon_models:
+                print("  🔄 进行三周期预测...")
+                for stock_code in df_catboost['code'].tolist():
+                    try:
+                        pred_result = predict_three_horizons(stock_code, three_horizon_models)
+                        if pred_result:
+                            three_horizon_results[stock_code] = pred_result
+                    except Exception as e:
+                        print(f"  ⚠️ 预测 {stock_code} 失败: {e}")
+                print(f"  ✅ 完成三周期预测: {len(three_horizon_results)} 只股票")
 
             # 计算筹码分布（如果技术分析模块可用）
             chip_data = {}
@@ -284,59 +464,30 @@ def extract_ml_predictions(filepath):
                 except Exception as e:
                     print(f"  ⚠️ 筹码分布计算失败: {e}")
 
-            catboost_text = "【CatBoost模型预测结果（20天）】\n"
-            catboost_text += f"预测日期: {date_str}\n\n"
-            catboost_text += "全部股票预测结果（按概率排序）:\n\n"
-
-            # 构建Markdown表格（添加板块名称、类型、阻力标识列）
-            catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 预测方向 | 上涨概率 | 当前价格 | 阻力标识 |\n"
-            catboost_text += "|----------|----------|----------|------|----------|----------|----------|----------|\n"
+            # 根据是否有三周期预测结果选择表格格式
+            if three_horizon_results and len(three_horizon_results) > 0:
+                # 三周期预测表格
+                catboost_text = "【CatBoost模型三周期预测结果】\n"
+                catboost_text += f"预测日期: {date_str}\n\n"
+                catboost_text += "全部股票预测结果（按20天概率排序）:\n\n"
+                catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 |\n"
+                catboost_text += "|----------|----------|----------|------|--------|--------|---------|------|---------|------|\n"
+            else:
+                # 原始表格格式（无三周期预测）
+                catboost_text = "【CatBoost模型预测结果（20天）】\n"
+                catboost_text += f"预测日期: {date_str}\n\n"
+                catboost_text += "全部股票预测结果（按概率排序）:\n\n"
+                catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 预测方向 | 上涨概率 | 当前价格 | 阻力标识 |\n"
+                catboost_text += "|----------|----------|----------|------|----------|----------|----------|----------|\n"
 
             # 统计筹码分布
             resistance_stats = {'low': 0, 'medium': 0, 'high': 0}
             high_resistance_stocks = []
 
             for _, row in df_catboost_sorted.iterrows():
-                if row['probability'] > 0.60:
-                    direction = "上涨"
-                elif row['probability'] > 0.50:
-                    direction = "观望"
-                else:
-                    direction = "下跌"
-
-                # 计算阻力标识
-                resistance_icon = 'N/A'
-                if TECHNICAL_ANALYSIS_AVAILABLE and row['code'] in chip_data and chip_data[row['code']]:
-                    chip_result = chip_data[row['code']]
-                    resistance_ratio = chip_result.get('resistance_ratio', 0)
-                    if resistance_ratio < 0.3:
-                        resistance_stats['low'] += 1
-                        resistance_icon = '✅'
-                    elif resistance_ratio < 0.6:
-                        resistance_stats['medium'] += 1
-                        resistance_icon = '⚠️'
-                    else:
-                        resistance_stats['high'] += 1
-                        resistance_icon = '🔴'
-                        # 记录高阻力股票
-                        high_resistance_stocks.append({
-                            'code': row['code'],
-                            'name': row['name'],
-                            'resistance_ratio': resistance_ratio
-                        })
-
-                # 为上涨概率添加颜色标记（使用 font 标签，邮件客户端兼容性更好）
-                probability = row['probability']
-                probability_formatted = safe_float_format(probability, '4f')
-                if probability > 0.60:
-                    probability_colored = f'<font color="green"><b>{probability_formatted}</b></font>'
-                elif probability > 0.55:
-                    probability_colored = f'<font color="orange"><b>{probability_formatted}</b></font>'
-                else:
-                    probability_colored = f'<font color="red"><b>{probability_formatted}</b></font>'
+                stock_code = row['code']
 
                 # 获取板块名称和类型
-                stock_code = row['code']
                 sector_name = '-'
                 sector_type = '-'
                 if stock_code in STOCK_SECTOR_MAPPING:
@@ -346,15 +497,103 @@ def extract_ml_predictions(filepath):
                     if sector_code:
                         sector_type = get_sector_type(sector_code)
 
-                catboost_text += f"| {row['code']} | {row['name']} | {sector_name} | {sector_type} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
+                # 如果有三周期预测结果
+                if three_horizon_results and stock_code in three_horizon_results:
+                    pred = three_horizon_results[stock_code]
+                    preds = pred['predictions']
 
-            catboost_text += f"\n**统计信息**：\n"
-            catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
-            catboost_text += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
-            catboost_text += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
+                    # 1天预测
+                    pred_1d = preds.get(1, {'direction': '-', 'probability': 0.5})
+                    p1d_str = f"{pred_1d['direction']} {pred_1d['probability']:.2f}"
 
-            # 添加筹码分布摘要
-            if TECHNICAL_ANALYSIS_AVAILABLE and resistance_stats['low'] + resistance_stats['medium'] + resistance_stats['high'] > 0:
+                    # 5天预测
+                    pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
+                    p5d_str = f"{pred_5d['direction']} {pred_5d['probability']:.2f}"
+
+                    # 20天预测
+                    pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
+                    p20d_str = f"{pred_20d['direction']} {pred_20d['probability']:.2f}"
+
+                    # 模式和交易建议
+                    pattern = pred.get('pattern', '-')
+                    pattern_info = pred.get('pattern_info', {})
+                    action = pattern_info.get('action', '观望')
+                    win_rate = pattern_info.get('win_rate', '-')
+
+                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern} | {action} | {win_rate} |\n"
+                else:
+                    # 无三周期预测，使用原始格式
+                    if row['probability'] > 0.60:
+                        direction = "上涨"
+                    elif row['probability'] > 0.50:
+                        direction = "观望"
+                    else:
+                        direction = "下跌"
+
+                    # 计算阻力标识
+                    resistance_icon = 'N/A'
+                    if TECHNICAL_ANALYSIS_AVAILABLE and stock_code in chip_data and chip_data[stock_code]:
+                        chip_result = chip_data[stock_code]
+                        resistance_ratio = chip_result.get('resistance_ratio', 0)
+                        if resistance_ratio < 0.3:
+                            resistance_stats['low'] += 1
+                            resistance_icon = '✅'
+                        elif resistance_ratio < 0.6:
+                            resistance_stats['medium'] += 1
+                            resistance_icon = '⚠️'
+                        else:
+                            resistance_stats['high'] += 1
+                            resistance_icon = '🔴'
+                            high_resistance_stocks.append({
+                                'code': stock_code,
+                                'name': row['name'],
+                                'resistance_ratio': resistance_ratio
+                            })
+
+                    # 为上涨概率添加颜色标记
+                    probability = row['probability']
+                    probability_formatted = safe_float_format(probability, '4f')
+                    if probability > 0.60:
+                        probability_colored = f'<font color="green"><b>{probability_formatted}</b></font>'
+                    elif probability > 0.55:
+                        probability_colored = f'<font color="orange"><b>{probability_formatted}</b></font>'
+                    else:
+                        probability_colored = f'<font color="red"><b>{probability_formatted}</b></font>'
+
+                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
+
+            # 添加统计信息
+            if three_horizon_results and len(three_horizon_results) > 0:
+                # 三周期预测统计
+                catboost_text += f"\n**三周期模式统计**：\n"
+
+                # 统计各模式数量
+                pattern_counts = {}
+                for pred in three_horizon_results.values():
+                    pattern = pred.get('pattern')
+                    if pattern:
+                        pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+                # 按数量排序
+                for pattern, count in sorted(pattern_counts.items(), key=lambda x: -x[1]):
+                    pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {})
+                    pattern_name = pattern_info.get('name', '未知')
+                    catboost_text += f"- {pattern_name}({pattern}): {count} 只\n"
+
+                # 添加交易规则说明
+                catboost_text += f"\n**三周期交易规则说明**：\n"
+                catboost_text += "- 模式 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
+                catboost_text += "- ⭐ 标记表示高胜率模式（>80%）\n"
+                catboost_text += "- 数据来源：docs/THREE_HORIZON_ANALYSIS.md（个股验证结果）\n"
+            else:
+                # 原始统计信息
+                catboost_text += f"\n**统计信息**：\n"
+                catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
+                catboost_text += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
+                catboost_text += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
+
+            # 添加筹码分布摘要（仅在没有三周期预测时显示）
+            if not three_horizon_results and TECHNICAL_ANALYSIS_AVAILABLE and resistance_stats['low'] + resistance_stats['medium'] + resistance_stats['high'] > 0:
                 catboost_text += f"\n**筹码分布摘要**：\n"
                 catboost_text += f"- 低阻力股票（上方筹码 < 30%）: {resistance_stats['low']} 只 ✅\n"
                 catboost_text += f"- 中等阻力股票（30-60%）: {resistance_stats['medium']} 只 ⚠️\n"
@@ -362,7 +601,6 @@ def extract_ml_predictions(filepath):
 
                 # 列出高阻力股票（按上方筹码比例降序）
                 if high_resistance_stocks:
-                    # 按上方筹码比例降序排序
                     high_resistance_stocks_sorted = sorted(high_resistance_stocks, key=lambda x: x['resistance_ratio'], reverse=True)
                     catboost_text += f"\n**高阻力股票列表**（按上方筹码比例降序）：\n"
                     catboost_text += '<table>\n'
