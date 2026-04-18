@@ -5,20 +5,34 @@
 
 基于模型特征重要性，使用加权评分模型预测恒生指数短期走势
 
-四大交易法则（基于 Walk-forward 回测验证，2020-2024年，938个样本）：
-┌──────────┬────────────────────────┬──────────────────┐
-│   法则   │          描述          │       操作       │
-├──────────┼────────────────────────┼──────────────────┤
-│ 一致追涨 │ 三周期一致看涨         │ 买入，持有20天   │
-├──────────┼────────────────────────┼──────────────────┤
-│ 背离逃顶 │ 短涨长跌（模式110）    │ 减仓，回避风险   │
-├──────────┼────────────────────────┼──────────────────┤
-│ 阶梯验证 │ 1天→5天→20天逐级确认   │ 前两周期对则重仓 │
-├──────────┼────────────────────────┼──────────────────┤
-│ 趋势惯性 │ 一致看跌时下跌惯性最强 │ 果断止损，不抄底 │
-└──────────┴────────────────────────┴──────────────────┘
+多周期预测验证结果（Walk-forward 回测，2020-2024年，938个样本）：
+┌──────────┬──────────┬─────────────────────────────────────────────────┐
+│   周期   │ 准确率   │                   策略建议                     │
+├──────────┼──────────┼─────────────────────────────────────────────────┤
+│   1天    │  51.31%  │ 噪音大，仅供参考                               │
+│   5天    │  57.17%  │ 趋势确认，辅助判断                             │
+│   20天   │  80.73%  │ 最可靠，主要决策依据                           │
+└──────────┴──────────┴─────────────────────────────────────────────────┘
 
-详细分析报告：THREE_HORIZON_ANALYSIS.md
+四大交易法则（已验证，详见 docs/THREE_HORIZON_ANALYSIS.md）：
+┌──────────────┬─────────────────────┬──────────┬──────────┬─────────────┐
+│     法则     │        条件         │   操作   │   胜率   │  平均收益   │
+├──────────────┼─────────────────────┼──────────┼──────────┼─────────────┤
+│ 一致追涨     │ 三周期一致看涨(111) │ 买入     │  70.31%  │   +3.55%    │
+├──────────────┼─────────────────────┼──────────┼──────────┼─────────────┤
+│ 趋势惯性     │ 三周期一致看跌(000) │ 减仓/做空│  79.19%  │   +3.21%    │
+├──────────────┼─────────────────────┼──────────┼──────────┼─────────────┤
+│ 背离逃顶⭐   │ 短涨长跌(110)       │ 做空     │  90.00%  │   +4.25%    │
+├──────────────┼─────────────────────┼──────────┼──────────┼─────────────┤
+│ 阶梯验证     │ 1d+5d正确→20d      │ 重仓     │  84.10%  │   -         │
+└──────────────┴─────────────────────┴──────────┴──────────┴─────────────┘
+
+关键发现：
+- 震荡回调模式(110)是最优策略，胜率90%，平均收益+4.25%
+- 一致看涨信号在熊市中胜率更高(71.43% vs 65.22%)
+- 一致看跌信号在牛市中准确率更高(81.63% vs 78.49%)
+
+详细分析报告：docs/THREE_HORIZON_ANALYSIS.md
 """
 
 import os
@@ -1229,9 +1243,17 @@ class HSI_Predictor:
             # 编码预测模式：1=上涨，0=下跌
             pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
-            # 根据四大交易法则匹配操作建议
+            # 根据四大交易法则匹配操作建议（基于 Walk-forward 验证，2020-2024年，938个样本）
+            # 详细分析：docs/THREE_HORIZON_ANALYSIS.md
+
+            # 判断市场环境（牛市/熊市）
+            is_bull_market = current_price > ma250 if ma250 > 0 else True
+
             if pattern == '111':  # 三周期一致看涨
                 consistency_signal = "📈 三周期一致看涨"
+                # 一致看涨在熊市中胜率更高
+                win_rate = "71.43%" if not is_bull_market else "65.22%"
+                market_note = "（熊市中更可靠）" if not is_bull_market else ""
                 trading_action = {
                     'rule': '一致追涨',
                     'pattern': pattern,
@@ -1240,46 +1262,57 @@ class HSI_Predictor:
                     'confidence': '高',
                     'color': '#166534',
                     'bg_color': '#dcfce7',
-                    'description': '三周期共振，上涨概率高（历史准确率92%）'
+                    'win_rate': '70.31%',
+                    'avg_return': '+3.55%',
+                    'description': f'三周期共振，上涨概率高{market_note}（胜率{win_rate}，平均收益+3.55%）'
                 }
             elif pattern == '000':  # 三周期一致看跌
                 consistency_signal = "📉 三周期一致看跌"
+                # 一致看跌在牛市中胜率更高
+                win_rate = "81.63%" if is_bull_market else "78.49%"
+                market_note = "（牛市中更可靠）" if is_bull_market else ""
                 trading_action = {
                     'rule': '趋势惯性',
                     'pattern': pattern,
-                    'action': '止损/空仓',
+                    'action': '止损/减仓',
                     'holding': '观望',
                     'confidence': '高',
                     'color': '#991b1b',
                     'bg_color': '#fee2e2',
-                    'description': '下跌惯性最强，不抄底（历史准确率93%）'
+                    'win_rate': '79.19%',
+                    'avg_return': '+3.21%（做空）',
+                    'description': f'下跌惯性最强，不抄底{market_note}（胜率{win_rate}）'
                 }
-            elif pattern == '110':  # 短涨长跌 - 背离逃顶
-                consistency_signal = "⚠️ 短期背离"
+            elif pattern == '110':  # 短涨长跌 - 背离逃顶（最优策略）
+                consistency_signal = "⚠️ 震荡回调（最优策略）"
                 trading_action = {
-                    'rule': '背离逃顶',
+                    'rule': '背离逃顶⭐',
                     'pattern': pattern,
-                    'action': '减仓',
-                    'holding': '回避风险',
-                    'confidence': '中',
-                    'color': '#92400e',
-                    'bg_color': '#fef3c7',
-                    'description': '短期反弹但长期趋势向下，警惕诱多'
+                    'action': '做空/减仓',
+                    'holding': '持有20天',
+                    'confidence': '极高',
+                    'color': '#7c2d12',
+                    'bg_color': '#fed7aa',
+                    'win_rate': '90.00%',
+                    'avg_return': '+4.25%（做空）',
+                    'description': '短线反弹+长线看空=逃顶信号，历史准确率90%，最优策略'
                 }
-            elif pattern in ['100', '010']:  # 仅一个短期看涨
-                consistency_signal = "⏳ 趋势不明"
+            elif pattern == '100':  # 冲高回落
+                consistency_signal = "⏳ 冲高回落"
                 trading_action = {
                     'rule': '阶梯验证',
                     'pattern': pattern,
-                    'action': '轻仓试探',
+                    'action': '观望/轻仓空',
                     'holding': '观察',
-                    'confidence': '低',
-                    'color': '#6b7280',
-                    'bg_color': '#f3f4f6',
-                    'description': '信号不统一，等待更多确认'
+                    'confidence': '中高',
+                    'color': '#92400e',
+                    'bg_color': '#fef3c7',
+                    'win_rate': '87.40%',
+                    'avg_return': '-',
+                    'description': '短期冲高但中长期看跌，建议观望'
                 }
-            elif pattern in ['011', '001']:  # 中长期看涨但短期看跌
-                consistency_signal = "🔄 短期调整"
+            elif pattern == '011':  # 探底回升
+                consistency_signal = "🔄 探底回升"
                 trading_action = {
                     'rule': '阶梯验证',
                     'pattern': pattern,
@@ -1288,10 +1321,40 @@ class HSI_Predictor:
                     'confidence': '中高',
                     'color': '#1d4ed8',
                     'bg_color': '#dbeafe',
+                    'win_rate': '81.37%',
+                    'avg_return': '-',
                     'description': '中长期趋势向上，短期回调是买入机会'
                 }
-            elif pattern == '101':  # 1天和20天看涨，5天看跌
-                consistency_signal = "📊 震荡上行"
+            elif pattern == '010':  # 反弹失败
+                consistency_signal = "📊 反弹失败"
+                trading_action = {
+                    'rule': '阶梯验证',
+                    'pattern': pattern,
+                    'action': '观望',
+                    'holding': '等待',
+                    'confidence': '中高',
+                    'color': '#6b7280',
+                    'bg_color': '#f3f4f6',
+                    'win_rate': '88.89%',
+                    'avg_return': '-',
+                    'description': '中期反弹但长期看跌，谨慎观望'
+                }
+            elif pattern == '001':  # 下跌中继
+                consistency_signal = "⬇️ 下跌中继"
+                trading_action = {
+                    'rule': '阶梯验证',
+                    'pattern': pattern,
+                    'action': '谨慎',
+                    'holding': '观望',
+                    'confidence': '中',
+                    'color': '#6b7280',
+                    'bg_color': '#f3f4f6',
+                    'win_rate': '70.33%',
+                    'avg_return': '-',
+                    'description': '长期看涨但短期下跌，可能继续探底'
+                }
+            elif pattern == '101':  # 假突破
+                consistency_signal = "📊 假突破"
                 trading_action = {
                     'rule': '阶梯验证',
                     'pattern': pattern,
@@ -1300,6 +1363,8 @@ class HSI_Predictor:
                     'confidence': '中',
                     'color': '#0369a1',
                     'bg_color': '#e0f2fe',
+                    'win_rate': '69.39%',
+                    'avg_return': '-',
                     'description': '中期波动但长期看涨，耐心持有'
                 }
             else:
@@ -1312,6 +1377,8 @@ class HSI_Predictor:
                     'confidence': '低',
                     'color': '#6b7280',
                     'bg_color': '#f3f4f6',
+                    'win_rate': '-',
+                    'avg_return': '-',
                     'description': '信号不明确，建议观望'
                 }
         elif multi_horizon_results:
@@ -2072,17 +2139,30 @@ class HSI_Predictor:
         try:
             from catboost import CatBoostClassifier
 
-            # 已知的历史准确率（基于 Walk-forward 验证）
+            # 已知的历史准确率（基于 Walk-forward 验证，2020-2024年，938个样本）
+            # 更新时间：2026-04-17
             historical_accuracy = {
-                1: 0.4643,   # 46.43%
-                5: 0.5765,   # 57.65%
-                20: 0.5459   # 54.59%
+                1: 0.5131,   # 51.31%（噪音大，仅供参考）
+                5: 0.5717,   # 57.17%（趋势确认）
+                20: 0.8073   # 80.73%（最可靠）
             }
 
             historical_auc = {
                 1: 0.5213,
                 5: 0.6567,
                 20: 0.7463
+            }
+
+            # 八大模式的准确率（用于交易策略匹配）
+            pattern_accuracy = {
+                '111': 70.31,  # 一致看涨
+                '000': 79.19,  # 一致看跌
+                '110': 90.00,  # 震荡回调（最优）
+                '100': 87.40,  # 冲高回落
+                '011': 81.37,  # 探底回升
+                '010': 88.89,  # 反弹失败
+                '001': 70.33,  # 下跌中继
+                '101': 69.39   # 假突破
             }
 
             results = {}
@@ -2171,16 +2251,55 @@ class HSI_Predictor:
                     print(f"{h}天{' '*4} {r['prediction']:<6} {r['probability']:.2%}{' '*2} {r['confidence']:<6} {r['historical_accuracy']:.2%}{' '*4} {r['historical_auc']:.4f}")
             print("-" * 60)
 
-            # 综合建议
-            up_count = sum(1 for r in results.values() if r['prediction'] == '上涨')
-            down_count = len(results) - up_count
+            # 模式分析
+            if all(h in results for h in [1, 5, 20]):
+                pred_1d = results[1]['prediction']
+                pred_5d = results[5]['prediction']
+                pred_20d = results[20]['prediction']
+                pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
-            if up_count > down_count:
-                suggestion = "📈 综合看涨"
-            elif down_count > up_count:
-                suggestion = "📉 综合看跌"
+                # 市场环境判断
+                current_price = df['Close'].iloc[-1]
+                ma250_val = df['MA250'].iloc[-1]
+                is_bull_market = current_price > ma250_val if not pd.isna(ma250_val) else True
+
+                print(f"\n📊 预测模式: {pattern}")
+                print(f"📈 市场环境: {'牛市（价格>MA250）' if is_bull_market else '熊市（价格<MA250）'}")
+
+                # 模式准确率
+                if pattern in pattern_accuracy:
+                    print(f"🎯 历史准确率: {pattern_accuracy[pattern]:.2f}%")
+
+                # 综合建议
+                if pattern == '111':
+                    suggestion = "📈 一致看涨 - 买入持有20天（胜率70.31%，收益+3.55%）"
+                elif pattern == '000':
+                    suggestion = "📉 一致看跌 - 减仓/止损（胜率79.19%）"
+                elif pattern == '110':
+                    suggestion = "⭐ 震荡回调 - 最优做空策略（胜率90%，收益+4.25%）"
+                elif pattern == '100':
+                    suggestion = "⏳ 冲高回落 - 观望为主（胜率87.40%）"
+                elif pattern == '011':
+                    suggestion = "🔄 探底回升 - 分批建仓（胜率81.37%）"
+                elif pattern == '010':
+                    suggestion = "📊 反弹失败 - 谨慎观望（胜率88.89%）"
+                elif pattern == '001':
+                    suggestion = "⬇️ 下跌中继 - 谨慎（胜率70.33%）"
+                elif pattern == '101':
+                    suggestion = "📊 假突破 - 中期持有（胜率69.39%）"
+                else:
+                    suggestion = "⚠️ 信号不明确，建议观望"
             else:
-                suggestion = "⚠️ 方向分歧，建议观望"
+                # 部分周期数据的综合建议
+                up_count = sum(1 for r in results.values() if r['prediction'] == '上涨')
+                down_count = len(results) - up_count
+
+                if up_count > down_count:
+                    suggestion = "📈 综合看涨"
+                elif down_count > up_count:
+                    suggestion = "📉 综合看跌"
+                else:
+                    suggestion = "⚠️ 方向分歧，建议观望"
 
             print(f"\n💡 {suggestion}")
             print("=" * 80)

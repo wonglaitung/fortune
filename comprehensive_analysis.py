@@ -57,6 +57,44 @@ except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
     print("⚠️ 技术分析模块不可用")
 
+# 板块类型定义（周期性/防御性）
+# 来源：SECTOR_ROTATION_ANALYSIS.md
+SECTOR_TYPES = {
+    # 周期性板块
+    'semiconductor': {'name': '半导体', 'type': '周期'},
+    'biotech': {'name': '生物医药', 'type': '周期'},
+    'tech': {'name': '科技', 'type': '周期'},
+    'consumer': {'name': '消费', 'type': '周期'},
+    'real_estate': {'name': '房地产', 'type': '周期'},
+    'energy': {'name': '能源', 'type': '周期'},
+    'shipping': {'name': '航运', 'type': '周期'},
+    'auto': {'name': '汽车', 'type': '周期'},
+    'new_energy': {'name': '新能源', 'type': '周期'},
+    'ai': {'name': '人工智能', 'type': '周期'},
+    # 防御性板块
+    'bank': {'name': '银行', 'type': '防御'},
+    'insurance': {'name': '保险', 'type': '防御'},
+    'utility': {'name': '公用事业', 'type': '防御'},
+    'environmental': {'name': '环保', 'type': '防御'},
+    'exchange': {'name': '交易所', 'type': '防御'},
+    'index': {'name': '指数', 'type': '防御'},
+}
+
+
+def get_sector_type(sector_code):
+    """
+    获取板块类型（周期/防御）
+
+    参数:
+    - sector_code: 板块代码
+
+    返回:
+    - str: '周期' 或 '防御'，未知则返回 '-'
+    """
+    if sector_code in SECTOR_TYPES:
+        return SECTOR_TYPES[sector_code]['type']
+    return '-'
+
 
 def safe_float_format(value, format_spec='.2f', default=''):
     """
@@ -785,6 +823,60 @@ def get_hsi_data_tencent():
         return None
 
 
+def get_stock_realtime_data(stock_code):
+    """
+    从腾讯财经获取个股实时数据
+
+    参数:
+    - stock_code: 股票代码（如 "0005.HK"）
+
+    返回:
+    - dict: 包含实时价格数据，或 None（如果获取失败）
+      {
+        'price': float,  # 最新价
+        'prev_close': float,  # 昨收
+        'open': float,  # 今开
+        'high': float,  # 最高
+        'low': float,  # 最低
+        'change_points': float,  # 涨跌点数
+        'change_pct': float,  # 涨跌幅
+        'volume': float  # 成交量
+      }
+    """
+    try:
+        import requests
+        # 移除 .HK 后缀，补零到5位
+        symbol = stock_code.replace('.HK', '').zfill(5)
+        url = f'https://web.sqt.gtimg.cn/q=r_hk{symbol}'
+        resp = requests.get(url, timeout=10)
+
+        if resp.status_code != 200:
+            return None
+
+        # 解析响应数据
+        data_str = resp.text.split('\"')[1]
+        fields = data_str.split('~')
+
+        # 腾讯财经港股字段说明：
+        # [3] 最新价, [4] 昨收, [5] 今开, [6] 成交量
+        # [31] 涨跌点数, [32] 涨跌幅, [33] 最高, [34] 最低
+        price = float(fields[3])
+        prev_close = float(fields[4])
+        return {
+            'price': price,
+            'prev_close': prev_close,
+            'open': float(fields[5]),
+            'high': float(fields[33]) if len(fields) > 33 else 0,
+            'low': float(fields[34]) if len(fields) > 34 else 0,
+            'change_points': float(fields[31]) if len(fields) > 31 else price - prev_close,
+            'change_pct': float(fields[32]) if len(fields) > 32 else (price - prev_close) / prev_close * 100,
+            'volume': float(fields[6]) if len(fields) > 6 else 0
+        }
+    except Exception as e:
+        print(f"⚠️ 腾讯财经获取 {stock_code} 数据失败: {e}")
+        return None
+
+
 def get_hsi_analysis():
     """
     获取恒生指数分析
@@ -795,18 +887,36 @@ def get_hsi_analysis():
     try:
         hsi_ticker = yf.Ticker("^HSI")
         hist = hsi_ticker.history(period="6mo")
-        
+
         if hist.empty:
             return None
-        
+
         latest = hist.iloc[-1]
         prev = hist.iloc[-2] if len(hist) > 1 else latest
-        
-        # 计算基本指标
-        current_price = latest['Close']
-        change_points = latest['Close'] - prev['Close']
-        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
-        
+
+        # 成交额数据（优先使用腾讯财经实时数据）
+        amount = None
+        amount_ratio = None
+        amount_ma20 = None
+        tencent_data = get_hsi_data_tencent()
+        if tencent_data:
+            amount = tencent_data['amount']
+
+        # 计算基本指标 - 优先使用腾讯财经实时数据
+        if tencent_data and tencent_data.get('price', 0) > 0:
+            # 使用腾讯财经实时数据
+            current_price = tencent_data['price']
+            prev_close = tencent_data['prev_close']
+            # 腾讯财经接口的涨跌字段可能为0，手动计算
+            change_points = current_price - prev_close
+            change_pct = (change_points / prev_close * 100) if prev_close != 0 else 0
+        else:
+            # 回退到 yfinance 数据
+            current_price = latest['Close']
+            change_points = latest['Close'] - prev['Close']
+            change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+            prev_close = prev['Close']
+
         # 计算RSI
         delta = hist['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
@@ -814,7 +924,7 @@ def get_hsi_analysis():
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         current_rsi = rsi.iloc[-1]
-        
+
         # 计算移动平均线
         ma20 = hist['Close'].rolling(window=20).mean().iloc[-1]
         ma50 = hist['Close'].rolling(window=50).mean().iloc[-1]
@@ -831,20 +941,21 @@ def get_hsi_analysis():
         prev_volume = prev['Volume']
         volume_change_pct = ((current_volume - prev_volume) / prev_volume * 100) if prev_volume > 0 else 0
 
-        # 成交额数据（从腾讯财经获取，作为备用数据源）
-        amount = None
-        amount_ratio = None
-        if current_volume == 0:
-            # yfinance 数据未更新，使用腾讯财经获取成交额
-            tencent_data = get_hsi_data_tencent()
-            if tencent_data:
-                amount = tencent_data['amount']
-                # 计算前一天的成交额（从 yfinance 的 prev_volume 估算）
-                # yfinance volume 单位可能与腾讯不同，但比率计算仍然有效
-                # 使用前一天 yfinance 成交量估算成交额
-                prev_amount_estimate = amount * (prev_volume / volume_ma20) if volume_ma20 > 0 else amount
-                amount_ratio = amount / (prev_amount_estimate) if prev_amount_estimate > 0 else 1.0
-                print(f"  📊 使用腾讯财经成交额: {amount:.2f}亿")
+        # 计算成交额比率
+        if tencent_data:
+            try:
+                from data_services.tencent_finance import get_hsi_data_tencent as get_hsi_history
+                hsi_history = get_hsi_history(period_days=30)
+                if hsi_history is not None and 'Amount' in hsi_history.columns and len(hsi_history) >= 20:
+                    amount_ma20 = hsi_history['Amount'].tail(20).mean()
+                    amount_ratio = amount / amount_ma20 if amount_ma20 > 0 else 1.0
+                    print(f"  📊 成交金额: {amount:.2f}亿, 20日均值: {amount_ma20:.2f}亿, 比率: {amount_ratio:.2f}x")
+                else:
+                    amount_ratio = None
+                    print(f"  📊 成交金额: {amount:.2f}亿（无法计算比率）")
+            except Exception as e:
+                print(f"  ⚠️ 获取历史成交额失败: {e}")
+                amount_ratio = None
 
         # 趋势判断
         if current_price > ma20 > ma50:
@@ -880,46 +991,43 @@ def get_hsi_analysis():
 def get_current_market_state():
     """
     获取当前市场状态（实时）
-    
+
     返回:
     dict: 当前市场状态信息
     """
     try:
-        # 获取最近30天的恒生指数数据（日线数据用于计算20天收益率）
+        # 使用 period 方式获取数据，确保包含最新数据
+        # history(start=..., end=...) 方式可能不包含今天的实时数据
         hsi_ticker = yf.Ticker("^HSI")
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        
-        hsi_df = hsi_ticker.history(start=start_date.strftime('%Y-%m-%d'), 
-                                    end=end_date.strftime('%Y-%m-%d'))
-        
+        hsi_df = hsi_ticker.history(period="2mo")  # 获取最近2个月数据，确保足够
+
         if len(hsi_df) < 10:
             return None
-        
+
         # 获取实时数据（1分钟间隔，用于显示当前价格）
         real_time_df = hsi_ticker.history(period='1d', interval='1m')
-        
+
         # 计算最近20天收益率（使用日线数据）
         if len(hsi_df) >= 20:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-20]) / hsi_df['Close'].iloc[-20]
         else:
             recent_20d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
-        
+
         # 计算最近5天收益率（使用日线数据）
         if len(hsi_df) >= 5:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[-5]) / hsi_df['Close'].iloc[-5]
         else:
             recent_5d_return = (hsi_df['Close'].iloc[-1] - hsi_df['Close'].iloc[0]) / hsi_df['Close'].iloc[0]
-        
+
         # 获取实时价格（优先使用分钟级数据）
         current_hsi = None
         current_time = None
-        
+
         if not real_time_df.empty:
             current_hsi = real_time_df['Close'].iloc[-1]
             # 转换时区到香港时间
             current_time = real_time_df.index[-1].tz_convert('Asia/Hong_Kong')
-        
+
         # 如果没有实时数据，使用日线数据
         if current_hsi is None and not hsi_df.empty:
             current_hsi = hsi_df['Close'].iloc[-1]
@@ -1295,32 +1403,48 @@ def get_hsi_email_indicators():
 def get_stock_technical_indicators(stock_code):
     """
     获取单只股票的详细技术指标
-    
+
     参数:
     - stock_code: 股票代码（如 "0700.HK"）
-    
+
     返回:
     - dict: 包含详细技术指标的字典
     """
     try:
         # 移除.HK后缀
         symbol = stock_code.replace('.HK', '')
-        
+
         # 获取股票数据 - 使用完整的股票代码（带.HK）
         ticker = yf.Ticker(stock_code)
         hist = ticker.history(period="6mo")
-        
+
         if hist.empty:
             print(f"⚠️ 警告: 无法获取 {stock_code} 的历史数据")
             return None
-        
+
+        # 检查最后一天是否是 NaN（今日数据未更新）
         latest = hist.iloc[-1]
+        if pd.isna(latest['Close']):
+            # 使用倒数第二天作为最新数据
+            if len(hist) > 1:
+                latest = hist.iloc[-2]
+                hist = hist.iloc[:-1]  # 移除最后一行 NaN 数据
+            else:
+                print(f"⚠️ 警告: {stock_code} 无有效数据")
+                return None
+
         prev = hist.iloc[-2] if len(hist) > 1 else latest
-        
-        # 基本指标
-        current_price = latest['Close']
-        change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
-        
+
+        # 优先使用腾讯财经实时价格
+        realtime_data = get_stock_realtime_data(stock_code)
+        if realtime_data and realtime_data.get('price', 0) > 0:
+            current_price = realtime_data['price']
+            change_pct = realtime_data['change_pct']
+        else:
+            # 回退到 yfinance 数据
+            current_price = latest['Close']
+            change_pct = ((latest['Close'] - prev['Close']) / prev['Close'] * 100) if prev['Close'] != 0 else 0
+
         # 技术指标
         # RSI
         delta = hist['Close'].diff()
@@ -2181,14 +2305,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 if sector_data and sector_data['performance'] is not None:
                     perf_df = sector_data['performance']
                     sector_leaders = sector_data['leaders']
-                    
-                    sector_text += "| 排名 | 板块名称 | 平均涨跌幅 | 龙头股TOP 3 |\n"
-                    sector_text += "|------|---------|-----------|-------------|\n"
-                    
+
+                    sector_text += "| 排名 | 板块名称 | 类型 | 平均涨跌幅 | 龙头股TOP 3 |\n"
+                    sector_text += "|------|---------|------|-----------|-------------|\n"
+
                     for idx, row in perf_df.iterrows():
                         trend_icon = "🔥" if row['avg_change_pct'] > 2 else "📈" if row['avg_change_pct'] > 0 else "📉"
                         change_color = "+" if row['avg_change_pct'] > 0 else ""
-                        
+                        sector_type = get_sector_type(row['sector_code'])
+
                         leaders_text = ""
                         if row['sector_code'] in sector_leaders:
                             leaders = sector_leaders[row['sector_code']]
@@ -2197,23 +2322,80 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             for i, leader in enumerate(leaders, 1):
                                 leader_items.append(f"{leader['name']}({leader['change_pct']:+.1f}%)")
                             leaders_text = " / ".join(leader_items)
-                        
-                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
+
+                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {sector_type} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
                     
-                    # 添加投资建议
-                    top_sector = perf_df.iloc[0]
-                    bottom_sector = perf_df.iloc[-1]
-                    
-                    sector_text += "\n**投资建议**：\n"
-                    if float(top_sector['avg_change_pct']) > 1 if not pd.isna(top_sector['avg_change_pct']) else False:
-                        sector_text += f"- 当前热点板块：{top_sector['sector_name']}，平均涨幅 {safe_float_format(top_sector['avg_change_pct'], '2f')}%\n"
-                        if top_sector['sector_code'] in sector_leaders and sector_leaders[top_sector['sector_code']]:
-                            leader = sector_leaders[top_sector['sector_code']][0]
-                            sector_text += f"- 建议关注该板块的龙头股：{leader['name']} ⭐\n"
-                    
-                    if float(bottom_sector['avg_change_pct']) < -1 if not pd.isna(bottom_sector['avg_change_pct']) else False:
-                        sector_text += f"- 当前弱势板块：{bottom_sector['sector_name']}，平均跌幅 {safe_float_format(bottom_sector['avg_change_pct'], '2f')}%\n"
-                        sector_text += "- 建议谨慎操作该板块，等待企稳信号\n"
+                    # 添加投资建议（基于板块轮动规律）
+                    sector_text += "\n**投资建议（基于板块轮动规律）**：\n\n"
+
+                    # 获取当前市场状态
+                    current_market = get_current_market_state()
+
+                    if current_market:
+                        market_state = current_market['market_state']
+                        market_state_cn = current_market['market_state_cn']
+                        recent_20d_return = current_market['recent_20d_return']
+
+                        sector_text += f"**当前市场状态**：{market_state_cn}（HSI 20日收益：{recent_20d_return*100:+.2f}%）\n\n"
+
+                        # 统计周期/防御板块表现
+                        cyclical_avg = 0
+                        defensive_avg = 0
+                        cyclical_count = 0
+                        defensive_count = 0
+
+                        for idx, row in perf_df.iterrows():
+                            sector_type = get_sector_type(row['sector_code'])
+                            change = row['avg_change_pct'] if not pd.isna(row['avg_change_pct']) else 0
+                            if sector_type == '周期':
+                                cyclical_avg += change
+                                cyclical_count += 1
+                            elif sector_type == '防御':
+                                defensive_avg += change
+                                defensive_count += 1
+
+                        if cyclical_count > 0:
+                            cyclical_avg = cyclical_avg / cyclical_count
+                        if defensive_count > 0:
+                            defensive_avg = defensive_avg / defensive_count
+
+                        sector_text += f"**板块表现对比**：\n"
+                        sector_text += f"- 周期板块平均：{'+' if cyclical_avg > 0 else ''}{cyclical_avg:.2f}%\n"
+                        sector_text += f"- 防御板块平均：{'+' if defensive_avg > 0 else ''}{defensive_avg:.2f}%\n\n"
+
+                        # 根据市场状态给出配置建议
+                        if market_state == 'bull':
+                            sector_text += "**牛市配置建议**：\n"
+                            sector_text += "- ✅ **重仓周期板块**：牛市中周期板块占优比例74.3%\n"
+                            sector_text += "- ✅ **推荐配置**：半导体30%、生物医药25%、科技20%、消费15%\n"
+                            sector_text += "- ✅ **总仓位建议**：90%\n"
+                            if cyclical_avg > defensive_avg:
+                                sector_text += f"- 📈 当前周期板块表现优于防御板块，符合牛市规律\n"
+                        elif market_state == 'bear':
+                            sector_text += "**熊市配置建议**：\n"
+                            sector_text += "- 🛡️ **重仓防御板块**：熊市中防御板块占优比例65.9%\n"
+                            sector_text += "- 🛡️ **推荐配置**：保险30%、公用事业25%、银行20%\n"
+                            sector_text += "- 🛡️ **总仓位建议**：75%（保留25%现金）\n"
+                            sector_text += "- ⚠️ **注意**：银行股Walk-forward夏普-0.053，不宜重仓\n"
+                            if defensive_avg > cyclical_avg:
+                                sector_text += f"- 📉 当前防御板块表现优于周期板块，符合熊市规律\n"
+                        else:
+                            sector_text += "**震荡市配置建议**：\n"
+                            sector_text += "- 🔄 **均衡配置**：周期/防御各50%\n"
+                            sector_text += "- 🔄 **动态调整**：根据相对强弱排名选择前3板块\n"
+                            sector_text += "- 🔄 **总仓位建议**：60%（保留40%现金）\n"
+                            sector_text += "- 📊 关注相对强势板块，每5日重新评估\n"
+
+                        sector_text += "\n**⚠️ 重要提醒**：\n"
+                        sector_text += "- 领涨频率高≠策略收益高，需以Walk-forward验证结果为准\n"
+                        sector_text += "- 动量/反转策略效果有限，不建议单独使用\n"
+                        sector_text += "- 板块轮动周期约28天，每2-3周评估轮动时机\n"
+
+                    else:
+                        # 无法获取市场状态时的默认建议
+                        sector_text += "- 📊 请结合恒生指数20日收益判断市场状态\n"
+                        sector_text += "- 牛市配置周期板块，熊市配置防御板块\n"
+                        sector_text += "- 单股仓位不超过15%，单板块不超过30%\n"
                 
                 # 构建股息信息文本
                 dividend_text = ""
@@ -2245,22 +2427,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- RSI（14日）：{safe_float_format(hsi_data['rsi'], '.2f')}\n"
                     hsi_text += f"- MA20：{safe_float_format(hsi_data['ma20'], '.2f')}\n"
                     hsi_text += f"- MA50：{safe_float_format(hsi_data['ma50'], '.2f')}\n"
-                    # 成交量相关数据
-                    # 当成交量为0时（数据未更新），使用腾讯财经成交额
-                    if hsi_data['volume'] > 0:
-                        hsi_text += f"- 成交量：{hsi_data['volume']:,.0f}\n"
-                        volume_ratio = hsi_data.get('volume_ratio', 0)
-                        volume_ratio_str = f"{volume_ratio:.2f}" if volume_ratio >= 1 else f"{volume_ratio:.2f}"
-                        volume_change_str = f"+{hsi_data['volume_change_pct']:.1f}%" if hsi_data['volume_change_pct'] > 0 else f"{hsi_data['volume_change_pct']:.1f}%"
-                        hsi_text += f"- 成交量比率（相对20日均量）：{volume_ratio_str}x（{volume_change_str}）\n"
-                    elif hsi_data.get('amount') is not None:
-                        # yfinance 数据未更新，使用腾讯财经成交额
-                        hsi_text += f"- 成交额：{hsi_data['amount']:.2f}亿港元（腾讯财经实时数据）\n"
-                        if hsi_data.get('amount_ratio'):
-                            hsi_text += f"- 成交额比率：{hsi_data['amount_ratio']:.2f}x\n"
+                    # 成交金额数据（优先显示）
+                    if hsi_data.get('amount') is not None:
+                        hsi_text += f"- 成交金额：{hsi_data['amount']:.2f}亿港元\n"
+                        if hsi_data.get('amount_ratio') is not None:
+                            hsi_text += f"- 成交金额比率：{hsi_data['amount_ratio']:.2f}x（相对20日均值）\n"
+                        else:
+                            hsi_text += "- 成交金额比率：N/A（无法获取历史数据）\n"
                     else:
-                        hsi_text += "- 成交量：N/A（数据暂未更新）\n"
-                        hsi_text += "- 成交量比率：N/A\n"
+                        hsi_text += "- 成交金额：N/A（数据暂未更新）\n"
+                        hsi_text += "- 成交金额比率：N/A\n"
 
                 if current_market:
                     hsi_text += f"- 市场信号: {current_market['market_signal']}\n"

@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## ⚡ 快速参考
+## ⚡ 常用命令
 
 ### 测试与验证
 
@@ -20,25 +20,21 @@ python3 -m py_compile <文件路径>
 
 # 运行所有测试
 python3 -m pytest tests/ -v
-
-# 运行单个测试
-python3 -m pytest tests/test_zscore_detector.py -v
 ```
 
-### 常用命令
+### 核心功能命令
 
 | 任务 | 命令 |
 |------|------|
-| **训练模型** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost` |
-| **生成预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost` |
-| **综合分析** | `./scripts/run_comprehensive_analysis.sh` |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
 | **恒指预测验证** | `python3 hsi_prediction.py --verify` |
+| **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
+| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
-| **预测性能监控** | `python3 ml_services/performance_monitor.py --mode all --horizon 20` |
+| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost` |
+| **板块验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
-| **板块分析** | `./scripts/run_sector_analysis.sh` |
+| **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -53,80 +49,42 @@ python3 -m pytest tests/test_zscore_detector.py -v
 |------|------|
 | **数据泄漏** | 准确率 >65% 通常是数据泄漏信号 |
 | **CatBoost 1天模型** | 严重过拟合，**不推荐使用** |
-| **深度学习模型** | LSTM/Transformer 表现远不如 CatBoost，**不推荐** |
+| **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **Walk-forward验证** | **唯一可信**的模型验证方法 |
-| **交易时段检测** | 交易时段数据不完整，应在收盘后检测 |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
+| **动量/反转策略** | 收益仅0.3%-0.5%，**不推荐单独使用** |
 
-### 异常策略（两年数据验证）
+### 可用策略（两年数据验证）
 
-| 异常类型 | 5日收益 | 胜率 | 策略 |
-|---------|---------|------|------|
-| **IF high** | -3.04% | 43% | 🔴 减仓 |
-| **价格异常+当日下跌** | +4.12% | **72%** | 🟢 抄底 |
-
-### 三周期一致预测策略 ⭐
-
-| 场景 | 占比 | 至少一周期正确率 | 操作 |
-|------|------|-----------------|------|
-| **三周期一致看涨** | 12.3% | **92%** | 强烈买入 |
-| **三周期一致看跌** | 23.4% | **93%** | 强烈卖出 |
-| 不一致 | 64.4% | - | 观望 |
-
-> **数据来源**: Walk-forward回测验证（2020-2024年，938个样本）
-> **详细说明**: 参阅 [lessons.md](lessons.md)
+| 策略 | 收益 | 胜率 | 操作 |
+|------|------|------|------|
+| **三周期一致(110)做空** | +4.25% | **90%** | ⭐ 最优 |
+| **Z-Score+当日下跌抄底** | +4.12% | **72%** | 🟢 买入 |
+| **IF high异常** | -3.04% | 43% | 🔴 减仓 |
+| **周期/防御轮动** | - | 74.3%/65.9% | ⭐⭐⭐⭐ 有效 |
 
 ---
 
-## 📂 项目架构
+## 📐 数据流架构
 
 ```
-fortune/
-├── 核心入口
-│   ├── comprehensive_analysis.py       # 综合分析（每日信号生成）
-│   ├── detect_stock_anomalies.py       # 港股异常检测
-│   ├── hsi_prediction.py               # 恒生指数预测（双模型）
-│   ├── hk_smart_money_tracker.py       # 主力资金追踪
-│   ├── simulation_trader.py            # 模拟交易系统
-│   └── crypto_email.py                 # 加密货币监控
-├── anomaly_detector/                   # 异常检测模块
-│   ├── zscore_detector.py              # Z-Score 检测器
-│   ├── isolation_forest_detector.py    # Isolation Forest 检测器
-│   └── anomaly_integrator.py           # 异常整合器
-├── data_services/                      # 数据服务层
-│   ├── technical_analysis.py           # 技术分析工具
-│   ├── fundamental_data.py             # 基本面数据
-│   ├── southbound_data.py              # 南向资金数据
-│   └── tencent_finance.py              # 腾讯财经数据源
-├── ml_services/                        # 机器学习模块
-│   ├── ml_trading_model.py             # ML 模型训练/预测
-│   ├── hsi_ml_model.py                 # 恒指 CatBoost 模型
-│   ├── walk_forward_validation.py      # Walk-forward 验证
-│   ├── walk_forward_by_sector.py       # 板块验证
-│   └── performance_monitor.py          # 预测性能监控
-├── llm_services/                       # 大模型服务
-│   ├── qwen_engine.py                  # 通义千问接口
-│   └── sentiment_analyzer.py           # 情感分析
-├── tests/                              # 测试脚本
-├── docs/                               # 文档
-├── output/                             # 输出报告
-├── data/                               # 数据文件
-└── scripts/                            # 运行脚本
+外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
+    ↓              ↓              ↓            ↓          ↓
+腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
+yfinance     基本面数据      综合分析     Walk-forward  JSON文件
+AKShare      南向资金        主力追踪     性能监控
 ```
 
----
+**关键依赖关系**：
+- `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
+- `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
+- `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
+- `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
 
-## 🎯 核心功能
-
-### 恒生指数预测系统
-
-**双模型架构**：
-- **评分模型**：基于特征重要性加权的规则模型
-- **CatBoost模型**：机器学习自动学习权重
-
-**多周期预测**：1天（噪音大，不推荐）、5天（准确率最高 ~58%）、20天（趋势判断能力强）
-
-**特征配置**：宏观因子（美债收益率、VIX）、港股通资金、技术指标（MA、RSI、MACD等）
+**数据存储**：
+- `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
+- `data/prediction_history.json` - 预测历史记录
+- `output/` - 分析报告和回测结果
 
 ---
 
@@ -134,32 +92,29 @@ fortune/
 
 ### 模型可信度
 
-| 模型 | 可信度 | 说明 |
-|------|--------|------|
-| **CatBoost 20天** | ⭐⭐⭐⭐⭐ | **推荐使用**，准确率 61.44% |
-| CatBoost 5天 | ⭐⭐⭐ | 谨慎使用 |
-| CatBoost 1天 | ⭐ | **不推荐**，严重过拟合 |
-| LSTM/Transformer | ⭐ | **不推荐**，表现远不如 CatBoost |
+| 模型 | 准确率 | 夏普比率 | 推荐度 |
+|------|--------|---------|--------|
+| **CatBoost 20天** | 61.44% (±1.75%) | 0.97 | ⭐⭐⭐⭐⭐ 推荐 |
+| CatBoost 5天 | 56.8% | - | ⭐⭐⭐ 谨慎使用 |
+| CatBoost 1天 | 过拟合 | - | ❌ 不推荐 |
+| LSTM/Transformer | ~51% | F1≈0 | ❌ 不推荐 |
 
-### CatBoost 配置（推荐）
+### CatBoost 配置
 
 | 参数 | 值 |
 |------|-----|
-| 准确率 | 61.44%（±1.75%） |
 | 置信度阈值 | 0.65 |
-| 特征数量 | 918 个全量特征 |
+| 特征数量 | 918 个（技术指标、基本面、美股市场、情感指标等） |
 | 随机种子 | 42（固定） |
+| Walk-forward folds | 12 |
 
-### Walk-forward 验证结果
+### 板块模型（Walk-forward验证）
 
-| 指标 | 数值 | 业界标准 | 评估 |
-|------|------|---------|------|
-| 夏普比率 | 0.97 | >1.0 | 接近标准 |
-| 最大回撤 | -0.55% | <-20% | 优秀 |
-| 胜率 | 49.36% | 52%+ | 略低 |
-| 索提诺比率 | 2.52 | >1.0 | 优秀 |
-
-**实用性评估**：80/100，⭐⭐⭐⭐⭐ 强烈推荐实盘
+| 板块 | 夏普比率 | 胜率 | 推荐度 |
+|------|---------|------|--------|
+| **消费股** | 0.7445 | 54.80% | ⭐⭐⭐⭐⭐ |
+| 银行股 | 0.1546 | 50.44% | ⭐⭐⭐⭐ |
+| 半导体股 | 0.1260 | 49.87% | ⭐⭐⭐⭐ |
 
 ---
 
@@ -175,85 +130,71 @@ fortune/
 | `RECIPIENT_EMAIL` | 收件人邮箱列表 |
 | `QWEN_API_KEY` | 通义千问 API 密钥 |
 
-### 依赖管理
+### 主要依赖
 
-```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 主要依赖
-yfinance    # 金融数据获取
-catboost    # 机器学习模型（主要模型）
-akshare     # 中文财经数据
-pandas      # 数据处理
-```
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm`
 
 ---
 
-## 🚀 自动化调度
+## 🚀 自动化调度（.github/workflows/）
 
 | 工作流 | 功能 | 执行时间 |
 |--------|------|----------|
-| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
-| `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
 | `hsi-prediction.yml` | 恒生指数预测 | 周一到周五 06:00 |
 | `comprehensive-analysis.yml` | 综合分析 | 周一到周五 16:00 |
+| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
+| `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
 | `performance-monitor.yml` | 性能月度报告 | 每月1号 |
 
 ---
 
-## 📝 Session Workflow
+## 📝 会话工作流
 
-**会话开始时**：
-1. 读取 `progress.txt`，了解项目当前进展
-2. 审查 `lessons.md`，检查是否有错误需要纠正
+**会话开始时**：读取 `progress.txt` 了解项目进展，审查 `lessons.md` 检查错误
 
-**功能更新后**：
-1. 更新 `progress.txt`，记录新的进展
-2. 如有新的学习心得，更新 `lessons.md`
+**功能更新后**：更新 `progress.txt` 记录进展，如有新学习心得更新 `lessons.md`
 
 ---
 
-## 🔧 开发规范要点
+## 🔧 开发规范
 
 ### 代码修改原则
 
-1. **修改完即测试**：每次代码修改后立即验证
-   - 语法检查：`python3 -m py_compile <文件路径>`
-   - 功能测试：验证修改是否符合预期
-   - 回归测试：确保没有破坏现有功能
-
-2. **避免硬编码路径**：
-   ```python
-   # ✅ 正确
-   script_dir = os.path.dirname(os.path.abspath(__file__))
-   data_dir = os.path.join(script_dir, 'data')
-   ```
-
+1. **修改完即测试**：每次修改后立即执行 `python3 -m py_compile <文件>`
+2. **避免硬编码路径**：使用 `os.path.dirname(os.path.abspath(__file__))` 获取脚本目录
 3. **HTTP API 超时处理**：调用 API 时必须设置超时时间
-
-4. **公共代码提取**：识别可复用逻辑，创建通用函数
+4. **语言规范**：对话和注释使用简体中文，变量名/函数名使用英文
 
 ### 数据泄漏防护
 
 高风险特征必须使用 `.shift(1)` 避免使用当日数据：
 - 所有 `.rolling()` 计算的特征
-- BB_Position、Price_Percentile、Intraday_Amplitude
-- Price_Ratio_MA5/20/50、Support_120d、Resistance_120d
+- `future_return` 必须使用 `.shift(-N)` 计算未来收益
+- BB_Position、Price_Percentile、动量分析特征
+
+```python
+# ❌ 错误：使用当日数据
+future_return = returns.rolling(5).sum()
+
+# ✅ 正确：使用未来数据
+future_return = returns.rolling(5).sum().shift(-5)
+```
 
 ### Git 提交规范
 
 - 文件上传：只提交 `.md` 格式，不提交 `.json`/`.csv`
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
-- 推送冲突：使用 `git pull --rebase` 或 `|| true` 容错
+- 推送冲突：使用 `git pull --rebase`
 
 ---
 
 ## 🔗 快速链接
 
-- **经验教训**：[lessons.md](lessons.md)
-- **进度跟踪**：[progress.txt](progress.txt)
-- **详细文档**：[docs/](docs/)
+- **经验教训**：[lessons.md](lessons.md) - 关键警告和最佳实践
+- **进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
+- **详细文档**：[docs/](docs/) - 特征工程、验证方法等
+- **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
+- **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 
 ---
 
