@@ -707,6 +707,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     action = pattern_info.get('action', '观望')
                     win_rate = pattern_info.get('win_rate', '-')
 
+                    # 格式化模式显示（带中文名称）
+                    pattern_display = pattern
+                    if pattern != '-' and pattern in THREE_HORIZON_PATTERNS:
+                        pattern_name = THREE_HORIZON_PATTERNS[pattern]['name']
+                        pattern_display = f"{pattern_name}({pattern})"
+
                     # 检查传导模式
                     transmission_info = check_transmission_mode(stock_code, date_str)
                     if transmission_info['transmission_mode']:
@@ -714,7 +720,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     else:
                         transmission_icon = "-"
 
-                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern} | {action} | {win_rate} | {transmission_icon} |\n"
+                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_icon} |\n"
                 else:
                     # 无三周期预测，使用原始格式
                     if row['probability'] > 0.60:
