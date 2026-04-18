@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_services.qwen_engine import chat_with_llm
 
 # 导入配置
-from config import WATCHLIST
+from config import WATCHLIST, STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING
 
 # 从WATCHLIST提取股票名称映射
 STOCK_NAMES = WATCHLIST
@@ -288,9 +288,9 @@ def extract_ml_predictions(filepath):
             catboost_text += f"预测日期: {date_str}\n\n"
             catboost_text += "全部股票预测结果（按概率排序）:\n\n"
 
-            # 构建Markdown表格（添加阻力标识列）
-            catboost_text += "| 股票代码 | 股票名称 | 预测方向 | 上涨概率 | 当前价格 | 阻力标识 |\n"
-            catboost_text += "|----------|----------|----------|----------|----------|----------|\n"
+            # 构建Markdown表格（添加板块名称、类型、阻力标识列）
+            catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 预测方向 | 上涨概率 | 当前价格 | 阻力标识 |\n"
+            catboost_text += "|----------|----------|----------|------|----------|----------|----------|----------|\n"
 
             # 统计筹码分布
             resistance_stats = {'low': 0, 'medium': 0, 'high': 0}
@@ -335,7 +335,18 @@ def extract_ml_predictions(filepath):
                 else:
                     probability_colored = f'<font color="red"><b>{probability_formatted}</b></font>'
 
-                catboost_text += f"| {row['code']} | {row['name']} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
+                # 获取板块名称和类型
+                stock_code = row['code']
+                sector_name = '-'
+                sector_type = '-'
+                if stock_code in STOCK_SECTOR_MAPPING:
+                    sector_code = STOCK_SECTOR_MAPPING[stock_code].get('sector', '')
+                    if sector_code and sector_code in SECTOR_NAME_MAPPING:
+                        sector_name = SECTOR_NAME_MAPPING[sector_code]
+                    if sector_code:
+                        sector_type = get_sector_type(sector_code)
+
+                catboost_text += f"| {row['code']} | {row['name']} | {sector_name} | {sector_type} | {direction} | {probability_colored} | {safe_float_format(row['current_price'], '2f')} | {resistance_icon} |\n"
 
             catboost_text += f"\n**统计信息**：\n"
             catboost_text += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
