@@ -657,8 +657,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text = "【CatBoost模型三周期预测结果】\n"
                 catboost_text += f"预测日期: {date_str}\n\n"
                 catboost_text += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 | 传导模式 |\n"
-                catboost_text += "|----------|----------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
+                catboost_text += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 | 传导模式 |\n"
+                catboost_text += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
             else:
                 # 原始表格格式（无三周期预测）
                 catboost_text = "【CatBoost模型预测结果（20天）】\n"
@@ -720,7 +720,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     else:
                         transmission_icon = "-"
 
-                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_icon} |\n"
+                    # 格式化价格
+                    price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
+
+                    catboost_text += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_icon} |\n"
                 else:
                     # 无三周期预测，使用原始格式
                     if row['probability'] > 0.60:
