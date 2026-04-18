@@ -302,41 +302,43 @@ def get_target_date_trading_days(date, horizon, stock_code='^HSI'):
     参数:
     - date: 数据日期（datetime 或 'YYYY-MM-DD' 字符串）
     - horizon: 交易日数量
-    - stock_code: 股票代码，用于获取交易日历（默认使用恒生指数）
+    - stock_code: 股票代码（保留参数，兼容性）
 
     返回:
     - 目标日期字符串 (YYYY-MM-DD)
     """
-    import yfinance as yf
-
     if isinstance(date, str):
         date = datetime.strptime(date, '%Y-%m-%d')
 
-    # 计算查询范围（自然日约是交易日的1.4倍，加一些缓冲）
-    end_date = date + timedelta(days=int(horizon * 2) + 30)
-
     try:
-        # 使用 yfinance 获取交易日历
-        ticker = yf.Ticker(stock_code)
-        df = ticker.history(start=date.strftime('%Y-%m-%d'),
-                           end=end_date.strftime('%Y-%m-%d'))
+        # 使用 akshare 获取交易日历（更可靠）
+        import akshare as ak
+        df = ak.tool_trade_date_hist_sina()
+        trading_dates = set(df['trade_date'].astype(str).tolist())
 
-        if len(df) > horizon:
-            # 返回第 horizon+1 个交易日（因为第一个是 start_date 当天或之后最近的交易日）
-            target_idx = horizon
-            if target_idx < len(df):
-                return df.index[target_idx].strftime('%Y-%m-%d')
+        # 找到第 horizon 个交易日后的日期
+        count = 0
+        current = date
 
-        # 如果数据不足，回退到自然日
-        logger.warning(f"交易日数据不足，回退到自然日计算: {stock_code}")
-        target_date = date + timedelta(days=horizon)
-        return target_date.strftime('%Y-%m-%d')
+        while count < horizon:
+            current += timedelta(days=1)
+            date_str = current.strftime('%Y-%m-%d')
+            if date_str in trading_dates:
+                count += 1
+
+        return current.strftime('%Y-%m-%d')
 
     except Exception as e:
-        # 出错时回退到自然日
-        logger.warning(f"获取交易日历失败，回退到自然日计算: {e}")
-        target_date = date + timedelta(days=horizon)
-        return target_date.strftime('%Y-%m-%d')
+        # 回退到 pandas 工作日（不包含节假日，但比自然日准确）
+        logger.warning(f"获取交易日历失败，回退到工作日计算: {e}")
+        try:
+            from pandas.tseries.offsets import BDay
+            target = date + horizon * BDay()
+            return target.strftime('%Y-%m-%d')
+        except:
+            # 最终回退到自然日
+            target_date = date + timedelta(days=horizon)
+            return target_date.strftime('%Y-%m-%d')
 
 
 # ========== 缓存辅助函数 ==========
