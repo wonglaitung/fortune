@@ -2,11 +2,45 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-18
+**最后更新**：2026-04-19
 
 ---
 
-## 最新进展（2026-04-18）
+## 最新进展（2026-04-19）
+
+### 综合分析脚本性能优化 ⭐ 重要
+
+**问题**：`run_comprehensive_analysis.sh` 步骤2已生成三周期预测CSV，步骤4又重新加载模型预测，造成重复计算。
+
+**解决方案**：
+- 新增 `--use-cached-predictions` 参数
+- 脚本调用时直接读取已有CSV文件，跳过模型预测
+
+**代码位置**：
+- `comprehensive_analysis.py`: `extract_ml_predictions()` 函数新增 `use_cached_predictions` 参数
+- `scripts/run_comprehensive_analysis.sh`: 步骤4添加 `--use-cached-predictions`
+
+**使用场景**：
+| 场景 | 命令 |
+|------|------|
+| 脚本运行（自动使用缓存） | `./scripts/run_comprehensive_analysis.sh` |
+| 单独运行（模型预测） | `python3 comprehensive_analysis.py --llm-file ...` |
+| 单独运行（使用缓存） | `python3 comprehensive_analysis.py --llm-file ... --use-cached-predictions` |
+
+### 三周期模式显示优化
+
+**问题**：邮件表格中的模式列只显示数字（如111、110），不易理解。
+
+**修复**：模式显示改为带中文名称格式：
+| 原格式 | 新格式 |
+|--------|--------|
+| `111` | `一致看涨(111)` |
+| `011` | `探底回升⭐(011)` |
+| `110` | `震荡回调(110)` |
+
+---
+
+## 历史进展（2026-04-18）
 
 ### 综合分析系统配置更新 ⭐ 重要
 
