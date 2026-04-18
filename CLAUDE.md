@@ -83,6 +83,8 @@ AKShare      南向资金        主力追踪     性能监控
 
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
+- `data/stock_cache/` - 原始数据缓存（股票、恒指数据）
+- `data/feature_cache/` - 特征缓存（计算好的特征，有效期7天）
 - `data/prediction_history.json` - 预测历史记录
 - `output/` - 分析报告和回测结果
 

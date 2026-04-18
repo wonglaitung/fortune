@@ -31,7 +31,9 @@ import lightgbm as lgb
 
 # 缓存配置
 CACHE_DIR = 'data/stock_cache'
+FEATURE_CACHE_DIR = 'data/feature_cache'  # 特征缓存目录
 STOCK_DATA_CACHE_DAYS = 7  # 股票历史数据缓存7天
+FEATURE_CACHE_DAYS = 7     # 特征缓存7天（与数据缓存一致）
 HSI_DATA_CACHE_HOURS = 1   # 恒生指数数据缓存1小时
 
 # 导入项目模块
@@ -372,8 +374,68 @@ def get_hsi_data_with_cache(period_days=730):
     # 保存缓存
     if hsi_df is not None and not hsi_df.empty:
         _save_cache(cache_file_path, hsi_df)
-    
+
     return hsi_df
+
+
+# ========== 特征缓存函数 ==========
+def _get_feature_cache_key(stock_code, last_date):
+    """生成特征缓存键
+
+    参数:
+    - stock_code: 股票代码（如 '0005'）
+    - last_date: 数据最后日期（如 '20260418'）
+
+    返回:
+    - 缓存键字符串
+    """
+    return f"{stock_code}_{last_date}"
+
+
+def _get_feature_cache_file_path(cache_key):
+    """获取特征缓存文件路径"""
+    if not os.path.exists(FEATURE_CACHE_DIR):
+        os.makedirs(FEATURE_CACHE_DIR)
+    return os.path.join(FEATURE_CACHE_DIR, f"{cache_key}.pkl")
+
+
+def _is_feature_cache_valid(cache_file_path):
+    """检查特征缓存是否有效"""
+    if not os.path.exists(cache_file_path):
+        return False
+    cache_time = os.path.getmtime(cache_file_path)
+    current_time = datetime.now().timestamp()
+    age_days = (current_time - cache_time) / 86400  # 转换为天
+    return age_days < FEATURE_CACHE_DAYS
+
+
+def _save_feature_cache(cache_file_path, feature_data):
+    """保存特征缓存
+
+    参数:
+    - cache_file_path: 缓存文件路径
+    - feature_data: dict，包含 'stock_df', 'hsi_df', 'us_market_df', 'feature_df'
+    """
+    try:
+        with open(cache_file_path, 'wb') as f:
+            pickle.dump({
+                'data': feature_data,
+                'timestamp': datetime.now().isoformat()
+            }, f)
+        logger.debug(f"特征缓存已保存: {cache_file_path}")
+    except Exception as e:
+        logger.warning(f"保存特征缓存失败: {e}")
+
+
+def _load_feature_cache(cache_file_path):
+    """加载特征缓存"""
+    try:
+        with open(cache_file_path, 'rb') as f:
+            cache = pickle.load(f)
+            return cache['data']
+    except Exception as e:
+        logger.warning(f"加载特征缓存失败: {e}")
+        return None
 
 
 class FeatureEngineer:
@@ -3897,7 +3959,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005, use_feature_cache=True):
         """准备训练数据
 
         Args:
@@ -3907,6 +3969,7 @@ class CatBoostModel(BaseTradingModel):
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
             min_return_threshold: 最小收益阈值（默认1%），用于标签定义
+            use_feature_cache: 是否使用特征缓存（默认True）
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
@@ -3920,6 +3983,16 @@ class CatBoostModel(BaseTradingModel):
         else:
             logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
+        # 获取恒生指数数据（只获取一次，用于缓存键）
+        logger.info("获取恒生指数数据...")
+        hsi_df = get_hsi_data_tencent(period_days=730)
+        if hsi_df is None or hsi_df.empty:
+            logger.warning("无法获取恒生指数数据")
+            hsi_df = None
+
+        cache_hits = 0
+        cache_misses = 0
+
         for code in codes:
             try:
                 print(f"处理股票: {code}")
@@ -3932,70 +4005,92 @@ class CatBoostModel(BaseTradingModel):
                 if stock_df is None or stock_df.empty:
                     continue
 
-                # 获取恒生指数数据（2年约730天）
-                hsi_df = get_hsi_data_tencent(period_days=730)
-                if hsi_df is None or hsi_df.empty:
-                    continue
+                # 获取数据最后日期作为缓存键
+                last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
-                # 计算技术指标（80个指标）
-                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+                # 尝试加载特征缓存
+                cache_key = _get_feature_cache_key(stock_code, last_date)
+                cache_file_path = _get_feature_cache_file_path(cache_key)
 
-                # 计算多周期指标
-                stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+                if use_feature_cache and _is_feature_cache_valid(cache_file_path):
+                    # 使用缓存
+                    cached_data = _load_feature_cache(cache_file_path)
+                    if cached_data is not None and 'stock_df' in cached_data:
+                        stock_df = cached_data['stock_df']
+                        cache_hits += 1
+                        print(f"  ✅ 使用特征缓存")
+                        logger.debug(f"特征缓存命中: {cache_key}")
+                else:
+                    # 计算特征
+                    cache_misses += 1
 
-                # 计算相对强度指标
-                stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+                    # 计算技术指标（80个指标）
+                    stock_df = self.feature_engineer.calculate_technical_features(stock_df)
 
-                # 创建资金流向特征
-                stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+                    # 计算多周期指标
+                    stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
 
-                # 创建市场环境特征（包含港股和美股）
-                stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+                    # 计算相对强度指标
+                    if hsi_df is not None:
+                        stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
 
-                # 创建标签（使用指定的 horizon 和阈值）
+                    # 创建资金流向特征
+                    stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+                    # 创建市场环境特征（包含港股和美股）
+                    if hsi_df is not None:
+                        stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+
+                    # 添加基本面特征
+                    fundamental_features = self.feature_engineer.create_fundamental_features(code)
+                    for key, value in fundamental_features.items():
+                        stock_df[key] = value
+
+                    # 添加股票类型特征
+                    stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                    for key, value in stock_type_features.items():
+                        stock_df[key] = value
+
+                    # 添加情感特征
+                    sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                    for key, value in sentiment_features.items():
+                        stock_df[key] = value
+
+                    # 添加主题特征（LDA主题建模）
+                    topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                    for key, value in topic_features.items():
+                        stock_df[key] = value
+                    # 添加主题情感交互特征
+                    topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                    for key, value in topic_sentiment_interaction.items():
+                        stock_df[key] = value
+                    # 添加预期差距特征
+                    expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                    for key, value in expectation_gap.items():
+                        stock_df[key] = value
+
+                    # 添加板块特征
+                    sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                    for key, value in sector_features.items():
+                        stock_df[key] = value
+
+                    # 添加事件驱动特征（9个）
+                    stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+
+                    # 生成技术指标与基本面交互特征（与训练时保持一致）
+                    stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
+                    # 生成交叉特征（与训练时保持一致）
+                    stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                    # 保存特征缓存（不含标签）
+                    if use_feature_cache:
+                        _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                        print(f"  💾 特征已缓存")
+                        logger.debug(f"特征缓存已保存: {cache_key}")
+
+                # 创建标签（使用指定的 horizon 和阈值，不缓存）
                 stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
-
-                # 添加基本面特征
-                fundamental_features = self.feature_engineer.create_fundamental_features(code)
-                for key, value in fundamental_features.items():
-                    stock_df[key] = value
-
-                # 添加股票类型特征
-                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
-                for key, value in stock_type_features.items():
-                    stock_df[key] = value
-
-                # 添加情感特征
-                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
-                for key, value in sentiment_features.items():
-                    stock_df[key] = value
-
-                # 添加主题特征（LDA主题建模）
-                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
-                for key, value in topic_features.items():
-                    stock_df[key] = value
-                # 添加主题情感交互特征
-                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                for key, value in topic_sentiment_interaction.items():
-                    stock_df[key] = value
-                # 添加预期差距特征
-                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
-                for key, value in expectation_gap.items():
-                    stock_df[key] = value
-
-                # 添加板块特征
-                sector_features = self.feature_engineer.create_sector_features(code, stock_df)
-                for key, value in sector_features.items():
-                    stock_df[key] = value
-
-                # 添加事件驱动特征（9个）
-                stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
-
-                # 生成技术指标与基本面交互特征（与训练时保持一致）
-                stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
-
-                # 生成交叉特征（与训练时保持一致）
-                stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
                 # 添加股票代码
                 stock_df['Code'] = code
@@ -4010,6 +4105,10 @@ class CatBoostModel(BaseTradingModel):
 
         if len(all_data) == 0:
             raise ValueError("没有可用的数据")
+
+        # 打印缓存统计
+        if use_feature_cache:
+            print(f"\n📊 特征缓存统计: 命中 {cache_hits}, 未命中 {cache_misses}")
 
         # 合并所有数据
         df = pd.concat(all_data, ignore_index=False)
@@ -4325,13 +4424,14 @@ class CatBoostModel(BaseTradingModel):
 
         return feat_imp
 
-    def predict(self, code, predict_date=None, horizon=None):
+    def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True):
         """预测单只股票
 
         Args:
             code: 股票代码
             predict_date: 预测日期 (YYYY-MM-DD)，基于该日期的数据预测下一个交易日，默认使用最新交易日
             horizon: 预测周期（1=次日，5=一周，20=一个月），默认使用训练时的周期
+            use_feature_cache: 是否使用特征缓存（默认True）
         """
         if horizon is None:
             horizon = self.horizon
@@ -4345,14 +4445,6 @@ class CatBoostModel(BaseTradingModel):
             if stock_df is None or stock_df.empty:
                 return None
 
-            # 获取恒生指数数据
-            hsi_df = get_hsi_data_tencent(period_days=730)
-            if hsi_df is None or hsi_df.empty:
-                return None
-
-            # 获取美股市场数据
-            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
-
             # 如果指定了预测日期，过滤数据到该日期
             if predict_date:
                 predict_date = pd.to_datetime(predict_date)
@@ -4361,77 +4453,110 @@ class CatBoostModel(BaseTradingModel):
                 # 确保索引是 datetime 类型
                 if not isinstance(stock_df.index, pd.DatetimeIndex):
                     stock_df.index = pd.to_datetime(stock_df.index)
-                if not isinstance(hsi_df.index, pd.DatetimeIndex):
-                    hsi_df.index = pd.to_datetime(hsi_df.index)
-                if us_market_df is not None and not isinstance(us_market_df.index, pd.DatetimeIndex):
-                    us_market_df.index = pd.to_datetime(us_market_df.index)
 
                 # 使用字符串比较避免时区问题
                 stock_df = stock_df[stock_df.index.strftime('%Y-%m-%d') <= predict_date_str]
-                hsi_df = hsi_df[hsi_df.index.strftime('%Y-%m-%d') <= predict_date_str]
-                if us_market_df is not None:
-                    us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 if stock_df.empty:
                     logger.warning(f"股票 {code} 在日期 {predict_date_str} 之前没有数据")
                     return None
 
-            # 计算技术指标（80个指标）
-            stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+            # 获取数据最后日期作为缓存键
+            last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
-            # 计算多周期指标
-            stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+            # 尝试加载特征缓存
+            cache_key = _get_feature_cache_key(stock_code, last_date)
+            cache_file_path = _get_feature_cache_file_path(cache_key)
 
-            # 计算相对强度指标
-            stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+            if use_feature_cache and _is_feature_cache_valid(cache_file_path):
+                # 使用缓存
+                cached_data = _load_feature_cache(cache_file_path)
+                if cached_data is not None and 'stock_df' in cached_data:
+                    stock_df = cached_data['stock_df']
+                    logger.debug(f"预测使用特征缓存: {cache_key}")
+            else:
+                # 计算特征
+                # 获取恒生指数数据
+                hsi_df = get_hsi_data_tencent(period_days=730)
+                if hsi_df is None or hsi_df.empty:
+                    hsi_df = None
 
-            # 创建资金流向特征
-            stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+                # 获取美股市场数据
+                us_market_df = us_market_data.get_all_us_market_data(period_days=730)
 
-            # 创建市场环境特征（包含港股和美股）
-            stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+                # 如果指定了预测日期，过滤数据到该日期
+                if predict_date and hsi_df is not None:
+                    if not isinstance(hsi_df.index, pd.DatetimeIndex):
+                        hsi_df.index = pd.to_datetime(hsi_df.index)
+                    hsi_df = hsi_df[hsi_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+                    if us_market_df is not None and not isinstance(us_market_df.index, pd.DatetimeIndex):
+                        us_market_df.index = pd.to_datetime(us_market_df.index)
+                    if us_market_df is not None:
+                        us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
-            # 添加基本面特征
-            fundamental_features = self.feature_engineer.create_fundamental_features(code)
-            for key, value in fundamental_features.items():
-                stock_df[key] = value
+                # 计算技术指标（80个指标）
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
 
-            # 添加股票类型特征
-            stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
-            for key, value in stock_type_features.items():
-                stock_df[key] = value
+                # 计算多周期指标
+                stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
 
-            # 添加情感特征
-            sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
-            for key, value in sentiment_features.items():
-                stock_df[key] = value
+                # 计算相对强度指标
+                if hsi_df is not None:
+                    stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
 
-            # 添加主题特征（LDA主题建模）
-            topic_features = self.feature_engineer.create_topic_features(code, stock_df)
-            for key, value in topic_features.items():
-                stock_df[key] = value
-                # 添加主题情感交互特征
-                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                for key, value in topic_sentiment_interaction.items():
+                # 创建资金流向特征
+                stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+
+                # 创建市场环境特征（包含港股和美股）
+                if hsi_df is not None:
+                    stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+
+                # 添加基本面特征
+                fundamental_features = self.feature_engineer.create_fundamental_features(code)
+                for key, value in fundamental_features.items():
                     stock_df[key] = value
-                # 添加预期差距特征
-                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
-                for key, value in expectation_gap.items():
+
+                # 添加股票类型特征
+                stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+                for key, value in stock_type_features.items():
                     stock_df[key] = value
 
-            # 添加板块特征
-            sector_features = self.feature_engineer.create_sector_features(code, stock_df)
-            for key, value in sector_features.items():
-                stock_df[key] = value
+                # 添加情感特征
+                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                for key, value in sentiment_features.items():
+                    stock_df[key] = value
 
-            # 添加事件驱动特征（9个，与训练时保持一致）
-            stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+                # 添加主题特征（LDA主题建模）
+                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                for key, value in topic_features.items():
+                    stock_df[key] = value
+                    # 添加主题情感交互特征
+                    topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                    for key, value in topic_sentiment_interaction.items():
+                        stock_df[key] = value
+                    # 添加预期差距特征
+                    expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                    for key, value in expectation_gap.items():
+                        stock_df[key] = value
 
-            # 生成技术指标与基本面交互特征（与训练时保持一致）
-            stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+                # 添加板块特征
+                sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                for key, value in sector_features.items():
+                    stock_df[key] = value
 
-            # 生成交叉特征（与训练时保持一致）
-            stock_df = self.feature_engineer.create_interaction_features(stock_df)
+                # 添加事件驱动特征（9个，与训练时保持一致）
+                stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+
+                # 生成技术指标与基本面交互特征（与训练时保持一致）
+                stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
+                # 生成交叉特征（与训练时保持一致）
+                stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                # 保存特征缓存
+                if use_feature_cache:
+                    _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                    logger.debug(f"特征缓存已保存: {cache_key}")
 
             # 获取最新数据
             latest_data = stock_df.iloc[-1:]
@@ -4483,13 +4608,13 @@ class CatBoostModel(BaseTradingModel):
             # 分类列已经在前面处理过（用 LabelEncoder 转换），这里不需要再处理
             # 转换回 numpy 数组
             X = df_temp.values
-            
+
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
-            
+
             # 获取分类特征索引
             categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
-            
+
             test_pool = Pool(data=X, cat_features=categorical_features if categorical_features else None)
             proba = self.catboost_model.predict_proba(test_pool)[0]
             prediction = self.catboost_model.predict(test_pool)[0]
