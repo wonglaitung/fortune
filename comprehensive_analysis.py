@@ -88,18 +88,161 @@ SECTOR_TYPES = {
     'index': {'name': '指数', 'type': '防御'},
 }
 
-# 三周期预测模式配置（基于个股验证结果）
+# 三周期预测模式配置（基于个股完整模型验证结果）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第10章
+# 验证数据：26只港股蓝筹股，Walk-forward 30 folds，完整模型（545特征）
 THREE_HORIZON_PATTERNS = {
-    '111': {'name': '一致看涨', 'action': '买入', 'win_rate': '80.22%', 'avg_return': '+7.69%', 'confidence': '高'},
-    '000': {'name': '一致看跌', 'action': '减仓', 'win_rate': '78.86%', 'avg_return': '-5.09%', 'confidence': '高'},
-    '110': {'name': '震荡回调', 'action': '谨慎', 'win_rate': '79.87%', 'avg_return': '-5.26%', 'confidence': '中高'},
-    '100': {'name': '冲高回落⭐', 'action': '观望/轻仓空', 'win_rate': '81.62%', 'avg_return': '-5.64%', 'confidence': '高'},
-    '011': {'name': '探底回升', 'action': '买入', 'win_rate': '81.34%', 'avg_return': '+7.92%', 'confidence': '高'},
-    '101': {'name': '假突破⭐', 'action': '买入', 'win_rate': '81.02%', 'avg_return': '+7.85%', 'confidence': '高'},
-    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '80.76%', 'avg_return': '-5.29%', 'confidence': '中高'},
-    '001': {'name': '下跌中继', 'action': '谨慎', 'win_rate': '79.60%', 'avg_return': '+7.61%', 'confidence': '中'},
+    '011': {'name': '探底回升⭐', 'action': '分批建仓', 'win_rate': '64.64%', 'avg_return': '+7.92%', 'confidence': '高'},
+    '110': {'name': '震荡回调', 'action': '谨慎', 'win_rate': '64.61%', 'avg_return': '-', 'confidence': '中高'},
+    '101': {'name': '假突破', 'action': '持有', 'win_rate': '62.10%', 'avg_return': '+7.85%', 'confidence': '中高'},
+    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '61.74%', 'avg_return': '+7.61%', 'confidence': '中'},
+    '111': {'name': '一致看涨', 'action': '买入', 'win_rate': '61.49%', 'avg_return': '+7.69%', 'confidence': '中'},
+    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '60.21%', 'avg_return': '-', 'confidence': '中'},
+    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '59.76%', 'avg_return': '-', 'confidence': '中低'},
+    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '59.07%', 'avg_return': '-', 'confidence': '低'},
 }
+
+# 传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
+TRANSMISSION_ACCURACY = {
+    'both_correct_rate': 62.28,      # 1天+5天都正确时，20天准确率
+    'independent_20d_rate': 56.75,   # 独立20天准确率
+    'improvement': 5.53               # 提升幅度
+}
+
+
+def check_transmission_mode(stock_code, data_date):
+    """
+    检查是否进入传导模式（动态计算，不依赖outcome字段）
+    
+    传导律：当同一data_date发出的1天预测和5天预测都已验证正确时，
+    20天预测准确率(62.28%)会高于独立20天预测准确率(56.75%)，提升5.53%
+    
+    参数:
+    - stock_code: 股票代码（如 '0005.HK'）
+    - data_date: 预测日期（如 '2026-04-18'）
+    
+    返回:
+    - dict: {
+        'transmission_mode': bool,      # 是否进入传导模式
+        'pred_1d_correct': bool/None,   # 1天预测是否正确
+        'pred_5d_correct': bool/None,   # 5天预测是否正确
+        'both_correct_rate': 62.28,     # 传导模式准确率
+        'independent_20d_rate': 56.75   # 独立20天准确率
+      }
+    """
+    import json
+    from datetime import datetime, timedelta
+    
+    history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prediction_history.json')
+    
+    if not os.path.exists(history_file):
+        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
+    
+    try:
+        with open(history_file, 'r', encoding='utf-8') as f:
+            history = json.load(f)
+        
+        predictions = history.get('predictions', [])
+        
+        # 查找该股票该日期的1天和5天预测
+        pred_1d = None
+        pred_5d = None
+        
+        for pred in predictions:
+            if pred['stock_code'] == stock_code and pred['data_date'] == data_date:
+                if pred['horizon'] == 1:
+                    pred_1d = pred
+                elif pred['horizon'] == 5:
+                    pred_5d = pred
+        
+        # 检查是否都存在
+        if not (pred_1d and pred_5d):
+            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
+        
+        # 如果outcome字段已存在，直接使用
+        if pred_1d.get('outcome') is not None and pred_5d.get('outcome') is not None:
+            pred_1d_correct = pred_1d.get('outcome') == 'correct'
+            pred_5d_correct = pred_5d.get('outcome') == 'correct'
+            return {
+                'transmission_mode': pred_1d_correct and pred_5d_correct,
+                'pred_1d_correct': pred_1d_correct,
+                'pred_5d_correct': pred_5d_correct,
+                'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
+                'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
+            }
+        
+        # 动态计算：检查预测是否已到期并验证正确
+        now = datetime.now()
+        
+        def verify_prediction(pred, horizon):
+            """验证单个预测是否正确"""
+            if not pred:
+                return None
+            
+            # 检查是否有entry_price
+            entry_price = pred.get('entry_price')
+            predicted_direction = pred.get('predicted_direction')
+            
+            if not entry_price or entry_price <= 0:
+                return None
+            
+            # 计算目标日期（data_date + horizon个交易日，近似为horizon天）
+            try:
+                data_date_obj = datetime.strptime(pred['data_date'], '%Y-%m-%d')
+            except (ValueError, KeyError):
+                return None
+            
+            # 检查是否已到期（当前日期 >= data_date + horizon天）
+            target_date = data_date_obj + timedelta(days=horizon)
+            if now < target_date:
+                # 尚未到期，无法验证
+                return None
+            
+            # 获取目标日期的收盘价
+            try:
+                ticker = yf.Ticker(stock_code)
+                # 获取目标日期附近的数据
+                hist = ticker.history(start=target_date - timedelta(days=3), end=target_date + timedelta(days=3))
+                if hist.empty:
+                    return None
+                
+                # 找到最接近目标日期的收盘价
+                exit_price = hist['Close'].iloc[-1]
+                
+                # 计算实际收益
+                actual_return = (exit_price - entry_price) / entry_price
+                actual_direction = 'up' if actual_return > 0 else 'down'
+                
+                # 判断预测是否正确
+                return predicted_direction == actual_direction
+            except Exception:
+                return None
+        
+        # 验证1天和5天预测
+        pred_1d_correct = verify_prediction(pred_1d, 1)
+        pred_5d_correct = verify_prediction(pred_5d, 5)
+        
+        # 如果任一预测尚未到期或无法验证，返回None
+        if pred_1d_correct is None or pred_5d_correct is None:
+            return {
+                'transmission_mode': False,
+                'pred_1d_correct': pred_1d_correct,
+                'pred_5d_correct': pred_5d_correct,
+                'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
+                'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
+            }
+        
+        return {
+            'transmission_mode': pred_1d_correct and pred_5d_correct,
+            'pred_1d_correct': pred_1d_correct,
+            'pred_5d_correct': pred_5d_correct,
+            'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
+            'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
+        }
+    
+    except Exception as e:
+        print(f"⚠️ 检查传导模式失败: {e}")
+        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
 
 
 def get_sector_type(sector_code):
@@ -466,12 +609,12 @@ def extract_ml_predictions(filepath):
 
             # 根据是否有三周期预测结果选择表格格式
             if three_horizon_results and len(three_horizon_results) > 0:
-                # 三周期预测表格
+                # 三周期预测表格（添加传导模式列）
                 catboost_text = "【CatBoost模型三周期预测结果】\n"
                 catboost_text += f"预测日期: {date_str}\n\n"
                 catboost_text += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 |\n"
-                catboost_text += "|----------|----------|----------|------|--------|--------|---------|------|---------|------|\n"
+                catboost_text += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 | 传导模式 |\n"
+                catboost_text += "|----------|----------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
             else:
                 # 原始表格格式（无三周期预测）
                 catboost_text = "【CatBoost模型预测结果（20天）】\n"
@@ -520,7 +663,14 @@ def extract_ml_predictions(filepath):
                     action = pattern_info.get('action', '观望')
                     win_rate = pattern_info.get('win_rate', '-')
 
-                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern} | {action} | {win_rate} |\n"
+                    # 检查传导模式
+                    transmission_info = check_transmission_mode(stock_code, date_str)
+                    if transmission_info['transmission_mode']:
+                        transmission_icon = "✅传导"
+                    else:
+                        transmission_icon = "-"
+
+                    catboost_text += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern} | {action} | {win_rate} | {transmission_icon} |\n"
                 else:
                     # 无三周期预测，使用原始格式
                     if row['probability'] > 0.60:
@@ -585,6 +735,12 @@ def extract_ml_predictions(filepath):
                 catboost_text += "- 模式 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
                 catboost_text += "- ⭐ 标记表示高胜率模式（>80%）\n"
                 catboost_text += "- 数据来源：docs/THREE_HORIZON_ANALYSIS.md（个股验证结果）\n"
+
+                # 添加传导律验证结果
+                catboost_text += f"\n**传导律验证结果**：\n"
+                catboost_text += f"- ✅ 传导律成立：当同一时间的1天+5天预测都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
+                catboost_text += "- 策略含义：短期预测正确 → 中期预测更可靠，可增加仓位信心\n"
+                catboost_text += "- 数据来源：docs/THREE_HORIZON_ANALYSIS.md（26只港股蓝筹股验证）\n"
             else:
                 # 原始统计信息
                 catboost_text += f"\n**统计信息**：\n"
