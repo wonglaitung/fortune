@@ -528,12 +528,13 @@ def extract_llm_recommendations(filepath):
         return {'short_term': '', 'medium_term': ''}
 
 
-def extract_ml_predictions(filepath):
+def extract_ml_predictions(filepath, use_cached_predictions=False):
     """
     从ML预测CSV文件中提取融合模型的预测结果，并进行三周期预测
 
     参数:
     - filepath: 文本预测文件路径（用于获取日期）
+    - use_cached_predictions: 是否使用已缓存的三周期预测CSV文件（跳过模型预测）
 
     返回:
     - dict: 包含融合模型预测结果的字典
@@ -565,28 +566,71 @@ def extract_ml_predictions(filepath):
             df_catboost = pd.read_csv(catboost_csv)
             df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 
-            # 尝试加载三周期模型
-            three_horizon_models = None
-            if ML_MODEL_AVAILABLE:
+            # 三周期预测结果
+            three_horizon_results = {}
+
+            # 如果指定使用缓存预测，尝试读取已有的三周期预测CSV文件
+            csv_1d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_1d.csv')
+            csv_5d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_5d.csv')
+            csv_20d = catboost_csv  # 20d文件就是主文件
+
+            if use_cached_predictions and all(os.path.exists(f) for f in [csv_1d, csv_5d]):
+                print("  📁 读取已缓存的三周期预测文件...")
+                try:
+                    df_1d = pd.read_csv(csv_1d)
+                    df_5d = pd.read_csv(csv_5d)
+
+                    for stock_code in df_catboost['code'].tolist():
+                        try:
+                            row_1d = df_1d[df_1d['code'] == stock_code]
+                            row_5d = df_5d[df_5d['code'] == stock_code]
+                            row_20d = df_catboost[df_catboost['code'] == stock_code]
+
+                            if len(row_1d) > 0 and len(row_5d) > 0 and len(row_20d) > 0:
+                                pred_1d = int(row_1d.iloc[0]['prediction'])
+                                prob_1d = float(row_1d.iloc[0]['probability'])
+                                pred_5d = int(row_5d.iloc[0]['prediction'])
+                                prob_5d = float(row_5d.iloc[0]['probability'])
+                                pred_20d = int(row_20d.iloc[0]['prediction'])
+                                prob_20d = float(row_20d.iloc[0]['probability'])
+
+                                pattern = f"{'1' if pred_1d == 1 else '0'}{'1' if pred_5d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
+                                pattern_info = get_pattern_action(pattern)
+
+                                three_horizon_results[stock_code] = {
+                                    'code': stock_code,
+                                    'predictions': {
+                                        1: {'prediction': pred_1d, 'probability': prob_1d, 'direction': '↑' if pred_1d == 1 else '↓'},
+                                        5: {'prediction': pred_5d, 'probability': prob_5d, 'direction': '↑' if pred_5d == 1 else '↓'},
+                                        20: {'prediction': pred_20d, 'probability': prob_20d, 'direction': '↑' if pred_20d == 1 else '↓'}
+                                    },
+                                    'pattern': pattern,
+                                    'pattern_info': pattern_info
+                                }
+                        except Exception:
+                            pass
+                    print(f"  ✅ 成功读取三周期预测: {len(three_horizon_results)} 只股票")
+                except Exception as e:
+                    print(f"  ⚠️ 读取缓存预测文件失败: {e}，将使用模型预测")
+                    three_horizon_results = {}
+
+            # 如果没有使用缓存或缓存读取失败，使用模型预测
+            if not three_horizon_results and ML_MODEL_AVAILABLE:
                 print("  🔄 加载三周期预测模型...")
                 three_horizon_models = load_multi_horizon_models()
                 if three_horizon_models:
                     print(f"  ✅ 成功加载 {len([k for k in three_horizon_models.keys() if k != 'loaded'])} 个模型")
+                    print("  🔄 进行三周期预测...")
+                    for stock_code in df_catboost['code'].tolist():
+                        try:
+                            pred_result = predict_three_horizons(stock_code, three_horizon_models)
+                            if pred_result:
+                                three_horizon_results[stock_code] = pred_result
+                        except Exception as e:
+                            print(f"  ⚠️ 预测 {stock_code} 失败: {e}")
+                    print(f"  ✅ 完成三周期预测: {len(three_horizon_results)} 只股票")
                 else:
                     print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
-
-            # 进行三周期预测
-            three_horizon_results = {}
-            if three_horizon_models:
-                print("  🔄 进行三周期预测...")
-                for stock_code in df_catboost['code'].tolist():
-                    try:
-                        pred_result = predict_three_horizons(stock_code, three_horizon_models)
-                        if pred_result:
-                            three_horizon_results[stock_code] = pred_result
-                    except Exception as e:
-                        print(f"  ⚠️ 预测 {stock_code} 失败: {e}")
-                print(f"  ✅ 完成三周期预测: {len(three_horizon_results)} 只股票")
 
             # 计算筹码分布（如果技术分析模块可用）
             chip_data = {}
@@ -2371,17 +2415,18 @@ def send_email(subject, content, html_content=None):
         return False
 
 
-def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None, 
-                             send_email_flag=True, use_deep_analysis=True):
+def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
+                             send_email_flag=True, use_deep_analysis=True, use_cached_predictions=False):
     """
     运行综合分析
-    
+
     参数:
     - llm_filepath: 大模型建议文件路径
     - ml_filepath: ML预测结果文件路径（已废弃，保留用于兼容性）
     - output_filepath: 输出文件路径（可选）
     - send_email_flag: 是否发送邮件（默认True）
     - use_deep_analysis: 是否使用深度分析模式进行异常检测（默认True）
+    - use_cached_predictions: 是否使用已缓存的三周期预测CSV文件（默认False）
     """
     try:
         print("=" * 80)
@@ -2415,7 +2460,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         
         # 提取ML预测
         print("📝 提取ML预测结果...")
-        ml_predictions = extract_ml_predictions(ml_filepath)
+        ml_predictions = extract_ml_predictions(ml_filepath, use_cached_predictions)
         print(f"✅ 提取完成\n")
         print(f"   - CatBoost模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
         
@@ -3157,6 +3202,8 @@ def main():
                        help='不发送邮件通知')
     parser.add_argument('--no-deep-analysis', action='store_true',
                        help='不使用深度分析模式进行异常检测（默认使用深度分析）')
+    parser.add_argument('--use-cached-predictions', action='store_true',
+                       help='使用已缓存的三周期预测CSV文件（跳过模型预测）')
     
     args = parser.parse_args()
     
@@ -3171,9 +3218,10 @@ def main():
         args.ml_file = f'data/ml_predictions_20d_{date_str}.txt'
     
     # 运行综合分析
-    result = run_comprehensive_analysis(args.llm_file, args.ml_file, args.output, 
+    result = run_comprehensive_analysis(args.llm_file, args.ml_file, args.output,
                                        send_email_flag=not args.no_email,
-                                       use_deep_analysis=not args.no_deep_analysis)
+                                       use_deep_analysis=not args.no_deep_analysis,
+                                       use_cached_predictions=args.use_cached_predictions)
     
     if result:
         print("\n✅ 综合分析完成！")
