@@ -237,9 +237,9 @@ def save_prediction_to_history(predictions, horizon=20, predict_date=None):
             if not target_date and data_date:
                 target_date = get_target_date(data_date, horizon)
             
-            # 创建预测记录
+            # 创建预测记录（添加周期标识，用于传导律检测）
             record = {
-                'prediction_id': f"{date_str}_{stock_code}",
+                'prediction_id': f"{date_str}_{stock_code}_{horizon}d",
                 'timestamp': timestamp,
                 'stock_code': stock_code,
                 'stock_name': stock_name,
@@ -5905,11 +5905,13 @@ def main():
             pred_df_export.to_csv(pred_path, index=False)
             print(f"\n预测结果已保存到 {pred_path}")
 
+            # 保存预测到历史记录（用于性能监控和传导律检测）
+            # 注意：同时保存所有周期的预测，以便后续验证传导律
+            save_prediction_to_history(predictions, horizon=args.horizon, predict_date=args.predict_date)
+            
             # 保存20天预测结果到文本文件（便于后续提取和对比）
             if args.horizon == 20:
                 save_predictions_to_text(pred_df_export, args.predict_date)
-                # 保存预测到历史记录（用于性能监控）
-                save_prediction_to_history(predictions, horizon=args.horizon, predict_date=args.predict_date)
 
     elif args.mode == 'evaluate':
         logger.info("=" * 50)
