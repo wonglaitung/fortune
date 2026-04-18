@@ -3,30 +3,34 @@
 """
 个股三周期预测验证脚本
 
-移植恒生指数三周期策略到个股，验证以下发现：
+支持两种模式：
+1. 简化模型（--model simple）：约40个技术指标特征，快速验证
+2. 完整模型（--model full）：918个特征（技术指标、基本面、情感指标等）
+
+验证以下发现：
 1. 传导律：短周期正确 → 长周期更可能正确
 2. 过滤律：周期越长噪音越少
 3. 一致律：三周期一致时准确率最高
 4. 背离律：短涨长跌是逃顶信号（110模式）
 
 使用方法：
-  # 单只股票验证
+  # 简化模型验证（默认）
   python3 ml_services/stock_three_horizon.py --stock 0700.HK
+  python3 ml_services/stock_three_horizon.py --sector tech --model simple
 
-  # 多只股票批量验证
-  python3 ml_services/stock_three_horizon.py --stocks 0700.HK 9988.HK 0005.HK
+  # 完整模型验证
+  python3 ml_services/stock_three_horizon.py --stock 0700.HK --model full
+  python3 ml_services/stock_three_horizon.py --quick --model full
 
-  # 按板块验证
-  python3 ml_services/stock_three_horizon.py --sector tech
-
-  # 快速验证（代表性股票）
-  python3 ml_services/stock_three_horizon.py --quick
+  # 全量验证
+  python3 ml_services/stock_three_horizon.py --all --model full
 """
 
 import warnings
 import os
 import sys
 import argparse
+import time
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
@@ -49,8 +53,8 @@ DATA_DIR = "data"
 OUTPUT_DIR = "output"
 RANDOM_SEED = 42
 
-# 特征配置（个股版，无宏观因子）
-STOCK_FEATURES = [
+# 特征配置（简化模型，约40个技术指标）
+SIMPLE_FEATURES = [
     # 移动平均线
     'MA20', 'MA60', 'MA120', 'MA250',
     # 均线斜率
@@ -80,8 +84,8 @@ STOCK_FEATURES = [
     'Stoch_K', 'Stoch_D',
 ]
 
-# CatBoost 参数（简化版，适合个股）
-CATBOOST_PARAMS = {
+# CatBoost 参数（简化版）
+SIMPLE_CATBOOST_PARAMS = {
     'iterations': 200,
     'learning_rate': 0.05,
     'depth': 3,
@@ -92,26 +96,48 @@ CATBOOST_PARAMS = {
     'verbose': 0
 }
 
+# CatBoost 参数（完整版，按周期调整）
+def get_full_catboost_params(horizon):
+    """根据预测周期返回完整模型参数"""
+    if horizon == 1:
+        return {
+            'iterations': 500,
+            'learning_rate': 0.05,
+            'depth': 7,
+            'l2_leaf_reg': 3,
+            'random_seed': RANDOM_SEED,
+            'loss_function': 'Logloss',
+            'auto_class_weights': 'Balanced',
+            'verbose': 0
+        }
+    elif horizon == 5:
+        return {
+            'iterations': 500,
+            'learning_rate': 0.05,
+            'depth': 6,
+            'l2_leaf_reg': 3,
+            'subsample': 0.7,
+            'random_seed': RANDOM_SEED,
+            'loss_function': 'Logloss',
+            'auto_class_weights': 'Balanced',
+            'verbose': 0
+        }
+    else:  # 20天
+        return {
+            'iterations': 500,
+            'learning_rate': 0.05,
+            'depth': 6,
+            'l2_leaf_reg': 3,
+            'subsample': 0.8,
+            'random_seed': RANDOM_SEED,
+            'loss_function': 'Logloss',
+            'auto_class_weights': 'Balanced',
+            'verbose': 0
+        }
 
-class StockThreeHorizonAnalyzer:
-    """个股三周期预测分析器"""
 
-    def __init__(self):
-        self.results = {}
-
-    def fetch_stock_data(self, stock_code, start_date='2020-01-01', end_date='2025-12-31'):
-        """获取个股历史数据"""
-        try:
-            ticker = yf.Ticker(stock_code)
-            df = ticker.history(start=start_date, end=end_date, interval="1d")
-
-            if df.empty or len(df) < 300:
-                return None
-
-            return df
-        except Exception as e:
-            print(f"  ⚠️ 获取 {stock_code} 数据失败: {e}")
-            return None
+class SimpleFeatureEngineer:
+    """简化特征工程（约40个技术指标）"""
 
     def calculate_features(self, df):
         """计算技术特征"""
@@ -212,9 +238,94 @@ class StockThreeHorizonAnalyzer:
 
         return df
 
+
+class FullFeatureEngineer:
+    """完整特征工程（918个特征，调用 ml_trading_model.py）"""
+
+    def __init__(self):
+        from ml_services.ml_trading_model import FeatureEngineer
+        self.feature_engineer = FeatureEngineer()
+
+    def calculate_features(self, df, stock_code):
+        """
+        计算完整特征（918个）
+
+        注意：完整模型需要额外数据（恒指、美股市场等）
+        这里只计算股票自身特征，约200+个
+        """
+        df = df.copy()
+
+        # 计算技术指标
+        df = self.feature_engineer.calculate_technical_features(df)
+        df = self.feature_engineer.calculate_multi_period_metrics(df)
+
+        # 添加基本面特征
+        fundamental_features = self.feature_engineer.create_fundamental_features(stock_code)
+        for key, value in fundamental_features.items():
+            df[key] = value
+
+        # 添加股票类型特征
+        stock_type_features = self.feature_engineer.create_stock_type_features(stock_code, df)
+        for key, value in stock_type_features.items():
+            df[key] = value
+
+        # 添加情感特征
+        sentiment_features = self.feature_engineer.create_sentiment_features(stock_code, df)
+        for key, value in sentiment_features.items():
+            df[key] = value
+
+        # 添加板块特征
+        sector_features = self.feature_engineer.create_sector_features(stock_code, df)
+        for key, value in sector_features.items():
+            df[key] = value
+
+        # 添加事件驱动特征
+        df = self.feature_engineer.create_event_driven_features(stock_code, df)
+
+        # 生成交互特征
+        df = self.feature_engineer.create_technical_fundamental_interactions(df)
+        df = self.feature_engineer.create_interaction_features(df)
+
+        return df
+
+
+class StockThreeHorizonAnalyzer:
+    """个股三周期预测分析器"""
+
+    def __init__(self, model_type='simple'):
+        """
+        参数:
+        - model_type: 'simple'（简化模型，约40特征）或 'full'（完整模型，918特征）
+        """
+        self.model_type = model_type
+        self.results = {}
+
+        if model_type == 'simple':
+            self.feature_engineer = SimpleFeatureEngineer()
+            self.features = SIMPLE_FEATURES
+            print(f"📊 使用简化模型（约{len(self.features)}个特征）")
+        else:
+            self.feature_engineer = FullFeatureEngineer()
+            self.features = None  # 完整模型动态获取特征
+            print(f"📊 使用完整模型（918个特征）")
+
+    def fetch_stock_data(self, stock_code, start_date='2020-01-01', end_date='2025-12-31'):
+        """获取个股历史数据"""
+        try:
+            ticker = yf.Ticker(stock_code)
+            df = ticker.history(start=start_date, end=end_date, interval="1d")
+
+            if df.empty or len(df) < 300:
+                return None
+
+            return df
+        except Exception as e:
+            print(f"  ⚠️ 获取 {stock_code} 数据失败: {e}")
+            return None
+
     def run_walkforward(self, df, stock_code, horizons=[1, 5, 20]):
         """
-        Walk-forward 验证（与恒指分析相同方法）
+        Walk-forward 验证
 
         参数:
         - df: 特征数据
@@ -226,14 +337,24 @@ class StockThreeHorizonAnalyzer:
         """
         all_predictions = {h: [] for h in horizons}
 
-        # 可用特征
-        available_features = [f for f in STOCK_FEATURES if f in df.columns]
+        # 确定特征
+        if self.model_type == 'simple':
+            available_features = [f for f in self.features if f in df.columns]
+        else:
+            # 完整模型：排除非特征列
+            exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
+                              'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
+                              'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                              'BB_upper', 'BB_lower', 'BB_middle', 'Dividends', 'Stock Splits']
+            available_features = [col for col in df.columns if col not in exclude_columns]
 
         if len(available_features) < 10:
             print(f"  ⚠️ {stock_code} 特征不足（{len(available_features)}），跳过")
             return None
 
-        # Walk-forward 参数（与恒指分析一致）
+        print(f"  📊 使用 {len(available_features)} 个特征")
+
+        # Walk-forward 参数
         train_days = 252
         step_days = 5
         total_days = len(df)
@@ -284,7 +405,12 @@ class StockThreeHorizonAnalyzer:
                 y_train = train_clean[target_col]
 
                 try:
-                    model = CatBoostClassifier(**CATBOOST_PARAMS)
+                    # 根据模型类型选择参数
+                    if self.model_type == 'simple':
+                        model = CatBoostClassifier(**SIMPLE_CATBOOST_PARAMS)
+                    else:
+                        model = CatBoostClassifier(**get_full_catboost_params(horizon))
+
                     model.fit(X_train, y_train)
 
                     for idx, row in test_clean.iterrows():
@@ -310,7 +436,7 @@ class StockThreeHorizonAnalyzer:
 
     def analyze_three_horizon_patterns(self, predictions, stock_code):
         """
-        分析三周期模式（与恒指分析相同方法）
+        分析三周期模式
 
         返回:
         - dict: 模式分析结果
@@ -386,7 +512,7 @@ class StockThreeHorizonAnalyzer:
 
         for pattern, name in pattern_names.items():
             pattern_df = merged[merged['pattern'] == pattern]
-            if len(pattern_df) >= 5:  # 最少5个样本
+            if len(pattern_df) >= 5:
                 accuracy_20d = (pattern_df['pred_20d'] == pattern_df['actual_20d']).mean()
                 avg_return = pattern_df['return_20d'].mean()
                 results['patterns'][pattern] = {
@@ -397,7 +523,6 @@ class StockThreeHorizonAnalyzer:
                 }
 
         # 3. 传导效应分析
-        # 1天正确 → 20天准确率
         correct_1d = merged[merged['pred_1d'] == merged['actual_1d']]
         if len(correct_1d) >= 5:
             results['transmission_effect']['1d_correct_to_20d'] = {
@@ -405,7 +530,6 @@ class StockThreeHorizonAnalyzer:
                 'sample_count': len(correct_1d)
             }
 
-        # 5天正确 → 20天准确率
         correct_5d = merged[merged['pred_5d'] == merged['actual_5d']]
         if len(correct_5d) >= 5:
             results['transmission_effect']['5d_correct_to_20d'] = {
@@ -413,7 +537,6 @@ class StockThreeHorizonAnalyzer:
                 'sample_count': len(correct_5d)
             }
 
-        # 1天和5天都正确 → 20天准确率
         correct_both = merged[(merged['pred_1d'] == merged['actual_1d']) &
                               (merged['pred_5d'] == merged['actual_5d'])]
         if len(correct_both) >= 5:
@@ -431,6 +554,8 @@ class StockThreeHorizonAnalyzer:
             print(f"📊 分析: {stock_code} ({STOCK_SECTOR_MAPPING.get(stock_code, {}).get('name', 'Unknown')})")
             print(f"{'='*60}")
 
+        start_time = time.time()
+
         # 获取数据
         df = self.fetch_stock_data(stock_code)
         if df is None:
@@ -440,7 +565,10 @@ class StockThreeHorizonAnalyzer:
             print(f"  ✅ 数据获取成功（{len(df)} 条记录）")
 
         # 计算特征
-        df = self.calculate_features(df)
+        if self.model_type == 'simple':
+            df = self.feature_engineer.calculate_features(df)
+        else:
+            df = self.feature_engineer.calculate_features(df, stock_code)
 
         if verbose:
             print(f"  ✅ 特征计算完成")
@@ -460,6 +588,8 @@ class StockThreeHorizonAnalyzer:
         if results is None:
             return None
 
+        elapsed_time = time.time() - start_time
+
         # 打印结果
         if verbose:
             print(f"\n  📈 三周期准确率:")
@@ -478,13 +608,15 @@ class StockThreeHorizonAnalyzer:
                     print(f"    {data['name']} ({pattern}): {data['accuracy_20d']:.2%} "
                           f"({data['count']} 样本, 收益: {data['avg_return']:.2%})")
 
+            print(f"\n  ⏱️ 耗时: {elapsed_time:.1f}秒")
+
         self.results[stock_code] = results
         return results
 
     def analyze_multiple_stocks(self, stock_codes, verbose=True):
         """批量分析多只股票"""
         print(f"\n{'='*60}")
-        print(f"🔬 个股三周期策略批量验证")
+        print(f"🔬 个股三周期策略批量验证（{self.model_type}模型）")
         print(f"{'='*60}")
         print(f"股票数量: {len(stock_codes)}")
 
@@ -510,7 +642,7 @@ class StockThreeHorizonAnalyzer:
             return None
 
         print(f"\n{'='*80}")
-        print(f"📊 个股三周期策略验证汇总报告")
+        print(f"📊 个股三周期策略验证汇总报告（{self.model_type}模型）")
         print(f"{'='*80}")
 
         # 汇总准确率
@@ -534,9 +666,8 @@ class StockThreeHorizonAnalyzer:
 
         # 与恒指对比
         print(f"\n📊 与恒生指数对比:")
-        hsi_benchmark = {1: 0.514, 5: 0.570, 20: 0.804}
-        for h in [1, 5, 20]:
-            avg = np.mean([all_1d, all_5d, all_20d][h//7])
+        hsi_benchmark = {1: 0.5131, 5: 0.5717, 20: 0.8073}
+        for h, avg in [(1, np.mean(all_1d)), (5, np.mean(all_5d)), (20, np.mean(all_20d))]:
             diff = avg - hsi_benchmark[h]
             print(f"  {h}天: 个股 {avg:.2%} vs 恒指 {hsi_benchmark[h]:.2%} ({'+' if diff > 0 else ''}{diff:.2%})")
 
@@ -618,11 +749,13 @@ class StockThreeHorizonAnalyzer:
                 print(f"     ⭐ 该模式在个股中同样有效！")
 
         # 保存结果
-        output_path = os.path.join(OUTPUT_DIR, 'stock_three_horizon_validation.json')
+        model_suffix = 'simple' if self.model_type == 'simple' else 'full'
+        output_path = os.path.join(OUTPUT_DIR, f'stock_three_horizon_validation_{model_suffix}.json')
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
         output_data = {
             'analysis_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'model_type': self.model_type,
             'stock_count': len(self.results),
             'summary': {
                 'avg_accuracy_1d': float(np.mean(all_1d)),
@@ -651,11 +784,13 @@ def main():
     parser.add_argument('--sector', type=str, help='板块类型（如 tech, bank）')
     parser.add_argument('--quick', action='store_true', help='快速验证（代表性股票）')
     parser.add_argument('--all', action='store_true', help='验证所有股票')
+    parser.add_argument('--model', type=str, choices=['simple', 'full'], default='simple',
+                        help='模型类型: simple（约40特征）或 full（918特征）')
     parser.add_argument('--verbose', action='store_true', default=True, help='详细输出')
 
     args = parser.parse_args()
 
-    analyzer = StockThreeHorizonAnalyzer()
+    analyzer = StockThreeHorizonAnalyzer(model_type=args.model)
 
     # 确定要分析的股票
     stock_codes = []
@@ -665,18 +800,16 @@ def main():
     elif args.stocks:
         stock_codes = args.stocks
     elif args.sector:
-        # 按板块选择
         stock_codes = [code for code, info in STOCK_SECTOR_MAPPING.items()
-                       if info.get('type') == args.sector]
+                       if info.get('sector') == args.sector]
         print(f"📊 板块 '{args.sector}' 包含 {len(stock_codes)} 只股票")
     elif args.quick:
-        # 快速验证：选择代表性股票
         quick_stocks = [
-            '0700.HK',  # 腾讯（科技龙头）
-            '0005.HK',  # 汇丰（银行龙头）
-            '9988.HK',  # 阿里巴巴（科技）
-            '2800.HK',  # 盈富基金（指数ETF）
-            '0941.HK',  # 中国移动（公用事业）
+            '0700.HK',  # 腾讯
+            '0005.HK',  # 汇丰
+            '9988.HK',  # 阿里巴巴
+            '2800.HK',  # 盈富基金
+            '0941.HK',  # 中国移动
         ]
         stock_codes = [s for s in quick_stocks if s in STOCK_SECTOR_MAPPING]
         print(f"⚡ 快速验证模式：{len(stock_codes)} 只代表性股票")
@@ -690,6 +823,7 @@ def main():
         print("  python3 ml_services/stock_three_horizon.py --stock 0700.HK")
         print("  python3 ml_services/stock_three_horizon.py --sector tech")
         print("  python3 ml_services/stock_three_horizon.py --quick")
+        print("  python3 ml_services/stock_three_horizon.py --stock 0700.HK --model full")
         return
 
     # 执行分析
