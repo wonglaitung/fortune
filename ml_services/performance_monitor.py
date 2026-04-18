@@ -174,19 +174,10 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
             else:
                 stats['pending'] += 1
                 continue
-        
+
         target_date_obj = datetime.strptime(target_date, '%Y-%m-%d')
-        
-        # 计算交易日
-        entry_date = pred.get('data_date', pred.get('timestamp', '').split('T')[0])
-        trading_days = count_trading_days(entry_date, now.strftime('%Y-%m-%d'), pred['stock_code'])
-        
-        # 如果交易日不足，跳过
-        if trading_days < horizon:
-            stats['pending'] += 1
-            continue
-        
-        # 获取目标日期的收盘价
+
+        # 获取目标日期的收盘价（直接检查是否有价格数据）
         exit_price = fetch_price(pred['stock_code'], target_date)
         
         if exit_price is None:
