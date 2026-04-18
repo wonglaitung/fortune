@@ -2,11 +2,42 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-17
+**最后更新**：2026-04-18
 
 ---
 
-## 最新进展（2026-04-17）
+## 最新进展（2026-04-18）
+
+### 个股三周期策略验证 ⭐ 新增
+
+**验证范围**：43只港股（涵盖银行、科技、公用事业、能源等16个板块）
+
+**核心发现**：
+| 验证项 | 恒生指数 | 个股平均 | 结论 |
+|--------|---------|---------|------|
+| 过滤律 | 20天>1天 | 80.30%>50.38% | ✅ 成立 |
+| 传导律 | 1+5天正确提升 | 81.79%>80.30% | ✅ 成立 |
+| 20天准确率 | 80.40% | 80.30% | 基本一致 |
+
+**个股最优模式**：冲高回落(1-0-0) 81.62%准确率（与恒指"震荡回调"不同）
+
+**新增脚本**：`ml_services/stock_three_horizon.py`
+- 支持单股验证：`--stock 0700.HK`
+- 支持板块验证：`--sector bank`
+- 支持全量验证：`--all`
+
+**最佳个股表现**：
+| 股票 | 20天准确率 | 最佳模式 |
+|------|-----------|---------|
+| 汇丰银行 | 87.64% | 探底回升 91.93% |
+| 中国移动 | 81.64% | 假突破 94.29% |
+| 中国电信 | 83.32% | 假突破 93.69% |
+
+**结果文件**：`output/stock_three_horizon_validation.json`
+
+---
+
+## 历史进展（2026-04-17）
 
 ### README.md 更新
 
@@ -40,6 +71,8 @@
 
 ### 一、三周期预测验证 ⭐ 最重要发现
 
+#### 恒生指数
+
 | 周期 | 准确率 | 策略建议 |
 |------|--------|---------|
 | 1天 | 51.31% | 噪音大，仅供参考 |
@@ -54,6 +87,16 @@
 | **110** | 震荡回调 | **90%** | ⭐ 最优做空 |
 | 000 | 一致看跌 | 79.19% | 强烈卖出 |
 | 111 | 一致看涨 | 70.31% | 强烈买入 |
+
+#### 个股验证（43只股票）
+
+| 模式 | 样本数 | 20天准确率 | 平均收益 |
+|------|--------|-----------|---------|
+| 冲高回落 (1-0-0) | 5,344 | **81.62%** | -5.64% |
+| 探底回升 (0-1-1) | 5,949 | 81.34% | +7.92% |
+| 假突破 (1-0-1) | 3,641 | 81.02% | +7.85% |
+
+**个股套用建议**：公用事业股>银行股>科技龙头>指数ETF
 
 ### 二、异常检测策略
 
@@ -112,7 +155,8 @@
 | 文档 | 说明 |
 |------|------|
 | [lessons.md](lessons.md) | 经验教训 |
-| [docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) | 三周期分析 |
+| [docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) | 三周期分析（恒指） |
+| [output/stock_three_horizon_validation.json](output/stock_three_horizon_validation.json) | 个股三周期验证结果 |
 | [docs/SECTOR_ROTATION_ANALYSIS.md](docs/SECTOR_ROTATION_ANALYSIS.md) | 板块轮动分析 |
 | [docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) | 板块轮动交易法则 |
 
@@ -144,6 +188,11 @@ python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 2
 
 # 板块轮动验证
 python3 verify_sector_rotation.py
+
+# 个股三周期验证（新增）
+python3 ml_services/stock_three_horizon.py --stock 0700.HK  # 单股
+python3 ml_services/stock_three_horizon.py --sector bank    # 板块
+python3 ml_services/stock_three_horizon.py --all            # 全量
 ```
 
 ---
