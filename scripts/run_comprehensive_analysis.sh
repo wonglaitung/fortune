@@ -100,7 +100,7 @@ if [ -z "$LLM_FILE" ]; then
     echo "⚠️  警告: 未找到大模型建议文件，跳过综合分析"
 else
     echo "📊 使用大模型建议文件: $LLM_FILE"
-    python3 comprehensive_analysis.py --llm-file "$LLM_FILE"
+    python3 comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
     if [ $? -ne 0 ]; then
         echo "❌ 步骤4失败: 综合分析失败"
         exit 1
