@@ -2538,17 +2538,18 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 full_content += generate_anomaly_report_content(anomaly_data)
                 
                 full_content += f"""
-## 四、大模型建议
+
+## 四、板块分析（5日涨跌幅排名）
+
+{sector_text}
+
+## 五、大模型建议
 
 ### 短期买卖建议（日内/数天）
 {llm_recommendations['short_term']}
 
 ### 中期买卖建议（数周-数月）
 {llm_recommendations['medium_term']}
-
-## 五、板块分析（5日涨跌幅排名）
-
-{sector_text}
 
 ## 六、股息信息（即将除净）
 
