@@ -1,4 +1,4 @@
-name: 预测性能月度报告
+name: 预测性能监控
 
 on:
   schedule:
