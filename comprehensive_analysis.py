@@ -253,7 +253,8 @@ def check_transmission_mode(stock_code, data_date):
 
     if not os.path.exists(history_file):
         return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
-                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None}
+                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None,
+                'prediction_date': prediction_date}
 
     try:
         with open(history_file, 'r', encoding='utf-8') as f:
