@@ -110,63 +110,149 @@ TRANSMISSION_ACCURACY = {
 }
 
 
+def format_transmission_display(transmission_info):
+    """
+    格式化传导模式显示字符串
+
+    参数:
+    - transmission_info: check_transmission_mode() 返回的字典
+
+    返回:
+    - str: 格式化的显示字符串
+    """
+    pred_1d_dir = transmission_info.get('pred_1d_direction')
+    pred_5d_dir = transmission_info.get('pred_5d_direction')
+    pred_20d_dir = transmission_info.get('pred_20d_direction')
+    pred_1d_correct = transmission_info.get('pred_1d_correct')
+    pred_5d_correct = transmission_info.get('pred_5d_correct')
+    pred_20d_correct = transmission_info.get('pred_20d_correct')
+    transmission_mode = transmission_info.get('transmission_mode')
+
+    # 如果没有预测数据
+    if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
+        return "-"
+
+    # 方向符号
+    def get_dir_symbol(direction):
+        if direction == 'up':
+            return "↑"
+        elif direction == 'down':
+            return "↓"
+        else:
+            return "?"
+
+    dir_1d_symbol = get_dir_symbol(pred_1d_dir)
+    dir_5d_symbol = get_dir_symbol(pred_5d_dir)
+    dir_20d_symbol = get_dir_symbol(pred_20d_dir)
+
+    # 结果符号
+    def get_result_symbol(correct):
+        if correct is None:
+            return "⏳"  # 待验证
+        elif correct:
+            return "✓"   # 正确
+        else:
+            return "✗"   # 错误
+
+    result_1d = get_result_symbol(pred_1d_correct)
+    result_5d = get_result_symbol(pred_5d_correct)
+    result_20d = get_result_symbol(pred_20d_correct)
+
+    # 构建显示字符串
+    parts = []
+
+    if pred_1d_dir is not None:
+        parts.append(f"1天{dir_1d_symbol}{result_1d}")
+
+    if pred_5d_dir is not None:
+        parts.append(f"5天{dir_5d_symbol}{result_5d}")
+
+    if pred_20d_dir is not None:
+        parts.append(f"20天{dir_20d_symbol}{result_20d}")
+
+    display = " ".join(parts)
+
+    # 如果传导模式激活，添加标记
+    if transmission_mode:
+        display = f"✅传导({display})"
+
+    return display if display else "-"
+
+
 def check_transmission_mode(stock_code, data_date):
     """
     检查是否进入传导模式（动态计算，不依赖outcome字段）
-    
+
     传导律：当同一data_date发出的1天预测和5天预测都已验证正确时，
     20天预测准确率(62.28%)会高于独立20天预测准确率(56.75%)，提升5.53%
-    
+
     参数:
     - stock_code: 股票代码（如 '0005.HK'）
     - data_date: 预测日期（如 '2026-04-18'）
-    
+
     返回:
     - dict: {
         'transmission_mode': bool,      # 是否进入传导模式
         'pred_1d_correct': bool/None,   # 1天预测是否正确
         'pred_5d_correct': bool/None,   # 5天预测是否正确
+        'pred_20d_correct': bool/None,  # 20天预测是否正确
+        'pred_1d_direction': str/None,  # 1天预测方向
+        'pred_5d_direction': str/None,  # 5天预测方向
+        'pred_20d_direction': str/None, # 20天预测方向
         'both_correct_rate': 62.28,     # 传导模式准确率
         'independent_20d_rate': 56.75   # 独立20天准确率
       }
     """
     import json
     from datetime import datetime, timedelta
-    
+
     history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prediction_history.json')
-    
+
     if not os.path.exists(history_file):
-        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
-    
+        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
+                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None}
+
     try:
         with open(history_file, 'r', encoding='utf-8') as f:
             history = json.load(f)
-        
+
         predictions = history.get('predictions', [])
-        
-        # 查找该股票该日期的1天和5天预测
+
+        # 查找该股票该日期的1天、5天、20天预测
         pred_1d = None
         pred_5d = None
-        
+        pred_20d = None
+
         for pred in predictions:
             if pred['stock_code'] == stock_code and pred['data_date'] == data_date:
                 if pred['horizon'] == 1:
                     pred_1d = pred
                 elif pred['horizon'] == 5:
                     pred_5d = pred
-        
+                elif pred['horizon'] == 20:
+                    pred_20d = pred
+
         # 检查是否都存在
         if not (pred_1d and pred_5d):
-            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
+            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
+                    'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
+                    'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
+                    'pred_20d_correct': pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None,
+                    'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None}
         
         # 如果outcome字段已存在，直接使用
         if pred_1d.get('outcome') is not None and pred_5d.get('outcome') is not None:
             pred_1d_correct = pred_1d.get('outcome') == 'correct'
             pred_5d_correct = pred_5d.get('outcome') == 'correct'
+            pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
             return {
                 'transmission_mode': pred_1d_correct and pred_5d_correct,
                 'pred_1d_correct': pred_1d_correct,
                 'pred_5d_correct': pred_5d_correct,
+                'pred_20d_correct': pred_20d_correct,
+                'pred_1d_direction': pred_1d.get('predicted_direction'),
+                'pred_5d_direction': pred_5d.get('predicted_direction'),
+                'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
                 'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
                 'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
             }
@@ -221,28 +307,38 @@ def check_transmission_mode(stock_code, data_date):
         # 验证1天和5天预测
         pred_1d_correct = verify_prediction(pred_1d, 1)
         pred_5d_correct = verify_prediction(pred_5d, 5)
-        
+        pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
+
         # 如果任一预测尚未到期或无法验证，返回None
         if pred_1d_correct is None or pred_5d_correct is None:
             return {
                 'transmission_mode': False,
                 'pred_1d_correct': pred_1d_correct,
                 'pred_5d_correct': pred_5d_correct,
+                'pred_20d_correct': pred_20d_correct,
+                'pred_1d_direction': pred_1d.get('predicted_direction'),
+                'pred_5d_direction': pred_5d.get('predicted_direction'),
+                'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
                 'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
                 'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
             }
-        
+
         return {
             'transmission_mode': pred_1d_correct and pred_5d_correct,
             'pred_1d_correct': pred_1d_correct,
             'pred_5d_correct': pred_5d_correct,
+            'pred_20d_correct': pred_20d_correct,
+            'pred_1d_direction': pred_1d.get('predicted_direction'),
+            'pred_5d_direction': pred_5d.get('predicted_direction'),
+            'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
             'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
             'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
         }
-    
+
     except Exception as e:
         print(f"⚠️ 检查传导模式失败: {e}")
-        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None}
+        return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
+                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None}
 
 
 def get_sector_type(sector_code):
@@ -713,17 +809,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pattern_name = THREE_HORIZON_PATTERNS[pattern]['name']
                         pattern_display = f"{pattern_name}({pattern})"
 
-                    # 检查传导模式
+                    # 检查传导模式并构建详细显示
                     transmission_info = check_transmission_mode(stock_code, date_str)
-                    if transmission_info['transmission_mode']:
-                        transmission_icon = "✅传导"
-                    else:
-                        transmission_icon = "-"
+                    transmission_display = format_transmission_display(transmission_info)
 
                     # 格式化价格
                     price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
 
-                    catboost_text += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_icon} |\n"
+                    catboost_text += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} |\n"
                 else:
                     # 无三周期预测，使用原始格式
                     if row['probability'] > 0.60:
