@@ -398,27 +398,38 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 二、整体表现（所有周期合计）
+## 二、各周期详细表现
+
+"""
+
+    # 各周期详细表现
+    for h in [1, 5, 20]:
+        m = horizon_metrics.get(h, {})
+        if m:
+            report += f"""### {horizon_names[h]}预测
 
 | 指标 | 数值 |
 |------|------|
-| 总预测数 | {overall_metrics.get('total_predictions', 0)} |
-| 正确预测数 | {overall_metrics.get('correct_predictions', 0)} |
-| **准确率** | **{overall_metrics.get('accuracy', 0):.2%}** |
-| 平均收益率 | {overall_metrics.get('avg_return', 0):.2%} |
-| 收益率中位数 | {overall_metrics.get('median_return', 0):.2%} |
-| 收益率标准差 | {overall_metrics.get('std_return', 0):.2%} |
-| 夏普比率 | {overall_metrics.get('sharpe_ratio', 0):.4f} |
+| 总预测数 | {m.get('total_predictions', 0)} |
+| 正确预测数 | {m.get('correct_predictions', 0)} |
+| **准确率** | **{m.get('accuracy', 0):.2%}** |
+| 平均收益率 | {m.get('avg_return', 0):.2%} |
+| 收益率标准差 | {m.get('std_return', 0):.2%} |
+| 夏普比率 | {m.get('sharpe_ratio', 0):.4f} |
+| 买入胜率 | {m.get('buy_win_rate', 0):.2%} |
 
-### 买入信号分析
+"""
+        else:
+            report += f"""### {horizon_names[h]}预测
 
 | 指标 | 数值 |
 |------|------|
-| 买入信号数 | {overall_metrics.get('buy_signal_count', 0)} |
-| 买入胜率 | {overall_metrics.get('buy_win_rate', 0):.2%} |
-| 买入平均收益 | {overall_metrics.get('buy_avg_return', 0):.2%} |
+| 总预测数 | 0 |
+| 准确率 | - |
 
----
+"""
+
+    report += """---
 
 ## 三、板块表现（20天预测）
 
