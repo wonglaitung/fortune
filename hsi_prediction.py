@@ -1145,6 +1145,10 @@ class HSI_Predictor:
         current_date = self.hsi_data.index[-1].strftime('%Y-%m-%d')
         current_time = self.hsi_data.index[-1].strftime('%H:%M:%S')
 
+        # 检查传导模式（5个交易日前的预测验证情况）
+        transmission_info = self._check_hsi_transmission_mode(current_date)
+        transmission_display = self._format_transmission_display(transmission_info)
+
         # 检测成交量异常
         volume_anomalies = self.detect_volume_anomalies()
         volume_anomaly = volume_anomalies.get('volume_anomaly')
@@ -1552,6 +1556,23 @@ class HSI_Predictor:
                 </tbody>
             </table>
 """
+
+            # 传导模式显示
+            prediction_date = transmission_info.get('prediction_date', '')
+            content += f"""
+            <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if transmission_info.get('transmission_mode') else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if transmission_info.get('transmission_mode') else '#6b7280'};">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证</h4>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+                    5个交易日前（{prediction_date}）的预测验证情况：
+                </div>
+                <div style="font-size: 14px; font-weight: 600; color: {'#166534' if transmission_info.get('transmission_mode') else '#374151'};">
+                    {transmission_display}
+                </div>
+                <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
+                    传导律：当1天和5天预测都正确时，20天预测准确率提升5.53%
+                </div>
+            </div>
+"""
         else:
             content += """<div style="padding: 15px; background: #f8fafc; border-radius: 8px; text-align: center; color: #6b7280;">多周期预测数据暂未获取</div>"""
 
@@ -1933,7 +1954,7 @@ class HSI_Predictor:
         print(f"   - {json_file}")
         print(f"   - {features_file}")
 
-    def save_prediction_to_history(self, score, trend, feature_details, catboost_result=None):
+    def save_prediction_to_history(self, score, trend, feature_details, catboost_result=None, multi_horizon_results=None):
         """
         保存预测到历史记录
 
@@ -1942,39 +1963,9 @@ class HSI_Predictor:
         - trend: 预测趋势
         - feature_details: 特征详情列表
         - catboost_result: CatBoost 预测结果（可选）
+        - multi_horizon_results: 多周期预测结果（可选）
         """
         history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
-
-        # 计算目标日期（horizon 天后）
-        prediction_date = self.hsi_data.index[-1]
-        from datetime import timedelta
-        target_date = prediction_date + timedelta(days=self.horizon if hasattr(self, 'horizon') else 20)
-
-        # 创建预测记录
-        record = {
-            'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
-            'prediction_date': prediction_date.strftime('%Y-%m-%d'),
-            'target_date': target_date.strftime('%Y-%m-%d'),
-            'current_price': float(self.hsi_data['Close'].iloc[-1]),
-            'horizon': self.horizon if hasattr(self, 'horizon') else 20,
-            'score_model': {
-                'score': float(score),
-                'trend': trend
-            },
-            'catboost_model': catboost_result,
-            'features': {k: (float(v) if not pd.isna(v) else None) for k, v in self.features.items()},
-            'top_features': [
-                {
-                    'feature': f['feature'],
-                    'value': f['value'],
-                    'contribution': f['contribution']
-                }
-                for f in sorted(feature_details, key=lambda x: abs(x['contribution']), reverse=True)[:10]
-            ],
-            'verified': False,
-            'actual_return': None,
-            'actual_direction': None
-        }
 
         # 加载现有历史记录
         history = {'predictions': [], 'metadata': {}}
@@ -1985,8 +1976,37 @@ class HSI_Predictor:
             except Exception as e:
                 print(f"⚠️ 加载历史记录失败，创建新文件: {e}")
 
-        # 添加新记录
-        history['predictions'].append(record)
+        prediction_date = self.hsi_data.index[-1]
+        current_price = float(self.hsi_data['Close'].iloc[-1])
+
+        # 保存多周期预测
+        if multi_horizon_results:
+            for horizon in [1, 5, 20]:
+                if horizon in multi_horizon_results:
+                    r = multi_horizon_results[horizon]
+
+                    # 计算目标日期（交易日）
+                    target_date = self._get_target_date_trading_days(prediction_date, horizon)
+
+                    # 创建预测记录
+                    record = {
+                        'prediction_id': f"{prediction_date.strftime('%Y-%m-%d')}_{horizon}d",
+                        'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+                        'data_date': prediction_date.strftime('%Y-%m-%d'),
+                        'target_date': target_date,
+                        'horizon': horizon,
+                        'predicted_direction': 'up' if r['prediction'] == '上涨' else 'down',
+                        'prediction_probability': r['probability'],
+                        'confidence_level': r['confidence'],
+                        'entry_price': current_price,
+                        'outcome': None,
+                        'actual_return': None,
+                        'actual_direction': None
+                    }
+
+                    # 添加新记录
+                    history['predictions'].append(record)
+                    print(f"   - 保存 {horizon}天预测: {r['prediction']} ({r['probability']:.1%})")
 
         # 更新元数据
         history['metadata']['last_updated'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
@@ -2000,6 +2020,212 @@ class HSI_Predictor:
             print(f"   - 历史记录总数: {history['metadata']['total_predictions']}")
         except Exception as e:
             print(f"❌ 保存历史记录失败: {e}")
+
+    def _get_target_date_trading_days(self, date, horizon):
+        """
+        计算目标日期（数据日期 + N个交易日）
+
+        参数:
+        - date: 数据日期
+        - horizon: 交易日数量
+
+        返回:
+        - 目标日期字符串 (YYYY-MM-DD)
+        """
+        from datetime import timedelta
+
+        if isinstance(date, str):
+            date = datetime.strptime(date, '%Y-%m-%d')
+
+        try:
+            import akshare as ak
+            df = ak.tool_trade_date_hist_sina()
+            trading_dates = set(df['trade_date'].astype(str).tolist())
+
+            count = 0
+            current = date
+
+            while count < horizon:
+                current += timedelta(days=1)
+                date_str = current.strftime('%Y-%m-%d')
+                if date_str in trading_dates:
+                    count += 1
+
+            return current.strftime('%Y-%m-%d')
+
+        except Exception as e:
+            # 回退到自然日
+            target_date = date + timedelta(days=horizon)
+            return target_date.strftime('%Y-%m-%d')
+
+    def _check_hsi_transmission_mode(self, data_date):
+        """
+        检查恒指传导模式：查看5个交易日前的预测验证情况
+
+        参数:
+        - data_date: 当前报告日期
+
+        返回:
+        - dict: 传导模式信息
+        """
+        from datetime import timedelta
+
+        history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
+
+        # 计算5个交易日前的日期
+        try:
+            import akshare as ak
+            df = ak.tool_trade_date_hist_sina()
+            trading_dates = df['trade_date'].astype(str).tolist()
+
+            current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
+
+            if current_date_str in trading_dates:
+                current_idx = trading_dates.index(current_date_str)
+            else:
+                for i, d in enumerate(trading_dates):
+                    if d >= current_date_str:
+                        current_idx = i
+                        break
+                else:
+                    current_idx = len(trading_dates) - 1
+
+            target_idx = max(0, current_idx - 5)
+            prediction_date = trading_dates[target_idx]
+        except Exception as e:
+            if isinstance(data_date, str):
+                data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
+            else:
+                data_date_obj = data_date
+            prediction_date = (data_date_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+
+        if not os.path.exists(history_file):
+            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
+                    'pred_20d_correct': None, 'pred_1d_direction': None, 'pred_5d_direction': None,
+                    'pred_20d_direction': None, 'prediction_date': prediction_date}
+
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+
+            predictions = history.get('predictions', [])
+
+            # 查找该日期的1天、5天、20天预测
+            pred_1d = None
+            pred_5d = None
+            pred_20d = None
+
+            for pred in predictions:
+                if pred.get('data_date') == prediction_date:
+                    h = pred.get('horizon')
+                    if h == 1:
+                        pred_1d = pred
+                    elif h == 5:
+                        pred_5d = pred
+                    elif h == 20:
+                        pred_20d = pred
+
+            # 检查是否都存在
+            if not (pred_1d and pred_5d):
+                return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
+                        'pred_20d_correct': pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None,
+                        'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
+                        'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
+                        'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+                        'prediction_date': prediction_date}
+
+            # 检查outcome字段
+            pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d.get('outcome') else None
+            pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d.get('outcome') else None
+            pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
+
+            return {
+                'transmission_mode': pred_1d_correct and pred_5d_correct if pred_1d_correct is not None and pred_5d_correct is not None else False,
+                'pred_1d_correct': pred_1d_correct,
+                'pred_5d_correct': pred_5d_correct,
+                'pred_20d_correct': pred_20d_correct,
+                'pred_1d_direction': pred_1d.get('predicted_direction'),
+                'pred_5d_direction': pred_5d.get('predicted_direction'),
+                'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+                'prediction_date': prediction_date
+            }
+
+        except Exception as e:
+            print(f"⚠️ 检查传导模式失败: {e}")
+            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
+                    'pred_20d_correct': None, 'pred_1d_direction': None, 'pred_5d_direction': None,
+                    'pred_20d_direction': None, 'prediction_date': prediction_date}
+
+    def _format_transmission_display(self, transmission_info):
+        """
+        格式化传导模式显示字符串
+
+        参数:
+        - transmission_info: _check_hsi_transmission_mode() 返回的字典
+
+        返回:
+        - str: 格式化的显示字符串
+        """
+        pred_1d_dir = transmission_info.get('pred_1d_direction')
+        pred_5d_dir = transmission_info.get('pred_5d_direction')
+        pred_20d_dir = transmission_info.get('pred_20d_direction')
+        pred_1d_correct = transmission_info.get('pred_1d_correct')
+        pred_5d_correct = transmission_info.get('pred_5d_correct')
+        pred_20d_correct = transmission_info.get('pred_20d_correct')
+        transmission_mode = transmission_info.get('transmission_mode')
+        prediction_date = transmission_info.get('prediction_date')
+
+        # 如果没有预测数据
+        if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
+            return "-"
+
+        # 方向符号
+        def get_dir_symbol(direction):
+            if direction == 'up':
+                return "↑"
+            elif direction == 'down':
+                return "↓"
+            else:
+                return "?"
+
+        dir_1d_symbol = get_dir_symbol(pred_1d_dir)
+        dir_5d_symbol = get_dir_symbol(pred_5d_dir)
+        dir_20d_symbol = get_dir_symbol(pred_20d_dir)
+
+        # 结果符号
+        def get_result_symbol(correct):
+            if correct is None:
+                return "⏳"  # 待验证
+            elif correct:
+                return "✓"   # 正确
+            else:
+                return "✗"   # 错误
+
+        result_1d = get_result_symbol(pred_1d_correct)
+        result_5d = get_result_symbol(pred_5d_correct)
+        result_20d = get_result_symbol(pred_20d_correct)
+
+        # 构建显示字符串
+        parts = []
+        if pred_1d_dir is not None:
+            parts.append(f"1天{dir_1d_symbol}{result_1d}")
+        if pred_5d_dir is not None:
+            parts.append(f"5天{dir_5d_symbol}{result_5d}")
+        if pred_20d_dir is not None:
+            parts.append(f"20天{dir_20d_symbol}{result_20d}")
+
+        display = " ".join(parts)
+
+        # 添加预测日期
+        date_prefix = f"[{prediction_date}] " if prediction_date else ""
+
+        # 如果传导模式激活，添加标记
+        if transmission_mode:
+            display = f"✅传导({date_prefix}{display})"
+        else:
+            display = f"{date_prefix}{display}"
+
+        return display if display else "-"
 
     def _run_catboost_comparison(self, score_model_score, score_model_trend):
         """
@@ -2349,7 +2575,7 @@ class HSI_Predictor:
             self.save_report(score, feature_details)
 
             # 8. 保存预测历史记录
-            self.save_prediction_to_history(score, trend, feature_details, catboost_result)
+            self.save_prediction_to_history(score, trend, feature_details, catboost_result, multi_horizon_results)
 
             # 8. 发送邮件
             if send_email_flag:
