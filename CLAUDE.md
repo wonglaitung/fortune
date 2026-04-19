@@ -148,7 +148,7 @@ AKShare      南向资金        主力追踪     性能监控
 | `comprehensive-analysis.yml` | 综合分析 | 周一到周五 16:00 |
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
 | `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
-| `performance-monitor.yml` | 性能月度报告 | 每月1号 |
+| `performance-monitor.yml` | 预测性能监控 | 每个工作日 HK 0:00 |
 
 ---
 
@@ -202,4 +202,4 @@ future_return = returns.rolling(5).sum().shift(-5)
 
 ---
 
-**最后更新**：2026-04-18
+**最后更新**：2026-04-19
