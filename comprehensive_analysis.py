@@ -127,6 +127,7 @@ def format_transmission_display(transmission_info):
     pred_5d_correct = transmission_info.get('pred_5d_correct')
     pred_20d_correct = transmission_info.get('pred_20d_correct')
     transmission_mode = transmission_info.get('transmission_mode')
+    prediction_date = transmission_info.get('prediction_date')
 
     # 如果没有预测数据
     if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
@@ -172,23 +173,32 @@ def format_transmission_display(transmission_info):
 
     display = " ".join(parts)
 
+    # 添加预测日期
+    date_prefix = f"[{prediction_date}] " if prediction_date else ""
+
     # 如果传导模式激活，添加标记
     if transmission_mode:
-        display = f"✅传导({display})"
+        display = f"✅传导({date_prefix}{display})"
+    else:
+        display = f"{date_prefix}{display}"
 
     return display if display else "-"
 
 
 def check_transmission_mode(stock_code, data_date):
     """
-    检查是否进入传导模式（动态计算，不依赖outcome字段）
+    检查传导模式：查看5个交易日前的预测验证情况
 
-    传导律：当同一data_date发出的1天预测和5天预测都已验证正确时，
-    20天预测准确率(62.28%)会高于独立20天预测准确率(56.75%)，提升5.53%
+    逻辑：在4月19日时，查看4月10日做的预测：
+    - 1天预测（目标4月11日）已到期，可验证
+    - 5天预测（目标4月17日）已到期，可验证
+    - 20天预测（目标5月8日）未到期
+
+    传导律：当1天和5天预测都正确时，20天预测准确率提升5.53%
 
     参数:
     - stock_code: 股票代码（如 '0005.HK'）
-    - data_date: 预测日期（如 '2026-04-18'）
+    - data_date: 当前报告日期（如 '2026-04-19'）
 
     返回:
     - dict: {
@@ -199,6 +209,7 @@ def check_transmission_mode(stock_code, data_date):
         'pred_1d_direction': str/None,  # 1天预测方向
         'pred_5d_direction': str/None,  # 5天预测方向
         'pred_20d_direction': str/None, # 20天预测方向
+        'prediction_date': str,         # 预测日期（5个交易日前）
         'both_correct_rate': 62.28,     # 传导模式准确率
         'independent_20d_rate': 56.75   # 独立20天准确率
       }
@@ -207,6 +218,38 @@ def check_transmission_mode(stock_code, data_date):
     from datetime import datetime, timedelta
 
     history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'prediction_history.json')
+
+    # 计算5个交易日前的日期
+    try:
+        import akshare as ak
+        df = ak.tool_trade_date_hist_sina()
+        trading_dates = df['trade_date'].astype(str).tolist()
+
+        # 找到当前日期在交易日列表中的位置，往前推5个交易日
+        current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
+
+        # 如果当前日期不在交易日列表中，找最近的交易日
+        if current_date_str in trading_dates:
+            current_idx = trading_dates.index(current_date_str)
+        else:
+            # 找最近的交易日
+            for i, d in enumerate(trading_dates):
+                if d >= current_date_str:
+                    current_idx = i
+                    break
+            else:
+                current_idx = len(trading_dates) - 1
+
+        # 往前推5个交易日
+        target_idx = max(0, current_idx - 5)
+        prediction_date = trading_dates[target_idx]
+    except Exception as e:
+        # 回退到自然日计算
+        if isinstance(data_date, str):
+            data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
+        else:
+            data_date_obj = data_date
+        prediction_date = (data_date_obj - timedelta(days=7)).strftime('%Y-%m-%d')
 
     if not os.path.exists(history_file):
         return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
@@ -218,13 +261,13 @@ def check_transmission_mode(stock_code, data_date):
 
         predictions = history.get('predictions', [])
 
-        # 查找该股票该日期的1天、5天、20天预测
+        # 查找该股票在5个交易日前的1天、5天、20天预测
         pred_1d = None
         pred_5d = None
         pred_20d = None
 
         for pred in predictions:
-            if pred['stock_code'] == stock_code and pred['data_date'] == data_date:
+            if pred['stock_code'] == stock_code and pred['data_date'] == prediction_date:
                 if pred['horizon'] == 1:
                     pred_1d = pred
                 elif pred['horizon'] == 5:
@@ -238,8 +281,9 @@ def check_transmission_mode(stock_code, data_date):
                     'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
                     'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
                     'pred_20d_correct': pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None,
-                    'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None}
-        
+                    'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+                    'prediction_date': prediction_date}
+
         # 如果outcome字段已存在，直接使用
         if pred_1d.get('outcome') is not None and pred_5d.get('outcome') is not None:
             pred_1d_correct = pred_1d.get('outcome') == 'correct'
@@ -253,6 +297,7 @@ def check_transmission_mode(stock_code, data_date):
                 'pred_1d_direction': pred_1d.get('predicted_direction'),
                 'pred_5d_direction': pred_5d.get('predicted_direction'),
                 'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+                'prediction_date': prediction_date,
                 'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
                 'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
             }
@@ -319,6 +364,7 @@ def check_transmission_mode(stock_code, data_date):
                 'pred_1d_direction': pred_1d.get('predicted_direction'),
                 'pred_5d_direction': pred_5d.get('predicted_direction'),
                 'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+                'prediction_date': prediction_date,
                 'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
                 'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
             }
@@ -331,6 +377,7 @@ def check_transmission_mode(stock_code, data_date):
             'pred_1d_direction': pred_1d.get('predicted_direction'),
             'pred_5d_direction': pred_5d.get('predicted_direction'),
             'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
+            'prediction_date': prediction_date,
             'both_correct_rate': TRANSMISSION_ACCURACY['both_correct_rate'],
             'independent_20d_rate': TRANSMISSION_ACCURACY['independent_20d_rate']
         }
@@ -338,7 +385,7 @@ def check_transmission_mode(stock_code, data_date):
     except Exception as e:
         print(f"⚠️ 检查传导模式失败: {e}")
         return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None, 'pred_20d_correct': None,
-                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None}
+                'pred_1d_direction': None, 'pred_5d_direction': None, 'pred_20d_direction': None, 'prediction_date': None}
 
 
 def get_sector_type(sector_code):
