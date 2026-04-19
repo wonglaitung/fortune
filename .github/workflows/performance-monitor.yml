@@ -33,7 +33,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         run: |
-          python3 ml_services/performance_monitor.py --mode all --horizon 20
+          python3 ml_services/performance_monitor.py --mode all --horizon all
 
       - name: Commit updated history
         run: |

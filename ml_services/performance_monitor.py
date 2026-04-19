@@ -300,11 +300,11 @@ def get_sector_name(sector_code: str) -> str:
 def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
     生成月度性能报告
-    
+
     参数:
     - history: 预测历史数据
     - month: 月份 (YYYY-MM)，默认上个月
-    
+
     返回:
     - Markdown 格式的报告
     """
@@ -317,58 +317,88 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         first_of_this_month = now.replace(day=1)
         last_month = first_of_this_month - timedelta(days=1)
         report_month = last_month.strftime('%Y-%m')
-    
+
     # 筛选该月份的预测
     month_predictions = [
         p for p in history['predictions']
         if p.get('timestamp', '').startswith(report_month)
     ]
-    
+
     # 筛选已评估的预测
     evaluated_predictions = [
         p for p in month_predictions
         if p.get('outcome') is not None
     ]
-    
-    # 计算整体指标
-    overall_metrics = calculate_metrics(evaluated_predictions)
-    
-    # 按板块分组
-    sector_metrics = {}
+
+    # 按周期分组
+    horizon_predictions = {1: [], 5: [], 20: []}
     for pred in evaluated_predictions:
+        h = pred.get('horizon', 20)
+        if h in horizon_predictions:
+            horizon_predictions[h].append(pred)
+
+    # 计算各周期指标
+    horizon_metrics = {}
+    for h, preds in horizon_predictions.items():
+        horizon_metrics[h] = calculate_metrics(preds)
+
+    # 计算整体指标（所有周期合计）
+    overall_metrics = calculate_metrics(evaluated_predictions)
+
+    # 按板块分组（仅20天）
+    sector_metrics = {}
+    for pred in horizon_predictions[20]:
         sector = pred.get('sector', 'unknown')
         if sector not in sector_metrics:
             sector_metrics[sector] = []
         sector_metrics[sector].append(pred)
-    
+
     sector_results = {}
     for sector, preds in sector_metrics.items():
         sector_results[sector] = calculate_metrics(preds)
-    
-    # 按股票分组
+
+    # 按股票分组（仅20天）
     stock_metrics = {}
-    for pred in evaluated_predictions:
+    for pred in horizon_predictions[20]:
         stock = pred.get('stock_code', 'unknown')
         if stock not in stock_metrics:
             stock_metrics[stock] = []
         stock_metrics[stock].append(pred)
-    
+
     stock_results = {}
     for stock, preds in stock_metrics.items():
         stock_results[stock] = {
             **calculate_metrics(preds),
             'stock_name': preds[0].get('stock_name', stock)
         }
-    
-    # 生成报告
-    report = f"""# 预测性能月度报告
 
-**报告月份**: {report_month}  
+    # 生成报告
+    report = f"""# 预测性能报告
+
+**报告月份**: {report_month}
 **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ---
 
-## 一、整体表现
+## 一、各周期性能概览
+
+| 周期 | 预测数 | 正确数 | 准确率 | 平均收益 | 夏普比率 |
+|------|--------|--------|--------|----------|----------|
+"""
+
+    # 各周期性能表格
+    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
+    for h in [1, 5, 20]:
+        m = horizon_metrics.get(h, {})
+        if m:
+            report += f"| {horizon_names[h]} | {m.get('total_predictions', 0)} | {m.get('correct_predictions', 0)} | **{m.get('accuracy', 0):.2%}** | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+        else:
+            report += f"| {horizon_names[h]} | 0 | 0 | - | - | - |\n"
+
+    report += f"""
+---
+
+## 二、整体表现（所有周期合计）
 
 | 指标 | 数值 |
 |------|------|
@@ -390,30 +420,30 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ---
 
-## 二、板块表现
+## 三、板块表现（20天预测）
 
 """
-    
+
     # 板块表现表格
     if sector_results:
         report += "| 板块 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
         report += "|------|--------|--------|----------|----------|\n"
-        
+
         # 按准确率排序
         sorted_sectors = sorted(
             sector_results.items(),
             key=lambda x: x[1].get('accuracy', 0),
             reverse=True
         )
-        
+
         for sector, metrics in sorted_sectors:
             sector_name = get_sector_name(sector)
             report += f"| {sector_name} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('buy_win_rate', 0):.2%} |\n"
     else:
         report += "*暂无板块数据*\n"
-    
-    report += "\n---\n\n## 三、个股表现 TOP 10\n\n"
-    
+
+    report += "\n---\n\n## 四、个股表现 TOP 10（20天预测）\n\n"
+
     # 个股表现 TOP 10（按准确率）
     if stock_results:
         report += "### 准确率 TOP 10\n\n"
@@ -541,58 +571,84 @@ def main():
     parser.add_argument('--mode', type=str, default='evaluate',
                        choices=['evaluate', 'report', 'all'],
                        help='运行模式: evaluate=评估预测, report=生成报告, all=全部')
-    parser.add_argument('--horizon', type=int, default=20,
-                       help='预测周期（默认20天）')
+    parser.add_argument('--horizon', type=str, default='all',
+                       help='预测周期: 1=1天, 5=5天, 20=20天, all=全部（默认）')
     parser.add_argument('--month', type=str, default=None,
                        help='报告月份 (YYYY-MM)，默认上个月')
     parser.add_argument('--no-email', action='store_true',
                        help='不发送邮件，仅生成报告')
     parser.add_argument('--force', action='store_true',
                        help='强制重新评估已评估的预测')
-    
+
     args = parser.parse_args()
-    
+
+    # 解析 horizon 参数
+    if args.horizon == 'all':
+        horizons = [1, 5, 20]
+    else:
+        horizons = [int(args.horizon)]
+
     print("=" * 60)
     print("📊 预测性能监控系统")
     print("=" * 60)
-    
+
     # 加载历史数据
     print("\n📂 加载预测历史数据...")
     history = load_prediction_history()
     print(f"   已加载 {len(history.get('predictions', []))} 条预测记录")
-    
+
     if args.mode in ['evaluate', 'all']:
-        # 评估已到期的预测
-        print(f"\n📈 评估 {args.horizon} 天周期的预测...")
-        history, stats = evaluate_predictions(history, args.horizon, args.force)
-        print(f"   总预测: {stats['total']}")
-        print(f"   已评估: {stats['evaluated']}")
-        print(f"   正确: {stats['correct']}")
-        print(f"   错误: {stats['wrong']}")
-        if stats['evaluated'] > 0:
-            print(f"   准确率: {stats['correct']/stats['evaluated']:.2%}")
-    
+        # 评估各周期的预测
+        total_stats = {'total': 0, 'evaluated': 0, 'correct': 0, 'wrong': 0}
+
+        for h in horizons:
+            print(f"\n📈 评估 {h} 天周期的预测...")
+            history, stats = evaluate_predictions(history, h, args.force)
+
+            # 显示统计
+            print(f"   总预测: {stats['total']}")
+            print(f"   已评估: {stats['evaluated']}")
+            print(f"   正确: {stats['correct']}")
+            print(f"   错误: {stats['wrong']}")
+            if stats['evaluated'] > 0:
+                print(f"   准确率: {stats['correct']/stats['evaluated']:.2%}")
+
+            # 累计统计
+            total_stats['total'] += stats['total']
+            total_stats['evaluated'] += stats['evaluated']
+            total_stats['correct'] += stats['correct']
+            total_stats['wrong'] += stats['wrong']
+
+        if len(horizons) > 1:
+            print(f"\n📊 所有周期合计:")
+            print(f"   总预测: {total_stats['total']}")
+            print(f"   已评估: {total_stats['evaluated']}")
+            print(f"   正确: {total_stats['correct']}")
+            print(f"   错误: {total_stats['wrong']}")
+            if total_stats['evaluated'] > 0:
+                print(f"   准确率: {total_stats['correct']/total_stats['evaluated']:.2%}")
+
     if args.mode in ['report', 'all']:
-        # 生成月度报告
-        print(f"\n📝 生成月度报告...")
+        # 生成报告
+        print(f"\n📝 生成性能报告...")
         report = generate_monthly_report(history, args.month)
-        
+
         # 保存报告
-        report_month = args.month if args.month else (datetime.now().replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
+        report_month = args.month if args.month else datetime.now().strftime('%Y-%m')
         report_path = os.path.join(REPORT_OUTPUT_DIR, f'performance_report_{report_month}.md')
-        
+
         os.makedirs(REPORT_OUTPUT_DIR, exist_ok=True)
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report)
         print(f"   报告已保存到: {report_path}")
-        
+
         # 发送邮件
         if not args.no_email:
-            subject = f"[港股智能分析] 预测性能月度报告 - {report_month}"
+            subject = f"[港股智能分析] 预测性能报告 - {report_month}"
             send_email_report(report, subject)
         else:
             print("   (--no-email) 跳过邮件发送")
-    
+
     print("\n" + "=" * 60)
     print("✅ 完成")
     print("=" * 60)
