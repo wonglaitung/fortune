@@ -299,34 +299,30 @@ def get_sector_name(sector_code: str) -> str:
 
 def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
-    生成月度性能报告
+    生成性能报告
 
     参数:
     - history: 预测历史数据
-    - month: 月份 (YYYY-MM)，默认上个月
+    - month: 保留参数（兼容性）
 
     返回:
     - Markdown 格式的报告
     """
-    # 确定报告月份
-    if month:
-        report_month = month
-    else:
-        now = datetime.now()
-        # 上个月
-        first_of_this_month = now.replace(day=1)
-        last_month = first_of_this_month - timedelta(days=1)
-        report_month = last_month.strftime('%Y-%m')
+    # 计算统计周期：半年前到今天
+    now = datetime.now()
+    start_date = now - timedelta(days=180)  # 约6个月
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = now.strftime('%Y-%m-%d')
 
-    # 筛选该月份的预测
-    month_predictions = [
+    # 筛选时间范围内的预测
+    period_predictions = [
         p for p in history['predictions']
-        if p.get('timestamp', '').startswith(report_month)
+        if start_date_str <= p.get('timestamp', '').split('T')[0] <= end_date_str
     ]
 
     # 筛选已评估的预测
     evaluated_predictions = [
-        p for p in month_predictions
+        p for p in period_predictions
         if p.get('outcome') is not None
     ]
 
@@ -375,7 +371,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 生成报告
     report = f"""# 预测性能报告
 
-**报告月份**: {report_month}
+**统计周期**: {start_date_str} ~ {end_date_str}
 **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ---
@@ -644,9 +640,9 @@ def main():
         print(f"\n📝 生成性能报告...")
         report = generate_monthly_report(history, args.month)
 
-        # 保存报告
-        report_month = args.month if args.month else datetime.now().strftime('%Y-%m')
-        report_path = os.path.join(REPORT_OUTPUT_DIR, f'performance_report_{report_month}.md')
+        # 保存报告（使用当前日期命名）
+        report_date = datetime.now().strftime('%Y-%m-%d')
+        report_path = os.path.join(REPORT_OUTPUT_DIR, f'performance_report_{report_date}.md')
 
         os.makedirs(REPORT_OUTPUT_DIR, exist_ok=True)
         with open(report_path, 'w', encoding='utf-8') as f:
@@ -655,7 +651,7 @@ def main():
 
         # 发送邮件
         if not args.no_email:
-            subject = f"[港股智能分析] 预测性能报告 - {report_month}"
+            subject = f"[港股智能分析] 预测性能报告 - {report_date}"
             send_email_report(report, subject)
         else:
             print("   (--no-email) 跳过邮件发送")
