@@ -568,34 +568,39 @@ def safe_float_format(value, format_spec='.2f', default=''):
 def load_model_accuracy(horizon=20):
     """
     从文件加载模型准确率信息
-    
+
     参数:
     - horizon: 预测周期（默认20天）
-    
+
     返回:
-    - dict: 包含LightGBM、GBDT和CatBoost准确率的字典
+    - dict: 包含1天、5天、20天三个周期的CatBoost准确率
       {
-        'lgbm': {'accuracy': float, 'std': float},
-        'gbdt': {'accuracy': float, 'std': float},
-        'catboost': {'accuracy': float, 'std': float}
+        'catboost': {'accuracy': float, 'std': float},  # 指定horizon的准确率
+        '1d': {'accuracy': float, 'std': float},
+        '5d': {'accuracy': float, 'std': float},
+        '20d': {'accuracy': float, 'std': float}
       }
     """
     # 默认准确率值（如果文件不存在）
     default_accuracy = {
-        'catboost': {'accuracy': 0.6101, 'std': 0.0219}
+        'catboost': {'accuracy': 0.6101, 'std': 0.0219},
+        '1d': {'accuracy': 0.5100, 'std': 0.0500},
+        '5d': {'accuracy': 0.5600, 'std': 0.0400},
+        '20d': {'accuracy': 0.6101, 'std': 0.0219}
     }
-    
+
     accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
-    
+
     try:
         if os.path.exists(accuracy_file):
             import json
             with open(accuracy_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
+
             result = {}
+
+            # 加载指定horizon的准确率
             catboost_key = f'catboost_{horizon}d'
-            
             if catboost_key in data:
                 result['catboost'] = {
                     'accuracy': data[catboost_key].get('accuracy', default_accuracy['catboost']['accuracy']),
@@ -603,9 +608,22 @@ def load_model_accuracy(horizon=20):
                 }
             else:
                 result['catboost'] = default_accuracy['catboost']
-            
+
+            # 加载三个周期的准确率
+            for period in ['1d', '5d', '20d']:
+                key = f'catboost_{period}'
+                if key in data:
+                    result[period] = {
+                        'accuracy': data[key].get('accuracy', default_accuracy[period]['accuracy']),
+                        'std': data[key].get('std', default_accuracy[period]['std'])
+                    }
+                else:
+                    result[period] = default_accuracy[period]
+
             print(f"✅ 已加载模型准确率: {accuracy_file}")
-            print(f"   CatBoost: {result['catboost']['accuracy']:.2%} (±{result['catboost']['std']:.2%})")
+            print(f"   CatBoost 1天: {result['1d']['accuracy']:.2%} (±{result['1d']['std']:.2%})")
+            print(f"   CatBoost 5天: {result['5d']['accuracy']:.2%} (±{result['5d']['std']:.2%})")
+            print(f"   CatBoost 20天: {result['20d']['accuracy']:.2%} (±{result['20d']['std']:.2%})")
             return result
         else:
             print(f"⚠️ 准确率文件不存在: {accuracy_file}，使用默认值")
@@ -3122,11 +3140,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 二、机器学习预测结果（20天）
 
-### CatBoost模型（20天预测）
+### CatBoost模型（三周期准确率）
 
-**模型准确率**：
+**模型准确率**（Walk-forward验证）：
 
-- CatBoost：{model_accuracy['catboost']['accuracy']:.2%}（标准差±{model_accuracy['catboost']['std']:.2%}）
+| 周期 | 准确率 | 标准差 | 可信度 |
+|------|--------|--------|--------|
+| 1天 | {model_accuracy['1d']['accuracy']:.2%} | ±{model_accuracy['1d']['std']:.2%} | ⚠️ 噪音大，仅供参考 |
+| 5天 | {model_accuracy['5d']['accuracy']:.2%} | ±{model_accuracy['5d']['std']:.2%} | ⭐⭐⭐ 趋势确认 |
+| **20天** | **{model_accuracy['20d']['accuracy']:.2%}** | **±{model_accuracy['20d']['std']:.2%}** | ⭐⭐⭐⭐⭐ **最可靠** |
 
 {ml_predictions['ensemble']}
 
