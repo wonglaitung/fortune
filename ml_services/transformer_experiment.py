@@ -312,7 +312,7 @@ class TransformerDataPreprocessor:
         else:
             # 如果没有提供hsi_df，则获取
             try:
-                hsi_df = get_hsi_data_tencent(period_days=730)
+                hsi_df = get_hsi_data_tencent(period_days=1460)
                 if hsi_df is not None and not hsi_df.empty:
                     df = self.feature_engineer.calculate_relative_strength(df, hsi_df)
             except Exception as e:
@@ -326,7 +326,7 @@ class TransformerDataPreprocessor:
         logger.info(f"  生成市场环境特征...")
         if hsi_df is None:
             try:
-                hsi_df = get_hsi_data_tencent(period_days=730)
+                hsi_df = get_hsi_data_tencent(period_days=1460)
             except Exception as e:
                 logger.warning(f"  获取恒生指数数据失败: {e}")
                 hsi_df = None
@@ -767,7 +767,7 @@ class TransformerExperiment:
             stock_code_num = stock_code.replace('.HK', '').zfill(5)
             
             # 获取数据
-            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=1460)
             if stock_df is None or stock_df.empty:
                 logger.error(f"无法获取股票数据: {stock_code}")
                 return None
@@ -775,7 +775,7 @@ class TransformerExperiment:
             # 获取恒生指数数据
             hsi_df = None
             try:
-                hsi_df = get_hsi_data_tencent(period_days=730)
+                hsi_df = get_hsi_data_tencent(period_days=1460)
             except Exception as e:
                 logger.warning(f"获取恒生指数数据失败: {e}")
             

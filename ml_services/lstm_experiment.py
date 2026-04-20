@@ -243,7 +243,7 @@ class LSTMDataPreprocessor:
         # 添加市场环境特征（恒生指数）
         logger.info(f"  生成市场环境特征...")
         try:
-            hsi_df = get_hsi_data_tencent(period_days=730)
+            hsi_df = get_hsi_data_tencent(period_days=1460)
             if hsi_df is not None and not hsi_df.empty:
                 # 计算恒生指数收益率
                 hsi_df['HSI_Return_1d'] = hsi_df['Close'].pct_change()
@@ -526,7 +526,7 @@ class LSTMExperiment:
             stock_code_num = stock_code.replace('.HK', '').zfill(5)
             
             # 获取数据
-            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=1460)
             if stock_df is None or stock_df.empty:
                 logger.error(f"无法获取股票数据: {stock_code}")
                 return None
@@ -755,7 +755,7 @@ class LSTMExperiment:
             stock_code_num = stock_code.replace('.HK', '').zfill(5)
             
             # 获取数据
-            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code_num, period_days=1460)
             if stock_df is None or stock_df.empty:
                 logger.error(f"无法获取股票数据: {stock_code}")
                 continue
