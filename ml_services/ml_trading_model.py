@@ -2678,17 +2678,19 @@ class LightGBMModel(BaseTradingModel):
         self.scaler = StandardScaler()
         self.model_type = 'lgbm'  # 模型类型标识
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
         """准备训练数据（80个指标版本，优化版）
-        
+
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
+            min_return_threshold: 最小收益阈值（默认0.5%）
         """
         self.horizon = horizon
+        self.min_return_threshold = min_return_threshold
         all_data = []
 
         # ========== 步骤1：获取共享数据（只获取一次） ==========
@@ -2834,7 +2836,7 @@ class LightGBMModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
         """训练模型（默认使用全量特征892个）
 
         Args:
@@ -2843,6 +2845,7 @@ class LightGBMModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            min_return_threshold: 最小收益阈值（默认0.5%）
 
         Returns:
         # 设置固定随机种子（确保模型训练的可重现性）
@@ -2856,7 +2859,7 @@ class LightGBMModel(BaseTradingModel):
             LightGBMModel._deprecation_warning_shown = True
 
         print("准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon, min_return_threshold=min_return_threshold)
 
         # 先删除全为NaN的列（避免dropna删除所有行）
         cols_all_nan = df.columns[df.isnull().all()].tolist()
@@ -3332,17 +3335,19 @@ class GBDTModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
         """准备训练数据（80个指标版本）
-        
+
         Args:
             codes: 股票代码列表
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
+            min_return_threshold: 最小收益阈值（默认0.5%）
         """
         self.horizon = horizon
+        self.min_return_threshold = min_return_threshold
         all_data = []
 
         # 获取美股市场数据（只获取一次）
@@ -3391,7 +3396,7 @@ class GBDTModel(BaseTradingModel):
                 stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
                 for key, value in stock_type_features.items():
                     stock_df[key] = value
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest)
+                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -3468,7 +3473,7 @@ class GBDTModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
         """训练 GBDT 模型（默认使用全量特征892个）
 
         Args:
@@ -3477,6 +3482,7 @@ class GBDTModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            min_return_threshold: 最小收益阈值（默认0.5%）
         """
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
@@ -3492,7 +3498,7 @@ class GBDTModel(BaseTradingModel):
 
         # 准备数据
         logger.info("准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date, horizon=horizon)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon, min_return_threshold=min_return_threshold)
 
         # 先删除全为NaN的列（避免dropna删除所有行）
         cols_all_nan = df.columns[df.isnull().all()].tolist()
