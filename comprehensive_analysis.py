@@ -3142,13 +3142,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ### CatBoost模型（三周期准确率）
 
-**模型准确率**（Walk-forward验证）：
+**模型准确率**：
 
-| 周期 | 准确率 | 标准差 | 可信度 |
-|------|--------|--------|--------|
-| 1天 | {model_accuracy['1d']['accuracy']:.2%} | ±{model_accuracy['1d']['std']:.2%} | ⚠️ 噪音大，仅供参考 |
-| 5天 | {model_accuracy['5d']['accuracy']:.2%} | ±{model_accuracy['5d']['std']:.2%} | ⭐⭐⭐ 趋势确认 |
-| **20天** | **{model_accuracy['20d']['accuracy']:.2%}** | **±{model_accuracy['20d']['std']:.2%}** | ⭐⭐⭐⭐⭐ **最可靠** |
+| 周期 | 准确率 | 标准差 |
+|------|--------|--------|
+| 1天 | {model_accuracy['1d']['accuracy']:.2%} | ±{model_accuracy['1d']['std']:.2%} |
+| 5天 | {model_accuracy['5d']['accuracy']:.2%} | ±{model_accuracy['5d']['std']:.2%} |
+| 20天 | {model_accuracy['20d']['accuracy']:.2%} | ±{model_accuracy['20d']['std']:.2%} |
 
 {ml_predictions['ensemble']}
 
