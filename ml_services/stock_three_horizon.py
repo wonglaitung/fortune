@@ -46,7 +46,7 @@ import yfinance as yf
 from catboost import CatBoostClassifier
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from config import STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING
+from config import STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING, TRAINING_STOCKS
 
 # ========== 配置 ==========
 DATA_DIR = "data"
@@ -309,9 +309,28 @@ class StockThreeHorizonAnalyzer:
             self.features = None  # 完整模型动态获取特征
             print(f"📊 使用完整模型（918个特征）")
 
-    def fetch_stock_data(self, stock_code, start_date='2020-01-01', end_date='2025-12-31'):
-        """获取个股历史数据"""
+    def fetch_stock_data(self, stock_code, period_days=1460):
+        """获取个股历史数据（使用缓存，4年数据）
+
+        Args:
+            stock_code: 股票代码
+            period_days: 数据天数（默认1460天=4年）
+        """
         try:
+            # 尝试使用项目的缓存数据获取函数
+            try:
+                from ml_services.ml_trading_model import get_stock_data_with_cache
+                df = get_stock_data_with_cache(stock_code.replace('.HK', ''), period_days=period_days)
+                if df is not None and not df.empty:
+                    return df
+            except ImportError:
+                pass
+
+            # 回退到 yfinance
+            from datetime import datetime, timedelta
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            start_date = (datetime.now() - timedelta(days=period_days)).strftime('%Y-%m-%d')
+
             ticker = yf.Ticker(stock_code)
             df = ticker.history(start=start_date, end=end_date, interval="1d")
 
@@ -493,7 +512,7 @@ class StockThreeHorizonAnalyzer:
 
         results = {
             'stock_code': stock_code,
-            'stock_name': STOCK_SECTOR_MAPPING.get(stock_code, {}).get('name', stock_code),
+            'stock_name': TRAINING_STOCKS.get(stock_code) or STOCK_SECTOR_MAPPING.get(stock_code, {}).get('name', stock_code),
             'sector': STOCK_SECTOR_MAPPING.get(stock_code, {}).get('sector', 'unknown'),
             'sample_count': len(merged),
             'horizon_accuracy': {},
@@ -565,9 +584,12 @@ class StockThreeHorizonAnalyzer:
 
     def analyze_stock(self, stock_code, verbose=True):
         """分析单只股票"""
+        # 获取股票名称（优先使用 TRAINING_STOCKS）
+        stock_name = TRAINING_STOCKS.get(stock_code) or STOCK_SECTOR_MAPPING.get(stock_code, {}).get('name', 'Unknown')
+
         if verbose:
             print(f"\n{'='*60}")
-            print(f"📊 分析: {stock_code} ({STOCK_SECTOR_MAPPING.get(stock_code, {}).get('name', 'Unknown')})")
+            print(f"📊 分析: {stock_code} ({stock_name})")
             print(f"{'='*60}")
 
         start_time = time.time()
@@ -827,11 +849,16 @@ def main():
             '2800.HK',  # 盈富基金
             '0941.HK',  # 中国移动
         ]
-        stock_codes = [s for s in quick_stocks if s in STOCK_SECTOR_MAPPING]
+        stock_codes = [s for s in quick_stocks if s in TRAINING_STOCKS]
         print(f"⚡ 快速验证模式：{len(stock_codes)} 只代表性股票")
     elif args.all:
-        stock_codes = list(STOCK_SECTOR_MAPPING.keys())
-        print(f"📊 全量验证：{len(stock_codes)} 只股票")
+        # 使用 TRAINING_STOCKS（59只）替代 STOCK_SECTOR_MAPPING
+        stock_codes = list(TRAINING_STOCKS.keys())
+        print(f"📊 全量验证（TRAINING_STOCKS）：{len(stock_codes)} 只股票")
+    else:
+        # 默认使用 TRAINING_STOCKS
+        stock_codes = list(TRAINING_STOCKS.keys())
+        print(f"📊 默认验证（TRAINING_STOCKS）：{len(stock_codes)} 只股票")
 
     if not stock_codes:
         print("⚠️ 请指定要分析的股票")
