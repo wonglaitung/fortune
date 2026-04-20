@@ -922,6 +922,10 @@ def main():
     parser.add_argument('--output-dir', type=str, default='output',
                        help='输出目录（默认: output）')
 
+    # 特征选择参数
+    parser.add_argument('--use-feature-selection', action='store_true',
+                       help='使用特征选择（默认: False，使用全量特征）')
+
     args = parser.parse_args()
 
     # 获取股票列表
@@ -945,7 +949,7 @@ def main():
         step_window_months=args.step_window,
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
-        use_feature_selection=False  # 默认使用全量特征
+        use_feature_selection=args.use_feature_selection
     )
 
     # 执行验证
