@@ -91,7 +91,7 @@ class USMarketData:
         # 不使用缓存
         pass
 
-    def get_sp500_data(self, period_days=730):
+    def get_sp500_data(self, period_days=1460):
         """获取标普500指数数据
         
         Args:
@@ -164,7 +164,7 @@ class USMarketData:
             print(f"⚠️ yfinance 获取标普500指数数据也失败: {e}")
             return None
 
-    def get_nasdaq_data(self, period_days=730):
+    def get_nasdaq_data(self, period_days=1460):
         """获取纳斯达克指数数据
         
         Args:
@@ -237,7 +237,7 @@ class USMarketData:
             print(f"⚠️ yfinance 获取纳斯达克指数数据也失败: {e}")
             return None
 
-    def get_vix_data(self, period_days=730):
+    def get_vix_data(self, period_days=1460):
         """获取VIX恐慌指数数据
         
         注意：AKShare 暂不支持 VIX 恐慌指数，仅使用 yfinance
@@ -279,7 +279,7 @@ class USMarketData:
             print(f"⚠️ 获取VIX恐慌指数数据失败: {e}")
             return None
 
-    def get_us_treasury_yield(self, period_days=730):
+    def get_us_treasury_yield(self, period_days=1460):
         """获取美国10年期国债收益率数据
         
         Args:
@@ -326,7 +326,7 @@ class USMarketData:
             print(f"⚠️ 获取美国10年期国债收益率数据失败: {e}")
             return None
 
-    def get_all_us_market_data(self, period_days=730):
+    def get_all_us_market_data(self, period_days=1460):
         """获取所有美股市场数据
 
         Args:

@@ -43,16 +43,22 @@ from data_services.fundamental_data import get_comprehensive_fundamental_data
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
 from ml_services.logger_config import get_logger
-from config import WATCHLIST as STOCK_LIST, STOCK_SECTOR_MAPPING
+from config import WATCHLIST as STOCK_LIST, TRAINING_STOCKS, STOCK_SECTOR_MAPPING
 
-# 股票名称映射
+# 股票名称映射（预测用核心28只）
 STOCK_NAMES = STOCK_LIST
+
+# 训练用股票列表（扩展59只，用于增加训练样本）
+TRAINING_NAMES = TRAINING_STOCKS
 
 # 股票板块映射（用于特征工程）
 STOCK_TYPE_MAPPING = STOCK_SECTOR_MAPPING
 
 # 自选股列表（转换为列表格式）
 WATCHLIST = list(STOCK_NAMES.keys())
+
+# 训练股票列表（转换为列表格式）
+TRAINING_LIST = list(TRAINING_NAMES.keys())
 
 # 获取日志记录器
 logger = get_logger('ml_trading_model')
@@ -382,7 +388,7 @@ def _load_cache(cache_file_path):
         logger.warning(f"加载缓存失败: {e}")
         return None
 
-def get_stock_data_with_cache(stock_code, period_days=730):
+def get_stock_data_with_cache(stock_code, period_days=1460):
     """获取股票数据（带缓存）"""
     cache_key = _get_cache_key(stock_code, period_days)
     cache_file_path = _get_cache_file_path(cache_key)
@@ -404,7 +410,7 @@ def get_stock_data_with_cache(stock_code, period_days=730):
     
     return stock_df
 
-def get_hsi_data_with_cache(period_days=730):
+def get_hsi_data_with_cache(period_days=1460):
     """获取恒生指数数据（带缓存）"""
     cache_key = _get_cache_key("HSI", period_days)
     cache_file_path = _get_cache_file_path(cache_key)
@@ -2689,14 +2695,14 @@ class LightGBMModel(BaseTradingModel):
         logger.info("获取共享数据...")
         
         # 获取美股市场数据（只获取一次）
-        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
         if us_market_df is not None:
             logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
             logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
         # 获取恒生指数数据（只获取一次，所有股票共享）
-        hsi_df = get_hsi_data_with_cache(period_days=730)
+        hsi_df = get_hsi_data_with_cache(period_days=1460)
         if hsi_df is None or hsi_df.empty:
             raise ValueError("无法获取恒生指数数据")
 
@@ -2707,7 +2713,7 @@ class LightGBMModel(BaseTradingModel):
             """获取单只股票数据"""
             try:
                 stock_code = code.replace('.HK', '')
-                stock_df = get_stock_data_with_cache(stock_code, period_days=730)
+                stock_df = get_stock_data_with_cache(stock_code, period_days=1460)
                 if stock_df is not None and not stock_df.empty:
                     return (code, stock_df)
                 return None
@@ -2960,7 +2966,7 @@ class LightGBMModel(BaseTradingModel):
             }
         else:  # horizon == 20
             # 一个月模型参数（超增强正则化 - 2026-02-16优化）
-            # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
+            # 原因：特征数量约2426个（基础892 + 交叉特征1534），需要更强的正则化防止过拟合
             # 优化目标：将训练/验证差距从±7.07%降至<5%
             print("使用20天模型参数（超增强正则化，降低过拟合）...")
             lgb_params = {
@@ -3088,17 +3094,17 @@ class LightGBMModel(BaseTradingModel):
             stock_code = code.replace('.HK', '')
 
             # 获取股票数据（2年约730天）
-            stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
             if stock_df is None or stock_df.empty:
                 return None
 
             # 获取恒生指数数据（2年约730天）
-            hsi_df = get_hsi_data_tencent(period_days=730)
+            hsi_df = get_hsi_data_tencent(period_days=1460)
             if hsi_df is None or hsi_df.empty:
                 return None
 
             # 获取美股市场数据
-            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+            us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
 
             # 如果指定了预测日期，过滤数据到该日期
             if predict_date:
@@ -3341,7 +3347,7 @@ class GBDTModel(BaseTradingModel):
 
         # 获取美股市场数据（只获取一次）
         logger.info("获取美股市场数据...")
-        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
         if us_market_df is not None:
             logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
@@ -3355,12 +3361,12 @@ class GBDTModel(BaseTradingModel):
                 stock_code = code.replace('.HK', '')
 
                 # 获取股票数据（2年约730天）
-                stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+                stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
                 if stock_df is None or stock_df.empty:
                     continue
 
                 # 获取恒生指数数据（2年约730天）
-                hsi_df = get_hsi_data_tencent(period_days=730)
+                hsi_df = get_hsi_data_tencent(period_days=1460)
                 if hsi_df is None or hsi_df.empty:
                     continue
 
@@ -3583,7 +3589,7 @@ class GBDTModel(BaseTradingModel):
             colsample_bytree = 0.65  # 减少列采样（0.6→0.65）
         else:  # horizon == 20
             # 一个月模型参数（超增强正则化 - 2026-02-16优化）
-            # 原因：特征数量从2530增至2936（+16%），需要更强的正则化防止过拟合
+            # 原因：特征数量约2426个（基础892 + 交叉特征1534），需要更强的正则化防止过拟合
             # 优化目标：将训练/验证差距从±7.07%降至<5%
             print("使用20天模型参数（超增强正则化，降低过拟合）...")
             n_estimators = 28           # 进一步减少树数量（32→28）
@@ -3741,17 +3747,17 @@ class GBDTModel(BaseTradingModel):
             stock_code = code.replace('.HK', '')
 
             # 获取股票数据
-            stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
             if stock_df is None or stock_df.empty:
                 return None
 
             # 获取恒生指数数据
-            hsi_df = get_hsi_data_tencent(period_days=730)
+            hsi_df = get_hsi_data_tencent(period_days=1460)
             if hsi_df is None or hsi_df.empty:
                 return None
 
             # 获取美股市场数据
-            us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+            us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
 
             # 如果指定了预测日期，过滤数据到该日期
             if predict_date:
@@ -4026,7 +4032,7 @@ class CatBoostModel(BaseTradingModel):
 
         # 获取美股市场数据（只获取一次）
         logger.info("获取美股市场数据...")
-        us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
         if us_market_df is not None:
             logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
@@ -4034,7 +4040,7 @@ class CatBoostModel(BaseTradingModel):
 
         # 获取恒生指数数据（只获取一次，用于缓存键）
         logger.info("获取恒生指数数据...")
-        hsi_df = get_hsi_data_tencent(period_days=730)
+        hsi_df = get_hsi_data_tencent(period_days=1460)
         if hsi_df is None or hsi_df.empty:
             logger.warning("无法获取恒生指数数据")
             hsi_df = None
@@ -4050,7 +4056,7 @@ class CatBoostModel(BaseTradingModel):
                 stock_code = code.replace('.HK', '')
 
                 # 获取股票数据（2年约730天）
-                stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+                stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
                 if stock_df is None or stock_df.empty:
                     continue
 
@@ -4490,7 +4496,7 @@ class CatBoostModel(BaseTradingModel):
             stock_code = code.replace('.HK', '')
 
             # 获取股票数据
-            stock_df = get_hk_stock_data_tencent(stock_code, period_days=730)
+            stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
             if stock_df is None or stock_df.empty:
                 return None
 
@@ -4526,12 +4532,12 @@ class CatBoostModel(BaseTradingModel):
             else:
                 # 计算特征
                 # 获取恒生指数数据
-                hsi_df = get_hsi_data_tencent(period_days=730)
+                hsi_df = get_hsi_data_tencent(period_days=1460)
                 if hsi_df is None or hsi_df.empty:
                     hsi_df = None
 
                 # 获取美股市场数据
-                us_market_df = us_market_data.get_all_us_market_data(period_days=730)
+                us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
 
                 # 如果指定了预测日期，过滤数据到该日期
                 if predict_date and hsi_df is not None:
@@ -5676,7 +5682,7 @@ def main():
     parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 20],
                        help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
     parser.add_argument('--use-feature-selection', action='store_true',
-                       help='使用特征选择（只使用500个选择的特征，而不是全部2936个）')
+                       help='使用特征选择（只使用500个选择的特征，而不是全部2426个）')
     parser.add_argument('--skip-feature-selection', action='store_true',
                        help='跳过特征选择，直接使用已有的特征文件（适用于批量训练多个模型）')
     parser.add_argument('--fusion-method', type=str, default='weighted', 
@@ -5780,7 +5786,7 @@ def main():
                     logger.info(f"LightGBM 模型已从 {lgbm_model_path} 加载")
                 else:
                     print(f"  ⚠️ LightGBM 模型不存在，开始训练")
-                    lgbm_feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    lgbm_feature_importance = lgbm_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
                     lgbm_model.save_model(lgbm_model_path)
                     lgbm_importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
                     lgbm_feature_importance.to_csv(lgbm_importance_path, index=False)
@@ -5796,7 +5802,7 @@ def main():
                     logger.info(f"GBDT 模型已从 {gbdt_model_path} 加载")
                 else:
                     print(f"  ⚠️ GBDT 模型不存在，开始训练")
-                    gbdt_feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    gbdt_feature_importance = gbdt_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
                     gbdt_model.save_model(gbdt_model_path)
                     gbdt_importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
                     gbdt_feature_importance.to_csv(gbdt_importance_path, index=False)
@@ -5812,7 +5818,7 @@ def main():
                     logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
                 else:
                     print(f"  ⚠️ CatBoost 模型不存在，开始训练")
-                    catboost_feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    catboost_feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
                     catboost_model.save_model(catboost_model_path)
                     catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
                     catboost_feature_importance.to_csv(catboost_importance_path, index=False)
@@ -5823,21 +5829,21 @@ def main():
             logger.info(r"融合模型的所有子模型已就绪！")
             logger.info("=" * 70)
         elif lgbm_model:
-            feature_importance = lgbm_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+            feature_importance = lgbm_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             lgbm_model_path = args.model_path.replace('.pkl', f'_lgbm{horizon_suffix}.pkl')
             lgbm_model.save_model(lgbm_model_path)
             importance_path = lgbm_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         elif catboost_model:
-            feature_importance = catboost_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+            feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
             catboost_model.save_model(catboost_model_path)
             importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         else:
-            feature_importance = gbdt_model.train(WATCHLIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+            feature_importance = gbdt_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
             gbdt_model_path = args.model_path.replace('.pkl', f'_gbdt{horizon_suffix}.pkl')
             gbdt_model.save_model(gbdt_model_path)
             importance_path = gbdt_model_path.replace('.pkl', '_importance.csv')
