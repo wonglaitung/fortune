@@ -17,8 +17,8 @@
 2. **延长数据期间**：2年（730天）→ 4年（1460天）（+100%）
 
 **改动文件**：
-- `config.py` - WATCHLIST从28只扩充至59只
-- `ml_services/ml_trading_model.py` - period_days改为1460
+- `config.py` - 新增TRAINING_STOCKS(59只)用于模型训练
+- `ml_services/ml_trading_model.py` - period_days改为1460，使用TRAINING_LIST
 - `ml_services/us_market_data.py` - 美股数据period_days改为1460
 - `ml_services/transformer_experiment.py` - period_days改为1460
 - `ml_services/lstm_experiment.py` - period_days改为1460
@@ -47,6 +47,33 @@
 - 唯一上涨预测：中国光大环境(52.4%概率)
 
 **结论**：改动成功，模型准确率和稳定性均有提升
+
+### 标签阈值参数优化 ⚠️ 实验中
+
+**新增参数**：`min_return_threshold`（最小收益阈值）
+
+**目的**：过滤小额波动噪音，只预测有意义的涨跌
+
+**实现**：
+- 默认阈值：0.5%
+- 标签逻辑：收益 > 0.5% 标记上涨(1)，否则下跌(0)
+- 代码位置：`ml_trading_model.py:1489` `create_label()` 函数
+
+**验证结果**（28只股票，2022-2023）：
+| 模型 | 准确率 | 夏普比率 | 状态 |
+|------|--------|---------|------|
+| CatBoost 20天 | 59.08% | -0.34 | ⚠️ 一般 |
+| LightGBM 20天 | - | - | ❌ 验证失败 |
+| GBDT 20天 | - | - | ❌ 验证失败 |
+
+**问题分析**：
+1. 0.5%阈值可能过高，导致标签分布失衡
+2. 验证期间（2022-2023）样本量不足（仅28只股票）
+3. 需要用59只股票 + 4年数据重新验证
+
+**待优化**：
+- 调整阈值或移除该参数
+- 使用TRAINING_LIST重新验证
 
 ---
 
