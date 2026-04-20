@@ -1486,7 +1486,7 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.005):
+    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0):
         """创建标签：未来涨跌（考虑交易成本）
 
         根据业界最佳实践，标签定义应考虑交易成本，避免"纸上盈利"变成实际亏损。
@@ -1496,9 +1496,9 @@ class FeatureEngineer:
             df: 股票数据
             horizon: 预测周期
             for_backtest: 是否为回测准备数据（True时不移除最后horizon行）
-            min_return_threshold: 最小收益阈值（默认0.5%），用于过滤小额波动
+            min_return_threshold: 最小收益阈值（默认0%），用于过滤小额波动
                                  推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
-                                 注意：对于20天预测周期，0.5%是合理阈值
+                                 注意：当前设为0%以保持标签分布均衡，后续可调整
         """
         if df.empty or len(df) < horizon + 1:
             return df
@@ -2678,7 +2678,7 @@ class LightGBMModel(BaseTradingModel):
         self.scaler = StandardScaler()
         self.model_type = 'lgbm'  # 模型类型标识
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0):
         """准备训练数据（80个指标版本，优化版）
 
         Args:
@@ -2687,7 +2687,7 @@ class LightGBMModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
-            min_return_threshold: 最小收益阈值（默认0.5%）
+            min_return_threshold: 最小收益阈值（默认0%）
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
@@ -2836,7 +2836,7 @@ class LightGBMModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0):
         """训练模型（默认使用全量特征892个）
 
         Args:
@@ -2845,7 +2845,7 @@ class LightGBMModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
-            min_return_threshold: 最小收益阈值（默认0.5%）
+            min_return_threshold: 最小收益阈值（默认0%）
 
         Returns:
         # 设置固定随机种子（确保模型训练的可重现性）
@@ -3335,7 +3335,7 @@ class GBDTModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0):
         """准备训练数据（80个指标版本）
 
         Args:
@@ -3344,7 +3344,7 @@ class GBDTModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
-            min_return_threshold: 最小收益阈值（默认0.5%）
+            min_return_threshold: 最小收益阈值（默认0%）
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
@@ -3473,7 +3473,7 @@ class GBDTModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0):
         """训练 GBDT 模型（默认使用全量特征892个）
 
         Args:
@@ -3482,7 +3482,7 @@ class GBDTModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
-            min_return_threshold: 最小收益阈值（默认0.5%）
+            min_return_threshold: 最小收益阈值（默认0%）
         """
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
@@ -4020,7 +4020,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.005, use_feature_cache=True):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True):
         """准备训练数据
 
         Args:
@@ -4029,7 +4029,7 @@ class CatBoostModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
-            min_return_threshold: 最小收益阈值（默认1%），用于标签定义
+            min_return_threshold: 最小收益阈值（默认0%），用于标签定义
             use_feature_cache: 是否使用特征缓存（默认True）
         """
         self.horizon = horizon
@@ -4203,7 +4203,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.005):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -4212,7 +4212,7 @@ class CatBoostModel(BaseTradingModel):
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
-            min_return_threshold: 最小收益阈值（默认1%），用于标签定义
+            min_return_threshold: 最小收益阈值（默认0%），用于标签定义
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
         random.seed(42)

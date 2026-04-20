@@ -39,7 +39,7 @@ warnings.filterwarnings('ignore')
 # 导入项目模块
 from ml_services.ml_trading_model import CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer
 from ml_services.logger_config import get_logger
-from config import WATCHLIST as STOCK_LIST
+from config import TRAINING_STOCKS as STOCK_LIST
 
 # 获取日志记录器
 logger = get_logger('walk_forward_validation')
