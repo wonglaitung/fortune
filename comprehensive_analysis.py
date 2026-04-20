@@ -89,24 +89,26 @@ SECTOR_TYPES = {
 }
 
 # 三周期预测模式配置（基于个股完整模型验证结果）
-# 来源：docs/THREE_HORIZON_ANALYSIS.md 第10章
-# 验证数据：26只港股蓝筹股，Walk-forward 30 folds，完整模型（545特征）
+# 来源：docs/THREE_HORIZON_ANALYSIS.md 第12章
+# 验证数据：56只港股，Walk-forward 30 folds，完整模型（545特征）
+# 更新日期：2026-04-20
 THREE_HORIZON_PATTERNS = {
-    '011': {'name': '探底回升⭐', 'action': '分批建仓', 'win_rate': '64.64%', 'avg_return': '+7.92%', 'confidence': '高'},
-    '110': {'name': '震荡回调', 'action': '谨慎', 'win_rate': '64.61%', 'avg_return': '-', 'confidence': '中高'},
-    '101': {'name': '假突破', 'action': '持有', 'win_rate': '62.10%', 'avg_return': '+7.85%', 'confidence': '中高'},
-    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '61.74%', 'avg_return': '+7.61%', 'confidence': '中'},
-    '111': {'name': '一致看涨', 'action': '买入', 'win_rate': '61.49%', 'avg_return': '+7.69%', 'confidence': '中'},
-    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '60.21%', 'avg_return': '-', 'confidence': '中'},
-    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '59.76%', 'avg_return': '-', 'confidence': '中低'},
-    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '59.07%', 'avg_return': '-', 'confidence': '低'},
+    '010': {'name': '反弹失败⭐', 'action': '谨慎减仓', 'win_rate': '66.32%', 'avg_return': '-1.65%', 'confidence': '高'},
+    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '63.14%', 'avg_return': '-2.54%', 'confidence': '中高'},
+    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '62.56%', 'avg_return': '-2.28%', 'confidence': '中高'},
+    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '61.45%', 'avg_return': '+4.86%', 'confidence': '中'},
+    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '60.43%', 'avg_return': '+3.54%', 'confidence': '中'},
+    '101': {'name': '假突破', 'action': '持有观望', 'win_rate': '50.00%', 'avg_return': '+2.21%', 'confidence': '低'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '48.48%', 'avg_return': '+2.34%', 'confidence': '低'},
+    '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '47.99%', 'avg_return': '+0.14%', 'confidence': '低'},
 }
 
 # 传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
+# 更新日期：2026-04-20，56只港股验证
 TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 62.28,      # 1天+5天都正确时，20天准确率
-    'independent_20d_rate': 56.75,   # 独立20天准确率
-    'improvement': 5.53               # 提升幅度
+    'both_correct_rate': 62.24,      # 1天+5天都正确时，20天准确率
+    'independent_20d_rate': 56.54,   # 独立20天准确率
+    'improvement': 5.70               # 提升幅度
 }
 
 
@@ -819,7 +821,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text = "【CatBoost模型三周期预测结果】\n"
                 catboost_text += f"预测日期: {date_str}\n\n"
                 catboost_text += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 胜率 | 传导模式 |\n"
+                catboost_text += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 |\n"
                 catboost_text += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
             else:
                 # 原始表格格式（无三周期预测）
@@ -944,15 +946,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 添加交易规则说明
                 catboost_text += f"\n**三周期交易规则说明**：\n"
-                catboost_text += "- 模式 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
-                catboost_text += "- ⭐ 标记表示高胜率模式（>80%）\n"
-                catboost_text += "- 数据来源：docs/THREE_HORIZON_ANALYSIS.md（个股验证结果）\n"
+                catboost_text += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
 
                 # 添加传导律验证结果
-                catboost_text += f"\n**传导律验证结果**：\n"
-                catboost_text += f"- ✅ 传导律成立：当同一时间的1天+5天预测都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
+                catboost_text += f"- 传导模式：当同一时间的1天+5天预测都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
                 catboost_text += "- 策略含义：短期预测正确 → 中期预测更可靠，可增加仓位信心\n"
-                catboost_text += "- 数据来源：docs/THREE_HORIZON_ANALYSIS.md（26只港股蓝筹股验证）\n"
             else:
                 # 原始统计信息
                 catboost_text += f"\n**统计信息**：\n"

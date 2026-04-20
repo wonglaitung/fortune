@@ -1354,8 +1354,11 @@ class FeatureEngineer:
                 features['Stock_Historical_Volatility'] = historical_volatility
 
                 # 实际流动性评分（基于成交额波动）
-                turnover_volatility = df['Turnover'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Turnover'].rolling(window=20, min_periods=10).mean().iloc[-1]
-                features['Stock_Actual_Liquidity_Score'] = max(0, min(1, 1 - turnover_volatility))
+                if 'Turnover' in df.columns:
+                    turnover_volatility = df['Turnover'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Turnover'].rolling(window=20, min_periods=10).mean().iloc[-1]
+                    features['Stock_Actual_Liquidity_Score'] = max(0, min(1, 1 - turnover_volatility))
+                else:
+                    features['Stock_Actual_Liquidity_Score'] = 0.5  # 默认值
 
                 # 价格稳定性评分（基于价格波动）
                 price_volatility = df['Close'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Close'].rolling(window=20, min_periods=10).mean().iloc[-1]
