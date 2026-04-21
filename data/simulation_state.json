@@ -29960,6 +29960,102 @@
       "current_price": 137.4,
       "target_price": 142.0,
       "validity_period": 17.5
+    },
+    {
+      "timestamp": "2026-04-21T13:51:43.900515",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 227.18929405196104,
+      "reason": "技术面：RSI 76.08（严重超买）、布林带突破上轨、CMF资金流-0.1149（流出）、OBV趋势下降、位置百分位100.0%（历史高位）。资金面：成交额变化36.3/-8.63/46.67（1日放量但5日萎缩，异常信号）。筹码分布：上方筹码比例0.0%但价格高位，拉升后动能衰竭。新闻面：无重大负面新闻，但TAV评分75.0（强共振）已反映过度乐观预期。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.55,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21T13:51:46.760755",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 227.18929405196104,
+      "reason": "技术面：CMF资金流-0.1178（流出）、OBV趋势下降、出货原因含\"price_high, macd_cross\"（高位死叉）。资金面：成交额变化-51.52/-27.18/-65.31（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例4.5%低阻力，但60日收益率13.51%已透支涨幅，相对强度-1.87%跑输恒指。新闻面：无新闻，但能源股板块涨幅1.55%中个股分化，中国神华3日收益率仅0.87%滞涨。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 46.28,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21T13:51:49.457893",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 227.18929405196104,
+      "reason": "技术面：RSI 66.2（接近超买）、CMF资金流-0.3768（显著流出）、布林带突破上轨、出货原因含\"price_high, rsi_high\"。资金面：成交额变化-50.74/-62.27/-53.41（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例0.0%但位置百分位85.92%高位，拉升后动能不足。新闻面：BNP Paribas下调评级至\"Neutral\"（\"uncertainty in European bank group\"），基本面承压。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 143.1,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21T13:51:53.597660",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 95.65,
+      "amount": 0,
+      "capital_after": 227.18929405196104,
+      "reason": "TAV评分58.25（中等共振）：趋势（60日收益率-5.32%但相对强度11.54%跑赢恒指）、动量（情感指标改善）、成交量（5日降幅收窄）协同。筹码分布优势：上方筹码比例0.0%、拉升难度\"容易\"，无阻力。板块协同：半导体股板块温和上涨（0.13%），新闻显示中国加速半导体投资（\"Record revenues from Chinese semiconductors and accelerating investment\"）。",
+      "success": false,
+      "stop_loss_price": 80.96,
+      "current_price": 95.65,
+      "target_price": 105.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-04-21T13:51:59.441275",
+      "type": "BUY",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 30.54,
+      "amount": 0,
+      "capital_after": 227.18929405196104,
+      "reason": "TAV评分58.25（中等共振）：趋势（3日收益率1.66%加速）、动量（位置低位）、成交量（20日降幅收窄）三要素协同。筹码分布优势：上方筹码比例11.0%、拉升难度\"容易\"，阻力极低。板块协同：房地产股板块温和上涨（1.43%），跑赢恒指（相对强度1.96%）。",
+      "success": false,
+      "stop_loss_price": 26.0,
+      "current_price": 30.54,
+      "target_price": 33.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-21T13:52:01.438855",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 35.32,
+      "amount": 0,
+      "capital_after": 227.18929405196104,
+      "reason": "TAV评分51.25（中等共振）：趋势（60日收益率-4.69%但3日企稳）、动量（位置低位）、成交量（20日降幅收窄）协同。筹码分布优势：上方筹码比例51.8% < 60%、拉升难度\"中等\"，阻力可控。板块协同：生物医药股板块温和下跌（-0.59%），但个股相对强度-0.64%接近恒指，技术面独立走强。",
+      "success": false,
+      "stop_loss_price": 30.05,
+      "current_price": 35.32,
+      "target_price": 39.0,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -47368,151 +47464,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-04-17 15:06:33",
-      "type": "BUY",
-      "code": "2533.HK",
-      "name": "黑芝麻智能",
-      "shares": 0,
-      "price": 17.71,
-      "amount": 0,
-      "reason": "价格低位区域(33.46%)，MACD金叉，OBV趋势上升，成交额变化1日+33.32%显著放量",
-      "capital_after": 720.189294051961,
-      "success": false,
-      "stop_loss_price": 15.05,
-      "current_price": 17.71,
-      "target_price": 20.5,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-04-20 10:13:09",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-04-20 14:34:05",
-      "buy": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "价格低位（位置百分位37.62%）、MACD金叉、OBV上升、CMF资金流入（0.1113），成交量比率1.07（温和放量），南向资金虽无数据但CMF流入支持。",
-          "allocation_pct": 65,
-          "stop_loss_price": 85.1,
-          "target_price": 105.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "价格低位（位置百分位19.51%）、MACD金叉、OBV上升、CMF资金流入（0.178），成交量比率0.27（稳定），南向资金无数据但CMF流入。",
-          "allocation_pct": 50,
-          "stop_loss_price": 27.1,
-          "target_price": 32.5,
-          "validity_period": 18
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "价格低位（位置百分位27.33%）、MACD金叉、CMF资金流入（0.094），成交量比率0.53（温和），南向资金无数据但CMF流入。",
-          "allocation_pct": 45,
-          "stop_loss_price": 27.6,
-          "target_price": 35.0,
-          "validity_period": 5
-        },
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "价格低位（位置百分位39.07%）、MACD金叉、OBV上升，成交量比率0.3（稳定），南向资金无数据但OBV支持。",
-          "allocation_pct": 40,
-          "stop_loss_price": 15.2,
-          "target_price": 19.5,
-          "validity_period": 5
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格低位（位置百分位21.87%）、MACD金叉、CMF资金流入（0.0739），成交量比率0.42（温和），南向资金无数据但CMF流入。",
-          "allocation_pct": 35,
-          "stop_loss_price": 4.2,
-          "target_price": 5.2,
-          "validity_period": 18
-        }
-      ],
-      "sell": [
-        {
-          "code": "6682.HK",
-          "name": "范式智能",
-          "reason": "出货评分9.5分（强烈出货）",
-          "stop_loss_triggered": false,
-          "target_price": 42.0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-20 14:34:05",
-      "type": "SELL",
-      "code": "6682.HK",
-      "name": "范式智能",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分9.5分（强烈出货）",
-      "capital_after": 720.189294051961,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 46.04,
-      "target_price": 42.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-20 14:34:09",
-      "type": "BUY",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 94.5,
-      "amount": 0,
-      "reason": "价格低位（位置百分位37.62%）、MACD金叉、OBV上升、CMF资金流入（0.1113），成交量比率1.07（温和放量），南向资金虽无数据但CMF流入支持。",
-      "capital_after": 720.189294051961,
-      "success": false,
-      "stop_loss_price": 85.1,
-      "current_price": 94.5,
-      "target_price": 105.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-20 14:34:18",
-      "type": "BUY",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 30.12,
-      "amount": 0,
-      "reason": "价格低位（位置百分位19.51%）、MACD金叉、OBV上升、CMF资金流入（0.178），成交量比率0.27（稳定），南向资金无数据但CMF流入。",
-      "capital_after": 720.189294051961,
-      "success": false,
-      "stop_loss_price": 27.1,
-      "current_price": 30.12,
-      "target_price": 32.5,
-      "validity_period": 18
-    },
-    {
-      "timestamp": "2026-04-20 14:34:20",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 32.44,
-      "amount": 0,
-      "reason": "价格低位（位置百分位27.33%）、MACD金叉、CMF资金流入（0.094），成交量比率0.53（温和），南向资金无数据但CMF流入。",
-      "capital_after": 720.189294051961,
-      "success": false,
-      "stop_loss_price": 27.6,
-      "current_price": 32.44,
-      "target_price": 35.0,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-04-20 14:34:23",
       "type": "BUY",
       "code": "2533.HK",
@@ -47697,6 +47648,160 @@
       "current_price": 137.4,
       "target_price": 142.0,
       "validity_period": 17.5
+    },
+    {
+      "timestamp": "2026-04-21 13:51:43",
+      "buy": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "TAV评分58.25（中等共振）：趋势（60日收益率-5.32%但相对强度11.54%跑赢恒指）、动量（情感指标改善）、成交量（5日降幅收窄）协同。筹码分布优势：上方筹码比例0.0%、拉升难度\"容易\"，无阻力。板块协同：半导体股板块温和上涨（0.13%），新闻显示中国加速半导体投资（\"Record revenues from Chinese semiconductors and accelerating investment\"）。",
+          "allocation_pct": 60,
+          "stop_loss_price": 80.96,
+          "target_price": 105.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "TAV评分58.25（中等共振）：趋势（3日收益率1.66%加速）、动量（位置低位）、成交量（20日降幅收窄）三要素协同。筹码分布优势：上方筹码比例11.0%、拉升难度\"容易\"，阻力极低。板块协同：房地产股板块温和上涨（1.43%），跑赢恒指（相对强度1.96%）。",
+          "allocation_pct": 55,
+          "stop_loss_price": 26.0,
+          "target_price": 33.5,
+          "validity_period": 14
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "TAV评分51.25（中等共振）：趋势（60日收益率-4.69%但3日企稳）、动量（位置低位）、成交量（20日降幅收窄）协同。筹码分布优势：上方筹码比例51.8% < 60%、拉升难度\"中等\"，阻力可控。板块协同：生物医药股板块温和下跌（-0.59%），但个股相对强度-0.64%接近恒指，技术面独立走强。",
+          "allocation_pct": 50,
+          "stop_loss_price": 30.05,
+          "target_price": 39.0,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "技术面：RSI 76.08（严重超买）、布林带突破上轨、CMF资金流-0.1149（流出）、OBV趋势下降、位置百分位100.0%（历史高位）。资金面：成交额变化36.3/-8.63/46.67（1日放量但5日萎缩，异常信号）。筹码分布：上方筹码比例0.0%但价格高位，拉升后动能衰竭。新闻面：无重大负面新闻，但TAV评分75.0（强共振）已反映过度乐观预期。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "技术面：CMF资金流-0.1178（流出）、OBV趋势下降、出货原因含\"price_high, macd_cross\"（高位死叉）。资金面：成交额变化-51.52/-27.18/-65.31（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例4.5%低阻力，但60日收益率13.51%已透支涨幅，相对强度-1.87%跑输恒指。新闻面：无新闻，但能源股板块涨幅1.55%中个股分化，中国神华3日收益率仅0.87%滞涨。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "reason": "技术面：RSI 66.2（接近超买）、CMF资金流-0.3768（显著流出）、布林带突破上轨、出货原因含\"price_high, rsi_high\"。资金面：成交额变化-50.74/-62.27/-53.41（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例0.0%但位置百分位85.92%高位，拉升后动能不足。新闻面：BNP Paribas下调评级至\"Neutral\"（\"uncertainty in European bank group\"），基本面承压。",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-04-21 13:51:43",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面：RSI 76.08（严重超买）、布林带突破上轨、CMF资金流-0.1149（流出）、OBV趋势下降、位置百分位100.0%（历史高位）。资金面：成交额变化36.3/-8.63/46.67（1日放量但5日萎缩，异常信号）。筹码分布：上方筹码比例0.0%但价格高位，拉升后动能衰竭。新闻面：无重大负面新闻，但TAV评分75.0（强共振）已反映过度乐观预期。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 83.55,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21 13:51:46",
+      "type": "SELL",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面：CMF资金流-0.1178（流出）、OBV趋势下降、出货原因含\"price_high, macd_cross\"（高位死叉）。资金面：成交额变化-51.52/-27.18/-65.31（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例4.5%低阻力，但60日收益率13.51%已透支涨幅，相对强度-1.87%跑输恒指。新闻面：无新闻，但能源股板块涨幅1.55%中个股分化，中国神华3日收益率仅0.87%滞涨。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 46.28,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21 13:51:49",
+      "type": "SELL",
+      "code": "0005.HK",
+      "name": "汇丰银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面：RSI 66.2（接近超买）、CMF资金流-0.3768（显著流出）、布林带突破上轨、出货原因含\"price_high, rsi_high\"。资金面：成交额变化-50.74/-62.27/-53.41（全面萎缩），换手率0.04%过低。筹码分布：上方筹码比例0.0%但位置百分位85.92%高位，拉升后动能不足。新闻面：BNP Paribas下调评级至\"Neutral\"（\"uncertainty in European bank group\"），基本面承压。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 143.1,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-04-21 13:51:53",
+      "type": "BUY",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 95.65,
+      "amount": 0,
+      "reason": "TAV评分58.25（中等共振）：趋势（60日收益率-5.32%但相对强度11.54%跑赢恒指）、动量（情感指标改善）、成交量（5日降幅收窄）协同。筹码分布优势：上方筹码比例0.0%、拉升难度\"容易\"，无阻力。板块协同：半导体股板块温和上涨（0.13%），新闻显示中国加速半导体投资（\"Record revenues from Chinese semiconductors and accelerating investment\"）。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": 80.96,
+      "current_price": 95.65,
+      "target_price": 105.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-04-21 13:51:59",
+      "type": "BUY",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 30.54,
+      "amount": 0,
+      "reason": "TAV评分58.25（中等共振）：趋势（3日收益率1.66%加速）、动量（位置低位）、成交量（20日降幅收窄）三要素协同。筹码分布优势：上方筹码比例11.0%、拉升难度\"容易\"，阻力极低。板块协同：房地产股板块温和上涨（1.43%），跑赢恒指（相对强度1.96%）。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": 26.0,
+      "current_price": 30.54,
+      "target_price": 33.5,
+      "validity_period": 14
+    },
+    {
+      "timestamp": "2026-04-21 13:52:01",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 35.32,
+      "amount": 0,
+      "reason": "TAV评分51.25（中等共振）：趋势（60日收益率-4.69%但3日企稳）、动量（位置低位）、成交量（20日降幅收窄）协同。筹码分布优势：上方筹码比例51.8% < 60%、拉升难度\"中等\"，阻力可控。板块协同：生物医药股板块温和下跌（-0.59%），但个股相对强度-0.64%接近恒指，技术面独立走强。",
+      "capital_after": 227.18929405196104,
+      "success": false,
+      "stop_loss_price": 30.05,
+      "current_price": 35.32,
+      "target_price": 39.0,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
