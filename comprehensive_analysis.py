@@ -885,8 +885,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
                 catboost_text_email += f"预测日期: {date_str}\n\n"
                 catboost_text_email += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 筹码阻力 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 筹码阻力 | 传导模式 |\n"
+                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -941,8 +941,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             else:
                                 resistance_icon = '🔴高'
 
+                        # 检查传导模式
+                        transmission_info = check_transmission_mode(stock_code, date_str)
+                        transmission_display = format_transmission_display(transmission_info)
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {resistance_icon} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {resistance_icon} | {transmission_display} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
