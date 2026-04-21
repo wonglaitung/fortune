@@ -819,13 +819,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 except Exception as e:
                     print(f"  ⚠️ 筹码分布计算失败: {e}")
 
-            # ========== 1. 构建传给大模型的表格（包含20天概率+筹码阻力）==========
-            catboost_text_llm = "【CatBoost模型预测结果（20天）】\n"
-            catboost_text_llm += f"预测日期: {date_str}\n\n"
-            catboost_text_llm += "全部股票预测结果（按概率排序）:\n\n"
-            catboost_text_llm += "| 股票代码 | 股票名称 | 板块名称 | 类型 | 预测方向 | 上涨概率 | 当前价格 | 筹码阻力 |\n"
-            catboost_text_llm += "|----------|----------|----------|------|----------|----------|----------|----------|\n"
+            # ========== 1. 构建传给大模型的JSON数据（包含20天概率+筹码阻力）==========
+            import json as json_module
 
+            llm_stock_list = []
             for _, row in df_catboost_sorted.iterrows():
                 stock_code = row['code']
 
@@ -839,8 +836,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     if sector_code:
                         sector_type = get_sector_type(sector_code)
 
-                # 统一使用20天预测概率（避免大模型混淆）
-                probability = row['probability']
+                # 20天预测概率
+                probability = float(row['probability'])
                 if probability > 0.60:
                     direction = "上涨"
                 elif probability > 0.50:
@@ -848,35 +845,39 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     direction = "下跌"
 
-                probability_formatted = safe_float_format(probability, '4f')
-                price_str = safe_float_format(row['current_price'], '2f')
-
-                # 计算筹码阻力标识
-                resistance_icon = 'N/A'
+                # 计算筹码阻力
+                resistance_level = 'N/A'
                 if stock_code in chip_data and chip_data[stock_code]:
                     chip_result = chip_data[stock_code]
                     resistance_ratio = chip_result.get('resistance_ratio', 0)
                     if resistance_ratio < 0.3:
-                        resistance_icon = '✅低'
+                        resistance_level = '低'
                     elif resistance_ratio < 0.6:
-                        resistance_icon = '⚠️中'
+                        resistance_level = '中'
                     else:
-                        resistance_icon = '🔴高'
+                        resistance_level = '高'
 
-                catboost_text_llm += f"| {stock_code} | {row['name']} | {sector_name} | {sector_type} | {direction} | {probability_formatted} | {price_str} | {resistance_icon} |\n"
+                llm_stock_list.append({
+                    'code': stock_code,
+                    'name': row['name'],
+                    'sector': sector_name,
+                    'sector_type': sector_type,
+                    'prediction_20d': direction,
+                    'probability_20d': round(probability, 4),
+                    'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
+                    'chip_resistance': resistance_level
+                })
 
-            # 添加统计信息
-            catboost_text_llm += f"\n**统计信息**：\n"
-            catboost_text_llm += f"- 高置信度上涨（概率 > 0.60）: {len(df_catboost[df_catboost['probability'] > 0.60])} 只\n"
-            catboost_text_llm += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
-            catboost_text_llm += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
-
-            # 添加筹码阻力说明
-            catboost_text_llm += f"\n**筹码阻力说明**：\n"
-            catboost_text_llm += "- ✅低：上方筹码 < 30%，拉升容易\n"
-            catboost_text_llm += "- ⚠️中：上方筹码 30-60%，注意风险\n"
-            catboost_text_llm += "- 🔴高：上方筹码 > 60%，拉升困难\n"
-            catboost_text_llm += "- **使用建议**：预测上涨 + 筹码阻力低 = 更可靠信号；预测上涨 + 筹码阻力高 = 需谨慎\n"
+            # 构建JSON格式文本
+            catboost_text_llm = "【CatBoost模型预测结果（20天）- JSON格式】\n"
+            catboost_text_llm += f"预测日期: {date_str}\n\n"
+            catboost_text_llm += "```json\n"
+            catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
+            catboost_text_llm += "\n```\n\n"
+            catboost_text_llm += "**字段说明**：\n"
+            catboost_text_llm += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
+            catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
