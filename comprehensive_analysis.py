@@ -133,7 +133,7 @@ def format_transmission_display(transmission_info):
 
     # 如果没有预测数据
     if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
-        return "-"
+        return "暂无数据"
 
     # 方向符号
     def get_dir_symbol(direction):
