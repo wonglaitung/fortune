@@ -1887,7 +1887,7 @@ class HSI_Predictor:
             action_str = ""
             if trading_action:
                 action_str = f" 【{trading_action['action']}】"
-            subject = f"恒生指数涨跌预测 {current_date} - {trend}{action_str}（得分{score:.4f}）"
+            subject = f"恒生指数涨跌预测 {current_date} - {trend}{action_str}"
 
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
