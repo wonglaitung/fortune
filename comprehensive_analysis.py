@@ -798,6 +798,27 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
 
+            # ========== 计算筹码分布（用于邮件表格）==========
+            chip_data = {}
+            if TECHNICAL_ANALYSIS_AVAILABLE:
+                try:
+                    from data_services.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    for stock_code in df_catboost['code'].tolist():
+                        try:
+                            # 获取股票数据（60天）
+                            stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=60)
+                            if not stock_df.empty and len(stock_df) >= 20:
+                                chip_result = analyzer.get_chip_distribution(stock_df)
+                                if chip_result:
+                                    chip_data[stock_code] = chip_result
+                        except Exception as e:
+                            print(f"  ⚠️ 计算 {stock_code} 筹码分布失败: {e}")
+                            chip_data[stock_code] = None
+                    print(f"  ✅ 筹码分布计算完成: {len([k for k, v in chip_data.items() if v])} 只股票")
+                except Exception as e:
+                    print(f"  ⚠️ 筹码分布计算失败: {e}")
+
             # ========== 1. 构建传给大模型的表格（只包含20天预测概率，避免混淆）==========
             catboost_text_llm = "【CatBoost模型预测结果（20天）】\n"
             catboost_text_llm += f"预测日期: {date_str}\n\n"
@@ -838,14 +859,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += f"- 中等置信度观望（0.50 < 概率 ≤ 0.60）: {len(df_catboost[(df_catboost['probability'] > 0.50) & (df_catboost['probability'] <= 0.60)])} 只\n"
             catboost_text_llm += f"- 预测下跌（概率 ≤ 0.50）: {len(df_catboost[df_catboost['probability'] <= 0.50])} 只\n"
 
-            # ========== 2. 构建邮件表格（保留三周期预测，用于用户查看）==========
+            # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
-                # 三周期预测表格
+                # 三周期预测表格（含筹码分布）
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
                 catboost_text_email += f"预测日期: {date_str}\n\n"
                 catboost_text_email += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 筹码阻力 |\n"
+                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -888,8 +909,20 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             pattern_name = THREE_HORIZON_PATTERNS[pattern]['name']
                             pattern_display = f"{pattern_name}({pattern})"
 
+                        # 计算筹码阻力标识
+                        resistance_icon = 'N/A'
+                        if stock_code in chip_data and chip_data[stock_code]:
+                            chip_result = chip_data[stock_code]
+                            resistance_ratio = chip_result.get('resistance_ratio', 0)
+                            if resistance_ratio < 0.3:
+                                resistance_icon = '✅低'
+                            elif resistance_ratio < 0.6:
+                                resistance_icon = '⚠️中'
+                            else:
+                                resistance_icon = '🔴高'
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {resistance_icon} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -909,6 +942,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
                 catboost_text_email += f"- 传导模式：当同一时间的1天+5天预测都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
                 catboost_text_email += "- 策略含义：短期预测正确 → 中期预测更可靠，可增加仓位信心\n"
+
+                # 添加筹码分布说明
+                catboost_text_email += f"\n**筹码阻力说明**：\n"
+                catboost_text_email += "- ✅低：上方筹码 < 30%，拉升容易\n"
+                catboost_text_email += "- ⚠️中：上方筹码 30-60%，注意风险\n"
+                catboost_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
