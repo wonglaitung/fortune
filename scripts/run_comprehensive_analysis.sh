@@ -22,7 +22,7 @@ echo ""
 
 # 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
 echo "=========================================="
-echo "📊 步骤 1/4: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
+echo "📊 步骤 1/5: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
 echo "=========================================="
 echo ""
 
@@ -50,7 +50,7 @@ echo ""
 
 # 步骤2: 生成 CatBoost 三周期预测
 echo "=========================================="
-echo "📊 步骤 2/4: 生成 CatBoost 三周期预测"
+echo "📊 步骤 2/5: 生成 CatBoost 三周期预测"
 echo "=========================================="
 echo ""
 
@@ -76,9 +76,22 @@ echo ""
 echo "✅ 步骤2完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
 echo ""
 
+# 步骤 2.5: 风险回报率分析（稳健型）
+echo "=========================================="
+echo "📊 步骤 2.5/5: 风险回报率分析（稳健型）"
+echo "=========================================="
+echo ""
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --output-json data/risk_reward_results.json --period 90
+if [ $? -ne 0 ]; then
+    echo "⚠️ 风险回报率分析失败（继续执行）"
+else
+    echo "✅ 风险回报率分析完成"
+fi
+echo ""
+
 # 步骤3: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
 echo "=========================================="
-echo "📊 步骤 3/4: 生成大模型建议"
+echo "📊 步骤 3/5: 生成大模型建议"
 echo "=========================================="
 echo ""
 python3 hsi_email.py --force --no-email
@@ -91,7 +104,7 @@ echo ""
 
 # 步骤4: 调用comprehensive_analysis.py进行综合分析
 echo "=========================================="
-echo "📊 步骤 4/4: 综合分析"
+echo "📊 步骤 4/5: 综合分析"
 echo "=========================================="
 echo ""
 # 获取步骤3生成的大模型建议文件（使用最新日期）
@@ -116,6 +129,7 @@ echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
 echo "  - 大模型建议: $(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)"
+echo "  - 风险回报率分析: data/risk_reward_results.json"
 echo "  - ML预测结果:"
 echo "    - 1d: $(ls -t data/ml_trading_model_catboost_predictions_1d.csv 2>/dev/null | head -1)"
 echo "    - 5d: $(ls -t data/ml_trading_model_catboost_predictions_5d.csv 2>/dev/null | head -1)"

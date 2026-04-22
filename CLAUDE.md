@@ -29,6 +29,7 @@ python3 -m pytest tests/ -v
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
 | **恒指预测验证** | `python3 hsi_prediction.py --verify` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
+| **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost` |
@@ -214,4 +215,4 @@ future_return = returns.rolling(5).sum().shift(-5)
 
 ---
 
-**最后更新**：2026-04-23（新增性能监控命令和时间窗口说明）
+**最后更新**：2026-04-22（新增风险回报率分析命令，集成到综合分析脚本）
