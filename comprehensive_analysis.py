@@ -421,6 +421,36 @@ def get_pattern_action(pattern):
     return {'name': '未知', 'action': '观望', 'win_rate': '-', 'avg_return': '-', 'confidence': '低'}
 
 
+def load_risk_reward_data(json_path='data/risk_reward_results.json'):
+    """
+    加载风险回报率分析结果
+
+    参数:
+    - json_path: JSON文件路径
+
+    返回:
+    - dict: {股票代码: 风险回报率数据} 的字典
+    """
+    import json
+
+    if not os.path.exists(json_path):
+        return {}
+
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # 转换为字典 {股票代码: 数据}
+        result = {}
+        for item in data:
+            result[item['code']] = item
+        print(f"  ✅ 加载风险回报率数据: {len(result)} 只股票")
+        return result
+    except Exception as e:
+        print(f"  ⚠️ 加载风险回报率数据失败: {e}")
+        return {}
+
+
 # 全局模型缓存（避免重复加载）
 _model_cache = {}
 
@@ -881,12 +911,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
-                # 三周期预测表格（含筹码分布）
+                # 加载风险回报率数据
+                risk_reward_data = load_risk_reward_data()
+
+                # 三周期预测表格（含筹码分布+风险回报率）
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
                 catboost_text_email += f"预测日期: {date_str}\n\n"
                 catboost_text_email += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 综合得分 | 风险得分 | 回报得分 | 风险建议 |\n"
+                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -945,8 +978,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         transmission_info = check_transmission_mode(stock_code, date_str)
                         transmission_display = format_transmission_display(transmission_info)
 
+                        # 获取风险回报率数据
+                        rr_info = risk_reward_data.get(stock_code, {})
+                        rr_comprehensive = rr_info.get('comprehensive_score', '-')
+                        rr_risk = rr_info.get('risk_score', '-')
+                        rr_return = rr_info.get('return_score', '-')
+                        rr_suggestion = rr_info.get('suggestion', '-')
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_comprehensive} | {rr_risk} | {rr_return} | {rr_suggestion} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -972,6 +1012,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- ✅低：上方筹码 < 30%，拉升容易\n"
                 catboost_text_email += "- ⚠️中：上方筹码 30-60%，注意风险\n"
                 catboost_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
+
+                # 添加风险回报率说明
+                catboost_text_email += f"\n**风险回报率说明**（稳健型模式）：\n"
+                catboost_text_email += "- 综合得分 = 风险得分 × 50% + 回报得分 × 50%\n"
+                catboost_text_email += "- ⭐ 优选：综合得分 ≥ 75，风险回报率最佳\n"
+                catboost_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
+                catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
+                catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
