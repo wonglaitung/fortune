@@ -918,7 +918,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
                 catboost_text_email += f"预测日期: {date_str}\n\n"
                 catboost_text_email += "全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 综合得分 | 风险得分 | 回报得分 | 风险建议 |\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 |\n"
                 catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
@@ -938,17 +938,35 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred = three_horizon_results[stock_code]
                         preds = pred['predictions']
 
-                        # 1天预测
+                        # 1天预测（升绿色，跌红色）
                         pred_1d = preds.get(1, {'direction': '-', 'probability': 0.5})
-                        p1d_str = f"{pred_1d['direction']} {pred_1d['probability']:.2f}"
+                        direction_1d = pred_1d['direction']
+                        if direction_1d == '升':
+                            p1d_str = f'<span style="color: green">升</span> {pred_1d["probability"]:.2f}'
+                        elif direction_1d == '跌':
+                            p1d_str = f'<span style="color: red">跌</span> {pred_1d["probability"]:.2f}'
+                        else:
+                            p1d_str = f"{direction_1d} {pred_1d['probability']:.2f}"
 
-                        # 5天预测
+                        # 5天预测（升绿色，跌红色）
                         pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
-                        p5d_str = f"{pred_5d['direction']} {pred_5d['probability']:.2f}"
+                        direction_5d = pred_5d['direction']
+                        if direction_5d == '升':
+                            p5d_str = f'<span style="color: green">升</span> {pred_5d["probability"]:.2f}'
+                        elif direction_5d == '跌':
+                            p5d_str = f'<span style="color: red">跌</span> {pred_5d["probability"]:.2f}'
+                        else:
+                            p5d_str = f"{direction_5d} {pred_5d['probability']:.2f}"
 
-                        # 20天预测
+                        # 20天预测（升绿色，跌红色）
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
-                        p20d_str = f"{pred_20d['direction']} {pred_20d['probability']:.2f}"
+                        direction_20d = pred_20d['direction']
+                        if direction_20d == '升':
+                            p20d_str = f'<span style="color: green">升</span> {pred_20d["probability"]:.2f}'
+                        elif direction_20d == '跌':
+                            p20d_str = f'<span style="color: red">跌</span> {pred_20d["probability"]:.2f}'
+                        else:
+                            p20d_str = f"{direction_20d} {pred_20d['probability']:.2f}"
 
                         # 模式和交易建议
                         pattern = pred.get('pattern', '-')
@@ -986,7 +1004,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         rr_suggestion = rr_info.get('suggestion', '-')
 
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_comprehensive} | {rr_risk} | {rr_return} | {rr_suggestion} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -2503,7 +2521,7 @@ def generate_technical_indicators_table(stock_codes):
                 ma50 = safe_float_format(indicators['ma50'], '2f')
                 ma200 = safe_float_format(indicators['ma200'], '2f') if pd.notna(indicators['ma200']) else "N/A"
                 ma_align = indicators['ma_alignment']
-                ma_slope = safe_float_format(indicators['ma_slope_20'], '4f')
+                ma_slope = safe_float_format(indicators['ma_slope_20'], '2f')
                 ma_dev = safe_float_format(indicators['ma_deviation'], '2f') + "%"
                 bb_pos = safe_float_format(indicators['bb_position'], '1f') + "%"
                 atr = safe_float_format(indicators['atr'], '2f')
@@ -2982,7 +3000,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             # 显示所有3个龙头股，使用斜线分隔避免与Markdown表格冲突
                             leader_items = []
                             for i, leader in enumerate(leaders, 1):
-                                leader_items.append(f"{leader['name']}({leader['change_pct']:+.1f}%)")
+                                leader_items.append(f"{leader['name']}({leader['change_pct']:+.2f}%)")
                             leaders_text = " / ".join(leader_items)
 
                         sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {sector_type} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
