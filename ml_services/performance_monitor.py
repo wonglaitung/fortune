@@ -339,42 +339,69 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     返回:
     - Markdown 格式的报告
     """
-    # 计算统计周期：半年前到今天
+    # 时间窗口定义：天数和名称
+    TIME_WINDOWS = [
+        (30, '1个月'),
+        (90, '3个月'),
+        (180, '6个月')
+    ]
+
     now = datetime.now()
-    start_date = now - timedelta(days=180)  # 约6个月
-    start_date_str = start_date.strftime('%Y-%m-%d')
     end_date_str = now.strftime('%Y-%m-%d')
+    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
 
-    # 筛选时间范围内的预测
-    period_predictions = [
+    # 为每个时间窗口计算各周期的指标
+    window_horizon_metrics = {}  # {窗口天数: {周期: 指标}}
+
+    for days, _ in TIME_WINDOWS:
+        start_date = now - timedelta(days=days)
+        start_date_str = start_date.strftime('%Y-%m-%d')
+
+        # 筛选时间范围内的已评估预测
+        evaluated_predictions = [
+            p for p in history['predictions']
+            if p.get('outcome') is not None
+            and start_date_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
+        ]
+
+        # 按周期分组
+        horizon_predictions = {1: [], 5: [], 20: []}
+        for pred in evaluated_predictions:
+            h = pred.get('horizon', 20)
+            if h in horizon_predictions:
+                horizon_predictions[h].append(pred)
+
+        # 计算各周期指标
+        window_horizon_metrics[days] = {}
+        for h, preds in horizon_predictions.items():
+            window_horizon_metrics[days][h] = calculate_metrics(preds)
+
+    # 使用3个月窗口的数据用于详细表现、板块和个股分析
+    detail_days = 90
+    start_date_detail = now - timedelta(days=detail_days)
+    start_date_detail_str = start_date_detail.strftime('%Y-%m-%d')
+
+    detail_predictions = [
         p for p in history['predictions']
-        if start_date_str <= p.get('timestamp', '').split('T')[0] <= end_date_str
-    ]
-
-    # 筛选已评估的预测
-    evaluated_predictions = [
-        p for p in period_predictions
         if p.get('outcome') is not None
+        and start_date_detail_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
     ]
 
-    # 按周期分组
-    horizon_predictions = {1: [], 5: [], 20: []}
-    for pred in evaluated_predictions:
+    # 按周期分组（详细）
+    detail_horizon_predictions = {1: [], 5: [], 20: []}
+    for pred in detail_predictions:
         h = pred.get('horizon', 20)
-        if h in horizon_predictions:
-            horizon_predictions[h].append(pred)
+        if h in detail_horizon_predictions:
+            detail_horizon_predictions[h].append(pred)
 
-    # 计算各周期指标
-    horizon_metrics = {}
-    for h, preds in horizon_predictions.items():
-        horizon_metrics[h] = calculate_metrics(preds)
+    # 计算各周期指标（详细）
+    detail_horizon_metrics = {}
+    for h, preds in detail_horizon_predictions.items():
+        detail_horizon_metrics[h] = calculate_metrics(preds)
 
-    # 计算整体指标（所有周期合计）
-    overall_metrics = calculate_metrics(evaluated_predictions)
-
-    # 按板块分组（仅20天）
+    # 按板块分组（仅20天，3个月窗口）
     sector_metrics = {}
-    for pred in horizon_predictions[20]:
+    for pred in detail_horizon_predictions[20]:
         sector = pred.get('sector', 'unknown')
         if sector not in sector_metrics:
             sector_metrics[sector] = []
@@ -384,9 +411,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     for sector, preds in sector_metrics.items():
         sector_results[sector] = calculate_metrics(preds)
 
-    # 按股票分组（仅20天）
+    # 按股票分组（仅20天，3个月窗口）
     stock_metrics = {}
-    for pred in horizon_predictions[20]:
+    for pred in detail_horizon_predictions[20]:
         stock = pred.get('stock_code', 'unknown')
         if stock not in stock_metrics:
             stock_metrics[stock] = []
@@ -403,36 +430,35 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 生成报告
     report = f"""# 预测性能报告
 
-**统计周期**: {start_date_str} ~ {end_date_str}
 **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ---
 
-## 一、各周期性能概览
+## 一、各周期不同时间窗口表现
 
-| 周期 | 预测数 | 正确数 | 准确率 | 平均收益 | 夏普比率 |
-|------|--------|--------|--------|----------|----------|
+| 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
+|------|----------|--------|--------|----------|----------|
 """
 
-    # 各周期性能表格
-    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
+    # 各周期各时间窗口性能表格
     for h in [1, 5, 20]:
-        m = horizon_metrics.get(h, {})
-        if m:
-            report += f"| {horizon_names[h]} | {m.get('total_predictions', 0)} | {m.get('correct_predictions', 0)} | **{m.get('accuracy', 0):.2%}** | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
-        else:
-            report += f"| {horizon_names[h]} | 0 | 0 | - | - | - |\n"
+        for days, window_name in TIME_WINDOWS:
+            m = window_horizon_metrics.get(days, {}).get(h, {})
+            if m and m.get('total_predictions', 0) > 0:
+                report += f"| {horizon_names[h]} | {window_name} | {m.get('total_predictions', 0)} | **{m.get('accuracy', 0):.2%}** | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+            else:
+                report += f"| {horizon_names[h]} | {window_name} | 0 | - | - | - |\n"
 
     report += f"""
 ---
 
-## 二、各周期详细表现
+## 二、各周期详细表现（3个月窗口）
 
 """
 
     # 各周期详细表现
     for h in [1, 5, 20]:
-        m = horizon_metrics.get(h, {})
+        m = detail_horizon_metrics.get(h, {})
         if m:
             report += f"""### {horizon_names[h]}预测
 
@@ -459,7 +485,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
     report += """---
 
-## 三、板块表现（20天预测）
+## 三、板块表现（20天预测，3个月窗口）
 
 """
 
@@ -482,7 +508,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     else:
         report += "*暂无板块数据*\n"
 
-    report += "\n---\n\n## 四、个股表现（20天预测）\n\n"
+    report += "\n---\n\n## 四、个股表现（20天预测，3个月窗口）\n\n"
 
     # 个股表现（按准确率、平均收益排序）
     if stock_results:
@@ -503,13 +529,19 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     else:
         report += "*暂无个股数据*\n"
     
+    # 计算3个月窗口的总预测数（用于风险提示）
+    total_3m_predictions = sum(
+        detail_horizon_metrics.get(h, {}).get('total_predictions', 0)
+        for h in [1, 5, 20]
+    )
+
     report += f"""
 ---
 
-## 四、风险提示
+## 五、风险提示
 
 1. **历史表现不代表未来收益**
-2. 模型准确率统计基于 {overall_metrics.get('total_predictions', 0)} 个样本，仅供参考
+2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
 3. 投资有风险，请谨慎决策
 
 ---
