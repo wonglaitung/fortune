@@ -1086,9 +1086,8 @@ def generate_html_email(content, date_str):
 
     # 为准确率添加颜色样式：超过50%绿色，低于50%红色
     import re
-    def colorize_accuracy(match):
+    def colorize_accuracy(percentage_str):
         """为准确率百分比添加颜色"""
-        percentage_str = match.group(1)
         try:
             percentage = float(percentage_str)
             if percentage >= 50:
@@ -1096,10 +1095,10 @@ def generate_html_email(content, date_str):
             else:
                 return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
         except ValueError:
-            return match.group(0)
+            return f'{percentage_str}%'
 
-    # 匹配表格中的百分比（格式：XX.XX% 或 100.00%）
-    html_content = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html_content)
+    # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
+    html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
     
     # 组装完整的HTML
     html = f"""

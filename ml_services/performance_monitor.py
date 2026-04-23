@@ -553,7 +553,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         sector_name = get_sector_name(item['sector'])
         sector_type = get_sector_type(item['sector'])
         m = item['metrics']
-        report += f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+        # 准确率加粗，便于后续颜色标记
+        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
+        report += f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
 
     report += """
 ---
@@ -614,7 +616,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     for item in all_stock_data:
         sector_name = get_sector_name(item['sector'])
         m = item['metrics']
-        report += f"| {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%} |\n"
+        # 准确率加粗，便于后续颜色标记
+        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
+        report += f"| {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} |\n"
 
     # 三周期模式统计（3个月窗口）
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
@@ -719,9 +723,8 @@ def send_email_report(report: str, subject: str) -> bool:
     html_content = markdown.markdown(report, extensions=['tables'])
 
     # 为准确率添加颜色样式：超过50%绿色，低于50%红色
-    def colorize_accuracy(match):
+    def colorize_accuracy(percentage_str):
         """为准确率百分比添加颜色"""
-        percentage_str = match.group(1)
         try:
             percentage = float(percentage_str)
             if percentage >= 50:
@@ -729,11 +732,11 @@ def send_email_report(report: str, subject: str) -> bool:
             else:
                 return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
         except ValueError:
-            return match.group(0)
+            return f'{percentage_str}%'
 
-    # 匹配表格中的百分比（格式：XX.XX% 或 100.00%）
-    # 只匹配表格单元格内的百分比，避免误匹配其他内容
-    html_content = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html_content)
+    # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
+    # Markdown加粗 **XX%** 转换为HTML后变成 <strong>XX%</strong> 或 <b>XX%</b>
+    html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
 
     # 添加样式
     html_content = f"""
