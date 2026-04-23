@@ -1745,11 +1745,11 @@ class HSI_Predictor:
 
                 # 颜色
                 if win_rate >= 0.6:
-                    rate_color = '#166534'
+                    rate_color = '#16a34a'  # 亮绿色
                 elif win_rate >= 0.5:
-                    rate_color = '#92400e'
+                    rate_color = '#ea580c'  # 亮橙色
                 else:
-                    rate_color = '#991b1b'
+                    rate_color = '#dc2626'  # 亮红色
 
                 ret_color = '#22c55e' if avg_return >= 0 else '#dc2626'
                 ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
