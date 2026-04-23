@@ -6979,6 +6979,21 @@ class HSIEmailSystem:
 
         text, html = self.generate_report_content(target_date, hsi_data, hsi_indicators, stock_results)
 
+        # 为准确率添加颜色样式：超过50%绿色，低于50%红色
+        import re
+        def colorize_accuracy(match):
+            """为准确率百分比添加颜色"""
+            percentage_str = match.group(1)
+            try:
+                percentage = float(percentage_str)
+                if percentage >= 50:
+                    return f'<span style="color: #28a745; font-weight: bold;">{percentage_str}%</span>'
+                else:
+                    return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
+            except ValueError:
+                return match.group(0)
+        html = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html)
+
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
         if ',' in recipient_env:
             recipients = [recipient.strip() for recipient in recipient_env.split(',')]

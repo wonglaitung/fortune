@@ -1080,9 +1080,26 @@ def generate_html_email(content, date_str):
     
     # 配置markdown扩展，使用更多功能以支持嵌套列表
     md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'])
-    
+
     # 将Markdown转换为HTML
     html_content = md.convert(content)
+
+    # 为准确率添加颜色样式：超过50%绿色，低于50%红色
+    import re
+    def colorize_accuracy(match):
+        """为准确率百分比添加颜色"""
+        percentage_str = match.group(1)
+        try:
+            percentage = float(percentage_str)
+            if percentage >= 50:
+                return f'<span style="color: #28a745; font-weight: bold;">{percentage_str}%</span>'
+            else:
+                return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
+        except ValueError:
+            return match.group(0)
+
+    # 匹配表格中的百分比（格式：XX.XX% 或 100.00%）
+    html_content = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html_content)
     
     # 组装完整的HTML
     html = f"""
