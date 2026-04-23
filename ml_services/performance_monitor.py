@@ -558,10 +558,10 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += """
 ---
 
-## 三、个股表现（Top 10）
+## 三、个股表现
 
-| 排名 | 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 |
-|------|----------|----------|------|------|----------|--------|--------|----------|
+| 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 |
+|----------|----------|------|------|----------|--------|--------|----------|
 """
 
     # 个股表现 - 收集所有数据后统一输出
@@ -603,14 +603,18 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
                         'metrics': metrics
                     })
 
-    # 按准确率和收益排序
-    all_stock_data.sort(key=lambda x: (x['metrics'].get('accuracy', 0), x['metrics'].get('avg_return', 0)), reverse=True)
+    # 按股票名称、周期、时间窗口排序
+    all_stock_data.sort(key=lambda x: (
+        x['stock_name'],                # 股票名称
+        x['horizon'],                   # 周期 (1, 5, 20)
+        window_order.get(x['window'], 99)  # 时间窗口
+    ))
 
-    # 只显示Top 10
-    for i, item in enumerate(all_stock_data[:10], 1):
+    # 显示所有股票
+    for item in all_stock_data:
         sector_name = get_sector_name(item['sector'])
         m = item['metrics']
-        report += f"| {i} | {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%} |\n"
+        report += f"| {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%} |\n"
 
     # 三周期模式统计（3个月窗口）
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
