@@ -950,13 +950,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred_1d = preds.get(1, {'direction': '-', 'probability': 0.5})
                         direction_1d = pred_1d['direction']
                         prob_1d = pred_1d['probability']
-                        if direction_1d == '升':
+                        if direction_1d == '↑':
                             if prob_1d >= 0.60:
-                                p1d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_1d:.2f}'  # 亮绿色
+                                p1d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_1d:.2f}'  # 亮绿色
                             else:
-                                p1d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_1d:.2f}'  # 亮橙色
-                        elif direction_1d == '跌':
-                            p1d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_1d:.2f}'  # 亮红色
+                                p1d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_1d:.2f}'  # 亮橙色
+                        elif direction_1d == '↓':
+                            p1d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_1d:.2f}'  # 亮红色
                         else:
                             p1d_str = f"{direction_1d} {prob_1d:.2f}"
 
@@ -964,13 +964,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
                         direction_5d = pred_5d['direction']
                         prob_5d = pred_5d['probability']
-                        if direction_5d == '升':
+                        if direction_5d == '↑':
                             if prob_5d >= 0.60:
-                                p5d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_5d:.2f}'  # 亮绿色
+                                p5d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_5d:.2f}'  # 亮绿色
                             else:
-                                p5d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_5d:.2f}'  # 亮橙色
-                        elif direction_5d == '跌':
-                            p5d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_5d:.2f}'  # 亮红色
+                                p5d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_5d:.2f}'  # 亮橙色
+                        elif direction_5d == '↓':
+                            p5d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_5d:.2f}'  # 亮红色
                         else:
                             p5d_str = f"{direction_5d} {prob_5d:.2f}"
 
@@ -978,13 +978,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
                         direction_20d = pred_20d['direction']
                         prob_20d = pred_20d['probability']
-                        if direction_20d == '升':
+                        if direction_20d == '↑':
                             if prob_20d >= 0.60:
-                                p20d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_20d:.2f}'  # 亮绿色
+                                p20d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_20d:.2f}'  # 亮绿色
                             else:
-                                p20d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_20d:.2f}'  # 亮橙色
-                        elif direction_20d == '跌':
-                            p20d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_20d:.2f}'  # 亮红色
+                                p20d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_20d:.2f}'  # 亮橙色
+                        elif direction_20d == '↓':
+                            p20d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_20d:.2f}'  # 亮红色
                         else:
                             p20d_str = f"{direction_20d} {prob_20d:.2f}"
 
@@ -1041,9 +1041,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 添加三色预测说明
                 catboost_text_email += f"\n**三周期预测颜色说明**：\n"
-                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">升</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">升</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">跌</span>（亮红色）：概率 < 50%，看跌\n"
+                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
+                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
+                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
