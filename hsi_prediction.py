@@ -1559,11 +1559,13 @@ class HSI_Predictor:
 
             # 传导模式显示
             prediction_date = transmission_info.get('prediction_date', '')
+            is_current = transmission_info.get('is_current_prediction', False)
+            date_label = "今日预测" if is_current else f"5个交易日前（{prediction_date}）的预测"
             content += f"""
             <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if transmission_info.get('transmission_mode') else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if transmission_info.get('transmission_mode') else '#6b7280'};">
                 <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证</h4>
                 <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-                    5个交易日前（{prediction_date}）的预测验证情况：
+                    {date_label}验证情况：
                 </div>
                 <div style="font-size: 14px; font-weight: 600; color: {'#166534' if transmission_info.get('transmission_mode') else '#374151'};">
                     {transmission_display}
