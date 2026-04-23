@@ -1679,7 +1679,108 @@ class HSI_Predictor:
             </div>
 """
 
+        # 三周期模式统计表格
+        pattern_stats = self._calculate_three_horizon_pattern_stats()
+
+        # 模式名称映射
+        pattern_names = {
+            '010': '反弹失败⭐',
+            '000': '一致看跌',
+            '100': '冲高回落',
+            '001': '下跌中继',
+            '011': '探底回升',
+            '101': '假突破',
+            '110': '震荡回调',
+            '111': '一致看涨',
+        }
+
+        # 模式建议映射
+        pattern_actions = {
+            '010': '谨慎减仓',
+            '000': '止损/减仓',
+            '100': '获利了结',
+            '001': '谨慎观望',
+            '011': '分批建仓',
+            '101': '持有观望',
+            '110': '观望',
+            '111': '谨慎持有',
+        }
+
         content += f"""
+        </div>
+
+        <!-- 三周期模式统计 -->
+        <div class="section">
+            <div class="section-title">📊 三周期模式验证（实时统计）</div>
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
+                基于恒指预测历史数据实时计算
+            </div>
+"""
+
+        if pattern_stats:
+            # 按准确率排序
+            sorted_patterns = sorted(pattern_stats.items(), key=lambda x: x[1]['win_rate'], reverse=True)
+
+            content += """
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">排名</th>
+                        <th style="width: 12%;">模式</th>
+                        <th style="width: 18%;">名称</th>
+                        <th style="width: 12%;">样本数</th>
+                        <th style="width: 15%;">准确率</th>
+                        <th style="width: 15%;">平均收益</th>
+                        <th style="width: 20%;">建议</th>
+                    </tr>
+                </thead>
+                <tbody>
+"""
+            for i, (pattern, stats) in enumerate(sorted_patterns, 1):
+                name = pattern_names.get(pattern, '未知')
+                action = pattern_actions.get(pattern, '观望')
+                win_rate = stats['win_rate']
+                avg_return = stats['avg_return']
+                total = stats['total']
+
+                # 颜色
+                if win_rate >= 0.6:
+                    rate_color = '#166534'
+                elif win_rate >= 0.5:
+                    rate_color = '#92400e'
+                else:
+                    rate_color = '#991b1b'
+
+                ret_color = '#22c55e' if avg_return >= 0 else '#dc2626'
+                ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
+
+                content += f"""
+                    <tr>
+                        <td style="text-align: center;">{i}</td>
+                        <td style="font-family: monospace; text-align: center;">{pattern}</td>
+                        <td>{name}</td>
+                        <td style="text-align: center;">{total}</td>
+                        <td style="color: {rate_color}; font-weight: 600; text-align: center;">{win_rate:.1%}</td>
+                        <td style="color: {ret_color}; text-align: center;">{ret_str}</td>
+                        <td>{action}</td>
+                    </tr>
+"""
+            content += """
+                </tbody>
+            </table>
+            <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
+                <strong>模式编码：</strong>110 = 1天涨、5天涨、20天跌 | 数据来源于恒指预测历史，实时计算
+            </div>
+"""
+        else:
+            content += """
+            <div style="padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center; color: #6b7280;">
+                📊 样本量不足，暂无统计数据<br>
+                <span style="font-size: 11px;">预计需要1-2周数据积累</span>
+            </div>
+"""
+
+        content += """
         </div>
 
         <!-- 交易法则参考 -->
@@ -2024,6 +2125,77 @@ class HSI_Predictor:
             print(f"   - 历史记录总数: {history['metadata']['total_predictions']}")
         except Exception as e:
             print(f"❌ 保存历史记录失败: {e}")
+
+    def _calculate_three_horizon_pattern_stats(self):
+        """
+        从 hsi_prediction_history.json 实时计算三周期模式统计
+
+        返回:
+        - dict: {模式: {total, correct, avg_return, win_rate}}
+        """
+        history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
+
+        if not os.path.exists(history_file):
+            return {}
+
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        except:
+            return {}
+
+        predictions = history.get('predictions', [])
+        if not predictions:
+            return {}
+
+        # 按 data_date 分组
+        from collections import defaultdict
+        grouped = defaultdict(dict)
+        for p in predictions:
+            data_date = p.get('data_date', '')
+            horizon = p.get('horizon')
+            if data_date and horizon:
+                grouped[data_date][horizon] = p
+
+        # 找出有三周期预测的记录，计算各模式统计
+        pattern_stats = defaultdict(lambda: {'total': 0, 'correct': 0, 'returns': []})
+
+        for data_date, horizons in grouped.items():
+            if 1 in horizons and 5 in horizons and 20 in horizons:
+                p1 = horizons[1]
+                p5 = horizons[5]
+                p20 = horizons[20]
+
+                # 只统计 20天已评估的
+                if p20.get('outcome') is None:
+                    continue
+
+                # 编码模式：up=1, down=0
+                pattern = f"{'1' if p1.get('predicted_direction') == 'up' else '0'}{'1' if p5.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
+
+                pattern_stats[pattern]['total'] += 1
+                if p20.get('outcome') == 'correct':
+                    pattern_stats[pattern]['correct'] += 1
+
+                ret = p20.get('actual_return')
+                if ret is not None:
+                    pattern_stats[pattern]['returns'].append(ret)
+
+        # 计算准确率和平均收益
+        result = {}
+        for pattern, stats in pattern_stats.items():
+            total = stats['total']
+            correct = stats['correct']
+            returns = stats['returns']
+
+            result[pattern] = {
+                'total': total,
+                'correct': correct,
+                'win_rate': correct / total if total > 0 else 0,
+                'avg_return': sum(returns) / len(returns) if returns else 0
+            }
+
+        return result
 
     def _get_target_date_trading_days(self, date, horizon):
         """
