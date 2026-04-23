@@ -1742,7 +1742,7 @@ class HSI_Predictor:
 </html>
 """
 
-        return content
+        return content, trading_action
 
     def _get_feature_explanation(self, feature_name):
         """获取特征说明"""
@@ -1848,7 +1848,7 @@ class HSI_Predictor:
         """发送邮件通知"""
         try:
             # 生成邮件内容
-            content = self.generate_email_content(score, trend, feature_details, multi_horizon_results)
+            content, trading_action = self.generate_email_content(score, trend, feature_details, multi_horizon_results)
 
             # 邮件配置
             sender_email = os.environ.get("EMAIL_SENDER")
@@ -1883,7 +1883,11 @@ class HSI_Predictor:
 
             # 创建邮件对象
             current_date = datetime.now().strftime('%Y-%m-%d')
-            subject = f"恒生指数涨跌预测 {current_date} - {trend}（得分{score:.4f}）"
+            # 构建邮件标题，包含交易建议
+            action_str = ""
+            if trading_action:
+                action_str = f" 【{trading_action['action']}】"
+            subject = f"恒生指数涨跌预测 {current_date} - {trend}{action_str}"
 
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
@@ -2177,7 +2181,7 @@ class HSI_Predictor:
 
         # 如果没有预测数据
         if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
-            return "-"
+            return "暂无数据"
 
         # 方向符号
         def get_dir_symbol(direction):
