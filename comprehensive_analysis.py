@@ -3226,9 +3226,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 | 周期 | 准确率 | 标准差 |
 |------|--------|--------|
-| 1天 | {model_accuracy['1d']['accuracy']:.2%} | ±{model_accuracy['1d']['std']:.2%} |
-| 5天 | {model_accuracy['5d']['accuracy']:.2%} | ±{model_accuracy['5d']['std']:.2%} |
-| 20天 | {model_accuracy['20d']['accuracy']:.2%} | ±{model_accuracy['20d']['std']:.2%} |
+| 1天 | **{model_accuracy['1d']['accuracy']:.2%}** | ±{model_accuracy['1d']['std']:.2%} |
+| 5天 | **{model_accuracy['5d']['accuracy']:.2%}** | ±{model_accuracy['5d']['std']:.2%} |
+| 20天 | **{model_accuracy['20d']['accuracy']:.2%}** | ±{model_accuracy['20d']['std']:.2%} |
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
