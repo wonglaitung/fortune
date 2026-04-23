@@ -540,8 +540,14 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
                         'metrics': metrics
                     })
 
-    # 按准确率、平均收益排序
-    all_sector_data.sort(key=lambda x: (x['metrics'].get('accuracy', 0), x['metrics'].get('avg_return', 0)), reverse=True)
+    # 按板块、周期、时间窗口排序
+    # 时间窗口排序顺序
+    window_order = {'1个月': 1, '3个月': 2, '6个月': 3}
+    all_sector_data.sort(key=lambda x: (
+        get_sector_name(x['sector']),  # 板块名称
+        x['horizon'],                   # 周期 (1, 5, 20)
+        window_order.get(x['window'], 99)  # 时间窗口
+    ))
 
     for item in all_sector_data:
         sector_name = get_sector_name(item['sector'])
