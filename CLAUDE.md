@@ -35,6 +35,7 @@ python3 -m pytest tests/ -v
 | **板块验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
 | **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
+| **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -88,6 +89,11 @@ AKShare      南向资金        主力追踪     性能监控
 - `data/feature_cache/` - 特征缓存（计算好的892个特征，7天有效期，170x加速）
 - `data/prediction_history.json` - 预测历史记录
 - `output/` - 分析报告和回测结果
+
+**性能监控**：
+- 按三个时间窗口统计：1个月、3个月、6个月
+- 详细表现使用3个月窗口（平衡样本量和时效性）
+- 每日自动评估到期预测，生成报告
 
 ---
 
@@ -154,7 +160,7 @@ AKShare      南向资金        主力追踪     性能监控
 | `comprehensive-analysis.yml` | 综合分析 | 周一到周五 16:00 |
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
 | `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
-| `performance-monitor.yml` | 预测性能监控 | 每个工作日 HK 0:00 |
+| `performance-monitor.yml` | 预测性能监控（三时间窗口） | 每个工作日 HK 0:00 |
 
 ---
 
@@ -208,4 +214,4 @@ future_return = returns.rolling(5).sum().shift(-5)
 
 ---
 
-**最后更新**：2026-04-20（准确率数据更新为训练时CV验证）
+**最后更新**：2026-04-23（新增性能监控命令和时间窗口说明）
