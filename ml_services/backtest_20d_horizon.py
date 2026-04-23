@@ -131,12 +131,16 @@ class Backtest20DHoldPeriod:
 
             X_test = X_test[model_features]
 
-            # 处理分类特征
-            categorical_features = [model_features.index(col) for col in categorical_encoders.keys() if col in model_features]
-            for cat_idx in categorical_features:
-                col_name = model_features[cat_idx]
+            # 处理分类特征（使用训练时的编码器转换字符串为数字）
+            for col_name, encoder in categorical_encoders.items():
                 if col_name in X_test.columns:
-                    X_test[col_name] = X_test[col_name].astype(np.int32)
+                    try:
+                        X_test[col_name] = X_test[col_name].fillna('unknown').astype(str)
+                        X_test[col_name] = encoder.transform(X_test[col_name])
+                        X_test[col_name] = X_test[col_name].astype(np.int32)
+                    except ValueError:
+                        # 处理未见过的类别
+                        X_test[col_name] = 0
 
             # 使用 Pool 对象进行预测
             test_pool = Pool(data=X_test)

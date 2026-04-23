@@ -160,14 +160,16 @@ class BacktestEvaluator:
                     # 如果是 numpy 数组，转换为 DataFrame
                     test_df = pd.DataFrame(test_data, columns=feature_columns)
 
-                # 获取分类特征索引
-                categorical_features = [feature_columns.index(col) for col in categorical_encoders.keys() if col in feature_columns]
-
-                # 确保分类特征列是整数类型
-                for cat_idx in categorical_features:
-                    col_name = feature_columns[cat_idx]
+                # 处理分类特征（使用训练时的编码器转换字符串为数字）
+                for col_name, encoder in categorical_encoders.items():
                     if col_name in test_df.columns:
-                        test_df[col_name] = test_df[col_name].astype(np.int32)
+                        try:
+                            test_df[col_name] = test_df[col_name].fillna('unknown').astype(str)
+                            test_df[col_name] = encoder.transform(test_df[col_name])
+                            test_df[col_name] = test_df[col_name].astype(np.int32)
+                        except ValueError:
+                            # 处理未见过的类别
+                            test_df[col_name] = 0
 
                 # 使用 Pool 对象进行预测
                 test_pool = Pool(data=test_df)
