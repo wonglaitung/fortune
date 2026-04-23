@@ -303,6 +303,31 @@ def get_sector_name(sector_code: str) -> str:
     return sector_names.get(sector_code, sector_code)
 
 
+def get_sector_type(sector_code: str) -> str:
+    """获取板块类型（周期/防御）"""
+    sector_types = {
+        # 周期性板块
+        'semiconductor': '周期',
+        'biotech': '周期',
+        'tech': '周期',
+        'consumer': '周期',
+        'real_estate': '周期',
+        'energy': '周期',
+        'shipping': '周期',
+        'auto': '周期',
+        'new_energy': '周期',
+        'ai': '周期',
+        # 防御性板块
+        'bank': '防御',
+        'insurance': '防御',
+        'utility': '防御',
+        'environmental': '防御',
+        'exchange': '防御',
+        'index': '防御',
+    }
+    return sector_types.get(sector_code, '-')
+
+
 def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
     生成性能报告
@@ -439,8 +464,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
     # 板块表现表格
     if sector_results:
-        report += "| 板块 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
-        report += "|------|--------|--------|----------|----------|\n"
+        report += "| 板块 | 类型 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
+        report += "|------|------|--------|--------|----------|----------|\n"
 
         # 按准确率排序
         sorted_sectors = sorted(
@@ -451,7 +476,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
         for sector, metrics in sorted_sectors:
             sector_name = get_sector_name(sector)
-            report += f"| {sector_name} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('buy_win_rate', 0):.2%} |\n"
+            sector_type = get_sector_type(sector)
+            report += f"| {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('buy_win_rate', 0):.2%} |\n"
     else:
         report += "*暂无板块数据*\n"
 
