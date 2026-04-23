@@ -472,34 +472,6 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     for h, preds in detail_horizon_predictions.items():
         detail_horizon_metrics[h] = calculate_metrics(preds)
 
-    # 按板块分组（仅20天，3个月窗口）
-    sector_metrics = {}
-    for pred in detail_horizon_predictions[20]:
-        sector = pred.get('sector', 'unknown')
-        if sector not in sector_metrics:
-            sector_metrics[sector] = []
-        sector_metrics[sector].append(pred)
-
-    sector_results = {}
-    for sector, preds in sector_metrics.items():
-        sector_results[sector] = calculate_metrics(preds)
-
-    # 按股票分组（仅20天，3个月窗口）
-    stock_metrics = {}
-    for pred in detail_horizon_predictions[20]:
-        stock = pred.get('stock_code', 'unknown')
-        if stock not in stock_metrics:
-            stock_metrics[stock] = []
-        stock_metrics[stock].append(pred)
-
-    stock_results = {}
-    for stock, preds in stock_metrics.items():
-        stock_results[stock] = {
-            **calculate_metrics(preds),
-            'stock_name': preds[0].get('stock_name', stock),
-            'sector': preds[0].get('sector', 'unknown')
-        }
-
     # 生成报告
     report = f"""# 预测性能报告
 
@@ -525,82 +497,118 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 二、各周期详细表现（3个月窗口）
+## 二、板块表现
 
 """
 
-    # 各周期详细表现
+    # 板块表现 - 各周期不同时间窗口
     for h in [1, 5, 20]:
-        m = detail_horizon_metrics.get(h, {})
-        if m:
-            report += f"""### {horizon_names[h]}预测
+        report += f"### {horizon_names[h]}预测\n\n"
 
-| 指标 | 数值 |
-|------|------|
-| 总预测数 | {m.get('total_predictions', 0)} |
-| 正确预测数 | {m.get('correct_predictions', 0)} |
-| **准确率** | **{m.get('accuracy', 0):.2%}** |
-| 平均收益率 | {m.get('avg_return', 0):.2%} |
-| 收益率标准差 | {m.get('std_return', 0):.2%} |
-| 夏普比率 | {m.get('sharpe_ratio', 0):.4f} |
-| 买入胜率 | {m.get('buy_win_rate', 0):.2%} |
+        for days, window_name in TIME_WINDOWS:
+            # 筛选该周期和时间窗口的预测
+            window_start = now - timedelta(days=days)
+            window_start_str = window_start.strftime('%Y-%m-%d')
 
-"""
-        else:
-            report += f"""### {horizon_names[h]}预测
+            window_preds = [
+                p for p in history['predictions']
+                if p.get('horizon') == h
+                and p.get('outcome') is not None
+                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
+            ]
 
-| 指标 | 数值 |
-|------|------|
-| 总预测数 | 0 |
-| 准确率 | - |
+            # 按板块分组
+            sector_preds = {}
+            for pred in window_preds:
+                sector = pred.get('sector', 'unknown')
+                if sector not in sector_preds:
+                    sector_preds[sector] = []
+                sector_preds[sector].append(pred)
 
-"""
+            if not sector_preds:
+                continue
 
-    report += """---
+            # 计算板块指标
+            sector_results = {}
+            for sector, preds in sector_preds.items():
+                sector_results[sector] = calculate_metrics(preds)
 
-## 三、板块表现（20天预测，3个月窗口）
+            # 按准确率排序
+            sorted_sectors = sorted(
+                sector_results.items(),
+                key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
+                reverse=True
+            )
 
-"""
+            report += f"**{window_name}窗口**\n\n"
+            report += "| 板块 | 类型 | 预测数 | 准确率 | 平均收益 | 夏普比率 |\n"
+            report += "|------|------|--------|--------|----------|----------|\n"
 
-    # 板块表现表格
-    if sector_results:
-        report += "| 板块 | 类型 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
-        report += "|------|------|--------|--------|----------|----------|\n"
+            for sector, metrics in sorted_sectors:
+                sector_name = get_sector_name(sector)
+                sector_type = get_sector_type(sector)
+                report += f"| {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('sharpe_ratio', 0):.4f} |\n"
 
-        # 按准确率、平均收益排序
-        sorted_sectors = sorted(
-            sector_results.items(),
-            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
-            reverse=True
-        )
+            report += "\n"
 
-        for sector, metrics in sorted_sectors:
-            sector_name = get_sector_name(sector)
-            sector_type = get_sector_type(sector)
-            report += f"| {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('buy_win_rate', 0):.2%} |\n"
-    else:
-        report += "*暂无板块数据*\n"
+        report += "\n"
 
-    report += "\n---\n\n## 四、个股表现（20天预测，3个月窗口）\n\n"
+    report += "---\n\n## 三、个股表现\n\n"
 
-    # 个股表现（按准确率、平均收益排序）
-    if stock_results:
-        report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
-        report += "|------|----------|----------|------|------|--------|--------|----------|\n"
+    # 个股表现 - 各周期不同时间窗口
+    for h in [1, 5, 20]:
+        report += f"### {horizon_names[h]}预测\n\n"
 
-        sorted_stocks = sorted(
-            stock_results.items(),
-            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
-            reverse=True
-        )
+        for days, window_name in TIME_WINDOWS:
+            # 筛选该周期和时间窗口的预测
+            window_start = now - timedelta(days=days)
+            window_start_str = window_start.strftime('%Y-%m-%d')
 
-        for i, (stock, metrics) in enumerate(sorted_stocks, 1):
-            sector = metrics.get('sector', 'unknown')
-            sector_name = get_sector_name(sector)
-            sector_type = get_sector_type(sector)
-            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
-    else:
-        report += "*暂无个股数据*\n"
+            window_preds = [
+                p for p in history['predictions']
+                if p.get('horizon') == h
+                and p.get('outcome') is not None
+                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
+            ]
+
+            # 按股票分组
+            stock_preds = {}
+            for pred in window_preds:
+                stock = pred.get('stock_code', 'unknown')
+                if stock not in stock_preds:
+                    stock_preds[stock] = []
+                stock_preds[stock].append(pred)
+
+            if not stock_preds:
+                continue
+
+            # 计算个股指标
+            stock_results = {}
+            for stock, preds in stock_preds.items():
+                stock_results[stock] = {
+                    **calculate_metrics(preds),
+                    'stock_name': preds[0].get('stock_name', stock),
+                    'sector': preds[0].get('sector', 'unknown')
+                }
+
+            # 按准确率和收益排序
+            sorted_stocks = sorted(
+                stock_results.items(),
+                key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
+                reverse=True
+            )
+
+            report += f"**{window_name}窗口**（Top 10）\n\n"
+            report += "| 排名 | 股票代码 | 股票名称 | 板块 | 预测数 | 准确率 | 平均收益 |\n"
+            report += "|------|----------|----------|------|--------|--------|----------|\n"
+
+            for i, (stock, metrics) in enumerate(sorted_stocks[:10], 1):
+                sector_name = get_sector_name(metrics.get('sector', 'unknown'))
+                report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
+
+            report += "\n"
+
+        report += "\n"
 
     # 三周期模式统计（3个月窗口）
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
@@ -629,7 +637,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         '111': '谨慎持有',
     }
 
-    report += "\n---\n\n## 五、三周期模式验证（3个月窗口）\n\n"
+    report += "\n---\n\n## 四、三周期模式验证（3个月窗口）\n\n"
 
     if pattern_stats:
         # 按准确率排序
@@ -661,7 +669,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 六、风险提示
+## 五、风险提示
 
 1. **历史表现不代表未来收益**
 2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
