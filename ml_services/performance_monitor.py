@@ -482,11 +482,10 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     else:
         report += "*暂无板块数据*\n"
 
-    report += "\n---\n\n## 四、个股表现 TOP 10（20天预测）\n\n"
+    report += "\n---\n\n## 四、个股表现（20天预测）\n\n"
 
-    # 个股表现 TOP 10（按准确率）
+    # 个股表现（按准确率排序）
     if stock_results:
-        report += "### 准确率 TOP 10\n\n"
         report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
         report += "|------|----------|----------|------|------|--------|--------|----------|\n"
 
@@ -494,24 +493,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
             stock_results.items(),
             key=lambda x: x[1].get('accuracy', 0),
             reverse=True
-        )[:10]
+        )
 
         for i, (stock, metrics) in enumerate(sorted_stocks, 1):
-            sector = metrics.get('sector', 'unknown')
-            sector_name = get_sector_name(sector)
-            sector_type = get_sector_type(sector)
-            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
-
-        report += "\n### 准确率 BOTTOM 10\n\n"
-        report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
-        report += "|------|----------|----------|------|------|--------|--------|----------|\n"
-
-        sorted_stocks_bottom = sorted(
-            stock_results.items(),
-            key=lambda x: x[1].get('accuracy', 0)
-        )[:10]
-
-        for i, (stock, metrics) in enumerate(sorted_stocks_bottom, 1):
             sector = metrics.get('sector', 'unknown')
             sector_name = get_sector_name(sector)
             sector_type = get_sector_type(sector)
