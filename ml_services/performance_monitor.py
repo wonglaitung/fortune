@@ -484,14 +484,14 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
     report += "\n---\n\n## 四、个股表现（20天预测）\n\n"
 
-    # 个股表现（按准确率排序）
+    # 个股表现（按准确率、平均收益排序）
     if stock_results:
         report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
         report += "|------|----------|----------|------|------|--------|--------|----------|\n"
 
         sorted_stocks = sorted(
             stock_results.items(),
-            key=lambda x: x[1].get('accuracy', 0),
+            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
             reverse=True
         )
 
