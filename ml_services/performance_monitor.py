@@ -328,6 +328,73 @@ def get_sector_type(sector_code: str) -> str:
     return sector_types.get(sector_code, '-')
 
 
+def calculate_three_horizon_pattern_stats(history: Dict) -> Dict:
+    """
+    从 prediction_history.json 实时计算三周期模式统计
+
+    参数:
+    - history: 预测历史数据
+
+    返回:
+    - dict: {模式: {total, correct, avg_return, win_rate}}
+    """
+    from collections import defaultdict
+
+    predictions = history.get('predictions', [])
+    if not predictions:
+        return {}
+
+    # 按 data_date + stock_code 分组
+    grouped = defaultdict(dict)
+    for p in predictions:
+        data_date = p.get('data_date', '')
+        stock_code = p.get('stock_code', '')
+        horizon = p.get('horizon')
+        if data_date and stock_code and horizon:
+            key = f"{data_date}_{stock_code}"
+            grouped[key][horizon] = p
+
+    # 找出有三周期预测的记录，计算各模式统计
+    pattern_stats = defaultdict(lambda: {'total': 0, 'correct': 0, 'returns': []})
+
+    for key, horizons in grouped.items():
+        if 1 in horizons and 5 in horizons and 20 in horizons:
+            p1 = horizons[1]
+            p5 = horizons[5]
+            p20 = horizons[20]
+
+            # 只统计 20天已评估的
+            if p20.get('outcome') is None:
+                continue
+
+            # 编码模式：up=1, down=0
+            pattern = f"{'1' if p1.get('predicted_direction') == 'up' else '0'}{'1' if p5.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
+
+            pattern_stats[pattern]['total'] += 1
+            if p20.get('outcome') == 'correct':
+                pattern_stats[pattern]['correct'] += 1
+
+            ret = p20.get('actual_return')
+            if ret is not None:
+                pattern_stats[pattern]['returns'].append(ret)
+
+    # 计算准确率和平均收益
+    result = {}
+    for pattern, stats in pattern_stats.items():
+        total = stats['total']
+        correct = stats['correct']
+        returns = stats['returns']
+
+        result[pattern] = {
+            'total': total,
+            'correct': correct,
+            'win_rate': correct / total if total > 0 else 0,
+            'avg_return': sum(returns) / len(returns) if returns else 0
+        }
+
+    return result
+
+
 def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
     生成性能报告
@@ -528,7 +595,57 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
             report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
     else:
         report += "*暂无个股数据*\n"
-    
+
+    # 三周期模式统计
+    pattern_stats = calculate_three_horizon_pattern_stats(history)
+
+    # 模式名称映射（个股版本，参考 docs/THREE_HORIZON_ANALYSIS.md）
+    pattern_names = {
+        '010': '反弹失败⭐',
+        '000': '一致看跌',
+        '100': '冲高回落',
+        '001': '下跌中继',
+        '011': '探底回升',
+        '101': '假突破',
+        '110': '震荡回调',
+        '111': '一致看涨',
+    }
+
+    # 模式建议映射（个股版本）
+    pattern_actions = {
+        '010': '谨慎减仓',
+        '000': '止损/减仓',
+        '100': '获利了结',
+        '001': '谨慎观望',
+        '011': '分批建仓',
+        '101': '持有观望',
+        '110': '观望',
+        '111': '谨慎持有',
+    }
+
+    report += "\n---\n\n## 五、三周期模式验证\n\n"
+
+    if pattern_stats:
+        # 按准确率排序
+        sorted_patterns = sorted(pattern_stats.items(), key=lambda x: x[1]['win_rate'], reverse=True)
+
+        report += "| 排名 | 模式 | 名称 | 样本数 | 准确率 | 平均收益 | 建议 |\n"
+        report += "|------|------|------|--------|--------|----------|------|\n"
+
+        for i, (pattern, stats) in enumerate(sorted_patterns, 1):
+            name = pattern_names.get(pattern, '未知')
+            action = pattern_actions.get(pattern, '观望')
+            win_rate = stats['win_rate']
+            avg_return = stats['avg_return']
+            total = stats['total']
+
+            ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
+            report += f"| {i} | {pattern} | {name} | {total} | {win_rate:.1%} | {ret_str} | {action} |\n"
+
+        report += "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 数据来源于个股预测历史，实时计算\n"
+    else:
+        report += "*样本量不足，暂无统计数据*\n"
+
     # 计算3个月窗口的总预测数（用于风险提示）
     total_3m_predictions = sum(
         detail_horizon_metrics.get(h, {}).get('total_predictions', 0)
@@ -538,7 +655,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 五、风险提示
+## 六、风险提示
 
 1. **历史表现不代表未来收益**
 2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
@@ -548,7 +665,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 **报告生成**: 港股智能分析系统 - 预测性能监控模块
 """
-    
+
     return report
 
 
