@@ -468,10 +468,10 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         report += "| 板块 | 类型 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
         report += "|------|------|--------|--------|----------|----------|\n"
 
-        # 按准确率排序
+        # 按准确率、平均收益排序
         sorted_sectors = sorted(
             sector_results.items(),
-            key=lambda x: x[1].get('accuracy', 0),
+            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
             reverse=True
         )
 
