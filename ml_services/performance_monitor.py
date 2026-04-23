@@ -722,17 +722,17 @@ def send_email_report(report: str, subject: str) -> bool:
     # 转换 Markdown 为 HTML
     html_content = markdown.markdown(report, extensions=['tables'])
 
-    # 为准确率添加颜色样式：三色系统（与hsi_prediction.py一致）
+    # 为准确率添加颜色样式：三色系统
     def colorize_accuracy(percentage_str):
         """为准确率百分比添加颜色"""
         try:
             percentage = float(percentage_str)
             if percentage >= 60:
-                return f'<span style="color: #166534; font-weight: bold;">{percentage_str}%</span>'  # 深绿色
+                return f'<span style="color: #16a34a; font-weight: bold;">{percentage_str}%</span>'  # 亮绿色
             elif percentage >= 50:
-                return f'<span style="color: #92400e; font-weight: bold;">{percentage_str}%</span>'  # 橙色
+                return f'<span style="color: #ea580c; font-weight: bold;">{percentage_str}%</span>'  # 亮橙色
             else:
-                return f'<span style="color: #991b1b; font-weight: bold;">{percentage_str}%</span>'  # 红色
+                return f'<span style="color: #dc2626; font-weight: bold;">{percentage_str}%</span>'  # 亮红色
         except ValueError:
             return f'{percentage_str}%'
 
