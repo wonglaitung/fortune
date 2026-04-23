@@ -2237,6 +2237,7 @@ class HSI_Predictor:
     def _check_hsi_transmission_mode(self, data_date):
         """
         检查恒指传导模式：查看5个交易日前的预测验证情况
+        如果没有5个交易日前的预测，则显示当天的预测
 
         参数:
         - data_date: 当前报告日期
@@ -2249,12 +2250,12 @@ class HSI_Predictor:
         history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
 
         # 计算5个交易日前的日期
+        current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
+
         try:
             import akshare as ak
             df = ak.tool_trade_date_hist_sina()
             trading_dates = df['trade_date'].astype(str).tolist()
-
-            current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
 
             if current_date_str in trading_dates:
                 current_idx = trading_dates.index(current_date_str)
@@ -2286,7 +2287,7 @@ class HSI_Predictor:
 
             predictions = history.get('predictions', [])
 
-            # 查找该日期的1天、5天、20天预测
+            # 先查找5个交易日前的预测
             pred_1d = None
             pred_5d = None
             pred_20d = None
@@ -2301,18 +2302,24 @@ class HSI_Predictor:
                     elif h == 20:
                         pred_20d = pred
 
-            # 检查是否都存在
-            if not (pred_1d and pred_5d):
-                return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                        'pred_20d_correct': pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None,
-                        'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
-                        'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
-                        'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-                        'prediction_date': prediction_date}
+            # 如果5个交易日前没有预测，则查找当天的预测
+            use_current_date = False
+            if not (pred_1d and pred_5d and pred_20d):
+                for pred in predictions:
+                    if pred.get('data_date') == current_date_str:
+                        h = pred.get('horizon')
+                        if h == 1:
+                            pred_1d = pred
+                        elif h == 5:
+                            pred_5d = pred
+                        elif h == 20:
+                            pred_20d = pred
+                use_current_date = True
+                prediction_date = current_date_str
 
             # 检查outcome字段
-            pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d.get('outcome') else None
-            pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d.get('outcome') else None
+            pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d and pred_1d.get('outcome') else None
+            pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d and pred_5d.get('outcome') else None
             pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
 
             return {
@@ -2320,10 +2327,11 @@ class HSI_Predictor:
                 'pred_1d_correct': pred_1d_correct,
                 'pred_5d_correct': pred_5d_correct,
                 'pred_20d_correct': pred_20d_correct,
-                'pred_1d_direction': pred_1d.get('predicted_direction'),
-                'pred_5d_direction': pred_5d.get('predicted_direction'),
+                'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
+                'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
                 'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
-                'prediction_date': prediction_date
+                'prediction_date': prediction_date,
+                'is_current_prediction': use_current_date
             }
 
         except Exception as e:
