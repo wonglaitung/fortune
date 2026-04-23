@@ -603,9 +603,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
                         'metrics': metrics
                     })
 
-    # 按股票名称、周期、时间窗口排序
+    # 按股票代码、周期、时间窗口排序
     all_stock_data.sort(key=lambda x: (
-        x['stock_name'],                # 股票名称
+        x['stock'],                     # 股票代码
         x['horizon'],                   # 周期 (1, 5, 20)
         window_order.get(x['window'], 99)  # 时间窗口
     ))
