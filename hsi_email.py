@@ -6981,9 +6981,8 @@ class HSIEmailSystem:
 
         # 为准确率添加颜色样式：超过50%绿色，低于50%红色
         import re
-        def colorize_accuracy(match):
+        def colorize_accuracy(percentage_str):
             """为准确率百分比添加颜色"""
-            percentage_str = match.group(1)
             try:
                 percentage = float(percentage_str)
                 if percentage >= 50:
@@ -6991,8 +6990,10 @@ class HSIEmailSystem:
                 else:
                     return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
             except ValueError:
-                return match.group(0)
-        html = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html)
+                return f'{percentage_str}%'
+
+        # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
+        html = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html)
 
         recipient_env = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
         if ',' in recipient_env:
