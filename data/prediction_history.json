@@ -16867,10 +16867,10 @@
       "model_type": "catboost",
       "data_date": "2026-04-22",
       "target_date": "2026-04-23",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0042,
+      "actual_direction": "down",
+      "evaluated_at": "2026-04-23T09:27:13"
     },
     {
       "prediction_id": "2026-04-22_0012.HK_1d",
@@ -16962,10 +16962,10 @@
       "model_type": "catboost",
       "data_date": "2026-04-22",
       "target_date": "2026-04-23",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0,
+      "actual_direction": "up",
+      "evaluated_at": "2026-04-23T09:27:13"
     },
     {
       "prediction_id": "2026-04-22_0883.HK_1d",
@@ -17076,10 +17076,10 @@
       "model_type": "catboost",
       "data_date": "2026-04-22",
       "target_date": "2026-04-23",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0031,
+      "actual_direction": "up",
+      "evaluated_at": "2026-04-23T09:27:13"
     },
     {
       "prediction_id": "2026-04-22_1138.HK_1d",
@@ -17095,10 +17095,10 @@
       "model_type": "catboost",
       "data_date": "2026-04-22",
       "target_date": "2026-04-23",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0,
+      "actual_direction": "up",
+      "evaluated_at": "2026-04-23T09:27:13"
     },
     {
       "prediction_id": "2026-04-22_1288.HK_1d",
@@ -18395,7 +18395,7 @@
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-04-23T09:17:40",
+    "last_updated": "2026-04-23T09:27:15",
     "version": "1.0",
     "total_predictions": 968
   }
