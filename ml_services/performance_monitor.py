@@ -396,7 +396,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     for stock, preds in stock_metrics.items():
         stock_results[stock] = {
             **calculate_metrics(preds),
-            'stock_name': preds[0].get('stock_name', stock)
+            'stock_name': preds[0].get('stock_name', stock),
+            'sector': preds[0].get('sector', 'unknown')
         }
 
     # 生成报告
@@ -486,29 +487,35 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 个股表现 TOP 10（按准确率）
     if stock_results:
         report += "### 准确率 TOP 10\n\n"
-        report += "| 排名 | 股票代码 | 股票名称 | 预测数 | 准确率 | 平均收益 |\n"
-        report += "|------|----------|----------|--------|--------|----------|\n"
-        
+        report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
+        report += "|------|----------|----------|------|------|--------|--------|----------|\n"
+
         sorted_stocks = sorted(
             stock_results.items(),
             key=lambda x: x[1].get('accuracy', 0),
             reverse=True
         )[:10]
-        
+
         for i, (stock, metrics) in enumerate(sorted_stocks, 1):
-            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
-        
+            sector = metrics.get('sector', 'unknown')
+            sector_name = get_sector_name(sector)
+            sector_type = get_sector_type(sector)
+            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
+
         report += "\n### 准确率 BOTTOM 10\n\n"
-        report += "| 排名 | 股票代码 | 股票名称 | 预测数 | 准确率 | 平均收益 |\n"
-        report += "|------|----------|----------|--------|--------|----------|\n"
-        
+        report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
+        report += "|------|----------|----------|------|------|--------|--------|----------|\n"
+
         sorted_stocks_bottom = sorted(
             stock_results.items(),
             key=lambda x: x[1].get('accuracy', 0)
         )[:10]
-        
+
         for i, (stock, metrics) in enumerate(sorted_stocks_bottom, 1):
-            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
+            sector = metrics.get('sector', 'unknown')
+            sector_name = get_sector_name(sector)
+            sector_type = get_sector_type(sector)
+            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
     else:
         report += "*暂无个股数据*\n"
     
