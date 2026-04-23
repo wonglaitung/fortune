@@ -1782,7 +1782,7 @@ class HSI_Predictor:
             </div>
 """
 
-        content += """
+        content += f"""
         </div>
 
         <!-- 交易法则参考 -->
