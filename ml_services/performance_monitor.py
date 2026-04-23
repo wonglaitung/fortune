@@ -177,6 +177,12 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
 
         target_date_obj = datetime.strptime(target_date, '%Y-%m-%d')
 
+        # 检查目标日期是否已到达（不允许评估未来的预测）
+        # 使用交易日判断：如果目标日期在今天之后，跳过评估
+        if target_date_obj.date() > now.date():
+            stats['pending'] += 1
+            continue
+
         # 获取目标日期的收盘价（直接检查是否有价格数据）
         exit_price = fetch_price(pred['stock_code'], target_date)
         
