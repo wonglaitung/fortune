@@ -692,11 +692,11 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 def send_email_report(report: str, subject: str) -> bool:
     """
     发送报告邮件
-    
+
     参数:
     - report: Markdown 格式的报告内容
     - subject: 邮件主题
-    
+
     返回:
     - 是否发送成功
     """
@@ -704,19 +704,37 @@ def send_email_report(report: str, subject: str) -> bool:
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     import markdown
-    
+    import re
+
     smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
     smtp_user = os.environ.get("EMAIL_SENDER")
     smtp_pass = os.environ.get("EMAIL_PASSWORD")
     recipient = os.environ.get("RECIPIENT_EMAIL", "")
-    
+
     if not smtp_user or not smtp_pass:
         print("❌ 缺少邮件配置环境变量")
         return False
-    
+
     # 转换 Markdown 为 HTML
     html_content = markdown.markdown(report, extensions=['tables'])
-    
+
+    # 为准确率添加颜色样式：超过50%绿色，低于50%红色
+    def colorize_accuracy(match):
+        """为准确率百分比添加颜色"""
+        percentage_str = match.group(1)
+        try:
+            percentage = float(percentage_str)
+            if percentage >= 50:
+                return f'<span style="color: #28a745; font-weight: bold;">{percentage_str}%</span>'
+            else:
+                return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
+        except ValueError:
+            return match.group(0)
+
+    # 匹配表格中的百分比（格式：XX.XX% 或 100.00%）
+    # 只匹配表格单元格内的百分比，避免误匹配其他内容
+    html_content = re.sub(r'(\d+\.\d{2})%', colorize_accuracy, html_content)
+
     # 添加样式
     html_content = f"""
     <html>
@@ -728,6 +746,8 @@ def send_email_report(report: str, subject: str) -> bool:
         th {{ background-color: #4CAF50; color: white; }}
         tr:nth-child(even) {{ background-color: #f2f2f2; }}
         h1, h2 {{ color: #333; }}
+        .positive {{ color: #28a745; font-weight: bold; }}
+        .negative {{ color: #dc3545; font-weight: bold; }}
     </style>
     </head>
     <body>
