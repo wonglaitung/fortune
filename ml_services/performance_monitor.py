@@ -328,12 +328,13 @@ def get_sector_type(sector_code: str) -> str:
     return sector_types.get(sector_code, '-')
 
 
-def calculate_three_horizon_pattern_stats(history: Dict) -> Dict:
+def calculate_three_horizon_pattern_stats(history: Dict, start_date: Optional[str] = None) -> Dict:
     """
     从 prediction_history.json 实时计算三周期模式统计
 
     参数:
     - history: 预测历史数据
+    - start_date: 起始日期 (YYYY-MM-DD)，None 表示不限制
 
     返回:
     - dict: {模式: {total, correct, avg_return, win_rate}}
@@ -350,6 +351,11 @@ def calculate_three_horizon_pattern_stats(history: Dict) -> Dict:
         data_date = p.get('data_date', '')
         stock_code = p.get('stock_code', '')
         horizon = p.get('horizon')
+
+        # 时间范围过滤
+        if start_date and data_date < start_date:
+            continue
+
         if data_date and stock_code and horizon:
             key = f"{data_date}_{stock_code}"
             grouped[key][horizon] = p
@@ -596,8 +602,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     else:
         report += "*暂无个股数据*\n"
 
-    # 三周期模式统计
-    pattern_stats = calculate_three_horizon_pattern_stats(history)
+    # 三周期模式统计（3个月窗口）
+    pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
 
     # 模式名称映射（个股版本，参考 docs/THREE_HORIZON_ANALYSIS.md）
     pattern_names = {
@@ -623,7 +629,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         '111': '谨慎持有',
     }
 
-    report += "\n---\n\n## 五、三周期模式验证\n\n"
+    report += "\n---\n\n## 五、三周期模式验证（3个月窗口）\n\n"
 
     if pattern_stats:
         # 按准确率排序
@@ -642,9 +648,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
             ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
             report += f"| {i} | {pattern} | {name} | {total} | {win_rate:.1%} | {ret_str} | {action} |\n"
 
-        report += "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 数据来源于个股预测历史，实时计算\n"
+        report += "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 统计时间：3个月窗口\n"
     else:
-        report += "*样本量不足，暂无统计数据*\n"
+        report += "*样本量不足，暂无统计数据（需要同时有1天、5天、20天预测）*\n"
 
     # 计算3个月窗口的总预测数（用于风险提示）
     total_3m_predictions = sum(
