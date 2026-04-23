@@ -175,14 +175,13 @@ def format_transmission_display(transmission_info):
 
     display = " ".join(parts)
 
-    # 添加预测日期
-    date_prefix = f"[{prediction_date}] " if prediction_date else ""
-
     # 如果传导模式激活，添加标记
     if transmission_mode:
-        display = f"✅传导({date_prefix}{display})"
+        display = f"✅传导({display})"
+    elif display:
+        display = display
     else:
-        display = f"{date_prefix}{display}"
+        display = "-"
 
     return display if display else "-"
 
@@ -914,10 +913,19 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 加载风险回报率数据
                 risk_reward_data = load_risk_reward_data()
 
+                # 获取传导模式验证日期（取第一只股票的日期）
+                first_stock = df_catboost_sorted.iloc[0]['code'] if len(df_catboost_sorted) > 0 else None
+                transmission_date = None
+                if first_stock:
+                    first_transmission = check_transmission_mode(first_stock, date_str)
+                    transmission_date = first_transmission.get('prediction_date')
+
                 # 三周期预测表格（含筹码分布+风险回报率）
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
-                catboost_text_email += f"预测日期: {date_str}\n\n"
-                catboost_text_email += "全部股票预测结果（按20天概率排序）:\n\n"
+                catboost_text_email += f"预测日期: {date_str}\n"
+                if transmission_date:
+                    catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
+                catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
                 catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 |\n"
                 catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|\n"
 
@@ -938,35 +946,47 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred = three_horizon_results[stock_code]
                         preds = pred['predictions']
 
-                        # 1天预测（升绿色，跌红色）
+                        # 1天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
                         pred_1d = preds.get(1, {'direction': '-', 'probability': 0.5})
                         direction_1d = pred_1d['direction']
+                        prob_1d = pred_1d['probability']
                         if direction_1d == '升':
-                            p1d_str = f'<span style="color: green">升</span> {pred_1d["probability"]:.2f}'
+                            if prob_1d >= 0.60:
+                                p1d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_1d:.2f}'  # 亮绿色
+                            else:
+                                p1d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_1d:.2f}'  # 亮橙色
                         elif direction_1d == '跌':
-                            p1d_str = f'<span style="color: red">跌</span> {pred_1d["probability"]:.2f}'
+                            p1d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_1d:.2f}'  # 亮红色
                         else:
-                            p1d_str = f"{direction_1d} {pred_1d['probability']:.2f}"
+                            p1d_str = f"{direction_1d} {prob_1d:.2f}"
 
-                        # 5天预测（升绿色，跌红色）
+                        # 5天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
                         pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
                         direction_5d = pred_5d['direction']
+                        prob_5d = pred_5d['probability']
                         if direction_5d == '升':
-                            p5d_str = f'<span style="color: green">升</span> {pred_5d["probability"]:.2f}'
+                            if prob_5d >= 0.60:
+                                p5d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_5d:.2f}'  # 亮绿色
+                            else:
+                                p5d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_5d:.2f}'  # 亮橙色
                         elif direction_5d == '跌':
-                            p5d_str = f'<span style="color: red">跌</span> {pred_5d["probability"]:.2f}'
+                            p5d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_5d:.2f}'  # 亮红色
                         else:
-                            p5d_str = f"{direction_5d} {pred_5d['probability']:.2f}"
+                            p5d_str = f"{direction_5d} {prob_5d:.2f}"
 
-                        # 20天预测（升绿色，跌红色）
+                        # 20天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
                         direction_20d = pred_20d['direction']
+                        prob_20d = pred_20d['probability']
                         if direction_20d == '升':
-                            p20d_str = f'<span style="color: green">升</span> {pred_20d["probability"]:.2f}'
+                            if prob_20d >= 0.60:
+                                p20d_str = f'<span style="color: #16a34a; font-weight: bold;">升</span> {prob_20d:.2f}'  # 亮绿色
+                            else:
+                                p20d_str = f'<span style="color: #ea580c; font-weight: bold;">升</span> {prob_20d:.2f}'  # 亮橙色
                         elif direction_20d == '跌':
-                            p20d_str = f'<span style="color: red">跌</span> {pred_20d["probability"]:.2f}'
+                            p20d_str = f'<span style="color: #dc2626; font-weight: bold;">跌</span> {prob_20d:.2f}'  # 亮红色
                         else:
-                            p20d_str = f"{direction_20d} {pred_20d['probability']:.2f}"
+                            p20d_str = f"{direction_20d} {prob_20d:.2f}"
 
                         # 模式和交易建议
                         pattern = pred.get('pattern', '-')
@@ -1018,6 +1038,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {})
                     pattern_name = pattern_info.get('name', '未知')
                     catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
+
+                # 添加三色预测说明
+                catboost_text_email += f"\n**三周期预测颜色说明**：\n"
+                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">升</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
+                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">升</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
+                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">跌</span>（亮红色）：概率 < 50%，看跌\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
@@ -2531,22 +2557,31 @@ def generate_technical_indicators_table(stock_codes):
                 stock_name = WATCHLIST.get(stock_code, stock_code)
                 
                 # 格式化数据
-                price = safe_float_format(indicators['current_price'], '2f')
+                price = safe_float_format(indicators['current_price'], '.2f')
                 change = safe_float_format(indicators['change_pct'], '+.2f') + "%"
-                rsi = safe_float_format(indicators['rsi'], '2f')
-                macd = safe_float_format(indicators['macd'], '2f')
-                ma20 = safe_float_format(indicators['ma20'], '2f')
-                ma50 = safe_float_format(indicators['ma50'], '2f')
-                ma200 = safe_float_format(indicators['ma200'], '2f') if pd.notna(indicators['ma200']) else "N/A"
+                rsi = safe_float_format(indicators['rsi'], '.2f')
+                macd = safe_float_format(indicators['macd'], '.2f')
+                ma20 = safe_float_format(indicators['ma20'], '.2f')
+                ma50 = safe_float_format(indicators['ma50'], '.2f')
+                ma200 = safe_float_format(indicators['ma200'], '.2f') if pd.notna(indicators['ma200']) else "N/A"
                 ma_align = indicators['ma_alignment']
-                ma_slope = safe_float_format(indicators['ma_slope_20'], '2f')
-                ma_dev = safe_float_format(indicators['ma_deviation'], '2f') + "%"
-                bb_pos = safe_float_format(indicators['bb_position'], '1f') + "%"
-                atr = safe_float_format(indicators['atr'], '2f')
-                vol_ratio = safe_float_format(indicators['volume_ratio'], '2f') + "x"
+                ma_slope = safe_float_format(indicators['ma_slope_20'], '.2f')
+                ma_dev = safe_float_format(indicators['ma_deviation'], '.2f') + "%"
+
+                # 布林带位置三色系统：<30%绿色（超卖），30-70%橙色（正常），>70%红色（超买）
+                bb_value = indicators['bb_position']
+                if bb_value < 30:
+                    bb_pos = f'<span style="color: #16a34a; font-weight: bold;">{bb_value:.1f}%</span>'  # 亮绿色
+                elif bb_value > 70:
+                    bb_pos = f'<span style="color: #dc2626; font-weight: bold;">{bb_value:.1f}%</span>'  # 亮红色
+                else:
+                    bb_pos = f'<span style="color: #ea580c; font-weight: bold;">{bb_value:.1f}%</span>'  # 亮橙色
+
+                atr = safe_float_format(indicators['atr'], '.2f')
+                vol_ratio = safe_float_format(indicators['volume_ratio'], '.2f') + "x"
                 trend = indicators['trend']
-                support = f"{safe_float_format(indicators['support_level'], '2f')} ({safe_float_format(indicators['support_distance'], '2f')}%)"
-                resistance = f"{safe_float_format(indicators['resistance_level'], '2f')} ({safe_float_format(indicators['resistance_distance'], '2f')}%)"
+                support = f"{safe_float_format(indicators['support_level'], '.2f')} ({safe_float_format(indicators['support_distance'], '.2f')}%)"
+                resistance = f"{safe_float_format(indicators['resistance_level'], '.2f')} ({safe_float_format(indicators['resistance_distance'], '.2f')}%)"
                 
                 # 根据数值添加颜色标记（文本用括号标注）
                 if indicators['rsi'] > 70:
@@ -3021,7 +3056,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                 leader_items.append(f"{leader['name']}({leader['change_pct']:+.2f}%)")
                             leaders_text = " / ".join(leader_items)
 
-                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {sector_type} | {change_color}{safe_float_format(row['avg_change_pct'], '2f')}% | {leaders_text} |\n"
+                        sector_text += f"| {idx+1} | {trend_icon} {row['sector_name']} | {sector_type} | {change_color}{safe_float_format(row['avg_change_pct'], '.2f')}% | {leaders_text} |\n"
                     
                     # 添加投资建议（基于板块轮动规律）
                     sector_text += "\n**投资建议（基于板块轮动规律）**：\n\n"
