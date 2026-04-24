@@ -83,7 +83,7 @@ STOCK_SECTOR_MAPPING = {
 
     # 指数基金 (index)
     '2800.HK': {'sector': 'index', 'name': '盈富基金', 'type': 'index', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
-    '08288.HK': {'sector': 'index', 'name': '恒生中国企业', 'type': 'index', 'defensive': 75, 'growth': 45, 'cyclical': 35, 'liquidity': 85, 'risk': 30},
+    '2828.HK': {'sector': 'index', 'name': '恒生中国企业', 'type': 'index', 'defensive': 75, 'growth': 45, 'cyclical': 35, 'liquidity': 85, 'risk': 30},
 
     # 房地产股 (real_estate)
     '1109.HK': {'sector': 'real_estate', 'name': '华润置地', 'type': 'real_estate', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
@@ -172,7 +172,7 @@ TRAINING_STOCKS = {
     "02382.HK": "舜宇光学科技",
     "02866.HK": "中远海运港口",
     "02883.HK": "中海油服",
-    "08288.HK": "恒生中国企业",
+    "02828.HK": "恒生中国企业",
     "0960.HK": "龙源电力",
     "0966.HK": "中国人寿",
     "1024.HK": "快手-W",
