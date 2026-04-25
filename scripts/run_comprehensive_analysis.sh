@@ -81,7 +81,7 @@ echo "=========================================="
 echo "📊 步骤 2.5/5: 风险回报率分析（稳健型）"
 echo "=========================================="
 echo ""
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --output-json data/risk_reward_results.json --period 90
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --recent-bias 0.7 --output-json data/risk_reward_results.json --period 90
 if [ $? -ne 0 ]; then
     echo "⚠️ 风险回报率分析失败（继续执行）"
 else
