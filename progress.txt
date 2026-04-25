@@ -136,7 +136,7 @@ python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate 
 | 策略 | 5日收益 | 胜率 |
 |------|---------|------|
 | IF high → 减仓 | -3.04% | 43% |
-| Z-Score + 当日下跌 → 抄底 | **+4.12%** | **72%** |
+| 价格异常 + 当日下跌 → 抄底 | **+4.12%** | **72%** |
 
 ### 板块轮动
 

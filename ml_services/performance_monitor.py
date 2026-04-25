@@ -472,34 +472,6 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     for h, preds in detail_horizon_predictions.items():
         detail_horizon_metrics[h] = calculate_metrics(preds)
 
-    # 按板块分组（仅20天，3个月窗口）
-    sector_metrics = {}
-    for pred in detail_horizon_predictions[20]:
-        sector = pred.get('sector', 'unknown')
-        if sector not in sector_metrics:
-            sector_metrics[sector] = []
-        sector_metrics[sector].append(pred)
-
-    sector_results = {}
-    for sector, preds in sector_metrics.items():
-        sector_results[sector] = calculate_metrics(preds)
-
-    # 按股票分组（仅20天，3个月窗口）
-    stock_metrics = {}
-    for pred in detail_horizon_predictions[20]:
-        stock = pred.get('stock_code', 'unknown')
-        if stock not in stock_metrics:
-            stock_metrics[stock] = []
-        stock_metrics[stock].append(pred)
-
-    stock_results = {}
-    for stock, preds in stock_metrics.items():
-        stock_results[stock] = {
-            **calculate_metrics(preds),
-            'stock_name': preds[0].get('stock_name', stock),
-            'sector': preds[0].get('sector', 'unknown')
-        }
-
     # 生成报告
     report = f"""# 预测性能报告
 
@@ -525,82 +497,128 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 二、各周期详细表现（3个月窗口）
+## 二、板块表现
 
+| 板块 | 类型 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
+|------|------|------|----------|--------|--------|----------|----------|
 """
 
-    # 各周期详细表现
+    # 板块表现 - 收集所有数据后统一输出
+    all_sector_data = []
     for h in [1, 5, 20]:
-        m = detail_horizon_metrics.get(h, {})
-        if m:
-            report += f"""### {horizon_names[h]}预测
+        for days, window_name in TIME_WINDOWS:
+            # 筛选该周期和时间窗口的预测
+            window_start = now - timedelta(days=days)
+            window_start_str = window_start.strftime('%Y-%m-%d')
 
-| 指标 | 数值 |
-|------|------|
-| 总预测数 | {m.get('total_predictions', 0)} |
-| 正确预测数 | {m.get('correct_predictions', 0)} |
-| **准确率** | **{m.get('accuracy', 0):.2%}** |
-| 平均收益率 | {m.get('avg_return', 0):.2%} |
-| 收益率标准差 | {m.get('std_return', 0):.2%} |
-| 夏普比率 | {m.get('sharpe_ratio', 0):.4f} |
-| 买入胜率 | {m.get('buy_win_rate', 0):.2%} |
+            window_preds = [
+                p for p in history['predictions']
+                if p.get('horizon') == h
+                and p.get('outcome') is not None
+                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
+            ]
 
+            # 按板块分组
+            sector_preds = {}
+            for pred in window_preds:
+                sector = pred.get('sector', 'unknown')
+                if sector not in sector_preds:
+                    sector_preds[sector] = []
+                sector_preds[sector].append(pred)
+
+            if not sector_preds:
+                continue
+
+            # 计算板块指标
+            for sector, preds in sector_preds.items():
+                metrics = calculate_metrics(preds)
+                if metrics.get('total_predictions', 0) > 0:
+                    all_sector_data.append({
+                        'sector': sector,
+                        'horizon': h,
+                        'window': window_name,
+                        'metrics': metrics
+                    })
+
+    # 按板块、周期、时间窗口排序
+    # 时间窗口排序顺序
+    window_order = {'1个月': 1, '3个月': 2, '6个月': 3}
+    all_sector_data.sort(key=lambda x: (
+        get_sector_name(x['sector']),  # 板块名称
+        x['horizon'],                   # 周期 (1, 5, 20)
+        window_order.get(x['window'], 99)  # 时间窗口
+    ))
+
+    for item in all_sector_data:
+        sector_name = get_sector_name(item['sector'])
+        sector_type = get_sector_type(item['sector'])
+        m = item['metrics']
+        # 准确率加粗，便于后续颜色标记
+        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
+        report += f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+
+    report += """
+---
+
+## 三、个股表现
+
+| 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 |
+|----------|----------|------|------|----------|--------|--------|----------|
 """
-        else:
-            report += f"""### {horizon_names[h]}预测
 
-| 指标 | 数值 |
-|------|------|
-| 总预测数 | 0 |
-| 准确率 | - |
+    # 个股表现 - 收集所有数据后统一输出
+    all_stock_data = []
+    for h in [1, 5, 20]:
+        for days, window_name in TIME_WINDOWS:
+            # 筛选该周期和时间窗口的预测
+            window_start = now - timedelta(days=days)
+            window_start_str = window_start.strftime('%Y-%m-%d')
 
-"""
+            window_preds = [
+                p for p in history['predictions']
+                if p.get('horizon') == h
+                and p.get('outcome') is not None
+                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
+            ]
 
-    report += """---
+            # 按股票分组
+            stock_preds = {}
+            for pred in window_preds:
+                stock = pred.get('stock_code', 'unknown')
+                if stock not in stock_preds:
+                    stock_preds[stock] = []
+                stock_preds[stock].append(pred)
 
-## 三、板块表现（20天预测，3个月窗口）
+            if not stock_preds:
+                continue
 
-"""
+            # 计算个股指标
+            for stock, preds in stock_preds.items():
+                metrics = calculate_metrics(preds)
+                if metrics.get('total_predictions', 0) > 0:
+                    all_stock_data.append({
+                        'stock': stock,
+                        'stock_name': preds[0].get('stock_name', stock),
+                        'sector': preds[0].get('sector', 'unknown'),
+                        'horizon': h,
+                        'window': window_name,
+                        'metrics': metrics
+                    })
 
-    # 板块表现表格
-    if sector_results:
-        report += "| 板块 | 类型 | 预测数 | 准确率 | 平均收益 | 买入胜率 |\n"
-        report += "|------|------|--------|--------|----------|----------|\n"
+    # 按股票代码、周期、时间窗口排序
+    all_stock_data.sort(key=lambda x: (
+        x['stock'],                     # 股票代码
+        x['horizon'],                   # 周期 (1, 5, 20)
+        window_order.get(x['window'], 99)  # 时间窗口
+    ))
 
-        # 按准确率、平均收益排序
-        sorted_sectors = sorted(
-            sector_results.items(),
-            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
-            reverse=True
-        )
-
-        for sector, metrics in sorted_sectors:
-            sector_name = get_sector_name(sector)
-            sector_type = get_sector_type(sector)
-            report += f"| {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} | {metrics.get('buy_win_rate', 0):.2%} |\n"
-    else:
-        report += "*暂无板块数据*\n"
-
-    report += "\n---\n\n## 四、个股表现（20天预测，3个月窗口）\n\n"
-
-    # 个股表现（按准确率、平均收益排序）
-    if stock_results:
-        report += "| 排名 | 股票代码 | 股票名称 | 板块 | 类型 | 预测数 | 准确率 | 平均收益 |\n"
-        report += "|------|----------|----------|------|------|--------|--------|----------|\n"
-
-        sorted_stocks = sorted(
-            stock_results.items(),
-            key=lambda x: (x[1].get('accuracy', 0), x[1].get('avg_return', 0)),
-            reverse=True
-        )
-
-        for i, (stock, metrics) in enumerate(sorted_stocks, 1):
-            sector = metrics.get('sector', 'unknown')
-            sector_name = get_sector_name(sector)
-            sector_type = get_sector_type(sector)
-            report += f"| {i} | {stock} | {metrics.get('stock_name', stock)} | {sector_name} | {sector_type} | {metrics.get('total_predictions', 0)} | {metrics.get('accuracy', 0):.2%} | {metrics.get('avg_return', 0):.2%} |\n"
-    else:
-        report += "*暂无个股数据*\n"
+    # 显示所有股票
+    for item in all_stock_data:
+        sector_name = get_sector_name(item['sector'])
+        m = item['metrics']
+        # 准确率加粗，便于后续颜色标记
+        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
+        report += f"| {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} |\n"
 
     # 三周期模式统计（3个月窗口）
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
@@ -629,7 +647,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         '111': '谨慎持有',
     }
 
-    report += "\n---\n\n## 五、三周期模式验证（3个月窗口）\n\n"
+    report += "\n---\n\n## 四、三周期模式验证（3个月窗口）\n\n"
 
     if pattern_stats:
         # 按准确率排序
@@ -661,7 +679,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 六、风险提示
+## 五、风险提示
 
 1. **历史表现不代表未来收益**
 2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
@@ -678,11 +696,11 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 def send_email_report(report: str, subject: str) -> bool:
     """
     发送报告邮件
-    
+
     参数:
     - report: Markdown 格式的报告内容
     - subject: 邮件主题
-    
+
     返回:
     - 是否发送成功
     """
@@ -690,19 +708,36 @@ def send_email_report(report: str, subject: str) -> bool:
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     import markdown
-    
+    import re
+
     smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
     smtp_user = os.environ.get("EMAIL_SENDER")
     smtp_pass = os.environ.get("EMAIL_PASSWORD")
     recipient = os.environ.get("RECIPIENT_EMAIL", "")
-    
+
     if not smtp_user or not smtp_pass:
         print("❌ 缺少邮件配置环境变量")
         return False
-    
+
     # 转换 Markdown 为 HTML
     html_content = markdown.markdown(report, extensions=['tables'])
-    
+
+    # 为准确率添加颜色样式：超过50%绿色，低于50%红色
+    def colorize_accuracy(percentage_str):
+        """为准确率百分比添加颜色"""
+        try:
+            percentage = float(percentage_str)
+            if percentage >= 50:
+                return f'<span style="color: #28a745; font-weight: bold;">{percentage_str}%</span>'
+            else:
+                return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
+        except ValueError:
+            return f'{percentage_str}%'
+
+    # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
+    # Markdown加粗 **XX%** 转换为HTML后变成 <strong>XX%</strong> 或 <b>XX%</b>
+    html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
+
     # 添加样式
     html_content = f"""
     <html>
@@ -714,6 +749,8 @@ def send_email_report(report: str, subject: str) -> bool:
         th {{ background-color: #4CAF50; color: white; }}
         tr:nth-child(even) {{ background-color: #f2f2f2; }}
         h1, h2 {{ color: #333; }}
+        .positive {{ color: #28a745; font-weight: bold; }}
+        .negative {{ color: #dc3545; font-weight: bold; }}
     </style>
     </head>
     <body>
