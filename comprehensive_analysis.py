@@ -1084,16 +1084,18 @@ def generate_html_email(content, date_str):
     # 将Markdown转换为HTML
     html_content = md.convert(content)
 
-    # 为准确率添加颜色样式：超过50%绿色，低于50%红色
+    # 为准确率添加颜色样式：三色系统（与hsi_prediction.py一致）
     import re
     def colorize_accuracy(percentage_str):
         """为准确率百分比添加颜色"""
         try:
             percentage = float(percentage_str)
-            if percentage >= 50:
-                return f'<span style="color: #28a745; font-weight: bold;">{percentage_str}%</span>'
+            if percentage >= 60:
+                return f'<span style="color: #166534; font-weight: bold;">{percentage_str}%</span>'  # 深绿色
+            elif percentage >= 50:
+                return f'<span style="color: #92400e; font-weight: bold;">{percentage_str}%</span>'  # 橙色
             else:
-                return f'<span style="color: #dc3545; font-weight: bold;">{percentage_str}%</span>'
+                return f'<span style="color: #991b1b; font-weight: bold;">{percentage_str}%</span>'  # 红色
         except ValueError:
             return f'{percentage_str}%'
 
