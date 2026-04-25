@@ -2,11 +2,45 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-22
+**最后更新**：2026-04-23
 
 ---
 
-## 最新进展（2026-04-22）
+## 最新进展（2026-04-23）
+
+### 风险回报率分析器 - 近期指标权重优化
+
+**功能**：新增 `--recent-bias` 参数，让分析更关注近一个月表现
+
+**实现**：
+- 新增参数 `recent_bias`（0.0-1.0），控制近期/历史指标权重
+- 新增近期指标计算函数：
+  - `calculate_recent_max_drawdown()` - 20日最大回撤
+  - `calculate_recent_volatility()` - 20日波动率
+  - `calculate_recent_beta()` - 20日Beta
+- 风险评分：混合近期(20日)和历史指标
+- 回报评分：调整权重分配
+  - 近期表现：10% → 17%
+  - 价格分位数：8% → 10%（支持20日窗口）
+  - 夏普比率：10% → 5%
+  - 趋势评分：20% → 15%
+
+**使用方式**：
+```bash
+# 默认平衡（recent_bias=0.5）
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
+
+# 更关注近一个月（推荐）
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --recent-bias 0.7
+```
+
+**改动文件**：
+- `ml_services/risk_reward_analyzer.py`
+- `scripts/run_comprehensive_analysis.sh`（默认使用 --recent-bias 0.7）
+
+---
+
+## 历史进展（2026-04-22）
 
 ### 风险回报率分析器
 
@@ -30,7 +64,7 @@
 
 ---
 
-## 历史进展（2026-04-23）
+## 历史进展（2026-04-23，续）
 
 ### 恒指预测邮件增加三周期模式统计表格
 

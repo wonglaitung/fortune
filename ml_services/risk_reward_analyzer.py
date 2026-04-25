@@ -103,6 +103,28 @@ def calculate_max_drawdown(df: pd.DataFrame) -> float:
     return abs(max_dd) if not np.isnan(max_dd) else 0.0
 
 
+def calculate_recent_max_drawdown(df: pd.DataFrame, window: int = 20) -> float:
+    """
+    计算近期最大回撤
+
+    Args:
+        df: 包含Close列的DataFrame
+        window: 近期窗口（天数），默认20
+
+    Returns:
+        近期最大回撤值（正数）
+    """
+    if df.empty or len(df) < window:
+        return 0.0
+
+    recent_df = df.iloc[-window:].copy()
+    cumulative_max = recent_df['Close'].cummax()
+    drawdown = (recent_df['Close'] - cumulative_max) / cumulative_max
+    max_dd = drawdown.min()
+
+    return abs(max_dd) if not np.isnan(max_dd) else 0.0
+
+
 def calculate_volatility(df: pd.DataFrame, annualize: bool = True) -> float:
     """
     计算波动率
@@ -122,6 +144,32 @@ def calculate_volatility(df: pd.DataFrame, annualize: bool = True) -> float:
         return 0.0
 
     daily_std = daily_returns.std()
+
+    if annualize:
+        return daily_std * np.sqrt(252)
+    return daily_std
+
+
+def calculate_recent_volatility(df: pd.DataFrame, window: int = 20, annualize: bool = True) -> float:
+    """
+    计算近期波动率
+
+    Args:
+        df: 包含Close列的DataFrame
+        window: 近期窗口（天数），默认20
+        annualize: 是否年化，默认True
+
+    Returns:
+        近期波动率
+    """
+    if df.empty or len(df) < window:
+        return 0.0
+
+    recent_returns = df['Close'].iloc[-window:].pct_change().dropna()
+    if recent_returns.empty:
+        return 0.0
+
+    daily_std = recent_returns.std()
 
     if annualize:
         return daily_std * np.sqrt(252)
@@ -153,6 +201,45 @@ def calculate_beta(stock_df: pd.DataFrame, index_df: pd.DataFrame, window: int =
         window = len(aligned)
 
     if window < 10:
+        return 1.0
+
+    covariance = aligned.iloc[-window:, 0].cov(aligned.iloc[-window:, 1])
+    variance = aligned.iloc[-window:, 1].var()
+
+    if variance == 0 or np.isnan(variance):
+        return 1.0
+
+    beta = covariance / variance
+
+    # 限制在合理范围内
+    return max(-2.0, min(3.0, beta))
+
+
+def calculate_recent_beta(stock_df: pd.DataFrame, index_df: pd.DataFrame, window: int = 20) -> float:
+    """
+    计算近期Beta系数
+
+    Args:
+        stock_df: 股票价格DataFrame
+        index_df: 指数价格DataFrame
+        window: 近期窗口（天数），默认20
+
+    Returns:
+        近期Beta系数
+    """
+    if stock_df.empty or index_df.empty:
+        return 1.0
+
+    stock_returns = stock_df['Close'].pct_change().dropna()
+    index_returns = index_df['Close'].pct_change().dropna()
+
+    # 对齐日期
+    aligned = pd.concat([stock_returns, index_returns], axis=1).dropna()
+
+    if len(aligned) < window:
+        window = len(aligned)
+
+    if window < 5:  # 近期Beta可以用更短的窗口
         return 1.0
 
     covariance = aligned.iloc[-window:, 0].cov(aligned.iloc[-window:, 1])
@@ -571,17 +658,22 @@ def calculate_anomaly_score(df: pd.DataFrame) -> Tuple[float, List[str]]:
 class RiskRewardAnalyzer:
     """风险回报率分析器"""
 
-    def __init__(self, style: str = 'moderate', period_days: int = 90):
+    def __init__(self, style: str = 'moderate', period_days: int = 90, recent_bias: float = 0.5):
         """
         初始化分析器
 
         Args:
             style: 投资风格（conservative/moderate/aggressive）
             period_days: 分析周期（天数）
+            recent_bias: 近期指标权重（0.0-1.0）
+                0.0 = 完全使用历史数据
+                0.5 = 平衡近期和历史
+                1.0 = 完全使用近期数据（近20日）
         """
         self.style = style
         self.style_config = INVESTMENT_STYLES.get(style, INVESTMENT_STYLES['moderate'])
         self.period_days = period_days
+        self.recent_bias = max(0.0, min(1.0, recent_bias))  # 限制在0-1范围
         self.technical_analyzer = TechnicalAnalyzer()
         self.hsi_data = None
 
@@ -631,12 +723,17 @@ class RiskRewardAnalyzer:
             return {}
 
         metrics = {
+            # 历史指标
             'var_5d': calculate_var(df, confidence=0.95, window=5),
             'var_20d': calculate_var(df, confidence=0.95, window=20),
             'max_drawdown': calculate_max_drawdown(df),
             'volatility': calculate_volatility(df, annualize=True),
             'beta': calculate_beta(df, hsi_df, window=60) if hsi_df is not None else 1.0,
             'liquidity_score': calculate_liquidity_score(df, window=20),
+            # 近期指标（近20日）
+            'recent_max_drawdown': calculate_recent_max_drawdown(df, window=20),
+            'recent_volatility': calculate_recent_volatility(df, window=20, annualize=True),
+            'recent_beta': calculate_recent_beta(df, hsi_df, window=20) if hsi_df is not None else 1.0,
         }
 
         return metrics
@@ -664,7 +761,8 @@ class RiskRewardAnalyzer:
         sharpe_ratio = calculate_sharpe_ratio(df)
         tech_pattern_score, tech_pattern = calculate_technical_pattern_score(df)
         overbought_oversold_score = calculate_overbought_oversold_score(df)
-        price_percentile = calculate_price_percentile(df)
+        price_percentile = calculate_price_percentile(df)  # 90日窗口
+        price_percentile_recent = calculate_price_percentile(df, window=20)  # 20日窗口
         tech_signal_score, tech_signals = calculate_technical_signal_score(df)
         anomaly_score, anomalies = calculate_anomaly_score(df)
         recent_return, relative_return = calculate_recent_performance(df, hsi_df, days=20)
@@ -678,6 +776,7 @@ class RiskRewardAnalyzer:
             'tech_pattern': tech_pattern,
             'overbought_oversold_score': overbought_oversold_score,
             'price_percentile': price_percentile,
+            'price_percentile_recent': price_percentile_recent,  # 新增：近期价格分位数
             'tech_signal_score': tech_signal_score,
             'tech_signals': tech_signals,
             'anomaly_score': anomaly_score,
@@ -703,59 +802,79 @@ class RiskRewardAnalyzer:
         if not risk_metrics:
             return 50.0
 
-        score = 0.0
+        recent_bias = self.recent_bias
+        historical_bias = 1.0 - recent_bias
 
-        # VaR评分（VaR越低得分越高）
-        var_20d = risk_metrics.get('var_20d', 0.1)
-        if var_20d < 0.05:
-            score += 25
-        elif var_20d < 0.10:
-            score += 20
-        elif var_20d < 0.15:
-            score += 15
-        elif var_20d < 0.20:
-            score += 10
-        else:
-            score += 5
+        # ===== VaR评分（VaR越低得分越高）=====
+        def var_score(var_value):
+            if var_value < 0.05:
+                return 25
+            elif var_value < 0.10:
+                return 20
+            elif var_value < 0.15:
+                return 15
+            elif var_value < 0.20:
+                return 10
+            else:
+                return 5
 
-        # 最大回撤评分
-        max_dd = risk_metrics.get('max_drawdown', 0.3)
-        if max_dd < 0.10:
-            score += 25
-        elif max_dd < 0.20:
-            score += 20
-        elif max_dd < 0.30:
-            score += 15
-        elif max_dd < 0.40:
-            score += 10
-        else:
-            score += 5
+        var_20d_score = var_score(risk_metrics.get('var_20d', 0.1))
+        var_score_total = var_20d_score  # VaR本身已基于20日，无需混合
 
-        # 波动率评分
-        volatility = risk_metrics.get('volatility', 0.3)
-        if volatility < 0.20:
-            score += 20
-        elif volatility < 0.30:
-            score += 15
-        elif volatility < 0.40:
-            score += 10
-        else:
-            score += 5
+        # ===== 最大回撤评分 =====
+        def drawdown_score(dd_value):
+            if dd_value < 0.10:
+                return 25
+            elif dd_value < 0.20:
+                return 20
+            elif dd_value < 0.30:
+                return 15
+            elif dd_value < 0.40:
+                return 10
+            else:
+                return 5
 
-        # Beta评分（Beta越接近0越好，但适度暴露可以接受）
-        beta = abs(risk_metrics.get('beta', 1.0))
-        if beta < 0.5:
-            score += 15
-        elif beta < 1.0:
-            score += 12
-        elif beta < 1.5:
-            score += 8
-        else:
-            score += 5
+        historical_dd_score = drawdown_score(risk_metrics.get('max_drawdown', 0.3))
+        recent_dd_score = drawdown_score(risk_metrics.get('recent_max_drawdown', 0.3))
+        dd_score_total = recent_dd_score * recent_bias + historical_dd_score * historical_bias
 
-        # 流动性评分
+        # ===== 波动率评分 =====
+        def volatility_score(vol_value):
+            if vol_value < 0.20:
+                return 20
+            elif vol_value < 0.30:
+                return 15
+            elif vol_value < 0.40:
+                return 10
+            else:
+                return 5
+
+        historical_vol_score = volatility_score(risk_metrics.get('volatility', 0.3))
+        recent_vol_score = volatility_score(risk_metrics.get('recent_volatility', 0.3))
+        vol_score_total = recent_vol_score * recent_bias + historical_vol_score * historical_bias
+
+        # ===== Beta评分（Beta越接近0越好，但适度暴露可以接受）=====
+        def beta_score(beta_value):
+            beta_abs = abs(beta_value)
+            if beta_abs < 0.5:
+                return 15
+            elif beta_abs < 1.0:
+                return 12
+            elif beta_abs < 1.5:
+                return 8
+            else:
+                return 5
+
+        historical_beta_score = beta_score(risk_metrics.get('beta', 1.0))
+        recent_beta_score = beta_score(risk_metrics.get('recent_beta', 1.0))
+        beta_score_total = recent_beta_score * recent_bias + historical_beta_score * historical_bias
+
+        # ===== 流动性评分 =====
         liquidity = risk_metrics.get('liquidity_score', 50)
-        score += liquidity * 0.15
+        liquidity_score_total = liquidity * 0.15
+
+        # 综合评分
+        score = var_score_total + dd_score_total + vol_score_total + beta_score_total + liquidity_score_total
 
         return min(100, max(0, score))
 
@@ -772,15 +891,18 @@ class RiskRewardAnalyzer:
         if not return_metrics:
             return 50.0
 
+        recent_bias = self.recent_bias
+        historical_bias = 1.0 - recent_bias
+
         score = 0.0
 
-        # 趋势评分（权重20%）
-        score += return_metrics.get('trend_score', 50) * 0.20
+        # 趋势评分（权重降低至15%，从20%调整）
+        score += return_metrics.get('trend_score', 50) * 0.15
 
         # 动量评分（权重15%）
         score += return_metrics.get('momentum_score', 50) * 0.15
 
-        # 夏普比率评分（权重10%）
+        # 夏普比率评分（权重降低至5%，从10%调整）
         sharpe = return_metrics.get('sharpe_ratio', 0)
         if sharpe > 1.5:
             sharpe_score = 100
@@ -792,47 +914,56 @@ class RiskRewardAnalyzer:
             sharpe_score = 40
         else:
             sharpe_score = 20
-        score += sharpe_score * 0.10
+        score += sharpe_score * 0.05
 
-        # 技术形态评分（权重10%）
-        score += return_metrics.get('tech_pattern_score', 50) * 0.10
+        # 技术形态评分（权重降低至8%，从10%调整）
+        score += return_metrics.get('tech_pattern_score', 50) * 0.08
 
         # 超买超卖评分（权重15%）
         score += return_metrics.get('overbought_oversold_score', 50) * 0.15
 
-        # 近期表现评分（权重10%）
-        recent_return = return_metrics.get('recent_return_20d', 0)
-        if 2 <= recent_return <= 8:
-            recent_score = 80  # 适度涨幅
-        elif 0 <= recent_return < 2:
-            recent_score = 60  # 小幅上涨
-        elif 8 < recent_return <= 15:
-            recent_score = 50  # 涨幅较大，谨慎
-        elif recent_return > 15:
-            recent_score = 30  # 涨幅过大，风险
-        elif -5 <= recent_return < 0:
-            recent_score = 50  # 小幅回调
-        elif -15 <= recent_return < -5:
-            recent_score = 70  # 回调可能反弹
-        else:
-            recent_score = 40  # 大跌
-        score += recent_score * 0.10
+        # 近期表现评分（权重提升至17%，从10%调整）
+        def recent_performance_score(recent_return):
+            if 2 <= recent_return <= 8:
+                return 80  # 适度涨幅
+            elif 0 <= recent_return < 2:
+                return 60  # 小幅上涨
+            elif 8 < recent_return <= 15:
+                return 50  # 涨幅较大，谨慎
+            elif recent_return > 15:
+                return 30  # 涨幅过大，风险
+            elif -5 <= recent_return < 0:
+                return 50  # 小幅回调
+            elif -15 <= recent_return < -5:
+                return 70  # 回调可能反弹
+            else:
+                return 40  # 大跌
 
-        # 价格分位数评分（权重8%）
-        percentile = return_metrics.get('price_percentile', 50)
-        if 30 <= percentile <= 70:
-            percentile_score = 80
-        elif 20 <= percentile < 30 or 70 < percentile <= 80:
-            percentile_score = 60
-        else:
-            percentile_score = 40
-        score += percentile_score * 0.08
+        recent_20d_score = recent_performance_score(return_metrics.get('recent_return_20d', 0))
+        recent_5d_score = recent_performance_score(return_metrics.get('recent_return_5d', 0))
+        # 混合5日和20日表现，近期偏向5日
+        recent_score = recent_5d_score * recent_bias + recent_20d_score * historical_bias
+        score += recent_score * 0.17
+
+        # 价格分位数评分（权重提升至10%，从8%调整，混合近期和历史）
+        def percentile_score(percentile):
+            if 30 <= percentile <= 70:
+                return 80
+            elif 20 <= percentile < 30 or 70 < percentile <= 80:
+                return 60
+            else:
+                return 40
+
+        historical_percentile_score = percentile_score(return_metrics.get('price_percentile', 50))
+        recent_percentile_score = percentile_score(return_metrics.get('price_percentile_recent', 50))
+        mixed_percentile_score = recent_percentile_score * recent_bias + historical_percentile_score * historical_bias
+        score += mixed_percentile_score * 0.10
 
         # 技术信号评分（权重8%）
         score += return_metrics.get('tech_signal_score', 50) * 0.08
 
-        # 异常状态评分（权重4%）
-        score += return_metrics.get('anomaly_score', 100) * 0.04
+        # 异常状态评分（权重5%，略微提升）
+        score += return_metrics.get('anomaly_score', 100) * 0.05
 
         return min(100, max(0, score))
 
@@ -1143,6 +1274,8 @@ def main():
                         help='输出目录')
     parser.add_argument('--output-json', type=str, default=None,
                         help='JSON输出文件路径（用于其他脚本调用）')
+    parser.add_argument('--recent-bias', type=float, default=0.5,
+                        help='近期指标权重(0.0-1.0)，0.5=平衡近期和历史，0.7=偏向近20日')
 
     args = parser.parse_args()
 
@@ -1165,7 +1298,7 @@ def main():
                 stock_list[code] = code
 
     # 创建分析器并执行分析
-    analyzer = RiskRewardAnalyzer(style=args.style, period_days=args.period)
+    analyzer = RiskRewardAnalyzer(style=args.style, period_days=args.period, recent_bias=args.recent_bias)
     results = analyzer.analyze_stocks(stock_list)
 
     # 生成报告
