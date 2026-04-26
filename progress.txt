@@ -2,11 +2,60 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-23
+**最后更新**：2026-04-26
 
 ---
 
-## 最新进展（2026-04-23）
+## 最新进展（2026-04-26）
+
+### 数据挖掘增强 - Tier 1 全部实施
+
+**目标**：扩展特征工程，提升模型预测能力
+
+**新增模块**：
+
+1. **日历效应特征** (`data_services/calendar_features.py`)
+   - 22 个特征：星期效应、月份效应、期权到期日、月初/月末、季末、长假前后、台风季
+   - 周期性编码（Month_Sin/Cos, DOW_Sin/Cos）避免离散跳跃
+
+2. **GARCH 波动率建模** (`data_services/volatility_model.py`)
+   - 4 个特征：条件波动率、波动率比率、5日变化率、持续性参数
+   - 波动率持续性 ~0.97（符合港股特点）
+
+3. **市场状态检测** (`data_services/regime_detector.py`)
+   - 基于 HMM 识别 3 种状态：震荡(0)、上涨(1)、下跌(2)
+   - 6 个特征：状态标签、各状态概率、持续时间、转换概率
+   - 状态特异性分析：震荡市看重波动率，上涨市看重MA20，下跌市看重MACD
+
+4. **SHAP 动态特征选择** (`ml_services/feature_selector.py`)
+   - 全局特征重要性分析
+   - 按市场状态分组的重要性差异
+   - 动态特征子集选择
+
+**效果验证**：
+- 特征数量：73 → 105（+32）
+- Walk-forward 准确率：54.59% → 60.11%（+5.52%）
+- SHAP 分析显示新特征贡献：
+  - `Days_to_Holiday` 排名第3（重要性 6.76）
+  - `Regime_Duration` 排名第13（2.49）
+  - `GARCH_Vol_Ratio` 排名第18（1.48）
+
+**新增依赖**：
+```
+pip install hmmlearn arch shap
+```
+
+**改动文件**：
+- 新增：`data_services/calendar_features.py`
+- 新增：`data_services/volatility_model.py`
+- 新增：`data_services/regime_detector.py`
+- 新增：`ml_services/hsi_feature_selection.py`
+- 修改：`ml_services/hsi_ml_model.py`（集成新特征）
+- 修改：`ml_services/hsi_walk_forward.py`（集成新特征）
+
+---
+
+## 历史进展（2026-04-23）
 
 ### 风险回报率分析器 - 近期指标权重优化
 
