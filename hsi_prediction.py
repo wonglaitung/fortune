@@ -1559,11 +1559,13 @@ class HSI_Predictor:
 
             # 传导模式显示
             prediction_date = transmission_info.get('prediction_date', '')
+            is_current = transmission_info.get('is_current_prediction', False)
+            date_label = "今日预测" if is_current else f"5个交易日前（{prediction_date}）的预测"
             content += f"""
             <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if transmission_info.get('transmission_mode') else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if transmission_info.get('transmission_mode') else '#6b7280'};">
                 <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证</h4>
                 <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-                    5个交易日前（{prediction_date}）的预测验证情况：
+                    {date_label}验证情况：
                 </div>
                 <div style="font-size: 14px; font-weight: 600; color: {'#166534' if transmission_info.get('transmission_mode') else '#374151'};">
                     {transmission_display}
@@ -1745,11 +1747,11 @@ class HSI_Predictor:
 
                 # 颜色
                 if win_rate >= 0.6:
-                    rate_color = '#166534'
+                    rate_color = '#16a34a'  # 亮绿色
                 elif win_rate >= 0.5:
-                    rate_color = '#92400e'
+                    rate_color = '#ea580c'  # 亮橙色
                 else:
-                    rate_color = '#991b1b'
+                    rate_color = '#dc2626'  # 亮红色
 
                 ret_color = '#22c55e' if avg_return >= 0 else '#dc2626'
                 ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
@@ -1780,7 +1782,7 @@ class HSI_Predictor:
             </div>
 """
 
-        content += """
+        content += f"""
         </div>
 
         <!-- 交易法则参考 -->
