@@ -30,6 +30,10 @@ import yfinance as yf
 
 # 导入南向资金服务
 from data_services.southbound_data import SouthboundDataService
+# 导入新增特征模块
+from data_services.calendar_features import CalendarFeatureCalculator, CALENDAR_FEATURE_CONFIG
+from data_services.volatility_model import GARCHVolatilityModel, GARCH_FEATURE_CONFIG
+from data_services.regime_detector import RegimeDetector, REGIME_FEATURE_CONFIG
 
 # ========== 配置 ==========
 HSI_SYMBOL = "^HSI"
@@ -62,7 +66,13 @@ FEATURE_CONFIG = {
                            '5d_RS_Signal_MA250', '3d_RS_Signal_MA250'],
     'trend_features': ['60d_Trend_MA250', '20d_Trend_MA250', '10d_Trend_MA250',
                        '5d_Trend_MA250', '3d_Trend_MA250', '60d_Trend_Volume_MA250',
-                       '20d_Trend_Volume_MA250', '60d_Trend_MA120', '20d_RS_Signal_Volume_MA250']
+                       '20d_Trend_Volume_MA250', '60d_Trend_MA120', '20d_RS_Signal_Volume_MA250'],
+    # 日历效应（2026-04-26 新增）
+    'calendar_features': CALENDAR_FEATURE_CONFIG['calendar_features'],
+    # GARCH 波动率（2026-04-26 新增）
+    'garch_features': GARCH_FEATURE_CONFIG['garch_features'],
+    # 市场状态检测（2026-04-26 新增）
+    'regime_features': REGIME_FEATURE_CONFIG['regime_features']
 }
 
 
@@ -283,6 +293,18 @@ class HSIWalkForwardValidator:
         df['Southbound_Net_Inflow'] = 0
         df['Southbound_Net_Buy'] = 0
 
+        # ========== 日历效应特征（2026-04-26 新增）==========
+        calendar_calc = CalendarFeatureCalculator()
+        df = calendar_calc.calculate_features(df)
+
+        # ========== GARCH 波动率特征（2026-04-26 新增）==========
+        garch_model = GARCHVolatilityModel()
+        df = garch_model.calculate_features(df)
+
+        # ========== 市场状态检测（HMM，2026-04-26 新增）==========
+        regime_detector = RegimeDetector()
+        df = regime_detector.calculate_features(df)
+
         return df
 
     def create_target(self, df):
@@ -302,6 +324,10 @@ class HSIWalkForwardValidator:
         print("🔧 正在计算特征...")
         df = self.calculate_features(hsi_df, us_df, vix_df)
         df = self.create_target(df)
+
+        # 确保索引无时区信息（日历特征模块会移除时区，需统一）
+        if hasattr(df.index, 'tz') and df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
 
         # 筛选日期范围
         df = df[(df.index >= start_date) & (df.index <= end_date)]
@@ -346,12 +372,12 @@ class HSIWalkForwardValidator:
             train_months = all_months[train_start_idx:train_end_idx]
             test_months = all_months[test_start_idx:test_end_idx]
 
-            train_start = pd.to_datetime(train_months[0] + '-01').tz_localize('UTC')
+            train_start = pd.to_datetime(train_months[0] + '-01')
             train_end = (pd.to_datetime(train_months[-1] + '-01') +
-                        pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
-            test_start = pd.to_datetime(test_months[0] + '-01').tz_localize('UTC')
+                        pd.DateOffset(months=1) - pd.DateOffset(days=1))
+            test_start = pd.to_datetime(test_months[0] + '-01')
             test_end = (pd.to_datetime(test_months[-1] + '-01') +
-                       pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
+                       pd.DateOffset(months=1) - pd.DateOffset(days=1))
 
             print(f"训练期间: {train_start.strftime('%Y-%m-%d')} ~ {train_end.strftime('%Y-%m-%d')}")
             print(f"测试期间: {test_start.strftime('%Y-%m-%d')} ~ {test_end.strftime('%Y-%m-%d')}")
