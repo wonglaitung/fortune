@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-三周期预测关系分析
+三周期预测关系分析（增强版）
+
+集成新增特征：日历效应、GARCH波动率、市场状态检测
 
 分析1天、5天、20天三个预测周期之间的：
 1. 时间序列关系（先后顺序）
 2. 因果关系（一个周期预测如何影响其他周期）
 3. 规律模式（一致性、传导性、均值回归等）
+
+更新时间：2026-04-26
 """
 
 import warnings
 import os
+import sys
 import json
 from datetime import datetime, timedelta
 import pandas as pd
@@ -18,17 +23,29 @@ import numpy as np
 import yfinance as yf
 from catboost import CatBoostClassifier
 
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 导入新增特征模块
+from data_services.calendar_features import CalendarFeatureCalculator
+from data_services.volatility_model import GARCHVolatilityModel
+from data_services.regime_detector import RegimeDetector
+
 warnings.filterwarnings('ignore')
 RANDOM_SEED = 42
 
+OUTPUT_DIR = "output"
+
 
 def fetch_and_prepare_data():
-    """获取数据并准备三周期预测"""
+    """获取数据并准备三周期预测（集成新特征）"""
     print("📊 正在获取数据...")
     hsi = yf.Ticker("^HSI")
-    df = hsi.history(period="max", interval="1d")
+    df = hsi.history(period="5y", interval="1d")
 
-    # 计算特征
+    print(f"  原始数据: {len(df)} 条")
+
+    # ========== 基础技术指标 ==========
     for window in [20, 60, 120, 250]:
         df[f'MA{window}'] = df['Close'].rolling(window=window).mean()
 
@@ -36,13 +53,36 @@ def fetch_and_prepare_data():
     df['Return_5d'] = df['Close'].pct_change(5).shift(1)
     df['Return_20d'] = df['Close'].pct_change(20).shift(1)
     df['Volatility_20d'] = df['Return_1d'].rolling(window=20).std()
-    df['RSI'] = df['Close'].rolling(14).apply(
-        lambda x: 100 - (100 / (1 + (x.diff().clip(lower=0).mean() / x.diff().clip(upper=0).abs().mean())))
-    ).shift(1)
+    df['Volatility_60d'] = df['Return_1d'].rolling(window=60).std()
 
-    # 获取宏观数据
-    us_df = yf.Ticker("^TNX").history(period="max", interval="1d")
-    vix_df = yf.Ticker("^VIX").history(period="max", interval="1d")
+    # RSI
+    delta = df['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / (loss + 1e-10)
+    df['RSI'] = (100 - (100 / (1 + rs))).shift(1)
+
+    # MACD
+    ema12 = df['Close'].ewm(span=12, adjust=False).mean()
+    ema26 = df['Close'].ewm(span=26, adjust=False).mean()
+    df['MACD'] = (ema12 - ema26).shift(1)
+    df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+    df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+
+    # 布林带
+    df['BB_Middle'] = df['Close'].rolling(window=20).mean()
+    bb_std = df['Close'].rolling(window=20).std()
+    df['BB_Width'] = (df['BB_Middle'] + 2 * bb_std - (df['BB_Middle'] - 2 * bb_std)) / df['BB_Middle']
+
+    # 趋势强度
+    df['MA250_Slope'] = df['MA250'].diff()
+    df['MA_Bullish_Alignment'] = ((df['MA20'] > df['MA60']) & (df['MA60'] > df['MA250'])).astype(int)
+    df['MA_Bearish_Alignment'] = ((df['MA20'] < df['MA60']) & (df['MA60'] < df['MA250'])).astype(int)
+
+    # ========== 宏观数据 ==========
+    print("  获取宏观数据...")
+    us_df = yf.Ticker("^TNX").history(period="5y", interval="1d")
+    vix_df = yf.Ticker("^VIX").history(period="5y", interval="1d")
 
     if not us_df.empty:
         us_aligned = us_df.reindex(df.index, method='ffill')
@@ -51,11 +91,39 @@ def fetch_and_prepare_data():
         vix_aligned = vix_df.reindex(df.index, method='ffill')
         df['VIX'] = vix_aligned['Close']
 
-    # 筛选2020-2024年
-    df = df[(df.index >= '2020-01-01') & (df.index <= '2024-12-31')]
-    df = df.iloc[:-20]  # 预留未来数据
+    # ========== 新增特征：日历效应 ==========
+    print("  计算日历效应特征...")
+    calendar_calc = CalendarFeatureCalculator()
+    df = calendar_calc.calculate_features(df)
+
+    # ========== 新增特征：GARCH 波动率 ==========
+    print("  计算 GARCH 波动率特征...")
+    garch_model = GARCHVolatilityModel()
+    df = garch_model.calculate_features(df)
+
+    # ========== 新增特征：市场状态检测 ==========
+    print("  计算市场状态特征...")
+    regime_detector = RegimeDetector()
+    df = regime_detector.calculate_features(df)
+
+    print(f"  ✅ 特征计算完成: {len(df.columns)} 列")
 
     return df
+
+
+def get_feature_list():
+    """获取特征列表（基础 + 新增）"""
+    features = [
+        # 基础技术指标
+        'MA20', 'MA60', 'MA120', 'MA250',
+        'Return_1d', 'Return_5d', 'Return_20d',
+        'Volatility_20d', 'Volatility_60d',
+        'RSI', 'MACD', 'MACD_Signal', 'MACD_Hist', 'BB_Width',
+        'MA250_Slope', 'MA_Bullish_Alignment', 'MA_Bearish_Alignment',
+        # 宏观因子
+        'US_10Y_Yield', 'VIX',
+    ]
+    return features
 
 
 def run_walkforward_predictions(df):
@@ -63,13 +131,26 @@ def run_walkforward_predictions(df):
     print("\n🔬 运行Walk-forward预测...")
 
     horizons = [1, 5, 20]
-    features = ['MA20', 'MA60', 'MA120', 'MA250',
-                'Return_1d', 'Return_5d', 'Return_20d',
-                'Volatility_20d', 'RSI']
-    if 'US_10Y_Yield' in df.columns:
-        features.extend(['US_10Y_Yield', 'VIX'])
 
-    available_features = [f for f in features if f in df.columns]
+    # 基础特征 + 新增特征
+    base_features = get_feature_list()
+
+    # 新增特征（日历、GARCH、Regime）
+    new_features = [
+        # 日历效应（选取重要特征）
+        'Day_of_Week', 'Month_of_Year', 'Days_to_Options_Expiry',
+        'Days_to_Holiday', 'Is_Pre_Holiday', 'Is_Typhoon_Season',
+        'Month_Sin', 'Month_Cos',
+        # GARCH
+        'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio',
+        # 市场状态
+        'Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1', 'Regime_Prob_2',
+    ]
+
+    all_features = base_features + new_features
+    available_features = [f for f in all_features if f in df.columns]
+
+    print(f"  可用特征数: {len(available_features)}")
 
     # 创建目标
     for h in horizons:
@@ -81,6 +162,8 @@ def run_walkforward_predictions(df):
     step_days = 5
     total_days = len(df)
     num_folds = (total_days - train_days) // step_days
+
+    print(f"  总样本: {total_days}, Fold数: {num_folds}")
 
     all_predictions = {h: [] for h in horizons}
 
@@ -97,10 +180,11 @@ def run_walkforward_predictions(df):
         test_df = df.iloc[test_start:test_end]
 
         for horizon in horizons:
-            train_clean = train_df[available_features + [f'Target_{horizon}d', f'Future_Return_{horizon}d', 'Close']].dropna()
-            test_clean = test_df[available_features + [f'Target_{horizon}d', f'Future_Return_{horizon}d', 'Close']].dropna()
+            cols_needed = available_features + [f'Target_{horizon}d', f'Future_Return_{horizon}d', 'Close']
+            train_clean = train_df[cols_needed].dropna()
+            test_clean = test_df[cols_needed].dropna()
 
-            if len(train_clean) < 30 or len(test_clean) < 1:
+            if len(train_clean) < 50 or len(test_clean) < 1:
                 continue
 
             X_train = train_clean[available_features]
@@ -126,17 +210,18 @@ def run_walkforward_predictions(df):
                         'actual_return': row[f'Future_Return_{horizon}d'],
                         'close': row['Close']
                     })
-            except:
+            except Exception as e:
                 continue
+
+        if (fold + 1) % 50 == 0:
+            print(f"  已完成 {fold + 1}/{num_folds} folds...")
 
     return all_predictions
 
 
-def analyze_temporal_relationships(all_predictions):
-    """分析时间关系"""
-    print("\n" + "=" * 80)
-    print("⏰ 一、时间关系分析")
-    print("=" * 80)
+def analyze_and_save_results(all_predictions):
+    """分析结果并保存到JSON"""
+    print("\n📊 分析结果...")
 
     # 构建DataFrame
     df_1d = pd.DataFrame(all_predictions[1])
@@ -144,43 +229,17 @@ def analyze_temporal_relationships(all_predictions):
     df_20d = pd.DataFrame(all_predictions[20])
 
     if len(df_1d) == 0 or len(df_5d) == 0 or len(df_20d) == 0:
-        print("数据不足")
-        return
+        print("❌ 数据不足，无法分析")
+        return None
 
     df_1d.set_index('date', inplace=True)
     df_5d.set_index('date', inplace=True)
     df_20d.set_index('date', inplace=True)
 
-    print("\n1. 时间范围关系")
-    print(f"   1天预测覆盖: {df_1d.index[0].strftime('%Y-%m-%d')} ~ {df_1d.index[-1].strftime('%Y-%m-%d')}")
-    print(f"   5天预测覆盖: {df_5d.index[0].strftime('%Y-%m-%d')} ~ {df_5d.index[-1].strftime('%Y-%m-%d')}")
-    print(f"   20天预测覆盖: {df_20d.index[0].strftime('%Y-%m-%d')} ~ {df_20d.index[-1].strftime('%Y-%m-%d')}")
-
-    print("\n2. 持有期重叠分析")
-    print("   假设第T日发出预测:")
-    print("   - 1天周期: 预测 T+1 日涨跌, 持有期 [T, T+1]")
-    print("   - 5天周期: 预测 T+5 日涨跌, 持有期 [T, T+5]")
-    print("   - 20天周期: 预测 T+20 日涨跌, 持有期 [T, T+20]")
-    print("\n   时间重叠:")
-    print("   - 1天与5天: [T, T+1] 完全包含于 [T, T+5] (前20%)")
-    print("   - 1天与20天: [T, T+1] 完全包含于 [T, T+20] (前5%)")
-    print("   - 5天与20天: [T, T+5] 完全包含于 [T, T+20] (前25%)")
-
-    return df_1d, df_5d, df_20d
-
-
-def analyze_causal_relationships(df_1d, df_5d, df_20d):
-    """分析因果关系"""
-    print("\n" + "=" * 80)
-    print("🔗 二、因果关系分析")
-    print("=" * 80)
-
     # 对齐数据
     common_dates = df_1d.index.intersection(df_5d.index).intersection(df_20d.index)
+    print(f"  共同样本数: {len(common_dates)}")
 
-    print(f"\n共同样本数: {len(common_dates)}")
-
-    # 提取预测和实际
     pred_1d = df_1d.loc[common_dates, 'prediction']
     pred_5d = df_5d.loc[common_dates, 'prediction']
     pred_20d = df_20d.loc[common_dates, 'prediction']
@@ -189,218 +248,171 @@ def analyze_causal_relationships(df_1d, df_5d, df_20d):
     actual_5d = df_5d.loc[common_dates, 'actual_direction']
     actual_20d = df_20d.loc[common_dates, 'actual_direction']
 
-    print("\n1. 预测方向的领先-滞后关系")
+    # ========== 1. 独立准确率 ==========
+    results = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'model_type': 'enhanced (with calendar/GARCH/regime features)',
+        'total_samples': len(common_dates),
+        'independent_accuracy': {
+            '1d': {
+                'accuracy': float((pred_1d == actual_1d).mean()),
+                'samples': len(common_dates)
+            },
+            '5d': {
+                'accuracy': float((pred_5d == actual_5d).mean()),
+                'samples': len(common_dates)
+            },
+            '20d': {
+                'accuracy': float((pred_20d == actual_20d).mean()),
+                'samples': len(common_dates)
+            }
+        }
+    }
 
-    # 分析：1天预测准确时，5天和20天的表现
+    # ========== 2. 因果分析 ==========
     correct_1d = actual_1d == pred_1d
-    print(f"\n   当1天预测正确时 (n={correct_1d.sum()}):")
-    print(f"   - 5天预测准确率: {(pred_5d[correct_1d] == actual_5d[correct_1d]).mean()*100:.2f}%")
-    print(f"   - 20天预测准确率: {(pred_20d[correct_1d] == actual_20d[correct_1d]).mean()*100:.2f}%")
-
-    incorrect_1d = ~correct_1d
-    print(f"\n   当1天预测错误时 (n={incorrect_1d.sum()}):")
-    print(f"   - 5天预测准确率: {(pred_5d[incorrect_1d] == actual_5d[incorrect_1d]).mean()*100:.2f}%")
-    print(f"   - 20天预测准确率: {(pred_20d[incorrect_1d] == actual_20d[incorrect_1d]).mean()*100:.2f}%")
-
-    # 分析：5天预测准确时
     correct_5d = actual_5d == pred_5d
-    print(f"\n   当5天预测正确时 (n={correct_5d.sum()}):")
-    print(f"   - 20天预测准确率: {(pred_20d[correct_5d] == actual_20d[correct_5d]).mean()*100:.2f}%")
 
-    print("\n2. 信号传导分析")
+    results['causal_analysis'] = {
+        '1d_correct_then_20d_accuracy': float((pred_20d[correct_1d] == actual_20d[correct_1d]).mean()) if correct_1d.sum() > 0 else 0,
+        '1d_wrong_then_20d_accuracy': float((pred_20d[~correct_1d] == actual_20d[~correct_1d]).mean()) if (~correct_1d).sum() > 0 else 0,
+        '5d_correct_then_20d_accuracy': float((pred_20d[correct_5d] == actual_20d[correct_5d]).mean()) if correct_5d.sum() > 0 else 0,
+        '1d_5d_correct_then_20d_accuracy': float((pred_20d[correct_1d & correct_5d] == actual_20d[correct_1d & correct_5d]).mean()) if (correct_1d & correct_5d).sum() > 0 else 0,
+    }
 
-    # 三周期一致时的后续表现
-    consensus_bull = (pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)
-    consensus_bear = (pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)
+    # ========== 3. 八大模式分析 ==========
+    patterns = {
+        '111': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)),
+        '110': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 0)),
+        '101': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 1)),
+        '100': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 0)),
+        '011': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 1)),
+        '010': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 0)),
+        '001': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 1)),
+        '000': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)),
+    }
 
-    print(f"\n   一致看涨后 (n={consensus_bull.sum()}):")
-    print(f"   - 1天实际上涨率: {actual_1d[consensus_bull].mean()*100:.2f}%")
-    print(f"   - 5天实际上涨率: {actual_5d[consensus_bull].mean()*100:.2f}%")
-    print(f"   - 20天实际上涨率: {actual_20d[consensus_bull].mean()*100:.2f}%")
+    results['patterns'] = {}
+    for pattern, mask in patterns.items():
+        count = mask.sum()
+        if count > 0:
+            results['patterns'][pattern] = {
+                'count': int(count),
+                'pct': float(count / len(common_dates) * 100),
+                '20d_accuracy': float((pred_20d[mask] == actual_20d[mask]).mean() * 100),
+                '1d_accuracy': float((pred_1d[mask] == actual_1d[mask]).mean() * 100),
+                '5d_accuracy': float((pred_5d[mask] == actual_5d[mask]).mean() * 100),
+            }
 
-    print(f"\n   一致看跌后 (n={consensus_bear.sum()}):")
-    print(f"   - 1天实际下跌率: {(1-actual_1d[consensus_bear]).mean()*100:.2f}%")
-    print(f"   - 5天实际下跌率: {(1-actual_5d[consensus_bear]).mean()*100:.2f}%")
-    print(f"   - 20天实际下跌率: {(1-actual_20d[consensus_bear]).mean()*100:.2f}%")
+    # ========== 4. 一致信号分析 ==========
+    consensus_bull = patterns['111']
+    consensus_bear = patterns['000']
 
-    print("\n3. 概率值的因果关系")
+    results['consensus_analysis'] = {
+        'bull': {
+            'count': int(consensus_bull.sum()),
+            '1d_actual_up_rate': float(actual_1d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+            '5d_actual_up_rate': float(actual_5d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+            '20d_actual_up_rate': float(actual_20d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+        },
+        'bear': {
+            'count': int(consensus_bear.sum()),
+            '1d_actual_down_rate': float((1 - actual_1d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+            '5d_actual_down_rate': float((1 - actual_5d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+            '20d_actual_down_rate': float((1 - actual_20d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+        }
+    }
 
-    # 分析概率值的相关性
+    # ========== 5. 概率相关性 ==========
     prob_1d = df_1d.loc[common_dates, 'probability']
     prob_5d = df_5d.loc[common_dates, 'probability']
     prob_20d = df_20d.loc[common_dates, 'probability']
 
-    print(f"\n   概率值相关性:")
-    print(f"   - 1天 vs 5天: r = {prob_1d.corr(prob_5d):.4f}")
-    print(f"   - 1天 vs 20天: r = {prob_1d.corr(prob_20d):.4f}")
-    print(f"   - 5天 vs 20天: r = {prob_5d.corr(prob_20d):.4f}")
-
-
-def analyze_patterns(df_1d, df_5d, df_20d):
-    """分析规律模式"""
-    print("\n" + "=" * 80)
-    print("📊 三、规律模式分析")
-    print("=" * 80)
-
-    common_dates = df_1d.index.intersection(df_5d.index).intersection(df_20d.index)
-
-    pred_1d = df_1d.loc[common_dates, 'prediction']
-    pred_5d = df_5d.loc[common_dates, 'prediction']
-    pred_20d = df_20d.loc[common_dates, 'prediction']
-
-    actual_1d = df_1d.loc[common_dates, 'actual_direction']
-    actual_5d = df_5d.loc[common_dates, 'actual_direction']
-    actual_20d = df_20d.loc[common_dates, 'actual_direction']
-
-    return_1d = df_1d.loc[common_dates, 'actual_return']
-    return_5d = df_5d.loc[common_dates, 'actual_return']
-    return_20d = df_20d.loc[common_dates, 'actual_return']
-
-    print("\n1. 一致性模式分析")
-
-    # 所有可能的组合
-    patterns = {
-        '涨-涨-涨 (111)': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)),
-        '涨-涨-跌 (110)': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 0)),
-        '涨-跌-涨 (101)': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 1)),
-        '涨-跌-跌 (100)': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 0)),
-        '跌-涨-涨 (011)': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 1)),
-        '跌-涨-跌 (010)': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 0)),
-        '跌-跌-涨 (001)': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 1)),
-        '跌-跌-跌 (000)': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)),
+    results['probability_correlation'] = {
+        '1d_vs_5d': float(prob_1d.corr(prob_5d)),
+        '1d_vs_20d': float(prob_1d.corr(prob_20d)),
+        '5d_vs_20d': float(prob_5d.corr(prob_20d)),
     }
 
-    print(f"\n   {'模式':<20} {'样本数':<10} {'占比':<10} {'1天胜率':<10} {'5天胜率':<10} {'20天胜率':<10}")
-    print("   " + "-" * 70)
+    # ========== 6. 序列分析 ==========
+    all_correct = (pred_1d == actual_1d) & (pred_5d == actual_5d) & (pred_20d == actual_20d)
+    at_least_one = (pred_1d == actual_1d) | (pred_5d == actual_5d) | (pred_20d == actual_20d)
 
-    for pattern_name, mask in patterns.items():
-        count = mask.sum()
-        if count == 0:
-            continue
-        pct = count / len(common_dates) * 100
-        acc_1d = (pred_1d[mask] == actual_1d[mask]).mean() * 100
-        acc_5d = (pred_5d[mask] == actual_5d[mask]).mean() * 100
-        acc_20d = (pred_20d[mask] == actual_20d[mask]).mean() * 100
-        print(f"   {pattern_name:<20} {count:<10} {pct:<10.2f}% {acc_1d:<10.2f}% {acc_5d:<10.2f}% {acc_20d:<10.2f}%")
+    results['sequence_analysis'] = {
+        'all_correct_count': int(all_correct.sum()),
+        'all_correct_pct': float(all_correct.sum() / len(common_dates) * 100),
+        'at_least_one_correct_count': int(at_least_one.sum()),
+        'at_least_one_correct_pct': float(at_least_one.sum() / len(common_dates) * 100),
+    }
 
-    print("\n2. 均值回归与趋势延续")
+    # ========== 保存结果 ==========
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output_path = os.path.join(OUTPUT_DIR, 'three_horizon_validation.json')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
 
-    # 短期预测 vs 长期实际
-    short_bull_long_bull = ((pred_1d == 1) & (actual_20d == 1)).sum()
-    short_bull_long_bear = ((pred_1d == 1) & (actual_20d == 0)).sum()
-    short_bear_long_bull = ((pred_1d == 0) & (actual_20d == 1)).sum()
-    short_bear_long_bear = ((pred_1d == 0) & (actual_20d == 0)).sum()
+    print(f"\n✅ 结果已保存到: {output_path}")
 
-    print(f"\n   短期看涨 -> 长期实际上涨: {short_bull_long_bull} ({short_bull_long_bull/(short_bull_long_bull+short_bull_long_bear)*100:.1f}%)")
-    print(f"   短期看涨 -> 长期实际下跌: {short_bull_long_bear} ({short_bull_long_bear/(short_bull_long_bull+short_bull_long_bear)*100:.1f}%)")
-    print(f"   短期看跌 -> 长期实际上涨: {short_bear_long_bull} ({short_bear_long_bull/(short_bear_long_bull+short_bear_long_bear)*100:.1f}%)")
-    print(f"   短期看跌 -> 长期实际下跌: {short_bear_long_bear} ({short_bear_long_bear/(short_bear_long_bull+short_bear_long_bear)*100:.1f}%)")
-
-    print("\n3. 收益分布规律")
-
-    print(f"\n   {'周期':<10} {'平均收益':<12} {'收益标准差':<12} {'最大收益':<12} {'最小收益':<12}")
-    print("   " + "-" * 60)
-    for horizon, ret in [('1天', return_1d), ('5天', return_5d), ('20天', return_20d)]:
-        print(f"   {horizon:<10} {ret.mean()*100:<12.3f}% {ret.std()*100:<12.3f}% {ret.max()*100:<12.3f}% {ret.min()*100:<12.3f}%")
-
-    print("\n   一致看涨时的收益:")
-    mask = (pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)
-    if mask.sum() > 0:
-        print(f"   - 1天平均收益: {return_1d[mask].mean()*100:.3f}% (标准差: {return_1d[mask].std()*100:.3f}%)")
-        print(f"   - 5天平均收益: {return_5d[mask].mean()*100:.3f}% (标准差: {return_5d[mask].std()*100:.3f}%)")
-        print(f"   - 20天平均收益: {return_20d[mask].mean()*100:.3f}% (标准差: {return_20d[mask].std()*100:.3f}%)")
-
-    print("\n   一致看跌时的收益:")
-    mask = (pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)
-    if mask.sum() > 0:
-        print(f"   - 1天平均收益: {return_1d[mask].mean()*100:.3f}% (标准差: {return_1d[mask].std()*100:.3f}%)")
-        print(f"   - 5天平均收益: {return_5d[mask].mean()*100:.3f}% (标准差: {return_5d[mask].std()*100:.3f}%)")
-        print(f"   - 20天平均收益: {return_20d[mask].mean()*100:.3f}% (标准差: {return_20d[mask].std()*100:.3f}%)")
+    return results
 
 
-def analyze_sequence_patterns(df_1d, df_5d, df_20d):
-    """分析序列模式 - 一个周期正确后其他周期的表现"""
+def print_summary(results):
+    """打印结果摘要"""
     print("\n" + "=" * 80)
-    print("🔄 四、序列动态分析")
+    print("📊 三周期预测分析结果")
     print("=" * 80)
 
-    common_dates = df_1d.index.intersection(df_5d.index).intersection(df_20d.index)
+    # 独立准确率
+    print("\n【独立准确率】")
+    for h in ['1d', '5d', '20d']:
+        acc = results['independent_accuracy'][h]['accuracy'] * 100
+        print(f"  {h}: {acc:.2f}%")
 
-    pred_1d = df_1d.loc[common_dates, 'prediction']
-    pred_5d = df_5d.loc[common_dates, 'prediction']
-    pred_20d = df_20d.loc[common_dates, 'prediction']
+    # 因果分析
+    print("\n【因果分析】")
+    print(f"  1天正确 → 20天准确率: {results['causal_analysis']['1d_correct_then_20d_accuracy']*100:.2f}%")
+    print(f"  1天错误 → 20天准确率: {results['causal_analysis']['1d_wrong_then_20d_accuracy']*100:.2f}%")
+    print(f"  1+5天正确 → 20天准确率: {results['causal_analysis']['1d_5d_correct_then_20d_accuracy']*100:.2f}%")
 
-    actual_1d = df_1d.loc[common_dates, 'actual_direction']
-    actual_5d = df_5d.loc[common_dates, 'actual_direction']
-    actual_20d = df_20d.loc[common_dates, 'actual_direction']
+    # 八大模式
+    print("\n【八大模式（按20天准确率排序）】")
+    sorted_patterns = sorted(results['patterns'].items(), key=lambda x: x[1]['20d_accuracy'], reverse=True)
+    print(f"  {'模式':<6} {'样本数':<8} {'占比':<10} {'20天准确率':<12}")
+    print("  " + "-" * 40)
+    for pattern, data in sorted_patterns:
+        print(f"  {pattern:<6} {data['count']:<8} {data['pct']:.2f}%    {data['20d_accuracy']:.2f}%")
 
-    print("\n1. 预测正确序列")
-
-    # 1天正确 -> 5天表现
-    correct_1d = pred_1d == actual_1d
-    print(f"\n   1天预测正确后，5天预测:")
-    print(f"   - 5天也正确: {(correct_1d & (pred_5d == actual_5d)).sum()} ({(correct_1d & (pred_5d == actual_5d)).sum()/correct_1d.sum()*100:.1f}%)")
-    print(f"   - 5天错误: {(correct_1d & (pred_5d != actual_5d)).sum()} ({(correct_1d & (pred_5d != actual_5d)).sum()/correct_1d.sum()*100:.1f}%)")
-
-    # 5天正确 -> 20天表现
-    correct_5d = pred_5d == actual_5d
-    print(f"\n   5天预测正确后，20天预测:")
-    print(f"   - 20天也正确: {(correct_5d & (pred_20d == actual_20d)).sum()} ({(correct_5d & (pred_20d == actual_20d)).sum()/correct_5d.sum()*100:.1f}%)")
-    print(f"   - 20天错误: {(correct_5d & (pred_20d != actual_20d)).sum()} ({(correct_5d & (pred_20d != actual_20d)).sum()/correct_5d.sum()*100:.1f}%)")
-
-    print("\n2. 连续正确链")
-
-    # 三周期全对
-    all_correct = (pred_1d == actual_1d) & (pred_5d == actual_5d) & (pred_20d == actual_20d)
-    print(f"\n   三周期全对: {all_correct.sum()}次 ({all_correct.sum()/len(common_dates)*100:.2f}%)")
-
-    # 至少一对
-    at_least_one = (pred_1d == actual_1d) | (pred_5d == actual_5d) | (pred_20d == actual_20d)
-    print(f"   至少一对: {at_least_one.sum()}次 ({at_least_one.sum()/len(common_dates)*100:.2f}%)")
-
-    print("\n3. 周期间一致性动态")
-
-    # 1天和5天一致时的20天表现
-    agree_1d_5d = pred_1d == pred_5d
-    print(f"\n   1天与5天预测一致时 (n={agree_1d_5d.sum()}):")
-    print(f"   - 20天预测与它们一致: {(agree_1d_5d & (pred_20d == pred_1d)).sum()} ({(agree_1d_5d & (pred_20d == pred_1d)).sum()/agree_1d_5d.sum()*100:.1f}%)")
-    print(f"   - 20天预测与它们相反: {(agree_1d_5d & (pred_20d != pred_1d)).sum()} ({(agree_1d_5d & (pred_20d != pred_1d)).sum()/agree_1d_5d.sum()*100:.1f}%)")
-
-    # 当1天和5天一致且正确时
-    agree_correct = agree_1d_5d & (pred_1d == actual_1d) & (pred_5d == actual_5d)
-    if agree_correct.sum() > 0:
-        print(f"\n   1天与5天一致且都正确时 (n={agree_correct.sum()}):")
-        print(f"   - 20天也正确: {(agree_correct & (pred_20d == actual_20d)).sum()} ({(agree_correct & (pred_20d == actual_20d)).sum()/agree_correct.sum()*100:.1f}%)")
+    # 一致信号
+    print("\n【一致信号分析】")
+    bull = results['consensus_analysis']['bull']
+    bear = results['consensus_analysis']['bear']
+    print(f"  一致看涨(111): {bull['count']}次, 20天实际上涨率: {bull['20d_actual_up_rate']:.2f}%")
+    print(f"  一致看跌(000): {bear['count']}次, 20天实际下跌率: {bear['20d_actual_down_rate']:.2f}%")
 
 
 def main():
     """主函数"""
     print("=" * 80)
-    print("三周期预测关系深度分析")
+    print("三周期预测关系深度分析（增强版）")
     print("=" * 80)
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
 
-    # 1. 获取数据
+    # 1. 获取数据（含新特征）
     df = fetch_and_prepare_data()
 
     # 2. 运行预测
     all_predictions = run_walkforward_predictions(df)
 
-    # 3. 分析时间关系
-    df_1d, df_5d, df_20d = analyze_temporal_relationships(all_predictions)
+    # 3. 分析并保存结果
+    results = analyze_and_save_results(all_predictions)
 
-    # 4. 分析因果关系
-    analyze_causal_relationships(df_1d, df_5d, df_20d)
-
-    # 5. 分析规律模式
-    analyze_patterns(df_1d, df_5d, df_20d)
-
-    # 6. 分析序列模式
-    analyze_sequence_patterns(df_1d, df_5d, df_20d)
+    if results:
+        # 4. 打印摘要
+        print_summary(results)
 
     print("\n" + "=" * 80)
-    print("分析完成")
+    print(f"分析完成: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 80)
 
 
