@@ -13,32 +13,6 @@
 
 ---
 
-## 最近更新
-
-### 2026-04-27：Walk-forward 验证 + 新特征集成
-
-**新增特征**：
-- **GARCH 波动率特征**（4个）：条件波动率、波动率比率、持续性参数
-- **HSI 市场状态特征**（6个）：HMM 检测震荡/牛市/熊市
-- **日历效应特征**（22个）：星期效应、月份效应、期权到期日
-
-**验证结果**：
-- 个股 Walk-forward 验证：综合评分 85/100，夏普比率 1.02
-- `HSI_Regime_Duration` 特征重要性排名第2
-
-**Bug 修复**：
-- CatBoost 分类特征 NaN 处理问题
-- 特征缓存版本检测逻辑
-
-### 2026-04-26：恒指增强模型三周期验证
-
-**验证结果**：
-- 20天准确率：80.73% → **82.23%**（+1.50%）
-- 5天准确率：57.17% → **64.35%**（+7.18%）
-- 最优策略变更：震荡回调(110) → **假突破(101)**（92.73%胜率）
-
----
-
 ## 核心功能
 
 ### 项目优势
@@ -68,8 +42,6 @@
 | 1天 | 51.55% | 噪音大，仅供参考 | 日内短线参考 |
 | 5天 | 64.35% | 趋势确认，辅助判断 | 周度持仓决策 |
 | **20天** | **82.23%** | **最可靠，主要决策依据** | 月度投资方向 |
-
-> ⚠️ **更新说明**：2026-04-26 使用增强模型（33特征含日历/GARCH/Regime）重新验证。详见 `docs/THREE_HORIZON_ANALYSIS.md`。
 
 **八大交易模式**（Walk-forward验证，938样本）：
 
@@ -316,7 +288,7 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 # Walk-forward验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 
-# 清除特征缓存（新增特征后必须执行）
+# 清除特征缓存
 rm -rf data/feature_cache/*.pkl
 ```
 
@@ -451,7 +423,7 @@ AKShare      南向资金        主力追踪     性能监控
 | 原始数据 | `data/stock_cache/` | 7天 | - |
 | 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
 
-**新增特征模块**（2026-04-27）：
+**特征模块**：
 
 | 模块 | 文件 | 特征数 | 功能 |
 |------|------|--------|------|
@@ -560,7 +532,7 @@ python hsi_email.py --no-email
 | **Walk-forward** | 唯一可信的验证方法 |
 | **加密货币** | 股票策略不适用 |
 | **恒指 vs 个股** | 因果链传导完全反向，个股概率高反而预示反转 |
-| **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
+| **特征缓存版本** | 缓存失效时需清除（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
 
 ---
@@ -582,9 +554,7 @@ python hsi_email.py --no-email
 
 ## 依赖项
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
-
-### 新增依赖（2026-04-27）
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `shap`
 
 | 包名 | 用途 |
 |------|------|
