@@ -8,6 +8,37 @@
 
 ## 最新进展（2026-04-27）
 
+### GARCH 波动率和 HSI 市场状态特征集成
+
+**目标**：将 Tier 1 数据挖掘模块集成到个股预测模型
+
+**实现内容**：
+
+1. **GARCH 波动率特征** - 集成到 `ml_trading_model.py`
+   - `GARCH_Conditional_Vol`：条件波动率
+   - `GARCH_Vol_Ratio`：波动率比率（当前/历史均值）
+   - `GARCH_Vol_Change_5d`：5日波动率变化
+   - `GARCH_Persistence`：波动率持续性参数
+
+2. **HSI 市场状态特征** - HMM 隐马尔可夫模型
+   - `HSI_Market_Regime`：市场状态标签（0=震荡, 1=牛市, 2=熊市）
+   - `HSI_Regime_Prob_0/1/2`：各状态概率
+   - `HSI_Regime_Duration`：当前状态持续时间
+   - `HSI_Regime_Transition_Prob`：状态转换概率
+
+3. **特征缓存验证升级**
+   - 检测新特征列是否存在
+   - 缺少新特征时自动重新计算
+   - 避免使用过期缓存
+
+**涉及模型**：LightGBM、GBDT、CatBoost 三种模型均已集成
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（新增 calculate_hsi_regime_features 方法）
+- `data/model_accuracy.json`（更新 1d 准确率）
+
+---
+
 ### 因果链分析：1d→5d 和 5d→20d 的传导关系
 
 **分析脚本**：`ml_services/analyze_causal_chain.py`（恒指）、`ml_services/analyze_stock_causal_chain.py`（个股）
