@@ -633,8 +633,7 @@ class FeatureEngineer:
         # 布林带宽度归一化（相对于60日均值，使用滞后数据避免数据泄漏）
         df['BB_Width_MA60'] = df['BB_Width'].rolling(window=60, min_periods=1).mean().shift(1)
         df['BB_Width_Normalized'] = (df['BB_Width'].shift(1) - df['BB_Width_MA60']) / (df['BB_Width'].rolling(60, min_periods=1).std().shift(1) + 1e-10)
-        # 布林带突破（使用滞后数据避免数据泄漏）
-        df['BB_Breakout'] = (df['Close'] - df['BB_lower'].shift(1)) / (df['BB_upper'].shift(1) - df['BB_lower'].shift(1) + 1e-10)
+        # 布林带突破（已删除：与 BB_Position 公式相同，保留 BB_Position）
 
         # ========== ATR ==========
         df = self.tech_analyzer.calculate_atr(df, period=14)
@@ -717,13 +716,10 @@ class FeatureEngineer:
         df['ROC'] = df['Close'].pct_change(periods=12)
 
         # ========== 波动率（年化） ==========
-        df['Returns'] = df['Close'].pct_change()
-        df['Volatility'] = df['Returns'].shift(1).rolling(20, min_periods=10).std() * np.sqrt(252)
+        # 已删除 Returns 和 Volatility：与 Return_1d 和 Volatility_20d 完全相同
 
         # ========== 价格位置特征 ==========
-        # 价格相对于均线的偏离
-        df['MA5_Deviation'] = (df['Close'] - df['MA5']) / df['MA5'] * 100
-        df['MA10_Deviation'] = (df['Close'] - df['MA10']) / df['MA10'] * 100
+        # 已删除 MA5_Deviation 和 MA10_Deviation：与 BIAS6 和 BIAS12 公式相同
         # 价格百分位（相对于60日窗口，使用滞后数据避免数据泄漏）
         df['Price_Percentile'] = df['Close'].rolling(window=60, min_periods=1).apply(
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100
@@ -795,7 +791,7 @@ class FeatureEngineer:
 
         # ========== 高优先级：价格形态特征 ==========
         # N日高低点位置（0-1之间，1表示在最高点，使用滞后数据避免泄漏）
-        df['High_Position_20d'] = (df['Close'] - df['Low'].rolling(20).min().shift(1)) / (df['High'].rolling(20).max().shift(1) - df['Low'].rolling(20).min().shift(1))
+        # 已删除 High_Position_20d：与 Price_Channel_Position_20d 公式相同
         df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min().shift(1)) / (df['High'].rolling(60).max().shift(1) - df['Low'].rolling(60).min().shift(1))
 
         # 距离近期高点/低点的天数（业界常用，使用滞后数据避免数据泄漏）
@@ -900,9 +896,7 @@ class FeatureEngineer:
         df['Return_120d'] = df['Close'].pct_change(120)
         df['Return_250d'] = df['Close'].pct_change(250)
 
-        # 长期动量（Momentum = 当前价格 / N日前价格 - 1）
-        df['Momentum_120d'] = df['Close'] / df['Close'].shift(120) - 1
-        df['Momentum_250d'] = df['Close'] / df['Close'].shift(250) - 1
+        # 长期动量（已删除 Momentum_120d 和 Momentum_250d：与 Return_120d 和 Return_250d 公式相同）
 
         # 长期动量加速度（趋势变化的二阶导数）
         df['Momentum_Accel_120d'] = df['Return_120d'] - df['Return_120d'].shift(30)
@@ -1037,12 +1031,7 @@ class FeatureEngineer:
             (df['MA5'] < df['MA20']) & (df['MA20'] < df['MA60'])
         ).astype(int)
 
-        # 多周期共振得分（0-3分，多头排列数量）
-        df['MA_Bullish_Resonance'] = (
-            (df['MA5'] > df['MA20']).astype(int) +
-            (df['MA20'] > df['MA50']).astype(int) +
-            (df['MA50'] > df['MA200']).astype(int)
-        )
+        # 多周期共振得分（已删除 MA_Bullish_Resonance：与 MA_Trend_Consistency 完全相同）
 
         # 趋势一致性得分（-3到3分，多头排列减去空头排列）
         df['MA_Trend_Consistency'] = (
@@ -1252,9 +1241,7 @@ class FeatureEngineer:
         df['Prev_Close'] = df['Close'].shift(1)
         df['Weak_Volume_Down'] = (df['Close'] < df['Prev_Close']) & (df['Vol_Ratio'] < 1.0) & ((df['Prev_Close'] - df['Close']) / df['Prev_Close'] < 0.02)
 
-        # 动量信号
-        df['Momentum_5d'] = df['Close'] / df['Close'].shift(5) - 1
-        df['Momentum_10d'] = df['Close'] / df['Close'].shift(10) - 1
+        # 动量信号（已删除 Momentum_5d 和 Momentum_10d：与 Return_5d 和 Return_10d 公式相同）
 
         # ========== 异常检测特征（使用滞后数据避免数据泄漏）==========
         # 基于两年数据验证（2024-04-01 至 2026-04-01，938个异常）
@@ -1388,7 +1375,11 @@ class FeatureEngineer:
         return features
 
     def calculate_multi_period_metrics(self, df):
-        """计算多周期指标（趋势和相对强度）"""
+        """计算多周期指标（趋势方向）
+
+        注：RS_Signal 特征已删除，因其与 Trend 使用完全相同的公式
+        (df[return_col] > 0).astype(int)，导致 251 个完全重复的交叉特征。
+        """
         if df.empty or len(df) < 60:
             return df
 
@@ -1405,19 +1396,10 @@ class FeatureEngineer:
                 trend_col = f'{period}d_Trend'
                 df[trend_col] = (df[return_col] > 0).astype(int)
 
-                # 计算相对强度信号（基于收益率）
-                rs_signal_col = f'{period}d_RS_Signal'
-                df[rs_signal_col] = (df[return_col] > 0).astype(int)
-
         # 计算多周期趋势评分
         trend_cols = [f'{p}d_Trend' for p in periods]
         if all(col in df.columns for col in trend_cols):
             df['Multi_Period_Trend_Score'] = df[trend_cols].sum(axis=1)
-
-        # 计算多周期相对强度评分
-        rs_cols = [f'{p}d_RS_Signal' for p in periods]
-        if all(col in df.columns for col in rs_cols):
-            df['Multi_Period_RS_Score'] = df[rs_cols].sum(axis=1)
 
         return df
 
@@ -1643,9 +1625,10 @@ class FeatureEngineer:
         fundamental_features = ['PE', 'PB']  # 目前只支持PE和PB
 
         # 技术指标特征列表（使用实际存在的列名）
+        # 已删除 Momentum_5d：与 Return_5d 公式相同
         technical_features = ['RSI', 'RSI_ROC', 'MACD', 'MACD_Hist', 'MACD_Hist_ROC',
                              'BB_Position', 'ATR', 'Vol_Ratio', 'CMF',
-                             'Return_5d', 'Price_Pct_20d', 'Momentum_5d']
+                             'Return_5d', 'Price_Pct_20d']
 
         # 预定义的高价值交互组合（基于业界实践，只使用实际可用的基本面特征）
         high_value_interactions = [
@@ -1672,15 +1655,27 @@ class FeatureEngineer:
             # 收益与估值的交互
             ('Return_5d', 'PE'),     # 5日收益 × PE
             ('Return_5d', 'PB'),     # 5日收益 × PB
-            # 动量与估值的交互
-            ('Momentum_5d', 'PE'),   # 5日动量 × PE
-            ('Momentum_5d', 'PB'),   # 5日动量 × PB
+            # 已删除 Momentum_5d 交互：与 Return_5d 公式相同
+        ]
+
+        # 检测并跳过常量基本面特征（PE/PB在缓存中可能只有单一值）
+        # 常量特征会导致交互特征 = 技术指标 × 常数，与原特征 r=1.0
+        constant_fund_features = []
+        for fund_feat in fundamental_features[:]:  # 复制列表以安全删除
+            if fund_feat in df.columns and df[fund_feat].nunique() <= 1:
+                constant_fund_features.append(fund_feat)
+                logger.info(f"基本面特征 {fund_feat} 为常量（nunique={df[fund_feat].nunique()}），跳过交互")
+
+        # 从交互列表中移除常量基本面特征的组合
+        filtered_interactions = [
+            (tech, fund) for tech, fund in high_value_interactions
+            if fund not in constant_fund_features
         ]
 
         print(f"🔗 生成技术指标与基本面交互特征...")
 
         interaction_count = 0
-        for tech_feat, fund_feat in high_value_interactions:
+        for tech_feat, fund_feat in filtered_interactions:
             if tech_feat in df.columns and fund_feat in df.columns:
                 # 交互特征命名：技术_基本面
                 interaction_name = f"{tech_feat}_{fund_feat}"
@@ -2553,13 +2548,12 @@ class FeatureEngineer:
         if df.empty:
             return df
 
-        # 类别型特征（13个）
+        # 类别型特征（8个，已删除5个RS_Signal重复特征）
         categorical_features = [
             'Outperforms_HSI',
             'Strong_Volume_Up',
             'Weak_Volume_Down',
-            '3d_Trend', '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend',
-            '3d_RS_Signal', '5d_RS_Signal', '10d_RS_Signal', '20d_RS_Signal', '60d_RS_Signal'
+            '3d_Trend', '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend'
         ]
 
         # 方案1：定义重要的数值型特征（120个精选特征）
@@ -2582,11 +2576,14 @@ class FeatureEngineer:
             'SP500_Return_5d', 'SP500_Return_20d', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
             'US10Y_Yield', 'US10Y_Yield_Change_5d',
             'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
-            'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d', 'GARCH_Persistence',
+            'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d',
+            # 已删除 GARCH_Persistence：交叉后与基础版 r=1.0
             'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1', 'HSI_Regime_Prob_2',
             'HSI_Regime_Duration', 'HSI_Regime_Transition_Prob',
-            'Volume_Confirmation_Adaptive', 'False_Breakout_Signal_Adaptive',
-            'Confidence_Threshold_Multiplier', 'ATR_Risk_Score',
+            'Volume_Confirmation_Adaptive',
+            # 已删除 False_Breakout_Signal_Adaptive：跨周期完全相同
+            # 已删除 Confidence_Threshold_Multiplier：与 Market_Regime_Encoded r=-1.0
+            'ATR_Risk_Score',
             
             # 基本面特征（20个）
             'PE_Ratio', 'PB_Ratio', 'ROE', 'ROA', 'Net_Margin',
@@ -2604,9 +2601,9 @@ class FeatureEngineer:
             'Short_Interest_Ratio', 'Margin_Debt_Ratio', 'Put_Call_Ratio',
             'Money_Flow_Index', 'Accumulation_Distribution',
             
-            # 风险管理特征（15个）
+            # 风险管理特征（14个，已删除 Consecutive_Ranging_Days：与 Ranging_Fatigue_Index r=1.0）
             'ATR_Stop_Loss_Distance', 'ATR_Change_5d', 'ATR_Change_10d',
-            'Consecutive_Ranging_Days', 'Ranging_Fatigue_Index',
+            'Ranging_Fatigue_Index',
             'Consecutive_Trending_Days', 'Trending_Momentum_Index',
             'Risk_Reward_Ratio', 'Expected_Value_Score',
             'Win_Loss_Ratio_5d', 'Win_Loss_Ratio_20d',
@@ -4346,17 +4343,52 @@ class CatBoostModel(BaseTradingModel):
 
         return df
 
-    def get_feature_columns(self, df):
-        """获取特征列"""
+    def get_feature_columns(self, df, dedup_threshold=None):
+        """获取特征列
+
+        Args:
+            df: 数据 DataFrame
+            dedup_threshold: Pearson 相关性去冗余阈值（默认 None 不启用）
+                            设置为 0.95 可删除 |r| > 0.95 的高相关特征
+
+        Returns:
+            list: 特征列名列表
+        """
         # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
-                          'TP', 'MF_Multiplier', 'MF_Volume']
+                          'TP', 'MF_Multiplier', 'MF_Volume',
+                          # 已删除的冗余特征（保留 DataFrame 列用于中间计算）
+                          'Returns', 'Volatility', 'MA5_Deviation', 'MA10_Deviation',
+                          'BB_Breakout', 'High_Position_20d', 'MA_Bullish_Resonance',
+                          'Momentum_5d', 'Momentum_10d', 'Momentum_120d', 'Momentum_250d',
+                          'Consecutive_Ranging_Days', 'Confidence_Threshold_Multiplier',
+                          'Price_Return_Std_30d']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
+
+        # 可选：Pearson 去冗余（防止新增特征时引入高相关冗余）
+        if dedup_threshold and len(feature_columns) > 0:
+            numeric_cols = [c for c in feature_columns if df[c].dtype in ['float64', 'float32', 'int64', 'int32']]
+            if len(numeric_cols) > 1:
+                # 使用最近 500 行数据计算相关性（减少计算量）
+                sample_df = df[numeric_cols].tail(500)
+                corr_matrix = sample_df.corr()
+                to_remove = set()
+                for i in range(len(numeric_cols)):
+                    if numeric_cols[i] in to_remove:
+                        continue
+                    for j in range(i+1, len(numeric_cols)):
+                        if numeric_cols[j] in to_remove:
+                            continue
+                        if abs(corr_matrix.iloc[i, j]) > dedup_threshold:
+                            to_remove.add(numeric_cols[j])
+                feature_columns = [c for c in feature_columns if c not in to_remove]
+                if to_remove:
+                    logger.info(f"Pearson 去冗余（阈值={dedup_threshold}）：删除 {len(to_remove)} 个高相关特征")
 
         return feature_columns
 
@@ -4481,15 +4513,16 @@ class CatBoostModel(BaseTradingModel):
             subsample = 0.75
             colsample_bylevel = 0.7
         else:  # horizon == 20
-            # 一个月模型参数（超增强正则化）
-            print("使用20天模型参数（超增强正则化，降低过拟合）...")
-            n_estimators = 400  # 减少树数量（500→400）
-            depth = 5  # 减少深度（6→5）
-            learning_rate = 0.04  # 降低学习率（0.05→0.04）
-            stopping_rounds = 60  # 增加早停耐心（40→60）
-            l2_leaf_reg = 5  # 增强L2正则（3→5）
-            subsample = 0.6  # 减少行采样（0.75→0.6）
-            colsample_bylevel = 0.6  # 减少列采样（0.7→0.6）
+            # 一个月模型参数（适配 730 特征版本）
+            # 2026-04-27：特征减少后适当降低正则化，增加模型复杂度
+            print("使用20天模型参数（适配 730 特征版本）...")
+            n_estimators = 500  # 增加树数量（400→500）
+            depth = 6  # 增加深度（5→6）
+            learning_rate = 0.04  # 保持学习率
+            stopping_rounds = 60  # 保持早停耐心
+            l2_leaf_reg = 3  # 降低L2正则（5→3），让模型更容易拟合
+            subsample = 0.7  # 增加行采样（0.6→0.7）
+            colsample_bylevel = 0.7  # 增加列采样（0.6→0.7）
 
         from catboost import CatBoostClassifier, Pool
 
