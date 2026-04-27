@@ -40,6 +40,8 @@ HSI_DATA_CACHE_HOURS = 1   # 恒生指数数据缓存1小时
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 from data_services.technical_analysis import TechnicalAnalyzer
 from data_services.fundamental_data import get_comprehensive_fundamental_data
+from data_services.volatility_model import GARCHVolatilityModel
+from data_services.regime_detector import RegimeDetector
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
 from ml_services.logger_config import get_logger
@@ -764,6 +766,25 @@ class FeatureEngineer:
         df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(1)
         df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std().shift(1)
 
+        # ========== GARCH 波动率特征（per-stock，2026-04-27 新增）==========
+        # GARCH(1,1) 条件波动率，捕捉波动率聚类和持续性
+        # GARCHVolatilityModel 内置 shift(1) 数据泄漏保护
+        try:
+            garch_model = GARCHVolatilityModel()
+            df = garch_model.calculate_features(df, return_col='Return_1d')
+            # 填充开头可能存在的 NaN（shift 导致）
+            garch_defaults = {
+                'GARCH_Conditional_Vol': 0.0,
+                'GARCH_Vol_Ratio': 1.0,
+                'GARCH_Vol_Change_5d': 0.0,
+                'GARCH_Persistence': 0.8,
+            }
+            for col, default_val in garch_defaults.items():
+                if col in df.columns:
+                    df[col] = df[col].fillna(default_val)
+        except Exception as e:
+            logger.warning(f"GARCH 特征计算失败，使用默认值: {e}")
+
         # 滚动偏度/峰度（业界常用，使用滞后数据避免数据泄漏）
         df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew().shift(1)
         df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt().shift(1)
@@ -1439,6 +1460,75 @@ class FeatureEngineer:
         # 跑赢恒指（基于5日相对强度）
         if 'RS_Ratio_5d' in stock_df.columns:
             stock_df['Outperforms_HSI'] = (stock_df['RS_Ratio_5d'] > 0).astype(int)
+
+        return stock_df
+
+    def calculate_hsi_regime_features(self, stock_df, hsi_regime_df):
+        """将预计算的 HSI 市场状态特征合并到个股 DataFrame
+
+        使用 HMM 隐马尔可夫模型识别恒指的市场状态（牛市/熊市/震荡），
+        作为所有个股共享的市场环境特征。
+
+        Args:
+            stock_df: 个股 DataFrame（需有 datetime index）
+            hsi_regime_df: 预计算的 HSI regime 特征 DataFrame
+                           （列名带 HSI_ 前缀，datetime index）
+
+        Returns:
+            stock_df with HSI regime columns added
+        """
+        if stock_df.empty or hsi_regime_df is None or hsi_regime_df.empty:
+            return stock_df
+
+        stock_df = stock_df.copy()
+
+        try:
+            # 对齐索引：确保两边都是 datetime 类型
+            hsi_regime_aligned = hsi_regime_df.copy()
+            hsi_regime_aligned.index = pd.to_datetime(hsi_regime_aligned.index)
+            stock_idx = pd.to_datetime(stock_df.index)
+
+            # 时区处理：移除时区信息以避免对齐问题
+            if hasattr(hsi_regime_aligned.index, 'tz') and hsi_regime_aligned.index.tz is not None:
+                hsi_regime_aligned.index = hsi_regime_aligned.index.tz_localize(None)
+            if hasattr(stock_idx, 'tz') and stock_idx.tz is not None:
+                stock_idx = stock_idx.tz_localize(None)
+
+            # Reindex HSI regime 到个股日期，forward-fill 填补非交易日
+            hsi_regime_aligned = hsi_regime_aligned.reindex(stock_idx, method='ffill')
+
+            # 合并到个股 DataFrame
+            for col in hsi_regime_aligned.columns:
+                stock_df[col] = hsi_regime_aligned[col].values
+
+            # 填充开头可能存在的 NaN（reindex ffill 无法填充开头）
+            regime_defaults = {
+                'HSI_Market_Regime': 0,       # 默认：震荡
+                'HSI_Regime_Prob_0': 0.5,     # 50% 震荡概率
+                'HSI_Regime_Prob_1': 0.25,    # 25% 牛市概率
+                'HSI_Regime_Prob_2': 0.25,    # 25% 熊市概率
+                'HSI_Regime_Duration': 0.0,
+                'HSI_Regime_Transition_Prob': 0.0,
+            }
+            for col, default_val in regime_defaults.items():
+                if col in stock_df.columns:
+                    stock_df[col] = stock_df[col].fillna(default_val)
+
+            logger.debug(f"HSI 市场状态特征已合并: {list(hsi_regime_aligned.columns)}")
+
+        except Exception as e:
+            logger.warning(f"HSI 市场状态特征合并失败: {e}")
+            # 填充安全默认值
+            defaults = {
+                'HSI_Market_Regime': 0,       # 默认：震荡
+                'HSI_Regime_Prob_0': 0.5,     # 50% 震荡概率
+                'HSI_Regime_Prob_1': 0.25,    # 25% 牛市概率
+                'HSI_Regime_Prob_2': 0.25,    # 25% 熊市概率
+                'HSI_Regime_Duration': 0.0,
+                'HSI_Regime_Transition_Prob': 0.0,
+            }
+            for col, default_val in defaults.items():
+                stock_df[col] = default_val
 
         return stock_df
 
@@ -2492,6 +2582,9 @@ class FeatureEngineer:
             'SP500_Return_5d', 'SP500_Return_20d', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
             'US10Y_Yield', 'US10Y_Yield_Change_5d',
             'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
+            'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d', 'GARCH_Persistence',
+            'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1', 'HSI_Regime_Prob_2',
+            'HSI_Regime_Duration', 'HSI_Regime_Transition_Prob',
             'Volume_Confirmation_Adaptive', 'False_Breakout_Signal_Adaptive',
             'Confidence_Threshold_Multiplier', 'ATR_Risk_Score',
             
@@ -2711,6 +2804,19 @@ class LightGBMModel(BaseTradingModel):
         if hsi_df is None or hsi_df.empty:
             raise ValueError("无法获取恒生指数数据")
 
+        # 计算 HSI 市场状态特征（一次性，所有股票共享）
+        hsi_regime_df = None
+        if hsi_df is not None and not hsi_df.empty:
+            try:
+                print("  计算 HSI 市场状态特征...")
+                regime_detector = RegimeDetector()
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
+                hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
+                print("  ✅ HSI 市场状态特征计算完成")
+            except Exception as e:
+                print(f"  ⚠️ HSI 市场状态特征计算失败: {e}")
+
         # ========== 步骤2：并行下载股票数据 ==========
         print(f"\n🚀 并行下载 {len(codes)} 只股票数据...")
         
@@ -2754,6 +2860,10 @@ class LightGBMModel(BaseTradingModel):
 
                 # 计算相对强度指标（使用共享的恒生指数数据）
                 stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+                # 合并 HSI 市场状态特征
+                if hsi_regime_df is not None:
+                    stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df)
 
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
@@ -3361,6 +3471,22 @@ class GBDTModel(BaseTradingModel):
         else:
             logger.warning(r"无法获取美股市场数据，将只使用港股特征")
 
+        # 获取恒生指数数据（移到循环外，避免重复获取）
+        hsi_df = get_hsi_data_tencent(period_days=1460)
+
+        # 计算 HSI 市场状态特征（一次性，所有股票共享）
+        hsi_regime_df = None
+        if hsi_df is not None and not hsi_df.empty:
+            try:
+                print("  计算 HSI 市场状态特征...")
+                regime_detector = RegimeDetector()
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
+                hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
+                print("  ✅ HSI 市场状态特征计算完成")
+            except Exception as e:
+                print(f"  ⚠️ HSI 市场状态特征计算失败: {e}")
+
         for code in codes:
             try:
                 print(f"处理股票: {code}")
@@ -3373,8 +3499,6 @@ class GBDTModel(BaseTradingModel):
                 if stock_df is None or stock_df.empty:
                     continue
 
-                # 获取恒生指数数据（2年约730天）
-                hsi_df = get_hsi_data_tencent(period_days=1460)
                 if hsi_df is None or hsi_df.empty:
                     continue
 
@@ -3386,6 +3510,10 @@ class GBDTModel(BaseTradingModel):
 
                 # 计算相对强度指标
                 stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+                # 合并 HSI 市场状态特征
+                if hsi_regime_df is not None:
+                    stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df)
 
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
@@ -4054,6 +4182,19 @@ class CatBoostModel(BaseTradingModel):
             logger.warning("无法获取恒生指数数据")
             hsi_df = None
 
+        # 计算 HSI 市场状态特征（一次性，所有股票共享）
+        hsi_regime_df = None
+        if hsi_df is not None and not hsi_df.empty:
+            try:
+                print("  计算 HSI 市场状态特征...")
+                regime_detector = RegimeDetector()
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
+                hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
+                print("  ✅ HSI 市场状态特征计算完成")
+            except Exception as e:
+                print(f"  ⚠️ HSI 市场状态特征计算失败: {e}")
+
         cache_hits = 0
         cache_misses = 0
 
@@ -4076,15 +4217,24 @@ class CatBoostModel(BaseTradingModel):
                 cache_key = _get_feature_cache_key(stock_code, last_date)
                 cache_file_path = _get_feature_cache_file_path(cache_key)
 
+                use_cache = False
                 if use_feature_cache and _is_feature_cache_valid(cache_file_path):
-                    # 使用缓存
                     cached_data = _load_feature_cache(cache_file_path)
                     if cached_data is not None and 'stock_df' in cached_data:
-                        stock_df = cached_data['stock_df']
-                        cache_hits += 1
-                        print(f"  ✅ 使用特征缓存")
-                        logger.debug(f"特征缓存命中: {cache_key}")
-                else:
+                        cached_df = cached_data['stock_df']
+                        # 检查新特征列是否存在（GARCH + HSI Regime）
+                        required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime']
+                        missing_cols = [c for c in required_new_cols if c not in cached_df.columns]
+                        if missing_cols:
+                            print(f"  ⚠️ 缓存缺少新特征: {missing_cols}，重新计算...")
+                        else:
+                            stock_df = cached_df
+                            use_cache = True
+                            cache_hits += 1
+                            print(f"  ✅ 使用特征缓存")
+                            logger.debug(f"特征缓存命中: {cache_key}")
+
+                if not use_cache:
                     # 计算特征
                     cache_misses += 1
 
@@ -4097,6 +4247,10 @@ class CatBoostModel(BaseTradingModel):
                     # 计算相对强度指标
                     if hsi_df is not None:
                         stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+                    # 合并 HSI 市场状态特征
+                    if hsi_regime_df is not None:
+                        stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df)
 
                     # 创建资金流向特征
                     stock_df = self.feature_engineer.create_smart_money_features(stock_df)
@@ -4532,13 +4686,23 @@ class CatBoostModel(BaseTradingModel):
             cache_key = _get_feature_cache_key(stock_code, last_date)
             cache_file_path = _get_feature_cache_file_path(cache_key)
 
+            use_cache_predict = False
             if use_feature_cache and _is_feature_cache_valid(cache_file_path):
                 # 使用缓存
                 cached_data = _load_feature_cache(cache_file_path)
                 if cached_data is not None and 'stock_df' in cached_data:
-                    stock_df = cached_data['stock_df']
-                    logger.debug(f"预测使用特征缓存: {cache_key}")
-            else:
+                    cached_df = cached_data['stock_df']
+                    # 检查新特征列是否存在（GARCH + HSI Regime）
+                    required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime']
+                    missing_cols = [c for c in required_new_cols if c not in cached_df.columns]
+                    if missing_cols:
+                        logger.debug(f"预测缓存缺少新特征: {missing_cols}，重新计算...")
+                    else:
+                        stock_df = cached_df
+                        logger.debug(f"预测使用特征缓存: {cache_key}")
+                        use_cache_predict = True
+
+            if not use_cache_predict:
                 # 计算特征
                 # 获取恒生指数数据
                 hsi_df = get_hsi_data_tencent(period_days=1460)
@@ -4567,6 +4731,18 @@ class CatBoostModel(BaseTradingModel):
                 # 计算相对强度指标
                 if hsi_df is not None:
                     stock_df = self.feature_engineer.calculate_relative_strength(stock_df, hsi_df)
+
+                    # 合并 HSI 市场状态特征
+                    hsi_regime_df_predict = None
+                    try:
+                        regime_detector = RegimeDetector()
+                        hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                        rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
+                        hsi_regime_df_predict = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
+                    except Exception as e:
+                        logger.warning(f"HSI 市场状态特征计算失败: {e}")
+                    if hsi_regime_df_predict is not None:
+                        stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df_predict)
 
                 # 创建资金流向特征
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df)
