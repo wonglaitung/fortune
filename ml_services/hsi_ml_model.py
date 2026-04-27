@@ -38,6 +38,10 @@ from data_services.calendar_features import CalendarFeatureCalculator, CALENDAR_
 from data_services.volatility_model import GARCHVolatilityModel, GARCH_FEATURE_CONFIG
 # 导入市场状态检测
 from data_services.regime_detector import RegimeDetector, REGIME_FEATURE_CONFIG
+# 导入跨尺度关联特征（Tier 1 新增，2026-04-27）
+from data_services.multiscale_features import MultiscaleFeatureCalculator, MULTISCALE_FEATURE_CONFIG
+# 导入信息衰减分析（Tier 1 新增，2026-04-27）
+from data_services.info_decay_analyzer import InfoDecayAnalyzer, INFO_DECAY_FEATURE_CONFIG
 
 # ========== 配置 ==========
 HSI_SYMBOL = "^HSI"
@@ -148,8 +152,12 @@ FEATURE_CONFIG = {
     'calendar_features': CALENDAR_FEATURE_CONFIG['calendar_features'],
     # GARCH 波动率（2026-04-26 新增）
     'garch_features': GARCH_FEATURE_CONFIG['garch_features'],
-    # 市场状态检测（2026-04-26 新增）
-    'regime_features': REGIME_FEATURE_CONFIG['regime_features']
+    # 市场状态检测（2026-04-26 新增，Tier 1 增强后 10 个特征）
+    'regime_features': REGIME_FEATURE_CONFIG['regime_features'],
+    # 跨尺度关联（Tier 1 新增，2026-04-27）
+    'multiscale_features': MULTISCALE_FEATURE_CONFIG['multiscale_features'],
+    # 信息衰减分析（Tier 1 新增，2026-04-27）
+    'info_decay_features': INFO_DECAY_FEATURE_CONFIG['info_decay_features'],
 }
 
 # CatBoost 模型参数（恒指专用 - 优化版本）
@@ -469,9 +477,18 @@ class HSICatBoostModel:
         garch_model = GARCHVolatilityModel()
         df = garch_model.calculate_features(df)
 
-        # ========== 市场状态检测（HMM，2026-04-26 新增）==========
+        # ========== 市场状态检测（HMM，2026-04-26 新增，Tier 1 增强后 10 个特征）==========
         regime_detector = RegimeDetector()
         df = regime_detector.calculate_features(df)
+
+        # ========== 跨尺度关联特征（Tier 1 新增，2026-04-27）==========
+        multiscale_calc = MultiscaleFeatureCalculator()
+        df = multiscale_calc.calculate_features(df)
+
+        # ========== 信息衰减特征（Tier 1 新增，2026-04-27）==========
+        info_decay_analyzer = InfoDecayAnalyzer()
+        # 信息衰减特征需要特征列表，先用默认值（MI 分析需在 Walk-forward 中离线计算）
+        df = info_decay_analyzer.calculate_features(df)
 
         print(f"  ✅ 特征计算完成（{len(df.columns)} 列）")
 
