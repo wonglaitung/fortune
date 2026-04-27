@@ -423,14 +423,6 @@ AKShare      南向资金        主力追踪     性能监控
 | 原始数据 | `data/stock_cache/` | 7天 | - |
 | 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
 
-**特征模块**：
-
-| 模块 | 文件 | 特征数 | 功能 |
-|------|------|--------|------|
-| GARCH 波动率 | `data_services/volatility_model.py` | 4 | 条件波动率、波动率比率、持续性参数 |
-| HSI 市场状态 | `data_services/regime_detector.py` | 6 | HMM 市场状态检测（震荡/牛市/熊市） |
-| 日历效应 | `data_services/calendar_features.py` | 22 | 星期效应、月份效应、期权到期日 |
-
 ---
 
 ## 项目结构
@@ -554,13 +546,7 @@ python hsi_email.py --no-email
 
 ## 依赖项
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `shap`
-
-| 包名 | 用途 |
-|------|------|
-| `hmmlearn` | HMM 隐马尔可夫模型（市场状态检测） |
-| `arch` | GARCH 波动率模型 |
-| `shap` | 特征重要性分析（可选） |
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
 
 ---
 
