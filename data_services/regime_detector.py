@@ -14,6 +14,12 @@
 - Regime_Duration: 当前状态已持续的交易日数
 - Regime_Transition_Prob: 状态转换概率（从当前状态转换的概率）
 
+新增特征（2026-04-27 Tier 1 增强）：
+- Regime_Switch_Prob_5d: 5天内转换到不同状态的概率
+- Regime_Expected_Duration: 当前状态期望剩余持续时间
+- Regime_Momentum: 状态概率 5 日变化（增强/减弱）
+- Regime_Vol_Interaction: 高波动+高转换=动荡期
+
 依赖：hmmlearn 库（pip install hmmlearn）
 """
 
@@ -240,6 +246,27 @@ class RegimeDetector:
             stay_prob = trans_mat[state, state]
             result.iloc[i, result.columns.get_loc('Regime_Transition_Prob')] = 1 - stay_prob
 
+        # ========== 新增 Tier 1 特征（2026-04-27）==========
+        # 1. Regime_Switch_Prob_5d: 5天内转换到不同状态的概率
+        # 使用 T^5 转移矩阵计算
+        trans_mat_5d = np.linalg.matrix_power(trans_mat, 5)
+        result['Regime_Switch_Prob_5d'] = 0.0
+        for i, state in enumerate(states_raw):
+            # 5天后留在当前状态的概率
+            stay_prob_5d = trans_mat_5d[state, state]
+            result.iloc[i, result.columns.get_loc('Regime_Switch_Prob_5d')] = 1 - stay_prob_5d
+
+        # 2. Regime_Expected_Duration: 当前状态期望剩余持续时间
+        # 期望持续时间 = 1 / (1 - T[i,i])
+        result['Regime_Expected_Duration'] = 0.0
+        for i, state in enumerate(states_raw):
+            stay_prob = trans_mat[state, state]
+            if stay_prob < 1.0:
+                expected_duration = 1.0 / (1.0 - stay_prob)
+            else:
+                expected_duration = 100.0  # 上限
+            result.iloc[i, result.columns.get_loc('Regime_Expected_Duration')] = expected_duration
+
         return result
 
     def _calculate_duration(self, states):
@@ -309,9 +336,32 @@ class RegimeDetector:
             # ⚠️ 数据泄漏防护：HMM 预测的是基于截至 t-1 的信息
             # 但 predict 使用了全部数据，所以需要 shift(1)
             for col in ['Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1',
-                       'Regime_Prob_2', 'Regime_Duration', 'Regime_Transition_Prob']:
+                       'Regime_Prob_2', 'Regime_Duration', 'Regime_Transition_Prob',
+                       'Regime_Switch_Prob_5d', 'Regime_Expected_Duration']:
                 if col in df.columns:
                     df[col] = df[col].shift(1)
+
+            # ========== 新增 Tier 1 特征计算 ==========
+            # 3. Regime_Momentum: 状态概率 5 日变化
+            # 上涨状态概率的变化（增强/减弱）
+            if 'Regime_Prob_1' in df.columns:
+                df['Regime_Momentum'] = df['Regime_Prob_1'].diff(5)
+                # 已通过 shift(1) 处理的 Regime_Prob_1，diff(5) 不会泄漏
+
+            # 4. Regime_Vol_Interaction: 高波动+高转换=动荡期
+            # 需要 GARCH_Conditional_Vol（GARCH 模型先计算）
+            if 'GARCH_Conditional_Vol' in df.columns and 'Regime_Transition_Prob' in df.columns:
+                df['Regime_Vol_Interaction'] = (
+                    df['GARCH_Conditional_Vol'] * df['Regime_Transition_Prob']
+                )
+            else:
+                # 回退：使用 Volatility_20d
+                if 'Volatility_20d' in df.columns and 'Regime_Transition_Prob' in df.columns:
+                    df['Regime_Vol_Interaction'] = (
+                        df['Volatility_20d'] * df['Regime_Transition_Prob']
+                    )
+                else:
+                    df['Regime_Vol_Interaction'] = 0.0
 
             feature_count = len([c for c in df.columns if c in self.get_feature_names()])
             print(f"  ✅ 市场状态特征计算完成（{feature_count} 个特征）")
@@ -325,6 +375,8 @@ class RegimeDetector:
                     df[col] = 0.5  # 默认50%概率震荡
                 elif col.startswith('Regime_Prob_'):
                     df[col] = 0.25
+                elif col == 'Regime_Expected_Duration':
+                    df[col] = 10.0  # 默认期望持续时间
                 else:
                     df[col] = 0.0
 
@@ -340,6 +392,11 @@ class RegimeDetector:
             'Regime_Prob_2',  # 下跌概率
             'Regime_Duration',
             'Regime_Transition_Prob',
+            # 新增 Tier 1 特征（2026-04-27）
+            'Regime_Switch_Prob_5d',      # 5天内转换概率
+            'Regime_Expected_Duration',   # 期望剩余持续时间
+            'Regime_Momentum',            # 状态概率变化
+            'Regime_Vol_Interaction',     # 波动率与转换概率交互
         ]
 
 

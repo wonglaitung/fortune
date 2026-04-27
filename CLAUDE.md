@@ -28,10 +28,12 @@ python3 -m pytest tests/ -v
 |------|------|
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
 | **恒指预测验证** | `python3 hsi_prediction.py --verify` |
+| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
+| **三周期关系分析** | `python3 ml_services/analyze_three_horizon_relationships.py` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
 | **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
-| **Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
+| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost` |
 | **板块验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
@@ -60,14 +62,14 @@ python3 -m pytest tests/ -v
 | **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
 
-### 可用策略（增强模型验证，2026-04-26）
+### 可用策略（恒指增强模型验证，2026-04-28，37特征）
 
-| 策略 | 收益 | 胜率 | 操作 |
-|------|------|------|------|
-| **假突破(101)做多** | - | **92.73%** | ⭐ 新最优 |
-| **一致看跌(000)做空** | - | **83.58%** | 🟢 减仓 |
-| 一致看涨(111)买入 | - | 81.40% | 🟢 买入 |
-| 震荡回调(110)做空 | - | 78.57% | ⚠️ 不再最优 |
+| 策略 | 胜率 | 操作 |
+|------|------|------|
+| **假突破(101)做多** | **94.03%** | ⭐ 最优策略 |
+| 下跌中继(001)做多 | 86.24% | 样本充足 |
+| 一致看跌(000)做空 | 77.90% | 样本最多 |
+| 一致看涨(111)买入 | 70.00% | ⚠️ 需谨慎 |
 
 ---
 
@@ -87,10 +89,12 @@ AKShare      南向资金        主力追踪     性能监控
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
 
-**新增特征模块**（2026-04-27）：
+**新增特征模块**（2026-04-27~28）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
 - `data_services/volatility_model.py` - GARCH 波动率（4个特征）
-- `data_services/regime_detector.py` - HMM 市场状态检测（6个特征）
+- `data_services/regime_detector.py` - HMM 市场状态检测（10个特征，含 Tier 1 增强）
+- `data_services/multiscale_features.py` - 跨尺度关联（5个特征，待优化）
+- `data_services/info_decay_analyzer.py` - 信息衰减分析（5个特征，待实施）
 
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
@@ -105,22 +109,23 @@ AKShare      南向资金        主力追踪     性能监控
 
 ### 模型可信度（Walk-forward 验证）
 
-**恒指增强模型**：
+**恒指增强模型**（2026-04-28，37特征）：
 
 | 周期 | 准确率 | 推荐度 |
 |------|--------|--------|
-| **20天** | **82.23%** | ⭐⭐⭐⭐⭐ 推荐 |
-| 5天 | 64.35% | ⭐⭐⭐⭐ 趋势确认 |
-| 1天 | 51.55% | ⚠️ 噪音大 |
+| **20天** | **80.24%** | ⭐⭐⭐⭐⭐ 推荐 |
+| 5天 | 58.28% | ⭐⭐⭐ 趋势确认 |
+| 1天 | 50.77% | ⚠️ 噪音大 |
 
-**个股完整模型**（2026-04-27 验证，12 folds，59只股票）：
+**个股完整模型**（2026-04-28 验证，12 folds，59只股票，730特征）：
 
 | 指标 | 数值 | 评估 |
 |------|------|------|
-| 综合评分 | 85/100 | 优秀 |
-| 平均准确率 | 54.82% | ✅ |
-| 平均夏普比率 | 1.0221 | ✅ (>1.0) |
-| 平均最大回撤 | -0.38% | ✅ 极佳 |
+| 综合评分 | 80/100 | 优秀 |
+| 平均准确率 | 57.15% | ✅ |
+| 平均夏普比率 | 0.8122 | ⚠️ (<1.0) |
+| 平均最大回撤 | -0.53% | ✅ 极佳 |
+| 夏普标准差 | 0.5844 | ✅ 稳定性优 |
 
 ### CatBoost 配置
 
@@ -130,6 +135,17 @@ AKShare      南向资金        主力追踪     性能监控
 | 置信度分级阈值 | 0.65 / 0.55 | 用于判断信号强弱，不影响方向 |
 | 特征数量 | 730 个 | 精简特征（2026-04-27 清理冗余后） |
 | 随机种子 | 42（固定） | 确保可重现性 |
+
+**20天模型参数（适配 730 特征，2026-04-28）**：
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| n_estimators | 500 | 树数量 |
+| depth | 6 | 树深度 |
+| learning_rate | 0.04 | 学习率 |
+| l2_leaf_reg | 3 | L2 正则化 |
+| subsample | 0.7 | 行采样 |
+| colsample_bylevel | 0.7 | 列采样 |
 
 **验证方法说明**：
 - **训练时CV准确率**：模型训练时的5折交叉验证准确率（用于文档展示）
@@ -249,6 +265,7 @@ for col in self.categorical_encoders.keys():
 - **经验教训**：[lessons.md](lessons.md) - 关键警告和最佳实践
 - **进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
 - **详细文档**：[docs/](docs/) - 特征工程、验证方法等
+- **数据挖掘计划**：[docs/DATA_MINING_TIER2_PLAN.md](docs/DATA_MINING_TIER2_PLAN.md) - Tier 1/2 特征增强方案
 - **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
@@ -256,4 +273,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-04-27（特征冗余清理：1045→730，删除RS_Signal/PE常量交互/数学等价特征，准确率55.01%）
+**最后更新**：2026-04-28（Regime增强：37特征，恒指20天准确率80.24%，假突破策略94.03%）
