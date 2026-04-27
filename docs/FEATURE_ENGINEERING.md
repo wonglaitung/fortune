@@ -1277,6 +1277,24 @@ df['Volume_Ratio'] = df['Volume'] / df['Volume'].rolling(5).mean()
 df['Volume_Ratio'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(5).mean()
 ```
 
+**新增特征的 shift 处理**：
+```python
+# GARCH 波动率特征（volatility_model.py:173-176）
+for col in ['GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d']:
+    df[col] = df[col].shift(1)
+
+# HSI 市场状态特征（regime_detector.py:311-314）
+for col in ['Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1', 'Regime_Prob_2',
+            'Regime_Duration', 'Regime_Transition_Prob']:
+    df[col] = df[col].shift(1)
+```
+
+**高风险特征检查清单**：
+- [ ] 所有 `.rolling()` 计算后是否有 `.shift(1)`
+- [ ] 标签是否使用 `shift(-horizon)` 获取未来收益
+- [ ] 价格距离/百分比特征是否使用滞后价格
+- [ ] 宏观因子是否对齐到正确日期
+
 ### 4. 特征标准化
 
 **CatBoost 不需要标准化**：
