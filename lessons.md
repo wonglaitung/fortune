@@ -47,7 +47,7 @@
 
 **代码**：`ml_services/performance_monitor.py:179-182`
 
-### 5. 特征缓存版本控制 ⭐（新增）
+### 5. 特征缓存版本控制 ⭐
 
 **问题**：新增特征后，旧缓存缺少新特征列，导致预测失败或使用错误特征
 
@@ -60,6 +60,35 @@
 - 检测特征列而非仅检测缓存文件存在性
 
 **代码**：`ml_services/ml_trading_model.py`（CatBoost 缓存验证逻辑）
+
+### 6. CatBoost 分类特征 NaN 处理 ⭐（新增 2026-04-27）
+
+**问题**：`predict_proba` 函数缺少分类特征 NaN 处理，导致测试数据预测失败
+
+**现象**：所有 Walk-forward Fold 验证失败，报错 `cat_features must be integer or string, real number values and NaN values should be converted to string`
+
+**原因**：
+- 训练时对分类特征进行了 `fillna('unknown')` 和 `LabelEncoder` 转换
+- 但 `predict_proba` 函数缺少相同处理
+
+**解决**：
+```python
+# 在 predict_proba 中添加分类特征处理
+for col in self.categorical_encoders.keys():
+    if col in test_df.columns:
+        test_df[col] = test_df[col].fillna('unknown').astype(str)
+        encoder = self.categorical_encoders[col]
+        test_df[col] = test_df[col].apply(
+            lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+        )
+```
+
+**教训**：
+- 训练和预测的预处理逻辑必须一致
+- 分类特征的 NaN 值必须在进入 CatBoost Pool 之前处理
+- 建议使用统一的预处理管道
+
+**代码**：`ml_services/ml_trading_model.py:4937-4948`
 
 ### 2. 大模型 Prompt 数据格式 ⭐
 
