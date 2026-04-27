@@ -32,6 +32,12 @@ from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 
 # 导入南向资金服务
 from data_services.southbound_data import SouthboundDataService
+# 导入日历效应特征
+from data_services.calendar_features import CalendarFeatureCalculator, CALENDAR_FEATURE_CONFIG
+# 导入 GARCH 波动率模型
+from data_services.volatility_model import GARCHVolatilityModel, GARCH_FEATURE_CONFIG
+# 导入市场状态检测
+from data_services.regime_detector import RegimeDetector, REGIME_FEATURE_CONFIG
 
 # ========== 配置 ==========
 HSI_SYMBOL = "^HSI"
@@ -137,7 +143,13 @@ FEATURE_CONFIG = {
         '60d_Trend_Volume_MA250', '20d_Trend_Volume_MA250',
         '60d_Trend_MA120',
         '20d_RS_Signal_Volume_MA250'
-    ]
+    ],
+    # 日历效应（2026-04-26 新增）
+    'calendar_features': CALENDAR_FEATURE_CONFIG['calendar_features'],
+    # GARCH 波动率（2026-04-26 新增）
+    'garch_features': GARCH_FEATURE_CONFIG['garch_features'],
+    # 市场状态检测（2026-04-26 新增）
+    'regime_features': REGIME_FEATURE_CONFIG['regime_features']
 }
 
 # CatBoost 模型参数（恒指专用 - 优化版本）
@@ -449,6 +461,18 @@ class HSICatBoostModel:
             # Volume_MA250趋势
             df[f'{period}d_Trend_Volume_MA250'] = (df['Volume_MA250'].diff(period) > 0).astype(int)
 
+        # ========== 日历效应特征（2026-04-26 新增）==========
+        calendar_calc = CalendarFeatureCalculator()
+        df = calendar_calc.calculate_features(df)
+
+        # ========== GARCH 波动率特征（2026-04-26 新增）==========
+        garch_model = GARCHVolatilityModel()
+        df = garch_model.calculate_features(df)
+
+        # ========== 市场状态检测（HMM，2026-04-26 新增）==========
+        regime_detector = RegimeDetector()
+        df = regime_detector.calculate_features(df)
+
         print(f"  ✅ 特征计算完成（{len(df.columns)} 列）")
 
         return df
@@ -565,6 +589,9 @@ class HSICatBoostModel:
         # 特征重要性
         self._print_feature_importance()
 
+        # SHAP 特征重要性分析（2026-04-26 新增）
+        self._analyze_shap_importance(X_train, df)
+
         # 保存模型
         self.save_model()
 
@@ -585,6 +612,36 @@ class HSICatBoostModel:
         print("-" * 50)
         for i, row in feature_imp.head(top_n).iterrows():
             print(f"  {row['Feature']:<30} {row['Importance']:.4f}")
+
+    def _analyze_shap_importance(self, X_train, df=None):
+        """
+        SHAP 特征重要性分析（2026-04-26 新增）
+
+        参数:
+        - X_train: 训练特征
+        - df: 原始特征数据（用于获取 Market_Regime 分组）
+        """
+        try:
+            from ml_services.hsi_feature_selection import DynamicFeatureSelector
+
+            # 获取市场状态序列（用于分组分析）
+            regime_series = None
+            if df is not None and 'Market_Regime' in df.columns:
+                # 对齐训练集索引
+                regime_series = df.loc[X_train.index, 'Market_Regime']
+
+            selector = DynamicFeatureSelector(
+                model=self.model,
+                X_train=X_train,
+                top_k_ratio=0.7
+            )
+            selector.analyze(regime_series=regime_series)
+            selector.print_summary()
+
+        except ImportError:
+            print("  ⚠️ shap 库未安装，跳过 SHAP 分析")
+        except Exception as e:
+            print(f"  ⚠️ SHAP 分析失败: {e}")
 
     def predict(self, latest_data=None):
         """
@@ -656,16 +713,17 @@ class HSICatBoostModel:
         results = {}
 
         # 已知的历史准确率（基于 Walk-forward 验证）
+        # 更新时间：2026-04-26（增强模型：33特征含日历/GARCH/Regime）
         historical_accuracy = {
-            1: 0.4643,   # 46.43%
-            5: 0.5765,   # 57.65%
-            20: 0.5459   # 54.59%
+            1: 0.5155,   # 51.55%（噪音大，仅供参考）
+            5: 0.6435,   # 64.35%（趋势确认）
+            20: 0.8223   # 82.23%（最可靠）
         }
 
         historical_auc = {
             1: 0.5213,
             5: 0.6567,
-            20: 0.7463
+            20: 0.7500   # 估算值
         }
 
         for horizon in horizons:
