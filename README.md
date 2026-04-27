@@ -13,6 +13,32 @@
 
 ---
 
+## 最近更新
+
+### 2026-04-27：Walk-forward 验证 + 新特征集成
+
+**新增特征**：
+- **GARCH 波动率特征**（4个）：条件波动率、波动率比率、持续性参数
+- **HSI 市场状态特征**（6个）：HMM 检测震荡/牛市/熊市
+- **日历效应特征**（22个）：星期效应、月份效应、期权到期日
+
+**验证结果**：
+- 个股 Walk-forward 验证：综合评分 85/100，夏普比率 1.02
+- `HSI_Regime_Duration` 特征重要性排名第2
+
+**Bug 修复**：
+- CatBoost 分类特征 NaN 处理问题
+- 特征缓存版本检测逻辑
+
+### 2026-04-26：恒指增强模型三周期验证
+
+**验证结果**：
+- 20天准确率：80.73% → **82.23%**（+1.50%）
+- 5天准确率：57.17% → **64.35%**（+7.18%）
+- 最优策略变更：震荡回调(110) → **假突破(101)**（92.73%胜率）
+
+---
+
 ## 核心功能
 
 ### 项目优势
@@ -68,17 +94,28 @@
 
 ### 港股预测 CatBoost 机器学习模型
 
-**核心优势**：使用CatBoost梯度提升算法，整合918个技术指标、基本面数据和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
+**核心优势**：使用CatBoost梯度提升算法，整合1045个技术指标、基本面数据、市场状态和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
 
-**性能指标（训练时5折交叉验证）**：
+**性能指标**：
 
-| 周期 | 准确率 | 标准差 | 推荐度 |
-|------|--------|--------|--------|
-| 1天 | 61.24% | ±6.51% | ⚠️ 噪音大，仅供参考 |
-| 5天 | 62.90% | ±4.61% | ⭐⭐⭐ 谨慎使用 |
-| **20天** | **64.67%** | ±4.32% | ⭐⭐⭐⭐⭐ 推荐 |
+| 验证方法 | 周期 | 准确率 | 推荐度 |
+|---------|------|--------|--------|
+| **Walk-forward**（个股12 folds） | **20天** | **54.82%** | ⭐⭐⭐⭐⭐ 推荐 |
+| Walk-forward（恒指增强模型） | **20天** | **82.23%** | ⭐⭐⭐⭐⭐ 推荐 |
+| Walk-forward（恒指增强模型） | 5天 | 64.35% | ⭐⭐⭐⭐ 趋势确认 |
+| 训练时5折交叉验证 | 20天 | 64.67% | 参考 |
 
-**特征体系（918个特征）**：
+**Walk-forward 验证结果（2026-04-27，59只股票，12 folds）**：
+
+| 指标 | 数值 | 业界标准 | 评估 |
+|------|------|---------|------|
+| 综合评分 | **85/100** | - | 优秀 |
+| 平均夏普比率 | **1.0221** | >1.0 | ✅ |
+| 平均最大回撤 | **-0.38%** | <-20% | ✅ 极佳 |
+| 平均索提诺比率 | **3.7658** | >1.0 | ✅ 优秀 |
+| 平均准确率 | 54.82% | >50% | ✅ |
+
+**特征体系（1045个特征）**：
 
 | 类别 | 特征示例 | 作用 |
 |------|----------|------|
@@ -87,6 +124,24 @@
 | 基本面 | PE、PB、ROE、市值 | 评估股票内在价值 |
 | 市场情绪 | 恒指走势、板块强弱 | 反映整体市场环境 |
 | 资金流向 | 南向资金、主力净流入 | 追踪大资金动向 |
+| **GARCH 波动率** | 条件波动率、波动率比率、持续性参数 | 捕捉波动率聚类特性 |
+| **HSI 市场状态** | HMM 市场状态、状态概率、持续时间 | 识别牛熊震荡市场 |
+| **日历效应** | 星期效应、月份效应、期权到期日 | 捕捉周期性市场规律 |
+
+**特征重要性（个股20天模型，Top 10）**：
+
+| 排名 | 特征 | 重要性 | 类别 |
+|------|------|--------|------|
+| 1 | US_10Y_Yield | 5.28 | 宏观类 |
+| 2 | **HSI_Regime_Duration** | **3.95** | **市场状态** |
+| 3 | **HSI_Regime_Prob_1** | **2.44** | **市场状态** |
+| 4 | HSI_Return_20d | 1.85 | 宏观类 |
+| 5 | Volatility_70pct | 1.75 | 波动类 |
+| 6 | MA250_Slope | 1.65 | 趋势类 |
+| 7 | HSI_Return_60d | 1.59 | 宏观类 |
+| 8 | SP500_Return_20d | 1.56 | 宏观类 |
+| 9 | Stock_Cyclical_Score | 1.44 | 股票类型 |
+| 10 | **HSI_Regime_Prob_0** | **1.44** | **市场状态** |
 
 **模型配置**：
 
@@ -95,11 +150,35 @@
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
 | 置信度分级 | 0.65 / 0.55 | 高置信度(>0.65)、中置信度(0.55-0.65)、低置信度(<0.55) |
 | 特征缓存 | 7天有效期 | 特征计算结果缓存，**170x 加速**，避免重复计算 |
+| 随机种子 | 42（固定） | 确保可重现性 |
 
 **实际应用**：
 - 每日自动预测自选股未来5天和20天的涨跌概率
 - 结合置信度分级决定仓位大小（高置信度重仓，低置信度轻仓或观望）
 - 通过邮件推送预测结果，便于及时决策
+
+**Walk-forward 验证详细结果（12 Folds）**：
+
+| Fold | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 |
+|------|---------|-------|---------|-------|------|-------|---------|--------|
+| 1 | 2025-01 | 1102 | 380 | 9.87% | 39.21% | 47.87% | 0.64 | -0.18% |
+| 2 | 2025-02 | 1160 | 304 | **53.33%** | 44.74% | 57.98% | **1.80** | -0.19% |
+| 3 | 2025-03 | 1218 | 117 | 36.79% | 29.06% | **76.96%** | 1.44 | -0.38% |
+| 4 | 2025-04 | 1102 | 80 | 1.46% | **68.75%** | 38.26% | **2.10** | -0.47% |
+| 5 | 2025-05 | 1160 | 480 | **51.31%** | 36.88% | 52.46% | 1.06 | -0.10% |
+| 6 | 2025-06 | 1218 | 492 | 9.54% | 42.89% | 53.59% | 0.88 | -0.16% |
+| 7 | 2025-07 | 1276 | 192 | 13.51% | 28.65% | 39.89% | **2.48** | -0.39% |
+| 8 | 2025-08 | 1218 | 430 | 7.92% | 35.12% | 68.61% | 0.78 | -0.12% |
+| 9 | 2025-09 | 1276 | 269 | 36.83% | 33.83% | 53.42% | 0.72 | -0.10% |
+| 10 | 2025-10 | 1160 | 385 | 2.87% | 40.78% | 52.98% | 0.26 | -0.18% |
+| 11 | 2025-11 | 1160 | 332 | 2.29% | 31.02% | 64.30% | 0.26 | -0.40% |
+| 12 | 2025-12 | 1218 | 336 | -0.20% | 32.44% | 51.50% | -0.16 | **-1.88%** |
+
+**关键洞察**：
+- ✅ **夏普比率最高**：Fold 7 (2.48)、Fold 4 (2.10)、Fold 2 (1.80)
+- ✅ **收益率最高**：Fold 2 (53.33%)、Fold 5 (51.31%)、Fold 3 (36.79%)
+- ⚠️ **唯一负收益**：Fold 12 (-0.20%)，夏普比率也是最低 (-0.16)
+- ✅ **最大回撤极低**：平均仅 -0.38%，风险控制优秀
 
 ### 港股异常检测
 
@@ -236,6 +315,9 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 
 # Walk-forward验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+
+# 清除特征缓存（新增特征后必须执行）
+rm -rf data/feature_cache/*.pkl
 ```
 
 ---
@@ -369,6 +451,14 @@ AKShare      南向资金        主力追踪     性能监控
 | 原始数据 | `data/stock_cache/` | 7天 | - |
 | 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
 
+**新增特征模块**（2026-04-27）：
+
+| 模块 | 文件 | 特征数 | 功能 |
+|------|------|--------|------|
+| GARCH 波动率 | `data_services/volatility_model.py` | 4 | 条件波动率、波动率比率、持续性参数 |
+| HSI 市场状态 | `data_services/regime_detector.py` | 6 | HMM 市场状态检测（震荡/牛市/熊市） |
+| 日历效应 | `data_services/calendar_features.py` | 22 | 星期效应、月份效应、期权到期日 |
+
 ---
 
 ## 项目结构
@@ -403,6 +493,28 @@ fortune/
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
 | `hourly-stock-monitor.yml` | 交易时段监控 | 10:00-15:00 每小时 |
 | `performance-monitor.yml` | 性能报告 | 每月1号 |
+
+### 可用命令汇总
+
+```bash
+# 核心预测与分析
+python3 hsi_prediction.py --no-email                    # 恒指预测
+python3 comprehensive_analysis.py                        # 综合分析
+python3 detect_stock_anomalies.py --mode standalone     # 异常检测
+
+# 模型训练与验证
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
+
+# 分析工具
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
+python3 ml_services/performance_monitor.py --mode all --no-email
+python3 ml_services/analyze_causal_chain.py             # 因果链分析
+
+# 缓存管理
+rm -rf data/feature_cache/*.pkl                         # 清除特征缓存
+```
 
 ---
 
@@ -447,6 +559,9 @@ python hsi_email.py --no-email
 | **深度学习** | LSTM/Transformer F1≈0，不推荐 |
 | **Walk-forward** | 唯一可信的验证方法 |
 | **加密货币** | 股票策略不适用 |
+| **恒指 vs 个股** | 因果链传导完全反向，个股概率高反而预示反转 |
+| **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
+| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
 
 ---
 
@@ -457,6 +572,9 @@ python hsi_email.py --no-email
 - **[progress.txt](progress.txt)** - 项目进展
 - **[docs/](docs/)** - 详细文档
   - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
+  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程（含 GARCH/HSI Regime）
+  - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
+  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法指南
   - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
   - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
 
@@ -464,7 +582,15 @@ python hsi_email.py --no-email
 
 ## 依赖项
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba`
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
+
+### 新增依赖（2026-04-27）
+
+| 包名 | 用途 |
+|------|------|
+| `hmmlearn` | HMM 隐马尔可夫模型（市场状态检测） |
+| `arch` | GARCH 波动率模型 |
+| `shap` | 特征重要性分析（可选） |
 
 ---
 

@@ -4934,6 +4934,18 @@ class CatBoostModel(BaseTradingModel):
             # 如果是 numpy 数组，转换为 DataFrame
             test_df = pd.DataFrame(X, columns=self.feature_columns)
 
+        # 处理分类特征：填充 NaN 并使用 LabelEncoder 转换
+        for col in self.categorical_encoders.keys():
+            if col in test_df.columns:
+                # 先填充 NaN 值为 'unknown'，避免 CatBoost 分类特征 NaN 错误
+                test_df[col] = test_df[col].fillna('unknown').astype(str)
+                # 使用训练时保存的 encoder 转换（处理未见过的类别）
+                encoder = self.categorical_encoders[col]
+                # 对未见过的类别使用 -1 或第一个已知类别
+                test_df[col] = test_df[col].apply(
+                    lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+                )
+
         # 获取分类特征索引
         categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
 

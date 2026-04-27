@@ -8,6 +8,46 @@
 
 ## 最新进展（2026-04-27）
 
+### Walk-forward 验证完成 + 分类特征 NaN Bug 修复
+
+**目标**：验证下午新增的 GARCH 和 HSI 市场状态特征效果
+
+**验证结果**（CatBoost 20天，12 folds，59只股票）：
+
+| 指标 | 数值 | 评估 |
+|------|------|------|
+| 综合评分 | 85/100 | 优秀 |
+| 平均准确率 | 54.82% | ✅ |
+| 平均夏普比率 | 1.0221 | ✅ (>1.0) |
+| 平均最大回撤 | -0.38% | ✅ 极佳 |
+| 平均索提诺比率 | 3.7658 | ✅ 优秀 |
+
+**新特征重要性**：
+- `HSI_Regime_Duration` 排名第2（重要性 3.95）
+- `HSI_Regime_Prob_1` 排名第3（重要性 2.44）
+- `HSI_Regime_Prob_0` 排名第10（重要性 1.44）
+- `HSI_Market_Regime` 排名第20（重要性 1.00）
+
+**Bug 修复**：
+- 修复 `predict_proba` 函数缺少分类特征 NaN 处理问题
+- 问题现象：所有 Fold 因 `Stock_Type` 分类特征 NaN 值失败
+- 解决方案：在预测前填充 NaN 为 'unknown' 并使用 LabelEncoder 转换
+
+**特征数量更新**：
+- 旧：918 个特征
+- 新：1045 个特征（+127 个，含 GARCH、HSI Regime、日历效应）
+
+**改动文件**：
+- `ml_services/ml_trading_model.py:4937-4948`（修复分类特征 NaN 处理）
+- `docs/VALIDATION_GUIDE.md`（更新验证示例）
+- `docs/FEATURE_ENGINEERING.md`（新增 GARCH/HSI Regime 特征文档）
+- `docs/FEATURE_IMPORTANCE_ANALYSIS.md`（更新特征重要性排名）
+- `lessons.md`（新增分类特征 NaN 处理教训）
+
+---
+
+## 历史进展（2026-04-27 上午）
+
 ### GARCH 波动率和 HSI 市场状态特征集成
 
 **目标**：将 Tier 1 数据挖掘模块集成到个股预测模型

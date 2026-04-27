@@ -1,6 +1,6 @@
 # 特征工程完整指南
 
-> **最后更新**：2026-04-03
+> **最后更新**：2026-04-27
 
 ---
 
@@ -33,8 +33,11 @@
 | **风险管理特征** | 18 | ATR动态止损、连续市场状态记忆、盈亏比评估 |
 | **事件驱动特征** | 9 | 分红、财报日期、财报超预期 |
 | **股票类型特征** | 128 | 技术指标、基本面、市场环境等 |
+| **GARCH 波动率特征** | 4 | 条件波动率、波动率比率、波动率变化、持续性参数 |
+| **HSI 市场状态特征** | 6 | HMM 市场状态检测（状态标签、概率、持续时间、转换概率） |
+| **日历效应特征** | 22 | 星期效应、月份效应、期权到期日、月初/月末等 |
 | **其他衍生特征** | 280 | 交叉特征、滞后特征等 |
-| **总计** | **892** | **全量特征** |
+| **总计** | **1045** | **全量特征（2026-04-27 更新）** |
 
 ### 特征分类原则
 
@@ -822,7 +825,179 @@ def create_stock_type_features(df, stock_code, stock_type_mapping):
 
 ---
 
-### 12. 其他衍生特征（280个）
+### 12. GARCH 波动率特征（4个）
+
+#### 目的
+使用 GARCH(1,1) 模型捕捉波动率聚类特性，提供更精确的风险评估
+
+#### 特征列表
+
+| 特征名称 | 说明 | 计算方法 |
+|---------|------|---------|
+| `GARCH_Conditional_Vol` | 条件波动率 | GARCH(1,1) 模型拟合后的条件标准差 |
+| `GARCH_Vol_Ratio` | 波动率比率 | 当前条件波动率 / 历史均值 |
+| `GARCH_Vol_Change_5d` | 5日波动率变化 | 条件波动率的5日变化率 |
+| `GARCH_Persistence` | 波动率持续性参数 | α + β（GARCH 参数之和，反映波动率持续性） |
+
+#### 计算方法
+
+```python
+from arch import arch_model
+
+def calculate_garch_features(returns):
+    """
+    计算 GARCH 波动率特征
+    """
+    # 使用 GARCH(1,1) 模型
+    model = arch_model(returns * 100, vol='Garch', p=1, q=1)
+    results = model.fit(disp='off')
+    
+    # 条件波动率
+    conditional_vol = results.conditional_volatility / 100
+    
+    # 波动率比率
+    vol_ratio = conditional_vol.iloc[-1] / conditional_vol.mean()
+    
+    # 波动率变化
+    vol_change = conditional_vol.pct_change(5).iloc[-1]
+    
+    # 持续性参数
+    alpha = results.params['alpha[1]']
+    beta = results.params['beta[1]']
+    persistence = alpha + beta
+    
+    return {
+        'GARCH_Conditional_Vol': conditional_vol.iloc[-1],
+        'GARCH_Vol_Ratio': vol_ratio,
+        'GARCH_Vol_Change_5d': vol_change,
+        'GARCH_Persistence': persistence
+    }
+```
+
+#### 实现文件
+- `data_services/volatility_model.py`
+
+---
+
+### 13. HSI 市场状态特征（6个）
+
+#### 目的
+使用 HMM（隐马尔可夫模型）识别恒生指数市场状态，辅助个股预测
+
+#### 特征列表
+
+| 特征名称 | 说明 | 取值范围 |
+|---------|------|---------|
+| `HSI_Market_Regime` | 市场状态标签 | 0=震荡, 1=牛市, 2=熊市 |
+| `HSI_Regime_Prob_0` | 震荡市概率 | 0-1 |
+| `HSI_Regime_Prob_1` | 牛市概率 | 0-1 |
+| `HSI_Regime_Prob_2` | 熊市概率 | 0-1 |
+| `HSI_Regime_Duration` | 当前状态持续时间 | 1-100+ 天 |
+| `HSI_Regime_Transition_Prob` | 状态转换概率 | 0-1 |
+
+#### 计算方法
+
+```python
+from hmmlearn import hmm
+
+def calculate_hsi_regime_features(hsi_returns):
+    """
+    计算 HSI 市场状态特征（HMM）
+    """
+    # 准备数据
+    returns = hsi_returns.values.reshape(-1, 1)
+    
+    # 训练 HMM 模型（3个状态）
+    model = hmm.GaussianHMM(
+        n_components=3,
+        covariance_type='full',
+        n_iter=100,
+        random_state=42
+    )
+    model.fit(returns)
+    
+    # 预测状态
+    hidden_states = model.predict(returns)
+    state_probs = model.predict_proba(returns)
+    
+    # 当前状态
+    current_state = hidden_states[-1]
+    
+    # 状态持续时间
+    duration = 1
+    for i in range(len(hidden_states) - 2, -1, -1):
+        if hidden_states[i] == current_state:
+            duration += 1
+        else:
+            break
+    
+    # 转换概率
+    trans_prob = model.transmat_[current_state, current_state]
+    
+    return {
+        'HSI_Market_Regime': current_state,
+        'HSI_Regime_Prob_0': state_probs[-1, 0],
+        'HSI_Regime_Prob_1': state_probs[-1, 1],
+        'HSI_Regime_Prob_2': state_probs[-1, 2],
+        'HSI_Regime_Duration': duration,
+        'HSI_Regime_Transition_Prob': trans_prob
+    }
+```
+
+#### 特征重要性（2026-04-27 验证）
+
+| 特征 | 重要性排名 | 重要性得分 |
+|------|-----------|-----------|
+| HSI_Regime_Duration | 第2 | 3.95 |
+| HSI_Regime_Prob_1 | 第3 | 2.44 |
+| HSI_Regime_Prob_0 | 第10 | 1.44 |
+| HSI_Market_Regime | 第20 | 1.00 |
+
+#### 实现文件
+- `data_services/regime_detector.py`
+
+---
+
+### 14. 日历效应特征（22个）
+
+#### 目的
+捕捉周期性市场规律，包括星期效应、月份效应、节假日效应等
+
+#### 特征列表
+
+**周期性编码特征（4个）**：
+- `Month_Sin` / `Month_Cos`：月份周期性编码
+- `DOW_Sin` / `DOW_Cos`：星期周期性编码
+
+**星期效应特征（5个）**：
+- `Day_of_Week`：星期几（0-4）
+- `Is_Monday` / `Is_Friday`：周一/周五效应
+- `Is_Week_End`：是否临近周末
+
+**月份效应特征（4个）**：
+- `Month`：月份（1-12）
+- `Is_Month_Start` / `Is_Month_End`：月初/月末效应
+- `Is_Quarter_End`：是否季末
+
+**节假日效应特征（5个）**：
+- `Days_to_Holiday`：距离最近假期天数
+- `Is_Pre_Holiday`：是否假期前
+- `Is_Post_Holiday`：是否假期后
+- `Is_Typhoon_Season`：是否台风季（7-9月）
+- `Is_Golden_Week`：是否黄金周前后
+
+**期权到期特征（4个）**：
+- `Days_to_Options_Expiry`：距离期权到期天数
+- `Is_Options_Expiry_Week`：是否期权到期周
+- `Is_Weekly_Options_Day`：是否周期权到期日
+- `Is_Quarterly_Expiry`：是否季度期权到期
+
+#### 实现文件
+- `data_services/calendar_features.py`
+
+---
+
+### 15. 其他衍生特征（280个）
 
 #### 目的
 创建交叉特征、滞后特征等衍生特征
@@ -1169,3 +1344,248 @@ pd.DataFrame({
 ---
 
 **最后更新**：2026-04-03
+
+---
+
+## 事件驱动特征设计方案
+
+> **来源**：event_driven_features_design.md（合并于 2026-04-27）
+
+### 概述
+
+事件驱动特征用于捕捉财报公告、分红事件、重大公告等对股价的影响。
+
+### 数据源
+
+1. **现有数据源**
+   - AKShare：财报指标数据（`ak.stock_hk_financial_indicator_em`）
+   - AKShare：股息数据（`ak.stock_hk_dividend_payout_em`）
+   - 新闻情感分析（`llm_services/sentiment_analyzer.py`）
+
+2. **待补充数据源**
+   - 财报公告日数据：雅虎财经/东方财富/新浪财经
+   - 重大事件公告：新闻关键词识别 + NLP分类
+
+### 特征分类
+
+#### 1. 财报公告日特征（2-3个）
+
+| 特征名称 | 类型 | 说明 | 数据来源 |
+|---------|------|------|---------|
+| `Earnings_Announcement_In_7d` | Binary | 未来7天内是否有财报公告（0/1） | 财报公告日API |
+| `Earnings_Announcement_In_30d` | Binary | 未来30天内是否有财报公告（0/1） | 财报公告日API |
+| `Days_Since_Last_Earnings` | Continuous | 距离上次财报公告的天数（1-120+） | 财报公告日API |
+
+#### 2. 财报超预期/不及预期特征（3-4个）
+
+| 特征名称 | 类型 | 说明 | 数据来源 |
+|---------|------|------|---------|
+| `Earnings_Surprise_Score` | Continuous | 财报超预期评分（-1到+1，基于新闻情感） | 新闻情感分析 |
+| `Earnings_Surprise_Trend` | Continuous | 近期财报超预期趋势（过去3次平均） | 新闻情感历史 |
+| `Post_Earnings_Price_Change_3d` | Continuous | 财报后3日股价变化率（%） | 历史股价数据 |
+| `Post_Earnings_Price_Change_10d` | Continuous | 财报后10日股价变化率（%） | 历史股价数据 |
+
+#### 3. 除净日和分红公告特征（3-4个）
+
+| 特征名称 | 类型 | 说明 | 数据来源 |
+|---------|------|------|---------|
+| `Ex_Dividend_In_7d` | Binary | 未来7天内是否有除净日（0/1） | AKShare股息数据 |
+| `Ex_Dividend_In_30d` | Binary | 未来30天内是否有除净日（0/1） | AKShare股息数据 |
+| `Dividend_Yield_Ratio` | Continuous | 股息率相对于板块平均值（0.5-2.0） | 财务数据 + 板块平均 |
+| `Dividend_Frequency_12m` | Continuous | 过去12个月分红次数（1-12） | AKShare股息历史 |
+
+#### 4. 重大事件公告特征（4-5个）
+
+| 特征名称 | 类型 | 说明 | 数据来源 |
+|---------|------|------|---------|
+| `Major_Event_In_7d` | Binary | 未来7天内重大事件（0/1） | 新闻关键词识别 |
+| `M_A_Announcement` | Binary | 近30天并购事件公告（0/1） | 新闻NLP分类 |
+| `Buyback_Announcement` | Binary | 近30天股票回购公告（0/1） | 新闻NLP分类 |
+| `Governance_Event` | Binary | 近30天公司治理事件（0/1） | 新闻NLP分类 |
+| `Regulatory_Event` | Binary | 近30天监管/合规事件（0/1） | 新闻NLP分类 |
+
+### 实现优先级
+
+#### 第一优先级（立即实现）
+1. 除净日和分红特征（已有数据源）
+   - `Ex_Dividend_In_7d`
+   - `Ex_Dividend_In_30d`
+   - `Dividend_Frequency_12m`
+
+#### 第二优先级（调研后实现）
+2. 财报公告日特征（需补充数据源）
+   - `Earnings_Announcement_In_7d`
+   - `Earnings_Announcement_In_30d`
+   - `Days_Since_Last_Earnings`
+
+3. 财报超预期特征（需新闻情感分析）
+   - `Earnings_Surprise_Score`
+   - `Earnings_Surprise_Trend`
+
+#### 第三优先级（可选实现）
+4. 重大事件特征（需NLP分类）
+   - `M_A_Announcement`
+   - `Buyback_Announcement`
+   - `Governance_Event`
+   - `Regulatory_Event`
+
+### 预期效果
+
+1. **除净日特征**：
+   - 捕捉除净日前的买入机会（高股息策略）
+   - 预期提升银行股、能源股的预测准确率
+
+2. **财报公告日特征**：
+   - 捕捉财报前的波动性
+   - 预期提升财报季期间的模型稳定性
+
+3. **重大事件特征**：
+   - 识别并购、回购等催化剂
+   - 预期提升突发事件的预测能力
+
+### 风险与挑战
+
+1. **数据源可靠性**：
+   - 雅虎财经数据可能不全
+   - 需要多个数据源备份
+
+2. **数据泄漏风险**：
+   - 必须使用历史数据
+   - 避免使用未来信息
+
+3. **特征稀疏性**：
+   - 事件特征多为稀疏特征（0/1）
+   - 需要与连续特征结合使用
+
+4. **NLP分类准确性**：
+   - 重大事件分类依赖LLM
+   - 需要建立标注数据集
+
+---
+
+## 不同股票类型分析框架对比
+
+> **来源**：不同股票类型分析框架对比.md（合并于 2026-04-27）
+
+### 概述
+
+不同类型的股票需要采用不同的分析框架和预测策略。本节对比银行股、科技股、半导体股等主要股票类型的特点和最佳分析方法。
+
+### 股票类型分类
+
+| 类型 | 代表股票 | 特点 | 最佳预测周期 |
+|------|----------|------|-------------|
+| **银行股** | 汇丰、工行、建行 | 趋势稳定、分红高、波动低 | 20天（70-82%） |
+| **科技股** | 腾讯、阿里、美团 | 波动大、成长性强、噪音高 | 不推荐（<55%） |
+| **半导体股** | 中芯、华虹 | 周期性强、受政策影响 | 20天（约50%） |
+| **新能源股** | 比亚迪、宁德时代 | 成长性强、政策驱动 | 1-5天（60%+） |
+| **公用事业股** | 中移动、中电信 | 防御性强、分红稳定 | 20天（约70%） |
+| **保险股** | 友邦、中国平安 | 周期性与防御性兼具 | 1天（约52%） |
+| **能源股** | 中海油、中石油 | 周期性强、受油价影响 | 5天（约50%） |
+
+### 各类型特征重要性差异
+
+#### 银行股（趋势型）
+
+**核心特征**：
+- MA250_Slope（长期趋势斜率）
+- Price_Distance_MA250（价格距离年线）
+- MA250_Slope_5d（趋势斜率变化）
+
+**特点**：
+- 趋势性强，长期预测准确率高
+- 对技术指标响应稳定
+- 分红公告影响显著
+
+**策略建议**：使用20天周期，关注MA250系统
+
+#### 科技股（波动型）
+
+**核心特征**：
+- Momentum_Accel_5d（动量加速）
+- Volume_Ratio（成交量比率）
+- RSI_ROC（RSI变化率）
+
+**特点**：
+- 噪音大，难以预测
+- 对市场情绪敏感
+- 短期波动剧烈
+
+**策略建议**：不推荐纯技术预测，需结合基本面和情绪指标
+
+#### 半导体股（周期型）
+
+**核心特征**：
+- CMF_Signal（资金流信号）
+- ATR_Ratio（波动率比率）
+- MACD_Signal（MACD信号）
+
+**特点**：
+- 受政策和行业周期影响大
+- 中期预测能力中等
+- 需关注行业景气度
+
+**策略建议**：20天周期，结合行业景气度指标
+
+#### 新能源股（成长型）
+
+**核心特征**：
+- Return_1d（短期收益）
+- Momentum_Accel_5d（动量加速）
+- Price_Distance_MA60（价格距离60日线）
+
+**特点**：
+- 短期动量有效
+- 政策敏感度高
+- 成长性驱动
+
+**策略建议**：1-5天短期交易，关注政策动态
+
+#### 公用事业股（防御型）
+
+**核心特征**：
+- MACD_Signal（MACD信号）
+- MA250_Slope_20d（长期趋势变化）
+- Volume_MA250（长期成交量）
+
+**特点**：
+- 防御性强
+- 波动率低
+- 分红稳定
+
+**策略建议**：20天周期，关注MACD信号
+
+### 板块轮动分析
+
+不同板块在不同市场环境下表现差异显著：
+
+| 市场环境 | 推荐板块 | 原因 |
+|----------|----------|------|
+| **牛市** | 科技股、半导体股、新能源股 | 成长性受益 |
+| **熊市** | 银行股、公用事业股 | 防御性强 |
+| **震荡市** | 银行股、保险股 | 分红收益 |
+| **政策刺激** | 新能源股、半导体股 | 政策驱动 |
+
+### 特征工程优化方向
+
+```
+银行股特征优化：
+├── 核心：MA系统（MA20/60/120/250）
+├── 增强：Price_Distance系列
+└── 可删：动量变化率
+
+科技股特征优化：
+├── 核心：Momentum_Accel、Volume_Ratio
+├── 增强：波动率系列（ATR_Ratio、BB_Width）
+└── 可删：长期均线
+
+新能源股特征优化：
+├── 核心：动量加速（Momentum_Accel）
+├── 增强：成交量相关
+└── 可删：无
+
+公用事业股特征优化：
+├── 核心：MACD信号系统
+├── 增强：趋势斜率
+└── 可删：短期动量
+```

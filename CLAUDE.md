@@ -37,6 +37,7 @@ python3 -m pytest tests/ -v
 | **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
 | **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
+| **因果链分析** | `python3 ml_services/analyze_causal_chain.py` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -54,8 +55,10 @@ python3 -m pytest tests/ -v
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
-| **动量/反转策略** | 收益仅0.3%-0.5%，**不推荐单独使用** |
 | **准确率指标** | 训练时CV准确率与Walk-forward准确率是不同指标，不能混用 |
+| **恒指 vs 个股** | 因果链传导完全反向，个股概率高反而预示反转（见 lessons.md） |
+| **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
+| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
 
 ### 可用策略（增强模型验证，2026-04-26）
 
@@ -84,23 +87,25 @@ AKShare      南向资金        主力追踪     性能监控
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
 
+**新增特征模块**（2026-04-27）：
+- `data_services/calendar_features.py` - 日历效应（22个特征）
+- `data_services/volatility_model.py` - GARCH 波动率（4个特征）
+- `data_services/regime_detector.py` - HMM 市场状态检测（6个特征）
+
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
 - `data/stock_cache/` - 原始数据缓存（股票、恒指数据，7天有效期）
-- `data/feature_cache/` - 特征缓存（计算好的892个特征，7天有效期，170x加速）
+- `data/feature_cache/` - 特征缓存（1045个特征，7天有效期，170x加速）
 - `data/prediction_history.json` - 预测历史记录
 - `output/` - 分析报告和回测结果
-
-**性能监控**：
-- 按三个时间窗口统计：1个月、3个月、6个月
-- 详细表现使用3个月窗口（平衡样本量和时效性）
-- 每日自动评估到期预测，生成报告
 
 ---
 
 ## 🤖 机器学习模型
 
-### 模型可信度（增强模型 Walk-forward 验证）
+### 模型可信度（Walk-forward 验证）
+
+**恒指增强模型**：
 
 | 周期 | 准确率 | 推荐度 |
 |------|--------|--------|
@@ -108,9 +113,14 @@ AKShare      南向资金        主力追踪     性能监控
 | 5天 | 64.35% | ⭐⭐⭐⭐ 趋势确认 |
 | 1天 | 51.55% | ⚠️ 噪音大 |
 
-| 模型 | 准确率 | 推荐度 |
-|------|--------|--------|
-| LSTM/Transformer | ~51% | ❌ 不推荐（F1≈0） |
+**个股完整模型**（2026-04-27 验证，12 folds，59只股票）：
+
+| 指标 | 数值 | 评估 |
+|------|------|------|
+| 综合评分 | 85/100 | 优秀 |
+| 平均准确率 | 54.82% | ✅ |
+| 平均夏普比率 | 1.0221 | ✅ (>1.0) |
+| 平均最大回撤 | -0.38% | ✅ 极佳 |
 
 ### CatBoost 配置
 
@@ -118,12 +128,23 @@ AKShare      南向资金        主力追踪     性能监控
 |------|-----|------|
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
 | 置信度分级阈值 | 0.65 / 0.55 | 用于判断信号强弱，不影响方向 |
-| 特征数量 | 918 个 | 全量特征（特征选择验证后仍最优） |
+| 特征数量 | 1045 个 | 全量特征（含 GARCH/HSI Regime/日历效应） |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
 **验证方法说明**：
 - **训练时CV准确率**：模型训练时的5折交叉验证准确率（用于文档展示）
 - **Walk-forward准确率**：独立时序验证（12 folds），更真实反映预测能力
+
+### 特征重要性（个股20天模型，2026-04-27）
+
+| 排名 | 特征 | 重要性 | 类别 |
+|------|------|--------|------|
+| 1 | US_10Y_Yield | 5.28 | 宏观类 |
+| 2 | **HSI_Regime_Duration** | 3.95 | **市场状态** |
+| 3 | **HSI_Regime_Prob_1** | 2.44 | **市场状态** |
+| 10 | **HSI_Regime_Prob_0** | 1.44 | **市场状态** |
+
+**关键发现**：新增的 HSI 市场状态特征进入 Top 10，证明其预测价值。
 
 ### 板块模型（Walk-forward验证）
 
@@ -149,7 +170,7 @@ AKShare      南向资金        主力追踪     性能监控
 
 ### 主要依赖
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm`
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `hmmlearn` `arch`
 
 ---
 
@@ -197,6 +218,24 @@ future_return = returns.rolling(5).sum()
 future_return = returns.rolling(5).sum().shift(-5)
 ```
 
+### CatBoost 分类特征处理
+
+训练和预测时必须一致处理分类特征 NaN：
+```python
+# 训练时（ml_trading_model.py:4445）
+df[col] = df[col].fillna('unknown').astype(str)
+encoder = LabelEncoder()
+df[col] = encoder.fit_transform(df[col])
+
+# 预测时（ml_trading_model.py:4937-4948）
+for col in self.categorical_encoders.keys():
+    test_df[col] = test_df[col].fillna('unknown').astype(str)
+    encoder = self.categorical_encoders[col]
+    test_df[col] = test_df[col].apply(
+        lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+    )
+```
+
 ### Git 提交规范
 
 - 文件上传：只提交 `.md` 格式，不提交 `.json`/`.csv`
@@ -212,7 +251,8 @@ future_return = returns.rolling(5).sum().shift(-5)
 - **详细文档**：[docs/](docs/) - 特征工程、验证方法等
 - **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
+- **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
 
 ---
 
-**最后更新**：2026-04-22（新增风险回报率分析命令，集成到综合分析脚本）
+**最后更新**：2026-04-27（更新特征数量为1045，新增分类特征NaN处理规范，更新个股模型验证结果）
