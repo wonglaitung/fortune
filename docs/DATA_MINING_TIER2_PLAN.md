@@ -397,7 +397,7 @@ mp = stumpy.stump(df['Close'].values, m=20)[:, 0]  # 第一列是 left profile
 
 | 问题 | 说明 |
 |------|------|
-| 文档写"基础/技术/宏观 19 个" | 实际 CatBoost 模型有 1045 个特征 |
+| 文档写"基础/技术/宏观 19 个" | 实际 CatBoost 模型有 730 个特征（2026-04-27 清理后） |
 | 文档写"Regime 6 个" | 需确认是否计入其他衍生特征 |
 | **建议** | 更新特征计数，与 `FEATURE_ENGINEERING.md` 一致 |
 
