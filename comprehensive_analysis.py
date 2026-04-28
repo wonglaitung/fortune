@@ -105,18 +105,18 @@ THREE_HORIZON_PATTERNS = {
 
 # 恒指三周期预测模式配置（基于恒指增强模型验证结果）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第一部分
-# 验证数据：906个恒指样本，Walk-forward验证，增强模型（37特征）
+# 验证数据：906个恒指样本，Walk-forward验证，增强模型（33特征）
 # 更新日期：2026-04-28
 # 注意：恒指准确率显著高于个股，最优模式为"假突破"(101)
 HSI_THREE_HORIZON_PATTERNS = {
-    '101': {'name': '假突破⭐⭐', 'action': '抄底买入', 'win_rate': '92.73%', 'avg_return': '高', 'confidence': '极高'},
-    '011': {'name': '探底回升⭐', 'action': '分批建仓', 'win_rate': '83.97%', 'avg_return': '+3.54%', 'confidence': '高'},
-    '000': {'name': '一致看跌', 'action': '减仓/做空', 'win_rate': '83.58%', 'avg_return': '-2.54%', 'confidence': '高'},
-    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '81.73%', 'avg_return': '-2.28%', 'confidence': '中高'},
-    '111': {'name': '一致看涨', 'action': '持有/买入', 'win_rate': '81.40%', 'avg_return': '+0.14%', 'confidence': '中高'},
-    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '79.31%', 'avg_return': '+4.86%', 'confidence': '中'},
-    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '79.17%', 'avg_return': '-1.65%', 'confidence': '中'},
-    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '78.57%', 'avg_return': '+2.34%', 'confidence': '中'},
+    '101': {'name': '假突破⭐⭐', 'action': '抄底买入', 'win_rate': '95.00%', 'avg_return': '高', 'confidence': '极高'},
+    '010': {'name': '反弹失败⭐', 'action': '谨慎做多', 'win_rate': '85.98%', 'avg_return': '+3.54%', 'confidence': '高'},
+    '001': {'name': '下跌中继⭐', 'action': '谨慎做多', 'win_rate': '84.00%', 'avg_return': '+4.86%', 'confidence': '高'},
+    '111': {'name': '一致看涨', 'action': '持有/买入', 'win_rate': '80.62%', 'avg_return': '+0.14%', 'confidence': '中高'},
+    '000': {'name': '一致看跌', 'action': '减仓/做空', 'win_rate': '79.57%', 'avg_return': '-2.54%', 'confidence': '中高'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '79.22%', 'avg_return': '+2.34%', 'confidence': '中'},
+    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '79.10%', 'avg_return': '+3.54%', 'confidence': '中'},
+    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '74.34%', 'avg_return': '-2.28%', 'confidence': '中'},
 }
 
 # 恒指传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
