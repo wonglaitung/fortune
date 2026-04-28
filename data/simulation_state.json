@@ -30520,6 +30520,102 @@
       "current_price": 17.43,
       "target_price": 20.5,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-28T13:55:59.024104",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分8.5分（强烈出货），技术面RSI 73.58超买、布林带突破上轨、CMF资金流-0.2387流出，三者同向确认顶部；资金面成交量比率1.91异常放量（>2.0），警惕主力出货；筹码分布虽上方筹码比例0.0%（低阻力），但TAV评分90.0分过高（短期超买），且板块轮动提示环保股涨幅2.36%已处高位，易回调。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.59,
+      "target_price": 6.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28T13:56:01.133926",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分7.5分（强烈出货），技术面RSI 69.33高位、布林带突破上轨、CMF资金流-0.1284流出，三者同向；资金面OBV上升但CMF流出，量价背离；筹码分布上方筹码比例9.0%低阻力，但半导体板块暴跌-2.89%（强势下跌），板块拖累远超个股优势；新闻面中国半导体技术追赶（结构性劣势），基本面评分仅20分（PE 405.64高估值）。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 113.6,
+      "target_price": 105.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28T13:56:03.206935",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分7.5分（强烈出货），技术面MACD交叉、OBV下降、价格下跌三者同向，且CMF资金流-0.1085流出；资金面成交额变化-66.16%（大幅萎缩），流动性风险；筹码分布上方筹码比例77.9%>60%且拉升难度\"困难\"，高阻力环境；新闻面EV需求放缓和美国关税壁垒，基本面评分仅20分（PE 27.01），板块新能源股-1.95%弱势。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 104.7,
+      "target_price": 95.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28T13:56:07.475086",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分6.0分（强烈出货），技术面RSI 77.86严重超买、CMF资金流-0.3429大幅流出、OBV下降，三者同向；资金面成交额变化-66.88%（流动性枯竭），南向资金缺失；筹码分布虽上方筹码比例0.0%（低阻力），但板块公用事业股仅温和上涨（0.27%），缺乏持续动能；新闻面Deutsche Telekom合并T-Mobile（海外竞争加剧），可能分流资金。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 84.85,
+      "target_price": 80.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28T13:56:09.367038",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分5.0分（强烈出货），技术面RSI 71.22高位、CMF资金流-0.4383大幅流出、价格下跌，三者同向；资金面成交量比率1.36放量（>1.3），但CMF流出显示主力派发；筹码分布上方筹码比例53.2%>30%且拉升难度\"中等\"，阻力渐增；新闻面银行监管收紧（PBOC遏制恶性竞争），压制板块情绪（银行股-0.64%）。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.12,
+      "target_price": 5.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28T13:56:11.177893",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.7,
+      "amount": 0,
+      "capital_after": 801.1892940520192,
+      "reason": "核心信号：建仓评分3.7分（partial级别），由\"macd_cross,obv_up,cmf_in\"驱动，技术指标中RSI、OBV、CMF三者同向（资金流入+量能配合），满足\"至少3个同向指标\"要求；TAV中等共振（63.25分），趋势（60日收益率23.21%跑赢恒指）与动量（3日收益率5.87%）支撑短期反弹；筹码阻力极低（上方筹码比例18.6%<30%），拉升难度\"容易\"，突破阻力小；板块虽属人工智能股（趋势温和下跌，-1.92%），但个股相对强度2.24%跑赢恒指，且环保股强势轮动可能带动科技股修复。",
+      "success": false,
+      "stop_loss_price": 15.0,
+      "current_price": 17.7,
+      "target_price": 20.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -48102,185 +48198,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-04-24 14:34:24",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "价格低位，MACD交叉，TAV中等共振，筹码阻力不严重，新闻利好",
-          "allocation_pct": 40,
-          "stop_loss_price": 112.54,
-          "target_price": 145.64,
-          "validity_period": 5
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "价格低位，MACD交叉，TAV弱共振但位置低，筹码阻力中等",
-          "allocation_pct": 30,
-          "stop_loss_price": 26.554,
-          "target_price": 34.36,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "价格高位，MACD死叉",
-          "stop_loss_triggered": false,
-          "target_price": 38.5,
-          "validity_period": 5
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "价格高位，RSI超买",
-          "stop_loss_triggered": false,
-          "target_price": 68.5,
-          "validity_period": 5
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格高位，成交量萎缩",
-          "stop_loss_triggered": false,
-          "target_price": 5.8,
-          "validity_period": 5
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "价格高位，MACD死叉",
-          "stop_loss_triggered": false,
-          "target_price": 15.2,
-          "validity_period": 5
-        },
-        {
-          "code": "0939.HK",
-          "name": "建设银行",
-          "reason": "价格高位，趋势疲弱",
-          "stop_loss_triggered": false,
-          "target_price": 6.5,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-24 14:34:25",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 6700,
-      "price": 110.2,
-      "amount": 738340.0,
-      "reason": "价格高位，MACD死叉",
-      "capital_after": 738496.189294052,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 110.2,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 146575.00000000003
-    },
-    {
-      "timestamp": "2026-04-24 14:34:28",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "价格高位，RSI超买",
-      "capital_after": 738496.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 84.05,
-      "target_price": 68.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-24 14:34:31",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 31100,
-      "price": 5.0,
-      "amount": 155500.0,
-      "reason": "价格高位，成交量萎缩",
-      "capital_after": 893996.189294052,
-      "success": true,
-      "stop_loss_price": null,
-      "current_price": 5.0,
-      "target_price": null,
-      "validity_period": null,
-      "profit_loss": 546.0000000000093
-    },
-    {
-      "timestamp": "2026-04-24 14:34:32",
-      "type": "SELL",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "价格高位，MACD死叉",
-      "capital_after": 893996.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 64.3,
-      "target_price": 15.2,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-24 14:34:34",
-      "type": "SELL",
-      "code": "0939.HK",
-      "name": "建设银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "价格高位，趋势疲弱",
-      "capital_after": 893996.189294052,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 8.95,
-      "target_price": 6.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-24 14:34:35",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 3400,
-      "price": 132.2,
-      "amount": 449479.99999999994,
-      "reason": "价格低位，MACD交叉，TAV中等共振，筹码阻力不严重，新闻利好",
-      "capital_after": 444516.189294052,
-      "success": true,
-      "stop_loss_price": 112.54,
-      "current_price": 132.2,
-      "target_price": 145.64,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-24 14:34:36",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 10800,
-      "price": 31.24,
-      "amount": 337392.0,
-      "reason": "价格低位，MACD交叉，TAV弱共振但位置低，筹码阻力中等",
-      "capital_after": 107124.18929405202,
-      "success": true,
-      "stop_loss_price": 26.554,
-      "current_price": 31.24,
-      "target_price": 34.36,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-04-27 10:45:37",
       "buy": [],
       "sell": []
@@ -48436,6 +48353,163 @@
       "current_price": 17.43,
       "target_price": 20.5,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-04-28 11:33:18",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-04-28 13:55:58",
+      "buy": [
+        {
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "reason": "核心信号：建仓评分3.7分（partial级别），由\"macd_cross,obv_up,cmf_in\"驱动，技术指标中RSI、OBV、CMF三者同向（资金流入+量能配合），满足\"至少3个同向指标\"要求；TAV中等共振（63.25分），趋势（60日收益率23.21%跑赢恒指）与动量（3日收益率5.87%）支撑短期反弹；筹码阻力极低（上方筹码比例18.6%<30%），拉升难度\"容易\"，突破阻力小；板块虽属人工智能股（趋势温和下跌，-1.92%），但个股相对强度2.24%跑赢恒指，且环保股强势轮动可能带动科技股修复。",
+          "allocation_pct": 40,
+          "stop_loss_price": 15.0,
+          "target_price": 20.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1330.HK",
+          "name": "绿色动力环保",
+          "reason": "出货评分8.5分（强烈出货），技术面RSI 73.58超买、布林带突破上轨、CMF资金流-0.2387流出，三者同向确认顶部；资金面成交量比率1.91异常放量（>2.0），警惕主力出货；筹码分布虽上方筹码比例0.0%（低阻力），但TAV评分90.0分过高（短期超买），且板块轮动提示环保股涨幅2.36%已处高位，易回调。",
+          "stop_loss_triggered": false,
+          "target_price": 6.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分7.5分（强烈出货），技术面RSI 69.33高位、布林带突破上轨、CMF资金流-0.1284流出，三者同向；资金面OBV上升但CMF流出，量价背离；筹码分布上方筹码比例9.0%低阻力，但半导体板块暴跌-2.89%（强势下跌），板块拖累远超个股优势；新闻面中国半导体技术追赶（结构性劣势），基本面评分仅20分（PE 405.64高估值）。",
+          "stop_loss_triggered": false,
+          "target_price": 105.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "reason": "出货评分7.5分（强烈出货），技术面MACD交叉、OBV下降、价格下跌三者同向，且CMF资金流-0.1085流出；资金面成交额变化-66.16%（大幅萎缩），流动性风险；筹码分布上方筹码比例77.9%>60%且拉升难度\"困难\"，高阻力环境；新闻面EV需求放缓和美国关税壁垒，基本面评分仅20分（PE 27.01），板块新能源股-1.95%弱势。",
+          "stop_loss_triggered": false,
+          "target_price": 95.0,
+          "validity_period": 3
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "出货评分6.0分（强烈出货），技术面RSI 77.86严重超买、CMF资金流-0.3429大幅流出、OBV下降，三者同向；资金面成交额变化-66.88%（流动性枯竭），南向资金缺失；筹码分布虽上方筹码比例0.0%（低阻力），但板块公用事业股仅温和上涨（0.27%），缺乏持续动能；新闻面Deutsche Telekom合并T-Mobile（海外竞争加剧），可能分流资金。",
+          "stop_loss_triggered": false,
+          "target_price": 80.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1288.HK",
+          "name": "农业银行",
+          "reason": "出货评分5.0分（强烈出货），技术面RSI 71.22高位、CMF资金流-0.4383大幅流出、价格下跌，三者同向；资金面成交量比率1.36放量（>1.3），但CMF流出显示主力派发；筹码分布上方筹码比例53.2%>30%且拉升难度\"中等\"，阻力渐增；新闻面银行监管收紧（PBOC遏制恶性竞争），压制板块情绪（银行股-0.64%）。",
+          "stop_loss_triggered": false,
+          "target_price": 5.8,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-04-28 13:55:59",
+      "type": "SELL",
+      "code": "1330.HK",
+      "name": "绿色动力环保",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分8.5分（强烈出货），技术面RSI 73.58超买、布林带突破上轨、CMF资金流-0.2387流出，三者同向确认顶部；资金面成交量比率1.91异常放量（>2.0），警惕主力出货；筹码分布虽上方筹码比例0.0%（低阻力），但TAV评分90.0分过高（短期超买），且板块轮动提示环保股涨幅2.36%已处高位，易回调。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.59,
+      "target_price": 6.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28 13:56:01",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5分（强烈出货），技术面RSI 69.33高位、布林带突破上轨、CMF资金流-0.1284流出，三者同向；资金面OBV上升但CMF流出，量价背离；筹码分布上方筹码比例9.0%低阻力，但半导体板块暴跌-2.89%（强势下跌），板块拖累远超个股优势；新闻面中国半导体技术追赶（结构性劣势），基本面评分仅20分（PE 405.64高估值）。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 113.6,
+      "target_price": 105.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28 13:56:03",
+      "type": "SELL",
+      "code": "1211.HK",
+      "name": "比亚迪股份",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.5分（强烈出货），技术面MACD交叉、OBV下降、价格下跌三者同向，且CMF资金流-0.1085流出；资金面成交额变化-66.16%（大幅萎缩），流动性风险；筹码分布上方筹码比例77.9%>60%且拉升难度\"困难\"，高阻力环境；新闻面EV需求放缓和美国关税壁垒，基本面评分仅20分（PE 27.01），板块新能源股-1.95%弱势。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 104.7,
+      "target_price": 95.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28 13:56:07",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（强烈出货），技术面RSI 77.86严重超买、CMF资金流-0.3429大幅流出、OBV下降，三者同向；资金面成交额变化-66.88%（流动性枯竭），南向资金缺失；筹码分布虽上方筹码比例0.0%（低阻力），但板块公用事业股仅温和上涨（0.27%），缺乏持续动能；新闻面Deutsche Telekom合并T-Mobile（海外竞争加剧），可能分流资金。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 84.85,
+      "target_price": 80.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28 13:56:09",
+      "type": "SELL",
+      "code": "1288.HK",
+      "name": "农业银行",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分5.0分（强烈出货），技术面RSI 71.22高位、CMF资金流-0.4383大幅流出、价格下跌，三者同向；资金面成交量比率1.36放量（>1.3），但CMF流出显示主力派发；筹码分布上方筹码比例53.2%>30%且拉升难度\"中等\"，阻力渐增；新闻面银行监管收紧（PBOC遏制恶性竞争），压制板块情绪（银行股-0.64%）。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.12,
+      "target_price": 5.8,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-04-28 13:56:11",
+      "type": "BUY",
+      "code": "2533.HK",
+      "name": "黑芝麻智能",
+      "shares": 0,
+      "price": 17.7,
+      "amount": 0,
+      "reason": "核心信号：建仓评分3.7分（partial级别），由\"macd_cross,obv_up,cmf_in\"驱动，技术指标中RSI、OBV、CMF三者同向（资金流入+量能配合），满足\"至少3个同向指标\"要求；TAV中等共振（63.25分），趋势（60日收益率23.21%跑赢恒指）与动量（3日收益率5.87%）支撑短期反弹；筹码阻力极低（上方筹码比例18.6%<30%），拉升难度\"容易\"，突破阻力小；板块虽属人工智能股（趋势温和下跌，-1.92%），但个股相对强度2.24%跑赢恒指，且环保股强势轮动可能带动科技股修复。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": 15.0,
+      "current_price": 17.7,
+      "target_price": 20.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
