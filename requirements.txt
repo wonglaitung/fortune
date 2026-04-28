@@ -14,3 +14,6 @@ scikit-learn
 jieba>=0.42.1
 nltk>=3.8
 catboost
+hmmlearn
+arch
+shap
