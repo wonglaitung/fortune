@@ -272,6 +272,7 @@ for col in self.categorical_encoders.keys():
 - **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
+- **股票关联分析**：[docs/STOCK_CORRELATION_ANALYSIS.md](docs/STOCK_CORRELATION_ANALYSIS.md) - 领头羊股票、跨板块相关性
 - **经典交易理论**：[docs/CLASSIC_TRADING_THEORIES.md](docs/CLASSIC_TRADING_THEORIES.md)
 
 ---
