@@ -76,7 +76,7 @@ python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
 | 对比项 | 恒指 | 个股 | 说明 |
 |--------|------|------|------|
 | 准确率上限 | 80% | 55% | 恒指噪声低，准确率更高 |
-| 因果链传导 | 正向（r=+0.43） | 反向（r=-0.17） | 个股有反转效应 |
+| 预测概率与实际方向相关性 | 正向（r=+0.35） | 弱正向（r=+0.03） | 个股相关性弱 |
 | 最优策略 | 假突破(101) | 反弹失败(010) | 策略不同 |
 
 ### 阶段 2：三周期验证（如果阶段 1 有效）
@@ -96,10 +96,11 @@ python3 ml_services/analyze_three_horizon_relationships.py
 
 | 策略代码 | 策略名称 | 目标胜率 | 当前胜率（2026-04-29） |
 |---------|---------|---------|----------------------|
-| 101 | 假突破做多 | >85% | **93.10%** ⭐⭐⭐⭐⭐ |
-| 001 | 下跌中继做多 | >85% | **89.19%** ⭐⭐⭐⭐⭐ |
-| 000 | 一致看跌做空 | >75% | **82.05%** ⭐⭐⭐⭐ |
-| 111 | 一致看涨买入 | >75% | **77.86%** ⭐⭐⭐⭐ |
+| 101 | 假突破做多 | >85% | **95.00%** ⭐⭐⭐⭐⭐ |
+| 010 | 反弹失败做空 | >85% | **85.98%** ⭐⭐⭐⭐⭐ |
+| 001 | 下跌中继做多 | >80% | **84.00%** ⭐⭐⭐⭐ |
+| 000 | 一致看跌做空 | >75% | **79.57%** ⭐⭐⭐⭐ |
+| 111 | 一致看涨买入 | >75% | **80.62%** ⭐⭐⭐⭐ |
 
 **输出文件**：`docs/THREE_HORIZON_ANALYSIS.md`
 
@@ -121,9 +122,9 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 | 策略代码 | 策略名称 | 目标胜率 | 说明 |
 |---------|---------|---------|------|
-| 010 | 反弹失败 | >60% | 个股最优策略 |
-| 000 | 一致看跌 | >60% | 次优策略 |
-| 101 | 假突破 | ~50% | 个股效果差（随机水平） |
+| 010 | 反弹失败 | >60% | 个股效果一般 |
+| 000 | 一致看跌 | >55% | 接近随机 |
+| 101 | 假突破 | ~55% | 个股效果差（随机水平） |
 
 **输出文件**：`output/stock_causal_chain_analysis.json`
 
@@ -131,58 +132,95 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 | 对比项 | 恒指 | 个股 | 说明 |
 |--------|------|------|------|
-| 因果链传导方向 | 正向（r=+0.43） | 反向（r=-0.17） | 个股有反转效应 |
-| 假突破(101)胜率 | **93.10%** | ~50% | 恒指最优，个股随机 |
-| 最优策略 | 假突破(101) | 反弹失败(010) | 策略完全不同 |
-| 准确率上限 | 80% | 55% | 恒指噪声低 |
+| 预测概率与实际方向相关性 | 正向（r=+0.35） | 弱正向（r=+0.03） | 个股相关性弱 |
+| 假突破(101)胜率 | **95.00%** | ~55% | 恒指最优，个股随机 |
+| 最优策略 | 假突破(101) | 一致看涨(111) | 策略效果都一般 |
+| 准确率上限 | 81% | 57% | 恒指噪声低 |
 
 **关键教训**：
-- 恒指假突破(101)胜率 93%，个股仅 50%
-- 个股因果链反向，短期概率高反而预示反转
+- 恒指假突破(101)胜率 95%，个股仅 55%
+- 个股所有模式准确率接近随机水平（50%左右）
 - **不能将恒指策略直接套用于个股**
 
 ### 阶段 3：文档更新（如果阶段 2 有提升）
 
 **目的**：同步更新所有相关文档的指标数字
 
+**⚠️ 重要**：
+1. 文档更新范围包括 `CLAUDE.md` 和 `docs/` 目录下的所有相关文档，确保信息一致性
+2. **恒指和个股数据必须分别更新**，不能只更新其中一个
+
 #### 3A. 恒指模型文档更新
 
-必须更新的文件：
+**必须更新的文件**：
 
 1. **CLAUDE.md** - 项目主文档
    - 恒指模型可信度表格（准确率：1d/5d/20d）
    - 可用策略表格（假突破、下跌中继胜率）
    - 最后更新日期
 
-2. **docs/THREE_HORIZON_ANALYSIS.md** - 三周期分析
-   - 各策略胜率
-   - 样本数量
-   - 交易建议
+2. **docs/THREE_HORIZON_ANALYSIS.md** - 三周期分析（恒指部分）
+   - 第一部分：恒指验证摘要（1d/5d/20d 准确率）
+   - 八大模式胜率表格（假突破 95%、反弹失败 86% 等）
+   - 因果关系分析数据
+   - 附录对比表中的恒指数据
 
-3. **progress.txt** - 项目进度
+3. **docs/VALIDATION_GUIDE.md** - 验证指南
+   - 最新验证结果（如有恒指相关内容）
+
+4. **progress.txt** - 项目进度
    - 记录恒指模型更新的内容和效果
 
 #### 3B. 个股模型文档更新
 
-必须更新的文件：
+**必须更新的文件**：
 
 1. **CLAUDE.md** - 项目主文档
    - 个股模型可信度表格（准确率、夏普比率、最大回撤）
    - CatBoost 配置参数
    - 特征重要性排名
 
-2. **docs/FEATURE_IMPORTANCE_ANALYSIS.md** - 特征重要性
+2. **docs/THREE_HORIZON_ANALYSIS.md** - 三周期分析（个股部分）
+   - 第二部分：个股验证概述（准确率、因果链数据）
+   - 各股票准确率排名表
+   - 个股与恒指核心差异对比表
+   - 附录对比表中的个股数据
+
+3. **docs/FEATURE_IMPORTANCE_ANALYSIS.md** - 特征重要性
    - Top 10 特征排名
    - 特征类别分布
 
-3. **docs/VALIDATION_GUIDE.md** - 验证指南
-   - Walk-forward 验证结果
+4. **docs/VALIDATION_GUIDE.md** - 验证指南
+   - Walk-forward 验证结果（准确率、夏普比率、最大回撤）
+   - 稳定性分析数据
 
-4. **progress.txt** - 项目进度
+5. **progress.txt** - 项目进度
    - 记录个股模型更新的内容和效果
 
-5. **lessons.md** - 经验教训
+6. **lessons.md** - 经验教训
    - 如有新的发现或警告，添加到对应章节
+
+#### 3C. 文档更新检查清单
+
+**恒指数据更新检查**：
+- [ ] CLAUDE.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] CLAUDE.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
+
+**个股数据更新检查**：
+- [ ] CLAUDE.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据
+- [ ] docs/VALIDATION_GUIDE.md - Walk-forward 验证结果
+
+**更新后必须确认**：
+- [ ] 所有相关文档的数值已同步更新
+- [ ] 恒指和个股数据都已更新（不能只更新其中一个）
+- [ ] 更新日期已修改
+- [ ] 无遗漏的文档
 
 #### 更新格式示例
 
@@ -271,21 +309,38 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 #### 个股三周期验证
 - [ ] 已执行 `analyze_stock_causal_chain.py --full`（完整模型）
 - [ ] 确认未使用快速模式（无 `--quick`，非5只股票）
-- [ ] 已确认因果链方向（应为负值 r≈-0.17）
+- [ ] 已确认预测概率与实际方向相关性（应为负值 r≈-0.17）
 - [ ] 已记录个股最优策略（反弹失败010）
 
 ### 阶段 3 检查
 
-#### 恒指文档
-- [ ] 已更新 CLAUDE.md 的恒指模型指标
-- [ ] 已更新三周期分析文档
-- [ ] 已更新 progress.txt
+**⚠️ 重要：恒指和个股数据必须分别更新，不能只更新其中一个**
 
-#### 个股文档
-- [ ] 已更新 CLAUDE.md 的个股模型指标
-- [ ] 已更新特征重要性文档（如有变化）
-- [ ] 已更新 progress.txt
+#### 恒指文档（docs/ 目录下相关文档）
+- [ ] 已更新 CLAUDE.md 的恒指模型指标（1d/5d/20d 准确率）
+- [ ] 已更新 CLAUDE.md 的可用策略表格（假突破、下跌中继等胜率）
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第一部分（恒指验证摘要）
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 八大模式胜率表格
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录恒指数据
+- [ ] 已更新 docs/VALIDATION_GUIDE.md（如有恒指相关内容）
+- [ ] 已更新 progress.txt 恒指部分
+
+#### 个股文档（docs/ 目录下相关文档）
+- [ ] 已更新 CLAUDE.md 的个股模型指标（准确率、夏普比率、最大回撤）
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第二部分（个股验证概述）
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 个股与恒指核心差异对比表
+- [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录个股数据
+- [ ] 已更新 docs/FEATURE_IMPORTANCE_ANALYSIS.md（如有变化）
+- [ ] 已更新 docs/VALIDATION_GUIDE.md Walk-forward 验证结果
+- [ ] 已更新 progress.txt 个股部分
 - [ ] 已更新 lessons.md（如有新发现）
+
+#### 文档一致性检查
+- [ ] 恒指数据已完整更新（不能只更新个股）
+- [ ] 个股数据已完整更新（不能只更新恒指）
+- [ ] 所有文档的数值已同步
+- [ ] 更新日期已修改
+- [ ] 无遗漏的文档
 
 ### 阶段 4 检查
 
@@ -377,8 +432,8 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 | 101 假突破 | XX.XX% | XX.XX% | +X.XX% | 随机水平 |
 
 ### 因果链验证
-- 5d→20d 概率传导 r：X.XX [✅ 负值正常 / ⚠️ 异常]
-- 预期：r ≈ -0.17（反向传导）
+- 5d预测概率与20d实际方向相关性 r：X.XX [✅ 负值正常 / ⚠️ 异常]
+- 预期：r ≈ +0.03（弱正向，个股预测信号不可靠）
 
 ### 数据泄漏检查
 - 准确率：XX.XX% [✅ 正常 / ⚠️ 可疑]
@@ -388,17 +443,32 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 ## 文档更新清单
 
-### 恒指文档
-- [ ] CLAUDE.md（恒指模型指标）
-- [ ] docs/THREE_HORIZON_ANALYSIS.md
-- [ ] progress.txt
+**⚠️ 重要：恒指和个股数据必须分别更新**
 
-### 个股文档
-- [ ] CLAUDE.md（个股模型指标）
-- [ ] docs/FEATURE_IMPORTANCE_ANALYSIS.md
-- [ ] docs/VALIDATION_GUIDE.md
-- [ ] progress.txt
-- [ ] lessons.md
+### 恒指文档（docs/ 目录下相关文档）
+- [ ] CLAUDE.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] CLAUDE.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
+- [ ] docs/VALIDATION_GUIDE.md - 恒指相关内容（如有）
+- [ ] progress.txt - 恒指部分
+
+### 个股文档（docs/ 目录下相关文档）
+- [ ] CLAUDE.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
+- [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据
+- [ ] docs/FEATURE_IMPORTANCE_ANALYSIS.md - Top 10 特征排名
+- [ ] docs/VALIDATION_GUIDE.md - Walk-forward 验证结果
+- [ ] progress.txt - 个股部分
+- [ ] lessons.md - 新发现或警告
+
+### 文档一致性检查
+- [ ] 恒指数据已完整更新（不能只更新个股）
+- [ ] 个股数据已完整更新（不能只更新恒指）
+- [ ] 所有 docs/ 目录下相关文档数值已同步
+- [ ] 更新日期已修改
 
 ---
 
@@ -431,7 +501,10 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 4. **顺序执行**：必须按阶段 1→2→3→4 顺序执行，前一阶段有效才进入下一阶段
 5. **记录完整**：每个阶段的测试结果必须完整记录
 6. **对比验证**：必须与更新前的指标对比，确认提升幅度
-7. **文档同步**：代码更新后立即同步文档，避免信息不一致
+7. **文档同步**：
+   - 代码更新后立即同步文档，避免信息不一致
+   - **文档更新范围包括 `docs/` 目录下所有相关文档**
+   - **恒指和个股数据必须分别更新，不能只更新其中一个**
 8. **语法检查**：每次代码修改后必须执行 `python3 -m py_compile`
 9. **核心文件优先**：hsi_prediction.py（恒指）和 comprehensive_analysis.py（个股）是主要入口
 
@@ -444,8 +517,8 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 | 验证脚本 | `hsi_walk_forward.py` | `walk_forward_validation.py` |
 | 特征数量 | 33个（增强模型） | 730个（完整模型） |
 | 数据泄漏阈值 | >85% | >65% |
-| 最优策略 | 假突破(101) 93% | 反弹失败(010) 66% |
-| 因果链方向 | 正向 r=+0.43 | 反向 r=-0.17 |
+| 最优策略 | 假突破(101) 95% | 一致看涨(111) 56% |
+| 预测概率与实际方向相关性 | 正向 r=+0.35 | 弱正向 r=+0.03 |
 
 ### 模型文件位置
 - 恒指模型：`data/hsi_models/hsi_catboost_*.cbm`
