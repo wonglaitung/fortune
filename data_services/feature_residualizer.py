@@ -196,36 +196,47 @@ class FeatureResidualizer:
             if micro_feat not in df.columns:
                 continue
 
-            # 检查有效样本数
+            # 检查有效样本数（排除 NaN 和无穷大值）
             required_cols = available_macro + [micro_feat]
             valid_mask = df_residual[required_cols].notna().all(axis=1)
+            # 额外检查无穷大值
+            for col in required_cols:
+                if df_residual[col].dtype in ['float64', 'float32']:
+                    valid_mask &= np.isfinite(df_residual[col])
+
             valid_count = valid_mask.sum()
 
             if valid_count < self.min_samples:
-                warnings.warn(f"特征 {micro_feat} 有效样本不足 ({valid_count} < {self.min_samples})，跳过残差化")
+                continue  # 静默跳过，避免过多警告
+
+            try:
+                # 拟合回归模型：微观特征 = β * 宏观特征 + 残差
+                model = LinearRegression()
+                X_train = df_residual.loc[valid_mask, available_macro].values
+                y_train = df_residual.loc[valid_mask, micro_feat].values
+
+                model.fit(X_train, y_train)
+
+                # 存储模型（用于后续预测）
+                self.models[micro_feat] = model
+
+                # 计算残差：残差 = 实际值 - 预测值
+                residual_name = f'{micro_feat}_Residual'
+                # 预测时填充 NaN 为 0
+                X_pred = df_residual[available_macro].fillna(0).values
+                predicted_values = model.predict(X_pred)
+                df_residual[residual_name] = df_residual[micro_feat].fillna(0) - predicted_values
+
+                # 如果不保留原始特征，用残差替换
+                if not keep_original:
+                    df_residual[micro_feat] = df_residual[residual_name]
+                    df_residual.drop(columns=[residual_name], inplace=True)
+
+                residualized_count += 1
+
+            except Exception as e:
+                # 静默跳过失败的特征
                 continue
-
-            # 拟合回归模型：微观特征 = β * 宏观特征 + 残差
-            model = LinearRegression()
-            model.fit(
-                df_residual.loc[valid_mask, available_macro],
-                df_residual.loc[valid_mask, micro_feat]
-            )
-
-            # 存储模型（用于后续预测）
-            self.models[micro_feat] = model
-
-            # 计算残差：残差 = 实际值 - 预测值
-            residual_name = f'{micro_feat}_Residual'
-            predicted_values = model.predict(df_residual[available_macro].fillna(0))
-            df_residual[residual_name] = df_residual[micro_feat] - predicted_values
-
-            # 如果不保留原始特征，用残差替换
-            if not keep_original:
-                df_residual[micro_feat] = df_residual[residual_name]
-                df_residual.drop(columns=[residual_name], inplace=True)
-
-            residualized_count += 1
 
         return df_residual
 
