@@ -591,6 +591,41 @@ class WalkForwardValidator:
         else:
             information_ratio = 0.0
 
+        # ========== IC 指标计算（选股能力评估）==========
+        # IC (Information Coefficient): 预测概率与实际收益的 Pearson 相关系数
+        # Rank IC: 预测排名与实际收益排名的 Spearman 相关系数
+        from scipy.stats import pearsonr, spearmanr
+
+        # 只计算有有效预测和收益的样本
+        valid_mask = ~df['actual_return'].isna() & ~df['probability'].isna()
+        valid_count = valid_mask.sum()
+
+        if valid_count > 10:  # 至少10个样本才计算相关性
+            try:
+                ic, ic_pvalue = pearsonr(
+                    df.loc[valid_mask, 'probability'],
+                    df.loc[valid_mask, 'actual_return']
+                )
+                rank_ic, rank_ic_pvalue = spearmanr(
+                    df.loc[valid_mask, 'probability'],
+                    df.loc[valid_mask, 'actual_return']
+                )
+                # 处理 NaN
+                if np.isnan(ic):
+                    ic = 0.0
+                if np.isnan(rank_ic):
+                    rank_ic = 0.0
+            except Exception:
+                ic = 0.0
+                rank_ic = 0.0
+        else:
+            ic = 0.0
+            rank_ic = 0.0
+
+        # 预测分散度：预测概率的标准差
+        # 用于检测"全涨全跌"问题（分散度过低表示预测缺乏区分度）
+        prediction_std = df['probability'].std() if 'probability' in df.columns else 0.0
+
         return {
             'num_samples': num_samples,
             'num_trades': num_trades,
@@ -608,7 +643,11 @@ class WalkForwardValidator:
             'sortino_ratio': sortino_ratio,
             'information_ratio': information_ratio,
             'benchmark_return': benchmark_return,
-            'transaction_cost': TOTAL_COST  # 记录使用的交易成本
+            'transaction_cost': TOTAL_COST,  # 记录使用的交易成本
+            # 新增 IC 指标
+            'ic': ic,
+            'rank_ic': rank_ic,
+            'prediction_std': prediction_std
         }
 
     def _calculate_overall_metrics(self, fold_results):
@@ -632,6 +671,13 @@ class WalkForwardValidator:
         avg_max_drawdown = np.mean([r['max_drawdown'] for r in fold_results])
         avg_sortino_ratio = np.mean([r['sortino_ratio'] for r in fold_results])
         avg_information_ratio = np.mean([r['information_ratio'] for r in fold_results])
+
+        # IC 指标平均（新增）
+        avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
+        avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
+        avg_prediction_std = np.mean([r.get('prediction_std', 0) for r in fold_results])
+        ic_std = np.std([r.get('ic', 0) for r in fold_results])
+        rank_ic_std = np.std([r.get('rank_ic', 0) for r in fold_results])
 
         # 稳定性分析
         return_std = np.std([r['avg_return'] for r in fold_results])
@@ -721,7 +767,13 @@ class WalkForwardValidator:
             'stability_rating': stability_rating,
             'overall_score': score,
             'overall_rating': overall_rating,
-            'recommendation': recommendation
+            'recommendation': recommendation,
+            # 新增 IC 指标
+            'avg_ic': avg_ic,
+            'avg_rank_ic': avg_rank_ic,
+            'avg_prediction_std': avg_prediction_std,
+            'ic_std': ic_std,
+            'rank_ic_std': rank_ic_std
         }
 
     def save_report(self, report, output_dir='output'):
@@ -820,6 +872,38 @@ class WalkForwardValidator:
                 f.write(f"- **胜率标准差**: {overall['win_rate_std']:.2%}\n")
                 f.write(f"- **夏普比率标准差**: {overall['sharpe_std']:.4f}\n")
                 f.write(f"- **稳定性评级**: {overall['stability_rating']}\n\n")
+
+            # IC 指标分析（新增）
+            f.write("## 📐 IC 指标分析（选股能力评估）\n\n")
+            if not overall:
+                f.write("⚠️  所有 Fold 验证失败，无法计算 IC 指标\n\n")
+            else:
+                avg_ic = overall.get('avg_ic', 0)
+                avg_rank_ic = overall.get('avg_rank_ic', 0)
+                avg_pred_std = overall.get('avg_prediction_std', 0)
+                ic_std = overall.get('ic_std', 0)
+                rank_ic_std = overall.get('rank_ic_std', 0)
+
+                f.write("| 指标 | 数值 | 说明 |\n")
+                f.write("|------|------|------|\n")
+                f.write(f"| **IC** | {avg_ic:.4f} | 预测概率与实际收益的 Pearson 相关系数 |\n")
+                f.write(f"| **Rank IC** | {avg_rank_ic:.4f} | 预测排名与实际收益排名的 Spearman 相关系数 |\n")
+                f.write(f"| **预测分散度** | {avg_pred_std:.4f} | 预测概率标准差（避免\"全涨全跌\"） |\n")
+                f.write(f"| **IC 标准差** | {ic_std:.4f} | IC 稳定性 |\n")
+                f.write(f"| **Rank IC 标准差** | {rank_ic_std:.4f} | Rank IC 稳定性 |\n\n")
+
+                f.write("**IC 解读**：\n")
+                if avg_ic > 0.05:
+                    ic_rating = "⭐⭐⭐⭐⭐ 预测能力较强"
+                elif avg_ic > 0.02:
+                    ic_rating = "⭐⭐⭐⭐ 预测能力中等"
+                elif avg_ic > 0:
+                    ic_rating = "⭐⭐⭐ 预测能力较弱"
+                else:
+                    ic_rating = "⚠️ 无预测能力或负相关"
+                f.write(f"- IC = {avg_ic:.4f}：{ic_rating}\n")
+                f.write(f"- Rank IC 更稳健，对异常值不敏感\n")
+                f.write(f"- 预测分散度 > 0.1 表示预测有区分度，避免\"全涨全跌\"\n\n")
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")

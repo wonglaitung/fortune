@@ -1561,8 +1561,8 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0):
-        """创建标签：未来涨跌（考虑交易成本）
+    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0, label_type='absolute', all_stocks_df=None):
+        """创建标签：未来涨跌（支持绝对标签和相对标签）
 
         根据业界最佳实践，标签定义应考虑交易成本，避免"纸上盈利"变成实际亏损。
         只有当预期收益 > 交易成本 + 最小盈利目标时才标记为正例。
@@ -1574,6 +1574,10 @@ class FeatureEngineer:
             min_return_threshold: 最小收益阈值（默认0%），用于过滤小额波动
                                  推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
                                  注意：当前设为0%以保持标签分布均衡，后续可调整
+            label_type: 标签类型
+                       - 'absolute': 绝对标签（收益 > 阈值）
+                       - 'relative': 相对标签（收益 > 当日所有股票中位数）
+            all_stocks_df: 所有股票的数据（用于计算相对标签的中位数），格式为 DataFrame，包含 Date 和 Future_Return 列
         """
         if df.empty or len(df) < horizon + 1:
             return df
@@ -1581,13 +1585,36 @@ class FeatureEngineer:
         # 计算未来收益率（累积收益）
         df['Future_Return'] = df['Close'].shift(-horizon) / df['Close'] - 1
 
-        # 阈值化标签：只有当收益超过阈值时才标记为正例
-        # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
-        # 业界标准：min_return_threshold = 交易成本 + 最小盈利目标
-        df['Label'] = (df['Future_Return'] > min_return_threshold).astype(int)
+        if label_type == 'absolute':
+            # 绝对标签：收益 > 阈值
+            # 阈值化标签：只有当收益超过阈值时才标记为正例
+            # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
+            # 业界标准：min_return_threshold = 交易成本 + 最小盈利目标
+            df['Label'] = (df['Future_Return'] > min_return_threshold).astype(int)
+            df['Label_Threshold'] = min_return_threshold
 
-        # 记录使用的阈值（用于后续分析）
-        df['Label_Threshold'] = min_return_threshold
+        elif label_type == 'relative':
+            # 相对标签：收益 > 当日所有股票中位数
+            # 这种标签方式迫使模型学习"个股为什么比别人强"，而非"大盘会不会涨"
+            # 预期效果：全局特征（如美债利率）权重下降，个股特异性特征权重上升
+
+            if all_stocks_df is not None and 'Daily_Median_Return' in all_stocks_df.columns:
+                # 使用预先计算的中位数（推荐，避免重复计算）
+                df = df.merge(
+                    all_stocks_df[['Date', 'Daily_Median_Return']].drop_duplicates(),
+                    on='Date',
+                    how='left'
+                )
+            else:
+                # 从当前数据计算（仅适用于单只股票数据）
+                # 注意：这种方式下，相对标签等于绝对标签（因为只有一只股票）
+                df['Daily_Median_Return'] = df['Future_Return'].expanding().median()
+
+            df['Label'] = (df['Future_Return'] > df['Daily_Median_Return']).astype(int)
+            df['Label_Threshold'] = df['Daily_Median_Return']  # 记录动态阈值
+
+        else:
+            raise ValueError(f"不支持的标签类型: {label_type}，支持: 'absolute', 'relative'")
 
         # 如果不是回测模式，移除最后horizon行（没有标签的数据）
         if not for_backtest:
@@ -4152,7 +4179,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, label_type='relative'):
         """准备训练数据
 
         Args:
@@ -4163,9 +4190,11 @@ class CatBoostModel(BaseTradingModel):
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
             use_feature_cache: 是否使用特征缓存（默认True）
+            label_type: 标签类型（'absolute'=绝对标签，'relative'=相对标签，默认'relative'）
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
+        self.label_type = label_type
         all_data = []
 
         # 获取美股市场数据（只获取一次）
@@ -4322,7 +4351,9 @@ class CatBoostModel(BaseTradingModel):
                         logger.debug(f"特征缓存已保存: {cache_key}")
 
                 # 创建标签（使用指定的 horizon 和阈值，不缓存）
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
+                # 注意：相对标签需要在所有股票数据收集完成后统一计算
+                if label_type == 'absolute':
+                    stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold, label_type='absolute')
 
                 # 添加股票代码
                 stock_df['Code'] = code
@@ -4348,6 +4379,33 @@ class CatBoostModel(BaseTradingModel):
         # 转换索引为 datetime（统一为UTC时区）
         df.index = pd.to_datetime(df.index, utc=True)
 
+        # 相对标签：在合并所有股票数据后统一计算
+        if label_type == 'relative':
+            print(f"  计算相对标签（每日中位数）...")
+            # 保存原始索引（日期）
+            original_dates = df.index.copy()
+
+            # 计算未来收益率（在原 DataFrame 上操作，保持日期索引）
+            df['Future_Return'] = df.groupby('Code')['Close'].transform(
+                lambda x: x.shift(-horizon) / x - 1
+            )
+
+            # 按日期计算每日中位数（使用日期索引）
+            daily_median = df.groupby(df.index)['Future_Return'].median()
+            daily_median.name = 'Daily_Median_Return'
+
+            # 将中位数映射回原数据
+            df['Daily_Median_Return'] = df.index.map(daily_median)
+
+            # 创建相对标签
+            df['Label'] = (df['Future_Return'] > df['Daily_Median_Return']).astype(int)
+
+            # 如果不是回测模式，移除最后horizon行（没有标签的数据）
+            if not for_backtest:
+                df = df.iloc[:-horizon]
+
+            print(f"  相对标签正例比例: {df['Label'].mean():.2%}")
+
         # 过滤日期范围（如果指定）
         if start_date:
             start_date = pd.to_datetime(start_date, utc=True)
@@ -4355,6 +4413,21 @@ class CatBoostModel(BaseTradingModel):
         if end_date:
             end_date = pd.to_datetime(end_date, utc=True)
             df = df[df.index <= end_date]
+
+        # ========== 特征残差化（剔除宏观因子对微观特征的影响）==========
+        # 对微观特征剔除宏观因子贡献，迫使模型学习个股特异性
+        try:
+            from data_services.feature_residualizer import FeatureResidualizer
+            residualizer = FeatureResidualizer()
+            df = residualizer.residualize(df, inplace=True, keep_original=True)
+            # 保存残差化器到实例，用于预测时保持一致
+            self.residualizer = residualizer
+            residual_features = residualizer.get_residual_features()
+            if residual_features:
+                logger.info(f"特征残差化完成，生成 {len(residual_features)} 个残差特征")
+        except Exception as e:
+            logger.warning(f"特征残差化失败: {e}，将使用原始特征")
+            self.residualizer = None
 
         logger.info(f"数据准备完成，共 {len(df)} 条记录")
 
@@ -4848,6 +4921,15 @@ class CatBoostModel(BaseTradingModel):
                 # 生成交叉特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
+                # ========== 特征残差化（与训练时保持一致）==========
+                # 如果训练时使用了残差化，预测时也需要使用
+                if hasattr(self, 'residualizer') and self.residualizer is not None:
+                    try:
+                        stock_df = self.residualizer.residualize(stock_df, inplace=True, keep_original=True)
+                        logger.debug("预测时特征残差化完成")
+                    except Exception as e:
+                        logger.warning(f"预测时特征残差化失败: {e}")
+
                 # 保存特征缓存
                 if use_feature_cache:
                     _save_feature_cache(cache_file_path, {'stock_df': stock_df})
@@ -4937,7 +5019,8 @@ class CatBoostModel(BaseTradingModel):
             'actual_n_estimators': self.actual_n_estimators,
             'horizon': self.horizon,
             'model_type': self.model_type,
-            'categorical_encoders': self.categorical_encoders
+            'categorical_encoders': self.categorical_encoders,
+            'residualizer': getattr(self, 'residualizer', None)  # 保存残差化器
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -4953,6 +5036,7 @@ class CatBoostModel(BaseTradingModel):
         self.horizon = model_data.get('horizon', 1)
         self.model_type = model_data.get('model_type', 'catboost')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
+        self.residualizer = model_data.get('residualizer', None)  # 加载残差化器
         print(f"CatBoost 模型已从 {filepath} 加载")
 
     def predict_proba(self, X):
