@@ -234,6 +234,124 @@ def run_single_stock_walkforward(stock_code, stock_name, feature_engineer):
         return None
 
 
+def analyze_three_horizon_patterns(all_predictions):
+    """分析三周期预测模式和正确性传导（参考恒指脚本）"""
+    # 构建DataFrame
+    df_1d = pd.DataFrame(all_predictions[1])
+    df_5d = pd.DataFrame(all_predictions[5])
+    df_20d = pd.DataFrame(all_predictions[20])
+
+    if len(df_1d) == 0 or len(df_5d) == 0 or len(df_20d) == 0:
+        return None
+
+    df_1d.set_index('date', inplace=True)
+    df_5d.set_index('date', inplace=True)
+    df_20d.set_index('date', inplace=True)
+
+    # 去重并排序
+    for df in [df_1d, df_5d, df_20d]:
+        df.drop_duplicates(keep='last', inplace=True)
+        df.sort_index(inplace=True)
+
+    # 对齐数据
+    common_dates = df_1d.index.intersection(df_5d.index).intersection(df_20d.index)
+    if len(common_dates) < 50:
+        return None
+
+    pred_1d = df_1d.loc[common_dates, 'prediction'].astype(int)
+    pred_5d = df_5d.loc[common_dates, 'prediction'].astype(int)
+    pred_20d = df_20d.loc[common_dates, 'prediction'].astype(int)
+
+    actual_1d = df_1d.loc[common_dates, 'actual_direction'].astype(int)
+    actual_5d = df_5d.loc[common_dates, 'actual_direction'].astype(int)
+    actual_20d = df_20d.loc[common_dates, 'actual_direction'].astype(int)
+
+    prob_1d = df_1d.loc[common_dates, 'probability']
+    prob_5d = df_5d.loc[common_dates, 'probability']
+
+    results = {'samples': len(common_dates)}
+
+    # ========== 1. 独立准确率 ==========
+    results['independent_accuracy'] = {
+        '1d': float((pred_1d == actual_1d).mean() * 100),
+        '5d': float((pred_5d == actual_5d).mean() * 100),
+        '20d': float((pred_20d == actual_20d).mean() * 100),
+    }
+
+    # ========== 2. 预测正确性传导 ==========
+    correct_1d = pred_1d == actual_1d
+    correct_5d = pred_5d == actual_5d
+
+    if correct_1d.sum() > 0:
+        results['1d_correct_then_20d_accuracy'] = float(
+            (pred_20d[correct_1d] == actual_20d[correct_1d]).mean() * 100
+        )
+    if (~correct_1d).sum() > 0:
+        results['1d_wrong_then_20d_accuracy'] = float(
+            (pred_20d[~correct_1d] == actual_20d[~correct_1d]).mean() * 100
+        )
+    if correct_5d.sum() > 0:
+        results['5d_correct_then_20d_accuracy'] = float(
+            (pred_20d[correct_5d] == actual_20d[correct_5d]).mean() * 100
+        )
+    if (correct_1d & correct_5d).sum() > 0:
+        results['1d_5d_correct_then_20d_accuracy'] = float(
+            (pred_20d[correct_1d & correct_5d] == actual_20d[correct_1d & correct_5d]).mean() * 100
+        )
+
+    # ========== 3. 八大模式分析 ==========
+    patterns = {
+        '111': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)),
+        '110': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 0)),
+        '101': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 1)),
+        '100': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 0)),
+        '011': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 1)),
+        '010': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 0)),
+        '001': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 1)),
+        '000': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)),
+    }
+
+    results['patterns'] = {}
+    for pattern, mask in patterns.items():
+        count = mask.sum()
+        if count > 0:
+            results['patterns'][pattern] = {
+                'count': int(count),
+                'pct': float(count / len(common_dates) * 100),
+                '20d_accuracy': float((pred_20d[mask] == actual_20d[mask]).mean() * 100),
+                '1d_accuracy': float((pred_1d[mask] == actual_1d[mask]).mean() * 100),
+                '5d_accuracy': float((pred_5d[mask] == actual_5d[mask]).mean() * 100),
+            }
+
+    # ========== 4. 一致信号分析 ==========
+    consensus_bull = patterns['111']
+    consensus_bear = patterns['000']
+
+    results['consensus_analysis'] = {
+        'bull': {
+            'count': int(consensus_bull.sum()),
+            '1d_actual_up_rate': float(actual_1d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+            '5d_actual_up_rate': float(actual_5d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+            '20d_actual_up_rate': float(actual_20d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+        },
+        'bear': {
+            'count': int(consensus_bear.sum()),
+            '1d_actual_down_rate': float((1 - actual_1d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+            '5d_actual_down_rate': float((1 - actual_5d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+            '20d_actual_down_rate': float((1 - actual_20d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+        }
+    }
+
+    # ========== 5. 概率相关性 ==========
+    results['probability_correlation'] = {
+        '1d_vs_5d': float(prob_1d.corr(prob_5d)),
+        '1d_vs_20d_actual': float(prob_1d.corr(actual_20d)),
+        '5d_vs_20d_actual': float(prob_5d.corr(actual_20d)),
+    }
+
+    return results
+
+
 def analyze_causal_chain(all_predictions, chain_type='1d_to_5d'):
     """分析因果链"""
     if chain_type == '1d_to_5d':
@@ -300,6 +418,162 @@ def analyze_causal_chain(all_predictions, chain_type='1d_to_5d'):
         return None
 
     return pd.DataFrame(results)
+
+
+def print_three_horizon_summary(all_stock_results):
+    """打印三周期模式汇总（参考恒指格式）"""
+    print("\n" + "=" * 90)
+    print("📊 个股三周期预测分析汇总")
+    print("=" * 90)
+
+    # 恒指基准数据
+    hsi_baseline = {
+        'independent_accuracy': {'1d': 49.67, '5d': 62.36, '20d': 81.24},
+        'causal_analysis': {
+            '1d_correct_then_20d_accuracy': 83.56,
+            '1d_wrong_then_20d_accuracy': 78.95,
+            '5d_correct_then_20d_accuracy': 81.95,
+            '1d_5d_correct_then_20d_accuracy': 81.49,
+        },
+        'patterns': {
+            '101': {'20d_accuracy': 95.00, 'count': 60},
+            '010': {'20d_accuracy': 85.98, 'count': 107},
+            '001': {'20d_accuracy': 84.00, 'count': 100},
+            '111': {'20d_accuracy': 80.62, 'count': 129},
+            '000': {'20d_accuracy': 79.57, 'count': 186},
+        },
+        'probability_correlation': {'5d_vs_20d_actual': 0.35},
+    }
+
+    # ========== 1. 独立准确率对比 ==========
+    print("\n【独立准确率对比】")
+    print(f"  {'指标':<20} {'恒指':<12} {'个股平均':<12} {'差异':<10}")
+    print("  " + "-" * 50)
+
+    acc_1d_list = []
+    acc_5d_list = []
+    acc_20d_list = []
+
+    for code, result in all_stock_results.items():
+        if 'three_horizon' in result:
+            acc = result['three_horizon'].get('independent_accuracy', {})
+            if '1d' in acc:
+                acc_1d_list.append(acc['1d'])
+            if '5d' in acc:
+                acc_5d_list.append(acc['5d'])
+            if '20d' in acc:
+                acc_20d_list.append(acc['20d'])
+
+    if acc_1d_list:
+        avg_1d = np.mean(acc_1d_list)
+        print(f"  {'1天准确率':<20} {hsi_baseline['independent_accuracy']['1d']:.2f}%{'':<6} "
+              f"{avg_1d:.2f}%{'':<6} {hsi_baseline['independent_accuracy']['1d'] - avg_1d:+.2f}%")
+    if acc_5d_list:
+        avg_5d = np.mean(acc_5d_list)
+        print(f"  {'5天准确率':<20} {hsi_baseline['independent_accuracy']['5d']:.2f}%{'':<6} "
+              f"{avg_5d:.2f}%{'':<6} {hsi_baseline['independent_accuracy']['5d'] - avg_5d:+.2f}%")
+    if acc_20d_list:
+        avg_20d = np.mean(acc_20d_list)
+        print(f"  {'20天准确率':<20} {hsi_baseline['independent_accuracy']['20d']:.2f}%{'':<6} "
+              f"{avg_20d:.2f}%{'':<6} {hsi_baseline['independent_accuracy']['20d'] - avg_20d:+.2f}%")
+
+    # ========== 2. 预测正确性传导对比 ==========
+    print("\n【预测正确性传导对比】")
+    print(f"  {'指标':<30} {'恒指':<12} {'个股平均':<12} {'差异':<10}")
+    print("  " + "-" * 60)
+
+    causal_1d_correct_list = []
+    causal_1d_wrong_list = []
+    causal_5d_correct_list = []
+    causal_1d_5d_correct_list = []
+
+    for code, result in all_stock_results.items():
+        if 'three_horizon' in result:
+            th = result['three_horizon']
+            if '1d_correct_then_20d_accuracy' in th:
+                causal_1d_correct_list.append(th['1d_correct_then_20d_accuracy'])
+            if '1d_wrong_then_20d_accuracy' in th:
+                causal_1d_wrong_list.append(th['1d_wrong_then_20d_accuracy'])
+            if '5d_correct_then_20d_accuracy' in th:
+                causal_5d_correct_list.append(th['5d_correct_then_20d_accuracy'])
+            if '1d_5d_correct_then_20d_accuracy' in th:
+                causal_1d_5d_correct_list.append(th['1d_5d_correct_then_20d_accuracy'])
+
+    if causal_1d_correct_list:
+        avg = np.mean(causal_1d_correct_list)
+        print(f"  {'1天正确→20天也正确':<30} {hsi_baseline['causal_analysis']['1d_correct_then_20d_accuracy']:.2f}%{'':<6} "
+              f"{avg:.2f}%{'':<6} {hsi_baseline['causal_analysis']['1d_correct_then_20d_accuracy'] - avg:+.2f}%")
+    if causal_1d_wrong_list:
+        avg = np.mean(causal_1d_wrong_list)
+        print(f"  {'1天错误→20天正确':<30} {hsi_baseline['causal_analysis']['1d_wrong_then_20d_accuracy']:.2f}%{'':<6} "
+              f"{avg:.2f}%{'':<6} {hsi_baseline['causal_analysis']['1d_wrong_then_20d_accuracy'] - avg:+.2f}%")
+    if causal_5d_correct_list:
+        avg = np.mean(causal_5d_correct_list)
+        print(f"  {'5天正确→20天也正确':<30} {hsi_baseline['causal_analysis']['5d_correct_then_20d_accuracy']:.2f}%{'':<6} "
+              f"{avg:.2f}%{'':<6} {hsi_baseline['causal_analysis']['5d_correct_then_20d_accuracy'] - avg:+.2f}%")
+    if causal_1d_5d_correct_list:
+        avg = np.mean(causal_1d_5d_correct_list)
+        print(f"  {'1+5天正确→20天也正确':<30} {hsi_baseline['causal_analysis']['1d_5d_correct_then_20d_accuracy']:.2f}%{'':<6} "
+              f"{avg:.2f}%{'':<6} {hsi_baseline['causal_analysis']['1d_5d_correct_then_20d_accuracy'] - avg:+.2f}%")
+
+    # ========== 3. 八大模式对比 ==========
+    print("\n【八大交易模式对比（20天准确率）】")
+    print(f"  {'模式':<8} {'名称':<12} {'恒指':<12} {'个股平均':<12} {'差异':<10}")
+    print("  " + "-" * 50)
+
+    pattern_names = {
+        '101': '假突破⭐',
+        '010': '反弹失败⭐',
+        '001': '下跌中继',
+        '111': '一致看涨',
+        '000': '一致看跌',
+        '110': '震荡回调',
+        '011': '探底回升',
+        '100': '冲高回落',
+    }
+
+    for pattern in ['101', '010', '001', '111', '000', '110', '011', '100']:
+        pattern_acc_list = []
+        for code, result in all_stock_results.items():
+            if 'three_horizon' in result and 'patterns' in result['three_horizon']:
+                if pattern in result['three_horizon']['patterns']:
+                    pattern_acc_list.append(result['three_horizon']['patterns'][pattern]['20d_accuracy'])
+
+        hsi_acc = hsi_baseline['patterns'].get(pattern, {}).get('20d_accuracy', 0)
+        if pattern_acc_list:
+            avg_acc = np.mean(pattern_acc_list)
+            diff = hsi_acc - avg_acc
+            print(f"  {pattern:<8} {pattern_names.get(pattern, ''):<12} "
+                  f"{hsi_acc:.2f}%{'':<6} {avg_acc:.2f}%{'':<6} {diff:+.2f}%")
+        elif hsi_acc > 0:
+            print(f"  {pattern:<8} {pattern_names.get(pattern, ''):<12} "
+                  f"{hsi_acc:.2f}%{'':<6} {'-':<12}")
+
+    # ========== 4. 概率相关性对比 ==========
+    print("\n【概率相关性对比】")
+    print(f"  {'指标':<30} {'恒指':<12} {'个股平均':<12} {'说明':<20}")
+    print("  " + "-" * 70)
+
+    prob_corr_list = []
+    for code, result in all_stock_results.items():
+        if 'three_horizon' in result:
+            pc = result['three_horizon'].get('probability_correlation', {})
+            if '5d_vs_20d_actual' in pc:
+                prob_corr_list.append(pc['5d_vs_20d_actual'])
+
+    if prob_corr_list:
+        avg_corr = np.mean(prob_corr_list)
+        hsi_corr = hsi_baseline['probability_correlation']['5d_vs_20d_actual']
+        direction = "正向（顺势）" if avg_corr > 0 else "反向（反转）"
+        print(f"  {'5d预测概率与20d实际方向相关性 r':<30} "
+              f"+{hsi_corr:.2f}{'':<8} {avg_corr:.4f}{'':<6} {direction}")
+        print(f"\n  💡 关键发现：")
+        if avg_corr < 0:
+            print(f"     ⚠️ 个股预测概率与实际方向呈负相关（r={avg_corr:.4f})")
+            print(f"     ⚠️ 高预测概率反而预示反转，与恒指完全相反")
+            print(f"     ⚠️ 不能将恒指策略直接套用于个股")
+        else:
+            print(f"     ✅ 个股预测概率与实际方向呈正相关（r={avg_corr:.4f})")
 
 
 def print_summary(all_stock_results):
@@ -505,13 +779,25 @@ def main():
             if len(mixed) > 0:
                 stock_result['5d_to_20d']['mixed_accuracy'] = float(mixed['long_correct'].mean() * 100)
 
+        # 新增：三周期模式分析
+        three_horizon_results = analyze_three_horizon_patterns(predictions)
+        if three_horizon_results is not None:
+            stock_result['three_horizon'] = three_horizon_results
+
         all_stock_results[stock_code] = stock_result
         res = stock_result
         print(f"  ✅ 1d→5d: {res.get('1d_to_5d',{}).get('model_accuracy','N/A')}%, "
               f"5d→20d: {res.get('5d_to_20d',{}).get('model_accuracy','N/A')}%")
+        if 'three_horizon' in res:
+            th = res['three_horizon']
+            print(f"     三周期模式: {len(th.get('patterns', {}))}种, "
+                  f"20d准确率: {th.get('independent_accuracy', {}).get('20d', 'N/A'):.2f}%")
 
     # 汇总对比
     print_summary(all_stock_results)
+
+    # 打印三周期模式汇总
+    print_three_horizon_summary(all_stock_results)
 
     # 保存结果
     os.makedirs(OUTPUT_DIR, exist_ok=True)
