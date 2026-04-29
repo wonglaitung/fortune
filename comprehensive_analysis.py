@@ -90,7 +90,7 @@ SECTOR_TYPES = {
 
 # 三周期预测模式配置（基于个股完整模型验证结果）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第12章
-# 验证数据：56只港股，Walk-forward 30 folds，完整模型（545特征）
+# 验证数据：56只港股，Walk-forward 30 folds，完整模型（730特征→385个有效特征）
 # 更新日期：2026-04-20
 THREE_HORIZON_PATTERNS = {
     '010': {'name': '反弹失败⭐', 'action': '谨慎减仓', 'win_rate': '66.32%', 'avg_return': '-1.65%', 'confidence': '高'},
@@ -103,7 +103,31 @@ THREE_HORIZON_PATTERNS = {
     '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '47.99%', 'avg_return': '+0.14%', 'confidence': '低'},
 }
 
-# 传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
+# 恒指三周期预测模式配置（基于恒指增强模型验证结果）
+# 来源：docs/THREE_HORIZON_ANALYSIS.md 第一部分
+# 验证数据：906个恒指样本，Walk-forward验证，增强模型（37特征）
+# 更新日期：2026-04-28
+# 注意：恒指准确率显著高于个股，最优模式为"假突破"(101)
+HSI_THREE_HORIZON_PATTERNS = {
+    '101': {'name': '假突破⭐⭐', 'action': '抄底买入', 'win_rate': '92.73%', 'avg_return': '高', 'confidence': '极高'},
+    '011': {'name': '探底回升⭐', 'action': '分批建仓', 'win_rate': '83.97%', 'avg_return': '+3.54%', 'confidence': '高'},
+    '000': {'name': '一致看跌', 'action': '减仓/做空', 'win_rate': '83.58%', 'avg_return': '-2.54%', 'confidence': '高'},
+    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '81.73%', 'avg_return': '-2.28%', 'confidence': '中高'},
+    '111': {'name': '一致看涨', 'action': '持有/买入', 'win_rate': '81.40%', 'avg_return': '+0.14%', 'confidence': '中高'},
+    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '79.31%', 'avg_return': '+4.86%', 'confidence': '中'},
+    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '79.17%', 'avg_return': '-1.65%', 'confidence': '中'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '78.57%', 'avg_return': '+2.34%', 'confidence': '中'},
+}
+
+# 恒指传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
+# 更新日期：2026-04-28，906个恒指样本验证
+HSI_TRANSMISSION_ACCURACY = {
+    'both_correct_rate': 81.46,     # 1天+5天都正确时，20天准确率
+    'independent_20d_rate': 82.23,   # 独立20天准确率
+    'improvement': -0.77             # 恒指传导效应不明显（独立准确率已很高）
+}
+
+# 个股传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
 # 更新日期：2026-04-20，56只港股验证
 TRANSMISSION_ACCURACY = {
     'both_correct_rate': 62.24,      # 1天+5天都正确时，20天准确率
@@ -405,18 +429,20 @@ def get_sector_type(sector_code):
     return '-'
 
 
-def get_pattern_action(pattern):
+def get_pattern_action(pattern, is_hsi=False):
     """
     根据三周期模式获取交易建议
 
     参数:
     - pattern: 三周期模式字符串（如 '111', '110' 等）
+    - is_hsi: 是否为恒指预测（默认False，使用个股模式）
 
     返回:
     - dict: 包含模式名称、操作建议、胜率等信息
     """
-    if pattern in THREE_HORIZON_PATTERNS:
-        return THREE_HORIZON_PATTERNS[pattern]
+    patterns = HSI_THREE_HORIZON_PATTERNS if is_hsi else THREE_HORIZON_PATTERNS
+    if pattern in patterns:
+        return patterns[pattern]
     return {'name': '未知', 'action': '观望', 'win_rate': '-', 'avg_return': '-', 'confidence': '低'}
 
 
@@ -1048,8 +1074,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
                 catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
-                catboost_text_email += f"- 传导模式：当同一时间的1天+5天预测都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
-                catboost_text_email += "- 策略含义：短期预测正确 → 中期预测更可靠，可增加仓位信心\n"
+                catboost_text_email += f"- 个股传导模式：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
+                catboost_text_email += f"- ⚠️ 注意：个股最优模式为\"反弹失败(010)\"，准确率66.32%；\"假突破(101)\"仅50%（随机水平）\n"
+                catboost_text_email += f"- 💡 恒指模式：恒指最优模式为\"假突破(101)\"，准确率92.73%（远高于个股）\n"
+                catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
 
                 # 添加筹码分布说明
                 catboost_text_email += f"\n**筹码阻力说明**：\n"
