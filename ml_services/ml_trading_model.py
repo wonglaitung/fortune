@@ -4447,6 +4447,7 @@ class CatBoostModel(BaseTradingModel):
         # 排除非特征列（包括中间计算列）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
+                          'Daily_Median_Return',  # 相对标签计算的中间结果，预测时无法获得
                           'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
