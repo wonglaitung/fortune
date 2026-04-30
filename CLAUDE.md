@@ -69,7 +69,7 @@ python3 -m pytest tests/test_feature_extractor.py -v
 | **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
 | **网络特征** | 网络特征不适合放入个股预测模型，应作为独立风险监控工具 |
-| **波动率网络密度** | 密度高→市场"同涨同跌"→选股失效→降仓位；历史数据存储在 `data/network_density_history.json` |
+| **波动率网络密度** | 密度高→市场"同涨同跌"→选股失效→降仓位；动态阈值（均值+1σ/1.5σ/2σ），历史数据存储在 `data/network_density_history.json` |
 
 ### 可用策略（恒指增强模型验证，2026-04-29，33特征）
 

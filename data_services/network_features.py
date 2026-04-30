@@ -28,11 +28,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# 波动率网络密度预警阈值
-DENSITY_WARNING_THRESHOLDS = {
-    'watch': 0.45,      # 关注
-    'warning': 0.46,    # 预警
-    'extreme': 0.47     # 极端
+# 波动率网络密度预警阈值（动态阈值，基于历史均值±标准差）
+# 当历史数据不足时使用默认阈值
+DENSITY_DEFAULT_THRESHOLDS = {
+    'watch_sigma': 1.0,     # 关注：均值 + 1σ
+    'warning_sigma': 1.5,   # 预警：均值 + 1.5σ
+    'extreme_sigma': 2.0    # 极端：均值 + 2σ
 }
 
 # 历史数据存储路径
@@ -416,17 +417,34 @@ class NetworkInsightCalculator:
             status_icon = '✅'
             status_detail = '在均值±1σ范围内'
 
-        # 判断预警级别
+        # 判断预警级别（动态阈值：基于历史均值±标准差）
         warning_level = None
-        if current_density > DENSITY_WARNING_THRESHOLDS['extreme']:
+        thresholds = {}
+
+        if std_30d > 0:
+            # 有足够历史数据，使用动态阈值
+            thresholds = {
+                'watch': mean_30d + DENSITY_DEFAULT_THRESHOLDS['watch_sigma'] * std_30d,
+                'warning': mean_30d + DENSITY_DEFAULT_THRESHOLDS['warning_sigma'] * std_30d,
+                'extreme': mean_30d + DENSITY_DEFAULT_THRESHOLDS['extreme_sigma'] * std_30d
+            }
+        else:
+            # 历史数据不足，使用固定阈值（基于当前密度的百分比）
+            thresholds = {
+                'watch': 0.45,
+                'warning': 0.50,
+                'extreme': 0.55
+            }
+
+        if current_density > thresholds['extreme']:
             warning_level = '🔴🔴 极端'
             status_icon = '🔴🔴'
             status = '极端'
-        elif current_density > DENSITY_WARNING_THRESHOLDS['warning']:
+        elif current_density > thresholds['warning']:
             warning_level = '🔴 预警'
             status_icon = '🔴'
             status = '预警'
-        elif current_density > DENSITY_WARNING_THRESHOLDS['watch']:
+        elif current_density > thresholds['watch']:
             warning_level = '⚠️ 关注'
             status_icon = '⚠️'
             status = '关注'
@@ -474,7 +492,8 @@ class NetworkInsightCalculator:
             'trend_detail': trend_detail,
             'warning_level': warning_level,
             'recommendation': recommendation,
-            'thresholds': DENSITY_WARNING_THRESHOLDS,
+            'thresholds': thresholds,
+            'threshold_type': 'dynamic' if std_30d > 0 else 'default',
             'history_count': len(history)
         }
 

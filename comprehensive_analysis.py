@@ -1162,12 +1162,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                     # 预警阈值建议
                     thresholds = density_warning.get('thresholds', {})
-                    catboost_text_email += "预警阈值建议\n\n"
+                    threshold_type = density_warning.get('threshold_type', 'default')
+                    threshold_note = "（动态阈值，基于历史均值±标准差）" if threshold_type == 'dynamic' else "（默认阈值，历史数据不足）"
+                    catboost_text_email += f"预警阈值建议{threshold_note}\n\n"
                     catboost_text_email += "| 级别 | 阈值 | 操作 |\n"
                     catboost_text_email += "|------|------|------|\n"
-                    catboost_text_email += f"| ⚠️ 关注 | > {thresholds.get('watch', 0.45):.2f} | 关注系统性风险 |\n"
-                    catboost_text_email += f"| 🔴 预警 | > {thresholds.get('warning', 0.46):.2f} | 降低仓位 20% |\n"
-                    catboost_text_email += f"| 🔴🔴 极端 | > {thresholds.get('extreme', 0.47):.2f} | 降低仓位 50% |\n\n"
+                    catboost_text_email += f"| ⚠️ 关注 | > {thresholds.get('watch', 0.45):.4f} | 关注系统性风险 |\n"
+                    catboost_text_email += f"| 🔴 预警 | > {thresholds.get('warning', 0.50):.4f} | 降低仓位 20% |\n"
+                    catboost_text_email += f"| 🔴🔴 极端 | > {thresholds.get('extreme', 0.55):.4f} | 降低仓位 50% |\n\n"
 
                     # 当前建议
                     recommendation = density_warning.get('recommendation', '')
