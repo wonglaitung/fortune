@@ -1450,6 +1450,183 @@ def visualize_network_evolution(evolution, output_dir):
     print(f"    ✅ 已保存: {path}")
 
 
+def visualize_volume_network(volume_graph, output_dir):
+    """可视化成交量相关性网络"""
+    setup_chinese_font()
+    print("  📊 生成成交量网络图...")
+
+    if volume_graph.number_of_nodes() == 0 or volume_graph.number_of_edges() == 0:
+        print("    ⚠️ 成交量网络无边，跳过可视化")
+        return
+
+    fig, ax = plt.subplots(1, 1, figsize=(16, 12))
+
+    # 使用 spring 布局
+    pos = nx.spring_layout(volume_graph, seed=RANDOM_SEED, k=2)
+
+    # 节点大小 = 度中心性
+    degrees = dict(volume_graph.degree())
+    max_deg = max(degrees.values()) if degrees else 1
+    node_sizes = [300 + 700 * (degrees.get(n, 0) / max(max_deg, 1))
+                  for n in volume_graph.nodes()]
+
+    node_colors = get_node_colors(volume_graph)
+
+    # 边颜色 = 相关性强度
+    edge_weights = [volume_graph[u][v].get('weight', 0.5) for u, v in volume_graph.edges()]
+    edge_colors = plt.cm.YlOrRd([w for w in edge_weights])
+
+    nx.draw_networkx_edges(volume_graph, pos, ax=ax, edge_color=edge_colors,
+                           width=2, alpha=0.7)
+    nx.draw_networkx_nodes(volume_graph, pos, ax=ax, node_color=node_colors,
+                           node_size=node_sizes, edgecolors='white', linewidths=0.5)
+
+    labels = {n: get_stock_name(n) for n in volume_graph.nodes()}
+    nx.draw_networkx_labels(volume_graph, pos, labels, ax=ax, font_size=8,
+                            font_family='WenQuanYi Micro Hei')
+
+    ax.set_title('成交量相关性网络（流动性联动）', fontsize=16, fontweight='bold')
+    ax.axis('off')
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'network_volume.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"    ✅ 已保存: {path}")
+
+
+def visualize_momentum_network(momentum_graph, output_dir):
+    """可视化动量相关性网络"""
+    setup_chinese_font()
+    print("  📊 生成动量网络图...")
+
+    if momentum_graph.number_of_nodes() == 0 or momentum_graph.number_of_edges() == 0:
+        print("    ⚠️ 动量网络无边，跳过可视化")
+        return
+
+    fig, ax = plt.subplots(1, 1, figsize=(18, 14))
+
+    # 使用 spring 布局
+    pos = nx.spring_layout(momentum_graph, seed=RANDOM_SEED, k=1.5)
+
+    # 节点大小 = 度中心性
+    degrees = dict(momentum_graph.degree())
+    max_deg = max(degrees.values()) if degrees else 1
+    node_sizes = [200 + 800 * (degrees.get(n, 0) / max(max_deg, 1))
+                  for n in momentum_graph.nodes()]
+
+    node_colors = get_node_colors(momentum_graph)
+
+    # 边颜色 = 相关性强度
+    edge_weights = [momentum_graph[u][v].get('weight', 0.5) for u, v in momentum_graph.edges()]
+    edge_colors = plt.cm.Greens([w for w in edge_weights])
+
+    nx.draw_networkx_edges(momentum_graph, pos, ax=ax, edge_color=edge_colors,
+                           width=1.5, alpha=0.5)
+    nx.draw_networkx_nodes(momentum_graph, pos, ax=ax, node_color=node_colors,
+                           node_size=node_sizes, edgecolors='white', linewidths=0.5)
+
+    labels = {n: get_stock_name(n) for n in momentum_graph.nodes()}
+    nx.draw_networkx_labels(momentum_graph, pos, labels, ax=ax, font_size=7,
+                            font_family='WenQuanYi Micro Hei')
+
+    ax.set_title('动量相关性网络（趋势同步）', fontsize=16, fontweight='bold')
+    ax.axis('off')
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'network_momentum.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"    ✅ 已保存: {path}")
+
+
+def visualize_volatility_network(volatility_graph, output_dir):
+    """可视化波动率相关性网络"""
+    setup_chinese_font()
+    print("  📊 生成波动率网络图...")
+
+    if volatility_graph.number_of_nodes() == 0 or volatility_graph.number_of_edges() == 0:
+        print("    ⚠️ 波动率网络无边，跳过可视化")
+        return
+
+    fig, ax = plt.subplots(1, 1, figsize=(18, 14))
+
+    # 使用 spring 布局
+    pos = nx.spring_layout(volatility_graph, seed=RANDOM_SEED, k=1.2)
+
+    # 节点大小 = 度中心性
+    degrees = dict(volatility_graph.degree())
+    max_deg = max(degrees.values()) if degrees else 1
+    node_sizes = [200 + 800 * (degrees.get(n, 0) / max(max_deg, 1))
+                  for n in volatility_graph.nodes()]
+
+    node_colors = get_node_colors(volatility_graph)
+
+    # 边颜色 = 相关性强度
+    edge_weights = [volatility_graph[u][v].get('weight', 0.5) for u, v in volatility_graph.edges()]
+    edge_colors = plt.cm.Reds([w for w in edge_weights])
+
+    nx.draw_networkx_edges(volatility_graph, pos, ax=ax, edge_color=edge_colors,
+                           width=1, alpha=0.4)
+    nx.draw_networkx_nodes(volatility_graph, pos, ax=ax, node_color=node_colors,
+                           node_size=node_sizes, edgecolors='white', linewidths=0.5)
+
+    labels = {n: get_stock_name(n) for n in volatility_graph.nodes()}
+    nx.draw_networkx_labels(volatility_graph, pos, labels, ax=ax, font_size=7,
+                            font_family='WenQuanYi Micro Hei')
+
+    ax.set_title('波动率相关性网络（风险传导）', fontsize=16, fontweight='bold')
+    ax.axis('off')
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'network_volatility.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"    ✅ 已保存: {path}")
+
+
+def visualize_multiplex_comparison(volume_topo, momentum_topo, volatility_topo,
+                                    threshold_topo, output_dir):
+    """可视化四种网络对比"""
+    setup_chinese_font()
+    print("  📊 生成多网络对比图...")
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    networks = [
+        ('价格相关性', threshold_topo, '#3498db'),
+        ('成交量相关性', volume_topo, '#e74c3c'),
+        ('动量相关性', momentum_topo, '#2ecc71'),
+        ('波动率相关性', volatility_topo, '#9b59b6')
+    ]
+
+    for idx, (name, topo, color) in enumerate(networks):
+        ax = axes[idx // 2, idx % 2]
+
+        metrics = ['边数', '密度', '聚类系数']
+        values = [
+            topo.get('edge_count', 0) / 10,  # 缩放以便显示
+            topo.get('density', 0) * 100,     # 转为百分比
+            topo.get('avg_clustering', 0) * 100  # 转为百分比
+        ]
+
+        bars = ax.bar(metrics, values, color=color, alpha=0.7, edgecolor='black')
+        ax.set_title(f'{name}网络', fontsize=12, fontweight='bold')
+        ax.set_ylabel('数值')
+
+        # 添加数值标签
+        for bar, val in zip(bars, values):
+            height = bar.get_height()
+            ax.annotate(f'{val:.1f}',
+                       xy=(bar.get_x() + bar.get_width() / 2, height),
+                       xytext=(0, 3), textcoords="offset points",
+                       ha='center', va='bottom', fontsize=10)
+
+    fig.suptitle('四种网络拓扑指标对比', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'network_multiplex_comparison.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"    ✅ 已保存: {path}")
+
+
 # ============================================================
 # 报告生成
 # ============================================================
@@ -2007,6 +2184,20 @@ def main():
 
         if evolution:
             visualize_network_evolution(evolution, args.output_dir)
+
+        # 新增：多维度网络可视化
+        if volume_graph.number_of_edges() > 0:
+            visualize_volume_network(volume_graph, args.output_dir)
+
+        if momentum_graph.number_of_edges() > 0:
+            visualize_momentum_network(momentum_graph, args.output_dir)
+
+        if volatility_graph.number_of_edges() > 0:
+            visualize_volatility_network(volatility_graph, args.output_dir)
+
+        # 四种网络对比图
+        visualize_multiplex_comparison(volume_topo, momentum_topo, volatility_topo,
+                                        threshold_topo, args.output_dir)
 
     # 9. 报告
     report = generate_markdown_report(
