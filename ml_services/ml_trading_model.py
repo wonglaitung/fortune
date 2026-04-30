@@ -3277,14 +3277,16 @@ class LightGBMModel(BaseTradingModel):
             topic_features = self.feature_engineer.create_topic_features(code, stock_df)
             for key, value in topic_features.items():
                 stock_df[key] = value
-                # 添加主题情感交互特征
-                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                for key, value in topic_sentiment_interaction.items():
-                    stock_df[key] = value
-                # 添加预期差距特征
-                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
-                for key, value in expectation_gap.items():
-                    stock_df[key] = value
+
+            # 添加主题情感交互特征（移到循环外，避免重复调用）
+            topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+            for key, value in topic_sentiment_interaction.items():
+                stock_df[key] = value
+
+            # 添加预期差距特征（移到循环外，避免重复调用）
+            expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+            for key, value in expectation_gap.items():
+                stock_df[key] = value
 
             # 添加板块特征
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
@@ -3951,14 +3953,16 @@ class GBDTModel(BaseTradingModel):
             topic_features = self.feature_engineer.create_topic_features(code, stock_df)
             for key, value in topic_features.items():
                 stock_df[key] = value
-                # 添加主题情感交互特征
-                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                for key, value in topic_sentiment_interaction.items():
-                    stock_df[key] = value
-                # 添加预期差距特征
-                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
-                for key, value in expectation_gap.items():
-                    stock_df[key] = value
+
+            # 添加主题情感交互特征（移到循环外，避免重复调用）
+            topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+            for key, value in topic_sentiment_interaction.items():
+                stock_df[key] = value
+
+            # 添加预期差距特征（移到循环外，避免重复调用）
+            expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+            for key, value in expectation_gap.items():
+                stock_df[key] = value
 
             # 添加板块特征
             sector_features = self.feature_engineer.create_sector_features(code, stock_df)
@@ -4817,14 +4821,16 @@ class CatBoostModel(BaseTradingModel):
                 topic_features = self.feature_engineer.create_topic_features(code, stock_df)
                 for key, value in topic_features.items():
                     stock_df[key] = value
-                    # 添加主题情感交互特征
-                    topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                    for key, value in topic_sentiment_interaction.items():
-                        stock_df[key] = value
-                    # 添加预期差距特征
-                    expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
-                    for key, value in expectation_gap.items():
-                        stock_df[key] = value
+
+                # 添加主题情感交互特征（移到循环外，避免重复调用）
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+
+                # 添加预期差距特征（移到循环外，避免重复调用）
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
 
                 # 添加板块特征
                 sector_features = self.feature_engineer.create_sector_features(code, stock_df)
