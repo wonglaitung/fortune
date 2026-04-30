@@ -4192,6 +4192,17 @@ class CatBoostModel(BaseTradingModel):
             except Exception as e:
                 print(f"  ⚠️ HSI 市场状态特征计算失败: {e}")
 
+        # 加载网络特征（跨截面特征，所有股票共享）
+        # 已移除：网络特征存在数据泄漏风险，作为独立分析工具使用
+        # network_loader = NetworkFeatureLoader()
+        # network_available = network_loader.is_available()
+        # if network_available:
+        #     network_loader.load_features()
+        #     print("  ✅ 网络特征加载完成")
+        # else:
+        #     print("  ⚠️ 网络特征文件不可用，将使用默认值")
+        network_available = False  # 禁用网络特征
+
         cache_hits = 0
         cache_misses = 0
 
@@ -4288,6 +4299,8 @@ class CatBoostModel(BaseTradingModel):
                     sector_features = self.feature_engineer.create_sector_features(code, stock_df)
                     for key, value in sector_features.items():
                         stock_df[key] = value
+
+                    # 网络特征已移除：存在数据泄漏风险，作为独立分析工具使用
 
                     # 添加事件驱动特征（9个）
                     stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -4727,7 +4740,7 @@ class CatBoostModel(BaseTradingModel):
                 if cached_data is not None and 'stock_df' in cached_data:
                     cached_df = cached_data['stock_df']
                     # 检查新特征列是否存在（GARCH + HSI Regime）
-                    required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime']
+                    required_new_cols = ['GARCH_Conditional_Vol', 'HSI_Market_Regime', 'net_composite_centrality']
                     missing_cols = [c for c in required_new_cols if c not in cached_df.columns]
                     if missing_cols:
                         logger.debug(f"预测缓存缺少新特征: {missing_cols}，重新计算...")
@@ -4817,6 +4830,8 @@ class CatBoostModel(BaseTradingModel):
                 sector_features = self.feature_engineer.create_sector_features(code, stock_df)
                 for key, value in sector_features.items():
                     stock_df[key] = value
+
+                # 网络特征已移除：存在数据泄漏风险，作为独立分析工具使用
 
                 # 添加事件驱动特征（9个，与训练时保持一致）
                 stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
