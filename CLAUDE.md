@@ -46,6 +46,7 @@ python3 -m pytest tests/test_feature_extractor.py -v
 
 | **网络分析** | `python3 ml_services/stock_network_analysis.py` |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` |
+| **密度预警** | 综合分析自动计算，历史数据存储在 `data/network_density_history.json` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -68,6 +69,7 @@ python3 -m pytest tests/test_feature_extractor.py -v
 | **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
 | **网络特征** | 网络特征不适合放入个股预测模型，应作为独立风险监控工具 |
+| **波动率网络密度** | 密度高→市场"同涨同跌"→选股失效→降仓位；历史数据存储在 `data/network_density_history.json` |
 
 ### 可用策略（恒指增强模型验证，2026-04-29，33特征）
 
@@ -283,4 +285,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-04-30（新增网络分析命令、网络特征警告）
+**最后更新**：2026-04-30（新增波动率网络密度预警功能）
