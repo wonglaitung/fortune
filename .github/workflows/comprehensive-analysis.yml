@@ -63,11 +63,11 @@ jobs:
             # 使用merge代替rebase
             git merge origin/main -m "Merge remote changes before updating prediction history"
           fi
-          # 添加prediction_history.json
-          git add data/prediction_history.json
+          # 添加prediction_history.json 和 network_density_history.json
+          git add data/prediction_history.json data/network_density_history.json
           # 检查是否有更改需要提交
           if ! git diff --staged --quiet; then
-            git commit -m "Update prediction history [skip ci]"
+            git commit -m "Update prediction history and network density [skip ci]"
             # 推送时处理可能的冲突
             if ! git push; then
               # 推送失败，拉取最新更改
