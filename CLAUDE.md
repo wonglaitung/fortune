@@ -20,6 +20,9 @@ python3 -m py_compile <文件路径>
 
 # 运行所有测试
 python3 -m pytest tests/ -v
+
+# 运行单个测试文件
+python3 -m pytest tests/test_feature_extractor.py -v
 ```
 
 ### 核心功能命令
@@ -41,6 +44,9 @@ python3 -m pytest tests/ -v
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
 | **因果链分析** | `python3 ml_services/analyze_causal_chain.py` |
 
+| **网络分析** | `python3 ml_services/stock_network_analysis.py` |
+| **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` |
+
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
 - 变量名和函数名使用英文，注释使用中文
@@ -61,6 +67,7 @@ python3 -m pytest tests/ -v
 | **特征冗余清理** | 清理后夏普比率可能下降 15-20%，需对比验证后再决定 |
 | **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
+| **网络特征** | 网络特征不适合放入个股预测模型，应作为独立风险监控工具 |
 
 ### 可用策略（恒指增强模型验证，2026-04-29，33特征）
 
@@ -272,7 +279,8 @@ for col in self.categorical_encoders.keys():
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
 - **经典交易理论**：[docs/CLASSIC_TRADING_THEORIES.md](docs/CLASSIC_TRADING_THEORIES.md)
+- **网络分析详解**：[docs/STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md)
 
 ---
 
-**最后更新**：2026-04-29（参数优化：恒指20天准确率81.24%，假突破策略93.10%，下跌中继策略89.19%）
+**最后更新**：2026-04-30（新增网络分析命令、网络特征警告）
