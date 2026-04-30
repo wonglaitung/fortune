@@ -201,19 +201,25 @@ class HSI_Predictor:
         """获取所需数据"""
         print("📊 正在获取数据...")
 
-        # 获取恒生指数数据（2年数据以确保MA250等长期指标有足够数据）
-        print("  - 恒生指数数据...")
-        hsi = yf.Ticker("^HSI")
-        self.hsi_data = hsi.history(period="2y", interval="1d")
-
-        # 获取腾讯财经的历史数据（包含准确的成交额）
-        print("  - 恒生指数成交额数据（腾讯财经）...")
+        # 优先从腾讯财经获取恒生指数数据（更新更及时）
+        print("  - 恒生指数数据（腾讯财经）...")
         from data_services.tencent_finance import get_hsi_data_tencent
         self.tencent_hsi_data = get_hsi_data_tencent(period_days=400)
-        if self.tencent_hsi_data is not None:
-            print(f"    ✅ 获取到 {len(self.tencent_hsi_data)} 天成交额数据")
+
+        if self.tencent_hsi_data is not None and len(self.tencent_hsi_data) > 0:
+            # 使用腾讯数据作为主数据源
+            self.hsi_data = self.tencent_hsi_data.copy()
+            # 重命名 Volume 为 Amount（腾讯接口的 Volume 实际是成交额）
+            if 'Volume' in self.hsi_data.columns and 'Amount' not in self.hsi_data.columns:
+                self.hsi_data['Amount'] = self.hsi_data['Volume'] / 100000000  # 元 -> 亿港元
+            print(f"    ✅ 获取到 {len(self.tencent_hsi_data)} 天数据（腾讯财经）")
+            print(f"    最新数据日期: {self.hsi_data.index[-1].strftime('%Y-%m-%d')}")
         else:
-            print("    ⚠️ 腾讯财经成交额数据获取失败，将使用yfinance估算")
+            # 回退到 yfinance
+            print("    ⚠️ 腾讯财经数据获取失败，回退到 yfinance...")
+            hsi = yf.Ticker("^HSI")
+            self.hsi_data = hsi.history(period="2y", interval="1d")
+            self.tencent_hsi_data = None
 
         # 获取美国10年期国债收益率
         print("  - 美国国债收益率...")
@@ -1015,8 +1021,9 @@ class HSI_Predictor:
         }
 
         # ========== 成交额异常检测（使用腾讯财经数据）==========
-        if hasattr(self, 'tencent_amount') and self.tencent_amount:
-            current_amount = self.tencent_amount['amount']  # 亿港元
+        # 优先使用历史数据中的成交额（昨日收盘），而非实时数据
+        if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
+            current_amount = self.tencent_hsi_data['Amount'].iloc[-1]  # 亿港元
 
             # 获取历史成交额数据（从yfinance估算）
             # 使用 Volume * Close / 1亿 作为历史成交额估计
@@ -1178,9 +1185,10 @@ class HSI_Predictor:
         rsi_val = self.features.get('RSI', 50)
         adx_val = self.features.get('ADX', 0)
 
-        # 成交额数据
+        # 成交额数据 - 优先使用历史数据（昨日收盘成交额），而非实时数据
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
-            current_amount = self.tencent_amount['amount'] if hasattr(self, 'tencent_amount') and self.tencent_amount else self.tencent_hsi_data['Amount'].iloc[-1]
+            # 使用历史数据中的成交额（昨日收盘数据）
+            current_amount = self.tencent_hsi_data['Amount'].iloc[-1]
             amount_ma20 = self.tencent_hsi_data['Amount'].tail(20).mean() if len(self.tencent_hsi_data) >= 20 else 0
             amount_ma60 = self.tencent_hsi_data['Amount'].tail(60).mean() if len(self.tencent_hsi_data) >= 60 else 0
             amount_ma120 = self.tencent_hsi_data['Amount'].tail(120).mean() if len(self.tencent_hsi_data) >= 120 else 0
@@ -2890,9 +2898,9 @@ class HSI_Predictor:
 
         # 成交额数据
         volume_ma250_val = self.features.get('Volume_MA250', 0)
-        # 优先使用腾讯财经成交额数据
+        # 优先使用腾讯财经成交额数据（历史数据，而非实时数据）
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
-            current_amount = self.tencent_amount['amount'] if hasattr(self, 'tencent_amount') and self.tencent_amount else self.tencent_hsi_data['Amount'].iloc[-1]
+            current_amount = self.tencent_hsi_data['Amount'].iloc[-1]  # 使用历史数据中的成交额
             # 计算250日成交额均值
             amount_data = self.tencent_hsi_data['Amount'].tail(250)
             amount_ma250_val = amount_data.mean() if len(amount_data) > 0 else 0
