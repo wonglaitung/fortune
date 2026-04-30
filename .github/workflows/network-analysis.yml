@@ -1,0 +1,39 @@
+name: Network Analysis
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # 每周一 UTC 0:00 (HK 8:00)
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run network analysis
+        run: |
+          python3 ml_services/stock_network_analysis.py
+        continue-on-error: true
+
+      - name: Commit report
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add output/stock_network_analysis.md
+          git commit -m "Update network analysis report [skip ci]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
