@@ -232,16 +232,21 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 | **20天** | **81.24%** | ⭐⭐⭐⭐⭐ 推荐 |
 ```
 
-### 阶段 4：代码更新（最后执行）
+### 阶段 4：代码更新（必须执行，不可跳过）
+
+**⚠️ 重要：阶段 4 是必须执行的步骤，不是可选步骤！**
 
 **目的**：将最新发现应用到生产代码
+
+**常见问题**：文档更新后忘记同步代码，导致邮件报告显示旧数据。
 
 #### 4A. 恒指模型代码更新
 
 1. **hsi_prediction.py** - 恒生指数预测主程序
    - 更新三周期策略胜率（假突破、下跌中继等）
-   - 调整预测阈值
-   - 更新策略信号生成逻辑
+   - 更新 `historical_accuracy` 字典（1d/5d/20d 准确率）
+   - 更新 `pattern_accuracy` 字典（八大模式胜率）
+   - 更新邮件内容中的 `win_rate` 和 `description` 字段
    - 同步邮件报告格式
 
 2. **ml_services/hsi_ml_model.py** - 恒指模型
@@ -270,16 +275,40 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 #### 代码更新检查点
 
-**hsi_prediction.py 关键位置**：
-- 三周期策略胜率数据（搜索 `94.03`、`86.24`、`92.73` 等旧数据）
-- CatBoost 模型调用
-- 预测结果处理
-- 策略建议生成
+**hsi_prediction.py 关键位置**（必须逐一检查并更新）：
+
+| 位置 | 搜索关键词 | 说明 |
+|------|-----------|------|
+| 第 2571-2575 行 | `historical_accuracy` | 1d/5d/20d 准确率 |
+| 第 2585-2594 行 | `pattern_accuracy` | 八大模式胜率 |
+| 第 1277-1400 行 | `win_rate` | 邮件中的策略胜率 |
+| 第 2700-2720 行 | `suggestion` | 控制台建议文字 |
 
 **comprehensive_analysis.py 关键位置**：
 - 恒指三周期策略配置（搜索 `THREE_HORIZON_PATTERNS_HSI`）
 - 个股策略配置（搜索 `THREE_HORIZON_PATTERNS_STOCK`）
 - 报告输出格式
+
+#### 4D. 代码与文档一致性验证（新增）
+
+**目的**：确保代码中的数据与文档一致，避免遗漏。
+
+**验证方法**：
+
+```bash
+# 检查 hsi_prediction.py 中的准确率是否与文档一致
+grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" hsi_prediction.py
+
+# 检查 CLAUDE.md 中的准确率
+grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" CLAUDE.md
+
+# 对比两者是否一致
+```
+
+**如果不一致**：
+1. 以文档（CLAUDE.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
+2. 更新代码中的硬编码数据
+3. 重新运行语法检查和测试
 
 ## 执行检查清单
 
@@ -342,19 +371,31 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 - [ ] 更新日期已修改
 - [ ] 无遗漏的文档
 
-### 阶段 4 检查
+### 阶段 4 检查（必须完成，不可跳过）
+
+**⚠️ 重要：这是最容易遗漏的步骤！文档更新后必须同步更新代码！**
 
 #### 恒指代码
-- [ ] 已更新 hsi_prediction.py（胜率数据）
+- [ ] 已更新 hsi_prediction.py 的 `historical_accuracy` 字典（1d/5d/20d 准确率）
+- [ ] 已更新 hsi_prediction.py 的 `pattern_accuracy` 字典（八大模式胜率）
+- [ ] 已更新 hsi_prediction.py 的邮件内容 `win_rate` 字段
+- [ ] 已更新 hsi_prediction.py 的控制台 `suggestion` 文字
 - [ ] 已更新 ml_services/hsi_ml_model.py（如需）
 
 #### 个股代码
-- [ ] 已更新 comprehensive_analysis.py
+- [ ] 已更新 comprehensive_analysis.py 的策略配置
 - [ ] 已更新 ml_services/ml_trading_model.py（如需）
+
+#### 代码与文档一致性验证（新增）
+- [ ] 已对比 hsi_prediction.py 和 CLAUDE.md 中的准确率数据
+- [ ] 已对比 hsi_prediction.py 和 docs/THREE_HORIZON_ANALYSIS.md 中的胜率数据
+- [ ] 确认代码中的硬编码数据与文档完全一致
+- [ ] 无遗漏的代码位置
 
 #### 验证
 - [ ] 已执行语法检查 `python3 -m py_compile <文件>`
 - [ ] 已运行测试 `python3 -m pytest tests/ -v`
+- [ ] 已运行 `python3 hsi_prediction.py --no-email` 验证输出正确
 
 ## 数据泄漏警告
 
@@ -475,12 +516,20 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 ## 代码更新清单
 
 ### 恒指代码
-- [ ] hsi_prediction.py：更新胜率数据
-- [ ] ml_services/hsi_ml_model.py：更新参数
+- [ ] hsi_prediction.py：更新 `historical_accuracy` 字典
+- [ ] hsi_prediction.py：更新 `pattern_accuracy` 字典
+- [ ] hsi_prediction.py：更新邮件内容 `win_rate` 字段
+- [ ] hsi_prediction.py：更新控制台 `suggestion` 文字
+- [ ] ml_services/hsi_ml_model.py：更新参数（如需）
 
 ### 个股代码
 - [ ] comprehensive_analysis.py：更新策略逻辑
-- [ ] ml_services/ml_trading_model.py：更新参数
+- [ ] ml_services/ml_trading_model.py：更新参数（如需）
+
+### 代码与文档一致性验证
+- [ ] 已对比代码和文档中的准确率数据
+- [ ] 确认代码中的硬编码数据与文档完全一致
+- [ ] 已运行 `python3 hsi_prediction.py --no-email` 验证输出正确
 
 ---
 
@@ -501,6 +550,11 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 4. **顺序执行**：必须按阶段 1→2→3→4 顺序执行，前一阶段有效才进入下一阶段
 5. **记录完整**：每个阶段的测试结果必须完整记录
 6. **对比验证**：必须与更新前的指标对比，确认提升幅度
+7. **⚠️ 阶段 4 不可跳过**：
+   - 文档更新后**必须**同步更新代码
+   - 常见问题：文档更新了，但代码中的硬编码数据没有更新
+   - 导致：邮件报告显示旧数据，用户收到错误信息
+   - **必须执行代码与文档一致性验证**
 7. **文档同步**：
    - 代码更新后立即同步文档，避免信息不一致
    - **文档更新范围包括 `docs/` 目录下所有相关文档**
