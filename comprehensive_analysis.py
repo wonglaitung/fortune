@@ -1119,8 +1119,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     if meta.get('core_hubs'):
                         core_names = []
                         for code in meta['core_hubs'][:3]:
-                            from config import STOCK_NAME_MAPPING
-                            name = STOCK_NAME_MAPPING.get(code, code)
+                            from config import TRAINING_STOCKS
+                            name = TRAINING_STOCKS.get(code, code)
                             core_names.append(name)
                         catboost_text_email += f"- 当前核心枢纽：{', '.join(core_names)}\n"
                     catboost_text_email += f"- 社区数量：{meta.get('community_count', 0)} 个\n"
