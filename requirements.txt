@@ -1,19 +1,41 @@
+# 数据获取
 yfinance
 requests
+akshare
+
+# 数据处理
 pandas
 numpy
-akshare
-matplotlib
-beautifulsoup4
-openpyxl
 scipy
-schedule
-markdown
-lightgbm
+openpyxl
+
+# 机器学习
 scikit-learn
-jieba>=0.42.1
-nltk>=3.8
 catboost
+lightgbm
 hmmlearn
 arch
 shap
+
+# 自然语言处理
+jieba>=0.42.1
+nltk>=3.8
+
+# 可视化
+matplotlib
+
+# 网络分析
+networkx
+
+# 统计分析
+statsmodels
+
+# 网页解析
+beautifulsoup4
+
+# 工具库
+schedule
+markdown
+
+# 测试
+pytest
