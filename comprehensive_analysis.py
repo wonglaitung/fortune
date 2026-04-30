@@ -876,6 +876,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             # ========== 计算网络洞察（用于邮件展示）==========
             network_insights = {}
+            density_warning = {}
             try:
                 from data_services.network_features import get_network_calculator
                 calculator = get_network_calculator()
@@ -884,6 +885,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if network_insights and '_meta' in network_insights:
                     meta = network_insights['_meta']
                     print(f"  ✅ 网络洞察计算完成: {len(network_insights)-1} 只股票, {meta.get('community_count', 0)} 个社区")
+
+                # 计算波动率网络密度预警
+                print("  📉 计算波动率网络密度预警...")
+                density_warning = calculator.calculate_density_warning(stock_codes)
+
             except Exception as e:
                 print(f"  ⚠️ 网络洞察计算失败: {e}")
 
@@ -1124,6 +1130,51 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             core_names.append(name)
                         catboost_text_email += f"- 当前核心枢纽：{', '.join(core_names)}\n"
                     catboost_text_email += f"- 社区数量：{meta.get('community_count', 0)} 个\n"
+
+                # 添加波动率网络密度预警
+                if density_warning:
+                    catboost_text_email += f"\n**波动率网络密度预警**\n\n"
+                    catboost_text_email += "核心逻辑：密度高 → 市场进入\"同涨同跌\"模式 → 个股分化度低 → 选股模型失效 → 降低仓位\n\n"
+
+                    # 过去30天数据表格
+                    catboost_text_email += "过去30天数据\n\n"
+                    catboost_text_email += "| 指标 | 数值 |\n"
+                    catboost_text_email += "|------|------|\n"
+                    catboost_text_email += f"| 平均值 | {density_warning.get('mean_30d', 0):.4f} |\n"
+                    catboost_text_email += f"| 标准差 | {density_warning.get('std_30d', 0):.4f} |\n"
+                    catboost_text_email += f"| 当前值 | {density_warning.get('current_density', 0):.4f} |\n"
+                    status_icon = density_warning.get('status_icon', '✅')
+                    status_detail = density_warning.get('status_detail', '')
+                    catboost_text_email += f"| 状态 | {status_icon} {density_warning.get('status', '未知')}（{status_detail}）|\n\n"
+
+                    # 趋势分析
+                    trend = density_warning.get('trend', '未知')
+                    trend_detail = density_warning.get('trend_detail', '')
+                    catboost_text_email += f"趋势\n\n{trend_detail}\n\n"
+                    if trend == '下降':
+                        catboost_text_email += "- 风险传导性减弱\n"
+                        catboost_text_email += "- 市场从\"同涨同跌\"转向\"个股分化\"\n"
+                        catboost_text_email += "- 选股模型有效性提高\n\n"
+                    elif trend == '上升':
+                        catboost_text_email += "- 风险传导性增强\n"
+                        catboost_text_email += "- 市场趋向\"同涨同跌\"\n"
+                        catboost_text_email += "- 需关注系统性风险\n\n"
+
+                    # 预警阈值建议
+                    thresholds = density_warning.get('thresholds', {})
+                    catboost_text_email += "预警阈值建议\n\n"
+                    catboost_text_email += "| 级别 | 阈值 | 操作 |\n"
+                    catboost_text_email += "|------|------|------|\n"
+                    catboost_text_email += f"| ⚠️ 关注 | > {thresholds.get('watch', 0.45):.2f} | 关注系统性风险 |\n"
+                    catboost_text_email += f"| 🔴 预警 | > {thresholds.get('warning', 0.46):.2f} | 降低仓位 20% |\n"
+                    catboost_text_email += f"| 🔴🔴 极端 | > {thresholds.get('extreme', 0.47):.2f} | 降低仓位 50% |\n\n"
+
+                    # 当前建议
+                    recommendation = density_warning.get('recommendation', '')
+                    warning_level = density_warning.get('warning_level')
+                    if warning_level:
+                        catboost_text_email += f"**当前预警**：{warning_level}\n\n"
+                    catboost_text_email += f"**操作建议**：{recommendation}\n"
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm

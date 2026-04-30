@@ -11,6 +11,7 @@
 - 社区归属：股票的网络群落
 - 枢纽等级：低/中/高（基于中心性）
 - 桥梁股标记：是否跨社区连接
+- 波动率网络密度预警：系统性风险预警
 
 创建时间：2026-04-30
 更新时间：2026-04-30（改为实时计算，不依赖文件）
@@ -20,12 +21,22 @@ import os
 import sys
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 添加项目根目录到 Python 跃径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
+
+# 波动率网络密度预警阈值
+DENSITY_WARNING_THRESHOLDS = {
+    'watch': 0.45,      # 关注
+    'warning': 0.46,    # 预警
+    'extreme': 0.47     # 极端
+}
+
+# 历史数据存储路径
+DENSITY_HISTORY_PATH = 'data/network_density_history.json'
 
 
 class NetworkInsightCalculator:
@@ -212,6 +223,265 @@ class NetworkInsightCalculator:
             warnings.append("桥梁股，波动跨板块传导")
 
         return warnings if warnings else None
+
+    def calculate_volatility_network_density(self, stock_codes):
+        """
+        计算波动率相关性网络的密度
+
+        参数:
+            stock_codes: 股票代码列表
+
+        返回:
+            float: 波动率网络密度（0-1之间）
+        """
+        try:
+            from ml_services.stock_network_analysis import (
+                fetch_all_stock_data,
+                build_volatility_correlation_network,
+                calculate_topology_stats
+            )
+
+            # 获取股票数据
+            stock_data = fetch_all_stock_data(list(stock_codes))
+            if not stock_data:
+                logger.warning("无法获取股票数据用于密度计算")
+                return None
+
+            # 构建波动率相关性网络
+            volatility_graph, _ = build_volatility_correlation_network(
+                stock_data, window=20, threshold=0.5
+            )
+
+            if volatility_graph.number_of_nodes() == 0:
+                logger.warning("波动率网络节点数为0")
+                return None
+
+            # 计算拓扑统计（包含密度）
+            topo_stats = calculate_topology_stats(volatility_graph)
+            density = topo_stats.get('density', 0)
+
+            logger.info(f"波动率网络密度: {density:.4f}")
+            return density
+
+        except Exception as e:
+            logger.warning(f"波动率网络密度计算失败: {e}")
+            return None
+
+    def save_density_history(self, density, date_str=None):
+        """
+        保存密度历史数据
+
+        参数:
+            density: 当前密度值
+            date_str: 日期字符串，默认使用今天
+        """
+        if density is None:
+            return
+
+        if date_str is None:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+
+        history_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            DENSITY_HISTORY_PATH
+        )
+
+        # 加载现有历史
+        history_data = {'history': []}
+        if os.path.exists(history_path):
+            try:
+                with open(history_path, 'r', encoding='utf-8') as f:
+                    history_data = json.load(f)
+            except Exception as e:
+                logger.warning(f"加载密度历史失败: {e}")
+
+        # 检查是否已有今天的记录
+        existing_dates = [h['date'] for h in history_data.get('history', [])]
+        if date_str in existing_dates:
+            # 更新今天的记录
+            for h in history_data['history']:
+                if h['date'] == date_str:
+                    h['volatility_density'] = density
+                    break
+        else:
+            # 添加新记录
+            history_data['history'].append({
+                'date': date_str,
+                'volatility_density': density
+            })
+
+        # 按日期排序
+        history_data['history'].sort(key=lambda x: x['date'])
+
+        # 只保留最近60天的数据
+        if len(history_data['history']) > 60:
+            history_data['history'] = history_data['history'][-60:]
+
+        # 保存
+        try:
+            os.makedirs(os.path.dirname(history_path), exist_ok=True)
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump(history_data, f, indent=2, ensure_ascii=False)
+            logger.info(f"密度历史已保存: {date_str} -> {density:.4f}")
+        except Exception as e:
+            logger.warning(f"保存密度历史失败: {e}")
+
+    def load_density_history(self, days=30):
+        """
+        加载密度历史数据
+
+        参数:
+            days: 要加载的天数
+
+        返回:
+            list: 历史密度数据列表 [{date, volatility_density}, ...]
+        """
+        history_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            DENSITY_HISTORY_PATH
+        )
+
+        if not os.path.exists(history_path):
+            return []
+
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                history_data = json.load(f)
+
+            history = history_data.get('history', [])
+            # 返回最近N天的数据
+            return history[-days:] if len(history) > days else history
+
+        except Exception as e:
+            logger.warning(f"加载密度历史失败: {e}")
+            return []
+
+    def calculate_density_warning(self, stock_codes):
+        """
+        计算波动率网络密度预警
+
+        核心逻辑：
+        密度高 → 市场进入"同涨同跌"模式 → 个股分化度低 → 选股模型失效 → 降低仓位
+
+        参数:
+            stock_codes: 股票代码列表
+
+        返回:
+            dict: {
+                'current_density': 当前密度,
+                'mean_30d': 30天平均值,
+                'std_30d': 30天标准差,
+                'first_density': 30天前密度,
+                'status': 状态描述,
+                'trend': 趋势方向,
+                'warning_level': 预警级别,
+                'recommendation': 操作建议
+            }
+        """
+        import numpy as np
+
+        # 计算当前密度
+        current_density = self.calculate_volatility_network_density(stock_codes)
+        if current_density is None:
+            return None
+
+        # 保存当前密度到历史
+        self.save_density_history(current_density)
+
+        # 加载历史数据
+        history = self.load_density_history(days=30)
+
+        # 计算统计值
+        if len(history) >= 2:
+            densities = [h['volatility_density'] for h in history]
+            mean_30d = np.mean(densities)
+            std_30d = np.std(densities)
+            first_density = densities[0]  # 30天前的密度
+        else:
+            mean_30d = current_density
+            std_30d = 0.0
+            first_density = current_density
+
+        # 判断状态（相对于均值）
+        if current_density < mean_30d - std_30d:
+            status = '偏低'
+            status_icon = '✅'
+            status_detail = '低于均值-1σ'
+        elif current_density > mean_30d + std_30d:
+            status = '偏高'
+            status_icon = '⚠️'
+            status_detail = '高于均值+1σ'
+        else:
+            status = '正常'
+            status_icon = '✅'
+            status_detail = '在均值±1σ范围内'
+
+        # 判断预警级别
+        warning_level = None
+        if current_density > DENSITY_WARNING_THRESHOLDS['extreme']:
+            warning_level = '🔴🔴 极端'
+            status_icon = '🔴🔴'
+            status = '极端'
+        elif current_density > DENSITY_WARNING_THRESHOLDS['warning']:
+            warning_level = '🔴 预警'
+            status_icon = '🔴'
+            status = '预警'
+        elif current_density > DENSITY_WARNING_THRESHOLDS['watch']:
+            warning_level = '⚠️ 关注'
+            status_icon = '⚠️'
+            status = '关注'
+
+        # 判断趋势
+        if len(history) >= 2:
+            density_change = current_density - first_density
+            if density_change > 0.01:
+                trend = '上升'
+                trend_detail = f'过去30天密度从 {first_density:.3f} → {current_density:.3f}，持续上升'
+            elif density_change < -0.01:
+                trend = '下降'
+                trend_detail = f'过去30天密度从 {first_density:.3f} → {current_density:.3f}，持续下降'
+            else:
+                trend = '稳定'
+                trend_detail = f'过去30天密度稳定在 {current_density:.3f} 左右'
+        else:
+            trend = '未知'
+            trend_detail = '历史数据不足，无法判断趋势'
+
+        # 生成建议
+        if warning_level:
+            if warning_level == '🔴🔴 极端':
+                recommendation = '市场高度同步，降低仓位 50%，选股模型可能失效'
+            elif warning_level == '🔴 预警':
+                recommendation = '市场同步性增强，降低仓位 20%，警惕系统性风险'
+            else:
+                recommendation = '关注系统性风险，密切观察市场联动'
+        elif trend == '下降':
+            recommendation = '风险传导性减弱，市场从"同涨同跌"转向"个股分化"，选股模型有效性提高'
+        elif trend == '上升':
+            recommendation = '风险传导性增强，市场趋向"同涨同跌"，需关注系统性风险'
+        else:
+            recommendation = '市场状态稳定，维持正常策略'
+
+        result = {
+            'current_density': current_density,
+            'mean_30d': mean_30d,
+            'std_30d': std_30d,
+            'first_density': first_density,
+            'status': status,
+            'status_icon': status_icon,
+            'status_detail': status_detail,
+            'trend': trend,
+            'trend_detail': trend_detail,
+            'warning_level': warning_level,
+            'recommendation': recommendation,
+            'thresholds': DENSITY_WARNING_THRESHOLDS,
+            'history_count': len(history)
+        }
+
+        print(f"    ✅ 波动率网络密度: {current_density:.4f} ({status})")
+        logger.info(f"波动率网络密度预警: {result}")
+
+        return result
 
 
 # 保留旧的 NetworkFeatureLoader 用于向后兼容
