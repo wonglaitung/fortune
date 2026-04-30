@@ -244,6 +244,32 @@
 - 风险回报雷达图
 - 具体的买卖建议
 
+### 波动率网络密度预警
+
+**核心价值**：通过计算股票间波动率相关性网络的密度，预警系统性风险。当市场进入"同涨同跌"模式时，个股分化度低，选股模型失效，应降低仓位。
+
+**核心逻辑**：
+
+```
+密度高 → 市场进入"同涨同跌"模式 → 个股分化度低 → 选股模型失效 → 降低仓位
+```
+
+**预警阈值**：
+
+| 级别 | 阈值 | 操作 |
+|------|------|------|
+| ⚠️ 关注 | > 0.45 | 关注系统性风险 |
+| 🔴 预警 | > 0.46 | 降低仓位 20% |
+| 🔴🔴 极端 | > 0.47 | 降低仓位 50% |
+
+**趋势分析**：
+- 密度下降：风险传导性减弱，市场从"同涨同跌"转向"个股分化"，选股模型有效性提高
+- 密度上升：风险传导性增强，市场趋向"同涨同跌"，需关注系统性风险
+
+**数据持久化**：
+- 历史数据存储在 `data/network_density_history.json`
+- GitHub Actions 每次运行后自动提交，累积30天历史用于趋势分析
+
 ### 模拟交易系统
 
 **核心价值**：在不投入真实资金的情况下测试策略效果，积累交易经验。支持多种风险偏好，帮助投资者找到适合自己的交易风格。
@@ -526,6 +552,7 @@ python hsi_email.py --no-email
 | **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 57%），个股预测接近随机，不可单独依赖 |
 | **特征缓存版本** | 缓存失效时需清除（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
+| **网络密度预警** | 密度高→市场"同涨同跌"→选股失效→降仓位；阈值：关注(0.45)/预警(0.46)/极端(0.47) |
 
 ---
 
@@ -540,6 +567,7 @@ python hsi_email.py --no-email
   - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
   - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法指南
   - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
+  - [STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md) - 网络分析详解
   - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
 
 ---
