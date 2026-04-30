@@ -874,6 +874,19 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 except Exception as e:
                     print(f"  ⚠️ 筹码分布计算失败: {e}")
 
+            # ========== 计算网络洞察（用于邮件展示）==========
+            network_insights = {}
+            try:
+                from data_services.network_features import get_network_calculator
+                calculator = get_network_calculator()
+                stock_codes = df_catboost['code'].tolist()
+                network_insights = calculator.calculate_network_insights(stock_codes)
+                if network_insights and '_meta' in network_insights:
+                    meta = network_insights['_meta']
+                    print(f"  ✅ 网络洞察计算完成: {len(network_insights)-1} 只股票, {meta.get('community_count', 0)} 个社区")
+            except Exception as e:
+                print(f"  ⚠️ 网络洞察计算失败: {e}")
+
             # ========== 1. 构建传给大模型的JSON数据（包含20天概率+筹码阻力）==========
             import json as json_module
 
@@ -952,8 +965,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -1049,8 +1062,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         rr_return = rr_info.get('return_score', '-')
                         rr_suggestion = rr_info.get('suggestion', '-')
 
+                        # 获取网络洞察
+                        network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -1092,6 +1108,22 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
                 catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
                 catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
+
+                # 添加网络洞察说明
+                if network_insights and '_meta' in network_insights:
+                    meta = network_insights['_meta']
+                    catboost_text_email += f"\n**网络洞察说明**：\n"
+                    catboost_text_email += "- 社区：股票的网络群落归属，同社区股票联动性强\n"
+                    catboost_text_email += "- 枢纽等级：低=独立性强，中=有一定影响，高=波动影响市场\n"
+                    catboost_text_email += "- ⚠️ 桥梁股：跨社区连接，波动会跨板块传导\n"
+                    if meta.get('core_hubs'):
+                        core_names = []
+                        for code in meta['core_hubs'][:3]:
+                            from config import STOCK_NAME_MAPPING
+                            name = STOCK_NAME_MAPPING.get(code, code)
+                            core_names.append(name)
+                        catboost_text_email += f"- 当前核心枢纽：{', '.join(core_names)}\n"
+                    catboost_text_email += f"- 社区数量：{meta.get('community_count', 0)} 个\n"
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
