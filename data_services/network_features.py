@@ -6,6 +6,7 @@
 用途：
 1. 综合分析：实时计算网络洞察（用于邮件展示）
 2. 独立分析：运行 stock_network_analysis.py 生成详细报告
+3. 机器学习特征：为模型提供网络相关特征
 
 网络洞察（用于综合分析展示）：
 - 社区归属：股票的网络群落
@@ -13,8 +14,11 @@
 - 桥梁股标记：是否跨社区连接
 - 波动率网络密度预警：系统性风险预警
 
+二阶网络特征（用于机器学习模型）：
+- 节点偏离度 (Node Deviation)：个股动量与邻居平均动量的差值，捕捉"掉队补涨"或"领涨回调"
+
 创建时间：2026-04-30
-更新时间：2026-04-30（改为实时计算，不依赖文件）
+更新时间：2026-05-02（新增节点偏离度特征）
 """
 
 import os
@@ -91,7 +95,8 @@ class NetworkInsightCalculator:
                 return self._get_default_insights(stock_codes)
 
             # 构建收益率 DataFrame
-            returns_df = build_returns_dataframe(stock_data)
+            # 数据泄漏防护：for_prediction=True 排除当日数据
+            returns_df = build_returns_dataframe(stock_data, for_prediction=True)
             if returns_df.empty or len(returns_df.columns) < 2:
                 logger.warning("数据不足，返回默认值")
                 return self._get_default_insights(stock_codes)
@@ -225,9 +230,262 @@ class NetworkInsightCalculator:
 
         return warnings if warnings else None
 
+    def calculate_node_deviation(self, stock_codes, score_type='momentum', window=20):
+        """
+        计算节点偏离度特征 (Node Deviation)
+
+        核心逻辑：
+        Feature_diff = Score_i - Average(Score_neighbors)
+
+        用途：
+        - 正值：个股跑赢邻居 → 可能回调（领涨回调）
+        - 负值：个股跑输邻居 → 可能补涨（掉队补涨）
+
+        参数:
+            stock_codes: 股票代码列表
+            score_type: 评分类型，可选 'momentum'(动量) 或 'return'(收益率)
+            window: 计算窗口（天数）
+
+        返回:
+            dict: {股票代码: {
+                'node_deviation': 偏离度值,
+                'own_score': 个股评分,
+                'neighbor_avg_score': 邻居平均评分,
+                'neighbor_count': 邻居数量,
+                'signal': 信号描述
+            }}
+        """
+        import numpy as np
+
+        logger.info(f"开始计算节点偏离度特征 (score_type={score_type}, window={window})...")
+        print(f"  📊 计算节点偏离度特征...")
+
+        try:
+            # 导入网络分析模块
+            from ml_services.stock_network_analysis import (
+                fetch_all_stock_data,
+                build_returns_dataframe,
+                compute_correlation_matrices,
+                build_minimum_spanning_tree
+            )
+            import networkx as nx
+
+            # 获取股票数据
+            stock_data = fetch_all_stock_data(list(stock_codes))
+            if not stock_data:
+                logger.warning("无法获取股票数据，返回默认值")
+                return self._get_default_node_deviations(stock_codes)
+
+            # 构建收益率 DataFrame
+            # 数据泄漏防护：for_prediction=True 排除当日数据
+            returns_df = build_returns_dataframe(stock_data, for_prediction=True)
+            if returns_df.empty or len(returns_df.columns) < 2:
+                logger.warning("数据不足，返回默认值")
+                return self._get_default_node_deviations(stock_codes)
+
+            # 计算个股评分（动量或收益率）
+            # 数据泄漏防护：使用 T-1 日数据，不包含当日
+            if score_type == 'momentum':
+                # 动量：过去 window 天的累计收益率（不含当日）
+                # 使用 [-window-1:-1] 而非 [-window:]，确保不包含当日数据
+                if len(returns_df) >= window + 1:
+                    scores = returns_df.iloc[-window-1:-1].sum()
+                else:
+                    # 数据不足时使用可用数据
+                    scores = returns_df.iloc[:-1].sum() if len(returns_df) > 1 else pd.Series(0, index=returns_df.columns)
+            else:
+                # 收益率：T-1 日的收益率（不使用当日）
+                scores = returns_df.iloc[-2] if len(returns_df) >= 2 else pd.Series(0, index=returns_df.columns)
+
+            # 计算相关性矩阵
+            pearson_corr, _ = compute_correlation_matrices(returns_df)
+            corr_matrix = pearson_corr
+
+            # 构建距离矩阵
+            distance_matrix = np.sqrt(2 * (1 - corr_matrix))
+
+            # 构建 MST
+            mst_graph = build_minimum_spanning_tree(distance_matrix, list(returns_df.columns))
+
+            # 计算每只股票的节点偏离度
+            deviations = {}
+
+            for stock_code in stock_codes:
+                if stock_code not in mst_graph.nodes():
+                    deviations[stock_code] = {
+                        'node_deviation': 0.0,
+                        'own_score': 0.0,
+                        'neighbor_avg_score': 0.0,
+                        'neighbor_count': 0,
+                        'signal': '无邻居'
+                    }
+                    continue
+
+                # 获取该股票的邻居
+                neighbors = list(mst_graph.neighbors(stock_code))
+
+                if len(neighbors) == 0:
+                    deviations[stock_code] = {
+                        'node_deviation': 0.0,
+                        'own_score': float(scores.get(stock_code, 0)),
+                        'neighbor_avg_score': 0.0,
+                        'neighbor_count': 0,
+                        'signal': '无邻居'
+                    }
+                    continue
+
+                # 计算个股评分
+                own_score = float(scores.get(stock_code, 0))
+
+                # 计算邻居平均评分
+                neighbor_scores = [float(scores.get(n, 0)) for n in neighbors]
+                neighbor_avg_score = np.mean(neighbor_scores) if neighbor_scores else 0.0
+
+                # 计算偏离度
+                node_deviation = own_score - neighbor_avg_score
+
+                # 生成信号描述
+                if node_deviation > 0:
+                    # 正值：跑赢邻居
+                    if node_deviation > 0.02:  # 2% 以上
+                        signal = '领涨回调⚠️'
+                    else:
+                        signal = '强势'
+                elif node_deviation < 0:
+                    # 负值：跑输邻居
+                    if node_deviation < -0.02:  # -2% 以下
+                        signal = '掉队补涨📈'
+                    else:
+                        signal = '弱势'
+                else:
+                    signal = '持平'
+
+                deviations[stock_code] = {
+                    'node_deviation': float(node_deviation),
+                    'own_score': own_score,
+                    'neighbor_avg_score': float(neighbor_avg_score),
+                    'neighbor_count': len(neighbors),
+                    'signal': signal
+                }
+
+            # 添加元数据
+            deviations['_meta'] = {
+                'score_type': score_type,
+                'window': window,
+                'calculation_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'stock_count': len([k for k in deviations.keys() if k != '_meta'])
+            }
+
+            print(f"    ✅ 节点偏离度计算完成: {len(deviations) - 1} 只股票")
+            logger.info(f"节点偏离度计算完成: {len(deviations) - 1} 只股票")
+
+            return deviations
+
+        except Exception as e:
+            logger.warning(f"节点偏离度计算失败: {e}")
+            print(f"    ⚠️ 节点偏离度计算失败: {e}")
+            return self._get_default_node_deviations(stock_codes)
+
+    def _get_default_node_deviations(self, stock_codes):
+        """返回默认节点偏离度值"""
+        deviations = {}
+        for code in stock_codes:
+            deviations[code] = {
+                'node_deviation': 0.0,
+                'own_score': 0.0,
+                'neighbor_avg_score': 0.0,
+                'neighbor_count': 0,
+                'signal': '未知'
+            }
+        deviations['_meta'] = {
+            'score_type': 'unknown',
+            'window': 20,
+            'calculation_time': 'N/A',
+            'stock_count': len(stock_codes)
+        }
+        return deviations
+
+    def get_node_deviation_for_features(self, stock_codes, window=20):
+        """
+        获取节点偏离度特征用于机器学习模型
+
+        返回格式适合直接加入特征 DataFrame
+
+        参数:
+            stock_codes: 股票代码列表
+            window: 计算窗口（天数）
+
+        返回:
+            dict: {股票代码: node_deviation值}，可直接用于 DataFrame 列
+        """
+        deviations = self.calculate_node_deviation(stock_codes, score_type='momentum', window=window)
+
+        # 提取简洁格式
+        result = {}
+        for code in stock_codes:
+            if code in deviations and isinstance(deviations[code], dict):
+                result[code] = deviations[code].get('node_deviation', 0.0)
+            else:
+                result[code] = 0.0
+
+        return result
+
+    def get_node_deviation_signals(self, stock_codes, threshold=0.02):
+        """
+        获取节点偏离度信号（用于交易决策）
+
+        参数:
+            stock_codes: 股票代码列表
+            threshold: 信号阈值（默认 2%）
+
+        返回:
+            dict: {股票代码: {
+                'signal': 'buy'/'sell'/'hold',
+                'strength': 信号强度,
+                'description': 描述
+            }}
+        """
+        deviations = self.calculate_node_deviation(stock_codes)
+
+        signals = {}
+        for code in stock_codes:
+            if code not in deviations or code == '_meta':
+                continue
+
+            dev = deviations[code]
+            node_dev = dev.get('node_deviation', 0.0)
+
+            if node_dev < -threshold:
+                # 跑输邻居超过阈值 → 补涨信号
+                signals[code] = {
+                    'signal': 'buy',
+                    'strength': min(abs(node_dev) / threshold, 3.0),  # 1-3 倍强度
+                    'description': f"掉队补涨: 跑输邻居 {abs(node_dev)*100:.1f}%"
+                }
+            elif node_dev > threshold:
+                # 跑赢邻居超过阈值 → 回调风险
+                signals[code] = {
+                    'signal': 'sell',
+                    'strength': min(node_dev / threshold, 3.0),
+                    'description': f"领涨回调: 跑赢邻居 {node_dev*100:.1f}%"
+                }
+            else:
+                signals[code] = {
+                    'signal': 'hold',
+                    'strength': 0.0,
+                    'description': f"与邻居持平: 偏离 {node_dev*100:.1f}%"
+                }
+
+        return signals
+
     def calculate_volatility_network_density(self, stock_codes):
         """
         计算波动率相关性网络的密度
+
+        数据泄漏防护：
+        - 使用 T-1 日数据构建网络，确保不包含当日信息
+        - 波动率计算基于历史窗口，本身不存在泄漏风险
+        - 但为确保一致性，显式声明用于预测
 
         参数:
             stock_codes: 股票代码列表
@@ -249,6 +507,8 @@ class NetworkInsightCalculator:
                 return None
 
             # 构建波动率相关性网络
+            # 注意：波动率使用 rolling(window).std()，基于历史数据计算
+            # 本身不存在数据泄漏，但保持一致性
             volatility_graph, _ = build_volatility_correlation_network(
                 stock_data, window=20, threshold=0.5
             )

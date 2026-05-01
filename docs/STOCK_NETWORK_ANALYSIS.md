@@ -682,9 +682,38 @@ MST 只保留最重要的 N-1 条连接，形成树状结构：
 | **维度灾难** | 网络特征呈长尾分布，极端值（权重股/妖股）会导致过拟合 |
 | **信噪比低** | 网络拓扑每天变化 <0.1%，每日更新带来的只是计算开销，而非预测增量 |
 
-#### 数据泄漏的本质
+#### 数据泄漏防护（已实施）
 
-> "这是操作规范问题，而非特征本质问题。只要严格使用 $T-1$ 日数据构建网络来预测 $T$ 日，就不存在泄漏。"
+**问题识别**（2026-05-02）：
+- `build_returns_dataframe()` 直接使用当日收益率数据
+- `calculate_node_deviation()` 包含当日收益率
+
+**修复措施**：
+1. **收益率数据时间偏移**：
+   ```python
+   # 修复前（存在泄漏）
+   returns_dict[stock_code] = df['Return']
+
+   # 修复后（安全）
+   returns_dict[stock_code] = df['Return'].shift(1)  # 排除当日
+   ```
+
+2. **节点偏离度计算**：
+   ```python
+   # 修复前（存在泄漏）
+   scores = returns_df.iloc[-window:].sum()  # 包含当日
+
+   # 修复后（安全）
+   scores = returns_df.iloc[-window-1:-1].sum()  # 排除当日
+   ```
+
+3. **统一使用 `for_prediction=True` 参数**：
+   - 所有网络特征计算默认排除当日数据
+   - 确保使用 $T-1$ 日数据构建网络，预测 $T$ 日
+
+**验证方法**：
+- 检查 `build_returns_dataframe(stock_data, for_prediction=True)` 调用
+- 确保所有特征计算不包含 `returns_df.iloc[-1]`（当日数据）
 
 #### 正确用法
 

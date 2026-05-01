@@ -130,11 +130,28 @@ def fetch_all_stock_data(stock_list, period="2y"):
     return stock_data
 
 
-def build_returns_dataframe(stock_data):
-    """构建对齐的收益率 DataFrame"""
+def build_returns_dataframe(stock_data, for_prediction=True):
+    """
+    构建对齐的收益率 DataFrame
+
+    参数:
+        stock_data: 股票数据字典
+        for_prediction: True 表示用于预测，排除当日数据避免泄漏
+
+    返回:
+        DataFrame: 收益率矩阵
+
+    数据泄漏防护:
+        - for_prediction=True: 使用 T-1 日数据构建网络，用于预测 T 日
+        - for_prediction=False: 使用完整数据（仅用于分析展示，不用于预测）
+    """
     returns_dict = {}
     for stock_code, df in stock_data.items():
-        returns_dict[stock_code] = df['Return']
+        if for_prediction:
+            # 排除当日数据，避免数据泄漏
+            returns_dict[stock_code] = df['Return'].shift(1)
+        else:
+            returns_dict[stock_code] = df['Return']
 
     returns_df = pd.DataFrame(returns_dict)
     returns_df = returns_df.dropna()
@@ -2090,7 +2107,9 @@ def main():
     sector_count = len(set(get_stock_sector(c) for c in stock_codes))
 
     # 2. 构建收益率和相关矩阵
-    returns_df = build_returns_dataframe(stock_data)
+    # 数据泄漏防护：使用 for_prediction=True 排除当日数据
+    # 网络结构变化缓慢（<0.1%/日），使用 T-1 日数据不影响分析结果
+    returns_df = build_returns_dataframe(stock_data, for_prediction=True)
     pearson_corr, _ = compute_correlation_matrices(returns_df)
     distance_matrix = build_correlation_distance_matrix(pearson_corr)
 
