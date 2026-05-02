@@ -21,6 +21,7 @@ allowed-tools: read_file, write_file, edit_file, bash, grep, glob
 | **新增微观特征** | 超参调优 → Walk-forward | 无需残差化 |
 | **删除特征** | 超参调优 → Walk-forward | 特征减少需重新调参 |
 | **参数调整** | Walk-forward | 仅验证效果 |
+| **IC 负值修复** | 单调约束/时间衰减/滚动百分位 → Walk-forward | Regime Shift 导致特征方向翻转 |
 
 ---
 
@@ -325,7 +326,54 @@ grep -n "future_return" ml_services/ml_trading_model.py
 | IC < 0 | 选股能力有限，需结合恒指择时 |
 | 预测分散度 < 0.1 | 检查特征坍缩，考虑残差化 |
 
-#### 3E. Walk-forward 检查清单
+#### 3E. IC 诊断与修复（新增 2026-05-02）
+
+**问题**：IC < 0 表示预测概率高的股票实际收益反而低
+
+**深层原因**：Regime Shift 导致特征方向翻转
+
+| 问题 | 说明 |
+|------|------|
+| **特征方向不稳定** | 2020年"波动率↑ → 下跌"，2024年可能变成"波动率↑ → 上涨"（逼空行情） |
+| **旧数据干扰** | 2020-2022 年的数据权重过高，干扰 2024-2025 年的预测 |
+| **绝对量级失效** | 波动率=0.03 在2020年是"高波动"，在2024年可能是"低波动" |
+
+**解决方案**：
+
+| 方案 | 参数 | 说明 | 适用特征 |
+|------|------|------|----------|
+| **单调约束** | `use_monotone_constraints=True` | 强制特征方向不变 | 波动率、股息、RS、情感 |
+| **时间衰减** | `time_decay_lambda=0.5` | 降低旧数据权重 | 所有特征 |
+| **滚动百分位** | `use_rolling_percentile=True` | 绝对值转历史百分位 | 波动率、ATR、成交量 |
+
+**单调约束方向参考**：
+
+| 特征类别 | 约束方向 | 理论依据 |
+|----------|----------|----------|
+| 波动率（Volatility, ATR, GARCH） | `-1` 递减 | 低波动异象，波动率↑ → 超额收益↓ |
+| 股息（Dividend_Yield） | `+1` 递增 | 股息溢价，分红↑ → 超额收益↑ |
+| 相对强度（RS_Ratio） | `+1` 递增 | 动量持续，RS↑ → 超额收益↑ |
+| 情感（sentiment_ma） | `+1` 递增 | 情感↑ → 超额收益↑ |
+
+**验证方法**：
+
+```bash
+# 带 IC 修复参数的 Walk-forward 验证
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+# 注意：新参数已集成到模型默认配置中
+# use_monotone_constraints=True, time_decay_lambda=0.5, use_rolling_percentile=True
+```
+
+**IC 修复检查清单**：
+
+- [ ] 已确认 IC < 0（选股能力有限）
+- [ ] 已启用单调约束
+- [ ] 已启用时间衰减权重
+- [ ] 已启用滚动百分位特征
+- [ ] 已重新执行 Walk-forward 验证
+- [ ] 已对比修复前后 IC 值
+
+#### 3F. Walk-forward 检查清单
 
 - [ ] 已执行 Walk-forward 测试
 - [ ] 已记录所有关键指标
@@ -415,6 +463,7 @@ cat output/walk_forward_catboost_20d_*.md
 - [ ] 已对比更新前后效果
 - [ ] 已检查数据泄漏（准确率 < 阈值）
 - [ ] 已检查 IC 和预测分散度
+- [ ] 已处理 IC 负值问题（如适用）
 
 ### 阶段 4：文档更新（参考 model_validation.md）
 
@@ -478,11 +527,12 @@ python3 -m py_compile ml_services/walk_forward_validation.py
 3. **超参调优必要性**：特征数量变化时必须执行
 4. **Walk-forward 必须执行**：所有模型修改都必须验证
 5. **数据泄漏检查**：准确率超过阈值必须排查
-6. **IC 负值处理**：IC < 0 表示选股能力有限，需结合恒指择时
+6. **IC 负值处理**：IC < 0 时启用单调约束、时间衰减、滚动百分位
 7. **文档同步**：调优完成后必须更新相关文档
 
 ---
 
-*文档版本：v1.0*
+*文档版本：v1.1*
 *创建日期：2026-04-29*
+*更新日期：2026-05-02（新增 IC 诊断与修复）*
 *参考文档：model_validation.md、lessons.md*
