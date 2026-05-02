@@ -28,7 +28,7 @@ STOCK_SECTOR_MAPPING = {
     # 半导体股 (semiconductor)
     '0981.HK': {'sector': 'semiconductor', 'name': '中芯国际', 'type': 'semiconductor', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 75, 'risk': 75},
     '1347.HK': {'sector': 'semiconductor', 'name': '华虹半导体', 'type': 'semiconductor', 'defensive': 20, 'growth': 85, 'cyclical': 75, 'liquidity': 70, 'risk': 80},
-    '02382.HK': {'sector': 'semiconductor', 'name': '舜宇光学科技', 'type': 'semiconductor', 'defensive': 25, 'growth': 80, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
+    # 注：02382.HK 舜宇光学科技 已退市，2026-05-03 移除
 
     # 人工智能股 (ai)
     '6682.HK': {'sector': 'ai', 'name': '范式智能', 'type': 'ai', 'defensive': 20, 'growth': 90, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
@@ -45,19 +45,19 @@ STOCK_SECTOR_MAPPING = {
 
     # 环保股 (environmental)
     '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保', 'type': 'environmental', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
-    '01257.HK': {'sector': 'environmental', 'name': '中国光大环境', 'type': 'environmental', 'defensive': 30, 'growth': 70, 'cyclical': 75, 'liquidity': 65, 'risk': 75},
-    '01387.HK': {'sector': 'environmental', 'name': '中国水务', 'type': 'environmental', 'defensive': 40, 'growth': 65, 'cyclical': 70, 'liquidity': 70, 'risk': 70},
+    '1257.HK': {'sector': 'environmental', 'name': '中国光大环境', 'type': 'environmental', 'defensive': 30, 'growth': 70, 'cyclical': 75, 'liquidity': 65, 'risk': 75},
+    '1387.HK': {'sector': 'environmental', 'name': '中国水务', 'type': 'environmental', 'defensive': 40, 'growth': 65, 'cyclical': 70, 'liquidity': 70, 'risk': 70},
 
     # 能源股 (energy)
     '0883.HK': {'sector': 'energy', 'name': '中国海洋石油', 'type': 'energy', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
     '1088.HK': {'sector': 'energy', 'name': '中国神华', 'type': 'energy', 'defensive': 40, 'growth': 45, 'cyclical': 85, 'liquidity': 70, 'risk': 70},
     '1171.HK': {'sector': 'energy', 'name': '兖矿能源', 'type': 'energy', 'defensive': 25, 'growth': 55, 'cyclical': 90, 'liquidity': 65, 'risk': 80},
-    '02883.HK': {'sector': 'energy', 'name': '中海油服', 'type': 'energy', 'defensive': 20, 'growth': 60, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
+    '2883.HK': {'sector': 'energy', 'name': '中海油服', 'type': 'energy', 'defensive': 20, 'growth': 60, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
 
     # 航运股 (shipping)
     '1138.HK': {'sector': 'shipping', 'name': '中远海能', 'type': 'shipping', 'defensive': 25, 'growth': 45, 'cyclical': 95, 'liquidity': 65, 'risk': 80},
-    '01919.HK': {'sector': 'shipping', 'name': '中远海控', 'type': 'shipping', 'defensive': 20, 'growth': 50, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
-    '02866.HK': {'sector': 'shipping', 'name': '中远海运港口', 'type': 'shipping', 'defensive': 30, 'growth': 40, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
+    '1919.HK': {'sector': 'shipping', 'name': '中远海控', 'type': 'shipping', 'defensive': 20, 'growth': 50, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
+    '2866.HK': {'sector': 'shipping', 'name': '中远海运港口', 'type': 'shipping', 'defensive': 30, 'growth': 40, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
 
     # 交易所 (exchange)
     '0388.HK': {'sector': 'exchange', 'name': '香港交易所', 'type': 'exchange', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
@@ -73,13 +73,12 @@ STOCK_SECTOR_MAPPING = {
     '2318.HK': {'sector': 'insurance', 'name': '中国平安', 'type': 'insurance', 'defensive': 80, 'growth': 45, 'cyclical': 30, 'liquidity': 70, 'risk': 35},
     '2601.HK': {'sector': 'insurance', 'name': '中国太保', 'type': 'insurance', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
     '0966.HK': {'sector': 'insurance', 'name': '中国人寿', 'type': 'insurance', 'defensive': 85, 'growth': 35, 'cyclical': 25, 'liquidity': 70, 'risk': 30},
-    '02318.HK': {'sector': 'insurance', 'name': '中国平安证券', 'type': 'insurance', 'defensive': 75, 'growth': 50, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
 
     # 生物医药股 (biotech)
     '2269.HK': {'sector': 'biotech', 'name': '药明生物', 'type': 'biotech', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
-    '02269.HK': {'sector': 'biotech', 'name': '药明康德', 'type': 'biotech', 'defensive': 30, 'growth': 75, 'cyclical': 60, 'liquidity': 65, 'risk': 75},
-    '01177.HK': {'sector': 'biotech', 'name': '中国生物制药', 'type': 'biotech', 'defensive': 35, 'growth': 70, 'cyclical': 50, 'liquidity': 70, 'risk': 65},
-    '02186.HK': {'sector': 'biotech', 'name': '绿叶制药', 'type': 'biotech', 'defensive': 30, 'growth': 65, 'cyclical': 55, 'liquidity': 60, 'risk': 70},
+    '2269.HK': {'sector': 'biotech', 'name': '药明康德', 'type': 'biotech', 'defensive': 30, 'growth': 75, 'cyclical': 60, 'liquidity': 65, 'risk': 75},
+    '1177.HK': {'sector': 'biotech', 'name': '中国生物制药', 'type': 'biotech', 'defensive': 35, 'growth': 70, 'cyclical': 50, 'liquidity': 70, 'risk': 65},
+    '2186.HK': {'sector': 'biotech', 'name': '绿叶制药', 'type': 'biotech', 'defensive': 30, 'growth': 65, 'cyclical': 55, 'liquidity': 60, 'risk': 70},
 
     # 指数基金 (index)
     '2800.HK': {'sector': 'index', 'name': '盈富基金', 'type': 'index', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
@@ -91,11 +90,11 @@ STOCK_SECTOR_MAPPING = {
     '0016.HK': {'sector': 'real_estate', 'name': '新鸿基地产', 'type': 'real_estate', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
 
     # 消费股 (consumer)
-    '00151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
-    '02228.HK': {'sector': 'consumer', 'name': '中国飞鹤', 'type': 'consumer', 'defensive': 45, 'growth': 50, 'cyclical': 50, 'liquidity': 65, 'risk': 50},
+    '151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
+    '2228.HK': {'sector': 'consumer', 'name': '中国飞鹤', 'type': 'consumer', 'defensive': 45, 'growth': 50, 'cyclical': 50, 'liquidity': 65, 'risk': 50},
 
     # 汽车股 (auto)
-    '02333.HK': {'sector': 'auto', 'name': '长城汽车', 'type': 'auto', 'defensive': 25, 'growth': 75, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
+    '2333.HK': {'sector': 'auto', 'name': '长城汽车', 'type': 'auto', 'defensive': 25, 'growth': 75, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
     '1053.HK': {'sector': 'auto', 'name': '重庆长安汽车', 'type': 'auto', 'defensive': 20, 'growth': 80, 'cyclical': 75, 'liquidity': 65, 'risk': 80},
 }
 
@@ -151,28 +150,27 @@ WATCHLIST = {
     "1299.HK": "友邦保险",
 }
 
-# 训练用股票列表（扩展59只，用于模型训练以增加样本量）
-# 包含WATCHLIST全部28只 + 31只额外股票
+# 训练用股票列表（扩展45只，用于模型训练以增加样本量）
+# 包含WATCHLIST全部28只 + 17只额外股票
 TRAINING_STOCKS = {
     **WATCHLIST,  # 继承核心28只
-    # 额外31只股票（从STOCK_SECTOR_MAPPING补充）
+    # 额外17只股票（从STOCK_SECTOR_MAPPING补充）
     "0002.HK": "中电控股",
     "0006.HK": "电能实业",
-    "00151.HK": "中国旺旺",
+    "151.HK": "中国旺旺",
     "0020.HK": "商汤-W",
-    "01177.HK": "中国生物制药",
-    "01257.HK": "中国光大环境",
-    "01387.HK": "中国水务",
-    "01919.HK": "中远海控",
-    "02186.HK": "绿叶制药",
-    "02228.HK": "中国飞鹤",
-    "02269.HK": "药明康德",
-    "02318.HK": "中国平安证券",
-    "02333.HK": "长城汽车",
-    "02382.HK": "舜宇光学科技",
-    "02866.HK": "中远海运港口",
-    "02883.HK": "中海油服",
-    "02828.HK": "恒生中国企业",
+    "1177.HK": "中国生物制药",
+    "1257.HK": "中国光大环境",
+    "1387.HK": "中国水务",
+    "1919.HK": "中远海控",
+    "2186.HK": "绿叶制药",
+    "2228.HK": "中国飞鹤",
+    "2269.HK": "药明康德",
+    "2333.HK": "长城汽车",
+    "2382.HK": "舜宇光学科技",
+    "2866.HK": "中远海运港口",
+    "2883.HK": "中海油服",
+    "2828.HK": "恒生中国企业",
     "0960.HK": "龙源电力",
     "0966.HK": "中国人寿",
     "1024.HK": "快手-W",

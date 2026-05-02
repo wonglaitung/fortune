@@ -62,7 +62,7 @@ class WalkForwardValidator:
         use_monotone_constraints: bool = True,
         time_decay_lambda: float = 0.5,
         use_rolling_percentile: bool = False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
-        use_cross_sectional_percentile: bool = False  # 2026-05-03: 新增截面百分位（与相对标签匹配）
+        use_cross_sectional_percentile: bool = True  # 2026-05-03: 启用截面百分位（与相对标签匹配）
     ):
         """
         初始化 Walk-forward 验证器

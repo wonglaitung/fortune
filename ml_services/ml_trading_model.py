@@ -4144,7 +4144,7 @@ class CatBoostModel(BaseTradingModel):
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
                  use_monotone_constraints=True, time_decay_lambda=0.5,
                  use_rolling_percentile=False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
-                 use_cross_sectional_percentile=False):  # 2026-05-03: 新增截面百分位（与相对标签匹配）
+                 use_cross_sectional_percentile=True):  # 2026-05-03: 启用截面百分位（与相对标签匹配）
         """初始化 CatBoost 模型
 
         Args:
