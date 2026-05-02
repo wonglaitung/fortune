@@ -90,7 +90,7 @@ STOCK_SECTOR_MAPPING = {
     '0016.HK': {'sector': 'real_estate', 'name': '新鸿基地产', 'type': 'real_estate', 'defensive': 25, 'growth': 35, 'cyclical': 90, 'liquidity': 55, 'risk': 80},
 
     # 消费股 (consumer)
-    '151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
+    '0151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
     '2228.HK': {'sector': 'consumer', 'name': '中国飞鹤', 'type': 'consumer', 'defensive': 45, 'growth': 50, 'cyclical': 50, 'liquidity': 65, 'risk': 50},
 
     # 汽车股 (auto)
@@ -157,7 +157,7 @@ TRAINING_STOCKS = {
     # 额外17只股票（从STOCK_SECTOR_MAPPING补充）
     "0002.HK": "中电控股",
     "0006.HK": "电能实业",
-    "151.HK": "中国旺旺",
+    "0151.HK": "中国旺旺",
     "0020.HK": "商汤-W",
     "1177.HK": "中国生物制药",
     "1257.HK": "中国光大环境",
