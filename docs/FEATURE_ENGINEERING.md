@@ -67,7 +67,10 @@
 | 3 | **训练/预测一致性** | 特征变换在两处都执行 |
 | 4 | **模型保存/加载** | 新增参数保存到 `save_model()` |
 
-**注意**：滚动百分位特征已关闭（消融实验证明其降低 IC），不建议新增。
+**百分位特征处理原则**：
+- ❌ **滚动百分位已关闭**：消融实验证明其降低 IC（时间序列自归一化丢失绝对量级）
+- ✅ **截面百分位备选**：如需百分位化，使用 `df.groupby('Date')[feat].rank(pct=True)`
+- **核心原因**：截面百分位与相对标签逻辑一致，都是"横向比较"
 
 ### 1.6 常用命令
 
@@ -342,15 +345,40 @@ y = (actual_return > expected_return).astype(int)
 
 | 方案 | 参数 | 说明 | 适用特征 |
 |------|------|------|----------|
-| **单调约束** | `use_monotone_constraints=True` | 强制特征方向不变 | 波动率、股息、RS、情感 |
+| **单调约束** | `use_monotone_constraints=True` | 强制特征方向不变 | RS_Ratio, RSI, MACD |
 | **时间衰减** | `time_decay_lambda=0.5` | 降低旧数据权重 | 所有特征 |
-| **滚动百分位** | `use_rolling_percentile=True` | 绝对值转历史百分位 | 波动率、ATR、成交量 |
+| ~~滚动百分位~~ | ~~`use_rolling_percentile=True`~~ | ~~绝对值转历史百分位~~ | ❌ 已关闭（降低IC） |
+
+**滚动百分位 vs 截面百分位**：
+
+| 特性 | 滚动百分位（已关闭） | 截面百分位（备选） |
+|------|---------------------|-------------------|
+| **计算方式** | `df[feat].rolling(252).rank(pct=True)` | `df.groupby('Date')[feat].rank(pct=True)` |
+| **比较对象** | 该股票过去252天的值 | 当日所有股票的值 |
+| **信息保留** | ❌ 丢失绝对量级 | ✅ 保留相对排名 |
+| **适用场景** | 时间序列预测 | 截面选股 |
+| **与相对标签匹配** | ❌ 不匹配 | ✅ 完美匹配 |
+| **IC 影响** | ↓13%（负面） | 待验证 |
+
+**截面百分位实现（备选方案）**：
+```python
+# 如果需要百分位化，使用截面百分位而非滚动百分位
+def calculate_cross_sectional_percentile(df, features):
+    """截面百分位：每天对所有股票进行排名
+    
+    与相对标签逻辑一致：判断"这只股票今天在所有股票中排第几"
+    """
+    for feat in features:
+        if feat in df.columns:
+            df[f'{feat}_CS_Pct'] = df.groupby(df.index)[feat].rank(pct=True)
+    return df
+```
 
 **验证方法**：
 ```bash
 # 带 IC 修复参数的 Walk-forward 验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
-# 注意：新参数已集成到模型默认配置中
+# 注意：单调约束和时间衰减已集成到模型默认配置中
 ```
 
 ---
