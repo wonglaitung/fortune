@@ -4085,44 +4085,27 @@ class CatBoostModel(BaseTradingModel):
     # -1: 递减约束（特征增大 → 预测概率减小）
     # +1: 递增约束（特征增大 → 预测概率增大）
     # 0: 无约束（逻辑不明确或依赖市场环境）
+    #
+    # 优化原则（2026-05-03 基于业界实践）：
+    # 1. 只对因果关系明确的特征使用约束
+    # 2. 波动率约束移除：相对标签模型下方向不稳定（牛市+1，熊市-1）
+    # 3. 情感约束移除：可能是反向指标（情感高 = 过度乐观）
+    # 4. 股息约束移除：港股股息溢价不明显
+    #
     MONOTONE_CONSTRAINT_MAP = {
-        # === 波动率特征：-1（低波动异象，波动率↑ → 超额收益↓）===
-        'Volatility_5d': -1,
-        'Volatility_10d': -1,
-        'Volatility_20d': -1,
-        'Volatility_60d': -1,
-        'Volatility_120d': -1,
-        'Volatility_30pct': -1,
-        'Volatility_70pct': -1,
-        'GARCH_Conditional_Vol': -1,
-        'GARCH_Vol_Ratio': -1,
-        'GARCH_Vol_Change_5d': -1,
-        'ATR': -1,
-        'ATR_Ratio': -1,
-        'ATR_Risk_Score': -1,
-        'ATR_MA60': -1,
-        'ATR_MA120': -1,
-        'Intraday_Range': -1,
-        'Intraday_Range_MA5': -1,
-        'Intraday_Range_MA20': -1,
-        'Volume_Volatility': -1,
-
-        # === 股息特征：+1（股息溢价，分红↑ → 超额收益↑）===
-        'Dividend_Yield': +1,
-        'Dividend_Frequency_12m': +1,
-
         # === 相对强度特征：+1（RS↑ → 超额收益↑）===
-        'RS_Ratio_1d': +1,
-        'RS_Ratio_3d': +1,
+        # RS_Ratio = (1+股票收益)/(1+恒指收益) - 1
+        # 含义：股票相对恒指的强度，约束方向正确
         'RS_Ratio_5d': +1,
-        'RS_Ratio_10d': +1,
         'RS_Ratio_20d': +1,
-        'RS_Ratio_60d': +1,
 
-        # === 情感特征：+1（情感↑ → 超额收益↑）===
-        'sentiment_ma3': +1,
-        'sentiment_ma7': +1,
-        'sentiment_ma14': +1,
+        # === RSI特征：-1（超买超卖）===
+        # RSI高 → 超买 → 可能下跌
+        'RSI': -1,
+
+        # === MACD特征：+1（趋势）===
+        # MACD柱正 → 上涨趋势
+        'MACD_histogram': +1,
     }
 
     # 滚动百分位特征列表（原始特征 → 百分位特征）
