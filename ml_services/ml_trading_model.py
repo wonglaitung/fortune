@@ -4124,9 +4124,27 @@ class CatBoostModel(BaseTradingModel):
         'Volume_Volatility', 'Volume_Ratio_5d', 'Volume_Ratio_20d',
     ]
 
+    # 截面百分位特征列表（2026-05-03 新增）
+    # 与相对标签逻辑一致：每天对所有股票进行排名，判断"这只股票今天排第几"
+    # 适用场景：截面选股（与相对标签匹配）
+    CROSS_SECTIONAL_PERCENTILE_FEATURES = [
+        # 波动率特征（比较当日所有股票的波动率水平）
+        'Volatility_5d', 'Volatility_10d', 'Volatility_20d',
+        'GARCH_Conditional_Vol',
+        # ATR特征
+        'ATR', 'ATR_Ratio',
+        # 成交量特征
+        'Volume_Ratio_5d', 'Volume_Ratio_20d',
+        # 动量特征
+        'Momentum_20d',
+        # RSI特征
+        'RSI',
+    ]
+
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
                  use_monotone_constraints=True, time_decay_lambda=0.5,
-                 use_rolling_percentile=False):  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
+                 use_rolling_percentile=False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
+                 use_cross_sectional_percentile=False):  # 2026-05-03: 新增截面百分位（与相对标签匹配）
         """初始化 CatBoost 模型
 
         Args:
@@ -4139,6 +4157,7 @@ class CatBoostModel(BaseTradingModel):
             use_monotone_constraints: 是否使用单调约束（防止特征方向翻转，推荐开启）
             time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认，1.0=强衰减）
             use_rolling_percentile: 是否使用滚动百分位特征（已关闭，消融实验证明降低IC）
+            use_cross_sectional_percentile: 是否使用截面百分位特征（备选方案，与相对标签匹配）
         """
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
@@ -4149,13 +4168,15 @@ class CatBoostModel(BaseTradingModel):
         self.use_monotone_constraints = use_monotone_constraints
         self.time_decay_lambda = time_decay_lambda
         self.use_rolling_percentile = use_rolling_percentile
+        self.use_cross_sectional_percentile = use_cross_sectional_percentile
         self.monotone_constraints_list = None  # 训练时填充
         self.sample_weights = None  # 时间衰减权重
 
         logger.info(f"CatBoostModel 初始化: class_weight={class_weight}, "
                     f"use_monotone_constraints={use_monotone_constraints}, "
                     f"time_decay_lambda={time_decay_lambda}, "
-                    f"use_rolling_percentile={use_rolling_percentile}")
+                    f"use_rolling_percentile={use_rolling_percentile}, "
+                    f"use_cross_sectional_percentile={use_cross_sectional_percentile}")
 
     def _build_monotone_constraints(self, feature_columns):
         """根据特征名称构建单调约束列表
@@ -4265,6 +4286,47 @@ class CatBoostModel(BaseTradingModel):
 
         if converted > 0:
             logger.info(f"滚动百分位特征：转换了 {converted} 个特征（窗口={window}天）")
+
+        return df
+
+    def _calculate_cross_sectional_percentile_features(self, df):
+        """计算截面百分位特征（2026-05-03 新增）
+
+        核心思想：
+        - 每天对所有股票进行排名，计算当日排名百分位
+        - 与相对标签逻辑一致：判断"这只股票今天在所有股票中排第几"
+        - 适用场景：截面选股（与相对标签匹配）
+
+        对比滚动百分位：
+        - 滚动百分位：df[feat].rolling(252).rank(pct=True) — 比较历史值
+        - 截面百分位：df.groupby('Date')[feat].rank(pct=True) — 比较当日其他股票
+
+        Args:
+            df: 数据 DataFrame，索引为日期，包含 'Code' 列
+
+        Returns:
+            DataFrame: 包含新增的截面百分位特征（_CS_Pct 后缀）
+        """
+        if not self.use_cross_sectional_percentile:
+            return df
+
+        features_to_convert = self.CROSS_SECTIONAL_PERCENTILE_FEATURES
+        converted = 0
+
+        for feat in features_to_convert:
+            if feat not in df.columns:
+                continue
+
+            # 截面百分位：按日期分组，计算当日排名百分位
+            # 结果范围：0-1，0.5 表示当日中位数
+            cs_pct = df.groupby(df.index)[feat].rank(pct=True)
+
+            # 新增特征列（不替换原始特征）
+            df[f'{feat}_CS_Pct'] = cs_pct
+            converted += 1
+
+        if converted > 0:
+            logger.info(f"截面百分位特征：新增 {converted} 个特征（_CS_Pct 后缀）")
 
         return df
 
@@ -4669,9 +4731,13 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"特征残差化失败: {e}，将使用原始特征")
             self.residualizer = None
 
-        # ========== 滚动百分位特征（使特征在regime变化时保持稳定）==========
+        # ========== 滚动百分位特征（已关闭，消融实验证明其降低IC）==========
         if self.use_rolling_percentile:
             df = self._calculate_rolling_percentile_features(df)
+
+        # ========== 截面百分位特征（2026-05-03 新增，与相对标签匹配）==========
+        if self.use_cross_sectional_percentile:
+            df = self._calculate_cross_sectional_percentile_features(df)
 
         logger.info(f"数据准备完成，共 {len(df)} 条记录")
 
@@ -5220,6 +5286,16 @@ class CatBoostModel(BaseTradingModel):
                 if self.use_rolling_percentile:
                     stock_df = self._calculate_rolling_percentile_features(stock_df)
 
+                # ========== 截面百分位特征（2026-05-03 新增）==========
+                # 注意：截面百分位需要当日所有股票数据，单只股票预测时无法计算
+                # 如果训练时使用了截面百分位，预测时需要确保特征列存在
+                if self.use_cross_sectional_percentile:
+                    # 检查是否有截面百分位特征，如果没有则跳过（使用原始特征）
+                    cs_pct_features = [f'{feat}_CS_Pct' for feat in self.CROSS_SECTIONAL_PERCENTILE_FEATURES]
+                    missing_features = [f for f in cs_pct_features if f not in stock_df.columns]
+                    if missing_features:
+                        logger.warning(f"截面百分位特征 {missing_features} 不存在（单只股票预测时无法计算），将使用原始特征")
+
                 # ========== 特征残差化（与训练时保持一致）==========
                 # 如果训练时使用了残差化，预测时也需要使用
                 if hasattr(self, 'residualizer') and self.residualizer is not None:
@@ -5325,6 +5401,7 @@ class CatBoostModel(BaseTradingModel):
             'monotone_constraints_list': self.monotone_constraints_list,
             'time_decay_lambda': self.time_decay_lambda,
             'use_rolling_percentile': self.use_rolling_percentile,
+            'use_cross_sectional_percentile': self.use_cross_sectional_percentile,  # 2026-05-03 新增
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -5346,6 +5423,7 @@ class CatBoostModel(BaseTradingModel):
         self.monotone_constraints_list = model_data.get('monotone_constraints_list', None)
         self.time_decay_lambda = model_data.get('time_decay_lambda', 0)  # 默认0=无衰减（向后兼容）
         self.use_rolling_percentile = model_data.get('use_rolling_percentile', False)
+        self.use_cross_sectional_percentile = model_data.get('use_cross_sectional_percentile', False)  # 2026-05-03 新增
         print(f"CatBoost 模型已从 {filepath} 加载")
 
     def predict_proba(self, X):

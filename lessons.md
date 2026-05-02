@@ -115,11 +115,11 @@
 
 **代码位置**：`ml_services/ml_trading_model.py:4084-4108`
 
-**截面百分位方案（备选，未实施）**：
+**截面百分位方案（已实施，2026-05-03）**：
 
 如果需要百分位化，应使用**截面百分位**而非滚动百分位：
 
-| 特性 | 滚动百分位（已关闭） | 截面百分位（推荐备选） |
+| 特性 | 滚动百分位（已关闭） | 截面百分位（已实施） |
 |------|---------------------|----------------------|
 | **计算方式** | `df[feat].rolling(252).rank(pct=True)` | `df.groupby('Date')[feat].rank(pct=True)` |
 | **比较对象** | 该股票过去252天的值 | 当日所有股票的值 |
@@ -127,6 +127,7 @@
 | **适用场景** | 时间序列预测 | 截面选股 |
 | **与相对标签匹配** | ❌ 不匹配 | ✅ 完美匹配 |
 | **IC 影响** | ↓13%（负面） | 待验证 |
+| **参数** | `use_rolling_percentile=False` | `use_cross_sectional_percentile=True` |
 
 **截面百分位实现代码**：
 ```python
@@ -141,6 +142,15 @@ def _calculate_cross_sectional_percentile(self, df, features):
             df[f'{feat}_CS_Pct'] = df.groupby(df.index)[feat].rank(pct=True)
     return df
 ```
+
+**适用特征（10个）**：
+- 波动率：Volatility_5d, Volatility_10d, Volatility_20d, GARCH_Conditional_Vol
+- ATR：ATR, ATR_Ratio
+- 成交量：Volume_Ratio_5d, Volume_Ratio_20d
+- 动量：Momentum_20d
+- RSI：RSI
+
+**代码位置**：`ml_services/ml_trading_model.py:4292-4328`
 
 **教训**：
 - **个股模型的选股能力有限**，不能单独依赖预测概率排序
