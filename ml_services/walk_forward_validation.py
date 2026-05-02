@@ -61,7 +61,7 @@ class WalkForwardValidator:
         # 新增：Regime Shift 修复参数
         use_monotone_constraints: bool = True,
         time_decay_lambda: float = 0.5,
-        use_rolling_percentile: bool = True
+        use_rolling_percentile: bool = False  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
     ):
         """
         初始化 Walk-forward 验证器
@@ -75,9 +75,9 @@ class WalkForwardValidator:
             confidence_threshold: 置信度阈值
             use_feature_selection: 是否使用特征选择
             min_train_samples: 最小训练样本数
-            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转）
+            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转，推荐开启）
             time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认）
-            use_rolling_percentile: 是否使用滚动百分位特征
+            use_rolling_percentile: 是否使用滚动百分位特征（已关闭，消融实验证明降低IC）
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months

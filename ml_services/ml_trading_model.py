@@ -4143,7 +4143,7 @@ class CatBoostModel(BaseTradingModel):
 
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
                  use_monotone_constraints=True, time_decay_lambda=0.5,
-                 use_rolling_percentile=True):
+                 use_rolling_percentile=False):  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
         """初始化 CatBoost 模型
 
         Args:
@@ -4153,9 +4153,9 @@ class CatBoostModel(BaseTradingModel):
                 - None: 不使用类别权重
                 - dict: 手动指定权重，如 {0: 1.0, 1: 1.2}
             use_dynamic_threshold: 是否使用动态阈值策略
-            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转）
+            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转，推荐开启）
             time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认，1.0=强衰减）
-            use_rolling_percentile: 是否使用滚动百分位特征（使特征在regime变化时保持稳定）
+            use_rolling_percentile: 是否使用滚动百分位特征（已关闭，消融实验证明降低IC）
         """
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
