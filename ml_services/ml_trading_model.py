@@ -4072,7 +4072,7 @@ class GBDTModel(BaseTradingModel):
 
 class CatBoostModel(BaseTradingModel):
     """CatBoost 模型 - 基于 CatBoost 梯度提升算法的单一模型
-    
+
     CatBoost 是 Yandex 开发的梯度提升库，具有以下优势：
     1. 自动处理分类特征，无需手动编码
     2. 更好的默认参数，减少调参工作量
@@ -4081,9 +4081,71 @@ class CatBoostModel(BaseTradingModel):
     """
     _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
-    def __init__(self, class_weight='balanced', use_dynamic_threshold=False):
+    # 单调约束映射：特征名 → 约束方向
+    # -1: 递减约束（特征增大 → 预测概率减小）
+    # +1: 递增约束（特征增大 → 预测概率增大）
+    # 0: 无约束（逻辑不明确或依赖市场环境）
+    MONOTONE_CONSTRAINT_MAP = {
+        # === 波动率特征：-1（低波动异象，波动率↑ → 超额收益↓）===
+        'Volatility_5d': -1,
+        'Volatility_10d': -1,
+        'Volatility_20d': -1,
+        'Volatility_60d': -1,
+        'Volatility_120d': -1,
+        'Volatility_30pct': -1,
+        'Volatility_70pct': -1,
+        'GARCH_Conditional_Vol': -1,
+        'GARCH_Vol_Ratio': -1,
+        'GARCH_Vol_Change_5d': -1,
+        'ATR': -1,
+        'ATR_Ratio': -1,
+        'ATR_Risk_Score': -1,
+        'ATR_MA60': -1,
+        'ATR_MA120': -1,
+        'Intraday_Range': -1,
+        'Intraday_Range_MA5': -1,
+        'Intraday_Range_MA20': -1,
+        'Volume_Volatility': -1,
+
+        # === 股息特征：+1（股息溢价，分红↑ → 超额收益↑）===
+        'Dividend_Yield': +1,
+        'Dividend_Frequency_12m': +1,
+
+        # === 相对强度特征：+1（RS↑ → 超额收益↑）===
+        'RS_Ratio_1d': +1,
+        'RS_Ratio_3d': +1,
+        'RS_Ratio_5d': +1,
+        'RS_Ratio_10d': +1,
+        'RS_Ratio_20d': +1,
+        'RS_Ratio_60d': +1,
+
+        # === 情感特征：+1（情感↑ → 超额收益↑）===
+        'sentiment_ma3': +1,
+        'sentiment_ma7': +1,
+        'sentiment_ma14': +1,
+    }
+
+    # 滚动百分位特征列表（原始特征 → 百分位特征）
+    # 原则：波动率、成交量、ATR等绝对量级特征受益于百分位化
+    # 宏观特征（VIX, US_10Y_Yield）和已相对化特征（RS_Ratio, BB_Position, sector_rank）不转换
+    ROLLING_PERCENTILE_FEATURES = [
+        # 波动率特征
+        'Volatility_5d', 'Volatility_10d', 'Volatility_20d',
+        'Volatility_60d', 'Volatility_120d',
+        'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio',
+        # ATR特征
+        'ATR', 'ATR_Ratio', 'ATR_MA60', 'ATR_MA120',
+        # 日内波动特征
+        'Intraday_Range', 'Intraday_Range_MA5', 'Intraday_Range_MA20',
+        # 成交量特征
+        'Volume_Volatility', 'Volume_Ratio_5d', 'Volume_Ratio_20d',
+    ]
+
+    def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
+                 use_monotone_constraints=True, time_decay_lambda=0.5,
+                 use_rolling_percentile=True):
         """初始化 CatBoost 模型
-        
+
         Args:
             class_weight: 类别权重策略
                 - 'balanced': 自动平衡类别权重（推荐，温和调整）
@@ -4091,6 +4153,9 @@ class CatBoostModel(BaseTradingModel):
                 - None: 不使用类别权重
                 - dict: 手动指定权重，如 {0: 1.0, 1: 1.2}
             use_dynamic_threshold: 是否使用动态阈值策略
+            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转）
+            time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认，1.0=强衰减）
+            use_rolling_percentile: 是否使用滚动百分位特征（使特征在regime变化时保持稳定）
         """
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
@@ -4098,8 +4163,127 @@ class CatBoostModel(BaseTradingModel):
         self.model_type = 'catboost'  # 模型类型标识
         self.class_weight = class_weight
         self.use_dynamic_threshold = use_dynamic_threshold
-        
-        logger.info(f"CatBoostModel 初始化: class_weight={class_weight}, use_dynamic_threshold={use_dynamic_threshold}")
+        self.use_monotone_constraints = use_monotone_constraints
+        self.time_decay_lambda = time_decay_lambda
+        self.use_rolling_percentile = use_rolling_percentile
+        self.monotone_constraints_list = None  # 训练时填充
+        self.sample_weights = None  # 时间衰减权重
+
+        logger.info(f"CatBoostModel 初始化: class_weight={class_weight}, "
+                    f"use_monotone_constraints={use_monotone_constraints}, "
+                    f"time_decay_lambda={time_decay_lambda}, "
+                    f"use_rolling_percentile={use_rolling_percentile}")
+
+    def _build_monotone_constraints(self, feature_columns):
+        """根据特征名称构建单调约束列表
+
+        Args:
+            feature_columns: 特征列名列表（动态生成）
+
+        Returns:
+            list: 单调约束列表（-1/0/+1），与 feature_columns 一一对应
+        """
+        if not self.use_monotone_constraints:
+            return None
+
+        constraints = []
+        matched = 0
+        for col in feature_columns:
+            # 精确匹配
+            if col in self.MONOTONE_CONSTRAINT_MAP:
+                constraints.append(self.MONOTONE_CONSTRAINT_MAP[col])
+                matched += 1
+            else:
+                constraints.append(0)  # 未匹配的默认无约束
+
+        logger.info(f"单调约束：{matched}/{len(feature_columns)} 个特征被约束 "
+                    f"(+1={constraints.count(1)}, -1={constraints.count(-1)}, "
+                    f"0={constraints.count(0)})")
+
+        self.monotone_constraints_list = constraints
+        return constraints
+
+    def _compute_time_decay_weights(self, df, lambda_decay=0.5):
+        """计算时间衰减样本权重
+
+        公式: W_i = exp(-lambda * delta_t_years)
+        其中 delta_t_years = (最新日期 - 当前样本日期) / 252
+
+        Args:
+            df: 包含时间索引的 DataFrame
+            lambda_decay: 衰减系数（0=无衰减，0.5=温和衰减，1.0=强衰减）
+
+        Returns:
+            numpy.ndarray: 样本权重数组（归一化至均值=1）
+        """
+        if lambda_decay <= 0 or df.empty:
+            return None
+
+        # 获取日期索引
+        dates = df.index
+        if not isinstance(dates, pd.DatetimeIndex):
+            dates = pd.to_datetime(dates)
+
+        # 计算距最新日期的年数
+        max_date = dates.max()
+        delta_days = (max_date - dates).total_seconds() / (24 * 3600)
+        # 转换为 numpy 数组，避免 Index 对象的问题
+        delta_days = np.array(delta_days)
+        delta_years = delta_days / 252.0  # 交易日年化
+
+        # 指数衰减
+        weights = np.exp(-lambda_decay * delta_years)
+
+        # 归一化至均值=1（保持与无权重时的期望损失等价）
+        weights = weights / np.mean(weights)
+
+        # 日志输出
+        oldest_weight = weights.min()
+        newest_weight = weights.max()
+        logger.info(f"时间衰减权重: lambda={lambda_decay}, "
+                    f"最旧样本权重={oldest_weight:.3f}, 最新样本权重={newest_weight:.3f}, "
+                    f"比值={newest_weight/max(oldest_weight, 1e-10):.2f}x")
+
+        return weights
+
+    def _calculate_rolling_percentile_features(self, df, window=252):
+        """计算滚动百分位特征（时间序列自归一化）
+
+        将绝对量级特征转换为历史百分位，使特征在regime变化时保持稳定。
+        公式: feature_pct = feature.rolling(window).rank(pct=True)
+
+        Args:
+            df: 股票数据 DataFrame
+            window: 滚动窗口（默认252个交易日=1年）
+
+        Returns:
+            DataFrame: 包含百分位特征的 DataFrame（原始特征被替换）
+        """
+        if not self.use_rolling_percentile:
+            return df
+
+        features_to_convert = self.ROLLING_PERCENTILE_FEATURES
+        converted = 0
+
+        for feat in features_to_convert:
+            if feat not in df.columns:
+                continue
+
+            # 滚动百分位：当前值在过去window天中的排名百分位
+            # 使用 rank(pct=True) 返回 0-1 之间的值
+            pct_values = df[feat].rolling(window, min_periods=20).rank(pct=True)
+
+            # 填充开头NaN为0.5（中位数，保守假设）
+            pct_values = pct_values.fillna(0.5)
+
+            # 直接替换原始特征
+            df[feat] = pct_values
+            converted += 1
+
+        if converted > 0:
+            logger.info(f"滚动百分位特征：转换了 {converted} 个特征（窗口={window}天）")
+
+        return df
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -4379,6 +4563,79 @@ class CatBoostModel(BaseTradingModel):
         # 转换索引为 datetime（统一为UTC时区）
         df.index = pd.to_datetime(df.index, utc=True)
 
+        # ========== 网络特征（跨截面特征，所有股票共享）==========
+        # 使用实时计算，确保数据泄漏防护（for_prediction=True 排除当日数据）
+        try:
+            from data_services.network_features import get_network_calculator
+            import networkx as nx
+
+            print("  📊 计算网络特征...")
+            network_calc = get_network_calculator()
+
+            # 获取所有股票代码
+            unique_codes = df['Code'].unique().tolist()
+
+            # 计算网络洞察（中心性、社区等）
+            insights = network_calc.calculate_network_insights(unique_codes, force_refresh=True)
+
+            # 计算节点偏离度
+            deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
+
+            # 将网络特征添加到每只股票的数据中
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+
+            # 初始化网络特征列
+            for feat in network_feature_names:
+                df[feat] = 0.0 if feat != 'net_community_id' else -1
+
+            # 填充网络特征
+            for code in unique_codes:
+                mask = df['Code'] == code
+
+                # 中心性
+                if code in insights:
+                    df.loc[mask, 'net_composite_centrality'] = insights[code].get('composite_centrality', 0)
+
+                # 社区ID（分类特征）
+                if code in insights:
+                    df.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
+
+                # 网络-行业匹配度（需要从网络分析模块获取）
+                # 暂时设为0，后续从 insights 获取
+                df.loc[mask, 'net_sector_community_match'] = 0
+
+                # MST邻居行业数（需要从网络分析模块获取）
+                # 暂时设为0，后续从 insights 获取
+                df.loc[mask, 'net_mst_neighbor_sectors'] = 0
+
+                # 节点偏离度
+                if code in deviations:
+                    df.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+
+            print(f"  ✅ 网络特征计算完成（5个特征）")
+            logger.info(f"网络特征计算完成: {len(unique_codes)} 只股票")
+
+        except Exception as e:
+            logger.warning(f"网络特征计算失败: {e}，将使用默认值")
+            print(f"  ⚠️ 网络特征计算失败: {e}")
+            # 使用默认值
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+            for feat in network_feature_names:
+                if feat not in df.columns:
+                    df[feat] = 0.0 if feat != 'net_community_id' else -1
+
         # 相对标签：在合并所有股票数据后统一计算
         if label_type == 'relative':
             print(f"  计算相对标签（每日中位数）...")
@@ -4428,6 +4685,10 @@ class CatBoostModel(BaseTradingModel):
         except Exception as e:
             logger.warning(f"特征残差化失败: {e}，将使用原始特征")
             self.residualizer = None
+
+        # ========== 滚动百分位特征（使特征在regime变化时保持稳定）==========
+        if self.use_rolling_percentile:
+            df = self._calculate_rolling_percentile_features(df)
 
         logger.info(f"数据准备完成，共 {len(df)} 条记录")
 
@@ -4523,6 +4784,11 @@ class CatBoostModel(BaseTradingModel):
         # 删除包含 NaN 的行
         df = df.dropna(subset=['Label'])
         print(f"删除 NaN 后: {len(df)} 条记录")
+
+        # 计算时间衰减权重（在dropna之后，确保索引对齐）
+        self.sample_weights = None
+        if self.time_decay_lambda > 0:
+            self.sample_weights = self._compute_time_decay_weights(df, self.time_decay_lambda)
 
         # 获取特征列
         self.feature_columns = self.get_feature_columns(df)
@@ -4651,6 +4917,16 @@ class CatBoostModel(BaseTradingModel):
         else:
             logger.info("不使用类别权重")
 
+        # 构建单调约束（防止特征方向翻转）
+        monotone_constraints = self._build_monotone_constraints(self.feature_columns)
+        if monotone_constraints is not None:
+            catboost_params['monotone_constraints'] = monotone_constraints
+            constrained_pos = sum(1 for c in monotone_constraints if c == 1)
+            constrained_neg = sum(1 for c in monotone_constraints if c == -1)
+            logger.info(f"已启用单调约束: +1={constrained_pos}, -1={constrained_neg}")
+        else:
+            logger.info("单调约束已禁用")
+
         self.catboost_model = CatBoostClassifier(**catboost_params)
 
         # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
@@ -4662,9 +4938,24 @@ class CatBoostModel(BaseTradingModel):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
+            # 计算当前fold的权重子集
+            fold_weights = None
+            if self.sample_weights is not None:
+                fold_weights = self.sample_weights[train_idx]
+
             # 创建 Pool 对象（CatBoost 推荐）
-            train_pool = Pool(data=X_train_fold, label=y_train_fold, cat_features=categorical_features if categorical_features else None)
-            val_pool = Pool(data=X_val_fold, label=y_val_fold, cat_features=categorical_features if categorical_features else None)
+            train_pool = Pool(
+                data=X_train_fold,
+                label=y_train_fold,
+                cat_features=categorical_features if categorical_features else None,
+                weight=fold_weights  # 时间衰减权重
+            )
+            val_pool = Pool(
+                data=X_val_fold,
+                label=y_val_fold,
+                cat_features=categorical_features if categorical_features else None
+                # 验证集不使用权重（权重只影响训练）
+            )
 
             self.catboost_model.fit(
                 train_pool,
@@ -4679,8 +4970,13 @@ class CatBoostModel(BaseTradingModel):
             catboost_f1_scores.append(f1)
             print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
-        # 使用全部数据重新训练
-        full_pool = Pool(data=X, label=y, cat_features=categorical_features if categorical_features else None)
+        # 使用全部数据重新训练（带时间衰减权重）
+        full_pool = Pool(
+            data=X,
+            label=y,
+            cat_features=categorical_features if categorical_features else None,
+            weight=self.sample_weights  # 时间衰减权重
+        )
         self.catboost_model.fit(full_pool, verbose=100)
 
         # 获取实际训练的树数量
@@ -4922,6 +5218,25 @@ class CatBoostModel(BaseTradingModel):
                 # 生成交叉特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
+                # ========== 网络特征（与训练时保持一致）==========
+                # 预测时使用缓存的网络特征或默认值
+                # 网络特征需要跨截面计算，预测单只股票时使用默认值
+                network_feature_names = [
+                    'net_composite_centrality',
+                    'net_community_id',
+                    'net_sector_community_match',
+                    'net_mst_neighbor_sectors',
+                    'net_node_deviation'
+                ]
+                for feat in network_feature_names:
+                    if feat not in stock_df.columns:
+                        stock_df[feat] = 0.0 if feat != 'net_community_id' else -1
+
+                # ========== 滚动百分位特征（与训练时保持一致）==========
+                # 如果训练时使用了滚动百分位，预测时也需要使用
+                if self.use_rolling_percentile:
+                    stock_df = self._calculate_rolling_percentile_features(stock_df)
+
                 # ========== 特征残差化（与训练时保持一致）==========
                 # 如果训练时使用了残差化，预测时也需要使用
                 if hasattr(self, 'residualizer') and self.residualizer is not None:
@@ -5021,7 +5336,12 @@ class CatBoostModel(BaseTradingModel):
             'horizon': self.horizon,
             'model_type': self.model_type,
             'categorical_encoders': self.categorical_encoders,
-            'residualizer': getattr(self, 'residualizer', None)  # 保存残差化器
+            'residualizer': getattr(self, 'residualizer', None),  # 保存残差化器
+            # 新增：Regime Shift 修复参数
+            'use_monotone_constraints': self.use_monotone_constraints,
+            'monotone_constraints_list': self.monotone_constraints_list,
+            'time_decay_lambda': self.time_decay_lambda,
+            'use_rolling_percentile': self.use_rolling_percentile,
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -5038,6 +5358,11 @@ class CatBoostModel(BaseTradingModel):
         self.model_type = model_data.get('model_type', 'catboost')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         self.residualizer = model_data.get('residualizer', None)  # 加载残差化器
+        # 新增：Regime Shift 修复参数（向后兼容）
+        self.use_monotone_constraints = model_data.get('use_monotone_constraints', False)
+        self.monotone_constraints_list = model_data.get('monotone_constraints_list', None)
+        self.time_decay_lambda = model_data.get('time_decay_lambda', 0)  # 默认0=无衰减（向后兼容）
+        self.use_rolling_percentile = model_data.get('use_rolling_percentile', False)
         print(f"CatBoost 模型已从 {filepath} 加载")
 
     def predict_proba(self, X):

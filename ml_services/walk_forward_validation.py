@@ -57,7 +57,11 @@ class WalkForwardValidator:
         horizon: int = 20,
         confidence_threshold: float = 0.55,
         use_feature_selection: bool = True,
-        min_train_samples: int = 100
+        min_train_samples: int = 100,
+        # 新增：Regime Shift 修复参数
+        use_monotone_constraints: bool = True,
+        time_decay_lambda: float = 0.5,
+        use_rolling_percentile: bool = True
     ):
         """
         初始化 Walk-forward 验证器
@@ -71,6 +75,9 @@ class WalkForwardValidator:
             confidence_threshold: 置信度阈值
             use_feature_selection: 是否使用特征选择
             min_train_samples: 最小训练样本数
+            use_monotone_constraints: 是否使用单调约束（防止特征方向翻转）
+            time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认）
+            use_rolling_percentile: 是否使用滚动百分位特征
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -80,6 +87,10 @@ class WalkForwardValidator:
         self.confidence_threshold = confidence_threshold
         self.use_feature_selection = use_feature_selection
         self.min_train_samples = min_train_samples
+        # 新增参数
+        self.use_monotone_constraints = use_monotone_constraints
+        self.time_decay_lambda = time_decay_lambda
+        self.use_rolling_percentile = use_rolling_percentile
 
         # 模型类映射
         self.model_classes = {
@@ -100,6 +111,7 @@ class WalkForwardValidator:
         logger.info(f"测试窗口: {test_window_months} 个月")
         logger.info(f"滚动步长: {step_window_months} 个月")
         logger.info(f"预测周期: {horizon} 天")
+        logger.info(f"单调约束: {use_monotone_constraints}, 时间衰减: {time_decay_lambda}, 滚动百分位: {use_rolling_percentile}")
 
     def validate(self, stock_list, start_date, end_date):
         """
@@ -262,8 +274,15 @@ class WalkForwardValidator:
         """
         print(f"\n  🔄 准备训练数据...")
 
-        # 创建模型实例
-        model = self.model_class()
+        # 创建模型实例（传递 Regime Shift 修复参数）
+        if self.model_type == 'catboost':
+            model = self.model_class(
+                use_monotone_constraints=self.use_monotone_constraints,
+                time_decay_lambda=self.time_decay_lambda,
+                use_rolling_percentile=self.use_rolling_percentile
+            )
+        else:
+            model = self.model_class()
 
         # 准备训练数据
         train_codes = stock_list
