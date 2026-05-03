@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 warnings.filterwarnings('ignore')
 
 # 导入项目模块
-from ml_services.ml_trading_model import CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer
+from ml_services.ml_trading_model import CatBoostModel, CatBoostRankerModel, LightGBMModel, GBDTModel, FeatureEngineer
 from ml_services.logger_config import get_logger
 from config import TRAINING_STOCKS as STOCK_LIST
 
@@ -63,13 +63,14 @@ class WalkForwardValidator:
         time_decay_lambda: float = 0.5,
         use_rolling_percentile: bool = False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
         use_cross_sectional_percentile: bool = True,  # 2026-05-03: 截面百分位（与相对标签匹配）
-        use_cross_sectional_zscore: bool = True  # 2026-05-03: 截面 Z-Score（解决时间序列基准问题）
+        use_cross_sectional_zscore: bool = True,  # 2026-05-03: 截面 Z-Score（解决时间序列基准问题）
+        feature_importance_threshold: float = 0.0,  # P3-8: 特征修剪阈值
     ):
         """
         初始化 Walk-forward 验证器
 
         Args:
-            model_type: 模型类型（catboost、lightgbm、gbdt）
+            model_type: 模型类型（catboost、lightgbm、gbdt、catboost_ranker）
             train_window_months: 训练窗口（月）
             test_window_months: 测试窗口（月）
             step_window_months: 滚动步长（月）
@@ -82,6 +83,7 @@ class WalkForwardValidator:
             use_rolling_percentile: 是否使用滚动百分位特征（已关闭，消融实验证明降低IC）
             use_cross_sectional_percentile: 是否使用截面百分位特征（与相对标签匹配）
             use_cross_sectional_zscore: 是否使用截面 Z-Score 特征（解决时间序列基准问题）
+            feature_importance_threshold: 特征重要性阈值，低于此值的特征将被移除（0=不修剪）
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -97,10 +99,12 @@ class WalkForwardValidator:
         self.use_rolling_percentile = use_rolling_percentile
         self.use_cross_sectional_percentile = use_cross_sectional_percentile
         self.use_cross_sectional_zscore = use_cross_sectional_zscore
+        self.feature_importance_threshold = feature_importance_threshold  # P3-8
 
         # 模型类映射
         self.model_classes = {
             'catboost': CatBoostModel,
+            'catboost_ranker': CatBoostRankerModel,  # P3-9: 排序模型
             'lightgbm': LightGBMModel,
             'gbdt': GBDTModel
         }
@@ -287,7 +291,19 @@ class WalkForwardValidator:
                 time_decay_lambda=self.time_decay_lambda,
                 use_rolling_percentile=self.use_rolling_percentile,
                 use_cross_sectional_percentile=self.use_cross_sectional_percentile,
-                use_cross_sectional_zscore=self.use_cross_sectional_zscore
+                use_cross_sectional_zscore=self.use_cross_sectional_zscore,
+                feature_importance_threshold=self.feature_importance_threshold  # P3-8
+            )
+        elif self.model_type == 'catboost_ranker':
+            # P3-9: 排序模型
+            model = self.model_class(
+                loss_function='YetiRank',
+                use_monotone_constraints=self.use_monotone_constraints,
+                time_decay_lambda=self.time_decay_lambda,
+                use_rolling_percentile=self.use_rolling_percentile,
+                use_cross_sectional_percentile=self.use_cross_sectional_percentile,
+                use_cross_sectional_zscore=self.use_cross_sectional_zscore,
+                feature_importance_threshold=self.feature_importance_threshold
             )
         else:
             model = self.model_class()
@@ -306,8 +322,14 @@ class WalkForwardValidator:
         if len(train_data) < self.min_train_samples:
             raise ValueError(f"训练样本不足: {len(train_data)} < {self.min_train_samples}")
 
-        # 检查目标变量多样性
-        if 'Label' in train_data.columns:
+        # 检查目标变量多样性（排序模型使用 Future_Return，跳过 Label 检查）
+        if self.model_type == 'catboost_ranker':
+            # 排序模型使用 Future_Return 作为标签，检查 Future_Return 存在性
+            if 'Future_Return' not in train_data.columns:
+                raise ValueError("训练数据中没有 'Future_Return' 列")
+            if train_data['Future_Return'].isna().all():
+                raise ValueError("Future_Return 全为 NaN")
+        elif 'Label' in train_data.columns:
             unique_labels = train_data['Label'].nunique()
             if unique_labels < 2:
                 raise ValueError(f"目标变量多样性不足：只有 {unique_labels} 个唯一值，需要至少 2 个（上涨/下跌）")
@@ -1004,8 +1026,8 @@ def main():
 
     # 模型参数
     parser.add_argument('--model-type', type=str, default='catboost',
-                       choices=['catboost', 'lightgbm', 'gbdt'],
-                       help='模型类型 (默认: catboost)')
+                       choices=['catboost', 'catboost_ranker', 'lightgbm', 'gbdt'],
+                       help='模型类型 (默认: catboost，catboost_ranker 为排序模型)')
 
     # Walk-forward 参数
     parser.add_argument('--train-window', type=int, default=12,

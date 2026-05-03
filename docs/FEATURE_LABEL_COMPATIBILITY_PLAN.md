@@ -260,10 +260,299 @@ stock_df = self.residualizer.residualize(stock_df, inplace=True, keep_original=F
 
 ---
 
+## P3 阶段：Rank IC 提升（排序模型 + 特征修剪 + 指标对齐）
+
+**背景**：P0+P1 实施后 Rank IC 从 -0.0214 改善至 -0.0013（改善 93.9%），但仍接近零。根本原因是**模型目标与评估指标不对齐**：
+
+- 模型使用 `CatBoostClassifier` + `Logloss` 优化二分类准确率（"跑赢/跑输中位数"）
+- 评估指标 Rank IC 衡量预测排序与实际收益排序的 Spearman 相关性
+- 分类模型丢弃收益幅度信息（top 1% 收益和 barely-above-median 收益标签相同）
+- 801 个特征中 280 个重要性为零，浪费模型容量、稀释梯度信号
+
+**目标**：Rank IC 从 -0.0013 提升至 >0.02
+
+### P3-7：eval_metric 对齐
+
+**文件**：`ml_services/ml_trading_model.py:5808`
+
+将 `CatBoostModel` 的 `eval_metric` 从 `Accuracy` 改为 `AUC`：
+
+```python
+catboost_params = {
+    'loss_function': 'Logloss',
+    'eval_metric': 'AUC',  # Changed from 'Accuracy' — AUC 直接衡量排序能力
+    ...
+}
+```
+
+**理由**：AUC 衡量正样本排在负样本前面的概率，与排序目标对齐，改善早停决策。
+
+### P3-8：特征修剪
+
+**文件**：`ml_services/ml_trading_model.py`、`ml_services/walk_forward_validation.py`
+
+#### 8a. 添加 `feature_importance_threshold` 参数
+
+在 `CatBoostModel.__init__`（~4933行）添加参数：
+
+```python
+def __init__(self, class_weight='balanced', ...,
+             feature_importance_threshold=0.0):  # 0.0 = 不修剪
+    self.feature_importance_threshold = feature_importance_threshold
+```
+
+#### 8b. 训练后修剪低重要性特征
+
+在 `train()` 方法特征重要性计算后（~5970行），修剪并重新训练：
+
+```python
+# 特征修剪：移除重要性低于阈值的特征
+if self.feature_importance_threshold > 0 and len(feat_imp) > 0:
+    kept_features = feat_imp[feat_imp['Importance'] >= self.feature_importance_threshold]['Feature'].tolist()
+    pruned = len(self.feature_columns) - len(kept_features)
+    if pruned > 0 and len(kept_features) >= 50:  # 安全：至少保留 50 个特征
+        logger.info(f"特征修剪：{len(self.feature_columns)} → {len(kept_features)}（移除 {pruned} 个，阈值={self.feature_importance_threshold}）")
+        self.feature_columns = [f for f in self.feature_columns if f in kept_features]
+        # 用修剪后的特征重新训练
+        X_pruned = df[self.feature_columns].values
+        # ... 重新创建 Pool 和 fit（复用 train() 中相同逻辑）
+```
+
+**推荐阈值**：
+
+| 阈值 | 移除特征数 | 保留特征数 | 风险 |
+|------|-----------|-----------|------|
+| 0.0 | 0 | 801 | 无修剪（基线） |
+| 0.01 | ~327 | ~474 | 低（仅移除近零特征） |
+| 0.05 | ~480 | ~321 | 中（可能过度修剪） |
+
+#### 8c. 持久化和传递
+
+- `save_model()` / `load_model()` 添加 `feature_importance_threshold` 字段
+- `WalkForwardValidator.__init__` 添加参数，`_validate_fold()` 传递给模型构造
+
+### P3-9：CatBoostRanker 排序模型（核心改动）
+
+**文件**：`ml_services/ml_trading_model.py`、`ml_services/walk_forward_validation.py`
+
+创建 `CatBoostRankerModel` 类，直接优化排序，从根本上解决模型-评估不对齐问题。
+
+#### 9a. CatBoostRanker vs CatBoostClassifier 对比
+
+| 项目 | CatBoostClassifier（当前） | CatBoostRanker（新增） |
+|------|--------------------------|----------------------|
+| 模型类 | `CatBoostClassifier` | `CatBoostRanker` |
+| 损失函数 | `Logloss`（二分类） | `YetiRank`（排序） |
+| 标签 | 二元 (0/1) | 连续 (`Future_Return`) |
+| eval_metric | `AUC` | `NDCG` |
+| group_id | 无 | 日期（每天所有股票为一组） |
+| 输出 | 概率 [0,1] | 排序分数（实数） |
+| class_weight | `Balanced` | 不适用（排序无需类别权重） |
+
+#### 9b. 已验证的技术可行性
+
+- ✅ `CatBoostRanker` 可用，支持 `YetiRank` 和 `YetiRankPairwise`
+- ✅ `group_id` 参数在 `Pool` 中可用
+- ✅ `monotone_constraints`、`has_time=True`、`early_stopping_rounds` + `eval_metric='NDCG'` 均可用
+- ✅ `predict()` 返回实数排序分数，sigmoid 变换后兼容现有接口
+- ✅ `get_feature_importance(train_pool, prettified=True)` 需传入训练池
+- ❌ `PairLogProb` 和 `QueryCrossEntropy` 不支持 CPU 学习
+
+#### 9c. 类结构
+
+在 `CatBoostModel` 之后（~6700行）插入新类：
+
+```python
+class CatBoostRankerModel(BaseTradingModel):
+    """CatBoost 排序模型 - 直接优化股票排序，最大化 Rank IC
+
+    与 CatBoostClassifier 的关键区别：
+    1. 使用 CatBoostRanker（排序模型）而非 CatBoostClassifier（分类模型）
+    2. 标签为连续 Future_Return（而非二元 0/1），保留收益幅度信息
+    3. 使用 group_id=date 分组，每个日期形成一个排序组
+    4. 损失函数为 YetiRank（直接优化排序），而非 Logloss（优化分类）
+    5. 输出为排序分数（而非概率），分数越高表示预期收益越高
+    """
+
+    # 复用 CatBoostModel 的特征列表
+    MONOTONE_CONSTRAINT_MAP = CatBoostModel.MONOTONE_CONSTRAINT_MAP
+    MARKET_LEVEL_FEATURES = CatBoostModel.MARKET_LEVEL_FEATURES
+    CROSS_SECTIONAL_PERCENTILE_FEATURES = CatBoostModel.CROSS_SECTIONAL_PERCENTILE_FEATURES
+    CROSS_SECTIONAL_ZSCORE_FEATURES = CatBoostModel.CROSS_SECTIONAL_ZSCORE_FEATURES
+    ROLLING_PERCENTILE_FEATURES = CatBoostModel.ROLLING_PERCENTILE_FEATURES
+
+    def __init__(self, loss_function='YetiRank',
+                 use_monotone_constraints=True,
+                 time_decay_lambda=0.5,
+                 use_rolling_percentile=False,
+                 use_cross_sectional_percentile=True,
+                 use_cross_sectional_zscore=True,
+                 feature_importance_threshold=0.0):
+        super().__init__()
+        self.ranker_model = None
+        self.model_type = 'catboost_ranker'
+        self.loss_function = loss_function
+        self.use_monotone_constraints = use_monotone_constraints
+        self.time_decay_lambda = time_decay_lambda
+        # ... 其余参数同 CatBoostModel
+```
+
+#### 9d. `train()` 方法核心逻辑
+
+```python
+def train(self, codes, start_date=None, end_date=None, horizon=1, ...):
+    # 1. 复用 CatBoostModel.prepare_data()（Future_Return 已存在于输出中）
+    df = self.prepare_data(codes, start_date, end_date, horizon, for_backtest=False)
+
+    # 2. 使用 Future_Return 作为标签（连续值），而非 Label（二元）
+    y = df['Future_Return'].values
+
+    # 3. 构建 group_id（每天所有股票为一个排序组）
+    df = df.sort_index()  # 确保按日期排序
+    unique_dates = sorted(df.index.normalize().unique())
+    date_to_gid = {d: i for i, d in enumerate(unique_dates)}
+    group_ids = df.index.normalize().map(date_to_gid).values.astype(int)
+
+    # 4. CatBoostRanker 参数
+    from catboost import CatBoostRanker, Pool
+    ranker_params = {
+        'loss_function': self.loss_function,  # 'YetiRank'
+        'eval_metric': 'NDCG',
+        'depth': 7,
+        'learning_rate': 0.03,
+        'n_estimators': 600,
+        'l2_leaf_reg': 2,
+        'subsample': 0.75,
+        'colsample_bylevel': 0.75,
+        'random_seed': 2020,
+        'early_stopping_rounds': 80,
+        'has_time': True,  # 告诉 CatBoost 数据是时间有序的
+        'thread_count': -1,
+        'allow_writing_files': False,
+    }
+
+    # 5. 单调约束（与 CatBoostModel 一致）
+    monotone_constraints = self._build_monotone_constraints(self.feature_columns)
+    if monotone_constraints is not None:
+        ranker_params['monotone_constraints'] = monotone_constraints
+
+    self.ranker_model = CatBoostRanker(**ranker_params)
+
+    # 6. 时间序列 CV（注意：CV 可能切分同日样本，仅影响诊断指标）
+    tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
+    for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+        # 提取子集的 group_ids
+        group_ids_train = group_ids[train_idx]
+        group_ids_val = group_ids[val_idx]
+
+        train_pool = Pool(
+            data=X[train_idx], label=y[train_idx],
+            group_id=group_ids_train,
+            weight=fold_weights,  # 时间衰减权重
+            cat_features=categorical_features if categorical_features else None
+        )
+        val_pool = Pool(
+            data=X[val_idx], label=y[val_idx],
+            group_id=group_ids_val,
+            cat_features=categorical_features if categorical_features else None
+        )
+        self.ranker_model.fit(train_pool, eval_set=val_pool, verbose=False)
+
+    # 7. 全量数据重训练
+    full_pool = Pool(data=X, label=y, group_id=group_ids,
+                     weight=self.sample_weights,
+                     cat_features=categorical_features if categorical_features else None)
+    self.ranker_model.fit(full_pool, verbose=100)
+
+    # 8. 特征重要性（需传入训练池）
+    feat_importance = self.ranker_model.get_feature_importance(full_pool, prettified=True)
+```
+
+#### 9e. `predict_proba()` — 兼容 WalkForwardValidator
+
+WalkForwardValidator 使用 `prediction_proba[:, 1]` 获取预测值。Ranker 输出实数分数，需 sigmoid 变换：
+
+```python
+def predict_proba(self, X):
+    """预测排序分数（兼容 predict_proba 接口）"""
+    from scipy.special import expit  # sigmoid
+
+    test_pool = Pool(data=test_df,
+                     cat_features=categorical_features if categorical_features else None)
+    scores = self.ranker_model.predict(test_pool)
+
+    # sigmoid 变换到 [0,1]，保持排序不变
+    proba_col1 = expit(scores)
+    return np.column_stack([1 - proba_col1, proba_col1])
+```
+
+**关键**：sigmoid 是单调变换，排序完全保留。`spearmanr(expit(scores), returns) == spearmanr(scores, returns)`，Rank IC 不受影响。
+
+#### 9f. `_predict_from_features()` / `predict()` / `predict_batch()`
+
+复用 CatBoostModel 的 3 阶段批量预测架构（`_extract_raw_features_single` → 合并计算截面特征 → `_predict_from_features`）。
+
+输出格式保持兼容：
+
+```python
+return {
+    'code': code,
+    'prediction': 1 if score > 0 else 0,  # 正分数 = 预测跑赢
+    'probability': float(expit(score)),     # sigmoid 变换，兼容阈值逻辑
+    'rank_score': float(score),             # 原始排序分数
+    'current_price': ...,
+    'date': ...,
+}
+```
+
+#### 9g. WalkForwardValidator 集成
+
+**文件**：`ml_services/walk_forward_validation.py`
+
+1. 添加模型类映射（line ~102）：
+
+```python
+from ml_services.ml_trading_model import CatBoostModel, CatBoostRankerModel, ...
+
+self.model_classes = {
+    'catboost': CatBoostModel,
+    'catboost_ranker': CatBoostRankerModel,  # 新增
+    'lightgbm': LightGBMModel,
+    'gbdt': GBDTModel,
+}
+```
+
+2. 在 `_validate_fold()` 添加 ranker 分支（line ~284）：
+
+```python
+elif self.model_type == 'catboost_ranker':
+    model = self.model_class(
+        loss_function='YetiRank',
+        use_monotone_constraints=self.use_monotone_constraints,
+        time_decay_lambda=self.time_decay_lambda,
+        use_cross_sectional_percentile=self.use_cross_sectional_percentile,
+        use_cross_sectional_zscore=self.use_cross_sectional_zscore,
+        feature_importance_threshold=self.feature_importance_threshold,
+    )
+```
+
+3. 对 ranker 跳过 `Label` 多样性检查（ranker 使用 `Future_Return`）：
+
+```python
+# 在 line 310-315 的 Label 多样性检查前添加：
+if self.model_type == 'catboost_ranker':
+    # Ranker 使用 Future_Return 作为标签，不需要 Label 列
+    pass
+elif 'Label' in train_data.columns:
+    # 现有检查逻辑
+```
+
+---
+
 ## 实施顺序
 
 ```
-阶段 1（P0，可独立交付）：
+阶段 1（P0，已完成 ✅）：
   Step 1 → 定义 MARKET_LEVEL_FEATURES 常量
   Step 2 → 排除市场级特征 from feature_columns
   Step 3 → 扩展截面化特征列表
@@ -272,14 +561,23 @@ stock_df = self.residualizer.residualize(stock_df, inplace=True, keep_original=F
   Step 6 → 截面统计量回退机制
   Step 7 → 完整重训练 + Walk-forward 验证
 
-阶段 2（P1，在阶段 1 验证后）：
+阶段 2（P1，已完成 ✅）：
   Step 8  → keep_original=False + 扩展 MICRO_FEATURES
   Step 9  → 再次重训练 + Walk-forward 验证
-  Step 10 → 调用方迁移（comprehensive_analysis.py, CLI）
 
-阶段 3（验证收尾）：
-  Step 11 → IC/Rank IC 对比验证
-  Step 12 → 更新 CLAUDE.md、progress.txt
+阶段 3（P2，部分完成 🚧）：
+  Step 10 → 调用方迁移（comprehensive_analysis.py 已支持 predict_batch，CLI 待迁移）
+
+阶段 4（P3，新增 — Rank IC 提升 🆕）：
+  Step 11 → eval_metric 对齐（Accuracy → AUC）
+  Step 12 → 特征修剪参数（feature_importance_threshold）
+  Step 13 → CatBoostRankerModel 类实现
+  Step 14 → WalkForwardValidator 集成
+  Step 15 → Walk-forward 验证对比（catboost vs catboost_ranker）
+
+阶段 5（验证收尾）：
+  Step 16 → IC/Rank IC 对比验证
+  Step 17 → 更新 CLAUDE.md、progress.txt、lessons.md
 ```
 
 ---
@@ -288,10 +586,10 @@ stock_df = self.residualizer.residualize(stock_df, inplace=True, keep_original=F
 
 | 文件 | 修改内容 |
 |------|---------|
-| `ml_services/ml_trading_model.py` | P0 全部 + P1 全部（主战场） |
+| `ml_services/ml_trading_model.py` | P0 全部 + P1 全部 + P3 全部（主战场） |
 | `data_services/feature_residualizer.py` | 扩展 MICRO_FEATURES + keep_original 默认值 |
 | `comprehensive_analysis.py` | 调用方迁移到 predict_batch |
-| `ml_services/walk_forward_validation.py` | 验证兼容性，可能微调 |
+| `ml_services/walk_forward_validation.py` | 验证兼容性 + P3 Ranker 支持 + 特征修剪参数 |
 | `config.py` | 确认 TRAINING_STOCKS 列表（截面计算基数） |
 
 ---
@@ -302,6 +600,7 @@ stock_df = self.residualizer.residualize(stock_df, inplace=True, keep_original=F
 ```bash
 python3 -m py_compile ml_services/ml_trading_model.py
 python3 -m py_compile data_services/feature_residualizer.py
+python3 -m py_compile ml_services/walk_forward_validation.py
 python3 -m pytest tests/ -v
 ```
 
@@ -311,13 +610,38 @@ python3 -m pytest tests/ -v
 3. **单股回退**：`predict()` 缺失截面特征时填充训练均值 + 打印警告
 
 ### 模型验证（`/model_validation` skill）
-4. **Walk-forward 验证**：`python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20`
-5. **IC 对比**：目标 IC 从 -0.02 提升至正数，夏普比率不低于当前 0.9677
-6. **准确率范围**：59-62%（超过 65% 需排查数据泄漏）
+4. **Walk-forward 验证（CatBoost 分类器）**：
+   ```bash
+   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+   ```
+5. **Walk-forward 验证（CatBoost Ranker）**：
+   ```bash
+   python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20
+   ```
+6. **IC 对比**：目标 Rank IC 从 -0.0013 提升至 >0.02，夏普比率不低于当前 0.8291
+7. **准确率范围**：59-62%（超过 65% 需排查数据泄漏）
+
+### P3 专项验证
+8. **特征修剪效果**：
+   ```bash
+   # 基线（无修剪）
+   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+
+   # 修剪阈值 0.01
+   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --feature-importance-threshold 0.01
+   ```
+9. **Ranker vs Classifier 对比**：
+   | 模型 | 预期 Rank IC | 预期夏普 |
+   |------|-------------|---------|
+   | CatBoostClassifier（基线） | ~0.0 | ~0.83 |
+   | + eval_metric=AUC | ~0.01 | ~0.85 |
+   | + 特征修剪 | ~0.015 | ~0.90 |
+   | **CatBoostRanker** | **>0.02** | **>1.0** |
 
 ### 回归保护
-7. **特征数量日志**：训练时记录特征总数，确保在 700-1000 范围内
-8. **predict_batch 一致性**：批量预测 vs 逐只预测结果，截面特征部分不同但原始特征相同
+10. **特征数量日志**：训练时记录特征总数，确保在 400-800 范围内
+11. **predict_batch 一致性**：批量预测 vs 逐只预测结果，截面特征部分不同但原始特征相同
+12. **Ranker 输出兼容性**：`predict_proba()[:, 1]` 输出范围在 [0, 1]，排序与原始分数一致
 
 ---
 
@@ -329,3 +653,14 @@ python3 -m pytest tests/ -v
 | `keep_original=False` 使旧模型不兼容 | 模型版本号区分，强制重训练 |
 | 截面特征在 28 只 WATCHLIST 上较粗 | 用 45 只 TRAINING_STOCKS 做截面计算，提升区分度 |
 | `predict_batch()` 比 `predict()` 慢 | 批量预测适用于每日批量任务；单股预测保留降级路径 |
+| **P3 新增风险** | |
+| group_id 排序问题导致 Ranker 输出错误 | `df.sort_index()` 确保按日期排序后再分配 group_id |
+| CV 切分同日样本影响诊断指标 | 仅影响 CV 诊断，最终模型全量重训练；可接受 |
+| Ranker 分数不等于概率，阈值逻辑失效 | sigmoid 变换保持排序不变，兼容现有阈值逻辑；或改用 rank_score 直接排序 |
+| 特征修剪过拟合到历史重要性 | 从阈值 0.01 开始（仅移除零/近零特征），Walk-forward 验证确认 |
+| CatBoostRanker 与 EnsembleModel 不兼容 | P3 阶段 Ranker 作为独立模型评估，不加入 Ensemble（后续可扩展） |
+| `get_feature_importance()` 需传入训练池 | 在 `train()` 中保存 `train_pool` 或在需要时重建 |
+
+---
+
+**最后更新**：2026-05-03（添加 P3 阶段：Rank IC 提升）
