@@ -7481,20 +7481,32 @@ class CatBoostRankerModel(BaseTradingModel):
         # 填充 NaN
         test_df = test_df.fillna(0)
 
-        test_pool = Pool(data=test_df.values, cat_features=[])
+        # 获取分类特征索引
+        categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
+
+        test_pool = Pool(data=test_df.values, cat_features=categorical_features if categorical_features else None)
         scores = self.ranker_model.predict(test_pool)
 
-        # 自动温度调整：使分数标准差约为 1.0
+        # 自动温度调整：归一化分数，使标准差约为 1.0
+        # temperature 越小，sigmoid 越陡峭，概率分布越极端
         if temperature == 'auto':
             score_std = np.std(scores)
-            if score_std > 0:
-                temperature = 1.0 / max(score_std, 0.1)  # 避免除零
+            if score_std > 0.001:  # 避免除零
+                # 使用分数的标准差作为温度，归一化后 sigmoid 输出范围更广
+                temperature = score_std
+                logger.info(f"Ranker 自动温度: {temperature:.4f} (分数标准差: {score_std:.4f}, 范围: [{scores.min():.4f}, {scores.max():.4f}])")
             else:
                 temperature = 1.0
+                logger.warning(f"Ranker 分数标准差过小 ({score_std:.4f})，使用默认温度 1.0")
 
         # 缩放分数后再 sigmoid 变换
+        # scores / temperature 使标准差归一化到 ~1.0
         scaled_scores = scores / temperature
         proba_col1 = expit(scaled_scores)
+
+        # 调试日志
+        logger.info(f"Ranker 概率分布: min={proba_col1.min():.4f}, max={proba_col1.max():.4f}, mean={proba_col1.mean():.4f}, std={proba_col1.std():.4f}")
+
         return np.column_stack([1 - proba_col1, proba_col1])
 
     def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True):
