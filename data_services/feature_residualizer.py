@@ -71,64 +71,97 @@ class FeatureResidualizer:
     ]
 
     # 微观特征列表（个股特异性特征）
-    # 注意：实际数据中有 357 个微观特征，这里列出核心的原始微观特征
+    # 2026-05-03 扩展：从 30 个扩展到 ~60 个，覆盖所有主要股票特异性特征
+    # 目标：迫使模型学习个股特异性，而非宏观因子
     MICRO_FEATURES = [
-        # 动量特征
+        # === 动量特征 ===
         'Momentum_Accel_5d',     # 5日动量加速
         'Momentum_Accel_10d',    # 10日动量加速
+        'Momentum_Accel_120d',   # 120日动量加速
         'Price_Pct_20d',         # 20日价格百分位
         'Close_Position',        # 收盘价位置
 
-        # 成交量特征
+        # === 成交量特征 ===
         'Volume_Ratio_5d',       # 5日成交量比率
+        'Volume_Ratio_20d',      # 20日成交量比率
         'Volume_Volatility',     # 成交量波动率
+        'Volume_Std_30d',        # 30日成交量标准差
         'OBV',                   # 能量潮
+        'OBV_MA5',               # OBV 5日均线
         'CMF',                   # Chaikin资金流量
 
-        # 技术指标 - RSI
-        'RSI',                   # RSI（实际数据中的名称）
+        # === 技术指标 - RSI ===
+        'RSI',                   # RSI
         'RSI_Deviation',         # RSI偏离度
         'RSI_ROC',               # RSI变化率
+        'RSI_120',               # 120日 RSI
+        'RSI_Deviation_MA20',    # RSI偏离度20日均线
 
-        # 技术指标 - MACD
+        # === 技术指标 - MACD ===
         'MACD',                  # MACD
-        'MACD_signal',           # MACD信号线（实际数据中的名称）
-        'MACD_histogram',        # MACD柱（实际数据中的名称）
-        'MACD_Hist',             # MACD柱（另一个名称）
+        'MACD_signal',           # MACD信号线
+        'MACD_histogram',        # MACD柱
 
-        # 技术指标 - 布林带
+        # === 技术指标 - 布林带 ===
         'BB_Position',           # 布林带位置
         'BB_Width',              # 布林带宽度
         'BB_Width_Normalized',   # 标准化布林带宽度
+        'BB_Width_MA60',         # 布林带宽度60日均线
 
-        # 技术指标 - ATR
+        # === 技术指标 - ATR ===
         'ATR',                   # ATR
         'ATR_Ratio',             # ATR比率
         'ATR_Risk_Score',        # ATR风险评分
+        'ATR_MA',                # ATR均线
+        'ATR_MA60',              # ATR 60日均线
+        'ATR_MA120',             # ATR 120日均线
+        'ATR_Ratio_60d',         # ATR 60日比率
+        'ATR_Ratio_120d',        # ATR 120日比率
 
-        # 技术指标 - ADX
+        # === 技术指标 - ADX ===
         'ADX',                   # ADX
         '+DI',                   # +DI
         '-DI',                   # -DI
 
-        # 波动率特征
+        # === 波动率特征 ===
         'Volatility_30pct',      # 30日波动率
+        'Volatility_70pct',      # 70日波动率
+        'Volatility_20d',        # 20日波动率
+        'Volatility_60d',        # 60日波动率
+        'Volatility_120d',       # 120日波动率
+        'Volatility_Mean_60d',   # 60日波动率均值
+        'Vol_Z_Score',           # 波动率 Z-Score
+        'Kurtosis_20d',          # 20日峰度
 
-        # 均线偏离
+        # === 均线偏离 ===
         'MA5_Deviation_Std',     # MA5偏离度（标准化）
         'MA20_Deviation_Std',    # MA20偏离度（标准化）
         'MA120_Deviation',       # MA120偏离度
         'MA250_Deviation',       # MA250偏离度
 
-        # 趋势特征
+        # === 趋势特征 ===
         '10d_Trend',             # 10日趋势
         '20d_Trend',             # 20日趋势
         '60d_Trend',             # 60日趋势
 
-        # 异常检测特征
+        # === 风险特征 ===
+        'Max_Drawdown_20d',      # 20日最大回撤
+        'Max_Drawdown_60d',      # 60日最大回撤
+
+        # === 资金流向特征 ===
+        'Smart_Money_Score',     # 聪明钱得分
+        'Accumulation_Score',    # 累积得分
+        'Net_Flow_5d',           # 5日净流入
+        'Net_Flow_20d',          # 20日净流入
+
+        # === 异常检测特征 ===
         'Anomaly_Severity_Score',  # 异常严重程度
         'Anomaly_Buy_Signal',      # 异常买入信号
         'Anomaly_Wait_Signal',     # 异常等待信号
+
+        # === 换手率特征 ===
+        'Turnover_Mean_20',      # 20日换手率均值
+        'Turnover_Std_20',       # 20日换手率标准差
     ]
 
     # 交叉特征前缀（这些特征包含宏观成分，但结构复杂，暂不处理）
