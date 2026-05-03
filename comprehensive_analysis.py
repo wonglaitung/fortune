@@ -88,26 +88,27 @@ SECTOR_TYPES = {
     'index': {'name': '指数', 'type': '防御'},
 }
 
-# 三周期预测模式配置（基于个股完整模型验证结果）
+# 三周期预测模式配置（基于个股完整模型验证结果，相对标签）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第12章
 # 验证数据：56只港股，Walk-forward 30 folds，完整模型（730特征→385个有效特征）
 # 更新日期：2026-04-20
+# 注意：相对标签模型，1=跑赢其他股票，0=跑输其他股票
 THREE_HORIZON_PATTERNS = {
     '010': {'name': '反弹失败⭐', 'action': '谨慎减仓', 'win_rate': '66.32%', 'avg_return': '-1.65%', 'confidence': '高'},
-    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '63.14%', 'avg_return': '-2.54%', 'confidence': '中高'},
+    '000': {'name': '一致跑输', 'action': '止损/减仓', 'win_rate': '63.14%', 'avg_return': '-2.54%', 'confidence': '中高'},
     '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '62.56%', 'avg_return': '-2.28%', 'confidence': '中高'},
-    '001': {'name': '下跌中继', 'action': '谨慎观望', 'win_rate': '61.45%', 'avg_return': '+4.86%', 'confidence': '中'},
-    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '60.43%', 'avg_return': '+3.54%', 'confidence': '中'},
+    '001': {'name': '探底回升', 'action': '谨慎观望', 'win_rate': '61.45%', 'avg_return': '+4.86%', 'confidence': '中'},
+    '011': {'name': '持续跑赢', 'action': '分批建仓', 'win_rate': '60.43%', 'avg_return': '+3.54%', 'confidence': '中'},
     '101': {'name': '假突破', 'action': '持有观望', 'win_rate': '50.00%', 'avg_return': '+2.21%', 'confidence': '低'},
     '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '48.48%', 'avg_return': '+2.34%', 'confidence': '低'},
-    '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '47.99%', 'avg_return': '+0.14%', 'confidence': '低'},
+    '111': {'name': '一致跑赢', 'action': '谨慎持有', 'win_rate': '47.99%', 'avg_return': '+0.14%', 'confidence': '低'},
 }
 
-# 恒指三周期预测模式配置（基于恒指增强模型验证结果）
+# 恒指三周期预测模式配置（基于恒指增强模型验证结果，绝对标签）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第一部分
 # 验证数据：906个恒指样本，Walk-forward验证，增强模型（33特征）
 # 更新日期：2026-04-28
-# 注意：恒指准确率显著高于个股，最优模式为"假突破"(101)
+# 注意：恒指使用绝对标签，1=涨，0=跌（恒指没有比较对象）
 HSI_THREE_HORIZON_PATTERNS = {
     '101': {'name': '假突破⭐⭐', 'action': '抄底买入', 'win_rate': '95.00%', 'avg_return': '高', 'confidence': '极高'},
     '010': {'name': '反弹失败⭐', 'action': '谨慎做多', 'win_rate': '85.98%', 'avg_return': '+3.54%', 'confidence': '高'},
@@ -537,7 +538,10 @@ def load_multi_horizon_models():
 
 def predict_three_horizons(stock_code, models=None):
     """
-    对单只股票进行三周期预测
+    ⚠️ 已废弃：对单只股票进行三周期预测
+
+    此方法已被废弃，因为单股票预测无法计算正确的截面特征。
+    请改用 predict_three_horizons_batch() 进行批量预测。
 
     参数:
     - stock_code: 股票代码（如 '0005.HK'）
@@ -546,6 +550,8 @@ def predict_three_horizons(stock_code, models=None):
     返回:
     - dict: 包含三个周期预测结果和模式，失败返回 None
     """
+    print(f"⚠️ predict_three_horizons() 已废弃，请使用 predict_three_horizons_batch()")
+
     if models is None:
         models = load_multi_horizon_models()
 
@@ -595,6 +601,94 @@ def predict_three_horizons(stock_code, models=None):
 
     # 如果有任何预测失败，返回 None
     return None
+
+
+def predict_three_horizons_batch(stock_codes, models=None):
+    """
+    批量进行三周期预测（推荐使用）
+
+    关键改进：
+    - 使用 predict_batch() 方法，确保 CatBoost 截面特征正确计算
+    - 比逐只预测效率更高
+
+    参数:
+    - stock_codes: 股票代码列表（如 ['0005.HK', '0001.HK']）
+    - models: 模型字典（如果为 None 则自动加载）
+
+    返回:
+    - dict: {stock_code: {predictions, pattern, pattern_info}, ...}
+    """
+    if models is None:
+        models = load_multi_horizon_models()
+
+    if models is None:
+        return {}
+
+    print(f"🔄 批量三周期预测: {len(stock_codes)} 只股票...")
+    results = {}
+
+    # 对每个周期进行批量预测
+    batch_results = {1: {}, 5: {}, 20: {}}
+
+    for horizon in [1, 5, 20]:
+        if horizon in models:
+            try:
+                model = models[horizon]
+                # 检查模型是否有 predict_batch 方法
+                if hasattr(model, 'predict_batch'):
+                    batch_pred = model.predict_batch(stock_codes)
+                    for pred in batch_pred:
+                        if pred:
+                            batch_results[horizon][pred['code']] = pred
+                else:
+                    # 回退到逐只预测（不推荐）
+                    print(f"⚠️ {horizon}d 模型无 predict_batch，使用逐只预测")
+                    for code in stock_codes:
+                        try:
+                            pred = model.predict(code)
+                            if pred:
+                                batch_results[horizon][code] = pred
+                        except Exception as e:
+                            print(f"  ⚠️ 预测 {code} {horizon}d 失败: {e}")
+            except Exception as e:
+                print(f"  ⚠️ {horizon}d 批量预测失败: {e}")
+
+    # 整合结果
+    for code in stock_codes:
+        result = {
+            'code': code,
+            'predictions': {},
+            'pattern': None,
+            'pattern_info': None
+        }
+
+        success_count = 0
+        for horizon in [1, 5, 20]:
+            if code in batch_results[horizon]:
+                pred = batch_results[horizon][code]
+                result['predictions'][horizon] = {
+                    'prediction': pred.get('prediction', 0),
+                    'probability': pred.get('probability', 0.5),
+                    'direction': '↑' if pred.get('prediction') == 1 else '↓'
+                }
+                success_count += 1
+            else:
+                result['predictions'][horizon] = None
+
+        # 只有当所有三个周期都成功预测时才计算模式
+        if success_count == 3 and all(result['predictions'].get(h) for h in [1, 5, 20]):
+            pred_1d = result['predictions'][1]['prediction']
+            pred_5d = result['predictions'][5]['prediction']
+            pred_20d = result['predictions'][20]['prediction']
+
+            pattern = f"{'1' if pred_1d == 1 else '0'}{'1' if pred_5d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
+            result['pattern'] = pattern
+            result['pattern_info'] = get_pattern_action(pattern)
+
+        results[code] = result
+
+    print(f"✅ 批量三周期预测完成: {len(results)} 只股票")
+    return results
 
 
 def safe_float_format(value, format_spec='.2f', default=''):
@@ -841,14 +935,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 three_horizon_models = load_multi_horizon_models()
                 if three_horizon_models:
                     print(f"  ✅ 成功加载 {len([k for k in three_horizon_models.keys() if k != 'loaded'])} 个模型")
-                    print("  🔄 进行三周期预测...")
-                    for stock_code in df_catboost['code'].tolist():
-                        try:
-                            pred_result = predict_three_horizons(stock_code, three_horizon_models)
-                            if pred_result:
-                                three_horizon_results[stock_code] = pred_result
-                        except Exception as e:
-                            print(f"  ⚠️ 预测 {stock_code} 失败: {e}")
+                    print("  🔄 进行批量三周期预测...")
+                    # 使用批量预测（关键：确保截面特征正确计算）
+                    stock_codes = df_catboost['code'].tolist()
+                    batch_results = predict_three_horizons_batch(stock_codes, three_horizon_models)
+                    three_horizon_results.update(batch_results)
                     print(f"  ✅ 完成三周期预测: {len(three_horizon_results)} 只股票")
                 else:
                     print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
@@ -910,14 +1001,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     if sector_code:
                         sector_type = get_sector_type(sector_code)
 
-                # 20天预测概率
+                # 20天预测概率（相对标签：预测跑赢/跑输其他股票）
                 probability = float(row['probability'])
                 if probability > 0.60:
-                    direction = "上涨"
+                    direction = "跑赢"
                 elif probability > 0.50:
                     direction = "观望"
                 else:
-                    direction = "下跌"
+                    direction = "跑输"
 
                 # 计算筹码阻力
                 resistance_level = 'N/A'
@@ -949,7 +1040,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
-            catboost_text_llm += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `probability_20d`: 20天跑赢概率（相对标签，>0.60=高置信度跑赢，0.50-0.60=中等，≤0.50=跑输）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
             catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
 
@@ -1089,17 +1180,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 添加三色预测说明
                 catboost_text_email += f"\n**三周期预测颜色说明**：\n"
-                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
+                catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度跑赢\n"
+                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度跑赢\n"
+                catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，跑输\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
-                catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
+                catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=跑赢，0=跑输）\n"
+                catboost_text_email += "- **相对标签**：预测\"跑赢/跑输其他股票\"，而非\"绝对涨跌\"\n"
                 catboost_text_email += f"- 个股传导模式：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
                 catboost_text_email += f"- ⚠️ 注意：个股最优模式为\"反弹失败(010)\"，准确率66.32%；\"假突破(101)\"仅50%（随机水平）\n"
-                catboost_text_email += f"- 💡 恒指模式：恒指最优模式为\"假突破(101)\"，准确率92.73%（远高于个股）\n"
-                catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
+                catboost_text_email += f"- 💡 恒指模式：恒指使用绝对标签（涨/跌），最优模式为\"假突破(101)\"，准确率92.73%\n"
+                catboost_text_email += "- 策略含义：个股选股 + 恒指择时，两者结合使用\n"
 
                 # 添加筹码分布说明
                 catboost_text_email += f"\n**筹码阻力说明**：\n"
@@ -2879,7 +2971,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 {llm_recommendations['medium_term']}
 
 【2. CatBoost模型20天预测结果】
-**重要：probability = 上涨概率（不是下跌概率）**
+**重要：probability = 跑赢概率（相对标签，预测跑赢其他股票的概率）**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -2935,24 +3027,25 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 **规则2：CatBoost概率评估**
 
-**CatBoost概率阈值**：
-- **高置信度上涨**：probability > 0.60
+**CatBoost概率阈值（相对标签）**：
+- **高置信度跑赢**：probability > 0.60
 - **中等置信度观望**：0.50 < probability ≤ 0.60
-- **预测下跌**：probability ≤ 0.50
+- **预测跑输**：probability ≤ 0.50
 
-**重要说明 - CatBoost probability 定义**：
-- `probability` = **上涨概率**（模型预测股票上涨的概率）
-- 下跌概率 = 1 - probability
-- 例如：probability = 0.35 表示上涨概率35%，下跌概率65%
-- 例如：probability = 0.68 表示上涨概率68%，下跌概率32%
-- **切勿将 probability 误解为下跌概率**
+**重要说明 - CatBoost probability 定义（相对标签）**：
+- `probability` = **跑赢概率**（模型预测股票跑赢其他股票的概率）
+- 跑输概率 = 1 - probability
+- 例如：probability = 0.35 表示跑赢概率35%，跑输概率65%
+- 例如：probability = 0.68 表示跑赢概率68%，跑输概率32%
+- **切勿将 probability 误解为绝对涨跌概率**
+- **相对标签含义**：预测"谁比谁强"，而非"绝对涨跌"
 
 **阈值优化说明**：
 - 当前CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
 - CatBoost模型准确率：{model_accuracy['catboost']['accuracy']:.2%}（±{model_accuracy['catboost']['std']:.2%}）
 - 强买入阈值0.60略高于CatBoost准确率，确保高置信度
 - 买入阈值0.50接近CatBoost准确率，平衡召回率和精确率
-- 卖出阈值0.50确保下跌概率>50%
+- 卖出阈值0.50确保跑输概率>50%
 - 观望区间0.45-0.50避免低置信度决策
 
 **重要说明 - CatBoost模型优势**：
@@ -2981,15 +3074,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 当前映射：大模型短期建议 ↔ CatBoost模型预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
 
 **规则3：CatBoost概率评估**
-- **高置信度上涨（probability > 0.60）**：信号可靠性最高，优先级提升
+- **高置信度跑赢（probability > 0.60）**：信号可靠性最高，优先级提升
 - **中等置信度观望（0.50 < probability ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
-- **预测下跌（probability ≤ 0.50）**：信号可靠性低，建议观望，不进行交易
+- **预测跑输（probability ≤ 0.50）**：信号可靠性低，建议观望，不进行交易
 - 如果probability高（>0.60），综合置信度最高
 - 如果probability低（≤0.50），降低为中等置信度
 
 **规则4：推荐理由格式**
 - 必须说明：短期建议+中期建议+CatBoost预测（probability）
-- 例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测上涨概率0.72（高置信度），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"
+- 例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测跑赢概率0.72（高置信度），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"
 
 请基于上述规则，完成以下任务：
 
@@ -3022,7 +3115,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - **绝对禁止**： probability ≤ 0.50 的股票不能出现在"强烈买入信号"或"买入信号"中
    - **正确处理**： probability ≤ 0.50 的股票应该出现在"持有/观望"或"卖出信号"中
    - **理由说明**：在"推荐理由"中必须明确说明"CatBoost probability ≤ 0.50，违反硬约束，建议观望"
-   - **示例**："短期建议买入，中期建议买入，但CatBoost预测上涨概率0.48（≤0.50），违反硬约束，建议观望"
+   - **示例**："短期建议买入，中期建议买入，但CatBoost预测跑赢概率0.48（≤0.50），违反硬约束，建议观望"
 
 4. **风险提示**：
    - 分析当前市场整体风险
@@ -3044,8 +3137,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 # 综合买卖建议
 
 ## 强烈买入信号（2-3只）
-1. [股票代码] [股票名称] 
-   - 推荐理由：[简短理由，例如：短期买入，中期买入，CatBoost预测上涨概率0.72（高置信度），方向一致]
+1. [股票代码] [股票名称]
+   - 推荐理由：[简短理由，例如：短期买入，中期买入，CatBoost预测跑赢概率0.72（高置信度），方向一致]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -3467,6 +3560,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ### ✦ 卖出策略
 
 - **CatBoost 概率 ≤ 0.50** + **短期看跌** + **中期看跌** → 卖出
+- **相对标签**：CatBoost概率预测"跑赢/跑输"，而非"绝对涨跌"
 
 - **CatBoost 概率 < 0.40** → 禁止持有或观望（硬约束）
 
@@ -3528,7 +3622,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 1. **模型不确定性**：
    - ML 20天 CatBoost模型标准差为±{model_accuracy['catboost']['std']:.2%}
-   - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
+   - 融合预测概率>0.60为高置信度跑赢，0.50-0.60为中等置信度观望，≤0.50为预测跑输
+   - **相对标签**：预测"跑赢/跑输其他股票"，而非"绝对涨跌"
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
 2. **市场风险**：
