@@ -369,7 +369,12 @@ class WalkForwardValidator:
         # 生成预测（使用 predict_proba 方法批量预测）
         print(f"  🔄 生成预测...")
         X_test = test_data[model.feature_columns]
-        prediction_proba = model.predict_proba(X_test)
+
+        # 对 Ranker 模型使用自动温度参数，扩大概率分布范围
+        if hasattr(model, 'model_type') and model.model_type == 'catboost_ranker':
+            prediction_proba = model.predict_proba(X_test, temperature='auto')
+        else:
+            prediction_proba = model.predict_proba(X_test)
         
         # 根据市场状态使用自适应置信度阈值（符合业界标准）
         base_threshold = self.confidence_threshold

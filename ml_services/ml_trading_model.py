@@ -7434,12 +7434,20 @@ class CatBoostRankerModel(BaseTradingModel):
 
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, X, temperature=1.0):
         """预测排序分数（兼容 predict_proba 接口）
 
         返回格式与 CatBoostClassifier.predict_proba() 兼容：
         - 第一列：1 - sigmoid(score)
         - 第二列：sigmoid(score)
+
+        参数：
+            X: 特征数据
+            temperature: 温度参数，控制概率分布的陡峭程度
+                        - temperature=1.0: 默认，使用原始分数
+                        - temperature>1.0: 概率分布更平坦（更保守）
+                        - temperature<1.0: 概率分布更陡峭（更激进）
+                        - temperature='auto': 自动根据分数标准差调整
         """
         from catboost import Pool
         from scipy.special import expit
@@ -7476,8 +7484,17 @@ class CatBoostRankerModel(BaseTradingModel):
         test_pool = Pool(data=test_df.values, cat_features=[])
         scores = self.ranker_model.predict(test_pool)
 
-        # sigmoid 变换到 [0,1]，保持排序不变
-        proba_col1 = expit(scores)
+        # 自动温度调整：使分数标准差约为 1.0
+        if temperature == 'auto':
+            score_std = np.std(scores)
+            if score_std > 0:
+                temperature = 1.0 / max(score_std, 0.1)  # 避免除零
+            else:
+                temperature = 1.0
+
+        # 缩放分数后再 sigmoid 变换
+        scaled_scores = scores / temperature
+        proba_col1 = expit(scaled_scores)
         return np.column_stack([1 - proba_col1, proba_col1])
 
     def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True):
