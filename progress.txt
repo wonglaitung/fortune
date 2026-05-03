@@ -2,7 +2,7 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-29
+**最后更新**：2026-05-03
 
 ---
 
@@ -56,6 +56,83 @@
 - `ml_services/walk_forward_validation.py`（新增 IC 指标）
 - `docs/THREE_HORIZON_ANALYSIS.md`（更新三周期验证结果）
 - `lessons.md`（更新因果链传导数据）
+
+---
+
+## 最新进展（2026-05-03）
+
+### LightGBM 和 GBDT 截面特征支持
+
+**目标**：统一所有模型的截面特征计算逻辑，确保与相对标签兼容
+
+**背景**：
+- CatBoost 已实现截面百分位和 Z-Score 特征（`_CS_Pct`, `_CS_ZScore`）
+- LightGBM 和 GBDT 此前仅支持逐只预测，截面特征退化为 0.5/0.0
+- 单只股票预测无法计算截面排名（groupby 返回单一值）
+
+**实施方案**：
+
+1. **批量预测架构改造**（所有模型统一）
+   - 阶段1：逐只提取原始特征（不含截面特征）
+   - 阶段2：合并所有股票数据，联合计算截面特征
+   - 阶段3：逐只预测（使用正确的截面特征值）
+
+2. **新增核心方法**
+   - `_extract_raw_features_single()` - 提取单只股票原始特征
+   - `_calculate_cross_sectional_percentile_features()` - 计算截面百分位
+   - `_calculate_cross_sectional_zscore_features()` - 计算截面 Z-Score
+   - `_predict_from_features()` - 从特征数据预测（共用逻辑）
+   - `predict_batch()` - 批量预测入口
+
+3. **截面特征覆盖（55个）**
+   - 波动率：Volatility_5d/10d/20d/60d/120d, GARCH_Conditional_Vol
+   - ATR：ATR, ATR_Ratio, ATR_Risk_Score
+   - 成交量：Volume_Ratio_5d/20d, Volume_Volatility, OBV, CMF
+   - 动量：Momentum_20d, Momentum_Accel_5d/10d, MACD_histogram
+   - RSI：RSI, RSI_Deviation, RSI_ROC
+   - 相对强度：RS_Ratio_5d/20d, RS_Diff_5d/20d, Relative_Return
+   - 布林带：BB_Position, BB_Width
+   - 风险：Max_Drawdown_20d/60d, Vol_Z_Score
+   - 资金流向：Smart_Money_Score, Accumulation_Score
+   - 基本面：PE, PB, ROE, Market_Cap
+
+4. **单股预测回退机制**
+   - 训练时保存 `cs_feature_stats`（各截面特征的均值/标准差）
+   - 单股预测缺失截面特征时，使用训练集均值填充
+
+5. **残差化策略改进（P1-5 完成）**
+   - `keep_original=False`：残差版本直接替换原始特征名，不再保留 `_Residual` 后缀
+   - 训练和预测一致使用 `keep_original=False`
+   - **破坏性变更**：旧模型 pkl 文件不兼容，需重新训练
+
+**模型一致性**：
+
+| 特性 | CatBoost | LightGBM | GBDT |
+|------|----------|----------|------|
+| 截面百分位 | ✅ | ✅ 新增 | ✅ 新增 |
+| 截面 Z-Score | ✅ | ✅ 新增 | ✅ 新增 |
+| 批量预测架构 | ✅ | ✅ 新增 | ✅ 新增 |
+| 单股回退机制 | ✅ | ✅ 新增 | ✅ 新增 |
+| 残差化 keep_original=False | ✅ | ✅ 新增 | ✅ 新增 |
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（LightGBMModel 和 GBDTModel 全面改造，CatBoostModel 残差化参数更新）
+- `data_services/feature_residualizer.py`（默认 `keep_original=False`）
+   - 单股预测缺失截面特征时，使用训练集均值填充
+   - 最终回退：`_CS_Pct` 用 0.5，`_CS_ZScore` 用 0.0
+
+**模型一致性**：
+
+| 特性 | CatBoost | LightGBM | GBDT |
+|------|----------|----------|------|
+| 截面百分位 | ✅ | ✅ 新增 | ✅ 新增 |
+| 截面 Z-Score | ✅ | ✅ 新增 | ✅ 新增 |
+| 批量预测架构 | ✅ | ✅ 新增 | ✅ 新增 |
+| 单股回退机制 | ✅ | ✅ 新增 | ✅ 新增 |
+| 统计量持久化 | ✅ | ✅ 新增 | ✅ 新增 |
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（LightGBMModel 和 GBDTModel 全面改造）
 
 ---
 

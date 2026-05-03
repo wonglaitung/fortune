@@ -1,6 +1,6 @@
 # 特征工程指南
 
-> **最后更新**：2026-05-02（重构文档结构，"相对标签切换指南"独立成章）
+> **最后更新**：2026-05-03（新增：三模型截面特征统一架构，LightGBM/GBDT 与 CatBoost 保持一致）
 
 ---
 
@@ -130,6 +130,74 @@ python3 -m py_compile ml_services/ml_trading_model.py
 6. **残差特征**：剔除宏观因子后的个股特异性特征
 
 ### 2.3 核心特征类别详解
+
+#### 2.3.0 三模型截面特征统一架构（2026-05-03 新增）
+
+**背景**：此前仅 CatBoost 支持截面特征（`_CS_Pct`, `_CS_ZScore`），LightGBM 和 GBDT 仅支持逐只预测，导致三模型预测结果不一致。
+
+**解决方案**：统一三模型的特征工程架构，所有模型均支持批量预测和截面特征计算。
+
+**统一架构设计**：
+
+| 组件 | CatBoost | LightGBM | GBDT | 说明 |
+|------|----------|----------|------|------|
+| **截面百分位** | ✅ | ✅ 新增 | ✅ 新增 | `CROSS_SECTIONAL_PERCENTILE_FEATURES`（55个） |
+| **截面 Z-Score** | ✅ | ✅ 新增 | ✅ 新增 | `CROSS_SECTIONAL_ZSCORE_FEATURES`（43个） |
+| **批量预测** | `predict_batch()` | `predict_batch()` 重写 | `predict_batch()` 重写 | 统一三阶段架构 |
+| **单股回退** | `cs_feature_stats` | `cs_feature_stats` 新增 | `cs_feature_stats` 新增 | 训练集统计量填充 |
+| **特征提取** | `_extract_raw_features_single()` | 新增 | 新增 | 原始特征提取 |
+
+**批量预测三阶段流程**（三模型统一）：
+
+```python
+# 阶段1：逐只提取原始特征（不含截面特征）
+all_features = {}
+for code in codes:
+    all_features[code] = self._extract_raw_features_single(code, predict_date, horizon)
+
+# 阶段2：合并后联合计算截面特征
+combined = pd.concat(all_features.values())
+combined = self._calculate_cross_sectional_percentile_features(combined)
+combined = self._calculate_cross_sectional_zscore_features(combined)
+
+# 阶段3：逐只预测（使用正确的截面特征）
+for code in all_features.keys():
+    stock_data = combined[combined['Code'] == code]
+    result = self._predict_from_features(code, stock_data.iloc[-1:], horizon)
+```
+
+**关键改进**：
+
+| 改进项 | 之前 | 之后 | 效果 |
+|--------|------|------|------|
+| 截面特征计算 | 单只股票退化为 0.5/0.0 | 批量联合计算真实排名 | 特征值分布一致 |
+| 单股预测回退 | 使用默认值 0.5/0.0 | 使用训练集统计量均值 | 更接近训练分布 |
+| 模型间一致性 | 不一致 | 一致 | 融合预测更可靠 |
+
+**单股预测回退机制**：
+
+```python
+# 训练时保存统计量
+self.cs_feature_stats = {}
+for col in df.columns:
+    if col.endswith('_CS_Pct') or col.endswith('_CS_ZScore'):
+        self.cs_feature_stats[col] = {
+            'mean': float(df[col].mean()),
+            'std': float(df[col].std()),
+        }
+
+# 预测时回退
+if cs_feat not in latest_data.columns:
+    if hasattr(self, 'cs_feature_stats') and cs_feat in self.cs_feature_stats:
+        latest_data[cs_feat] = self.cs_feature_stats[cs_feat]['mean']
+    else:
+        latest_data[cs_feat] = 0.5 if suffix == '_CS_Pct' else 0.0
+```
+
+**实现文件**：
+- `ml_services/ml_trading_model.py` - `CatBoostModel`, `LightGBMModel`, `GBDTModel`
+
+---
 
 #### 2.3.1 残差特征（35个，2026-04-29 新增）
 
@@ -349,7 +417,31 @@ y = (actual_return > expected_return).astype(int)
 | **单调约束** | `use_monotone_constraints=True` | 强制特征方向不变 | RS_Ratio, RSI, MACD |
 | **时间衰减** | `time_decay_lambda=0.5` | 降低旧数据权重 | 所有特征 |
 | ~~滚动百分位~~ | ~~`use_rolling_percentile=True`~~ | ~~绝对值转历史百分位~~ | ❌ 已关闭（降低IC） |
-| **截面百分位** | `use_cross_sectional_percentile=True` | 当日排名百分位 | 波动率、ATR、成交量、动量、RSI（9个特征） |
+| **截面百分位** | `use_cross_sectional_percentile=True` | 当日排名百分位 | 波动率、ATR、成交量、动量、RSI等（55个特征） |
+
+**截面百分位特征列表（55个）**：
+
+| 类别 | 特征 |
+|------|------|
+| 波动率 | Volatility_5d/10d/20d/60d/120d, GARCH_Conditional_Vol, GARCH_Vol_Ratio, Intraday_Range |
+| ATR | ATR, ATR_Ratio, ATR_Risk_Score, ATR_Change_5d |
+| 成交量 | Volume_Ratio_5d/20d, Volume_Volatility, OBV, CMF, Volume_Confirmation_Adaptive, Turnover_Change_5d |
+| 动量 | Momentum_20d, Momentum_Accel_5d/10d, MACD_histogram, Price_Pct_20d, Close_Position |
+| RSI | RSI, RSI_Deviation, RSI_ROC, RSI_Deviation_MA20 |
+| 相对强度 | RS_Ratio_5d/20d, RS_Diff_5d/20d, Relative_Return |
+| 布林带 | BB_Position, BB_Width, BB_Width_Normalized |
+| 风险 | Max_Drawdown_20d/60d, Vol_Z_Score, Kurtosis_20d |
+| 资金流向 | Smart_Money_Score, Accumulation_Score, Net_Flow_5d/20d |
+| 基本面 | PE, PB, ROE, Market_Cap |
+
+**截面 Z-Score 特征列表（43个）**：
+
+在截面百分位基础上增加 `Volume`, `Turnover`, `Turnover_Mean_20` 等量级特征。
+
+**注意事项**：
+- 单只股票预测时无法计算截面排名，使用训练集统计量均值回退
+- 三模型（CatBoost/LightGBM/GBDT）使用相同的特征列表和计算逻辑
+- 截面特征在 `prepare_data()` 中合并所有股票后计算，在 `predict_batch()` 中批量计算
 
 **滚动百分位 vs 截面百分位**：
 
@@ -429,8 +521,9 @@ df['Volume_Ratio'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(5).me
 | 4 | **Pearson 相关性** | 与现有特征 < 0.8 | 与现有特征 < 0.8 |
 | 5 | **随机种子稳定性** | 3 个种子波动 < 2% | 3 个种子波动 < 2% |
 | 6 | **单调约束判断** | 有明确方向逻辑则添加 | 有明确方向逻辑则添加 |
-| 7 | **滚动百分位判断** | 绝对量级特征需转换 | 绝对量级特征需转换 |
+| 7 | **截面百分位判断** | 与相对标签匹配的特征需添加 | 与相对标签匹配的特征需添加 |
 | 8 | **训练/预测一致性** | 特征变换在两处都执行 | 特征变换在两处都执行 |
+| 9 | **三模型一致性** | 三模型特征工程逻辑一致 | 三模型特征工程逻辑一致 |
 
 **新增特征时的额外检查项**：
 
@@ -439,6 +532,35 @@ df['Volume_Ratio'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(5).me
 | **单调约束** | 特征有明确因果关系（如 RSI 高 → 超买） | 添加到 `MONOTONE_CONSTRAINT_MAP` | `ml_trading_model.py:4084-4108` |
 | **训练/预测一致性** | 任何训练时的特征变换 | 在 `predict_proba()` 中重复执行 | `ml_trading_model.py:5216-5233` |
 | **模型保存/加载** | 新增模型参数 | 保存到 `save_model()`，恢复于 `load_model()` | `ml_trading_model.py:5334-5356` |
+| **三模型一致性** | 新增特征涉及截面特征 | 同步更新 `LightGBMModel` 和 `GBDTModel` | `ml_trading_model.py` |
+
+**三模型一致性检查清单**：
+
+当修改特征工程或新增特征时，必须同步更新三模型：
+
+| 检查项 | CatBoostModel | LightGBMModel | GBDTModel | 验证方法 |
+|--------|---------------|---------------|-----------|----------|
+| **截面百分位列表** | `CROSS_SECTIONAL_PERCENTILE_FEATURES` | ✅ 保持一致 | ✅ 保持一致 | 列表长度和内容相同 |
+| **截面 Z-Score 列表** | `CROSS_SECTIONAL_ZSCORE_FEATURES` | ✅ 保持一致 | ✅ 保持一致 | 列表长度和内容相同 |
+| **批量预测方法** | `predict_batch()` | ✅ 统一架构 | ✅ 统一架构 | 三阶段流程一致 |
+| **特征提取方法** | `_extract_raw_features_single()` | ✅ 统一接口 | ✅ 统一接口 | 返回相同特征集 |
+| **统计量保存/加载** | `save_model()` / `load_model()` | ✅ 持久化 | ✅ 持久化 | `cs_feature_stats` 字段 |
+| **单股回退机制** | `_predict_from_features()` | ✅ 统一回退 | ✅ 统一回退 | 训练集统计量填充 |
+
+**三模型同步修改示例**：
+
+```python
+# 新增截面特征时，需在三处同步添加
+
+# 1. CatBoostModel.CROSS_SECTIONAL_PERCENTILE_FEATURES
+# 2. LightGBMModel.CROSS_SECTIONAL_PERCENTILE_FEATURES  
+# 3. GBDTModel.CROSS_SECTIONAL_PERCENTILE_FEATURES
+
+# 同时更新 Z-Score 列表（如适用）
+# 1. CatBoostModel.CROSS_SECTIONAL_ZSCORE_FEATURES
+# 2. LightGBMModel.CROSS_SECTIONAL_ZSCORE_FEATURES
+# 3. GBDTModel.CROSS_SECTIONAL_ZSCORE_FEATURES
+```
 
 **单调约束方向参考**（2026-05-03 优化，基于业界实践）：
 
@@ -604,12 +726,14 @@ rm -rf data/feature_cache/*.pkl
 
 | 文件 | 说明 |
 |------|------|
-| `ml_services/ml_trading_model.py` | 特征工程实现（FeatureEngineer 类） |
+| `ml_services/ml_trading_model.py` | 特征工程实现（FeatureEngineer 类），包含三模型（CatBoostModel / LightGBMModel / GBDTModel） |
 | `data_services/volatility_model.py` | GARCH 波动率 |
 | `data_services/regime_detector.py` | HSI 市场状态 |
 | `data_services/calendar_features.py` | 日历效应 |
 | `data_services/network_features.py` | 网络特征 |
+| `data_services/feature_residualizer.py` | 特征残差化 |
 | `docs/FEATURE_IMPORTANCE_ANALYSIS.md` | 特征重要性分析 |
+| `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md` | 特征与标签兼容性修复计划 |
 
 ### 6.3 参考资料
 
@@ -619,5 +743,5 @@ rm -rf data/feature_cache/*.pkl
 
 ---
 
-*文档版本：v4.0*
-*更新日期：2026-05-02*
+*文档版本：v4.1*
+*更新日期：2026-05-03*

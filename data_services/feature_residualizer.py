@@ -166,7 +166,7 @@ class FeatureResidualizer:
         self,
         df: pd.DataFrame,
         inplace: bool = False,
-        keep_original: bool = True
+        keep_original: bool = False
     ) -> pd.DataFrame:
         """
         对每个微观特征，剔除宏观因子贡献
@@ -174,7 +174,7 @@ class FeatureResidualizer:
         Args:
             df: 包含特征的 DataFrame
             inplace: 是否原地修改（默认 False，返回新 DataFrame）
-            keep_original: 是否保留原始特征（默认 True，残差特征命名为 {feature}_Residual）
+            keep_original: 是否保留原始特征（默认 False，残差直接替换原始特征）
 
         Returns:
             DataFrame: 包含残差特征的 DataFrame

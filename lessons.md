@@ -1,10 +1,83 @@
 # 经验教训
 
-> **版本**：v5.8 (2026-05-02) | **状态**：当前有效
+> **版本**：v5.10 (2026-05-03) | **状态**：当前有效
 
 ---
 
 ## 一、核心警告
+
+### 0. 所有模型必须使用一致的特征工程逻辑 ⭐（新增 2026-05-03）
+
+**问题**：不同模型使用不同的特征计算逻辑，导致预测结果不可比
+
+**背景**：
+- 系统包含三种模型：CatBoost、LightGBM、GBDT
+- CatBoost 已实现截面特征（`_CS_Pct`, `_CS_ZScore`）
+- LightGBM/GBDT 此前仅支持逐只预测，截面特征退化为 0.5/0.0
+- 这导致相同股票、相同日期的预测结果因模型而异
+
+**不一致的后果**：
+
+| 场景 | CatBoost | LightGBM/GBDT | 问题 |
+|------|----------|---------------|------|
+| 单股预测截面特征 | 0.5/0.0 回退 | 0.5/0.0 回退 | ✅ 一致 |
+| 批量预测截面特征 | 联合计算 | 逐只计算 | ❌ 不一致 |
+| 截面特征值 | 真实排名 | 常数 0.5 | ❌ 分布差异 |
+| 模型融合结果 | 不可靠 | 不可靠 | ❌ 信号冲突 |
+
+**解决方案**：
+
+1. **统一批量预测架构**
+   ```python
+   def predict_batch(self, codes, predict_date=None, horizon=None):
+       # 阶段1：逐只提取原始特征
+       all_features = {}
+       for code in codes:
+           stock_df = self._extract_raw_features_single(code, ...)
+           all_features[code] = stock_df
+       
+       # 阶段2：合并后联合计算截面特征
+       combined = pd.concat(all_features.values())
+       combined = self._calculate_cross_sectional_features(combined)
+       
+       # 阶段3：逐只预测
+       for code in all_features.keys():
+           stock_data = combined[combined['Code'] == code]
+           result = self._predict_from_features(code, stock_data)
+   ```
+
+2. **统一截面特征列表**
+   - 所有模型使用相同的 `CROSS_SECTIONAL_PERCENTILE_FEATURES`（55个）
+   - 所有模型使用相同的 `CROSS_SECTIONAL_ZSCORE_FEATURES`（43个）
+   - 确保特征名称、计算方式完全一致
+
+3. **统一回退机制**
+   - 训练时保存 `cs_feature_stats`（截面特征统计量）
+   - 单股预测时使用训练集均值填充缺失值
+   - 最终回退：`_CS_Pct` 用 0.5，`_CS_ZScore` 用 0.0
+
+4. **统一模型持久化**
+   ```python
+   def save_model(self, filepath):
+       model_data = {
+           # ... 原有字段
+           'use_cross_sectional_percentile': self.use_cross_sectional_percentile,
+           'use_cross_sectional_zscore': self.use_cross_sectional_zscore,
+           'cs_feature_stats': self.cs_feature_stats,  # 关键：持久化统计量
+       }
+   ```
+
+**核心教训**：
+- **多模型系统必须保持特征工程逻辑一致**，否则预测结果不可比
+- 截面特征必须在所有股票数据上联合计算，单只股票无法计算
+- 批量预测架构是截面特征正确性的前提
+- 单股预测必须有合理的回退机制（训练集统计量 > 默认值）
+- 模型持久化必须包含截面特征统计量，否则加载后回退失效
+
+**代码位置**：
+- `ml_services/ml_trading_model.py`（LightGBMModel、GBDTModel、CatBoostModel）
+
+---
 
 ### 1. 网络特征数据泄漏防护 ⭐（新增 2026-05-02）
 
@@ -211,27 +284,26 @@ def _calculate_cross_sectional_percentile(self, df, features):
 - 选股问题必须用相对标签，择时问题必须用绝对标签
 - 模型目标与标签类型必须匹配，否则模型会学到错误的信号
 
-### 4. 特征残差化提升准确率 ⭐（新增 2026-04-29）
+### 4. 特征残差化提升准确率 ⭐（新增 2026-04-29，更新 2026-05-03）
 
 **问题**：全局特征（美债利率）导致模型依赖宏观信号，而非个股特异性特征
 
 **解决方案**：
 1. **相对标签**：以当天所有股票收益率中位数为基准
 2. **特征残差化**：对 35 个微观特征剔除宏观因子贡献
+3. **残差替换原始特征**（2026-05-03 实施）：`keep_original=False`
 
-**验证结果**：
+**残差化策略演进**：
 
-| 指标 | 残差化前 | 残差化后 | 变化 |
-|------|---------|---------|------|
-| 准确率 | 54.93% | **60.77%** | **+5.84%** ✅ |
-| 夏普比率 | 0.9059 | 0.8672 | -0.0387 |
-| 最大回撤 | -0.20% | -0.27% | -0.07% |
-| IC | - | -0.0181 | 新增指标 |
+| 阶段 | 实现方式 | 特征名 | 问题 | 解决 |
+|------|---------|--------|------|------|
+| 初始 | `keep_original=True` | `Momentum_20d_Residual` | 原始特征仍可使用，模型可走捷径 | ❌ |
+| 最终 | `keep_original=False` | `Momentum_20d` | 残差直接替换，强制使用净化后特征 | ✅ |
 
-**教训**：
-- 特征残差化能有效降低宏观因子对微观特征的干扰
-- 准确率显著提升，但 IC 为负值说明选股能力仍有限
-- 残差化后特征数量增加（730 → 770），需注意模型复杂度
+**破坏性变更说明**：
+- **旧模型不兼容**：`keep_original=False` 后，旧模型 pkl 文件无法加载（特征名不一致）
+- **必须重新训练**：所有模型需重新训练以生成新的特征集
+- **优势**：消除模型使用原始宏观特征的
 
 ### 4. 特征冗余清理需谨慎 ⭐（更新 2026-04-28）
 
@@ -646,6 +718,8 @@ df = ak.tool_trade_date_hist_sina()
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-03 | v5.10 | 实施：残差化策略改进 `keep_original=False`，残差直接替换原始特征 |
+| 2026-05-03 | v5.9 | 添加：所有模型必须使用一致的特征工程逻辑（LightGBM/GBDT/CatBoost截面特征统一） |
 | 2026-05-02 | v5.8 | 添加：标签类型必须与模型目标匹配（选股用相对标签，择时用绝对标签） |
 | 2026-05-02 | v5.7 | 添加：Regime Shift 导致 IC 负值的解决方案（单调约束、时间衰减、滚动百分位） |
 | 2026-04-28 | v5.3 | 添加：数据泄漏阈值因模型而异（个股>65%，恒指>80%）；修复编号 |

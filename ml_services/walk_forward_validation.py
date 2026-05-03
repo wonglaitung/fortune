@@ -62,7 +62,8 @@ class WalkForwardValidator:
         use_monotone_constraints: bool = True,
         time_decay_lambda: float = 0.5,
         use_rolling_percentile: bool = False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
-        use_cross_sectional_percentile: bool = True  # 2026-05-03: 启用截面百分位（与相对标签匹配）
+        use_cross_sectional_percentile: bool = True,  # 2026-05-03: 截面百分位（与相对标签匹配）
+        use_cross_sectional_zscore: bool = True  # 2026-05-03: 截面 Z-Score（解决时间序列基准问题）
     ):
         """
         初始化 Walk-forward 验证器
@@ -79,7 +80,8 @@ class WalkForwardValidator:
             use_monotone_constraints: 是否使用单调约束（防止特征方向翻转，推荐开启）
             time_decay_lambda: 时间衰减系数（0=无衰减，0.5=默认）
             use_rolling_percentile: 是否使用滚动百分位特征（已关闭，消融实验证明降低IC）
-            use_cross_sectional_percentile: 是否使用截面百分位特征（备选方案，与相对标签匹配）
+            use_cross_sectional_percentile: 是否使用截面百分位特征（与相对标签匹配）
+            use_cross_sectional_zscore: 是否使用截面 Z-Score 特征（解决时间序列基准问题）
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -94,6 +96,7 @@ class WalkForwardValidator:
         self.time_decay_lambda = time_decay_lambda
         self.use_rolling_percentile = use_rolling_percentile
         self.use_cross_sectional_percentile = use_cross_sectional_percentile
+        self.use_cross_sectional_zscore = use_cross_sectional_zscore
 
         # 模型类映射
         self.model_classes = {
@@ -114,7 +117,7 @@ class WalkForwardValidator:
         logger.info(f"测试窗口: {test_window_months} 个月")
         logger.info(f"滚动步长: {step_window_months} 个月")
         logger.info(f"预测周期: {horizon} 天")
-        logger.info(f"单调约束: {use_monotone_constraints}, 时间衰减: {time_decay_lambda}, 滚动百分位: {use_rolling_percentile}, 截面百分位: {use_cross_sectional_percentile}")
+        logger.info(f"单调约束: {use_monotone_constraints}, 时间衰减: {time_decay_lambda}, 滚动百分位: {use_rolling_percentile}, 截面百分位: {use_cross_sectional_percentile}, 截面ZScore: {use_cross_sectional_zscore}")
 
     def validate(self, stock_list, start_date, end_date):
         """
@@ -283,7 +286,8 @@ class WalkForwardValidator:
                 use_monotone_constraints=self.use_monotone_constraints,
                 time_decay_lambda=self.time_decay_lambda,
                 use_rolling_percentile=self.use_rolling_percentile,
-                use_cross_sectional_percentile=self.use_cross_sectional_percentile
+                use_cross_sectional_percentile=self.use_cross_sectional_percentile,
+                use_cross_sectional_zscore=self.use_cross_sectional_zscore
             )
         else:
             model = self.model_class()

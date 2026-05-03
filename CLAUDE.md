@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **📚 详细文档**：特征工程、验证方法、异常检测等完整指南请查看 [docs/](docs/) 目录
 > **⚠️ 经验教训**：所有关键警告和最佳实践请参阅 [lessons.md](lessons.md)
 > **🔧 编程规范**：规范化开发流程、系统设计决策、测试验证要求请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
+> **📊 项目进度**：当前进展和最新更新请查看 [progress.txt](progress.txt)
 
 ---
 
@@ -98,6 +99,7 @@ AKShare      南向资金        主力追踪     性能监控
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
+- `ml_services/ml_trading_model.py` 包含三个模型类（CatBoostModel / LightGBMModel / GBDTModel），保持特征工程逻辑一致
 
 **新增特征模块**（2026-04-27~28）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
@@ -198,6 +200,39 @@ AKShare      南向资金        主力追踪     性能监控
 | **消费股** | 0.7445 | 54.80% | ⭐⭐⭐⭐⭐ |
 | 银行股 | 0.1546 | 50.44% | ⭐⭐⭐⭐ |
 | 半导体股 | 0.1260 | 49.87% | ⭐⭐⭐⭐ |
+
+### 模型架构一致性要求
+
+**三模型统一设计**（CatBoost / LightGBM / GBDT）：
+
+| 特性 | 说明 | 代码位置 |
+|------|------|----------|
+| 截面特征 | 所有模型支持 `_CS_Pct` 和 `_CS_ZScore` | `CROSS_SECTIONAL_*_FEATURES` 常量 |
+| 批量预测 | `predict_batch()` 统一架构：提取→合并→计算截面→预测 | 各模型的 `predict_batch()` 方法 |
+| 单股回退 | 缺失截面特征时使用训练集统计量 | `cs_feature_stats` + `_predict_from_features()` |
+| 特征提取 | `_extract_raw_features_single()` 统一接口 | 各模型独立实现 |
+
+**批量预测流程**：
+```python
+# 阶段1：逐只提取原始特征（不含截面特征）
+all_features = {}
+for code in codes:
+    all_features[code] = self._extract_raw_features_single(code, ...)
+
+# 阶段2：合并后联合计算截面特征
+combined = pd.concat(all_features.values())
+combined = self._calculate_cross_sectional_percentile_features(combined)
+combined = self._calculate_cross_sectional_zscore_features(combined)
+
+# 阶段3：逐只预测
+for code in all_features.keys():
+    result = self._predict_from_features(code, combined[combined['Code'] == code])
+```
+
+**修改模型时的同步要求**：
+- 修改特征工程后，三模型必须同步更新
+- 新增截面特征时，需添加到 `CROSS_SECTIONAL_PERCENTILE_FEATURES` 和 `CROSS_SECTIONAL_ZSCORE_FEATURES`
+- 单股预测 (`predict()`) 必须保持与批量预测相同的特征处理逻辑
 
 ---
 
@@ -312,4 +347,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-05-03（截面百分位消融实验：夏普比率+11.6%）
+**最后更新**：2026-05-03（LightGBM/GBDT截面特征统一，与CatBoost保持一致）
