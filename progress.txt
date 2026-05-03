@@ -2,11 +2,64 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-03
+**最后更新**：2026-05-04
 
 ---
 
-## 最新进展（2026-04-29）
+## 最新进展（2026-05-04）
+
+### CatBoostRanker 排序模型验证
+
+**目标**：使用 CatBoostRanker + YetiRank 损失函数优化排序能力，提升 Rank IC
+
+**背景**：
+- 当前模型使用 CatBoostClassifier + Logloss 优化分类准确率
+- 评估指标 Rank IC 衡量排序能力，两者不对齐
+- CatBoostRanker 直接优化排序（YetiRank 损失）
+
+**实施内容**：
+
+1. **CatBoostRankerModel 类实现**
+   - 损失函数：YetiRank（优化排序）
+   - 标签：连续值（Future_Return）而非二元标签
+   - group_id：日期（每天一组）
+   - eval_metric：NDCG
+
+2. **概率变换修复**
+   - 问题：原始分数分布集中，sigmoid 后概率过于集中在 0.5 附近
+   - 解决：温度参数归一化 `temperature = score_std`
+   - 分类特征处理：正确传递 cat_features 参数
+
+**验证结果对比（Walk-forward，12 folds，57只股票）**：
+
+| 指标 | CatBoostClassifier | CatBoostRanker | 变化 |
+|------|---------------------|----------------|------|
+| IC | -0.0216 | **+0.0122** | ✅ 从负变正 |
+| Rank IC | -0.0012 | -0.0060 | ❌ 未改善 |
+| 准确率 | 59.38% | 49.69% | ⚠️ 下降（预期） |
+| 夏普比率 | 0.8291 | 0.7945 | ➖ 相近 |
+| 索提诺比率 | 3.54 | **5.61** | ✅ 提升 58% |
+| 最大回撤 | -0.23% | -0.22% | ➖ 相近 |
+
+**关键发现**：
+- ✅ IC 从负变正（-0.0216 → +0.0122）
+- ⚠️ Rank IC 未达目标（-0.0060，目标 >0.02）
+- ⚠️ 准确率下降是预期的（排序模型优化排序而非分类）
+- ✅ 索提诺比率显著提升（风险调整收益更好）
+
+**核心教训**：
+- 排序模型优化排序而非分类准确率
+- 温度参数应使用 score_std，而非 1.0/score_std
+- 分类特征必须在 predict_proba 中正确处理
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（CatBoostRankerModel 类、温度参数）
+- `ml_services/walk_forward_validation.py`（Ranker 模型支持）
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P3 阶段文档）
+
+---
+
+## 最新进展（2026-05-03）
 
 ### 特征残差化 + 相对标签实施
 

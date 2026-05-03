@@ -1,12 +1,61 @@
 # 经验教训
 
-> **版本**：v5.10 (2026-05-03) | **状态**：当前有效
+> **版本**：v5.11 (2026-05-04) | **状态**：当前有效
 
 ---
 
 ## 一、核心警告
 
-### 0. 所有模型必须使用一致的特征工程逻辑 ⭐（新增 2026-05-03）
+### 0. CatBoostRanker 排序模型的概率变换 ⭐（新增 2026-05-04）
+
+**问题**：CatBoostRanker 的原始分数分布集中，sigmoid 变换后概率过于集中在 0.5 附近
+
+**背景**：
+- CatBoostRanker 使用 YetiRank 损失函数，输出原始排序分数
+- 原始分数范围通常很小（例如 [-0.15, 0.22]，标准差 ~0.05）
+- 直接 sigmoid 变换后，概率集中在 [0.46, 0.55] 附近
+- 置信度阈值 0.55 会过滤掉几乎所有信号
+
+**解决方案**：
+
+1. **温度参数归一化**
+   ```python
+   # 使用分数标准差作为温度，归一化后 sigmoid 输出范围更广
+   temperature = score_std  # 而非 1.0 / score_std
+   scaled_scores = scores / temperature
+   proba_col1 = expit(scaled_scores)
+   ```
+
+2. **分类特征处理**
+   ```python
+   # predict_proba 中必须正确传递 cat_features
+   categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys()]
+   test_pool = Pool(data=test_df.values, cat_features=categorical_features if categorical_features else None)
+   ```
+
+**验证结果对比**：
+
+| 指标 | CatBoostClassifier | CatBoostRanker | 变化 |
+|------|---------------------|----------------|------|
+| IC | -0.0216 | **+0.0122** | ✅ 从负变正 |
+| Rank IC | -0.0012 | -0.0060 | ❌ 未改善 |
+| 准确率 | 59.38% | 49.69% | ⚠️ 下降（预期） |
+| 夏普比率 | 0.8291 | 0.7945 | ➖ 相近 |
+| 索提诺比率 | 3.54 | **5.61** | ✅ 提升 58% |
+
+**核心教训**：
+- **排序模型优化排序而非分类准确率**，准确率下降是预期的
+- **温度参数应使用 score_std**，而非 1.0/score_std（后者会使概率更集中）
+- **分类特征必须在 predict_proba 中正确处理**，否则会报错
+- **IC 改善但 Rank IC 未改善**，表明排序能力仍有限
+- **索提诺比率提升**表明风险调整收益更好
+
+**代码位置**：
+- `ml_services/ml_trading_model.py:7481-7510`（CatBoostRankerModel.predict_proba）
+
+---
+
+### 1. 所有模型必须使用一致的特征工程逻辑 ⭐（更新 2026-05-03）
 
 **问题**：不同模型使用不同的特征计算逻辑，导致预测结果不可比
 
@@ -718,6 +767,7 @@ df = ak.tool_trade_date_hist_sina()
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-04 | v5.11 | 添加：CatBoostRanker 排序模型概率变换经验（温度参数、分类特征处理、IC改善） |
 | 2026-05-03 | v5.10 | 实施：残差化策略改进 `keep_original=False`，残差直接替换原始特征 |
 | 2026-05-03 | v5.9 | 添加：所有模型必须使用一致的特征工程逻辑（LightGBM/GBDT/CatBoost截面特征统一） |
 | 2026-05-02 | v5.8 | 添加：标签类型必须与模型目标匹配（选股用相对标签，择时用绝对标签） |
