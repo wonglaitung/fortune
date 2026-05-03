@@ -32,6 +32,9 @@ env/
 *.swo
 *~
 
+# CatBoost Training Info (generated during training, not needed for version control)
+catboost_info/
+
 # OS
 .DS_Store
 Thumbs.db
