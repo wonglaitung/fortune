@@ -349,24 +349,34 @@ y = (actual_return > expected_return).astype(int)
 | **单调约束** | `use_monotone_constraints=True` | 强制特征方向不变 | RS_Ratio, RSI, MACD |
 | **时间衰减** | `time_decay_lambda=0.5` | 降低旧数据权重 | 所有特征 |
 | ~~滚动百分位~~ | ~~`use_rolling_percentile=True`~~ | ~~绝对值转历史百分位~~ | ❌ 已关闭（降低IC） |
-| **截面百分位** | `use_cross_sectional_percentile=True` | 当日排名百分位 | 波动率、ATR、成交量、动量、RSI（10个特征） |
+| **截面百分位** | `use_cross_sectional_percentile=True` | 当日排名百分位 | 波动率、ATR、成交量、动量、RSI（9个特征） |
 
 **滚动百分位 vs 截面百分位**：
 
-| 特性 | 滚动百分位（已关闭） | 截面百分位（已实施） |
+| 特性 | 滚动百分位（已关闭） | 截面百分位（已启用） |
 |------|---------------------|-------------------|
 | **计算方式** | `df[feat].rolling(252).rank(pct=True)` | `df.groupby('Date')[feat].rank(pct=True)` |
 | **比较对象** | 该股票过去252天的值 | 当日所有股票的值 |
 | **信息保留** | ❌ 丢失绝对量级 | ✅ 保留相对排名 |
 | **适用场景** | 时间序列预测 | 截面选股 |
 | **与相对标签匹配** | ❌ 不匹配 | ✅ 完美匹配 |
-| **IC 影响** | ↓13%（负面） | 待验证 |
+| **夏普比率影响** | ↓（负面） | **↑11.6%** ✅ |
+| **IC 影响** | ↓13%（负面） | 未改善（-0.0033） |
 | **参数** | `use_rolling_percentile=False` | `use_cross_sectional_percentile=True` |
+
+**截面百分位消融实验（2026-05-03）**：
+
+| 指标 | 基线 | 截面百分位 | 变化 | 结论 |
+|------|------|-----------|------|------|
+| 准确率 | 60.77% | 59.51% | -1.26% | 正常范围 |
+| IC | -0.0181 | -0.0214 | -0.0033 | 未改善 |
+| **夏普比率** | 0.8672 | **0.9677** | **+11.6%** | ✅ 显著提升 |
+| 最大回撤 | -0.27% | -0.22% | +0.05% | ✅ 改善 |
 
 **截面百分位实现（已集成）**：
 ```python
 # 已集成到 ml_trading_model.py
-# 训练时自动计算，生成 _CS_Pct 后缀的新特征
+# 训练时自动计算，生成 _CS_Pct 后缀的新特征（9个）
 # 预测时：单只股票无法计算截面排名，使用原始特征并输出警告
 ```
 
@@ -374,7 +384,7 @@ y = (actual_return > expected_return).astype(int)
 ```bash
 # 带 IC 修复参数的 Walk-forward 验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
-# 注意：单调约束和时间衰减已集成到模型默认配置中
+# 注意：单调约束、时间衰减、截面百分位已集成到模型默认配置中
 ```
 
 ---
