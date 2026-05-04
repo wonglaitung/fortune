@@ -1517,6 +1517,10 @@ class FeatureEngineer:
     def create_market_environment_features(self, stock_df, hsi_df, us_market_df=None):
         """创建市场环境特征（包含港股和美股）
 
+        P7 优化（2026-05-04）：
+        - 添加环境状态特征（HSI_Volatility、Market_Activeness）
+        - 环境特征作为"开关"而非"预测变量"，让模型知道当前市场状态
+
         Args:
             stock_df: 股票数据
             hsi_df: 恒生指数数据
@@ -1535,6 +1539,45 @@ class FeatureEngineer:
 
         # 相对表现（相对于恒生指数）
         stock_df['Relative_Return'] = stock_df['Return_5d'] - stock_df['HSI_Return_5d']
+
+        # ========== P7 新增：环境状态特征 ==========
+        # 这些特征描述"市场环境"，而非"预测大盘方向"
+        # 让模型知道当前是"风大"还是"水静"，调整对微观特征的敏感度
+
+        # 1. HSI 波动率（环境状态，非预测变量）
+        # 描述当前市场的"波动基准"，帮助模型判断信号强弱
+        hsi_df = hsi_df.copy()
+        hsi_df['HSI_Volatility_5d'] = hsi_df['Close'].pct_change().rolling(5).std() * np.sqrt(252)
+        hsi_df['HSI_Volatility_20d'] = hsi_df['Close'].pct_change().rolling(20).std() * np.sqrt(252)
+        hsi_df['HSI_Volatility_Ratio'] = hsi_df['HSI_Volatility_5d'] / hsi_df['HSI_Volatility_20d']
+
+        # 2. 市场活跃度（成交量相对历史水平）
+        # 高活跃度 = 资金涌入，信号更可靠
+        hsi_df['HSI_Volume_MA20'] = hsi_df['Volume'].rolling(20).mean() if 'Volume' in hsi_df.columns else 1
+        hsi_df['Market_Activeness'] = hsi_df['Volume'] / hsi_df['HSI_Volume_MA20'] if 'Volume' in hsi_df.columns else 1.0
+
+        # 3. 市场宽度（涨跌比例，描述市场健康度）
+        # 这个特征需要从所有股票计算，暂时用 HSI 动量作为代理
+        hsi_df['HSI_Momentum_5d'] = hsi_df['Close'].pct_change(5)
+        hsi_df['HSI_Momentum_20d'] = hsi_df['Close'].pct_change(20)
+
+        # 4. VIX 水平分类（风险偏好状态）
+        # VIX < 15: 低波动，风险偏好高
+        # VIX 15-25: 正常
+        # VIX > 25: 高波动，风险规避
+        # 这个特征在 us_market_df 中处理
+
+        # 合并环境状态特征（shift 1 避免数据泄漏）
+        env_features = ['HSI_Volatility_5d', 'HSI_Volatility_20d', 'HSI_Volatility_Ratio',
+                        'Market_Activeness', 'HSI_Momentum_5d', 'HSI_Momentum_20d']
+        existing_env_features = [f for f in env_features if f in hsi_df.columns]
+        if existing_env_features:
+            # shift(1) 确保使用 T-1 日数据
+            hsi_env_shifted = hsi_df[existing_env_features].shift(1)
+            stock_df = stock_df.merge(
+                hsi_env_shifted,
+                left_index=True, right_index=True, how='left'
+            )
 
         # 如果提供了美股数据，合并美股特征
         if us_market_df is not None and not us_market_df.empty:
@@ -1558,6 +1601,15 @@ class FeatureEngineer:
                     us_market_df_shifted,
                     left_index=True, right_index=True, how='left'
                 )
+
+            # ========== P7 新增：VIX 风险状态分类 ==========
+            if 'VIX_Level' in us_market_df.columns:
+                # VIX 风险状态（分类，非连续值）
+                # 让模型学习"在 VIX 高时如何调整策略"
+                vix = us_market_df['VIX_Level'].shift(1)
+                stock_df['VIX_Risk_State_Low'] = (vix < 15).astype(int)  # 低波动
+                stock_df['VIX_Risk_State_Normal'] = ((vix >= 15) & (vix < 25)).astype(int)  # 正常
+                stock_df['VIX_Risk_State_High'] = (vix >= 25).astype(int)  # 高波动
 
         return stock_df
 
@@ -2792,52 +2844,39 @@ class LightGBMModel(BaseTradingModel):
     """LightGBM 模型 - 基于 LightGBM 梯度提升算法的单一模型"""
     _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
-    # 截面百分位特征列表（2026-05-04 P6 扩展，与 CatBoost 保持一致）
-    # 从 55 个扩展到 ~100 个，强化截面特征，强迫模型学习个股 Alpha
+    # 截面百分位特征列表（P7 精简版，2026-05-04）
+    # 从 P6 的 ~100 个精简回核心高质量特征，去除高相关性冗余
+    # 原则：质量 > 数量，保留核心 Alpha 信号
     CROSS_SECTIONAL_PERCENTILE_FEATURES = [
-        # 波动率特征
-        'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_60d',
-        'Volatility_120d', 'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'Intraday_Range',
-        'Intraday_Range_MA5', 'Intraday_Range_MA20',  # P6 新增
-        # ATR特征
-        'ATR', 'ATR_Ratio', 'ATR_Risk_Score', 'ATR_Change_5d',
-        'ATR_MA', 'ATR_MA60', 'ATR_MA120',  # P6 新增
-        # 成交量特征
+        # ========== 波动率特征（保留核心，去除冗余）==========
+        'Volatility_5d', 'Volatility_20d', 'Volatility_60d',  # 短中长期
+        'GARCH_Conditional_Vol', 'Intraday_Range',  # 条件波动率、日内波幅
+        # ========== ATR特征（保留核心）==========
+        'ATR', 'ATR_Ratio', 'ATR_Risk_Score',
+        # ========== 成交量特征（保留核心）==========
         'Volume_Ratio_5d', 'Volume_Ratio_20d', 'Volume_Volatility',
-        'OBV', 'CMF', 'Volume_Confirmation_Adaptive',
-        'Turnover_Change_5d', 'Turnover_Rate_Change_5d',
-        'Volume_Std_30d', 'Volume_Z_Score',  # P6 新增
-        # 动量特征（P6 扩展）
-        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_10d',
-        'Momentum_Accel_20d', 'Momentum_Accel_60d', 'Momentum_Accel_120d',  # P6 新增
-        'MACD_histogram', 'MACD_Hist_ROC', 'Price_Pct_20d', 'Close_Position',
-        'Price_Pct_5d', 'Price_Pct_10d',  # P6 新增
-        # RSI特征
-        'RSI', 'RSI_Deviation', 'RSI_ROC', 'RSI_Deviation_MA20',
-        'RSI_Deviation_Normalized',  # P6 新增
-        # 相对强度特征
+        'OBV', 'CMF',  # 资金流向指标
+        # ========== 动量特征（保留核心，去除高相关变体）==========
+        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_20d',
+        'MACD_histogram', 'Close_Position',
+        # ========== RSI特征（保留核心）==========
+        'RSI', 'RSI_Deviation',
+        # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
-        'Relative_Return', 'RS_Diff_1d',  # P6 新增
-        # 布林带/位置特征
-        'BB_Position', 'BB_Width', 'BB_Width_Normalized',
-        'MA5_Deviation_Std', 'MA20_Deviation_Std',
-        'MA60_Deviation_Std',  # P6 新增
-        # 风险特征（P6 扩展）
+        'Relative_Return',
+        # ========== 布林带/位置特征 ==========
+        'BB_Position', 'BB_Width',
+        # ========== 风险特征（保留核心）==========
         'Max_Drawdown_20d', 'Max_Drawdown_60d',
-        'Vol_Z_Score', 'Kurtosis_20d', 'Kurtosis_5d', 'Kurtosis_10d',
-        'Skewness_5d', 'Skewness_10d', 'Skewness_20d',  # P6 新增
-        # 资金流向特征
+        'Vol_Z_Score', 'Kurtosis_20d', 'Skewness_20d',
+        # ========== 资金流向特征 ==========
         'Smart_Money_Score', 'Accumulation_Score',
-        'Net_Flow_5d', 'Net_Flow_20d',
-        # 基本面特征
+        # ========== 基本面特征 ==========
         'PE', 'PB', 'ROE', 'Market_Cap',
-        # 异常检测特征（P6 新增）
+        # ========== 异常检测特征（关键 Alpha 信号）==========
         'Anomaly_Severity_Score', 'Anomaly_Buy_Signal',
-        'Price_Anomaly_ZScore', 'Volume_Anomaly_ZScore',
-        # 趋势特征（P6 新增）
-        '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend',
-        # K线形态特征（P6 新增）
-        'Upper_Shadow', 'Lower_Shadow', 'Gap_Size',
+        # ========== 网络增量特征（P7 新增）==========
+        'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
     # 截面 Z-Score 特征列表（2026-05-04 P6 扩展，与 CatBoost 保持一致）
@@ -3794,67 +3833,72 @@ class GBDTModel(BaseTradingModel):
     """GBDT 模型 - 基于梯度提升决策树的单一模型"""
     _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
-    # 截面百分位特征列表（2026-05-03 新增，与 CatBoost/LightGBM 保持一致）
+    # 截面百分位特征列表（P7 精简版，2026-05-04）
+    # 从 P6 的 ~100 个精简回核心高质量特征，去除高相关性冗余
+    # 原则：质量 > 数量，保留核心 Alpha 信号
     CROSS_SECTIONAL_PERCENTILE_FEATURES = [
-        'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_60d',
-        'Volatility_120d', 'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'Intraday_Range',
-        'ATR', 'ATR_Ratio', 'ATR_Risk_Score', 'ATR_Change_5d',
+        # ========== 波动率特征（保留核心，去除冗余）==========
+        'Volatility_5d', 'Volatility_20d', 'Volatility_60d',  # 短中长期
+        'GARCH_Conditional_Vol', 'Intraday_Range',  # 条件波动率、日内波幅
+        # ========== ATR特征（保留核心）==========
+        'ATR', 'ATR_Ratio', 'ATR_Risk_Score',
+        # ========== 成交量特征（保留核心）==========
         'Volume_Ratio_5d', 'Volume_Ratio_20d', 'Volume_Volatility',
-        'OBV', 'CMF', 'Volume_Confirmation_Adaptive',
-        'Turnover_Change_5d', 'Turnover_Rate_Change_5d',
-        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_10d',
-        'MACD_histogram', 'Price_Pct_20d', 'Close_Position',
-        'RSI', 'RSI_Deviation', 'RSI_ROC', 'RSI_Deviation_MA20',
+        'OBV', 'CMF',  # 资金流向指标
+        # ========== 动量特征（保留核心，去除高相关变体）==========
+        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_20d',
+        'MACD_histogram', 'Close_Position',
+        # ========== RSI特征（保留核心）==========
+        'RSI', 'RSI_Deviation',
+        # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
         'Relative_Return',
-        'BB_Position', 'BB_Width', 'BB_Width_Normalized',
-        'MA5_Deviation_Std', 'MA20_Deviation_Std',
+        # ========== 布林带/位置特征 ==========
+        'BB_Position', 'BB_Width',
+        # ========== 风险特征（保留核心）==========
         'Max_Drawdown_20d', 'Max_Drawdown_60d',
-        'Vol_Z_Score', 'Kurtosis_20d',
+        'Vol_Z_Score', 'Kurtosis_20d', 'Skewness_20d',
+        # ========== 资金流向特征 ==========
         'Smart_Money_Score', 'Accumulation_Score',
-        'Net_Flow_5d', 'Net_Flow_20d',
+        # ========== 基本面特征 ==========
         'PE', 'PB', 'ROE', 'Market_Cap',
+        # ========== 异常检测特征（关键 Alpha 信号）==========
+        'Anomaly_Severity_Score', 'Anomaly_Buy_Signal',
+        # ========== 网络增量特征（P7 新增）==========
+        'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
-    # 截面 Z-Score 特征列表（2026-05-03 新增）
-    # 截面 Z-Score 特征列表（2026-05-04 P6 扩展，与 CatBoost 保持一致）
+    # 截面 Z-Score 特征列表（P7 精简版，2026-05-04）
     CROSS_SECTIONAL_ZSCORE_FEATURES = [
         # 成交量特征
         'Volume', 'Turnover', 'Turnover_Mean_20',
-        'Volume_Std_30d', 'Volume_Z_Score',  # P6 新增
         # 波动率特征
-        'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_60d',
-        'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio',
+        'Volatility_5d', 'Volatility_20d', 'Volatility_60d',
+        'GARCH_Conditional_Vol',
         # ATR特征
-        'ATR', 'ATR_Ratio', 'ATR_Risk_Score',
-        'ATR_MA', 'ATR_MA60',  # P6 新增
+        'ATR', 'ATR_Ratio',
         # 成交量比率特征
-        'Volume_Ratio_5d', 'Volume_Ratio_20d', 'Volume_Volatility',
+        'Volume_Ratio_5d', 'Volume_Ratio_20d',
         'OBV', 'CMF',
-        # 动量特征（P6 扩展）
-        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_10d',
-        'Momentum_Accel_20d', 'Momentum_Accel_60d',  # P6 新增
-        'MACD_histogram', 'MACD_Hist_ROC', 'Price_Pct_20d',
+        # 动量特征
+        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_20d',
+        'MACD_histogram',
         # RSI特征
-        'RSI', 'RSI_Deviation', 'RSI_ROC',
-        'RSI_Deviation_Normalized',  # P6 新增
+        'RSI', 'RSI_Deviation',
         # 相对强度特征
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
-        'Relative_Return', 'RS_Diff_1d',  # P6 新增
+        'Relative_Return',
         # 布林带/位置特征
-        'BB_Position', 'BB_Width', 'BB_Width_Normalized',
-        'MA5_Deviation_Std', 'MA20_Deviation_Std',
-        # 风险特征（P6 扩展）
+        'BB_Position', 'BB_Width',
+        # 风险特征
         'Max_Drawdown_20d', 'Max_Drawdown_60d',
-        'Vol_Z_Score', 'Kurtosis_20d', 'Kurtosis_5d', 'Kurtosis_10d',
-        'Skewness_5d', 'Skewness_10d', 'Skewness_20d',  # P6 新增
+        'Vol_Z_Score', 'Kurtosis_20d', 'Skewness_20d',
         # 资金流向特征
         'Smart_Money_Score', 'Accumulation_Score',
-        'Net_Flow_5d', 'Net_Flow_20d',
         # 基本面特征
         'PE', 'PB', 'ROE', 'Market_Cap',
-        # 异常检测特征（P6 新增）
-        'Anomaly_Severity_Score', 'Price_Anomaly_ZScore', 'Volume_Anomaly_ZScore',
+        # 网络增量特征（P7 新增）
+        'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
     def __init__(self, use_cross_sectional_percentile=True, use_cross_sectional_zscore=True):
@@ -4943,97 +4987,73 @@ class CatBoostModel(BaseTradingModel):
         'Volume_Volatility', 'Volume_Ratio_5d', 'Volume_Ratio_20d',
     ]
 
-    # 截面百分位特征列表（2026-05-03 扩展）
-    # 与相对标签逻辑一致：每天对所有股票进行排名，判断"这只股票今天排第几"
-    # 适用场景：截面选股（与相对标签匹配）
-    # 扩展原则：覆盖所有主要股票特异性特征族，从 55 个扩展到 ~100 个
-    # P6 优化（2026-05-04）：强化截面特征，强迫模型学习个股 Alpha
+    # 截面百分位特征列表（P7 精简版，2026-05-04）
+    # 从 P6 的 ~100 个精简回核心高质量特征，去除高相关性冗余
+    # 原则：质量 > 数量，保留核心 Alpha 信号
     CROSS_SECTIONAL_PERCENTILE_FEATURES = [
-        # 波动率特征（比较当日所有股票的波动率水平）
-        'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_60d',
-        'Volatility_120d', 'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'Intraday_Range',
-        'Intraday_Range_MA5', 'Intraday_Range_MA20',  # P6 新增
-        # ATR特征
-        'ATR', 'ATR_Ratio', 'ATR_Risk_Score', 'ATR_Change_5d',
-        'ATR_MA', 'ATR_MA60', 'ATR_MA120',  # P6 新增
-        # 成交量特征
+        # ========== 波动率特征（保留核心，去除冗余）==========
+        'Volatility_5d', 'Volatility_20d', 'Volatility_60d',  # 短中长期
+        'GARCH_Conditional_Vol', 'Intraday_Range',  # 条件波动率、日内波幅
+        # ========== ATR特征（保留核心）==========
+        'ATR', 'ATR_Ratio', 'ATR_Risk_Score',
+        # ========== 成交量特征（保留核心）==========
         'Volume_Ratio_5d', 'Volume_Ratio_20d', 'Volume_Volatility',
-        'OBV', 'CMF', 'Volume_Confirmation_Adaptive',
-        'Turnover_Change_5d', 'Turnover_Rate_Change_5d',
-        'Volume_Std_30d', 'Volume_Z_Score',  # P6 新增
-        # 动量特征（P6 扩展）
-        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_10d',
-        'Momentum_Accel_20d', 'Momentum_Accel_60d', 'Momentum_Accel_120d',  # P6 新增
-        'MACD_histogram', 'MACD_Hist_ROC', 'Price_Pct_20d', 'Close_Position',
-        'Price_Pct_5d', 'Price_Pct_10d',  # P6 新增
-        # RSI特征
-        'RSI', 'RSI_Deviation', 'RSI_ROC', 'RSI_Deviation_MA20',
-        'RSI_Deviation_Normalized',  # P6 新增
-        # 相对强度特征——替代市场级特征的关键截面信号
+        'OBV', 'CMF',  # 资金流向指标
+        # ========== 动量特征（保留核心，去除高相关变体）==========
+        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_20d',
+        'MACD_histogram', 'Close_Position',
+        # ========== RSI特征（保留核心）==========
+        'RSI', 'RSI_Deviation',
+        # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
-        'Relative_Return', 'RS_Diff_1d',  # P6 新增
-        # 布林带/位置特征
-        'BB_Position', 'BB_Width', 'BB_Width_Normalized',
-        'MA5_Deviation_Std', 'MA20_Deviation_Std',
-        'MA60_Deviation_Std',  # P6 新增
-        # 风险特征（P6 扩展）
+        'Relative_Return',
+        # ========== 布林带/位置特征 ==========
+        'BB_Position', 'BB_Width',
+        # ========== 风险特征（保留核心）==========
         'Max_Drawdown_20d', 'Max_Drawdown_60d',
-        'Vol_Z_Score', 'Kurtosis_20d', 'Kurtosis_5d', 'Kurtosis_10d',  # P6 新增
-        'Skewness_5d', 'Skewness_10d', 'Skewness_20d',  # P6 新增
-        # 资金流向特征
+        'Vol_Z_Score', 'Kurtosis_20d', 'Skewness_20d',
+        # ========== 资金流向特征 ==========
         'Smart_Money_Score', 'Accumulation_Score',
-        'Net_Flow_5d', 'Net_Flow_20d',
-        # 基本面特征
+        # ========== 基本面特征 ==========
         'PE', 'PB', 'ROE', 'Market_Cap',
-        # 异常检测特征（P6 新增 - 关键 Alpha 信号）
+        # ========== 异常检测特征（关键 Alpha 信号）==========
         'Anomaly_Severity_Score', 'Anomaly_Buy_Signal',
-        'Price_Anomaly_ZScore', 'Volume_Anomaly_ZScore',
-        # 趋势特征（P6 新增 - 纯个股信号）
-        '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend',
-        # K线形态特征（P6 新增）
-        'Upper_Shadow', 'Lower_Shadow', 'Gap_Size',
+        # ========== 网络增量特征（P7 新增）==========
+        'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
-    # 截面 Z-Score 特征列表（2026-05-04 P6 扩展）
+    # 截面 Z-Score 特征列表（P7 精简版，2026-05-04）
     # 对关键特征进行截面标准化，确保特征在截面内可比
-    # 解决时间序列 Z-Score 的基准问题（不同股票历史基准不同）
     CROSS_SECTIONAL_ZSCORE_FEATURES = [
         # 成交量特征（时间序列 Z-Score 基准问题最严重）
         'Volume', 'Turnover', 'Turnover_Mean_20',
-        'Volume_Std_30d', 'Volume_Z_Score',  # P6 新增
         # 波动率特征
-        'Volatility_5d', 'Volatility_10d', 'Volatility_20d', 'Volatility_60d',
-        'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio',
+        'Volatility_5d', 'Volatility_20d', 'Volatility_60d',
+        'GARCH_Conditional_Vol',
         # ATR特征
-        'ATR', 'ATR_Ratio', 'ATR_Risk_Score',
-        'ATR_MA', 'ATR_MA60',  # P6 新增
+        'ATR', 'ATR_Ratio',
         # 成交量比率特征
-        'Volume_Ratio_5d', 'Volume_Ratio_20d', 'Volume_Volatility',
+        'Volume_Ratio_5d', 'Volume_Ratio_20d',
         'OBV', 'CMF',
-        # 动量特征（P6 扩展）
-        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_10d',
-        'Momentum_Accel_20d', 'Momentum_Accel_60d',  # P6 新增
-        'MACD_histogram', 'MACD_Hist_ROC', 'Price_Pct_20d',
+        # 动量特征
+        'Momentum_20d', 'Momentum_Accel_5d', 'Momentum_Accel_20d',
+        'MACD_histogram',
         # RSI特征
-        'RSI', 'RSI_Deviation', 'RSI_ROC',
-        'RSI_Deviation_Normalized',  # P6 新增
+        'RSI', 'RSI_Deviation',
         # 相对强度特征
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
-        'Relative_Return', 'RS_Diff_1d',  # P6 新增
+        'Relative_Return',
         # 布林带/位置特征
-        'BB_Position', 'BB_Width', 'BB_Width_Normalized',
-        'MA5_Deviation_Std', 'MA20_Deviation_Std',
-        # 风险特征（P6 扩展）
+        'BB_Position', 'BB_Width',
+        # 风险特征
         'Max_Drawdown_20d', 'Max_Drawdown_60d',
-        'Vol_Z_Score', 'Kurtosis_20d', 'Kurtosis_5d', 'Kurtosis_10d',
-        'Skewness_5d', 'Skewness_10d', 'Skewness_20d',  # P6 新增
+        'Vol_Z_Score', 'Kurtosis_20d', 'Skewness_20d',
         # 资金流向特征
         'Smart_Money_Score', 'Accumulation_Score',
-        'Net_Flow_5d', 'Net_Flow_20d',
         # 基本面特征
         'PE', 'PB', 'ROE', 'Market_Cap',
-        # 异常检测特征（P6 新增）
-        'Anomaly_Severity_Score', 'Price_Anomaly_ZScore', 'Volume_Anomaly_ZScore',
+        # 网络增量特征（P7 新增）
+        'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
@@ -5565,6 +5585,7 @@ class CatBoostModel(BaseTradingModel):
 
         # ========== 网络特征（跨截面特征，所有股票共享）==========
         # 使用实时计算，确保数据泄漏防护（for_prediction=True 排除当日数据）
+        # P7 优化（2026-05-04）：添加增量网络特征
         try:
             from data_services.network_features import get_network_calculator
             import networkx as nx
@@ -5578,15 +5599,20 @@ class CatBoostModel(BaseTradingModel):
             # 计算网络洞察（中心性、社区等）
             insights = network_calc.calculate_network_insights(unique_codes, force_refresh=True)
 
-            # 计算节点偏离度
+            # 计算节点偏离度（当前窗口）
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
+            # P7 新增：计算不同窗口的节点偏离度，用于增量特征
+            deviations_5d = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=5)
+
             # 将网络特征添加到每只股票的数据中
-            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                # P7 新增：增量网络特征
+                'net_node_deviation_delta_5d',  # 节点偏离度变化率
+                'net_node_deviation_accel',     # 节点偏离度加速度
             ]
 
             # 初始化网络特征列
@@ -5605,13 +5631,23 @@ class CatBoostModel(BaseTradingModel):
                 if code in insights:
                     df.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # MST邻居行业数（需要从网络分析模块获取）
-                # 暂时设为0，后续从 insights 获取
                 # 节点偏离度
-                if code in deviations:
-                    df.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+                dev_20d = deviations.get(code, {}).get('node_deviation', 0) if code in deviations else 0
+                dev_5d = deviations_5d.get(code, {}).get('node_deviation', 0) if code in deviations_5d else 0
 
-            print(f"  ✅ 网络特征计算完成（3个特征）")
+                df.loc[mask, 'net_node_deviation'] = dev_20d
+
+                # P7 新增：增量特征
+                # 节点偏离度变化率 = 当前偏离度 - 5日前偏离度
+                # 正值表示"正在变得更强"，负值表示"正在变弱"
+                df.loc[mask, 'net_node_deviation_delta_5d'] = dev_20d - dev_5d
+
+                # 节点偏离度加速度 = 变化率的变化率
+                # 正值表示"加速变强"，负值表示"减速变强"
+                # 这里用 20d 偏离度与 5d 偏离度的差值作为加速度的代理
+                df.loc[mask, 'net_node_deviation_accel'] = (dev_20d - dev_5d) / (abs(dev_5d) + 0.001)  # 归一化
+
+            print(f"  ✅ 网络特征计算完成（5个特征，含增量特征）")
             logger.info(f"网络特征计算完成: {len(unique_codes)} 只股票")
 
         except Exception as e:
@@ -5621,7 +5657,9 @@ class CatBoostModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                'net_node_deviation_delta_5d',
+                'net_node_deviation_accel',
             ]
             for feat in network_feature_names:
                 if feat not in df.columns:

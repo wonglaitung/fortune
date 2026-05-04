@@ -771,6 +771,33 @@ class WalkForwardValidator:
         # 用于检测"全涨全跌"问题（分散度过低表示预测缺乏区分度）
         prediction_std = df['probability'].std() if 'probability' in df.columns else 0.0
 
+        # ========== 头部精度分析（Top Percentile Accuracy）==========
+        # 分析预测概率最高的股票其实际收益分布
+        top_metrics = {}
+        if valid_count > 20:  # 至少20个样本才计算头部精度
+            valid_df = df[valid_mask].copy()
+
+            # Top 1%, 5%, 10%, 20% 分析
+            for pct in [1, 5, 10, 20]:
+                threshold = valid_df['probability'].quantile(1 - pct/100)
+                top_mask = valid_df['probability'] >= threshold
+                top_df = valid_df[top_mask]
+
+                if len(top_df) > 0:
+                    top_return = top_df['actual_return'].mean()
+                    top_std = top_df['actual_return'].std()
+                    top_win_rate = (top_df['actual_return'] > 0).mean()
+
+                    # 与整体平均收益比较
+                    overall_return = valid_df['actual_return'].mean()
+                    excess_return = top_return - overall_return
+
+                    top_metrics[f'top{pct}_return'] = top_return
+                    top_metrics[f'top{pct}_std'] = top_std
+                    top_metrics[f'top{pct}_win_rate'] = top_win_rate
+                    top_metrics[f'top{pct}_excess'] = excess_return
+                    top_metrics[f'top{pct}_count'] = len(top_df)
+
         return {
             'num_samples': num_samples,
             'num_trades': num_trades,
@@ -792,7 +819,9 @@ class WalkForwardValidator:
             # 新增 IC 指标
             'ic': ic,
             'rank_ic': rank_ic,
-            'prediction_std': prediction_std
+            'prediction_std': prediction_std,
+            # 头部精度指标
+            'top_metrics': top_metrics
         }
 
     def _calculate_overall_metrics(self, fold_results):
@@ -823,6 +852,28 @@ class WalkForwardValidator:
         avg_prediction_std = np.mean([r.get('prediction_std', 0) for r in fold_results])
         ic_std = np.std([r.get('ic', 0) for r in fold_results])
         rank_ic_std = np.std([r.get('rank_ic', 0) for r in fold_results])
+
+        # 头部精度指标汇总
+        top_percentile_metrics = {}
+        for pct in [1, 5, 10, 20]:
+            returns = []
+            win_rates = []
+            excesses = []
+            counts = []
+            for r in fold_results:
+                tm = r.get('top_metrics', {})
+                if f'top{pct}_return' in tm:
+                    returns.append(tm[f'top{pct}_return'])
+                    win_rates.append(tm[f'top{pct}_win_rate'])
+                    excesses.append(tm[f'top{pct}_excess'])
+                    counts.append(tm[f'top{pct}_count'])
+
+            if returns:
+                top_percentile_metrics[f'top{pct}_avg_return'] = np.mean(returns)
+                top_percentile_metrics[f'top{pct}_avg_win_rate'] = np.mean(win_rates)
+                top_percentile_metrics[f'top{pct}_avg_excess'] = np.mean(excesses)
+                top_percentile_metrics[f'top{pct}_total_count'] = sum(counts)
+                top_percentile_metrics[f'top{pct}_return_std'] = np.std(returns)
 
         # 稳定性分析
         return_std = np.std([r['avg_return'] for r in fold_results])
@@ -918,7 +969,9 @@ class WalkForwardValidator:
             'avg_rank_ic': avg_rank_ic,
             'avg_prediction_std': avg_prediction_std,
             'ic_std': ic_std,
-            'rank_ic_std': rank_ic_std
+            'rank_ic_std': rank_ic_std,
+            # 头部精度指标
+            'top_percentile_metrics': top_percentile_metrics
         }
 
     def save_report(self, report, output_dir='output'):
@@ -1049,6 +1102,42 @@ class WalkForwardValidator:
                 f.write(f"- IC = {avg_ic:.4f}：{ic_rating}\n")
                 f.write(f"- Rank IC 更稳健，对异常值不敏感\n")
                 f.write(f"- 预测分散度 > 0.1 表示预测有区分度，避免\"全涨全跌\"\n\n")
+
+            # 头部精度分析（新增）
+            f.write("## 🎯 头部精度分析（Top Percentile Accuracy）\n\n")
+            if overall and 'top_percentile_metrics' in overall and overall['top_percentile_metrics']:
+                top_metrics = overall['top_percentile_metrics']
+                f.write("预测概率最高的股票其实际收益分布：\n\n")
+                f.write("| 分位 | 平均收益 | 胜率 | 超额收益 | 样本数 | 评估 |\n")
+                f.write("|------|---------|------|---------|--------|------|\n")
+
+                for pct in [1, 5, 10, 20]:
+                    ret_key = f'top{pct}_avg_return'
+                    if ret_key in top_metrics:
+                        ret = top_metrics[ret_key]
+                        win = top_metrics.get(f'top{pct}_avg_win_rate', 0)
+                        exc = top_metrics.get(f'top{pct}_avg_excess', 0)
+                        cnt = top_metrics.get(f'top{pct}_total_count', 0)
+
+                        # 评估：超额收益 > 0 且胜率 > 50%
+                        if exc > 0 and win > 0.5:
+                            rating = "✅ 有效"
+                        elif exc > 0:
+                            rating = "⚠️ 超额为正"
+                        elif win > 0.5:
+                            rating = "⚠️ 胜率过半"
+                        else:
+                            rating = "❌ 无效"
+
+                        f.write(f"| **Top {pct}%** | {ret:.2%} | {win:.2%} | {exc:.2%} | {cnt} | {rating} |\n")
+
+                f.write("\n**解读**：\n")
+                f.write("- **平均收益**：该分位股票的平均实际收益\n")
+                f.write("- **胜率**：该分位股票中收益为正的比例\n")
+                f.write("- **超额收益**：该分位收益减去整体平均收益\n")
+                f.write("- 如果 Top 1%/5% 的超额收益显著为正，说明模型头部预测有效\n\n")
+            else:
+                f.write("⚠️ 样本不足，无法计算头部精度\n\n")
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
