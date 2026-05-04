@@ -380,33 +380,37 @@ def _detect_single_crypto_anomaly(crypto_name, crypto_symbol, prices, use_deep_a
         # Get historical data (小时级数据，1个月)
         ticker = yf.Ticker(crypto_symbol)
         hist = ticker.history(period="1mo", interval='1h')
-        
+
         if hist.empty:
             print(f"⚠️ {crypto_symbol} 历史数据不可用")
             return []
-        
+
         # Run Z-Score detection (Layer 1)
         zscore_anomalies = []
-        current_price = prices[crypto_name]['usd']
-        
+
+        # 使用 yfinance 历史数据的最新值作为当前值（保持数据源一致）
+        # CoinGecko 实时价格与 yfinance 历史数据可能存在系统性偏差
+        current_price = hist['Close'].iloc[-1]
+
         # Price anomaly
         price_anomaly = zscore_detector.detect_anomaly(
             metric_name='price',
             current_value=current_price,
-            history=hist['Close'],
+            history=hist['Close'].iloc[:-1],  # 排除当前值，避免数据泄漏
             timestamp=target_dt,
             time_interval='hour'
         )
         if price_anomaly:
             zscore_anomalies.append(price_anomaly)
-        
-        # Volume anomaly
-        if 'usd_24hr_vol' in prices[crypto_name]:
-            current_volume = prices[crypto_name]['usd_24hr_vol']
+
+        # Volume anomaly（使用 yfinance 历史数据，保持数据源一致）
+        # CoinGecko 的 usd_24hr_vol 是 24 小时滚动交易量，与 yfinance 小时级数据单位不一致
+        if 'Volume' in hist.columns and len(hist['Volume']) > 0:
+            current_volume = hist['Volume'].iloc[-1]
             volume_anomaly = zscore_detector.detect_anomaly(
                 metric_name='volume',
                 current_value=current_volume,
-                history=hist['Volume'],
+                history=hist['Volume'].iloc[:-1],  # 排除当前值，避免数据泄漏
                 timestamp=target_dt,
                 time_interval='hour'
             )
