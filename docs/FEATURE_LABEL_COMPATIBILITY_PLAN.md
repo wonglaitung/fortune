@@ -617,11 +617,16 @@ loss_function='YetiRankPairwise',
 阶段 5（P4，已完成 ✅）：
   Step 16 → YetiRankPairwise 损失函数替换
   Step 17 → Walk-forward 验证（Rank IC 目标 >0.02）— ✅ Rank IC 从负变正（+0.0038）
-  Step 18 → 更新 CLAUDE.md、progress.txt、lessons.md — 待更新
+  Step 18 → MinMax 归一化验证 — ❌ 失败，已回退
 
-阶段 6（验证收尾）：
-  Step 20 → 最终 IC/Rank IC 验证
-  Step 21 → 文档更新
+阶段 6（P5，进行中 🚧）：
+  Step 19 → 软标签（use_soft_label=True）实现
+  Step 20 → Walk-forward 验证（Rank IC 目标 >0.02）
+  Step 21 → 更新 CLAUDE.md、progress.txt、lessons.md
+
+阶段 7（验证收尾）：
+  Step 22 → 最终 IC/Rank IC 验证
+  Step 23 → 文档更新
 ```
 
 ---
@@ -740,6 +745,54 @@ python3 -m pytest tests/ -v
     - ⚠️ Rank IC 目标（>0.02）未达成，但相比 Classifier 已有显著改善
     - 建议：接受当前配置，后续可尝试特征工程改进或模型融合
 
+---
+
+## P5 阶段：软标签实验（Soft Label）
+
+**背景**：P4 验证后 Rank IC = +0.0038，仍未达到 >0.02 目标。分析发现原始收益率作为标签时，极端收益的"妖股"会主导训练，导致模型过度关注少数样本而非整体排序。
+
+**目标**：通过软标签（截面排名百分位）替代原始收益率，让 YetiRankPairwise 学到"好多少"而非仅仅"谁更好"。
+
+### P5-12：软标签实现
+
+**文件**：`ml_services/ml_trading_model.py:7198-7308`
+
+```python
+# 新增参数
+def __init__(self, ..., use_soft_label=True):
+
+# 标签计算逻辑
+if self.use_soft_label:
+    # 计算每日截面排名百分位（0 到 1 之间）
+    df['Return_Rank_Pct'] = df.groupby(df.index.normalize())['Future_Return'].transform(
+        lambda x: x.rank(pct=True)
+    )
+    y = df['Return_Rank_Pct'].values
+else:
+    # 使用原始收益率作为标签
+    y = df['Future_Return'].values
+```
+
+### P5-13：软标签 vs 原始收益率对比
+
+| 标签类型 | 值范围 | 含义 | 优势 |
+|----------|--------|------|------|
+| 原始收益率 | 实数（可正可负） | "赚多少" | 保留收益幅度信息 |
+| 软标签（排名百分位） | 0 ~ 1 | "排第几" | 消除极端值影响，与截面选股目标一致 |
+
+### P5-14：验证状态
+
+```bash
+python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
+```
+
+| 指标 | P4（原始收益率） | P5（软标签） | 目标 |
+|------|-----------------|--------------|------|
+| IC | +0.0066 | 待验证 | >0.01 |
+| Rank IC | +0.0038 | 待验证 | **>0.02** |
+| 夏普比率 | 0.8103 | 待验证 | >0.8 |
+| 索提诺比率 | 5.06 | 待验证 | >5.0 |
+
 ### 回归保护
 10. **特征数量日志**：训练时记录特征总数，确保在 400-800 范围内
 11. **predict_batch 一致性**：批量预测 vs 逐只预测结果，截面特征部分不同但原始特征相同
@@ -766,7 +819,10 @@ python3 -m pytest tests/ -v
 | YetiRankPairwise 训练时间更长 | 先用少量 fold 测试，确认效果后再完整验证 |
 | Rank IC 仍未达标 | 备选方案：输入特征端 Rank 归一化、特征工程改进、模型融合 |
 | MinMax 归一化信息损失 | ❌ 已放弃：验证证明 MinMax 导致 IC/Rank IC 双降 |
+| **P5 新增风险** | |
+| 软标签丢失收益幅度信息 | 截面选股目标本身就是"谁比谁强"，幅度信息非核心 |
+| 软标签与 YetiRankPairwise 不兼容 | 理论上兼容：YetiRankPairwise 优化排序，软标签直接提供排序目标 |
 
 ---
 
-**最后更新**：2026-05-04（P4 验证完成：YetiRankPairwise 最优，MinMax 失败）
+**最后更新**：2026-05-04（P5 软标签实验：待验证）

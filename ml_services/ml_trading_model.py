@@ -7198,7 +7198,8 @@ class CatBoostRankerModel(BaseTradingModel):
                  use_rolling_percentile=False,
                  use_cross_sectional_percentile=True,
                  use_cross_sectional_zscore=True,
-                 feature_importance_threshold=0.0):
+                 feature_importance_threshold=0.0,
+                 use_soft_label=True):
         """初始化 CatBoost 排序模型
 
         Args:
@@ -7209,6 +7210,7 @@ class CatBoostRankerModel(BaseTradingModel):
             use_cross_sectional_percentile: 是否使用截面百分位
             use_cross_sectional_zscore: 是否使用截面 Z-Score
             feature_importance_threshold: 特征重要性阈值
+            use_soft_label: 是否使用软标签（截面排名百分位），默认 True
         """
         super().__init__()
         self.ranker_model = None
@@ -7221,6 +7223,7 @@ class CatBoostRankerModel(BaseTradingModel):
         self.use_cross_sectional_percentile = use_cross_sectional_percentile
         self.use_cross_sectional_zscore = use_cross_sectional_zscore
         self.feature_importance_threshold = feature_importance_threshold
+        self.use_soft_label = use_soft_label
         self.monotone_constraints_list = None
         self.sample_weights = None
         self.feature_columns = None
@@ -7234,7 +7237,8 @@ class CatBoostRankerModel(BaseTradingModel):
                     f"time_decay_lambda={time_decay_lambda}, "
                     f"use_cross_sectional_percentile={use_cross_sectional_percentile}, "
                     f"use_cross_sectional_zscore={use_cross_sectional_zscore}, "
-                    f"feature_importance_threshold={feature_importance_threshold}")
+                    f"feature_importance_threshold={feature_importance_threshold}, "
+                    f"use_soft_label={use_soft_label}")
 
     # 复用 CatBoostModel 的方法
     _build_monotone_constraints = CatBoostModel._build_monotone_constraints
@@ -7284,8 +7288,20 @@ class CatBoostRankerModel(BaseTradingModel):
                     df[col] = encoder.fit_transform(df[col])
                     self.categorical_encoders[col] = encoder
 
-        # 排序模型关键：使用 Future_Return 作为连续标签
-        y = df['Future_Return'].values
+        # 排序模型关键：标签选择
+        # P5: 软标签实验 - 使用截面排名百分位作为标签
+        if self.use_soft_label:
+            # 计算每日截面排名百分位（0 到 1 之间）
+            # 这样 YetiRankPairwise 能学到"好多少"而非仅仅"谁更好"
+            df['Return_Rank_Pct'] = df.groupby(df.index.normalize())['Future_Return'].transform(
+                lambda x: x.rank(pct=True)
+            )
+            y = df['Return_Rank_Pct'].values
+            logger.info(f"使用软标签（截面排名百分位）: min={y.min():.4f}, max={y.max():.4f}, mean={y.mean():.4f}")
+        else:
+            # 使用原始收益率作为标签
+            y = df['Future_Return'].values
+            logger.info(f"使用原始收益率作为标签: min={y.min():.4f}, max={y.max():.4f}, mean={y.mean():.4f}")
 
         # 构建 group_id（每天所有股票为一个排序组）
         df = df.sort_index()  # 确保按日期排序
