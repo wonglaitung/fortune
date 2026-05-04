@@ -6617,6 +6617,74 @@ class CatBoostModel(BaseTradingModel):
             combined = self._calculate_cross_sectional_zscore_features(combined)
             logger.info("批量预测：截面 Z-Score 特征计算完成")
 
+        # ========== 网络特征（跨截面特征，所有股票共享）==========
+        # 批量预测时可以正确计算网络特征（需要所有股票数据）
+        try:
+            from data_services.network_features import get_network_calculator
+
+            logger.info("批量预测：计算网络特征...")
+            network_calc = get_network_calculator()
+
+            # 获取所有股票代码
+            unique_codes = combined['Code'].unique().tolist()
+
+            # 计算网络洞察（中心性、社区等）
+            insights = network_calc.calculate_network_insights(unique_codes, force_refresh=False)
+
+            # 计算节点偏离度（动量网络特征）
+            deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
+
+            # 将网络特征添加到每只股票的数据中
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+
+            # 初始化网络特征列
+            for feat in network_feature_names:
+                combined[feat] = 0.0 if feat != 'net_community_id' else -1
+
+            # 填充网络特征
+            for code in unique_codes:
+                mask = combined['Code'] == code
+
+                # 中心性
+                if code in insights:
+                    combined.loc[mask, 'net_composite_centrality'] = insights[code].get('composite_centrality', 0)
+
+                # 社区ID（分类特征）
+                if code in insights:
+                    combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
+
+                # 网络-行业匹配度
+                combined.loc[mask, 'net_sector_community_match'] = 0
+
+                # MST邻居行业数
+                combined.loc[mask, 'net_mst_neighbor_sectors'] = 0
+
+                # 节点偏离度（动量网络特征）
+                if code in deviations:
+                    combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+
+            logger.info(f"批量预测：网络特征计算完成（{len(unique_codes)} 只股票）")
+
+        except Exception as e:
+            logger.warning(f"批量预测：网络特征计算失败: {e}，将使用默认值")
+            # 使用默认值
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+            for feat in network_feature_names:
+                if feat not in combined.columns:
+                    combined[feat] = 0.0 if feat != 'net_community_id' else -1
+
         # 阶段3：逐只预测（使用正确的截面特征）
         results = []
         for code in all_features.keys():
@@ -7652,18 +7720,125 @@ class CatBoostRankerModel(BaseTradingModel):
     def predict_batch(self, codes, predict_date=None, horizon=None, use_feature_cache=True):
         """批量预测：先提取所有股票特征，再统一计算截面特征，最后逐只预测
 
-        复用 CatBoostModel 的 3 阶段批量预测架构
+        复用 CatBoostModel 的 3 阶段批量预测架构（含网络特征计算）
         """
-        # 完整实现可参考 CatBoostModel.predict_batch()
-        # 这里提供简化版本
-        results = []
+        if horizon is None:
+            horizon = self.horizon
+
+        if len(self.feature_columns) == 0:
+            raise ValueError("模型未训练，请先调用train()方法")
+
+        logger.info(f"CatBoostRanker 批量预测 {len(codes)} 只股票...")
+
+        # 阶段1：逐只提取原始特征
+        all_features = {}
         for code in codes:
-            try:
-                # 简化：直接返回占位结果
-                # 完整实现需要提取特征、计算截面特征、预测
-                pass
-            except Exception as e:
-                logger.warning(f"预测 {code} 失败: {e}")
+            stock_df = self._extract_raw_features_single(code, predict_date, horizon, use_feature_cache)
+            if stock_df is not None:
+                all_features[code] = stock_df
+
+        if not all_features:
+            logger.warning("批量预测：没有成功提取任何股票的特征")
+            return []
+
+        logger.info(f"成功提取 {len(all_features)} 只股票的特征")
+
+        # 阶段2：合并所有股票，计算截面特征
+        combined = pd.concat(all_features.values())
+
+        # 计算截面百分位特征
+        if self.use_cross_sectional_percentile:
+            combined = self._calculate_cross_sectional_percentile_features(combined)
+            logger.info("批量预测：截面百分位特征计算完成")
+
+        # 计算截面 Z-Score 特征
+        if self.use_cross_sectional_zscore:
+            combined = self._calculate_cross_sectional_zscore_features(combined)
+            logger.info("批量预测：截面 Z-Score 特征计算完成")
+
+        # ========== 网络特征（跨截面特征，所有股票共享）==========
+        # 批量预测时可以正确计算网络特征（需要所有股票数据）
+        try:
+            from data_services.network_features import get_network_calculator
+
+            logger.info("批量预测：计算网络特征...")
+            network_calc = get_network_calculator()
+
+            # 获取所有股票代码
+            unique_codes = combined['Code'].unique().tolist()
+
+            # 计算网络洞察（中心性、社区等）
+            insights = network_calc.calculate_network_insights(unique_codes, force_refresh=False)
+
+            # 计算节点偏离度（动量网络特征）
+            deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
+
+            # 将网络特征添加到每只股票的数据中
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+
+            # 初始化网络特征列
+            for feat in network_feature_names:
+                combined[feat] = 0.0 if feat != 'net_community_id' else -1
+
+            # 填充网络特征
+            for code in unique_codes:
+                mask = combined['Code'] == code
+
+                # 中心性
+                if code in insights:
+                    combined.loc[mask, 'net_composite_centrality'] = insights[code].get('composite_centrality', 0)
+
+                # 社区ID（分类特征）
+                if code in insights:
+                    combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
+
+                # 网络-行业匹配度
+                combined.loc[mask, 'net_sector_community_match'] = 0
+
+                # MST邻居行业数
+                combined.loc[mask, 'net_mst_neighbor_sectors'] = 0
+
+                # 节点偏离度（动量网络特征）
+                if code in deviations:
+                    combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+
+            logger.info(f"批量预测：网络特征计算完成（{len(unique_codes)} 只股票）")
+
+        except Exception as e:
+            logger.warning(f"批量预测：网络特征计算失败: {e}，将使用默认值")
+            # 使用默认值
+            network_feature_names = [
+                'net_composite_centrality',
+                'net_community_id',
+                'net_sector_community_match',
+                'net_mst_neighbor_sectors',
+                'net_node_deviation'
+            ]
+            for feat in network_feature_names:
+                if feat not in combined.columns:
+                    combined[feat] = 0.0 if feat != 'net_community_id' else -1
+
+        # 阶段3：逐只预测（使用正确的截面特征）
+        results = []
+        for code in all_features.keys():
+            stock_data = combined[combined['Code'] == code]
+            if stock_data.empty:
+                continue
+
+            latest = stock_data.iloc[-1:].copy()
+
+            # 使用辅助方法进行预测
+            result = self._predict_from_features(code, latest, horizon)
+            if result:
+                results.append(result)
+
+        logger.info(f"CatBoostRanker 批量预测完成：{len(results)}/{len(codes)} 只股票")
         return results
 
     def save_model(self, filepath):
