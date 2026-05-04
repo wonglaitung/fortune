@@ -10,17 +10,17 @@
 
 ### CatBoostRanker 排序模型验证
 
-**目标**：使用 CatBoostRanker + YetiRank 损失函数优化排序能力，提升 Rank IC
+**目标**：使用 CatBoostRanker + YetiRankPairwise 损失函数优化排序能力，提升 Rank IC
 
 **背景**：
 - 当前模型使用 CatBoostClassifier + Logloss 优化分类准确率
 - 评估指标 Rank IC 衡量排序能力，两者不对齐
-- CatBoostRanker 直接优化排序（YetiRank 损失）
+- CatBoostRanker 直接优化排序（YetiRankPairwise 损失）
 
 **实施内容**：
 
 1. **CatBoostRankerModel 类实现**
-   - 损失函数：YetiRank（优化排序）
+   - 损失函数：YetiRankPairwise（成对比较式排序）
    - 标签：连续值（Future_Return）而非二元标签
    - group_id：日期（每天一组）
    - eval_metric：NDCG
@@ -30,37 +30,46 @@
    - 解决：温度参数归一化 `temperature = score_std`
    - 分类特征处理：正确传递 cat_features 参数
 
-**三版本验证对比（Walk-forward，12 folds，57只股票）**：
+**四版本验证对比（Walk-forward，12 folds，57只股票）**：
 
-| 指标 | CatBoostClassifier | YetiRank | YetiRankPairwise | 目标 |
-|------|---------------------|----------|------------------|------|
-| IC | -0.0216 | +0.0122 | **+0.0066** | >0.01 |
-| Rank IC | -0.0012 | -0.0060 | **+0.0038** | >0.02 |
-| 准确率 | 59.38% | 49.69% | 49.80% | - |
-| 夏普比率 | 0.8291 | 0.7945 | **0.8103** | >0.8 |
-| 索提诺比率 | 3.54 | 5.61 | 5.06 | >5.0 |
-| 最大回撤 | -0.23% | -0.22% | -0.23% | <-20% |
+| 指标 | CatBoostClassifier | YetiRank | YetiRankPairwise | P5 软标签 | 目标 |
+|------|---------------------|----------|------------------|-----------|------|
+| IC | -0.0216 | +0.0122 | **+0.0066** | -0.0022 | >0.01 |
+| Rank IC | -0.0012 | -0.0060 | **+0.0038** | -0.0063 | >0.02 |
+| 准确率 | 59.38% | 49.69% | 49.80% | 48.57% | - |
+| 夏普比率 | 0.8291 | 0.7945 | **0.8103** | 0.7146 | >0.8 |
+| 索提诺比率 | 3.54 | 5.61 | **5.06** | 3.14 | >5.0 |
+| 最大回撤 | -0.23% | -0.22% | -0.23% | -0.21% | <-20% |
 
 **关键发现**：
 - ✅ IC 从负变正（-0.0216 → +0.0066）
 - ⚠️ Rank IC 改善但仍未达目标（+0.0038，目标 >0.02）
 - ✅ YetiRankPairwise 优于 YetiRank（Rank IC +0.0038 vs -0.0060）
 - ❌ MinMax 归一化失败（Rank IC 从 +0.0038 降至 +0.0014）
+- ❌ **软标签实验失败**（IC 从 +0.0066 降至 -0.0022，Rank IC 从 +0.0038 降至 -0.0063）
 
 **失败尝试**：
 - MinMax 归一化：将分数直接映射到 [0,1]，导致 IC/Rank IC 双双下降
-- 结论：自动温度 sigmoid 变换仍是最佳概率转换策略
+- 软标签：将标签从原始收益率改为截面排名百分位（0~1），导致 IC/Rank IC 双双变负
+- 结论：原始收益率作为标签仍是最佳选择，自动温度 sigmoid 变换是最佳概率转换策略
 
 **核心教训**：
 - 排序模型优化排序而非分类准确率
 - YetiRankPairwise 成对比较式排序更适合截面选股场景
 - MinMax 归一化不适合 Ranker 分数转概率（信息损失）
+- **软标签不适合 YetiRankPairwise**：丢失收益幅度信息后，模型无法区分"大幅跑赢"和"小幅跑赢"
 - 温度参数应使用 score_std，而非 1.0/score_std
 
+**最终配置**：
+- 损失函数：YetiRankPairwise
+- 标签：原始收益率（Future_Return）
+- 概率变换：自动温度 sigmoid（temperature = score_std）
+- `use_soft_label=False`（已回退）
+
 **改动文件**：
-- `ml_services/ml_trading_model.py`（CatBoostRankerModel 类、温度参数）
+- `ml_services/ml_trading_model.py`（CatBoostRankerModel 类、温度参数、软标签参数）
 - `ml_services/walk_forward_validation.py`（Ranker 模型支持、YetiRankPairwise）
-- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P3/P4 阶段文档）
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P3/P4/P5 阶段文档）
 
 ---
 

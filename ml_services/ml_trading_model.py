@@ -4844,6 +4844,26 @@ class CatBoostModel(BaseTradingModel):
         'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
     ]
 
+    # P6: 宏交叉特征排除列表（2026-05-04 新增）
+    # 这些特征虽然在不同股票间有微小差异（通过 Trend 分类乘数），但核心信息仍是宏观环境
+    # 模型会"偷懒"用这些特征做宏观拟合，而非学习个股 Alpha
+    # 排除后强迫模型通过 Momentum/Network 特征寻找个股差异
+    MACRO_CROSS_FEATURES = [
+        # 趋势 × 恒指收益（Top 2 特征，噪音霸主）
+        '10d_Trend_HSI_Return_60d', '20d_Trend_HSI_Return_60d', '60d_Trend_HSI_Return_60d',
+        '10d_Trend_HSI_Return_20d', '20d_Trend_HSI_Return_20d', '60d_Trend_HSI_Return_20d',
+        '10d_Trend_HSI_Return_5d', '20d_Trend_HSI_Return_5d', '60d_Trend_HSI_Return_5d',
+        # 趋势 × 市场状态（Top 5 特征）
+        '10d_Trend_HSI_Regime_Prob_0', '10d_Trend_HSI_Regime_Prob_1', '10d_Trend_HSI_Regime_Prob_2',
+        '20d_Trend_HSI_Regime_Prob_0', '20d_Trend_HSI_Regime_Prob_1', '20d_Trend_HSI_Regime_Prob_2',
+        '60d_Trend_HSI_Regime_Prob_0', '60d_Trend_HSI_Regime_Prob_1', '60d_Trend_HSI_Regime_Prob_2',
+        # 趋势 × 美股
+        '10d_Trend_SP500_Return', '20d_Trend_SP500_Return', '60d_Trend_SP500_Return',
+        '10d_Trend_SP500_Return_5d', '20d_Trend_SP500_Return_5d', '60d_Trend_SP500_Return_5d',
+        '10d_Trend_NASDAQ_Return', '20d_Trend_NASDAQ_Return', '60d_Trend_NASDAQ_Return',
+        '10d_Trend_NASDAQ_Return_5d', '20d_Trend_NASDAQ_Return_5d', '60d_Trend_NASDAQ_Return_5d',
+    ]
+
     # 滚动百分位特征列表（原始特征 → 百分位特征）
     # 原则：波动率、成交量、ATR等绝对量级特征受益于百分位化
     # 宏观特征（VIX, US_10Y_Yield）和已相对化特征（RS_Ratio, BB_Position, sector_rank）不转换
@@ -5643,6 +5663,15 @@ class CatBoostModel(BaseTradingModel):
         excluded_market_features = [col for col in df.columns if col in market_exclude]
         if excluded_market_features:
             logger.info(f"排除 {len(excluded_market_features)} 个市场级特征: {excluded_market_features[:5]}{'...' if len(excluded_market_features) > 5 else ''}")
+
+        # P6: 排除宏交叉特征（趋势 × 宏观变量，模型会"偷懒"用这些做宏观拟合）
+        macro_cross_exclude = set(self.MACRO_CROSS_FEATURES) if hasattr(self, 'MACRO_CROSS_FEATURES') else set()
+        feature_columns = [col for col in feature_columns if col not in macro_cross_exclude]
+
+        # 日志记录排除的宏交叉特征
+        excluded_macro_cross = [col for col in df.columns if col in macro_cross_exclude]
+        if excluded_macro_cross:
+            logger.info(f"排除 {len(excluded_macro_cross)} 个宏交叉特征: {excluded_macro_cross[:5]}{'...' if len(excluded_macro_cross) > 5 else ''}")
 
         # 可选：Pearson 去冗余（防止新增特征时引入高相关冗余）
         if dedup_threshold and len(feature_columns) > 0:
@@ -7188,6 +7217,7 @@ class CatBoostRankerModel(BaseTradingModel):
     # 复用 CatBoostModel 的特征列表
     MONOTONE_CONSTRAINT_MAP = CatBoostModel.MONOTONE_CONSTRAINT_MAP
     MARKET_LEVEL_FEATURES = CatBoostModel.MARKET_LEVEL_FEATURES
+    MACRO_CROSS_FEATURES = CatBoostModel.MACRO_CROSS_FEATURES  # P6: 宏交叉特征排除
     CROSS_SECTIONAL_PERCENTILE_FEATURES = CatBoostModel.CROSS_SECTIONAL_PERCENTILE_FEATURES
     CROSS_SECTIONAL_ZSCORE_FEATURES = CatBoostModel.CROSS_SECTIONAL_ZSCORE_FEATURES
     ROLLING_PERCENTILE_FEATURES = CatBoostModel.ROLLING_PERCENTILE_FEATURES
@@ -7199,7 +7229,7 @@ class CatBoostRankerModel(BaseTradingModel):
                  use_cross_sectional_percentile=True,
                  use_cross_sectional_zscore=True,
                  feature_importance_threshold=0.0,
-                 use_soft_label=True):
+                 use_soft_label=False):  # P5 失败，回退到原始收益率
         """初始化 CatBoost 排序模型
 
         Args:

@@ -385,6 +385,7 @@ class WalkForwardValidator:
         elif self.model_type == 'catboost_ranker':
             # P3-9: 排序模型
             # P4-10: 使用 YetiRankPairwise 损失函数（成对比较，更适合截面选股）
+            # P5: 软标签实验失败（IC/Rank IC 双降），已放弃
             model = self.model_class(
                 loss_function='YetiRankPairwise',
                 use_monotone_constraints=self.use_monotone_constraints,
@@ -392,7 +393,8 @@ class WalkForwardValidator:
                 use_rolling_percentile=self.use_rolling_percentile,
                 use_cross_sectional_percentile=self.use_cross_sectional_percentile,
                 use_cross_sectional_zscore=self.use_cross_sectional_zscore,
-                feature_importance_threshold=self.feature_importance_threshold
+                feature_importance_threshold=self.feature_importance_threshold,
+                use_soft_label=False  # P5: 软标签实验失败，回退到原始收益率
             )
         else:
             model = self.model_class()

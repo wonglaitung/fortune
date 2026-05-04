@@ -619,14 +619,19 @@ loss_function='YetiRankPairwise',
   Step 17 → Walk-forward 验证（Rank IC 目标 >0.02）— ✅ Rank IC 从负变正（+0.0038）
   Step 18 → MinMax 归一化验证 — ❌ 失败，已回退
 
-阶段 6（P5，进行中 🚧）：
+阶段 6（P5，已完成 ❌）：
   Step 19 → 软标签（use_soft_label=True）实现
-  Step 20 → Walk-forward 验证（Rank IC 目标 >0.02）
-  Step 21 → 更新 CLAUDE.md、progress.txt、lessons.md
+  Step 20 → Walk-forward 验证 — ❌ 失败，IC/Rank IC 双双变负
+  Step 21 → 回退到 P4 最优配置（use_soft_label=False）
 
-阶段 7（验证收尾）：
-  Step 22 → 最终 IC/Rank IC 验证
-  Step 23 → 文档更新
+阶段 7（P6，已完成 ✅）：
+  Step 22 → 特征重要性审计（Classifier vs Ranker 对比）
+  Step 23 → 诊断模型是否在"偷懒"（通过交叉特征获取市场信号）
+  Step 24 → 制定下一步优化方向（强化截面特征、剔除交叉特征中的市场成分）
+
+阶段 8（验证收尾）：
+  Step 25 → 最终 IC/Rank IC 验证
+  Step 26 → 文档更新
 ```
 
 ---
@@ -780,18 +785,27 @@ else:
 | 原始收益率 | 实数（可正可负） | "赚多少" | 保留收益幅度信息 |
 | 软标签（排名百分位） | 0 ~ 1 | "排第几" | 消除极端值影响，与截面选股目标一致 |
 
-### P5-14：验证状态
+### P5-14：验证结果（❌ 失败）
 
 ```bash
 python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
 ```
 
-| 指标 | P4（原始收益率） | P5（软标签） | 目标 |
-|------|-----------------|--------------|------|
-| IC | +0.0066 | 待验证 | >0.01 |
-| Rank IC | +0.0038 | 待验证 | **>0.02** |
-| 夏普比率 | 0.8103 | 待验证 | >0.8 |
-| 索提诺比率 | 5.06 | 待验证 | >5.0 |
+| 指标 | P4（原始收益率） | P5（软标签） | 变化 | 目标 |
+|------|-----------------|--------------|------|------|
+| IC | +0.0066 | **-0.0022** | ❌ -0.0088 | >0.01 |
+| Rank IC | +0.0038 | **-0.0063** | ❌ -0.0101 | >0.02 |
+| 夏普比率 | 0.8103 | 0.7146 | ❌ -0.0957 | >0.8 |
+| 索提诺比率 | 5.06 | 3.14 | ❌ -1.92 | >5.0 |
+| 准确率 | 49.80% | 48.57% | -1.23% | - |
+
+**失败原因分析**：
+- 软标签将收益率转换为排名百分位（0~1），丢失了收益幅度信息
+- YetiRankPairwise 成对比较时，无法区分"大幅跑赢"和"小幅跑赢"
+- 原始收益率保留了幅度信息，模型可以学习到"好多少"而非仅仅"谁更好"
+- 截面排名百分位与 YetiRankPairwise 的成对比较机制不兼容
+
+**结论**：软标签不适合 YetiRankPairwise 损失函数，已回退到 P4 最优配置（原始收益率 + YetiRankPairwise）
 
 ### 回归保护
 10. **特征数量日志**：训练时记录特征总数，确保在 400-800 范围内
@@ -820,9 +834,132 @@ python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --ho
 | Rank IC 仍未达标 | 备选方案：输入特征端 Rank 归一化、特征工程改进、模型融合 |
 | MinMax 归一化信息损失 | ❌ 已放弃：验证证明 MinMax 导致 IC/Rank IC 双降 |
 | **P5 新增风险** | |
-| 软标签丢失收益幅度信息 | 截面选股目标本身就是"谁比谁强"，幅度信息非核心 |
-| 软标签与 YetiRankPairwise 不兼容 | 理论上兼容：YetiRankPairwise 优化排序，软标签直接提供排序目标 |
+| 软标签丢失收益幅度信息 | ❌ 已验证失败：软标签导致 IC/Rank IC 双双变负 |
+| 软标签与 YetiRankPairwise 不兼容 | ❌ 已验证失败：成对比较需要幅度信息 |
 
 ---
 
-**最后更新**：2026-05-04（P5 软标签实验：待验证）
+## P6 阶段：特征重要性审计（模型是否在"偷懒"）
+
+**背景**：P5 软标签实验失败后，需要深入分析模型是否仍在通过"代理特征"猜测大盘环境，而非学习个股间的超额收益（Alpha）。
+
+**核心问题**：模型是否在"偷懒"？
+
+### P6-15：特征重要性对比分析
+
+**对比对象**：CatBoostClassifier vs CatBoostRanker（YetiRankPairwise）
+
+| 类型 | Classifier | Ranker | 变化 | 评估 |
+|------|-----------|--------|------|------|
+| **市场/宏观** | 39.7% | 29.4% | **-10.4%** | ✅ 显著改善 |
+| **截面特征** | 0.0% | 29.2% | **+29.2%** | ✅ 新增有效 |
+| **个股特异性** | 60.3% | 41.5% | -18.8% | ⚠️ 下降 |
+
+**关键发现**：
+
+1. **Ranker 成功降低市场特征依赖**（-10.4%）
+   - Classifier Top 20 中市场特征占 11 席（55%）
+   - Ranker Top 20 中市场特征仅占 3 席（15%）
+
+2. **截面特征成为 Ranker 的核心信号**（+29.2%）
+   - Top 1 特征：`CMF_CS_Pct`（资金流向截面排名）
+   - Top 7 特征：`CMF_CS_ZScore`
+   - 截面特征直接衡量"这只股票今天在所有股票中排第几"，与选股目标一致
+
+3. **但模型仍在"偷懒"的迹象**：
+   - `60d_Trend_HSI_Return_60d` 排名 #2（市场特征仍是 Top 2）
+   - `10d_Trend_HSI_Regime_Prob_1` 排名 #5
+   - `Outperforms_HSI_*` 类特征占 6.27%（46 个特征）
+   - Trend × 市场交叉特征占 21.24%（66 个特征）
+
+### P6-16：Classifier vs Ranker Top 20 对比
+
+**Classifier 独有的 Top 20 特征（纯市场特征）**：
+| 特征 | Classifier 排名 | Ranker 排名 |
+|------|----------------|------------|
+| `US_10Y_Yield` | #1 | N/A（已排除） |
+| `HSI_Regime_Duration` | #2 | N/A |
+| `HSI_Regime_Prob_0` | #3 | N/A |
+| `HSI_Return_60d` | #4 | N/A |
+| `VIX_Level` | #5 | N/A |
+| `HSI_Return_10d/20d` | #13/#20 | N/A |
+
+**Ranker 独有的 Top 20 特征（截面 + 个股）**：
+| 特征 | Ranker 排名 | Classifier 排名 | 类型 |
+|------|------------|----------------|------|
+| `CMF_CS_Pct` | #1 | N/A | 截面 |
+| `Skewness_10d` | #3 | #285 | 个股 |
+| `Anomaly_Severity_Score` | #8 | #469 | 个股 |
+| `Close_Position` | #12 | #227 | 个股 |
+| `Kurtosis_10d` | #10 | #126 | 个股 |
+
+**结论**：Ranker 成功将"纯市场特征"挤出 Top 20，但仍依赖"交叉特征"间接获取市场信号。
+
+### P6-17：下一步优化方向
+
+**问题诊断**：模型通过交叉特征（如 `60d_Trend_HSI_Return_60d`）间接获取市场信号，而非学习个股 Alpha。
+
+**优化方向**：
+
+| 方向 | 具体措施 | 预期效果 |
+|------|---------|---------|
+| **A. 强化截面特征** | 对更多个股特异性特征做截面化（目前仅 85 个） | 提升截面特征占比至 >40% |
+| **B. 剔除交叉特征中的市场成分** | 移除 `Trend × HSI_*` 类交叉特征 | 强迫模型关注个股信号 |
+| **C. 增加纯 Alpha 特征** | 新增 `Relative_Return_5d`、`Sector_Relative_Return` 等 | 提供更多截面信号 |
+| **D. 特征权重调整** | 训练时对截面特征赋予更高权重 | 强制模型优先学习 Alpha |
+
+**推荐优先级**：A > B > C > D
+
+### P6-18：具体实施建议
+
+#### A. 扩展截面特征覆盖（推荐）
+
+当前截面特征仅覆盖 85 个，建议扩展至 150+：
+
+```python
+# 新增截面化特征候选
+NEW_CS_FEATURES = [
+    # 动量类（当前仅 3 个，扩展至 10）
+    'Momentum_5d', 'Momentum_10d', 'Momentum_60d',
+    'Momentum_Accel_5d', 'Momentum_Accel_10d', 'Momentum_Accel_120d',
+    'MACD_histogram', 'MACD_Hist_ROC', 'Price_Pct_5d', 'Price_Pct_10d',
+
+    # 风险类（当前仅 4 个，扩展至 8）
+    'Max_Drawdown_60d', 'Max_Drawdown_120d',
+    'Vol_Z_Score', 'Kurtosis_20d', 'Kurtosis_60d',
+    'Skewness_5d', 'Skewness_10d', 'Skewness_20d',
+
+    # 相对强度类（关键 Alpha 信号）
+    'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
+    'Relative_Return_5d', 'Relative_Return_10d', 'Relative_Return_20d',
+
+    # 资金流向类（当前仅 4 个，扩展至 8）
+    'Smart_Money_Score', 'Accumulation_Score',
+    'Net_Flow_5d', 'Net_Flow_20d',
+    'CMF', 'OBV', 'Volume_Confirmation_Adaptive',
+
+    # 基本面类
+    'PE', 'PB', 'ROE', 'Market_Cap', 'Dividend_Yield',
+]
+```
+
+#### B. 剔除交叉特征中的市场成分
+
+```python
+# 在 MARKET_LEVEL_FEATURES 中新增
+MARKET_LEVEL_FEATURES.extend([
+    # 交叉特征中的市场成分
+    '60d_Trend_HSI_Return_60d',
+    '10d_Trend_HSI_Return_20d',
+    '10d_Trend_HSI_Regime_Prob_1',
+    '20d_Trend_NASDAQ_Return_5d',
+    '20d_Trend_SP500_Return_5d',
+    # ... 其他 Trend × 市场交叉特征
+])
+```
+
+**风险**：过度剔除可能导致模型容量不足，需逐步验证。
+
+---
+
+**最后更新**：2026-05-04（P6 特征重要性审计：模型仍在"偷懒"，需强化截面特征）
