@@ -1025,10 +1025,9 @@ class HSI_Predictor:
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
             current_amount = self.tencent_hsi_data['Amount'].iloc[-1]  # 亿港元
 
-            # 获取历史成交额数据（从yfinance估算）
-            # 使用 Volume * Close / 1亿 作为历史成交额估计
-            df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000
-            amount_history = df['Amount_Estimated'].iloc[:-1]
+            # 使用腾讯财经的历史成交额数据（与当前值数据源一致）
+            # 排除当日数据，使用历史数据进行统计
+            amount_history = self.tencent_hsi_data['Amount'].iloc[:-1]
 
             # 使用Z-Score检测
             zscore_detector = ZScoreDetector(
