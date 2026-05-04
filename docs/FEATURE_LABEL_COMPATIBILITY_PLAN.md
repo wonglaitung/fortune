@@ -549,6 +549,45 @@ elif 'Label' in train_data.columns:
 
 ---
 
+## P4 阶段：损失函数优化（YetiRankPairwise）
+
+**背景**：P3 阶段 CatBoostRanker 验证结果：
+- IC 从 -0.0216 改善至 +0.0122（✅ 从负变正）
+- Rank IC 未达标（-0.0060，目标 >0.02）
+- 索提诺比率显著提升（3.54 → 5.61，+58%）
+
+**目标**：通过损失函数优化，将 Rank IC 提升至 >0.02
+
+### P4-10：YetiRankPairwise 损失函数（已完成 ✅）
+
+**文件**：`ml_services/walk_forward_validation.py:300`
+
+```python
+# 已修改为
+loss_function='YetiRankPairwise',
+```
+
+**原理**：
+- YetiRank：基于列表式排序，优化整体排序质量
+- YetiRankPairwise：成对比较式排序，直接优化"股票 A vs 股票 B"
+- 截面选股本质是成对比较，YetiRankPairwise 更适合
+
+**配套配置**：
+- `eval_metric='NDCG'`（ml_trading_model.py:7336）— 排序模型用排序指标监控
+
+### P4-11：温度参数优化（❌ 不推荐）
+
+**分析结论**：在 Rank IC 未稳住（>0.02）前调整温度参数会放大噪音，不建议使用。
+
+| 策略 | 评估 | 原因 |
+|------|------|------|
+| 固定温度 0.5 | ❌ 不推荐 | 放大噪音，等 Rank IC > 0.02 后再考虑 |
+| MinMax 归一化 | ❌ 不推荐 | 输出端归一化不改变排名，无意义 |
+
+**正确方向**：如 Rank IC 仍未达标，应在输入特征端做 Rank 归一化，而非输出端
+
+---
+
 ## 实施顺序
 
 ```
@@ -568,16 +607,21 @@ elif 'Label' in train_data.columns:
 阶段 3（P2，部分完成 🚧）：
   Step 10 → 调用方迁移（comprehensive_analysis.py 已支持 predict_batch，CLI 待迁移）
 
-阶段 4（P3，新增 — Rank IC 提升 🆕）：
+阶段 4（P3，已完成 ✅）：
   Step 11 → eval_metric 对齐（Accuracy → AUC）
   Step 12 → 特征修剪参数（feature_importance_threshold）
   Step 13 → CatBoostRankerModel 类实现
   Step 14 → WalkForwardValidator 集成
   Step 15 → Walk-forward 验证对比（catboost vs catboost_ranker）
 
-阶段 5（验证收尾）：
-  Step 16 → IC/Rank IC 对比验证
-  Step 17 → 更新 CLAUDE.md、progress.txt、lessons.md
+阶段 5（P4，已完成 ✅）：
+  Step 16 → YetiRankPairwise 损失函数替换
+  Step 17 → Walk-forward 验证（Rank IC 目标 >0.02）— 待验证
+  Step 18 → 更新 CLAUDE.md、progress.txt、lessons.md — 待验证后更新
+
+阶段 6（验证收尾）：
+  Step 20 → 最终 IC/Rank IC 验证
+  Step 21 → 文档更新
 ```
 
 ---
@@ -638,6 +682,23 @@ python3 -m pytest tests/ -v
    | + 特征修剪 | ~0.015 | ~0.90 |
    | **CatBoostRanker** | **>0.02** | **>1.0** |
 
+### P4 专项验证
+10. **YetiRankPairwise 验证**：
+    ```bash
+    python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20
+    ```
+
+11. **损失函数对比**：
+    | 指标 | YetiRank（基线） | YetiRankPairwise（当前） | 目标 |
+    |------|-----------------|--------------------------|------|
+    | IC | +0.0122 | 待验证 | >0.01 |
+    | Rank IC | -0.0060 | 待验证 | **>0.02** |
+    | 准确率 | 49.69% | 待验证 | - |
+    | 夏普比率 | 0.7945 | 待验证 | >0.8 |
+    | 索提诺比率 | 5.61 | 待验证 | >5.0 |
+
+12. **关键诊断**：IC 正但 Rank IC 负 → 模型抓住了极端收益的"妖股"，但整体排序混乱。YetiRankPairwise 应能改善此问题。
+
 ### 回归保护
 10. **特征数量日志**：训练时记录特征总数，确保在 400-800 范围内
 11. **predict_batch 一致性**：批量预测 vs 逐只预测结果，截面特征部分不同但原始特征相同
@@ -660,7 +721,11 @@ python3 -m pytest tests/ -v
 | 特征修剪过拟合到历史重要性 | 从阈值 0.01 开始（仅移除零/近零特征），Walk-forward 验证确认 |
 | CatBoostRanker 与 EnsembleModel 不兼容 | P3 阶段 Ranker 作为独立模型评估，不加入 Ensemble（后续可扩展） |
 | `get_feature_importance()` 需传入训练池 | 在 `train()` 中保存 `train_pool` 或在需要时重建 |
+| **P4 新增风险** | |
+| YetiRankPairwise 训练时间更长 | 先用少量 fold 测试，确认效果后再完整验证 |
+| Rank IC 仍未达标 | 备选方案：输入特征端 Rank 归一化、特征工程改进、模型融合 |
+| 温度参数优化 | ❌ 不推荐：在 Rank IC 未稳住前会放大噪音 |
 
 ---
 
-**最后更新**：2026-05-03（添加 P3 阶段：Rank IC 提升）
+**最后更新**：2026-05-04（添加 P4 阶段：损失函数优化）
