@@ -5582,11 +5582,10 @@ class CatBoostModel(BaseTradingModel):
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
             # 将网络特征添加到每只股票的数据中
+            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
 
@@ -5606,19 +5605,13 @@ class CatBoostModel(BaseTradingModel):
                 if code in insights:
                     df.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # 网络-行业匹配度（需要从网络分析模块获取）
-                # 暂时设为0，后续从 insights 获取
-                df.loc[mask, 'net_sector_community_match'] = 0
-
                 # MST邻居行业数（需要从网络分析模块获取）
                 # 暂时设为0，后续从 insights 获取
-                df.loc[mask, 'net_mst_neighbor_sectors'] = 0
-
                 # 节点偏离度
                 if code in deviations:
                     df.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
 
-            print(f"  ✅ 网络特征计算完成（5个特征）")
+            print(f"  ✅ 网络特征计算完成（3个特征）")
             logger.info(f"网络特征计算完成: {len(unique_codes)} 只股票")
 
         except Exception as e:
@@ -5628,8 +5621,6 @@ class CatBoostModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
             for feat in network_feature_names:
@@ -6258,11 +6249,10 @@ class CatBoostModel(BaseTradingModel):
                 # ========== 网络特征（与训练时保持一致）==========
                 # 预测时使用缓存的网络特征或默认值
                 # 网络特征需要跨截面计算，预测单只股票时使用默认值
+                # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除
                 network_feature_names = [
                     'net_composite_centrality',
                     'net_community_id',
-                    'net_sector_community_match',
-                    'net_mst_neighbor_sectors',
                     'net_node_deviation'
                 ]
                 for feat in network_feature_names:
@@ -6533,10 +6523,9 @@ class CatBoostModel(BaseTradingModel):
                 stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
-                # 网络特征默认值
+                # 网络特征默认值（注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除）
                 network_feature_names = [
-                    'net_composite_centrality', 'net_community_id', 'net_sector_community_match',
-                    'net_mst_neighbor_sectors', 'net_node_deviation'
+                    'net_composite_centrality', 'net_community_id', 'net_node_deviation'
                 ]
                 for feat in network_feature_names:
                     if feat not in stock_df.columns:
@@ -6635,11 +6624,10 @@ class CatBoostModel(BaseTradingModel):
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
             # 将网络特征添加到每只股票的数据中
+            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
 
@@ -6659,12 +6647,6 @@ class CatBoostModel(BaseTradingModel):
                 if code in insights:
                     combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # 网络-行业匹配度
-                combined.loc[mask, 'net_sector_community_match'] = 0
-
-                # MST邻居行业数
-                combined.loc[mask, 'net_mst_neighbor_sectors'] = 0
-
                 # 节点偏离度（动量网络特征）
                 if code in deviations:
                     combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
@@ -6677,8 +6659,6 @@ class CatBoostModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
             for feat in network_feature_names:
@@ -7774,11 +7754,10 @@ class CatBoostRankerModel(BaseTradingModel):
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
             # 将网络特征添加到每只股票的数据中
+            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
 
@@ -7798,12 +7777,6 @@ class CatBoostRankerModel(BaseTradingModel):
                 if code in insights:
                     combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # 网络-行业匹配度
-                combined.loc[mask, 'net_sector_community_match'] = 0
-
-                # MST邻居行业数
-                combined.loc[mask, 'net_mst_neighbor_sectors'] = 0
-
                 # 节点偏离度（动量网络特征）
                 if code in deviations:
                     combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
@@ -7816,8 +7789,6 @@ class CatBoostRankerModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_sector_community_match',
-                'net_mst_neighbor_sectors',
                 'net_node_deviation'
             ]
             for feat in network_feature_names:
