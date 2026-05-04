@@ -65,6 +65,7 @@ class WalkForwardValidator:
         use_cross_sectional_percentile: bool = True,  # 2026-05-03: 截面百分位（与相对标签匹配）
         use_cross_sectional_zscore: bool = True,  # 2026-05-03: 截面 Z-Score（解决时间序列基准问题）
         feature_importance_threshold: float = 0.0,  # P3-8: 特征修剪阈值
+        n_jobs: int = 1,  # 并行执行的 fold 数量（-1 表示使用所有 CPU 核心）
     ):
         """
         初始化 Walk-forward 验证器
@@ -84,6 +85,7 @@ class WalkForwardValidator:
             use_cross_sectional_percentile: 是否使用截面百分位特征（与相对标签匹配）
             use_cross_sectional_zscore: 是否使用截面 Z-Score 特征（解决时间序列基准问题）
             feature_importance_threshold: 特征重要性阈值，低于此值的特征将被移除（0=不修剪）
+            n_jobs: 并行执行的 fold 数量（-1 表示使用所有 CPU 核心，1 表示顺序执行）
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -100,6 +102,7 @@ class WalkForwardValidator:
         self.use_cross_sectional_percentile = use_cross_sectional_percentile
         self.use_cross_sectional_zscore = use_cross_sectional_zscore
         self.feature_importance_threshold = feature_importance_threshold  # P3-8
+        self.n_jobs = n_jobs
 
         # 模型类映射
         self.model_classes = {
@@ -165,17 +168,12 @@ class WalkForwardValidator:
             raise ValueError(f"日期范围不足，需要至少 {self.train_window_months + self.test_window_months} 个月的数据")
 
         print(f"\nFold 数量: {num_folds}")
+        print(f"并行执行: {self.n_jobs if self.n_jobs > 0 else '所有可用核心'} 个 fold")
         print("="*80)
 
-        # 存储所有fold的结果
-        all_fold_results = []
-
-        # 执行每个fold的验证
+        # 准备所有 fold 的参数
+        fold_params = []
         for fold in range(num_folds):
-            print(f"\n{'='*80}")
-            print(f"📊 Fold {fold + 1}/{num_folds}")
-            print(f"{'='*80}")
-
             # 计算训练和测试期间
             train_start_idx = fold * self.step_window_months
             train_end_idx = train_start_idx + self.train_window_months
@@ -192,37 +190,77 @@ class WalkForwardValidator:
             test_start_date = pd.to_datetime(test_months[0] + '-01').tz_localize('UTC')
             test_end_date = (pd.to_datetime(test_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
 
-            print(f"训练期间: {train_start_date.strftime('%Y-%m-%d')} 至 {train_end_date.strftime('%Y-%m-%d')}")
-            print(f"测试期间: {test_start_date.strftime('%Y-%m-%d')} 至 {test_end_date.strftime('%Y-%m-%d')}")
+            fold_params.append({
+                'fold': fold,
+                'train_start_date': train_start_date,
+                'train_end_date': train_end_date,
+                'test_start_date': test_start_date,
+                'test_end_date': test_end_date,
+            })
 
-            # 执行fold验证
-            try:
-                fold_result = self._validate_fold(
+        # 执行验证（并行或顺序）
+        all_fold_results = []
+        if self.n_jobs != 1 and num_folds > 1:
+            # 并行执行
+            from joblib import Parallel, delayed
+            print(f"\n🚀 并行执行 {num_folds} 个 fold...")
+
+            results = Parallel(
+                n_jobs=self.n_jobs,
+                verbose=10,  # 显示进度
+                backend='loky'  # 使用 loky 后端，支持多进程
+            )(
+                delayed(self._validate_fold_wrapper)(
                     stock_list,
-                    train_start_date,
-                    train_end_date,
-                    test_start_date,
-                    test_end_date,
-                    fold
+                    params['train_start_date'],
+                    params['train_end_date'],
+                    params['test_start_date'],
+                    params['test_end_date'],
+                    params['fold'],
+                    num_folds
                 )
+                for params in fold_params
+            )
 
-                all_fold_results.append(fold_result)
+            # 过滤失败的结果
+            all_fold_results = [r for r in results if r is not None]
+        else:
+            # 顺序执行（原有逻辑）
+            for params in fold_params:
+                fold = params['fold']
+                print(f"\n{'='*80}")
+                print(f"📊 Fold {fold + 1}/{num_folds}")
+                print(f"{'='*80}")
+                print(f"训练期间: {params['train_start_date'].strftime('%Y-%m-%d')} 至 {params['train_end_date'].strftime('%Y-%m-%d')}")
+                print(f"测试期间: {params['test_start_date'].strftime('%Y-%m-%d')} 至 {params['test_end_date'].strftime('%Y-%m-%d')}")
 
-                # 打印fold结果
-                print(f"\n✅ Fold {fold + 1} 结果:")
-                print(f"  样本数: {fold_result['num_samples']}")
-                print(f"  交易次数: {fold_result.get('num_trades', 'N/A')}")
-                print(f"  平均收益率: {fold_result['avg_return']:.2%}")
-                print(f"  胜率: {fold_result['win_rate']:.2%}")
-                print(f"  准确率: {fold_result['accuracy']:.2%}")
-                print(f"  夏普比率: {fold_result['sharpe_ratio']:.4f}")
-                print(f"  最大回撤: {fold_result['max_drawdown']:.2%}")
+                try:
+                    fold_result = self._validate_fold(
+                        stock_list,
+                        params['train_start_date'],
+                        params['train_end_date'],
+                        params['test_start_date'],
+                        params['test_end_date'],
+                        fold
+                    )
 
-            except Exception as e:
-                logger.error(f"Fold {fold + 1} 验证失败: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
-                continue
+                    all_fold_results.append(fold_result)
+
+                    # 打印fold结果
+                    print(f"\n✅ Fold {fold + 1} 结果:")
+                    print(f"  样本数: {fold_result['num_samples']}")
+                    print(f"  交易次数: {fold_result.get('num_trades', 'N/A')}")
+                    print(f"  平均收益率: {fold_result['avg_return']:.2%}")
+                    print(f"  胜率: {fold_result['win_rate']:.2%}")
+                    print(f"  准确率: {fold_result['accuracy']:.2%}")
+                    print(f"  夏普比率: {fold_result['sharpe_ratio']:.4f}")
+                    print(f"  最大回撤: {fold_result['max_drawdown']:.2%}")
+
+                except Exception as e:
+                    logger.error(f"Fold {fold + 1} 验证失败: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    continue
 
         # 计算整体指标
         overall_result = self._calculate_overall_metrics(all_fold_results)
@@ -267,6 +305,56 @@ class WalkForwardValidator:
 
         return report
 
+    def _validate_fold_wrapper(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, total_folds):
+        """
+        并行执行的 fold 验证包装器
+
+        Args:
+            stock_list: 股票代码列表
+            train_start_date: 训练开始日期
+            train_end_date: 训练结束日期
+            test_start_date: 测试开始日期
+            test_end_date: 测试结束日期
+            fold: fold编号
+            total_folds: 总fold数
+
+        Returns:
+            dict: fold验证结果，失败时返回 None
+        """
+        print(f"\n{'='*80}")
+        print(f"📊 Fold {fold + 1}/{total_folds}")
+        print(f"{'='*80}")
+        print(f"训练期间: {train_start_date.strftime('%Y-%m-%d')} 至 {train_end_date.strftime('%Y-%m-%d')}")
+        print(f"测试期间: {test_start_date.strftime('%Y-%m-%d')} 至 {test_end_date.strftime('%Y-%m-%d')}")
+
+        try:
+            fold_result = self._validate_fold(
+                stock_list,
+                train_start_date,
+                train_end_date,
+                test_start_date,
+                test_end_date,
+                fold
+            )
+
+            # 打印fold结果
+            print(f"\n✅ Fold {fold + 1} 结果:")
+            print(f"  样本数: {fold_result['num_samples']}")
+            print(f"  交易次数: {fold_result.get('num_trades', 'N/A')}")
+            print(f"  平均收益率: {fold_result['avg_return']:.2%}")
+            print(f"  胜率: {fold_result['win_rate']:.2%}")
+            print(f"  准确率: {fold_result['accuracy']:.2%}")
+            print(f"  夏普比率: {fold_result['sharpe_ratio']:.4f}")
+            print(f"  最大回撤: {fold_result['max_drawdown']:.2%}")
+
+            return fold_result
+
+        except Exception as e:
+            logger.error(f"Fold {fold + 1} 验证失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+
     def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold):
         """
         验证单个fold
@@ -296,8 +384,9 @@ class WalkForwardValidator:
             )
         elif self.model_type == 'catboost_ranker':
             # P3-9: 排序模型
+            # P4-10: 使用 YetiRankPairwise 损失函数（成对比较，更适合截面选股）
             model = self.model_class(
-                loss_function='YetiRank',
+                loss_function='YetiRankPairwise',
                 use_monotone_constraints=self.use_monotone_constraints,
                 time_decay_lambda=self.time_decay_lambda,
                 use_rolling_percentile=self.use_rolling_percentile,
@@ -1064,6 +1153,10 @@ def main():
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（默认: False，使用全量特征）')
 
+    # 并行执行参数
+    parser.add_argument('--n-jobs', type=int, default=1,
+                       help='并行执行的 fold 数量（-1 表示使用所有 CPU 核心，默认: 1 顺序执行）')
+
     args = parser.parse_args()
 
     # 获取股票列表
@@ -1087,7 +1180,8 @@ def main():
         step_window_months=args.step_window,
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
-        use_feature_selection=args.use_feature_selection
+        use_feature_selection=args.use_feature_selection,
+        n_jobs=args.n_jobs
     )
 
     # 执行验证
