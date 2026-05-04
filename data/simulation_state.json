@@ -31064,6 +31064,70 @@
       "current_price": 34.46,
       "target_price": 36.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-04T14:52:36.974659",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分6.0分，RSI高位布林带突破上轨，CMF显著流出，量价背离",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 32.26,
+      "target_price": 30.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04T14:52:39.155880",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分6.5分，RSI超买布林带突破上轨，CMF流出，美国芯片设备出口限制地缘风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 72.8,
+      "target_price": 68.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04T14:52:42.393607",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分6.5分，RSI高位CMF显著流出，美国芯片管制升级，基本面与TAV评分背离",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 121.0,
+      "target_price": 112.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04T14:52:44.514858",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 132.5,
+      "amount": 0,
+      "capital_after": 801.1892940520192,
+      "reason": "技术指标协同支持（RSI中性偏强、MACD初现金叉、CMF流入、情感指标改善），筹码分布低位阻力中等，科技板块强势上涨，AI业务新闻提振",
+      "success": false,
+      "stop_loss_price": 112.6,
+      "current_price": 132.5,
+      "target_price": 145.0,
+      "validity_period": 7
     }
   ],
   "portfolio_history": [
@@ -48646,174 +48710,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-04-30 09:55:46",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买：RSI 65.36高位、布林带突破上轨、CMF流出(-0.0796)、价格高位三重出货信号；OBV上升但CMF流出（量价背离）；能源股板块下跌（-0.51%）；情感指标波动3.15（情绪不稳）。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 29.38,
-      "target_price": 28.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:51",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.8,
-      "amount": 0,
-      "reason": "市场发生重大变化：技术指标从20.3小时前的卖出信号转为当前买入信号，因RSI超卖（34.91<35）、布林带破下轨、OBV上升、CMF流入（0.0878）四重超卖信号共振；筹码分布无阻力（上方筹码比例0.0%）；银行股板块轮动（+0.53%）提供支撑；基本面低估值（PE 7.72）增强安全边际。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": 40.7,
-      "current_price": 47.8,
-      "target_price": 50.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 14:54:37",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "MACD金叉初现、RSI中性、OBV上升、CMF资金流入，板块轮动支持",
-          "allocation_pct": 40,
-          "stop_loss_price": 15.8,
-          "target_price": 19.2,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "价格高位、RSI超买、MACD死叉、CMF资金流出",
-          "stop_loss_triggered": false,
-          "target_price": 5.8,
-          "validity_period": 3
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "RSI严重超买、布林带超买、CMF资金流出、成交额骤降",
-          "stop_loss_triggered": false,
-          "target_price": 82.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "价格高位、布林带超买、CMF资金流出、成交额断崖下跌",
-          "stop_loss_triggered": false,
-          "target_price": 5.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "MACD死叉、CMF资金流出、OBV下降、板块弱势、Q1利润暴跌",
-          "stop_loss_triggered": false,
-          "target_price": 98.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0700.HK",
-          "name": "腾讯控股",
-          "reason": "MACD死叉、OBV下降、VWAP放量下跌、CMF资金流出",
-          "stop_loss_triggered": false,
-          "target_price": 450.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-30 14:54:37",
-      "type": "SELL",
-      "code": "1288.HK",
-      "name": "农业银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "价格高位、RSI超买、MACD死叉、CMF资金流出",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.07,
-      "target_price": 5.8,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-04-30 14:54:39",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "RSI严重超买、布林带超买、CMF资金流出、成交额骤降",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 84.65,
-      "target_price": 82.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-04-30 14:54:43",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "价格高位、布林带超买、CMF资金流出、成交额断崖下跌",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.21,
-      "target_price": 5.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-04-30 14:54:45",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "MACD死叉、CMF资金流出、OBV下降、板块弱势、Q1利润暴跌",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 102.5,
-      "target_price": 98.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-04-30 14:54:47",
-      "type": "SELL",
-      "code": "0700.HK",
-      "name": "腾讯控股",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "MACD死叉、OBV下降、VWAP放量下跌、CMF资金流出",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 468.8,
-      "target_price": 450.0,
-      "validity_period": 3
-    },
-    {
       "timestamp": "2026-04-30 14:54:52",
       "type": "BUY",
       "code": "2533.HK",
@@ -49005,6 +48901,110 @@
       "current_price": 34.46,
       "target_price": 36.5,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-04 14:52:36",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "技术指标协同支持（RSI中性偏强、MACD初现金叉、CMF流入、情感指标改善），筹码分布低位阻力中等，科技板块强势上涨，AI业务新闻提振",
+          "allocation_pct": 15,
+          "stop_loss_price": 112.6,
+          "target_price": 145.0,
+          "validity_period": 7
+        }
+      ],
+      "sell": [
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "出货评分6.0分，RSI高位布林带突破上轨，CMF显著流出，量价背离",
+          "stop_loss_triggered": false,
+          "target_price": 30.5,
+          "validity_period": 3
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "出货评分6.5分，RSI超买布林带突破上轨，CMF流出，美国芯片设备出口限制地缘风险",
+          "stop_loss_triggered": false,
+          "target_price": 68.0,
+          "validity_period": 3
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "出货评分6.5分，RSI高位CMF显著流出，美国芯片管制升级，基本面与TAV评分背离",
+          "stop_loss_triggered": false,
+          "target_price": 112.0,
+          "validity_period": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-04 14:52:36",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分，RSI高位布林带突破上轨，CMF显著流出，量价背离",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 32.26,
+      "target_price": 30.5,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04 14:52:39",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，RSI超买布林带突破上轨，CMF流出，美国芯片设备出口限制地缘风险",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 72.8,
+      "target_price": 68.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04 14:52:42",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.5分，RSI高位CMF显著流出，美国芯片管制升级，基本面与TAV评分背离",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 121.0,
+      "target_price": 112.0,
+      "validity_period": 3
+    },
+    {
+      "timestamp": "2026-05-04 14:52:44",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 132.5,
+      "amount": 0,
+      "reason": "技术指标协同支持（RSI中性偏强、MACD初现金叉、CMF流入、情感指标改善），筹码分布低位阻力中等，科技板块强势上涨，AI业务新闻提振",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": 112.6,
+      "current_price": 132.5,
+      "target_price": 145.0,
+      "validity_period": 7
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
