@@ -30,32 +30,37 @@
    - 解决：温度参数归一化 `temperature = score_std`
    - 分类特征处理：正确传递 cat_features 参数
 
-**验证结果对比（Walk-forward，12 folds，57只股票）**：
+**三版本验证对比（Walk-forward，12 folds，57只股票）**：
 
-| 指标 | CatBoostClassifier | CatBoostRanker | 变化 |
-|------|---------------------|----------------|------|
-| IC | -0.0216 | **+0.0122** | ✅ 从负变正 |
-| Rank IC | -0.0012 | -0.0060 | ❌ 未改善 |
-| 准确率 | 59.38% | 49.69% | ⚠️ 下降（预期） |
-| 夏普比率 | 0.8291 | 0.7945 | ➖ 相近 |
-| 索提诺比率 | 3.54 | **5.61** | ✅ 提升 58% |
-| 最大回撤 | -0.23% | -0.22% | ➖ 相近 |
+| 指标 | CatBoostClassifier | YetiRank | YetiRankPairwise | 目标 |
+|------|---------------------|----------|------------------|------|
+| IC | -0.0216 | +0.0122 | **+0.0066** | >0.01 |
+| Rank IC | -0.0012 | -0.0060 | **+0.0038** | >0.02 |
+| 准确率 | 59.38% | 49.69% | 49.80% | - |
+| 夏普比率 | 0.8291 | 0.7945 | **0.8103** | >0.8 |
+| 索提诺比率 | 3.54 | 5.61 | 5.06 | >5.0 |
+| 最大回撤 | -0.23% | -0.22% | -0.23% | <-20% |
 
 **关键发现**：
-- ✅ IC 从负变正（-0.0216 → +0.0122）
-- ⚠️ Rank IC 未达目标（-0.0060，目标 >0.02）
-- ⚠️ 准确率下降是预期的（排序模型优化排序而非分类）
-- ✅ 索提诺比率显著提升（风险调整收益更好）
+- ✅ IC 从负变正（-0.0216 → +0.0066）
+- ⚠️ Rank IC 改善但仍未达目标（+0.0038，目标 >0.02）
+- ✅ YetiRankPairwise 优于 YetiRank（Rank IC +0.0038 vs -0.0060）
+- ❌ MinMax 归一化失败（Rank IC 从 +0.0038 降至 +0.0014）
+
+**失败尝试**：
+- MinMax 归一化：将分数直接映射到 [0,1]，导致 IC/Rank IC 双双下降
+- 结论：自动温度 sigmoid 变换仍是最佳概率转换策略
 
 **核心教训**：
 - 排序模型优化排序而非分类准确率
+- YetiRankPairwise 成对比较式排序更适合截面选股场景
+- MinMax 归一化不适合 Ranker 分数转概率（信息损失）
 - 温度参数应使用 score_std，而非 1.0/score_std
-- 分类特征必须在 predict_proba 中正确处理
 
 **改动文件**：
 - `ml_services/ml_trading_model.py`（CatBoostRankerModel 类、温度参数）
-- `ml_services/walk_forward_validation.py`（Ranker 模型支持）
-- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P3 阶段文档）
+- `ml_services/walk_forward_validation.py`（Ranker 模型支持、YetiRankPairwise）
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P3/P4 阶段文档）
 
 ---
 

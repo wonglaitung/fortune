@@ -7348,13 +7348,16 @@ class CatBoostRankerModel(BaseTradingModel):
             'allow_writing_files': False,
         }
 
-        # 单调约束
-        monotone_constraints = self._build_monotone_constraints(self.feature_columns)
-        if monotone_constraints is not None:
-            ranker_params['monotone_constraints'] = monotone_constraints
-            constrained_pos = sum(1 for c in monotone_constraints if c == 1)
-            constrained_neg = sum(1 for c in monotone_constraints if c == -1)
-            logger.info(f"已启用单调约束: +1={constrained_pos}, -1={constrained_neg}")
+        # 单调约束（YetiRankPairwise 不支持单调约束）
+        if self.loss_function != 'YetiRankPairwise':
+            monotone_constraints = self._build_monotone_constraints(self.feature_columns)
+            if monotone_constraints is not None:
+                ranker_params['monotone_constraints'] = monotone_constraints
+                constrained_pos = sum(1 for c in monotone_constraints if c == 1)
+                constrained_neg = sum(1 for c in monotone_constraints if c == -1)
+                logger.info(f"已启用单调约束: +1={constrained_pos}, -1={constrained_neg}")
+        else:
+            logger.info("YetiRankPairwise 不支持单调约束，已跳过")
 
         self.ranker_model = CatBoostRanker(**ranker_params)
 
@@ -7488,19 +7491,16 @@ class CatBoostRankerModel(BaseTradingModel):
         scores = self.ranker_model.predict(test_pool)
 
         # 自动温度调整：归一化分数，使标准差约为 1.0
-        # temperature 越小，sigmoid 越陡峭，概率分布越极端
+        # 验证结论：MinMax 归一化导致 IC/Rank IC 下降，已放弃
         if temperature == 'auto':
             score_std = np.std(scores)
-            if score_std > 0.001:  # 避免除零
-                # 使用分数的标准差作为温度，归一化后 sigmoid 输出范围更广
+            if score_std > 0.001:
                 temperature = score_std
-                logger.info(f"Ranker 自动温度: {temperature:.4f} (分数标准差: {score_std:.4f}, 范围: [{scores.min():.4f}, {scores.max():.4f}])")
+                logger.info(f"Ranker 自动温度: {temperature:.4f} (分数标准差)")
             else:
                 temperature = 1.0
                 logger.warning(f"Ranker 分数标准差过小 ({score_std:.4f})，使用默认温度 1.0")
 
-        # 缩放分数后再 sigmoid 变换
-        # scores / temperature 使标准差归一化到 ~1.0
         scaled_scores = scores / temperature
         proba_col1 = expit(scaled_scores)
 
