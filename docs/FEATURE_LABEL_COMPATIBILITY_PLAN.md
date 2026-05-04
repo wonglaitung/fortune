@@ -629,9 +629,23 @@ loss_function='YetiRankPairwise',
   Step 23 → 诊断模型是否在"偷懒"（通过交叉特征获取市场信号）
   Step 24 → 制定下一步优化方向（强化截面特征、剔除交叉特征中的市场成分）
 
-阶段 8（验证收尾）：
-  Step 25 → 最终 IC/Rank IC 验证
-  Step 26 → 文档更新
+阶段 8（P7，已完成 ⚠️）：
+  Step 25 → 截面特征扩展（55 → ~100）
+  Step 26 → 剔除宏观交叉特征（MACRO_CROSS_FEATURES）
+  Step 27 → Walk-forward 验证 — ⚠️ Rank IC 变负，效果不如预期
+  Step 28 → 建议回退到 P4 最优配置
+
+阶段 9（P8，已完成 ✅）：
+  Step 29 → 训练与预测一致性诊断（网络特征重要性极低）
+  Step 30 → 启用动量网络特征（predict_batch 添加网络特征计算）
+  Step 31 → 移除占位符特征（net_sector_community_match, net_mst_neighbor_sectors）
+  Step 32 → 新增"训练与预测一致性"规则（docs/programmer_skill.md）
+
+阶段 10（验证收尾，待执行）：
+  Step 33 → 重新训练模型（含修复后的网络特征）
+  Step 34 → Walk-forward 验证（检查网络特征重要性排名）
+  Step 35 → 最终 IC/Rank IC 验证
+  Step 36 → 文档更新
 ```
 
 ---
@@ -640,7 +654,7 @@ loss_function='YetiRankPairwise',
 
 | 文件 | 修改内容 |
 |------|---------|
-| `ml_services/ml_trading_model.py` | P0 全部 + P1 全部 + P3 全部（主战场） |
+| `ml_services/ml_trading_model.py` | P0 全部 + P1 全部 + P3 全部 + P8 全部（主战场） |
 | `data_services/feature_residualizer.py` | 扩展 MICRO_FEATURES + keep_original 默认值 |
 | `comprehensive_analysis.py` | 调用方迁移到 predict_batch |
 | `ml_services/walk_forward_validation.py` | 验证兼容性 + P3 Ranker 支持 + 特征修剪参数 |
@@ -962,4 +976,155 @@ MARKET_LEVEL_FEATURES.extend([
 
 ---
 
-**最后更新**：2026-05-04（P6 特征重要性审计：模型仍在"偷懒"，需强化截面特征）
+## P7 阶段：特征优化验证（截面特征扩展 + 宏观交叉特征剔除）
+
+**背景**：P6 特征重要性审计发现模型仍通过交叉特征（如 `60d_Trend_HSI_Return_60d`）间接获取市场信号，而非学习个股 Alpha。
+
+**优化措施**：
+1. **A. 截面特征扩展**：`CROSS_SECTIONAL_PERCENTILE_FEATURES` 从 55 扩展至 ~100
+2. **B. 剔除宏观交叉特征**：`MACRO_CROSS_FEATURES`（27 个特征）在 `get_feature_columns()` 中排除
+3. **C. 增加纯 Alpha 特征**：新增 `Anomaly_*`、`Trend_*`、K线形态等截面化特征
+
+### P7-19：验证结果（⚠️ 效果不如预期）
+
+```bash
+python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
+```
+
+| 指标 | P4（基线） | P5（软标签） | P7（特征优化） | 目标 | 评估 |
+|------|-----------|--------------|----------------|------|------|
+| **IC** | +0.0066 | -0.0022 | **+0.0033** | >0.01 | ⚠️ 下降 |
+| **Rank IC** | +0.0038 | -0.0063 | **-0.0025** | >0.02 | ❌ 变负 |
+| **准确率** | 49.80% | 48.57% | **49.29%** | - | ➡️ 持平 |
+| **夏普比率** | 0.8103 | 0.7146 | **0.7786** | >0.8 | ⚠️ 略低 |
+| **索提诺比率** | 5.06 | 3.14 | **5.2051** | >5.0 | ✅ 最优 |
+| **最大回撤** | -0.23% | -0.21% | **-0.24%** | <-20% | ✅ 极佳 |
+
+### P7-20：失败原因分析
+
+**Rank IC 变负的原因**：
+
+1. **截面特征扩展引入噪声**
+   - 从 55 扩展至 ~100，新增特征可能包含低质量信号
+   - 部分特征（如 `Skewness_*`、`Kurtosis_*`）在截面排名中区分度有限
+
+2. **宏观交叉特征剔除过度**
+   - `MACRO_CROSS_FEATURES`（27 个特征）被剔除
+   - 这些特征虽含宏观成分，但也提供了个股与市场的相对强度信息
+   - 剔除后模型失去了部分预测能力
+
+3. **特征冗余导致信息稀释**
+   - 截面特征过多（~100 个），部分特征间高度相关
+   - 模型难以区分有效信号和噪声
+
+### P7-21：关键教训
+
+| 教训 | 说明 |
+|------|------|
+| **截面特征非越多越好** | 质量比数量重要，低质量特征会稀释有效信号 |
+| **宏观交叉特征有双重作用** | 既含宏观成分（干扰），也含相对强度信息（有用） |
+| **剔除特征需逐步验证** | 过度剔除可能导致模型容量不足 |
+| **索提诺比率最优** | P7 的风险调整收益最佳，但排序能力下降 |
+
+### P7-22：下一步建议
+
+| 方向 | 说明 | 优先级 |
+|------|------|--------|
+| **回退到 P4 配置** | P4（YetiRankPairwise + 原始收益率）仍是当前最优 | ⭐⭐⭐ |
+| **精简截面特征** | 从 ~100 回退到 55，仅保留高质量特征 | ⭐⭐⭐ |
+| **部分恢复宏观交叉特征** | 仅剔除纯市场特征，保留 `Trend × HSI_Return` 类 | ⭐⭐ |
+| **模型融合** | P4（排序）+ Classifier（分类）融合 | ⭐ |
+
+---
+
+## P8 阶段：训练与预测一致性修复
+
+**背景**：P7 验证后发现网络特征重要性极低（排名 737/818、786/818、802/818），经排查发现训练和预测时特征计算不一致。
+
+### P8-23：问题诊断
+
+**网络特征训练-预测不一致**：
+
+| 问题 | 训练时 | 预测时（修复前） | 后果 |
+|------|--------|-----------------|------|
+| 网络特征（批量预测） | 实时计算 | 默认值 0/-1 | 特征重要性极低 |
+| 网络特征（单股预测） | 实时计算 | 默认值 0/-1 | 无法修复（设计限制） |
+
+**占位符特征未实际计算**：
+
+| 特征 | 训练时 | 预测时 | 说明 |
+|------|--------|--------|------|
+| `net_sector_community_match` | 设为 0 | 设为 0 | 占位符，从未实现 |
+| `net_mst_neighbor_sectors` | 设为 0 | 设为 0 | 占位符，从未实现 |
+
+### P8-24：修复措施
+
+**1. 启用动量网络特征（predict_batch）**
+
+修改 `CatBoostModel.predict_batch()` 和 `CatBoostRankerModel.predict_batch()`，添加网络特征实时计算：
+
+```python
+# 批量预测时正确计算网络特征
+from data_services.network_features import get_network_calculator
+network_calc = get_network_calculator()
+
+# 计算网络洞察（中心性、社区）
+insights = network_calc.calculate_network_insights(unique_codes, force_refresh=False)
+
+# 计算节点偏离度（动量网络特征）
+deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
+
+# 填充网络特征
+for code in unique_codes:
+    mask = combined['Code'] == code
+    combined.loc[mask, 'net_composite_centrality'] = insights[code].get('composite_centrality', 0)
+    combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
+    combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+```
+
+**2. 移除占位符特征**
+
+移除 `net_sector_community_match` 和 `net_mst_neighbor_sectors`，保留 3 个有效网络特征：
+
+| 保留特征 | 说明 |
+|---------|------|
+| `net_composite_centrality` | 综合中心性 |
+| `net_community_id` | 社区ID（分类特征） |
+| `net_node_deviation` | 节点偏离度（动量网络特征） |
+
+**3. 新增"训练与预测一致性"规则**
+
+在 `docs/programmer_skill.md` 新增关键警告：
+
+- 常见不一致问题类型
+- 检查清单
+- 批量预测优先原则
+
+### P8-25：修改位置
+
+| 文件 | 修改内容 |
+|------|---------|
+| `ml_services/ml_trading_model.py` | `prepare_data()` 网络特征计算（移除占位符） |
+| `ml_services/ml_trading_model.py` | `predict()` 单股预测网络特征默认值（移除占位符） |
+| `ml_services/ml_trading_model.py` | `_extract_raw_features_single()` 特征提取（移除占位符） |
+| `ml_services/ml_trading_model.py` | `predict_batch()` 批量预测网络特征计算（CatBoostModel 和 CatBoostRankerModel） |
+| `docs/programmer_skill.md` | 新增"训练与预测必须一致"关键警告 |
+
+### P8-26：提交记录
+
+```
+cd05433 feat: 启用动量网络特征 - predict_batch 添加网络特征计算
+0ab3c99 refactor: 移除占位符网络特征 + 文档新增"训练与预测一致性"规则
+```
+
+### P8-27：待验证
+
+| 验证项 | 说明 |
+|--------|------|
+| 网络特征重要性提升 | 重新训练后检查 `net_node_deviation` 排名 |
+| 训练-预测一致性 | 确保 `predict_batch()` 网络特征与训练时一致 |
+| Walk-forward 验证 | 验证 Rank IC 是否改善 |
+
+---
+
+**最后更新**：2026-05-04（P8 训练与预测一致性修复：启用动量网络特征、移除占位符、新增一致性规则）
