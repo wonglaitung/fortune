@@ -1127,4 +1127,462 @@ cd05433 feat: 启用动量网络特征 - predict_batch 添加网络特征计算
 
 ---
 
-**最后更新**：2026-05-04（P8 训练与预测一致性修复：启用动量网络特征、移除占位符、新增一致性规则）
+## P9 阶段：选股能力深度优化
+
+**背景**：P7 验证失败（Rank IC 变负），P8 修复了训练-预测一致性问题。当前核心问题是模型选股能力不足（IC ≈ 0，Rank IC ≈ 0）。
+
+### P9-1：问题根因分析
+
+**当前 Top 20 特征分析**：
+
+| 排名 | 特征 | 类型 | 问题 |
+|------|------|------|------|
+| #1 | `CMF_CS_Pct` | 截面 | ✅ 正确方向 |
+| #2 | `60d_Trend_HSI_Return_60d` | 交叉 | ⚠️ 含宏观成分 |
+| #3 | `Skewness_10d` | 个股 | ✅ 正确方向 |
+| #5 | `10d_Trend_HSI_Regime_Prob_1` | 交叉 | ⚠️ 含宏观成分 |
+
+**核心问题**：
+
+1. **截面特征占比不足**：Top 20 中仅 2 个纯截面特征（`CMF_CS_Pct`, `CMF_CS_ZScore`）
+2. **交叉特征仍占主导**：`Trend × HSI_*` 类特征排名靠前，模型仍在"偷懒"
+3. **相对强度特征未进入 Top 20**：`RS_Ratio_*`、`RS_Diff_*` 等关键 Alpha 信号未被充分利用
+
+### P9-2：优化方案
+
+#### 方案 A：特征分层策略（推荐）
+
+**核心思想**：将特征分为三层，优先使用高质量截面特征
+
+| 层级 | 特征类型 | 数量 | 处理方式 |
+|------|----------|------|----------|
+| **L1（核心）** | 截面特征 | ~60 | 全部保留，优先学习 |
+| **L2（辅助）** | 个股特异性特征 | ~200 | 保留，提供补充信号 |
+| **L3（剔除）** | 市场级 + 宏观交叉 | ~150 | 完全剔除 |
+
+**L1 核心截面特征清单**：
+
+```python
+L1_CORE_CS_FEATURES = [
+    # ========== 资金流向（选股核心）==========
+    'CMF_CS_Pct', 'CMF_CS_ZScore',
+    'OBV_CS_Pct', 'OBV_CS_ZScore',
+    'Smart_Money_Score_CS_Pct', 'Smart_Money_Score_CS_ZScore',
+    'Accumulation_Score_CS_Pct', 'Accumulation_Score_CS_ZScore',
+
+    # ========== 动量（选股核心）==========
+    'Momentum_20d_CS_Pct', 'Momentum_20d_CS_ZScore',
+    'Momentum_Accel_5d_CS_Pct', 'Momentum_Accel_5d_CS_ZScore',
+    'MACD_histogram_CS_Pct', 'MACD_histogram_CS_ZScore',
+
+    # ========== 相对强度（关键 Alpha）==========
+    'RS_Ratio_5d_CS_Pct', 'RS_Ratio_5d_CS_ZScore',
+    'RS_Ratio_20d_CS_Pct', 'RS_Ratio_20d_CS_ZScore',
+    'RS_Diff_5d_CS_Pct', 'RS_Diff_5d_CS_ZScore',
+    'RS_Diff_20d_CS_Pct', 'RS_Diff_20d_CS_ZScore',
+    'Relative_Return_CS_Pct', 'Relative_Return_CS_ZScore',
+
+    # ========== 波动率（风险调整）==========
+    'Volatility_20d_CS_Pct', 'Volatility_20d_CS_ZScore',
+    'ATR_Ratio_CS_Pct', 'ATR_Ratio_CS_ZScore',
+
+    # ========== 风险特征 ==========
+    'Max_Drawdown_20d_CS_Pct', 'Max_Drawdown_20d_CS_ZScore',
+    'Kurtosis_20d_CS_Pct', 'Kurtosis_20d_CS_ZScore',
+    'Skewness_20d_CS_Pct', 'Skewness_20d_CS_ZScore',
+
+    # ========== 基本面 ==========
+    'PE_CS_Pct', 'PE_CS_ZScore',
+    'PB_CS_Pct', 'PB_CS_ZScore',
+    'ROE_CS_Pct', 'ROE_CS_ZScore',
+]
+```
+
+**L3 剔除特征清单**：
+
+```python
+L3_EXCLUDE_FEATURES = [
+    # ========== 纯市场特征（同日所有股票值相同）==========
+    'US_10Y_Yield', 'US_10Y_Yield_Change',
+    'VIX_Level', 'VIX_Change',
+    'HSI_Return_1d', 'HSI_Return_5d', 'HSI_Return_20d', 'HSI_Return_60d',
+    'SP500_Return_5d', 'SP500_Return_20d',
+    'HSI_Market_Regime', 'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1',
+    'HSI_Regime_Duration',
+
+    # ========== 宏观交叉特征（含市场成分）==========
+    # Trend × 市场收益
+    '5d_Trend_HSI_Return_5d', '10d_Trend_HSI_Return_10d',
+    '20d_Trend_HSI_Return_20d', '60d_Trend_HSI_Return_60d',
+    # Trend × 市场状态
+    '5d_Trend_HSI_Regime_Prob_0', '5d_Trend_HSI_Regime_Prob_1',
+    '10d_Trend_HSI_Regime_Prob_0', '10d_Trend_HSI_Regime_Prob_1',
+    '20d_Trend_HSI_Regime_Prob_0', '20d_Trend_HSI_Regime_Prob_1',
+    # Trend × 美股
+    '5d_Trend_SP500_Return_5d', '10d_Trend_SP500_Return_10d',
+    '5d_Trend_NASDAQ_Return_5d', '10d_Trend_NASDAQ_Return_10d',
+]
+```
+
+#### 方案 B：特征权重增强
+
+**核心思想**：训练时对截面特征赋予更高样本权重
+
+```python
+# 在 train() 方法中
+def _compute_feature_weights(self, df):
+    """计算特征权重，截面特征权重加倍"""
+    weights = np.ones(len(df))
+
+    # 识别截面特征
+    cs_features = [col for col in self.feature_columns if '_CS_Pct' in col or '_CS_ZScore' in col]
+
+    # 对截面特征权重加倍（通过样本权重间接实现）
+    # 这是一种近似方法，实际效果需要验证
+    return weights
+```
+
+**注意**：CatBoost 不直接支持特征权重，需要通过其他方式实现（如重复样本）。
+
+#### 方案 C：两阶段训练
+
+**核心思想**：第一阶段只用截面特征，第二阶段加入个股特征微调
+
+| 阶段 | 特征 | 目标 |
+|------|------|------|
+| **阶段1** | 仅 L1 截面特征 | 学习"谁比谁强" |
+| **阶段2** | L1 + L2 特征 | 微调预测 |
+
+**实现方式**：
+
+```python
+# 阶段1：仅用截面特征训练
+model_phase1 = CatBoostModel()
+model_phase1.train(codes, feature_subset=L1_CORE_CS_FEATURES)
+
+# 阶段2：用全部特征微调
+model_phase2 = CatBoostModel()
+model_phase2.train(codes, init_model=model_phase1.catboost_model)
+```
+
+### P9-3：推荐实施顺序
+
+| 优先级 | 方案 | 预期效果 | 实施难度 |
+|--------|------|----------|----------|
+| **1** | 方案 A（特征分层） | 截面特征占比提升至 >40% | 低 |
+| 2 | 方案 C（两阶段训练） | 强制模型优先学习截面信号 | 中 |
+| 3 | 方案 B（特征权重） | 间接提升截面特征重要性 | 高（CatBoost 不原生支持） |
+
+### P9-4：方案 A 实施细节
+
+**修改文件**：`ml_services/ml_trading_model.py`
+
+**Step 1**：定义 L1 核心截面特征
+
+```python
+# 在 CatBoostModel 类中（~5000 行附近）
+L1_CORE_CS_FEATURES = [
+    # 资金流向
+    'CMF_CS_Pct', 'CMF_CS_ZScore', 'OBV_CS_Pct', 'OBV_CS_ZScore',
+    'Smart_Money_Score_CS_Pct', 'Smart_Money_Score_CS_ZScore',
+    # 动量
+    'Momentum_20d_CS_Pct', 'Momentum_20d_CS_ZScore',
+    'Momentum_Accel_5d_CS_Pct', 'Momentum_Accel_5d_CS_ZScore',
+    # 相对强度
+    'RS_Ratio_5d_CS_Pct', 'RS_Ratio_5d_CS_ZScore',
+    'RS_Ratio_20d_CS_Pct', 'RS_Ratio_20d_CS_ZScore',
+    'RS_Diff_5d_CS_Pct', 'RS_Diff_5d_CS_ZScore',
+    'RS_Diff_20d_CS_Pct', 'RS_Diff_20d_CS_ZScore',
+    # 波动率
+    'Volatility_20d_CS_Pct', 'Volatility_20d_CS_ZScore',
+    # 风险
+    'Max_Drawdown_20d_CS_Pct', 'Max_Drawdown_20d_CS_ZScore',
+    # 基本面
+    'PE_CS_Pct', 'PE_CS_ZScore', 'ROE_CS_Pct', 'ROE_CS_ZScore',
+]
+
+L3_EXCLUDE_FEATURES = [
+    # 纯市场特征
+    'US_10Y_Yield', 'VIX_Level', 'HSI_Return_1d', 'HSI_Return_5d',
+    'HSI_Return_20d', 'HSI_Return_60d', 'SP500_Return_5d', 'SP500_Return_20d',
+    'HSI_Market_Regime', 'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1',
+    # 宏观交叉特征
+    '5d_Trend_HSI_Return_5d', '10d_Trend_HSI_Return_10d',
+    '20d_Trend_HSI_Return_20d', '60d_Trend_HSI_Return_60d',
+    '5d_Trend_HSI_Regime_Prob_0', '5d_Trend_HSI_Regime_Prob_1',
+    '10d_Trend_HSI_Regime_Prob_0', '10d_Trend_HSI_Regime_Prob_1',
+]
+```
+
+**Step 2**：修改 `get_feature_columns()` 方法
+
+```python
+def get_feature_columns(self, df):
+    """获取特征列，应用特征分层策略"""
+    # ... 原有排除逻辑 ...
+
+    # 应用 L3 剔除
+    l3_exclude = set(self.L3_EXCLUDE_FEATURES) if hasattr(self, 'L3_EXCLUDE_FEATURES') else set()
+    feature_columns = [col for col in feature_columns if col not in l3_exclude]
+
+    return feature_columns
+```
+
+**Step 3**：扩展截面特征覆盖
+
+确保 `CROSS_SECTIONAL_PERCENTILE_FEATURES` 包含所有 L1 特征的原始版本：
+
+```python
+# 更新 CROSS_SECTIONAL_PERCENTILE_FEATURES
+CROSS_SECTIONAL_PERCENTILE_FEATURES = [
+    # 资金流向
+    'CMF', 'OBV', 'Smart_Money_Score', 'Accumulation_Score',
+    # 动量
+    'Momentum_20d', 'Momentum_Accel_5d', 'MACD_histogram',
+    # 相对强度
+    'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d', 'Relative_Return',
+    # 波动率
+    'Volatility_20d', 'ATR_Ratio',
+    # 风险
+    'Max_Drawdown_20d', 'Kurtosis_20d', 'Skewness_20d',
+    # 基本面
+    'PE', 'PB', 'ROE', 'Market_Cap',
+    # 网络特征
+    'net_node_deviation', 'net_node_deviation_delta_5d',
+]
+```
+
+### P9-5：验证计划
+
+| 验证项 | 命令 | 目标 |
+|--------|------|------|
+| Walk-forward 验证 | `python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20` | Rank IC > 0.02 |
+| 特征重要性审计 | 检查 Top 20 中截面特征占比 | > 40% |
+| IC 分析 | 检查 IC 和 Rank IC | IC > 0.01, Rank IC > 0.02 |
+
+### P9-5.1：验证结果保存要求
+
+**必须保存的文件**：
+
+| # | 文件名 | 内容 | 用途 |
+|---|--------|------|------|
+| **1** | `feature_importance_top50.json` | Top 50 特征名称及重要性 | 特征工程优化依据 |
+| **2** | `recommended_stocks_returns.csv` | 前 25% 推荐股票及真实收益率 | 选股效果分析 |
+| **3** | `prediction_distribution.json` | 预测概率分布统计 | 模型校准分析 |
+| **4** | `fold_metrics_detail.json` | 各 Fold 详细指标 | 稳定性分析 |
+| **5** | `top_stocks_features.csv` | 推荐股票的特征值 | 特征归因分析 |
+
+#### 文件 1：`feature_importance_top50.json`
+
+```json
+{
+  "model_type": "catboost_ranker",
+  "horizon": 20,
+  "timestamp": "2026-05-05_120000",
+  "top_50_features": [
+    {"rank": 1, "feature": "CMF_CS_Pct", "importance": 5.28, "type": "cross_sectional"},
+    {"rank": 2, "feature": "Momentum_20d_CS_Pct", "importance": 4.15, "type": "cross_sectional"},
+    ...
+  ],
+  "feature_type_summary": {
+    "cross_sectional": 25,
+    "individual": 20,
+    "macro": 5
+  }
+}
+```
+
+#### 文件 2：`recommended_stocks_returns.csv`
+
+| Fold | Date | Stock_Code | Stock_Name | Predict_Prob | Rank | Actual_Return | Actual_Rank | Hit |
+|------|------|------------|------------|--------------|------|---------------|-------------|-----|
+| 1 | 2025-01-15 | 0700.HK | 腾讯控股 | 0.82 | 3 | +12.5% | 15/57 | 1 |
+| 1 | 2025-01-15 | 0988.HK | 阿里巴巴 | 0.78 | 5 | +8.2% | 22/57 | 1 |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
+**字段说明**：
+- `Predict_Prob`：模型预测概率
+- `Rank`：当日预测排名（1 = 最看好）
+- `Actual_Return`：实际收益率（horizon 天后）
+- `Actual_Rank`：实际收益排名
+- `Hit`：是否跑赢中位数（1 = 跑赢）
+
+#### 文件 3：`prediction_distribution.json`
+
+```json
+{
+  "fold": 1,
+  "test_period": "2025-01-01 to 2025-01-31",
+  "prediction_stats": {
+    "mean": 0.52,
+    "std": 0.15,
+    "min": 0.18,
+    "max": 0.85,
+    "quartiles": {
+      "q25": 0.42,
+      "q50": 0.51,
+      "q75": 0.63
+    }
+  },
+  "calibration": {
+    "predicted_0.6_to_0.7": {"count": 120, "actual_positive_rate": 0.58},
+    "predicted_0.7_to_0.8": {"count": 85, "actual_positive_rate": 0.62},
+    "predicted_0.8_to_0.9": {"count": 42, "actual_positive_rate": 0.71}
+  }
+}
+```
+
+**用途**：检查模型是否校准良好（预测概率是否与实际概率一致）
+
+#### 文件 4：`fold_metrics_detail.json`
+
+```json
+{
+  "model_type": "catboost_ranker",
+  "horizon": 20,
+  "folds": [
+    {
+      "fold": 1,
+      "train_period": "2024-01-01 to 2024-12-31",
+      "test_period": "2025-01-01 to 2025-01-31",
+      "metrics": {
+        "ic": 0.0082,
+        "rank_ic": 0.0045,
+        "accuracy": 51.2,
+        "sharpe": 0.85,
+        "max_drawdown": -0.18,
+        "top_10pct_return": 15.2,
+        "bottom_10pct_return": -5.8
+      },
+      "sample_counts": {
+        "total": 1102,
+        "positive": 551,
+        "negative": 551
+      }
+    },
+    ...
+  ]
+}
+```
+
+#### 文件 5：`top_stocks_features.csv`
+
+| Fold | Date | Stock_Code | Predict_Prob | CMF_CS_Pct | Momentum_20d_CS_Pct | RS_Ratio_20d | ... |
+|------|------|------------|--------------|------------|---------------------|--------------|-----|
+| 1 | 2025-01-15 | 0700.HK | 0.82 | 0.85 | 0.72 | 1.15 | ... |
+
+**用途**：分析"模型为什么推荐这只股票"，便于特征归因
+
+### P9-5.2：其他建议保存的信息
+
+| # | 信息 | 文件名 | 用途 |
+|---|------|--------|------|
+| **6** | 错误案例分析 | `error_analysis.csv` | 分析模型失败原因 |
+| **7** | 板块分布 | `sector_distribution.json` | 检查推荐股票的板块集中度 |
+| **8** | 特征相关性 | `feature_correlation_top20.csv` | 检查 Top 特征是否高度相关 |
+| **9** | 时间衰减效果 | `time_decay_analysis.json` | 分析近期 vs 远期预测效果 |
+| **10** | 置信度分层收益 | `confidence_return_breakdown.json` | 不同置信度区间的实际收益 |
+
+#### 文件 6：`error_analysis.csv`
+
+| Fold | Date | Stock_Code | Predict_Prob | Actual_Return | Error_Type | Possible_Reason |
+|------|------|------------|--------------|---------------|------------|-----------------|
+| 1 | 2025-01-20 | 0005.HK | 0.75 | -8.2% | False Positive | 财报不及预期 |
+
+**用途**：分析模型预测错误的原因，发现系统性偏差
+
+#### 文件 7：`sector_distribution.json`
+
+```json
+{
+  "fold": 1,
+  "top_25pct_stocks": {
+    "sector_counts": {"科技": 8, "金融": 5, "消费": 4, "能源": 2},
+    "sector_concentration": 0.35,
+    "top_sector": "科技"
+  },
+  "actual_returns_by_sector": {
+    "科技": {"avg_return": 12.5, "hit_rate": 0.65},
+    "金融": {"avg_return": 5.2, "hit_rate": 0.52}
+  }
+}
+```
+
+**用途**：检查模型是否过度集中某些板块
+
+#### 文件 8：`feature_correlation_top20.csv`
+
+| Feature_1 | Feature_2 | Correlation |
+|-----------|-----------|-------------|
+| CMF_CS_Pct | OBV_CS_Pct | 0.85 |
+| Momentum_20d_CS_Pct | RS_Ratio_20d_CS_Pct | 0.72 |
+
+**用途**：检查 Top 特征是否高度相关，避免冗余
+
+#### 文件 9：`confidence_return_breakdown.json`
+
+```json
+{
+  "confidence_bins": [
+    {"range": "0.8-1.0", "count": 45, "avg_return": 15.2, "hit_rate": 0.71},
+    {"range": "0.7-0.8", "count": 120, "avg_return": 8.5, "hit_rate": 0.58},
+    {"range": "0.6-0.7", "count": 180, "avg_return": 3.2, "hit_rate": 0.52},
+    {"range": "0.5-0.6", "count": 250, "avg_return": 0.8, "hit_rate": 0.50},
+    {"range": "0.0-0.5", "count": 300, "avg_return": -2.5, "hit_rate": 0.42}
+  ]
+}
+```
+
+**用途**：验证高置信度预测是否确实有更高收益
+
+### P9-5.3：保存路径规范
+
+```
+data/
+├── validation_results/
+│   ├── 2026-05-05_P9_catboost_ranker_20d/
+│   │   ├── feature_importance_top50.json
+│   │   ├── recommended_stocks_returns.csv
+│   │   ├── prediction_distribution.json
+│   │   ├── fold_metrics_detail.json
+│   │   ├── top_stocks_features.csv
+│   │   ├── error_analysis.csv
+│   │   ├── sector_distribution.json
+│   │   ├── feature_correlation_top20.csv
+│   │   └── confidence_return_breakdown.json
+│   └── ...
+```
+
+### P9-6：预期效果
+
+| 指标 | P4 基线 | P9 目标 | 改善幅度 |
+|------|---------|---------|----------|
+| IC | +0.0066 | **> 0.01** | +50% |
+| Rank IC | +0.0038 | **> 0.02** | +400% |
+| 截面特征占比 | 15% | **> 40%** | +167% |
+| 夏普比率 | 0.8103 | **> 0.9** | +11% |
+
+### P9-7：风险与缓解
+
+| 风险 | 说明 | 缓解措施 |
+|------|------|----------|
+| 过度剔除 | L3 特征可能包含有用信息 | 逐步剔除，每步验证 |
+| 截面特征质量 | 部分截面特征可能区分度有限 | 先做单特征 IC 分析 |
+| 模型容量不足 | 特征减少可能导致欠拟合 | 监控训练集准确率 |
+
+### P9-8：实施检查清单
+
+| # | 检查项 | 状态 |
+|---|--------|------|
+| 1 | 定义 `L1_CORE_CS_FEATURES` 常量 | ⏳ 待实施 |
+| 2 | 定义 `L3_EXCLUDE_FEATURES` 常量 | ⏳ 待实施 |
+| 3 | 修改 `get_feature_columns()` 应用 L3 剔除 | ⏳ 待实施 |
+| 4 | 扩展 `CROSS_SECTIONAL_PERCENTILE_FEATURES` | ⏳ 待实施 |
+| 5 | 实现验证结果保存逻辑（10 个文件） | ⏳ 待实施 |
+| 6 | 运行 Walk-forward 验证 | ⏳ 待实施 |
+| 7 | 分析特征重要性变化 | ⏳ 待实施 |
+| 8 | 分析推荐股票收益分布 | ⏳ 待实施 |
+
+---
+
+**最后更新**：2026-05-05（P9 选股能力深度优化：特征分层策略、验证结果保存规范、10 个分析文件）
