@@ -53,6 +53,9 @@ python3 -m pytest tests/ -v
 | 警告 | 说明 |
 |------|------|
 | **数据泄漏** | Walk-forward准确率 >65% 通常是数据泄漏信号（个股）或 >80%（恒指） |
+| **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致 |
+| **市场级特征** | 市场级特征（HSI_Return、VIX等）需与股票特征交叉后使用 |
+| **股票代码格式** | 统一使用无前导零格式（如 `2382.HK`，不是 `02382.HK`） |
 | **CatBoost 1天模型** | 噪音大，仅供参考 |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
@@ -95,6 +98,11 @@ AKShare      南向资金        主力追踪     性能监控
 - `data_services/regime_detector.py` - HMM 市场状态检测（10个特征，含 Tier 1 增强）
 - `data_services/multiscale_features.py` - 跨尺度关联（5个特征，待优化）
 - `data_services/info_decay_analyzer.py` - 信息衰减分析（5个特征，待实施）
+
+**网络分析模块**（2026-05-05 新增）：
+- `ml_services/stock_network_analysis.py` - 股票网络分析（MST、PMFG、社区检测）
+- 网络特征：社区ID、桥梁股票、中心性等
+- 输出：`output/network_features_for_ml.json`、`output/stock_network_analysis.md`
 
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
@@ -188,7 +196,7 @@ AKShare      南向资金        主力追踪     性能监控
 
 ### 主要依赖
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `hmmlearn` `arch`
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `hmmlearn` `arch` `networkx`
 
 ---
 
@@ -275,4 +283,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-04-29（参数优化：恒指20天准确率81.24%，假突破策略93.10%，下跌中继策略89.19%）
+**最后更新**：2026-05-05（网络特征集成、IC计算修复、股票代码格式统一）
