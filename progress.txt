@@ -8,6 +8,37 @@
 
 ## 最新进展（2026-05-05）
 
+### P10 验证结果 - group_weight 修复无效 ❌
+
+**验证时间**：2026-05-05 13:35:18
+
+**对比结果**：
+
+| 指标 | P9（weight 被忽略） | P10（group_weight） | 变化 |
+|------|-------------------|---------------------|------|
+| IC | +0.0137 | +0.0092 | **-0.0045** ❌ |
+| Rank IC | -0.0087 | -0.0097 | **-0.0010** ❌ |
+| 夏普比率 | 0.7797 | 0.7623 | -0.0174 |
+
+**结论**：
+1. **group_weight 修复无效**：IC 和 Rank IC 均下降
+2. **IC/Rank IC 分离持续**：IC 正值但 Rank IC 负值
+3. **预测分布挤压**：所有预测集中在 0.7-1.0 区间
+
+**Fold 级别分析**：
+- 正值 Fold：Fold 1 (+0.056), Fold 8 (+0.051), Fold 11 (+0.042)
+- 负值 Fold：Fold 5 (-0.069), Fold 2 (-0.065), Fold 10 (-0.055)
+
+**下一步建议**：
+- 回退到 P4 配置（YetiRankPairwise + 原始收益，Rank IC +0.0038）
+- 或尝试 QuerySoftMax 损失函数
+- 或放弃 Ranker，回归分类模型
+
+**改动文件**：
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P10-14 章节）
+
+---
+
 ### P10 关键发现与修复 - Pairwise 损失函数不支持样本权重
 
 **目标**：修复 P9 Rank IC 变负的根因
@@ -52,8 +83,7 @@ train_pool = Pool(
 - `ml_services/ml_trading_model.py`（weight → group_weight）
 - `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P10-10~13 章节）
 
-**待验证**：
-- Walk-forward 验证修复后效果
+**验证结果**：❌ 无效，见上方 P10 验证结果
 
 ---
 
