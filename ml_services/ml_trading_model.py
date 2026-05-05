@@ -7723,16 +7723,27 @@ class CatBoostRankerModel(BaseTradingModel):
             group_ids_train = group_ids[train_idx]
             group_ids_val = group_ids[val_idx]
 
-            fold_weights = None
+            # P10 修复：Pairwise 损失函数不支持 object weights，改用 group_weight
+            # 计算每日（每个 Group）的权重
+            group_weights_train = None
             if self.sample_weights is not None:
                 fold_weights = self.sample_weights[train_idx]
+                # 使用 pandas 计算每个 group 的平均权重（同一日的样本权重相同）
+                # group_ids_train 是日期索引映射，需要转换为 DataFrame 操作
+                import pandas as pd
+                train_df = pd.DataFrame({
+                    'weight': fold_weights,
+                    'group_id': group_ids_train
+                })
+                # 每个日期取第一个样本的权重（同日样本权重相同）
+                group_weights_train = train_df.groupby('group_id')['weight'].first().values
 
             train_pool = Pool(
                 data=X_train_fold,
                 label=y_train_fold,
                 group_id=group_ids_train,
                 cat_features=categorical_features if categorical_features else None,
-                weight=fold_weights
+                group_weight=group_weights_train  # ✅ YetiRank/YetiRankPairwise 支持组权重
             )
             val_pool = Pool(
                 data=X_val_fold,
@@ -7755,13 +7766,23 @@ class CatBoostRankerModel(BaseTradingModel):
                 cv_scores.append(0.0)
                 print(f"   Fold {fold} 完成")
 
-        # 全量数据重训练
+        # 全量数据重训练（P10 修复：使用 group_weight）
+        # 计算每个日期的组权重
+        group_weights_full = None
+        if self.sample_weights is not None:
+            import pandas as pd
+            full_df = pd.DataFrame({
+                'weight': self.sample_weights,
+                'group_id': group_ids
+            })
+            group_weights_full = full_df.groupby('group_id')['weight'].first().values
+
         full_pool = Pool(
             data=X,
             label=y,
             group_id=group_ids,
             cat_features=categorical_features if categorical_features else None,
-            weight=self.sample_weights
+            group_weight=group_weights_full  # ✅ YetiRank/YetiRankPairwise 支持组权重
         )
         self.ranker_model.fit(full_pool, verbose=100)
 

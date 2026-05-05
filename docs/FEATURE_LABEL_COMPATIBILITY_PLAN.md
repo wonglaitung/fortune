@@ -647,6 +647,12 @@ loss_function='YetiRankPairwise',
   Step 35 → Walk-forward 验证 — ⚠️ IC 达标（+0.0137），但 Rank IC 变负（-0.0087）
   Step 36 → 文档更新 + 结论分析
 
+阶段 11（P10，待实施）：
+  Step 37 → YetiRank 损失函数实验（YetiRankPairwise → YetiRank）
+  Step 38 → Walk-forward 验证对比
+  Step 39 → 分析 IC/Rank IC 分歧原因
+  Step 40 → 最终配置决策
+
 阶段 11（验证收尾，待执行）：
   Step 37 → 分析 IC/Rank IC 分歧原因
   Step 38 → 精简 L3 剔除列表（保留相对强度特征）
@@ -1583,7 +1589,7 @@ data/
 | 1 | 定义 `L1_CORE_CS_FEATURES` 常量 | ✅ 已完成 |
 | 2 | 定义 `L3_EXCLUDE_FEATURES` 常量 | ✅ 已完成 |
 | 3 | 修改 `get_feature_columns()` 应用 L3 剔除 | ✅ 已完成 |
-| 4 | 扩展 `CROSS_SECTIONAL_PERCENTILE_FEATURES` | ⏳ 待实施 |
+| 4 | 扩展 `CROSS_SECTIONAL_PERCENTILE_FEATURES` | ✅ 已完成（覆盖所有 L1 原始特征） |
 | 5 | 实现验证结果保存逻辑（10 个文件） | ⏳ 待实施 |
 | 6 | 运行 Walk-forward 验证 | ✅ 已完成 |
 | 7 | 分析特征重要性变化 | ⏳ 待实施 |
@@ -1668,4 +1674,221 @@ python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --ho
 
 ---
 
-**最后更新**：2026-05-05（P9 验证完成：IC 首次达标 +0.0137，但 Rank IC 变负 -0.0087，Top 20% 超额收益 +9.22%）
+## P10 阶段：YetiRank 损失函数实验
+
+**背景**：P9 验证发现 IC 首次达标（+0.0137），但 Rank IC 变负（-0.0087）。分析认为 YetiRankPairwise 可能是根因之一。
+
+**核心问题**：
+- **IC 正但 Rank IC 负**：模型抓住了极端收益的"妖股"（线性关系），但整体排序混乱
+- **预测值挤压**：概率集中在 0.7-1.0，模型只需确保 A > B，不拉开分数差距
+
+### P10-1：YetiRank vs YetiRankPairwise 对比
+
+| 特性 | YetiRankPairwise（P4/P9 使用） | YetiRank（建议尝试） |
+|------|-------------------------------|---------------------|
+| **优化核心** | 样本对的分类准确率 | 基于位置权重的全局排序（NDCG-like） |
+| **对 Rank IC 贡献** | 间接（成对胜负 ≠ 整体排序） | 直接（优化排序质量） |
+| **计算压力** | 较低（仅处理对） | 较高（需计算每轮排序权重） |
+| **对异常值敏感度** | 较高（易受极端收益个股干扰） | 较低（权重随排名动态调整） |
+| **得分分布** | 密集、挤压 | 相对离散、区分度好 |
+| **对位置的敏感度** | 低（只关心 A > B） | 高（排名越靠前错误惩罚越大） |
+
+### P10-2：为什么 YetiRank 可能修复 Rank IC 为负？
+
+**1. 从"局部胜负"到"全局排序"**：
+- YetiRankPairwise 主要关注样本对（Pair）的胜负
+- 如果特征没做好截面归一化，模型可能在"局部对战"中赢了，但在整体排序中输了
+- YetiRank 会在每次迭代中根据当前排序结果，自动计算出类似 NDCG 的权重（Lambda 梯度）
+- 它会赋予排名靠前且预测错误的样本更高的惩罚权重
+- 这种机制天然更贴合 Rank IC 的目标——确保排序顺序的正确性
+
+**2. 更强的非线性捕捉**：
+- YetiRank 被公认为是 CatBoost 中处理排序任务最先进的 Loss
+- 在处理"长尾数据"或"分布不均的收益率"时比简单的 Pairwise 更鲁棒
+
+**3. 解决"预测值挤压"与"过度自信"**：
+- YetiRank 会考虑样本在排序表中的位置
+- 如果模型把一只差股排在了第一名，YetiRank 产生的梯度冲击会远大于把它排在第十名
+- 这种对位置的敏感性会迫使模型拉开不同质量股票之间的 Score 间距
+
+### P10-3：实施步骤
+
+**文件**：`ml_services/ml_trading_model.py`（CatBoostRankerModel 类）
+
+**Step 1**：修改默认损失函数
+
+```python
+# 在 CatBoostRankerModel.__init__ 中（~7200 行）
+def __init__(self, loss_function='YetiRank',  # 从 'YetiRankPairwise' 改为 'YetiRank'
+             ...):
+```
+
+**Step 2**：确保 eval_metric 配套
+
+```python
+# 在 train() 方法中（~7336 行）
+ranker_params = {
+    'loss_function': self.loss_function,  # 'YetiRank'
+    'eval_metric': 'NDCG',  # 与 YetiRank 优化目标匹配
+    ...
+}
+```
+
+### P10-4：关键注意事项
+
+| 注意项 | 说明 |
+|--------|------|
+| **必须设置 eval_metric='NDCG'** | YetiRank 的强项在于优化 NDCG，与 Rank IC 的逻辑（排序相关性）高度一致 |
+| **检查 group_id** | 确保 group_id 依然是 TradeDate，YetiRank 对分组质量要求更高 |
+| **配合截面百分位** | 即使换了 YetiRank，如果特征不进行截面百分位处理，模型依然会困惑 |
+| **训练时间增加** | YetiRank 计算量更大，预计训练时间增加 20-30% |
+
+### P10-5：验证计划
+
+```bash
+# YetiRank 验证
+python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
+```
+
+**对比指标**：
+
+| 指标 | P4（YetiRankPairwise） | P10（YetiRank） | 目标 | 预期 |
+|------|----------------------|----------------|------|------|
+| **IC** | +0.0066 | ? | >0.01 | 持平或略升 |
+| **Rank IC** | +0.0038 | ? | >0.02 | **显著提升** |
+| **准确率** | 49.80% | ? | - | 持平 |
+| **夏普比率** | 0.8103 | ? | >0.8 | 持平或略升 |
+| **预测分布** | 挤压（0.7-1.0） | ? | 离散 | **改善** |
+
+### P10-6：预期效果
+
+**如果成功**：
+- Rank IC 从 +0.0038 提升至 >0.02（目标达成）
+- 预测概率分布更离散，区分度更好
+- Top 1% 超额收益从负变正
+
+**如果失败**：
+- Rank IC 未改善或变负 → 回退到 YetiRankPairwise
+- 训练时间过长 → 评估性价比
+- 其他指标恶化 → 分析原因后决策
+
+### P10-7：风险与缓解
+
+| 风险 | 说明 | 缓解措施 |
+|------|------|----------|
+| 训练时间增加 | YetiRank 计算量更大 | 先用少量 fold 测试 |
+| Rank IC 未改善 | 理论预期可能不准确 | 回退到 YetiRankPairwise |
+| 过拟合 | YetiRank 可能过度优化排序 | 监控训练/验证集差距 |
+| 与截面特征不兼容 | YetiRank 需要截面化特征配合 | 确保截面特征覆盖率 >30% |
+
+### P10-8：决策树
+
+```
+P10 验证结果
+    │
+    ├─ 情况 A：Rank IC > 0.02 ✅
+    │   └─ 采用 YetiRank 作为默认损失函数
+    │       更新 CLAUDE.md 和本文档
+    │
+    ├─ 情况 B：Rank IC 改善但仍 < 0.02 ⚠️
+    │   └─ 评估性价比：
+    │       - 如训练时间增加 <50%，采用 YetiRank
+    │       - 如训练时间增加 >50%，保留 YetiRankPairwise
+    │
+    └─ 情况 C：Rank IC 未改善或变负 ❌
+        └─ 回退到 YetiRankPairwise
+            分析失败原因，考虑其他优化方向
+```
+
+### P10-9：与其他阶段的关系
+
+| 阶段 | 配置 | Rank IC | 说明 |
+|------|------|---------|------|
+| P4 | YetiRankPairwise + 原始收益率 | +0.0038 | 当前最优 |
+| P9 | YetiRankPairwise + L3 剔除 | -0.0087 | IC 达标但 Rank IC 变负 |
+| **P10** | **YetiRank + 原始收益率** | **?** | **本实验** |
+
+**关键问题**：P9 的 Rank IC 变负是 L3 剔除导致的，还是 YetiRankPairwise 的固有限制？P10 将回答这个问题。
+
+### P10-10：关键发现 - Pairwise 损失函数不支持样本权重 🚨
+
+**警告信息**：`"Pairwise losses don't support object weights"`
+
+**问题根因**：
+- CatBoost 的 Pairwise 和 Ranking 类损失函数（YetiRank、YetiRankPairwise）无法将 weight 映射到单个 object 上
+- 代码中传递的 `weight=fold_weights` 参数被**静默忽略**
+- 模型对 2019 年的陈旧数据和 2024 年的最新数据"一视同仁"，在风格切换剧烈的港股市场是致命的
+
+**影响分析**：
+
+| 损失函数 | 支持 object weight | 支持 group_weight | 支持单调约束 |
+|----------|-------------------|-------------------|-------------|
+| YetiRank | ❌ 不支持 | ✅ 支持 | ✅ 支持 |
+| YetiRankPairwise | ❌ 不支持 | ✅ 支持 | ❌ 不支持 |
+
+**这完美解释了 P9 的异常表现**：
+
+| 现象 | 原因 |
+|------|------|
+| IC 达标 (+0.0137) | L1 核心特征（资金流、动量）确实有预测力，模型学到了"好股票"的通用特征 |
+| Rank IC 变负 (-0.0087) | 权重失效，模型学到了过多的"历史过期逻辑"，在新市场环境下排序完全反向 |
+| 预测分布挤压 (0.7-1.0) | 模型试图拟合所有时期（权重相同）的样本，产生平均化的"高概率"预测 |
+
+### P10-11：修复方案 - 使用 group_weight
+
+**核心思想**：既然无法给"每只股票"加权，那就给"每天（每个 Group）"加权。
+
+**代码修改**（`ml_services/ml_trading_model.py:7726-7746`）：
+
+```python
+# P10 修复：Pairwise 损失函数不支持 object weights，改用 group_weight
+group_weights_train = None
+if self.sample_weights is not None:
+    fold_weights = self.sample_weights[train_idx]
+    import pandas as pd
+    train_df = pd.DataFrame({
+        'weight': fold_weights,
+        'group_id': group_ids_train
+    })
+    # 每个日期取第一个样本的权重（同日样本权重相同）
+    group_weights_train = train_df.groupby('group_id')['weight'].first().values
+
+train_pool = Pool(
+    data=X_train_fold,
+    label=y_train_fold,
+    group_id=group_ids_train,
+    cat_features=categorical_features if categorical_features else None,
+    group_weight=group_weights_train  # ✅ YetiRank/YetiRankPairwise 支持组权重
+)
+```
+
+**预期效果**：
+- 模型会优先保证权重高的交易日（近期）排序正确
+- 显著提升验证集（Walk-forward 靠近训练集末端的时段）的 Rank IC
+
+### P10-12：验证计划
+
+```bash
+python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
+```
+
+**对比指标**：
+
+| 指标 | P9（weight 被忽略） | P10 修复后（group_weight） | 目标 |
+|------|-------------------|--------------------------|------|
+| **IC** | +0.0137 | ? | >0.01 |
+| **Rank IC** | -0.0087 | ? | **>0.02** |
+| **准确率** | 48.97% | ? | - |
+| **夏普比率** | 0.7797 | ? | >0.8 |
+
+### P10-13：其他备选方案
+
+| 方案 | 说明 | 适用场景 |
+|------|------|---------|
+| **方案一：group_weight** | 给每个交易日加权 | ✅ 推荐，已实施 |
+| **方案二：截面百分位特征** | 归一化特征，消除历史偏差 | 已实施（CROSS_SECTIONAL_PERCENTILE_FEATURES） |
+| **方案三：QuerySoftMax** | 对样本权重兼容性更好，关注 Top 端排序 | 备选，如 group_weight 效果不佳 |
+
+---
+
+**最后更新**：2026-05-05（P10 修复：发现 Pairwise 不支持 object weights，改用 group_weight）

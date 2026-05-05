@@ -2,62 +2,62 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-04
+**最后更新**：2026-05-05
 
 ---
 
-## 最新进展（2026-05-04）
+## 最新进展（2026-05-05）
 
-### P7 特征优化验证（截面特征扩展 + 宏观交叉特征剔除）
+### P10 关键发现与修复 - Pairwise 损失函数不支持样本权重
 
-**目标**：通过特征优化提升 Rank IC 至 >0.02
+**目标**：修复 P9 Rank IC 变负的根因
 
-**背景**：
-- P4 验证后 Rank IC = +0.0038，仍未达标
-- P6 特征重要性审计发现模型仍通过交叉特征间接获取市场信号
-- 优化方向：强化截面特征、剔除宏观交叉特征
+**关键发现** 🚨：
+- CatBoost 警告：`"Pairwise losses don't support object weights"`
+- YetiRank 和 YetiRankPairwise 损失函数**不支持样本权重**
+- 代码中传递的 `weight=fold_weights` 参数被**静默忽略**
+- 模型对 2019 年陈旧数据和 2024 年最新数据"一视同仁"
 
-**实施内容**：
+**这完美解释了 P9 的异常**：
 
-1. **截面特征扩展**（55 → ~100）
-   - 新增：`Anomaly_*`、`Trend_*`、K线形态特征
-   - 新增：`Skewness_*`、`Kurtosis_*` 等统计特征
+| 现象 | 原因 |
+|------|------|
+| IC 达标 (+0.0137) | L1 核心特征有预测力，模型学到"好股票"通用特征 |
+| Rank IC 变负 (-0.0087) | 权重失效，模型学到过多"历史过期逻辑"，排序反向 |
+| 预测分布挤压 (0.7-1.0) | 模型拟合所有时期（权重相同），产生平均化预测 |
 
-2. **宏观交叉特征剔除**
-   - 定义 `MACRO_CROSS_FEATURES`（27 个特征）
-   - 在 `get_feature_columns()` 中排除
+**修复方案**：
+- 将 `weight` 改为 `group_weight`（给每个交易日加权）
+- YetiRank/YetiRankPairwise 支持 `group_weight` 参数
 
-**验证结果（Walk-forward，12 folds，57只股票）**：
+**代码修改**（`ml_services/ml_trading_model.py:7726-7746, 7769-7785`）：
 
-| 指标 | P4（基线） | P7（特征优化） | 变化 | 目标 |
-|------|-----------|----------------|------|------|
-| IC | +0.0066 | **+0.0033** | -0.0033 | >0.01 |
-| Rank IC | +0.0038 | **-0.0025** | -0.0063 | >0.02 |
-| 准确率 | 49.80% | 49.29% | -0.51% | - |
-| 夏普比率 | 0.8103 | 0.7786 | -0.0317 | >0.8 |
-| 索提诺比率 | 5.06 | **5.2051** | +0.1451 | >5.0 |
-| 最大回撤 | -0.23% | -0.24% | -0.01% | <-20% |
+```python
+# P10 修复：计算每个 Group 的权重
+group_weights_train = train_df.groupby('group_id')['weight'].first().values
 
-**关键发现**：
-- ❌ Rank IC 变负（从 +0.0038 降至 -0.0025）
-- ⚠️ IC 下降（从 +0.0066 降至 +0.0033）
-- ✅ 索提诺比率最优（5.2051）
+train_pool = Pool(
+    data=X_train_fold,
+    label=y_train_fold,
+    group_id=group_ids_train,
+    group_weight=group_weights_train  # ✅ 支持组权重
+)
+```
 
-**失败原因**：
-- 截面特征扩展引入噪声（质量比数量重要）
-- 宏观交叉特征剔除过度（丢失相对强度信息）
-- 特征冗余导致信息稀释
-
-**结论**：P4（YetiRankPairwise + 原始收益率）仍是当前最优配置
+**预期效果**：
+- 模型优先保证近期交易日排序正确
+- Rank IC 由负转正
 
 **改动文件**：
-- `ml_services/ml_trading_model.py`（截面特征扩展、MACRO_CROSS_FEATURES）
-- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P7 阶段文档）
-- `lessons.md`（五版本对比表、P7 失败教训）
+- `ml_services/ml_trading_model.py`（weight → group_weight）
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P10-10~13 章节）
+
+**待验证**：
+- Walk-forward 验证修复后效果
 
 ---
 
-## 历史进展（2026-05-04 上午）
+## 历史进展（2026-05-04）
 
 ### CatBoostRanker 排序模型验证
 

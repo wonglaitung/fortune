@@ -384,10 +384,11 @@ class WalkForwardValidator:
             )
         elif self.model_type == 'catboost_ranker':
             # P3-9: 排序模型
-            # P4-10: 使用 YetiRankPairwise 损失函数（成对比较，更适合截面选股）
+            # P10-1: 使用 YetiRank 损失函数（全局排序，直接优化 Rank IC）
+            # P4-10/P9: YetiRankPairwise 导致 IC 正但 Rank IC 负，尝试 YetiRank 改善
             # P5: 软标签实验失败（IC/Rank IC 双降），已放弃
             model = self.model_class(
-                loss_function='YetiRankPairwise',
+                loss_function='YetiRank',
                 use_monotone_constraints=self.use_monotone_constraints,
                 time_decay_lambda=self.time_decay_lambda,
                 use_rolling_percentile=self.use_rolling_percentile,
