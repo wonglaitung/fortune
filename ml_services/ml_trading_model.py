@@ -3773,6 +3773,15 @@ class LightGBMModel(BaseTradingModel):
         # 阶段2：合并所有股票，计算截面特征
         combined = pd.concat(all_features.values())
 
+        # 统一索引时区：将 tz-aware 时间戳转换为 tz-naive，避免 groupby 时比较错误
+        if hasattr(combined.index, 'tz') and combined.index.tz is not None:
+            combined.index = combined.index.tz_localize(None)
+        elif hasattr(combined.index, 'tz_localize'):
+            try:
+                combined.index = combined.index.tz_convert('UTC').tz_localize(None)
+            except Exception:
+                combined.index = pd.to_datetime(combined.index).tz_localize(None)
+
         # 计算截面百分位特征
         if self.use_cross_sectional_percentile:
             combined = self._calculate_cross_sectional_percentile_features(combined)
@@ -4834,6 +4843,15 @@ class GBDTModel(BaseTradingModel):
 
         # 阶段2：合并所有股票，计算截面特征
         combined = pd.concat(all_features.values())
+
+        # 统一索引时区：将 tz-aware 时间戳转换为 tz-naive，避免 groupby 时比较错误
+        if hasattr(combined.index, 'tz') and combined.index.tz is not None:
+            combined.index = combined.index.tz_localize(None)
+        elif hasattr(combined.index, 'tz_localize'):
+            try:
+                combined.index = combined.index.tz_convert('UTC').tz_localize(None)
+            except Exception:
+                combined.index = pd.to_datetime(combined.index).tz_localize(None)
 
         # 计算截面百分位特征
         if self.use_cross_sectional_percentile:
@@ -6634,6 +6652,24 @@ class CatBoostModel(BaseTradingModel):
         # 阶段2：合并所有股票，计算截面特征
         combined = pd.concat(all_features.values())
 
+        # 统一索引时区：强制将所有时间戳转换为 tz-naive，避免 groupby 时比较错误
+        # 问题根源：不同股票数据可能来自不同源，索引时区状态不一致
+        # 当合并 tz-aware 和 tz-naive 索引时，pandas 会创建 object 类型 Index
+        def normalize_timestamp(ts):
+            '''将任意时间戳转换为 tz-naive'''
+            try:
+                if hasattr(ts, 'tz') and ts.tz is not None:
+                    return ts.tz_localize(None)
+                return ts
+            except Exception:
+                return pd.Timestamp(ts).tz_localize(None) if pd.Timestamp(ts).tz is not None else pd.Timestamp(ts)
+
+        # 检查索引是否为 object 类型（混合时区情况）
+        if combined.index.dtype == 'object' or (hasattr(combined.index, 'tz') and combined.index.tz is not None):
+            new_index = [normalize_timestamp(ts) for ts in combined.index]
+            combined.index = pd.DatetimeIndex(new_index)
+            logger.debug("批量预测：索引时区已统一为 tz-naive")
+
         # 计算截面百分位特征
         if self.use_cross_sectional_percentile:
             combined = self._calculate_cross_sectional_percentile_features(combined)
@@ -7786,6 +7822,24 @@ class CatBoostRankerModel(BaseTradingModel):
 
         # 阶段2：合并所有股票，计算截面特征
         combined = pd.concat(all_features.values())
+
+        # 统一索引时区：强制将所有时间戳转换为 tz-naive，避免 groupby 时比较错误
+        # 问题根源：不同股票数据可能来自不同源，索引时区状态不一致
+        # 当合并 tz-aware 和 tz-naive 索引时，pandas 会创建 object 类型 Index
+        def normalize_timestamp(ts):
+            '''将任意时间戳转换为 tz-naive'''
+            try:
+                if hasattr(ts, 'tz') and ts.tz is not None:
+                    return ts.tz_localize(None)
+                return ts
+            except Exception:
+                return pd.Timestamp(ts).tz_localize(None) if pd.Timestamp(ts).tz is not None else pd.Timestamp(ts)
+
+        # 检查索引是否为 object 类型（混合时区情况）
+        if combined.index.dtype == 'object' or (hasattr(combined.index, 'tz') and combined.index.tz is not None):
+            new_index = [normalize_timestamp(ts) for ts in combined.index]
+            combined.index = pd.DatetimeIndex(new_index)
+            logger.debug("批量预测：索引时区已统一为 tz-naive")
 
         # 计算截面百分位特征
         if self.use_cross_sectional_percentile:
