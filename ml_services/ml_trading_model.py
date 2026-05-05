@@ -7724,19 +7724,14 @@ class CatBoostRankerModel(BaseTradingModel):
             group_ids_val = group_ids[val_idx]
 
             # P10 修复：Pairwise 损失函数不支持 object weights，改用 group_weight
-            # 计算每日（每个 Group）的权重
-            # group_weight 长度必须等于唯一 group_id 数量，且索引与 group_id 对应
+            # group_weight 长度必须等于数据长度（每个样本一个权重）
+            # 但同一 group 内的样本权重相同（取该日第一个样本的权重）
             group_weights_train = None
             if self.sample_weights is not None:
                 fold_weights = self.sample_weights[train_idx]
-                # 获取唯一的 group_id 并按顺序排列
-                unique_group_ids = np.unique(group_ids_train)
-                # 为每个 group 计算权重（取该 group 第一个样本的权重，同日样本权重相同）
-                group_weights_train = np.zeros(len(unique_group_ids))
-                for i, gid in enumerate(unique_group_ids):
-                    # 找到属于这个 group 的第一个样本
-                    first_idx = np.where(group_ids_train == gid)[0][0]
-                    group_weights_train[i] = fold_weights[first_idx]
+                # 直接使用 fold_weights（每个样本的权重）
+                # 同一日的样本权重相同，所以这实际上就是 group_weight
+                group_weights_train = fold_weights
 
             train_pool = Pool(
                 data=X_train_fold,
@@ -7767,14 +7762,11 @@ class CatBoostRankerModel(BaseTradingModel):
                 print(f"   Fold {fold} 完成")
 
         # 全量数据重训练（P10 修复：使用 group_weight）
-        # group_weight 长度必须等于唯一 group_id 数量
+        # group_weight 长度必须等于数据长度
         group_weights_full = None
         if self.sample_weights is not None:
-            unique_group_ids = np.unique(group_ids)
-            group_weights_full = np.zeros(len(unique_group_ids))
-            for i, gid in enumerate(unique_group_ids):
-                first_idx = np.where(group_ids == gid)[0][0]
-                group_weights_full[i] = self.sample_weights[first_idx]
+            # 直接使用 sample_weights（每个样本的权重）
+            group_weights_full = self.sample_weights
 
         full_pool = Pool(
             data=X,
