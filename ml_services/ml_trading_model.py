@@ -7725,18 +7725,18 @@ class CatBoostRankerModel(BaseTradingModel):
 
             # P10 修复：Pairwise 损失函数不支持 object weights，改用 group_weight
             # 计算每日（每个 Group）的权重
+            # group_weight 长度必须等于唯一 group_id 数量，且索引与 group_id 对应
             group_weights_train = None
             if self.sample_weights is not None:
                 fold_weights = self.sample_weights[train_idx]
-                # 使用 pandas 计算每个 group 的平均权重（同一日的样本权重相同）
-                # group_ids_train 是日期索引映射，需要转换为 DataFrame 操作
-                import pandas as pd
-                train_df = pd.DataFrame({
-                    'weight': fold_weights,
-                    'group_id': group_ids_train
-                })
-                # 每个日期取第一个样本的权重（同日样本权重相同）
-                group_weights_train = train_df.groupby('group_id')['weight'].first().values
+                # 获取唯一的 group_id 并按顺序排列
+                unique_group_ids = np.unique(group_ids_train)
+                # 为每个 group 计算权重（取该 group 第一个样本的权重，同日样本权重相同）
+                group_weights_train = np.zeros(len(unique_group_ids))
+                for i, gid in enumerate(unique_group_ids):
+                    # 找到属于这个 group 的第一个样本
+                    first_idx = np.where(group_ids_train == gid)[0][0]
+                    group_weights_train[i] = fold_weights[first_idx]
 
             train_pool = Pool(
                 data=X_train_fold,
@@ -7767,15 +7767,14 @@ class CatBoostRankerModel(BaseTradingModel):
                 print(f"   Fold {fold} 完成")
 
         # 全量数据重训练（P10 修复：使用 group_weight）
-        # 计算每个日期的组权重
+        # group_weight 长度必须等于唯一 group_id 数量
         group_weights_full = None
         if self.sample_weights is not None:
-            import pandas as pd
-            full_df = pd.DataFrame({
-                'weight': self.sample_weights,
-                'group_id': group_ids
-            })
-            group_weights_full = full_df.groupby('group_id')['weight'].first().values
+            unique_group_ids = np.unique(group_ids)
+            group_weights_full = np.zeros(len(unique_group_ids))
+            for i, gid in enumerate(unique_group_ids):
+                first_idx = np.where(group_ids == gid)[0][0]
+                group_weights_full[i] = self.sample_weights[first_idx]
 
         full_pool = Pool(
             data=X,
