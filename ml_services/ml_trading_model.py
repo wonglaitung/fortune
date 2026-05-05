@@ -6661,12 +6661,17 @@ class CatBoostModel(BaseTradingModel):
             # 计算节点偏离度（动量网络特征）
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
+            # P7 新增：计算不同窗口的节点偏离度，用于增量特征
+            deviations_5d = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=5)
+
             # 将网络特征添加到每只股票的数据中
-            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                # P7 新增：增量网络特征
+                'net_node_deviation_delta_5d',  # 节点偏离度变化率
+                'net_node_deviation_accel',     # 节点偏离度加速度
             ]
 
             # 初始化网络特征列
@@ -6685,9 +6690,15 @@ class CatBoostModel(BaseTradingModel):
                 if code in insights:
                     combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # 节点偏离度（动量网络特征）
-                if code in deviations:
-                    combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+                # 节点偏离度
+                dev_20d = deviations.get(code, {}).get('node_deviation', 0) if code in deviations else 0
+                dev_5d = deviations_5d.get(code, {}).get('node_deviation', 0) if code in deviations_5d else 0
+
+                combined.loc[mask, 'net_node_deviation'] = dev_20d
+
+                # P7 新增：增量特征
+                combined.loc[mask, 'net_node_deviation_delta_5d'] = dev_20d - dev_5d
+                combined.loc[mask, 'net_node_deviation_accel'] = (dev_20d - dev_5d) / (abs(dev_5d) + 0.001)  # 归一化
 
             logger.info(f"批量预测：网络特征计算完成（{len(unique_codes)} 只股票）")
 
@@ -6697,7 +6708,9 @@ class CatBoostModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                'net_node_deviation_delta_5d',
+                'net_node_deviation_accel',
             ]
             for feat in network_feature_names:
                 if feat not in combined.columns:
@@ -6745,6 +6758,16 @@ class CatBoostModel(BaseTradingModel):
                 if feat not in latest_data.columns:
                     logger.warning(f"事件驱动特征 {feat} 不存在，使用默认值0")
                     latest_data[feat] = 0.0
+
+            # 处理缺失的网络特征（P7 增量特征）
+            network_features = [
+                'net_composite_centrality', 'net_community_id', 'net_node_deviation',
+                'net_node_deviation_delta_5d', 'net_node_deviation_accel'
+            ]
+            for feat in network_features:
+                if feat not in latest_data.columns:
+                    logger.warning(f"网络特征 {feat} 不存在，使用默认值")
+                    latest_data[feat] = 0.0 if feat != 'net_community_id' else -1
 
             # 处理缺失的截面特征（使用训练集统计量回退）
             cs_feature_suffixes = ['_CS_Pct', '_CS_ZScore']
@@ -7791,12 +7814,17 @@ class CatBoostRankerModel(BaseTradingModel):
             # 计算节点偏离度（动量网络特征）
             deviations = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=20)
 
+            # P7 新增：计算不同窗口的节点偏离度，用于增量特征
+            deviations_5d = network_calc.calculate_node_deviation(unique_codes, score_type='momentum', window=5)
+
             # 将网络特征添加到每只股票的数据中
-            # 注意：net_sector_community_match 和 net_mst_neighbor_sectors 已移除（占位符，未实际计算）
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                # P7 新增：增量网络特征
+                'net_node_deviation_delta_5d',  # 节点偏离度变化率
+                'net_node_deviation_accel',     # 节点偏离度加速度
             ]
 
             # 初始化网络特征列
@@ -7815,9 +7843,15 @@ class CatBoostRankerModel(BaseTradingModel):
                 if code in insights:
                     combined.loc[mask, 'net_community_id'] = insights[code].get('community', -1)
 
-                # 节点偏离度（动量网络特征）
-                if code in deviations:
-                    combined.loc[mask, 'net_node_deviation'] = deviations[code].get('node_deviation', 0)
+                # 节点偏离度
+                dev_20d = deviations.get(code, {}).get('node_deviation', 0) if code in deviations else 0
+                dev_5d = deviations_5d.get(code, {}).get('node_deviation', 0) if code in deviations_5d else 0
+
+                combined.loc[mask, 'net_node_deviation'] = dev_20d
+
+                # P7 新增：增量特征
+                combined.loc[mask, 'net_node_deviation_delta_5d'] = dev_20d - dev_5d
+                combined.loc[mask, 'net_node_deviation_accel'] = (dev_20d - dev_5d) / (abs(dev_5d) + 0.001)  # 归一化
 
             logger.info(f"批量预测：网络特征计算完成（{len(unique_codes)} 只股票）")
 
@@ -7827,7 +7861,9 @@ class CatBoostRankerModel(BaseTradingModel):
             network_feature_names = [
                 'net_composite_centrality',
                 'net_community_id',
-                'net_node_deviation'
+                'net_node_deviation',
+                'net_node_deviation_delta_5d',
+                'net_node_deviation_accel',
             ]
             for feat in network_feature_names:
                 if feat not in combined.columns:
