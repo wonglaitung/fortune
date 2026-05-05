@@ -638,8 +638,102 @@ class WalkForwardValidator:
             'rank_ic': rank_ic if not np.isnan(rank_ic) else 0.0,
             'prediction_std': prediction_std,
             'confidence_breakdown': confidence_bins,
-            'error_analysis': error_analysis
+            'error_analysis': error_analysis,
+            # 百分位预测效果分析
+            'percentile_performance': self._calculate_percentile_performance(df)
         }
+
+    def _calculate_percentile_performance(self, df):
+        """
+        计算不同百分位预测股票的实际效果
+
+        方法：每个交易日按预测概率排名，分成 Top 1%/5%/10%/20% 四组，
+        计算每组的平均实际收益。
+
+        Args:
+            df: 包含 probability, actual_return, Code 的 DataFrame
+
+        Returns:
+            list: 各百分位的收益统计
+        """
+        if 'Code' not in df.columns or 'actual_return' not in df.columns:
+            return []
+
+        # 导入股票名称映射
+        try:
+            from config import WATCHLIST as STOCK_NAMES
+        except ImportError:
+            STOCK_NAMES = {}
+
+        # 按日期分组，计算截面百分位
+        df = df.copy()
+        # 提取日期（处理时区问题）
+        if hasattr(df.index, 'date'):
+            df['date'] = df.index.date
+        elif hasattr(df.index[0], 'strftime'):
+            df['date'] = df.index.strftime('%Y-%m-%d')
+        else:
+            df['date'] = df.index
+
+        percentiles = [1, 5, 10, 20]
+        results = {f'Top_{p}pct': {'count': 0, 'total_return': 0.0, 'returns': [], 'stocks': []}
+                   for p in percentiles}
+
+        for date, group in df.groupby('date'):
+            if len(group) < 5:  # 样本太少跳过
+                continue
+
+            # 过滤掉 actual_return 为 NaN 的样本
+            group = group.dropna(subset=['actual_return', 'probability'])
+            if len(group) < 5:
+                continue
+
+            # 按预测概率降序排列
+            group = group.sort_values('probability', ascending=False)
+
+            for p in percentiles:
+                # 计算该百分位的股票数量
+                n_stocks = max(1, int(len(group) * p / 100))
+                top_stocks = group.head(n_stocks)
+
+                # 计算平均收益
+                avg_return = top_stocks['actual_return'].mean()
+                if not np.isnan(avg_return):
+                    results[f'Top_{p}pct']['count'] += n_stocks
+                    results[f'Top_{p}pct']['total_return'] += avg_return * n_stocks
+                    results[f'Top_{p}pct']['returns'].append(avg_return)
+
+                    # 记录股票详情（只记录 Top 1% 和 Top 5%）
+                    if p <= 5:
+                        for _, row in top_stocks.iterrows():
+                            code = row.get('Code', 'Unknown')
+                            stock_name = STOCK_NAMES.get(code, code) if isinstance(STOCK_NAMES, dict) else code
+                            results[f'Top_{p}pct']['stocks'].append({
+                                'date': str(date),
+                                'code': code,
+                                'name': stock_name,
+                                'probability': round(float(row.get('probability', 0)), 4),
+                                'actual_return': round(float(row.get('actual_return', 0)), 4)
+                            })
+
+        # 计算最终统计
+        final_results = []
+        for p in percentiles:
+            key = f'Top_{p}pct'
+            if results[key]['count'] > 0:
+                result_item = {
+                    'percentile': f'Top {p}%',
+                    'total_stocks': results[key]['count'],
+                    'avg_return': float(results[key]['total_return'] / results[key]['count']),
+                    'return_std': float(np.std(results[key]['returns'])) if results[key]['returns'] else 0.0,
+                    'num_periods': len(results[key]['returns'])
+                }
+                # 只在 Top 1% 和 Top 5% 中包含股票详情
+                if p <= 5 and results[key]['stocks']:
+                    result_item['top_stocks'] = results[key]['stocks'][:50]  # 最多记录50条
+                final_results.append(result_item)
+
+        return final_results
 
     def _calculate_confidence_return_breakdown(self, df):
         """计算置信度与收益关系"""
@@ -866,7 +960,7 @@ class WalkForwardValidator:
                 'avg_ic': report['overall_metrics'].get('avg_ic', 0),
                 'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0)
             },
-            'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'error_analysis', 'confidence_return_breakdown']
+            'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'error_analysis', 'confidence_return_breakdown', 'percentile_performance']
         }
         summary_file = os.path.join(detail_dir, 'validation_summary.json')
         with open(summary_file, 'w', encoding='utf-8') as f:
@@ -989,7 +1083,46 @@ class WalkForwardValidator:
             json.dump(confidence_summary, f, indent=2, ensure_ascii=False)
         logger.info(f"置信度分析已保存: {conf_file}")
 
-        # 6. 保存完整JSON格式（原有逻辑）
+        # 6. 保存 percentile_performance.json
+        all_percentile_results = []
+        for fold in report['fold_results']:
+            fold_num = fold.get('fold', 0) + 1
+            for pct_result in fold.get('percentile_performance', []):
+                pct_result_copy = pct_result.copy()
+                pct_result_copy['fold'] = fold_num
+                all_percentile_results.append(pct_result_copy)
+
+        if all_percentile_results:
+            # 汇总各百分位的平均收益
+            percentile_summary = {}
+            for result in all_percentile_results:
+                pct = result['percentile']
+                if pct not in percentile_summary:
+                    percentile_summary[pct] = {'total_return': 0.0, 'count': 0, 'returns': []}
+                percentile_summary[pct]['total_return'] += result['avg_return'] * result['total_stocks']
+                percentile_summary[pct]['count'] += result['total_stocks']
+                percentile_summary[pct]['returns'].append(result['avg_return'])
+
+            final_summary = []
+            for pct in ['Top 1%', 'Top 5%', 'Top 10%', 'Top 20%']:
+                if pct in percentile_summary:
+                    data = percentile_summary[pct]
+                    final_summary.append({
+                        'percentile': pct,
+                        'avg_return': float(data['total_return'] / data['count']) if data['count'] > 0 else 0.0,
+                        'return_std': float(np.std(data['returns'])) if data['returns'] else 0.0,
+                        'total_stocks': data['count']
+                    })
+
+            percentile_file = os.path.join(detail_dir, 'percentile_performance.json')
+            with open(percentile_file, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'summary': final_summary,
+                    'by_fold': all_percentile_results
+                }, f, indent=2, ensure_ascii=False)
+            logger.info(f"百分位效果分析已保存: {percentile_file}")
+
+        # 7. 保存完整JSON格式（原有逻辑）
         json_file = os.path.join(output_dir, f'walk_forward_{model_type}_{horizon}d_{timestamp}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False, default=str)
