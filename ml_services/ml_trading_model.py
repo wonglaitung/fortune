@@ -3199,7 +3199,9 @@ class LightGBMModel(BaseTradingModel):
             LightGBMModel._deprecation_warning_shown = True
 
         print("准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date, horizon=horizon, min_return_threshold=min_return_threshold)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon,
+                               min_return_threshold=min_return_threshold,
+                               label_type='relative')  # 个股选股模型使用相对标签
 
         # 先删除全为NaN的列（避免dropna删除所有行）
         cols_all_nan = df.columns[df.isnull().all()].tolist()
@@ -4251,7 +4253,9 @@ class GBDTModel(BaseTradingModel):
 
         # 准备数据
         logger.info("准备训练数据...")
-        df = self.prepare_data(codes, start_date, end_date, horizon=horizon, min_return_threshold=min_return_threshold)
+        df = self.prepare_data(codes, start_date, end_date, horizon=horizon,
+                               min_return_threshold=min_return_threshold,
+                               label_type='relative')  # 个股选股模型使用相对标签
 
         # 先删除全为NaN的列（避免dropna删除所有行）
         cols_all_nan = df.columns[df.isnull().all()].tolist()
@@ -5863,7 +5867,9 @@ class CatBoostModel(BaseTradingModel):
         logger.info("准备训练数据")
         print("="*70)
 
-        df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold)
+        df = self.prepare_data(codes, start_date, end_date, horizon,
+                               min_return_threshold=min_return_threshold,
+                               label_type='relative')  # 个股选股模型使用相对标签
 
         # 删除包含 NaN 的行
         df = df.dropna(subset=['Label'])
@@ -7529,7 +7535,8 @@ class CatBoostRankerModel(BaseTradingModel):
         logger.info(f"准备 CatBoostRanker 训练数据（horizon={horizon}）")
         print(f"{'='*70}")
 
-        df = self.prepare_data(codes, start_date, end_date, horizon, for_backtest=False)
+        df = self.prepare_data(codes, start_date, end_date, horizon, for_backtest=False,
+                               label_type='relative')  # 个股选股模型使用相对标签
 
         if df is None or len(df) == 0:
             raise ValueError("数据准备失败或数据为空")
