@@ -418,23 +418,28 @@ class WalkForwardValidator:
         if df.empty:
             raise ValueError("合并后的数据为空")
 
+        # ========== 计算实际收益率（与训练时一致）==========
+        # 训练时使用累积收益率：Close[t+horizon] / Close[t] - 1
+        # 这与 Future_Return 的计算方式一致
+        df['actual_return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
+
         # ========== 计算 IC 和 Rank IC ==========
-        # IC: 预测概率与实际收益的相关系数
-        # Rank IC: 预测概率排名与实际收益排名的相关系数
-        ic = df['probability'].corr(df['Label'].astype(float))
-        rank_ic = df['probability'].rank().corr(df['Label'].astype(float).rank())
+        # IC: 预测概率与实际收益率的相关系数（不是与二元标签）
+        # 这是业界标准定义：IC = Corr(Prediction, Actual_Return)
+        if 'actual_return' in df.columns:
+            valid_mask = df['actual_return'].notna() & df['probability'].notna()
+            if valid_mask.sum() > 1:
+                ic = df.loc[valid_mask, 'probability'].corr(df.loc[valid_mask, 'actual_return'])
+                rank_ic = df.loc[valid_mask, 'probability'].rank().corr(df.loc[valid_mask, 'actual_return'].rank())
+            else:
+                ic = 0.0
+                rank_ic = 0.0
+        else:
+            ic = 0.0
+            rank_ic = 0.0
 
         # 预测分布统计
         prediction_std = df['probability'].std()
-
-        # 计算实际收益率
-        # 注意：模型训练时 Label 基于 Future_Return（20天累积收益）
-        # 但验证时使用 pct_change().shift(-horizon) 是合理的：
-        # 1. 模型预测的是"未来上涨/下跌的方向"，不是具体收益率
-        # 2. pct_change() 提供的是标准化后的收益方向和幅度
-        # 3. 累积收益会受到除权除息、停牌等因素影响，可能导致异常值
-        # 4. pct_change() 的单日收益更稳定，数值范围合理（±10%以内）
-        df['actual_return'] = df['Close'].pct_change().shift(-self.horizon)
 
         # 计算预测收益
         df['predicted_return'] = df['actual_return'] * df['prediction']
