@@ -1095,7 +1095,7 @@ class WalkForwardValidator:
         import os
         import json
         from datetime import datetime
-        from config import STOCK_NAMES, STOCK_SECTOR_MAPPING
+        from config import STOCK_SECTOR_MAPPING
 
         # 创建输出目录
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1282,7 +1282,7 @@ class WalkForwardValidator:
 
     def _extract_recommended_stocks(self, report):
         """提取前 25% 推荐股票及真实收益率"""
-        from config import STOCK_NAMES
+        from config import WATCHLIST
 
         records = []
         for fold_result in report.get('fold_results', []):
@@ -1305,7 +1305,7 @@ class WalkForwardValidator:
                             'Fold': fold + 1,
                             'Date': stock_info.get('date', test_start),
                             'Stock_Code': code,
-                            'Stock_Name': STOCK_NAMES.get(code, code),
+                            'Stock_Name': WATCHLIST.get(code, code),
                             'Predict_Prob': stock_info.get('predict_prob', 0),
                             'Rank': stock_info.get('rank', 0),
                             'Actual_Return': stock_info.get('actual_return', 0),
@@ -1392,7 +1392,7 @@ class WalkForwardValidator:
 
     def _analyze_errors(self, report):
         """分析预测错误案例"""
-        from config import STOCK_NAMES
+        from config import WATCHLIST
 
         records = []
         for fold_result in report.get('fold_results', []):
@@ -1408,7 +1408,7 @@ class WalkForwardValidator:
                     'Fold': fold + 1,
                     'Date': case.get('date', ''),
                     'Stock_Code': code,
-                    'Stock_Name': STOCK_NAMES.get(code, code),
+                    'Stock_Name': WATCHLIST.get(code, code),
                     'Predict_Prob': case.get('predict_prob', 0),
                     'Actual_Return': case.get('actual_return', 0),
                     'Error_Type': case.get('error_type', ''),
