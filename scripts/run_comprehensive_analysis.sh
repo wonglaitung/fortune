@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # 综合分析自动化脚本
+# 0. 计算网络特征（供训练和预测使用）
 # 1. 训练 CatBoost 三周期模型（1d, 5d, 20d）
 # 2. 生成 CatBoost 三周期预测
 # 3. 调用 hsi_email.py 生成大模型建议（使用force参数）
@@ -18,6 +19,19 @@ echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "📍 项目根目录: $PROJECT_DIR"
 echo "📍 当前工作目录: $(pwd)"
+echo ""
+
+# 步骤0: 计算网络特征（供训练和预测使用）
+echo "=========================================="
+echo "📊 步骤 0/5: 计算网络特征"
+echo "=========================================="
+echo ""
+python3 ml_services/stock_network_analysis.py --skip-pmfg
+if [ $? -ne 0 ]; then
+    echo "⚠️ 网络特征计算失败（继续执行，模型将跳过网络特征）"
+else
+    echo "✅ 网络特征计算完成: output/network_features_for_ml.json"
+fi
 echo ""
 
 # 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
