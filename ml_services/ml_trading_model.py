@@ -62,6 +62,30 @@ WATCHLIST = list(STOCK_NAMES.keys())
 # 训练股票列表（转换为列表格式）
 TRAINING_LIST = list(TRAINING_NAMES.keys())
 
+# 市场级特征（所有股票同值，需与网络特征交叉后使用）
+# 这些特征在同一天对所有股票具有完全相同的值，无法区分个股
+# 通过与网络社区特征交叉，使不同社区的股票对市场信号有不同响应
+MARKET_LEVEL_FEATURES = [
+    # 恒指收益（6个）
+    'HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d',
+    'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d',
+    # HSI 市场状态（5个）
+    'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1', 'HSI_Regime_Prob_2',
+    'HSI_Regime_Duration', 'HSI_Regime_Transition_Prob',
+    # 美股收益（6个）
+    'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
+    'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
+    # VIX 波动率（5个）
+    'VIX', 'VIX_Change_5d', 'VIX_Level', 'VIX_Change', 'VIX_Ratio_MA20',
+    # 美债收益率（4个）
+    'US_10Y_Yield', 'US_10Y_Yield_Change',
+    'US10Y_Yield', 'US10Y_Yield_Change_5d',
+    # 市场状态 One-Hot（3个）
+    'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
+    # GARCH 波动率（3个）
+    'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d',
+]
+
 # 获取日志记录器
 logger = get_logger('ml_trading_model')
 
@@ -2656,6 +2680,79 @@ class FeatureEngineer:
         logger.info(f"成功生成 {interaction_count} 个交叉特征")
         return df
 
+    def create_market_network_interaction_features(self, df, market_features=None):
+        """创建市场级特征与网络社区特征的交叉特征
+
+        将市场级特征（所有股票同值）与网络社区特征交叉，
+        使不同社区的股票对市场信号有不同的响应权重。
+
+        Args:
+            df: 包含网络特征的 DataFrame
+            market_features: 市场级特征列表（默认使用 MARKET_LEVEL_FEATURES）
+
+        Returns:
+            DataFrame: 添加交叉特征后的数据
+        """
+        if df.empty:
+            return df
+
+        # 使用默认市场级特征列表
+        if market_features is None:
+            market_features = MARKET_LEVEL_FEATURES
+
+        # 检查网络特征是否存在
+        network_features = ['net_community_id', 'net_is_bridge_stock',
+                           'net_sector_community_match', 'net_composite_centrality']
+        missing = [f for f in network_features if f not in df.columns]
+        if missing:
+            logger.debug(f"网络特征缺失，跳过市场-网络交叉: {missing}")
+            return df
+
+        interaction_count = 0
+
+        # 1. 社区 ID One-Hot 编码并交叉
+        if 'net_community_id' in df.columns:
+            unique_communities = sorted(df['net_community_id'].unique())
+            for comm_id in unique_communities:
+                if comm_id < 0:  # 跳过无效社区
+                    continue
+                comm_col = f'net_comm_{int(comm_id)}'
+                df[comm_col] = (df['net_community_id'] == comm_id).astype(int)
+
+                # 与市场级特征交叉
+                for market_feat in market_features:
+                    if market_feat in df.columns:
+                        interaction_name = f'{comm_col}_{market_feat}'
+                        df[interaction_name] = df[comm_col] * df[market_feat]
+                        interaction_count += 1
+
+        # 2. 桥梁股票与市场特征交叉
+        if 'net_is_bridge_stock' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_bridge_{market_feat}'
+                    df[interaction_name] = df['net_is_bridge_stock'] * df[market_feat]
+                    interaction_count += 1
+
+        # 3. 社区-板块匹配与市场特征交叉
+        if 'net_sector_community_match' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_sector_match_{market_feat}'
+                    df[interaction_name] = df['net_sector_community_match'] * df[market_feat]
+                    interaction_count += 1
+
+        # 4. 中心性与市场特征交叉（连续型交叉）
+        if 'net_composite_centrality' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_centrality_{market_feat}'
+                    df[interaction_name] = df['net_composite_centrality'] * df[market_feat]
+                    interaction_count += 1
+
+        logger.info(f"成功生成 {interaction_count} 个市场-网络交叉特征")
+        return df
+
 
 class BaseTradingModel:
     """交易模型基类 - 提供公共方法和属性"""
@@ -4197,15 +4294,18 @@ class CatBoostModel(BaseTradingModel):
                 print(f"  ⚠️ HSI 市场状态特征计算失败: {e}")
 
         # 加载网络特征（跨截面特征，所有股票共享）
-        # 已移除：网络特征存在数据泄漏风险，作为独立分析工具使用
-        # network_loader = NetworkFeatureLoader()
-        # network_available = network_loader.is_available()
-        # if network_available:
-        #     network_loader.load_features()
-        #     print("  ✅ 网络特征加载完成")
-        # else:
-        #     print("  ⚠️ 网络特征文件不可用，将使用默认值")
-        network_available = False  # 禁用网络特征
+        # 网络特征文件由 stock_network_analysis.py 生成
+        network_features_file = 'output/network_features_for_ml.json'
+        network_features_data = None
+        try:
+            if os.path.exists(network_features_file):
+                with open(network_features_file, 'r') as f:
+                    network_features_data = json.load(f)
+                print(f"  ✅ 网络特征加载完成（{len(network_features_data)} 只股票）")
+            else:
+                print("  ⚠️ 网络特征文件不存在，将跳过网络特征")
+        except Exception as e:
+            print(f"  ⚠️ 网络特征加载失败: {e}")
 
         cache_hits = 0
         cache_misses = 0
@@ -4304,7 +4404,11 @@ class CatBoostModel(BaseTradingModel):
                     for key, value in sector_features.items():
                         stock_df[key] = value
 
-                    # 网络特征已移除：存在数据泄漏风险，作为独立分析工具使用
+                    # 添加网络特征（从预计算文件加载）
+                    if network_features_data is not None and code in network_features_data:
+                        net_features = network_features_data[code]
+                        for key, value in net_features.items():
+                            stock_df[key] = value
 
                     # 添加事件驱动特征（9个）
                     stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -4314,6 +4418,9 @@ class CatBoostModel(BaseTradingModel):
 
                     # 生成交叉特征（与训练时保持一致）
                     stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                    # 生成市场-网络交叉特征（如果网络特征存在）
+                    stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
 
                     # 保存特征缓存（不含标签）
                     if use_feature_cache:
@@ -4385,7 +4492,13 @@ class CatBoostModel(BaseTradingModel):
                           'Consecutive_Ranging_Days', 'Confidence_Threshold_Multiplier',
                           'Price_Return_Std_30d']
 
-        feature_columns = [col for col in df.columns if col not in exclude_columns]
+        # 排除纯市场级特征（所有股票同值，无法区分个股）
+        # 这些特征已通过与网络社区特征交叉保留信息
+        market_exclude = set(MARKET_LEVEL_FEATURES)
+
+        feature_columns = [col for col in df.columns
+                          if col not in exclude_columns
+                          and col not in market_exclude]
 
         # 可选：Pearson 去冗余（防止新增特征时引入高相关冗余）
         if dedup_threshold and len(feature_columns) > 0:
@@ -4837,7 +4950,18 @@ class CatBoostModel(BaseTradingModel):
                 for key, value in sector_features.items():
                     stock_df[key] = value
 
-                # 网络特征已移除：存在数据泄漏风险，作为独立分析工具使用
+                # 添加网络特征（从预计算文件加载，与训练时保持一致）
+                network_features_file = 'output/network_features_for_ml.json'
+                if os.path.exists(network_features_file):
+                    try:
+                        with open(network_features_file, 'r') as f:
+                            network_features_data = json.load(f)
+                        if code in network_features_data:
+                            net_features = network_features_data[code]
+                            for key, value in net_features.items():
+                                stock_df[key] = value
+                    except Exception as e:
+                        logger.debug(f"网络特征加载失败: {e}")
 
                 # 添加事件驱动特征（9个，与训练时保持一致）
                 stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -4847,6 +4971,9 @@ class CatBoostModel(BaseTradingModel):
 
                 # 生成交叉特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                # 生成市场-网络交叉特征（如果网络特征存在，与训练时保持一致）
+                stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
 
                 # 保存特征缓存
                 if use_feature_cache:
