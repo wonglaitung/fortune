@@ -408,11 +408,24 @@ class WalkForwardValidator:
         df['prediction'] = predictions['prediction']
         df['probability'] = predictions['probability']
 
+        # 保存 Code 列（用于错误分析）
+        if 'Code' not in df.columns and 'Code' in predictions.columns:
+            df['Code'] = predictions['Code'].values
+
         # 确保索引对齐（删除预测中不存在于 test_data 的索引）
         df = df[df.index.isin(predictions.index)]
 
         if df.empty:
             raise ValueError("合并后的数据为空")
+
+        # ========== 计算 IC 和 Rank IC ==========
+        # IC: 预测概率与实际收益的相关系数
+        # Rank IC: 预测概率排名与实际收益排名的相关系数
+        ic = df['probability'].corr(df['Label'].astype(float))
+        rank_ic = df['probability'].rank().corr(df['Label'].astype(float).rank())
+
+        # 预测分布统计
+        prediction_std = df['probability'].std()
 
         # 计算实际收益率
         # 注意：模型训练时 Label 基于 Future_Return（20天累积收益）
@@ -591,6 +604,12 @@ class WalkForwardValidator:
         else:
             information_ratio = 0.0
 
+        # ========== 置信度与收益关系分析 ==========
+        confidence_bins = self._calculate_confidence_return_breakdown(df)
+
+        # ========== 错误分析 ==========
+        error_analysis = self._analyze_errors(df)
+
         return {
             'num_samples': num_samples,
             'num_trades': num_trades,
@@ -608,8 +627,84 @@ class WalkForwardValidator:
             'sortino_ratio': sortino_ratio,
             'information_ratio': information_ratio,
             'benchmark_return': benchmark_return,
-            'transaction_cost': TOTAL_COST  # 记录使用的交易成本
+            'transaction_cost': TOTAL_COST,  # 记录使用的交易成本
+            # 新增指标
+            'ic': ic if not np.isnan(ic) else 0.0,
+            'rank_ic': rank_ic if not np.isnan(rank_ic) else 0.0,
+            'prediction_std': prediction_std,
+            'confidence_breakdown': confidence_bins,
+            'error_analysis': error_analysis
         }
+
+    def _calculate_confidence_return_breakdown(self, df):
+        """计算置信度与收益关系"""
+        bins = [
+            (0.8, 1.0, '0.8-1.0'),
+            (0.7, 0.8, '0.7-0.8'),
+            (0.6, 0.7, '0.6-0.7'),
+            (0.5, 0.6, '0.5-0.6'),
+            (0.0, 0.5, '0.0-0.5')
+        ]
+
+        confidence_breakdown = []
+        for low, high, label in bins:
+            mask = (df['probability'] >= low) & (df['probability'] < high)
+            subset = df[mask]
+            if len(subset) > 0:
+                avg_return = subset['actual_return'].mean()
+                hit_rate = (subset['Label'] == 1).sum() / len(subset) if 'Label' in subset.columns else 0
+                confidence_breakdown.append({
+                    'range': label,
+                    'count': len(subset),
+                    'avg_return': float(avg_return) if not np.isnan(avg_return) else 0,
+                    'hit_rate': float(hit_rate)
+                })
+            else:
+                confidence_breakdown.append({
+                    'range': label,
+                    'count': 0,
+                    'avg_return': 0,
+                    'hit_rate': 0
+                })
+
+        return confidence_breakdown
+
+    def _analyze_errors(self, df):
+        """分析预测错误"""
+        errors = []
+
+        # 需要有 Code 列才能进行错误分析
+        if 'Code' not in df.columns:
+            return errors
+
+        for idx, row in df.iterrows():
+            prob = row['probability']
+            actual_return = row.get('actual_return', 0)
+            label = row.get('Label', 0)
+            code = row.get('Code', 'Unknown')
+
+            # False Positive: 高概率预测但实际下跌
+            if prob >= 0.7 and label == 0:
+                errors.append({
+                    'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
+                    'Stock_Code': code,
+                    'Predict_Prob': round(prob, 4),
+                    'Actual_Return': round(actual_return, 4) if not np.isnan(actual_return) else 0,
+                    'Error_Type': 'False Positive',
+                    'Possible_Reason': '高概率预测但实际下跌'
+                })
+            # False Negative: 低概率预测但实际上涨
+            elif prob < 0.3 and label == 1:
+                errors.append({
+                    'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
+                    'Stock_Code': code,
+                    'Predict_Prob': round(prob, 4),
+                    'Actual_Return': round(actual_return, 4) if not np.isnan(actual_return) else 0,
+                    'Error_Type': 'False Negative',
+                    'Possible_Reason': '低概率预测但实际上涨'
+                })
+
+        return errors
 
     def _calculate_overall_metrics(self, fold_results):
         """
@@ -705,6 +800,10 @@ class WalkForwardValidator:
             overall_rating = "不佳"
             recommendation = "需要改进"
 
+        # 计算平均 IC 和 Rank IC
+        avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
+        avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
+
         return {
             'num_folds': len(fold_results),
             'avg_return': avg_return,
@@ -721,12 +820,15 @@ class WalkForwardValidator:
             'stability_rating': stability_rating,
             'overall_score': score,
             'overall_rating': overall_rating,
-            'recommendation': recommendation
+            'recommendation': recommendation,
+            # 新增指标
+            'avg_ic': avg_ic,
+            'avg_rank_ic': avg_rank_ic
         }
 
     def save_report(self, report, output_dir='output'):
         """
-        保存验证报告（CSV、JSON、Markdown格式）
+        保存验证报告（CSV、JSON、Markdown格式 + 详细分析文件）
 
         Args:
             report: 验证报告
@@ -740,19 +842,161 @@ class WalkForwardValidator:
         model_type = report['validation_config']['model_type']
         horizon = report['validation_config']['horizon']
 
-        # 1. 保存JSON格式
+        # 创建详细结果目录
+        detail_dir = os.path.join(output_dir, f'{timestamp}_{model_type}_{horizon}d')
+        os.makedirs(detail_dir, exist_ok=True)
+
+        # 1. 保存 validation_summary.json
+        summary = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'model_type': model_type,
+            'horizon': horizon,
+            'num_folds': report['validation_config']['num_folds'],
+            'num_stocks': len(report['validation_config']['stock_list']),
+            'overall_metrics': {
+                'score': report['overall_metrics'].get('overall_score', 0),
+                'rating': report['overall_metrics'].get('overall_rating', 'N/A'),
+                'recommendation': report['overall_metrics'].get('recommendation', 'N/A'),
+                'avg_sharpe': report['overall_metrics'].get('avg_sharpe_ratio', 0),
+                'avg_ic': report['overall_metrics'].get('avg_ic', 0),
+                'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0)
+            },
+            'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'error_analysis', 'confidence_return_breakdown']
+        }
+        summary_file = os.path.join(detail_dir, 'validation_summary.json')
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, indent=2, ensure_ascii=False)
+        logger.info(f"汇总报告已保存: {summary_file}")
+
+        # 2. 保存 fold_metrics_detail.json
+        fold_metrics = {
+            'model_type': model_type,
+            'horizon': horizon,
+            'folds': []
+        }
+        for fold in report['fold_results']:
+            fold_data = {
+                'fold': fold.get('fold', 0) + 1,
+                'train_period': f"{fold.get('train_start_date', '')} to {fold.get('train_end_date', '')}",
+                'test_period': f"{fold.get('test_start_date', '')} to {fold.get('test_end_date', '')}",
+                'metrics': {
+                    'ic': fold.get('ic', 0),
+                    'rank_ic': fold.get('rank_ic', 0),
+                    'accuracy': fold.get('accuracy', 0),
+                    'sharpe': fold.get('sharpe_ratio', 0),
+                    'max_drawdown': fold.get('max_drawdown', 0),
+                    'sortino': fold.get('sortino_ratio', 0),
+                    'win_rate': fold.get('win_rate', 0),
+                    'avg_return': fold.get('avg_return', 0)
+                },
+                'sample_counts': {
+                    'total': fold.get('num_samples', 0),
+                    'train': fold.get('num_train_samples', 0),
+                    'test': fold.get('num_test_samples', 0)
+                }
+            }
+            fold_metrics['folds'].append(fold_data)
+
+        metrics_file = os.path.join(detail_dir, 'fold_metrics_detail.json')
+        with open(metrics_file, 'w', encoding='utf-8') as f:
+            json.dump(fold_metrics, f, indent=2, ensure_ascii=False)
+        logger.info(f"Fold详细指标已保存: {metrics_file}")
+
+        # 3. 保存 prediction_distribution.json
+        pred_dist = {
+            'folds': [],
+            'overall': {
+                'avg_ic': report['overall_metrics'].get('avg_ic', 0),
+                'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0),
+                'avg_prediction_std': np.mean([f.get('prediction_std', 0) for f in report['fold_results']])
+            }
+        }
+        for fold in report['fold_results']:
+            pred_dist['folds'].append({
+                'fold': fold.get('fold', 0) + 1,
+                'test_period': f"{fold.get('test_start_date', '')} to {fold.get('test_end_date', '')}",
+                'prediction_stats': {
+                    'std': fold.get('prediction_std', 0),
+                    'ic': fold.get('ic', 0),
+                    'rank_ic': fold.get('rank_ic', 0)
+                }
+            })
+
+        pred_file = os.path.join(detail_dir, 'prediction_distribution.json')
+        with open(pred_file, 'w', encoding='utf-8') as f:
+            json.dump(pred_dist, f, indent=2, ensure_ascii=False)
+        logger.info(f"预测分布已保存: {pred_file}")
+
+        # 4. 保存 error_analysis.csv
+        all_errors = []
+        for fold in report['fold_results']:
+            fold_num = fold.get('fold', 0) + 1
+            for error in fold.get('error_analysis', []):
+                error['Fold'] = fold_num
+                all_errors.append(error)
+
+        if all_errors:
+            error_df = pd.DataFrame(all_errors)
+            # 调整列顺序
+            cols = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Actual_Return', 'Error_Type', 'Possible_Reason']
+            error_df = error_df[[c for c in cols if c in error_df.columns]]
+            error_file = os.path.join(detail_dir, 'error_analysis.csv')
+            error_df.to_csv(error_file, index=False)
+            logger.info(f"错误分析已保存: {error_file}")
+
+        # 5. 保存 confidence_return_breakdown.json
+        # 汇总所有 fold 的置信度分析
+        confidence_summary = {'confidence_bins': []}
+        bins_labels = ['0.8-1.0', '0.7-0.8', '0.6-0.7', '0.5-0.6', '0.0-0.5']
+
+        for label in bins_labels:
+            total_count = 0
+            total_return = 0
+            total_hit_rate = 0
+            fold_count = 0
+
+            for fold in report['fold_results']:
+                for breakdown in fold.get('confidence_breakdown', []):
+                    if breakdown['range'] == label:
+                        total_count += breakdown['count']
+                        total_return += breakdown['avg_return'] * breakdown['count']
+                        total_hit_rate += breakdown['hit_rate'] * breakdown['count']
+                        fold_count += 1
+                        break
+
+            if total_count > 0:
+                confidence_summary['confidence_bins'].append({
+                    'range': label,
+                    'count': total_count,
+                    'avg_return': total_return / total_count,
+                    'hit_rate': total_hit_rate / total_count
+                })
+            else:
+                confidence_summary['confidence_bins'].append({
+                    'range': label,
+                    'count': 0,
+                    'avg_return': 0,
+                    'hit_rate': 0
+                })
+
+        conf_file = os.path.join(detail_dir, 'confidence_return_breakdown.json')
+        with open(conf_file, 'w', encoding='utf-8') as f:
+            json.dump(confidence_summary, f, indent=2, ensure_ascii=False)
+        logger.info(f"置信度分析已保存: {conf_file}")
+
+        # 6. 保存完整JSON格式（原有逻辑）
         json_file = os.path.join(output_dir, f'walk_forward_{model_type}_{horizon}d_{timestamp}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False, default=str)
         logger.info(f"JSON报告已保存: {json_file}")
 
-        # 2. 保存CSV格式
+        # 7. 保存CSV格式（原有逻辑）
         csv_file = os.path.join(output_dir, f'walk_forward_{model_type}_{horizon}d_{timestamp}.csv')
         fold_df = pd.DataFrame(report['fold_results'])
         fold_df.to_csv(csv_file, index=False)
         logger.info(f"CSV报告已保存: {csv_file}")
 
-        # 3. 保存Markdown格式
+        # 8. 保存Markdown格式（原有逻辑）
         md_file = os.path.join(output_dir, f'walk_forward_{model_type}_{horizon}d_{timestamp}.md')
         self._generate_markdown_report(report, md_file)
         logger.info(f"Markdown报告已保存: {md_file}")
@@ -760,7 +1004,8 @@ class WalkForwardValidator:
         return {
             'json_file': json_file,
             'csv_file': csv_file,
-            'md_file': md_file
+            'md_file': md_file,
+            'detail_dir': detail_dir
         }
 
     def _generate_markdown_report(self, report, output_file):
@@ -808,7 +1053,10 @@ class WalkForwardValidator:
                 f.write(f"- **平均夏普比率**: {overall['avg_sharpe_ratio']:.4f}\n")
                 f.write(f"- **平均最大回撤**: {overall['avg_max_drawdown']:.2%}\n")
                 f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
-                f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n\n")
+                f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n")
+                # 新增 IC 和 Rank IC
+                f.write(f"- **平均 IC**: {overall.get('avg_ic', 0):.4f}\n")
+                f.write(f"- **平均 Rank IC**: {overall.get('avg_rank_ic', 0):.4f}\n\n")
 
             # 稳定性分析
             f.write("## 🔬 稳定性分析\n\n")
@@ -823,15 +1071,16 @@ class WalkForwardValidator:
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
-            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 |\n")
-            f.write("|------|---------|---------|-------|---------|-------|------|-------|---------|--------|\n")
+            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | IC | Rank IC |\n")
+            f.write("|------|---------|---------|-------|---------|-------|------|-------|---------|--------|------|--------|\n")
 
             for fold in folds:
                 f.write(f"| {fold['fold'] + 1} | {fold['train_start_date']} 至 {fold['train_end_date']} | "
                        f"{fold['test_start_date']} 至 {fold['test_end_date']} | {fold['num_test_samples']} | "
                        f"{fold.get('num_trades', 'N/A')} | "
                        f"{fold['avg_return']:.2%} | {fold['win_rate']:.2%} | {fold['accuracy']:.2%} | "
-                       f"{fold['sharpe_ratio']:.4f} | {fold['max_drawdown']:.2%} |\n")
+                       f"{fold['sharpe_ratio']:.4f} | {fold['max_drawdown']:.2%} | "
+                       f"{fold.get('ic', 0):.4f} | {fold.get('rank_ic', 0):.4f} |\n")
 
             f.write("\n")
 
