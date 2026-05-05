@@ -5078,6 +5078,65 @@ class CatBoostModel(BaseTradingModel):
         'net_node_deviation', 'net_node_deviation_delta_5d',
     ]
 
+    # ========== P9 阶段：特征分层策略 ==========
+    # L1 核心截面特征：选股核心信号，与相对标签逻辑一致
+    L1_CORE_CS_FEATURES = [
+        # ========== 资金流向（选股核心）==========
+        'CMF_CS_Pct', 'CMF_CS_ZScore',
+        'OBV_CS_Pct', 'OBV_CS_ZScore',
+        'Smart_Money_Score_CS_Pct', 'Smart_Money_Score_CS_ZScore',
+        'Accumulation_Score_CS_Pct', 'Accumulation_Score_CS_ZScore',
+        # ========== 动量（选股核心）==========
+        'Momentum_20d_CS_Pct', 'Momentum_20d_CS_ZScore',
+        'Momentum_Accel_5d_CS_Pct', 'Momentum_Accel_5d_CS_ZScore',
+        'MACD_histogram_CS_Pct', 'MACD_histogram_CS_ZScore',
+        # ========== 相对强度（关键 Alpha）==========
+        'RS_Ratio_5d_CS_Pct', 'RS_Ratio_5d_CS_ZScore',
+        'RS_Ratio_20d_CS_Pct', 'RS_Ratio_20d_CS_ZScore',
+        'RS_Diff_5d_CS_Pct', 'RS_Diff_5d_CS_ZScore',
+        'RS_Diff_20d_CS_Pct', 'RS_Diff_20d_CS_ZScore',
+        'Relative_Return_CS_Pct', 'Relative_Return_CS_ZScore',
+        # ========== 波动率（风险调整）==========
+        'Volatility_20d_CS_Pct', 'Volatility_20d_CS_ZScore',
+        'ATR_Ratio_CS_Pct', 'ATR_Ratio_CS_ZScore',
+        # ========== 风险特征 ==========
+        'Max_Drawdown_20d_CS_Pct', 'Max_Drawdown_20d_CS_ZScore',
+        'Kurtosis_20d_CS_Pct', 'Kurtosis_20d_CS_ZScore',
+        'Skewness_20d_CS_Pct', 'Skewness_20d_CS_ZScore',
+        # ========== 基本面 ==========
+        'PE_CS_Pct', 'PE_CS_ZScore',
+        'PB_CS_Pct', 'PB_CS_ZScore',
+        'ROE_CS_Pct', 'ROE_CS_ZScore',
+    ]
+
+    # L3 剔除特征：市场级 + 宏观交叉特征（干扰选股）
+    L3_EXCLUDE_FEATURES = [
+        # ========== 纯市场特征（同日所有股票值相同）==========
+        'US_10Y_Yield', 'US_10Y_Yield_Change',
+        'US10Y_Yield', 'US10Y_Yield_Change_5d',
+        'VIX_Level', 'VIX_Change', 'VIX_Ratio_MA20',
+        'HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d',
+        'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d',
+        'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
+        'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
+        'HSI_Market_Regime', 'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1',
+        'HSI_Regime_Prob_2', 'HSI_Regime_Duration', 'HSI_Regime_Transition_Prob',
+        'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
+        # ========== 宏观交叉特征（含市场成分）==========
+        # Trend × 市场收益
+        '5d_Trend_HSI_Return_5d', '10d_Trend_HSI_Return_10d',
+        '20d_Trend_HSI_Return_20d', '60d_Trend_HSI_Return_60d',
+        # Trend × 市场状态
+        '5d_Trend_HSI_Regime_Prob_0', '5d_Trend_HSI_Regime_Prob_1',
+        '10d_Trend_HSI_Regime_Prob_0', '10d_Trend_HSI_Regime_Prob_1',
+        '20d_Trend_HSI_Regime_Prob_0', '20d_Trend_HSI_Regime_Prob_1',
+        # Trend × 美股
+        '5d_Trend_SP500_Return_5d', '10d_Trend_SP500_Return_10d',
+        '20d_Trend_SP500_Return_20d',
+        '5d_Trend_NASDAQ_Return_5d', '10d_Trend_NASDAQ_Return_10d',
+        '20d_Trend_NASDAQ_Return_20d',
+    ]
+
     def __init__(self, class_weight='balanced', use_dynamic_threshold=False,
                  use_monotone_constraints=True, time_decay_lambda=0.5,
                  use_rolling_percentile=False,  # 2026-05-02: 关闭滚动百分位（消融实验证明其降低IC）
@@ -5809,6 +5868,15 @@ class CatBoostModel(BaseTradingModel):
         excluded_macro_cross = [col for col in df.columns if col in macro_cross_exclude]
         if excluded_macro_cross:
             logger.info(f"排除 {len(excluded_macro_cross)} 个宏交叉特征: {excluded_macro_cross[:5]}{'...' if len(excluded_macro_cross) > 5 else ''}")
+
+        # P9: 排除 L3 特征（市场级 + 宏观交叉特征的完整列表）
+        l3_exclude = set(self.L3_EXCLUDE_FEATURES) if hasattr(self, 'L3_EXCLUDE_FEATURES') else set()
+        feature_columns = [col for col in feature_columns if col not in l3_exclude]
+
+        # 日志记录排除的 L3 特征
+        excluded_l3 = [col for col in df.columns if col in l3_exclude]
+        if excluded_l3:
+            logger.info(f"P9 排除 {len(excluded_l3)} 个 L3 特征: {excluded_l3[:5]}{'...' if len(excluded_l3) > 5 else ''}")
 
         # 可选：Pearson 去冗余（防止新增特征时引入高相关冗余）
         if dedup_threshold and len(feature_columns) > 0:
