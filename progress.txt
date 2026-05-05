@@ -2,11 +2,60 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-04-29
+**最后更新**：2026-05-05
 
 ---
 
-## 最新进展（2026-04-29）
+## 最新进展（2026-05-05）
+
+### 网络特征集成 + Walk-forward 验证增强
+
+**目标**：将股票网络分析特征集成到 ML 模型，增强验证指标
+
+**实现内容**：
+
+1. **网络特征集成**
+   - 新增 `MARKET_LEVEL_FEATURES` 常量（32个市场级特征）
+   - 新增 `create_market_network_interaction_features` 方法
+   - 将市场级特征与网络社区特征交叉，使不同社区股票对市场信号有不同响应
+   - 网络特征来源：`output/network_features_for_ml.json`
+
+2. **股票代码格式修复**
+   - 统一移除前导零（如 `02382.HK` → `2382.HK`）
+   - 修复 `STOCK_SECTOR_MAPPING` 和 `TRAINING_STOCKS` 中的代码格式
+
+3. **Walk-forward 验证增强**
+   - 新增 IC/Rank IC 指标（预测概率与实际收益的相关系数）
+   - 新增百分位预测效果分析（Top 1%/5%/10%/20% 收益）
+   - 新增详细分析结果保存（validation_summary.json, fold_metrics_detail.json 等）
+   - 修复 IC 计算与训练不一致问题
+
+4. **综合分析脚本更新**
+   - 新增步骤0：网络特征计算（使用 `--skip-pmfg` 加速）
+   - 网络特征保存到 `output/network_features_for_ml.json`
+
+**验证结果**（CatBoost 20d，12 folds，59只股票）：
+
+| 指标 | 数值 | 评估 |
+|------|------|------|
+| 综合评分 | 80/100 | 优秀 |
+| 平均准确率 | 54.93% | ✅ |
+| 平均夏普比率 | 0.9059 | ✅ 接近目标 |
+| 平均最大回撤 | -0.20% | ✅ 极佳 |
+
+**关键发现**：
+- 网络特征集成后模型可正常训练和预测
+- IC 计算修复后数值更准确反映预测能力
+
+**改动文件**：
+- `config.py`（修复股票代码格式）
+- `ml_services/ml_trading_model.py`（新增网络特征交叉）
+- `ml_services/walk_forward_validation.py`（IC修复、百分位分析、详细结果保存）
+- `scripts/run_comprehensive_analysis.sh`（新增网络特征计算步骤）
+
+---
+
+## 历史进展（2026-04-29）
 
 ### CatBoost 超参数优化
 

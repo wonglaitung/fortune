@@ -26,6 +26,7 @@ matplotlib
 
 # 网络分析
 networkx
+python-louvain
 
 # 统计分析
 statsmodels
