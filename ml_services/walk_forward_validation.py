@@ -439,6 +439,8 @@ class WalkForwardValidator:
                 horizon=self.horizon,
                 use_feature_selection=self.use_feature_selection
             )
+            # P9: 保存最后一个训练的模型引用（用于 save_detailed_results）
+            self.last_model = model
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
             raise
@@ -1801,6 +1803,19 @@ def main():
 
         # 保存报告
         output_files = validator.save_report(report, args.output_dir)
+
+        # P9: 保存详细分析结果（10个文件）
+        if hasattr(validator, 'last_model') and validator.last_model is not None:
+            print(f"\n{'='*80}")
+            print("📊 保存详细分析结果...")
+            print(f"{'='*80}")
+            detailed_files = validator.save_detailed_results(report, validator.last_model, args.output_dir)
+            if detailed_files:
+                print(f"\n详细分析文件:")
+                for name, path in detailed_files.items():
+                    print(f"  - {name}: {path}")
+        else:
+            print("\n⚠️  无法保存详细分析结果：模型引用不存在")
 
         print(f"\n{'='*80}")
         print("✅ 验证完成")
