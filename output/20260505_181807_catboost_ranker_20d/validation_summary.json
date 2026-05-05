@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-05-05 18:18:07",
+  "model_type": "catboost_ranker",
+  "horizon": 20,
+  "num_folds": 12,
+  "num_stocks": 57,
+  "overall_metrics": {
+    "score": 75,
+    "rating": "良好",
+    "recommendation": "推荐实盘",
+    "avg_sharpe": 0.7796708864481413,
+    "avg_ic": 0.01365243571539819,
+    "avg_rank_ic": -0.008658350489211384
+  },
+  "saved_files": [
+    "prediction_distribution",
+    "fold_metrics_detail",
+    "error_analysis",
+    "confidence_return_breakdown"
+  ]
+}
