@@ -677,6 +677,13 @@ loss_function='YetiRankPairwise',
   Step 53 → Expected_Value 公式设计
   Step 54 → _predict_from_features() 实现
   Step 55 → 返回值新增 expected_value 和 atr_ratio
+
+阶段 17（P16，规划中 📋）：
+  Step 56 → ATR_Ratio 极值处理（双保险）
+  Step 57 → EV 阈值筛选 + Proba 标准化选项
+  Step 58 → EV 排序替代 probability
+  Step 59 → 仓位分配（凯利公式变体）
+  Step 60 → 风险监控指标新增
 ```
 
 ---
@@ -2158,3 +2165,198 @@ return {
 ---
 
 **最后更新**：2026-05-06（P12-P15：数据泄漏修复 + 板块相对动能 + QuerySoftMax + Expected_Value）
+
+---
+
+## P16 阶段：Expected_Value 阈值筛选逻辑（待实施）
+
+**背景**：P15 实现了 Expected_Value 计算，但未实现筛选和仓位分配逻辑。
+
+### P16-1：当前实现状态
+
+| 检查项 | 状态 | 说明 |
+|--------|------|------|
+| **EV 计算** | ✅ 已实现 | Line 8050: `expected_value = (2 * proba - 1) * atr_ratio` |
+| **硬阈值截断** | ❌ 未实现 | 无 `ev_threshold` 参数 |
+| **动态排名** | ❌ 未实现 | EV 未参与排序或筛选 |
+| **异常值处理** | ❌ 未实现 | ATR_Ratio 无 clip/winsorize |
+| **仓位分配** | ❌ 未实现 | EV 未用于仓位计算 |
+
+### P16-2：风险点分析
+
+#### ⚠️ 风险 1：零和偏见（Proba 集中在 0.7-1.0）
+
+根据 P10 验证结果，预测分布严重挤压：
+- 所有预测集中在 0.7-1.0 区间（820 个样本）
+- 0.0-0.7 区间均为 0 个样本
+
+**问题**：当 Proba 集中在 0.7-0.8 时，EV 的区分度主要来自 ATR_Ratio，模型可能过度追逐高波动股票。
+
+#### ⚠️ 风险 2：ATR_Ratio 无极值处理
+
+当前代码：
+```python
+atr_ratio = df['ATR'] / df['ATR_MA']  # 无 clip
+```
+
+**极端情况**：
+- 停牌复牌：ATR_Ratio 可能 > 5.0
+- 僵尸股：ATR_Ratio 可能 < 0.3
+
+**后果**：单只股票的极端波动产生巨大 EV，导致过度集中。
+
+#### ⚠️ 风险 3：EV 未参与筛选逻辑
+
+当前 `comprehensive_analysis.py` 使用 `probability` 排序：
+```python
+df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
+```
+
+**问题**：EV 计算了但未使用，浪费了波动率信息。
+
+### P16-3：Expected_Value 矩阵分析
+
+| Proba | ATR=0.8 | ATR=1.0 | ATR=1.2 | ATR=1.5 | ATR=2.0 |
+|-------|---------|---------|---------|---------|---------|
+| 0.51 | +0.016 | +0.020 | +0.024 | +0.030 | +0.040 |
+| 0.55 | +0.080 | +0.100 | +0.120 | +0.150 | +0.200 |
+| 0.60 | +0.160 | +0.200 | +0.240 | +0.300 | +0.400 |
+| 0.65 | +0.240 | +0.300 | +0.360 | +0.450 | +0.600 |
+| 0.70 | +0.320 | +0.400 | +0.480 | +0.600 | +0.800 |
+| 0.75 | +0.400 | +0.500 | +0.600 | +0.750 | +1.000 |
+| 0.80 | +0.480 | +0.600 | +0.720 | +0.900 | +1.200 |
+
+**关键发现**：
+- Proba = 0.51 时，EV 范围: 0.016 - 0.040（极小）
+- Proba = 0.65 时，EV 范围: 0.240 - 0.600（中等）
+- Proba = 0.80 时，EV 范围: 0.480 - 1.200（显著）
+
+### P16-4：改进方案
+
+#### A. ATR_Ratio 极值处理（双保险）
+
+```python
+# 在 _predict_from_features() 中（Line 8042-8048）
+atr_ratio = 0.0
+if 'ATR_Ratio' in latest_data.columns:
+    atr_ratio = float(latest_data['ATR_Ratio'].values[0])
+elif 'ATR' in latest_data.columns and 'ATR_MA' in latest_data.columns:
+    atr_val = float(latest_data['ATR'].values[0])
+    atr_ma = float(latest_data['ATR_MA'].values[0])
+    # P16: 双保险 - 防止除以零 + 极值处理
+    atr_ratio = atr_val / max(atr_ma, 1e-6)  # 防止数值爆炸
+    atr_ratio = np.clip(atr_ratio, 0.5, 2.0)  # 限制在合理范围
+```
+
+**双保险机制**：
+1. `max(atr_ma, 1e-6)`：防止除以零或极小值导致的数值爆炸
+2. `np.clip(0.5, 2.0)`：限制 ATR_Ratio 在合理范围，防止单只股票过度集中
+
+#### B. EV 阈值筛选（含 Proba 标准化选项）
+
+```python
+# 在 CatBoostRankerModel.__init__ 中添加参数
+def __init__(self, ..., ev_threshold=0.1, use_proba_standardization=False):
+    self.ev_threshold = ev_threshold
+    self.use_proba_standardization = use_proba_standardization
+
+# 在 _predict_from_features() 中
+if self.use_proba_standardization:
+    # 对 Proba 进行 Z-Score 标准化后再计算 EV
+    # 解决 Proba 集中在 0.7-1.0 导致 EV 被 ATR_Ratio 主导的问题
+    proba_adjusted = (proba - 0.5) / 0.15  # 假设标准差 0.15
+    expected_value = proba_adjusted * atr_ratio
+else:
+    expected_value = (2 * proba - 1) * atr_ratio
+
+# EV 阈值筛选
+if expected_value < self.ev_threshold:
+    return None  # 过滤低 EV 样本
+```
+
+**Proba 标准化的数学原理**：
+- 当 Proba 集中在 [0.7, 1.0] 时，系数 $(2P-1) \in [0.4, 1.0]$，区间较窄
+- EV 大小 70%+ 由 ATR_Ratio 决定，模型变成"高波动追逐器"
+- 标准化后，Proba 的区分度被放大，迫使模型在真正的高胜率样本中对比波动率
+
+#### C. EV 排序替代 Probability（质的飞跃）
+
+```python
+# 在 comprehensive_analysis.py 中
+# 从"命中率导向"转为"盈亏比导向"
+
+# 旧逻辑（命中率导向）
+# df_sorted = df.sort_values('probability', ascending=False)
+
+# 新逻辑（盈亏比导向）
+df_sorted = df.sort_values('expected_value', ascending=False)
+```
+
+**核心差异**：
+
+| 指标 | 含义 | 策略导向 |
+|------|------|---------|
+| `probability` | 会不会涨 | 命中率导向 |
+| `expected_value` | 会涨多少（经风险调整） | 盈亏比导向 |
+
+**建议**：在回测中对比 Prob-Rank vs EV-Rank 的夏普比率，选择更优方案。
+
+#### D. 仓位分配（凯利公式变体）
+
+```python
+# 在 comprehensive_analysis.py 中
+# 凯利公式变体：重仓高确定性，轻仓试错
+
+# 方法1：简单比例
+total_ev = df_sorted['expected_value'].sum()
+df_sorted['weight'] = df_sorted['expected_value'] / total_ev
+
+# 方法2：凯利公式完整版（考虑赔率）
+# Kelly% = (bp - q) / b
+# b = 赔率（平均盈利/平均亏损）
+# p = 胜率（probability）
+# q = 1 - p
+
+# 方法3：半凯利（保守，降低过拟合风险）
+df_sorted['weight'] = (df_sorted['weight'] * 0.5).clip(0.05, 0.25)
+```
+
+### P16-5：实施优先级（更新版）
+
+| 优先级 | 改进项 | 评价 | 实施要点 |
+|--------|--------|------|---------|
+| **P0** | ATR_Ratio 极值处理 | 🔴 必做 | 双保险：防除零 + clip，应对小盘股暴波动 |
+| **P1** | EV 阈值筛选 | ⭐ 关键 | 默认 0.1，后续通过回测找最优分位数 |
+| **P2** | EV 排序替代 probability | 💎 灵魂 | 决定策略上限，回测对比夏普比率 |
+| **P3** | 仓位分配 | 🚀 进阶 | 凯利公式变体，自动化"重仓高确定性，轻仓试错" |
+
+### P16-6：验证计划
+
+```bash
+# 修改后验证
+python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --horizon 20 --n-jobs -1
+```
+
+**对比指标**：
+
+| 指标 | 修改前 | 修改后 | 目标 |
+|------|--------|--------|------|
+| EV 分布 | 无筛选 | 有阈值 | 过滤低 EV |
+| 最大仓位集中度 | 未知 | <30% | 分散风险 |
+| 夏普比率 | 0.78 | >0.85 | 提升 |
+| Prob-Rank vs EV-Rank | - | 对比 | 选择更优 |
+
+### P16-7：风险监控指标
+
+实施 P16 后，建议在性能监控中新增以下指标：
+
+| 指标 | 公式 | 预警阈值 |
+|------|------|---------|
+| **EV 集中度** | `max(EV) / sum(EV)` | >30% 预警 |
+| **ATR_Ratio 极值占比** | `count(clip生效) / total` | >5% 需检查 |
+| **Proba 分布标准差** | `std(Proba)` | <0.1 说明挤压严重 |
+| **EV/Prob 排序相关性** | `spearman(EV_rank, Prob_rank)` | <0.7 说明差异显著 |
+
+---
+
+**最后更新**：2026-05-06（P16：Expected_Value 阈值筛选逻辑规划）
