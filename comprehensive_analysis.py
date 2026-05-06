@@ -1069,7 +1069,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += f"预测日期: {date_str}\n"
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
-                catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
+                catboost_text_email += "\n全部股票预测结果（按Expected_Value排序，盈亏比导向）:\n\n"
                 catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
 
@@ -3023,6 +3023,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 【2. CatBoost模型20天预测结果】
 **重要：probability = 跑赢概率（相对标签，预测跑赢其他股票的概率）**
+**P16新增：expected_value = (2×probability-1)×ATR_Ratio，用于排序和仓位分配**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -3082,6 +3083,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **高置信度跑赢**：probability > 0.60
 - **中等置信度观望**：0.50 < probability ≤ 0.60
 - **预测跑输**：probability ≤ 0.50
+
+**P16新增：Expected_Value 排序与仓位分配**：
+- `expected_value = (2 × probability - 1) × ATR_Ratio`
+- **含义**：将胜率转化为期望收益，自动考虑波动率
+- **排序逻辑**：按 expected_value 降序排列（盈亏比导向）
+- **仓位分配**：Weight = expected_value / Σexpected_value × 0.5（半凯利）
+- **风险控制**：单只股票仓位 ≤ 25%，最大集中度 ≤ 30%
 
 **重要说明 - CatBoost probability 定义（相对标签）**：
 - `probability` = **跑赢概率**（模型预测股票跑赢其他股票的概率）
