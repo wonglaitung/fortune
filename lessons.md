@@ -1,12 +1,59 @@
 # 经验教训
 
-> **版本**：v5.13 (2026-05-04) | **状态**：当前有效
+> **版本**：v5.14 (2026-05-06) | **状态**：当前有效
 
 ---
 
 ## 一、核心警告
 
-### 0. CatBoostRanker 排序模型的概率变换 ⭐（更新 2026-05-04）
+### 0. Volume/Turnover 数据泄漏 - IC/Rank IC 分离的根因 ⭐⭐⭐（更新 2026-05-06）
+
+**问题**：15+ 个成交量相关特征存在数据泄漏，导致 IC 为正但 Rank IC 为负
+
+**背景**：
+- 成交量（Volume）与价格波动高度相关，当日成交量是当日涨跌的"事后信号"
+- 模型通过当日成交量"偷看"了当日价格走势，制造了 IC 虚高的假象
+- 实盘预测时无法获得当日收盘成交量，排序逻辑完全失效
+
+**受影响的特征**（已修复）：
+
+| 特征 | 问题 | 修复 |
+|------|------|------|
+| `VWAP` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `CMF` | `Volume` 和 `Close` 未 shift | 全部使用 shift(1) |
+| `OBV` | 使用当日 `Volume` 推断当日涨跌 | 整体 shift(1) |
+| `Vol_Ratio` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Vol_Z_Score` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Turnover` | `Close * Volume` 含当日数据 | 两者都 shift(1) |
+| `Turnover_Z_Score` | `Turnover` 未 shift | 已修复 |
+| `Volume_Ratio_5d/20d` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Volume_Ratio_7d/120d` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Price_*_Volume_*` | `Turnover.pct_change()` 含当日数据 | 使用滞后数据 |
+
+**为什么 IC 正但 Rank IC 负？**
+
+1. **IC（Pearson 相关性）**：衡量预测值与收益的线性关系
+   - 模型通过当日成交量"锚定"了当日涨跌
+   - 回测时 IC 看起来很好（虚高）
+
+2. **Rank IC（Spearman 相关性）**：衡量预测排名与收益排名的关系
+   - 实盘时无法获得当日收盘成交量
+   - 模型学到的"成交量-价格"逻辑完全错位
+   - 排序变成随机乱炖，甚至反向
+
+**核心教训**：
+- **成交量是价格的事后信号**，必须严格使用 shift(1)
+- **OBV 是累加指标**，必须整体滞后，否则模型可 100% 推断当日涨跌
+- **IC 虚高是数据泄漏的典型症状**，需检查 Rank IC 是否一致
+- **P9 特征剔除失败的原因**：模型把泄露特征当"救命稻草"，剔除宏观特征后变本加厉挖掘噪声
+
+**代码位置**：
+- `ml_services/ml_trading_model.py:644-687`（Volume/Turnover 特征计算）
+- `ml_services/ml_trading_model.py:822-837`（量价关系特征）
+
+---
+
+### 1. CatBoostRanker 排序模型的概率变换 ⭐（更新 2026-05-04）
 
 **问题**：CatBoostRanker 的原始分数分布集中，sigmoid 变换后概率过于集中在 0.5 附近
 

@@ -641,49 +641,54 @@ class FeatureEngineer:
         df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean().shift(1)
         df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
 
-        # ========== 成交量相关 ==========
+        # ========== 成交量相关（P0 修复：所有 Volume/Turnover 使用 shift(1) 避免数据泄漏）==========
         df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean().shift(1)
-        df['Vol_Ratio'] = df['Volume'] / df['Vol_MA20']
+        df['Vol_Ratio'] = df['Volume'].shift(1) / df['Vol_MA20']  # P0 修复：Volume shift(1)
         # 成交量 z-score（使用滞后数据避免数据泄漏）
         df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean().shift(1)
         df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std().shift(1)
-        df['Vol_Z_Score'] = (df['Volume'] - df['Vol_Mean_20']) / df['Vol_Std_20']
-        # 成交额
-        df['Turnover'] = df['Close'] * df['Volume']
+        df['Vol_Z_Score'] = (df['Volume'].shift(1) - df['Vol_Mean_20']) / df['Vol_Std_20']  # P0 修复
+        # 成交额（使用滞后数据避免数据泄漏）
+        df['Turnover'] = df['Close'].shift(1) * df['Volume'].shift(1)  # P0 修复
         # 成交额 z-score（使用滞后数据避免数据泄漏）
         df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean().shift(1)
         df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std().shift(1)
         df['Turnover_Z_Score'] = (df['Turnover'] - df['Turnover_Mean_20']) / df['Turnover_Std_20']
-        # 成交额变化率（多周期）
+        # 成交额变化率（多周期，使用滞后数据）
         df['Turnover_Change_1d'] = df['Turnover'].pct_change()
         df['Turnover_Change_5d'] = df['Turnover'].pct_change(5)
         df['Turnover_Change_10d'] = df['Turnover'].pct_change(10)
         df['Turnover_Change_20d'] = df['Turnover'].pct_change(20)
-        # 换手率（假设总股本为常数，这里使用成交额/价格作为近似）
-        df['Turnover_Rate'] = (df['Turnover'] / (df['Close'] * 1000000)) * 100
+        # 换手率（使用滞后数据避免数据泄漏）
+        df['Turnover_Rate'] = (df['Turnover'] / (df['Close'].shift(1) * 1000000)) * 100  # P0 修复
         # 换手率变化率
         df['Turnover_Rate_Change_5d'] = df['Turnover_Rate'].pct_change(5)
         df['Turnover_Rate_Change_20d'] = df['Turnover_Rate'].pct_change(20)
 
-        # ========== VWAP (成交量加权平均价，使用滞后数据避免数据泄漏) ==========
+        # ========== VWAP (成交量加权平均价，P0 修复：所有分量使用 shift(1) 避免数据泄漏) ==========
         df['TP'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
-        df['VWAP'] = (df['TP'] * df['Volume']).rolling(window=20, min_periods=1).sum() / df['Volume'].rolling(window=20, min_periods=1).sum()
+        df['Volume_Lagged'] = df['Volume'].shift(1)  # P0 修复：Volume 必须滞后
+        df['VWAP'] = (df['TP'] * df['Volume_Lagged']).rolling(window=20, min_periods=1).sum() / df['Volume_Lagged'].rolling(window=20, min_periods=1).sum()
 
-        # ========== OBV (能量潮) ==========
+        # ========== OBV (能量潮，P0 修复：使用滞后数据避免数据泄漏) ==========
+        # OBV 累加逻辑必须使用 T-1 日的 Volume，否则模型可通过当日 Volume 推断当日 Close 涨跌
         df['OBV'] = 0.0
         for i in range(1, len(df)):
-            if df['Close'].iloc[i] > df['Close'].iloc[i-1]:
-                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] + df['Volume'].iloc[i]
-            elif df['Close'].iloc[i] < df['Close'].iloc[i-1]:
-                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] - df['Volume'].iloc[i]
+            # P0 修复：使用 shift(1) 后的 Close 比较和 Volume
+            if df['Close'].iloc[i-1] > df['Close'].iloc[i-2]:  # 昨日收盘价 > 前日
+                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] + df['Volume'].iloc[i-1]  # 使用昨日 Volume
+            elif df['Close'].iloc[i-1] < df['Close'].iloc[i-2]:
+                df['OBV'].iloc[i] = df['OBV'].iloc[i-1] - df['Volume'].iloc[i-1]
             else:
                 df['OBV'].iloc[i] = df['OBV'].iloc[i-1]
+        df['OBV'] = df['OBV'].shift(1)  # P0 修复：整体滞后，确保预测时不使用当日数据
 
-        # ========== CMF (Chaikin Money Flow) ==========
+        # ========== CMF (Chaikin Money Flow，P0 修复：所有 Volume 使用 shift(1)) ==========
         # 使用滞后High/Low避免数据泄漏
-        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1))
-        df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
-        df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume'].rolling(20, min_periods=1).sum()
+        df['MF_Multiplier'] = ((df['Close'].shift(1) - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'].shift(1))) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)  # P0 修复：Close 也 shift
+        df['Volume_Lagged'] = df['Volume'].shift(1)  # P0 修复
+        df['MF_Volume'] = df['MF_Multiplier'] * df['Volume_Lagged']
+        df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume_Lagged'].rolling(20, min_periods=1).sum()
         # CMF 信号线（使用滞后数据避免数据泄漏）
         df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
 
@@ -814,10 +819,10 @@ class FeatureEngineer:
         df['Gap_Up'] = (df['Gap_Size'] > 0.01).astype(int)  # 跳空高开 >1%
         df['Gap_Down'] = (df['Gap_Size'] < -0.01).astype(int)  # 跳空低开 >1%
 
-        # ========== 中优先级：量价关系特征 ==========
-        # 量价背离（业界重要信号）
-        df['Price_Up_Volume_Down'] = ((df['Return_1d'] > 0) & (df['Turnover'].pct_change() < 0)).astype(int)
-        df['Price_Down_Volume_Up'] = ((df['Return_1d'] < 0) & (df['Turnover'].pct_change() > 0)).astype(int)
+        # ========== 中优先级：量价关系特征（P0 修复：使用滞后数据）==========
+        # 量价背离（业界重要信号，使用滞后数据）
+        df['Price_Up_Volume_Down'] = ((df['Return_1d'].shift(1) > 0) & (df['Turnover'].pct_change() < 0)).astype(int)  # P0 修复
+        df['Price_Down_Volume_Up'] = ((df['Return_1d'].shift(1) < 0) & (df['Turnover'].pct_change() > 0)).astype(int)  # P0 修复
 
         # OBV 趋势（使用滞后数据避免数据泄漏）
         df['OBV_MA5'] = df['OBV'].rolling(5).mean().shift(1)
@@ -826,9 +831,9 @@ class FeatureEngineer:
         # 成交量波动率（使用滞后数据避免数据泄漏）
         df['Volume_Volatility'] = df['Turnover'].shift(1).rolling(20).std() / (df['Turnover'].shift(1).rolling(20).mean() + 1e-10)
 
-        # 成交量比率（多周期）
-        df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
-        df['Volume_Ratio_20d'] = df['Volume'] / df['Volume'].rolling(20).mean()
+        # 成交量比率（多周期，P0 修复：使用滞后数据）
+        df['Volume_Ratio_5d'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(5).mean()  # P0 修复
+        df['Volume_Ratio_20d'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(20).mean()  # P0 修复
 
         # ========== 长期趋势特征（专门优化一个月模型） ==========
         # 长期均线（120日半年线、250日年线，使用滞后数据避免数据泄漏）
@@ -931,7 +936,7 @@ class FeatureEngineer:
         # 长期成交量趋势（使用滞后数据避免数据泄漏）
         df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean().shift(1)
         df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean().shift(1)
-        df['Volume_Ratio_120d'] = df['Volume'] / df['Volume_MA120']
+        df['Volume_Ratio_120d'] = df['Volume'].shift(1) / df['Volume_MA120']  # P0 修复
         df['Volume_Trend_Long'] = np.where(
             df['Volume_MA120'] > df['Volume_MA250'], 1, -1
         )
@@ -945,11 +950,11 @@ class FeatureEngineer:
         # 长期RSI（基于120日）
         df['RSI_120'] = self.tech_analyzer.calculate_rsi(df.copy(), period=120)['RSI']
 
-        # ========== 自适应成交量确认过滤器（实验性方案）==========
+        # ========== 自适应成交量确认过滤器（实验性方案，P0 修复）==========
         # 7日成交量均值（业界常用周期，使用滞后数据避免数据泄漏）
         df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean().shift(1)
-        # 成交量比率（当前成交量/7日均量）
-        df['Volume_Ratio_7d'] = df['Volume'] / df['Volume_MA7']
+        # 成交量比率（当前成交量/7日均量，P0 修复：使用滞后数据）
+        df['Volume_Ratio_7d'] = df['Volume'].shift(1) / df['Volume_MA7']
         
         # 市场环境识别（基于ADX）
         market_regime = self.detect_market_regime(df)
@@ -1551,10 +1556,10 @@ class FeatureEngineer:
         hsi_df['HSI_Volatility_20d'] = hsi_df['Close'].pct_change().rolling(20).std() * np.sqrt(252)
         hsi_df['HSI_Volatility_Ratio'] = hsi_df['HSI_Volatility_5d'] / hsi_df['HSI_Volatility_20d']
 
-        # 2. 市场活跃度（成交量相对历史水平）
+        # 2. 市场活跃度（成交量相对历史水平，P0 修复：使用滞后数据）
         # 高活跃度 = 资金涌入，信号更可靠
-        hsi_df['HSI_Volume_MA20'] = hsi_df['Volume'].rolling(20).mean() if 'Volume' in hsi_df.columns else 1
-        hsi_df['Market_Activeness'] = hsi_df['Volume'] / hsi_df['HSI_Volume_MA20'] if 'Volume' in hsi_df.columns else 1.0
+        hsi_df['HSI_Volume_MA20'] = hsi_df['Volume'].shift(1).rolling(20).mean() if 'Volume' in hsi_df.columns else 1  # P0 修复
+        hsi_df['Market_Activeness'] = hsi_df['Volume'].shift(1) / hsi_df['HSI_Volume_MA20'] if 'Volume' in hsi_df.columns else 1.0  # P0 修复
 
         # 3. 市场宽度（涨跌比例，描述市场健康度）
         # 这个特征需要从所有股票计算，暂时用 HSI 动量作为代理
@@ -2864,6 +2869,8 @@ class LightGBMModel(BaseTradingModel):
         # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
         'Relative_Return',
+        # ========== 板块相对动能特征（P4 新增，2026-05-06）==========
+        'Sector_Relative_Momentum_5d', 'Sector_Relative_Momentum_20d',
         # ========== 布林带/位置特征 ==========
         'BB_Position', 'BB_Width',
         # ========== 风险特征（保留核心）==========
@@ -3864,6 +3871,8 @@ class GBDTModel(BaseTradingModel):
         # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
         'Relative_Return',
+        # ========== 板块相对动能特征（P4 新增，2026-05-06）==========
+        'Sector_Relative_Momentum_5d', 'Sector_Relative_Momentum_20d',
         # ========== 布林带/位置特征 ==========
         'BB_Position', 'BB_Width',
         # ========== 风险特征（保留核心）==========
@@ -5029,6 +5038,8 @@ class CatBoostModel(BaseTradingModel):
         # ========== 相对强度特征（关键 Alpha 信号）==========
         'RS_Ratio_5d', 'RS_Ratio_20d', 'RS_Diff_5d', 'RS_Diff_20d',
         'Relative_Return',
+        # ========== 板块相对动能特征（P4 新增，2026-05-06）==========
+        'Sector_Relative_Momentum_5d', 'Sector_Relative_Momentum_20d',
         # ========== 布林带/位置特征 ==========
         'BB_Position', 'BB_Width',
         # ========== 风险特征（保留核心）==========
@@ -5807,6 +5818,77 @@ class CatBoostModel(BaseTradingModel):
         # ========== 截面 Z-Score 特征（2026-05-03 新增，解决时间序列基准问题）==========
         if self.use_cross_sectional_zscore:
             df = self._calculate_cross_sectional_zscore_features(df)
+
+        # ========== P4: 板块相对动能特征（2026-05-06 新增）==========
+        # 计算 Individual_Stock_Momentum - Sector_Momentum，提供个股 Alpha 信号
+        # 强迫模型关注个股相对于板块的超额收益，而非市场 Beta
+        try:
+            from config import STOCK_SECTOR_MAPPING
+
+            # 获取股票板块映射
+            stock_to_sector = {code: info['sector'] for code, info in STOCK_SECTOR_MAPPING.items()}
+
+            # 添加板块列
+            df['Sector'] = df['Code'].map(stock_to_sector)
+
+            # 保存原始索引名称
+            original_index_name = df.index.name
+            df.index.name = 'Date'
+
+            # 计算板块动量（每日每板块的平均动量）
+            if 'Momentum_20d' in df.columns:
+                # 板块动量 = 板块内所有股票 Momentum_20d 的均值
+                sector_momentum = df.groupby([df.index, 'Sector'])['Momentum_20d'].mean()
+                sector_momentum.name = 'Sector_Momentum_20d'
+
+                # 将板块动量映射回原数据
+                sector_momentum_df = sector_momentum.reset_index()
+                df = df.reset_index().merge(
+                    sector_momentum_df,
+                    on=['Date', 'Sector'],
+                    how='left'
+                ).set_index('Date')
+
+                # 计算板块相对动能
+                df['Sector_Relative_Momentum_20d'] = df['Momentum_20d'] - df['Sector_Momentum_20d']
+
+                # 删除临时列
+                df = df.drop(columns=['Sector_Momentum_20d'], errors='ignore')
+
+                logger.info(f"板块相对动能特征计算完成: Sector_Relative_Momentum_20d")
+
+            # 同样计算 5d 版本
+            if 'Momentum_5d' in df.columns or 'Return_5d' in df.columns:
+                # 使用 Return_5d 作为短期动量代理
+                if 'Return_5d' in df.columns:
+                    momentum_col = 'Return_5d'
+                else:
+                    momentum_col = 'Momentum_5d'
+
+                sector_momentum_5d = df.groupby([df.index, 'Sector'])[momentum_col].mean()
+                sector_momentum_5d.name = 'Sector_Momentum_5d'
+
+                sector_momentum_5d_df = sector_momentum_5d.reset_index()
+                df = df.reset_index().merge(
+                    sector_momentum_5d_df,
+                    on=['Date', 'Sector'],
+                    how='left'
+                ).set_index('Date')
+
+                # 计算板块相对动能
+                df['Sector_Relative_Momentum_5d'] = df[momentum_col] - df['Sector_Momentum_5d']
+
+                # 删除临时列
+                df = df.drop(columns=['Sector_Momentum_5d'], errors='ignore')
+
+            # 恢复原始索引名称
+            df.index.name = original_index_name
+
+            # 删除临时 Sector 列
+            df = df.drop(columns=['Sector'], errors='ignore')
+
+        except Exception as e:
+            logger.warning(f"板块相对动能特征计算失败: {e}")
 
         # 保存截面特征的训练集统计量，供单只股票预测时回退使用
         # 当单只股票预测无法计算截面特征时，使用训练集均值作为中性值
@@ -7527,7 +7609,7 @@ class CatBoostRankerModel(BaseTradingModel):
     CROSS_SECTIONAL_ZSCORE_FEATURES = CatBoostModel.CROSS_SECTIONAL_ZSCORE_FEATURES
     ROLLING_PERCENTILE_FEATURES = CatBoostModel.ROLLING_PERCENTILE_FEATURES
 
-    def __init__(self, loss_function='YetiRank',
+    def __init__(self, loss_function='QuerySoftMax',  # P3: 从 YetiRank 改为 QuerySoftMax
                  use_monotone_constraints=True,
                  time_decay_lambda=0.5,
                  use_rolling_percentile=False,
@@ -7538,7 +7620,10 @@ class CatBoostRankerModel(BaseTradingModel):
         """初始化 CatBoost 排序模型
 
         Args:
-            loss_function: 排序损失函数（'YetiRank' 或 'YetiRankPairwise'）
+            loss_function: 排序损失函数
+                - 'QuerySoftMax'（P3 新默认）：对样本权重兼容性更好，强制在同一天内做差分竞争
+                - 'YetiRank'：基于位置权重的全局排序
+                - 'YetiRankPairwise'：成对比较式排序
             use_monotone_constraints: 是否使用单调约束
             time_decay_lambda: 时间衰减系数
             use_rolling_percentile: 是否使用滚动百分位（已关闭）
@@ -7880,6 +7965,105 @@ class CatBoostRankerModel(BaseTradingModel):
         logger.warning("CatBoostRankerModel.predict() 单股预测建议使用 predict_batch() 获取正确的截面特征")
         # 这里返回一个简化版本
         return None
+
+    def _predict_from_features(self, code, latest_data, horizon=None):
+        """从特征数据进行预测（供 predict_batch() 共用）
+
+        P2 新增：计算 Expected_Value = (2*Prob-1) × ATR_Ratio
+        - 将胜率转化为期望收益
+        - 自动避开"胜率虽高但波动极小"的僵尸股
+
+        Args:
+            code: 股票代码
+            latest_data: 单行 DataFrame，包含所有特征
+            horizon: 预测周期
+
+        Returns:
+            dict: 预测结果，包含 Expected_Value
+        """
+        if horizon is None:
+            horizon = self.horizon
+
+        try:
+            # 处理缺失的截面特征（使用训练集统计量回退）
+            cs_feature_suffixes = ['_CS_Pct', '_CS_ZScore']
+            for suffix in cs_feature_suffixes:
+                cs_features = [col for col in self.feature_columns if col.endswith(suffix)]
+                for cs_feat in cs_features:
+                    if cs_feat not in latest_data.columns:
+                        if hasattr(self, 'cs_feature_stats') and cs_feat in self.cs_feature_stats:
+                            latest_data[cs_feat] = self.cs_feature_stats[cs_feat]['mean']
+                        else:
+                            latest_data[cs_feat] = 0.5 if suffix == '_CS_Pct' else 0.0
+
+            # 处理分类特征
+            for col, encoder in self.categorical_encoders.items():
+                if col in latest_data.columns:
+                    try:
+                        latest_data[col] = latest_data[col].fillna('unknown').astype(str)
+                        latest_data[col] = encoder.transform(latest_data[col])
+                    except ValueError:
+                        latest_data[col] = 0
+
+            # 提取特征
+            X = latest_data[self.feature_columns].values
+
+            # 处理 NaN
+            df_temp = pd.DataFrame(X, columns=self.feature_columns)
+            categorical_cols = list(self.categorical_encoders.keys())
+            numeric_cols = [col for col in self.feature_columns if col not in categorical_cols]
+
+            for col in numeric_cols:
+                if col in df_temp.columns:
+                    df_temp[col] = df_temp[col].fillna(0.0)
+
+            X = df_temp.values
+
+            # Ranker 预测
+            from catboost import Pool
+            from scipy.special import expit
+
+            categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
+
+            test_pool = Pool(data=X, cat_features=categorical_features if categorical_features else None)
+            scores = self.ranker_model.predict(test_pool)
+
+            # sigmoid 变换到概率（使用自动温度）
+            score = scores[0]
+            proba = expit(score)  # 默认温度 1.0
+
+            # 方向判断：正分数 = 预测跑赢
+            prediction = 1 if score > 0 else 0
+
+            # P2: 计算 Expected_Value
+            # 公式: Expected_Value = (2 * Prob - 1) * ATR_Ratio
+            # - 2*Prob-1 将 0.5（中性）映射到 0
+            # - ATR_Ratio 衡量波动率相对水平
+            atr_ratio = 0.0
+            if 'ATR_Ratio' in latest_data.columns:
+                atr_ratio = float(latest_data['ATR_Ratio'].values[0])
+            elif 'ATR' in latest_data.columns and 'ATR_MA' in latest_data.columns:
+                atr = float(latest_data['ATR'].values[0])
+                atr_ma = float(latest_data['ATR_MA'].values[0])
+                atr_ratio = atr / atr_ma if atr_ma > 0 else 1.0
+
+            expected_value = (2 * proba - 1) * atr_ratio
+
+            return {
+                'code': code,
+                'name': STOCK_NAMES.get(code, code),
+                'prediction': int(prediction),
+                'probability': float(proba),
+                'rank_score': float(score),  # 原始排序分数
+                'expected_value': float(expected_value),  # P2: 期望收益
+                'atr_ratio': float(atr_ratio),
+                'current_price': float(latest_data['Close'].values[0]),
+                'date': latest_data.index[0]
+            }
+
+        except Exception as e:
+            logger.warning(f"Ranker 预测失败 {code}: {e}")
+            return None
 
     def predict_batch(self, codes, predict_date=None, horizon=None, use_feature_cache=True):
         """批量预测：先提取所有股票特征，再统一计算截面特征，最后逐只预测

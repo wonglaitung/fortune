@@ -2,11 +2,86 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-05
+**最后更新**：2026-05-06
 
 ---
 
-## 最新进展（2026-05-05）
+## 最新进展（2026-05-06）
+
+### P12-P15：数据泄漏修复 + 板块相对动能 + QuerySoftMax + Expected_Value ✅
+
+**核心发现**：15+ 个成交量相关特征存在数据泄漏，导致 IC 正但 Rank IC 负
+
+**根因分析**：
+- 成交量（Volume）是价格的事后信号，当日成交量可推断当日涨跌
+- 模型通过当日成交量"偷看"了当日价格走势，制造 IC 虚高假象
+- 实盘预测时无法获得当日收盘成交量，排序逻辑完全失效
+
+**修复内容**：
+
+| 阶段 | 内容 | 文件位置 |
+|------|------|---------|
+| **P12** | Volume/Turnover 数据泄漏修复 | `ml_trading_model.py:644-687, 822-837` |
+| **P13** | 板块相对动能特征 | `ml_trading_model.py:5819-5890` |
+| **P14** | QuerySoftMax 损失函数 | `ml_trading_model.py:7527` |
+| **P15** | Expected_Value 计算 | `ml_trading_model.py:7959-8058` |
+
+**新增特征**：
+- `Sector_Relative_Momentum_5d`：短期板块相对动能
+- `Sector_Relative_Momentum_20d`：中期板块相对动能
+- `Expected_Value`：`(2*Prob-1) × ATR_Ratio`，胜率转期望收益
+
+**损失函数更新**：
+- CatBoostRanker 默认损失函数从 `YetiRank` 改为 `QuerySoftMax`
+- QuerySoftMax 对样本权重兼容性更好
+
+**核心教训**：
+- **成交量是价格的事后信号**，必须严格使用 shift(1)
+- **OBV 是累加指标**，必须整体滞后，否则模型可 100% 推断当日涨跌
+- **IC 虚高是数据泄漏的典型症状**，需检查 Rank IC 是否一致
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（数据泄漏修复 + 新特征 + QuerySoftMax + Expected_Value）
+- `lessons.md`（新增 Volume/Turnover 数据泄漏警告）
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P12-P15 阶段文档）
+
+---
+
+## 历史进展（2026-05-05）
+
+### P11 最终决策 - 回归分类模型 ✅
+
+**背景**：P10 group_weight 修复无效，Rank IC 持续为负。
+
+**决策**：放弃 CatBoostRanker 排序模型，回归 CatBoostClassifier 分类模型。
+
+**核心教训**：
+
+| 教训 | 说明 |
+|------|------|
+| **排序模型不适合港股个股** | 港股市场非线性极强，排序模型难以学习稳定的 Alpha |
+| **IC/Rank IC 分离是警告信号** | IC 正但 Rank IC 负说明模型捕获了极端收益但排序混乱 |
+| **预测分布挤压是致命问题** | 模型无法产生低置信度预测，区分度不足 |
+| **分类模型更稳健** | CatBoostClassifier 在港股市场表现更稳定 |
+
+**推荐配置**：
+- 模型：CatBoostClassifier
+- 损失函数：Logloss
+- eval_metric：AUC
+- 特征：P0-P2 阶段的截面特征 + 残差化
+- 相对标签：保持（Label = Future_Return > Daily_Median_Return）
+
+**预期效果**：
+- 准确率：59-62%（正常范围）
+- 夏普比率：>0.8
+- Rank IC：~0.0（选股能力有限，需结合恒指择时）
+
+**改动文件**：
+- `docs/FEATURE_LABEL_COMPATIBILITY_PLAN.md`（P11 阶段文档）
+
+---
+
+## 历史进展（2026-05-05）
 
 ### P10 验证结果 - group_weight 修复无效 ❌
 

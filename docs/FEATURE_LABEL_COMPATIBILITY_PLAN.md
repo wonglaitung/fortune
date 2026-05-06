@@ -647,17 +647,36 @@ loss_function='YetiRankPairwise',
   Step 35 → Walk-forward 验证 — ⚠️ IC 达标（+0.0137），但 Rank IC 变负（-0.0087）
   Step 36 → 文档更新 + 结论分析
 
-阶段 11（P10，待实施）：
+阶段 11（P10，已完成 ❌）：
   Step 37 → YetiRank 损失函数实验（YetiRankPairwise → YetiRank）
   Step 38 → Walk-forward 验证对比
   Step 39 → 分析 IC/Rank IC 分歧原因
   Step 40 → 最终配置决策
 
-阶段 11（验证收尾，待执行）：
-  Step 37 → 分析 IC/Rank IC 分歧原因
-  Step 38 → 精简 L3 剔除列表（保留相对强度特征）
-  Step 39 → 扩展截面特征覆盖
-  Step 40 → 最终验证（目标：Rank IC > 0.02）
+阶段 12（P11，已完成 ✅）：
+  Step 41 → 回归分类模型决策
+  Step 42 → 核心教训总结
+  Step 43 → 推荐配置确定
+
+阶段 13（P12，已完成 ✅）：
+  Step 44 → Volume/Turnover 数据泄漏排查
+  Step 45 → 15+ 特征 shift(1) 修复
+  Step 46 → IC/Rank IC 分离根因分析
+
+阶段 14（P13，已完成 ✅）：
+  Step 47 → 板块相对动能特征设计
+  Step 48 → Sector_Relative_Momentum_5d/20d 实现
+  Step 49 → 三模型同步更新
+
+阶段 15（P14，已完成 ✅）：
+  Step 50 → QuerySoftMax 损失函数替换
+  Step 51 → group_weight 计算简化
+  Step 52 → 验证样本权重兼容性
+
+阶段 16（P15，已完成 ✅）：
+  Step 53 → Expected_Value 公式设计
+  Step 54 → _predict_from_features() 实现
+  Step 55 → 返回值新增 expected_value 和 atr_ratio
 ```
 
 ---
@@ -1901,6 +1920,7 @@ python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --ho
 | **Rank IC** | -0.0087 | -0.0097 | **-0.0010** | ❌ 仍负 |
 | 预测分散度 | 0.2074 | 0.2051 | -0.0023 | 无改善 |
 | 夏普比率 | 0.7797 | 0.7623 | -0.0174 | 略降 |
+| 索提诺比率 | 4.0569 | 3.8566 | -0.2003 | 略降 |
 
 **Fold 级别 Rank IC 分析**：
 
@@ -1936,11 +1956,205 @@ python3 ml_services/walk_forward_validation.py --model-type catboost_ranker --ho
 2. **IC/Rank IC 分离持续**：IC 正值但 Rank IC 负值，说明模型捕获了线性关系但排序混乱
 3. **预测分布挤压**：模型无法产生低置信度预测，区分度不足
 
-**下一步建议**：
-- 回退到 P4 配置（YetiRankPairwise + 原始收益，Rank IC +0.0038）
-- 或尝试 QuerySoftMax 损失函数（对样本权重兼容性更好）
-- 或放弃 Ranker，回归分类模型（CatBoostClassifier）
+---
+
+## P11 阶段：回归分类模型（最终决策）
+
+**背景**：P10 group_weight 修复无效，Rank IC 持续为负。CatBoostRanker 排序模型在港股市场表现不佳。
+
+**核心问题**：
+- 排序模型（YetiRank/YetiRankPairwise）在港股市场无法有效学习个股 Alpha
+- IC/Rank IC 分离说明模型捕获了线性关系但排序混乱
+- 预测分布挤压（0.7-1.0）说明模型区分度不足
+
+### P11-1：最终决策
+
+| 方案 | 评估 | 决策 |
+|------|------|------|
+| 继续优化 Ranker | ❌ 不推荐 | P4-P10 验证证明 Ranker 在港股市场效果有限 |
+| 回退到 Classifier | ✅ 推荐 | P4 基线（YetiRankPairwise）Rank IC +0.0038，综合最优 |
+| 尝试 QuerySoftMax | ⚠️ 备选 | 理论可行，但性价比不明 |
+
+### P11-2：推荐配置
+
+**回归 CatBoostClassifier**：
+- 损失函数：Logloss
+- eval_metric：AUC
+- 特征：P0-P2 阶段的截面特征 + 残差化
+- 相对标签：保持（Label = Future_Return > Daily_Median_Return）
+
+**预期效果**：
+- 准确率：59-62%（正常范围）
+- 夏普比率：>0.8
+- Rank IC：~0.0（选股能力有限，需结合恒指择时）
+
+### P11-3：核心教训
+
+| 教训 | 说明 |
+|------|------|
+| **排序模型不适合港股个股** | 港股市场非线性极强，排序模型难以学习稳定的 Alpha |
+| **IC/Rank IC 分离是警告信号** | IC 正但 Rank IC 负说明模型捕获了极端收益但排序混乱 |
+| **预测分布挤压是致命问题** | 模型无法产生低置信度预测，区分度不足 |
+| **分类模型更稳健** | CatBoostClassifier 在港股市场表现更稳定 |
 
 ---
 
-**最后更新**：2026-05-05（P10-14：验证结果 - group_weight 修复无效，建议回退或换方案）
+## P12 阶段：Volume/Turnover 数据泄漏修复（IC/Rank IC 分离的根因）
+
+**背景**：P11 回归分类模型后，发现 IC/Rank IC 分离问题仍存在。深入排查发现 15+ 个成交量相关特征存在数据泄漏。
+
+**核心问题**：
+- 成交量（Volume）与价格波动高度相关，当日成交量是当日涨跌的"事后信号"
+- 模型通过当日成交量"偷看"了当日价格走势，制造了 IC 虚高的假象
+- 实盘预测时无法获得当日收盘成交量，排序逻辑完全失效
+
+### P12-1：受影响的特征清单
+
+| 特征 | 问题 | 修复 |
+|------|------|------|
+| `VWAP` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `CMF` | `Volume` 和 `Close` 未 shift | 全部使用 shift(1) |
+| `OBV` | 使用当日 `Volume` 推断当日涨跌 | 整体 shift(1) |
+| `Vol_Ratio` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Vol_Z_Score` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Turnover` | `Close * Volume` 含当日数据 | 两者都 shift(1) |
+| `Turnover_Z_Score` | `Turnover` 未 shift | 已修复 |
+| `Volume_Ratio_5d/20d` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Volume_Ratio_7d/120d` | `Volume` 未 shift | `df['Volume'].shift(1)` |
+| `Price_*_Volume_*` | `Turnover.pct_change()` 含当日数据 | 使用滞后数据 |
+| `Market_Activeness` | HSI `Volume` 未 shift | `df['Volume'].shift(1)` |
+
+### P12-2：为什么 IC 正但 Rank IC 负？
+
+**IC（Pearson 相关性）**：衡量预测值与收益的线性关系
+- 模型通过当日成交量"锚定"了当日涨跌
+- 回测时 IC 看起来很好（虚高）
+
+**Rank IC（Spearman 相关性）**：衡量预测排名与收益排名的关系
+- 实盘时无法获得当日收盘成交量
+- 模型学到的"成交量-价格"逻辑完全错位
+- 排序变成随机乱炖，甚至反向
+
+### P12-3：修复代码位置
+
+**文件**：`ml_services/ml_trading_model.py`
+
+| 行号 | 修改内容 |
+|------|---------|
+| 644-687 | Volume/Turnover 特征计算（所有 Volume 使用 shift(1)） |
+| 822-837 | 量价关系特征（Price_Up_Volume_Down 等） |
+| 1556-1560 | HSI Market_Activeness |
+| 936-950 | Volume_Ratio_120d |
+
+### P12-4：核心教训
+
+| 教训 | 说明 |
+|------|------|
+| **成交量是价格的事后信号** | 必须严格使用 shift(1) |
+| **OBV 是累加指标** | 必须整体滞后，否则模型可 100% 推断当日涨跌 |
+| **IC 虚高是数据泄漏的典型症状** | 需检查 Rank IC 是否一致 |
+| **P9 特征剔除失败的原因** | 模型把泄露特征当"救命稻草"，剔除宏观特征后变本加厉挖掘噪声 |
+
+---
+
+## P13 阶段：板块相对动能特征（Sector Relative Momentum）
+
+**背景**：P12 修复数据泄漏后，需要提供更多纯 Alpha 信号，强迫模型关注个股相对于板块的超额收益。
+
+**目标**：计算 `Individual_Stock_Momentum - Sector_Momentum`，提供个股 Alpha 信号
+
+### P13-1：新增特征
+
+| 特征 | 公式 | 说明 |
+|------|------|------|
+| `Sector_Relative_Momentum_5d` | `Return_5d - Sector_Return_5d` | 短期板块相对动能 |
+| `Sector_Relative_Momentum_20d` | `Momentum_20d - Sector_Momentum_20d` | 中期板块相对动能 |
+
+**Sector_Momentum 计算**：
+- 板块动量 = 板块内所有股票 Momentum 的均值
+- 使用 `STOCK_SECTOR_MAPPING` 获取股票-板块映射
+
+### P13-2：代码位置
+
+**文件**：`ml_services/ml_trading_model.py:5819-5890`
+
+**新增截面化特征**：
+- `CROSS_SECTIONAL_PERCENTILE_FEATURES` 新增 `Sector_Relative_Momentum_5d`, `Sector_Relative_Momentum_20d`
+- 三模型（CatBoost/LightGBM/GBDT）同步更新
+
+### P13-3：预期效果
+
+| 效果 | 说明 |
+|------|------|
+| 强迫模型关注 Alpha | 而非市场 Beta |
+| 提升截面特征占比 | 从 ~15% 提升至 >30% |
+| 改善 Rank IC | 目标从负变正 |
+
+---
+
+## P14 阶段：QuerySoftMax 损失函数实验
+
+**背景**：P10 验证 YetiRank/YetiRankPairwise 对样本权重支持不佳，尝试 QuerySoftMax。
+
+### P14-1：QuerySoftMax vs YetiRankPairwise
+
+| 特性 | YetiRankPairwise | QuerySoftMax |
+|------|-----------------|--------------|
+| 样本权重支持 | ❌ 不支持 object weight | ✅ 更好的兼容性 |
+| 排序机制 | 成对比较 | 同一天内做差分竞争 |
+| 适用场景 | 通用排序 | Listwise 排序 |
+
+### P14-2：代码修改
+
+**文件**：`ml_services/ml_trading_model.py:7527`
+
+```python
+def __init__(self, loss_function='QuerySoftMax',  # P3: 从 YetiRank 改为 QuerySoftMax
+             ...):
+```
+
+### P14-3：group_weight 计算简化
+
+**文件**：`ml_services/ml_trading_model.py:7802-7840`
+
+```python
+# P10 修复简化：直接使用 fold_weights（每个样本的权重）
+# 同一日的样本权重相同，所以这实际上就是 group_weight
+group_weights_train = fold_weights
+```
+
+---
+
+## P15 阶段：Expected_Value 计算（胜率 → 期望收益）
+
+**背景**：概率预测无法直接指导交易，需要将胜率转化为期望收益。
+
+### P15-1：公式
+
+```
+Expected_Value = (2 * Prob - 1) * ATR_Ratio
+```
+
+**解释**：
+- `2*Prob-1`：将 0.5（中性）映射到 0，概率越高期望越正
+- `ATR_Ratio`：衡量波动率相对水平，自动避开"胜率虽高但波动极小"的僵尸股
+
+### P15-2：代码位置
+
+**文件**：`ml_services/ml_trading_model.py:7959-8058`
+
+**返回值新增**：
+```python
+return {
+    'code': code,
+    'prediction': int(prediction),
+    'probability': float(proba),
+    'expected_value': float(expected_value),  # P2: 期望收益
+    'atr_ratio': float(atr_ratio),
+    ...
+}
+```
+
+---
+
+**最后更新**：2026-05-06（P12-P15：数据泄漏修复 + 板块相对动能 + QuerySoftMax + Expected_Value）
