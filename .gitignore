@@ -1,3 +1,6 @@
+# CatBoost training artifacts
+catboost_info/
+
 # Python
 __pycache__/
 *.py[cod]
