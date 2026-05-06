@@ -15,6 +15,7 @@
 """
 
 import warnings
+import math
 warnings.filterwarnings('ignore')
 
 import os
@@ -1137,8 +1138,13 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
         effective_size = 0.0
         if threshold_graph is not None and code in threshold_graph:
             try:
-                constraint = nx.constraint(threshold_graph, [code]).get(code, 1.0)
-                effective_size = nx.effective_size(threshold_graph, [code]).get(code, 0)
+                constraint_val = nx.constraint(threshold_graph, [code]).get(code, 1.0)
+                # 处理 NaN：如果计算结果为 NaN，使用默认值
+                if constraint_val is not None and not math.isnan(constraint_val):
+                    constraint = constraint_val
+                effective_size_val = nx.effective_size(threshold_graph, [code]).get(code, 0)
+                if effective_size_val is not None and not math.isnan(effective_size_val):
+                    effective_size = effective_size_val
             except Exception:
                 pass
 
