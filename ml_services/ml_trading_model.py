@@ -7616,7 +7616,9 @@ class CatBoostRankerModel(BaseTradingModel):
                  use_cross_sectional_percentile=True,
                  use_cross_sectional_zscore=True,
                  feature_importance_threshold=0.0,
-                 use_soft_label=False):  # P5 失败，回退到原始收益率
+                 use_soft_label=False,  # P5 失败，回退到原始收益率
+                 ev_threshold=0.1,  # P16: Expected_Value 阈值，过滤低 EV 样本
+                 use_proba_standardization=False):  # P16: Proba 标准化选项
         """初始化 CatBoost 排序模型
 
         Args:
@@ -7630,7 +7632,10 @@ class CatBoostRankerModel(BaseTradingModel):
             use_cross_sectional_percentile: 是否使用截面百分位
             use_cross_sectional_zscore: 是否使用截面 Z-Score
             feature_importance_threshold: 特征重要性阈值
-            use_soft_label: 是否使用软标签（截面排名百分位），默认 True
+            use_soft_label: 是否使用软标签（截面排名百分位），默认 False
+            ev_threshold: P16 - Expected_Value 阈值，低于此值的样本将被过滤
+            use_proba_standardization: P16 - 是否对 Proba 进行 Z-Score 标准化
+                解决 Proba 集中在 0.7-1.0 导致 EV 被 ATR_Ratio 主导的问题
         """
         super().__init__()
         self.ranker_model = None
@@ -7644,6 +7649,8 @@ class CatBoostRankerModel(BaseTradingModel):
         self.use_cross_sectional_zscore = use_cross_sectional_zscore
         self.feature_importance_threshold = feature_importance_threshold
         self.use_soft_label = use_soft_label
+        self.ev_threshold = ev_threshold  # P16
+        self.use_proba_standardization = use_proba_standardization  # P16
         self.monotone_constraints_list = None
         self.sample_weights = None
         self.feature_columns = None
@@ -8039,15 +8046,36 @@ class CatBoostRankerModel(BaseTradingModel):
             # 公式: Expected_Value = (2 * Prob - 1) * ATR_Ratio
             # - 2*Prob-1 将 0.5（中性）映射到 0
             # - ATR_Ratio 衡量波动率相对水平
+            # P16: 双保险 - 防止除以零 + 极值处理
             atr_ratio = 0.0
             if 'ATR_Ratio' in latest_data.columns:
                 atr_ratio = float(latest_data['ATR_Ratio'].values[0])
             elif 'ATR' in latest_data.columns and 'ATR_MA' in latest_data.columns:
-                atr = float(latest_data['ATR'].values[0])
+                atr_val = float(latest_data['ATR'].values[0])
                 atr_ma = float(latest_data['ATR_MA'].values[0])
-                atr_ratio = atr / atr_ma if atr_ma > 0 else 1.0
+                # P16: 双保险 - 防止除以零或极小值导致的数值爆炸
+                atr_ratio = atr_val / max(atr_ma, 1e-6)
 
-            expected_value = (2 * proba - 1) * atr_ratio
+            # P16: 极值处理，限制在 [0.5, 2.0] 范围
+            # 防止单只股票极端波动导致 EV 失真
+            atr_ratio = np.clip(atr_ratio, 0.5, 2.0)
+
+            # P16: Expected_Value 计算（含 Proba 标准化选项）
+            if self.use_proba_standardization:
+                # 对 Proba 进行 Z-Score 标准化后再计算 EV
+                # 解决 Proba 集中在 0.7-1.0 导致 EV 被 ATR_Ratio 主导的问题
+                # 标准化公式: (P - 0.5) / 0.15，假设标准差 0.15
+                proba_adjusted = (proba - 0.5) / 0.15
+                expected_value = proba_adjusted * atr_ratio
+            else:
+                # 原始公式: EV = (2P - 1) * ATR_Ratio
+                expected_value = (2 * proba - 1) * atr_ratio
+
+            # P16: EV 阈值筛选
+            # 低于阈值的样本返回 None，过滤噪音信号
+            if expected_value < self.ev_threshold:
+                logger.debug(f"{code} EV={expected_value:.4f} < threshold={self.ev_threshold}, 过滤")
+                return None
 
             return {
                 'code': code,

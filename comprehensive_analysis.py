@@ -879,7 +879,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         # 读取 CatBoost 预测结果
         if os.path.exists(catboost_csv):
             df_catboost = pd.read_csv(catboost_csv)
-            df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
+
+            # P16: 从"命中率导向"转为"盈亏比导向"
+            # 优先使用 expected_value 排序，若无则回退到 probability
+            if 'expected_value' in df_catboost.columns:
+                df_catboost_sorted = df_catboost.sort_values('expected_value', ascending=False)
+                print("  📊 按 Expected_Value 排序（盈亏比导向）")
+            else:
+                df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
+                print("  📊 按 Probability 排序（命中率导向）")
 
             # 三周期预测结果
             three_horizon_results = {}
@@ -1206,6 +1214,49 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
                 catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
                 catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
+
+                # P16: 仓位分配（凯利公式变体）
+                # 基于 Expected_Value 计算仓位权重
+                if 'expected_value' in df_catboost_sorted.columns:
+                    try:
+                        # 过滤有效 EV（> 0）
+                        df_ev_positive = df_catboost_sorted[df_catboost_sorted['expected_value'] > 0].copy()
+
+                        if len(df_ev_positive) > 0:
+                            # 计算总 EV
+                            total_ev = df_ev_positive['expected_value'].sum()
+
+                            # 凯利公式变体：Weight = EV / Total_EV
+                            df_ev_positive['kelly_weight'] = df_ev_positive['expected_value'] / total_ev
+
+                            # 半凯利（保守，降低过拟合风险）
+                            df_ev_positive['half_kelly'] = (df_ev_positive['kelly_weight'] * 0.5).clip(0.05, 0.25)
+
+                            # 限制最大仓位集中度
+                            max_weight = df_ev_positive['half_kelly'].max()
+                            if max_weight > 0.30:
+                                # 重新归一化，确保最大仓位 < 30%
+                                df_ev_positive['half_kelly'] = df_ev_positive['half_kelly'] / max_weight * 0.30
+
+                            # 添加仓位分配说明
+                            catboost_text_email += f"\n**仓位分配建议**（凯利公式变体，半凯利保守）：\n"
+                            catboost_text_email += "- 公式：Weight = Expected_Value / Total_EV × 0.5（半凯利）\n"
+                            catboost_text_email += "- 限制：单只股票仓位 ≤ 25%，总集中度 ≤ 30%\n"
+                            catboost_text_email += "- 含义：重仓高确定性，轻仓试错\n\n"
+
+                            # 显示 Top 5 仓位分配
+                            catboost_text_email += "| 股票代码 | Expected_Value | 仓位权重 |\n"
+                            catboost_text_email += "|----------|----------------|----------|\n"
+                            for _, row in df_ev_positive.head(5).iterrows():
+                                stock_code = row['code']
+                                ev = row['expected_value']
+                                weight = row['half_kelly']
+                                catboost_text_email += f"| {stock_code} | {ev:.4f} | {weight*100:.1f}% |\n"
+                            catboost_text_email += "\n"
+
+                            logger.info(f"仓位分配计算完成: {len(df_ev_positive)} 只股票, 最大仓位 {df_ev_positive['half_kelly'].max()*100:.1f}%")
+                    except Exception as e:
+                        logger.warning(f"仓位分配计算失败: {e}")
 
                 # 添加网络洞察说明
                 if network_insights and '_meta' in network_insights:
