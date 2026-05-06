@@ -2680,7 +2680,7 @@ class FeatureEngineer:
         logger.info(f"成功生成 {interaction_count} 个交叉特征")
         return df
 
-    def create_market_network_interaction_features(self, df, market_features=None):
+    def create_market_network_interaction_features(self, df, market_features=None, community_ids=None):
         """创建市场级特征与网络社区特征的交叉特征
 
         将市场级特征（所有股票同值）与网络社区特征交叉，
@@ -2689,6 +2689,8 @@ class FeatureEngineer:
         Args:
             df: 包含网络特征的 DataFrame
             market_features: 市场级特征列表（默认使用 MARKET_LEVEL_FEATURES）
+            community_ids: 预定义的社区 ID 列表（训练时保存，预测时使用）
+                           如果为 None，则从当前数据动态提取（可能导致不一致）
 
         Returns:
             DataFrame: 添加交叉特征后的数据
@@ -2712,11 +2714,20 @@ class FeatureEngineer:
 
         # 1. 社区 ID One-Hot 编码并交叉
         if 'net_community_id' in df.columns:
-            unique_communities = sorted(df['net_community_id'].unique())
+            # 使用预定义的社区 ID 列表（确保训练/预测一致）
+            if community_ids is not None:
+                unique_communities = community_ids
+                logger.debug(f"使用预定义社区 ID 列表: {unique_communities}")
+            else:
+                # 动态提取（可能导致训练/预测不一致）
+                unique_communities = sorted(df['net_community_id'].unique())
+                logger.warning(f"动态提取社区 ID（可能导致训练/预测不一致）: {unique_communities}")
+
             for comm_id in unique_communities:
                 if comm_id < 0:  # 跳过无效社区
                     continue
                 comm_col = f'net_comm_{int(comm_id)}'
+                # One-Hot 编码：如果股票属于该社区则为 1，否则为 0
                 df[comm_col] = (df['net_community_id'] == comm_id).astype(int)
 
                 # 与市场级特征交叉
@@ -2764,6 +2775,7 @@ class BaseTradingModel:
         self.horizon = 1  # 默认预测周期
         self.model_type = None  # 子类必须设置
         self.categorical_encoders = {}
+        self.community_ids = None  # 训练时保存的社区 ID 列表
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
@@ -4249,7 +4261,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None):
         """准备训练数据
 
         Args:
@@ -4260,6 +4272,7 @@ class CatBoostModel(BaseTradingModel):
             for_backtest: 是否为回测准备数据（True时不应用horizon过滤）
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
             use_feature_cache: 是否使用特征缓存（默认True）
+            community_ids: 预定义的社区 ID 列表（用于测试数据，确保与训练一致）
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
@@ -4405,10 +4418,30 @@ class CatBoostModel(BaseTradingModel):
                         stock_df[key] = value
 
                     # 添加网络特征（从预计算文件加载）
+                    # 如果股票没有网络特征，使用默认值（社区 ID = -1 表示未知）
                     if network_features_data is not None and code in network_features_data:
                         net_features = network_features_data[code]
                         for key, value in net_features.items():
                             stock_df[key] = value
+                    else:
+                        # 为缺失网络特征的股票提供默认值
+                        default_net_features = {
+                            'net_degree_centrality': 0.0,
+                            'net_betweenness_centrality': 0.0,
+                            'net_eigenvector_centrality': 0.0,
+                            'net_closeness_centrality': 0.0,
+                            'net_composite_centrality': 0.0,
+                            'net_community_id': -1,  # -1 表示未知社区
+                            'net_community_size': 0,
+                            'net_sector_community_match': 0,
+                            'net_mst_degree': 0,
+                            'net_mst_neighbor_sectors': 0,
+                            'net_systemic_risk_score': 0.0,
+                            'net_is_bridge_stock': 0
+                        }
+                        for key, value in default_net_features.items():
+                            stock_df[key] = value
+                        logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
 
                     # 添加事件驱动特征（9个）
                     stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -4420,7 +4453,9 @@ class CatBoostModel(BaseTradingModel):
                     stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
                     # 生成市场-网络交叉特征（如果网络特征存在）
-                    stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
+                    # 使用传入的 community_ids（如果有），确保测试数据与训练一致
+                    stock_df = self.feature_engineer.create_market_network_interaction_features(
+                        stock_df, community_ids=community_ids)
 
                     # 保存特征缓存（不含标签）
                     if use_feature_cache:
@@ -4558,6 +4593,14 @@ class CatBoostModel(BaseTradingModel):
         print("="*70)
 
         df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold)
+
+        # 提取并保存社区 ID 列表（用于预测时的一致性）
+        if 'net_community_id' in df.columns:
+            self.community_ids = sorted([int(c) for c in df['net_community_id'].dropna().unique() if c >= 0])
+            logger.info(f"训练数据中的社区 ID: {self.community_ids}")
+        else:
+            self.community_ids = None
+            logger.warning("训练数据中未找到网络社区特征")
 
         # 删除包含 NaN 的行
         df = df.dropna(subset=['Label'])
@@ -4866,7 +4909,9 @@ class CatBoostModel(BaseTradingModel):
                         logger.debug(f"预测使用特征缓存: {cache_key}")
                         use_cache_predict = True
                         # 即使使用缓存，也要加载网络特征（因为网络特征是跨截面的，可能已更新）
+                        # 如果股票没有网络特征，使用默认值
                         network_features_file = 'output/network_features_for_ml.json'
+                        has_network_features = False
                         if os.path.exists(network_features_file):
                             try:
                                 with open(network_features_file, 'r') as f:
@@ -4875,13 +4920,36 @@ class CatBoostModel(BaseTradingModel):
                                     net_features = network_features_data[code]
                                     for key, value in net_features.items():
                                         stock_df[key] = value
+                                    has_network_features = True
                                     logger.debug(f"网络特征已加载到缓存数据")
                             except Exception as e:
                                 logger.debug(f"网络特征加载失败: {e}")
 
+                        if not has_network_features:
+                            # 为缺失网络特征的股票提供默认值
+                            default_net_features = {
+                                'net_degree_centrality': 0.0,
+                                'net_betweenness_centrality': 0.0,
+                                'net_eigenvector_centrality': 0.0,
+                                'net_closeness_centrality': 0.0,
+                                'net_composite_centrality': 0.0,
+                                'net_community_id': -1,  # -1 表示未知社区
+                                'net_community_size': 0,
+                                'net_sector_community_match': 0,
+                                'net_mst_degree': 0,
+                                'net_mst_neighbor_sectors': 0,
+                                'net_systemic_risk_score': 0.0,
+                                'net_is_bridge_stock': 0
+                            }
+                            for key, value in default_net_features.items():
+                                stock_df[key] = value
+                            logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
+
             # 生成市场-网络交叉特征（无论是否使用缓存，都需要调用）
             # 因为网络特征可能已更新，且交叉特征依赖于网络特征
-            stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
+            # 使用训练时保存的社区 ID 列表，确保特征一致性
+            stock_df = self.feature_engineer.create_market_network_interaction_features(
+                stock_df, community_ids=self.community_ids)
 
             if not use_cache_predict:
                 # 计算特征
@@ -4968,7 +5036,9 @@ class CatBoostModel(BaseTradingModel):
                     stock_df[key] = value
 
                 # 添加网络特征（从预计算文件加载，与训练时保持一致）
+                # 如果股票没有网络特征，使用默认值（社区 ID = -1 表示未知）
                 network_features_file = 'output/network_features_for_ml.json'
+                has_network_features = False
                 if os.path.exists(network_features_file):
                     try:
                         with open(network_features_file, 'r') as f:
@@ -4977,8 +5047,29 @@ class CatBoostModel(BaseTradingModel):
                             net_features = network_features_data[code]
                             for key, value in net_features.items():
                                 stock_df[key] = value
+                            has_network_features = True
                     except Exception as e:
                         logger.debug(f"网络特征加载失败: {e}")
+
+                if not has_network_features:
+                    # 为缺失网络特征的股票提供默认值
+                    default_net_features = {
+                        'net_degree_centrality': 0.0,
+                        'net_betweenness_centrality': 0.0,
+                        'net_eigenvector_centrality': 0.0,
+                        'net_closeness_centrality': 0.0,
+                        'net_composite_centrality': 0.0,
+                        'net_community_id': -1,  # -1 表示未知社区
+                        'net_community_size': 0,
+                        'net_sector_community_match': 0,
+                        'net_mst_degree': 0,
+                        'net_mst_neighbor_sectors': 0,
+                        'net_systemic_risk_score': 0.0,
+                        'net_is_bridge_stock': 0
+                    }
+                    for key, value in default_net_features.items():
+                        stock_df[key] = value
+                    logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
 
                 # 添加事件驱动特征（9个，与训练时保持一致）
                 stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -5078,7 +5169,8 @@ class CatBoostModel(BaseTradingModel):
             'actual_n_estimators': self.actual_n_estimators,
             'horizon': self.horizon,
             'model_type': self.model_type,
-            'categorical_encoders': self.categorical_encoders
+            'categorical_encoders': self.categorical_encoders,
+            'community_ids': self.community_ids  # 保存社区 ID 列表
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -5094,7 +5186,11 @@ class CatBoostModel(BaseTradingModel):
         self.horizon = model_data.get('horizon', 1)
         self.model_type = model_data.get('model_type', 'catboost')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
-        print(f"CatBoost 模型已从 {filepath} 加载")
+        self.community_ids = model_data.get('community_ids', None)  # 恢复社区 ID 列表
+        if self.community_ids:
+            print(f"CatBoost 模型已从 {filepath} 加载（社区 ID: {self.community_ids}）")
+        else:
+            print(f"CatBoost 模型已从 {filepath} 加载")
 
     def predict_proba(self, X):
         """
