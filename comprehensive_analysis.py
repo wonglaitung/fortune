@@ -1120,21 +1120,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
                 catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
 
-                # 添加网络洞察说明
+                # 添加网络洞察统计表格
                 if network_insights and '_meta' in network_insights:
-                    meta = network_insights['_meta']
-                    catboost_text_email += f"\n**网络洞察说明**：\n"
-                    catboost_text_email += "- 社区：股票的网络群落归属，同社区股票联动性强\n"
-                    catboost_text_email += "- 枢纽等级：低=独立性强，中=有一定影响，高=波动影响市场\n"
-                    catboost_text_email += "- ⚠️ 桥梁股：跨社区连接，波动会跨板块传导\n"
-                    if meta.get('core_hubs'):
-                        core_names = []
-                        for code in meta['core_hubs'][:3]:
-                            from config import WATCHLIST
-                            name = WATCHLIST.get(code, code)
-                            core_names.append(name)
-                        catboost_text_email += f"- 当前核心枢纽：{', '.join(core_names)}\n"
-                    catboost_text_email += f"- 社区数量：{meta.get('community_count', 0)} 个\n"
+                    from data_services.network_features import get_network_calculator
+                    net_calc = get_network_calculator()
+                    insights_table = net_calc.generate_insights_table(network_insights)
+                    if insights_table:
+                        catboost_text_email += insights_table
 
                 # 添加波动率网络密度预警
                 if volatility_density_info and volatility_density_info.get('current_density', 0) > 0:

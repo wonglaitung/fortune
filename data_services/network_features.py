@@ -213,6 +213,99 @@ class NetworkInsightCalculator:
 
         return warnings if warnings else None
 
+    def generate_insights_table(self, insights):
+        """
+        生成网络洞察统计表格（Markdown格式）
+
+        参数:
+            insights: 网络洞察信息字典（包含各股票洞察和_meta元数据）
+
+        返回:
+            str: Markdown格式的统计表格
+        """
+        if not insights or '_meta' not in insights:
+            return ""
+
+        meta = insights.get('_meta', {})
+
+        # 统计各社区股票数量
+        community_stats = {}
+        hub_stats = {'高': 0, '中': 0, '低': 0, '未知': 0}
+        bridge_count = 0
+
+        for key, value in insights.items():
+            if key == '_meta':
+                continue
+            if isinstance(value, dict):
+                # 统计社区
+                comm = value.get('community', -1)
+                if comm not in community_stats:
+                    community_stats[comm] = 0
+                community_stats[comm] += 1
+
+                # 统计枢纽等级
+                hub_level = value.get('hub_level', '未知')
+                if hub_level in hub_stats:
+                    hub_stats[hub_level] += 1
+
+                # 统计桥梁股
+                if value.get('is_bridge', False):
+                    bridge_count += 1
+
+        # 构建表格
+        table = "\n### 🕸️ 网络洞察统计\n\n"
+        table += "**核心逻辑**：网络分析揭示股票间的联动关系，社区内股票同涨同跌，桥梁股波动会跨板块传导\n\n"
+
+        # 社区分布表
+        table += "**社区分布**\n\n"
+        table += "| 社区ID | 股票数量 | 占比 |\n"
+        table += "|--------|----------|------|\n"
+        total_stocks = sum(community_stats.values())
+        for comm_id in sorted(community_stats.keys()):
+            count = community_stats[comm_id]
+            pct = count / total_stocks * 100 if total_stocks > 0 else 0
+            table += f"| 社区{comm_id} | {count} | {pct:.1f}% |\n"
+        table += "\n"
+
+        # 枢纽等级分布表
+        table += "**枢纽等级分布**\n\n"
+        table += "| 等级 | 数量 | 说明 |\n"
+        table += "|------|------|------|\n"
+        table += f"| 高 | {hub_stats['高']} | 核心枢纽，波动影响市场 |\n"
+        table += f"| 中 | {hub_stats['中']} | 有一定影响力 |\n"
+        table += f"| 低 | {hub_stats['低']} | 独立性强 |\n"
+        if hub_stats['未知'] > 0:
+            table += f"| 未知 | {hub_stats['未知']} | 数据不足 |\n"
+        table += "\n"
+
+        # 系统性信息
+        table += "**网络指标**\n\n"
+        table += "| 指标 | 数值 |\n"
+        table += "|------|------|\n"
+        table += f"| 社区数量 | {meta.get('community_count', 0)} |\n"
+        table += f"| 桥梁股数量 | {bridge_count} |\n"
+        table += f"| 模块度 | {meta.get('modularity', 0):.4f} |\n"
+
+        # 核心枢纽
+        core_hubs = meta.get('core_hubs', [])
+        if core_hubs:
+            from config import WATCHLIST
+            hub_names = [WATCHLIST.get(code, code) for code in core_hubs[:3]]
+            table += f"| 核心枢纽 | {', '.join(hub_names)} |\n"
+
+        table += "\n"
+
+        # 操作建议
+        modularity = meta.get('modularity', 0)
+        if modularity > 0.4:
+            table += "**操作建议**：模块度较高，社区分化明显，可针对各社区独立操作\n"
+        elif modularity > 0.2:
+            table += "**操作建议**：模块度适中，关注核心枢纽和桥梁股的信号传导\n"
+        else:
+            table += "**操作建议**：模块度较低，市场联动性强，需注意系统性风险\n"
+
+        return table
+
 
 # 保留旧的 NetworkFeatureLoader 用于向后兼容
 class NetworkFeatureLoader:
