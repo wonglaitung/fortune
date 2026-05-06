@@ -215,13 +215,13 @@ class NetworkInsightCalculator:
 
     def generate_insights_table(self, insights):
         """
-        生成网络洞察统计表格（Markdown格式）
+        生成网络洞察预警表格（Markdown格式）
 
         参数:
             insights: 网络洞察信息字典（包含各股票洞察和_meta元数据）
 
         返回:
-            str: Markdown格式的统计表格
+            str: Markdown格式的预警表格
         """
         if not insights or '_meta' not in insights:
             return ""
@@ -252,57 +252,56 @@ class NetworkInsightCalculator:
                 if value.get('is_bridge', False):
                     bridge_count += 1
 
-        # 构建表格
-        table = "\n### 🕸️ 网络洞察统计\n\n"
-        table += "**核心逻辑**：网络分析揭示股票间的联动关系，社区内股票同涨同跌，桥梁股波动会跨板块传导\n\n"
-
-        # 社区分布表
-        table += "**社区分布**\n\n"
-        table += "| 社区ID | 股票数量 | 占比 |\n"
-        table += "|--------|----------|------|\n"
         total_stocks = sum(community_stats.values())
-        for comm_id in sorted(community_stats.keys()):
-            count = community_stats[comm_id]
-            pct = count / total_stocks * 100 if total_stocks > 0 else 0
-            table += f"| 社区{comm_id} | {count} | {pct:.1f}% |\n"
-        table += "\n"
+        modularity = meta.get('modularity', 0)
+        community_count = meta.get('community_count', 0)
 
-        # 枢纽等级分布表
-        table += "**枢纽等级分布**\n\n"
-        table += "| 等级 | 数量 | 说明 |\n"
-        table += "|------|------|------|\n"
-        table += f"| 高 | {hub_stats['高']} | 核心枢纽，波动影响市场 |\n"
-        table += f"| 中 | {hub_stats['中']} | 有一定影响力 |\n"
-        table += f"| 低 | {hub_stats['低']} | 独立性强 |\n"
-        if hub_stats['未知'] > 0:
-            table += f"| 未知 | {hub_stats['未知']} | 数据不足 |\n"
-        table += "\n"
+        # 构建表格
+        table = "\n### 🕸️ 网络洞察预警\n\n"
+        table += "**核心逻辑**：模块度高 → 社区分化明显 → 个股独立性强 → 选股模型有效 → 正常操作；模块度低 → 市场同涨同跌 → 系统性风险高 → 降低仓位\n\n"
 
-        # 系统性信息
-        table += "**网络指标**\n\n"
+        # 网络指标数据表
+        table += "**网络指标数据**\n\n"
         table += "| 指标 | 数值 |\n"
         table += "|------|------|\n"
-        table += f"| 社区数量 | {meta.get('community_count', 0)} |\n"
+        table += f"| 社区数量 | {community_count} |\n"
         table += f"| 桥梁股数量 | {bridge_count} |\n"
-        table += f"| 模块度 | {meta.get('modularity', 0):.4f} |\n"
+        table += f"| 模块度 | {modularity:.4f} |\n"
+        table += f"| 高枢纽股票 | {hub_stats['高']} |\n"
 
-        # 核心枢纽
-        core_hubs = meta.get('core_hubs', [])
-        if core_hubs:
-            from config import WATCHLIST
-            hub_names = [WATCHLIST.get(code, code) for code in core_hubs[:3]]
-            table += f"| 核心枢纽 | {', '.join(hub_names)} |\n"
+        # 状态判断
+        if modularity >= 0.4:
+            status = "✅ 正常（模块度高，社区分化明显）"
+        elif modularity >= 0.2:
+            status = "⚠️ 关注（模块度适中，市场有一定联动）"
+        else:
+            status = "🔴 预警（模块度低，市场同涨同跌）"
+        table += f"| 状态 | {status} |\n\n"
 
-        table += "\n"
+        # 趋势说明
+        table += "**趋势**\n\n"
+        if modularity >= 0.4:
+            table += "模块度较高，股票分化明显，选股模型有效性高\n\n"
+        elif modularity >= 0.2:
+            table += "模块度适中，需关注核心枢纽和桥梁股的信号传导\n\n"
+        else:
+            table += "模块度较低，市场联动性强，系统性风险高\n\n"
+
+        # 预警阈值建议表
+        table += "**预警阈值建议**\n\n"
+        table += "| 级别 | 阈值 | 操作 |\n"
+        table += "|------|------|------|\n"
+        table += "| ✅ 正常 | > 0.40 | 社区分化明显，正常操作 |\n"
+        table += "| ⚠️ 关注 | 0.20 ~ 0.40 | 关注系统性风险，适度降低仓位 |\n"
+        table += "| 🔴 预警 | < 0.20 | 市场同涨同跌，降低仓位 30% |\n\n"
 
         # 操作建议
-        modularity = meta.get('modularity', 0)
-        if modularity > 0.4:
-            table += "**操作建议**：模块度较高，社区分化明显，可针对各社区独立操作\n"
-        elif modularity > 0.2:
-            table += "**操作建议**：模块度适中，关注核心枢纽和桥梁股的信号传导\n"
+        if modularity >= 0.4:
+            table += "**操作建议**：市场分化明显，选股模型有效，维持正常策略"
+        elif modularity >= 0.2:
+            table += "**操作建议**：市场有一定联动，关注桥梁股信号，适度控制仓位"
         else:
-            table += "**操作建议**：模块度较低，市场联动性强，需注意系统性风险\n"
+            table += "**操作建议**：市场同涨同跌风险高，建议降低仓位，以防御性配置为主"
 
         return table
 
