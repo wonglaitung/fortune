@@ -678,7 +678,7 @@ loss_function='YetiRankPairwise',
   Step 54 → _predict_from_features() 实现
   Step 55 → 返回值新增 expected_value 和 atr_ratio
 
-阶段 17（P16，规划中 📋）：
+阶段 17（P16，已完成 ✅）：
   Step 56 → ATR_Ratio 极值处理（双保险）
   Step 57 → EV 阈值筛选 + Proba 标准化选项
   Step 58 → EV 排序替代 probability
@@ -2168,7 +2168,7 @@ return {
 
 ---
 
-## P16 阶段：Expected_Value 阈值筛选逻辑（待实施）
+## P16 阶段：Expected_Value 阈值筛选逻辑（已完成 ✅）
 
 **背景**：P15 实现了 Expected_Value 计算，但未实现筛选和仓位分配逻辑。
 
@@ -2231,9 +2231,9 @@ df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 - Proba = 0.65 时，EV 范围: 0.240 - 0.600（中等）
 - Proba = 0.80 时，EV 范围: 0.480 - 1.200（显著）
 
-### P16-4：改进方案
+### P16-4：改进方案（已实施 ✅）
 
-#### A. ATR_Ratio 极值处理（双保险）
+#### A. ATR_Ratio 极值处理（双保险）✅
 
 ```python
 # 在 _predict_from_features() 中（Line 8042-8048）
@@ -2252,7 +2252,7 @@ elif 'ATR' in latest_data.columns and 'ATR_MA' in latest_data.columns:
 1. `max(atr_ma, 1e-6)`：防止除以零或极小值导致的数值爆炸
 2. `np.clip(0.5, 2.0)`：限制 ATR_Ratio 在合理范围，防止单只股票过度集中
 
-#### B. EV 阈值筛选（含 Proba 标准化选项）
+#### B. EV 阈值筛选（含 Proba 标准化选项）✅
 
 ```python
 # 在 CatBoostRankerModel.__init__ 中添加参数
@@ -2263,8 +2263,7 @@ def __init__(self, ..., ev_threshold=0.1, use_proba_standardization=False):
 # 在 _predict_from_features() 中
 if self.use_proba_standardization:
     # 对 Proba 进行 Z-Score 标准化后再计算 EV
-    # 解决 Proba 集中在 0.7-1.0 导致 EV 被 ATR_Ratio 主导的问题
-    proba_adjusted = (proba - 0.5) / 0.15  # 假设标准差 0.15
+    proba_adjusted = (proba - 0.5) / 0.15
     expected_value = proba_adjusted * atr_ratio
 else:
     expected_value = (2 * proba - 1) * atr_ratio
@@ -2279,17 +2278,17 @@ if expected_value < self.ev_threshold:
 - EV 大小 70%+ 由 ATR_Ratio 决定，模型变成"高波动追逐器"
 - 标准化后，Proba 的区分度被放大，迫使模型在真正的高胜率样本中对比波动率
 
-#### C. EV 排序替代 Probability（质的飞跃）
+#### C. EV 排序替代 Probability（质的飞跃）✅
 
 ```python
 # 在 comprehensive_analysis.py 中
 # 从"命中率导向"转为"盈亏比导向"
 
-# 旧逻辑（命中率导向）
-# df_sorted = df.sort_values('probability', ascending=False)
-
-# 新逻辑（盈亏比导向）
-df_sorted = df.sort_values('expected_value', ascending=False)
+# 优先使用 expected_value 排序
+if 'expected_value' in df_catboost.columns:
+    df_catboost_sorted = df_catboost.sort_values('expected_value', ascending=False)
+else:
+    df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 ```
 
 **核心差异**：
@@ -2301,34 +2300,38 @@ df_sorted = df.sort_values('expected_value', ascending=False)
 
 **建议**：在回测中对比 Prob-Rank vs EV-Rank 的夏普比率，选择更优方案。
 
-#### D. 仓位分配（凯利公式变体）
+#### D. 仓位分配（凯利公式变体）✅
 
 ```python
-# 在 comprehensive_analysis.py 中
+# 在 comprehensive_analysis.py 中（Line 1217-1260）
 # 凯利公式变体：重仓高确定性，轻仓试错
 
-# 方法1：简单比例
-total_ev = df_sorted['expected_value'].sum()
-df_sorted['weight'] = df_sorted['expected_value'] / total_ev
+# 过滤有效 EV（> 0）
+df_ev_positive = df_catboost_sorted[df_catboost_sorted['expected_value'] > 0].copy()
 
-# 方法2：凯利公式完整版（考虑赔率）
-# Kelly% = (bp - q) / b
-# b = 赔率（平均盈利/平均亏损）
-# p = 胜率（probability）
-# q = 1 - p
+# 计算总 EV
+total_ev = df_ev_positive['expected_value'].sum()
 
-# 方法3：半凯利（保守，降低过拟合风险）
-df_sorted['weight'] = (df_sorted['weight'] * 0.5).clip(0.05, 0.25)
+# 凯利公式：Weight = EV / Total_EV
+df_ev_positive['kelly_weight'] = df_ev_positive['expected_value'] / total_ev
+
+# 半凯利（保守，降低过拟合风险）
+df_ev_positive['half_kelly'] = (df_ev_positive['kelly_weight'] * 0.5).clip(0.05, 0.25)
+
+# 限制最大仓位集中度 < 30%
+max_weight = df_ev_positive['half_kelly'].max()
+if max_weight > 0.30:
+    df_ev_positive['half_kelly'] = df_ev_positive['half_kelly'] / max_weight * 0.30
 ```
 
-### P16-5：实施优先级（更新版）
+### P16-5：实施优先级（已完成 ✅）
 
-| 优先级 | 改进项 | 评价 | 实施要点 |
-|--------|--------|------|---------|
-| **P0** | ATR_Ratio 极值处理 | 🔴 必做 | 双保险：防除零 + clip，应对小盘股暴波动 |
-| **P1** | EV 阈值筛选 | ⭐ 关键 | 默认 0.1，后续通过回测找最优分位数 |
-| **P2** | EV 排序替代 probability | 💎 灵魂 | 决定策略上限，回测对比夏普比率 |
-| **P3** | 仓位分配 | 🚀 进阶 | 凯利公式变体，自动化"重仓高确定性，轻仓试错" |
+| 优先级 | 改进项 | 评价 | 状态 |
+|--------|--------|------|------|
+| **P0** | ATR_Ratio 极值处理 | 🔴 必做 | ✅ 已完成 |
+| **P1** | EV 阈值筛选 | ⭐ 关键 | ✅ 已完成 |
+| **P2** | EV 排序替代 probability | 💎 灵魂 | ✅ 已完成 |
+| **P3** | 仓位分配 | 🚀 进阶 | ✅ 已完成 |
 
 ### P16-6：验证计划
 
