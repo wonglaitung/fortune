@@ -7731,6 +7731,14 @@ class CatBoostRankerModel(BaseTradingModel):
             y = df['Future_Return'].values
             logger.info(f"使用原始收益率作为标签: min={y.min():.4f}, max={y.max():.4f}, mean={y.mean():.4f}")
 
+            # P17: QuerySoftMax 要求 target >= 0，需要对收益率归一化
+            # 使用 Min-Max 归一化到 [0, 1] 区间，保持相对排序不变
+            if self.loss_function == 'QuerySoftMax':
+                y_min, y_max = y.min(), y.max()
+                if y_min < 0:
+                    y = (y - y_min) / (y_max - y_min + 1e-10)
+                    logger.info(f"QuerySoftMax 归一化: [{y_min:.4f}, {y_max:.4f}] -> [0, 1]")
+
         # 构建 group_id（每天所有股票为一个排序组）
         df = df.sort_index()  # 确保按日期排序
         unique_dates = sorted(df.index.normalize().unique())

@@ -224,6 +224,24 @@ class WalkForwardValidator:
 
             # 过滤失败的结果
             all_fold_results = [r for r in results if r is not None]
+
+            # P17: 并行执行后，额外运行最后一个 fold 获取模型引用（用于 save_detailed_results）
+            # 因为 joblib 并行执行时，子进程中的 self.last_model 不会传回主进程
+            if all_fold_results:
+                print(f"\n🔄 重新运行最后一个 fold 以获取模型引用...")
+                last_fold_params = fold_params[-1]
+                try:
+                    last_fold_result = self._validate_fold(
+                        stock_list,
+                        last_fold_params['train_start_date'],
+                        last_fold_params['train_end_date'],
+                        last_fold_params['test_start_date'],
+                        last_fold_params['test_end_date'],
+                        last_fold_params['fold']
+                    )
+                    print(f"✅ 模型引用已保存 (self.last_model)")
+                except Exception as e:
+                    logger.warning(f"重新运行最后一个 fold 失败: {e}，详细报告可能不可用")
         else:
             # 顺序执行（原有逻辑）
             for params in fold_params:
@@ -384,11 +402,9 @@ class WalkForwardValidator:
             )
         elif self.model_type == 'catboost_ranker':
             # P3-9: 排序模型
-            # P10-1: 使用 YetiRank 损失函数（全局排序，直接优化 Rank IC）
-            # P4-10/P9: YetiRankPairwise 导致 IC 正但 Rank IC 负，尝试 YetiRank 改善
-            # P5: 软标签实验失败（IC/Rank IC 双降），已放弃
+            # P3: 使用模型默认的 loss_function（QuerySoftMax）
+            # 不硬编码，让 CatBoostRankerModel.__init__ 的默认值生效
             model = self.model_class(
-                loss_function='YetiRank',
                 use_monotone_constraints=self.use_monotone_constraints,
                 time_decay_lambda=self.time_decay_lambda,
                 use_rolling_percentile=self.use_rolling_percentile,
