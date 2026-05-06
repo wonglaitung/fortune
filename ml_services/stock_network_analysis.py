@@ -1025,11 +1025,12 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
 
     特征设计原则：使用连续值特征替代二元特征，提供更丰富的信息量
 
-    特征列表（12个）：
+    特征列表（15个）：
     - 中心性特征(5): degree, betweenness, eigenvector, closeness, composite
     - 社区特征(4): community_id, community_size, community_centrality_rank, sector_cohesion
     - MST特征(2): mst_degree, mst_neighbor_sectors
     - 跨社区特征(1): inter_community_ratio
+    - 结构洞特征(3): constraint, effective_size, local_clustering
 
     已移除的二元特征：
     - net_sector_community_match (0/1) -> 替换为 net_sector_cohesion (连续值)
@@ -1129,6 +1130,27 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
         # 表示该股票连接不同社区的程度（连续值 0~1）
         inter_community_ratio = inter_community_connections.get(code, 0)
 
+        # ========== 【新增】结构洞特征（2个）==========
+        # 1. Burt 约束系数（低=结构洞机会多，信息优势大）
+        # 范围：0~1，低值表示该股票连接多个不相连的群体，具有信息套利优势
+        constraint = 1.0  # 默认高约束（无机会）
+        effective_size = 0.0
+        if threshold_graph is not None and code in threshold_graph:
+            try:
+                constraint = nx.constraint(threshold_graph, [code]).get(code, 1.0)
+                effective_size = nx.effective_size(threshold_graph, [code]).get(code, 0)
+            except Exception:
+                pass
+
+        # 2. 局部聚类系数（高=局部羊群效应强，板块共振明显）
+        # 范围：0~1，高值表示邻居之间也相互连接，形成紧密群体
+        local_clustering = 0.0
+        if threshold_graph is not None and code in threshold_graph:
+            try:
+                local_clustering = nx.clustering(threshold_graph, code)
+            except Exception:
+                pass
+
         features[code] = {
             # 中心性特征
             'net_degree_centrality': degree_centrality,
@@ -1146,9 +1168,13 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
             'net_mst_neighbor_sectors': mst_neighbor_sectors,
             # 跨社区特征
             'net_inter_community_ratio': inter_community_ratio,
+            # 结构洞特征
+            'net_constraint': constraint,
+            'net_effective_size': effective_size,
+            'net_local_clustering': local_clustering,
         }
 
-    print(f"    ✅ 导出 {len(features)} 只股票的网络特征（12个）")
+    print(f"    ✅ 导出 {len(features)} 只股票的网络特征（15个）")
     return features
 
 
