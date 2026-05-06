@@ -305,14 +305,15 @@ class WalkForwardValidator:
 
         print(f"  ✅ 模型训练完成")
 
-        # 准备测试数据
+        # 准备测试数据（使用训练时保存的社区 ID，确保特征一致性）
         print(f"  🔄 准备测试数据...")
         test_data = model.prepare_data(
             train_codes,
             start_date=test_start_date,
             end_date=test_end_date,
             horizon=self.horizon,
-            for_backtest=False
+            for_backtest=False,
+            community_ids=model.community_ids  # 使用训练时的社区 ID
         )
 
         print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
