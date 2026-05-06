@@ -2742,7 +2742,8 @@ class FeatureEngineer:
         # 检查网络特征是否存在（使用新的连续值特征）
         network_features = ['net_community_id', 'net_inter_community_ratio',
                            'net_sector_cohesion', 'net_composite_centrality',
-                           'net_community_centrality_rank']
+                           'net_community_centrality_rank',
+                           'net_constraint', 'net_effective_size', 'net_local_clustering']
         missing = [f for f in network_features if f not in df.columns]
         if missing:
             logger.debug(f"网络特征缺失，跳过市场-网络交叉: {missing}")
@@ -2805,6 +2806,32 @@ class FeatureEngineer:
                 if market_feat in df.columns:
                     interaction_name = f'net_comm_rank_{market_feat}'
                     df[interaction_name] = df['net_community_centrality_rank'] * df[market_feat]
+                    interaction_count += 1
+
+        # 6. 【新增】结构洞约束 × 市场特征（低约束=信息优势大）
+        # 捕捉信息套利环境：低约束股票在市场波动时有更大套利空间
+        if 'net_constraint' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_constraint_{market_feat}'
+                    df[interaction_name] = df['net_constraint'] * df[market_feat]
+                    interaction_count += 1
+
+        # 7. 【新增】有效规模 × 市场特征（大有效规模=信息网络大）
+        if 'net_effective_size' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_effsize_{market_feat}'
+                    df[interaction_name] = df['net_effective_size'] * df[market_feat]
+                    interaction_count += 1
+
+        # 8. 【新增】局部聚类系数 × 市场特征（高聚类=板块共振强）
+        # 捕捉局部羊群效应：高聚类股票在市场趋势中跟随板块联动
+        if 'net_local_clustering' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_clustering_{market_feat}'
+                    df[interaction_name] = df['net_local_clustering'] * df[market_feat]
                     interaction_count += 1
 
         logger.info(f"成功生成 {interaction_count} 个市场-网络交叉特征")
@@ -4483,7 +4510,11 @@ class CatBoostModel(BaseTradingModel):
                             'net_sector_cohesion': 0.0,
                             'net_mst_degree': 0,
                             'net_mst_neighbor_sectors': 0,
-                            'net_inter_community_ratio': 0.0
+                            'net_inter_community_ratio': 0.0,
+                            # 结构洞特征默认值
+                            'net_constraint': 1.0,  # 高约束=无机会
+                            'net_effective_size': 0.0,
+                            'net_local_clustering': 0.0,
                         }
                         for key, value in default_net_features.items():
                             stock_df[key] = value
@@ -4985,7 +5016,11 @@ class CatBoostModel(BaseTradingModel):
                                 'net_sector_cohesion': 0.0,
                                 'net_mst_degree': 0,
                                 'net_mst_neighbor_sectors': 0,
-                                'net_inter_community_ratio': 0.0
+                                'net_inter_community_ratio': 0.0,
+                                # 结构洞特征默认值
+                                'net_constraint': 1.0,  # 高约束=无机会
+                                'net_effective_size': 0.0,
+                                'net_local_clustering': 0.0,
                             }
                             for key, value in default_net_features.items():
                                 stock_df[key] = value
@@ -5111,7 +5146,11 @@ class CatBoostModel(BaseTradingModel):
                         'net_sector_cohesion': 0.0,
                         'net_mst_degree': 0,
                         'net_mst_neighbor_sectors': 0,
-                        'net_inter_community_ratio': 0.0
+                        'net_inter_community_ratio': 0.0,
+                        # 结构洞特征默认值
+                        'net_constraint': 1.0,  # 高约束=无机会
+                        'net_effective_size': 0.0,
+                        'net_local_clustering': 0.0,
                     }
                     for key, value in default_net_features.items():
                         stock_df[key] = value
