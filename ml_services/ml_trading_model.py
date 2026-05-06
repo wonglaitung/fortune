@@ -4865,6 +4865,23 @@ class CatBoostModel(BaseTradingModel):
                         stock_df = cached_df
                         logger.debug(f"预测使用特征缓存: {cache_key}")
                         use_cache_predict = True
+                        # 即使使用缓存，也要加载网络特征（因为网络特征是跨截面的，可能已更新）
+                        network_features_file = 'output/network_features_for_ml.json'
+                        if os.path.exists(network_features_file):
+                            try:
+                                with open(network_features_file, 'r') as f:
+                                    network_features_data = json.load(f)
+                                if code in network_features_data:
+                                    net_features = network_features_data[code]
+                                    for key, value in net_features.items():
+                                        stock_df[key] = value
+                                    logger.debug(f"网络特征已加载到缓存数据")
+                            except Exception as e:
+                                logger.debug(f"网络特征加载失败: {e}")
+
+            # 生成市场-网络交叉特征（无论是否使用缓存，都需要调用）
+            # 因为网络特征可能已更新，且交叉特征依赖于网络特征
+            stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
 
             if not use_cache_predict:
                 # 计算特征
@@ -4971,9 +4988,6 @@ class CatBoostModel(BaseTradingModel):
 
                 # 生成交叉特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
-
-                # 生成市场-网络交叉特征（如果网络特征存在，与训练时保持一致）
-                stock_df = self.feature_engineer.create_market_network_interaction_features(stock_df)
 
                 # 保存特征缓存
                 if use_feature_cache:
