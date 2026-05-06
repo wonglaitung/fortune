@@ -1018,6 +1018,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     direction = "跑输"
 
+                # P16: 获取 Expected_Value
+                ev_value = row.get('expected_value', None)
+                if ev_value is not None and pd.notna(ev_value):
+                    ev_rounded = round(ev_value, 4)
+                else:
+                    ev_rounded = None
+
                 # 计算筹码阻力
                 resistance_level = 'N/A'
                 if stock_code in chip_data and chip_data[stock_code]:
@@ -1037,6 +1044,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'sector_type': sector_type,
                     'prediction_20d': direction,
                     'probability_20d': round(probability, 4),
+                    'expected_value': ev_rounded,  # P16: 新增 EV 值
                     'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
                     'chip_resistance': resistance_level
                 })
@@ -1049,8 +1057,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
             catboost_text_llm += "- `probability_20d`: 20天跑赢概率（相对标签，>0.60=高置信度跑赢，0.50-0.60=中等，≤0.50=跑输）\n"
+            catboost_text_llm += "- `expected_value`: 期望收益值 = (2×probability-1)×ATR_Ratio，用于排序和仓位分配\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
-            catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
+            catboost_text_llm += "- **使用建议**：expected_value高 + chip_resistance低 = 更可靠信号\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
@@ -1070,8 +1079,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按Expected_Value排序，盈亏比导向）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | EV值 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -1170,8 +1179,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         # 获取网络洞察
                         network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
 
+                        # P16: 获取 Expected_Value
+                        ev_value = row.get('expected_value', None)
+                        if ev_value is not None and pd.notna(ev_value):
+                            ev_str = f"{ev_value:.4f}"
+                        else:
+                            ev_str = '-'
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {ev_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -1214,6 +1230,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 🟢 推荐：综合得分 60-75，值得关注\n"
                 catboost_text_email += "- 🟡 观察：综合得分 45-60，需谨慎\n"
                 catboost_text_email += "- 🔴 暂缓：综合得分 < 45，暂不考虑\n"
+
+                # P16: 添加 Expected_Value 说明
+                catboost_text_email += f"\n**Expected_Value（EV值）说明**：\n"
+                catboost_text_email += "- 公式：EV = (2 × probability - 1) × ATR_Ratio\n"
+                catboost_text_email += "- 含义：将胜率转化为期望收益，自动考虑波动率\n"
+                catboost_text_email += "- 排序：按 EV 降序排列（盈亏比导向，非命中率导向）\n"
+                catboost_text_email += "- 解读：EV > 0 表示预期正收益，EV 越大越优先\n"
 
                 # P16: 仓位分配（凯利公式变体）
                 # 基于 Expected_Value 计算仓位权重
@@ -3022,8 +3045,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 {llm_recommendations['medium_term']}
 
 【2. CatBoost模型20天预测结果】
-**重要：probability = 跑赢概率（相对标签，预测跑赢其他股票的概率）**
-**P16新增：expected_value = (2×probability-1)×ATR_Ratio，用于排序和仓位分配**
+**probability = 跑赢概率（相对标签，预测跑赢其他股票的概率）**
+**expected_value = (2×probability-1)×ATR_Ratio，用于排序和仓位分配**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -3084,7 +3107,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **中等置信度观望**：0.50 < probability ≤ 0.60
 - **预测跑输**：probability ≤ 0.50
 
-**P16新增：Expected_Value 排序与仓位分配**：
+**Expected_Value 排序与仓位分配**：
 - `expected_value = (2 × probability - 1) × ATR_Ratio`
 - **含义**：将胜率转化为期望收益，自动考虑波动率
 - **排序逻辑**：按 expected_value 降序排列（盈亏比导向）
