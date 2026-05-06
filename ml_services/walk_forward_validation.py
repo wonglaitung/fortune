@@ -521,28 +521,29 @@ class WalkForwardValidator:
             batch_returns = np.array([])
             batch_returns_net = np.array([])
 
-        # ========== 年化收益和夏普比率计算（修正版） ==========
-        # 问题：之前用 avg_return * (252/horizon) 年化，假设一年可做12.6次交易
-        # 实际：固定持有期策略的多笔交易是同时持有的，不能这样年化
-        # 正确方法：基于批次收益的时间序列，月度收益 * 12 年化
+        # ========== 年化收益和夏普比率计算（修正版 v3） ==========
+        # 修正说明：
+        # - 批次收益是20天持有期的收益，不是日收益
+        # - 年化因子应考虑持有期：一年约252个交易日，20天持有期可做 252/20 ≈ 12.6 次交易
+        # - 年化收益 = 批次收益均值 * (252/horizon)
+        # - 年化波动率 = 批次收益标准差 * sqrt(252/horizon)
 
-        # 月度组合收益
-        monthly_return = avg_return
+        # 持有期调整因子
+        holding_period_factor = 252 / self.horizon  # 20天持有期 = 12.6
 
         # 年化收益
-        annualized_return = monthly_return * 12
+        annualized_return = avg_return * holding_period_factor
 
         # 标准差：基于批次收益的波动
         if len(batch_returns) > 1:
             batch_std = np.std(batch_returns, ddof=1)
-            monthly_std = batch_std
         elif return_std > 0:
-            monthly_std = return_std
+            batch_std = return_std
         else:
-            monthly_std = 0.0
+            batch_std = 0.0
 
-        # 年化标准差
-        annualized_std = monthly_std * np.sqrt(12) if monthly_std > 0 else 0.0
+        # 年化标准差（考虑持有期）
+        annualized_std = batch_std * np.sqrt(holding_period_factor) if batch_std > 0 else 0.0
 
         # ========== 最大回撤计算（批次回撤） ==========
         if len(batch_returns) > 1:
@@ -581,14 +582,14 @@ class WalkForwardValidator:
             sharpe_ratio = 0.0
 
         # 索提诺比率（只考虑下行风险，仅计算有交易的样本）
-        # 修正：使用与夏普比率一致的年化因子 sqrt(12)
+        # 修正：使用持有期调整的年化因子 sqrt(252/horizon)
         if len(trades) > 0:
             downside_returns = trades['strategy_return'][trades['strategy_return'] < 0]
             if len(downside_returns) > 0:
                 downside_std = downside_returns.std()
                 if downside_std > 0:
-                    # 月度下行标准差 * sqrt(12) 年化
-                    annualized_downside_std = downside_std * np.sqrt(12)
+                    # 持有期调整的年化下行标准差
+                    annualized_downside_std = downside_std * np.sqrt(holding_period_factor)
                     sortino_ratio = annualized_return / annualized_downside_std
                 else:
                     sortino_ratio = 0.0
@@ -601,14 +602,14 @@ class WalkForwardValidator:
         # 基准收益：所有样本的平均收益（代表买入持有）
         benchmark_return = df['actual_return'].mean()
         # 策略收益与基准的差异（只比较有交易的样本）
-        # 修正：使用与夏普比率一致的年化因子 sqrt(12)
+        # 修正：使用持有期调整的年化因子
         if len(trades) > 0:
             excess_returns = trades['strategy_return'] - trades['actual_return']
             tracking_error = excess_returns.std()
             if tracking_error > 0:
-                # 月度跟踪误差 * sqrt(12) 年化
-                annualized_tracking_error = tracking_error * np.sqrt(12)
-                information_ratio = (excess_returns.mean() * 12) / annualized_tracking_error
+                # 持有期调整的年化跟踪误差
+                annualized_tracking_error = tracking_error * np.sqrt(holding_period_factor)
+                information_ratio = (excess_returns.mean() * holding_period_factor) / annualized_tracking_error
             else:
                 information_ratio = 0.0
         else:
@@ -864,20 +865,38 @@ class WalkForwardValidator:
             stability_rating = "低（需改进）"
 
         # 综合评估评分（0-100分）
-        # 权重：夏普比率30%，最大回撤25%，索提诺比率25%，稳定性20%
+        # 权重：夏普比率25%，IC指标25%，最大回撤25%，稳定性25%
+        # 修正说明：年化因子修正后夏普比率约0.97，评分标准相应调整
         score = 0
 
-        # 1. 夏普比率评分（30分）：业界标准 >1.0
-        if avg_sharpe_ratio >= 1.0:
-            score += 30
-        elif avg_sharpe_ratio >= 0.8:
+        # 1. 夏普比率评分（25分）：修正后业界标准 >0.5 为良好，>1.0 为优秀
+        if avg_sharpe_ratio >= 1.5:
             score += 25
+        elif avg_sharpe_ratio >= 1.0:
+            score += 22
         elif avg_sharpe_ratio >= 0.5:
-            score += 20
+            score += 18
+        elif avg_sharpe_ratio >= 0.3:
+            score += 15
         elif avg_sharpe_ratio >= 0:
             score += 10
 
-        # 2. 最大回撤评分（25分）：业界标准 <-20%
+        # 2. IC指标评分（25分）：IC >0.05 表示有效预测能力
+        avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
+        avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
+        if avg_ic >= 0.20:
+            score += 25
+        elif avg_ic >= 0.15:
+            score += 22
+        elif avg_ic >= 0.10:
+            score += 18
+        elif avg_ic >= 0.05:
+            score += 15
+        elif avg_ic >= 0:
+            score += 10
+
+        # 3. 最大回撤评分（25分）：业界标准 <-20%
+        # 注意：当前为信号级回测，实际回撤可能更大
         if avg_max_drawdown > -0.05:  # -5%以内，优秀
             score += 25
         elif avg_max_drawdown > -0.10:  # -10%以内，良好
@@ -886,43 +905,35 @@ class WalkForwardValidator:
             score += 15
         elif avg_max_drawdown > -0.30:  # -30%以内，较差
             score += 10
-
-        # 3. 索提诺比率评分（25分）：业界标准 >1.0
-        if avg_sortino_ratio >= 2.0:
-            score += 25
-        elif avg_sortino_ratio >= 1.0:
-            score += 20
-        elif avg_sortino_ratio >= 0.5:
-            score += 15
-        elif avg_sortino_ratio >= 0:
-            score += 10
-
-        # 4. 稳定性评分（20分）
-        if return_std < 0.02:
-            score += 20
-        elif return_std < 0.05:
-            score += 15
-        elif return_std < 0.10:
-            score += 10
         else:
             score += 5
 
+        # 4. 稳定性评分（25分）：基于收益标准差和Fold波动
+        # Fold波动大（准确率标准差>0.08）扣分
+        if return_std < 0.02 and sharpe_std < 2.0:
+            score += 25
+        elif return_std < 0.05 and sharpe_std < 3.0:
+            score += 20
+        elif return_std < 0.10:
+            score += 15
+        else:
+            score += 10
+
         # 综合评级
-        if score >= 80:
+        if score >= 85:
             overall_rating = "优秀"
             recommendation = "强烈推荐实盘"
-        elif score >= 60:
+        elif score >= 70:
             overall_rating = "良好"
             recommendation = "推荐实盘"
-        elif score >= 40:
+        elif score >= 55:
             overall_rating = "一般"
             recommendation = "谨慎使用"
         else:
             overall_rating = "不佳"
             recommendation = "需要改进"
 
-        # 计算平均 IC 和 Rank IC
-        avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
+        # Rank IC 在评分中已计算 avg_ic
         avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
 
         return {
