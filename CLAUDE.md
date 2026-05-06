@@ -40,6 +40,7 @@ python3 -m pytest tests/ -v
 | **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
 | **因果链分析** | `python3 ml_services/analyze_causal_chain.py` |
+| **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -63,6 +64,7 @@ python3 -m pytest tests/ -v
 | **恒指 vs 个股** | 因果链传导完全反向，个股概率高反而预示反转（见 lessons.md） |
 | **特征冗余清理** | 清理后夏普比率可能下降 15-20%，需对比验证后再决定 |
 | **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
+| **网络社区特征一致性** | 训练时保存 `model.community_ids`，预测时使用相同社区 ID 列表 |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
 
 ### 可用策略（恒指增强模型验证，2026-04-29，33特征）
@@ -283,4 +285,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-05-05（网络特征集成、IC计算修复、股票代码格式统一）
+**最后更新**：2026-05-06（网络社区特征一致性、股票网络分析命令）
