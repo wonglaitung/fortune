@@ -887,6 +887,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             except Exception as e:
                 print(f"  ⚠️ 网络洞察计算失败: {e}")
 
+            # ========== 计算波动率网络密度预警 ==========
+            volatility_density_info = {}
+            try:
+                from data_services.network_features import get_volatility_density_calculator
+                vol_calculator = get_volatility_density_calculator()
+                volatility_density_info = vol_calculator.calculate_volatility_network_density(stock_codes)
+                if volatility_density_info and volatility_density_info.get('current_density', 0) > 0:
+                    print(f"  ✅ 波动率网络密度: {volatility_density_info.get('current_density', 0):.4f}")
+            except Exception as e:
+                print(f"  ⚠️ 波动率网络密度计算失败: {e}")
+
             # ========== 1. 构建传给大模型的JSON数据（包含20天概率+筹码阻力）==========
             import json as json_module
 
@@ -1124,6 +1135,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             core_names.append(name)
                         catboost_text_email += f"- 当前核心枢纽：{', '.join(core_names)}\n"
                     catboost_text_email += f"- 社区数量：{meta.get('community_count', 0)} 个\n"
+
+                # 添加波动率网络密度预警
+                if volatility_density_info and volatility_density_info.get('current_density', 0) > 0:
+                    from data_services.network_features import get_volatility_density_calculator
+                    vol_calc = get_volatility_density_calculator()
+                    density_table = vol_calc.generate_warning_table(volatility_density_info)
+                    if density_table:
+                        catboost_text_email += f"\n{density_table}\n"
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
