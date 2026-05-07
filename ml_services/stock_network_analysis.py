@@ -1019,50 +1019,133 @@ def calculate_network_stability(evolution):
 # ML 特征导出
 # ============================================================
 
-def export_network_features(centrality_dict, communities, bridge_stocks, stock_codes):
+def export_network_features(centrality_dict, communities, bridge_stocks, stock_codes, threshold_graph=None):
     """
     导出网络特征供 ML 模型使用
-    12个特征：中心性(5) + 社区(3) + MST(2) + 风险(2)
+
+    特征设计原则：使用连续值特征替代二元特征，提供更丰富的信息量
+
+    特征列表（12个）：
+    - 中心性特征(5): degree, betweenness, eigenvector, closeness, composite
+    - 社区特征(4): community_id, community_size, community_centrality_rank, sector_cohesion
+    - MST特征(2): mst_degree, mst_neighbor_sectors
+    - 跨社区特征(1): inter_community_ratio
+
+    已移除的二元特征：
+    - net_sector_community_match (0/1) -> 替换为 net_sector_cohesion (连续值)
+    - net_is_bridge_stock (0/1) -> 替换为 net_inter_community_ratio (连续值)
+    - net_systemic_risk_score -> 移除（与 betweenness 高度相关）
     """
     print("  🤖 导出 ML 网络特征...")
 
-    # 桥梁股票集合
-    bridge_set = set(b['stock'] for b in bridge_stocks)
+    # 预计算社区统计信息
+    community_stats = {}
+    if communities:
+        for comm_id in set(communities.values()):
+            comm_stocks = [s for s, c in communities.items() if c == comm_id]
+            comm_centralities = [centrality_dict.get(s, {}).get('composite', 0) for s in comm_stocks]
+            community_stats[comm_id] = {
+                'size': len(comm_stocks),
+                'stocks': set(comm_stocks),
+                'avg_centrality': np.mean(comm_centralities) if comm_centralities else 0,
+                'max_centrality': max(comm_centralities) if comm_centralities else 0
+            }
+
+    # 预计算板块-社区映射
+    sector_community_map = defaultdict(lambda: defaultdict(int))
+    if communities:
+        for code, comm_id in communities.items():
+            sector = get_stock_sector(code)
+            sector_community_map[sector][comm_id] += 1
+
+    # 计算跨社区连接比例（用于替代桥梁股二元特征）
+    inter_community_connections = {}
+    if threshold_graph is not None:
+        for code in stock_codes:
+            if code in threshold_graph:
+                neighbors = list(threshold_graph.neighbors(code))
+                if len(neighbors) > 0 and communities:
+                    # 计算邻居中不同社区的比例
+                    my_comm = communities.get(code, -1)
+                    diff_comm_count = sum(1 for n in neighbors
+                                         if communities.get(n, -1) != my_comm)
+                    inter_community_connections[code] = diff_comm_count / len(neighbors)
+                else:
+                    inter_community_connections[code] = 0
+            else:
+                inter_community_connections[code] = 0
 
     features = {}
     for code in stock_codes:
         c = centrality_dict.get(code, {})
         comm = communities.get(code, -1)
-
-        # 计算社区大小
-        community_size = sum(1 for v in communities.values() if v == comm) if communities else 0
-
-        # 判断社区是否匹配板块
         sector = get_stock_sector(code)
-        sector_match = 0
-        if communities:
-            # 同板块的社区众数
-            same_sector_comms = [communities[s] for s in communities
+
+        # ========== 中心性特征（5个，保持不变）==========
+        degree_centrality = c.get('degree', 0)
+        betweenness_centrality = c.get('betweenness', 0)
+        eigenvector_centrality = c.get('eigenvector', 0)
+        closeness_centrality = c.get('closeness', 0)
+        composite_centrality = c.get('composite', 0)
+
+        # ========== 社区特征（4个，改进）==========
+        # 1. 社区ID（保持不变，分类特征）
+        community_id = comm
+
+        # 2. 社区大小（保持不变）
+        community_size = community_stats.get(comm, {}).get('size', 0)
+
+        # 3. 【新增】社区内中心性排名（0~1连续值）
+        # 表示该股票在其社区内的重要程度
+        community_centrality_rank = 0.5  # 默认中位数
+        if comm in community_stats and community_stats[comm]['size'] > 1:
+            comm_stocks = community_stats[comm]['stocks']
+            comm_centralities = [(s, centrality_dict.get(s, {}).get('composite', 0))
+                                for s in comm_stocks]
+            comm_centralities.sort(key=lambda x: x[1], reverse=True)
+            for rank, (s, _) in enumerate(comm_centralities):
+                if s == code:
+                    community_centrality_rank = 1 - (rank / (len(comm_centralities) - 1))
+                    break
+
+        # 4. 【新增】板块内聚度（替代 sector_community_match 二元特征）
+        # 计算方式：同板块股票中与该股票同社区的比例（连续值 0~1）
+        sector_cohesion = 0.0
+        if sector and sector in sector_community_map:
+            same_sector_stocks = [s for s in stock_codes
                                  if s in STOCK_SECTOR_MAPPING
-                                 and STOCK_SECTOR_MAPPING[s]['sector'] == sector]
-            if same_sector_comms:
-                from collections import Counter
-                majority = Counter(same_sector_comms).most_common(1)[0][0]
-                sector_match = 1 if comm == majority else 0
+                                 and STOCK_SECTOR_MAPPING[s].get('sector') == sector]
+            if len(same_sector_stocks) > 1:
+                same_comm_count = sum(1 for s in same_sector_stocks
+                                     if communities.get(s, -1) == comm)
+                sector_cohesion = same_comm_count / len(same_sector_stocks)
+
+        # ========== MST特征（2个，保持不变）==========
+        # 将在 add_mst_degree_features 中填充
+        mst_degree = 0
+        mst_neighbor_sectors = 0
+
+        # ========== 【新增】跨社区连接比例（替代桥梁股二元特征）==========
+        # 表示该股票连接不同社区的程度（连续值 0~1）
+        inter_community_ratio = inter_community_connections.get(code, 0)
 
         features[code] = {
-            'net_degree_centrality': c.get('degree', 0),
-            'net_betweenness_centrality': c.get('betweenness', 0),
-            'net_eigenvector_centrality': c.get('eigenvector', 0),
-            'net_closeness_centrality': c.get('closeness', 0),
-            'net_composite_centrality': c.get('composite', 0),
-            'net_community_id': comm,
+            # 中心性特征
+            'net_degree_centrality': degree_centrality,
+            'net_betweenness_centrality': betweenness_centrality,
+            'net_eigenvector_centrality': eigenvector_centrality,
+            'net_closeness_centrality': closeness_centrality,
+            'net_composite_centrality': composite_centrality,
+            # 社区特征
+            'net_community_id': community_id,
             'net_community_size': community_size,
-            'net_sector_community_match': sector_match,
-            'net_mst_degree': 0,  # 将在下面填充
-            'net_mst_neighbor_sectors': 0,
-            'net_systemic_risk_score': c.get('betweenness', 0) * 0.5 + c.get('eigenvector', 0) * 0.5,
-            'net_is_bridge_stock': 1 if code in bridge_set else 0
+            'net_community_centrality_rank': community_centrality_rank,
+            'net_sector_cohesion': sector_cohesion,
+            # MST特征
+            'net_mst_degree': mst_degree,
+            'net_mst_neighbor_sectors': mst_neighbor_sectors,
+            # 跨社区特征
+            'net_inter_community_ratio': inter_community_ratio,
         }
 
     print(f"    ✅ 导出 {len(features)} 只股票的网络特征（12个）")
@@ -2162,7 +2245,8 @@ def main():
 
     # 7. ML 特征导出
     ml_features = export_network_features(centrality_dict, communities,
-                                           bridge_stocks, stock_codes)
+                                           bridge_stocks, stock_codes,
+                                           threshold_graph=threshold_graph)
     ml_features = add_mst_degree_features(ml_features, mst_graph)
     save_ml_features(ml_features, args.output_dir)
 

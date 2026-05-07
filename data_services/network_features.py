@@ -216,7 +216,19 @@ class NetworkInsightCalculator:
 
 # 保留旧的 NetworkFeatureLoader 用于向后兼容
 class NetworkFeatureLoader:
-    """网络特征加载器 - 保留用于向后兼容"""
+    """网络特征加载器 - 保留用于向后兼容
+
+    特征列表（12个）：
+    - 中心性特征(5): degree, betweenness, eigenvector, closeness, composite
+    - 社区特征(4): community_id, community_size, community_centrality_rank, sector_cohesion
+    - MST特征(2): mst_degree, mst_neighbor_sectors
+    - 跨社区特征(1): inter_community_ratio
+
+    已移除的二元特征：
+    - net_sector_community_match (0/1) -> 替换为 net_sector_cohesion (连续值)
+    - net_is_bridge_stock (0/1) -> 替换为 net_inter_community_ratio (连续值)
+    - net_systemic_risk_score -> 移除（与 betweenness 高度相关）
+    """
 
     @staticmethod
     def get_feature_names():
@@ -224,9 +236,9 @@ class NetworkFeatureLoader:
             'net_degree_centrality', 'net_betweenness_centrality',
             'net_eigenvector_centrality', 'net_closeness_centrality',
             'net_composite_centrality', 'net_community_id',
-            'net_community_size', 'net_sector_community_match',
-            'net_mst_degree', 'net_mst_neighbor_sectors',
-            'net_systemic_risk_score', 'net_is_bridge_stock'
+            'net_community_size', 'net_community_centrality_rank',
+            'net_sector_cohesion', 'net_mst_degree',
+            'net_mst_neighbor_sectors', 'net_inter_community_ratio'
         ]
 
     @staticmethod
@@ -239,11 +251,11 @@ class NetworkFeatureLoader:
             'net_composite_centrality': 0.0,
             'net_community_id': 'unknown',
             'net_community_size': 0,
-            'net_sector_community_match': 0,
+            'net_community_centrality_rank': 0.5,
+            'net_sector_cohesion': 0.0,
             'net_mst_degree': 0,
             'net_mst_neighbor_sectors': 0,
-            'net_systemic_risk_score': 0.0,
-            'net_is_bridge_stock': 0
+            'net_inter_community_ratio': 0.0
         }
 
     def __init__(self):
