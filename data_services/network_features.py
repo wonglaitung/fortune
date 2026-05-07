@@ -528,6 +528,17 @@ class VolatilityNetworkDensityCalculator:
         return table
 
 
+# 全局网络洞察计算器实例
+_network_calculator = None
+
+def get_network_calculator():
+    """获取网络洞察计算器实例"""
+    global _network_calculator
+    if _network_calculator is None:
+        _network_calculator = NetworkInsightCalculator()
+    return _network_calculator
+
+
 # 全局波动率密度计算器实例
 _volatility_density_calculator = None
 

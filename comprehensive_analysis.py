@@ -876,10 +876,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             # ========== 计算网络洞察（用于邮件展示）==========
             network_insights = {}
+            stock_codes = df_catboost['code'].tolist()  # 提前定义，避免后续引用错误
             try:
                 from data_services.network_features import get_network_calculator
                 calculator = get_network_calculator()
-                stock_codes = df_catboost['code'].tolist()
                 network_insights = calculator.calculate_network_insights(stock_codes)
                 if network_insights and '_meta' in network_insights:
                     meta = network_insights['_meta']
