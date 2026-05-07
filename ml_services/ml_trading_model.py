@@ -5108,6 +5108,42 @@ class CatBoostModel(BaseTradingModel):
                     logger.warning(f"警告: 事件驱动特征 {feat} 不存在，使用默认值0")
                     latest_data[feat] = 0.0
 
+            # 确保所有基本面特征都存在（容错处理）
+            # 当 create_fundamental_features 获取数据失败时，需要提供默认值
+            fundamental_features_default = {
+                'PE': 0.0, 'PB': 0.0, 'Market_Cap': 0.0,
+                'ROE': 0.0, 'ROA': 0.0, 'Dividend_Yield': 0.0,
+                'EPS': 0.0, 'Net_Margin': 0.0, 'Gross_Margin': 0.0
+            }
+            for feat, default_val in fundamental_features_default.items():
+                if feat not in latest_data.columns:
+                    logger.warning(f"警告: 基本面特征 {feat} 不存在，使用默认值{default_val}")
+                    latest_data[feat] = default_val
+
+            # 确保所有基本面交互特征都存在（容错处理）
+            # 这些特征由 create_interaction_features 生成，当基本面数据缺失时需要默认值
+            interaction_features_default = [
+                # Outperforms_HSI 系列
+                'Outperforms_HSI_ROE', 'Outperforms_HSI_ROA', 'Outperforms_HSI_Net_Margin',
+                'Outperforms_HSI_Gross_Margin', 'Outperforms_HSI_Dividend_Yield',
+                # Strong_Volume_Up 系列
+                'Strong_Volume_Up_ROE', 'Strong_Volume_Up_ROA', 'Strong_Volume_Up_Net_Margin',
+                'Strong_Volume_Up_Gross_Margin', 'Strong_Volume_Up_Dividend_Yield',
+                # Weak_Volume_Down 系列
+                'Weak_Volume_Down_ROE', 'Weak_Volume_Down_ROA', 'Weak_Volume_Down_Net_Margin',
+                'Weak_Volume_Down_Gross_Margin', 'Weak_Volume_Down_Dividend_Yield',
+                # Trend 系列 (3d, 5d, 10d, 20d, 60d)
+                '3d_Trend_ROE', '3d_Trend_ROA', '3d_Trend_Net_Margin', '3d_Trend_Gross_Margin', '3d_Trend_Dividend_Yield',
+                '5d_Trend_ROE', '5d_Trend_ROA', '5d_Trend_Net_Margin', '5d_Trend_Gross_Margin', '5d_Trend_Dividend_Yield',
+                '10d_Trend_ROE', '10d_Trend_ROA', '10d_Trend_Net_Margin', '10d_Trend_Gross_Margin', '10d_Trend_Dividend_Yield',
+                '20d_Trend_ROE', '20d_Trend_ROA', '20d_Trend_Net_Margin', '20d_Trend_Gross_Margin', '20d_Trend_Dividend_Yield',
+                '60d_Trend_ROE', '60d_Trend_ROA', '60d_Trend_Net_Margin', '60d_Trend_Gross_Margin', '60d_Trend_Dividend_Yield',
+            ]
+            for feat in interaction_features_default:
+                if feat not in latest_data.columns:
+                    logger.debug(f"基本面交互特征 {feat} 不存在，使用默认值0")
+                    latest_data[feat] = 0.0
+
             # 准备特征
             if len(self.feature_columns) == 0:
                 raise ValueError("模型未训练，请先调用train()方法")
