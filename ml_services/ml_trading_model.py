@@ -42,6 +42,7 @@ from data_services.technical_analysis import TechnicalAnalyzer
 from data_services.fundamental_data import get_comprehensive_fundamental_data
 from data_services.volatility_model import GARCHVolatilityModel
 from data_services.regime_detector import RegimeDetector
+from data_services.calendar_features import CalendarFeatureCalculator
 from ml_services.base_model_processor import BaseModelProcessor
 from ml_services.us_market_data import us_market_data
 from ml_services.logger_config import get_logger
@@ -62,29 +63,65 @@ WATCHLIST = list(STOCK_NAMES.keys())
 # 训练股票列表（转换为列表格式）
 TRAINING_LIST = list(TRAINING_NAMES.keys())
 
+
+def _build_market_level_features():
+    """动态构建市场级特征列表（所有股票同值）
+
+    从各特征模块动态获取，确保与特征模块自动同步。
+    新增特征模块时，只需在模块中定义 get_feature_names()，
+    此处会自动包含，避免遗漏。
+
+    Returns:
+        list: 市场级特征名称列表
+    """
+    features = []
+
+    # 1. 恒指收益（6个）- 手动定义，非特征模块
+    features.extend([
+        'HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d',
+        'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d',
+    ])
+
+    # 2. HSI 市场状态 - 从 RegimeDetector 动态获取，添加 HSI_ 前缀
+    for feat in RegimeDetector.get_feature_names():
+        features.append(f'HSI_{feat}')
+
+    # 3. 美股收益（6个）- 手动定义
+    features.extend([
+        'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
+        'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
+    ])
+
+    # 4. VIX 波动率（5个）- 手动定义
+    features.extend([
+        'VIX', 'VIX_Change_5d', 'VIX_Level', 'VIX_Change', 'VIX_Ratio_MA20',
+    ])
+
+    # 5. 美债收益率（4个）- 手动定义
+    features.extend([
+        'US_10Y_Yield', 'US_10Y_Yield_Change',
+        'US10Y_Yield', 'US10Y_Yield_Change_5d',
+    ])
+
+    # 6. 市场状态 One-Hot（3个）- 手动定义
+    features.extend([
+        'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
+    ])
+
+    # 7. GARCH 波动率 - 从 GARCHVolatilityModel 动态获取
+    features.extend(GARCHVolatilityModel.get_feature_names())
+
+    # 8. 日历效应 - 从 CalendarFeatureCalculator 动态获取
+    features.extend(CalendarFeatureCalculator.get_feature_names())
+
+    return features
+
+
 # 市场级特征（所有股票同值，需与网络特征交叉后使用）
 # 这些特征在同一天对所有股票具有完全相同的值，无法区分个股
 # 通过与网络社区特征交叉，使不同社区的股票对市场信号有不同响应
-MARKET_LEVEL_FEATURES = [
-    # 恒指收益（6个）
-    'HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d',
-    'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d',
-    # HSI 市场状态（5个）
-    'HSI_Regime_Prob_0', 'HSI_Regime_Prob_1', 'HSI_Regime_Prob_2',
-    'HSI_Regime_Duration', 'HSI_Regime_Transition_Prob',
-    # 美股收益（6个）
-    'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
-    'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
-    # VIX 波动率（5个）
-    'VIX', 'VIX_Change_5d', 'VIX_Level', 'VIX_Change', 'VIX_Ratio_MA20',
-    # 美债收益率（4个）
-    'US_10Y_Yield', 'US_10Y_Yield_Change',
-    'US10Y_Yield', 'US10Y_Yield_Change_5d',
-    # 市场状态 One-Hot（3个）
-    'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
-    # GARCH 波动率（3个）
-    'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d',
-]
+# 使用动态构建函数，确保与特征模块自动同步
+MARKET_LEVEL_FEATURES = _build_market_level_features()
 
 # 获取日志记录器
 logger = get_logger('ml_trading_model')
