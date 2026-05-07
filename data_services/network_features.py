@@ -271,12 +271,269 @@ class NetworkFeatureLoader:
         return self.get_default_values()
 
 
-# 全局计算器实例
-_network_calculator = None
+class VolatilityNetworkDensityCalculator:
+    """波动率网络密度计算器 - 用于系统性风险预警"""
 
-def get_network_calculator():
-    """获取网络洞察计算器实例"""
-    global _network_calculator
-    if _network_calculator is None:
-        _network_calculator = NetworkInsightCalculator()
-    return _network_calculator
+    def __init__(self):
+        self._density_history = []
+        self._current_density = None
+        self._cache_time = None
+        self._cache_ttl = 3600  # 缓存有效期：1小时
+
+    def calculate_volatility_network_density(self, stock_codes, stock_data=None, window=20, threshold=0.5):
+        """
+        计算波动率网络密度
+
+        参数:
+            stock_codes: 股票代码列表
+            stock_data: 股票数据字典（可选，如不提供则自动获取）
+            window: 波动率计算窗口（天）
+            threshold: 相关系数阈值
+
+        返回:
+            dict: {
+                'current_density': 当前密度,
+                'history_30d': 过去30天密度列表,
+                'mean': 平均值,
+                'std': 标准差,
+                'status': 状态（正常/关注/预警/极端）,
+                'trend': 趋势描述,
+                'suggestion': 操作建议
+            }
+        """
+        # 检查缓存
+        if self._cache_time and self._current_density:
+            elapsed = (datetime.now() - self._cache_time).total_seconds()
+            if elapsed < self._cache_ttl:
+                logger.info("使用缓存的波动率网络密度数据")
+                return self._current_density
+
+        logger.info("开始计算波动率网络密度...")
+        print("  📉 计算波动率网络密度预警...")
+
+        try:
+            import networkx as nx
+            import numpy as np
+
+            # 获取股票数据
+            if stock_data is None:
+                from ml_services.stock_network_analysis import fetch_all_stock_data
+                stock_data = fetch_all_stock_data(list(stock_codes))
+
+            if not stock_data:
+                logger.warning("无法获取股票数据，返回默认值")
+                return self._get_default_density()
+
+            # 计算滚动波动率
+            vol_data = {}
+            for stock_code, df in stock_data.items():
+                if 'Return' not in df.columns and 'Close' in df.columns:
+                    df['Return'] = df['Close'].pct_change()
+                if 'Return' in df.columns:
+                    vol_data[stock_code] = df['Return'].rolling(window).std()
+
+            vol_df = pd.DataFrame(vol_data).dropna()
+
+            if len(vol_df.columns) < 2 or len(vol_df) < 30:
+                logger.warning("波动率数据不足，返回默认值")
+                return self._get_default_density()
+
+            # 计算过去30天的网络密度
+            density_history = []
+            for i in range(min(30, len(vol_df) - 1)):
+                end_idx = len(vol_df) - i
+                start_idx = max(0, end_idx - window)
+                vol_window = vol_df.iloc[start_idx:end_idx]
+
+                if len(vol_window) < 5:
+                    continue
+
+                # 计算相关系数矩阵
+                vol_corr = vol_window.corr(method='pearson')
+
+                # 构建网络
+                G = nx.Graph()
+                stock_list = list(vol_corr.columns)
+
+                for code in stock_list:
+                    G.add_node(code)
+
+                # 添加边
+                n = len(stock_list)
+                edge_count = 0
+                for j in range(n):
+                    for k in range(j + 1, n):
+                        corr_val = vol_corr.iloc[j, k]
+                        if abs(corr_val) >= threshold:
+                            G.add_edge(stock_list[j], stock_list[k])
+                            edge_count += 1
+
+                density = nx.density(G)
+                density_history.append(density)
+
+            if not density_history:
+                return self._get_default_density()
+
+            # 计算统计值
+            current_density = density_history[0]  # 最新一天的密度
+            mean_density = np.mean(density_history)
+            std_density = np.std(density_history)
+
+            # 判断状态（基于历史数据的统计分布）
+            if std_density < 0.001:
+                std_density = 0.01  # 防止除零
+
+            deviation = (current_density - mean_density) / std_density
+
+            # 动态计算阈值（基于历史均值 + 标准差）
+            # 关注：均值 + 1σ
+            # 预警：均值 + 2σ
+            # 极端：均值 + 3σ 或 历史最大值
+            watch_threshold = mean_density + std_density
+            warning_threshold = mean_density + 2 * std_density
+            extreme_threshold = min(mean_density + 3 * std_density, max(density_history) * 0.95)
+
+            if current_density >= extreme_threshold:
+                status = '🔴🔴 极端'
+                status_icon = '🔴🔴'
+            elif current_density >= warning_threshold:
+                status = '🔴 预警'
+                status_icon = '🔴'
+            elif current_density >= watch_threshold:
+                status = '⚠️ 关注'
+                status_icon = '⚠️'
+            elif abs(deviation) <= 1:
+                status = '✅ 正常'
+                status_icon = '✅'
+            else:
+                status = '⚠️ 异常'
+                status_icon = '⚠️'
+
+            # 判断趋势
+            if len(density_history) >= 5:
+                recent = density_history[:5]
+                older = density_history[5:10] if len(density_history) >= 10 else density_history[5:]
+                if len(older) > 0:
+                    recent_mean = np.mean(recent)
+                    older_mean = np.mean(older)
+                    if recent_mean > older_mean + 0.02:
+                        trend = '📈 密度上升，系统性风险增加'
+                    elif recent_mean < older_mean - 0.02:
+                        trend = '📉 密度下降，市场分化度提高'
+                    else:
+                        trend = f'过去30天密度稳定在 {mean_density:.3f} 左右'
+                else:
+                    trend = f'过去30天密度稳定在 {mean_density:.3f} 左右'
+            else:
+                trend = '数据不足，无法判断趋势'
+
+            # 操作建议
+            if status_icon == '🔴🔴':
+                suggestion = '市场高度联动，降低仓位 50%，避免系统性风险'
+            elif status_icon == '🔴':
+                suggestion = '市场联动性较高，降低仓位 20%，关注系统性风险'
+            elif status_icon == '⚠️':
+                suggestion = '市场联动性上升，关注系统性风险，谨慎操作'
+            else:
+                suggestion = '市场状态稳定，维持正常策略'
+
+            result = {
+                'current_density': round(current_density, 4),
+                'mean': round(mean_density, 4),
+                'std': round(std_density, 4),
+                'history_30d': [round(d, 4) for d in density_history],
+                'status': status,
+                'status_icon': status_icon,
+                'trend': trend,
+                'suggestion': suggestion,
+                'thresholds': {
+                    'watch': round(watch_threshold, 4),
+                    'warning': round(warning_threshold, 4),
+                    'extreme': round(extreme_threshold, 4)
+                }
+            }
+
+            # 更新缓存
+            self._current_density = result
+            self._cache_time = datetime.now()
+
+            print(f"    ✅ 波动率网络密度: {current_density:.4f} ({status})")
+            logger.info(f"波动率网络密度计算完成: {current_density:.4f}")
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"波动率网络密度计算失败: {e}")
+            print(f"    ⚠️ 波动率网络密度计算失败: {e}")
+            return self._get_default_density()
+
+    def _get_default_density(self):
+        """返回默认密度值"""
+        return {
+            'current_density': 0.0,
+            'mean': 0.0,
+            'std': 0.0,
+            'history_30d': [],
+            'status': '未知',
+            'status_icon': '⚠️',
+            'trend': '数据不足',
+            'suggestion': '无法判断，维持正常策略',
+            'thresholds': {
+                'watch': 0.0,
+                'warning': 0.0,
+                'extreme': 0.0
+            }
+        }
+
+    def generate_warning_table(self, density_info):
+        """
+        生成波动率网络密度预警表格（Markdown格式）
+
+        参数:
+            density_info: 波动率网络密度信息字典
+
+        返回:
+            str: Markdown格式的预警表格
+        """
+        if not density_info or density_info.get('current_density', 0) == 0:
+            return ""
+
+        current = density_info.get('current_density', 0)
+        mean = density_info.get('mean', 0)
+        std = density_info.get('std', 0)
+        status = density_info.get('status', '未知')
+        trend = density_info.get('trend', '未知')
+        suggestion = density_info.get('suggestion', '')
+        thresholds = density_info.get('thresholds', {})
+
+        table = "\n### 📉 波动率网络密度预警\n\n"
+        table += "**核心逻辑**：密度高 → 市场进入「同涨同跌」模式 → 个股分化度低 → 选股模型失效 → 降低仓位\n\n"
+        table += "**过去30天数据**\n\n"
+        table += "| 指标 | 数值 |\n"
+        table += "|------|------|\n"
+        table += f"| 平均值 | {mean:.4f} |\n"
+        table += f"| 标准差 | {std:.4f} |\n"
+        table += f"| 当前值 | {current:.4f} |\n"
+        table += f"| 状态 | {status} |\n"
+        table += f"| 趋势 | {trend} |\n\n"
+
+        table += "**预警阈值**（基于历史数据动态计算：均值 + N×标准差）\n\n"
+        table += "| 级别 | 阈值 | 计算方式 | 操作 |\n"
+        table += "|------|------|----------|------|\n"
+        table += f"| ⚠️ 关注 | > {thresholds.get('watch', 0):.4f} | μ + 1σ | 关注系统性风险 |\n"
+        table += f"| 🔴 预警 | > {thresholds.get('warning', 0):.4f} | μ + 2σ | 降低仓位 20% |\n"
+        table += f"| 🔴🔴 极端 | > {thresholds.get('extreme', 0):.4f} | μ + 3σ | 降低仓位 50% |\n\n"
+        table += f"**操作建议**：{suggestion}\n"
+
+        return table
+
+
+# 全局波动率密度计算器实例
+_volatility_density_calculator = None
+
+def get_volatility_density_calculator():
+    """获取波动率网络密度计算器实例"""
+    global _volatility_density_calculator
+    if _volatility_density_calculator is None:
+        _volatility_density_calculator = VolatilityNetworkDensityCalculator()
+    return _volatility_density_calculator
