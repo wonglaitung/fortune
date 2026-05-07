@@ -13,7 +13,7 @@
 
 ---
 
-## 核心功能
+## 一、核心功能
 
 ### 项目优势
 
@@ -290,7 +290,7 @@
 
 ---
 
-## 快速开始
+## 二、快速开始
 
 ```bash
 # 恒生指数预测
@@ -317,7 +317,7 @@ rm -rf data/feature_cache/*.pkl
 
 ---
 
-## 技术架构
+## 三、技术架构
 
 ```
 外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
@@ -448,7 +448,7 @@ AKShare      南向资金        主力追踪     性能监控
 
 ---
 
-## 项目结构
+## 四、项目结构
 
 ```
 fortune/
@@ -471,7 +471,7 @@ fortune/
 
 ---
 
-## 自动化调度
+## 五、自动化调度
 
 | 工作流 | 功能 | 执行时间 |
 |--------|------|----------|
@@ -505,7 +505,7 @@ rm -rf data/feature_cache/*.pkl                         # 清除特征缓存
 
 ---
 
-## 安装部署
+## 六、安装部署
 
 ```bash
 # 1. 克隆项目
@@ -536,7 +536,7 @@ python hsi_email.py --no-email
 
 ---
 
-## 核心警告
+## 七、核心警告
 
 | 警告 | 说明 |
 |------|------|
@@ -554,7 +554,7 @@ python hsi_email.py --no-email
 
 ---
 
-## 文档
+## 八、文档
 
 - **[CLAUDE.md](CLAUDE.md)** - 快速参考指南
 - **[lessons.md](lessons.md)** - 经验教训
@@ -569,25 +569,25 @@ python hsi_email.py --no-email
 
 ---
 
-## 依赖项
+## 九、依赖项
 
 `yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
 
 ---
 
-## 许可证
+## 十、许可证
 
 MIT License
 
 ---
 
-## 联系方式
+## 十一、联系方式
 
 - Issues: https://github.com/wonglaitung/fortune/issues
 - Email: wonglaitung@gmail.com
 
 ---
 
-## Star History
+## 十二、Star History
 
 ![Star History Chart](https://api.star-history.com/svg?repos=wonglaitung/fortune&type=Date)
