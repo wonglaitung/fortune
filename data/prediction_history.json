@@ -32242,12 +32242,69 @@
       "actual_return": null,
       "actual_direction": null,
       "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-07_2800.HK_1d",
+      "timestamp": "2026-05-07T19:14:20",
+      "stock_code": "2800.HK",
+      "stock_name": "盈富基金",
+      "sector": "index",
+      "horizon": 1,
+      "predicted_direction": "up",
+      "prediction_probability": 0.5076645446088288,
+      "confidence_level": "medium",
+      "entry_price": 26.76,
+      "model_type": "catboost",
+      "data_date": "2026-05-07",
+      "target_date": "2026-05-08",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-07_2800.HK_5d",
+      "timestamp": "2026-05-07T19:15:20",
+      "stock_code": "2800.HK",
+      "stock_name": "盈富基金",
+      "sector": "index",
+      "horizon": 5,
+      "predicted_direction": "down",
+      "prediction_probability": 0.45018006318959486,
+      "confidence_level": "low",
+      "entry_price": 26.76,
+      "model_type": "catboost",
+      "data_date": "2026-05-07",
+      "target_date": "2026-05-14",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-07_2800.HK_20d",
+      "timestamp": "2026-05-07T19:16:19",
+      "stock_code": "2800.HK",
+      "stock_name": "盈富基金",
+      "sector": "index",
+      "horizon": 20,
+      "predicted_direction": "down",
+      "prediction_probability": 0.49172230513294674,
+      "confidence_level": "low",
+      "entry_price": 26.76,
+      "model_type": "catboost",
+      "data_date": "2026-05-07",
+      "target_date": "2026-06-04",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
     }
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-05-07T07:58:15",
+    "last_updated": "2026-05-07T19:16:19",
     "version": "1.0",
-    "total_predictions": 1697
+    "total_predictions": 1700
   }
 }
