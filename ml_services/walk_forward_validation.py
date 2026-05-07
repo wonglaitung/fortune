@@ -780,28 +780,32 @@ class WalkForwardValidator:
         for idx, row in df.iterrows():
             prob = row['probability']
             actual_return = row.get('actual_return', 0)
-            label = row.get('Label', 0)
             code = row.get('Code', 'Unknown')
 
-            # False Positive: 高概率预测但实际下跌
-            if prob >= 0.7 and label == 0:
+            # 处理 NaN 值
+            if pd.isna(actual_return):
+                continue
+
+            # False Positive: 高概率预测涨，但实际收益为负
+            # 使用 actual_return 而非 Label，因为 Label 可能与实际收益不一致
+            if prob >= 0.7 and actual_return <= 0:
                 errors.append({
                     'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
                     'Stock_Code': code,
                     'Predict_Prob': round(prob, 4),
-                    'Actual_Return': round(actual_return, 4) if not np.isnan(actual_return) else 0,
+                    'Actual_Return': round(actual_return, 4),
                     'Error_Type': 'False Positive',
-                    'Possible_Reason': '高概率预测但实际下跌'
+                    'Possible_Reason': '高概率预测涨，但实际收益为负'
                 })
-            # False Negative: 低概率预测但实际上涨
-            elif prob < 0.3 and label == 1:
+            # False Negative: 低概率预测跌，但实际收益为正
+            elif prob < 0.3 and actual_return > 0:
                 errors.append({
                     'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
                     'Stock_Code': code,
                     'Predict_Prob': round(prob, 4),
-                    'Actual_Return': round(actual_return, 4) if not np.isnan(actual_return) else 0,
+                    'Actual_Return': round(actual_return, 4),
                     'Error_Type': 'False Negative',
-                    'Possible_Reason': '低概率预测但实际上涨'
+                    'Possible_Reason': '低概率预测跌，但实际收益为正'
                 })
 
         return errors
