@@ -2702,9 +2702,10 @@ class FeatureEngineer:
         if market_features is None:
             market_features = MARKET_LEVEL_FEATURES
 
-        # 检查网络特征是否存在
-        network_features = ['net_community_id', 'net_is_bridge_stock',
-                           'net_sector_community_match', 'net_composite_centrality']
+        # 检查网络特征是否存在（使用新的连续值特征）
+        network_features = ['net_community_id', 'net_inter_community_ratio',
+                           'net_sector_cohesion', 'net_composite_centrality',
+                           'net_community_centrality_rank']
         missing = [f for f in network_features if f not in df.columns]
         if missing:
             logger.debug(f"网络特征缺失，跳过市场-网络交叉: {missing}")
@@ -2712,7 +2713,7 @@ class FeatureEngineer:
 
         interaction_count = 0
 
-        # 1. 社区 ID One-Hot 编码并交叉
+        # 1. 社区 ID One-Hot 编码并交叉（保持不变）
         if 'net_community_id' in df.columns:
             # 使用预定义的社区 ID 列表（确保训练/预测一致）
             if community_ids is not None:
@@ -2737,28 +2738,36 @@ class FeatureEngineer:
                         df[interaction_name] = df[comm_col] * df[market_feat]
                         interaction_count += 1
 
-        # 2. 桥梁股票与市场特征交叉
-        if 'net_is_bridge_stock' in df.columns:
+        # 2. 【新增】跨社区连接比例与市场特征交叉（连续值，替代旧的桥梁股二元特征）
+        if 'net_inter_community_ratio' in df.columns:
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_bridge_{market_feat}'
-                    df[interaction_name] = df['net_is_bridge_stock'] * df[market_feat]
+                    interaction_name = f'net_inter_comm_{market_feat}'
+                    df[interaction_name] = df['net_inter_community_ratio'] * df[market_feat]
                     interaction_count += 1
 
-        # 3. 社区-板块匹配与市场特征交叉
-        if 'net_sector_community_match' in df.columns:
+        # 3. 【新增】板块内聚度与市场特征交叉（连续值，替代旧的社区-板块匹配二元特征）
+        if 'net_sector_cohesion' in df.columns:
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_sector_match_{market_feat}'
-                    df[interaction_name] = df['net_sector_community_match'] * df[market_feat]
+                    interaction_name = f'net_cohesion_{market_feat}'
+                    df[interaction_name] = df['net_sector_cohesion'] * df[market_feat]
                     interaction_count += 1
 
-        # 4. 中心性与市场特征交叉（连续型交叉）
+        # 4. 中心性与市场特征交叉（连续型交叉，保持不变）
         if 'net_composite_centrality' in df.columns:
             for market_feat in market_features:
                 if market_feat in df.columns:
                     interaction_name = f'net_centrality_{market_feat}'
                     df[interaction_name] = df['net_composite_centrality'] * df[market_feat]
+                    interaction_count += 1
+
+        # 5. 【新增】社区内中心性排名与市场特征交叉（连续值）
+        if 'net_community_centrality_rank' in df.columns:
+            for market_feat in market_features:
+                if market_feat in df.columns:
+                    interaction_name = f'net_comm_rank_{market_feat}'
+                    df[interaction_name] = df['net_community_centrality_rank'] * df[market_feat]
                     interaction_count += 1
 
         logger.info(f"成功生成 {interaction_count} 个市场-网络交叉特征")
@@ -4424,7 +4433,7 @@ class CatBoostModel(BaseTradingModel):
                         for key, value in net_features.items():
                             stock_df[key] = value
                     else:
-                        # 为缺失网络特征的股票提供默认值
+                        # 为缺失网络特征的股票提供默认值（使用新的连续值特征）
                         default_net_features = {
                             'net_degree_centrality': 0.0,
                             'net_betweenness_centrality': 0.0,
@@ -4433,11 +4442,11 @@ class CatBoostModel(BaseTradingModel):
                             'net_composite_centrality': 0.0,
                             'net_community_id': -1,  # -1 表示未知社区
                             'net_community_size': 0,
-                            'net_sector_community_match': 0,
+                            'net_community_centrality_rank': 0.5,  # 默认中位数
+                            'net_sector_cohesion': 0.0,
                             'net_mst_degree': 0,
                             'net_mst_neighbor_sectors': 0,
-                            'net_systemic_risk_score': 0.0,
-                            'net_is_bridge_stock': 0
+                            'net_inter_community_ratio': 0.0
                         }
                         for key, value in default_net_features.items():
                             stock_df[key] = value
@@ -4926,7 +4935,7 @@ class CatBoostModel(BaseTradingModel):
                                 logger.debug(f"网络特征加载失败: {e}")
 
                         if not has_network_features:
-                            # 为缺失网络特征的股票提供默认值
+                            # 为缺失网络特征的股票提供默认值（使用新的连续值特征）
                             default_net_features = {
                                 'net_degree_centrality': 0.0,
                                 'net_betweenness_centrality': 0.0,
@@ -4935,11 +4944,11 @@ class CatBoostModel(BaseTradingModel):
                                 'net_composite_centrality': 0.0,
                                 'net_community_id': -1,  # -1 表示未知社区
                                 'net_community_size': 0,
-                                'net_sector_community_match': 0,
+                                'net_community_centrality_rank': 0.5,  # 默认中位数
+                                'net_sector_cohesion': 0.0,
                                 'net_mst_degree': 0,
                                 'net_mst_neighbor_sectors': 0,
-                                'net_systemic_risk_score': 0.0,
-                                'net_is_bridge_stock': 0
+                                'net_inter_community_ratio': 0.0
                             }
                             for key, value in default_net_features.items():
                                 stock_df[key] = value
@@ -5052,7 +5061,7 @@ class CatBoostModel(BaseTradingModel):
                         logger.debug(f"网络特征加载失败: {e}")
 
                 if not has_network_features:
-                    # 为缺失网络特征的股票提供默认值
+                    # 为缺失网络特征的股票提供默认值（使用新的连续值特征）
                     default_net_features = {
                         'net_degree_centrality': 0.0,
                         'net_betweenness_centrality': 0.0,
@@ -5061,11 +5070,11 @@ class CatBoostModel(BaseTradingModel):
                         'net_composite_centrality': 0.0,
                         'net_community_id': -1,  # -1 表示未知社区
                         'net_community_size': 0,
-                        'net_sector_community_match': 0,
+                        'net_community_centrality_rank': 0.5,  # 默认中位数
+                        'net_sector_cohesion': 0.0,
                         'net_mst_degree': 0,
                         'net_mst_neighbor_sectors': 0,
-                        'net_systemic_risk_score': 0.0,
-                        'net_is_bridge_stock': 0
+                        'net_inter_community_ratio': 0.0
                     }
                     for key, value in default_net_features.items():
                         stock_df[key] = value
