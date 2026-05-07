@@ -770,12 +770,12 @@ class WalkForwardValidator:
         return confidence_breakdown
 
     def _analyze_errors(self, df):
-        """分析预测错误"""
-        errors = []
+        """分析所有预测（包括正确和错误预测）"""
+        predictions = []
 
-        # 需要有 Code 列才能进行错误分析
+        # 需要有 Code 列才能进行分析
         if 'Code' not in df.columns:
-            return errors
+            return predictions
 
         for idx, row in df.iterrows():
             prob = row['probability']
@@ -786,29 +786,42 @@ class WalkForwardValidator:
             if pd.isna(actual_return):
                 continue
 
-            # False Positive: 高概率预测涨，但实际收益为负
-            # 使用 actual_return 而非 Label，因为 Label 可能与实际收益不一致
-            if prob >= 0.7 and actual_return <= 0:
-                errors.append({
-                    'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
-                    'Stock_Code': code,
-                    'Predict_Prob': round(prob, 4),
-                    'Actual_Return': round(actual_return, 4),
-                    'Error_Type': 'False Positive',
-                    'Possible_Reason': '高概率预测涨，但实际收益为负'
-                })
-            # False Negative: 低概率预测跌，但实际收益为正
-            elif prob < 0.3 and actual_return > 0:
-                errors.append({
-                    'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
-                    'Stock_Code': code,
-                    'Predict_Prob': round(prob, 4),
-                    'Actual_Return': round(actual_return, 4),
-                    'Error_Type': 'False Negative',
-                    'Possible_Reason': '低概率预测跌，但实际收益为正'
-                })
+            # 判断预测方向和实际方向
+            predict_up = prob >= 0.5
+            actual_up = actual_return > 0
 
-        return errors
+            # 判断预测是否正确
+            is_correct = (predict_up and actual_up) or (not predict_up and not actual_up)
+
+            # 确定预测类型
+            if is_correct:
+                if predict_up:
+                    pred_type = 'True Positive'  # 预测涨，实际涨
+                    reason = '正确预测上涨'
+                else:
+                    pred_type = 'True Negative'  # 预测跌，实际跌
+                    reason = '正确预测下跌'
+            else:
+                if predict_up:
+                    pred_type = 'False Positive'  # 预测涨，实际跌
+                    reason = '预测涨但实际下跌'
+                else:
+                    pred_type = 'False Negative'  # 预测跌，实际涨
+                    reason = '预测跌但实际上涨'
+
+            predictions.append({
+                'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
+                'Stock_Code': code,
+                'Predict_Prob': round(prob, 4),
+                'Predict_Direction': 'UP' if predict_up else 'DOWN',
+                'Actual_Return': round(actual_return, 4),
+                'Actual_Direction': 'UP' if actual_up else 'DOWN',
+                'Is_Correct': is_correct,
+                'Prediction_Type': pred_type,
+                'Note': reason
+            })
+
+        return predictions
 
     def _calculate_overall_metrics(self, fold_results):
         """
@@ -965,7 +978,7 @@ class WalkForwardValidator:
                 'avg_ic': report['overall_metrics'].get('avg_ic', 0),
                 'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0)
             },
-            'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'error_analysis', 'confidence_return_breakdown', 'percentile_performance']
+            'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'prediction_analysis', 'confidence_return_breakdown', 'percentile_performance']
         }
         summary_file = os.path.join(detail_dir, 'validation_summary.json')
         with open(summary_file, 'w', encoding='utf-8') as f:
@@ -1031,22 +1044,23 @@ class WalkForwardValidator:
             json.dump(pred_dist, f, indent=2, ensure_ascii=False)
         logger.info(f"预测分布已保存: {pred_file}")
 
-        # 4. 保存 error_analysis.csv
-        all_errors = []
+        # 4. 保存 prediction_analysis.csv（所有预测，包括正确和错误）
+        all_predictions = []
         for fold in report['fold_results']:
             fold_num = fold.get('fold', 0) + 1
-            for error in fold.get('error_analysis', []):
-                error['Fold'] = fold_num
-                all_errors.append(error)
+            for pred in fold.get('error_analysis', []):
+                pred['Fold'] = fold_num
+                all_predictions.append(pred)
 
-        if all_errors:
-            error_df = pd.DataFrame(all_errors)
+        if all_predictions:
+            pred_df = pd.DataFrame(all_predictions)
             # 调整列顺序
-            cols = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Actual_Return', 'Error_Type', 'Possible_Reason']
-            error_df = error_df[[c for c in cols if c in error_df.columns]]
-            error_file = os.path.join(detail_dir, 'error_analysis.csv')
-            error_df.to_csv(error_file, index=False)
-            logger.info(f"错误分析已保存: {error_file}")
+            cols = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Predict_Direction',
+                    'Actual_Return', 'Actual_Direction', 'Is_Correct', 'Prediction_Type', 'Note']
+            pred_df = pred_df[[c for c in cols if c in pred_df.columns]]
+            pred_file = os.path.join(detail_dir, 'prediction_analysis.csv')
+            pred_df.to_csv(pred_file, index=False)
+            logger.info(f"预测分析已保存: {pred_file}")
 
         # 5. 保存 confidence_return_breakdown.json
         # 汇总所有 fold 的置信度分析
