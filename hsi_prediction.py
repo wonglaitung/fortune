@@ -1021,48 +1021,87 @@ class HSI_Predictor:
         }
 
         # ========== 成交额异常检测（使用腾讯财经数据）==========
-        # 优先使用历史数据中的成交额（昨日收盘），而非实时数据
+        # 使用腾讯财经的历史成交额数据，确保数据源一致性
         if self.tencent_hsi_data is not None and 'Amount' in self.tencent_hsi_data.columns:
+            # 当前成交额（最新数据）
             current_amount = self.tencent_hsi_data['Amount'].iloc[-1]  # 亿港元
 
-            # 获取历史成交额数据（从yfinance估算）
-            # 使用 Volume * Close / 1亿 作为历史成交额估计
-            df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000
-            amount_history = df['Amount_Estimated'].iloc[:-1]
+            # 使用腾讯财经的历史成交额数据（排除最新一天）
+            # 这样确保数据源一致性，避免 yfinance 估算与腾讯数据的偏差
+            amount_history = self.tencent_hsi_data['Amount'].iloc[:-1]
 
-            # 使用Z-Score检测
-            zscore_detector = ZScoreDetector(
-                window_size=window_size,
-                threshold=threshold,
-                time_interval='day'
-            )
+            # 检查是否有足够的历史数据
+            if len(amount_history) >= window_size:
+                # 使用Z-Score检测
+                zscore_detector = ZScoreDetector(
+                    window_size=window_size,
+                    threshold=threshold,
+                    time_interval='day'
+                )
 
-            amount_zscore_result = zscore_detector.detect_anomaly(
-                metric_name='amount',
-                current_value=current_amount,
-                history=amount_history,
-                timestamp=current_timestamp
-            )
+                amount_zscore_result = zscore_detector.detect_anomaly(
+                    metric_name='amount',
+                    current_value=current_amount,
+                    history=amount_history,
+                    timestamp=current_timestamp
+                )
 
-            if amount_zscore_result:
-                anomalies['amount_anomaly'] = {
-                    'type': '成交额异常',
-                    'z_score': amount_zscore_result['z_score'],
-                    'current_value': current_amount,
-                    'mean': amount_zscore_result['mean'],
-                    'std': amount_zscore_result['std'],
-                    'severity': amount_zscore_result['severity'],
-                    'direction': '放大' if amount_zscore_result['z_score'] > 0 else '萎缩',
-                    'detection_method': 'zscore_tencent',
-                    'data_source': '腾讯财经API'
-                }
+                if amount_zscore_result:
+                    anomalies['amount_anomaly'] = {
+                        'type': '成交额异常',
+                        'z_score': amount_zscore_result['z_score'],
+                        'current_value': current_amount,
+                        'mean': amount_zscore_result['mean'],
+                        'std': amount_zscore_result['std'],
+                        'severity': amount_zscore_result['severity'],
+                        'direction': '放大' if amount_zscore_result['z_score'] > 0 else '萎缩',
+                        'detection_method': 'zscore_tencent',
+                        'data_source': '腾讯财经API（历史数据）'
+                    }
+                else:
+                    anomalies['amount_anomaly'] = None
             else:
-                anomalies['amount_anomaly'] = None
+                # 腾讯数据不足，回退到 yfinance 估算
+                df['Amount_Estimated'] = df['Volume'] * df['Close'] / 100000000
+                amount_history_fallback = df['Amount_Estimated'].iloc[:-1]
 
-            # 记录成交额数据用于后续显示
+                zscore_detector = ZScoreDetector(
+                    window_size=window_size,
+                    threshold=threshold,
+                    time_interval='day'
+                )
+
+                amount_zscore_result = zscore_detector.detect_anomaly(
+                    metric_name='amount',
+                    current_value=current_amount,
+                    history=amount_history_fallback,
+                    timestamp=current_timestamp
+                )
+
+                if amount_zscore_result:
+                    anomalies['amount_anomaly'] = {
+                        'type': '成交额异常',
+                        'z_score': amount_zscore_result['z_score'],
+                        'current_value': current_amount,
+                        'mean': amount_zscore_result['mean'],
+                        'std': amount_zscore_result['std'],
+                        'severity': amount_zscore_result['severity'],
+                        'direction': '放大' if amount_zscore_result['z_score'] > 0 else '萎缩',
+                        'detection_method': 'zscore_tencent_fallback',
+                        'data_source': '腾讯财经API（当前）+ yfinance估算（历史）',
+                        'warning': '腾讯历史数据不足，使用yfinance估算作为历史基准'
+                    }
+                else:
+                    anomalies['amount_anomaly'] = None
+
+            # 记录成交额数据用于后续显示（使用腾讯财经数据）
             anomalies['amount_data'] = {
                 'current': current_amount,
-                'ma250': amount_history.tail(250).mean() if len(amount_history) >= 250 else amount_history.mean()
+                'ma20': amount_history.tail(20).mean() if len(amount_history) >= 20 else None,
+                'ma60': amount_history.tail(60).mean() if len(amount_history) >= 60 else None,
+                'ma120': amount_history.tail(120).mean() if len(amount_history) >= 120 else None,
+                'ma250': amount_history.tail(250).mean() if len(amount_history) >= 250 else amount_history.mean(),
+                'data_source': '腾讯财经API'
             }
         else:
             anomalies['amount_anomaly'] = None
