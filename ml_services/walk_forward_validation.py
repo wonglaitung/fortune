@@ -420,9 +420,13 @@ class WalkForwardValidator:
             raise ValueError("合并后的数据为空")
 
         # ========== 计算实际收益率（与训练时一致）==========
-        # 训练时使用累积收益率：Close[t+horizon] / Close[t] - 1
-        # 这与 Future_Return 的计算方式一致
-        df['actual_return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
+        # 优先使用 Future_Return（在过滤前计算，包含正确的未来收益率）
+        # 如果 Future_Return 不存在，则使用 Close.shift(-horizon) 计算
+        if 'Future_Return' in df.columns and df['Future_Return'].notna().sum() > 0:
+            df['actual_return'] = df['Future_Return']
+        else:
+            # 训练时使用累积收益率：Close[t+horizon] / Close[t] - 1
+            df['actual_return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
 
         # ========== 计算 IC 和 Rank IC ==========
         # IC: 预测概率与实际收益率的相关系数（不是与二元标签）
