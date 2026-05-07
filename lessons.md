@@ -30,26 +30,47 @@ ic = df['probability'].corr(df['actual_return'])
 
 **代码**：`ml_services/walk_forward_validation.py:418-445`
 
-### 2. 市场级特征需与股票特征交叉 ⭐（新增 2026-05-05）
+### 2. 市场级特征需与股票特征交叉 ⭐（更新 2026-05-07）
 
 **问题**：市场级特征（如 HSI_Return、VIX）对所有股票同值，无法区分个股
 
 **原因**：
 - 市场级特征在同一天对所有股票具有完全相同的值
 - 直接使用会导致模型无法学习个股差异
-- 需要通过交叉特征让不同股票对市场信号有不同响应
+- `MARKET_LEVEL_FEATURES` 列表与特征模块不同步，导致遗漏
+
+**历史问题**（2026-05-07 发现）：
+- `RegimeDetector` 新增 Tier 1 特征（5个）未加入排除列表
+- `GARCH_Persistence` 未加入排除列表
+- 日历特征（22个）完全遗漏
+- 导致 `HSI_Regime_Momentum` 等特征直接进入模型，降低区分能力
 
 **解决**：
-- 定义 `MARKET_LEVEL_FEATURES` 常量（32个市场级特征）
+- 使用 `_build_market_level_features()` 动态构建，自动同步特征模块
 - 与网络社区特征交叉：`HSI_Return_1d * net_community_id`
 - 不同社区的股票对同一市场信号有不同权重
+
+```python
+def _build_market_level_features():
+    """动态构建，确保与特征模块自动同步"""
+    features = []
+    # 从特征模块动态获取
+    for feat in RegimeDetector.get_feature_names():
+        features.append(f'HSI_{feat}')
+    features.extend(GARCHVolatilityModel.get_feature_names())
+    features.extend(CalendarFeatureCalculator.get_feature_names())
+    return features
+```
 
 **教训**：
 - 市场级特征不能直接用于个股预测
 - 必须通过与股票特定特征交叉来引入差异化
-- 网络社区是有效的交叉维度
+- **新增特征模块时，必须在 `get_feature_names()` 中定义，确保自动同步**
+- 避免手动维护列表，使用动态构建
 
-**代码**：`ml_services/ml_trading_model.py:62-85`（常量定义）、`ml_services/ml_trading_model.py:2680-2753`（交叉方法）
+**当前状态**：60 个市场级特征，动态构建，自动同步
+
+**代码**：`ml_services/ml_trading_model.py:68-115`（动态构建）、`ml_services/ml_trading_model.py:2696-2785`（交叉方法）
 
 ### 3. 股票代码格式必须统一 ⭐（新增 2026-05-05）
 
