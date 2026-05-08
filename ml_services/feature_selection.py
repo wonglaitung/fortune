@@ -33,6 +33,18 @@ from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_selection')
 
+# 绝对价格特征排除列表（跨股票不可比，使用标准化版本代替）
+ABSOLUTE_PRICE_FEATURES = [
+    'Channel_High_20d', 'Channel_Low_20d',
+    'Price_High_5d', 'Price_Low_5d',
+    'Support_120d', 'Resistance_120d',
+    'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
+    'BB_upper', 'BB_lower', 'BB_middle',
+    'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+    'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20',
+    'High_Max', 'Low_Min', 'Prev_Close'
+]
+
 
 def load_training_data(horizon=20):
     """
@@ -95,7 +107,9 @@ def load_training_data(horizon=20):
 
     # 获取特征列
     feature_columns = model.get_feature_columns(df)
-    print(f"使用 {len(feature_columns)} 个特征")
+    # 额外排除绝对价格特征（确保跨股票可比）
+    feature_columns = [col for col in feature_columns if col not in ABSOLUTE_PRICE_FEATURES]
+    print(f"使用 {len(feature_columns)} 个特征（已排除绝对价格特征）")
 
     # 处理分类特征（与 CatBoost 训练一致）
     categorical_features = []
