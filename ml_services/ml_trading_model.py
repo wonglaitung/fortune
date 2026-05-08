@@ -3136,7 +3136,7 @@ class LightGBMModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            use_feature_selection: 是否使用特征选择（推荐 Top 300）
             min_return_threshold: 最小收益阈值（默认0%）
 
         Returns:
@@ -3145,9 +3145,9 @@ class LightGBMModel(BaseTradingModel):
         random.seed(42)
             特征重要性
         """
-        # 检查是否需要显示弃用警告
+        # 检查是否需要显示提示
         if use_feature_selection and not LightGBMModel._deprecation_warning_shown:
-            print("⚠️  警告：特征选择功能已弃用，建议使用全量特征（892个）。Walk-forward验证显示全量特征性能更好。")
+            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
             LightGBMModel._deprecation_warning_shown = True
 
         print("准备训练数据...")
@@ -3182,12 +3182,12 @@ class LightGBMModel(BaseTradingModel):
 
         # 应用特征选择（可选）
         if use_feature_selection:
-            print("\n🎯 应用特征选择（LightGBM）...（已弃用）")
+            print("\n🎯 应用特征选择（Top 300）")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择 - 已弃用）")
+                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
@@ -3801,15 +3801,15 @@ class GBDTModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            use_feature_selection: 是否使用特征选择（推荐 Top 300）
             min_return_threshold: 最小收益阈值（默认0%）
         """
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
         random.seed(42)
-        # 检查是否需要显示弃用警告
+        # 检查是否需要显示提示
         if use_feature_selection and not GBDTModel._deprecation_warning_shown:
-            print("⚠️  警告：特征选择功能已弃用，建议使用全量特征（892个）。Walk-forward验证显示全量特征性能更好。")
+            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
             GBDTModel._deprecation_warning_shown = True
 
         print("="*70)
@@ -3848,12 +3848,12 @@ class GBDTModel(BaseTradingModel):
 
         # 应用特征选择（可选）
         if use_feature_selection:
-            print("\n🎯 应用特征选择（GBDT）...（已弃用）")
+            print("\n🎯 应用特征选择（Top 300）")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择 - 已弃用）")
+                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
@@ -4657,7 +4657,7 @@ class CatBoostModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（已弃用，默认False使用全量特征）
+            use_feature_selection: 是否使用特征选择（推荐 Top 300）
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
@@ -4666,9 +4666,9 @@ class CatBoostModel(BaseTradingModel):
         Returns:
             DataFrame: 特征重要性数据
         """
-        # 检查是否需要显示弃用警告
+        # 检查是否需要显示特征选择提示
         if use_feature_selection and not CatBoostModel._deprecation_warning_shown:
-            print("⚠️  警告：特征选择功能已弃用，建议使用全量特征（892个）。Walk-forward验证显示全量特征性能更好。")
+            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
             CatBoostModel._deprecation_warning_shown = True
 
         print("\n" + "="*70)
@@ -4710,7 +4710,7 @@ class CatBoostModel(BaseTradingModel):
         # ========== 特征选择（可选）==========
         if use_feature_selection:
             print("\n" + "="*70)
-            print("🔍 应用特征选择（已弃用）")
+            print("🔍 应用特征选择（Top 300）")
             print("="*70)
 
             # 加载选择的特征
@@ -4719,7 +4719,7 @@ class CatBoostModel(BaseTradingModel):
             if selected_features:
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in selected_features]
-                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择 - 已弃用）")
+                print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
