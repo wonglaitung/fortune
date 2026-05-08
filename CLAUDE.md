@@ -34,7 +34,9 @@ python3 -m pytest tests/ -v
 | **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
-| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost` |
+| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` |
+| **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` |
+| **特征选择** | `python3 ml_services/feature_selection.py --method model --top-k 300 --horizon 20` |
 | **板块验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
 | **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
 | **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
@@ -131,14 +133,16 @@ AKShare      南向资金        主力追踪     性能监控
 | 5天 | 60.26% | ⭐⭐⭐ 趋势确认 |
 | 1天 | 50.11% | ⚠️ 噪音大 |
 
-**个股完整模型**（2026-05-07 验证，12 folds，57只股票，1023特征）：
+**个股完整模型**（2026-05-08 验证，12 folds，57只股票，1191特征）：
 
 | 指标 | 数值 | 评估 |
 |------|------|------|
-| 综合评分 | 95/100 | 优秀 |
-| 平均夏普比率 | 4.43 | ✅ 优秀 |
-| 平均 IC | 0.205 | ✅ 有效 |
-| 平均 Rank IC | 0.220 | ✅ 有效 |
+| 综合评分 | 90/100 | 优秀 |
+| 平均准确率 | 53.09% | ✅ 正常范围 |
+| 平均夏普比率 | 4.64 | ✅ 优秀 |
+| 平均 IC | 0.219 | ✅ 有效 |
+| 平均 Rank IC | 0.239 | ✅ 有效 |
+| 平均最大回撤 | -0.91% | ✅ 良好 |
 
 ### CatBoost 配置
 
@@ -146,7 +150,7 @@ AKShare      南向资金        主力追踪     性能监控
 |------|-----|------|
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
 | 置信度分级阈值 | 0.65 / 0.55 | 用于判断信号强弱，不影响方向 |
-| 特征数量 | 1023 个 | 完整特征（含网络社区特征） |
+| 特征数量 | 1191 个 | 完整特征（含网络社区特征） |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
 **20天模型参数（适配 730 特征，2026-05-08 系统调优版）**：
@@ -165,6 +169,25 @@ AKShare      南向资金        主力追踪     性能监控
 **验证方法说明**：
 - **训练时CV准确率**：模型训练时的5折交叉验证准确率（用于文档展示）
 - **Walk-forward准确率**：独立时序验证（12 folds），更真实反映预测能力
+
+### 特征选择（Top 300）
+
+验证结果显示 Top 300 特征表现最优：
+
+| 特征集 | 平均夏普 | 变异系数 | 正夏普比例 | 推荐 |
+|--------|----------|----------|------------|------|
+| **Top 300** | **4.91** | **0.87** | **91.7%** | ⭐⭐⭐⭐⭐ |
+| Top 500 | 3.96 | 1.00 | 81.8% | ⭐⭐⭐⭐ |
+| 全量(1191) | 0 | - | - | ⚠️ 特征冗余 |
+
+**使用方法**：
+```bash
+# 运行特征选择
+python3 ml_services/feature_selection.py --method model --top-k 300 --horizon 20
+
+# 训练/预测时使用特征选择
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
+```
 
 ### 特征重要性（个股20天模型，2026-04-27）
 
@@ -288,4 +311,4 @@ for col in self.categorical_encoders.keys():
 
 ---
 
-**最后更新**：2026-05-08（新增默认值设计原则、训练时NaN处理）
+**最后更新**：2026-05-08（特征选择集成、Top 300 特征验证）
