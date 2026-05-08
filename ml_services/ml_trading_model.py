@@ -4679,17 +4679,43 @@ class CatBoostModel(BaseTradingModel):
         print(f"特征选择: {'是' if use_feature_selection else '否'}")
         print(f"最小收益阈值: {min_return_threshold:.2%}")
 
+        # ========== 预加载网络特征以获取社区 ID ==========
+        # 在准备数据之前，先加载网络特征文件提取社区 ID 列表
+        # 这样可以确保训练时使用正确的社区 ID，避免动态提取导致的不一致
+        network_features_file = 'output/network_features_for_ml.json'
+        preloaded_community_ids = None
+        if os.path.exists(network_features_file):
+            try:
+                with open(network_features_file, 'r') as f:
+                    network_features_data = json.load(f)
+                # 从所有股票的网络特征中提取唯一的社区 ID
+                all_community_ids = set()
+                for stock_code, net_features in network_features_data.items():
+                    if 'net_community_id' in net_features:
+                        comm_id = net_features['net_community_id']
+                        if comm_id >= 0:  # 只保留有效社区 ID
+                            all_community_ids.add(int(comm_id))
+                if all_community_ids:
+                    preloaded_community_ids = sorted(list(all_community_ids))
+                    logger.info(f"从网络特征文件预加载社区 ID: {preloaded_community_ids}")
+            except Exception as e:
+                logger.warning(f"预加载网络特征失败: {e}")
+
         # ========== 准备数据 ==========
         print("\n" + "="*70)
         logger.info("准备训练数据")
         print("="*70)
 
-        df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold)
+        df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold, community_ids=preloaded_community_ids)
 
         # 提取并保存社区 ID 列表（用于预测时的一致性）
-        if 'net_community_id' in df.columns:
+        # 优先使用预加载的社区 ID，如果没有则从数据中提取
+        if preloaded_community_ids is not None:
+            self.community_ids = preloaded_community_ids
+            logger.info(f"使用预加载的社区 ID: {self.community_ids}")
+        elif 'net_community_id' in df.columns:
             self.community_ids = sorted([int(c) for c in df['net_community_id'].dropna().unique() if c >= 0])
-            logger.info(f"训练数据中的社区 ID: {self.community_ids}")
+            logger.info(f"从训练数据提取社区 ID: {self.community_ids}")
         else:
             self.community_ids = None
             logger.warning("训练数据中未找到网络社区特征")
