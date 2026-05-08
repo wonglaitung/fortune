@@ -4505,36 +4505,6 @@ class CatBoostModel(BaseTradingModel):
                     for key, value in sector_features.items():
                         stock_df[key] = value
 
-                    # 添加网络特征（从预计算文件加载）
-                    # 如果股票没有网络特征，使用默认值（社区 ID = -1 表示未知）
-                    if network_features_data is not None and code in network_features_data:
-                        net_features = network_features_data[code]
-                        for key, value in net_features.items():
-                            stock_df[key] = value
-                    else:
-                        # 为缺失网络特征的股票提供默认值（使用新的连续值特征）
-                        default_net_features = {
-                            'net_degree_centrality': 0.0,
-                            'net_betweenness_centrality': 0.0,
-                            'net_eigenvector_centrality': 0.0,
-                            'net_closeness_centrality': 0.0,
-                            'net_composite_centrality': 0.0,
-                            'net_community_id': -1,  # -1 表示未知社区
-                            'net_community_size': 0,
-                            'net_community_centrality_rank': -1,  # -1表示未知社区
-                            'net_sector_cohesion': 0.0,
-                            'net_mst_degree': 0,
-                            'net_mst_neighbor_sectors': 0,
-                            'net_inter_community_ratio': 0.0,
-                            # 结构洞特征默认值
-                            'net_constraint': 1.0,  # 高约束=无机会
-                            'net_effective_size': 0.0,
-                            'net_local_clustering': 0.0,
-                        }
-                        for key, value in default_net_features.items():
-                            stock_df[key] = value
-                        logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
-
                     # 添加事件驱动特征（9个）
                     stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
 
@@ -4544,16 +4514,51 @@ class CatBoostModel(BaseTradingModel):
                     # 生成交叉特征（与训练时保持一致）
                     stock_df = self.feature_engineer.create_interaction_features(stock_df)
 
-                    # 生成市场-网络交叉特征（如果网络特征存在）
-                    # 使用传入的 community_ids（如果有），确保测试数据与训练一致
-                    stock_df = self.feature_engineer.create_market_network_interaction_features(
-                        stock_df, community_ids=community_ids)
+                # ========== 网络特征和交叉特征（无论缓存是否命中都需要更新）==========
+                # 原因：网络特征文件可能已更新，导致社区 ID 列表变化
+                # 必须使用预加载的 community_ids 确保训练/预测一致性
 
-                    # 保存特征缓存（不含标签）
-                    if use_feature_cache:
-                        _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                # 添加网络特征（从预计算文件加载）
+                if network_features_data is not None and code in network_features_data:
+                    net_features = network_features_data[code]
+                    for key, value in net_features.items():
+                        stock_df[key] = value
+                else:
+                    # 为缺失网络特征的股票提供默认值
+                    default_net_features = {
+                        'net_degree_centrality': 0.0,
+                        'net_betweenness_centrality': 0.0,
+                        'net_eigenvector_centrality': 0.0,
+                        'net_closeness_centrality': 0.0,
+                        'net_composite_centrality': 0.0,
+                        'net_community_id': -1,  # -1 表示未知社区
+                        'net_community_size': 0,
+                        'net_community_centrality_rank': -1,  # -1表示未知社区
+                        'net_sector_cohesion': 0.0,
+                        'net_mst_degree': 0,
+                        'net_mst_neighbor_sectors': 0,
+                        'net_inter_community_ratio': 0.0,
+                        # 结构洞特征默认值
+                        'net_constraint': 1.0,  # 高约束=无机会
+                        'net_effective_size': 0.0,
+                        'net_local_clustering': 0.0,
+                    }
+                    for key, value in default_net_features.items():
+                        stock_df[key] = value
+                    logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
+
+                # 生成市场-网络交叉特征（使用预加载的 community_ids）
+                stock_df = self.feature_engineer.create_market_network_interaction_features(
+                    stock_df, community_ids=community_ids)
+
+                # 保存/更新特征缓存（包含最新的网络交叉特征）
+                if use_feature_cache:
+                    _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                    if use_cache:
+                        print(f"  💾 缓存已更新（网络交叉特征）")
+                    else:
                         print(f"  💾 特征已缓存")
-                        logger.debug(f"特征缓存已保存: {cache_key}")
+                    logger.debug(f"特征缓存已保存: {cache_key}")
 
                 # 创建标签（使用指定的 horizon 和阈值，不缓存）
                 stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
