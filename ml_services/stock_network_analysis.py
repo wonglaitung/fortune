@@ -1099,7 +1099,8 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
 
         # 3. 【新增】社区内中心性排名（0~1连续值）
         # 表示该股票在其社区内的重要程度
-        community_centrality_rank = 0.5  # 默认中位数
+        # 默认值-1表示未知社区，与有效值(0~1)区分
+        community_centrality_rank = -1
         if comm in community_stats and community_stats[comm]['size'] > 1:
             comm_stocks = community_stats[comm]['stocks']
             comm_centralities = [(s, centrality_dict.get(s, {}).get('composite', 0))

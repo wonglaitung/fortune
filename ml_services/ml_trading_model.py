@@ -4506,7 +4506,7 @@ class CatBoostModel(BaseTradingModel):
                             'net_composite_centrality': 0.0,
                             'net_community_id': -1,  # -1 表示未知社区
                             'net_community_size': 0,
-                            'net_community_centrality_rank': 0.5,  # 默认中位数
+                            'net_community_centrality_rank': -1,  # -1表示未知社区
                             'net_sector_cohesion': 0.0,
                             'net_mst_degree': 0,
                             'net_mst_neighbor_sectors': 0,
@@ -5012,7 +5012,7 @@ class CatBoostModel(BaseTradingModel):
                                 'net_composite_centrality': 0.0,
                                 'net_community_id': -1,  # -1 表示未知社区
                                 'net_community_size': 0,
-                                'net_community_centrality_rank': 0.5,  # 默认中位数
+                                'net_community_centrality_rank': -1,  # -1表示未知社区
                                 'net_sector_cohesion': 0.0,
                                 'net_mst_degree': 0,
                                 'net_mst_neighbor_sectors': 0,
@@ -5142,7 +5142,7 @@ class CatBoostModel(BaseTradingModel):
                         'net_composite_centrality': 0.0,
                         'net_community_id': -1,  # -1 表示未知社区
                         'net_community_size': 0,
-                        'net_community_centrality_rank': 0.5,  # 默认中位数
+                        'net_community_centrality_rank': -1,  # -1表示未知社区
                         'net_sector_cohesion': 0.0,
                         'net_mst_degree': 0,
                         'net_mst_neighbor_sectors': 0,
