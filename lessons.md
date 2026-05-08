@@ -1,12 +1,54 @@
 # 经验教训
 
-> **版本**：v5.9 (2026-05-08) | **状态**：当前有效
+> **版本**：v5.10 (2026-05-08) | **状态**：当前有效
 
 ---
 
 ## 一、核心警告
 
-### 1. 默认值设计原则 ⭐（新增 2026-05-08）
+### 1. 网络社区特征一致性 ⭐（新增 2026-05-08）
+
+**问题**：训练时动态提取社区 ID，预测时使用保存的社区 ID，可能导致特征不一致
+
+**现象**：
+```
+WARNING | 动态提取社区 ID（可能导致训练/预测不一致）: [np.int64(1)]
+```
+
+**原因**：
+- `prepare_data()` 函数接收 `community_ids` 参数
+- 训练时调用未传递该参数，导致函数内部动态提取
+- 虽然模型保存了正确的 `community_ids`，但训练日志会有警告
+
+**解决**：
+```python
+# 在 train() 方法中，调用 prepare_data 之前预加载社区 ID
+network_features_file = 'output/network_features_for_ml.json'
+preloaded_community_ids = None
+if os.path.exists(network_features_file):
+    with open(network_features_file, 'r') as f:
+        network_features_data = json.load(f)
+    all_community_ids = set()
+    for stock_code, net_features in network_features_data.items():
+        if 'net_community_id' in net_features:
+            comm_id = net_features['net_community_id']
+            if comm_id >= 0:
+                all_community_ids.add(int(comm_id))
+    if all_community_ids:
+        preloaded_community_ids = sorted(list(all_community_ids))
+
+# 传递给 prepare_data
+df = self.prepare_data(..., community_ids=preloaded_community_ids)
+```
+
+**教训**：
+- 训练和预测必须使用相同的社区 ID 列表
+- 预加载网络特征文件可确保一致性
+- 社区 ID 应从网络分析结果中提取，而非从训练数据中动态提取
+
+**代码**：`ml_services/ml_trading_model.py:4682-4710`（预加载）、`ml_services/ml_trading_model.py:2757-2763`（使用预加载值）
+
+### 2. 默认值设计原则 ⭐（新增 2026-05-08）
 
 **问题**：默认值设计不当会导致模型无法区分"缺失"和"有效值"
 
@@ -634,6 +676,7 @@ df = ak.tool_trade_date_hist_sina()
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-08 | v5.10 | 添加：网络社区特征一致性修复经验 |
 | 2026-05-08 | v5.9 | 添加：夏普比率解读经验（高夏普比率可能来自低波动率） |
 | 2026-05-08 | v5.8 | 添加：默认值设计原则、训练时保留特征NaN |
 | 2026-05-07 | v5.7 | 添加：Walk-forward 收益率计算 Bug、高置信度预测错误风险分析 |

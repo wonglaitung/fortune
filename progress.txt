@@ -8,6 +8,27 @@
 
 ## 最新进展（2026-05-08）
 
+### 网络社区特征一致性修复
+
+**问题**：训练时日志显示"动态提取社区 ID（可能导致训练/预测不一致）"
+
+**原因**：`train()` 方法调用 `prepare_data()` 时未传递 `community_ids` 参数
+
+**解决方案**：
+- 在调用 `prepare_data` 之前预加载网络特征文件
+- 从网络特征中提取所有唯一的社区 ID
+- 将预加载的社区 ID 列表传递给 `prepare_data`
+
+**修改内容**：
+- `ml_services/ml_trading_model.py:4682-4710`：预加载社区 ID 逻辑
+- `ml_services/ml_trading_model.py:4712-4720`：优先使用预加载值
+
+**改动文件**：
+- `ml_services/ml_trading_model.py`（修复训练时社区 ID 一致性）
+- `lessons.md`（新增网络社区特征一致性经验）
+
+---
+
 ### CLAUDE.md 文档优化
 
 **目标**：完善项目快速参考指南，补充遗漏的命令和工作流
