@@ -28,7 +28,7 @@ import lightgbm as lgb
 
 # 导入项目模块
 from config import WATCHLIST as STOCK_LIST
-from ml_services.ml_trading_model import MLTradingModel
+from ml_services.ml_trading_model import CatBoostModel
 from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_selection')
@@ -47,8 +47,8 @@ def load_training_data(horizon=20):
     print("📊 加载训练数据")
     logger.info("=" * 50)
 
-    # 创建模型实例
-    model = MLTradingModel()
+    # 创建模型实例（使用 CatBoostModel 以确保特征列表一致）
+    model = CatBoostModel()
 
     # 准备数据（使用指定horizon）
     import random
