@@ -691,6 +691,11 @@ class FeatureEngineer:
         df = self.tech_analyzer.calculate_bollinger_bands(df, period=20, std_dev=2)
         # 布林带宽度（震荡市识别特征）
         df['BB_Width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
+        # 标准化特征：布林带相对位置（跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['BB_Upper_Ratio'] = df['BB_upper'] / prev_close
+        df['BB_Lower_Ratio'] = df['BB_lower'] / prev_close
+        df['BB_Middle_Ratio'] = df['BB_middle'] / prev_close
         # 布林带宽度归一化（相对于60日均值，使用滞后数据避免数据泄漏）
         df['BB_Width_MA60'] = df['BB_Width'].rolling(window=60, min_periods=1).mean().shift(1)
         df['BB_Width_Normalized'] = (df['BB_Width'].shift(1) - df['BB_Width_MA60']) / (df['BB_Width'].rolling(60, min_periods=1).std().shift(1) + 1e-10)
@@ -701,6 +706,9 @@ class FeatureEngineer:
         # ATR 比率（ATR相对于10日均线的比率，使用滞后数据避免数据泄漏）
         df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean().shift(1)
         df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
+        # 标准化特征：ATP百分比（ATR/价格，跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['ATR_Pct'] = df['ATR'] / prev_close
 
         # ========== 成交量相关 ==========
         df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean().shift(1)
@@ -786,8 +794,15 @@ class FeatureEngineer:
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100
         ).shift(1)
         # 价格通道位置（震荡市识别特征，使用滞后数据避免数据泄漏）
+        # 保留中间变量用于计算其他特征，但不作为模型特征
         df['Channel_High_20d'] = df['High'].rolling(window=20, min_periods=1).max().shift(1)
         df['Channel_Low_20d'] = df['Low'].rolling(window=20, min_periods=1).min().shift(1)
+        # 标准化特征：价格通道相对位置（跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['Channel_High_Ratio_20d'] = df['Channel_High_20d'] / prev_close
+        df['Channel_Low_Ratio_20d'] = df['Channel_Low_20d'] / prev_close
+        df['Channel_Width_Ratio_20d'] = (df['Channel_High_20d'] - df['Channel_Low_20d']) / prev_close
+        # 价格在通道中的位置（0-1标准化）
         df['Price_Channel_Position_20d'] = (df['Close'] - df['Channel_Low_20d']) / (df['Channel_High_20d'] - df['Channel_Low_20d'] + 1e-10)
         # 价格在通道中的位置（靠近上轨/下轨/中轨）
         df['Price_Channel_Zone'] = np.where(
@@ -895,6 +910,10 @@ class FeatureEngineer:
         # 长期均线（120日半年线、250日年线，使用滞后数据避免数据泄漏）
         df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean().shift(1)
         df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean().shift(1)
+        # 标准化特征：均线相对位置（跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['MA_Ratio_120d'] = df['MA120'] / prev_close
+        df['MA_Ratio_250d'] = df['MA250'] / prev_close
 
         # ========== 新增指标：趋势斜率 ==========
         # 计算趋势斜率（线性回归斜率）
@@ -998,8 +1017,13 @@ class FeatureEngineer:
         )
 
         # 长期支撑阻力位（基于120日高低点，使用滞后数据避免数据泄漏）
+        # 保留中间变量用于计算盈亏比，但不作为模型特征
         df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min().shift(1)
         df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max().shift(1)
+        # 标准化特征：支撑阻力相对位置（跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['Support_Ratio_120d'] = df['Support_120d'] / prev_close
+        df['Resistance_Ratio_120d'] = df['Resistance_120d'] / prev_close
         df['Distance_Support_120d'] = (df['Close'] - df['Support_120d']) / df['Close']
         df['Distance_Resistance_120d'] = (df['Resistance_120d'] - df['Close']) / df['Close']
 
@@ -1081,6 +1105,10 @@ class FeatureEngineer:
         # 三周期均线排列（5/20/60日MA，与业界标准一致）
         df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean().shift(1)
         df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean().shift(1)
+        # 标准化特征：均线相对位置（跨股票可比）
+        prev_close = df['Close'].shift(1)
+        df['MA_Ratio_5d'] = df['MA5'] / prev_close
+        df['MA_Ratio_60d'] = df['MA60'] / prev_close
 
         # 三周期多头排列（5>20>60）
         df['MA_Alignment_Bullish_5_20_60'] = (
@@ -2679,13 +2707,22 @@ class FeatureEngineer:
             'Sector_Leader'
         ]
 
-        # 排除列表
+        # 排除列表（包含绝对价格特征，使用标准化版本代替）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
-                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Returns', 'TP', 'MF_Multiplier', 'MF_Volume',
-                          'High_Max', 'Low_Min'] + categorical_features
+                          'High_Max', 'Low_Min',
+                          # 绝对价格特征（使用标准化版本 Channel_High/Low_Ratio_20d 代替）
+                          'Channel_High_20d', 'Channel_Low_20d',
+                          'Price_High_5d', 'Price_Low_5d',
+                          # 绝对支撑阻力位（使用 Support/Resistance_Ratio_120d 代替）
+                          'Support_120d', 'Resistance_120d',
+                          # ATR 绝对值（使用 ATR_Pct 代替）
+                          'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+                          # 成交额绝对值（使用 Turnover_Z_Score 代替）
+                          'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20'] + categorical_features
 
         if limit_interaction_features:
             # 方案1：只对重要的数值型特征生成交叉特征
@@ -2930,13 +2967,19 @@ class BaseTradingModel:
 
     def get_feature_columns(self, df):
         """获取特征列（排除中间计算列）"""
-        # 排除非特征列（包括中间计算列）
+        # 排除非特征列（包括中间计算列和绝对价格特征）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close',
-                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
-                          'TP', 'MF_Multiplier', 'MF_Volume']
+                          'TP', 'MF_Multiplier', 'MF_Volume',
+                          # 绝对价格特征（使用标准化版本代替）
+                          'Channel_High_20d', 'Channel_Low_20d',
+                          'Price_High_5d', 'Price_Low_5d',
+                          'Support_120d', 'Resistance_120d',
+                          'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+                          'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -3116,13 +3159,19 @@ class LightGBMModel(BaseTradingModel):
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列（包括中间计算列）
+        # 排除非特征列（包括中间计算列和绝对价格特征）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
-                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
-                          'TP', 'MF_Multiplier', 'MF_Volume']
+                          'TP', 'MF_Multiplier', 'MF_Volume',
+                          # 绝对价格特征（使用标准化版本代替）
+                          'Channel_High_20d', 'Channel_Low_20d',
+                          'Price_High_5d', 'Price_Low_5d',
+                          'Support_120d', 'Resistance_120d',
+                          'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+                          'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -3781,13 +3830,19 @@ class GBDTModel(BaseTradingModel):
 
     def get_feature_columns(self, df):
         """获取特征列"""
-        # 排除非特征列（包括中间计算列）
+        # 排除非特征列（包括中间计算列和绝对价格特征）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
-                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
-                          'TP', 'MF_Multiplier', 'MF_Volume']
+                          'TP', 'MF_Multiplier', 'MF_Volume',
+                          # 绝对价格特征（使用标准化版本代替）
+                          'Channel_High_20d', 'Channel_Low_20d',
+                          'Price_High_5d', 'Price_Low_5d',
+                          'Support_120d', 'Resistance_120d',
+                          'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+                          'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20']
 
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
@@ -4610,13 +4665,19 @@ class CatBoostModel(BaseTradingModel):
         Returns:
             list: 特征列名列表
         """
-        # 排除非特征列（包括中间计算列）
+        # 排除非特征列（包括中间计算列和绝对价格特征）
         exclude_columns = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                           'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
-                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
+                          'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
                           'BB_upper', 'BB_lower', 'BB_middle',
                           'Low_Min', 'High_Max', '+DM', '-DM', '+DI', '-DI',
                           'TP', 'MF_Multiplier', 'MF_Volume',
+                          # 绝对价格特征（使用标准化版本代替）
+                          'Channel_High_20d', 'Channel_Low_20d',
+                          'Price_High_5d', 'Price_Low_5d',
+                          'Support_120d', 'Resistance_120d',
+                          'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
+                          'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20',
                           # 已删除的冗余特征（保留 DataFrame 列用于中间计算）
                           'Returns', 'Volatility', 'MA5_Deviation', 'MA10_Deviation',
                           'BB_Breakout', 'High_Position_20d', 'MA_Bullish_Resonance',
