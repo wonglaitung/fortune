@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # 港股智能分析系统 - 快速参考
 
-> **📚 详细文档**：特征工程、验证方法、异常检测等完整指南请查看 [docs/](docs/) 目录
-> **⚠️ 经验教训**：所有关键警告和最佳实践请参阅 [lessons.md](lessons.md)
-> **🔧 编程规范**：规范化开发流程、系统设计决策、测试验证要求请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
+> **📚 详细文档**：特征工程、验证方法等完整指南请查看 [docs/](docs/) 目录
+> **⚠️ 经验教训**：关键警告和最佳实践请参阅 [lessons.md](lessons.md)
+> **🔧 编程规范**：开发流程、系统设计决策请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
 
 ---
 
@@ -20,6 +20,9 @@ python3 -m py_compile <文件路径>
 
 # 运行所有测试
 python3 -m pytest tests/ -v
+
+# 运行单个测试
+python3 -m pytest tests/test_anomaly_integrator.py -v
 ```
 
 ### 核心功能命令
@@ -27,30 +30,25 @@ python3 -m pytest tests/ -v
 | 任务 | 命令 |
 |------|------|
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
-| **恒指预测验证** | `python3 hsi_prediction.py --verify` |
-| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
-| **三周期关系分析** | `python3 ml_services/analyze_three_horizon_relationships.py` |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
-| **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` |
-| **特征选择** | `python3 ml_services/feature_selection.py --method model --top-k 300 --horizon 20` |
-| **板块验证** | `python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20` |
-| **模拟交易** | `python3 simulation_trader.py --duration-days 90 --investor-type moderate` |
-| **板块轮动分析** | `python3 analyze_sector_rotation.py && python3 verify_sector_rotation.py` |
-| **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
-| **因果链分析** | `python3 ml_services/analyze_causal_chain.py` |
-| **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` |
-| **黄金分析** | `python3 gold_analyzer.py` |
-| **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
+| **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` |
+| **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` |
+| **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
 
-### 语言与代码规范
-- 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
-- 变量名和函数名使用英文，注释使用中文
-- 遵循 PEP8 规范
+### 缓存管理
+
+```bash
+# 清除特征缓存（新增特征后必须执行）
+rm -rf data/feature_cache/*.pkl
+
+# 清除原始数据缓存
+rm -rf data/stock_cache/*.pkl
+```
 
 ---
 
@@ -58,32 +56,18 @@ python3 -m pytest tests/ -v
 
 | 警告 | 说明 |
 |------|------|
-| **数据泄漏** | Walk-forward准确率 >65% 通常是数据泄漏信号（个股）或 >80%（恒指） |
+| **数据泄漏** | Walk-forward准确率 >65%（个股）或 >80%（恒指）通常是数据泄漏信号 |
 | **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致 |
-| **市场级特征** | 市场级特征（60个）动态构建，自动同步特征模块，不直接进入模型 |
-| **股票代码格式** | 统一使用无前导零格式（如 `2382.HK`，不是 `02382.HK`） |
+| **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **CatBoost 1天模型** | 噪音大，仅供参考 |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
-| **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
-| **恒指 vs 个股** | 因果链传导完全反向，个股概率高反而预示反转（见 lessons.md） |
-| **特征冗余清理** | 清理后夏普比率可能下降 15-20%，需对比验证后再决定 |
-| **特征缓存版本** | 新增特征后必须清除缓存（`rm -rf data/feature_cache/*.pkl`） |
-| **新增特征后预测失败** | 训练时 `feature_columns` 包含新特征，预测时数据获取失败导致缺失。需为缺失特征提供默认值 |
+| **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 54%），个股预测需谨慎 |
+| **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
 | **网络社区特征一致性** | 训练时保存 `model.community_ids`，预测时使用相同社区 ID 列表 |
-| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测的预处理必须一致 |
+| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
 | **默认值设计** | 默认值必须与有效值范围分离，使用 -1 表示"未知"，基本面特征用 NaN |
-| **训练时 NaN** | 不要用 `df.dropna()` 删除所有 NaN，只删除标签和关键列，让模型学习缺失模式 |
-| **高置信度预测风险** | 高置信度预测错误时损失不一定小（平均 -6.91%，最大 -72.96%），必须配合止损 |
-
-### 可用策略（恒指增强模型验证，2026-04-29，33特征）
-
-| 策略 | 胜率 | 操作 |
-|------|------|------|
-| **假突破(101)做多** | **93.10%** | ⭐⭐⭐⭐⭐ 最优策略 |
-| **下跌中继(001)做多** | **89.19%** | ⭐⭐⭐⭐⭐ 次优策略 |
-| 一致看跌(000)做空 | 82.05% | ⭐⭐⭐⭐ 样本最多 |
-| 一致看涨(111)买入 | 77.86% | ⭐⭐⭐⭐ 准确率回升 |
+| **训练时 NaN** | 不要用 `df.dropna()` 删除所有 NaN，只删除标签和关键列 |
 
 ---
 
@@ -103,23 +87,16 @@ AKShare      南向资金        主力追踪     性能监控
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
 
-**新增特征模块**（2026-04-27~28）：
+**特征模块**（动态构建，自动同步）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
 - `data_services/volatility_model.py` - GARCH 波动率（4个特征）
-- `data_services/regime_detector.py` - HMM 市场状态检测（10个特征，含 Tier 1 增强）
-- `data_services/multiscale_features.py` - 跨尺度关联（5个特征，待优化）
-- `data_services/info_decay_analyzer.py` - 信息衰减分析（5个特征，待实施）
-
-**网络分析模块**（2026-05-05 新增）：
-- `ml_services/stock_network_analysis.py` - 股票网络分析（MST、PMFG、社区检测）
-- 网络特征：社区ID、桥梁股票、中心性等
-- 输出：`output/network_features_for_ml.json`、`output/stock_network_analysis.md`
+- `data_services/regime_detector.py` - HMM 市场状态检测（10个特征）
+- `ml_services/stock_network_analysis.py` - 股票网络分析（社区ID、中心性等）
 
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
-- `data/stock_cache/` - 原始数据缓存（股票、恒指数据，7天有效期）
-- `data/feature_cache/` - 特征缓存（730个特征，7天有效期，170x加速）
-- `data/prediction_history.json` - 预测历史记录
+- `data/stock_cache/` - 原始数据缓存（7天有效期）
+- `data/feature_cache/` - 特征缓存（7天有效期，170x加速）
 - `output/` - 分析报告和回测结果
 
 ---
@@ -128,7 +105,7 @@ AKShare      南向资金        主力追踪     性能监控
 
 ### 模型可信度（Walk-forward 验证）
 
-**恒指增强模型**（2026-04-29，33特征）：
+**恒指增强模型**（33特征）：
 
 | 周期 | 准确率 | 推荐度 |
 |------|--------|--------|
@@ -136,85 +113,33 @@ AKShare      南向资金        主力追踪     性能监控
 | 5天 | 60.26% | ⭐⭐⭐ 趋势确认 |
 | 1天 | 50.11% | ⚠️ 噪音大 |
 
-**个股完整模型**（2026-05-08 验证，12 folds，57只股票，1191特征）：
+**个股完整模型**（12 folds，57只股票，Top 300特征）：
 
 | 指标 | 数值 | 评估 |
 |------|------|------|
-| 综合评分 | 90/100 | 优秀 |
 | 平均准确率 | 53.09% | ✅ 正常范围 |
 | 平均夏普比率 | 4.64 | ✅ 优秀 |
 | 平均 IC | 0.219 | ✅ 有效 |
 | 平均 Rank IC | 0.239 | ✅ 有效 |
-| 平均最大回撤 | -0.91% | ✅ 良好 |
 
 ### CatBoost 配置
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
-| 置信度分级阈值 | 0.65 / 0.55 | 用于判断信号强弱，不影响方向 |
+| **预测阈值** | 0.5 | 概率 > 0.5 预测上涨 |
 | 特征数量 | 1191 → 730 → 300 | 完整特征 → 去冗余 → Top 300 最优 |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
-**特征数量说明**：
-- **1191**：完整特征集（含网络社区特征、所有交叉特征）
-- **730**：去除 r=1.0 冗余特征后（RS_Signal 重复、数学等价特征等）
-- **300**：Top 300 特征集，验证表现最优（夏普比率 4.91）
+**20天模型参数**：
 
-**20天模型参数（适配 730 特征，2026-05-08 系统调优版）**：
-
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| n_estimators | 400 | 树数量（减少过拟合） |
-| depth | 7 | 树深度 |
-| learning_rate | 0.04 | 学习率（提高收敛速度） |
-| l2_leaf_reg | 2 | L2 正则化 |
-| subsample | 0.75 | 行采样 |
-| colsample_bylevel | 0.6 | 列采样（降低增加多样性） |
-
-**优化效果**：准确率 65.26%（+1.26%），夏普比率 ~0.97（持有期调整后）
-
-**验证方法说明**：
-- **训练时CV准确率**：模型训练时的5折交叉验证准确率（用于文档展示）
-- **Walk-forward准确率**：独立时序验证（12 folds），更真实反映预测能力
-
-### 特征选择（Top 300）
-
-验证结果显示 Top 300 特征表现最优：
-
-| 特征集 | 平均夏普 | 变异系数 | 正夏普比例 | 推荐 |
-|--------|----------|----------|------------|------|
-| **Top 300** | **4.91** | **0.87** | **91.7%** | ⭐⭐⭐⭐⭐ |
-| Top 500 | 3.96 | 1.00 | 81.8% | ⭐⭐⭐⭐ |
-| 全量(1191) | 0 | - | - | ⚠️ 特征冗余 |
-
-**使用方法**：
-```bash
-# 运行特征选择
-python3 ml_services/feature_selection.py --method model --top-k 300 --horizon 20
-
-# 训练/预测时使用特征选择
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection
-```
-
-### 特征重要性（个股20天模型，2026-04-27）
-
-| 排名 | 特征 | 重要性 | 类别 |
-|------|------|--------|------|
-| 1 | US_10Y_Yield | 5.28 | 宏观类 |
-| 2 | **HSI_Regime_Duration** | 3.95 | **市场状态** |
-| 3 | **HSI_Regime_Prob_1** | 2.44 | **市场状态** |
-| 10 | **HSI_Regime_Prob_0** | 1.44 | **市场状态** |
-
-**关键发现**：新增的 HSI 市场状态特征进入 Top 10，证明其预测价值。
-
-### 板块模型（Walk-forward验证）
-
-| 板块 | 夏普比率 | 胜率 | 推荐度 |
-|------|---------|------|--------|
-| **消费股** | 0.7445 | 54.80% | ⭐⭐⭐⭐⭐ |
-| 银行股 | 0.1546 | 50.44% | ⭐⭐⭐⭐ |
-| 半导体股 | 0.1260 | 49.87% | ⭐⭐⭐⭐ |
+| 参数 | 值 |
+|------|-----|
+| n_estimators | 400 |
+| depth | 7 |
+| learning_rate | 0.04 |
+| l2_leaf_reg | 2 |
+| subsample | 0.75 |
+| colsample_bylevel | 0.6 |
 
 ---
 
@@ -236,32 +161,6 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 
 ---
 
-## 🚀 自动化调度（.github/workflows/）
-
-| 工作流 | 功能 | 执行时间 |
-|--------|------|----------|
-| `hsi-prediction.yml` | 恒生指数预测 | 周一到周五 06:00 |
-| `comprehensive-analysis.yml` | 综合分析 | 周一到周五 16:00 |
-| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
-| `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
-| `hourly-gold-monitor.yml` | 黄金市场监控 | 每小时 |
-| `performance-monitor.yml` | 预测性能监控（三时间窗口） | 每个工作日 HK 0:00 |
-| `sector-analysis.yml` | 板块分析 | 周度 |
-| `ranking-analysis.yml` | 排名分析 | 周度 |
-| `bull-bear-analysis.yml` | 牛熊市分析 | 周度 |
-
----
-
-## 📝 会话工作流
-
-**会话开始时**：读取 `progress.txt` 了解项目进展，审查 `lessons.md` 检查错误
-
-**功能更新后**：更新 `progress.txt` 记录进展，如有新学习心得更新 `lessons.md`
-
-**模型更新后**：运行 `/model_validation` 技能执行标准验证流程（Walk-forward测试、三周期验证、文档更新）
-
----
-
 ## 🔧 开发规范
 
 ### 代码修改原则
@@ -276,7 +175,6 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 高风险特征必须使用 `.shift(1)` 避免使用当日数据：
 - 所有 `.rolling()` 计算的特征
 - `future_return` 必须使用 `.shift(-N)` 计算未来收益
-- BB_Position、Price_Percentile、动量分析特征
 
 ```python
 # ❌ 错误：使用当日数据
@@ -290,18 +188,16 @@ future_return = returns.rolling(5).sum().shift(-5)
 
 训练和预测时必须一致处理分类特征 NaN：
 ```python
-# 训练时（ml_trading_model.py:4445）
+# 训练时
 df[col] = df[col].fillna('unknown').astype(str)
 encoder = LabelEncoder()
 df[col] = encoder.fit_transform(df[col])
 
-# 预测时（ml_trading_model.py:4937-4948）
-for col in self.categorical_encoders.keys():
-    test_df[col] = test_df[col].fillna('unknown').astype(str)
-    encoder = self.categorical_encoders[col]
-    test_df[col] = test_df[col].apply(
-        lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
-    )
+# 预测时
+test_df[col] = test_df[col].fillna('unknown').astype(str)
+test_df[col] = test_df[col].apply(
+    lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+)
 ```
 
 ### Git 提交规范
@@ -312,18 +208,21 @@ for col in self.categorical_encoders.keys():
 
 ---
 
+## 📝 会话工作流
+
+**会话开始时**：读取 `progress.txt` 了解项目进展，审查 `lessons.md` 检查错误
+
+**功能更新后**：更新 `progress.txt` 记录进展，如有新学习心得更新 `lessons.md`
+
+**模型更新后**：运行 Walk-forward 验证确认性能
+
+---
+
 ## 🔗 快速链接
 
 - **经验教训**：[lessons.md](lessons.md) - 关键警告和最佳实践
 - **进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
 - **详细文档**：[docs/](docs/) - 特征工程、验证方法等
-- **数据挖掘计划**：[docs/DATA_MINING_TIER2_PLAN.md](docs/DATA_MINING_TIER2_PLAN.md) - Tier 1/2 特征增强方案
-- **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
-- **股票网络分析**：[docs/STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md) - MST、PMFG、社区检测
-- **经典交易理论**：[docs/CLASSIC_TRADING_THEORIES.md](docs/CLASSIC_TRADING_THEORIES.md)
-
----
-
-**最后更新**：2026-05-08（添加黄金分析、主力资金追踪、超参数调优命令；更新工作流列表；添加模型验证流程；澄清特征数量说明）
+- **股票网络分析**：[docs/STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md)
