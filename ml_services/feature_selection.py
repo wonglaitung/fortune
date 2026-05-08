@@ -50,14 +50,33 @@ def load_training_data(horizon=20):
     # 创建模型实例（使用 CatBoostModel 以确保特征列表一致）
     model = CatBoostModel()
 
+    # 预加载网络特征以获取社区 ID（确保训练/预测一致性）
+    network_features_file = 'output/network_features_for_ml.json'
+    preloaded_community_ids = None
+    if os.path.exists(network_features_file):
+        try:
+            with open(network_features_file, 'r') as f:
+                network_features_data = json.load(f)
+            all_community_ids = set()
+            for stock_code, net_features in network_features_data.items():
+                if 'net_community_id' in net_features:
+                    comm_id = net_features['net_community_id']
+                    if comm_id >= 0:
+                        all_community_ids.add(int(comm_id))
+            if all_community_ids:
+                preloaded_community_ids = sorted(list(all_community_ids))
+                logger.info(f"预加载社区 ID: {preloaded_community_ids}")
+        except Exception as e:
+            logger.warning(f"预加载网络特征失败: {e}")
+
     # 准备数据（使用指定horizon）
     import random
     all_codes = list(STOCK_LIST.keys())
     codes = random.sample(all_codes, min(10, len(all_codes)))  # 随机选择10只股票以提高速度
     logger.info(f"准备加载 {len(codes)} 只股票的数据...")
 
-    # 调用prepare_data方法（返回DataFrame）
-    df = model.prepare_data(codes, horizon=horizon)
+    # 调用prepare_data方法（传递预加载的社区 ID）
+    df = model.prepare_data(codes, horizon=horizon, community_ids=preloaded_community_ids)
 
     # 先删除全为NaN的列
     cols_all_nan = df.columns[df.isnull().all()].tolist()

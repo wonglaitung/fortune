@@ -112,6 +112,25 @@ class HyperparameterTuner:
         logger.info(f"股票数量: {self.n_stocks}")
         logger.info(f"模式: {'快速' if quick_mode else '完整' if full_mode else '标准'}")
 
+        # 预加载社区 ID（确保训练/预测一致性）
+        self.preloaded_community_ids = None
+        network_features_file = 'output/network_features_for_ml.json'
+        if os.path.exists(network_features_file):
+            try:
+                with open(network_features_file, 'r') as f:
+                    network_features_data = json.load(f)
+                all_community_ids = set()
+                for stock_code, net_features in network_features_data.items():
+                    if 'net_community_id' in net_features:
+                        comm_id = net_features['net_community_id']
+                        if comm_id >= 0:
+                            all_community_ids.add(int(comm_id))
+                if all_community_ids:
+                    self.preloaded_community_ids = sorted(list(all_community_ids))
+                    logger.info(f"预加载社区 ID: {self.preloaded_community_ids}")
+            except Exception as e:
+                logger.warning(f"预加载网络特征失败: {e}")
+
     def evaluate_params(self, params: dict, stock_list: list) -> dict:
         """
         评估单组参数（使用 Walk-forward 风格验证）
@@ -135,7 +154,8 @@ class HyperparameterTuner:
             train_data = model.prepare_data(
                 selected_stocks,
                 horizon=self.horizon,
-                for_backtest=False
+                for_backtest=False,
+                community_ids=self.preloaded_community_ids  # 使用预加载的社区 ID
             )
 
             if len(train_data) < 200:
