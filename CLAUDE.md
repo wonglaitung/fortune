@@ -43,6 +43,9 @@ python3 -m pytest tests/ -v
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
 | **因果链分析** | `python3 ml_services/analyze_causal_chain.py` |
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` |
+| **黄金分析** | `python3 gold_analyzer.py` |
+| **主力资金追踪** | `python3 hk_smart_money_tracker.py` |
+| **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` |
 
 ### 语言与代码规范
 - 对话、代码解释、文档注释使用 **简体中文**，技术术语可括号标注英文
@@ -150,8 +153,13 @@ AKShare      南向资金        主力追踪     性能监控
 |------|-----|------|
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
 | 置信度分级阈值 | 0.65 / 0.55 | 用于判断信号强弱，不影响方向 |
-| 特征数量 | 1191 个 | 完整特征（含网络社区特征） |
+| 特征数量 | 1191 → 730 → 300 | 完整特征 → 去冗余 → Top 300 最优 |
 | 随机种子 | 42（固定） | 确保可重现性 |
+
+**特征数量说明**：
+- **1191**：完整特征集（含网络社区特征、所有交叉特征）
+- **730**：去除 r=1.0 冗余特征后（RS_Signal 重复、数学等价特征等）
+- **300**：Top 300 特征集，验证表现最优（夏普比率 4.91）
 
 **20天模型参数（适配 730 特征，2026-05-08 系统调优版）**：
 
@@ -236,7 +244,11 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 | `comprehensive-analysis.yml` | 综合分析 | 周一到周五 16:00 |
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
 | `hourly-stock-monitor.yml` | 港股异常检测（交易时段） | 10:00-15:00 每小时 |
+| `hourly-gold-monitor.yml` | 黄金市场监控 | 每小时 |
 | `performance-monitor.yml` | 预测性能监控（三时间窗口） | 每个工作日 HK 0:00 |
+| `sector-analysis.yml` | 板块分析 | 周度 |
+| `ranking-analysis.yml` | 排名分析 | 周度 |
+| `bull-bear-analysis.yml` | 牛熊市分析 | 周度 |
 
 ---
 
@@ -245,6 +257,8 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 **会话开始时**：读取 `progress.txt` 了解项目进展，审查 `lessons.md` 检查错误
 
 **功能更新后**：更新 `progress.txt` 记录进展，如有新学习心得更新 `lessons.md`
+
+**模型更新后**：运行 `/model_validation` 技能执行标准验证流程（Walk-forward测试、三周期验证、文档更新）
 
 ---
 
@@ -307,8 +321,9 @@ for col in self.categorical_encoders.keys():
 - **板块轮动交易法则**：[docs/SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md)
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
+- **股票网络分析**：[docs/STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md) - MST、PMFG、社区检测
 - **经典交易理论**：[docs/CLASSIC_TRADING_THEORIES.md](docs/CLASSIC_TRADING_THEORIES.md)
 
 ---
 
-**最后更新**：2026-05-08（特征选择集成、Top 300 特征验证）
+**最后更新**：2026-05-08（添加黄金分析、主力资金追踪、超参数调优命令；更新工作流列表；添加模型验证流程；澄清特征数量说明）
