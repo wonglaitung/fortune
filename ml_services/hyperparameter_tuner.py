@@ -57,14 +57,14 @@ SEARCH_SPACE = {
     'colsample_bylevel': [0.6, 0.7, 0.75, 0.8]
 }
 
-# 当前最优参数（基准）
+# 当前最优参数（基准）- 2026-05-08 系统调优结果
 BASELINE_PARAMS = {
-    'n_estimators': 600,
+    'n_estimators': 400,
     'depth': 7,
-    'learning_rate': 0.03,
+    'learning_rate': 0.04,
     'l2_leaf_reg': 2,
     'subsample': 0.75,
-    'colsample_bylevel': 0.75
+    'colsample_bylevel': 0.6
 }
 
 
@@ -210,12 +210,22 @@ class HyperparameterTuner:
                 # 计算指标
                 accuracy = (y_pred == y_val).mean()
 
-                # 计算夏普比率
+                # 计算夏普比率（修正版：考虑持有期调整）
+                # 修正说明：Future_Return 是 horizon 天持有期的收益，不是日收益
+                # 年化因子应考虑持有期：一年约252个交易日，horizon天持有期可做 252/horizon 次交易
                 if 'Future_Return' in val_df.columns:
                     returns = val_df['Future_Return'].values
                     strategy_returns = returns * (2 * y_pred - 1)
                     if len(strategy_returns) > 0 and np.std(strategy_returns) > 0:
-                        sharpe = np.mean(strategy_returns) / np.std(strategy_returns) * np.sqrt(252)
+                        # 持有期调整因子
+                        holding_period_factor = 252 / self.horizon
+                        # 年化收益
+                        annualized_return = np.mean(strategy_returns) * holding_period_factor
+                        # 年化波动率
+                        annualized_std = np.std(strategy_returns) * np.sqrt(holding_period_factor)
+                        # 夏普比率（扣除无风险利率）
+                        risk_free_rate = 0.02
+                        sharpe = (annualized_return - risk_free_rate) / annualized_std if annualized_std > 0 else 0
                     else:
                         sharpe = 0
                 else:
