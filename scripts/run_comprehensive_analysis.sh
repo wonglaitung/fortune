@@ -23,7 +23,7 @@ echo ""
 
 # 步骤0: 计算网络特征（供训练和预测使用）
 echo "=========================================="
-echo "📊 步骤 0/5: 计算网络特征"
+echo "📊 步骤 0/6: 计算网络特征"
 echo "=========================================="
 echo ""
 python3 ml_services/stock_network_analysis.py --skip-pmfg
@@ -34,9 +34,27 @@ else
 fi
 echo ""
 
+# 步骤 0.5: 运行特征选择（生成 Top 300 特征）
+echo "=========================================="
+echo "📊 步骤 0.5/6: 运行特征选择（Top 300）"
+echo "=========================================="
+echo ""
+python3 ml_services/feature_selection.py --method model --top-k 300 --horizon 20
+if [ $? -ne 0 ]; then
+    echo "⚠️ 特征选择失败，使用已有特征文件"
+else
+    # 将生成的特征文件复制为 latest
+    LATEST_FEATURE_FILE=$(ls -t output/selected_features_model_*.txt 2>/dev/null | head -1)
+    if [ -n "$LATEST_FEATURE_FILE" ]; then
+        cp "$LATEST_FEATURE_FILE" output/selected_features_latest.txt
+        echo "✅ 特征选择完成: output/selected_features_latest.txt"
+    fi
+fi
+echo ""
+
 # 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
 echo "=========================================="
-echo "📊 步骤 1/5: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
+echo "📊 步骤 1/6: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
 echo "=========================================="
 echo ""
 
@@ -44,7 +62,7 @@ TRAIN_SUCCESS=0
 TRAIN_FAILED=0
 for horizon in 1 5 20; do
     echo "  🔄 训练 ${horizon}d 模型..."
-    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type catboost
+    python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type catboost --use-feature-selection
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
         TRAIN_FAILED=$((TRAIN_FAILED + 1))
@@ -64,7 +82,7 @@ echo ""
 
 # 步骤2: 生成 CatBoost 三周期预测
 echo "=========================================="
-echo "📊 步骤 2/5: 生成 CatBoost 三周期预测"
+echo "📊 步骤 2/6: 生成 CatBoost 三周期预测"
 echo "=========================================="
 echo ""
 
@@ -72,7 +90,7 @@ PREDICT_SUCCESS=0
 PREDICT_FAILED=0
 for horizon in 1 5 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
-    python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type catboost
+    python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type catboost --use-feature-selection
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 生成 ${horizon}d 预测失败（继续执行其他周期）"
         PREDICT_FAILED=$((PREDICT_FAILED + 1))
@@ -92,7 +110,7 @@ echo ""
 
 # 步骤 2.5: 风险回报率分析（稳健型）
 echo "=========================================="
-echo "📊 步骤 2.5/5: 风险回报率分析（稳健型）"
+echo "📊 步骤 3/6: 风险回报率分析（稳健型）"
 echo "=========================================="
 echo ""
 python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --recent-bias 0.7 --output-json data/risk_reward_results.json --period 90
@@ -105,7 +123,7 @@ echo ""
 
 # 步骤3: 调用hsi_email.py生成大模型建议（使用force参数，不发送邮件）
 echo "=========================================="
-echo "📊 步骤 3/5: 生成大模型建议"
+echo "📊 步骤 4/6: 生成大模型建议"
 echo "=========================================="
 echo ""
 python3 hsi_email.py --force --no-email
@@ -118,7 +136,7 @@ echo ""
 
 # 步骤4: 调用comprehensive_analysis.py进行综合分析
 echo "=========================================="
-echo "📊 步骤 4/5: 综合分析"
+echo "📊 步骤 5/6: 综合分析"
 echo "=========================================="
 echo ""
 # 获取步骤3生成的大模型建议文件（使用最新日期）
