@@ -30952,6 +30952,38 @@
       "current_price": 17.62,
       "target_price": 19.2,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-05-08T13:41:01.513379",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 801.1892940520192,
+      "reason": "出货评分7.0分（强烈出货）/筹码阻力严重（上方筹码比例27.6%<60%但拉升难度\"容易\"，主要因出货信号强）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 33.84,
+      "target_price": 32.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-08T13:41:04.744059",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 31.56,
+      "amount": 0,
+      "capital_after": 801.1892940520192,
+      "reason": "技术指标协同：RSI 50.38（中性，无超买超卖），布林带正常范围（价格未突破上轨），情感指标MA3>MA7（情绪改善），3项指标同向支持反弹。 TAV评分：47.75分（中等共振），趋势-动量-成交量综合信号质量一般但可靠。 筹码分布：上方筹码比例4.2%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.148（低），易突破。 板块环境：科技股温和上涨（+0.20%），相对强势板块，跑赢恒指潜力。 新闻影响：小米SU7订单超70,000辆（新闻摘要），显示产品竞争力，短期催化股价修复。",
+      "success": false,
+      "stop_loss_price": 29.5,
+      "current_price": 31.56,
+      "target_price": 33.8,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -48534,174 +48566,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-04-29 13:32:59",
-      "type": "SELL",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（强烈出货）",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.49,
-      "target_price": 1.0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-04-29 13:33:04",
-      "type": "BUY",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 30.7,
-      "amount": 0,
-      "reason": "技术面协同：位置百分位27.44%（低位）、MACD金叉初现、OBV上升；板块环境：房地产股板块强势上涨（+2.40%）；筹码分布：上方筹码比例5.7%<30%（低阻力）、拉升难度容易；TAV共振：58.25分（趋势-动量-成交量协同性良好）",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": 26.08,
-      "current_price": 30.7,
-      "target_price": 32.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:32",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "市场发生重大变化：技术指标从20.3小时前的卖出信号转为当前买入信号，因RSI超卖（34.91<35）、布林带破下轨、OBV上升、CMF流入（0.0878）四重超卖信号共振；筹码分布无阻力（上方筹码比例0.0%）；银行股板块轮动（+0.53%）提供支撑；基本面低估值（PE 7.72）增强安全边际。",
-          "allocation_pct": 15,
-          "stop_loss_price": 40.7,
-          "target_price": 50.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术面恶化：RSI 59.57接近超买、布林带高位、CMF资金流出(-0.2609)、OBV下降四重出货信号；成交额骤降（-72.21%）显示资金撤离；上方筹码比例15.0%增加抛压；Q1利润创新高但估值存疑（利好出尽）。",
-          "stop_loss_triggered": false,
-          "target_price": 400.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "技术面顶背离：RSI 77.85严重超买、布林带高位、CMF大额流出(-0.3381)、OBV下降三重出货信号；成交额萎缩93.63%显示资金枯竭；情感指标MA3/MA7归零（情绪崩塌）；Deutsche Telekom合并传闻未落地（利好兑现）。",
-          "stop_loss_triggered": false,
-          "target_price": 82.0,
-          "validity_period": 5
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "技术面破位：价格高位（位置百分位73.28%）、MACD交叉、CMF流出(-0.0943)、价格下跌三重出货信号；成交额骤降90.7%；新能源股板块下跌（-1.17%）拖累；上方筹码比例53.8%形成中等阻力。",
-          "stop_loss_triggered": false,
-          "target_price": 102.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "技术面顶背离：价格高位（位置百分位75.0%）、MACD交叉、CMF流出(-0.2784)、价格下跌四重出货信号；成交额变化-82.45%显示萎缩；上方筹码比例100.0%形成高阻力；假稳定币风险新闻压制情绪。",
-          "stop_loss_triggered": false,
-          "target_price": 135.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "技术面超买：RSI 65.36高位、布林带突破上轨、CMF流出(-0.0796)、价格高位三重出货信号；OBV上升但CMF流出（量价背离）；能源股板块下跌（-0.51%）；情感指标波动3.15（情绪不稳）。",
-          "stop_loss_triggered": false,
-          "target_price": 28.0,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-04-30 09:55:32",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化：RSI 59.57接近超买、布林带高位、CMF资金流出(-0.2609)、OBV下降四重出货信号；成交额骤降（-72.21%）显示资金撤离；上方筹码比例15.0%增加抛压；Q1利润创新高但估值存疑（利好出尽）。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 420.2,
-      "target_price": 400.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:37",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶背离：RSI 77.85严重超买、布林带高位、CMF大额流出(-0.3381)、OBV下降三重出货信号；成交额萎缩93.63%显示资金枯竭；情感指标MA3/MA7归零（情绪崩塌）；Deutsche Telekom合并传闻未落地（利好兑现）。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 85.25,
-      "target_price": 82.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:41",
-      "type": "SELL",
-      "code": "1211.HK",
-      "name": "比亚迪股份",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面破位：价格高位（位置百分位73.28%）、MACD交叉、CMF流出(-0.0943)、价格下跌三重出货信号；成交额骤降90.7%；新能源股板块下跌（-1.17%）拖累；上方筹码比例53.8%形成中等阻力。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 107.0,
-      "target_price": 102.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:43",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面顶背离：价格高位（位置百分位75.0%）、MACD交叉、CMF流出(-0.2784)、价格下跌四重出货信号；成交额变化-82.45%显示萎缩；上方筹码比例100.0%形成高阻力；假稳定币风险新闻压制情绪。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 140.2,
-      "target_price": 135.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-04-30 09:55:46",
-      "type": "SELL",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买：RSI 65.36高位、布林带突破上轨、CMF流出(-0.0796)、价格高位三重出货信号；OBV上升但CMF流出（量价背离）；能源股板块下跌（-0.51%）；情感指标波动3.15（情绪不稳）。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 29.38,
-      "target_price": 28.0,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-04-30 09:55:51",
       "type": "BUY",
       "code": "3968.HK",
@@ -48868,6 +48732,67 @@
       "current_price": 17.62,
       "target_price": 19.2,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-05-08 11:06:48",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-08 13:41:01",
+      "buy": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "技术指标协同：RSI 50.38（中性，无超买超卖），布林带正常范围（价格未突破上轨），情感指标MA3>MA7（情绪改善），3项指标同向支持反弹。 TAV评分：47.75分（中等共振），趋势-动量-成交量综合信号质量一般但可靠。 筹码分布：上方筹码比例4.2%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.148（低），易突破。 板块环境：科技股温和上涨（+0.20%），相对强势板块，跑赢恒指潜力。 新闻影响：小米SU7订单超70,000辆（新闻摘要），显示产品竞争力，短期催化股价修复。",
+          "allocation_pct": 40,
+          "stop_loss_price": 29.5,
+          "target_price": 33.8,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "出货评分7.0分（强烈出货）/筹码阻力严重（上方筹码比例27.6%<60%但拉升难度\"容易\"，主要因出货信号强）",
+          "stop_loss_triggered": false,
+          "target_price": 32.5,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-08 13:41:01",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分（强烈出货）/筹码阻力严重（上方筹码比例27.6%<60%但拉升难度\"容易\"，主要因出货信号强）",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 33.84,
+      "target_price": 32.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-08 13:41:04",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 31.56,
+      "amount": 0,
+      "reason": "技术指标协同：RSI 50.38（中性，无超买超卖），布林带正常范围（价格未突破上轨），情感指标MA3>MA7（情绪改善），3项指标同向支持反弹。 TAV评分：47.75分（中等共振），趋势-动量-成交量综合信号质量一般但可靠。 筹码分布：上方筹码比例4.2%<30%（低阻力），拉升难度\"容易\"，筹码集中度0.148（低），易突破。 板块环境：科技股温和上涨（+0.20%），相对强势板块，跑赢恒指潜力。 新闻影响：小米SU7订单超70,000辆（新闻摘要），显示产品竞争力，短期催化股价修复。",
+      "capital_after": 801.1892940520192,
+      "success": false,
+      "stop_loss_price": 29.5,
+      "current_price": 31.56,
+      "target_price": 33.8,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
