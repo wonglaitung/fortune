@@ -78,7 +78,7 @@ def load_training_data(horizon=20):
     feature_columns = model.get_feature_columns(df)
     print(f"使用 {len(feature_columns)} 个特征")
 
-    # 处理分类特征
+    # 处理分类特征（与 CatBoost 训练一致）
     categorical_features = []
     for col in feature_columns:
         if df[col].dtype == 'object' or df[col].dtype.name == 'category':
@@ -86,46 +86,19 @@ def load_training_data(horizon=20):
             categorical_features.append(col)
             from sklearn.preprocessing import LabelEncoder
             le = LabelEncoder()
-            df[col] = le.fit_transform(df[col].astype(str))
+            # 先填充 NaN 为 'unknown'，与 CatBoost 训练一致
+            df[col] = df[col].fillna('unknown').astype(str)
+            df[col] = le.fit_transform(df[col])
 
-    # 准备特征和标签（用 0 填充 NaN，LightGBM 会自动处理）
-    X = df[feature_columns].fillna(0).values  # 转换为numpy数组
+    # 准备特征和标签（保留 NaN，与 CatBoost 训练一致）
+    # CatBoost 会自动处理 NaN 值，无需手动填充
+    X = df[feature_columns].values
     y = df['Label'].values
 
-    # 确保X是数值类型
+    # 确保X是float64类型（统计方法需要数值类型）
     if X.dtype == object:
-        print("   - 转换特征矩阵为数值类型...")
-        X = np.array(X, dtype=np.float64)
-
-    # 检查并处理异常值（在特征选择前清理）
-    print("   - 检查特征矩阵中的异常值...")
-    inf_mask = np.isinf(X)
-    large_mask = np.abs(X) > 1e10
-    invalid_mask = inf_mask | large_mask
-    
-    if np.any(invalid_mask):
-        invalid_count = np.sum(invalid_mask)
-        invalid_features = np.sum(invalid_mask, axis=0)
-        print(f"   - 发现 {invalid_count} 个异常值（无穷大或过大），将替换为0")
-        print(f"   - 受影响的特征数量: {np.sum(invalid_features > 0)}")
-        # 将异常值替换为0
-        X = X.copy()
-        X[invalid_mask] = 0.0
-    
-    # 检查NaN值
-    nan_mask = np.isnan(X)
-    if np.any(nan_mask):
-        nan_count = np.sum(nan_mask)
-        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
-        X = np.nan_to_num(X, nan=0.0)
-    
-    # 删除全为0的列（这些列可能是无效的）
-    all_zero_cols = (X == 0).all(axis=0)
-    if np.any(all_zero_cols):
-        zero_col_count = np.sum(all_zero_cols)
-        print(f"   - 删除 {zero_col_count} 个全为0的特征列")
-        X = X[:, ~all_zero_cols]
-        feature_columns = [feature_columns[i] for i in range(len(feature_columns)) if not all_zero_cols[i]]
+        print("   - 转换特征矩阵为 float64 类型...")
+        X = X.astype(np.float64)
 
     logger.info(f"数据加载完成")
     print(f"   - 样本数量: {len(X)}")
@@ -155,26 +128,8 @@ def feature_selection_f_test(X, y, k=1000):
     print("🔬 F-test特征选择")
     logger.info("=" * 50)
 
-    # 检查并处理无穷大值和过大的值
-    print("   - 检查异常值...")
-    inf_mask = np.isinf(X)
-    large_mask = np.abs(X) > 1e10
-    invalid_mask = inf_mask | large_mask
-    
-    if np.any(invalid_mask):
-        invalid_count = np.sum(invalid_mask)
-        invalid_features = np.sum(invalid_mask, axis=0)
-        print(f"   - 发现 {invalid_count} 个异常值，将替换为0")
-        print(f"   - 受影响的特征数量: {np.sum(invalid_features > 0)}")
-        X = X.copy()
-        X[invalid_mask] = 0.0  # 将异常值替换为0
-    
-    # 检查NaN值
-    nan_mask = np.isnan(X)
-    if np.any(nan_mask):
-        nan_count = np.sum(nan_mask)
-        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
-        X = np.nan_to_num(X, nan=0.0)
+    # 处理 NaN 和异常值（sklearn 需要无缺失值）
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
     selector = SelectKBest(f_classif, k=k)
     X_selected = selector.fit_transform(X, y)
@@ -217,24 +172,8 @@ def feature_selection_mutual_info(X, y, k=1000):
     print("🔬 互信息特征选择")
     logger.info("=" * 50)
 
-    # 检查并处理无穷大值和过大的值
-    print("   - 检查异常值...")
-    inf_mask = np.isinf(X)
-    large_mask = np.abs(X) > 1e10
-    invalid_mask = inf_mask | large_mask
-    
-    if np.any(invalid_mask):
-        invalid_count = np.sum(invalid_mask)
-        print(f"   - 发现 {invalid_count} 个异常值，将替换为0")
-        X = X.copy()
-        X[invalid_mask] = 0.0  # 将异常值替换为0
-    
-    # 检查NaN值
-    nan_mask = np.isnan(X)
-    if np.any(nan_mask):
-        nan_count = np.sum(nan_mask)
-        print(f"   - 发现 {nan_count} 个NaN值，将替换为0")
-        X = np.nan_to_num(X, nan=0.0)
+    # 处理 NaN 和异常值（sklearn 需要无缺失值）
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
     selector = SelectKBest(mutual_info_classif, k=k)
     X_selected = selector.fit_transform(X, y)
@@ -426,7 +365,7 @@ def feature_selection_model_importance(X, y, feature_names, top_k=500):
 def feature_selection_cumulative_importance(X, y, feature_names, score_method='f_test', target_importance=0.95, min_features=100, max_features=1000):
     """
     基于累积重要性自动决定特征数量
-    
+
     策略：
     1. 使用F-test或互信息选择所有特征
     2. 按重要性排序
@@ -450,7 +389,10 @@ def feature_selection_cumulative_importance(X, y, feature_names, score_method='f
     logger.info("=" * 50)
     print(f"🔬 基于累积重要性自动决定特征数量（{score_method}）")
     logger.info("=" * 50)
-    
+
+    # 处理 NaN 和异常值（sklearn 需要无缺失值）
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+
     # 1. 选择所有特征并获取分数
     if score_method == 'f_test':
         selector = SelectKBest(f_classif, k='all')
@@ -543,8 +485,11 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
     logger.info("=" * 50)
 
     try:
-        # 选择特征
-        X_selected = X.iloc[:, selected_features]
+        # 选择特征（支持 numpy 数组和 DataFrame）
+        if hasattr(X, 'iloc'):
+            X_selected = X.iloc[:, selected_features]
+        else:
+            X_selected = X[:, selected_features]
 
         # 创建LightGBM数据集
         lgb_train = lgb.Dataset(X_selected, y)
