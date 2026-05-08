@@ -3159,8 +3159,16 @@ class LightGBMModel(BaseTradingModel):
             print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
             df = df.drop(columns=cols_all_nan)
 
-        # 删除包含NaN的行
-        df = df.dropna()
+        # 只删除标签为NaN的行，保留特征中的NaN（LightGBM原生支持NaN）
+        # LightGBM 的 use_missing=True 参数会自动处理缺失值
+        if 'Label' in df.columns:
+            df = df.dropna(subset=['Label'])
+
+        # 删除其他关键列的NaN（非基本面特征）
+        critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
+        critical_cols_existing = [c for c in critical_cols if c in df.columns]
+        if critical_cols_existing:
+            df = df.dropna(subset=critical_cols_existing)
 
         # 确保数据按日期索引排序（dropna 可能会改变顺序）
         df = df.sort_index()
@@ -3818,8 +3826,15 @@ class GBDTModel(BaseTradingModel):
             print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
             df = df.drop(columns=cols_all_nan)
 
-        # 删除包含NaN的行
-        df = df.dropna()
+        # 只删除标签为NaN的行，保留特征中的NaN（XGBoost原生支持NaN）
+        if 'Label' in df.columns:
+            df = df.dropna(subset=['Label'])
+
+        # 删除其他关键列的NaN（非基本面特征）
+        critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
+        critical_cols_existing = [c for c in critical_cols if c in df.columns]
+        if critical_cols_existing:
+            df = df.dropna(subset=critical_cols_existing)
 
         # 确保数据按日期索引排序（dropna 可能会改变顺序）
         df = df.sort_index()
@@ -4679,8 +4694,13 @@ class CatBoostModel(BaseTradingModel):
             self.community_ids = None
             logger.warning("训练数据中未找到网络社区特征")
 
-        # 删除包含 NaN 的行
+        # 删除包含 NaN 的行（仅标签和关键列，保留基本面特征的NaN）
         df = df.dropna(subset=['Label'])
+        # 删除其他关键列的NaN（非基本面特征）
+        critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
+        critical_cols_existing = [c for c in critical_cols if c in df.columns]
+        if critical_cols_existing:
+            df = df.dropna(subset=critical_cols_existing)
         print(f"删除 NaN 后: {len(df)} 条记录")
 
         # 获取特征列
