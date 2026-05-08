@@ -2170,18 +2170,18 @@ class FeatureEngineer:
                         else:
                             # 板块未找到，使用默认值
                             features[f'sector_avg_change_{period}d'] = 0.0
-                            features[f'sector_rank_{period}d'] = 0
+                            features[f'sector_rank_{period}d'] = -1  # -1表示未知
                             features[f'sector_rising_ratio_{period}d'] = 0.5
                     else:
                         # 无法获取板块数据，使用默认值
                         features[f'sector_avg_change_{period}d'] = 0.0
-                        features[f'sector_rank_{period}d'] = 0
+                        features[f'sector_rank_{period}d'] = -1  # -1表示未知
                         features[f'sector_rising_ratio_{period}d'] = 0.5
 
                 except Exception as e:
                     logger.warning(f"计算板块表现失败 (period={period}): {e}")
                     features[f'sector_avg_change_{period}d'] = 0.0
-                    features[f'sector_rank_{period}d'] = 0
+                    features[f'sector_rank_{period}d'] = -1  # -1表示未知
                     features[f'sector_rising_ratio_{period}d'] = 0.5
 
             # 计算板块趋势
@@ -5179,17 +5179,23 @@ class CatBoostModel(BaseTradingModel):
                 'Earnings_Announcement_In_7d', 'Earnings_Announcement_In_30d', 'Days_Since_Last_Earnings',
                 'Earnings_Surprise_Score', 'Earnings_Surprise_Avg_3', 'Earnings_Surprise_Trend'
             ]
+            # Days_Since_Last_Earnings 使用 -1 表示未知，其他使用 0
             for feat in event_features:
                 if feat not in latest_data.columns:
-                    logger.warning(f"警告: 事件驱动特征 {feat} 不存在，使用默认值0")
-                    latest_data[feat] = 0.0
+                    if feat == 'Days_Since_Last_Earnings':
+                        logger.warning(f"警告: 事件驱动特征 {feat} 不存在，使用默认值-1（未知）")
+                        latest_data[feat] = -1
+                    else:
+                        logger.warning(f"警告: 事件驱动特征 {feat} 不存在，使用默认值0")
+                        latest_data[feat] = 0.0
 
             # 确保所有基本面特征都存在（容错处理）
             # 当 create_fundamental_features 获取数据失败时，需要提供默认值
+            # 使用 NaN 表示缺失，让 CatBoost 自动学习缺失模式
             fundamental_features_default = {
-                'PE': 0.0, 'PB': 0.0, 'Market_Cap': 0.0,
-                'ROE': 0.0, 'ROA': 0.0, 'Dividend_Yield': 0.0,
-                'EPS': 0.0, 'Net_Margin': 0.0, 'Gross_Margin': 0.0
+                'PE': float('nan'), 'PB': float('nan'), 'Market_Cap': float('nan'),
+                'ROE': float('nan'), 'ROA': float('nan'), 'Dividend_Yield': 0.0,
+                'EPS': float('nan'), 'Net_Margin': float('nan'), 'Gross_Margin': float('nan')
             }
             for feat, default_val in fundamental_features_default.items():
                 if feat not in latest_data.columns:
