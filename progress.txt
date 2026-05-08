@@ -2,11 +2,55 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-07
+**最后更新**：2026-05-08
 
 ---
 
-## 最新进展（2026-05-07）
+## 最新进展（2026-05-08）
+
+### 网络特征默认值优化
+
+**问题**：部分网络特征默认值设计不合理，存在歧义或与有效值混淆
+
+**修改内容**：
+
+| 特征 | 原值 | 新值 | 原因 |
+|------|------|------|------|
+| `net_community_centrality_rank` | 0.5 | **-1** | 避免与"社区内中等重要"混淆 |
+| `sector_rank_Nd` | 0 | **-1** | 避免与"第一名"混淆 |
+| `Days_Since_Last_Earnings` | 0 | **-1** | 避免与"刚公布"混淆 |
+| PE/PB/Market_Cap/ROE/ROA/EPS/Gross_Margin | 0.0 | **NaN** | 0值在现实中不合理 |
+
+**设计原则**：
+- 使用 -1 表示"未知"，与有效值范围完全分离
+- 使用 NaN 让 CatBoost 自动学习缺失模式
+
+**改动文件**：
+- `ml_services/stock_network_analysis.py`
+- `ml_services/ml_trading_model.py`
+- `data_services/network_features.py`
+
+### 训练时保留基本面特征的 NaN
+
+**问题**：`df.dropna()` 删除所有含 NaN 的行，导致基本面特征缺失时数据丢失
+
+**修改**：
+- LightGBM/GBDT/CatBoost 训练时只删除标签和关键列的 NaN
+- 保留基本面特征的 NaN，让模型自动处理
+
+**关键列（必须非空）**：Label, Return_1d, Return_5d, Return_20d, Close, Volume
+
+**基本面特征（允许 NaN）**：PE, PB, Market_Cap, ROE, ROA, EPS, Net_Margin, Gross_Margin
+
+**技术原理**：
+- LightGBM: `use_missing=True` 自动处理 NaN
+- XGBoost/CatBoost: 原生支持 NaN
+
+**改动文件**：`ml_services/ml_trading_model.py`
+
+---
+
+## 历史进展（2026-05-07）
 
 ### Walk-forward 验证收益率计算 Bug 修复
 
