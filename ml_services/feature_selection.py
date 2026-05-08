@@ -65,8 +65,11 @@ def load_training_data(horizon=20):
         print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
         df = df.drop(columns=cols_all_nan)
 
-    # 删除包含NaN的行
-    df = df.dropna()
+    # 只删除标签和关键列的 NaN（与 CatBoost 训练一致）
+    # 基本面特征的 NaN 保留，让模型自动处理
+    df = df.dropna(subset=['Label'])
+    critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
+    df = df.dropna(subset=[c for c in critical_cols if c in df.columns])
 
     # 确保数据按日期索引排序
     df = df.sort_index()
@@ -85,8 +88,8 @@ def load_training_data(horizon=20):
             le = LabelEncoder()
             df[col] = le.fit_transform(df[col].astype(str))
 
-    # 准备特征和标签
-    X = df[feature_columns].values  # 转换为numpy数组
+    # 准备特征和标签（用 0 填充 NaN，LightGBM 会自动处理）
+    X = df[feature_columns].fillna(0).values  # 转换为numpy数组
     y = df['Label'].values
 
     # 确保X是数值类型
