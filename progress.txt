@@ -2,11 +2,37 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-08
+**最后更新**：2026-05-09
 
 ---
 
 ## 最新进展
+
+### 2026-05-09 绝对价格特征标准化
+
+**问题**：绝对价格特征（如 Channel_High_20d、Support_120d）跨股票量级差异大，可能导致模型误导
+
+**现象**：
+- 腾讯 Channel_High_20d ≈ 400元
+- 小盘股 Channel_High_20d ≈ 5元
+- CatBoost 可能学到无意义的"高价股"模式
+
+**解决方案**：
+- 新增标准化特征（除以前一日收盘价）：
+  - `Channel_High/Low_Ratio_20d`、`Channel_Width_Ratio_20d`
+  - `Support/Resistance_Ratio_120d`
+  - `MA_Ratio_5d/60d/120d/250d`
+  - `BB_Upper/Lower/Middle_Ratio`
+  - `ATR_Pct`（波动率百分比）
+- 更新排除列表，移除绝对价格特征
+
+**验证结果**：
+- 特征选择后 Top 20 不再包含绝对价格特征
+- 主要特征变为：RSI/MACD 历史极值、网络凝聚度交叉特征
+
+**改动文件**：`ml_services/ml_trading_model.py`、`ml_services/feature_selection.py`
+
+---
 
 ### 2026-05-08 网络社区特征缓存一致性修复
 
@@ -134,6 +160,7 @@
 
 | 日期 | 主要改进 |
 |------|----------|
+| 05-09 | 绝对价格特征标准化（Channel/Support/MA/BB/ATR） |
 | 05-08 | 网络社区特征缓存一致性修复、超参数调优 |
 | 05-07 | Walk-forward 收益率计算 Bug 修复 |
 | 05-05 | 网络特征集成、IC/Rank IC 指标增强 |
