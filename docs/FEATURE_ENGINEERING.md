@@ -1,6 +1,57 @@
 # 特征工程指南
 
-> **最后更新**：2026-04-27（特征冗余清理：1045→730）
+> **最后更新**：2026-05-09 | **版本**：v2.0
+
+本文档是港股智能分析系统的特征工程完整指南，涵盖特征设计、实现、验证和维护的全流程。
+
+---
+
+## 目录
+
+1. [快速参考](#快速参考)
+2. [特征概览](#特征概览)
+3. [核心特征类别](#核心特征类别)
+4. [特征架构设计](#特征架构设计)
+5. [特征工程最佳实践](#特征工程最佳实践)
+6. [关键经验教训](#关键经验教训)
+7. [附录](#附录)
+
+---
+
+## 快速参考
+
+### 核心警告
+
+| 警告 | 说明 | 后果 |
+|------|------|------|
+| **数据泄漏** | 特征使用了当日数据 | Walk-forward 准确率异常高（个股>65%，恒指>80%） |
+| **绝对值特征** | 跨股票训练时使用未标准化的价格/成交量特征 | 模型学到无意义的"高价股"模式 |
+| **缓存不一致** | 网络特征更新后未清除缓存 | 训练/预测特征不一致，性能下降 |
+| **默认值混淆** | 默认值落在有效值范围内 | 模型无法区分"缺失"和"有效值" |
+
+### 常用命令
+
+```bash
+# 模型训练（使用全量特征）
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
+
+# 特征选择
+python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20
+
+# Walk-forward 验证
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+
+# 清除特征缓存（新增特征后必须执行）
+rm -rf data/feature_cache/*.pkl
+```
+
+### 特征数量速览
+
+| 类别 | 数量 | 说明 |
+|------|------|------|
+| 完整特征 | ~1450 | 包含所有特征类别 |
+| 排除的绝对值特征 | 40 | 自动标准化或排除 |
+| 推荐特征数（特征选择后） | 300 | 平衡性能和效率 |
 
 ---
 
@@ -8,42 +59,63 @@
 
 ### 特征数量统计
 
-| 特征类别 | 数量 | 说明 |
-|---------|------|------|
-| **滚动统计特征** | 126 | 偏度、峰度、多周期波动率 |
-| **价格形态特征** | 84 | 日内振幅、影线比例、缺口 |
-| **量价关系特征** | 98 | 背离、OBV、成交量波动率 |
-| **长期趋势特征** | 84 | MA120/250、长期收益率、长期RSI |
-| **主题分布特征** | 10 | LDA主题建模（10个主题概率） |
-| **主题情感交互特征** | 50 | 10个主题 × 5个情感指标 |
-| **预期差距特征** | 5 | 新闻情感相对于市场预期的差距 |
-| **市场环境自适应特征** | 8 | ADX+波动率双因子识别 |
-| **风险管理特征** | 18 | ATR动态止损、连续市场状态记忆、盈亏比评估 |
-| **事件驱动特征** | 9 | 分红、财报日期、财报超预期 |
-| **股票类型特征** | 128 | 技术指标、基本面、市场环境等 |
-| **GARCH 波动率特征** | 4 | 条件波动率、波动率比率、波动率变化、持续性参数 |
-| **HSI 市场状态特征** | 6 | HMM 市场状态检测（状态标签、概率、持续时间、转换概率） |
-| **日历效应特征** | 22 | 星期效应、月份效应、期权到期日、月初/月末等 |
-| **交叉特征** | 360 | 8个类别 × 45个数值（已清理冗余） |
-| **总计** | **730** | **精简特征（2026-04-27 清理后）** |
+| 特征类别 | 数量 | 说明 | 实现文件 |
+|---------|------|------|----------|
+| **滚动统计特征** | 126 | 偏度、峰度、多周期波动率 | `ml_trading_model.py` |
+| **价格形态特征** | 84 | 日内振幅、影线比例、缺口 | `ml_trading_model.py` |
+| **量价关系特征** | 98 | 背离、OBV、成交量波动率 | `ml_trading_model.py` |
+| **长期趋势特征** | 84 | MA120/250、长期收益率、长期RSI | `ml_trading_model.py` |
+| **GARCH 波动率特征** | 4 | 条件波动率、波动率比率 | `data_services/volatility_model.py` |
+| **HSI 市场状态特征** | 6 | HMM 市场状态检测 | `data_services/regime_detector.py` |
+| **日历效应特征** | 22 | 星期、月份、节假日效应 | `data_services/calendar_features.py` |
+| **网络社区特征** | 7 | 社区ID、中心性、聚类系数 | `ml_services/stock_network_analysis.py` |
+| **市场-网络交叉特征** | 434 | 市场指标 × 网络特征 | `ml_trading_model.py` |
+| **主题分布特征** | 10 | LDA主题建模 | `ml_trading_model.py` |
+| **主题情感交互特征** | 50 | 主题 × 情感指标 | `ml_trading_model.py` |
+| **事件驱动特征** | 9 | 分红、财报日期 | `ml_trading_model.py` |
+| **交叉特征** | 360 | 类别 × 数值特征 | `ml_trading_model.py` |
+| **总计** | **~1450** | **完整特征集** | - |
 
-### 特征冗余清理记录（2026-04-27）
+### 特征分类
 
-| 清理类别 | 删除数量 | 原因 |
-|---------|---------|------|
-| RS_Signal 重复 | 251 | 与 Trend 公式完全相同 |
-| PE/PB 常量交互 | 18 | PE/PB 为常量，交互无信息 |
-| 数学等价特征 | 15 | Returns/Volatility/Momentum 等重复 |
-| 第二轮 r=1.0 冗余 | ~23 | GARCH_Persistence 等 |
-| **合计** | **~307** | 特征数量 1045→730 |
+按数据源分类：
 
-### 特征分类原则
+```
+特征体系
+├── 时间序列特征（~500个）
+│   ├── 价格特征：MA、布林带、价格通道
+│   ├── 成交量特征：OBV、成交量比率
+│   ├── 动量特征：RSI、MACD、KDJ
+│   └── 波动率特征：ATR、GARCH
+├── 市场环境特征（~100个）
+│   ├── HSI市场状态：HMM检测
+│   ├── 宏观指标：VIX、南向资金
+│   └── 日历效应：节假日、期权到期
+├── 网络特征（~450个）
+│   ├── 拓扑特征：中心性、聚类系数
+│   ├── 社区特征：社区ID、桥梁股票
+│   └── 交叉特征：市场×网络
+├── 基本面特征（~50个）
+│   ├── 估值指标：PE、PB
+│   ├── 盈利指标：ROE、ROA
+│   └── 其他：股息率、市值
+├── 情感特征（~65个）
+│   ├── 主题分布：LDA建模
+│   ├── 情感指标：正面/负面情绪
+│   └── 预期差距：新闻 vs 市场
+└── 交叉特征（~360个）
+    └── 类别特征 × 数值特征
+```
 
-1. **时间序列特征**：基于历史价格、成交量数据计算
-2. **市场环境特征**：基于市场状态、波动率等宏观指标
-3. **基本面特征**：基于公司财务数据
-4. **情感特征**：基于新闻情感、主题分析
-5. **事件驱动特征**：基于分红、财报等公司事件
+### 特征冗余清理记录
+
+| 清理日期 | 清理内容 | 删除数量 | 原因 |
+|---------|---------|---------|------|
+| 2026-04-27 | RS_Signal 重复 | 251 | 与 Trend 公式完全相同 |
+| 2026-04-27 | PE/PB 常量交互 | 18 | PE/PB 为常量，交互无信息 |
+| 2026-04-27 | 数学等价特征 | 15 | Returns/Volatility/Momentum 等重复 |
+| 2026-04-27 | r=1.0 冗余 | 23 | GARCH_Persistence 等 |
+| **合计** | - | **307** | 1045→730 |
 
 ---
 
@@ -53,12 +125,26 @@
 
 使用 GARCH(1,1) 模型捕捉波动率聚类特性。
 
-| 特征名称 | 说明 | 计算方法 |
-|---------|------|---------|
-| `GARCH_Conditional_Vol` | 条件波动率 | GARCH(1,1) 模型拟合后的条件标准差 |
-| `GARCH_Vol_Ratio` | 波动率比率 | 当前条件波动率 / 历史均值 |
-| `GARCH_Vol_Change_5d` | 5日波动率变化 | 条件波动率的5日变化率 |
-| `GARCH_Persistence` | 波动率持续性参数 | α + β（GARCH 参数之和） |
+| 特征名称 | 说明 | 计算方法 | 业务意义 |
+|---------|------|---------|---------|
+| `GARCH_Conditional_Vol` | 条件波动率 | GARCH(1,1) 条件标准差 | 当前市场波动水平 |
+| `GARCH_Vol_Ratio` | 波动率比率 | 当前/历史均值 | 波动率相对高低 |
+| `GARCH_Vol_Change_5d` | 5日波动率变化 | 5日变化率 | 波动率趋势 |
+| `GARCH_Persistence` | 波动率持续性 | α + β | 波动率聚类程度 |
+
+**实现示例**：
+```python
+from arch import arch_model
+
+# 拟合 GARCH(1,1)
+returns = df['Close'].pct_change().dropna() * 100
+model = arch_model(returns, vol='Garch', p=1, q=1)
+res = model.fit(disp='off')
+
+# 提取特征
+df['GARCH_Conditional_Vol'] = res.conditional_volatility
+df['GARCH_Persistence'] = res.params['alpha[1]'] + res.params['beta[1]']
+```
 
 **实现文件**：`data_services/volatility_model.py`
 
@@ -68,14 +154,14 @@
 
 使用 HMM（隐马尔可夫模型）识别恒生指数市场状态。
 
-| 特征名称 | 说明 | 取值范围 |
-|---------|------|---------|
-| `HSI_Market_Regime` | 市场状态标签 | 0=震荡, 1=牛市, 2=熊市 |
-| `HSI_Regime_Prob_0` | 震荡市概率 | 0-1 |
-| `HSI_Regime_Prob_1` | 牛市概率 | 0-1 |
-| `HSI_Regime_Prob_2` | 熊市概率 | 0-1 |
-| `HSI_Regime_Duration` | 当前状态持续时间 | 1-100+ 天 |
-| `HSI_Regime_Transition_Prob` | 状态转换概率 | 0-1 |
+| 特征名称 | 说明 | 取值范围 | 业务意义 |
+|---------|------|---------|---------|
+| `HSI_Market_Regime` | 市场状态标签 | 0=震荡, 1=牛市, 2=熊市 | 当前市场环境 |
+| `HSI_Regime_Prob_0` | 震荡市概率 | 0-1 | 状态置信度 |
+| `HSI_Regime_Prob_1` | 牛市概率 | 0-1 | 状态置信度 |
+| `HSI_Regime_Prob_2` | 熊市概率 | 0-1 | 状态置信度 |
+| `HSI_Regime_Duration` | 状态持续时间 | 1-100+ 天 | 趋势稳定性 |
+| `HSI_Regime_Transition_Prob` | 状态转换概率 | 0-1 | 趋势反转风险 |
 
 **特征重要性（个股20天模型）**：
 
@@ -92,139 +178,199 @@
 
 ### 3. 日历效应特征（22个）
 
-捕捉周期性市场规律。
+捕捉周期性市场规律，分为四大类：
 
-**周期性编码特征（4个）**：
-- `Month_Sin` / `Month_Cos`：月份周期性编码
-- `DOW_Sin` / `DOW_Cos`：星期周期性编码
+#### 3.1 周期性编码特征（4个）
 
-**星期效应特征（5个）**：
-- `Day_of_Week`：星期几（0-4）
-- `Is_Monday` / `Is_Friday`：周一/周五效应
-- `Is_Week_End`：是否临近周末
+| 特征名称 | 说明 | 取值范围 |
+|---------|------|---------|
+| `Month_Sin` / `Month_Cos` | 月份周期性编码 | [-1, 1] |
+| `DOW_Sin` / `DOW_Cos` | 星期周期性编码 | [-1, 1] |
 
-**月份效应特征（4个）**：
-- `Month`：月份（1-12）
-- `Is_Month_Start` / `Is_Month_End`：月初/月末效应
-- `Is_Quarter_End`：是否季末
+**优势**：避免 12月（12）和 1月（1）的数值断裂问题。
 
-**节假日效应特征（5个）**：
-- `Days_to_Holiday`：距离最近假期天数
-- `Is_Pre_Holiday` / `Is_Post_Holiday`：假期前后
-- `Is_Typhoon_Season`：是否台风季（7-9月）
-- `Is_Golden_Week`：是否黄金周前后
+#### 3.2 星期效应特征（5个）
 
-**期权到期特征（4个）**：
-- `Days_to_Options_Expiry`：距离期权到期天数
-- `Is_Options_Expiry_Week`：是否期权到期周
-- `Is_Weekly_Options_Day`：是否周期权到期日
-- `Is_Quarterly_Expiry`：是否季度期权到期
+| 特征名称 | 说明 |
+|---------|------|
+| `Day_of_Week` | 星期几（0-4） |
+| `Is_Monday` | 周一效应 |
+| `Is_Friday` | 周五效应 |
+| `Is_Week_End` | 是否临近周末 |
+
+#### 3.3 节假日效应特征（5个）
+
+| 特征名称 | 说明 |
+|---------|------|
+| `Days_to_Holiday` | 距离最近假期天数 |
+| `Is_Pre_Holiday` | 假期前 |
+| `Is_Post_Holiday` | 假期后 |
+| `Is_Typhoon_Season` | 台风季（7-9月） |
+| `Is_Golden_Week` | 黄金周前后 |
+
+#### 3.4 期权到期特征（4个）
+
+| 特征名称 | 说明 |
+|---------|------|
+| `Days_to_Options_Expiry` | 距离期权到期天数 |
+| `Is_Options_Expiry_Week` | 期权到期周 |
+| `Is_Weekly_Options_Day` | 周期权到期日 |
+| `Is_Quarterly_Expiry` | 季度期权到期 |
 
 **实现文件**：`data_services/calendar_features.py`
 
 ---
 
-### 4. 技术指标特征
+### 4. 网络社区特征（7个）
 
-**移动平均（MA系列）**：
-- MA5、MA10、MA20、MA60、MA120、MA250
-- 价格相对MA比率、MA交叉信号
+基于股票网络分析提取的拓扑特征。
 
-**动量指标**：
-- RSI（5日、10日、14日、20日）
-- MACD（DIF、DEA、MACD柱）
-- KDJ（K、D、J值）
+| 特征名称 | 说明 | 取值范围 | 业务意义 |
+|---------|------|---------|---------|
+| `net_community_id` | 网络社区 ID | 0-6（7个社区） | 股票所属群落 |
+| `net_degree_centrality` | 度中心性 | 0-1 | 连接广度 |
+| `net_betweenness_centrality` | 介数中心性 | 0-1 | 信息传递枢纽 |
+| `net_eigenvector_centrality` | 特征向量中心性 | 0-1 | 连接质量 |
+| `net_closeness_centrality` | 接近中心性 | 0-1 | 信息到达速度 |
+| `net_clustering_coeff` | 聚类系数 | 0-1 | 局部连接密度 |
+| `net_constraint` | 结构洞约束 | 0-1 | 信息控制能力 |
 
-**波动率指标**：
-- ATR（5日、10日、14日、20日）
-- 布林带（上轨、下轨、带宽）
-- 波动率比率
+**默认值处理**：
+- `net_community_id = -1`：股票不在网络中
+- 中心性特征：用中位数填充
 
-**成交量指标**：
-- 成交量比率（5日、10日、20日）
-- OBV（能量潮）
-- 量价背离信号
-
----
-
-### 5. 基本面特征
-
-- PE、PB、ROE、ROA
-- 股息率、EPS
-- 净利率、毛利率
-- 市值、流通市值
+**实现文件**：`ml_services/stock_network_analysis.py`
 
 ---
 
-### 6. 市场环境特征
+### 5. 技术/基本面特征摘要
 
-- 恒生指数收益率、相对表现
-- 南向资金流向
-- VIX波动率水平
-- 美国10年期国债收益率
-- 标普500/纳斯达克收益率
+#### 技术指标特征
+
+| 类别 | 特征 | 标准化替代 |
+|------|------|-----------|
+| 移动平均 | MA5~MA250 | MA_Ratio 系列 |
+| 动量指标 | RSI(5/10/14/20), MACD, KDJ | 已是 0-100 范围，无需标准化 |
+| 波动率 | ATR, 布林带 | ATR_Pct, BB_Ratio 系列 |
+| 成交量 | OBV, 成交量比率 | OBV_Trend, Volume_Ratio 系列 |
+
+#### 基本面特征
+
+| 类别 | 特征 |
+|------|------|
+| 估值 | PE、PB、PS |
+| 盈利 | ROE、ROA、净利率、毛利率 |
+| 分红 | 股息率、EPS |
+| 规模 | 市值、流通市值 |
+
+---
+
+## 特征架构设计
+
+### 单一真相源原则
+
+**问题**：特征处理逻辑分散在多个文件，维护困难且易不一致。
+
+**解决方案**：所有特征处理逻辑集中在 `ml_trading_model.py`。
+
+```
+ml_trading_model.py（单一真相源）
+├── 模块级常量
+│   └── ABSOLUTE_PRICE_FEATURES（40个绝对值特征）
+│
+├── BaseTradingModel 类
+│   ├── get_feature_columns()     # 排除绝对值，返回有效特征
+│   ├── prepare_features_for_selection()  # 特征选择专用
+│   └── prepare_data()            # 完整特征准备
+│
+└── FeatureEngineer 类
+    ├── 计算技术指标
+    ├── 生成交叉特征
+    └── 处理 NaN 和默认值
+
+其他模块（通过导入复用）
+├── feature_selection.py
+│   └── model.prepare_features_for_selection()
+├── walk_forward_validation.py
+│   └── model.get_feature_columns()
+└── hyperparameter_tuner.py
+    └── model.prepare_data()
+```
+
+### 绝对价格特征排除列表（40个）
+
+**问题**：绝对价格特征跨股票量级差异大（腾讯 ~400元 vs 小盘股 ~5元），可能导致模型学到无意义模式。
+
+**解决方案**：自动排除绝对值特征，使用标准化替代。
+
+| 类别 | 绝对值特征 | 标准化替代 | 标准化方法 |
+|------|-----------|-----------|-----------|
+| 价格通道 | Channel_High/Low_20d | Channel_High/Low_Ratio_20d | ÷ prev_close |
+| 支撑阻力 | Support/Resistance_120d | Support/Resistance_Ratio_120d | ÷ prev_close |
+| 均线 | MA5~MA250 | MA_Ratio 系列 | ÷ prev_close |
+| 布林带 | BB_upper/lower/middle | BB_Ratio 系列 | ÷ prev_close |
+| ATR | ATR, ATR_MA | ATR_Pct | ÷ prev_close |
+| 成交额 | Turnover, Turnover_Mean/Std_20 | Turnover_Z_Score | Z-score 标准化 |
+| 成交量 | Volume_MA7/120/250 | Volume_Ratio 系列 | ÷ 历史均值 |
+| OBV | OBV, OBV_MA5 | OBV_Trend | 差分/变化率 |
+| VWAP | VWAP | VWAP_Ratio | ÷ close |
+| 技术指标 | MACD, MACD_signal, TP | 比率版本 | ÷ close |
+
+**标准化代码示例**：
+```python
+# 标准化：除以前一日收盘价（避免数据泄漏）
+prev_close = df['Close'].shift(1)
+df['Channel_High_Ratio_20d'] = df['Channel_High_20d'] / prev_close
+df['MA_Ratio_20d'] = df['MA20'] / prev_close
+df['ATR_Pct'] = df['ATR'] / prev_close
+```
+
+**标准化特征解读**：
+
+| 特征 | 值 | 解读 |
+|------|-----|------|
+| MA_Ratio_20d = 1.02 | >1 | 当前价格比20日均线高2%（偏多） |
+| Support_Ratio_120d = 0.90 | <1 | 支撑位在当前价格下方10% |
+| ATR_Pct = 0.03 | - | 日波动率3% |
+
+### 特征模块动态同步
+
+新增特征模块时，只需修改一处：
+
+```python
+# 1. 在 ml_trading_model.py 中添加特征计算
+def _build_new_features(self, df):
+    df['New_Feature'] = ...
+    return df
+
+# 2. 在 get_feature_names() 中注册（自动同步到所有模块）
+def get_feature_names(self):
+    return [
+        ...,
+        'New_Feature'
+    ]
+
+# 3. 如果是绝对值，添加到排除列表
+ABSOLUTE_PRICE_FEATURES = [..., 'New_Absolute_Feature']
+```
 
 ---
 
 ## 特征工程最佳实践
 
-### 1. 使用全量特征
+### 1. 数据泄漏防护
 
-**推荐命令**：
-```bash
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
-```
-
-CatBoost 内置 L2 正则化和自动特征重要性计算，能够自动降权不重要特征，无需预先筛选。
-
-### 2. 特征相关性筛选阈值（Pearson < 0.8）
-
-**阈值选择**：新增特征与现有特征相关性应 **< 0.8**，超过则视为冗余。
-
-**原因分析**：
-
-| 问题 | 说明 |
-|------|------|
-| **信息量不增加** | 相关性 > 0.8 的特征本质上是同一信号的不同表达，CatBoost 无法获得额外信息，反而增加噪音 |
-| **特征重要性分散** | 同一信号由两个高相关特征瓜分重要性，导致 SHAP 排名失真，误判哪个特征真正有用 |
-| **过拟合风险** | 模型可能在不同 fold 中交替选择两个高相关特征，降低稳定性 |
-| **SHAP 特征选择失效** | 新特征需进 top 30、最终特征集 < 50，冗余特征挤入会排挤真正有价值但独立的特征 |
-
-**为什么是 0.8**：
-
-| 阈值 | 问题 |
-|------|------|
-| 0.9 | 太松 — 81% 方差重叠，基本是同一信号 |
-| 0.5 | 太严 — 0.5-0.8 之间可能包含互补信息（如 RSI 和 MACD 都衡量动量，但捕捉不同方面） |
-| **0.8** | **工程折中** — 保留足够独立的信号，同时不丢弃有部分重叠但有增量价值的特征 |
-
-**实践建议**：
-- 新特征上线前检查与现有特征的 Pearson 相关系数
-- 相关性 > 0.8 时，评估是否带来增量信息；若无，则丢弃
-- CatBoost 对多重共线性容忍度高于线性模型，但高相关特征仍会影响特征重要性解释
-
-### 3. 数据泄漏防护
-
-**原则**：所有特征必须使用滞后数据
+**原则**：所有特征必须使用滞后数据，预测标签使用未来数据。
 
 ```python
 # ❌ 错误：使用当日数据
-df['Volume_Ratio'] = df['Volume'] / df['Volume'].rolling(5).mean()
+df['Feature'] = df['Close'].rolling(5).mean()
 
 # ✅ 正确：使用滞后数据
-df['Volume_Ratio'] = df['Volume'].shift(1) / df['Volume'].shift(1).rolling(5).mean()
-```
+df['Feature'] = df['Close'].rolling(5).mean().shift(1)
 
-**新增特征的 shift 处理**：
-```python
-# GARCH 波动率特征
-for col in ['GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d']:
-    df[col] = df[col].shift(1)
-
-# HSI 市场状态特征
-for col in ['Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1', 'Regime_Prob_2',
-            'Regime_Duration', 'Regime_Transition_Prob']:
-    df[col] = df[col].shift(1)
+# ✅ 正确：标签使用未来数据
+df['Label'] = df['Close'].pct_change(horizon).shift(-horizon)
 ```
 
 **高风险特征检查清单**：
@@ -232,57 +378,184 @@ for col in ['Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1', 'Regime_Prob_2',
 - [ ] 标签是否使用 `shift(-horizon)` 获取未来收益
 - [ ] 价格距离/百分比特征是否使用滞后价格
 - [ ] 宏观因子是否对齐到正确日期
+- [ ] GARCH/HMM 特征是否滞后一天
 
-### 4. 分类特征编码
+**数据泄漏阈值**：
 
+| 模型类型 | 正常范围 | 数据泄漏信号 |
+|---------|---------|-------------|
+| 个股 | 50-60% | >65% |
+| 恒指 | 60-80% | >80% |
+
+### 2. 特征相关性控制
+
+**阈值**：新增特征与现有特征相关性应 **< 0.8**。
+
+| 问题 | 说明 |
+|------|------|
+| 信息量不增加 | 相关性 > 0.8 本质是同一信号 |
+| 特征重要性分散 | 高相关特征瓜分重要性 |
+| 过拟合风险 | 不同 fold 交替选择高相关特征 |
+
+**检查方法**：
 ```python
-from sklearn.preprocessing import LabelEncoder
+import pandas as pd
 
-le = LabelEncoder()
-df['Market_Regime_Encoded'] = le.fit_transform(df['Market_Regime'])
+# 计算新特征与现有特征的相关性
+correlations = df[existing_features].corrwith(df['New_Feature'])
+max_corr = correlations.abs().max()
+
+if max_corr > 0.8:
+    print(f"警告：新特征与现有特征相关性过高 ({max_corr:.2f})")
 ```
 
-### 5. 固定随机种子
+### 3. NaN 处理策略
+
+**原则**：只删除标签和关键列的 NaN，保留特征 NaN。
 
 ```python
-random.seed(42)
-np.random.seed(42)
+# ❌ 错误：删除所有 NaN
+df = df.dropna()  # 数据大量丢失
+
+# ✅ 正确：只删除关键列 NaN
+df = df.dropna(subset=['Label'])
+critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
+df = df.dropna(subset=[c for c in critical_cols if c in df.columns])
+# 基本面特征的 NaN 保留，让模型自动处理
+```
+
+**技术原理**：LightGBM/XGBoost/CatBoost 原生支持 NaN，会学习最优分裂方向。
+
+### 4. 默认值设计原则
+
+| 原则 | 说明 | 示例 |
+|------|------|------|
+| **分离原则** | 默认值与有效值范围完全分离 | `net_community_id = -1`（默认）vs `0-6`（有效）|
+| **语义原则** | 默认值有明确语义 | `net_constraint = 1.0` 表示"高约束=无机会" |
+| **中性原则** | 中性默认值用于无法判断的情况 | `sector_rising_ratio = 0.5` 表示"50%上涨" |
+
+**常见错误**：
+
+| 错误 | 问题 | 修正 |
+|------|------|------|
+| 默认值=中位数 | 无法区分"未知"和"中等" | 0.5 → -1 |
+| 默认值=边界值 | 无法区分"未知"和"第一名" | 0 → -1 |
+| 不合理的值 | 现实中不存在 | PE=0 → NaN |
+
+### 5. 分类特征编码
+
+CatBoost 原生支持分类特征，但需要一致处理 NaN：
+
+```python
+# 训练时
+df[col] = df[col].fillna('unknown').astype(str)
+encoder = LabelEncoder()
+df[col] = encoder.fit_transform(df[col])
+
+# 预测时（必须一致）
+test_df[col] = test_df[col].fillna('unknown').astype(str)
+test_df[col] = test_df[col].apply(
+    lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+)
 ```
 
 ### 6. 新特征上线验证清单
 
-每个新特征维度完成后需执行以下验证：
-
 | 步骤 | 验证项 | 标准（恒指） | 标准（个股） | 不通过的后果 |
 |------|--------|-------------|-------------|-------------|
-| 1 | **泄漏检查** | 所有特征使用 `shift(1)` | 所有特征使用 `shift(1)` | 数据泄漏，准确率虚高 |
-| 2 | **Walk-forward 验证** | 目标 ≥ 82.23%；> 85% 需审计 | 目标 ≥ 50%；> 65% 需审计 | 准确率低于目标特征无效；超阈值需查泄漏 |
-| 3 | **SHAP 排名** | 进入 top 30 | 进入 top 30 | 未进入则特征预测价值不足 |
-| 4 | **Pearson 相关性** | 与现有特征 < 0.8 | 与现有特征 < 0.8 | > 0.8 为冗余特征，需评估增量价值 |
-| 5 | **随机种子稳定性** | 3 个种子波动 < 2% | 3 个种子波动 < 2% | 波动过大说明特征不稳定 |
+| 1 | 泄漏检查 | 所有特征使用 `shift(1)` | 所有特征使用 `shift(1)` | 准确率虚高 |
+| 2 | Walk-forward 验证 | 目标 ≥ 82%；> 85% 需审计 | 目标 ≥ 50%；> 65% 需审计 | 特征无效或泄漏 |
+| 3 | SHAP 排名 | 进入 top 30 | 进入 top 30 | 预测价值不足 |
+| 4 | Pearson 相关性 | 与现有特征 < 0.8 | 与现有特征 < 0.8 | 冗余特征 |
+| 5 | 随机种子稳定性 | 3 个种子波动 < 2% | 3 个种子波动 < 2% | 特征不稳定 |
 
 **验证命令**：
 ```bash
-# 1. Walk-forward 验证（恒指）
+# Walk-forward 验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 
-# 2. Walk-forward 验证（个股）
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --stock-mode
-
-# 3. 特征重要性分析
+# 特征重要性分析
 python3 scripts/analyze_feature_importance_by_horizon.py
-
-# 4. 相关性检查（需自行实现或检查日志）
 ```
-
-**注意事项**：
-- 步骤 1-4 必须全部通过，步骤 5 为稳定性保障
-- 恒指准确率 > 85%、个股准确率 > 65% 触发审计，需检查是否存在隐蔽的数据泄漏
-- SHAP 未进 top 30 但有业务意义的特征可保留，需说明理由
 
 ---
 
-## 缓存机制
+## 关键经验教训
+
+> 本节来自项目实践中总结的经验，详见 [lessons.md](../lessons.md)
+
+### 1. 绝对价格特征标准化 ⭐⭐⭐
+
+**问题**：绝对价格特征跨股票量级差异大，可能导致模型学到无意义模式。
+
+**现象**：
+- 腾讯 Channel_High_20d ≈ 400元 vs 小盘股 ≈ 5元
+- CatBoost 偏向选择高方差特征，导致绝对价格特征进入 Top 20
+- 模型可能学到"高价股=好"这种无意义模式
+
+**解决方案**：除以前一日收盘价进行标准化。
+
+**教训**：树模型虽然对特征量级不敏感，但跨股票混合训练时需要标准化。
+
+---
+
+### 2. 网络社区特征一致性 ⭐⭐⭐
+
+**问题**：训练时动态提取社区 ID，预测时使用保存的社区 ID，导致特征不一致。
+
+**现象**：
+```
+WARNING | 动态提取社区 ID（可能导致训练/预测不一致）: [np.int64(0)]
+```
+
+**根本原因**：
+- 缓存命中时跳过交叉特征计算
+- 缓存中的交叉特征是旧的网络特征文件生成的
+
+**解决方案**：
+```python
+# 1. 预加载社区 ID
+preloaded_community_ids = extract_community_ids_from_network_file()
+
+# 2. 无论缓存是否命中，都重新计算交叉特征
+stock_df = create_market_network_interaction_features(
+    stock_df, community_ids=preloaded_community_ids)
+```
+
+**教训**：缓存命中时也需要重新计算依赖外部数据的特征。
+
+---
+
+### 3. 市场级特征需与股票特征交叉 ⭐⭐
+
+**问题**：市场级特征（如 HSI_Return、VIX）对所有股票同值，无法区分个股。
+
+**解决方案**：
+- 与网络社区特征交叉：`HSI_Return_1d * net_community_id`
+- 使用智能交叉：根据特征单调性选择乘法/除法
+
+**教训**：新增特征模块时，必须在 `get_feature_names()` 中定义，确保自动同步。
+
+---
+
+### 4. 特征缓存版本控制 ⭐
+
+**问题**：新增特征后，旧缓存缺少新特征列。
+
+**解决方案**：
+- 缓存验证时检查必需特征列是否存在
+- 缺少新特征时标记缓存无效，重新计算
+
+```bash
+# 新增特征后必须清除缓存
+rm -rf data/feature_cache/*.pkl
+```
+
+---
+
+## 附录
+
+### A. 缓存机制
 
 | 缓存类型 | 位置 | 有效期 | 加速效果 |
 |---------|------|--------|---------|
@@ -291,23 +564,37 @@ python3 scripts/analyze_feature_importance_by_horizon.py
 
 **清除缓存**：
 ```bash
+# 清除特征缓存（新增特征后）
 rm -rf data/feature_cache/*.pkl
+
+# 清除原始数据缓存
+rm -rf data/stock_cache/*.pkl
 ```
 
----
+### B. 相关文件
 
-## 相关文件
+| 文件 | 说明 |
+|------|------|
+| `ml_services/ml_trading_model.py` | 特征工程核心实现 |
+| `ml_services/feature_selection.py` | 特征选择 |
+| `data_services/volatility_model.py` | GARCH 波动率 |
+| `data_services/regime_detector.py` | HSI 市场状态 |
+| `data_services/calendar_features.py` | 日历效应 |
+| `ml_services/stock_network_analysis.py` | 网络社区特征 |
+| `lessons.md` | 关键经验教训 |
 
-- **特征工程实现**：`ml_services/ml_trading_model.py` 中的 `FeatureEngineer` 类
-- **GARCH 波动率**：`data_services/volatility_model.py`
-- **HSI 市场状态**：`data_services/regime_detector.py`
-- **日历效应**：`data_services/calendar_features.py`
-- **特征重要性分析**：`docs/FEATURE_IMPORTANCE_ANALYSIS.md`
-
----
-
-## 参考资料
+### C. 参考资料
 
 - **CatBoost 官方文档**：https://catboost.ai/docs/
 - **特征工程最佳实践**：https://www.kaggle.com/learn/feature-engineering
 - **时间序列特征工程**：https://machinelearningmastery.com/feature-engineering-for-time-series/
+
+---
+
+## 更新日志
+
+| 日期 | 版本 | 变更 |
+|------|------|------|
+| 2026-05-09 | v2.0 | 重构：完整特征工程指南，新增特征架构设计、核心特征详解 |
+| 2026-05-09 | v1.5 | 新增：网络社区特征、市场-网络交叉特征、绝对值排除列表 |
+| 2026-04-27 | v1.0 | 初始版本：特征冗余清理 |
