@@ -8,6 +8,29 @@
 
 ## 最新进展
 
+### 2026-05-09 特征架构重构与绝对值特征完善
+
+**问题**：`feature_selection.py` 和 `ml_trading_model.py` 中特征处理逻辑重复，维护困难
+
+**解决方案**：
+1. 在 `ml_trading_model.py` 新增 `prepare_features_for_selection()` 方法
+2. `feature_selection.py` 直接调用该方法，无需维护重复逻辑
+3. 完善绝对值特征排除列表（32→35个）
+
+**新增排除**：
+- `Volume_MA7`, `Volume_Mean_30d`, `Volume_Std_30d`（成交量绝对值）
+
+**标准化替代**：
+| 绝对值特征 | 标准化替代 |
+|-----------|-----------|
+| Volume_MA7 | Volume_Ratio_7d |
+| Volume_Mean_30d | Volume_Ratio_20d/120d |
+| Volume_Std_30d | Volume_Volatility |
+
+**改动文件**：`ml_services/ml_trading_model.py`、`ml_services/feature_selection.py`
+
+---
+
 ### 2026-05-09 个股模型验证更新
 
 **更新内容**：网络社区特征一致性修复后重新验证

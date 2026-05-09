@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v6.1 (2026-05-09) | **状态**：当前有效
+> **版本**：v6.2 (2026-05-09) | **状态**：当前有效
 
 ---
 
@@ -40,10 +40,11 @@ df['ATR_Pct'] = df['ATR'] / prev_close
 | 均线 | MA5/20/60/120/250 | MA_Ratio_5/20/60/120/250d |
 | 布林带 | BB_upper/lower/middle | BB_Upper/Lower/Middle_Ratio |
 | 波动率 | ATR | ATR_Pct |
+| 成交量 | Volume_MA7/120/250 | Volume_Ratio_7d/20d/120d |
+| OBV | OBV 绝对值 | OBV_Trend, OBV_Change_5d |
 
 **不需要标准化的特征**：
 - 技术指标极值（RSI_High_5d_History 等）：本身是 0-100 范围
-- 成交量移动平均（Volume_MA120）：成交量单位一致
 - 网络特征、收益率特征：本身就是比率
 
 **教训**：
@@ -52,7 +53,42 @@ df['ATR_Pct'] = df['ATR'] / prev_close
 
 ---
 
-### 2. 网络社区特征一致性 ⭐⭐⭐
+### 2. 特征架构单一真相源 ⭐⭐⭐
+
+**问题**：特征处理逻辑在多个文件中重复，维护困难且易不一致
+
+**现象**：
+- `feature_selection.py` 和 `ml_trading_model.py` 各自维护排除列表
+- `ABSOLUTE_PRICE_FEATURES` 需要手动同步
+- 新增特征时容易遗漏
+
+**解决方案**：
+```python
+# ml_trading_model.py 中定义模块级常量
+ABSOLUTE_PRICE_FEATURES = [...]
+
+# 新增方法，封装所有特征处理逻辑
+def prepare_features_for_selection(self, codes, horizon=20, sample_size=10):
+    """为特征选择准备数据，确保与训练一致"""
+    # 预加载社区 ID
+    # 调用 prepare_data
+    # 删除 NaN
+    # 获取特征列（已排除绝对值）
+    # 编码分类特征
+    return X, y, feature_columns
+
+# feature_selection.py 直接导入和使用
+from ml_trading_model import CatBoostModel, ABSOLUTE_PRICE_FEATURES
+X, y, feature_columns = model.prepare_features_for_selection(...)
+```
+
+**教训**：
+- 特征处理逻辑只维护一处，其他模块通过导入或方法调用复用
+- 模块级常量作为单一真相源，自动同步到所有使用方
+
+---
+
+### 3. 网络社区特征一致性 ⭐⭐⭐
 
 **问题**：训练时动态提取社区 ID，预测时使用保存的社区 ID，导致特征不一致
 
@@ -358,6 +394,7 @@ df['Feature'] = df['Close'].pct_change().shift(1)
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-09 | v6.2 | 添加：特征架构单一真相源经验；完善成交量绝对值排除列表 |
 | 2026-05-09 | v6.1 | 添加：绝对价格特征标准化经验 |
 | 2026-05-08 | v6.0 | 重构：精简至核心内容，分类整理 |
 | 2026-05-08 | v5.11 | 添加：网络社区特征缓存一致性修复 |
