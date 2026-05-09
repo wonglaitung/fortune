@@ -73,7 +73,6 @@ STOCK_SECTOR_MAPPING = {
     '2318.HK': {'sector': 'insurance', 'name': '中国平安', 'type': 'insurance', 'defensive': 80, 'growth': 45, 'cyclical': 30, 'liquidity': 70, 'risk': 35},
     '2601.HK': {'sector': 'insurance', 'name': '中国太保', 'type': 'insurance', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
     '0966.HK': {'sector': 'insurance', 'name': '中国人寿', 'type': 'insurance', 'defensive': 85, 'growth': 35, 'cyclical': 25, 'liquidity': 70, 'risk': 30},
-    '2318.HK': {'sector': 'insurance', 'name': '中国平安证券', 'type': 'insurance', 'defensive': 75, 'growth': 50, 'cyclical': 30, 'liquidity': 65, 'risk': 35},
 
     # 生物医药股 (biotech)
     '2269.HK': {'sector': 'biotech', 'name': '药明生物', 'type': 'biotech', 'defensive': 30, 'growth': 80, 'cyclical': 55, 'liquidity': 70, 'risk': 70},
@@ -169,7 +168,6 @@ TRAINING_STOCKS = {
     "2186.HK": "绿叶制药",
     "2228.HK": "中国飞鹤",
     "2269.HK": "药明康德",
-    "2318.HK": "中国平安证券",
     "2333.HK": "长城汽车",
     "2382.HK": "舜宇光学科技",
     "2866.HK": "中远海运港口",
@@ -182,7 +180,6 @@ TRAINING_STOCKS = {
     "1171.HK": "兖矿能源",
     "1798.HK": "赣锋锂业",
     "2282.HK": "比亚迪电子",
-    "2318.HK": "中国平安",
     "2388.HK": "中银香港",
     "2601.HK": "中国太保",
     "3800.HK": "保利协鑫能源",
