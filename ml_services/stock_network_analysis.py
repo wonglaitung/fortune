@@ -1583,7 +1583,7 @@ def visualize_lead_lag_network(digraph, output_dir, title=None, filename=None):
                            edge_color=edge_colors, width=edge_widths,
                            arrowsize=15, arrowstyle='->',
                            connectionstyle='arc3,rad=0.1',
-                           min_source_margin=20, min_target_margin=20)
+                           min_source_margin=5, min_target_margin=5)
 
     # 标签
     labels = {n: get_stock_name(n) for n in digraph.nodes()}
