@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > **📚 详细文档**：特征工程、验证方法等完整指南请查看 [docs/](docs/) 目录
 > **⚠️ 经验教训**：关键警告和最佳实践请参阅 [lessons.md](lessons.md)
 > **🔧 编程规范**：开发流程、系统设计决策请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
+> **📅 进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
 
 ---
 
@@ -108,20 +109,27 @@ AKShare      南向资金        主力追踪     性能监控
 
 ```
 ml_trading_model.py
-├── ABSOLUTE_PRICE_FEATURES（模块级常量，35个特征）
-│   └── 被所有方法自动使用
-├── BaseTradingModel.get_feature_columns()
-│   └── 排除绝对值特征，返回有效特征列表
-├── BaseTradingModel.prepare_features_for_selection()
-│   └── 特征选择专用方法（封装所有处理逻辑）
+├── 模块级常量
+│   ├── ABSOLUTE_PRICE_FEATURES（40个绝对值特征）
+│   ├── NETWORK_FEATURE_MONOTONICITY（7个网络特征单调性）
+│   └── MARKET_FEATURE_MONOTONICITY（34个市场特征单调性）
+│
+├── BaseTradingModel 类
+│   ├── get_feature_columns()     # 排除绝对值特征，返回有效特征列表
+│   ├── prepare_features_for_selection()  # 特征选择专用方法
+│   └── prepare_data()            # 完整特征准备
+│
 └── FeatureEngineer 类
-    └── 特征计算和交叉特征生成
+    ├── 计算技术指标
+    ├── 生成交叉特征
+    ├── create_monotonic_interaction()  # 智能交叉（保持单调性）
+    └── 处理 NaN 和默认值
 
 feature_selection.py
 └── model.prepare_features_for_selection()  # 直接调用，无需维护重复逻辑
 ```
 
-### 绝对价格特征排除列表（35个）
+### 绝对价格特征排除列表（40个）
 
 所有绝对值特征都有标准化替代：
 
@@ -136,6 +144,20 @@ feature_selection.py
 | 成交量 | Volume_MA7/120/250, Volume_Mean/Std_30d | Volume_Ratio 系列 |
 | OBV | OBV, OBV_MA5 | OBV_Trend, OBV_Change_5d |
 | VWAP | VWAP | VWAP_Ratio |
+| 技术指标 | MACD, MACD_signal, TP | 比率版本 |
+
+### 特征单调性与智能交叉
+
+交叉特征时必须保持逻辑单调性：
+
+| 交叉类型 | 交叉方式 | 示例 |
+|---------|---------|------|
+| 正向 × 正向 | 乘法 | 中心性 × 收益率 |
+| 负向 × 负向 | 风险放大 | 约束度 × VIX → `-|X| × |Y|` |
+| 正向 × 负向 | 风险调整 | 中心性 × VIX → `X / (|Y| + ε)` |
+| 涉及中性 | 乘法 | × 日历效应 |
+
+**关键**：市场级特征（HSI_Return、VIX 等）对所有股票同值，必须与网络社区特征交叉才能区分个股。
 
 ### 新增特征时
 
@@ -148,7 +170,8 @@ df['New_Ratio'] = df['New_Value'] / df['Close'].shift(1)
 # 2. 如果是绝对值，添加到排除列表
 ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 
-# 3. 如果是重要特征，添加到 important_numeric_features
+# 3. 如果是市场级特征，添加到 _build_market_level_features()
+# 4. 定义单调性（如需要交叉）
 ```
 
 **feature_selection.py 自动同步，无需修改。**
@@ -175,13 +198,14 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | 平均夏普比率 | **5.36** | ✅ 优秀 |
 | 平均最大回撤 | **-0.83%** | ✅ 优秀 |
 | 平均胜率 | 67.00% | 良好 |
+| 个股预测相关性 r | 0.0186 | ⚠️ 远低于恒指(0.35)，需谨慎 |
 
 ### CatBoost 配置
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨 |
-| 特征数量 | 1191 → 730 → 300 | 完整特征 → 去冗余 → Top 300 最优 |
+| 特征数量 | ~1450 → 300 | 完整特征 → Top 300 最优 |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
 **20天模型参数**（超参数优化后）：
@@ -194,6 +218,19 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | l2_leaf_reg | 2 |
 | subsample | 0.75 |
 | colsample_bylevel | 0.8 |
+
+### 新特征上线验证清单
+
+详见 [docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md)，8个验证步骤：
+
+1. 泄漏检查 - 所有特征使用 `shift(1)`
+2. **绝对值特征标准化** - 跨股票训练必须标准化
+3. **市场级特征交叉** - 对所有股票同值的特征必须交叉
+4. **特征单调性** - 交叉特征保持逻辑单调性
+5. Walk-forward 验证 - 准确率达标
+6. SHAP 排名 - 进入 top 30
+7. Pearson 相关性 - 与现有特征 < 0.8
+8. 随机种子稳定性 - 波动 < 2%
 
 ---
 
@@ -270,13 +307,14 @@ test_df[col] = test_df[col].apply(
 
 **模型更新后**：运行 Walk-forward 验证确认性能
 
+**特征修改后**：清除缓存 `rm -rf data/feature_cache/*.pkl`
+
 ---
 
 ## 🔗 快速链接
 
 - **经验教训**：[lessons.md](lessons.md) - 关键警告和最佳实践
 - **进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
-- **详细文档**：[docs/](docs/) - 特征工程、验证方法等
+- **特征工程**：[docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 完整指南（含案例分析）
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
-- **特征重要性分析**：[docs/FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md)
-- **股票网络分析**：[docs/STOCK_NETWORK_ANALYSIS.md](docs/STOCK_NETWORK_ANALYSIS.md)
+- **验证方法**：[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)
