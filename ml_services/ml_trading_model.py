@@ -4969,17 +4969,17 @@ class CatBoostModel(BaseTradingModel):
             subsample = 0.75
             colsample_bylevel = 0.7
         else:  # horizon == 20
-            # 一个月模型参数（适配 730 特征版本）
-            # 2026-05-08：系统调优最优参数（准确率65.26%，夏普4.59）
-            # 调优结果：n_estimators 600→400, learning_rate 0.03→0.04, colsample_bylevel 0.75→0.6
-            print("使用20天模型参数（系统调优最优版，730特征）...")
-            n_estimators = 400  # 树数量（减少过拟合）
-            depth = 7  # 树深度
-            learning_rate = 0.04  # 学习率（提高收敛速度）
+            # 一个月模型参数（适配 Top 300 特征版本）
+            # 2026-05-09：系统调优最优参数（准确率64.02%，夏普0.8027，Top 300特征）
+            # 调优结果：depth 7→8, learning_rate 0.04→0.06, colsample_bylevel 0.6→0.8
+            print("使用20天模型参数（系统调优最优版，Top 300特征）...")
+            n_estimators = 400  # 树数量
+            depth = 8  # 树深度（增加复杂度）
+            learning_rate = 0.06  # 学习率（加快收敛）
             stopping_rounds = 80  # 早停耐心
             l2_leaf_reg = 2  # L2正则化
             subsample = 0.75  # 行采样
-            colsample_bylevel = 0.6  # 列采样（降低增加多样性）
+            colsample_bylevel = 0.8  # 列采样（增加特征多样性）
 
         from catboost import CatBoostClassifier, Pool
 
