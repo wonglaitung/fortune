@@ -1644,8 +1644,25 @@ def visualize_lead_lag_by_community(digraph, partition, output_dir):
         communities[comm_id].append(node)
 
     for comm_id, members in communities.items():
-        # 只保留该社区内的节点和边
-        subgraph = digraph.subgraph(members)
+        # 创建包含跨社区入边的子图
+        # 1. 包含社区内的所有节点
+        # 2. 包含指向社区内节点的所有边（包括跨社区边）
+        subgraph = nx.DiGraph()
+
+        # 添加社区内节点
+        for node in members:
+            if node in digraph.nodes():
+                subgraph.add_node(node, **digraph.nodes[node])
+
+        # 添加指向社区内节点的边（包括跨社区边）
+        edge_count = 0
+        for u, v in digraph.edges():
+            if v in members:  # 目标节点在社区内
+                # 添加源节点（如果不在社区内）
+                if u not in members and u in digraph.nodes():
+                    subgraph.add_node(u, **digraph.nodes[u])
+                subgraph.add_edge(u, v, **digraph.edges[u, v])
+                edge_count += 1
 
         if subgraph.number_of_edges() == 0:
             continue
@@ -1658,7 +1675,7 @@ def visualize_lead_lag_by_community(digraph, partition, output_dir):
 
         visualize_lead_lag_network(
             subgraph, output_dir,
-            title=f'社区 {comm_id} 领先滞后网络（{sector_name}，{len(members)}只）',
+            title=f'社区 {comm_id} 领先滞后网络（{sector_name}，{len(members)}只，含跨社区入边）',
             filename=f'network_lead_lag_community_{comm_id}.png'
         )
 
