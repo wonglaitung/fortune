@@ -80,7 +80,8 @@ ABSOLUTE_PRICE_FEATURES = [
     # 成交额绝对值（使用 Turnover_Z_Score 代替）
     'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20',
     # 成交量绝对值（使用 Volume_Ratio 系列代替）
-    'Volume_MA120', 'Volume_MA250',
+    'Volume_MA7', 'Volume_MA120', 'Volume_MA250',
+    'Volume_Mean_30d', 'Volume_Std_30d',  # 使用 Volume_Volatility (std/mean) 代替
     # OBV 累积绝对值（使用 OBV_Trend 和 OBV_Change_5d 代替）
     'OBV', 'OBV_MA5',
     # VWAP 绝对价格（使用 VWAP_Ratio 代替）
@@ -2680,7 +2681,7 @@ class FeatureEngineer:
         important_numeric_features = [
             # 技术指标（40个）
             'RSI_14d', 'MACD', 'MACD_Signal', 'ATR_14d', 'BB_Width', 'BB_Position',
-            'Volume_MA20', 'Volume_Ratio_7d', 'Volume_Trend_5d',
+            'Volume_Ratio_7d', 'Volume_Trend_5d',  # 使用比率，不使用成交量绝对值
             'OBV_Trend', 'OBV_Change_5d',  # 使用标准化版本，不使用 OBV 绝对值
             'VWAP_Ratio',  # 使用标准化版本，不使用 VWAP 绝对值
             'MA_Slope_20d', 'MA_Slope_60d', 'Price_Ratio_MA5', 'Price_Ratio_MA20',
