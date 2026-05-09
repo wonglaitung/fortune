@@ -76,7 +76,9 @@ class HyperparameterTuner:
         horizon: int = 20,
         n_folds: int = 6,
         quick_mode: bool = False,
-        full_mode: bool = False
+        full_mode: bool = False,
+        use_feature_selection: bool = False,
+        top_k: int = 300
     ):
         """
         初始化调优器
@@ -86,11 +88,15 @@ class HyperparameterTuner:
             n_folds: 验证fold数量
             quick_mode: 快速模式（更少股票和fold）
             full_mode: 完整模式（使用全部股票）
+            use_feature_selection: 是否使用特征选择
+            top_k: 特征选择数量
         """
         self.horizon = horizon
         self.n_folds = n_folds
         self.quick_mode = quick_mode
         self.full_mode = full_mode
+        self.use_feature_selection = use_feature_selection
+        self.top_k = top_k
 
         # 根据模式配置
         if quick_mode:
@@ -111,6 +117,8 @@ class HyperparameterTuner:
         logger.info(f"验证fold数: {self.n_folds}")
         logger.info(f"股票数量: {self.n_stocks}")
         logger.info(f"模式: {'快速' if quick_mode else '完整' if full_mode else '标准'}")
+        if use_feature_selection:
+            logger.info(f"特征选择: Top {top_k}")
 
         # 预加载社区 ID（确保训练/预测一致性）
         self.preloaded_community_ids = None
@@ -167,11 +175,37 @@ class HyperparameterTuner:
                            'Vol_MA20', 'MA5', 'MA10', 'MA20', 'MA50', 'MA100', 'MA200',
                            'BB_upper', 'BB_lower', 'BB_middle', 'Low_Min', 'High_Max',
                            '+DM', '-DM', '+DI', '-DI', 'TP', 'MF_Multiplier', 'MF_Volume']
-            feature_cols = [c for c in train_data.columns if c not in exclude_cols
+            all_feature_cols = [c for c in train_data.columns if c not in exclude_cols
                            and train_data[c].dtype in ['float64', 'float32', 'int64', 'int32']]
 
-            if len(feature_cols) == 0:
+            if len(all_feature_cols) == 0:
                 return {'score': -999, 'accuracy': 0, 'sharpe': 0, 'error': '无特征'}
+
+            # 特征选择（如果启用）
+            if self.use_feature_selection:
+                # 加载特征选择结果
+                feature_selection_file = f'data/feature_selection_top{self.top_k}_horizon{self.horizon}.json'
+                if os.path.exists(feature_selection_file):
+                    try:
+                        with open(feature_selection_file, 'r') as f:
+                            selected_features = json.load(f).get('selected_features', [])
+                        if selected_features:
+                            feature_cols = [f for f in selected_features if f in all_feature_cols]
+                            if len(feature_cols) < 10:
+                                feature_cols = all_feature_cols
+                            else:
+                                logger.debug(f"使用 Top {len(feature_cols)} 特征")
+                        else:
+                            feature_cols = all_feature_cols
+                    except Exception as e:
+                        logger.warning(f"加载特征选择失败: {e}")
+                        feature_cols = all_feature_cols
+                else:
+                    # 如果没有特征选择文件，使用统计方法快速选择
+                    logger.info(f"特征选择文件不存在，使用快速统计方法选择 Top {self.top_k}")
+                    feature_cols = self._quick_feature_selection(train_data, all_feature_cols)
+            else:
+                feature_cols = all_feature_cols
 
             # 使用 Walk-forward 风格验证
             total_samples = len(train_data)
