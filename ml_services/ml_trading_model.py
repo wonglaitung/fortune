@@ -89,6 +89,8 @@ ABSOLUTE_PRICE_FEATURES = [
     'OBV', 'OBV_MA5',
     # VWAP 绝对价格（使用 VWAP_Ratio 代替）
     'VWAP',
+    # 典型价格绝对值（VWAP 的中间变量）
+    'TP',
     # 其他绝对值（中间变量）
     'High_Max', 'Low_Min'
 ]
