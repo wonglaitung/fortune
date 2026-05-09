@@ -321,6 +321,46 @@ class HyperparameterTuner:
             logger.error(f"参数评估失败: {e}")
             return {'score': -999, 'accuracy': 0, 'sharpe': 0, 'error': str(e)}
 
+    def _quick_feature_selection(self, df: pd.DataFrame, feature_cols: list) -> list:
+        """
+        快速特征选择（基于统计方法）
+
+        Args:
+            df: 数据框
+            feature_cols: 特征列列表
+
+        Returns:
+            list: 选择的特征列
+        """
+        from scipy import stats
+
+        if 'Label' not in df.columns:
+            return feature_cols[:self.top_k]
+
+        # 计算每个特征与标签的相关性
+        correlations = {}
+        for col in feature_cols:
+            try:
+                # 使用点二列相关系数
+                valid_mask = df[col].notna() & df['Label'].notna()
+                if valid_mask.sum() > 50:
+                    corr, _ = stats.pointbiserialr(
+                        df.loc[valid_mask, 'Label'],
+                        df.loc[valid_mask, col]
+                    )
+                    if not np.isnan(corr):
+                        correlations[col] = abs(corr)
+            except Exception:
+                continue
+
+        # 按相关性排序，选择 Top K
+        if correlations:
+            sorted_features = sorted(correlations.keys(), key=lambda x: correlations[x], reverse=True)
+            selected = sorted_features[:self.top_k]
+            return selected
+        else:
+            return feature_cols[:self.top_k]
+
     def random_search(self, n_iter: int = 30, stock_list: list = None) -> dict:
         """
         随机搜索
@@ -508,6 +548,10 @@ def main():
                         help='输出目录 (默认: output)')
     parser.add_argument('--skip-final', action='store_true',
                         help='跳过最终验证')
+    parser.add_argument('--use-feature-selection', action='store_true',
+                        help='使用特征选择（Top 300）')
+    parser.add_argument('--top-k', type=int, default=300,
+                        help='特征选择数量 (默认: 300)')
 
     args = parser.parse_args()
 
@@ -517,6 +561,8 @@ def main():
     print(f"迭代次数: {args.n_iter}")
     print(f"预测周期: {args.horizon}天")
     print(f"模式: {'快速' if args.quick else '完整' if args.full else '标准'}")
+    if args.use_feature_selection:
+        print(f"特征选择: Top {args.top_k}")
     print(f"输出目录: {args.output_dir}")
     print("="*80)
 
@@ -524,7 +570,9 @@ def main():
     tuner = HyperparameterTuner(
         horizon=args.horizon,
         quick_mode=args.quick,
-        full_mode=args.full
+        full_mode=args.full,
+        use_feature_selection=args.use_feature_selection,
+        top_k=args.top_k
     )
 
     # 执行调优

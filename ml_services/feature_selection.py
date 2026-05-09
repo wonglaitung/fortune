@@ -14,7 +14,6 @@ import sys
 import argparse
 from datetime import datetime
 import warnings
-import json
 warnings.filterwarnings('ignore')
 
 # 添加项目根目录到 Python 路径
@@ -33,22 +32,10 @@ from ml_services.logger_config import get_logger
 
 logger = get_logger('feature_selection')
 
-# 绝对价格特征排除列表（跨股票不可比，使用标准化版本代替）
-ABSOLUTE_PRICE_FEATURES = [
-    'Channel_High_20d', 'Channel_Low_20d',
-    'Price_High_5d', 'Price_Low_5d',
-    'Support_120d', 'Resistance_120d',
-    'MA5', 'MA10', 'MA20', 'MA50', 'MA60', 'MA100', 'MA120', 'MA200', 'MA250',
-    'BB_upper', 'BB_lower', 'BB_middle',
-    'ATR', 'ATR_MA', 'ATR_MA60', 'ATR_MA120',
-    'Turnover', 'Turnover_Mean_20', 'Turnover_Std_20',
-    'High_Max', 'Low_Min', 'Prev_Close'
-]
-
 
 def load_training_data(horizon=20):
     """
-    加载训练数据（复用现有模型的数据准备流程）
+    加载训练数据（调用 ml_trading_model.py 的方法，确保特征处理一致）
 
     返回:
     - X: 特征矩阵
@@ -59,84 +46,20 @@ def load_training_data(horizon=20):
     print("📊 加载训练数据")
     logger.info("=" * 50)
 
-    # 创建模型实例（使用 CatBoostModel 以确保特征列表一致）
+    # 创建模型实例
     model = CatBoostModel()
 
-    # 预加载网络特征以获取社区 ID（确保训练/预测一致性）
-    network_features_file = 'output/network_features_for_ml.json'
-    preloaded_community_ids = None
-    if os.path.exists(network_features_file):
-        try:
-            with open(network_features_file, 'r') as f:
-                network_features_data = json.load(f)
-            all_community_ids = set()
-            for stock_code, net_features in network_features_data.items():
-                if 'net_community_id' in net_features:
-                    comm_id = net_features['net_community_id']
-                    if comm_id >= 0:
-                        all_community_ids.add(int(comm_id))
-            if all_community_ids:
-                preloaded_community_ids = sorted(list(all_community_ids))
-                logger.info(f"预加载社区 ID: {preloaded_community_ids}")
-        except Exception as e:
-            logger.warning(f"预加载网络特征失败: {e}")
-
-    # 准备数据（使用指定horizon）
-    import random
+    # 调用 ml_trading_model.py 中的方法，确保特征处理逻辑完全一致
+    # 该方法已包含：预加载社区ID、数据准备、NaN处理、特征列获取、分类特征编码
     all_codes = list(STOCK_LIST.keys())
-    codes = random.sample(all_codes, min(10, len(all_codes)))  # 随机选择10只股票以提高速度
-    logger.info(f"准备加载 {len(codes)} 只股票的数据...")
+    X, y, feature_columns = model.prepare_features_for_selection(
+        codes=all_codes,
+        horizon=horizon,
+        sample_size=10  # 随机采样10只股票加速
+    )
 
-    # 调用prepare_data方法（传递预加载的社区 ID）
-    df = model.prepare_data(codes, horizon=horizon, community_ids=preloaded_community_ids)
-
-    # 先删除全为NaN的列
-    cols_all_nan = df.columns[df.isnull().all()].tolist()
-    if cols_all_nan:
-        print(f"🗑️  删除 {len(cols_all_nan)} 个全为NaN的列")
-        df = df.drop(columns=cols_all_nan)
-
-    # 只删除标签和关键列的 NaN（与 CatBoost 训练一致）
-    # 基本面特征的 NaN 保留，让模型自动处理
-    df = df.dropna(subset=['Label'])
-    critical_cols = ['Return_1d', 'Return_5d', 'Return_20d', 'Close', 'Volume']
-    df = df.dropna(subset=[c for c in critical_cols if c in df.columns])
-
-    # 确保数据按日期索引排序
-    df = df.sort_index()
-
-    # 获取特征列
-    feature_columns = model.get_feature_columns(df)
-    # 额外排除绝对价格特征（确保跨股票可比）
-    feature_columns = [col for col in feature_columns if col not in ABSOLUTE_PRICE_FEATURES]
-    print(f"使用 {len(feature_columns)} 个特征（已排除绝对价格特征）")
-
-    # 处理分类特征（与 CatBoost 训练一致）
-    categorical_features = []
-    for col in feature_columns:
-        if df[col].dtype == 'object' or df[col].dtype.name == 'category':
-            print(f"  编码分类特征: {col}")
-            categorical_features.append(col)
-            from sklearn.preprocessing import LabelEncoder
-            le = LabelEncoder()
-            # 先填充 NaN 为 'unknown'，与 CatBoost 训练一致
-            df[col] = df[col].fillna('unknown').astype(str)
-            df[col] = le.fit_transform(df[col])
-
-    # 准备特征和标签（保留 NaN，与 CatBoost 训练一致）
-    # CatBoost 会自动处理 NaN 值，无需手动填充
-    X = df[feature_columns].values
-    y = df['Label'].values
-
-    # 确保X是float64类型（统计方法需要数值类型）
-    if X.dtype == object:
-        print("   - 转换特征矩阵为 float64 类型...")
-        X = X.astype(np.float64)
-
-    logger.info(f"数据加载完成")
     print(f"   - 样本数量: {len(X)}")
     print(f"   - 特征数量: {len(feature_columns)}")
-    print(f"   - 目标变量分布: {y}")
     print("")
 
     return X, y, feature_columns
