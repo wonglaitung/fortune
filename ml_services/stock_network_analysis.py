@@ -863,12 +863,20 @@ def generate_diversification_recommendations(mst_graph, communities, centrality_
     }
 
 
-def build_lead_lag_network(stock_data, max_lag=5, use_all_stocks=False):
+def build_lead_lag_network(stock_data, max_lag=5, use_all_stocks=False,
+                            p_threshold=0.01, top_k_edges=50):
     """
     构建领先滞后有向网络
     使用 Granger 因果检验，边从领先股票指向滞后股票
+
+    参数：
+    - stock_data: 股票数据字典
+    - max_lag: 最大滞后期
+    - use_all_stocks: 使用全部股票还是代表股票
+    - p_threshold: 显著性阈值（默认 0.01，比原来的 0.05 更严格）
+    - top_k_edges: 最多保留多少条边（默认 50）
     """
-    print(f"  🔀 构建领先滞后网络（max_lag={max_lag}）...")
+    print(f"  🔀 构建领先滞后网络（max_lag={max_lag}, p<{p_threshold}, top_{top_k_edges}边）...")
 
     returns_dict = {}
     for stock_code, df in stock_data.items():
@@ -895,7 +903,7 @@ def build_lead_lag_network(stock_data, max_lag=5, use_all_stocks=False):
                    sector=get_stock_sector(code),
                    name=get_stock_name(code))
 
-    # Granger 因果检验
+    # Granger 因果检验（使用更严格的阈值）
     for i, stock1 in enumerate(test_stocks):
         for j, stock2 in enumerate(test_stocks):
             if i != j and stock1 in returns_df.columns and stock2 in returns_df.columns:
@@ -905,7 +913,7 @@ def build_lead_lag_network(stock_data, max_lag=5, use_all_stocks=False):
 
                     for lag in range(1, max_lag + 1):
                         p_value = result[lag][0]['ssr_ftest'][1]
-                        if p_value < 0.05:
+                        if p_value < p_threshold:  # 使用传入的阈值
                             # 边权 = -log(p)，权重越大越显著
                             weight = -np.log10(p_value)
                             G.add_edge(stock1, stock2,
@@ -914,6 +922,17 @@ def build_lead_lag_network(stock_data, max_lag=5, use_all_stocks=False):
                             break  # 只保留最显著的滞后期
                 except Exception:
                     continue
+
+    # 过滤：只保留 top_k_edges 条最显著的边
+    if G.number_of_edges() > top_k_edges:
+        edges_data = [(u, v, d) for u, v, d in G.edges(data=True)]
+        edges_data.sort(key=lambda x: x[2]['weight'], reverse=True)
+        G_filtered = nx.DiGraph()
+        G_filtered.add_nodes_from(G.nodes(data=True))
+        for u, v, d in edges_data[:top_k_edges]:
+            G_filtered.add_edge(u, v, **d)
+        print(f"    ✅ 领先滞后网络: {G_filtered.number_of_nodes()} 节点, {G_filtered.number_of_edges()} 边（从 {G.number_of_edges()} 条筛选）")
+        return G_filtered
 
     print(f"    ✅ 领先滞后网络: {G.number_of_nodes()} 节点, {G.number_of_edges()} 边")
     return G
@@ -1476,21 +1495,69 @@ def visualize_centrality_ranking(centrality_dict, output_dir, top_n=20):
     print(f"    ✅ 已保存: {path}")
 
 
-def visualize_lead_lag_network(digraph, output_dir):
-    """可视化领先滞后有向网络"""
+def create_layered_layout(digraph):
+    """按出度创建分层布局
+
+    出度高的节点在上层（领导者），出度低的在下层（跟随者）
+    """
+    out_degrees = dict(digraph.out_degree())
+    if not out_degrees:
+        return {}
+
+    max_degree = max(out_degrees.values())
+
+    # 计算每个节点的层级（Y坐标）
+    pos = {}
+    for node in digraph.nodes():
+        degree = out_degrees.get(node, 0)
+        # Y坐标：出度高的在上（Y值大），范围 [0, 1]
+        y = degree / max_degree if max_degree > 0 else 0.5
+        pos[node] = [0, y]  # 临时坐标
+
+    # 在同层级内均匀分布 X 坐标
+    # 将 Y 坐标四舍五入到 2 位小数，作为层级标识
+    y_levels = {}
+    for node, (x, y) in pos.items():
+        y_rounded = round(y * 10) / 10  # 按 0.1 精度分组
+        if y_rounded not in y_levels:
+            y_levels[y_rounded] = []
+        y_levels[y_rounded].append(node)
+
+    # 为每层的节点均匀分布 X 坐标
+    for y_level, nodes in y_levels.items():
+        n = len(nodes)
+        for i, node in enumerate(nodes):
+            # X 坐标：在 [0.1, 0.9] 范围内均匀分布
+            x = 0.1 + 0.8 * (i + 1) / (n + 1)
+            pos[node] = [x, y_level]
+
+    return pos
+
+
+def visualize_lead_lag_network(digraph, output_dir, title=None, filename=None):
+    """可视化领先滞后有向网络（分层布局）
+
+    参数：
+    - digraph: 有向图
+    - output_dir: 输出目录
+    - title: 图标题（可选）
+    - filename: 文件名（可选，默认 network_lead_lag.png）
+    """
     setup_chinese_font()
-    print("  📊 生成领先滞后网络图...")
+    print("  📊 生成领先滞后网络图（分层布局）...")
 
     if digraph.number_of_nodes() == 0:
         return
 
-    fig, ax = plt.subplots(1, 1, figsize=(14, 12))
-    pos = nx.spring_layout(digraph, seed=RANDOM_SEED)
+    fig, ax = plt.subplots(1, 1, figsize=(16, 10))
+
+    # 使用分层布局
+    pos = create_layered_layout(digraph)
 
     # 节点大小 = 出度（领导力）
     out_degrees = dict(digraph.out_degree())
     max_out = max(out_degrees.values()) if out_degrees else 1
-    node_sizes = [200 + 800 * (out_degrees.get(n, 0) / max(max_out, 1))
+    node_sizes = [300 + 700 * (out_degrees.get(n, 0) / max(max_out, 1))
                   for n in digraph.nodes()]
 
     node_colors = get_node_colors(digraph)
@@ -1503,33 +1570,77 @@ def visualize_lead_lag_network(digraph, output_dir):
     for w in edge_weights:
         intensity = w / max(max_w, 1)
         # 颜色：深蓝到浅蓝
-        edge_colors.append((0.1, 0.2, 0.6 + 0.4 * intensity))
-        # 宽度：1.5 到 3.0
-        edge_widths.append(1.5 + 1.5 * intensity)
+        edge_colors.append((0.1, 0.3, 0.7 + 0.3 * intensity))
+        # 宽度：1.0 到 2.5
+        edge_widths.append(1.0 + 1.5 * intensity)
 
-    # 先画节点，再画边，确保箭头可见
+    # 先画节点
     nx.draw_networkx_nodes(digraph, pos, ax=ax, node_color=node_colors,
-                           node_size=node_sizes, edgecolors='white', linewidths=1.5)
+                           node_size=node_sizes, edgecolors='white', linewidths=2)
 
     # 画边（箭头在节点上层）
     nx.draw_networkx_edges(digraph, pos, ax=ax,
                            edge_color=edge_colors, width=edge_widths,
-                           arrowsize=20, arrowstyle='->',
-                           connectionstyle='arc3,rad=0.15',
-                           min_source_margin=15, min_target_margin=15)
+                           arrowsize=15, arrowstyle='->',
+                           connectionstyle='arc3,rad=0.1',
+                           min_source_margin=20, min_target_margin=20)
 
+    # 标签
     labels = {n: get_stock_name(n) for n in digraph.nodes()}
-    nx.draw_networkx_labels(digraph, pos, labels, ax=ax, font_size=8,
+    nx.draw_networkx_labels(digraph, pos, labels, ax=ax, font_size=9,
                             font_family='WenQuanYi Micro Hei',
                             font_weight='bold')
 
-    ax.set_title('领先滞后网络（Granger因果）', fontsize=16, fontweight='bold')
+    # 标题
+    if title is None:
+        title = '领先滞后网络（Granger因果，分层布局）'
+    ax.set_title(title, fontsize=14, fontweight='bold')
+
+    # 添加层级说明
+    ax.text(0.02, 0.98, '上层 = 领导者（高出度）', transform=ax.transAxes,
+            fontsize=10, verticalalignment='top', color='#666666')
+    ax.text(0.02, 0.94, '下层 = 跟随者（低出度）', transform=ax.transAxes,
+            fontsize=10, verticalalignment='top', color='#666666')
+
     ax.axis('off')
     plt.tight_layout()
-    path = os.path.join(output_dir, 'network_lead_lag.png')
+
+    if filename is None:
+        filename = 'network_lead_lag.png'
+    path = os.path.join(output_dir, filename)
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"    ✅ 已保存: {path}")
+
+
+def visualize_lead_lag_by_community(digraph, communities, output_dir):
+    """按社区生成领先滞后子图
+
+    参数：
+    - digraph: 完整的有向图
+    - communities: 社区字典 {community_id: [stock_codes]}
+    - output_dir: 输出目录
+    """
+    print("  📊 生成社区领先滞后子图...")
+
+    for comm_id, members in communities.items():
+        # 只保留该社区内的节点和边
+        subgraph = digraph.subgraph(members)
+
+        if subgraph.number_of_edges() == 0:
+            continue
+
+        # 获取该社区的主要板块
+        sectors = [get_stock_sector(s) for s in members]
+        from collections import Counter
+        main_sector = Counter(sectors).most_common(1)[0][0]
+        sector_name = SECTOR_NAME_MAPPING.get(main_sector, main_sector)
+
+        visualize_lead_lag_network(
+            subgraph, output_dir,
+            title=f'社区 {comm_id} 领先滞后网络（{sector_name}，{len(members)}只）',
+            filename=f'network_lead_lag_community_{comm_id}.png'
+        )
 
 
 def visualize_network_evolution(evolution, output_dir):
@@ -2175,6 +2286,10 @@ def main():
                         help='Granger因果检验最大滞后期（默认5）')
     parser.add_argument('--full-granger', action='store_true',
                         help='使用全部股票进行Granger检验（默认仅代表股票）')
+    parser.add_argument('--p-threshold', type=float, default=0.01,
+                        help='Granger因果显著性阈值（默认0.01，比原来0.05更严格）')
+    parser.add_argument('--top-edges', type=int, default=50,
+                        help='最多显示多少条边（默认50，解决图太密集问题）')
     parser.add_argument('--resolution', type=float, default=1.0,
                         help='Louvain社区检测分辨率参数（默认1.0）')
     parser.add_argument('--portfolio-size', type=int, default=10,
@@ -2278,7 +2393,8 @@ def main():
     diversification = generate_diversification_recommendations(
         mst_graph, communities, centrality_dict, args.portfolio_size)
     lead_lag_graph = build_lead_lag_network(
-        stock_data, args.max_lag, args.full_granger)
+        stock_data, args.max_lag, args.full_granger,
+        args.p_threshold, args.top_edges)
 
     # 6. 动态分析（可选）
     evolution = []
@@ -2311,6 +2427,8 @@ def main():
 
         if lead_lag_graph.number_of_edges() > 0:
             visualize_lead_lag_network(lead_lag_graph, args.output_dir)
+            # 生成社区领先滞后子图
+            visualize_lead_lag_by_community(lead_lag_graph, communities, args.output_dir)
 
         if evolution:
             visualize_network_evolution(evolution, args.output_dir)
