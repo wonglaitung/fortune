@@ -68,6 +68,7 @@ rm -rf data/stock_cache/*.pkl
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
 | **默认值设计** | 默认值必须与有效值范围分离，使用 -1 表示"未知"，基本面特征用 NaN |
 | **训练时 NaN** | 不要用 `df.dropna()` 删除所有 NaN，只删除标签和关键列 |
+| **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
 
 ---
 
@@ -98,6 +99,59 @@ AKShare      南向资金        主力追踪     性能监控
 - `data/stock_cache/` - 原始数据缓存（7天有效期）
 - `data/feature_cache/` - 特征缓存（7天有效期，170x加速）
 - `output/` - 分析报告和回测结果
+
+---
+
+## 🏗️ 特征架构（单一真相源）
+
+**核心原则**：特征处理逻辑只在 `ml_trading_model.py` 中维护，其他模块通过导入或方法调用复用。
+
+```
+ml_trading_model.py
+├── ABSOLUTE_PRICE_FEATURES（模块级常量，35个特征）
+│   └── 被所有方法自动使用
+├── BaseTradingModel.get_feature_columns()
+│   └── 排除绝对值特征，返回有效特征列表
+├── BaseTradingModel.prepare_features_for_selection()
+│   └── 特征选择专用方法（封装所有处理逻辑）
+└── FeatureEngineer 类
+    └── 特征计算和交叉特征生成
+
+feature_selection.py
+└── model.prepare_features_for_selection()  # 直接调用，无需维护重复逻辑
+```
+
+### 绝对价格特征排除列表（35个）
+
+所有绝对值特征都有标准化替代：
+
+| 类别 | 绝对值特征 | 标准化替代 |
+|------|-----------|-----------|
+| 价格通道 | Channel_High/Low_20d | Channel_High/Low_Ratio_20d |
+| 支撑阻力 | Support/Resistance_120d | Support/Resistance_Ratio_120d |
+| 均线 | MA5~MA250 | MA_Ratio 系列 |
+| 布林带 | BB_upper/lower/middle | BB_Ratio 系列 |
+| ATR | ATR, ATR_MA 等 | ATR_Pct, ATR_Ratio |
+| 成交额 | Turnover, Turnover_Mean/Std_20 | Turnover_Z_Score |
+| 成交量 | Volume_MA7/120/250, Volume_Mean/Std_30d | Volume_Ratio 系列 |
+| OBV | OBV, OBV_MA5 | OBV_Trend, OBV_Change_5d |
+| VWAP | VWAP | VWAP_Ratio |
+
+### 新增特征时
+
+只需修改 `ml_trading_model.py`：
+
+```python
+# 1. 在特征计算处添加标准化特征
+df['New_Ratio'] = df['New_Value'] / df['Close'].shift(1)
+
+# 2. 如果是绝对值，添加到排除列表
+ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
+
+# 3. 如果是重要特征，添加到 important_numeric_features
+```
+
+**feature_selection.py 自动同步，无需修改。**
 
 ---
 

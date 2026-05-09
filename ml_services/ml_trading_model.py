@@ -82,6 +82,9 @@ ABSOLUTE_PRICE_FEATURES = [
     # 成交量绝对值（使用 Volume_Ratio 系列代替）
     'Volume_MA7', 'Volume_MA120', 'Volume_MA250',
     'Volume_Mean_30d', 'Volume_Std_30d',  # 使用 Volume_Volatility (std/mean) 代替
+    'Vol_Mean_20', 'Vol_Std_20',  # 成交量滚动均值/标准差
+    # 技术指标绝对值
+    'MACD', 'MACD_signal',  # 使用 MACD_Hist 和 MACD_Hist_ROC 代替
     # OBV 累积绝对值（使用 OBV_Trend 和 OBV_Change_5d 代替）
     'OBV', 'OBV_MA5',
     # VWAP 绝对价格（使用 VWAP_Ratio 代替）
@@ -2676,21 +2679,29 @@ class FeatureEngineer:
             '3d_Trend', '5d_Trend', '10d_Trend', '20d_Trend', '60d_Trend'
         ]
 
-        # 方案1：定义重要的数值型特征（120个精选特征）
+        # 方案1：定义重要的数值型特征（精选特征）
         # 基于特征重要性实验和历史数据选择
+        # 注意：特征名必须与实际计算名称完全匹配
         important_numeric_features = [
-            # 技术指标（40个）
-            'RSI_14d', 'MACD', 'MACD_Signal', 'ATR_14d', 'BB_Width', 'BB_Position',
-            'Volume_Ratio_7d', 'Volume_Trend_5d',  # 使用比率，不使用成交量绝对值
-            'OBV_Trend', 'OBV_Change_5d',  # 使用标准化版本，不使用 OBV 绝对值
-            'VWAP_Ratio',  # 使用标准化版本，不使用 VWAP 绝对值
-            'MA_Slope_20d', 'MA_Slope_60d', 'Price_Ratio_MA5', 'Price_Ratio_MA20',
-            'Distance_MA20', 'Distance_MA60', 'Above_MA20', 'Above_MA60',
-            'Volatility_20d', 'Volatility_60d', 'Kurtosis_20d', 'Skewness_20d',
-            'Price_Percentile_20d', 'Price_ZScore_20d', 'High_Low_Range_5d',
-            'Upper_Shadow_Ratio', 'Lower_Shadow_Ratio', 'Intraday_Amplitude',
-            'Gap_Up', 'Gap_Down', 'Gap_Size', 'Gap_Sign',
-            'RSI_Overbought', 'RSI_Oversold', 'MACD_Bullish', 'MACD_Bearish',
+            # 技术指标（使用标准化特征，避免绝对值）
+            'RSI', 'RSI_ROC', 'RSI_Deviation',  # RSI 系列（0-100 标准化）
+            'MACD_Hist', 'MACD_Hist_ROC',  # MACD 柱状图（差值，相对稳定）
+            'MACD_Low_5d_History', 'MACD_High_5d_History',  # MACD 历史极值
+            'RSI_Low_5d_History', 'RSI_High_5d_History',  # RSI 历史极值
+            'ATR_Pct', 'ATR_Ratio',  # ATR 标准化（百分比）
+            'BB_Width', 'BB_Position',  # 布林带宽度和位置
+            'Volume_Ratio_7d', 'Volume_Ratio_20d',  # 成交量比率
+            'OBV_Trend', 'OBV_Change_5d',  # OBV 趋势（标准化）
+            'VWAP_Ratio',  # VWAP 相对位置
+            'Trend_Slope_5d', 'Trend_Slope_20d', 'Trend_Slope_60d',  # 趋势斜率（标准化）
+            'Price_Ratio_MA5', 'Price_Ratio_MA20', 'Price_Ratio_MA50',  # 价格相对均线
+            'Volatility_5d', 'Volatility_20d', 'Volatility_60d',  # 波动率
+            'Kurtosis_20d', 'Skewness_20d',  # 高阶矩
+            'Price_Percentile', 'High_Position_60d',  # 价格位置
+            'Upper_Shadow', 'Lower_Shadow', 'Intraday_Amplitude',  # 日内形态
+            'Gap_Up', 'Gap_Down', 'Gap_Size',  # 缺口
+            'MACD_Bullish_Divergence', 'MACD_Bearish_Divergence',  # MACD 背离
+            'RSI_Bullish_Divergence', 'RSI_Bearish_Divergence',  # RSI 背离
             
             # 市场环境特征（20个）
             'VIX', 'VIX_Change_5d', 'VIX_Level',
