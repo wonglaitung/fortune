@@ -1613,15 +1613,22 @@ def visualize_lead_lag_network(digraph, output_dir, title=None, filename=None):
     print(f"    ✅ 已保存: {path}")
 
 
-def visualize_lead_lag_by_community(digraph, communities, output_dir):
+def visualize_lead_lag_by_community(digraph, partition, output_dir):
     """按社区生成领先滞后子图
 
     参数：
     - digraph: 完整的有向图
-    - communities: 社区字典 {community_id: [stock_codes]}
+    - partition: 社区划分字典 {node: community_id}
     - output_dir: 输出目录
     """
     print("  📊 生成社区领先滞后子图...")
+
+    # 转换 partition 格式：{node: comm_id} -> {comm_id: [nodes]}
+    communities = {}
+    for node, comm_id in partition.items():
+        if comm_id not in communities:
+            communities[comm_id] = []
+        communities[comm_id].append(node)
 
     for comm_id, members in communities.items():
         # 只保留该社区内的节点和边
