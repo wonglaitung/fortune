@@ -155,6 +155,69 @@ def _build_market_level_features():
 # 使用动态构建函数，确保与特征模块自动同步
 MARKET_LEVEL_FEATURES = _build_market_level_features()
 
+
+# ========== 特征单调性定义 ==========
+# POSITIVE: 值越大越好（如中心性、收益率）
+# NEGATIVE: 值越大越差（如波动率、约束度）
+# NEUTRAL: 无明确方向（如市场状态）
+# 用于交叉特征时保持逻辑单调性
+
+NETWORK_FEATURE_MONOTONICITY = {
+    'net_inter_community_ratio': 'POSITIVE',      # 跨社区连接多 = 信息优势
+    'net_sector_cohesion': 'POSITIVE',            # 板块内聚度高 = 联动强
+    'net_composite_centrality': 'POSITIVE',       # 中心性高 = 影响力大
+    'net_community_centrality_rank': 'POSITIVE',  # 排名高 = 社区内地位高
+    'net_constraint': 'NEGATIVE',                  # 约束度高 = 信息劣势
+    'net_effective_size': 'POSITIVE',             # 有效规模大 = 信息网络大
+    'net_local_clustering': 'NEUTRAL',            # 混合：高聚类=板块共振但信息冗余
+}
+
+MARKET_FEATURE_MONOTONICITY = {
+    # 收益率类（正向）
+    'HSI_Return_1d': 'POSITIVE',
+    'HSI_Return_3d': 'POSITIVE',
+    'HSI_Return_5d': 'POSITIVE',
+    'HSI_Return_10d': 'POSITIVE',
+    'HSI_Return_20d': 'POSITIVE',
+    'HSI_Return_60d': 'POSITIVE',
+    'SP500_Return': 'POSITIVE',
+    'SP500_Return_5d': 'POSITIVE',
+    'SP500_Return_20d': 'POSITIVE',
+    'NASDAQ_Return': 'POSITIVE',
+    'NASDAQ_Return_5d': 'POSITIVE',
+    'NASDAQ_Return_20d': 'POSITIVE',
+
+    # 波动率类（负向）
+    'VIX': 'NEGATIVE',
+    'VIX_Change_5d': 'NEGATIVE',
+    'VIX_Level': 'NEGATIVE',
+    'VIX_Change': 'NEGATIVE',
+    'VIX_Ratio_MA20': 'NEGATIVE',
+    'GARCH_Conditional_Vol': 'NEGATIVE',
+    'GARCH_Vol_Ratio': 'NEGATIVE',
+    'GARCH_Vol_Change_5d': 'NEGATIVE',
+
+    # 利率类（中性）
+    'US_10Y_Yield': 'NEUTRAL',
+    'US_10Y_Yield_Change': 'NEUTRAL',
+    'US10Y_Yield': 'NEUTRAL',
+    'US10Y_Yield_Change_5d': 'NEUTRAL',
+
+    # 市场状态类
+    'HSI_Market_Regime': 'NEUTRAL',
+    'HSI_Regime_Prob_0': 'NEUTRAL',   # 震荡市概率
+    'HSI_Regime_Prob_1': 'POSITIVE',  # 牛市概率
+    'HSI_Regime_Prob_2': 'NEGATIVE',  # 熊市概率
+    'HSI_Regime_Duration': 'NEUTRAL',
+    'HSI_Regime_Transition_Prob': 'NEUTRAL',
+
+    # 日历效应类（中性）
+    'Month_Sin': 'NEUTRAL',
+    'Month_Cos': 'NEUTRAL',
+    'DOW_Sin': 'NEUTRAL',
+    'DOW_Cos': 'NEUTRAL',
+}
+
 # 获取日志记录器
 logger = get_logger('ml_trading_model')
 
@@ -2791,6 +2854,55 @@ class FeatureEngineer:
         logger.info(f"成功生成 {interaction_count} 个交叉特征")
         return df
 
+    @staticmethod
+    def create_monotonic_interaction(df, feat1, feat2, name1, name2,
+                                       mono1='NEUTRAL', mono2='NEUTRAL'):
+        """创建保持单调性的交叉特征
+
+        根据特征的单调性方向，选择合适的交叉方式：
+        - 正向 × 正向 → 乘法（协同效应）
+        - 负向 × 负向 → 加权绝对值乘法（风险放大，保持负向）
+        - 正向 × 负向 → 除法（风险调整，平滑处理）
+        - 涉及中性 → 乘法（保守策略）
+
+        Args:
+            df: DataFrame
+            feat1, feat2: 特征列名
+            name1, name2: 特征名称（用于命名）
+            mono1, mono2: 特征单调性 ('POSITIVE', 'NEGATIVE', 'NEUTRAL')
+
+        Returns:
+            tuple: (特征名, 特征值) 或 (None, None)
+        """
+        if feat1 not in df.columns or feat2 not in df.columns:
+            return None, None
+
+        eps = 1e-6  # 平滑项，避免除零
+
+        if mono1 == 'NEGATIVE' and mono2 == 'NEGATIVE':
+            # 负向 × 负向：加权绝对值乘法
+            # 数学实现：-|X| × |Y|，保持负向含义，幅度放大
+            feature_name = f'{name1}_risk_{name2}'
+            feature_value = -1 * df[feat1].abs() * df[feat2].abs()
+
+        elif mono1 == 'POSITIVE' and mono2 == 'NEGATIVE':
+            # 正向 / 负向：风险调整收益比
+            # 数学实现：X / (|Y| + ε)，单位风险收益
+            feature_name = f'{name1}_per_{name2}'
+            feature_value = df[feat1] / (df[feat2].abs() + eps)
+
+        elif mono1 == 'NEGATIVE' and mono2 == 'POSITIVE':
+            # 负向 / 正向：风险调整
+            feature_name = f'{name1}_per_{name2}'
+            feature_value = df[feat1] / (df[feat2] + eps)
+
+        else:
+            # 其他情况：使用乘法（正向×正向、涉及中性）
+            feature_name = f'{name1}_{name2}'
+            feature_value = df[feat1] * df[feat2]
+
+        return feature_name, feature_value
+
     def create_market_network_interaction_features(self, df, market_features=None, community_ids=None):
         """创建市场级特征与网络社区特征的交叉特征
 
@@ -2850,63 +2962,113 @@ class FeatureEngineer:
                         df[interaction_name] = df[comm_col] * df[market_feat]
                         interaction_count += 1
 
-        # 2. 【新增】跨社区连接比例与市场特征交叉（连续值，替代旧的桥梁股二元特征）
+        # 2. 跨社区连接比例与市场特征交叉（正向特征）
         if 'net_inter_community_ratio' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_inter_community_ratio', 'POSITIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_inter_comm_{market_feat}'
-                    df[interaction_name] = df['net_inter_community_ratio'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_inter_community_ratio', market_feat,
+                        'net_inter_comm', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 3. 【新增】板块内聚度与市场特征交叉（连续值，替代旧的社区-板块匹配二元特征）
+        # 3. 板块内聚度与市场特征交叉（正向特征）
         if 'net_sector_cohesion' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_sector_cohesion', 'POSITIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_cohesion_{market_feat}'
-                    df[interaction_name] = df['net_sector_cohesion'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_sector_cohesion', market_feat,
+                        'net_cohesion', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 4. 中心性与市场特征交叉（连续型交叉，保持不变）
+        # 4. 中心性与市场特征交叉（正向特征）
         if 'net_composite_centrality' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_composite_centrality', 'POSITIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_centrality_{market_feat}'
-                    df[interaction_name] = df['net_composite_centrality'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_composite_centrality', market_feat,
+                        'net_centrality', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 5. 【新增】社区内中心性排名与市场特征交叉（连续值）
+        # 5. 社区内中心性排名与市场特征交叉（正向特征）
         if 'net_community_centrality_rank' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_community_centrality_rank', 'POSITIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_comm_rank_{market_feat}'
-                    df[interaction_name] = df['net_community_centrality_rank'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_community_centrality_rank', market_feat,
+                        'net_comm_rank', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 6. 【新增】结构洞约束 × 市场特征（低约束=信息优势大）
-        # 捕捉信息套利环境：低约束股票在市场波动时有更大套利空间
+        # 6. 结构洞约束 × 市场特征（负向特征）
+        # 低约束=信息优势大，高约束=信息劣势
+        # 与负向市场特征（如VIX）交叉时使用风险放大逻辑
         if 'net_constraint' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_constraint', 'NEGATIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_constraint_{market_feat}'
-                    df[interaction_name] = df['net_constraint'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_constraint', market_feat,
+                        'net_constraint', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 7. 【新增】有效规模 × 市场特征（大有效规模=信息网络大）
+        # 7. 有效规模 × 市场特征（正向特征）
         if 'net_effective_size' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_effective_size', 'POSITIVE')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_effsize_{market_feat}'
-                    df[interaction_name] = df['net_effective_size'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_effective_size', market_feat,
+                        'net_effsize', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
-        # 8. 【新增】局部聚类系数 × 市场特征（高聚类=板块共振强）
-        # 捕捉局部羊群效应：高聚类股票在市场趋势中跟随板块联动
+        # 8. 局部聚类系数 × 市场特征（中性特征）
+        # 高聚类=板块共振强但信息冗余，使用乘法（保守策略）
         if 'net_local_clustering' in df.columns:
+            mono_net = NETWORK_FEATURE_MONOTONICITY.get('net_local_clustering', 'NEUTRAL')
             for market_feat in market_features:
                 if market_feat in df.columns:
-                    interaction_name = f'net_clustering_{market_feat}'
-                    df[interaction_name] = df['net_local_clustering'] * df[market_feat]
-                    interaction_count += 1
+                    mono_market = MARKET_FEATURE_MONOTONICITY.get(market_feat, 'NEUTRAL')
+                    feat_name, feat_value = self.create_monotonic_interaction(
+                        df, 'net_local_clustering', market_feat,
+                        'net_clustering', market_feat,
+                        mono_net, mono_market
+                    )
+                    if feat_name:
+                        df[feat_name] = feat_value
+                        interaction_count += 1
 
         logger.info(f"成功生成 {interaction_count} 个市场-网络交叉特征")
         return df
