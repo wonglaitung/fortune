@@ -1495,20 +1495,33 @@ def visualize_lead_lag_network(digraph, output_dir):
 
     node_colors = get_node_colors(digraph)
 
-    # 边颜色深浅 = 显著性
+    # 边颜色深浅 = 显著性（使用深蓝色系）
     edge_weights = [digraph[u][v].get('weight', 1) for u, v in digraph.edges()]
     max_w = max(edge_weights) if edge_weights else 1
-    edge_alphas = [0.2 + 0.8 * (w / max(max_w, 1)) for w in edge_weights]
+    edge_colors = []
+    edge_widths = []
+    for w in edge_weights:
+        intensity = w / max(max_w, 1)
+        # 颜色：深蓝到浅蓝
+        edge_colors.append((0.1, 0.2, 0.6 + 0.4 * intensity))
+        # 宽度：1.5 到 3.0
+        edge_widths.append(1.5 + 1.5 * intensity)
 
-    nx.draw_networkx_edges(digraph, pos, ax=ax, alpha=0.4,
-                           edge_color=edge_alphas, width=1,
-                           arrowsize=10, connectionstyle='arc3,rad=0.1')
+    # 先画节点，再画边，确保箭头可见
     nx.draw_networkx_nodes(digraph, pos, ax=ax, node_color=node_colors,
-                           node_size=node_sizes, edgecolors='white', linewidths=0.5)
+                           node_size=node_sizes, edgecolors='white', linewidths=1.5)
+
+    # 画边（箭头在节点上层）
+    nx.draw_networkx_edges(digraph, pos, ax=ax,
+                           edge_color=edge_colors, width=edge_widths,
+                           arrowsize=20, arrowstyle='->',
+                           connectionstyle='arc3,rad=0.15',
+                           min_source_margin=15, min_target_margin=15)
 
     labels = {n: get_stock_name(n) for n in digraph.nodes()}
-    nx.draw_networkx_labels(digraph, pos, labels, ax=ax, font_size=7,
-                            font_family='WenQuanYi Micro Hei')
+    nx.draw_networkx_labels(digraph, pos, labels, ax=ax, font_size=8,
+                            font_family='WenQuanYi Micro Hei',
+                            font_weight='bold')
 
     ax.set_title('领先滞后网络（Granger因果）', fontsize=16, fontweight='bold')
     ax.axis('off')
