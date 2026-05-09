@@ -1562,15 +1562,26 @@ def visualize_lead_lag_network(digraph, output_dir, title=None, filename=None):
 
     node_colors = get_node_colors(digraph)
 
-    # 边颜色深浅 = 显著性（使用深蓝色系）
+    # 创建节点到颜色的映射
+    node_color_map = {}
+    for i, node in enumerate(digraph.nodes()):
+        node_color_map[node] = node_colors[i]
+
+    # 边颜色 = 源节点（领先股票）的板块颜色
+    # 边宽度 = 显著性
     edge_weights = [digraph[u][v].get('weight', 1) for u, v in digraph.edges()]
     max_w = max(edge_weights) if edge_weights else 1
     edge_colors = []
     edge_widths = []
-    for w in edge_weights:
+    for (u, v), w in zip(digraph.edges(), edge_weights):
         intensity = w / max(max_w, 1)
-        # 颜色：深蓝到浅蓝
-        edge_colors.append((0.1, 0.3, 0.7 + 0.3 * intensity))
+        # 使用源节点的板块颜色
+        source_color = node_color_map.get(u, '#666666')
+        # 将颜色稍微调淡（混合白色）
+        import matplotlib.colors as mcolors
+        rgb = mcolors.to_rgb(source_color)
+        faded_rgb = tuple(min(1, c + 0.3 * (1 - intensity)) for c in rgb)
+        edge_colors.append(faded_rgb)
         # 宽度：1.0 到 2.5
         edge_widths.append(1.0 + 1.5 * intensity)
 
@@ -1600,6 +1611,8 @@ def visualize_lead_lag_network(digraph, output_dir, title=None, filename=None):
     ax.text(0.02, 0.98, '上层 = 领导者（高出度）', transform=ax.transAxes,
             fontsize=10, verticalalignment='top', color='#666666')
     ax.text(0.02, 0.94, '下层 = 跟随者（低出度）', transform=ax.transAxes,
+            fontsize=10, verticalalignment='top', color='#666666')
+    ax.text(0.02, 0.90, '边颜色 = 领先股票板块色', transform=ax.transAxes,
             fontsize=10, verticalalignment='top', color='#666666')
 
     ax.axis('off')
