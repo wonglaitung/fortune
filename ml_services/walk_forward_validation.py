@@ -401,7 +401,6 @@ class WalkForwardValidator:
         # 获取特征重要性（Top 20）
         try:
             if hasattr(model, 'catboost_model') and model.catboost_model is not None:
-                import pandas as pd
                 feat_imp = pd.DataFrame({
                     'Feature': model.feature_columns,
                     'Importance': model.catboost_model.feature_importances_
