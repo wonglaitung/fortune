@@ -398,6 +398,26 @@ class WalkForwardValidator:
         metrics['num_train_samples'] = len(train_data)
         metrics['num_test_samples'] = len(test_data)
 
+        # 获取特征重要性（Top 20）
+        try:
+            if hasattr(model, 'catboost_model') and model.catboost_model is not None:
+                import pandas as pd
+                feat_imp = pd.DataFrame({
+                    'Feature': model.feature_columns,
+                    'Importance': model.catboost_model.feature_importances_
+                })
+                feat_imp = feat_imp.sort_values('Importance', ascending=False)
+                # 保存 Top 100 特征重要性
+                top_features = feat_imp.head(100).to_dict('records')
+                metrics['top_features'] = [
+                    {'feature': r['Feature'], 'importance': round(r['Importance'], 4)}
+                    for r in top_features
+                ]
+                print(f"  ✅ 特征重要性已记录 (Top 100)")
+        except Exception as e:
+            logger.warning(f"获取特征重要性失败: {e}")
+            metrics['top_features'] = []
+
         return metrics
 
     def _calculate_metrics(self, test_data, predictions):
@@ -1045,7 +1065,8 @@ class WalkForwardValidator:
                     'total': fold.get('num_samples', 0),
                     'train': fold.get('num_train_samples', 0),
                     'test': fold.get('num_test_samples', 0)
-                }
+                },
+                'top_features': fold.get('top_features', [])
             }
             fold_metrics['folds'].append(fold_data)
 
