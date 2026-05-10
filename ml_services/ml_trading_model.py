@@ -5109,27 +5109,27 @@ class CatBoostModel(BaseTradingModel):
         print("🐱 训练 CatBoost 模型")
         print("="*70)
 
-        # 根据预测周期调整参数
+        # 根据预测周期调整参数（统一使用20天调优参数）
         if horizon == 5:
-            # 一周模型参数（防过拟合）
-            print("使用一周模型参数（减少树深度，增加早停耐心）...")
-            n_estimators = 500
-            depth = 6  # 减少深度（7→6）
-            learning_rate = 0.05
-            stopping_rounds = 50  # 增加早停耐心（30→50）
-            l2_leaf_reg = 3  # 增加L2正则（2→3）
-            subsample = 0.7
-            colsample_bylevel = 0.6
-        elif horizon == 1:
-            # 次日模型参数（适度）
-            print("使用次日模型参数...")
-            n_estimators = 500
-            depth = 7
-            learning_rate = 0.05
-            stopping_rounds = 40
-            l2_leaf_reg = 3
+            # 一周模型参数（与20天模型统一）
+            print("使用一周模型参数（统一参数）...")
+            n_estimators = 400
+            depth = 8
+            learning_rate = 0.06
+            stopping_rounds = 80
+            l2_leaf_reg = 2
             subsample = 0.75
-            colsample_bylevel = 0.7
+            colsample_bylevel = 0.8
+        elif horizon == 1:
+            # 次日模型参数（与20天模型统一）
+            print("使用次日模型参数（统一参数）...")
+            n_estimators = 400
+            depth = 8
+            learning_rate = 0.06
+            stopping_rounds = 80
+            l2_leaf_reg = 2
+            subsample = 0.75
+            colsample_bylevel = 0.8
         else:  # horizon == 20
             # 一个月模型参数（特征选择版本）
             # 2026-05-09：系统调优最优参数（准确率64.02%，夏普0.8027）
