@@ -1,0 +1,5628 @@
+{
+  "summary": [
+    {
+      "percentile": "Top 1%",
+      "avg_return": 0.059916094101551895,
+      "return_std": 0.08918120717535694,
+      "total_stocks": 246
+    },
+    {
+      "percentile": "Top 5%",
+      "avg_return": 0.052859374177626296,
+      "return_std": 0.06742740722705917,
+      "total_stocks": 492
+    },
+    {
+      "percentile": "Top 10%",
+      "avg_return": 0.0543114970481773,
+      "return_std": 0.05762867162564026,
+      "total_stocks": 1230
+    },
+    {
+      "percentile": "Top 20%",
+      "avg_return": 0.05287199884870187,
+      "return_std": 0.053181530897066946,
+      "total_stocks": 2706
+    }
+  ],
+  "by_fold": [
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 19,
+      "avg_return": 0.302426604593077,
+      "return_std": 0.13922428074929902,
+      "num_periods": 19,
+      "top_stocks": [
+        {
+          "date": "2025-01-02",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9642,
+          "actual_return": 0.1632
+        },
+        {
+          "date": "2025-01-03",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9588,
+          "actual_return": 0.0938
+        },
+        {
+          "date": "2025-01-06",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9706,
+          "actual_return": 0.1171
+        },
+        {
+          "date": "2025-01-07",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.973,
+          "actual_return": 0.243
+        },
+        {
+          "date": "2025-01-08",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9866,
+          "actual_return": 0.3338
+        },
+        {
+          "date": "2025-01-09",
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "probability": 0.8443,
+          "actual_return": 0.3015
+        },
+        {
+          "date": "2025-01-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9814,
+          "actual_return": 0.3145
+        },
+        {
+          "date": "2025-01-13",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9875,
+          "actual_return": 0.1667
+        },
+        {
+          "date": "2025-01-14",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9842,
+          "actual_return": 0.3244
+        },
+        {
+          "date": "2025-01-15",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9564,
+          "actual_return": 0.3438
+        },
+        {
+          "date": "2025-01-16",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.988,
+          "actual_return": 0.409
+        },
+        {
+          "date": "2025-01-17",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9903,
+          "actual_return": 0.4149
+        },
+        {
+          "date": "2025-01-20",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.7396,
+          "actual_return": -0.0241
+        },
+        {
+          "date": "2025-01-21",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9758,
+          "actual_return": 0.4401
+        },
+        {
+          "date": "2025-01-22",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9504,
+          "actual_return": 0.4618
+        },
+        {
+          "date": "2025-01-23",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9316,
+          "actual_return": 0.3297
+        },
+        {
+          "date": "2025-01-24",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9457,
+          "actual_return": 0.5278
+        },
+        {
+          "date": "2025-01-27",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9275,
+          "actual_return": 0.4313
+        },
+        {
+          "date": "2025-01-28",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9638,
+          "actual_return": 0.3538
+        }
+      ],
+      "fold": 1
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 38,
+      "avg_return": 0.2196047001421943,
+      "return_std": 0.10172881723343673,
+      "num_periods": 19,
+      "top_stocks": [
+        {
+          "date": "2025-01-02",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9642,
+          "actual_return": 0.1632
+        },
+        {
+          "date": "2025-01-02",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9629,
+          "actual_return": 0.0821
+        },
+        {
+          "date": "2025-01-03",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9588,
+          "actual_return": 0.0938
+        },
+        {
+          "date": "2025-01-03",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9419,
+          "actual_return": 0.0568
+        },
+        {
+          "date": "2025-01-06",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9706,
+          "actual_return": 0.1171
+        },
+        {
+          "date": "2025-01-06",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9275,
+          "actual_return": 0.0775
+        },
+        {
+          "date": "2025-01-07",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.973,
+          "actual_return": 0.243
+        },
+        {
+          "date": "2025-01-07",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9192,
+          "actual_return": 0.1063
+        },
+        {
+          "date": "2025-01-08",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9866,
+          "actual_return": 0.3338
+        },
+        {
+          "date": "2025-01-08",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.969,
+          "actual_return": 0.1368
+        },
+        {
+          "date": "2025-01-09",
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "probability": 0.8443,
+          "actual_return": 0.3015
+        },
+        {
+          "date": "2025-01-09",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.8391,
+          "actual_return": 0.1076
+        },
+        {
+          "date": "2025-01-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9814,
+          "actual_return": 0.3145
+        },
+        {
+          "date": "2025-01-10",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9781,
+          "actual_return": 0.1693
+        },
+        {
+          "date": "2025-01-13",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9875,
+          "actual_return": 0.1667
+        },
+        {
+          "date": "2025-01-13",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9821,
+          "actual_return": 0.2698
+        },
+        {
+          "date": "2025-01-14",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9842,
+          "actual_return": 0.3244
+        },
+        {
+          "date": "2025-01-14",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.9408,
+          "actual_return": 0.168
+        },
+        {
+          "date": "2025-01-15",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9564,
+          "actual_return": 0.3438
+        },
+        {
+          "date": "2025-01-15",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.9275,
+          "actual_return": 0.1643
+        },
+        {
+          "date": "2025-01-16",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.988,
+          "actual_return": 0.409
+        },
+        {
+          "date": "2025-01-16",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.8867,
+          "actual_return": 0.138
+        },
+        {
+          "date": "2025-01-17",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9903,
+          "actual_return": 0.4149
+        },
+        {
+          "date": "2025-01-17",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.9037,
+          "actual_return": 0.1382
+        },
+        {
+          "date": "2025-01-20",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.7396,
+          "actual_return": -0.0241
+        },
+        {
+          "date": "2025-01-20",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.6617,
+          "actual_return": -0.0409
+        },
+        {
+          "date": "2025-01-21",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9758,
+          "actual_return": 0.4401
+        },
+        {
+          "date": "2025-01-21",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8877,
+          "actual_return": -0.028
+        },
+        {
+          "date": "2025-01-22",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9504,
+          "actual_return": 0.4618
+        },
+        {
+          "date": "2025-01-22",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.8405,
+          "actual_return": 0.1185
+        },
+        {
+          "date": "2025-01-23",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9316,
+          "actual_return": 0.3297
+        },
+        {
+          "date": "2025-01-23",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.871,
+          "actual_return": 0.542
+        },
+        {
+          "date": "2025-01-24",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9457,
+          "actual_return": 0.5278
+        },
+        {
+          "date": "2025-01-24",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.8683,
+          "actual_return": 0.0648
+        },
+        {
+          "date": "2025-01-27",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9275,
+          "actual_return": 0.4313
+        },
+        {
+          "date": "2025-01-27",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.7559,
+          "actual_return": 0.2811
+        },
+        {
+          "date": "2025-01-28",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9638,
+          "actual_return": 0.3538
+        },
+        {
+          "date": "2025-01-28",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8371,
+          "actual_return": 0.0467
+        }
+      ],
+      "fold": 1
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 95,
+      "avg_return": 0.1810300938678568,
+      "return_std": 0.06181085265804231,
+      "num_periods": 19,
+      "fold": 1
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 209,
+      "avg_return": 0.1693572794270993,
+      "return_std": 0.03583418230599976,
+      "num_periods": 19,
+      "fold": 1
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 20,
+      "avg_return": 0.13257407328920637,
+      "return_std": 0.11572828177696567,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-02-03",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9966,
+          "actual_return": 0.3426
+        },
+        {
+          "date": "2025-02-04",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9906,
+          "actual_return": 0.2781
+        },
+        {
+          "date": "2025-02-05",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9948,
+          "actual_return": 0.367
+        },
+        {
+          "date": "2025-02-06",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9893,
+          "actual_return": 0.3539
+        },
+        {
+          "date": "2025-02-07",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.9756,
+          "actual_return": 0.0764
+        },
+        {
+          "date": "2025-02-10",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9704,
+          "actual_return": 0.0894
+        },
+        {
+          "date": "2025-02-11",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9535,
+          "actual_return": 0.2667
+        },
+        {
+          "date": "2025-02-12",
+          "code": "2282.HK",
+          "name": "2282.HK",
+          "probability": 0.9302,
+          "actual_return": 0.1205
+        },
+        {
+          "date": "2025-02-13",
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "probability": 0.9609,
+          "actual_return": 0.1489
+        },
+        {
+          "date": "2025-02-14",
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "probability": 0.9327,
+          "actual_return": 0.0896
+        },
+        {
+          "date": "2025-02-17",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.898,
+          "actual_return": 0.0138
+        },
+        {
+          "date": "2025-02-18",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.8839,
+          "actual_return": 0.0122
+        },
+        {
+          "date": "2025-02-19",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.8926,
+          "actual_return": 0.023
+        },
+        {
+          "date": "2025-02-20",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.87,
+          "actual_return": 0.0802
+        },
+        {
+          "date": "2025-02-21",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9325,
+          "actual_return": 0.1
+        },
+        {
+          "date": "2025-02-24",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9405,
+          "actual_return": 0.0726
+        },
+        {
+          "date": "2025-02-25",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.952,
+          "actual_return": 0.0718
+        },
+        {
+          "date": "2025-02-26",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9174,
+          "actual_return": 0.0569
+        },
+        {
+          "date": "2025-02-27",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9384,
+          "actual_return": 0.0556
+        },
+        {
+          "date": "2025-02-28",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9331,
+          "actual_return": 0.0324
+        }
+      ],
+      "fold": 2
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 40,
+      "avg_return": 0.0968099230801123,
+      "return_std": 0.09309388812570223,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-02-03",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9966,
+          "actual_return": 0.3426
+        },
+        {
+          "date": "2025-02-03",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9685,
+          "actual_return": 0.2121
+        },
+        {
+          "date": "2025-02-04",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9906,
+          "actual_return": 0.2781
+        },
+        {
+          "date": "2025-02-04",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9578,
+          "actual_return": 0.1484
+        },
+        {
+          "date": "2025-02-05",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9948,
+          "actual_return": 0.367
+        },
+        {
+          "date": "2025-02-05",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.9789,
+          "actual_return": 0.0992
+        },
+        {
+          "date": "2025-02-06",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9893,
+          "actual_return": 0.3539
+        },
+        {
+          "date": "2025-02-06",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9747,
+          "actual_return": 0.088
+        },
+        {
+          "date": "2025-02-07",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.9756,
+          "actual_return": 0.0764
+        },
+        {
+          "date": "2025-02-07",
+          "code": "1177.HK",
+          "name": "1177.HK",
+          "probability": 0.9741,
+          "actual_return": 0.1246
+        },
+        {
+          "date": "2025-02-10",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9704,
+          "actual_return": 0.0894
+        },
+        {
+          "date": "2025-02-10",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9699,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-02-11",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9535,
+          "actual_return": 0.2667
+        },
+        {
+          "date": "2025-02-11",
+          "code": "2282.HK",
+          "name": "2282.HK",
+          "probability": 0.949,
+          "actual_return": 0.1503
+        },
+        {
+          "date": "2025-02-12",
+          "code": "2282.HK",
+          "name": "2282.HK",
+          "probability": 0.9302,
+          "actual_return": 0.1205
+        },
+        {
+          "date": "2025-02-12",
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "probability": 0.9282,
+          "actual_return": 0.1011
+        },
+        {
+          "date": "2025-02-13",
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "probability": 0.9609,
+          "actual_return": 0.1489
+        },
+        {
+          "date": "2025-02-13",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9186,
+          "actual_return": 0.2689
+        },
+        {
+          "date": "2025-02-14",
+          "code": "2533.HK",
+          "name": "黑芝麻智能",
+          "probability": 0.9327,
+          "actual_return": 0.0896
+        },
+        {
+          "date": "2025-02-14",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.9044,
+          "actual_return": -0.0342
+        },
+        {
+          "date": "2025-02-17",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.898,
+          "actual_return": 0.0138
+        },
+        {
+          "date": "2025-02-17",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.8159,
+          "actual_return": -0.0424
+        },
+        {
+          "date": "2025-02-18",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.8839,
+          "actual_return": 0.0122
+        },
+        {
+          "date": "2025-02-18",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.8735,
+          "actual_return": -0.0667
+        },
+        {
+          "date": "2025-02-19",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.8926,
+          "actual_return": 0.023
+        },
+        {
+          "date": "2025-02-19",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.8912,
+          "actual_return": 0.0655
+        },
+        {
+          "date": "2025-02-20",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.87,
+          "actual_return": 0.0802
+        },
+        {
+          "date": "2025-02-20",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.8673,
+          "actual_return": 0.0424
+        },
+        {
+          "date": "2025-02-21",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9325,
+          "actual_return": 0.1
+        },
+        {
+          "date": "2025-02-21",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.9067,
+          "actual_return": -0.1532
+        },
+        {
+          "date": "2025-02-24",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9405,
+          "actual_return": 0.0726
+        },
+        {
+          "date": "2025-02-24",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.9252,
+          "actual_return": 0.0135
+        },
+        {
+          "date": "2025-02-25",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.952,
+          "actual_return": 0.0718
+        },
+        {
+          "date": "2025-02-25",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9374,
+          "actual_return": 0.0863
+        },
+        {
+          "date": "2025-02-26",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9174,
+          "actual_return": 0.0569
+        },
+        {
+          "date": "2025-02-26",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9068,
+          "actual_return": 0.036
+        },
+        {
+          "date": "2025-02-27",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9384,
+          "actual_return": 0.0556
+        },
+        {
+          "date": "2025-02-27",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9328,
+          "actual_return": 0.0887
+        },
+        {
+          "date": "2025-02-28",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9331,
+          "actual_return": 0.0324
+        },
+        {
+          "date": "2025-02-28",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.93,
+          "actual_return": -0.0077
+        }
+      ],
+      "fold": 2
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 100,
+      "avg_return": 0.08348436265437663,
+      "return_std": 0.06342408832759995,
+      "num_periods": 20,
+      "fold": 2
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 220,
+      "avg_return": 0.0664799325447661,
+      "return_std": 0.04607485582934936,
+      "num_periods": 20,
+      "fold": 2
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 21,
+      "avg_return": -0.059770751210655115,
+      "return_std": 0.12425294374875118,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-03-03",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9629,
+          "actual_return": 0.0635
+        },
+        {
+          "date": "2025-03-04",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9772,
+          "actual_return": 0.0801
+        },
+        {
+          "date": "2025-03-05",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9596,
+          "actual_return": 0.079
+        },
+        {
+          "date": "2025-03-06",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.966,
+          "actual_return": 0.0173
+        },
+        {
+          "date": "2025-03-07",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9766,
+          "actual_return": -0.1095
+        },
+        {
+          "date": "2025-03-10",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9534,
+          "actual_return": -0.0881
+        },
+        {
+          "date": "2025-03-11",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9786,
+          "actual_return": -0.1349
+        },
+        {
+          "date": "2025-03-12",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9643,
+          "actual_return": -0.1266
+        },
+        {
+          "date": "2025-03-13",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9271,
+          "actual_return": -0.0838
+        },
+        {
+          "date": "2025-03-14",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9448,
+          "actual_return": -0.0855
+        },
+        {
+          "date": "2025-03-17",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8547,
+          "actual_return": -0.0868
+        },
+        {
+          "date": "2025-03-18",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8445,
+          "actual_return": -0.2845
+        },
+        {
+          "date": "2025-03-19",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8712,
+          "actual_return": -0.2792
+        },
+        {
+          "date": "2025-03-20",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8917,
+          "actual_return": -0.2142
+        },
+        {
+          "date": "2025-03-21",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9412,
+          "actual_return": -0.0724
+        },
+        {
+          "date": "2025-03-24",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.917,
+          "actual_return": -0.2233
+        },
+        {
+          "date": "2025-03-25",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8992,
+          "actual_return": -0.0926
+        },
+        {
+          "date": "2025-03-26",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9367,
+          "actual_return": 0.0752
+        },
+        {
+          "date": "2025-03-27",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9626,
+          "actual_return": 0.0988
+        },
+        {
+          "date": "2025-03-28",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.948,
+          "actual_return": 0.1103
+        },
+        {
+          "date": "2025-03-31",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9269,
+          "actual_return": 0.1019
+        }
+      ],
+      "fold": 3
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 42,
+      "avg_return": -0.051718345631932526,
+      "return_std": 0.08220480249093716,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-03-03",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9629,
+          "actual_return": 0.0635
+        },
+        {
+          "date": "2025-03-03",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9604,
+          "actual_return": 0.0517
+        },
+        {
+          "date": "2025-03-04",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9772,
+          "actual_return": 0.0801
+        },
+        {
+          "date": "2025-03-04",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9765,
+          "actual_return": 0.0478
+        },
+        {
+          "date": "2025-03-05",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9596,
+          "actual_return": 0.079
+        },
+        {
+          "date": "2025-03-05",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.957,
+          "actual_return": 0.0234
+        },
+        {
+          "date": "2025-03-06",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.966,
+          "actual_return": 0.0173
+        },
+        {
+          "date": "2025-03-06",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9208,
+          "actual_return": 0.0586
+        },
+        {
+          "date": "2025-03-07",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9766,
+          "actual_return": -0.1095
+        },
+        {
+          "date": "2025-03-07",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9747,
+          "actual_return": -0.1611
+        },
+        {
+          "date": "2025-03-10",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9534,
+          "actual_return": -0.0881
+        },
+        {
+          "date": "2025-03-10",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9487,
+          "actual_return": -0.1476
+        },
+        {
+          "date": "2025-03-11",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9786,
+          "actual_return": -0.1349
+        },
+        {
+          "date": "2025-03-11",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9656,
+          "actual_return": -0.0782
+        },
+        {
+          "date": "2025-03-12",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9643,
+          "actual_return": -0.1266
+        },
+        {
+          "date": "2025-03-12",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9612,
+          "actual_return": -0.0878
+        },
+        {
+          "date": "2025-03-13",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9271,
+          "actual_return": -0.0838
+        },
+        {
+          "date": "2025-03-13",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9147,
+          "actual_return": -0.0315
+        },
+        {
+          "date": "2025-03-14",
+          "code": "2883.HK",
+          "name": "2883.HK",
+          "probability": 0.9448,
+          "actual_return": -0.0855
+        },
+        {
+          "date": "2025-03-14",
+          "code": "1171.HK",
+          "name": "1171.HK",
+          "probability": 0.8989,
+          "actual_return": -0.0746
+        },
+        {
+          "date": "2025-03-17",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8547,
+          "actual_return": -0.0868
+        },
+        {
+          "date": "2025-03-17",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.822,
+          "actual_return": -0.1236
+        },
+        {
+          "date": "2025-03-18",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8445,
+          "actual_return": -0.2845
+        },
+        {
+          "date": "2025-03-18",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.7726,
+          "actual_return": -0.1015
+        },
+        {
+          "date": "2025-03-19",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8712,
+          "actual_return": -0.2792
+        },
+        {
+          "date": "2025-03-19",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.853,
+          "actual_return": -0.0859
+        },
+        {
+          "date": "2025-03-20",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8917,
+          "actual_return": -0.2142
+        },
+        {
+          "date": "2025-03-20",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8859,
+          "actual_return": -0.0821
+        },
+        {
+          "date": "2025-03-21",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.9412,
+          "actual_return": -0.0724
+        },
+        {
+          "date": "2025-03-21",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9281,
+          "actual_return": 0.0425
+        },
+        {
+          "date": "2025-03-24",
+          "code": "3800.HK",
+          "name": "3800.HK",
+          "probability": 0.917,
+          "actual_return": -0.2233
+        },
+        {
+          "date": "2025-03-24",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8487,
+          "actual_return": 0.0501
+        },
+        {
+          "date": "2025-03-25",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8992,
+          "actual_return": -0.0926
+        },
+        {
+          "date": "2025-03-25",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.8965,
+          "actual_return": -0.0215
+        },
+        {
+          "date": "2025-03-26",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9367,
+          "actual_return": 0.0752
+        },
+        {
+          "date": "2025-03-26",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.884,
+          "actual_return": -0.1449
+        },
+        {
+          "date": "2025-03-27",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9626,
+          "actual_return": 0.0988
+        },
+        {
+          "date": "2025-03-27",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9297,
+          "actual_return": -0.0201
+        },
+        {
+          "date": "2025-03-28",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.948,
+          "actual_return": 0.1103
+        },
+        {
+          "date": "2025-03-28",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8991,
+          "actual_return": -0.0478
+        },
+        {
+          "date": "2025-03-31",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9269,
+          "actual_return": 0.1019
+        },
+        {
+          "date": "2025-03-31",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9199,
+          "actual_return": 0.0171
+        }
+      ],
+      "fold": 3
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 105,
+      "avg_return": -0.053655891728927686,
+      "return_std": 0.06416448144398439,
+      "num_periods": 21,
+      "fold": 3
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 231,
+      "avg_return": -0.04561360362069005,
+      "return_std": 0.060440946183618394,
+      "num_periods": 21,
+      "fold": 3
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 19,
+      "avg_return": 0.11109590048559695,
+      "return_std": 0.06872962906110543,
+      "num_periods": 19,
+      "top_stocks": [
+        {
+          "date": "2025-04-01",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8382,
+          "actual_return": 0.1023
+        },
+        {
+          "date": "2025-04-02",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8509,
+          "actual_return": 0.0966
+        },
+        {
+          "date": "2025-04-03",
+          "code": "0151.HK",
+          "name": "0151.HK",
+          "probability": 0.8132,
+          "actual_return": 0.0384
+        },
+        {
+          "date": "2025-04-07",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9779,
+          "actual_return": 0.1575
+        },
+        {
+          "date": "2025-04-08",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9598,
+          "actual_return": 0.1627
+        },
+        {
+          "date": "2025-04-09",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.9515,
+          "actual_return": 0.2223
+        },
+        {
+          "date": "2025-04-10",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.8712,
+          "actual_return": 0.203
+        },
+        {
+          "date": "2025-04-11",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8156,
+          "actual_return": 0.2
+        },
+        {
+          "date": "2025-04-14",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.7277,
+          "actual_return": 0.157
+        },
+        {
+          "date": "2025-04-15",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.5974,
+          "actual_return": 0.011
+        },
+        {
+          "date": "2025-04-16",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.8244,
+          "actual_return": 0.1825
+        },
+        {
+          "date": "2025-04-17",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.7965,
+          "actual_return": 0.1842
+        },
+        {
+          "date": "2025-04-22",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.7861,
+          "actual_return": 0.0445
+        },
+        {
+          "date": "2025-04-23",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.6784,
+          "actual_return": 0.0224
+        },
+        {
+          "date": "2025-04-24",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.6425,
+          "actual_return": 0.0189
+        },
+        {
+          "date": "2025-04-25",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.6029,
+          "actual_return": 0.0366
+        },
+        {
+          "date": "2025-04-28",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7418,
+          "actual_return": 0.0738
+        },
+        {
+          "date": "2025-04-29",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7725,
+          "actual_return": 0.1018
+        },
+        {
+          "date": "2025-04-30",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7958,
+          "actual_return": 0.0953
+        }
+      ],
+      "fold": 4
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 38,
+      "avg_return": 0.10868902886243054,
+      "return_std": 0.0578730339417796,
+      "num_periods": 19,
+      "top_stocks": [
+        {
+          "date": "2025-04-01",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8382,
+          "actual_return": 0.1023
+        },
+        {
+          "date": "2025-04-01",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.7857,
+          "actual_return": 0.058
+        },
+        {
+          "date": "2025-04-02",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8509,
+          "actual_return": 0.0966
+        },
+        {
+          "date": "2025-04-02",
+          "code": "0151.HK",
+          "name": "0151.HK",
+          "probability": 0.7897,
+          "actual_return": 0.0262
+        },
+        {
+          "date": "2025-04-03",
+          "code": "0151.HK",
+          "name": "0151.HK",
+          "probability": 0.8132,
+          "actual_return": 0.0384
+        },
+        {
+          "date": "2025-04-03",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.8088,
+          "actual_return": 0.0304
+        },
+        {
+          "date": "2025-04-07",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9779,
+          "actual_return": 0.1575
+        },
+        {
+          "date": "2025-04-07",
+          "code": "9999.HK",
+          "name": "9999.HK",
+          "probability": 0.97,
+          "actual_return": 0.2108
+        },
+        {
+          "date": "2025-04-08",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9598,
+          "actual_return": 0.1627
+        },
+        {
+          "date": "2025-04-08",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9506,
+          "actual_return": 0.238
+        },
+        {
+          "date": "2025-04-09",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.9515,
+          "actual_return": 0.2223
+        },
+        {
+          "date": "2025-04-09",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9478,
+          "actual_return": 0.1741
+        },
+        {
+          "date": "2025-04-10",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.8712,
+          "actual_return": 0.203
+        },
+        {
+          "date": "2025-04-10",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8682,
+          "actual_return": 0.1106
+        },
+        {
+          "date": "2025-04-11",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8156,
+          "actual_return": 0.2
+        },
+        {
+          "date": "2025-04-11",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.7853,
+          "actual_return": 0.2
+        },
+        {
+          "date": "2025-04-14",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.7277,
+          "actual_return": 0.157
+        },
+        {
+          "date": "2025-04-14",
+          "code": "0016.HK",
+          "name": "新鸿基地产",
+          "probability": 0.6288,
+          "actual_return": 0.179
+        },
+        {
+          "date": "2025-04-15",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.5974,
+          "actual_return": 0.011
+        },
+        {
+          "date": "2025-04-15",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.5869,
+          "actual_return": 0.1687
+        },
+        {
+          "date": "2025-04-16",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.8244,
+          "actual_return": 0.1825
+        },
+        {
+          "date": "2025-04-16",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.7374,
+          "actual_return": 0.0111
+        },
+        {
+          "date": "2025-04-17",
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "probability": 0.7965,
+          "actual_return": 0.1842
+        },
+        {
+          "date": "2025-04-17",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.7694,
+          "actual_return": 0.0059
+        },
+        {
+          "date": "2025-04-22",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.7861,
+          "actual_return": 0.0445
+        },
+        {
+          "date": "2025-04-22",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7191,
+          "actual_return": 0.0617
+        },
+        {
+          "date": "2025-04-23",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.6784,
+          "actual_return": 0.0224
+        },
+        {
+          "date": "2025-04-23",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.5113,
+          "actual_return": 0.0764
+        },
+        {
+          "date": "2025-04-24",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.6425,
+          "actual_return": 0.0189
+        },
+        {
+          "date": "2025-04-24",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.5914,
+          "actual_return": 0.0417
+        },
+        {
+          "date": "2025-04-25",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.6029,
+          "actual_return": 0.0366
+        },
+        {
+          "date": "2025-04-25",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.5644,
+          "actual_return": 0.0353
+        },
+        {
+          "date": "2025-04-28",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7418,
+          "actual_return": 0.0738
+        },
+        {
+          "date": "2025-04-28",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.6551,
+          "actual_return": 0.1407
+        },
+        {
+          "date": "2025-04-29",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7725,
+          "actual_return": 0.1018
+        },
+        {
+          "date": "2025-04-29",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.6486,
+          "actual_return": 0.131
+        },
+        {
+          "date": "2025-04-30",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.7958,
+          "actual_return": 0.0953
+        },
+        {
+          "date": "2025-04-30",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.603,
+          "actual_return": 0.1199
+        }
+      ],
+      "fold": 4
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 95,
+      "avg_return": 0.08585966594587982,
+      "return_std": 0.05793844249829143,
+      "num_periods": 19,
+      "fold": 4
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 209,
+      "avg_return": 0.08833428439899227,
+      "return_std": 0.03894456177218037,
+      "num_periods": 19,
+      "fold": 4
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 20,
+      "avg_return": 0.04106442457561396,
+      "return_std": 0.06044359344387384,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-05-02",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9518,
+          "actual_return": 0.1041
+        },
+        {
+          "date": "2025-05-06",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.8763,
+          "actual_return": 0.058
+        },
+        {
+          "date": "2025-05-07",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8385,
+          "actual_return": 0.0603
+        },
+        {
+          "date": "2025-05-08",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.8266,
+          "actual_return": 0.1137
+        },
+        {
+          "date": "2025-05-09",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8049,
+          "actual_return": 0.0804
+        },
+        {
+          "date": "2025-05-12",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.7766,
+          "actual_return": -0.0876
+        },
+        {
+          "date": "2025-05-13",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8717,
+          "actual_return": 0.108
+        },
+        {
+          "date": "2025-05-14",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9287,
+          "actual_return": -0.0246
+        },
+        {
+          "date": "2025-05-15",
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "probability": 0.907,
+          "actual_return": -0.0149
+        },
+        {
+          "date": "2025-05-16",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9591,
+          "actual_return": 0.0347
+        },
+        {
+          "date": "2025-05-19",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9692,
+          "actual_return": 0.0071
+        },
+        {
+          "date": "2025-05-20",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9411,
+          "actual_return": 0.0403
+        },
+        {
+          "date": "2025-05-21",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9468,
+          "actual_return": 0.0211
+        },
+        {
+          "date": "2025-05-22",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9242,
+          "actual_return": -0.0032
+        },
+        {
+          "date": "2025-05-23",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8742,
+          "actual_return": -0.0562
+        },
+        {
+          "date": "2025-05-26",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.848,
+          "actual_return": -0.0202
+        },
+        {
+          "date": "2025-05-27",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.8364,
+          "actual_return": 0.1091
+        },
+        {
+          "date": "2025-05-28",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9113,
+          "actual_return": 0.0797
+        },
+        {
+          "date": "2025-05-29",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8668,
+          "actual_return": 0.0749
+        },
+        {
+          "date": "2025-05-30",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.7922,
+          "actual_return": 0.1366
+        }
+      ],
+      "fold": 5
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 40,
+      "avg_return": 0.05425753131180424,
+      "return_std": 0.0569821255414645,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-05-02",
+          "code": "1088.HK",
+          "name": "中国神华",
+          "probability": 0.9518,
+          "actual_return": 0.1041
+        },
+        {
+          "date": "2025-05-02",
+          "code": "1053.HK",
+          "name": "1053.HK",
+          "probability": 0.9313,
+          "actual_return": 0.0625
+        },
+        {
+          "date": "2025-05-06",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.8763,
+          "actual_return": 0.058
+        },
+        {
+          "date": "2025-05-06",
+          "code": "2601.HK",
+          "name": "2601.HK",
+          "probability": 0.8301,
+          "actual_return": 0.1505
+        },
+        {
+          "date": "2025-05-07",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8385,
+          "actual_return": 0.0603
+        },
+        {
+          "date": "2025-05-07",
+          "code": "2601.HK",
+          "name": "2601.HK",
+          "probability": 0.8325,
+          "actual_return": 0.1751
+        },
+        {
+          "date": "2025-05-08",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.8266,
+          "actual_return": 0.1137
+        },
+        {
+          "date": "2025-05-08",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8187,
+          "actual_return": 0.0958
+        },
+        {
+          "date": "2025-05-09",
+          "code": "0883.HK",
+          "name": "中国海洋石油",
+          "probability": 0.8049,
+          "actual_return": 0.0804
+        },
+        {
+          "date": "2025-05-09",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.7644,
+          "actual_return": 0.0969
+        },
+        {
+          "date": "2025-05-12",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.7766,
+          "actual_return": -0.0876
+        },
+        {
+          "date": "2025-05-12",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.7611,
+          "actual_return": -0.0495
+        },
+        {
+          "date": "2025-05-13",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8717,
+          "actual_return": 0.108
+        },
+        {
+          "date": "2025-05-13",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8696,
+          "actual_return": 0.1469
+        },
+        {
+          "date": "2025-05-14",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9287,
+          "actual_return": -0.0246
+        },
+        {
+          "date": "2025-05-14",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8845,
+          "actual_return": 0.1087
+        },
+        {
+          "date": "2025-05-15",
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "probability": 0.907,
+          "actual_return": -0.0149
+        },
+        {
+          "date": "2025-05-15",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8938,
+          "actual_return": -0.0109
+        },
+        {
+          "date": "2025-05-16",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9591,
+          "actual_return": 0.0347
+        },
+        {
+          "date": "2025-05-16",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9525,
+          "actual_return": -0.0357
+        },
+        {
+          "date": "2025-05-19",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9692,
+          "actual_return": 0.0071
+        },
+        {
+          "date": "2025-05-19",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9377,
+          "actual_return": 0.1358
+        },
+        {
+          "date": "2025-05-20",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9411,
+          "actual_return": 0.0403
+        },
+        {
+          "date": "2025-05-20",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9264,
+          "actual_return": 0.0642
+        },
+        {
+          "date": "2025-05-21",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9468,
+          "actual_return": 0.0211
+        },
+        {
+          "date": "2025-05-21",
+          "code": "0960.HK",
+          "name": "0960.HK",
+          "probability": 0.8864,
+          "actual_return": -0.0514
+        },
+        {
+          "date": "2025-05-22",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9242,
+          "actual_return": -0.0032
+        },
+        {
+          "date": "2025-05-22",
+          "code": "3690.HK",
+          "name": "美团-W",
+          "probability": 0.8661,
+          "actual_return": -0.0566
+        },
+        {
+          "date": "2025-05-23",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8742,
+          "actual_return": -0.0562
+        },
+        {
+          "date": "2025-05-23",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.8719,
+          "actual_return": 0.0474
+        },
+        {
+          "date": "2025-05-26",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.848,
+          "actual_return": -0.0202
+        },
+        {
+          "date": "2025-05-26",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.8476,
+          "actual_return": 0.0679
+        },
+        {
+          "date": "2025-05-27",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.8364,
+          "actual_return": 0.1091
+        },
+        {
+          "date": "2025-05-27",
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "probability": 0.7558,
+          "actual_return": 0.0966
+        },
+        {
+          "date": "2025-05-28",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9113,
+          "actual_return": 0.0797
+        },
+        {
+          "date": "2025-05-28",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8939,
+          "actual_return": 0.0983
+        },
+        {
+          "date": "2025-05-29",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8668,
+          "actual_return": 0.0749
+        },
+        {
+          "date": "2025-05-29",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.86,
+          "actual_return": 0.1006
+        },
+        {
+          "date": "2025-05-30",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.7922,
+          "actual_return": 0.1366
+        },
+        {
+          "date": "2025-05-30",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.7786,
+          "actual_return": 0.106
+        }
+      ],
+      "fold": 5
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 100,
+      "avg_return": 0.06506507798095602,
+      "return_std": 0.031127517611519034,
+      "num_periods": 20,
+      "fold": 5
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 220,
+      "avg_return": 0.04806446282813098,
+      "return_std": 0.03790603631013122,
+      "num_periods": 20,
+      "fold": 5
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 21,
+      "avg_return": 0.045253627178868015,
+      "return_std": 0.03908521301724698,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-06-02",
+          "code": "9999.HK",
+          "name": "9999.HK",
+          "probability": 0.9204,
+          "actual_return": 0.095
+        },
+        {
+          "date": "2025-06-03",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9164,
+          "actual_return": 0.1212
+        },
+        {
+          "date": "2025-06-04",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9209,
+          "actual_return": 0.0352
+        },
+        {
+          "date": "2025-06-05",
+          "code": "9999.HK",
+          "name": "9999.HK",
+          "probability": 0.9649,
+          "actual_return": 0.0437
+        },
+        {
+          "date": "2025-06-06",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9405,
+          "actual_return": 0.0144
+        },
+        {
+          "date": "2025-06-09",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.887,
+          "actual_return": 0.0038
+        },
+        {
+          "date": "2025-06-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8691,
+          "actual_return": 0.0739
+        },
+        {
+          "date": "2025-06-11",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.8277,
+          "actual_return": -0.0167
+        },
+        {
+          "date": "2025-06-12",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9038,
+          "actual_return": 0.0987
+        },
+        {
+          "date": "2025-06-13",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9124,
+          "actual_return": 0.103
+        },
+        {
+          "date": "2025-06-16",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8913,
+          "actual_return": 0.0646
+        },
+        {
+          "date": "2025-06-17",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9519,
+          "actual_return": 0.0584
+        },
+        {
+          "date": "2025-06-18",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9334,
+          "actual_return": 0.0365
+        },
+        {
+          "date": "2025-06-19",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9715,
+          "actual_return": 0.0711
+        },
+        {
+          "date": "2025-06-20",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9406,
+          "actual_return": 0.0644
+        },
+        {
+          "date": "2025-06-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9342,
+          "actual_return": 0.0432
+        },
+        {
+          "date": "2025-06-24",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8189,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-06-25",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8541,
+          "actual_return": -0.0154
+        },
+        {
+          "date": "2025-06-26",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8913,
+          "actual_return": -0.002
+        },
+        {
+          "date": "2025-06-27",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8908,
+          "actual_return": 0.0227
+        },
+        {
+          "date": "2025-06-30",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9115,
+          "actual_return": 0.0347
+        }
+      ],
+      "fold": 6
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 42,
+      "avg_return": 0.05704123605647943,
+      "return_std": 0.048666643970501966,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-06-02",
+          "code": "9999.HK",
+          "name": "9999.HK",
+          "probability": 0.9204,
+          "actual_return": 0.095
+        },
+        {
+          "date": "2025-06-02",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9046,
+          "actual_return": 0.0592
+        },
+        {
+          "date": "2025-06-03",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9164,
+          "actual_return": 0.1212
+        },
+        {
+          "date": "2025-06-03",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.8939,
+          "actual_return": 0.0703
+        },
+        {
+          "date": "2025-06-04",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9209,
+          "actual_return": 0.0352
+        },
+        {
+          "date": "2025-06-04",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9119,
+          "actual_return": 0.1686
+        },
+        {
+          "date": "2025-06-05",
+          "code": "9999.HK",
+          "name": "9999.HK",
+          "probability": 0.9649,
+          "actual_return": 0.0437
+        },
+        {
+          "date": "2025-06-05",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9563,
+          "actual_return": 0.0212
+        },
+        {
+          "date": "2025-06-06",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9405,
+          "actual_return": 0.0144
+        },
+        {
+          "date": "2025-06-06",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9335,
+          "actual_return": 0.0162
+        },
+        {
+          "date": "2025-06-09",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.887,
+          "actual_return": 0.0038
+        },
+        {
+          "date": "2025-06-09",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.7952,
+          "actual_return": -0.0115
+        },
+        {
+          "date": "2025-06-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8691,
+          "actual_return": 0.0739
+        },
+        {
+          "date": "2025-06-10",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8369,
+          "actual_return": -0.0186
+        },
+        {
+          "date": "2025-06-11",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.8277,
+          "actual_return": -0.0167
+        },
+        {
+          "date": "2025-06-11",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.7832,
+          "actual_return": -0.0138
+        },
+        {
+          "date": "2025-06-12",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9038,
+          "actual_return": 0.0987
+        },
+        {
+          "date": "2025-06-12",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.831,
+          "actual_return": -0.1064
+        },
+        {
+          "date": "2025-06-13",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9124,
+          "actual_return": 0.103
+        },
+        {
+          "date": "2025-06-13",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8907,
+          "actual_return": -0.0446
+        },
+        {
+          "date": "2025-06-16",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8913,
+          "actual_return": 0.0646
+        },
+        {
+          "date": "2025-06-16",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.8861,
+          "actual_return": 0.0069
+        },
+        {
+          "date": "2025-06-17",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9519,
+          "actual_return": 0.0584
+        },
+        {
+          "date": "2025-06-17",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9011,
+          "actual_return": 0.0078
+        },
+        {
+          "date": "2025-06-18",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9334,
+          "actual_return": 0.0365
+        },
+        {
+          "date": "2025-06-18",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9282,
+          "actual_return": 0.0205
+        },
+        {
+          "date": "2025-06-19",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9715,
+          "actual_return": 0.0711
+        },
+        {
+          "date": "2025-06-19",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9662,
+          "actual_return": 0.0567
+        },
+        {
+          "date": "2025-06-20",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9406,
+          "actual_return": 0.0644
+        },
+        {
+          "date": "2025-06-20",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.9163,
+          "actual_return": 0.0151
+        },
+        {
+          "date": "2025-06-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9342,
+          "actual_return": 0.0432
+        },
+        {
+          "date": "2025-06-23",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9205,
+          "actual_return": 0.0622
+        },
+        {
+          "date": "2025-06-24",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8189,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-06-24",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.7932,
+          "actual_return": 0.1319
+        },
+        {
+          "date": "2025-06-25",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8541,
+          "actual_return": -0.0154
+        },
+        {
+          "date": "2025-06-25",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8338,
+          "actual_return": 0.1615
+        },
+        {
+          "date": "2025-06-26",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8913,
+          "actual_return": -0.002
+        },
+        {
+          "date": "2025-06-26",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8442,
+          "actual_return": 0.26
+        },
+        {
+          "date": "2025-06-27",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.8908,
+          "actual_return": 0.0227
+        },
+        {
+          "date": "2025-06-27",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8823,
+          "actual_return": 0.2724
+        },
+        {
+          "date": "2025-06-30",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9115,
+          "actual_return": 0.0347
+        },
+        {
+          "date": "2025-06-30",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8413,
+          "actual_return": 0.3099
+        }
+      ],
+      "fold": 6
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 105,
+      "avg_return": 0.06669656505346117,
+      "return_std": 0.05349321486902264,
+      "num_periods": 21,
+      "fold": 6
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 231,
+      "avg_return": 0.07417195481799664,
+      "return_std": 0.05245980407900246,
+      "num_periods": 21,
+      "fold": 6
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 22,
+      "avg_return": 0.03143803679054259,
+      "return_std": 0.08839276986214185,
+      "num_periods": 22,
+      "top_stocks": [
+        {
+          "date": "2025-07-02",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9442,
+          "actual_return": 0.0178
+        },
+        {
+          "date": "2025-07-03",
+          "code": "1177.HK",
+          "name": "1177.HK",
+          "probability": 0.955,
+          "actual_return": 0.3798
+        },
+        {
+          "date": "2025-07-04",
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "probability": 0.938,
+          "actual_return": 0.0769
+        },
+        {
+          "date": "2025-07-07",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.8965,
+          "actual_return": 0.0796
+        },
+        {
+          "date": "2025-07-08",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.8888,
+          "actual_return": 0.0891
+        },
+        {
+          "date": "2025-07-09",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9163,
+          "actual_return": 0.0329
+        },
+        {
+          "date": "2025-07-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9164,
+          "actual_return": -0.0888
+        },
+        {
+          "date": "2025-07-11",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9099,
+          "actual_return": -0.1064
+        },
+        {
+          "date": "2025-07-14",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9044,
+          "actual_return": 0.0347
+        },
+        {
+          "date": "2025-07-15",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9032,
+          "actual_return": 0.0261
+        },
+        {
+          "date": "2025-07-16",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8965,
+          "actual_return": 0.0442
+        },
+        {
+          "date": "2025-07-17",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9322,
+          "actual_return": 0.0282
+        },
+        {
+          "date": "2025-07-18",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9291,
+          "actual_return": 0.0219
+        },
+        {
+          "date": "2025-07-21",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.898,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-07-22",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9271,
+          "actual_return": -0.0065
+        },
+        {
+          "date": "2025-07-23",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9118,
+          "actual_return": -0.005
+        },
+        {
+          "date": "2025-07-24",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9042,
+          "actual_return": -0.0127
+        },
+        {
+          "date": "2025-07-25",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8872,
+          "actual_return": 0.003
+        },
+        {
+          "date": "2025-07-28",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8513,
+          "actual_return": 0.004
+        },
+        {
+          "date": "2025-07-29",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8761,
+          "actual_return": -0.006
+        },
+        {
+          "date": "2025-07-30",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.859,
+          "actual_return": 0.0325
+        },
+        {
+          "date": "2025-07-31",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9353,
+          "actual_return": 0.0463
+        }
+      ],
+      "fold": 7
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 44,
+      "avg_return": 0.012073360950570978,
+      "return_std": 0.07224400413727786,
+      "num_periods": 22,
+      "top_stocks": [
+        {
+          "date": "2025-07-02",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9442,
+          "actual_return": 0.0178
+        },
+        {
+          "date": "2025-07-02",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9351,
+          "actual_return": 0.094
+        },
+        {
+          "date": "2025-07-03",
+          "code": "1177.HK",
+          "name": "1177.HK",
+          "probability": 0.955,
+          "actual_return": 0.3798
+        },
+        {
+          "date": "2025-07-03",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9445,
+          "actual_return": 0.0884
+        },
+        {
+          "date": "2025-07-04",
+          "code": "0700.HK",
+          "name": "腾讯控股",
+          "probability": 0.938,
+          "actual_return": 0.0769
+        },
+        {
+          "date": "2025-07-04",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9134,
+          "actual_return": 0.0569
+        },
+        {
+          "date": "2025-07-07",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.8965,
+          "actual_return": 0.0796
+        },
+        {
+          "date": "2025-07-07",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8529,
+          "actual_return": 0.0121
+        },
+        {
+          "date": "2025-07-08",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.8888,
+          "actual_return": 0.0891
+        },
+        {
+          "date": "2025-07-08",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.7975,
+          "actual_return": -0.0742
+        },
+        {
+          "date": "2025-07-09",
+          "code": "0006.HK",
+          "name": "0006.HK",
+          "probability": 0.9163,
+          "actual_return": 0.0329
+        },
+        {
+          "date": "2025-07-09",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9004,
+          "actual_return": 0.0031
+        },
+        {
+          "date": "2025-07-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9164,
+          "actual_return": -0.0888
+        },
+        {
+          "date": "2025-07-10",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9081,
+          "actual_return": 0.0185
+        },
+        {
+          "date": "2025-07-11",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9099,
+          "actual_return": -0.1064
+        },
+        {
+          "date": "2025-07-11",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8643,
+          "actual_return": 0.0118
+        },
+        {
+          "date": "2025-07-14",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9044,
+          "actual_return": 0.0347
+        },
+        {
+          "date": "2025-07-14",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8047,
+          "actual_return": 0.0484
+        },
+        {
+          "date": "2025-07-15",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9032,
+          "actual_return": 0.0261
+        },
+        {
+          "date": "2025-07-15",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8027,
+          "actual_return": -0.1032
+        },
+        {
+          "date": "2025-07-16",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8965,
+          "actual_return": 0.0442
+        },
+        {
+          "date": "2025-07-16",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.8006,
+          "actual_return": 0.1465
+        },
+        {
+          "date": "2025-07-17",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9322,
+          "actual_return": 0.0282
+        },
+        {
+          "date": "2025-07-17",
+          "code": "1398.HK",
+          "name": "工商银行",
+          "probability": 0.7963,
+          "actual_return": 0.0016
+        },
+        {
+          "date": "2025-07-18",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9291,
+          "actual_return": 0.0219
+        },
+        {
+          "date": "2025-07-18",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.8144,
+          "actual_return": 0.0112
+        },
+        {
+          "date": "2025-07-21",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.898,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-07-21",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8456,
+          "actual_return": -0.0814
+        },
+        {
+          "date": "2025-07-22",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9271,
+          "actual_return": -0.0065
+        },
+        {
+          "date": "2025-07-22",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.7923,
+          "actual_return": -0.1505
+        },
+        {
+          "date": "2025-07-23",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9118,
+          "actual_return": -0.005
+        },
+        {
+          "date": "2025-07-23",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.7921,
+          "actual_return": -0.1002
+        },
+        {
+          "date": "2025-07-24",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9042,
+          "actual_return": -0.0127
+        },
+        {
+          "date": "2025-07-24",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8066,
+          "actual_return": -0.1215
+        },
+        {
+          "date": "2025-07-25",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8872,
+          "actual_return": 0.003
+        },
+        {
+          "date": "2025-07-25",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8293,
+          "actual_return": -0.0845
+        },
+        {
+          "date": "2025-07-28",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8513,
+          "actual_return": 0.004
+        },
+        {
+          "date": "2025-07-28",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.8003,
+          "actual_return": -0.096
+        },
+        {
+          "date": "2025-07-29",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8761,
+          "actual_return": -0.006
+        },
+        {
+          "date": "2025-07-29",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.7566,
+          "actual_return": -0.0325
+        },
+        {
+          "date": "2025-07-30",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.859,
+          "actual_return": 0.0325
+        },
+        {
+          "date": "2025-07-30",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.8408,
+          "actual_return": -0.0283
+        },
+        {
+          "date": "2025-07-31",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9353,
+          "actual_return": 0.0463
+        },
+        {
+          "date": "2025-07-31",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9001,
+          "actual_return": 0.2192
+        }
+      ],
+      "fold": 7
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 110,
+      "avg_return": 0.013693358567970196,
+      "return_std": 0.051986314795351436,
+      "num_periods": 22,
+      "fold": 7
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 242,
+      "avg_return": 0.02518620135811592,
+      "return_std": 0.03531302850757075,
+      "num_periods": 22,
+      "fold": 7
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 21,
+      "avg_return": 0.058620422794705966,
+      "return_std": 0.07940350516044273,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-08-01",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9624,
+          "actual_return": 0.0815
+        },
+        {
+          "date": "2025-08-04",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9724,
+          "actual_return": 0.0784
+        },
+        {
+          "date": "2025-08-05",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9662,
+          "actual_return": 0.0268
+        },
+        {
+          "date": "2025-08-06",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9659,
+          "actual_return": 0.0189
+        },
+        {
+          "date": "2025-08-07",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9579,
+          "actual_return": 0.0566
+        },
+        {
+          "date": "2025-08-08",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.9388,
+          "actual_return": 0.3801
+        },
+        {
+          "date": "2025-08-11",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9764,
+          "actual_return": 0.0275
+        },
+        {
+          "date": "2025-08-12",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9729,
+          "actual_return": 0.0381
+        },
+        {
+          "date": "2025-08-13",
+          "code": "2601.HK",
+          "name": "2601.HK",
+          "probability": 0.9723,
+          "actual_return": -0.0634
+        },
+        {
+          "date": "2025-08-14",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9734,
+          "actual_return": 0.0109
+        },
+        {
+          "date": "2025-08-15",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9628,
+          "actual_return": 0.0205
+        },
+        {
+          "date": "2025-08-18",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9778,
+          "actual_return": 0.0553
+        },
+        {
+          "date": "2025-08-19",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9819,
+          "actual_return": 0.0562
+        },
+        {
+          "date": "2025-08-20",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9897,
+          "actual_return": 0.0725
+        },
+        {
+          "date": "2025-08-21",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9639,
+          "actual_return": 0.0609
+        },
+        {
+          "date": "2025-08-22",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9612,
+          "actual_return": -0.0067
+        },
+        {
+          "date": "2025-08-25",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.961,
+          "actual_return": 0.0562
+        },
+        {
+          "date": "2025-08-26",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9305,
+          "actual_return": 0.0838
+        },
+        {
+          "date": "2025-08-27",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9694,
+          "actual_return": 0.0739
+        },
+        {
+          "date": "2025-08-28",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9813,
+          "actual_return": 0.0577
+        },
+        {
+          "date": "2025-08-29",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9784,
+          "actual_return": 0.0453
+        }
+      ],
+      "fold": 8
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 42,
+      "avg_return": 0.06183890367636636,
+      "return_std": 0.07427037548393117,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-08-01",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9624,
+          "actual_return": 0.0815
+        },
+        {
+          "date": "2025-08-01",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.945,
+          "actual_return": 0.0256
+        },
+        {
+          "date": "2025-08-04",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9724,
+          "actual_return": 0.0784
+        },
+        {
+          "date": "2025-08-04",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9543,
+          "actual_return": 0.027
+        },
+        {
+          "date": "2025-08-05",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9662,
+          "actual_return": 0.0268
+        },
+        {
+          "date": "2025-08-05",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.9597,
+          "actual_return": 0.4387
+        },
+        {
+          "date": "2025-08-06",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9659,
+          "actual_return": 0.0189
+        },
+        {
+          "date": "2025-08-06",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9576,
+          "actual_return": 0.0215
+        },
+        {
+          "date": "2025-08-07",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9579,
+          "actual_return": 0.0566
+        },
+        {
+          "date": "2025-08-07",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9507,
+          "actual_return": 0.0076
+        },
+        {
+          "date": "2025-08-08",
+          "code": "2333.HK",
+          "name": "2333.HK",
+          "probability": 0.9388,
+          "actual_return": 0.3801
+        },
+        {
+          "date": "2025-08-08",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9362,
+          "actual_return": 0.0192
+        },
+        {
+          "date": "2025-08-11",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9764,
+          "actual_return": 0.0275
+        },
+        {
+          "date": "2025-08-11",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9599,
+          "actual_return": 0.013
+        },
+        {
+          "date": "2025-08-12",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9729,
+          "actual_return": 0.0381
+        },
+        {
+          "date": "2025-08-12",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9557,
+          "actual_return": 0.02
+        },
+        {
+          "date": "2025-08-13",
+          "code": "2601.HK",
+          "name": "2601.HK",
+          "probability": 0.9723,
+          "actual_return": -0.0634
+        },
+        {
+          "date": "2025-08-13",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9667,
+          "actual_return": 0.0109
+        },
+        {
+          "date": "2025-08-14",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9734,
+          "actual_return": 0.0109
+        },
+        {
+          "date": "2025-08-14",
+          "code": "2601.HK",
+          "name": "2601.HK",
+          "probability": 0.9683,
+          "actual_return": -0.0789
+        },
+        {
+          "date": "2025-08-15",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9628,
+          "actual_return": 0.0205
+        },
+        {
+          "date": "2025-08-15",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9489,
+          "actual_return": 0.3064
+        },
+        {
+          "date": "2025-08-18",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9778,
+          "actual_return": 0.0553
+        },
+        {
+          "date": "2025-08-18",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9713,
+          "actual_return": 0.0223
+        },
+        {
+          "date": "2025-08-19",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9819,
+          "actual_return": 0.0562
+        },
+        {
+          "date": "2025-08-19",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9749,
+          "actual_return": 0.0415
+        },
+        {
+          "date": "2025-08-20",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9897,
+          "actual_return": 0.0725
+        },
+        {
+          "date": "2025-08-20",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9744,
+          "actual_return": 0.0641
+        },
+        {
+          "date": "2025-08-21",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9639,
+          "actual_return": 0.0609
+        },
+        {
+          "date": "2025-08-21",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9299,
+          "actual_return": 0.0041
+        },
+        {
+          "date": "2025-08-22",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9612,
+          "actual_return": -0.0067
+        },
+        {
+          "date": "2025-08-22",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9199,
+          "actual_return": 0.0543
+        },
+        {
+          "date": "2025-08-25",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.961,
+          "actual_return": 0.0562
+        },
+        {
+          "date": "2025-08-25",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9401,
+          "actual_return": -0.0436
+        },
+        {
+          "date": "2025-08-26",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9305,
+          "actual_return": 0.0838
+        },
+        {
+          "date": "2025-08-26",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9153,
+          "actual_return": 0.03
+        },
+        {
+          "date": "2025-08-27",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9694,
+          "actual_return": 0.0739
+        },
+        {
+          "date": "2025-08-27",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9587,
+          "actual_return": 0.3644
+        },
+        {
+          "date": "2025-08-28",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9813,
+          "actual_return": 0.0577
+        },
+        {
+          "date": "2025-08-28",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9788,
+          "actual_return": 0.0643
+        },
+        {
+          "date": "2025-08-29",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9784,
+          "actual_return": 0.0453
+        },
+        {
+          "date": "2025-08-29",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9756,
+          "actual_return": -0.0461
+        }
+      ],
+      "fold": 8
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 105,
+      "avg_return": 0.0954479309048961,
+      "return_std": 0.05159242937780569,
+      "num_periods": 21,
+      "fold": 8
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 231,
+      "avg_return": 0.09792993160507003,
+      "return_std": 0.04333991221679645,
+      "num_periods": 21,
+      "fold": 8
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 22,
+      "avg_return": -0.0075500268354279365,
+      "return_std": 0.09813983156189972,
+      "num_periods": 22,
+      "top_stocks": [
+        {
+          "date": "2025-09-01",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9844,
+          "actual_return": 0.0413
+        },
+        {
+          "date": "2025-09-02",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9919,
+          "actual_return": 0.0568
+        },
+        {
+          "date": "2025-09-03",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9921,
+          "actual_return": 0.071
+        },
+        {
+          "date": "2025-09-04",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.988,
+          "actual_return": 0.029
+        },
+        {
+          "date": "2025-09-05",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9831,
+          "actual_return": 0.0532
+        },
+        {
+          "date": "2025-09-08",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9807,
+          "actual_return": 0.0481
+        },
+        {
+          "date": "2025-09-09",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9814,
+          "actual_return": -0.0507
+        },
+        {
+          "date": "2025-09-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9779,
+          "actual_return": -0.0528
+        },
+        {
+          "date": "2025-09-11",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9761,
+          "actual_return": -0.0067
+        },
+        {
+          "date": "2025-09-12",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9708,
+          "actual_return": 0.1689
+        },
+        {
+          "date": "2025-09-15",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9585,
+          "actual_return": -0.1196
+        },
+        {
+          "date": "2025-09-16",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9618,
+          "actual_return": 0.1693
+        },
+        {
+          "date": "2025-09-17",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9477,
+          "actual_return": 0.0207
+        },
+        {
+          "date": "2025-09-18",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9752,
+          "actual_return": -0.1708
+        },
+        {
+          "date": "2025-09-19",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9728,
+          "actual_return": 0.0616
+        },
+        {
+          "date": "2025-09-22",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9745,
+          "actual_return": -0.174
+        },
+        {
+          "date": "2025-09-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.971,
+          "actual_return": 0.0013
+        },
+        {
+          "date": "2025-09-24",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9649,
+          "actual_return": -0.0079
+        },
+        {
+          "date": "2025-09-25",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9594,
+          "actual_return": -0.2296
+        },
+        {
+          "date": "2025-09-26",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9648,
+          "actual_return": 0.0086
+        },
+        {
+          "date": "2025-09-29",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9375,
+          "actual_return": -0.0308
+        },
+        {
+          "date": "2025-09-30",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9284,
+          "actual_return": -0.0531
+        }
+      ],
+      "fold": 9
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 44,
+      "avg_return": -0.004682901258824323,
+      "return_std": 0.09825884276631561,
+      "num_periods": 22,
+      "top_stocks": [
+        {
+          "date": "2025-09-01",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9844,
+          "actual_return": 0.0413
+        },
+        {
+          "date": "2025-09-01",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9823,
+          "actual_return": 0.0332
+        },
+        {
+          "date": "2025-09-02",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9919,
+          "actual_return": 0.0568
+        },
+        {
+          "date": "2025-09-02",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9908,
+          "actual_return": 0.0483
+        },
+        {
+          "date": "2025-09-03",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9921,
+          "actual_return": 0.071
+        },
+        {
+          "date": "2025-09-03",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9913,
+          "actual_return": 0.0795
+        },
+        {
+          "date": "2025-09-04",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.988,
+          "actual_return": 0.029
+        },
+        {
+          "date": "2025-09-04",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9867,
+          "actual_return": 0.6232
+        },
+        {
+          "date": "2025-09-05",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9831,
+          "actual_return": 0.0532
+        },
+        {
+          "date": "2025-09-05",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9826,
+          "actual_return": 0.1234
+        },
+        {
+          "date": "2025-09-08",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9807,
+          "actual_return": 0.0481
+        },
+        {
+          "date": "2025-09-08",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.9784,
+          "actual_return": 0.1041
+        },
+        {
+          "date": "2025-09-09",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9814,
+          "actual_return": -0.0507
+        },
+        {
+          "date": "2025-09-09",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9653,
+          "actual_return": 0.0291
+        },
+        {
+          "date": "2025-09-10",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9779,
+          "actual_return": -0.0528
+        },
+        {
+          "date": "2025-09-10",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9625,
+          "actual_return": -0.0013
+        },
+        {
+          "date": "2025-09-11",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9761,
+          "actual_return": -0.0067
+        },
+        {
+          "date": "2025-09-11",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.974,
+          "actual_return": -0.0103
+        },
+        {
+          "date": "2025-09-12",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9708,
+          "actual_return": 0.1689
+        },
+        {
+          "date": "2025-09-12",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9461,
+          "actual_return": -0.0337
+        },
+        {
+          "date": "2025-09-15",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9585,
+          "actual_return": -0.1196
+        },
+        {
+          "date": "2025-09-15",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9573,
+          "actual_return": 0.2063
+        },
+        {
+          "date": "2025-09-16",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9618,
+          "actual_return": 0.1693
+        },
+        {
+          "date": "2025-09-16",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9609,
+          "actual_return": -0.155
+        },
+        {
+          "date": "2025-09-17",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9477,
+          "actual_return": 0.0207
+        },
+        {
+          "date": "2025-09-17",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9325,
+          "actual_return": -0.2055
+        },
+        {
+          "date": "2025-09-18",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9752,
+          "actual_return": -0.1708
+        },
+        {
+          "date": "2025-09-18",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9415,
+          "actual_return": 0.0215
+        },
+        {
+          "date": "2025-09-19",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9728,
+          "actual_return": 0.0616
+        },
+        {
+          "date": "2025-09-19",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9521,
+          "actual_return": -0.1806
+        },
+        {
+          "date": "2025-09-22",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9745,
+          "actual_return": -0.174
+        },
+        {
+          "date": "2025-09-22",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9644,
+          "actual_return": -0.0152
+        },
+        {
+          "date": "2025-09-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.971,
+          "actual_return": 0.0013
+        },
+        {
+          "date": "2025-09-23",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9642,
+          "actual_return": -0.1571
+        },
+        {
+          "date": "2025-09-24",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9649,
+          "actual_return": -0.0079
+        },
+        {
+          "date": "2025-09-24",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9612,
+          "actual_return": -0.193
+        },
+        {
+          "date": "2025-09-25",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9594,
+          "actual_return": -0.2296
+        },
+        {
+          "date": "2025-09-25",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.932,
+          "actual_return": 0.001
+        },
+        {
+          "date": "2025-09-26",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9648,
+          "actual_return": 0.0086
+        },
+        {
+          "date": "2025-09-26",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9559,
+          "actual_return": -0.178
+        },
+        {
+          "date": "2025-09-29",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9375,
+          "actual_return": -0.0308
+        },
+        {
+          "date": "2025-09-29",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9287,
+          "actual_return": -0.0114
+        },
+        {
+          "date": "2025-09-30",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9284,
+          "actual_return": -0.0531
+        },
+        {
+          "date": "2025-09-30",
+          "code": "2382.HK",
+          "name": "2382.HK",
+          "probability": 0.918,
+          "actual_return": -0.1686
+        }
+      ],
+      "fold": 9
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 110,
+      "avg_return": 0.022874794274199327,
+      "return_std": 0.09011173159850663,
+      "num_periods": 22,
+      "fold": 9
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 242,
+      "avg_return": 0.06087653607743366,
+      "return_std": 0.10636195704217424,
+      "num_periods": 22,
+      "fold": 9
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 20,
+      "avg_return": 0.020078835969848115,
+      "return_std": 0.06271809738868274,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-10-02",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9354,
+          "actual_return": 0.1638
+        },
+        {
+          "date": "2025-10-03",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9481,
+          "actual_return": 0.0544
+        },
+        {
+          "date": "2025-10-06",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9467,
+          "actual_return": 0.0716
+        },
+        {
+          "date": "2025-10-08",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.9199,
+          "actual_return": 0.1097
+        },
+        {
+          "date": "2025-10-09",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.8426,
+          "actual_return": 0.0979
+        },
+        {
+          "date": "2025-10-10",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9282,
+          "actual_return": 0.0079
+        },
+        {
+          "date": "2025-10-13",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9612,
+          "actual_return": 0.0259
+        },
+        {
+          "date": "2025-10-14",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9824,
+          "actual_return": 0.0485
+        },
+        {
+          "date": "2025-10-15",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9419,
+          "actual_return": 0.0375
+        },
+        {
+          "date": "2025-10-16",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9677,
+          "actual_return": 0.0161
+        },
+        {
+          "date": "2025-10-17",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9912,
+          "actual_return": 0.0392
+        },
+        {
+          "date": "2025-10-20",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9605,
+          "actual_return": -0.0062
+        },
+        {
+          "date": "2025-10-21",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9618,
+          "actual_return": -0.0158
+        },
+        {
+          "date": "2025-10-22",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.981,
+          "actual_return": -0.0091
+        },
+        {
+          "date": "2025-10-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9761,
+          "actual_return": -0.0411
+        },
+        {
+          "date": "2025-10-24",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9412,
+          "actual_return": -0.032
+        },
+        {
+          "date": "2025-10-27",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9423,
+          "actual_return": -0.0321
+        },
+        {
+          "date": "2025-10-28",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9474,
+          "actual_return": -0.1404
+        },
+        {
+          "date": "2025-10-30",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9159,
+          "actual_return": 0.0093
+        },
+        {
+          "date": "2025-10-31",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9744,
+          "actual_return": -0.0034
+        }
+      ],
+      "fold": 10
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 40,
+      "avg_return": 0.024336005403327348,
+      "return_std": 0.07287553813278543,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-10-02",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9354,
+          "actual_return": 0.1638
+        },
+        {
+          "date": "2025-10-02",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.9129,
+          "actual_return": 0.2374
+        },
+        {
+          "date": "2025-10-03",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9481,
+          "actual_return": 0.0544
+        },
+        {
+          "date": "2025-10-03",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.8985,
+          "actual_return": 0.1663
+        },
+        {
+          "date": "2025-10-06",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9467,
+          "actual_return": 0.0716
+        },
+        {
+          "date": "2025-10-06",
+          "code": "1288.HK",
+          "name": "农业银行",
+          "probability": 0.9063,
+          "actual_return": 0.191
+        },
+        {
+          "date": "2025-10-08",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.9199,
+          "actual_return": 0.1097
+        },
+        {
+          "date": "2025-10-08",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.9098,
+          "actual_return": 0.0951
+        },
+        {
+          "date": "2025-10-09",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.8426,
+          "actual_return": 0.0979
+        },
+        {
+          "date": "2025-10-09",
+          "code": "0728.HK",
+          "name": "中国电信",
+          "probability": 0.8338,
+          "actual_return": 0.0833
+        },
+        {
+          "date": "2025-10-10",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9282,
+          "actual_return": 0.0079
+        },
+        {
+          "date": "2025-10-10",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9274,
+          "actual_return": 0.0676
+        },
+        {
+          "date": "2025-10-13",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9612,
+          "actual_return": 0.0259
+        },
+        {
+          "date": "2025-10-13",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9394,
+          "actual_return": 0.0113
+        },
+        {
+          "date": "2025-10-14",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9824,
+          "actual_return": 0.0485
+        },
+        {
+          "date": "2025-10-14",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.974,
+          "actual_return": 0.0352
+        },
+        {
+          "date": "2025-10-15",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9419,
+          "actual_return": 0.0375
+        },
+        {
+          "date": "2025-10-15",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9279,
+          "actual_return": 0.0233
+        },
+        {
+          "date": "2025-10-16",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9677,
+          "actual_return": 0.0161
+        },
+        {
+          "date": "2025-10-16",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9413,
+          "actual_return": -0.0054
+        },
+        {
+          "date": "2025-10-17",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9912,
+          "actual_return": 0.0392
+        },
+        {
+          "date": "2025-10-17",
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "probability": 0.9827,
+          "actual_return": -0.087
+        },
+        {
+          "date": "2025-10-20",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9605,
+          "actual_return": -0.0062
+        },
+        {
+          "date": "2025-10-20",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9343,
+          "actual_return": 0.0735
+        },
+        {
+          "date": "2025-10-21",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9618,
+          "actual_return": -0.0158
+        },
+        {
+          "date": "2025-10-21",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9526,
+          "actual_return": -0.027
+        },
+        {
+          "date": "2025-10-22",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.981,
+          "actual_return": -0.0091
+        },
+        {
+          "date": "2025-10-22",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9542,
+          "actual_return": -0.018
+        },
+        {
+          "date": "2025-10-23",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9761,
+          "actual_return": -0.0411
+        },
+        {
+          "date": "2025-10-23",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9442,
+          "actual_return": -0.0466
+        },
+        {
+          "date": "2025-10-24",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9412,
+          "actual_return": -0.032
+        },
+        {
+          "date": "2025-10-24",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9349,
+          "actual_return": -0.1494
+        },
+        {
+          "date": "2025-10-27",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9423,
+          "actual_return": -0.0321
+        },
+        {
+          "date": "2025-10-27",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.8951,
+          "actual_return": 0.0471
+        },
+        {
+          "date": "2025-10-28",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9474,
+          "actual_return": -0.1404
+        },
+        {
+          "date": "2025-10-28",
+          "code": "0151.HK",
+          "name": "0151.HK",
+          "probability": 0.8797,
+          "actual_return": -0.0822
+        },
+        {
+          "date": "2025-10-30",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9159,
+          "actual_return": 0.0093
+        },
+        {
+          "date": "2025-10-30",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9121,
+          "actual_return": -0.0129
+        },
+        {
+          "date": "2025-10-31",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9744,
+          "actual_return": -0.0034
+        },
+        {
+          "date": "2025-10-31",
+          "code": "1211.HK",
+          "name": "比亚迪股份",
+          "probability": 0.9647,
+          "actual_return": -0.0308
+        }
+      ],
+      "fold": 10
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 100,
+      "avg_return": 0.01274511582149894,
+      "return_std": 0.07430847020635434,
+      "num_periods": 20,
+      "fold": 10
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 220,
+      "avg_return": -0.0012637295635216752,
+      "return_std": 0.06494147742713383,
+      "num_periods": 20,
+      "fold": 10
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 20,
+      "avg_return": -0.017545113893818735,
+      "return_std": 0.0593076480939113,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-11-03",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9479,
+          "actual_return": 0.0203
+        },
+        {
+          "date": "2025-11-04",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9657,
+          "actual_return": 0.0278
+        },
+        {
+          "date": "2025-11-05",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9647,
+          "actual_return": 0.0277
+        },
+        {
+          "date": "2025-11-06",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9262,
+          "actual_return": 0.0072
+        },
+        {
+          "date": "2025-11-07",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9354,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-11-10",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.886,
+          "actual_return": -0.0188
+        },
+        {
+          "date": "2025-11-11",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.8178,
+          "actual_return": -0.0972
+        },
+        {
+          "date": "2025-11-12",
+          "code": "1109.HK",
+          "name": "华润置地",
+          "probability": 0.8203,
+          "actual_return": -0.0814
+        },
+        {
+          "date": "2025-11-13",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.8529,
+          "actual_return": -0.025
+        },
+        {
+          "date": "2025-11-14",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8525,
+          "actual_return": 0.0634
+        },
+        {
+          "date": "2025-11-17",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8274,
+          "actual_return": -0.0837
+        },
+        {
+          "date": "2025-11-18",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.8891,
+          "actual_return": -0.0311
+        },
+        {
+          "date": "2025-11-19",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9218,
+          "actual_return": -0.0432
+        },
+        {
+          "date": "2025-11-20",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9292,
+          "actual_return": -0.0304
+        },
+        {
+          "date": "2025-11-21",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9944,
+          "actual_return": 0.0022
+        },
+        {
+          "date": "2025-11-24",
+          "code": "1798.HK",
+          "name": "1798.HK",
+          "probability": 0.9569,
+          "actual_return": -0.0667
+        },
+        {
+          "date": "2025-11-25",
+          "code": "1798.HK",
+          "name": "1798.HK",
+          "probability": 0.9362,
+          "actual_return": -0.0705
+        },
+        {
+          "date": "2025-11-26",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9303,
+          "actual_return": -0.0521
+        },
+        {
+          "date": "2025-11-27",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9225,
+          "actual_return": -0.0625
+        },
+        {
+          "date": "2025-11-28",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8723,
+          "actual_return": 0.1631
+        }
+      ],
+      "fold": 11
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 40,
+      "avg_return": -0.007996236105494822,
+      "return_std": 0.04522964977240868,
+      "num_periods": 20,
+      "top_stocks": [
+        {
+          "date": "2025-11-03",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9479,
+          "actual_return": 0.0203
+        },
+        {
+          "date": "2025-11-03",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.925,
+          "actual_return": 0.0609
+        },
+        {
+          "date": "2025-11-04",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9657,
+          "actual_return": 0.0278
+        },
+        {
+          "date": "2025-11-04",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.9562,
+          "actual_return": 0.0295
+        },
+        {
+          "date": "2025-11-05",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9647,
+          "actual_return": 0.0277
+        },
+        {
+          "date": "2025-11-05",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9414,
+          "actual_return": 0.0027
+        },
+        {
+          "date": "2025-11-06",
+          "code": "0005.HK",
+          "name": "汇丰银行",
+          "probability": 0.9262,
+          "actual_return": 0.0072
+        },
+        {
+          "date": "2025-11-06",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9015,
+          "actual_return": -0.0017
+        },
+        {
+          "date": "2025-11-07",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9354,
+          "actual_return": 0.0
+        },
+        {
+          "date": "2025-11-07",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8728,
+          "actual_return": 0.0431
+        },
+        {
+          "date": "2025-11-10",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.886,
+          "actual_return": -0.0188
+        },
+        {
+          "date": "2025-11-10",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8604,
+          "actual_return": -0.076
+        },
+        {
+          "date": "2025-11-11",
+          "code": "1138.HK",
+          "name": "中远海能",
+          "probability": 0.8178,
+          "actual_return": -0.0972
+        },
+        {
+          "date": "2025-11-11",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8088,
+          "actual_return": -0.0864
+        },
+        {
+          "date": "2025-11-12",
+          "code": "1109.HK",
+          "name": "华润置地",
+          "probability": 0.8203,
+          "actual_return": -0.0814
+        },
+        {
+          "date": "2025-11-12",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.8137,
+          "actual_return": -0.036
+        },
+        {
+          "date": "2025-11-13",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.8529,
+          "actual_return": -0.025
+        },
+        {
+          "date": "2025-11-13",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8335,
+          "actual_return": -0.0998
+        },
+        {
+          "date": "2025-11-14",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8525,
+          "actual_return": 0.0634
+        },
+        {
+          "date": "2025-11-14",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8487,
+          "actual_return": -0.085
+        },
+        {
+          "date": "2025-11-17",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.8274,
+          "actual_return": -0.0837
+        },
+        {
+          "date": "2025-11-17",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8126,
+          "actual_return": 0.0957
+        },
+        {
+          "date": "2025-11-18",
+          "code": "3968.HK",
+          "name": "招商银行",
+          "probability": 0.8891,
+          "actual_return": -0.0311
+        },
+        {
+          "date": "2025-11-18",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.886,
+          "actual_return": -0.0933
+        },
+        {
+          "date": "2025-11-19",
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "probability": 0.9218,
+          "actual_return": -0.0432
+        },
+        {
+          "date": "2025-11-19",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9167,
+          "actual_return": 0.1177
+        },
+        {
+          "date": "2025-11-20",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9292,
+          "actual_return": -0.0304
+        },
+        {
+          "date": "2025-11-20",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9286,
+          "actual_return": 0.1193
+        },
+        {
+          "date": "2025-11-21",
+          "code": "2828.HK",
+          "name": "2828.HK",
+          "probability": 0.9944,
+          "actual_return": 0.0022
+        },
+        {
+          "date": "2025-11-21",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9784,
+          "actual_return": 0.1503
+        },
+        {
+          "date": "2025-11-24",
+          "code": "1798.HK",
+          "name": "1798.HK",
+          "probability": 0.9569,
+          "actual_return": -0.0667
+        },
+        {
+          "date": "2025-11-24",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9295,
+          "actual_return": -0.0445
+        },
+        {
+          "date": "2025-11-25",
+          "code": "1798.HK",
+          "name": "1798.HK",
+          "probability": 0.9362,
+          "actual_return": -0.0705
+        },
+        {
+          "date": "2025-11-25",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9359,
+          "actual_return": -0.0504
+        },
+        {
+          "date": "2025-11-26",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9303,
+          "actual_return": -0.0521
+        },
+        {
+          "date": "2025-11-26",
+          "code": "2388.HK",
+          "name": "中银香港",
+          "probability": 0.8845,
+          "actual_return": 0.0352
+        },
+        {
+          "date": "2025-11-27",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9225,
+          "actual_return": -0.0625
+        },
+        {
+          "date": "2025-11-27",
+          "code": "2388.HK",
+          "name": "中银香港",
+          "probability": 0.9047,
+          "actual_return": 0.0512
+        },
+        {
+          "date": "2025-11-28",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.8723,
+          "actual_return": 0.1631
+        },
+        {
+          "date": "2025-11-28",
+          "code": "1798.HK",
+          "name": "1798.HK",
+          "probability": 0.871,
+          "actual_return": -0.1013
+        }
+      ],
+      "fold": 11
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 100,
+      "avg_return": 0.0031632870216598895,
+      "return_std": 0.033329287675477104,
+      "num_periods": 20,
+      "fold": 11
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 220,
+      "avg_return": -0.0007797187671681088,
+      "return_std": 0.030972260464725638,
+      "num_periods": 20,
+      "fold": 11
+    },
+    {
+      "percentile": "Top 1%",
+      "total_stocks": 21,
+      "avg_return": 0.0908229362207689,
+      "return_std": 0.08175760008225555,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-12-01",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9002,
+          "actual_return": 0.143
+        },
+        {
+          "date": "2025-12-02",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9356,
+          "actual_return": 0.037
+        },
+        {
+          "date": "2025-12-03",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9573,
+          "actual_return": 0.0897
+        },
+        {
+          "date": "2025-12-04",
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "probability": 0.8891,
+          "actual_return": 0.1122
+        },
+        {
+          "date": "2025-12-05",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9334,
+          "actual_return": 0.1762
+        },
+        {
+          "date": "2025-12-08",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9344,
+          "actual_return": -0.0065
+        },
+        {
+          "date": "2025-12-09",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9837,
+          "actual_return": -0.0026
+        },
+        {
+          "date": "2025-12-10",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9643,
+          "actual_return": -0.0525
+        },
+        {
+          "date": "2025-12-11",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9662,
+          "actual_return": -0.0549
+        },
+        {
+          "date": "2025-12-12",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9356,
+          "actual_return": 0.017
+        },
+        {
+          "date": "2025-12-15",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9636,
+          "actual_return": 0.2337
+        },
+        {
+          "date": "2025-12-16",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.972,
+          "actual_return": 0.0595
+        },
+        {
+          "date": "2025-12-17",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9609,
+          "actual_return": 0.0498
+        },
+        {
+          "date": "2025-12-18",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9307,
+          "actual_return": 0.0319
+        },
+        {
+          "date": "2025-12-19",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9438,
+          "actual_return": 0.1241
+        },
+        {
+          "date": "2025-12-22",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9813,
+          "actual_return": 0.1756
+        },
+        {
+          "date": "2025-12-23",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9569,
+          "actual_return": 0.1698
+        },
+        {
+          "date": "2025-12-24",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9433,
+          "actual_return": 0.1724
+        },
+        {
+          "date": "2025-12-29",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9388,
+          "actual_return": 0.1972
+        },
+        {
+          "date": "2025-12-30",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9307,
+          "actual_return": 0.0938
+        },
+        {
+          "date": "2025-12-31",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9524,
+          "actual_return": 0.1409
+        }
+      ],
+      "fold": 12
+    },
+    {
+      "percentile": "Top 5%",
+      "total_stocks": 42,
+      "avg_return": 0.0878425206416958,
+      "return_std": 0.05947665086473194,
+      "num_periods": 21,
+      "top_stocks": [
+        {
+          "date": "2025-12-01",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9002,
+          "actual_return": 0.143
+        },
+        {
+          "date": "2025-12-01",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8957,
+          "actual_return": -0.0088
+        },
+        {
+          "date": "2025-12-02",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9356,
+          "actual_return": 0.037
+        },
+        {
+          "date": "2025-12-02",
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "probability": 0.8446,
+          "actual_return": 0.1238
+        },
+        {
+          "date": "2025-12-03",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9573,
+          "actual_return": 0.0897
+        },
+        {
+          "date": "2025-12-03",
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "probability": 0.9336,
+          "actual_return": 0.1458
+        },
+        {
+          "date": "2025-12-04",
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "probability": 0.8891,
+          "actual_return": 0.1122
+        },
+        {
+          "date": "2025-12-04",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8846,
+          "actual_return": 0.0352
+        },
+        {
+          "date": "2025-12-05",
+          "code": "2318.HK",
+          "name": "中国平安",
+          "probability": 0.9334,
+          "actual_return": 0.1762
+        },
+        {
+          "date": "2025-12-05",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.8767,
+          "actual_return": 0.1073
+        },
+        {
+          "date": "2025-12-08",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9344,
+          "actual_return": -0.0065
+        },
+        {
+          "date": "2025-12-08",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9252,
+          "actual_return": 0.1063
+        },
+        {
+          "date": "2025-12-09",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9837,
+          "actual_return": -0.0026
+        },
+        {
+          "date": "2025-12-09",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9487,
+          "actual_return": -0.0587
+        },
+        {
+          "date": "2025-12-10",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9643,
+          "actual_return": -0.0525
+        },
+        {
+          "date": "2025-12-10",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9576,
+          "actual_return": 0.0198
+        },
+        {
+          "date": "2025-12-11",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9662,
+          "actual_return": -0.0549
+        },
+        {
+          "date": "2025-12-11",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9444,
+          "actual_return": 0.1882
+        },
+        {
+          "date": "2025-12-12",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9356,
+          "actual_return": 0.017
+        },
+        {
+          "date": "2025-12-12",
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "probability": 0.9236,
+          "actual_return": 0.0398
+        },
+        {
+          "date": "2025-12-15",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9636,
+          "actual_return": 0.2337
+        },
+        {
+          "date": "2025-12-15",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9264,
+          "actual_return": 0.0397
+        },
+        {
+          "date": "2025-12-16",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.972,
+          "actual_return": 0.0595
+        },
+        {
+          "date": "2025-12-16",
+          "code": "0941.HK",
+          "name": "中国移动",
+          "probability": 0.9634,
+          "actual_return": -0.0498
+        },
+        {
+          "date": "2025-12-17",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9609,
+          "actual_return": 0.0498
+        },
+        {
+          "date": "2025-12-17",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.957,
+          "actual_return": 0.1635
+        },
+        {
+          "date": "2025-12-18",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9307,
+          "actual_return": 0.0319
+        },
+        {
+          "date": "2025-12-18",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9303,
+          "actual_return": 0.2593
+        },
+        {
+          "date": "2025-12-19",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9438,
+          "actual_return": 0.1241
+        },
+        {
+          "date": "2025-12-19",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9222,
+          "actual_return": 0.024
+        },
+        {
+          "date": "2025-12-22",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9813,
+          "actual_return": 0.1756
+        },
+        {
+          "date": "2025-12-22",
+          "code": "0939.HK",
+          "name": "建设银行",
+          "probability": 0.9585,
+          "actual_return": 0.0093
+        },
+        {
+          "date": "2025-12-23",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9569,
+          "actual_return": 0.1698
+        },
+        {
+          "date": "2025-12-23",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9422,
+          "actual_return": 0.198
+        },
+        {
+          "date": "2025-12-24",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9433,
+          "actual_return": 0.1724
+        },
+        {
+          "date": "2025-12-24",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9395,
+          "actual_return": 0.0633
+        },
+        {
+          "date": "2025-12-29",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9388,
+          "actual_return": 0.1972
+        },
+        {
+          "date": "2025-12-29",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9151,
+          "actual_return": 0.1549
+        },
+        {
+          "date": "2025-12-30",
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "probability": 0.9307,
+          "actual_return": 0.0938
+        },
+        {
+          "date": "2025-12-30",
+          "code": "2282.HK",
+          "name": "2282.HK",
+          "probability": 0.9257,
+          "actual_return": 0.0158
+        },
+        {
+          "date": "2025-12-31",
+          "code": "0020.HK",
+          "name": "0020.HK",
+          "probability": 0.9524,
+          "actual_return": 0.1409
+        },
+        {
+          "date": "2025-12-31",
+          "code": "2269.HK",
+          "name": "药明生物",
+          "probability": 0.9412,
+          "actual_return": 0.2055
+        }
+      ],
+      "fold": 12
+    },
+    {
+      "percentile": "Top 10%",
+      "total_stocks": 105,
+      "avg_return": 0.09132409126071621,
+      "return_std": 0.029484091160124355,
+      "num_periods": 21,
+      "fold": 12
+    },
+    {
+      "percentile": "Top 20%",
+      "total_stocks": 231,
+      "avg_return": 0.062415185752798745,
+      "return_std": 0.016740236248586185,
+      "num_periods": 21,
+      "fold": 12
+    }
+  ]
+}
