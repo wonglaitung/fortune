@@ -3457,7 +3457,7 @@ class LightGBMModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（推荐 Top 300）
+            use_feature_selection: 是否使用特征选择
             min_return_threshold: 最小收益阈值（默认0%）
 
         Returns:
@@ -3468,7 +3468,7 @@ class LightGBMModel(BaseTradingModel):
         """
         # 检查是否需要显示提示
         if use_feature_selection and not LightGBMModel._deprecation_warning_shown:
-            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
+            print("💡 提示：使用特征选择，Walk-forward 验证显示夏普比率更优")
             LightGBMModel._deprecation_warning_shown = True
 
         print("准备训练数据...")
@@ -3503,7 +3503,7 @@ class LightGBMModel(BaseTradingModel):
 
         # 应用特征选择（可选）
         if use_feature_selection:
-            print("\n🎯 应用特征选择（Top 300）")
+            print("\n🎯 应用特征选择...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -4120,7 +4120,7 @@ class GBDTModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（推荐 Top 300）
+            use_feature_selection: 是否使用特征选择
             min_return_threshold: 最小收益阈值（默认0%）
         """
         # 设置固定随机种子（确保模型训练的可重现性）
@@ -4128,7 +4128,7 @@ class GBDTModel(BaseTradingModel):
         random.seed(42)
         # 检查是否需要显示提示
         if use_feature_selection and not GBDTModel._deprecation_warning_shown:
-            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
+            print("💡 提示：使用特征选择，Walk-forward 验证显示夏普比率更优")
             GBDTModel._deprecation_warning_shown = True
 
         print("="*70)
@@ -4167,7 +4167,7 @@ class GBDTModel(BaseTradingModel):
 
         # 应用特征选择（可选）
         if use_feature_selection:
-            print("\n🎯 应用特征选择（Top 300）")
+            print("\n🎯 应用特征选择...")
             selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
             if selected_features:
                 # 筛选特征列
@@ -4979,7 +4979,7 @@ class CatBoostModel(BaseTradingModel):
             start_date: 训练开始日期
             end_date: 训练结束日期
             horizon: 预测周期（1=次日，5=一周，20=一个月）
-            use_feature_selection: 是否使用特征选择（推荐 Top 300）
+            use_feature_selection: 是否使用特征选择
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
@@ -4990,7 +4990,7 @@ class CatBoostModel(BaseTradingModel):
         """
         # 检查是否需要显示特征选择提示
         if use_feature_selection and not CatBoostModel._deprecation_warning_shown:
-            print("💡 提示：使用特征选择（Top 300），Walk-forward 验证显示夏普比率更优（4.91 vs 0）")
+            print("💡 提示：使用特征选择，Walk-forward 验证显示夏普比率更优")
             CatBoostModel._deprecation_warning_shown = True
 
         print("\n" + "="*70)
@@ -5058,7 +5058,7 @@ class CatBoostModel(BaseTradingModel):
         # ========== 特征选择（可选）==========
         if use_feature_selection:
             print("\n" + "="*70)
-            print("🔍 应用特征选择（Top 300）")
+            print("🔍 应用特征选择...")
             print("="*70)
 
             # 加载选择的特征
@@ -5131,10 +5131,10 @@ class CatBoostModel(BaseTradingModel):
             subsample = 0.75
             colsample_bylevel = 0.7
         else:  # horizon == 20
-            # 一个月模型参数（适配 Top 300 特征版本）
-            # 2026-05-09：系统调优最优参数（准确率64.02%，夏普0.8027，Top 300特征）
+            # 一个月模型参数（特征选择版本）
+            # 2026-05-09：系统调优最优参数（准确率64.02%，夏普0.8027）
             # 调优结果：depth 7→8, learning_rate 0.04→0.06, colsample_bylevel 0.6→0.8
-            print("使用20天模型参数（系统调优最优版，Top 300特征）...")
+            print("使用20天模型参数（系统调优最优版）...")
             n_estimators = 400  # 树数量
             depth = 8  # 树深度（增加复杂度）
             learning_rate = 0.06  # 学习率（加快收敛）
