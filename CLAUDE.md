@@ -34,6 +34,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
+| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` |
@@ -87,7 +88,7 @@ AKShare      南向资金        主力追踪     性能监控
 - `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
-- `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`
+- `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（31只）
 
 **特征模块**（动态构建，自动同步）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
@@ -200,6 +201,11 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | 平均胜率 | 67.00% | 良好 |
 | 个股预测相关性 r | 0.0186 | ⚠️ 远低于恒指(0.35)，需谨慎 |
 
+**Walk-forward 输出文件**（保存到 `output/YYYYMMDD_HHMMSS_catboost_20d/`）：
+- `fold_metrics_detail.json` - 每个 Fold 的指标 + **Top 100 特征重要性**
+- `prediction_analysis.csv` - 所有预测详情（用于 Fold 盈亏比分析）
+- `validation_summary.json` - 总体验证结果
+
 ### CatBoost 配置
 
 | 参数 | 值 | 说明 |
@@ -305,7 +311,7 @@ test_df[col] = test_df[col].apply(
 
 **功能更新后**：更新 `progress.txt` 记录进展，如有新学习心得更新 `lessons.md`
 
-**模型更新后**：运行 Walk-forward 验证确认性能
+**模型更新后**：运行 Walk-forward 验证确认性能，使用 `/model_validation` 技能执行标准验证流程
 
 **特征修改后**：清除缓存 `rm -rf data/feature_cache/*.pkl`
 
