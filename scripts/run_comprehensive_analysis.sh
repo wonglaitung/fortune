@@ -36,10 +36,10 @@ echo ""
 
 # 步骤 0.5: 运行特征选择（统计方法，生成 Top 300 特征）
 echo "=========================================="
-echo "📊 步骤 0.5/6: 运行特征选择（统计方法，Top 300）"
+echo "📊 步骤 0.5/6: 运行特征选择（统计方法，Top 500）"
 echo "=========================================="
 echo ""
-python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20
+python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20
 if [ $? -ne 0 ]; then
     echo "⚠️ 特征选择失败，使用已有特征文件"
 else
