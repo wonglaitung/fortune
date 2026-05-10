@@ -37486,12 +37486,69 @@
       "actual_return": null,
       "actual_direction": null,
       "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-10_2318.HK_1d",
+      "timestamp": "2026-05-10T14:33:47",
+      "stock_code": "2318.HK",
+      "stock_name": "中国平安",
+      "sector": "insurance",
+      "horizon": 1,
+      "predicted_direction": "down",
+      "prediction_probability": 0.30138284132161447,
+      "confidence_level": "low",
+      "entry_price": 65.6,
+      "model_type": "catboost",
+      "data_date": "2026-05-10",
+      "target_date": "2026-05-11",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-10_2318.HK_5d",
+      "timestamp": "2026-05-10T14:34:52",
+      "stock_code": "2318.HK",
+      "stock_name": "中国平安",
+      "sector": "insurance",
+      "horizon": 5,
+      "predicted_direction": "up",
+      "prediction_probability": 0.5323330378442482,
+      "confidence_level": "medium",
+      "entry_price": 65.6,
+      "model_type": "catboost",
+      "data_date": "2026-05-10",
+      "target_date": "2026-05-15",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-05-10_2318.HK_20d",
+      "timestamp": "2026-05-10T14:35:58",
+      "stock_code": "2318.HK",
+      "stock_name": "中国平安",
+      "sector": "insurance",
+      "horizon": 20,
+      "predicted_direction": "up",
+      "prediction_probability": 0.5976937906335968,
+      "confidence_level": "medium",
+      "entry_price": 65.6,
+      "model_type": "catboost",
+      "data_date": "2026-05-10",
+      "target_date": "2026-06-05",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
     }
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-05-10T12:39:55",
+    "last_updated": "2026-05-10T14:35:58",
     "version": "1.0",
-    "total_predictions": 1973
+    "total_predictions": 1976
   }
 }
