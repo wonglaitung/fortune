@@ -57,7 +57,8 @@ class WalkForwardValidator:
         horizon: int = 20,
         confidence_threshold: float = 0.55,
         use_feature_selection: bool = True,
-        min_train_samples: int = 100
+        min_train_samples: int = 100,
+        fp_penalty: float = None           # False Positive 惩罚系数（非对称损失函数）
     ):
         """
         初始化 Walk-forward 验证器
@@ -71,6 +72,9 @@ class WalkForwardValidator:
             confidence_threshold: 置信度阈值
             use_feature_selection: 是否使用特征选择
             min_train_samples: 最小训练样本数
+            fp_penalty: False Positive 惩罚系数（非对称损失函数）
+                - None: 不使用额外惩罚
+                - float (如 2.5): 对类别0（下跌）施加 fp_penalty 倍惩罚
         """
         self.model_type = model_type.lower()
         self.train_window_months = train_window_months
@@ -80,6 +84,7 @@ class WalkForwardValidator:
         self.confidence_threshold = confidence_threshold
         self.use_feature_selection = use_feature_selection
         self.min_train_samples = min_train_samples
+        self.fp_penalty = fp_penalty
 
         # 模型类映射
         self.model_classes = {
@@ -100,6 +105,8 @@ class WalkForwardValidator:
         logger.info(f"测试窗口: {test_window_months} 个月")
         logger.info(f"滚动步长: {step_window_months} 个月")
         logger.info(f"预测周期: {horizon} 天")
+        if self.fp_penalty is not None:
+            logger.info(f"非对称损失函数: FP惩罚={self.fp_penalty}x")
 
         # 预加载社区 ID（确保训练/预测一致性）
         self.preloaded_community_ids = None
@@ -281,8 +288,12 @@ class WalkForwardValidator:
         """
         print(f"\n  🔄 准备训练数据...")
 
-        # 创建模型实例
-        model = self.model_class()
+        # 创建模型实例（支持非对称损失函数）
+        if self.fp_penalty is not None:
+            model = self.model_class(fp_penalty=self.fp_penalty)
+            print(f"  ⚠️ 使用非对称损失函数: FP惩罚={self.fp_penalty}x")
+        else:
+            model = self.model_class()
 
         # 准备训练数据
         train_codes = stock_list
@@ -1387,6 +1398,10 @@ def main():
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（默认: False，使用全量特征）')
 
+    # 非对称损失函数参数
+    parser.add_argument('--fp-penalty', type=float, default=None,
+                       help='False Positive 惩罚系数（非对称损失函数），如 2.5 表示对FP错误施加2.5倍惩罚')
+
     args = parser.parse_args()
 
     # 获取股票列表
@@ -1410,7 +1425,8 @@ def main():
         step_window_months=args.step_window,
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
-        use_feature_selection=args.use_feature_selection
+        use_feature_selection=args.use_feature_selection,
+        fp_penalty=args.fp_penalty
     )
 
     # 执行验证

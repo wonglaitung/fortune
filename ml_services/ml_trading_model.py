@@ -4570,9 +4570,9 @@ class CatBoostModel(BaseTradingModel):
     """
     _deprecation_warning_shown = False  # 类变量，控制弃用警告只显示一次
 
-    def __init__(self, class_weight='balanced', use_dynamic_threshold=False):
+    def __init__(self, class_weight='balanced', use_dynamic_threshold=False, fp_penalty=None):
         """初始化 CatBoost 模型
-        
+
         Args:
             class_weight: 类别权重策略
                 - 'balanced': 自动平衡类别权重（推荐，温和调整）
@@ -4580,15 +4580,26 @@ class CatBoostModel(BaseTradingModel):
                 - None: 不使用类别权重
                 - dict: 手动指定权重，如 {0: 1.0, 1: 1.2}
             use_dynamic_threshold: 是否使用动态阈值策略
+            fp_penalty: False Positive 惩罚系数（非对称损失函数）
+                - None: 不使用额外惩罚
+                - float (如 2.5): 对类别0（下跌）施加 fp_penalty 倍惩罚
+                - 效果：class_weights = {0: fp_penalty, 1: 1.0}，惩罚预测涨但实际跌的错误
         """
         super().__init__()  # 调用基类初始化
         self.catboost_model = None
         self.actual_n_estimators = 0
         self.model_type = 'catboost'  # 模型类型标识
-        self.class_weight = class_weight
         self.use_dynamic_threshold = use_dynamic_threshold
-        
-        logger.info(f"CatBoostModel 初始化: class_weight={class_weight}, use_dynamic_threshold={use_dynamic_threshold}")
+        self.fp_penalty = fp_penalty
+
+        # 如果设置了 fp_penalty，覆盖 class_weight（非对称损失函数）
+        if fp_penalty is not None:
+            self.class_weight = {0: fp_penalty, 1: 1.0}
+            logger.info(f"CatBoostModel 使用非对称损失函数: FP惩罚={fp_penalty}x")
+        else:
+            self.class_weight = class_weight
+
+        logger.info(f"CatBoostModel 初始化: class_weight={self.class_weight}, use_dynamic_threshold={use_dynamic_threshold}, fp_penalty={fp_penalty}")
 
     def load_selected_features(self, filepath=None, current_feature_names=None):
         """加载选择的特征列表（使用特征名称交集，确保特征存在）
