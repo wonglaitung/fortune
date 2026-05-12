@@ -2301,27 +2301,30 @@ class HSI_Predictor:
 
         history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
 
-        # 计算5个交易日前的日期
+        # 计算5个交易日前的日期（使用香港交易日历）
         current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
 
         try:
-            import akshare as ak
-            df = ak.tool_trade_date_hist_sina()
-            trading_dates = df['trade_date'].astype(str).tolist()
+            # 使用恒指历史数据获取香港实际交易日
+            import yfinance as yf
+            hsi = yf.Ticker("^HSI")
+            hsi_data = hsi.history(period="2mo", interval="1d")
+            trading_dates = [d.strftime('%Y-%m-%d') for d in hsi_data.index]
 
             if current_date_str in trading_dates:
                 current_idx = trading_dates.index(current_date_str)
             else:
+                # 找最近的交易日
                 for i, d in enumerate(trading_dates):
-                    if d >= current_date_str:
+                    if d <= current_date_str:
                         current_idx = i
+                    else:
                         break
-                else:
-                    current_idx = len(trading_dates) - 1
 
             target_idx = max(0, current_idx - 5)
             prediction_date = trading_dates[target_idx]
         except Exception as e:
+            print(f"⚠️ 获取香港交易日历失败: {e}，使用备用方案")
             if isinstance(data_date, str):
                 data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
             else:
