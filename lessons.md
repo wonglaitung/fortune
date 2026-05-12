@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v7.2 (2026-05-12) | **状态**：当前有效
+> **版本**：v7.3 (2026-05-12) | **状态**：当前有效
 
 ---
 
@@ -575,6 +575,47 @@ else:                                 # 正常市场
 
 ---
 
+### 19. 市场情绪过滤器生产集成 ⭐⭐⭐
+
+**问题**：验证方案与生产环境数据源不一致，可能导致效果偏差
+
+**现象**：
+- Walk-forward 验证使用所有股票收益率计算上涨比例
+- 生产环境最初使用 HSI 单一指数数据
+- HSI 数据每天只有一个值，上涨比例只能是 0% 或 100%
+
+**解决方案**：
+
+```python
+# 生产环境：获取所有股票收益率数据
+all_returns = []
+for stock_code in stock_codes:
+    stock_df = get_hk_stock_data_tencent(stock_code, period_days=90)
+    stock_df['Return_1d'] = stock_df['Close'].pct_change()
+    all_returns.append(stock_df[['Date', 'Return_1d']])
+
+returns_df = pd.concat(all_returns, ignore_index=True)
+market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Return_1d')
+```
+
+**邮件显示增强**：
+
+| 显示位置 | 内容 |
+|---------|------|
+| 邮件开头 | 市场层级、滞后1天上涨比例、动态阈值 |
+| 表格新增列 | "市场调整"：显示每只股票的市场调整状态 |
+| JSON 新增字段 | `probability_display`、`market_layer`、`dynamic_threshold` |
+| 极端熊市警告 | 邮件末尾显示警告信息 |
+
+**教训**：
+- 验证方案与生产环境必须使用相同数据源
+- 邮件显示应完整呈现市场情绪调整逻辑
+- 传给大模型的数据应包含市场调整标注
+
+**代码**：`comprehensive_analysis.py:777-820`（市场情绪初始化）、`comprehensive_analysis.py:955-1017`（动态阈值判断）
+
+---
+
 ## 六、快速参考
 
 ### 模型可信度
@@ -607,6 +648,7 @@ else:                                 # 正常市场
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-12 | v7.3 | 新增：市场情绪过滤器生产集成经验（数据源一致性、邮件显示增强、大模型标注） |
 | 2026-05-12 | v7.2 | 新增：市场情绪过滤器设计与实施经验（滞后数据有效性、阈值分层、验证效果） |
 | 2026-05-11 | v7.2 | 新增：市场环境感知经验（问题Fold根本原因分析） |
 | 2026-05-11 | v7.1 | 完善：非对称损失函数完整对比测试（fp_penalty=2.5/3.0/3.5） |

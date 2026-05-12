@@ -774,6 +774,59 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(script_dir, 'data')
 
+        # ========== 获取所有股票收益率数据用于市场情绪过滤 ==========
+        # 参考 walk_forward_validation.py 的方案：使用所有股票的收益率计算上涨比例
+        market_layer = 'normal'
+        dynamic_threshold = 0.50
+        up_ratio = 0.50
+
+        try:
+            from config import TRAINING_STOCKS as STOCK_LIST
+            from data_services.tencent_finance import get_hk_stock_data_tencent
+            from ml_services.market_regime import MarketSentimentFilter
+
+            # STOCK_LIST 是字典，取 keys 作为股票代码列表
+            stock_codes = list(STOCK_LIST.keys()) if isinstance(STOCK_LIST, dict) else STOCK_LIST
+            print(f"  🔄 获取 {len(stock_codes)} 只股票数据用于市场情绪计算...")
+
+            # 收集所有股票的收益率数据
+            all_returns = []
+            for stock_code in stock_codes:
+                try:
+                    stock_df = get_hk_stock_data_tencent(stock_code.replace('.HK', ''), period_days=90)
+                    if not stock_df.empty and len(stock_df) >= 2:
+                        stock_df['Return_1d'] = stock_df['Close'].pct_change()
+                        stock_df['Date'] = pd.to_datetime(stock_df.index).tz_localize(None)
+                        all_returns.append(stock_df[['Date', 'Return_1d']])
+                except Exception:
+                    pass
+
+            if all_returns:
+                returns_df = pd.concat(all_returns, ignore_index=True)
+                print(f"  ✅ 收益率数据获取成功，共 {len(returns_df)} 条记录")
+
+                # 初始化市场情绪过滤器
+                market_filter = MarketSentimentFilter(lookback_days=1)
+                market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Return_1d')
+
+                # 获取当日的市场情绪
+                threshold, layer, ratio = market_filter.get_threshold(date_str)
+                market_layer = layer
+                dynamic_threshold = threshold
+                up_ratio = ratio
+
+                layer_names = {
+                    'extreme_bear': '🔴 极端熊市',
+                    'bear': '🟠 熊市',
+                    'weak': '🟡 弱震荡',
+                    'normal': '🟢 正常市场'
+                }
+                print(f"  ✅ 市场情绪: {layer_names.get(layer, layer)}, 上涨比例: {ratio:.1%}, 阈值: {threshold:.2f}")
+            else:
+                print(f"  ⚠️ 无法获取股票收益率数据，使用默认市场情绪")
+        except Exception as e:
+            print(f"  ⚠️ 市场情绪过滤器初始化失败: {e}")
+
         # 读取 CatBoost 单模型预测结果
         catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
 
@@ -917,12 +970,51 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 20天预测概率
                 probability = float(row['probability'])
-                if probability > 0.60:
-                    direction = "上涨"
-                elif probability > 0.50:
-                    direction = "观望"
+
+                # 根据市场情绪和概率判断方向
+                if market_layer == 'extreme_bear':
+                    # 极端熊市：暂停所有看涨信号
+                    direction = "暂停"
+                    probability_display = f"{probability:.2f} (暂停)"
+                    include_in_llm = False  # 不传给大模型
+                elif market_layer == 'bear':
+                    # 熊市：提高阈值到 0.70
+                    if probability >= 0.70:
+                        direction = "上涨"
+                        probability_display = f"{probability:.2f} (高置信)"
+                        include_in_llm = True
+                    elif probability >= 0.50:
+                        direction = "观望"
+                        probability_display = f"{probability:.2f} (降级)"
+                        include_in_llm = True  # 传给大模型但标注降级
+                    else:
+                        direction = "下跌"
+                        probability_display = f"{probability:.2f}"
+                        include_in_llm = True
+                elif market_layer == 'weak':
+                    # 弱震荡：提高阈值到 0.65
+                    if probability >= 0.65:
+                        direction = "上涨"
+                        probability_display = f"{probability:.2f}"
+                        include_in_llm = True
+                    elif probability >= 0.50:
+                        direction = "观望"
+                        probability_display = f"{probability:.2f} (降级)"
+                        include_in_llm = True
+                    else:
+                        direction = "下跌"
+                        probability_display = f"{probability:.2f}"
+                        include_in_llm = True
                 else:
-                    direction = "下跌"
+                    # 正常市场：标准阈值 0.50
+                    if probability > 0.60:
+                        direction = "上涨"
+                    elif probability > 0.50:
+                        direction = "观望"
+                    else:
+                        direction = "下跌"
+                    probability_display = f"{probability:.2f}"
+                    include_in_llm = True
 
                 # 计算筹码阻力
                 resistance_level = 'N/A'
@@ -936,16 +1028,21 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     else:
                         resistance_level = '高'
 
-                llm_stock_list.append({
-                    'code': stock_code,
-                    'name': row['name'],
-                    'sector': sector_name,
-                    'sector_type': sector_type,
-                    'prediction_20d': direction,
-                    'probability_20d': round(probability, 4),
-                    'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
-                    'chip_resistance': resistance_level
-                })
+                # 根据市场情绪决定是否传给大模型
+                if include_in_llm:
+                    llm_stock_list.append({
+                        'code': stock_code,
+                        'name': row['name'],
+                        'sector': sector_name,
+                        'sector_type': sector_type,
+                        'prediction_20d': direction,
+                        'probability_20d': round(probability, 4),
+                        'probability_display': probability_display,  # 市场情绪调整后的显示
+                        'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
+                        'chip_resistance': resistance_level,
+                        'market_layer': market_layer,
+                        'dynamic_threshold': dynamic_threshold
+                    })
 
             # 构建JSON格式文本
             catboost_text_llm = "【CatBoost模型预测结果（20天）- JSON格式】\n"
@@ -955,8 +1052,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
             catboost_text_llm += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
-            catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
+            catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal）\n"
+            catboost_text_llm += "- `dynamic_threshold`: 动态阈值（根据市场情绪调整）\n"
+            catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 + market_layer=normal = 更可靠信号\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
@@ -971,13 +1071,24 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     transmission_date = first_transmission.get('prediction_date')
 
                 # 三周期预测表格（含筹码分布+风险回报率）
+                # 在邮件开头显示市场情绪
+                layer_names_email = {
+                    'extreme_bear': '🔴 极端熊市 - 暂停交易',
+                    'bear': '🟠 熊市 - 需概率≥0.70',
+                    'weak': '🟡 弱震荡 - 需概率≥0.65',
+                    'normal': '🟢 正常市场'
+                }
+
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
                 catboost_text_email += f"预测日期: {date_str}\n"
+                catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
+                catboost_text_email += f"**滞后1天上涨比例**: {up_ratio:.1%}\n"
+                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}\n"
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -1076,8 +1187,29 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         # 获取网络洞察
                         network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
 
+                        # 计算市场调整显示
+                        probability_20d = float(row['probability'])
+                        if market_layer == 'extreme_bear':
+                            market_adjust_display = '🔴暂停'
+                        elif market_layer == 'bear':
+                            if probability_20d >= 0.70:
+                                market_adjust_display = '🟠高置信'
+                            elif probability_20d >= 0.50:
+                                market_adjust_display = '🟠降级'
+                            else:
+                                market_adjust_display = '-'
+                        elif market_layer == 'weak':
+                            if probability_20d >= 0.65:
+                                market_adjust_display = '🟡通过'
+                            elif probability_20d >= 0.50:
+                                market_adjust_display = '🟡降级'
+                            else:
+                                market_adjust_display = '-'
+                        else:
+                            market_adjust_display = '🟢正常'
+
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -1097,6 +1229,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
                 catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
                 catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
+
+                # 添加市场调整说明
+                catboost_text_email += f"\n**市场调整说明**：\n"
+                catboost_text_email += "- 🟢正常：正常市场环境，使用标准阈值\n"
+                catboost_text_email += "- 🟡通过/降级：弱震荡市场，概率≥65%通过，否则降级为观望\n"
+                catboost_text_email += "- 🟠高置信/降级：熊市环境，概率≥70%通过，否则降级为观望\n"
+                catboost_text_email += "- 🔴暂停：极端熊市，暂停所有看涨信号\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
@@ -1138,6 +1277,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
+
+            # 极端熊市警告
+            if market_layer == 'extreme_bear':
+                catboost_text_email += """
+
+⚠️ **极端熊市警告**
+今日市场上涨比例极低（<20%），根据历史验证，此类市场环境下看涨信号准确率极低。
+建议：暂停所有看涨操作，等待市场企稳。
+"""
 
             result['ensemble'] = catboost_text_llm
             result['ensemble_email'] = catboost_text_email
