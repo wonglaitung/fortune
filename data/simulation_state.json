@@ -31331,6 +31331,134 @@
       "current_price": 134.2,
       "target_price": 140.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-05-12T13:12:18.751132",
+      "type": "SELL",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面恶化：RSI 81.57超买、布林带上轨突破、CMF -0.304流出；位置百分位100.0%高位；房地产板块下跌；利好出尽",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.66,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12T13:12:20.927186",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面崩溃：CMF -0.2547流出、OBV下降、位置百分位95.07%高位；成交额变化1日-47.9%；基本面PE 28.7过高；板块下跌",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 424.0,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12T13:12:22.577922",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面超买：RSI 70.06、CMF -0.3921流出、位置百分位80.79%高位；量能背离；房地产板块下跌；基本面PE 29.6偏高",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 33.98,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12T13:12:24.788643",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面见顶：RSI 74.78超买、布林带上轨突破、CMF -0.2381流出；高位放量滞涨；公用事业板块上涨但个股高位；利好兑现",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.6,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12T13:12:26.166078",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面超买：RSI 75.2、CMF -0.3611流出、OBV下降；高位量能不足；位置百分位100.0%；合并新闻远期",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.6,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12T13:12:28.200703",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 133.9,
+      "amount": 0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术指标协同：RSI 52.09、MACD交叉、CMF流入；TAV评分54.25中等共振；筹码分布上方比例41.7%<60%；科技股板块支撑；AI购物推动新闻催化剂",
+      "success": false,
+      "stop_loss_price": 113.8,
+      "current_price": 133.9,
+      "target_price": 145.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-12T13:12:29.600523",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 34.06,
+      "amount": 0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术指标协同：RSI 47.55、CMF流入、OBV上升；筹码分布上方比例17.7%<30%；资金面CMF 0.2076高流入；生物医药板块支撑",
+      "success": false,
+      "stop_loss_price": 28.7,
+      "current_price": 34.06,
+      "target_price": 36.5,
+      "validity_period": 2
+    },
+    {
+      "timestamp": "2026-05-12T13:12:30.764542",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.7,
+      "amount": 0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术指标协同：RSI 40.8、CMF流入、OBV上升；TAV评分32.0谨慎观察；筹码分布上方比例52.6%<60%；银行板块温和上涨；基本面估值低",
+      "success": false,
+      "stop_loss_price": 40.6,
+      "current_price": 47.7,
+      "target_price": 50.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -48967,282 +49095,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-05-11 11:22:37",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "买入理由：\n- **技术指标协同**：RSI 53.38（中性）、MACD无信号但金叉预期、布林带正常范围、OBV下降中成交量放大，4项指标协同；情感指标MA3>MA7确认情绪拐点。\n- **筹码分布优势**：上方筹码比例仅15.2%（低阻力），拉升难度\"容易\"，筹码集中度0.162（中集中度），短期拉升阻力小。\n- **板块与TAV共振**：科技股板块虽下跌（-1.57%），但公司相对强度+0.76%跑赢恒指，TAV评分54.25分（中等共振）显示技术面修复。\n- **新闻影响**：BNP Paribas给予\"跑赢大盘\"评级（\"BNP Paribas Initiates Coverage... with Outperform rating\"），云业务增长预期强化。",
-          "allocation_pct": 35,
-          "stop_loss_price": 131.0,
-          "target_price": 142.0,
-          "validity_period": 14
-        },
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "买入理由：\n- **技术指标协同**：RSI 51.57（中性）、MACD无信号但金叉预期、布林带正常范围、OBV下降中CMF资金流稳定，3项指标支持建仓；情感指标MA3>MA7确认情绪转暖。\n- **筹码分布优势**：上方筹码比例仅7.4%（极低阻力），拉升难度\"容易\"，筹码集中度0.149（低集中度），短期拉升阻力小。\n- **板块与TAV共振**：科技股板块虽温和下跌（-1.57%），但公司60日收益率-9.72%已超跌，TAV评分51.25分（中等共振）显示技术面修复。\n- **新闻影响**：SU7订单超7万（\"Orders for the updated Xiaomi SU7 EV sedan... topped 70,000\"），产品需求强劲，抵消iPhone 17竞争压力。",
-          "allocation_pct": 40,
-          "stop_loss_price": 30.8,
-          "target_price": 33.2,
-          "validity_period": 5
-        },
-        {
-          "code": "0016.HK",
-          "name": "新鸿基地产",
-          "reason": "买入理由：\n- **技术指标协同**：RSI 56.83（中性区域）、MACD无信号但金叉预期、布林带正常范围、OBV上升趋势，4项指标同向支持；情感指标MA3>MA7显示情绪转暖。\n- **筹码分布优势**：上方筹码比例仅23.8%（低阻力），拉升难度\"容易\"，筹码集中度0.139（低集中度），利于短期拉升。\n- **板块与TAV共振**：所属房地产股板块温和上涨（+0.17%），TAV评分61.25分（中等共振），60日收益率11.72%跑赢恒指。\n- **新闻影响**：新闻显示公司获200亿港元贷款（\"Sun Hung Kai Secures HK$20B Loan\"），融资成本降低，利好短期流动性。",
-          "allocation_pct": 30,
-          "stop_loss_price": 138.0,
-          "target_price": 148.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "风险因素：\n- **技术面**：RSI 68.86（超买区）、布林带突破上轨、CMF资金流-0.1651（持续流出），3项指标确认出货信号；OBV上升但成交量比率0.84（高位放量滞涨），暗示主力出货。\n- **筹码阻力**：上方筹码比例仅5.2%（低阻力），但位置百分位92.0%（高位区域），短期获利盘丰厚，易引发抛压。\n- **板块与资金**：半导体股板块强势上涨（+1.59%），但个股60日收益率37.33%已严重超涨，相对强度+41.35%偏离均值；新闻显示美国限制设备出口（\"U.S. halts chip equipment shipments\"），基本面承压。",
-          "stop_loss_triggered": false,
-          "target_price": 130.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "风险因素：\n- **技术面**：RSI 65.62（超买区）、布林带突破上轨、CMF资金流-0.3681（大幅流出），3项指标确认出货；OBV上升但成交量比率0.24（量价背离），信号可靠性高。\n- **筹码阻力**：上方筹码比例34.0%（中阻力），但位置百分位72.26%（高位区域），3日收益率-2.72%显示短期动能衰竭。\n- **板块与资金**：房地产股板块温和上涨（+0.17%），但个股相对强度+7.71%已偏离均值；新闻显示中国房地产政策不确定性（\"Wall Street Dares to Ask If China’s Property Turnaround Is Close\"），基本面风险上升。",
-          "stop_loss_triggered": false,
-          "target_price": 32.5,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "风险因素：\n- **技术面**：RSI 58.41（接近超买）、布林带正常范围但CMF资金流-0.2786（持续流出）、OBV下降，3项指标确认出货；情感指标MA3:3.18显示短期过热。\n- **筹码阻力**：上方筹码比例仅13.4%（低阻力），但位置百分位90.58%（历史高位），60日收益率3.73%与3日收益率-0.98%背离，动能衰竭。\n- **板块与资金**：交易所板块温和下跌（-0.33%），但个股基本面评分仅20分（高估值，PE 28.7），新闻显示IPO监管趋严（\"Hong Kong maintains IPO dominance, though regulatory headwinds mount\"）。",
-          "stop_loss_triggered": false,
-          "target_price": 410.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "风险因素：\n- **技术面**：RSI 70.66（严重超买）、布林带突破上轨、CMF资金流-0.2273（持续流出），3项指标确认出货；OBV下降与价格背离，信号可靠性高。\n- **筹码阻力**：上方筹码比例0.0%（无阻力），但位置百分位100.0%（历史高位），3日收益率1.87%与60日收益率7.5%背离，短期动能衰竭。\n- **板块与资金**：公用事业股板块温和上涨（+0.33%），但个股RSI超买严重，新闻显示AI芯片合作（\"Alibaba’s Zhenwu AI Chips Power New Data Center\"）已部分定价。",
-          "stop_loss_triggered": false,
-          "target_price": 5.3,
-          "validity_period": 3
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "风险因素：\n- **技术面**：RSI 71.91（严重超买）、布林带突破上轨、CMF资金流-0.3517（大幅流出），3项指标确认出货；OBV下降与价格背离，量能不足。\n- **筹码阻力**：上方筹码比例0.0%（无阻力），但位置百分位100.0%（历史高位），情感指标MA3:0.0显示短期动能枯竭。\n- **板块与资金**：公用事业股板块温和上涨（+0.33%），但个股相对强度-0.64%跑输恒指，新闻显示德意志电信合并传闻（\"Deutsche Telekom Weighs Full Combination\"）短期难落地。",
-          "stop_loss_triggered": false,
-          "target_price": 84.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-05-11 11:22:37",
-      "type": "SELL",
-      "code": "1347.HK",
-      "name": "华虹半导体",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "风险因素：\n- **技术面**：RSI 68.86（超买区）、布林带突破上轨、CMF资金流-0.1651（持续流出），3项指标确认出货信号；OBV上升但成交量比率0.84（高位放量滞涨），暗示主力出货。\n- **筹码阻力**：上方筹码比例仅5.2%（低阻力），但位置百分位92.0%（高位区域），短期获利盘丰厚，易引发抛压。\n- **板块与资金**：半导体股板块强势上涨（+1.59%），但个股60日收益率37.33%已严重超涨，相对强度+41.35%偏离均值；新闻显示美国限制设备出口（\"U.S. halts chip equipment shipments\"），基本面承压。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 136.9,
-      "target_price": 130.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-11 11:22:39",
-      "type": "SELL",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "风险因素：\n- **技术面**：RSI 65.62（超买区）、布林带突破上轨、CMF资金流-0.3681（大幅流出），3项指标确认出货；OBV上升但成交量比率0.24（量价背离），信号可靠性高。\n- **筹码阻力**：上方筹码比例34.0%（中阻力），但位置百分位72.26%（高位区域），3日收益率-2.72%显示短期动能衰竭。\n- **板块与资金**：房地产股板块温和上涨（+0.17%），但个股相对强度+7.71%已偏离均值；新闻显示中国房地产政策不确定性（\"Wall Street Dares to Ask If China’s Property Turnaround Is Close\"），基本面风险上升。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 33.62,
-      "target_price": 32.5,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-11 11:22:41",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "风险因素：\n- **技术面**：RSI 58.41（接近超买）、布林带正常范围但CMF资金流-0.2786（持续流出）、OBV下降，3项指标确认出货；情感指标MA3:3.18显示短期过热。\n- **筹码阻力**：上方筹码比例仅13.4%（低阻力），但位置百分位90.58%（历史高位），60日收益率3.73%与3日收益率-0.98%背离，动能衰竭。\n- **板块与资金**：交易所板块温和下跌（-0.33%），但个股基本面评分仅20分（高估值，PE 28.7），新闻显示IPO监管趋严（\"Hong Kong maintains IPO dominance, though regulatory headwinds mount\"）。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 422.2,
-      "target_price": 410.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-11 11:22:43",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "风险因素：\n- **技术面**：RSI 70.66（严重超买）、布林带突破上轨、CMF资金流-0.2273（持续流出），3项指标确认出货；OBV下降与价格背离，信号可靠性高。\n- **筹码阻力**：上方筹码比例0.0%（无阻力），但位置百分位100.0%（历史高位），3日收益率1.87%与60日收益率7.5%背离，短期动能衰竭。\n- **板块与资金**：公用事业股板块温和上涨（+0.33%），但个股RSI超买严重，新闻显示AI芯片合作（\"Alibaba’s Zhenwu AI Chips Power New Data Center\"）已部分定价。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.44,
-      "target_price": 5.3,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-11 11:22:44",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "风险因素：\n- **技术面**：RSI 71.91（严重超买）、布林带突破上轨、CMF资金流-0.3517（大幅流出），3项指标确认出货；OBV下降与价格背离，量能不足。\n- **筹码阻力**：上方筹码比例0.0%（无阻力），但位置百分位100.0%（历史高位），情感指标MA3:0.0显示短期动能枯竭。\n- **板块与资金**：公用事业股板块温和上涨（+0.33%），但个股相对强度-0.64%跑输恒指，新闻显示德意志电信合并传闻（\"Deutsche Telekom Weighs Full Combination\"）短期难落地。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 85.75,
-      "target_price": 84.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-11 11:22:46",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 134.7,
-      "amount": 0,
-      "reason": "买入理由：\n- **技术指标协同**：RSI 53.38（中性）、MACD无信号但金叉预期、布林带正常范围、OBV下降中成交量放大，4项指标协同；情感指标MA3>MA7确认情绪拐点。\n- **筹码分布优势**：上方筹码比例仅15.2%（低阻力），拉升难度\"容易\"，筹码集中度0.162（中集中度），短期拉升阻力小。\n- **板块与TAV共振**：科技股板块虽下跌（-1.57%），但公司相对强度+0.76%跑赢恒指，TAV评分54.25分（中等共振）显示技术面修复。\n- **新闻影响**：BNP Paribas给予\"跑赢大盘\"评级（\"BNP Paribas Initiates Coverage... with Outperform rating\"），云业务增长预期强化。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": 131.0,
-      "current_price": 134.7,
-      "target_price": 142.0,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-05-11 11:22:50",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 31.9,
-      "amount": 0,
-      "reason": "买入理由：\n- **技术指标协同**：RSI 51.57（中性）、MACD无信号但金叉预期、布林带正常范围、OBV下降中CMF资金流稳定，3项指标支持建仓；情感指标MA3>MA7确认情绪转暖。\n- **筹码分布优势**：上方筹码比例仅7.4%（极低阻力），拉升难度\"容易\"，筹码集中度0.149（低集中度），短期拉升阻力小。\n- **板块与TAV共振**：科技股板块虽温和下跌（-1.57%），但公司60日收益率-9.72%已超跌，TAV评分51.25分（中等共振）显示技术面修复。\n- **新闻影响**：SU7订单超7万（\"Orders for the updated Xiaomi SU7 EV sedan... topped 70,000\"），产品需求强劲，抵消iPhone 17竞争压力。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": 30.8,
-      "current_price": 31.9,
-      "target_price": 33.2,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-11 11:22:52",
-      "type": "BUY",
-      "code": "0016.HK",
-      "name": "新鸿基地产",
-      "shares": 0,
-      "price": 142.3,
-      "amount": 0,
-      "reason": "买入理由：\n- **技术指标协同**：RSI 56.83（中性区域）、MACD无信号但金叉预期、布林带正常范围、OBV上升趋势，4项指标同向支持；情感指标MA3>MA7显示情绪转暖。\n- **筹码分布优势**：上方筹码比例仅23.8%（低阻力），拉升难度\"容易\"，筹码集中度0.139（低集中度），利于短期拉升。\n- **板块与TAV共振**：所属房地产股板块温和上涨（+0.17%），TAV评分61.25分（中等共振），60日收益率11.72%跑赢恒指。\n- **新闻影响**：新闻显示公司获200亿港元贷款（\"Sun Hung Kai Secures HK$20B Loan\"），融资成本降低，利好短期流动性。",
-      "capital_after": 801.1892940520192,
-      "success": false,
-      "stop_loss_price": 138.0,
-      "current_price": 142.3,
-      "target_price": 148.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-11 14:42:14",
-      "buy": [
-        {
-          "code": "2533.HK",
-          "name": "黑芝麻智能",
-          "reason": "技术指标共振，成交量放大，MACD金叉，OBV上升",
-          "allocation_pct": 50,
-          "stop_loss_price": 15.2,
-          "target_price": 18.75,
-          "validity_period": 5
-        },
-        {
-          "code": "6682.HK",
-          "name": "范式智能",
-          "reason": "价格低位，MACD金叉，CMF流入，OBV上升",
-          "allocation_pct": 40,
-          "stop_loss_price": 35.0,
-          "target_price": 40.0,
-          "validity_period": 5
-        },
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "价格低位，MACD金叉，CMF微正，TAV中等共振",
-          "allocation_pct": 30,
-          "stop_loss_price": 115.0,
-          "target_price": 140.0,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "价格高位，RSI超买，布林带超买，CMF流出",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 3
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "成交量高，价格下跌，OBV下降",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 3
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "价格高位，RSI高，CMF流出，布林带超买",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "价格高位，CMF流出，OBV下降，布林带超买",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "价格高位，RSI超买，CMF流出，布林带超买",
-          "stop_loss_triggered": false,
-          "target_price": 0.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
       "timestamp": "2026-05-11 14:42:14",
       "type": "SELL",
       "code": "1109.HK",
@@ -49370,6 +49222,213 @@
       "current_price": 134.2,
       "target_price": 140.0,
       "validity_period": 14
+    },
+    {
+      "timestamp": "2026-05-12 10:53:46",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-12 13:12:18",
+      "buy": [
+        {
+          "code": "9988.HK",
+          "name": "阿里巴巴-SW",
+          "reason": "技术指标协同：RSI 52.09、MACD交叉、CMF流入；TAV评分54.25中等共振；筹码分布上方比例41.7%<60%；科技股板块支撑；AI购物推动新闻催化剂",
+          "allocation_pct": 40,
+          "stop_loss_price": 113.8,
+          "target_price": 145.0,
+          "validity_period": 5
+        },
+        {
+          "code": "2269.HK",
+          "name": "药明生物",
+          "reason": "技术指标协同：RSI 47.55、CMF流入、OBV上升；筹码分布上方比例17.7%<30%；资金面CMF 0.2076高流入；生物医药板块支撑",
+          "allocation_pct": 30,
+          "stop_loss_price": 28.7,
+          "target_price": 36.5,
+          "validity_period": 2
+        },
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "技术指标协同：RSI 40.8、CMF流入、OBV上升；TAV评分32.0谨慎观察；筹码分布上方比例52.6%<60%；银行板块温和上涨；基本面估值低",
+          "allocation_pct": 35,
+          "stop_loss_price": 40.6,
+          "target_price": 50.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1109.HK",
+          "name": "华润置地",
+          "reason": "技术面恶化：RSI 81.57超买、布林带上轨突破、CMF -0.304流出；位置百分位100.0%高位；房地产板块下跌；利好出尽",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "技术面崩溃：CMF -0.2547流出、OBV下降、位置百分位95.07%高位；成交额变化1日-47.9%；基本面PE 28.7过高；板块下跌",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0012.HK",
+          "name": "恒基地产",
+          "reason": "技术面超买：RSI 70.06、CMF -0.3921流出、位置百分位80.79%高位；量能背离；房地产板块下跌；基本面PE 29.6偏高",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "技术面见顶：RSI 74.78超买、布林带上轨突破、CMF -0.2381流出；高位放量滞涨；公用事业板块上涨但个股高位；利好兑现",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "技术面超买：RSI 75.2、CMF -0.3611流出、OBV下降；高位量能不足；位置百分位100.0%；合并新闻远期",
+          "stop_loss_triggered": false,
+          "target_price": 0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-12 13:12:18",
+      "type": "SELL",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化：RSI 81.57超买、布林带上轨突破、CMF -0.304流出；位置百分位100.0%高位；房地产板块下跌；利好出尽",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.66,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12 13:12:20",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面崩溃：CMF -0.2547流出、OBV下降、位置百分位95.07%高位；成交额变化1日-47.9%；基本面PE 28.7过高；板块下跌",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 424.0,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12 13:12:22",
+      "type": "SELL",
+      "code": "0012.HK",
+      "name": "恒基地产",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面超买：RSI 70.06、CMF -0.3921流出、位置百分位80.79%高位；量能背离；房地产板块下跌；基本面PE 29.6偏高",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 33.98,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12 13:12:24",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面见顶：RSI 74.78超买、布林带上轨突破、CMF -0.2381流出；高位放量滞涨；公用事业板块上涨但个股高位；利好兑现",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.6,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12 13:12:26",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面超买：RSI 75.2、CMF -0.3611流出、OBV下降；高位量能不足；位置百分位100.0%；合并新闻远期",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.6,
+      "target_price": 0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-12 13:12:28",
+      "type": "BUY",
+      "code": "9988.HK",
+      "name": "阿里巴巴-SW",
+      "shares": 0,
+      "price": 133.9,
+      "amount": 0,
+      "reason": "技术指标协同：RSI 52.09、MACD交叉、CMF流入；TAV评分54.25中等共振；筹码分布上方比例41.7%<60%；科技股板块支撑；AI购物推动新闻催化剂",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": 113.8,
+      "current_price": 133.9,
+      "target_price": 145.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-12 13:12:29",
+      "type": "BUY",
+      "code": "2269.HK",
+      "name": "药明生物",
+      "shares": 0,
+      "price": 34.06,
+      "amount": 0,
+      "reason": "技术指标协同：RSI 47.55、CMF流入、OBV上升；筹码分布上方比例17.7%<30%；资金面CMF 0.2076高流入；生物医药板块支撑",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": 28.7,
+      "current_price": 34.06,
+      "target_price": 36.5,
+      "validity_period": 2
+    },
+    {
+      "timestamp": "2026-05-12 13:12:30",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.7,
+      "amount": 0,
+      "reason": "技术指标协同：RSI 40.8、CMF流入、OBV上升；TAV评分32.0谨慎观察；筹码分布上方比例52.6%<60%；银行板块温和上涨；基本面估值低",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": 40.6,
+      "current_price": 47.7,
+      "target_price": 50.5,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
