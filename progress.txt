@@ -8,6 +8,38 @@
 
 ## 最新进展
 
+### 2026-05-12 市场情绪过滤器聚合方式修复 ⭐⭐
+
+**问题**：Walk-forward 验证中市场上涨比例计算错误，导致过滤效果与预期不符
+
+**现象**：
+- 上午验证 Fold 3 收益 +1.87%，下午验证 -5.66%
+- 原因：市场上涨比例计算方式不一致
+
+**根本原因**：
+- 上午验证：按日期聚合后计算上涨比例（正确）
+- 下午验证：直接使用 Return_1d，未按日期聚合（错误）
+- 导致每个股票单独计算上涨比例，而非整体市场上涨比例
+
+**解决方案**：
+```python
+# 按日期分组计算上涨比例（所有股票中上涨的比例）
+daily_up_ratio = returns_df.groupby('Date')['Return_1d'].apply(
+    lambda x: (x > 0).mean()
+).reset_index()
+daily_up_ratio.columns = ['Date', 'Return_1d']
+```
+
+**验证效果**：
+- 修复后市场上涨比例计算正确
+- Fold 3 市场上涨比例 18.6%（极端熊市），正确触发暂停交易
+
+**改动文件**：
+- 修改：`ml_services/walk_forward_validation.py`
+  - `_apply_market_filter` 方法：按日期聚合后计算上涨比例
+
+---
+
 ### 2026-05-12 CatBoost 分类特征处理一致性修复 ⭐⭐
 
 **问题**：CatBoost 训练时报错 `'data' is numpy array of floating point numerical type, it means no categorical features, but 'cat_features' parameter specifies nonzero number of categorical features`
