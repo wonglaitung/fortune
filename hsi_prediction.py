@@ -3102,29 +3102,40 @@ def verify_predictions():
                 # 目标日期已过，进行验证
                 try:
                     # 查找目标日期的收盘价
-                    target_date_pd = pd.to_datetime(target_date_str)
-                    if target_date_pd in hsi_data.index:
-                        actual_price = float(hsi_data.loc[target_date_pd, 'Close'])
+                    target_date_pd = pd.to_datetime(target_date_str).tz_localize(None)
+                    hsi_index_naive = hsi_data.index.tz_localize(None) if hsi_data.index.tzinfo else hsi_data.index
+
+                    # 使用字符串日期匹配
+                    target_date_str_for_match = target_date_pd.strftime('%Y-%m-%d')
+                    matching_rows = hsi_data[hsi_index_naive.strftime('%Y-%m-%d') == target_date_str_for_match]
+
+                    if not matching_rows.empty:
+                        actual_price = float(matching_rows.iloc[0]['Close'])
                     else:
                         # 找最近的交易日
-                        mask = hsi_data.index <= target_date_pd
+                        mask = hsi_index_naive <= target_date_pd
                         if mask.any():
                             actual_price = float(hsi_data[mask].iloc[-1]['Close'])
                         else:
                             updated_predictions.append(pred)
                             continue
 
-                    # 获取预测时的价格
-                    prediction_price = pred.get('current_price', 0)
+                    # 获取预测时的价格（兼容 entry_price 和 current_price）
+                    prediction_price = pred.get('entry_price') or pred.get('current_price', 0)
 
                     # 计算实际收益
                     actual_return = (actual_price - prediction_price) / prediction_price
-                    actual_direction = 1 if actual_return > 0 else 0
+                    actual_direction_str = 'up' if actual_return > 0 else 'down'
+
+                    # 判断预测是否正确
+                    predicted_direction = pred.get('predicted_direction', '')
+                    is_correct = (predicted_direction == actual_direction_str)
 
                     # 更新预测记录
                     pred['verified'] = True
                     pred['actual_return'] = float(actual_return)
-                    pred['actual_direction'] = actual_direction
+                    pred['actual_direction'] = actual_direction_str
+                    pred['outcome'] = 'correct' if is_correct else 'incorrect'
 
                     # 验证评分模型（兼容新旧格式）
                     score_model = pred.get('score_model', {})
@@ -3149,12 +3160,13 @@ def verify_predictions():
                         catboost_pred = catboost_model.get('trend')
                         catboost_predicted_direction = 1 if catboost_pred == '上涨' else 0
                         catboost_total += 1
-                        if catboost_predicted_direction == actual_direction:
+                        if catboost_predicted_direction == (1 if actual_direction_str == 'up' else 0):
                             catboost_correct += 1
 
                     verified_count += 1
                     print(f"✅ 验证: {prediction_date_str} → {target_date_str}")
-                    print(f"   实际收益: {actual_return*100:.2f}%, 方向: {'上涨' if actual_direction == 1 else '下跌'}")
+                    print(f"   实际收益: {actual_return*100:.2f}%, 方向: {'上涨' if actual_direction_str == 'up' else '下跌'}")
+                    print(f"   预测方向: {predicted_direction}, 结果: {'✓ 正确' if is_correct else '✗ 错误'}")
 
                 except Exception as e:
                     print(f"⚠️ 验证失败 {prediction_date_str}: {e}")
