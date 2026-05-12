@@ -8,6 +8,27 @@
 
 ## 最新进展
 
+### 2026-05-12 CatBoost 分类特征处理一致性修复 ⭐⭐
+
+**问题**：CatBoost 训练时报错 `'data' is numpy array of floating point numerical type, it means no categorical features, but 'cat_features' parameter specifies nonzero number of categorical features`
+
+**根本原因**：
+- 分类特征用 LabelEncoder 编码为整数后，numpy 自动将整个数组转为 float 类型
+- CatBoost 的 `cat_features` 参数不接受 float 数组
+
+**解决方案**：
+- 训练和预测时都不使用 `cat_features` 参数
+- 分类特征作为普通数值特征处理
+- 保持训练和预测的一致性
+
+**改动文件**：
+- 修改：`ml_services/ml_trading_model.py`
+  - 训练时移除 `cat_features` 参数
+  - `predict_single()` 方法移除 `cat_features`
+  - `predict_proba()` 方法移除 `cat_features`
+
+---
+
 ### 2026-05-12 市场情绪过滤器集成到生产流程 ⭐⭐⭐
 
 **更新内容**：将市场情绪过滤器集成到 `comprehensive_analysis.py`

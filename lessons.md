@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v7.4 (2026-05-12) | **状态**：当前有效
+> **版本**：v7.5 (2026-05-12) | **状态**：当前有效
 
 ---
 
@@ -269,6 +269,45 @@ for col in self.categorical_encoders.keys():
 ```
 
 **教训**：训练和预测的预处理逻辑必须一致
+
+---
+
+### 10.1 CatBoost cat_features 参数与数据类型一致性 ⭐⭐
+
+**问题**：CatBoost 训练时报错 `'data' is numpy array of floating point numerical type, it means no categorical features, but 'cat_features' parameter specifies nonzero number of categorical features`
+
+**根本原因**：
+- 分类特征用 LabelEncoder 编码为整数（如 `0, 1, 2...`）
+- 调用 `df[feature_columns].values` 时，numpy 将整个数组转为统一类型
+- 因为其他特征是 float，整个数组变成 float 类型
+- CatBoost 的 `cat_features` 参数不接受 float 数组
+
+**解决方案**：
+```python
+# 方案1：不使用 cat_features（推荐，改动最小）
+# 分类特征作为普通数值特征处理
+catboost_params = {
+    'loss_function': 'Logloss',
+    # 不设置 cat_features
+}
+train_pool = Pool(data=X, label=y)  # 不传递 cat_features
+
+# 方案2：保持 DataFrame 格式（更优但改动大）
+# 不调用 .values，保持 DataFrame 格式
+train_pool = Pool(data=df[feature_columns], label=y, cat_features=[0, 1])
+```
+
+**验证**：
+```python
+# float 数组 + cat_features → 报错
+# int 数组 + cat_features → 正常
+# float 数组不使用 cat_features → 正常
+```
+
+**教训**：
+- 训练和预测必须使用相同的 `cat_features` 设置
+- 分类特征编码为数值后，CatBoost 仍能学到其模式
+- numpy 数组类型转换可能导致意外行为
 
 ---
 
@@ -672,6 +711,7 @@ market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Retu
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-12 | v7.5 | 新增：CatBoost cat_features 参数与数据类型一致性经验 |
 | 2026-05-12 | v7.4 | 新增：Walk-forward 验证结果展示指标选择经验（单笔最大亏损 vs 最大回撤） |
 | 2026-05-12 | v7.3 | 新增：市场情绪过滤器生产集成经验（数据源一致性、邮件显示增强、大模型标注） |
 | 2026-05-12 | v7.2 | 新增：市场情绪过滤器设计与实施经验（滞后数据有效性、阈值分层、验证效果） |
