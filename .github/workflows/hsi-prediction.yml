@@ -30,6 +30,10 @@ jobs:
         pip install -r requirements.txt
         pip install yfinance pandas numpy
         
+    - name: 验证历史预测
+      run: |
+        python hsi_prediction.py --verify
+
     - name: 运行恒生指数预测脚本
       env:
         EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}

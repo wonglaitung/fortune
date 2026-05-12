@@ -26,6 +26,57 @@ allowed-tools: read_file, write_file, edit_file, bash, grep, glob
 
 ## 验证流程
 
+### 阶段 0：特征选择（可选但推荐）
+
+**目的**：减少特征数量，提高模型泛化能力
+
+**⚠️ 重要**：如果要在 Walk-forward 验证中使用特征选择，**必须先运行特征选择**！
+
+#### 0A. 特征选择命令
+
+```bash
+# 模型重要性法（推荐，Top 500 特征）
+python3 ml_services/feature_selection.py --method model --top-k 500 --horizon 20
+
+# 统计方法（Top 300 特征）
+python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20
+
+# 累积重要性法（自动选择特征数量，覆盖95%重要性）
+python3 ml_services/feature_selection.py --method cumulative_importance --horizon 20 --target-importance 0.95
+```
+
+#### 0B. 特征选择方法对比
+
+| 方法 | 优点 | 缺点 | 推荐场景 |
+|------|------|------|---------|
+| **model** | 效果稳定，计算快 | 依赖模型 | ⭐⭐⭐⭐⭐ 推荐 |
+| statistical | 不依赖模型，独立性强 | 可能遗漏非线性关系 | 特征较少时 |
+| cumulative_importance | 自动选择数量 | 可能选择过多特征 | 不确定特征数量时 |
+
+#### 0C. 输出文件位置
+
+特征选择后会生成以下文件：
+
+| 文件格式 | 路径示例 | 用途 |
+|---------|---------|------|
+| TXT 特征名称 | `output/model_importance_features_20260509.txt` | 直接读取特征名 |
+| CSV 选择结果 | `output/model_importance_selected_20260509.csv` | 包含重要性得分 |
+| 最新特征文件 | `output/model_importance_features_latest.txt` | 软链接到最新 |
+
+**验证特征选择文件是否存在**：
+
+```bash
+ls -la output/model_importance_features_*.txt output/statistical_features_*.txt
+```
+
+#### 0D. 特征选择检查清单
+
+- [ ] 已运行特征选择脚本（如 `--method model --top-k 500`）
+- [ ] 已确认输出文件存在（`output/model_importance_features_*.txt`）
+- [ ] 已确认预测周期与验证周期一致（如 `--horizon 20`）
+
+---
+
 ### 阶段 1：Walk-forward 测试
 
 **目的**：验证模型效果是否有提升
@@ -53,9 +104,17 @@ python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 1
 
 #### 1B. 个股模型测试
 
+**⚠️ 重要：需要先决定是否使用特征选择！**
+
 ```bash
-# 20天周期（推荐）
+# 【推荐】使用特征选择（Top 500 特征，需先运行阶段 0）
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection
+
+# 使用全量特征（约 1132 个特征）
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+
+# 带置信度阈值
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection --confidence-threshold 0.55
 
 # 板块验证（可选）
 python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
@@ -63,11 +122,18 @@ python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
 
 **个股判断标准**：
 
-| 指标 | 正常范围 | 优秀 | 数据泄漏信号 |
-|------|---------|------|-------------|
-| 准确率 | 50-55% | >55% | **>65%** |
-| 夏普比率 | 0.5-0.8 | >0.8 | - |
-| 最大回撤 | -5%~-10% | >-5% | - |
+| 指标 | 全量特征 (~1132) | Top 500 特征 | 数据泄漏信号 |
+|------|-----------------|--------------|-------------|
+| 准确率 | 50-55% | 50-55% | **>65%** |
+| 夏普比率 | 5.0-6.0 | 4.8-5.5 | - |
+| 最大回撤 | -0.8%~-1.0% | -0.7%~-0.9% | - |
+| 平均收益率 | +5%~+6% | +5%~+6% | - |
+| 总体盈亏比 | ~1.5 | ~1.5 | - |
+
+**使用特征选择的优势**：
+- 特征数量减少 55.8%（1132 → 500）
+- 性能基本持平，训练速度更快
+- 降低过拟合风险
 
 #### 1C. 两个模型对比验证
 
@@ -444,6 +510,13 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 
 在完成验证流程前，请确认：
 
+### 阶段 0 检查（特征选择）
+
+- [ ] 已决定是否使用特征选择
+- [ ] 如使用特征选择，已运行 `feature_selection.py`
+- [ ] 已确认特征选择文件存在（`output/model_importance_features_*.txt`）
+- [ ] 已确认预测周期与验证周期一致（如 `--horizon 20`）
+
 ### 阶段 1 检查（两个模型独立检查）
 
 #### 恒指模型
@@ -730,23 +803,27 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 
 ## 注意事项
 
-1. **两个模型独立验证**：恒指和个股模型有各自的验证脚本、判断标准、数据泄漏阈值
-2. **三周期验证必须分别执行**：
+1. **特征选择是可选但推荐的**：
+   - 如果要在 Walk-forward 验证中使用特征选择，**必须先运行特征选择**（阶段 0）
+   - 特征选择文件路径：`output/model_importance_features_*.txt`
+   - Walk-forward 验证时添加 `--use-feature-selection` 参数
+2. **两个模型独立验证**：恒指和个股模型有各自的验证脚本、判断标准、数据泄漏阈值
+3. **三周期验证必须分别执行**：
    - 恒指：`analyze_three_horizon_relationships.py`
    - 个股：`analyze_stock_causal_chain.py --full`（完整模型，禁止快速模式）
-3. **个股验证禁止快速模式**：
+4. **个股验证禁止快速模式**：
    - ❌ 禁止使用 `--quick` 参数
    - ❌ 禁止使用5只代表性股票
-   - ✅ 必须使用完整模型（730特征，59只股票）
-4. **顺序执行**：必须按阶段 1→2→3→4→5 顺序执行，前一阶段有效才进入下一阶段
-5. **记录完整**：每个阶段的测试结果必须完整记录
-6. **对比验证**：必须与更新前的指标对比，确认提升幅度
-7. **⚠️ 阶段 4 不可跳过**：
+   - ✅ 必须使用完整模型（推荐 Top 500 特征或全量特征 ~1132）
+5. **顺序执行**：必须按阶段 0→1→2→3→4→5 顺序执行，前一阶段有效才进入下一阶段
+6. **记录完整**：每个阶段的测试结果必须完整记录
+7. **对比验证**：必须与更新前的指标对比，确认提升幅度
+8. **⚠️ 阶段 4 不可跳过**：
    - 文档更新后**必须**同步更新代码
    - 常见问题：文档更新了，但代码中的硬编码数据没有更新
    - 导致：邮件报告显示旧数据，用户收到错误信息
    - **必须执行代码与文档一致性验证**
-8. **⚠️ 阶段 5 必须执行**：
+9. **⚠️ 阶段 5 必须执行**：
    - Fold 分析报告用于深度诊断模型表现
    - 识别问题 Fold（盈亏比 < 1.5 或收益 < 0）
    - 分析问题根因，指导后续优化
@@ -759,24 +836,41 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
      ```
      | 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |
      ```
-9. **文档同步**：
+10. **文档同步**：
    - 代码更新后立即同步文档，避免信息不一致
    - **文档更新范围包括 `docs/` 目录下所有相关文档**
    - **恒指和个股数据必须分别更新，不能只更新其中一个**
-10. **语法检查**：每次代码修改后必须执行 `python3 -m py_compile`
-11. **核心文件优先**：hsi_prediction.py（恒指）和 comprehensive_analysis.py（个股）是主要入口
+11. **语法检查**：每次代码修改后必须执行 `python3 -m py_compile`
+12. **核心文件优先**：hsi_prediction.py（恒指）和 comprehensive_analysis.py（个股）是主要入口
 
 ## 快速参考
+
+### 核心命令速查
+
+| 任务 | 命令 |
+|------|------|
+| **特征选择** | `python3 ml_services/feature_selection.py --method model --top-k 500 --horizon 20` |
+| **恒指 Walk-forward** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
+| **个股 Walk-forward（推荐）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection` |
+| **个股 Walk-forward（全量特征）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
 
 ### 模型对比
 
 | 项目 | 恒指模型 | 个股模型 |
 |------|---------|---------|
 | 验证脚本 | `hsi_walk_forward.py` | `walk_forward_validation.py` |
-| 特征数量 | 33个（增强模型） | 730个（完整模型） |
+| 特征数量 | 33个（增强模型） | ~1132个（全量）/ 500个（推荐） |
 | 数据泄漏阈值 | >85% | >65% |
 | 最优策略 | 假突破(101) 95% | 一致看涨(111) 56% |
 | 预测概率与实际方向相关性 | 正向 r=+0.35 | 弱正向 r=+0.03 |
+
+### 特征选择相关文件
+
+| 文件类型 | 路径 | 说明 |
+|---------|------|------|
+| 特征选择输出 | `output/model_importance_features_*.txt` | 模型重要性法结果 |
+| 特征选择输出 | `output/statistical_features_*.txt` | 统计方法结果 |
+| 特征选择缓存 | `data/feature_selection_*.json` | Top 300 特征（JSON格式） |
 
 ### 模型文件位置
 - 恒指模型：`data/hsi_models/hsi_catboost_*.cbm`
