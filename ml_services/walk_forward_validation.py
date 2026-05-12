@@ -39,6 +39,7 @@ warnings.filterwarnings('ignore')
 # 导入项目模块
 from ml_services.ml_trading_model import CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer
 from ml_services.logger_config import get_logger
+from ml_services.market_regime import MarketSentimentFilter
 from config import TRAINING_STOCKS as STOCK_LIST
 
 # 获取日志记录器
@@ -98,6 +99,10 @@ class WalkForwardValidator:
 
         self.model_class = self.model_classes[self.model_type]
         self.feature_engineer = FeatureEngineer()
+
+        # 市场情绪过滤器（使用滞后数据避免前瞻性偏差）
+        self.market_filter = None
+        self.use_market_filter = True  # 默认启用
 
         logger.info(f"初始化 Walk-forward 验证器")
         logger.info(f"模型类型: {self.model_type}")
@@ -396,6 +401,10 @@ class WalkForwardValidator:
         
         print(f"  ✅ 预测生成完成 ({len(predictions)} 条预测)")
 
+        # ========== 应用市场情绪过滤器 ==========
+        if self.use_market_filter:
+            predictions = self._apply_market_filter(test_data, predictions, fold)
+
         # 计算评估指标
         print(f"  🔄 计算评估指标...")
         metrics = self._calculate_metrics(test_data, predictions)
@@ -429,6 +438,87 @@ class WalkForwardValidator:
             metrics['top_features'] = []
 
         return metrics
+
+    def _apply_market_filter(self, test_data, predictions, fold):
+        """
+        应用市场情绪过滤器
+
+        使用滞后1天的市场上涨比例动态调整预测阈值，
+        在极端市场环境时提高门槛，减少 False Positive。
+
+        Args:
+            test_data: 测试数据
+            predictions: 预测结果
+            fold: fold编号
+
+        Returns:
+            pd.DataFrame: 过滤后的预测结果
+        """
+        print(f"  🔄 应用市场情绪过滤器...")
+
+        # 初始化市场过滤器（首次调用时）
+        if self.market_filter is None:
+            self.market_filter = MarketSentimentFilter(lookback_days=1)
+
+            # 准备市场收益率数据
+            # 从测试数据中提取收益率信息
+            if 'Return_1d' in test_data.columns:
+                returns_df = test_data[['Return_1d']].copy()
+                returns_df['Date'] = test_data.index
+                self.market_filter.prepare_market_schedule(
+                    returns_df,
+                    date_col='Date',
+                    ret_col='Return_1d'
+                )
+            elif 'Close' in test_data.columns:
+                # 计算收益率
+                returns_df = pd.DataFrame({
+                    'Date': test_data.index,
+                    'Close': test_data['Close']
+                })
+                returns_df['Return_1d'] = returns_df['Close'].pct_change()
+                self.market_filter.prepare_market_schedule(
+                    returns_df,
+                    date_col='Date',
+                    ret_col='Return_1d'
+                )
+            else:
+                logger.warning("无法准备市场情绪数据，跳过过滤")
+                return predictions
+
+        # 构建预测 DataFrame
+        pred_df = predictions.copy()
+        pred_df['Date'] = predictions.index
+        pred_df['Predict_Prob'] = predictions['probability']
+        pred_df['Predict_Direction'] = predictions['prediction'].map({1: 'UP', 0: 'DOWN'})
+
+        # 应用过滤
+        filtered_df = self.market_filter.apply_filter(
+            pred_df,
+            date_col='Date',
+            prob_col='Predict_Prob',
+            direction_col='Predict_Direction'
+        )
+
+        # 更新预测结果
+        predictions['market_up_ratio_lag1'] = filtered_df['market_up_ratio_lag1'].values
+        predictions['dynamic_threshold'] = filtered_df['dynamic_threshold'].values
+        predictions['market_layer'] = filtered_df['market_layer'].values
+        predictions['filtered_signal'] = filtered_df['filtered_signal'].values
+
+        # 统计过滤效果
+        original_signals = (predictions['prediction'] == 1).sum()
+        filtered_signals = predictions['filtered_signal'].sum()
+        reduction_pct = (original_signals - filtered_signals) / original_signals if original_signals > 0 else 0
+
+        print(f"  ✅ 市场情绪过滤完成")
+        print(f"     原始信号: {original_signals}, 过滤后: {filtered_signals}, 减少: {reduction_pct:.1%}")
+
+        # 统计各层级分布
+        layer_counts = predictions['market_layer'].value_counts()
+        print(f"     层级分布: {layer_counts.to_dict()}")
+
+        return predictions
 
     def _calculate_metrics(self, test_data, predictions):
         """
@@ -512,8 +602,15 @@ class WalkForwardValidator:
             ranging_filter = (df['Market_Regime'] != 'ranging') | (df['probability'] >= 0.75)
             df['risk_filter'] = df['risk_filter'] & ranging_filter
 
-        # 计算交易信号（应用风险过滤）
-        df['signal'] = ((df['prediction'] >= self.confidence_threshold) & df['risk_filter']).astype(int)
+        # 计算交易信号
+        # 优先使用市场情绪过滤后的信号，否则使用风险过滤
+        if 'filtered_signal' in predictions.columns:
+            # 使用市场情绪过滤后的信号
+            df['signal'] = predictions['filtered_signal'].values
+            print(f"  📊 使用市场情绪过滤信号")
+        else:
+            # 使用风险过滤（原有逻辑）
+            df['signal'] = ((df['prediction'] >= self.confidence_threshold) & df['risk_filter']).astype(int)
 
         # 计算收益率（扣除交易成本）
         df['strategy_return'] = df['signal'] * df['actual_return']
