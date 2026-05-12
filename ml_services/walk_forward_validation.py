@@ -467,18 +467,13 @@ class WalkForwardValidator:
         # 从 test_data 中提取所有股票的收益率数据
         if 'Return_1d' in test_data.columns:
             # 使用 reset_index 避免索引和列名冲突
+            # 关键：直接传入原始收益率数据，让 prepare_market_schedule 内部进行 groupby
+            # 不要在这里预先计算上涨比例，否则 prepare_market_schedule 会再次 groupby 导致错误
             returns_df = test_data[['Return_1d']].reset_index()
             returns_df.columns = ['Date', 'Return_1d']
 
-            # 按日期分组计算上涨比例（所有股票中上涨的比例）
-            # 这是正确的市场情绪计算方式
-            daily_up_ratio = returns_df.groupby('Date')['Return_1d'].apply(
-                lambda x: (x > 0).mean()
-            ).reset_index()
-            daily_up_ratio.columns = ['Date', 'Return_1d']
-
             self.market_filter.prepare_market_schedule(
-                daily_up_ratio,
+                returns_df,
                 date_col='Date',
                 ret_col='Return_1d'
             )
@@ -488,14 +483,9 @@ class WalkForwardValidator:
             returns_df.columns = ['Date', 'Close']
             returns_df['Return_1d'] = returns_df['Close'].pct_change()
 
-            # 按日期分组计算上涨比例
-            daily_up_ratio = returns_df.groupby('Date')['Return_1d'].apply(
-                lambda x: (x > 0).mean()
-            ).reset_index()
-            daily_up_ratio.columns = ['Date', 'Return_1d']
-
+            # 直接传入收益率数据
             self.market_filter.prepare_market_schedule(
-                daily_up_ratio,
+                returns_df[['Date', 'Return_1d']],
                 date_col='Date',
                 ret_col='Return_1d'
             )
