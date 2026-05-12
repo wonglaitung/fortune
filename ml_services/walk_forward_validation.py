@@ -460,31 +460,29 @@ class WalkForwardValidator:
         if self.market_filter is None:
             self.market_filter = MarketSentimentFilter(lookback_days=1)
 
-            # 准备市场收益率数据
-            # 从测试数据中提取收益率信息
-            if 'Return_1d' in test_data.columns:
-                returns_df = test_data[['Return_1d']].copy()
-                returns_df['Date'] = test_data.index
-                self.market_filter.prepare_market_schedule(
-                    returns_df,
-                    date_col='Date',
-                    ret_col='Return_1d'
-                )
-            elif 'Close' in test_data.columns:
-                # 计算收益率
-                returns_df = pd.DataFrame({
-                    'Date': test_data.index,
-                    'Close': test_data['Close']
-                })
-                returns_df['Return_1d'] = returns_df['Close'].pct_change()
-                self.market_filter.prepare_market_schedule(
-                    returns_df,
-                    date_col='Date',
-                    ret_col='Return_1d'
-                )
-            else:
-                logger.warning("无法准备市场情绪数据，跳过过滤")
-                return predictions
+        # 每个 fold 都需要准备市场收益率数据（因为日期范围不同）
+        if 'Return_1d' in test_data.columns:
+            # 使用 reset_index 避免索引和列名冲突
+            returns_df = test_data[['Return_1d']].reset_index()
+            returns_df.columns = ['Date', 'Return_1d']
+            self.market_filter.prepare_market_schedule(
+                returns_df,
+                date_col='Date',
+                ret_col='Return_1d'
+            )
+        elif 'Close' in test_data.columns:
+            # 计算收益率
+            returns_df = test_data[['Close']].reset_index()
+            returns_df.columns = ['Date', 'Close']
+            returns_df['Return_1d'] = returns_df['Close'].pct_change()
+            self.market_filter.prepare_market_schedule(
+                returns_df,
+                date_col='Date',
+                ret_col='Return_1d'
+            )
+        else:
+            logger.warning("无法准备市场情绪数据，跳过过滤")
+            return predictions
 
         # 构建预测 DataFrame
         pred_df = predictions.copy()
