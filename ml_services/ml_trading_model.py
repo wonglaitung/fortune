@@ -5654,10 +5654,9 @@ class CatBoostModel(BaseTradingModel):
             # 使用 CatBoost 模型直接预测
             from catboost import Pool
 
-            # 获取分类特征索引
-            categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
-
-            test_pool = Pool(data=X, cat_features=categorical_features if categorical_features else None)
+            # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
+            # 因为 X 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
+            test_pool = Pool(data=X)
             proba = self.catboost_model.predict_proba(test_pool)[0]
             prediction = self.catboost_model.predict(test_pool)[0]
 
@@ -5753,11 +5752,9 @@ class CatBoostModel(BaseTradingModel):
                     lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
                 )
 
-        # 获取分类特征索引
-        categorical_features = [self.feature_columns.index(col) for col in self.categorical_encoders.keys() if col in self.feature_columns]
-
-        # 创建 Pool 对象
-        test_pool = Pool(data=test_df, cat_features=categorical_features if categorical_features else None)
+        # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
+        # 因为 test_df 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
+        test_pool = Pool(data=test_df)
 
         # 返回预测概率
         return self.catboost_model.predict_proba(test_pool)
