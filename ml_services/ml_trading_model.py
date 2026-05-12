@@ -5097,8 +5097,8 @@ class CatBoostModel(BaseTradingModel):
         
         # 识别分类特征（字符串类型）
         self.categorical_encoders = {}
-        categorical_features = []
-        
+        categorical_features_indices = []
+
         for col in self.feature_columns:
             if df[col].dtype == 'object':
                 print(f"  检测到分类特征: {col}")
@@ -5107,13 +5107,20 @@ class CatBoostModel(BaseTradingModel):
                 encoder = LabelEncoder()
                 df[col] = encoder.fit_transform(df[col])
                 self.categorical_encoders[col] = encoder
-                categorical_features.append(self.feature_columns.index(col))
-        
+                # 记录分类特征的索引（用于CatBoost）
+                categorical_features_indices.append(self.feature_columns.index(col))
+
         X = df[self.feature_columns].values
         y = df['Label'].values
 
+        # 关键：分类特征已被LabelEncoder编码为整数，numpy会自动转为float
+        # 此时不应再传递cat_features参数，否则CatBoost会报错
+        # 因为cat_features参数要求数据中包含实际的字符串/分类类型
+        # 但我们已将分类特征编码为数值，所以cat_features应为None
+        categorical_features = None  # 不使用cat_features，因为数据已是数值型
+
         print(f"训练数据形状: X={X.shape}, y={y.shape}")
-        print(f"分类特征数量: {len(categorical_features)}")
+        print(f"已编码分类特征数量: {len(categorical_features_indices)} (已转为数值，不使用cat_features)")
 
         # ========== 训练 CatBoost 模型 ==========
         print("\n" + "="*70)
@@ -5157,6 +5164,7 @@ class CatBoostModel(BaseTradingModel):
         from catboost import CatBoostClassifier, Pool
 
         # 准备类别权重参数
+        # 注意：分类特征已用LabelEncoder编码为数值，不使用cat_features参数
         catboost_params = {
             'loss_function': 'Logloss',
             'eval_metric': 'Accuracy',
@@ -5170,8 +5178,8 @@ class CatBoostModel(BaseTradingModel):
             'verbose': 100,
             'early_stopping_rounds': stopping_rounds,
             'thread_count': -1,
-            'allow_writing_files': False,
-            'cat_features': categorical_features if categorical_features else None
+            'allow_writing_files': False
+            # cat_features 不设置，因为分类特征已编码为数值
         }
         
         # 添加类别权重（温和调整）
@@ -5201,8 +5209,9 @@ class CatBoostModel(BaseTradingModel):
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
             # 创建 Pool 对象（CatBoost 推荐）
-            train_pool = Pool(data=X_train_fold, label=y_train_fold, cat_features=categorical_features if categorical_features else None)
-            val_pool = Pool(data=X_val_fold, label=y_val_fold, cat_features=categorical_features if categorical_features else None)
+            # 注意：分类特征已编码为数值，不传递cat_features参数
+            train_pool = Pool(data=X_train_fold, label=y_train_fold)
+            val_pool = Pool(data=X_val_fold, label=y_val_fold)
 
             self.catboost_model.fit(
                 train_pool,
@@ -5218,7 +5227,7 @@ class CatBoostModel(BaseTradingModel):
             print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
-        full_pool = Pool(data=X, label=y, cat_features=categorical_features if categorical_features else None)
+        full_pool = Pool(data=X, label=y)
         self.catboost_model.fit(full_pool, verbose=100)
 
         # 获取实际训练的树数量
