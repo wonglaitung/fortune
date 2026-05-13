@@ -86,6 +86,12 @@ echo "📊 步骤 2/6: 生成 CatBoost 三周期预测"
 echo "=========================================="
 echo ""
 
+# 清除特征缓存，确保使用最新的网络特征（避免缓存中的旧网络交叉特征导致预测不一致）
+echo "🗑️ 清除特征缓存..."
+rm -rf data/feature_cache/*.pkl
+echo "✅ 特征缓存已清除"
+echo ""
+
 PREDICT_SUCCESS=0
 PREDICT_FAILED=0
 for horizon in 1 5 20; do
