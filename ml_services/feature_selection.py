@@ -55,7 +55,7 @@ def load_training_data(horizon=20):
     X, y, feature_columns = model.prepare_features_for_selection(
         codes=all_codes,
         horizon=horizon,
-        sample_size=10  # 随机采样10只股票加速
+        sample_size=None  # 使用全部股票，确保特征选择结果准确稳定
     )
 
     print(f"   - 样本数量: {len(X)}")
