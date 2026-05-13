@@ -3194,6 +3194,9 @@ class BaseTradingModel:
         """
         import random
 
+        # 固定随机种子，确保可重现性
+        random.seed(42)
+
         # 随机采样股票（加速特征选择）
         if len(codes) > sample_size:
             codes = random.sample(codes, sample_size)

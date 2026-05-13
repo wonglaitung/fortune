@@ -273,7 +273,8 @@ def feature_selection_model_importance(X, y, feature_names, top_k=500):
         'feature_fraction': 0.8,
         'bagging_fraction': 0.8,
         'bagging_freq': 5,
-        'verbose': -1
+        'verbose': -1,
+        'seed': 42  # 固定随机种子，确保可重现性
     }
 
     # 训练模型
@@ -460,7 +461,8 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
             'feature_fraction': 0.8,
             'bagging_fraction': 0.8,
             'bagging_freq': 5,
-            'verbose': -1
+            'verbose': -1,
+            'seed': 42  # 固定随机种子，确保可重现性
         }
 
         # 使用cv评估
@@ -469,7 +471,8 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
             lgb_train,
             num_boost_round=100,
             nfold=5,
-            stratified=False
+            stratified=False,
+            seed=42  # 固定CV分割种子，确保可重现性
         )
 
         # 检查cv_results的键名
