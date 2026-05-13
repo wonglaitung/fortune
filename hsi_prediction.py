@@ -1609,19 +1609,18 @@ class HSI_Predictor:
 
             # 传导模式显示
             prediction_date = transmission_info.get('prediction_date', '')
-            is_current = transmission_info.get('is_current_prediction', False)
-            date_label = "今日预测" if is_current else f"5个交易日前（{prediction_date}）的预测"
+            estimated_accuracy = transmission_info.get('estimated_20d_accuracy')
             content += f"""
-            <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if transmission_info.get('transmission_mode') else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if transmission_info.get('transmission_mode') else '#6b7280'};">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证</h4>
+            <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if estimated_accuracy and estimated_accuracy > 80 else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if estimated_accuracy and estimated_accuracy > 80 else '#6b7280'};">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证（5个交易日前预测）</h4>
                 <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-                    {date_label}验证情况：
+                    {prediction_date} 的1天和5天预测验证情况：
                 </div>
-                <div style="font-size: 14px; font-weight: 600; color: {'#166534' if transmission_info.get('transmission_mode') else '#374151'};">
+                <div style="font-size: 14px; font-weight: 600; color: {'#166534' if estimated_accuracy and estimated_accuracy > 80 else '#374151'};">
                     {transmission_display}
                 </div>
                 <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
-                    传导律：当1天和5天预测都正确时，20天预测准确率提升5.53%
+                    传导律：1天正确→20天准确率82.37%，5天正确→80.18%，两者都正确→80.59%（基准80.77%）
                 </div>
             </div>
 """
@@ -2288,8 +2287,13 @@ class HSI_Predictor:
 
     def _check_hsi_transmission_mode(self, data_date):
         """
-        检查恒指传导模式：查看5个交易日前的预测验证情况
-        如果没有5个交易日前的预测，则显示当天的预测
+        检查恒指传导模式：查看5个交易日前的1天和5天预测验证情况
+        用于预估20天预测的准确率
+
+        验证逻辑：
+        - 1天预测：5个交易日前做的1天预测，现在可以验证
+        - 5天预测：5个交易日前做的5天预测，现在可以验证
+        - 20天预测：不显示验证结果（还没到验证时间），但根据1天和5天的验证结果预估准确率
 
         参数:
         - data_date: 当前报告日期
@@ -2333,8 +2337,9 @@ class HSI_Predictor:
 
         if not os.path.exists(history_file):
             return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                    'pred_20d_correct': None, 'pred_1d_direction': None, 'pred_5d_direction': None,
-                    'pred_20d_direction': None, 'prediction_date': prediction_date}
+                    'pred_1d_direction': None, 'pred_5d_direction': None,
+                    'pred_20d_direction': None, 'prediction_date': prediction_date,
+                    'estimated_20d_accuracy': None}
 
         try:
             with open(history_file, 'r', encoding='utf-8') as f:
@@ -2342,7 +2347,7 @@ class HSI_Predictor:
 
             predictions = history.get('predictions', [])
 
-            # 先查找5个交易日前的预测
+            # 查找5个交易日前的预测
             pred_1d = None
             pred_5d = None
             pred_20d = None
@@ -2357,47 +2362,57 @@ class HSI_Predictor:
                     elif h == 20:
                         pred_20d = pred
 
-            # 如果5个交易日前没有预测，则查找当天的预测
-            use_current_date = False
-            if not (pred_1d and pred_5d and pred_20d):
-                for pred in predictions:
-                    if pred.get('data_date') == current_date_str:
-                        h = pred.get('horizon')
-                        if h == 1:
-                            pred_1d = pred
-                        elif h == 5:
-                            pred_5d = pred
-                        elif h == 20:
-                            pred_20d = pred
-                use_current_date = True
-                prediction_date = current_date_str
-
-            # 检查outcome字段
+            # 检查outcome字段（验证结果）
             pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d and pred_1d.get('outcome') else None
             pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d and pred_5d.get('outcome') else None
-            pred_20d_correct = pred_20d.get('outcome') == 'correct' if pred_20d and pred_20d.get('outcome') else None
+
+            # 根据1天和5天的验证结果，预估20天预测的准确率
+            # 最新传导律数据（2026-05-13 验证）：
+            # - 基准（无条件）：80.77%
+            # - 1天正确 → 20天也正确：82.37%
+            # - 5天正确 → 20天也正确：80.18%
+            # - 1天+5天都正确 → 20天也正确：80.59%
+            estimated_20d_accuracy = None
+            if pred_1d_correct is not None and pred_5d_correct is not None:
+                if pred_1d_correct and pred_5d_correct:
+                    # 1天和5天都正确
+                    estimated_20d_accuracy = 80.59  # 1+5天都正确 → 20天也正确
+                elif pred_1d_correct:
+                    # 只有1天正确
+                    estimated_20d_accuracy = 82.37  # 1天正确 → 20天也正确
+                elif pred_5d_correct:
+                    # 只有5天正确
+                    estimated_20d_accuracy = 80.18  # 5天正确 → 20天也正确
+                else:
+                    # 1天和5天都错误
+                    estimated_20d_accuracy = 80.77  # 基准准确率
 
             return {
                 'transmission_mode': pred_1d_correct and pred_5d_correct if pred_1d_correct is not None and pred_5d_correct is not None else False,
                 'pred_1d_correct': pred_1d_correct,
                 'pred_5d_correct': pred_5d_correct,
-                'pred_20d_correct': pred_20d_correct,
                 'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
                 'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
                 'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
                 'prediction_date': prediction_date,
-                'is_current_prediction': use_current_date
+                'estimated_20d_accuracy': estimated_20d_accuracy
             }
 
         except Exception as e:
             print(f"⚠️ 检查传导模式失败: {e}")
             return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                    'pred_20d_correct': None, 'pred_1d_direction': None, 'pred_5d_direction': None,
-                    'pred_20d_direction': None, 'prediction_date': prediction_date}
+                    'pred_1d_direction': None, 'pred_5d_direction': None,
+                    'pred_20d_direction': None, 'prediction_date': prediction_date,
+                    'estimated_20d_accuracy': None}
 
     def _format_transmission_display(self, transmission_info):
         """
         格式化传导模式显示字符串
+
+        显示逻辑：
+        - 显示5个交易日前的1天和5天预测验证结果
+        - 不显示20天验证结果（还没到验证时间）
+        - 显示预估的20天准确率
 
         参数:
         - transmission_info: _check_hsi_transmission_mode() 返回的字典
@@ -2410,13 +2425,12 @@ class HSI_Predictor:
         pred_20d_dir = transmission_info.get('pred_20d_direction')
         pred_1d_correct = transmission_info.get('pred_1d_correct')
         pred_5d_correct = transmission_info.get('pred_5d_correct')
-        pred_20d_correct = transmission_info.get('pred_20d_correct')
-        transmission_mode = transmission_info.get('transmission_mode')
+        estimated_20d_accuracy = transmission_info.get('estimated_20d_accuracy')
         prediction_date = transmission_info.get('prediction_date')
 
         # 如果没有预测数据
-        if pred_1d_dir is None and pred_5d_dir is None and pred_20d_dir is None:
-            return "暂无数据"
+        if pred_1d_dir is None and pred_5d_dir is None:
+            return "暂无历史预测数据"
 
         # 方向符号
         def get_dir_symbol(direction):
@@ -2442,27 +2456,29 @@ class HSI_Predictor:
 
         result_1d = get_result_symbol(pred_1d_correct)
         result_5d = get_result_symbol(pred_5d_correct)
-        result_20d = get_result_symbol(pred_20d_correct)
 
-        # 构建显示字符串
+        # 构建显示字符串（只显示1天和5天的验证结果）
         parts = []
         if pred_1d_dir is not None:
             parts.append(f"1天{dir_1d_symbol}{result_1d}")
         if pred_5d_dir is not None:
             parts.append(f"5天{dir_5d_symbol}{result_5d}")
-        if pred_20d_dir is not None:
-            parts.append(f"20天{dir_20d_symbol}{result_20d}")
 
         display = " ".join(parts)
 
         # 添加预测日期
         date_prefix = f"[{prediction_date}] " if prediction_date else ""
 
-        # 如果传导模式激活，添加标记
-        if transmission_mode:
-            display = f"✅传导({date_prefix}{display})"
-        else:
-            display = f"{date_prefix}{display}"
+        # 添加20天预测方向（不显示验证结果）和预估准确率
+        if pred_20d_dir is not None:
+            display += f" | 20天预测{dir_20d_symbol}"
+
+        # 添加预估准确率
+        if estimated_20d_accuracy is not None:
+            display += f" → 预估准确率 {estimated_20d_accuracy:.1f}%"
+
+        # 添加日期前缀
+        display = f"{date_prefix}{display}"
 
         return display if display else "-"
 
