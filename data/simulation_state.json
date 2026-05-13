@@ -31571,6 +31571,86 @@
       "current_price": 33.76,
       "target_price": 37.11,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13T14:02:51.152578",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "出货评分7.0分（强烈出货）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.35,
+      "target_price": 84.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13T14:02:54.010088",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "出货评分6.0分（强烈出货）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 422.4,
+      "target_price": 410.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13T14:02:55.910347",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "出货评分6.0分（强烈出货）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.5,
+      "target_price": 5.3,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13T14:02:58.717236",
+      "type": "SELL",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "出货评分6.0分（强烈出货）",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.12,
+      "target_price": 36.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13T14:03:00.613961",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 31.78,
+      "amount": 0,
+      "capital_after": 1063.1892940520192,
+      "reason": "核心信号：建仓评分3.5分（\"price_low,macd_cross\"），出货评分仅1.0分（无实质出货压力），风险控制未触发。技术面：TAV中等共振（51.25分），筹码分布极佳（上方筹码比例13.7%<30%，拉升难度\"容易\"），阻力小；情感指标MA3:0.6 < MA7:1.11显示情绪短期恶化但波动率2.54提供反弹空间。板块协同：所属科技股板块温和上涨（+0.86%），跑赢恒指环境；新闻面利好（小米SU7订单超7万，特斯拉Model 3竞品需求强劲），增强短期动能。",
+      "success": false,
+      "stop_loss_price": 30.2,
+      "current_price": 31.78,
+      "target_price": 33.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -49207,208 +49287,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-05-12 13:12:18",
-      "buy": [
-        {
-          "code": "9988.HK",
-          "name": "阿里巴巴-SW",
-          "reason": "技术指标协同：RSI 52.09、MACD交叉、CMF流入；TAV评分54.25中等共振；筹码分布上方比例41.7%<60%；科技股板块支撑；AI购物推动新闻催化剂",
-          "allocation_pct": 40,
-          "stop_loss_price": 113.8,
-          "target_price": 145.0,
-          "validity_period": 5
-        },
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "技术指标协同：RSI 47.55、CMF流入、OBV上升；筹码分布上方比例17.7%<30%；资金面CMF 0.2076高流入；生物医药板块支撑",
-          "allocation_pct": 30,
-          "stop_loss_price": 28.7,
-          "target_price": 36.5,
-          "validity_period": 2
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "技术指标协同：RSI 40.8、CMF流入、OBV上升；TAV评分32.0谨慎观察；筹码分布上方比例52.6%<60%；银行板块温和上涨；基本面估值低",
-          "allocation_pct": 35,
-          "stop_loss_price": 40.6,
-          "target_price": 50.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "技术面恶化：RSI 81.57超买、布林带上轨突破、CMF -0.304流出；位置百分位100.0%高位；房地产板块下跌；利好出尽",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "技术面崩溃：CMF -0.2547流出、OBV下降、位置百分位95.07%高位；成交额变化1日-47.9%；基本面PE 28.7过高；板块下跌",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0012.HK",
-          "name": "恒基地产",
-          "reason": "技术面超买：RSI 70.06、CMF -0.3921流出、位置百分位80.79%高位；量能背离；房地产板块下跌；基本面PE 29.6偏高",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "技术面见顶：RSI 74.78超买、布林带上轨突破、CMF -0.2381流出；高位放量滞涨；公用事业板块上涨但个股高位；利好兑现",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "技术面超买：RSI 75.2、CMF -0.3611流出、OBV下降；高位量能不足；位置百分位100.0%；合并新闻远期",
-          "stop_loss_triggered": false,
-          "target_price": 0,
-          "validity_period": 1
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-05-12 13:12:18",
-      "type": "SELL",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面恶化：RSI 81.57超买、布林带上轨突破、CMF -0.304流出；位置百分位100.0%高位；房地产板块下跌；利好出尽",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.66,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-05-12 13:12:20",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面崩溃：CMF -0.2547流出、OBV下降、位置百分位95.07%高位；成交额变化1日-47.9%；基本面PE 28.7过高；板块下跌",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 424.0,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-05-12 13:12:22",
-      "type": "SELL",
-      "code": "0012.HK",
-      "name": "恒基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买：RSI 70.06、CMF -0.3921流出、位置百分位80.79%高位；量能背离；房地产板块下跌；基本面PE 29.6偏高",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 33.98,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-05-12 13:12:24",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面见顶：RSI 74.78超买、布林带上轨突破、CMF -0.2381流出；高位放量滞涨；公用事业板块上涨但个股高位；利好兑现",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.6,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-05-12 13:12:26",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "技术面超买：RSI 75.2、CMF -0.3611流出、OBV下降；高位量能不足；位置百分位100.0%；合并新闻远期",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 86.6,
-      "target_price": 0,
-      "validity_period": 1
-    },
-    {
-      "timestamp": "2026-05-12 13:12:28",
-      "type": "BUY",
-      "code": "9988.HK",
-      "name": "阿里巴巴-SW",
-      "shares": 0,
-      "price": 133.9,
-      "amount": 0,
-      "reason": "技术指标协同：RSI 52.09、MACD交叉、CMF流入；TAV评分54.25中等共振；筹码分布上方比例41.7%<60%；科技股板块支撑；AI购物推动新闻催化剂",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": 113.8,
-      "current_price": 133.9,
-      "target_price": 145.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-12 13:12:29",
-      "type": "BUY",
-      "code": "2269.HK",
-      "name": "药明生物",
-      "shares": 0,
-      "price": 34.06,
-      "amount": 0,
-      "reason": "技术指标协同：RSI 47.55、CMF流入、OBV上升；筹码分布上方比例17.7%<30%；资金面CMF 0.2076高流入；生物医药板块支撑",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": 28.7,
-      "current_price": 34.06,
-      "target_price": 36.5,
-      "validity_period": 2
-    },
-    {
-      "timestamp": "2026-05-12 13:12:30",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 47.7,
-      "amount": 0,
-      "reason": "技术指标协同：RSI 40.8、CMF流入、OBV上升；TAV评分32.0谨慎观察；筹码分布上方比例52.6%<60%；银行板块温和上涨；基本面估值低",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": 40.6,
-      "current_price": 47.7,
-      "target_price": 50.5,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-05-12 15:21:30",
       "buy": [
         {
@@ -49583,6 +49461,139 @@
       "stop_loss_price": 28.68,
       "current_price": 33.76,
       "target_price": 37.11,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13 10:35:18",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-13 14:02:51",
+      "buy": [
+        {
+          "code": "1810.HK",
+          "name": "小米集团-W",
+          "reason": "核心信号：建仓评分3.5分（\"price_low,macd_cross\"），出货评分仅1.0分（无实质出货压力），风险控制未触发。技术面：TAV中等共振（51.25分），筹码分布极佳（上方筹码比例13.7%<30%，拉升难度\"容易\"），阻力小；情感指标MA3:0.6 < MA7:1.11显示情绪短期恶化但波动率2.54提供反弹空间。板块协同：所属科技股板块温和上涨（+0.86%），跑赢恒指环境；新闻面利好（小米SU7订单超7万，特斯拉Model 3竞品需求强劲），增强短期动能。",
+          "allocation_pct": 30,
+          "stop_loss_price": 30.2,
+          "target_price": 33.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "出货评分7.0分（强烈出货）",
+          "stop_loss_triggered": false,
+          "target_price": 84.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "出货评分6.0分（强烈出货）",
+          "stop_loss_triggered": false,
+          "target_price": 410.0,
+          "validity_period": 5
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "出货评分6.0分（强烈出货）",
+          "stop_loss_triggered": false,
+          "target_price": 5.3,
+          "validity_period": 5
+        },
+        {
+          "code": "1109.HK",
+          "name": "华润置地",
+          "reason": "出货评分6.0分（强烈出货）",
+          "stop_loss_triggered": false,
+          "target_price": 36.5,
+          "validity_period": 5
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-13 14:02:51",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分7.0分（强烈出货）",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.35,
+      "target_price": 84.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13 14:02:54",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（强烈出货）",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 422.4,
+      "target_price": 410.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13 14:02:55",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（强烈出货）",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.5,
+      "target_price": 5.3,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13 14:02:58",
+      "type": "SELL",
+      "code": "1109.HK",
+      "name": "华润置地",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "出货评分6.0分（强烈出货）",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 38.12,
+      "target_price": 36.5,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-13 14:03:00",
+      "type": "BUY",
+      "code": "1810.HK",
+      "name": "小米集团-W",
+      "shares": 0,
+      "price": 31.78,
+      "amount": 0,
+      "reason": "核心信号：建仓评分3.5分（\"price_low,macd_cross\"），出货评分仅1.0分（无实质出货压力），风险控制未触发。技术面：TAV中等共振（51.25分），筹码分布极佳（上方筹码比例13.7%<30%，拉升难度\"容易\"），阻力小；情感指标MA3:0.6 < MA7:1.11显示情绪短期恶化但波动率2.54提供反弹空间。板块协同：所属科技股板块温和上涨（+0.86%），跑赢恒指环境；新闻面利好（小米SU7订单超7万，特斯拉Model 3竞品需求强劲），增强短期动能。",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": 30.2,
+      "current_price": 31.78,
+      "target_price": 33.5,
       "validity_period": 5
     }
   ],
