@@ -1827,7 +1827,7 @@ class HSI_Predictor:
             content += """
             <div style="padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center; color: #6b7280;">
                 📊 样本量不足，暂无统计数据<br>
-                <span style="font-size: 11px;">预计需要1-2周数据积累</span>
+                <span style="font-size: 11px;">三周期模式验证需要20个交易日数据积累</span>
             </div>
 """
 
