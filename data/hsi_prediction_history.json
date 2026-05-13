@@ -792,9 +792,10 @@
       "prediction_probability": 0.48064018335698283,
       "confidence_level": "低",
       "entry_price": 26347.91,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "incorrect",
+      "actual_return": 0.0011037017499680296,
+      "actual_direction": "up",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-12_5d",
@@ -823,14 +824,56 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-05-13_1d",
+      "timestamp": "2026-05-13T16:17:37",
+      "data_date": "2026-05-13",
+      "target_date": "2026-05-14",
+      "horizon": 1,
+      "predicted_direction": "down",
+      "prediction_probability": 0.46984546038172126,
+      "confidence_level": "低",
+      "entry_price": 26388.44,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-05-13_5d",
+      "timestamp": "2026-05-13T16:17:38",
+      "data_date": "2026-05-13",
+      "target_date": "2026-05-20",
+      "horizon": 5,
+      "predicted_direction": "down",
+      "prediction_probability": 0.2503541436046009,
+      "confidence_level": "高",
+      "entry_price": 26388.44,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-05-13_20d",
+      "timestamp": "2026-05-13T16:17:38",
+      "data_date": "2026-05-13",
+      "target_date": "2026-06-10",
+      "horizon": 20,
+      "predicted_direction": "up",
+      "prediction_probability": 0.5333442045701201,
+      "confidence_level": "低",
+      "entry_price": 26388.44,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
     }
   ],
   "metadata": {
     "created_at": "2026-04-28T00:00:00",
-    "last_updated": "2026-05-13T07:06:36",
+    "last_updated": "2026-05-13T16:17:38",
     "version": "1.0",
-    "total_predictions": 57,
+    "total_predictions": 60,
     "description": "恒生指数多周期预测历史记录",
-    "last_verified": "2026-05-13T07:06:27"
+    "last_verified": "2026-05-13T16:17:29"
   }
 }
