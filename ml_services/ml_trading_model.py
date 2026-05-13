@@ -3197,8 +3197,8 @@ class BaseTradingModel:
         # 固定随机种子，确保可重现性
         random.seed(42)
 
-        # 随机采样股票（加速特征选择）
-        if len(codes) > sample_size:
+        # 随机采样股票（加速特征选择），sample_size=None 时使用全部股票
+        if sample_size is not None and len(codes) > sample_size:
             codes = random.sample(codes, sample_size)
 
         logger.info(f"准备特征选择数据: {len(codes)} 只股票")
