@@ -350,10 +350,16 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 | 第 1277-1400 行 | `win_rate` | 邮件中的策略胜率 |
 | 第 2700-2720 行 | `suggestion` | 控制台建议文字 |
 
-**comprehensive_analysis.py 关键位置**：
-- 恒指三周期策略配置（搜索 `THREE_HORIZON_PATTERNS_HSI`）
-- 个股策略配置（搜索 `THREE_HORIZON_PATTERNS_STOCK`）
-- 报告输出格式
+**comprehensive_analysis.py 关键位置**（必须逐一检查并更新）：
+
+| 位置 | 搜索关键词 | 说明 |
+|------|-----------|------|
+| 第 95-104 行 | `THREE_HORIZON_PATTERNS = {` | 个股三周期模式胜率（8个模式） |
+| 第 111-120 行 | `HSI_THREE_HORIZON_PATTERNS = {` | 恒指三周期模式胜率（8个模式） |
+| 第 124-128 行 | `HSI_TRANSMISSION_ACCURACY` | 恒指传导准确率 |
+| 第 131-136 行 | `TRANSMISSION_ACCURACY` | 个股传导准确率 |
+
+**⚠️ 常见遗漏**：只更新 `hsi_prediction.py` 而忘记更新 `comprehensive_analysis.py`，导致个股策略配置过时。
 
 #### 4D. 代码与文档一致性验证（新增）
 
@@ -586,7 +592,10 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 - [ ] 已更新 ml_services/hsi_ml_model.py（如需）
 
 #### 个股代码
-- [ ] 已更新 comprehensive_analysis.py 的策略配置
+- [ ] 已更新 comprehensive_analysis.py 的 `THREE_HORIZON_PATTERNS`（个股三周期模式胜率）
+- [ ] 已更新 comprehensive_analysis.py 的 `HSI_THREE_HORIZON_PATTERNS`（恒指三周期模式胜率）
+- [ ] 已更新 comprehensive_analysis.py 的 `TRANSMISSION_ACCURACY`（个股传导准确率）
+- [ ] 已更新 comprehensive_analysis.py 的 `HSI_TRANSMISSION_ACCURACY`（恒指传导准确率）
 - [ ] 已更新 ml_services/ml_trading_model.py（如需）
 
 #### 代码与文档一致性验证（新增）
