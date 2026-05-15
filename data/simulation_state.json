@@ -31715,6 +31715,70 @@
       "current_price": 47.2,
       "target_price": 50.0,
       "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-15T15:54:41.444291",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "技术面恶化：出货原因含\"vol_ratio, macd_cross, cmf_out, vwap_vol, price_down\"，成交量比率1.83异常放量下跌（单日跌8.9%），CMF流出-0.0868，OBV下降；筹码阻力严重：上方筹码比例76.0%（>60%），拉升难度\"困难\"，反弹空间被压制；板块拖累：半导体股板块跌幅-3.79%（强势下跌），行业情绪崩溃；基本面隐患：市盈率392.72（极高估值），Q1财报增长放缓（新闻提及\"record revenue但利润不及预期\"）。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 115.5,
+      "target_price": 95.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15T15:54:43.710374",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "资金面逆转：出货原因含\"vol_ratio, vol_z, macd_cross, vwap_vol, price_down\"，成交量比率1.91异常放量（成交额变化1日+98.64%），但CMF仅流入0.0701，资金流出隐现；筹码阻力严重：上方筹码比例85.2%（>60%），拉升难度\"困难\"，指数基金受大盘拖累；市场环境恶化：恒指整体弱势（16个板块下跌），盈富作为恒指ETF无独立行情；技术指标背离：RSI 47.97中性但情感指标无改善，TAV评分36.75弱共振。",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 26.18,
+      "target_price": 24.8,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15T15:54:46.296295",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 1063.1892940520192,
+      "reason": "量价背离：出货原因含\"vol_ratio, macd_cross, obv_down, vwap_vol, price_down\"，成交量比率1.72放量但OBV下降，CMF流入0.1894被价格下跌抵消；",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.24,
+      "target_price": 5.2,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15T15:54:48.851233",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.0,
+      "amount": 0,
+      "capital_after": 1063.1892940520192,
+      "reason": "核心信号突出：RSI超卖（36.3）、CMF显著流入（0.2926）、OBV上升构成3项同向信号，成交量比率0.7虽未放量但成交额1日+24.93%显示资金回流；筹码分布极佳：上方筹码比例0.0%，拉升难度\"容易\"，无阻力压制；基本面支撑：基本面评分100（优质银行），市盈率7.10（低估值安全边际）；板块轮动机会：银行股板块跌幅-0.63%（弱于恒指但跌幅收窄），政策面有央行规范竞争（2026-04-25新闻）潜在利好。",
+      "success": false,
+      "stop_loss_price": 39.95,
+      "current_price": 47.0,
+      "target_price": 50.5,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -49351,139 +49415,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-05-13 10:35:18",
-      "buy": [],
-      "sell": []
-    },
-    {
-      "timestamp": "2026-05-13 14:02:51",
-      "buy": [
-        {
-          "code": "1810.HK",
-          "name": "小米集团-W",
-          "reason": "核心信号：建仓评分3.5分（\"price_low,macd_cross\"），出货评分仅1.0分（无实质出货压力），风险控制未触发。技术面：TAV中等共振（51.25分），筹码分布极佳（上方筹码比例13.7%<30%，拉升难度\"容易\"），阻力小；情感指标MA3:0.6 < MA7:1.11显示情绪短期恶化但波动率2.54提供反弹空间。板块协同：所属科技股板块温和上涨（+0.86%），跑赢恒指环境；新闻面利好（小米SU7订单超7万，特斯拉Model 3竞品需求强劲），增强短期动能。",
-          "allocation_pct": 30,
-          "stop_loss_price": 30.2,
-          "target_price": 33.5,
-          "validity_period": 5
-        }
-      ],
-      "sell": [
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "出货评分7.0分（强烈出货）",
-          "stop_loss_triggered": false,
-          "target_price": 84.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分6.0分（强烈出货）",
-          "stop_loss_triggered": false,
-          "target_price": 410.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "出货评分6.0分（强烈出货）",
-          "stop_loss_triggered": false,
-          "target_price": 5.3,
-          "validity_period": 5
-        },
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "出货评分6.0分（强烈出货）",
-          "stop_loss_triggered": false,
-          "target_price": 36.5,
-          "validity_period": 5
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-05-13 14:02:51",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.0分（强烈出货）",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 86.35,
-      "target_price": 84.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-13 14:02:54",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（强烈出货）",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 422.4,
-      "target_price": 410.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-13 14:02:55",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（强烈出货）",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.5,
-      "target_price": 5.3,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-13 14:02:58",
-      "type": "SELL",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0分（强烈出货）",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 38.12,
-      "target_price": 36.5,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-13 14:03:00",
-      "type": "BUY",
-      "code": "1810.HK",
-      "name": "小米集团-W",
-      "shares": 0,
-      "price": 31.78,
-      "amount": 0,
-      "reason": "核心信号：建仓评分3.5分（\"price_low,macd_cross\"），出货评分仅1.0分（无实质出货压力），风险控制未触发。技术面：TAV中等共振（51.25分），筹码分布极佳（上方筹码比例13.7%<30%，拉升难度\"容易\"），阻力小；情感指标MA3:0.6 < MA7:1.11显示情绪短期恶化但波动率2.54提供反弹空间。板块协同：所属科技股板块温和上涨（+0.86%），跑赢恒指环境；新闻面利好（小米SU7订单超7万，特斯拉Model 3竞品需求强劲），增强短期动能。",
-      "capital_after": 1063.1892940520192,
-      "success": false,
-      "stop_loss_price": 30.2,
-      "current_price": 31.78,
-      "target_price": 33.5,
-      "validity_period": 5
-    },
-    {
       "timestamp": "2026-05-14 10:30:24",
       "buy": [],
       "sell": []
@@ -49595,6 +49526,120 @@
       "stop_loss_price": 44.0,
       "current_price": 47.2,
       "target_price": 50.0,
+      "validity_period": 5
+    },
+    {
+      "timestamp": "2026-05-15 11:25:27",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-15 13:47:28",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-15 15:54:41",
+      "buy": [
+        {
+          "code": "3968.HK",
+          "name": "招商银行",
+          "reason": "核心信号突出：RSI超卖（36.3）、CMF显著流入（0.2926）、OBV上升构成3项同向信号，成交量比率0.7虽未放量但成交额1日+24.93%显示资金回流；筹码分布极佳：上方筹码比例0.0%，拉升难度\"容易\"，无阻力压制；基本面支撑：基本面评分100（优质银行），市盈率7.10（低估值安全边际）；板块轮动机会：银行股板块跌幅-0.63%（弱于恒指但跌幅收窄），政策面有央行规范竞争（2026-04-25新闻）潜在利好。",
+          "allocation_pct": 40,
+          "stop_loss_price": 39.95,
+          "target_price": 50.5,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "技术面恶化：出货原因含\"vol_ratio, macd_cross, cmf_out, vwap_vol, price_down\"，成交量比率1.83异常放量下跌（单日跌8.9%），CMF流出-0.0868，OBV下降；筹码阻力严重：上方筹码比例76.0%（>60%），拉升难度\"困难\"，反弹空间被压制；板块拖累：半导体股板块跌幅-3.79%（强势下跌），行业情绪崩溃；基本面隐患：市盈率392.72（极高估值），Q1财报增长放缓（新闻提及\"record revenue但利润不及预期\"）。",
+          "stop_loss_triggered": false,
+          "target_price": 95.0,
+          "validity_period": 1
+        },
+        {
+          "code": "2800.HK",
+          "name": "盈富基金",
+          "reason": "资金面逆转：出货原因含\"vol_ratio, vol_z, macd_cross, vwap_vol, price_down\"，成交量比率1.91异常放量（成交额变化1日+98.64%），但CMF仅流入0.0701，资金流出隐现；筹码阻力严重：上方筹码比例85.2%（>60%），拉升难度\"困难\"，指数基金受大盘拖累；市场环境恶化：恒指整体弱势（16个板块下跌），盈富作为恒指ETF无独立行情；技术指标背离：RSI 47.97中性但情感指标无改善，TAV评分36.75弱共振。",
+          "stop_loss_triggered": false,
+          "target_price": 24.8,
+          "validity_period": 1
+        },
+        {
+          "code": "9660.HK",
+          "name": "地平线机器人",
+          "reason": "量价背离：出货原因含\"vol_ratio, macd_cross, obv_down, vwap_vol, price_down\"，成交量比率1.72放量但OBV下降，CMF流入0.1894被价格下跌抵消；",
+          "stop_loss_triggered": false,
+          "target_price": 5.2,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-15 15:54:41",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "技术面恶化：出货原因含\"vol_ratio, macd_cross, cmf_out, vwap_vol, price_down\"，成交量比率1.83异常放量下跌（单日跌8.9%），CMF流出-0.0868，OBV下降；筹码阻力严重：上方筹码比例76.0%（>60%），拉升难度\"困难\"，反弹空间被压制；板块拖累：半导体股板块跌幅-3.79%（强势下跌），行业情绪崩溃；基本面隐患：市盈率392.72（极高估值），Q1财报增长放缓（新闻提及\"record revenue但利润不及预期\"）。",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 115.5,
+      "target_price": 95.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15 15:54:43",
+      "type": "SELL",
+      "code": "2800.HK",
+      "name": "盈富基金",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "资金面逆转：出货原因含\"vol_ratio, vol_z, macd_cross, vwap_vol, price_down\"，成交量比率1.91异常放量（成交额变化1日+98.64%），但CMF仅流入0.0701，资金流出隐现；筹码阻力严重：上方筹码比例85.2%（>60%），拉升难度\"困难\"，指数基金受大盘拖累；市场环境恶化：恒指整体弱势（16个板块下跌），盈富作为恒指ETF无独立行情；技术指标背离：RSI 47.97中性但情感指标无改善，TAV评分36.75弱共振。",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 26.18,
+      "target_price": 24.8,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15 15:54:46",
+      "type": "SELL",
+      "code": "9660.HK",
+      "name": "地平线机器人",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "量价背离：出货原因含\"vol_ratio, macd_cross, obv_down, vwap_vol, price_down\"，成交量比率1.72放量但OBV下降，CMF流入0.1894被价格下跌抵消；",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 6.24,
+      "target_price": 5.2,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-15 15:54:48",
+      "type": "BUY",
+      "code": "3968.HK",
+      "name": "招商银行",
+      "shares": 0,
+      "price": 47.0,
+      "amount": 0,
+      "reason": "核心信号突出：RSI超卖（36.3）、CMF显著流入（0.2926）、OBV上升构成3项同向信号，成交量比率0.7虽未放量但成交额1日+24.93%显示资金回流；筹码分布极佳：上方筹码比例0.0%，拉升难度\"容易\"，无阻力压制；基本面支撑：基本面评分100（优质银行），市盈率7.10（低估值安全边际）；板块轮动机会：银行股板块跌幅-0.63%（弱于恒指但跌幅收窄），政策面有央行规范竞争（2026-04-25新闻）潜在利好。",
+      "capital_after": 1063.1892940520192,
+      "success": false,
+      "stop_loss_price": 39.95,
+      "current_price": 47.0,
+      "target_price": 50.5,
       "validity_period": 5
     }
   ],
