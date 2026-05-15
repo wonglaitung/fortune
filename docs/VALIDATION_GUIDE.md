@@ -731,6 +731,48 @@ python3 ml_services/performance_monitor.py --mode all --horizon 20
 # ✅ 设置自动化调度（每月1号）
 ```
 
+### 陷阱9：市场情绪过滤器 lookback_days 设置错误
+
+**问题**：Walk-forward 验证和实际预测使用相同的 `lookback_days`，导致语义混乱
+
+**原因**：两种场景的数据可用性不同
+
+**场景对比**：
+
+| 场景 | 运行时机 | 数据日期 | 预测目标 | 应用的上涨比例 | `lookback_days` |
+|------|---------|---------|---------|---------------|----------------|
+| **Walk-forward 验证** | 模拟历史预测 | Fold 内 test 日期 | test 日期 + N 天 | test 日期 - 1 天 | `1` |
+| **实际预测** | 收市后运行 | 今天 | 明天及之后 | 今天（已知） | `0` |
+
+**关键区别**：
+
+1. **Walk-forward 验证**模拟"在历史某个时点做预测"
+   - 假设今天是 2026-05-10，要预测 2026-05-10 + 20 天
+   - 此时 2026-05-10 的上涨比例还未知（还没收市）
+   - 只能用 2026-05-09 的上涨比例，`lookback_days=1`
+
+2. **实际预测**在收市后运行
+   - 今天 2026-05-15 已收市，上涨比例已知
+   - 预测 2026-05-16 及之后
+   - 可以用 2026-05-15 的上涨比例，`lookback_days=0`
+
+**解决方案**：
+
+```python
+# Walk-forward 验证（ml_services/walk_forward_validation.py）
+market_filter = MarketSentimentFilter(lookback_days=1)  # ✅ 正确
+
+# 实际预测（comprehensive_analysis.py）
+market_filter = MarketSentimentFilter(lookback_days=0)  # ✅ 正确
+```
+
+**邮件显示**：
+```
+数据日期: 2026-05-15
+今日上涨比例: 32.1%  ← 2026-05-15 刚收市的数据
+动态阈值: 0.65
+```
+
 ---
 
 ## 相关文件

@@ -3,6 +3,10 @@
 """
 综合分析脚本 - 整合大模型建议和ML预测结果
 生成综合的买卖建议
+
+⚠️ 运行时机：建议在港股收市后（16:00 HKT）运行
+   - 市场情绪过滤器依赖当日收市数据计算上涨比例
+   - 盘中运行可能导致上涨比例不完整，影响阈值判断准确性
 """
 
 import os
@@ -806,7 +810,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 print(f"  ✅ 收益率数据获取成功，共 {len(returns_df)} 条记录")
 
                 # 初始化市场情绪过滤器
-                market_filter = MarketSentimentFilter(lookback_days=1)
+                # 注意：lookback_days=0 表示直接使用数据日期的上涨比例
+                # 因为预测目标日期是"数据日期 + N个交易日"，应该用数据日期当天的市场情绪
+                market_filter = MarketSentimentFilter(lookback_days=0)
                 market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Return_1d')
 
                 # 获取当日的市场情绪
@@ -1080,9 +1086,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 }
 
                 catboost_text_email = "【CatBoost模型三周期预测结果】\n"
-                catboost_text_email += f"预测日期: {date_str}\n"
+                catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
-                catboost_text_email += f"**滞后1天上涨比例**: {up_ratio:.1%}\n"
+                catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
                 catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}\n"
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
@@ -3697,8 +3703,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 
 def main():
-    parser = argparse.ArgumentParser(description='综合分析脚本 - 整合大模型建议和ML预测结果')
-    parser.add_argument('--llm-file', type=str, default=None, 
+    parser = argparse.ArgumentParser(
+        description='综合分析脚本 - 整合大模型建议和ML预测结果\n'
+                    '⚠️ 建议在港股收市后（16:00 HKT）运行'
+    )
+    parser.add_argument('--llm-file', type=str, default=None,
                        help='大模型建议文件路径 (默认使用今天的文件)')
     parser.add_argument('--ml-file', type=str, default=None,
                        help='ML预测结果文件路径 (默认使用今天的文件)')
@@ -3710,9 +3719,21 @@ def main():
                        help='不使用深度分析模式进行异常检测（默认使用深度分析）')
     parser.add_argument('--use-cached-predictions', action='store_true',
                        help='使用已缓存的三周期预测CSV文件（跳过模型预测）')
-    
+
     args = parser.parse_args()
-    
+
+    # 检查运行时机（只在交易日盘中显示警告）
+    now = datetime.now()
+    weekday = now.weekday()  # 0=周一, 6=周日
+    current_hour = now.hour
+
+    # 周末不显示警告（市场休市，使用最近交易日数据）
+    if weekday < 5 and current_hour < 16:  # 周一到周五，且未到16:00
+        print("⚠️ 警告: 当前时间未到港股收市时间（16:00 HKT）")
+        print("   市场情绪过滤器可能使用不完整的当日数据")
+        print("   建议在收市后运行以获得准确结果")
+        print("")
+
     # 生成日期
     date_str = datetime.now().strftime('%Y-%m-%d')
     
