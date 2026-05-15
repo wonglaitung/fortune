@@ -89,20 +89,20 @@
 | Fold 10 | 盈亏比 0.90, 收益 -0.52% | 平均收益为负，预测方向错误 |
 | Fold 11 | 盈亏比 0.77, 收益 -3.09% | 平均收益为负，预测方向错误 |
 
-**Top 10 特征重要性**：
+**Top 10 特征重要性**（12 Folds 平均）：
 
 | 排名 | 特征名称 | 重要性 |
 |------|---------|--------|
-| 1 | net_comm_rank_HSI_Regime_Duration | 2.93 |
-| 2 | sector_avg_change_1d | 2.02 |
-| 3 | PB | 1.75 |
-| 4 | net_comm_rank_US_10Y_Yield | 1.61 |
-| 5 | net_constraint_HSI_Regime_Duration | 1.56 |
-| 6 | MA250_Slope | 1.50 |
-| 7 | Volatility_70pct | 1.47 |
-| 8 | BB_Width_MA60 | 1.45 |
-| 9 | Volatility_30pct | 1.39 |
-| 10 | net_comm_rank_HSI_Return_60d | 1.38 |
+| 1 | net_comm_rank_HSI_Return_60d | 3.67 |
+| 2 | Volatility_30pct | 1.49 |
+| 3 | Volatility_70pct | 1.33 |
+| 4 | BB_Width_MA60 | 1.33 |
+| 5 | net_comm_rank_US_10Y_Yield | 1.31 |
+| 6 | Volume_Volatility | 1.26 |
+| 7 | net_constraint_risk_VIX_Level | 1.25 |
+| 8 | MA250_Slope | 1.14 |
+| 9 | sector_avg_change_1d | 1.12 |
+| 10 | net_comm_rank_HSI_Regime_Duration | 1.09 |
 
 **数据泄漏检查**：
 - 个股准确率 56.12% < 65%，无数据泄漏信号 ✅
