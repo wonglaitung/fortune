@@ -28,19 +28,19 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 
 ### 核心功能命令
 
-| 任务 | 命令 |
-|------|------|
-| **恒生指数预测** | `python3 hsi_prediction.py --no-email` |
-| **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` |
-| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
-| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
-| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` |
-| **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` |
-| **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` |
-| **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` |
-| **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` |
-| **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` |
+| 任务 | 命令 | 运行时机 |
+|------|------|---------|
+| **恒生指数预测** | `python3 hsi_prediction.py --no-email` | 收市后 |
+| **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
+| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | - |
+| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | - |
+| **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
+| **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
+| **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
+| **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
+| **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
+| **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
+| **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
 
 ### 缓存管理
 
