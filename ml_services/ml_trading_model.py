@@ -5417,11 +5417,12 @@ class CatBoostModel(BaseTradingModel):
                                 stock_df[key] = value
                             logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
 
-            # 生成市场-网络交叉特征（无论是否使用缓存，都需要调用）
-            # 因为网络特征可能已更新，且交叉特征依赖于网络特征
-            # 使用训练时保存的社区 ID 列表，确保特征一致性
-            stock_df = self.feature_engineer.create_market_network_interaction_features(
-                stock_df, community_ids=self.community_ids)
+                        # 使用缓存时，也需要重新生成市场-网络交叉特征
+                        # 因为网络特征可能已更新，且交叉特征依赖于网络特征
+                        stock_df = self.feature_engineer.create_market_network_interaction_features(
+                            stock_df, community_ids=self.community_ids)
+
+            # 注意：非缓存情况下，市场-网络交叉特征在特征计算完成后生成
 
             if not use_cache_predict:
                 # 计算特征
@@ -5555,6 +5556,11 @@ class CatBoostModel(BaseTradingModel):
 
                 # 生成交叉特征（与训练时保持一致）
                 stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+                # 生成市场-网络交叉特征（需要在所有市场特征添加之后）
+                # 使用训练时保存的社区 ID 列表，确保特征一致性
+                stock_df = self.feature_engineer.create_market_network_interaction_features(
+                    stock_df, community_ids=self.community_ids)
 
                 # 保存特征缓存
                 if use_feature_cache:
