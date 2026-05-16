@@ -592,17 +592,24 @@ def get_hsi_data_with_cache(period_days=1460):
 
 
 # ========== 特征缓存函数 ==========
-def _get_feature_cache_key(stock_code, last_date):
+def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     """生成特征缓存键
 
     参数:
     - stock_code: 股票代码（如 '0005'）
     - last_date: 数据最后日期（如 '20260418'）
+    - use_shift: 是否使用滞后数据（True=Walk-forward验证，False=生产预测）
 
     返回:
     - 缓存键字符串
+
+    注意:
+    - use_shift=True 时特征使用 T-1 数据（避免数据泄漏）
+    - use_shift=False 时特征使用当日数据（收市后预测）
+    - 两种模式的缓存必须分开，否则会导致数据泄漏
     """
-    return f"{stock_code}_{last_date}"
+    shift_suffix = "shift" if use_shift else "noshift"
+    return f"{stock_code}_{last_date}_{shift_suffix}"
 
 
 def _get_feature_cache_file_path(cache_key):
@@ -622,29 +629,45 @@ def _is_feature_cache_valid(cache_file_path):
     return age_days < FEATURE_CACHE_DAYS
 
 
-def _save_feature_cache(cache_file_path, feature_data):
+def _save_feature_cache(cache_file_path, feature_data, use_shift=True):
     """保存特征缓存
 
     参数:
     - cache_file_path: 缓存文件路径
     - feature_data: dict，包含 'stock_df', 'hsi_df', 'us_market_df', 'feature_df'
+    - use_shift: 是否使用滞后数据（用于验证缓存一致性）
     """
     try:
         with open(cache_file_path, 'wb') as f:
             pickle.dump({
                 'data': feature_data,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'use_shift': use_shift  # 保存 use_shift 信息，用于加载时验证
             }, f)
         logger.debug(f"特征缓存已保存: {cache_file_path}")
     except Exception as e:
         logger.warning(f"保存特征缓存失败: {e}")
 
 
-def _load_feature_cache(cache_file_path):
-    """加载特征缓存"""
+def _load_feature_cache(cache_file_path, use_shift=None):
+    """加载特征缓存
+
+    参数:
+    - cache_file_path: 缓存文件路径
+    - use_shift: 期望的 use_shift 值（如果提供，会验证缓存是否匹配）
+
+    返回:
+    - 缓存数据（dict），如果验证失败或加载失败返回 None
+    """
     try:
         with open(cache_file_path, 'rb') as f:
             cache = pickle.load(f)
+            # 验证 use_shift 是否匹配
+            if use_shift is not None and 'use_shift' in cache:
+                cached_use_shift = cache['use_shift']
+                if cached_use_shift != use_shift:
+                    logger.warning(f"缓存 use_shift={cached_use_shift} 与期望值 {use_shift} 不匹配，将重新计算")
+                    return None
             return cache['data']
     except Exception as e:
         logger.warning(f"加载特征缓存失败: {e}")
@@ -4968,13 +4991,13 @@ class CatBoostModel(BaseTradingModel):
                 # 获取数据最后日期作为缓存键
                 last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
-                # 尝试加载特征缓存
-                cache_key = _get_feature_cache_key(stock_code, last_date)
+                # 尝试加载特征缓存（使用 use_shift 参数生成缓存键）
+                cache_key = _get_feature_cache_key(stock_code, last_date, use_shift=use_shift)
                 cache_file_path = _get_feature_cache_file_path(cache_key)
 
                 use_cache = False
                 if use_feature_cache and _is_feature_cache_valid(cache_file_path):
-                    cached_data = _load_feature_cache(cache_file_path)
+                    cached_data = _load_feature_cache(cache_file_path, use_shift=use_shift)
                     if cached_data is not None and 'stock_df' in cached_data:
                         cached_df = cached_data['stock_df']
                         # 检查新特征列是否存在（GARCH + HSI Regime）
@@ -5096,9 +5119,9 @@ class CatBoostModel(BaseTradingModel):
                 # 添加异常检测特征（复用 use_shift）
                 stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
 
-                # 保存/更新特征缓存（包含最新的网络交叉特征）
+                # 保存/更新特征缓存（包含最新的网络交叉特征，保存 use_shift 信息）
                 if use_feature_cache:
-                    _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                    _save_feature_cache(cache_file_path, {'stock_df': stock_df}, use_shift=use_shift)
                     if use_cache:
                         print(f"  💾 缓存已更新（网络交叉特征）")
                     else:
@@ -5580,14 +5603,14 @@ class CatBoostModel(BaseTradingModel):
             # 获取数据最后日期作为缓存键
             last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
-            # 尝试加载特征缓存
-            cache_key = _get_feature_cache_key(stock_code, last_date)
+            # 尝试加载特征缓存（使用 use_shift 参数生成缓存键）
+            cache_key = _get_feature_cache_key(stock_code, last_date, use_shift=use_shift)
             cache_file_path = _get_feature_cache_file_path(cache_key)
 
             use_cache_predict = False
             if use_feature_cache and _is_feature_cache_valid(cache_file_path):
-                # 使用缓存
-                cached_data = _load_feature_cache(cache_file_path)
+                # 使用缓存（验证 use_shift 是否匹配）
+                cached_data = _load_feature_cache(cache_file_path, use_shift=use_shift)
                 if cached_data is not None and 'stock_df' in cached_data:
                     cached_df = cached_data['stock_df']
                     # 检查新特征列是否存在（GARCH + HSI Regime）
@@ -5791,9 +5814,9 @@ class CatBoostModel(BaseTradingModel):
                 # 添加异常检测特征（复用 use_shift）
                 stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
 
-                # 保存特征缓存
+                # 保存特征缓存（保存 use_shift 信息）
                 if use_feature_cache:
-                    _save_feature_cache(cache_file_path, {'stock_df': stock_df})
+                    _save_feature_cache(cache_file_path, {'stock_df': stock_df}, use_shift=use_shift)
                     logger.debug(f"特征缓存已保存: {cache_key}")
 
             # 获取最新数据
