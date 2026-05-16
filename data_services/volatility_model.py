@@ -100,22 +100,27 @@ class GARCHVolatilityModel:
         else:
             return np.nan
 
-    def calculate_features(self, df, return_col='Return_1d'):
+    def calculate_features(self, df, return_col='Return_1d', use_shift=True):
         """
         计算 GARCH 波动率特征
 
         参数:
         - df: 包含收益率列的 DataFrame
         - return_col: 收益率列名
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（默认）
+            - False: 收市后预测，使用当日数据
 
         返回:
         - DataFrame: 添加了 GARCH 特征的 DataFrame
         """
         print("  📈 计算 GARCH 波动率特征...")
 
-        # 使用原始收益率（不用 shift，因为 GARCH 本身就是条件模型）
-        # 但 GARCH 条件波动率是基于截至 t-1 的信息预测 t 时刻的波动率
+        # GARCH 条件波动率本身就是基于 t-1 及之前的信息预测 t 时刻的波动率
         # 所以天然避免了数据泄漏
+        # 但为了与 Walk-forward 验证保持一致，use_shift=True 时额外 shift(1)
+
+        shift_val = 1 if use_shift else 0
 
         # 计算原始收益率（如果 Return_1d 是 shift(1) 后的，需要用未 shift 的）
         if return_col in df.columns:
@@ -169,11 +174,12 @@ class GARCHVolatilityModel:
                     common_idx = df.index.intersection(garch_df.index)
                     df.loc[common_idx, col] = garch_df.loc[common_idx, col].values
 
-                # ⚠️ 数据泄漏防护：GARCH 条件波动率是基于 t-1 之前的信息
-                # 但为安全起见，对 GARCH 特征也做 shift(1)
+                # ⚠️ 时序处理：
+                # - use_shift=True (Walk-forward): 额外 shift(1)，确保使用 T-1 数据
+                # - use_shift=False (收市后预测): 不 shift，使用当日数据
                 for col in ['GARCH_Conditional_Vol', 'GARCH_Vol_Ratio',
                            'GARCH_Vol_Change_5d']:
-                    df[col] = df[col].shift(1)
+                    df[col] = df[col].shift(shift_val)
 
                 feature_count = len([c for c in df.columns if c in self.get_feature_names()])
                 print(f"  ✅ GARCH 波动率特征计算完成（{feature_count} 个特征，持续性={persistence:.4f}）")

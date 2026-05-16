@@ -40,26 +40,31 @@ class MultiscaleFeatureCalculator:
         """
         self.lookback = lookback
 
-    def calculate_features(self, df):
+    def calculate_features(self, df, use_shift=True):
         """
         计算跨尺度关联特征
 
         参数:
         - df: 包含 Close 列的 DataFrame
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（默认）
+            - False: 收市后预测，使用当日数据
 
         返回:
         - DataFrame: 添加了跨尺度特征的 DataFrame
         """
         print("  📊 计算跨尺度关联特征...")
 
+        shift_val = 1 if use_shift else 0
+
         # ========== 1. Vol_of_Vol_20d - 波动率的波动率 ==========
-        # 使用已有的 Volatility_20d（已经 shift(1)）
+        # 使用已有的 Volatility_20d（已经 shift(shift_val)）
         if 'Volatility_20d' in df.columns:
             vol_20d = df['Volatility_20d']
         else:
             # 回退：重新计算
             returns = df['Close'].pct_change()
-            vol_20d = returns.rolling(window=20).std().shift(1)
+            vol_20d = returns.rolling(window=20).std().shift(shift_val)
 
         # 波动率的 20 日滚动标准差
         df['Vol_of_Vol_20d'] = vol_20d.rolling(window=20).std()
@@ -69,14 +74,14 @@ class MultiscaleFeatureCalculator:
         if 'Volatility_20d' in df.columns:
             vol_20d = df['Volatility_20d']
         else:
-            vol_20d = df['Close'].pct_change().rolling(window=20).std().shift(1)
+            vol_20d = df['Close'].pct_change().rolling(window=20).std().shift(shift_val)
 
         # 计算 5 日波动率
         if 'Return_1d' in df.columns:
-            # Return_1d 已经是 shift(1) 后的
-            vol_5d = df['Close'].pct_change().rolling(window=5).std().shift(1)
+            # Return_1d 已经是 shift(shift_val) 后的
+            vol_5d = df['Close'].pct_change().rolling(window=5).std().shift(shift_val)
         else:
-            vol_5d = df['Close'].pct_change().rolling(window=5).std().shift(1)
+            vol_5d = df['Close'].pct_change().rolling(window=5).std().shift(shift_val)
 
         # 短期波动率 / 长期波动率
         df['Vol_Ratio_5d_20d'] = (vol_5d / (vol_20d + 1e-10))
@@ -88,8 +93,8 @@ class MultiscaleFeatureCalculator:
             r_5d = df['Return_5d']
         else:
             # 回退：重新计算
-            r_1d = df['Close'].pct_change().shift(1)
-            r_5d = df['Close'].pct_change(5).shift(1)
+            r_1d = df['Close'].pct_change().shift(shift_val)
+            r_5d = df['Close'].pct_change(5).shift(shift_val)
 
         # 滚动相关性（20 日窗口）
         df['Return_1d_5d_Correlation'] = r_1d.rolling(window=20).corr(r_5d)
@@ -109,9 +114,9 @@ class MultiscaleFeatureCalculator:
             r_20d = df['Return_20d']
         else:
             # 回退：重新计算
-            r_1d = df['Close'].pct_change().shift(1)
-            r_5d = df['Close'].pct_change(5).shift(1)
-            r_20d = df['Close'].pct_change(20).shift(1)
+            r_1d = df['Close'].pct_change().shift(shift_val)
+            r_5d = df['Close'].pct_change(5).shift(shift_val)
+            r_20d = df['Close'].pct_change(20).shift(shift_val)
 
         df['Momentum_Consistency'] = (
             np.sign(r_1d) + np.sign(r_5d) + np.sign(r_20d)

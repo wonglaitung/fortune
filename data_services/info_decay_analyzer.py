@@ -145,7 +145,7 @@ class InfoDecayAnalyzer:
             return True
         return False
 
-    def calculate_features(self, df, feature_cols=None):
+    def calculate_features(self, df, feature_cols=None, use_shift=True):
         """
         阶段 2：运行时特征生成
 
@@ -154,11 +154,16 @@ class InfoDecayAnalyzer:
         参数:
         - df: 包含特征的 DataFrame
         - feature_cols: 要分析的特征列名列表（如果为 None，使用所有已知特征）
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（默认）
+            - False: 收市后预测，使用当日数据
 
         返回:
         - DataFrame: 添加了信息衰减特征的 DataFrame
         """
         print("  📈 计算信息衰减特征...")
+
+        shift_val = 1 if use_shift else 0
 
         # 尝试加载 MI 分析结果
         if not self.load_mi_assignments():
@@ -249,9 +254,11 @@ class InfoDecayAnalyzer:
         else:
             df['MI_Decay_Rate_MACD'] = 0.0
 
-        # ⚠️ 数据泄漏防护：对计数特征应用 shift(1)
+        # ⚠️ 时序处理：
+        # - use_shift=True (Walk-forward): 额外 shift(1)，确保使用 T-1 数据
+        # - use_shift=False (收市后预测): 不 shift，使用当日数据
         for col in ['MI_Fast_Signal_Count', 'MI_Slow_Signal_Count', 'MI_Fast_Slow_Divergence']:
-            df[col] = df[col].shift(1)
+            df[col] = df[col].shift(shift_val)
 
         feature_count = len([c for c in df.columns if c in self.get_feature_names()])
         print(f"  ✅ 信息衰减特征计算完成（{feature_count} 个特征）")

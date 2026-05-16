@@ -72,6 +72,7 @@ rm -rf data/stock_cache/*.pkl
 | **训练时 NaN** | 不要用 `df.dropna()` 删除所有 NaN，只删除标签和关键列 |
 | **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
 | **市场情绪数据源** | 必须使用所有股票收益率计算上涨比例，与 walk-forward 验证一致 |
+| **双模式预测** | 收市后预测使用 `mode='production'`（当日数据），Walk-forward 使用 `mode='backtest'`（T-1 数据） |
 
 ---
 

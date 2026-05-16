@@ -233,7 +233,7 @@ class HSICatBoostModel:
 
         return hsi_df, us_df, vix_df
 
-    def calculate_features(self, hsi_df, us_df, vix_df):
+    def calculate_features(self, hsi_df, us_df, vix_df, use_shift=True):
         """
         计算特征
 
@@ -241,6 +241,9 @@ class HSICatBoostModel:
         - hsi_df: 恒指数据
         - us_df: 美债数据
         - vix_df: VIX数据
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+            - False: 收市后预测，使用当日数据
 
         返回:
         - DataFrame: 特征数据
@@ -248,6 +251,9 @@ class HSICatBoostModel:
         print("🔧 正在计算特征...")
 
         df = hsi_df.copy()
+
+        # 根据 use_shift 参数确定 shift 值
+        shift_val = 1 if use_shift else 0
 
         # ========== 移动平均线（与 hsi_prediction.py 对齐）==========
         for window in [20, 60, 120, 250]:
@@ -294,8 +300,8 @@ class HSICatBoostModel:
         df['MA60_Death_Cross_MA250'] = ((df['MA60'] < df['MA250']) &
                                         (df['MA60'].shift(1) >= df['MA250'].shift(1))).astype(int)
 
-        # ========== 收益率（使用昨日值）==========
-        df['Return_1d'] = df['Close'].pct_change().shift(1)  # 使用昨日值
+        # ========== 收益率（使用滞后值）==========
+        df['Return_1d'] = df['Close'].pct_change().shift(shift_val)  # 使用滞后值
 
         # ========== 波动率 ==========
         df['Volatility_120d'] = df['Return_1d'].rolling(window=120).std()
@@ -339,40 +345,40 @@ class HSICatBoostModel:
             print(f"    ⚠️ 港股通数据获取失败，使用默认值")
 
         # ========== 新增技术指标特征（2026-04-16 优化）==========
-        # ⚠️ 特征时滞处理：所有使用当日 Close 的特征需添加 .shift(1)
-        # 实盘中预测时只能使用前一天的数据
+        # ⚠️ 特征时滞处理：所有使用当日 Close 的特征需添加 .shift(shift_val)
+        # 实盘中预测时只能使用前一天的数据（use_shift=True）
 
-        # 1. RSI 系列（使用昨日值）
+        # 1. RSI 系列（使用滞后值）
         delta = df['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / (loss + 1e-10)
-        df['RSI'] = (100 - (100 / (1 + rs))).shift(1)  # 使用昨日 RSI
+        df['RSI'] = (100 - (100 / (1 + rs))).shift(shift_val)  # 使用滞后 RSI
         df['RSI_ROC'] = df['RSI'].pct_change()
         df['RSI_Deviation'] = abs(df['RSI'] - 50)
 
-        # 2. MACD 系列（使用昨日值）
+        # 2. MACD 系列（使用滞后值）
         ema12 = df['Close'].ewm(span=12, adjust=False).mean()
         ema26 = df['Close'].ewm(span=26, adjust=False).mean()
-        df['MACD'] = (ema12 - ema26).shift(1)  # 使用昨日 MACD
+        df['MACD'] = (ema12 - ema26).shift(shift_val)  # 使用滞后 MACD
         df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
         df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
         df['MACD_Hist_ROC'] = df['MACD_Hist'].pct_change()
 
-        # 3. 布林带（使用昨日值）
+        # 3. 布林带（使用滞后值）
         df['BB_Middle'] = df['Close'].rolling(window=20).mean()
         bb_std = df['Close'].rolling(window=20).std()
         df['BB_Upper'] = df['BB_Middle'] + 2 * bb_std
         df['BB_Lower'] = df['BB_Middle'] - 2 * bb_std
         df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Middle']
-        # BB_Position 使用昨日 Close 计算
-        df['BB_Position'] = ((df['Close'].shift(1) - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'] + 1e-10))
+        # BB_Position 使用滞后 Close 计算
+        df['BB_Position'] = ((df['Close'].shift(shift_val) - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'] + 1e-10))
 
-        # 4. 多周期收益率（使用昨日值，实盘中预测时只能用昨天收盘价计算）
+        # 4. 多周期收益率（使用滞后值，实盘中预测时只能用滞后收盘价计算）
         for period in [1, 3, 5, 10, 20, 60]:
-            df[f'Return_{period}d'] = df['Close'].pct_change(period).shift(1)
+            df[f'Return_{period}d'] = df['Close'].pct_change(period).shift(shift_val)
 
-        # 5. 动量加速度（使用昨日值）
+        # 5. 动量加速度（使用滞后值）
         df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
         df['Momentum_Accel_10d'] = df['Return_10d'] - df['Return_10d'].shift(5)
 
@@ -382,21 +388,21 @@ class HSICatBoostModel:
 
         # ========== 新增技术指标（从 ml_trading_model.py 借鉴）==========
 
-        # 7. ATR（真实波幅，使用昨日高低价避免数据泄漏）
-        high_prev = df['High'].shift(1)
-        low_prev = df['Low'].shift(1)
-        close_prev = df['Close'].shift(1)
+        # 7. ATR（真实波幅，使用滞后高低价避免数据泄漏）
+        high_prev = df['High'].shift(shift_val)
+        low_prev = df['Low'].shift(shift_val)
+        close_prev = df['Close'].shift(shift_val)
         tr1 = high_prev - low_prev
         tr2 = abs(high_prev - close_prev)
         tr3 = abs(low_prev - close_prev)
         df['TR'] = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         df['ATR'] = df['TR'].rolling(window=14).mean()
-        df['ATR_MA'] = df['ATR'].rolling(window=10).mean().shift(1)
+        df['ATR_MA'] = df['ATR'].rolling(window=10).mean().shift(shift_val)
         df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
 
         # 8. ADX（平均趋向指数，趋势强度识别）
-        up_move = df['High'].diff().shift(1)
-        down_move = -df['Low'].diff().shift(1)
+        up_move = df['High'].diff().shift(shift_val)
+        down_move = -df['Low'].diff().shift(shift_val)
         df['Plus_DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
         df['Minus_DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
         df['Plus_DI'] = 100 * (df['Plus_DM'].ewm(alpha=1/14, adjust=False).mean() / df['ATR'])
@@ -404,37 +410,37 @@ class HSICatBoostModel:
         dx = 100 * (np.abs(df['Plus_DI'] - df['Minus_DI']) / (df['Plus_DI'] + df['Minus_DI'] + 1e-10))
         df['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
 
-        # 9. KDJ随机振荡器（使用昨日高低价避免数据泄漏）
+        # 9. KDJ随机振荡器（使用滞后高低价避免数据泄漏）
         k_period = 14
         d_period = 3
-        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min().shift(1)
-        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max().shift(1)
+        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min().shift(shift_val)
+        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max().shift(shift_val)
         df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min_14']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10)
-        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean().shift(1)
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean().shift(shift_val)
 
-        # 10. Williams %R（使用昨日高低价避免数据泄漏）
+        # 10. Williams %R（使用滞后高低价避免数据泄漏）
         df['Williams_R'] = (df['High_Max_14'] - df['Close']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10) * -100
 
-        # 11. CMF（Chaikin资金流，使用昨日高低价避免数据泄漏）
-        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        # 11. CMF（Chaikin资金流，使用滞后高低价避免数据泄漏）
+        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(shift_val)) - (df['High'].shift(shift_val) - df['Close'])) / (df['High'].shift(shift_val) - df['Low'].shift(shift_val) + 1e-10)
         df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
         df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / (df['Volume'].rolling(20, min_periods=1).sum() + 1e-10)
-        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(shift_val)
 
         # 12. RSI背离检测（价格创新低但RSI未创新低 = 看涨背离）
         lookback = 5
-        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
-        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(shift_val)
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(shift_val)
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(shift_val)
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(shift_val)
         # 看涨背离：价格创新低，但RSI未创新低
         df['RSI_Bullish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_Low_5d']) &
+            (df['Close'].shift(shift_val) == df['Price_Low_5d']) &
             (df['RSI'] > df['RSI_Low_5d_History'])
         ).astype(int)
         # 看跌背离：价格创新高，但RSI未创新高
         df['RSI_Bearish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_High_5d']) &
+            (df['Close'].shift(shift_val) == df['Price_High_5d']) &
             (df['RSI'] < df['RSI_High_5d_History'])
         ).astype(int)
 
@@ -475,20 +481,20 @@ class HSICatBoostModel:
 
         # ========== GARCH 波动率特征（2026-04-26 新增）==========
         garch_model = GARCHVolatilityModel()
-        df = garch_model.calculate_features(df)
+        df = garch_model.calculate_features(df, use_shift=use_shift)
 
         # ========== 市场状态检测（HMM，2026-04-26 新增，Tier 1 增强后 10 个特征）==========
         regime_detector = RegimeDetector()
-        df = regime_detector.calculate_features(df)
+        df = regime_detector.calculate_features(df, use_shift=use_shift)
 
         # ========== 跨尺度关联特征（Tier 1 新增，2026-04-27）==========
         multiscale_calc = MultiscaleFeatureCalculator()
-        df = multiscale_calc.calculate_features(df)
+        df = multiscale_calc.calculate_features(df, use_shift=use_shift)
 
         # ========== 信息衰减特征（Tier 1 新增，2026-04-27）==========
         info_decay_analyzer = InfoDecayAnalyzer()
         # 信息衰减特征需要特征列表，先用默认值（MI 分析需在 Walk-forward 中离线计算）
-        df = info_decay_analyzer.calculate_features(df)
+        df = info_decay_analyzer.calculate_features(df, use_shift=use_shift)
 
         print(f"  ✅ 特征计算完成（{len(df.columns)} 列）")
 

@@ -299,17 +299,22 @@ class RegimeDetector:
                 return False
         return False
 
-    def calculate_features(self, df):
+    def calculate_features(self, df, use_shift=True):
         """
         计算市场状态特征（集成接口）
 
         参数:
         - df: 包含 Close 和 Volume 列的 DataFrame
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（默认）
+            - False: 收市后预测，使用当日数据
 
         返回:
         - DataFrame: 添加了状态特征的 DataFrame
         """
         print("  🔄 计算市场状态特征（HMM）...")
+
+        shift_val = 1 if use_shift else 0
 
         try:
             # 尝试加载缓存模型
@@ -333,13 +338,14 @@ class RegimeDetector:
                 if col in df.columns:
                     df.loc[common_idx, col] = regime_df.loc[common_idx, col].values
 
-            # ⚠️ 数据泄漏防护：HMM 预测的是基于截至 t-1 的信息
-            # 但 predict 使用了全部数据，所以需要 shift(1)
+            # ⚠️ 时序处理：
+            # - use_shift=True (Walk-forward): 额外 shift(1)，确保使用 T-1 数据
+            # - use_shift=False (收市后预测): 不 shift，使用当日数据
             for col in ['Market_Regime', 'Regime_Prob_0', 'Regime_Prob_1',
                        'Regime_Prob_2', 'Regime_Duration', 'Regime_Transition_Prob',
                        'Regime_Switch_Prob_5d', 'Regime_Expected_Duration']:
                 if col in df.columns:
-                    df[col] = df[col].shift(1)
+                    df[col] = df[col].shift(shift_val)
 
             # ========== 新增 Tier 1 特征计算 ==========
             # 3. Regime_Momentum: 状态概率 5 日变化

@@ -810,8 +810,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 print(f"  ✅ 收益率数据获取成功，共 {len(returns_df)} 条记录")
 
                 # 初始化市场情绪过滤器
-                # 注意：lookback_days=0 表示直接使用数据日期的上涨比例
-                # 因为预测目标日期是"数据日期 + N个交易日"，应该用数据日期当天的市场情绪
+                # 收市后预测使用 lookback_days=0，因为当日收盘价已知，可计算当日市场上涨比例
+                # Walk-forward 验证使用 lookback_days=1，模拟开盘前预测场景
                 market_filter = MarketSentimentFilter(lookback_days=0)
                 market_filter.prepare_market_schedule(returns_df, date_col='Date', ret_col='Return_1d')
 

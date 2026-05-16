@@ -1,6 +1,6 @@
 # 特征工程指南
 
-> **最后更新**：2026-05-09 | **版本**：v2.0
+> **最后更新**：2026-05-16 | **版本**：v2.1
 
 本文档是港股智能分析系统的特征工程完整指南，涵盖特征设计、实现、验证和维护的全流程。
 
@@ -297,6 +297,61 @@ ml_trading_model.py（单一真相源）
 └── hyperparameter_tuner.py
     └── model.prepare_data()
 ```
+
+### 特征时点控制（双模式预测）
+
+**问题**：项目有两个特征生成场景，需要区分特征时点。
+
+**场景差异**：
+
+| 场景 | 文件 | 特征时点 | 目的 |
+|------|------|---------|------|
+| 收市后预测 | `comprehensive_analysis.py` | 当日数据 | 最优信息利用 |
+| Walk-forward 验证 | `walk_forward_validation.py` | T-1 数据 | 防止数据泄漏 |
+
+**解决方案**：添加 `use_shift` 参数控制特征时点。
+
+```python
+def calculate_technical_features(self, df, use_shift=True):
+    """
+    Args:
+        use_shift: 特征时点控制
+            - True: 使用 T-1 数据（Walk-forward 验证）
+            - False: 使用当日数据（收市后预测）
+    """
+    shift_val = 1 if use_shift else 0
+
+    # 所有 .shift(1) 改为 .shift(shift_val)
+    df['RSI'] = calculate_rsi().shift(shift_val)
+    df['MACD'] = calculate_macd().shift(shift_val)
+    # ...
+```
+
+**默认值设计原则**：
+
+| 方法 | 默认值 | 原因 |
+|------|--------|------|
+| `prepare_data(mode='backtest')` | backtest | 训练/验证必须防止泄漏 |
+| `predict(mode='production')` | production | 收市后预测使用当日数据 |
+
+**涉及文件**（共 7 个）：
+
+| 文件 | 修改内容 |
+|------|---------|
+| `ml_services/ml_trading_model.py` | FeatureEngineer 类添加 `use_shift` 参数（约 80 处） |
+| `ml_services/hsi_ml_model.py` | 特征计算添加 `use_shift` 参数 |
+| `data_services/volatility_model.py` | GARCH 特征添加 `use_shift` 参数 |
+| `data_services/regime_detector.py` | HMM 特征添加 `use_shift` 参数 |
+| `data_services/multiscale_features.py` | 多尺度特征添加 `use_shift` 参数 |
+| `data_services/info_decay_analyzer.py` | 信息衰减特征添加 `use_shift` 参数 |
+| `data_services/technical_analysis.py` | 布林带计算添加 `use_shift` 参数 |
+
+**市场情绪过滤器时点配置**：
+
+| 场景 | `lookback_days` | 说明 |
+|------|----------------|------|
+| 收市后预测 | 0 | 使用当日上涨比例（收市后已知） |
+| Walk-forward 验证 | 1 | 使用滞后1天数据（避免前瞻性偏差） |
 
 ### 绝对价格特征排除列表（40个）
 

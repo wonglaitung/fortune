@@ -406,11 +406,11 @@ class HSI_Predictor:
         df['MA60_Death_Cross_MA250'] = ((df['MA60'] < df['MA250']) &
                                         (df['MA60'].shift(1) >= df['MA250'].shift(1))).astype(int)
 
-        # 收益率（使用昨日值，实盘中预测时只能用昨天收盘价计算）
-        df['Return_1d'] = df['Close'].pct_change().shift(1)
-        df['Return_5d'] = df['Close'].pct_change(5).shift(1)
-        df['Return_20d'] = df['Close'].pct_change(20).shift(1)
-        df['Return_60d'] = df['Close'].pct_change(60).shift(1)
+        # 收益率（收市后预测使用当日数据）
+        df['Return_1d'] = df['Close'].pct_change()
+        df['Return_5d'] = df['Close'].pct_change(5)
+        df['Return_20d'] = df['Close'].pct_change(20)
+        df['Return_60d'] = df['Close'].pct_change(60)
 
         # 成交量相关
         df['Volume_MA20'] = df['Volume'].rolling(window=20).mean()
@@ -445,34 +445,34 @@ class HSI_Predictor:
         df['RS_Signal_MA250_Slope'] = df['Close'] / df['MA250'] - 1
 
         # ========== 新增技术指标（2026-04-16 优化）==========
-        # ⚠️ 特征时滞处理：所有使用当日 Close 的特征需添加 .shift(1)
-        # 实盘中预测时只能使用前一天的数据
+        # ⚠️ 收市后预测使用当日数据：所有特征使用当日收盘价计算
+        # Walk-forward 验证使用 T-1 数据（见 hsi_ml_model.py）
 
-        # RSI（使用昨日值）
+        # RSI（使用当日值）
         delta = df['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / (loss + 1e-10)
-        df['RSI'] = (100 - (100 / (1 + rs))).shift(1)  # 使用昨日 RSI
+        df['RSI'] = (100 - (100 / (1 + rs)))  # 使用当日 RSI
         df['RSI_ROC'] = df['RSI'].pct_change()
         df['RSI_Deviation'] = abs(df['RSI'] - 50)
 
-        # MACD（使用昨日值）
+        # MACD（使用当日值）
         ema12 = df['Close'].ewm(span=12, adjust=False).mean()
         ema26 = df['Close'].ewm(span=26, adjust=False).mean()
-        df['MACD'] = (ema12 - ema26).shift(1)  # 使用昨日 MACD
+        df['MACD'] = (ema12 - ema26)  # 使用当日 MACD
         df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
         df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
         df['MACD_Hist_ROC'] = df['MACD_Hist'].pct_change()
 
-        # 布林带（使用昨日值）
+        # 布林带（使用当日值）
         df['BB_Middle'] = df['Close'].rolling(window=20).mean()
         bb_std = df['Close'].rolling(window=20).std()
         df['BB_Upper'] = df['BB_Middle'] + 2 * bb_std
         df['BB_Lower'] = df['BB_Middle'] - 2 * bb_std
         df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Middle']
-        # BB_Position 使用昨日 Close 计算
-        df['BB_Position'] = ((df['Close'].shift(1) - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'] + 1e-10))
+        # BB_Position 使用当日 Close 计算
+        df['BB_Position'] = ((df['Close'] - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'] + 1e-10))
 
         # 动量加速度（使用昨日值）
         df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
@@ -488,8 +488,8 @@ class HSI_Predictor:
         df['ATR_Ratio'] = df['ATR'] / (df['ATR_MA'] + 1e-10)
 
         # ADX（平均趋向指数，趋势强度识别）
-        up_move = df['High'].diff().shift(1)
-        down_move = -df['Low'].diff().shift(1)
+        up_move = df['High'].diff()
+        down_move = -df['Low'].diff()
         df['Plus_DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
         df['Minus_DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
         df['Plus_DI'] = 100 * (df['Plus_DM'].ewm(alpha=1/14, adjust=False).mean() / (df['ATR'] + 1e-10))
@@ -497,43 +497,43 @@ class HSI_Predictor:
         dx = 100 * (np.abs(df['Plus_DI'] - df['Minus_DI']) / (df['Plus_DI'] + df['Minus_DI'] + 1e-10))
         df['ADX'] = dx.ewm(alpha=1/14, adjust=False).mean()
 
-        # KDJ随机振荡器（使用昨日高低价避免数据泄漏）
+        # KDJ随机振荡器（使用当日高低价）
         k_period = 14
         d_period = 3
-        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min().shift(1)
-        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max().shift(1)
+        df['Low_Min_14'] = df['Low'].rolling(window=k_period, min_periods=1).min()
+        df['High_Max_14'] = df['High'].rolling(window=k_period, min_periods=1).max()
         df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min_14']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10)
-        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean().shift(1)
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=d_period, min_periods=1).mean()
 
-        # Williams %R（使用昨日高低价避免数据泄漏）
+        # Williams %R（使用当日高低价）
         df['Williams_R'] = (df['High_Max_14'] - df['Close']) / (df['High_Max_14'] - df['Low_Min_14'] + 1e-10) * -100
 
-        # CMF（Chaikin资金流，使用昨日高低价避免数据泄漏）
-        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        # CMF（Chaikin资金流，使用当日高低价）
+        df['MF_Multiplier'] = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'] + 1e-10)
         df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
         df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / (df['Volume'].rolling(20, min_periods=1).sum() + 1e-10)
-        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean()
 
         # RSI背离检测（价格创新低但RSI未创新低 = 看涨背离）
         lookback = 5
-        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
-        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min()
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max()
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min()
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max()
         # 看涨背离：价格创新低，但RSI未创新低
         df['RSI_Bullish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_Low_5d']) &
+            (df['Close'] == df['Price_Low_5d']) &
             (df['RSI'] > df['RSI_Low_5d_History'])
         ).astype(int)
         # 看跌背离：价格创新高，但RSI未创新高
         df['RSI_Bearish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_High_5d']) &
+            (df['Close'] == df['Price_High_5d']) &
             (df['RSI'] < df['RSI_High_5d_History'])
         ).astype(int)
 
         # MACD背离检测（价格创新低但MACD未创新低 = 看涨背离）
-        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min()
+        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max()
         # 看涨背离：价格创新低，但MACD未创新低
         df['MACD_Bullish_Divergence'] = (
             (df['Close'] == df['Price_Low_5d']) &
@@ -555,12 +555,12 @@ class HSI_Predictor:
         
         # 计算多周期指标
         periods = [3, 5, 10, 20, 60]
-        
-        # 计算多周期收益率（使用昨日值）
+
+        # 计算多周期收益率（收市后预测使用当日数据）
         for period in periods:
             if len(hsi_df) >= period:
                 return_col = f'Return_{period}d'
-                hsi_df[return_col] = hsi_df['Close'].pct_change(period).shift(1)  # 使用昨日值
+                hsi_df[return_col] = hsi_df['Close'].pct_change(period)  # 使用当日值
 
                 # 计算趋势方向（1=上涨，0=下跌）
                 trend_col = f'{period}d_Trend'
