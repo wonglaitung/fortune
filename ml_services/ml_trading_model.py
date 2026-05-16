@@ -2398,6 +2398,182 @@ class FeatureEngineer:
                 'sector_outperform_hsi': 0
             }
 
+    def create_anomaly_features(self, df: pd.DataFrame, use_shift: bool = True) -> pd.DataFrame:
+        """
+        创建异常检测特征（复用 use_shift 参数）
+
+        Args:
+            df: 包含 OHLCV 数据的 DataFrame
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
+
+        Returns:
+            添加异常特征的 DataFrame
+
+        特征列表（9个）：
+        - anomaly_price: 价格异常标志（0/1）
+        - anomaly_volume: 成交量异常标志（0/1）
+        - anomaly_price_zscore: 价格 Z-Score 值
+        - anomaly_volume_zscore: 成交量 Z-Score 值
+        - anomaly_if_score: Isolation Forest 异常分数
+        - anomaly_severity: 异常严重程度（0/1/2）
+        - anomaly_any: 任意异常标志（0/1）
+        - anomaly_count_7d: 过去7天异常次数
+        - anomaly_count_30d: 过去30天异常次数
+        """
+        if df.empty or len(df) < 30:
+            return self._get_default_anomaly_features(df)
+
+        shift_val = 1 if use_shift else 0
+
+        try:
+            from anomaly_detector.zscore_detector import ZScoreDetector
+            from anomaly_detector.isolation_forest_detector import IsolationForestDetector
+            from anomaly_detector.feature_extractor import FeatureExtractor
+        except ImportError:
+            logger.warning("异常检测模块不可用，使用默认值")
+            return self._get_default_anomaly_features(df)
+
+        # 初始化检测器
+        zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
+        if_detector = IsolationForestDetector(contamination=0.05, random_state=42, anomaly_type='stock')
+        feature_extractor = FeatureExtractor()
+
+        # 计算每日异常检测结果
+        anomaly_price = []
+        anomaly_volume = []
+        anomaly_price_zscore = []
+        anomaly_volume_zscore = []
+        anomaly_if_score = []
+        anomaly_severity = []
+
+        # 训练 Isolation Forest（使用全部数据）
+        try:
+            features, timestamps = feature_extractor.extract_features(df)
+            if not features.empty:
+                if_detector.train(features)
+        except Exception as e:
+            logger.debug(f"Isolation Forest 训练失败: {e}")
+
+        for i in range(len(df)):
+            current_price = df['Close'].iloc[i]
+            current_volume = df['Volume'].iloc[i] if 'Volume' in df.columns else 0
+            timestamp = df.index[i]
+
+            # Z-Score 检测（价格）
+            price_anomaly = None
+            try:
+                price_history = df['Close'].iloc[:i+1]
+                if len(price_history) >= 30:
+                    price_anomaly = zscore_detector.detect_anomaly(
+                        'price', current_price, price_history, timestamp
+                    )
+            except Exception:
+                pass
+
+            # Z-Score 检测（成交量）
+            volume_anomaly = None
+            try:
+                if 'Volume' in df.columns and current_volume > 0:
+                    volume_history = df['Volume'].iloc[:i+1]
+                    if len(volume_history) >= 30:
+                        volume_anomaly = zscore_detector.detect_anomaly(
+                            'volume', current_volume, volume_history, timestamp
+                        )
+            except Exception:
+                pass
+
+            # Isolation Forest 检测
+            if_score = 0.0
+            try:
+                if not features.empty and i < len(features):
+                    # 获取当前日期的特征
+                    if_anomalies = if_detector.detect_anomalies_by_date(
+                        features.iloc[:i+1], timestamps[:i+1], timestamp
+                    )
+                    if if_anomalies:
+                        if_score = if_anomalies[0].get('anomaly_score', 0)
+            except Exception:
+                pass
+
+            # 记录结果
+            anomaly_price.append(1 if price_anomaly else 0)
+            anomaly_volume.append(1 if volume_anomaly else 0)
+            anomaly_price_zscore.append(price_anomaly.get('z_score', 0) if price_anomaly else 0)
+            anomaly_volume_zscore.append(volume_anomaly.get('z_score', 0) if volume_anomaly else 0)
+            anomaly_if_score.append(if_score)
+
+            # 严重程度：high=2, medium=1, low/none=0
+            severity = 0
+            if price_anomaly:
+                if price_anomaly['severity'] == 'high':
+                    severity = 2
+                elif price_anomaly['severity'] == 'medium':
+                    severity = max(severity, 1)
+            if volume_anomaly:
+                if volume_anomaly['severity'] == 'high':
+                    severity = 2
+                elif volume_anomaly['severity'] == 'medium':
+                    severity = max(severity, 1)
+            if if_score < -0.10:  # IF 高异常
+                severity = max(severity, 2)
+            elif if_score < -0.02:  # IF 中异常
+                severity = max(severity, 1)
+            anomaly_severity.append(severity)
+
+        # 创建异常特征 DataFrame
+        anomaly_df = pd.DataFrame({
+            'anomaly_price': anomaly_price,
+            'anomaly_volume': anomaly_volume,
+            'anomaly_price_zscore': anomaly_price_zscore,
+            'anomaly_volume_zscore': anomaly_volume_zscore,
+            'anomaly_if_score': anomaly_if_score,
+            'anomaly_severity': anomaly_severity,
+        }, index=df.index)
+
+        # 任意异常标志
+        anomaly_df['anomaly_any'] = (
+            (anomaly_df['anomaly_price'] == 1) |
+            (anomaly_df['anomaly_volume'] == 1) |
+            (anomaly_df['anomaly_if_score'] < -0.02)
+        ).astype(int)
+
+        # 应用滞后（Walk-forward 场景）
+        if shift_val > 0:
+            anomaly_df = anomaly_df.shift(shift_val)
+
+        # 滚动统计（使用滞后后的数据）
+        anomaly_df['anomaly_count_7d'] = anomaly_df['anomaly_any'].rolling(7).sum()
+        anomaly_df['anomaly_count_30d'] = anomaly_df['anomaly_any'].rolling(30).sum()
+
+        # 填充 NaN
+        anomaly_df = anomaly_df.fillna(0)
+
+        # 合并到原 DataFrame
+        for col in anomaly_df.columns:
+            df[col] = anomaly_df[col]
+
+        logger.debug(f"异常检测特征计算完成（use_shift={use_shift}）")
+        return df
+
+    def _get_default_anomaly_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """返回默认异常特征值"""
+        defaults = {
+            'anomaly_price': 0,
+            'anomaly_volume': 0,
+            'anomaly_price_zscore': 0.0,
+            'anomaly_volume_zscore': 0.0,
+            'anomaly_if_score': 0.0,
+            'anomaly_severity': 0,
+            'anomaly_any': 0,
+            'anomaly_count_7d': 0,
+            'anomaly_count_30d': 0,
+        }
+        for col, default_val in defaults.items():
+            df[col] = default_val
+        return df
+
     def create_event_driven_features(self, code, df):
         """
         创建事件驱动特征（9个）
@@ -4934,6 +5110,9 @@ class CatBoostModel(BaseTradingModel):
                 stock_df = self.feature_engineer.create_market_network_interaction_features(
                     stock_df, community_ids=community_ids)
 
+                # 添加异常检测特征（复用 use_shift）
+                stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
+
                 # 保存/更新特征缓存（包含最新的网络交叉特征）
                 if use_feature_cache:
                     _save_feature_cache(cache_file_path, {'stock_df': stock_df})
@@ -5483,7 +5662,10 @@ class CatBoostModel(BaseTradingModel):
                         stock_df = self.feature_engineer.create_market_network_interaction_features(
                             stock_df, community_ids=self.community_ids)
 
-            # 注意：非缓存情况下，市场-网络交叉特征在特征计算完成后生成
+                        # 使用缓存时，也需要重新生成异常检测特征
+                        stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
+
+            # 注意：非缓存情况下，市场-网络交叉特征和异常检测特征在特征计算完成后生成
 
             if not use_cache_predict:
                 # 计算特征
@@ -5622,6 +5804,9 @@ class CatBoostModel(BaseTradingModel):
                 # 使用训练时保存的社区 ID 列表，确保特征一致性
                 stock_df = self.feature_engineer.create_market_network_interaction_features(
                     stock_df, community_ids=self.community_ids)
+
+                # 添加异常检测特征（复用 use_shift）
+                stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
 
                 # 保存特征缓存
                 if use_feature_cache:
