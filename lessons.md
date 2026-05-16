@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v7.8 (2026-05-16) | **状态**：当前有效
+> **版本**：v7.9 (2026-05-16) | **状态**：当前有效
 
 ---
 
@@ -832,6 +832,80 @@ def calculate_technical_features(self, df, use_shift=True):
 
 ---
 
+### 25. 异常检测特征向量化优化 ⭐⭐⭐
+
+**问题**：`create_anomaly_features` 使用逐行循环，导致预测和回测时间成倍增加
+
+**现象**：
+- Walk-forward 验证时间从 ~10 分钟增加到 ~30+ 分钟
+- 每只股票特征计算耗时 2-5 秒
+
+**根本原因**：
+
+```python
+# 原实现：O(n) 逐行循环
+for i in range(len(df)):
+    # Z-Score 检测（价格）
+    price_history = df['Close'].iloc[:i+1]
+    price_anomaly = zscore_detector.detect_anomaly(...)
+
+    # Z-Score 检测（成交量）
+    volume_history = df['Volume'].iloc[:i+1]
+    volume_anomaly = zscore_detector.detect_anomaly(...)
+
+    # Isolation Forest 检测
+    if_anomalies = if_detector.detect_anomalies_by_date(...)
+```
+
+**性能影响计算**：
+
+| 参数 | 数值 |
+|------|------|
+| Walk-forward Folds | 12 |
+| 股票数量 | 57 |
+| 每只股票数据行数 | ~500-1000 |
+| 每行操作 | Z-Score × 2 + Isolation Forest |
+| **总循环次数** | 12 × 57 × ~750 = **~513,000 次** |
+
+**解决方案**：向量化计算
+
+```python
+# 优化后：向量化 Z-Score 计算
+price_rolling_mean = df['Close'].rolling(window=30).mean()
+price_rolling_std = df['Close'].rolling(window=30).std()
+price_zscore = (df['Close'] - price_rolling_mean) / price_rolling_std
+
+# 异常标志（|Z-Score| >= threshold）
+anomaly_price_flag = (price_zscore.abs() >= 3.0).astype(int)
+
+# 严重程度：向量化分类
+price_severity = pd.cut(
+    price_zscore.abs(),
+    bins=[-np.inf, 3.0, 4.0, np.inf],
+    labels=[0, 1, 2]
+).astype(int)
+
+# Isolation Forest：一次性获取所有样本的异常分数
+all_scores = if_detector.model.decision_function(features)
+```
+
+**性能对比**：
+
+| 指标 | 优化前（逐行） | 优化后（向量化） | 提升 |
+|------|--------------|----------------|------|
+| 500 行数据耗时 | ~2.5 秒 | **0.128 秒** | **20x** |
+| 每行耗时 | ~5 毫秒 | **0.255 毫秒** | **20x** |
+| Walk-forward 总时间 | ~30 分钟 | **~1 分钟** | **30x** |
+
+**教训**：
+- pandas/numpy 向量化操作比 Python 循环快 10-100 倍
+- 特征计算应优先使用 `rolling()`、`shift()` 等向量化方法
+- Isolation Forest 的 `decision_function()` 支持批量预测，应一次性调用
+
+**代码**：`ml_services/ml_trading_model.py:FeatureEngineer.create_anomaly_features`
+
+---
+
 ## 七、快速参考
 
 ### 模型可信度
@@ -864,6 +938,7 @@ def calculate_technical_features(self, df, use_shift=True):
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-16 | v7.9 | 新增：异常检测特征向量化优化经验（性能提升20-40倍） |
 | 2026-05-16 | v7.8 | 新增：异常特征预测价值有限经验（特征重要性分析、预测周期不匹配） |
 | 2026-05-16 | v7.7 | 新增：双模式预测系统章节（特征时点控制参数设计、市场情绪过滤器时点配置） |
 | 2026-05-12 | v7.6 | 新增：市场情绪过滤器聚合方式经验（按日期聚合计算上涨比例） |

@@ -2400,7 +2400,7 @@ class FeatureEngineer:
 
     def create_anomaly_features(self, df: pd.DataFrame, use_shift: bool = True) -> pd.DataFrame:
         """
-        创建异常检测特征（复用 use_shift 参数）
+        创建异常检测特征（向量化实现，性能优化）
 
         Args:
             df: 包含 OHLCV 数据的 DataFrame
@@ -2426,110 +2426,93 @@ class FeatureEngineer:
             return self._get_default_anomaly_features(df)
 
         shift_val = 1 if use_shift else 0
+        window_size = 30
+        zscore_threshold = 3.0
 
+        # ========== 向量化 Z-Score 计算 ==========
+        # 价格 Z-Score（滚动窗口）
+        price_rolling_mean = df['Close'].rolling(window=window_size, min_periods=window_size).mean()
+        price_rolling_std = df['Close'].rolling(window=window_size, min_periods=window_size).std()
+        price_zscore = (df['Close'] - price_rolling_mean) / price_rolling_std.replace(0, np.nan)
+        price_zscore = price_zscore.fillna(0)
+
+        # 成交量 Z-Score（滚动窗口）
+        volume_zscore = pd.Series(0.0, index=df.index)
+        if 'Volume' in df.columns:
+            volume_rolling_mean = df['Volume'].rolling(window=window_size, min_periods=window_size).mean()
+            volume_rolling_std = df['Volume'].rolling(window=window_size, min_periods=window_size).std()
+            volume_zscore = (df['Volume'] - volume_rolling_mean) / volume_rolling_std.replace(0, np.nan)
+            volume_zscore = volume_zscore.fillna(0)
+
+        # 异常标志（|Z-Score| >= threshold）
+        anomaly_price_flag = (price_zscore.abs() >= zscore_threshold).astype(int)
+        anomaly_volume_flag = (volume_zscore.abs() >= zscore_threshold).astype(int)
+
+        # 严重程度：high=2 (|z|>=4), medium=1 (|z|>=3), low/none=0
+        price_severity = pd.cut(
+            price_zscore.abs(),
+            bins=[-np.inf, 3.0, 4.0, np.inf],
+            labels=[0, 1, 2],
+            right=False
+        ).astype(int)
+
+        volume_severity = pd.cut(
+            volume_zscore.abs(),
+            bins=[-np.inf, 3.0, 4.0, np.inf],
+            labels=[0, 1, 2],
+            right=False
+        ).astype(int)
+
+        # ========== 向量化 Isolation Forest 计算 ==========
+        if_score = pd.Series(0.0, index=df.index)
         try:
-            from anomaly_detector.zscore_detector import ZScoreDetector
             from anomaly_detector.isolation_forest_detector import IsolationForestDetector
             from anomaly_detector.feature_extractor import FeatureExtractor
-        except ImportError:
-            logger.warning("异常检测模块不可用，使用默认值")
-            return self._get_default_anomaly_features(df)
 
-        # 初始化检测器
-        zscore_detector = ZScoreDetector(window_size=30, threshold=3.0)
-        if_detector = IsolationForestDetector(contamination=0.05, random_state=42, anomaly_type='stock')
-        feature_extractor = FeatureExtractor()
-
-        # 计算每日异常检测结果
-        anomaly_price = []
-        anomaly_volume = []
-        anomaly_price_zscore = []
-        anomaly_volume_zscore = []
-        anomaly_if_score = []
-        anomaly_severity = []
-
-        # 训练 Isolation Forest（使用全部数据）
-        try:
+            feature_extractor = FeatureExtractor()
             features, timestamps = feature_extractor.extract_features(df)
+
             if not features.empty:
+                if_detector = IsolationForestDetector(
+                    contamination=0.05, random_state=42, anomaly_type='stock'
+                )
                 if_detector.train(features)
+
+                # 一次性获取所有样本的异常分数
+                all_scores = if_detector.model.decision_function(features)
+
+                # 将分数映射到原始 DataFrame 的索引
+                # features 的行数可能与 df 不同（FeatureExtractor 可能过滤某些行）
+                if len(features) == len(df):
+                    if_score = pd.Series(all_scores, index=df.index)
+                else:
+                    # 按时间戳对齐
+                    for i, ts in enumerate(timestamps):
+                        if ts in df.index:
+                            if_score.loc[ts] = all_scores[i]
         except Exception as e:
-            logger.debug(f"Isolation Forest 训练失败: {e}")
+            logger.debug(f"Isolation Forest 计算失败: {e}")
 
-        for i in range(len(df)):
-            current_price = df['Close'].iloc[i]
-            current_volume = df['Volume'].iloc[i] if 'Volume' in df.columns else 0
-            timestamp = df.index[i]
+        # IF 严重程度：high=2 (score < -0.10), medium=1 (score < -0.02)
+        if_severity = pd.cut(
+            if_score,
+            bins=[-np.inf, -0.10, -0.02, np.inf],
+            labels=[2, 1, 0],
+            right=False
+        ).astype(int)
 
-            # Z-Score 检测（价格）
-            price_anomaly = None
-            try:
-                price_history = df['Close'].iloc[:i+1]
-                if len(price_history) >= 30:
-                    price_anomaly = zscore_detector.detect_anomaly(
-                        'price', current_price, price_history, timestamp
-                    )
-            except Exception:
-                pass
+        # ========== 合并严重程度 ==========
+        # 取三者最大值
+        severity = pd.concat([price_severity, volume_severity, if_severity], axis=1).max(axis=1)
 
-            # Z-Score 检测（成交量）
-            volume_anomaly = None
-            try:
-                if 'Volume' in df.columns and current_volume > 0:
-                    volume_history = df['Volume'].iloc[:i+1]
-                    if len(volume_history) >= 30:
-                        volume_anomaly = zscore_detector.detect_anomaly(
-                            'volume', current_volume, volume_history, timestamp
-                        )
-            except Exception:
-                pass
-
-            # Isolation Forest 检测
-            if_score = 0.0
-            try:
-                if not features.empty and i < len(features):
-                    # 获取当前日期的特征
-                    if_anomalies = if_detector.detect_anomalies_by_date(
-                        features.iloc[:i+1], timestamps[:i+1], timestamp
-                    )
-                    if if_anomalies:
-                        if_score = if_anomalies[0].get('anomaly_score', 0)
-            except Exception:
-                pass
-
-            # 记录结果
-            anomaly_price.append(1 if price_anomaly else 0)
-            anomaly_volume.append(1 if volume_anomaly else 0)
-            anomaly_price_zscore.append(price_anomaly.get('z_score', 0) if price_anomaly else 0)
-            anomaly_volume_zscore.append(volume_anomaly.get('z_score', 0) if volume_anomaly else 0)
-            anomaly_if_score.append(if_score)
-
-            # 严重程度：high=2, medium=1, low/none=0
-            severity = 0
-            if price_anomaly:
-                if price_anomaly['severity'] == 'high':
-                    severity = 2
-                elif price_anomaly['severity'] == 'medium':
-                    severity = max(severity, 1)
-            if volume_anomaly:
-                if volume_anomaly['severity'] == 'high':
-                    severity = 2
-                elif volume_anomaly['severity'] == 'medium':
-                    severity = max(severity, 1)
-            if if_score < -0.10:  # IF 高异常
-                severity = max(severity, 2)
-            elif if_score < -0.02:  # IF 中异常
-                severity = max(severity, 1)
-            anomaly_severity.append(severity)
-
-        # 创建异常特征 DataFrame
+        # ========== 创建异常特征 DataFrame ==========
         anomaly_df = pd.DataFrame({
-            'anomaly_price': anomaly_price,
-            'anomaly_volume': anomaly_volume,
-            'anomaly_price_zscore': anomaly_price_zscore,
-            'anomaly_volume_zscore': anomaly_volume_zscore,
-            'anomaly_if_score': anomaly_if_score,
-            'anomaly_severity': anomaly_severity,
+            'anomaly_price': anomaly_price_flag,
+            'anomaly_volume': anomaly_volume_flag,
+            'anomaly_price_zscore': price_zscore,
+            'anomaly_volume_zscore': volume_zscore,
+            'anomaly_if_score': if_score,
+            'anomaly_severity': severity,
         }, index=df.index)
 
         # 任意异常标志
@@ -2554,7 +2537,7 @@ class FeatureEngineer:
         for col in anomaly_df.columns:
             df[col] = anomaly_df[col]
 
-        logger.debug(f"异常检测特征计算完成（use_shift={use_shift}）")
+        logger.debug(f"异常检测特征计算完成（use_shift={use_shift}，向量化实现）")
         return df
 
     def _get_default_anomaly_features(self, df: pd.DataFrame) -> pd.DataFrame:
