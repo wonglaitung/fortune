@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v7.6 (2026-05-12) | **状态**：当前有效
+> **版本**：v7.7 (2026-05-16) | **状态**：当前有效
 
 ---
 
@@ -713,7 +713,92 @@ daily_up_ratio.columns = ['Date', 'Return_1d']
 
 ---
 
-## 六、快速参考
+## 六、双模式预测系统
+
+### 22. 特征时点控制参数设计 ⭐⭐⭐
+
+**问题**：项目有两个特征生成场景，需要区分特征时点
+
+**场景差异**：
+
+| 场景 | 文件 | 特征时点 | 目的 |
+|------|------|---------|------|
+| 收市后预测 | `comprehensive_analysis.py` | 当日数据 | 最优信息利用 |
+| Walk-forward 验证 | `walk_forward_validation.py` | T-1 数据 | 防止数据泄漏 |
+
+**解决方案**：
+
+```python
+# 添加 use_shift 参数控制特征时点
+def calculate_technical_features(self, df, use_shift=True):
+    """
+    Args:
+        use_shift: 特征时点控制
+            - True: 使用 T-1 数据（Walk-forward 验证）
+            - False: 使用当日数据（收市后预测）
+    """
+    shift_val = 1 if use_shift else 0
+
+    # 所有 .shift(1) 改为 .shift(shift_val)
+    df['RSI'] = calculate_rsi().shift(shift_val)
+    df['MACD'] = calculate_macd().shift(shift_val)
+    # ...
+```
+
+**默认值设计原则**：
+
+| 方法 | 默认值 | 原因 |
+|------|--------|------|
+| `prepare_data(mode='backtest')` | backtest | 训练/验证必须防止泄漏 |
+| `predict(mode='production')` | production | 收市后预测使用当日数据 |
+
+**涉及文件**（共 7 个）：
+
+| 文件 | 修改内容 |
+|------|---------|
+| `ml_services/ml_trading_model.py` | FeatureEngineer 类添加 `use_shift` 参数（约 80 处） |
+| `ml_services/hsi_ml_model.py` | 特征计算添加 `use_shift` 参数 |
+| `data_services/volatility_model.py` | GARCH 特征添加 `use_shift` 参数 |
+| `data_services/regime_detector.py` | HMM 特征添加 `use_shift` 参数 |
+| `data_services/multiscale_features.py` | 多尺度特征添加 `use_shift` 参数 |
+| `data_services/info_decay_analyzer.py` | 信息衰减特征添加 `use_shift` 参数 |
+| `data_services/technical_analysis.py` | 布林带计算添加 `use_shift` 参数 |
+
+**教训**：
+- 默认值设计应优先考虑"安全"场景（防止泄漏）
+- 参数命名应清晰表达意图（`use_shift` 比 `shift` 更明确）
+- 所有数据服务模块必须支持双模式，否则会出现不一致
+
+---
+
+### 23. 市场情绪过滤器时点配置 ⭐⭐
+
+**问题**：市场情绪过滤器在收市后预测和 Walk-forward 验证中使用不同时点
+
+**配置差异**：
+
+| 场景 | `lookback_days` | 说明 |
+|------|----------------|------|
+| 收市后预测 | 0 | 使用当日上涨比例（收市后已知） |
+| Walk-forward 验证 | 1 | 使用滞后1天数据（避免前瞻性偏差） |
+
+**关键发现**：
+- 市场上涨比例有强自相关性（lag=1 自相关系数 0.929）
+- 滞后1天数据能有效识别极端市场环境
+- 收市后预测时，当日上涨比例已确定，可以使用
+
+**代码位置**：
+- `comprehensive_analysis.py`: `MarketSentimentFilter(lookback_days=0)`
+- `ml_services/walk_forward_validation.py`: `MarketSentimentFilter(lookback_days=1)`
+
+**教训**：
+- 时点配置必须与场景匹配
+- 收市后预测可以使用当日数据，因为市场已收盘
+- Walk-forward 验证必须使用滞后数据，模拟真实预测环境
+
+---
+
+## 七、快速参考
 
 ### 模型可信度
 
@@ -745,6 +830,7 @@ daily_up_ratio.columns = ['Date', 'Return_1d']
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-16 | v7.7 | 新增：双模式预测系统章节（特征时点控制参数设计、市场情绪过滤器时点配置） |
 | 2026-05-12 | v7.6 | 新增：市场情绪过滤器聚合方式经验（按日期聚合计算上涨比例） |
 | 2026-05-12 | v7.5 | 新增：CatBoost cat_features 参数与数据类型一致性经验 |
 | 2026-05-12 | v7.4 | 新增：Walk-forward 验证结果展示指标选择经验（单笔最大亏损 vs 最大回撤） |

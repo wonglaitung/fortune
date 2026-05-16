@@ -2,11 +2,53 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-14
+**最后更新**：2026-05-16
 
 ---
 
 ## 最新进展
+
+### 2026-05-16 双模式预测系统实现 ⭐⭐⭐
+
+**更新内容**：实现双模式预测系统，区分收市后预测和 Walk-forward 验证的特征时点
+
+**核心设计**：
+- `use_shift` 参数控制特征时点
+- `mode` 参数区分预测场景
+
+**场景差异**：
+
+| 场景 | 文件 | `use_shift` | `mode` | 特征时点 |
+|------|------|-------------|--------|---------|
+| 收市后预测 | `comprehensive_analysis.py` | False | production | 当日数据 |
+| Walk-forward 验证 | `walk_forward_validation.py` | True | backtest | T-1 数据 |
+
+**涉及文件**（共 7 个）：
+
+| 文件 | 修改内容 |
+|------|---------|
+| `ml_services/ml_trading_model.py` | FeatureEngineer 类添加 `use_shift` 参数（约 80 处） |
+| `ml_services/hsi_ml_model.py` | 特征计算添加 `use_shift` 参数 |
+| `data_services/volatility_model.py` | GARCH 特征添加 `use_shift` 参数 |
+| `data_services/regime_detector.py` | HMM 特征添加 `use_shift` 参数 |
+| `data_services/multiscale_features.py` | 多尺度特征添加 `use_shift` 参数 |
+| `data_services/info_decay_analyzer.py` | 信息衰减特征添加 `use_shift` 参数 |
+| `data_services/technical_analysis.py` | 布林带计算添加 `use_shift` 参数 |
+
+**市场情绪过滤器配置**：
+
+| 场景 | `lookback_days` | 说明 |
+|------|----------------|------|
+| 收市后预测 | 0 | 使用当日上涨比例（收市后已知） |
+| Walk-forward 验证 | 1 | 使用滞后1天数据（避免前瞻性偏差） |
+
+**默认值设计原则**：
+- `prepare_data(mode='backtest')`：默认防止泄漏
+- `predict(mode='production')`：默认使用当日数据
+
+**改动文件**：`lessons.md`、`progress.txt`、`ml_services/ml_trading_model.py`、`ml_services/hsi_ml_model.py`、`data_services/*.py`
+
+---
 
 ### 2026-05-14 Walk-forward 验证修复 + 三周期验证更新 ⭐⭐⭐
 

@@ -122,19 +122,34 @@ class TechnicalAnalyzer:
         
         return df
     
-    def calculate_bollinger_bands(self, df, period=20, std_dev=2):
-        """计算布林带（使用滞后数据避免数据泄漏）"""
+    def calculate_bollinger_bands(self, df, period=20, std_dev=2, use_shift=True):
+        """
+        计算布林带
+
+        参数:
+        - df: DataFrame
+        - period: 周期（默认 20）
+        - std_dev: 标准差倍数（默认 2）
+        - use_shift: 是否使用滞后数据
+            - True: Walk-forward 验证，使用 T-1 数据（默认）
+            - False: 收市后预测，使用当日数据
+
+        返回:
+        - DataFrame: 添加了布林带特征的 DataFrame
+        """
         if df.empty:
             return df
-        
-        # 使用过去N天的数据计算布林带（避免使用当天数据）
-        df['BB_middle'] = df['Close'].rolling(window=period).mean().shift(1)
-        bb_std = df['Close'].rolling(window=period).std().shift(1)
+
+        shift_val = 1 if use_shift else 0
+
+        # 使用过去N天的数据计算布林带
+        df['BB_middle'] = df['Close'].rolling(window=period).mean().shift(shift_val)
+        bb_std = df['Close'].rolling(window=period).std().shift(shift_val)
         df['BB_upper'] = df['BB_middle'] + (bb_std * std_dev)
         df['BB_lower'] = df['BB_middle'] - (bb_std * std_dev)
         df['BB_width'] = (df['BB_upper'] - df['BB_lower']) / (df['BB_middle'] + 1e-10)
         df['BB_position'] = (df['Close'] - df['BB_lower']) / (df['BB_upper'] - df['BB_lower'] + 1e-10)
-        
+
         return df
     
     def calculate_stochastic_oscillator(self, df, k_period=14, d_period=3):

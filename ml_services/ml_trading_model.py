@@ -726,10 +726,21 @@ class FeatureEngineer:
         
         return self._sector_performance_cache[cache_key]
 
-    def calculate_technical_features(self, df):
-        """计算技术指标特征（扩展版：80个指标）"""
+    def calculate_technical_features(self, df, use_shift=True):
+        """
+        计算技术指标特征（扩展版：80个指标）
+
+        Args:
+            df: 股票数据 DataFrame
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
+        """
         if df.empty or len(df) < 200:
             return df
+
+        # 根据 use_shift 参数确定 shift 值
+        shift_val = 1 if use_shift else 0
 
         # ========== 基础移动平均线 ==========
         df = self.tech_analyzer.calculate_moving_averages(df, periods=[5, 10, 20, 50, 100, 200])
@@ -740,23 +751,23 @@ class FeatureEngineer:
         df['RSI_ROC'] = df['RSI'].pct_change()
         # RSI偏离度（震荡市超买超卖识别特征）
         df['RSI_Deviation'] = abs(df['RSI'] - 50)  # RSI偏离50的程度
-        df['RSI_Deviation_MA20'] = df['RSI_Deviation'].rolling(window=20, min_periods=1).mean().shift(1)
-        df['RSI_Deviation_Normalized'] = (df['RSI_Deviation'].shift(1) - df['RSI_Deviation_MA20']) / (df['RSI_Deviation'].rolling(20, min_periods=1).std().shift(1) + 1e-10)
+        df['RSI_Deviation_MA20'] = df['RSI_Deviation'].rolling(window=20, min_periods=1).mean().shift(shift_val)
+        df['RSI_Deviation_Normalized'] = (df['RSI_Deviation'].shift(shift_val) - df['RSI_Deviation_MA20']) / (df['RSI_Deviation'].rolling(20, min_periods=1).std().shift(shift_val) + 1e-10)
         # 价格高低点定义（用于背离检测，使用滞后数据避免数据泄漏）
         lookback = 5
-        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(1)
-        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['Price_Low_5d'] = df['Close'].rolling(window=lookback, min_periods=1).min().shift(shift_val)
+        df['Price_High_5d'] = df['Close'].rolling(window=lookback, min_periods=1).max().shift(shift_val)
         # RSI背离检测（震荡市假突破识别特征，使用滞后数据避免数据泄漏）
         # 看涨背离：价格创新低，但RSI未创新低
-        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['RSI_Low_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).min().shift(shift_val)
         df['RSI_Bullish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_Low_5d']) &  # 昨日价格创5日新低
+            (df['Close'].shift(shift_val) == df['Price_Low_5d']) &  # 昨日价格创5日新低
             (df['RSI'] > df['RSI_Low_5d_History'])  # RSI未创5日新低（对比历史最低点）
         ).astype(int)
         # 看跌背离：价格创新高，但RSI未创新高
-        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['RSI_High_5d_History'] = df['RSI'].rolling(window=lookback, min_periods=1).max().shift(shift_val)
         df['RSI_Bearish_Divergence'] = (
-            (df['Close'].shift(1) == df['Price_High_5d']) &  # 昨日价格创5日新高
+            (df['Close'].shift(shift_val) == df['Price_High_5d']) &  # 昨日价格创5日新高
             (df['RSI'] < df['RSI_High_5d_History'])  # RSI未创5日新高（对比历史最高点）
         ).astype(int)
 
@@ -770,53 +781,53 @@ class FeatureEngineer:
         # 使用5日窗口检测背离
         lookback = 5
         # 看涨背离：价格创新低，但MACD未创新低
-        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(1)
+        df['MACD_Low_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).min().shift(shift_val)
         df['MACD_Bullish_Divergence'] = (
             (df['Close'] == df['Price_Low_5d']) &  # 价格创5日新低
             (df['MACD'] > df['MACD_Low_5d_History'])  # MACD未创5日新低（对比历史最低点）
         ).astype(int)
         # 看跌背离：价格创新高，但MACD未创新高
-        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(1)
+        df['MACD_High_5d_History'] = df['MACD'].rolling(window=lookback, min_periods=1).max().shift(shift_val)
         df['MACD_Bearish_Divergence'] = (
             (df['Close'] == df['Price_High_5d']) &  # 价格创5日新高
             (df['MACD'] < df['MACD_High_5d_History'])  # MACD未创5日新高（对比历史最高点）
         ).astype(int)
 
         # ========== 布林带 ==========
-        df = self.tech_analyzer.calculate_bollinger_bands(df, period=20, std_dev=2)
+        df = self.tech_analyzer.calculate_bollinger_bands(df, period=20, std_dev=2, use_shift=use_shift)
         # 布林带宽度（震荡市识别特征）
         df['BB_Width'] = (df['BB_upper'] - df['BB_lower']) / df['BB_middle']
         # 标准化特征：布林带相对位置（跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['BB_Upper_Ratio'] = df['BB_upper'] / prev_close
         df['BB_Lower_Ratio'] = df['BB_lower'] / prev_close
         df['BB_Middle_Ratio'] = df['BB_middle'] / prev_close
         # 布林带宽度归一化（相对于60日均值，使用滞后数据避免数据泄漏）
-        df['BB_Width_MA60'] = df['BB_Width'].rolling(window=60, min_periods=1).mean().shift(1)
-        df['BB_Width_Normalized'] = (df['BB_Width'].shift(1) - df['BB_Width_MA60']) / (df['BB_Width'].rolling(60, min_periods=1).std().shift(1) + 1e-10)
+        df['BB_Width_MA60'] = df['BB_Width'].rolling(window=60, min_periods=1).mean().shift(shift_val)
+        df['BB_Width_Normalized'] = (df['BB_Width'].shift(shift_val) - df['BB_Width_MA60']) / (df['BB_Width'].rolling(60, min_periods=1).std().shift(shift_val) + 1e-10)
         # 布林带突破（已删除：与 BB_Position 公式相同，保留 BB_Position）
 
         # ========== ATR ==========
         df = self.tech_analyzer.calculate_atr(df, period=14)
         # ATR 比率（ATR相对于10日均线的比率，使用滞后数据避免数据泄漏）
-        df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean().shift(1)
+        df['ATR_MA'] = df['ATR'].rolling(window=10, min_periods=1).mean().shift(shift_val)
         df['ATR_Ratio'] = df['ATR'] / df['ATR_MA']
         # 标准化特征：ATP百分比（ATR/价格，跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['ATR_Pct'] = df['ATR'] / prev_close
 
         # ========== 成交量相关 ==========
-        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean().shift(1)
+        df['Vol_MA20'] = df['Volume'].rolling(window=20, min_periods=1).mean().shift(shift_val)
         df['Vol_Ratio'] = df['Volume'] / df['Vol_MA20']
         # 成交量 z-score（使用滞后数据避免数据泄漏）
-        df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean().shift(1)
-        df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std().shift(1)
+        df['Vol_Mean_20'] = df['Volume'].rolling(20, min_periods=1).mean().shift(shift_val)
+        df['Vol_Std_20'] = df['Volume'].rolling(20, min_periods=1).std().shift(shift_val)
         df['Vol_Z_Score'] = (df['Volume'] - df['Vol_Mean_20']) / df['Vol_Std_20']
         # 成交额
         df['Turnover'] = df['Close'] * df['Volume']
         # 成交额 z-score（使用滞后数据避免数据泄漏）
-        df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean().shift(1)
-        df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std().shift(1)
+        df['Turnover_Mean_20'] = df['Turnover'].rolling(20, min_periods=1).mean().shift(shift_val)
+        df['Turnover_Std_20'] = df['Turnover'].rolling(20, min_periods=1).std().shift(shift_val)
         df['Turnover_Z_Score'] = (df['Turnover'] - df['Turnover_Mean_20']) / df['Turnover_Std_20']
         # 成交额变化率（多周期）
         df['Turnover_Change_1d'] = df['Turnover'].pct_change()
@@ -830,10 +841,10 @@ class FeatureEngineer:
         df['Turnover_Rate_Change_20d'] = df['Turnover_Rate'].pct_change(20)
 
         # ========== VWAP (成交量加权平均价，使用滞后数据避免数据泄漏) ==========
-        df['TP'] = (df['High'].shift(1) + df['Low'].shift(1) + df['Close'].shift(1)) / 3
+        df['TP'] = (df['High'].shift(shift_val) + df['Low'].shift(shift_val) + df['Close'].shift(shift_val)) / 3
         df['VWAP'] = (df['TP'] * df['Volume']).rolling(window=20, min_periods=1).sum() / df['Volume'].rolling(window=20, min_periods=1).sum()
         # VWAP 标准化特征（当前价格相对VWAP位置，跨股票可比）
-        df['VWAP_Ratio'] = df['Close'].shift(1) / df['VWAP']
+        df['VWAP_Ratio'] = df['Close'].shift(shift_val) / df['VWAP']
 
         # ========== OBV (能量潮) ==========
         df['OBV'] = 0.0
@@ -847,16 +858,16 @@ class FeatureEngineer:
 
         # ========== CMF (Chaikin Money Flow) ==========
         # 使用滞后High/Low避免数据泄漏
-        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(1)) - (df['High'].shift(1) - df['Close'])) / (df['High'].shift(1) - df['Low'].shift(1))
+        df['MF_Multiplier'] = ((df['Close'] - df['Low'].shift(shift_val)) - (df['High'].shift(shift_val) - df['Close'])) / (df['High'].shift(shift_val) - df['Low'].shift(shift_val))
         df['MF_Volume'] = df['MF_Multiplier'] * df['Volume']
         df['CMF'] = df['MF_Volume'].rolling(20, min_periods=1).sum() / df['Volume'].rolling(20, min_periods=1).sum()
         # CMF 信号线（使用滞后数据避免数据泄漏）
-        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(1)
+        df['CMF_Signal'] = df['CMF'].rolling(5, min_periods=1).mean().shift(shift_val)
 
         # ========== ADX (平均趋向指数) ==========
         # +DM and -DM (使用滞后数据避免数据泄漏)
-        up_move = df['High'].diff().shift(1)
-        down_move = -df['Low'].diff().shift(1)
+        up_move = df['High'].diff().shift(shift_val)
+        down_move = -df['Low'].diff().shift(shift_val)
         df['+DM'] = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
         df['-DM'] = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
         # +DI and -DI
@@ -870,10 +881,10 @@ class FeatureEngineer:
         K_Period = 14
         D_Period = 3
         # 使用滞后数据避免数据泄漏（昨日的14日高低点）
-        df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min().shift(1)
-        df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max().shift(1)
+        df['Low_Min'] = df['Low'].rolling(window=K_Period, min_periods=1).min().shift(shift_val)
+        df['High_Max'] = df['High'].rolling(window=K_Period, min_periods=1).max().shift(shift_val)
         df['Stoch_K'] = 100 * (df['Close'] - df['Low_Min']) / (df['High_Max'] - df['Low_Min'])
-        df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean().shift(1)
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=D_Period, min_periods=1).mean().shift(shift_val)
 
         # ========== Williams %R ==========
         df['Williams_R'] = (df['High_Max'] - df['Close']) / (df['High_Max'] - df['Low_Min']) * -100
@@ -889,13 +900,13 @@ class FeatureEngineer:
         # 价格百分位（相对于60日窗口，使用滞后数据避免数据泄漏）
         df['Price_Percentile'] = df['Close'].rolling(window=60, min_periods=1).apply(
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100
-        ).shift(1)
+        ).shift(shift_val)
         # 价格通道位置（震荡市识别特征，使用滞后数据避免数据泄漏）
         # 保留中间变量用于计算其他特征，但不作为模型特征
-        df['Channel_High_20d'] = df['High'].rolling(window=20, min_periods=1).max().shift(1)
-        df['Channel_Low_20d'] = df['Low'].rolling(window=20, min_periods=1).min().shift(1)
+        df['Channel_High_20d'] = df['High'].rolling(window=20, min_periods=1).max().shift(shift_val)
+        df['Channel_Low_20d'] = df['Low'].rolling(window=20, min_periods=1).min().shift(shift_val)
         # 标准化特征：价格通道相对位置（跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['Channel_High_Ratio_20d'] = df['Channel_High_20d'] / prev_close
         df['Channel_Low_Ratio_20d'] = df['Channel_Low_20d'] / prev_close
         df['Channel_Width_Ratio_20d'] = (df['Channel_High_20d'] - df['Channel_Low_20d']) / prev_close
@@ -910,7 +921,7 @@ class FeatureEngineer:
             )
         )
         # 布林带位置（使用滞后数据避免数据泄漏）
-        df['BB_Position'] = (df['Close'] - df['BB_lower'].shift(1)) / (df['BB_upper'].shift(1) - df['BB_lower'].shift(1) + 1e-10)
+        df['BB_Position'] = (df['Close'] - df['BB_lower'].shift(shift_val)) / (df['BB_upper'].shift(shift_val) - df['BB_lower'].shift(shift_val) + 1e-10)
 
         # ========== 多周期收益率 ==========
         df['Return_1d'] = df['Close'].pct_change()
@@ -921,26 +932,25 @@ class FeatureEngineer:
         df['Return_60d'] = df['Close'].pct_change(60)
 
         # ========== 价格相对于均线的比率（使用滞后Close避免数据泄漏） ==========
-        df['Price_Ratio_MA5'] = df['Close'].shift(1) / df['MA5']
-        df['Price_Ratio_MA20'] = df['Close'].shift(1) / df['MA20']
-        df['Price_Ratio_MA50'] = df['Close'].shift(1) / df['MA50']
+        df['Price_Ratio_MA5'] = df['Close'].shift(shift_val) / df['MA5']
+        df['Price_Ratio_MA20'] = df['Close'].shift(shift_val) / df['MA20']
+        df['Price_Ratio_MA50'] = df['Close'].shift(shift_val) / df['MA50']
 
         # ========== 高优先级：滚动统计特征 ==========
         # 均线偏离度（标准化，使用滞后数据避免数据泄漏）
-        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std().shift(1)
-        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std().shift(1)
+        df['MA5_Deviation_Std'] = (df['Close'] - df['MA5']) / df['Close'].rolling(5).std().shift(shift_val)
+        df['MA20_Deviation_Std'] = (df['Close'] - df['MA20']) / df['Close'].rolling(20).std().shift(shift_val)
 
         # 滚动波动率（多周期，使用滞后数据避免数据泄漏）
-        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std().shift(1)
-        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(1)
-        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std().shift(1)
+        df['Volatility_5d'] = df['Close'].pct_change().rolling(5).std().shift(shift_val)
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(shift_val)
+        df['Volatility_20d'] = df['Close'].pct_change().rolling(20).std().shift(shift_val)
 
         # ========== GARCH 波动率特征（per-stock，2026-04-27 新增）==========
         # GARCH(1,1) 条件波动率，捕捉波动率聚类和持续性
-        # GARCHVolatilityModel 内置 shift(1) 数据泄漏保护
         try:
             garch_model = GARCHVolatilityModel()
-            df = garch_model.calculate_features(df, return_col='Return_1d')
+            df = garch_model.calculate_features(df, return_col='Return_1d', use_shift=use_shift)
             # 填充开头可能存在的 NaN（shift 导致）
             garch_defaults = {
                 'GARCH_Conditional_Vol': 0.0,
@@ -955,8 +965,8 @@ class FeatureEngineer:
             logger.warning(f"GARCH 特征计算失败，使用默认值: {e}")
 
         # 滚动偏度/峰度（业界常用，使用滞后数据避免数据泄漏）
-        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew().shift(1)
-        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt().shift(1)
+        df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew().shift(shift_val)
+        df['Kurtosis_20d'] = df['Close'].pct_change().rolling(20).kurt().shift(shift_val)
 
         # 动量加速度（业界重要特征）
         df['Momentum_Accel_5d'] = df['Return_5d'] - df['Return_5d'].shift(5)
@@ -965,25 +975,25 @@ class FeatureEngineer:
         # ========== 高优先级：价格形态特征 ==========
         # N日高低点位置（0-1之间，1表示在最高点，使用滞后数据避免泄漏）
         # 已删除 High_Position_20d：与 Price_Channel_Position_20d 公式相同
-        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min().shift(1)) / (df['High'].rolling(60).max().shift(1) - df['Low'].rolling(60).min().shift(1))
+        df['High_Position_60d'] = (df['Close'] - df['Low'].rolling(60).min().shift(shift_val)) / (df['High'].rolling(60).max().shift(shift_val) - df['Low'].rolling(60).min().shift(shift_val))
 
         # 距离近期高点/低点的天数（业界常用，使用滞后数据避免数据泄漏）
-        df['Days_Since_High_20d'] = df['Close'].shift(1).rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
-        df['Days_Since_Low_20d'] = df['Close'].shift(1).rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
+        df['Days_Since_High_20d'] = df['Close'].shift(shift_val).rolling(20).apply(lambda x: 20 - np.argmax(x), raw=False)
+        df['Days_Since_Low_20d'] = df['Close'].shift(shift_val).rolling(20).apply(lambda x: 20 - np.argmin(x), raw=False)
 
         # 日内特征（业界核心信号，使用滞后High/Low避免数据泄漏）
-        df['Intraday_Range'] = (df['High'].shift(1) - df['Low'].shift(1)) / df['Close']
-        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean().shift(1)
-        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean().shift(1)
+        df['Intraday_Range'] = (df['High'].shift(shift_val) - df['Low'].shift(shift_val)) / df['Close']
+        df['Intraday_Range_MA5'] = df['Intraday_Range'].rolling(5).mean().shift(shift_val)
+        df['Intraday_Range_MA20'] = df['Intraday_Range'].rolling(20).mean().shift(shift_val)
 
         # 收盘位置（阳线/阴线强度，0-1之间，使用滞后High/Low避免数据泄漏）
-        df['Close_Position'] = (df['Close'] - df['Low'].shift(1)) / (df['High'].shift(1) - df['Low'].shift(1))
+        df['Close_Position'] = (df['Close'] - df['Low'].shift(shift_val)) / (df['High'].shift(shift_val) - df['Low'].shift(shift_val))
         # 上影线/下影线比例（使用滞后High/Low）
-        df['Upper_Shadow'] = (df['High'].shift(1) - df[['Close', 'Open']].max(axis=1)) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
-        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low'].shift(1)) / (df['High'].shift(1) - df['Low'].shift(1) + 1e-10)
+        df['Upper_Shadow'] = (df['High'].shift(shift_val) - df[['Close', 'Open']].max(axis=1)) / (df['High'].shift(shift_val) - df['Low'].shift(shift_val) + 1e-10)
+        df['Lower_Shadow'] = (df[['Close', 'Open']].min(axis=1) - df['Low'].shift(shift_val)) / (df['High'].shift(shift_val) - df['Low'].shift(shift_val) + 1e-10)
 
         # 开盘缺口
-        df['Gap_Size'] = (df['Open'] - df['Close'].shift(1)) / df['Close'].shift(1)
+        df['Gap_Size'] = (df['Open'] - df['Close'].shift(shift_val)) / df['Close'].shift(shift_val)
         df['Gap_Up'] = (df['Gap_Size'] > 0.01).astype(int)  # 跳空高开 >1%
         df['Gap_Down'] = (df['Gap_Size'] < -0.01).astype(int)  # 跳空低开 >1%
 
@@ -993,13 +1003,13 @@ class FeatureEngineer:
         df['Price_Down_Volume_Up'] = ((df['Return_1d'] < 0) & (df['Turnover'].pct_change() > 0)).astype(int)
 
         # OBV 趋势（使用滞后数据避免数据泄漏）
-        df['OBV_MA5'] = df['OBV'].rolling(5).mean().shift(1)
+        df['OBV_MA5'] = df['OBV'].rolling(5).mean().shift(shift_val)
         df['OBV_Trend'] = (df['OBV'] > df['OBV_MA5']).astype(int)
         # OBV 变化率标准化特征（跨股票可比）
-        df['OBV_Change_5d'] = df['OBV'].pct_change(5).shift(1)
+        df['OBV_Change_5d'] = df['OBV'].pct_change(5).shift(shift_val)
 
         # 成交量波动率（使用滞后数据避免数据泄漏）
-        df['Volume_Volatility'] = df['Turnover'].shift(1).rolling(20).std() / (df['Turnover'].shift(1).rolling(20).mean() + 1e-10)
+        df['Volume_Volatility'] = df['Turnover'].shift(shift_val).rolling(20).std() / (df['Turnover'].shift(shift_val).rolling(20).mean() + 1e-10)
 
         # 成交量比率（多周期）
         df['Volume_Ratio_5d'] = df['Volume'] / df['Volume'].rolling(5).mean()
@@ -1007,10 +1017,10 @@ class FeatureEngineer:
 
         # ========== 长期趋势特征（专门优化一个月模型） ==========
         # 长期均线（120日半年线、250日年线，使用滞后数据避免数据泄漏）
-        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean().shift(1)
-        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean().shift(1)
+        df['MA120'] = df['Close'].rolling(window=120, min_periods=1).mean().shift(shift_val)
+        df['MA250'] = df['Close'].rolling(window=250, min_periods=1).mean().shift(shift_val)
         # 标准化特征：均线相对位置（跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['MA_Ratio_120d'] = df['MA120'] / prev_close
         df['MA_Ratio_250d'] = df['MA250'] / prev_close
 
@@ -1053,12 +1063,12 @@ class FeatureEngineer:
 
         # ========== 新增指标：日内振幅（更精确的计算） ==========
         # 计算日内振幅（相对于开盘价，使用滞后数据避免数据泄漏）
-        df['Intraday_Amplitude'] = ((df['High'].shift(1) - df['Low'].shift(1)) / (df['Open'] + 1e-10)) * 100
+        df['Intraday_Amplitude'] = ((df['High'].shift(shift_val) - df['Low'].shift(shift_val)) / (df['Open'] + 1e-10)) * 100
 
         # ========== 新增指标：多周期波动率 ==========
         # 补充10日和60日波动率（使用滞后数据避免数据泄漏）
-        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(1)
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1)
+        df['Volatility_10d'] = df['Close'].pct_change().rolling(10).std().shift(shift_val)
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(shift_val)
 
         # ========== 新增指标：多周期偏度和峰度 ==========
         # 补充多周期偏度和峰度
@@ -1068,8 +1078,8 @@ class FeatureEngineer:
         df['Kurtosis_10d'] = df['Close'].pct_change().rolling(10).kurt()
 
         # 价格相对长期均线的比率（业界长期趋势指标，使用滞后数据避免数据泄漏）
-        df['Price_Ratio_MA120'] = df['Close'].shift(1) / df['MA120']
-        df['Price_Ratio_MA250'] = df['Close'].shift(1) / df['MA250']
+        df['Price_Ratio_MA120'] = df['Close'].shift(shift_val) / df['MA120']
+        df['Price_Ratio_MA250'] = df['Close'].shift(shift_val) / df['MA250']
 
         # 长期收益率（业界核心长期特征）
         df['Return_120d'] = df['Close'].pct_change(120)
@@ -1098,18 +1108,18 @@ class FeatureEngineer:
         df['MA250_Deviation'] = (df['Close'] - df['MA250']) / df['MA250'] * 100
 
         # 长期波动率（风险指标，使用滞后数据避免数据泄漏）
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1)
-        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std().shift(1)
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(shift_val)
+        df['Volatility_120d'] = df['Close'].pct_change().rolling(120).std().shift(shift_val)
 
         # 长期ATR（长期风险，使用滞后数据避免数据泄漏）
-        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean().shift(1)
-        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean().shift(1)
+        df['ATR_MA60'] = df['ATR'].rolling(60, min_periods=1).mean().shift(shift_val)
+        df['ATR_MA120'] = df['ATR'].rolling(120, min_periods=1).mean().shift(shift_val)
         df['ATR_Ratio_60d'] = df['ATR'] / df['ATR_MA60']
         df['ATR_Ratio_120d'] = df['ATR'] / df['ATR_MA120']
 
         # 长期成交量趋势（使用滞后数据避免数据泄漏）
-        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean().shift(1)
-        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean().shift(1)
+        df['Volume_MA120'] = df['Volume'].rolling(120, min_periods=1).mean().shift(shift_val)
+        df['Volume_MA250'] = df['Volume'].rolling(250, min_periods=1).mean().shift(shift_val)
         df['Volume_Ratio_120d'] = df['Volume'] / df['Volume_MA120']
         df['Volume_Trend_Long'] = np.where(
             df['Volume_MA120'] > df['Volume_MA250'], 1, -1
@@ -1117,10 +1127,10 @@ class FeatureEngineer:
 
         # 长期支撑阻力位（基于120日高低点，使用滞后数据避免数据泄漏）
         # 保留中间变量用于计算盈亏比，但不作为模型特征
-        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min().shift(1)
-        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max().shift(1)
+        df['Support_120d'] = df['Low'].rolling(120, min_periods=1).min().shift(shift_val)
+        df['Resistance_120d'] = df['High'].rolling(120, min_periods=1).max().shift(shift_val)
         # 标准化特征：支撑阻力相对位置（跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['Support_Ratio_120d'] = df['Support_120d'] / prev_close
         df['Resistance_Ratio_120d'] = df['Resistance_120d'] / prev_close
         df['Distance_Support_120d'] = (df['Close'] - df['Support_120d']) / df['Close']
@@ -1131,7 +1141,7 @@ class FeatureEngineer:
 
         # ========== 自适应成交量确认过滤器（实验性方案）==========
         # 7日成交量均值（业界常用周期，使用滞后数据避免数据泄漏）
-        df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean().shift(1)
+        df['Volume_MA7'] = df['Volume'].rolling(window=7, min_periods=1).mean().shift(shift_val)
         # 成交量比率（当前成交量/7日均量）
         df['Volume_Ratio_7d'] = df['Volume'] / df['Volume_MA7']
         
@@ -1159,23 +1169,23 @@ class FeatureEngineer:
 
         # ========== 新增特征：假突破检测（符合Bookmap 3点检查清单）==========
         # 1. 价格突破但成交量萎缩检测
-        df['Price_Breakout'] = (df['Close'] > df['BB_upper'].shift(1)).astype(int)
+        df['Price_Breakout'] = (df['Close'] > df['BB_upper'].shift(shift_val)).astype(int)
         df['False_Breakout_Volume'] = (
             (df['Price_Breakout'] == 1) & (df['Volume_Ratio_7d'] < 0.8)
         ).astype(int)
 
         # 2. MACD顶背离检测（价格新高但MACD未新高）
-        df['Price_Higher_High'] = (df['Close'] > df['Close'].rolling(5, min_periods=1).max().shift(1)).astype(int)
-        df['MACD_Higher_High'] = (df['MACD_Hist'] > df['MACD_Hist'].rolling(5, min_periods=1).max().shift(1)).astype(int)
+        df['Price_Higher_High'] = (df['Close'] > df['Close'].rolling(5, min_periods=1).max().shift(shift_val)).astype(int)
+        df['MACD_Higher_High'] = (df['MACD_Hist'] > df['MACD_Hist'].rolling(5, min_periods=1).max().shift(shift_val)).astype(int)
         df['MACD_Top_Divergence'] = (
             (df['Price_Higher_High'] == 1) & (df['MACD_Higher_High'] == 0) &
             (df['MACD_Hist'] > 0)  # 只在MACD正值区域检测顶背离
         ).astype(int)
 
         # 3. RSI背离检测（价格新高但RSI未新高，或价格新低但RSI未新低）
-        df['RSI_Higher_High'] = (df['RSI'] > df['RSI'].rolling(5, min_periods=1).max().shift(1)).astype(int)
-        df['RSI_Lower_Low'] = (df['RSI'] < df['RSI'].rolling(5, min_periods=1).min().shift(1)).astype(int)
-        df['Price_Lower_Low'] = (df['Close'] < df['Close'].rolling(5, min_periods=1).min().shift(1)).astype(int)
+        df['RSI_Higher_High'] = (df['RSI'] > df['RSI'].rolling(5, min_periods=1).max().shift(shift_val)).astype(int)
+        df['RSI_Lower_Low'] = (df['RSI'] < df['RSI'].rolling(5, min_periods=1).min().shift(shift_val)).astype(int)
+        df['Price_Lower_Low'] = (df['Close'] < df['Close'].rolling(5, min_periods=1).min().shift(shift_val)).astype(int)
 
         df['RSI_Top_Divergence'] = (
             (df['Price_Higher_High'] == 1) & (df['RSI_Higher_High'] == 0) &
@@ -1202,10 +1212,10 @@ class FeatureEngineer:
 
         # ========== 新增特征：增强的MA排列（符合掘金量化多周期共振标准）==========
         # 三周期均线排列（5/20/60日MA，与业界标准一致）
-        df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean().shift(1)
-        df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean().shift(1)
+        df['MA5'] = df['Close'].rolling(window=5, min_periods=1).mean().shift(shift_val)
+        df['MA60'] = df['Close'].rolling(window=60, min_periods=1).mean().shift(shift_val)
         # 标准化特征：均线相对位置（跨股票可比）
-        prev_close = df['Close'].shift(1)
+        prev_close = df['Close'].shift(shift_val)
         df['MA_Ratio_5d'] = df['MA5'] / prev_close
         df['MA_Ratio_60d'] = df['MA60'] / prev_close
 
@@ -1234,9 +1244,9 @@ class FeatureEngineer:
         # ========== 新增特征：市场环境自适应过滤（符合QuantInsti HMM标准）==========
         # 多维度市场状态识别（ADX + 波动率双因子）
         # 计算波动率分位数（基于60日滚动窗口，使用滞后数据避免数据泄漏）
-        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(1) * np.sqrt(252)
-        df['Volatility_30pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.3).shift(1)
-        df['Volatility_70pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.7).shift(1)
+        df['Volatility_60d'] = df['Close'].pct_change().rolling(60).std().shift(shift_val) * np.sqrt(252)
+        df['Volatility_30pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.3).shift(shift_val)
+        df['Volatility_70pct'] = df['Volatility_60d'].rolling(120, min_periods=60).quantile(0.7).shift(shift_val)
 
         # 市场状态分类（ADX + 波动率）
         df['Market_Regime'] = np.where(
@@ -1310,13 +1320,13 @@ class FeatureEngineer:
         df['ATR_Change_10d'] = df['ATR'].pct_change(10)
         
         # 波动率扩张/收缩信号（使用滞后数据避免数据泄漏）
-        df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].shift(1).rolling(20).mean() * 1.2).astype(int)
-        df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].shift(1).rolling(20).mean() * 0.8).astype(int)
-        
+        df['Volatility_Expansion'] = (df['ATR'] > df['ATR'].shift(shift_val).rolling(20).mean() * 1.2).astype(int)
+        df['Volatility_Contraction'] = (df['ATR'] < df['ATR'].shift(shift_val).rolling(20).mean() * 0.8).astype(int)
+
         # 基于ATR的动态风险评分（0-1，越高风险越大，使用滞后数据避免数据泄漏）
         atr_percentile = df['ATR'].rolling(60, min_periods=20).apply(
             lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10), raw=False
-        ).shift(1)
+        ).shift(shift_val)
         df['ATR_Risk_Score'] = atr_percentile.fillna(0.5)
 
         # ========== 新增特征：连续市场状态记忆（解决连续震荡市问题）==========
@@ -1337,7 +1347,7 @@ class FeatureEngineer:
         
         # 近期市场状态连续性评分（简化版：当前状态与前一日一致的比例）
         df['Market_Continuity_Score'] = (
-            df['Market_Regime_Encoded'] == df['Market_Regime_Encoded'].shift(1)
+            df['Market_Regime_Encoded'] == df['Market_Regime_Encoded'].shift(shift_val)
         ).rolling(10).mean()
         
         # 震荡市疲劳指数（在震荡市中停留时间占比，0-1连续值，避免硬阈值）
@@ -1414,19 +1424,28 @@ class FeatureEngineer:
             print(f"获取基本面数据失败 {code}: {e}")
         return {}
 
-    def create_smart_money_features(self, df):
-        """创建资金流向特征"""
+    def create_smart_money_features(self, df, use_shift=True):
+        """创建资金流向特征
+
+        Args:
+            df: 股票数据 DataFrame
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
+        """
         if df.empty or len(df) < 50:
             return df
 
+        shift_val = 1 if use_shift else 0
+
         # 价格相对位置（使用滞后数据避免数据泄漏）
-        df['Price_Pct_20d'] = df['Close'].shift(1).rolling(window=20).apply(lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10))
+        df['Price_Pct_20d'] = df['Close'].shift(shift_val).rolling(window=20).apply(lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10))
 
         # 放量上涨信号
         df['Strong_Volume_Up'] = (df['Close'] > df['Open']) & (df['Vol_Ratio'] > 1.5)
 
         # 缩量回调信号
-        df['Prev_Close'] = df['Close'].shift(1)
+        df['Prev_Close'] = df['Close'].shift(shift_val)
         df['Weak_Volume_Down'] = (df['Close'] < df['Prev_Close']) & (df['Vol_Ratio'] < 1.0) & ((df['Prev_Close'] - df['Close']) / df['Prev_Close'] < 0.02)
 
         # 动量信号（已删除 Momentum_5d 和 Momentum_10d：与 Return_5d 和 Return_10d 公式相同）
@@ -1434,59 +1453,59 @@ class FeatureEngineer:
         # ========== 异常检测特征（使用滞后数据避免数据泄漏）==========
         # 基于两年数据验证（2024-04-01 至 2026-04-01，938个异常）
         # 关键发现：价格异常+当日下跌，5天胜率71.7%，10天胜率72.8%
-        
+
         # 1. 价格异常标记（昨日是否有价格异常）
         # 使用滞后数据计算涨跌幅，Z-Score > 3.0 视为异常
-        df['Price_Return_1d'] = df['Close'].pct_change().shift(1)
+        df['Price_Return_1d'] = df['Close'].pct_change().shift(shift_val)
         df['Price_Return_Mean_30d'] = df['Price_Return_1d'].rolling(30, min_periods=10).mean()
         df['Price_Return_Std_30d'] = df['Price_Return_1d'].rolling(30, min_periods=10).std()
         df['Price_Anomaly_ZScore'] = (
-            (df['Price_Return_1d'] - df['Price_Return_Mean_30d']) / 
+            (df['Price_Return_1d'] - df['Price_Return_Mean_30d']) /
             (df['Price_Return_Std_30d'] + 1e-10)
         )
         df['Price_Anomaly_Flag'] = (df['Price_Anomaly_ZScore'].abs() > 3.0).astype(int)
-        
+
         # 2. 成交量异常标记（昨日是否有成交量异常）
-        df['Volume_Mean_30d'] = df['Volume'].shift(1).rolling(30, min_periods=10).mean()
-        df['Volume_Std_30d'] = df['Volume'].shift(1).rolling(30, min_periods=10).std()
+        df['Volume_Mean_30d'] = df['Volume'].shift(shift_val).rolling(30, min_periods=10).mean()
+        df['Volume_Std_30d'] = df['Volume'].shift(shift_val).rolling(30, min_periods=10).std()
         df['Volume_Anomaly_ZScore'] = (
-            (df['Volume'].shift(1) - df['Volume_Mean_30d']) / 
+            (df['Volume'].shift(shift_val) - df['Volume_Mean_30d']) /
             (df['Volume_Std_30d'] + 1e-10)
         )
         df['Volume_Anomaly_Flag'] = (df['Volume_Anomaly_ZScore'] > 3.0).astype(int)
-        
+
         # 3. 异常严重程度评分（0-1，越高越异常）
         df['Anomaly_Severity_Score'] = np.clip(
-            (df['Price_Anomaly_ZScore'].abs() + df['Volume_Anomaly_ZScore'].abs()) / 10.0, 
+            (df['Price_Anomaly_ZScore'].abs() + df['Volume_Anomaly_ZScore'].abs()) / 10.0,
             0, 1
         )
-        
+
         # 4. 连续异常天数（连续出现异常的天数，使用滞后数据）
         df['Consecutive_Anomaly_Days'] = (
             df['Price_Anomaly_Flag'].rolling(5, min_periods=1).sum()
         ).astype(int)
-        
+
         # 5. 抄底信号（价格异常+当日下跌）- 胜率71.7%
         # 基于两年数据验证：价格异常+当日下跌是均值回归信号
         df['Anomaly_Buy_Signal'] = (
-            (df['Price_Anomaly_Flag'] == 1) & 
+            (df['Price_Anomaly_Flag'] == 1) &
             (df['Price_Return_1d'] < -0.03)  # 昨日下跌超过3%
         ).astype(int)
-        
+
         # 6. 观望信号（价格异常+当日上涨）- 胜率53.7%
         df['Anomaly_Wait_Signal'] = (
-            (df['Price_Anomaly_Flag'] == 1) & 
+            (df['Price_Anomaly_Flag'] == 1) &
             (df['Price_Return_1d'] > 0.03)  # 昨日上涨超过3%
         ).astype(int)
-        
+
         # 7. 成交量异常谨慎信号（预测能力较弱）
         df['Volume_Anomaly_Caution'] = (
-            (df['Volume_Anomaly_Flag'] == 1) & 
+            (df['Volume_Anomaly_Flag'] == 1) &
             (df['Price_Anomaly_Flag'] == 0)  # 仅成交量异常，价格正常
         ).astype(int)
-        
+
         # 8. 波动率异常标记（昨日波动率是否异常）
-        df['Volatility_30d'] = df['Close'].pct_change().shift(1).rolling(30, min_periods=10).std() * np.sqrt(252)
+        df['Volatility_30d'] = df['Close'].pct_change().shift(shift_val).rolling(30, min_periods=10).std() * np.sqrt(252)
         df['Volatility_Mean_60d'] = df['Volatility_30d'].rolling(60, min_periods=30).mean()
         df['Volatility_Anomaly_Flag'] = (
             df['Volatility_30d'] > df['Volatility_Mean_60d'] * 1.5
@@ -1702,16 +1721,21 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_market_environment_features(self, stock_df, hsi_df, us_market_df=None):
+    def create_market_environment_features(self, stock_df, hsi_df, us_market_df=None, use_shift=True):
         """创建市场环境特征（包含港股和美股）
 
         Args:
             stock_df: 股票数据
             hsi_df: 恒生指数数据
             us_market_df: 美股市场数据（可选）
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
         """
         if stock_df.empty or hsi_df.empty:
             return stock_df
+
+        shift_val = 1 if use_shift else 0
 
         # 检查是否已经存在 HSI_Return_5d 列（由 calculate_relative_strength 创建）
         if 'HSI_Return_5d' not in stock_df.columns:
@@ -1737,10 +1761,10 @@ class FeatureEngineer:
             # 只合并存在的特征
             existing_us_features = [f for f in us_features if f in us_market_df.columns]
             if existing_us_features:
-                # 对美股特征进行 shift(1)，确保不包含未来信息
+                # 对美股特征进行 shift，确保不包含未来信息
                 # 因为美股数据比港股晚15小时开盘，所以在预测港股 T+1 日涨跌时，
                 # 只能使用 T 日及之前的美股数据
-                us_market_df_shifted = us_market_df[existing_us_features].shift(1)
+                us_market_df_shifted = us_market_df[existing_us_features].shift(shift_val)
 
                 stock_df = stock_df.merge(
                     us_market_df_shifted,
@@ -2475,17 +2499,22 @@ class FeatureEngineer:
             print(f"  ⚠️ 获取股息日历失败 {code}: {e}")
             return None
 
-    def _add_dividend_features(self, df, dividend_info):
+    def _add_dividend_features(self, df, dividend_info, use_shift=True):
         """
         添加除净日和分红特征（3个）
 
         参数:
             df: 股票数据DataFrame
             dividend_info: 股息信息DataFrame
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
 
         返回:
             df: 添加除净日特征的DataFrame
         """
+        shift_val = 1 if use_shift else 0
+
         # 确保日期索引是datetime类型
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
@@ -2515,9 +2544,9 @@ class FeatureEngineer:
         )
 
         # 使用滞后数据避免数据泄漏
-        df['Ex_Dividend_In_7d'] = df['Ex_Dividend_In_7d'].shift(1)
-        df['Ex_Dividend_In_30d'] = df['Ex_Dividend_In_30d'].shift(1)
-        df['Dividend_Frequency_12m'] = df['Dividend_Frequency_12m'].shift(1)
+        df['Ex_Dividend_In_7d'] = df['Ex_Dividend_In_7d'].shift(shift_val)
+        df['Ex_Dividend_In_30d'] = df['Ex_Dividend_In_30d'].shift(shift_val)
+        df['Dividend_Frequency_12m'] = df['Dividend_Frequency_12m'].shift(shift_val)
 
         return df
 
@@ -2552,17 +2581,22 @@ class FeatureEngineer:
             print(f"  ⚠️ 获取财报公告日失败 {code}: {e}")
             return None
 
-    def _add_earnings_date_features(self, df, earnings_calendar):
+    def _add_earnings_date_features(self, df, earnings_calendar, use_shift=True):
         """
         添加财报公告日特征（3个）
 
         参数:
             df: 股票数据DataFrame
             earnings_calendar: 财报日历字典
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
 
         返回:
             df: 添加财报公告日特征的DataFrame
         """
+        shift_val = 1 if use_shift else 0
+
         # 确保日期索引是datetime类型
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
@@ -2611,9 +2645,9 @@ class FeatureEngineer:
         )
 
         # 使用滞后数据避免数据泄漏
-        df['Earnings_Announcement_In_7d'] = df['Earnings_Announcement_In_7d'].shift(1)
-        df['Earnings_Announcement_In_30d'] = df['Earnings_Announcement_In_30d'].shift(1)
-        df['Days_Since_Last_Earnings'] = df['Days_Since_Last_Earnings'].shift(1)
+        df['Earnings_Announcement_In_7d'] = df['Earnings_Announcement_In_7d'].shift(shift_val)
+        df['Earnings_Announcement_In_30d'] = df['Earnings_Announcement_In_30d'].shift(shift_val)
+        df['Days_Since_Last_Earnings'] = df['Days_Since_Last_Earnings'].shift(shift_val)
 
         return df
 
@@ -2648,17 +2682,22 @@ class FeatureEngineer:
             print(f"  ⚠️ 获取财报超预期数据失败 {code}: {e}")
             return None
 
-    def _add_earnings_surprise_features(self, df, earnings_surprise):
+    def _add_earnings_surprise_features(self, df, earnings_surprise, use_shift=True):
         """
         添加财报超预期特征（3个）
 
         参数:
             df: 股票数据DataFrame
             earnings_surprise: 财报超预期DataFrame（包含Surprise(%)列）
+            use_shift: 是否使用滞后数据
+                - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
+                - False: 收市后预测，使用当日数据
 
         返回:
             df: 添加财报超预期特征的DataFrame
         """
+        shift_val = 1 if use_shift else 0
+
         # 确保日期索引是datetime类型
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
@@ -2716,9 +2755,9 @@ class FeatureEngineer:
                             df.loc[date, 'Earnings_Surprise_Trend'] = np.clip(trend / 10.0, -1.0, 1.0)
 
         # 使用滞后数据避免数据泄漏
-        df['Earnings_Surprise_Score'] = df['Earnings_Surprise_Score'].shift(1)
-        df['Earnings_Surprise_Avg_3'] = df['Earnings_Surprise_Avg_3'].shift(1)
-        df['Earnings_Surprise_Trend'] = df['Earnings_Surprise_Trend'].shift(1)
+        df['Earnings_Surprise_Score'] = df['Earnings_Surprise_Score'].shift(shift_val)
+        df['Earnings_Surprise_Avg_3'] = df['Earnings_Surprise_Avg_3'].shift(shift_val)
+        df['Earnings_Surprise_Trend'] = df['Earnings_Surprise_Trend'].shift(shift_val)
 
         return df
 
@@ -3315,7 +3354,7 @@ class LightGBMModel(BaseTradingModel):
             try:
                 print("  计算 HSI 市场状态特征...")
                 regime_detector = RegimeDetector()
-                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                 rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                 hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
                 print("  ✅ HSI 市场状态特征计算完成")
@@ -3993,7 +4032,7 @@ class GBDTModel(BaseTradingModel):
             try:
                 print("  计算 HSI 市场状态特征...")
                 regime_detector = RegimeDetector()
-                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                 rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                 hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
                 print("  ✅ HSI 市场状态特征计算完成")
@@ -4682,8 +4721,8 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None):
-        """准备训练数据
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None, mode='backtest'):
+        """准备训练/验证数据
 
         Args:
             codes: 股票代码列表
@@ -4694,9 +4733,20 @@ class CatBoostModel(BaseTradingModel):
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
             use_feature_cache: 是否使用特征缓存（默认True）
             community_ids: 预定义的社区 ID 列表（用于测试数据，确保与训练一致）
+            mode: 数据模式
+                - 'backtest': Walk-forward 验证（默认），使用 T-1 数据
+                - 'production': 收市后预测，使用当日数据
+
+        Note:
+            默认 mode='backtest' 是因为 prepare_data 主要用于训练和 Walk-forward 验证，
+            这些场景需要使用 T-1 数据避免数据泄漏。
+            收市后预测应使用 predict() 方法（默认 mode='production'）。
         """
         self.horizon = horizon
         self.min_return_threshold = min_return_threshold
+
+        # 根据 mode 确定 use_shift
+        use_shift = (mode == 'backtest')
         all_data = []
 
         # 获取美股市场数据（只获取一次）
@@ -4720,7 +4770,7 @@ class CatBoostModel(BaseTradingModel):
             try:
                 print("  计算 HSI 市场状态特征...")
                 regime_detector = RegimeDetector()
-                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                 rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                 hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
                 print("  ✅ HSI 市场状态特征计算完成")
@@ -4785,7 +4835,7 @@ class CatBoostModel(BaseTradingModel):
                     cache_misses += 1
 
                     # 计算技术指标（80个指标）
-                    stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+                    stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift)
 
                     # 计算多周期指标
                     stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -4799,11 +4849,11 @@ class CatBoostModel(BaseTradingModel):
                         stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df)
 
                     # 创建资金流向特征
-                    stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+                    stock_df = self.feature_engineer.create_smart_money_features(stock_df, use_shift=use_shift)
 
                     # 创建市场环境特征（包含港股和美股）
                     if hsi_df is not None:
-                        stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+                        stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df, use_shift=use_shift)
 
                     # 添加基本面特征
                     fundamental_features = self.feature_engineer.create_fundamental_features(code)
@@ -5317,7 +5367,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feat_imp
 
-    def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True):
+    def predict(self, code, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
         """预测单只股票
 
         Args:
@@ -5325,9 +5375,20 @@ class CatBoostModel(BaseTradingModel):
             predict_date: 预测日期 (YYYY-MM-DD)，基于该日期的数据预测下一个交易日，默认使用最新交易日
             horizon: 预测周期（1=次日，5=一周，20=一个月），默认使用训练时的周期
             use_feature_cache: 是否使用特征缓存（默认True）
+            mode: 预测模式
+                - 'production': 收市后预测（默认），使用当日数据
+                - 'backtest': Walk-forward 验证，使用 T-1 数据
+
+        Note:
+            默认 mode='production' 是因为 predict 主要用于收市后预测场景，
+            此时当日收盘价已知，可以使用当日数据。
+            Walk-forward 验证应使用 prepare_data() 方法（默认 mode='backtest'）。
         """
         if horizon is None:
             horizon = self.horizon
+
+        # 根据 mode 确定 use_shift
+        use_shift = (mode == 'backtest')
 
         try:
             # 移除代码中的.HK后缀
@@ -5445,7 +5506,7 @@ class CatBoostModel(BaseTradingModel):
                         us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 # 计算技术指标（80个指标）
-                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift)
 
                 # 计算多周期指标
                 stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -5458,7 +5519,7 @@ class CatBoostModel(BaseTradingModel):
                     hsi_regime_df_predict = None
                     try:
                         regime_detector = RegimeDetector()
-                        hsi_with_regime = regime_detector.calculate_features(hsi_df.copy())
+                        hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                         rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                         hsi_regime_df_predict = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
                     except Exception as e:
@@ -5467,11 +5528,11 @@ class CatBoostModel(BaseTradingModel):
                         stock_df = self.feature_engineer.calculate_hsi_regime_features(stock_df, hsi_regime_df_predict)
 
                 # 创建资金流向特征
-                stock_df = self.feature_engineer.create_smart_money_features(stock_df)
+                stock_df = self.feature_engineer.create_smart_money_features(stock_df, use_shift=use_shift)
 
                 # 创建市场环境特征（包含港股和美股）
                 if hsi_df is not None:
-                    stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df)
+                    stock_df = self.feature_engineer.create_market_environment_features(stock_df, hsi_df, us_market_df, use_shift=use_shift)
 
                 # 添加基本面特征
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
