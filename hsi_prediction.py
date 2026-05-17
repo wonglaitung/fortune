@@ -1997,11 +1997,37 @@ class HSI_Predictor:
         return explanations.get(feature_name, '暂无详细说明')
 
     def send_email_notification(self, score, trend, feature_details, multi_horizon_results=None):
-        """发送邮件通知"""
+        """发送邮件通知（使用统一消息服务模块）"""
         try:
             # 生成邮件内容
             content, trading_action = self.generate_email_content(score, trend, feature_details, multi_horizon_results)
 
+            # 构建邮件标题，包含交易建议
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            action_str = ""
+            if trading_action:
+                action_str = f" 【{trading_action['action']}】"
+            subject = f"恒生指数涨跌预测 {current_date} - {trend}{action_str}"
+
+            # 使用统一消息服务模块
+            try:
+                from message_services import EmailSender
+                sender = EmailSender()
+                # content 是 HTML 格式
+                return sender.send_with_retry(subject, "", content)
+            except ImportError:
+                print("⚠️ 消息服务模块未安装，使用内置邮件发送")
+                return self._send_email_notification_legacy(subject, content)
+
+        except Exception as e:
+            print(f"❌ 发送邮件失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _send_email_notification_legacy(self, subject, content):
+        """发送邮件通知（备用实现）"""
+        try:
             # 邮件配置
             sender_email = os.environ.get("EMAIL_SENDER")
             email_password = os.environ.get("EMAIL_PASSWORD")
@@ -2034,13 +2060,6 @@ class HSI_Predictor:
                 use_ssl = False
 
             # 创建邮件对象
-            current_date = datetime.now().strftime('%Y-%m-%d')
-            # 构建邮件标题，包含交易建议
-            action_str = ""
-            if trading_action:
-                action_str = f" 【{trading_action['action']}】"
-            subject = f"恒生指数涨跌预测 {current_date} - {trend}{action_str}"
-
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
             msg['From'] = sender_email
