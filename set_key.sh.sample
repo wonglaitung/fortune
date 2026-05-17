@@ -16,5 +16,11 @@ export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
 # Get webhook URL from: 企业微信群设置 -> 群机器人 -> 添加机器人
 export WECHAT_WORK_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY
 
+# WxPusher Configuration (Optional, alternative to WeChat Work)
+# Create app at https://wxpusher.zjiecode.com/ and get appToken
+# Scan QR code to follow app and get UID
+export WXPUSHER_TOKEN=AT_xxx
+export WXPUSHER_UIDS=UID_xxx,UID_yyy
+
 echo "Configuration loaded successfully"
 echo "QWEN_API_KEY: $QWEN_API_KEY"
