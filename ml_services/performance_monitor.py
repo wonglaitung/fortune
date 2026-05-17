@@ -695,7 +695,73 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 def send_email_report(report: str, subject: str) -> bool:
     """
-    发送报告邮件
+    发送报告邮件（使用统一消息服务模块）
+
+    参数:
+    - report: Markdown 格式的报告内容
+    - subject: 邮件主题
+
+    返回:
+    - 是否发送成功
+    """
+    try:
+        from message_services import EmailSender
+        import markdown
+        import re
+
+        # 转换 Markdown 为 HTML
+        html_content = markdown.markdown(report, extensions=['tables'])
+
+        # 为准确率添加颜色样式：三色系统
+        def colorize_accuracy(percentage_str):
+            """为准确率百分比添加颜色"""
+            try:
+                percentage = float(percentage_str)
+                if percentage >= 60:
+                    return f'<span style="color: #16a34a; font-weight: bold;">{percentage_str}%</span>'  # 亮绿色
+                elif percentage >= 50:
+                    return f'<span style="color: #ea580c; font-weight: bold;">{percentage_str}%</span>'  # 亮橙色
+                else:
+                    return f'<span style="color: #dc2626; font-weight: bold;">{percentage_str}%</span>'  # 亮红色
+            except ValueError:
+                return f'{percentage_str}%'
+
+        # 只匹配加粗的准确率百分比
+        html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
+
+        # 添加样式
+        html_content = f"""
+        <html>
+        <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; }}
+            table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #4CAF50; color: white; }}
+            tr:nth-child(even) {{ background-color: #f2f2f2; }}
+            h1, h2 {{ color: #333; }}
+            .positive {{ color: #28a745; font-weight: bold; }}
+            .negative {{ color: #dc3545; font-weight: bold; }}
+        </style>
+        </head>
+        <body>
+        {html_content}
+        </body>
+        </html>
+        """
+
+        # 使用统一消息服务模块
+        sender = EmailSender()
+        return sender.send_with_retry(subject, report, html_content)
+
+    except ImportError:
+        print("⚠️ 消息服务模块未安装，使用内置邮件发送")
+        return _send_email_report_legacy(report, subject)
+
+
+def _send_email_report_legacy(report: str, subject: str) -> bool:
+    """
+    发送报告邮件（备用实现）
 
     参数:
     - report: Markdown 格式的报告内容
@@ -737,7 +803,6 @@ def send_email_report(report: str, subject: str) -> bool:
             return f'{percentage_str}%'
 
     # 只匹配加粗的准确率百分比（<strong>XX.XX%</strong> 或 <b>XX.XX%</b>）
-    # Markdown加粗 **XX%** 转换为HTML后变成 <strong>XX%</strong> 或 <b>XX%</b>
     html_content = re.sub(r'<(strong|b)>(\d+\.\d{2})%</(strong|b)>', lambda m: colorize_accuracy(m.group(2)), html_content)
 
     # 添加样式
@@ -760,16 +825,16 @@ def send_email_report(report: str, subject: str) -> bool:
     </body>
     </html>
     """
-    
+
     # 创建邮件
     msg = MIMEMultipart("alternative")
     msg['From'] = smtp_user
     msg['To'] = recipient
     msg['Subject'] = subject
-    
+
     msg.attach(MIMEText(report, "plain"))
     msg.attach(MIMEText(html_content, "html"))
-    
+
     # 发送邮件
     try:
         if "163.com" in smtp_server:
@@ -777,11 +842,11 @@ def send_email_report(report: str, subject: str) -> bool:
         else:
             server = smtplib.SMTP(smtp_server, 587, timeout=30)
             server.starttls()
-        
+
         server.login(smtp_user, smtp_pass)
         server.sendmail(smtp_user, recipient.split(","), msg.as_string())
         server.quit()
-        
+
         print(f"✅ 报告邮件发送成功: {subject}")
         return True
     except Exception as e:

@@ -2837,8 +2837,26 @@ def generate_technical_indicators_table(stock_codes):
 
 def send_email(subject, content, html_content=None):
     """
-    发送邮件通知
-    
+    发送邮件通知（使用统一消息服务模块）
+
+    参数:
+    - subject: 邮件主题
+    - content: 邮件文本内容
+    - html_content: 邮件HTML内容（可选）
+    """
+    try:
+        from message_services import EmailSender
+        sender = EmailSender()
+        return sender.send_with_retry(subject, content, html_content)
+    except ImportError:
+        print("⚠️ 消息服务模块未安装，使用内置邮件发送")
+        return _send_email_legacy(subject, content, html_content)
+
+
+def _send_email_legacy(subject, content, html_content=None):
+    """
+    发送邮件通知（备用实现）
+
     参数:
     - subject: 邮件主题
     - content: 邮件文本内容
@@ -2848,22 +2866,22 @@ def send_email(subject, content, html_content=None):
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        
+
         # 从环境变量获取邮件配置
         sender_email = os.environ.get("EMAIL_SENDER")
         email_password = os.environ.get("EMAIL_PASSWORD")
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.163.com")
         recipient_email = os.environ.get("RECIPIENT_EMAIL", "wonglaitung@google.com")
-        
+
         if ',' in recipient_email:
             recipients = [recipient.strip() for recipient in recipient_email.split(',')]
         else:
             recipients = [recipient_email]
-        
+
         if not sender_email or not email_password:
             print("❌ 邮件配置不完整，跳过邮件发送")
             return False
-        
+
         # 根据SMTP服务器类型选择端口和SSL
         if "163.com" in smtp_server:
             smtp_port = 465
@@ -2874,22 +2892,22 @@ def send_email(subject, content, html_content=None):
         else:
             smtp_port = 587
             use_ssl = False
-        
+
         # 创建邮件对象
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = sender_email
         msg['To'] = ', '.join(recipients)
-        
+
         # 添加文本版本
         text_part = MIMEText(content, 'plain', 'utf-8')
         msg.attach(text_part)
-        
+
         # 如果有HTML版本，添加HTML版本
         if html_content:
             html_part = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(html_part)
-        
+
         # 重试机制（3次）
         for attempt in range(3):
             try:
@@ -2904,7 +2922,7 @@ def send_email(subject, content, html_content=None):
                     server.login(sender_email, email_password)
                     server.sendmail(sender_email, recipients, msg.as_string())
                     server.quit()
-                
+
                 print(f"✅ 邮件已发送到: {', '.join(recipients)}")
                 return True
             except Exception as e:
@@ -2912,10 +2930,10 @@ def send_email(subject, content, html_content=None):
                 if attempt < 2:
                     import time
                     time.sleep(5)
-        
+
         print("❌ 3次尝试后仍无法发送邮件")
         return False
-        
+
     except Exception as e:
         print(f"❌ 发送邮件失败: {e}")
         import traceback
