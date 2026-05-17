@@ -12,5 +12,9 @@ export QWEN_API_KEY=sk-ccxxx
 export QWEN_CHAT_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
 
+# WeChat Work Bot Configuration (Optional)
+# Get webhook URL from: 企业微信群设置 -> 群机器人 -> 添加机器人
+export WECHAT_WORK_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY
+
 echo "Configuration loaded successfully"
 echo "QWEN_API_KEY: $QWEN_API_KEY"
