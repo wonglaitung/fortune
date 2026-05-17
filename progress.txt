@@ -2,11 +2,50 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-17
+**最后更新**：2026-05-18
 
 ---
 
 ## 最新进展
+
+### 2026-05-18 邮件通知抽取为公共组件 ⭐⭐⭐
+
+**目的**：统一管理邮件、企微机器人、WxPusher 等通知渠道
+
+**新增模块**：
+
+| 文件 | 功能 |
+|------|------|
+| `message_services/email_sender.py` | 统一邮件发送器（重试机制、SSL/TLS 自动检测） |
+| `message_services/message_formatter.py` | 消息格式化工具（Markdown 转 HTML） |
+| `message_services/notifier.py` | 统一通知接口（邮件+微信） |
+
+**移动模块**：
+- `data_services/wechat_work_bot.py` → `message_services/`
+- `data_services/wxpusher_bot.py` → `message_services/`
+
+**更新调用方**：
+- `comprehensive_analysis.py` - 使用 `EmailSender`
+- `hsi_prediction.py` - 使用 `EmailSender`
+- `ml_services/performance_monitor.py` - 使用 `EmailSender`
+
+**使用方法**：
+```python
+# 发送邮件
+from message_services import send_email
+send_email("主题", "内容", html_content="<html>...</html>")
+
+# 发送到所有渠道
+from message_services import notify_all
+notify_all("标题", "内容")
+```
+
+**预期收益**：
+- 代码减少约 500+ 行重复代码
+- SMTP 配置修改只需改一处
+- 新增通知渠道只需修改 `notifier.py`
+
+---
 
 ### 2026-05-17 模型验证流程完成 ⭐⭐⭐
 

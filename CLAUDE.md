@@ -83,7 +83,7 @@ rm -rf data/stock_cache/*.pkl
     ↓              ↓              ↓            ↓          ↓
 腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
 yfinance     基本面数据      综合分析     Walk-forward  JSON文件
-AKShare      南向资金        主力追踪     性能监控
+AKShare      南向资金        主力追踪     性能监控     微信通知
 ```
 
 **关键依赖关系**：
@@ -91,12 +91,19 @@ AKShare      南向资金        主力追踪     性能监控
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（31只）
+- `message_services/` 统一管理邮件和微信通知
 
 **特征模块**（动态构建，自动同步）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
 - `data_services/volatility_model.py` - GARCH 波动率（4个特征）
 - `data_services/regime_detector.py` - HMM 市场状态检测（10个特征）
 - `ml_services/stock_network_analysis.py` - 股票网络分析（社区ID、中心性等）
+
+**消息服务模块**：
+- `message_services/email_sender.py` - 统一邮件发送
+- `message_services/wechat_work_bot.py` - 企业微信机器人
+- `message_services/wxpusher_bot.py` - WxPusher 推送
+- `message_services/notifier.py` - 统一通知接口
 
 **数据存储**：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
@@ -281,6 +288,9 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | `EMAIL_PASSWORD` | 邮箱应用密码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱列表 |
 | `QWEN_API_KEY` | 通义千问 API 密钥 |
+| `WECHAT_WORK_WEBHOOK` | 企业微信机器人 Webhook（可选） |
+| `WXPUSHER_TOKEN` | WxPusher Token（可选） |
+| `WXPUSHER_UIDS` | WxPusher 用户 UID（可选） |
 
 ### 主要依赖
 

@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v7.9 (2026-05-16) | **状态**：当前有效
+> **版本**：v8.1 (2026-05-18) | **状态**：当前有效
 
 ---
 
@@ -186,7 +186,55 @@ df = df.dropna(subset=[c for c in critical_cols if c in df.columns])
 
 ## 二、验证方法
 
-### 6. Walk-forward 收益率计算 ⭐⭐⭐
+### 6. 特征缓存数据泄漏 ⭐⭐⭐⭐
+
+**问题**：特征缓存键未区分 backtest 和 production 模式，导致 Walk-forward 验证准确率异常高（68-71%）
+
+**现象**：
+- Walk-forward 验证准确率超过 65% 数据泄漏阈值
+- Fold 1-4 准确率 68-71%，明显高于正常范围（50-55%）
+
+**根本原因**：
+- `_get_feature_cache_key()` 未包含 `use_shift` 参数
+- backtest 模式（`use_shift=True`）和 production 模式（`use_shift=False`）使用相同缓存键
+- production 模式缓存包含当日数据，被 backtest 模式误用
+
+**解决方案**：
+```python
+# 缓存键添加 use_shift 参数
+def _get_feature_cache_key(stock_code, last_date, use_shift=True):
+    shift_suffix = "shift" if use_shift else "noshift"
+    return f"{stock_code}_{last_date}_{shift_suffix}"
+
+# 保存缓存时记录 use_shift
+def _save_feature_cache(cache_file_path, feature_data, use_shift=True):
+    pickle.dump({
+        'data': feature_data,
+        'timestamp': datetime.now().isoformat(),
+        'use_shift': use_shift
+    }, f)
+
+# 加载缓存时验证 use_shift
+def _load_feature_cache(cache_file_path, use_shift=None):
+    if use_shift is not None and 'use_shift' in cache:
+        if cached_use_shift != use_shift:
+            logger.warning(f"缓存 use_shift={cached_use_shift} 与期望值 {use_shift} 不匹配")
+            return None
+    return cache['data']
+```
+
+**验证结果**：
+- 修复后准确率从 68-71% 降至 54.44%，符合正常范围
+- 所有指标恢复正常：夏普比率 6.05，最大回撤 -0.95%
+
+**教训**：
+- 特征缓存必须区分不同预测模式
+- 准确率 >65%（个股）或 >80%（恒指）是数据泄漏信号
+- 发现异常高准确率时，立即排查特征缓存和数据流
+
+---
+
+### 7. Walk-forward 收益率计算 ⭐⭐⭐
 
 **问题**：数据过滤后计算的收益率不完整
 
@@ -401,7 +449,56 @@ df['Feature'] = df['Close'].pct_change().shift(1)
 
 ---
 
-## 五、网络可视化
+## 五、消息服务模块
+
+### 1. 邮件发送逻辑统一 ⭐⭐⭐
+
+**问题**：10+ 个文件各自实现邮件发送，代码重复、难以维护
+
+**现象**：
+- 每个文件独立实现 SMTP 连接、认证、发送
+- 配置修改需要改多处
+- 新增通知渠道（如微信）需要改多个文件
+
+**解决方案**：
+```python
+# 创建统一消息服务模块
+message_services/
+├── email_sender.py      # 统一邮件发送器
+├── wechat_work_bot.py   # 企微机器人
+├── wxpusher_bot.py      # WxPusher 推送
+├── message_formatter.py # 消息格式化
+└── notifier.py          # 统一通知接口
+
+# 使用
+from message_services import send_email, notify_all
+send_email("主题", "内容", html_content="<html>...</html>")
+notify_all("标题", "内容")  # 发送到所有已配置渠道
+```
+
+**教训**：
+- 重复代码超过 3 处就应抽取为公共模块
+- 通知渠道统一管理，新增渠道只需修改一处
+- 保留备用实现，确保向后兼容
+
+---
+
+### 2. 企业微信机器人 vs WxPusher ⭐⭐
+
+**对比**：
+
+| 特性 | 企业微信机器人 | WxPusher |
+|------|---------------|----------|
+| 接收方式 | 企业微信群 | 个人微信服务号 |
+| 免费额度 | 无限制 | 200 条/天 |
+| 配置复杂度 | 需要企业微信 | 扫码关注即可 |
+| 适用场景 | 团队通知 | 个人推送 |
+
+**教训**：团队使用选企微机器人，个人使用选 WxPusher
+
+---
+
+## 六、网络可视化
 
 ### 1. 网络图边过滤 ⭐⭐
 
