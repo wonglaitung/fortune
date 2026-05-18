@@ -273,6 +273,24 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 - 无前瞻性偏差：严格使用滞后1天数据（`lookback_days=1`）
 - 生产集成：`comprehensive_analysis.py` 中已集成
 
+### 市场状态稳定性检测
+
+**核心原理**：HMM 市场状态持续时间（Regime_Duration）反映状态稳定性，短持续时间意味着频繁转换，预测可靠性下降。
+
+**状态稳定性判断**：
+
+| Regime_Duration | 稳定性 | 建议 |
+|-----------------|--------|------|
+| < 5 天 | ⚠️ 不稳定 | 降低仓位 |
+| 5-15 天 | 🟡 中等 | 正常交易 |
+| > 15 天 | ✅ 稳定 | 趋势明确 |
+
+**代码**：`data_services/regime_detector.py` - RegimeDetector 类
+
+**生产集成**：
+- `comprehensive_analysis.py` 的 `get_current_market_state()` 函数
+- 邮件报告中展示市场状态持续时间
+
 ---
 
 ## ⚙️ 环境配置

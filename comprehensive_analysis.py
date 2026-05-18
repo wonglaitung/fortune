@@ -1940,19 +1940,20 @@ def get_current_market_state():
     获取当前市场状态（实时）- 使用腾讯财经API
 
     返回:
-    dict: 当前市场状态信息
+    dict: 当前市场状态信息，包含 Regime_Duration（市场状态持续时间）
     """
     try:
         from data_services.tencent_finance import get_hsi_data_tencent as get_hsi_history
 
-        # 使用腾讯财经API获取恒指历史数据（更稳定）
-        hsi_df = get_hsi_history(period_days=60)
+        # 使用腾讯财经API获取恒指历史数据
+        # 注意：需要至少 100 天数据才能计算 Regime_Duration（因为 HMM 需要 20 天滚动窗口）
+        hsi_df = get_hsi_history(period_days=100)
 
         if hsi_df is None or len(hsi_df) < 10:
             # 回退到 yfinance
             print("⚠️ 腾讯财经获取恒指数据失败，回退到 yfinance")
             hsi_ticker = yf.Ticker("^HSI")
-            hsi_df = hsi_ticker.history(period="3mo")
+            hsi_df = hsi_ticker.history(period="5mo")
 
             if len(hsi_df) < 10:
                 return None
@@ -2002,10 +2003,46 @@ def get_current_market_state():
             market_state = 'neutral'
             market_state_cn = '震荡市'
             market_signal = '➡️ 横盘整理'
-        
+
+        # ========== 新增：获取 Regime_Duration ==========
+        regime_duration = None
+        regime_state = None
+        regime_state_cn = None
+        regime_stability = None
+
+        try:
+            from data_services.regime_detector import RegimeDetector
+
+            detector = RegimeDetector()
+            regime_result = detector.predict(hsi_df)
+
+            if regime_result is not None and len(regime_result) > 0:
+                # 获取最新的 Regime_Duration
+                regime_duration = int(regime_result['Regime_Duration'].iloc[-1])
+                regime_state = int(regime_result['Market_Regime'].iloc[-1])
+
+                # 状态名称映射
+                regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
+                regime_state_cn = regime_labels.get(regime_state, '未知')
+
+                # 判断状态稳定性
+                # Regime_Duration < 5: 状态不稳定，频繁转换
+                # Regime_Duration 5-15: 中等稳定
+                # Regime_Duration > 15: 状态稳定
+                if regime_duration < 5:
+                    regime_stability = '⚠️ 不稳定'
+                elif regime_duration < 15:
+                    regime_stability = '🟡 中等'
+                else:
+                    regime_stability = '✅ 稳定'
+
+                print(f"  ✅ 市场状态检测: {regime_state_cn}，持续 {regime_duration} 天（{regime_stability}）")
+        except Exception as e:
+            print(f"  ⚠️ 获取 Regime_Duration 失败: {e}")
+
         # 格式化时间（如果存在）
         date_str = current_time.strftime('%Y-%m-%d %H:%M:%S HKT') if current_time else 'N/A'
-        
+
         return {
             'market_state': market_state,
             'market_state_cn': market_state_cn,
@@ -2013,7 +2050,11 @@ def get_current_market_state():
             'recent_20d_return': recent_20d_return,
             'recent_5d_return': recent_5d_return,
             'current_hsi': current_hsi,
-            'date': date_str
+            'date': date_str,
+            'regime_duration': regime_duration,
+            'regime_state': regime_state,
+            'regime_state_cn': regime_state_cn,
+            'regime_stability': regime_stability,
         }
     except Exception as e:
         print(f"⚠️ 获取当前市场状态失败: {e}")
@@ -3419,7 +3460,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- 市场状态: {current_market['market_state_cn']}\n"
                     hsi_text += f"- 最近20天收益率: {current_market['recent_20d_return']:.2%}\n"
                     hsi_text += f"- 最近5天收益率: {current_market['recent_5d_return']:.2%}\n"
-                    
+
+                    # ========== 新增：显示 Regime_Duration ==========
+                    if current_market.get('regime_duration') is not None:
+                        regime_duration = current_market['regime_duration']
+                        regime_state_cn = current_market.get('regime_state_cn', '未知')
+                        regime_stability = current_market.get('regime_stability', '')
+
+                        hsi_text += f"- **市场状态持续时间**: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
+
+                        # 添加状态稳定性说明
+                        hsi_text += "\n**状态稳定性说明**:\n"
+                        hsi_text += "- ⚠️ 不稳定（<5天）：市场状态频繁转换，建议降低仓位\n"
+                        hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
+                        hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
+
                     # 添加市场状态说明表格
                     hsi_text += "### 市场状态说明\n\n"
                     hsi_text += "| 市场状态 | 20天收益率范围 | 说明 |\n"
@@ -3429,7 +3484,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += "| ➡️ 震荡市 | -2% - 2% | 市场横盘整理，建议观望 |\n"
                     hsi_text += "| ⬇️ 震荡偏跌 | -5% - -2% | 市场温和下跌，建议减仓 |\n"
                     hsi_text += "| 📉 熊市 | < -5% | 市场强劲下跌，建议空仓 |\n\n"
-                    
+
                     # 添加投资建议
                     hsi_text += "### 投资建议\n\n"
                     
