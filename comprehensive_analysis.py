@@ -2205,6 +2205,136 @@ def get_stock_anomalies(use_deep_analysis=True):
         return None
 
 
+def format_anomaly_summary_for_llm(anomaly_data):
+    """
+    将异常数据格式化为大模型可理解的摘要
+
+    参数:
+    - anomaly_data: 异常数据列表
+
+    返回:
+    - str: 格式化的异常摘要
+    """
+    if not anomaly_data or len(anomaly_data) == 0:
+        return "今日未检测到异常"
+
+    # 按严重程度分组
+    high_anomalies = [a for a in anomaly_data if a['severity'] == 'high']
+    medium_anomalies = [a for a in anomaly_data if a['severity'] == 'medium']
+    low_anomalies = [a for a in anomaly_data if a['severity'] == 'low']
+
+    summary_lines = []
+
+    # 高严重度异常
+    if high_anomalies:
+        summary_lines.append(f"## 高严重度异常（{len(high_anomalies)}只）")
+        for a in high_anomalies:
+            stock_code = a['stock']
+            stock_name = a['name']
+            # 获取板块信息
+            sector_info = STOCK_SECTOR_MAPPING.get(stock_code, {})
+            sector_name = SECTOR_NAME_MAPPING.get(sector_info.get('sector', ''), '未知板块')
+
+            change_1d = a.get('change_1d', 0)
+            rsi = a.get('rsi', 50)
+            anomaly_reason = a.get('anomaly_reason', '未知')
+
+            summary_lines.append(f"- {stock_code} {stock_name}（{sector_name}）：当日{change_1d:+.2f}%，RSI {rsi:.1f}，{anomaly_reason}")
+        summary_lines.append("")
+
+    # 中严重度异常
+    if medium_anomalies:
+        summary_lines.append(f"## 中严重度异常（{len(medium_anomalies)}只）")
+        for a in medium_anomalies:
+            stock_code = a['stock']
+            stock_name = a['name']
+            sector_info = STOCK_SECTOR_MAPPING.get(stock_code, {})
+            sector_name = SECTOR_NAME_MAPPING.get(sector_info.get('sector', ''), '未知板块')
+
+            change_1d = a.get('change_1d', 0)
+            change_5d = a.get('change_5d', 0)
+            rsi = a.get('rsi', 50)
+            anomaly_reason = a.get('anomaly_reason', '未知')
+
+            summary_lines.append(f"- {stock_code} {stock_name}（{sector_name}）：当日{change_1d:+.2f}%，5日{change_5d:+.2f}%，RSI {rsi:.1f}，{anomaly_reason}")
+        summary_lines.append("")
+
+    # 低严重度异常
+    if low_anomalies:
+        summary_lines.append(f"## 低严重度异常（{len(low_anomalies)}只）")
+        for a in low_anomalies:
+            stock_code = a['stock']
+            stock_name = a['name']
+            sector_info = STOCK_SECTOR_MAPPING.get(stock_code, {})
+            sector_name = SECTOR_NAME_MAPPING.get(sector_info.get('sector', ''), '未知板块')
+
+            change_1d = a.get('change_1d', 0)
+            rsi = a.get('rsi', 50)
+
+            summary_lines.append(f"- {stock_code} {stock_name}（{sector_name}）：当日{change_1d:+.2f}%，RSI {rsi:.1f}")
+        summary_lines.append("")
+
+    # 添加统计摘要
+    oversold_count = sum(1 for a in anomaly_data if a.get('rsi', 50) < 30)
+    overbought_count = sum(1 for a in anomaly_data if a.get('rsi', 50) > 70)
+
+    summary_lines.append("## 统计摘要")
+    summary_lines.append(f"- 总异常数：{len(anomaly_data)}只")
+    summary_lines.append(f"- RSI超卖（<30）：{oversold_count}只")
+    summary_lines.append(f"- RSI超买（>70）：{overbought_count}只")
+
+    return "\n".join(summary_lines)
+
+
+def analyze_anomalies_with_llm(anomaly_data):
+    """
+    使用大模型分析异常数据
+
+    参数:
+    - anomaly_data: 异常数据列表
+
+    返回:
+    - str: 大模型生成的分析报告（Markdown格式）
+    """
+    if not anomaly_data or len(anomaly_data) == 0:
+        return "✅ 未检测到异常，市场波动正常"
+
+    # 构建异常数据摘要
+    anomaly_summary = format_anomaly_summary_for_llm(anomaly_data)
+
+    # 构建提示词
+    prompt = f"""你是港股量化分析师。请分析以下股票异常数据，提供深度洞察。
+
+## 异常数据
+
+{anomaly_summary}
+
+## 分析要求
+
+请从以下角度分析（但不限于）：
+1. **整体市场状态**：超卖/超买比例、市场情绪判断
+2. **板块异动**：哪些板块集体异动、板块轮动信号
+3. **资金流向**：防御性资金、成长性资金的流向
+4. **个股亮点**：值得特别关注的个股及原因
+5. **交易启示**：基于异常信号的操作建议（表格形式）
+6. **风险提示**：需要警惕的风险点
+
+输出格式要求：
+- 使用Markdown格式
+- 表格优先，简洁专业
+- 每个分析板块用二级标题分隔
+- 交易启示用表格展示（信号|解读|操作建议）
+- 总字数控制在500字以内"""
+
+    # 调用大模型
+    try:
+        response = chat_with_llm(prompt)
+        return response
+    except Exception as e:
+        print(f"⚠️ 大模型分析异常失败: {e}")
+        return f"⚠️ 大模型分析失败: {e}"
+
+
 def generate_anomaly_report_content(anomaly_data):
     """
     生成异常检测报告内容
@@ -2255,12 +2385,8 @@ def generate_anomaly_report_content(anomaly_data):
         for anomaly in high_price_anomalies:
             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
             content += f"| {anomaly['stock']} | {anomaly['name']} | **{anomaly['z_score']:.2f}** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} | {get_bollinger_position_cn(anomaly['bollinger_position'])} |\n"
-        
-        content += "\n**📊 Z-Score 价格异常策略建议**：\n"
-        content += "- **抄底信号**：价格异常 + 当日下跌 → 5日收益 +4.12%，胜率 71.7%\n"
-        content += "- 价格大幅偏离均值，可能是短期超跌/超涨\n"
-        content += "- **如果当日下跌**：考虑抄底（均值回归信号）\n"
-        content += "- **如果当日上涨**：观望，等待确认\n\n"
+
+        content += "\n"
     
     # 高异常（成交量）
     if high_volume_anomalies:
@@ -2272,11 +2398,8 @@ def generate_anomaly_report_content(anomaly_data):
             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
             volume_str = f"{anomaly.get('value', 0):,.0f}"
             content += f"| {anomaly['stock']} | {anomaly['name']} | **{anomaly['z_score']:.2f}** | {volume_str} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% |\n"
-        
-        content += "\n**风险提示**：\n"
-        content += "⚠️ 成交量异常放大，可能有大额交易\n"
-        content += "⚠️ 可能是机构建仓或出货\n"
-        content += "⚠️ 建议关注价格方向和持续性\n\n"
+
+        content += "\n"
     
     # 中异常（价格）
     if medium_price_anomalies:
@@ -2287,11 +2410,8 @@ def generate_anomaly_report_content(anomaly_data):
         for anomaly in medium_price_anomalies:
             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
             content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly['z_score']:.2f} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
-        
-        content += "\n**操作建议**：\n"
-        content += "- 观察价格是否能突破阻力位\n"
-        content += "- 注意止损位设置\n"
-        content += "- 避免在异常期间加仓\n\n"
+
+        content += "\n"
     
     # 中异常（成交量）
     if medium_volume_anomalies:
@@ -2303,11 +2423,8 @@ def generate_anomaly_report_content(anomaly_data):
             change_icon = "📈" if anomaly['change_1d'] > 0 else "📉"
             volume_str = f"{anomaly.get('value', 0):,.0f}"
             content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly['z_score']:.2f} | {volume_str} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% |\n"
-        
-        content += "\n**操作建议**：\n"
-        content += "- 关注成交量是否持续放大\n"
-        content += "- 结合价格方向判断趋势\n"
-        content += "- 谨慎操作，避免追涨杀跌\n\n"
+
+        content += "\n"
     
     # Isolation Forest 异常（仅深度分析模式）- 按严重程度分组
     # 高严重度 IF 异常
@@ -2322,11 +2439,8 @@ def generate_anomaly_report_content(anomaly_data):
             anomaly_reason = anomaly.get('anomaly_reason', '未知')
             anomaly_score = anomaly.get('value', 0)
             content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | **{anomaly_score:.3f}** | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
-        
-        content += "\n**风险提示**：\n"
-        content += "🔴 多维特征严重偏离正常模式\n"
-        content += "🔴 可能存在价格操纵或重大消息\n"
-        content += "🔴 建议立即检查持仓，考虑减仓\n\n"
+
+        content += "\n"
     
     # 中等严重度 IF 异常
     if if_medium_anomalies:
@@ -2340,11 +2454,8 @@ def generate_anomaly_report_content(anomaly_data):
             anomaly_reason = anomaly.get('anomaly_reason', '未知')
             anomaly_score = anomaly.get('value', 0)
             content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | {anomaly_score:.3f} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
-        
-        content += "\n**操作建议**：\n"
-        content += "- 多维特征出现异常，值得关注\n"
-        content += "- 观察后续价格走势确认\n"
-        content += "- 避免在异常期间加仓\n\n"
+
+        content += "\n"
     
     # 低严重度 IF 异常
     if if_low_anomalies:
@@ -2358,30 +2469,19 @@ def generate_anomaly_report_content(anomaly_data):
             anomaly_reason = anomaly.get('anomaly_reason', '未知')
             anomaly_score = anomaly.get('value', 0)
             content += f"| {anomaly['stock']} | {anomaly['name']} | {anomaly_date} | {anomaly_reason} | {anomaly_score:.3f} | {anomaly['current_price']:.2f} | {change_icon} {anomaly['change_1d']:+.2f}% | {anomaly['rsi']:.1f} |\n"
-        
+
         content += "\n**说明**：\n"
         content += "- 基于多维特征检测的轻微异常\n"
-        content += "- 可能是价格模式轻微变化\n"
-        content += "- 建议结合基本面分析\n\n"
-    
-    content += "**重要提醒**：\n"
-    content += "- 异常是警告信号，不一定是交易信号\n"
-    content += "- 不要看到异常就立即卖出\n"
-    content += "- 综合考虑基本面和市场情绪\n\n"
-    
-    # 添加基于两年数据验证的策略建议（精简版）
+        content += "- 可能是价格模式轻微变化\n\n"
+
+    # 添加大模型分析
     content += "---\n\n"
-    content += "### 📊 异常策略建议（2024-2026两年验证）\n\n"
-    
-    content += "| 异常类型 | 含义 | 5日收益 | 胜率 | 策略 |\n"
-    content += "|---------|------|---------|------|------|\n"
-    content += "| **IF high** | 多维异常（系统风险） | -3.04% | 43% | 🔴 减仓 |\n"
-    content += "| **价格异常+当日下跌** | 超跌反弹 | +4.12% | 72% | 🟢 抄底 |\n"
-    content += "| 价格异常+当日上涨 | 追涨风险 | +1.96% | 54% | ⚠️ 观望 |\n\n"
-    
-    content += "**核心逻辑**：IF high 预警风险，Z-Score 价格异常+当日下跌 = 抄底机会\n"
-    content += "*基于86个IF样本、11个Z-Score样本回测，需结合其他指标*\n"
-    
+    content += "### 🤖 大模型异常分析\n\n"
+
+    # 调用大模型分析异常
+    llm_analysis = analyze_anomalies_with_llm(anomaly_data)
+    content += llm_analysis
+
     return content
 
 
