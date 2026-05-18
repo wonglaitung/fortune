@@ -66,128 +66,131 @@ class HSI_Predictor:
     # 2026-04-16: 新增RSI/MACD/布林带/动量特征
     # 2026-04-16: 新增多周期均线组合、均线斜率分析、价格距离分析
     FEATURE_IMPORTANCE = {
-        # ========== 宏观因子（新增，业界最重要的预测因子）==========
-        'US_10Y_Yield': {'weight': 0.07, 'direction': -1},  # 美债10年期收益率，利率上升不利股市
-        'US_10Y_Yield_Change_5d': {'weight': 0.05, 'direction': -1},  # 美债5日变化，快速上升不利
-        'VIX': {'weight': 0.06, 'direction': -1},  # VIX恐慌指数，恐慌上升不利
-        'VIX_Change_5d': {'weight': 0.04, 'direction': -1},  # VIX 5日变化
+        # ========== 核心技术指标（CatBoost 最重要特征）==========
+        'MA20': {'weight': 0.12, 'direction': 1},  # ⬆️ 提升（CatBoost #1，重要性45.08）
+        'MA250_Slope_5d': {'weight': 0.10, 'direction': 1},  # ⬆️ 提升（CatBoost #3，重要性17.26）
+        'MA250_Slope': {'weight': 0.06, 'direction': 1},
+        'MA250_Slope_20d': {'weight': 0.04, 'direction': 1},
+        'MA250_Slope_Direction': {'weight': 0.03, 'direction': 1},
 
-        # ========== 港股通资金流向（新增，恒指最重要预测因子）==========
-        'Southbound_Net_Inflow': {'weight': 0.08, 'direction': 1},  # 南向资金净流入（亿），资金流入利好
-        'Southbound_Net_Buy': {'weight': 0.06, 'direction': 1},  # 南向资金净买入（亿），净买入利好
+        # ========== 月份效应（CatBoost 重要特征，新增）==========
+        'Month_Sin': {'weight': 0.10, 'direction': 1},  # ➕ 新增（CatBoost #2，重要性26.10）
+        'Month_of_Year': {'weight': 0.08, 'direction': 1},  # ➕ 新增（CatBoost #4，重要性11.55）
+        'Month_Cos': {'weight': 0.05, 'direction': 1},  # ➕ 新增
 
-        # ========== 长期移动平均线相关（权重调整）==========
-        'MA250': {'weight': 0.08, 'direction': 1},  # 250日均线，长期趋势支撑
-        'Volume_MA250': {'weight': 0.06, 'direction': 1},  # 250日成交量均线，长期流动性
-        'MA120': {'weight': 0.05, 'direction': 1},  # 120日均线，中期趋势
-        'MA60': {'weight': 0.04, 'direction': 1},  # 60日均线，季线
-        'MA20': {'weight': 0.03, 'direction': 1},  # 20日均线，月线
-
-        # ========== 均线斜率分析（新增）==========
-        'MA250_Slope': {'weight': 0.03, 'direction': 1},  # MA250每日斜率
-        'MA250_Slope_5d': {'weight': 0.025, 'direction': 1},  # MA250的5日斜率变化
-        'MA250_Slope_20d': {'weight': 0.02, 'direction': 1},  # MA250的20日斜率变化
-        'MA250_Slope_Direction': {'weight': 0.02, 'direction': 1},  # MA250斜率方向
-
-        # ========== 价格与均线距离（新增，超买超卖指标）==========
-        'Price_Distance_MA250': {'weight': 0.03, 'direction': 1},  # 价格与MA250距离%
-        'Price_Distance_MA60': {'weight': 0.02, 'direction': 1},  # 价格与MA60距离%
-        'Price_Distance_MA20': {'weight': 0.015, 'direction': 1},  # 价格与MA20距离%
-
-        # ========== 均线排列信号（新增）==========
-        'MA_Bullish_Alignment': {'weight': 0.04, 'direction': 1},  # 多头排列
-        'MA_Bearish_Alignment': {'weight': 0.04, 'direction': -1},  # 空头排列
-
-        # ========== 交叉信号（新增）==========
-        'MA20_Golden_Cross_MA60': {'weight': 0.03, 'direction': 1},  # MA20金叉MA60
-        'MA20_Death_Cross_MA60': {'weight': 0.03, 'direction': -1},  # MA20死叉MA60
-        'MA60_Golden_Cross_MA250': {'weight': 0.04, 'direction': 1},  # MA60金叉MA250
-        'MA60_Death_Cross_MA250': {'weight': 0.04, 'direction': -1},  # MA60死叉MA250
-
-        # ========== RSI 系列（新增）==========
-        'RSI': {'weight': 0.03, 'direction': -1},  # RSI > 70 超买，不利
-        'RSI_ROC': {'weight': 0.015, 'direction': 1},  # RSI 变化率
-        'RSI_Deviation': {'weight': 0.02, 'direction': -1},  # RSI 偏离度大，不利
-
-        # ========== MACD 系列（新增）==========
-        'MACD': {'weight': 0.015, 'direction': 1},  # MACD
-        'MACD_Signal': {'weight': 0.01, 'direction': 1},  # MACD 信号线
-        'MACD_Hist': {'weight': 0.03, 'direction': 1},  # MACD 柱状图正值利好
-        'MACD_Hist_ROC': {'weight': 0.015, 'direction': 1},  # MACD 柱状图变化率
-
-        # ========== 布林带（新增）==========
-        'BB_Width': {'weight': 0.01, 'direction': 1},  # 布林带宽度
-        'BB_Position': {'weight': 0.02, 'direction': 1},  # 布林带位置
-
-        # ========== ATR（真实波幅，新增）==========
-        'ATR': {'weight': 0.01, 'direction': -1},  # ATR，高波动不利
-        'ATR_Ratio': {'weight': 0.015, 'direction': -1},  # ATR比率，高波动不利
-
-        # ========== ADX（趋势强度，新增）==========
-        'ADX': {'weight': 0.02, 'direction': 1},  # ADX>25表示趋势市场
-        'Plus_DI': {'weight': 0.01, 'direction': 1},  # +DI，多头力量
-        'Minus_DI': {'weight': 0.01, 'direction': -1},  # -DI，空头力量
-
-        # ========== KDJ随机振荡器（新增）==========
-        'Stoch_K': {'weight': 0.015, 'direction': -1},  # K值，超买区不利
-        'Stoch_D': {'weight': 0.01, 'direction': -1},  # D值，超买区不利
-
-        # ========== Williams %R（新增）==========
-        'Williams_R': {'weight': 0.01, 'direction': 1},  # Williams %R，超卖区利好
-
-        # ========== CMF资金流（新增）==========
-        'CMF': {'weight': 0.02, 'direction': 1},  # CMF正值表示资金流入
-        'CMF_Signal': {'weight': 0.01, 'direction': 1},  # CMF信号线
-
-        # ========== RSI背离（新增）==========
-        'RSI_Bullish_Divergence': {'weight': 0.03, 'direction': 1},  # RSI看涨背离
-        'RSI_Bearish_Divergence': {'weight': 0.03, 'direction': -1},  # RSI看跌背离
-
-        # ========== MACD背离（新增）==========
-        'MACD_Bullish_Divergence': {'weight': 0.03, 'direction': 1},  # MACD看涨背离
-        'MACD_Bearish_Divergence': {'weight': 0.03, 'direction': -1},  # MACD看跌背离
-
-        # ========== 动量加速度（新增）==========
-        'Momentum_Accel_5d': {'weight': 0.02, 'direction': 1},  # 5日动量加速度
-        'Momentum_Accel_10d': {'weight': 0.015, 'direction': 1},  # 10日动量加速度
-
-        # ========== 多周期收益率（扩展）==========
-        'Return_1d': {'weight': 0.005, 'direction': 1},  # 1日收益率
-        'Return_3d': {'weight': 0.01, 'direction': 1},  # 3日收益率
-        'Return_5d': {'weight': 0.01, 'direction': 1},  # 5日收益率
-        'Return_10d': {'weight': 0.01, 'direction': 1},  # 10日收益率
-        'Return_20d': {'weight': 0.01, 'direction': 1},  # 20日收益率
-        'Return_60d': {'weight': 0.01, 'direction': 1},  # 60日收益率
-
-        # ========== 多周期相对强度信号（RS_Signal）==========
-        '60d_RS_Signal_MA250': {'weight': 0.04, 'direction': 1},  # 60日相对强度信号
-        '60d_RS_Signal_Volume_MA250': {'weight': 0.03, 'direction': 1},  # 成交量相对强度
-        '20d_RS_Signal_MA250': {'weight': 0.02, 'direction': 1},  # 20日相对强度
-        '10d_RS_Signal_MA250': {'weight': 0.015, 'direction': 1},  # 10日相对强度
-        '5d_RS_Signal_MA250': {'weight': 0.01, 'direction': 1},  # 5日相对强度
-        '3d_RS_Signal_MA250': {'weight': 0.01, 'direction': 1},  # 3日相对强度
-
-        # ========== 多周期趋势（Trend）==========
-        '60d_Trend_MA250': {'weight': 0.03, 'direction': 1},  # 60日趋势
-        '20d_Trend_MA250': {'weight': 0.025, 'direction': 1},  # 20日趋势
-        '10d_Trend_MA250': {'weight': 0.02, 'direction': 1},  # 10日趋势
-        '5d_Trend_MA250': {'weight': 0.02, 'direction': 1},  # 5日趋势
-        '3d_Trend_MA250': {'weight': 0.015, 'direction': 1},  # 3日趋势
-
-        # ========== 成交量趋势 ==========
-        '60d_Trend_Volume_MA250': {'weight': 0.03, 'direction': 1},  # 60日成交量趋势
-        '20d_Trend_Volume_MA250': {'weight': 0.02, 'direction': 1},  # 20日成交量趋势
+        # ========== 移动平均线 ==========
+        'MA250': {'weight': 0.05, 'direction': 1},  # ⬇️ 降低
+        'MA120': {'weight': 0.04, 'direction': 1},
+        'MA60': {'weight': 0.03, 'direction': 1},
+        'Volume_MA250': {'weight': 0.03, 'direction': 1},
 
         # ========== 波动率 ==========
-        'Volatility_120d': {'weight': 0.025, 'direction': -1},  # 120日波动率，高波动率不利
-        'Volatility_20d': {'weight': 0.015, 'direction': -1},  # 20日波动率
-        'Volatility_60d': {'weight': 0.02, 'direction': -1},  # 60日波动率
+        'Volatility_20d': {'weight': 0.04, 'direction': -1},
+        'Volatility_60d': {'weight': 0.03, 'direction': -1},
+        'Volatility_120d': {'weight': 0.02, 'direction': -1},
+
+        # ========== 宏观因子（保留领域知识权重）==========
+        'US_10Y_Yield': {'weight': 0.04, 'direction': -1},  # ⬇️ 降低但保留
+        'US_10Y_Yield_Change_5d': {'weight': 0.03, 'direction': -1},
+        'VIX': {'weight': 0.04, 'direction': -1},  # ⬇️ 降低但保留
+        'VIX_Change_5d': {'weight': 0.02, 'direction': -1},
+
+        # ========== 港股通资金（保留领域知识权重）==========
+        'Southbound_Net_Inflow': {'weight': 0.05, 'direction': 1},  # ⬇️ 降低但保留
+        'Southbound_Net_Buy': {'weight': 0.04, 'direction': 1},
+
+        # ========== 价格与均线距离 ==========
+        'Price_Distance_MA250': {'weight': 0.03, 'direction': 1},
+        'Price_Distance_MA60': {'weight': 0.02, 'direction': 1},
+        'Price_Distance_MA20': {'weight': 0.015, 'direction': 1},
+
+        # ========== 均线排列信号 ==========
+        'MA_Bullish_Alignment': {'weight': 0.04, 'direction': 1},
+        'MA_Bearish_Alignment': {'weight': 0.04, 'direction': -1},
+
+        # ========== 交叉信号 ==========
+        'MA20_Golden_Cross_MA60': {'weight': 0.03, 'direction': 1},
+        'MA20_Death_Cross_MA60': {'weight': 0.03, 'direction': -1},
+        'MA60_Golden_Cross_MA250': {'weight': 0.04, 'direction': 1},
+        'MA60_Death_Cross_MA250': {'weight': 0.04, 'direction': -1},
+
+        # ========== RSI 系列 ==========
+        'RSI': {'weight': 0.02, 'direction': -1},
+        'RSI_ROC': {'weight': 0.01, 'direction': 1},
+        'RSI_Deviation': {'weight': 0.015, 'direction': -1},
+
+        # ========== MACD 系列 ==========
+        'MACD': {'weight': 0.01, 'direction': 1},
+        'MACD_Signal': {'weight': 0.01, 'direction': 1},
+        'MACD_Hist': {'weight': 0.02, 'direction': 1},
+        'MACD_Hist_ROC': {'weight': 0.01, 'direction': 1},
+
+        # ========== 布林带 ==========
+        'BB_Width': {'weight': 0.01, 'direction': 1},
+        'BB_Position': {'weight': 0.015, 'direction': 1},
+
+        # ========== ATR ==========
+        'ATR': {'weight': 0.01, 'direction': -1},
+        'ATR_Ratio': {'weight': 0.01, 'direction': -1},
+
+        # ========== ADX ==========
+        'ADX': {'weight': 0.015, 'direction': 1},
+        'Plus_DI': {'weight': 0.01, 'direction': 1},
+        'Minus_DI': {'weight': 0.01, 'direction': -1},
+
+        # ========== KDJ ==========
+        'Stoch_K': {'weight': 0.01, 'direction': -1},
+        'Stoch_D': {'weight': 0.01, 'direction': -1},
+
+        # ========== Williams %R ==========
+        'Williams_R': {'weight': 0.01, 'direction': 1},
+
+        # ========== CMF ==========
+        'CMF': {'weight': 0.015, 'direction': 1},
+        'CMF_Signal': {'weight': 0.01, 'direction': 1},
+
+        # ========== 背离 ==========
+        'RSI_Bullish_Divergence': {'weight': 0.02, 'direction': 1},
+        'RSI_Bearish_Divergence': {'weight': 0.02, 'direction': -1},
+        'MACD_Bullish_Divergence': {'weight': 0.02, 'direction': 1},
+        'MACD_Bearish_Divergence': {'weight': 0.02, 'direction': -1},
+
+        # ========== 动量加速度 ==========
+        'Momentum_Accel_5d': {'weight': 0.015, 'direction': 1},
+        'Momentum_Accel_10d': {'weight': 0.01, 'direction': 1},
+
+        # ========== 多周期收益率 ==========
+        'Return_1d': {'weight': 0.005, 'direction': 1},
+        'Return_3d': {'weight': 0.01, 'direction': 1},
+        'Return_5d': {'weight': 0.01, 'direction': 1},
+        'Return_10d': {'weight': 0.01, 'direction': 1},
+        'Return_20d': {'weight': 0.015, 'direction': 1},  # ⬆️ 微调
+        'Return_60d': {'weight': 0.01, 'direction': 1},
+
+        # ========== 多周期相对强度信号 ==========
+        '60d_RS_Signal_MA250': {'weight': 0.03, 'direction': 1},
+        '60d_RS_Signal_Volume_MA250': {'weight': 0.02, 'direction': 1},
+        '20d_RS_Signal_MA250': {'weight': 0.02, 'direction': 1},
+        '10d_RS_Signal_MA250': {'weight': 0.01, 'direction': 1},
+        '5d_RS_Signal_MA250': {'weight': 0.01, 'direction': 1},
+        '3d_RS_Signal_MA250': {'weight': 0.01, 'direction': 1},
+
+        # ========== 多周期趋势 ==========
+        '60d_Trend_MA250': {'weight': 0.025, 'direction': 1},
+        '20d_Trend_MA250': {'weight': 0.02, 'direction': 1},
+        '10d_Trend_MA250': {'weight': 0.015, 'direction': 1},
+        '5d_Trend_MA250': {'weight': 0.015, 'direction': 1},
+        '3d_Trend_MA250': {'weight': 0.01, 'direction': 1},
+
+        # ========== 成交量趋势 ==========
+        '60d_Trend_Volume_MA250': {'weight': 0.02, 'direction': 1},
+        '20d_Trend_Volume_MA250': {'weight': 0.015, 'direction': 1},
 
         # ========== 中期均线趋势 ==========
-        '60d_Trend_MA120': {'weight': 0.02, 'direction': 1},  # 60日MA120趋势
+        '60d_Trend_MA120': {'weight': 0.015, 'direction': 1},
 
         # ========== 成交量相对强度 ==========
-        '20d_RS_Signal_Volume_MA250': {'weight': 0.015, 'direction': 1},  # 20日成交量相对强度
+        '20d_RS_Signal_Volume_MA250': {'weight': 0.01, 'direction': 1},
     }
 
     def __init__(self):
@@ -677,6 +680,11 @@ class HSI_Predictor:
 
             # ========== 成交量相对强度 ==========
             '20d_RS_Signal_Volume_MA250': safe_get(latest_hsi.get('20d_RS_Signal_Volume_MA250', 0), 0),
+
+            # ========== 月份效应（新增，CatBoost 重要特征）==========
+            'Month_Sin': np.sin(2 * np.pi * latest_hsi.name.month / 12) if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 0,
+            'Month_Cos': np.cos(2 * np.pi * latest_hsi.name.month / 12) if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 0,
+            'Month_of_Year': latest_hsi.name.month if hasattr(latest_hsi, 'name') and latest_hsi.name is not None else 1,
 
             # ========== RSI 系列（新增）==========
             'RSI': safe_get(latest_hsi.get('RSI', 50), 50),
