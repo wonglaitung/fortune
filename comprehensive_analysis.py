@@ -2021,6 +2021,11 @@ def get_current_market_state():
                 regime_duration = int(regime_result['Regime_Duration'].iloc[-1])
                 regime_state = int(regime_result['Market_Regime'].iloc[-1])
 
+                # 获取转换概率指标（动态计算）
+                regime_transition_prob = float(regime_result['Regime_Transition_Prob'].iloc[-1])
+                regime_switch_prob_5d = float(regime_result['Regime_Switch_Prob_5d'].iloc[-1])
+                regime_expected_duration = float(regime_result['Regime_Expected_Duration'].iloc[-1])
+
                 # 状态名称映射
                 regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
                 regime_state_cn = regime_labels.get(regime_state, '未知')
@@ -2037,8 +2042,12 @@ def get_current_market_state():
                     regime_stability = '✅ 稳定'
 
                 print(f"  ✅ 市场状态检测: {regime_state_cn}，持续 {regime_duration} 天（{regime_stability}）")
+                print(f"     转换概率: {regime_transition_prob:.2%}, 5日转换概率: {regime_switch_prob_5d:.2%}")
         except Exception as e:
             print(f"  ⚠️ 获取 Regime_Duration 失败: {e}")
+            regime_transition_prob = None
+            regime_switch_prob_5d = None
+            regime_expected_duration = None
 
         # 格式化时间（如果存在）
         date_str = current_time.strftime('%Y-%m-%d %H:%M:%S HKT') if current_time else 'N/A'
@@ -2055,6 +2064,9 @@ def get_current_market_state():
             'regime_state': regime_state,
             'regime_state_cn': regime_state_cn,
             'regime_stability': regime_stability,
+            'regime_transition_prob': regime_transition_prob,
+            'regime_switch_prob_5d': regime_switch_prob_5d,
+            'regime_expected_duration': regime_expected_duration,
         }
     except Exception as e:
         print(f"⚠️ 获取当前市场状态失败: {e}")
@@ -3474,6 +3486,36 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += "- ⚠️ 不稳定（<5天）：市场状态频繁转换，建议降低仓位\n"
                         hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
                         hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
+
+                        # ========== 新增：HMM 状态转换概率解读 ==========
+                        if current_market.get('regime_transition_prob') is not None:
+                            transition_prob = current_market['regime_transition_prob']
+                            switch_prob_5d = current_market['regime_switch_prob_5d']
+                            expected_duration = current_market['regime_expected_duration']
+
+                            hsi_text += "**HMM 状态转换概率解读**:\n\n"
+                            hsi_text += "| 指标 | 数值 | 含义 |\n"
+                            hsi_text += "|------|------|------|\n"
+                            hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
+                            hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
+                            hsi_text += f"| 期望剩余持续时间 | {expected_duration:.1f} 天 | 当前状态平均还能持续多久 |\n\n"
+
+                            hsi_text += "**转换概率范围说明**:\n\n"
+                            hsi_text += "| T[i,i] 范围 | 5日转换概率范围 | 状态特征 |\n"
+                            hsi_text += "|-------------|----------------|---------|\n"
+                            hsi_text += "| 0.95 ~ 0.99 | 5% ~ 23% | 状态稳定（如震荡期） |\n"
+                            hsi_text += "| 0.80 ~ 0.95 | 33% ~ 67% | 状态中等稳定 |\n"
+                            hsi_text += "| 0.50 ~ 0.80 | 84% ~ 97% | 状态不稳定（快速转换） |\n\n"
+
+                            # 动态判断当前状态稳定性
+                            if switch_prob_5d < 0.23:
+                                stability_desc = "处于实际范围的最低端，状态高度稳定，短期内几乎不会转换"
+                            elif switch_prob_5d < 0.67:
+                                stability_desc = "处于中等范围，状态有一定稳定性"
+                            else:
+                                stability_desc = "处于较高范围，状态不稳定，可能即将转换"
+
+                            hsi_text += f"**今日解读**: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n\n"
 
                     # 添加市场状态说明表格
                     hsi_text += "### 市场状态说明\n\n"
