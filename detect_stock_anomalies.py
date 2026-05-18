@@ -460,6 +460,19 @@ class StockAnomalyDetector:
                 logger.warning("异常但没有特征数据")
                 return '多维特征异常（综合指标异常）'
 
+            # 判断异常方向（上升/下跌）
+            anomaly_direction = ''
+            if 'return_rate' in features:
+                return_rate = features['return_rate']
+                if return_rate > 0.02:  # 涨幅超过2%
+                    anomaly_direction = '📈 上升异常：'
+                elif return_rate < -0.02:  # 跌幅超过2%
+                    anomaly_direction = '📉 下跌异常：'
+                elif return_rate > 0:
+                    anomaly_direction = '📈 微涨异常：'
+                elif return_rate < 0:
+                    anomaly_direction = '📉 微跌异常：'
+
             # 特征名称映射和分析
             feature_analysis = []
 
@@ -512,7 +525,7 @@ class StockAnomalyDetector:
             logger.debug(f"特征分析结果: {feature_analysis}")
 
             if feature_analysis:
-                return f'多维特征异常（{", ".join(feature_analysis[:3])}）'
+                return f'{anomaly_direction}多维特征异常（{", ".join(feature_analysis[:3])}）'
             else:
                 # 如果没有明显异常特征，显示原始特征值
                 feature_values = []
@@ -520,8 +533,8 @@ class StockAnomalyDetector:
                     if abs(value) > 0.05 or key in ['rsi', 'bb_position']:  # 显示有意义的值
                         feature_values.append(f"{key}={value:.3f}")
                 if feature_values:
-                    return f'多维特征异常（关键特征: {", ".join(feature_values[:3])}）'
-                return '多维特征异常（综合指标异常，需关注）'
+                    return f'{anomaly_direction}多维特征异常（关键特征: {", ".join(feature_values[:3])}）'
+                return f'{anomaly_direction}多维特征异常（综合指标异常，需关注）'
 
         if anomaly_type == 'price':
             # 价格异常：分析涨跌幅
