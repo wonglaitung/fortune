@@ -2475,7 +2475,6 @@ def generate_anomaly_report_content(anomaly_data):
         content += "- 可能是价格模式轻微变化\n\n"
 
     # 添加大模型分析
-    content += "---\n\n"
     content += "### 🤖 大模型异常分析\n\n"
 
     # 调用大模型分析异常
@@ -3618,7 +3617,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             hsi_text += f"**今日解读**: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n\n"
 
                     # 添加市场状态说明表格
-                    hsi_text += "### 市场状态说明\n\n"
+                    hsi_text += "**市场状态说明**:\n\n"
                     hsi_text += "| 市场状态 | 20天收益率范围 | 说明 |\n"
                     hsi_text += "|---------|--------------|------|\n"
                     hsi_text += "| 📈 牛市 | > 5% | 市场强劲上涨，适合积极配置 |\n"
