@@ -3592,19 +3592,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             switch_prob_5d = current_market['regime_switch_prob_5d']
                             expected_duration = current_market['regime_expected_duration']
 
-                            hsi_text += "**HMM 状态转换概率解读**:\n\n"
+                            hsi_text += "**HMM 状态转换概率说明**:\n\n"
                             hsi_text += "| 指标 | 数值 | 含义 |\n"
                             hsi_text += "|------|------|------|\n"
                             hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
                             hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
                             hsi_text += f"| 期望剩余持续时间 | {expected_duration:.1f} 天 | 当前状态平均还能持续多久 |\n\n"
-
-                            hsi_text += "**转换概率范围说明**:\n\n"
-                            hsi_text += "| T[i,i] 范围 | 5日转换概率范围 | 状态特征 |\n"
-                            hsi_text += "|-------------|----------------|---------|\n"
-                            hsi_text += "| 0.95 ~ 0.99 | 5% ~ 23% | 状态稳定（如震荡期） |\n"
-                            hsi_text += "| 0.80 ~ 0.95 | 33% ~ 67% | 状态中等稳定 |\n"
-                            hsi_text += "| 0.50 ~ 0.80 | 84% ~ 97% | 状态不稳定（快速转换） |\n\n"
 
                             # 动态判断当前状态稳定性
                             if switch_prob_5d < 0.23:
