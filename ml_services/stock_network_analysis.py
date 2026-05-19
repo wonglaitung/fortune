@@ -2447,7 +2447,8 @@ def main():
                                            bridge_stocks, stock_codes,
                                            threshold_graph=threshold_graph)
     ml_features = add_mst_degree_features(ml_features, mst_graph)
-    save_ml_features(ml_features, args.output_dir)
+    # ML 特征保存到 data/network_features/（机器可读数据）
+    save_ml_features(ml_features, 'data/network_features')
 
     # 8. 可视化
     if not args.no_visualization:
