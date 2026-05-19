@@ -861,9 +861,10 @@
       "prediction_probability": 0.2503541436046009,
       "confidence_level": "高",
       "entry_price": 26388.44,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "correct",
+      "actual_return": -0.027029271624241475,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-13_20d",
@@ -904,9 +905,10 @@
       "prediction_probability": 0.2503541436046009,
       "confidence_level": "高",
       "entry_price": 26388.44,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "correct",
+      "actual_return": -0.027029271624241475,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-13_20d",
@@ -947,9 +949,10 @@
       "prediction_probability": 0.3663738414542916,
       "confidence_level": "中",
       "entry_price": 26388.44,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "correct",
+      "actual_return": -0.027029271624241475,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-13_20d",
@@ -1104,9 +1107,10 @@
       "prediction_probability": 0.5115252257696152,
       "confidence_level": "低",
       "entry_price": 25675.18,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "incorrect",
+      "actual_return": -1.2171287612824459e-08,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-18_5d",
@@ -1143,6 +1147,6 @@
     "version": "1.0",
     "total_predictions": 78,
     "description": "恒生指数多周期预测历史记录",
-    "last_verified": "2026-05-19T07:06:56"
+    "last_verified": "2026-05-20T07:07:51"
   }
 }
