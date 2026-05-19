@@ -8,6 +8,47 @@
 
 ## 最新进展
 
+### 2026-05-19 综合分析增强：交易日日期 + 涨跌幅列 + 股票分析技能 ⭐⭐⭐
+
+**目的**：优化综合分析报告的用户体验，提供更直观的股票分析服务
+
+**新增功能**：
+
+| 功能 | 说明 | 效果 |
+|------|------|------|
+| 交易日日期逻辑 | 周末运行时使用最近交易日（周五）日期 | 报告日期准确 |
+| 涨跌幅列 | 预测表格新增实时涨跌幅显示 | 一目了然当日表现 |
+| 股票分析技能 | 用户询问股票时自动查询综合报告 | 12维度专业分析 |
+
+**涨跌幅列实现**：
+- 调用 `get_stock_realtime_data()` 获取实时数据
+- 涨跌标识：📈 +X.XX%（上涨）、📉 -X.XX%（下跌）
+- 位置：在"现价"列之后
+
+**股票分析技能**（`.claude/skills/stock-analysis.md`）：
+- 触发词："今天买XXX股票好不好"、"XXX股票分析"等
+- 12个分析维度：核心指标、三周期预测、大模型建议、技术指标、风险评分、市场环境、异常检测、网络洞察、板块表现、操作建议、风险提示、股息提醒
+- 硬约束：CatBoost 20天上涨概率 ≤ 50% 禁止推荐买入
+- 市场环境感知：熊市提高阈值至 0.70，震荡市提高至 0.65
+
+**交易日日期逻辑**：
+```python
+# data_services/calendar_features.py
+def get_last_trading_day(date=None):
+    """获取最近交易日（使用 AKShare 交易日历）"""
+    # 如果当天是交易日，返回当天
+    # 否则返回前一个交易日
+```
+
+**改动文件**：
+- `data_services/calendar_features.py` - 新增 `get_last_trading_day()` 函数
+- `comprehensive_analysis.py` - 使用交易日日期、新增涨跌幅列
+- `.claude/skills/stock-analysis.md` - 新增股票分析技能
+- `.github/workflows/comprehensive-analysis.yml` - 提交 MD 报告到 GitHub
+- `.github/workflows/weekly-comprehensive-analysis.yml` - 提交 MD 报告到 GitHub
+
+---
+
 ### 2026-05-19 目录重构：data/ 和 output/ 定位清晰化 ⭐⭐⭐
 
 **目的**：将 `output/` 目录中混合的机器可读数据迁移到 `data/`，实现清晰的目录定位

@@ -26,6 +26,9 @@ from llm_services.qwen_engine import chat_with_llm
 # 导入配置
 from config import WATCHLIST, STOCK_SECTOR_MAPPING, SECTOR_NAME_MAPPING
 
+# 导入交易日历工具
+from data_services.calendar_features import get_last_trading_day
+
 # 从WATCHLIST提取股票名称映射
 STOCK_NAMES = WATCHLIST
 STOCK_LIST = WATCHLIST  # 为兼容 hsi_email 模块添加别名
@@ -1093,11 +1096,26 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
+
+                    # 获取涨跌幅
+                    change_pct_str = '-'
+                    try:
+                        realtime_data = get_stock_realtime_data(stock_code)
+                        if realtime_data and 'change_pct' in realtime_data:
+                            change_pct = realtime_data['change_pct']
+                            if change_pct > 0:
+                                change_pct_str = f"📈 +{change_pct:.2f}%"
+                            elif change_pct < 0:
+                                change_pct_str = f"📉 {change_pct:.2f}%"
+                            else:
+                                change_pct_str = f"{change_pct:.2f}%"
+                    except:
+                        pass
 
                     # 获取板块名称和类型
                     sector_name = '-'
@@ -1215,7 +1233,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             market_adjust_display = '🟢正常'
 
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -3189,9 +3207,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         print("📝 加载模型准确率...")
         model_accuracy = load_model_accuracy(horizon=20)
         print(f"✅ 准确率加载完成\n")
-        
-        # 生成日期
-        date_str = datetime.now().strftime('%Y-%m-%d')
+
+        # 生成日期（使用最近交易日，而非当前日期）
+        # 这样周末运行时，文件名会是周五的日期
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        date_str = get_last_trading_day()
+        if date_str != current_date:
+            print(f"📅 当前日期 {current_date} 非交易日，使用最近交易日: {date_str}\n")
         
         # 构建综合分析提示词
         prompt = f"""你是一位专业的投资分析师。请根据以下四部分信息，进行综合分析，给出实质的买卖建议。
@@ -3985,8 +4007,9 @@ def main():
         print("")
 
     # 生成日期
-    date_str = datetime.now().strftime('%Y-%m-%d')
-    
+    # 使用最近交易日作为日期（周末运行时使用周五日期）
+    date_str = get_last_trading_day()
+
     # 默认文件路径
     if args.llm_file is None:
         args.llm_file = f'data/llm_recommendations_{date_str}.txt'
