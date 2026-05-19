@@ -3572,13 +3572,26 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     hsi_text += f"- 最近20天收益率: {current_market['recent_20d_return']:.2%}\n"
                     hsi_text += f"- 最近5天收益率: {current_market['recent_5d_return']:.2%}\n"
 
-                    # ========== 新增：显示 Regime_Duration ==========
-                    if current_market.get('regime_duration') is not None:
+                    # ========== 新增：显示 Regime_Duration && HMM 状态转换概率解读 ==========
+                    if current_market.get('regime_duration') is not None and current_market.get('regime_transition_prob') is not None:
                         regime_duration = current_market['regime_duration']
                         regime_state_cn = current_market.get('regime_state_cn', '未知')
                         regime_stability = current_market.get('regime_stability', '')
 
-                        hsi_text += f"- **市场状态持续时间**: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
+                        transition_prob = current_market['regime_transition_prob']
+                        switch_prob_5d = current_market['regime_switch_prob_5d']
+                        expected_duration = current_market['regime_expected_duration']
+
+                        # 动态判断当前状态稳定性
+                        if switch_prob_5d < 0.23:
+                            stability_desc = "处于实际范围的最低端，状态高度稳定，短期内几乎不会转换"
+                        elif switch_prob_5d < 0.67:
+                            stability_desc = "处于中等范围，状态有一定稳定性"
+                        else:
+                            stability_desc = "处于较高范围，状态不稳定，可能即将转换"
+
+                        hsi_text += f"- 市场状态持续时间: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
+                        hsi_text += f"- HMM 状态转换概率: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n"
 
                         # 添加状态稳定性说明
                         hsi_text += "\n**状态稳定性说明**:\n"
@@ -3586,28 +3599,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
                         hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
 
-                        # ========== 新增：HMM 状态转换概率解读 ==========
-                        if current_market.get('regime_transition_prob') is not None:
-                            transition_prob = current_market['regime_transition_prob']
-                            switch_prob_5d = current_market['regime_switch_prob_5d']
-                            expected_duration = current_market['regime_expected_duration']
-
-                            hsi_text += "**HMM 状态转换概率说明**:\n\n"
-                            hsi_text += "| 指标 | 数值 | 含义 |\n"
-                            hsi_text += "|------|------|------|\n"
-                            hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
-                            hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
-                            hsi_text += f"| 期望剩余持续时间 | {expected_duration:.1f} 天 | 当前状态平均还能持续多久 |\n\n"
-
-                            # 动态判断当前状态稳定性
-                            if switch_prob_5d < 0.23:
-                                stability_desc = "处于实际范围的最低端，状态高度稳定，短期内几乎不会转换"
-                            elif switch_prob_5d < 0.67:
-                                stability_desc = "处于中等范围，状态有一定稳定性"
-                            else:
-                                stability_desc = "处于较高范围，状态不稳定，可能即将转换"
-
-                            hsi_text += f"**今日解读**: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n\n"
+                        hsi_text += "**HMM 状态转换概率说明**:\n\n"
+                        hsi_text += "| 指标 | 数值 | 含义 |\n"
+                        hsi_text += "|------|------|------|\n"
+                        hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
+                        hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
+                        hsi_text += f"| 期望剩余持续时间 | {expected_duration:.1f} 天 | 当前状态平均还能持续多久 |\n\n"
 
                     # 添加市场状态说明表格
                     hsi_text += "**市场状态说明**:\n\n"
