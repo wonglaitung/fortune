@@ -2124,7 +2124,7 @@ class HSI_Predictor:
             'prediction_trend': self.interpret_score(score)[0]
         }
 
-        json_file = os.path.join(output_dir, f'hsi_prediction_report_{timestamp}.json')
+        json_file = os.path.join(data_dir, 'hsi_prediction_reports', f'hsi_prediction_report_{timestamp}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(report_data, f, indent=2, ensure_ascii=False)
 

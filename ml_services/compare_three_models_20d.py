@@ -368,7 +368,7 @@ def main():
         f.write(report)
 
     # 保存详细数据
-    json_file = f'output/compare_three_models_20d_{timestamp}.json'
+    json_file = f'data/analysis_results/compare_three_models_20d_{timestamp}.json'
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump({
             'catboost': catboost_results,

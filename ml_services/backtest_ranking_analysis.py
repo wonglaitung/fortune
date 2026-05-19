@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 # 读取回测数据
-trades_df = pd.read_csv('output/backtest_20d_trades_20260305_115839.csv')
+trades_df = pd.read_csv('data/walk_forward_results/backtest_20d_trades.csv')
 
 # 股票名称映射
 STOCK_NAMES = {

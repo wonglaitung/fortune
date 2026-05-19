@@ -144,7 +144,7 @@ def compare_feature_sets(feature_list_path, horizon=5):
     logger.info(f"\n{results_df.to_string(index=False)}")
 
     # 保存结果
-    output_path = 'output/feature_comparison_results.csv'
+    output_path = 'data/feature_selection/feature_comparison_results.csv'
     results_df.to_csv(output_path, index=False)
     logger.info(f"\n对比结果已保存: {output_path}")
 
@@ -158,7 +158,7 @@ def main():
                        choices=['train', 'compare', 'analyze'],
                        help='运行模式: train(训练), compare(对比), analyze(分析)')
     parser.add_argument('--feature_csv', type=str,
-                       default='output/feature_eval_v2/feature_importance.csv',
+                       default='data/feature_selection/feature_importance.csv',
                        help='特征重要性 CSV 路径')
     parser.add_argument('--n_features', type=int, default=100,
                        help='选择的特征数量')
@@ -177,7 +177,7 @@ def main():
         )
 
         # 保存模型
-        model_path = f'output/model_with_top{args.n_features}.pkl'
+        model_path = f'data/models_with_feature_selection/model_with_top{args.n_features}.pkl'
         model.save_model(model_path)
         logger.info(f"\n模型已保存: {model_path}")
 

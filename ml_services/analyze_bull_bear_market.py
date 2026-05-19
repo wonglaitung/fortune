@@ -326,7 +326,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     # 2. 读取交易记录
-    trades_df = pd.read_csv('output/backtest_20d_trades_20260307_002039.csv')
+    trades_df = pd.read_csv('data/walk_forward_results/backtest_20d_trades.csv')
     print(f"\n✅ 成功读取 {len(trades_df)} 条交易记录")
     
     # 3. 分析股票表现
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     valid_stocks = generate_analysis_report(market_env_df, stock_performance_df)
     
     # 5. 保存结果
-    output_file = 'output/bull_bear_market_analysis_20260307.csv'
+    output_file = 'data/analysis_results/bull_bear_market_analysis.csv'
     valid_stocks.to_csv(output_file, index=False, encoding='utf-8-sig')
     print(f"\n✅ 分析结果已保存到: {output_file}")
     

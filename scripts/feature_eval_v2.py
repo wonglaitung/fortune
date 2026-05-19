@@ -33,11 +33,11 @@ logger = get_logger('feature_eval_v2')
 
 
 def evaluate_feature_importance_improved(
-    model_path='output/ml_trading_model_lightgbm_20d.pkl',
+    model_path='data/ml_trading_model_lightgbm_20d.pkl',
     horizon=5,  # 默认使用5天周期
     num_stocks=10,  # 默认10只股票
     max_nan_ratio=0.3,  # 移除NaN >= 30%的特征
-    output_dir='output/feature_eval_v2'
+    output_dir='data/feature_selection'
 ):
     """
     改进的特征重要性评估
@@ -300,14 +300,14 @@ def main():
         horizon=5,  # 使用5天周期
         num_stocks=10,  # 使用10只股票
         max_nan_ratio=0.3,  # 移除NaN >= 30%的特征
-        output_dir='output/feature_eval_v2'
+        output_dir='data/feature_selection'
     )
 
     if importance_df is not None:
         logger.info("\n✅ 评估成功完成！")
         logger.info("可以查看以下文件:")
-        logger.info("  - output/feature_eval_v2/feature_importance.csv")
-        logger.info("  - output/feature_eval_v2/feature_evaluation_report.txt")
+        logger.info("  - data/feature_selection/feature_importance.csv")
+        logger.info("  - data/feature_selection/feature_evaluation_report.txt")
     else:
         logger.error("\n❌ 评估失败，请检查日志")
 

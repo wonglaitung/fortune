@@ -306,7 +306,7 @@ def main():
     if args.model_type == 'lgbm':
         model = MLTradingModel()
         # 优先使用新训练的模型，否则使用旧路径
-        new_model_path = f'output/models_with_feature_selection/lightgbm_stable_high_100_h5.pkl'
+        new_model_path = f'data/models_with_feature_selection/lightgbm_stable_high_100_h5.pkl'
         if os.path.exists(new_model_path):
             logger.info(f"使用推荐模型: {new_model_path}")
             model.load_model(new_model_path)

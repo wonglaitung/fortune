@@ -145,7 +145,7 @@ def main():
     print(f"✅ 信号减少: {reduction_pct:.1%}")
 
     # 保存结果
-    output_file = 'output/market_filter_validation_result.csv'
+    output_file = 'data/analysis_results/market_filter_validation_result.csv'
     filtered_df.to_csv(output_file, index=False)
     print(f"\n结果已保存到: {output_file}")
 

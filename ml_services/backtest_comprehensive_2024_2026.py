@@ -230,11 +230,11 @@ def main():
     print("=" * 80)
     
     parser = argparse.ArgumentParser(description='CatBoost 20天模型综合回测分析 (2024-2026)')
-    parser.add_argument('--trades-file', type=str, 
-                       default='output/backtest_20d_trades_20260306_221048.csv',
+    parser.add_argument('--trades-file', type=str,
+                       default='data/walk_forward_results/backtest_20d_trades.csv',
                        help='交易记录文件路径')
-    parser.add_argument('--stock-summary-file', type=str, 
-                       default='output/backtest_20d_stock_summary_20260306_221048.csv',
+    parser.add_argument('--stock-summary-file', type=str,
+                       default='data/analysis_results/backtest_20d_stock_summary.csv',
                        help='股票汇总文件路径')
     parser.add_argument('--start-date', type=str, default='2024-01-01',
                        help='开始日期 (YYYY-MM-DD)')
@@ -257,27 +257,27 @@ def main():
     
     # 生成文件
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    
+
     # 1. 股票汇总CSV（含正确决策比例）
-    stock_summary_csv = f'output/backtest_stock_summary_2024_2026_{timestamp}.csv'
+    stock_summary_csv = f'data/analysis_results/backtest_stock_summary_2024_2026_{timestamp}.csv'
     stock_summary_df.to_csv(stock_summary_csv, index=False, encoding='utf-8-sig')
     print(f"\n✅ 股票汇总CSV已保存: {stock_summary_csv}")
-    
+
     # 2. 月度分析CSV
-    monthly_csv = f'output/backtest_monthly_analysis_2024_2026_{timestamp}.csv'
+    monthly_csv = f'data/analysis_results/backtest_monthly_analysis_2024_2026_{timestamp}.csv'
     monthly_stats.to_csv(monthly_csv, index=False, encoding='utf-8-sig')
     print(f"✅ 月度分析CSV已保存: {monthly_csv}")
-    
+
     # 3. 股票月度分析CSV
-    stock_monthly_csv = f'output/backtest_stock_monthly_2024_2026_{timestamp}.csv'
+    stock_monthly_csv = f'data/analysis_results/backtest_stock_monthly_2024_2026_{timestamp}.csv'
     stock_monthly_stats.to_csv(stock_monthly_csv, index=False, encoding='utf-8-sig')
     print(f"✅ 股票月度分析CSV已保存: {stock_monthly_csv}")
-    
+
     # 4. 相关性分析CSV
-    correlation_csv = f'output/backtest_correlation_2024_2026_{timestamp}.csv'
+    correlation_csv = f'data/analysis_results/backtest_correlation_2024_2026_{timestamp}.csv'
     trend_analysis['correlation_analysis'].to_csv(correlation_csv, index=False, encoding='utf-8-sig')
     print(f"✅ 相关性分析CSV已保存: {correlation_csv}")
-    
+
     # 5. 生成报告
     report_txt = f'output/backtest_comprehensive_report_2024_2026_{timestamp}.txt'
     with open(report_txt, 'w', encoding='utf-8') as f:

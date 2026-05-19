@@ -115,7 +115,7 @@ class WalkForwardValidator:
 
         # 预加载社区 ID（确保训练/预测一致性）
         self.preloaded_community_ids = None
-        network_features_file = 'output/network_features_for_ml.json'
+        network_features_file = 'data/network_features/network_features_for_ml.json'
         if os.path.exists(network_features_file):
             try:
                 with open(network_features_file, 'r') as f:

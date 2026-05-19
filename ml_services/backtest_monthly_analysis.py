@@ -421,11 +421,11 @@ def main():
     
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='CatBoost 20天模型回测 - 月度分析 (2024-2026)')
-    parser.add_argument('--trades-file', type=str, 
-                       default='output/backtest_20d_trades_20260306_091148.csv',
+    parser.add_argument('--trades-file', type=str,
+                       default='data/walk_forward_results/backtest_20d_trades.csv',
                        help='交易记录文件路径')
-    parser.add_argument('--stock-summary-file', type=str, 
-                       default='output/backtest_20d_stock_summary_20260306_091148.csv',
+    parser.add_argument('--stock-summary-file', type=str,
+                       default='data/analysis_results/backtest_20d_stock_summary.csv',
                        help='股票汇总文件路径')
     parser.add_argument('--start-date', type=str, default='2024-01-01',
                        help='开始日期 (YYYY-MM-DD)')
@@ -469,13 +469,13 @@ def main():
     
     # 分析单个股票与总体趋势的差异
     trend_analysis = analyze_trend_differences(monthly_stats, stock_monthly_stats, stock_summary_df)
-    
+
     # 生成分析报告
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    monthly_csv = f'output/backtest_20d_monthly_analysis_2024_2026_{timestamp}.csv'
-    stock_monthly_csv = f'output/backtest_20d_stock_monthly_analysis_2024_2026_{timestamp}.csv'
-    stock_summary_csv = f'output/backtest_20d_stock_summary_2024_2026_{timestamp}.csv'
-    correlation_csv = f'output/backtest_20d_correlation_analysis_2024_2026_{timestamp}.csv'
+    monthly_csv = f'data/analysis_results/backtest_20d_monthly_analysis_2024_2026_{timestamp}.csv'
+    stock_monthly_csv = f'data/analysis_results/backtest_20d_stock_monthly_analysis_2024_2026_{timestamp}.csv'
+    stock_summary_csv = f'data/analysis_results/backtest_20d_stock_summary_2024_2026_{timestamp}.csv'
+    correlation_csv = f'data/analysis_results/backtest_20d_correlation_analysis_2024_2026_{timestamp}.csv'
     report_txt = f'output/backtest_20d_monthly_analysis_report_2024_2026_{timestamp}.txt'
     
     # 保存月度分析结果

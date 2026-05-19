@@ -64,7 +64,7 @@ def train_model_with_features(
     num_stocks=10,
     feature_set_name='all_features',
     features=None,
-    output_dir='output/models_with_feature_selection'
+    output_dir='data/models_with_feature_selection'
 ):
     """
     使用指定特征集训练模型
@@ -180,7 +180,7 @@ def compare_feature_sets(
     model_type='lightgbm',
     horizon=5,
     num_stocks=10,
-    output_dir='output/models_with_feature_selection'
+    output_dir='data/models_with_feature_selection'
 ):
     """
     对比不同特征集的模型性能
@@ -199,7 +199,7 @@ def compare_feature_sets(
     logger.info("=" * 70)
 
     # 加载特征重要性
-    feature_csv = 'output/feature_eval_v2/feature_importance.csv'
+    feature_csv = 'data/feature_selection/feature_importance.csv'
 
     if not os.path.exists(feature_csv):
         logger.error(f"特征重要性文件不存在: {feature_csv}")
@@ -398,7 +398,7 @@ def main():
                        choices=['top_50', 'top_100', 'top_200', 'all_features', 'stable_high_100'],
                        help='特征集名称（train 模式）')
     parser.add_argument('--output_dir', type=str,
-                       default='output/models_with_feature_selection',
+                       default='data/models_with_feature_selection',
                        help='输出目录')
 
     args = parser.parse_args()
@@ -428,7 +428,7 @@ def main():
         # 训练模式：训练单个模型
         logger.info(f"\n训练单个模型: {args.feature_set}")
 
-        feature_csv = 'output/feature_eval_v2/feature_importance.csv'
+        feature_csv = 'data/feature_selection/feature_importance.csv'
 
         # 根据特征集名称加载特征
         if args.feature_set == 'all_features':
@@ -463,7 +463,7 @@ def main():
         # 分析模式：仅分析特征选择结果
         logger.info(f"\n分析特征选择结果")
 
-        feature_csv = 'output/feature_eval_v2/feature_importance.csv'
+        feature_csv = 'data/feature_selection/feature_importance.csv'
         df = pd.read_csv(feature_csv)
 
         logger.info(f"\n特征总数: {len(df)}")
