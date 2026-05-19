@@ -2978,13 +2978,56 @@ def generate_technical_indicators_table(stock_codes):
                 
                 table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma200} | {ma_align} | {ma_slope} | {ma_dev} | {bb_pos} | {atr} | {vol_ratio} | {trend} | {support} | {resistance} |\n"
                 success_count += 1
-        
+
         print(f"📊 技术指标表格: 成功获取 {success_count}/{len(stock_codes)} 只股票的数据")
         return table
-        
+
     except Exception as e:
         print(f"⚠️ 生成技术指标表格失败: {e}")
         return ""
+
+
+def save_comprehensive_report_md(content, date_str):
+    """
+    保存综合分析报告为 MD 文档（用于知识库）
+
+    参数:
+    - content: 报告内容
+    - date_str: 日期字符串 (YYYY-MM-DD)
+    """
+    try:
+        # 创建输出目录
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, 'output', 'comprehensive_reports')
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"📁 创建目录: {output_dir}")
+
+        # 生成文件路径
+        md_filepath = os.path.join(output_dir, f'{date_str}.md')
+
+        # 添加元数据头部
+        md_content = f"""# 综合分析报告
+
+**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**分析日期**: {date_str}
+
+---
+
+{content}
+"""
+
+        # 写入文件
+        with open(md_filepath, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+
+        print(f"✅ MD 报告已保存到 {md_filepath}")
+        return md_filepath
+
+    except Exception as e:
+        print(f"⚠️ 保存 MD 报告失败: {e}")
+        return None
 
 
 def send_email(subject, content, html_content=None):
@@ -3893,7 +3936,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
                 html_content = generate_html_email(full_content, date_str)
                 send_email(email_subject, full_content, html_content)
-            
+
+            # 保存 MD 文档（用于知识库）
+            save_comprehensive_report_md(full_content, date_str)
+
             return response
         else:
             print("❌ 大模型分析失败")

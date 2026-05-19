@@ -105,11 +105,23 @@ AKShare      南向资金        主力追踪     性能监控     微信通知
 - `message_services/wxpusher_bot.py` - WxPusher 推送
 - `message_services/notifier.py` - 统一通知接口
 
-**数据存储**：
+**数据存储**（`data/` - 机器可读）：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
 - `data/stock_cache/` - 原始数据缓存（7天有效期）
 - `data/feature_cache/` - 特征缓存（7天有效期，170x加速）
-- `output/` - 分析报告和回测结果
+- `data/feature_selection/` - 特征选择结果（CSV/TXT）
+- `data/hsi_prediction_reports/` - 恒指预测报告（JSON）
+- `data/network_features/` - 网络特征（JSON）
+- `data/walk_forward_results/` - Walk-forward 验证结果（CSV/JSON）
+- `data/hyperparams/` - 超参数记录（JSON）
+- `data/analysis_results/` - 分析结果（CSV/JSON）
+
+**输出报告**（`output/` - 人类可读）：
+- `output/*.md` - Markdown 分析报告
+- `output/*.txt` - 文本分析报告
+- `output/*.png` - 可视化图表
+- `output/*_catboost_20d/` - Walk-forward 验证结果目录
+- `output/comprehensive_reports/` - 综合分析报告（知识库材料）
 
 ---
 

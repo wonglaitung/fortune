@@ -748,7 +748,7 @@ class TransformerExperiment:
         self.stock_codes = stock_codes or TEST_STOCKS
         self.horizon = horizon
         self.use_feature_selection = use_feature_selection  # 默认启用特征选择
-        self.features_file = features_file or 'output/statistical_features_latest.txt'  # 默认特征文件
+        self.features_file = features_file or 'data/feature_selection/statistical_features_latest.txt'  # 默认特征文件
         self.preprocessor = TransformerDataPreprocessor(use_feature_selection=use_feature_selection)
         self.results = {}
         
@@ -1119,8 +1119,8 @@ def main():
                        help='使用特征选择（与CatBoost一致，默认启用）')
     parser.add_argument('--no-feature-selection', action='store_true',
                        help='禁用特征选择（使用所有特征）')
-    parser.add_argument('--features-file', type=str, default='output/statistical_features_latest.txt',
-                       help='精选特征文件路径（默认: output/statistical_features_latest.txt）')
+    parser.add_argument('--features-file', type=str, default='data/feature_selection/statistical_features_latest.txt',
+                       help='精选特征文件路径（默认: data/feature_selection/statistical_features_latest.txt）')
     
     args = parser.parse_args()
     

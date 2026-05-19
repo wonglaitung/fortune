@@ -569,7 +569,7 @@ class HSIWalkForwardValidator:
 
             # 保存到文件
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_file = f'output/hsi_walk_forward_{timestamp}.json'
+            output_file = f'data/hsi_walk_forward/hsi_walk_forward_{timestamp}.json'
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(output, f, ensure_ascii=False, indent=2)
             print(f"\n💾 结果已保存到: {output_file}")

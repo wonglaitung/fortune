@@ -207,7 +207,7 @@ def main():
     print("=" * 70)
 
     # 保存结果
-    output_file = f'output/sector_model_evaluation_{args.sector}_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    output_file = f'data/analysis_results/sector_model_evaluation_{args.sector}_{args.horizon}d_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
 

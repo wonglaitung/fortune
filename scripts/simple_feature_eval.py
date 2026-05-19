@@ -32,7 +32,7 @@ from ml_services.logger_config import get_logger
 logger = get_logger('simple_feature_eval')
 
 
-def evaluate_feature_importance_simple(model_path, horizon=20, output_dir='output/feature_eval'):
+def evaluate_feature_importance_simple(model_path, horizon=20, output_dir='data/feature_selection'):
     """
     简化的特征重要性评估
 
@@ -237,9 +237,9 @@ if __name__ == '__main__':
     logger.info("开始简化特征重要性评估...")
 
     importance_df = evaluate_feature_importance_simple(
-        model_path='output/ml_trading_model_lightgbm_20d.pkl',
+        model_path='data/ml_trading_model_lightgbm_20d.pkl',
         horizon=20,
-        output_dir='output/feature_eval_simple'
+        output_dir='data/feature_selection'
     )
 
     logger.info("\n提示: 如需使用 SHAP 进行更深入的分析，请运行:")

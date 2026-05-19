@@ -46,7 +46,7 @@ logger = get_logger('feature_evaluation')
 class FeatureEvaluator:
     """特征评估器"""
 
-    def __init__(self, output_dir='output/feature_evaluation'):
+    def __init__(self, output_dir='data/feature_selection'):
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         self.shap_values = None
@@ -454,7 +454,7 @@ def main():
     """主函数"""
     parser = argparse.ArgumentParser(description='特征评估脚本')
     parser.add_argument('--model_path', type=str,
-                       default='output/ml_trading_model_lightgbm_20d.pkl',
+                       default='data/ml_trading_model_lightgbm_20d.pkl',
                        help='模型文件路径')
     parser.add_argument('--horizon', type=int, default=20,
                        choices=[1, 5, 20],
@@ -462,7 +462,7 @@ def main():
     parser.add_argument('--top_k', type=int, default=50,
                        help='显示前 k 个特征')
     parser.add_argument('--output_dir', type=str,
-                       default='output/feature_evaluation',
+                       default='data/feature_selection',
                        help='输出目录')
     parser.add_argument('--skip_shap', action='store_true',
                        help='跳过 SHAP 计算（如果未安装 shap）')

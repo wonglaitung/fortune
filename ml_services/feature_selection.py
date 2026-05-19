@@ -523,7 +523,7 @@ def evaluate_feature_selection(X, y, selected_features, feature_names):
         return performance
 
 
-def save_results(feature_scores, selected_features, output_dir='output', method_name='feature_selection'):
+def save_results(feature_scores, selected_features, output_dir='data/feature_selection', method_name='feature_selection'):
     """
     保存特征选择结果
 
@@ -594,8 +594,8 @@ def main():
     parser.add_argument('--horizon', type=int, default=20,
                        choices=[1, 5, 20],
                        help='预测周期 (默认: 20)')
-    parser.add_argument('--output-dir', type=str, default='output',
-                       help='输出目录 (默认: output)')
+    parser.add_argument('--output-dir', type=str, default='data/feature_selection',
+                       help='输出目录 (默认: data/feature_selection)')
     parser.add_argument('--target-importance', type=float, default=0.95,
                        help='目标累积重要性 (默认: 0.95, 仅用于cumulative_importance方法)')
     parser.add_argument('--min-features', type=int, default=100,

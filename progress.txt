@@ -2,11 +2,49 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-18
+**最后更新**：2026-05-19
 
 ---
 
 ## 最新进展
+
+### 2026-05-19 目录重构：data/ 和 output/ 定位清晰化 ⭐⭐⭐
+
+**目的**：将 `output/` 目录中混合的机器可读数据迁移到 `data/`，实现清晰的目录定位
+
+**目录定位**：
+| 目录 | 定位 | 内容 |
+|------|------|------|
+| `data/` | 数据存储 | 机器可读、程序运行时读写 |
+| `output/` | 输出报告 | 人类可读、知识库材料 |
+
+**data/ 新增子目录**：
+| 子目录 | 内容 |
+|--------|------|
+| `feature_selection/` | 特征选择结果 (CSV/TXT) |
+| `hsi_prediction_reports/` | 恒指预测报告 (JSON) |
+| `hsi_walk_forward/` | 恒指验证结果 (JSON) |
+| `network_features/` | 网络特征 (JSON) |
+| `walk_forward_results/` | Walk-forward 结果 (CSV/JSON) |
+| `hyperparams/` | 超参数记录 (JSON) |
+| `analysis_results/` | 分析结果 (CSV/JSON) |
+| `models_with_feature_selection/` | 特征选择模型 |
+
+**output/ 保留内容**：
+- MD 报告文件
+- TXT 分析报告
+- PNG 可视化图表
+- Walk-forward 验证结果目录 (`*_catboost_20d/`)
+- 综合分析报告目录 (`comprehensive_reports/`)
+
+**改动文件**（30个）：
+- 核心模块：`hsi_prediction.py`, `ml_trading_model.py`, `walk_forward_validation.py`, `feature_selection.py`
+- 分析模块：`hsi_walk_forward.py`, `hyperparameter_tuner.py`, `compare_three_models_20d.py`
+- 回测模块：`backtest_monthly_analysis.py`, `backtest_comprehensive_2024_2026.py`, `batch_backtest.py`
+- 脚本文件：`scripts/feature_eval_v2.py`, `scripts/feature_evaluation.py`, `scripts/train_with_feature_selection.py`
+- 配置文件：`.gitignore`
+
+---
 
 ### 2026-05-18 恒指评分模型特征权重更新（融合 CatBoost 重要性和领域知识）⭐⭐⭐
 

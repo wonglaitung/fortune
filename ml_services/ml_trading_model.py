@@ -3324,12 +3324,12 @@ class BaseTradingModel:
             # 查找最新的特征名称文件
             # 支持多种文件格式和命名
             patterns = [
-                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
-                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
-                'output/selected_features_*.csv',          # 统计方法（CSV格式）
-                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
-                'output/model_importance_features_latest.txt',  # 最新模型重要性特征
-                'output/statistical_features_latest.txt'   # 最新统计特征
+                'data/feature_selection/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'data/feature_selection/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'data/feature_selection/selected_features_*.csv',          # 统计方法（CSV格式）
+                'data/feature_selection/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'data/feature_selection/model_importance_features_latest.txt',  # 最新模型重要性特征
+                'data/feature_selection/statistical_features_latest.txt'   # 最新统计特征
             ]
             
             files = []
@@ -3425,7 +3425,7 @@ class BaseTradingModel:
         logger.info(f"准备特征选择数据: {len(codes)} 只股票")
 
         # 预加载网络特征获取社区 ID
-        network_features_file = 'output/network_features_for_ml.json'
+        network_features_file = 'data/network_features/network_features_for_ml.json'
         preloaded_community_ids = None
         if os.path.exists(network_features_file):
             try:
@@ -4121,12 +4121,12 @@ class GBDTModel(BaseTradingModel):
             # 查找最新的特征名称文件
             # 支持多种文件格式和命名
             patterns = [
-                'output/selected_features_*.csv',          # 统计方法（CSV格式）
-                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
-                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
-                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
-                'output/statistical_features_latest.txt',   # 最新统计特征
-                'output/model_importance_features_latest.txt'  # 最新模型重要性特征
+                'data/feature_selection/selected_features_*.csv',          # 统计方法（CSV格式）
+                'data/feature_selection/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'data/feature_selection/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'data/feature_selection/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'data/feature_selection/statistical_features_latest.txt',   # 最新统计特征
+                'data/feature_selection/model_importance_features_latest.txt'  # 最新模型重要性特征
             ]
             
             files = []
@@ -4590,8 +4590,8 @@ class GBDTModel(BaseTradingModel):
             )
 
             # 保存特征重要性
-            feat_imp.to_csv('output/ml_trading_model_gbdt_20d_importance.csv', index=False)
-            logger.info(r"已保存特征重要性至 output/ml_trading_model_gbdt_20d_importance.csv")
+            feat_imp.to_csv('data/feature_selection/ml_trading_model_gbdt_20d_importance.csv', index=False)
+            logger.info(r"已保存特征重要性至 data/feature_selection/ml_trading_model_gbdt_20d_importance.csv")
 
             # 显示前20个重要特征
             print("\n📊 GBDT Top 20 重要特征 (含影响方向):")
@@ -4842,12 +4842,12 @@ class CatBoostModel(BaseTradingModel):
             # 查找最新的特征名称文件
             # 支持多种文件格式和命名
             patterns = [
-                'output/selected_features_*.csv',          # 统计方法（CSV格式）
-                'output/statistical_features_*.txt',       # 统计方法（TXT格式）
-                'output/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
-                'output/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
-                'output/statistical_features_latest.txt',   # 最新统计特征
-                'output/model_importance_features_latest.txt'  # 最新模型重要性特征
+                'data/feature_selection/selected_features_*.csv',          # 统计方法（CSV格式）
+                'data/feature_selection/statistical_features_*.txt',       # 统计方法（TXT格式）
+                'data/feature_selection/model_importance_selected_*.csv',  # 模型重要性法（CSV格式）
+                'data/feature_selection/model_importance_features_*.txt',  # 模型重要性法（TXT格式）
+                'data/feature_selection/statistical_features_latest.txt',   # 最新统计特征
+                'data/feature_selection/model_importance_features_latest.txt'  # 最新模型重要性特征
             ]
             
             files = []
@@ -4961,7 +4961,7 @@ class CatBoostModel(BaseTradingModel):
 
         # 加载网络特征（跨截面特征，所有股票共享）
         # 网络特征文件由 stock_network_analysis.py 生成
-        network_features_file = 'output/network_features_for_ml.json'
+        network_features_file = 'data/network_features/network_features_for_ml.json'
         network_features_data = None
         try:
             if os.path.exists(network_features_file):
@@ -5253,7 +5253,7 @@ class CatBoostModel(BaseTradingModel):
         # ========== 预加载网络特征以获取社区 ID ==========
         # 在准备数据之前，先加载网络特征文件提取社区 ID 列表
         # 这样可以确保训练时使用正确的社区 ID，避免动态提取导致的不一致
-        network_features_file = 'output/network_features_for_ml.json'
+        network_features_file = 'data/network_features/network_features_for_ml.json'
         preloaded_community_ids = None
         if os.path.exists(network_features_file):
             try:
@@ -5539,8 +5539,8 @@ class CatBoostModel(BaseTradingModel):
             feat_imp['Impact_Direction'] = 'Unknown'
 
         # 保存特征重要性
-        feat_imp.to_csv('output/ml_trading_model_catboost_20d_importance.csv', index=False)
-        logger.info(r"已保存特征重要性至 output/ml_trading_model_catboost_20d_importance.csv")
+        feat_imp.to_csv('data/feature_selection/ml_trading_model_catboost_20d_importance.csv', index=False)
+        logger.info(r"已保存特征重要性至 data/feature_selection/ml_trading_model_catboost_20d_importance.csv")
 
         # 显示前20个重要特征
         print("\n📊 CatBoost Top 20 重要特征:")
@@ -5624,7 +5624,7 @@ class CatBoostModel(BaseTradingModel):
                         use_cache_predict = True
                         # 即使使用缓存，也要加载网络特征（因为网络特征是跨截面的，可能已更新）
                         # 如果股票没有网络特征，使用默认值
-                        network_features_file = 'output/network_features_for_ml.json'
+                        network_features_file = 'data/network_features/network_features_for_ml.json'
                         has_network_features = False
                         if os.path.exists(network_features_file):
                             try:
@@ -5759,7 +5759,7 @@ class CatBoostModel(BaseTradingModel):
 
                 # 添加网络特征（从预计算文件加载，与训练时保持一致）
                 # 如果股票没有网络特征，使用默认值（社区 ID = -1 表示未知）
-                network_features_file = 'output/network_features_for_ml.json'
+                network_features_file = 'data/network_features/network_features_for_ml.json'
                 has_network_features = False
                 if os.path.exists(network_features_file):
                     try:
