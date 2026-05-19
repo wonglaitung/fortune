@@ -304,6 +304,49 @@ class CalendarFeatureCalculator:
         ]
 
 
+def get_last_trading_day(date=None):
+    """
+    获取最近交易日（如果当天是交易日则返回当天，否则返回前一个交易日）
+
+    参数:
+    - date: 参考日期（datetime 或 'YYYY-MM-DD' 字符串，默认为今天）
+
+    返回:
+    - 最近交易日字符串 (YYYY-MM-DD)
+    """
+    if date is None:
+        date = datetime.now()
+    elif isinstance(date, str):
+        date = datetime.strptime(date, '%Y-%m-%d')
+
+    date_str = date.strftime('%Y-%m-%d')
+
+    try:
+        import akshare as ak
+        df = ak.tool_trade_date_hist_sina()
+        trading_dates = df['trade_date'].astype(str).tolist()
+
+        # 如果当天是交易日，返回当天
+        if date_str in trading_dates:
+            return date_str
+
+        # 否则找前一个交易日
+        past_trading_dates = [d for d in trading_dates if d <= date_str]
+        if past_trading_dates:
+            return past_trading_dates[-1]
+        else:
+            # 如果没有历史交易日，返回当天
+            return date_str
+
+    except Exception as e:
+        print(f"⚠️ 获取交易日历失败: {e}，使用工作日估算")
+        # 回退：向前找最近的工作日
+        current = date
+        while current.weekday() >= 5:  # 周六=5, 周日=6
+            current -= timedelta(days=1)
+        return current.strftime('%Y-%m-%d')
+
+
 # 日历效应特征配置（用于 FEATURE_CONFIG）
 CALENDAR_FEATURE_CONFIG = {
     'calendar_features': CalendarFeatureCalculator.get_feature_names()
