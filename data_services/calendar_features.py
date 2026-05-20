@@ -306,18 +306,34 @@ class CalendarFeatureCalculator:
 
 def get_last_trading_day(date=None):
     """
-    获取最近交易日（如果当天是交易日则返回当天，否则返回前一个交易日）
+    获取最近交易日（如果当天是交易日且已开市则返回当天，否则返回前一个交易日）
 
     参数:
     - date: 参考日期（datetime 或 'YYYY-MM-DD' 字符串，默认为今天）
 
     返回:
     - 最近交易日字符串 (YYYY-MM-DD)
+
+    注意:
+    - 港股开市时间为 09:30，在开市前应返回前一个交易日
+    - 这确保报告文件名与实际分析的数据日期一致
     """
     if date is None:
         date = datetime.now()
     elif isinstance(date, str):
         date = datetime.strptime(date, '%Y-%m-%d')
+
+    # 港股开市时间 09:30
+    MARKET_OPEN_HOUR = 9
+    MARKET_OPEN_MINUTE = 30
+
+    # 检查当前时间是否在开市前
+    current_time = date.hour * 60 + date.minute
+    market_open_time = MARKET_OPEN_HOUR * 60 + MARKET_OPEN_MINUTE
+
+    # 如果当前时间在开市前，使用前一天的日期来判断
+    if current_time < market_open_time:
+        date = date - timedelta(days=1)
 
     date_str = date.strftime('%Y-%m-%d')
 
