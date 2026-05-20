@@ -993,9 +993,10 @@
       "prediction_probability": 0.29966831617516576,
       "confidence_level": "高",
       "entry_price": 26389.04,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "correct",
+      "actual_return": -0.022402875990373307,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-05-14_20d",
@@ -1147,6 +1148,6 @@
     "version": "1.0",
     "total_predictions": 78,
     "description": "恒生指数多周期预测历史记录",
-    "last_verified": "2026-05-20T07:07:51"
+    "last_verified": "2026-05-21T07:16:28"
   }
 }
