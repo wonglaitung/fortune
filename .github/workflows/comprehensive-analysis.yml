@@ -4,8 +4,13 @@ on:
   schedule:
     # 每天港股交易时段执行 (周一到周五，下午4:00 HK时间)
     - cron: '8 8 * * 1-5'
-  # 可选：允许手动触发
+  # 允许手动触发，可指定股票代码
   workflow_dispatch:
+    inputs:
+      stock_codes:
+        description: '股票代码（逗号分隔，如 2318.HK,0700.HK）'
+        required: false
+        default: '2318.HK'
 
 jobs:
   send-email:
@@ -36,6 +41,17 @@ jobs:
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
           bash scripts/run_comprehensive_analysis.sh
+
+      - name: Send stock analysis email
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
+          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+        run: |
+          python3 scripts/send_stock_analysis_email.py --stocks "${{ inputs.stock_codes || '2318.HK' }}" --email
 
       - name: Commit prediction history
         run: |
