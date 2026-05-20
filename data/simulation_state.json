@@ -32638,6 +32638,102 @@
       "current_price": 46.84,
       "target_price": 51.28,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-05-20T10:16:33.891992",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 799.1892940520192,
+      "reason": "价格高位(60.99%)+CMF流出+OBV下降，主力出货迹象，新闻显示股价透支业绩",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 409.4,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20T10:16:35.841214",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 799.1892940520192,
+      "reason": "RSI 70.74超买+CMF流出+OBV下降+价格高位(98.39%)，6项出货原因全触发，新闻引发估值重估担忧",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.65,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20T10:16:37.258107",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 799.1892940520192,
+      "reason": "RSI 69.95超买+CMF流出+OBV下降+布林带超买，5项出货原因，新闻利好已兑现",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.67,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20T10:16:38.443930",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 799.1892940520192,
+      "reason": "价格高位(71.14%)+CMF流出+MACD交叉，筹码比例67.2%>60%拉升困难，新闻地缘政治风险",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 123.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20T10:16:41.179513",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "capital_after": 799.1892940520192,
+      "reason": "价格高位(87.14%)+MACD交叉+OBV下降，筹码比例57.1%>50%，新闻峰会无突破触发回调",
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 73.1,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20T10:16:44.618989",
+      "type": "BUY",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 45.08,
+      "amount": 0,
+      "capital_after": 799.1892940520192,
+      "reason": "价格低位(29.93%)+CMF资金流入+OBV上升，筹码比例43.0%<60%，能源板块温和上涨支撑",
+      "success": false,
+      "stop_loss_price": 38.28,
+      "current_price": 45.08,
+      "target_price": 47.3,
+      "validity_period": 5
     }
   ],
   "portfolio_history": [
@@ -50405,416 +50501,6 @@
   ],
   "decision_history": [
     {
-      "timestamp": "2026-05-18 13:46:59",
-      "type": "BUY",
-      "code": "6682.HK",
-      "name": "范式智能",
-      "shares": 3400,
-      "price": 33.82,
-      "amount": 114988.0,
-      "reason": "技术指标协同：RSI+CMF+布林带三指标同向（RSI 38.8超卖、CMF 0.2133流入）；筹码分布：上方筹码比例0.0%低阻力、拉升难度容易；CMF资金流流入抵消OBV下降影响",
-      "capital_after": 799.1892940520192,
-      "success": true,
-      "stop_loss_price": 28.8,
-      "current_price": 33.82,
-      "target_price": 37.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-18 15:56:49",
-      "buy": [
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "RSI 33.72超卖，CMF资金流+0.2783显著流入，PE 7.10深度低估，筹码上方比例0.0%低阻力",
-          "allocation_pct": 30,
-          "stop_loss_price": 42.0,
-          "target_price": 50.0,
-          "validity_period": 5
-        },
-        {
-          "code": "0883.HK",
-          "name": "中国海洋石油",
-          "reason": "能源股涨幅1.12%温和上涨，RSI 44.28接近超卖，CMF+0.0385资金流入，PE 8.96低估值，Q1利润上升39.14亿",
-          "allocation_pct": 40,
-          "stop_loss_price": 24.0,
-          "target_price": 28.5,
-          "validity_period": 14
-        }
-      ],
-      "sell": [
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "RSI 68.27超买，CMF-0.177资金流出，成交额暴增507.01%，短期获利盘巨大位置百分位100%",
-          "stop_loss_triggered": false,
-          "target_price": 5.2,
-          "validity_period": 3
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "CMF-0.1935资金流出，成交额暴增270.46%，上方筹码比例94.3%高阻力，板块趋势温和下跌",
-          "stop_loss_triggered": false,
-          "target_price": 5.8,
-          "validity_period": 3
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "MACD交叉，CMF-0.1269资金流出，缩量下跌，情感指标MA3:3.18显示情绪恶化",
-          "stop_loss_triggered": false,
-          "target_price": 395.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0016.HK",
-          "name": "新鸿基地产",
-          "reason": "房地产板块系统性风险跌幅-4.25%，成交量比率1.61放量下跌，上方筹码比例89.0%高阻力",
-          "stop_loss_triggered": false,
-          "target_price": 128.0,
-          "validity_period": 3
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "RSI 71.34超买，CMF-0.2652资金流出，布林带超买，位置百分位97.83%利好出尽",
-          "stop_loss_triggered": false,
-          "target_price": 83.0,
-          "validity_period": 3
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-05-18 15:56:49",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "RSI 68.27超买，CMF-0.177资金流出，成交额暴增507.01%，短期获利盘巨大位置百分位100%",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.64,
-      "target_price": 5.2,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-18 15:56:51",
-      "type": "SELL",
-      "code": "1330.HK",
-      "name": "绿色动力环保",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "CMF-0.1935资金流出，成交额暴增270.46%，上方筹码比例94.3%高阻力，板块趋势温和下跌",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 6.23,
-      "target_price": 5.8,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-18 15:56:53",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "MACD交叉，CMF-0.1269资金流出，缩量下跌，情感指标MA3:3.18显示情绪恶化",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 409.8,
-      "target_price": 395.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-18 15:56:54",
-      "type": "SELL",
-      "code": "0016.HK",
-      "name": "新鸿基地产",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "房地产板块系统性风险跌幅-4.25%，成交量比率1.61放量下跌，上方筹码比例89.0%高阻力",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 136.6,
-      "target_price": 128.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-18 15:56:56",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "RSI 71.34超买，CMF-0.2652资金流出，布林带超买，位置百分位97.83%利好出尽",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 86.45,
-      "target_price": 83.0,
-      "validity_period": 3
-    },
-    {
-      "timestamp": "2026-05-18 15:56:58",
-      "type": "BUY",
-      "code": "3968.HK",
-      "name": "招商银行",
-      "shares": 0,
-      "price": 46.62,
-      "amount": 0,
-      "reason": "RSI 33.72超卖，CMF资金流+0.2783显著流入，PE 7.10深度低估，筹码上方比例0.0%低阻力",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": 42.0,
-      "current_price": 46.62,
-      "target_price": 50.0,
-      "validity_period": 5
-    },
-    {
-      "timestamp": "2026-05-18 15:57:00",
-      "type": "BUY",
-      "code": "0883.HK",
-      "name": "中国海洋石油",
-      "shares": 0,
-      "price": 26.82,
-      "amount": 0,
-      "reason": "能源股涨幅1.12%温和上涨，RSI 44.28接近超卖，CMF+0.0385资金流入，PE 8.96低估值，Q1利润上升39.14亿",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": 24.0,
-      "current_price": 26.82,
-      "target_price": 28.5,
-      "validity_period": 14
-    },
-    {
-      "timestamp": "2026-05-19 10:20:59",
-      "buy": [
-        {
-          "code": "2269.HK",
-          "name": "药明生物",
-          "reason": "建仓评分5.7，OBV上升，CMF资金流入，情感指标改善",
-          "allocation_pct": 10,
-          "stop_loss_price": 50.0,
-          "target_price": 55.0,
-          "validity_period": 7
-        },
-        {
-          "code": "3968.HK",
-          "name": "招商银行",
-          "reason": "建仓评分4.9，位置百分位1.68%显示严重超卖，RSI 34.92超卖，布林带突破下轨",
-          "allocation_pct": 10,
-          "stop_loss_price": 44.29,
-          "target_price": 51.28,
-          "validity_period": 7
-        }
-      ],
-      "sell": [
-        {
-          "code": "0005.HK",
-          "name": "汇丰银行",
-          "reason": "出货评分3.5 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0388.HK",
-          "name": "香港交易所",
-          "reason": "出货评分7.5 (强烈出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0728.HK",
-          "name": "中国电信",
-          "reason": "出货评分6.0 (强烈出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0941.HK",
-          "name": "中国移动",
-          "reason": "出货评分6.0 (强烈出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "0981.HK",
-          "name": "中芯国际",
-          "reason": "出货评分4.0 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1109.HK",
-          "name": "华润置地",
-          "reason": "出货评分3.5 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1288.HK",
-          "name": "农业银行",
-          "reason": "出货评分4.0 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1330.HK",
-          "name": "绿色动力环保",
-          "reason": "出货评分5.0 (强烈出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1347.HK",
-          "name": "华虹半导体",
-          "reason": "出货评分4.5 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "9660.HK",
-          "name": "地平线机器人",
-          "reason": "出货评分3.5 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1211.HK",
-          "name": "比亚迪股份",
-          "reason": "出货评分4.0 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        },
-        {
-          "code": "1299.HK",
-          "name": "友邦保险",
-          "reason": "出货评分3.0 (弱出货信号)",
-          "stop_loss_triggered": false,
-          "target_price": 100.0,
-          "validity_period": 7
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-05-19 10:20:59",
-      "type": "SELL",
-      "code": "0005.HK",
-      "name": "汇丰银行",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分3.5 (弱出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 139.1,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-19 10:21:02",
-      "type": "SELL",
-      "code": "0388.HK",
-      "name": "香港交易所",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分7.5 (强烈出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 410.6,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-19 10:21:03",
-      "type": "SELL",
-      "code": "0728.HK",
-      "name": "中国电信",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0 (强烈出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 5.66,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-19 10:21:04",
-      "type": "SELL",
-      "code": "0941.HK",
-      "name": "中国移动",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分6.0 (强烈出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 86.9,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-19 10:21:07",
-      "type": "SELL",
-      "code": "0981.HK",
-      "name": "中芯国际",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分4.0 (弱出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 65.95,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
-      "timestamp": "2026-05-19 10:21:12",
-      "type": "SELL",
-      "code": "1109.HK",
-      "name": "华润置地",
-      "shares": 0,
-      "price": 0.0,
-      "amount": 0.0,
-      "reason": "出货评分3.5 (弱出货信号)",
-      "capital_after": 799.1892940520192,
-      "success": false,
-      "stop_loss_price": null,
-      "current_price": 35.58,
-      "target_price": 100.0,
-      "validity_period": 7
-    },
-    {
       "timestamp": "2026-05-19 10:21:13",
       "type": "SELL",
       "code": "1288.HK",
@@ -50941,6 +50627,163 @@
       "current_price": 46.84,
       "target_price": 51.28,
       "validity_period": 7
+    },
+    {
+      "timestamp": "2026-05-19 14:08:29",
+      "buy": [],
+      "sell": []
+    },
+    {
+      "timestamp": "2026-05-20 10:16:33",
+      "buy": [
+        {
+          "code": "1088.HK",
+          "name": "中国神华",
+          "reason": "价格低位(29.93%)+CMF资金流入+OBV上升，筹码比例43.0%<60%，能源板块温和上涨支撑",
+          "allocation_pct": 15,
+          "stop_loss_price": 38.28,
+          "target_price": 47.3,
+          "validity_period": 5
+        }
+      ],
+      "sell": [
+        {
+          "code": "0388.HK",
+          "name": "香港交易所",
+          "reason": "价格高位(60.99%)+CMF流出+OBV下降，主力出货迹象，新闻显示股价透支业绩",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0941.HK",
+          "name": "中国移动",
+          "reason": "RSI 70.74超买+CMF流出+OBV下降+价格高位(98.39%)，6项出货原因全触发，新闻引发估值重估担忧",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0728.HK",
+          "name": "中国电信",
+          "reason": "RSI 69.95超买+CMF流出+OBV下降+布林带超买，5项出货原因，新闻利好已兑现",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "1347.HK",
+          "name": "华虹半导体",
+          "reason": "价格高位(71.14%)+CMF流出+MACD交叉，筹码比例67.2%>60%拉升困难，新闻地缘政治风险",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        },
+        {
+          "code": "0981.HK",
+          "name": "中芯国际",
+          "reason": "价格高位(87.14%)+MACD交叉+OBV下降，筹码比例57.1%>50%，新闻峰会无突破触发回调",
+          "stop_loss_triggered": false,
+          "target_price": 0.0,
+          "validity_period": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-05-20 10:16:33",
+      "type": "SELL",
+      "code": "0388.HK",
+      "name": "香港交易所",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "价格高位(60.99%)+CMF流出+OBV下降，主力出货迹象，新闻显示股价透支业绩",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 409.4,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20 10:16:35",
+      "type": "SELL",
+      "code": "0941.HK",
+      "name": "中国移动",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI 70.74超买+CMF流出+OBV下降+价格高位(98.39%)，6项出货原因全触发，新闻引发估值重估担忧",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 86.65,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20 10:16:37",
+      "type": "SELL",
+      "code": "0728.HK",
+      "name": "中国电信",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "RSI 69.95超买+CMF流出+OBV下降+布林带超买，5项出货原因，新闻利好已兑现",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 5.67,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20 10:16:38",
+      "type": "SELL",
+      "code": "1347.HK",
+      "name": "华虹半导体",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "价格高位(71.14%)+CMF流出+MACD交叉，筹码比例67.2%>60%拉升困难，新闻地缘政治风险",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 123.6,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20 10:16:41",
+      "type": "SELL",
+      "code": "0981.HK",
+      "name": "中芯国际",
+      "shares": 0,
+      "price": 0.0,
+      "amount": 0.0,
+      "reason": "价格高位(87.14%)+MACD交叉+OBV下降，筹码比例57.1%>50%，新闻峰会无突破触发回调",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": null,
+      "current_price": 73.1,
+      "target_price": 0.0,
+      "validity_period": 1
+    },
+    {
+      "timestamp": "2026-05-20 10:16:44",
+      "type": "BUY",
+      "code": "1088.HK",
+      "name": "中国神华",
+      "shares": 0,
+      "price": 45.08,
+      "amount": 0,
+      "reason": "价格低位(29.93%)+CMF资金流入+OBV上升，筹码比例43.0%<60%，能源板块温和上涨支撑",
+      "capital_after": 799.1892940520192,
+      "success": false,
+      "stop_loss_price": 38.28,
+      "current_price": 45.08,
+      "target_price": 47.3,
+      "validity_period": 5
     }
   ],
   "start_date": "2025-10-24T12:47:53.368185"
