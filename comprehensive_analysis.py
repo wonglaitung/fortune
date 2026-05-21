@@ -3659,7 +3659,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += f"- HMM 状态转换概率: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n"
 
                         # 添加状态稳定性说明
-                        hsi_text += "\n**状态稳定性说明**:\n"
+                        hsi_text += "\n**状态持续性说明**:\n"
                         hsi_text += "- ⚠️ 不稳定（<5天）：市场状态频繁转换，建议降低仓位\n"
                         hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
                         hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
