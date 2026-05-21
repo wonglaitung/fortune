@@ -32,7 +32,6 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import pandas as pd
 import numpy as np
-import yfinance as yf
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -369,13 +368,13 @@ class StockAnomalyDetector:
 
     def get_stock_data(self, stock: str, period: str = '3mo', interval: str = None) -> Optional[pd.DataFrame]:
         """
-        获取股票数据
-        
+        获取股票数据（使用腾讯财经接口，更可靠）
+
         Args:
             stock: 股票代码（如 '0700.HK'）
             period: 数据周期（默认3个月）
             interval: 数据间隔（如 '1d'、'1h'），默认为 None（使用 self.time_interval）
-            
+
         Returns:
             DataFrame 包含价格数据，或 None
         """
@@ -383,20 +382,46 @@ class StockAnomalyDetector:
             # 如果没有指定 interval，使用实例的 time_interval
             if interval is None:
                 interval = '1h' if self.time_interval == 'hour' else '1d'
-            
-            logger.info(f"下载 {stock} 数据（周期：{period}，间隔：{interval}）...")
-            ticker = yf.Ticker(stock)
-            df = ticker.history(period=period, interval=interval, auto_adjust=True)
-            
-            if df.empty:
+
+            # 将股票代码格式转换为腾讯接口格式（去掉 .HK 后缀）
+            stock_code = stock.replace('.HK', '')
+
+            # 根据周期计算天数
+            period_days = 90 if period == '3mo' else 30 if period == '1mo' else 60
+
+            logger.info(f"下载 {stock} 数据（周期：{period_days}天，间隔：{interval}）...")
+
+            # 使用腾讯财经接口获取日线数据
+            from data_services.tencent_finance import get_hk_stock_data_tencent, get_hk_stock_info_tencent
+            df = get_hk_stock_data_tencent(stock_code, period_days=period_days)
+
+            if df is None or df.empty:
                 logger.warning(f"{stock} 数据下载失败：无数据")
                 return None
-            
+
+            # 腾讯接口返回的数据列名需要调整以匹配 yfinance 格式
+            # 腾讯返回: Open, Close, Low, High, Volume
+            # yfinance 格式: Open, High, Low, Close, Volume
+            # 需要确保列名一致
+            df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+            # 获取实时报价，更新当天的收盘价为实时价格
+            realtime_info = get_hk_stock_info_tencent(stock_code)
+            if realtime_info and realtime_info.get('current_price'):
+                realtime_price = realtime_info['current_price']
+                # 更新最后一条记录的收盘价为实时价格
+                if len(df) > 0:
+                    old_close = df['Close'].iloc[-1]
+                    df.loc[df.index[-1], 'Close'] = realtime_price
+                    logger.info(f"{stock} 更新实时价格: {old_close:.2f} -> {realtime_price:.2f}")
+
             logger.info(f"{stock} 数据下载成功，共 {len(df)} 条记录")
             return df
-            
+
         except Exception as e:
             logger.error(f"获取 {stock} 数据失败: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def get_stock_name(self, stock: str) -> str:
@@ -660,8 +685,8 @@ class StockAnomalyDetector:
 
 def get_market_status() -> Dict:
     """
-    获取市场整体状态（恒生指数）
-    
+    获取市场整体状态（恒生指数）- 使用腾讯财经接口
+
     Returns:
         市场状态字典：
         {
@@ -672,17 +697,19 @@ def get_market_status() -> Dict:
         }
     """
     try:
-        hsi = yf.Ticker('^HSI')
-        hist = hsi.history(period='5d')
-        
-        if hist.empty or len(hist) < 2:
+        from data_services.tencent_finance import get_hsi_data_tencent
+
+        # 使用腾讯接口获取恒生指数数据
+        hist = get_hsi_data_tencent(period_days=5)
+
+        if hist is None or hist.empty or len(hist) < 2:
             return {'hsi_change': 0, 'hsi_price': 0, 'is_market_anomaly': False, 'anomaly_type': None}
-        
+
         latest = hist.iloc[-1]
         prev = hist.iloc[-2]
         hsi_change = (latest['Close'] - prev['Close']) / prev['Close'] * 100
         hsi_price = latest['Close']
-        
+
         # 判断市场整体异常（涨跌超过 2%）
         is_market_anomaly = abs(hsi_change) >= 2.0
         anomaly_type = None

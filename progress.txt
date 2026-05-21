@@ -8,6 +8,46 @@
 
 ## 最新进展
 
+### 2026-05-21 异常检测数据源切换：yfinance → 腾讯财经接口 ⭐⭐
+
+**问题**：yfinance 在盘中返回的数据不准确，导致异常检测邮件显示错误价格
+
+**现象**：
+- 邮件显示美团价格 85.00，实际收盘价 82.10
+- 原因：yfinance 日线数据在盘中时，Close 字段可能是开盘价而非最新价
+- 每小时工作流在交易时段运行，获取的是盘中数据
+
+**解决方案**：
+
+| 修改项 | 旧方案 | 新方案 |
+|--------|--------|--------|
+| 股票数据源 | yfinance | 腾讯财经接口 |
+| 恒指数据源 | yfinance (`^HSI`) | 腾讯财经接口 |
+| 当前价格 | 历史K线最后一条 | 实时报价接口更新 |
+
+**核心改动**：
+```python
+# 获取历史K线数据
+df = get_hk_stock_data_tencent(stock_code, period_days=period_days)
+
+# 获取实时报价，更新当天的收盘价
+realtime_info = get_hk_stock_info_tencent(stock_code)
+if realtime_info and realtime_info.get('current_price'):
+    df.loc[df.index[-1], 'Close'] = realtime_info['current_price']
+```
+
+**效果**：
+- 盘中运行：使用实时报价，价格准确
+- 收盘后运行：实时报价等于收盘价，数据一致
+- 不再依赖 yfinance，避免数据延迟问题
+
+**改动文件**：
+- `detect_stock_anomalies.py` - `get_stock_data()` 方法改用腾讯接口 + 实时报价更新
+- `detect_stock_anomalies.py` - `get_market_status()` 函数改用腾讯接口
+- 移除 `yfinance` 导入
+
+---
+
 ### 2026-05-21 目录重构遗漏修复：hsi_prediction_reports 目录创建 ⭐
 
 **问题**：目录重构时路径变更，但遗漏了创建新目录的代码

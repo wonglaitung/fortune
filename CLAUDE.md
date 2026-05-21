@@ -33,7 +33,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` | 收市后 |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **股票分析邮件** | `python3 scripts/send_stock_analysis_email.py --stocks 2318.HK --email` | 收市后 |
-| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | - |
+| **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | - |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
@@ -74,6 +74,7 @@ rm -rf data/stock_cache/*.pkl
 | **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
 | **市场情绪数据源** | 必须使用所有股票收益率计算上涨比例，与 walk-forward 验证一致 |
 | **双模式预测** | 收市后预测使用 `mode='production'`（当日数据），Walk-forward 使用 `mode='backtest'`（T-1 数据） |
+| **yfinance 盘中数据** | yfinance 日线数据在盘中可能不准确，推荐使用腾讯财经接口获取实时报价 |
 
 ---
 
@@ -83,8 +84,8 @@ rm -rf data/stock_cache/*.pkl
 外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
     ↓              ↓              ↓            ↓          ↓
 腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
-yfinance     基本面数据      综合分析     Walk-forward  JSON文件
-AKShare      南向资金        主力追踪     性能监控     微信通知
+AKShare      基本面数据      综合分析     Walk-forward  JSON文件
+             南向资金        主力追踪     性能监控     微信通知
 ```
 
 **关键依赖关系**：

@@ -1,12 +1,39 @@
 # 经验教训
 
-> **版本**：v9.0 (2026-05-21) | **状态**：当前有效
+> **版本**：v9.1 (2026-05-21) | **状态**：当前有效
 
 ---
 
 ## 一、项目架构
 
-### 1. 目录定位清晰化 ⭐⭐⭐
+### 1. 数据源选择：yfinance vs 腾讯财经接口 ⭐⭐⭐
+
+**问题**：yfinance 在盘中返回的数据不准确，导致异常检测邮件显示错误价格
+
+**现象**：
+- 邮件显示美团价格 85.00，实际收盘价 82.10
+- yfinance 日线数据在盘中时，Close 字段可能是开盘价而非最新价
+- 每小时工作流在交易时段运行，获取的是盘中数据
+
+**解决方案**：
+```python
+# 使用腾讯财经接口获取历史K线
+df = get_hk_stock_data_tencent(stock_code, period_days=90)
+
+# 使用实时报价接口更新当天的收盘价
+realtime_info = get_hk_stock_info_tencent(stock_code)
+if realtime_info and realtime_info.get('current_price'):
+    df.loc[df.index[-1], 'Close'] = realtime_info['current_price']
+```
+
+**教训**：
+- yfinance 数据在盘中可能不准确，不适合实时/盘中场景
+- 腾讯财经接口实时报价更及时，适合盘中检测
+- 收盘后运行时，实时报价等于收盘价，数据一致
+
+---
+
+### 1.1 目录定位清晰化 ⭐⭐⭐
 
 **问题**：`output/` 目录混合了人类可读报告和机器可读数据，定位不清晰
 
