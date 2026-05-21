@@ -2,11 +2,38 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-20
+**最后更新**：2026-05-21
 
 ---
 
 ## 最新进展
+
+### 2026-05-21 目录重构遗漏修复：hsi_prediction_reports 目录创建 ⭐
+
+**问题**：目录重构时路径变更，但遗漏了创建新目录的代码
+
+**现象**：
+```
+FileNotFoundError: [Errno 2] No such file or directory:
+'/home/runner/work/fortune/fortune/data/hsi_prediction_reports/hsi_prediction_report_20260521_071636.json'
+```
+
+**根本原因**：
+- 提交 `8567e1e` 将恒指预测报告从 `output/` 迁移到 `data/hsi_prediction_reports/`
+- 路径变更了，但未添加 `os.makedirs()` 创建新目录
+- 文件开头只创建了 `data_dir` 和 `output_dir`，没有创建子目录
+
+**解决方案**：
+```python
+reports_dir = os.path.join(data_dir, 'hsi_prediction_reports')
+os.makedirs(reports_dir, exist_ok=True)
+json_file = os.path.join(reports_dir, f'hsi_prediction_report_{timestamp}.json')
+```
+
+**改动文件**：
+- `hsi_prediction.py:2127-2129` - 添加目录创建逻辑
+
+---
 
 ### 2026-05-20 股票分析邮件集成技能分析框架 ⭐⭐⭐
 
