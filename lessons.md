@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v8.9 (2026-05-20) | **状态**：当前有效
+> **版本**：v9.0 (2026-05-21) | **状态**：当前有效
 
 ---
 
@@ -39,6 +39,39 @@ output/ - 输出报告（人类可读、知识库材料）
 - 数据和报告分离，便于管理和版本控制
 - 机器可读数据放 `data/`，人类可读报告放 `output/`
 - `.gitignore` 按目录类型配置忽略规则
+
+---
+
+### 1.1 目录重构需检查所有路径变更 ⭐⭐
+
+**问题**：目录重构时路径变更，但遗漏了创建新目录的代码
+
+**现象**：
+```
+FileNotFoundError: [Errno 2] No such file or directory:
+'data/hsi_prediction_reports/hsi_prediction_report_xxx.json'
+```
+
+**根本原因**：
+- 提交 `8567e1e` 将恒指预测报告从 `output/` 迁移到 `data/hsi_prediction_reports/`
+- 路径变更了，但未添加 `os.makedirs()` 创建新目录
+- 文件开头只创建了 `data_dir` 和 `output_dir`，没有创建子目录
+
+**解决方案**：
+```python
+# 方案1：在文件开头创建所有需要的子目录
+os.makedirs(os.path.join(data_dir, 'hsi_prediction_reports'), exist_ok=True)
+
+# 方案2：在写入文件前检查并创建目录（更安全）
+reports_dir = os.path.join(data_dir, 'hsi_prediction_reports')
+os.makedirs(reports_dir, exist_ok=True)
+json_file = os.path.join(reports_dir, f'hsi_prediction_report_{timestamp}.json')
+```
+
+**教训**：
+- 目录重构时必须检查所有路径变更，确保新目录有创建代码
+- 使用 `os.makedirs(path, exist_ok=True)` 避免目录已存在时报错
+- 在写入文件前创建目录比在文件开头创建更安全（就近原则）
 
 ---
 
@@ -1331,6 +1364,7 @@ report_date = get_last_trading_day()  # 周六运行时返回周五日期
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-21 | v9.0 | 新增：目录重构需检查所有路径变更经验（创建新目录的代码不能遗漏） |
 | 2026-05-20 | v8.9 | 新增：大模型综合分析框架集成经验（避免硬编码分析逻辑，让大模型生成详细建议） |
 | 2026-05-20 | v8.8 | 新增：定时股票分析邮件功能（大模型智能提取、多股票支持、Workflow 集成） |
 | 2026-05-19 | v8.7 | 新增：股票分析技能设计经验（触发词、硬约束、12维度分析）；新增：涨跌幅实时显示经验；新增：交易日日期处理经验 |
