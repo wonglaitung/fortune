@@ -129,10 +129,26 @@ def _build_market_level_features():
         'VIX', 'VIX_Change_5d', 'VIX_Level', 'VIX_Change', 'VIX_Ratio_MA20',
     ])
 
-    # 5. 美债收益率（4个）- 手动定义
+    # 5. 美债收益率（多期限）- 手动定义
     features.extend([
+        'US_2Y_Yield', 'US_2Y_Yield_Change',
         'US_10Y_Yield', 'US_10Y_Yield_Change',
-        'US10Y_Yield', 'US10Y_Yield_Change_5d',
+        'US_30Y_Yield', 'US_30Y_Yield_Change',
+    ])
+
+    # 5.1 美债期限利差 - 手动定义
+    features.extend([
+        'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
+    ])
+
+    # 5.2 中国国债收益率 - 手动定义
+    features.extend([
+        'CN_10Y_Yield', 'CN_10Y_Yield_Change',
+    ])
+
+    # 5.3 中美利差（核心特征）- 手动定义
+    features.extend([
+        'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
     ])
 
     # 6. 市场状态 One-Hot（3个）- 手动定义
@@ -197,11 +213,26 @@ MARKET_FEATURE_MONOTONICITY = {
     'GARCH_Vol_Ratio': 'NEGATIVE',
     'GARCH_Vol_Change_5d': 'NEGATIVE',
 
-    # 利率类（中性）
+    # 利率类（中性）- 多期限美债
+    'US_2Y_Yield': 'NEUTRAL',
+    'US_2Y_Yield_Change': 'NEUTRAL',
     'US_10Y_Yield': 'NEUTRAL',
     'US_10Y_Yield_Change': 'NEUTRAL',
-    'US10Y_Yield': 'NEUTRAL',
-    'US10Y_Yield_Change_5d': 'NEUTRAL',
+    'US_30Y_Yield': 'NEUTRAL',
+    'US_30Y_Yield_Change': 'NEUTRAL',
+
+    # 中国国债收益率（中性）
+    'CN_10Y_Yield': 'NEUTRAL',
+    'CN_10Y_Yield_Change': 'NEUTRAL',
+
+    # 美债期限利差（正向 - 曲线陡峭有利风险资产）
+    'US_2Y_10Y_Spread': 'POSITIVE',   # 10Y-2Y，倒挂=衰退预期
+    'US_10Y_30Y_Spread': 'POSITIVE',  # 30Y-10Y，长端曲线形态
+
+    # 中美利差（正向 - 利差扩大有利港股资金流入）
+    'CN_US_10Y_Spread': 'POSITIVE',
+    'CN_US_Spread_Change_5d': 'NEUTRAL',
+    'CN_US_Spread_Z_Score': 'NEUTRAL',
 
     # 市场状态类
     'HSI_Market_Regime': 'NEUTRAL',
@@ -1778,7 +1809,16 @@ class FeatureEngineer:
                 'SP500_Return', 'SP500_Return_5d', 'SP500_Return_20d',
                 'NASDAQ_Return', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
                 'VIX_Change', 'VIX_Ratio_MA20', 'VIX_Level',
-                'US_10Y_Yield', 'US_10Y_Yield_Change'
+                # 多期限美债收益率
+                'US_2Y_Yield', 'US_2Y_Yield_Change',
+                'US_10Y_Yield', 'US_10Y_Yield_Change',
+                'US_30Y_Yield', 'US_30Y_Yield_Change',
+                # 中国国债收益率
+                'CN_10Y_Yield', 'CN_10Y_Yield_Change',
+                # 美债期限利差
+                'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
+                # 中美利差（核心特征）
+                'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
             ]
 
             # 只合并存在的特征
@@ -2989,11 +3029,18 @@ class FeatureEngineer:
             'MACD_Bullish_Divergence', 'MACD_Bearish_Divergence',  # MACD 背离
             'RSI_Bullish_Divergence', 'RSI_Bearish_Divergence',  # RSI 背离
             
-            # 市场环境特征（20个）
+            # 市场环境特征（扩展）
             'VIX', 'VIX_Change_5d', 'VIX_Level',
             'HSI_Return_5d', 'HSI_Return_20d', 'HSI_Return_60d',
             'SP500_Return_5d', 'SP500_Return_20d', 'NASDAQ_Return_5d', 'NASDAQ_Return_20d',
-            'US10Y_Yield', 'US10Y_Yield_Change_5d',
+            # 多期限美债收益率
+            'US_2Y_Yield', 'US_10Y_Yield', 'US_30Y_Yield',
+            # 中国国债收益率
+            'CN_10Y_Yield',
+            # 美债期限利差（收益率曲线形态）
+            'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
+            # 中美利差（核心特征）
+            'CN_US_10Y_Spread', 'CN_US_Spread_Z_Score',
             'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
             'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d',
             # 已删除 GARCH_Persistence：交叉后与基础版 r=1.0

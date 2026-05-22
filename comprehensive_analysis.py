@@ -97,17 +97,17 @@ SECTOR_TYPES = {
 
 # 三周期预测模式配置（基于个股完整模型验证结果）
 # 来源：docs/THREE_HORIZON_ANALYSIS.md 第12章
-# 验证数据：12只港股，Walk-forward 30 folds，完整模型（730特征→385个有效特征）
-# 更新日期：2026-05-18
+# 验证数据：12只港股，Walk-forward 30 folds，Top 500特征（含利率特征）
+# 更新日期：2026-05-23
 THREE_HORIZON_PATTERNS = {
-    '001': {'name': '下跌中继⭐', 'action': '谨慎做多', 'win_rate': '60.41%', 'avg_return': '+4.86%', 'confidence': '低'},
-    '010': {'name': '反弹失败', 'action': '谨慎减仓', 'win_rate': '59.29%', 'avg_return': '-1.65%', 'confidence': '低'},
-    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '57.30%', 'avg_return': '+3.54%', 'confidence': '低'},
-    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '57.85%', 'avg_return': '+2.34%', 'confidence': '低'},
-    '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '58.09%', 'avg_return': '+0.14%', 'confidence': '低'},
-    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '55.52%', 'avg_return': '-2.28%', 'confidence': '低'},
-    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '55.69%', 'avg_return': '-2.54%', 'confidence': '低'},
-    '101': {'name': '假突破', 'action': '持有观望', 'win_rate': '54.05%', 'avg_return': '+2.21%', 'confidence': '低'},
+    '010': {'name': '反弹失败', 'action': '谨慎减仓', 'win_rate': '57.22%', 'avg_return': '-1.65%', 'confidence': '低'},
+    '001': {'name': '下跌中继⭐', 'action': '谨慎做多', 'win_rate': '56.95%', 'avg_return': '+4.86%', 'confidence': '低'},
+    '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '56.80%', 'avg_return': '+0.14%', 'confidence': '低'},
+    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '56.52%', 'avg_return': '+3.54%', 'confidence': '低'},
+    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '56.28%', 'avg_return': '-2.54%', 'confidence': '低'},
+    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '55.37%', 'avg_return': '-2.28%', 'confidence': '低'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '54.62%', 'avg_return': '+2.34%', 'confidence': '低'},
+    '101': {'name': '假突破', 'action': '持有观望', 'win_rate': '53.63%', 'avg_return': '+2.21%', 'confidence': '低'},
 }
 
 # 恒指三周期预测模式配置（基于恒指增强模型验证结果）
@@ -135,11 +135,11 @@ HSI_TRANSMISSION_ACCURACY = {
 }
 
 # 个股传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
-# 更新日期：2026-05-18，12只港股验证（完整模型532特征）
+# 更新日期：2026-05-23，12只港股验证（Top 500特征，含利率特征）
 TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 63.19,      # 1天+5天都正确时，20天准确率
-    'independent_20d_rate': 57.77,   # 独立20天准确率
-    'improvement': 5.42              # 提升幅度
+    'both_correct_rate': 59.12,      # 1天+5天都正确时，20天准确率
+    'independent_20d_rate': 56.91,   # 独立20天准确率
+    'improvement': 2.21              # 提升幅度
 }
 
 
