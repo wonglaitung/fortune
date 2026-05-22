@@ -2403,3 +2403,10 @@ timestamp,type,code,name,shares,price,amount,capital_after,reason,success,stop_l
 2026-05-21T15:02:41.957335,SELL,1347.HK,华虹半导体,0,0.0,0.0,799.1892940520192,出货评分6.5分（强烈出货）,False,,127.7,0.0,,3.0
 2026-05-21T15:02:42.902467,SELL,0981.HK,中芯国际,0,0.0,0.0,799.1892940520192,出货评分6.0分（强烈出货）,False,,74.2,0.0,,3.0
 2026-05-21T15:02:45.670126,SELL,1288.HK,农业银行,0,0.0,0.0,799.1892940520192,出货评分5.0分（强烈出货）,False,,5.88,0.0,,3.0
+2026-05-22T09:41:38.184919,SELL,1288.HK,农业银行,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,5.83,4.5,,7.0
+2026-05-22T09:41:40.539432,SELL,0981.HK,中芯国际,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,74.7,15.0,,7.0
+2026-05-22T09:41:42.802207,SELL,1347.HK,华虹半导体,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,125.6,8.2,,7.0
+2026-05-22T09:41:46.446528,SELL,1330.HK,绿色动力环保,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,6.18,3.8,,7.0
+2026-05-22T09:41:47.268958,SELL,0941.HK,中国移动,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,86.4,50.0,,7.0
+2026-05-22T09:41:48.012976,SELL,0388.HK,香港交易所,0,0.0,0.0,799.1892940520192,Weak performance and bearish trend,False,,408.2,250.0,,7.0
+2026-05-22T09:41:50.233142,BUY,2269.HK,药明生物,0,33.0,0.0,799.1892940520192,Strong growth prospects and positive earnings outlook,False,31.26,33.0,36.19,,14.0
