@@ -10,3 +10,104 @@
 [2026-05-22 07:00:48] 开始每120分钟分析...
 [2026-05-22 07:00:48] 非交易时间，暂停交易
 [2026-05-22 07:00:48] 下一次交易分析将在 2026-05-22 09:30:48 执行（间隔约 2.5 小时，基准 2.0 小时）
+[2026-05-22 09:30:48] 开始每120分钟分析...
+[2026-05-22 09:30:48] 开始执行交易决策...
+[2026-05-22 09:30:48] 正在分析股票...
+[2026-05-22 09:33:22] 正在调用大模型分析...
+[2026-05-22 09:38:11] 大模型分析调用成功
+[2026-05-22 09:38:11] 大模型分析结果:
+###
+[2026-05-22 09:38:11] 正在请求大模型以固定格式输出买卖信号...
+[2026-05-22 09:41:38] 格式化输出结果:
+{
+    "buy": [
+        {
+            "code": "2269.HK",
+            "name": "药明生物",
+            "reason": "Strong growth prospects and positive earnings outlook",
+            "allocation_pct": 15,
+            "stop_loss_price": 31.26,
+            "target_price": 36.19,
+            "validity_period": 14
+        }
+    ],
+    "sell": [
+        {
+            "code": "1288.HK",
+            "name": "农业银行",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 4.50,
+            "validity_period": 7
+        },
+        {
+            "code": "0981.HK",
+            "name": "中芯国际",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 15.00,
+            "validity_period": 7
+        },
+        {
+            "code": "1347.HK",
+            "name": "华虹半导体",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 8.20,
+            "validity_period": 7
+        },
+        {
+            "code": "1330.HK",
+            "name": "绿色动力环保",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 3.80,
+            "validity_period": 7
+        },
+        {
+            "code": "0941.HK",
+            "name": "中国移动",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 50.00,
+            "validity_period": 7
+        },
+        {
+            "code": "0388.HK",
+            "name": "香港交易所",
+            "reason": "Weak performance and bearish trend",
+            "stop_loss_triggered": false,
+            "target_price": 250.00,
+            "validity_period": 7
+        }
+    ]
+}
+[2026-05-22 09:41:38] 成功解析JSON格式的买卖信号
+[2026-05-22 09:41:38] 解析后推荐: 买入 [{'code': '2269.HK', 'name': '药明生物', 'reason': 'Strong growth prospects and positive earnings outlook', 'allocation_pct': 15, 'stop_loss_price': 31.26, 'target_price': 36.19, 'validity_period': 14}], 卖出 [{'code': '1288.HK', 'name': '农业银行', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 4.5, 'validity_period': 7}, {'code': '0981.HK', 'name': '中芯国际', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 15.0, 'validity_period': 7}, {'code': '1347.HK', 'name': '华虹半导体', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 8.2, 'validity_period': 7}, {'code': '1330.HK', 'name': '绿色动力环保', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 3.8, 'validity_period': 7}, {'code': '0941.HK', 'name': '中国移动', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 50.0, 'validity_period': 7}, {'code': '0388.HK', 'name': '香港交易所', 'reason': 'Weak performance and bearish trend', 'stop_loss_triggered': False, 'target_price': 250.0, 'validity_period': 7}]
+[2026-05-22 09:41:38] 未持有 农业银行 (1288.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:40] 邮件发送成功: 【无法卖出通知】农业银行 (1288.HK)
+[2026-05-22 09:41:40] 已发送无法卖出通知邮件: 农业银行 (1288.HK)
+[2026-05-22 09:41:40] 未持有 中芯国际 (0981.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:42] 邮件发送成功: 【无法卖出通知】中芯国际 (0981.HK)
+[2026-05-22 09:41:42] 已发送无法卖出通知邮件: 中芯国际 (0981.HK)
+[2026-05-22 09:41:42] 未持有 华虹半导体 (1347.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:46] 邮件发送成功: 【无法卖出通知】华虹半导体 (1347.HK)
+[2026-05-22 09:41:46] 已发送无法卖出通知邮件: 华虹半导体 (1347.HK)
+[2026-05-22 09:41:46] 未持有 绿色动力环保 (1330.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:47] 邮件发送成功: 【无法卖出通知】绿色动力环保 (1330.HK)
+[2026-05-22 09:41:47] 已发送无法卖出通知邮件: 绿色动力环保 (1330.HK)
+[2026-05-22 09:41:47] 未持有 中国移动 (0941.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:47] 邮件发送成功: 【无法卖出通知】中国移动 (0941.HK)
+[2026-05-22 09:41:47] 已发送无法卖出通知邮件: 中国移动 (0941.HK)
+[2026-05-22 09:41:47] 未持有 香港交易所 (0388.HK)，无法按大模型建议卖出
+[2026-05-22 09:41:49] 邮件发送成功: 【无法卖出通知】香港交易所 (0388.HK)
+[2026-05-22 09:41:49] 已发送无法卖出通知邮件: 香港交易所 (0388.HK)
+[2026-05-22 09:41:50] 按大模型建议的15.00%资金分配比例计算出的投资金额超出可用现金，限制买入金额至现金余额
+[2026-05-22 09:41:50] 资金不足买入 药明生物 (2269.HK)，即使买入100股也不够资金（目标投资: HK$799.19, 当前资金: HK$799.19, 股价: HK$33.00）
+[2026-05-22 09:41:50] 按大模型建议计算出的买入股数为0，跳过买入 药明生物 (2269.HK)，原因: 资金不足
+[2026-05-22 09:41:52] 邮件发送成功: 【无法买入通知】药明生物 (2269.HK)
+[2026-05-22 09:41:52] 当前资金: HK$799.19
+[2026-05-22 09:41:52] 投资组合价值: HK$1,090,484.19
+[2026-05-22 09:41:52] 持仓情况: {'2533.HK': {'shares': 33500, 'avg_price': 16.607791044776118, 'stop_loss_price': 14.0}, '3968.HK': {'shares': 9400, 'avg_price': 46.52, 'stop_loss_price': 39.56}, '6682.HK': {'shares': 3400, 'avg_price': 33.82, 'stop_loss_price': 28.8}}
+[2026-05-22 09:41:52] 总收益率: 9.05%
+[2026-05-22 09:41:52] 下一次交易分析将在 2026-05-22 11:58:52 执行（间隔约 2.3 小时，基准 2.0 小时）
