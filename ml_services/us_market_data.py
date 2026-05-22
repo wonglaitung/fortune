@@ -280,13 +280,13 @@ class USMarketData:
             return None
 
     def get_us_treasury_yield(self, period_days=1460):
-        """获取美国10年期国债收益率数据
-        
+        """获取美国多期限国债收益率数据（2Y, 10Y, 30Y）和中国国债收益率
+
         Args:
-            period_days: 获取天数（默认730天，约2年）
-        
+            period_days: 获取天数（默认1460天，约4年）
+
         Returns:
-            DataFrame: 包含美国10年期国债收益率数据
+            DataFrame: 包含美国和中国多期限国债收益率数据，及利差特征
         """
         try:
             # 使用超时控制包装器
@@ -298,32 +298,56 @@ class USMarketData:
             df = fetch_data()
 
             if df.empty:
-                print("⚠️ 无法获取美国10年期国债收益率数据")
+                print("⚠️ 无法获取国债收益率数据")
                 return None
 
             # 重命名列以保持一致性
             df.rename(columns={'日期': 'Date'}, inplace=True)
-            
-            # 提取美国10年期国债收益率（已经是百分比形式，需要除以100转换为小数）
+
+            # 美国国债收益率（已经是百分比形式，需要除以100转换为小数）
+            df['US_2Y_Yield'] = df['美国国债收益率2年'] / 100
             df['US_10Y_Yield'] = df['美国国债收益率10年'] / 100
-            
+            df['US_30Y_Yield'] = df['美国国债收益率30年'] / 100
+
+            # 中国国债收益率（已经是百分比形式）
+            df['CN_2Y_Yield'] = df['中国国债收益率2年'] / 100
+            df['CN_10Y_Yield'] = df['中国国债收益率10年'] / 100
+            df['CN_30Y_Yield'] = df['中国国债收益率30年'] / 100
+
             # 转换日期格式并设置为UTC时区
             df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
             df.set_index('Date', inplace=True)
 
             # 计算收益率变化
+            df['US_2Y_Yield_Change'] = df['US_2Y_Yield'].pct_change()
             df['US_10Y_Yield_Change'] = df['US_10Y_Yield'].pct_change()
+            df['US_30Y_Yield_Change'] = df['US_30Y_Yield'].pct_change()
+            df['CN_10Y_Yield_Change'] = df['CN_10Y_Yield'].pct_change()
+
+            # 计算美债期限利差（收益率曲线形态）
+            df['US_2Y_10Y_Spread'] = df['US_10Y_Yield'] - df['US_2Y_Yield']
+            df['US_10Y_30Y_Spread'] = df['US_30Y_Yield'] - df['US_10Y_Yield']
+
+            # 计算中美利差（核心特征）
+            df['CN_US_10Y_Spread'] = df['CN_10Y_Yield'] - df['US_10Y_Yield']
+            df['CN_US_Spread_Change_5d'] = df['CN_US_10Y_Spread'].diff(5)
+            # 利差 Z-Score（60日滚动）
+            spread_mean = df['CN_US_10Y_Spread'].rolling(window=60).mean()
+            spread_std = df['CN_US_10Y_Spread'].rolling(window=60).std()
+            df['CN_US_Spread_Z_Score'] = (df['CN_US_10Y_Spread'] - spread_mean) / spread_std
+
+            # 移动平均
             df['US_10Y_Yield_MA5'] = df['US_10Y_Yield'].rolling(window=5).mean()
             df['US_10Y_Yield_MA20'] = df['US_10Y_Yield'].rolling(window=20).mean()
 
-            print("✅ 使用 AKShare 获取美国国债收益率数据成功")
+            print("✅ 使用 AKShare 获取多期限国债收益率数据成功（含中美利差）")
             return df
 
         except TimeoutError as e:
-            print(f"⚠️ 获取美国10年期国债收益率数据超时: {e}")
+            print(f"⚠️ 获取国债收益率数据超时: {e}")
             return None
         except Exception as e:
-            print(f"⚠️ 获取美国10年期国债收益率数据失败: {e}")
+            print(f"⚠️ 获取国债收益率数据失败: {e}")
             return None
 
     def get_all_us_market_data(self, period_days=1460):
@@ -390,10 +414,22 @@ class USMarketData:
             merged_df.rename(columns={'Close': 'VIX_Level'}, inplace=True)
 
         if treasury_df is not None:
-            merged_df = merged_df.merge(
-                treasury_df[['US_10Y_Yield', 'US_10Y_Yield_Change']],
-                left_index=True, right_index=True, how='left'
-            )
+            # 新增多期限利率和利差特征
+            treasury_cols = [
+                'US_2Y_Yield', 'US_2Y_Yield_Change',
+                'US_10Y_Yield', 'US_10Y_Yield_Change',
+                'US_30Y_Yield', 'US_30Y_Yield_Change',
+                'CN_10Y_Yield', 'CN_10Y_Yield_Change',
+                'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
+                'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
+            ]
+            # 只合并存在的列
+            existing_cols = [c for c in treasury_cols if c in treasury_df.columns]
+            if existing_cols:
+                merged_df = merged_df.merge(
+                    treasury_df[existing_cols],
+                    left_index=True, right_index=True, how='left'
+                )
 
         return merged_df
 
