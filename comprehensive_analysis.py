@@ -2660,7 +2660,19 @@ def get_stock_technical_indicators(stock_code):
         # 价格位置（基于20日区间）
         price_range_20d = hist['Close'].rolling(window=20).max() - hist['Close'].rolling(window=20).min()
         price_position = ((current_price - hist['Close'].rolling(window=20).min().iloc[-1]) / price_range_20d.iloc[-1] * 100) if price_range_20d.iloc[-1] > 0 else 50
-        
+
+        # 获取 PE/PB 基本面数据
+        pe_ratio = None
+        pb_ratio = None
+        try:
+            from data_services.fundamental_data import get_stock_financial_indicator
+            financial_data = get_stock_financial_indicator(symbol)
+            if financial_data:
+                pe_ratio = financial_data.get('pe_ratio')
+                pb_ratio = financial_data.get('pb_ratio')
+        except Exception as e:
+            print(f"  ⚠️ 获取 {stock_code} PE/PB 数据失败: {e}")
+
         return {
             'current_price': current_price,
             'change_pct': change_pct,
@@ -2690,7 +2702,9 @@ def get_stock_technical_indicators(stock_code):
             'support_distance': support_distance,
             'resistance_distance': resistance_distance,
             'obv': obv,
-            'price_position': price_position
+            'price_position': price_position,
+            'pe_ratio': pe_ratio,
+            'pb_ratio': pb_ratio
         }
     except Exception as e:
         print(f"⚠️ 获取股票 {stock_code} 技术指标失败: {e}")
@@ -2940,8 +2954,8 @@ def generate_technical_indicators_table(stock_codes):
         # 按股票代码排序
         stock_codes_sorted = sorted(stock_codes)
         
-        table = "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
-        table += "|---------|---------|---------|--------|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
+        table = "| 股票代码 | 股票名称 | 当前价格 | 涨跌幅 | PE | PB | RSI | MACD | MA20 | MA50 | MA200 | 均线排列 | 均线斜率 | 乖离率 | 布林带位置 | ATR | 成交量比率 | 趋势 | 支撑位 | 阻力位 |\n"
+        table += "|---------|---------|---------|--------|-----|-----|-----|------|-----|-----|------|---------|---------|-------|-----------|-----|-----------|------|--------|--------|\n"
         
         success_count = 0
         for stock_code in stock_codes_sorted:
@@ -2954,6 +2968,31 @@ def generate_technical_indicators_table(stock_codes):
                 # 格式化数据
                 price = safe_float_format(indicators['current_price'], '.2f')
                 change = safe_float_format(indicators['change_pct'], '+.2f') + "%"
+
+                # PE 市盈率格式化（带颜色）
+                pe_value = indicators.get('pe_ratio')
+                if pe_value is not None and pe_value > 0:
+                    if pe_value < 15:
+                        pe_display = f'<span style="color: #16a34a;">{pe_value:.2f}</span>'  # 绿色（低估）
+                    elif pe_value < 25:
+                        pe_display = f'<span style="color: #ea580c;">{pe_value:.2f}</span>'  # 橙色（正常）
+                    else:
+                        pe_display = f'<span style="color: #dc2626;">{pe_value:.2f}</span>'  # 红色（高估）
+                else:
+                    pe_display = "N/A"
+
+                # PB 市净率格式化（带颜色）
+                pb_value = indicators.get('pb_ratio')
+                if pb_value is not None and pb_value > 0:
+                    if pb_value < 1.5:
+                        pb_display = f'<span style="color: #16a34a;">{pb_value:.2f}</span>'  # 绿色（低估）
+                    elif pb_value < 3:
+                        pb_display = f'<span style="color: #ea580c;">{pb_value:.2f}</span>'  # 橙色（正常）
+                    else:
+                        pb_display = f'<span style="color: #dc2626;">{pb_value:.2f}</span>'  # 红色（高估）
+                else:
+                    pb_display = "N/A"
+
                 rsi = safe_float_format(indicators['rsi'], '.2f')
                 macd = safe_float_format(indicators['macd'], '.2f')
                 ma20 = safe_float_format(indicators['ma20'], '.2f')
@@ -2988,13 +3027,13 @@ def generate_technical_indicators_table(stock_codes):
                     change = f"📈 {change}"
                 else:
                     change = f"📉 {change}"
-                
+
                 if indicators['trend'] == "强势多头":
                     trend = f"🟢 {trend}"
                 elif indicators['trend'] == "弱势空头":
                     trend = f"🔴 {trend}"
-                
-                table += f"| {stock_code} | {stock_name} | {price} | {change} | {rsi} | {macd} | {ma20} | {ma50} | {ma200} | {ma_align} | {ma_slope} | {ma_dev} | {bb_pos} | {atr} | {vol_ratio} | {trend} | {support} | {resistance} |\n"
+
+                table += f"| {stock_code} | {stock_name} | {price} | {change} | {pe_display} | {pb_display} | {rsi} | {macd} | {ma20} | {ma50} | {ma200} | {ma_align} | {ma_slope} | {ma_dev} | {bb_pos} | {atr} | {vol_ratio} | {trend} | {support} | {resistance} |\n"
                 success_count += 1
 
         print(f"📊 技术指标表格: 成功获取 {success_count}/{len(stock_codes)} 只股票的数据")
