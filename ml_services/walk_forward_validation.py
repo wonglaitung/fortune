@@ -540,6 +540,16 @@ class WalkForwardValidator:
         if 'Code' not in df.columns and 'Code' in predictions.columns:
             df['Code'] = predictions['Code'].values
 
+        # 保存市场情绪数据（用于 prediction_analysis.csv）
+        if 'market_layer' in predictions.columns:
+            df['market_layer'] = predictions['market_layer'].values
+        if 'dynamic_threshold' in predictions.columns:
+            df['dynamic_threshold'] = predictions['dynamic_threshold'].values
+        if 'market_up_ratio_lag1' in predictions.columns:
+            df['market_up_ratio_lag1'] = predictions['market_up_ratio_lag1'].values
+        if 'filtered_signal' in predictions.columns:
+            df['filtered_signal'] = predictions['filtered_signal'].values
+
         # 确保索引对齐（删除预测中不存在于 test_data 的索引）
         df = df[df.index.isin(predictions.index)]
 
