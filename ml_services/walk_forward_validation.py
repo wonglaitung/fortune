@@ -447,6 +447,11 @@ class WalkForwardValidator:
             returns_df = test_data[['Return_1d']].reset_index()
             returns_df.columns = ['Date', 'Return_1d']
 
+            # 调试：检查数据
+            print(f"  📊 市场情绪数据: {len(returns_df)} 条记录, {returns_df['Date'].nunique()} 个交易日")
+            up_ratio_daily = returns_df.groupby('Date')['Return_1d'].apply(lambda x: (x > 0).mean())
+            print(f"     平均上涨比例: {up_ratio_daily.mean()*100:.1f}%, 最低: {up_ratio_daily.min()*100:.1f}%, 最高: {up_ratio_daily.max()*100:.1f}%")
+
             self.market_filter.prepare_market_schedule(
                 returns_df,
                 date_col='Date',
@@ -943,7 +948,7 @@ class WalkForwardValidator:
                     pred_type = 'False Negative'  # 预测跌，实际涨
                     reason = '预测跌但实际上涨'
 
-            predictions.append({
+            pred_item = {
                 'Date': idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx),
                 'Stock_Code': code,
                 'Predict_Prob': round(prob, 4),
@@ -953,7 +958,17 @@ class WalkForwardValidator:
                 'Is_Correct': is_correct,
                 'Prediction_Type': pred_type,
                 'Note': reason
-            })
+            }
+
+            # 添加市场情绪数据（如果存在）
+            if 'market_layer' in df.columns:
+                pred_item['Market_Layer'] = row.get('market_layer', 'unknown')
+            if 'dynamic_threshold' in df.columns:
+                pred_item['Dynamic_Threshold'] = round(row.get('dynamic_threshold', 0.5), 2)
+            if 'market_up_ratio_lag1' in df.columns:
+                pred_item['Market_Up_Ratio'] = round(row.get('market_up_ratio_lag1', 0.5), 4)
+
+            predictions.append(pred_item)
 
         return predictions
 
@@ -1199,9 +1214,10 @@ class WalkForwardValidator:
 
         if all_predictions:
             pred_df = pd.DataFrame(all_predictions)
-            # 调整列顺序
+            # 调整列顺序（新增市场情绪列）
             cols = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Predict_Direction',
-                    'Actual_Return', 'Actual_Direction', 'Is_Correct', 'Prediction_Type', 'Note']
+                    'Actual_Return', 'Actual_Direction', 'Is_Correct', 'Prediction_Type', 'Note',
+                    'Market_Layer', 'Dynamic_Threshold', 'Market_Up_Ratio']
             pred_df = pred_df[[c for c in cols if c in pred_df.columns]]
             pred_file = os.path.join(detail_dir, 'prediction_analysis.csv')
             pred_df.to_csv(pred_file, index=False)
