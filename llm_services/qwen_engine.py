@@ -137,11 +137,20 @@ def chat_with_llm(query, enable_thinking=True):
         response = requests.post(chat_url, headers=headers, json=payload, timeout=300)
         log_message(f"[DEBUG] chat_with_llm response status: {response.status_code}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm response headers: {response.headers}")  # 调试日志
-        log_message(f"[DEBUG] chat_with_llm response text: {response.text}")  # 打印完整的输出
-        
+        log_message(f"[DEBUG] chat_with_llm response text: {response.text[:500] if response.text else 'EMPTY'}")  # 打印输出（截断）
+
         response.raise_for_status()  # Raise an exception for bad status codes
-        
-        response_data = response.json()
+
+        # 检查响应内容是否为空
+        if not response.text or not response.text.strip():
+            raise ValueError("API 返回空响应，可能是服务暂时不可用或被限流")
+
+        try:
+            response_data = response.json()
+        except json.JSONDecodeError as e:
+            log_message(f"[ERROR] JSON 解析失败: {e}")
+            log_message(f"[ERROR] 原始响应内容: {response.text[:1000]}")
+            raise ValueError(f"API 返回非 JSON 格式响应: {response.text[:200]}")
         message = response_data['choices'][0]['message']
         
         # 如果 content 为空，尝试使用 reasoning_content 作为备用
