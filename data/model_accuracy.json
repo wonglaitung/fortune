@@ -29,11 +29,11 @@
   "catboost_20d": {
     "model_type": "catboost",
     "horizon": 20,
-    "accuracy": 0.6186964383992453,
-    "std": 0.01140708645969297,
-    "f1_score": 0.5760632759296831,
-    "f1_std": 0.05864225691788161,
-    "timestamp": "2026-05-23 18:43:56"
+    "accuracy": 0.5878,
+    "std": 0.0988,
+    "f1_score": 0.6,
+    "f1_std": 0.0,
+    "timestamp": "2026-05-24 00:36:43"
   },
   "gbdt_1d": {
     "model_type": "gbdt",
