@@ -483,6 +483,100 @@ def load_risk_reward_data(json_path='data/risk_reward_results.json'):
         return {}
 
 
+def load_historical_profit_loss_ratio(output_dir='output'):
+    """
+    从最新的 Walk-forward 验证结果计算每只股票的历史盈亏比和期望收益
+
+    使用历史预测表现法：
+    - 盈亏比 = 正确预测的平均盈利 / 错误预测的平均亏损
+    - 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损
+
+    参数:
+    - output_dir: 输出目录，包含 walk-forward 验证结果
+
+    返回:
+    - dict: {股票代码: {'profit_loss_ratio': 盈亏比, 'expected_return': 期望收益, 'win_rate': 胜率, ...}}
+    """
+    import glob
+
+    # 查找最新的 prediction_analysis.csv 文件
+    search_patterns = [
+        os.path.join(output_dir, '*_catboost_20d/prediction_analysis.csv'),
+        os.path.join(output_dir, 'walk_forward_catboost_20d_*/prediction_analysis.csv'),
+        os.path.join(output_dir, 'walk_forward_catboost_20d_*/*_catboost_20d/prediction_analysis.csv'),
+    ]
+
+    prediction_files = []
+    for pattern in search_patterns:
+        prediction_files.extend(glob.glob(pattern))
+
+    if not prediction_files:
+        print(f"  ⚠️ 未找到 Walk-forward 预测分析文件")
+        return {}
+
+    # 使用最新的文件
+    latest_file = max(prediction_files, key=lambda x: os.path.getmtime(x))
+    print(f"  📁 加载历史盈亏比数据: {os.path.basename(os.path.dirname(latest_file))}")
+
+    try:
+        df = pd.read_csv(latest_file)
+
+        # 只分析预测UP的交易（实际买入场景）
+        up_preds = df[df['Predict_Direction'] == 'UP'].copy()
+
+        results = {}
+        for stock_code in up_preds['Stock_Code'].unique():
+            stock_data = up_preds[up_preds['Stock_Code'] == stock_code]
+
+            if len(stock_data) < 10:  # 样本太少不统计
+                continue
+
+            # 正确预测（实际收益>0）
+            correct = stock_data[stock_data['Actual_Return'] > 0]
+            wrong = stock_data[stock_data['Actual_Return'] <= 0]
+
+            n_samples = len(stock_data)
+            n_correct = len(correct)
+            n_wrong = len(wrong)
+
+            if n_correct > 0 and n_wrong > 0:
+                avg_profit = correct['Actual_Return'].mean()
+                avg_loss = abs(wrong['Actual_Return'].mean())
+                win_rate = n_correct / n_samples
+
+                profit_loss_ratio = avg_profit / avg_loss if avg_loss > 0 else 999
+                expected_return = win_rate * avg_profit - (1 - win_rate) * avg_loss
+
+                # 盈亏比等级
+                if profit_loss_ratio >= 3.0:
+                    pl_grade = '⭐⭐⭐'
+                elif profit_loss_ratio >= 2.0:
+                    pl_grade = '⭐⭐'
+                elif profit_loss_ratio >= 1.5:
+                    pl_grade = '⭐'
+                else:
+                    pl_grade = '⚠️'
+
+                results[stock_code] = {
+                    'profit_loss_ratio': profit_loss_ratio,
+                    'profit_loss_ratio_str': f'{profit_loss_ratio:.2f}:1',
+                    'profit_loss_grade': pl_grade,
+                    'expected_return': expected_return,
+                    'expected_return_str': f'{expected_return:+.2%}',
+                    'win_rate': win_rate,
+                    'avg_profit': avg_profit,
+                    'avg_loss': avg_loss,
+                    'n_samples': n_samples
+                }
+
+        print(f"  ✅ 加载历史盈亏比数据: {len(results)} 只股票")
+        return results
+
+    except Exception as e:
+        print(f"  ⚠️ 加载历史盈亏比数据失败: {e}")
+        return {}
+
+
 # 全局模型缓存（避免重复加载）
 _model_cache = {}
 
@@ -1072,6 +1166,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 加载风险回报率数据
                 risk_reward_data = load_risk_reward_data()
 
+                # 加载历史盈亏比数据（基于 Walk-forward 验证结果）
+                historical_pl_data = load_historical_profit_loss_ratio()
+
                 # 获取传导模式验证日期（取第一只股票的日期）
                 first_stock = df_catboost_sorted.iloc[0]['code'] if len(df_catboost_sorted) > 0 else None
                 transmission_date = None
@@ -1096,8 +1193,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
-                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
                     stock_code = row['code']
@@ -1208,6 +1305,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         rr_return = rr_info.get('return_score', '-')
                         rr_suggestion = rr_info.get('suggestion', '-')
 
+                        # 获取历史盈亏比数据
+                        pl_info = historical_pl_data.get(stock_code, {})
+                        profit_loss_ratio_str = pl_info.get('profit_loss_ratio_str', '-')
+                        expected_return_str = pl_info.get('expected_return_str', '-')
+                        pl_grade = pl_info.get('profit_loss_grade', '')
+
+                        # 格式化盈亏比显示（带等级标识）
+                        if profit_loss_ratio_str != '-':
+                            pl_display = f"{profit_loss_ratio_str} {pl_grade}"
+                        else:
+                            pl_display = '-'
+
                         # 获取网络洞察
                         network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
 
@@ -1233,7 +1342,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             market_adjust_display = '🟢正常'
 
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
@@ -1274,6 +1383,16 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- ✅低：上方筹码 < 30%，拉升容易\n"
                 catboost_text_email += "- ⚠️中：上方筹码 30-60%，注意风险\n"
                 catboost_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
+
+                # 添加盈亏比说明
+                catboost_text_email += f"\n**历史盈亏比说明**（基于Walk-forward验证）：\n"
+                catboost_text_email += "- 盈亏比 = 正确预测平均盈利 / 错误预测平均亏损\n"
+                catboost_text_email += "- 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损\n"
+                catboost_text_email += "- ⭐⭐⭐：盈亏比 ≥ 3:1，优秀\n"
+                catboost_text_email += "- ⭐⭐：盈亏比 2-3:1，良好\n"
+                catboost_text_email += "- ⭐：盈亏比 1.5-2:1，一般\n"
+                catboost_text_email += "- ⚠️：盈亏比 < 1.5:1，较差\n"
+                catboost_text_email += "- 💡 使用建议：优先选择盈亏比 ≥ 2:1 且期望收益 > 0 的股票\n"
 
                 # 添加风险回报率说明
                 catboost_text_email += f"\n**风险回报率说明**（稳健型模式）：\n"
