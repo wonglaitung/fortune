@@ -97,6 +97,7 @@ data/southbound_data_cache.pkl
 
 # Sensitive Configuration Files (DO NOT COMMIT)
 set_key.sh
+.mcp.json
 
 # Log Files
 *.log
