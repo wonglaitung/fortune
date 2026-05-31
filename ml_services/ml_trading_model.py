@@ -41,6 +41,7 @@ from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_dat
 from data_services.technical_analysis import TechnicalAnalyzer
 from data_services.fundamental_data import get_comprehensive_fundamental_data
 from data_services.volatility_model import GARCHVolatilityModel
+from ml_services.hybrid_volatility_model import HybridGARCHLSTM
 from data_services.regime_detector import RegimeDetector
 from data_services.calendar_features import CalendarFeatureCalculator
 from ml_services.base_model_processor import BaseModelProcessor
@@ -158,6 +159,9 @@ def _build_market_level_features():
 
     # 7. GARCH 波动率 - 从 GARCHVolatilityModel 动态获取
     features.extend(GARCHVolatilityModel.get_feature_names())
+
+    # 7.1 LSTM-GARCH 混合波动率 - 从 HybridGARCHLSTM 动态获取
+    features.extend(HybridGARCHLSTM.get_feature_names())
 
     # 8. 日历效应 - 从 CalendarFeatureCalculator 动态获取
     features.extend(CalendarFeatureCalculator.get_feature_names())
@@ -780,7 +784,7 @@ class FeatureEngineer:
         
         return self._sector_performance_cache[cache_key]
 
-    def calculate_technical_features(self, df, use_shift=True):
+    def calculate_technical_features(self, df, use_shift=True, code=None):
         """
         计算技术指标特征（扩展版：80个指标）
 
@@ -789,6 +793,7 @@ class FeatureEngineer:
             use_shift: 是否使用滞后数据
                 - True: Walk-forward 验证，使用 T-1 数据（避免泄漏）
                 - False: 收市后预测，使用当日数据
+            code: 股票代码（用于模型缓存）
         """
         if df.empty or len(df) < 200:
             return df
@@ -1017,6 +1022,39 @@ class FeatureEngineer:
                     df[col] = df[col].fillna(default_val)
         except Exception as e:
             logger.warning(f"GARCH 特征计算失败，使用默认值: {e}")
+
+        # ========== LSTM-GARCH 混合波动率特征（2026-05-31 新增）==========
+        # 结合 GARCH 的计量经济学优势和 LSTM 的非线性建模能力
+        # 注意：训练较慢，建议在预测时使用预训练模型
+        try:
+            # LSTM-GARCH 混合模式：首次运行会自动训练并缓存
+            hybrid_model = HybridGARCHLSTM(
+                lookback=60,
+                lstm_hidden=64,
+                lstm_layers=2,
+                fusion_weight=0.6,  # GARCH 权重 60%，LSTM 权重 40%
+                use_lstm=True,  # 启用 LSTM 混合模式
+                cache_dir='data/feature_cache'
+            )
+            df = hybrid_model.calculate_features(
+                df,
+                return_col='Return_1d',
+                use_shift=use_shift,
+                symbol=code,  # 用于模型缓存
+                train_if_needed=False,  # 训练时跳过，预测时训练
+                verbose=False
+            )
+            # 填充缺失值
+            hybrid_defaults = {
+                'Hybrid_Conditional_Vol': 0.02,
+                'Hybrid_Vol_Uncertainty': 0.0,
+                'Hybrid_Vol_Trend': 0.0,
+            }
+            for col, default_val in hybrid_defaults.items():
+                if col in df.columns:
+                    df[col] = df[col].fillna(default_val)
+        except Exception as e:
+            logger.warning(f"LSTM-GARCH 混合特征计算失败，使用默认值: {e}")
 
         # 滚动偏度/峰度（业界常用，使用滞后数据避免数据泄漏）
         df['Skewness_20d'] = df['Close'].pct_change().rolling(20).skew().shift(shift_val)
@@ -3626,7 +3664,7 @@ class LightGBMModel(BaseTradingModel):
                 print(f"  [{i}/{len(stock_data_list)}] 处理股票: {code}")
 
                 # 计算技术指标（80个指标）
-                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df, code=code)
 
                 # 计算多周期指标
                 stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -4026,7 +4064,7 @@ class LightGBMModel(BaseTradingModel):
                     return None
 
             # 计算技术指标（80个指标）
-            stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+            stock_df = self.feature_engineer.calculate_technical_features(stock_df, code=code)
 
             # 计算多周期指标
             stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -4284,7 +4322,7 @@ class GBDTModel(BaseTradingModel):
                     continue
 
                 # 计算技术指标（80个指标）
-                stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df, code=code)
 
                 # 计算多周期指标
                 stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -4707,7 +4745,7 @@ class GBDTModel(BaseTradingModel):
                     return None
 
             # 计算技术指标（80个指标）
-            stock_df = self.feature_engineer.calculate_technical_features(stock_df)
+            stock_df = self.feature_engineer.calculate_technical_features(stock_df, code=code)
 
             # 计算多周期指标
             stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -5064,7 +5102,7 @@ class CatBoostModel(BaseTradingModel):
                     cache_misses += 1
 
                     # 计算技术指标（80个指标）
-                    stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift)
+                    stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift, code=code)
 
                     # 计算多周期指标
                     stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
@@ -5741,7 +5779,7 @@ class CatBoostModel(BaseTradingModel):
                         us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
 
                 # 计算技术指标（80个指标）
-                stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift)
+                stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift, code=code)
 
                 # 计算多周期指标
                 stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)

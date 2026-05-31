@@ -72,6 +72,13 @@ except ImportError:
     ML_MODEL_AVAILABLE = False
     print("⚠️ ML模型模块不可用")
 
+# 导入混合波动率模型
+try:
+    from ml_services.hybrid_volatility_model import HybridGARCHLSTM
+    HYBRID_VOL_MODEL_AVAILABLE = True
+except ImportError:
+    HYBRID_VOL_MODEL_AVAILABLE = False
+
 # 板块类型定义（周期性/防御性）
 # 来源：SECTOR_ROTATION_ANALYSIS.md
 SECTOR_TYPES = {
@@ -1417,6 +1424,84 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     density_table = vol_calc.generate_warning_table(volatility_density_info)
                     if density_table:
                         catboost_text_email += f"\n{density_table}\n"
+
+                # ========== LSTM-GARCH 混合波动率分析 ==========
+                if HYBRID_VOL_MODEL_AVAILABLE:
+                    try:
+                        catboost_text_email += "\n**📊 混合波动率预测**\n"
+                        catboost_text_email += "| 股票代码 | 预测波动率 | 不确定性 | 趋势信号 | 风险建议 |\n"
+                        catboost_text_email += "|----------|-----------|----------|---------|----------|\n"
+
+                        # 获取波动率最高的前10只股票
+                        vol_data = []
+                        for _, row in df_catboost_sorted.head(20).iterrows():
+                            stock_code = row['code']
+                            try:
+                                # 获取股票历史数据
+                                stock_data = get_hk_stock_data_tencent(stock_code, days=100)
+                                if stock_data is not None and len(stock_data) > 60:
+                                    stock_data['Return_1d'] = stock_data['Close'].pct_change()
+
+                                    # LSTM-GARCH 混合模型
+                                    hybrid_model = HybridGARCHLSTM(
+                                        lookback=60,
+                                        fusion_weight=0.6,
+                                        use_lstm=True
+                                    )
+
+                                    # 训练和预测
+                                    hybrid_model.train(stock_data['Return_1d'], verbose=False)
+                                    result = hybrid_model.predict(stock_data['Return_1d'])
+
+                                    # 获取最新预测
+                                    latest = hybrid_model.get_latest_prediction()
+                                    if latest:
+                                        hybrid_vol = latest['hybrid_vol']
+                                        vol_trend = result['Hybrid_Vol_Trend'].iloc[-1]
+
+                                        # 计算不确定性
+                                        uncertainty = abs(latest['garch_vol'] - latest['lstm_vol']) if hybrid_model.use_lstm else 0
+
+                                        vol_data.append({
+                                            'code': stock_code,
+                                            'vol': hybrid_vol,
+                                            'uncertainty': uncertainty,
+                                            'trend': vol_trend
+                                        })
+                            except Exception as e:
+                                continue
+
+                        # 按波动率排序，取前10
+                        vol_data = sorted(vol_data, key=lambda x: x['vol'], reverse=True)[:10]
+
+                        for item in vol_data:
+                            # 风险建议
+                            if item['vol'] > 0.04:  # 4% 日波动率
+                                risk_advice = "🔴 高风险"
+                            elif item['vol'] > 0.025:  # 2.5% 日波动率
+                                risk_advice = "🟡 中等风险"
+                            else:
+                                risk_advice = "🟢 低风险"
+
+                            # 趋势信号
+                            if item['trend'] > 0.5:
+                                trend_signal = "📈 波动上升"
+                            elif item['trend'] < -0.5:
+                                trend_signal = "📉 波动下降"
+                            else:
+                                trend_signal = "➡️ 波动稳定"
+
+                            catboost_text_email += f"| {item['code']} | {item['vol']:.2%} | {item['uncertainty']:.4f} | {trend_signal} | {risk_advice} |\n"
+
+                        catboost_text_email += "\n**波动率说明**：\n"
+                        catboost_text_email += "- 预测波动率：LSTM-GARCH 混合模型预测的日波动率\n"
+                        catboost_text_email += "- 趋势信号：波动率短期趋势，用于判断风险变化\n"
+                        catboost_text_email += "- 🔴 高风险：日波动率 > 4%，建议减仓或观望\n"
+                        catboost_text_email += "- 🟡 中等风险：日波动率 2.5%-4%，正常交易\n"
+                        catboost_text_email += "- 🟢 低风险：日波动率 < 2.5%，可适当加仓\n"
+
+                    except Exception as e:
+                        print(f"  ⚠️ 混合波动率分析失败: {e}")
             else:
                 # 无三周期预测时，邮件表格也使用简化版本
                 catboost_text_email = catboost_text_llm
