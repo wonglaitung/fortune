@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v10.2 (2026-05-24) | **状态**：当前有效
+> **版本**：v10.3 (2026-05-31) | **状态**：当前有效
 
 ---
 
@@ -131,6 +131,37 @@ stock_df = create_market_network_interaction_features(stock_df, community_ids=pr
 |------|------|------|
 | 分离原则 | 默认值与有效值范围分离 | `net_community_centrality_rank`: -1（默认）vs [0,1]（有效）|
 | 语义原则 | 默认值有明确语义 | `net_constraint=1.0` 表示"高约束=无机会" |
+
+---
+
+### 5. 特征模块参数传递 ⭐⭐
+
+**问题**：新增特征模块时，内部使用了变量但函数签名未定义参数
+
+**现象**：
+```
+WARNING | LSTM-GARCH 混合特征计算失败，使用默认值: name 'code' is not defined
+```
+
+**根本原因**：
+```python
+# 函数内部使用了 code 变量
+df = hybrid_model.calculate_features(df, symbol=code, ...)
+
+# 但函数签名没有 code 参数
+def calculate_technical_features(self, df, use_shift=True):  # 缺少 code
+```
+
+**解决方案**：
+```python
+# 修改函数签名添加参数
+def calculate_technical_features(self, df, use_shift=True, code=None):
+
+# 所有调用处传递参数（共 6 处）
+stock_df = self.feature_engineer.calculate_technical_features(stock_df, code=code)
+```
+
+**教训**：新增特征模块时，检查函数签名是否包含内部使用的所有参数，并更新所有调用处
 
 ---
 
@@ -382,6 +413,7 @@ df['Feature'] = df['Close'].pct_change().shift(1)
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-05-31 | v10.3 | 新增：特征模块参数传递经验（函数签名需包含内部使用的参数） |
 | 2026-05-24 | v10.2 | 新增：市场情绪过滤器验证确认（extreme_bear 完全过滤生效） |
 | 2026-05-21 | v10.0 | 重构：精简至核心内容，分类整理 |
 | 2026-05-21 | v9.1 | 新增：数据源选择经验（yfinance vs 腾讯接口） |

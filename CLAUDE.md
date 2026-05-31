@@ -100,6 +100,7 @@ AKShare      基本面数据      综合分析     Walk-forward  JSON文件
 - `data_services/volatility_model.py` - GARCH 波动率（4个特征）
 - `data_services/regime_detector.py` - HMM 市场状态检测（10个特征）
 - `ml_services/stock_network_analysis.py` - 股票网络分析（社区ID、中心性等）
+- `ml_services/hybrid_volatility_model.py` - LSTM-GARCH 混合波动率（3个特征）
 
 **消息服务模块**：
 - `message_services/email_sender.py` - 统一邮件发送
