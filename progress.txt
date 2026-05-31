@@ -2,11 +2,41 @@
 
 **项目**：港股智能分析系统
 **状态**：生产就绪
-**最后更新**：2026-05-24
+**最后更新**：2026-05-31
 
 ---
 
 ## 最新进展
+
+### 2026-05-31 LSTM-GARCH 混合波动率模型 ⭐⭐⭐
+
+**新增模块**：`ml_services/hybrid_volatility_model.py`
+
+**特征输出**（3个）：
+| 特征 | 说明 |
+|------|------|
+| Hybrid_Conditional_Vol | 混合波动率（百分比偏离） |
+| Hybrid_Vol_Uncertainty | 预测不确定性 |
+| Hybrid_Vol_Trend | 波动率趋势信号 |
+
+**架构设计**：
+- GARCH(1,1) 提供基准波动率预测
+- LSTM 捕捉非线性模式（可选，use_lstm=True 启用）
+- 加权融合（fusion_weight=0.6 表示 60% GARCH + 40% LSTM）
+
+**特征合规性验证**：
+| 检查项 | 结果 |
+|--------|------|
+| 数据泄漏检查 | ✅ shift(1) |
+| 相关性检查 | ✅ 0.58 < 0.8 |
+| 特征单调性 | ✅ 通过 |
+
+**改动文件**：
+- `ml_services/hybrid_volatility_model.py`（新增）
+- `ml_services/ml_trading_model.py`（集成）
+- `comprehensive_analysis.py`（报告展示）
+
+---
 
 ### 2026-05-24 Walk-forward 完整验证完成 ⭐⭐⭐
 
