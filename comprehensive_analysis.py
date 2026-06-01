@@ -1452,13 +1452,13 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                                     # 训练和预测
                                     hybrid_model.train(stock_data['Return_1d'], verbose=False)
-                                    result = hybrid_model.predict(stock_data['Return_1d'])
+                                    hybrid_result = hybrid_model.predict(stock_data['Return_1d'])
 
                                     # 获取最新预测
                                     latest = hybrid_model.get_latest_prediction()
                                     if latest:
                                         hybrid_vol = latest['hybrid_vol']
-                                        vol_trend = result['Hybrid_Vol_Trend'].iloc[-1]
+                                        vol_trend = hybrid_result['Hybrid_Vol_Trend'].iloc[-1]
 
                                         # 计算不确定性
                                         uncertainty = abs(latest['garch_vol'] - latest['lstm_vol']) if hybrid_model.use_lstm else 0
