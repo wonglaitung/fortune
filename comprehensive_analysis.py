@@ -940,7 +940,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         # 读取 CatBoost 单模型预测结果
         catboost_csv = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_20d.csv')
 
-        result = {
+        pred_result = {
             'ensemble': '',
             'ensemble_email': ''
         }
@@ -1516,15 +1516,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 建议：暂停所有看涨操作，等待市场企稳。
 """
 
-            result['ensemble'] = catboost_text_llm
-            result['ensemble_email'] = catboost_text_email
+            pred_result['ensemble'] = catboost_text_llm
+            pred_result['ensemble_email'] = catboost_text_email
         else:
             print(f"⚠️ CatBoost 预测文件不存在: {catboost_csv}")
 
-            result['ensemble'] = ''
-            result['ensemble_email'] = ''
+            pred_result['ensemble'] = ''
+            pred_result['ensemble_email'] = ''
 
-        return result
+        return pred_result
 
     except Exception as e:
         print(f"❌ 提取ML预测失败: {e}")
