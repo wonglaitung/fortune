@@ -1437,8 +1437,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         for _, row in df_catboost_sorted.head(20).iterrows():
                             stock_code = row['code']
                             try:
-                                # 获取股票历史数据
-                                stock_data = get_hk_stock_data_tencent(stock_code, days=100)
+                                # 获取股票历史数据（需要足够数据训练LSTM）
+                                tencent_code = stock_code.replace('.HK', '').zfill(5)
+                                stock_data = get_hk_stock_data_tencent(tencent_code, period_days=250)
                                 if stock_data is not None and len(stock_data) > 60:
                                     stock_data['Return_1d'] = stock_data['Close'].pct_change()
 
