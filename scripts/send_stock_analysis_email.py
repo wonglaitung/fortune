@@ -193,6 +193,63 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 
 
 # ============================================================================
+# 大模型持货人建议 Prompt 模板
+# ============================================================================
+
+HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下股票分析数据，为已持有该股票的投资者提供操作建议。
+
+# 股票数据
+{stock_data}
+
+# 分析框架
+
+## 第一步：趋势判断
+- CatBoost 20天概率 > 60% 且短中期建议"买入" → 趋势向上，考虑持有或加仓
+- CatBoost 20天概率 50-60% → 趋势不明，谨慎持有
+- CatBoost 20天概率 < 50% → 趋势向下，考虑减仓或止损
+
+## 第二步：止盈止损判断
+- 当前价格接近目标价 → 考虑分批止盈
+- RSI > 70 或布林带位置 > 80% → 短期超买，考虑减仓锁利
+- RSI < 30 或布林带位置 < 20% → 短期超卖，若趋势仍向上可持有
+- MACD 死叉 → 警惕回调
+
+## 第三步：市场环境调整
+- 熊市环境 → 降低持仓，严格止损
+- 市场情绪"暂停" → 建议减仓避险
+- 市场状态不稳定（<5天）→ 降低仓位
+
+## 第四步：综合建议
+基于以上分析，给出持货人的具体操作建议。
+
+# 返回格式
+
+请以 JSON 格式返回：
+{{
+    "holder_action": "继续持有 / 加仓 / 减仓 / 止盈离场 / 止损离场",
+    "holder_reason": "操作理由（1-2句话）",
+    "key_level": "关键价位说明（如：跌破XX止损，突破XX加仓）",
+    "risk_level": "低 / 中 / 高",
+    "time_horizon": "短期（1-5天）/ 中期（5-20天）"
+}}
+
+**重要**：
+1. 确保返回纯 JSON，不要包含 Markdown 代码块标记
+2. holder_action 只能是上述5种之一
+3. holder_reason 要具体，引用具体指标数据
+"""
+
+# 持货人操作建议样式映射
+HOLDER_ACTION_STYLES = {
+    '继续持有': ('holder-action-hold', '#d4edda', '#155724'),
+    '加仓': ('holder-action-add', '#cce5ff', '#004085'),
+    '减仓': ('holder-action-reduce', '#fff3cd', '#856404'),
+    '止盈离场': ('holder-action-exit-profit', '#f8d7da', '#721c24'),
+    '止损离场': ('holder-action-exit-loss', '#f8d7da', '#721c24'),
+}
+
+
+# ============================================================================
 # HTML 邮件模板
 # ============================================================================
 
@@ -350,6 +407,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .stock-section:last-child {{
             border-bottom: none;
         }}
+        .holder-action-hold {{
+            background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+            padding: 15px; border-radius: 8px; margin: 15px 0;
+        }}
+        .holder-action-add {{
+            background-color: #cce5ff; color: #004085; border: 1px solid #b8daff;
+            padding: 15px; border-radius: 8px; margin: 15px 0;
+        }}
+        .holder-action-reduce {{
+            background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+            padding: 15px; border-radius: 8px; margin: 15px 0;
+        }}
+        .holder-action-exit-profit, .holder-action-exit-loss {{
+            background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+            padding: 15px; border-radius: 8px; margin: 15px 0;
+        }}
     </style>
 </head>
 <body>
@@ -457,6 +530,8 @@ STOCK_SECTION_TEMPLATE = """
 
             {operation_box}
 
+            {holder_advice_section}
+
             {risk_warnings_section}
         </div>
 """
@@ -558,7 +633,36 @@ def comprehensive_analyze_with_llm(stock_data: dict) -> dict:
         return None
 
 
-def analyze_multiple_stocks(stock_codes: list, report_path: str) -> tuple:
+def get_holder_advice_with_llm(stock_data: dict) -> dict:
+    """
+    使用大模型为已持货人生成操作建议
+
+    参数：
+    - stock_data: 股票数据
+
+    返回：
+    - dict: 持货人操作建议
+    """
+    print(f"📊 正在生成持货人操作建议...")
+
+    prompt = HOLDER_ADVICE_PROMPT.format(
+        stock_data=json.dumps(stock_data, ensure_ascii=False, indent=2)
+    )
+
+    try:
+        response = chat_with_llm(prompt, enable_thinking=True)
+    except Exception as e:
+        print(f"❌ 持货人建议生成失败: {e}")
+        return None
+
+    result = extract_json_from_response(response)
+    if result:
+        print(f"✅ 成功生成持货人操作建议")
+        return result
+    else:
+        print(f"❌ 无法从大模型响应中提取持货人建议 JSON")
+        print(f"   响应内容: {response[:500]}...")
+        return None
     """
     分析多只股票
 
@@ -591,6 +695,11 @@ def analyze_multiple_stocks(stock_codes: list, report_path: str) -> tuple:
         if analysis_result:
             # 合并分析结果到股票数据
             stock_data['analysis'] = analysis_result
+
+        # 第三步：生成持货人操作建议
+        holder_advice = get_holder_advice_with_llm(stock_data)
+        if holder_advice:
+            stock_data['holder_advice'] = holder_advice
 
         results.append(stock_data)
 
@@ -823,6 +932,31 @@ def generate_stock_section(stock_data: dict) -> str:
                 </div>
             """
 
+    # 持货人操作建议部分
+    holder_advice = stock_data.get('holder_advice')
+    if holder_advice:
+        holder_action = holder_advice.get('holder_action', '继续持有')
+        holder_reason = holder_advice.get('holder_reason', '')
+        key_level = holder_advice.get('key_level', '')
+        risk_level = holder_advice.get('risk_level', '中')
+        time_horizon = holder_advice.get('time_horizon', '中期（5-20天）')
+
+        # 根据操作类型选择样式
+        style_info = HOLDER_ACTION_STYLES.get(holder_action, HOLDER_ACTION_STYLES['继续持有'])
+        holder_action_class = style_info[0]
+
+        holder_advice_section = f"""
+            <h3>十、持货人操作建议</h3>
+            <div class="{holder_action_class}">
+                <strong>建议操作</strong>：{holder_action}<br>
+                <strong>风险等级</strong>：{risk_level} | <strong>适用周期</strong>：{time_horizon}
+            </div>
+            <p><strong>理由</strong>：{holder_reason}</p>
+            <p><strong>关键价位</strong>：{key_level}</p>
+        """
+    else:
+        holder_advice_section = ""
+
     # 风险提示部分（使用大模型分析结果）
     if risk_warnings:
         risk_warnings_list = "".join([f"<li>{w}</li>" for w in risk_warnings])
@@ -881,6 +1015,7 @@ def generate_stock_section(stock_data: dict) -> str:
         anomaly_section=anomaly_section,
         dividend_section=dividend_section,
         operation_box=operation_box,
+        holder_advice_section=holder_advice_section,
         risk_warnings_section=risk_warnings_section,
     )
 
