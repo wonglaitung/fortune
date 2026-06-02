@@ -663,6 +663,9 @@ def get_holder_advice_with_llm(stock_data: dict) -> dict:
         print(f"❌ 无法从大模型响应中提取持货人建议 JSON")
         print(f"   响应内容: {response[:500]}...")
         return None
+
+
+def analyze_multiple_stocks(stock_codes: list, report_path: str) -> tuple:
     """
     分析多只股票
 
