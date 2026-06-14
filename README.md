@@ -1,423 +1,429 @@
-# <img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产和港股智能分析与交易系统
+# <img src="assets/icon.svg" width="40" height="48" alt="Financial Intelligence Analysis" style="vertical-align: middle; margin-right: 10px;"> Financial Asset & Hong Kong Stock Intelligent Analysis System
 
-**⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
+**[中文版 (Chinese Version)](README_CN.md)**
 
-实践**人机混合智能**的理念，开发具备变现能力的金融资产智能量化分析助手。系统整合**大模型智能决策**与**机器学习预测模型**，实时监控加密货币、港股、黄金等金融市场。
+**⭐ If you find this project useful, please Star and Fork to support its development! ⭐**
 
----
-
-## 📄 效果文档
-
-- 每日定时更新[港股买卖建议](output/comprehensive_reports)
+Implementing the concept of **Human-AI Hybrid Intelligence**, developing a financial asset intelligent quantitative analysis assistant with monetization capabilities. The system integrates **Large Language Model reasoning** with **Machine Learning prediction models**, monitoring cryptocurrency, Hong Kong stocks, gold, and other financial markets in real-time.
 
 ---
 
-## 一、核心功能
+## 📄 Documentation
 
-### 1.1 项目优势
-
-**人机混合智能**：融合大模型推理能力与机器学习预测精度，既保持量化分析的客观性，又具备理解市场上下文的灵活性。相比纯量化策略，能更好地应对市场突发事件和非理性行为。
-
-**经过验证的策略**：所有交易策略均经过至少两年的历史数据回测和Walk-forward验证，确保不是"纸上谈兵"。核心策略如假突破做多（87%胜率）和Z-Score抄底（72%胜率）已在实际交易中验证有效。
-
-**全流程自动化**：从数据采集、特征计算、模型预测到邮件推送，全流程自动化运行。GitHub Actions定时调度，无需人工干预，确保不错过任何交易机会。
-
-**港股市场专注**：专门针对港股市场特性优化，包括南向资金追踪、恒指联动分析、板块轮动研究等。相比通用量化工具，更能把握港股市场规律。
-
-**多维度交叉验证**：单一指标可能失效，但多维度信号共振可显著提高可靠性。系统整合三周期预测、异常检测、大模型分析、板块轮动四大维度，只有多信号一致时才给出强建议。
-
-**透明的性能监控**：每日自动评估预测准确率，按月度、季度、年度统计，真实反映系统表现。不隐藏失败预测，持续迭代改进。
+- Daily updated [Hong Kong Stock Trading Recommendations](output/comprehensive_reports)
 
 ---
 
-### 1.2 恒生指数三周期预测系统
+## I. Core Features
 
-**核心理念**：通过同时预测1天、5天、20天三个时间周期，捕捉不同时间尺度的市场趋势，为短线、中线和长线交易提供决策支持。三周期交叉验证可显著提高预测可靠性。
+### 1.1 Project Advantages
 
-**多周期预测**（2026-05-18 验证）：
+**Human-AI Hybrid Intelligence**: Fuses LLM reasoning capabilities with ML prediction precision, maintaining quantitative analysis objectivity while understanding market context flexibly. Compared to pure quantitative strategies, it better handles market events and irrational behaviors.
 
-| 周期 | 准确率 | 特点 | 用途 |
-|------|--------|------|------|
-| 1天 | 51.49% | 噪音大，仅供参考 | 日内短线参考 |
-| 5天 | 65.86% | 趋势确认，辅助判断 | 周度持仓决策 |
-| **20天** | **81.22%** | **最可靠，主要决策依据** | 月度投资方向 |
+**Validated Strategies**: All trading strategies undergo at least two years of historical backtesting and Walk-forward validation. Core strategies like False Breakout Long (87% win rate) and Z-Score Bottom Fishing (72% win rate) have been verified in actual trading.
 
-**八大交易模式**（恒指增强模型，2026-05-18 验证）：
+**Full Automation**: From data collection, feature computation, model prediction to email delivery - fully automated via GitHub Actions scheduled workflows. No manual intervention needed, ensuring no trading opportunity is missed.
 
-基于三周期预测结果（1/0表示涨/跌）组合形成8种交易信号，例如"110"表示1天涨、5天涨、20天跌。
+**Hong Kong Market Focus**: Optimized specifically for HK market characteristics, including southbound capital tracking, HSI correlation analysis, sector rotation research. Better captures HK market patterns than general quantitative tools.
 
-| 模式 | 描述 | 20天准确率 | 策略 |
-|------|------|-----------|------|
-| **101** | 假突破（1天涨5天跌20天涨） | **87.32%** | ⭐ 最优做多，短期回调后中线上涨 |
-| **111** | 一致看涨 | **86.26%** | ⭐⭐⭐⭐⭐ 次优做多 |
-| **001** | 下跌中继 | **81.05%** | ⭐⭐⭐⭐ 做多信号 |
-| 000 | 一致看跌 | **79.80%** | 强烈卖出，三周期共振下跌 |
-| 010 | 反弹失败 | **77.78%** | 做空信号 |
+**Multi-dimensional Cross-validation**: Single indicators may fail, but multi-dimensional signal resonance significantly improves reliability. System integrates four dimensions: three-horizon prediction, anomaly detection, LLM analysis, sector rotation - strong recommendations only when signals align.
 
-**四条交易法则**（恒指增强模型）：
+**Transparent Performance Monitoring**: Daily automatic prediction accuracy evaluation with monthly/quarterly/yearly statistics. No hiding failed predictions, continuous iterative improvement.
 
-| 法则 | 条件 | 准确率 | 应用场景 |
-|------|------|--------|----------|
-| **假突破做多** | 1天涨5天跌20天涨(101) | **87.32%** | 短期回调后中线做多 |
-| 一致看涨买入 | 三周期全看涨(111) | **86.26%** | 趋势确认后顺势加仓 |
-| 下跌中继做多 | 1天跌5天跌20天涨(001) | **81.05%** | 下跌后买入 |
-| 一致看跌做空 | 三周期全看跌(000) | 79.80% | 趋势确认后减仓或做空 |
+---
 
-### 1.3 港股预测 CatBoost 机器学习模型
+### 1.2 Hang Seng Index Three-Horizon Prediction System
 
-**核心优势**：使用CatBoost梯度提升算法，整合1023个技术指标、基本面数据、市场状态、网络特征和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
+**Core Philosophy**: Simultaneously predicting 1-day, 5-day, and 20-day horizons captures market trends at different time scales, supporting short-term, medium-term, and long-term trading decisions. Three-horizon cross-validation significantly improves prediction reliability.
 
-**性能指标**：
+**Multi-Horizon Predictions** (Validated 2026-05-18):
 
-| 验证方法 | 周期 | 准确率 | IC | Rank IC | 推荐度 |
-|---------|------|--------|------|---------|--------|
-| **Walk-forward**（12 folds，57只股票） | **20天** | **55.04%** | **0.205** | **0.231** | ⭐⭐⭐⭐ 推荐 |
-| Walk-forward（12 folds） | 5天 | ~50% | - | - | ⭐⭐⭐ 谨慎使用 |
-| 训练时5折交叉验证 | 20天 | 64.67% | - | - | 参考 |
+| Horizon | Accuracy | Characteristics | Usage |
+|---------|----------|-----------------|-------|
+| 1-day | 51.49% | High noise, reference only | Intraday trading |
+| 5-day | 65.86% | Trend confirmation, auxiliary | Weekly holding decisions |
+| **20-day** | **81.22%** | **Most reliable, primary decision** | Monthly investment direction |
 
-> ⚠️ 注意：训练时CV准确率高于Walk-forward准确率是正常现象，不代表数据泄漏。详见 `docs/VALIDATION_GUIDE.md`。
+**Eight Trading Patterns** (HSI Enhanced Model, validated 2026-05-18):
 
-**Walk-forward 验证结果（57只股票，12 folds，Top 500特征，市场情绪过滤器启用，2026-05-23）**：
+Based on three-horizon prediction results (1/0 indicates up/down), forming 8 trading signals. E.g., "110" means 1-day up, 5-day up, 20-day down.
 
-| 指标 | 数值 | 业界标准 | 评估 |
-|------|------|---------|------|
-| 综合评分 | **90/100** | - | 优秀 |
-| 平均夏普比率 | **5.33** | >0.5 | ✅ 优秀 |
-| 平均最大回撤 | **-1.04%** | <-20% | ✅ 极佳 |
-| 平均准确率 | 55.04% | >50% | ✅ |
-| 平均 IC | **0.205** | >0.05 | ✅ 优秀 |
-| 平均 Rank IC | **0.231** | >0.05 | ✅ 优秀 |
-| 平均收益率 | **+5.08%** | >0% | ✅ 正收益 |
+| Pattern | Description | 20-day Accuracy | Strategy |
+|---------|-------------|-----------------|----------|
+| **101** | False Breakout (1-up 5-down 20-up) | **87.32%** | ⭐ Best long entry, short pullback then medium-term rise |
+| **111** | Consistent Bullish | **86.26%** | ⭐⭐⭐⭐⭐ Second-best long entry |
+| **001** | Downward Continuation | **81.05%** | ⭐⭐⭐⭐ Long signal |
+| 000 | Consistent Bearish | **79.80%** | Strong sell, three-horizon resonance down |
+| 010 | Failed Rebound | **77.78%** | Short signal |
 
-**特征体系（1023个特征）**：
+**Four Trading Rules** (HSI Enhanced Model):
 
-| 类别 | 特征示例 | 作用 |
-|------|----------|------|
-| 技术指标 | MA、RSI、MACD、布林带、KDJ等 | 捕捉价格趋势和动量 |
-| 价格形态 | K线形态、支撑阻力位 | 识别经典交易信号 |
-| 基本面 | PE、PB、ROE、市值 | 评估股票内在价值 |
-| 市场情绪 | 恒指走势、板块强弱 | 反映整体市场环境 |
-| 资金流向 | 南向资金、主力净流入 | 追踪大资金动向 |
-| **利率特征** | 中美利率、期限利差、中美利差 | 港股资金流向关键驱动 |
-| **GARCH 波动率** | 条件波动率、波动率比率、持续性参数 | 捕捉波动率聚类特性 |
-| **LSTM-GARCH 混合波动率** | 混合波动率、不确定性、趋势信号 | 融合计量经济与深度学习 |
-| **HSI 市场状态** | HMM 市场状态、状态概率、持续时间 | 识别牛熊震荡市场 |
-| **日历效应** | 星期效应、月份效应、期权到期日 | 捕捉周期性市场规律 |
-| **网络特征** | 社区归属、中心性、桥梁股 | 反映股票联动关系 |
-| **网络交叉特征** | 市场级特征 × 网络社区 | 不同社区对市场信号有不同响应 |
+| Rule | Condition | Accuracy | Application |
+|------|-----------|----------|-------------|
+| **False Breakout Long** | 1-up 5-down 20-up (101) | **87.32%** | Long after short pullback |
+| Consistent Bullish Buy | All three up (111) | **86.26%** | Add position after trend confirmation |
+| Downward Continuation Long | 1-down 5-down 20-up (001) | **81.05%** | Buy after decline |
+| Consistent Bearish Short | All three down (000) | 79.80% | Reduce position or short after trend confirmation |
 
-> **市场级特征处理**：60个市场级特征（所有股票同值）通过与网络社区交叉，使不同社区的股票对同一市场信号有差异化响应。利率特征通过此机制区分个股。
+### 1.3 Hong Kong Stock CatBoost Machine Learning Model
 
-**特征重要性（个股20天模型，Top 10，2026-05-23）**：
+**Core Advantage**: Uses CatBoost gradient boosting algorithm, integrating 1023 technical indicators, fundamental data, market state, network features, and sentiment indicators for multi-horizon up/down prediction. ML models automatically discover complex market patterns beyond traditional technical analysis.
 
-| 排名 | 特征 | 重要性 | 类别 |
-|------|------|--------|------|
-| 1 | Volatility_30pct | 2.01 | 波动类 |
-| 2 | MA250_Slope | 1.83 | 趋势类 |
-| 3 | Volatility_30d | 1.79 | 波动类 |
-| 4 | BB_Width_MA60 | 1.76 | 技术指标 |
-| 5 | net_cohesion_HSI_Regime_Duration | 1.51 | **网络交叉** |
-| 6 | Volatility_70pct | 1.49 | 波动类 |
-| 7 | Distance_Support_120d | 1.43 | 技术指标 |
-| 8 | net_cohesion_per_GARCH_Conditional_Vol | 1.36 | **网络交叉** |
-| 9 | Stock_Price_Stability_Score | 1.34 | 风险类 |
-| 10 | 60d_Trend_HSI_Return_60d | 1.31 | **网络交叉** |
+**Performance Metrics**:
 
-> **关键发现**：网络交叉特征（`net_cohesion_*`, `net_constraint_*`）占据 Top 10 中的 3 席，证明市场级特征与网络社区交叉后具有显著预测价值。
+| Validation Method | Horizon | Accuracy | IC | Rank IC | Recommendation |
+|------------------|---------|----------|------|---------|----------------|
+| **Walk-forward** (12 folds, 57 stocks) | **20-day** | **55.04%** | **0.205** | **0.231** | ⭐⭐⭐⭐ Recommended |
+| Walk-forward (12 folds) | 5-day | ~50% | - | - | ⭐⭐⭐ Use cautiously |
+| Training 5-fold CV | 20-day | 64.67% | - | - | Reference |
 
-**模型配置**：
+> ⚠️ Note: Training CV accuracy higher than Walk-forward is normal, not data leakage. See `docs/VALIDATION_GUIDE.md`.
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| **预测阈值** | 0.5 | 概率 > 0.5 预测上涨，≤ 0.5 预测下跌 |
-| 置信度分级 | 0.65 / 0.55 | 高置信度(>0.65)、中置信度(0.55-0.65)、低置信度(<0.55) |
-| 特征缓存 | 7天有效期 | 特征计算结果缓存，**170x 加速**，避免重复计算 |
-| 随机种子 | 42（固定） | 确保可重现性 |
+**Walk-forward Validation Results** (57 stocks, 12 folds, Top 500 features, Market Sentiment Filter enabled, 2026-05-23):
 
-**双模式预测系统**：
+| Metric | Value | Industry Standard | Assessment |
+|--------|-------|-------------------|------------|
+| Composite Score | **90/100** | - | Excellent |
+| Average Sharpe Ratio | **5.33** | >0.5 | ✅ Excellent |
+| Average Max Drawdown | **-1.04%** | <-20% | ✅ Excellent |
+| Average Accuracy | 55.04% | >50% | ✅ |
+| Average IC | **0.205** | >0.05 | ✅ Excellent |
+| Average Rank IC | **0.231** | >0.05 | ✅ Excellent |
+| Average Return | **+5.08%** | >0% | ✅ Positive |
 
-系统区分两种预测场景，确保训练-预测一致性：
+**Feature System (1023 features)**:
 
-| 场景 | 特征时点 | `mode` 参数 | 应用 |
-|------|---------|-------------|------|
-| 收市后预测 | 当日数据 | `production` | 实际交易决策 |
-| Walk-forward 验证 | T-1 数据 | `backtest` | 模型验证、防止泄漏 |
+| Category | Feature Examples | Purpose |
+|----------|------------------|---------|
+| Technical Indicators | MA, RSI, MACD, Bollinger Bands, KDJ | Capture price trends and momentum |
+| Price Patterns | Candlestick patterns, support/resistance | Identify classic trading signals |
+| Fundamentals | PE, PB, ROE, Market Cap | Assess intrinsic value |
+| Market Sentiment | HSI trend, sector strength | Reflect overall market environment |
+| Capital Flow | Southbound capital, institutional inflow | Track smart money |
+| **Interest Rate Features** | US-CN rates, term spreads, CN-US spread | HK capital flow key drivers |
+| **GARCH Volatility** | Conditional volatility, volatility ratio, persistence | Capture volatility clustering |
+| **LSTM-GARCH Hybrid** | Hybrid volatility, uncertainty, trend signal | Fuse econometrics with deep learning |
+| **HSI Market Regime** | HMM market state, state probability, duration | Identify bull/bear/range markets |
+| **Calendar Effects** | Day-of-week, month effects, option expiry | Capture cyclical market patterns |
+| **Network Features** | Community membership, centrality, bridge stocks | Reflect stock correlations |
+| **Network Cross Features** | Market-level features × Network community | Different communities respond differently to market signals |
 
-**实际应用**：
-- 每日自动预测自选股未来5天和20天的涨跌概率
-- 结合置信度分级决定仓位大小（高置信度重仓，低置信度轻仓或观望）
-- 通过邮件推送预测结果，便于及时决策
+> **Market-level Feature Handling**: 60 market-level features (same value for all stocks) are crossed with network communities, enabling differentiated responses to the same market signal. Interest rate features distinguish stocks through this mechanism.
 
-**⚠️ 风险提示**：
+**Feature Importance** (Stock 20-day Model, Top 10, 2026-05-23):
 
-高置信度预测错误时损失风险依然很高：
+| Rank | Feature | Importance | Category |
+|------|---------|------------|----------|
+| 1 | Volatility_30pct | 2.01 | Volatility |
+| 2 | MA250_Slope | 1.83 | Trend |
+| 3 | Volatility_30d | 1.79 | Volatility |
+| 4 | BB_Width_MA60 | 1.76 | Technical |
+| 5 | net_cohesion_HSI_Regime_Duration | 1.51 | **Network Cross** |
+| 6 | Volatility_70pct | 1.49 | Volatility |
+| 7 | Distance_Support_120d | 1.43 | Technical |
+| 8 | net_cohesion_per_GARCH_Conditional_Vol | 1.36 | **Network Cross** |
+| 9 | Stock_Price_Stability_Score | 1.34 | Risk |
+| 10 | 60d_Trend_HSI_Return_60d | 1.31 | **Network Cross** |
 
-| 指标 | 值 |
-|------|-----|
-| 高置信度(>=0.65)错误样本 | 1,539 |
-| 平均损失 | **-6.91%** |
-| 最大损失 | **-72.96%** |
-| 损失 <= -5% | **49.4%** |
-| 损失 <= -10% | **24.7%** |
+> **Key Finding**: Network cross features (`net_cohesion_*`, `net_constraint_*`) occupy 3 of Top 10, proving market-level features crossed with network communities have significant predictive value.
 
-**必须配合止损策略**：建议设置 3-5% 止损，可提升期望收益 30%。
+**Model Configuration**:
 
-### 1.4 市场情绪过滤器
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| **Prediction Threshold** | 0.5 | Probability > 0.5 predicts up, ≤ 0.5 predicts down |
+| Confidence Levels | 0.65 / 0.55 | High (>0.65), Medium (0.55-0.65), Low (<0.55) |
+| Feature Cache | 7-day validity | Feature computation cache, **170x speedup** |
+| Random Seed | 42 (fixed) | Ensures reproducibility |
 
-**核心原理**：市场上涨比例有强自相关性（lag=1 自相关系数 0.929），滞后1天数据能有效识别极端市场环境，动态调整预测阈值。
+**Dual-Mode Prediction System**:
 
-**阈值分层**：
+System distinguishes two prediction scenarios for train-predict consistency:
 
-| 层级 | 上涨比例 | 动态阈值 | 操作 |
-|------|---------|---------|------|
-| extreme_bear | <20% | 1.0 | 暂停交易 |
-| bear | 20-30% | 0.70 | 高置信 |
-| weak | 30-40% | 0.65 | 谨慎 |
-| normal | >40% | 0.50 | 标准 |
+| Scenario | Feature Timestamp | `mode` Parameter | Application |
+|----------|------------------|------------------|-------------|
+| Post-market Prediction | Current day data | `production` | Real trading decisions |
+| Walk-forward Validation | T-1 data | `backtest` | Model validation, prevent leakage |
 
-**验证效果**（12 folds，57只股票）：
+**Practical Application**:
+- Daily automatic prediction of watchlist stocks' 5-day and 20-day up/down probabilities
+- Position sizing based on confidence levels (high confidence = larger position, low confidence = observe)
+- Email delivery of predictions for timely decisions
 
-| 指标 | 过滤前 | 过滤后 | 变化 |
-|------|--------|--------|------|
-| 准确率 | 62.0% | 70.7% | **+8.7%** |
-| 总收益 | 242.13 | 305.57 | **+63.44** |
+**⚠️ Risk Warning**:
+
+High confidence prediction errors still carry significant loss risk:
+
+| Metric | Value |
+|--------|-------|
+| High confidence (>=0.65) error samples | 1,539 |
+| Average loss | **-6.91%** |
+| Maximum loss | **-72.96%** |
+| Loss <= -5% | **49.4%** |
+| Loss <= -10% | **24.7%** |
+
+**Must use stop-loss strategy**: Recommend 3-5% stop-loss, can improve expected return by 30%.
+
+### 1.4 Market Sentiment Filter
+
+**Core Principle**: Market up ratio has strong autocorrelation (lag=1 autocorrelation 0.929), lag-1 day data effectively identifies extreme market environments, dynamically adjusting prediction thresholds.
+
+**Threshold Layers**:
+
+| Layer | Up Ratio | Dynamic Threshold | Action |
+|-------|----------|-------------------|--------|
+| extreme_bear | <20% | 1.0 | Pause trading |
+| bear | 20-30% | 0.70 | High confidence required |
+| weak | 30-40% | 0.65 | Cautious |
+| normal | >40% | 0.50 | Standard |
+
+**Validation Results** (12 folds, 57 stocks):
+
+| Metric | Before Filter | After Filter | Change |
+|--------|--------------|--------------|--------|
+| Accuracy | 62.0% | 70.7% | **+8.7%** |
+| Total Return | 242.13 | 305.57 | **+63.44** |
 | FP | 2217 | 1424 | **-793** |
 
-**关键发现**：问题本质是"市场普跌时模型仍过度乐观"，而非"选错股"。市场环境感知比个股过滤更有效。
+**Key Finding**: The problem is "model remains over-optimistic when market broadly declines", not "wrong stock selection". Market environment perception is more effective than individual stock filtering.
 
-### 1.5 港股异常检测
+### 1.5 Hong Kong Stock Anomaly Detection
 
-**核心价值**：在市场出现异常波动时发出预警，帮助投资者及时规避风险或抓住机会。异常信号往往是市场转折点的重要提示。
+**Core Value**: Alerts when market shows abnormal fluctuations, helping investors timely avoid risks or seize opportunities. Anomaly signals often indicate important market turning points.
 
-**双层检测机制**：
+**Dual-Layer Detection Mechanism**:
 
-| 层级 | 方法 | 检测目标 | 优势 |
-|------|------|----------|------|
-| 第一层 | Z-Score | 价格/成交量偏离均值程度 | 快速识别统计异常 |
-| 第二层 | Isolation Forest | 多维特征空间离群点 | 捕捉复杂异常模式 |
+| Layer | Method | Detection Target | Advantage |
+|-------|--------|------------------|-----------|
+| First Layer | Z-Score | Price/volume deviation from mean | Quick statistical anomaly identification |
+| Second Layer | Isolation Forest | Multi-dimensional feature space outliers | Capture complex anomaly patterns |
 
-**验证策略（两年历史数据回测）**：
+**Validation Strategy** (Two-year historical backtesting):
 
-| 异常类型 | 策略 | 5日收益 | 胜率 | 应用场景 |
-|---------|------|---------|------|----------|
-| **价格异常 + 当日下跌** | 🟢 抄底 | +4.12% | **72%** | 超跌反弹机会，适合左侧交易 |
-| 价格异常 + 当日上涨 | ⚠️ 观望 | +1.96% | 54% | 追涨风险，等待确认后再决策 |
-| IF high 异常 | 🔴 减仓 | -3.04% | 43% | 多维异常预警，建议减仓观望 |
+| Anomaly Type | Strategy | 5-day Return | Win Rate | Application |
+|--------------|----------|--------------|----------|-------------|
+| **Price anomaly + same-day down** | 🟢 Bottom Fishing | +4.12% | **72%** | Oversold rebound opportunity, left-side trading |
+| Price anomaly + same-day up | ⚠️ Observe | +1.96% | 54% | Chase risk, wait for confirmation |
+| IF high anomaly | 🔴 Reduce Position | -3.04% | 43% | Multi-dimensional warning, reduce exposure |
 
-**使用场景**：
-- 开盘前检测隔夜异常，预判当日走势
-- 盘中实时监控，及时发现异动股票
-- 结合其他分析工具，提高决策可靠性
+**Usage Scenarios**:
+- Pre-market overnight anomaly detection, predict intraday trend
+- Intraday real-time monitoring, detect abnormal stocks immediately
+- Combine with other analysis tools, improve decision reliability
 
-⚠️ **重要警告**：股票异常策略**不适用于加密货币市场**，加密货币市场特性不同，需要专门的策略。
+⚠️ **Important Warning**: Stock anomaly strategies **NOT applicable to cryptocurrency markets**. Cryptocurrency characteristics differ, requiring specialized strategies.
 
-### 1.6 大模型智能决策
+### 1.6 Large Language Model Intelligent Decision
 
-**核心理念**：利用大语言模型（通义千问）的推理能力，整合多维信息生成交易建议。相比传统量化策略，大模型能理解市场上下文，提供更有针对性的建议。
+**Core Philosophy**: Uses LLM (Qwen) reasoning capabilities, integrating multi-dimensional information to generate trading recommendations. Compared to traditional quantitative strategies, LLM understands market context, providing targeted advice.
 
-**六层分析框架**：
+**Six-Layer Analysis Framework**:
 
-| 层级 | 分析维度 | 输出内容 | 重要性 |
-|------|----------|----------|--------|
-| 1️⃣ | 风险控制 | 仓位建议、止损点位 | 最高优先级 |
-| 2️⃣ | 市场环境 | 大盘趋势、宏观因素 | 决定整体方向 |
-| 3️⃣ | 基本面 | 财务健康度、估值水平 | 中长期价值判断 |
-| 4️⃣ | 技术面 | 趋势、支撑阻力、形态 | 入场时机选择 |
-| 5️⃣ | 信号识别 | 异常信号、资金流向 | 短线机会捕捉 |
-| 6️⃣ | 综合决策 | 最终买卖建议 | 综合以上五层 |
+| Layer | Analysis Dimension | Output Content | Priority |
+|-------|--------------------|----------------|----------|
+| 1️⃣ | Risk Control | Position suggestion, stop-loss point | Highest priority |
+| 2️⃣ | Market Environment | Index trend, macro factors | Overall direction |
+| 3️⃣ | Fundamentals | Financial health, valuation level | Medium-long term value judgment |
+| 4️⃣ | Technical Analysis | Trend, support/resistance, patterns | Entry timing |
+| 5️⃣ | Signal Recognition | Anomaly signals, capital flow | Short-term opportunity capture |
+| 6️⃣ | Comprehensive Decision | Final buy/sell recommendation | Synthesizes above five layers |
 
-**板块轮动分析**：
+**Sector Rotation Analysis**:
 
-| 分析内容 | 输出 | 应用 |
-|----------|------|------|
-| 16个板块排名 | 强势板块→弱势板块 | 选择热点板块 |
-| 龙头股识别 | 各板块领涨股 | 精选个股标的 |
-| 周期/防御轮动 | 市场风格判断 | 调整投资组合 |
-| 主力资金追踪 | 建仓/出货信号 | 跟随聪明钱 |
+| Analysis Content | Output | Application |
+|------------------|--------|-------------|
+| 16 sector rankings | Strong sectors → Weak sectors | Select hot sectors |
+| Leader stock identification | Sector leading stocks | Select specific targets |
+| Cyclical/Defensive rotation | Market style judgment | Adjust portfolio |
+| Institutional capital tracking | Build/distribute signals | Follow smart money |
 
-**输出示例**：
-- 每只股票的买入/卖出/持有建议
-- 具体的仓位配置建议
-- 风险提示和止损位
+**Output Examples**:
+- Buy/Sell/Hold recommendation for each stock
+- Specific position allocation suggestions
+- Risk warnings and stop-loss levels
 
-### 1.7 股票分析技能
+### 1.7 Stock Analysis Skill
 
-**核心价值**：用户询问股票买卖建议时，自动查询综合分析报告，提供12维度专业分析。
+**Core Value**: When users ask about stock trading recommendations, automatically queries comprehensive analysis reports, providing 12-dimension professional analysis.
 
-**触发方式**：
-- "今天买XXX股票好不好"
-- "XXX股票分析"
-- "XXX股票值得买吗"
+**Trigger Methods**:
+- "Is XXX stock a good buy today?"
+- "XXX stock analysis"
+- "Is XXX stock worth buying?"
 
-**分析维度**（12个）：
+**Analysis Dimensions** (12):
 
-| 维度 | 内容 | 用途 |
-|------|------|------|
-| 核心指标 | CatBoost概率、价格、仓位、止损位 | 决策依据 |
-| 三周期预测 | 1天/5天/20天预测概率 | 趋势判断 |
-| 大模型建议 | 短期/中期建议 | 智能参考 |
-| 技术指标 | RSI/MACD/布林带/筹码阻力 | 入场时机 |
-| 风险评分 | 风险/回报/综合得分 | 风险评估 |
-| 市场环境 | 恒指/市场状态/VIX | 环境感知 |
-| 异常检测 | 超买/超卖/成交量异常 | 风险预警 |
-| 网络洞察 | 社区归属/桥梁股/模块度 | 联动分析 |
-| 板块表现 | 板块排名/涨跌幅 | 板块轮动 |
-| 操作建议 | 分批建仓/止盈止损 | 具体操作 |
-| 风险提示 | 主要风险因素 | 风警 |
-| 股息提醒 | 除净日/分红方案 | 收益补充 |
+| Dimension | Content | Purpose |
+|-----------|---------|---------|
+| Core Metrics | CatBoost probability, price, position, stop-loss | Decision basis |
+| Three-Horizon Prediction | 1-day/5-day/20-day prediction probability | Trend judgment |
+| LLM Recommendation | Short-term/medium-term suggestions | Intelligent reference |
+| Technical Indicators | RSI/MACD/Bollinger/chip resistance | Entry timing |
+| Risk Score | Risk/return/composite score | Risk assessment |
+| Market Environment | HSI/market state/VIX | Environment awareness |
+| Anomaly Detection | Overbought/oversold/volume anomaly | Risk warning |
+| Network Insights | Community membership/bridge stocks/modularity | Correlation analysis |
+| Sector Performance | Sector ranking/price change | Sector rotation |
+| Operation Suggestions | Staged entry/stop-profit-stop-loss | Specific operations |
+| Risk Alerts | Major risk factors | Warning |
+| Dividend Reminder | Ex-dividend date/dividend scheme | Income supplement |
 
-**硬约束**：
-- CatBoost 20天上涨概率 ≤ 50% → 禁止推荐买入
-- 市场状态为熊市 → 提高阈值至 0.70
-- 市场状态为震荡市 → 提高阈值至 0.65
+**Hard Constraints**:
+- CatBoost 20-day up probability ≤ 50% → Prohibit buy recommendation
+- Market state is bear → Raise threshold to 0.70
+- Market state is range-bound → Raise threshold to 0.65
 
-### 1.8 风险回报率分析
+### 1.8 Risk-Reward Ratio Analysis
 
-**核心价值**：在选股时，不仅考虑预期收益，更要评估潜在风险。该工具帮助投资者在多只候选股票中选择风险回报比最优的标的，实现"收益最大化、风险最小化"。
+**Core Value**: When selecting stocks, not only consider expected return, but also assess potential risk. Helps investors choose optimal risk-reward ratio among multiple candidates, achieving "maximum return, minimum risk".
 
-**三种投资风格**：
+**Three Investment Styles**:
 
-| 风格 | 风险权重 | 回报权重 | 适用场景 | 适合人群 |
-|------|----------|----------|----------|----------|
-| 保守型 | 60% | 40% | 防御性资产、熊市策略 | 风险厌恶型投资者 |
-| **平衡型** | **50%** | **50%** | **稳健投资、震荡市** | **大多数投资者** |
-| 激进型 | 30% | 70% | 高成长标的、牛市策略 | 风险偏好型投资者 |
+| Style | Risk Weight | Return Weight | Application Scenario | Suitable For |
+|-------|-------------|---------------|---------------------|--------------|
+| Conservative | 60% | 40% | Defensive assets, bear market | Risk-averse investors |
+| **Balanced** | **50%** | **50%** | **Steady investing, range-bound market** | **Most investors** |
+| Aggressive | 30% | 70% | High growth targets, bull market | Risk-seeking investors |
 
-**风险指标（衡量下行风险）**：
+**Risk Metrics** (Measuring downside risk):
 
-| 指标 | 含义 | 应用 |
-|------|------|------|
-| VaR（在险价值） | 95%置信度下最大可能损失 | 评估极端风险 |
-| 最大回撤 | 历史最大跌幅 | 心理承受能力测试 |
-| 波动率 | 价格波动程度 | 衡量稳定性 |
-| Beta | 相对大盘的敏感度 | 判断系统性风险 |
-| 流动性 | 日均成交额 | 评估变现能力 |
+| Metric | Meaning | Application |
+|--------|---------|-------------|
+| VaR (Value at Risk) | Maximum possible loss at 95% confidence | Assess extreme risk |
+| Maximum Drawdown | Historical maximum decline | Psychological tolerance test |
+| Volatility | Price fluctuation degree | Measure stability |
+| Beta | Sensitivity relative to index | Judge systematic risk |
+| Liquidity | Average daily turnover | Assess liquidation capability |
 
-**回报指标（衡量上涨潜力）**：
+**Return Metrics** (Measuring upside potential):
 
-| 指标 | 含义 | 应用 |
-|------|------|------|
-| 趋势评分 | 当前趋势强度 | 顺势交易参考 |
-| 动量评分 | 价格动能强度 | 判断持续性 |
-| 夏普比率 | 风险调整后收益 | 综合评价效率 |
-| 技术形态 | 经典看涨/看跌形态 | 入场时机判断 |
-| 实时状态 | 当日涨跌幅 | 短线时机选择 |
+| Metric | Meaning | Application |
+|--------|---------|-------------|
+| Trend Score | Current trend strength | Trend-following reference |
+| Momentum Score | Price momentum strength | Judge sustainability |
+| Sharpe Ratio | Risk-adjusted return | Comprehensive efficiency |
+| Technical Pattern | Classic bullish/bearish patterns | Entry timing |
+| Real-time Status | Intraday price change | Short-term timing |
 
-**输出报告**：
-- 每只股票的综合评分和排名
-- 风险回报雷达图
-- 具体的买卖建议
+**Output Reports**:
+- Composite score and ranking for each stock
+- Risk-reward radar chart
+- Specific buy/sell recommendations
 
-### 1.9 模拟交易系统
+### 1.9 Simulated Trading System
 
-**核心价值**：在不投入真实资金的情况下测试策略效果，积累交易经验。支持多种风险偏好，帮助投资者找到适合自己的交易风格。
+**Core Value**: Test strategy effectiveness without real capital, accumulate trading experience. Supports multiple risk preferences, helping investors find suitable trading style.
 
-**三种风险偏好**：
+**Three Risk Preferences**:
 
-| 类型 | 特点 | 止损位 | 适合场景 |
-|------|------|--------|----------|
-| 进取型 | 追求高收益，接受高风险 | -8% | 牛市、成长股 |
-| 稳健型 | 平衡风险与收益 | -6% | 震荡市、蓝筹股 |
-| 保守型 | 资产保值为主 | -4% | 熊市、防御股 |
+| Type | Characteristics | Stop-Loss | Suitable Scenario |
+|------|-----------------|-----------|-------------------|
+| Aggressive | Pursue high return, accept high risk | -8% | Bull market, growth stocks |
+| Balanced | Balance risk and return | -6% | Range-bound market, blue chips |
+| Conservative | Asset preservation primary | -4% | Bear market, defensive stocks |
 
-**核心功能**：
+**Core Functions**:
 
-| 功能 | 说明 | 作用 |
-|------|------|------|
-| 自动止损跟踪 | 价格上涨后动态调整止损位 | 锁定利润，控制回撤 |
-| 决策一致性保护 | 3小时/24小时内避免频繁反向操作 | 防止情绪化交易 |
-| 交易日志 | 记录每笔交易的决策过程 | 复盘总结，持续改进 |
-| 收益统计 | 计算总收益、胜率、最大回撤 | 评估策略效果 |
+| Function | Description | Purpose |
+|----------|-------------|---------|
+| Automatic stop-loss tracking | Dynamically adjust stop-loss after price rise | Lock profit, control drawdown |
+| Decision consistency protection | Avoid frequent reverse operations within 3h/24h | Prevent emotional trading |
+| Trading log | Record decision process for each trade | Review and improve |
+| Return statistics | Calculate total return, win rate, max drawdown | Evaluate strategy effectiveness |
 
 ---
 
-## 二、快速开始
+## II. Quick Start
 
 ```bash
-# 恒生指数预测
+# Hang Seng Index prediction
 python3 hsi_prediction.py --no-email
 
-# 综合分析（含三周期预测和风险回报率分析）
+# Comprehensive analysis (includes three-horizon prediction and risk-reward analysis)
 ./scripts/run_comprehensive_analysis.sh
 
-# 风险回报率分析（选股辅助）
+# Risk-reward analysis (stock selection assistance)
 python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
 
-# 港股异常检测
+# Hong Kong stock anomaly detection
 python3 detect_stock_anomalies.py --mode standalone --mode-type deep
 
-# 模型训练
+# Model training
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
 
-# Walk-forward验证
+# Walk-forward validation
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 
-# 清除特征缓存
+# Clear feature cache
 rm -rf data/feature_cache/*.pkl
 ```
 
 ---
 
-## 三、技术架构
+## III. Technical Architecture
 
 ```
-外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
-    ↓              ↓              ↓            ↓          ↓
-腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
-yfinance     基本面数据      综合分析     Walk-forward  JSON文件
-AKShare      南向资金        主力追踪     性能监控
+External Data Sources → data_services/ → Analysis Layer → ml_services/ → Output
+         ↓                    ↓                ↓              ↓            ↓
+    Tencent Finance    Technical Indicators  Anomaly Detection  CatBoost    Email Reports
+    yfinance           Fundamental Data      Comprehensive      Walk-forward  JSON Files
+    AKShare            Southbound Capital    Analysis           Performance
+                       Capital Tracking                         Monitoring
 ```
 
-### 3.1 数据流图
+### 3.1 Data Flow Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              数据采集层                                          │
+│                              Data Collection Layer                              │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
-│  │ yfinance │  │  腾讯财经 │  │  AKShare │  │  恒指数据 │  │  南向资金 │         │
+│  │ yfinance │  │  Tencent │  │  AKShare │  │  HSI Data│  │Southbound│         │
+│  │          │  │  Finance │  │          │  │          │  │  Capital │         │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘         │
 │       │             │             │             │             │                │
 │       └─────────────┴─────────────┴──────┬──────┴─────────────┘                │
 │                                          ▼                                      │
 │                              ┌────────────────────┐                             │
-│                              │  data/stock_cache/ │ ← 原始数据缓存（7天）        │
+│                              │  data/stock_cache/ │ ← Raw data cache (7 days)  │
 │                              └────────────────────┘                             │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              数据处理层 (data_services/)                         │
+│                              Data Processing Layer (data_services/)             │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐             │
-│  │  技术指标计算    │    │   基本面数据     │    │   市场数据整合   │             │
-│  │  MA/RSI/MACD   │    │  PE/PB/ROE      │    │  恒指/板块/资金  │             │
-│  │  布林带/KDJ    │    │  营收/利润       │    │                 │             │
+│  │ Technical       │    │  Fundamental    │    │   Market Data   │             │
+│  │ Indicators      │    │  Data           │    │   Integration   │             │
+│  │ MA/RSI/MACD    │    │  PE/PB/ROE      │    │  HSI/Sector/    │             │
+│  │ Bollinger/KDJ  │    │  Revenue/Profit │    │  Capital Flow   │             │
 │  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘             │
 │           │                      │                      │                       │
 │           └──────────────────────┼──────────────────────┘                       │
 │                                  ▼                                              │
 │                       ┌─────────────────────┐                                   │
-│                       │ 1023个特征工程计算  │                                   │
+│                       │ 1023 Feature        │                                   │
+│                       │ Engineering         │                                   │
 │                       └──────────┬──────────┘                                   │
 │                                  ▼                                              │
 │                       ┌─────────────────────┐                                   │
-│                       │ data/feature_cache/ │ ← 特征缓存（7天，170x加速）        │
+│                       │ data/feature_cache/ │ ← Feature cache (7 days, 170x)   │
 │                       └─────────────────────┘                                   │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              分析层                                             │
+│                              Analysis Layer                                     │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────────────────────────┐    ┌─────────────────────────────┐    │
 │  │      anomaly_detector/              │    │    comprehensive_analysis   │    │
-│  │      异常检测模块                    │    │    综合分析模块              │    │
+│  │      Anomaly Detection Module       │    │    Comprehensive Analysis   │    │
 │  │  ┌─────────────┐ ┌───────────────┐  │    │  ┌───────────────────────┐  │    │
-│  │  │  Z-Score    │ │ Isolation     │  │    │  │ 板块轮动分析          │  │    │
-│  │  │  第一层检测  │ │ Forest第二层  │  │    │  │ 主力资金追踪          │  │    │
-│  │  │  (实时)     │ │ 检测(深度)    │  │    │  │ 风险回报率分析        │  │    │
+│  │  │  Z-Score    │ │ Isolation     │  │    │  │ Sector Rotation       │  │    │
+│  │  │  Layer 1    │ │ Forest Layer 2│  │    │  │ Capital Tracking      │  │    │
+│  │  │  (Real-time)│ │ (Deep)        │  │    │  │ Risk-Reward Analysis  │  │    │
 │  │  └─────────────┘ └───────────────┘  │    │  └───────────────────────┘  │    │
 │  └─────────────────────────────────────┘    └─────────────────────────────┘    │
 │                                                                                  │
@@ -425,211 +431,216 @@ AKShare      南向资金        主力追踪     性能监控
                                            │
                                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            机器学习层 (ml_services/)                             │
+│                            Machine Learning Layer (ml_services/)                │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌───────────────────────────────────────────────────────────────────────────┐  │
-│  │                        CatBoost 预测模型                                   │  │
+│  │                        CatBoost Prediction Model                          │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │  │
-│  │  │  1天预测    │  │  5天预测    │  │  20天预测   │  │ 三周期信号  │      │  │
-│  │  │  (噪音大)   │  │  (谨慎使用) │  │  (推荐)     │  │  组合分析   │      │  │
+│  │  │  1-day      │  │  5-day      │  │  20-day     │  │ Three-Horizon│      │  │
+│  │  │  (High Noise│  │  (Caution)  │  │  (Recommended│  │ Signal       │      │  │
+│  │  │  Reference) │  │             │  │  Primary)   │  │ Combination  │      │  │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │  │
 │  └───────────────────────────────────────────────────────────────────────────┘  │
 │                                                                                  │
 │  ┌───────────────────────────┐  ┌───────────────────────────┐                  │
-│  │  Walk-forward 验证        │  │  性能监控                 │                  │
-│  │  12折时序交叉验证         │  │  预测准确率追踪           │                  │
+│  │  Walk-forward Validation  │  │  Performance Monitoring   │                  │
+│  │  12-fold Time Series CV   │  │  Prediction Accuracy      │                  │
 │  └───────────────────────────┘  └───────────────────────────┘                  │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            大模型决策层 (llm_services/)                          │
+│                            LLM Decision Layer (llm_services/)                   │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                     通义千问大模型 (Qwen API)                            │    │
+│  │                     Qwen Large Language Model                            │    │
 │  │                                                                          │    │
-│  │   输入: 价格数据 + 技术指标 + 异常信号 + ML预测 + 板块分析 + 资金流向      │    │
+│  │   Input: Price Data + Technical Indicators + Anomaly Signals +          │    │
+│  │          ML Predictions + Sector Analysis + Capital Flow                 │    │
 │  │                                                                          │    │
-│  │   六层分析: 风险控制 → 市场环境 → 基本面 → 技术面 → 信号识别 → 综合决策    │    │
+│  │   Six Layers: Risk Control → Market Environment → Fundamentals →        │    │
+│  │                Technical Analysis → Signal Recognition → Decision       │    │
 │  │                                                                          │    │
-│  │   输出: 买卖建议 + 仓位配置 + 风险提示 + 止损位                           │    │
+│  │   Output: Buy/Sell Recommendations + Position Allocation +              │    │
+│  │           Risk Warnings + Stop-Loss Levels                               │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              输出层                                             │
+│                              Output Layer                                       │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                 │
-│  │    邮件报告      │  │    JSON数据     │  │   Markdown报告  │                 │
-│  │  恒指预测提醒    │  │ prediction_     │  │  output/*.md   │                 │
-│  │  异常检测预警    │  │ history.json    │  │  综合分析报告   │                 │
-│  │  综合分析报告    │  │ model_accuracy  │  │  回测验证报告   │                 │
+│  │  Email Reports  │  │   JSON Data     │  │ Markdown Reports│                 │
+│  │  HSI Prediction │  │ prediction_     │  │  output/*.md   │                 │
+│  │  Anomaly Alerts │  │ history.json    │  │ Comprehensive   │                 │
+│  │  Comprehensive  │  │ model_accuracy  │  │ Backtest        │                 │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘                 │
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
-│  │                      GitHub Actions 自动化调度                           │    │
-│  │  恒指预测(06:00) → 异常检测(02:00/每小时) → 综合分析(16:00) → 性能监控    │    │
+│  │                      GitHub Actions Automated Scheduling                 │    │
+│  │  HSI Prediction(06:00) → Anomaly Detection(02:00/hourly) →              │    │
+│  │  Comprehensive Analysis(16:00) → Performance Monitoring(monthly)         │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**缓存机制**：
+**Cache Mechanism**:
 
-| 缓存类型 | 位置 | 有效期 | 加速效果 |
-|---------|------|--------|---------|
-| 原始数据 | `data/stock_cache/` | 7天 | - |
-| 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
+| Cache Type | Location | Validity | Speedup |
+|------------|----------|----------|---------|
+| Raw Data | `data/stock_cache/` | 7 days | - |
+| Feature Cache | `data/feature_cache/` | 7 days | **170x** |
 
 ---
 
-## 四、项目结构
+## IV. Project Structure
 
 ```
 fortune/
-├── 核心脚本
-│   ├── comprehensive_analysis.py       # 综合分析
-│   ├── hsi_prediction.py               # 恒指三周期预测
-│   ├── detect_stock_anomalies.py       # 异常检测
-│   └── simulation_trader.py            # 模拟交易
-├── ml_services/                        # 机器学习模块
-│   ├── ml_trading_model.py             # CatBoost模型
-│   └── walk_forward_validation.py      # Walk-forward验证
-├── data_services/                      # 数据服务
-├── anomaly_detector/                   # 异常检测
-├── llm_services/                       # 大模型服务
-├── docs/                               # 详细文档
-└── data/                               # 数据和缓存
-    ├── stock_cache/                    # 原始数据缓存
-    └── feature_cache/                  # 特征缓存
+├── Core Scripts
+│   ├── comprehensive_analysis.py       # Comprehensive analysis
+│   ├── hsi_prediction.py               # HSI three-horizon prediction
+│   ├── detect_stock_anomalies.py       # Anomaly detection
+│   └── simulation_trader.py            # Simulated trading
+├── ml_services/                        # Machine Learning module
+│   ├── ml_trading_model.py             # CatBoost model
+│   └── walk_forward_validation.py      # Walk-forward validation
+├── data_services/                      # Data services
+├── anomaly_detector/                   # Anomaly detection
+├── llm_services/                       # LLM services
+├── docs/                               # Detailed documentation
+└── data/                               # Data and cache
+    ├── stock_cache/                    # Raw data cache
+    └── feature_cache/                  # Feature cache
 ```
 
 ---
 
-## 五、自动化调度
+## V. Automated Scheduling
 
-| 工作流 | 功能 | 执行时间 |
-|--------|------|----------|
-| `hsi-prediction.yml` | 恒生指数预测 | 工作日 06:00 |
-| `comprehensive-analysis.yml` | 综合分析 | 工作日 16:00 |
-| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
-| `hourly-stock-monitor.yml` | 交易时段监控 | 10:00-15:00 每小时 |
-| `performance-monitor.yml` | 性能报告 | 每月1号 |
+| Workflow | Function | Execution Time |
+|----------|----------|----------------|
+| `hsi-prediction.yml` | Hang Seng Index prediction | Weekdays 06:00 |
+| `comprehensive-analysis.yml` | Comprehensive analysis | Weekdays 16:00 |
+| `stock-anomaly-detection.yml` | HK stock anomaly detection | Daily 02:00 |
+| `hourly-stock-monitor.yml` | Trading hours monitoring | 10:00-15:00 hourly |
+| `performance-monitor.yml` | Performance report | Monthly 1st |
 
-### 5.1 可用命令汇总
+### 5.1 Command Summary
 
 ```bash
-# 核心预测与分析
-python3 hsi_prediction.py --no-email                    # 恒指预测
-python3 comprehensive_analysis.py                        # 综合分析
-python3 detect_stock_anomalies.py --mode standalone     # 异常检测
+# Core Prediction and Analysis
+python3 hsi_prediction.py --no-email                    # HSI prediction
+python3 comprehensive_analysis.py                        # Comprehensive analysis
+python3 detect_stock_anomalies.py --mode standalone     # Anomaly detection
 
-# 模型训练与验证
+# Model Training and Validation
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
 
-# 分析工具
+# Analysis Tools
 python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
 python3 ml_services/performance_monitor.py --mode all --no-email
-python3 ml_services/analyze_causal_chain.py             # 因果链分析
+python3 ml_services/analyze_causal_chain.py             # Causal chain analysis
 
-# 缓存管理
-rm -rf data/feature_cache/*.pkl                         # 清除特征缓存
+# Cache Management
+rm -rf data/feature_cache/*.pkl                         # Clear feature cache
 ```
 
 ---
 
-## 六、安装部署
+## VI. Installation
 
 ```bash
-# 1. 克隆项目
+# 1. Clone project
 git clone https://github.com/wonglaitung/fortune.git
 cd fortune
 
-# 2. 安装依赖
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. 配置环境变量
+# 3. Configure environment variables
 cp set_key.sh.sample set_key.sh
-# 编辑 set_key.sh，填写邮箱和API密钥
+# Edit set_key.sh, fill in email and API keys
 source set_key.sh
 
-# 4. 验证安装
+# 4. Verify installation
 python hsi_email.py --no-email
 ```
 
-**必填环境变量**：
+**Required Environment Variables**:
 
-| 变量名 | 说明 |
-|--------|------|
-| `SMTP_SERVER` | SMTP服务器地址 |
-| `EMAIL_SENDER` | 发件人邮箱 |
-| `EMAIL_PASSWORD` | 邮箱授权码 |
-| `RECIPIENT_EMAIL` | 收件人邮箱 |
-| `QWEN_API_KEY` | 通义千问API密钥 |
-
----
-
-## 七、核心警告
-
-| 警告 | 说明 |
-|------|------|
-| **数据泄漏** | Walk-forward 准确率 >65%（个股）或 >80%（恒指）通常有数据泄漏 |
-| **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
-| **CatBoost 1天** | 噪音大，仅供参考 |
-| **深度学习** | LSTM/Transformer F1≈0，不推荐 |
-| **Walk-forward** | 唯一可信的验证方法 |
-| **加密货币** | 股票策略不适用 |
-| **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 57%），个股预测需谨慎 |
-| **特征缓存版本** | 缓存失效时需清除（`rm -rf data/feature_cache/*.pkl`） |
-| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
-| **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
-| **IC 不等于收益** | IC 高不代表收益高，需结合损失分布分析 |
-| **双模式预测** | 收市后预测用当日数据，Walk-forward 用 T-1 数据防止泄漏 |
+| Variable Name | Description |
+|---------------|-------------|
+| `SMTP_SERVER` | SMTP server address |
+| `EMAIL_SENDER` | Sender email |
+| `EMAIL_PASSWORD` | Email authorization code |
+| `RECIPIENT_EMAIL` | Recipient email list |
+| `QWEN_API_KEY` | Qwen API key |
 
 ---
 
-## 八、文档
+## VII. Core Warnings
 
-- **[CLAUDE.md](CLAUDE.md)** - 快速参考指南
-- **[lessons.md](lessons.md)** - 经验教训
-- **[progress.txt](progress.txt)** - 项目进展
-- **[docs/](docs/)** - 详细文档
-  - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
-  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程（含 GARCH/HSI Regime）
-  - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
-  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法指南
-  - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
-  - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
+| Warning | Description |
+|---------|-------------|
+| **Data Leakage** | Walk-forward accuracy >65% (individual stocks) or >80% (HSI) usually indicates data leakage |
+| **Prediction Threshold** | Direction judgment uses **0.5**, not 0.65 |
+| **CatBoost 1-day** | High noise, reference only |
+| **Deep Learning** | LSTM/Transformer F1≈0, not recommended |
+| **Walk-forward** | Only trustworthy validation method |
+| **Cryptocurrency** | Stock strategies NOT applicable |
+| **HSI vs Individual Stocks** | HSI accuracy significantly higher than stocks (81% vs 57%), stock prediction needs caution |
+| **Feature Cache Version** | Clear cache when invalidated (`rm -rf data/feature_cache/*.pkl`) |
+| **Categorical Feature NaN** | CatBoost prediction must handle categorical NaN, training and prediction preprocessing must be consistent |
+| **High Confidence Risk** | High confidence errors can lose -73%, must use stop-loss |
+| **IC ≠ Return** | High IC doesn't guarantee high return, need loss distribution analysis |
+| **Dual-Mode Prediction** | Post-market uses current day data, Walk-forward uses T-1 data to prevent leakage |
 
 ---
 
-## 九、依赖项
+## VIII. Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** - Quick reference guide
+- **[lessons.md](lessons.md)** - Lessons learned
+- **[progress.txt](progress.txt)** - Project progress
+- **[docs/](docs/)** - Detailed documentation
+  - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - Three-horizon analysis
+  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - Feature engineering (includes GARCH/HSI Regime)
+  - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - Feature importance analysis
+  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - Validation method guide
+  - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - Sector rotation
+  - [programmer_skill.md](docs/programmer_skill.md) - Development standards
+
+---
+
+## IX. Dependencies
 
 `yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
 
 ---
 
-## 十、许可证
+## X. License
 
 MIT License
 
 ---
 
-## 十一、联系方式
+## XI. Contact
 
 - Issues: https://github.com/wonglaitung/fortune/issues
 - Email: wonglaitung@gmail.com
 
 ---
 
-## 十二、Star History
+## XII. Star History
 
 ![Star History Chart](https://api.star-history.com/svg?repos=wonglaitung/fortune&type=Date)
