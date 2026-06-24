@@ -6,59 +6,60 @@ import json
 def get_hk_stock_data_tencent(stock_code, period_days=90):
     """
     通过腾讯财经接口获取港股股票数据
-    
+
     Args:
         stock_code (str): 股票代码，例如 "00700" (腾讯)
         period_days (int): 获取数据的天数，默认90天
-    
+
     Returns:
         pandas.DataFrame: 包含股票数据的DataFrame，列包括Date, Open, High, Low, Close, Volume
     """
     # 确保股票代码是5位数字格式
     formatted_code = stock_code.zfill(5)
-    
+
     # 腾讯财经API URL (历史交易数据)
-    # 使用正确的接口和参数格式
-    url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=kline_dayqfq&param=hk{formatted_code},day,,,{period_days},qfq&r=0.123456"
-    
+    # 使用 hkfqkline 端点（绕过 WAF）
+    # 注意：fqkline/get 端点会触发 WAF 501 错误
+    url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hk{formatted_code},day,,,{period_days},qfq"
+
     try:
         # 添加请求头以模拟浏览器访问
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-            'Referer': 'https://stockapp.finance.qq.com/'
+            'Accept': '*/*',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Referer': 'https://stockapp.finance.qq.com/',
+            'Origin': 'https://stockapp.finance.qq.com',
+            'Connection': 'keep-alive',
         }
-        
-        response = requests.get(url, headers=headers)
+
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        
-        # 解析返回的JSON数据 (需要去除回调函数名)
-        # 数据格式为: kline_dayqfq={...}
-        text_data = response.text
-        if text_data.startswith("kline_dayqfq="):
-            # 直接提取等号后面的部分
-            json_str = text_data[13:]  # 去除 "kline_dayqfq="
-            data = json.loads(json_str)
-        else:
-            print(f"无法解析股票 {stock_code} 的返回数据: {text_data[:50]}")
-            return None
-        
+
+        # 解析返回的JSON数据
+        data = response.json()
+
         # 检查数据是否有效
         if 'data' not in data or f'hk{formatted_code}' not in data['data']:
             print(f"无法获取股票 {stock_code} 的数据")
             return None
-            
+
         # 提取K线数据
+        # 普通股票数据在 'qfqday' 键下（前复权数据）
+        stock_data = data['data'][f'hk{formatted_code}']
         kline_data = None
-        # 注意：数据在 'day' 键下
-        if 'day' in data['data'][f'hk{formatted_code}']:
-            kline_data = data['data'][f'hk{formatted_code}']['day']
-        
+        if 'qfqday' in stock_data:
+            kline_data = stock_data['qfqday']
+        elif 'day' in stock_data:
+            kline_data = stock_data['day']
+
         if kline_data is None or len(kline_data) == 0:
             print(f"无法获取股票 {stock_code} 的K线数据")
             return None
-        
+
         # 解析数据
-        # 数据格式: [日期, 开盘价, 收盘价, 最低价, 最高价, 成交量, 其他信息]
+        # 数据格式: [日期, 开盘价, 收盘价, 最高价, 最低价, 成交量, 其他信息, ?, 成交额(万元)]
+        # 示例: ['2026-06-24', '148.800', '148.200', '149.900', '147.900', '10676159.000', {}, '0.060', '159009.520']
         parsed_data = []
         for item in kline_data:
             if len(item) >= 6:
@@ -66,11 +67,11 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
                     'Date': pd.to_datetime(item[0], utc=True),
                     'Open': float(item[1]),
                     'Close': float(item[2]),
-                    'Low': float(item[3]),
-                    'High': float(item[4]),
+                    'High': float(item[3]),
+                    'Low': float(item[4]),
                     'Volume': int(float(item[5]))  # 成交量可能是浮点数字符串
                 })
-        
+
         # 创建DataFrame
         if parsed_data:
             df = pd.DataFrame(parsed_data)
@@ -79,7 +80,7 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
         else:
             print(f"股票 {stock_code} 数据为空")
             return None
-            
+
     except Exception as e:
         print(f"获取股票 {stock_code} 数据失败: {e}")
         return None
@@ -143,11 +144,19 @@ def get_hsi_data_tencent(period_days=90):
         pandas.DataFrame: 包含恒生指数数据的DataFrame，列包括Date, Open, High, Low, Close, Volume, Amount
     """
     # 腾讯财经API URL (历史交易数据)
-    # 首先尝试获取前复权数据
+    # 使用 hkfqkline 端点（绕过 WAF）
+    # 注意：恒生指数也需要 qfq 参数，否则会返回 "bad params"
     url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days},qfq"
 
     try:
-        response = requests.get(url)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Referer': 'https://stockapp.finance.qq.com/',
+        }
+
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
 
         # 解析返回的JSON数据
@@ -159,28 +168,11 @@ def get_hsi_data_tencent(period_days=90):
             return None
 
         # 提取K线数据
-        # 尝试不同的数据键名
+        # 恒生指数数据在 'day' 键下（没有 qfqday）
+        hsi_data = data['data']['hkHSI']
         kline_data = None
-        if 'qfqday' in data['data']['hkHSI']:
-            kline_data = data['data']['hkHSI']['qfqday']
-        elif 'day' in data['data']['hkHSI']:
-            kline_data = data['data']['hkHSI']['day']
-
-        # 如果前复权数据为空，尝试获取原始数据
-        if not kline_data or len(kline_data) == 0:
-            url = f"https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?param=hkHSI,day,,,{period_days}"
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-
-            # 检查数据是否有效
-            if 'data' not in data or 'hkHSI' not in data['data']:
-                print("无法获取恒生指数的数据")
-                return None
-
-            # 提取K线数据
-            if 'day' in data['data']['hkHSI']:
-                kline_data = data['data']['hkHSI']['day']
+        if 'day' in hsi_data:
+            kline_data = hsi_data['day']
 
         if kline_data is None or len(kline_data) == 0:
             print("无法获取恒生指数的K线数据")
