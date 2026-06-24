@@ -1,0 +1,204 @@
+name: LLM API 连通性测试
+
+on:
+  schedule:
+    # 每周一早上 8 点（香港时间）运行，即 UTC 0:00
+    - cron: '0 0 * * 1'
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      test_type:
+        description: '测试类型'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chat
+          - embedding
+
+permissions:
+  contents: read
+
+jobs:
+  test-llm-api:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: 测试 Chat API
+      if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'chat' || github.event_name == 'schedule' }}
+      env:
+        QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+        QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
+        QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+      run: |
+        python3 -c "
+        import os
+        import requests
+        import json
+        from datetime import datetime
+
+        print('=== Chat API 连通性测试 ===')
+        print(f'测试时间: {datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")}')
+
+        # 读取配置
+        api_key = os.getenv('QWEN_API_KEY', '')
+        chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
+        chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
+
+        # 检查 API Key 是否配置
+        if not api_key:
+            print('❌ QWEN_API_KEY 未配置')
+            exit(1)
+        else:
+            print(f'✅ QWEN_API_KEY 已配置 (长度: {len(api_key)} 字符)')
+
+        print(f'Chat URL: {chat_url}')
+        print(f'Chat Model: {chat_model}')
+
+        # 发送测试请求
+        try:
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            }
+
+            payload = {
+                'model': chat_model,
+                'messages': [{'role': 'user', 'content': '请回复：连通性测试成功'}],
+                'stream': False,
+                'max_tokens': 50
+            }
+
+            print('正在发送测试请求...')
+            response = requests.post(chat_url, headers=headers, json=payload, timeout=30)
+
+            print(f'响应状态码: {response.status_code}')
+
+            if response.status_code == 200:
+                data = response.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                print(f'✅ Chat API 连通性测试成功')
+                print(f'模型响应: {content[:100]}')
+            elif response.status_code == 401:
+                print('❌ 认证失败：API Key 无效或已过期')
+                print(f'错误信息: {response.text}')
+                exit(1)
+            elif response.status_code == 404:
+                print('❌ URL 无效：请检查 QWEN_CHAT_URL 配置')
+                print(f'错误信息: {response.text}')
+                exit(1)
+            else:
+                print(f'❌ 请求失败：HTTP {response.status_code}')
+                print(f'错误信息: {response.text[:500]}')
+                exit(1)
+
+        except requests.exceptions.Timeout:
+            print('❌ 请求超时：API 响应时间超过 30 秒')
+            exit(1)
+        except requests.exceptions.ConnectionError as e:
+            print(f'❌ 连接失败：无法访问 API URL')
+            print(f'错误详情: {str(e)[:200]}')
+            exit(1)
+        except Exception as e:
+            print(f'❌ 测试异常: {str(e)}')
+            exit(1)
+        "
+
+    - name: 测试 Embedding API
+      if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'embedding' || github.event_name == 'schedule' }}
+      env:
+        QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      run: |
+        python3 -c "
+        import os
+        import requests
+        from datetime import datetime
+
+        print('=== Embedding API 连通性测试 ===')
+        print(f'测试时间: {datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")}')
+
+        # 读取配置
+        api_key = os.getenv('QWEN_API_KEY', '')
+        embedding_url = 'https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings'
+        embedding_model = 'text-embedding-v4'
+
+        # 检查 API Key 是否配置
+        if not api_key:
+            print('❌ QWEN_API_KEY 未配置')
+            exit(1)
+        else:
+            print(f'✅ QWEN_API_KEY 已配置')
+
+        print(f'Embedding URL: {embedding_url}')
+        print(f'Embedding Model: {embedding_model}')
+
+        # 发送测试请求
+        try:
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            }
+
+            payload = {
+                'model': embedding_model,
+                'input': '测试文本'
+            }
+
+            print('正在发送测试请求...')
+            response = requests.post(embedding_url, headers=headers, json=payload, timeout=30)
+
+            print(f'响应状态码: {response.status_code}')
+
+            if response.status_code == 200:
+                data = response.json()
+                embedding = data.get('data', [{}])[0].get('embedding', [])
+                print(f'✅ Embedding API 连通性测试成功')
+                print(f'向量维度: {len(embedding)}')
+            elif response.status_code == 401:
+                print('❌ 认证失败：API Key 无效或已过期')
+                print(f'错误信息: {response.text}')
+                exit(1)
+            else:
+                print(f'❌ 请求失败：HTTP {response.status_code}')
+                print(f'错误信息: {response.text[:500]}')
+                exit(1)
+
+        except requests.exceptions.Timeout:
+            print('❌ 请求超时')
+            exit(1)
+        except requests.exceptions.ConnectionError as e:
+            print(f'❌ 连接失败：无法访问 Embedding API URL')
+            print(f'错误详情: {str(e)[:200]}')
+            exit(1)
+        except Exception as e:
+            print(f'❌ 测试异常: {str(e)}')
+            exit(1)
+        "
+
+    - name: 汇总测试结果
+      if: always()
+      run: |
+        echo "=== LLM API 测试汇总 ==="
+        echo "测试完成时间: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+        echo ""
+        echo "如测试失败，请检查以下配置："
+        echo "1. QWEN_API_KEY - API 密钥是否正确"
+        echo "2. QWEN_CHAT_URL - Chat API 地址是否正确"
+        echo "3. QWEN_CHAT_MODEL - 模型名称是否正确"
+        echo ""
+        echo "文档参考：https://help.aliyun.com/zh/model-studio/"
