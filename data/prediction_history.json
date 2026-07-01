@@ -76565,10 +76565,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-03",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:47"
     },
     {
       "prediction_id": "2026-06-03_0941.HK_20d",
@@ -76622,10 +76622,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-03",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:47"
     },
     {
       "prediction_id": "2026-06-03_1109.HK_20d",
@@ -76869,10 +76869,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-03",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:47"
     },
     {
       "prediction_id": "2026-06-03_6682.HK_20d",
@@ -95413,10 +95413,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-25",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:43"
     },
     {
       "prediction_id": "2026-06-25_0941.HK_5d",
@@ -95470,10 +95470,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-25",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:43"
     },
     {
       "prediction_id": "2026-06-25_1109.HK_5d",
@@ -95717,10 +95717,10 @@
       "model_type": "catboost",
       "data_date": "2026-06-25",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:43"
     },
     {
       "prediction_id": "2026-06-25_6682.HK_5d",
@@ -101892,10 +101892,10 @@
       "model_type": "catboost",
       "data_date": "2026-07-01",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:33"
     },
     {
       "prediction_id": "2026-07-01_0941.HK_1d",
@@ -101949,10 +101949,10 @@
       "model_type": "catboost",
       "data_date": "2026-07-01",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:33"
     },
     {
       "prediction_id": "2026-07-01_1109.HK_1d",
@@ -102196,10 +102196,10 @@
       "model_type": "catboost",
       "data_date": "2026-07-01",
       "target_date": "2026-07-02",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": NaN,
+      "actual_direction": "down",
+      "evaluated_at": "2026-07-02T01:56:33"
     },
     {
       "prediction_id": "2026-07-01_6682.HK_1d",
@@ -103515,7 +103515,7 @@
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-07-01T20:39:59",
+    "last_updated": "2026-07-02T01:56:48",
     "version": "1.0",
     "total_predictions": 5448
   }
