@@ -25,13 +25,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入港股模型
-from ml_services.ml_trading_model import (
-    BaseTradingModel,
-    CatBoostModel,
-    FeatureEngineer,
-    ABSOLUTE_PRICE_FEATURES,
-    logger,
-)
+from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES, logger
 
 # 导入A股配置和数据服务
 from a_stock_config import (
@@ -41,12 +35,32 @@ from a_stock_config import (
     get_limit_rate,
     get_market_code,
     A_STOCK_INDEX,
-    A_STOCK_CACHE_DIR,
-    A_STOCK_FEATURE_CACHE_DIR,
 )
-from data_services.a_stock_data import get_a_stock_data, get_index_data, get_a_stock_info_tencent
-from data_services.northbound_data import get_northbound_features
-from data_services.technical_analysis import TechnicalAnalyzer
+from data_services.a_stock_data import get_a_stock_data, get_index_data
+
+# ========== Monkey-patch 港股数据源为 A股数据源 ==========
+# 父类方法硬编码使用港股数据源，这里替换为 A股数据源
+import ml_services.ml_trading_model as ml_module
+
+# 保存原始函数引用（如果需要恢复）
+_original_get_hk_stock_data = ml_module.get_hk_stock_data_tencent
+_original_get_hsi_data = ml_module.get_hsi_data_tencent
+
+# 替换为 A股数据获取函数
+def _get_a_stock_data_wrapper(stock_code, period_days=500):
+    """包装 A股数据获取函数，兼容港股接口签名"""
+    # 移除可能的 .HK 后缀，但保留前导零
+    code = stock_code.replace('.HK', '')
+    # A股代码是6位数字，不要去掉前导零
+    return get_a_stock_data(code, period_days=period_days, use_cache=True)
+
+def _get_index_data_wrapper(period_days=500):
+    """包装指数数据获取函数"""
+    return get_index_data('sh', period_days=period_days)
+
+# 应用 monkey-patch
+ml_module.get_hk_stock_data_tencent = _get_a_stock_data_wrapper
+ml_module.get_hsi_data_tencent = _get_index_data_wrapper
 
 
 class AStockFeatureEngineer(FeatureEngineer):
@@ -76,84 +90,55 @@ class AStockFeatureEngineer(FeatureEngineer):
         return df
 
     def _add_limit_features(self, df, stock_code):
-        """
-        添加涨跌停特征
-
-        Args:
-            df: 股票数据DataFrame
-            stock_code: 股票代码
-
-        Returns:
-            df: 添加涨跌停特征后的DataFrame
-        """
+        """添加涨跌停特征"""
         limit_rate = get_limit_rate(stock_code)
 
-        # 计算涨停价和跌停价（使用前一日收盘价）
+        # 计算涨停价和跌停价
         df['High_Limit'] = df['Close'].shift(1) * (1 + limit_rate)
         df['Low_Limit'] = df['Close'].shift(1) * (1 - limit_rate)
 
-        # 涨跌停状态（允许0.5%误差，因为实际价格可能四舍五入）
+        # 涨跌停状态
         df['Limit_Up'] = (df['Close'] >= df['High_Limit'] * 0.995).astype(int)
         df['Limit_Down'] = (df['Close'] <= df['Low_Limit'] * 1.005).astype(int)
 
-        # 连续涨停天数
+        # 连续涨跌停天数
         df['Consecutive_Limit_Up'] = (df['Limit_Up']
             .groupby((df['Limit_Up'] == 0).cumsum())
             .cumsum())
-
-        # 连续跌停天数
         df['Consecutive_Limit_Down'] = (df['Limit_Down']
             .groupby((df['Limit_Down'] == 0).cumsum())
             .cumsum())
 
-        # 距离涨停的空间
+        # 距离涨跌停空间
         df['Space_To_Limit_Up'] = (df['High_Limit'] - df['Close']) / df['Close']
-
-        # 距离跌停的空间
         df['Space_To_Limit_Down'] = (df['Close'] - df['Low_Limit']) / df['Close']
 
         return df
 
     def _add_northbound_features(self, df):
-        """
-        添加北向资金特征
-
-        Args:
-            df: 股票数据DataFrame
-
-        Returns:
-            df: 添加北向资金特征后的DataFrame
-        """
-        # 获取北向资金历史数据
+        """添加北向资金特征"""
         from data_services.northbound_data import NorthboundDataService
         service = NorthboundDataService()
         northbound_df = service.fetch_history()
 
         if northbound_df is None or northbound_df.empty:
-            # 添加默认值
             df['Northbound_Net_Buy'] = 0
             df['Northbound_Net_Inflow'] = 0
-            df['Northbound_SH_Net_Buy'] = 0
-            df['Northbound_SZ_Net_Buy'] = 0
             return df
 
-        # 合并北向资金数据
         northbound_df = northbound_df.copy()
         northbound_df.index = pd.to_datetime(northbound_df.index).tz_localize(None)
 
-        # 重置索引以便合并
         df_temp = df.copy()
         if df_temp.index.tz is not None:
             df_temp.index = df_temp.index.tz_localize(None)
 
-        # 对齐日期
-        for col in ['net_buy', 'net_inflow', 'sh_net_buy', 'sz_net_buy']:
+        for col in ['net_buy', 'net_inflow']:
             if col in northbound_df.columns:
                 df_temp[f'Northbound_{col.title()}'] = df_temp.index.map(
                     lambda x: northbound_df.loc[:x, col].iloc[-1] if (northbound_df.index <= x).any() else 0
                 )
 
-        # 复制回原DataFrame
         for col in df_temp.columns:
             if col.startswith('Northbound_'):
                 df[col] = df_temp[col]
@@ -174,164 +159,89 @@ class AStockTradingModel(CatBoostModel):
         self.stock_names = A_STOCK_TRAINING_LIST
         self.stock_sector_mapping = A_STOCK_SECTOR_MAPPING
 
-    def get_stock_data(self, stock_code, period_days=500):
-        """
-        获取A股股票数据
-
-        Args:
-            stock_code: 股票代码
-            period_days: 数据天数
-
-        Returns:
-            DataFrame: 股票数据
-        """
-        return get_a_stock_data(stock_code, period_days=period_days, use_cache=True)
-
-    def get_index_data(self, period_days=500):
-        """
-        获取A股指数数据
-
-        Args:
-            period_days: 数据天数
-
-        Returns:
-            DataFrame: 指数数据
-        """
-        return get_index_data('sh', period_days=period_days)
-
-    def prepare_features(self, df, stock_code, mode='production'):
-        """
-        准备特征（覆盖父类方法，添加A股特有特征）
-
-        Args:
-            df: 股票数据DataFrame
-            stock_code: 股票代码
-            mode: 'production' 或 'backtest'
-
-        Returns:
-            DataFrame: 特征DataFrame
-        """
-        # 调用父类方法准备基础特征
-        df = super().prepare_features(df, stock_code, mode=mode)
-
-        # 添加A股特有特征
-        df = self.feature_engineer.add_a_stock_features(df, stock_code)
-
-        return df
-
-    def _build_market_features(self, df, hsi_df=None):
-        """
-        构建市场级特征（覆盖父类方法，使用上证指数）
-
-        Args:
-            df: 股票数据DataFrame
-            hsi_df: 指数数据（可选）
-
-        Returns:
-            DataFrame: 添加市场特征后的DataFrame
-        """
-        # 获取上证指数数据
-        if hsi_df is None:
-            hsi_df = self.get_index_data()
-
-        if hsi_df is None or hsi_df.empty:
-            logger.warning(f"无法获取上证指数数据，跳过市场特征")
-            return df
-
-        # 确保索引是datetime
-        if not isinstance(hsi_df.index, pd.DatetimeIndex):
-            hsi_df.index = pd.to_datetime(hsi_df.index)
-
-        # 移除时区信息
-        if hsi_df.index.tz is not None:
-            hsi_df.index = hsi_df.index.tz_localize(None)
-        if df.index.tz is not None:
-            df_temp = df.copy()
-            df_temp.index = df_temp.index.tz_localize(None)
-        else:
-            df_temp = df
-
-        # 计算上证指数收益率
-        hsi_df['SH_Return_1d'] = hsi_df['Close'].pct_change()
-        hsi_df['SH_Return_3d'] = hsi_df['Close'].pct_change(3)
-        hsi_df['SH_Return_5d'] = hsi_df['Close'].pct_change(5)
-        hsi_df['SH_Return_10d'] = hsi_df['Close'].pct_change(10)
-        hsi_df['SH_Return_20d'] = hsi_df['Close'].pct_change(20)
-        hsi_df['SH_Return_60d'] = hsi_df['Close'].pct_change(60)
-
-        # 上证指数波动率
-        hsi_df['SH_Volatility_20d'] = hsi_df['SH_Return_1d'].rolling(20).std()
-
-        # 上证指数均线
-        hsi_df['SH_MA5'] = hsi_df['Close'].rolling(5).mean()
-        hsi_df['SH_MA20'] = hsi_df['Close'].rolling(20).mean()
-        hsi_df['SH_MA60'] = hsi_df['Close'].rolling(60).mean()
-
-        # 上证指数相对位置
-        hsi_df['SH_Ratio_MA5'] = hsi_df['Close'] / hsi_df['SH_MA5'] - 1
-        hsi_df['SH_Ratio_MA20'] = hsi_df['Close'] / hsi_df['SH_MA20'] - 1
-        hsi_df['SH_Ratio_MA60'] = hsi_df['Close'] / hsi_df['SH_MA60'] - 1
-
-        # 合并到股票数据
-        market_cols = [
-            'SH_Return_1d', 'SH_Return_3d', 'SH_Return_5d',
-            'SH_Return_10d', 'SH_Return_20d', 'SH_Return_60d',
-            'SH_Volatility_20d',
-            'SH_Ratio_MA5', 'SH_Ratio_MA20', 'SH_Ratio_MA60',
-        ]
-
-        for col in market_cols:
-            if col in hsi_df.columns:
-                df_temp[col] = df_temp.index.map(
-                    lambda x: hsi_df.loc[:x, col].iloc[-1] if (hsi_df.index <= x).any() else np.nan
-                )
-
-        # 复制回原DataFrame
-        for col in market_cols:
-            if col in df_temp.columns:
-                df[col] = df_temp[col]
-
-        return df
-
-    def train(self, start_date=None, end_date=None, use_feature_selection=False):
+    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0):
         """
         训练A股模型
 
         Args:
+            codes: 股票代码列表（可选，默认使用配置）
             start_date: 训练开始日期
             end_date: 训练结束日期
+            horizon: 预测周期
             use_feature_selection: 是否使用特征选择
+            min_return_threshold: 最小收益阈值
         """
+        if codes is None:
+            codes = self.stock_list
+        if horizon is None:
+            horizon = self.horizon
+
         logger.info("=" * 60)
-        logger.info(f"开始训练A股模型（预测周期: {self.horizon}天）")
+        logger.info(f"开始训练A股模型（预测周期: {horizon}天）")
+        logger.info(f"股票数量: {len(codes)}")
         logger.info("=" * 60)
 
         # 调用父类训练方法
         return super().train(
+            codes=codes,
             start_date=start_date,
             end_date=end_date,
-            use_feature_selection=use_feature_selection
+            horizon=horizon,
+            use_feature_selection=use_feature_selection,
+            min_return_threshold=min_return_threshold
         )
 
-    def predict(self, predict_date=None, use_feature_selection=False, mode='production'):
+    def predict(self, code=None, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
         """
         生成A股预测
 
         Args:
+            code: 股票代码（可选，默认预测所有自选股）
             predict_date: 预测日期
-            use_feature_selection: 是否使用特征选择
+            horizon: 预测周期
+            use_feature_cache: 是否使用特征缓存
             mode: 预测模式
         """
+        if horizon is None:
+            horizon = self.horizon
+
         logger.info("=" * 60)
-        logger.info(f"开始生成A股预测（预测周期: {self.horizon}天）")
+        logger.info(f"开始生成A股预测（预测周期: {horizon}天）")
         logger.info("=" * 60)
 
-        # 调用父类预测方法
-        return super().predict(
-            predict_date=predict_date,
-            use_feature_selection=use_feature_selection,
-            mode=mode
-        )
+        # 如果没有指定股票代码，预测所有自选股
+        if code is None:
+            results = []
+            for stock_code in self.stock_list:
+                try:
+                    result = super().predict(
+                        code=stock_code,
+                        predict_date=predict_date,
+                        horizon=horizon,
+                        use_feature_cache=use_feature_cache,
+                        mode=mode
+                    )
+                    if result is not None:
+                        results.append(result)
+                except Exception as e:
+                    logger.warning(f"预测 {stock_code} 失败: {e}")
+            return results
+        else:
+            return super().predict(
+                code=code,
+                predict_date=predict_date,
+                horizon=horizon,
+                use_feature_cache=use_feature_cache,
+                mode=mode
+            )
+
+    def get_stock_data(self, stock_code, period_days=500):
+        """获取A股股票数据"""
+        return get_a_stock_data(stock_code, period_days=period_days, use_cache=True)
+
+    def get_index_data_for_market(self, period_days=500):
+        """获取A股指数数据"""
+        return get_index_data('sh', period_days=period_days)
 
 
 # ========== 命令行接口 ==========
@@ -350,14 +260,22 @@ def main():
                        help='训练结束日期 (YYYY-MM-DD)')
     parser.add_argument('--predict-date', type=str, default=None,
                        help='预测日期 (YYYY-MM-DD)')
+    parser.add_argument('--stocks', type=str, default=None,
+                       help='股票代码列表，逗号分隔')
 
     args = parser.parse_args()
+
+    # 解析股票列表
+    codes = None
+    if args.stocks:
+        codes = args.stocks.split(',')
 
     # 初始化模型
     model = AStockTradingModel(horizon=args.horizon)
 
     if args.mode == 'train':
         model.train(
+            codes=codes,
             start_date=args.start_date,
             end_date=args.end_date,
             use_feature_selection=args.use_feature_selection
@@ -365,7 +283,7 @@ def main():
     elif args.mode == 'predict':
         model.predict(
             predict_date=args.predict_date,
-            use_feature_selection=args.use_feature_selection,
+            use_feature_cache=True,
             mode='production'
         )
 
