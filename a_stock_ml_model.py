@@ -830,17 +830,20 @@ class AStockTradingModel(CatBoostModel):
 
         return feature_columns
 
-    def train_with_weights(self, X, y, sample_weights=None, cat_features=None):
+    def train_with_weights(self, X, y, sample_weights=None, cat_features=None, horizon=20):
         """
-        使用样本权重训练模型
+        使用样本权重训练模型（带时间序列交叉验证）
 
         Args:
             X: 特征矩阵
             y: 标签
             sample_weights: 样本权重（核心股3.0，扩展股1.0）
             cat_features: 分类特征索引（已编码为数值，应为None）
+            horizon: 预测周期（用于交叉验证 gap）
         """
         from catboost import CatBoostClassifier, Pool
+        from sklearn.model_selection import TimeSeriesSplit
+        from sklearn.metrics import accuracy_score, f1_score
 
         # 如果没有提供样本权重，使用默认权重
         if sample_weights is None:
@@ -857,28 +860,104 @@ class AStockTradingModel(CatBoostModel):
             'subsample': 0.75,
             'colsample_bylevel': 0.8,
             'random_seed': 2020,
-            'verbose': 100,
+            'verbose': False,  # 交叉验证时不输出详细日志
             'auto_class_weights': 'Balanced',  # 使用类别权重平衡
         }
 
         self.catboost_model = CatBoostClassifier(**catboost_params)
 
-        # 创建训练池（cat_features=None，因为分类特征已编码为数值）
-        train_pool = Pool(
+        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
+        cv_scores = []
+        cv_f1_scores = []
+
+        logger.info("开始时间序列交叉验证...")
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
+            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
+            weights_train_fold = sample_weights[train_idx]
+
+            # 创建训练池
+            train_pool = Pool(
+                data=X_train_fold,
+                label=y_train_fold,
+                weight=weights_train_fold,
+                cat_features=None
+            )
+            val_pool = Pool(data=X_val_fold, label=y_val_fold)
+
+            # 训练并评估
+            self.catboost_model.fit(train_pool, eval_set=val_pool, verbose=False)
+            y_pred_fold = self.catboost_model.predict(X_val_fold)
+
+            score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
+            cv_scores.append(score)
+            cv_f1_scores.append(f1)
+            logger.info(f"   Fold {fold} 验证准确率: {score:.4f}, F1分数: {f1:.4f}")
+
+        mean_accuracy = np.mean(cv_scores)
+        std_accuracy = np.std(cv_scores)
+        mean_f1 = np.mean(cv_f1_scores)
+        std_f1 = np.std(cv_f1_scores)
+
+        logger.info(f"\n✅ 交叉验证完成")
+        logger.info(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
+        logger.info(f"   平均验证F1分数: {mean_f1:.4f} (+/- {std_f1:.4f})")
+
+        # 使用全部数据重新训练（带样本权重）
+        full_pool = Pool(
             data=X,
             label=y,
             weight=sample_weights,
-            cat_features=None  # 分类特征已用 LabelEncoder 编码为数值
+            cat_features=None
         )
-
-        # 训练模型
-        self.catboost_model.fit(train_pool)
+        self.catboost_model.fit(full_pool, verbose=100)
 
         # 更新实际树数量
         self.actual_n_estimators = self.catboost_model.tree_count_
 
-        logger.info(f"模型训练完成（样本加权：核心股3.0，扩展股1.0）")
-        logger.info(f"实际训练树数量: {self.actual_n_estimators}")
+        logger.info(f"\n✅ 模型训练完成（样本加权：核心股3.0，扩展股1.0）")
+        logger.info(f"   实际训练树数量: {self.actual_n_estimators}")
+
+        # 保存准确率到文件（供综合分析使用）
+        self._save_accuracy(mean_accuracy, std_accuracy, mean_f1, std_f1, horizon)
+
+        return {
+            'accuracy': mean_accuracy,
+            'std': std_accuracy,
+            'f1': mean_f1,
+            'f1_std': std_f1
+        }
+
+    def _save_accuracy(self, accuracy, std, f1, f1_std, horizon):
+        """保存模型准确率到文件"""
+        import json
+        accuracy_info = {
+            'model_type': 'a_stock_catboost',
+            'horizon': horizon,
+            'accuracy': float(accuracy),
+            'std': float(std),
+            'f1_score': float(f1),
+            'f1_std': float(f1_std),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        accuracy_file = 'data/model_accuracy.json'
+        try:
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+            else:
+                existing_data = {}
+
+            key = f'a_stock_catboost_{horizon}d'
+            existing_data[key] = accuracy_info
+
+            with open(accuracy_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            logger.info(f"准确率已保存到 {accuracy_file}")
+        except Exception as e:
+            logger.warning(f"保存准确率失败: {e}")
 
     def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True):
         """
@@ -948,7 +1027,7 @@ class AStockTradingModel(CatBoostModel):
 
         # 使用样本权重训练
         if use_sample_weights and sample_weights is not None:
-            self.train_with_weights(X, y, sample_weights)
+            self.train_with_weights(X, y, sample_weights, horizon=horizon)
         else:
             # 调用父类训练方法
             super().train(
