@@ -251,6 +251,9 @@ class AStockTradingModel(CatBoostModel):
 
 # ========== 命令行接口 ==========
 
+# A股模型保存路径
+A_STOCK_MODEL_DIR = 'data/a_stock_models'
+
 def main():
     parser = argparse.ArgumentParser(description='A股机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict'],
@@ -278,19 +281,88 @@ def main():
     # 初始化模型
     model = AStockTradingModel(horizon=args.horizon)
 
+    # 模型保存路径
+    os.makedirs(A_STOCK_MODEL_DIR, exist_ok=True)
+    model_path = os.path.join(A_STOCK_MODEL_DIR, f'trading_model_catboost_{args.horizon}d.pkl')
+
     if args.mode == 'train':
-        model.train(
+        # 训练模型
+        feature_importance = model.train(
             codes=codes,
             start_date=args.start_date,
             end_date=args.end_date,
             use_feature_selection=args.use_feature_selection
         )
+        # 保存模型
+        model.save_model(model_path)
+        logger.info(f"A股模型已保存到 {model_path}")
+
+        # 保存特征重要性
+        if feature_importance is not None:
+            importance_path = model_path.replace('.pkl', '_importance.csv')
+            feature_importance.to_csv(importance_path, index=False)
+            logger.info(f"特征重要性已保存到 {importance_path}")
+
     elif args.mode == 'predict':
-        model.predict(
+        # 加载模型
+        if not os.path.exists(model_path):
+            logger.error(f"模型文件不存在: {model_path}")
+            logger.error(f"请先运行训练模式: python3 a_stock_ml_model.py --mode train --horizon {args.horizon}")
+            return
+        model.load_model(model_path)
+        logger.info(f"A股模型已从 {model_path} 加载")
+
+        # 生成预测
+        predictions = model.predict(
             predict_date=args.predict_date,
             use_feature_cache=True,
             mode='production'
         )
+
+        # 保存预测结果
+        if predictions:
+            from datetime import datetime, timedelta
+            from a_stock_config import A_STOCK_WATCHLIST
+
+            # 计算 target_date
+            def get_target_date(start_date, horizon):
+                """计算目标日期（简化版，实际交易日计算更复杂）"""
+                target = start_date + timedelta(days=horizon)
+                return target.strftime('%Y-%m-%d')
+
+            # 构建预测 DataFrame
+            pred_data = []
+            for pred in predictions:
+                if pred:
+                    data_date = pred['date'].strftime('%Y-%m-%d') if hasattr(pred['date'], 'strftime') else str(pred['date'])
+                    target_date = get_target_date(pred['date'], args.horizon) if hasattr(pred['date'], 'timedelta') else data_date
+
+                    pred_data.append({
+                        'Stock_Code': pred['code'],
+                        'Stock_Name': A_STOCK_WATCHLIST.get(pred['code'], pred['code']),
+                        'Prediction': pred['prediction'],
+                        'Prediction_Proba': pred['probability'],
+                        'Current_Price': pred['current_price'],
+                        'Data_Date': data_date,
+                        'Target_Date': target_date
+                    })
+
+            if pred_data:
+                import pandas as pd
+                pred_df = pd.DataFrame(pred_data)
+                pred_file = os.path.join(A_STOCK_MODEL_DIR, f'ml_predictions_{args.horizon}d.csv')
+                pred_df.to_csv(pred_file, index=False)
+                logger.info(f"A股预测结果已保存到 {pred_file}")
+
+                # 打印预测结果摘要
+                print("\n" + "=" * 60)
+                print(f"📊 A股预测结果（{args.horizon}天周期）")
+                print("=" * 60)
+                for _, row in pred_df.iterrows():
+                    pred_label = '上涨' if row['Prediction'] == 1 else '下跌'
+                    confidence = row['Prediction_Proba'] if row['Prediction'] == 1 else 1 - row['Prediction_Proba']
+                    print(f"  {row['Stock_Name']:<10} {pred_label} (置信度: {confidence:.1%}, 概率: {row['Prediction_Proba']:.4f})")
+                print("=" * 60)
 
 
 if __name__ == '__main__':

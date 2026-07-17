@@ -62,9 +62,9 @@ def read_ml_predictions(horizon=20):
     Returns:
         DataFrame: 预测结果
     """
-    # 查找最新的预测文件
+    # 查找最新的预测文件（A股专用路径）
     import glob
-    files = glob.glob(f'data/ml_trading_model_catboost_predictions_{horizon}d.csv')
+    files = glob.glob(f'data/a_stock_models/ml_predictions_{horizon}d.csv')
 
     if not files:
         print(f"⚠️ 未找到 {horizon}d 预测文件")
