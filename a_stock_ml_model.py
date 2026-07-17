@@ -837,8 +837,10 @@ class AStockTradingModel(CatBoostModel):
         """
         使用样本权重训练模型（带时间序列交叉验证）
 
+        注意：特征必须已经编码为数值型（由 train() 方法处理）
+
         Args:
-            X: 特征矩阵
+            X: 特征矩阵（已编码为数值）
             y: 标签
             sample_weights: 样本权重（核心股3.0，扩展股1.0）
             cat_features: 分类特征索引（已编码为数值，应为None）
@@ -852,8 +854,18 @@ class AStockTradingModel(CatBoostModel):
         if sample_weights is None:
             sample_weights = np.ones(len(y))
 
-        # 创建 CatBoost 模型
-        # 注意：已使用样本权重（核心股3.0），不再使用 auto_class_weights
+        # 验证特征是否为数值型
+        if X.dtype == object:
+            logger.error("特征矩阵包含字符串，请确保分类特征已编码")
+            # 尝试转换
+            try:
+                X = X.astype(float)
+                logger.warning("已自动转换为数值型")
+            except Exception as e:
+                logger.error(f"无法转换特征: {e}")
+                raise ValueError("特征必须为数值型，请检查分类特征编码")
+
+        # 创建 CatBoost 模型（不使用 auto_class_weights，避免与样本权重冲突）
         catboost_params = {
             'loss_function': 'Logloss',
             'eval_metric': 'Accuracy',
@@ -869,7 +881,7 @@ class AStockTradingModel(CatBoostModel):
 
         self.catboost_model = CatBoostClassifier(**catboost_params)
 
-        # 使用时间序列交叉验证（与港股一致）
+        # 使用时间序列交叉验证
         # 数据已按日期排序，训练集是早期所有股票，验证集是后期所有股票
         # 这样验证集的日期完全是新的，避免市场特征泄漏
         tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
@@ -882,6 +894,9 @@ class AStockTradingModel(CatBoostModel):
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
             weights_train_fold = sample_weights[train_idx]
 
+            # 创建新的模型实例（避免累积训练）
+            fold_model = CatBoostClassifier(**catboost_params)
+
             train_pool = Pool(
                 data=X_train_fold,
                 label=y_train_fold,
@@ -890,8 +905,9 @@ class AStockTradingModel(CatBoostModel):
             )
             val_pool = Pool(data=X_val_fold, label=y_val_fold)
 
-            self.catboost_model.fit(train_pool, eval_set=val_pool, verbose=False)
-            y_pred_fold = self.catboost_model.predict(X_val_fold)
+            # 不使用 eval_set 进行早停（避免过拟合验证集）
+            fold_model.fit(train_pool, verbose=False)
+            y_pred_fold = fold_model.predict(X_val_fold)
 
             score = accuracy_score(y_val_fold, y_pred_fold)
             f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
@@ -1024,6 +1040,11 @@ class AStockTradingModel(CatBoostModel):
         X = df[feature_cols].values
         y = df['Label'].values
         sample_weights = df['sample_weight'].values if 'sample_weight' in df.columns else None
+
+        # 确保特征矩阵为数值型（转换 object 类型为 float）
+        if X.dtype == object:
+            logger.warning("特征矩阵包含 object 类型，转换为 float")
+            X = X.astype(float)
 
         # 保存特征列名（用于预测时对齐）
         self.feature_columns = feature_cols
