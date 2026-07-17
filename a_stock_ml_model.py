@@ -963,6 +963,37 @@ class AStockTradingModel(CatBoostModel):
         # 返回特征重要性
         return self.get_feature_importance()
 
+    def get_feature_importance(self, top_n=50):
+        """
+        获取特征重要性
+
+        Args:
+            top_n: 返回前 N 个重要特征
+
+        Returns:
+            DataFrame: 特征重要性排序
+        """
+        if self.catboost_model is None:
+            logger.warning("模型未训练，无法获取特征重要性")
+            return None
+
+        if not hasattr(self, 'feature_columns') or not self.feature_columns:
+            logger.warning("特征列未设置")
+            return None
+
+        # 获取特征重要性
+        import pandas as pd
+        feat_imp = pd.DataFrame({
+            'Feature': self.feature_columns,
+            'Importance': self.catboost_model.feature_importances_
+        })
+        feat_imp = feat_imp.sort_values('Importance', ascending=False)
+
+        logger.info(f"特征重要性计算完成（共 {len(feat_imp)} 个特征）")
+        if top_n:
+            return feat_imp.head(top_n)
+        return feat_imp
+
     def predict(self, code=None, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
         """
         生成A股预测
