@@ -253,6 +253,25 @@ class AStockFeatureEngineer(FeatureEngineer):
             'is_core': 0,
         }
 
+    def create_event_driven_features(self, code, df):
+        """
+        创建事件驱动特征（重写父类方法）
+
+        A股暂不使用港股的财报日期接口，返回默认值。
+        后续可接入 A股专用数据源（如东方财富）。
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        Returns:
+            df: 添加默认事件驱动特征的DataFrame
+        """
+        # A股暂不实现财报日期特征，直接返回原始DataFrame
+        # 避免调用港股接口（如 yfinance 的 300440.HK）
+        logger.debug(f"A股 {code} 跳过事件驱动特征（暂不支持）")
+        return df
+
     def add_a_stock_features(self, df, stock_code):
         """
         添加A股特有特征
