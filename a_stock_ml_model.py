@@ -852,7 +852,8 @@ class AStockTradingModel(CatBoostModel):
         if sample_weights is None:
             sample_weights = np.ones(len(y))
 
-        # 创建 CatBoost 模型（与父类 CatBoostModel.train 参数一致）
+        # 创建 CatBoost 模型
+        # 注意：已使用样本权重（核心股3.0），不再使用 auto_class_weights
         catboost_params = {
             'loss_function': 'Logloss',
             'eval_metric': 'Accuracy',
@@ -863,8 +864,7 @@ class AStockTradingModel(CatBoostModel):
             'subsample': 0.75,
             'colsample_bylevel': 0.8,
             'random_seed': 2020,
-            'verbose': False,  # 交叉验证时不输出详细日志
-            'auto_class_weights': 'Balanced',  # 使用类别权重平衡
+            'verbose': False,
         }
 
         self.catboost_model = CatBoostClassifier(**catboost_params)
