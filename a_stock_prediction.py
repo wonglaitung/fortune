@@ -197,6 +197,8 @@ def main():
                        help='不发送邮件通知（默认）')
     parser.add_argument('--comprehensive', action='store_true',
                        help='运行综合分析（训练+预测+报告）')
+    parser.add_argument('--ai', action='store_true',
+                       help='生成AI买卖建议')
 
     args = parser.parse_args()
 
@@ -227,9 +229,23 @@ def main():
         except Exception as e:
             print(f"⚠️ 预测失败: {e}")
 
-        # 3. 生成报告
-        print("\n📊 步骤3: 生成报告...")
+        # 3. 生成AI报告
+        if args.ai:
+            print("\n📊 步骤3: 生成AI买卖建议...")
+            try:
+                from a_stock_email import generate_ai_report
+                generate_ai_report(stocks=stocks)
+            except Exception as e:
+                print(f"⚠️ AI报告生成失败: {e}")
+
+        # 4. 生成报告
+        print("\n📊 步骤4: 生成报告...")
         generate_prediction_report(stocks=stocks, horizon=args.horizon, send_email=args.email)
+
+    elif args.ai:
+        # 仅生成AI报告
+        from a_stock_email import generate_ai_report
+        generate_ai_report(stocks=stocks)
 
     else:
         # 仅生成报告

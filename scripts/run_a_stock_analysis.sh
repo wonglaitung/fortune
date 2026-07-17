@@ -68,9 +68,23 @@ echo ""
 echo "✅ 步骤2完成: $PREDICT_SUCCESS 个预测成功"
 echo ""
 
-# 步骤3: 生成报告
+# 步骤3: 生成AI报告
 echo "=========================================="
-echo "📊 步骤 3/3: 生成预测报告"
+echo "📊 步骤 3/4: 生成AI买卖建议"
+echo "=========================================="
+echo ""
+
+python3 a_stock_email.py --force
+if [ $? -ne 0 ]; then
+    echo "⚠️ AI报告生成失败（继续执行）"
+else
+    echo "✅ AI报告生成完成"
+fi
+echo ""
+
+# 步骤4: 生成预测报告
+echo "=========================================="
+echo "📊 步骤 4/4: 生成预测报告"
 echo "=========================================="
 echo ""
 
@@ -88,7 +102,8 @@ echo "=========================================="
 echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
+echo "  - AI买卖建议: $(ls -t data/a_stock_llm_recommendations_*.txt 2>/dev/null | head -1)"
 echo "  - 预测报告: $(ls -t data/a_stock_prediction_*.json 2>/dev/null | head -1)"
 echo ""
-echo "💡 提示: 查看报告了解详细分析"
+echo "💡 提示: 查看AI买卖建议了解详细投资建议"
 echo "=========================================="
