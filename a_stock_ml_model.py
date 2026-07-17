@@ -1016,9 +1016,8 @@ class AStockTradingModel(CatBoostModel):
             logger.error("数据准备失败")
             return None
 
-        # 准备特征和标签
-        feature_cols = [c for c in df.columns if c not in
-                        ['Label', 'Label_Normalized', 'Stock_Code', 'Date', 'sample_weight', 'is_core']]
+        # 使用统一的特征列定义（排除 Future_Return 等泄漏特征）
+        feature_cols = self.get_feature_columns(df)
 
         # 处理分类特征（与父类 CatBoostModel 一致）
         from sklearn.preprocessing import LabelEncoder

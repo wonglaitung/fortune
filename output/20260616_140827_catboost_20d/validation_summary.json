@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-06-16 14:08:27",
+  "model_type": "catboost",
+  "horizon": 20,
+  "num_folds": 12,
+  "num_stocks": 57,
+  "overall_metrics": {
+    "score": 0,
+    "rating": "N/A",
+    "recommendation": "N/A",
+    "avg_sharpe": 0,
+    "avg_ic": 0,
+    "avg_rank_ic": 0
+  },
+  "saved_files": [
+    "prediction_distribution",
+    "fold_metrics_detail",
+    "prediction_analysis",
+    "confidence_return_breakdown",
+    "percentile_performance"
+  ]
+}

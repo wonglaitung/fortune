@@ -1,0 +1,5 @@
+{
+  "model_type": "catboost",
+  "horizon": 20,
+  "folds": []
+}
