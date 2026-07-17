@@ -2,11 +2,10 @@
 
 # A股综合分析自动化脚本
 # ⚠️ 建议在A股收市后（15:00 CST）运行
-# 0. 计算网络特征（供训练和预测使用）
 # 1. 训练 CatBoost 三周期模型（1d, 5d, 20d）
 # 2. 生成 CatBoost 三周期预测
-# 3. 调用 a_stock_email.py 生成大模型建议（使用force参数）
-# 4. 调用 a_stock_comprehensive_analysis.py 进行综合分析（含三周期预测）
+# 3. 调用 a_stock_email.py 生成大模型建议
+# 4. 调用 a_stock_comprehensive_analysis.py 进行综合分析
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,7 +14,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 echo "=========================================="
-echo "🚀 A股综合分析自动化流程（使用 CatBoost 三周期模型）"
+echo "🚀 A股综合分析自动化流程"
 echo "=========================================="
 echo "📅 开始时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "📍 项目根目录: $PROJECT_DIR"
@@ -31,40 +30,9 @@ else
 fi
 echo ""
 
-# 步骤0: 计算网络特征（供训练和预测使用）
-echo "=========================================="
-echo "📊 步骤 0/6: 计算网络特征"
-echo "=========================================="
-echo ""
-python3 ml_services/stock_network_analysis.py --skip-pmfg
-if [ $? -ne 0 ]; then
-    echo "⚠️ 网络特征计算失败（继续执行，模型将跳过网络特征）"
-else
-    echo "✅ 网络特征计算完成: output/network_features_for_ml.json"
-fi
-echo ""
-
-# 步骤 0.5: 运行特征选择（统计方法，生成 Top 500 特征）
-echo "=========================================="
-echo "📊 步骤 0.5/6: 运行特征选择（统计方法，Top 500）"
-echo "=========================================="
-echo ""
-python3 ml_services/feature_selection.py --method statistical --top-k 500 --horizon 20
-if [ $? -ne 0 ]; then
-    echo "⚠️ 特征选择失败，使用已有特征文件"
-else
-    # 将生成的特征文件复制为 latest
-    LATEST_FEATURE_FILE=$(ls -t output/selected_features_statistical_*.txt 2>/dev/null | head -1)
-    if [ -n "$LATEST_FEATURE_FILE" ]; then
-        cp "$LATEST_FEATURE_FILE" output/selected_features_latest.txt
-        echo "✅ 特征选择完成: output/selected_features_latest.txt"
-    fi
-fi
-echo ""
-
 # 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
 echo "=========================================="
-echo "📊 步骤 1/6: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
+echo "📊 步骤 1/4: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
 echo "=========================================="
 echo ""
 
@@ -72,7 +40,7 @@ TRAIN_SUCCESS=0
 TRAIN_FAILED=0
 for horizon in 1 5 20; do
     echo "  🔄 训练 ${horizon}d 模型..."
-    python3 a_stock_ml_model.py --mode train --horizon $horizon --use-feature-selection
+    python3 a_stock_ml_model.py --mode train --horizon $horizon
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
         TRAIN_FAILED=$((TRAIN_FAILED + 1))
@@ -92,11 +60,11 @@ echo ""
 
 # 步骤2: 生成 CatBoost 三周期预测
 echo "=========================================="
-echo "📊 步骤 2/6: 生成 CatBoost 三周期预测"
+echo "📊 步骤 2/4: 生成 CatBoost 三周期预测"
 echo "=========================================="
 echo ""
 
-# 清除特征缓存，确保使用最新的网络特征
+# 清除特征缓存
 echo "🗑️ 清除特征缓存..."
 rm -rf data/feature_cache/*.pkl
 rm -rf data/a_stock_feature_cache/*.pkl 2>/dev/null
@@ -125,22 +93,9 @@ echo ""
 echo "✅ 步骤2完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
 echo ""
 
-# 步骤 3: 风险回报率分析（稳健型）
+# 步骤3: 调用 a_stock_email.py 生成大模型建议
 echo "=========================================="
-echo "📊 步骤 3/6: 风险回报率分析（稳健型）"
-echo "=========================================="
-echo ""
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate --recent-bias 0.7 --output-json data/a_stock_risk_reward_results.json --period 90
-if [ $? -ne 0 ]; then
-    echo "⚠️ 风险回报率分析失败（继续执行）"
-else
-    echo "✅ 风险回报率分析完成"
-fi
-echo ""
-
-# 步骤4: 调用 a_stock_email.py 生成大模型建议（使用force参数，不发送邮件）
-echo "=========================================="
-echo "📊 步骤 4/6: 生成大模型建议"
+echo "📊 步骤 3/4: 生成大模型建议"
 echo "=========================================="
 echo ""
 python3 a_stock_email.py --force
@@ -151,12 +106,12 @@ else
 fi
 echo ""
 
-# 步骤5: 调用 a_stock_comprehensive_analysis.py 进行综合分析
+# 步骤4: 调用 a_stock_comprehensive_analysis.py 进行综合分析
 echo "=========================================="
-echo "📊 步骤 5/6: 综合分析"
+echo "📊 步骤 4/4: 综合分析"
 echo "=========================================="
 echo ""
-# 获取步骤4生成的大模型建议文件（使用最新日期）
+# 获取步骤3生成的大模型建议文件（使用最新日期）
 LLM_FILE=$(ls -t data/a_stock_llm_recommendations_*.txt 2>/dev/null | head -1)
 if [ -z "$LLM_FILE" ]; then
     echo "⚠️ 警告: 未找到大模型建议文件，跳过综合分析"
@@ -164,23 +119,10 @@ else
     echo "📊 使用大模型建议文件: $LLM_FILE"
     python3 a_stock_comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
     if [ $? -ne 0 ]; then
-        echo "❌ 步骤5失败: 综合分析失败"
+        echo "❌ 步骤4失败: 综合分析失败"
         exit 1
     fi
-    echo "✅ 步骤5完成: 综合分析已生成"
-fi
-echo ""
-
-# 步骤6: 生成预测报告
-echo "=========================================="
-echo "📊 步骤 6/6: 生成预测报告"
-echo "=========================================="
-echo ""
-python3 a_stock_prediction.py --horizon 20 --no-email
-if [ $? -ne 0 ]; then
-    echo "⚠️ 报告生成失败"
-else
-    echo "✅ 报告生成完成"
+    echo "✅ 步骤4完成: 综合分析已生成"
 fi
 echo ""
 
@@ -191,13 +133,11 @@ echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
 echo "  - 大模型建议: $(ls -t data/a_stock_llm_recommendations_*.txt 2>/dev/null | head -1)"
-echo "  - 风险回报率分析: data/a_stock_risk_reward_results.json"
 echo "  - ML预测结果:"
 echo "    - 1d: $(ls -t data/ml_trading_model_catboost_predictions_1d.csv 2>/dev/null | head -1)"
 echo "    - 5d: $(ls -t data/ml_trading_model_catboost_predictions_5d.csv 2>/dev/null | head -1)"
 echo "    - 20d: $(ls -t data/ml_trading_model_catboost_predictions_20d.csv 2>/dev/null | head -1)"
 echo "  - 综合买卖建议: $(ls -t data/a_stock_comprehensive_recommendations_*.txt 2>/dev/null | head -1)"
-echo "  - 预测报告: $(ls -t data/a_stock_prediction_*.json 2>/dev/null | head -1)"
 echo ""
-echo "💡 提示: 查看综合买卖建议了解最终投资建议（含三周期模式分析）"
+echo "💡 提示: 查看综合买卖建议了解最终投资建议"
 echo "=========================================="
