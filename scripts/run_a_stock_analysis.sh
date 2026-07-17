@@ -98,7 +98,7 @@ echo "=========================================="
 echo "📊 步骤 3/4: 生成大模型建议"
 echo "=========================================="
 echo ""
-python3 a_stock_email.py --force
+python3 a_stock_email.py --force --no-email
 if [ $? -ne 0 ]; then
     echo "⚠️ 大模型建议生成失败（继续执行）"
 else
@@ -117,12 +117,13 @@ if [ -z "$LLM_FILE" ]; then
     echo "⚠️ 警告: 未找到大模型建议文件，跳过综合分析"
 else
     echo "📊 使用大模型建议文件: $LLM_FILE"
+    # 默认发送邮件，如需禁用可添加 --no-email 参数
     python3 a_stock_comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
     if [ $? -ne 0 ]; then
         echo "❌ 步骤4失败: 综合分析失败"
         exit 1
     fi
-    echo "✅ 步骤4完成: 综合分析已生成"
+    echo "✅ 步骤4完成: 综合分析已生成（邮件已发送）"
 fi
 echo ""
 
