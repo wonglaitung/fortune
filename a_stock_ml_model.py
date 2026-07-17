@@ -38,29 +38,31 @@ from a_stock_config import (
 )
 from data_services.a_stock_data import get_a_stock_data, get_index_data
 
-# ========== Monkey-patch 港股数据源为 A股数据源 ==========
-# 父类方法硬编码使用港股数据源，这里替换为 A股数据源
-import ml_services.ml_trading_model as ml_module
+# 标记是否已应用 monkey-patch
+_patched = False
 
-# 保存原始函数引用（如果需要恢复）
-_original_get_hk_stock_data = ml_module.get_hk_stock_data_tencent
-_original_get_hsi_data = ml_module.get_hsi_data_tencent
 
-# 替换为 A股数据获取函数
-def _get_a_stock_data_wrapper(stock_code, period_days=500):
-    """包装 A股数据获取函数，兼容港股接口签名"""
-    # 移除可能的 .HK 后缀，但保留前导零
-    code = stock_code.replace('.HK', '')
-    # A股代码是6位数字，不要去掉前导零
-    return get_a_stock_data(code, period_days=period_days, use_cache=True)
+def _apply_a_stock_patch():
+    """应用 A股数据源替换（延迟执行，只在需要时调用）"""
+    global _patched
+    if _patched:
+        return
 
-def _get_index_data_wrapper(period_days=500):
-    """包装指数数据获取函数"""
-    return get_index_data('sh', period_days=period_days)
+    import ml_services.ml_trading_model as ml_module
 
-# 应用 monkey-patch
-ml_module.get_hk_stock_data_tencent = _get_a_stock_data_wrapper
-ml_module.get_hsi_data_tencent = _get_index_data_wrapper
+    # 替换数据源函数
+    def _get_a_stock_data_wrapper(stock_code, period_days=500):
+        code = stock_code.replace('.HK', '')
+        return get_a_stock_data(code, period_days=period_days, use_cache=True)
+
+    def _get_index_data_wrapper(period_days=500):
+        return get_index_data('sh', period_days=period_days)
+
+    ml_module.get_hk_stock_data_tencent = _get_a_stock_data_wrapper
+    ml_module.get_hsi_data_tencent = _get_index_data_wrapper
+
+    _patched = True
+    logger.debug("已应用A股数据源替换")
 
 
 class AStockFeatureEngineer(FeatureEngineer):
@@ -150,6 +152,9 @@ class AStockTradingModel(CatBoostModel):
     """A股交易模型 - 继承港股CatBoost模型"""
 
     def __init__(self, horizon=20):
+        # 应用 A股数据源替换（延迟执行）
+        _apply_a_stock_patch()
+
         # 调用父类初始化
         super().__init__()
         self.horizon = horizon
