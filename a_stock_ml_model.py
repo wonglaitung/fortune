@@ -838,7 +838,7 @@ class AStockTradingModel(CatBoostModel):
             X: 特征矩阵
             y: 标签
             sample_weights: 样本权重（核心股3.0，扩展股1.0）
-            cat_features: 分类特征索引
+            cat_features: 分类特征索引（已编码为数值，应为None）
         """
         from catboost import CatBoostClassifier, Pool
 
@@ -846,18 +846,39 @@ class AStockTradingModel(CatBoostModel):
         if sample_weights is None:
             sample_weights = np.ones(len(y))
 
-        # 创建训练池
+        # 创建 CatBoost 模型（与父类 CatBoostModel.train 参数一致）
+        catboost_params = {
+            'loss_function': 'Logloss',
+            'eval_metric': 'Accuracy',
+            'depth': 8,
+            'learning_rate': 0.06,
+            'n_estimators': 400,
+            'l2_leaf_reg': 2,
+            'subsample': 0.75,
+            'colsample_bylevel': 0.8,
+            'random_seed': 2020,
+            'verbose': 100,
+            'auto_class_weights': 'Balanced',  # 使用类别权重平衡
+        }
+
+        self.catboost_model = CatBoostClassifier(**catboost_params)
+
+        # 创建训练池（cat_features=None，因为分类特征已编码为数值）
         train_pool = Pool(
             data=X,
             label=y,
             weight=sample_weights,
-            cat_features=cat_features
+            cat_features=None  # 分类特征已用 LabelEncoder 编码为数值
         )
 
         # 训练模型
-        self.model.fit(train_pool)
+        self.catboost_model.fit(train_pool)
+
+        # 更新实际树数量
+        self.actual_n_estimators = self.catboost_model.tree_count_
 
         logger.info(f"模型训练完成（样本加权：核心股3.0，扩展股1.0）")
+        logger.info(f"实际训练树数量: {self.actual_n_estimators}")
 
     def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True):
         """
@@ -901,9 +922,29 @@ class AStockTradingModel(CatBoostModel):
         feature_cols = [c for c in df.columns if c not in
                         ['Label', 'Label_Normalized', 'Stock_Code', 'Date', 'sample_weight', 'is_core']]
 
+        # 处理分类特征（与父类 CatBoostModel 一致）
+        from sklearn.preprocessing import LabelEncoder
+        categorical_features = []
+        self.categorical_encoders = {}
+
+        for col in feature_cols:
+            if df[col].dtype == 'object' or df[col].dtype.name == 'category':
+                logger.info(f"  检测到分类特征: {col}")
+                df[col] = df[col].fillna('unknown').astype(str)
+                encoder = LabelEncoder()
+                df[col] = encoder.fit_transform(df[col])
+                self.categorical_encoders[col] = encoder
+                categorical_features.append(col)
+
+        if categorical_features:
+            logger.info(f"已编码 {len(categorical_features)} 个分类特征")
+
         X = df[feature_cols].values
         y = df['Label'].values
         sample_weights = df['sample_weight'].values if 'sample_weight' in df.columns else None
+
+        # 保存特征列名（用于预测时对齐）
+        self.feature_columns = feature_cols
 
         # 使用样本权重训练
         if use_sample_weights and sample_weights is not None:

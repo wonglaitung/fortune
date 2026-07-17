@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-A股 Walk-forward 验证 - 模型预测能力验证
+A股 Walk-forward 验证 - 完整版本
 
-功能：
-- 业界标准的 Walk-forward 验证方法
-- A股特有特征：涨跌停限制、北向资金
-- 多维度评估指标
+复用港股 Walk-forward 架构，调用 AStockTradingModel 完整特征流程：
+- 1000+ 特征（技术指标 + 市场特征 + 网络特征 + 波动率等）
+- 市场情绪过滤器
+- 样本权重训练（核心股3.0，扩展股1.0）
+- 完整评估指标（IC、夏普比率、最大回撤等）
 
 使用方法：
   python3 a_stock_walk_forward.py --horizon 20
-  python3 a_stock_walk_forward.py --horizon 20 --train-window 6 --folds 6
+  python3 a_stock_walk_forward.py --horizon 20 --train-window 12 --folds 6
 """
 
 import warnings
@@ -33,7 +34,10 @@ from a_stock_config import (
     A_STOCK_TRAINING_LIST,
     get_limit_rate,
 )
-from data_services.a_stock_data import get_a_stock_data, get_index_data
+
+# 导入日志
+from ml_services.logger_config import get_logger
+logger = get_logger('a_stock_walk_forward')
 
 # 常量
 TRADING_DAYS_PER_MONTH = 20
@@ -41,14 +45,15 @@ TRADING_DAYS_PER_YEAR = 240
 
 
 class AStockWalkForwardValidator:
-    """A股 Walk-forward 验证器"""
+    """A股 Walk-forward 验证器 - 完整版本"""
 
     def __init__(
         self,
         horizon: int = 20,
-        train_window_months: int = 6,
-        test_window_months: int = 1,
+        train_window_months: int = 12,    # 业界标准：12个月
+        test_window_months: int = 1,       # 业界标准：1个月
         confidence_threshold: float = 0.50,
+        use_market_filter: bool = True,    # 启用市场情绪过滤器
     ):
         """
         初始化验证器
@@ -58,144 +63,27 @@ class AStockWalkForwardValidator:
             train_window_months: 训练窗口（月）
             test_window_months: 测试窗口（月）
             confidence_threshold: 置信度阈值
+            use_market_filter: 是否使用市场情绪过滤器
         """
         self.horizon = horizon
         self.train_window_months = train_window_months
         self.test_window_months = test_window_months
         self.confidence_threshold = confidence_threshold
+        self.use_market_filter = use_market_filter
         self.stock_list = list(A_STOCK_TRAINING_LIST.keys())
 
+        # 市场情绪过滤器（延迟初始化）
+        self.market_filter = None
+
         print(f"\n{'='*60}")
-        print("🔬 A股 Walk-forward 验证器")
+        print("🔬 A股 Walk-forward 验证器（完整版）")
         print(f"{'='*60}")
         print(f"预测周期: {horizon} 天")
         print(f"训练窗口: {train_window_months} 个月")
         print(f"测试窗口: {test_window_months} 个月")
         print(f"置信度阈值: {confidence_threshold}")
+        print(f"市场情绪过滤: {'启用' if use_market_filter else '禁用'}")
         print(f"股票数量: {len(self.stock_list)}")
-
-    def prepare_data(self, stock_code, start_date=None, end_date=None):
-        """
-        准备股票数据
-
-        Args:
-            stock_code: 股票代码
-            start_date: 开始日期
-            end_date: 结束日期
-
-        Returns:
-            DataFrame: 股票数据
-        """
-        # 获取足够长的历史数据（不使用缓存，直接获取）
-        period_days = 500  # 约2年数据
-        df = get_a_stock_data(stock_code, period_days=period_days, use_cache=False)
-
-        if df is None or df.empty:
-            return None
-
-        # 确保索引是datetime
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-
-        # 移除时区信息
-        if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-
-        # 过滤日期范围
-        if start_date:
-            df = df[df.index >= pd.to_datetime(start_date)]
-        if end_date:
-            df = df[df.index <= pd.to_datetime(end_date)]
-
-        return df
-
-    def calculate_features(self, df, stock_code):
-        """
-        计算技术特征
-
-        Args:
-            df: 股票数据
-            stock_code: 股票代码
-
-        Returns:
-            DataFrame: 特征数据
-        """
-        df = df.copy()
-
-        # 收益率
-        df['Return_1d'] = df['Close'].pct_change()
-        df['Return_5d'] = df['Close'].pct_change(5)
-        df['Return_10d'] = df['Close'].pct_change(10)
-        df['Return_20d'] = df['Close'].pct_change(20)
-
-        # 移动平均
-        df['MA5'] = df['Close'].rolling(5).mean()
-        df['MA10'] = df['Close'].rolling(10).mean()
-        df['MA20'] = df['Close'].rolling(20).mean()
-        df['MA60'] = df['Close'].rolling(60).mean()
-
-        # 移动平均比率
-        df['MA5_Ratio'] = df['Close'] / df['MA5'] - 1
-        df['MA10_Ratio'] = df['Close'] / df['MA10'] - 1
-        df['MA20_Ratio'] = df['Close'] / df['MA20'] - 1
-
-        # 波动率
-        df['Volatility_5d'] = df['Return_1d'].rolling(5).std()
-        df['Volatility_10d'] = df['Return_1d'].rolling(10).std()
-        df['Volatility_20d'] = df['Return_1d'].rolling(20).std()
-
-        # 成交量比率
-        df['Volume_MA5'] = df['Volume'].rolling(5).mean()
-        df['Volume_MA20'] = df['Volume'].rolling(20).mean()
-        df['Volume_Ratio'] = df['Volume'] / df['Volume_MA5'] - 1
-
-        # RSI
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        df['RSI_14'] = 100 - (100 / (1 + rs))
-
-        # MACD
-        df['EMA12'] = df['Close'].ewm(span=12, adjust=False).mean()
-        df['EMA26'] = df['Close'].ewm(span=26, adjust=False).mean()
-        df['MACD'] = df['EMA12'] - df['EMA26']
-        df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-
-        # 布林带
-        df['BB_Middle'] = df['Close'].rolling(20).mean()
-        df['BB_Std'] = df['Close'].rolling(20).std()
-        df['BB_Upper'] = df['BB_Middle'] + 2 * df['BB_Std']
-        df['BB_Lower'] = df['BB_Middle'] - 2 * df['BB_Std']
-        df['BB_Ratio'] = (df['Close'] - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'])
-
-        # A股特有：涨跌停
-        limit_rate = get_limit_rate(stock_code)
-        df['High_Limit'] = df['Close'].shift(1) * (1 + limit_rate)
-        df['Low_Limit'] = df['Close'].shift(1) * (1 - limit_rate)
-        df['Limit_Up'] = (df['Close'] >= df['High_Limit'] * 0.995).astype(int)
-        df['Limit_Down'] = (df['Close'] <= df['Low_Limit'] * 1.005).astype(int)
-
-        # 未来收益（标签）
-        df['Future_Return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
-
-        # 标签：未来收益 > 0 为上涨
-        df['Label'] = (df['Future_Return'] > 0).astype(int)
-
-        return df
-
-    def get_feature_columns(self):
-        """获取特征列名"""
-        return [
-            'Return_1d', 'Return_5d', 'Return_10d', 'Return_20d',
-            'MA5_Ratio', 'MA10_Ratio', 'MA20_Ratio',
-            'Volatility_5d', 'Volatility_10d', 'Volatility_20d',
-            'Volume_Ratio',
-            'RSI_14',
-            'MACD', 'MACD_Signal',
-            'BB_Ratio',
-            'Limit_Up', 'Limit_Down',
-        ]
 
     def validate(self, start_date='2024-01-01', end_date='2026-07-01', num_folds=6):
         """
@@ -260,9 +148,13 @@ class AStockWalkForwardValidator:
                 # 打印结果
                 print(f"\n✅ Fold {fold + 1} 结果:")
                 print(f"  样本数: {fold_result['num_samples']}")
+                print(f"  交易次数: {fold_result.get('num_trades', 'N/A')}")
                 print(f"  准确率: {fold_result['accuracy']:.2%}")
                 print(f"  胜率: {fold_result['win_rate']:.2%}")
                 print(f"  平均收益率: {fold_result['avg_return']:.2%}")
+                print(f"  夏普比率: {fold_result.get('sharpe_ratio', 'N/A'):.4f}")
+                print(f"  IC: {fold_result.get('ic', 'N/A'):.4f}")
+                print(f"  特征数量: {fold_result.get('num_features', 'N/A')}")
 
             except Exception as e:
                 print(f"  ❌ Fold {fold + 1} 验证失败: {e}")
@@ -282,6 +174,7 @@ class AStockWalkForwardValidator:
                 'num_folds': num_folds,
                 'start_date': start_date,
                 'end_date': end_date,
+                'use_market_filter': self.use_market_filter,
             },
             'fold_results': all_fold_results,
             'overall_metrics': overall_result,
@@ -297,7 +190,7 @@ class AStockWalkForwardValidator:
 
     def _validate_fold(self, train_start, train_end, test_start, test_end, fold):
         """
-        验证单个fold
+        验证单个fold - 调用 AStockTradingModel 完整流程
 
         Args:
             train_start: 训练开始日期
@@ -309,99 +202,332 @@ class AStockWalkForwardValidator:
         Returns:
             dict: fold结果
         """
-        from catboost import CatBoostClassifier
-        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+        from a_stock_ml_model import AStockTradingModel
 
-        # 收集训练和测试数据
-        train_data_list = []
-        test_data_list = []
+        # 创建模型实例
+        print(f"\n  🔄 准备训练数据...")
+        model = AStockTradingModel(horizon=self.horizon)
 
-        for stock_code in self.stock_list:
-            # 获取数据
-            df = self.prepare_data(stock_code)
-            if df is None or len(df) < 200:
-                continue
+        # 准备训练数据（完整特征流程）
+        train_data = model.prepare_data(
+            self.stock_list,
+            start_date=pd.to_datetime(train_start).tz_localize('UTC'),
+            end_date=pd.to_datetime(train_end).tz_localize('UTC'),
+            horizon=self.horizon,
+            mode='backtest'  # 使用滞后数据
+        )
 
-            # 计算特征
-            df = self.calculate_features(df, stock_code)
+        if train_data is None or len(train_data) < 100:
+            raise ValueError(f"训练数据不足: {len(train_data) if train_data is not None else 0}")
 
-            # 分割训练和测试
-            df_train = df[(df.index >= train_start) & (df.index <= train_end)]
-            df_test = df[(df.index >= test_start) & (df.index <= test_end)]
+        print(f"  ✅ 训练数据准备完成: {len(train_data)} 条记录")
 
-            if len(df_train) > 50 and len(df_test) > 5:
-                train_data_list.append(df_train)
-                test_data_list.append(df_test)
+        # 获取特征列
+        feature_cols = model.get_feature_columns(train_data)
+        print(f"  ✅ 特征数量: {len(feature_cols)}")
 
-        if not train_data_list:
-            raise ValueError("训练数据不足")
+        # 准备训练数据
+        # 只删除标签缺失的行，特征缺失用 fillna 处理
+        train_data_clean = train_data.dropna(subset=['Label'])
 
-        # 合并数据
-        train_df = pd.concat(train_data_list, ignore_index=False)
-        test_df = pd.concat(test_data_list, ignore_index=False)
+        # 对特征缺失值填充（使用中位数）
+        for col in feature_cols:
+            if col in train_data_clean.columns:
+                if train_data_clean[col].isna().any():
+                    # 检查是否为数值型
+                    if pd.api.types.is_numeric_dtype(train_data_clean[col]):
+                        median_val = train_data_clean[col].median()
+                        if pd.isna(median_val):
+                            median_val = 0  # 如果中位数也是NaN，用0填充
+                        train_data_clean[col] = train_data_clean[col].fillna(median_val)
+                    else:
+                        # 非数值型，用 'unknown' 填充
+                        train_data_clean[col] = train_data_clean[col].fillna('unknown')
 
-        # 准备特征和标签
-        feature_cols = self.get_feature_columns()
-        train_df = train_df.dropna(subset=feature_cols + ['Label'])
-        test_df = test_df.dropna(subset=feature_cols + ['Label'])
+        # 处理分类特征：转换为字符串并编码
+        cat_features = []
+        for col in feature_cols:
+            if col in train_data_clean.columns:
+                if not pd.api.types.is_numeric_dtype(train_data_clean[col]):
+                    # 标记为分类特征
+                    cat_features.append(feature_cols.index(col))
+                    # 转换为字符串
+                    train_data_clean[col] = train_data_clean[col].astype(str)
 
-        X_train = train_df[feature_cols]
-        y_train = train_df['Label']
-        X_test = test_df[feature_cols]
-        y_test = test_df['Label']
+        X_train = train_data_clean[feature_cols]
+        y_train = train_data_clean['Label']
+        sample_weights = train_data_clean['sample_weight'].values if 'sample_weight' in train_data_clean.columns else None
 
         print(f"  训练样本: {len(X_train)}")
-        print(f"  测试样本: {len(X_test)}")
 
         # 训练模型
-        model = CatBoostClassifier(
+        print(f"  🔄 训练模型...")
+        from catboost import CatBoostClassifier
+
+        catboost_model = CatBoostClassifier(
             iterations=400,
             depth=8,
             learning_rate=0.06,
             l2_leaf_reg=2,
             random_seed=42,
             verbose=0,
+            cat_features=cat_features if cat_features else None,
         )
 
-        model.fit(X_train, y_train)
+        if sample_weights is not None:
+            catboost_model.fit(X_train, y_train, sample_weight=sample_weights)
+        else:
+            catboost_model.fit(X_train, y_train)
+
+        print(f"  ✅ 模型训练完成")
+
+        # 准备测试数据
+        print(f"  🔄 准备测试数据...")
+        test_data = model.prepare_data(
+            self.stock_list,
+            start_date=pd.to_datetime(test_start).tz_localize('UTC'),
+            end_date=pd.to_datetime(test_end).tz_localize('UTC'),
+            horizon=self.horizon,
+            mode='backtest'
+        )
+
+        if test_data is None or len(test_data) < 10:
+            raise ValueError(f"测试数据不足: {len(test_data) if test_data is not None else 0}")
+
+        print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
+
+        # 准备测试数据
+        # 只删除标签缺失的行，特征缺失用 fillna 处理
+        test_data_clean = test_data.dropna(subset=['Label'])
+
+        # 对特征缺失值填充（使用训练集的中位数，如果没有则用0）
+        for col in feature_cols:
+            if col in test_data_clean.columns:
+                if test_data_clean[col].isna().any():
+                    # 检查是否为数值型
+                    if pd.api.types.is_numeric_dtype(test_data_clean[col]):
+                        # 尝试使用训练集的中位数
+                        if col in train_data_clean.columns and pd.api.types.is_numeric_dtype(train_data_clean[col]):
+                            median_val = train_data_clean[col].median()
+                            if pd.isna(median_val):
+                                median_val = 0
+                        else:
+                            median_val = 0
+                        test_data_clean[col] = test_data_clean[col].fillna(median_val)
+                    else:
+                        # 非数值型，用 'unknown' 填充
+                        test_data_clean[col] = test_data_clean[col].fillna('unknown')
+
+        # 处理分类特征：转换为字符串
+        for idx in cat_features:
+            col = feature_cols[idx]
+            if col in test_data_clean.columns:
+                test_data_clean[col] = test_data_clean[col].astype(str)
+
+        X_test = test_data_clean[feature_cols]
+        y_test = test_data_clean['Label']
+
+        print(f"  测试样本: {len(X_test)}")
 
         # 预测
-        y_pred_proba = model.predict_proba(X_test)[:, 1]
-        y_pred = (y_pred_proba >= self.confidence_threshold).astype(int)
+        print(f"  🔄 生成预测...")
+        y_pred_proba = catboost_model.predict_proba(X_test)[:, 1]
+        y_pred = (y_pred_proba >= 0.5).astype(int)
+
+        # 构建预测 DataFrame
+        predictions = pd.DataFrame({
+            'prediction': y_pred,
+            'probability': y_pred_proba,
+        }, index=test_data_clean.index)
+
+        # 添加 Code 列
+        if 'Stock_Code' in test_data_clean.columns:
+            predictions['Code'] = test_data_clean['Stock_Code'].values
+
+        # 应用市场情绪过滤器
+        if self.use_market_filter:
+            predictions = self._apply_market_filter(test_data_clean, predictions)
 
         # 计算指标
-        accuracy = accuracy_score(y_test, y_pred)
+        print(f"  🔄 计算评估指标...")
+        metrics = self._calculate_metrics(test_data_clean, predictions, y_test, y_pred)
 
-        # 计算交易收益
-        test_df_copy = test_df.copy()
-        test_df_copy['Pred_Proba'] = y_pred_proba
-        test_df_copy['Pred'] = y_pred
-
-        # 只在预测上涨且概率超过阈值时买入
-        trades = test_df_copy[test_df_copy['Pred'] == 1]
-        if len(trades) > 0:
-            avg_return = trades['Future_Return'].mean()
-            win_rate = (trades['Future_Return'] > 0).mean()
-        else:
-            avg_return = 0
-            win_rate = 0
+        # 添加fold信息
+        metrics['fold'] = fold + 1
+        metrics['train_start'] = train_start
+        metrics['train_end'] = train_end
+        metrics['test_start'] = test_start
+        metrics['test_end'] = test_end
+        metrics['num_train_samples'] = len(X_train)
+        metrics['num_features'] = len(feature_cols)
 
         # 特征重要性
-        feature_importance = dict(zip(feature_cols, model.feature_importances_))
+        feature_importance = dict(zip(feature_cols, catboost_model.feature_importances_))
         top_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:10]
+        metrics['top_features'] = top_features
+
+        return metrics
+
+    def _apply_market_filter(self, test_data, predictions):
+        """
+        应用市场情绪过滤器
+
+        使用所有股票的收益率计算上涨比例，动态调整预测阈值。
+
+        Args:
+            test_data: 测试数据
+            predictions: 预测结果
+
+        Returns:
+            pd.DataFrame: 过滤后的预测结果
+        """
+        print(f"  🔄 应用市场情绪过滤器...")
+
+        # 初始化市场过滤器（首次调用时）
+        if self.market_filter is None:
+            from ml_services.market_regime import MarketSentimentFilter
+            self.market_filter = MarketSentimentFilter(lookback_days=1)
+
+        # 从测试数据中提取收益率
+        if 'Return_1d' not in test_data.columns:
+            # 计算收益率
+            test_data = test_data.copy()
+            if 'Close' in test_data.columns:
+                test_data['Return_1d'] = test_data['Close'].pct_change()
+            else:
+                logger.warning("无法计算收益率，跳过市场情绪过滤")
+                predictions['filtered_signal'] = predictions['prediction']
+                return predictions
+
+        # 准备市场收益率数据
+        returns_df = test_data[['Return_1d']].reset_index()
+        returns_df.columns = ['Date', 'Return_1d']
+
+        # 计算每日上涨比例
+        up_ratio_daily = returns_df.groupby('Date')['Return_1d'].apply(lambda x: (x > 0).mean())
+
+        if len(up_ratio_daily) > 0:
+            print(f"     平均上涨比例: {up_ratio_daily.mean()*100:.1f}%")
+
+            # 准备市场过滤器数据
+            self.market_filter.prepare_market_schedule(
+                returns_df,
+                date_col='Date',
+                ret_col='Return_1d'
+            )
+
+            # 应用过滤
+            pred_df = predictions.copy()
+            pred_df['Date'] = predictions.index
+            pred_df['Predict_Prob'] = predictions['probability']
+            pred_df['Predict_Direction'] = predictions['prediction'].map({1: 'UP', 0: 'DOWN'})
+
+            filtered_df = self.market_filter.apply_filter(
+                pred_df,
+                date_col='Date',
+                prob_col='Predict_Prob',
+                direction_col='Predict_Direction'
+            )
+
+            # 更新预测结果
+            predictions['filtered_signal'] = filtered_df['filtered_signal'].values
+            predictions['market_layer'] = filtered_df['market_layer'].values
+            predictions['dynamic_threshold'] = filtered_df['dynamic_threshold'].values
+
+            # 统计过滤效果
+            original_signals = (predictions['prediction'] == 1).sum()
+            filtered_signals = predictions['filtered_signal'].sum()
+            reduction_pct = (original_signals - filtered_signals) / original_signals if original_signals > 0 else 0
+
+            print(f"  ✅ 市场情绪过滤完成")
+            print(f"     原始信号: {original_signals}, 过滤后: {filtered_signals}, 减少: {reduction_pct:.1%}")
+        else:
+            predictions['filtered_signal'] = predictions['prediction']
+
+        return predictions
+
+    def _calculate_metrics(self, test_data, predictions, y_test, y_pred):
+        """
+        计算多维度评估指标
+
+        Args:
+            test_data: 测试数据
+            predictions: 预测结果
+            y_test: 真实标签
+            y_pred: 预测标签
+
+        Returns:
+            dict: 评估指标
+        """
+        from sklearn.metrics import accuracy_score
+
+        # 合并数据
+        df = test_data.copy()
+        df['prediction'] = predictions['prediction'].values
+        df['probability'] = predictions['probability'].values
+
+        # 使用过滤后的信号（如果有）
+        if 'filtered_signal' in predictions.columns:
+            df['signal'] = predictions['filtered_signal'].values
+        else:
+            df['signal'] = df['prediction']
+
+        # 计算实际收益率
+        if 'Future_Return' in df.columns:
+            df['actual_return'] = df['Future_Return']
+        else:
+            # 使用 Close 计算未来收益
+            df['actual_return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
+
+        # 准确率
+        accuracy = accuracy_score(y_test, y_pred)
+
+        # 计算 IC（预测概率与实际收益率的相关性）
+        valid_mask = df['actual_return'].notna() & df['probability'].notna()
+        if valid_mask.sum() > 1:
+            ic = df.loc[valid_mask, 'probability'].corr(df.loc[valid_mask, 'actual_return'])
+            rank_ic = df.loc[valid_mask, 'probability'].rank().corr(df.loc[valid_mask, 'actual_return'].rank())
+        else:
+            ic = 0.0
+            rank_ic = 0.0
+
+        # 计算交易收益
+        trades = df[df['signal'] == 1].copy()
+
+        if len(trades) > 0:
+            avg_return = trades['actual_return'].mean()
+            win_rate = (trades['actual_return'] > 0).mean()
+            return_std = trades['actual_return'].std()
+
+            # 夏普比率（年化）
+            if return_std > 0:
+                sharpe_ratio = avg_return / return_std * np.sqrt(252 / self.horizon)
+            else:
+                sharpe_ratio = 0.0
+
+            # 最大回撤
+            cumulative = (1 + trades['actual_return']).cumprod()
+            peak = cumulative.expanding(min_periods=1).max()
+            drawdown = (cumulative - peak) / peak
+            max_drawdown = drawdown.min()
+        else:
+            avg_return = 0.0
+            win_rate = 0.0
+            sharpe_ratio = 0.0
+            max_drawdown = 0.0
+            return_std = 0.0
 
         return {
-            'fold': fold + 1,
-            'train_start': train_start,
-            'train_end': train_end,
-            'test_start': test_start,
-            'test_end': test_end,
-            'num_samples': len(X_test),
+            'num_samples': len(y_test),
             'num_trades': len(trades) if 'trades' in dir() else 0,
             'accuracy': accuracy,
             'avg_return': avg_return,
             'win_rate': win_rate,
-            'top_features': top_features,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'ic': ic,
+            'rank_ic': rank_ic,
+            'return_std': return_std,
         }
 
     def _calculate_overall_metrics(self, fold_results):
@@ -412,6 +538,8 @@ class AStockWalkForwardValidator:
         accuracies = [r['accuracy'] for r in fold_results]
         avg_returns = [r['avg_return'] for r in fold_results]
         win_rates = [r['win_rate'] for r in fold_results]
+        sharpe_ratios = [r.get('sharpe_ratio', 0) for r in fold_results]
+        ics = [r.get('ic', 0) for r in fold_results]
 
         return {
             'avg_accuracy': np.mean(accuracies),
@@ -419,6 +547,8 @@ class AStockWalkForwardValidator:
             'avg_return': np.mean(avg_returns),
             'std_return': np.std(avg_returns),
             'avg_win_rate': np.mean(win_rates),
+            'avg_sharpe_ratio': np.mean(sharpe_ratios),
+            'avg_ic': np.mean(ics),
             'num_folds': len(fold_results),
             'total_samples': sum(r['num_samples'] for r in fold_results),
         }
@@ -439,6 +569,8 @@ class AStockWalkForwardValidator:
         print(f"  平均准确率: {overall['avg_accuracy']:.2%} (±{overall['std_accuracy']:.2%})")
         print(f"  平均胜率: {overall['avg_win_rate']:.2%}")
         print(f"  平均收益率: {overall['avg_return']:.2%}")
+        print(f"  平均夏普比率: {overall['avg_sharpe_ratio']:.4f}")
+        print(f"  平均 IC: {overall['avg_ic']:.4f}")
 
         # 评估模型可信度
         print(f"\n模型评估:")
@@ -453,6 +585,11 @@ class AStockWalkForwardValidator:
             print(f"  ✅ 平均收益为正 ({overall['avg_return']:.2%})")
         else:
             print(f"  ⚠️ 平均收益为负 ({overall['avg_return']:.2%})")
+
+        if overall['avg_ic'] > 0.1:
+            print(f"  ✅ IC > 0.1，特征有效")
+        else:
+            print(f"  ⚠️ IC < 0.1，特征预测能力较弱")
 
     def _save_report(self, report):
         """保存验证报告"""
@@ -471,14 +608,16 @@ def main():
     parser = argparse.ArgumentParser(description='A股 Walk-forward 验证')
     parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
                        help='预测周期: 1=次日, 5=一周, 20=一个月（默认）')
-    parser.add_argument('--train-window', type=int, default=6,
-                       help='训练窗口（月），默认6个月')
+    parser.add_argument('--train-window', type=int, default=12,
+                       help='训练窗口（月），默认12个月')
     parser.add_argument('--folds', type=int, default=6,
                        help='Fold数量，默认6')
     parser.add_argument('--start-date', type=str, default='2024-01-01',
                        help='验证开始日期')
     parser.add_argument('--end-date', type=str, default='2026-07-01',
                        help='验证结束日期')
+    parser.add_argument('--no-market-filter', action='store_true',
+                       help='禁用市场情绪过滤器')
 
     args = parser.parse_args()
 
@@ -486,6 +625,7 @@ def main():
     validator = AStockWalkForwardValidator(
         horizon=args.horizon,
         train_window_months=args.train_window,
+        use_market_filter=not args.no_market_filter,
     )
 
     # 执行验证
