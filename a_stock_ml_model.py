@@ -833,9 +833,9 @@ class AStockTradingModel(CatBoostModel):
 
         return feature_columns
 
-    def train_with_weights(self, X, y, sample_weights=None, cat_features=None, horizon=20, groups=None):
+    def train_with_weights(self, X, y, sample_weights=None, cat_features=None, horizon=20):
         """
-        使用样本权重训练模型（带分组交叉验证）
+        使用样本权重训练模型（带时间序列交叉验证）
 
         Args:
             X: 特征矩阵
@@ -843,10 +843,9 @@ class AStockTradingModel(CatBoostModel):
             sample_weights: 样本权重（核心股3.0，扩展股1.0）
             cat_features: 分类特征索引（已编码为数值，应为None）
             horizon: 预测周期
-            groups: 分组信息（股票代码数组，用于 GroupKFold）
         """
         from catboost import CatBoostClassifier, Pool
-        from sklearn.model_selection import TimeSeriesSplit, GroupKFold
+        from sklearn.model_selection import TimeSeriesSplit
         from sklearn.metrics import accuracy_score, f1_score
 
         # 如果没有提供样本权重，使用默认权重
@@ -870,71 +869,35 @@ class AStockTradingModel(CatBoostModel):
 
         self.catboost_model = CatBoostClassifier(**catboost_params)
 
-        # 使用按股票分组的交叉验证（避免同一股票泄漏）
-        # 方法：按股票分组，每个fold用不同股票验证
-        from sklearn.model_selection import GroupKFold
-
-        # 准备分组信息（需要在调用时传入股票代码）
-        # 如果没有提供 groups，则使用纯时间序列划分（会有泄漏风险）
+        # 使用时间序列交叉验证（与港股一致）
+        # 数据已按日期排序，训练集是早期所有股票，验证集是后期所有股票
+        # 这样验证集的日期完全是新的，避免市场特征泄漏
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         cv_scores = []
         cv_f1_scores = []
 
-        if groups is not None:
-            # 按股票分组交叉验证
-            gkf = GroupKFold(n_splits=5)
-            logger.info("开始分组时间序列交叉验证（按股票分组）...")
+        logger.info("开始时间序列交叉验证...")
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+            X_train_fold, X_val_fold = X[train_idx], X[val_idx]
+            y_train_fold, y_val_fold = y[train_idx], y[val_idx]
+            weights_train_fold = sample_weights[train_idx]
 
-            for fold, (train_idx, val_idx) in enumerate(gkf.split(X, y, groups=groups), 1):
-                X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-                y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-                weights_train_fold = sample_weights[train_idx]
+            train_pool = Pool(
+                data=X_train_fold,
+                label=y_train_fold,
+                weight=weights_train_fold,
+                cat_features=None
+            )
+            val_pool = Pool(data=X_val_fold, label=y_val_fold)
 
-                train_pool = Pool(
-                    data=X_train_fold,
-                    label=y_train_fold,
-                    weight=weights_train_fold,
-                    cat_features=None
-                )
-                val_pool = Pool(data=X_val_fold, label=y_val_fold)
+            self.catboost_model.fit(train_pool, eval_set=val_pool, verbose=False)
+            y_pred_fold = self.catboost_model.predict(X_val_fold)
 
-                self.catboost_model.fit(train_pool, eval_set=val_pool, verbose=False)
-                y_pred_fold = self.catboost_model.predict(X_val_fold)
-
-                score = accuracy_score(y_val_fold, y_pred_fold)
-                f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
-                cv_scores.append(score)
-                cv_f1_scores.append(f1)
-
-                # 显示验证股票
-                val_stocks = np.unique(groups[val_idx])
-                logger.info(f"   Fold {fold} 验证股票: {', '.join(val_stocks)}")
-                logger.info(f"   Fold {fold} 验证准确率: {score:.4f}, F1分数: {f1:.4f}")
-        else:
-            # 回退到纯时间序列划分（有泄漏风险）
-            tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
-            logger.info("开始时间序列交叉验证（⚠️ 可能存在股票泄漏）...")
-
-            for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
-                X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-                y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-                weights_train_fold = sample_weights[train_idx]
-
-                train_pool = Pool(
-                    data=X_train_fold,
-                    label=y_train_fold,
-                    weight=weights_train_fold,
-                    cat_features=None
-                )
-                val_pool = Pool(data=X_val_fold, label=y_val_fold)
-
-                self.catboost_model.fit(train_pool, eval_set=val_pool, verbose=False)
-                y_pred_fold = self.catboost_model.predict(X_val_fold)
-
-                score = accuracy_score(y_val_fold, y_pred_fold)
-                f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
-                cv_scores.append(score)
-                cv_f1_scores.append(f1)
-                logger.info(f"   Fold {fold} 验证准确率: {score:.4f}, F1分数: {f1:.4f}")
+            score = accuracy_score(y_val_fold, y_pred_fold)
+            f1 = f1_score(y_val_fold, y_pred_fold, zero_division=0)
+            cv_scores.append(score)
+            cv_f1_scores.append(f1)
+            logger.info(f"   Fold {fold} 验证准确率: {score:.4f}, F1分数: {f1:.4f}")
 
         mean_accuracy = np.mean(cv_scores)
         std_accuracy = np.std(cv_scores)
@@ -1062,15 +1025,12 @@ class AStockTradingModel(CatBoostModel):
         y = df['Label'].values
         sample_weights = df['sample_weight'].values if 'sample_weight' in df.columns else None
 
-        # 获取股票代码分组（用于 GroupKFold，避免同一股票泄漏）
-        groups = df['Stock_Code'].values if 'Stock_Code' in df.columns else None
-
         # 保存特征列名（用于预测时对齐）
         self.feature_columns = feature_cols
 
         # 使用样本权重训练
         if use_sample_weights and sample_weights is not None:
-            self.train_with_weights(X, y, sample_weights, horizon=horizon, groups=groups)
+            self.train_with_weights(X, y, sample_weights, horizon=horizon)
         else:
             # 调用父类训练方法
             super().train(
