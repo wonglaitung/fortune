@@ -1753,7 +1753,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
             <th>1天</th><th>5天</th><th>20天</th><th>市场调整</th>
-            <th>模式</th><th>建议</th><th>胜率</th>
+            <th>模式</th><th>量化建议</th><th>胜率</th>
             <th>筹码阻力</th><th>盈亏比</th><th>期望收益</th>
             <th>风险得分</th><th>综合得分</th><th>风险建议</th>
         </tr>
@@ -1871,6 +1871,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         html += """    </table>
 
     <div style="color: #666; font-size: 11px; margin-top: 10px;">
+        <p><strong>量化建议说明</strong>：
+        基于 CatBoost 三周期预测概率（1d/5d/20d）计算的模式，如 AAA=三周期均看涨→"积极买入"。这是纯量化信号，不含定性分析，可能与 AI 建议存在差异。</p>
+
         <p><strong>三周期预测颜色说明</strong>：
         <span style="color: #16a34a; font-weight: bold;">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨 |
         <span style="color: #ea580c; font-weight: bold;">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨 |
@@ -1906,6 +1909,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     html += """
     <h2>💡 AI 分析建议</h2>
+    <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
+        <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于CatBoost三周期预测）可能存在差异，请综合参考。
+    </p>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """
     if llm_content:
