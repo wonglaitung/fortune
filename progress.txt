@@ -1,12 +1,53 @@
 # 项目进度跟踪
 
 **项目**：港股智能分析系统 + A股智能分析系统
-**状态**：生产就绪（港股）/ 设计完成（A股）
+**状态**：生产就绪（港股）/ 特征增强中（A股）
 **最后更新**：2026-07-18
 
 ---
 
 ## 最新进展
+
+### 2026-07-18 A股模型特征增强 ⭐⭐⭐⭐
+
+**背景**：A股模型修复数据泄漏后准确率 52.37%，需要通过增加业界验证有效的特征来提升预测能力
+
+**实施内容**：基于业界机器学习选股模型最佳实践，分三阶段增强特征：
+
+**阶段1：行为金融因子**（已完成）
+- 凸显性因子 (STR)：基于 Kahneman-Tversky 前景理论，衡量投资者对极端收益的关注
+- 球队硬币因子：基于体育博彩理论，捕捉市场情绪过度偏向后的反转机会
+- 实现位置：`ml_services/feature_engineering/behavioral_factors.py`
+- 新增特征：STR_5d, STR_20d, STR_Intensity, STR_Signal, Team_Coin_Sentiment, Team_Coin_Reversal, Team_Coin_Intensity
+
+**阶段2：日内特征**（已完成）
+- 隔夜收益 (Overnight_Return)：收盘到次日开盘的收益，研究显示对次日走势有预测力
+- 日内收益 (Intraday_Return)：开盘到收盘的收益
+- 隔夜/日内收益比率：衡量隔夜信息消化程度
+- 开盘收盘关系 (Open_Close_Ratio)：收高于开表示买方力量强
+- 连续阳线/阴线天数：趋势延续信号
+- 日内波动率与隔夜波动率对比
+
+**阶段3：跨市场联动特征**（已完成）
+- 商品期货联动：铜期货收益 (Copper_Return_5d/20d)、原油期货收益 (Oil_Return_5d/20d)
+- 人民币汇率：CNY_USD_Change_5d, CNY_USD_Z_Score
+- 数据源：AKShare（铜期货 CU0、原油期货 SC0、汇率）
+
+**文件修改清单**：
+| 文件 | 修改类型 | 说明 |
+|------|---------|------|
+| `ml_services/feature_engineering/behavioral_factors.py` | 新建 | 行为金融因子计算器 |
+| `ml_services/feature_engineering/__init__.py` | 新建 | 模块初始化 |
+| `ml_services/ml_trading_model.py` | 修改 | 添加日内特征（约20行） |
+| `data_services/a_stock_market_features.py` | 修改 | 添加跨市场联动特征（约150行） |
+| `a_stock_ml_model.py` | 修改 | 集成新特征（约20行） |
+
+**验证状态**：
+- ✅ 语法检查通过
+- ✅ 行为金融因子模块单元测试通过
+- ⏳ 待运行 Walk-forward 验证确认效果
+
+---
 
 ### 2026-07-18 A股模型数据泄漏修复 ⭐⭐⭐⭐
 

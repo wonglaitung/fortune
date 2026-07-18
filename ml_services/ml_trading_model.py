@@ -1089,6 +1089,24 @@ class FeatureEngineer:
         df['Gap_Up'] = (df['Gap_Size'] > 0.01).astype(int)  # 跳空高开 >1%
         df['Gap_Down'] = (df['Gap_Size'] < -0.01).astype(int)  # 跳空低开 >1%
 
+        # ========== 业界推荐：隔夜与日内特征（研究显示预测有效） ==========
+        # 隔夜收益（收盘到次日开盘的收益，使用滞后数据避免泄漏）
+        df['Overnight_Return'] = (df['Open'].shift(shift_val) - df['Close'].shift(shift_val + 1)) / df['Close'].shift(shift_val + 1)
+        # 日内收益（开盘到收盘的收益，使用滞后数据）
+        df['Intraday_Return'] = (df['Close'].shift(shift_val) - df['Open'].shift(shift_val)) / df['Open'].shift(shift_val)
+        # 隔夜/日内收益比率（衡量隔夜信息消化程度）
+        df['Overnight_Intraday_Ratio'] = df['Overnight_Return'] / (df['Intraday_Return'].abs() + 1e-10)
+
+        # 开盘收盘关系（研究显示：收高于开表示买方力量强）
+        df['Open_Close_Ratio'] = df['Close'].shift(shift_val) / df['Open'].shift(shift_val)
+        # 连续阳线/阴线天数（使用滞后数据）
+        df['Consecutive_Up_Days'] = df['Return_1d'].shift(shift_val).gt(0).astype(int).groupby(df['Return_1d'].shift(shift_val).le(0).cumsum()).cumsum()
+        df['Consecutive_Down_Days'] = df['Return_1d'].shift(shift_val).lt(0).astype(int).groupby(df['Return_1d'].shift(shift_val).ge(0).cumsum()).cumsum()
+
+        # 日内波动率与隔夜波动率对比（使用滞后数据）
+        df['Intraday_Vol_5d'] = df['Intraday_Return'].rolling(5).std().shift(shift_val)
+        df['Overnight_Vol_5d'] = df['Overnight_Return'].rolling(5).std().shift(shift_val)
+
         # ========== 中优先级：量价关系特征 ==========
         # 量价背离（业界重要信号）
         df['Price_Up_Volume_Down'] = ((df['Return_1d'] > 0) & (df['Turnover'].pct_change() < 0)).astype(int)

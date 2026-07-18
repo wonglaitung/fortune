@@ -289,6 +289,38 @@ class AStockFeatureEngineer(FeatureEngineer):
         # 2. 北向资金特征
         df = self._add_northbound_features(df)
 
+        # 3. 行为金融因子（凸显性、球队硬币）
+        df = self._add_behavioral_factors(df)
+
+        return df
+
+    def _add_behavioral_factors(self, df):
+        """
+        添加行为金融因子
+
+        基于业界研究：
+        - 凸显性因子 (STR): 国信证券研究，基于 Kahneman-Tversky 前景理论
+        - 球队硬币因子: 方正证券研究，基于体育博彩理论
+
+        Args:
+            df: 股票数据DataFrame（需包含 Open, High, Low, Close, Volume）
+
+        Returns:
+            df: 添加行为金融因子后的DataFrame
+        """
+        from ml_services.feature_engineering.behavioral_factors import BehavioralFactorCalculator
+
+        try:
+            # 计算行为金融因子
+            df = BehavioralFactorCalculator.calculate_all_factors(df)
+            logger.debug(f"行为金融因子计算完成")
+        except Exception as e:
+            logger.warning(f"行为金融因子计算失败: {e}")
+            # 失败时添加默认值
+            for col in BehavioralFactorCalculator.get_feature_names():
+                if col not in df.columns:
+                    df[col] = np.nan
+
         return df
 
     def _add_limit_features(self, df, stock_code):
@@ -487,6 +519,11 @@ class AStockFeatureEngineer(FeatureEngineer):
                     us_market_df_shifted,
                     left_index=True, right_index=True, how='left'
                 )
+
+        # 4. 跨市场联动特征（商品期货、汇率）
+        from data_services.a_stock_market_features import AStockMarketFeatures
+        market_features = AStockMarketFeatures()
+        stock_df = market_features.calculate_cross_market_features(stock_df, use_shift=use_shift)
 
         return stock_df
 
@@ -1098,7 +1135,7 @@ class AStockTradingModel(CatBoostModel):
 
     def predict(self, code=None, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
         """
-        生成A股预测
+        生成A股预测（重写父类方法，使用A股特征工程）
 
         Args:
             code: 股票代码（可选，默认预测所有自选股）
@@ -1106,6 +1143,8 @@ class AStockTradingModel(CatBoostModel):
             horizon: 预测周期
             use_feature_cache: 是否使用特征缓存
             mode: 预测模式
+                - 'production': 收市后预测（默认），使用当日数据
+                - 'backtest': Walk-forward 验证，使用 T-1 数据
         """
         if horizon is None:
             horizon = self.horizon
@@ -1119,26 +1158,218 @@ class AStockTradingModel(CatBoostModel):
             results = []
             for stock_code in self.stock_list:
                 try:
-                    result = super().predict(
-                        code=stock_code,
-                        predict_date=predict_date,
-                        horizon=horizon,
-                        use_feature_cache=use_feature_cache,
-                        mode=mode
+                    result = self._predict_single_stock(
+                        stock_code, predict_date, horizon,
+                        use_feature_cache, mode
                     )
                     if result is not None:
                         results.append(result)
                 except Exception as e:
                     logger.warning(f"预测 {stock_code} 失败: {e}")
+                    import traceback
+                    traceback.print_exc()
             return results
         else:
-            return super().predict(
-                code=code,
-                predict_date=predict_date,
-                horizon=horizon,
-                use_feature_cache=use_feature_cache,
-                mode=mode
+            return self._predict_single_stock(
+                code, predict_date, horizon,
+                use_feature_cache, mode
             )
+
+    def _predict_single_stock(self, code, predict_date, horizon, use_feature_cache, mode):
+        """
+        预测单只A股股票（使用A股特征工程）
+        """
+        use_shift = (mode == 'backtest')
+
+        # 获取股票数据
+        stock_df = get_a_stock_data(code, period_days=1460, use_cache=True)
+        if stock_df is None or stock_df.empty:
+            logger.warning(f"无法获取股票 {code} 数据")
+            return None
+
+        # 如果指定了预测日期，过滤数据到该日期
+        if predict_date:
+            predict_date = pd.to_datetime(predict_date)
+            predict_date_str = predict_date.strftime('%Y-%m-%d')
+            if not isinstance(stock_df.index, pd.DatetimeIndex):
+                stock_df.index = pd.to_datetime(stock_df.index)
+            stock_df = stock_df[stock_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+            if stock_df.empty:
+                logger.warning(f"股票 {code} 在日期 {predict_date_str} 之前没有数据")
+                return None
+
+        # ========== A股特征计算（与训练时一致）==========
+        # 获取中证1000和创业板指数据
+        from data_services.a_stock_data import get_index_data
+        csi1000_df = get_index_data('csi1000', period_days=1460)
+        cyb_df = get_index_data('cyb', period_days=1460)
+
+        # 获取美股市场数据
+        from ml_services import us_market_data
+        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
+
+        # 如果指定了预测日期，过滤指数数据
+        if predict_date:
+            if csi1000_df is not None and not csi1000_df.empty:
+                if not isinstance(csi1000_df.index, pd.DatetimeIndex):
+                    csi1000_df.index = pd.to_datetime(csi1000_df.index)
+                csi1000_df = csi1000_df[csi1000_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+            if cyb_df is not None and not cyb_df.empty:
+                if not isinstance(cyb_df.index, pd.DatetimeIndex):
+                    cyb_df.index = pd.to_datetime(cyb_df.index)
+                cyb_df = cyb_df[cyb_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+            if us_market_df is not None and not us_market_df.empty:
+                if not isinstance(us_market_df.index, pd.DatetimeIndex):
+                    us_market_df.index = pd.to_datetime(us_market_df.index)
+                us_market_df = us_market_df[us_market_df.index.strftime('%Y-%m-%d') <= predict_date_str]
+
+        # 计算A股市场状态特征
+        a_stock_regime_df = None
+        if csi1000_df is not None and not csi1000_df.empty:
+            a_stock_regime_df = _calculate_a_stock_regime_features(csi1000_df, use_shift=use_shift)
+
+        # 加载网络特征
+        network_features_file = os.path.join(A_STOCK_NETWORK_FEATURES_DIR, 'network_features_for_ml.json')
+        network_features_data = None
+        community_ids = []
+        if os.path.exists(network_features_file):
+            try:
+                with open(network_features_file, 'r') as f:
+                    network_features_data = json.load(f)
+                community_ids = list(set(
+                    v.get('net_community_id', -1) for v in network_features_data.values() if v.get('net_community_id', -1) != -1
+                ))
+            except Exception as e:
+                logger.debug(f"网络特征加载失败: {e}")
+
+        # ========== 计算所有特征（与训练时流程一致）==========
+        # 技术指标
+        stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift, code=code)
+
+        # 多周期指标
+        stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+
+        # 资金流向特征
+        stock_df = self.feature_engineer.create_smart_money_features(stock_df, use_shift=use_shift)
+
+        # 基本面特征
+        fundamental_features = self.feature_engineer.create_fundamental_features(code)
+        for key, value in fundamental_features.items():
+            stock_df[key] = value
+
+        # 股票类型特征
+        stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
+        for key, value in stock_type_features.items():
+            stock_df[key] = value
+
+        # 板块特征
+        sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+        for key, value in sector_features.items():
+            stock_df[key] = value
+
+        # 事件驱动特征
+        stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
+
+        # 技术指标与基本面交互特征
+        stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
+
+        # A股特有特征（涨跌停、北向资金、行为金融因子）
+        stock_df = self.feature_engineer.add_a_stock_features(stock_df, code)
+
+        # A股市场环境特征
+        stock_df = self.feature_engineer.create_a_stock_market_environment_features(
+            stock_df, csi1000_df, cyb_df, us_market_df, use_shift=use_shift)
+
+        # 合并A股市场状态特征
+        if a_stock_regime_df is not None:
+            regime_df_temp = a_stock_regime_df.copy()
+            stock_df_temp = stock_df.copy()
+            if hasattr(regime_df_temp.index, 'tz') and regime_df_temp.index.tz is not None:
+                regime_df_temp.index = regime_df_temp.index.tz_localize(None)
+            if hasattr(stock_df_temp.index, 'tz') and stock_df_temp.index.tz is not None:
+                stock_df_temp.index = stock_df_temp.index.tz_localize(None)
+            regime_aligned = regime_df_temp.reindex(stock_df_temp.index, method='ffill')
+            for col in regime_aligned.columns:
+                stock_df[col] = regime_aligned[col].values
+
+        # 网络特征
+        if network_features_data is not None and code in network_features_data:
+            net_features = network_features_data[code]
+            for key, value in net_features.items():
+                stock_df[key] = value
+        else:
+            default_net_features = {
+                'net_degree_centrality': 0.0,
+                'net_betweenness_centrality': 0.0,
+                'net_eigenvector_centrality': 0.0,
+                'net_closeness_centrality': 0.0,
+                'net_composite_centrality': 0.0,
+                'net_community_id': -1,
+                'net_community_size': 0,
+                'net_community_centrality_rank': -1,
+                'net_sector_cohesion': 0.0,
+                'net_mst_degree': 0,
+                'net_mst_neighbor_sectors': 0,
+                'net_inter_community_ratio': 0.0,
+                'net_constraint': 1.0,
+                'net_effective_size': 0.0,
+                'net_local_clustering': 0.0,
+            }
+            for key, value in default_net_features.items():
+                stock_df[key] = value
+
+        # 交叉特征
+        stock_df = self.feature_engineer.create_interaction_features(stock_df)
+
+        # 市场网络交叉特征
+        stock_df = self.feature_engineer.create_market_network_interaction_features(
+            stock_df, community_ids=community_ids)
+
+        # 异常检测特征
+        stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
+
+        # ========== 预测 ==========
+        # 获取最新一行数据
+        latest_data = stock_df.iloc[[-1]].copy()
+
+        # 检查特征列是否存在
+        if not hasattr(self, 'feature_columns') or self.feature_columns is None:
+            logger.error("模型未加载特征列，请先加载模型")
+            return None
+
+        missing_features = [c for c in self.feature_columns if c not in latest_data.columns]
+        if missing_features:
+            # 为缺失特征填充默认值
+            for col in missing_features:
+                latest_data[col] = 0.0
+            logger.warning(f"预测时缺失特征已填充默认值: {missing_features[:5]}...")
+
+        # 准备预测数据
+        X = latest_data[self.feature_columns].values
+
+        # 处理分类特征 NaN
+        for col in self.categorical_encoders.keys():
+            if col in latest_data.columns:
+                encoder = self.categorical_encoders[col]
+                latest_data[col] = latest_data[col].fillna('unknown').astype(str)
+                latest_data[col] = latest_data[col].apply(
+                    lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
+                )
+
+        # 预测
+        prediction = self.model.predict(X)[0]
+        probability = self.model.predict_proba(X)[0][1]
+
+        # 获取当前价格
+        current_price = latest_data['Close'].iloc[-1] if 'Close' in latest_data.columns else None
+
+        return {
+            'code': code,
+            'date': latest_data.index[-1],
+            'prediction': int(prediction),
+            'probability': float(probability),
+            'current_price': float(current_price) if current_price is not None else None,
+        }
 
     def get_stock_data(self, stock_code, period_days=500):
         """获取A股股票数据"""
