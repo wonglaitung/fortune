@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v10.4 (2026-06-01) | **状态**：当前有效
+> **版本**：v10.5 (2026-07-18) | **状态**：当前有效
 
 ---
 
@@ -407,6 +407,30 @@ df['Feature'] = df['Close'].pct_change().shift(1)
 
 **高风险特征**：所有 `.rolling()` 计算的特征必须 `.shift(1)`
 
+### 特征列排除逻辑一致性 ⭐⭐⭐⭐
+
+**问题**：`train()` 方法中硬编码的特征排除列表与 `get_feature_columns()` 不一致，导致 `Future_Return` 泄漏
+
+**现象**：交叉验证准确率达到 100%（明显的数据泄漏信号）
+
+**根本原因**：
+```python
+# ❌ 错误：train() 方法中硬编码排除列表
+feature_cols = [c for c in df.columns if c not in
+                ['Label', 'Label_Normalized', 'Stock_Code', 'Date', 'sample_weight', 'is_core']]
+# 遗漏了 'Future_Return'！
+
+# ✅ 正确：使用统一的特征列定义方法
+feature_cols = self.get_feature_columns(df)
+```
+
+**解决方案**：确保所有获取特征列的地方使用同一个方法（`get_feature_columns()`）
+
+**教训**：
+- 特征列排除逻辑必须统一，不能在多处硬编码
+- `Future_Return` 是标签的原始值，绝对不能出现在特征中
+- 准确率达到 100% 是极端数据泄漏信号，必须立即排查
+
 ### 阈值配置
 
 | 用途 | 阈值 | 说明 |
@@ -440,6 +464,7 @@ df['Feature'] = df['Close'].pct_change().shift(1)
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-07-18 | v10.5 | 新增：特征列排除逻辑一致性经验（Future_Return 泄漏） |
 | 2026-06-01 | v10.4 | 新增：API 参数与数据格式一致性经验 |
 | 2026-05-31 | v10.3 | 新增：特征模块参数传递经验（函数签名需包含内部使用的参数） |
 | 2026-05-24 | v10.2 | 新增：市场情绪过滤器验证确认（extreme_bear 完全过滤生效） |
