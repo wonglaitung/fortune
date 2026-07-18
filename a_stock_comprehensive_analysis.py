@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # 导入A股配置
 from a_stock_config import (
     A_STOCK_WATCHLIST,
+    A_STOCK_TRAINING_LIST,
     A_STOCK_SECTOR_MAPPING,
     get_limit_rate,
     is_core_holding,
@@ -43,6 +44,9 @@ from a_stock_recommendation_generator import AStockRecommendationGenerator
 # 股票名称映射
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
+
+# 板块分析使用全量股票（53只）
+SECTOR_STOCK_LIST = list(A_STOCK_TRAINING_LIST.keys())
 
 # 三周期模式定义（参考港股）
 THREE_HORIZON_PATTERNS = {
@@ -1540,13 +1544,20 @@ def main():
         print(f"  上证指数: {market_data.get('sh_close', 'N/A'):.2f} ({market_data.get('sh_change', 0):+.2f}%)")
         print(f"  北向资金: {market_data.get('northbound_net_buy', 0):.2f} 亿")
 
-    # 4. 分析每只股票
+    # 4. 分析每只股票（核心股用于预测和交易）
     print("\n📊 分析自选股...")
     stock_analyses = {}
     for code in STOCK_LIST:
         print(f"  分析 {code}...")
         analysis = get_stock_analysis(code)
         stock_analyses[code] = analysis
+
+    # 4b. 分析全量股票（用于市场情绪和板块分析）
+    print(f"\n📊 分析全量股票（{len(SECTOR_STOCK_LIST)}只）...")
+    sector_stock_analyses = {}
+    for code in SECTOR_STOCK_LIST:
+        analysis = get_stock_analysis(code)
+        sector_stock_analyses[code] = analysis
 
     # 5. 生成三周期预测（核心新增）
     print("\n🔮 生成三周期预测（1d/5d/20d）...")
@@ -1558,9 +1569,9 @@ def main():
     else:
         print("  ⚠️ 使用缓存预测，跳过三周期预测")
 
-    # 6. 计算市场情绪
+    # 6. 计算市场情绪（使用全量股票）
     print("\n📈 计算市场情绪...")
-    market_sentiment = get_market_sentiment(stock_analyses)
+    market_sentiment = get_market_sentiment(sector_stock_analyses)
     layer_names = {
         'extreme_bear': '🔴 极端熊市',
         'bear': '🟠 熊市',
@@ -1578,11 +1589,12 @@ def main():
     print(f"  20日累积: {northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿")
     print(f"  连续流入: {northbound_trend.get('consecutive_inflow', 0)} 天")
 
-    # 8. 分析板块涨跌幅
+    # 8. 分析板块涨跌幅（使用全量股票）
     print("\n📊 分析板块涨跌幅...")
-    sector_analysis = analyze_sectors(stock_analyses)
+    sector_analysis = analyze_sectors(sector_stock_analyses)
     if sector_analysis and sector_analysis.get('sector_ranking'):
         print(f"  板块数量: {sector_analysis['total_sectors']}")
+        print(f"  分析股票: {len(sector_stock_analyses)} 只")
         top_sector = sector_analysis['sector_ranking'][0]
         print(f"  领涨板块: {top_sector['sector']} ({top_sector['avg_change']:+.2f}%)")
 
