@@ -1634,7 +1634,7 @@ def main():
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
-        email_subject = f"【综合分析】A股三周期预测 - {date_str}"
+        email_subject = f"【综合分析】A股买卖建议 - {date_str}"
 
         if send_email(email_subject, report, html_content):
             print("  ✅ 邮件发送成功")
