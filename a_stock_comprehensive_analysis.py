@@ -1124,7 +1124,10 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if recommendations:
         html += _format_recommendations_section(recommendations)
 
-    html += """
+    # 预计算交易建议
+    trade_advice = '暂停交易' if sentiment_layer == 'extreme_bear' else ('正常交易' if sentiment_layer == 'normal' else '谨慎交易')
+
+    html += f"""
 
     <!-- 市场情绪分析 -->
     <div class="sentiment-box">
@@ -1134,7 +1137,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <tr>
                 <td><strong>市场情绪</strong></td>
                 <td style="color: {sentiment_color}; font-weight: bold;">{sentiment_name}</td>
-                <td>{'暂停交易' if sentiment_layer == 'extreme_bear' else '正常交易' if sentiment_layer == 'normal' else '谨慎交易'}</td>
+                <td>{trade_advice}</td>
             </tr>
             <tr>
                 <td>今日上涨比例</td>
@@ -1362,7 +1365,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         html += format_anomalies_html(anomaly_result)
 
     # AI 分析建议（完整版）
-    html += """
+    # 预计算生成时间
+    generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    html += f"""
     <h2>💡 AI 分析建议</h2>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
 """
@@ -1372,7 +1377,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     else:
         html += '暂无AI建议'
 
-    html += """
+    html += f"""
     </div>
 
     <h2>⚠️ 风险提示</h2>
@@ -1385,7 +1390,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
     <div class="footer">
         <p>📧 本邮件由A股综合分析系统自动生成</p>
-        <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>⏰ 生成时间：{generation_time}</p>
         <p>⚠️ 本报告仅供参考，不构成投资建议</p>
     </div>
 </body>
