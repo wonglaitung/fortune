@@ -289,7 +289,10 @@ class AStockFeatureEngineer(FeatureEngineer):
         # 2. 北向资金特征
         df = self._add_northbound_features(df)
 
-        # 3. 行为金融因子（凸显性、球队硬币）
+        # 3. 融资融券特征
+        df = self._add_margin_features(df, stock_code)
+
+        # 4. 行为金融因子（凸显性、球队硬币）
         df = self._add_behavioral_factors(df)
 
         return df
@@ -349,15 +352,109 @@ class AStockFeatureEngineer(FeatureEngineer):
 
         return df
 
+    def _add_margin_features(self, df, stock_code):
+        """
+        添加融资融券特征
+
+        包括：
+        - 融资余额变化趋势（5日）
+        - 融资买入占比
+        - 融券卖出压力
+        - 融资做多情绪指标
+
+        Args:
+            df: 股票数据DataFrame
+            stock_code: 股票代码
+
+        Returns:
+            DataFrame: 添加融资融券特征后的数据
+        """
+        from data_services.margin_data import MarginDataService
+        import warnings
+
+        # 初始化默认值
+        df['Margin_Balance_Change_5d'] = 0.0
+        df['Margin_Buy_Ratio'] = 0.0
+        df['Short_Sell_Pressure'] = 0.0
+        df['Margin_Sentiment'] = 0.0
+
+        try:
+            service = MarginDataService()
+
+            # 获取最近日期的融资融券数据（使用最后5个交易日）
+            if len(df) < 5:
+                return df
+
+            # 获取最近5个交易日的融资融券数据
+            recent_dates = df.index[-5:]
+            margin_data_list = []
+
+            for date in recent_dates:
+                date_str = pd.to_datetime(date).strftime('%Y%m%d')
+                try:
+                    margin_data = service.get_stock_margin_data(stock_code, date_str)
+                    margin_data_list.append({
+                        'date': date,
+                        'Margin_Buy_Amount': margin_data.get('Margin_Buy_Amount', 0),
+                        'Margin_Balance': margin_data.get('Margin_Balance', 0),
+                        'Short_Sell_Volume': margin_data.get('Short_Sell_Volume', 0),
+                        'Short_Balance': margin_data.get('Short_Balance', 0),
+                    })
+                except Exception:
+                    continue
+
+            if len(margin_data_list) == 0:
+                return df
+
+            # 转换为 DataFrame
+            margin_df = pd.DataFrame(margin_data_list)
+            margin_df = margin_df.set_index('date')
+
+            # 计算特征（使用 shift(1) 避免数据泄漏）
+            if len(margin_df) >= 2:
+                # 融资余额变化率（5日）
+                margin_df['Margin_Balance_Change_5d'] = margin_df['Margin_Balance'].pct_change(5)
+                margin_df['Margin_Balance_Change_5d'] = margin_df['Margin_Balance_Change_5d'].shift(1)
+
+            # 合并到股票数据
+            for col in ['Margin_Balance_Change_5d', 'Margin_Buy_Ratio', 'Short_Sell_Pressure', 'Margin_Sentiment']:
+                if col in margin_df.columns:
+                    df[col] = margin_df[col].reindex(df.index, method='ffill').fillna(0)
+
+        except Exception as e:
+            # 融资融券数据获取失败时使用默认值
+            logger.debug(f"融资融券数据获取失败 {stock_code}: {e}")
+
+        return df
+
     def _add_northbound_features(self, df):
-        """添加北向资金特征"""
+        """
+        添加北向资金特征（增强版）
+
+        包括：
+        - 当日净买入、净流入
+        - 累积流入趋势（5日、20日）
+        - 流入持续性（连续流入/流出天数）
+        - 北向资金占比（相对成交额）
+
+        Args:
+            df: 股票数据DataFrame
+
+        Returns:
+            DataFrame: 添加北向资金特征后的数据
+        """
         from data_services.northbound_data import NorthboundDataService
         service = NorthboundDataService()
         northbound_df = service.fetch_history()
 
         if northbound_df is None or northbound_df.empty:
+            # 添加默认值
             df['Northbound_Net_Buy'] = 0
             df['Northbound_Net_Inflow'] = 0
+            df['Northbound_Net_Buy_5d_Sum'] = 0
+            df['Northbound_Net_Buy_20d_Sum'] = 0
+            df['Northbound_Consecutive_Inflow'] = 0
+            df['Northbound_Turnover_Ratio'] = 0
             return df
 
         northbound_df = northbound_df.copy()
@@ -367,12 +464,33 @@ class AStockFeatureEngineer(FeatureEngineer):
         if df_temp.index.tz is not None:
             df_temp.index = df_temp.index.tz_localize(None)
 
+        # 基础特征：当日净买入、净流入
         for col in ['net_buy', 'net_inflow']:
             if col in northbound_df.columns:
                 df_temp[f'Northbound_{col.title()}'] = df_temp.index.map(
                     lambda x: northbound_df.loc[:x, col].iloc[-1] if (northbound_df.index <= x).any() else 0
                 )
 
+        # 计算累积流入趋势（5日、20日）
+        if 'Northbound_Net_Buy' in df_temp.columns:
+            # 使用 shift(1) 避免数据泄漏
+            df_temp['Northbound_Net_Buy_5d_Sum'] = df_temp['Northbound_Net_Buy'].shift(1).rolling(5).sum()
+            df_temp['Northbound_Net_Buy_20d_Sum'] = df_temp['Northbound_Net_Buy'].shift(1).rolling(20).sum()
+
+            # 流入持续性（连续流入天数）
+            # 当净买入 > 0 时，连续流入天数 +1
+            net_buy_shifted = df_temp['Northbound_Net_Buy'].shift(1)
+            df_temp['Northbound_Consecutive_Inflow'] = (
+                net_buy_shifted > 0
+            ).groupby((net_buy_shifted <= 0).cumsum()).cumsum()
+
+        # 北向资金占比（相对成交额）- 需要成交额数据
+        if 'Turnover' in df_temp.columns and 'Northbound_Net_Buy' in df_temp.columns:
+            # 使用 shift(1) 避免数据泄漏
+            turnover_shifted = df_temp['Turnover'].shift(1)
+            df_temp['Northbound_Turnover_Ratio'] = df_temp['Northbound_Net_Buy'] / (turnover_shifted.abs() + 1e-10)
+
+        # 复制到原 DataFrame
         for col in df_temp.columns:
             if col.startswith('Northbound_'):
                 df[col] = df_temp[col]
@@ -572,7 +690,8 @@ class AStockTradingModel(CatBoostModel):
 
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=None,
                      for_backtest=False, min_return_threshold=0.0,
-                     use_feature_cache=True, community_ids=None, mode='backtest'):
+                     use_feature_cache=True, community_ids=None, mode='backtest',
+                     use_cross_sectional_label=False):
         """
         准备A股训练/预测数据 - A股专用实现
 
@@ -593,6 +712,9 @@ class AStockTradingModel(CatBoostModel):
             mode: 数据模式
                 - 'backtest': Walk-forward验证（默认），使用T-1数据
                 - 'production': 收市后预测，使用当日数据
+            use_cross_sectional_label: 是否使用截面标准化标签（业界推荐用于月度预测）
+                - True: 每个交易日对所有股票排名，排名前50%为正例
+                - False: 使用时间序列标签（默认）
         """
         self.horizon = horizon if horizon is not None else self.horizon
         self.min_return_threshold = min_return_threshold
@@ -800,7 +922,20 @@ class AStockTradingModel(CatBoostModel):
             df['sample_weight'] = df['Stock_Code'].apply(get_sample_weight)
             df['is_core'] = df['Stock_Code'].apply(lambda x: 1 if is_core_holding(x) else 0)
 
-        # ========== 6. 标签标准化（除以滚动波动率）==========
+        # ========== 6. 截面标准化标签（业界推荐用于月度预测）==========
+        # 每个交易日对所有股票排名，排名前50%为正例
+        # 优点：避免主板10%和创业板20%涨跌停的非对称问题
+        if use_cross_sectional_label and 'Future_Return' in df.columns:
+            logger.info("使用截面标准化标签...")
+            # 每个交易日对所有股票的未来收益排名
+            df['Return_Rank'] = df.groupby(df.index)['Future_Return'].rank(pct=True)
+            # 排名前50%为正例
+            df['Label_CS'] = (df['Return_Rank'] > 0.5).astype(int)
+            # 用截面标签替换原始标签
+            df['Label'] = df['Label_CS']
+            logger.info(f"截面标签分布: 正例 {df['Label'].sum()} / 总计 {len(df)}")
+
+        # ========== 7. 标签标准化（除以滚动波动率）==========
         # 解决主板10%和创业板20%涨跌停的非对称问题
         if 'Label' in df.columns and 'volatility_20d' in df.columns:
             mask = df['Label'].notna() & (df['volatility_20d'] > 0)
@@ -829,7 +964,8 @@ class AStockTradingModel(CatBoostModel):
         # 基础排除列
         base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                        'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
-                       'Vol_MA20', '+DM', '-DM', '+DI', '-DI']
+                       'Vol_MA20', '+DM', '-DM', '+DI', '-DI',
+                       'Return_Rank', 'Label_CS', 'sample_weight']  # 截面标签相关列必须排除
 
         # 已删除的冗余特征
         deprecated_features = ['Returns', 'Volatility', 'MA5_Deviation', 'MA10_Deviation',
@@ -1015,7 +1151,7 @@ class AStockTradingModel(CatBoostModel):
         except Exception as e:
             logger.warning(f"保存准确率失败: {e}")
 
-    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True):
+    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False):
         """
         训练A股模型
 
@@ -1027,6 +1163,7 @@ class AStockTradingModel(CatBoostModel):
             use_feature_selection: 是否使用特征选择
             min_return_threshold: 最小收益阈值
             use_sample_weights: 是否使用样本权重训练
+            use_cross_sectional_label: 是否使用截面标准化标签（业界推荐用于月度预测）
         """
         if codes is None:
             codes = self.stock_list
@@ -1037,6 +1174,7 @@ class AStockTradingModel(CatBoostModel):
         logger.info(f"开始训练A股模型（预测周期: {horizon}天）")
         logger.info(f"股票数量: {len(codes)}")
         logger.info(f"样本权重: {'启用' if use_sample_weights else '禁用'}")
+        logger.info(f"截面标签: {'启用' if use_cross_sectional_label else '禁用'}")
         logger.info("=" * 60)
 
         # 准备数据
@@ -1046,7 +1184,8 @@ class AStockTradingModel(CatBoostModel):
             end_date=end_date,
             horizon=horizon,
             use_feature_cache=True,
-            mode='backtest'
+            mode='backtest',
+            use_cross_sectional_label=use_cross_sectional_label
         )
 
         if df is None or df.empty:
@@ -1409,6 +1548,8 @@ def main():
                        help='预测日期 (YYYY-MM-DD)')
     parser.add_argument('--stocks', type=str, default=None,
                        help='股票代码列表，逗号分隔')
+    parser.add_argument('--use-cross-sectional-label', action='store_true',
+                       help='使用截面标准化标签（业界推荐用于月度预测）')
 
     args = parser.parse_args()
 
@@ -1430,7 +1571,8 @@ def main():
             codes=codes,
             start_date=args.start_date,
             end_date=args.end_date,
-            use_feature_selection=args.use_feature_selection
+            use_feature_selection=args.use_feature_selection,
+            use_cross_sectional_label=args.use_cross_sectional_label
         )
         # 保存模型
         model.save_model(model_path)

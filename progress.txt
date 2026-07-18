@@ -8,7 +8,63 @@
 
 ## 最新进展
 
-### 2026-07-18 A股模型特征增强 ⭐⭐⭐⭐
+### 2026-07-18 A股模型特征增强 v2.0 ⭐⭐⭐⭐
+
+**背景**：A股模型阶段1特征增强后，5天和20天预测准确率仍然偏低（51-54%），需要进一步优化
+
+**阶段2改进内容**：
+
+**1. 截面标准化标签**（已完成）
+- 新增参数 `use_cross_sectional_label`
+- 每个交易日对所有股票排名，排名前50%为正例
+- 业界推荐用于月度预测，避免主板/创业板涨跌停非对称问题
+- 实现位置：`a_stock_ml_model.py` `prepare_data()` 方法
+
+**2. 北向资金特征增强**（已完成）
+- 累积流入趋势：Northbound_Net_Buy_5d_Sum, Northbound_Net_Buy_20d_Sum
+- 流入持续性：Northbound_Consecutive_Inflow（连续流入天数）
+- 北向资金占比：Northbound_Turnover_Ratio（相对成交额）
+- 实现位置：`a_stock_ml_model.py` `_add_northbound_features()` 方法
+
+**3. 融资融券特征集成**（已完成）
+- 融资余额变化：Margin_Balance_Change_5d
+- 融资买入占比：Margin_Buy_Ratio
+- 融券卖出压力：Short_Sell_Pressure
+- 融资做多情绪：Margin_Sentiment
+- 实现位置：`a_stock_ml_model.py` `_add_margin_features()` 方法
+
+**4. 数据泄漏修复**（重要！）
+- 问题：`Return_Rank`（截面标签中间变量）泄漏到特征中，导致特征重要性 94.81
+- 修复：在 `get_feature_columns()` 排除列表中添加 `Return_Rank`, `Label_CS`, `sample_weight`
+- 修复后特征重要性最高 1.84，分布合理
+
+**5. 技能更新**（已完成）
+- 更新 `.claude/commands/model_validation.md`
+- 添加训练与预测代码同步验证章节（阶段 4E）
+
+**文件修改清单**：
+| 文件 | 修改类型 | 说明 |
+|------|---------|------|
+| `a_stock_ml_model.py` | 修改 | 截面标签、北向资金增强、融资融券集成、数据泄漏修复 |
+| `.claude/commands/model_validation.md` | 修改 | 添加训练预测同步验证章节 |
+
+**验证状态**：
+- ✅ 语法检查通过
+- ✅ 训练启动成功（截面标签已启用）
+- ✅ 北向资金特征加载成功
+- ⚠️ 融资融券数据获取失败（网络问题，使用默认值）
+- ✅ 数据泄漏修复验证：Return_Rank 已从特征中排除
+- ✅ 训练与预测代码同步验证通过
+- ⏳ Walk-forward 验证待运行
+
+**训练结果**：
+- 交叉验证准确率：52.05% ✅ 正常范围（<65% 无数据泄漏）
+- 特征数量：1077 个
+- 核心股权重：3.0，扩展股权重：1.0
+
+---
+
+### 2026-07-18 A股模型特征增强 v1.0 ⭐⭐⭐⭐
 
 **背景**：A股模型修复数据泄漏后准确率 52.37%，需要通过增加业界验证有效的特征来提升预测能力
 

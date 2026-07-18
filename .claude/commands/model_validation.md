@@ -361,7 +361,7 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 **⚠️ 常见遗漏**：只更新 `hsi_prediction.py` 而忘记更新 `comprehensive_analysis.py`，导致个股策略配置过时。
 
-#### 4D. 代码与文档一致性验证（新增）
+### 阶段 4D. 代码与文档一致性验证（新增）
 
 **目的**：确保代码中的数据与文档一致，避免遗漏。
 
@@ -381,6 +381,77 @@ grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" CLAUDE.md
 1. 以文档（CLAUDE.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
 2. 更新代码中的硬编码数据
 3. 重新运行语法检查和测试
+
+---
+
+### 阶段 4E. 训练与预测代码同步验证（新增）
+
+**⚠️ 重要：新增特征时必须同步训练代码和预测代码！**
+
+**风险**：训练时添加新特征，但预测时未同步添加，导致特征不匹配。
+
+#### A股模型关键代码位置
+
+| 方法 | 文件位置 | 用途 |
+|------|---------|------|
+| `prepare_data()` | `a_stock_ml_model.py:573-811` | 训练时特征计算 |
+| `_predict_single_stock()` | `a_stock_ml_model.py:1178-1380` | 预测时特征计算 |
+
+#### 特征计算流程对比
+
+**训练时**（`prepare_data`，第 667-765 行）：
+```python
+stock_df = self.feature_engineer.calculate_technical_features(...)
+stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+stock_df = self.feature_engineer.create_smart_money_features(...)
+stock_df = self.feature_engineer.add_a_stock_features(stock_df, code)  # A股特有
+stock_df = self.feature_engineer.create_a_stock_market_environment_features(...)
+stock_df = self.feature_engineer.create_interaction_features(stock_df)
+stock_df = self.feature_engineer.create_market_network_interaction_features(...)
+stock_df = self.feature_engineer.create_anomaly_features(...)
+stock_df = self.feature_engineer.create_label(...)  # 标签
+```
+
+**预测时**（`_predict_single_stock`，第 1247-1329 行）：
+```python
+stock_df = self.feature_engineer.calculate_technical_features(...)
+stock_df = self.feature_engineer.calculate_multi_period_metrics(stock_df)
+stock_df = self.feature_engineer.create_smart_money_features(...)
+stock_df = self.feature_engineer.add_a_stock_features(stock_df, code)  # A股特有
+stock_df = self.feature_engineer.create_a_stock_market_environment_features(...)
+stock_df = self.feature_engineer.create_interaction_features(stock_df)
+stock_df = self.feature_engineer.create_market_network_interaction_features(...)
+stock_df = self.feature_engineer.create_anomaly_features(...)
+# 注意：预测时不需要 create_label()
+```
+
+#### 同步检查清单
+
+| 新增特征类型 | 训练代码位置 | 预测代码位置 | 检查项 |
+|-------------|-------------|-------------|--------|
+| 截面标准化标签 | `prepare_data()` | 不需要（预测不需要标签） | - |
+| 北向资金增强 | `add_a_stock_features()` | 自动同步（同一方法） | ✅ |
+| 融资融券特征 | `add_a_stock_features()` 新增方法 | 自动同步 | 需确认方法调用 |
+| 分析师预期 | `add_a_stock_features()` 新增方法 | 自动同步 | 需确认方法调用 |
+| 质量因子 | `create_quality_factors()` 新增方法 | 需在 `_predict_single_stock` 中添加调用 | ⚠️ 必须手动同步 |
+
+#### 验证同步性的方法
+
+```bash
+# 训练后立即预测测试
+python3 a_stock_ml_model.py --mode train --horizon 20
+python3 a_stock_ml_model.py --mode predict --horizon 20
+
+# 检查日志是否有特征缺失警告
+# 如果出现 "预测时缺失特征已填充默认值" 警告，说明预测代码未同步
+```
+
+#### 同步检查点
+
+- [ ] 训练代码 `prepare_data()` 和预测代码 `_predict_single_stock()` 特征计算流程一致
+- [ ] 新增特征方法在 `add_a_stock_features()` 中添加（自动同步）
+- [ ] 如果新增独立方法（如 `create_quality_factors()`），必须同时在训练和预测中调用
+- [ ] 训练后立即运行预测测试，确认无特征缺失警告
 
 ---
 
