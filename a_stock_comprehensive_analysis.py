@@ -6,10 +6,12 @@ A股综合分析脚本 - 整合大模型建议和ML预测结果
 
 ⚠️ 运行时机：建议在A股收市后（15:00 CST）运行
 
-版本：v2.0 (2026-07-18)
-- 新增邮件发送功能
-- 新增HTML格式邮件
-- 复用港股的邮件服务模块
+版本：v3.0 (2026-07-18)
+- 新增三周期预测表格（参考港股邮件格式）
+- 新增市场情绪分析
+- 增强ML预测表格（板块、涨跌幅、风险建议）
+- 新增北向资金详细分析
+- 新增涨跌停状态分析
 """
 
 import os
@@ -28,6 +30,7 @@ from a_stock_config import (
     A_STOCK_WATCHLIST,
     A_STOCK_SECTOR_MAPPING,
     get_limit_rate,
+    is_core_holding,
 )
 
 # 导入数据服务
@@ -37,6 +40,18 @@ from data_services.northbound_data import NorthboundDataService
 # 股票名称映射
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
+
+# 三周期模式定义（参考港股）
+THREE_HORIZON_PATTERNS = {
+    'AAA': {'name': '强势上涨', 'action': '积极买入', 'color': '#16a34a'},
+    'AAB': {'name': '短期调整', 'action': '逢低买入', 'color': '#16a34a'},
+    'ABA': {'name': '震荡上行', 'action': '适度买入', 'color': '#ea580c'},
+    'ABB': {'name': '趋势转弱', 'action': '观望', 'color': '#ea580c'},
+    'BAA': {'name': '底部反弹', 'action': '试探买入', 'color': '#ea580c'},
+    'BAB': {'name': '震荡下行', 'action': '谨慎观望', 'color': '#dc2626'},
+    'BBA': {'name': '下跌反弹', 'action': '观望', 'color': '#dc2626'},
+    'BBB': {'name': '持续下跌', 'action': '回避', 'color': '#dc2626'},
+}
 
 
 def read_llm_recommendations(llm_file):
@@ -174,7 +189,183 @@ def analyze_market():
     return result
 
 
-def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data):
+def generate_three_horizon_predictions(stock_list):
+    """
+    生成三周期预测（1天、5天、20天）
+
+    Args:
+        stock_list: 股票代码列表
+
+    Returns:
+        dict: {股票代码: {predictions: {1: {...}, 5: {...}, 20: {...}}, pattern: 'AAA', ...}}
+    """
+    from a_stock_ml_model import AStockTradingModel
+    import pickle
+
+    three_horizon_results = {}
+
+    # 加载三个周期的模型
+    for horizon in [1, 5, 20]:
+        model_path = f'data/a_stock_models/trading_model_catboost_{horizon}d.pkl'
+        if not os.path.exists(model_path):
+            print(f"⚠️ 模型文件不存在: {model_path}")
+            continue
+
+        try:
+            # 加载模型
+            model = AStockTradingModel(horizon=horizon)
+            with open(model_path, 'rb') as f:
+                model_data = pickle.load(f)
+            model.catboost_model = model_data['catboost_model']
+            model.feature_columns = model_data['feature_columns']
+            model.categorical_encoders = model_data.get('categorical_encoders', {})
+            model.community_ids = model_data.get('community_ids', [0, 1, 2, 3, 4, 5, 6])
+
+            print(f"  ✅ 加载 {horizon}d 模型")
+
+            # 预测每只股票
+            for code in stock_list:
+                try:
+                    result = model.predict(code=code, mode='production')
+                    if result:
+                        if code not in three_horizon_results:
+                            three_horizon_results[code] = {'predictions': {}}
+
+                        prob = result.get('probability', 0.5)
+                        direction = '↑' if prob >= 0.5 else '↓'
+
+                        three_horizon_results[code]['predictions'][horizon] = {
+                            'direction': direction,
+                            'probability': prob,
+                            'current_price': result.get('current_price'),
+                            'date': result.get('date'),
+                        }
+                except Exception as e:
+                    print(f"  ⚠️ 预测 {code} {horizon}d 失败: {e}")
+
+        except Exception as e:
+            print(f"  ⚠️ 加载模型 {model_path} 失败: {e}")
+
+    # 计算三周期模式
+    for code, data in three_horizon_results.items():
+        preds = data.get('predictions', {})
+        if len(preds) == 3:
+            # 模式计算：A=上涨(概率>=0.5)，B=下跌(概率<0.5)
+            pattern = ''
+            for h in [1, 5, 20]:
+                if h in preds:
+                    pattern += 'A' if preds[h]['probability'] >= 0.5 else 'B'
+                else:
+                    pattern += 'B'
+
+            data['pattern'] = pattern
+            pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {'name': '未知', 'action': '观望'})
+            data['pattern_info'] = pattern_info
+
+            # 计算历史胜率（简化版，基于概率）
+            probs = [preds[h]['probability'] for h in [1, 5, 20] if h in preds]
+            data['avg_probability'] = np.mean(probs) if probs else 0.5
+            data['win_rate'] = data['avg_probability'] * 100  # 简化估算
+
+    return three_horizon_results
+
+
+def get_market_sentiment(stock_analyses):
+    """
+    计算市场情绪（上涨比例）
+
+    Args:
+        stock_analyses: 股票分析结果
+
+    Returns:
+        dict: {layer: 'normal'/'bear'/'extreme_bear', up_ratio: 0.5, dynamic_threshold: 0.5}
+    """
+    if not stock_analyses:
+        return {'layer': 'normal', 'up_ratio': 0.5, 'dynamic_threshold': 0.5}
+
+    # 计算上涨比例
+    up_count = 0
+    total = 0
+    for code, analysis in stock_analyses.items():
+        change = analysis.get('change_percent', 0)
+        if change is not None:
+            total += 1
+            if change > 0:
+                up_count += 1
+
+    up_ratio = up_count / total if total > 0 else 0.5
+
+    # 计算情绪层级
+    if up_ratio < 0.20:
+        layer = 'extreme_bear'
+        dynamic_threshold = 1.0  # 暂停交易
+    elif up_ratio < 0.30:
+        layer = 'bear'
+        dynamic_threshold = 0.70  # 高置信
+    elif up_ratio < 0.40:
+        layer = 'weak'
+        dynamic_threshold = 0.65  # 谨慎
+    else:
+        layer = 'normal'
+        dynamic_threshold = 0.50  # 标准
+
+    return {
+        'layer': layer,
+        'up_ratio': up_ratio,
+        'dynamic_threshold': dynamic_threshold,
+    }
+
+
+def get_northbound_trend():
+    """
+    获取北向资金趋势
+
+    Returns:
+        dict: 北向资金详细数据
+    """
+    result = {
+        'net_buy': 0,
+        'sh_net_buy': 0,
+        'sz_net_buy': 0,
+        'net_buy_5d_sum': 0,
+        'net_buy_20d_sum': 0,
+        'consecutive_inflow': 0,
+    }
+
+    try:
+        service = NorthboundDataService()
+
+        # 获取最新数据
+        latest = service.get_latest()
+        if latest:
+            result['net_buy'] = latest.get('net_buy', 0)
+            result['sh_net_buy'] = latest.get('sh_net_buy', 0)
+            result['sz_net_buy'] = latest.get('sz_net_buy', 0)
+
+        # 获取历史数据计算趋势
+        history = service.fetch_history()
+        if history is not None and not history.empty:
+            # 累积流入（5日、20日）
+            if 'net_buy' in history.columns:
+                result['net_buy_5d_sum'] = history['net_buy'].tail(5).sum()
+                result['net_buy_20d_sum'] = history['net_buy'].tail(20).sum()
+
+                # 连续流入天数
+                net_buy_series = history['net_buy'].tail(20)
+                consecutive = 0
+                for val in net_buy_series.iloc[::-1]:
+                    if val > 0:
+                        consecutive += 1
+                    else:
+                        break
+                result['consecutive_inflow'] = consecutive
+
+    except Exception as e:
+        print(f"⚠️ 获取北向资金趋势失败: {e}")
+
+    return result
+
+
     """
     生成综合分析报告
 
@@ -307,15 +498,19 @@ A股综合分析报告
     return report
 
 
-def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data):
+def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
+                          three_horizon_results=None, market_sentiment=None, northbound_trend=None):
     """
-    生成HTML格式的邮件内容
+    生成增强版HTML邮件（参考港股详细度）
 
     Args:
         llm_content: 大模型建议内容
         ml_predictions_20d: ML预测结果
         stock_analyses: 股票分析结果
         market_data: 市场数据
+        three_horizon_results: 三周期预测结果（新增）
+        market_sentiment: 市场情绪数据（新增）
+        northbound_trend: 北向资金趋势（新增）
 
     Returns:
         str: HTML格式邮件
@@ -330,34 +525,77 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     nb_buy = market_data.get('northbound_net_buy', 0)
     nb_color = 'green' if nb_buy >= 0 else 'red'
 
+    # 市场情绪层级名称
+    layer_names = {
+        'extreme_bear': ('🔴 极端熊市 - 暂停交易', '#dc2626'),
+        'bear': ('🟠 熊市 - 需概率≥0.70', '#ea580c'),
+        'weak': ('🟡 弱震荡 - 需概率≥0.65', '#eab308'),
+        'normal': ('🟢 正常市场', '#16a34a'),
+    }
+    sentiment_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
+    sentiment_name, sentiment_color = layer_names.get(sentiment_layer, ('正常市场', '#16a34a'))
+    up_ratio = market_sentiment.get('up_ratio', 0.5) if market_sentiment else 0.5
+    dynamic_threshold = market_sentiment.get('dynamic_threshold', 0.5) if market_sentiment else 0.5
+
     html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <style>
-        body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+        body {{ font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }}
         h1 {{ color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }}
-        h2 {{ color: #007bff; margin-top: 30px; }}
+        h2 {{ color: #007bff; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }}
         h3 {{ color: #333; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
-        th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 13px; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
         th {{ background-color: #007bff; color: white; }}
         tr:nth-child(even) {{ background-color: #f9f9f9; }}
         .positive {{ color: green; }}
         .negative {{ color: red; }}
         .market-box {{ background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+        .sentiment-box {{ background: {sentiment_color}15; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid {sentiment_color}; }}
         .stock-card {{ background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 10px 0; }}
-        .prediction-up {{ color: green; font-weight: bold; }}
-        .prediction-down {{ color: red; font-weight: bold; }}
+        .prediction-up {{ color: #16a34a; font-weight: bold; }}
+        .prediction-down {{ color: #dc2626; font-weight: bold; }}
+        .prediction-neutral {{ color: #ea580c; font-weight: bold; }}
         .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }}
+        .core-stock {{ background-color: #fff3cd; }}
+        .pattern-AAA, .pattern-AAB {{ background-color: #dcfce7; }}
+        .pattern-ABA, .pattern-ABB {{ background-color: #fef3c7; }}
+        .pattern-BAA, .pattern-BAB {{ background-color: #fee2e2; }}
+        .pattern-BBA, .pattern-BBB {{ background-color: #fecaca; }}
     </style>
 </head>
 <body>
     <h1>📊 A股综合分析报告</h1>
-    <p>日期: {date_str}</p>
+    <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')}</p>
 
+    <!-- 市场情绪分析 -->
+    <div class="sentiment-box">
+        <h2>📈 市场情绪分析</h2>
+        <table>
+            <tr><th>指标</th><th>数值</th><th>说明</th></tr>
+            <tr>
+                <td><strong>市场情绪</strong></td>
+                <td style="color: {sentiment_color}; font-weight: bold;">{sentiment_name}</td>
+                <td>{'暂停交易' if sentiment_layer == 'extreme_bear' else '正常交易' if sentiment_layer == 'normal' else '谨慎交易'}</td>
+            </tr>
+            <tr>
+                <td>今日上涨比例</td>
+                <td>{up_ratio:.1%}</td>
+                <td>自选股上涨数量占比</td>
+            </tr>
+            <tr>
+                <td>动态置信阈值</td>
+                <td>{dynamic_threshold:.0%}</td>
+                <td>买入信号需达到的概率</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 市场概况 -->
     <div class="market-box">
-        <h2>📈 市场概况</h2>
+        <h2>📊 市场概况</h2>
         <table>
             <tr><th>指标</th><th>数值</th><th>变化</th></tr>
             <tr>
@@ -366,9 +604,19 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                 <td class="{'positive' if sh_change >= 0 else 'negative'}">{sh_change:+.2f}%</td>
             </tr>
             <tr>
-                <td>北向资金净买入</td>
-                <td>{nb_buy:.2f} 亿</td>
-                <td class="{'positive' if nb_buy >= 0 else 'negative'}">{'流入' if nb_buy >= 0 else '流出'}</td>
+                <td>上证 MA20</td>
+                <td>{market_data.get('sh_ma20', 0):.2f}</td>
+                <td>{'📈 站上' if market_data.get('sh_close', 0) >= market_data.get('sh_ma20', 0) else '📉 跌破'} MA20</td>
+            </tr>
+        </table>
+
+        <h3>💰 北向资金</h3>
+        <table>
+            <tr><th>指标</th><th>数值</th><th>趋势</th></tr>
+            <tr>
+                <td>今日净买入</td>
+                <td class="{'positive' if nb_buy >= 0 else 'negative'}">{nb_buy:.2f} 亿</td>
+                <td>{'流入' if nb_buy >= 0 else '流出'}</td>
             </tr>
             <tr>
                 <td>沪股通</td>
@@ -380,78 +628,174 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                 <td>{market_data.get('northbound_sz', 0):.2f} 亿</td>
                 <td>-</td>
             </tr>
-        </table>
+"""
+    # 北向资金趋势
+    if northbound_trend:
+        html += f"""            <tr>
+                <td>5日累积流入</td>
+                <td class="{'positive' if northbound_trend.get('net_buy_5d_sum', 0) >= 0 else 'negative'}">{northbound_trend.get('net_buy_5d_sum', 0):.2f} 亿</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>20日累积流入</td>
+                <td class="{'positive' if northbound_trend.get('net_buy_20d_sum', 0) >= 0 else 'negative'}">{northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>连续流入天数</td>
+                <td>{northbound_trend.get('consecutive_inflow', 0)} 天</td>
+                <td>-</td>
+            </tr>
+"""
+    html += """        </table>
     </div>
+"""
 
-    <h2>📋 自选股分析</h2>
+    # 三周期预测表格（核心新增）
+    if three_horizon_results and len(three_horizon_results) > 0:
+        html += """
+    <h2>🔮 三周期预测结果（核心）</h2>
+    <p style="color: #666; font-size: 12px;">按20天概率排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
     <table>
         <tr>
-            <th>股票</th>
-            <th>代码</th>
-            <th>现价</th>
-            <th>涨跌</th>
-            <th>RSI</th>
-            <th>涨跌停</th>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th>
+            <th>1天预测</th><th>5天预测</th><th>20天预测</th>
+            <th>模式</th><th>建议</th><th>胜率</th><th>核心</th>
+        </tr>
+"""
+        # 按20天概率排序
+        sorted_results = sorted(
+            three_horizon_results.items(),
+            key=lambda x: x[1].get('predictions', {}).get(20, {}).get('probability', 0.5),
+            reverse=True
+        )
+
+        for code, data in sorted_results:
+            name = A_STOCK_WATCHLIST.get(code, code)
+            preds = data.get('predictions', {})
+            pattern = data.get('pattern', '-')
+            pattern_info = data.get('pattern_info', {})
+            win_rate = data.get('win_rate', 0)
+
+            # 获取股票分析数据
+            analysis = stock_analyses.get(code, {})
+            current_price = analysis.get('current_price', '-')
+            change_pct = analysis.get('change_percent', 0)
+            limit_rate = analysis.get('limit_rate', 0.1) * 100
+
+            # 板块信息
+            sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
+            sector_name = sector_info.get('sector_name', '-')
+
+            # 是否核心股
+            is_core = is_core_holding(code) if 'is_core_holding' in dir() else False
+            core_str = '⭐' if is_core else ''
+
+            # 格式化预测（三色系统）
+            def format_pred(h):
+                if h not in preds:
+                    return '-'
+                p = preds[h]
+                prob = p.get('probability', 0.5)
+                direction = p.get('direction', '-')
+                if direction == '↑':
+                    if prob >= 0.60:
+                        return f'<span style="color: #16a34a; font-weight: bold;">↑ {prob:.2f}</span>'
+                    else:
+                        return f'<span style="color: #ea580c; font-weight: bold;">↑ {prob:.2f}</span>'
+                elif direction == '↓':
+                    return f'<span style="color: #dc2626; font-weight: bold;">↓ {prob:.2f}</span>'
+                return f'{direction} {prob:.2f}'
+
+            pred_1d = format_pred(1)
+            pred_5d = format_pred(5)
+            pred_20d = format_pred(20)
+
+            # 涨跌颜色
+            change_str = f"{change_pct:+.2f}%" if change_pct else "-"
+            change_class = 'positive' if change_pct and change_pct >= 0 else 'negative' if change_pct else ''
+
+            # 模式颜色
+            pattern_class = f'pattern-{pattern}' if pattern in THREE_HORIZON_PATTERNS else ''
+
+            # 模式名称
+            pattern_name = pattern_info.get('name', '-') if pattern_info else '-'
+            action = pattern_info.get('action', '-') if pattern_info else '-'
+
+            html += f"""        <tr class="{pattern_class}">
+            <td><strong>{name}</strong></td>
+            <td>{code}</td>
+            <td>{current_price:.2f if current_price else '-'}</td>
+            <td class="{change_class}">{change_str}</td>
+            <td>{sector_name}</td>
+            <td>{pred_1d}</td>
+            <td>{pred_5d}</td>
+            <td>{pred_20d}</td>
+            <td><strong>{pattern_name}</strong><br><small>{pattern}</small></td>
+            <td>{action}</td>
+            <td>{win_rate:.0f}%</td>
+            <td>{core_str}</td>
         </tr>
 """
 
+        html += """    </table>
+"""
+
+    # 自选股详细分析
+    html += """
+    <h2>📋 自选股技术分析</h2>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
+            <th>涨跌停</th><th>RSI</th><th>MA5</th><th>MA20</th>
+            <th>5日涨跌</th><th>20日涨跌</th>
+        </tr>
+"""
     for code, analysis in stock_analyses.items():
         name = analysis.get('name', code)
         price = analysis.get('current_price', '-')
         change = analysis.get('change_percent', 0)
-        rsi = analysis.get('rsi_14', 50)
         limit_rate = analysis.get('limit_rate', 0.1) * 100
+        rsi = analysis.get('rsi_14', 50)
+        ma5 = analysis.get('ma5', 0)
+        ma20 = analysis.get('ma20', 0)
+        return_5d = analysis.get('return_5d', 0)
+        return_20d = analysis.get('return_20d', 0)
 
-        change_class = 'positive' if change >= 0 else 'negative'
+        change_class = 'positive' if change and change >= 0 else 'negative' if change else ''
         rsi_class = 'negative' if rsi > 70 else ('positive' if rsi < 30 else '')
+        rsi_str = f"{rsi:.1f}" if rsi else "-"
+
+        # 涨跌停状态
+        limit_status = ""
+        if change and abs(change) >= limit_rate - 0.1:
+            limit_status = "🔴 涨停" if change > 0 else "🟢 跌停"
 
         html += f"""        <tr>
             <td>{name}</td>
             <td>{code}</td>
-            <td>{price:.2f}</td>
+            <td>{price:.2f if price else '-'}</td>
             <td class="{change_class}">{change:+.2f}%</td>
-            <td class="{rsi_class}">{rsi:.1f}</td>
-            <td>{limit_rate:.0f}%</td>
+            <td>{limit_rate:.0f}% {limit_status}</td>
+            <td class="{rsi_class}">{rsi_str}</td>
+            <td>{ma5:.2f if ma5 else '-'}</td>
+            <td>{ma20:.2f if ma20 else '-'}</td>
+            <td>{return_5d:+.2f}%</td>
+            <td>{return_20d:+.2f}%</td>
         </tr>
 """
 
     html += """    </table>
-
-    <h2>🤖 机器学习预测（20天）</h2>
-    <table>
-        <tr><th>股票</th><th>代码</th><th>预测方向</th><th>置信度</th></tr>
 """
 
-    if ml_predictions_20d is not None and not ml_predictions_20d.empty:
-        for _, row in ml_predictions_20d.iterrows():
-            code = row.get('Stock_Code', '')
-            name = A_STOCK_WATCHLIST.get(code, code)
-            pred_proba = row.get('Prediction_Proba', 0.5)
-            pred_label = '上涨' if pred_proba >= 0.5 else '下跌'
-            confidence = pred_proba if pred_proba >= 0.5 else 1 - pred_proba
-            pred_class = 'prediction-up' if pred_proba >= 0.5 else 'prediction-down'
-
-            html += f"""        <tr>
-            <td>{name}</td>
-            <td>{code}</td>
-            <td class="{pred_class}">{pred_label}</td>
-            <td>{confidence:.1%}</td>
-        </tr>
-"""
-    else:
-        html += '        <tr><td colspan="4">暂无预测数据</td></tr>\n'
-
-    html += """    </table>
-
+    # AI 分析建议（完整版）
+    html += """
     <h2>💡 AI 分析建议</h2>
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
 """
-
-    # 简化LLM内容显示
     if llm_content:
-        # 提取关键建议（前500字符）
-        llm_summary = llm_content[:500] + '...' if len(llm_content) > 500 else llm_content
-        html += llm_summary.replace('\n', '<br>')
+        # 完整显示LLM内容
+        html += llm_content.replace('\n', '<br>')
     else:
         html += '暂无AI建议'
 
@@ -460,13 +804,15 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
     <h2>⚠️ 风险提示</h2>
     <ul>
-        <li>创业板/科创板涨跌停限制20%，主板10%</li>
-        <li>关注北向资金流向变化</li>
-        <li>上证指数跌破MA20时需谨慎</li>
+        <li><strong>涨跌停限制</strong>：创业板/科创板 20%，主板 10%，ST股 5%</li>
+        <li><strong>北向资金</strong>：关注外资流向变化，连续流出需警惕</li>
+        <li><strong>市场情绪</strong>：极端熊市时暂停交易，保护本金</li>
+        <li><strong>动态阈值</strong>：熊市需更高置信度才可买入</li>
     </ul>
 
     <div class="footer">
         <p>📧 本邮件由A股综合分析系统自动生成</p>
+        <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         <p>⚠️ 本报告仅供参考，不构成投资建议</p>
     </div>
 </body>
@@ -624,7 +970,37 @@ def main():
         analysis = get_stock_analysis(code)
         stock_analyses[code] = analysis
 
-    # 5. 生成综合报告
+    # 5. 生成三周期预测（核心新增）
+    print("\n🔮 生成三周期预测（1d/5d/20d）...")
+    three_horizon_results = None
+    if not args.use_cached_predictions:
+        three_horizon_results = generate_three_horizon_predictions(STOCK_LIST)
+        if three_horizon_results:
+            print(f"  ✅ 三周期预测完成: {len(three_horizon_results)} 只股票")
+    else:
+        print("  ⚠️ 使用缓存预测，跳过三周期预测")
+
+    # 6. 计算市场情绪
+    print("\n📈 计算市场情绪...")
+    market_sentiment = get_market_sentiment(stock_analyses)
+    layer_names = {
+        'extreme_bear': '🔴 极端熊市',
+        'bear': '🟠 熊市',
+        'weak': '🟡 弱震荡',
+        'normal': '🟢 正常市场',
+    }
+    print(f"  市场情绪: {layer_names.get(market_sentiment['layer'], market_sentiment['layer'])}")
+    print(f"  上涨比例: {market_sentiment['up_ratio']:.1%}")
+    print(f"  动态阈值: {market_sentiment['dynamic_threshold']:.0%}")
+
+    # 7. 获取北向资金趋势
+    print("\n💰 获取北向资金趋势...")
+    northbound_trend = get_northbound_trend()
+    print(f"  5日累积: {northbound_trend.get('net_buy_5d_sum', 0):.2f} 亿")
+    print(f"  20日累积: {northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿")
+    print(f"  连续流入: {northbound_trend.get('consecutive_inflow', 0)} 天")
+
+    # 8. 生成综合报告
     print("\n📊 生成综合报告...")
     report = generate_comprehensive_report(llm_content, ml_predictions, stock_analyses, market_data)
 
@@ -635,13 +1011,18 @@ def main():
         f.write(report)
     print(f"✅ 报告已保存: {report_file}")
 
-    # 6. 发送邮件
+    # 9. 发送邮件（增强版）
     if send_email_flag:
-        print("\n📊 发送邮件...")
-        html_content = generate_html_email(llm_content, ml_predictions, stock_analyses, market_data)
+        print("\n📊 发送增强版邮件...")
+        html_content = generate_html_email(
+            llm_content, ml_predictions, stock_analyses, market_data,
+            three_horizon_results=three_horizon_results,
+            market_sentiment=market_sentiment,
+            northbound_trend=northbound_trend
+        )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
-        email_subject = f"A股综合分析报告 - {date_str}"
+        email_subject = f"【综合分析】A股三周期预测 - {date_str}"
 
         if send_email(email_subject, report, html_content):
             print("  ✅ 邮件发送成功")
