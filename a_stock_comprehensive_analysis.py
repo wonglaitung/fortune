@@ -1276,45 +1276,18 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <h1>📊 A股综合分析报告</h1>
     <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')}</p>
     <p style="margin: 5px 0 15px 0; font-size: 13px;">📖 <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #2563eb;">A股智能分析系统设计文档</a></p>
+"""
 
-    <!-- 综合买卖建议（核心） -->
+    # ========== 1. 综合买卖建议（核心） ==========
+    if recommendations:
+        html += """
     <h2>📋 综合买卖建议</h2>
     <p style="color: #666; font-size: 12px;">基于大模型分析 + CatBoost预测 + 技术指标综合判断</p>
 """
-
-    # 添加综合买卖建议
-    if recommendations:
         html += _format_recommendations_section(recommendations)
 
-    # 预计算交易建议
-    trade_advice = '暂停交易' if sentiment_layer == 'extreme_bear' else ('正常交易' if sentiment_layer == 'normal' else '谨慎交易')
-
+    # ========== 2. 市场概况 ==========
     html += f"""
-
-    <!-- 市场情绪分析 -->
-    <div class="sentiment-box">
-        <h2>📈 市场情绪分析</h2>
-        <table>
-            <tr><th>指标</th><th>数值</th><th>说明</th></tr>
-            <tr>
-                <td><strong>市场情绪</strong></td>
-                <td style="color: {sentiment_color}; font-weight: bold;">{sentiment_name}</td>
-                <td>{trade_advice}</td>
-            </tr>
-            <tr>
-                <td>今日上涨比例</td>
-                <td>{up_ratio:.1%}</td>
-                <td>全量股票上涨数量占比（53只）</td>
-            </tr>
-            <tr>
-                <td>动态置信阈值</td>
-                <td>{dynamic_threshold:.0%}</td>
-                <td>买入信号需达到的概率</td>
-            </tr>
-        </table>
-    </div>
-
-    <!-- 市场概况 -->
     <div class="market-box">
         <h2>📊 市场概况</h2>
         <table>
@@ -1372,104 +1345,33 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     </div>
 """
 
-    # 三周期预测表格（核心新增）
-    if three_horizon_results and len(three_horizon_results) > 0:
-        html += """
-    <h2>🔮 三周期预测结果（核心）</h2>
-    <p style="color: #666; font-size: 12px;">按20天概率排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
-    <table>
-        <tr>
-            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th>
-            <th>1天预测</th><th>5天预测</th><th>20天预测</th>
-            <th>模式</th><th>建议</th><th>胜率</th><th>核心</th>
-        </tr>
-"""
-        # 按20天概率排序
-        sorted_results = sorted(
-            three_horizon_results.items(),
-            key=lambda x: x[1].get('predictions', {}).get(20, {}).get('probability', 0.5),
-            reverse=True
-        )
-
-        for code, data in sorted_results:
-            name = A_STOCK_WATCHLIST.get(code, code)
-            preds = data.get('predictions', {})
-            pattern = data.get('pattern', '-')
-            pattern_info = data.get('pattern_info', {})
-            win_rate = data.get('win_rate', 0)
-
-            # 获取股票分析数据
-            analysis = stock_analyses.get(code, {})
-            current_price = analysis.get('current_price', '-')
-            change_pct = analysis.get('change_percent', 0)
-            limit_rate = analysis.get('limit_rate', 0.1) * 100
-
-            # 板块信息
-            sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
-            sector_name = sector_info.get('sector_name', '-')
-
-            # 是否核心股
-            is_core = is_core_holding(code) if 'is_core_holding' in dir() else False
-            core_str = '⭐' if is_core else ''
-
-            # 格式化预测（三色系统）
-            def format_pred(h):
-                if h not in preds:
-                    return '-'
-                p = preds[h]
-                prob = p.get('probability', 0.5)
-                direction = p.get('direction', '-')
-                if direction == '↑':
-                    if prob >= 0.60:
-                        return f'<span style="color: #16a34a; font-weight: bold;">↑ {prob:.2f}</span>'
-                    else:
-                        return f'<span style="color: #ea580c; font-weight: bold;">↑ {prob:.2f}</span>'
-                elif direction == '↓':
-                    return f'<span style="color: #dc2626; font-weight: bold;">↓ {prob:.2f}</span>'
-                return f'{direction} {prob:.2f}'
-
-            pred_1d = format_pred(1)
-            pred_5d = format_pred(5)
-            pred_20d = format_pred(20)
-
-            # 涨跌颜色
-            change_str = f"{change_pct:+.2f}%" if change_pct else "-"
-            change_class = 'positive' if change_pct and change_pct >= 0 else 'negative' if change_pct else ''
-
-            # 模式颜色
-            pattern_class = f'pattern-{pattern}' if pattern in THREE_HORIZON_PATTERNS else ''
-
-            # 模式名称
-            pattern_name = pattern_info.get('name', '-') if pattern_info else '-'
-            action = pattern_info.get('action', '-') if pattern_info else '-'
-
-            # 格式化价格
-            price_str = f"{current_price:.2f}" if current_price else "-"
-
-            html += f"""        <tr class="{pattern_class}">
-            <td><strong>{name}</strong></td>
-            <td>{code}</td>
-            <td>{price_str}</td>
-            <td class="{change_class}">{change_str}</td>
-            <td>{sector_name}</td>
-            <td>{pred_1d}</td>
-            <td>{pred_5d}</td>
-            <td>{pred_20d}</td>
-            <td><strong>{pattern_name}</strong><br><small>{pattern}</small></td>
-            <td>{action}</td>
-            <td>{win_rate:.0f}%</td>
-            <td>{core_str}</td>
-        </tr>
+    # ========== 3. 市场情绪分析 ==========
+    trade_advice = '暂停交易' if sentiment_layer == 'extreme_bear' else ('正常交易' if sentiment_layer == 'normal' else '谨慎交易')
+    html += f"""
+    <div class="sentiment-box">
+        <h2>📈 市场情绪分析</h2>
+        <table>
+            <tr><th>指标</th><th>数值</th><th>说明</th></tr>
+            <tr>
+                <td><strong>市场情绪</strong></td>
+                <td style="color: {sentiment_color}; font-weight: bold;">{sentiment_name}</td>
+                <td>{trade_advice}</td>
+            </tr>
+            <tr>
+                <td>今日上涨比例</td>
+                <td>{up_ratio:.1%}</td>
+                <td>全量股票上涨数量占比（53只）</td>
+            </tr>
+            <tr>
+                <td>动态置信阈值</td>
+                <td>{dynamic_threshold:.0%}</td>
+                <td>买入信号需达到的概率</td>
+            </tr>
+        </table>
+    </div>
 """
 
-        html += """    </table>
-"""
-
-    # 板块分析表格
-    if sector_analysis and sector_analysis.get('sector_ranking'):
-        html += format_sectors_html(sector_analysis)
-
-    # 自选股详细分析
+    # ========== 4. 自选股技术分析 ==========
     html += """
     <h2>📋 自选股技术分析</h2>
     <table>
@@ -1522,26 +1424,40 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """    </table>
 """
 
-    # 异常检测表格
-    if anomaly_result and anomaly_result.get('total_count', 0) > 0:
-        html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
-
-    # AI 分析建议（完整版）
+    # ========== 5. AI 分析建议 ==========
     # 预计算生成时间
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    html += f"""
+    html += """
     <h2>💡 AI 分析建议</h2>
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """
     if llm_content:
-        # 完整显示LLM内容
-        html += llm_content.replace('\n', '<br>')
+        # 将Markdown转换为HTML
+        try:
+            import markdown
+            md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'])
+            llm_html = md.convert(llm_content)
+            html += llm_html
+        except ImportError:
+            # 如果没有安装markdown库，使用简单转换
+            html += llm_content.replace('\n', '<br>')
     else:
         html += '暂无AI建议'
 
-    html += f"""
+    html += """
     </div>
+"""
 
+    # ========== 6. 板块分析 ==========
+    if sector_analysis and sector_analysis.get('sector_ranking'):
+        html += format_sectors_html(sector_analysis)
+
+    # ========== 7. 股票异常检测提醒 + LLM异常分析 ==========
+    if anomaly_result and anomaly_result.get('total_count', 0) > 0:
+        html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
+
+    # ========== 8. 风险提示 ==========
+    html += f"""
     <h2>⚠️ 风险提示</h2>
     <ul>
         <li><strong>涨跌停限制</strong>：创业板/科创板 20%，主板 10%，ST股 5%</li>
