@@ -189,6 +189,111 @@ def analyze_market():
     return result
 
 
+def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data):
+    """
+    生成综合分析报告
+
+    Args:
+        llm_content: 大模型建议内容
+        ml_predictions_20d: 20天ML预测
+        stock_analyses: 股票分析结果
+        market_data: 市场数据
+
+    Returns:
+        str: 综合报告
+    """
+    date_str = datetime.now().strftime('%Y-%m-%d')
+
+    report = f"""{'=' * 80}
+A股综合分析报告
+日期: {date_str}
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+{'=' * 80}
+
+## 一、市场概况
+
+### 1.1 上证指数
+- 收盘: {market_data.get('sh_close', 'N/A'):.2f}
+- 涨跌: {market_data.get('sh_change', 0):+.2f}%
+- MA20: {market_data.get('sh_ma20', 'N/A'):.2f}
+- 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
+
+### 1.2 北向资金
+- 净买入: {market_data.get('northbound_net_buy', 0):.2f} 亿
+- 沪股通: {market_data.get('northbound_sh', 0):.2f} 亿
+- 深股通: {market_data.get('northbound_sz', 0):.2f} 亿
+
+---
+
+## 二、自选股技术分析
+
+"""
+
+    # 添加每只股票的分析
+    for code, analysis in stock_analyses.items():
+        name = analysis.get('name', code)
+        report += f"""### {name} ({code})
+
+**基本数据**：
+- 当前价格: {analysis.get('current_price', 'N/A')} 元
+- 今日涨跌: {analysis.get('change_percent', 0):+.2f}%
+- 涨跌停限制: {analysis.get('limit_rate', 0) * 100:.0f}%
+
+**技术指标**：
+- MA5: {analysis.get('ma5', 'N/A'):.2f}
+- MA10: {analysis.get('ma10', 'N/A'):.2f}
+- MA20: {analysis.get('ma20', 'N/A'):.2f}
+- RSI(14): {analysis.get('rsi_14', 'N/A'):.1f}
+
+**近期涨跌**：
+- 5日: {analysis.get('return_5d', 0):+.2f}%
+- 20日: {analysis.get('return_20d', 0):+.2f}%
+
+"""
+
+    # 添加ML预测结果
+    report += """---
+
+## 三、机器学习预测（20天周期）
+
+"""
+    if ml_predictions_20d is not None and not ml_predictions_20d.empty:
+        for _, row in ml_predictions_20d.iterrows():
+            code = row.get('Stock_Code', '')
+            name = A_STOCK_WATCHLIST.get(code, code)
+            pred_proba = row.get('Prediction_Proba', 0.5)
+            direction = '上涨' if pred_proba >= 0.5 else '下跌'
+            confidence = pred_proba if pred_proba >= 0.5 else 1 - pred_proba
+
+            report += f"- **{name} ({code})**: {direction} (置信度: {confidence:.1%})\n"
+
+    # 添加大模型建议
+    if llm_content:
+        report += f"""
+---
+
+## 四、AI 分析建议
+
+{llm_content}
+"""
+
+    report += """
+---
+
+## 五、风险提示
+
+1. **涨跌停限制**：创业板/科创板 20%，主板 10%，ST股 5%
+2. **北向资金**：关注外资流向变化
+3. **市场情绪**：上证指数跌破MA20时需谨慎
+
+---
+
+*本报告仅供参考，不构成投资建议*
+"""
+
+    return report
+
+
 def generate_three_horizon_predictions(stock_list):
     """
     生成三周期预测（1天、5天、20天）
@@ -722,10 +827,13 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             pattern_name = pattern_info.get('name', '-') if pattern_info else '-'
             action = pattern_info.get('action', '-') if pattern_info else '-'
 
+            # 格式化价格
+            price_str = f"{current_price:.2f}" if current_price else "-"
+
             html += f"""        <tr class="{pattern_class}">
             <td><strong>{name}</strong></td>
             <td>{code}</td>
-            <td>{current_price:.2f if current_price else '-'}</td>
+            <td>{price_str}</td>
             <td class="{change_class}">{change_str}</td>
             <td>{sector_name}</td>
             <td>{pred_1d}</td>
@@ -771,15 +879,21 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         if change and abs(change) >= limit_rate - 0.1:
             limit_status = "🔴 涨停" if change > 0 else "🟢 跌停"
 
+        # 格式化数值
+        price_str = f"{price:.2f}" if price else "-"
+        ma5_str = f"{ma5:.2f}" if ma5 else "-"
+        ma20_str = f"{ma20:.2f}" if ma20 else "-"
+        change_str = f"{change:+.2f}%" if change else "-"
+
         html += f"""        <tr>
             <td>{name}</td>
             <td>{code}</td>
-            <td>{price:.2f if price else '-'}</td>
-            <td class="{change_class}">{change:+.2f}%</td>
+            <td>{price_str}</td>
+            <td class="{change_class}">{change_str}</td>
             <td>{limit_rate:.0f}% {limit_status}</td>
             <td class="{rsi_class}">{rsi_str}</td>
-            <td>{ma5:.2f if ma5 else '-'}</td>
-            <td>{ma20:.2f if ma20 else '-'}</td>
+            <td>{ma5_str}</td>
+            <td>{ma20_str}</td>
             <td>{return_5d:+.2f}%</td>
             <td>{return_20d:+.2f}%</td>
         </tr>
