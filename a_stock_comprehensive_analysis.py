@@ -474,6 +474,115 @@ def get_northbound_trend():
     return result
 
 
+def analyze_sectors(stock_analyses: dict) -> dict:
+    """
+    分析板块涨跌幅排名
+
+    Args:
+        stock_analyses: 股票分析结果字典
+
+    Returns:
+        dict: 板块分析结果
+    """
+    from a_stock_config import A_STOCK_SECTOR_MAPPING
+
+    # 按板块聚合
+    sector_data = {}
+    for code, analysis in stock_analyses.items():
+        sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
+        sector_name = sector_info.get('sector', 'unknown')
+
+        if sector_name not in sector_data:
+            sector_data[sector_name] = {
+                'stocks': [],
+                'total_change': 0,
+                'count': 0,
+                'type': sector_info.get('type', 'unknown'),
+            }
+
+        sector_data[sector_name]['stocks'].append({
+            'code': code,
+            'name': analysis.get('name', code),
+            'change': analysis.get('change_percent', 0),
+        })
+        sector_data[sector_name]['total_change'] += analysis.get('change_percent', 0)
+        sector_data[sector_name]['count'] += 1
+
+    # 计算平均涨跌幅并排序
+    sector_ranking = []
+    for sector_name, data in sector_data.items():
+        avg_change = data['total_change'] / data['count'] if data['count'] > 0 else 0
+        # 找出龙头股（涨幅最大的前3只）
+        top_stocks = sorted(data['stocks'], key=lambda x: x['change'], reverse=True)[:3]
+        sector_ranking.append({
+            'sector': sector_name,
+            'type': data['type'],
+            'avg_change': avg_change,
+            'stock_count': data['count'],
+            'top_stocks': top_stocks,
+        })
+
+    # 按平均涨跌幅排序
+    sector_ranking.sort(key=lambda x: x['avg_change'], reverse=True)
+
+    return {
+        'sector_ranking': sector_ranking,
+        'total_sectors': len(sector_ranking),
+    }
+
+
+def format_sectors_html(sector_analysis: dict) -> str:
+    """
+    格式化板块分析为HTML
+
+    Args:
+        sector_analysis: 板块分析结果
+
+    Returns:
+        str: HTML格式的板块分析表格
+    """
+    if not sector_analysis or not sector_analysis.get('sector_ranking'):
+        return ""
+
+    html = """
+    <h2>📊 板块分析（5日涨跌幅排名）</h2>
+    <table>
+        <tr>
+            <th>排名</th><th>板块名称</th><th>类型</th><th>平均涨跌幅</th><th>股票数</th><th>龙头股TOP 3</th>
+        </tr>
+"""
+
+    for idx, sector in enumerate(sector_analysis['sector_ranking'], 1):
+        # 涨跌标识
+        if sector['avg_change'] > 3:
+            icon = "🔥"
+        elif sector['avg_change'] > 0:
+            icon = "📈"
+        else:
+            icon = "📉"
+
+        # 龙头股列表
+        top_stocks_str = " / ".join([
+            f"{s['name']}({s['change']:+.2f}%)"
+            for s in sector['top_stocks']
+        ]) if sector['top_stocks'] else "-"
+
+        html += f"""        <tr>
+            <td>{idx}</td>
+            <td>{icon} {sector['sector']}</td>
+            <td>{sector['type']}</td>
+            <td class="{'positive' if sector['avg_change'] >= 0 else 'negative'}">{sector['avg_change']:+.2f}%</td>
+            <td>{sector['stock_count']}</td>
+            <td>{top_stocks_str}</td>
+        </tr>
+"""
+
+    html += "    </table>\n"
+
+    return html
+
+
+def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data):
     """
     生成综合分析报告
 
@@ -739,7 +848,7 @@ def _format_recommendations_section(recommendations):
 
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
                           three_horizon_results=None, market_sentiment=None, northbound_trend=None,
-                          recommendations=None):
+                          recommendations=None, sector_analysis=None):
     """
     生成增强版HTML邮件（参考港股详细度）
 
@@ -752,6 +861,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         market_sentiment: 市场情绪数据（新增）
         northbound_trend: 北向资金趋势（新增）
         recommendations: 综合买卖建议（新增）
+        sector_analysis: 板块分析结果（新增）
 
     Returns:
         str: HTML格式邮件
@@ -995,6 +1105,10 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
         html += """    </table>
 """
+
+    # 板块分析表格
+    if sector_analysis and sector_analysis.get('sector_ranking'):
+        html += format_sectors_html(sector_analysis)
 
     # 自选股详细分析
     html += """
@@ -1261,7 +1375,15 @@ def main():
     print(f"  20日累积: {northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿")
     print(f"  连续流入: {northbound_trend.get('consecutive_inflow', 0)} 天")
 
-    # 8. 生成综合买卖建议
+    # 8. 分析板块涨跌幅
+    print("\n📊 分析板块涨跌幅...")
+    sector_analysis = analyze_sectors(stock_analyses)
+    if sector_analysis and sector_analysis.get('sector_ranking'):
+        print(f"  板块数量: {sector_analysis['total_sectors']}")
+        top_sector = sector_analysis['sector_ranking'][0]
+        print(f"  领涨板块: {top_sector['sector']} ({top_sector['avg_change']:+.2f}%)")
+
+    # 9. 生成综合买卖建议
     print("\n📊 生成综合买卖建议...")
     recommendations = None
     try:
@@ -1300,7 +1422,8 @@ def main():
             three_horizon_results=three_horizon_results,
             market_sentiment=market_sentiment,
             northbound_trend=northbound_trend,
-            recommendations=recommendations
+            recommendations=recommendations,
+            sector_analysis=sector_analysis
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
