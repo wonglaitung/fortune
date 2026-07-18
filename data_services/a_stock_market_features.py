@@ -247,23 +247,50 @@ class AStockMarketFeatures:
                 return cache_data
 
         try:
+            # 方法1: 尝试外汇即时行情
             df = ak.fx_spot_quote()
             if df is not None and not df.empty:
-                # 找到美元兑人民币
-                usd_cny = df[df['货币对'].str.contains('USD/CNY', case=False, na=False)]
-                if not usd_cny.empty:
-                    # 创建时间序列（使用当日数据）
+                # 检查可用列名（API格式已变更）
+                price_cols = ['最新价', '买报价', '卖报价', '中间价']
+                price_col = None
+                for col in price_cols:
+                    if col in df.columns:
+                        # 检查是否有有效数据（非NaN）
+                        if not df[col].isna().all():
+                            price_col = col
+                            break
+
+                if price_col:
+                    # 找到美元兑人民币
+                    usd_cny = df[df['货币对'].str.contains('USD/CNY', case=False, na=False)]
+                    if not usd_cny.empty and not pd.isna(usd_cny[price_col].iloc[0]):
+                        result = pd.DataFrame({
+                            'date': [datetime.now()],
+                            'rate': [float(usd_cny[price_col].iloc[0])]
+                        })
+                        result = result.set_index('date')
+                        self._cache[cache_key] = (datetime.now(), result)
+                        return result
+
+            # 方法2: 使用 yfinance 获取 USDCNY=X
+            try:
+                import yfinance as yf
+                ticker = yf.Ticker("USDCNY=X")
+                data = ticker.history(period="1d")
+                if not data.empty:
                     result = pd.DataFrame({
                         'date': [datetime.now()],
-                        'rate': [float(usd_cny['最新价'].iloc[0])]
+                        'rate': [float(data['Close'].iloc[-1])]
                     })
                     result = result.set_index('date')
-
-                    # 缓存数据
                     self._cache[cache_key] = (datetime.now(), result)
                     return result
+            except Exception:
+                pass
+
         except Exception as e:
-            logger.warning(f"获取人民币汇率数据失败: {e}")
+            # 静默处理，汇率数据是辅助特征
+            pass
 
         return None
 

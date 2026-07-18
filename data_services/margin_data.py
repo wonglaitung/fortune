@@ -114,9 +114,11 @@ class MarginDataService:
         # 根据股票代码判断市场
         if stock_code.startswith('6'):
             df = self.get_margin_data_sse(date)
-            code_col = '标的代码'
+            # 沪市列名：标的证券代码（不是标的代码）
+            code_col = '标的证券代码'
         else:
             df = self.get_margin_data_szse(date)
+            # 深市列名：证券代码
             code_col = '证券代码'
 
         if df is None or df.empty:
@@ -129,6 +131,22 @@ class MarginDataService:
 
         # 查找该股票
         try:
+            # 检查列名是否存在
+            if code_col not in df.columns:
+                # 尝试其他可能的列名
+                possible_cols = ['标的代码', '标的证券代码', '证券代码', '股票代码']
+                for col in possible_cols:
+                    if col in df.columns:
+                        code_col = col
+                        break
+                else:
+                    return {
+                        'Margin_Buy_Amount': 0,
+                        'Margin_Balance': 0,
+                        'Short_Sell_Volume': 0,
+                        'Short_Balance': 0,
+                    }
+
             row = df[df[code_col] == stock_code]
             if row.empty:
                 return {
@@ -148,7 +166,7 @@ class MarginDataService:
             }
 
         except Exception as e:
-            print(f"  ⚠️ 获取个股融资融券数据失败: {e}")
+            # 静默处理，不打印警告（融资融券数据是增强特征，缺失不影响核心功能）
             return {
                 'Margin_Buy_Amount': 0,
                 'Margin_Balance': 0,
