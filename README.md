@@ -1,8 +1,12 @@
-# <img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产和港股智能分析与交易系统
+# <img src="assets/icon.svg" width="40" height="48" alt="金融智能分析" style="vertical-align: middle; margin-right: 10px;"> 金融资产智能分析与交易系统
 
 **⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
 
-实践**人机混合智能**的理念，开发具备变现能力的金融资产智能量化分析助手。系统整合**大模型智能决策**与**机器学习预测模型**，实时监控加密货币、港股、黄金等金融市场。
+实践**人机混合智能**的理念，开发具备变现能力的金融资产智能量化分析助手。系统整合**大模型智能决策**与**机器学习预测模型**，实时监控**港股**、**A股**、加密货币、黄金等金融市场。
+
+**支持市场**：
+- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测
+- 🇨🇳 **A股** - 三周期预测、综合买卖建议、板块分析（53只股票池）
 
 ---
 
@@ -211,7 +215,73 @@
 
 ⚠️ **重要警告**：股票异常策略**不适用于加密货币市场**，加密货币市场特性不同，需要专门的策略。
 
-### 1.6 大模型智能决策
+### 1.6 A股智能分析系统
+
+**核心设计**：基于港股成熟架构，针对A股市场特性深度定制，实现"机器学习定量 + 大模型定性 + 人来决策"三层决策框架。
+
+**股票池设计**（53只股票）：
+
+| 类型 | 数量 | 用途 | 权重 |
+|------|------|------|------|
+| 核心持仓 | 4只 | 监控、预测、交易 | **3.0** |
+| 扩展股票 | 49只 | 网络分析、样本扩充、产业链锚点 | 1.0 |
+
+**四只核心持仓**：
+
+| 代码 | 名称 | 板块 | 网络角色 |
+|------|------|------|---------|
+| 300440 | 运达科技 | 轨交IT | 轨交信息化网络核心 |
+| 002655 | 共达电声 | 声学电子 | 智能硬件/果链网络节点 |
+| 300765 | 石药创新 | 创新药 | 医药研发网络核心 |
+| 600800 | 渤海化学 | 精细化工 | 化工周期网络节点 |
+
+**A股特有特征**（1077个特征）：
+
+| 类别 | 数量 | 说明 |
+|------|------|------|
+| 涨跌停 | 8 | 涨停/跌停标记、空间、连续涨停 |
+| 北向资金 | 2 | 净买入、累积流入 |
+| 行为金融 | 7 | 凸显性因子、球队硬币因子 |
+| 跨市场联动 | 6 | 铜期货、原油期货、人民币汇率 |
+| 网络特征 | 316 | 中心性、社区、交叉特征 |
+
+**模型验证结果**（20天模型，2026-07-18）：
+
+| 排名 | 特征名 | 重要性 | 类型 |
+|------|--------|--------|------|
+| 1 | net_constraint_CN_10Y_Yield | 3.45 | 网络×利率交叉 |
+| 2 | net_constraint_US_2Y_Yield | 2.79 | 网络×利率交叉 |
+| 3 | Copper_Return_20d | 1.78 | 跨市场联动 |
+| 4 | Low_Limit | 1.64 | 涨跌停特征 |
+
+**综合分析报告**：
+
+| 模块 | 内容 |
+|------|------|
+| **综合买卖建议** | 四类建议（强烈买入、买入、持有、卖出）、价格指引、止损位 |
+| **市场环境分析** | 上证指数技术分析、北向资金趋势、市场情绪 |
+| **板块分析** | 板块涨跌幅排名（53只股票）、龙头股TOP 3 |
+| **异常检测** | 全量股票检测、三级严重度分类、LLM分析 |
+| **三周期预测表格** | 19列完整数据（参考港股） |
+
+**运行命令**：
+
+```bash
+# A股完整分析流程（收市后15:15 CST自动执行）
+./scripts/run_a_stock_analysis.sh
+
+# 单独训练模型
+python3 a_stock_ml_model.py --mode train --horizon 20
+
+# 单独预测
+python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
+```
+
+**A股 GitHub Actions 自动化**：
+- 每个工作日 15:15 CST（A股收市后15分钟）自动执行
+- 训练三周期模型 → 生成预测 → 大模型建议 → 综合分析 → 邮件推送
+
+### 1.7 大模型智能决策
 
 **核心理念**：利用大语言模型（通义千问）的推理能力，整合多维信息生成交易建议。相比传统量化策略，大模型能理解市场上下文，提供更有针对性的建议。
 
@@ -240,7 +310,7 @@
 - 具体的仓位配置建议
 - 风险提示和止损位
 
-### 1.7 股票分析技能
+### 1.8 股票分析技能
 
 **核心价值**：用户询问股票买卖建议时，自动查询综合分析报告，提供12维度专业分析。
 
@@ -271,7 +341,7 @@
 - 市场状态为熊市 → 提高阈值至 0.70
 - 市场状态为震荡市 → 提高阈值至 0.65
 
-### 1.8 风险回报率分析
+### 1.9 风险回报率分析
 
 **核心价值**：在选股时，不仅考虑预期收益，更要评估潜在风险。该工具帮助投资者在多只候选股票中选择风险回报比最优的标的，实现"收益最大化、风险最小化"。
 
@@ -308,7 +378,7 @@
 - 风险回报雷达图
 - 具体的买卖建议
 
-### 1.9 模拟交易系统
+### 1.10 模拟交易系统
 
 **核心价值**：在不投入真实资金的情况下测试策略效果，积累交易经验。支持多种风险偏好，帮助投资者找到适合自己的交易风格。
 
@@ -334,6 +404,7 @@
 ## 二、快速开始
 
 ```bash
+# ============ 港股系统 ============
 # 恒生指数预测
 python3 hsi_prediction.py --no-email
 
@@ -352,8 +423,22 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 # Walk-forward验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 
-# 清除特征缓存
+# ============ A股系统 ============
+# A股完整分析流程（训练→预测→大模型建议→综合分析）
+./scripts/run_a_stock_analysis.sh
+
+# A股模型训练
+python3 a_stock_ml_model.py --mode train --horizon 20
+
+# A股模型预测（仅核心股）
+python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
+
+# ============ 缓存管理 ============
+# 清除港股特征缓存
 rm -rf data/feature_cache/*.pkl
+
+# 清除A股特征缓存
+rm -rf data/a_stock_feature_cache/*.pkl
 ```
 
 ---
@@ -366,7 +451,12 @@ rm -rf data/feature_cache/*.pkl
 腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
 yfinance     基本面数据      综合分析     Walk-forward  JSON文件
 AKShare      南向资金        主力追踪     性能监控
+             北向资金(A股)
 ```
+
+**支持市场**：
+- 🇭🇰 **港股** - 31只自选股，恒生指数预测，南向资金追踪
+- 🇨🇳 **A股** - 53只股票池（4核心+49扩展），北向资金追踪，涨跌停特征
 
 ### 3.1 数据流图
 
@@ -493,21 +583,31 @@ AKShare      南向资金        主力追踪     性能监控
 
 ```
 fortune/
-├── 核心脚本
+├── 核心脚本（港股）
 │   ├── comprehensive_analysis.py       # 综合分析
 │   ├── hsi_prediction.py               # 恒指三周期预测
 │   ├── detect_stock_anomalies.py       # 异常检测
 │   └── simulation_trader.py            # 模拟交易
+├── 核心脚本（A股）
+│   ├── a_stock_ml_model.py             # A股模型训练与预测
+│   ├── a_stock_comprehensive_analysis.py # A股综合分析
+│   ├── a_stock_email.py                # A股大模型建议
+│   └── a_stock_config.py               # A股配置（53只股票池）
 ├── ml_services/                        # 机器学习模块
 │   ├── ml_trading_model.py             # CatBoost模型
 │   └── walk_forward_validation.py      # Walk-forward验证
 ├── data_services/                      # 数据服务
+│   ├── a_stock_data.py                 # A股数据获取
+│   └── a_stock_market_features.py      # A股市场特征
 ├── anomaly_detector/                   # 异常检测
 ├── llm_services/                       # 大模型服务
 ├── docs/                               # 详细文档
+│   └── A_STOCK_DESIGN.md               # A股系统设计文档
 └── data/                               # 数据和缓存
-    ├── stock_cache/                    # 原始数据缓存
-    └── feature_cache/                  # 特征缓存
+    ├── stock_cache/                    # 港股原始数据缓存
+    ├── feature_cache/                  # 港股特征缓存
+    ├── a_stock_models/                 # A股模型和预测结果
+    └── a_stock_feature_cache/          # A股特征缓存
 ```
 
 ---
@@ -517,7 +617,8 @@ fortune/
 | 工作流 | 功能 | 执行时间 |
 |--------|------|----------|
 | `hsi-prediction.yml` | 恒生指数预测 | 工作日 06:00 |
-| `comprehensive-analysis.yml` | 综合分析 | 工作日 16:00 |
+| `comprehensive-analysis.yml` | 港股综合分析 | 工作日 16:00 |
+| `a-stock-comprehensive-analysis.yml` | **A股综合分析** | 工作日 **15:15 CST** |
 | `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
 | `hourly-stock-monitor.yml` | 交易时段监控 | 10:00-15:00 每小时 |
 | `performance-monitor.yml` | 性能报告 | 每月1号 |
@@ -525,23 +626,29 @@ fortune/
 ### 5.1 可用命令汇总
 
 ```bash
-# 核心预测与分析
+# ============ 港股核心预测与分析 ============
 python3 hsi_prediction.py --no-email                    # 恒指预测
 python3 comprehensive_analysis.py                        # 综合分析
 python3 detect_stock_anomalies.py --mode standalone     # 异常检测
 
-# 模型训练与验证
+# ============ A股核心预测与分析 ============
+./scripts/run_a_stock_analysis.sh                        # A股完整流程
+python3 a_stock_ml_model.py --mode train --horizon 20   # A股模型训练
+python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only  # A股预测
+
+# ============ 模型训练与验证（港股）============
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
 
-# 分析工具
+# ============ 分析工具 ============
 python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
 python3 ml_services/performance_monitor.py --mode all --no-email
 python3 ml_services/analyze_causal_chain.py             # 因果链分析
 
-# 缓存管理
-rm -rf data/feature_cache/*.pkl                         # 清除特征缓存
+# ============ 缓存管理 ============
+rm -rf data/feature_cache/*.pkl                         # 清除港股特征缓存
+rm -rf data/a_stock_feature_cache/*.pkl                 # 清除A股特征缓存
 ```
 
 ---
@@ -581,13 +688,15 @@ python hsi_email.py --no-email
 
 | 警告 | 说明 |
 |------|------|
-| **数据泄漏** | Walk-forward 准确率 >65%（个股）或 >80%（恒指）通常有数据泄漏 |
+| **数据泄漏** | Walk-forward 准确率 >65%（个股/A股）或 >80%（恒指）通常有数据泄漏 |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **CatBoost 1天** | 噪音大，仅供参考 |
 | **深度学习** | LSTM/Transformer F1≈0，不推荐 |
 | **Walk-forward** | 唯一可信的验证方法 |
 | **加密货币** | 股票策略不适用 |
 | **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 57%），个股预测需谨慎 |
+| **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练需标签标准化 |
+| **A股股票代码** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失 |
 | **特征缓存版本** | 缓存失效时需清除（`rm -rf data/feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
 | **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
@@ -602,6 +711,7 @@ python hsi_email.py --no-email
 - **[lessons.md](lessons.md)** - 经验教训
 - **[progress.txt](progress.txt)** - 项目进展
 - **[docs/](docs/)** - 详细文档
+  - [A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - **A股系统设计文档**
   - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
   - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程（含 GARCH/HSI Regime）
   - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析

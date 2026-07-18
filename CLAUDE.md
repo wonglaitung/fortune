@@ -28,6 +28,8 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 
 ### 核心功能命令
 
+#### 港股系统
+
 | 任务 | 命令 | 运行时机 |
 |------|------|---------|
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` | 收市后 |
@@ -43,14 +45,31 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
 
+#### A股系统
+
+| 任务 | 命令 | 运行时机 |
+|------|------|---------|
+| **A股综合分析（完整流程）** | `./scripts/run_a_stock_analysis.sh` | ⚠️ 收市后（15:15 CST） |
+| **A股模型训练** | `python3 a_stock_ml_model.py --mode train --horizon 20` | - |
+| **A股模型预测** | `python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only` | - |
+| **A股大模型建议** | `python3 a_stock_email.py --force --no-email` | - |
+| **A股综合分析** | `python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_*.txt --use-cached-predictions` | - |
+| **A股Walk-forward验证** | `python3 a_stock_walk_forward.py --horizon 20` | - |
+
 ### 缓存管理
 
 ```bash
-# 清除特征缓存（新增特征后必须执行）
+# 清除港股特征缓存（新增特征后必须执行）
 rm -rf data/feature_cache/*.pkl
 
-# 清除原始数据缓存
+# 清除港股原始数据缓存
 rm -rf data/stock_cache/*.pkl
+
+# 清除A股特征缓存
+rm -rf data/a_stock_feature_cache/*.pkl
+
+# 清除A股原始数据缓存
+rm -rf data/a_stock_cache/*.pkl
 ```
 
 ---
@@ -75,6 +94,10 @@ rm -rf data/stock_cache/*.pkl
 | **市场情绪数据源** | 必须使用所有股票收益率计算上涨比例，与 walk-forward 验证一致 |
 | **双模式预测** | 收市后预测使用 `mode='production'`（当日数据），Walk-forward 使用 `mode='backtest'`（T-1 数据） |
 | **yfinance 盘中数据** | yfinance 日线数据在盘中可能不准确，推荐使用腾讯财经接口获取实时报价 |
+| **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练时需标签标准化 |
+| **A股股票代码前导零** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失（002655→2655） |
+| **A股样本权重** | 核心股权重3.0倍，扩展股1.0倍，训练时需传入 `sample_weight` |
+| **A股数据泄漏阈值** | 个股准确率正常范围50-60%，>65%为数据泄漏信号 |
 
 ---
 
@@ -108,6 +131,15 @@ AKShare      基本面数据      综合分析     Walk-forward  JSON文件
 - `message_services/wxpusher_bot.py` - WxPusher 推送
 - `message_services/notifier.py` - 统一通知接口
 
+**A股核心模块**：
+- `a_stock_config.py` - A股配置（股票池53只、板块映射、样本权重）
+- `a_stock_ml_model.py` - A股模型训练与预测（1077特征）
+- `a_stock_comprehensive_analysis.py` - A股综合分析（买卖建议+异常检测+板块分析）
+- `a_stock_email.py` - A股大模型建议生成（通义千问）
+- `a_stock_recommendation_generator.py` - 综合买卖建议生成器
+- `data_services/a_stock_data.py` - A股数据获取（AKShare+腾讯财经）
+- `data_services/a_stock_market_features.py` - A股市场特征（涨跌停、北向资金、跨市场联动）
+
 **数据存储**（`data/` - 机器可读）：
 - `data/hsi_models/` - 恒指CatBoost模型（.cbm）和特征配置（.json）
 - `data/stock_cache/` - 原始数据缓存（7天有效期）
@@ -118,6 +150,14 @@ AKShare      基本面数据      综合分析     Walk-forward  JSON文件
 - `data/walk_forward_results/` - Walk-forward 验证结果（CSV/JSON）
 - `data/hyperparams/` - 超参数记录（JSON）
 - `data/analysis_results/` - 分析结果（CSV/JSON）
+
+**A股数据存储**：
+- `data/a_stock_models/` - A股CatBoost模型（1d/5d/20d）和特征重要性
+- `data/a_stock_cache/` - A股原始数据缓存
+- `data/a_stock_feature_cache/` - A股特征缓存
+- `data/a_stock_network_features/` - A股网络特征（JSON）
+- `data/a_stock_llm_recommendations_*.txt` - 通义千问大模型建议
+- `data/a_stock_comprehensive_recommendations_*.txt` - 综合买卖建议
 
 **输出报告**（`output/` - 人类可读）：
 - `output/*.md` - Markdown 分析报告
@@ -403,3 +443,4 @@ test_df[col] = test_df[col].apply(
 - **特征工程**：[docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 完整指南（含案例分析）
 - **三周期分析**：[docs/THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md)
 - **验证方法**：[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)
+- **A股设计**：[docs/A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统完整设计文档
