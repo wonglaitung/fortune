@@ -249,14 +249,8 @@ def save_llm_report(report_content, stock_data_list):
     date_str = datetime.now().strftime('%Y-%m-%d')
     filepath = f'data/a_stock_llm_recommendations_{date_str}.txt'
 
-    # 构建完整报告（使用标准 Markdown 格式）
-    content = f"""---
-title: A股大模型买卖建议报告
-date: {date_str}
-generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
----
-
-# A股大模型买卖建议报告
+    # 构建完整报告（标准 Markdown 格式）
+    content = f"""# A股大模型买卖建议报告
 
 **日期**: {date_str}
 **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
