@@ -1,6 +1,6 @@
 # A股智能分析系统设计文档
 
-> **版本**：v2.1 | **更新日期**：2026-07-18
+> **版本**：v2.3 | **更新日期**：2026-07-19
 
 ---
 
@@ -137,7 +137,7 @@
 ### 3.1 特征架构概览
 
 ```
-特征工程架构（总计 700+ 特征）
+特征工程架构
 ├── 通用特征（继承港股，约 400 个）
 │   ├── 技术指标（80+）：RSI, MACD, 布林带, ATR, ADX
 │   ├── 多周期指标（20+）：Return_1d/5d/10d/20d, Volatility
@@ -158,6 +158,8 @@
 │   └── 结构洞：net_constraint, net_effective_size
 │
 └── 交叉特征（200+）：市场特征 × 网络特征
+
+模型实际使用特征：**1077 个**（全量特征，未启用特征选择）
 ```
 
 ### 3.2 行为金融因子（业界最佳实践）
@@ -314,6 +316,29 @@ label = (future_return > 0).astype(int)
 | 准确率 | 50-60% | **>65%** |
 | 交叉验证准确率 | 50-60% | **>65%** |
 
+### 4.5 模型验证结果（2026-07-18）
+
+**20天模型 Top 10 特征重要性**：
+
+| 排名 | 特征名 | 重要性 | 类型 |
+|------|--------|--------|------|
+| 1 | net_constraint_CN_10Y_Yield | 3.45 | 网络×利率交叉 |
+| 2 | net_constraint_US_2Y_Yield | 2.79 | 网络×利率交叉 |
+| 3 | net_constraint_US_30Y_Yield | 2.31 | 网络×利率交叉 |
+| 4 | Volatility_30pct | 1.92 | 波动率分位数 |
+| 5 | Copper_Return_20d | 1.78 | 跨市场联动 |
+| 6 | Low_Limit | 1.64 | 涨跌停特征 |
+| 7 | High_Limit | 1.58 | 涨跌停特征 |
+| 8 | AStock_Regime_Expected_Duration | 1.47 | A股市场状态 |
+| 9 | Return_250d | 1.46 | 长期收益 |
+| 10 | PB | 1.46 | 基本面估值 |
+
+**关键发现**：
+- 网络特征与利率交叉特征（`net_constraint_CN_10Y_Yield`）重要性最高，验证了网络特征设计的有效性
+- 跨市场联动特征（`Copper_Return_20d`）进入 Top 5，铜价对化工板块有显著预测力
+- A股市场状态特征（`AStock_Regime_*`）被模型有效利用
+- 涨跌停特征（`Low_Limit`/`High_Limit`）重要性高，体现A股特殊性
+
 ---
 
 ## 五、运行流程
@@ -371,9 +396,9 @@ done
 ```
 
 **输出文件**：
-- `data/ml_trading_model_catboost_predictions_1d.csv`
-- `data/ml_trading_model_catboost_predictions_5d.csv`
-- `data/ml_trading_model_catboost_predictions_20d.csv`
+- `data/a_stock_models/ml_predictions_1d.csv`
+- `data/a_stock_models/ml_predictions_5d.csv`
+- `data/a_stock_models/ml_predictions_20d.csv`
 
 #### 步骤 3：生成大模型建议
 
@@ -418,9 +443,9 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 | 模块 | 内容 | 状态 |
 |------|------|------|
 | **综合买卖建议** | 四类建议（强烈买入、买入、持有、卖出）、价格指引、止损位 | ✅ v3.0 新增 |
-| **市场环境分析** | 上证指数技术分析、北向资金趋势（5日/20日累积、连续流入） | ✅ v3.0 增强 |
-| **板块分析** | 板块涨跌幅排名、龙头股TOP 3、板块类型（周期/防御） | ✅ v3.0 新增 |
-| **异常检测提醒** | 三级严重度分类（高/中/低）、异常原因详细说明 | ✅ v3.0 新增 |
+| **市场环境分析** | 上证指数技术分析、北向资金趋势（5日/20日累积、连续流入）、市场情绪（全量53只股票上涨比例） | ✅ v3.0 增强 |
+| **板块分析** | 板块涨跌幅排名（全量53只股票）、龙头股TOP 3、板块类型（周期/防御） | ✅ v3.0 新增 |
+| **异常检测提醒** | 全量股票检测、三级严重度分类、LLM分析（v2.3新增） | ✅ v3.0 新增 |
 | **三周期预测表格** | 12列数据、三色概率系统、模式胜率、核心股标识 | ✅ 已有 |
 | **风险控制建议** | 市场风险评估、总仓位建议、止损策略 | ✅ v3.0 新增 |
 | **AI 分析建议** | 通义千问大模型完整建议 | ✅ 已有 |
@@ -450,6 +475,8 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 
 ### 6.3 异常检测模块
 
+**检测范围**：全量股票（53只），非仅核心股
+
 **检测维度**：
 
 | 维度 | 阈值 | 严重度 |
@@ -462,12 +489,19 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 | **成交量异常** | 量比 > 2 倍 | 低 |
 | **价格偏离** | 偏离 MA20 > 15% | 中 |
 
+**LLM 分析**（v2.3 新增）：
+- 使用通义千问大模型分析异常数据
+- 输出：整体市场状态、板块异动、资金流向、个股亮点、交易启示、风险提示
+- 格式：Markdown 转 HTML 显示
+
 **输出格式**：
 - 高严重度：🔴 红色标记，需立即关注
 - 中严重度：⚠️ 黄色标记，需关注
-- 低严重度：📋 灰色标记，轻微异常
+- 低严重度：📋 灰色标记，轻微异常（最多显示10个）
 
 ### 6.4 板块分析模块
+
+**分析范围**：全量股票（53只），提供完整市场板块概览
 
 **聚合逻辑**：
 1. 按 `A_STOCK_SECTOR_MAPPING` 中的 `sector` 字段聚合
@@ -542,14 +576,21 @@ df['label_normalized'] = df['future_return'] / df['volatility_20d']
 
 ```
 data/
-├── a_stock_cache/                    # 原始数据缓存
+├── a_stock_cache/                    # 原始数据缓存（已清理）
 ├── a_stock_models/                   # CatBoost模型
-│   ├── trading_model_catboost_1d.pkl
-│   ├── trading_model_catboost_5d.pkl
-│   └── trading_model_catboost_20d.pkl
+│   ├── trading_model_catboost_1d.pkl # 1天模型（1.78MB）
+│   ├── trading_model_catboost_5d.pkl # 5天模型（1.78MB）
+│   ├── trading_model_catboost_20d.pkl # 20天模型（1.78MB）
+│   ├── trading_model_catboost_1d_importance.csv   # 1天特征重要性
+│   ├── trading_model_catboost_5d_importance.csv   # 5天特征重要性
+│   ├── trading_model_catboost_20d_importance.csv  # 20天特征重要性（51特征）
+│   ├── ml_predictions_1d.csv         # 1天预测结果
+│   ├── ml_predictions_5d.csv         # 5天预测结果
+│   └── ml_predictions_20d.csv        # 20天预测结果
 ├── a_stock_network_features/         # 网络特征
 │   └── network_features_for_ml.json
-└── ml_trading_model_predictions_*.csv  # 预测结果
+├── a_stock_llm_recommendations_*.txt # 大模型建议
+└── a_stock_comprehensive_recommendations_*.txt # 综合建议
 ```
 
 ---
@@ -558,9 +599,51 @@ data/
 
 | 版本 | 日期 | 主要变更 |
 |------|------|---------|
+| v2.3 | 2026-07-19 | 修复：HTML邮件模板变量插值问题；增强：板块分析/市场情绪/异常检测使用全量股票（53只）；新增：异常检测LLM分析功能；修正：特征数量文档（1077个，非50个） |
+| v2.2 | 2026-07-19 | 新增：模型验证结果（特征重要性）、更新数据目录结构、优化运行流程说明 |
 | v2.1 | 2026-07-18 | 新增：综合分析报告章节（买卖建议、异常检测、板块分析、风险控制） |
 | v2.0 | 2026-07-18 | 重构：按逻辑顺序组织（概述→股票池→特征→模型→流程→风险） |
 | v1.3 | 2026-07-18 | 新增：运行流程章节 |
 | v1.2 | 2026-07-18 | 新增：特征工程详细设计、行为金融因子 |
 | v1.1 | 2026-07-17 | 初始设计：双指数架构、样本权重、网络分组 |
 | v1.0 | 2026-07-16 | 项目启动 |
+
+---
+
+## 十、系统运行状态
+
+### 10.1 当前已部署模块
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 数据获取 | ✅ 已部署 | AKShare + 腾讯财经双数据源 |
+| 特征计算 | ✅ 已部署 | 700+ 特征，含A股特有特征 |
+| 模型训练 | ✅ 已部署 | 三周期模型已训练（1d/5d/20d） |
+| 三周期预测 | ✅ 已部署 | 每日自动生成 |
+| 大模型建议 | ✅ 已部署 | 通义千问 API |
+| 综合分析 | ✅ 已部署 | 买卖建议 + 异常检测 + 板块分析 |
+| 邮件报告 | ✅ 已部署 | HTML 格式，支持多收件人 |
+
+### 10.2 待优化项
+
+| 项目 | 优先级 | 说明 |
+|------|--------|------|
+| Walk-forward 验证 | 高 | 验证模型稳定性，避免过拟合 |
+| 滚动网络特征 | 中 | 防止时序泄漏，动态计算社区ID |
+| 深度学习模型 | 低 | LSTM/Transformer 验证（港股已验证不推荐） |
+| 回测框架 | 低 | 自动化策略回测 |
+
+### 10.3 模型文件信息
+
+**文件大小**：
+- 1天模型：1.78 MB
+- 5天模型：1.78 MB
+- 20天模型：1.78 MB
+
+**特征数量**：
+- 计算特征：~700+（技术指标、网络特征、交叉特征等）
+- 模型使用：**1077 个**（全量特征，所有周期一致）
+
+**训练时间**：约 10-15 分钟/模型
+
+**预测时间**：< 5 秒/股票

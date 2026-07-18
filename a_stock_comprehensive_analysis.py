@@ -1303,7 +1303,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <tr>
                 <td>今日上涨比例</td>
                 <td>{up_ratio:.1%}</td>
-                <td>自选股上涨数量占比</td>
+                <td>全量股票上涨数量占比（53只）</td>
             </tr>
             <tr>
                 <td>动态置信阈值</td>
