@@ -1644,6 +1644,8 @@ def main():
             if pred_data:
                 import pandas as pd
                 pred_df = pd.DataFrame(pred_data)
+                # 确保股票代码为字符串格式，保留前导零
+                pred_df['Stock_Code'] = pred_df['Stock_Code'].astype(str).str.zfill(6)
                 pred_file = os.path.join(A_STOCK_MODEL_DIR, f'ml_predictions_{args.horizon}d.csv')
                 pred_df.to_csv(pred_file, index=False)
                 logger.info(f"A股预测结果已保存到 {pred_file}")

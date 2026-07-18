@@ -75,6 +75,7 @@ PREDICT_SUCCESS=0
 PREDICT_FAILED=0
 for horizon in 1 5 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
+    # 只预测核心股票（4只），用于邮件展示
     python3 a_stock_ml_model.py --mode predict --horizon $horizon --core-only
     if [ $? -ne 0 ]; then
         echo "  ⚠️ 生成 ${horizon}d 预测失败（继续执行其他周期）"

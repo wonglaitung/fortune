@@ -29,7 +29,8 @@ jobs:
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
+          # RECIPIENT_EMAIL: yanbin.hk@gmail.com, mall_cn@hotmail.com, wonglaitung@gmail.com
+          RECIPIENT_EMAIL: wonglaitung@gmail.com
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}

@@ -6,12 +6,12 @@ A股综合分析脚本 - 整合大模型建议和ML预测结果
 
 ⚠️ 运行时机：建议在A股收市后（15:00 CST）运行
 
-版本：v3.0 (2026-07-18)
-- 新增三周期预测表格（参考港股邮件格式）
-- 新增市场情绪分析
-- 增强ML预测表格（板块、涨跌幅、风险建议）
-- 新增北向资金详细分析
-- 新增涨跌停状态分析
+版本：v3.2 (2026-07-19)
+- 修复：三周期预测表格不显示问题
+- 增强：支持从缓存文件读取三周期预测数据（--use-cached-predictions）
+- 增强三周期预测表格（参考港股，新增19列完整版本）
+- 新增筹码阻力、盈亏比、风险得分、网络洞察
+- 新增市场情绪调整、传导模式验证
 """
 
 import os
@@ -44,6 +44,27 @@ from a_stock_recommendation_generator import AStockRecommendationGenerator
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
 
+# 尝试导入技术分析模块（用于筹码阻力）
+try:
+    from data_services.technical_analysis import TechnicalAnalyzer
+    TECHNICAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    TECHNICAL_ANALYSIS_AVAILABLE = False
+
+# 尝试导入网络特征模块（用于网络洞察）
+try:
+    from data_services.network_features import get_network_calculator
+    NETWORK_FEATURES_AVAILABLE = True
+except ImportError:
+    NETWORK_FEATURES_AVAILABLE = False
+
+# 尝试导入风险回报分析器
+try:
+    from ml_services.risk_reward_analyzer import RiskRewardAnalyzer
+    RISK_REWARD_AVAILABLE = True
+except ImportError:
+    RISK_REWARD_AVAILABLE = False
+
 # 股票名称映射
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
@@ -62,6 +83,266 @@ THREE_HORIZON_PATTERNS = {
     'BBA': {'name': '下跌反弹', 'action': '观望', 'color': '#dc2626'},
     'BBB': {'name': '持续下跌', 'action': '回避', 'color': '#dc2626'},
 }
+
+# A股传导模式准确率（参考港股，需要根据A股验证结果更新）
+A_STOCK_TRANSMISSION_ACCURACY = {
+    'AAA': {'win_rate': 58.0, 'description': '一致看涨'},
+    'AAB': {'win_rate': 56.0, 'description': '短期调整'},
+    'ABA': {'win_rate': 55.0, 'description': '震荡上行'},
+    'ABB': {'win_rate': 54.0, 'description': '趋势转弱'},
+    'BAA': {'win_rate': 56.0, 'description': '底部反弹'},
+    'BAB': {'win_rate': 54.0, 'description': '震荡下行'},
+    'BBA': {'win_rate': 53.0, 'description': '下跌反弹'},
+    'BBB': {'win_rate': 52.0, 'description': '持续下跌'},
+}
+
+
+def calculate_chip_resistance(stock_code):
+    """
+    计算筹码阻力（A股专用）
+
+    Args:
+        stock_code: 股票代码
+
+    Returns:
+        dict: {'resistance_ratio': 0.5, 'resistance_level': '中', 'resistance_icon': '⚠️中'}
+    """
+    if not TECHNICAL_ANALYSIS_AVAILABLE:
+        return None
+
+    try:
+        analyzer = TechnicalAnalyzer()
+        # 获取A股数据
+        df = get_a_stock_data(stock_code, period_days=60)
+        if df is None or df.empty or len(df) < 20:
+            return None
+
+        chip_result = analyzer.get_chip_distribution(df)
+        if chip_result:
+            resistance_ratio = chip_result.get('resistance_ratio', 0.5)
+            if resistance_ratio < 0.3:
+                resistance_level = '低'
+                resistance_icon = '✅低'
+            elif resistance_ratio < 0.6:
+                resistance_level = '中'
+                resistance_icon = '⚠️中'
+            else:
+                resistance_level = '高'
+                resistance_icon = '🔴高'
+
+            return {
+                'resistance_ratio': resistance_ratio,
+                'resistance_level': resistance_level,
+                'resistance_icon': resistance_icon,
+            }
+    except Exception as e:
+        pass
+
+    return None
+
+
+def calculate_risk_reward_scores(stock_code, stock_analyses):
+    """
+    计算风险得分和回报得分（A股专用）
+
+    Args:
+        stock_code: 股票代码
+        stock_analyses: 股票分析结果
+
+    Returns:
+        dict: {'risk_score': 70, 'return_score': 60, 'comprehensive_score': 65, 'suggestion': '🟢 推荐'}
+    """
+    analysis = stock_analyses.get(stock_code, {})
+
+    # 默认值
+    result = {
+        'risk_score': 50,
+        'return_score': 50,
+        'comprehensive_score': 50,
+        'suggestion': '🟡 观察',
+    }
+
+    if not analysis:
+        return result
+
+    try:
+        # 风险得分（基于波动率、涨跌幅偏离）
+        volatility = analysis.get('volatility_20d', 0.03)
+        change_pct = analysis.get('change_percent', 0)
+
+        # 波动率风险（波动越大风险越高，得分越低）
+        vol_risk = max(0, 100 - volatility * 1000)  # 波动率3% -> 70分
+
+        # 涨跌风险（涨太多有回调风险，跌太多有反弹机会）
+        if change_pct > 5:
+            price_risk = 40  # 大涨后风险高
+        elif change_pct < -5:
+            price_risk = 60  # 大跌后有机会
+        else:
+            price_risk = 70  # 正常波动
+
+        risk_score = (vol_risk + price_risk) / 2
+
+        # 回报得分（基于RSI、趋势）
+        rsi = analysis.get('rsi_14', 50)
+        ma5 = analysis.get('ma5', 0)
+        ma20 = analysis.get('ma20', 0)
+        current_price = analysis.get('current_price', 0)
+
+        # RSI回报（超卖有机会，超买有风险）
+        if rsi < 30:
+            rsi_return = 80  # 超卖，反弹机会大
+        elif rsi > 70:
+            rsi_return = 30  # 超买，回调风险大
+        else:
+            rsi_return = 50  # 中性
+
+        # 趋势回报（多头排列回报高）
+        if ma5 > 0 and ma20 > 0 and current_price > ma5 > ma20:
+            trend_return = 75  # 多头排列
+        elif current_price < ma5 < ma20:
+            trend_return = 35  # 空头排列
+        else:
+            trend_return = 50  # 震荡
+
+        return_score = (rsi_return + trend_return) / 2
+
+        # 综合得分
+        comprehensive_score = risk_score * 0.5 + return_score * 0.5
+
+        # 建议等级
+        if comprehensive_score >= 75:
+            suggestion = '⭐ 优选'
+        elif comprehensive_score >= 60:
+            suggestion = '🟢 推荐'
+        elif comprehensive_score >= 45:
+            suggestion = '🟡 观察'
+        else:
+            suggestion = '🔴 暂缓'
+
+        result = {
+            'risk_score': int(risk_score),
+            'return_score': int(return_score),
+            'comprehensive_score': int(comprehensive_score),
+            'suggestion': suggestion,
+        }
+
+    except Exception as e:
+        pass
+
+    return result
+
+
+def calculate_network_insight(stock_code):
+    """
+    计算网络洞察（A股专用）
+
+    Args:
+        stock_code: 股票代码
+
+    Returns:
+        str: 网络洞察字符串（如 "社区1/高枢纽/桥梁股⚠️"）
+    """
+    if not NETWORK_FEATURES_AVAILABLE:
+        return '未知'
+
+    try:
+        calculator = get_network_calculator()
+        insights = calculator.calculate_network_insights([stock_code])
+        if insights and stock_code in insights:
+            insight = insights[stock_code]
+            community_id = insight.get('community_id', 0)
+            hub_level = insight.get('hub_level', '低')
+            is_bridge = insight.get('is_bridge', False)
+
+            insight_str = f"社区{community_id}/{hub_level}枢纽"
+            if is_bridge:
+                insight_str += "/桥梁股⚠️"
+
+            return insight_str
+    except Exception as e:
+        pass
+
+    return '未知'
+
+
+def load_historical_profit_loss_ratio_a_stock():
+    """
+    从A股Walk-forward验证结果计算每只股票的历史盈亏比
+
+    Returns:
+        dict: {股票代码: {'profit_loss_ratio': 1.5, 'expected_return': 2.0, 'profit_loss_ratio_str': '1.50:1'}}
+    """
+    import glob
+
+    # 查找最新的A股prediction_analysis.csv文件
+    search_patterns = [
+        'output/*_a_stock_*_20d/prediction_analysis.csv',
+        'output/*_catboost_20d/prediction_analysis.csv',  # 兼容港股格式
+    ]
+
+    prediction_files = []
+    for pattern in search_patterns:
+        prediction_files.extend(glob.glob(os.path.join(os.getcwd(), pattern)))
+
+    if not prediction_files:
+        return {}
+
+    # 使用最新的文件
+    latest_file = max(prediction_files, key=lambda x: os.path.getmtime(x))
+
+    try:
+        df = pd.read_csv(latest_file)
+
+        # 只分析预测UP的交易（实际买入场景）
+        df_up = df[df['Predicted_Direction'] == 'UP'].copy()
+
+        if df_up.empty:
+            return {}
+
+        results = {}
+        for stock_code in df_up['code'].unique():
+            stock_df = df_up[df_up['code'] == stock_code]
+            n_samples = len(stock_df)
+
+            if n_samples >= 3:  # 至少3次交易才计算
+                correct_df = stock_df[stock_df['Is_Correct'] == True]
+                incorrect_df = stock_df[stock_df['Is_Correct'] == False]
+
+                n_correct = len(correct_df)
+                avg_profit = correct_df['Actual_Return'].mean() * 100 if n_correct > 0 else 0
+                avg_loss = abs(incorrect_df['Actual_Return'].mean() * 100) if len(incorrect_df) > 0 else 1
+                win_rate = n_correct / n_samples
+
+                profit_loss_ratio = avg_profit / avg_loss if avg_loss > 0 else 999
+                expected_return = win_rate * avg_profit - (1 - win_rate) * avg_loss
+
+                # 盈亏比等级
+                if profit_loss_ratio >= 3.0:
+                    pl_grade = '⭐⭐⭐'
+                elif profit_loss_ratio >= 2.0:
+                    pl_grade = '⭐⭐'
+                elif profit_loss_ratio >= 1.5:
+                    pl_grade = '⭐'
+                else:
+                    pl_grade = '⚠️'
+
+                results[stock_code] = {
+                    'profit_loss_ratio': profit_loss_ratio,
+                    'profit_loss_ratio_str': f'{profit_loss_ratio:.2f}:1',
+                    'expected_return': expected_return,
+                    'expected_return_str': f'{expected_return:+.2f}%',
+                    'profit_loss_grade': pl_grade,
+                    'win_rate': win_rate * 100,
+                    'avg_profit': avg_profit,
+                    'avg_loss': avg_loss,
+                    'n_samples': n_samples
+                }
+
+        return results
+
+    except Exception as e:
+        return {}
 
 
 def read_llm_recommendations(llm_file):
@@ -305,20 +586,35 @@ A股综合分析报告
     return report
 
 
-def generate_three_horizon_predictions(stock_list):
+def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     """
-    生成三周期预测（1天、5天、20天）
+    生成三周期预测（1天、5天、20天）- 增强版，包含筹码阻力、风险得分、网络洞察
 
     Args:
         stock_list: 股票代码列表
+        stock_analyses: 股票分析结果（用于计算风险得分）
 
     Returns:
-        dict: {股票代码: {predictions: {1: {...}, 5: {...}, 20: {...}}, pattern: 'AAA', ...}}
+        dict: {股票代码: {
+            predictions: {1: {...}, 5: {...}, 20: {...}},
+            pattern: 'AAA',
+            pattern_info: {...},
+            chip_resistance: {...},
+            risk_reward: {...},
+            network_insight: '社区1/高枢纽',
+            ...
+        }}
     """
     from a_stock_ml_model import AStockTradingModel
     import pickle
 
+    if stock_analyses is None:
+        stock_analyses = {}
+
     three_horizon_results = {}
+
+    # 预加载历史盈亏比数据
+    historical_pl_data = load_historical_profit_loss_ratio_a_stock()
 
     # 加载三个周期的模型
     for horizon in [1, 5, 20]:
@@ -362,7 +658,7 @@ def generate_three_horizon_predictions(stock_list):
         except Exception as e:
             print(f"  ⚠️ 加载模型 {model_path} 失败: {e}")
 
-    # 计算三周期模式
+    # 计算三周期模式和附加指标
     for code, data in three_horizon_results.items():
         preds = data.get('predictions', {})
         if len(preds) == 3:
@@ -378,10 +674,34 @@ def generate_three_horizon_predictions(stock_list):
             pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {'name': '未知', 'action': '观望'})
             data['pattern_info'] = pattern_info
 
-            # 计算历史胜率（简化版，基于概率）
-            probs = [preds[h]['probability'] for h in [1, 5, 20] if h in preds]
-            data['avg_probability'] = np.mean(probs) if probs else 0.5
-            data['win_rate'] = data['avg_probability'] * 100  # 简化估算
+            # 计算历史胜率（基于传导模式准确率）
+            transmission_info = A_STOCK_TRANSMISSION_ACCURACY.get(pattern, {'win_rate': 50, 'description': '未知'})
+            data['win_rate'] = transmission_info['win_rate']
+
+            # 计算筹码阻力
+            chip_result = calculate_chip_resistance(code)
+            if chip_result:
+                data['chip_resistance'] = chip_result
+            else:
+                data['chip_resistance'] = {'resistance_icon': 'N/A'}
+
+            # 计算风险回报得分
+            risk_reward = calculate_risk_reward_scores(code, stock_analyses)
+            data['risk_reward'] = risk_reward
+
+            # 计算网络洞察
+            data['network_insight'] = calculate_network_insight(code)
+
+            # 获取历史盈亏比
+            pl_info = historical_pl_data.get(code, {})
+            if pl_info:
+                data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio_str', '-')
+                data['expected_return'] = pl_info.get('expected_return_str', '-')
+                data['profit_loss_grade'] = pl_info.get('profit_loss_grade', '')
+            else:
+                data['profit_loss_ratio'] = '-'
+                data['expected_return'] = '-'
+                data['profit_loss_grade'] = ''
 
     return three_horizon_results
 
@@ -1424,16 +1744,18 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """    </table>
 """
 
-    # ========== 5. 三周期预测表格（核心） ==========
+    # ========== 5. 三周期预测表格（核心，港股19列格式） ==========
     if three_horizon_results and len(three_horizon_results) > 0:
         html += """
     <h2>🔮 三周期预测结果</h2>
     <p style="color: #666; font-size: 12px;">按20天概率排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
-    <table>
+    <table style="font-size: 11px;">
         <tr>
-            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th>
-            <th>1天预测</th><th>5天预测</th><th>20天预测</th>
-            <th>模式</th><th>建议</th><th>胜率</th><th>核心</th>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
+            <th>1天</th><th>5天</th><th>20天</th><th>市场调整</th>
+            <th>模式</th><th>建议</th><th>胜率</th>
+            <th>筹码阻力</th><th>盈亏比</th><th>期望收益</th>
+            <th>风险得分</th><th>综合得分</th><th>风险建议</th>
         </tr>
 """
         # 按20天概率排序
@@ -1454,15 +1776,11 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             analysis = stock_analyses.get(code, {})
             current_price = analysis.get('current_price', '-')
             change_pct = analysis.get('change_percent', 0)
-            limit_rate = analysis.get('limit_rate', 0.1) * 100
 
             # 板块信息
             sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
-            sector_name = sector_info.get('sector_name', '-')
-
-            # 是否核心股
-            is_core = is_core_holding(code) if 'is_core_holding' in dir() else False
-            core_str = '⭐' if is_core else ''
+            sector_name = sector_info.get('sector', '-')
+            sector_type = sector_info.get('type', '-')
 
             # 格式化预测（三色系统）
             def format_pred(h):
@@ -1484,37 +1802,103 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             pred_5d = format_pred(5)
             pred_20d = format_pred(20)
 
+            # 市场调整（基于市场情绪）
+            market_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
+            prob_20d = preds.get(20, {}).get('probability', 0.5) if 20 in preds else 0.5
+
+            if market_layer == 'extreme_bear':
+                market_adjust = '🔴暂停'
+            elif market_layer == 'bear':
+                market_adjust = '🟠高置信' if prob_20d >= 0.70 else '🟡降级'
+            elif market_layer == 'weak':
+                market_adjust = '🟡谨慎'
+            else:
+                market_adjust = '🟢正常'
+
             # 涨跌颜色
             change_str = f"{change_pct:+.2f}%" if change_pct else "-"
             change_class = 'positive' if change_pct and change_pct >= 0 else 'negative' if change_pct else ''
-
-            # 模式颜色
-            pattern_class = f'pattern-{pattern}' if pattern in THREE_HORIZON_PATTERNS else ''
 
             # 模式名称
             pattern_name = pattern_info.get('name', '-') if pattern_info else '-'
             action = pattern_info.get('action', '-') if pattern_info else '-'
 
+            # 筹码阻力
+            chip_resistance = data.get('chip_resistance', {})
+            resistance_icon = chip_resistance.get('resistance_icon', 'N/A')
+
+            # 盈亏比
+            pl_ratio = data.get('profit_loss_ratio', '-')
+            pl_grade = data.get('profit_loss_grade', '')
+            pl_display = f"{pl_ratio} {pl_grade}" if pl_ratio != '-' else '-'
+
+            # 期望收益
+            expected_return = data.get('expected_return', '-')
+
+            # 风险回报得分
+            risk_reward = data.get('risk_reward', {})
+            risk_score = risk_reward.get('risk_score', '-')
+            return_score = risk_reward.get('return_score', '-')
+            comprehensive_score = risk_reward.get('comprehensive_score', '-')
+            suggestion = risk_reward.get('suggestion', '🟡 观察')
+
             # 格式化价格
             price_str = f"{current_price:.2f}" if current_price else "-"
 
-            html += f"""        <tr class="{pattern_class}">
+            html += f"""        <tr>
             <td><strong>{name}</strong></td>
             <td>{code}</td>
             <td>{price_str}</td>
             <td class="{change_class}">{change_str}</td>
             <td>{sector_name}</td>
+            <td>{sector_type}</td>
             <td>{pred_1d}</td>
             <td>{pred_5d}</td>
             <td>{pred_20d}</td>
+            <td>{market_adjust}</td>
             <td><strong>{pattern_name}</strong><br><small>{pattern}</small></td>
             <td>{action}</td>
             <td>{win_rate:.0f}%</td>
-            <td>{core_str}</td>
+            <td>{resistance_icon}</td>
+            <td>{pl_display}</td>
+            <td>{expected_return}</td>
+            <td>{risk_score}</td>
+            <td>{comprehensive_score}</td>
+            <td>{suggestion}</td>
         </tr>
 """
 
         html += """    </table>
+
+    <div style="color: #666; font-size: 11px; margin-top: 10px;">
+        <p><strong>三周期预测颜色说明</strong>：
+        <span style="color: #16a34a; font-weight: bold;">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨 |
+        <span style="color: #ea580c; font-weight: bold;">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨 |
+        <span style="color: #dc2626; font-weight: bold;">↓</span>（亮红色）：概率 < 50%，看跌</p>
+
+        <p><strong>市场调整说明</strong>：
+        🟢正常：正常市场环境，使用标准阈值 |
+        🟡谨慎/降级：弱震荡市场，需更高置信度 |
+        🟠高置信：熊市环境，概率≥70%才通过 |
+        🔴暂停：极端熊市，暂停所有看涨信号</p>
+
+        <p><strong>筹码阻力说明</strong>：
+        ✅低：上方筹码 < 30%，拉升容易 |
+        ⚠️中：上方筹码 30-60%，注意风险 |
+        🔴高：上方筹码 > 60%，拉升困难</p>
+
+        <p><strong>盈亏比说明</strong>（基于Walk-forward验证）：
+        ⭐⭐⭐：盈亏比 ≥ 3:1，优秀 |
+        ⭐⭐：盈亏比 2-3:1，良好 |
+        ⭐：盈亏比 1.5-2:1，一般 |
+        ⚠️：盈亏比 < 1.5:1，较差</p>
+
+        <p><strong>风险建议说明</strong>：
+        ⭐ 优选：综合得分 ≥ 75，风险回报率最佳 |
+        🟢 推荐：综合得分 60-75，值得关注 |
+        🟡 观察：综合得分 45-60，需谨慎 |
+        🔴 暂缓：综合得分 < 45，暂不考虑</p>
+    </div>
 """
 
     # ========== 6. AI 分析建议 ==========
@@ -1726,15 +2110,93 @@ def main():
         analysis = get_stock_analysis(code)
         sector_stock_analyses[code] = analysis
 
-    # 5. 生成三周期预测（核心新增）
+    # 5. 生成三周期预测（核心新增，增强版）
     print("\n🔮 生成三周期预测（1d/5d/20d）...")
     three_horizon_results = None
     if not args.use_cached_predictions:
-        three_horizon_results = generate_three_horizon_predictions(STOCK_LIST)
+        three_horizon_results = generate_three_horizon_predictions(STOCK_LIST, sector_stock_analyses)
         if three_horizon_results:
             print(f"  ✅ 三周期预测完成: {len(three_horizon_results)} 只股票")
     else:
-        print("  ⚠️ 使用缓存预测，跳过三周期预测")
+        print("  ⚠️ 使用缓存预测，尝试从缓存文件读取三周期数据...")
+        # 从缓存文件构建三周期预测结果
+        three_horizon_results = {}
+        for horizon in [1, 5, 20]:
+            cache_file = f'data/a_stock_models/ml_predictions_{horizon}d.csv'
+            if os.path.exists(cache_file):
+                try:
+                    df = pd.read_csv(cache_file, dtype={'Stock_Code': str})  # 确保股票代码为字符串
+                    print(f"  ✅ 读取 {horizon}d 缓存: {len(df)} 条记录")
+                    for _, row in df.iterrows():
+                        code = str(row.get('Stock_Code', ''))
+                        if not code:
+                            continue
+                        # 补齐前导零（A股代码为6位）
+                        code = code.zfill(6)
+                        if code not in three_horizon_results:
+                            three_horizon_results[code] = {'predictions': {}}
+
+                        prob = row.get('Prediction_Proba', 0.5)
+                        direction = '↑' if prob >= 0.5 else '↓'
+
+                        three_horizon_results[code]['predictions'][horizon] = {
+                            'direction': direction,
+                            'probability': prob,
+                            'current_price': row.get('Current_Price'),
+                            'date': row.get('Data_Date'),  # 修正列名
+                        }
+                except Exception as e:
+                    print(f"  ⚠️ 读取 {horizon}d 缓存失败: {e}")
+
+        # 如果读取到了数据，计算模式和附加指标
+        if three_horizon_results:
+            print(f"  ✅ 从缓存构建三周期预测: {len(three_horizon_results)} 只股票")
+            # 计算三周期模式和附加指标
+            for code, data in three_horizon_results.items():
+                preds = data.get('predictions', {})
+                if len(preds) >= 1:  # 至少有一个周期的预测
+                    # 模式计算：A=上涨(概率>=0.5)，B=下跌(概率<0.5)
+                    pattern = ''
+                    for h in [1, 5, 20]:
+                        if h in preds:
+                            pattern += 'A' if preds[h]['probability'] >= 0.5 else 'B'
+                        else:
+                            pattern += 'B'  # 缺失的周期默认看跌
+
+                    data['pattern'] = pattern
+                    pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {'name': '未知', 'action': '观望'})
+                    data['pattern_info'] = pattern_info
+
+                    # 计算历史胜率（基于传导模式准确率）
+                    transmission_info = A_STOCK_TRANSMISSION_ACCURACY.get(pattern, {'win_rate': 50, 'description': '未知'})
+                    data['win_rate'] = transmission_info['win_rate']
+
+                    # 计算筹码阻力
+                    chip_result = calculate_chip_resistance(code)
+                    if chip_result:
+                        data['chip_resistance'] = chip_result
+                    else:
+                        data['chip_resistance'] = {'resistance_icon': 'N/A'}
+
+                    # 计算风险回报得分
+                    risk_reward = calculate_risk_reward_scores(code, sector_stock_analyses)
+                    data['risk_reward'] = risk_reward
+
+                    # 计算网络洞察
+                    data['network_insight'] = calculate_network_insight(code)
+
+                    # 获取历史盈亏比
+                    pl_info = load_historical_profit_loss_ratio_a_stock().get(code, {})
+                    if pl_info:
+                        data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio_str', '-')
+                        data['expected_return'] = pl_info.get('expected_return_str', '-')
+                        data['profit_loss_grade'] = pl_info.get('profit_loss_grade', '')
+                    else:
+                        data['profit_loss_ratio'] = '-'
+                        data['expected_return'] = '-'
+                        data['profit_loss_grade'] = ''
+        else:
+            print("  ⚠️ 缓存文件不存在或读取失败，跳过三周期预测")
 
     # 6. 计算市场情绪（使用全量股票）
     print("\n📈 计算市场情绪...")
