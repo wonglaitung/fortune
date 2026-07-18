@@ -1112,7 +1112,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 </head>
 <body>
     <h1>📊 A股综合分析报告</h1>
-    <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')} | <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #666; font-size: 12px;">设计文档</a></p>
+    <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')}</p>
+    <p style="margin: 5px 0 15px 0; font-size: 13px;">📖 <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #2563eb;">A股智能分析系统设计文档</a></p>
 
     <!-- 综合买卖建议（核心） -->
     <h2>📋 综合买卖建议</h2>
