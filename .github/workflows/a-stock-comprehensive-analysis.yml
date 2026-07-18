@@ -1,0 +1,84 @@
+name: A股综合分析邮件提醒
+
+on:
+  schedule:
+    # 每天A股交易时段执行 (周一到周五，下午15:15 北京时间，即A股收市后15分钟)
+    - cron: '15 7 * * 1-5'
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run A股综合分析脚本
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: mall_cn@hotmail.com, wonglaitung@gmail.com
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
+          QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
+        run: |
+          bash scripts/run_a_stock_analysis.sh
+
+      - name: Commit prediction results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # 先拉取远程更新
+          git fetch origin main
+          # 如果本地有未提交的更改，先暂存
+          if ! git diff --quiet; then
+            git stash push -m "Temporarily stash changes before rebase"
+          fi
+          # 尝试rebase
+          if git rebase origin/main; then
+            # rebase成功，恢复之前暂存的更改
+            if git stash list | grep -q "Temporarily stash changes before rebase"; then
+              git stash pop
+            fi
+          else
+            # rebase失败，中止rebase
+            git rebase --abort
+            # 恢复之前暂存的更改
+            if git stash list | grep -q "Temporarily stash changes before rebase"; then
+              git stash pop
+            fi
+            # 使用merge代替rebase
+            git merge origin/main -m "Merge remote changes before updating A股 prediction history"
+          fi
+          # 添加A股预测结果文件
+          git add data/a_stock_models/*.pkl
+          git add data/a_stock_models/*.csv
+          git add data/a_stock_llm_recommendations_*.txt
+          git add data/a_stock_comprehensive_recommendations_*.txt
+          git add data/ml_trading_model_catboost_predictions_*.csv
+          # 检查是否有更改需要提交
+          if ! git diff --staged --quiet; then
+            git commit -m "Update A股 prediction results [skip ci]"
+            # 推送时处理可能的冲突
+            if ! git push; then
+              # 推送失败，拉取最新更改
+              git pull --rebase origin main
+              # 再次尝试推送
+              git push
+            fi
+          else
+            echo "没有新的A股预测结果需要提交"
+          fi
