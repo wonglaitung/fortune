@@ -41,6 +41,9 @@ from data_services.northbound_data import NorthboundDataService
 # 导入综合买卖建议生成器
 from a_stock_recommendation_generator import AStockRecommendationGenerator
 
+# 导入LLM服务
+from llm_services.qwen_engine import chat_with_llm
+
 # 股票名称映射
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
@@ -639,12 +642,145 @@ def detect_stock_anomalies(stock_analyses: dict, market_data: dict) -> dict:
     }
 
 
-def format_anomalies_html(anomaly_result: dict) -> str:
+def format_anomaly_summary_for_llm(anomaly_result: dict) -> str:
+    """
+    将异常数据格式化为大模型可理解的摘要
+
+    Args:
+        anomaly_result: 异常检测结果
+
+    Returns:
+        str: 格式化的异常摘要
+    """
+    if not anomaly_result or anomaly_result.get('total_count', 0) == 0:
+        return "今日未检测到异常"
+
+    anomalies = anomaly_result.get('anomalies', {})
+    high_anomalies = anomalies.get('high', [])
+    medium_anomalies = anomalies.get('medium', [])
+    low_anomalies = anomalies.get('low', [])
+
+    summary_lines = []
+
+    # 高严重度异常
+    if high_anomalies:
+        summary_lines.append(f"## 高严重度异常（{len(high_anomalies)}只）")
+        for a in high_anomalies:
+            code = a['code']
+            name = a['name']
+            change = a.get('change', 0)
+            rsi = a.get('rsi', 50)
+            reasons = a.get('reasons', [])
+            sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
+            sector_name = sector_info.get('sector_name', '未知板块')
+
+            summary_lines.append(f"- {code} {name}（{sector_name}）：当日{change:+.2f}%，RSI {rsi:.1f}，{', '.join(reasons)}")
+        summary_lines.append("")
+
+    # 中严重度异常
+    if medium_anomalies:
+        summary_lines.append(f"## 中严重度异常（{len(medium_anomalies)}只）")
+        for a in medium_anomalies:
+            code = a['code']
+            name = a['name']
+            change = a.get('change', 0)
+            rsi = a.get('rsi', 50)
+            reasons = a.get('reasons', [])
+            sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
+            sector_name = sector_info.get('sector_name', '未知板块')
+
+            summary_lines.append(f"- {code} {name}（{sector_name}）：当日{change:+.2f}%，RSI {rsi:.1f}，{', '.join(reasons)}")
+        summary_lines.append("")
+
+    # 低严重度异常
+    if low_anomalies:
+        summary_lines.append(f"## 低严重度异常（{len(low_anomalies)}只）")
+        for a in low_anomalies[:10]:  # 最多显示10只
+            code = a['code']
+            name = a['name']
+            change = a.get('change', 0)
+            rsi = a.get('rsi', 50)
+            sector_info = A_STOCK_SECTOR_MAPPING.get(code, {})
+            sector_name = sector_info.get('sector_name', '未知板块')
+
+            summary_lines.append(f"- {code} {name}（{sector_name}）：当日{change:+.2f}%，RSI {rsi:.1f}")
+        if len(low_anomalies) > 10:
+            summary_lines.append(f"- ... 还有 {len(low_anomalies) - 10} 只低严重度异常")
+        summary_lines.append("")
+
+    # 添加统计摘要
+    all_anomalies = high_anomalies + medium_anomalies + low_anomalies
+    oversold_count = sum(1 for a in all_anomalies if a.get('rsi', 50) < 30)
+    overbought_count = sum(1 for a in all_anomalies if a.get('rsi', 50) > 70)
+    limit_up_count = sum(1 for a in all_anomalies if a.get('change', 0) > 9)
+    limit_down_count = sum(1 for a in all_anomalies if a.get('change', 0) < -9)
+
+    summary_lines.append("## 统计摘要")
+    summary_lines.append(f"- 总异常数：{anomaly_result['total_count']}只")
+    summary_lines.append(f"- RSI超卖（<30）：{oversold_count}只")
+    summary_lines.append(f"- RSI超买（>70）：{overbought_count}只")
+    summary_lines.append(f"- 接近涨停：{limit_up_count}只")
+    summary_lines.append(f"- 接近跌停：{limit_down_count}只")
+
+    return "\n".join(summary_lines)
+
+
+def analyze_anomalies_with_llm(anomaly_result: dict) -> str:
+    """
+    使用大模型分析异常数据
+
+    Args:
+        anomaly_result: 异常检测结果
+
+    Returns:
+        str: 大模型生成的分析报告（Markdown格式）
+    """
+    if not anomaly_result or anomaly_result.get('total_count', 0) == 0:
+        return "✅ 未检测到异常，市场波动正常"
+
+    # 构建异常数据摘要
+    anomaly_summary = format_anomaly_summary_for_llm(anomaly_result)
+
+    # 构建提示词
+    prompt = f"""你是A股量化分析师。请分析以下股票异常数据，提供深度洞察。
+
+## 异常数据
+
+{anomaly_summary}
+
+## 分析要求
+
+请从以下角度分析（但不限于）：
+1. **整体市场状态**：超卖/超买比例、市场情绪判断
+2. **板块异动**：哪些板块集体异动、板块轮动信号
+3. **资金流向**：主力资金、北向资金的流向判断
+4. **个股亮点**：值得特别关注的个股及原因
+5. **交易启示**：基于异常信号的操作建议（表格形式）
+6. **风险提示**：需要警惕的风险点
+
+输出格式要求：
+- 使用Markdown格式
+- 表格优先，简洁专业
+- 每个分析板块用二级标题分隔
+- 交易启示用表格展示（信号|解读|操作建议）
+- 总字数控制在500字以内"""
+
+    # 调用大模型
+    try:
+        response = chat_with_llm(prompt, enable_thinking=False)
+        return response
+    except Exception as e:
+        print(f"⚠️ 大模型分析异常失败: {e}")
+        return f"⚠️ 大模型分析失败: {e}"
+
+
+def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None) -> str:
     """
     格式化异常检测为HTML
 
     Args:
         anomaly_result: 异常检测结果
+        anomaly_llm_analysis: LLM异常分析结果（新增）
 
     Returns:
         str: HTML格式的异常检测表格
@@ -656,7 +792,7 @@ def format_anomalies_html(anomaly_result: dict) -> str:
 
     html = f"""
     <h2>🔴 股票异常检测提醒</h2>
-    <p style="color: #666; font-size: 12px;">检测到 {anomaly_result['total_count']} 个异常</p>
+    <p style="color: #666; font-size: 12px;">检测到 {anomaly_result['total_count']} 个异常（全量股票）</p>
 """
 
     # 高严重度
@@ -703,16 +839,17 @@ def format_anomalies_html(anomaly_result: dict) -> str:
 """
         html += "    </table>\n"
 
-    # 低严重度
+    # 低严重度（最多显示10个）
     if anomalies.get('low'):
-        html += """
-    <h3>📋 低严重度异常</h3>
+        low_anomalies = anomalies['low'][:10]
+        html += f"""
+    <h3>📋 低严重度异常（显示前10个，共{len(anomalies['low'])}个）</h3>
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>异常原因</th>
         </tr>
 """
-        for a in anomalies['low']:
+        for a in low_anomalies:
             change_class = 'positive' if a['change'] >= 0 else 'negative'
             html += f"""        <tr>
             <td>{a['name']}</td>
@@ -723,6 +860,15 @@ def format_anomalies_html(anomaly_result: dict) -> str:
         </tr>
 """
         html += "    </table>\n"
+
+    # LLM异常分析（新增）
+    if anomaly_llm_analysis:
+        html += f"""
+    <h3>🤖 LLM异常分析</h3>
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
+{anomaly_llm_analysis.replace(chr(10), '<br>')}
+    </div>
+"""
 
     return html
 
@@ -1044,7 +1190,8 @@ def _format_recommendations_section(recommendations):
 
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
                           three_horizon_results=None, market_sentiment=None, northbound_trend=None,
-                          recommendations=None, sector_analysis=None, anomaly_result=None):
+                          recommendations=None, sector_analysis=None, anomaly_result=None,
+                          anomaly_llm_analysis=None):
     """
     生成增强版HTML邮件（参考港股详细度）
 
@@ -1059,6 +1206,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         recommendations: 综合买卖建议（新增）
         sector_analysis: 板块分析结果（新增）
         anomaly_result: 异常检测结果（新增）
+        anomaly_llm_analysis: LLM异常分析结果（新增）
 
     Returns:
         str: HTML格式邮件
@@ -1366,7 +1514,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
     # 异常检测表格
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
-        html += format_anomalies_html(anomaly_result)
+        html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
 
     # AI 分析建议（完整版）
     # 预计算生成时间
@@ -1598,14 +1746,24 @@ def main():
         top_sector = sector_analysis['sector_ranking'][0]
         print(f"  领涨板块: {top_sector['sector']} ({top_sector['avg_change']:+.2f}%)")
 
-    # 9. 检测股票异常
+    # 9. 检测股票异常（使用全量股票）
     print("\n🔴 检测股票异常...")
-    anomaly_result = detect_stock_anomalies(stock_analyses, market_data or {})
+    anomaly_result = detect_stock_anomalies(sector_stock_analyses, market_data or {})
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
         print(f"  异常总数: {anomaly_result['total_count']} 个")
         print(f"  高严重度: {anomaly_result['high_count']} 个")
         print(f"  中严重度: {anomaly_result['medium_count']} 个")
         print(f"  低严重度: {anomaly_result['low_count']} 个")
+
+    # 9b. 使用LLM分析异常
+    anomaly_llm_analysis = None
+    if anomaly_result and anomaly_result.get('total_count', 0) > 0:
+        print("\n🤖 使用LLM分析异常...")
+        try:
+            anomaly_llm_analysis = analyze_anomalies_with_llm(anomaly_result)
+            print("  ✅ LLM异常分析完成")
+        except Exception as e:
+            print(f"  ⚠️ LLM异常分析失败: {e}")
 
     # 10. 生成综合买卖建议
     print("\n📊 生成综合买卖建议...")
@@ -1648,7 +1806,8 @@ def main():
             northbound_trend=northbound_trend,
             recommendations=recommendations,
             sector_analysis=sector_analysis,
-            anomaly_result=anomaly_result
+            anomaly_result=anomaly_result,
+            anomaly_llm_analysis=anomaly_llm_analysis
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
