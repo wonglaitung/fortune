@@ -1114,6 +1114,14 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <h1>📊 A股综合分析报告</h1>
     <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')}</p>
 
+    <!-- 设计文档链接 -->
+    <div style="background: #e0f2fe; padding: 10px 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #0284c7;">
+        <p style="margin: 0; color: #0369a1;">
+            📖 <strong>系统设计文档</strong>：
+            <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #0284c7; font-weight: bold;">A股智能分析系统设计文档</a>
+        </p>
+    </div>
+
     <!-- 综合买卖建议（核心） -->
     <h2>📋 综合买卖建议</h2>
     <p style="color: #666; font-size: 12px;">基于大模型分析 + CatBoost预测 + 技术指标综合判断</p>
@@ -1384,7 +1392,6 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
     <div class="footer">
         <p>📧 本邮件由A股综合分析系统自动生成</p>
-        <p>📖 <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #2563eb;">A股系统设计文档</a></p>
         <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         <p>⚠️ 本报告仅供参考，不构成投资建议</p>
     </div>
