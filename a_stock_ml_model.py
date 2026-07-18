@@ -1272,7 +1272,7 @@ class AStockTradingModel(CatBoostModel):
             return feat_imp.head(top_n)
         return feat_imp
 
-    def predict(self, code=None, predict_date=None, horizon=None, use_feature_cache=True, mode='production'):
+    def predict(self, code=None, predict_date=None, horizon=None, use_feature_cache=True, mode='production', core_only=False):
         """
         生成A股预测（重写父类方法，使用A股特征工程）
 
@@ -1284,18 +1284,28 @@ class AStockTradingModel(CatBoostModel):
             mode: 预测模式
                 - 'production': 收市后预测（默认），使用当日数据
                 - 'backtest': Walk-forward 验证，使用 T-1 数据
+            core_only: 是否只预测核心持仓股（默认 False，预测所有股票）
         """
         if horizon is None:
             horizon = self.horizon
 
         logger.info("=" * 60)
         logger.info(f"开始生成A股预测（预测周期: {horizon}天）")
+        if core_only:
+            logger.info("预测范围: 核心持仓股（4只）")
         logger.info("=" * 60)
 
-        # 如果没有指定股票代码，预测所有自选股
+        # 确定预测股票列表
+        from a_stock_config import A_STOCK_CORE_HOLDINGS
+        if core_only:
+            predict_list = list(A_STOCK_CORE_HOLDINGS.keys())
+        else:
+            predict_list = self.stock_list
+
+        # 如果没有指定股票代码，预测股票列表
         if code is None:
             results = []
-            for stock_code in self.stock_list:
+            for stock_code in predict_list:
                 try:
                     result = self._predict_single_stock(
                         stock_code, predict_date, horizon,
@@ -1550,6 +1560,8 @@ def main():
                        help='股票代码列表，逗号分隔')
     parser.add_argument('--use-cross-sectional-label', action='store_true',
                        help='使用截面标准化标签（业界推荐用于月度预测）')
+    parser.add_argument('--core-only', action='store_true',
+                       help='仅预测核心持仓股（4只）')
 
     args = parser.parse_args()
 
@@ -1597,7 +1609,8 @@ def main():
         predictions = model.predict(
             predict_date=args.predict_date,
             use_feature_cache=True,
-            mode='production'
+            mode='production',
+            core_only=args.core_only
         )
 
         # 保存预测结果

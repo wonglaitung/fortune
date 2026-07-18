@@ -346,6 +346,8 @@ def main():
                        help='不保存文件')
     parser.add_argument('--force', action='store_true',
                        help='强制生成报告')
+    parser.add_argument('--no-email', action='store_true',
+                       help='兼容参数（此脚本不发送邮件）')
 
     args = parser.parse_args()
 
