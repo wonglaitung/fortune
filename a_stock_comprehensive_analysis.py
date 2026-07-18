@@ -531,6 +531,198 @@ def analyze_sectors(stock_analyses: dict) -> dict:
     }
 
 
+def detect_stock_anomalies(stock_analyses: dict, market_data: dict) -> dict:
+    """
+    检测股票异常（基于技术指标）
+
+    Args:
+        stock_analyses: 股票分析结果
+        market_data: 市场数据
+
+    Returns:
+        dict: 异常检测结果
+    """
+    anomalies = {
+        'high': [],    # 高严重度
+        'medium': [],  # 中严重度
+        'low': [],     # 低严重度
+    }
+
+    for code, analysis in stock_analyses.items():
+        name = analysis.get('name', code)
+        price = analysis.get('current_price', 0)
+        change = analysis.get('change_percent', 0)
+        rsi = analysis.get('rsi_14', 50)
+        volume_ratio = analysis.get('volume_ratio', 1.0)
+
+        # 异常原因列表
+        reasons = []
+        severity = 'low'
+
+        # 1. RSI 超买/超卖
+        if rsi > 80:
+            reasons.append(f"RSI严重超买({rsi:.1f})")
+            severity = 'high'
+        elif rsi > 70:
+            reasons.append(f"RSI超买({rsi:.1f})")
+            severity = max(severity, 'medium')
+        elif rsi < 20:
+            reasons.append(f"RSI严重超卖({rsi:.1f})")
+            severity = 'high'
+        elif rsi < 30:
+            reasons.append(f"RSI超卖({rsi:.1f})")
+            severity = max(severity, 'medium')
+
+        # 2. 大涨/大跌
+        limit_rate = analysis.get('limit_rate', 0.1) * 100
+        if abs(change) >= limit_rate - 0.5:
+            if change > 0:
+                reasons.append(f"接近涨停({change:+.2f}%)")
+            else:
+                reasons.append(f"接近跌停({change:+.2f}%)")
+            severity = 'high'
+        elif abs(change) >= 5:
+            if change > 0:
+                reasons.append(f"大幅上涨({change:+.2f}%)")
+            else:
+                reasons.append(f"大幅下跌({change:+.2f}%)")
+            severity = max(severity, 'medium')
+
+        # 3. 成交量异常
+        if volume_ratio > 3:
+            reasons.append(f"成交量放大{volume_ratio:.1f}倍")
+            severity = max(severity, 'medium')
+        elif volume_ratio > 2:
+            reasons.append(f"成交量放大{volume_ratio:.1f}倍")
+            severity = max(severity, 'low')
+
+        # 4. 价格异常（与MA20偏离）
+        ma20 = analysis.get('ma20', 0)
+        if ma20 > 0 and price > 0:
+            deviation = (price - ma20) / ma20 * 100
+            if abs(deviation) > 15:
+                reasons.append(f"偏离MA20 {deviation:+.1f}%")
+                severity = max(severity, 'medium')
+
+        # 如果有异常，添加到列表
+        if reasons:
+            anomaly_info = {
+                'code': code,
+                'name': name,
+                'price': price,
+                'change': change,
+                'rsi': rsi,
+                'reasons': reasons,
+                'severity': severity,
+            }
+
+            if severity == 'high':
+                anomalies['high'].append(anomaly_info)
+            elif severity == 'medium':
+                anomalies['medium'].append(anomaly_info)
+            else:
+                anomalies['low'].append(anomaly_info)
+
+    # 统计
+    total = len(anomalies['high']) + len(anomalies['medium']) + len(anomalies['low'])
+
+    return {
+        'anomalies': anomalies,
+        'total_count': total,
+        'high_count': len(anomalies['high']),
+        'medium_count': len(anomalies['medium']),
+        'low_count': len(anomalies['low']),
+    }
+
+
+def format_anomalies_html(anomaly_result: dict) -> str:
+    """
+    格式化异常检测为HTML
+
+    Args:
+        anomaly_result: 异常检测结果
+
+    Returns:
+        str: HTML格式的异常检测表格
+    """
+    if not anomaly_result or anomaly_result.get('total_count', 0) == 0:
+        return ""
+
+    anomalies = anomaly_result.get('anomalies', {})
+
+    html = f"""
+    <h2>🔴 股票异常检测提醒</h2>
+    <p style="color: #666; font-size: 12px;">检测到 {anomaly_result['total_count']} 个异常</p>
+"""
+
+    # 高严重度
+    if anomalies.get('high'):
+        html += """
+    <h3>🔴 高严重度异常</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>RSI</th><th>异常原因</th>
+        </tr>
+"""
+        for a in anomalies['high']:
+            change_class = 'positive' if a['change'] >= 0 else 'negative'
+            html += f"""        <tr>
+            <td><strong>{a['name']}</strong></td>
+            <td>{a['code']}</td>
+            <td>{a['price']:.2f}</td>
+            <td class="{change_class}">{a['change']:+.2f}%</td>
+            <td>{a['rsi']:.1f}</td>
+            <td>{', '.join(a['reasons'])}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 中严重度
+    if anomalies.get('medium'):
+        html += """
+    <h3>⚠️ 中严重度异常</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>RSI</th><th>异常原因</th>
+        </tr>
+"""
+        for a in anomalies['medium']:
+            change_class = 'positive' if a['change'] >= 0 else 'negative'
+            html += f"""        <tr>
+            <td>{a['name']}</td>
+            <td>{a['code']}</td>
+            <td>{a['price']:.2f}</td>
+            <td class="{change_class}">{a['change']:+.2f}%</td>
+            <td>{a['rsi']:.1f}</td>
+            <td>{', '.join(a['reasons'])}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 低严重度
+    if anomalies.get('low'):
+        html += """
+    <h3>📋 低严重度异常</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>异常原因</th>
+        </tr>
+"""
+        for a in anomalies['low']:
+            change_class = 'positive' if a['change'] >= 0 else 'negative'
+            html += f"""        <tr>
+            <td>{a['name']}</td>
+            <td>{a['code']}</td>
+            <td>{a['price']:.2f}</td>
+            <td class="{change_class}">{a['change']:+.2f}%</td>
+            <td>{', '.join(a['reasons'])}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    return html
+
+
 def format_sectors_html(sector_analysis: dict) -> str:
     """
     格式化板块分析为HTML
@@ -848,7 +1040,7 @@ def _format_recommendations_section(recommendations):
 
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
                           three_horizon_results=None, market_sentiment=None, northbound_trend=None,
-                          recommendations=None, sector_analysis=None):
+                          recommendations=None, sector_analysis=None, anomaly_result=None):
     """
     生成增强版HTML邮件（参考港股详细度）
 
@@ -862,6 +1054,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         northbound_trend: 北向资金趋势（新增）
         recommendations: 综合买卖建议（新增）
         sector_analysis: 板块分析结果（新增）
+        anomaly_result: 异常检测结果（新增）
 
     Returns:
         str: HTML格式邮件
@@ -1163,6 +1356,10 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """    </table>
 """
 
+    # 异常检测表格
+    if anomaly_result and anomaly_result.get('total_count', 0) > 0:
+        html += format_anomalies_html(anomaly_result)
+
     # AI 分析建议（完整版）
     html += """
     <h2>💡 AI 分析建议</h2>
@@ -1383,7 +1580,16 @@ def main():
         top_sector = sector_analysis['sector_ranking'][0]
         print(f"  领涨板块: {top_sector['sector']} ({top_sector['avg_change']:+.2f}%)")
 
-    # 9. 生成综合买卖建议
+    # 9. 检测股票异常
+    print("\n🔴 检测股票异常...")
+    anomaly_result = detect_stock_anomalies(stock_analyses, market_data or {})
+    if anomaly_result and anomaly_result.get('total_count', 0) > 0:
+        print(f"  异常总数: {anomaly_result['total_count']} 个")
+        print(f"  高严重度: {anomaly_result['high_count']} 个")
+        print(f"  中严重度: {anomaly_result['medium_count']} 个")
+        print(f"  低严重度: {anomaly_result['low_count']} 个")
+
+    # 10. 生成综合买卖建议
     print("\n📊 生成综合买卖建议...")
     recommendations = None
     try:
@@ -1403,7 +1609,7 @@ def main():
     except Exception as e:
         print(f"  ⚠️ 综合买卖建议生成失败: {e}")
 
-    # 9. 生成综合报告
+    # 11. 生成综合报告
     print("\n📊 生成综合报告...")
     report = generate_comprehensive_report(llm_content, ml_predictions, stock_analyses, market_data)
 
@@ -1414,7 +1620,7 @@ def main():
         f.write(report)
     print(f"✅ 报告已保存: {report_file}")
 
-    # 10. 发送邮件（增强版）
+    # 12. 发送邮件（增强版）
     if send_email_flag:
         print("\n📊 发送增强版邮件...")
         html_content = generate_html_email(
@@ -1423,7 +1629,8 @@ def main():
             market_sentiment=market_sentiment,
             northbound_trend=northbound_trend,
             recommendations=recommendations,
-            sector_analysis=sector_analysis
+            sector_analysis=sector_analysis,
+            anomaly_result=anomaly_result
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
