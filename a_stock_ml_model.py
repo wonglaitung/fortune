@@ -1337,6 +1337,14 @@ class AStockTradingModel(CatBoostModel):
             logger.error("模型未加载特征列，请先加载模型")
             return None
 
+        # 处理 Market_Regime 字符串特征（转换为数值，与训练时一致）
+        if 'Market_Regime' in latest_data.columns and latest_data['Market_Regime'].dtype == 'object':
+            latest_data['Market_Regime'] = latest_data['Market_Regime'].map({
+                'ranging': 0,
+                'normal': 1,
+                'trending': 2
+            }).fillna(1).astype(int)
+
         missing_features = [c for c in self.feature_columns if c not in latest_data.columns]
         if missing_features:
             # 为缺失特征填充默认值
@@ -1357,8 +1365,8 @@ class AStockTradingModel(CatBoostModel):
                 )
 
         # 预测
-        prediction = self.model.predict(X)[0]
-        probability = self.model.predict_proba(X)[0][1]
+        prediction = self.catboost_model.predict(X)[0]
+        probability = self.catboost_model.predict_proba(X)[0][1]
 
         # 获取当前价格
         current_price = latest_data['Close'].iloc[-1] if 'Close' in latest_data.columns else None
