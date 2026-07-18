@@ -250,12 +250,7 @@ def save_llm_report(report_content, stock_data_list):
     filepath = f'data/a_stock_llm_recommendations_{date_str}.txt'
 
     # 构建完整报告（标准 Markdown 格式）
-    content = f"""**日期**: {date_str}
-**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
----
-
-## 自选股概览
+    content = """## 自选股概览
 
 """
     # 添加股票概览
@@ -263,7 +258,7 @@ def save_llm_report(report_content, stock_data_list):
         stock_name = A_STOCK_WATCHLIST.get(data['stock_code'], data['stock_code'])
         content += f"- **{stock_name}** ({data['stock_code']}): {data['current_price']:.2f} 元 ({data['change_percent']:+.2f}%)\n"
 
-    content += f"\n---\n\n"
+    content += "\n---\n\n"
     content += "## AI分析报告\n\n"
     content += report_content
 
