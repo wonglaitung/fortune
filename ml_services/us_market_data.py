@@ -10,7 +10,9 @@
 - VIX恐慌指数：仅使用 yfinance（AKShare 暂不支持）
 - 美国国债收益率：仅使用 AKShare（稳定可靠）
 
-注：不使用缓存机制，每次都实时获取最新数据
+缓存策略：
+- 美股指数数据缓存1天（日线数据每天只更新一次）
+- 当天有效，次日自动失效
 """
 
 import pandas as pd
@@ -19,8 +21,17 @@ from datetime import datetime, timedelta
 import warnings
 import signal
 from functools import wraps
+import os
+import pickle
 
 warnings.filterwarnings('ignore')
+
+# 缓存目录
+CACHE_DIR = 'data/us_market_cache'
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+# 缓存有效期（天）
+CACHE_EXPIRE_DAYS = 1
 
 
 def timeout_handler(signum, frame):
@@ -84,22 +95,77 @@ def timeout(seconds):
     return decorator
 
 
+def _get_cache_key(name: str) -> str:
+    """生成缓存文件路径"""
+    return os.path.join(CACHE_DIR, f"{name}.pkl")
+
+
+def _load_cache(name: str) -> pd.DataFrame:
+    """加载缓存数据
+
+    Returns:
+        DataFrame if cache valid, None otherwise
+    """
+    cache_file = _get_cache_key(name)
+
+    if not os.path.exists(cache_file):
+        return None
+
+    try:
+        with open(cache_file, 'rb') as f:
+            cache_data = pickle.load(f)
+
+        # 检查缓存日期
+        cache_date = cache_data.get('date')
+        if cache_date:
+            cache_date = pd.to_datetime(cache_date)
+            today = pd.Timestamp.now().normalize()
+
+            # 缓存有效期：当天有效
+            if cache_date.date() >= today.date():
+                return cache_data.get('data')
+
+        return None
+    except Exception:
+        return None
+
+
+def _save_cache(name: str, data: pd.DataFrame):
+    """保存缓存数据"""
+    cache_file = _get_cache_key(name)
+
+    try:
+        cache_data = {
+            'date': datetime.now(),
+            'data': data
+        }
+        with open(cache_file, 'wb') as f:
+            pickle.dump(cache_data, f)
+    except Exception as e:
+        print(f"⚠️ 缓存保存失败: {e}")
+
+
 class USMarketData:
-    """美股市场数据获取类（无缓存，AKShare 优先）"""
+    """美股市场数据获取类（带缓存，AKShare 优先）"""
 
     def __init__(self):
-        # 不使用缓存
         pass
 
     def get_sp500_data(self, period_days=1460):
         """获取标普500指数数据
-        
+
         Args:
             period_days: 获取天数（默认730天，约2年）
         
         Returns:
             DataFrame: 包含标普500指数数据
         """
+        # 尝试从缓存加载
+        cached = _load_cache('sp500')
+        if cached is not None:
+            print("✅ 从缓存加载标普500数据")
+            return cached
+
         # 策略1: 优先尝试 AKShare
         try:
             from akshare.index import index_global_em
@@ -127,18 +193,19 @@ class USMarketData:
                 df['SP500_Return'] = df['Close'].pct_change()
                 df['SP500_Return_5d'] = df['Close'].pct_change(5)
                 df['SP500_Return_20d'] = df['Close'].pct_change(20)
-                
+
                 print("✅ 使用 AKShare 获取标普500数据成功")
+                _save_cache('sp500', df)
                 return df
         except TimeoutError as e:
             print(f"⚠️ AKShare 获取标普500数据超时: {e}")
         except Exception as e:
             print(f"⚠️ AKShare 获取标普500数据失败: {e}")
-        
+
         # 策略2: AKShare 失败，使用 yfinance 作为备选
         try:
             import yfinance as yf
-            
+
             ticker = yf.Ticker('^GSPC')
             df = ticker.history(period=f'{period_days}d')
 
@@ -158,6 +225,7 @@ class USMarketData:
             df['SP500_Return_20d'] = df['Close'].pct_change(20)
 
             print("✅ 使用 yfinance 获取标普500数据成功")
+            _save_cache('sp500', df)
             return df
 
         except Exception as e:
@@ -166,52 +234,59 @@ class USMarketData:
 
     def get_nasdaq_data(self, period_days=1460):
         """获取纳斯达克指数数据
-        
+
         Args:
             period_days: 获取天数（默认730天，约2年）
-        
+
         Returns:
             DataFrame: 包含纳斯达克指数数据
         """
+        # 尝试从缓存加载
+        cached = _load_cache('nasdaq')
+        if cached is not None:
+            print("✅ 从缓存加载纳斯达克数据")
+            return cached
+
         # 策略1: 优先尝试 AKShare
         try:
             from akshare.index import index_global_em
-            
+
             # 使用超时控制包装器
             @timeout(60)  # 60秒超时，适应 GitHub Actions 网络环境
             def fetch_data():
                 return index_global_em.index_global_hist_em(symbol="纳斯达克")
-            
+
             df = fetch_data()
-            
+
             if not df.empty:
                 # 重命名列以保持一致性
                 df.rename(columns={'日期': 'Date', '收盘': 'Close'}, inplace=True)
-                
+
                 # 转换日期格式并设置为UTC时区
                 df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
                 df.set_index('Date', inplace=True)
-                
+
                 # 只保留最近N天的数据
                 if len(df) > period_days:
                     df = df.tail(period_days)
-                
+
                 # 计算收益率
                 df['NASDAQ_Return'] = df['Close'].pct_change()
                 df['NASDAQ_Return_5d'] = df['Close'].pct_change(5)
                 df['NASDAQ_Return_20d'] = df['Close'].pct_change(20)
-                
+
                 print("✅ 使用 AKShare 获取纳斯达克数据成功")
+                _save_cache('nasdaq', df)
                 return df
         except TimeoutError as e:
             print(f"⚠️ AKShare 获取纳斯达克数据超时: {e}")
         except Exception as e:
             print(f"⚠️ AKShare 获取纳斯达克数据失败: {e}")
-        
+
         # 策略2: AKShare 失败，使用 yfinance 作为备选
         try:
             import yfinance as yf
-            
+
             ticker = yf.Ticker('^IXIC')
             df = ticker.history(period=f'{period_days}d')
 
@@ -231,6 +306,7 @@ class USMarketData:
             df['NASDAQ_Return_20d'] = df['Close'].pct_change(20)
 
             print("✅ 使用 yfinance 获取纳斯达克数据成功")
+            _save_cache('nasdaq', df)
             return df
 
         except Exception as e:
@@ -239,18 +315,24 @@ class USMarketData:
 
     def get_vix_data(self, period_days=1460):
         """获取VIX恐慌指数数据
-        
+
         注意：AKShare 暂不支持 VIX 恐慌指数，仅使用 yfinance
-        
+
         Args:
             period_days: 获取天数（默认730天，约2年）
-        
+
         Returns:
             DataFrame: 包含VIX恐慌指数数据
         """
+        # 尝试从缓存加载
+        cached = _load_cache('vix')
+        if cached is not None:
+            print("✅ 从缓存加载VIX数据")
+            return cached
+
         try:
             import yfinance as yf
-            
+
             ticker = yf.Ticker('^VIX')
             df = ticker.history(period=f'{period_days}d')
 
@@ -273,6 +355,7 @@ class USMarketData:
             df['VIX_Ratio_MA20'] = df['Close'] / df['VIX_MA20']
 
             print("✅ 使用 yfinance 获取VIX数据成功")
+            _save_cache('vix', df)
             return df
 
         except Exception as e:
@@ -288,6 +371,12 @@ class USMarketData:
         Returns:
             DataFrame: 包含美国和中国多期限国债收益率数据，及利差特征
         """
+        # 尝试从缓存加载
+        cached = _load_cache('treasury_yield')
+        if cached is not None:
+            print("✅ 从缓存加载国债收益率数据")
+            return cached
+
         try:
             # 使用超时控制包装器
             @timeout(60)  # 60秒超时，适应 GitHub Actions 网络环境
@@ -341,6 +430,7 @@ class USMarketData:
             df['US_10Y_Yield_MA20'] = df['US_10Y_Yield'].rolling(window=20).mean()
 
             print("✅ 使用 AKShare 获取多期限国债收益率数据成功（含中美利差）")
+            _save_cache('treasury_yield', df)
             return df
 
         except TimeoutError as e:

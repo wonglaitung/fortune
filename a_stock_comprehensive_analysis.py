@@ -1384,6 +1384,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
     <div class="footer">
         <p>📧 本邮件由A股综合分析系统自动生成</p>
+        <p>📖 <a href="https://github.com/wonglaitung/fortune/blob/main/docs/A_STOCK_DESIGN.md" style="color: #2563eb;">A股系统设计文档</a></p>
         <p>⏰ 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         <p>⚠️ 本报告仅供参考，不构成投资建议</p>
     </div>
