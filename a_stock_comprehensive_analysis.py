@@ -116,7 +116,8 @@ def get_stock_analysis(stock_code):
     Returns:
         dict: 股票分析结果
     """
-    stock_name = A_STOCK_WATCHLIST.get(stock_code, stock_code)
+    # 优先从全量股票列表获取名称，其次从核心持仓获取
+    stock_name = A_STOCK_TRAINING_LIST.get(stock_code) or A_STOCK_WATCHLIST.get(stock_code, stock_code)
     result = {
         'code': stock_code,
         'name': stock_name,
