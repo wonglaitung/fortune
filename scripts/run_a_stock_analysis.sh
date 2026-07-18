@@ -38,22 +38,22 @@ echo ""
 
 TRAIN_SUCCESS=0
 TRAIN_FAILED=0
-#for horizon in 1 5 20; do
-#    echo "  🔄 训练 ${horizon}d 模型..."
-#    python3 a_stock_ml_model.py --mode train --horizon $horizon
-#    if [ $? -ne 0 ]; then
-#        echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
-#        TRAIN_FAILED=$((TRAIN_FAILED + 1))
-#    else
-#        echo "  ✅ ${horizon}d 模型训练完成"
-#        TRAIN_SUCCESS=$((TRAIN_SUCCESS + 1))
-#    fi
-#done
+for horizon in 1 5 20; do
+    echo "  🔄 训练 ${horizon}d 模型..."
+    python3 a_stock_ml_model.py --mode train --horizon $horizon
+    if [ $? -ne 0 ]; then
+        echo "  ⚠️ 训练 ${horizon}d 模型失败（继续执行其他周期）"
+        TRAIN_FAILED=$((TRAIN_FAILED + 1))
+    else
+        echo "  ✅ ${horizon}d 模型训练完成"
+        TRAIN_SUCCESS=$((TRAIN_SUCCESS + 1))
+    fi
+done
 
-#if [ $TRAIN_SUCCESS -eq 0 ]; then
-#    echo "❌ 步骤1失败: 所有模型训练失败"
-#    exit 1
-#fi
+if [ $TRAIN_SUCCESS -eq 0 ]; then
+    echo "❌ 步骤1失败: 所有模型训练失败"
+    exit 1
+fi
 echo ""
 echo "✅ 步骤1完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
 echo ""
