@@ -37,6 +37,9 @@ from a_stock_config import (
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
 from data_services.northbound_data import NorthboundDataService
 
+# 导入综合买卖建议生成器
+from a_stock_recommendation_generator import AStockRecommendationGenerator
+
 # 股票名称映射
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
@@ -603,8 +606,140 @@ A股综合分析报告
     return report
 
 
+def _format_recommendations_section(recommendations):
+    """
+    格式化综合买卖建议HTML部分
+
+    Args:
+        recommendations: 综合买卖建议字典
+
+    Returns:
+        str: HTML格式的建议
+    """
+    html = ""
+
+    # 强烈买入
+    if recommendations.get('strong_buy'):
+        html += """
+    <h3>🟢 强烈买入信号</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
+            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>推荐理由</th>
+        </tr>
+"""
+        for rec in recommendations['strong_buy']:
+            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            html += f"""        <tr>
+            <td><strong>{rec['stock_name']}</strong></td>
+            <td>{rec['stock_code']}</td>
+            <td>{rec['current_price']:.2f}</td>
+            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
+            <td style="color: #16a34a; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td>{rec['position_pct']}%</td>
+            <td>{rec['stop_loss']:.2f}</td>
+            <td>{rec['target_price']:.2f}</td>
+            <td>{rec['reason']}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 买入
+    if recommendations.get('buy'):
+        html += """
+    <h3>🟡 买入信号</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
+            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>推荐理由</th>
+        </tr>
+"""
+        for rec in recommendations['buy']:
+            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            html += f"""        <tr>
+            <td><strong>{rec['stock_name']}</strong></td>
+            <td>{rec['stock_code']}</td>
+            <td>{rec['current_price']:.2f}</td>
+            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
+            <td style="color: #ea580c; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td>{rec['position_pct']}%</td>
+            <td>{rec['stop_loss']:.2f}</td>
+            <td>{rec['target_price']:.2f}</td>
+            <td>{rec['reason']}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 持有/观望
+    if recommendations.get('hold'):
+        html += """
+    <h3>⚪ 持有/观望</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
+            <th>20天概率</th><th>建议</th><th>推荐理由</th>
+        </tr>
+"""
+        for rec in recommendations['hold']:
+            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            html += f"""        <tr>
+            <td>{rec['stock_name']}</td>
+            <td>{rec['stock_code']}</td>
+            <td>{rec['current_price']:.2f}</td>
+            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
+            <td>{rec['probability_20d']:.2f}</td>
+            <td>观望</td>
+            <td>{rec['reason']}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 卖出
+    if recommendations.get('sell'):
+        html += """
+    <h3>🔴 卖出信号</h3>
+    <table>
+        <tr>
+            <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
+            <th>20天概率</th><th>建议卖出价</th><th>推荐理由</th>
+        </tr>
+"""
+        for rec in recommendations['sell']:
+            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            html += f"""        <tr>
+            <td><strong>{rec['stock_name']}</strong></td>
+            <td>{rec['stock_code']}</td>
+            <td>{rec['current_price']:.2f}</td>
+            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
+            <td style="color: #dc2626; font-weight: bold;">{rec['probability_20d']:.2f}</td>
+            <td>{rec['current_price']:.2f}</td>
+            <td>{rec['reason']}</td>
+        </tr>
+"""
+        html += "    </table>\n"
+
+    # 风险控制建议
+    risk = recommendations.get('risk_control', {})
+    if risk:
+        html += f"""
+    <h3>⚠️ 风险控制建议</h3>
+    <table>
+        <tr><th>指标</th><th>建议</th></tr>
+        <tr><td>当前市场风险</td><td>{risk.get('market_risk', '中')}</td></tr>
+        <tr><td>建议总仓位</td><td>{risk.get('total_position', 0)}%</td></tr>
+        <tr><td>止损策略</td><td>{risk.get('stop_loss_strategy', '')}</td></tr>
+        <tr><td>仓位策略</td><td>{risk.get('position_strategy', '')}</td></tr>
+    </table>
+"""
+
+    return html
+
+
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
-                          three_horizon_results=None, market_sentiment=None, northbound_trend=None):
+                          three_horizon_results=None, market_sentiment=None, northbound_trend=None,
+                          recommendations=None):
     """
     生成增强版HTML邮件（参考港股详细度）
 
@@ -616,6 +751,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         three_horizon_results: 三周期预测结果（新增）
         market_sentiment: 市场情绪数据（新增）
         northbound_trend: 北向资金趋势（新增）
+        recommendations: 综合买卖建议（新增）
 
     Returns:
         str: HTML格式邮件
@@ -674,6 +810,17 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 <body>
     <h1>📊 A股综合分析报告</h1>
     <p>日期: {date_str} | 生成时间: {datetime.now().strftime('%H:%M:%S')}</p>
+
+    <!-- 综合买卖建议（核心） -->
+    <h2>📋 综合买卖建议</h2>
+    <p style="color: #666; font-size: 12px;">基于大模型分析 + CatBoost预测 + 技术指标综合判断</p>
+"""
+
+    # 添加综合买卖建议
+    if recommendations:
+        html += _format_recommendations_section(recommendations)
+
+    html += """
 
     <!-- 市场情绪分析 -->
     <div class="sentiment-box">
@@ -1114,7 +1261,27 @@ def main():
     print(f"  20日累积: {northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿")
     print(f"  连续流入: {northbound_trend.get('consecutive_inflow', 0)} 天")
 
-    # 8. 生成综合报告
+    # 8. 生成综合买卖建议
+    print("\n📊 生成综合买卖建议...")
+    recommendations = None
+    try:
+        from a_stock_recommendation_generator import AStockRecommendationGenerator
+        rec_generator = AStockRecommendationGenerator()
+        recommendations = rec_generator.generate_recommendations(
+            llm_report=llm_content or '',
+            ml_predictions=ml_predictions or {},
+            stock_analyses=stock_analyses,
+            market_data=market_data or {},
+            northbound_data=northbound_trend or {}
+        )
+        print(f"  强烈买入: {len(recommendations.get('strong_buy', []))} 只")
+        print(f"  买入: {len(recommendations.get('buy', []))} 只")
+        print(f"  持有/观望: {len(recommendations.get('hold', []))} 只")
+        print(f"  卖出: {len(recommendations.get('sell', []))} 只")
+    except Exception as e:
+        print(f"  ⚠️ 综合买卖建议生成失败: {e}")
+
+    # 9. 生成综合报告
     print("\n📊 生成综合报告...")
     report = generate_comprehensive_report(llm_content, ml_predictions, stock_analyses, market_data)
 
@@ -1125,14 +1292,15 @@ def main():
         f.write(report)
     print(f"✅ 报告已保存: {report_file}")
 
-    # 9. 发送邮件（增强版）
+    # 10. 发送邮件（增强版）
     if send_email_flag:
         print("\n📊 发送增强版邮件...")
         html_content = generate_html_email(
             llm_content, ml_predictions, stock_analyses, market_data,
             three_horizon_results=three_horizon_results,
             market_sentiment=market_sentiment,
-            northbound_trend=northbound_trend
+            northbound_trend=northbound_trend,
+            recommendations=recommendations
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
