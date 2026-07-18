@@ -863,10 +863,19 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
 
     # LLM异常分析（新增）
     if anomaly_llm_analysis:
+        # 将Markdown转换为HTML
+        try:
+            import markdown
+            md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'])
+            llm_html = md.convert(anomaly_llm_analysis)
+        except ImportError:
+            # 如果没有安装markdown库，使用简单转换
+            llm_html = anomaly_llm_analysis.replace('\n', '<br>')
+
         html += f"""
     <h3>🤖 LLM异常分析</h3>
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">
-{anomaly_llm_analysis.replace(chr(10), '<br>')}
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
+{llm_html}
     </div>
 """
 
