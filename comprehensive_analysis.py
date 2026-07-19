@@ -4274,77 +4274,8 @@ def generate_stock_section_html(stock_data: dict) -> str:
     """
 
 
-def generate_market_section_html(market_info: dict) -> str:
-    """生成市场环境 HTML 部分"""
-    if not market_info:
-        return ""
-
-    # 涨跌幅显示
-    hsi_change = market_info.get('hsi_change', 0) or 0
-    if hsi_change > 0:
-        hsi_change_display = f"📈 +{hsi_change:.2f}%"
-    elif hsi_change < 0:
-        hsi_change_display = f"📉 {hsi_change:.2f}%"
-    else:
-        hsi_change_display = "-"
-
-    # 市场状态说明
-    market_status = market_info.get('market_status') or "-"
-    market_status_desc = {
-        '牛市': '持续上涨趋势',
-        '震荡偏涨': '震荡中偏强',
-        '震荡市': '横盘整理',
-        '震荡偏跌': '震荡中偏弱',
-        '熊市': '持续下跌趋势',
-    }.get(market_status, '-')
-
-    # VIX 说明
-    vix = market_info.get('vix', 15) or 15
-    if vix < 15:
-        vix_desc = "市场平静"
-    elif vix < 20:
-        vix_desc = "正常水平"
-    elif vix < 30:
-        vix_desc = "市场恐慌"
-    else:
-        vix_desc = "极度恐慌"
-
-    # 市场情绪说明
-    sentiment = market_info.get('market_sentiment') or '正常'
-    sentiment_desc = {
-        '正常': '可正常交易',
-        '谨慎': '建议降低仓位',
-        '暂停': '建议暂停交易',
-    }.get(sentiment, '-')
-
-    # 模块度说明
-    modularity = market_info.get('modularity', 0.4) or 0.4
-    if modularity > 0.4:
-        modularity_desc = "分化明显，选股有效"
-    elif modularity > 0.2:
-        modularity_desc = "中等分化"
-    else:
-        modularity_desc = "同涨同跌，系统性风险高"
-
-    return f"""
-        <h2>市场环境概览</h2>
-        <table>
-            <tr><th>指标</th><th>数值</th><th>说明</th></tr>
-            <tr><td>恒生指数</td><td>{format_value_default(market_info.get('hsi_price'), "-")}</td><td>{hsi_change_display}</td></tr>
-            <tr><td>市场状态</td><td>{market_status}</td><td>{market_status_desc}</td></tr>
-            <tr><td>状态持续时间</td><td>{format_value_default(market_info.get('market_duration'), "-")}天</td><td>{market_info.get('market_stability') or "-"}</td></tr>
-            <tr><td>VIX（恐慌指数）</td><td>{format_value_default(vix, "-")}</td><td>{vix_desc}</td></tr>
-            <tr><td>市场情绪</td><td>{sentiment}</td><td>{sentiment_desc}</td></tr>
-            <tr><td>模块度</td><td>{format_value_default(modularity, "-")}</td><td>{modularity_desc}</td></tr>
-        </table>
-    """
-
-
 def generate_detailed_stock_email(stock_results: list, market_info: dict, date_str: str) -> str:
     """生成完整的详细个股分析 HTML 邮件"""
-    # 生成市场环境部分
-    market_section = generate_market_section_html(market_info)
-
     # 生成每只股票的分析部分
     stock_sections = ""
     for stock_data in stock_results:
@@ -4531,8 +4462,6 @@ def generate_detailed_stock_email(stock_results: list, market_info: dict, date_s
     <div class="container">
         <h1>【港股个股分析报告】{date_str}</h1>
         <p class="date-info"><strong>分析日期</strong>：{date_str}</p>
-
-        {market_section}
 
         {stock_sections}
 
