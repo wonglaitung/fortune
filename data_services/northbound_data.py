@@ -32,6 +32,59 @@ class NorthboundDataService:
         os.makedirs(CACHE_DIR, exist_ok=True)
         self._cache = None
 
+    def fetch_latest(self):
+        """
+        获取当日北向资金数据（使用汇总接口）
+
+        返回:
+        - dict: 当日北向资金数据
+        """
+        try:
+            import akshare as ak
+
+            # 使用 fund_flow_summary 接口获取当日数据
+            df = ak.stock_hsgt_fund_flow_summary_em()
+
+            if df is None or df.empty:
+                return None
+
+            # 解析数据
+            result = {
+                'date': None,
+                'sh_net_buy': 0,
+                'sz_net_buy': 0,
+                'net_buy': 0,
+                'net_inflow': 0,
+            }
+
+            for _, row in df.iterrows():
+                direction = row.get('资金方向', '')
+                sector = row.get('板块', '')
+                net_buy = row.get('成交净买额', 0)
+                net_inflow = row.get('资金净流入', 0)
+                trade_date = row.get('交易日', '')
+
+                # 记录日期
+                if result['date'] is None and trade_date:
+                    result['date'] = str(trade_date)
+
+                # 北向资金
+                if direction == '北向':
+                    if sector == '沪股通':
+                        result['sh_net_buy'] = float(net_buy) if pd.notna(net_buy) else 0
+                    elif sector == '深股通':
+                        result['sz_net_buy'] = float(net_buy) if pd.notna(net_buy) else 0
+
+            # 计算合计
+            result['net_buy'] = result['sh_net_buy'] + result['sz_net_buy']
+            result['net_inflow'] = result.get('net_inflow', 0)
+
+            return result
+
+        except Exception as e:
+            print(f"  ⚠️ 获取当日北向资金失败: {e}")
+            return None
+
     def fetch_history(self, use_cache=True):
         """
         获取北向资金历史数据
@@ -206,21 +259,28 @@ class NorthboundDataService:
     def get_latest(self):
         """
         获取最新的北向资金数据
+        优先使用 fetch_latest 接口（数据更准确）
 
         返回:
         - dict: 最新北向资金数据
         """
+        # 优先使用当日汇总接口
+        latest = self.fetch_latest()
+        if latest and latest.get('date'):
+            return latest
+
+        # 备用：从历史数据获取
         df = self.fetch_history()
         if df is None or df.empty:
             return None
 
-        latest = df.iloc[-1]
+        latest_row = df.iloc[-1]
         return {
             'date': df.index[-1].strftime('%Y-%m-%d'),
-            'net_buy': float(latest.get('net_buy', 0)) if pd.notna(latest.get('net_buy', 0)) else 0,
-            'net_inflow': float(latest.get('net_inflow', 0)) if pd.notna(latest.get('net_inflow', 0)) else 0,
-            'sh_net_buy': float(latest.get('sh_net_buy', 0)) if pd.notna(latest.get('sh_net_buy', 0)) else 0,
-            'sz_net_buy': float(latest.get('sz_net_buy', 0)) if pd.notna(latest.get('sz_net_buy', 0)) else 0,
+            'net_buy': float(latest_row.get('net_buy', 0)) if pd.notna(latest_row.get('net_buy', 0)) else 0,
+            'net_inflow': float(latest_row.get('net_inflow', 0)) if pd.notna(latest_row.get('net_inflow', 0)) else 0,
+            'sh_net_buy': float(latest_row.get('sh_net_buy', 0)) if pd.notna(latest_row.get('sh_net_buy', 0)) else 0,
+            'sz_net_buy': float(latest_row.get('sz_net_buy', 0)) if pd.notna(latest_row.get('sz_net_buy', 0)) else 0,
         }
 
 
@@ -245,22 +305,22 @@ if __name__ == '__main__':
     print("北向资金数据测试")
     print("=" * 60)
 
-    # 获取历史数据
-    df = service.fetch_history()
-    print(f"\n数据概览:")
-    print(df.describe() if df is not None else "无数据")
+    # 测试当日数据接口
+    print("\n当日数据（fetch_latest）:")
+    latest = service.fetch_latest()
+    if latest:
+        print(f"  日期: {latest.get('date', 'N/A')}")
+        print(f"  净买入: {latest.get('net_buy', 0):.2f} 亿")
+        print(f"  沪股通: {latest.get('sh_net_buy', 0):.2f} 亿")
+        print(f"  深股通: {latest.get('sz_net_buy', 0):.2f} 亿")
+    else:
+        print("  无法获取当日数据")
 
     # 获取最新数据
+    print("\n最新数据（get_latest）:")
     latest = service.get_latest()
     if latest:
-        print(f"\n最新数据:")
-        print(f"  日期: {latest['date']}")
-        print(f"  净买入: {latest['net_buy']:.2f} 亿")
-        print(f"  净流入: {latest['net_inflow']:.2f} 亿")
-        print(f"  沪股通: {latest['sh_net_buy']:.2f} 亿")
-        print(f"  深股通: {latest['sz_net_buy']:.2f} 亿")
-
-    # 测试特征获取
-    print(f"\n特征测试:")
-    features = get_northbound_features('2026-07-17')
-    print(f"  {features}")
+        print(f"  日期: {latest.get('date', 'N/A')}")
+        print(f"  净买入: {latest.get('net_buy', 0):.2f} 亿")
+        print(f"  沪股通: {latest.get('sh_net_buy', 0):.2f} 亿")
+        print(f"  深股通: {latest.get('sz_net_buy', 0):.2f} 亿")

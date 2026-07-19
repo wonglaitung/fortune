@@ -6,12 +6,12 @@ A股综合分析脚本 - 整合大模型建议和ML预测结果
 
 ⚠️ 运行时机：建议在A股收市后（15:00 CST）运行
 
-版本：v3.2 (2026-07-19)
-- 修复：三周期预测表格不显示问题
-- 增强：支持从缓存文件读取三周期预测数据（--use-cached-predictions）
-- 增强三周期预测表格（参考港股，新增19列完整版本）
-- 新增筹码阻力、盈亏比、风险得分、网络洞察
-- 新增市场情绪调整、传导模式验证
+版本：v4.0 (2026-07-19)
+- 重构：综合买卖建议改由AI生成（替代硬编码逻辑）
+- 新增：generate_comprehensive_recommendations_with_llm 函数
+- 新增：数据格式化辅助函数（技术指标、ML预测、板块分析、异常检测）
+- 删除：a_stock_recommendation_generator.py（硬编码逻辑）
+- 优化：AI综合分析接收全部数据（技术指标+ML预测+市场情绪+北向资金+板块分析+异常检测）
 """
 
 import os
@@ -37,9 +37,6 @@ from a_stock_config import (
 # 导入数据服务
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
 from data_services.northbound_data import NorthboundDataService
-
-# 导入综合买卖建议生成器
-from a_stock_recommendation_generator import AStockRecommendationGenerator
 
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
@@ -1095,13 +1092,410 @@ def analyze_anomalies_with_llm(anomaly_result: dict) -> str:
         return f"⚠️ 大模型分析失败: {e}"
 
 
+# ============================================================
+# AI综合买卖建议生成（替代硬编码逻辑）
+# ============================================================
+
+def format_stock_technical_data_for_llm(stock_analyses: dict) -> str:
+    """
+    格式化技术指标为LLM可读文本
+
+    Args:
+        stock_analyses: 股票分析结果
+
+    Returns:
+        str: 格式化的技术指标文本
+    """
+    lines = []
+    for code, analysis in stock_analyses.items():
+        name = analysis.get('name', code)
+        price = analysis.get('current_price', '-')
+        change = analysis.get('change_percent', 0)
+        rsi = analysis.get('rsi_14', 50)
+        ma5 = analysis.get('ma5', 0)
+        ma20 = analysis.get('ma20', 0)
+        ma60 = analysis.get('ma60', 0)
+        return_5d = analysis.get('return_5d', 0)
+        return_20d = analysis.get('return_20d', 0)
+        limit_rate = analysis.get('limit_rate', 0.1) * 100
+
+        # 均线位置判断
+        ma_status = '中性'
+        if price > ma5 > ma20 > ma60:
+            ma_status = '多头排列'
+        elif price < ma5 < ma20:
+            ma_status = '空头排列'
+        elif price > ma20:
+            ma_status = '站上MA20'
+        else:
+            ma_status = '跌破MA20'
+
+        # RSI状态
+        if rsi > 70:
+            rsi_status = '超买'
+        elif rsi < 30:
+            rsi_status = '超卖'
+        else:
+            rsi_status = '中性'
+
+        lines.append(f"- {name}({code}): 现价{price:.2f}元, 今日{change:+.2f}%, RSI{rsi:.1f}({rsi_status}), MA{ma_status}, 5日{return_5d:+.1f}%, 20日{return_20d:+.1f}%, 涨跌停{limit_rate:.0f}%")
+
+    return '\n'.join(lines)
+
+
+def format_ml_predictions_for_llm(three_horizon_results: dict) -> str:
+    """
+    格式化三周期ML预测为LLM可读文本
+
+    Args:
+        three_horizon_results: 三周期预测结果
+
+    Returns:
+        str: 格式化的预测文本
+    """
+    if not three_horizon_results:
+        return "暂无ML预测数据"
+
+    lines = []
+    # 按20天概率排序
+    sorted_results = sorted(
+        three_horizon_results.items(),
+        key=lambda x: x[1].get('predictions', {}).get(20, {}).get('probability', 0.5),
+        reverse=True
+    )
+
+    for code, data in sorted_results:
+        name = A_STOCK_WATCHLIST.get(code, code)
+        preds = data.get('predictions', {})
+        pattern = data.get('pattern', '-')
+        pattern_info = data.get('pattern_info', {})
+        win_rate = data.get('win_rate', 0)
+
+        # 获取概率
+        prob_1d = preds.get(1, {}).get('probability', 0.5)
+        prob_5d = preds.get(5, {}).get('probability', 0.5)
+        prob_20d = preds.get(20, {}).get('probability', 0.5)
+
+        # 格式化预测
+        pred_str = f"1d={prob_1d:.2f}, 5d={prob_5d:.2f}, 20d={prob_20d:.2f}"
+        pattern_name = pattern_info.get('name', '-')
+        action = pattern_info.get('action', '-')
+
+        lines.append(f"- {name}({code}): {pred_str}, 模式={pattern}({pattern_name}), 建议={action}, 胜率={win_rate:.0f}%")
+
+    return '\n'.join(lines)
+
+
+def format_sector_analysis_for_llm(sector_analysis: dict) -> str:
+    """
+    格式化板块分析为LLM可读文本
+
+    Args:
+        sector_analysis: 板块分析结果
+
+    Returns:
+        str: 格式化的板块分析文本
+    """
+    if not sector_analysis or not sector_analysis.get('sector_ranking'):
+        return "暂无板块数据"
+
+    lines = []
+    for idx, sector in enumerate(sector_analysis['sector_ranking'][:10], 1):
+        sector_name = sector.get('sector', '-')
+        avg_change = sector.get('avg_change', 0)
+        stock_count = sector.get('stock_count', 0)
+        top_stocks = sector.get('top_stocks', [])
+
+        # 龙头股
+        top_stocks_str = ', '.join([f"{s['name']}({s['change']:+.1f}%)" for s in top_stocks[:3]])
+
+        lines.append(f"{idx}. {sector_name}: 均涨{avg_change:+.2f}%, {stock_count}只, 龙头: {top_stocks_str}")
+
+    return '\n'.join(lines)
+
+
+def format_anomaly_for_llm(anomaly_result: dict) -> str:
+    """
+    格式化异常检测为LLM可读文本
+
+    Args:
+        anomaly_result: 异常检测结果
+
+    Returns:
+        str: 格式化的异常检测文本
+    """
+    if not anomaly_result or anomaly_result.get('total_count', 0) == 0:
+        return "今日无异常"
+
+    anomalies = anomaly_result.get('anomalies', {})
+    lines = [f"共{anomaly_result['total_count']}个异常"]
+
+    # 高严重度
+    if anomalies.get('high'):
+        lines.append(f"\n高严重度({len(anomalies['high'])}个):")
+        for a in anomalies['high'][:5]:
+            lines.append(f"  - {a['name']}({a['code']}): {a['change']:+.2f}%, RSI{a['rsi']:.1f}, {', '.join(a['reasons'])}")
+
+    # 中严重度
+    if anomalies.get('medium'):
+        lines.append(f"\n中严重度({len(anomalies['medium'])}个):")
+        for a in anomalies['medium'][:5]:
+            lines.append(f"  - {a['name']}({a['code']}): {a['change']:+.2f}%, RSI{a['rsi']:.1f}")
+
+    return '\n'.join(lines)
+
+
+def parse_llm_json_response(response: str) -> dict:
+    """
+    解析AI返回的JSON响应
+
+    Args:
+        response: AI返回的文本
+
+    Returns:
+        dict: 解析后的字典
+    """
+    import re
+
+    # 尝试直接解析
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        pass
+
+    # 尝试提取JSON块
+    json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # 尝试提取花括号内容
+    brace_match = re.search(r'\{[\s\S]*\}', response)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    # 解析失败，返回空结构
+    print("⚠️ 无法解析AI返回的JSON，使用默认结构")
+    return {
+        'strong_buy': [],
+        'buy': [],
+        'hold': [],
+        'sell': [],
+        'risk_control': {
+            'market_risk': '中',
+            'total_position': 0,
+            'stop_loss_strategy': '单只股票最大亏损-8%',
+            'position_strategy': '建议观望'
+        }
+    }
+
+
+def generate_comprehensive_recommendations_with_llm(
+    stock_analyses: dict,
+    three_horizon_results: dict,
+    market_sentiment: dict,
+    northbound_trend: dict,
+    sector_analysis: dict,
+    anomaly_result: dict
+) -> dict:
+    """
+    使用AI生成综合买卖建议（替代硬编码逻辑）
+
+    Args:
+        stock_analyses: 股票技术分析结果
+        three_horizon_results: 三周期ML预测结果
+        market_sentiment: 市场情绪数据
+        northbound_trend: 北向资金趋势
+        sector_analysis: 板块分析结果
+        anomaly_result: 异常检测结果
+
+    Returns:
+        dict: {
+            'strong_buy': [{stock_code, stock_name, reason, position_pct, stop_loss, target_price}, ...],
+            'buy': [...],
+            'hold': [...],
+            'sell': [...],
+            'risk_control': {...}
+        }
+    """
+    print("\n🤖 正在调用AI生成综合买卖建议...")
+
+    # 格式化各类数据
+    technical_data = format_stock_technical_data_for_llm(stock_analyses)
+    ml_data = format_ml_predictions_for_llm(three_horizon_results)
+    sector_data = format_sector_analysis_for_llm(sector_analysis)
+    anomaly_data = format_anomaly_for_llm(anomaly_result)
+
+    # 市场情绪
+    sentiment_layer = market_sentiment.get('layer', 'normal')
+    up_ratio = market_sentiment.get('up_ratio', 0.5)
+    dynamic_threshold = market_sentiment.get('dynamic_threshold', 0.5)
+
+    layer_names = {
+        'extreme_bear': '极端熊市-暂停交易',
+        'bear': '熊市-需概率≥0.70',
+        'weak': '弱震荡-需概率≥0.65',
+        'normal': '正常市场'
+    }
+    sentiment_name = layer_names.get(sentiment_layer, '正常市场')
+
+    # 北向资金
+    nb_buy = northbound_trend.get('net_buy', 0)
+    nb_5d = northbound_trend.get('net_buy_5d_sum', 0)
+    nb_20d = northbound_trend.get('net_buy_20d_sum', 0)
+    consecutive_inflow = northbound_trend.get('consecutive_inflow', 0)
+
+    # 构建Prompt
+    prompt = f"""你是A股量化投资专家。请根据以下数据，为每只股票生成综合买卖建议。
+
+## 输入数据
+
+### 1. 股票技术分析（{len(stock_analyses)}只核心股）
+{technical_data}
+
+### 2. 三周期ML预测（CatBoost模型）
+{ml_data}
+
+### 3. 市场情绪
+- 情绪状态：{sentiment_name}
+- 上涨比例：{up_ratio:.1%}
+- 动态置信阈值：{dynamic_threshold:.0%}
+
+### 4. 北向资金趋势
+- 今日净买入：{nb_buy:.2f}亿
+- 5日累积：{nb_5d:.2f}亿
+- 20日累积：{nb_20d:.2f}亿
+- 连续流入天数：{consecutive_inflow}天
+
+### 5. 板块分析（按涨幅排名）
+{sector_data}
+
+### 6. 异常检测
+{anomaly_data}
+
+## 输出要求
+
+请返回JSON格式的综合买卖建议，格式如下：
+
+```json
+{{
+    "strong_buy": [
+        {{
+            "stock_code": "000001",
+            "stock_name": "平安银行",
+            "reason": "三周期一致看涨(概率0.65)，市场情绪正常，北向资金持续流入，技术面多头排列",
+            "position_pct": 4,
+            "stop_loss": 10.50,
+            "target_price": 12.80
+        }}
+    ],
+    "buy": [
+        {{
+            "stock_code": "300440",
+            "stock_name": "捷安高科",
+            "reason": "20天看涨(概率0.55)，技术面中性偏多",
+            "position_pct": 3,
+            "stop_loss": 25.00,
+            "target_price": 30.00
+        }}
+    ],
+    "hold": [
+        {{
+            "stock_code": "002655",
+            "stock_name": "共达电声",
+            "reason": "ML信号不明确，建议观望"
+        }}
+    ],
+    "sell": [
+        {{
+            "stock_code": "000002",
+            "stock_name": "万科A",
+            "reason": "三周期看跌，技术面恶化，建议减仓"
+        }}
+    ],
+    "risk_control": {{
+        "market_risk": "中",
+        "total_position": 7,
+        "stop_loss_strategy": "单只股票最大亏损-8%，触及止损位无条件平仓",
+        "position_strategy": "建议总仓位7%，保留现金应对波动"
+    }}
+}}
+```
+
+## 判断原则
+
+1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑 + 北向资金流入，建议仓位4%
+2. **买入**：20天看涨(概率>0.50) + 技术面中性偏多，建议仓位3%
+3. **持有**：信号不明确、存在冲突、或市场情绪不佳，暂不操作
+4. **卖出**：三周期看跌 + 技术面恶化，建议减仓或清仓
+
+## 注意事项
+
+1. 市场情绪为"极端熊市"时，暂停所有买入建议，strong_buy和buy为空数组
+2. 市场情绪为"熊市"时，需要ML概率≥0.70才能买入
+3. 市场情绪为"弱震荡"时，需要ML概率≥0.65才能买入
+4. 止损位一般为现价的-8%，目标价为现价的+10%
+5. total_position = strong_buy数量×4% + buy数量×3%
+
+请综合所有因素做出专业判断，**只返回JSON，不要其他文字**。
+"""
+
+    # 调用大模型
+    try:
+        response = chat_with_llm(prompt, enable_thinking=False)
+        recommendations = parse_llm_json_response(response)
+
+        # 验证结构完整性
+        required_keys = ['strong_buy', 'buy', 'hold', 'sell', 'risk_control']
+        for key in required_keys:
+            if key not in recommendations:
+                recommendations[key] = [] if key != 'risk_control' else {}
+
+        # 确保risk_control完整
+        if 'risk_control' in recommendations:
+            rc = recommendations['risk_control']
+            rc.setdefault('market_risk', '中')
+            rc.setdefault('total_position', 0)
+            rc.setdefault('stop_loss_strategy', '单只股票最大亏损-8%')
+            rc.setdefault('position_strategy', '建议观望')
+
+        print(f"  ✅ AI建议生成完成")
+        print(f"  强烈买入: {len(recommendations.get('strong_buy', []))} 只")
+        print(f"  买入: {len(recommendations.get('buy', []))} 只")
+        print(f"  持有/观望: {len(recommendations.get('hold', []))} 只")
+        print(f"  卖出: {len(recommendations.get('sell', []))} 只")
+
+        return recommendations
+
+    except Exception as e:
+        print(f"⚠️ AI综合建议生成失败: {e}")
+        # 返回空结构
+        return {
+            'strong_buy': [],
+            'buy': [],
+            'hold': [],
+            'sell': [],
+            'risk_control': {
+                'market_risk': '中',
+                'total_position': 0,
+                'stop_loss_strategy': '单只股票最大亏损-8%',
+                'position_strategy': '建议观望'
+            }
+        }
+
+
 def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None) -> str:
     """
     格式化异常检测为HTML
 
     Args:
         anomaly_result: 异常检测结果
-        anomaly_llm_analysis: LLM异常分析结果（新增）
+        anomaly_llm_analysis: AI异常分析结果（新增）
 
     Returns:
         str: HTML格式的异常检测表格
@@ -1182,7 +1576,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
 """
         html += "    </table>\n"
 
-    # LLM异常分析（新增）
+    # AI异常分析（新增）
     if anomaly_llm_analysis:
         # 将Markdown转换为HTML
         try:
@@ -1194,7 +1588,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
             llm_html = anomaly_llm_analysis.replace('\n', '<br>')
 
         html += f"""
-    <h3>🤖 LLM异常分析</h3>
+    <h3>🤖 AI异常分析</h3>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 {llm_html}
     </div>
@@ -1387,17 +1781,28 @@ A股综合分析报告
     return report
 
 
-def _format_recommendations_section(recommendations):
+def _format_recommendations_section(recommendations, stock_analyses=None):
     """
     格式化综合买卖建议HTML部分
 
     Args:
         recommendations: 综合买卖建议字典
+        stock_analyses: 股票分析结果（用于补充现价和涨跌数据）
 
     Returns:
         str: HTML格式的建议
     """
     html = ""
+
+    # 辅助函数：获取股票的现价和涨跌
+    def get_stock_price_info(stock_code):
+        if stock_analyses and stock_code in stock_analyses:
+            analysis = stock_analyses[stock_code]
+            return {
+                'current_price': analysis.get('current_price', 0) or 0,
+                'change_percent': analysis.get('change_percent', 0) or 0
+            }
+        return {'current_price': 0, 'change_percent': 0}
 
     # 强烈买入
     if recommendations.get('strong_buy'):
@@ -1406,22 +1811,25 @@ def _format_recommendations_section(recommendations):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>建议仓位</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
         for rec in recommendations['strong_buy']:
-            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            stock_code = rec.get('stock_code', '')
+            price_info = get_stock_price_info(stock_code)
+            current_price = rec.get('current_price') or price_info['current_price']
+            change_percent = rec.get('change_percent', price_info['change_percent'])
+            change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
-            <td><strong>{rec['stock_name']}</strong></td>
-            <td>{rec['stock_code']}</td>
-            <td>{rec['current_price']:.2f}</td>
-            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #16a34a; font-weight: bold;">{rec['probability_20d']:.2f}</td>
-            <td>{rec['position_pct']}%</td>
-            <td>{rec['stop_loss']:.2f}</td>
-            <td>{rec['target_price']:.2f}</td>
-            <td>{rec['reason']}</td>
+            <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
+            <td>{stock_code}</td>
+            <td>{current_price:.2f}</td>
+            <td class="{change_class}">{change_percent:+.2f}%</td>
+            <td>{rec.get('position_pct', 0)}%</td>
+            <td>{rec.get('stop_loss', 0):.2f}</td>
+            <td>{rec.get('target_price', 0):.2f}</td>
+            <td>{rec.get('reason', '')}</td>
         </tr>
 """
         html += "    </table>\n"
@@ -1433,22 +1841,25 @@ def _format_recommendations_section(recommendations):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>建议仓位</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
         for rec in recommendations['buy']:
-            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            stock_code = rec.get('stock_code', '')
+            price_info = get_stock_price_info(stock_code)
+            current_price = rec.get('current_price') or price_info['current_price']
+            change_percent = rec.get('change_percent', price_info['change_percent'])
+            change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
-            <td><strong>{rec['stock_name']}</strong></td>
-            <td>{rec['stock_code']}</td>
-            <td>{rec['current_price']:.2f}</td>
-            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #ea580c; font-weight: bold;">{rec['probability_20d']:.2f}</td>
-            <td>{rec['position_pct']}%</td>
-            <td>{rec['stop_loss']:.2f}</td>
-            <td>{rec['target_price']:.2f}</td>
-            <td>{rec['reason']}</td>
+            <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
+            <td>{stock_code}</td>
+            <td>{current_price:.2f}</td>
+            <td class="{change_class}">{change_percent:+.2f}%</td>
+            <td>{rec.get('position_pct', 0)}%</td>
+            <td>{rec.get('stop_loss', 0):.2f}</td>
+            <td>{rec.get('target_price', 0):.2f}</td>
+            <td>{rec.get('reason', '')}</td>
         </tr>
 """
         html += "    </table>\n"
@@ -1460,19 +1871,22 @@ def _format_recommendations_section(recommendations):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议</th><th>推荐理由</th>
+            <th>建议</th><th>推荐理由</th>
         </tr>
 """
         for rec in recommendations['hold']:
-            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            stock_code = rec.get('stock_code', '')
+            price_info = get_stock_price_info(stock_code)
+            current_price = rec.get('current_price') or price_info['current_price']
+            change_percent = rec.get('change_percent', price_info['change_percent'])
+            change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
-            <td>{rec['stock_name']}</td>
-            <td>{rec['stock_code']}</td>
-            <td>{rec['current_price']:.2f}</td>
-            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
-            <td>{rec['probability_20d']:.2f}</td>
+            <td>{rec.get('stock_name', stock_code)}</td>
+            <td>{stock_code}</td>
+            <td>{current_price:.2f}</td>
+            <td class="{change_class}">{change_percent:+.2f}%</td>
             <td>观望</td>
-            <td>{rec['reason']}</td>
+            <td>{rec.get('reason', '')}</td>
         </tr>
 """
         html += "    </table>\n"
@@ -1484,19 +1898,22 @@ def _format_recommendations_section(recommendations):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议卖出价</th><th>推荐理由</th>
+            <th>建议卖出价</th><th>推荐理由</th>
         </tr>
 """
         for rec in recommendations['sell']:
-            change_class = 'positive' if rec.get('change_percent', 0) >= 0 else 'negative'
+            stock_code = rec.get('stock_code', '')
+            price_info = get_stock_price_info(stock_code)
+            current_price = rec.get('current_price') or price_info['current_price']
+            change_percent = rec.get('change_percent', price_info['change_percent'])
+            change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
-            <td><strong>{rec['stock_name']}</strong></td>
-            <td>{rec['stock_code']}</td>
-            <td>{rec['current_price']:.2f}</td>
-            <td class="{change_class}">{rec['change_percent']:+.2f}%</td>
-            <td style="color: #dc2626; font-weight: bold;">{rec['probability_20d']:.2f}</td>
-            <td>{rec['current_price']:.2f}</td>
-            <td>{rec['reason']}</td>
+            <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
+            <td>{stock_code}</td>
+            <td>{current_price:.2f}</td>
+            <td class="{change_class}">{change_percent:+.2f}%</td>
+            <td>{current_price:.2f}</td>
+            <td>{rec.get('reason', '')}</td>
         </tr>
 """
         html += "    </table>\n"
@@ -1536,7 +1953,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         recommendations: 综合买卖建议（新增）
         sector_analysis: 板块分析结果（新增）
         anomaly_result: 异常检测结果（新增）
-        anomaly_llm_analysis: LLM异常分析结果（新增）
+        anomaly_llm_analysis: AI异常分析结果（新增）
 
     Returns:
         str: HTML格式邮件
@@ -1625,6 +2042,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         </table>
 
         <h3>💰 北向资金</h3>
+        <p style="color: #888; font-size: 10px; margin: 2px 0;">⚠️ 数据源暂时无法提供北向资金净买额数据</p>
         <table>
             <tr><th>指标</th><th>数值</th><th>趋势</th></tr>
             <tr>
@@ -1909,7 +2327,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if sector_analysis and sector_analysis.get('sector_ranking'):
         html += format_sectors_html(sector_analysis)
 
-    # ========== 8. 股票异常检测提醒 + LLM异常分析 ==========
+    # ========== 8. 股票异常检测提醒 + AI异常分析 ==========
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
         html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
 
@@ -2222,30 +2640,20 @@ def main():
         print("\n🤖 使用LLM分析异常...")
         try:
             anomaly_llm_analysis = analyze_anomalies_with_llm(anomaly_result)
-            print("  ✅ LLM异常分析完成")
+            print("  ✅ AI异常分析完成")
         except Exception as e:
-            print(f"  ⚠️ LLM异常分析失败: {e}")
+            print(f"  ⚠️ AI异常分析失败: {e}")
 
-    # 10. 生成综合买卖建议
+    # 10. 生成综合买卖建议（使用AI综合分析）
     print("\n📊 生成综合买卖建议...")
-    recommendations = None
-    try:
-        from a_stock_recommendation_generator import AStockRecommendationGenerator
-        rec_generator = AStockRecommendationGenerator()
-        # 使用 three_horizon_results（字典格式）替代 ml_predictions（DataFrame格式）
-        recommendations = rec_generator.generate_recommendations(
-            llm_report=llm_content or '',
-            ml_predictions=three_horizon_results or {},
-            stock_analyses=stock_analyses,
-            market_data=market_data or {},
-            northbound_data=northbound_trend or {}
-        )
-        print(f"  强烈买入: {len(recommendations.get('strong_buy', []))} 只")
-        print(f"  买入: {len(recommendations.get('buy', []))} 只")
-        print(f"  持有/观望: {len(recommendations.get('hold', []))} 只")
-        print(f"  卖出: {len(recommendations.get('sell', []))} 只")
-    except Exception as e:
-        print(f"  ⚠️ 综合买卖建议生成失败: {e}")
+    recommendations = generate_comprehensive_recommendations_with_llm(
+        stock_analyses=stock_analyses,
+        three_horizon_results=three_horizon_results,
+        market_sentiment=market_sentiment,
+        northbound_trend=northbound_trend,
+        sector_analysis=sector_analysis,
+        anomaly_result=anomaly_result
+    )
 
     # 11. 生成综合报告
     print("\n📊 生成综合报告...")
