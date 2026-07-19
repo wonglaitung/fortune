@@ -1372,7 +1372,7 @@ def generate_comprehensive_recommendations_with_llm(
 ### 1. 股票技术分析（{len(stock_analyses)}只核心股）
 {technical_data}
 
-### 2. 三周期ML预测（CatBoost模型）
+### 2. 三周期机器学习预测（CatBoost模型）
 {ml_data}
 
 ### 3. 市场情绪
@@ -1418,7 +1418,7 @@ def generate_comprehensive_recommendations_with_llm(
         {{
             "stock_code": "002655",
             "stock_name": "共达电声",
-            "reason": "ML信号不明确，建议观望"
+            "reason": "机器学习信号不明确，建议观望"
         }}
     ],
     "sell": [
@@ -1447,8 +1447,8 @@ def generate_comprehensive_recommendations_with_llm(
 ## 注意事项
 
 1. 市场情绪为"极端熊市"时，暂停所有买入建议，strong_buy和buy为空数组
-2. 市场情绪为"熊市"时，需要ML概率≥0.70才能买入
-3. 市场情绪为"弱震荡"时，需要ML概率≥0.65才能买入
+2. 市场情绪为"熊市"时，需要预测概率≥0.70才能买入
+3. 市场情绪为"弱震荡"时，需要预测概率≥0.65才能买入
 4. 止损位一般为现价的-8%，目标价为现价的+10%
 5. total_position = strong_buy数量×4% + buy数量×3%
 
@@ -2332,8 +2332,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     html += """
     <h2>💡 AI 分析建议</h2>
-    <p style="color: #666; font-size: 11px; margin-bottom: 8px;">
-        ⚠️ AI建议基于通义千问定性分析，量化建议基于CatBoost三周期预测，两者可能存在差异，请综合参考。
+    <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
+        <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于CatBoost三周期预测）可能存在差异，请综合参考。
     </p>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """
