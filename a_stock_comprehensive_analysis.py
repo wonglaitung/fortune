@@ -1749,7 +1749,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         html += """
     <h2>🔮 三周期预测结果</h2>
     <p style="color: #666; font-size: 12px;">按20天概率排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
-    <table style="font-size: 11px;">
+    <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
             <th>1天</th><th>5天</th><th>20天</th><th>市场调整</th>
@@ -2261,9 +2261,10 @@ def main():
     try:
         from a_stock_recommendation_generator import AStockRecommendationGenerator
         rec_generator = AStockRecommendationGenerator()
+        # 使用 three_horizon_results（字典格式）替代 ml_predictions（DataFrame格式）
         recommendations = rec_generator.generate_recommendations(
             llm_report=llm_content or '',
-            ml_predictions=ml_predictions or {},
+            ml_predictions=three_horizon_results or {},
             stock_analyses=stock_analyses,
             market_data=market_data or {},
             northbound_data=northbound_trend or {}
