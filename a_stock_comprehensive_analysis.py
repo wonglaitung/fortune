@@ -2021,7 +2021,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <h2>📋 综合买卖建议</h2>
     <p style="color: #666; font-size: 12px;">基于大模型分析 + CatBoost预测 + 技术指标综合判断</p>
 """
-        html += _format_recommendations_section(recommendations)
+        html += _format_recommendations_section(recommendations, stock_analyses)
 
     # ========== 2. 市场概况 ==========
     html += f"""
@@ -2040,9 +2040,14 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                 <td>{'📈 站上' if market_data.get('sh_close', 0) >= market_data.get('sh_ma20', 0) else '📉 跌破'} MA20</td>
             </tr>
         </table>
+"""
 
+    # 北向资金部分（仅当数据可用时显示）
+    nb_sh = market_data.get('northbound_sh', 0) or 0
+    nb_sz = market_data.get('northbound_sz', 0) or 0
+    if nb_buy != 0 or nb_sh != 0 or nb_sz != 0:
+        html += f"""
         <h3>💰 北向资金</h3>
-        <p style="color: #888; font-size: 10px; margin: 2px 0;">⚠️ 数据源暂时无法提供北向资金净买额数据</p>
         <table>
             <tr><th>指标</th><th>数值</th><th>趋势</th></tr>
             <tr>
@@ -2052,18 +2057,18 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             </tr>
             <tr>
                 <td>沪股通</td>
-                <td>{market_data.get('northbound_sh', 0):.2f} 亿</td>
+                <td>{nb_sh:.2f} 亿</td>
                 <td>-</td>
             </tr>
             <tr>
                 <td>深股通</td>
-                <td>{market_data.get('northbound_sz', 0):.2f} 亿</td>
+                <td>{nb_sz:.2f} 亿</td>
                 <td>-</td>
             </tr>
 """
-    # 北向资金趋势
-    if northbound_trend:
-        html += f"""            <tr>
+        # 北向资金趋势
+        if northbound_trend:
+            html += f"""            <tr>
                 <td>5日累积流入</td>
                 <td class="{'positive' if northbound_trend.get('net_buy_5d_sum', 0) >= 0 else 'negative'}">{northbound_trend.get('net_buy_5d_sum', 0):.2f} 亿</td>
                 <td>-</td>
@@ -2079,8 +2084,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                 <td>-</td>
             </tr>
 """
-    html += """        </table>
-    </div>
+        html += """        </table>
+"""
+    html += """    </div>
 """
 
     # ========== 3. 市场情绪分析 ==========
