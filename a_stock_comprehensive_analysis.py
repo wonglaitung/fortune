@@ -1870,41 +1870,12 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
         html += """    </table>
 
-    <details style="color: #666; font-size: 11px; margin-top: 10px; background: #f9f9f9; padding: 8px; border-radius: 5px;">
-        <summary style="cursor: pointer; font-weight: bold;">📖 表格说明（点击展开）</summary>
-        <div style="margin-top: 10px;">
-        <p><strong>量化建议说明</strong>：
-        基于 CatBoost 三周期预测概率（1d/5d/20d）计算的模式，如 AAA=三周期均看涨→"积极买入"。这是纯量化信号，不含定性分析，可能与 AI 建议存在差异。</p>
-
-        <p><strong>三周期预测颜色说明</strong>：
-        <span style="color: #16a34a; font-weight: bold;">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨 |
-        <span style="color: #ea580c; font-weight: bold;">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨 |
-        <span style="color: #dc2626; font-weight: bold;">↓</span>（亮红色）：概率 < 50%，看跌</p>
-
-        <p><strong>市场调整说明</strong>：
-        🟢正常：正常市场环境，使用标准阈值 |
-        🟡谨慎/降级：弱震荡市场，需更高置信度 |
-        🟠高置信：熊市环境，概率≥70%才通过 |
-        🔴暂停：极端熊市，暂停所有看涨信号</p>
-
-        <p><strong>筹码阻力说明</strong>：
-        ✅低：上方筹码 < 30%，拉升容易 |
-        ⚠️中：上方筹码 30-60%，注意风险 |
-        🔴高：上方筹码 > 60%，拉升困难</p>
-
-        <p><strong>盈亏比说明</strong>（基于Walk-forward验证）：
-        ⭐⭐⭐：盈亏比 ≥ 3:1，优秀 |
-        ⭐⭐：盈亏比 2-3:1，良好 |
-        ⭐：盈亏比 1.5-2:1，一般 |
-        ⚠️：盈亏比 < 1.5:1，较差</p>
-
-        <p><strong>风险建议说明</strong>：
-        ⭐ 优选：综合得分 ≥ 75，风险回报率最佳 |
-        🟢 推荐：综合得分 60-75，值得关注 |
-        🟡 观察：综合得分 45-60，需谨慎 |
-        🔴 暂缓：综合得分 < 45，暂不考虑</p>
-        </div>
-    </details>
+    <div style="color: #888; font-size: 10px; margin-top: 8px; background: #fafafa; padding: 6px 8px; border-radius: 4px; line-height: 1.4;">
+        <span style="margin-right: 12px;"><strong>颜色</strong>：<span style="color: #16a34a;">↑≥60%</span> 高置信 | <span style="color: #ea580c;">↑50-60%</span> 中等 | <span style="color: #dc2626;">↓&lt;50%</span> 看跌</span>
+        <span style="margin-right: 12px;"><strong>市场</strong>：🟢正常 | 🟡谨慎 | 🟠高置信 | 🔴暂停</span>
+        <span style="margin-right: 12px;"><strong>筹码</strong>：✅低 &lt;30% | ⚠️中 30-60% | 🔴高 &gt;60%</span>
+        <span><strong>风险</strong>：⭐优选 ≥75 | 🟢推荐 60-75 | 🟡观察 45-60 | 🔴暂缓 &lt;45</span>
+    </div>
 """
 
     # ========== 6. AI 分析建议 ==========
