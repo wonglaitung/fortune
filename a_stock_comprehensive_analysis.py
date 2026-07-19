@@ -1884,7 +1884,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """
     <h2>💡 AI 分析建议</h2>
     <p style="color: #666; font-size: 11px; margin-bottom: 8px;">
-        ⚠️ AI建议（定性分析）与量化建议（CatBoost预测）可能冲突，请综合参考。
+        ⚠️ AI建议基于通义千问定性分析，量化建议基于CatBoost三周期预测，两者可能存在差异，请综合参考。
     </p>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """
