@@ -1107,7 +1107,9 @@ def format_stock_technical_data_for_llm(stock_analyses: dict) -> str:
         str: 格式化的技术指标文本
     """
     lines = []
-    for code, analysis in stock_analyses.items():
+    # 按股票代码排序
+    for code in sorted(stock_analyses.keys()):
+        analysis = stock_analyses[code]
         name = analysis.get('name', code)
         price = analysis.get('current_price', '-')
         change = analysis.get('change_percent', 0)
@@ -1157,11 +1159,10 @@ def format_ml_predictions_for_llm(three_horizon_results: dict) -> str:
         return "暂无ML预测数据"
 
     lines = []
-    # 按20天概率排序
+    # 按股票代码排序
     sorted_results = sorted(
         three_horizon_results.items(),
-        key=lambda x: x[1].get('predictions', {}).get(20, {}).get('probability', 0.5),
-        reverse=True
+        key=lambda x: x[0]
     )
 
     for code, data in sorted_results:
@@ -1344,11 +1345,24 @@ def generate_comprehensive_recommendations_with_llm(
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
 
-    # 北向资金
+    # 北向资金 - 检查数据是否可用
     nb_buy = northbound_trend.get('net_buy', 0)
     nb_5d = northbound_trend.get('net_buy_5d_sum', 0)
     nb_20d = northbound_trend.get('net_buy_20d_sum', 0)
     consecutive_inflow = northbound_trend.get('consecutive_inflow', 0)
+
+    # 判断北向资金数据是否有效（全为0表示数据不可用）
+    northbound_available = (nb_buy != 0 or nb_5d != 0 or nb_20d != 0)
+
+    if northbound_available:
+        northbound_info = f"""### 4. 北向资金趋势
+- 今日净买入：{nb_buy:.2f}亿
+- 5日累积：{nb_5d:.2f}亿
+- 20日累积：{nb_20d:.2f}亿
+- 连续流入天数：{consecutive_inflow}天"""
+    else:
+        northbound_info = """### 4. 北向资金趋势
+- ⚠️ 数据暂不可用，请忽略此因素进行分析"""
 
     # 构建Prompt
     prompt = f"""你是A股量化投资专家。请根据以下数据，为每只股票生成综合买卖建议。
@@ -1366,11 +1380,7 @@ def generate_comprehensive_recommendations_with_llm(
 - 上涨比例：{up_ratio:.1%}
 - 动态置信阈值：{dynamic_threshold:.0%}
 
-### 4. 北向资金趋势
-- 今日净买入：{nb_buy:.2f}亿
-- 5日累积：{nb_5d:.2f}亿
-- 20日累积：{nb_20d:.2f}亿
-- 连续流入天数：{consecutive_inflow}天
+{northbound_info}
 
 ### 5. 板块分析（按涨幅排名）
 {sector_data}
@@ -1429,7 +1439,7 @@ def generate_comprehensive_recommendations_with_llm(
 
 ## 判断原则
 
-1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑 + 北向资金流入，建议仓位4%
+1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑{' + 北向资金流入' if northbound_available else ''}，建议仓位4%
 2. **买入**：20天看涨(概率>0.50) + 技术面中性偏多，建议仓位3%
 3. **持有**：信号不明确、存在冲突、或市场情绪不佳，暂不操作
 4. **卖出**：三周期看跌 + 技术面恶化，建议减仓或清仓
@@ -1519,7 +1529,9 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>RSI</th><th>异常原因</th>
         </tr>
 """
-        for a in anomalies['high']:
+        # 按股票代码排序
+        sorted_anomalies = sorted(anomalies['high'], key=lambda x: str(x.get('code', '')).zfill(6))
+        for a in sorted_anomalies:
             change_class = 'positive' if a['change'] >= 0 else 'negative'
             html += f"""        <tr>
             <td><strong>{a['name']}</strong></td>
@@ -1541,7 +1553,9 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>RSI</th><th>异常原因</th>
         </tr>
 """
-        for a in anomalies['medium']:
+        # 按股票代码排序
+        sorted_anomalies = sorted(anomalies['medium'], key=lambda x: str(x.get('code', '')).zfill(6))
+        for a in sorted_anomalies:
             change_class = 'positive' if a['change'] >= 0 else 'negative'
             html += f"""        <tr>
             <td>{a['name']}</td>
@@ -1556,7 +1570,8 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
 
     # 低严重度（最多显示10个）
     if anomalies.get('low'):
-        low_anomalies = anomalies['low'][:10]
+        # 先排序，再取前10个
+        sorted_low = sorted(anomalies['low'], key=lambda x: str(x.get('code', '')).zfill(6))[:10]
         html += f"""
     <h3>📋 低严重度异常（显示前10个，共{len(anomalies['low'])}个）</h3>
     <table>
@@ -1564,7 +1579,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>异常原因</th>
         </tr>
 """
-        for a in low_anomalies:
+        for a in sorted_low:
             change_class = 'positive' if a['change'] >= 0 else 'negative'
             html += f"""        <tr>
             <td>{a['name']}</td>
@@ -1818,7 +1833,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <th>推荐理由</th>
         </tr>
 """
-        for rec in recommendations['strong_buy']:
+        # 按股票代码排序
+        sorted_recs = sorted(recommendations['strong_buy'], key=lambda x: str(x.get('stock_code', '')).zfill(6))
+        for rec in sorted_recs:
             stock_code = rec.get('stock_code', '')
             price_info = get_stock_price_info(stock_code)
             current_price = rec.get('current_price') or price_info['current_price']
@@ -1848,7 +1865,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <th>推荐理由</th>
         </tr>
 """
-        for rec in recommendations['buy']:
+        # 按股票代码排序
+        sorted_recs = sorted(recommendations['buy'], key=lambda x: str(x.get('stock_code', '')).zfill(6))
+        for rec in sorted_recs:
             stock_code = rec.get('stock_code', '')
             price_info = get_stock_price_info(stock_code)
             current_price = rec.get('current_price') or price_info['current_price']
@@ -1877,7 +1896,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <th>建议</th><th>推荐理由</th>
         </tr>
 """
-        for rec in recommendations['hold']:
+        # 按股票代码排序
+        sorted_recs = sorted(recommendations['hold'], key=lambda x: str(x.get('stock_code', '')).zfill(6))
+        for rec in sorted_recs:
             stock_code = rec.get('stock_code', '')
             price_info = get_stock_price_info(stock_code)
             current_price = rec.get('current_price') or price_info['current_price']
@@ -1904,7 +1925,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <th>建议卖出价</th><th>推荐理由</th>
         </tr>
 """
-        for rec in recommendations['sell']:
+        # 按股票代码排序
+        sorted_recs = sorted(recommendations['sell'], key=lambda x: str(x.get('stock_code', '')).zfill(6))
+        for rec in sorted_recs:
             stock_code = rec.get('stock_code', '')
             price_info = get_stock_price_info(stock_code)
             current_price = rec.get('current_price') or price_info['current_price']
@@ -2175,7 +2198,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if three_horizon_results and len(three_horizon_results) > 0:
         html += """
     <h2>🔮 三周期预测结果</h2>
-    <p style="color: #666; font-size: 12px;">按20天概率排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
+    <p style="color: #666; font-size: 12px;">按股票代码排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
@@ -2185,11 +2208,10 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <th>风险得分</th><th>综合得分</th><th>风险建议</th>
         </tr>
 """
-        # 按20天概率排序
+        # 按股票代码排序
         sorted_results = sorted(
             three_horizon_results.items(),
-            key=lambda x: x[1].get('predictions', {}).get(20, {}).get('probability', 0.5),
-            reverse=True
+            key=lambda x: x[0]
         )
 
         for code, data in sorted_results:
