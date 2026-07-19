@@ -1883,8 +1883,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     html += """
     <h2>💡 AI 分析建议</h2>
-    <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
-        <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于CatBoost三周期预测）可能存在差异，请综合参考。
+    <p style="color: #666; font-size: 11px; margin-bottom: 8px;">
+        ⚠️ AI建议（定性分析）与量化建议（CatBoost预测）可能冲突，请综合参考。
     </p>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 """
