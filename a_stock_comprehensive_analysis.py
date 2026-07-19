@@ -1870,7 +1870,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
         html += """    </table>
 
-    <div style="color: #666; font-size: 11px; margin-top: 10px;">
+    <details style="color: #666; font-size: 11px; margin-top: 10px; background: #f9f9f9; padding: 8px; border-radius: 5px;">
+        <summary style="cursor: pointer; font-weight: bold;">📖 表格说明（点击展开）</summary>
+        <div style="margin-top: 10px;">
         <p><strong>量化建议说明</strong>：
         基于 CatBoost 三周期预测概率（1d/5d/20d）计算的模式，如 AAA=三周期均看涨→"积极买入"。这是纯量化信号，不含定性分析，可能与 AI 建议存在差异。</p>
 
@@ -1901,7 +1903,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         🟢 推荐：综合得分 60-75，值得关注 |
         🟡 观察：综合得分 45-60，需谨慎 |
         🔴 暂缓：综合得分 < 45，暂不考虑</p>
-    </div>
+        </div>
+    </details>
 """
 
     # ========== 6. AI 分析建议 ==========

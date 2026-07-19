@@ -65,11 +65,10 @@ jobs:
             git merge origin/main -m "Merge remote changes before updating A股 prediction history"
           fi
           # 添加A股预测结果文件
-          git add data/a_stock_models/*.pkl
-          git add data/a_stock_models/*.csv
-          git add data/a_stock_llm_recommendations_*.txt
-          git add data/a_stock_comprehensive_recommendations_*.txt
-          git add data/ml_trading_model_catboost_predictions_*.csv
+          git add data/a_stock_models/*.pkl 2>/dev/null || true
+          git add data/a_stock_models/*.csv 2>/dev/null || true
+          git add data/a_stock_llm_recommendations_*.txt 2>/dev/null || true
+          git add data/a_stock_comprehensive_recommendations_*.txt 2>/dev/null || true
           # 检查是否有更改需要提交
           if ! git diff --staged --quiet; then
             git commit -m "Update A股 prediction results [skip ci]"
