@@ -1796,12 +1796,15 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
 
     # 辅助函数：获取股票的现价和涨跌
     def get_stock_price_info(stock_code):
-        if stock_analyses and stock_code in stock_analyses:
-            analysis = stock_analyses[stock_code]
-            return {
-                'current_price': analysis.get('current_price', 0) or 0,
-                'change_percent': analysis.get('change_percent', 0) or 0
-            }
+        if stock_analyses and stock_code:
+            # 标准化股票代码为6位（补齐前导零）
+            normalized_code = str(stock_code).zfill(6)
+            if normalized_code in stock_analyses:
+                analysis = stock_analyses[normalized_code]
+                return {
+                    'current_price': analysis.get('current_price', 0) or 0,
+                    'change_percent': analysis.get('change_percent', 0) or 0
+                }
         return {'current_price': 0, 'change_percent': 0}
 
     # 强烈买入
