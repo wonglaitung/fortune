@@ -506,12 +506,21 @@ A股综合分析报告
 - 涨跌: {market_data.get('sh_change', 0):+.2f}%
 - MA20: {market_data.get('sh_ma20', 'N/A'):.2f}
 - 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
+"""
 
+    # 北向资金 - 仅当数据可用时显示
+    nb_net = market_data.get('northbound_net_buy', 0)
+    nb_sh = market_data.get('northbound_sh', 0)
+    nb_sz = market_data.get('northbound_sz', 0)
+    if nb_net != 0 or nb_sh != 0 or nb_sz != 0:
+        report += f"""
 ### 1.2 北向资金
-- 净买入: {market_data.get('northbound_net_buy', 0):.2f} 亿
-- 沪股通: {market_data.get('northbound_sh', 0):.2f} 亿
-- 深股通: {market_data.get('northbound_sz', 0):.2f} 亿
+- 净买入: {nb_net:.2f} 亿
+- 沪股通: {nb_sh:.2f} 亿
+- 深股通: {nb_sz:.2f} 亿
+"""
 
+    report += """
 ---
 
 ## 二、自选股技术分析
@@ -548,7 +557,7 @@ A股综合分析报告
 """
     if ml_predictions_20d is not None and not ml_predictions_20d.empty:
         for _, row in ml_predictions_20d.iterrows():
-            code = row.get('Stock_Code', '')
+            code = str(row.get('Stock_Code', '')).zfill(6)  # 标准化为6位代码
             name = A_STOCK_WATCHLIST.get(code, code)
             pred_proba = row.get('Prediction_Proba', 0.5)
             direction = '上涨' if pred_proba >= 0.5 else '下跌'
@@ -1690,12 +1699,21 @@ A股综合分析报告
 - 涨跌: {market_data.get('sh_change', 0):+.2f}%
 - MA20: {market_data.get('sh_ma20', 'N/A'):.2f}
 - 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
+"""
 
+    # 北向资金 - 仅当数据可用时显示
+    nb_net = market_data.get('northbound_net_buy', 0)
+    nb_sh = market_data.get('northbound_sh', 0)
+    nb_sz = market_data.get('northbound_sz', 0)
+    if nb_net != 0 or nb_sh != 0 or nb_sz != 0:
+        report += f"""
 ### 1.2 北向资金
-- 净买入: {market_data.get('northbound_net_buy', 0):.2f} 亿
-- 沪股通: {market_data.get('northbound_sh', 0):.2f} 亿
-- 深股通: {market_data.get('northbound_sz', 0):.2f} 亿
+- 净买入: {nb_net:.2f} 亿
+- 沪股通: {nb_sh:.2f} 亿
+- 深股通: {nb_sz:.2f} 亿
+"""
 
+    report += """
 ---
 
 ## 二、自选股技术分析
@@ -1732,7 +1750,7 @@ A股综合分析报告
 """
     if ml_predictions_20d is not None and not ml_predictions_20d.empty:
         for _, row in ml_predictions_20d.iterrows():
-            code = row.get('Stock_Code', '')
+            code = str(row.get('Stock_Code', '')).zfill(6)  # 标准化为6位代码
             name = A_STOCK_WATCHLIST.get(code, code)
             pred_proba = row.get('Prediction_Proba', 0.5)
             pred_label = '上涨' if pred_proba >= 0.5 else '下跌'
