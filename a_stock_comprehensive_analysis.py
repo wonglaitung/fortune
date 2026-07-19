@@ -1452,11 +1452,6 @@ def generate_comprehensive_recommendations_with_llm(
 4. 止损位一般为现价的-8%，目标价为现价的+10%
 5. total_position = strong_buy数量×4% + buy数量×3%
 
-## 文字规范
-
-1. 推荐理由中使用"机器学习"而非"ML"缩写
-2. 例如："机器学习三周期看涨"、"机器学习模式AAA"，不要写成"ML三周期"、"ML模式"
-
 请综合所有因素做出专业判断，**只返回JSON，不要其他文字**。
 """
 
