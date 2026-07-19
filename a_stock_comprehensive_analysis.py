@@ -2045,7 +2045,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if recommendations:
         html += """
     <h2>📋 综合买卖建议</h2>
-    <p style="color: #666; font-size: 12px;">基于大模型分析 + CatBoost预测 + 技术指标综合判断</p>
+    <p style="color: #666; font-size: 12px;">基于大模型分析 + ML(机器学习)预测 + 技术指标综合判断</p>
 """
         html += _format_recommendations_section(recommendations, stock_analyses)
 
