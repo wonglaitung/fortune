@@ -1359,10 +1359,11 @@ def generate_comprehensive_recommendations_with_llm(
 - 今日净买入：{nb_buy:.2f}亿
 - 5日累积：{nb_5d:.2f}亿
 - 20日累积：{nb_20d:.2f}亿
-- 连续流入天数：{consecutive_inflow}天"""
+- 连续流入天数：{consecutive_inflow}天
+
+"""
     else:
-        northbound_info = """### 4. 北向资金趋势
-- ⚠️ 数据暂不可用，请忽略此因素进行分析"""
+        northbound_info = ""  # 数据不可用时完全移除该部分
 
     # 构建Prompt
     prompt = f"""你是A股量化投资专家。请根据以下数据，为每只股票生成综合买卖建议。
@@ -1380,12 +1381,10 @@ def generate_comprehensive_recommendations_with_llm(
 - 上涨比例：{up_ratio:.1%}
 - 动态置信阈值：{dynamic_threshold:.0%}
 
-{northbound_info}
-
-### 5. 板块分析（按涨幅排名）
+{northbound_info}### 4. 板块分析（按涨幅排名）
 {sector_data}
 
-### 6. 异常检测
+### 5. 异常检测
 {anomaly_data}
 
 ## 输出要求
@@ -1398,7 +1397,7 @@ def generate_comprehensive_recommendations_with_llm(
         {{
             "stock_code": "000001",
             "stock_name": "平安银行",
-            "reason": "三周期一致看涨(概率0.65)，市场情绪正常，北向资金持续流入，技术面多头排列",
+            "reason": "三周期一致看涨(概率0.65)，市场情绪正常{'，北向资金持续流入' if northbound_available else ''}，技术面多头排列",
             "position_pct": 4,
             "stop_loss": 10.50,
             "target_price": 12.80
