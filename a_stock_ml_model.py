@@ -5,14 +5,14 @@ A股机器学习交易模型
 
 继承港股模型结构，适配A股特有特征：
 - 涨跌停限制
-- 北向资金
+- 主力资金流向
 - 融资融券
 - 龙虎榜
 - 样本权重训练（核心股3.0，扩展股1.0）
 - 双指数市场特征（中证1000 + 创业板指）
 - 滚动网络特征（防止时序泄漏）
 
-版本：v2.0 (2026-07-17)
+版本：v2.1 (2026-07-20)
 """
 
 import os
@@ -286,8 +286,8 @@ class AStockFeatureEngineer(FeatureEngineer):
         # 1. 涨跌停特征
         df = self._add_limit_features(df, stock_code)
 
-        # 2. 北向资金特征
-        df = self._add_northbound_features(df)
+        # 2. 主力资金特征
+        df = self._add_main_fund_features(df)
 
         # 3. 融资融券特征
         df = self._add_margin_features(df, stock_code)
@@ -427,72 +427,66 @@ class AStockFeatureEngineer(FeatureEngineer):
 
         return df
 
-    def _add_northbound_features(self, df):
+    def _add_main_fund_features(self, df):
         """
-        添加北向资金特征（增强版）
+        添加主力资金特征
 
         包括：
-        - 当日净买入、净流入
+        - 当日主力净流入、超大单、大单
         - 累积流入趋势（5日、20日）
         - 流入持续性（连续流入/流出天数）
-        - 北向资金占比（相对成交额）
 
         Args:
             df: 股票数据DataFrame
 
         Returns:
-            DataFrame: 添加北向资金特征后的数据
+            DataFrame: 添加主力资金特征后的数据
         """
-        from data_services.northbound_data import NorthboundDataService
-        service = NorthboundDataService()
-        northbound_df = service.fetch_history()
+        from data_services.main_fund_flow import MainFundFlowService
+        service = MainFundFlowService()
+        main_fund_df = service.fetch_history()
 
-        if northbound_df is None or northbound_df.empty:
+        if main_fund_df is None or main_fund_df.empty:
             # 添加默认值
-            df['Northbound_Net_Buy'] = 0
-            df['Northbound_Net_Inflow'] = 0
-            df['Northbound_Net_Buy_5d_Sum'] = 0
-            df['Northbound_Net_Buy_20d_Sum'] = 0
-            df['Northbound_Consecutive_Inflow'] = 0
-            df['Northbound_Turnover_Ratio'] = 0
+            df['MainFund_Net_Flow'] = 0
+            df['MainFund_Super_Large'] = 0
+            df['MainFund_Large'] = 0
+            df['MainFund_Net_Flow_5d_Sum'] = 0
+            df['MainFund_Net_Flow_20d_Sum'] = 0
+            df['MainFund_Consecutive_Inflow'] = 0
             return df
 
-        northbound_df = northbound_df.copy()
-        northbound_df.index = pd.to_datetime(northbound_df.index).tz_localize(None)
+        main_fund_df = main_fund_df.copy()
+        main_fund_df.index = pd.to_datetime(main_fund_df.index).tz_localize(None)
 
         df_temp = df.copy()
         if df_temp.index.tz is not None:
             df_temp.index = df_temp.index.tz_localize(None)
 
-        # 基础特征：当日净买入、净流入
-        for col in ['net_buy', 'net_inflow']:
-            if col in northbound_df.columns:
-                df_temp[f'Northbound_{col.title()}'] = df_temp.index.map(
-                    lambda x: northbound_df.loc[:x, col].iloc[-1] if (northbound_df.index <= x).any() else 0
+        # 基础特征：当日主力净流入、超大单、大单
+        for col, target in [('main_net_flow', 'MainFund_Net_Flow'),
+                            ('super_large', 'MainFund_Super_Large'),
+                            ('large', 'MainFund_Large')]:
+            if col in main_fund_df.columns:
+                df_temp[target] = df_temp.index.map(
+                    lambda x: main_fund_df.loc[:x, col].iloc[-1] if (main_fund_df.index <= x).any() else 0
                 )
 
         # 计算累积流入趋势（5日、20日）
-        if 'Northbound_Net_Buy' in df_temp.columns:
+        if 'MainFund_Net_Flow' in df_temp.columns:
             # 使用 shift(1) 避免数据泄漏
-            df_temp['Northbound_Net_Buy_5d_Sum'] = df_temp['Northbound_Net_Buy'].shift(1).rolling(5).sum()
-            df_temp['Northbound_Net_Buy_20d_Sum'] = df_temp['Northbound_Net_Buy'].shift(1).rolling(20).sum()
+            df_temp['MainFund_Net_Flow_5d_Sum'] = df_temp['MainFund_Net_Flow'].shift(1).rolling(5).sum()
+            df_temp['MainFund_Net_Flow_20d_Sum'] = df_temp['MainFund_Net_Flow'].shift(1).rolling(20).sum()
 
             # 流入持续性（连续流入天数）
-            # 当净买入 > 0 时，连续流入天数 +1
-            net_buy_shifted = df_temp['Northbound_Net_Buy'].shift(1)
-            df_temp['Northbound_Consecutive_Inflow'] = (
-                net_buy_shifted > 0
-            ).groupby((net_buy_shifted <= 0).cumsum()).cumsum()
-
-        # 北向资金占比（相对成交额）- 需要成交额数据
-        if 'Turnover' in df_temp.columns and 'Northbound_Net_Buy' in df_temp.columns:
-            # 使用 shift(1) 避免数据泄漏
-            turnover_shifted = df_temp['Turnover'].shift(1)
-            df_temp['Northbound_Turnover_Ratio'] = df_temp['Northbound_Net_Buy'] / (turnover_shifted.abs() + 1e-10)
+            net_flow_shifted = df_temp['MainFund_Net_Flow'].shift(1)
+            df_temp['MainFund_Consecutive_Inflow'] = (
+                net_flow_shifted > 0
+            ).groupby((net_flow_shifted <= 0).cumsum()).cumsum()
 
         # 复制到原 DataFrame
         for col in df_temp.columns:
-            if col.startswith('Northbound_'):
+            if col.startswith('MainFund_'):
                 df[col] = df_temp[col]
 
         return df
@@ -697,7 +691,7 @@ class AStockTradingModel(CatBoostModel):
 
         不调用父类 prepare_data()，而是复制港股流程并替换港股特有部分：
         - 使用中证1000/创业板指代替恒生指数
-        - 添加涨跌停、北向资金等A股特有特征
+        - 添加涨跌停、主力资金等A股特有特征
         - 使用A股网络特征路径
 
         Args:
@@ -818,7 +812,7 @@ class AStockTradingModel(CatBoostModel):
                 # ========== 3.2 A股特有特征（关键新增！）==========
                 # 涨跌停特征 + 北向资金特征
                 stock_df = self.feature_engineer.add_a_stock_features(stock_df, code)
-                print(f"  ✅ A股特有特征已添加（涨跌停、北向资金）")
+                print(f"  ✅ A股特有特征已添加（涨跌停、主力资金）")
 
                 # ========== 3.3 A股市场环境特征 ==========
                 # 中证1000收益 + 创业板指收益 + 美股特征
@@ -1428,7 +1422,7 @@ class AStockTradingModel(CatBoostModel):
         # 技术指标与基本面交互特征
         stock_df = self.feature_engineer.create_technical_fundamental_interactions(stock_df)
 
-        # A股特有特征（涨跌停、北向资金、行为金融因子）
+        # A股特有特征（涨跌停、主力资金、行为金融因子）
         stock_df = self.feature_engineer.add_a_stock_features(stock_df, code)
 
         # A股市场环境特征

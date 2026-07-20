@@ -19,12 +19,36 @@ import os
 import sys
 import logging
 from datetime import datetime, timedelta
+import signal
+from functools import wraps
 
 import pandas as pd
 import numpy as np
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def timeout_handler(seconds):
+    """超时装饰器，用于给 AKShare 调用添加超时限制"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            def _timeout_handler(signum, frame):
+                raise TimeoutError(f"函数 {func.__name__} 执行超时（{seconds}秒）")
+
+            # 设置信号处理器
+            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                # 恢复原来的信号处理器
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
+            return result
+        return wrapper
+    return decorator
 
 from a_stock_config import (
     A_STOCK_MARKET_INDEX,
@@ -212,7 +236,7 @@ class AStockMarketFeatures:
         return df
 
     def _get_commodity_futures_data(self, symbol='CU0'):
-        """获取商品期货数据（带缓存）"""
+        """获取商品期货数据（带缓存，带超时）"""
         import akshare as ak
 
         cache_key = f'futures_{symbol}'
@@ -222,7 +246,12 @@ class AStockMarketFeatures:
                 return cache_data
 
         try:
-            df = ak.futures_main_sina(symbol=symbol)
+            # 使用信号超时包装 AKShare 调用
+            @timeout_handler(15)
+            def _fetch_futures():
+                return ak.futures_main_sina(symbol=symbol)
+
+            df = _fetch_futures()
             if df is not None and not df.empty:
                 df['日期'] = pd.to_datetime(df['日期'])
                 df = df.set_index('日期')
@@ -231,6 +260,8 @@ class AStockMarketFeatures:
                 # 缓存数据
                 self._cache[cache_key] = (datetime.now(), df)
                 return df
+        except TimeoutError as e:
+            logger.warning(f"获取商品期货 {symbol} 数据超时: {e}")
         except Exception as e:
             logger.warning(f"获取商品期货 {symbol} 数据失败: {e}")
 

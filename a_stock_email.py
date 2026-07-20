@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from a_stock_config import A_STOCK_WATCHLIST, get_limit_rate
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
-from data_services.northbound_data import NorthboundDataService
+from data_services.main_fund_flow import MainFundFlowService
 
 
 def get_stock_technical_data(stock_code, period_days=100):
@@ -107,14 +107,14 @@ def get_stock_technical_data(stock_code, period_days=100):
     }
 
 
-def generate_llm_prompt(stock_data_list, market_data, northbound_data):
+def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     """
     生成大模型提示词
 
     Args:
         stock_data_list: 股票数据列表
         market_data: 市场数据
-        northbound_data: 北向资金数据
+        main_fund_data: 主力资金数据
 
     Returns:
         str: 提示词
@@ -157,10 +157,10 @@ def generate_llm_prompt(stock_data_list, market_data, northbound_data):
 - 收盘：{market_data.get('sh_close', 'N/A')}
 - 涨跌：{market_data.get('sh_change', 'N/A')}%
 
-**北向资金**：
-- 净买入：{northbound_data.get('net_buy', 0):.2f} 亿
-- 沪股通：{northbound_data.get('sh_net_buy', 0):.2f} 亿
-- 深股通：{northbound_data.get('sz_net_buy', 0):.2f} 亿
+**主力资金**：
+- 净流入：{main_fund_data.get('main_net_flow', 0):.2f} 亿
+- 超大单：{main_fund_data.get('super_large', 0):.2f} 亿
+- 大单：{main_fund_data.get('large', 0):.2f} 亿
 """
 
     # 完整提示词
@@ -178,7 +178,7 @@ def generate_llm_prompt(stock_data_list, market_data, northbound_data):
 
 请针对以上{len(stock_data_list)}只A股，给出：
 
-1. **市场判断**：当前A股市场整体趋势如何？北向资金流向说明了什么？
+1. **市场判断**：当前A股市场整体趋势如何？主力资金流向说明了什么？
 
 2. **个股分析**：对每只股票给出：
    - 技术面分析（趋势、支撑位、压力位）
@@ -201,14 +201,14 @@ def generate_llm_prompt(stock_data_list, market_data, northbound_data):
     return prompt
 
 
-def analyze_with_llm(stock_data_list, market_data, northbound_data):
+def analyze_with_llm(stock_data_list, market_data, main_fund_data):
     """
     使用大模型分析股票
 
     Args:
         stock_data_list: 股票数据列表
         market_data: 市场数据
-        northbound_data: 北向资金数据
+        main_fund_data: 主力资金数据
 
     Returns:
         str: 分析报告
@@ -218,7 +218,7 @@ def analyze_with_llm(stock_data_list, market_data, northbound_data):
 
         print("🤖 正在调用通义千问分析A股...")
 
-        prompt = generate_llm_prompt(stock_data_list, market_data, northbound_data)
+        prompt = generate_llm_prompt(stock_data_list, market_data, main_fund_data)
 
         # 调用大模型
         result = chat_with_llm(prompt, enable_thinking=False)
@@ -290,12 +290,12 @@ def generate_ai_report(stocks=None, save_file=True):
     print(f"📅 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"📊 分析股票: {len(stocks)} 只")
 
-    # 获取北向资金
-    print("\n📊 获取北向资金数据...")
-    northbound_service = NorthboundDataService()
-    northbound_data = northbound_service.get_latest()
-    if not northbound_data:
-        northbound_data = {}
+    # 获取主力资金
+    print("\n📊 获取主力资金数据...")
+    main_fund_service = MainFundFlowService()
+    main_fund_data = main_fund_service.get_latest()
+    if not main_fund_data:
+        main_fund_data = {}
 
     # 获取上证指数
     print("📊 获取上证指数数据...")
@@ -324,7 +324,7 @@ def generate_ai_report(stocks=None, save_file=True):
 
     # 调用大模型分析
     print("\n🤖 调用大模型分析...")
-    report = analyze_with_llm(stock_data_list, market_data, northbound_data)
+    report = analyze_with_llm(stock_data_list, market_data, main_fund_data)
 
     if report and save_file:
         save_llm_report(report, stock_data_list)

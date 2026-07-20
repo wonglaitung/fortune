@@ -11,7 +11,7 @@ A股综合分析脚本 - 整合大模型建议和ML预测结果
 - 新增：generate_comprehensive_recommendations_with_llm 函数
 - 新增：数据格式化辅助函数（技术指标、ML预测、板块分析、异常检测）
 - 删除：a_stock_recommendation_generator.py（硬编码逻辑）
-- 优化：AI综合分析接收全部数据（技术指标+ML预测+市场情绪+北向资金+板块分析+异常检测）
+- 优化：AI综合分析接收全部数据（技术指标+ML预测+市场情绪+主力资金+板块分析+异常检测）
 """
 
 import os
@@ -36,7 +36,7 @@ from a_stock_config import (
 
 # 导入数据服务
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
-from data_services.northbound_data import NorthboundDataService
+from data_services.main_fund_flow import MainFundFlowService
 
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
@@ -467,13 +467,13 @@ def analyze_market():
         result['sh_ma20'] = sh_df['MA20'].iloc[-1]
         result['sh_vs_ma20'] = (latest['Close'] / sh_df['MA20'].iloc[-1] - 1) * 100
 
-    # 北向资金
-    northbound_service = NorthboundDataService()
-    nb_data = northbound_service.get_latest()
-    if nb_data:
-        result['northbound_net_buy'] = nb_data.get('net_buy', 0)
-        result['northbound_sh'] = nb_data.get('sh_net_buy', 0)
-        result['northbound_sz'] = nb_data.get('sz_net_buy', 0)
+    # 主力资金
+    main_fund_service = MainFundFlowService()
+    mf_data = main_fund_service.get_latest()
+    if mf_data:
+        result['main_fund_net_flow'] = mf_data.get('main_net_flow', 0)
+        result['main_fund_super_large'] = mf_data.get('super_large', 0)
+        result['main_fund_large'] = mf_data.get('large', 0)
 
     return result
 
@@ -508,16 +508,16 @@ A股综合分析报告
 - 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
 """
 
-    # 北向资金 - 仅当数据可用时显示
-    nb_net = market_data.get('northbound_net_buy', 0)
-    nb_sh = market_data.get('northbound_sh', 0)
-    nb_sz = market_data.get('northbound_sz', 0)
-    if nb_net != 0 or nb_sh != 0 or nb_sz != 0:
+    # 主力资金 - 仅当数据可用时显示
+    mf_net = market_data.get('main_fund_net_flow', 0)
+    mf_super = market_data.get('main_fund_super_large', 0)
+    mf_large = market_data.get('main_fund_large', 0)
+    if mf_net != 0 or mf_super != 0 or mf_large != 0:
         report += f"""
-### 1.2 北向资金
-- 净买入: {nb_net:.2f} 亿
-- 沪股通: {nb_sh:.2f} 亿
-- 深股通: {nb_sz:.2f} 亿
+### 1.2 主力资金
+- 净流入: {mf_net:.2f} 亿
+- 超大单: {mf_super:.2f} 亿
+- 大单: {mf_large:.2f} 亿
 """
 
     report += """
@@ -581,7 +581,7 @@ A股综合分析报告
 ## 五、风险提示
 
 1. **涨跌停限制**：创业板/科创板 20%，主板 10%，ST股 5%
-2. **北向资金**：关注外资流向变化
+2. **主力资金**：关注大资金流向变化
 3. **市场情绪**：上证指数跌破MA20时需谨慎
 
 ---
@@ -758,44 +758,44 @@ def get_market_sentiment(stock_analyses):
     }
 
 
-def get_northbound_trend():
+def get_main_fund_trend():
     """
-    获取北向资金趋势
+    获取主力资金趋势
 
     Returns:
-        dict: 北向资金详细数据
+        dict: 主力资金详细数据
     """
     result = {
-        'net_buy': 0,
-        'sh_net_buy': 0,
-        'sz_net_buy': 0,
-        'net_buy_5d_sum': 0,
-        'net_buy_20d_sum': 0,
+        'net_flow': 0,
+        'super_large': 0,
+        'large': 0,
+        'net_flow_5d_sum': 0,
+        'net_flow_20d_sum': 0,
         'consecutive_inflow': 0,
     }
 
     try:
-        service = NorthboundDataService()
+        service = MainFundFlowService()
 
         # 获取最新数据
         latest = service.get_latest()
         if latest:
-            result['net_buy'] = latest.get('net_buy', 0)
-            result['sh_net_buy'] = latest.get('sh_net_buy', 0)
-            result['sz_net_buy'] = latest.get('sz_net_buy', 0)
+            result['net_flow'] = latest.get('main_net_flow', 0)
+            result['super_large'] = latest.get('super_large', 0)
+            result['large'] = latest.get('large', 0)
 
         # 获取历史数据计算趋势
         history = service.fetch_history()
         if history is not None and not history.empty:
             # 累积流入（5日、20日）
-            if 'net_buy' in history.columns:
-                result['net_buy_5d_sum'] = history['net_buy'].tail(5).sum()
-                result['net_buy_20d_sum'] = history['net_buy'].tail(20).sum()
+            if 'main_net_flow' in history.columns:
+                result['net_flow_5d_sum'] = history['main_net_flow'].tail(5).sum()
+                result['net_flow_20d_sum'] = history['main_net_flow'].tail(20).sum()
 
                 # 连续流入天数
-                net_buy_series = history['net_buy'].tail(20)
+                net_flow_series = history['main_net_flow'].tail(20)
                 consecutive = 0
-                for val in net_buy_series.iloc[::-1]:
+                for val in net_flow_series.iloc[::-1]:
                     if val > 0:
                         consecutive += 1
                     else:
@@ -803,7 +803,7 @@ def get_northbound_trend():
                 result['consecutive_inflow'] = consecutive
 
     except Exception as e:
-        print(f"⚠️ 获取北向资金趋势失败: {e}")
+        print(f"⚠️ 获取主力资金趋势失败: {e}")
 
     return result
 
@@ -1080,7 +1080,7 @@ def analyze_anomalies_with_llm(anomaly_result: dict) -> str:
 请从以下角度分析（但不限于）：
 1. **整体市场状态**：超卖/超买比例、市场情绪判断
 2. **板块异动**：哪些板块集体异动、板块轮动信号
-3. **资金流向**：主力资金、北向资金的流向判断
+3. **资金流向**：主力资金的流向判断
 4. **个股亮点**：值得特别关注的个股及原因
 5. **交易启示**：基于异常信号的操作建议（表格形式）
 6. **风险提示**：需要警惕的风险点
@@ -1309,7 +1309,7 @@ def generate_comprehensive_recommendations_with_llm(
     stock_analyses: dict,
     three_horizon_results: dict,
     market_sentiment: dict,
-    northbound_trend: dict,
+    main_fund_trend: dict,
     sector_analysis: dict,
     anomaly_result: dict
 ) -> dict:
@@ -1320,7 +1320,7 @@ def generate_comprehensive_recommendations_with_llm(
         stock_analyses: 股票技术分析结果
         three_horizon_results: 三周期ML预测结果
         market_sentiment: 市场情绪数据
-        northbound_trend: 北向资金趋势
+        main_fund_trend: 主力资金趋势
         sector_analysis: 板块分析结果
         anomaly_result: 异常检测结果
 
@@ -1354,25 +1354,25 @@ def generate_comprehensive_recommendations_with_llm(
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
 
-    # 北向资金 - 检查数据是否可用
-    nb_buy = northbound_trend.get('net_buy', 0)
-    nb_5d = northbound_trend.get('net_buy_5d_sum', 0)
-    nb_20d = northbound_trend.get('net_buy_20d_sum', 0)
-    consecutive_inflow = northbound_trend.get('consecutive_inflow', 0)
+    # 主力资金 - 检查数据是否可用
+    mf_flow = main_fund_trend.get('net_flow', 0)
+    mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
+    mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
+    consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
 
-    # 判断北向资金数据是否有效（全为0表示数据不可用）
-    northbound_available = (nb_buy != 0 or nb_5d != 0 or nb_20d != 0)
+    # 判断主力资金数据是否有效（全为0表示数据不可用）
+    main_fund_available = (mf_flow != 0 or mf_5d != 0 or mf_20d != 0)
 
-    if northbound_available:
-        northbound_info = f"""### 4. 北向资金趋势
-- 今日净买入：{nb_buy:.2f}亿
-- 5日累积：{nb_5d:.2f}亿
-- 20日累积：{nb_20d:.2f}亿
+    if main_fund_available:
+        main_fund_info = f"""### 4. 主力资金趋势
+- 今日净流入：{mf_flow:.2f}亿
+- 5日累积：{mf_5d:.2f}亿
+- 20日累积：{mf_20d:.2f}亿
 - 连续流入天数：{consecutive_inflow}天
 
 """
     else:
-        northbound_info = ""  # 数据不可用时完全移除该部分
+        main_fund_info = ""  # 数据不可用时完全移除该部分
 
     # 构建Prompt
     prompt = f"""你是A股量化投资专家。请根据以下数据，为每只股票生成综合买卖建议。
@@ -1390,7 +1390,7 @@ def generate_comprehensive_recommendations_with_llm(
 - 上涨比例：{up_ratio:.1%}
 - 动态置信阈值：{dynamic_threshold:.0%}
 
-{northbound_info}### 4. 板块分析（按涨幅排名）
+{main_fund_info}### 4. 板块分析（按涨幅排名）
 {sector_data}
 
 ### 5. 异常检测
@@ -1406,7 +1406,7 @@ def generate_comprehensive_recommendations_with_llm(
         {{
             "stock_code": "000001",
             "stock_name": "平安银行",
-            "reason": "三周期一致看涨(概率0.65)，市场情绪正常{'，北向资金持续流入' if northbound_available else ''}，技术面多头排列",
+            "reason": "三周期一致看涨(概率0.65)，市场情绪正常{'，主力资金持续流入' if main_fund_available else ''}，技术面多头排列",
             "position_pct": 4,
             "stop_loss": 10.50,
             "target_price": 12.80
@@ -1447,7 +1447,7 @@ def generate_comprehensive_recommendations_with_llm(
 
 ## 判断原则
 
-1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑{' + 北向资金流入' if northbound_available else ''}，建议仓位4%
+1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑{' + 主力资金流入' if main_fund_available else ''}，建议仓位4%
 2. **买入**：20天看涨(概率>0.50) + 技术面中性偏多，建议仓位3%
 3. **持有**：信号不明确、存在冲突、或市场情绪不佳，暂不操作
 4. **卖出**：三周期看跌 + 技术面恶化，建议减仓或清仓
@@ -1701,16 +1701,16 @@ A股综合分析报告
 - 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
 """
 
-    # 北向资金 - 仅当数据可用时显示
-    nb_net = market_data.get('northbound_net_buy', 0)
-    nb_sh = market_data.get('northbound_sh', 0)
-    nb_sz = market_data.get('northbound_sz', 0)
-    if nb_net != 0 or nb_sh != 0 or nb_sz != 0:
+    # 主力资金 - 仅当数据可用时显示
+    mf_net = market_data.get('main_fund_net_flow', 0)
+    mf_super = market_data.get('main_fund_super_large', 0)
+    mf_large = market_data.get('main_fund_large', 0)
+    if mf_net != 0 or mf_super != 0 or mf_large != 0:
         report += f"""
-### 1.2 北向资金
-- 净买入: {nb_net:.2f} 亿
-- 沪股通: {nb_sh:.2f} 亿
-- 深股通: {nb_sz:.2f} 亿
+### 1.2 主力资金
+- 净流入: {mf_net:.2f} 亿
+- 超大单: {mf_super:.2f} 亿
+- 大单: {mf_large:.2f} 亿
 """
 
     report += """
@@ -1802,7 +1802,7 @@ A股综合分析报告
 ## 六、风险提示
 
 1. **涨跌停风险**: 创业板/科创板涨跌停限制20%，主板10%
-2. **北向资金**: 关注外资流向变化
+2. **主力资金**: 关注大资金流向变化
 3. **市场情绪**: 上证指数跌破MA20时需谨慎
 
 ---
@@ -1979,7 +1979,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
 
 
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
-                          three_horizon_results=None, market_sentiment=None, northbound_trend=None,
+                          three_horizon_results=None, market_sentiment=None, main_fund_trend=None,
                           recommendations=None, sector_analysis=None, anomaly_result=None,
                           anomaly_llm_analysis=None):
     """
@@ -1992,7 +1992,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         market_data: 市场数据
         three_horizon_results: 三周期预测结果（新增）
         market_sentiment: 市场情绪数据（新增）
-        northbound_trend: 北向资金趋势（新增）
+        main_fund_trend: 主力资金趋势（新增）
         recommendations: 综合买卖建议（新增）
         sector_analysis: 板块分析结果（新增）
         anomaly_result: 异常检测结果（新增）
@@ -2007,9 +2007,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     sh_change = market_data.get('sh_change', 0)
     sh_color = 'green' if sh_change >= 0 else 'red'
 
-    # 北向资金颜色
-    nb_buy = market_data.get('northbound_net_buy', 0)
-    nb_color = 'green' if nb_buy >= 0 else 'red'
+    # 主力资金颜色
+    mf_flow = market_data.get('main_fund_net_flow', 0)
+    mf_color = 'green' if mf_flow >= 0 else 'red'
 
     # 市场情绪层级名称
     layer_names = {
@@ -2085,45 +2085,45 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         </table>
 """
 
-    # 北向资金部分（仅当数据可用时显示）
-    nb_sh = market_data.get('northbound_sh', 0) or 0
-    nb_sz = market_data.get('northbound_sz', 0) or 0
-    if nb_buy != 0 or nb_sh != 0 or nb_sz != 0:
+    # 主力资金部分（仅当数据可用时显示）
+    mf_super = market_data.get('main_fund_super_large', 0) or 0
+    mf_large = market_data.get('main_fund_large', 0) or 0
+    if mf_flow != 0 or mf_super != 0 or mf_large != 0:
         html += f"""
-        <h3>💰 北向资金</h3>
+        <h3>💰 主力资金</h3>
         <table>
             <tr><th>指标</th><th>数值</th><th>趋势</th></tr>
             <tr>
-                <td>今日净买入</td>
-                <td class="{'positive' if nb_buy >= 0 else 'negative'}">{nb_buy:.2f} 亿</td>
-                <td>{'流入' if nb_buy >= 0 else '流出'}</td>
+                <td>今日净流入</td>
+                <td class="{'positive' if mf_flow >= 0 else 'negative'}">{mf_flow:.2f} 亿</td>
+                <td>{'流入' if mf_flow >= 0 else '流出'}</td>
             </tr>
             <tr>
-                <td>沪股通</td>
-                <td>{nb_sh:.2f} 亿</td>
+                <td>超大单</td>
+                <td>{mf_super:.2f} 亿</td>
                 <td>-</td>
             </tr>
             <tr>
-                <td>深股通</td>
-                <td>{nb_sz:.2f} 亿</td>
+                <td>大单</td>
+                <td>{mf_large:.2f} 亿</td>
                 <td>-</td>
             </tr>
 """
-        # 北向资金趋势
-        if northbound_trend:
+        # 主力资金趋势
+        if main_fund_trend:
             html += f"""            <tr>
                 <td>5日累积流入</td>
-                <td class="{'positive' if northbound_trend.get('net_buy_5d_sum', 0) >= 0 else 'negative'}">{northbound_trend.get('net_buy_5d_sum', 0):.2f} 亿</td>
+                <td class="{'positive' if main_fund_trend.get('net_flow_5d_sum', 0) >= 0 else 'negative'}">{main_fund_trend.get('net_flow_5d_sum', 0):.2f} 亿</td>
                 <td>-</td>
             </tr>
             <tr>
                 <td>20日累积流入</td>
-                <td class="{'positive' if northbound_trend.get('net_buy_20d_sum', 0) >= 0 else 'negative'}">{northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿</td>
+                <td class="{'positive' if main_fund_trend.get('net_flow_20d_sum', 0) >= 0 else 'negative'}">{main_fund_trend.get('net_flow_20d_sum', 0):.2f} 亿</td>
                 <td>-</td>
             </tr>
             <tr>
                 <td>连续流入天数</td>
-                <td>{northbound_trend.get('consecutive_inflow', 0)} 天</td>
+                <td>{main_fund_trend.get('consecutive_inflow', 0)} 天</td>
                 <td>-</td>
             </tr>
 """
@@ -2384,7 +2384,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <h2>⚠️ 风险提示</h2>
     <ul>
         <li><strong>涨跌停限制</strong>：创业板/科创板 20%，主板 10%，ST股 5%</li>
-        <li><strong>北向资金</strong>：关注外资流向变化，连续流出需警惕</li>
+        <li><strong>主力资金</strong>：关注大资金流向变化，连续流出需警惕</li>
         <li><strong>市场情绪</strong>：极端熊市时暂停交易，保护本金</li>
         <li><strong>动态阈值</strong>：熊市需更高置信度才可买入</li>
     </ul>
@@ -2539,7 +2539,7 @@ def main():
     market_data = analyze_market()
     if market_data:
         print(f"  上证指数: {market_data.get('sh_close', 'N/A'):.2f} ({market_data.get('sh_change', 0):+.2f}%)")
-        print(f"  北向资金: {market_data.get('northbound_net_buy', 0):.2f} 亿")
+        print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
 
     # 4. 分析每只股票（核心股用于预测和交易）
     print("\n📊 分析自选股...")
@@ -2657,12 +2657,12 @@ def main():
     print(f"  上涨比例: {market_sentiment['up_ratio']:.1%}")
     print(f"  动态阈值: {market_sentiment['dynamic_threshold']:.0%}")
 
-    # 7. 获取北向资金趋势
-    print("\n💰 获取北向资金趋势...")
-    northbound_trend = get_northbound_trend()
-    print(f"  5日累积: {northbound_trend.get('net_buy_5d_sum', 0):.2f} 亿")
-    print(f"  20日累积: {northbound_trend.get('net_buy_20d_sum', 0):.2f} 亿")
-    print(f"  连续流入: {northbound_trend.get('consecutive_inflow', 0)} 天")
+    # 7. 获取主力资金趋势
+    print("\n💰 获取主力资金趋势...")
+    main_fund_trend = get_main_fund_trend()
+    print(f"  5日累积: {main_fund_trend.get('net_flow_5d_sum', 0):.2f} 亿")
+    print(f"  20日累积: {main_fund_trend.get('net_flow_20d_sum', 0):.2f} 亿")
+    print(f"  连续流入: {main_fund_trend.get('consecutive_inflow', 0)} 天")
 
     # 8. 分析板块涨跌幅（使用全量股票）
     print("\n📊 分析板块涨跌幅...")
@@ -2698,7 +2698,7 @@ def main():
         stock_analyses=stock_analyses,
         three_horizon_results=three_horizon_results,
         market_sentiment=market_sentiment,
-        northbound_trend=northbound_trend,
+        main_fund_trend=main_fund_trend,
         sector_analysis=sector_analysis,
         anomaly_result=anomaly_result
     )
@@ -2721,7 +2721,7 @@ def main():
             llm_content, ml_predictions, stock_analyses, market_data,
             three_horizon_results=three_horizon_results,
             market_sentiment=market_sentiment,
-            northbound_trend=northbound_trend,
+            main_fund_trend=main_fund_trend,
             recommendations=recommendations,
             sector_analysis=sector_analysis,
             anomaly_result=anomaly_result,
@@ -2741,7 +2741,7 @@ def main():
     print("📊 报告摘要")
     print("=" * 60)
     print(f"  市场状态: 上证 {market_data.get('sh_change', 0):+.2f}%")
-    print(f"  北向资金: {market_data.get('northbound_net_buy', 0):.2f} 亿")
+    print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
     print(f"\n  个股建议:")
     for code, analysis in stock_analyses.items():
         name = analysis.get('name', code)
