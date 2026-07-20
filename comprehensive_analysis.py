@@ -3704,7 +3704,10 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         rt = stock_realtime_data[stock_code]
         lines.append(f"当前价格: {rt.get('current_price', 'N/A')}")
         change_pct = rt.get('change_pct', 0)
-        lines.append(f"涨跌幅: {change_pct:+.2f}%" if change_pct else "涨跌幅: N/A")
+        try:
+            lines.append(f"涨跌幅: {float(change_pct):+.2f}%" if change_pct is not None else "涨跌幅: N/A")
+        except (ValueError, TypeError):
+            lines.append(f"涨跌幅: {change_pct}")
 
     lines.append("")
 
@@ -3718,9 +3721,17 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         pred_5d = preds.get(5, {})
         pred_20d = preds.get(20, {})
 
-        lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {pred_1d.get('probability', 0):.2f}")
-        lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {pred_5d.get('probability', 0):.2f}")
-        lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {pred_20d.get('probability', 0):.2f}")
+        prob_1d = pred_1d.get('probability', 0)
+        prob_5d = pred_5d.get('probability', 0)
+        prob_20d = pred_20d.get('probability', 0)
+        try:
+            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}")
+            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}")
+            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}")
+        except (ValueError, TypeError):
+            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
+            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {prob_5d}")
+            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {prob_20d}")
 
         pattern = pred.get('pattern', '-')
         pattern_info = pred.get('pattern_info', {})
@@ -3733,7 +3744,10 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         action = pattern_info.get('action', '观望')
         win_rate = pattern_info.get('win_rate', 0)
         lines.append(f"交易建议: {action}")
-        lines.append(f"历史胜率: {win_rate:.1f}%")
+        try:
+            lines.append(f"历史胜率: {float(win_rate):.1f}%")
+        except (ValueError, TypeError):
+            lines.append(f"历史胜率: {win_rate}")
     else:
         lines.append("CatBoost预测: 数据缺失")
 
@@ -3789,12 +3803,19 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
     if stock_code in stock_realtime_data:
         rt = stock_realtime_data[stock_code]
         rsi = rt.get('rsi')
-        if rsi:
-            rsi_status = "超买" if rsi > 70 else "超卖" if rsi < 30 else "正常"
-            lines.append(f"RSI: {rsi:.2f} ({rsi_status})")
+        if rsi is not None:
+            try:
+                rsi_val = float(rsi)
+                rsi_status = "超买" if rsi_val > 70 else "超卖" if rsi_val < 30 else "正常"
+                lines.append(f"RSI: {rsi_val:.2f} ({rsi_status})")
+            except (ValueError, TypeError):
+                lines.append(f"RSI: {rsi}")
         macd = rt.get('macd')
-        if macd:
-            lines.append(f"MACD: {macd:.2f}")
+        if macd is not None:
+            try:
+                lines.append(f"MACD: {float(macd):.2f}")
+            except (ValueError, TypeError):
+                lines.append(f"MACD: {macd}")
         ma_status = rt.get('ma_alignment')
         if ma_status:
             lines.append(f"MA状态: {ma_status}")
@@ -3817,7 +3838,11 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
                 for idx, row in perf_df.iterrows():
                     if row.get('sector_code') == sector_code:
                         lines.append(f"板块排名: {idx + 1}")
-                        lines.append(f"板块5日涨跌幅: {row.get('avg_change_pct', 0):+.2f}%")
+                        avg_change = row.get('avg_change_pct', 0)
+                        try:
+                            lines.append(f"板块5日涨跌幅: {float(avg_change):+.2f}%")
+                        except (ValueError, TypeError):
+                            lines.append(f"板块5日涨跌幅: {avg_change}")
                         break
 
     lines.append("")
@@ -3840,7 +3865,12 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
     # 市场环境
     lines.append("# 市场环境")
     if current_market:
-        lines.append(f"恒生指数: {current_market.get('hsi_price', 'N/A')} ({current_market.get('hsi_change', 0):+.2f}%)")
+        hsi_price = current_market.get('hsi_price', 'N/A')
+        hsi_change = current_market.get('hsi_change', 0)
+        try:
+            lines.append(f"恒生指数: {hsi_price} ({float(hsi_change):+.2f}%)")
+        except (ValueError, TypeError):
+            lines.append(f"恒生指数: {hsi_price} ({hsi_change}%)")
         lines.append(f"市场状态: {current_market.get('market_state_cn', 'N/A')}")
         lines.append(f"市场状态持续: {current_market.get('duration', 'N/A')}天")
         lines.append(f"市场稳定性: {current_market.get('stability', 'N/A')}")
