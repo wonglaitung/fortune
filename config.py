@@ -59,6 +59,9 @@ STOCK_SECTOR_MAPPING = {
     '1919.HK': {'sector': 'shipping', 'name': '中远海控', 'type': 'shipping', 'defensive': 20, 'growth': 50, 'cyclical': 95, 'liquidity': 60, 'risk': 85},
     '2866.HK': {'sector': 'shipping', 'name': '中远海运港口', 'type': 'shipping', 'defensive': 30, 'growth': 40, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
 
+    # 燃气股 (gas)
+    '1600.HK': {'sector': 'gas', 'name': '天伦燃气', 'type': 'gas', 'defensive': 70, 'growth': 45, 'cyclical': 30, 'liquidity': 55, 'risk': 40},
+
     # 交易所 (exchange)
     '0388.HK': {'sector': 'exchange', 'name': '香港交易所', 'type': 'exchange', 'defensive': 25, 'growth': 50, 'cyclical': 90, 'liquidity': 70, 'risk': 75},
 
@@ -116,6 +119,7 @@ SECTOR_NAME_MAPPING = {
     'index': '指数基金',
     'consumer': '消费股',
     'auto': '汽车股',
+    'gas': '燃气股',
 }
 
 # 自选股列表（核心30只，用于预测和日常监控）
@@ -137,6 +141,7 @@ WATCHLIST = {
     "1330.HK": "绿色动力环保",
     "1347.HK": "华虹半导体",
     "1398.HK": "工商银行",
+    "1600.HK": "天伦燃气",
     "1810.HK": "小米集团-W",
     "2269.HK": "药明生物",
     "2388.HK": "中银香港",
