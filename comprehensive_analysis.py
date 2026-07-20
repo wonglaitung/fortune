@@ -5479,10 +5479,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                     send_email(email_subject, full_content, html_content)
 
-                # 保存 MD 文档（用于知识库）
-                save_comprehensive_report_md(full_content, date_str)
+            # 保存 MD 文档（用于知识库）- 无论是否发送邮件都保存
+            save_comprehensive_report_md(response, date_str)
 
-                return response
+            return response
         else:
             print("❌ 大模型分析失败")
             return None
