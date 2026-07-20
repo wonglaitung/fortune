@@ -42,7 +42,7 @@ jobs:
         run: |
           bash scripts/run_comprehensive_analysis.sh
 
-      - name: Send stock analysis email
+      - name: Send detailed stock analysis email
         env:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
@@ -51,7 +51,7 @@ jobs:
           QWEN_CHAT_URL: ${{ secrets.QWEN_CHAT_URL }}
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
-          python3 scripts/send_stock_analysis_email.py --stocks "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK' }}" --email
+          python3 comprehensive_analysis.py --stocks "${{ inputs.stock_codes || '2318.HK,0728.HK,1288.HK,3968.HK' }}"
 
       - name: Commit prediction history
         run: |
