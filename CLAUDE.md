@@ -34,7 +34,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 |------|------|---------|
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` | 收市后 |
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
-| **股票分析邮件** | `python3 scripts/send_stock_analysis_email.py --stocks 2318.HK --email` | 收市后 |
+| **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | - |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
