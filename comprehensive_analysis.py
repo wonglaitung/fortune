@@ -4410,34 +4410,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
     - send_email_flag: 是否发送邮件（默认True）
     - use_deep_analysis: 是否使用深度分析模式进行异常检测（默认True）
     - use_cached_predictions: 是否使用已缓存的三周期预测CSV文件（默认False）
-    - stock_codes: 指定股票代码列表，生成详细个股分析邮件（默认None，生成完整报告）
+    - stock_codes: 指定股票代码列表，在邮件最前面插入详细个股分析（默认None）
     """
-    # 如果指定了股票代码，运行详细个股分析模式
-    if stock_codes:
-        # 获取日期
-        date_str = get_last_trading_day()
-
-        # 确定报告路径
-        if output_filepath is None:
-            report_path = f'output/comprehensive_reports/{date_str}.md'
-        else:
-            report_path = output_filepath
-
-        # 如果报告文件不存在，先生成综合报告
-        if not os.path.exists(report_path):
-            print("⚠️ 综合报告不存在，先生成综合报告...")
-            # 临时设置 stock_codes=None 运行完整综合分析
-            result = run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath,
-                                               send_email_flag=False,
-                                               use_deep_analysis=use_deep_analysis,
-                                               use_cached_predictions=use_cached_predictions,
-                                               stock_codes=None)
-            if not result:
-                print("❌ 无法生成综合报告")
-                return None
-
-        # 运行详细个股分析
-        return run_detailed_stock_analysis(stock_codes, report_path, date_str, send_email_flag)
+    # 保存 stock_codes 供后续使用（在邮件发送前插入详细个股分析）
+    _stock_codes_for_detail = stock_codes
 
     try:
         print("=" * 80)
@@ -5213,22 +5189,88 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）
 
 """
-                
+
                 # 如果有hsi_email.py指标，添加到数据源部分
                 if hsi_email_indicators:
                     full_content += f"""
 - **实时指标**：恒生指数及自选股实时技术指标，包括TAV评分、建仓/出货评分、基本面评分等高级分析指标
 """
-                
+
                 full_content += f"""
 
 ---
 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 分析日期：{date_str}
 """
-                
+
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
                 html_content = generate_html_email(full_content, date_str)
+
+                # 如果指定了股票代码，在邮件最前面插入详细个股分析
+                if _stock_codes_for_detail:
+                    print(f"\n📊 生成详细个股分析: {', '.join(_stock_codes_for_detail)}")
+
+                    # 确定报告路径
+                    report_path = f'output/comprehensive_reports/{date_str}.md'
+
+                    # 提取个股数据
+                    stock_results = []
+                    market_info = {}
+                    for stock_code in _stock_codes_for_detail:
+                        stock_data = extract_stock_data_with_llm(stock_code, full_content)
+                        if stock_data:
+                            # 综合分析
+                            analysis_result = comprehensive_analyze_with_llm(stock_data)
+                            if analysis_result:
+                                stock_data['analysis'] = analysis_result
+                            # 持货人建议
+                            holder_advice = get_holder_advice_with_llm(stock_data)
+                            if holder_advice:
+                                stock_data['holder_advice'] = holder_advice
+                            stock_results.append(stock_data)
+                            # 提取市场环境信息
+                            if not market_info:
+                                market_info = {
+                                    'hsi_price': stock_data.get('hsi_price'),
+                                    'hsi_change': stock_data.get('hsi_change'),
+                                    'market_status': stock_data.get('market_status'),
+                                    'market_duration': stock_data.get('market_duration'),
+                                    'market_stability': stock_data.get('market_stability'),
+                                    'vix': stock_data.get('vix'),
+                                    'market_sentiment': stock_data.get('market_sentiment'),
+                                    'modularity': stock_data.get('modularity'),
+                                }
+
+                    if stock_results:
+                        # 生成详细个股分析 HTML
+                        detailed_html = generate_detailed_stock_email(stock_results, market_info, date_str)
+
+                        # 从详细个股分析 HTML 中提取 body 内容
+                        import re
+                        body_match = re.search(r'<body[^>]*>(.*?)</body>', detailed_html, re.DOTALL)
+                        if body_match:
+                            detailed_body = body_match.group(1)
+                            # 提取 container div
+                            container_match = re.search(r'<div class="container">(.*?)</div>\s*</body>', detailed_html, re.DOTALL)
+                            if container_match:
+                                detailed_content = container_match.group(1)
+                                # 在综合报告 HTML 的 container 开头插入详细个股分析
+                                # 找到 <div class="container"> 的位置
+                                container_start = html_content.find('<div class="container">')
+                                if container_start != -1:
+                                    # 插入详细个股分析
+                                    insert_pos = container_start + len('<div class="container">')
+                                    html_content = html_content[:insert_pos] + detailed_content + html_content[insert_pos:]
+
+                        # 更新邮件主题
+                        if len(stock_results) == 1:
+                            stock_name = stock_results[0].get('stock_name', stock_results[0].get('stock_code'))
+                            email_subject = f"【个股分析】{stock_name} - {date_str}"
+                        else:
+                            email_subject = f"【个股分析报告】{len(stock_results)}只股票 - {date_str}"
+
+                        print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析")
+
                 send_email(email_subject, full_content, html_content)
 
             # 保存 MD 文档（用于知识库）
