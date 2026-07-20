@@ -1524,14 +1524,37 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             result['ensemble'] = ''
             result['ensemble_email'] = ''
+            # 确保这些变量被定义，即使没有预测文件
+            three_horizon_results = {}
+            chip_data = {}
+            network_insights = {}
+            risk_reward_data = {}
+            historical_pl_data = {}
 
-        return result
+        # 返回预测结果和额外数据（用于个股分析）
+        return {
+            'ensemble': result['ensemble'],
+            'ensemble_email': result['ensemble_email'],
+            'three_horizon_results': three_horizon_results,
+            'chip_data': chip_data,
+            'network_insights': network_insights,
+            'risk_reward_data': risk_reward_data if 'risk_reward_data' in dir() else {},
+            'historical_pl_data': historical_pl_data if 'historical_pl_data' in dir() else {},
+        }
 
     except Exception as e:
         print(f"❌ 提取ML预测失败: {e}")
         import traceback
         traceback.print_exc()
-        return {'ensemble': '', 'ensemble_email': ''}
+        return {
+            'ensemble': '',
+            'ensemble_email': '',
+            'three_horizon_results': {},
+            'chip_data': {},
+            'network_insights': {},
+            'risk_reward_data': {},
+            'historical_pl_data': {},
+        }
 
 
 def generate_html_email(content, date_str):
@@ -4642,7 +4665,14 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         ml_predictions = extract_ml_predictions(ml_filepath, use_cached_predictions)
         print(f"✅ 提取完成\n")
         print(f"   - CatBoost模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
-        
+
+        # 提取用于个股分析的额外数据
+        three_horizon_results = ml_predictions.get('three_horizon_results', {})
+        chip_data = ml_predictions.get('chip_data', {})
+        network_insights = ml_predictions.get('network_insights', {})
+        risk_reward_data = ml_predictions.get('risk_reward_data', {})
+        historical_pl_data = ml_predictions.get('historical_pl_data', {})
+
         # 加载模型准确率
         print("📝 加载模型准确率...")
         model_accuracy = load_model_accuracy(horizon=20)
