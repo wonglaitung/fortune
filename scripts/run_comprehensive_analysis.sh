@@ -7,6 +7,13 @@
 # 2. 生成 CatBoost 三周期预测
 # 3. 调用 hsi_email.py 生成大模型建议（使用force参数）
 # 4. 调用 comprehensive_analysis.py 进行综合分析（含三周期预测）
+#
+# 用法：
+#   ./scripts/run_comprehensive_analysis.sh                     # 不指定股票
+#   ./scripts/run_comprehensive_analysis.sh "2318.HK,0700.HK"   # 指定详细分析股票
+
+# 可选参数：股票代码（逗号分隔）
+STOCK_CODES="${1:-}"
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -152,7 +159,14 @@ if [ -z "$LLM_FILE" ]; then
     echo "⚠️  警告: 未找到大模型建议文件，跳过综合分析"
 else
     echo "📊 使用大模型建议文件: $LLM_FILE"
-    python3 comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
+    # 构建命令
+    CMD="python3 comprehensive_analysis.py --llm-file \"$LLM_FILE\" --use-cached-predictions"
+    # 如果指定了股票代码，添加 --stocks 参数
+    if [ -n "$STOCK_CODES" ]; then
+        CMD="$CMD --stocks \"$STOCK_CODES\""
+        echo "📊 详细个股分析股票: $STOCK_CODES"
+    fi
+    eval $CMD
     if [ $? -ne 0 ]; then
         echo "❌ 步骤4失败: 综合分析失败"
         exit 1
