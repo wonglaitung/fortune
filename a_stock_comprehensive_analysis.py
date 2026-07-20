@@ -523,7 +523,7 @@ A股综合分析报告
     report += """
 ---
 
-## 二、自选股技术分析
+## 二、技术指标分析
 
 """
 
@@ -570,7 +570,7 @@ A股综合分析报告
         report += f"""
 ---
 
-## 四、AI 分析建议
+## 四、大模型分析建议
 
 {llm_content}
 """
@@ -1159,7 +1159,7 @@ def format_ml_predictions_for_llm(three_horizon_results: dict) -> str:
     格式化三周期ML预测为LLM可读文本
 
     Args:
-        three_horizon_results: 三周期预测结果
+        three_horizon_results: 机器学习分析预测
 
     Returns:
         str: 格式化的预测文本
@@ -1513,7 +1513,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
 
     Args:
         anomaly_result: 异常检测结果
-        anomaly_llm_analysis: AI异常分析结果（新增）
+        anomaly_llm_analysis: 大模型异常分析结果（新增）
 
     Returns:
         str: HTML格式的异常检测表格
@@ -1599,7 +1599,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
 """
         html += "    </table>\n"
 
-    # AI异常分析（新增）
+    # 大模型异常分析（新增）
     if anomaly_llm_analysis:
         # 将Markdown转换为HTML
         try:
@@ -1611,7 +1611,7 @@ def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None
             llm_html = anomaly_llm_analysis.replace('\n', '<br>')
 
         html += f"""
-    <h3>🤖 AI异常分析</h3>
+    <h3>🤖 大模型异常分析</h3>
     <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6;">
 {llm_html}
     </div>
@@ -1716,7 +1716,7 @@ A股综合分析报告
     report += """
 ---
 
-## 二、自选股技术分析
+## 二、技术指标分析
 
 """
 
@@ -1990,13 +1990,13 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         ml_predictions_20d: ML预测结果
         stock_analyses: 股票分析结果
         market_data: 市场数据
-        three_horizon_results: 三周期预测结果（新增）
+        three_horizon_results: 机器学习分析预测（新增）
         market_sentiment: 市场情绪数据（新增）
         main_fund_trend: 主力资金趋势（新增）
         recommendations: 综合买卖建议（新增）
         sector_analysis: 板块分析结果（新增）
         anomaly_result: 异常检测结果（新增）
-        anomaly_llm_analysis: AI异常分析结果（新增）
+        anomaly_llm_analysis: 大模型异常分析结果（新增）
 
     Returns:
         str: HTML格式邮件
@@ -2158,9 +2158,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     </div>
 """
 
-    # ========== 4. 自选股技术分析 ==========
+    # ========== 4. 技术指标分析 ==========
     html += """
-    <h2>📋 自选股技术分析</h2>
+    <h2>📋 技术指标分析</h2>
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
@@ -2211,10 +2211,10 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     html += """    </table>
 """
 
-    # ========== 5. 三周期预测表格（核心，港股19列格式） ==========
+    # ========== 5. 机器学习分析预测表格（核心，港股19列格式） ==========
     if three_horizon_results and len(three_horizon_results) > 0:
         html += """
-    <h2>🔮 三周期预测结果</h2>
+    <h2>🔮 机器学习分析预测</h2>
     <p style="color: #666; font-size: 12px;">按股票代码排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
     <table>
         <tr>
@@ -2344,11 +2344,11 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     </div>
 """
 
-    # ========== 6. AI 分析建议 ==========
+    # ========== 6. 大模型分析建议 ==========
     # 预计算生成时间
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     html += """
-    <h2>💡 AI 分析建议</h2>
+    <h2>💡 大模型分析建议</h2>
     <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
         <strong>说明</strong>：AI建议基于通义千问大模型，结合技术指标、市场环境、基本面等定性分析，与量化建议（基于CatBoost三周期预测）可能存在差异，请综合参考。
     </p>
@@ -2375,7 +2375,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if sector_analysis and sector_analysis.get('sector_ranking'):
         html += format_sectors_html(sector_analysis)
 
-    # ========== 8. 股票异常检测提醒 + AI异常分析 ==========
+    # ========== 8. 股票异常检测提醒 + 大模型异常分析 ==========
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
         html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
 
@@ -2565,7 +2565,7 @@ def main():
             print(f"  ✅ 三周期预测完成: {len(three_horizon_results)} 只股票")
     else:
         print("  ⚠️ 使用缓存预测，尝试从缓存文件读取三周期数据...")
-        # 从缓存文件构建三周期预测结果
+        # 从缓存文件构建机器学习分析预测
         three_horizon_results = {}
         for horizon in [1, 5, 20]:
             cache_file = f'data/a_stock_models/ml_predictions_{horizon}d.csv'
@@ -2688,9 +2688,9 @@ def main():
         print("\n🤖 使用LLM分析异常...")
         try:
             anomaly_llm_analysis = analyze_anomalies_with_llm(anomaly_result)
-            print("  ✅ AI异常分析完成")
+            print("  ✅ 大模型异常分析完成")
         except Exception as e:
-            print(f"  ⚠️ AI异常分析失败: {e}")
+            print(f"  ⚠️ 大模型异常分析失败: {e}")
 
     # 10. 生成综合买卖建议（使用AI综合分析）
     print("\n📊 生成综合买卖建议...")
