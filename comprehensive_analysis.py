@@ -12,6 +12,7 @@
 import os
 import sys
 import argparse
+import json
 from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
