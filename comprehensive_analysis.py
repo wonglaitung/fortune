@@ -3645,6 +3645,197 @@ def extract_json_from_response(response: str) -> dict:
         return None
 
 
+def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
+                               chip_data: dict, risk_reward_data: dict,
+                               historical_pl_data: dict, network_insights: dict,
+                               anomaly_data: dict, current_market: dict,
+                               stock_realtime_data: dict, sector_data: dict) -> str:
+    """
+    从已计算数据构建精简文本，供大模型提取股票数据
+
+    参数：
+    - stock_code: 股票代码
+    - three_horizon_results: 三周期预测结果
+    - chip_data: 筹码阻力数据
+    - risk_reward_data: 风险回报数据
+    - historical_pl_data: 历史盈亏比数据
+    - network_insights: 网络洞察数据
+    - anomaly_data: 异常检测数据
+    - current_market: 当前市场状态
+    - stock_realtime_data: 股票实时数据
+    - sector_data: 板块数据
+
+    返回：
+    - str: 精简文本（约2000字符）
+    """
+    lines = []
+
+    # 股票基本信息
+    stock_name = WATCHLIST.get(stock_code, stock_code)
+    lines.append(f"# 股票基本信息")
+    lines.append(f"股票代码: {stock_code}")
+    lines.append(f"股票名称: {stock_name}")
+
+    # 实时价格数据
+    if stock_code in stock_realtime_data:
+        rt = stock_realtime_data[stock_code]
+        lines.append(f"当前价格: {rt.get('current_price', 'N/A')}")
+        change_pct = rt.get('change_pct', 0)
+        lines.append(f"涨跌幅: {change_pct:+.2f}%" if change_pct else "涨跌幅: N/A")
+
+    lines.append("")
+
+    # ML预测
+    lines.append("# ML预测")
+    if stock_code in three_horizon_results:
+        pred = three_horizon_results[stock_code]
+        preds = pred.get('predictions', {})
+
+        pred_1d = preds.get(1, {})
+        pred_5d = preds.get(5, {})
+        pred_20d = preds.get(20, {})
+
+        lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {pred_1d.get('probability', 0):.2f}")
+        lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {pred_5d.get('probability', 0):.2f}")
+        lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {pred_20d.get('probability', 0):.2f}")
+
+        pattern = pred.get('pattern', '-')
+        pattern_info = pred.get('pattern_info', {})
+        pattern_name = pattern_info.get('name', '')
+        if pattern_name:
+            lines.append(f"三周期模式: {pattern_name}({pattern})")
+        else:
+            lines.append(f"三周期模式: {pattern}")
+
+        action = pattern_info.get('action', '观望')
+        win_rate = pattern_info.get('win_rate', 0)
+        lines.append(f"交易建议: {action}")
+        lines.append(f"历史胜率: {win_rate:.1f}%")
+    else:
+        lines.append("CatBoost预测: 数据缺失")
+
+    lines.append("")
+
+    # 风险评估
+    lines.append("# 风险评估")
+
+    # 筹码阻力
+    if stock_code in chip_data and chip_data[stock_code]:
+        chip_result = chip_data[stock_code]
+        resistance_ratio = chip_result.get('resistance_ratio', 0)
+        if resistance_ratio < 0.3:
+            lines.append(f"筹码阻力: 低 ({resistance_ratio:.1%})")
+        elif resistance_ratio < 0.6:
+            lines.append(f"筹码阻力: 中 ({resistance_ratio:.1%})")
+        else:
+            lines.append(f"筹码阻力: 高 ({resistance_ratio:.1%})")
+    else:
+        lines.append("筹码阻力: N/A")
+
+    # 风险回报数据
+    if stock_code in risk_reward_data and risk_reward_data[stock_code]:
+        rr = risk_reward_data[stock_code]
+        lines.append(f"风险得分: {rr.get('risk_score', 'N/A')}")
+        lines.append(f"回报得分: {rr.get('return_score', 'N/A')}")
+        lines.append(f"综合得分: {rr.get('comprehensive_score', 'N/A')}")
+        lines.append(f"风险建议: {rr.get('suggestion', 'N/A')}")
+
+    # 历史盈亏比
+    if stock_code in historical_pl_data and historical_pl_data[stock_code]:
+        pl = historical_pl_data[stock_code]
+        lines.append(f"盈亏比: {pl.get('profit_loss_ratio_str', 'N/A')}")
+        lines.append(f"期望收益: {pl.get('expected_return_str', 'N/A')}")
+
+    lines.append("")
+
+    # 网络洞察
+    lines.append("# 网络洞察")
+    if stock_code in network_insights and network_insights[stock_code]:
+        insight = network_insights[stock_code]
+        lines.append(f"网络洞察: {insight.get('insight_str', '未知')}")
+        lines.append(f"社区: {insight.get('community_id', 'N/A')}")
+        lines.append(f"枢纽类型: {insight.get('hub_level', 'N/A')}")
+        lines.append(f"是否桥梁股: {'是' if insight.get('is_bridge') else '否'}")
+    else:
+        lines.append("网络洞察: 数据缺失")
+
+    lines.append("")
+
+    # 技术指标（从实时数据获取）
+    lines.append("# 技术指标")
+    if stock_code in stock_realtime_data:
+        rt = stock_realtime_data[stock_code]
+        rsi = rt.get('rsi')
+        if rsi:
+            rsi_status = "超买" if rsi > 70 else "超卖" if rsi < 30 else "正常"
+            lines.append(f"RSI: {rsi:.2f} ({rsi_status})")
+        macd = rt.get('macd')
+        if macd:
+            lines.append(f"MACD: {macd:.2f}")
+        ma_status = rt.get('ma_alignment')
+        if ma_status:
+            lines.append(f"MA状态: {ma_status}")
+
+    lines.append("")
+
+    # 板块信息
+    lines.append("# 板块信息")
+    if stock_code in STOCK_SECTOR_MAPPING:
+        sector_code = STOCK_SECTOR_MAPPING[stock_code].get('sector', '')
+        if sector_code and sector_code in SECTOR_NAME_MAPPING:
+            sector_name = SECTOR_NAME_MAPPING[sector_code]
+            lines.append(f"板块: {sector_name}")
+            sector_type = get_sector_type(sector_code)
+            lines.append(f"板块类型: {sector_type}")
+
+            # 从板块数据获取排名
+            if sector_data and sector_data.get('performance') is not None:
+                perf_df = sector_data['performance']
+                for idx, row in perf_df.iterrows():
+                    if row.get('sector_code') == sector_code:
+                        lines.append(f"板块排名: {idx + 1}")
+                        lines.append(f"板块5日涨跌幅: {row.get('avg_change_pct', 0):+.2f}%")
+                        break
+
+    lines.append("")
+
+    # 异常检测
+    lines.append("# 异常检测")
+    if anomaly_data and stock_code in anomaly_data:
+        anom = anomaly_data[stock_code]
+        has_anomaly = anom.get('has_anomaly', False)
+        lines.append(f"异常警报: {'是' if has_anomaly else '否'}")
+        if has_anomaly:
+            reasons = anom.get('reasons', [])
+            if reasons:
+                lines.append(f"异常原因: {', '.join(reasons)}")
+    else:
+        lines.append("异常警报: 否")
+
+    lines.append("")
+
+    # 市场环境
+    lines.append("# 市场环境")
+    if current_market:
+        lines.append(f"恒生指数: {current_market.get('hsi_price', 'N/A')} ({current_market.get('hsi_change', 0):+.2f}%)")
+        lines.append(f"市场状态: {current_market.get('market_state_cn', 'N/A')}")
+        lines.append(f"市场状态持续: {current_market.get('duration', 'N/A')}天")
+        lines.append(f"市场稳定性: {current_market.get('stability', 'N/A')}")
+        lines.append(f"VIX: {current_market.get('vix', 'N/A')}")
+
+    lines.append("")
+
+    # 股息信息（如果有）
+    if stock_code in stock_realtime_data:
+        rt = stock_realtime_data[stock_code]
+        dividend_info = rt.get('dividend_info')
+        if dividend_info:
+            lines.append("# 股息信息")
+            lines.append(f"股息信息: {dividend_info}")
+
+    return "\n".join(lines)
+
+
 def extract_stock_data_with_llm(stock_code: str, report_content: str) -> dict:
     """
     使用大模型从综合报告中提取指定股票的分析数据
@@ -5218,7 +5409,21 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     stock_results = []
                     market_info = {}
                     for stock_code in _stock_codes_for_detail:
-                        stock_data = extract_stock_data_with_llm(stock_code, full_content)
+                        # 构建精简文本（从已计算数据提取，避免大模型超时）
+                        stock_realtime = get_stock_realtime_data(stock_code) or {}
+                        compact_text = build_stock_data_for_llm(
+                            stock_code,
+                            three_horizon_results,
+                            chip_data,
+                            risk_reward_data,
+                            historical_pl_data,
+                            network_insights,
+                            anomaly_data,
+                            current_market,
+                            {stock_code: stock_realtime},  # 单只股票的实时数据
+                            sector_data
+                        )
+                        stock_data = extract_stock_data_with_llm(stock_code, compact_text)
                         if stock_data:
                             # 综合分析
                             analysis_result = comprehensive_analyze_with_llm(stock_data)

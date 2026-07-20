@@ -2,249 +2,257 @@
   {
     "code": "0005.HK",
     "name": "汇丰银行",
-    "comprehensive_score": 76.3,
-    "risk_score": 82.5,
-    "return_score": 70.1,
-    "suggestion": "⭐ 优选"
+    "comprehensive_score": 74.7,
+    "risk_score": 86.2,
+    "return_score": 63.2,
+    "suggestion": "🟢 推荐"
   },
   {
     "code": "1398.HK",
     "name": "工商银行",
-    "comprehensive_score": 72.5,
-    "risk_score": 89.6,
-    "return_score": 55.3,
+    "comprehensive_score": 73.7,
+    "risk_score": 82.9,
+    "return_score": 64.5,
     "suggestion": "🟢 推荐"
   },
   {
-    "code": "2388.HK",
-    "name": "中银香港",
-    "comprehensive_score": 71.0,
-    "risk_score": 87.6,
-    "return_score": 54.4,
+    "code": "1088.HK",
+    "name": "中国神华",
+    "comprehensive_score": 72.5,
+    "risk_score": 82.2,
+    "return_score": 62.9,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "0941.HK",
     "name": "中国移动",
-    "comprehensive_score": 69.6,
-    "risk_score": 96.6,
-    "return_score": 42.6,
+    "comprehensive_score": 71.3,
+    "risk_score": 90.2,
+    "return_score": 52.4,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "0388.HK",
+    "name": "香港交易所",
+    "comprehensive_score": 71.1,
+    "risk_score": 86.1,
+    "return_score": 56.1,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "0939.HK",
     "name": "建设银行",
-    "comprehensive_score": 67.5,
-    "risk_score": 84.8,
-    "return_score": 50.2,
+    "comprehensive_score": 70.8,
+    "risk_score": 78.9,
+    "return_score": 62.7,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "2388.HK",
+    "name": "中银香港",
+    "comprehensive_score": 70.3,
+    "risk_score": 82.3,
+    "return_score": 58.2,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "2800.HK",
+    "name": "盈富基金",
+    "comprehensive_score": 68.2,
+    "risk_score": 80.1,
+    "return_score": 56.2,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "3968.HK",
     "name": "招商银行",
     "comprehensive_score": 67.1,
-    "risk_score": 85.6,
-    "return_score": 48.6,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "0388.HK",
-    "name": "香港交易所",
-    "comprehensive_score": 64.9,
-    "risk_score": 83.1,
-    "return_score": 46.6,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "2800.HK",
-    "name": "盈富基金",
-    "comprehensive_score": 64.6,
-    "risk_score": 82.8,
-    "return_score": 46.3,
+    "risk_score": 81.3,
+    "return_score": 52.8,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "1288.HK",
     "name": "农业银行",
-    "comprehensive_score": 64.5,
-    "risk_score": 81.2,
-    "return_score": 47.9,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "1109.HK",
-    "name": "华润置地",
-    "comprehensive_score": 63.3,
-    "risk_score": 69.3,
-    "return_score": 57.3,
+    "comprehensive_score": 65.6,
+    "risk_score": 73.1,
+    "return_score": 58.2,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "1299.HK",
     "name": "友邦保险",
-    "comprehensive_score": 63.0,
-    "risk_score": 69.2,
-    "return_score": 56.8,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "1088.HK",
-    "name": "中国神华",
-    "comprehensive_score": 62.5,
-    "risk_score": 78.3,
-    "return_score": 46.7,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "0981.HK",
-    "name": "中芯国际",
-    "comprehensive_score": 62.4,
-    "risk_score": 57.6,
-    "return_score": 67.3,
-    "suggestion": "🟢 推荐"
-  },
-  {
-    "code": "1330.HK",
-    "name": "绿色动力环保",
-    "comprehensive_score": 61.4,
-    "risk_score": 71.9,
-    "return_score": 51.0,
+    "comprehensive_score": 65.5,
+    "risk_score": 73.0,
+    "return_score": 58.1,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "2318.HK",
     "name": "中国平安",
-    "comprehensive_score": 60.4,
-    "risk_score": 73.3,
-    "return_score": 47.5,
+    "comprehensive_score": 65.1,
+    "risk_score": 74.2,
+    "return_score": 56.0,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "0016.HK",
+    "name": "新鸿基地产",
+    "comprehensive_score": 63.4,
+    "risk_score": 69.7,
+    "return_score": 57.1,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "1600.HK",
+    "name": "天伦燃气",
+    "comprehensive_score": 63.4,
+    "risk_score": 84.1,
+    "return_score": 42.7,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "0012.HK",
+    "name": "恒基地产",
+    "comprehensive_score": 63.0,
+    "risk_score": 69.4,
+    "return_score": 56.6,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "2269.HK",
+    "name": "药明生物",
+    "comprehensive_score": 63.0,
+    "risk_score": 61.6,
+    "return_score": 64.4,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "1330.HK",
+    "name": "绿色动力环保",
+    "comprehensive_score": 62.9,
+    "risk_score": 62.3,
+    "return_score": 63.5,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "1109.HK",
+    "name": "华润置地",
+    "comprehensive_score": 62.1,
+    "risk_score": 64.9,
+    "return_score": 59.2,
+    "suggestion": "🟢 推荐"
+  },
+  {
+    "code": "0700.HK",
+    "name": "腾讯控股",
+    "comprehensive_score": 61.8,
+    "risk_score": 60.2,
+    "return_score": 63.5,
     "suggestion": "🟢 推荐"
   },
   {
     "code": "0728.HK",
     "name": "中国电信",
-    "comprehensive_score": 59.4,
-    "risk_score": 74.7,
-    "return_score": 44.1,
-    "suggestion": "🟡 观察"
-  },
-  {
-    "code": "0016.HK",
-    "name": "新鸿基地产",
-    "comprehensive_score": 59.1,
-    "risk_score": 66.6,
-    "return_score": 51.6,
-    "suggestion": "🟡 观察"
-  },
-  {
-    "code": "2269.HK",
-    "name": "药明生物",
-    "comprehensive_score": 58.4,
-    "risk_score": 53.1,
-    "return_score": 63.8,
-    "suggestion": "🟡 观察"
-  },
-  {
-    "code": "0012.HK",
-    "name": "恒基地产",
-    "comprehensive_score": 57.8,
-    "risk_score": 71.1,
-    "return_score": 44.5,
+    "comprehensive_score": 59.3,
+    "risk_score": 67.2,
+    "return_score": 51.4,
     "suggestion": "🟡 观察"
   },
   {
     "code": "0883.HK",
     "name": "中国海洋石油",
-    "comprehensive_score": 57.5,
-    "risk_score": 70.6,
-    "return_score": 44.4,
+    "comprehensive_score": 56.7,
+    "risk_score": 60.1,
+    "return_score": 53.4,
     "suggestion": "🟡 观察"
   },
   {
-    "code": "1347.HK",
-    "name": "华虹半导体",
-    "comprehensive_score": 56.9,
-    "risk_score": 56.6,
-    "return_score": 57.3,
-    "suggestion": "🟡 观察"
-  },
-  {
-    "code": "0700.HK",
-    "name": "腾讯控股",
-    "comprehensive_score": 51.3,
-    "risk_score": 55.9,
-    "return_score": 46.8,
-    "suggestion": "🟡 观察"
-  },
-  {
-    "code": "1810.HK",
-    "name": "小米集团-W",
-    "comprehensive_score": 49.0,
-    "risk_score": 52.0,
-    "return_score": 46.0,
+    "code": "0981.HK",
+    "name": "中芯国际",
+    "comprehensive_score": 54.5,
+    "risk_score": 53.2,
+    "return_score": 55.7,
     "suggestion": "🟡 观察"
   },
   {
     "code": "1211.HK",
     "name": "比亚迪股份",
-    "comprehensive_score": 47.6,
-    "risk_score": 49.5,
-    "return_score": 45.7,
+    "comprehensive_score": 54.3,
+    "risk_score": 52.6,
+    "return_score": 56.1,
     "suggestion": "🟡 观察"
   },
   {
-    "code": "3690.HK",
-    "name": "美团-W",
-    "comprehensive_score": 46.0,
-    "risk_score": 44.1,
-    "return_score": 47.9,
+    "code": "1347.HK",
+    "name": "华虹半导体",
+    "comprehensive_score": 54.1,
+    "risk_score": 53.1,
+    "return_score": 55.1,
     "suggestion": "🟡 观察"
   },
   {
-    "code": "1138.HK",
-    "name": "中远海能",
-    "comprehensive_score": 45.0,
-    "risk_score": 39.5,
-    "return_score": 50.4,
+    "code": "9888.HK",
+    "name": "百度集团-SW",
+    "comprehensive_score": 52.4,
+    "risk_score": 46.0,
+    "return_score": 58.8,
     "suggestion": "🟡 观察"
   },
   {
     "code": "6682.HK",
     "name": "范式智能",
-    "comprehensive_score": 44.5,
-    "risk_score": 40.8,
-    "return_score": 48.2,
-    "suggestion": "🔴 暂缓"
+    "comprehensive_score": 52.0,
+    "risk_score": 40.5,
+    "return_score": 63.5,
+    "suggestion": "🟡 观察"
   },
   {
     "code": "9660.HK",
     "name": "地平线机器人",
-    "comprehensive_score": 42.9,
-    "risk_score": 39.4,
-    "return_score": 46.5,
-    "suggestion": "🔴 暂缓"
+    "comprehensive_score": 51.7,
+    "risk_score": 42.4,
+    "return_score": 61.0,
+    "suggestion": "🟡 观察"
+  },
+  {
+    "code": "1810.HK",
+    "name": "小米集团-W",
+    "comprehensive_score": 50.8,
+    "risk_score": 48.6,
+    "return_score": 52.9,
+    "suggestion": "🟡 观察"
+  },
+  {
+    "code": "3690.HK",
+    "name": "美团-W",
+    "comprehensive_score": 49.6,
+    "risk_score": 50.1,
+    "return_score": 49.1,
+    "suggestion": "🟡 观察"
   },
   {
     "code": "9988.HK",
     "name": "阿里巴巴-SW",
-    "comprehensive_score": 42.9,
-    "risk_score": 39.4,
-    "return_score": 46.4,
-    "suggestion": "🔴 暂缓"
+    "comprehensive_score": 48.5,
+    "risk_score": 43.4,
+    "return_score": 53.6,
+    "suggestion": "🟡 观察"
   },
   {
     "code": "2533.HK",
     "name": "黑芝麻智能",
-    "comprehensive_score": 42.4,
-    "risk_score": 39.2,
-    "return_score": 45.7,
-    "suggestion": "🔴 暂缓"
+    "comprehensive_score": 47.2,
+    "risk_score": 40.6,
+    "return_score": 53.7,
+    "suggestion": "🟡 观察"
   },
   {
-    "code": "9888.HK",
-    "name": "百度集团-SW",
-    "comprehensive_score": 42.3,
-    "risk_score": 39.5,
-    "return_score": 45.1,
+    "code": "1138.HK",
+    "name": "中远海能",
+    "comprehensive_score": 44.7,
+    "risk_score": 40.1,
+    "return_score": 49.3,
     "suggestion": "🔴 暂缓"
   }
 ]
