@@ -48,12 +48,21 @@ try:
 except ImportError:
     TECHNICAL_ANALYSIS_AVAILABLE = False
 
-# 尝试导入网络特征模块（用于网络洞察）
+# 尝试导入A股网络分析模块（用于网络洞察）
 try:
-    from data_services.network_features import get_network_calculator
-    NETWORK_FEATURES_AVAILABLE = True
+    from ml_services.a_stock_network_analysis import (
+        fetch_stock_data,
+        build_returns_dataframe,
+        build_minimum_spanning_tree,
+        calculate_centrality_metrics,
+        detect_communities,
+        identify_bridge_stocks,
+        get_stock_name,
+        get_stock_list,
+    )
+    A_STOCK_NETWORK_AVAILABLE = True
 except ImportError:
-    NETWORK_FEATURES_AVAILABLE = False
+    A_STOCK_NETWORK_AVAILABLE = False
 
 # 尝试导入风险回报分析器
 try:
@@ -234,33 +243,52 @@ def calculate_network_insight(stock_code):
     """
     计算网络洞察（A股专用）
 
+    从缓存文件读取网络特征，包括社区ID和枢纽等级
+
     Args:
         stock_code: 股票代码
 
     Returns:
-        str: 网络洞察字符串（如 "社区1/高枢纽/桥梁股⚠️"）
+        str: 网络洞察字符串（如 "社区1/高枢纽"）
     """
-    if not NETWORK_FEATURES_AVAILABLE:
+    # A股网络特征缓存文件路径
+    cache_file = 'data/a_stock_network_features/network_features_for_ml.json'
+
+    if not os.path.exists(cache_file):
         return '未知'
 
     try:
-        calculator = get_network_calculator()
-        insights = calculator.calculate_network_insights([stock_code])
-        if insights and stock_code in insights:
-            insight = insights[stock_code]
-            community_id = insight.get('community_id', 0)
-            hub_level = insight.get('hub_level', '低')
-            is_bridge = insight.get('is_bridge', False)
+        with open(cache_file, 'r') as f:
+            network_features = json.load(f)
 
-            insight_str = f"社区{community_id}/{hub_level}枢纽"
-            if is_bridge:
-                insight_str += "/桥梁股⚠️"
+        if stock_code not in network_features:
+            return '未知'
 
-            return insight_str
+        features = network_features[stock_code]
+        community_id = features.get('net_community_id', -1)
+        composite_centrality = features.get('net_composite_centrality', 0)
+        community_rank = features.get('net_community_centrality_rank', 0)
+        community_size = features.get('net_community_size', 1)
+
+        # 计算枢纽等级（基于社区内排名）
+        if community_size > 0:
+            percentile = community_rank / community_size
+            if percentile <= 0.3:  # Top 30% in community
+                hub_level = '高'
+            elif percentile <= 0.6:  # Middle 30%
+                hub_level = '中'
+            else:
+                hub_level = '低'
+        else:
+            hub_level = '低'
+
+        if community_id >= 0:
+            return f"社区{community_id}/{hub_level}枢纽"
+        else:
+            return '未知'
+
     except Exception as e:
-        pass
-
-    return '未知'
+        return '未知'
 
 
 def load_historical_profit_loss_ratio_a_stock():

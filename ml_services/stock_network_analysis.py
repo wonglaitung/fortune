@@ -104,16 +104,7 @@ def get_stock_sector(stock_code):
 def fetch_stock_data(stock_code, period="2y"):
     """获取单只股票数据"""
     try:
-        # A股代码需要添加后缀
-        if stock_code.isdigit() and len(stock_code) == 6:
-            if stock_code.startswith('6'):
-                yf_code = f"{stock_code}.SS"  # 上交所
-            else:
-                yf_code = f"{stock_code}.SZ"  # 深交所
-        else:
-            yf_code = stock_code
-
-        ticker = yf.Ticker(yf_code)
+        ticker = yf.Ticker(stock_code)
         df = ticker.history(period=period, interval="1d")
         if len(df) < 100:
             return None
