@@ -5477,12 +5477,12 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                         print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析")
 
-                send_email(email_subject, full_content, html_content)
+                    send_email(email_subject, full_content, html_content)
 
-            # 保存 MD 文档（用于知识库）
-            save_comprehensive_report_md(full_content, date_str)
+                # 保存 MD 文档（用于知识库）
+                save_comprehensive_report_md(full_content, date_str)
 
-            return response
+                return response
         else:
             print("❌ 大模型分析失败")
             return None
