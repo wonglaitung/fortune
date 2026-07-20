@@ -1216,10 +1216,16 @@ class AStockTradingModel(CatBoostModel):
         y = df['Label'].values
         sample_weights = df['sample_weight'].values if 'sample_weight' in df.columns else None
 
-        # 确保特征矩阵为数值型（转换 object 类型为 float）
+        # 确保特征矩阵为数值型
+        # 注意：当特征包含 NaN 时，numpy 数组会被视为 object 类型，这是正常的
+        # CatBoost 可以正确处理 NaN，无需填充
         if X.dtype == object:
-            logger.warning("特征矩阵包含 object 类型，转换为 float")
-            X = X.astype(float)
+            # 检查是否有未编码的分类特征
+            obj_cols = [col for col in feature_cols if df[col].dtype == 'object']
+            if obj_cols:
+                logger.warning(f"以下特征列仍为 object 类型（未编码）: {obj_cols[:10]}...")
+            # object 类型通常是因为包含 NaN，转换为 float（NaN 保持为 nan）
+            X = X.astype(np.float64)
 
         # 保存特征列名（用于预测时对齐）
         self.feature_columns = feature_cols
