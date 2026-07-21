@@ -83,11 +83,11 @@
   "a_stock_catboost_20d": {
     "model_type": "a_stock_catboost",
     "horizon": 20,
-    "accuracy": 0.5452358490566038,
-    "std": 0.02113154901635337,
-    "f1_score": 0.5984907103605,
-    "f1_std": 0.06347618192344162,
-    "timestamp": "2026-07-20 13:44:06"
+    "accuracy": 0.5264325323475046,
+    "std": 0.047625657640304554,
+    "f1_score": 0.5683560122549446,
+    "f1_std": 0.04046488268228117,
+    "timestamp": "2026-07-21 20:58:19"
   },
   "a_stock_catboost_1d": {
     "model_type": "a_stock_catboost",
