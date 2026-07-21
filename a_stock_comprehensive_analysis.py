@@ -2061,12 +2061,23 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
     格式化综合买卖建议HTML部分
 
     Args:
-        recommendations: 综合买卖建议字典
+        recommendations: 综合买卖建议（Markdown字符串或字典）
         stock_analyses: 股票分析结果（用于补充现价和涨跌数据）
 
     Returns:
         str: HTML格式的建议
     """
+    # 如果是字符串（Markdown格式），使用markdown库转换
+    if isinstance(recommendations, str):
+        try:
+            import markdown
+            md = markdown.Markdown(extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'])
+            return md.convert(recommendations)
+        except ImportError:
+            # 如果没有安装markdown库，使用简单转换
+            return recommendations.replace('\n', '<br>')
+
+    # 如果是字典，按原有逻辑处理
     html = ""
 
     # 辅助函数：获取股票的现价和涨跌
