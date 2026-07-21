@@ -18,9 +18,16 @@ from datetime import datetime, timedelta
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from a_stock_config import A_STOCK_WATCHLIST, get_limit_rate
+from a_stock_config import A_STOCK_WATCHLIST, A_STOCK_TRAINING_LIST, get_limit_rate
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
 from data_services.main_fund_flow import MainFundFlowService
+
+# 尝试导入技术分析模块（用于筹码阻力）
+try:
+    from data_services.technical_analysis import TechnicalAnalyzer
+    TECHNICAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    TECHNICAL_ANALYSIS_AVAILABLE = False
 
 
 def get_stock_technical_data(stock_code, period_days=100):
@@ -74,17 +81,62 @@ def get_stock_technical_data(stock_code, period_days=100):
     df['Volume_MA5'] = df['Volume'].rolling(5).mean()
     df['Volume_MA20'] = df['Volume'].rolling(20).mean()
 
+    # 支撑位/阻力位（20日）
+    df['Support_20d'] = df['Low'].rolling(20).min()
+    df['Resistance_20d'] = df['High'].rolling(20).max()
+
+    # 趋势判断（基于MA排列）
+    df['MA_Alignment'] = df.apply(
+        lambda row: '多头排列' if row['MA5'] > row['MA10'] > row['MA20']
+        else ('空头排列' if row['MA5'] < row['MA10'] < row['MA20'] else '震荡'),
+        axis=1
+    )
+
     latest = df.iloc[-1]
     prev = df.iloc[-2] if len(df) > 1 else latest
 
     # 获取实时价格
     realtime = get_a_stock_info_tencent(stock_code)
     current_price = realtime['current_price'] if realtime else latest['Close']
+    change_percent = realtime['change_percent'] if realtime else None
+
+    # 计算筹码分布（中期分析）
+    chip_data = None
+    if TECHNICAL_ANALYSIS_AVAILABLE:
+        try:
+            analyzer = TechnicalAnalyzer()
+            chip_result = analyzer.get_chip_distribution(df)
+            if chip_result:
+                resistance_ratio = chip_result.get('resistance_ratio', 0.5)
+                concentration = chip_result.get('concentration', 0)
+                chip_data = {
+                    'resistance_ratio': resistance_ratio,
+                    'resistance_level': chip_result.get('resistance_level', '中'),
+                    'concentration': concentration,
+                    'concentration_level': chip_result.get('concentration_level', '中'),
+                }
+        except Exception as e:
+            pass
+
+    # 支撑位/阻力位计算
+    support_20d = latest['Support_20d']
+    resistance_20d = latest['Resistance_20d']
+    distance_to_support = (current_price - support_20d) / current_price * 100 if current_price else None
+    distance_to_resistance = (resistance_20d - current_price) / current_price * 100 if current_price else None
+
+    # 涨跌停状态判断
+    limit_rate = get_limit_rate(stock_code)
+    limit_pct = limit_rate * 100
+    is_near_limit_up = False
+    is_near_limit_down = False
+    if change_percent is not None:
+        is_near_limit_up = change_percent >= (limit_pct - 1)  # 距离涨停1%以内
+        is_near_limit_down = change_percent <= -(limit_pct - 1)  # 距离跌停1%以内
 
     return {
         'stock_code': stock_code,
         'current_price': current_price,
-        'change_percent': realtime['change_percent'] if realtime else None,
+        'change_percent': change_percent,
         'ma5': latest['MA5'],
         'ma10': latest['MA10'],
         'ma20': latest['MA20'],
@@ -103,13 +155,22 @@ def get_stock_technical_data(stock_code, period_days=100):
         'bb_position': (current_price - latest['BB_Lower']) / (latest['BB_Upper'] - latest['BB_Lower']) * 100 if latest['BB_Upper'] != latest['BB_Lower'] else 50,
         'volume': latest['Volume'],
         'volume_ratio': latest['Volume'] / latest['Volume_MA5'] if latest['Volume_MA5'] else None,
-        'limit_rate': get_limit_rate(stock_code),
+        'limit_rate': limit_rate,
+        # 新增字段
+        'ma_alignment': latest['MA_Alignment'],
+        'support_20d': support_20d,
+        'resistance_20d': resistance_20d,
+        'distance_to_support': distance_to_support,
+        'distance_to_resistance': distance_to_resistance,
+        'is_near_limit_up': is_near_limit_up,
+        'is_near_limit_down': is_near_limit_down,
+        'chip_data': chip_data,
     }
 
 
 def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     """
-    生成大模型提示词
+    生成大模型提示词（参考港股六层分析框架）
 
     Args:
         stock_data_list: 股票数据列表
@@ -119,60 +180,128 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     Returns:
         str: 提示词
     """
-    # 构建股票信息
+    # 构建股票信息（包含新增字段）
     stock_info = ""
     for data in stock_data_list:
         stock_name = A_STOCK_WATCHLIST.get(data['stock_code'], data['stock_code'])
+
+        # 涨跌停状态
+        limit_status = ""
+        if data.get('is_near_limit_up'):
+            limit_status = "⚠️ 接近涨停"
+        elif data.get('is_near_limit_down'):
+            limit_status = "⚠️ 接近跌停"
+        else:
+            limit_status = "正常"
+
+        # 筹码分布（中期分析）
+        chip_info = ""
+        if data.get('chip_data'):
+            chip = data['chip_data']
+            chip_info = f"""
+- **筹码分布**：
+  - 上方筹码比例：{chip.get('resistance_ratio', 0):.1%}（{chip.get('resistance_level', '中')}）
+  - 筹码集中度：{chip.get('concentration', 0):.3f}（{chip.get('concentration_level', '中')}）
+"""
+
         stock_info += f"""
 ### {stock_name} ({data['stock_code']})
 
 **基本数据**：
 - 当前价格：{data['current_price']:.2f} 元
 - 今日涨跌：{data['change_percent']:+.2f}%
-- 涨跌停限制：{data['limit_rate']*100:.0f}%
+- 涨跌停限制：{data['limit_rate']*100:.0f}%（{limit_status}）
 
 **技术指标**：
 - 均线位置：
   - MA5: {data['ma5']:.2f} ({data['price_vs_ma5']:+.2f}%)
   - MA20: {data['ma20']:.2f} ({data['price_vs_ma20']:+.2f}%)
+  - MA排列：{data.get('ma_alignment', '震荡')}
 - 近期涨跌：
   - 5日涨跌：{data['return_5d']:+.2f}%
   - 20日涨跌：{data['return_20d']:+.2f}%
-- RSI(14)：{data['rsi_14']:.1f}
-- MACD：{data['macd']:.4f}，信号线：{data['macd_signal']:.4f}，柱状：{data['macd_hist']:.4f}
+- RSI(14)：{data['rsi_14']:.1f}（{'超买' if data['rsi_14'] > 70 else '超卖' if data['rsi_14'] < 30 else '中性'}）
+- MACD：{data['macd']:.4f}，信号线：{data['macd_signal']:.4f}，柱状：{data['macd_hist']:.4f}（{'金叉' if data['macd_hist'] > 0 else '死叉'}）
 - 布林带位置：{data['bb_position']:.1f}%（0%=下轨，100%=上轨）
 - 成交量比率：{data['volume_ratio']:.2f}x
 
-**技术判断**：
-- 趋势：{'上涨' if data['price_vs_ma20'] > 0 else '下跌'}
-- RSI状态：{'超买' if data['rsi_14'] > 70 else '超卖' if data['rsi_14'] < 30 else '中性'}
-- MACD状态：{'金叉' if data['macd_hist'] > 0 else '死叉'}
+**支撑阻力**：
+- 支撑位（20日）：{data.get('support_20d', 'N/A'):.2f} 元（距离 {data.get('distance_to_support', 0):+.1f}%）
+- 阻力位（20日）：{data.get('resistance_20d', 'N/A'):.2f} 元（距离 {data.get('distance_to_resistance', 0):+.1f}%）
+{chip_info}
 """
 
-    # 构建市场环境
+    # 构建市场环境（包含市场情绪层级）
+    sentiment = market_data.get('sentiment', {})
+    sentiment_name = sentiment.get('name', '正常市场')
+    sentiment_action = sentiment.get('action', '正常交易')
+    up_ratio = sentiment.get('up_ratio', 0.5)
+
+    # 主力资金趋势
+    mf_5d = main_fund_data.get('net_flow_5d_sum', 0)
+    mf_20d = main_fund_data.get('net_flow_20d_sum', 0)
+    consecutive = main_fund_data.get('consecutive_inflow', 0)
+
     market_info = f"""
 ### 市场环境
 
 **上证指数**：
-- 收盘：{market_data.get('sh_close', 'N/A')}
-- 涨跌：{market_data.get('sh_change', 'N/A')}%
+- 收盘：{market_data.get('sh_close', 'N/A'):.2f}
+- 涨跌：{market_data.get('sh_change', 0):+.2f}%
+- MA20：{market_data.get('sh_ma20', 'N/A'):.2f}
+- 相对MA20：{market_data.get('sh_vs_ma20', 0):+.2f}%
+
+**市场情绪**：
+- 情绪层级：{sentiment_name}（{sentiment_action}）
+- 上涨比例：{up_ratio:.1%}（全量{sentiment.get('total_count', len(stock_data_list))}只股票）
+- 动态阈值：买入需概率≥{sentiment.get('dynamic_threshold', 0.5):.0%}
 
 **主力资金**：
-- 净流入：{main_fund_data.get('main_net_flow', 0):.2f} 亿
-- 超大单：{main_fund_data.get('super_large', 0):.2f} 亿
-- 大单：{main_fund_data.get('large', 0):.2f} 亿
+- 今日净流入：{main_fund_data.get('main_net_flow', 0):.2f} 亿
+- 5日累积：{mf_5d:.2f} 亿
+- 20日累积：{mf_20d:.2f} 亿
+- 连续流入：{consecutive} 天
 """
 
-    # 完整提示词
-    prompt = f"""你是一位专业的A股投资分析师。请根据以下股票数据和市场环境，给出专业的投资建议。
+    # 完整提示词（参考港股六层分析框架）
+    prompt = f"""你是一位专业的A股投资分析师。请按照以下六层分析框架进行系统性分析：
 
 ## 股票数据
-
 {stock_info}
 
 ## 市场环境
-
 {market_info}
+
+## 分析框架（业界惯例）
+
+请按照以下六层分析框架进行系统性分析：
+
+【第一层：风险控制检查（最高优先级）】
+⚠️ 必须首先检查所有股票的涨跌停风险：
+- 接近涨停（涨幅≥9%）：追高风险大，不建议追高
+- 接近跌停（跌幅≥9%）：可能继续下跌，不建议抄底
+
+【第二层：市场环境评估】
+- 市场情绪层级：极端熊市暂停交易，熊市需概率≥0.70，弱震荡需概率≥0.65
+- 主力资金流向：持续流入利好，持续流出需警惕
+- 上证指数MA20：站上MA20为多头，跌破MA20为空头
+
+【第三层：技术面分析】
+- RSI状态：>70超买（回调风险），<30超卖（反弹机会）
+- MACD状态：金叉看涨，死叉看跌
+- 均线排列：多头排列看涨，空头排列看跌，震荡观望
+- 支撑位/阻力位：接近支撑位可买入，接近阻力位需谨慎
+
+【第四层：筹码分布分析】（中期分析）
+- 上方筹码比例：<30%拉升阻力小，>60%阻力大
+- 筹码集中度：高集中度表示筹码锁定，利于拉升
+
+【第五层：成交量分析】
+- 放量（成交量比率>2）：资金关注度高
+- 缩量（成交量比率<0.5）：资金关注度低
+
+【第六层：综合建议】
+基于以上分析，给出具体的操作建议
 
 ## 分析要求
 
@@ -184,8 +313,8 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
    - 技术面分析（趋势、支撑位、压力位）
    - 买卖建议（买入/持有/卖出）
    - 建议仓位（0-100%）
-   - 止损价位
-   - 目标价位
+   - 止损价位（建议-8%）
+   - 目标价位（建议+10%）
 
 3. **风险提示**：
    - 涨跌停限制对交易的影响
@@ -219,6 +348,9 @@ def analyze_with_llm(stock_data_list, market_data, main_fund_data):
         print("🤖 正在调用通义千问分析A股...")
 
         prompt = generate_llm_prompt(stock_data_list, market_data, main_fund_data)
+
+        # 打印提示词摘要（调试用）
+        print(f"  提示词长度: {len(prompt)} 字符")
 
         # 调用大模型
         result = chat_with_llm(prompt, enable_thinking=False)
@@ -297,6 +429,21 @@ def generate_ai_report(stocks=None, save_file=True):
     if not main_fund_data:
         main_fund_data = {}
 
+    # 获取主力资金趋势（5日/20日累积）
+    main_fund_history = main_fund_service.fetch_history()
+    if main_fund_history is not None and not main_fund_history.empty:
+        main_fund_data['net_flow_5d_sum'] = main_fund_history['main_net_flow'].tail(5).sum()
+        main_fund_data['net_flow_20d_sum'] = main_fund_history['main_net_flow'].tail(20).sum()
+        # 连续流入天数
+        net_flow_series = main_fund_history['main_net_flow'].tail(20)
+        consecutive_inflow = 0
+        for val in net_flow_series.iloc[::-1]:
+            if val > 0:
+                consecutive_inflow += 1
+            else:
+                break
+        main_fund_data['consecutive_inflow'] = consecutive_inflow
+
     # 获取上证指数
     print("📊 获取上证指数数据...")
     sh_df = get_index_data('sh', period_days=30)
@@ -307,8 +454,58 @@ def generate_ai_report(stocks=None, save_file=True):
         market_data['sh_close'] = latest_sh['Close']
         market_data['sh_change'] = (latest_sh['Close'] / prev_sh['Close'] - 1) * 100
 
-    # 获取股票技术数据
-    print("\n📊 获取股票技术数据...")
+        # 计算MA20
+        sh_df['MA20'] = sh_df['Close'].rolling(20).mean()
+        market_data['sh_ma20'] = sh_df['MA20'].iloc[-1]
+        market_data['sh_vs_ma20'] = (latest_sh['Close'] / sh_df['MA20'].iloc[-1] - 1) * 100 if sh_df['MA20'].iloc[-1] else None
+
+    # 计算市场情绪层级（基于全量53只股票涨跌）
+    print("📊 计算市场情绪层级（全量股票）...")
+    all_stock_changes = []
+    for stock_code in A_STOCK_TRAINING_LIST.keys():
+        realtime = get_a_stock_info_tencent(stock_code)
+        if realtime and realtime.get('change_percent') is not None:
+            all_stock_changes.append(realtime['change_percent'])
+
+    up_count = sum(1 for c in all_stock_changes if c > 0)
+    total_count = len(all_stock_changes)
+    up_ratio = up_count / total_count if total_count > 0 else 0.5
+
+    if up_ratio < 0.20:
+        market_sentiment = {
+            'layer': 'extreme_bear',
+            'name': '极端熊市',
+            'action': '暂停交易',
+            'dynamic_threshold': 1.0,
+        }
+    elif up_ratio < 0.30:
+        market_sentiment = {
+            'layer': 'bear',
+            'name': '熊市',
+            'action': '需概率≥0.70',
+            'dynamic_threshold': 0.70,
+        }
+    elif up_ratio < 0.40:
+        market_sentiment = {
+            'layer': 'weak',
+            'name': '弱震荡',
+            'action': '需概率≥0.65',
+            'dynamic_threshold': 0.65,
+        }
+    else:
+        market_sentiment = {
+            'layer': 'normal',
+            'name': '正常市场',
+            'action': '正常交易',
+            'dynamic_threshold': 0.50,
+        }
+    market_sentiment['up_ratio'] = up_ratio
+    market_sentiment['total_count'] = total_count
+    market_data['sentiment'] = market_sentiment
+    print(f"  市场情绪: {market_sentiment['name']}（{total_count}只股票，上涨比例 {up_ratio:.1%}）")
+
+    # 获取股票技术数据（仅核心持仓）
+    print("\n📊 获取股票技术数据（核心持仓）...")
     stock_data_list = []
     for stock_code, stock_name in stocks.items():
         print(f"  分析 {stock_code} {stock_name}...")

@@ -103,6 +103,176 @@ A_STOCK_TRANSMISSION_ACCURACY = {
 }
 
 
+def extract_llm_recommendations(filepath):
+    """
+    从A股大模型建议文件中提取买卖建议，分别提取短期和中期建议
+
+    参数:
+    - filepath: 文件路径
+
+    返回:
+    - dict: 包含短期和中期建议的字典
+      {
+        'short_term': str,  # 短期建议文本
+        'medium_term': str  # 中期建议文本
+      }
+    """
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # A股文件格式：查找"短期操作建议"和"中期操作建议"的位置
+        short_start = content.find("短期操作建议")
+        medium_start = content.find("中期操作建议")
+
+        # 备用格式：查找"短期（1-5天）"和"中期（1-4周）"
+        if short_start == -1:
+            short_start = content.find("短期（1-5天）")
+        if medium_start == -1:
+            medium_start = content.find("中期（1-4周）")
+
+        # 再备用：查找"短期"和"中期"标题
+        if short_start == -1:
+            short_start = content.find("### 短期")
+        if medium_start == -1:
+            medium_start = content.find("### 中期")
+
+        short_content = ""
+        medium_content = ""
+
+        if short_start != -1:
+            if medium_start != -1 and medium_start > short_start:
+                # 提取短期分析内容（从短期分析标题后到中期分析标题前）
+                short_content = content[short_start:medium_start].strip()
+            else:
+                # 如果没有中期分析或中期在短期之前，提取到下一个主要标题
+                next_section = content.find("\n## ", short_start + 10)
+                if next_section != -1:
+                    short_content = content[short_start:next_section].strip()
+                else:
+                    short_content = content[short_start:].strip()
+
+        if medium_start != -1:
+            # 提取中期分析内容（从中期分析标题后到文件末尾或下一个主要标题）
+            next_section = content.find("\n## ", medium_start + 10)
+            if next_section != -1:
+                medium_content = content[medium_start:next_section].strip()
+            else:
+                medium_content = content[medium_start:].strip()
+
+        # 如果都没找到，尝试从"AI分析报告"之后分割
+        if not short_content and not medium_content:
+            ai_report_start = content.find("## AI分析报告")
+            if ai_report_start != -1:
+                # 整个AI分析报告作为中期建议
+                medium_content = content[ai_report_start:].strip()
+
+        result = {
+            'short_term': short_content if short_content else "暂无短期建议",
+            'medium_term': medium_content if medium_content else "暂无中期建议"
+        }
+
+        return result
+
+    except Exception as e:
+        print(f"❌ 提取大模型建议失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return {'short_term': '暂无短期建议', 'medium_term': '暂无中期建议'}
+
+
+def load_a_stock_model_accuracy(horizon=20):
+    """
+    从Walk-forward验证结果或文件加载A股模型准确率信息
+
+    参数:
+    - horizon: 预测周期（默认20天）
+
+    返回:
+    - dict: 包含准确率信息
+      {
+        'catboost': {'accuracy': float, 'std': float},
+        '1d': {'accuracy': float, 'std': float},
+        '5d': {'accuracy': float, 'std': float},
+        '20d': {'accuracy': float, 'std': float}
+      }
+    """
+    import glob
+
+    # 默认准确率值（A股个股预测准确率通常在50-60%）
+    default_accuracy = {
+        'catboost': {'accuracy': 0.55, 'std': 0.05},
+        '1d': {'accuracy': 0.52, 'std': 0.08},
+        '5d': {'accuracy': 0.54, 'std': 0.06},
+        '20d': {'accuracy': 0.55, 'std': 0.05}
+    }
+
+    # 尝试从文件加载
+    accuracy_file = 'data/a_stock_model_accuracy.json'
+    if os.path.exists(accuracy_file):
+        try:
+            with open(accuracy_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            result = {}
+            catboost_key = f'catboost_{horizon}d'
+            if catboost_key in data:
+                result['catboost'] = {
+                    'accuracy': data[catboost_key].get('accuracy', default_accuracy['catboost']['accuracy']),
+                    'std': data[catboost_key].get('std', default_accuracy['catboost']['std'])
+                }
+            else:
+                result['catboost'] = default_accuracy['catboost']
+
+            for period in ['1d', '5d', '20d']:
+                key = f'catboost_{period}'
+                if key in data:
+                    result[period] = {
+                        'accuracy': data[key].get('accuracy', default_accuracy[period]['accuracy']),
+                        'std': data[key].get('std', default_accuracy[period]['std'])
+                    }
+                else:
+                    result[period] = default_accuracy[period]
+
+            print(f"✅ 已加载模型准确率: {accuracy_file}")
+            return result
+        except Exception as e:
+            print(f"⚠️ 加载模型准确率文件失败: {e}")
+
+    # 尝试从Walk-forward验证结果计算
+    search_patterns = [
+        'output/*_a_stock_*_20d/validation_summary.json',
+        'output/a_stock_walk_forward_*/validation_summary.json',
+    ]
+
+    for pattern in search_patterns:
+        validation_files = glob.glob(pattern)
+        if validation_files:
+            try:
+                latest_file = max(validation_files, key=os.path.getmtime)
+                with open(latest_file, 'r', encoding='utf-8') as f:
+                    vf = json.load(f)
+
+                if 'accuracy' in vf or 'avg_accuracy' in vf:
+                    accuracy = vf.get('avg_accuracy', vf.get('accuracy', 0.55))
+                    std = vf.get('accuracy_std', 0.05)
+
+                    result = {
+                        'catboost': {'accuracy': accuracy, 'std': std},
+                        '1d': default_accuracy['1d'],
+                        '5d': default_accuracy['5d'],
+                        '20d': {'accuracy': accuracy, 'std': std}
+                    }
+                    print(f"✅ 从Walk-forward结果加载准确率: {latest_file}")
+                    print(f"   CatBoost 20天: {accuracy:.2%} (±{std:.2%})")
+                    return result
+            except Exception as e:
+                print(f"⚠️ 解析验证结果失败: {e}")
+
+    print(f"⚠️ 使用默认模型准确率")
+    return default_accuracy
+
+
 def calculate_chip_resistance(stock_code):
     """
     计算筹码阻力（A股专用）
@@ -1339,10 +1509,12 @@ def generate_comprehensive_recommendations_with_llm(
     market_sentiment: dict,
     main_fund_trend: dict,
     sector_analysis: dict,
-    anomaly_result: dict
-) -> dict:
+    anomaly_result: dict,
+    llm_recommendations: dict = None,
+    model_accuracy: dict = None
+) -> str:
     """
-    使用AI生成综合买卖建议（替代硬编码逻辑）
+    使用AI生成综合买卖建议（参考港股实现）
 
     Args:
         stock_analyses: 股票技术分析结果
@@ -1351,23 +1523,50 @@ def generate_comprehensive_recommendations_with_llm(
         main_fund_trend: 主力资金趋势
         sector_analysis: 板块分析结果
         anomaly_result: 异常检测结果
+        llm_recommendations: 大模型短期/中期建议（新增）
+        model_accuracy: 模型准确率信息（新增）
 
     Returns:
-        dict: {
-            'strong_buy': [{stock_code, stock_name, reason, position_pct, stop_loss, target_price}, ...],
-            'buy': [...],
-            'hold': [...],
-            'sell': [...],
-            'risk_control': {...}
-        }
+        str: Markdown格式的综合买卖建议
     """
     print("\n🤖 正在调用AI生成综合买卖建议...")
 
-    # 格式化各类数据
-    technical_data = format_stock_technical_data_for_llm(stock_analyses)
-    ml_data = format_ml_predictions_for_llm(three_horizon_results)
-    sector_data = format_sector_analysis_for_llm(sector_analysis)
-    anomaly_data = format_anomaly_for_llm(anomaly_result)
+    # 格式化ML预测数据（参考港股JSON格式）
+    ml_stock_list = []
+    for code, data in (three_horizon_results or {}).items():
+        preds = data.get('predictions', {})
+        pred_20d = preds.get(20, {})
+        prob_20d = pred_20d.get('probability', 0.5)
+
+        # 筹码阻力
+        chip_data = data.get('chip_resistance', {})
+        resistance_level = chip_data.get('resistance_level', 'N/A') if chip_data else 'N/A'
+
+        # 风险回报
+        risk_reward = data.get('risk_reward', {})
+
+        ml_stock_list.append({
+            'code': code,
+            'name': A_STOCK_WATCHLIST.get(code, code),
+            'probability_20d': round(prob_20d, 4),
+            'prediction_20d': '上涨' if prob_20d >= 0.50 else '下跌',
+            'chip_resistance': resistance_level,
+            'risk_score': risk_reward.get('risk_score', '-'),
+            'comprehensive_score': risk_reward.get('comprehensive_score', '-'),
+        })
+
+    # 按概率排序
+    ml_stock_list.sort(key=lambda x: x['probability_20d'], reverse=True)
+
+    # 构建ML预测JSON文本
+    ml_predictions_text = "【CatBoost模型预测结果（20天）- JSON格式】\n"
+    ml_predictions_text += "```json\n"
+    ml_predictions_text += json.dumps(ml_stock_list, ensure_ascii=False, indent=2)
+    ml_predictions_text += "\n```\n\n"
+    ml_predictions_text += "**字段说明**：\n"
+    ml_predictions_text += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+    ml_predictions_text += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
+    ml_predictions_text += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
 
     # 市场情绪
     sentiment_layer = market_sentiment.get('layer', 'normal')
@@ -1382,157 +1581,173 @@ def generate_comprehensive_recommendations_with_llm(
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
 
-    # 主力资金 - 检查数据是否可用
+    # 主力资金
     mf_flow = main_fund_trend.get('net_flow', 0)
     mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
     mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
     consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
-
-    # 判断主力资金数据是否有效（全为0表示数据不可用）
     main_fund_available = (mf_flow != 0 or mf_5d != 0 or mf_20d != 0)
 
-    if main_fund_available:
-        main_fund_info = f"""### 4. 主力资金趋势
+    # 板块分析
+    sector_data = format_sector_analysis_for_llm(sector_analysis)
+
+    # 异常检测
+    anomaly_data = format_anomaly_for_llm(anomaly_result)
+
+    # 大模型建议
+    llm_short_term = llm_recommendations.get('short_term', '暂无短期建议') if llm_recommendations else '暂无短期建议'
+    llm_medium_term = llm_recommendations.get('medium_term', '暂无中期建议') if llm_recommendations else '暂无中期建议'
+
+    # 模型准确率
+    accuracy = model_accuracy.get('catboost', {}).get('accuracy', 0.55) if model_accuracy else 0.55
+    std = model_accuracy.get('catboost', {}).get('std', 0.05) if model_accuracy else 0.05
+
+    # 日期
+    date_str = datetime.now().strftime('%Y-%m-%d')
+
+    # 构建Prompt（参考港股格式）
+    prompt = f"""你是一位专业的A股投资分析师。请根据以下四部分信息，进行综合分析，给出实质的买卖建议。
+
+=== 信息来源 ===
+
+【主要信息源 - 决策依据】
+
+【1. 大模型中期买卖建议（数周-数月）】
+{llm_medium_term}
+
+【2. CatBoost模型20天预测结果】
+**重要：probability = 上涨概率（不是下跌概率）**
+{ml_predictions_text}
+
+【辅助信息源 - 操作时机参考】
+
+【3. 大模型短期买卖建议（日内/数天）】
+{llm_short_term}
+
+【4. 市场情绪】
+- 情绪层级：{sentiment_name}
+- 上涨比例：{up_ratio:.1%}
+- 动态阈值：买入需概率≥{dynamic_threshold:.0%}
+
+【5. 主力资金趋势】
 - 今日净流入：{mf_flow:.2f}亿
 - 5日累积：{mf_5d:.2f}亿
 - 20日累积：{mf_20d:.2f}亿
 - 连续流入天数：{consecutive_inflow}天
 
-"""
-    else:
-        main_fund_info = ""  # 数据不可用时完全移除该部分
-
-    # 构建Prompt
-    prompt = f"""你是A股量化投资专家。请根据以下数据，为每只股票生成综合买卖建议。
-
-## 输入数据
-
-### 1. 股票技术分析（{len(stock_analyses)}只核心股）
-{technical_data}
-
-### 2. 三周期机器学习预测（CatBoost模型）
-{ml_data}
-
-### 3. 市场情绪
-- 情绪状态：{sentiment_name}
-- 上涨比例：{up_ratio:.1%}
-- 动态置信阈值：{dynamic_threshold:.0%}
-
-{main_fund_info}### 4. 板块分析（按涨幅排名）
+【6. 板块分析（按涨幅排名）】
 {sector_data}
 
-### 5. 异常检测
+【7. 异常检测】
 {anomaly_data}
 
-## 输出要求
+=== 核心硬性约束（不可违反）===
 
-请返回JSON格式的综合买卖建议，格式如下：
+⚠️ **CatBoost概率约束（最高优先级，无例外）**：
+- CatBoost概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
+- CatBoost概率 < 0.40 → **绝对禁止推荐持有或观望**
+- CatBoost概率 ≥ 0.50 → 可以考虑买入
+- CatBoost概率 ≥ 0.60 → 可以考虑强烈买入
+- **即使短期和中期方向一致，也绝对不允许违反此约束**
+- **违反此约束的建议将被视为错误**
 
-```json
-{{
-    "strong_buy": [
-        {{
-            "stock_code": "000001",
-            "stock_name": "平安银行",
-            "reason": "三周期一致看涨(概率0.65)，市场情绪正常{'，主力资金持续流入' if main_fund_available else ''}，技术面多头排列",
-            "position_pct": 4,
-            "stop_loss": 10.50,
-            "target_price": 12.80
-        }}
-    ],
-    "buy": [
-        {{
-            "stock_code": "300440",
-            "stock_name": "捷安高科",
-            "reason": "20天看涨(概率0.55)，技术面中性偏多",
-            "position_pct": 3,
-            "stop_loss": 25.00,
-            "target_price": 30.00
-        }}
-    ],
-    "hold": [
-        {{
-            "stock_code": "002655",
-            "stock_name": "共达电声",
-            "reason": "机器学习信号不明确，建议观望"
-        }}
-    ],
-    "sell": [
-        {{
-            "stock_code": "000002",
-            "stock_name": "万科A",
-            "reason": "三周期看跌，技术面恶化，建议减仓"
-        }}
-    ],
-    "risk_control": {{
-        "market_risk": "中",
-        "total_position": 7,
-        "stop_loss_strategy": "单只股票最大亏损-8%，触及止损位无条件平仓",
-        "position_strategy": "建议总仓位7%，保留现金应对波动"
-    }}
-}}
-```
+🔥 **决策顺序（严格遵守）**：
+第一步：检查CatBoost概率 → 不满足则直接排除
+第二步：检查市场情绪 → 极端熊市暂停交易，熊市需概率≥0.70，弱震荡需概率≥0.65
+第三步：检查短期和中期一致性
+第四步：生成综合建议
 
-## 判断原则
+=== 综合分析规则 ===
 
-1. **强烈买入**：三周期一致看涨(概率≥0.55) + 市场情绪正常 + 技术面支撑{' + 主力资金流入' if main_fund_available else ''}，建议仓位4%
-2. **买入**：20天看涨(概率>0.50) + 技术面中性偏多，建议仓位3%
-3. **持有**：信号不明确、存在冲突、或市场情绪不佳，暂不操作
-4. **卖出**：三周期看跌 + 技术面恶化，建议减仓或清仓
+**规则1：时间维度匹配（业界最佳实践）**
+- **短期信号（触发器）**：负责"何时做"（Timing）
+- **中期信号（确认器）**：负责"是否做"（Direction）
+- **CatBoost模型（验证器）**：负责提升置信度
+- 只有短期和中期方向一致时，才采取行动
+- 短期和中期冲突时，选择观望（避免不确定性）
 
-## 注意事项
+**决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
+- **第一步：检查CatBoost概率（硬约束）**
+  - probability ≤ 0.50 → 排除买入或强烈买入
+  - probability ≥ 0.50 → 进入下一步
+- **第二步：检查市场情绪**
+  - 极端熊市 → 暂停所有买入
+  - 熊市 → 需probability ≥ 0.70
+  - 弱震荡 → 需probability ≥ 0.65
+- **第三步：检查短期和中期一致性**
+  - 短期看好，中期看好 → 进入下一步
+  - 方向不一致 → 观望
+- **第四步：生成建议**
+  - 强烈买入：短期看好，中期看好，CatBoost probability ≥ 0.60，市场情绪正常
+  - 买入：短期看好，中期看好，0.50 < CatBoost probability < 0.60
+  - 持有/观望：CatBoost probability ≤ 0.50 或 方向不一致
+  - 卖出：短期看跌，中期看跌
 
-1. 市场情绪为"极端熊市"时，暂停所有买入建议，strong_buy和buy为空数组
-2. 市场情绪为"熊市"时，需要预测概率≥0.70才能买入
-3. 市场情绪为"弱震荡"时，需要预测概率≥0.65才能买入
-4. 止损位一般为现价的-8%，目标价为现价的+10%
-5. total_position = strong_buy数量×4% + buy数量×3%
+**规则2：CatBoost概率评估**
 
-请综合所有因素做出专业判断，**只返回JSON，不要其他文字**。
+**CatBoost概率阈值**：
+- **高置信度上涨**：probability > 0.60
+- **中等置信度观望**：0.50 < probability ≤ 0.60
+- **预测下跌**：probability ≤ 0.50
+
+**阈值优化说明**：
+- 当前CatBoost模型20天准确率：约{accuracy:.2%}（±{std:.2%}）
+- 强买入阈值0.60略高于准确率，确保高置信度
+- 买入阈值0.50接近准确率，平衡召回率和精确率
+
+请按照以下格式输出（不要添加任何额外说明文字）：
+
+# 综合买卖建议
+
+## 强烈买入信号（如有）
+1. [股票代码] [股票名称]
+   - 推荐理由：[包含短期建议、中期建议、CatBoost概率]
+   - 操作建议：买入
+   - 建议仓位：4%
+   - 止损位：[现价-8%]
+   - 目标价：[现价+10%]
+   - 风险提示：[主要风险因素]
+
+## 买入信号（如有）
+...
+
+## 持有/观望
+...
+
+## 卖出信号（如有）
+...
+
+## 风险控制建议
+- 当前市场整体风险：[高/中/低]
+- 建议仓位百分比：[X]%
+- 止损位设置：[策略]
+- 组合调整建议：[具体的组合调整建议]
+
+---
+分析日期：{date_str}
 """
 
     # 调用大模型
     try:
         response = chat_with_llm(prompt, enable_thinking=False)
-        recommendations = parse_llm_json_response(response)
-
-        # 验证结构完整性
-        required_keys = ['strong_buy', 'buy', 'hold', 'sell', 'risk_control']
-        for key in required_keys:
-            if key not in recommendations:
-                recommendations[key] = [] if key != 'risk_control' else {}
-
-        # 确保risk_control完整
-        if 'risk_control' in recommendations:
-            rc = recommendations['risk_control']
-            rc.setdefault('market_risk', '中')
-            rc.setdefault('total_position', 0)
-            rc.setdefault('stop_loss_strategy', '单只股票最大亏损-8%')
-            rc.setdefault('position_strategy', '建议观望')
 
         print(f"  ✅ AI建议生成完成")
-        print(f"  强烈买入: {len(recommendations.get('strong_buy', []))} 只")
-        print(f"  买入: {len(recommendations.get('buy', []))} 只")
-        print(f"  持有/观望: {len(recommendations.get('hold', []))} 只")
-        print(f"  卖出: {len(recommendations.get('sell', []))} 只")
 
-        return recommendations
+        return response
 
     except Exception as e:
         print(f"⚠️ AI综合建议生成失败: {e}")
-        # 返回空结构
-        return {
-            'strong_buy': [],
-            'buy': [],
-            'hold': [],
-            'sell': [],
-            'risk_control': {
-                'market_risk': '中',
-                'total_position': 0,
-                'stop_loss_strategy': '单只股票最大亏损-8%',
-                'position_strategy': '建议观望'
-            }
-        }
+        return f"""# 综合买卖建议
+
+## 风险控制建议
+- 当前市场整体风险：中
+- 建议仓位百分比：0%
+- 止损位设置：单只股票最大亏损-8%
+- 组合调整建议：建议观望
+
+---
+分析日期：{date_str}
+"""
 
 
 def format_anomalies_html(anomaly_result: dict, anomaly_llm_analysis: str = None) -> str:
@@ -2553,10 +2768,19 @@ def main():
             print(f"  使用文件: {llm_file}")
 
     llm_content = None
+    llm_recommendations = None
     if llm_file:
         llm_content = read_llm_recommendations(llm_file)
         if llm_content:
             print("  ✅ 大模型建议读取成功")
+            # 提取短期和中期建议
+            llm_recommendations = extract_llm_recommendations(llm_file)
+            print(f"  ✅ 提取短期建议: {len(llm_recommendations.get('short_term', ''))} 字符")
+            print(f"  ✅ 提取中期建议: {len(llm_recommendations.get('medium_term', ''))} 字符")
+
+    # 1b. 加载模型准确率
+    print("\n📊 加载模型准确率...")
+    model_accuracy = load_a_stock_model_accuracy(horizon=args.horizon)
 
     # 2. 读取ML预测结果
     print("\n📊 读取ML预测结果...")
@@ -2728,8 +2952,18 @@ def main():
         market_sentiment=market_sentiment,
         main_fund_trend=main_fund_trend,
         sector_analysis=sector_analysis,
-        anomaly_result=anomaly_result
+        anomaly_result=anomaly_result,
+        llm_recommendations=llm_recommendations,
+        model_accuracy=model_accuracy
     )
+
+    # 保存综合买卖建议到文件
+    if recommendations:
+        os.makedirs('data', exist_ok=True)
+        recommendations_file = f"data/a_stock_comprehensive_recommendations_{datetime.now().strftime('%Y%m%d')}.txt"
+        with open(recommendations_file, 'w', encoding='utf-8') as f:
+            f.write(recommendations)
+        print(f"✅ 综合买卖建议已保存: {recommendations_file}")
 
     # 11. 生成综合报告
     print("\n📊 生成综合报告...")

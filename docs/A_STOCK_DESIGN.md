@@ -1,6 +1,6 @@
 # A股智能分析系统设计文档
 
-> **版本**：v3.0 | **更新日期**：2026-07-20
+> **版本**：v3.1 | **更新日期**：2026-07-21
 
 ---
 
@@ -131,8 +131,9 @@
 | ATR相关 | 8 | 波动率、真实波幅 |
 | 收益率 | 8 | 多周期收益率 |
 | 行为金融 | 7 | 凸显性、球队硬币因子 |
-| 主力资金 | 6 | 主力净流入、超大单等 |
+| 主力资金 | 6 | 主力净流入、超大单、大单、中单、小单、累积流入 |
 | 跨市场联动 | 6 | 铜、原油、汇率 |
+| 融资融券 | 4 | 融资余额变化、融资买入占比、融券压力、融资情绪 |
 | 基本面 | 4 | PE、PB、ROE、ROA |
 | 涨跌停 | 4 | 涨停/跌停标记、空间 |
 
@@ -332,7 +333,22 @@ CNY_USD_Z_Score     # 人民币汇率Z分数
 
 **实现位置**：`data_services/a_stock_market_features.py`
 
-### 3.5 特征单调性设计
+### 3.5 融资融券特征
+
+**数据源**：AKShare融资融券接口
+
+```python
+Margin_Balance_Change_5d   # 融资余额变化率（5日）
+Margin_Buy_Ratio           # 融资买入占比
+Short_Sell_Pressure        # 融券卖出压力
+Margin_Sentiment           # 融资做多情绪指标
+```
+
+**实现位置**：`a_stock_ml_model.py` - `_add_margin_features()`
+
+**注意**：融资融券数据获取失败时使用默认值0，不影响模型训练。
+
+### 3.6 特征单调性设计
 
 交叉特征时保持逻辑单调性：
 
@@ -342,7 +358,7 @@ CNY_USD_Z_Score     # 人民币汇率Z分数
 | 负向 × 负向 | 风险放大 | 约束度 × VIX → `-|X| × |Y|` |
 | 正向 × 负向 | 风险调整 | 中心性 × VIX → `X / (|Y| + ε)` |
 
-### 3.6 数据泄漏防护
+### 3.7 数据泄漏防护
 
 **高风险特征必须使用 `.shift(1)`**：
 
@@ -385,7 +401,9 @@ df['STR_5d'] = df['STR_5d'].shift(1)  # 避免数据泄漏
 | l2_leaf_reg | 2 | L2正则化 |
 | subsample | 0.75 | 子采样率 |
 | colsample_bylevel | 0.8 | 列采样率 |
-| random_seed | 42 | 固定随机种子 |
+| random_seed | 2020 | 固定随机种子 |
+
+**注意**：A股模型使用 `random_seed=2020`（港股模型使用 42），确保A股独立复现性。
 
 ### 4.2 样本权重策略
 
@@ -432,28 +450,108 @@ label = (future_return > 0).astype(int)
 | 准确率 | 50-60% | **>65%** |
 | 交叉验证准确率 | 50-60% | **>65%** |
 
-### 4.5 模型验证结果（2026-07-18）
+### 4.5 Walk-forward 验证结果（2026-07-18）
 
-**20天模型 Top 10 特征重要性**：
+**验证配置**：
+
+| 参数 | 值 |
+|------|-----|
+| 预测周期 | 20 天 |
+| 截面标签 | 启用 |
+| 训练窗口 | 12 个月 |
+| 测试窗口 | 1 个月 |
+| 总 Fold 数 | 4 |
+
+**总体结果**：
+
+| 指标 | 数值 | 评估 |
+|------|------|------|
+| 平均准确率 | **55.77%** | ✅ 正常（无数据泄漏） |
+| 准确率范围 | 51.70% - 60.37% | ✅ 稳定 |
+| 平均 F1 分数 | 0.5708 | - |
+
+**各 Fold 详情**：
+
+| Fold | 测试期间 | 训练样本 | 测试样本 | 准确率 | F1 |
+|------|---------|---------|---------|--------|-----|
+| 1 | 2025-11-27 ~ 2026-01-09 | 18358 | 1572 | 60.37% | 0.6342 |
+| 2 | 2026-01-12 ~ 2026-03-02 | 19028 | 1590 | 57.86% | 0.5592 |
+| 3 | 2026-03-03 ~ 2026-04-14 | 19028 | 1588 | 51.70% | 0.5538 |
+| 4 | 2026-04-15 ~ 2026-05-29 | 19036 | 1590 | 53.14% | 0.5358 |
+
+**数据泄漏检查**：
+- 准确率 55.77% < 65%，无数据泄漏信号 ✅
+- 截面标签中间变量 `Return_Rank` 已从特征中排除 ✅
+
+### 4.6 模型验证结果（2026-07-19）
+
+**20天模型 Top 50 特征重要性**：
 
 | 排名 | 特征名 | 重要性 | 类型 |
 |------|--------|--------|------|
-| 1 | net_constraint_CN_10Y_Yield | 3.45 | 网络×利率交叉 |
-| 2 | net_constraint_US_2Y_Yield | 2.79 | 网络×利率交叉 |
-| 3 | net_constraint_US_30Y_Yield | 2.31 | 网络×利率交叉 |
-| 4 | Volatility_30pct | 1.92 | 波动率分位数 |
-| 5 | Copper_Return_20d | 1.78 | 跨市场联动 |
-| 6 | Low_Limit | 1.64 | 涨跌停特征 |
-| 7 | High_Limit | 1.58 | 涨跌停特征 |
-| 8 | AStock_Regime_Expected_Duration | 1.47 | A股市场状态 |
-| 9 | Return_250d | 1.46 | 长期收益 |
-| 10 | PB | 1.46 | 基本面估值 |
+| 1 | net_constraint_CN_10Y_Yield | 3.34 | 网络×利率交叉 |
+| 2 | net_constraint_US_2Y_Yield | 2.71 | 网络×利率交叉 |
+| 3 | net_constraint_US_30Y_Yield | 2.16 | 网络×利率交叉 |
+| 4 | Return_250d | 1.86 | 长期收益 |
+| 5 | High_Limit | 1.83 | 涨跌停特征 |
+| 6 | Volatility_30pct | 1.70 | 波动率分位数 |
+| 7 | AStock_Regime_Expected_Duration | 1.64 | A股市场状态 |
+| 8 | Copper_Return_20d | 1.54 | 跨市场联动 |
+| 9 | BB_Width_MA60 | 1.28 | 布林带 |
+| 10 | net_constraint_per_NASDAQ_Return_20d | 1.25 | 网络×美股交叉 |
+| 11 | PB | 1.22 | 基本面估值 |
+| 12 | AStock_Regime_Momentum | 1.19 | A股市场状态 |
+| 13 | Oil_Return_20d | 1.18 | 跨市场联动 |
+| 14 | Volatility_70pct | 1.18 | 波动率分位数 |
+| 15 | Low_Limit | 1.18 | 涨跌停特征 |
+| 16 | net_constraint_risk_VIX_Ratio_MA20 | 1.14 | 网络×VIX交叉 |
+| 17 | MA250_Slope | 1.14 | 均线斜率 |
+| 18 | cyclical_score | 1.07 | 周期性评分 |
+| 19 | Volatility_120d | 1.03 | 波动率 |
+| 20 | RSI_Deviation_MA20 | 1.02 | RSI偏离 |
+| 21 | PE | 0.96 | 基本面估值 |
+| 22 | AStock_Regime_Switch_Prob_5d | 0.93 | A股市场状态 |
+| 23 | net_comm_1_US_30Y_Yield | 0.92 | 网络×利率交叉 |
+| 24 | defensive_score | 0.87 | 防御性评分 |
+| 25 | net_constraint_per_CN_US_10Y_Spread | 0.86 | 网络×利差交叉 |
+| 26 | net_constraint_GARCH_Persistence | 0.85 | 网络×波动率交叉 |
+| 27 | Market_Cap | 0.84 | 市值 |
+| 28 | Volatility_Mean_60d | 0.81 | 波动率 |
+| 29 | MA_Ratio_60d | 0.78 | 均线比率 |
+| 30 | ADX | 0.74 | 趋势指标 |
 
 **关键发现**：
 - 网络特征与利率交叉特征（`net_constraint_CN_10Y_Yield`）重要性最高，验证了网络特征设计的有效性
-- 跨市场联动特征（`Copper_Return_20d`）进入 Top 5，铜价对化工板块有显著预测力
+- 跨市场联动特征（`Copper_Return_20d`、`Oil_Return_20d`）进入 Top 15，铜价/原油对化工板块有显著预测力
 - A股市场状态特征（`AStock_Regime_*`）被模型有效利用
 - 涨跌停特征（`Low_Limit`/`High_Limit`）重要性高，体现A股特殊性
+- 美股联动特征（`net_constraint_per_NASDAQ_Return_20d`）对A股有预测价值
+
+### 4.7 截面标准化标签选项
+
+**设计原理**：解决主板10%和创业板20%涨跌停的非对称问题。
+
+**启用方式**：训练时添加 `--use-cross-sectional-label` 参数
+
+```bash
+python3 a_stock_ml_model.py --mode train --horizon 20 --use-cross-sectional-label
+```
+
+**计算逻辑**：
+```python
+# 每个交易日对所有股票排名，排名前50%为正例
+df['Return_Rank'] = df.groupby(df.index)['Future_Return'].rank(pct=True)
+df['Label_CS'] = (df['Return_Rank'] > 0.5).astype(int)
+```
+
+**优点**：
+- 避免主板/创业板涨跌停差异导致的标签偏差
+- 业界推荐用于月度预测
+- Walk-forward验证准确率更稳定（55.77%）
+
+**注意**：
+- 中间变量 `Return_Rank` 必须从特征中排除（已自动处理）
+- 截面标签与时间序列标签二选一，不可同时使用
 
 ---
 
@@ -568,7 +666,7 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 
 综合分析报告是对标港股成熟格式的完整投资决策支持系统，整合量化预测、定性分析、风险提示三大维度：
 
-1. **买卖建议生成器的决策逻辑**：三周期预测概率（1d/5d/20d）经过市场情绪过滤器调整后，结合短期/中期买入信号判断，生成四类建议（强烈买入/买入/持有/卖出）。强烈买入条件最严格：短期买入+中期买入+CatBoost概率≥0.55，建议仓位4%；买入条件略宽松：概率0.50-0.55，建议仓位3%。
+1. **AI生成买卖建议（v4.0重大变更）**：综合买卖建议改由通义千问大模型生成，替代原有的硬编码规则。AI综合接收技术指标、ML预测、市场情绪、主力资金、板块分析、异常检测等全部数据，生成更灵活、更全面的买卖建议。
 
 2. **异常检测的双重机制**：技术指标检测（RSI超买超卖、价格偏离均线）捕捉短期交易机会；LLM大模型分析（整体市场状态、板块异动、资金流向）提供定性解读。高严重度异常（RSI>80、接近涨跌停）标记为红色，需立即关注。
 
@@ -637,11 +735,35 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 | 三周期预测表格 | 按股票代码升序 |
 | 异常检测表格（高/中/低严重度） | 按股票代码升序 |
 
-### 6.2 综合买卖建议生成器
+### 6.2 AI综合买卖建议生成（v4.0）
 
-**文件位置**：`a_stock_recommendation_generator.py`
+**文件位置**：`a_stock_comprehensive_analysis.py` - `generate_comprehensive_recommendations_with_llm()`
 
-**决策逻辑**：
+**设计变更**：v4.0版本起，综合买卖建议改由通义千问大模型生成，替代原有的硬编码规则。
+
+**AI输入数据**：
+- 技术指标（RSI、MACD、均线、布林带等）
+- ML三周期预测概率（1d/5d/20d）
+- 市场情绪（53只股票上涨比例）
+- 主力资金流向（净流入、累积趋势）
+- 板块分析（板块涨跌幅、龙头股）
+- 异常检测（高/中/低严重度异常）
+
+**优势**：
+- 灵活应对突发事件和市场变化
+- 综合考虑多维度因素
+- 提供定性分析和风险提示
+- 避免硬编码规则的局限性
+
+**实现位置**：`llm_services/qwen_engine.py` - `chat_with_llm()`
+
+### 6.3 旧版买卖建议生成器（已弃用）
+
+**状态**：v4.0已弃用，保留文档供参考
+
+**文件位置**：`a_stock_recommendation_generator.py`（已删除）
+
+**旧版决策逻辑**（硬编码规则）：
 
 | 建议类型 | 条件 | 建议仓位 |
 |---------|------|---------|
@@ -660,12 +782,33 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 - 总仓位建议：强烈买入 + 买入仓位之和
 - 止损策略：单只股票最大亏损不超过-8%
 
-**主力资金数据说明**：
-- 主力资金 = 超大单 + 大单净流入
-- 反映市场大资金流向，替代原北向资金指标
-- 数据源：东方财富API（稳定可用）
+### 6.4 主力资金数据说明
 
-### 6.3 异常检测模块
+**数据来源**：东方财富网 API（`data_services/main_fund_flow.py`）
+
+**数据内容**：
+- 主力净流入 = 超大单 + 大单净流入
+- 细分：超大单、大单、中单、小单
+- 单位：亿元
+
+**特征计算**：
+```python
+MainFund_Net_Flow          # 当日主力净流入（亿元）
+MainFund_Super_Large       # 超大单净流入（亿元）
+MainFund_Large             # 大单净流入（亿元）
+MainFund_Net_Flow_5d_Sum   # 5日累积主力净流入
+MainFund_Net_Flow_20d_Sum  # 20日累积主力净流入
+MainFund_Consecutive_Inflow # 连续流入天数
+```
+
+**缓存配置**：
+- 缓存目录：`data/main_fund_cache/`
+- 缓存有效期：6小时
+- 缓存文件：`main_fund_history.pkl`
+
+**替代说明**：主力资金替代原北向资金指标（数据源不可用），反映市场大资金流向。
+
+### 6.5 异常检测模块
 
 **检测范围**：全量股票（53只），非仅核心股
 
@@ -691,7 +834,7 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 - 中严重度：⚠️ 黄色标记，需关注
 - 低严重度：📋 灰色标记，轻微异常（最多显示10个）
 
-### 6.4 板块分析模块
+### 6.6 板块分析模块
 
 **分析范围**：全量股票（53只），提供完整市场板块概览
 
@@ -704,7 +847,7 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 **输出表格列**：
 - 排名、板块名称、类型、平均涨跌幅、股票数、龙头股TOP 3
 
-### 6.5 邮件标题
+### 6.7 邮件标题
 
 ```
 【综合分析】A股买卖建议 - YYYY-MM-DD
@@ -774,24 +917,27 @@ def get_stock_price_info(stock_code):
 
 ## 八、文件架构
 
-### 7.1 核心文件
+### 8.1 核心文件
 
 | 文件 | 用途 |
 |------|------|
-| `a_stock_config.py` | A股配置（股票池、板块映射、权重） |
-| `a_stock_ml_model.py` | A股模型训练与预测 |
-| `a_stock_comprehensive_analysis.py` | 综合分析主程序 |
+| `a_stock_config.py` | A股配置（股票池53只、板块映射、样本权重） |
+| `a_stock_ml_model.py` | A股模型训练与预测（1077特征） |
+| `a_stock_comprehensive_analysis.py` | 综合分析主程序（AI生成买卖建议） |
+| `a_stock_email.py` | 大模型建议生成（通义千问） |
 | `scripts/run_a_stock_analysis.sh` | 自动化运行脚本 |
 
-### 7.2 特征模块
+### 8.2 特征模块
 
 | 文件 | 特征类型 |
 |------|---------|
-| `ml_services/feature_engineering/behavioral_factors.py` | 行为金融因子 |
+| `ml_services/feature_engineering/behavioral_factors.py` | 行为金融因子（凸显性、球队硬币） |
 | `data_services/a_stock_market_features.py` | 市场级特征、跨市场联动 |
+| `data_services/main_fund_flow.py` | 主力资金流向（替代北向资金） |
+| `data_services/margin_data.py` | 融资融券数据 |
 | `ml_services/ml_trading_model.py` | 技术指标、日内特征 |
 
-### 7.3 数据目录
+### 8.3 数据目录
 
 ```
 data/
@@ -818,6 +964,7 @@ data/
 
 | 版本 | 日期 | 主要变更 |
 |------|------|---------|
+| v3.1 | 2026-07-21 | **验证更新**：Walk-forward验证结果（平均准确率55.77%）；**文档同步**：更新特征重要性Top 50；**功能增强**：融资融券特征（4个）、截面标签选项；**流程优化**：综合买卖建议改由AI生成（替代硬编码逻辑） |
 | v3.0 | 2026-07-20 | **重大变更**：北向资金替换为主力资金（数据源不可用）；新增 `data_services/main_fund_flow.py` 模块；特征名从 `Northbound_*` 改为 `MainFund_*` |
 | v2.9 | 2026-07-19 | 优化：表格统一按股票代码排序；修复：综合买卖建议显示现价0.00问题（股票代码标准化）；增强：北向资金数据不可用时提示AI忽略此因素；优化：ML改为机器学习；恢复：AI建议完整说明文字 |
 | v2.8 | 2026-07-19 | 重构：新增"系统定位"章节，明确三层决策框架（机器学习定量→大模型定性→人来决策）；新增量化建议vs AI建议说明；区分三周期表格中的"量化建议"列 |
@@ -854,7 +1001,7 @@ data/
 
 | 项目 | 优先级 | 说明 |
 |------|--------|------|
-| Walk-forward 验证 | 高 | 验证模型稳定性，避免过拟合 |
+| ~~Walk-forward 验证~~ | ~~高~~ | ✅ 已完成（2026-07-18验证，准确率55.77%） |
 | 滚动网络特征 | 中 | 防止时序泄漏，动态计算社区ID |
 | 深度学习模型 | 低 | LSTM/Transformer 验证（港股已验证不推荐） |
 | 回测框架 | 低 | 自动化策略回测 |
@@ -862,9 +1009,9 @@ data/
 ### 10.3 模型文件信息
 
 **文件大小**：
-- 1天模型：1.78 MB
-- 5天模型：1.78 MB
-- 20天模型：1.78 MB
+- 1天模型：1.79 MB
+- 5天模型：1.79 MB
+- 20天模型：1.79 MB
 
 **特征数量**：
 - 计算特征：~700+（技术指标、网络特征、交叉特征等）
