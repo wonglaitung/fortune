@@ -109,7 +109,14 @@ class AStockRecommendationGenerator:
             llm_report: 大模型报告文本
 
         Returns:
-            Dict: {stock_code: {'short_term': str, 'mid_term': str, 'action': str}}
+            Dict: {stock_code: {
+                'short_term': str,
+                'mid_term': str,
+                'action': str,
+                'position_conservative': int,
+                'position_moderate': int,
+                'position_aggressive': int
+            }}
         """
         recommendations = {}
 
@@ -130,13 +137,44 @@ class AStockRecommendationGenerator:
                 elif '卖出' in short_term or '减仓' in short_term:
                     action = '卖出'
 
+                # 提取三种仓位建议
+                position_conservative = self._extract_position(llm_report, stock_name, '保守')
+                position_moderate = self._extract_position(llm_report, stock_name, '适度')
+                position_aggressive = self._extract_position(llm_report, stock_name, '激进')
+
                 recommendations[stock_code] = {
                     'short_term': short_term,
                     'mid_term': mid_term,
-                    'action': action
+                    'action': action,
+                    'position_conservative': position_conservative,
+                    'position_moderate': position_moderate,
+                    'position_aggressive': position_aggressive
                 }
 
         return recommendations
+
+    def _extract_position(self, text: str, stock_name: str, risk_type: str) -> int:
+        """
+        从大模型报告中提取仓位建议
+
+        Args:
+            text: 报告文本
+            stock_name: 股票名称
+            risk_type: 风险类型（保守/适度/激进）
+
+        Returns:
+            int: 仓位百分比，默认0
+        """
+        # 尝试匹配：保守型仓位：5% 或 保守型：5%
+        patterns = [
+            rf'{risk_type}型?仓位[：:]\s*(\d+)%?',
+            rf'{risk_type}型?[：:]\s*(\d+)%?',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return int(match.group(1))
+        return 0
 
     def _extract_term_advice(self, text: str, stock_name: str, term: str) -> str:
         """提取特定期限的建议"""
@@ -213,12 +251,13 @@ class AStockRecommendationGenerator:
         stop_loss = current_price * 0.92  # -8%
         target_price = current_price * 1.10  # +10%
 
-        # 建议仓位
-        position_pct = 0
-        if signal_type == 'strong_buy':
-            position_pct = 4
-        elif signal_type == 'buy':
-            position_pct = 3
+        # 建议仓位（三种风险偏好）
+        position_conservative = llm_rec.get('position_conservative', 0)
+        position_moderate = llm_rec.get('position_moderate', 0)
+        position_aggressive = llm_rec.get('position_aggressive', 0)
+
+        # 默认使用适度型仓位作为主要建议
+        position_pct = position_moderate
 
         return {
             'stock_code': stock_code,
@@ -227,6 +266,9 @@ class AStockRecommendationGenerator:
             'reason': reason,
             'action': '买入' if signal_type in ['strong_buy', 'buy'] else ('卖出' if signal_type == 'sell' else '观望'),
             'position_pct': position_pct,
+            'position_conservative': position_conservative,
+            'position_moderate': position_moderate,
+            'position_aggressive': position_aggressive,
             'current_price': current_price,
             'buy_price': buy_price,
             'stop_loss': stop_loss,
@@ -245,12 +287,20 @@ class AStockRecommendationGenerator:
         northbound_data: Dict
     ) -> Dict:
         """生成风险控制建议"""
-        # 计算总仓位
-        total_position = 0
+        # 计算三种风险偏好的总仓位
+        total_position_conservative = 0
+        total_position_moderate = 0
+        total_position_aggressive = 0
+
         for rec in recommendations['strong_buy']:
-            total_position += rec.get('position_pct', 0)
+            total_position_conservative += rec.get('position_conservative', 0)
+            total_position_moderate += rec.get('position_moderate', 0)
+            total_position_aggressive += rec.get('position_aggressive', 0)
+
         for rec in recommendations['buy']:
-            total_position += rec.get('position_pct', 0)
+            total_position_conservative += rec.get('position_conservative', 0)
+            total_position_moderate += rec.get('position_moderate', 0)
+            total_position_aggressive += rec.get('position_aggressive', 0)
 
         # 判断市场风险
         market_risk = '中'
@@ -263,9 +313,11 @@ class AStockRecommendationGenerator:
 
         return {
             'market_risk': market_risk,
-            'total_position': total_position,
+            'total_position_conservative': min(total_position_conservative, 50),
+            'total_position_moderate': min(total_position_moderate, 70),
+            'total_position_aggressive': min(total_position_aggressive, 90),
             'stop_loss_strategy': '单只股票最大亏损不超过-8%，触及止损位无条件平仓',
-            'position_strategy': f'建议总仓位{min(total_position, 50)}%，保留{(50-total_position) if total_position < 50 else 0}%现金'
+            'position_strategy': f'保守型总仓位{min(total_position_conservative, 50)}%，适度型总仓位{min(total_position_moderate, 70)}%，激进型总仓位{min(total_position_aggressive, 90)}%'
         }
 
     def format_recommendations_html(self, recommendations: Dict) -> str:
@@ -279,7 +331,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>20天概率</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -290,7 +342,9 @@ class AStockRecommendationGenerator:
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
             <td style="color: #16a34a; font-weight: bold;">{rec['probability_20d']:.2f}</td>
-            <td>{rec['position_pct']}%</td>
+            <td>{rec.get('position_conservative', 0)}%</td>
+            <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
+            <td>{rec.get('position_aggressive', 0)}%</td>
             <td>{rec['stop_loss']:.2f}</td>
             <td>{rec['target_price']:.2f}</td>
             <td>{rec['reason']}</td>
@@ -305,7 +359,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>20天概率</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -316,7 +370,9 @@ class AStockRecommendationGenerator:
             <td>{rec['current_price']:.2f}</td>
             <td class="{'positive' if rec['change_percent'] >= 0 else 'negative'}">{rec['change_percent']:+.2f}%</td>
             <td style="color: #ea580c; font-weight: bold;">{rec['probability_20d']:.2f}</td>
-            <td>{rec['position_pct']}%</td>
+            <td>{rec.get('position_conservative', 0)}%</td>
+            <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
+            <td>{rec.get('position_aggressive', 0)}%</td>
             <td>{rec['stop_loss']:.2f}</td>
             <td>{rec['target_price']:.2f}</td>
             <td>{rec['reason']}</td>
@@ -377,7 +433,9 @@ class AStockRecommendationGenerator:
     <table>
         <tr><th>指标</th><th>建议</th></tr>
         <tr><td>当前市场风险</td><td>{risk['market_risk']}</td></tr>
-        <tr><td>建议总仓位</td><td>{risk['total_position']}%</td></tr>
+        <tr><td>保守型总仓位</td><td>{risk['total_position_conservative']}%（上限50%）</td></tr>
+        <tr><td>适度型总仓位</td><td>{risk['total_position_moderate']}%（上限70%）</td></tr>
+        <tr><td>激进型总仓位</td><td>{risk['total_position_aggressive']}%（上限90%）</td></tr>
         <tr><td>止损策略</td><td>{risk['stop_loss_strategy']}</td></tr>
         <tr><td>仓位策略</td><td>{risk['position_strategy']}</td></tr>
     </table>
@@ -397,7 +455,10 @@ class AStockRecommendationGenerator:
 {rec['stock_name']} ({rec['stock_code']})
    - 推荐理由：{rec['reason']}
    - 操作建议：买入
-   - 建议仓位：{rec['position_pct']}%
+   - 建议仓位：
+     * 保守型：{rec.get('position_conservative', 0)}%
+     * 适度型：{rec.get('position_moderate', 0)}%
+     * 激进型：{rec.get('position_aggressive', 0)}%
    - 价格指引：
      * 建议买入价：{rec['buy_price']:.2f} 元
      * 止损位：{rec['stop_loss']:.2f} 元（-8.00%）
@@ -412,7 +473,10 @@ class AStockRecommendationGenerator:
 {rec['stock_name']} ({rec['stock_code']})
    - 推荐理由：{rec['reason']}
    - 操作建议：买入
-   - 建议仓位：{rec['position_pct']}%
+   - 建议仓位：
+     * 保守型：{rec.get('position_conservative', 0)}%
+     * 适度型：{rec.get('position_moderate', 0)}%
+     * 激进型：{rec.get('position_aggressive', 0)}%
    - 价格指引：
      * 建议买入价：{rec['buy_price']:.2f} 元
      * 止损位：{rec['stop_loss']:.2f} 元（-8.00%）
@@ -445,7 +509,10 @@ class AStockRecommendationGenerator:
         text += f"""
 ## 风险控制建议
 - 当前市场风险：{risk['market_risk']}
-- 建议仓位百分比：{risk['total_position']}%
+- 建议仓位：
+  * 保守型：{risk['total_position_conservative']}%（上限50%）
+  * 适度型：{risk['total_position_moderate']}%（上限70%）
+  * 激进型：{risk['total_position_aggressive']}%（上限90%）
 - 止损位设置：{risk['stop_loss_strategy']}
 - 仓位策略：{risk['position_strategy']}
 """
