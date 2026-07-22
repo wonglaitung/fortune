@@ -13,7 +13,6 @@
 ## 📄 效果文档
 
 - 每日定时更新[港股买卖建议](output/comprehensive_reports)
-- 每日定时更新[A股买卖建议](data/a_stock_comprehensive_recommendations_*.txt)
 
 ---
 
