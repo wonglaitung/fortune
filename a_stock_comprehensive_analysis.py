@@ -2607,12 +2607,12 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     <div style="color: #888; font-size: 10px; margin-top: 8px; background: #fafafa; padding: 6px 8px; border-radius: 4px; line-height: 1.6;">
         <span style="margin-right: 12px;"><strong>颜色</strong>：<span style="color: #16a34a;">↑≥60%</span> 高置信 | <span style="color: #ea580c;">↑50-60%</span> 中等 | <span style="color: #dc2626;">↓&lt;50%</span> 看跌</span>
         <span style="margin-right: 12px;"><strong>市场</strong>：🟢正常 | 🟡谨慎 | 🟠高置信 | 🔴暂停</span>
-        <span style="margin-right: 12px;"><strong>筹码</strong>：✅低 &lt;30% | ⚠️中 30-60% | 🔴高 &gt;60%</span>
-        <span><strong>综合建议</strong>：⭐优选 ≥75 | 🟢推荐 60-75 | 🟡观察 45-60 | 🔴暂缓 &lt;45</span><br>
+        <span><strong>筹码阻力</strong>：✅低 &lt;30% | ⚠️中 30-60% | 🔴高 &gt;60%</span><br>
         <span style="margin-right: 12px;"><strong>盈亏比</strong>：基于Walk-forward验证历史数据计算，⭐⭐⭐ ≥3.0 | ⭐⭐ ≥2.0 | ⭐ ≥1.5 | ⚠️ &lt;1.5</span>
         <span><strong>期望收益</strong>：胜率×平均盈利-(1-胜率)×平均亏损，正值表示正期望</span><br>
         <span style="margin-right: 12px;"><strong>风险得分</strong>：(100-波动率×1000 + 涨跌风险)/2，大涨风险高、大跌有机会</span>
-        <span><strong>综合得分</strong>：风险得分×0.5 + 回报得分×0.5（RSI超卖机会大、多头排列回报高）</span>
+        <span style="margin-right: 12px;"><strong>综合得分</strong>：风险得分×0.5 + 回报得分×0.5（RSI超卖机会大、多头排列回报高）</span>
+        <span><strong>风险建议</strong>：⭐优选 ≥75 | 🟢推荐 60-75 | 🟡观察 45-60 | 🔴暂缓 &lt;45</span>
     </div>
 """
 
