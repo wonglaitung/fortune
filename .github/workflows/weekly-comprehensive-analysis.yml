@@ -39,7 +39,7 @@ jobs:
           QWEN_CHAT_MODEL: ${{ secrets.QWEN_CHAT_MODEL }}
         run: |
           chmod +x scripts/run_comprehensive_analysis.sh
-          ./scripts/run_comprehensive_analysis.sh
+          ./scripts/run_comprehensive_analysis.sh '2318.HK,0728.HK,1288.HK,3968.HK,1600.HK'
 
       - name: Upload analysis results
         uses: actions/upload-artifact@v4
