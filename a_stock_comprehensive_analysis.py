@@ -2100,7 +2100,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -2117,7 +2117,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <td>{stock_code}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
-            <td>{rec.get('position_pct', 0)}%</td>
+            <td>{rec.get('position_conservative', 0)}%</td>
+            <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
+            <td>{rec.get('position_aggressive', 0)}%</td>
             <td>{rec.get('stop_loss', 0):.2f}</td>
             <td>{rec.get('target_price', 0):.2f}</td>
             <td>{rec.get('reason', '')}</td>
@@ -2132,7 +2134,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>建议仓位</th><th>止损位</th><th>目标价</th>
+            <th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -2149,7 +2151,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             <td>{stock_code}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
-            <td>{rec.get('position_pct', 0)}%</td>
+            <td>{rec.get('position_conservative', 0)}%</td>
+            <td><strong>{rec.get('position_moderate', 0)}%</strong></td>
+            <td>{rec.get('position_aggressive', 0)}%</td>
             <td>{rec.get('stop_loss', 0):.2f}</td>
             <td>{rec.get('target_price', 0):.2f}</td>
             <td>{rec.get('reason', '')}</td>
@@ -2223,7 +2227,9 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
     <table>
         <tr><th>指标</th><th>建议</th></tr>
         <tr><td>当前市场风险</td><td>{risk.get('market_risk', '中')}</td></tr>
-        <tr><td>建议总仓位</td><td>{risk.get('total_position', 0)}%</td></tr>
+        <tr><td>保守型总仓位</td><td>{risk.get('total_position_conservative', 0)}%（上限50%）</td></tr>
+        <tr><td>适度型总仓位</td><td>{risk.get('total_position_moderate', 0)}%（上限70%）</td></tr>
+        <tr><td>激进型总仓位</td><td>{risk.get('total_position_aggressive', 0)}%（上限90%）</td></tr>
         <tr><td>止损策略</td><td>{risk.get('stop_loss_strategy', '')}</td></tr>
         <tr><td>仓位策略</td><td>{risk.get('position_strategy', '')}</td></tr>
     </table>
