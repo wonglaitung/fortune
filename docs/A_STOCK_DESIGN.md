@@ -1,6 +1,6 @@
 # A股智能分析系统设计文档
 
-> **版本**：v3.1 | **更新日期**：2026-07-21
+> **版本**：v3.2 | **更新日期**：2026-07-22
 
 ---
 
@@ -735,11 +735,11 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 | 三周期预测表格 | 按股票代码升序 |
 | 异常检测表格（高/中/低严重度） | 按股票代码升序 |
 
-### 6.2 AI综合买卖建议生成（v4.0）
+### 6.2 AI综合买卖建议生成（v4.1）
 
 **文件位置**：`a_stock_comprehensive_analysis.py` - `generate_comprehensive_recommendations_with_llm()`
 
-**设计变更**：v4.0版本起，综合买卖建议改由通义千问大模型生成，替代原有的硬编码规则。
+**设计变更**：v4.0版本起，综合买卖建议改由通义千问大模型生成，替代原有的硬编码规则。v4.1新增三种风险偏好仓位建议。
 
 **AI输入数据**：
 - 技术指标（RSI、MACD、均线、布林带等）
@@ -756,6 +756,41 @@ python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_recommenda
 - 避免硬编码规则的局限性
 
 **实现位置**：`llm_services/qwen_engine.py` - `chat_with_llm()`
+
+### 6.2.1 三种风险偏好仓位建议（v4.1新增）
+
+**设计理念**：大模型根据个股预测概率、波动率、筹码阻力、市场环境等因素，动态决定仓位，而非使用固定值。
+
+**仓位类型**：
+
+| 类型 | 适用人群 | 仓位上限 | 特点 |
+|------|---------|---------|------|
+| **保守型** | 风险厌恶，追求稳健 | 50%总仓位 | 低波动、高确定性股票配置较高 |
+| **适度型** | 平衡风险与收益 | 70%总仓位 | 中等风险承受能力 |
+| **激进型** | 风险偏好，追求高收益 | 90%总仓位 | 高波动、高潜力股票配置较高 |
+
+**输出格式**：
+```
+- 建议仓位：
+  * 保守型：3%
+  * 适度型：5%
+  * 激进型：8%
+```
+
+**风险控制输出**：
+- 保守型总仓位：X%（上限50%）
+- 适度型总仓位：X%（上限70%）
+- 激进型总仓位：X%（上限90%）
+- 止损策略：单只股票最大亏损不超过-8%
+
+**示例**：
+
+| 股票 | 保守型 | 适度型 | 激进型 | 推荐理由 |
+|------|--------|--------|--------|---------|
+| 运达科技 | 0% | 10% | 20% | 趋势破位，观望为主 |
+| 共达电声 | 0% | 10% | 20% | RSI极度超卖，博弈反弹 |
+| 渤海化学 | 0% | 0% | 5% | 筹码压力巨大，不建议参与 |
+| 石药创新 | 10% | 20% | 30% | 市场龙头，趋势向上 |
 
 ### 6.3 旧版买卖建议生成器（已弃用）
 
@@ -954,9 +989,39 @@ data/
 │   └── ml_predictions_20d.csv        # 20天预测结果
 ├── a_stock_network_features/         # 网络特征
 │   └── network_features_for_ml.json
+├── a_stock_walk_forward/             # Walk-forward验证结果
+│   └── validation_report_*.json      # 验证报告
 ├── a_stock_llm_recommendations_*.txt # 大模型建议
 └── a_stock_comprehensive_recommendations_*.txt # 综合建议
 ```
+
+### 8.4 Walk-forward 输出目录
+
+```
+output/
+└── YYYYMMDD_HHMMSS_a_stock_catboost_20d/  # Walk-forward验证输出
+    ├── validation_summary.json      # 验证汇总
+    ├── fold_metrics_detail.json     # Fold详细指标
+    ├── prediction_analysis.csv      # 预测详情（用于计算盈亏比）
+    └── prediction_distribution.json # 预测分布
+```
+
+**prediction_analysis.csv 列说明**：
+
+| 列名 | 说明 |
+|------|------|
+| code | 股票代码 |
+| Date | 交易日期 |
+| fold | Fold编号 |
+| Predicted_Direction | 预测方向（UP/DOWN） |
+| Predict_Prob | 预测概率 |
+| Actual_Direction | 实际方向 |
+| Actual_Return | 实际收益率 |
+| Is_Correct | 是否正确预测 |
+
+**盈亏比计算**：从 `prediction_analysis.csv` 读取每只股票的历史交易记录，计算：
+- 盈亏比 = 平均盈利 / 平均亏损
+- 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损
 
 ---
 
@@ -964,6 +1029,7 @@ data/
 
 | 版本 | 日期 | 主要变更 |
 |------|------|---------|
+| v3.2 | 2026-07-22 | **仓位建议优化**：大模型动态决定仓位（替代固定值），支持三种风险偏好（保守型/适度型/激进型）；**Walk-forward增强**：输出 `prediction_analysis.csv` 用于计算个股盈亏比；**邮件描述优化**：更清晰表达AI综合判断过程 |
 | v3.1 | 2026-07-21 | **验证更新**：Walk-forward验证结果（平均准确率55.77%）；**文档同步**：更新特征重要性Top 50；**功能增强**：融资融券特征（4个）、截面标签选项；**流程优化**：综合买卖建议改由AI生成（替代硬编码逻辑） |
 | v3.0 | 2026-07-20 | **重大变更**：北向资金替换为主力资金（数据源不可用）；新增 `data_services/main_fund_flow.py` 模块；特征名从 `Northbound_*` 改为 `MainFund_*` |
 | v2.9 | 2026-07-19 | 优化：表格统一按股票代码排序；修复：综合买卖建议显示现价0.00问题（股票代码标准化）；增强：北向资金数据不可用时提示AI忽略此因素；优化：ML改为机器学习；恢复：AI建议完整说明文字 |
