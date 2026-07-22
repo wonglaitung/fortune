@@ -3702,7 +3702,7 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
     # 实时价格数据
     if stock_code in stock_realtime_data:
         rt = stock_realtime_data[stock_code]
-        lines.append(f"当前价格: {rt.get('current_price', 'N/A')}")
+        lines.append(f"当前价格: {rt.get('price', 'N/A')}")
         change_pct = rt.get('change_pct', 0)
         try:
             lines.append(f"涨跌幅: {float(change_pct):+.2f}%" if change_pct is not None else "涨跌幅: N/A")
@@ -5456,13 +5456,6 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                     # 插入详细个股分析
                                     insert_pos = container_start + len('<div class="container">')
                                     html_content = html_content[:insert_pos] + detailed_content + html_content[insert_pos:]
-
-                        # 更新邮件主题
-                        if len(stock_results) == 1:
-                            stock_name = stock_results[0].get('stock_name', stock_results[0].get('stock_code'))
-                            email_subject = f"【个股分析】{stock_name} - {date_str}"
-                        else:
-                            email_subject = f"【个股分析报告】{len(stock_results)}只股票 - {date_str}"
 
                         print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析")
 
