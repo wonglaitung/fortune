@@ -498,6 +498,8 @@ def load_historical_profit_loss_ratio_a_stock():
 
         results = {}
         for stock_code in df_up['code'].unique():
+            # 标准化股票代码为6位字符串
+            stock_code_str = str(stock_code).zfill(6)
             stock_df = df_up[df_up['code'] == stock_code]
             n_samples = len(stock_df)
 
@@ -523,7 +525,7 @@ def load_historical_profit_loss_ratio_a_stock():
                 else:
                     pl_grade = '⚠️'
 
-                results[stock_code] = {
+                results[stock_code_str] = {
                     'profit_loss_ratio': profit_loss_ratio,
                     'profit_loss_ratio_str': f'{profit_loss_ratio:.2f}:1',
                     'expected_return': expected_return,

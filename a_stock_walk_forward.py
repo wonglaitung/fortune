@@ -820,6 +820,10 @@ class AStockWalkForwardValidator:
             # 计算是否正确
             pred_analysis['Is_Correct'] = pred_analysis['Predicted_Direction'] == pred_analysis['Actual_Direction']
 
+            # 确保股票代码为6位字符串格式（保留前导零）
+            if 'code' in pred_analysis.columns:
+                pred_analysis['code'] = pred_analysis['code'].astype(str).str.zfill(6)
+
             # 选择需要的列
             columns_to_save = ['code', 'fold', 'Predicted_Direction', 'Predict_Prob',
                                'Actual_Direction', 'Actual_Return', 'Is_Correct']
