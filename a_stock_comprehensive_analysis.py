@@ -472,6 +472,7 @@ def load_historical_profit_loss_ratio_a_stock():
 
     # 查找最新的A股prediction_analysis.csv文件
     search_patterns = [
+        'output/*_a_stock_catboost_*/prediction_analysis.csv',
         'output/*_a_stock_*_20d/prediction_analysis.csv',
         'output/*_catboost_20d/prediction_analysis.csv',  # 兼容港股格式
     ]

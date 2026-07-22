@@ -89,6 +89,9 @@ class AStockWalkForwardValidator:
         # 市场情绪过滤器（延迟初始化）
         self.market_filter = None
 
+        # 存储所有预测详情（用于生成 prediction_analysis.csv）
+        self.all_predictions = []
+
         logger.info(f"初始化 A股 Walk-forward 验证器")
         logger.info(f"训练窗口: {train_window_months} 个月")
         logger.info(f"测试窗口: {test_window_months} 个月")
@@ -327,6 +330,16 @@ class AStockWalkForwardValidator:
         print(f"  🔄 计算评估指标...")
         metrics = self._calculate_metrics(test_data, predictions)
 
+        # 收集预测详情
+        if 'prediction_df' in metrics:
+            pred_df = metrics['prediction_df'].copy()
+            pred_df['fold'] = fold + 1
+            pred_df['train_start'] = train_start_date.strftime('%Y-%m-%d')
+            pred_df['train_end'] = train_end_date.strftime('%Y-%m-%d')
+            pred_df['test_start'] = test_start_date.strftime('%Y-%m-%d')
+            pred_df['test_end'] = test_end_date.strftime('%Y-%m-%d')
+            self.all_predictions.append(pred_df)
+
         # 添加fold信息
         metrics['fold'] = fold
         metrics['train_start_date'] = train_start_date.strftime('%Y-%m-%d')
@@ -552,6 +565,7 @@ class AStockWalkForwardValidator:
             'sharpe_ratio': sharpe_ratio,
             'ic': ic if not np.isnan(ic) else 0.0,
             'rank_ic': rank_ic if not np.isnan(rank_ic) else 0.0,
+            'prediction_df': df,  # 返回预测详情用于保存
         }
 
     def _calculate_overall_metrics(self, fold_results):
@@ -785,6 +799,40 @@ class AStockWalkForwardValidator:
         md_file = os.path.join('output', f'walk_forward_a_stock_catboost_{horizon}d_{timestamp}.md')
         self._generate_markdown_report(report, md_file)
         logger.info(f"Markdown报告已保存: {md_file}")
+
+        # 6. 保存 prediction_analysis.csv（用于计算个股盈亏比）
+        if self.all_predictions:
+            all_pred_df = pd.concat(self.all_predictions, ignore_index=True)
+
+            # 标准化列名（与港股格式一致）
+            pred_analysis = all_pred_df.rename(columns={
+                'Code': 'code',
+                'prediction': 'Predicted_Direction',
+                'probability': 'Predict_Prob',
+                'actual_return': 'Actual_Return',
+                'Label': 'Actual_Direction',
+            })
+
+            # 转换预测方向
+            pred_analysis['Predicted_Direction'] = pred_analysis['Predicted_Direction'].map({1: 'UP', 0: 'DOWN'})
+            pred_analysis['Actual_Direction'] = pred_analysis['Actual_Direction'].map({1: 'UP', 0: 'DOWN'})
+
+            # 计算是否正确
+            pred_analysis['Is_Correct'] = pred_analysis['Predicted_Direction'] == pred_analysis['Actual_Direction']
+
+            # 选择需要的列
+            columns_to_save = ['code', 'fold', 'Predicted_Direction', 'Predict_Prob',
+                               'Actual_Direction', 'Actual_Return', 'Is_Correct']
+            # 添加日期列（如果存在）
+            if 'Date' in pred_analysis.columns or pred_analysis.index.name == 'Date':
+                if pred_analysis.index.name == 'Date':
+                    pred_analysis['Date'] = pred_analysis.index
+                columns_to_save.insert(0, 'Date')
+
+            pred_analysis_file = os.path.join(detail_dir, 'prediction_analysis.csv')
+            pred_analysis[columns_to_save].to_csv(pred_analysis_file, index=False)
+            logger.info(f"预测详情已保存: {pred_analysis_file}")
+            print(f"  - 预测详情: {pred_analysis_file}")
 
         print(f"\n📄 报告已保存:")
         print(f"  - JSON: {json_file}")
