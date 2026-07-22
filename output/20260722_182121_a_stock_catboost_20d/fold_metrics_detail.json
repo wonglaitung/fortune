@@ -1,0 +1,612 @@
+{
+  "model_type": "a_stock_catboost",
+  "horizon": 20,
+  "folds": [
+    {
+      "fold": 1,
+      "train_period": "2025-01-01 to 2025-12-31",
+      "test_period": "2026-01-01 to 2026-01-31",
+      "metrics": {
+        "ic": 0.28543880589501414,
+        "rank_ic": 0.2784698681773368,
+        "accuracy": 0.44706994328922495,
+        "sharpe": -0.5291591109474731,
+        "max_drawdown": -0.9999985329018524,
+        "win_rate": 0.353099730458221,
+        "avg_return": -0.012379868263384138
+      },
+      "sample_counts": {
+        "total": 1058,
+        "train": 12849,
+        "test": 1058
+      },
+      "top_features": [
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 3.0044890985144743
+        },
+        {
+          "Feature": "net_constraint_CN_10Y_Yield",
+          "Importance": 2.941292398123501
+        },
+        {
+          "Feature": "Oil_Return_20d",
+          "Importance": 1.8352547373412929
+        },
+        {
+          "Feature": "High_Limit",
+          "Importance": 1.6209209557685318
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.5757386954519557
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 1.520971908054957
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 1.4825905570335995
+        },
+        {
+          "Feature": "Volatility_Mean_60d",
+          "Importance": 1.3234399410640278
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.1953088740935904
+        },
+        {
+          "Feature": "Volatility_120d",
+          "Importance": 1.1945447635610646
+        },
+        {
+          "Feature": "Volatility_70pct",
+          "Importance": 1.1878230036028097
+        },
+        {
+          "Feature": "BB_Width_MA60",
+          "Importance": 1.1290786374923816
+        },
+        {
+          "Feature": "RSI_Deviation_MA20",
+          "Importance": 1.046778510586826
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 1.0313112362256893
+        },
+        {
+          "Feature": "net_constraint_per_NASDAQ_Return_20d",
+          "Importance": 1.0297118930169677
+        },
+        {
+          "Feature": "growth_score",
+          "Importance": 0.9154643221566929
+        },
+        {
+          "Feature": "Market_Cap",
+          "Importance": 0.9066789991886914
+        },
+        {
+          "Feature": "Momentum_Accel_120d",
+          "Importance": 0.9046339929123614
+        },
+        {
+          "Feature": "Distance_Support_120d",
+          "Importance": 0.8726538857638332
+        },
+        {
+          "Feature": "stock_type_sector",
+          "Importance": 0.8307904642928904
+        }
+      ]
+    },
+    {
+      "fold": 2,
+      "train_period": "2025-02-01 to 2026-01-31",
+      "test_period": "2026-02-01 to 2026-02-28",
+      "metrics": {
+        "ic": 0.39130618158897346,
+        "rank_ic": 0.2643811238328515,
+        "accuracy": 0.7439353099730458,
+        "sharpe": -0.09111052649334711,
+        "max_drawdown": -0.9987988653953784,
+        "win_rate": 0.43670886075949367,
+        "avg_return": -0.001758792403020198
+      },
+      "sample_counts": {
+        "total": 742,
+        "train": 12953,
+        "test": 742
+      },
+      "top_features": [
+        {
+          "Feature": "net_constraint_CN_10Y_Yield",
+          "Importance": 2.781636657837768
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 2.2373970128957974
+        },
+        {
+          "Feature": "Volatility_70pct",
+          "Importance": 2.0604823798034904
+        },
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 2.0511558452314125
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.5329701280255348
+        },
+        {
+          "Feature": "net_constraint_per_NASDAQ_Return_20d",
+          "Importance": 1.4819196953160083
+        },
+        {
+          "Feature": "High_Limit",
+          "Importance": 1.4299165175246915
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.3070978675370881
+        },
+        {
+          "Feature": "net_constraint_per_CN_US_10Y_Spread",
+          "Importance": 1.2263357296604653
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 1.1296337873143407
+        },
+        {
+          "Feature": "stock_type_sector",
+          "Importance": 1.1199722314349116
+        },
+        {
+          "Feature": "Volatility_120d",
+          "Importance": 1.1028537781433374
+        },
+        {
+          "Feature": "MA120_Slope",
+          "Importance": 1.0515825290695766
+        },
+        {
+          "Feature": "Oil_Return_20d",
+          "Importance": 1.0070197806839167
+        },
+        {
+          "Feature": "MA250_Slope",
+          "Importance": 0.9995501458632914
+        },
+        {
+          "Feature": "Volatility_30d",
+          "Importance": 0.9951707919832167
+        },
+        {
+          "Feature": "Oil_Return_5d",
+          "Importance": 0.9874682737372118
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 0.9756615393996771
+        },
+        {
+          "Feature": "Market_Cap",
+          "Importance": 0.9374846855974447
+        },
+        {
+          "Feature": "Volatility_Mean_60d",
+          "Importance": 0.9048311796047875
+        }
+      ]
+    },
+    {
+      "fold": 3,
+      "train_period": "2025-03-01 to 2026-02-28",
+      "test_period": "2026-03-01 to 2026-03-31",
+      "metrics": {
+        "ic": 0.29295722493934045,
+        "rank_ic": 0.30611913296859056,
+        "accuracy": 0.6030927835051546,
+        "sharpe": 1.4656543511320306,
+        "max_drawdown": -0.9215850033744329,
+        "win_rate": 0.6199261992619927,
+        "avg_return": 0.05563132354633308
+      },
+      "sample_counts": {
+        "total": 1164,
+        "train": 12741,
+        "test": 1164
+      },
+      "top_features": [
+        {
+          "Feature": "net_constraint_CN_10Y_Yield",
+          "Importance": 3.3094893248263255
+        },
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 2.509622907244063
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 2.0273400143798264
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.6628630769155404
+        },
+        {
+          "Feature": "net_constraint_per_NASDAQ_Return_20d",
+          "Importance": 1.6098730190367108
+        },
+        {
+          "Feature": "Volatility_70pct",
+          "Importance": 1.4876741091894579
+        },
+        {
+          "Feature": "net_constraint_per_CN_US_10Y_Spread",
+          "Importance": 1.468410341109832
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.4164278778726977
+        },
+        {
+          "Feature": "Volatility_30d",
+          "Importance": 1.250422800756644
+        },
+        {
+          "Feature": "Volatility_Mean_60d",
+          "Importance": 1.089666024254832
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 1.0817124265825189
+        },
+        {
+          "Feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "Importance": 1.0676050738288207
+        },
+        {
+          "Feature": "Market_Cap",
+          "Importance": 1.0429349466008346
+        },
+        {
+          "Feature": "AStock_Regime_Switch_Prob_5d",
+          "Importance": 0.9995716348122907
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 0.9942590304234789
+        },
+        {
+          "Feature": "High_Limit",
+          "Importance": 0.9822164139521099
+        },
+        {
+          "Feature": "Volatility_120d",
+          "Importance": 0.9667365411588953
+        },
+        {
+          "Feature": "net_eigenvector_centrality",
+          "Importance": 0.9459565265081521
+        },
+        {
+          "Feature": "net_constraint_US_2Y_Yield",
+          "Importance": 0.9398670720484725
+        },
+        {
+          "Feature": "Low_Limit",
+          "Importance": 0.9298210608748029
+        }
+      ]
+    },
+    {
+      "fold": 4,
+      "train_period": "2025-04-01 to 2026-03-31",
+      "test_period": "2026-04-01 to 2026-04-30",
+      "metrics": {
+        "ic": 0.0491724257849422,
+        "rank_ic": 0.050509308845582954,
+        "accuracy": 0.49056603773584906,
+        "sharpe": 1.3252787257298209,
+        "max_drawdown": -0.999345555412322,
+        "win_rate": 0.5631578947368421,
+        "avg_return": 0.06937908642402212
+      },
+      "sample_counts": {
+        "total": 1113,
+        "train": 12792,
+        "test": 1113
+      },
+      "top_features": [
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 2.0840197364399287
+        },
+        {
+          "Feature": "net_constraint_CN_10Y_Yield",
+          "Importance": 1.8307881901670444
+        },
+        {
+          "Feature": "net_constraint_US_2Y_Yield",
+          "Importance": 1.7866891326233996
+        },
+        {
+          "Feature": "net_constraint_per_NASDAQ_Return_20d",
+          "Importance": 1.6498081272826646
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 1.6449746879520915
+        },
+        {
+          "Feature": "net_constraint_per_CN_US_10Y_Spread",
+          "Importance": 1.508635205125381
+        },
+        {
+          "Feature": "AStock_Regime_Switch_Prob_5d",
+          "Importance": 1.3731171668378632
+        },
+        {
+          "Feature": "Volatility_70pct",
+          "Importance": 1.3396072207293532
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.3029519781534764
+        },
+        {
+          "Feature": "Volatility_120d",
+          "Importance": 1.2254969067674804
+        },
+        {
+          "Feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "Importance": 1.2123252489880258
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 1.1602654093102698
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.1493891037142188
+        },
+        {
+          "Feature": "stock_type_sector",
+          "Importance": 1.1291805935399417
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 1.0960154517774523
+        },
+        {
+          "Feature": "net_eigenvector_centrality",
+          "Importance": 1.087253888929059
+        },
+        {
+          "Feature": "High_Limit",
+          "Importance": 1.0749835522040645
+        },
+        {
+          "Feature": "Oil_Return_20d",
+          "Importance": 1.0346453876484307
+        },
+        {
+          "Feature": "MA250_Slope",
+          "Importance": 1.0198332624547837
+        },
+        {
+          "Feature": "BB_Width_MA60",
+          "Importance": 1.011854039260928
+        }
+      ]
+    },
+    {
+      "fold": 5,
+      "train_period": "2025-05-01 to 2026-04-30",
+      "test_period": "2026-05-01 to 2026-05-31",
+      "metrics": {
+        "ic": 0.4546728999262249,
+        "rank_ic": 0.48219475286637625,
+        "accuracy": 0.6048218029350105,
+        "sharpe": 0.3718145749815996,
+        "max_drawdown": -0.9110358000760073,
+        "win_rate": 0.44124168514412415,
+        "avg_return": 0.02043252775233088
+      },
+      "sample_counts": {
+        "total": 954,
+        "train": 12802,
+        "test": 954
+      },
+      "top_features": [
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 2.8053586487409645
+        },
+        {
+          "Feature": "net_constraint_US_2Y_Yield",
+          "Importance": 2.026518499653148
+        },
+        {
+          "Feature": "AStock_Regime_Expected_Duration",
+          "Importance": 1.767747668285222
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 1.4640593339764225
+        },
+        {
+          "Feature": "BB_Width_MA60",
+          "Importance": 1.436848909719552
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.3363114401672735
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 1.327511903662908
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.3112616951256981
+        },
+        {
+          "Feature": "High_Limit",
+          "Importance": 1.2900515582943348
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 1.2802761081079448
+        },
+        {
+          "Feature": "net_constraint_per_NASDAQ_Return_20d",
+          "Importance": 1.2255186350072593
+        },
+        {
+          "Feature": "net_comm_2_CN_10Y_Yield",
+          "Importance": 1.2250832373535134
+        },
+        {
+          "Feature": "Low_Limit",
+          "Importance": 1.1811394275709164
+        },
+        {
+          "Feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "Importance": 1.0815178899147238
+        },
+        {
+          "Feature": "ADX",
+          "Importance": 1.067244807603236
+        },
+        {
+          "Feature": "Volume_Volatility",
+          "Importance": 1.0496310241200268
+        },
+        {
+          "Feature": "PE",
+          "Importance": 1.014755394060507
+        },
+        {
+          "Feature": "net_eigenvector_centrality",
+          "Importance": 0.979011637754938
+        },
+        {
+          "Feature": "Volatility_30d",
+          "Importance": 0.9737475681208357
+        },
+        {
+          "Feature": "stock_type_sector",
+          "Importance": 0.9555280312231225
+        }
+      ]
+    },
+    {
+      "fold": 6,
+      "train_period": "2025-06-01 to 2026-05-31",
+      "test_period": "2026-06-01 to 2026-06-30",
+      "metrics": {
+        "ic": 0.37668116837563137,
+        "rank_ic": 0.37458830276559124,
+        "accuracy": 0.6549865229110512,
+        "sharpe": 1.2273607250556358,
+        "max_drawdown": -0.999777259094994,
+        "win_rate": 0.5889967637540453,
+        "avg_return": 0.08317599721469117
+      },
+      "sample_counts": {
+        "total": 742,
+        "train": 12749,
+        "test": 742
+      },
+      "top_features": [
+        {
+          "Feature": "AStock_Regime_Switch_Prob_5d",
+          "Importance": 2.8985366699498947
+        },
+        {
+          "Feature": "net_constraint_US_30Y_Yield",
+          "Importance": 2.8921630844188977
+        },
+        {
+          "Feature": "net_eigenvector_centrality",
+          "Importance": 1.9494278642164848
+        },
+        {
+          "Feature": "AStock_Regime_Expected_Duration",
+          "Importance": 1.903716409550028
+        },
+        {
+          "Feature": "PE",
+          "Importance": 1.523463251532686
+        },
+        {
+          "Feature": "net_constraint_CN_10Y_Yield",
+          "Importance": 1.4942470692051983
+        },
+        {
+          "Feature": "net_constraint_US_2Y_Yield",
+          "Importance": 1.4688772748347332
+        },
+        {
+          "Feature": "Volatility_70pct",
+          "Importance": 1.4037163107112585
+        },
+        {
+          "Feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "Importance": 1.356848027705632
+        },
+        {
+          "Feature": "AStock_Regime_Momentum",
+          "Importance": 1.2864321485420274
+        },
+        {
+          "Feature": "Volatility_30pct",
+          "Importance": 1.2838618110708053
+        },
+        {
+          "Feature": "defensive_score",
+          "Importance": 1.2671358575836686
+        },
+        {
+          "Feature": "Copper_Return_20d",
+          "Importance": 1.187840515995124
+        },
+        {
+          "Feature": "ADX",
+          "Importance": 1.1661064945473125
+        },
+        {
+          "Feature": "Return_250d",
+          "Importance": 1.065432556350334
+        },
+        {
+          "Feature": "PB",
+          "Importance": 1.029951401707803
+        },
+        {
+          "Feature": "MA120_Slope",
+          "Importance": 0.999368752502081
+        },
+        {
+          "Feature": "Price_Return_Mean_30d",
+          "Importance": 0.9919278619262992
+        },
+        {
+          "Feature": "cyclical_score",
+          "Importance": 0.9148983623414646
+        },
+        {
+          "Feature": "Volatility_30d",
+          "Importance": 0.9083335017798922
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-07-22 18:21:21",
+  "model_type": "a_stock_catboost",
+  "horizon": 20,
+  "num_folds": 7,
+  "num_stocks": 53,
+  "overall_metrics": {
+    "score": 73,
+    "rating": "良好",
+    "recommendation": "推荐实盘",
+    "avg_sharpe": 0.6283064565763778,
+    "avg_ic": 0.30837145108502106,
+    "avg_accuracy": 0.5907454000582227
+  }
+}
