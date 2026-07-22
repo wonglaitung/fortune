@@ -3889,6 +3889,109 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
     return "\n".join(lines)
 
 
+def parse_recommendation_from_text(response: str, stock_code: str) -> dict:
+    """
+    从综合买卖建议文本中解析指定股票的推荐信息
+
+    参数：
+    - response: 综合买卖建议文本
+    - stock_code: 股票代码
+
+    返回：
+    - dict: 推荐信息，包含 recommendation, operation_advice, risk_warnings 等
+    """
+    import re
+
+    # 获取股票名称
+    stock_name = WATCHLIST.get(stock_code, stock_code)
+
+    # 默认值
+    result = {
+        'recommendation': '🟡 观望',
+        'recommendation_class': 'rec-hold',
+        'consistency': '-',
+        'analysis_summary': '-',
+        'operation_advice': '-',
+        'risk_warnings': []
+    }
+
+    # 查找股票在文本中的位置
+    # 格式：N. STOCK_CODE STOCK_NAME
+    pattern = rf'(\d+)\.\s+{re.escape(stock_code)}\s+{re.escape(stock_name)}'
+    match = re.search(pattern, response)
+
+    if not match:
+        # 尝试只匹配股票代码
+        pattern = rf'(\d+)\.\s+{re.escape(stock_code)}\s+'
+        match = re.search(pattern, response)
+
+    if not match:
+        return result
+
+    # 找到股票所在的部分
+    start_pos = match.start()
+
+    # 确定所在分类（强烈买入/买入/持有观望/卖出）
+    # 向前查找最近的分类标题
+    text_before = response[:start_pos]
+
+    # 根据分类确定推荐级别
+    if '## 强烈买入信号' in text_before and text_before.rfind('## 强烈买入信号') > text_before.rfind('## 买入信号'):
+        result['recommendation'] = '⭐强烈买入'
+        result['recommendation_class'] = 'rec-strong-buy'
+    elif '## 买入信号' in text_before and text_before.rfind('## 买入信号') > text_before.rfind('## 持有'):
+        result['recommendation'] = '🟢买入'
+        result['recommendation_class'] = 'rec-buy'
+    elif '## 卖出信号' in text_before and text_before.rfind('## 卖出信号') > text_before.rfind('## 风险'):
+        result['recommendation'] = '🔴卖出'
+        result['recommendation_class'] = 'rec-sell'
+    else:
+        result['recommendation'] = '🟡观望'
+        result['recommendation_class'] = 'rec-hold'
+
+    # 提取该股票的详细信息（到下一个股票或下一节为止）
+    text_after = response[start_pos:]
+
+    # 查找下一个股票条目或下一节
+    next_stock = re.search(r'\n\d+\.\s+\d{4}\.HK', text_after)
+    next_section = re.search(r'\n## ', text_after)
+
+    end_pos = len(text_after)
+    if next_stock and next_section:
+        end_pos = min(next_stock.start(), next_section.start())
+    elif next_stock:
+        end_pos = next_stock.start()
+    elif next_section:
+        end_pos = next_section.start()
+
+    stock_section = text_after[:end_pos]
+
+    # 提取推荐理由（只取第一行）
+    reason_match = re.search(r'- 推荐理由：([^\n]+)', stock_section)
+    if reason_match:
+        result['analysis_summary'] = reason_match.group(1).strip()
+        # 判断一致性
+        reason_text = reason_match.group(1)
+        if '一致' in reason_text:
+            result['consistency'] = '一致'
+        elif '冲突' in reason_text:
+            result['consistency'] = '方向冲突'
+        else:
+            result['consistency'] = '-'
+
+    # 提取操作建议（只取第一行）
+    op_match = re.search(r'- 操作建议：([^\n]+)', stock_section)
+    if op_match:
+        result['operation_advice'] = op_match.group(1).strip()
+
+    # 提取风险提示（只取第一行）
+    risk_match = re.search(r'- 风险提示：([^\n]+)', stock_section)
+    if risk_match:
+        result['risk_warnings'] = [risk_match.group(1).strip()]
+
+    return result
+
+
 def extract_stock_data_with_llm(stock_code: str, report_content: str) -> dict:
     """
     使用大模型从综合报告中提取指定股票的分析数据
@@ -5414,8 +5517,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         )
                         stock_data = extract_stock_data_with_llm(stock_code, compact_text)
                         if stock_data:
-                            # 综合分析
-                            analysis_result = comprehensive_analyze_with_llm(stock_data)
+                            # 从综合买卖建议文本中解析推荐信息（不再调用大模型分析）
+                            analysis_result = parse_recommendation_from_text(response, stock_code)
                             if analysis_result:
                                 stock_data['analysis'] = analysis_result
                             # 持货人建议
