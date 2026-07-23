@@ -94,9 +94,22 @@ echo ""
 echo "✅ 步骤2完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
 echo ""
 
-# 步骤3: 调用 a_stock_email.py 生成大模型建议
+# 步骤3: 获取A股新闻
 echo "=========================================="
-echo "📊 步骤 3/4: 生成大模型建议"
+echo "📊 步骤 3/5: 获取A股新闻"
+echo "=========================================="
+echo ""
+python3 data_services/a_stock_news_fetcher.py
+if [ $? -ne 0 ]; then
+    echo "⚠️ A股新闻获取失败（继续执行）"
+else
+    echo "✅ A股新闻已获取"
+fi
+echo ""
+
+# 步骤4: 调用 a_stock_email.py 生成大模型建议
+echo "=========================================="
+echo "📊 步骤 4/5: 生成大模型建议"
 echo "=========================================="
 echo ""
 python3 a_stock_email.py --force --no-email
@@ -107,9 +120,9 @@ else
 fi
 echo ""
 
-# 步骤4: 调用 a_stock_comprehensive_analysis.py 进行综合分析
+# 步骤5: 调用 a_stock_comprehensive_analysis.py 进行综合分析
 echo "=========================================="
-echo "📊 步骤 4/4: 综合分析"
+echo "📊 步骤 5/5: 综合分析"
 echo "=========================================="
 echo ""
 # 获取步骤3生成的大模型建议文件（使用最新日期）

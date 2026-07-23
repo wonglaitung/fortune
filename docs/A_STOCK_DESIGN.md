@@ -1,6 +1,6 @@
 # A股智能分析系统设计文档
 
-> **版本**：v3.2 | **更新日期**：2026-07-22
+> **版本**：v3.3 | **更新日期**：2026-07-23
 
 ---
 
@@ -74,6 +74,7 @@
 | **网络互动捕捉** | 通过图论方法捕捉"大哥涨、小弟跟"、"上游提价、下游承压"、"板块资金合力"的互动信号 |
 | **板块特征建模** | 衡量板块内部或产业链上的互动、联动、信息传导与协同效应 |
 | **核心持仓聚焦** | 模型训练聚焦4只核心持仓股，扩展股提供网络上下文和样本量 |
+| **新闻情感分析** | 获取A股个股新闻，通过通义千问大模型分析情感影响，辅助投资决策 |
 
 ### 1.2 系统架构
 
@@ -110,6 +111,9 @@
 │                              │                              │
 │  基本面 ──────► 估值指标  ────┤                              │
 │  (财务数据)     PE/PB(4)      │                              │
+│                              │                              │
+│  新闻数据 ────► 情感分析  ────┤                              │
+│  (东方财富)     四维评分(5)   │                              │
 │                              │                              │
 │  总计特征: 1077 个                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -579,7 +583,7 @@ df['Label_CS'] = (df['Return_Rank'] > 0.5).astype(int)
 ./scripts/run_a_stock_analysis.sh
 ```
 
-### 5.2 四步流程
+### 5.2 五步流程
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -589,11 +593,18 @@ df['Label_CS'] = (df['Return_Rank'] > 0.5).astype(int)
 │  ↓                       ↓                                   │
 │  data/a_stock_models/    data/ml_trading_model_predictions/ │
 │                                                             │
-│  步骤3: 大模型建议        步骤4: 综合分析                     │
+│  步骤3: 获取新闻          步骤4: 大模型建议                   │
 │  ───────────────         ───────────────                    │
-│  通义千问分析核心股       整合预测 + 大模型建议               │
+│  东方财富API → 情感分析    通义千问分析核心股                 │
 │  ↓                       ↓                                   │
-│  data/a_stock_llm_*.txt  发送邮件通知                        │
+│  data/a_stock_news_      data/a_stock_llm_*.txt             │
+│  records.csv                                               │
+│                                                             │
+│  步骤5: 综合分析                                             │
+│  ───────────────                                            │
+│  整合预测 + 新闻 + 大模型建议                                │
+│  ↓                                                          │
+│  发送邮件通知                                               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -626,7 +637,36 @@ done
 - `data/a_stock_models/ml_predictions_5d.csv`
 - `data/a_stock_models/ml_predictions_20d.csv`
 
-#### 步骤 3：生成大模型建议
+#### 步骤 3：获取A股新闻
+
+```bash
+python3 data_services/a_stock_news_fetcher.py
+```
+
+**功能**：通过东方财富API获取A股核心持仓新闻，调用通义千问大模型分析情感影响。
+
+**输出文件**：`data/a_stock_news_records.csv`
+
+**CSV列说明**：
+
+| 列名 | 说明 |
+|------|------|
+| 股票名称 | 股票中文名称 |
+| 股票代码 | 6位股票代码 |
+| 新闻时间 | 新闻发布时间 |
+| 新闻标题 | 新闻标题 |
+| 简要内容 | 新闻摘要（东方财富API不返回，为空） |
+| 查询时间 | 数据获取时间 |
+| 情感分数 | 综合情感分数（-5到+5） |
+| 相关性 | 新闻与股票的相关性（0-1） |
+| 影响度 | 新闻对股价的影响程度（0-1） |
+| 预期差 | 新闻是否超出市场预期（-1到1） |
+| 情感方向 | 新闻情感倾向（-1到1） |
+| 情感分析时间 | 情感分析执行时间 |
+
+**四维情感评分**：复用港股情感分析模块（`llm_services/sentiment_analyzer.py`）
+
+#### 步骤 4：生成大模型建议
 
 ```bash
 python3 a_stock_email.py --force --no-email
@@ -634,7 +674,7 @@ python3 a_stock_email.py --force --no-email
 
 **功能**：调用通义千问大模型分析核心持仓，生成投资建议和风险提示。
 
-#### 步骤 4：综合分析
+#### 步骤 5：综合分析
 
 ```bash
 python3 a_stock_comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
@@ -960,6 +1000,7 @@ def get_stock_price_info(stock_code):
 | `a_stock_ml_model.py` | A股模型训练与预测（1077特征） |
 | `a_stock_comprehensive_analysis.py` | 综合分析主程序（AI生成买卖建议） |
 | `a_stock_email.py` | 大模型建议生成（通义千问） |
+| `data_services/a_stock_news_fetcher.py` | A股新闻获取与情感分析 |
 | `scripts/run_a_stock_analysis.sh` | 自动化运行脚本 |
 
 ### 8.2 特征模块
@@ -991,6 +1032,7 @@ data/
 │   └── network_features_for_ml.json
 ├── a_stock_walk_forward/             # Walk-forward验证结果
 │   └── validation_report_*.json      # 验证报告
+├── a_stock_news_records.csv          # A股新闻记录（含情感分析）
 ├── a_stock_llm_recommendations_*.txt # 大模型建议
 └── a_stock_comprehensive_recommendations_*.txt # 综合建议
 ```
@@ -1029,6 +1071,7 @@ output/
 
 | 版本 | 日期 | 主要变更 |
 |------|------|---------|
+| v3.3 | 2026-07-23 | **新增新闻功能**：A股新闻获取模块（`data_services/a_stock_news_fetcher.py`）；集成东方财富API获取个股资讯；四维情感分析（相关性、影响度、预期差、情感方向）；新闻摘要集成到大模型提示词和综合分析报告；运行流程从4步扩展为5步 |
 | v3.2 | 2026-07-22 | **仓位建议优化**：大模型动态决定仓位（替代固定值），支持三种风险偏好（保守型/适度型/激进型）；**Walk-forward增强**：输出 `prediction_analysis.csv` 用于计算个股盈亏比；**邮件描述优化**：更清晰表达AI综合判断过程 |
 | v3.1 | 2026-07-21 | **验证更新**：Walk-forward验证结果（平均准确率55.77%）；**文档同步**：更新特征重要性Top 50；**功能增强**：融资融券特征（4个）、截面标签选项；**流程优化**：综合买卖建议改由AI生成（替代硬编码逻辑） |
 | v3.0 | 2026-07-20 | **重大变更**：北向资金替换为主力资金（数据源不可用）；新增 `data_services/main_fund_flow.py` 模块；特征名从 `Northbound_*` 改为 `MainFund_*` |

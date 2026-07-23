@@ -121,7 +121,7 @@ def analyze_news_sentiment(stock_name, stock_code, news_title, news_content):
         return None
 
 
-def batch_analyze_sentiment(news_df, days_limit=3):
+def batch_analyze_sentiment(news_df, days_limit=3, save_path='data/all_stock_news_records.csv'):
     """
     批量分析新闻情感
 
@@ -183,8 +183,8 @@ def batch_analyze_sentiment(news_df, days_limit=3):
             continue
 
     # 保存更新后的数据
-    news_df.to_csv('data/all_stock_news_records.csv', index=False, encoding='utf-8-sig')
-    print(f"✅ 情感分析完成，数据已保存")
+    news_df.to_csv(save_path, index=False, encoding='utf-8-sig')
+    print(f"✅ 情感分析完成，数据已保存到 {save_path}")
 
     return news_df
 

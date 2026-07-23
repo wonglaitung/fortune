@@ -13,6 +13,7 @@ import os
 import sys
 import argparse
 import json
+import pandas as pd
 from datetime import datetime, timedelta
 
 # 添加项目根目录到 Python 路径
@@ -180,6 +181,18 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     Returns:
         str: 提示词
     """
+    # 读取A股新闻数据
+    news_data = {}
+    news_file_path = "data/a_stock_news_records.csv"
+    try:
+        if os.path.exists(news_file_path):
+            news_df = pd.read_csv(news_file_path)
+            if not news_df.empty:
+                for code, group in news_df.groupby('股票代码'):
+                    news_data[code] = group.to_dict('records')
+    except Exception as e:
+        print(f"⚠️ 读取A股新闻数据失败: {e}")
+
     # 构建股票信息（包含新增字段）
     stock_info = ""
     for data in stock_data_list:
@@ -230,6 +243,19 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
 - 阻力位（20日）：{data.get('resistance_20d', 'N/A'):.2f} 元（距离 {data.get('distance_to_resistance', 0):+.1f}%）
 {chip_info}
 """
+
+        # 新闻摘要
+        stock_code = data['stock_code']
+        stock_news = news_data.get(stock_code, [])
+        if stock_news:
+            stock_info += "**新闻摘要**：\n"
+            for news in stock_news[:3]:
+                sentiment_str = ""
+                if pd.notna(news.get('情感分数')):
+                    sentiment_str = f"（情感分数: {news['情感分数']:.1f}）"
+                stock_info += f"  - {news.get('新闻时间', '')}: {news.get('新闻标题', '')}{sentiment_str}\n"
+        else:
+            stock_info += "**新闻摘要**：暂无相关新闻\n"
 
     # 构建市场环境（包含市场情绪层级）
     sentiment = market_data.get('sentiment', {})

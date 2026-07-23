@@ -1456,6 +1456,41 @@ def format_anomaly_for_llm(anomaly_result: dict) -> str:
     return '\n'.join(lines)
 
 
+def format_news_for_llm(news_data: dict, stock_codes: list) -> str:
+    """
+    格式化新闻数据为LLM可读文本
+
+    Args:
+        news_data: 新闻数据字典 {股票代码: [新闻列表]}
+        stock_codes: 需要展示的股票代码列表
+
+    Returns:
+        str: 格式化的新闻文本
+    """
+    if not news_data:
+        return "暂无新闻数据"
+
+    lines = []
+    for code in stock_codes:
+        if code in news_data:
+            stock_news = news_data[code][:3]  # 每只股票最多3条
+            if stock_news:
+                stock_name = A_STOCK_WATCHLIST.get(code, code)
+                lines.append(f"\n**{stock_name}({code})**:")
+                for news in stock_news:
+                    title = news.get('新闻标题', '')
+                    time_str = news.get('新闻时间', '')
+                    sentiment_str = ""
+                    if pd.notna(news.get('情感分数')):
+                        sentiment_str = f" [情感:{news['情感分数']:.1f}]"
+                    lines.append(f"  - {time_str}: {title}{sentiment_str}")
+
+    if not lines:
+        return "暂无相关新闻"
+
+    return '\n'.join(lines)
+
+
 def parse_llm_json_response(response: str) -> dict:
     """
     解析AI返回的JSON响应
@@ -1597,6 +1632,21 @@ def generate_comprehensive_recommendations_with_llm(
     # 异常检测
     anomaly_data = format_anomaly_for_llm(anomaly_result)
 
+    # 新闻数据
+    news_data = {}
+    news_file_path = "data/a_stock_news_records.csv"
+    try:
+        if os.path.exists(news_file_path):
+            news_df = pd.read_csv(news_file_path)
+            if not news_df.empty:
+                for code, group in news_df.groupby('股票代码'):
+                    news_data[code] = group.to_dict('records')
+    except Exception as e:
+        print(f"⚠️ 读取A股新闻数据失败: {e}")
+
+    # 格式化新闻摘要
+    news_summary = format_news_for_llm(news_data, three_horizon_results.keys() if three_horizon_results else [])
+
     # 大模型建议
     llm_short_term = llm_recommendations.get('short_term', '暂无短期建议') if llm_recommendations else '暂无短期建议'
     llm_medium_term = llm_recommendations.get('medium_term', '暂无中期建议') if llm_recommendations else '暂无中期建议'
@@ -1643,6 +1693,9 @@ def generate_comprehensive_recommendations_with_llm(
 
 【7. 异常检测】
 {anomaly_data}
+
+【8. 新闻摘要】
+{news_summary}
 
 === 核心硬性约束（不可违反）===
 
