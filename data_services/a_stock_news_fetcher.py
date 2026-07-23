@@ -165,6 +165,14 @@ def fetch_all_a_stock_news(analyze_sentiment=True):
     # 保存新闻数据
     df = pd.DataFrame(all_news_data)
 
+    # 添加情感分析相关列（初始为空）
+    df['情感分数'] = None
+    df['相关性'] = None
+    df['影响度'] = None
+    df['预期差'] = None
+    df['情感方向'] = None
+    df['情感分析时间'] = None
+
     # 确保data目录存在
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
