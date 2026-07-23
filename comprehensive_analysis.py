@@ -3878,6 +3878,21 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
 
     lines.append("")
 
+    # 止损位和目标价（基于当前价格计算）
+    current_price = None
+    if stock_code in stock_realtime_data:
+        rt = stock_realtime_data[stock_code]
+        current_price = rt.get('price')
+
+    if current_price and isinstance(current_price, (int, float)) and current_price > 0:
+        stop_loss_price = round(current_price * 0.92, 2)  # 最大亏损 -8%
+        target_price = round(current_price * 1.10, 2)     # 目标涨幅 +10%
+        lines.append("# 止损与目标")
+        lines.append(f"止损位: {stop_loss_price} (-8.00%)")
+        lines.append(f"目标价: {target_price} (+10.00%)")
+
+    lines.append("")
+
     # 股息信息（如果有）
     if stock_code in stock_realtime_data:
         rt = stock_realtime_data[stock_code]
@@ -4618,6 +4633,14 @@ def run_detailed_stock_analysis(stock_codes: list, report_path: str, date_str: s
         if not stock_data:
             print(f"⚠️ 跳过 {stock_code}")
             continue
+
+        # 兜底：如果LLM未提取到止损位/目标价，用当前价格计算
+        current_p = stock_data.get('current_price')
+        if current_p and isinstance(current_p, (int, float)) and current_p > 0:
+            if not stock_data.get('stop_loss'):
+                stock_data['stop_loss'] = round(current_p * 0.92, 2)
+            if not stock_data.get('target_price'):
+                stock_data['target_price'] = round(current_p * 1.10, 2)
 
         # 第二步：使用大模型进行综合分析
         analysis_result = comprehensive_analyze_with_llm(stock_data)
@@ -5517,6 +5540,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         )
                         stock_data = extract_stock_data_with_llm(stock_code, compact_text)
                         if stock_data:
+                            # 兜底：如果LLM未提取到止损位/目标价，用计算值填充
+                            current_p = stock_data.get('current_price') or (stock_realtime.get('price') if stock_realtime else None)
+                            if current_p and isinstance(current_p, (int, float)) and current_p > 0:
+                                if not stock_data.get('stop_loss'):
+                                    stock_data['stop_loss'] = round(current_p * 0.92, 2)
+                                if not stock_data.get('target_price'):
+                                    stock_data['target_price'] = round(current_p * 1.10, 2)
                             # 从综合买卖建议文本中解析推荐信息（不再调用大模型分析）
                             analysis_result = parse_recommendation_from_text(response, stock_code)
                             if analysis_result:
