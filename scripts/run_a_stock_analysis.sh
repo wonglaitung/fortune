@@ -2,10 +2,12 @@
 
 # A股综合分析自动化脚本
 # ⚠️ 建议在A股收市后（15:00 CST）运行
-# 1. 训练 CatBoost 三周期模型（1d, 5d, 20d）
-# 2. 生成 CatBoost 三周期预测
-# 3. 调用 a_stock_email.py 生成大模型建议
-# 4. 调用 a_stock_comprehensive_analysis.py 进行综合分析
+# 流程顺序（新闻特征必须在训练前获取）：
+# 1. 获取A股新闻（模型训练需要新闻特征）
+# 2. 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 3. 生成 CatBoost 三周期预测
+# 4. 调用 a_stock_email.py 生成大模型建议
+# 5. 调用 a_stock_comprehensive_analysis.py 进行综合分析
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,9 +32,22 @@ else
 fi
 echo ""
 
-# 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 步骤1: 获取A股新闻（必须在训练前执行，因为模型需要新闻特征）
 echo "=========================================="
-echo "📊 步骤 1/4: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
+echo "📊 步骤 1/5: 获取A股新闻"
+echo "=========================================="
+echo ""
+python3 data_services/a_stock_news_fetcher.py
+if [ $? -ne 0 ]; then
+    echo "⚠️ A股新闻获取失败（继续执行，模型将使用默认新闻特征）"
+else
+    echo "✅ A股新闻已获取"
+fi
+echo ""
+
+# 步骤2: 训练 CatBoost 三周期模型（1d, 5d, 20d）
+echo "=========================================="
+echo "📊 步骤 2/5: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
 echo "=========================================="
 echo ""
 
@@ -51,16 +66,16 @@ for horizon in 1 5 20; do
 done
 
 if [ $TRAIN_SUCCESS -eq 0 ]; then
-    echo "❌ 步骤1失败: 所有模型训练失败"
+    echo "❌ 步骤2失败: 所有模型训练失败"
     exit 1
 fi
 echo ""
-echo "✅ 步骤1完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
+echo "✅ 步骤2完成: $TRAIN_SUCCESS/3 个模型训练成功（$TRAIN_FAILED 个失败）"
 echo ""
 
-# 步骤2: 生成 CatBoost 三周期预测
+# 步骤3: 生成 CatBoost 三周期预测
 echo "=========================================="
-echo "📊 步骤 2/4: 生成 CatBoost 三周期预测"
+echo "📊 步骤 3/5: 生成 CatBoost 三周期预测"
 echo "=========================================="
 echo ""
 
@@ -87,24 +102,11 @@ for horizon in 1 5 20; do
 done
 
 if [ $PREDICT_SUCCESS -eq 0 ]; then
-    echo "❌ 步骤2失败: 所有预测生成失败"
+    echo "❌ 步骤3失败: 所有预测生成失败"
     exit 1
 fi
 echo ""
-echo "✅ 步骤2完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
-echo ""
-
-# 步骤3: 获取A股新闻
-echo "=========================================="
-echo "📊 步骤 3/5: 获取A股新闻"
-echo "=========================================="
-echo ""
-python3 data_services/a_stock_news_fetcher.py
-if [ $? -ne 0 ]; then
-    echo "⚠️ A股新闻获取失败（继续执行）"
-else
-    echo "✅ A股新闻已获取"
-fi
+echo "✅ 步骤3完成: $PREDICT_SUCCESS/3 个周期预测成功（$PREDICT_FAILED 个失败）"
 echo ""
 
 # 步骤4: 调用 a_stock_email.py 生成大模型建议
@@ -125,7 +127,7 @@ echo "=========================================="
 echo "📊 步骤 5/5: 综合分析"
 echo "=========================================="
 echo ""
-# 获取步骤3生成的大模型建议文件（使用最新日期）
+# 获取步骤4生成的大模型建议文件（使用最新日期）
 LLM_FILE=$(ls -t data/a_stock_llm_recommendations_*.txt 2>/dev/null | head -1)
 if [ -z "$LLM_FILE" ]; then
     echo "⚠️ 警告: 未找到大模型建议文件，跳过综合分析"
@@ -134,10 +136,10 @@ else
     # 默认发送邮件，如需禁用可添加 --no-email 参数
     python3 a_stock_comprehensive_analysis.py --llm-file "$LLM_FILE" --use-cached-predictions
     if [ $? -ne 0 ]; then
-        echo "❌ 步骤4失败: 综合分析失败"
+        echo "❌ 步骤5失败: 综合分析失败"
         exit 1
     fi
-    echo "✅ 步骤4完成: 综合分析已生成（邮件已发送）"
+    echo "✅ 步骤5完成: 综合分析已生成（邮件已发送）"
 fi
 echo ""
 
@@ -147,6 +149,7 @@ echo "=========================================="
 echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
+echo "  - 新闻数据: data/a_stock_news_records.csv"
 echo "  - 大模型建议: $(ls -t data/a_stock_llm_recommendations_*.txt 2>/dev/null | head -1)"
 echo "  - ML预测结果:"
 echo "    - 1d: $(ls -t data/ml_trading_model_catboost_predictions_1d.csv 2>/dev/null | head -1)"
