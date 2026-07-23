@@ -186,7 +186,7 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     news_file_path = "data/a_stock_news_records.csv"
     try:
         if os.path.exists(news_file_path):
-            news_df = pd.read_csv(news_file_path)
+            news_df = pd.read_csv(news_file_path, dtype={'股票代码': str})
             if not news_df.empty:
                 for code, group in news_df.groupby('股票代码'):
                     news_data[code] = group.to_dict('records')

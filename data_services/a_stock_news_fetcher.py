@@ -165,6 +165,9 @@ def fetch_all_a_stock_news(analyze_sentiment=True):
     # 保存新闻数据
     df = pd.DataFrame(all_news_data)
 
+    # 确保股票代码保持字符串格式（防止前导零丢失）
+    df['股票代码'] = df['股票代码'].astype(str).apply(lambda x: x.zfill(6))
+
     # 添加情感分析相关列（初始为空）
     df['情感分数'] = None
     df['相关性'] = None
