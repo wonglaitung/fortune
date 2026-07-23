@@ -639,6 +639,209 @@ class AStockFeatureEngineer(FeatureEngineer):
 
         return stock_df
 
+    def create_sentiment_features(self, code, df):
+        """
+        创建A股情感指标特征（重写父类方法）
+
+        使用A股新闻文件路径：data/a_stock_news_records.csv
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        Returns:
+            dict: 情感特征字典
+        """
+        try:
+            # A股新闻文件路径
+            news_file_path = 'data/a_stock_news_records.csv'
+            if not os.path.exists(news_file_path):
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 读取新闻数据
+            news_df = pd.read_csv(news_file_path, dtype={'股票代码': str})
+
+            if news_df.empty:
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 筛选该股票的新闻
+            stock_news = news_df[news_df['股票代码'] == code].copy()
+            if stock_news.empty:
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 转换日期格式
+            stock_news['新闻时间'] = pd.to_datetime(stock_news['新闻时间'])
+
+            # 只使用已分析情感分数的新闻
+            stock_news = stock_news[stock_news['情感分数'].notna()].copy()
+            if stock_news.empty:
+                return {
+                    'sentiment_ma3': 0.0,
+                    'sentiment_ma7': 0.0,
+                    'sentiment_ma14': 0.0,
+                    'sentiment_volatility': 0.0,
+                    'sentiment_change_rate': 0.0,
+                    'sentiment_days': 0
+                }
+
+            # 确保按日期排序
+            stock_news = stock_news.sort_values('新闻时间')
+
+            # 按日期聚合情感分数（使用平均值）
+            sentiment_by_date = stock_news.groupby('新闻时间')['情感分数'].mean()
+
+            # 获取实际数据天数
+            actual_days = len(sentiment_by_date)
+
+            # 动态调整移动平均窗口
+            window_ma3 = min(3, actual_days)
+            window_ma7 = min(7, actual_days)
+            window_ma14 = min(14, actual_days)
+            window_volatility = min(14, actual_days)
+
+            # 计算移动平均
+            sentiment_ma3 = sentiment_by_date.rolling(window=window_ma3, min_periods=1).mean().iloc[-1]
+            sentiment_ma7 = sentiment_by_date.rolling(window=window_ma7, min_periods=1).mean().iloc[-1]
+            sentiment_ma14 = sentiment_by_date.rolling(window=window_ma14, min_periods=1).mean().iloc[-1]
+
+            # 计算波动率
+            sentiment_volatility = sentiment_by_date.rolling(window=window_volatility, min_periods=2).std().iloc[-1] if actual_days >= 2 else np.nan
+
+            # 计算变化率
+            if actual_days >= 2:
+                latest_sentiment = sentiment_by_date.iloc[-1]
+                prev_sentiment = sentiment_by_date.iloc[-2]
+                sentiment_change_rate = (latest_sentiment - prev_sentiment) / abs(prev_sentiment) if prev_sentiment != 0 else np.nan
+            else:
+                sentiment_change_rate = np.nan
+
+            return {
+                'sentiment_ma3': sentiment_ma3,
+                'sentiment_ma7': sentiment_ma7,
+                'sentiment_ma14': sentiment_ma14,
+                'sentiment_volatility': sentiment_volatility,
+                'sentiment_change_rate': sentiment_change_rate,
+                'sentiment_days': actual_days
+            }
+
+        except Exception as e:
+            logger.warning(f"计算A股情感特征失败 {code}: {e}")
+            return {
+                'sentiment_ma3': 0.0,
+                'sentiment_ma7': 0.0,
+                'sentiment_ma14': 0.0,
+                'sentiment_volatility': 0.0,
+                'sentiment_change_rate': 0.0,
+                'sentiment_days': 0
+            }
+
+    def create_topic_features(self, code, df):
+        """
+        创建A股主题分布特征（重写父类方法）
+
+        使用A股新闻文件路径。如果没有LDA模型，返回默认值。
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        Returns:
+            dict: 主题特征字典
+        """
+        # A股目前没有训练LDA主题模型，返回默认值
+        # 如需启用，需要：
+        # 1. 训练A股专属的LDA模型
+        # 2. 保存到 data/lda_topic_model.pkl
+        return {f'Topic_{i+1}': 0.0 for i in range(10)}
+
+    def create_topic_sentiment_interaction_features(self, code, df):
+        """
+        创建A股主题与情感交互特征（重写父类方法）
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        Returns:
+            dict: 交互特征字典
+        """
+        # 由于主题特征为默认值，交互特征也为默认值
+        return {}
+
+    def create_expectation_gap_features(self, code, df):
+        """
+        创建A股预期差距特征（重写父类方法）
+
+        计算新闻情感相对于市场预期的差距。
+
+        Args:
+            code: 股票代码
+            df: 股票数据DataFrame
+
+        Returns:
+            dict: 预期差距特征字典
+        """
+        try:
+            # 获取情感特征
+            sentiment_features = self.create_sentiment_features(code, df)
+
+            # 创建预期差距特征
+            expectation_gap_features = {}
+
+            # 获取当前情感值（使用最新的情感值）
+            current_sentiment = sentiment_features.get('sentiment_ma3', 0.0)
+
+            # 获取长期移动平均
+            ma7 = sentiment_features.get('sentiment_ma7', 0.0)
+            ma14 = sentiment_features.get('sentiment_ma14', 0.0)
+
+            # 预期差距 = 当前情感 - 长期移动平均
+            expectation_gap_features['Sentiment_Gap_MA7'] = current_sentiment - ma7
+            expectation_gap_features['Sentiment_Gap_MA14'] = current_sentiment - ma14
+
+            # 正向意外（情感超预期，差距为正）
+            expectation_gap_features['Positive_Surprise'] = max(0, current_sentiment - ma14)
+
+            # 负向意外（情感不及预期，差距为负，取绝对值）
+            expectation_gap_features['Negative_Surprise'] = max(0, ma14 - current_sentiment)
+
+            # 使用情感变化率来衡量预期差距的强度
+            sentiment_change_rate = sentiment_features.get('sentiment_change_rate', 0.0)
+            expectation_gap_features['Expectation_Change_Strength'] = abs(sentiment_change_rate) if pd.notna(sentiment_change_rate) else 0.0
+
+            return expectation_gap_features
+
+        except Exception as e:
+            logger.warning(f"创建A股预期差距特征失败 {code}: {e}")
+            return {
+                'Sentiment_Gap_MA7': 0.0,
+                'Sentiment_Gap_MA14': 0.0,
+                'Positive_Surprise': 0.0,
+                'Negative_Surprise': 0.0,
+                'Expectation_Change_Strength': 0.0
+            }
+
 
 class AStockTradingModel(CatBoostModel):
     """A股交易模型 - 继承港股CatBoost模型
@@ -874,7 +1077,28 @@ class AStockTradingModel(CatBoostModel):
                 # ========== 3.8 异常检测特征 ==========
                 stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
 
-                # ========== 3.9 创建标签 ==========
+                # ========== 3.9 新闻情感特征 ==========
+                # 情感特征（6个）
+                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                for key, value in sentiment_features.items():
+                    stock_df[key] = value
+
+                # 主题特征（10个）
+                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                for key, value in topic_features.items():
+                    stock_df[key] = value
+
+                # 主题情感交互特征（50个）
+                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                for key, value in topic_sentiment_interaction.items():
+                    stock_df[key] = value
+
+                # 预期差距特征（5个）
+                expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
+                for key, value in expectation_gap.items():
+                    stock_df[key] = value
+
+                # ========== 3.10 创建标签 ==========
                 stock_df = self.feature_engineer.create_label(
                     stock_df, horizon=self.horizon,
                     for_backtest=for_backtest,
