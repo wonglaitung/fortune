@@ -3672,7 +3672,8 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
                                chip_data: dict, risk_reward_data: dict,
                                historical_pl_data: dict, network_insights: dict,
                                anomaly_data: dict, current_market: dict,
-                               stock_realtime_data: dict, sector_data: dict) -> str:
+                               stock_realtime_data: dict, sector_data: dict,
+                               llm_recommendations: dict = None) -> str:
     """
     从已计算数据构建精简文本，供大模型提取股票数据
 
@@ -3810,15 +3811,52 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
                 lines.append(f"RSI: {rsi_val:.2f} ({rsi_status})")
             except (ValueError, TypeError):
                 lines.append(f"RSI: {rsi}")
+
+        # MACD 状态
         macd = rt.get('macd')
-        if macd is not None:
+        macd_signal = rt.get('macd_signal')
+        if macd is not None and macd_signal is not None:
             try:
-                lines.append(f"MACD: {float(macd):.2f}")
+                macd_val = float(macd)
+                macd_signal_val = float(macd_signal)
+                macd_status = "金叉" if macd_val > macd_signal_val else "死叉"
+                lines.append(f"MACD: {macd_val:.4f} ({macd_status})")
             except (ValueError, TypeError):
                 lines.append(f"MACD: {macd}")
+        elif macd is not None:
+            try:
+                lines.append(f"MACD: {float(macd):.4f}")
+            except (ValueError, TypeError):
+                lines.append(f"MACD: {macd}")
+
+        # 布林带位置
+        bb_position = rt.get('bb_position')
+        if bb_position is not None:
+            try:
+                bb_val = float(bb_position)
+                bb_status = "接近上轨（超买）" if bb_val > 80 else "接近下轨（超卖）" if bb_val < 20 else "中性"
+                lines.append(f"布林带位置: {bb_val:.1f}% ({bb_status})")
+            except (ValueError, TypeError):
+                lines.append(f"布林带位置: {bb_position}")
+
         ma_status = rt.get('ma_alignment')
         if ma_status:
             lines.append(f"MA状态: {ma_status}")
+
+    # 传导模式（从三周期预测获取）
+    if stock_code in three_horizon_results:
+        pred = three_horizon_results[stock_code]
+        preds = pred.get('predictions', {})
+        dir_1d = preds.get(1, {}).get('direction', '-')
+        dir_5d = preds.get(5, {}).get('direction', '-')
+        dir_20d = preds.get(20, {}).get('direction', '-')
+        prob_20d = preds.get(20, {}).get('probability', 0)
+
+        # 传导模式判断：1天下跌 + 5天下跌 + 20天上涨 = 传导模式
+        if dir_1d == '↓' and dir_5d == '↓' and dir_20d == '↑' and prob_20d > 0.55:
+            lines.append(f"传导模式: ✅传导(1天↓ 5天↓ 20天↑)")
+        else:
+            lines.append(f"传导模式: {dir_1d}{dir_5d}{dir_20d}")
 
     lines.append("")
 
@@ -3876,7 +3914,31 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         lines.append(f"市场稳定性: {current_market.get('stability', 'N/A')}")
         lines.append(f"VIX: {current_market.get('vix', 'N/A')}")
 
+        # 市场情绪和模块度（从网络洞察元数据获取）
+        if network_insights and '_meta' in network_insights:
+            meta = network_insights['_meta']
+            modularity = meta.get('modularity', 0)
+            lines.append(f"模块度: {modularity:.4f}")
+            # 模块度解读
+            if modularity >= 0.4:
+                lines.append("市场结构: 分化明显（模块度高）")
+            elif modularity >= 0.2:
+                lines.append("市场结构: 中等分化")
+            else:
+                lines.append("市场结构: 同涨同跌（模块度低）")
+
     lines.append("")
+
+    # 大模型建议（如果有）
+    if llm_recommendations:
+        lines.append("# 大模型建议")
+        short_term = llm_recommendations.get('short_term', '')
+        medium_term = llm_recommendations.get('medium_term', '')
+        if short_term:
+            lines.append(f"短期建议: {short_term[:500]}...")  # 截取前500字符
+        if medium_term:
+            lines.append(f"中期建议: {medium_term[:500]}...")
+        lines.append("")
 
     # 止损位和目标价（基于当前价格计算）
     current_price = None
@@ -4641,6 +4703,21 @@ def run_detailed_stock_analysis(stock_codes: list, report_path: str, date_str: s
                 stock_data['stop_loss'] = round(current_p * 0.92, 2)
             if not stock_data.get('target_price'):
                 stock_data['target_price'] = round(current_p * 1.10, 2)
+            if not stock_data.get('position_advice'):
+                # 基于CatBoost概率计算建议仓位
+                prob_20d = stock_data.get('catboost_prob_20d', 50) or 50
+                if prob_20d >= 60:
+                    stock_data['position_advice'] = 5  # 高置信度 5%
+                elif prob_20d >= 55:
+                    stock_data['position_advice'] = 3  # 中等置信度 3%
+                else:
+                    stock_data['position_advice'] = 0  # 观望
+
+        # 兜底：布林带位置和MACD状态
+        if not stock_data.get('bb_position'):
+            stock_data['bb_position'] = 50  # 默认中性
+        if not stock_data.get('macd_status'):
+            stock_data['macd_status'] = "-"  # 默认无
 
         # 第二步：使用大模型进行综合分析
         analysis_result = comprehensive_analyze_with_llm(stock_data)
@@ -5536,17 +5613,43 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             anomaly_data,
                             current_market,
                             {stock_code: stock_realtime},  # 单只股票的实时数据
-                            sector_data
+                            sector_data,
+                            llm_recommendations  # 传入大模型建议
                         )
                         stock_data = extract_stock_data_with_llm(stock_code, compact_text)
                         if stock_data:
-                            # 兜底：如果LLM未提取到止损位/目标价，用计算值填充
+                            # 兜底：如果LLM未提取到关键字段，用计算值填充
                             current_p = stock_data.get('current_price') or (stock_realtime.get('price') if stock_realtime else None)
                             if current_p and isinstance(current_p, (int, float)) and current_p > 0:
                                 if not stock_data.get('stop_loss'):
                                     stock_data['stop_loss'] = round(current_p * 0.92, 2)
                                 if not stock_data.get('target_price'):
                                     stock_data['target_price'] = round(current_p * 1.10, 2)
+                                if not stock_data.get('position_advice'):
+                                    # 基于CatBoost概率计算建议仓位
+                                    prob_20d = stock_data.get('catboost_prob_20d', 50) or 50
+                                    if prob_20d >= 60:
+                                        stock_data['position_advice'] = 5  # 高置信度 5%
+                                    elif prob_20d >= 55:
+                                        stock_data['position_advice'] = 3  # 中等置信度 3%
+                                    else:
+                                        stock_data['position_advice'] = 0  # 观望
+
+                            # 兜底：布林带位置
+                            if not stock_data.get('bb_position') and stock_realtime:
+                                stock_data['bb_position'] = stock_realtime.get('bb_position', 50) or 50
+
+                            # 兜底：MACD状态
+                            if not stock_data.get('macd_status') and stock_realtime:
+                                macd = stock_realtime.get('macd')
+                                macd_signal = stock_realtime.get('macd_signal')
+                                if macd is not None and macd_signal is not None:
+                                    stock_data['macd_status'] = "金叉" if macd > macd_signal else "死叉"
+
+                            # 兜底：模块度和市场情绪（从网络洞察元数据获取）
+                            if not stock_data.get('modularity') and network_insights and '_meta' in network_insights:
+                                stock_data['modularity'] = network_insights['_meta'].get('modularity', 0)
+
                             # 从综合买卖建议文本中解析推荐信息（不再调用大模型分析）
                             analysis_result = parse_recommendation_from_text(response, stock_code)
                             if analysis_result:
