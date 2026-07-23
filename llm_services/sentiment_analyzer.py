@@ -77,8 +77,19 @@ def analyze_news_sentiment(stock_name, stock_code, news_title, news_content):
     try:
         response = chat_with_llm(prompt, enable_thinking=False)
 
+        # 清理markdown代码块包裹（如果有）
+        cleaned_response = response.strip()
+        if cleaned_response.startswith('```'):
+            # 移除开头的 ```json 或 ```
+            first_newline = cleaned_response.find('\n')
+            if first_newline != -1:
+                cleaned_response = cleaned_response[first_newline + 1:]
+            # 移除结尾的 ```
+            if cleaned_response.endswith('```'):
+                cleaned_response = cleaned_response[:-3].strip()
+
         # 尝试解析JSON响应
-        result = json.loads(response)
+        result = json.loads(cleaned_response)
 
         # 验证必要字段
         required_fields = ['relevance', 'impact', 'expectation_gap', 'sentiment_direction']
