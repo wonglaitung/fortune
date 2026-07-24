@@ -149,6 +149,7 @@ def fetch_all_a_stock_news(analyze_sentiment=True):
                     "新闻时间": article.get('publishedAt', ''),
                     "新闻标题": article.get('title', ''),
                     "简要内容": article.get('summary', ''),
+                    "新闻链接": article.get('url', ''),
                     "查询时间": query_time,
                 })
                 print(f"    • {article['title']}{media_info}")

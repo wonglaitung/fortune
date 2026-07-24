@@ -2719,6 +2719,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             for news in news_list[:3]:  # 每只股票最多3条
                 title = news.get('新闻标题', '')
                 time_str = news.get('新闻时间', '')
+                news_url = news.get('新闻链接', '')
                 sentiment_score = news.get('情感分数')
                 if pd.notna(sentiment_score):
                     if sentiment_score > 0:
@@ -2729,10 +2730,15 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
                         sentiment_str = f'<span style="color: #888;">0.0</span>'
                 else:
                     sentiment_str = '<span style="color: #ccc;">-</span>'
+                # 标题加链接
+                if news_url and news_url.startswith('http'):
+                    title_html = f'<a href="{news_url}" target="_blank" style="color: #2563eb; text-decoration: none;">{title}</a>'
+                else:
+                    title_html = title
                 html += f"""        <tr>
             <td><strong>{stock_name}</strong><br><small>{code}</small></td>
             <td><small>{time_str}</small></td>
-            <td>{title}</td>
+            <td>{title_html}</td>
             <td>{sentiment_str}</td>
         </tr>
 """
