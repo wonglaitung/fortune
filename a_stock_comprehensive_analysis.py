@@ -2704,14 +2704,17 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
         html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
 
-    # ========== 8.5 新闻摘要 ==========
+    # ========== 8.5 新闻摘要（仅核心股） ==========
     if news_data:
         html += """
     <h2>📰 新闻摘要</h2>
     <table>
         <tr><th>股票</th><th>时间</th><th>标题</th><th>情感</th></tr>
 """
-        for code, news_list in news_data.items():
+        for code in A_STOCK_WATCHLIST:
+            if code not in news_data:
+                continue
+            news_list = news_data[code]
             stock_name = A_STOCK_WATCHLIST.get(code, code)
             for news in news_list[:3]:  # 每只股票最多3条
                 title = news.get('新闻标题', '')
