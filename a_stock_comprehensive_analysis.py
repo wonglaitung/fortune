@@ -2302,7 +2302,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
 def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_data,
                           three_horizon_results=None, market_sentiment=None, main_fund_trend=None,
                           recommendations=None, sector_analysis=None, anomaly_result=None,
-                          anomaly_llm_analysis=None):
+                          anomaly_llm_analysis=None, news_data=None):
     """
     生成增强版HTML邮件（参考港股详细度）
 
@@ -2704,6 +2704,38 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if anomaly_result and anomaly_result.get('total_count', 0) > 0:
         html += format_anomalies_html(anomaly_result, anomaly_llm_analysis)
 
+    # ========== 8.5 新闻摘要 ==========
+    if news_data:
+        html += """
+    <h2>📰 新闻摘要</h2>
+    <table>
+        <tr><th>股票</th><th>时间</th><th>标题</th><th>情感</th></tr>
+"""
+        for code, news_list in news_data.items():
+            stock_name = A_STOCK_WATCHLIST.get(code, code)
+            for news in news_list[:3]:  # 每只股票最多3条
+                title = news.get('新闻标题', '')
+                time_str = news.get('新闻时间', '')
+                sentiment_score = news.get('情感分数')
+                if pd.notna(sentiment_score):
+                    if sentiment_score > 0:
+                        sentiment_str = f'<span style="color: green;">+{sentiment_score:.1f}</span>'
+                    elif sentiment_score < 0:
+                        sentiment_str = f'<span style="color: red;">{sentiment_score:.1f}</span>'
+                    else:
+                        sentiment_str = f'<span style="color: #888;">0.0</span>'
+                else:
+                    sentiment_str = '<span style="color: #ccc;">-</span>'
+                html += f"""        <tr>
+            <td><strong>{stock_name}</strong><br><small>{code}</small></td>
+            <td><small>{time_str}</small></td>
+            <td>{title}</td>
+            <td>{sentiment_str}</td>
+        </tr>
+"""
+        html += """    </table>
+"""
+
     # ========== 9. 风险提示 ==========
     html += f"""
     <h2>⚠️ 风险提示</h2>
@@ -3060,6 +3092,18 @@ def main():
 
     # 12. 发送邮件（增强版）
     if send_email_flag:
+        # 读取新闻数据
+        news_data = {}
+        news_file_path = "data/a_stock_news_records.csv"
+        try:
+            if os.path.exists(news_file_path):
+                news_df = pd.read_csv(news_file_path, dtype={'股票代码': str})
+                if not news_df.empty:
+                    for code, group in news_df.groupby('股票代码'):
+                        news_data[code] = group.to_dict('records')
+        except Exception as e:
+            print(f"⚠️ 读取A股新闻数据失败: {e}")
+
         print("\n📊 发送增强版邮件...")
         html_content = generate_html_email(
             llm_content, ml_predictions, stock_analyses, market_data,
@@ -3069,7 +3113,8 @@ def main():
             recommendations=recommendations,
             sector_analysis=sector_analysis,
             anomaly_result=anomaly_result,
-            anomaly_llm_analysis=anomaly_llm_analysis
+            anomaly_llm_analysis=anomaly_llm_analysis,
+            news_data=news_data
         )
 
         date_str = datetime.now().strftime('%Y-%m-%d')
