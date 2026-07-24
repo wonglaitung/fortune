@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 import time
 import argparse
 
-from a_stock_config import A_STOCK_WATCHLIST, get_market_code
+from a_stock_config import A_STOCK_TRAINING_LIST, get_market_code
 from llm_services.sentiment_analyzer import batch_analyze_sentiment, get_sentiment_statistics
 
 
@@ -134,7 +134,7 @@ def fetch_all_a_stock_news(analyze_sentiment=True):
     query_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     all_news_data = []
 
-    for code, name in A_STOCK_WATCHLIST.items():
+    for code, name in A_STOCK_TRAINING_LIST.items():
         print(f"\n🔍 正在获取 {name} ({code}) 的新闻...")
 
         articles = get_a_stock_news(code, name, size=5)
@@ -235,7 +235,7 @@ def fetch_all_a_stock_news(analyze_sentiment=True):
             print(f"⚠️ 情感分析失败: {e}")
             print("💡 提示：请检查 QWEN_API_KEY 环境变量是否设置")
 
-    print(f"\n📊 总共处理了 {len(A_STOCK_WATCHLIST)} 只股票")
+    print(f"\n📊 总共处理了 {len(A_STOCK_TRAINING_LIST)} 只股票")
     print("=" * 60)
     return df
 
