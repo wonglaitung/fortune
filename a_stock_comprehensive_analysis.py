@@ -2719,7 +2719,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             for news in news_list[:3]:  # 每只股票最多3条
                 title = news.get('新闻标题', '')
                 time_str = news.get('新闻时间', '')
-                news_url = news.get('新闻链接', '')
+                news_url = news.get('新闻链接', '') or ''
                 sentiment_score = news.get('情感分数')
                 if pd.notna(sentiment_score):
                     if sentiment_score > 0:
