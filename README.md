@@ -2,7 +2,7 @@
 
 **⭐ 如果您觉得这个项目有用，请先给项目Star再Fork，以支持项目发展！⭐**
 
-实践**人机混合智能**的理念，开发具备变现能力的金融资产智能量化分析助手。系统整合**大模型智能决策**与**机器学习预测模型**，实时监控**港股**、**A股**等金融市场。
+实践**人机混合智能**的理念，开发具备变现能力的金融资产智能量化分析助手。系统整合**大模型智能决策**与**机器学习预测模型**，实时监控**港股**、**A股**两大市场。
 
 **支持市场**：
 - 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（31只自选股）
@@ -12,7 +12,8 @@
 
 ## 📄 效果文档
 
-- 每日定时更新[港股买卖建议](output/comprehensive_reports)
+- 📊 [港股综合分析报告](output/comprehensive_reports) - 每日港股买卖建议
+- 📊 [A股综合分析报告](output/comprehensive_reports) - 每日A股买卖建议
 
 ---
 
@@ -38,20 +39,21 @@
 |------|-------------|------------|
 | **股票池** | 31只自选股 | 53只（4核心+49扩展） |
 | **三周期预测** | ✅ 1d/5d/20d | ✅ 1d/5d/20d |
-| **恒指预测** | ✅ 81%准确率 | ❌ 不适用 |
+| **指数预测** | ✅ 恒生指数（81%准确率） | ❌ 暂不适用 |
 | **大模型建议** | ✅ 通义千问 | ✅ 通义千问 |
-| **异常检测** | ✅ 双层检测 | ✅ 双层检测 |
+| **异常检测** | ✅ 双层检测（Z-Score + IF） | ✅ 双层检测 |
 | **市场情绪** | ✅ 南向资金 | ✅ 北向资金 |
 | **涨跌停特征** | ❌ 不适用 | ✅ 主板10%/创业板20% |
-| **自动化时间** | 16:00 HKT（收市后） | 15:15 CST（收市后） |
+| **自动化时间** | 工作日 16:00 HKT | 工作日 15:15 CST |
 | **模型准确率** | 20d: 55-58% | 20d: 55-60% |
 | **特征数量** | 1023个 | 1077个 |
+| **核心交易策略** | 假突破做多、一致看涨、下跌中继做多 | 综合买卖建议、四类评级 |
 
 ---
 
-## 二、港股智能分析系统
+## 二、机器学习预测系统
 
-### 2.1 恒生指数三周期预测系统
+### 2.1 恒生指数三周期预测（港股特有）
 
 **核心理念**：通过同时预测1天、5天、20天三个时间周期，捕捉不同时间尺度的市场趋势，为短线、中线和长线交易提供决策支持。三周期交叉验证可显著提高预测可靠性。
 
@@ -84,21 +86,25 @@
 | 下跌中继做多 | 1天跌5天跌20天涨(001) | **81.05%** | 下跌后买入 |
 | 一致看跌做空 | 三周期全看跌(000) | 79.80% | 趋势确认后减仓或做空 |
 
-### 2.2 港股个股预测 CatBoost 模型
+### 2.2 双市场个股预测模型对比
+
+| 维度 | 🇭🇰 港股个股模型 | 🇨🇳 A股个股模型 |
+|------|-----------------|----------------|
+| **算法** | CatBoost 梯度提升 | CatBoost 梯度提升 |
+| **特征总数** | 1023个 | 1077个 |
+| **预测周期** | 1d / 5d / 20d | 1d / 5d / 20d |
+| **预测阈值** | 0.5 | 0.5 |
+| **股票池** | 31只（57只验证） | 53只（4核心+49扩展） |
+| **验证方法** | Walk-forward, 12 folds | Walk-forward, 12 folds |
+| **20天准确率** | 55-58% | 55-60% |
+| **特征缓存加速** | 170x | 170x |
+| **随机种子** | 42（固定） | 42（固定） |
+
+### 2.3 港股个股CatBoost模型
 
 **核心优势**：使用CatBoost梯度提升算法，整合1023个技术指标、基本面数据、市场状态、网络特征和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
 
-**性能指标**：
-
-| 验证方法 | 周期 | 准确率 | IC | Rank IC | 推荐度 |
-|---------|------|--------|------|---------|--------|
-| **Walk-forward**（12 folds，57只股票） | **20天** | **55.04%** | **0.205** | **0.231** | ⭐⭐⭐⭐ 推荐 |
-| Walk-forward（12 folds） | 5天 | ~50% | - | - | ⭐⭐⭐ 谨慎使用 |
-| 训练时5折交叉验证 | 20天 | 64.67% | - | - | 参考 |
-
-> ⚠️ 注意：训练时CV准确率高于Walk-forward准确率是正常现象，不代表数据泄漏。详见 `docs/VALIDATION_GUIDE.md`。
-
-**Walk-forward 验证结果（57只股票，12 folds，Top 500特征，市场情绪过滤器启用，2026-05-23）**：
+**Walk-forward 验证结果**（57只股票，12 folds，Top 500特征，市场情绪过滤器启用，2026-05-23）：
 
 | 指标 | 数值 | 业界标准 | 评估 |
 |------|------|---------|------|
@@ -178,62 +184,19 @@
 
 **必须配合止损策略**：建议设置 3-5% 止损，可提升期望收益 30%。
 
-### 2.3 市场情绪过滤器
+### 2.4 A股个股CatBoost模型
 
-**核心原理**：市场上涨比例有强自相关性（lag=1 自相关系数 0.929），滞后1天数据能有效识别极端市场环境，动态调整预测阈值。
+**核心优势**：使用CatBoost梯度提升算法，整合1077个特征（含A股特有特征），对A股进行多周期涨跌预测。相比港股模型，A股模型增加了涨跌停特征、北向资金等A股特有因素。
 
-**阈值分层**：
+**模型验证结果**（Walk-forward，12 folds，53只股票，2026-07-18）：
 
-| 层级 | 上涨比例 | 动态阈值 | 操作 |
-|------|---------|---------|------|
-| extreme_bear | <20% | 1.0 | 暂停交易 |
-| bear | 20-30% | 0.70 | 高置信 |
-| weak | 30-40% | 0.65 | 谨慎 |
-| normal | >40% | 0.50 | 标准 |
+| 周期 | 准确率 | IC | 推荐度 |
+|------|--------|------|--------|
+| **20天** | **55-60%** | **0.18** | ⭐⭐⭐⭐ 推荐 |
+| 5天 | ~50% | - | ⭐⭐⭐ 谨慎使用 |
+| 1天 | ~50% | - | ⚠️ 噪音大 |
 
-**验证效果**（12 folds，57只股票）：
-
-| 指标 | 过滤前 | 过滤后 | 变化 |
-|------|--------|--------|------|
-| 准确率 | 62.0% | 70.7% | **+8.7%** |
-| 总收益 | 242.13 | 305.57 | **+63.44** |
-| FP | 2217 | 1424 | **-793** |
-
-**关键发现**：问题本质是"市场普跌时模型仍过度乐观"，而非"选错股"。市场环境感知比个股过滤更有效。
-
-### 2.4 港股异常检测
-
-**核心价值**：在市场出现异常波动时发出预警，帮助投资者及时规避风险或抓住机会。异常信号往往是市场转折点的重要提示。
-
-**双层检测机制**：
-
-| 层级 | 方法 | 检测目标 | 优势 |
-|------|------|----------|------|
-| 第一层 | Z-Score | 价格/成交量偏离均值程度 | 快速识别统计异常 |
-| 第二层 | Isolation Forest | 多维特征空间离群点 | 捕捉复杂异常模式 |
-
-**验证策略（两年历史数据回测）**：
-
-| 异常类型 | 策略 | 5日收益 | 胜率 | 应用场景 |
-|---------|------|---------|------|----------|
-| **价格异常 + 当日下跌** | 🟢 抄底 | +4.12% | **72%** | 超跌反弹机会，适合左侧交易 |
-| 价格异常 + 当日上涨 | ⚠️ 观望 | +1.96% | 54% | 追涨风险，等待确认后再决策 |
-| IF high 异常 | 🔴 减仓 | -3.04% | 43% | 多维异常预警，建议减仓观望 |
-
-**使用场景**：
-- 开盘前检测隔夜异常，预判当日走势
-- 盘中实时监控，及时发现异动股票
-- 结合其他分析工具，提高决策可靠性
-
-⚠️ **重要警告**：股票异常策略**不适用于加密货币市场**，加密货币市场特性不同，需要专门的策略。
-
----
-
-## 三、A股智能分析系统
-
-### 3.1 A股系统架构
-
-**核心设计**：基于港股成熟架构，针对A股市场特性深度定制，实现"机器学习定量 + 大模型定性 + 人来决策"三层决策框架。
+> ⚠️ 注意：A股个股准确率正常范围50-60%，>65%为数据泄漏信号。
 
 **股票池设计**（53只股票）：
 
@@ -251,31 +214,7 @@
 | 300765 | 石药创新 | 创新药 | 医药研发网络核心 |
 | 600800 | 渤海化学 | 精细化工 | 化工周期网络节点 |
 
-### 3.2 A股个股预测 CatBoost 模型
-
-**核心优势**：使用CatBoost梯度提升算法，整合1077个特征（含A股特有特征），对A股进行多周期涨跌预测。相比港股模型，A股模型增加了涨跌停特征、北向资金等A股特有因素。
-
-**模型验证结果**（Walk-forward，12 folds，53只股票，2026-07-18）：
-
-| 周期 | 准确率 | IC | 推荐度 |
-|------|--------|------|--------|
-| **20天** | **55-60%** | **0.18** | ⭐⭐⭐⭐ 推荐 |
-| 5天 | ~50% | - | ⭐⭐⭐ 谨慎使用 |
-| 1天 | ~50% | - | ⚠️ 噪音大 |
-
-> ⚠️ 注意：A股个股准确率正常范围50-60%，>65%为数据泄漏信号。
-
-**综合分析报告**：
-
-| 模块 | 内容 |
-|------|------|
-| **综合买卖建议** | 四类建议（强烈买入、买入、持有、卖出）、价格指引、止损位 |
-| **市场环境分析** | 上证指数技术分析、北向资金趋势、市场情绪 |
-| **板块分析** | 板块涨跌幅排名（53只股票）、龙头股TOP 3 |
-| **异常检测** | 全量股票检测、三级严重度分类、LLM分析 |
-| **三周期预测表格** | 19列完整数据（参考港股） |
-
-### 3.3 A股特有特征
+### 2.5 A股特有特征体系
 
 **A股市场特有特征**（1077个特征中，A股专有）：
 
@@ -302,8 +241,6 @@
 | 核心股 | **3.0** | 实际交易标的，预测准确性更重要 |
 | 扩展股 | 1.0 | 网络分析、样本扩充 |
 
-### 3.4 A股模型验证结果
-
 **特征重要性（A股20天模型，Top 10，2026-07-18）**：
 
 | 排名 | 特征名 | 重要性 | 类型 |
@@ -321,28 +258,95 @@
 
 > **关键发现**：网络×利率交叉特征占据前2位，证明中美利率对A股有显著影响。涨跌停特征(Low_Limit)进入Top 5，体现A股特有规律。
 
-**运行命令**：
+**综合分析报告内容**：
 
-```bash
-# A股完整分析流程（收市后15:15 CST自动执行）
-./scripts/run_a_stock_analysis.sh
+| 模块 | 内容 |
+|------|------|
+| **综合买卖建议** | 四类建议（强烈买入、买入、持有、卖出）、价格指引、止损位 |
+| **市场环境分析** | 上证指数技术分析、北向资金趋势、市场情绪 |
+| **板块分析** | 板块涨跌幅排名（53只股票）、龙头股TOP 3 |
+| **异常检测** | 全量股票检测、三级严重度分类、LLM分析 |
+| **三周期预测表格** | 19列完整数据 |
 
-# 单独训练模型
-python3 a_stock_ml_model.py --mode train --horizon 20
+### 2.6 双市场通用模块
 
-# 单独预测
-python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
-```
+#### 市场情绪过滤器
 
-**A股 GitHub Actions 自动化**：
-- 每个工作日 15:15 CST（A股收市后15分钟）自动执行
-- 训练三周期模型 → 生成预测 → 大模型建议 → 综合分析 → 邮件推送
+**核心原理**：市场上涨比例有强自相关性（lag=1 自相关系数 0.929），滞后1天数据能有效识别极端市场环境，动态调整预测阈值。港股和A股均适用此机制。
+
+**阈值分层**：
+
+| 层级 | 上涨比例 | 动态阈值 | 操作 |
+|------|---------|---------|------|
+| extreme_bear | <20% | 1.0 | 暂停交易 |
+| bear | 20-30% | 0.70 | 高置信 |
+| weak | 30-40% | 0.65 | 谨慎 |
+| normal | >40% | 0.50 | 标准 |
+
+**验证效果**（港股12 folds，57只股票）：
+
+| 指标 | 过滤前 | 过滤后 | 变化 |
+|------|--------|--------|------|
+| 准确率 | 62.0% | 70.7% | **+8.7%** |
+| 总收益 | 242.13 | 305.57 | **+63.44** |
+| FP | 2217 | 1424 | **-793** |
+
+**关键发现**：问题本质是"市场普跌时模型仍过度乐观"，而非"选错股"。市场环境感知比个股过滤更有效。
+
+#### 市场状态稳定性检测
+
+**核心原理**：HMM 市场状态持续时间（Regime_Duration）反映状态稳定性，短持续时间意味着频繁转换，预测可靠性下降。双市场均支持。
+
+| Regime_Duration | 稳定性 | 建议 |
+|-----------------|--------|------|
+| < 5 天 | ⚠️ 不稳定 | 降低仓位 |
+| 5-15 天 | 🟡 中等 | 正常交易 |
+| > 15 天 | ✅ 稳定 | 趋势明确 |
 
 ---
 
-## 四、智能决策与分析工具
+## 三、异常检测系统（双市场）
 
-### 4.1 大模型智能决策
+### 3.1 港股异常检测
+
+**核心价值**：在市场出现异常波动时发出预警，帮助投资者及时规避风险或抓住机会。异常信号往往是市场转折点的重要提示。
+
+**双层检测机制**：
+
+| 层级 | 方法 | 检测目标 | 优势 |
+|------|------|----------|------|
+| 第一层 | Z-Score | 价格/成交量偏离均值程度 | 快速识别统计异常 |
+| 第二层 | Isolation Forest | 多维特征空间离群点 | 捕捉复杂异常模式 |
+
+**验证策略（两年历史数据回测）**：
+
+| 异常类型 | 策略 | 5日收益 | 胜率 | 应用场景 |
+|---------|------|---------|------|----------|
+| **价格异常 + 当日下跌** | 🟢 抄底 | +4.12% | **72%** | 超跌反弹机会，适合左侧交易 |
+| 价格异常 + 当日上涨 | ⚠️ 观望 | +1.96% | 54% | 追涨风险，等待确认后再决策 |
+| IF high 异常 | 🔴 减仓 | -3.04% | 43% | 多维异常预警，建议减仓观望 |
+
+**使用场景**：
+- 开盘前检测隔夜异常，预判当日走势
+- 盘中实时监控，及时发现异动股票
+- 结合其他分析工具，提高决策可靠性
+
+⚠️ **重要警告**：股票异常策略**不适用于加密货币市场**，加密货币市场特性不同，需要专门的策略。
+
+### 3.2 A股异常检测
+
+A股异常检测集成在综合分析流程中，与港股采用相同双层检测机制：
+
+| 功能 | 说明 |
+|------|------|
+| 全量股票检测 | 对53只股票池进行全覆盖扫描 |
+| 三级严重度分类 | 高/中/低三级预警 |
+| LLM分析 | 通义千问对异常信号进行深度解读 |
+| 联动分析 | 结合板块表现和北向资金综合判断 |
+
+---
+
+## 四、大模型智能决策
 
 **核心理念**：利用大语言模型（通义千问）的推理能力，整合多维信息生成交易建议。相比传统量化策略，大模型能理解市场上下文，提供更有针对性的建议。
 
@@ -366,21 +370,21 @@ python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 | 周期/防御轮动 | 市场风格判断 | 调整投资组合 |
 | 主力资金追踪 | 建仓/出货信号 | 跟随聪明钱 |
 
-**输出示例**：
-- 每只股票的买入/卖出/持有建议
-- 具体的仓位配置建议
-- 风险提示和止损位
+**双市场应用**：
+- 🇭🇰 **港股**：`comprehensive_analysis.py` 整合大模型建议、CatBoost预测、异常检测、板块分析
+- 🇨🇳 **A股**：`a_stock_email.py` 调用通义千问，`a_stock_comprehensive_analysis.py` 整合多维度输出
 
-### 4.2 股票分析技能
+---
 
-**核心价值**：用户询问股票买卖建议时，自动查询综合分析报告，提供12维度专业分析。
+## 五、股票分析技能
+
+**核心价值**：用户询问股票买卖建议时，自动查询综合分析报告，提供12维度专业分析。支持港股和A股。
 
 **触发方式**：
 - "今天买XXX股票好不好"
 - "XXX股票分析"
-- "XXX股票值得买吗"
 
-**分析维度**（12个）：
+**分析维度（12个）**：
 
 | 维度 | 内容 | 用途 |
 |------|------|------|
@@ -389,12 +393,12 @@ python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 | 大模型建议 | 短期/中期建议 | 智能参考 |
 | 技术指标 | RSI/MACD/布林带/筹码阻力 | 入场时机 |
 | 风险评分 | 风险/回报/综合得分 | 风险评估 |
-| 市场环境 | 恒指/市场状态/VIX | 环境感知 |
+| 市场环境 | 恒指/上证/市场状态/VIX | 环境感知 |
 | 异常检测 | 超买/超卖/成交量异常 | 风险预警 |
 | 网络洞察 | 社区归属/桥梁股/模块度 | 联动分析 |
 | 板块表现 | 板块排名/涨跌幅 | 板块轮动 |
 | 操作建议 | 分批建仓/止盈止损 | 具体操作 |
-| 风险提示 | 主要风险因素 | 风警 |
+| 风险提示 | 主要风险因素 | 风险预警 |
 | 股息提醒 | 除净日/分红方案 | 收益补充 |
 
 **硬约束**：
@@ -402,7 +406,9 @@ python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 - 市场状态为熊市 → 提高阈值至 0.70
 - 市场状态为震荡市 → 提高阈值至 0.65
 
-### 4.3 风险回报率分析
+---
+
+## 六、风险回报率分析
 
 **核心价值**：在选股时，不仅考虑预期收益，更要评估潜在风险。该工具帮助投资者在多只候选股票中选择风险回报比最优的标的，实现"收益最大化、风险最小化"。
 
@@ -434,12 +440,9 @@ python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 | 技术形态 | 经典看涨/看跌形态 | 入场时机判断 |
 | 实时状态 | 当日涨跌幅 | 短线时机选择 |
 
-**输出报告**：
-- 每只股票的综合评分和排名
-- 风险回报雷达图
-- 具体的买卖建议
+---
 
-### 4.4 模拟交易系统
+## 七、模拟交易系统
 
 **核心价值**：在不投入真实资金的情况下测试策略效果，积累交易经验。支持多种风险偏好，帮助投资者找到适合自己的交易风格。
 
@@ -462,7 +465,7 @@ python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 
 ---
 
-## 五、快速开始
+## 八、快速开始
 
 ```bash
 # ============ 🇭🇰 港股系统 ============
@@ -472,9 +475,6 @@ python3 hsi_prediction.py --no-email
 # 综合分析（含三周期预测和风险回报率分析）
 ./scripts/run_comprehensive_analysis.sh
 
-# 风险回报率分析（选股辅助）
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
-
 # 港股异常检测
 python3 detect_stock_anomalies.py --mode standalone --mode-type deep
 
@@ -483,6 +483,9 @@ python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type c
 
 # Walk-forward验证
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+
+# 风险回报率分析
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
 
 # ============ 🇨🇳 A股系统 ============
 # A股完整分析流程（训练→预测→大模型建议→综合分析）
@@ -494,32 +497,47 @@ python3 a_stock_ml_model.py --mode train --horizon 20
 # A股模型预测（仅核心股）
 python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only
 
+# A股Walk-forward验证
+python3 a_stock_walk_forward.py --horizon 20
+
 # ============ 缓存管理 ============
 # 清除港股特征缓存
 rm -rf data/feature_cache/*.pkl
 
 # 清除A股特征缓存
 rm -rf data/a_stock_feature_cache/*.pkl
+
+# 清除原始数据缓存
+rm -rf data/stock_cache/*.pkl data/a_stock_cache/*.pkl
 ```
 
 ---
 
-## 六、技术架构
+## 九、技术架构
+
+### 9.1 数据流架构
 
 ```
 外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
     ↓              ↓              ↓            ↓          ↓
 腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
-yfinance     基本面数据      综合分析     Walk-forward  JSON文件
-AKShare      南向资金        主力追踪     性能监控
-             北向资金(A股)
+yfinance      基本面数据      综合分析     Walk-forward  JSON文件
+AKShare      南向/北向资金    主力追踪     性能监控     Markdown报告
 ```
 
-**支持市场**：
-- 🇭🇰 **港股** - 31只自选股，恒生指数预测，南向资金追踪
-- 🇨🇳 **A股** - 53只股票池（4核心+49扩展），北向资金追踪，涨跌停特征
+**关键依赖关系**：
 
-### 6.1 数据流图
+| 模块 | 港股 | A股 |
+|------|------|-----|
+| 数据获取 | yfinance + 腾讯财经 | AKShare + 腾讯财经 |
+| 市场资金 | 南向资金 | 北向资金 |
+| 价格限制 | 无涨跌停 | 主板10% / 创业板20% |
+| 核心模型 | `ml_trading_model.py` | `a_stock_ml_model.py` |
+| 综合分析 | `comprehensive_analysis.py` | `a_stock_comprehensive_analysis.py` |
+| 大模型建议 | `comprehensive_analysis.py` 集成 | `a_stock_email.py` |
+| 运行时间 | 16:00 HKT | 15:15 CST |
+
+### 9.2 数据流图
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -528,7 +546,7 @@ AKShare      南向资金        主力追踪     性能监控
 │  yfinance │ 腾讯财经 │ AKShare │ 恒指数据 │ 南向/北向资金        │
 │     └──────────────────┬──────────────────┘                      │
 │                        ▼                                         │
-│               data/stock_cache/ (原始数据缓存, 7天)              │
+│      data/stock_cache/ + data/a_stock_cache/ (原始数据缓存)      │
 └──────────────────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -538,7 +556,7 @@ AKShare      南向资金        主力追踪     性能监控
 │  技术指标(MA/RSI/MACD) │ 基本面(PE/PB/ROE) │ 市场数据整合        │
 │     └──────────────────┬──────────────────┘                      │
 │                        ▼                                         │
-│     特征工程(1023/1077个特征) → data/feature_cache/ (170x加速)   │
+│    特征工程(1023/1077个特征) → feature_cache/ (170x加速)         │
 └──────────────────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -572,88 +590,108 @@ AKShare      南向资金        主力追踪     性能监控
 
 **缓存机制**：
 
-| 缓存类型 | 位置 | 有效期 | 加速效果 |
-|---------|------|--------|---------|
-| 原始数据 | `data/stock_cache/` | 7天 | - |
-| 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
+| 市场 | 缓存类型 | 位置 | 有效期 | 加速效果 |
+|------|---------|------|--------|---------|
+| 🇭🇰 港股 | 原始数据 | `data/stock_cache/` | 7天 | - |
+| 🇭🇰 港股 | 特征缓存 | `data/feature_cache/` | 7天 | **170x** |
+| 🇨🇳 A股 | 原始数据 | `data/a_stock_cache/` | 7天 | - |
+| 🇨🇳 A股 | 特征缓存 | `data/a_stock_feature_cache/` | 7天 | **170x** |
 
 ---
 
-## 七、项目结构
+## 十、项目结构
 
 ```
 fortune/
-├── 核心脚本（港股）
-│   ├── comprehensive_analysis.py       # 综合分析
+├── 港股核心脚本
+│   ├── comprehensive_analysis.py       # 综合分析（含大模型建议）
 │   ├── hsi_prediction.py               # 恒指三周期预测
 │   ├── detect_stock_anomalies.py       # 异常检测
 │   └── simulation_trader.py            # 模拟交易
-├── 核心脚本（A股）
-│   ├── a_stock_ml_model.py             # A股模型训练与预测
-│   ├── a_stock_comprehensive_analysis.py # A股综合分析
-│   ├── a_stock_email.py                # A股大模型建议
-│   └── a_stock_config.py               # A股配置（53只股票池）
-├── ml_services/                        # 机器学习模块
-│   ├── ml_trading_model.py             # CatBoost模型
-│   └── walk_forward_validation.py      # Walk-forward验证
+├── A股核心脚本
+│   ├── a_stock_ml_model.py             # 模型训练与预测
+│   ├── a_stock_comprehensive_analysis.py # 综合分析
+│   ├── a_stock_email.py                # 大模型建议生成
+│   ├── a_stock_recommendation_generator.py # 综合买卖建议
+│   └── a_stock_config.py               # 配置（53只股票池）
+├── ml_services/                        # 机器学习模块（双市场共用）
+│   ├── ml_trading_model.py             # CatBoost模型（港股）
+│   ├── walk_forward_validation.py      # Walk-forward验证（港股）
+│   ├── hyperparameter_tuner.py         # 超参数调优
+│   ├── feature_selection.py            # 特征选择
+│   ├── market_regime.py                # 市场情绪过滤器
+│   ├── stock_network_analysis.py       # 股票网络分析
+│   ├── risk_reward_analyzer.py         # 风险回报率分析
+│   ├── performance_monitor.py          # 性能监控
+│   └── hsi_ml_model.py                 # 恒指机器学习模型
 ├── data_services/                      # 数据服务
-│   ├── a_stock_data.py                 # A股数据获取
-│   └── a_stock_market_features.py      # A股市场特征
-├── anomaly_detector/                   # 异常检测
-├── llm_services/                       # 大模型服务
+│   ├── 港股: calendar_features.py, volatility_model.py, regime_detector.py
+│   ├── A股: a_stock_data.py, a_stock_market_features.py
+│   └── 共用: 技术指标、基本面数据获取
+├── anomaly_detector/                   # 异常检测引擎（双市场共用）
+├── llm_services/                       # 大模型服务（通义千问）
+├── message_services/                   # 通知服务
+│   ├── email_sender.py                 # 邮件发送
+│   ├── wechat_work_bot.py              # 企业微信机器人
+│   └── wxpusher_bot.py                 # WxPusher 推送
 ├── docs/                               # 详细文档
-│   └── A_STOCK_DESIGN.md               # A股系统设计文档
-└── data/                               # 数据和缓存
-    ├── stock_cache/                    # 港股原始数据缓存
-    ├── feature_cache/                  # 港股特征缓存
-    ├── a_stock_models/                 # A股模型和预测结果
-    └── a_stock_feature_cache/          # A股特征缓存
+│   ├── A_STOCK_DESIGN.md               # A股系统设计
+│   ├── THREE_HORIZON_ANALYSIS.md       # 三周期分析
+│   ├── FEATURE_ENGINEERING.md          # 特征工程
+│   └── VALIDATION_GUIDE.md             # 验证方法
+└── data/                               # 数据与缓存
+    ├── 港股: stock_cache/, feature_cache/, hsi_models/
+    ├── A股: a_stock_cache/, a_stock_feature_cache/, a_stock_models/
+    ├── 网络特征: network_features/, a_stock_network_features/
+    └── 输出: walk_forward_results/, hyperparams/, analysis_results/
 ```
 
 ---
 
-## 八、自动化调度
+## 十一、自动化调度
 
-| 工作流 | 功能 | 执行时间 |
-|--------|------|----------|
-| `hsi-prediction.yml` | 恒生指数预测 | 工作日 06:00 |
-| `comprehensive-analysis.yml` | 港股综合分析 | 工作日 16:00 |
-| `a-stock-comprehensive-analysis.yml` | **A股综合分析** | 工作日 **15:15 CST** |
-| `stock-anomaly-detection.yml` | 港股异常检测 | 每天凌晨2点 |
-| `hourly-stock-monitor.yml` | 交易时段监控 | 10:00-15:00 每小时 |
-| `performance-monitor.yml` | 性能报告 | 每月1号 |
+| 时间 | 工作流 | 功能 | 市场 |
+|------|--------|------|------|
+| **06:00** (工作日) | `hsi-prediction.yml` | 恒生指数预测 | 🇭🇰 |
+| **10:00-15:00** (每小时) | `hourly-stock-monitor.yml` | 交易时段监控 | 🇭🇰 |
+| **15:15 CST** (工作日) | `a-stock-comprehensive-analysis.yml` | A股综合分析 | 🇨🇳 |
+| **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
+| 02:00 (每天) | `stock-anomaly-detection.yml` | 异常检测 | 🇭🇰 |
+| 每月1号 | `performance-monitor.yml` | 性能报告 | 双市场 |
 
-### 8.1 可用命令汇总
+### 命令汇总
 
 ```bash
-# ============ 🇭🇰 港股核心预测与分析 ============
-python3 hsi_prediction.py --no-email                    # 恒指预测
-python3 comprehensive_analysis.py                        # 综合分析
-python3 detect_stock_anomalies.py --mode standalone     # 异常检测
+# ============ 🇭🇰 港股核心 ============
+python3 hsi_prediction.py --no-email                        # 恒指预测
+python3 comprehensive_analysis.py                            # 综合分析
+python3 detect_stock_anomalies.py --mode standalone         # 异常检测
+python3 simulation_trader.py                                 # 模拟交易
+python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost  # 模型训练
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20        # Walk-forward
+python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate          # 风险分析
 
-# ============ 🇨🇳 A股核心预测与分析 ============
-./scripts/run_a_stock_analysis.sh                        # A股完整流程
-python3 a_stock_ml_model.py --mode train --horizon 20   # A股模型训练
-python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only  # A股预测
+# ============ 🇨🇳 A股核心 ============
+./scripts/run_a_stock_analysis.sh                            # 完整流程
+python3 a_stock_ml_model.py --mode train --horizon 20       # 模型训练
+python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only  # 模型预测
+python3 a_stock_walk_forward.py --horizon 20                # Walk-forward
 
-# ============ 模型训练与验证（港股）============
-python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
-python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
-python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
-
-# ============ 分析工具 ============
-python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate
+# ============ 共用工具 ============
 python3 ml_services/performance_monitor.py --mode all --no-email
-python3 ml_services/analyze_causal_chain.py             # 因果链分析
+python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30
+python3 ml_services/stock_network_analysis.py --skip-pmfg
 
-# ============ 缓存管理 ============
-rm -rf data/feature_cache/*.pkl                         # 清除港股特征缓存
-rm -rf data/a_stock_feature_cache/*.pkl                 # 清除A股特征缓存
+# ============ 缓存清理 ============
+rm -rf data/feature_cache/*.pkl                              # 港股特征缓存
+rm -rf data/a_stock_feature_cache/*.pkl                      # A股特征缓存
+rm -rf data/stock_cache/*.pkl                                # 港股原始数据
+rm -rf data/a_stock_cache/*.pkl                              # A股原始数据
 ```
 
 ---
 
-## 九、安装部署
+## 十二、安装部署
 
 ```bash
 # 1. 克隆项目
@@ -684,62 +722,64 @@ python hsi_email.py --no-email
 
 ---
 
-## 十、核心警告
+## 十三、核心警告
 
 | 警告 | 说明 |
 |------|------|
 | **数据泄漏** | Walk-forward 准确率 >65%（个股/A股）或 >80%（恒指）通常有数据泄漏 |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
-| **CatBoost 1天** | 噪音大，仅供参考 |
+| **CatBoost 1天模型** | 噪音大，仅供参考（双市场通用） |
 | **深度学习** | LSTM/Transformer F1≈0，不推荐 |
-| **Walk-forward** | 唯一可信的验证方法 |
 | **加密货币** | 股票策略不适用 |
 | **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 57%），个股预测需谨慎 |
+| **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
+| **双模式预测** | 收市后预测用当日数据(production)，Walk-forward 用 T-1 数据(backtest) |
+| **特征缓存版本** | 缓存失效时需清除（`rm -rf data/*feature_cache/*.pkl`） |
+| **分类特征 NaN** | CatBoost 训练和预测时需一致处理分类特征 NaN |
 | **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练需标签标准化 |
 | **A股股票代码** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失 |
-| **特征缓存版本** | 缓存失效时需清除（`rm -rf data/feature_cache/*.pkl`） |
-| **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
-| **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
+| **A股样本权重** | 核心股权重3.0倍，扩展股1.0倍，训练时需传入 |
+| **A股数据泄漏阈值** | 个股准确率正常范围50-60%，>65%为数据泄漏信号 |
 | **IC 不等于收益** | IC 高不代表收益高，需结合损失分布分析 |
-| **双模式预测** | 收市后预测用当日数据，Walk-forward 用 T-1 数据防止泄漏 |
+| **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
 
 ---
 
-## 十一、文档
+## 十四、文档
 
 - **[CLAUDE.md](CLAUDE.md)** - 快速参考指南
 - **[lessons.md](lessons.md)** - 经验教训
 - **[progress.txt](progress.txt)** - 项目进展
 - **[docs/](docs/)** - 详细文档
-  - [A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - **A股系统设计文档**
+  - [A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统设计
   - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
-  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程（含 GARCH/HSI Regime）
+  - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程
   - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
-  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法指南
+  - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法
   - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
   - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
 
 ---
 
-## 十二、依赖项
+## 十五、依赖项
 
-`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch`
+`yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `jieba` `hmmlearn` `arch` `networkx`
 
 ---
 
-## 十三、许可证
+## 十六、许可证
 
 MIT License
 
 ---
 
-## 十四、联系方式
+## 十七、联系方式
 
 - Issues: https://github.com/wonglaitung/fortune/issues
 - Email: wonglaitung@gmail.com
 
 ---
 
-## 十五、Star History
+## 十八、Star History
 
 ![Star History Chart](https://api.star-history.com/svg?repos=wonglaitung/fortune&type=Date)
