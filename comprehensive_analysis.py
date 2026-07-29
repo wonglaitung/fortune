@@ -42,6 +42,10 @@ except ImportError:
     SECTOR_ANALYSIS_AVAILABLE = False
     print("⚠️ 板块分析模块不可用")
 
+# 股票雷达图模块
+from scripts.stock_radar import compute_hk_stock_dimensions, _generate_radar_png_bytes
+from message_services.email_sender import send_email_with_images
+
 try:
     from detect_stock_anomalies import StockAnomalyDetector, run_stock_anomaly_detection
     ANOMALY_DETECTION_AVAILABLE = True
@@ -4373,6 +4377,17 @@ def generate_stock_section_html(stock_data: dict) -> str:
     else:
         risk_warnings_section = ""
 
+    # 雷达图
+    radar_cid = stock_data.get('radar_cid', '')
+    if radar_cid:
+        radar_cid_html = f'''
+            <div style="text-align: center; margin: 10px 0;">
+                <img src="cid:{radar_cid}" alt="Stock Strength Radar" style="width: 160px; height: 160px;">
+            </div>
+        '''
+    else:
+        radar_cid_html = ''
+
     return f"""
         <div class="stock-section">
             <h2>{stock_name}（{stock_code}）</h2>
@@ -4380,6 +4395,8 @@ def generate_stock_section_html(stock_data: dict) -> str:
             <div class="recommendation {rec_class}">
                 综合建议：{recommendation}
             </div>
+
+            {radar_cid_html}
 
             <h3>一、核心指标</h3>
             <table>
@@ -5673,6 +5690,26 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                 }
 
                     if stock_results:
+                        # 生成六边形雷达图（嵌入个股卡片）
+                        radar_attachments = {}
+                        for sd in stock_results:
+                            code = sd.get('code', '')
+                            if code in three_horizon_results:
+                                try:
+                                    dims = compute_hk_stock_dimensions(
+                                        stock_data=sd,
+                                        three_horizon_entry=three_horizon_results.get(code, {}),
+                                        risk_reward_entry=risk_reward_data.get(code, {})
+                                    )
+                                    if max(dims.values()) >= 10:
+                                        name = sd.get('name', code)
+                                        png_bytes = _generate_radar_png_bytes(name, code, dims, size=160)
+                                        cid = f"radar_{code.replace('.', '_')}"
+                                        radar_attachments[cid] = png_bytes
+                                        sd['radar_cid'] = cid
+                                except Exception as e:
+                                    print(f"  [radar] Warning: {code} radar chart failed: {e}")
+
                         # 生成详细个股分析 HTML
                         detailed_html = generate_detailed_stock_email(stock_results, market_info, date_str)
 
@@ -5693,9 +5730,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                     insert_pos = container_start + len('<div class="container">')
                                     html_content = html_content[:insert_pos] + detailed_content + html_content[insert_pos:]
 
-                        print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析")
+                        print(f"✅ 已在邮件最前面插入 {len(stock_results)} 只股票的详细分析，含 {len(radar_attachments)} 张雷达图")
 
-                    send_email(email_subject, full_content, html_content)
+                    # 根据是否有内嵌图片选择发送方式
+                    if stock_results and radar_attachments:
+                        send_email_with_images(email_subject, full_content, html_content, inline_images=radar_attachments)
+                    else:
+                        send_email(email_subject, full_content, html_content)
 
             # 保存 MD 文档（用于知识库）- 无论是否发送邮件都保存
             save_comprehensive_report_md(response, date_str)

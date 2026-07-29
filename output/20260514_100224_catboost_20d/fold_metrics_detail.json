@@ -1,0 +1,5070 @@
+{
+  "model_type": "catboost",
+  "horizon": 20,
+  "folds": [
+    {
+      "fold": 1,
+      "train_period": "2024-01-01 to 2024-12-31",
+      "test_period": "2025-01-01 to 2025-01-31",
+      "metrics": {
+        "ic": 0.00024150079788303125,
+        "rank_ic": 0.05273788770598017,
+        "accuracy": 0.49624060150375937,
+        "sharpe": 13.450062085108508,
+        "max_drawdown": 0.0,
+        "sortino": 15.741267354552306,
+        "win_rate": 0.7634730538922155,
+        "avg_return": 0.1270186647554861
+      },
+      "sample_counts": {
+        "total": 1064,
+        "train": 13320,
+        "test": 1064
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 2.829
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 1.7124
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 1.5339
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.4935
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.4747
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.4318
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.2644
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 1.2293
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.1696
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 1.1455
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.1066
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 1.1056
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 1.1011
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 1.0787
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.012
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.9728
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.966
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 0.9645
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.9358
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.9269
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.9238
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.8986
+        },
+        {
+          "feature": "PB",
+          "importance": 0.8952
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 0.8674
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.8667
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.8416
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.8364
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.8069
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.8051
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.7874
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.7759
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.7702
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.7671
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.765
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.7618
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.759
+        },
+        {
+          "feature": "Volume_Trend_Long",
+          "importance": 0.7495
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.745
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.7373
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.7225
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.7173
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.7041
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.6665
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.6534
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.6426
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.6397
+        },
+        {
+          "feature": "PE",
+          "importance": 0.631
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.6224
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.6055
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.6017
+        },
+        {
+          "feature": "net_constraint_risk_GARCH_Vol_Ratio",
+          "importance": 0.5946
+        },
+        {
+          "feature": "Earnings_Surprise_Score",
+          "importance": 0.5921
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.5837
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.5758
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.573
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.569
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.5621
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.5588
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.5484
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.5402
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_5d",
+          "importance": 0.5376
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.5289
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.5181
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.5143
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.4875
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.4857
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 0.4681
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.4656
+        },
+        {
+          "feature": "60d_Trend_Skewness_20d",
+          "importance": 0.4646
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.4643
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.4618
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.458
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.4456
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.4407
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.4372
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.4339
+        },
+        {
+          "feature": "20d_Trend_HSI_Return_60d",
+          "importance": 0.4327
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.4308
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.4259
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.4159
+        },
+        {
+          "feature": "ATR_Ratio",
+          "importance": 0.4157
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.4123
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.4003
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.3949
+        },
+        {
+          "feature": "Topic_3",
+          "importance": 0.3938
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.3839
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.3806
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.3781
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.3707
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.3687
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.3648
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.3588
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.3557
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.3505
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.3471
+        },
+        {
+          "feature": "Skewness_10d",
+          "importance": 0.3404
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.3379
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.3288
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.3129
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.3109
+        }
+      ]
+    },
+    {
+      "fold": 2,
+      "train_period": "2024-02-01 to 2025-01-31",
+      "test_period": "2025-02-01 to 2025-02-28",
+      "metrics": {
+        "ic": 0.29397818912719864,
+        "rank_ic": 0.3324552632320095,
+        "accuracy": 0.6071428571428571,
+        "sharpe": 8.150816834024855,
+        "max_drawdown": 0.0,
+        "sortino": 7.358722226663353,
+        "win_rate": 0.8362445414847162,
+        "avg_return": 0.09112711683854316
+      },
+      "sample_counts": {
+        "total": 1120,
+        "train": 13218,
+        "test": 1120
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 3.2979
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 1.9123
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.8023
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.7754
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 1.3144
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 1.2831
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.2488
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.2302
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 1.2138
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 1.165
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 1.1195
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 1.1185
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 1.0889
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.0573
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 1.0488
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 1.0454
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.0173
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 0.9924
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.982
+        },
+        {
+          "feature": "PE",
+          "importance": 0.9504
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.9289
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.9281
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.9242
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 0.8853
+        },
+        {
+          "feature": "PB",
+          "importance": 0.8839
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.8837
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.7999
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.7831
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.7808
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.7755
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.7669
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.7509
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 0.7299
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.7203
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.709
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.6903
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.6896
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.6748
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.6726
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.6676
+        },
+        {
+          "feature": "Volume_Trend_Long",
+          "importance": 0.6671
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.6653
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.6591
+        },
+        {
+          "feature": "60d_Trend_NASDAQ_Return_20d",
+          "importance": 0.6348
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.625
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.6216
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.6197
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.6102
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.5976
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5933
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.587
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Expected_Duration",
+          "importance": 0.5711
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.5623
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.5512
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.5389
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.5267
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.5254
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.5225
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.5224
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.5221
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.4955
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.4885
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.4786
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.4698
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4609
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.4576
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.4526
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 0.4515
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.4372
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.4362
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.4325
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.4304
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.4277
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.4262
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_5d",
+          "importance": 0.4226
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.4219
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.4085
+        },
+        {
+          "feature": "Trend_Vol_Match",
+          "importance": 0.3878
+        },
+        {
+          "feature": "ATR_Stop_Loss_Distance",
+          "importance": 0.3875
+        },
+        {
+          "feature": "10d_Trend_MACD_Low_5d_History",
+          "importance": 0.3765
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.3702
+        },
+        {
+          "feature": "Resistance_Ratio_120d",
+          "importance": 0.3616
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.3613
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.361
+        },
+        {
+          "feature": "net_constraint_risk_GARCH_Vol_Ratio",
+          "importance": 0.3584
+        },
+        {
+          "feature": "Topic_9_x_sentiment_change_rate",
+          "importance": 0.3569
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.3535
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.3527
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.3481
+        },
+        {
+          "feature": "Price_Ratio_MA50",
+          "importance": 0.3441
+        },
+        {
+          "feature": "Consecutive_Trending_Days",
+          "importance": 0.3396
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.3393
+        },
+        {
+          "feature": "net_comm_rank_HSI_Market_Regime",
+          "importance": 0.3381
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.3378
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.3375
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.3366
+        },
+        {
+          "feature": "MA_Alignment_Long",
+          "importance": 0.3363
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.3339
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.3211
+        },
+        {
+          "feature": "Topic_10_x_sentiment_volatility",
+          "importance": 0.3211
+        }
+      ]
+    },
+    {
+      "fold": 3,
+      "train_period": "2024-03-01 to 2025-02-28",
+      "test_period": "2025-03-01 to 2025-03-31",
+      "metrics": {
+        "ic": 0.3246845902273575,
+        "rank_ic": 0.2850920033338009,
+        "accuracy": 0.6496598639455783,
+        "sharpe": -2.9383808361327617,
+        "max_drawdown": -0.06294159746018894,
+        "sortino": -2.201707527651558,
+        "win_rate": 0.3058823529411765,
+        "avg_return": -0.04487720214784509
+      },
+      "sample_counts": {
+        "total": 1176,
+        "train": 13331,
+        "test": 1176
+      },
+      "top_features": [
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.963
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 1.9336
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.8119
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 1.6707
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.6517
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.3338
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.3001
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.2738
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 1.2275
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 1.1897
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 1.1537
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 1.0788
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.0679
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 1.0653
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.9963
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.9899
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.9719
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.9392
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.9391
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.9295
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.909
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 0.9068
+        },
+        {
+          "feature": "60d_Trend_NASDAQ_Return_20d",
+          "importance": 0.8898
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.8891
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.8853
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.8834
+        },
+        {
+          "feature": "PB",
+          "importance": 0.8807
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.8644
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.8581
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 0.8464
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.8295
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.8133
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.8077
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.799
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.7842
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.7786
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.7751
+        },
+        {
+          "feature": "PE",
+          "importance": 0.7644
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.7604
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.7394
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.7205
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.6826
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.669
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.6526
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.6298
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.6238
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.6201
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.6177
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5967
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.5797
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.5747
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.5717
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.5588
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.5518
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.55
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.5443
+        },
+        {
+          "feature": "10d_Trend_MACD_Low_5d_History",
+          "importance": 0.5423
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.5372
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.5372
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.535
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.5308
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.5198
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4905
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.4886
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.4815
+        },
+        {
+          "feature": "Topic_5",
+          "importance": 0.481
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.4672
+        },
+        {
+          "feature": "Volume_Trend_Long",
+          "importance": 0.4543
+        },
+        {
+          "feature": "Price_Return_Mean_30d",
+          "importance": 0.4474
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.4462
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.4446
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.4439
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_5d",
+          "importance": 0.4405
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.4186
+        },
+        {
+          "feature": "sentiment_days",
+          "importance": 0.4093
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.3974
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.3927
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.3894
+        },
+        {
+          "feature": "MA_Alignment_Strength",
+          "importance": 0.3893
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.3885
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.3812
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.3775
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.3763
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.3615
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.3609
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.3533
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.3507
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.3457
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.3409
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.3398
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.3371
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.3358
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.3349
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.3323
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.3321
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.3306
+        },
+        {
+          "feature": "Topic_3",
+          "importance": 0.3261
+        },
+        {
+          "feature": "20d_Trend_MACD_High_5d_History",
+          "importance": 0.3211
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.3179
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.3165
+        }
+      ]
+    },
+    {
+      "fold": 4,
+      "train_period": "2024-04-01 to 2025-03-31",
+      "test_period": "2025-04-01 to 2025-04-30",
+      "metrics": {
+        "ic": 0.324196292308589,
+        "rank_ic": 0.320736201883209,
+        "accuracy": 0.42951127819548873,
+        "sharpe": 8.762833043809568,
+        "max_drawdown": 0.0,
+        "sortino": 17.91450580693393,
+        "win_rate": 0.9,
+        "avg_return": 0.10703726201255657
+      },
+      "sample_counts": {
+        "total": 1064,
+        "train": 13447,
+        "test": 1064
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 3.0956
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 2.1818
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 1.7082
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.6401
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 1.5699
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.4601
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.4239
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.3282
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.325
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 1.2816
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 1.2626
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.1649
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 1.1511
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 1.1371
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 1.0776
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 1.073
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.0669
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.9574
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.9264
+        },
+        {
+          "feature": "PE",
+          "importance": 0.8648
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.8247
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.7998
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.7951
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.7832
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.7766
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.7647
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.7633
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.7628
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.75
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.7358
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.7248
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.7084
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 0.7033
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.6992
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.6919
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.6782
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.6744
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.6735
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.6688
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.6587
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.6549
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.6414
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.6337
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.6322
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.5958
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.5953
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.5745
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.5702
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.5399
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.5355
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.5266
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.5207
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.5071
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.5067
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.5011
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.4903
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.4756
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.4748
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.4737
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.4645
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.4624
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4591
+        },
+        {
+          "feature": "Topic_5",
+          "importance": 0.457
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.4563
+        },
+        {
+          "feature": "PB",
+          "importance": 0.4538
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.4517
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.4458
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.4432
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.4431
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.4408
+        },
+        {
+          "feature": "10d_Trend_MACD_Low_5d_History",
+          "importance": 0.4393
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.4322
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.4183
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.4143
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.4127
+        },
+        {
+          "feature": "3d_Trend_HSI_Return_60d",
+          "importance": 0.3993
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.3982
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.3939
+        },
+        {
+          "feature": "MA_Alignment_Strength",
+          "importance": 0.3839
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.3839
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Transition_Prob",
+          "importance": 0.3809
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.3798
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.3741
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.3741
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Transition_Prob",
+          "importance": 0.3644
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.3638
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.3625
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.3612
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.3609
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.3602
+        },
+        {
+          "feature": "sentiment_days",
+          "importance": 0.3571
+        },
+        {
+          "feature": "High_Position_60d",
+          "importance": 0.3541
+        },
+        {
+          "feature": "10d_Trend_HSI_Return_60d",
+          "importance": 0.3507
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.3472
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.3467
+        },
+        {
+          "feature": "Topic_9_x_sentiment_change_rate",
+          "importance": 0.3454
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.3445
+        },
+        {
+          "feature": "OBV_Change_5d",
+          "importance": 0.3406
+        },
+        {
+          "feature": "60d_Trend_Volatility_60d",
+          "importance": 0.3387
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.3377
+        }
+      ]
+    },
+    {
+      "fold": 5,
+      "train_period": "2024-05-01 to 2025-04-30",
+      "test_period": "2025-05-01 to 2025-05-31",
+      "metrics": {
+        "ic": 0.09846852413370745,
+        "rank_ic": 0.16639303563884555,
+        "accuracy": 0.5946428571428571,
+        "sharpe": 4.58379369572462,
+        "max_drawdown": -0.001950611699257152,
+        "sortino": 0.9441208591179054,
+        "win_rate": 0.7344028520499108,
+        "avg_return": 0.05339553015073072
+      },
+      "sample_counts": {
+        "total": 1120,
+        "train": 13451,
+        "test": 1120
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 4.0884
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 2.1135
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 1.968
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.6744
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.6434
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.612
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 1.4596
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.2341
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.1555
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 1.1321
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 1.1292
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.1255
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 1.0751
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 1.0536
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 1.0458
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.9678
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.918
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.9085
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.8809
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 0.8446
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.8341
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.8241
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.8044
+        },
+        {
+          "feature": "PB",
+          "importance": 0.8026
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.7877
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.7836
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.7459
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.7368
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.7211
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 0.716
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.7058
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.6879
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.687
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.6536
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.6446
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.6342
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.6226
+        },
+        {
+          "feature": "PE",
+          "importance": 0.6219
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.6182
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.6071
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.602
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.6007
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5951
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.591
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Transition_Prob",
+          "importance": 0.5771
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.5756
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.5707
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.5682
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.5678
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.5593
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.5587
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.5566
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.5538
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.5531
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.54
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.5379
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.5305
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.5246
+        },
+        {
+          "feature": "Topic_5",
+          "importance": 0.5151
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.5029
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.5023
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.5021
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.4721
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.4714
+        },
+        {
+          "feature": "sentiment_days",
+          "importance": 0.4539
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.4467
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.4362
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.433
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.4252
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.425
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.4221
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.4199
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.4123
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4099
+        },
+        {
+          "feature": "RSI_High_5d_History",
+          "importance": 0.4009
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.3984
+        },
+        {
+          "feature": "60d_Trend_Volatility_60d",
+          "importance": 0.3949
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.3887
+        },
+        {
+          "feature": "Topic_8",
+          "importance": 0.3871
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.3839
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.381
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.3796
+        },
+        {
+          "feature": "10d_Trend_MACD_Low_5d_History",
+          "importance": 0.3665
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.3657
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.3634
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.3581
+        },
+        {
+          "feature": "High_Position_60d",
+          "importance": 0.3576
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.3547
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.3534
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.347
+        },
+        {
+          "feature": "Outperforms_HSI_HSI_Return_60d",
+          "importance": 0.3448
+        },
+        {
+          "feature": "Topic_5_x_sentiment_volatility",
+          "importance": 0.3401
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 0.3397
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.3387
+        },
+        {
+          "feature": "ATR_Stop_Loss_Distance",
+          "importance": 0.3379
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.3339
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_5d",
+          "importance": 0.3325
+        },
+        {
+          "feature": "60d_Trend_MACD_Low_5d_History",
+          "importance": 0.3273
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.3217
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.3202
+        }
+      ]
+    },
+    {
+      "fold": 6,
+      "train_period": "2024-06-01 to 2025-05-31",
+      "test_period": "2025-06-01 to 2025-06-30",
+      "metrics": {
+        "ic": 0.1774831542826742,
+        "rank_ic": 0.21790863958451404,
+        "accuracy": 0.5850340136054422,
+        "sharpe": 10.581383184417474,
+        "max_drawdown": 0.0,
+        "sortino": 10.995936644123196,
+        "win_rate": 0.7936507936507936,
+        "avg_return": 0.0842113954936497
+      },
+      "sample_counts": {
+        "total": 1176,
+        "train": 13458,
+        "test": 1176
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 4.4045
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 2.1967
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.6826
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 1.6115
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.5437
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 1.4165
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.378
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 1.3647
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.34
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 1.3222
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 1.2351
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 1.1339
+        },
+        {
+          "feature": "PB",
+          "importance": 1.0651
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 1.0546
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.0181
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 1.0026
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.9883
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.9805
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 0.9055
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.9001
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 0.8531
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.8244
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 0.8212
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.8073
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.798
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.7679
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.7654
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.7635
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.7608
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.7394
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.7218
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.7207
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.7028
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.7012
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.6932
+        },
+        {
+          "feature": "PE",
+          "importance": 0.6882
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.6698
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.6639
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.6604
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.657
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.6454
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.6275
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.6033
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.5988
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 0.5865
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.5723
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.5642
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.5635
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.5588
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.558
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.547
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.5428
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.5396
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.531
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.5246
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.519
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.5187
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.5128
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.5076
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.4971
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.4917
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.4641
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.4556
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.4553
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.4509
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.4504
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.4498
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.445
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 0.4371
+        },
+        {
+          "feature": "MF_Volume",
+          "importance": 0.433
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.4287
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.4283
+        },
+        {
+          "feature": "60d_Trend_GARCH_Vol_Ratio",
+          "importance": 0.4276
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.4217
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.4087
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.4038
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Switch_Prob_5d",
+          "importance": 0.4021
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.4005
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.4005
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.3967
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.3912
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.3887
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.3872
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.3826
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.3811
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.3772
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.377
+        },
+        {
+          "feature": "20d_Trend_MACD_High_5d_History",
+          "importance": 0.3768
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.3658
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.3633
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.3618
+        },
+        {
+          "feature": "Topic_7",
+          "importance": 0.3535
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.3403
+        },
+        {
+          "feature": "BB_Position",
+          "importance": 0.3395
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.335
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.3269
+        },
+        {
+          "feature": "MACD_Hist",
+          "importance": 0.3155
+        },
+        {
+          "feature": "MA_Ratio_120d",
+          "importance": 0.314
+        },
+        {
+          "feature": "Earnings_Surprise_Score",
+          "importance": 0.3107
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.3106
+        }
+      ]
+    },
+    {
+      "fold": 7,
+      "train_period": "2024-07-01 to 2025-06-30",
+      "test_period": "2025-07-01 to 2025-07-31",
+      "metrics": {
+        "ic": 0.06870469916555444,
+        "rank_ic": 0.07103769204763585,
+        "accuracy": 0.4642857142857143,
+        "sharpe": 5.6522077437552865,
+        "max_drawdown": -0.001659508036944607,
+        "sortino": 4.768801099741676,
+        "win_rate": 0.6526806526806527,
+        "avg_return": 0.04922120343863116
+      },
+      "sample_counts": {
+        "total": 1232,
+        "train": 13615,
+        "test": 1232
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 5.2472
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.6991
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 1.6273
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.5062
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.4924
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.3773
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 1.3295
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.2349
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.1903
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.1242
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 1.0806
+        },
+        {
+          "feature": "PB",
+          "importance": 1.0561
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 1.0519
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 0.9904
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.9714
+        },
+        {
+          "feature": "PE",
+          "importance": 0.9643
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.9464
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.8944
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.8919
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.8714
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.8493
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.8412
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.8263
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.8149
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.8119
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.7915
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 0.7813
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.7626
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.7527
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 0.7484
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.7401
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.733
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.7327
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.7294
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.7179
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.7119
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.6806
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.677
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Ratio_MA20",
+          "importance": 0.6734
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.6721
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.6652
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.655
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 0.6533
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.6278
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.61
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.5794
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.5741
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.5704
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.5689
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.5628
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.5617
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.556
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.5552
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.5531
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5499
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.5327
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.5166
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.5067
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.4934
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.4903
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.4859
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.4752
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Ratio_MA20",
+          "importance": 0.4728
+        },
+        {
+          "feature": "Topic_1",
+          "importance": 0.4653
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.4609
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.4561
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.4554
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.4521
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.4479
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.4463
+        },
+        {
+          "feature": "BB_width",
+          "importance": 0.4328
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.4166
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.4125
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.4087
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.4049
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.4019
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.4017
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.4005
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.3937
+        },
+        {
+          "feature": "Earnings_Surprise_Score",
+          "importance": 0.3898
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.3867
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.3834
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.3818
+        },
+        {
+          "feature": "Topic_9",
+          "importance": 0.3768
+        },
+        {
+          "feature": "MF_Volume",
+          "importance": 0.3747
+        },
+        {
+          "feature": "Topic_3",
+          "importance": 0.3661
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.3601
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.3593
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.358
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_5d",
+          "importance": 0.3372
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.3369
+        },
+        {
+          "feature": "MA_Ratio_120d",
+          "importance": 0.3361
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.3308
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Expected_Duration",
+          "importance": 0.326
+        },
+        {
+          "feature": "Resistance_Ratio_120d",
+          "importance": 0.3172
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.314
+        },
+        {
+          "feature": "RSI_High_5d_History",
+          "importance": 0.3037
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.2993
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.2987
+        },
+        {
+          "feature": "MACD_histogram",
+          "importance": 0.2986
+        }
+      ]
+    },
+    {
+      "fold": 8,
+      "train_period": "2024-08-01 to 2025-07-31",
+      "test_period": "2025-08-01 to 2025-08-31",
+      "metrics": {
+        "ic": 0.3372443231369039,
+        "rank_ic": 0.3974432110434022,
+        "accuracy": 0.673469387755102,
+        "sharpe": 11.551172905125387,
+        "max_drawdown": 0.0,
+        "sortino": 4.812595193136266,
+        "win_rate": 0.6810584958217271,
+        "avg_return": 0.07018005301593389
+      },
+      "sample_counts": {
+        "total": 1176,
+        "train": 13659,
+        "test": 1176
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 5.2046
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 1.6522
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.5618
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.5486
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 1.4999
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.369
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.3259
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.322
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.2982
+        },
+        {
+          "feature": "PB",
+          "importance": 1.1908
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 1.1406
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.1122
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.0928
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 1.0462
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 1.0222
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.9626
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.9463
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.9313
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.8972
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.8671
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.8572
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.8347
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.8088
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.8064
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.7969
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.796
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.7872
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.7856
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.7818
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.7711
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.7483
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.7389
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.7292
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.7138
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 0.7052
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.7028
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.6965
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.6937
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.686
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.6852
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.6824
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.6738
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.6443
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.6374
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.6236
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.616
+        },
+        {
+          "feature": "PE",
+          "importance": 0.6106
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.5988
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.5797
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.5723
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.5578
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.5532
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.5395
+        },
+        {
+          "feature": "Topic_9",
+          "importance": 0.5222
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.5195
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.5142
+        },
+        {
+          "feature": "MACD_histogram",
+          "importance": 0.5123
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.5057
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.5027
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.4898
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.4851
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.4747
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.4703
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.4698
+        },
+        {
+          "feature": "Topic_1",
+          "importance": 0.4515
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.4479
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.4442
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.4422
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.4358
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.4265
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.4255
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.4179
+        },
+        {
+          "feature": "BB_position",
+          "importance": 0.4081
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.4014
+        },
+        {
+          "feature": "10d_Trend_HSI_Regime_Duration",
+          "importance": 0.3998
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.3937
+        },
+        {
+          "feature": "Kurtosis_10d",
+          "importance": 0.3775
+        },
+        {
+          "feature": "sentiment_ma7",
+          "importance": 0.3766
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.3727
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.3648
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.3641
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.3563
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.3511
+        },
+        {
+          "feature": "MACD_Hist",
+          "importance": 0.3499
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.3473
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.3464
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.3462
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.3425
+        },
+        {
+          "feature": "RS_Ratio_60d",
+          "importance": 0.3404
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.3391
+        },
+        {
+          "feature": "20d_Trend_MACD_High_5d_History",
+          "importance": 0.3276
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.3178
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Prob_1",
+          "importance": 0.3147
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.3135
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.3134
+        },
+        {
+          "feature": "20d_Trend_Ranging_Fatigue_Index",
+          "importance": 0.3112
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.305
+        },
+        {
+          "feature": "RS_Ratio_20d",
+          "importance": 0.3047
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_10d",
+          "importance": 0.3016
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.301
+        }
+      ]
+    },
+    {
+      "fold": 9,
+      "train_period": "2024-09-01 to 2025-08-31",
+      "test_period": "2025-09-01 to 2025-09-30",
+      "metrics": {
+        "ic": 0.2526656307629087,
+        "rank_ic": 0.20492146237744766,
+        "accuracy": 0.5616883116883117,
+        "sharpe": 2.0545026579445542,
+        "max_drawdown": -0.009903453235996135,
+        "sortino": 3.2064589165409525,
+        "win_rate": 0.5129533678756477,
+        "avg_return": 0.0465083200469029
+      },
+      "sample_counts": {
+        "total": 1232,
+        "train": 13630,
+        "test": 1232
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 6.0392
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.4364
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.4006
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.3602
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.2173
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 1.1352
+        },
+        {
+          "feature": "PE",
+          "importance": 1.1295
+        },
+        {
+          "feature": "PB",
+          "importance": 1.1182
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.118
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 1.0719
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 1.0545
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 1.0462
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 1.0279
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.0172
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 1.0163
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 0.9987
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 0.9971
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.9831
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.9625
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.9388
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.9342
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.9108
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.907
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.8782
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.8692
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 0.8649
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.8459
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.8057
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.7943
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.7801
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.7635
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.7568
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.7522
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.6985
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.6969
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.6957
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.6846
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 0.6834
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.6739
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.6703
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.6608
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.6572
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.6544
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.6492
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.64
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.6281
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.6194
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.6157
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.605
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.591
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Transition_Prob",
+          "importance": 0.5904
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.5832
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.5826
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.5771
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.5701
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.5669
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.5613
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.5559
+        },
+        {
+          "feature": "60d_Trend_Volatility_60d",
+          "importance": 0.5441
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.5333
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.5286
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.5266
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.5248
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.5171
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5105
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.5089
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.497
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4784
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.4699
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.4617
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.458
+        },
+        {
+          "feature": "RS_Ratio_20d",
+          "importance": 0.4567
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.4533
+        },
+        {
+          "feature": "Topic_5",
+          "importance": 0.443
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.4402
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.4329
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.4254
+        },
+        {
+          "feature": "Topic_9",
+          "importance": 0.4204
+        },
+        {
+          "feature": "Stoch_K",
+          "importance": 0.398
+        },
+        {
+          "feature": "Topic_1",
+          "importance": 0.389
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.3883
+        },
+        {
+          "feature": "Kurtosis_10d",
+          "importance": 0.386
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.3854
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.371
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.3487
+        },
+        {
+          "feature": "Trend_Vol_Match",
+          "importance": 0.3375
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_20d",
+          "importance": 0.325
+        },
+        {
+          "feature": "net_constraint_risk_GARCH_Vol_Ratio",
+          "importance": 0.3245
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.3239
+        },
+        {
+          "feature": "MACD_Hist",
+          "importance": 0.3146
+        },
+        {
+          "feature": "Volatility_10d",
+          "importance": 0.3121
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.3079
+        },
+        {
+          "feature": "Topic_5_x_sentiment_volatility",
+          "importance": 0.3075
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Duration",
+          "importance": 0.3024
+        },
+        {
+          "feature": "ATR_Stop_Loss_Distance",
+          "importance": 0.2951
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.2911
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.2896
+        },
+        {
+          "feature": "net_comm_rank_per_GARCH_Conditional_Vol",
+          "importance": 0.2878
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.2828
+        },
+        {
+          "feature": "10d_Trend_MACD_Low_5d_History",
+          "importance": 0.2802
+        }
+      ]
+    },
+    {
+      "fold": 10,
+      "train_period": "2024-10-01 to 2025-09-30",
+      "test_period": "2025-10-01 to 2025-10-31",
+      "metrics": {
+        "ic": 0.2864602032924199,
+        "rank_ic": 0.2506479777487912,
+        "accuracy": 0.5669642857142857,
+        "sharpe": 0.43044149967222095,
+        "max_drawdown": -0.02189165228547708,
+        "sortino": 0.5870471884083985,
+        "win_rate": 0.5285412262156448,
+        "avg_return": 0.00904225350896451
+      },
+      "sample_counts": {
+        "total": 1120,
+        "train": 13817,
+        "test": 1120
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 4.6484
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 1.6473
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 1.6425
+        },
+        {
+          "feature": "PE",
+          "importance": 1.3841
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 1.3003
+        },
+        {
+          "feature": "PB",
+          "importance": 1.3001
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.2916
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.2779
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.2717
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.2611
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.183
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 1.1777
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.1485
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.1331
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.0535
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 1.0148
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.0128
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.9946
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.9454
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.9053
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.8831
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.8489
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.8411
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.8319
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.7955
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.7857
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.7695
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 0.7651
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.7633
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.7632
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.7631
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.7522
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.7412
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.7384
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.735
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.7285
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.7216
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 0.7184
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.6994
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.679
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.6626
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.6506
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.6203
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.6083
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.6076
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.5911
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.5868
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.5858
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.584
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.5776
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.5726
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.5691
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.555
+        },
+        {
+          "feature": "Topic_9",
+          "importance": 0.5547
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.5447
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.5343
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.53
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.5162
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.5129
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.5111
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.5037
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.4938
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.4714
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.4702
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.467
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.4668
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.4617
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.4605
+        },
+        {
+          "feature": "Stock_Liquidity_Score",
+          "importance": 0.4481
+        },
+        {
+          "feature": "High_Position_60d",
+          "importance": 0.4443
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.4236
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 0.4191
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.4176
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.4172
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.4153
+        },
+        {
+          "feature": "Earnings_Surprise_Score",
+          "importance": 0.4133
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.4117
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.4071
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.4056
+        },
+        {
+          "feature": "Topic_3",
+          "importance": 0.4012
+        },
+        {
+          "feature": "Price_Channel_Position_20d",
+          "importance": 0.3968
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.3963
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.3915
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.3893
+        },
+        {
+          "feature": "Return_120d",
+          "importance": 0.3834
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Duration",
+          "importance": 0.3795
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.3769
+        },
+        {
+          "feature": "MACD_Low_5d_History",
+          "importance": 0.3767
+        },
+        {
+          "feature": "net_constraint_HSI_Market_Regime",
+          "importance": 0.3741
+        },
+        {
+          "feature": "net_constraint_per_NASDAQ_Return_20d",
+          "importance": 0.3681
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.3678
+        },
+        {
+          "feature": "10d_Trend_HSI_Regime_Duration",
+          "importance": 0.367
+        },
+        {
+          "feature": "MACD_Hist",
+          "importance": 0.3635
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.3626
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.348
+        },
+        {
+          "feature": "RSI_High_5d_History",
+          "importance": 0.3463
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.3408
+        },
+        {
+          "feature": "MA_Ratio_120d",
+          "importance": 0.3379
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.3306
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_20d",
+          "importance": 0.3199
+        }
+      ]
+    },
+    {
+      "fold": 11,
+      "train_period": "2024-11-01 to 2025-10-31",
+      "test_period": "2025-11-01 to 2025-11-30",
+      "metrics": {
+        "ic": 0.37691274966242944,
+        "rank_ic": 0.3515436750352048,
+        "accuracy": 0.6696428571428571,
+        "sharpe": -0.5298157625108705,
+        "max_drawdown": -0.013951450430703395,
+        "sortino": -0.30496178543477526,
+        "win_rate": 0.4133738601823708,
+        "avg_return": -0.0027555224122785557
+      },
+      "sample_counts": {
+        "total": 1120,
+        "train": 13776,
+        "test": 1120
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 3.4903
+        },
+        {
+          "feature": "PE",
+          "importance": 2.4815
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 1.9815
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 1.858
+        },
+        {
+          "feature": "PB",
+          "importance": 1.5803
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 1.5442
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.542
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.5165
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 1.4675
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.4548
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 1.4457
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.3927
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.315
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 1.1277
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 1.1123
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 1.0719
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.0606
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 1.0269
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.9583
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.9404
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.923
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.9163
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.9113
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 0.8759
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Duration",
+          "importance": 0.8699
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.8691
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.8624
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 0.8352
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.8275
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.8106
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 0.8021
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.8004
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.8003
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 0.7876
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.7867
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.766
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.7554
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.723
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.7003
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.6851
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.6818
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.6508
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.6366
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.6299
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.6276
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.6126
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.6103
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.5842
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.5494
+        },
+        {
+          "feature": "Stock_Defensive_Score",
+          "importance": 0.5458
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.5412
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.5381
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.5288
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.5282
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 0.5253
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.506
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.4984
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.4952
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.4754
+        },
+        {
+          "feature": "60d_Trend_HSI_Return_60d",
+          "importance": 0.474
+        },
+        {
+          "feature": "MACD_histogram",
+          "importance": 0.4653
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.4633
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.4591
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.4572
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.4477
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.4449
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.4389
+        },
+        {
+          "feature": "Price_Position_Risk",
+          "importance": 0.4388
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.4385
+        },
+        {
+          "feature": "net_comm_rank_NASDAQ_Return_20d",
+          "importance": 0.4364
+        },
+        {
+          "feature": "High_Position_60d",
+          "importance": 0.4306
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.4192
+        },
+        {
+          "feature": "sector_avg_change_20d",
+          "importance": 0.4028
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.3899
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.3873
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.3862
+        },
+        {
+          "feature": "ATR_Change_10d",
+          "importance": 0.3783
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.366
+        },
+        {
+          "feature": "MA_Alignment_Long",
+          "importance": 0.3656
+        },
+        {
+          "feature": "Stock_Risk_Score",
+          "importance": 0.3637
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.3575
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.3494
+        },
+        {
+          "feature": "Skewness_10d",
+          "importance": 0.3413
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.3361
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.332
+        },
+        {
+          "feature": "Trend_Vol_Match",
+          "importance": 0.3222
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.3205
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.3138
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.3052
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.3022
+        },
+        {
+          "feature": "60d_Trend_GARCH_Conditional_Vol",
+          "importance": 0.2967
+        },
+        {
+          "feature": "net_constraint_per_SP500_Return_20d",
+          "importance": 0.2949
+        },
+        {
+          "feature": "net_comm_rank_per_VIX_Level",
+          "importance": 0.2944
+        },
+        {
+          "feature": "Dividend_Frequency_12m",
+          "importance": 0.2886
+        },
+        {
+          "feature": "Distance_Resistance_120d",
+          "importance": 0.2871
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.2818
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.2807
+        },
+        {
+          "feature": "MA_Ratio_120d",
+          "importance": 0.2751
+        },
+        {
+          "feature": "60d_Trend_Kurtosis_20d",
+          "importance": 0.2746
+        },
+        {
+          "feature": "20d_Trend_SP500_Return_20d",
+          "importance": 0.274
+        }
+      ]
+    },
+    {
+      "fold": 12,
+      "train_period": "2024-12-01 to 2025-11-30",
+      "test_period": "2025-12-01 to 2025-12-31",
+      "metrics": {
+        "ic": 0.15527310973618536,
+        "rank_ic": 0.244070781419124,
+        "accuracy": 0.4362244897959184,
+        "sharpe": 5.817455511414791,
+        "max_drawdown": 0.0,
+        "sortino": 9.608905256686125,
+        "win_rate": 0.7058823529411765,
+        "avg_return": 0.06561664513314905
+      },
+      "sample_counts": {
+        "total": 1176,
+        "train": 13720,
+        "test": 1176
+      },
+      "top_features": [
+        {
+          "feature": "net_comm_rank_HSI_Regime_Duration",
+          "importance": 2.9345
+        },
+        {
+          "feature": "sector_avg_change_1d",
+          "importance": 2.0186
+        },
+        {
+          "feature": "PB",
+          "importance": 1.7512
+        },
+        {
+          "feature": "net_comm_rank_US_10Y_Yield",
+          "importance": 1.6138
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Duration",
+          "importance": 1.564
+        },
+        {
+          "feature": "MA250_Slope",
+          "importance": 1.5014
+        },
+        {
+          "feature": "Volatility_70pct",
+          "importance": 1.4715
+        },
+        {
+          "feature": "BB_Width_MA60",
+          "importance": 1.4477
+        },
+        {
+          "feature": "Volatility_30pct",
+          "importance": 1.3926
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_60d",
+          "importance": 1.3753
+        },
+        {
+          "feature": "net_comm_rank_SP500_Return_20d",
+          "importance": 1.3562
+        },
+        {
+          "feature": "PE",
+          "importance": 1.2312
+        },
+        {
+          "feature": "net_comm_rank_per_HSI_Regime_Prob_2",
+          "importance": 1.2262
+        },
+        {
+          "feature": "net_constraint_risk_VIX_Level",
+          "importance": 1.2142
+        },
+        {
+          "feature": "Volume_Volatility",
+          "importance": 1.19
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Momentum",
+          "importance": 1.1821
+        },
+        {
+          "feature": "Volatility_Mean_60d",
+          "importance": 1.1441
+        },
+        {
+          "feature": "Ex_Dividend_In_30d",
+          "importance": 1.0247
+        },
+        {
+          "feature": "Distance_Support_120d",
+          "importance": 1.0221
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Momentum",
+          "importance": 0.9705
+        },
+        {
+          "feature": "RSI_Deviation_MA20",
+          "importance": 0.9477
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Duration",
+          "importance": 0.946
+        },
+        {
+          "feature": "Stock_Type",
+          "importance": 0.9421
+        },
+        {
+          "feature": "Return_250d",
+          "importance": 0.9038
+        },
+        {
+          "feature": "sector_total_volume",
+          "importance": 0.8637
+        },
+        {
+          "feature": "Volatility_60d",
+          "importance": 0.8408
+        },
+        {
+          "feature": "Earnings_Surprise_Avg_3",
+          "importance": 0.8333
+        },
+        {
+          "feature": "sector_flow_score",
+          "importance": 0.8281
+        },
+        {
+          "feature": "MA_Ratio_250d",
+          "importance": 0.8137
+        },
+        {
+          "feature": "MA250_Deviation",
+          "importance": 0.8106
+        },
+        {
+          "feature": "Stock_Price_Stability_Score",
+          "importance": 0.7897
+        },
+        {
+          "feature": "net_constraint_US_10Y_Yield",
+          "importance": 0.7853
+        },
+        {
+          "feature": "BB_Width_Normalized",
+          "importance": 0.7569
+        },
+        {
+          "feature": "Stock_Historical_Volatility",
+          "importance": 0.7544
+        },
+        {
+          "feature": "net_constraint_risk_HSI_Regime_Prob_2",
+          "importance": 0.7454
+        },
+        {
+          "feature": "CMF",
+          "importance": 0.7186
+        },
+        {
+          "feature": "Volatility_30d",
+          "importance": 0.7146
+        },
+        {
+          "feature": "Ranging_Fatigue_Index",
+          "importance": 0.7138
+        },
+        {
+          "feature": "MA120_Slope",
+          "importance": 0.7125
+        },
+        {
+          "feature": "net_constraint_HSI_Regime_Prob_0",
+          "importance": 0.7054
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_20d",
+          "importance": 0.6961
+        },
+        {
+          "feature": "20d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.6915
+        },
+        {
+          "feature": "Channel_Width_Ratio_20d",
+          "importance": 0.675
+        },
+        {
+          "feature": "Topic_3",
+          "importance": 0.6745
+        },
+        {
+          "feature": "net_comm_rank_GARCH_Persistence",
+          "importance": 0.6586
+        },
+        {
+          "feature": "MACD_High_5d_History",
+          "importance": 0.6455
+        },
+        {
+          "feature": "Skewness_20d",
+          "importance": 0.6416
+        },
+        {
+          "feature": "Stock_Actual_Liquidity_Score",
+          "importance": 0.6346
+        },
+        {
+          "feature": "sector_rising_ratio_1d",
+          "importance": 0.6218
+        },
+        {
+          "feature": "net_constraint_GARCH_Persistence",
+          "importance": 0.6186
+        },
+        {
+          "feature": "MACD_histogram",
+          "importance": 0.6166
+        },
+        {
+          "feature": "Stock_Cyclical_Score",
+          "importance": 0.6155
+        },
+        {
+          "feature": "sector_best_stock_change",
+          "importance": 0.599
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_1",
+          "importance": 0.5757
+        },
+        {
+          "feature": "Volatility_120d",
+          "importance": 0.5553
+        },
+        {
+          "feature": "net_comm_rank_HSI_Regime_Prob_0",
+          "importance": 0.5549
+        },
+        {
+          "feature": "sector_worst_stock_change",
+          "importance": 0.5528
+        },
+        {
+          "feature": "Turnover_Rate",
+          "importance": 0.5211
+        },
+        {
+          "feature": "Kurtosis_20d",
+          "importance": 0.5136
+        },
+        {
+          "feature": "RSI_120",
+          "importance": 0.4982
+        },
+        {
+          "feature": "ADX",
+          "importance": 0.4911
+        },
+        {
+          "feature": "Momentum_Accel_120d",
+          "importance": 0.4761
+        },
+        {
+          "feature": "Price_Ratio_MA250",
+          "importance": 0.4657
+        },
+        {
+          "feature": "ATR_Ratio_120d",
+          "importance": 0.4545
+        },
+        {
+          "feature": "sector_rank_5d",
+          "importance": 0.4516
+        },
+        {
+          "feature": "Topic_5",
+          "importance": 0.4495
+        },
+        {
+          "feature": "Stock_Growth_Score",
+          "importance": 0.4421
+        },
+        {
+          "feature": "MA_Alignment_Long",
+          "importance": 0.44
+        },
+        {
+          "feature": "Support_Ratio_120d",
+          "importance": 0.4291
+        },
+        {
+          "feature": "net_constraint_per_HSI_Return_60d",
+          "importance": 0.4187
+        },
+        {
+          "feature": "60d_Trend_Trend_Slope_60d",
+          "importance": 0.4051
+        },
+        {
+          "feature": "net_comm_rank_HSI_Return_20d",
+          "importance": 0.3901
+        },
+        {
+          "feature": "Earnings_Surprise_Trend",
+          "importance": 0.3894
+        },
+        {
+          "feature": "Intraday_Range_MA20",
+          "importance": 0.3798
+        },
+        {
+          "feature": "Market_Cap",
+          "importance": 0.3771
+        },
+        {
+          "feature": "net_constraint_per_HSI_Regime_Prob_1",
+          "importance": 0.3703
+        },
+        {
+          "feature": "Topic_5_x_sentiment_volatility",
+          "importance": 0.364
+        },
+        {
+          "feature": "MA120_Deviation",
+          "importance": 0.3607
+        },
+        {
+          "feature": "CMF_Signal",
+          "importance": 0.3601
+        },
+        {
+          "feature": "60d_Trend_HSI_Regime_Prob_2",
+          "importance": 0.3547
+        },
+        {
+          "feature": "Resistance_Ratio_120d",
+          "importance": 0.348
+        },
+        {
+          "feature": "Return_60d",
+          "importance": 0.3459
+        },
+        {
+          "feature": "BIAS24",
+          "importance": 0.343
+        },
+        {
+          "feature": "RS_Diff_60d",
+          "importance": 0.339
+        },
+        {
+          "feature": "ATR_Risk_Score",
+          "importance": 0.3362
+        },
+        {
+          "feature": "Volatility_10d",
+          "importance": 0.3337
+        },
+        {
+          "feature": "Trend_Slope_60d",
+          "importance": 0.3306
+        },
+        {
+          "feature": "Earnings_Surprise_Score",
+          "importance": 0.3179
+        },
+        {
+          "feature": "Volatility_20d",
+          "importance": 0.3177
+        },
+        {
+          "feature": "MF_Multiplier",
+          "importance": 0.3146
+        },
+        {
+          "feature": "10d_Trend_HSI_Regime_Duration",
+          "importance": 0.3135
+        },
+        {
+          "feature": "sector_rising_ratio_5d",
+          "importance": 0.3105
+        },
+        {
+          "feature": "Stoch_K",
+          "importance": 0.296
+        },
+        {
+          "feature": "net_constraint_risk_GARCH_Vol_Ratio",
+          "importance": 0.2954
+        },
+        {
+          "feature": "sector_rising_ratio_20d",
+          "importance": 0.2939
+        },
+        {
+          "feature": "Market_Regime_Change_Freq",
+          "importance": 0.2921
+        },
+        {
+          "feature": "sector_avg_change_5d",
+          "importance": 0.2888
+        },
+        {
+          "feature": "ATR_Ratio_60d",
+          "importance": 0.2841
+        },
+        {
+          "feature": "Sentiment_Gap_MA14",
+          "importance": 0.2796
+        },
+        {
+          "feature": "Topic_4",
+          "importance": 0.2791
+        }
+      ]
+    }
+  ]
+}

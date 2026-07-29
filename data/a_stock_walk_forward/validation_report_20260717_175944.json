@@ -1,0 +1,129 @@
+{
+  "validation_config": {
+    "horizon": 20,
+    "train_window_months": 3,
+    "test_window_months": 1,
+    "num_folds": 3,
+    "start_date": "2024-01-01",
+    "end_date": "2026-07-01"
+  },
+  "fold_results": [
+    {
+      "fold": 2,
+      "train_start": "2025-02-04",
+      "train_end": "2025-04-28",
+      "test_start": "2025-04-29",
+      "test_end": "2025-05-26",
+      "num_samples": 68,
+      "num_trades": 38,
+      "accuracy": 0.5735294117647058,
+      "avg_return": 0.16666414055912981,
+      "win_rate": 0.7368421052631579,
+      "top_features": [
+        [
+          "Volatility_20d",
+          12.319366919399247
+        ],
+        [
+          "MACD",
+          10.870986851564899
+        ],
+        [
+          "Volatility_10d",
+          9.559173309194302
+        ],
+        [
+          "MACD_Signal",
+          8.634498934098774
+        ],
+        [
+          "Volatility_5d",
+          8.109678610979584
+        ],
+        [
+          "RSI_14",
+          7.206710365945995
+        ],
+        [
+          "Return_20d",
+          6.655775489432187
+        ],
+        [
+          "Return_10d",
+          6.4140966644790485
+        ],
+        [
+          "BB_Ratio",
+          5.814955158403355
+        ],
+        [
+          "MA10_Ratio",
+          4.7924857577824715
+        ]
+      ]
+    },
+    {
+      "fold": 3,
+      "train_start": "2026-03-11",
+      "train_end": "2026-06-02",
+      "test_start": "2026-06-03",
+      "test_end": "2026-06-30",
+      "num_samples": 76,
+      "num_trades": 50,
+      "accuracy": 0.6842105263157895,
+      "avg_return": 0.21756385452021273,
+      "win_rate": 0.58,
+      "top_features": [
+        [
+          "MACD_Signal",
+          27.422831402315172
+        ],
+        [
+          "MACD",
+          11.950334477618442
+        ],
+        [
+          "Volatility_10d",
+          11.921225533432365
+        ],
+        [
+          "Volatility_20d",
+          11.810631295766823
+        ],
+        [
+          "Return_20d",
+          9.262153015605485
+        ],
+        [
+          "Return_10d",
+          5.236049646786589
+        ],
+        [
+          "Volatility_5d",
+          3.5176444820323134
+        ],
+        [
+          "RSI_14",
+          3.2508604016837266
+        ],
+        [
+          "MA5_Ratio",
+          2.8478132847346114
+        ],
+        [
+          "Return_5d",
+          2.797690066529375
+        ]
+      ]
+    }
+  ],
+  "overall_metrics": {
+    "avg_accuracy": 0.6288699690402477,
+    "std_accuracy": 0.055340557275541824,
+    "avg_return": 0.1921139975396713,
+    "std_return": 0.02544985698054146,
+    "avg_win_rate": 0.6584210526315789,
+    "num_folds": 2,
+    "total_samples": 144
+  }
+}

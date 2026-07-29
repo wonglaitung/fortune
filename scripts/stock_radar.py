@@ -402,6 +402,102 @@ def _generate_radar_png_bytes(name, code, dimensions, size=180):
     return buf.getvalue()
 
 
+def compute_hk_stock_dimensions(stock_data=None, three_horizon_entry=None, risk_reward_entry=None):
+    """
+    Compute 6 dimension scores (0-100) for HK stocks.
+
+    Args:
+        stock_data: dict from LLM extraction
+            - catboost_prob_20d/5d/1d, price_change, rsi, ma5, ma20
+            - current_price, risk_score, return_score (optional)
+        three_horizon_entry: dict from three_horizon_results[code]
+            - predictions: {horizon: {probability, direction}}
+            - win_rate, profit_loss_ratio (optional)
+        risk_reward_entry: dict from risk_reward_data.get(code, {})
+            - risk_score, return_score
+
+    Returns:
+        dict: {dim_name: score_0_100}
+    """
+    if stock_data is None:
+        stock_data = {}
+    if three_horizon_entry is None:
+        three_horizon_entry = {}
+    if risk_reward_entry is None:
+        risk_reward_entry = {}
+
+    scores = {}
+
+    # ═══ 1. Trend: CatBoost 20d probability ═══
+    prob_20d = stock_data.get('catboost_prob_20d', None)
+    if prob_20d is None:
+        preds = three_horizon_entry.get('predictions', {})
+        if isinstance(preds.get(20), dict):
+            prob_20d = preds[20].get('probability', 0.50)
+        else:
+            prob_20d = 0.50
+    scores['trend'] = round(max(0, min(100, float(prob_20d))), 1)
+
+    # ═══ 2. Return: return_score ═══
+    rs = stock_data.get('return_score') or risk_reward_entry.get('return_score', 50)
+    scores['return'] = max(0, min(100, float(rs) if rs else 50))
+
+    # ═══ 3. Risk: inverted risk_score (higher = safer) ═══
+    risk_val = stock_data.get('risk_score') or risk_reward_entry.get('risk_score', 50)
+    scores['risk'] = max(0, min(100, 100 - (float(risk_val) if risk_val else 50)))
+
+    # ═══ 4. Tech: RSI + MA arrangement ═══
+    rsi = stock_data.get('rsi', 50) or 50
+    price = stock_data.get('current_price', 0) or 0
+    ma5 = stock_data.get('ma5', 0) or 0
+    ma20 = stock_data.get('ma20', 0) or 0
+
+    if ma5 > 0 and ma20 > 0 and price > ma5 > ma20:
+        ma_score = 85
+    elif ma5 > 0 and ma20 > 0 and price > ma20 >= ma5:
+        ma_score = 65
+    elif ma5 > 0 and ma20 > 0 and price > ma5 and ma5 < ma20:
+        ma_score = 55
+    elif ma5 > 0 and ma20 > 0 and price < ma5 < ma20:
+        ma_score = 35
+    elif ma5 > 0 and ma20 > 0 and price < ma5 and ma5 > ma20:
+        ma_score = 25
+    else:
+        ma_score = 45
+
+    if rsi < 20:
+        rsi_score = 85
+    elif rsi < 30:
+        rsi_score = 75
+    elif rsi < 40:
+        rsi_score = 65
+    elif rsi < 50:
+        rsi_score = 55
+    elif rsi < 60:
+        rsi_score = 50
+    elif rsi < 70:
+        rsi_score = 40
+    elif rsi < 80:
+        rsi_score = 30
+    else:
+        rsi_score = 20
+
+    scores['tech'] = round(max(0, min(100, ma_score * 0.50 + rsi_score * 0.50)), 1)
+
+    # ═══ 5. Momentum: price_change ═══
+    price_chg = stock_data.get('price_change', 0) or 0
+    scores['momentum'] = round(max(0, min(100, 50 + float(price_chg))), 1)
+
+    # ═══ 6. Signal: win_rate + pl_ratio ═══
+    wr = three_horizon_entry.get('win_rate', stock_data.get('win_rate', 50))
+    pl = three_horizon_entry.get('profit_loss_ratio', stock_data.get('pl_ratio', 1.0))
+    wr_score = max(0, min(100, float(wr) if wr else 50))
+    pl_score = max(0, min(100, 30 + (float(pl) - 0.5) * 20))
+    scores['signal'] = round(wr_score * 0.60 + pl_score * 0.40, 1)
+
+    return scores
+
+
 # ── CLI ──
 def main():
     parser = argparse.ArgumentParser(description='A-Share Stock Strength Radar Chart')

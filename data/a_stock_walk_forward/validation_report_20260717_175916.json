@@ -1,0 +1,12 @@
+{
+  "validation_config": {
+    "horizon": 20,
+    "train_window_months": 6,
+    "test_window_months": 1,
+    "num_folds": 4,
+    "start_date": "2024-01-01",
+    "end_date": "2026-07-01"
+  },
+  "fold_results": [],
+  "overall_metrics": {}
+}
