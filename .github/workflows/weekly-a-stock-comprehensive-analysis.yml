@@ -51,7 +51,7 @@ jobs:
             data/a_stock_news_records.csv
             data/a_stock_models/*.pkl
             data/a_stock_models/*.csv
-          retention-days: 30
+          retention-days: 7
 
       - name: Commit prediction history
         run: |
