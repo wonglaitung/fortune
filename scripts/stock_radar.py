@@ -164,8 +164,8 @@ def compute_a_stock_dimensions(analysis=None, predictions=None, risk_reward=None
     scores['momentum'] = round(m20 * 0.40 + m5d * 0.35 + m1 * 0.25, 1)
 
     # ═══ 6. Signal: win_rate + pl_ratio ═══
-    wr = win_rate if win_rate is not None else 50
-    pl = pl_ratio if pl_ratio is not None else 1.0
+    wr = float(win_rate) if win_rate is not None else 50
+    pl = float(pl_ratio) if pl_ratio is not None else 1.0
 
     wr_score = max(0, min(100, wr))
     pl_score = max(0, min(100, 30 + (pl - 0.5) * 20))
