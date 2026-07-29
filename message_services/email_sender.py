@@ -32,7 +32,8 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional, List, Union
+from email.mime.image import MIMEImage
+from typing import Optional, List, Union, Dict
 
 
 class EmailSender:
@@ -205,6 +206,78 @@ class EmailSender:
                 time.sleep(retry_delay)
 
         print(f"❌ 重试 {max_retries} 次后仍失败")
+        return False
+
+
+def send_email_with_images(
+    subject: str,
+    content: str,
+    html_content: str,
+    inline_images: Optional[Dict[str, bytes]] = None,
+    recipients: Optional[List[str]] = None
+) -> bool:
+    """
+    发送HTML邮件并内嵌图片（CID引用）
+
+    Args:
+        subject: 邮件主题
+        content: 纯文本内容
+        html_content: HTML内容（图片用 <img src="cid:XXX"> 引用）
+        inline_images: {cid_name: png_bytes}，cid_name不含"cid:"
+        recipients: 收件人列表（可选）
+
+    Returns:
+        bool: 是否发送成功
+    """
+    sender = EmailSender()
+    if not sender.sender or not sender.password:
+        print("❌ 邮件配置不完整，无法发送")
+        return False
+
+    to_list = recipients or sender.recipients
+    if not to_list:
+        print("❌ 未指定收件人")
+        return False
+
+    # 使用 multipart/related 支持内嵌图片
+    msg = MIMEMultipart("related")
+    msg["Subject"] = subject
+    msg["From"] = sender.sender
+    msg["To"] = ", ".join(to_list)
+
+    # 构建 multipart/alternative 作为子容器（纯文本+HTML）
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(content, "plain", "utf-8"))
+    alt.attach(MIMEText(html_content, "html", "utf-8"))
+    msg.attach(alt)
+
+    # 添加内嵌图片
+    if inline_images:
+        for cid, img_data in inline_images.items():
+            img = MIMEImage(img_data, _subtype="png")
+            img.add_header("Content-ID", f"<{cid}>")
+            img.add_header("Content-Disposition", "inline", filename=f"{cid}.png")
+            msg.attach(img)
+
+    try:
+        if sender.use_ssl:
+            server = smtplib.SMTP_SSL(sender.smtp_server, sender.smtp_port, timeout=30)
+        else:
+            server = smtplib.SMTP(sender.smtp_server, sender.smtp_port, timeout=30)
+            server.starttls()
+
+        server.login(sender.sender, sender.password)
+        server.sendmail(sender.sender, to_list, msg.as_string())
+        server.quit()
+
+        print(f"✅ 邮件发送成功（含 {len(inline_images) if inline_images else 0} 张内嵌图片）: {subject}")
+        return True
+
+    except smtplib.SMTPException as e:
+        print(f"❌ SMTP 错误: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ 发送失败: {e}")
         return False
 
 

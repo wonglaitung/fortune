@@ -37,6 +37,7 @@ from a_stock_config import (
 # 导入数据服务
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
 from data_services.main_fund_flow import MainFundFlowService
+from scripts.stock_radar import generate_html_radar_section
 
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
@@ -2669,6 +2670,11 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     </div>
 """
 
+    # ========== 5.5 股票六边形强度图 (Radar Chart) ==========
+    radar_html, radar_attachments = generate_html_radar_section(three_horizon_results, stock_analyses)
+    if radar_html:
+        html += radar_html
+
     # ========== 6. 大模型分析建议 ==========
     # 预计算生成时间
     generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -2763,7 +2769,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 </body>
 </html>"""
 
-    return html
+    return html, radar_attachments
 
 
 def send_email(subject, content, html_content=None):
@@ -3114,7 +3120,7 @@ def main():
             print(f"⚠️ 读取A股新闻数据失败: {e}")
 
         print("\n📊 发送增强版邮件...")
-        html_content = generate_html_email(
+        html_content, radar_attachments = generate_html_email(
             llm_content, ml_predictions, stock_analyses, market_data,
             three_horizon_results=three_horizon_results,
             market_sentiment=market_sentiment,
@@ -3129,10 +3135,18 @@ def main():
         date_str = datetime.now().strftime('%Y-%m-%d')
         email_subject = f"【综合分析】A股买卖建议 - {date_str}"
 
-        if send_email(email_subject, report, html_content):
-            print("  ✅ 邮件发送成功")
+        # 如果有雷达图附件，使用内嵌图片发送
+        if radar_attachments:
+            from message_services.email_sender import send_email_with_images
+            if send_email_with_images(email_subject, report, html_content, inline_images=radar_attachments):
+                print("  ✅ 邮件发送成功（含六边形强度图）")
+            else:
+                print("  ⚠️ 邮件发送失败")
         else:
-            print("  ⚠️ 邮件发送失败")
+            if send_email(email_subject, report, html_content):
+                print("  ✅ 邮件发送成功")
+            else:
+                print("  ⚠️ 邮件发送失败")
 
     # 打印报告摘要
     print("\n" + "=" * 60)
