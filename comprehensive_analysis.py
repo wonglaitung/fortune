@@ -4382,7 +4382,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
     if radar_cid:
         radar_cid_html = f'''
             <div style="text-align: center; margin: 10px 0;">
-                <img src="cid:{radar_cid}" alt="Stock Strength Radar" style="width: 160px; height: 160px;">
+                <img src="cid:{radar_cid}" alt="个股强度雷达图" style="width: 160px; height: 160px;">
             </div>
         '''
     else:

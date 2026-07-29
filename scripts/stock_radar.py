@@ -331,7 +331,7 @@ def generate_html_radar_section(three_horizon_results, stock_analyses, max_stock
 
     html = """
     <h2 style="color: #007bff; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
-    Stock Strength Radar
+    个股强度雷达图
     </h2>
     <p style="color: #666; font-size: 11px; margin: 5px 0 10px 0;">
     6-dimension: Trend / Return / Risk / Tech / Momentum / Signal
