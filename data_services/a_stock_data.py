@@ -161,7 +161,7 @@ def get_a_stock_data_akshare(stock_code, period_days=90):
         return None
 
 
-def get_a_stock_data(stock_code, period_days=90, use_cache=True):
+def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
     """
     获取A股股票数据（优先腾讯财经，失败后使用AKShare）
 
@@ -169,6 +169,7 @@ def get_a_stock_data(stock_code, period_days=90, use_cache=True):
         stock_code (str): 股票代码
         period_days (int): 获取数据的天数
         use_cache (bool): 是否使用缓存
+        min_rows (int): 最小数据行数（低于此值尝试备用数据源）
 
     Returns:
         pandas.DataFrame: 股票数据
@@ -188,16 +189,22 @@ def get_a_stock_data(stock_code, period_days=90, use_cache=True):
     # 优先使用腾讯财经
     df = get_a_stock_data_tencent(stock_code, period_days)
 
-    # 腾讯失败，尝试AKShare
-    if df is None:
-        print(f"  ⚠️ 腾讯财经获取失败，尝试 AKShare...")
-        df = get_a_stock_data_akshare(stock_code, period_days)
+    # 腾讯失败或数据不足，尝试AKShare
+    if df is None or len(df) < min_rows:
+        if df is not None:
+            print(f"  ⚠️ 腾讯财经数据不足（{len(df)} < {min_rows}），尝试 AKShare...")
+        else:
+            print(f"  ⚠️ 腾讯财经获取失败，尝试 AKShare...")
+        df_ak = get_a_stock_data_akshare(stock_code, period_days)
+        # 使用数据量更多的来源
+        if df_ak is not None and (df is None or len(df_ak) > len(df)):
+            df = df_ak
 
     # 保存缓存
     if df is not None:
         try:
             df.to_pickle(cache_file)
-            print(f"  ✅ 数据已缓存: {cache_file}")
+            print(f"  ✅ 数据已缓存: {cache_file}（{len(df)}行）")
         except Exception as e:
             print(f"  ⚠️ 缓存保存失败: {e}")
 

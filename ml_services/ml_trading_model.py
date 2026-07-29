@@ -1548,6 +1548,11 @@ class FeatureEngineer:
 
         shift_val = 1 if use_shift else 0
 
+        # 确保 Vol_Ratio 存在（可能因 calculate_technical_features 数据不足提前返回）
+        if 'Vol_Ratio' not in df.columns and 'Volume' in df.columns:
+            vol_ma20 = df['Volume'].rolling(window=20, min_periods=1).mean().shift(shift_val)
+            df['Vol_Ratio'] = df['Volume'] / vol_ma20
+
         # 价格相对位置（使用滞后数据避免数据泄漏）
         df['Price_Pct_20d'] = df['Close'].shift(shift_val).rolling(window=20).apply(lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10))
 
