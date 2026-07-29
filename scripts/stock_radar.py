@@ -51,6 +51,18 @@ COLOR_RED = '#dc2626'
 COLOR_GRID = '#cccccc'
 
 
+def _parse_pl_ratio(val, default=1.0):
+    """Parse profit/loss ratio from various formats (number, '2.38:1', etc.)."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        return float(str(val).split(':')[0])
+    except (ValueError, TypeError):
+        return default
+
+
 def compute_a_stock_dimensions(analysis=None, predictions=None, risk_reward=None,
                                 win_rate=None, pl_ratio=None):
     """
@@ -165,7 +177,7 @@ def compute_a_stock_dimensions(analysis=None, predictions=None, risk_reward=None
 
     # ═══ 6. Signal: win_rate + pl_ratio ═══
     wr = float(win_rate) if win_rate is not None else 50
-    pl = float(pl_ratio) if pl_ratio is not None else 1.0
+    pl = _parse_pl_ratio(pl_ratio)
 
     wr_score = max(0, min(100, wr))
     pl_score = max(0, min(100, 30 + (pl - 0.5) * 20))
@@ -492,7 +504,7 @@ def compute_hk_stock_dimensions(stock_data=None, three_horizon_entry=None, risk_
     wr = three_horizon_entry.get('win_rate', stock_data.get('win_rate', 50))
     pl = three_horizon_entry.get('profit_loss_ratio', stock_data.get('pl_ratio', 1.0))
     wr_score = max(0, min(100, float(wr) if wr else 50))
-    pl_score = max(0, min(100, 30 + (float(pl) - 0.5) * 20))
+    pl_score = max(0, min(100, 30 + (_parse_pl_ratio(pl) - 0.5) * 20))
     scores['signal'] = round(wr_score * 0.60 + pl_score * 0.40, 1)
 
     return scores

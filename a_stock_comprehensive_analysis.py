@@ -903,11 +903,13 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
             # 获取历史盈亏比
             pl_info = historical_pl_data.get(code, {})
             if pl_info:
-                data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio_str', '-')
+                data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio', 1.0)
+                data['profit_loss_ratio_display'] = pl_info.get('profit_loss_ratio_str', '-')
                 data['expected_return'] = pl_info.get('expected_return_str', '-')
                 data['profit_loss_grade'] = pl_info.get('profit_loss_grade', '')
             else:
-                data['profit_loss_ratio'] = '-'
+                data['profit_loss_ratio'] = 1.0
+                data['profit_loss_ratio_display'] = '-'
                 data['expected_return'] = '-'
                 data['profit_loss_grade'] = ''
 
@@ -2616,7 +2618,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             resistance_icon = chip_resistance.get('resistance_icon', 'N/A')
 
             # 盈亏比
-            pl_ratio = data.get('profit_loss_ratio', '-')
+            pl_ratio = data.get('profit_loss_ratio_display', data.get('profit_loss_ratio', '-'))
             pl_grade = data.get('profit_loss_grade', '')
             pl_display = f"{pl_ratio} {pl_grade}" if pl_ratio != '-' else '-'
 
@@ -3015,11 +3017,13 @@ def main():
                     # 获取历史盈亏比
                     pl_info = load_historical_profit_loss_ratio_a_stock().get(code, {})
                     if pl_info:
-                        data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio_str', '-')
+                        data['profit_loss_ratio'] = pl_info.get('profit_loss_ratio', 1.0)
+                        data['profit_loss_ratio_display'] = pl_info.get('profit_loss_ratio_str', '-')
                         data['expected_return'] = pl_info.get('expected_return_str', '-')
                         data['profit_loss_grade'] = pl_info.get('profit_loss_grade', '')
                     else:
-                        data['profit_loss_ratio'] = '-'
+                        data['profit_loss_ratio'] = 1.0
+                        data['profit_loss_ratio_display'] = '-'
                         data['expected_return'] = '-'
                         data['profit_loss_grade'] = ''
         else:
