@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
   # 定时触发
   schedule:
-    # 每周星期天上午9点北京时间 (UTC 01:00) 执行综合分析
-    - cron: '0 1 * * 0'
+    # 每周星期天上午11点北京时间 (UTC 03:00) 执行综合分析
+    - cron: '0 3 * * 0'
 
 jobs:
   comprehensive-analysis:
