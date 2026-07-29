@@ -23,6 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-wqy-microhei
           pip install -r requirements.txt
 
       - name: Run A股综合分析脚本
