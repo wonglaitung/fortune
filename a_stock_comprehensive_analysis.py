@@ -669,13 +669,14 @@ def analyze_market():
         result['sh_ma20'] = sh_df['MA20'].iloc[-1]
         result['sh_vs_ma20'] = (latest['Close'] / sh_df['MA20'].iloc[-1] - 1) * 100
 
-    # 主力资金
+    # 主力资金（直接获取历史数据，避免缓存污染问题）
     main_fund_service = MainFundFlowService()
-    mf_data = main_fund_service.get_latest()
-    if mf_data:
-        result['main_fund_net_flow'] = mf_data.get('main_net_flow', 0)
-        result['main_fund_super_large'] = mf_data.get('super_large', 0)
-        result['main_fund_large'] = mf_data.get('large', 0)
+    main_fund_history = main_fund_service.fetch_history()
+    if main_fund_history is not None and not main_fund_history.empty:
+        latest_row = main_fund_history.iloc[-1]
+        result['main_fund_net_flow'] = float(latest_row.get('main_net_flow', 0))
+        result['main_fund_super_large'] = float(latest_row.get('super_large', 0))
+        result['main_fund_large'] = float(latest_row.get('large', 0))
 
     return result
 
@@ -981,16 +982,15 @@ def get_main_fund_trend():
     try:
         service = MainFundFlowService()
 
-        # 获取最新数据
-        latest = service.get_latest()
-        if latest:
-            result['net_flow'] = latest.get('main_net_flow', 0)
-            result['super_large'] = latest.get('super_large', 0)
-            result['large'] = latest.get('large', 0)
-
-        # 获取历史数据计算趋势
+        # 先获取完整历史数据（避免 get_latest 的 days=1 缓存污染）
         history = service.fetch_history()
         if history is not None and not history.empty:
+            # 从历史数据中提取最新数据
+            latest_row = history.iloc[-1]
+            result['net_flow'] = float(latest_row.get('main_net_flow', 0))
+            result['super_large'] = float(latest_row.get('super_large', 0))
+            result['large'] = float(latest_row.get('large', 0))
+
             # 累积流入（5日、20日）
             if 'main_net_flow' in history.columns:
                 result['net_flow_5d_sum'] = history['main_net_flow'].tail(5).sum()

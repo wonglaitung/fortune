@@ -52,9 +52,9 @@ class MainFundFlowService:
         返回:
         - DataFrame: 主力资金历史数据
         """
-        # 检查缓存
+        # 检查缓存（仅当缓存数据量 >= 请求天数时才使用，避免小请求污染）
         if use_cache:
-            cached_data = self._load_cache()
+            cached_data = self._load_cache(min_rows=days)
             if cached_data is not None:
                 return cached_data
 
@@ -105,8 +105,9 @@ class MainFundFlowService:
             df = pd.DataFrame(parsed_data)
             df = df.set_index('date')
 
-            # 保存缓存
-            self._save_cache(df)
+            # 保存缓存（仅当请求全量数据时，避免小请求覆盖大缓存）
+            if days >= 30:
+                self._save_cache(df)
 
             logger.info(f"获取完成（{len(df)} 条记录）")
             logger.info(f"日期范围: {df.index.min().strftime('%Y-%m-%d')} ~ {df.index.max().strftime('%Y-%m-%d')}")
@@ -147,8 +148,13 @@ class MainFundFlowService:
         """
         return self.fetch_latest()
 
-    def _load_cache(self):
-        """加载缓存数据"""
+    def _load_cache(self, min_rows=None):
+        """
+        加载缓存数据
+
+        参数:
+        - min_rows: 最小行数要求，缓存数据量不足时返回 None（避免小请求污染大缓存）
+        """
         if not os.path.exists(CACHE_FILE):
             return None
 
@@ -160,6 +166,11 @@ class MainFundFlowService:
 
             with open(CACHE_FILE, 'rb') as f:
                 df = pickle.load(f)
+
+            # 检查缓存数据量是否满足要求
+            if min_rows is not None and len(df) < min_rows:
+                logger.info(f"缓存数据量不足（{len(df)} < {min_rows}），需要重新获取")
+                return None
 
             logger.info(f"从缓存加载主力资金数据（{len(df)} 条）")
             return df

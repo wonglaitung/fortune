@@ -2,12 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# 港股智能分析系统 - 快速参考
+# 金融资产智能分析系统 - 快速参考
 
 > **📚 详细文档**：特征工程、验证方法等完整指南请查看 [docs/](docs/) 目录
 > **⚠️ 经验教训**：关键警告和最佳实践请参阅 [lessons.md](lessons.md)
 > **🔧 编程规范**：开发流程、系统设计决策请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
 > **📅 进度跟踪**：[progress.txt](progress.txt) - 项目当前进展
+> **📖 完整说明**：[README.md](README.md) - 项目详细介绍
+
+---
+
+## 📋 项目概览
+
+**双市场支持**：
+- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（31只自选股）
+- 🇨🇳 **A股** - 三周期预测、综合买卖建议、板块分析（53只股票池）
+
+**核心理念**：人机混合智能 - 融合大模型推理能力与机器学习预测精度
 
 ---
 
@@ -44,6 +55,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
+| **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` | - |
 
 #### A股系统
 
@@ -71,6 +83,23 @@ rm -rf data/a_stock_feature_cache/*.pkl
 # 清除A股原始数据缓存
 rm -rf data/a_stock_cache/*.pkl
 ```
+
+### 安装与配置
+
+```bash
+# 1. 安装依赖
+pip install -r requirements.txt
+
+# 2. 配置环境变量
+cp set_key.sh.sample set_key.sh
+# 编辑 set_key.sh，填写邮箱和API密钥
+source set_key.sh
+
+# 3. 验证安装
+python hsi_email.py --no-email
+```
+
+> 环境变量详细配置见下方 [环境配置](#-环境配置) 章节
 
 ---
 
@@ -255,6 +284,27 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | 5天 | 65.86% | ⭐⭐⭐ 趋势确认 |
 | 1天 | 51.49% | ⚠️ 噪音大 |
 
+**八大交易模式**（恒指增强模型，2026-05-18 验证）：
+
+基于三周期预测结果（1/0表示涨/跌）组合形成8种交易信号，例如"110"表示1天涨、5天涨、20天跌。
+
+| 模式 | 描述 | 20天准确率 | 策略 |
+|------|------|-----------|------|
+| **101** | 假突破（1天涨5天跌20天涨） | **87.32%** | ⭐ 最优做多，短期回调后中线上涨 |
+| **111** | 一致看涨 | **86.26%** | ⭐⭐⭐⭐⭐ 次优做多 |
+| **001** | 下跌中继 | **81.05%** | ⭐⭐⭐⭐ 做多信号 |
+| 000 | 一致看跌 | **79.80%** | 强烈卖出，三周期共振下跌 |
+| 010 | 反弹失败 | **77.78%** | 做空信号 |
+
+**四条交易法则**（恒指增强模型）：
+
+| 法则 | 条件 | 准确率 | 应用场景 |
+|------|------|--------|----------|
+| **假突破做多** | 1天涨5天跌20天涨(101) | **87.32%** | 短期回调后中线做多 |
+| 一致看涨买入 | 三周期全看涨(111) | **86.26%** | 趋势确认后顺势加仓 |
+| 下跌中继做多 | 1天跌5天跌20天涨(001) | **81.05%** | 下跌后买入 |
+| 一致看跌做空 | 三周期全看跌(000) | 79.80% | 趋势确认后减仓或做空 |
+
 **个股完整模型**（2026-05-24 验证，12 folds，57只股票，Top 500特征，市场情绪过滤器启用）：
 
 | 指标 | 数值 | 评估 |
@@ -421,6 +471,19 @@ test_df[col] = test_df[col].apply(
 - 文件上传：只提交 `.md` 格式，不提交 `.json`/`.csv`
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
 - 推送冲突：使用 `git pull --rebase`
+
+---
+
+## 🔄 自动化调度
+
+| 时间 | 工作流 | 功能 | 市场 |
+|------|--------|------|------|
+| **06:00** (工作日) | `hsi-prediction.yml` | 恒生指数预测 | 🇭🇰 |
+| **10:00-15:00** (每小时) | `hourly-stock-monitor.yml` | 交易时段监控 | 🇭🇰 |
+| **15:15 CST** (工作日) | `a-stock-comprehensive-analysis.yml` | A股综合分析 | 🇨🇳 |
+| **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
+| 02:00 (每天) | `stock-anomaly-detection.yml` | 异常检测 | 🇭🇰 |
+| 每月1号 | `performance-monitor.yml` | 性能报告 | 双市场 |
 
 ---
 

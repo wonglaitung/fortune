@@ -451,16 +451,19 @@ def generate_ai_report(stocks=None, save_file=True):
     print(f"📅 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"📊 分析股票: {len(stocks)} 只")
 
-    # 获取主力资金
+    # 获取主力资金（先获取历史数据，再从历史中提取最新数据）
     print("\n📊 获取主力资金数据...")
     main_fund_service = MainFundFlowService()
-    main_fund_data = main_fund_service.get_latest()
-    if not main_fund_data:
-        main_fund_data = {}
-
-    # 获取主力资金趋势（5日/20日累积）
     main_fund_history = main_fund_service.fetch_history()
+    main_fund_data = {}
     if main_fund_history is not None and not main_fund_history.empty:
+        # 从历史数据中提取最新数据（避免 get_latest 的缓存污染问题）
+        latest_row = main_fund_history.iloc[-1]
+        main_fund_data['main_net_flow'] = float(latest_row.get('main_net_flow', 0))
+        main_fund_data['super_large'] = float(latest_row.get('super_large', 0))
+        main_fund_data['large'] = float(latest_row.get('large', 0))
+
+        # 获取主力资金趋势（5日/20日累积）
         main_fund_data['net_flow_5d_sum'] = main_fund_history['main_net_flow'].tail(5).sum()
         main_fund_data['net_flow_20d_sum'] = main_fund_history['main_net_flow'].tail(20).sum()
         # 连续流入天数
