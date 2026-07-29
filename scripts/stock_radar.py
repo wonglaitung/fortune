@@ -31,6 +31,16 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# Register Chinese font (WenQuanYi Micro Hei)
+_CN_FONT_PATH = '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc'
+if os.path.exists(_CN_FONT_PATH):
+    fm.fontManager.addfont(_CN_FONT_PATH)
+    plt.rcParams['font.family'] = 'WenQuanYi Micro Hei, DejaVu Sans, sans-serif'
+else:
+    plt.rcParams['font.family'] = 'DejaVu Sans, sans-serif'
+plt.rcParams['axes.unicode_minus'] = False
 
 # ── Configuration ──
 DIMENSIONS = ['Trend', 'Return', 'Risk', 'Tech', 'Momentum', 'Signal']
