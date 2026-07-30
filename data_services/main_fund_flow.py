@@ -15,6 +15,7 @@
 import os
 import sys
 import pickle
+import time
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -62,20 +63,32 @@ class MainFundFlowService:
 
         try:
             # 东方财富主力资金流向接口
+            # 参考 akshare stock_market_fund_flow 实现
             url = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
-            params = {
-                "lmt": days,
-                "klt": 101,  # 日线
-                "secid": "1.000001",  # 上证指数
-                "fields1": "f1,f2,f3,f7",
-                "fields2": "f51,f52,f53,f54,f55,f56",
+
+            # 添加 headers 避免被反爬限制
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://data.eastmoney.com/",
             }
 
-            r = requests.get(url, params=params, timeout=15)
+            # 请求参数（参考 akshare 实现，添加 ut、secid2、_ 等关键参数）
+            params = {
+                "lmt": "0",  # 返回全部数据，后续用 tail(days) 截取
+                "klt": "101",  # 日线
+                "secid": "1.000001",  # 上证指数
+                "secid2": "0.399001",  # 深证成指
+                "fields1": "f1,f2,f3,f7",
+                "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63,f64,f65",
+                "ut": "b2884a393a59ad64002292a3e90d46a5",
+                "_": str(int(time.time() * 1000)),
+            }
+
+            r = requests.get(url, params=params, headers=headers, timeout=15)
             data = r.json()
 
             if data.get("rc") != 0 or not data.get("data"):
-                logger.error("获取主力资金数据失败")
+                logger.error(f"获取主力资金数据失败: rc={data.get('rc')}, data keys={list(data.keys()) if isinstance(data, dict) else 'N/A'}")
                 return None
 
             klines = data["data"].get("klines", [])
@@ -83,8 +96,10 @@ class MainFundFlowService:
                 logger.error("主力资金数据为空")
                 return None
 
-            # 解析数据
-            # 格式: 日期,主力净流入,超大单,大单,中单,小单,主力净占比,超大单占比,大单占比,中单占比,小单占比,收盘价,涨跌幅,flag
+            # 解析数据（参考 akshare stock_market_fund_flow）
+            # 新格式（15个字段）: 日期,主力净流入,小单净流入,中单净流入,大单净流入,超大单净流入,
+            #                  主力净占比,小单净占比,中单净占比,大单净占比,超大单净占比,
+            #                  上证收盘价,上证涨跌幅,深证收盘价,深证涨跌幅
             parsed_data = []
             for kline in klines:
                 parts = kline.split(',')
@@ -92,10 +107,10 @@ class MainFundFlowService:
                     parsed_data.append({
                         'date': pd.to_datetime(parts[0]),
                         'main_net_flow': float(parts[1]) / 1e8 if parts[1] else 0,  # 转换为亿元
-                        'super_large': float(parts[2]) / 1e8 if parts[2] else 0,
-                        'large': float(parts[3]) / 1e8 if parts[3] else 0,
-                        'mid': float(parts[4]) / 1e8 if parts[4] else 0,
-                        'small': float(parts[5]) / 1e8 if parts[5] else 0,
+                        'small': float(parts[2]) / 1e8 if parts[2] else 0,
+                        'mid': float(parts[3]) / 1e8 if parts[3] else 0,
+                        'large': float(parts[4]) / 1e8 if parts[4] else 0,
+                        'super_large': float(parts[5]) / 1e8 if parts[5] else 0,
                     })
 
             if not parsed_data:
@@ -104,6 +119,11 @@ class MainFundFlowService:
 
             df = pd.DataFrame(parsed_data)
             df = df.set_index('date')
+
+            # 截取最后 N 天（lmt=0 返回全部数据）
+            if days > 0 and len(df) > days:
+                df = df.tail(days)
+                logger.info(f"截取最近 {days} 天数据")
 
             # 保存缓存（仅当请求全量数据时，避免小请求覆盖大缓存）
             if days >= 30:
