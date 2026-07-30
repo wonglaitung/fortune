@@ -52,9 +52,9 @@ class MainFundFlowService:
         返回:
         - DataFrame: 主力资金历史数据
         """
-        # 检查缓存（仅当缓存数据量 >= 请求天数时才使用，避免小请求污染）
+        # 检查缓存（API 最多返回约120行，缓存有数据即可使用）
         if use_cache:
-            cached_data = self._load_cache(min_rows=days)
+            cached_data = self._load_cache(min_rows=1)
             if cached_data is not None:
                 return cached_data
 
