@@ -681,7 +681,7 @@ def analyze_market():
     return result
 
 
-def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data):
+def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data, main_fund_trend=None):
     """
     生成综合分析报告
 
@@ -690,6 +690,7 @@ def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyse
         ml_predictions_20d: 20天ML预测
         stock_analyses: 股票分析结果
         market_data: 市场数据
+        main_fund_trend: 主力资金趋势数据（包含5日/20日累积）
 
     Returns:
         str: 综合报告
@@ -722,6 +723,15 @@ A股综合分析报告
 - 超大单: {mf_super:.2f} 亿
 - 大单: {mf_large:.2f} 亿
 """
+
+        # 添加5日/20日累积数据和连续流入天数
+        if main_fund_trend:
+            mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
+            mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
+            consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
+            report += f"- 5日累积流入: {mf_5d:.2f} 亿\n"
+            report += f"- 20日累积流入: {mf_20d:.2f} 亿\n"
+            report += f"- 连续流入天数: {consecutive_inflow} 天\n"
 
     report += """
 ---
@@ -1978,7 +1988,7 @@ def format_sectors_html(sector_analysis: dict) -> str:
     return html
 
 
-def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data):
+def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data, main_fund_trend=None):
     """
     生成综合分析报告
 
@@ -1987,6 +1997,7 @@ def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyse
         ml_predictions_20d: 20天ML预测
         stock_analyses: 股票分析结果
         market_data: 市场数据
+        main_fund_trend: 主力资金趋势数据（包含5日/20日累积）
 
     Returns:
         str: 综合报告
@@ -2019,6 +2030,15 @@ A股综合分析报告
 - 超大单: {mf_super:.2f} 亿
 - 大单: {mf_large:.2f} 亿
 """
+
+        # 添加5日/20日累积数据和连续流入天数
+        if main_fund_trend:
+            mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
+            mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
+            consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
+            report += f"- 5日累积流入: {mf_5d:.2f} 亿\n"
+            report += f"- 20日累积流入: {mf_20d:.2f} 亿\n"
+            report += f"- 连续流入天数: {consecutive_inflow} 天\n"
 
     report += """
 ---
@@ -3100,7 +3120,7 @@ def main():
 
     # 11. 生成综合报告
     print("\n📊 生成综合报告...")
-    report = generate_comprehensive_report(llm_content, ml_predictions, stock_analyses, market_data)
+    report = generate_comprehensive_report(llm_content, ml_predictions, stock_analyses, market_data, main_fund_trend)
 
     # 保存报告
     os.makedirs('data', exist_ok=True)
