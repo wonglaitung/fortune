@@ -674,9 +674,23 @@ def analyze_market():
     main_fund_history = main_fund_service.fetch_history()
     if main_fund_history is not None and not main_fund_history.empty:
         latest_row = main_fund_history.iloc[-1]
+        # 金额（亿）
         result['main_fund_net_flow'] = float(latest_row.get('main_net_flow', 0))
         result['main_fund_super_large'] = float(latest_row.get('super_large', 0))
         result['main_fund_large'] = float(latest_row.get('large', 0))
+        result['main_fund_mid'] = float(latest_row.get('mid', 0))
+        result['main_fund_small'] = float(latest_row.get('small', 0))
+        # 占比（%）
+        result['main_fund_net_pct'] = float(latest_row.get('main_net_pct', 0))
+        result['main_fund_small_pct'] = float(latest_row.get('small_pct', 0))
+        result['main_fund_mid_pct'] = float(latest_row.get('mid_pct', 0))
+        result['main_fund_large_pct'] = float(latest_row.get('large_pct', 0))
+        result['main_fund_super_large_pct'] = float(latest_row.get('super_large_pct', 0))
+        # 指数数据
+        result['main_fund_sh_close'] = float(latest_row.get('sh_close', 0))
+        result['main_fund_sh_change_pct'] = float(latest_row.get('sh_change_pct', 0))
+        result['main_fund_sz_close'] = float(latest_row.get('sz_close', 0))
+        result['main_fund_sz_change_pct'] = float(latest_row.get('sz_change_pct', 0))
 
     return result
 
@@ -716,13 +730,24 @@ A股综合分析报告
     mf_net = market_data.get('main_fund_net_flow', 0)
     mf_super = market_data.get('main_fund_super_large', 0)
     mf_large = market_data.get('main_fund_large', 0)
+    mf_mid = market_data.get('main_fund_mid', 0)
+    mf_small = market_data.get('main_fund_small', 0)
     if mf_net != 0 or mf_super != 0 or mf_large != 0:
         report += f"""
 ### 1.2 主力资金
-- 净流入: {mf_net:.2f} 亿
-- 超大单: {mf_super:.2f} 亿
-- 大单: {mf_large:.2f} 亿
+- 净流入: {mf_net:.2f} 亿（主力净占比 {market_data.get('main_fund_net_pct', 0):.2f}%）
+- 超大单: {mf_super:.2f} 亿（占比 {market_data.get('main_fund_super_large_pct', 0):.2f}%）
+- 大单: {mf_large:.2f} 亿（占比 {market_data.get('main_fund_large_pct', 0):.2f}%）
+- 中单: {mf_mid:.2f} 亿（占比 {market_data.get('main_fund_mid_pct', 0):.2f}%）
+- 小单: {mf_small:.2f} 亿（占比 {market_data.get('main_fund_small_pct', 0):.2f}%）
 """
+
+        # 添加指数数据
+        mf_sh_close = market_data.get('main_fund_sh_close', 0)
+        mf_sz_close = market_data.get('main_fund_sz_close', 0)
+        if mf_sh_close or mf_sz_close:
+            report += f"- 上证收盘: {mf_sh_close:.2f}（{market_data.get('main_fund_sh_change_pct', 0):+.2f}%）\n"
+            report += f"- 深证收盘: {mf_sz_close:.2f}（{market_data.get('main_fund_sz_change_pct', 0):+.2f}%）\n"
 
         # 添加5日/20日累积数据和连续流入天数
         if main_fund_trend:
@@ -984,9 +1009,22 @@ def get_main_fund_trend():
         'net_flow': 0,
         'super_large': 0,
         'large': 0,
+        'mid': 0,
+        'small': 0,
         'net_flow_5d_sum': 0,
         'net_flow_20d_sum': 0,
         'consecutive_inflow': 0,
+        # 占比（%）
+        'net_flow_pct': 0,
+        'small_pct': 0,
+        'mid_pct': 0,
+        'large_pct': 0,
+        'super_large_pct': 0,
+        # 指数数据
+        'sh_close': 0,
+        'sh_change_pct': 0,
+        'sz_close': 0,
+        'sz_change_pct': 0,
     }
 
     try:
@@ -1000,6 +1038,19 @@ def get_main_fund_trend():
             result['net_flow'] = float(latest_row.get('main_net_flow', 0))
             result['super_large'] = float(latest_row.get('super_large', 0))
             result['large'] = float(latest_row.get('large', 0))
+            result['mid'] = float(latest_row.get('mid', 0))
+            result['small'] = float(latest_row.get('small', 0))
+            # 占比（%）
+            result['net_flow_pct'] = float(latest_row.get('main_net_pct', 0))
+            result['small_pct'] = float(latest_row.get('small_pct', 0))
+            result['mid_pct'] = float(latest_row.get('mid_pct', 0))
+            result['large_pct'] = float(latest_row.get('large_pct', 0))
+            result['super_large_pct'] = float(latest_row.get('super_large_pct', 0))
+            # 指数数据
+            result['sh_close'] = float(latest_row.get('sh_close', 0))
+            result['sh_change_pct'] = float(latest_row.get('sh_change_pct', 0))
+            result['sz_close'] = float(latest_row.get('sz_close', 0))
+            result['sz_change_pct'] = float(latest_row.get('sz_change_pct', 0))
 
             # 累积流入（5日、20日）
             if 'main_net_flow' in history.columns:
@@ -1634,9 +1685,24 @@ def generate_comprehensive_recommendations_with_llm(
 
     # 主力资金
     mf_flow = main_fund_trend.get('net_flow', 0)
+    mf_super = main_fund_trend.get('super_large', 0)
+    mf_large = main_fund_trend.get('large', 0)
+    mf_mid = main_fund_trend.get('mid', 0)
+    mf_small = main_fund_trend.get('small', 0)
     mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
     mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
     consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
+    # 占比
+    mf_pct = main_fund_trend.get('net_flow_pct', 0)
+    mf_super_pct = main_fund_trend.get('super_large_pct', 0)
+    mf_large_pct = main_fund_trend.get('large_pct', 0)
+    mf_mid_pct = main_fund_trend.get('mid_pct', 0)
+    mf_small_pct = main_fund_trend.get('small_pct', 0)
+    # 指数
+    mf_sh_close = main_fund_trend.get('sh_close', 0)
+    mf_sh_change_pct = main_fund_trend.get('sh_change_pct', 0)
+    mf_sz_close = main_fund_trend.get('sz_close', 0)
+    mf_sz_change_pct = main_fund_trend.get('sz_change_pct', 0)
     main_fund_available = (mf_flow != 0 or mf_5d != 0 or mf_20d != 0)
 
     # 板块分析
@@ -1696,10 +1762,16 @@ def generate_comprehensive_recommendations_with_llm(
 - 动态阈值：买入需概率≥{dynamic_threshold:.0%}
 
 【5. 主力资金趋势】
-- 今日净流入：{mf_flow:.2f}亿
+- 今日净流入：{mf_flow:.2f}亿（主力净占比 {mf_pct:.2f}%）
+- 超大单：{mf_super:.2f}亿（占比 {mf_super_pct:.2f}%）
+- 大单：{mf_large:.2f}亿（占比 {mf_large_pct:.2f}%）
+- 中单：{mf_mid:.2f}亿（占比 {mf_mid_pct:.2f}%）
+- 小单：{mf_small:.2f}亿（占比 {mf_small_pct:.2f}%）
 - 5日累积：{mf_5d:.2f}亿
 - 20日累积：{mf_20d:.2f}亿
 - 连续流入天数：{consecutive_inflow}天
+- 上证收盘：{mf_sh_close:.2f}（{mf_sh_change_pct:+.2f}%）
+- 深证收盘：{mf_sz_close:.2f}（{mf_sz_change_pct:+.2f}%）
 
 【6. 板块分析（按涨幅排名）】
 {sector_data}
@@ -2023,13 +2095,24 @@ A股综合分析报告
     mf_net = market_data.get('main_fund_net_flow', 0)
     mf_super = market_data.get('main_fund_super_large', 0)
     mf_large = market_data.get('main_fund_large', 0)
+    mf_mid = market_data.get('main_fund_mid', 0)
+    mf_small = market_data.get('main_fund_small', 0)
     if mf_net != 0 or mf_super != 0 or mf_large != 0:
         report += f"""
 ### 1.2 主力资金
-- 净流入: {mf_net:.2f} 亿
-- 超大单: {mf_super:.2f} 亿
-- 大单: {mf_large:.2f} 亿
+- 净流入: {mf_net:.2f} 亿（主力净占比 {market_data.get('main_fund_net_pct', 0):.2f}%）
+- 超大单: {mf_super:.2f} 亿（占比 {market_data.get('main_fund_super_large_pct', 0):.2f}%）
+- 大单: {mf_large:.2f} 亿（占比 {market_data.get('main_fund_large_pct', 0):.2f}%）
+- 中单: {mf_mid:.2f} 亿（占比 {market_data.get('main_fund_mid_pct', 0):.2f}%）
+- 小单: {mf_small:.2f} 亿（占比 {market_data.get('main_fund_small_pct', 0):.2f}%）
 """
+
+        # 添加指数数据
+        mf_sh_close = market_data.get('main_fund_sh_close', 0)
+        mf_sz_close = market_data.get('main_fund_sz_close', 0)
+        if mf_sh_close or mf_sz_close:
+            report += f"- 上证收盘: {mf_sh_close:.2f}（{market_data.get('main_fund_sh_change_pct', 0):+.2f}%）\n"
+            report += f"- 深证收盘: {mf_sz_close:.2f}（{market_data.get('main_fund_sz_change_pct', 0):+.2f}%）\n"
 
         # 添加5日/20日累积数据和连续流入天数
         if main_fund_trend:
@@ -2432,25 +2515,62 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     # 主力资金部分（仅当数据可用时显示）
     mf_super = market_data.get('main_fund_super_large', 0) or 0
     mf_large = market_data.get('main_fund_large', 0) or 0
+    mf_mid = market_data.get('main_fund_mid', 0) or 0
+    mf_small = market_data.get('main_fund_small', 0) or 0
     if mf_flow != 0 or mf_super != 0 or mf_large != 0:
+        # 占比数据
+        mf_pct = market_data.get('main_fund_net_pct', 0) or 0
+        mf_super_pct = market_data.get('main_fund_super_large_pct', 0) or 0
+        mf_large_pct = market_data.get('main_fund_large_pct', 0) or 0
+        mf_mid_pct = market_data.get('main_fund_mid_pct', 0) or 0
+        mf_small_pct = market_data.get('main_fund_small_pct', 0) or 0
+        # 指数数据
+        mf_sh_close = market_data.get('main_fund_sh_close', 0) or 0
+        mf_sh_change_pct = market_data.get('main_fund_sh_change_pct', 0) or 0
+        mf_sz_close = market_data.get('main_fund_sz_close', 0) or 0
+        mf_sz_change_pct = market_data.get('main_fund_sz_change_pct', 0) or 0
+
         html += f"""
         <h3>💰 主力资金</h3>
         <table>
-            <tr><th>指标</th><th>数值</th><th>趋势</th></tr>
+            <tr><th>指标</th><th>数值</th><th>占比</th></tr>
             <tr>
                 <td>今日净流入</td>
                 <td class="{'positive' if mf_flow >= 0 else 'negative'}">{mf_flow:.2f} 亿</td>
-                <td>{'流入' if mf_flow >= 0 else '流出'}</td>
+                <td>{mf_pct:.2f}%</td>
             </tr>
             <tr>
                 <td>超大单</td>
-                <td>{mf_super:.2f} 亿</td>
-                <td>-</td>
+                <td class="{'positive' if mf_super >= 0 else 'negative'}">{mf_super:.2f} 亿</td>
+                <td>{mf_super_pct:.2f}%</td>
             </tr>
             <tr>
                 <td>大单</td>
-                <td>{mf_large:.2f} 亿</td>
-                <td>-</td>
+                <td class="{'positive' if mf_large >= 0 else 'negative'}">{mf_large:.2f} 亿</td>
+                <td>{mf_large_pct:.2f}%</td>
+            </tr>
+            <tr>
+                <td>中单</td>
+                <td class="{'positive' if mf_mid >= 0 else 'negative'}">{mf_mid:.2f} 亿</td>
+                <td>{mf_mid_pct:.2f}%</td>
+            </tr>
+            <tr>
+                <td>小单</td>
+                <td class="{'positive' if mf_small >= 0 else 'negative'}">{mf_small:.2f} 亿</td>
+                <td>{mf_small_pct:.2f}%</td>
+            </tr>
+"""
+        # 指数数据
+        if mf_sh_close or mf_sz_close:
+            html += f"""            <tr style="background-color: #f0f8ff;">
+                <td>上证指数</td>
+                <td>{mf_sh_close:.2f}</td>
+                <td class="{'positive' if mf_sh_change_pct >= 0 else 'negative'}">{mf_sh_change_pct:+.2f}%</td>
+            </tr>
+            <tr style="background-color: #f0f8ff;">
+                <td>深证指数</td>
+                <td>{mf_sz_close:.2f}</td>
+                <td class="{'positive' if mf_sz_change_pct >= 0 else 'negative'}">{mf_sz_change_pct:+.2f}%</td>
             </tr>
 """
         # 主力资金趋势

@@ -103,7 +103,7 @@ class MainFundFlowService:
             parsed_data = []
             for kline in klines:
                 parts = kline.split(',')
-                if len(parts) >= 6:
+                if len(parts) >= 15:
                     parsed_data.append({
                         'date': pd.to_datetime(parts[0]),
                         'main_net_flow': float(parts[1]) / 1e8 if parts[1] else 0,  # 转换为亿元
@@ -111,6 +111,31 @@ class MainFundFlowService:
                         'mid': float(parts[3]) / 1e8 if parts[3] else 0,
                         'large': float(parts[4]) / 1e8 if parts[4] else 0,
                         'super_large': float(parts[5]) / 1e8 if parts[5] else 0,
+                        # 新增：占比数据（%）
+                        'main_net_pct': float(parts[6]) if parts[6] else 0,
+                        'small_pct': float(parts[7]) if parts[7] else 0,
+                        'mid_pct': float(parts[8]) if parts[8] else 0,
+                        'large_pct': float(parts[9]) if parts[9] else 0,
+                        'super_large_pct': float(parts[10]) if parts[10] else 0,
+                        # 新增：指数数据
+                        'sh_close': float(parts[11]) if parts[11] else 0,
+                        'sh_change_pct': float(parts[12]) if parts[12] else 0,
+                        'sz_close': float(parts[13]) if parts[13] else 0,
+                        'sz_change_pct': float(parts[14]) if parts[14] else 0,
+                    })
+                elif len(parts) >= 6:
+                    # 兼容旧格式（只有6个字段）
+                    parsed_data.append({
+                        'date': pd.to_datetime(parts[0]),
+                        'main_net_flow': float(parts[1]) / 1e8 if parts[1] else 0,
+                        'small': float(parts[2]) / 1e8 if parts[2] else 0,
+                        'mid': float(parts[3]) / 1e8 if parts[3] else 0,
+                        'large': float(parts[4]) / 1e8 if parts[4] else 0,
+                        'super_large': float(parts[5]) / 1e8 if parts[5] else 0,
+                        'main_net_pct': 0, 'small_pct': 0, 'mid_pct': 0,
+                        'large_pct': 0, 'super_large_pct': 0,
+                        'sh_close': 0, 'sh_change_pct': 0,
+                        'sz_close': 0, 'sz_change_pct': 0,
                     })
 
             if not parsed_data:
@@ -157,6 +182,15 @@ class MainFundFlowService:
             'large': float(latest['large']),
             'mid': float(latest['mid']),
             'small': float(latest['small']),
+            'main_net_pct': float(latest.get('main_net_pct', 0)),
+            'small_pct': float(latest.get('small_pct', 0)),
+            'mid_pct': float(latest.get('mid_pct', 0)),
+            'large_pct': float(latest.get('large_pct', 0)),
+            'super_large_pct': float(latest.get('super_large_pct', 0)),
+            'sh_close': float(latest.get('sh_close', 0)),
+            'sh_change_pct': float(latest.get('sh_change_pct', 0)),
+            'sz_close': float(latest.get('sz_close', 0)),
+            'sz_change_pct': float(latest.get('sz_change_pct', 0)),
         }
 
     def get_latest(self):
@@ -229,6 +263,15 @@ class MainFundFlowService:
                 'MainFund_Large': 0,
                 'MainFund_Mid': 0,
                 'MainFund_Small': 0,
+                'MainFund_Net_Pct': 0,
+                'MainFund_Small_Pct': 0,
+                'MainFund_Mid_Pct': 0,
+                'MainFund_Large_Pct': 0,
+                'MainFund_Super_Large_Pct': 0,
+                'MainFund_SH_Close': 0,
+                'MainFund_SH_Change_Pct': 0,
+                'MainFund_SZ_Close': 0,
+                'MainFund_SZ_Change_Pct': 0,
             }
 
         # 转换日期格式
@@ -251,6 +294,15 @@ class MainFundFlowService:
                         'MainFund_Large': 0,
                         'MainFund_Mid': 0,
                         'MainFund_Small': 0,
+                        'MainFund_Net_Pct': 0,
+                        'MainFund_Small_Pct': 0,
+                        'MainFund_Mid_Pct': 0,
+                        'MainFund_Large_Pct': 0,
+                        'MainFund_Super_Large_Pct': 0,
+                        'MainFund_SH_Close': 0,
+                        'MainFund_SH_Change_Pct': 0,
+                        'MainFund_SZ_Close': 0,
+                        'MainFund_SZ_Change_Pct': 0,
                     }
 
             return {
@@ -259,6 +311,15 @@ class MainFundFlowService:
                 'MainFund_Large': float(row.get('large', 0)) if pd.notna(row.get('large', 0)) else 0,
                 'MainFund_Mid': float(row.get('mid', 0)) if pd.notna(row.get('mid', 0)) else 0,
                 'MainFund_Small': float(row.get('small', 0)) if pd.notna(row.get('small', 0)) else 0,
+                'MainFund_Net_Pct': float(row.get('main_net_pct', 0)) if pd.notna(row.get('main_net_pct', 0)) else 0,
+                'MainFund_Small_Pct': float(row.get('small_pct', 0)) if pd.notna(row.get('small_pct', 0)) else 0,
+                'MainFund_Mid_Pct': float(row.get('mid_pct', 0)) if pd.notna(row.get('mid_pct', 0)) else 0,
+                'MainFund_Large_Pct': float(row.get('large_pct', 0)) if pd.notna(row.get('large_pct', 0)) else 0,
+                'MainFund_Super_Large_Pct': float(row.get('super_large_pct', 0)) if pd.notna(row.get('super_large_pct', 0)) else 0,
+                'MainFund_SH_Close': float(row.get('sh_close', 0)) if pd.notna(row.get('sh_close', 0)) else 0,
+                'MainFund_SH_Change_Pct': float(row.get('sh_change_pct', 0)) if pd.notna(row.get('sh_change_pct', 0)) else 0,
+                'MainFund_SZ_Close': float(row.get('sz_close', 0)) if pd.notna(row.get('sz_close', 0)) else 0,
+                'MainFund_SZ_Change_Pct': float(row.get('sz_change_pct', 0)) if pd.notna(row.get('sz_change_pct', 0)) else 0,
             }
 
         except Exception as e:
@@ -269,6 +330,15 @@ class MainFundFlowService:
                 'MainFund_Large': 0,
                 'MainFund_Mid': 0,
                 'MainFund_Small': 0,
+                'MainFund_Net_Pct': 0,
+                'MainFund_Small_Pct': 0,
+                'MainFund_Mid_Pct': 0,
+                'MainFund_Large_Pct': 0,
+                'MainFund_Super_Large_Pct': 0,
+                'MainFund_SH_Close': 0,
+                'MainFund_SH_Change_Pct': 0,
+                'MainFund_SZ_Close': 0,
+                'MainFund_SZ_Change_Pct': 0,
             }
 
 
