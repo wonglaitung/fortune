@@ -2,11 +2,39 @@
 
 **项目**：港股智能分析系统 + A股智能分析系统
 **状态**：生产就绪（港股）/ 特征增强中（A股）
-**最后更新**：2026-07-24
+**最后更新**：2026-07-30
 
 ---
 
 ## 最新进展
+
+### 2026-07-30 A股数据管道修复 ⭐⭐⭐
+
+**问题1**：A股模型训练 KeyError: 'Vol_Ratio'
+
+**根因**：腾讯财经API暂时异常，53只A股缓存仅101行（正常641行）。`calculate_technical_features` 因 <200行提前返回，未创建 `Vol_Ratio`。`create_smart_money_features` 仅需50行就执行，依赖该列报错。
+
+**修复**：
+- `create_smart_money_features` 增加 `Vol_Ratio` 防御性计算
+- `get_a_stock_data` 增加 `min_rows` 参数，数据不足时尝试备用源
+- 清除缓存重新获取
+
+**问题2**：A股邮件缺少主力资金信息
+
+**根因**：commit `f0559374`（修复缓存污染）引入副作用。`_load_cache(min_rows=365)` 要求缓存≥365行，但东方财富API最多只返回120行（约6个月）。缓存永远被拒绝，API不稳定时数据丢失。
+
+**修复**：`min_rows=365` → `min_rows=1`。小请求污染已通过 `days>=30` 才写缓存解决，`min_rows` 只需确保缓存非空。
+
+**文件修改**：
+| 文件 | 说明 |
+|------|------|
+| `ml_services/ml_trading_model.py` | `create_smart_money_features` 防御性计算 `Vol_Ratio` |
+| `data_services/a_stock_data.py` | `get_a_stock_data` 增加 `min_rows` 验证 |
+| `data_services/main_fund_flow.py` | `fetch_history` 的 `min_rows=365` → `min_rows=1` |
+
+**模型更新**：A股20天CatBoost重训练，准确率 52.6% → 54.9%
+
+---
 
 ### 2026-07-24 A股系统诊断与优化方案 ⭐⭐⭐
 

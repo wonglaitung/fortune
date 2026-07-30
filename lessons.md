@@ -1,6 +1,6 @@
 # 经验教训
 
-> **版本**：v10.7 (2026-07-24) | **状态**：当前有效
+> **版本**：v10.8 (2026-07-30) | **状态**：当前有效
 
 ---
 
@@ -96,6 +96,51 @@ stock_data = get_hk_stock_data_tencent(tencent_code, period_days=250)
 - 跨模块调用时必须核对函数签名和参数名
 - 不同数据源可能有不同的股票代码格式要求
 - LSTM 类模型需要足够训练数据（建议 >200 天）
+
+---
+
+### 6. 缓存验证需基于API实际能力 ⭐⭐⭐
+
+**问题**：`_load_cache(min_rows=365)` 要求缓存≥365行，但API最多只返回120行，缓存永远被拒绝
+
+**现象**：A股邮件缺少主力资金信息
+
+**根本原因**：
+```python
+# ❌ 错误：min_rows=请求天数
+# 东方财富API最多返回120行（约6个月），永远达不到365
+cached_data = self._load_cache(min_rows=days)  # days=365
+
+# ✅ 正确：min_rows=最小可用行数
+# 小请求污染已通过 days>=30 才写缓存解决
+cached_data = self._load_cache(min_rows=1)  # 缓存非空即使用
+```
+
+**教训**：
+- `min_rows` 参数应基于API实际返回能力，不是请求参数
+- 修复bug时检查是否引入新的副作用（防御性代码可能过于严格）
+- 多步数据管道中，每步的验证逻辑需要端到端考虑
+
+---
+
+### 7. 防御性代码需与上游逻辑协调 ⭐⭐
+
+**问题**：`calculate_technical_features` 数据<200行提前返回，`create_smart_money_features` 仅需50行就执行
+
+**现象**：KeyError: 'Vol_Ratio'（上游跳过了列的创建）
+
+**解决方案**：
+```python
+# 下游函数自行确保依赖列存在
+if 'Vol_Ratio' not in df.columns and 'Volume' in df.columns:
+    vol_ma20 = df['Volume'].rolling(window=20, min_periods=1).mean().shift(shift_val)
+    df['Vol_Ratio'] = df['Volume'] / vol_ma20
+```
+
+**教训**：
+- 函数间的数据依赖关系需要文档化
+- 下游函数不能假设上游一定创建了所有需要的列
+- 防御性代码（自行计算缺失列）比严格依赖上游更健壮
 
 ---
 
@@ -513,6 +558,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-07-30 | v10.8 | 新增：缓存验证需基于API实际能力、防御性代码需与上游逻辑协调 |
 | 2026-07-24 | v10.7 | 新增：系统诊断与维护规范经验 |
 | 2026-07-18 | v10.6 | 新增：截面标签中间变量泄漏经验（Return_Rank 泄漏） |
 | 2026-07-18 | v10.5 | 新增：特征列排除逻辑一致性经验（Future_Return 泄漏） |
