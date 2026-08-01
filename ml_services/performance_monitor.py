@@ -185,9 +185,10 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
 
         # 获取目标日期的收盘价（直接检查是否有价格数据）
         exit_price = fetch_price(pred['stock_code'], target_date)
-        
-        if exit_price is None:
-            print(f"⚠️ 无法获取 {pred['stock_code']} 在 {target_date} 的价格")
+
+        # NaN 价格视同缺失：否则 NaN 收益会被误判为 'down' 方向，污染准确率统计
+        if exit_price is None or np.isnan(exit_price):
+            print(f"⚠️ 无法获取 {pred['stock_code']} 在 {target_date} 的有效价格")
             stats['pending'] += 1
             continue
         
@@ -245,22 +246,27 @@ def calculate_metrics(predictions: List[Dict]) -> Dict:
     total = len(df)
     correct = len(df[df['outcome'] == 'correct'])
     accuracy = correct / total if total > 0 else 0
-    
-    # 收益指标
-    returns = df['actual_return'].values
-    avg_return = np.mean(returns) if len(returns) > 0 else 0
-    median_return = np.median(returns) if len(returns) > 0 else 0
-    
+
+    # 收益指标（剔除 NaN，避免无效退出价格污染统计 —— 历史数据中存在 NaN actual_return）
+    if 'actual_return' in df.columns:
+        returns_series = pd.to_numeric(df['actual_return'], errors='coerce').dropna()
+    else:
+        returns_series = pd.Series(dtype=float)
+    returns = returns_series.values
+    avg_return = float(np.mean(returns)) if len(returns) > 0 else 0
+    median_return = float(np.median(returns)) if len(returns) > 0 else 0
+
     # 风险指标
-    std_return = np.std(returns) if len(returns) > 1 else 0
+    std_return = float(np.std(returns)) if len(returns) > 1 else 0
     sharpe = avg_return / std_return if std_return > 0 else 0
-    
+
     # 买入信号分析（只看预测上涨的）
     buy_signals = df[df['predicted_direction'] == 'up']
     if len(buy_signals) > 0:
         buy_wins = len(buy_signals[buy_signals['outcome'] == 'correct'])
         buy_win_rate = buy_wins / len(buy_signals)
-        buy_avg_return = buy_signals['actual_return'].mean()
+        buy_returns = pd.to_numeric(buy_signals['actual_return'], errors='coerce').dropna()
+        buy_avg_return = float(buy_returns.mean()) if len(buy_returns) > 0 else 0
     else:
         buy_win_rate = 0
         buy_avg_return = 0
@@ -277,6 +283,122 @@ def calculate_metrics(predictions: List[Dict]) -> Dict:
         'buy_win_rate': round(buy_win_rate, 4),
         'buy_avg_return': round(buy_avg_return, 4)
     }
+
+
+# ── 共享指标计算（Markdown 报告与可视化报告复用，单一真相源） ──
+
+# 时间窗口定义：(天数, 名称)
+TIME_WINDOWS = [
+    (30, '1个月'),
+    (90, '3个月'),
+    (180, '6个月'),
+]
+
+# 时间窗口排序顺序
+WINDOW_ORDER = {'1个月': 1, '3个月': 2, '6个月': 3}
+
+
+def _filter_evaluated(history: Dict, start_date_str: str, end_date_str: str,
+                      horizon: Optional[int] = None) -> List[Dict]:
+    """筛选日期范围 [start, end] 内已评估的预测（可按周期过滤）"""
+    result = []
+    for p in history['predictions']:
+        if p.get('outcome') is None:
+            continue
+        d = p.get('target_date', p.get('timestamp', '').split('T')[0])
+        if not (start_date_str <= d <= end_date_str):
+            continue
+        if horizon is not None and p.get('horizon') != horizon:
+            continue
+        result.append(p)
+    return result
+
+
+def compute_window_horizon_metrics(history: Dict, time_windows: Optional[List] = None,
+                                   now: Optional[datetime] = None) -> Dict:
+    """
+    计算各时间窗口 × 各周期的指标
+
+    返回: {窗口天数: {周期: calculate_metrics() 结果}}
+    """
+    if time_windows is None:
+        time_windows = TIME_WINDOWS
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+
+    result = {}
+    for days, _ in time_windows:
+        start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+        preds = _filter_evaluated(history, start_str, end_str)
+
+        by_horizon = {1: [], 5: [], 20: []}
+        for p in preds:
+            h = p.get('horizon', 20)
+            if h in by_horizon:
+                by_horizon[h].append(p)
+
+        result[days] = {h: calculate_metrics(ps) for h, ps in by_horizon.items()}
+    return result
+
+
+def compute_grouped_metrics(history: Dict, days: int, horizon: int,
+                            group_key: str, now: Optional[datetime] = None) -> Dict:
+    """
+    在指定窗口与周期内，按 group_key（'sector' / 'stock_code'）分组计算指标
+
+    返回: {分组值: calculate_metrics() 结果}
+    """
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+    start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+
+    preds = _filter_evaluated(history, start_str, end_str, horizon=horizon)
+    groups = {}
+    for p in preds:
+        g = p.get(group_key, 'unknown')
+        groups.setdefault(g, []).append(p)
+
+    return {g: calculate_metrics(ps) for g, ps in groups.items() if ps}
+
+
+def collect_group_detail(history: Dict, group_key: str,
+                         time_windows: Optional[List] = None,
+                         now: Optional[datetime] = None) -> List[Dict]:
+    """
+    收集 分组 × 周期 × 时间窗口 的明细行（用于表格）
+
+    返回行列表: {'group', 'horizon', 'window', 'metrics', 'sample_pred'}，排序由调用方负责
+    """
+    if time_windows is None:
+        time_windows = TIME_WINDOWS
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+
+    rows = []
+    for h in [1, 5, 20]:
+        for days, window_name in time_windows:
+            start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+            preds = _filter_evaluated(history, start_str, end_str, horizon=h)
+
+            groups = {}
+            for p in preds:
+                g = p.get(group_key, 'unknown')
+                groups.setdefault(g, []).append(p)
+
+            for g, gps in groups.items():
+                metrics = calculate_metrics(gps)
+                if metrics.get('total_predictions', 0) > 0:
+                    rows.append({
+                        'group': g,
+                        'horizon': h,
+                        'window': window_name,
+                        'metrics': metrics,
+                        'sample_pred': gps[0],
+                    })
+    return rows
 
 
 def get_sector_name(sector_code: str) -> str:
@@ -412,65 +534,16 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     返回:
     - Markdown 格式的报告
     """
-    # 时间窗口定义：天数和名称
-    TIME_WINDOWS = [
-        (30, '1个月'),
-        (90, '3个月'),
-        (180, '6个月')
-    ]
-
     now = datetime.now()
-    end_date_str = now.strftime('%Y-%m-%d')
     horizon_names = {1: '1天', 5: '5天', 20: '20天'}
 
-    # 为每个时间窗口计算各周期的指标
-    window_horizon_metrics = {}  # {窗口天数: {周期: 指标}}
+    # 各时间窗口 × 各周期指标（与可视化报告共享 helper，单一真相源）
+    window_horizon_metrics = compute_window_horizon_metrics(history, now=now)
 
-    for days, _ in TIME_WINDOWS:
-        start_date = now - timedelta(days=days)
-        start_date_str = start_date.strftime('%Y-%m-%d')
-
-        # 筛选时间范围内的已评估预测
-        evaluated_predictions = [
-            p for p in history['predictions']
-            if p.get('outcome') is not None
-            and start_date_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
-        ]
-
-        # 按周期分组
-        horizon_predictions = {1: [], 5: [], 20: []}
-        for pred in evaluated_predictions:
-            h = pred.get('horizon', 20)
-            if h in horizon_predictions:
-                horizon_predictions[h].append(pred)
-
-        # 计算各周期指标
-        window_horizon_metrics[days] = {}
-        for h, preds in horizon_predictions.items():
-            window_horizon_metrics[days][h] = calculate_metrics(preds)
-
-    # 使用3个月窗口的数据用于详细表现、板块和个股分析
+    # 3个月窗口（用于模式验证与风险提示）
     detail_days = 90
-    start_date_detail = now - timedelta(days=detail_days)
-    start_date_detail_str = start_date_detail.strftime('%Y-%m-%d')
-
-    detail_predictions = [
-        p for p in history['predictions']
-        if p.get('outcome') is not None
-        and start_date_detail_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
-    ]
-
-    # 按周期分组（详细）
-    detail_horizon_predictions = {1: [], 5: [], 20: []}
-    for pred in detail_predictions:
-        h = pred.get('horizon', 20)
-        if h in detail_horizon_predictions:
-            detail_horizon_predictions[h].append(pred)
-
-    # 计算各周期指标（详细）
-    detail_horizon_metrics = {}
-    for h, preds in detail_horizon_predictions.items():
-        detail_horizon_metrics[h] = calculate_metrics(preds)
+    start_date_detail_str = (now - timedelta(days=detail_days)).strftime('%Y-%m-%d')
+    detail_horizon_metrics = window_horizon_metrics.get(detail_days, {})
 
     # 生成报告
     report = f"""# 预测性能报告
@@ -503,50 +576,24 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 |------|------|------|----------|--------|--------|----------|----------|
 """
 
-    # 板块表现 - 收集所有数据后统一输出
+    # 板块表现 - 收集所有数据后统一输出（复用共享 helper）
     all_sector_data = []
     for h in [1, 5, 20]:
         for days, window_name in TIME_WINDOWS:
-            # 筛选该周期和时间窗口的预测
-            window_start = now - timedelta(days=days)
-            window_start_str = window_start.strftime('%Y-%m-%d')
-
-            window_preds = [
-                p for p in history['predictions']
-                if p.get('horizon') == h
-                and p.get('outcome') is not None
-                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
-            ]
-
-            # 按板块分组
-            sector_preds = {}
-            for pred in window_preds:
-                sector = pred.get('sector', 'unknown')
-                if sector not in sector_preds:
-                    sector_preds[sector] = []
-                sector_preds[sector].append(pred)
-
-            if not sector_preds:
-                continue
-
-            # 计算板块指标
-            for sector, preds in sector_preds.items():
-                metrics = calculate_metrics(preds)
-                if metrics.get('total_predictions', 0) > 0:
-                    all_sector_data.append({
-                        'sector': sector,
-                        'horizon': h,
-                        'window': window_name,
-                        'metrics': metrics
-                    })
+            sector_metrics = compute_grouped_metrics(history, days, h, 'sector', now=now)
+            for sector, metrics in sector_metrics.items():
+                all_sector_data.append({
+                    'sector': sector,
+                    'horizon': h,
+                    'window': window_name,
+                    'metrics': metrics
+                })
 
     # 按板块、周期、时间窗口排序
-    # 时间窗口排序顺序
-    window_order = {'1个月': 1, '3个月': 2, '6个月': 3}
     all_sector_data.sort(key=lambda x: (
         get_sector_name(x['sector']),  # 板块名称
         x['horizon'],                   # 周期 (1, 5, 20)
-        window_order.get(x['window'], 99)  # 时间窗口
+        WINDOW_ORDER.get(x['window'], 99)  # 时间窗口
     ))
 
     for item in all_sector_data:
@@ -566,50 +613,23 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 |----------|----------|------|------|----------|--------|--------|----------|
 """
 
-    # 个股表现 - 收集所有数据后统一输出
+    # 个股表现 - 收集所有数据后统一输出（复用共享 helper）
     all_stock_data = []
-    for h in [1, 5, 20]:
-        for days, window_name in TIME_WINDOWS:
-            # 筛选该周期和时间窗口的预测
-            window_start = now - timedelta(days=days)
-            window_start_str = window_start.strftime('%Y-%m-%d')
-
-            window_preds = [
-                p for p in history['predictions']
-                if p.get('horizon') == h
-                and p.get('outcome') is not None
-                and window_start_str <= p.get('target_date', p.get('timestamp', '').split('T')[0]) <= end_date_str
-            ]
-
-            # 按股票分组
-            stock_preds = {}
-            for pred in window_preds:
-                stock = pred.get('stock_code', 'unknown')
-                if stock not in stock_preds:
-                    stock_preds[stock] = []
-                stock_preds[stock].append(pred)
-
-            if not stock_preds:
-                continue
-
-            # 计算个股指标
-            for stock, preds in stock_preds.items():
-                metrics = calculate_metrics(preds)
-                if metrics.get('total_predictions', 0) > 0:
-                    all_stock_data.append({
-                        'stock': stock,
-                        'stock_name': preds[0].get('stock_name', stock),
-                        'sector': preds[0].get('sector', 'unknown'),
-                        'horizon': h,
-                        'window': window_name,
-                        'metrics': metrics
-                    })
+    for row in collect_group_detail(history, 'stock_code', now=now):
+        all_stock_data.append({
+            'stock': row['group'],
+            'stock_name': row['sample_pred'].get('stock_name', row['group']),
+            'sector': row['sample_pred'].get('sector', 'unknown'),
+            'horizon': row['horizon'],
+            'window': row['window'],
+            'metrics': row['metrics']
+        })
 
     # 按股票代码、周期、时间窗口排序
     all_stock_data.sort(key=lambda x: (
         x['stock'],                     # 股票代码
         x['horizon'],                   # 周期 (1, 5, 20)
-        window_order.get(x['window'], 99)  # 时间窗口
+        WINDOW_ORDER.get(x['window'], 99)  # 时间窗口
     ))
 
     # 显示所有股票
@@ -691,6 +711,180 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 """
 
     return report
+
+
+def _build_stock_detail_table_html(history: Dict, now: Optional[datetime] = None) -> str:
+    """
+    构建可视化报告的「个股表现」明细表 HTML（保留表格以便明细查询）
+    """
+    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
+
+    rows = []
+    for row in collect_group_detail(history, 'stock_code', now=now):
+        rows.append({
+            'stock': row['group'],
+            'stock_name': row['sample_pred'].get('stock_name', row['group']),
+            'sector': row['sample_pred'].get('sector', 'unknown'),
+            'horizon': row['horizon'],
+            'window': row['window'],
+            'metrics': row['metrics'],
+        })
+
+    rows.sort(key=lambda x: (x['stock'], x['horizon'], WINDOW_ORDER.get(x['window'], 99)))
+
+    header = ('<h2 style="color:#007bff; margin-top:30px; border-bottom:1px solid #ddd; '
+              'padding-bottom:5px;">五、个股表现</h2>')
+
+    if not rows:
+        return header + '<p style="color:#666; font-size:13px;">暂无已评估样本。</p>'
+
+    def acc_span(acc):
+        """准确率三色（带数值，颜色非唯一编码）"""
+        color = '#16a34a' if acc >= 0.60 else ('#ea580c' if acc >= 0.50 else '#dc2626')
+        return f'<span style="color:{color}; font-weight:bold;">{acc:.2%}</span>'
+
+    def ret_span(ret):
+        color = '#16a34a' if ret >= 0 else '#dc2626'
+        return f'<span style="color:{color};">{ret:+.2%}</span>'
+
+    lines = [
+        header,
+        '<p style="color:#666; font-size:11px; margin:5px 0 10px 0;">'
+        '明细表（图表未覆盖的个股数据）：按股票代码排序 | 准确率三色：'
+        '<span style="color:#16a34a;">≥60%</span> / '
+        '<span style="color:#ea580c;">50–60%</span> / '
+        '<span style="color:#dc2626;">&lt;50%</span></p>',
+        '<table>',
+        '<tr><th>股票代码</th><th>股票名称</th><th>板块</th><th>周期</th>'
+        '<th>时间窗口</th><th>预测数</th><th>准确率</th><th>平均收益</th></tr>',
+    ]
+    for r in rows:
+        m = r['metrics']
+        lines.append(
+            f"<tr><td>{r['stock']}</td><td>{r['stock_name']}</td>"
+            f"<td>{get_sector_name(r['sector'])}</td><td>{horizon_names[r['horizon']]}</td>"
+            f"<td>{r['window']}</td><td>{m.get('total_predictions', 0)}</td>"
+            f"<td>{acc_span(m.get('accuracy', 0))}</td>"
+            f"<td>{ret_span(m.get('avg_return', 0))}</td></tr>"
+        )
+    lines.append('</table>')
+    return '\n'.join(lines)
+
+
+def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None):
+    """
+    生成可视化性能报告（HTML + 内嵌图表附件）
+
+    用图表替换主要汇总表格（整体雷达 / 窗口柱状图 / 板块雷达网格 / 模式柱状图），
+    保留个股明细表与风险提示。
+
+    参数:
+    - history: 预测历史数据
+    - plain_text: 纯文本正文（默认复用 Markdown 报告）
+
+    返回: (html_content, plain_text, attachments)
+    """
+    from scripts.performance_charts import (
+        generate_overall_radar_section,
+        generate_window_bar_section,
+        generate_sector_radar_section,
+        generate_pattern_bar_section,
+    )
+
+    now = datetime.now()
+    report_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    detail_days = 90
+    start_date_detail_str = (now - timedelta(days=detail_days)).strftime('%Y-%m-%d')
+
+    # 指标计算（与 Markdown 报告共享 helper）
+    window_metrics = compute_window_horizon_metrics(history, now=now)
+    horizon_metrics_3m = window_metrics.get(detail_days, {})
+    sector_metrics_3m = compute_grouped_metrics(history, detail_days, 20, 'sector', now=now)
+    pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
+
+    parts = []
+    attachments = {}
+
+    # 标题
+    parts.append(f"""
+    <h1 style="color:#333; margin-bottom:5px;">预测性能报告</h1>
+    <p style="color:#666; font-size:13px; margin-top:0;">
+        生成时间: {report_time} | 统计口径: 已到期且已评估的方向预测
+    </p>
+    <hr style="border:none; border-top:1px solid #ddd;">
+""")
+
+    # 一、整体性能雷达
+    html, atts = generate_overall_radar_section(horizon_metrics_3m, window_name='3个月')
+    parts.append(html)
+    attachments.update(atts)
+
+    # 二、时间窗口柱状图
+    html, atts = generate_window_bar_section(window_metrics)
+    parts.append(html)
+    attachments.update(atts)
+
+    # 三、板块雷达网格
+    sector_bundle = {
+        s: {'name': get_sector_name(s), 'metrics': m}
+        for s, m in sector_metrics_3m.items()
+    }
+    html, atts = generate_sector_radar_section(sector_bundle)
+    parts.append(html)
+    attachments.update(atts)
+
+    # 四、三周期模式柱状图（图表标签使用无 emoji 的名称）
+    chart_pattern_names = {
+        '010': '反弹失败', '000': '一致看跌', '100': '冲高回落', '001': '下跌中继',
+        '011': '探底回升', '101': '假突破', '110': '震荡回调', '111': '一致看涨',
+    }
+    html, atts = generate_pattern_bar_section(pattern_stats, chart_pattern_names)
+    parts.append(html)
+    attachments.update(atts)
+
+    # 五、个股明细表（保留表格）
+    parts.append(_build_stock_detail_table_html(history, now=now))
+
+    # 六、风险提示
+    total_3m = sum(
+        horizon_metrics_3m.get(h, {}).get('total_predictions', 0) for h in [1, 5, 20]
+    )
+    parts.append(f"""
+    <h2 style="color:#007bff; margin-top:30px; border-bottom:1px solid #ddd; padding-bottom:5px;">六、风险提示</h2>
+    <ol style="color:#333; font-size:13px; line-height:1.8;">
+        <li><b>历史表现不代表未来收益</b></li>
+        <li>模型准确率统计基于 {total_3m} 个样本（3个月窗口），仅供参考</li>
+        <li>投资有风险，请谨慎决策</li>
+    </ol>
+    <p style="color:#999; font-size:12px; margin-top:25px; border-top:1px solid #eee; padding-top:10px;">
+        报告生成: 港股智能分析系统 - 预测性能监控模块
+    </p>
+""")
+
+    body = '\n'.join(p for p in parts if p)
+
+    html_content = f"""
+    <html>
+    <head>
+    <style>
+        body {{ font-family: Arial, "Microsoft YaHei", sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 12px; }}
+        th {{ background-color: #4CAF50; color: white; }}
+        tr:nth-child(even) {{ background-color: #f7f7f7; }}
+        h1, h2 {{ color: #333; }}
+    </style>
+    </head>
+    <body>
+    {body}
+    </body>
+    </html>
+    """
+
+    if plain_text is None:
+        plain_text = generate_monthly_report(history)
+
+    return html_content, plain_text, attachments
 
 
 def send_email_report(report: str, subject: str) -> bool:
@@ -918,7 +1112,7 @@ def main():
                 print(f"   准确率: {total_stats['correct']/total_stats['evaluated']:.2%}")
 
     if args.mode in ['report', 'all']:
-        # 生成报告
+        # 生成 Markdown 报告（仍保存，供 CI 提交与纯文本正文使用）
         print(f"\n📝 生成性能报告...")
         report = generate_monthly_report(history, args.month)
 
@@ -931,10 +1125,37 @@ def main():
             f.write(report)
         print(f"   报告已保存到: {report_path}")
 
-        # 发送邮件
+        # 生成可视化报告（图表替换主要汇总表格）
+        html_content, attachments = None, {}
+        try:
+            html_content, _, attachments = generate_visual_html_report(
+                history, plain_text=report)
+            print(f"   可视化报告已生成: {len(attachments)} 张图表")
+        except Exception as e:
+            print(f"⚠️ 可视化报告生成失败，将回退纯表格邮件: {e}")
+
+        # 保存图表 PNG（便于本地预览）
+        if attachments:
+            charts_dir = os.path.join(REPORT_OUTPUT_DIR, 'performance_charts')
+            os.makedirs(charts_dir, exist_ok=True)
+            for cid, png in attachments.items():
+                with open(os.path.join(charts_dir, f'{cid}.png'), 'wb') as f:
+                    f.write(png)
+            print(f"   图表已保存到: {charts_dir}")
+
+        # 发送邮件（优先带内嵌图表的可视化版本，失败回退纯表格）
         if not args.no_email:
             subject = f"[港股智能分析] 预测性能报告 - {report_date}"
-            send_email_report(report, subject)
+            if html_content and attachments:
+                try:
+                    from message_services.email_sender import send_email_with_images
+                    send_email_with_images(
+                        subject, report, html_content, inline_images=attachments)
+                except Exception as e:
+                    print(f"⚠️ 可视化邮件发送失败（{e}），回退纯表格邮件")
+                    send_email_report(report, subject)
+            else:
+                send_email_report(report, subject)
         else:
             print("   (--no-email) 跳过邮件发送")
 
