@@ -49,13 +49,13 @@ INK = '#333333'
 INK_MUTED = '#666666'
 INK_FAINT = '#999999'
 
-# 雷达 5 维度（均归一化到 0-100）
-PERF_DIMENSIONS = ['准确率', '平均收益', '夏普比率', '买入胜率', '样本充足度']
+# 雷达 5 维度（均为真实模型质量指标，归一化到 0-100；不含样本量/正收益占比等环境敏感量）
+# 注：样本量 n 不是模型能力维度，故不作雷达轴，仅在图下方文字中标注作为可信度上下文
+PERF_DIMENSIONS = ['准确率', '平均收益', '夏普比率', '买入胜率', '买入平均收益']
 
 # 归一化常量（在图下方 caption 中向读者说明）
-RETURN_BOUND = 0.15      # 平均收益 ±15% 映射到 [0, 100]
+RETURN_BOUND = 0.15      # 平均收益 / 买入平均收益 ±15% 映射到 [0, 100]（50 = 零收益）
 SHARPE_MAX = 3.0         # 夏普比率 [0, 3] 映射到 [0, 100]
-SAMPLE_TARGET = 100      # 样本数达到 100 视为充足
 
 # 章节标题样式（与 A股邮件一致）
 _SECTION_H2 = ('<h2 style="color: #007bff; margin-top: 30px; '
@@ -102,11 +102,6 @@ def normalize_buy_win_rate(win_rate):
     return max(0.0, min(100.0, _safe_float(win_rate) * 100))
 
 
-def normalize_sample(count):
-    """样本充足度：n / 100，封顶 100（衡量统计可靠性）"""
-    return max(0.0, min(100.0, _safe_float(count) / SAMPLE_TARGET * 100))
-
-
 def metrics_to_dimensions(metrics):
     """
     将 calculate_metrics() 的指标字典转换为雷达 5 维度分（0-100）。
@@ -115,7 +110,7 @@ def metrics_to_dimensions(metrics):
     - metrics: performance_monitor.calculate_metrics() 的返回值
 
     返回:
-    - {维度名: 分数}
+    - {维度名: 分数}（仅含模型质量维度；样本量 n 不作轴）
     """
     if not metrics:
         metrics = {}
@@ -124,7 +119,8 @@ def metrics_to_dimensions(metrics):
         '平均收益': round(normalize_return(metrics.get('avg_return')), 1),
         '夏普比率': round(normalize_sharpe(metrics.get('sharpe_ratio')), 1),
         '买入胜率': round(normalize_buy_win_rate(metrics.get('buy_win_rate')), 1),
-        '样本充足度': round(normalize_sample(metrics.get('total_predictions')), 1),
+        # 买入平均收益复用 ±15% 映射：衡量"喊涨时平均赚多少"，纯质量、无市场涨跌干扰
+        '买入平均收益': round(normalize_return(metrics.get('buy_avg_return')), 1),
     }
 
 
@@ -139,7 +135,7 @@ def _strip_unsafe_glyphs(text):
 
 def _render_single_radar_png_bytes(title, dimensions, color, size=220):
     """
-    渲染单系列六边形（5 轴）雷达图，返回 PNG bytes。
+    渲染单系列多边形雷达图，返回 PNG bytes（轴数 = PERF_DIMENSIONS 维度数）。
 
     参数:
     - title: 图表标题（如 "1天" / "银行股"）
@@ -249,6 +245,9 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
                      else COLOR_ORANGE if acc >= 0.50 else COLOR_RED)
         avg_ret = m.get('avg_return', 0)
         ret_color = COLOR_GREEN if avg_ret >= 0 else COLOR_RED
+        buy_ret = _safe_float(m.get('buy_avg_return'), 0.0)
+        buy_ret_color = COLOR_GREEN if buy_ret >= 0 else COLOR_RED
+        buy_wr = _safe_float(m.get('buy_win_rate'), 0.0)
         cells.append(f"""            <td style="border: none; text-align: center; padding: 6px; vertical-align: top; width: 33%;">
                 <div style="background: #fafafa; border-radius: 8px; padding: 8px; margin: 2px;">
                     <img src="cid:{cid}" style="width: 100%; max-width: 230px; height: auto;" alt="{HORIZON_NAMES[h]}周期性能雷达">
@@ -256,6 +255,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
                         样本 <b style="color:#333;">{m.get('total_predictions', 0)}</b><br>
                         准确率 <b style="color: {acc_color};">{acc:.2%}</b><br>
                         平均收益 <b style="color: {ret_color};">{avg_ret:+.2%}</b><br>
+                        买入胜率 <b style="color:#333;">{buy_wr:.1%}</b>
+                        · 买入均收 <b style="color: {buy_ret_color};">{buy_ret:+.2%}</b><br>
                         夏普 <b style="color:#333;">{m.get('sharpe_ratio', 0):.2f}</b>
                     </div>
                 </div>
@@ -267,9 +268,10 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
 
     html = _SECTION_H2.format(title='一、模型整体性能雷达')
     html += _CAPTION.format(
-        text=f'统计窗口：{window_name} | 5 维度均归一化至 0–100：'
-             '准确率=方向正确率 · 平均收益=±15%映射(50为零收益) · 夏普=0–3映射 · '
-             '买入胜率=预测上涨样本正确率 · 样本充足度=n/100 | '
+        text=f'统计窗口：{window_name} | 5 维度均为模型质量指标，归一化至 0–100：'
+             '准确率=方向正确率 · 平均收益=全样本±15%映射(50为零收益) · 夏普=0–3映射 · '
+             '买入胜率=预测上涨样本正确率 · 买入平均收益=喊涨样本平均收益(同±15%映射) | '
+             '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
     html += '    <table style="border: 0; border-collapse: collapse; width: 100%;">\n        <tr>\n'
     html += ''.join(cells)
@@ -397,6 +399,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
             'total': total,
             'accuracy': m.get('accuracy', 0),
             'avg_return': m.get('avg_return', 0),
+            'buy_avg_return': m.get('buy_avg_return', 0),
             'cid': cid,
         })
 
@@ -426,6 +429,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
         acc_color = (COLOR_GREEN if it['accuracy'] >= 0.60
                      else COLOR_ORANGE if it['accuracy'] >= 0.50 else COLOR_RED)
         ret_color = COLOR_GREEN if it['avg_return'] >= 0 else COLOR_RED
+        buy_ret = _safe_float(it.get('buy_avg_return'), 0.0)
+        buy_ret_color = COLOR_GREEN if buy_ret >= 0 else COLOR_RED
         html += f"""            <td style="border: none; text-align: center; padding: 5px; vertical-align: top; width: {100.0 / items_per_row:.0f}%;">
                 <div style="background: #fafafa; border-radius: 6px; padding: 5px; margin: 2px;">
                     <img src="cid:{it['cid']}" style="width: 100%; max-width: 190px; height: auto;" alt="{it['name']}">
@@ -433,6 +438,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
                         综合 <b style="color: {avg_color};">{it['avg']:.0f}</b>
                         | 准确率 <b style="color: {acc_color};">{it['accuracy']:.1%}</b><br>
                         收益 <b style="color: {ret_color};">{it['avg_return']:+.1%}</b>
+                        | 买入均收 <b style="color: {buy_ret_color};">{buy_ret:+.1%}</b>
                         | n={it['total']}
                     </div>
                 </div>
