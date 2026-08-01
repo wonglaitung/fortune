@@ -55,7 +55,11 @@ PERF_DIMENSIONS = ['准确率', '平均收益', '夏普比率', '买入胜率', 
 
 # 归一化常量（在图下方 caption 中向读者说明）
 RETURN_BOUND = 0.15      # 平均收益 / 买入平均收益 ±15% 映射到 [0, 100]（50 = 零收益）
-SHARPE_MAX = 3.0         # 夏普比率 [0, 3] 映射到 [0, 100]
+# 单期夏普比率居中映射 [-1, +1] → [0, 100]（50 = 零夏普）。
+# 注：calculate_metrics 的 sharpe 是单持有期信噪比(mean/std)，真实量级 ~±1；
+#     不能年化(滚动样本高度重叠、违反 i.i.d.)，故上限取单期量级 1.0 而非年化的 3.0；
+#     居中后负值显示为 <50、不再被截断贴底，轴才有区分度。
+SHARPE_BOUND = 1.0
 
 # 章节标题样式（与 A股邮件一致）
 _SECTION_H2 = ('<h2 style="color: #007bff; margin-top: 30px; '
@@ -92,9 +96,10 @@ def normalize_return(avg_return):
 
 
 def normalize_sharpe(sharpe):
-    """夏普比率：clamp 到 [0, 3] 后映射 [0, 100]（负值/NaN 记 0）"""
-    s = max(0.0, min(SHARPE_MAX, _safe_float(sharpe, 0.0)))
-    return s / SHARPE_MAX * 100
+    """单期夏普比率：居中映射 [-1, +1] → [0, 100]，50 = 零夏普（NaN 记中性 50）。
+    负值显示为 <50、不再贴底；正负两侧对称，轴具备区分度。"""
+    s = max(-SHARPE_BOUND, min(SHARPE_BOUND, _safe_float(sharpe, 0.0)))
+    return (s + SHARPE_BOUND) / (2 * SHARPE_BOUND) * 100
 
 
 def normalize_buy_win_rate(win_rate):
@@ -269,7 +274,7 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
     html = _SECTION_H2.format(title='一、模型整体性能雷达')
     html += _CAPTION.format(
         text=f'统计窗口：{window_name} | 5 维度均为模型质量指标，归一化至 0–100：'
-             '准确率=方向正确率 · 平均收益=全样本±15%映射(50为零收益) · 夏普=0–3映射 · '
+             '准确率=方向正确率 · 平均收益=全样本±15%映射(50为零收益) · 夏普=单期±1居中映射(50为零,负值<50) · '
              '买入胜率=预测上涨样本正确率 · 买入平均收益=喊涨样本平均收益(同±15%映射) | '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
