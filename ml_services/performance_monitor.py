@@ -713,64 +713,6 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     return report
 
 
-def _build_stock_detail_table_html(history: Dict, now: Optional[datetime] = None) -> str:
-    """
-    构建可视化报告的「个股表现」明细表 HTML（保留表格以便明细查询）
-    """
-    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
-
-    rows = []
-    for row in collect_group_detail(history, 'stock_code', now=now):
-        rows.append({
-            'stock': row['group'],
-            'stock_name': row['sample_pred'].get('stock_name', row['group']),
-            'sector': row['sample_pred'].get('sector', 'unknown'),
-            'horizon': row['horizon'],
-            'window': row['window'],
-            'metrics': row['metrics'],
-        })
-
-    rows.sort(key=lambda x: (x['stock'], x['horizon'], WINDOW_ORDER.get(x['window'], 99)))
-
-    header = ('<h2 style="color:#007bff; margin-top:30px; border-bottom:1px solid #ddd; '
-              'padding-bottom:5px;">五、个股表现</h2>')
-
-    if not rows:
-        return header + '<p style="color:#666; font-size:13px;">暂无已评估样本。</p>'
-
-    def acc_span(acc):
-        """准确率三色（带数值，颜色非唯一编码）"""
-        color = '#16a34a' if acc >= 0.60 else ('#ea580c' if acc >= 0.50 else '#dc2626')
-        return f'<span style="color:{color}; font-weight:bold;">{acc:.2%}</span>'
-
-    def ret_span(ret):
-        color = '#16a34a' if ret >= 0 else '#dc2626'
-        return f'<span style="color:{color};">{ret:+.2%}</span>'
-
-    lines = [
-        header,
-        '<p style="color:#666; font-size:11px; margin:5px 0 10px 0;">'
-        '明细表（图表未覆盖的个股数据）：按股票代码排序 | 准确率三色：'
-        '<span style="color:#16a34a;">≥60%</span> / '
-        '<span style="color:#ea580c;">50–60%</span> / '
-        '<span style="color:#dc2626;">&lt;50%</span></p>',
-        '<table>',
-        '<tr><th>股票代码</th><th>股票名称</th><th>板块</th><th>周期</th>'
-        '<th>时间窗口</th><th>预测数</th><th>准确率</th><th>平均收益</th></tr>',
-    ]
-    for r in rows:
-        m = r['metrics']
-        lines.append(
-            f"<tr><td>{r['stock']}</td><td>{r['stock_name']}</td>"
-            f"<td>{get_sector_name(r['sector'])}</td><td>{horizon_names[r['horizon']]}</td>"
-            f"<td>{r['window']}</td><td>{m.get('total_predictions', 0)}</td>"
-            f"<td>{acc_span(m.get('accuracy', 0))}</td>"
-            f"<td>{ret_span(m.get('avg_return', 0))}</td></tr>"
-        )
-    lines.append('</table>')
-    return '\n'.join(lines)
-
-
 def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None):
     """
     生成可视化性能报告（HTML + 内嵌图表附件）
@@ -789,6 +731,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
         generate_window_bar_section,
         generate_sector_radar_section,
         generate_pattern_bar_section,
+        generate_stock_section,
     )
 
     now = datetime.now()
@@ -842,8 +785,21 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
     parts.append(html)
     attachments.update(atts)
 
-    # 五、个股明细表（保留表格）
-    parts.append(_build_stock_detail_table_html(history, now=now))
+    # 五、个股表现（全部排名条形图 + Top 10 雷达网格，替换原明细表）
+    # 复用 collect_group_detail 取「20天 / 3个月」口径，组装个股 bundle（含名称/板块）
+    stock_bundle = {}
+    for row in collect_group_detail(history, 'stock_code', now=now):
+        if row['horizon'] != 20 or row['window'] != '3个月':
+            continue
+        stock_bundle[row['group']] = {
+            'code': row['group'],
+            'name': row['sample_pred'].get('stock_name', row['group']),
+            'sector': row['sample_pred'].get('sector', 'unknown'),
+            'metrics': row['metrics'],
+        }
+    html, atts = generate_stock_section(stock_bundle)
+    parts.append(html)
+    attachments.update(atts)
 
     # 六、风险提示
     total_3m = sum(

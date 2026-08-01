@@ -521,3 +521,164 @@ def generate_pattern_bar_section(pattern_stats, pattern_names):
              f'<img src="cid:{cid}" style="max-width: 620px; width: 100%; height: auto;" '
              'alt="三周期模式胜率柱状图"></div>\n')
     return html, attachments
+
+
+# ════════════════════════════════════════════════════════════
+# 章节 5：个股表现（全部排名条形图 + Top N 雷达网格）
+# ════════════════════════════════════════════════════════════
+
+def _sanitize_cid_code(code):
+    """把股票代码转成合法 CID 片段（只保留字母数字，如 0700.HK → 0700HK）。"""
+    return re.sub(r'[^A-Za-z0-9]', '', str(code))
+
+
+def _stock_rank_bar_png_bytes(items):
+    """
+    渲染「全部个股综合分排名」水平条形图，返回 PNG bytes。
+
+    参数:
+    - items: [{'label', 'avg', 'total'}]，调用方已按综合分升序排列（最高分在顶部）
+    """
+    n = len(items)
+    labels = [it['label'] for it in items]
+    avgs = [it['avg'] for it in items]
+    totals = [it['total'] for it in items]
+    colors = [_get_color(a) for a in avgs]
+    group_mean = float(np.mean(avgs)) if avgs else 0.0
+
+    y = np.arange(n)
+    fig, ax = plt.subplots(figsize=(8.6, 0.42 * n + 1.5), facecolor='white')
+    ax.barh(y, avgs, color=colors, height=0.66,
+            edgecolor='white', linewidth=0.8, zorder=3)
+    # 全组均值参考线（综合分非百分比，无 50 基准语义）
+    ax.axvline(group_mean, color=INK_FAINT, linestyle='--', linewidth=0.9,
+               alpha=0.8, zorder=2)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels, fontsize=8.8, color=INK)
+    ax.set_xlim(0, 100)
+    ax.set_xticks([0, 20, 40, 60, 80, 100])
+    ax.set_xlabel('综合分（5 维度均值）', fontsize=9.5, color=INK_MUTED)
+    ax.set_title('个股综合分排名（20天 · 3个月窗口）', fontsize=12, color=INK, pad=10)
+    _style_bar_axis(ax)
+
+    # 数值 + 样本量直接标注（墨色）
+    for yi, a, t in zip(y, avgs, totals):
+        ax.text(a + 1.2, yi, f'{a:.0f}  (n={t})', va='center', ha='left',
+                fontsize=8.0, color=INK, zorder=5)
+    # 均值参考线标注
+    ax.text(group_mean, n - 0.4, f'均值 {group_mean:.0f}', va='bottom', ha='center',
+            fontsize=7.8, color=INK_FAINT, zorder=5)
+
+    fig.tight_layout()
+    return _save_png_bytes(fig)
+
+
+def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=5):
+    """
+    生成「个股表现」HTML 区块 + CID 附件：
+      - 一张水平条形图：全部个股按综合分排名（紧凑、便于横向对比）
+      - Top N 个股雷达网格：综合分最高者单独展示 5 维度细节
+
+    参数:
+    - stock_bundle: {代码: {'name', 'code', 'sector', 'metrics'}}
+    - min_samples: 最小样本数，低于此值的个股跳过（并打印日志，不静默截断）
+    - top_n: 雷达网格展示的个股数量
+    - items_per_row: 雷达网格每行几张
+
+    返回: (html, {cid: png_bytes})
+    """
+    items = []
+    dropped = []
+
+    for code, info in stock_bundle.items():
+        m = info.get('metrics') or {}
+        total = int(m.get('total_predictions', 0))
+        name = info.get('name', code)
+        if total < min_samples:
+            dropped.append((name, code, total))
+            continue
+
+        dims = metrics_to_dimensions(m)
+        avg = float(np.mean(list(dims.values())))
+        items.append({
+            'code': code,
+            'name': name,
+            'label': f'{_strip_unsafe_glyphs(name)} {code}',
+            'avg': avg,
+            'total': total,
+            'dims': dims,
+            'metrics': m,
+        })
+
+    for name, code, total in dropped:
+        print(f'  [perf-stock] 个股样本不足跳过: {name} {code} (n={total} < {min_samples})')
+
+    if not items:
+        return '', {}
+
+    attachments = {}
+
+    # ── 5.1 全部个股综合分排名条形图 ──
+    ranked_asc = sorted(items, key=lambda it: it['avg'])  # barh 最高分落在顶部
+    attachments['perf_stock_rank'] = _stock_rank_bar_png_bytes(ranked_asc)
+
+    html = _SECTION_H2.format(title='五、个股表现')
+    html += _CAPTION.format(
+        text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
+             f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
+             '5 维度同整体雷达，综合分=5维度均值 | 状态三色：'
+             '<span style="color:#16a34a;">≥60</span> / '
+             '<span style="color:#ea580c;">40–60</span> / '
+             '<span style="color:#dc2626;">&lt;40</span>')
+    html += ('    <div style="text-align: center;">'
+             '<img src="cid:perf_stock_rank" style="max-width: 660px; width: 100%; height: auto;" '
+             'alt="个股综合分排名"></div>\n')
+
+    # ── 5.2 Top N 个股雷达网格 ──
+    top_items = sorted(items, key=lambda it: it['avg'], reverse=True)[:top_n]
+    html += '    <table style="border: 0; border-collapse: collapse; width: 100%;">\n        <tr>\n'
+
+    for i, it in enumerate(top_items):
+        if i % items_per_row == 0 and i > 0:
+            html += '        </tr><tr>\n'
+        cid = f"perf_stock_{_sanitize_cid_code(it['code'])}"
+        try:
+            attachments[cid] = _render_single_radar_png_bytes(
+                it['name'], it['dims'], _get_color(it['avg']), size=185)
+        except Exception as e:  # 单只失败不影响整体
+            print(f"  [perf-stock] 个股图表生成失败: {it['name']} {e}")
+            continue
+
+        avg_color = (COLOR_GREEN if it['avg'] >= 60
+                     else COLOR_ORANGE if it['avg'] >= 40 else COLOR_RED)
+        acc = it['metrics'].get('accuracy', 0)
+        acc_color = (COLOR_GREEN if acc >= 0.60
+                     else COLOR_ORANGE if acc >= 0.50 else COLOR_RED)
+        avg_ret = it['metrics'].get('avg_return', 0)
+        ret_color = COLOR_GREEN if avg_ret >= 0 else COLOR_RED
+        buy_ret = _safe_float(it['metrics'].get('buy_avg_return'), 0.0)
+        buy_ret_color = COLOR_GREEN if buy_ret >= 0 else COLOR_RED
+
+        html += f"""            <td style="border: none; text-align: center; padding: 4px; vertical-align: top; width: {100.0 / items_per_row:.0f}%;">
+                <div style="background: #fafafa; border-radius: 6px; padding: 4px; margin: 2px;">
+                    <img src="cid:{cid}" style="width: 100%; max-width: 185px; height: auto;" alt="{it['name']}">
+                    <div style="font-size: 9.5px; color: #666; margin-top: 2px; line-height: 1.55;">
+                        <b style="color:#333;">{it['code']}</b><br>
+                        综合 <b style="color: {avg_color};">{it['avg']:.0f}</b>
+                        | 准确率 <b style="color: {acc_color};">{acc:.1%}</b><br>
+                        收益 <b style="color: {ret_color};">{avg_ret:+.1%}</b>
+                        | 买入均收 <b style="color: {buy_ret_color};">{buy_ret:+.1%}</b><br>
+                        n={it['total']}
+                    </div>
+                </div>
+            </td>
+"""
+
+    # 补齐末行空单元格
+    remainder = len(top_items) % items_per_row
+    if remainder > 0:
+        for _ in range(items_per_row - remainder):
+            html += f'            <td style="border: none; width: {100.0 / items_per_row:.0f}%;"></td>\n'
+
+    html += '        </tr>\n    </table>\n'
+    return html, attachments
