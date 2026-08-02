@@ -53,6 +53,31 @@ INK_FAINT = '#999999'
 # 注：样本量 n 不是模型能力维度，故不作雷达轴，仅在图下方文字中标注作为可信度上下文
 PERF_DIMENSIONS = ['准确率', '平均收益', '夏普比率', '买入胜率', '买入平均收益']
 
+# 综合分加权（胜率为主、准确率为辅）：买入胜率×3 主导，准确率×0.5 降权，其余×1。
+# 仅用于「综合分」这一标量（排名条 / Top10 选取 / 状态三色 / 雷达标题综合分）；
+# 雷达 5 轴多边形本身不加权（极坐标对单轴加权会扭曲形状，5 维仍等权呈现）。
+PERF_DIM_WEIGHTS = {
+    '准确率': 0.5,
+    '平均收益': 1.0,
+    '夏普比率': 1.0,
+    '买入胜率': 3.0,
+    '买入平均收益': 1.0,
+}
+
+
+def composite_score(dimensions):
+    """5 维度按 PERF_DIM_WEIGHTS 加权平均 → 综合分（0-100）。
+
+    与等权均值不同：买入胜率权重最高，使综合分/排名向"喊涨命中率"倾斜；
+    准确率降权为辅。雷达多边形形状不受影响。
+    """
+    wsum = 0.0
+    wtot = 0.0
+    for k, w in PERF_DIM_WEIGHTS.items():
+        wsum += w * dimensions.get(k, 0)
+        wtot += w
+    return wsum / wtot if wtot > 0 else 0.0
+
 # 归一化常量（在图下方 caption 中向读者说明）
 RETURN_BOUND = 0.15      # 平均收益 / 买入平均收益 ±15% 映射到 [0, 100]（50 = 零收益）
 # 单期夏普比率居中映射 [-1, +1] → [0, 100]（50 = 零夏普）。
@@ -138,7 +163,7 @@ def _strip_unsafe_glyphs(text):
 # 基础渲染：单系列雷达图 PNG
 # ════════════════════════════════════════════════════════════
 
-def _render_single_radar_png_bytes(title, dimensions, color, size=220):
+def _render_single_radar_png_bytes(title, dimensions, color, size=220, composite=None):
     """
     渲染单系列多边形雷达图，返回 PNG bytes（轴数 = PERF_DIMENSIONS 维度数）。
 
@@ -147,12 +172,14 @@ def _render_single_radar_png_bytes(title, dimensions, color, size=220):
     - dimensions: {维度名: 0-100 分数}
     - color: 填充/描边颜色
     - size: 图片尺寸（像素，换算为 figsize）
+    - composite: 标题"综合 X"用的标量；None 时回退 5 维等权均值（兼容旧调用）。
+      调用方应传加权综合分 composite_score(dimensions)，使标题与排名口径一致。
     """
     categories = PERF_DIMENSIONS
     n = len(categories)
 
     values = [dimensions.get(c, 0) for c in categories]
-    avg = float(np.mean(values))
+    avg = composite if composite is not None else float(np.mean(values))
     values_closed = values + values[:1]
     angles = [i / float(n) * 2 * np.pi for i in range(n)]
     angles_closed = angles + angles[:1]
@@ -242,7 +269,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
         color = HORIZON_COLORS[h]
         cid = f'perf_radar_{h}d'
         attachments[cid] = _render_single_radar_png_bytes(
-            f'{HORIZON_NAMES[h]}周期', dims, color, size=230)
+            f'{HORIZON_NAMES[h]}周期', dims, color, size=230,
+            composite=composite_score(dims))
 
         # 关键指标（墨色文本，准确率按状态上色并带数值 = 非颜色唯一编码）
         acc = m.get('accuracy', 0)
@@ -277,6 +305,7 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
              '准确率=方向正确率 · 平均收益=全样本±15%映射(50为零收益) · 夏普=单期±1居中映射(50为零,负值<50) · '
              '买入胜率=预测上涨样本正确率 · 买入平均收益=喊涨样本平均收益(同±15%映射) | '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
+             '标题"综合"=加权综合分(买入胜率×3·准确率×0.5·其余×1，胜率为主，雷达5轴形状仍等权) | '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
     html += '    <table style="border: 0; border-collapse: collapse; width: 100%;">\n        <tr>\n'
     html += ''.join(cells)
@@ -291,8 +320,9 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
 def generate_window_bar_section(window_metrics,
                                 time_windows=((30, '1个月'), (90, '3个月'), (180, '6个月'))):
     """
-    生成「各周期时间窗口准确率」柱状图 HTML 区块 + CID 附件。
-    一张图内 3 个子图（1天/5天/20天），每个子图展示 1个月/3个月/6个月 的准确率。
+    生成「各周期时间窗口表现」HTML 区块 + CID 附件：
+    上下两张图，结构一致——上图为准确率、下图为买入胜率（新增），
+    每张图内 3 个子图（1天/5天/20天），每个子图展示 1个月/3个月/6个月。
 
     参数:
     - window_metrics: {窗口天数: {周期: metrics}}
@@ -304,60 +334,73 @@ def generate_window_bar_section(window_metrics,
     x = np.arange(len(windows))
     xlabels = [name for _, name in windows]
 
-    fig, axes = plt.subplots(1, len(HORIZONS), figsize=(9.6, 3.1),
-                             facecolor='white', sharey=True)
-    if len(HORIZONS) == 1:
-        axes = [axes]
+    # (metrics键, 图标题, 纵轴名) —— 准确率 + 买入胜率，虚线均为 50% 基准
+    panels = [
+        ('perf_window_acc', 'accuracy', '各周期在不同时间窗口的准确率', '准确率'),
+        ('perf_window_bwr', 'buy_win_rate', '各周期在不同时间窗口的买入胜率', '买入胜率'),
+    ]
 
-    any_data = False
-    for ax, h in zip(axes, HORIZONS):
-        accs, counts = [], []
-        for days, _ in windows:
-            m = (window_metrics.get(days, {}) or {}).get(h, {}) or {}
-            accs.append(float(m.get('accuracy', 0)) * 100)
-            counts.append(int(m.get('total_predictions', 0)))
-        if any(c > 0 for c in counts):
-            any_data = True
+    attachments = {}
+    imgs = []
+    for cid, key, suptitle, ylabel in panels:
+        fig, axes = plt.subplots(1, len(HORIZONS), figsize=(9.6, 3.1),
+                                 facecolor='white', sharey=True)
+        if len(HORIZONS) == 1:
+            axes = [axes]
 
-        color = HORIZON_COLORS[h]
-        ax.bar(x, accs, color=color, width=0.62,
-               edgecolor='white', linewidth=0.8, zorder=3)
-        ax.axhline(50, color=INK_FAINT, linestyle='--', linewidth=0.9,
-                   alpha=0.8, zorder=2)  # 50% 随机基准
-        ax.set_title(f'{HORIZON_NAMES[h]}周期', fontsize=10.5, color=INK, pad=8)
-        ax.set_xticks(x)
-        ax.set_xticklabels(xlabels, fontsize=8.5, color=INK_MUTED)
-        ax.set_ylim(0, 100)
-        ax.set_yticks([0, 25, 50, 75, 100])
-        _style_bar_axis(ax)
+        any_data = False
+        for ax, h in zip(axes, HORIZONS):
+            vals, counts = [], []
+            for days, _ in windows:
+                m = (window_metrics.get(days, {}) or {}).get(h, {}) or {}
+                vals.append(float(m.get(key, 0)) * 100)
+                counts.append(int(m.get('total_predictions', 0)))
+            if any(c > 0 for c in counts):
+                any_data = True
 
-        # 数值直接标注（墨色；无样本标灰）
-        for xi, v, c in zip(x, accs, counts):
-            if c > 0:
-                ax.text(xi, v + 2, f'{v:.0f}%', ha='center', va='bottom',
-                        fontsize=8.5, color=INK, zorder=5)
-            else:
-                ax.text(xi, 3, '无样本', ha='center', va='bottom',
-                        fontsize=7.5, color=INK_FAINT, zorder=5)
+            color = HORIZON_COLORS[h]
+            ax.bar(x, vals, color=color, width=0.62,
+                   edgecolor='white', linewidth=0.8, zorder=3)
+            ax.axhline(50, color=INK_FAINT, linestyle='--', linewidth=0.9,
+                       alpha=0.8, zorder=2)  # 50% 基准（随机方向 / 抛硬币）
+            ax.set_title(f'{HORIZON_NAMES[h]}周期', fontsize=10.5, color=INK, pad=8)
+            ax.set_xticks(x)
+            ax.set_xticklabels(xlabels, fontsize=8.5, color=INK_MUTED)
+            ax.set_ylim(0, 100)
+            ax.set_yticks([0, 25, 50, 75, 100])
+            _style_bar_axis(ax)
 
-    axes[0].set_ylabel('准确率', fontsize=9, color=INK_MUTED)
-    fig.suptitle('各周期在不同时间窗口的准确率', fontsize=12, color=INK, y=1.04)
-    fig.tight_layout()
+            # 数值直接标注（墨色；无样本标灰）
+            for xi, v, c in zip(x, vals, counts):
+                if c > 0:
+                    ax.text(xi, v + 2, f'{v:.0f}%', ha='center', va='bottom',
+                            fontsize=8.5, color=INK, zorder=5)
+                else:
+                    ax.text(xi, 3, '无样本', ha='center', va='bottom',
+                            fontsize=7.5, color=INK_FAINT, zorder=5)
 
-    if not any_data:
-        plt.close(fig)
+        axes[0].set_ylabel(ylabel, fontsize=9, color=INK_MUTED)
+        fig.suptitle(suptitle, fontsize=12, color=INK, y=1.04)
+        fig.tight_layout()
+
+        if not any_data:
+            plt.close(fig)
+            continue
+        attachments[cid] = _save_png_bytes(fig)
+        imgs.append((cid, suptitle))
+
+    if not imgs:
         return '', {}
-
-    cid = 'perf_window_bar'
-    attachments = {cid: _save_png_bytes(fig)}
 
     html = _SECTION_H2.format(title='二、各周期时间窗口表现')
     html += _CAPTION.format(
-        text='准确率 = 方向预测正确比例 | 虚线为 50% 随机基准 | '
+        text='上图=准确率（方向预测正确比例）| 下图=买入胜率（模型喊涨的样本中真涨比例，'
+             '与实盘盈亏直接挂钩）| 虚线均为 50% 基准 | '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
-    html += ('    <div style="text-align: center;">'
-             f'<img src="cid:{cid}" style="max-width: 680px; width: 100%; height: auto;" '
-             'alt="各周期时间窗口准确率柱状图"></div>\n')
+    for cid, suptitle in imgs:
+        html += ('    <div style="text-align: center; margin: 6px 0;">'
+                 f'<img src="cid:{cid}" style="max-width: 680px; width: 100%; height: auto;" '
+                 f'alt="{suptitle}"></div>\n')
     return html, attachments
 
 
@@ -389,11 +432,11 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
             continue
 
         dims = metrics_to_dimensions(m)
-        avg = float(np.mean(list(dims.values())))
+        avg = composite_score(dims)  # 加权综合分（胜率为主、准确率为辅）
         color = _get_color(avg)  # 状态三色：≥60 绿 / 40-60 橙 / <40 红
         cid = f'perf_sector_{sector}'
         try:
-            attachments[cid] = _render_single_radar_png_bytes(name, dims, color, size=190)
+            attachments[cid] = _render_single_radar_png_bytes(name, dims, color, size=190, composite=avg)
         except Exception as e:  # 单板块失败不影响整体
             print(f'  [perf-radar] 板块图表生成失败: {name} {e}')
             continue
@@ -420,7 +463,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     html = _SECTION_H2.format(title='三、板块表现雷达图')
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 仅展示样本数 ≥ {min_samples} 的板块 | '
-             '5 维度同整体雷达 | 颜色为综合分状态：'
+             '5 维度同整体雷达 | 综合分=加权(买入胜率×3·准确率×0.5·其余×1，胜率为主) | 颜色为综合分状态：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
              '<span style="color:#dc2626;">&lt;40</span>')
@@ -562,7 +605,7 @@ def _stock_rank_bar_png_bytes(items):
     ax.set_yticklabels(labels, fontsize=8.8, color=INK)
     ax.set_xlim(0, 100)
     ax.set_xticks([0, 20, 40, 60, 80, 100])
-    ax.set_xlabel('综合分（5 维度均值）', fontsize=9.5, color=INK_MUTED)
+    ax.set_xlabel('综合分（加权：胜率为主）', fontsize=9.5, color=INK_MUTED)
     ax.set_title('个股综合分排名（20天 · 3个月窗口）', fontsize=12, color=INK, pad=10)
     _style_bar_axis(ax)
 
@@ -604,7 +647,7 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
             continue
 
         dims = metrics_to_dimensions(m)
-        avg = float(np.mean(list(dims.values())))
+        avg = composite_score(dims)  # 加权综合分（胜率为主、准确率为辅）
         items.append({
             'code': code,
             'name': name,
@@ -631,7 +674,7 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
              f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
-             '5 维度同整体雷达，综合分=5维度均值 | 状态三色：'
+             '5 维度同整体雷达，综合分=加权(买入胜率×3·准确率×0.5·其余×1，胜率为主) | 状态三色：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
              '<span style="color:#dc2626;">&lt;40</span>')
@@ -649,7 +692,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         cid = f"perf_stock_{_sanitize_cid_code(it['code'])}"
         try:
             attachments[cid] = _render_single_radar_png_bytes(
-                it['name'], it['dims'], _get_color(it['avg']), size=185)
+                it['name'], it['dims'], _get_color(it['avg']), size=185,
+                composite=it['avg'])
         except Exception as e:  # 单只失败不影响整体
             print(f"  [perf-stock] 个股图表生成失败: {it['name']} {e}")
             continue
