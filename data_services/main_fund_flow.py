@@ -84,16 +84,31 @@ class MainFundFlowService:
                 "_": str(int(time.time() * 1000)),
             }
 
-            r = requests.get(url, params=params, headers=headers, timeout=15)
-            data = r.json()
+            # 重试机制：东方财富接口偶发连接中断（RemoteDisconnected），
+            # 单次失败不代表接口不可用，最多重试3次，退避间隔 5s/10s
+            max_retries = 3
+            klines = None
+            for attempt in range(1, max_retries + 1):
+                params["_"] = str(int(time.time() * 1000))
+                try:
+                    r = requests.get(url, params=params, headers=headers, timeout=15)
+                    data = r.json()
 
-            if data.get("rc") != 0 or not data.get("data"):
-                logger.error(f"获取主力资金数据失败: rc={data.get('rc')}, data keys={list(data.keys()) if isinstance(data, dict) else 'N/A'}")
-                return None
+                    if data.get("rc") != 0 or not data.get("data"):
+                        logger.warning(f"获取主力资金数据失败（第{attempt}/{max_retries}次）: rc={data.get('rc')}, data keys={list(data.keys()) if isinstance(data, dict) else 'N/A'}")
+                    else:
+                        klines = data["data"].get("klines", [])
+                        if klines:
+                            break
+                        logger.warning(f"主力资金数据为空（第{attempt}/{max_retries}次）")
+                except requests.RequestException as e:
+                    logger.warning(f"请求主力资金数据失败（第{attempt}/{max_retries}次）: {e}")
 
-            klines = data["data"].get("klines", [])
+                if attempt < max_retries:
+                    time.sleep(5 * attempt)
+
             if not klines:
-                logger.error("主力资金数据为空")
+                logger.error(f"获取主力资金数据失败: 已重试{max_retries}次")
                 return None
 
             # 解析数据（参考 akshare stock_market_fund_flow）

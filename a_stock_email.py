@@ -268,6 +268,17 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
     mf_20d = main_fund_data.get('net_flow_20d_sum', 0)
     consecutive = main_fund_data.get('consecutive_inflow', 0)
 
+    # 主力资金块（基于可用性标志显式展示）
+    if main_fund_data.get('available', False):
+        main_fund_block = f"""**主力资金**：
+- 今日净流入：{main_fund_data.get('main_net_flow', 0):.2f} 亿
+- 5日累积：{mf_5d:.2f} 亿
+- 20日累积：{mf_20d:.2f} 亿
+- 连续流入：{consecutive} 天"""
+    else:
+        main_fund_block = """**主力资金**：
+- ⚠️ 主力资金数据获取失败（东方财富API不可用），今日无资金流向数据，请勿基于资金面做推断"""
+
     market_info = f"""
 ### 市场环境
 
@@ -282,11 +293,7 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
 - 上涨比例：{up_ratio:.1%}（全量{sentiment.get('total_count', len(stock_data_list))}只股票）
 - 动态阈值：买入需概率≥{sentiment.get('dynamic_threshold', 0.5):.0%}
 
-**主力资金**：
-- 今日净流入：{main_fund_data.get('main_net_flow', 0):.2f} 亿
-- 5日累积：{mf_5d:.2f} 亿
-- 20日累积：{mf_20d:.2f} 亿
-- 连续流入：{consecutive} 天
+{main_fund_block}
 """
 
     # 完整提示词（参考港股六层分析框架）
@@ -456,7 +463,10 @@ def generate_ai_report(stocks=None, save_file=True):
     main_fund_service = MainFundFlowService()
     main_fund_history = main_fund_service.fetch_history()
     main_fund_data = {}
-    if main_fund_history is not None and not main_fund_history.empty:
+    main_fund_data['available'] = main_fund_history is not None and not main_fund_history.empty
+    if not main_fund_data['available']:
+        print("  ⚠️ 主力资金数据获取失败（东方财富API不可用），LLM建议将不含资金流向信息")
+    if main_fund_data['available']:
         # 从历史数据中提取最新数据（避免 get_latest 的缓存污染问题）
         latest_row = main_fund_history.iloc[-1]
         main_fund_data['main_net_flow'] = float(latest_row.get('main_net_flow', 0))

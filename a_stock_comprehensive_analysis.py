@@ -672,7 +672,8 @@ def analyze_market():
     # 主力资金（直接获取历史数据，避免缓存污染问题）
     main_fund_service = MainFundFlowService()
     main_fund_history = main_fund_service.fetch_history()
-    if main_fund_history is not None and not main_fund_history.empty:
+    result['main_fund_available'] = main_fund_history is not None and not main_fund_history.empty
+    if result['main_fund_available']:
         latest_row = main_fund_history.iloc[-1]
         # 金额（亿）
         result['main_fund_net_flow'] = float(latest_row.get('main_net_flow', 0))
@@ -693,141 +694,6 @@ def analyze_market():
         result['main_fund_sz_change_pct'] = float(latest_row.get('sz_change_pct', 0))
 
     return result
-
-
-def generate_comprehensive_report(llm_content, ml_predictions_20d, stock_analyses, market_data, main_fund_trend=None):
-    """
-    生成综合分析报告
-
-    Args:
-        llm_content: 大模型建议内容
-        ml_predictions_20d: 20天ML预测
-        stock_analyses: 股票分析结果
-        market_data: 市场数据
-        main_fund_trend: 主力资金趋势数据（包含5日/20日累积）
-
-    Returns:
-        str: 综合报告
-    """
-    date_str = datetime.now().strftime('%Y-%m-%d')
-
-    report = f"""{'=' * 80}
-A股综合分析报告
-日期: {date_str}
-生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-{'=' * 80}
-
-## 一、市场概况
-
-### 1.1 上证指数
-- 收盘: {market_data.get('sh_close', 'N/A'):.2f}
-- 涨跌: {market_data.get('sh_change', 0):+.2f}%
-- MA20: {market_data.get('sh_ma20', 'N/A'):.2f}
-- 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
-"""
-
-    # 主力资金 - 仅当数据可用时显示
-    mf_net = market_data.get('main_fund_net_flow', 0)
-    mf_super = market_data.get('main_fund_super_large', 0)
-    mf_large = market_data.get('main_fund_large', 0)
-    mf_mid = market_data.get('main_fund_mid', 0)
-    mf_small = market_data.get('main_fund_small', 0)
-    if mf_net != 0 or mf_super != 0 or mf_large != 0:
-        report += f"""
-### 1.2 主力资金
-- 净流入: {mf_net:.2f} 亿（主力净占比 {market_data.get('main_fund_net_pct', 0):.2f}%）
-- 超大单: {mf_super:.2f} 亿（占比 {market_data.get('main_fund_super_large_pct', 0):.2f}%）
-- 大单: {mf_large:.2f} 亿（占比 {market_data.get('main_fund_large_pct', 0):.2f}%）
-- 中单: {mf_mid:.2f} 亿（占比 {market_data.get('main_fund_mid_pct', 0):.2f}%）
-- 小单: {mf_small:.2f} 亿（占比 {market_data.get('main_fund_small_pct', 0):.2f}%）
-"""
-
-        # 添加指数数据
-        mf_sh_close = market_data.get('main_fund_sh_close', 0)
-        mf_sz_close = market_data.get('main_fund_sz_close', 0)
-        if mf_sh_close or mf_sz_close:
-            report += f"- 上证收盘: {mf_sh_close:.2f}（{market_data.get('main_fund_sh_change_pct', 0):+.2f}%）\n"
-            report += f"- 深证收盘: {mf_sz_close:.2f}（{market_data.get('main_fund_sz_change_pct', 0):+.2f}%）\n"
-
-        # 添加5日/20日累积数据和连续流入天数
-        if main_fund_trend:
-            mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
-            mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
-            consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
-            report += f"- 5日累积流入: {mf_5d:.2f} 亿\n"
-            report += f"- 20日累积流入: {mf_20d:.2f} 亿\n"
-            report += f"- 连续流入天数: {consecutive_inflow} 天\n"
-
-    report += """
----
-
-## 二、技术指标分析
-
-"""
-
-    # 添加每只股票的分析
-    for code, analysis in stock_analyses.items():
-        name = analysis.get('name', code)
-        report += f"""### {name} ({code})
-
-**基本数据**：
-- 当前价格: {analysis.get('current_price', 'N/A')} 元
-- 今日涨跌: {analysis.get('change_percent', 0):+.2f}%
-- 涨跌停限制: {analysis.get('limit_rate', 0) * 100:.0f}%
-
-**技术指标**：
-- MA5: {analysis.get('ma5', 'N/A'):.2f}
-- MA10: {analysis.get('ma10', 'N/A'):.2f}
-- MA20: {analysis.get('ma20', 'N/A'):.2f}
-- RSI(14): {analysis.get('rsi_14', 'N/A'):.1f}
-
-**近期涨跌**：
-- 5日: {analysis.get('return_5d', 0):+.2f}%
-- 20日: {analysis.get('return_20d', 0):+.2f}%
-
-"""
-
-    # 添加ML预测结果
-    report += """---
-
-## 三、机器学习预测（20天周期）
-
-"""
-    if ml_predictions_20d is not None and not ml_predictions_20d.empty:
-        for _, row in ml_predictions_20d.iterrows():
-            code = str(row.get('Stock_Code', '')).zfill(6)  # 标准化为6位代码
-            name = A_STOCK_WATCHLIST.get(code, code)
-            pred_proba = row.get('Prediction_Proba', 0.5)
-            direction = '上涨' if pred_proba >= 0.5 else '下跌'
-            confidence = pred_proba if pred_proba >= 0.5 else 1 - pred_proba
-
-            report += f"- **{name} ({code})**: {direction} (置信度: {confidence:.1%})\n"
-
-    # 添加大模型建议
-    if llm_content:
-        report += f"""
----
-
-## 四、大模型分析建议
-
-{llm_content}
-"""
-
-    report += """
----
-
-## 五、风险提示
-
-1. **涨跌停限制**：创业板/科创板 20%，主板 10%，ST股 5%
-2. **主力资金**：关注大资金流向变化
-3. **市场情绪**：上证指数跌破MA20时需谨慎
-
----
-
-*本报告仅供参考，不构成投资建议*
-"""
-
-    return report
 
 
 def generate_three_horizon_predictions(stock_list, stock_analyses=None):
@@ -1025,6 +891,8 @@ def get_main_fund_trend():
         'sh_change_pct': 0,
         'sz_close': 0,
         'sz_change_pct': 0,
+        # 数据可用性标志（fetch_history 返回 None 时为 False）
+        'available': False,
     }
 
     try:
@@ -1033,6 +901,7 @@ def get_main_fund_trend():
         # 先获取完整历史数据（避免 get_latest 的 days=1 缓存污染）
         history = service.fetch_history()
         if history is not None and not history.empty:
+            result['available'] = True
             # 从历史数据中提取最新数据
             latest_row = history.iloc[-1]
             result['net_flow'] = float(latest_row.get('main_net_flow', 0))
@@ -1703,7 +1572,20 @@ def generate_comprehensive_recommendations_with_llm(
     mf_sh_change_pct = main_fund_trend.get('sh_change_pct', 0)
     mf_sz_close = main_fund_trend.get('sz_close', 0)
     mf_sz_change_pct = main_fund_trend.get('sz_change_pct', 0)
-    main_fund_available = (mf_flow != 0 or mf_5d != 0 or mf_20d != 0)
+    main_fund_available = main_fund_trend.get('available', True)
+    if main_fund_available:
+        main_fund_prompt = f"""- 今日净流入：{mf_flow:.2f}亿（主力净占比 {mf_pct:.2f}%）
+- 超大单：{mf_super:.2f}亿（占比 {mf_super_pct:.2f}%）
+- 大单：{mf_large:.2f}亿（占比 {mf_large_pct:.2f}%）
+- 中单：{mf_mid:.2f}亿（占比 {mf_mid_pct:.2f}%）
+- 小单：{mf_small:.2f}亿（占比 {mf_small_pct:.2f}%）
+- 5日累积：{mf_5d:.2f}亿
+- 20日累积：{mf_20d:.2f}亿
+- 连续流入天数：{consecutive_inflow}天
+- 上证收盘：{mf_sh_close:.2f}（{mf_sh_change_pct:+.2f}%）
+- 深证收盘：{mf_sz_close:.2f}（{mf_sz_change_pct:+.2f}%）"""
+    else:
+        main_fund_prompt = "⚠️ 主力资金数据获取失败（东方财富API不可用），今日无资金流向数据。请勿基于资金面做推断。"
 
     # 板块分析
     sector_data = format_sector_analysis_for_llm(sector_analysis)
@@ -1762,16 +1644,7 @@ def generate_comprehensive_recommendations_with_llm(
 - 动态阈值：买入需概率≥{dynamic_threshold:.0%}
 
 【5. 主力资金趋势】
-- 今日净流入：{mf_flow:.2f}亿（主力净占比 {mf_pct:.2f}%）
-- 超大单：{mf_super:.2f}亿（占比 {mf_super_pct:.2f}%）
-- 大单：{mf_large:.2f}亿（占比 {mf_large_pct:.2f}%）
-- 中单：{mf_mid:.2f}亿（占比 {mf_mid_pct:.2f}%）
-- 小单：{mf_small:.2f}亿（占比 {mf_small_pct:.2f}%）
-- 5日累积：{mf_5d:.2f}亿
-- 20日累积：{mf_20d:.2f}亿
-- 连续流入天数：{consecutive_inflow}天
-- 上证收盘：{mf_sh_close:.2f}（{mf_sh_change_pct:+.2f}%）
-- 深证收盘：{mf_sz_close:.2f}（{mf_sz_change_pct:+.2f}%）
+{main_fund_prompt}
 
 【6. 板块分析（按涨幅排名）】
 {sector_data}
@@ -2091,13 +1964,13 @@ A股综合分析报告
 - 相对MA20: {market_data.get('sh_vs_ma20', 0):+.2f}%
 """
 
-    # 主力资金 - 仅当数据可用时显示
-    mf_net = market_data.get('main_fund_net_flow', 0)
-    mf_super = market_data.get('main_fund_super_large', 0)
-    mf_large = market_data.get('main_fund_large', 0)
-    mf_mid = market_data.get('main_fund_mid', 0)
-    mf_small = market_data.get('main_fund_small', 0)
-    if mf_net != 0 or mf_super != 0 or mf_large != 0:
+    # 主力资金 - 基于可用性标志显式展示
+    if market_data.get('main_fund_available', False):
+        mf_net = market_data.get('main_fund_net_flow', 0)
+        mf_super = market_data.get('main_fund_super_large', 0)
+        mf_large = market_data.get('main_fund_large', 0)
+        mf_mid = market_data.get('main_fund_mid', 0)
+        mf_small = market_data.get('main_fund_small', 0)
         report += f"""
 ### 1.2 主力资金
 - 净流入: {mf_net:.2f} 亿（主力净占比 {market_data.get('main_fund_net_pct', 0):.2f}%）
@@ -2115,13 +1988,18 @@ A股综合分析报告
             report += f"- 深证收盘: {mf_sz_close:.2f}（{market_data.get('main_fund_sz_change_pct', 0):+.2f}%）\n"
 
         # 添加5日/20日累积数据和连续流入天数
-        if main_fund_trend:
+        if main_fund_trend and main_fund_trend.get('available', True):
             mf_5d = main_fund_trend.get('net_flow_5d_sum', 0)
             mf_20d = main_fund_trend.get('net_flow_20d_sum', 0)
             consecutive_inflow = main_fund_trend.get('consecutive_inflow', 0)
             report += f"- 5日累积流入: {mf_5d:.2f} 亿\n"
             report += f"- 20日累积流入: {mf_20d:.2f} 亿\n"
             report += f"- 连续流入天数: {consecutive_inflow} 天\n"
+    else:
+        report += """
+### 1.2 主力资金
+- ⚠️ 主力资金数据获取失败（东方财富API不可用），今日无资金流向数据
+"""
 
     report += """
 ---
@@ -2512,12 +2390,12 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         </table>
 """
 
-    # 主力资金部分（仅当数据可用时显示）
+    # 主力资金部分（基于可用性标志显式展示）
     mf_super = market_data.get('main_fund_super_large', 0) or 0
     mf_large = market_data.get('main_fund_large', 0) or 0
     mf_mid = market_data.get('main_fund_mid', 0) or 0
     mf_small = market_data.get('main_fund_small', 0) or 0
-    if mf_flow != 0 or mf_super != 0 or mf_large != 0:
+    if market_data.get('main_fund_available', False):
         # 占比数据
         mf_pct = market_data.get('main_fund_net_pct', 0) or 0
         mf_super_pct = market_data.get('main_fund_super_large_pct', 0) or 0
@@ -2574,7 +2452,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             </tr>
 """
         # 主力资金趋势
-        if main_fund_trend:
+        if main_fund_trend and main_fund_trend.get('available', True):
             html += f"""            <tr>
                 <td>5日累积流入</td>
                 <td class="{'positive' if main_fund_trend.get('net_flow_5d_sum', 0) >= 0 else 'negative'}">{main_fund_trend.get('net_flow_5d_sum', 0):.2f} 亿</td>
@@ -2592,6 +2470,11 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             </tr>
 """
         html += """        </table>
+"""
+    else:
+        html += """
+        <h3>💰 主力资金</h3>
+        <p style="color: #dc2626; font-weight: bold;">⚠️ 主力资金数据获取失败（东方财富API不可用），今日无资金流向数据</p>
 """
     html += """    </div>
 """
@@ -3062,7 +2945,10 @@ def main():
     market_data = analyze_market()
     if market_data:
         print(f"  上证指数: {market_data.get('sh_close', 'N/A'):.2f} ({market_data.get('sh_change', 0):+.2f}%)")
-        print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
+        if market_data.get('main_fund_available', False):
+            print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
+        else:
+            print("  主力资金: ⚠️ 数据获取失败")
 
     # 4. 分析每只股票（核心股用于预测和交易）
     print("\n📊 分析自选股...")
@@ -3185,9 +3071,12 @@ def main():
     # 7. 获取主力资金趋势
     print("\n💰 获取主力资金趋势...")
     main_fund_trend = get_main_fund_trend()
-    print(f"  5日累积: {main_fund_trend.get('net_flow_5d_sum', 0):.2f} 亿")
-    print(f"  20日累积: {main_fund_trend.get('net_flow_20d_sum', 0):.2f} 亿")
-    print(f"  连续流入: {main_fund_trend.get('consecutive_inflow', 0)} 天")
+    if main_fund_trend.get('available', True):
+        print(f"  5日累积: {main_fund_trend.get('net_flow_5d_sum', 0):.2f} 亿")
+        print(f"  20日累积: {main_fund_trend.get('net_flow_20d_sum', 0):.2f} 亿")
+        print(f"  连续流入: {main_fund_trend.get('consecutive_inflow', 0)} 天")
+    else:
+        print("  ⚠️ 主力资金数据获取失败（东方财富API不可用），今日无资金流向数据")
 
     # 8. 分析板块涨跌幅（使用全量股票）
     print("\n📊 分析板块涨跌幅...")
@@ -3297,7 +3186,10 @@ def main():
     print("📊 报告摘要")
     print("=" * 60)
     print(f"  市场状态: 上证 {market_data.get('sh_change', 0):+.2f}%")
-    print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
+    if market_data.get('main_fund_available', False):
+        print(f"  主力资金: {market_data.get('main_fund_net_flow', 0):.2f} 亿")
+    else:
+        print("  主力资金: ⚠️ 数据获取失败")
     print(f"\n  个股建议:")
     for code, analysis in stock_analyses.items():
         name = analysis.get('name', code)
