@@ -517,12 +517,49 @@ rm -rf data/stock_cache/*.pkl data/a_stock_cache/*.pkl
 
 ### 9.1 数据流架构
 
-```
-外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
-    ↓              ↓              ↓            ↓          ↓
-腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
-yfinance      基本面数据      综合分析     Walk-forward  JSON文件
-AKShare      南向/北向资金    主力追踪     性能监控     Markdown报告
+```mermaid
+flowchart TD
+    subgraph SRC["外部数据源"]
+        direction LR
+        S1["腾讯财经"]
+        S2["yfinance"]
+        S3["AKShare"]
+        S1 ~~~ S2 ~~~ S3
+    end
+
+    subgraph DS["data_services/ 数据处理层"]
+        direction LR
+        D1["技术指标计算"]
+        D2["基本面数据"]
+        D3["南向/北向资金"]
+        D1 ~~~ D2 ~~~ D3
+    end
+
+    subgraph AN["分析层"]
+        direction LR
+        A1["异常检测"]
+        A2["综合分析"]
+        A3["主力追踪"]
+        A1 ~~~ A2 ~~~ A3
+    end
+
+    subgraph ML["ml_services/ 机器学习层"]
+        direction LR
+        M1["CatBoost 预测"]
+        M2["Walk-forward 验证"]
+        M3["性能监控"]
+        M1 ~~~ M2 ~~~ M3
+    end
+
+    subgraph OUT["输出层"]
+        direction LR
+        O1["邮件报告"]
+        O2["JSON 文件"]
+        O3["Markdown 报告"]
+        O1 ~~~ O2 ~~~ O3
+    end
+
+    SRC --> DS --> AN --> ML --> OUT
 ```
 
 **关键依赖关系**：
@@ -539,53 +576,70 @@ AKShare      南向/北向资金    主力追踪     性能监控     Markdown�
 
 ### 9.2 数据流图
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                        数据采集层                                 │
-├──────────────────────────────────────────────────────────────────┤
-│  yfinance │ 腾讯财经 │ AKShare │ 恒指数据 │ 南向/北向资金        │
-│     └──────────────────┬──────────────────┘                      │
-│                        ▼                                         │
-│      data/stock_cache/ + data/a_stock_cache/ (原始数据缓存)      │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                数据处理层 (data_services/)                        │
-├──────────────────────────────────────────────────────────────────┤
-│  技术指标(MA/RSI/MACD) │ 基本面(PE/PB/ROE) │ 市场数据整合        │
-│     └──────────────────┬──────────────────┘                      │
-│                        ▼                                         │
-│    特征工程(1023/1077个特征) → feature_cache/ (170x加速)         │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                        分析层                                    │
-├──────────────────────────────────────────────────────────────────┤
-│  异常检测(Z-Score + Isolation Forest) │ 综合分析(板块轮动/风险)  │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                机器学习层 (ml_services/)                          │
-├──────────────────────────────────────────────────────────────────┤
-│  CatBoost预测(1d/5d/20d) │ Walk-forward验证 │ 性能监控           │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                大模型决策层 (llm_services/)                       │
-├──────────────────────────────────────────────────────────────────┤
-│  通义千问: 风险控制→市场环境→基本面→技术面→信号识别→综合决策    │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                        输出层                                    │
-├──────────────────────────────────────────────────────────────────┤
-│  邮件报告 │ JSON数据 │ Markdown报告 │ GitHub Actions自动化调度   │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph L1["数据采集层"]
+        direction LR
+        A1["yfinance"]
+        A2["腾讯财经"]
+        A3["AKShare"]
+        A4["恒指数据"]
+        A5["南向/北向资金"]
+        A1 ~~~ A2 ~~~ A3 ~~~ A4 ~~~ A5
+    end
+
+    RAW["原始数据缓存<br/>data/stock_cache/<br/>data/a_stock_cache/"]
+
+    subgraph L2["数据处理层（data_services/）"]
+        direction LR
+        B1["技术指标<br/>MA / RSI / MACD"]
+        B2["基本面<br/>PE / PB / ROE"]
+        B3["市场数据整合"]
+        B1 ~~~ B2 ~~~ B3
+    end
+
+    FEAT["特征工程（1023 / 1077 个特征）<br/>feature_cache/ 170x 加速"]
+
+    subgraph L3["分析层"]
+        direction LR
+        C1["异常检测<br/>Z-Score + Isolation Forest"]
+        C2["综合分析<br/>板块轮动 / 风险"]
+        C1 ~~~ C2
+    end
+
+    subgraph L4["机器学习层（ml_services/）"]
+        direction LR
+        D1["CatBoost 预测<br/>1d / 5d / 20d"]
+        D2["Walk-forward 验证"]
+        D3["性能监控"]
+        D1 ~~~ D2 ~~~ D3
+    end
+
+    subgraph L5["大模型决策层（llm_services/ 通义千问）"]
+        direction LR
+        E1["风险控制"]
+        E2["市场环境"]
+        E3["基本面"]
+        E4["技术面"]
+        E5["信号识别"]
+        E6["综合决策"]
+        E1 --> E2 --> E3 --> E4 --> E5 --> E6
+    end
+
+    subgraph L6["输出层"]
+        direction LR
+        F1["邮件报告"]
+        F2["JSON 数据"]
+        F3["Markdown 报告"]
+        F4["GitHub Actions 自动化调度"]
+        F1 ~~~ F2 ~~~ F3 ~~~ F4
+    end
+
+    L1 --> RAW --> L2
+    L2 --> FEAT --> L3
+    L3 --> L4
+    L4 --> L5
+    L5 --> L6
 ```
 
 **缓存机制**：
@@ -601,49 +655,91 @@ AKShare      南向/北向资金    主力追踪     性能监控     Markdown�
 
 ## 十、项目结构
 
-```
-fortune/
-├── 港股核心脚本
-│   ├── comprehensive_analysis.py       # 综合分析（含大模型建议）
-│   ├── hsi_prediction.py               # 恒指三周期预测
-│   ├── detect_stock_anomalies.py       # 异常检测
-│   └── simulation_trader.py            # 模拟交易
-├── A股核心脚本
-│   ├── a_stock_ml_model.py             # 模型训练与预测
-│   ├── a_stock_comprehensive_analysis.py # 综合分析
-│   ├── a_stock_email.py                # 大模型建议生成
-│   ├── a_stock_recommendation_generator.py # 综合买卖建议
-│   └── a_stock_config.py               # 配置（53只股票池）
-├── ml_services/                        # 机器学习模块（双市场共用）
-│   ├── ml_trading_model.py             # CatBoost模型（港股）
-│   ├── walk_forward_validation.py      # Walk-forward验证（港股）
-│   ├── hyperparameter_tuner.py         # 超参数调优
-│   ├── feature_selection.py            # 特征选择
-│   ├── market_regime.py                # 市场情绪过滤器
-│   ├── stock_network_analysis.py       # 股票网络分析
-│   ├── risk_reward_analyzer.py         # 风险回报率分析
-│   ├── performance_monitor.py          # 性能监控
-│   └── hsi_ml_model.py                 # 恒指机器学习模型
-├── data_services/                      # 数据服务
-│   ├── 港股: calendar_features.py, volatility_model.py, regime_detector.py
-│   ├── A股: a_stock_data.py, a_stock_market_features.py
-│   └── 共用: 技术指标、基本面数据获取
-├── anomaly_detector/                   # 异常检测引擎（双市场共用）
-├── llm_services/                       # 大模型服务（通义千问）
-├── message_services/                   # 通知服务
-│   ├── email_sender.py                 # 邮件发送
-│   ├── wechat_work_bot.py              # 企业微信机器人
-│   └── wxpusher_bot.py                 # WxPusher 推送
-├── docs/                               # 详细文档
-│   ├── A_STOCK_DESIGN.md               # A股系统设计
-│   ├── THREE_HORIZON_ANALYSIS.md       # 三周期分析
-│   ├── FEATURE_ENGINEERING.md          # 特征工程
-│   └── VALIDATION_GUIDE.md             # 验证方法
-└── data/                               # 数据与缓存
-    ├── 港股: stock_cache/, feature_cache/, hsi_models/
-    ├── A股: a_stock_cache/, a_stock_feature_cache/, a_stock_models/
-    ├── 网络特征: network_features/, a_stock_network_features/
-    └── 输出: walk_forward_results/, hyperparams/, analysis_results/
+```mermaid
+flowchart LR
+    ROOT["fortune/"]
+    ROOT --> HK
+    subgraph HK["港股核心脚本"]
+        direction LR
+        H1["comprehensive_analysis.py<br/>综合分析（含大模型建议）"]
+        H2["hsi_prediction.py<br/>恒指三周期预测"]
+        H3["detect_stock_anomalies.py<br/>异常检测"]
+        H4["simulation_trader.py<br/>模拟交易"]
+        H1 ~~~ H2 ~~~ H3 ~~~ H4
+    end
+    ROOT --> A
+    subgraph A["A股核心脚本"]
+        direction LR
+        A1["a_stock_ml_model.py<br/>模型训练与预测"]
+        A2["a_stock_comprehensive_analysis.py<br/>综合分析"]
+        A3["a_stock_email.py<br/>大模型建议生成"]
+        A4["a_stock_recommendation_generator.py<br/>综合买卖建议"]
+        A5["a_stock_config.py<br/>配置（53只股票池）"]
+        A1 ~~~ A2 ~~~ A3 ~~~ A4 ~~~ A5
+    end
+    ROOT --> ML
+    subgraph ML["ml_services/ 机器学习模块（双市场共用）"]
+        direction LR
+        M1["ml_trading_model.py<br/>CatBoost 模型（港股）"]
+        M2["walk_forward_validation.py<br/>Walk-forward 验证"]
+        M3["hsi_ml_model.py<br/>恒指机器学习模型"]
+        M1 ~~~ M2 ~~~ M3
+    end
+    ROOT --> ML2
+    subgraph ML2["ml_services/ 辅助工具"]
+        direction LR
+        N1["hyperparameter_tuner.py<br/>超参数调优"]
+        N2["feature_selection.py<br/>特征选择"]
+        N3["market_regime.py<br/>市场情绪过滤器"]
+        N4["stock_network_analysis.py<br/>股票网络分析"]
+        N5["risk_reward_analyzer.py<br/>风险回报率分析"]
+        N6["performance_monitor.py<br/>性能监控"]
+        N1 ~~~ N2 ~~~ N3 ~~~ N4 ~~~ N5 ~~~ N6
+    end
+    ROOT --> DS
+    subgraph DS["data_services/ 数据服务"]
+        direction LR
+        D1["港股<br/>calendar_features.py<br/>volatility_model.py<br/>regime_detector.py"]
+        D2["A股<br/>a_stock_data.py<br/>a_stock_market_features.py"]
+        D3["共用<br/>技术指标 / 基本面数据获取"]
+        D1 ~~~ D2 ~~~ D3
+    end
+    ROOT --> AD
+    subgraph AD["anomaly_detector/ 异常检测引擎（双市场共用）"]
+        direction LR
+        AD1["双层检测<br/>Z-Score + Isolation Forest"]
+    end
+    ROOT --> LS
+    subgraph LS["llm_services/ 大模型服务"]
+        direction LR
+        LS1["通义千问"]
+    end
+    ROOT --> MS
+    subgraph MS["message_services/ 通知服务"]
+        direction LR
+        S1["email_sender.py<br/>邮件发送"]
+        S2["wechat_work_bot.py<br/>企业微信机器人"]
+        S3["wxpusher_bot.py<br/>WxPusher 推送"]
+        S1 ~~~ S2 ~~~ S3
+    end
+    ROOT --> DOC
+    subgraph DOC["docs/ 详细文档"]
+        direction LR
+        C1["A_STOCK_DESIGN.md<br/>A股系统设计"]
+        C2["THREE_HORIZON_ANALYSIS.md<br/>三周期分析"]
+        C3["FEATURE_ENGINEERING.md<br/>特征工程"]
+        C4["VALIDATION_GUIDE.md<br/>验证方法"]
+        C1 ~~~ C2 ~~~ C3 ~~~ C4
+    end
+    ROOT --> DAT
+    subgraph DAT["data/ 数据与缓存"]
+        direction LR
+        T1["港股<br/>stock_cache/<br/>feature_cache/<br/>hsi_models/"]
+        T2["A股<br/>a_stock_cache/<br/>a_stock_feature_cache/<br/>a_stock_models/"]
+        T3["网络特征<br/>network_features/<br/>a_stock_network_features/"]
+        T4["输出<br/>walk_forward_results/<br/>hyperparams/<br/>analysis_results/"]
+        T1 ~~~ T2 ~~~ T3 ~~~ T4
+    end
 ```
 
 ---

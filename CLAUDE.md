@@ -132,12 +132,48 @@ python hsi_email.py --no-email
 
 ## 📐 数据流架构
 
-```
-外部数据源 → data_services/ → 分析层 → ml_services/ → 输出
-    ↓              ↓              ↓            ↓          ↓
-腾讯财经      技术指标计算    异常检测     CatBoost    邮件报告
-AKShare      基本面数据      综合分析     Walk-forward  JSON文件
-             南向资金        主力追踪     性能监控     微信通知
+```mermaid
+flowchart TD
+    subgraph SRC["外部数据源"]
+        direction LR
+        S1["腾讯财经"]
+        S2["AKShare"]
+        S1 ~~~ S2
+    end
+
+    subgraph DS["data_services/ 数据处理层"]
+        direction LR
+        D1["技术指标计算"]
+        D2["基本面数据"]
+        D3["南向资金"]
+        D1 ~~~ D2 ~~~ D3
+    end
+
+    subgraph AN["分析层"]
+        direction LR
+        A1["异常检测"]
+        A2["综合分析"]
+        A3["主力追踪"]
+        A1 ~~~ A2 ~~~ A3
+    end
+
+    subgraph ML["ml_services/ 机器学习层"]
+        direction LR
+        M1["CatBoost"]
+        M2["Walk-forward"]
+        M3["性能监控"]
+        M1 ~~~ M2 ~~~ M3
+    end
+
+    subgraph OUT["输出"]
+        direction LR
+        O1["邮件报告"]
+        O2["JSON 文件"]
+        O3["微信通知"]
+        O1 ~~~ O2 ~~~ O3
+    end
+
+    SRC --> DS --> AN --> ML --> OUT
 ```
 
 **关键依赖关系**：
