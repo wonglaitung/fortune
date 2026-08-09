@@ -853,6 +853,7 @@ python hsi_email.py --no-email
   - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
   - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法
   - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
+  - [BANK_AND_ETF_TRADING_GUIDE.md](docs/BANK_AND_ETF_TRADING_GUIDE.md) - 银行股与盈富基金买卖指引
   - [programmer_skill.md](docs/programmer_skill.md) - 开发规范
 
 ---
