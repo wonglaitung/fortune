@@ -35,6 +35,7 @@ STOCK_SECTOR_MAPPING = {
     '9660.HK': {'sector': 'ai', 'name': '地平线机器人', 'type': 'ai', 'defensive': 15, 'growth': 95, 'cyclical': 60, 'liquidity': 55, 'risk': 90},
     '2533.HK': {'sector': 'ai', 'name': '黑芝麻智能', 'type': 'ai', 'defensive': 15, 'growth': 95, 'cyclical': 65, 'liquidity': 50, 'risk': 90},
     '0020.HK': {'sector': 'ai', 'name': '商汤-W', 'type': 'ai', 'defensive': 15, 'growth': 90, 'cyclical': 55, 'liquidity': 55, 'risk': 85},
+    '2513.HK': {'sector': 'ai', 'name': '智谱', 'type': 'ai', 'defensive': 15, 'growth': 95, 'cyclical': 50, 'liquidity': 65, 'risk': 90},
 
     # 新能源股 (new_energy)
     '1211.HK': {'sector': 'new_energy', 'name': '比亚迪股份', 'type': 'new_energy', 'defensive': 30, 'growth': 85, 'cyclical': 60, 'liquidity': 80, 'risk': 70},
@@ -151,6 +152,7 @@ WATCHLIST = {
     "3968.HK": "招商银行",
     "6682.HK": "范式智能",
     "9660.HK": "地平线机器人",
+    "2513.HK": "智谱",
     "9888.HK": "百度集团-SW",
     "9988.HK": "阿里巴巴-SW",
     "1211.HK": "比亚迪股份",
