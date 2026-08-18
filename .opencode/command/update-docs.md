@@ -1,5 +1,5 @@
 ---
-description: 功能更新后按顺序更新 progress.txt、lessons.md、CLAUDE.md、README.md 并提交 GitHub
+description: 功能更新后按顺序更新 progress.txt、lessons.md、AGENTS.md、README.md 并提交 GitHub
 ---
 
 # 更新文档 SOP
@@ -23,7 +23,7 @@ description: 功能更新后按顺序更新 progress.txt、lessons.md、CLAUDE.m
 2. 格式：问题 → 现象 → 解决方案 → 教训
 3. 更新版本号和更新日志
 
-## 步骤 3：更新 CLAUDE.md
+## 步骤 3：更新 AGENTS.md
 
 从项目整体角度更新，**不要**强调"最新修改"：
 
@@ -49,16 +49,16 @@ description: 功能更新后按顺序更新 progress.txt、lessons.md、CLAUDE.m
 
 ### 5.1 数据一致性校对
 
-逐项核对以下数据，与验证文件和 CLAUDE.md 交叉对比：
+逐项核对以下数据，与验证文件和 AGENTS.md 交叉对比：
 
 | 检查项 | 数据来源 | 核对要点 |
 |--------|----------|----------|
-| 恒指三周期准确率 | CLAUDE.md, THREE_HORIZON_ANALYSIS.md | 1d/5d/20d 准确率是否一致 |
+| 恒指三周期准确率 | AGENTS.md, THREE_HORIZON_ANALYSIS.md | 1d/5d/20d 准确率是否一致 |
 | 恒指八大模式胜率 | THREE_HORIZON_ANALYSIS.md | 假突破(101)、一致看涨(111)、下跌中继(001) 等 |
-| 个股 Walk-forward 结果 | validation_summary.json, CLAUDE.md | 准确率、IC、Rank IC、夏普比率、最大回撤 |
+| 个股 Walk-forward 结果 | validation_summary.json, AGENTS.md | 准确率、IC、Rank IC、夏普比率、最大回撤 |
 | 特征重要性 Top 10 | fold_metrics_detail.json | 特征名称、重要性数值 |
 | 验证日期 | 各验证文件 | 是否为最新验证日期 |
-| 核心警告数据 | CLAUDE.md | 恒指 vs 个股准确率对比 |
+| 核心警告数据 | AGENTS.md | 恒指 vs 个股准确率对比 |
 
 ### 5.2 常见错误检查
 
@@ -89,7 +89,7 @@ python3 -c "import json; d=json.load(open('output/*/fold_metrics_detail.json'));
 
 校对完成后，确认以下各项：
 
-- [ ] 恒指三周期准确率与 CLAUDE.md 一致
+- [ ] 恒指三周期准确率与 AGENTS.md 一致
 - [ ] 恒指八大模式胜率与 THREE_HORIZON_ANALYSIS.md 一致
 - [ ] 个股 Walk-forward 结果与 validation_summary.json 一致
 - [ ] 特征重要性 Top 10 与 fold_metrics_detail.json 一致
@@ -105,7 +105,7 @@ git status
 git diff
 
 # 添加文件（只添加 .md 文件，不添加 .json/.csv）
-git add *.md docs/*.md lessons.md progress.txt CLAUDE.md README.md
+git add *.md docs/*.md lessons.md progress.txt AGENTS.md README.md
 
 # 提交
 git commit -m "docs: 更新文档 - <简短描述>"

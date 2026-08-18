@@ -843,7 +843,7 @@ python hsi_email.py --no-email
 
 ## 十四、文档
 
-- **[CLAUDE.md](CLAUDE.md)** - 快速参考指南
+- **[AGENTS.md](AGENTS.md)** - 快速参考指南
 - **[lessons.md](lessons.md)** - 经验教训
 - **[progress.txt](progress.txt)** - 项目进展
 - **[docs/](docs/)** - 详细文档

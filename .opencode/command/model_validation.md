@@ -212,14 +212,14 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 **目的**：同步更新所有相关文档的指标数字
 
 **⚠️ 重要**：
-1. 文档更新范围包括 `CLAUDE.md` 和 `docs/` 目录下的所有相关文档，确保信息一致性
+1. 文档更新范围包括 `AGENTS.md` 和 `docs/` 目录下的所有相关文档，确保信息一致性
 2. **恒指和个股数据必须分别更新**，不能只更新其中一个
 
 #### 3A. 恒指模型文档更新
 
 **必须更新的文件**：
 
-1. **CLAUDE.md** - 项目主文档
+1. **AGENTS.md** - 项目主文档
    - 恒指模型可信度表格（准确率：1d/5d/20d）
    - 可用策略表格（假突破、下跌中继胜率）
    - 最后更新日期
@@ -240,7 +240,7 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 
 **必须更新的文件**：
 
-1. **CLAUDE.md** - 项目主文档
+1. **AGENTS.md** - 项目主文档
    - 个股模型可信度表格（准确率、夏普比率、最大回撤）
    - CatBoost 配置参数
    - 特征重要性排名
@@ -268,14 +268,14 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 #### 3C. 文档更新检查清单
 
 **恒指数据更新检查**：
-- [ ] CLAUDE.md - 恒指模型可信度表格（1d/5d/20d 准确率）
-- [ ] CLAUDE.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] AGENTS.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] AGENTS.md - 可用策略表格（假突破、下跌中继等胜率）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
 
 **个股数据更新检查**：
-- [ ] CLAUDE.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] AGENTS.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据
@@ -370,14 +370,14 @@ python3 ml_services/analyze_stock_causal_chain.py --full
 # 检查 hsi_prediction.py 中的准确率是否与文档一致
 grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" hsi_prediction.py
 
-# 检查 CLAUDE.md 中的准确率
-grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" CLAUDE.md
+# 检查 AGENTS.md 中的准确率
+grep -E "81\.24|62\.36|49\.67|95\.00|85\.98" AGENTS.md
 
 # 对比两者是否一致
 ```
 
 **如果不一致**：
-1. 以文档（CLAUDE.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
+1. 以文档（AGENTS.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
 2. 更新代码中的硬编码数据
 3. 重新运行语法检查和测试
 
@@ -625,8 +625,8 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 **⚠️ 重要：恒指和个股数据必须分别更新，不能只更新其中一个**
 
 #### 恒指文档（docs/ 目录下相关文档）
-- [ ] 已更新 CLAUDE.md 的恒指模型指标（1d/5d/20d 准确率）
-- [ ] 已更新 CLAUDE.md 的可用策略表格（假突破、下跌中继等胜率）
+- [ ] 已更新 AGENTS.md 的恒指模型指标（1d/5d/20d 准确率）
+- [ ] 已更新 AGENTS.md 的可用策略表格（假突破、下跌中继等胜率）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第一部分（恒指验证摘要）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 八大模式胜率表格
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录恒指数据
@@ -634,7 +634,7 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 - [ ] 已更新 progress.txt 恒指部分
 
 #### 个股文档（docs/ 目录下相关文档）
-- [ ] 已更新 CLAUDE.md 的个股模型指标（准确率、夏普比率、最大回撤）
+- [ ] 已更新 AGENTS.md 的个股模型指标（准确率、夏普比率、最大回撤）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第二部分（个股验证概述）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 个股与恒指核心差异对比表
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录个股数据
@@ -669,7 +669,7 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 - [ ] 已更新 ml_services/ml_trading_model.py（如需）
 
 #### 代码与文档一致性验证（新增）
-- [ ] 已对比 hsi_prediction.py 和 CLAUDE.md 中的准确率数据
+- [ ] 已对比 hsi_prediction.py 和 AGENTS.md 中的准确率数据
 - [ ] 已对比 hsi_prediction.py 和 docs/THREE_HORIZON_ANALYSIS.md 中的胜率数据
 - [ ] 确认代码中的硬编码数据与文档完全一致
 - [ ] 无遗漏的代码位置
@@ -830,8 +830,8 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 **⚠️ 重要：恒指和个股数据必须分别更新**
 
 ### 恒指文档（docs/ 目录下相关文档）
-- [ ] CLAUDE.md - 恒指模型可信度表格（1d/5d/20d 准确率）
-- [ ] CLAUDE.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] AGENTS.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] AGENTS.md - 可用策略表格（假突破、下跌中继等胜率）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
@@ -839,7 +839,7 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 - [ ] progress.txt - 恒指部分
 
 ### 个股文档（docs/ 目录下相关文档）
-- [ ] CLAUDE.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] AGENTS.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据

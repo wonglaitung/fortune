@@ -2,11 +2,58 @@
 
 **项目**：港股智能分析系统 + A股智能分析系统
 **状态**：生产就绪（港股）/ 特征增强中（A股）
-**最后更新**：2026-07-30
+**最后更新**：2026-08-18
 
 ---
 
 ## 最新进展
+
+### 2026-08-18 迁移至 opencode ⭐
+
+**变更**：项目从 Claude Code 迁移到 opencode，弃用 Claude Code。
+
+**改动内容**：
+- `AGENTS.md`：合并原 `CLAUDE.md` 全部内容，成为单一真相源（opencode 自动加载）
+- `opencode.json`：`instructions` 指向 `AGENTS.md`；新增 tavily MCP 配置（从 `.mcp.json` 迁移）
+- `.opencode/command/`：6 个技能命令已从 `.claude/commands/` 转换迁移（`allowed-tools` 已移除）
+- 删除：`CLAUDE.md`、`.claude/` 目录、`.mcp.json`
+
+**文件修改**：
+| 文件 | 说明 |
+|------|------|
+| `AGENTS.md` | 合并 CLAUDE.md 全部内容，opencode 规则入口 |
+| `opencode.json` | instructions 指向 AGENTS.md + tavily MCP |
+| `.opencode/command/update-docs.md` | CLAUDE.md → AGENTS.md 引用更新 |
+| `.opencode/command/model_validation.md` | CLAUDE.md → AGENTS.md 引用更新 |
+| `README.md` | 文档链接 CLAUDE.md → AGENTS.md |
+
+**注意事项**：重启 opencode 后生效（配置一次性加载）。
+
+---
+
+### 2026-08-18 智谱(2513.HK)缺席预测修复 ⭐⭐
+
+**问题**：智谱(2513.HK)从未出现在每日预测和 `prediction_history.json`（9150条记录中0条）。
+
+**根因**：智谱2026年1月上市，腾讯接口仅返回约149行K线。`calculate_technical_features` 在 `len(df) < 200` 时直接返回原始数据（不计算任何特征），后续 `create_market_environment_features` 访问缺失的 `Return_5d` 抛 `KeyError`，`predict()` 返回 None，被预测循环静默跳过。
+
+**修复**：
+- `ml_services/ml_trading_model.py`：`calculate_technical_features` 最低数据量门槛 200 → 100（与 `train()` 的100行要求一致）
+- `create_market_environment_features`：`Relative_Return` 增加 `Return_5d`/`HSI_Return_5d` 存在性防御检查
+
+**验证**：
+- 三周期(1d/5d/20d)对智谱预测均正常（20d下跌概率0.204）
+- 全量33只自选股预测完整，无回归
+- `pytest tests/` 中唯一失败 `test_cache.py` 为既有问题（改动前同样失败）
+
+**文件修改**：
+| 文件 | 说明 |
+|------|------|
+| `ml_services/ml_trading_model.py` | 特征工程最低门槛200→100 + 防御性列检查 |
+
+---
+
+## 历史进展
 
 ### 2026-07-30 A股数据管道修复 ⭐⭐⭐
 
