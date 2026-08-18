@@ -795,7 +795,9 @@ class FeatureEngineer:
                 - False: 收市后预测，使用当日数据
             code: 股票代码（用于模型缓存）
         """
-        if df.empty or len(df) < 200:
+        if df.empty or len(df) < 100:
+            # 低于100行无法可靠计算特征（与 train() 的最低数据量要求一致）
+            # 新上市股票（如智谱2513.HK仅约149行）需要降低门槛才能被纳入预测
             return df
 
         # 根据 use_shift 参数确定 shift 值
@@ -1861,7 +1863,9 @@ class FeatureEngineer:
             stock_df = stock_df.merge(hsi_df[['HSI_Return', 'HSI_Return_5d']], left_index=True, right_index=True, how='left')
 
         # 相对表现（相对于恒生指数）
-        stock_df['Relative_Return'] = stock_df['Return_5d'] - stock_df['HSI_Return_5d']
+        # 防御性检查：若数据不足导致 calculate_technical_features 提前返回，Return_5d 可能不存在
+        if 'Return_5d' in stock_df.columns and 'HSI_Return_5d' in stock_df.columns:
+            stock_df['Relative_Return'] = stock_df['Return_5d'] - stock_df['HSI_Return_5d']
 
         # 如果提供了美股数据，合并美股特征
         if us_market_df is not None and not us_market_df.empty:

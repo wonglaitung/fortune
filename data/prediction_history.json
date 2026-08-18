@@ -173849,12 +173849,31 @@
       "actual_return": null,
       "actual_direction": null,
       "evaluated_at": null
+    },
+    {
+      "prediction_id": "2026-08-18_2513.HK_20d",
+      "timestamp": "2026-08-18T20:33:10",
+      "stock_code": "2513.HK",
+      "stock_name": "智谱",
+      "sector": "ai",
+      "horizon": 20,
+      "predicted_direction": "down",
+      "prediction_probability": 0.20385235818653058,
+      "confidence_level": "low",
+      "entry_price": 1043.0,
+      "model_type": "catboost",
+      "data_date": "2026-08-18",
+      "target_date": "2026-09-15",
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null,
+      "evaluated_at": null
     }
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-08-18T17:47:42",
+    "last_updated": "2026-08-18T20:33:10",
     "version": "1.0",
-    "total_predictions": 9150
+    "total_predictions": 9151
   }
 }
