@@ -4827,7 +4827,8 @@ class HSIEmailSystem:
             var_medium_long = None
             es_short = None
             es_medium_long = None
-            max_drawdown = None            
+            max_drawdown = None
+            risk_assessment = "正常"
             if stock_code != 'HSI':
                 # stock_results是列表，需要查找匹配的股票代码
                 stock_indicators = None
