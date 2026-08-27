@@ -44,7 +44,7 @@ jobs:
           git config user.name "github-actions[bot]"
 
           # 添加文件
-          git add data/prediction_history.json output/performance_report_*.md
+          git add data/prediction_history.json data/a_stock_prediction_history.json output/performance_report_*.md
 
           # 检查是否有更改
           if git diff --staged --quiet; then

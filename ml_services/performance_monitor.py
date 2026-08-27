@@ -21,23 +21,28 @@ from config import STOCK_SECTOR_MAPPING
 
 # 历史文件路径
 HISTORY_FILE = 'data/prediction_history.json'
+A_STOCK_HISTORY_FILE = 'data/a_stock_prediction_history.json'
 REPORT_OUTPUT_DIR = 'output'
 
 
-def load_prediction_history() -> Dict:
+def load_prediction_history(path: str = None) -> Dict:
     """加载预测历史数据"""
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+    if path is None:
+        path = HISTORY_FILE
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {'predictions': [], 'metadata': {}}
 
 
-def save_prediction_history(history: Dict):
+def save_prediction_history(history: Dict, path: str = None):
     """保存预测历史数据"""
+    if path is None:
+        path = HISTORY_FILE
     history['metadata']['last_updated'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     history['metadata']['total_predictions'] = len(history['predictions'])
     
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+    with open(path, 'w', encoding='utf-8') as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
 
 
@@ -115,7 +120,54 @@ def fetch_price(stock_code: str, date: str) -> Optional[float]:
         return None
 
 
-def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) -> Tuple[Dict, Dict]:
+def fetch_a_stock_price(stock_code: str, date: str) -> Optional[float]:
+    """
+    获取A股指定日期的收盘价（与 fetch_price 接口一致，仅数据源不同）
+
+    参数:
+    - stock_code: A股代码（6位，如 600000）
+    - date: 日期 (YYYY-MM-DD)
+
+    返回:
+    - 收盘价，如果获取失败返回 None
+    """
+    try:
+        from data_services.a_stock_data import get_a_stock_data
+
+        date_obj = datetime.strptime(date, '%Y-%m-%d')
+        start = (date_obj - timedelta(days=10)).strftime('%Y-%m-%d')
+        end = (date_obj + timedelta(days=10)).strftime('%Y-%m-%d')
+
+        df = get_a_stock_data(stock_code, period_days=30, use_cache=False)
+        if df is None or df.empty:
+            return None
+
+        # 统一列名
+        if 'Date' not in df.columns and df.index.name != 'Date':
+            df = df.reset_index()
+        if 'Date' in df.columns:
+            df['date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+        elif 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+        else:
+            return None
+
+        # 优先匹配目标日期，否则取目标日期之前最近的交易日
+        exact = df[df['date'] == date]
+        if not exact.empty:
+            return float(exact['Close'].iloc[-1])
+
+        before = df[df['date'] <= date]
+        if not before.empty:
+            return float(before['Close'].iloc[-1])
+        return None
+    except Exception as e:
+        print(f"⚠️ 获取A股 {stock_code} 价格失败: {e}")
+        return None
+
+
+def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False,
+                         save_path: str = None) -> Tuple[Dict, Dict]:
     """
     评估已到期的预测
     
@@ -183,8 +235,12 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
             stats['pending'] += 1
             continue
 
-        # 获取目标日期的收盘价（直接检查是否有价格数据）
-        exit_price = fetch_price(pred['stock_code'], target_date)
+        # 获取目标日期的收盘价（按市场选择数据源）
+        market = pred.get('market', 'HK')
+        if market == 'A':
+            exit_price = fetch_a_stock_price(pred['stock_code'], target_date)
+        else:
+            exit_price = fetch_price(pred['stock_code'], target_date)
 
         # NaN 价格视同缺失：否则 NaN 收益会被误判为 'down' 方向，污染准确率统计
         if exit_price is None or np.isnan(exit_price):
@@ -220,7 +276,7 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False) 
     
     # 保存更新后的历史
     if evaluated_count > 0:
-        save_prediction_history(history)
+        save_prediction_history(history, save_path)
     
     return history, stats
 
@@ -570,7 +626,28 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 二、板块表现
+## 二、市场分布（港股 / A股）
+
+| 市场 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
+|------|--------|--------|----------|----------|
+"""
+
+    _market_predictions = {}
+    for _p in history.get('predictions', []):
+        if _p.get('outcome') is not None:
+            _market_predictions.setdefault(_p.get('market', 'HK'), []).append(_p)
+    _market_label = {'HK': '港股', 'A': 'A股'}
+    for _mk in ['HK', 'A']:
+        _ps = _market_predictions.get(_mk, [])
+        if _ps:
+            _m = calculate_metrics(_ps)
+            report += f"| {_market_label.get(_mk, _mk)} | {_m.get('total_predictions', 0)} | **{_m.get('accuracy', 0):.2%}** | {_m.get('avg_return', 0):.2%} | {_m.get('sharpe_ratio', 0):.4f} |\n"
+    report += "\n"
+
+    report += f"""
+---
+
+## 三、板块表现
 
 | 板块 | 类型 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
 |------|------|------|----------|--------|--------|----------|----------|
@@ -607,7 +684,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += """
 ---
 
-## 三、个股表现
+## 四、个股表现
 
 | 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 |
 |----------|----------|------|------|----------|--------|--------|----------|
@@ -667,7 +744,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         '111': '谨慎持有',
     }
 
-    report += "\n---\n\n## 四、三周期模式验证（3个月窗口）\n\n"
+    report += "\n---\n\n## 五、三周期模式验证（3个月窗口）\n\n"
 
     if pattern_stats:
         # 按准确率排序
@@ -699,7 +776,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 五、风险提示
+## 六、风险提示
 
 1. **历史表现不代表未来收益**
 2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
@@ -707,7 +784,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ---
 
-**报告生成**: 港股智能分析系统 - 预测性能监控模块
+**报告生成**: 金融资产智能分析系统 - 预测性能监控模块
 """
 
     return report
@@ -750,7 +827,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
 
     # 标题
     parts.append(f"""
-    <h1 style="color:#333; margin-bottom:5px;">预测性能报告</h1>
+    <h1 style="color:#333; margin-bottom:5px;">预测性能报告（港股 + A股）</h1>
     <p style="color:#666; font-size:13px; margin-top:0;">
         生成时间: {report_time} | 统计口径: 已到期且已评估的方向预测
     </p>
@@ -813,8 +890,8 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
         <li>投资有风险，请谨慎决策</li>
     </ol>
     <p style="color:#999; font-size:12px; margin-top:25px; border-top:1px solid #eee; padding-top:10px;">
-        报告生成: 港股智能分析系统 - 预测性能监控模块
-    </p>
+        报告生成: 金融资产智能分析系统 - 预测性能监控模块
+     </p>
 """)
 
     body = '\n'.join(p for p in parts if p)
@@ -1031,32 +1108,36 @@ def main():
     print("📊 预测性能监控系统")
     print("=" * 60)
 
-    # 加载历史数据
+    # 加载历史数据（港股 + A股，分别标注市场，互不干扰）
     print("\n📂 加载预测历史数据...")
-    history = load_prediction_history()
-    print(f"   已加载 {len(history.get('predictions', []))} 条预测记录")
+    hk_history = load_prediction_history(HISTORY_FILE)
+    for _p in hk_history.get('predictions', []):
+        _p.setdefault('market', 'HK')
+    a_history = load_prediction_history(A_STOCK_HISTORY_FILE)
+    for _p in a_history.get('predictions', []):
+        _p.setdefault('market', 'A')
+    print(f"   港股: {len(hk_history.get('predictions', []))} 条 | A股: {len(a_history.get('predictions', []))} 条")
 
     if args.mode in ['evaluate', 'all']:
-        # 评估各周期的预测
+        # 评估各周期、各市场的预测（分别写回各自历史文件）
         total_stats = {'total': 0, 'evaluated': 0, 'correct': 0, 'wrong': 0}
 
-        for h in horizons:
-            print(f"\n📈 评估 {h} 天周期的预测...")
-            history, stats = evaluate_predictions(history, h, args.force)
+        for label, hist, path in [('港股', hk_history, HISTORY_FILE), ('A股', a_history, A_STOCK_HISTORY_FILE)]:
+            for h in horizons:
+                print(f"\n📈 评估 {label} {h} 天周期的预测...")
+                hist, stats = evaluate_predictions(hist, h, args.force, save_path=path)
 
-            # 显示统计
-            print(f"   总预测: {stats['total']}")
-            print(f"   已评估: {stats['evaluated']}")
-            print(f"   正确: {stats['correct']}")
-            print(f"   错误: {stats['wrong']}")
-            if stats['evaluated'] > 0:
-                print(f"   准确率: {stats['correct']/stats['evaluated']:.2%}")
+                print(f"   总预测: {stats['total']}")
+                print(f"   已评估: {stats['evaluated']}")
+                print(f"   正确: {stats['correct']}")
+                print(f"   错误: {stats['wrong']}")
+                if stats['evaluated'] > 0:
+                    print(f"   准确率: {stats['correct']/stats['evaluated']:.2%}")
 
-            # 累计统计
-            total_stats['total'] += stats['total']
-            total_stats['evaluated'] += stats['evaluated']
-            total_stats['correct'] += stats['correct']
-            total_stats['wrong'] += stats['wrong']
+                total_stats['total'] += stats['total']
+                total_stats['evaluated'] += stats['evaluated']
+                total_stats['correct'] += stats['correct']
+                total_stats['wrong'] += stats['wrong']
 
         if len(horizons) > 1:
             print(f"\n📊 所有周期合计:")
@@ -1066,6 +1147,12 @@ def main():
             print(f"   错误: {total_stats['wrong']}")
             if total_stats['evaluated'] > 0:
                 print(f"   准确率: {total_stats['correct']/total_stats['evaluated']:.2%}")
+
+    # 合并两市场历史用于报告生成（只读）
+    history = {
+        'predictions': hk_history.get('predictions', []) + a_history.get('predictions', []),
+        'metadata': {**hk_history.get('metadata', {}), **a_history.get('metadata', {})}
+    }
 
     if args.mode in ['report', 'all']:
         # 生成 Markdown 报告（仍保存，供 CI 提交与纯文本正文使用）
@@ -1101,7 +1188,7 @@ def main():
 
         # 发送邮件（优先带内嵌图表的可视化版本，失败回退纯表格）
         if not args.no_email:
-            subject = f"[港股智能分析] 预测性能报告 - {report_date}"
+            subject = f"[金融资产智能分析] 预测性能报告（港股+A股） - {report_date}"
             if html_content and attachments:
                 try:
                     from message_services.email_sender import send_email_with_images

@@ -31,7 +31,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入港股模型
-from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES, logger
+from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES, logger, get_target_date_trading_days
 
 # 导入A股配置和数据服务
 from a_stock_config import (
@@ -1842,22 +1842,16 @@ def main():
             from datetime import datetime, timedelta
             from a_stock_config import A_STOCK_WATCHLIST
 
-            # 计算 target_date
-            def get_target_date(start_date, horizon):
-                """计算目标日期（简化版，实际交易日计算更复杂）"""
-                target = start_date + timedelta(days=horizon)
-                return target.strftime('%Y-%m-%d')
-
-            # 构建预测 DataFrame
+            # 构建预测 DataFrame（target_date 使用A股交易日历）
             pred_data = []
             for pred in predictions:
                 if pred:
                     data_date = pred['date'].strftime('%Y-%m-%d') if hasattr(pred['date'], 'strftime') else str(pred['date'])
-                    target_date = get_target_date(pred['date'], args.horizon) if hasattr(pred['date'], 'timedelta') else data_date
+                    target_date = get_target_date_trading_days(data_date, args.horizon, str(pred['code']).zfill(6))
 
                     pred_data.append({
                         'Stock_Code': pred['code'],
-                        'Stock_Name': A_STOCK_WATCHLIST.get(pred['code'], pred['code']),
+                        'Stock_Name': A_STOCK_WATCHLIST.get(str(pred['code']).zfill(6), pred['code']),
                         'Prediction': pred['prediction'],
                         'Prediction_Proba': pred['probability'],
                         'Current_Price': pred['current_price'],
@@ -1874,6 +1868,10 @@ def main():
                 pred_df.to_csv(pred_file, index=False)
                 logger.info(f"A股预测结果已保存到 {pred_file}")
 
+                # 写入预测历史，供性能监控评估（覆盖A股）
+                saved = save_a_stock_prediction_history(predictions, args.horizon, args.predict_date)
+                logger.info(f"A股预测历史更新：新增 {saved} 条（周期 {args.horizon}d）")
+
                 # 打印预测结果摘要
                 print("\n" + "=" * 60)
                 print(f"📊 A股预测结果（{args.horizon}天周期）")
@@ -1883,6 +1881,90 @@ def main():
                     confidence = row['Prediction_Proba'] if row['Prediction'] == 1 else 1 - row['Prediction_Proba']
                     print(f"  {row['Stock_Name']:<10} {pred_label} (置信度: {confidence:.1%}, 概率: {row['Prediction_Proba']:.4f})")
                 print("=" * 60)
+
+
+def save_a_stock_prediction_history(predictions, horizon, predict_date=None):
+    """保存A股预测结果到历史记录文件，供性能监控评估
+
+    与港股 ml_trading_model.save_prediction_to_history 对齐：
+    - 写入独立文件 data/a_stock_prediction_history.json（不干扰港股监控）
+    - 记录字段含 market='A'，便于性能监控按市场拆分
+
+    参数:
+    - predictions: 预测结果列表（dict，含 code/prediction/probability/current_price/date）
+    - horizon: 预测周期（天）
+    - predict_date: 预测日期字符串（可选）
+    """
+    try:
+        history_file = 'data/a_stock_prediction_history.json'
+        history_dir = os.path.dirname(history_file)
+        if history_dir:
+            os.makedirs(history_dir, exist_ok=True)
+
+        if os.path.exists(history_file):
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        else:
+            history = {'predictions': [], 'metadata': {}}
+
+        now = datetime.now()
+        timestamp = now.strftime('%Y-%m-%dT%H:%M:%S')
+        date_str = predict_date if predict_date else now.strftime('%Y-%m-%d')
+
+        new_records = []
+        existing_ids = {p.get('prediction_id') for p in history['predictions']}
+        for pred in predictions:
+            if not pred:
+                continue
+            stock_code = str(pred.get('code', '')).zfill(6)
+            stock_name = A_STOCK_WATCHLIST.get(stock_code, stock_code)
+            sector_info = A_STOCK_SECTOR_MAPPING.get(stock_code, {})
+            sector = sector_info.get('sector', 'unknown') if isinstance(sector_info, dict) else 'unknown'
+
+            pred_date = pred.get('date')
+            data_date = pred_date.strftime('%Y-%m-%d') if hasattr(pred_date, 'strftime') else str(pred_date)
+            target_date = get_target_date_trading_days(data_date, horizon, stock_code)
+
+            probability = float(pred.get('probability', 0.5))
+            prediction = pred.get('prediction', 0)
+            record = {
+                'prediction_id': f"{date_str}_{stock_code}_{horizon}d",
+                'timestamp': timestamp,
+                'stock_code': stock_code,
+                'stock_name': stock_name,
+                'sector': sector,
+                'horizon': horizon,
+                'predicted_direction': 'up' if prediction == 1 else 'down',
+                'prediction_probability': probability,
+                'confidence_level': 'high' if probability > 0.6 else ('medium' if probability > 0.5 else 'low'),
+                'entry_price': float(pred.get('current_price', 0)),
+                'model_type': 'catboost',
+                'data_date': data_date,
+                'target_date': target_date,
+                'market': 'A',
+                'outcome': None,
+                'actual_return': None,
+                'actual_direction': None,
+                'evaluated_at': None,
+            }
+            if record['prediction_id'] not in existing_ids:
+                new_records.append(record)
+
+        if new_records:
+            history['predictions'].extend(new_records)
+            history['metadata']['last_updated'] = timestamp
+            history['metadata']['total_predictions'] = len(history['predictions'])
+            with open(history_file, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+            logger.info(f"已保存 {len(new_records)} 条A股预测记录到 {history_file}")
+        else:
+            logger.info(f"A股预测历史无新增记录（{history_file}）")
+        return len(new_records)
+    except Exception as e:
+        logger.error(f"保存A股预测历史失败: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
+        return 0
 
 
 if __name__ == '__main__':

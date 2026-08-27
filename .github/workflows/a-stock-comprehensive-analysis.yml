@@ -69,6 +69,7 @@ jobs:
           git add data/a_stock_models/*.csv 2>/dev/null || true
           git add data/a_stock_llm_recommendations_*.txt 2>/dev/null || true
           git add data/a_stock_comprehensive_recommendations_*.txt 2>/dev/null || true
+          git add data/a_stock_prediction_history.json 2>/dev/null || true
           # 检查是否有更改需要提交
           if ! git diff --staged --quiet; then
             git commit -m "Update A股 prediction results [skip ci]"

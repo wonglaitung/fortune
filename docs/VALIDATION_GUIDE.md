@@ -380,13 +380,13 @@ python3 ml_services/performance_monitor.py --mode all --horizon 20 --no-email
 
 ### 自动化调度
 
-**GitHub Actions**：每月1号上午4点香港时间运行（UTC 20:00）
+**GitHub Actions**：工作日香港时间 00:00 运行（UTC 16:00）
 
 ```yaml
-name: 预测性能月度报告
+name: 预测性能监控
 on:
   schedule:
-    - cron: '0 20 1 * *'  # 每月1号UTC 20:00（香港时间4:00）
+    - cron: '0 16 * * 1-5'  # 工作日UTC 16:00（香港时间00:00）
   workflow_dispatch:  # 支持手动触发
 ```
 
@@ -586,7 +586,7 @@ python3 ml_services/walk_forward_validation.py --confidence-threshold 0.60
 
 **推荐配置**：
 ```bash
-# 每月1号自动执行
+# 工作日自动执行
 python3 ml_services/performance_monitor.py --mode all --horizon 20
 ```
 
@@ -728,7 +728,7 @@ python3 ml_services/walk_forward_validation.py --confidence-threshold 0.60
 # ✅ 定期监控性能
 python3 ml_services/performance_monitor.py --mode all --horizon 20
 
-# ✅ 设置自动化调度（每月1号）
+# ✅ 设置自动化调度（工作日）
 ```
 
 ### 陷阱9：市场情绪过滤器 lookback_days 设置错误

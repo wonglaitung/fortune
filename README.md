@@ -753,7 +753,7 @@ flowchart LR
 | **15:15 CST** (工作日) | `a-stock-comprehensive-analysis.yml` | A股综合分析 | 🇨🇳 |
 | **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
 | 02:00 (每天) | `stock-anomaly-detection.yml` | 异常检测 | 🇭🇰 |
-| 每月1号 | `performance-monitor.yml` | 性能报告 | 双市场 |
+| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（港股+A股预测表现） | 🇭🇰🇨🇳 |
 
 ### 命令汇总
 
