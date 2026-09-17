@@ -4601,9 +4601,10 @@
       "prediction_probability": 0.5696517634880728,
       "confidence_level": "中",
       "entry_price": 24954.471,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "incorrect",
+      "actual_return": -0.011510192527222931,
+      "actual_direction": "down",
+      "verified": true
     },
     {
       "prediction_id": "2026-09-10_20d",
@@ -4715,9 +4716,10 @@
       "prediction_probability": 0.7022467431015298,
       "confidence_level": "高",
       "entry_price": 24667.24,
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null
+      "outcome": "correct",
+      "actual_return": 9.501468279357128e-09,
+      "actual_direction": "up",
+      "verified": true
     },
     {
       "prediction_id": "2026-09-15_5d",
@@ -4746,14 +4748,56 @@
       "outcome": null,
       "actual_return": null,
       "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-09-16_1d",
+      "timestamp": "2026-09-17T08:13:47",
+      "data_date": "2026-09-16",
+      "target_date": "2026-09-17",
+      "horizon": 1,
+      "predicted_direction": "up",
+      "prediction_probability": 0.7427637686687031,
+      "confidence_level": "高",
+      "entry_price": 24713.779,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-09-16_5d",
+      "timestamp": "2026-09-17T08:13:47",
+      "data_date": "2026-09-16",
+      "target_date": "2026-09-23",
+      "horizon": 5,
+      "predicted_direction": "up",
+      "prediction_probability": 0.715721943532277,
+      "confidence_level": "高",
+      "entry_price": 24713.779,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
+    },
+    {
+      "prediction_id": "2026-09-16_20d",
+      "timestamp": "2026-09-17T08:13:48",
+      "data_date": "2026-09-16",
+      "target_date": "2026-10-22",
+      "horizon": 20,
+      "predicted_direction": "up",
+      "prediction_probability": 0.5564226018987932,
+      "confidence_level": "中",
+      "entry_price": 24713.779,
+      "outcome": null,
+      "actual_return": null,
+      "actual_direction": null
     }
   ],
   "metadata": {
     "created_at": "2026-04-28T00:00:00",
-    "last_updated": "2026-09-16T08:03:54",
+    "last_updated": "2026-09-17T08:13:48",
     "version": "1.0",
-    "total_predictions": 318,
+    "total_predictions": 321,
     "description": "恒生指数多周期预测历史记录",
-    "last_verified": "2026-09-16T08:03:45"
+    "last_verified": "2026-09-17T08:13:40"
   }
 }
