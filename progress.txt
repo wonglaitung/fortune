@@ -8,6 +8,19 @@
 
 ## 最新进展
 
+### 2026-09-23 backtest_eval 新增月度 / 月份×股票分析（含股票名称）⭐
+
+**改动**（`ml_services/backtest_eval.py`）：
+- 逐股票表增加**股票名称**（`config.STOCK_SECTOR_MAPPING`）与**跨月一致性**列（acc>50% 月数 · lift>0 月数）。
+- 新增章节「七、逐月表现」：按预测月份的准确率/信号胜率/基准/超额 lift。
+- 新增章节「八、月份×股票最佳组合」：准确率/ lift TOP10，附 `n_eff` 与**多重比较警告**
+  （5d 每格 n_eff≈4、20d≈1；90–100% 是必然极值，禁用于择时/选股）。
+
+**关键结论**（复述）：5d 相对可信的"好股票"为 汇丰银行(0005)、恒基地产(0012)、舜宇光学科技(2382)；
+"月份×股票"组合为噪声。
+
+**文件**：`ml_services/backtest_eval.py`；重新生成 `output/backtest_eval_{1d,5d,20d}.md`。
+
 ### 2026-09-23 1d Walk-forward 完成（三周期齐全）⭐
 
 **配置**：CatBoost horizon=1，38 folds，59 只，PIT 口径（`output/20260923_105752_catboost_1d/`）。

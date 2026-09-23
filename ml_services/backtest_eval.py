@@ -13,7 +13,9 @@
   - 板块表现（方向技能 + 胜率 + lift + 可靠性）
   - 逐 fold 准确率
   - 概率校准分桶
-  - 逐股票表现（方向技能 + 胜率 + lift + 可靠性 + 跨周期一致性）
+  - 逐股票表现（名称 + 方向技能 + 胜率 + lift + 跨月一致性）
+  - 逐月表现（准确率/胜率/lift）
+  - 月份×股票最佳组合（含 n_eff 与多重比较警告）
 
   方向技能 = 准确率 − "永远看涨"基准（该组上涨占比），>0 才说明方向判断超越趋势。
 
@@ -73,6 +75,26 @@ def _sector_label(sector):
     if sector == SECTOR_UNKNOWN:
         return SECTOR_UNKNOWN
     return f"{SECTOR_NAME_ZH.get(sector, sector)}({sector})"
+
+
+def _stock_mapping():
+    try:
+        from config import STOCK_SECTOR_MAPPING
+        return STOCK_SECTOR_MAPPING
+    except Exception:
+        return {}
+
+
+def _stock_label(code, mapping=None):
+    """股票代码 → '代码 名称'（无名称时只显示代码）"""
+    mapping = mapping if mapping is not None else _stock_mapping()
+    name = (mapping.get(str(code)) or {}).get('name')
+    return f"{code} {name}" if name else str(code)
+
+
+# 月份×股票组合的最小样本门槛（过滤噪声）
+MIN_COMBO_N = 15
+MIN_COMBO_TRADES = 5
 
 
 def _normalize_columns(df):
@@ -232,6 +254,54 @@ def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
         stock_rows = _group_full_metrics(d, 'code', horizon, reliability_threshold)
         stock_rows.sort(key=lambda r: -(r['lift'] if r['lift'] is not None else -9e9))
 
+    # 逐月（按自然年月）
+    month_rows = []
+    if 'date' in d.columns:
+        _dt = pd.to_datetime(d['date'], errors='coerce')
+        d['_ym'] = _dt.dt.to_period('M').astype(str)
+        month_rows = _group_full_metrics(d, '_ym', horizon, reliability_threshold)
+        month_rows = [r for r in month_rows if r['key'] != 'NaT']
+        month_rows.sort(key=lambda r: str(r['key']))
+
+    # 月份×股票组合 + 个股跨月一致性
+    month_stock_rows = []
+    if 'code' in d.columns and '_ym' in d.columns:
+        for (ym, code), g in d.groupby(['_ym', 'code'], dropna=True):
+            nb = int(len(g))
+            if nb < MIN_COMBO_N:
+                continue
+            nt = int(g['_trade'].sum())
+            if nt < MIN_COMBO_TRADES:
+                continue
+            kw = int((g['_trade'] & g['_win']).sum())
+            base = float(g['_win'].mean())
+            acc = float(g['is_correct'].mean()) if 'is_correct' in g else None
+            wr = kw / nt
+            month_stock_rows.append({
+                'ym': str(ym), 'code': str(code), 'n': nb,
+                'n_eff': (nb / horizon) if (horizon and horizon > 0) else float(nb),
+                'accuracy': acc, 'baseline': base, 'trades': nt,
+                'win_rate': wr, 'lift': wr - base,
+            })
+        # 跨月一致性：每只股票在多少个月 acc>50% / lift>0
+        consistency = {}
+        for code, g in d.groupby('code'):
+            acc_win = lift_pos = months = 0
+            for _ym, gg in g.groupby('_ym'):
+                if len(gg) == 0:
+                    continue
+                months += 1
+                if 'is_correct' in gg and gg['is_correct'].mean() > 0.5:
+                    acc_win += 1
+                t = gg[gg['_trade']]
+                if len(t) > 0 and t['_win'].mean() > gg['_win'].mean():
+                    lift_pos += 1
+            consistency[str(code)] = (months, acc_win, lift_pos)
+        for r in stock_rows:
+            m = consistency.get(str(r['key']))
+            if m:
+                r['months'], r['acc_win_months'], r['lift_pos_months'] = m
+
     return {
         'n': n,
         'trades': n_trade,
@@ -253,6 +323,8 @@ def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
         'years': year_rows,
         'sectors': sector_rows,
         'stocks': stock_rows,
+        'months': month_rows,
+        'month_stocks': month_stock_rows,
     }
 
 
@@ -411,8 +483,15 @@ def _render_sectors(wr, compare=None):
     return L
 
 
+def _fmt_consistency(r):
+    """跨月一致性：'acc胜月/总月数 · lift正月'"""
+    if not r.get('months'):
+        return '—'
+    return f"{r.get('acc_win_months', 0)}/{r['months']} · {r.get('lift_pos_months', 0)}"
+
+
 def _render_stocks(wr, res, compare=None):
-    """逐股票表现章节：准确率 + 胜率 + lift + 可靠性 + 跨周期一致性"""
+    """逐股票表现章节：名称 + 方向技能 + 胜率 lift + 跨月一致性"""
     if wr and wr.get('stocks'):
         rows = [dict(r, key=str(r['key'])) for r in wr['stocks']]
         has_win = True
@@ -427,33 +506,82 @@ def _render_stocks(wr, res, compare=None):
 
     L = []
     L.append("## 六、逐股票表现\n")
-    L.append("> ⚠️ 个股有效样本低（20d 约 n/20），排名噪声大；仅「两期一致」者相对可信。")
+    L.append("> ⚠️ 个股有效样本低（20d 约 n/20），排名噪声大；仅「两期一致 + 跨月一致」者相对可信。")
     L.append("> 「永远看涨」= 该股上涨占比（方向准确率基准）；「方向技能」= 准确率 − 永远看涨。")
+    L.append("> 「跨月」= 在多少个月 acc>50% / lift>0。")
     if ref is None and has_win:
         L.append("> 传入 `--compare` 可显示跨周期一致性。")
     L.append("")
     if has_win and ref is not None:
-        L.append("| 股票 | 样本 | 永远看涨 | 准确率 | 方向技能 | 信号胜率 | 超额 lift | 有效样本 | 可靠性 | 一致性 |")
-        L.append("|------|------|---------|--------|---------|---------|----------|---------|--------|--------|")
+        L.append("| 股票 | 样本 | 永远看涨 | 准确率 | 方向技能 | 信号胜率 | 超额 lift | 有效样本 | 跨月(acc胜·lift正) | 可靠性 | 一致性 |")
+        L.append("|------|------|---------|--------|---------|---------|----------|---------|------------------|--------|--------|")
     elif has_win:
-        L.append("| 股票 | 样本 | 永远看涨 | 准确率 | 方向技能 | 信号胜率 | 超额 lift | 有效样本 | 可靠性 |")
-        L.append("|------|------|---------|--------|---------|---------|----------|---------|--------|")
+        L.append("| 股票 | 样本 | 永远看涨 | 准确率 | 方向技能 | 信号胜率 | 超额 lift | 有效样本 | 跨月(acc胜·lift正) | 可靠性 |")
+        L.append("|------|------|---------|--------|---------|---------|----------|---------|------------------|--------|")
     else:
         L.append("| 股票 | 样本 | 准确率 | 有效样本 | 可靠性 |")
         L.append("|------|------|--------|---------|--------|")
     for r in rows:
         if has_win:
-            line = (f"| {r['key']} | {r['n']} | {_fmt_pct(r.get('naive_up'))} | "
+            line = (f"| {_stock_label(r['key'])} | {r['n']} | {_fmt_pct(r.get('naive_up'))} | "
                     f"{_fmt_pct(r.get('accuracy'))} | {_fmt_lift(r.get('acc_skill'))} | "
                     f"{_fmt_pct(r.get('win_rate'))} | {_fmt_lift(r.get('lift'))} | "
-                    f"{r['n_eff']:.1f} | {_reliability_mark(r['reliability'])} |")
+                    f"{r['n_eff']:.1f} | {_fmt_consistency(r)} | {_reliability_mark(r['reliability'])} |")
             if ref is not None:
                 line += f" {_consistency_mark(r.get('lift'), ref.get(r['key']))} |"
         else:
-            line = (f"| {r['key']} | {r['n']} | {_fmt_pct(r.get('accuracy'))} | "
+            line = (f"| {_stock_label(r['key'])} | {r['n']} | {_fmt_pct(r.get('accuracy'))} | "
                     f"{r['n_eff']:.1f} | {_reliability_mark(r['reliability'])} |")
         L.append(line)
     L.append("")
+    return L
+
+
+def _render_months(wr):
+    """逐月表现（按自然年月）"""
+    rows = wr.get('months') if wr else None
+    if not rows:
+        return []
+    L = []
+    L.append("## 七、逐月表现（按预测月份）\n")
+    L.append("> 准确率/胜率月度波动极大；绝对胜率受行情主导，应看超额 lift。")
+    L.append("")
+    L.append("| 月份 | 样本 | 永远看涨 | 准确率 | 信号胜率 | 基准胜率 | 超额 lift | 交易数 |")
+    L.append("|------|------|---------|--------|---------|---------|----------|--------|")
+    for r in rows:
+        L.append(f"| {r['key']} | {r['n']} | {_fmt_pct(r.get('naive_up'))} | "
+                 f"{_fmt_pct(r.get('accuracy'))} | {_fmt_pct(r.get('win_rate'))} | "
+                 f"{_fmt_pct(r.get('baseline'))} | {_fmt_lift(r.get('lift'))} | {r.get('trades')} |")
+    L.append("")
+    return L
+
+
+def _render_month_stocks(wr):
+    """月份×股票最佳组合（含多重比较警告）"""
+    rows = wr.get('month_stocks') if wr else None
+    if not rows:
+        return []
+    L = []
+    L.append("## 八、月份×股票（最佳组合）⚠️\n")
+    L.append("> ⚠️ **多重比较警告**：约 (月数 × 股票数) 个组合，每格 5d 有效样本 `n_eff≈4`（20d≈1）。")
+    L.append("> 下表的 90–100% 是多重比较的**必然极值**，不代表可预测；仅供识别，**禁用于择时/选股**。")
+    L.append(f"> 过滤门槛：样本 ≥{MIN_COMBO_N}、交易 ≥{MIN_COMBO_TRADES}。\n")
+
+    top_acc = sorted(rows, key=lambda r: -(r['accuracy'] or 0))[:10]
+    top_lift = sorted(rows, key=lambda r: -(r['lift'] if r['lift'] is not None else -9e9))[:10]
+
+    def _table(title, data, by):
+        T = [f"### {title}\n",
+             "| 月份 | 股票 | 样本 | n_eff | 准确率 | 信号胜率 | 超额 lift |",
+             "|------|------|------|-------|--------|---------|----------|"]
+        for r in data:
+            T.append(f"| {r['ym']} | {_stock_label(r['code'])} | {r['n']} | {r['n_eff']:.1f} | "
+                     f"{_fmt_pct(r['accuracy'])} | {_fmt_pct(r['win_rate'])} | {_fmt_lift(r['lift'])} |")
+        T.append("")
+        return T
+
+    L.extend(_table("准确率 TOP10", top_acc, 'accuracy'))
+    L.extend(_table("超额 lift TOP10", top_lift, 'lift'))
     return L
 
 
@@ -495,6 +623,8 @@ def render_markdown(res, horizon, source, compare=None):
     L.append("")
 
     L.extend(_render_stocks(res.get('win_rate'), res, compare))
+    L.extend(_render_months(res.get('win_rate')))
+    L.extend(_render_month_stocks(res.get('win_rate')))
 
     return '\n'.join(L)
 
