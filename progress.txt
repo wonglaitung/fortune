@@ -31,6 +31,10 @@
    才得到强结果（0.59→1.27）。
 4. 印证"先让主模型有 edge，再用元标签做仓位"的顺序。
 
+**增量对照**（元模型 vs 直接用主概率定仓）：5d 2025 元模型增量 **+0.55**（1.27 vs 0.71），
+20d 2025 仅 +0.04，5d 2024 +0.39（仍负）、全期 +0.07。→ **5d 元模型有实质增量，
+价值在排序/仓位而非阈值过滤**；但为单年结果，需 CPCV/PBO 复现。
+
 **文件**：`ml_services/meta_labeling_ablation.py`（新）、
 `output/meta_labeling_ablation_{5d_2025,20d_2025,5d_2024,5d_all}.md`、
 `docs/MODEL_IMPROVEMENT_PLAN.md`（新增 §5.5）。

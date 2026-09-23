@@ -94,6 +94,9 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
     meta_f = _scheme(sig, (sig['meta_prob'] >= thr).astype(float).values, horizon)
     kelly = 0.5 * np.clip(2 * sig['meta_prob'].values - 1, 0, 1)
     meta_k = _scheme(sig, kelly, horizon)
+    # 对照：直接用主模型概率定仓（若与元模型相当，则元模型无增量价值）
+    kelly_primary = 0.5 * np.clip(2 * sig['Predict_Prob'].values - 1, 0, 1)
+    primary_k = _scheme(sig, kelly_primary, horizon)
 
     def _row(name, m):
         return (f"| {name} | {m['trades']} | {_p(m['retention'])} | {_p(m['precision'])} | "
@@ -108,7 +111,8 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
     L.append("|------|--------|--------|-----------|---------|------|")
     L.append(_row("Baseline（全部信号，等权）", base))
     L.append(_row("Meta-过滤（等权）", meta_f))
-    L.append(_row("Meta+Kelly（按 p 定仓）", meta_k))
+    L.append(_row("Meta+Kelly（按元概率定仓）", meta_k))
+    L.append(_row("Primary+Kelly（按主概率定仓，对照）", primary_k))
     L.append("")
 
     prec_lift = meta_f['precision'] - base['precision']
@@ -119,6 +123,8 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
              f"净IR {ir_filter:+.2f}")
     L.append(f"- 仓位：净IR {ir_kelly:+.2f}（{base['ir']:.2f} → {meta_k['ir']:.2f}），"
              f"交易数 {meta_k['trades']}")
+    L.append(f"- **增量对照**：用主概率定仓净IR = {primary_k['ir']:.2f}；"
+             f"元模型相对主概率的增量 = {meta_k['ir'] - primary_k['ir']:+.2f}")
 
     improved_kelly = meta_k['ir'] > base['ir'] + 0.05
     if base['ir'] <= 0:
