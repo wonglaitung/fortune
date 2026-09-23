@@ -117,7 +117,45 @@
 
 ---
 
-## 5. 统一指标定义
+## 5. 提升准确率/胜率的方案（业界实践）
+
+> **天花板认知**：日频个股方向准确率/胜率有上限。业界公开结果——单因子 IC 0.02–0.06、
+> 方向准确率 51–55%、Gu et al.(2020) 月频 OOS R²≈0.5%。目标应是**几个 pp 的实打实提升**，
+> 而非 65%。且"准确率"与"胜率"提升路径不同，不能用一个模型硬扛。
+
+### 5.1 方法清单（按杠杆排序）
+
+| # | 方案 | 主要提升 | 做法 / 参考 |
+|---|------|---------|------------|
+| 1 | **三重障碍 + 元标签** | **胜率/precision** | 按波动率设止盈/止损/时间障碍生成标签；主模型定方向、副模型过滤低置信交易。`mlfinlab` / `mlfinpy` / `JohnsoN98X/financial-labeling`；Hudson & Thames 实测 precision 55%→75% |
+| 2 | **集成（DoubleEnsemble）** | **准确率/IC** | 样本重加权 + 特征选择 + 子模型集成。Qlib Alpha158 实测 IC 0.052 / ICIR 0.42 / 年化 +11.6%（优于单 CatBoost 0.035/0.29） |
+| 3 | **概率校准** | 阈值有效性→胜率 | Platt / Isotonic 校准后，0.5 阈值与置信分层才可靠（当前高置信桶仅 54.6%） |
+| 4 | **样本唯一性权重** | 泛化 | de Prado sample uniqueness + 时间衰减，给重叠标签降权；叠加现有核心股 3.0 权重 |
+| 5 | **特征工程** | IC/ICIR | 对照/引入 Alpha158/Alpha360；PIT 基本面/另类数据；按 IC/SHAP 去冗余 |
+| 6 | **排序目标** | Rank IC | LambdaRankIC / LambdaMART 直接优化 Rank IC |
+| 7 | **执行层** | 实盘胜率 | 只在高置信 + 有利 regime 交易；波动率目标仓位 + 止损；TopK 分散；成本/换手惩罚 |
+| 8 | **验证护栏** | 防假提升 | 每次改动都用 CPCV + PBO + DSR（`purgedcv`）确认 |
+
+### 5.2 落地顺序（性价比）
+
+| 顺序 | 方案 | 预期 | 工具 |
+|---|---|---|---|
+| 1 | 三重障碍 + **元标签** | 胜率/precision 明显↑ | mlfinlab / financial-labeling |
+| 2 | **DoubleEnsemble** 集成 | IC/ICIR ↑ | Qlib `DEnsembleModel` |
+| 3 | 概率校准 | 阈值/分层有效 | sklearn Isotonic |
+| 4 | 样本唯一性权重 | 泛化 ↑ | mlfinlab |
+| 5 | Alpha158 + IC 选特征 | IC ↑ | Qlib |
+| 6 | CPCV/PBO/DSR 验证 | 防假提升 | purgedcv |
+
+### 5.3 关键认知
+
+- **准确率**靠"**改标签 + 集成**"；**胜率**靠"**元标签过滤 + 少而精的执行**"。
+- 元标签的收益主要来自**少交易、只打高确定性**，而非预测更准。
+- 所有标签重叠类改动**必须用 purged/embargo 验证**，否则提升是假象。
+
+---
+
+## 6. 统一指标定义
 
 | 指标 | 定义 | 判读 |
 |------|------|------|
@@ -132,20 +170,23 @@
 
 ---
 
-## 6. 工具与依赖
+## 7. 工具与依赖
 
 | 库 / 工程 | 用途 |
 |-----------|------|
 | `stefan-jansen/alphalens-reloaded` | 因子 tear sheet（IC/分位/换手） |
 | `eslazarev/purged-cross-validation` | CPCV + PBO + DSR/PSR |
-| `microsoft/qlib` | 基准特征（Alpha158/360）、双轨指标、TopK-Dropout 回测 |
+| `microsoft/qlib` | 基准特征（Alpha158/360）、双轨指标、TopK-Dropout 回测、**DoubleEnsemble** |
+| `hudson-thames/mlfinlab` / `mlfinpy` | 三重障碍、元标签、样本唯一性权重 |
+| `JohnsoN98X/financial-labeling` | 三重障碍 + 元标签 + 时间序列 embargo CV 参考实现 |
 | `dennis20413/factor-model` / `minihellboy/factorminer` | IC/ICIR/分位参考实现 |
 
-文献：de Prado《Advances in Financial Machine Learning》第 7、12 章；Bailey & de Prado PSR/DSR/PBO；Gu et al. (2020) 实证资产定价。
+文献：de Prado《Advances in Financial Machine Learning》第 3、7、12 章（三重障碍/元标签/CPCV）；
+Bailey & de Prado PSR/DSR/PBO；Gu et al. (2020) 实证资产定价；Qlib 基准（DoubleEnsemble/LightGBM）。
 
 ---
 
-## 7. 里程碑
+## 8. 里程碑
 
 | 阶段 | 交付物 | 验收 |
 |------|--------|------|
@@ -158,7 +199,7 @@
 
 ---
 
-## 8. 风险与停止条件
+## 9. 风险与停止条件
 
 | 风险 | 缓解 |
 |------|------|
@@ -170,7 +211,7 @@
 
 ---
 
-## 9. 明确不做的事
+## 10. 明确不做的事
 
 - 不再用绝对准确率/胜率作为主评估或部署依据（1d 的"高显著准确率"即反面教材）。
 - 不再在未过 DSR/PBO 的配置上继续堆特征/调参。
