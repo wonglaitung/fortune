@@ -55,11 +55,12 @@ def _sector_neutral_score(g):
     return z.fillna(0.0)
 
 
-def backtest(df, horizon, topk, use_sector_neutral, cost=COST):
+def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_target=None):
     dates = sorted(df['date'].unique())
     rb = dates[::horizon]  # 非重叠调仓
     rows = []
     prev_long, prev_short = set(), set()
+    held = []  # TopK-Dropout：当前持仓（按上次分数降序）
     for d in rb:
         g = df[df['date'] == d].copy()
         if len(g) < 20:
@@ -70,23 +71,43 @@ def backtest(df, horizon, topk, use_sector_neutral, cost=COST):
             g['score'] = g['prob']
         g = g.sort_values('score', ascending=False)
         k = min(topk, len(g) // 4)
-        long = g.head(k)
-        short = g.tail(k)
-        # 基准：等权全池
         bench = g['ret'].mean()
-        # 多空
-        ls_gross = long['ret'].mean() - short['ret'].mean()
-        # 换手（单边）
+
+        # TopK-Dropout：保留仍在榜的旧持仓，剔除分数最低的 dropout 只，再补新
+        if dropout > 0 and held:
+            hold_score = g[g['code'].isin(held)].sort_values('score', ascending=False)
+            keep = list(hold_score['code'].head(max(k - dropout, 1)))
+            fill = [c for c in g['code'] if c not in keep and c not in held][:k - len(keep)]
+            if len(keep) + len(fill) < k:
+                fill += [c for c in g['code'] if c not in keep and c not in fill][:k - len(keep) - len(fill)]
+            sel = keep + fill
+        else:
+            sel = list(g['code'].head(k))
+        long = g[g['code'].isin(sel)]
+        short = g.tail(k)
+
         cur_long = set(long['code']); cur_short = set(short['code'])
         t_long = len(cur_long - prev_long) / k if prev_long else 1.0
         t_short = len(cur_short - prev_short) / k if prev_short else 1.0
         prev_long, prev_short = cur_long, cur_short
+        held = sel
+
         top_gross = long['ret'].mean()
         top_net = top_gross - t_long * cost
+        ls_gross = top_gross - short['ret'].mean()
         ls_net = ls_gross - (t_long + t_short) * cost
         rows.append(dict(date=d, bench=bench, top_gross=top_gross, top_net=top_net,
                          ls_gross=ls_gross, ls_net=ls_net, turnover=t_long))
-    return pd.DataFrame(rows)
+    bt = pd.DataFrame(rows)
+    # 波动率目标：按上一期为止的基准已实现波动缩放敞口
+    if vol_target and len(bt) > 3:
+        rv = bt['bench'].rolling(6, min_periods=3).std().shift(1)
+        ann_rv = rv * np.sqrt(252.0 / horizon)
+        scale = (vol_target / ann_rv).clip(upper=2.0).fillna(0.0)
+        bt['exposure'] = scale
+        bt['top_net'] = bt['top_net'] * scale
+        bt['ls_net'] = bt['ls_net'] * scale
+    return bt
 
 
 def bootstrap(x, horizon, n=2000, seed=42):
@@ -119,14 +140,14 @@ def _stats(x, horizon):
     return dict(n=len(x), mean=mean, ir=ir, win=float((x > 0).mean()), cum=cum)
 
 
-def run(horizon, pred_csv, topk, out_md, cost=COST):
+def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None):
     df = load_panel(pred_csv)
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
 
     res = {}
     for name, neutral in [("TopK-raw", False), ("TopK-行业中性", True)]:
-        res[name] = backtest(df, horizon, topk, neutral, cost=cost)
+        res[name] = backtest(df, horizon, topk, neutral, cost=cost, dropout=dropout, vol_target=vol_target)
 
     # 汇总
     rows = []
@@ -144,7 +165,7 @@ def run(horizon, pred_csv, topk, out_md, cost=COST):
     L.append(f"# Phase 3 最小组合回测（{horizon}d，TopK={topk}）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 数据: `{pred_csv}`")
-    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {cost:.3f}（双边）\n")
+    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {cost:.3f}　Dropout={dropout}　波动率目标={vol_target}\n")
     # bootstrap CI（对每个组合的净收益序列）
     series = {'等权基准（全池）': res["TopK-raw"]['bench'].values}
     series['TopK-raw（净）'] = res["TopK-raw"]['top_net'].values
@@ -216,12 +237,14 @@ def main():
     ap.add_argument('--horizon', type=int, required=True, choices=[5, 20])
     ap.add_argument('--topk', type=int, default=10)
     ap.add_argument('--cost', type=float, default=COST, help='双边成本（默认0.005）')
+    ap.add_argument('--dropout', type=int, default=0, help='TopK-Dropout 每期剔除只数')
+    ap.add_argument('--vol-target', type=float, default=None, help='年化波动率目标（如 0.15）')
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
     args = ap.parse_args()
     pred_csv = args.pred or DEFAULT_PRED[args.horizon]
     out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}.md"
-    run(args.horizon, pred_csv, args.topk, out, cost=args.cost)
+    run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout, vol_target=args.vol_target)
 
 
 if __name__ == '__main__':
