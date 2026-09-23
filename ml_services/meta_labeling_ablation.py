@@ -67,15 +67,57 @@ def _scheme(df, weights, horizon):
     return dict(trades=n, retention=n / len(df), precision=precision, mean=mean, ir=ir)
 
 
+def _batch_returns(df, weights, horizon):
+    """按信号日的组合批次收益（Series，索引=日期）"""
+    w = np.asarray(weights, dtype=float)
+    keep = w > 0
+    d = df[keep]
+    w = w[keep]
+    g = pd.DataFrame({'d': d['date'].values, 'wr': w * d['net_ret'].values, 'w': w}).groupby('d').sum()
+    g = g[g['w'] > 0]
+    return g['wr'] / g['w']
+
+
+def _ir(batch, horizon):
+    if len(batch) < 2:
+        return np.nan
+    m = float(np.mean(batch)); s = float(np.std(batch, ddof=1))
+    return m / s * np.sqrt(252.0 / horizon) if s > 0 else np.nan
+
+
+def _bootstrap_ir_delta(df, w_base, w_scheme, horizon, n_boot=1000, seed=42):
+    """对信号日做 block bootstrap，返回 (delta_ir均值, 2.5%, 97.5%, P(delta>0))"""
+    b0 = _batch_returns(df, w_base, horizon)
+    b1 = _batch_returns(df, w_scheme, horizon)
+    common = b0.index.intersection(b1.index)
+    b0 = b0.loc[common]; b1 = b1.loc[common]
+    if len(common) < 5:
+        return (np.nan, np.nan, np.nan, np.nan)
+    rng = np.random.RandomState(seed)
+    idx = np.arange(len(common))
+    deltas = []
+    for _ in range(n_boot):
+        s = rng.choice(idx, size=len(idx), replace=True)
+        d = _ir(b1.values[s], horizon) - _ir(b0.values[s], horizon)
+        if np.isfinite(d):
+            deltas.append(d)
+    if not deltas:
+        return (np.nan, np.nan, np.nan, np.nan)
+    deltas = np.array(deltas)
+    return (float(deltas.mean()), float(np.percentile(deltas, 2.5)),
+            float(np.percentile(deltas, 97.5)), float((deltas > 0).mean()))
+
+
 def run(horizon, year, pred_csv, cache_dir, out_md):
     print(f"\n{'='*70}\n元标签消融  horizon={horizon}  year={year}\n{'='*70}")
     pred, prices = build_dataset(pred_csv, cache_dir)
     sig = pred[pred['Predict_Prob'] >= pred['Dynamic_Threshold']].copy()
     sig = attach_labels(sig, prices, horizon).dropna(subset=['tb_ret']).reset_index(drop=True)
     X = meta_feature_frame(sig, prices).reset_index(drop=True)
-    meta_prob, thresholds = purged_walk_forward(sig, X, horizon)
+    meta_prob, cal_prob, thresholds = purged_walk_forward(sig, X, horizon, return_calibrated=True)
     sig['_thr'] = sig['fold'].map(thresholds) if 'fold' in sig.columns else 0.5
     sig['meta_prob'] = meta_prob.values
+    sig['meta_prob_cal'] = cal_prob.values
 
     # 选择评估子集
     if year:
@@ -90,30 +132,59 @@ def run(horizon, year, pred_csv, cache_dir, out_md):
         return
 
     thr = sig['_thr'].fillna(0.5).values
-    base = _scheme(sig, np.ones(len(sig)), horizon)
-    meta_f = _scheme(sig, (sig['meta_prob'] >= thr).astype(float).values, horizon)
-    kelly = 0.5 * np.clip(2 * sig['meta_prob'].values - 1, 0, 1)
-    meta_k = _scheme(sig, kelly, horizon)
-    # 对照：直接用主模型概率定仓（若与元模型相当，则元模型无增量价值）
-    kelly_primary = 0.5 * np.clip(2 * sig['Predict_Prob'].values - 1, 0, 1)
-    primary_k = _scheme(sig, kelly_primary, horizon)
+    w_base = np.ones(len(sig))
+    w_metaf = (sig['meta_prob'] >= thr).astype(float).values
+    w_kelly = 0.5 * np.clip(2 * sig['meta_prob'].values - 1, 0, 1)
+    w_cal = 0.5 * np.clip(2 * sig['meta_prob_cal'].values - 1, 0, 1)
+    w_primary = 0.5 * np.clip(2 * sig['Predict_Prob'].values - 1, 0, 1)
+    w_vol = np.clip(1.0 - pd.Series(sig['daily_vol'].values).rank(pct=True).values, 0, 1)
+    w_rank = pd.Series(sig['meta_prob'].values).rank(pct=True).values
+
+    schemes = [
+        ("Baseline（全部信号，等权）", w_base),
+        ("Meta-过滤（等权）", w_metaf),
+        ("Meta+Kelly（元概率定仓）", w_kelly),
+        ("Meta+Kelly‑Cal（Isotonic 校准后）", w_cal),
+        ("Meta-Rank（元概率排名定仓）", w_rank),
+        ("Primary+Kelly（主概率定仓，对照）", w_primary),
+        ("VolRule（低波动加仓，对照）", w_vol),
+    ]
+    results = {name: _scheme(sig, w, horizon) for name, w in schemes}
+    # block bootstrap：各方案相对 Baseline 的净IR增量
+    ci = {}
+    for name, w in schemes:
+        if name.startswith("Baseline"):
+            continue
+        ci[name] = _bootstrap_ir_delta(sig, w_base, w, horizon)
+    ci_meta_vs_primary = _bootstrap_ir_delta(sig, w_primary, w_kelly, horizon)
 
     def _row(name, m):
+        d, lo, hi, ppos = ci.get(name, (np.nan,) * 4)
+        cir = '—' if np.isnan(d) else f"{d:+.2f} [{lo:+.2f},{hi:+.2f}] ({ppos*100:.0f}%)"
         return (f"| {name} | {m['trades']} | {_p(m['retention'])} | {_p(m['precision'])} | "
-                f"{_p(m['mean'])} | {_f(m['ir'])} |")
+                f"{_p(m['mean'])} | {_f(m['ir'])} | {cir} |")
 
     L = []
     L.append(f"# 元标签消融（{horizon}d，{year or '全期'}）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 评估样本: {len(sig)}　成本: {COST:.3f}　Kelly=0.5×clip(2p−1,0,1)")
-    L.append(f"- 目的: 在主模型有 edge 的子集上，检验元标签的**过滤**与**仓位**两种用法\n")
-    L.append("| 方案 | 交易数 | 保留率 | Precision | 净均收益 | 净IR |")
-    L.append("|------|--------|--------|-----------|---------|------|")
-    L.append(_row("Baseline（全部信号，等权）", base))
-    L.append(_row("Meta-过滤（等权）", meta_f))
-    L.append(_row("Meta+Kelly（按元概率定仓）", meta_k))
-    L.append(_row("Primary+Kelly（按主概率定仓，对照）", primary_k))
+    L.append(f"- 目的: 主模型有 edge 子集上，检验元标签**过滤 vs 仓位**，并给 Bootstrap 置信区间")
+    L.append(f"- 「ΔIR」= 相对 Baseline 的净IR增量 block bootstrap（1000 次，中括号 95%CI，括号内 P(Δ>0)）\n")
+    L.append("| 方案 | 交易数 | 保留率 | Precision | 净均收益 | 净IR | ΔIR vs Baseline |")
+    L.append("|------|--------|--------|-----------|---------|------|-----------------|")
+    for name, _ in schemes:
+        L.append(_row(name, results[name]))
     L.append("")
+    base = results["Baseline（全部信号，等权）"]
+
+    meta_f = results["Meta-过滤（等权）"]
+    meta_k = results["Meta+Kelly（元概率定仓）"]
+    primary_k = results["Primary+Kelly（主概率定仓，对照）"]
+    cal_k = results["Meta+Kelly‑Cal（Isotonic 校准后）"]
+    d_mp, lo_mp, hi_mp, p_mp = ci_meta_vs_primary
+    L.append("### 元模型增量（相对 Primary+Kelly 的 block bootstrap）")
+    L.append(f"- ΔIR(元−主) = {d_mp:+.2f} [{lo_mp:+.2f}, {hi_mp:+.2f}]，P(Δ>0)={p_mp*100:.0f}%")
+    L.append(f"- 校准前后：Meta-Kelly {meta_k['ir']:.2f} → Meta-Kelly-Cal {cal_k['ir']:.2f}\n")
 
     prec_lift = meta_f['precision'] - base['precision']
     ir_filter = meta_f['ir'] - base['ir']

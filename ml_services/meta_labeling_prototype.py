@@ -192,13 +192,18 @@ def meta_feature_frame(pred, prices):
 
 # ----------------------------- purged walk-forward -----------------------------
 
-def purged_walk_forward(pred, X, horizon):
-    """按 Fold 顺序：训练 folds < f，embargo=horizon 天，预测 fold f"""
+def purged_walk_forward(pred, X, horizon, return_calibrated=False):
+    """按 Fold 顺序：训练 folds < f，embargo=horizon 天，预测 fold f
+
+    return_calibrated=True 时额外返回逐折 Isotonic 校准后的概率。
+    """
     folds = sorted(pred['fold'].unique()) if 'fold' in pred.columns else []
     if not folds:
-        return pd.Series(np.nan, index=pred.index), {}
+        empty = pd.Series(np.nan, index=pred.index)
+        return (empty, empty, {}) if return_calibrated else (empty, {})
     pred = pred.copy()
     meta_prob = pd.Series(np.nan, index=pred.index)
+    cal_prob = pd.Series(np.nan, index=pred.index) if return_calibrated else None
     thresholds = {}
     for f in folds:
         test_mask = pred['fold'] == f
@@ -221,7 +226,17 @@ def purged_walk_forward(pred, X, horizon):
         thr = _pick_threshold(p_tr, tr['meta_label'].values)
         thresholds[f] = thr
         p_te = model.predict_proba(X.loc[test.index])[:, 1]
+        if return_calibrated:
+            try:
+                from sklearn.isotonic import IsotonicRegression
+                iso = IsotonicRegression(out_of_bounds='clip')
+                iso.fit(p_tr, tr['meta_label'].values)
+                cal_prob.loc[test.index] = iso.predict(p_te)
+            except Exception:
+                cal_prob.loc[test.index] = p_te
         meta_prob.loc[test.index] = p_te
+    if return_calibrated:
+        return meta_prob, cal_prob, thresholds
     return meta_prob, thresholds
 
 
