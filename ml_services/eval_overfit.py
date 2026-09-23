@@ -74,9 +74,9 @@ def deflated_sharpe(sr, T, n_trials, var_sr, skewness, kurt):
     return float(norm.cdf((sr - sr0) * np.sqrt(T - 1) / denom))
 
 
-def build_matrix(horizon):
+def build_matrix(horizon, pred_csv=None):
     """构建配置族 (topk × 中性) 的逐期收益矩阵"""
-    df = load_panel(DEFAULT_PRED[horizon])
+    df = load_panel(pred_csv or DEFAULT_PRED[horizon])
     cols = {}
     dates = None
     for topk in (5, 10, 20):
@@ -88,8 +88,8 @@ def build_matrix(horizon):
     return M
 
 
-def run(horizon, out_md):
-    M = build_matrix(horizon)
+def run(horizon, out_md, pred_csv=None):
+    M = build_matrix(horizon, pred_csv)
     T, N = M.shape
     pbo, logits = cscv_pbo(M.values, n_splits=8)
     # 各配置指标
@@ -136,9 +136,10 @@ def main():
     ap = argparse.ArgumentParser(description='PBO + DSR 过拟合护栏')
     ap.add_argument('--horizon', type=int, required=True, choices=[5, 20])
     ap.add_argument('--output', type=str, default=None)
+    ap.add_argument('--pred', type=str, default=None, help='prediction_analysis.csv（默认内置）')
     args = ap.parse_args()
     out = args.output or f"output/overfit_guard_{args.horizon}d.md"
-    run(args.horizon, out)
+    run(args.horizon, out, pred_csv=args.pred)
 
 
 if __name__ == '__main__':

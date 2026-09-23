@@ -8,6 +8,22 @@
 
 ## 最新进展
 
+### 2026-09-23 2021–2022 熊市压力测试：方向一致但未独立通过护栏 ⭐⭐⭐
+
+**执行**：`walk_forward_validation.py --train-window 12`（21 折，2021-10~2023-05，含 2022 熊市），
+输出 `output/20260923_191611_catboost_20d/`。
+
+**组合回测（20d 中性 TopK，22 期）**：净IR **0.69 [−0.91,2.10]**，累计 +48.6%；基准 0.38。
+逐年：2021 IR 1.13 / **2022（熊市）0.71** / 2023 −0.05 —— **每年胜基准**。
+**护栏**：PBO=0.54、DSR=0.745 → **未独立通过**（22 期功效有限）；中性族仍优于 raw、top10-neutral 仍最优。
+
+**综合**：与 2023–2026（IR 1.52 通过）符号一致但早期/熊市强度弱 → **edge 跨期存在但强度不一，尚不足以宣称稳健**；
+需更长历史或统一口径合并两期再验。
+
+**文件**：`ml_services/eval_overfit.py`（支持 `--pred`）、`output/portfolio_20d_2021_2023.md`、
+`output/overfit_guard_20d_2021_2023.md`、`output/walk_forward_catboost_20d_20260923_191611.md`、
+`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.10）。
+
 ### 2026-09-23 20d 策略硬化：Dropout / 波动率目标均不优于基础版 ⭐⭐
 
 **新增能力**：`portfolio_backtest.py --dropout / --vol-target`。
