@@ -8,6 +8,19 @@
 
 ## 最新进展
 
+### 2026-09-24 横截面大小 vs IC 精度：扩池是降噪根本手段，但数据源受阻 ⭐⭐
+
+**新增**：`ml_services/ic_scale_test.py`（59 只内子抽样，Alpha158 复合因子）；报告 `output/ic_scale_test.md`。
+
+**结果**：日度 IC std 随 m 缩小并贴近 1/√(m−3)（m=58 → std 0.212，CI ±0.37）。
+**可检测性**（发现 IC=0.02，z=2）：m=58 需 **448 天**；m=100 → 103；m=200 → 51；m=300 → **34 天**。
+
+**结论**：扩池（58→300 只）把检测门槛降 ~13 倍，是把微弱横截面 alpha 变可用信号的根本手段。
+**Part B 受阻**：腾讯接口当前环境取不到新代码（DNS/网络故障）→ **扩池必须先解决数据源**，
+这是项目最大的外部约束之一。
+
+**文件**：`ml_services/ic_scale_test.py`、`output/ic_scale_test.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.13）。
+
 ### 2026-09-24 Alpha158 风格特征基线：模型 IC 高于朴素因子复合，最强为低波动 ⭐⭐
 
 **新增**：`ml_services/alpha158_baseline.py`（Qlib 未装，自实现 Alpha158 核心子集 48 因子，仅 OHLCV+VWAP）。
