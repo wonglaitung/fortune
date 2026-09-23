@@ -83,12 +83,14 @@ class HSIWalkForwardValidator:
     """恒生指数 Walk-forward 验证器"""
 
     def __init__(self, horizon=20, train_window_months=12, test_window_months=1,
-                 step_window_months=1, confidence_threshold=0.55):
+                 step_window_months=1, confidence_threshold=0.55, embargo_days=None):
         self.horizon = horizon
         self.train_window_months = train_window_months
         self.test_window_months = test_window_months
         self.step_window_months = step_window_months
         self.confidence_threshold = confidence_threshold
+        # 训练/测试隔离期（默认=horizon），消除训练集末尾标签穿越测试期
+        self.embargo_days = embargo_days if embargo_days is not None else horizon
 
         # 收集所有特征
         self.feature_names = []
@@ -369,6 +371,7 @@ class HSIWalkForwardValidator:
         # 存储结果
         all_fold_results = []
         all_trades = []
+        all_predictions = []  # 逐条预测（供统一评估：准确率/lift/CI）
 
         # 执行每个 fold
         for fold in range(num_folds):
@@ -391,6 +394,13 @@ class HSIWalkForwardValidator:
             test_start = pd.to_datetime(test_months[0] + '-01')
             test_end = (pd.to_datetime(test_months[-1] + '-01') +
                        pd.DateOffset(months=1) - pd.DateOffset(days=1))
+
+            # 应用 embargo：训练集末尾回退 embargo_days，消除标签穿越测试期
+            if self.embargo_days and self.embargo_days > 0:
+                train_end = train_end - pd.Timedelta(days=int(self.embargo_days))
+                if train_end <= train_start:
+                    print(f"⚠️ Fold {fold + 1} 训练期在 embargo 后过短，跳过")
+                    continue
 
             print(f"训练期间: {train_start.strftime('%Y-%m-%d')} ~ {train_end.strftime('%Y-%m-%d')}")
             print(f"测试期间: {test_start.strftime('%Y-%m-%d')} ~ {test_end.strftime('%Y-%m-%d')}")
@@ -418,6 +428,11 @@ class HSIWalkForwardValidator:
             print(f"  训练样本: {len(X_train)}, 测试样本: {len(X_test)}")
 
             # 训练模型（原始参数配置）
+            # 单一类别则跳过（CatBoost 不接受）
+            if len(np.unique(y_train)) < 2 or len(X_train) < 20:
+                print(f"  ⚠️ 训练集类别单一或样本过少，跳过本折")
+                continue
+
             print(f"  🔄 训练模型...")
             model = CatBoostClassifier(
                 iterations=300,
@@ -433,18 +448,38 @@ class HSIWalkForwardValidator:
                 task_type='CPU'
             )
 
-            # 时序分割验证集
+            # 时序分割验证集（注意：子集可能单类别，需分别处理）
             val_idx = int(len(X_train) * 0.8)
-            model.fit(
-                X_train.iloc[:val_idx], y_train.iloc[:val_idx],
-                eval_set=(X_train.iloc[val_idx:], y_train.iloc[val_idx:]),
-                early_stopping_rounds=30,
-                verbose=0
-            )
+            y_tr_part = y_train.iloc[:val_idx]
+            y_val_part = y_train.iloc[val_idx:]
+            if len(np.unique(y_tr_part)) < 2:
+                print(f"  ⚠️ 训练子集单一类别，跳过本折")
+                continue
+            if len(np.unique(y_val_part)) >= 2:
+                model.fit(
+                    X_train.iloc[:val_idx], y_tr_part,
+                    eval_set=(X_train.iloc[val_idx:], y_val_part),
+                    early_stopping_rounds=30,
+                    verbose=0
+                )
+            else:
+                model.fit(X_train.iloc[:val_idx], y_tr_part, verbose=0)
 
             # 预测
             proba = model.predict_proba(X_test)[:, 1]
             pred = (proba > 0.5).astype(int)
+
+            # 逐条预测记录（供统一评估）
+            for i in range(len(proba)):
+                all_predictions.append({
+                    'fold': fold + 1,
+                    'date': test_clean.index[i].strftime('%Y-%m-%d'),
+                    'prob': float(proba[i]),
+                    'pred': int(pred[i]),
+                    'actual': int(y_test.values[i]),
+                    'actual_return': float(test_returns.values[i]) if not pd.isna(test_returns.values[i]) else None,
+                    'is_correct': bool(int(pred[i]) == int(y_test.values[i])),
+                })
 
             # 计算指标
             accuracy = accuracy_score(y_test, pred)
@@ -556,6 +591,7 @@ class HSIWalkForwardValidator:
                     'end_date': end_date
                 },
                 'fold_results': all_fold_results,
+                'predictions': all_predictions,
                 'overall_metrics': {
                     'avg_accuracy': avg_accuracy,
                     'avg_auc': avg_auc,
@@ -569,10 +605,17 @@ class HSIWalkForwardValidator:
 
             # 保存到文件
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            os.makedirs('data/hsi_walk_forward', exist_ok=True)
             output_file = f'data/hsi_walk_forward/hsi_walk_forward_{timestamp}.json'
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(output, f, ensure_ascii=False, indent=2)
             print(f"\n💾 结果已保存到: {output_file}")
+
+            # 保存逐条预测 CSV（供统一评估脚本使用）
+            if all_predictions:
+                pred_csv = f'data/hsi_walk_forward/hsi_prediction_analysis_{timestamp}.csv'
+                pd.DataFrame(all_predictions).to_csv(pred_csv, index=False)
+                print(f"📄 逐条预测已保存到: {pred_csv}")
 
             return output
         else:
@@ -589,6 +632,8 @@ def main():
     parser.add_argument('--confidence-threshold', type=float, default=0.55, help='置信度阈值')
     parser.add_argument('--start-date', type=str, default='2020-01-01', help='开始日期')
     parser.add_argument('--end-date', type=str, default='2025-12-31', help='结束日期')
+    parser.add_argument('--embargo-days', type=int, default=None,
+                        help='训练/测试隔离期天数（默认=horizon，消除标签穿越）')
 
     args = parser.parse_args()
 
@@ -597,7 +642,8 @@ def main():
         train_window_months=args.train_window,
         test_window_months=args.test_window,
         step_window_months=args.step_window,
-        confidence_threshold=args.confidence_threshold
+        confidence_threshold=args.confidence_threshold,
+        embargo_days=args.embargo_days
     )
 
     validator.run_validation(

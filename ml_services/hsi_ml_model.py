@@ -735,18 +735,18 @@ class HSICatBoostModel:
 
         results = {}
 
-        # 已知的历史准确率（基于 Walk-forward 验证）
-        # 更新时间：2026-04-26（增强模型：33特征含日历/GARCH/Regime）
+        # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-2025，12月训练窗口）
+        # 5/20天因独立样本少，统计上不显著；详见 output/backtest_eval_hsi_{1,5,20}d.md
         historical_accuracy = {
-            1: 0.5155,   # 51.55%（噪音大，仅供参考）
-            5: 0.6435,   # 64.35%（趋势确认）
-            20: 0.8223   # 82.23%（最可靠）
+            1: 0.541,
+            5: 0.559,
+            20: 0.575
         }
 
         historical_auc = {
-            1: 0.5213,
-            5: 0.6567,
-            20: 0.7500   # 估算值
+            1: 0.50,
+            5: 0.50,
+            20: 0.50   # 未单独测 AUC，置中性值避免误导
         }
 
         for horizon in horizons:
