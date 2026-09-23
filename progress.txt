@@ -8,6 +8,27 @@
 
 ## 最新进展
 
+### 2026-09-23 三重障碍 + 元标签原型（5d/20d）——未复现 55%→75% ⭐⭐
+
+**新增**：`ml_services/meta_labeling_prototype.py`
+- 用特征缓存 OHLC 生成**三重障碍**标签（波动率缩放的止盈/止损 + 时间障碍）
+- 在现有主模型买入信号上训练**元模型**（概率/市场层级+技术特征），
+  **purged/embargo walk-forward**（训练 folds<f，embargo=horizon）过滤低置信交易
+- 输出 precision / recall / F1 / 保留率 / 净均收益 / 净 IR 前后对比 + 逐 Fold + 结论
+
+**实测结果**（报告 `output/meta_labeling_{5d,20d}.md`）：
+
+| 周期 | Baseline Precision | Meta Precision | 保留率 | 净 IR | 判定 |
+|------|--------------------|----------------|--------|-------|------|
+| 5d | 50.8% | 50.7% | 72% | −0.05 → −0.08 | ❌ 未提升 |
+| 20d | 54.6% | 54.1% | 72% | 0.32 → 0.29 | ❌ 未提升 |
+
+**结论**：元标签**未**带来 precision 提升（业界示例 55%→75% 不适用）。根因是**主模型 lift≈0**，
+元模型无可学习的差异信号，过滤只等于随机砍样本。→ 需先让主模型有真实 edge（改标签/集成）。
+
+**文件**：`ml_services/meta_labeling_prototype.py`（新）、`output/meta_labeling_{5d,20d}.md`、
+`docs/MODEL_IMPROVEMENT_PLAN.md`（新增 §5.4 原型实测）。
+
 ### 2026-09-23 改进计划新增「提升准确率/胜率的方案（业界实践）」⭐
 
 **改动**（`docs/MODEL_IMPROVEMENT_PLAN.md`）：
