@@ -8,6 +8,20 @@
 
 ## 最新进展
 
+### 2026-09-23 模型验证技能新增「阶段 5.5 严谨合并评估」⭐
+
+**改动**（`.opencode/command/model_validation.md`）：
+- 顶部加评估口径说明：绝对准确率/胜率不是通过依据，以 `backtest_eval.py` 的
+  **超额 lift** 与 **方向技能** 为准。
+- 新增「阶段 5.5：严谨合并评估（backtest_eval.py，必须执行）」：运行命令、必看指标表、
+  典型陷阱（银行 beta 陷阱）、检查清单。
+- 执行检查清单新增「阶段 5.5 检查」；数据泄漏警告新增「假显著陷阱」（1d p 值陷阱、
+  月份×股票 n_eff≈4、绝对胜率需减基准）。
+
+**流程更新**：阶段 0 → 1 Walk-forward → 2 三周期 → 3/4 文档与代码 → 5 Fold 分析 → **5.5 严谨评估**。
+
+**文件**：`.opencode/command/model_validation.md`。
+
 ### 2026-09-23 backtest_eval 新增月度 / 月份×股票分析（含股票名称）⭐
 
 **改动**（`ml_services/backtest_eval.py`）：
