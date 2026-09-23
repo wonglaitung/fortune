@@ -8,6 +8,20 @@
 
 ## 最新进展
 
+### 2026-09-24 Alpha158 风格特征基线：模型 IC 高于朴素因子复合，最强为低波动 ⭐⭐
+
+**新增**：`ml_services/alpha158_baseline.py`（Qlib 未装，自实现 Alpha158 核心子集 48 因子，仅 OHLCV+VWAP）。
+报告 `output/alpha158_baseline_20d.md`（2021-10~2026-07，59 只）。
+
+**结果**：
+- 最强单因子：**ATR_Ratio_14 IC −0.048**（低波动→涨）、CORR_CV_20 −0.030、MA_Ratio_60 −0.029、RSI_12 +0.019。
+- 复合：全部因子等权 IC **+0.0088**（ICIR 0.042）。
+- 对照：我们的 CatBoost 20d Rank IC ≈ **0.02 > 0.009** → 现有管线已吸收部分信号；
+  **低波动/质量因子**在本池有效，值得显式纳入。
+- 与 Qlib（RankIC 0.048/CSI300）差距主因：**横截面仅 59 只**（IC 噪声大）+ 未建模。
+
+**文件**：`ml_services/alpha158_baseline.py`、`output/alpha158_baseline_20d.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.12）。
+
 ### 2026-09-24 统一口径全期复验（12m/59折）：IR~0.7 但 DSR 未过 ⭐⭐⭐
 
 **执行**：`walk_forward_validation.py --train-window 12` 全期（2021-10~2026-07，59 折）
