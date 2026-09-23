@@ -8,6 +8,25 @@
 
 ## 最新进展
 
+### 2026-09-23 方法#2 排序目标 MVP：简化版不如基线，LambdaRank 更差 ⭐⭐
+
+**新增**：`ml_services/rank_model.py`（同特征 Top500 + 同折 + 按日横截面 z-score + 相对收益标签，
+比较回归 vs LightGBM LambdaRank）。
+
+**实测（20d Rank IC）**：
+
+| 目标 | Rank IC | ICIR | 多空/期 |
+|------|---------|------|---------|
+| 基线 CatBoost（全特征） | **+0.023** | — | — |
+| 回归（500特征标准化） | +0.0017 | 0.010 | +0.20% |
+| **LambdaRank** | **−0.0409** | −0.241 | −0.32% |
+
+**结论**：简化排序 MVP **未复现基线**，LambdaRank **反而更差** → 方法#2 此形态无效。
+因子无错位（单特征 IC 最高 +0.046），差距来自**简化管线**（仅 500 原始特征、无市场/网络交叉、月度重训）。
+→ 要公平检验需接进真实 2054 特征管线（较大改动）；**优先推进已验证的 20d 行业中性 TopK**。
+
+**文件**：`ml_services/rank_model.py`、`output/rank_model_20d.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.8）。
+
 ### 2026-09-23 Phase 3 完整化：成本敏感性 + PBO/DSR，20d 首个通过护栏 ⭐⭐⭐
 
 **新增**：`ml_services/eval_overfit.py`（自实现 CSCV-PBO + Deflated Sharpe，`purgedcv` 未装）；
