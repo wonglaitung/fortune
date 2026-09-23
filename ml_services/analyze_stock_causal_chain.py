@@ -428,21 +428,21 @@ def print_three_horizon_summary(all_stock_results):
 
     # 恒指基准数据
     hsi_baseline = {
-        'independent_accuracy': {'1d': 49.67, '5d': 62.36, '20d': 81.24},
+        'independent_accuracy': {'1d': 54.10, '5d': 55.93, '20d': 57.53},
         'causal_analysis': {
-            '1d_correct_then_20d_accuracy': 83.56,
-            '1d_wrong_then_20d_accuracy': 78.95,
-            '5d_correct_then_20d_accuracy': 81.95,
-            '1d_5d_correct_then_20d_accuracy': 81.49,
+            '1d_correct_then_20d_accuracy': 58.12,
+            '1d_wrong_then_20d_accuracy': 56.83,
+            '5d_correct_then_20d_accuracy': 61.87,
+            '1d_5d_correct_then_20d_accuracy': 64.81,
         },
         'patterns': {
-            '101': {'20d_accuracy': 95.00, 'count': 60},
-            '010': {'20d_accuracy': 85.98, 'count': 107},
-            '001': {'20d_accuracy': 84.00, 'count': 100},
-            '111': {'20d_accuracy': 80.62, 'count': 129},
-            '000': {'20d_accuracy': 79.57, 'count': 186},
+            '101': {'20d_accuracy': 32.26, 'count': 62},
+            '010': {'20d_accuracy': 58.33, 'count': 84},
+            '001': {'20d_accuracy': 50.46, 'count': 109},
+            '111': {'20d_accuracy': 50.38, 'count': 133},
+            '000': {'20d_accuracy': 53.70, 'count': 257},
         },
-        'probability_correlation': {'5d_vs_20d_actual': 0.35},
+        'probability_correlation': {'5d_vs_20d_actual': 0.16},
     }
 
     # ========== 1. 独立准确率对比 ==========
@@ -579,12 +579,12 @@ def print_three_horizon_summary(all_stock_results):
 def print_summary(all_stock_results):
     """打印汇总对比表"""
     hsi_baseline = {
-        '1d_to_5d': {'model_accuracy': 64.14, 'majority_accuracy': 52.15,
-                     'strong_accuracy': 64.69, 'mixed_accuracy': 63.12,
+        '1d_to_5d': {'model_accuracy': 60.31, 'majority_accuracy': 52.15,
+                     'strong_accuracy': 60.31, 'mixed_accuracy': 55.93,
                      'transmission_corr': 0.0358, 'prob_corr': 0.0246},
-        '5d_to_20d': {'model_accuracy': 82.76, 'majority_accuracy': 66.38,
-                      'strong_accuracy': 84.36, 'mixed_accuracy': 78.70,
-                      'transmission_corr': 0.0811, 'prob_corr': 0.4294},
+        '5d_to_20d': {'model_accuracy': 61.87, 'majority_accuracy': 57.53,
+                      'strong_accuracy': 61.87, 'mixed_accuracy': 57.53,
+                      'transmission_corr': 0.0811, 'prob_corr': 0.16},
     }
 
     print("\n" + "=" * 90)
