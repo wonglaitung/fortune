@@ -1,6 +1,6 @@
 # 验证方法完整指南
 
-> **最后更新**：2026-05-09
+> **最后更新**：2026-09-23
 
 ---
 
@@ -42,7 +42,12 @@
 | **收益指标** | 年化收益率、平均收益率 | 衡量盈利能力 |
 | **风险指标** | 夏普比率、索提诺比率、最大回撤 | 衡量风险调整后收益 |
 | **预测指标** | 准确率、胜率、正确决策比例 | 衡量预测准确性 |
-| **稳定性指标** | 收益率标准差、胜率标准差 | 衡量模型稳定性 |
+| **超额指标** | **方向技能**（准确率−永远看涨）、**超额 lift**（胜率−无条件买入） | 剔除市场 beta 后衡量真实技能 ⭐ |
+| **稳定性指标** | 收益率标准差、胜率标准差、跨周期一致性 | 衡量模型稳定性 |
+
+> ⚠️ **只看绝对准确率/胜率会被市场趋势误导**：趋势向上板块的"永远看涨"准确率本就 >50%，
+> 买入基准胜率也高。评估必须减去基准，详见 [回测评估](#严谨评估工具backtest_evalpy) 与
+> [lessons.md 0.5/0.6](../lessons.md)。
 
 ---
 
@@ -287,6 +292,55 @@ python3 ml_services/walk_forward_validation.py \
 - 召回率：关注"上涨信号的覆盖度"（避免漏报）
 - F1分数：综合评估（平衡精确率和召回率）
 
+### 严谨评估工具（backtest_eval.py）⭐
+
+`ml_services/backtest_eval.py` 对 Walk-forward 输出的 `prediction_analysis.csv` 做**合并层面**评估，
+核心是**把市场 beta 从模型技能里剥离出来**。
+
+#### 核心指标
+
+| 指标 | 定义 | 意义 |
+|------|------|------|
+| **合并准确率** | 正确数 / 已验证样本，附 Wilson 95%CI | 报告口径 = `correct/verified`，不是 `correct/total` |
+| **有效独立样本** `n_eff` | `n / horizon` | 重叠窗口下 n 天预测≈n/h 个独立观测，CI 基于此 |
+| **基准胜率** | 无条件买入净收益>0.5% 的占比 | 代表该样本集的市场 beta（含牛市水分） |
+| **信号胜率** | 过滤后买入信号净收益>0.5% 占比 | 模型实际交易胜率 |
+| **超额 lift** | 信号胜率 − 基准胜率 | **剔除行情后才是选股/择时能力** |
+| **永远看涨** | 该组实际上涨占比 | 方向准确率的公平基准 |
+| **方向技能** | 准确率 − 永远看涨 | **>0 才说明方向判断超越趋势** |
+
+#### 用法
+
+```bash
+# 单周期评估
+python3 ml_services/backtest_eval.py \
+    --input output/<dir>/prediction_analysis.csv --horizon 20 \
+    --output output/backtest_eval_20d.md
+
+# 跨周期一致性（用另一周期的 CSV 标注「一致正/一致负/混合」）
+python3 ml_services/backtest_eval.py \
+    --input   output/<5d_dir>/prediction_analysis.csv  --horizon 5 \
+    --compare output/<20d_dir>/prediction_analysis.csv --compare-horizon 20 \
+    --output output/backtest_eval_5d.md
+```
+
+**常用参数**：`--cost`（默认 0.005，与 walk-forward 的 `TOTAL_COST` 一致）、
+`--reliability-threshold`（默认 30 有效样本）。
+
+#### 报告章节
+
+1. 合并准确率 2. 买入胜率与基准 lift（含逐年/逐 fold）3. **板块表现**
+（`config.STOCK_SECTOR_MAPPING` 关联，方向技能 + lift + 可靠性）4. 逐 fold 准确率
+5. 概率校准分桶 6. **逐股票表现**（附 `--compare` 跨周期一致性）
+
+#### 关键判读（2026-09-22 数据）
+
+- **银行是"高准确率陷阱"**：20d 准确率 58.3%（全场最高），但"永远看涨"基准 62.4%
+  → **方向技能 −4.2pp**；买入基准 60.7%、信号胜率 61.5% → **lift 仅 +0.9pp**。
+  绝对数字漂亮，实则无技能。评估必须看方向技能与 lift。
+- **板块层可迁移，个股层不可**：板块 lift 跨周期 Spearman(5d,20d)=**0.73**（p=0.0009），
+  个股仅 **0.14**（p=0.29，不显著）。板块可用于倾斜，个股排名基本是噪声。
+
 ### 回测评估命令
 
 ```bash
@@ -318,6 +372,7 @@ python3 ml_services/batch_backtest.py \
 - `output/backtest_20d_report_{timestamp}.txt`：详细报告
 - `output/batch_backtest_{model_type}_{horizon}d_{timestamp}.json`：批量回测数据
 - `output/batch_backtest_summary_{model_type}_{horizon}d_{timestamp}.txt`：批量回测汇总
+- `output/backtest_eval_{horizon}d.md`：严谨评估报告（准确率/胜率 lift/板块/个股，`backtest_eval.py` 生成）
 
 ### 多周期策略回撤计算最佳实践 ⭐
 

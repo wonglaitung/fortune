@@ -51,6 +51,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
+| **回测评估（lift/方向技能）** | `python3 ml_services/backtest_eval.py --input output/<dir>/prediction_analysis.csv --horizon 20` | ⭐ 评估必用 |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
 | **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` | - |
 
@@ -105,6 +106,8 @@ python hsi_email.py --no-email
 | 警告 | 说明 |
 |------|------|
 | **数据泄漏** | Walk-forward准确率 >65%（个股）或 >80%（恒指）通常是数据泄漏信号 |
+| **静态快照穿越** | 网络/情感/主题/基本面等"最新值广播到全部历史行"=未来穿越；回测须用 PIT 时点还原 |
+| **绝对准确率/胜率陷阱** | 趋势板块基准本就高；评估看 **lift（胜率−基准）** 与 **方向技能（准确率−永远看涨）**，不看绝对值 |
 | **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致 |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **CatBoost 1天模型** | 噪音大，仅供参考 |
@@ -338,18 +341,20 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | 下跌中继做多 | 1天跌5天跌20天涨(001) | **81.05%** | 下跌后买入 |
 | 一致看跌做空 | 三周期全看跌(000) | 79.80% | 趋势确认后减仓或做空 |
 
-**个股完整模型**（2026-05-24 验证，12 folds，57只股票，Top 500特征，市场情绪过滤器启用）：
+**个股完整模型**（2026-09-22 PIT 修正后，38 folds，59只股票，市场情绪过滤器启用）⭐：
 
-| 指标 | 数值 | 评估 |
-|------|------|------|
-| 综合评分 | **90/100** | ⭐⭐⭐⭐⭐ 优秀 |
-| 平均准确率 | **58.77%** | ✅ 正常范围（<65% 无数据泄漏） |
-| 平均夏普比率 | **6.45** | ✅ 优秀 |
-| 平均最大回撤 | **-1.03%** | ✅ 优秀 |
-| 平均胜率 | 63.30% | 良好 |
-| 平均收益率 | +4.88% | ✅ 正收益 |
-| 平均 IC | 0.203 | ✅ 有效 |
-| 稳定性评级 | 低（需改进） | ⚠️ |
+| 指标 | 20d | 5d | 评估 |
+|------|-----|----|------|
+| 合并准确率 | **51.6%**（95%CI 49.5–53.7） | **51.8%**（50.8–52.9） | 接近随机；20d p=0.14，5d p=0.0008 |
+| 信号胜率 | 51.2% | 48.6% | 含行情 |
+| 基准胜率 | 49.5% | 46.9% | 无条件买入 |
+| **超额 lift** | +1.8pp | +1.6pp | 微弱，20d 不显著 |
+| 平均 IC | 0.052 | 0.067 | 偏低 |
+
+> ⚠️ **历史数字已作废**：2026-05-24 的"平均准确率 58.77% / 胜率 63.30%"主要由
+> **静态快照穿越**（网络/情感/主题特征用最新值广播历史行）+ 全局特征选择穿越贡献。
+> PIT 时点还原后同口径 2025 测试月准确率降至 ~55%，胜率 lift 从 ~+5.6pp 降至 +0.7pp。
+> **评估以 `ml_services/backtest_eval.py` 的 lift / 方向技能为准**（详见 [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)）。
 
 **新增利率特征**（2026-05-23）：
 - 多期限美债收益率：US_2Y_Yield, US_10Y_Yield, US_30Y_Yield

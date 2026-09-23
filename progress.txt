@@ -8,6 +8,77 @@
 
 ## 最新进展
 
+### 2026-09-23 回测评估新增"买入胜率 + 基准 lift" ⭐
+
+**背景**：`backtest_eval.py` 原只报准确率；旧报告的"平均胜率 63.30%"未剔除市场 beta，
+牛市月份（如 2025-04/05/06）会虚高，无法判断真实选股能力。
+
+**改动**：
+- `ml_services/backtest_eval.py` 新增 `evaluate_win_rate()`：还原市场情绪过滤信号
+  （`prob >= Dynamic_Threshold`），计算买入胜率、**无条件买入基准胜率**、**超额 lift（胜率−基准）**、
+  95%CI 与显著性，并输出逐年 / 逐 fold lift 表。
+- 新增**板块表现**章节：用 `config.STOCK_SECTOR_MAPPING` 关联板块，输出方向技能 + 胜率 + lift + 可靠性。
+- 新增**方向技能**列 = 准确率 −「永远看涨」基准（该组上涨占比），
+  揭示"高准确率实则趋势水分"（银行 20d acc 58.3% 但永远看涨 62.4% → 方向技能 **−4.2pp**）。
+- 逐股票章节升级为**表现表**：方向技能 + 胜率 + lift + 可靠性，并支持 `--compare` 标注**跨周期一致性**。
+- 新增 `--cost`（默认 0.005）、`--compare` / `--compare-horizon` 参数。
+- 报告章节重排：二、买入胜率与基准 lift；三、板块表现；四、逐 Fold 准确率；五、概率校准；六、逐股票表现。
+
+**关键结论**（2026-09-22 数据）：
+
+| 周期 | 基准胜率 | 信号胜率 | 超额 lift |
+|------|---------|---------|----------|
+| 20d 全期 | 49.5% | 51.2% | +1.8pp (p=0.28) |
+| 5d 全期 | 46.9% | 48.6% | +1.6pp (p=0.08) |
+| 20d 2025 | 57.7% | 58.4% | +0.7pp |
+
+**结论**：旧 63.30% 胜率大部分是 2025 牛市 beta 水分，剔除后超额胜率接近 0；
+后续评估应以 **lift** 而非绝对胜率衡量模型能力。
+
+**板块 / 个股拆分结论**：
+- **板块层可信**：lift 跨周期 Spearman(5d,20d)=**0.73**（准确率 0.71）。超配
+  交易所/半导体/指数基金/AI，低配 燃气/航运/能源。
+- **银行是"高准确率陷阱"**：20d 准确率 58.3%（最高），但基准 60.7%，lift 仅 +0.9。
+- **个股层不可信**：lift 跨周期 Spearman 仅 **0.14**（20d 每股有效样本仅 39）。
+  仅"两期一致正"（0020/2382/2533/0388/2388/2800/2828/1299 等 23 只）相对可信。
+
+**文件修改**：
+| 文件 | 说明 |
+|------|------|
+| `ml_services/backtest_eval.py` | 胜率 lift + 板块章节 + 个股表现/一致性 + `--compare` |
+| `output/backtest_eval_20d.md` / `backtest_eval_5d.md` | 重新生成（含新章节） |
+
+### 2026-09-22 消除特征穿越（PIT 时点还原）+ 严谨评估体系 ⭐
+
+**背景**：发现静态快照特征（网络/情感/主题/基本面/板块）用"最新值广播到全部历史行"，
+在回测中构成未来穿越，导致准确率虚高；且 Walk-forward 训练窗口(12月)与生产(~6年)不匹配。
+
+**改动内容**：
+- **PIT 网络特征**：`stock_network_analysis.py` 新增 `export_pit_network_features`，
+  按滚动窗口输出每股票每日期 centrality/community → `data/network_features/network_features_pit.json`
+- **PIT 板块特征**：新增 `export_pit_sector_features` → `sector_features_pit.json`
+- **PIT 情感/主题**：`create_sentiment_features`/`create_topic_features` 改为逐日滚动（历史期 NaN）
+- **基本面**：数据源无历史 → 统一 NaN（诚实缺失）
+- **股票类型动态特征**：`.iloc[-1]` → 逐日 rolling
+- **时序合并**：新增 `merge_pit_features()`，按日期对齐 + 前向填充
+- **A1 embargo**：`walk_forward_validation.py` 新增 `--embargo-days`（默认=horizon）
+- **A2 每折特征选择**：新增 `--train-window` 默认 36（与生产3年口径对齐）；每折在训练数据上重选 Top-500
+- **评估工具**：新增 `ml_services/eval_stats.py`（Wilson CI/有效样本/显著性）、
+  `ml_services/backtest_eval.py`（合并层面评估报告）
+
+**文件修改**：
+| 文件 | 说明 |
+|------|------|
+| `ml_services/stock_network_analysis.py` | 新增 PIT 网络/板块特征导出 |
+| `ml_services/ml_trading_model.py` | PIT 合并、情感/主题/基本面/股票类型 PIT 化 |
+| `ml_services/walk_forward_validation.py` | embargo + 每折特征选择 + 默认36月窗口 |
+| `ml_services/eval_stats.py` | 新建（评估统计） |
+| `ml_services/backtest_eval.py` | 新建（回测评估） |
+| `tests/test_pit_network_merge.py` | 新建 |
+| `tests/test_eval_stats.py` | 新建 |
+
+**待办**：跑 3 年 Walk-forward（1/5/20）并评估（耗时长，需单独执行）。
+
 ### 2026-08-18 迁移至 opencode ⭐
 
 **变更**：项目从 Claude Code 迁移到 opencode，弃用 Claude Code。

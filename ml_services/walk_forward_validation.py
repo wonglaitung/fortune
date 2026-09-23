@@ -59,7 +59,9 @@ class WalkForwardValidator:
         confidence_threshold: float = 0.55,
         use_feature_selection: bool = True,
         min_train_samples: int = 100,
-        fp_penalty: float = None           # False Positive 惩罚系数（非对称损失函数）
+        fp_penalty: float = None,          # False Positive 惩罚系数（非对称损失函数）
+        embargo_days: int = None,          # 训练/测试之间的隔离期（默认=horizon，消除标签穿越）
+        top_k: int = 500                   # 每折特征选择保留的特征数
     ):
         """
         初始化 Walk-forward 验证器
@@ -86,6 +88,9 @@ class WalkForwardValidator:
         self.use_feature_selection = use_feature_selection
         self.min_train_samples = min_train_samples
         self.fp_penalty = fp_penalty
+        # 训练/测试隔离期：默认等于 horizon，消除训练集末尾标签穿越测试期
+        self.embargo_days = embargo_days if embargo_days is not None else horizon
+        self.top_k = top_k
 
         # 模型类映射
         self.model_classes = {
@@ -200,6 +205,13 @@ class WalkForwardValidator:
             train_end_date = (pd.to_datetime(train_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
             test_start_date = pd.to_datetime(test_months[0] + '-01').tz_localize('UTC')
             test_end_date = (pd.to_datetime(test_months[-1] + '-01') + pd.DateOffset(months=1) - pd.DateOffset(days=1)).tz_localize('UTC')
+
+            # 应用 embargo：训练集末尾回退 embargo_days，消除训练集标签穿越测试期
+            if self.embargo_days and self.embargo_days > 0:
+                train_end_date = train_end_date - pd.Timedelta(days=int(self.embargo_days))
+                if train_end_date <= train_start_date:
+                    print(f"⚠️ Fold {fold + 1} 训练期在 embargo 后过短，跳过")
+                    continue
 
             print(f"训练期间: {train_start_date.strftime('%Y-%m-%d')} 至 {train_end_date.strftime('%Y-%m-%d')}")
             print(f"测试期间: {test_start_date.strftime('%Y-%m-%d')} 至 {test_end_date.strftime('%Y-%m-%d')}")
@@ -325,6 +337,34 @@ class WalkForwardValidator:
 
         print(f"  ✅ 训练数据准备完成: {len(train_data)} 条记录")
 
+        # 每折独立特征选择（防穿越）：仅使用该折训练数据选 Top-K，
+        # 避免使用含未来信息的全局特征文件
+        fold_selected_features = None
+        if self.use_feature_selection:
+            try:
+                from ml_services.feature_selection import feature_selection_statistical
+                feat_cols = model.get_feature_columns(train_data)
+                feat_cols = [c for c in feat_cols if c in train_data.columns
+                             and train_data[c].dtype in ['float64', 'float32', 'int64', 'int32']]
+                # 仅保留标签有效行；特征强制 float 并清理 NaN/Inf（sklearn 不接受 NaN）
+                valid_mask = train_data['Label'].notna().values
+                X_sel = train_data.loc[valid_mask, feat_cols].astype(float).values
+                X_sel = np.nan_to_num(X_sel, nan=0.0, posinf=0.0, neginf=0.0)
+                y_sel = train_data.loc[valid_mask, 'Label'].values
+                # 对特征选择做行采样，控制内存/耗时（FS 无需全量行）
+                max_fs_rows = 20000
+                if len(X_sel) > max_fs_rows:
+                    rng = np.random.RandomState(42)
+                    idx = rng.choice(len(X_sel), size=max_fs_rows, replace=False)
+                    X_sel = X_sel[idx]
+                    y_sel = y_sel[idx]
+                if len(feat_cols) > self.top_k and len(X_sel) > 0:
+                    sel_idx, _ = feature_selection_statistical(X_sel, y_sel, feat_cols, top_k=self.top_k)
+                    fold_selected_features = [feat_cols[int(i)] for i in sel_idx]
+                    print(f"  🔍 每折特征选择: {len(fold_selected_features)} 个特征（防穿越）")
+            except Exception as e:
+                logger.warning(f"每折特征选择失败，回退全局文件: {e}")
+
         # 训练模型（关键：每个fold重新训练）
         print(f"  🔄 训练模型 (Fold {fold + 1})...")
         try:
@@ -333,7 +373,8 @@ class WalkForwardValidator:
                 start_date=train_start_date,
                 end_date=train_end_date,
                 horizon=self.horizon,
-                use_feature_selection=self.use_feature_selection
+                use_feature_selection=self.use_feature_selection,
+                selected_features=fold_selected_features
             )
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
@@ -1474,8 +1515,8 @@ def main():
                        help='模型类型 (默认: catboost)')
 
     # Walk-forward 参数
-    parser.add_argument('--train-window', type=int, default=12,
-                       help='训练窗口（月，默认: 12）')
+    parser.add_argument('--train-window', type=int, default=36,
+                       help='训练窗口（月，默认: 36，与生产3年训练口径对齐）')
     parser.add_argument('--test-window', type=int, default=1,
                        help='测试窗口（月，默认: 1）')
     parser.add_argument('--step-window', type=int, default=1,
@@ -1507,6 +1548,9 @@ def main():
     parser.add_argument('--fp-penalty', type=float, default=None,
                        help='False Positive 惩罚系数（非对称损失函数），如 2.5 表示对FP错误施加2.5倍惩罚')
 
+    parser.add_argument('--embargo-days', type=int, default=None,
+                       help='训练/测试隔离期天数（默认=horizon，消除标签穿越测试期）')
+
     args = parser.parse_args()
 
     # 获取股票列表
@@ -1531,7 +1575,8 @@ def main():
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
         use_feature_selection=args.use_feature_selection,
-        fp_penalty=args.fp_penalty
+        fp_penalty=args.fp_penalty,
+        embargo_days=args.embargo_days
     )
 
     # 执行验证

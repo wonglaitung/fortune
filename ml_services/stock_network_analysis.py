@@ -1039,7 +1039,8 @@ def calculate_network_stability(evolution):
 # ML 特征导出
 # ============================================================
 
-def export_network_features(centrality_dict, communities, bridge_stocks, stock_codes, threshold_graph=None):
+def export_network_features(centrality_dict, communities, bridge_stocks, stock_codes, threshold_graph=None,
+                            verbose=True):
     """
     导出网络特征供 ML 模型使用
 
@@ -1200,7 +1201,8 @@ def export_network_features(centrality_dict, communities, bridge_stocks, stock_c
             'net_local_clustering': local_clustering,
         }
 
-    print(f"    ✅ 导出 {len(features)} 只股票的网络特征（15个）")
+    if verbose:
+        print(f"    ✅ 导出 {len(features)} 只股票的网络特征（15个）")
     return features
 
 
@@ -1215,6 +1217,198 @@ def add_mst_degree_features(features, mst_graph):
                 neighbor_sectors.add(get_stock_sector(neighbor))
             features[code]['net_mst_neighbor_sectors'] = len(neighbor_sectors)
     return features
+
+
+def export_pit_network_features(stock_data, stock_codes, window_days=120,
+                                step_days=20, threshold=0.5):
+    """时点还原（Point-in-Time）网络特征
+
+    对每个滚动窗口（截至日期 T），仅使用 [T-window_days, T] 的收益率数据
+    重建相关性网络，计算每只股票在当日的网络特征。这样每个历史日期都使用
+    "当时可知"的网络结构，避免用未来数据计算特征（消除静态快照的穿越问题）。
+
+    Args:
+        stock_data: {code: DataFrame(含 'Return' 列)}
+        stock_codes: 股票代码列表
+        window_days: 滚动窗口天数
+        step_days: 滚动步长（每个窗口代表一个时点）
+        threshold: 阈值网络相关系数阈值
+
+    Returns:
+        dict: {code: {date_str: {feature_name: value}}}
+    """
+    print(f"  🕒 计算 PIT 网络特征（窗口={window_days}天，步长={step_days}天）...")
+
+    all_returns = {}
+    for code, df in stock_data.items():
+        if 'Return' in df.columns:
+            all_returns[code] = df['Return']
+    # 不做全局 dropna（否则日期范围塌缩到所有股票的交集）；
+    # 改为在每个滚动窗口内剔除缺失股票，以保留尽可能长的历史
+    returns_df = pd.DataFrame(all_returns)
+
+    if len(returns_df) < window_days:
+        print("    ⚠️ 数据不足，无法计算 PIT 网络特征")
+        return {}
+
+    pit_features = defaultdict(dict)
+    start_idx = 0
+    n_windows = 0
+
+    while start_idx + window_days <= len(returns_df):
+        window_data = returns_df.iloc[start_idx:start_idx + window_days].dropna(axis=1)
+        if window_data.shape[1] < 10:
+            start_idx += step_days
+            continue
+        end_date_str = window_data.index[-1].strftime('%Y-%m-%d')
+
+        corr = window_data.corr()
+        codes_in_window = list(corr.columns)
+        dist = build_correlation_distance_matrix(corr)
+        mst = build_minimum_spanning_tree(dist, codes_in_window)
+        centrality = calculate_centrality_metrics(mst)
+        partition, _ = detect_communities(mst)
+        threshold_graph = build_threshold_network(corr, codes_in_window, threshold)
+
+        window_feats = export_network_features(
+            centrality, partition, [], codes_in_window,
+            threshold_graph=threshold_graph, verbose=False)
+        window_feats = add_mst_degree_features(window_feats, mst)
+
+        for code, feats in window_feats.items():
+            pit_features[code][end_date_str] = feats
+
+        n_windows += 1
+        start_idx += step_days
+
+    print(f"    ✅ 完成 {n_windows} 个窗口的 PIT 网络特征（{len(pit_features)} 只股票）")
+    return dict(pit_features)
+
+
+def save_pit_network_features(pit_features, output_dir):
+    """保存 PIT 网络特征（时序）到 JSON"""
+    if not pit_features:
+        return
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, 'network_features_pit.json')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(pit_features, f, ensure_ascii=False)
+    print(f"  ✅ PIT 网络特征已保存到: {path}")
+
+
+def export_pit_sector_features(stock_data, periods=(1, 5, 20)):
+    """时点还原（PIT）板块特征
+
+    对每个交易日 T，仅使用截至 T 的收益率数据计算各板块聚合指标，
+    避免用最新板块快照广播到全部历史行（穿越）。
+
+    Returns:
+        dict: {code: {date_str: {feature_name: value}}}
+    """
+    print("  🕒 计算 PIT 板块特征...")
+    from config import STOCK_SECTOR_MAPPING as _SECTOR_MAP
+
+    sector_codes = defaultdict(list)
+    for code in stock_data:
+        info = _SECTOR_MAP.get(code)
+        if info and info.get('sector'):
+            sector_codes[info['sector']].append(code)
+
+    ret = pd.DataFrame({c: df['Return'] for c, df in stock_data.items()
+                        if 'Return' in df.columns})
+    if ret.empty:
+        print("    ⚠️ 无收益率数据，跳过 PIT 板块特征")
+        return {}
+    vol = pd.DataFrame({c: df['Volume'] for c, df in stock_data.items()
+                        if 'Volume' in df.columns})
+
+    # 板块 -> 有效列
+    sec_cols = {}
+    for sec, codes in sector_codes.items():
+        cols = [c for c in codes if c in ret.columns]
+        if cols:
+            sec_cols[sec] = cols
+    if not sec_cols:
+        return {}
+
+    # 板块日收益（股票均值）
+    sec_ret = pd.DataFrame({sec: ret[cols].mean(axis=1) for sec, cols in sec_cols.items()})
+    sectors = list(sec_ret.columns)
+
+    # 向量化：各周期累计收益与排名（避免逐日 DataFrame 切片）
+    sec_cum_np, sec_rank_np, stock_cum_np = {}, {}, {}
+    for p in periods:
+        cum = (1.0 + sec_ret).rolling(p, min_periods=p).apply(np.prod, raw=True) - 1.0
+        sec_cum_np[p] = cum[sectors].values
+        sec_rank_np[p] = cum[sectors].rank(axis=1, ascending=False).values
+        stock_cum_np[p] = ((1.0 + ret).rolling(p, min_periods=p).apply(np.prod, raw=True) - 1.0).values
+
+    ret_np = ret.values
+    vol_np = vol.reindex(columns=ret.columns).values if not vol.empty else None
+    col_index = {c: j for j, c in enumerate(ret.columns)}
+    dates = ret.index
+    n = len(dates)
+
+    pit = defaultdict(dict)
+    for i in range(n):
+        ds = dates[i].strftime('%Y-%m-%d')
+        for si, sec in enumerate(sectors):
+            cols = sec_cols[sec]
+            jidx = [col_index[c] for c in cols]
+            feats = {}
+            for p in periods:
+                v = sec_cum_np[p][i, si]
+                if np.isnan(v):
+                    continue
+                feats[f'sector_avg_change_{p}d'] = float(v)
+                feats[f'sector_rank_{p}d'] = int(sec_rank_np[p][i, si])
+                sc = stock_cum_np[p][i, jidx]
+                valid = np.sum(~np.isnan(sc))
+                feats[f'sector_rising_ratio_{p}d'] = float(np.sum(sc > 0) / valid) if valid > 0 else 0.5
+            if not feats:
+                continue
+            feats['sector_stock_count'] = len(cols)
+            if vol_np is not None:
+                vv = vol_np[i, jidx]
+                feats['sector_total_volume'] = float(np.nansum(vv))
+            else:
+                feats['sector_total_volume'] = 0.0
+            day_r = ret_np[i, jidx]
+            feats['sector_best_stock_change'] = float(np.nanmax(day_r))
+            feats['sector_worst_stock_change'] = float(np.nanmin(day_r))
+            r20 = feats.get('sector_rank_20d')
+            feats['is_sector_leader'] = 1 if (r20 is not None and r20 <= 3) else 0
+            c20 = feats.get('sector_avg_change_20d')
+            if c20 is None:
+                feats['sector_trend_score'] = 0.0
+            elif c20 > 0.05:
+                feats['sector_trend_score'] = 2.0
+            elif c20 > 0.0:
+                feats['sector_trend_score'] = 1.0
+            elif c20 < -0.05:
+                feats['sector_trend_score'] = -2.0
+            elif c20 < 0.0:
+                feats['sector_trend_score'] = -1.0
+            else:
+                feats['sector_trend_score'] = 0.0
+            feats['sector_flow_score'] = 0.0
+            feats['sector_outperform_hsi'] = 0
+            for code in cols:
+                pit[code][ds] = dict(feats)
+
+    print(f"    ✅ 完成 PIT 板块特征（{len(pit)} 只股票，{n} 个交易日）")
+    return dict(pit)
+
+
+def save_pit_sector_features(pit_features, output_dir):
+    """保存 PIT 板块特征（时序）到 JSON"""
+    if not pit_features:
+        return
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, 'sector_features_pit.json')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(pit_features, f, ensure_ascii=False)
+    print(f"  ✅ PIT 板块特征已保存到: {path}")
 
 
 # ============================================================
@@ -2345,6 +2539,10 @@ def main():
                         help='不生成可视化图表')
     parser.add_argument('--output-dir', type=str, default='output',
                         help='输出目录（默认output）')
+    parser.add_argument('--history-period', type=str, default='10y',
+                        help='取数历史长度（yfinance period，默认10y；供 PIT 网络特征使用）')
+    parser.add_argument('--skip-pit', action='store_true',
+                        help='跳过 PIT 网络特征计算')
 
     args = parser.parse_args()
 
@@ -2362,7 +2560,7 @@ def main():
     stock_list = get_stock_list()
     print(f"股票列表: {len(stock_list)} 只股票")
 
-    stock_data = fetch_all_stock_data(stock_list)
+    stock_data = fetch_all_stock_data(stock_list, period=args.history_period)
     if len(stock_data) < 10:
         print("❌ 数据不足，无法分析")
         return
@@ -2449,6 +2647,15 @@ def main():
     ml_features = add_mst_degree_features(ml_features, mst_graph)
     # ML 特征保存到 data/network_features/（机器可读数据）
     save_ml_features(ml_features, 'data/network_features')
+
+    # 7.5 PIT（时点还原）网络特征 —— 时序版本，供生产训练/回测使用，消除穿越
+    if not args.skip_pit:
+        pit_features = export_pit_network_features(
+            stock_data, stock_codes, args.window_days, args.step_days, args.threshold)
+        save_pit_network_features(pit_features, 'data/network_features')
+
+        pit_sector = export_pit_sector_features(stock_data)
+        save_pit_sector_features(pit_sector, 'data/network_features')
 
     # 8. 可视化
     if not args.no_visualization:

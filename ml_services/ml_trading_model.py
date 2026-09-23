@@ -1513,28 +1513,25 @@ class FeatureEngineer:
         return df
 
     def create_fundamental_features(self, code):
-        """创建基本面特征（只使用实际可用的数据）"""
-        try:
-            # 移除代码中的.HK后缀
-            stock_code = code.replace('.HK', '')
+        """创建基本面特征（PIT 时点还原）
 
-            fundamental_data = get_comprehensive_fundamental_data(stock_code)
-            if fundamental_data:
-                # 只使用实际可用的基本面数据
-                return {
-                    'PE': fundamental_data.get('fi_pe_ratio', np.nan),
-                    'PB': fundamental_data.get('fi_pb_ratio', np.nan),
-                    'Market_Cap': fundamental_data.get('fi_market_cap', np.nan),
-                    'ROE': np.nan,  # 暂不可用
-                    'ROA': np.nan,  # 暂不可用
-                    'Dividend_Yield': np.nan,  # 暂不可用
-                    'EPS': np.nan,  # 暂不可用
-                    'Net_Margin': np.nan,  # 暂不可用
-                    'Gross_Margin': np.nan  # 暂不可用
-                }
-        except Exception as e:
-            print(f"获取基本面数据失败 {code}: {e}")
-        return {}
+        数据源（AKShare stock_hk_financial_indicator_em）只返回"最新一期"快照，
+        无历史多期数据，无法按时点还原。若沿用最新值广播到全部历史行，会构成
+        未来穿越。因此这里统一返回 NaN（诚实缺失）——模型不会使用这些特征。
+
+        如需恢复基本面特征，需接入可提供历史多期财报的数据源。
+        """
+        return {
+            'PE': np.nan,
+            'PB': np.nan,
+            'Market_Cap': np.nan,
+            'ROE': np.nan,
+            'ROA': np.nan,
+            'Dividend_Yield': np.nan,
+            'EPS': np.nan,
+            'Net_Margin': np.nan,
+            'Gross_Margin': np.nan,
+        }
 
     def create_smart_money_features(self, df, use_shift=True):
         """创建资金流向特征
@@ -1677,24 +1674,23 @@ class FeatureEngineer:
             'RealEstate_Style_Flow_Weight': 0.2 if stock_info['type'] == 'real_estate' else 0.0,
         }
 
-        # 动态特征（基于历史数据计算）
-        if df is not None and not df.empty and len(df) >= 60:
-            # 历史波动率（基于60日数据）
-            returns = df['Close'].pct_change().dropna()
-            if len(returns) >= 30:
-                historical_volatility = returns.rolling(window=30, min_periods=10).std().iloc[-1]
-                features['Stock_Historical_Volatility'] = historical_volatility
+        # 动态特征（基于历史数据逐日计算，避免用最新值广播造成穿越）
+        # 注意：类型常量（Stock_Type / *_Score / *_Weight）是股票固有属性，
+        #       本身不随时间变化，属合法静态特征，无需 PIT。
+        if df is not None and not df.empty:
+            returns = df['Close'].pct_change()
+            features['Stock_Historical_Volatility'] = returns.rolling(window=30, min_periods=10).std()
 
-                # 实际流动性评分（基于成交额波动）
-                if 'Turnover' in df.columns:
-                    turnover_volatility = df['Turnover'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Turnover'].rolling(window=20, min_periods=10).mean().iloc[-1]
-                    features['Stock_Actual_Liquidity_Score'] = max(0, min(1, 1 - turnover_volatility))
-                else:
-                    features['Stock_Actual_Liquidity_Score'] = 0.5  # 默认值
+            if 'Turnover' in df.columns:
+                t_std = df['Turnover'].rolling(window=20, min_periods=10).std()
+                t_mean = df['Turnover'].rolling(window=20, min_periods=10).mean()
+                features['Stock_Actual_Liquidity_Score'] = (1 - t_std / t_mean).clip(lower=0, upper=1)
+            else:
+                features['Stock_Actual_Liquidity_Score'] = 0.5  # 默认值
 
-                # 价格稳定性评分（基于价格波动）
-                price_volatility = df['Close'].rolling(window=20, min_periods=10).std().iloc[-1] / df['Close'].rolling(window=20, min_periods=10).mean().iloc[-1]
-                features['Stock_Price_Stability_Score'] = max(0, min(1, 1 - price_volatility))
+            p_std = df['Close'].rolling(window=20, min_periods=10).std()
+            p_mean = df['Close'].rolling(window=20, min_periods=10).mean()
+            features['Stock_Price_Stability_Score'] = (1 - p_std / p_mean).clip(lower=0, upper=1)
 
         return features
 
@@ -2115,39 +2111,34 @@ class FeatureEngineer:
             stock_news = stock_news.sort_values('新闻时间')
 
             # 按日期聚合情感分数（使用平均值）
-            sentiment_by_date = stock_news.groupby('新闻时间')['情感分数'].mean()
+            sentiment_by_date = stock_news.groupby('新闻时间')['情感分数'].mean().sort_index()
 
             # 获取实际数据天数
             actual_days = len(sentiment_by_date)
 
-            # 动态调整移动平均窗口
-            window_ma3 = min(3, actual_days)
-            window_ma7 = min(7, actual_days)
-            window_ma14 = min(14, actual_days)
-            window_volatility = min(14, actual_days)
+            # 逐日滚动（PIT 时点还原）：每个日期只使用截至当日的数据，
+            # 避免用最新情感值广播到全部历史行（穿越）
+            sentiment_ma3 = sentiment_by_date.rolling(window=3, min_periods=1).mean()
+            sentiment_ma7 = sentiment_by_date.rolling(window=7, min_periods=1).mean()
+            sentiment_ma14 = sentiment_by_date.rolling(window=14, min_periods=1).mean()
+            sentiment_volatility = sentiment_by_date.rolling(window=14, min_periods=2).std()
+            sentiment_change_rate = sentiment_by_date.pct_change().replace([np.inf, -np.inf], np.nan)
 
-            # 计算移动平均
-            sentiment_ma3 = sentiment_by_date.rolling(window=window_ma3, min_periods=1).mean().iloc[-1]
-            sentiment_ma7 = sentiment_by_date.rolling(window=window_ma7, min_periods=1).mean().iloc[-1]
-            sentiment_ma14 = sentiment_by_date.rolling(window=window_ma14, min_periods=1).mean().iloc[-1]
+            # 对齐到 df 的日期索引：新闻覆盖之前为 NaN（诚实缺失）
+            df_index_naive = df.index.tz_localize(None) if getattr(df.index, 'tz', None) is not None else df.index
 
-            # 计算波动率
-            sentiment_volatility = sentiment_by_date.rolling(window=window_volatility, min_periods=2).std().iloc[-1] if actual_days >= 2 else np.nan
-
-            # 计算变化率
-            if actual_days >= 2:
-                latest_sentiment = sentiment_by_date.iloc[-1]
-                prev_sentiment = sentiment_by_date.iloc[-2]
-                sentiment_change_rate = (latest_sentiment - prev_sentiment) / abs(prev_sentiment) if prev_sentiment != 0 else np.nan
-            else:
-                sentiment_change_rate = np.nan
+            def _align_to_df(series):
+                combined = df_index_naive.union(series.index)
+                aligned = series.reindex(combined).sort_index().ffill().reindex(df_index_naive)
+                aligned.index = df.index
+                return aligned
 
             return {
-                'sentiment_ma3': sentiment_ma3,
-                'sentiment_ma7': sentiment_ma7,
-                'sentiment_ma14': sentiment_ma14,
-                'sentiment_volatility': sentiment_volatility,
-                'sentiment_change_rate': sentiment_change_rate,
+                'sentiment_ma3': _align_to_df(sentiment_ma3),
+                'sentiment_ma7': _align_to_df(sentiment_ma7),
+                'sentiment_ma14': _align_to_df(sentiment_ma14),
+                'sentiment_volatility': _align_to_df(sentiment_volatility),
+                'sentiment_change_rate': _align_to_df(sentiment_change_rate),
                 'sentiment_days': actual_days
             }
 
@@ -2191,27 +2182,48 @@ class FeatureEngineer:
                 # 使用缓存的新闻数据（如果存在）
                 if self._news_data_cache is None:
                     self._news_data_cache = topic_modeler.load_news_data(days=self._news_data_days)
-                
+
                 # 检查新闻数据是否有效
-                if self._news_data_cache is None:
-                    logger.warning(f" 新闻数据加载失败（返回None）")
+                if self._news_data_cache is None or len(self._news_data_cache) == 0:
+                    logger.warning(" 新闻数据为空")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
-                
-                if len(self._news_data_cache) == 0:
-                    logger.warning(f" 新闻数据为空")
-                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
-                
+
                 if '文本' not in self._news_data_cache.columns:
                     logger.warning(f" 新闻数据缺少'文本'列，可用列: {self._news_data_cache.columns.tolist()}")
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
-                
-                # 获取股票主题特征
-                topic_features = topic_modeler.get_stock_topic_features(code, self._news_data_cache)
 
-                if topic_features:
-                    return topic_features
-                else:
+                stock_news = self._news_data_cache[self._news_data_cache['股票代码'] == code]
+                if len(stock_news) == 0:
                     return {f'Topic_{i+1}': 0.0 for i in range(10)}
+
+                # 逐条新闻计算主题分布，并保留时间戳（PIT 时点还原）
+                times, dists = [], []
+                for _, row in stock_news.iterrows():
+                    dist = topic_modeler.get_topic_distribution(row['文本'])
+                    if dist is not None:
+                        times.append(pd.to_datetime(row['新闻时间']))
+                        dists.append(dist)
+
+                if not dists:
+                    return {f'Topic_{i+1}': 0.0 for i in range(10)}
+
+                topic_df = pd.DataFrame(dists, index=pd.DatetimeIndex(times))
+                topic_df.columns = [f'Topic_{i+1}' for i in range(10)]
+                # 按日期聚合，消除重复时间戳（否则 expanding/reindex 会因重复索引报错）
+                topic_df = topic_df.groupby(level=0).mean().sort_index()
+
+                # PIT：每个日期只使用截至该日的新闻（累计均值），避免未来穿越
+                cum = topic_df.expanding().mean()
+                df_index_naive = df.index.tz_localize(None) if getattr(df.index, 'tz', None) is not None else df.index
+
+                result = {}
+                for col in cum.columns:
+                    s = cum[col]
+                    combined = df_index_naive.union(s.index)
+                    aligned = s.reindex(combined).sort_index().ffill().reindex(df_index_naive)
+                    aligned.index = df.index
+                    result[col] = aligned
+                return result
             else:
                 logger.warning(f" 主题模型不存在，请先运行: python ml_services/topic_modeling.py")
                 return {f'Topic_{i+1}': 0.0 for i in range(10)}
@@ -2309,14 +2321,19 @@ class FeatureEngineer:
             ma14 = sentiment_features.get('sentiment_ma14', 0.0)
 
             # 预期差距 = 当前情感 - 长期移动平均
+            # 注意：sentiment 已改为 PIT 的 Series，需用 elementwise 运算
+            gap14 = current_sentiment - ma14
             expectation_gap_features['Sentiment_Gap_MA7'] = current_sentiment - ma7
-            expectation_gap_features['Sentiment_Gap_MA14'] = current_sentiment - ma14
+            expectation_gap_features['Sentiment_Gap_MA14'] = gap14
 
             # 正向意外（情感超预期，差距为正）
-            expectation_gap_features['Positive_Surprise'] = max(0, current_sentiment - ma14)
+            expectation_gap_features['Positive_Surprise'] = (
+                gap14.clip(lower=0) if hasattr(gap14, 'clip') else max(0.0, gap14))
 
             # 负向意外（情感不及预期，差距为负，取绝对值）
-            expectation_gap_features['Negative_Surprise'] = max(0, ma14 - current_sentiment)
+            neg14 = -gap14
+            expectation_gap_features['Negative_Surprise'] = (
+                neg14.clip(lower=0) if hasattr(neg14, 'clip') else max(0.0, neg14))
 
             # 使用情感变化率来衡量预期差距的强度
             sentiment_change_rate = sentiment_features.get('sentiment_change_rate', 0.0)
@@ -3405,6 +3422,101 @@ class FeatureEngineer:
 
         logger.info(f"成功生成 {interaction_count} 个市场-网络交叉特征")
         return df
+
+
+# 网络特征默认值（缺失时使用，-1 表示未知社区）
+DEFAULT_NETWORK_FEATURES = {
+    'net_degree_centrality': 0.0,
+    'net_betweenness_centrality': 0.0,
+    'net_eigenvector_centrality': 0.0,
+    'net_closeness_centrality': 0.0,
+    'net_composite_centrality': 0.0,
+    'net_community_id': -1,
+    'net_community_size': 0,
+    'net_community_centrality_rank': -1,
+    'net_sector_cohesion': 0.0,
+    'net_mst_degree': 0,
+    'net_mst_neighbor_sectors': 0,
+    'net_inter_community_ratio': 0.0,
+    'net_constraint': 1.0,
+    'net_effective_size': 0.0,
+    'net_local_clustering': 0.0,
+}
+
+
+# 板块特征默认值（PIT 未覆盖时使用，-1 表示未知排名）
+DEFAULT_SECTOR_FEATURES = {
+    'sector_avg_change_1d': 0.0,
+    'sector_avg_change_5d': 0.0,
+    'sector_avg_change_20d': 0.0,
+    'sector_rank_1d': -1,
+    'sector_rank_5d': -1,
+    'sector_rank_20d': -1,
+    'sector_rising_ratio_1d': 0.5,
+    'sector_rising_ratio_5d': 0.5,
+    'sector_rising_ratio_20d': 0.5,
+    'sector_total_volume': 0.0,
+    'sector_stock_count': 0,
+    'sector_trend_score': 0.0,
+    'sector_flow_score': 0.0,
+    'is_sector_leader': 0,
+    'sector_best_stock_change': 0.0,
+    'sector_worst_stock_change': 0.0,
+    'sector_outperform_hsi': 0,
+}
+
+
+def merge_pit_features(stock_df, code_pit, defaults=None):
+    """将时点还原（PIT）特征按日期合并到 stock_df（通用：网络/板块等）
+
+    Args:
+        stock_df: 个股 DataFrame（datetime 索引）
+        code_pit: {date_str: {feature_name: value}}，该股票的时序特征
+        defaults: 缺失时的默认值字典
+
+    Returns:
+        合并后的 stock_df（原地修改并返回）
+    """
+    if defaults is None:
+        defaults = DEFAULT_NETWORK_FEATURES
+
+    if not code_pit:
+        for key, value in defaults.items():
+            stock_df[key] = value
+        return stock_df
+
+    pit_df = pd.DataFrame.from_dict(code_pit, orient='index')
+    if pit_df.empty:
+        for key, value in defaults.items():
+            stock_df[key] = value
+        return stock_df
+
+    # 统一为 tz-naive 做对齐，避免 tz-naive 与 tz-aware 混用报错
+    pit_df.index = pd.to_datetime(pit_df.index, utc=True).tz_convert('UTC').tz_localize(None)
+    pit_df = pit_df.sort_index()
+
+    stock_index = stock_df.index
+    if getattr(stock_index, 'tz', None) is not None:
+        stock_index_naive = stock_index.tz_convert('UTC').tz_localize(None)
+    else:
+        stock_index_naive = stock_index
+
+    # 对齐到 stock_df 的索引：先并入 PIT 日期，前向填充（20天步长 -> 日频），再取回原索引
+    combined_index = stock_index_naive.union(pit_df.index)
+    aligned = pit_df.reindex(combined_index).sort_index().ffill().reindex(stock_index_naive)
+    aligned.index = stock_index
+
+    for col in aligned.columns:
+        stock_df[col] = aligned[col].values
+
+    # 早期无 PIT 覆盖的行用默认值填充
+    for key, value in defaults.items():
+        if key in stock_df.columns:
+            stock_df[key] = stock_df[key].fillna(value)
+        else:
+            stock_df[key] = value
+
+    return stock_df
 
 
 class BaseTradingModel:
@@ -5085,6 +5197,32 @@ class CatBoostModel(BaseTradingModel):
         except Exception as e:
             print(f"  ⚠️ 网络特征加载失败: {e}")
 
+        # 加载 PIT（时点还原）网络特征：优先使用，按日期对齐，消除静态快照穿越
+        pit_network_file = 'data/network_features/network_features_pit.json'
+        network_features_pit = None
+        try:
+            if os.path.exists(pit_network_file):
+                with open(pit_network_file, 'r') as f:
+                    network_features_pit = json.load(f)
+                print(f"  ✅ PIT 网络特征加载完成（{len(network_features_pit)} 只股票）")
+            else:
+                print("  ⚠️ PIT 网络特征文件不存在，回退静态网络特征")
+        except Exception as e:
+            print(f"  ⚠️ PIT 网络特征加载失败: {e}")
+
+        # 加载 PIT（时点还原）板块特征
+        pit_sector_file = 'data/network_features/sector_features_pit.json'
+        sector_features_pit = None
+        try:
+            if os.path.exists(pit_sector_file):
+                with open(pit_sector_file, 'r') as f:
+                    sector_features_pit = json.load(f)
+                print(f"  ✅ PIT 板块特征加载完成（{len(sector_features_pit)} 只股票）")
+            else:
+                print("  ⚠️ PIT 板块特征文件不存在，回退静态板块特征")
+        except Exception as e:
+            print(f"  ⚠️ PIT 板块特征加载失败: {e}")
+
         cache_hits = 0
         cache_misses = 0
 
@@ -5177,10 +5315,14 @@ class CatBoostModel(BaseTradingModel):
                     for key, value in expectation_gap.items():
                         stock_df[key] = value
 
-                    # 添加板块特征
-                    sector_features = self.feature_engineer.create_sector_features(code, stock_df)
-                    for key, value in sector_features.items():
-                        stock_df[key] = value
+                    # 添加板块特征：优先使用 PIT（按日期对齐），否则回退静态快照
+                    if sector_features_pit is not None and code in sector_features_pit:
+                        stock_df = merge_pit_features(
+                            stock_df, sector_features_pit[code], DEFAULT_SECTOR_FEATURES)
+                    else:
+                        sector_features = self.feature_engineer.create_sector_features(code, stock_df)
+                        for key, value in sector_features.items():
+                            stock_df[key] = value
 
                     # 添加事件驱动特征（9个）
                     stock_df = self.feature_engineer.create_event_driven_features(code, stock_df)
@@ -5195,32 +5337,17 @@ class CatBoostModel(BaseTradingModel):
                 # 原因：网络特征文件可能已更新，导致社区 ID 列表变化
                 # 必须使用预加载的 community_ids 确保训练/预测一致性
 
-                # 添加网络特征（从预计算文件加载）
-                if network_features_data is not None and code in network_features_data:
+                # 添加网络特征：优先使用 PIT（按日期对齐），否则回退静态快照
+                if network_features_pit is not None and code in network_features_pit:
+                    stock_df = merge_pit_features(
+                        stock_df, network_features_pit[code], DEFAULT_NETWORK_FEATURES)
+                elif network_features_data is not None and code in network_features_data:
                     net_features = network_features_data[code]
                     for key, value in net_features.items():
                         stock_df[key] = value
                 else:
                     # 为缺失网络特征的股票提供默认值
-                    default_net_features = {
-                        'net_degree_centrality': 0.0,
-                        'net_betweenness_centrality': 0.0,
-                        'net_eigenvector_centrality': 0.0,
-                        'net_closeness_centrality': 0.0,
-                        'net_composite_centrality': 0.0,
-                        'net_community_id': -1,  # -1 表示未知社区
-                        'net_community_size': 0,
-                        'net_community_centrality_rank': -1,  # -1表示未知社区
-                        'net_sector_cohesion': 0.0,
-                        'net_mst_degree': 0,
-                        'net_mst_neighbor_sectors': 0,
-                        'net_inter_community_ratio': 0.0,
-                        # 结构洞特征默认值
-                        'net_constraint': 1.0,  # 高约束=无机会
-                        'net_effective_size': 0.0,
-                        'net_local_clustering': 0.0,
-                    }
-                    for key, value in default_net_features.items():
+                    for key, value in DEFAULT_NETWORK_FEATURES.items():
                         stock_df[key] = value
                     logger.debug(f"股票 {code} 使用默认网络特征（社区 ID = -1）")
 
@@ -5332,7 +5459,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -5342,6 +5469,7 @@ class CatBoostModel(BaseTradingModel):
             horizon: 预测周期（1=次日，5=一周，20=一个月）
             use_feature_selection: 是否使用特征选择
             min_return_threshold: 最小收益阈值（默认0%），用于标签定义
+            selected_features: 预定义的特征列表（用于 Walk-forward 每折独立选特征，避免全局文件穿越）
         # 设置固定随机种子（确保模型训练的可重现性）
         np.random.seed(42)
         random.seed(42)
@@ -5384,6 +5512,24 @@ class CatBoostModel(BaseTradingModel):
             except Exception as e:
                 logger.warning(f"预加载网络特征失败: {e}")
 
+        # 并入 PIT 网络特征中出现的所有社区 ID（避免 PIT 社区被漏掉）
+        pit_network_file = 'data/network_features/network_features_pit.json'
+        if os.path.exists(pit_network_file):
+            try:
+                with open(pit_network_file, 'r') as f:
+                    pit_network_data = json.load(f)
+                pit_comm_ids = set(preloaded_community_ids or [])
+                for stock_code, by_date in pit_network_data.items():
+                    for date_str, feats in by_date.items():
+                        cid = feats.get('net_community_id')
+                        if cid is not None and cid >= 0:
+                            pit_comm_ids.add(int(cid))
+                if pit_comm_ids:
+                    preloaded_community_ids = sorted(pit_comm_ids)
+                    logger.info(f"并入 PIT 后社区 ID: {preloaded_community_ids}")
+            except Exception as e:
+                logger.warning(f"加载 PIT 网络特征失败: {e}")
+
         # ========== 准备数据 ==========
         print("\n" + "="*70)
         logger.info("准备训练数据")
@@ -5422,12 +5568,12 @@ class CatBoostModel(BaseTradingModel):
             print("🔍 应用特征选择...")
             print("="*70)
 
-            # 加载选择的特征
-            selected_features = self.load_selected_features(current_feature_names=self.feature_columns)
+            # 优先使用传入的每折特征列表（Walk-forward 防穿越）；否则加载全局文件
+            _selected = selected_features if selected_features else self.load_selected_features(current_feature_names=self.feature_columns)
 
-            if selected_features:
+            if _selected:
                 # 筛选特征列
-                self.feature_columns = [col for col in self.feature_columns if col in selected_features]
+                self.feature_columns = [col for col in self.feature_columns if col in _selected]
                 print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
