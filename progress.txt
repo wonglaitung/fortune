@@ -8,6 +8,27 @@
 
 ## 最新进展
 
+### 2026-09-24 Part B 实测：扩池降噪✓ 但朴素因子信号被稀释（关键修正）⭐⭐⭐
+
+**数据源澄清**：腾讯接口正常（此前失败=瞬时 DNS + 代码格式需 5 位无 `.HK`）。
+新增 `ml_services/fetch_hk_universe.py`（抓取 124 只大中盘到 `data/hk_universe_cache/`）、
+`ml_services/alpha158_universe.py`。
+
+**Alpha158 复合因子对比（2021-10~2026-07）**：
+
+| 池 | 日均股票 | 复合IC | ICIR | 日IC std |
+|----|---------|--------|------|---------|
+| 59只 | 55 | +0.0088 | 0.042 | 0.211 |
+| ~124只 | 122 | +0.0049 | 0.029 | **0.167** |
+
+**结论**：①扩池降噪成立（std 0.211→0.167，验证 §5.13）；②但朴素因子等权复合信号**被稀释**
+（IC 0.0088→0.0049）→ 原 59 只的技术因子信号不自动迁移到更广池；③**扩池后必须用模型重新学习**
+（LightGBM/DoubleEnsemble+低波动因子+质量筛选），而非沿用旧等权复合。正解=更大池(降噪)+模型(找信号)。
+
+**文件**：`ml_services/fetch_hk_universe.py`、`ml_services/alpha158_universe.py`、
+`output/alpha158_universe_20d.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.14）。
+（`data/hk_universe_cache/` 为数据 pkl，不提交。）
+
 ### 2026-09-24 横截面大小 vs IC 精度：扩池是降噪根本手段，但数据源受阻 ⭐⭐
 
 **新增**：`ml_services/ic_scale_test.py`（59 只内子抽样，Alpha158 复合因子）；报告 `output/ic_scale_test.md`。
