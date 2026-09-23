@@ -8,6 +8,26 @@
 
 ## 最新进展
 
+### 2026-09-23 Phase 3 完整化：成本敏感性 + PBO/DSR，20d 首个通过护栏 ⭐⭐⭐
+
+**新增**：`ml_services/eval_overfit.py`（自实现 CSCV-PBO + Deflated Sharpe，`purgedcv` 未装）；
+`portfolio_backtest.py` 增加 `--cost`。
+
+**成本敏感性（20d TopK-行业中性）**：0.3%/0.5%/0.8% → 净IR **1.58 / 1.52 / 1.43**（CI 下限均>0）→ 稳健。
+
+**过拟合护栏**（配置族 topk{5,10,20}×raw/中性，N=6）：
+
+| 周期 | PBO | 最优 | DSR | 判定 |
+|------|-----|------|-----|------|
+| **20d** | **0.14** | top10-neutral | **0.987** | ✅ 通过 |
+| 5d | 0.36 | top20-neutral | 0.813 | ⚠️ DSR 未过 |
+
+**结论**：**20d 行业中性 TopK 是首个通过 PBO/DSR 的配置**（中性族 IR 均>1.0，非孤立尖峰）；
+5d 未通过。⚠️ T=39、N=6 功效有限，需扩展 2021–2022 与 Alpha158 对照。
+
+**文件**：`ml_services/eval_overfit.py`、`output/overfit_guard_{5d,20d}.md`、
+`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.7）。
+
 ### 2026-09-23 Phase 3 最小版：5d 无 edge，20d 行业中性 TopK 有希望 ⭐⭐⭐
 
 **新增**：`ml_services/portfolio_backtest.py`

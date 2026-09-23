@@ -55,7 +55,7 @@ def _sector_neutral_score(g):
     return z.fillna(0.0)
 
 
-def backtest(df, horizon, topk, use_sector_neutral):
+def backtest(df, horizon, topk, use_sector_neutral, cost=COST):
     dates = sorted(df['date'].unique())
     rb = dates[::horizon]  # 非重叠调仓
     rows = []
@@ -82,8 +82,8 @@ def backtest(df, horizon, topk, use_sector_neutral):
         t_short = len(cur_short - prev_short) / k if prev_short else 1.0
         prev_long, prev_short = cur_long, cur_short
         top_gross = long['ret'].mean()
-        top_net = top_gross - t_long * COST
-        ls_net = ls_gross - (t_long + t_short) * COST
+        top_net = top_gross - t_long * cost
+        ls_net = ls_gross - (t_long + t_short) * cost
         rows.append(dict(date=d, bench=bench, top_gross=top_gross, top_net=top_net,
                          ls_gross=ls_gross, ls_net=ls_net, turnover=t_long))
     return pd.DataFrame(rows)
@@ -119,14 +119,14 @@ def _stats(x, horizon):
     return dict(n=len(x), mean=mean, ir=ir, win=float((x > 0).mean()), cum=cum)
 
 
-def run(horizon, pred_csv, topk, out_md):
+def run(horizon, pred_csv, topk, out_md, cost=COST):
     df = load_panel(pred_csv)
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
 
     res = {}
     for name, neutral in [("TopK-raw", False), ("TopK-行业中性", True)]:
-        res[name] = backtest(df, horizon, topk, neutral)
+        res[name] = backtest(df, horizon, topk, neutral, cost=cost)
 
     # 汇总
     rows = []
@@ -144,7 +144,7 @@ def run(horizon, pred_csv, topk, out_md):
     L.append(f"# Phase 3 最小组合回测（{horizon}d，TopK={topk}）\n")
     L.append(f"- 生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}")
     L.append(f"- 数据: `{pred_csv}`")
-    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {COST:.3f}（双边）\n")
+    L.append(f"- 调仓: 每 {horizon} 交易日（非重叠）　成本: {cost:.3f}（双边）\n")
     # bootstrap CI（对每个组合的净收益序列）
     series = {'等权基准（全池）': res["TopK-raw"]['bench'].values}
     series['TopK-raw（净）'] = res["TopK-raw"]['top_net'].values
@@ -215,12 +215,13 @@ def main():
     ap = argparse.ArgumentParser(description='Phase3 最小 TopK 组合回测')
     ap.add_argument('--horizon', type=int, required=True, choices=[5, 20])
     ap.add_argument('--topk', type=int, default=10)
+    ap.add_argument('--cost', type=float, default=COST, help='双边成本（默认0.005）')
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
     args = ap.parse_args()
     pred_csv = args.pred or DEFAULT_PRED[args.horizon]
     out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}.md"
-    run(args.horizon, pred_csv, args.topk, out)
+    run(args.horizon, pred_csv, args.topk, out, cost=args.cost)
 
 
 if __name__ == '__main__':
