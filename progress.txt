@@ -8,6 +8,23 @@
 
 ## 最新进展
 
+### 2026-09-23 个股模型改进计划（业界基准驱动）⭐
+
+**背景**：PIT 修正后确认绝对准确率≈随机，但改用**横截面 Rank IC** 后，5d 有微弱但显著的排序
+信号（IC 0.039–0.057、ICIR 0.20–0.35，重叠修正 t≈2.5），与 Qlib 公开基准（CatBoost Alpha158
+IC 0.035 / Rank IC 0.042）同档。**问题在评估框架与目标定义，而非模型失效。**
+
+**产出**：`docs/MODEL_IMPROVEMENT_PLAN.md` — 6 阶段计划：
+Phase 0 基线冻结 → 1 评估框架升级（alphalens + purgedcv）→ 2 横截面标签改造 →
+3 组合构建与净收益（TopK-Dropout + 中性化 + 成本）→ 4 特征瘦身（对照 Alpha158）→ 5 决策门。
+
+**核心原则**：
+- 主评估改为 **Rank IC/ICIR + 分位多空净收益**，弃用绝对准确率/胜率。
+- 引入 `alphalens-reloaded`（因子 tear sheet）与 `purgedcv`（CPCV/PBO/DSR）。
+- **Gate**：净多空 IR ≥ 0.5 且 PBO < 0.5 且 DSR 显著，否则停止个股 alpha，转板块/恒指/异常检测。
+
+**文件**：`docs/MODEL_IMPROVEMENT_PLAN.md`（新增），`AGENTS.md` 快速链接更新。
+
 ### 2026-09-23 回测评估新增"买入胜率 + 基准 lift" ⭐
 
 **背景**：`backtest_eval.py` 原只报准确率；旧报告的"平均胜率 63.30%"未剔除市场 beta，
