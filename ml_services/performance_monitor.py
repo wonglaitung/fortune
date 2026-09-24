@@ -854,7 +854,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     return report
 
 
-def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None):
+def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
+                                extra_html: Optional[str] = None):
     """
     生成可视化性能报告（HTML + 内嵌图表附件）
 
@@ -864,6 +865,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
     参数:
     - history: 预测历史数据
     - plain_text: 纯文本正文（默认复用 Markdown 报告）
+    - extra_html: 额外 HTML 片段（如"诚实监控摘要/护栏状态"），插入风险提示之前
 
     返回: (html_content, plain_text, attachments)
     """
@@ -946,6 +948,11 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None)
     total_3m = sum(
         horizon_metrics_3m.get(h, {}).get('total_predictions', 0) for h in [1, 5, 20]
     )
+
+    # 额外 HTML（诚实监控摘要 / 护栏状态），插入风险提示之前
+    extra = extra_html or ""
+    parts.append(extra)
+
     parts.append(f"""
     <h2 style="color:#007bff; margin-top:30px; border-bottom:1px solid #ddd; padding-bottom:5px;">六、风险提示</h2>
     <ol style="color:#333; font-size:13px; line-height:1.8;">
@@ -1229,6 +1236,7 @@ def main():
             report = report.rstrip() + f"\n\n---\n\n## 策略护栏状态\n\n{gs}\n"
 
         # 追加诚实监控摘要（lift / 方向技能，避免只看绝对准确率，见 DECISIONS D3）
+        extra_html = ""
         try:
             hm = calculate_metrics(history.get('predictions', []))
             if hm:
@@ -1240,8 +1248,25 @@ def main():
                     f"　无条件买入基准: {hm['base_win_rate']*100:.1f}%"
                     f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n"
                 )
+                extra_html += (
+                    f"<h2 style=\"color:#007bff; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
+                    f"诚实监控摘要（含基准扣除）</h2>"
+                    f"<ul style=\"color:#333; font-size:13px; line-height:1.8;\">"
+                    f"<li>准确率 {hm['accuracy']*100:.1f}%　上涨占比(永远看涨) {hm['up_ratio']*100:.1f}%　"
+                    f"<b>方向技能 {hm['direction_skill']*100:+.1f}pp</b></li>"
+                    f"<li>信号净胜率(扣成本) {hm['buy_net_win_rate']*100:.1f}%　无条件买入基准 "
+                    f"{hm['base_win_rate']*100:.1f}%　<b>超额 lift {hm['lift']*100:+.1f}pp</b></li>"
+                    f"</ul>"
+                )
         except Exception:
             pass
+
+        if gs:
+            extra_html += (
+                f"<h2 style=\"color:#e67e22; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
+                f"策略护栏状态（20d 中性 TopK，DECISIONS D2）</h2>"
+                f"<p style=\"color:#333; font-size:13px;\">{gs.replace('## ', '').strip()}</p>"
+            )
 
         # 保存报告（使用当前日期命名）
         report_date = datetime.now().strftime('%Y-%m-%d')
@@ -1256,7 +1281,7 @@ def main():
         html_content, attachments = None, {}
         try:
             html_content, _, attachments = generate_visual_html_report(
-                history, plain_text=report)
+                history, plain_text=report, extra_html=extra_html)
             print(f"   可视化报告已生成: {len(attachments)} 张图表")
         except Exception as e:
             print(f"⚠️ 可视化报告生成失败，将回退纯表格邮件: {e}")
