@@ -38,6 +38,18 @@ jobs:
         run: |
           python3 ml_services/performance_monitor.py --mode all --horizon all
 
+      - name: Guardrail status check
+        run: |
+          LATEST=$(ls -t output/monthly_guardrail_*.md 2>/dev/null | head -1)
+          if [ -n "$LATEST" ]; then
+            echo "✅ 最近护栏报告: $LATEST"
+            grep "## 判定" "$LATEST" || true
+          else
+            echo "⚠️ 未找到 monthly_guardrail_*.md —— 请在本地重训后运行:"
+            echo "   python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20"
+            echo "   python3 ml_services/monthly_guardrail.py --horizon 20"
+          fi
+
       - name: Commit updated history
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"

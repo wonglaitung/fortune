@@ -8,6 +8,23 @@
 
 ## 最新进展
 
+### 2026-09-24 性能监控升级：诚实指标(lift/方向技能/逐年) + 护栏状态 ⭐⭐
+
+**A** `ml_services/performance_monitor.py`：
+- `calculate_metrics` 新增：上涨占比(永远看涨)、**方向技能**（准确率−永远看涨）、
+  信号净胜率(扣成本)、无条件买入基准胜率、**超额 lift**、逐年分解(`_yearly_metrics`)；
+- 报告/邮件追加「诚实监控摘要（含基准扣除）」与「策略护栏状态」（读最近 `monthly_guardrail_*.md`）。
+实测（合并历史）：准确率 54.4%、方向技能 +11.3pp、信号净胜率 42.6% vs 基准 37.9% → lift +4.7pp。
+
+**B** `.github/workflows/performance-monitor.yml` 新增 `Guardrail status check` 步骤：
+读到护栏报告则显示判定，否则提醒本地跑 walk-forward+monthly_guardrail。
+
+**说明**：`monthly_guardrail.py` 需本地 `prediction_analysis.csv`，**不**放入 GitHub Action（会失败）；
+Action 只做诚实监控 + 护栏状态提醒，严格护栏在本地每月执行。
+
+**文件**：`ml_services/performance_monitor.py`、`.github/workflows/performance-monitor.yml`、
+`output/performance_report_2026-09-24.md`。
+
 ### 2026-09-24 实盘部署指南 docs/DEPLOYMENT.md ⭐⭐⭐
 
 **新增** `docs/DEPLOYMENT.md`：实盘用法收口——

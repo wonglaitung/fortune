@@ -19,6 +19,9 @@ import numpy as np
 import yfinance as yf
 from config import STOCK_SECTOR_MAPPING
 
+# 双边交易成本（与 walk_forward TOTAL_COST 一致）
+COST = 0.005
+
 # 历史文件路径
 HISTORY_FILE = 'data/prediction_history.json'
 A_STOCK_HISTORY_FILE = 'data/a_stock_prediction_history.json'
@@ -281,6 +284,51 @@ def evaluate_predictions(history: Dict, horizon: int = 20, force: bool = False,
     return history, stats
 
 
+def _yearly_metrics(predictions: List[Dict]) -> List[Dict]:
+    """逐年分解：准确率 / 上涨占比 / 方向技能 / 信号净胜率 vs 基准（lift）"""
+    ev = [p for p in predictions
+          if p.get('outcome') is not None and p.get('actual_return') is not None]
+    if not ev:
+        return []
+    df = pd.DataFrame(ev)
+    df['year'] = pd.to_datetime(df.get('data_date'), errors='coerce').dt.year
+    rows = []
+    for y, g in df.groupby('year'):
+        if pd.isna(y):
+            continue
+        acc = (g['outcome'] == 'correct').mean()
+        ret = pd.to_numeric(g['actual_return'], errors='coerce').dropna()
+        up = float((ret > 0).mean()) if len(ret) else 0.0
+        base = float((ret > COST).mean()) if len(ret) else 0.0
+        buys = g[g.get('predicted_direction') == 'up']
+        buy_net = pd.to_numeric(buys['actual_return'], errors='coerce').dropna() if len(buys) else pd.Series(dtype=float)
+        bwr = float((buy_net > COST).mean()) if len(buy_net) else 0.0
+        rows.append({
+            'year': int(y), 'n': int(len(g)), 'accuracy': round(acc, 4),
+            'up_ratio': round(up, 4), 'direction_skill': round(acc - up, 4),
+            'buy_net_win_rate': round(bwr, 4), 'base_win_rate': round(base, 4),
+            'lift': round(bwr - base, 4),
+        })
+    return rows
+
+
+def _guardrail_status() -> Optional[str]:
+    """读取最近提交的 monthly_guardrail_*.md，返回一行判定摘要（无则 None）"""
+    import glob
+    files = glob.glob(os.path.join('output', 'monthly_guardrail_*.md'))
+    if not files:
+        return None
+    latest = max(files, key=os.path.getmtime)
+    try:
+        with open(latest, encoding='utf-8') as f:
+            for line in f:
+                if line.strip().startswith('## 判定'):
+                    return f"上次 20d TopK 护栏（{os.path.basename(latest)}）: {line.strip()}"
+    except Exception:
+        return None
+    return None
+
+
 def calculate_metrics(predictions: List[Dict]) -> Dict:
     """
     计算性能指标
@@ -326,18 +374,34 @@ def calculate_metrics(predictions: List[Dict]) -> Dict:
     else:
         buy_win_rate = 0
         buy_avg_return = 0
-    
+
+    # 基准与方向技能（诚实口径，见 docs/DECISIONS.md D3）
+    # 无条件买入基准胜率 / 永远看涨占比 / 信号净胜率 / 超额lift / 方向技能
+    up_ratio = float((returns_series > 0).mean()) if len(returns_series) > 0 else 0.0
+    base_win = float((returns_series > COST).mean()) if len(returns_series) > 0 else 0.0
+    buy_net = pd.to_numeric(buy_signals['actual_return'], errors='coerce').dropna() \
+        if len(buy_signals) > 0 else pd.Series(dtype=float)
+    buy_net_win_rate = float((buy_net > COST).mean()) if len(buy_net) > 0 else 0.0
+    lift = round(buy_net_win_rate - base_win, 4)
+    direction_skill = round(accuracy - up_ratio, 4)
+    yearly = _yearly_metrics(predictions)
+
     return {
         'total_predictions': total,
         'correct_predictions': correct,
         'accuracy': round(accuracy, 4),
+        'up_ratio': round(up_ratio, 4),
+        'direction_skill': direction_skill,
         'avg_return': round(avg_return, 4),
         'median_return': round(median_return, 4),
         'std_return': round(std_return, 4),
         'sharpe_ratio': round(sharpe, 4),
         'buy_signal_count': len(buy_signals),
         'buy_win_rate': round(buy_win_rate, 4),
-        'buy_avg_return': round(buy_avg_return, 4)
+        'buy_net_win_rate': round(buy_net_win_rate, 4),
+        'base_win_rate': round(base_win, 4),
+        'lift': lift,
+        'yearly': yearly,
     }
 
 
@@ -1158,6 +1222,26 @@ def main():
         # 生成 Markdown 报告（仍保存，供 CI 提交与纯文本正文使用）
         print(f"\n📝 生成性能报告...")
         report = generate_monthly_report(history, args.month)
+
+        # 追加策略护栏状态（20d 中性 TopK，见 docs/DECISIONS.md D2）
+        gs = _guardrail_status()
+        if gs:
+            report = report.rstrip() + f"\n\n---\n\n## 策略护栏状态\n\n{gs}\n"
+
+        # 追加诚实监控摘要（lift / 方向技能，避免只看绝对准确率，见 DECISIONS D3）
+        try:
+            hm = calculate_metrics(history.get('predictions', []))
+            if hm:
+                report = report.rstrip() + (
+                    "\n\n---\n\n## 诚实监控摘要（含基准扣除）\n\n"
+                    f"- 准确率: {hm['accuracy']*100:.1f}%　上涨占比(永远看涨): {hm['up_ratio']*100:.1f}%"
+                    f"　**方向技能: {hm['direction_skill']*100:+.1f}pp**\n"
+                    f"- 信号净胜率(扣成本): {hm['buy_net_win_rate']*100:.1f}%"
+                    f"　无条件买入基准: {hm['base_win_rate']*100:.1f}%"
+                    f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n"
+                )
+        except Exception:
+            pass
 
         # 保存报告（使用当前日期命名）
         report_date = datetime.now().strftime('%Y-%m-%d')
