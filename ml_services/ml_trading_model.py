@@ -5459,7 +5459,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -5657,13 +5657,18 @@ class CatBoostModel(BaseTradingModel):
             subsample = 0.75  # 行采样
             colsample_bylevel = 0.8  # 列采样（增加特征多样性）
 
-        from catboost import CatBoostClassifier, Pool
+        from catboost import CatBoostClassifier, CatBoostRanker, Pool
+
+        if loss_function is None:
+            loss_function = getattr(self, 'loss_function', 'Logloss')
+        ranking = str(loss_function).lower() == 'yetirank'
+        self._ranking = ranking
 
         # 准备类别权重参数
         # 注意：分类特征已用LabelEncoder编码为数值，不使用cat_features参数
         catboost_params = {
-            'loss_function': 'Logloss',
-            'eval_metric': 'Accuracy',
+            'loss_function': 'YetiRank' if ranking else 'Logloss',
+            'eval_metric': 'NDCG' if ranking else 'Accuracy',
             'depth': depth,
             'learning_rate': learning_rate,
             'n_estimators': n_estimators,
@@ -5677,30 +5682,34 @@ class CatBoostModel(BaseTradingModel):
             'allow_writing_files': False
             # cat_features 不设置，因为分类特征已编码为数值
         }
+        if ranking:
+            catboost_params.pop('early_stopping_rounds', None)
         
-        # 添加类别权重（温和调整）
-        if self.class_weight == 'balanced':
+        # 添加类别权重（温和调整）—— 排序目标不使用类别权重
+        if not ranking and self.class_weight == 'balanced':
             # 自动平衡类别权重（温和）
             catboost_params['auto_class_weights'] = 'Balanced'
             logger.info("使用自动平衡类别权重 (Balanced)")
-        elif self.class_weight == 'balanced_subsample':
+        elif not ranking and self.class_weight == 'balanced_subsample':
             catboost_params['auto_class_weights'] = 'Balanced'
             logger.info("使用子样本平衡类别权重 (Balanced)")
-        elif isinstance(self.class_weight, dict):
+        elif not ranking and isinstance(self.class_weight, dict):
             # 手动指定权重
             catboost_params['class_weights'] = [self.class_weight.get(0, 1.0), self.class_weight.get(1, 1.0)]
             logger.info(f"使用手动类别权重: {self.class_weight}")
         else:
             logger.info("不使用类别权重")
 
-        self.catboost_model = CatBoostClassifier(**catboost_params)
+        self.catboost_model = (CatBoostRanker(**catboost_params) if ranking
+                           else CatBoostClassifier(**catboost_params))
 
-        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）
+        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）—— 排序目标跳过分类 CV
         tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         catboost_scores = []
         catboost_f1_scores = []
+        folds_iter = [] if ranking else tscv.split(X)
 
-        for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
+        for fold, (train_idx, val_idx) in enumerate(folds_iter, 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
             y_train_fold, y_val_fold = y[train_idx], y[val_idx]
 
@@ -5723,15 +5732,25 @@ class CatBoostModel(BaseTradingModel):
             print(f"   Fold {fold} 验证准确率: {score:.4f}, 验证F1分数: {f1:.4f}")
 
         # 使用全部数据重新训练
-        full_pool = Pool(data=X, label=y)
-        self.catboost_model.fit(full_pool, verbose=100)
+        if ranking:
+            # 排序目标：按日期排序，group_id=每行所属日期组（CatBoost 要求组内连续、组号递增）
+            import pandas as _pd
+            date_grp = _pd.factorize(df.index)[0]
+            order = np.argsort(date_grp, kind='stable')
+            Xr, yr = X[order], y[order]
+            grp = date_grp[order]
+            full_pool = Pool(data=Xr, label=yr, group_id=grp)
+            self.catboost_model.fit(full_pool, verbose=100)
+        else:
+            full_pool = Pool(data=X, label=y)
+            self.catboost_model.fit(full_pool, verbose=100)
 
         # 获取实际训练的树数量
         self.actual_n_estimators = self.catboost_model.tree_count_
-        mean_accuracy = np.mean(catboost_scores)
-        std_accuracy = np.std(catboost_scores)
-        mean_f1 = np.mean(catboost_f1_scores)
-        std_f1 = np.std(catboost_f1_scores)
+        mean_accuracy = np.mean(catboost_scores) if catboost_scores else 0.0
+        std_accuracy = np.std(catboost_scores) if catboost_scores else 0.0
+        mean_f1 = np.mean(catboost_f1_scores) if catboost_f1_scores else 0.0
+        std_f1 = np.std(catboost_f1_scores) if catboost_f1_scores else 0.0
         print(f"\n✅ CatBoost 训练完成")
         print(f"   实际训练树数量: {self.actual_n_estimators} (原计划: {n_estimators})")
         print(f"   平均验证准确率: {mean_accuracy:.4f} (+/- {std_accuracy:.4f})")
@@ -5772,11 +5791,18 @@ class CatBoostModel(BaseTradingModel):
         logger.info("分析 CatBoost 特征重要性")
         print("="*70)
 
-        # CatBoost 提供多种特征重要性计算方法
-        feature_importance = self.catboost_model.get_feature_importance(prettified=True)
+        # CatBoost 提供多种特征重要性计算方法（排序模型需显式指定 fstr_type）
+        try:
+            fi_kwargs = {'fstr_type': 'FeatureImportance'} if ranking else {}
+            feature_importance = self.catboost_model.get_feature_importance(prettified=True, **fi_kwargs)
+            imp_vals = feature_importance['Importances'].values if feature_importance is not None else None
+        except Exception:
+            imp_vals = None
+        if imp_vals is None or len(imp_vals) != len(self.feature_columns):
+            imp_vals = np.zeros(len(self.feature_columns))
         feat_imp = pd.DataFrame({
-            'Feature': [self.feature_columns[i] for i in range(len(self.feature_columns))],
-            'Importance': self.catboost_model.feature_importances_
+            'Feature': list(self.feature_columns),
+            'Importance': imp_vals
         })
         feat_imp = feat_imp.sort_values('Importance', ascending=False)
 
@@ -6276,6 +6302,12 @@ class CatBoostModel(BaseTradingModel):
         test_pool = Pool(data=test_df)
 
         # 返回预测概率
+        if getattr(self, '_ranking', False):
+            # 排序模型：predict 返回原始分数，映射为伪概率 (1-p, p) 兼容现有 [:,1] 用法
+            import numpy as _np
+            scores = np.asarray(self.catboost_model.predict(test_pool)).ravel()
+            p = 1.0 / (1.0 + _np.exp(-_np.clip(scores, -30, 30)))
+            return _np.column_stack([1 - p, p])
         return self.catboost_model.predict_proba(test_pool)
 
     def get_dynamic_threshold(self, market_regime=None, vix_level=None, base_threshold=0.55):

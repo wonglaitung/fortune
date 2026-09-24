@@ -8,6 +8,24 @@
 
 ## 最新进展
 
+### 2026-09-24 管线级排序目标 B1（YetiRank）实现并启动全折 ⭐⭐⭐
+
+**发现**：`LightGBMModel`/`GBDTModel` 是弃用的旧实现（`prepare_data` 无 cache/PIT/community_ids），
+直接跑 lightgbm 会用**泄漏的旧特征管线**，不是公平 A/B → 放弃该路。
+
+**B1 实现**（维护中的 CatBoostModel 内加排序目标）：
+- `CatBoostModel.train()` 加 `loss_function` 参数；`YetiRank` 时用 **CatBoostRanker** + `group_id=date`，
+  跳过分类 TS-CV/类别权重，特征重要性用 `fstr_type='FeatureImportance'`；
+- `predict_proba()` 对排序模型把 `predict()` 分数映射为 `(1-p,p)` 兼容现有 `[:,1]`；
+- `walk_forward_validation.py` 加 `--loss-function`，透传给模型。
+- 冒烟测试：4 折 YetiRank 全管线跑通 ✅
+
+**启动**：38 折全折 YetiRank（与 09-22 CatBoost 同参数：train 36、2020-06~2026-07、use-feature-selection）
+后台运行中（`/tmp/opencode/wf_yetirank.log`，~3h）。完成后对比 CatBoost-Logloss：avg_ic/avg_rank_ic、
+backtest_eval（lift/方向技能）、monthly_guardrail（净IR/PBO/DSR）。
+
+**文件**：`ml_services/ml_trading_model.py`、`ml_services/walk_forward_validation.py`。
+
 ### 2026-09-24 相关扩池 vs 任意扩池：相关扩池反而更差 ⭐⭐⭐
 
 **新增** `ml_services/related_pool_test.py`；报告 `output/related_pool_test.md`。
