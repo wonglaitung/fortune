@@ -194694,10 +194694,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-25",
       "target_date": "2026-09-22",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0108,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198214,10 +198214,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0235,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198234,10 +198234,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1034,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198254,10 +198254,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1271,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198274,10 +198274,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0725,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198294,10 +198294,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0304,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198314,10 +198314,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198334,10 +198334,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0565,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198354,10 +198354,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0564,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198374,10 +198374,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0044,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198394,10 +198394,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1178,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198414,10 +198414,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0276,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198434,10 +198434,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.143,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198454,10 +198454,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.1944,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198474,10 +198474,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0577,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198494,10 +198494,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0863,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198514,10 +198514,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1026,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198534,10 +198534,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0235,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198554,10 +198554,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0471,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198574,10 +198574,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.048,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198594,10 +198594,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0347,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198614,10 +198614,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0297,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198634,10 +198634,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.05,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198654,10 +198654,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0284,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198674,10 +198674,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.069,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198694,10 +198694,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0309,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198714,10 +198714,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0413,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198734,10 +198734,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1307,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198754,10 +198754,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.4634,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198774,10 +198774,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0997,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198794,10 +198794,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0468,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198814,10 +198814,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1337,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198834,10 +198834,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0188,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -198854,10 +198854,10 @@
       "model_type": "catboost",
       "data_date": "2026-08-27",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0691,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:35",
       "market": "HK"
     },
     {
@@ -229674,10 +229674,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-15",
       "target_date": "2026-09-22",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0174,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232534,10 +232534,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0113,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232554,10 +232554,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0179,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232574,10 +232574,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0037,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232594,10 +232594,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0077,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232614,10 +232614,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0192,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232634,10 +232634,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0211,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232654,10 +232654,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0075,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232674,10 +232674,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0026,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232694,10 +232694,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0013,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232714,10 +232714,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.008,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232734,10 +232734,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0058,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232754,10 +232754,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0175,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232774,10 +232774,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0093,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232794,10 +232794,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0443,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232814,10 +232814,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0692,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232834,10 +232834,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232854,10 +232854,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0146,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232874,10 +232874,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0451,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232894,10 +232894,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0008,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232914,10 +232914,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0429,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232934,10 +232934,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0125,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232954,10 +232954,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0463,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232974,10 +232974,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0056,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -232994,10 +232994,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0103,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233014,10 +233014,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0049,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233034,10 +233034,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0533,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233054,10 +233054,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0012,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233074,10 +233074,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.1588,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233094,10 +233094,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0132,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233114,10 +233114,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0476,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233134,10 +233134,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0259,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233154,10 +233154,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0168,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -233174,10 +233174,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-17",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0076,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:32",
       "market": "HK"
     },
     {
@@ -239794,10 +239794,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0094,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239814,10 +239814,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0046,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239834,10 +239834,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0119,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239854,10 +239854,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0106,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239874,10 +239874,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0154,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239894,10 +239894,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0011,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239914,10 +239914,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0154,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239934,10 +239934,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.001,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239954,10 +239954,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0038,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239974,10 +239974,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0141,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -239994,10 +239994,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0049,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240014,10 +240014,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0209,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240034,10 +240034,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0133,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240054,10 +240054,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0162,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240074,10 +240074,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0207,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240094,10 +240094,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.035,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240114,10 +240114,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0119,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240134,10 +240134,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0054,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240154,10 +240154,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0008,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240174,10 +240174,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0104,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240194,10 +240194,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240214,10 +240214,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0137,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240234,10 +240234,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0031,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240254,10 +240254,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": -0.0096,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240274,10 +240274,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0039,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240294,10 +240294,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0123,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240314,10 +240314,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0185,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240334,10 +240334,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0423,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240354,10 +240354,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0265,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240374,10 +240374,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": 0.0027,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240394,10 +240394,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0162,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240414,10 +240414,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "correct",
+      "actual_return": 0.0093,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -240434,10 +240434,10 @@
       "model_type": "catboost",
       "data_date": "2026-09-23",
       "target_date": "2026-09-24",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null,
+      "outcome": "wrong",
+      "actual_return": -0.0028,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-24T12:36:24",
       "market": "HK"
     },
     {
@@ -241763,7 +241763,7 @@
   ],
   "metadata": {
     "created_at": "2026-03-25T00:00:00",
-    "last_updated": "2026-09-24T03:30:05",
+    "last_updated": "2026-09-24T12:36:36",
     "version": "1.0",
     "total_predictions": 12088
   }
