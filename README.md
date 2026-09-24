@@ -111,6 +111,10 @@
 > 评估以 `ml_services/backtest_eval.py` 的 **lift / 方向技能** 为准，详见
 > [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)。
 
+> **当前定位（2026-09）**：个股横截面 alpha 已科学检验到终点，**停止投入**（[docs/DECISIONS.md](docs/DECISIONS.md) D1）。
+> 保留 `20d 行业中性 TopK` 作**低配辅助信号**（每次 Walk-forward 后跑 `monthly_guardrail.py` 复核），
+> `异常大跌抄底`仅限**大盘上行期**战术使用；价值重心转向恒指/决策报告/风控。
+
 **特征体系（1023个特征）**：
 
 | 类别 | 特征示例 | 作用 |
