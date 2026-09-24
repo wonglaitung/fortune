@@ -8,6 +8,19 @@
 
 ## 最新进展
 
+### 2026-09-24 月度护栏自动化 monthly_guardrail.py ⭐⭐⭐
+
+**新增** `ml_services/monthly_guardrail.py`：一键对最新/指定 `prediction_analysis.csv` 输出
+**净IR(95%CI) / P(IR>0.5) / 累计 / 换手 / PBO / DSR / 信号超额lift**，并按
+`docs/DECISIONS.md` D2 判定（IR≥0.7 且 PBO<0.5 且 DSR≥0.95 → 升级；IR>0 保留；IR≤0 停用）。
+
+**首个复核**（全期 12m 20d 预测）：净IR 0.71、PBO 0.30、DSR 0.872 → **🟡 保留低配**。
+已加 `AGENTS.md` 常用命令「月度护栏」。
+
+**使用**：每次 Walk-forward 后 `python3 ml_services/monthly_guardrail.py --horizon 20`。
+
+**文件**：`ml_services/monthly_guardrail.py`、`output/monthly_guardrail_20260924.md`、`AGENTS.md`。
+
 ### 2026-09-24 决策备忘 docs/DECISIONS.md：个股 alpha 停止投入 ⭐⭐⭐⭐
 
 **建立** `docs/DECISIONS.md`：基于整轮实证收敛最终决策——

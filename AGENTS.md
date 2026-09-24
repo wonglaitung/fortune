@@ -52,6 +52,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
 | **回测评估（lift/方向技能）** | `python3 ml_services/backtest_eval.py --input output/<dir>/prediction_analysis.csv --horizon 20` | ⭐ 评估必用 |
+| **月度护栏（净IR/PBO/DSR）** | `python3 ml_services/monthly_guardrail.py --horizon 20` | 每次 Walk-forward 后必跑，判定见 `docs/DECISIONS.md` D2 |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
 | **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` | - |
 
