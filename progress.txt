@@ -8,6 +8,27 @@
 
 ## 最新进展
 
+### 2026-09-25 管线级 LightGBM A/B：信号最强、护栏通过 ⭐⭐⭐
+
+**实现**：`CatBoostModel` 加 `learner='lightgbm'` 分支（复用同一 PIT 管线，仅换 LGBMClassifier）；
+`walk_forward_validation.py` 加 `--learner`。38 折同口径（36m，2023–2026）三模型对比：
+
+| 指标 | CatBoost | YetiRank | **LightGBM** |
+|------|----------|----------|--------------|
+| 横截面 RankIC | +0.0231 | +0.0241 | **+0.0318** |
+| ICIR | 0.134 | 0.138 | **0.187** |
+| 20d中性TopK 净IR | **1.52** | 1.06 | 1.06 |
+| PBO | **0.14** | 0.71 | 0.47 |
+| DSR | 0.987 | 0.975 | **0.981** |
+| 判定 | 🟢 | 🟡 | **🟢** |
+
+**结论**：LightGBM 原始排序信号最强（RankIC +38%，ICIR 0.19）且护栏 🟢 通过；
+组合净IR 点估计 1.06 低于 CatBoost 1.52（CI 含 0，噪声内）。最优配置变为 **top5-neutral**。
+→ **LightGBM 作为 20d 候选新默认学习器**，仍受 2025 行情主导，需月度护栏监控。
+
+**文件**：`output/20260925_044407_catboost_20d/`、`output/monthly_guardrail_lightgbm.md`、
+`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.18）。
+
 ### 2026-09-24 管线级 B1 YetiRank A/B：排序目标组合层不优于 Logloss ⭐⭐⭐
 
 **执行**：38 折全折 YetiRank（与 Logloss 同参数同折）→ `output/20260924_202315_catboost_20d/`。

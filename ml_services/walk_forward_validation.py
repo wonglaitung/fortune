@@ -62,7 +62,8 @@ class WalkForwardValidator:
         fp_penalty: float = None,          # False Positive 惩罚系数（非对称损失函数）
         embargo_days: int = None,          # 训练/测试之间的隔离期（默认=horizon，消除标签穿越）
         top_k: int = 500,                  # 每折特征选择保留的特征数
-        loss_function: str = None          # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
+        loss_function: str = None,         # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
+        learner: str = None               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
     ):
         """
         初始化 Walk-forward 验证器
@@ -93,6 +94,7 @@ class WalkForwardValidator:
         self.embargo_days = embargo_days if embargo_days is not None else horizon
         self.top_k = top_k
         self.loss_function = loss_function
+        self.learner = learner
 
         # 模型类映射
         self.model_classes = {
@@ -317,6 +319,10 @@ class WalkForwardValidator:
         if getattr(self, 'loss_function', None):
             model.loss_function = self.loss_function
             print(f"  🧭 目标函数: {self.loss_function}")
+        # 管线级 A/B：learner（如 lightgbm），复用 CatBoost 管线只换拟合器
+        if getattr(self, 'learner', None):
+            model.learner = self.learner
+            print(f"  🔁 学习器: {self.learner}")
 
         # 准备训练数据
         train_codes = stock_list
@@ -1558,6 +1564,8 @@ def main():
                        help='训练/测试隔离期天数（默认=horizon，消除标签穿越测试期）')
     parser.add_argument('--loss-function', type=str, default=None,
                        help='目标函数（默认 Logloss；YetiRank 为管线级排序目标 A/B）')
+    parser.add_argument('--learner', type=str, default=None,
+                       help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
 
     args = parser.parse_args()
 
@@ -1585,7 +1593,8 @@ def main():
         use_feature_selection=args.use_feature_selection,
         fp_penalty=args.fp_penalty,
         embargo_days=args.embargo_days,
-        loss_function=args.loss_function
+        loss_function=args.loss_function,
+        learner=args.learner
     )
 
     # 执行验证

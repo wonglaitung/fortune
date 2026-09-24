@@ -5615,6 +5615,10 @@ class CatBoostModel(BaseTradingModel):
         # 但我们已将分类特征编码为数值，所以cat_features应为None
         categorical_features = None  # 不使用cat_features，因为数据已是数值型
 
+        # 管线级 A/B：learner='lightgbm' 时用 LightGBM 拟合（复用同一 prepare_data/特征选择/编码）
+        if getattr(self, 'learner', 'catboost') == 'lightgbm':
+            return self._train_lightgbm(df, use_feature_selection, selected_features, horizon, X, y)
+
         print(f"训练数据形状: X={X.shape}, y={y.shape}")
         print(f"已编码分类特征数量: {len(categorical_features_indices)} (已转为数值，不使用cat_features)")
 
@@ -6302,6 +6306,8 @@ class CatBoostModel(BaseTradingModel):
         test_pool = Pool(data=test_df)
 
         # 返回预测概率
+        if getattr(self, 'learner', 'catboost') == 'lightgbm':
+            return self.model.predict_proba(test_df)
         if getattr(self, '_ranking', False):
             # 排序模型：predict 返回原始分数，映射为伪概率 (1-p, p) 兼容现有 [:,1] 用法
             import numpy as _np
@@ -6309,6 +6315,31 @@ class CatBoostModel(BaseTradingModel):
             p = 1.0 / (1.0 + _np.exp(-_np.clip(scores, -30, 30)))
             return _np.column_stack([1 - p, p])
         return self.catboost_model.predict_proba(test_pool)
+
+    def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
+        """LightGBM 拟合（复用 CatBoost 管线的 prepare_data/特征选择/编码，仅换学习器）"""
+        import lightgbm as lgb
+        lgb_params = dict(
+            objective='binary', learning_rate=0.06, num_leaves=2 ** 6,
+            max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
+            colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
+            random_state=42, n_jobs=-1, verbose=-1,
+        )
+        self.model = lgb.LGBMClassifier(**lgb_params)
+        self.model.fit(X, y)
+        self.actual_n_estimators = self.model.n_estimators
+        print(f"✅ LightGBM 训练完成 (learner=lightgbm, n_estimators={self.actual_n_estimators})")
+        try:
+            imp = self.model.feature_importances_
+            feat_imp = pd.DataFrame({'Feature': list(self.feature_columns), 'Importance': imp})
+            feat_imp = feat_imp.sort_values('Importance', ascending=False)
+            feat_imp['Impact_Direction'] = 'Unknown'
+            out = os.path.join('data', 'feature_selection', f'ml_trading_model_lightgbm_{horizon}d_importance.csv')
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            feat_imp.to_csv(out, index=False)
+        except Exception as e:
+            logger.warning(f"保存 LightGBM 特征重要性失败: {e}")
+        return None
 
     def get_dynamic_threshold(self, market_regime=None, vix_level=None, base_threshold=0.55):
         """获取动态阈值（基于市场环境调整）
