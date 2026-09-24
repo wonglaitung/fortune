@@ -6200,14 +6200,20 @@ class CatBoostModel(BaseTradingModel):
             # 转换回 numpy 数组
             X = df_temp.values
 
-            # 使用 CatBoost 模型直接预测
-            from catboost import Pool
+            if getattr(self, 'learner', 'catboost') == 'lightgbm':
+                # LightGBM 直接预测（复用同一特征管线）
+                import numpy as _np
+                proba = self.model.predict_proba(X)[0]
+                prediction = int(proba[1] >= 0.5)
+            else:
+                # 使用 CatBoost 模型直接预测
+                from catboost import Pool
 
-            # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
-            # 因为 X 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
-            test_pool = Pool(data=X)
-            proba = self.catboost_model.predict_proba(test_pool)[0]
-            prediction = self.catboost_model.predict(test_pool)[0]
+                # 分类特征已用 LabelEncoder 编码为数值，不使用 cat_features 参数
+                # 因为 X 是 float 类型的 numpy 数组，CatBoost 不接受 cat_features
+                test_pool = Pool(data=X)
+                proba = self.catboost_model.predict_proba(test_pool)[0]
+                prediction = self.catboost_model.predict(test_pool)[0]
 
             return {
                 'code': code,
@@ -6225,35 +6231,41 @@ class CatBoostModel(BaseTradingModel):
             return None
 
     def save_model(self, filepath):
-        """保存模型"""
+        """保存模型（CatBoost 或 LightGBM 学习器）"""
+        learner = getattr(self, 'learner', 'catboost')
+        base_model = (self.catboost_model if learner != 'lightgbm' else self.model)
         model_data = {
+            'model': base_model,
             'catboost_model': self.catboost_model,
             'feature_columns': self.feature_columns,
             'actual_n_estimators': self.actual_n_estimators,
             'horizon': self.horizon,
             'model_type': self.model_type,
             'categorical_encoders': self.categorical_encoders,
-            'community_ids': self.community_ids  # 保存社区 ID 列表
+            'community_ids': self.community_ids,  # 保存社区 ID 列表
+            'learner': learner,
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
-        print(f"CatBoost 模型已保存到 {filepath}")
+        print(f"{'CatBoost' if learner == 'catboost' else learner} 模型已保存到 {filepath}")
 
     def load_model(self, filepath):
-        """加载模型"""
+        """加载模型（CatBoost 或 LightGBM 学习器）"""
         with open(filepath, 'rb') as f:
             model_data = pickle.load(f)
-        self.catboost_model = model_data['catboost_model']
+        learner = model_data.get('learner', 'catboost')
+        base_model = model_data.get('model') or model_data.get('catboost_model')
+        self.catboost_model = base_model
+        self.model = base_model
+        self.learner = learner
         self.feature_columns = model_data['feature_columns']
         self.actual_n_estimators = model_data['actual_n_estimators']
         self.horizon = model_data.get('horizon', 1)
         self.model_type = model_data.get('model_type', 'catboost')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         self.community_ids = model_data.get('community_ids', None)  # 恢复社区 ID 列表
-        if self.community_ids:
-            print(f"CatBoost 模型已从 {filepath} 加载（社区 ID: {self.community_ids}）")
-        else:
-            print(f"CatBoost 模型已从 {filepath} 加载")
+        print(f"{learner} 模型已从 {filepath} 加载"
+              + (f"（社区 ID: {self.community_ids}）" if self.community_ids else ""))
 
     def predict_proba(self, X):
         """

@@ -8,6 +8,20 @@
 
 ## 最新进展
 
+### 2026-09-25 LightGBM 设为 20d 默认学习器（生产集成）⭐⭐⭐
+
+**实现**：
+- `CatBoostModel` 的 `predict/save_model/load_model` 适配 learner（旧 CatBoost pkl 向后兼容已验证，
+  0005 单股预测正常）；
+- 新增 `scripts/train_lightgbm_20d.py`（生产 LightGBM 20d 训练+保存，复用 CatBoost 管线）；
+- `comprehensive_analysis.py` 20d 模型**优先加载 `ml_trading_model_lightgbm_20d.pkl`**，否则回退 CatBoost；
+- `AGENTS.md` 加「生产 LightGBM 20d」命令；`DEPLOYMENT.md` T2 注明学习器=LightGBM、最优 top5-neutral。
+
+**训练**：生产 LightGBM 20d 模型后台训练中（500 特征，全历史，~20-40 分钟）。
+
+**文件**：`scripts/train_lightgbm_20d.py`、`ml_services/ml_trading_model.py`、
+`comprehensive_analysis.py`、`AGENTS.md`、`docs/DEPLOYMENT.md`。
+
 ### 2026-09-25 管线级 LightGBM A/B：信号最强、护栏通过 ⭐⭐⭐
 
 **实现**：`CatBoostModel` 加 `learner='lightgbm'` 分支（复用同一 PIT 管线，仅换 LGBMClassifier）；

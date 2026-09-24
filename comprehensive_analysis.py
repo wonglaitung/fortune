@@ -612,10 +612,13 @@ def load_multi_horizon_models():
     data_dir = os.path.join(script_dir, 'data')
 
     models = {}
+    # 20d 优先使用 LightGBM（管线级 A/B 胜出：信号更强+护栏通过，见 docs/MODEL_IMPROVEMENT_PLAN.md §5.18）
+    lgbm20 = os.path.join(data_dir, 'ml_trading_model_lightgbm_20d.pkl')
+    cat20 = os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl')
     model_files = {
         1: os.path.join(data_dir, 'ml_trading_model_catboost_1d.pkl'),
         5: os.path.join(data_dir, 'ml_trading_model_catboost_5d.pkl'),
-        20: os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl'),
+        20: lgbm20 if os.path.exists(lgbm20) else cat20,
     }
 
     missing_models = []

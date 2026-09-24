@@ -47,6 +47,10 @@
 
 ### T2 20d 行业中性 TopK（`ml_services/portfolio_backtest.py` + `monthly_guardrail.py`）
 
+**学习器**：**LightGBM**（管线级 A/B 胜出：横截面 RankIC +0.032 vs CatBoost +0.023、护栏 🟢；
+生产模型 `scripts/train_lightgbm_20d.py` 产出 `data/ml_trading_model_lightgbm_20d.pkl`，
+`comprehensive_analysis.py` 优先加载）。最优组合参数：**top5-neutral**。
+
 **开仓条件**
 1. 每次 Walk-forward 后跑 `monthly_guardrail.py`；
 2. **🟢 升级**（净IR≥0.7 且 PBO<0.5 且 DSR≥0.95）→ 可放大至 15–20%；
