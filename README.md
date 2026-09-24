@@ -31,7 +31,9 @@
 
 **多维度交叉验证**：单一指标可能失效，但多维度信号共振可显著提高可靠性。系统整合三周期预测、异常检测、大模型分析、板块轮动四大维度，只有多信号一致时才给出强建议。
 
-**透明的性能监控**：每日自动评估预测准确率，按月度、季度、年度统计，真实反映系统表现。不隐藏失败预测，持续迭代改进。
+**透明的性能监控**：每日自动评估预测，报告**基准扣除后的诚实指标**（方向技能=准确率−永远看涨、
+超额 lift=信号净胜率−无条件买入基准、逐年分解）与 `20d 中性 TopK` 护栏判定，真实反映系统表现。
+不隐藏失败预测，持续迭代改进。
 
 ### 1.2 双市场支持概览
 
@@ -752,7 +754,11 @@ flowchart LR
 | **15:15 CST** (工作日) | `a-stock-comprehensive-analysis.yml` | A股综合分析 | 🇨🇳 |
 | **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
 | 02:00 (每天) | `stock-anomaly-detection.yml` | 异常检测 | 🇭🇰 |
-| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（港股+A股预测表现） | 🇭🇰🇨🇳 |
+| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（港股+A股预测表现，含 lift/方向技能/护栏状态） | 🇭🇰🇨🇳 |
+
+> 说明：`performance-monitor.yml` 报告**带基准扣除的诚实指标**与护栏状态；严格护栏
+> （`monthly_guardrail.py`，需本地 `prediction_analysis.csv`）在**本地每月**执行，见
+> [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 ### 命令汇总
 
