@@ -633,6 +633,39 @@ python3 ml_services/backtest_eval.py \
 - [ ] 已用 `--compare` 检查跨周期一致性
 - [ ] 已确认未采信"月份×股票"极值组合（多重比较噪声）
 
+---
+
+### 阶段 5.6：月度护栏判定（monthly_guardrail.py，必须执行）⭐
+
+**目的**：对 `20d 行业中性 TopK` 辅助信号做**决策判定**（升级/保留/停用），
+按 `docs/DECISIONS.md` D2 收口。
+
+**⚠️ 适用边界**：仅针对 **20d 中性 TopK 辅助信号**。个股横截面 alpha 已按 D1 停止投入；
+恒指/异常检测不套用此判定门槛。
+
+#### 5.6A. 运行
+
+```bash
+python3 ml_services/monthly_guardrail.py --horizon 20          # 自动找最新预测
+python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
+```
+
+#### 5.6B. 判定规则（DECISIONS D2）
+
+| 条件 | 判定 |
+|------|------|
+| 净IR ≥ 0.7 且 PBO < 0.5 且 DSR ≥ 0.95 | 🟢 升级 |
+| IR > 0（未达升级） | 🟡 保留低配 |
+| IR ≤ 0 | 🔴 停用 |
+
+输出含：净IR(95%CI) / P(IR>0.5) / 累计 / 换手 / **PBO / DSR / 超额 lift**。
+
+#### 5.6C. 阶段 5.6 检查清单
+
+- [ ] 已运行 `monthly_guardrail.py` 并记录判定（🟢/🟡/🔴）
+- [ ] 判定为 🟡 保留时，确认仍未上核心仓位
+- [ ] 判定为 🔴 时，已按 D2 停用
+
 ## 执行检查清单
 
 在完成验证流程前，请确认：
@@ -754,6 +787,12 @@ python3 ml_services/backtest_eval.py \
 - [ ] 两者 >0 才算通过；高准确率但方向技能 <0（beta 陷阱）不算通过
 - [ ] 已用 `--compare` 检查跨周期一致性（板块层稳、个股层噪声大）
 - [ ] 已确认未采信"月份×股票"极值组合
+
+### 阶段 5.6 检查（必须完成）⭐
+
+- [ ] 已运行 `python3 ml_services/monthly_guardrail.py --horizon 20`
+- [ ] 已记录判定（🟢 升级 / 🟡 保留低配 / 🔴 停用），见 `docs/DECISIONS.md` D2
+- [ ] 🟡 保留时确认未上核心仓位；🔴 时已停用
 
 ## 数据泄漏警告
 
