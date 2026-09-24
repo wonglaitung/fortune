@@ -8,6 +8,29 @@
 
 ## 最新进展
 
+### 2026-09-24 管线级 B1 YetiRank A/B：排序目标组合层不优于 Logloss ⭐⭐⭐
+
+**执行**：38 折全折 YetiRank（与 Logloss 同参数同折）→ `output/20260924_202315_catboost_20d/`。
+
+**同口径（36m，2023–2026）对比**：
+
+| 指标 | Logloss | YetiRank |
+|------|---------|----------|
+| 横截面 Rank IC | +0.0231 | **+0.0241** |
+| ICIR | 0.134 | **0.138** |
+| 20d 中性TopK 净IR | **1.52** | 1.06 |
+| PBO | **0.14** | 0.71 |
+| DSR | **0.987** | 0.975 |
+| 判定 | 🟢 | 🟡 |
+
+**结论**：排序目标**原始 IC 微优**（+0.001）但**组合层明显更差**（净IR 1.52→1.06、PBO 0.14→0.71）
+→ **不升级模型，20d 中性TopK 继续用 Logloss**。横截面 IC≠组合 IR 再次验证。
+**附带**：Logloss 36m 护栏 🟢 可升级，而 12m 全期为 🟡 → 仍受 2025 行情主导。
+B1 代码保留（无害）。
+
+**文件**：`output/20260924_202315_catboost_20d/`、`output/monthly_guardrail_yetirank.md`、
+`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.17）。
+
 ### 2026-09-24 管线级排序目标 B1（YetiRank）实现并启动全折 ⭐⭐⭐
 
 **发现**：`LightGBMModel`/`GBDTModel` 是弃用的旧实现（`prepare_data` 无 cache/PIT/community_ids），
