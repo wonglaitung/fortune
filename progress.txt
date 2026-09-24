@@ -8,6 +8,18 @@
 
 ## 最新进展
 
+### 2026-09-24 决策备忘 docs/DECISIONS.md：个股 alpha 停止投入 ⭐⭐⭐⭐
+
+**建立** `docs/DECISIONS.md`：基于整轮实证收敛最终决策——
+- **D1 停止个股横截面 alpha 研发**（DSR 不过、扩池不增信号、简单模型 IC 转负）；
+- **D2 `20d 中性 TopK` 保留为低配辅助信号 + 月度护栏**（PBO 0.30 / DSR 0.87，不升级）；
+- D3 评估禁用绝对准确率，一律 lift/IC/IR+PBO/DSR+bootstrap；
+- D4 资源转向恒指/异常检测/决策报告；
+- D5 扩池须配模型重拟合 + 先解决数据源；
+- D6 元标签只留 Kelly 仓位一半；D7 排序目标须管线级再评。
+含已验证/已否定清单、策略规格、方法论护栏、停止事项、下一步。
+`AGENTS.md` 快速链接更新。
+
 ### 2026-09-24 更大池模型重学习：负结果，LightGBM 学不到信号 ⭐⭐⭐
 
 **新增**：`ml_services/rank_universe.py`；报告 `output/rank_universe_20d.md`
