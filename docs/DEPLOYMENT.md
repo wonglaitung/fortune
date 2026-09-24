@@ -89,6 +89,16 @@
 - `20d 中性 TopK`：净IR / PBO / DSR 逐月监控，判定见 DECISIONS D2；
 - 异常抄底：逐年胜率/收益分布，若连续 2 个月在当前 regime 为负 → 暂停。
 
+**复核怎么执行（两种用法）**：
+
+| 场景 | 做法 |
+|------|------|
+| 模型/特征/数据有改动 | 调用 **模型验证技能 `/model_validation`**（SOP 全流程：walk-forward → 阶段 5.5 严谨评估 → **阶段 5.6 月度护栏判定** → 文档/提交）。⚠️ walk-forward 本身约 3h |
+| 仅需对已有最新预测复核 | 直接 `python3 ml_services/monthly_guardrail.py --horizon 20`，提交 `output/monthly_guardrail_*.md`（秒级，不重训） |
+
+> 日常节奏：有改动 → `/model_validation` 全流程；无改动 → 直接 `monthly_guardrail.py`。
+> 结果 md 提交后，`performance-monitor.yml` 的邮件会自动带上护栏判定（"策略护栏状态"节）。
+
 **失败/收缩条件**：
 - 恒指 < MA200 且情绪 extreme_bear → 战术层清零，仅留底仓/现金；
 - 任一战术 DSR 持续 <0.9 或 IR≤0 两个季度 → 停用；
