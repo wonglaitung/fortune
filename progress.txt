@@ -1776,3 +1776,9 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 ---
 
 **详细经验请查看 [lessons.md](lessons.md)**
+### 2026-09-25 回测入库工具健壮性修复（终审）⭐
+
+- **pathspec 坑**：`git commit -- <paths>` 会从工作树取内容，把 `rm --cached` 取消跟踪的旧 CSV
+  重新提交（端到端测试抓出）→ 回退 index 提交 + 预 stage 其它文件仅 WARNING
+- **push 重试**：push 被拒自动 `pull --rebase --autostash` 重试一次（保护本地 data 修改）
+- README/AGENTS 调度表措辞统一；终审 12 tests passed

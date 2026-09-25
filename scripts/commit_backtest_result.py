@@ -115,6 +115,15 @@ def main() -> int:
                    f"+ GATE_SNAPSHOT 同步 bear={gates['bear']:.4f} weak={gates['weak']:.4f}")
         else:
             msg = f"[skip ci] 回测入库: {dirname}"
+        # 注意：不可用 `git commit -- <paths>`（会从工作树取内容，把 rm --cached
+        # 取消跟踪的旧 CSV 重新提交）；只能提交 index。若用户预先 stage 了其它
+        # 文件会被一并提交，这里仅告警。
+        commit_paths = set([rel_csv] + untrack +
+                           ([os.path.relpath(SNAPSHOT_FILE, BASE_DIR)] if is_20d else []))
+        staged = _run(['git', 'diff', '--cached', '--name-only']).stdout.split()
+        others = [p for p in staged if p not in commit_paths]
+        if others:
+            print(f"WARNING: 以下已暂存文件将随本次提交一并入库: {others}")
         r = _run(['git', 'commit', '-m', msg])
         if r.returncode != 0 and 'nothing to commit' not in (r.stdout + r.stderr):
             raise RuntimeError(f'git commit 失败: {r.stderr}')
@@ -122,6 +131,13 @@ def main() -> int:
 
         if not args.no_push:
             r = _run(['git', 'push'], timeout=300)
+            if r.returncode != 0:
+                # 远程有新提交：rebase 拉取后重试一次（autostash 保护本地 data 修改）
+                print("push 被拒，自动 pull --rebase 重试...")
+                rp = _run(['git', 'pull', '--rebase', '--autostash'], timeout=300)
+                if rp.returncode != 0:
+                    raise RuntimeError(f'pull --rebase 失败: {rp.stderr}')
+                r = _run(['git', 'push'], timeout=300)
             if r.returncode != 0:
                 raise RuntimeError(f'git push 失败: {r.stderr}')
             print("已推送")
