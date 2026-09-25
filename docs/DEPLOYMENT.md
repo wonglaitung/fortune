@@ -82,6 +82,20 @@
 | 决策 | LLM 综合分析报告 | 人机混合，最终裁决 |
 | 复核 | `monthly_guardrail.py` | 每月：净IR/PBO/DSR/lift + 逐年 |
 
+### 每日预测优化（用户视角，2026-09-25 落地）
+
+`comprehensive_analysis.py`（16:00 HKT 每日）已集成的优化：
+
+| 优化 | 做法 | 用户看到 |
+|------|------|---------|
+| **概率校准** | `ml_services/daily_confidence.py` 用历史拟合 Isotonic，把 probability 映射成真概率 | 报告里的"上涨概率"可信（20d 原始 0.8 → 实际约 0.54） |
+| **置信度** | 每只股票加 `P(主模型判对)`（Isotonic 校准曲线），邮件显示 `(置信xx)` | 低置信建议一眼可见，不被不靠谱信号带偏 |
+| **市场风险横幅** | 邮件顶部按 `market_layer` 给当日指引（🟢/🟡≥0.65/🟠≥0.70/🔴暂停买入），附上涨比例与动态阈值 | 开信即见"今天该不该买、买多紧"；极端熊市主动提醒收手 |
+| **数据源可靠性** | `data_services/tencent_finance.py`：3 次重试 + yfinance 备用 + stock_cache/HSI 缓存兜底 | 网络抖动不再缺股票/缺数据，报告每天完整 |
+| **20d 学习器** | LightGBM（§5.18） | 信号更强（RankIC +38%），护栏 🟢 |
+
+> 校准器每次运行自动重拟合（`data/calibrators/*.pkl`，不入库）；校准/置信失败不影响原预测（try/except 兜底）。
+
 ### 监控报告解读示例（2026-09-24 实测）
 
 `performance-monitor.yml`（00:00 HKT）生成的「诚实监控摘要 + 护栏状态」怎么读：
