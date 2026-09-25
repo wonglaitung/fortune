@@ -8,6 +8,23 @@
 
 ## 最新进展
 
+### 2026-09-25 删除废弃 LightGBMModel/GBDTModel 旧实现（~1290 行）⭐
+
+**背景**：旧 `LightGBMModel`/`GBDTModel`（3717-5009 行）是泄漏/非 PIT 旧管线
+（prepare_data 无 cache/community_ids、无 predict_proba、无 selected_features），
+已被 `CatBoostModel.learner='lightgbm'` 分支完全取代。
+
+**改动**：
+- 删除两个旧类（~1290 行），替换为 6 行**兼容存根**：`LightGBMModel(CatBoostModel)`、
+  `GBDTModel(CatBoostModel)`，`__init__` 预置 `learner='lightgbm'`；
+- 所有引用（walk_forward `model_classes`、`__init__` 导出、`batch_backtest`、`compare_three_models_20d`、
+  `main()` 的 lgbm/gbdt 分支、`MLTradingModel` 别名）**无需改动**，经继承自动走新 PIT 管线；
+- 存根定义放在 `CatBoostModel` 之后、`MLTradingModel` 别名之前（避免 NameError）。
+
+**验证**：存根 load+predict 正常（0700→涨 0.56）；`--model-type lightgbm` 冒烟 4 折走新管线 ✓。
+
+**文件**：`ml_services/ml_trading_model.py`（瘦身 ~1290 行）、`progress.txt`。
+
 ### 2026-09-25 LightGBM 设为 20d 默认学习器（生产集成）⭐⭐⭐
 
 **实现**：
