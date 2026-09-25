@@ -1782,3 +1782,12 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   重新提交（端到端测试抓出）→ 回退 index 提交 + 预 stage 其它文件仅 WARNING
 - **push 重试**：push 被拒自动 `pull --rebase --autostash` 重试一次（保护本地 data 修改）
 - README/AGENTS 调度表措辞统一；终审 12 tests passed
+### 2026-09-25 学习器归属事实修正（用户同意）⭐
+
+- **代码事实** `comprehensive_analysis.py:614-622`：港股综合分析 1d/5d CatBoost、
+  **20d LightGBM 优先**（A/B §5.18 胜出）；A股三周期全 CatBoost
+- **误判根源**：lightgbm pkl 内嵌 `model_type='catboost'`（CatBoostModel 类标识）误导 →
+  lessons 三.7「pkl 内嵌标签不可信，实跑看加载路径」（v10.10）
+- README 修正 7 处：L89 算法行、L99 章节标题、L101 核心优势、L382/399/413 措辞、
+  L621/L692 流程图节点；AGENTS mermaid M1 同步
+- 保留不动：A股 CatBoost、恒指 hsi_ml_model CatBoost、1d 噪音警告、CatBoost 配置/NaN 小节（均真实）

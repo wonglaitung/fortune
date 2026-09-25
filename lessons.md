@@ -465,6 +465,21 @@ ic = df['probability'].corr(df['actual_return'])
 
 **代码**：`scripts/commit_backtest_result.py`；**决策**：`docs/DECISIONS.md` D9
 
+### 7. pkl 内嵌 model_type 标签不可信，实跑学习器看加载路径 ⭐⭐
+
+**教训**：判断"综合分析实跑哪个学习器"时，曾凭 `ml_trading_model_lightgbm_20d.pkl`
+内 `model_type == 'catboost'` 及加载打印，误判 20d 实跑 CatBoost。
+
+**根因**：该 pkl 由 `CatBoostModel` 包装类保存，`model_type` 是类标识字段（值 `'catboost'`），
+不反映底层 booster 类型。
+
+**正确**：实跑学习器以**加载方的文件选择逻辑**为准——
+`comprehensive_analysis.py load_multi_horizon_models()`：`20: lgbm20 if exists else cat20`
+（1d/5d CatBoost、**20d LightGBM 优先**，管线级 A/B 胜出 §5.18；A股三周期全 CatBoost）。
+
+**关键**：pkl 内嵌标签 / 模型自报 `model_type` ≠ 管线实跑；查"用什么模型"必须读
+加载路径选择代码，文档断言须对照该处。
+
 ---
 
 ## 四、模型训练
@@ -727,6 +742,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-09-25 | v10.10 | 新增：pkl 内嵌 model_type 标签不可信，实跑学习器看加载路径（20d=LightGBM） |
 | 2026-09-25 | v10.9 | 新增：Isotonic 阶梯绝对阈值空转须分位（含数据源/CI 同源两坑）、回测数据源自动入库 |
 | 2026-07-30 | v10.8 | 新增：缓存验证需基于API实际能力、防御性代码需与上游逻辑协调 |
 | 2026-07-24 | v10.7 | 新增：系统诊断与维护规范经验 |

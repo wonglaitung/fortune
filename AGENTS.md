@@ -166,7 +166,7 @@ flowchart TD
 
     subgraph ML["ml_services/ 机器学习层"]
         direction LR
-        M1["CatBoost"]
+        M1["模型预测"]
         M2["Walk-forward"]
         M3["性能监控"]
         M1 ~~~ M2 ~~~ M3
