@@ -119,7 +119,7 @@ python hsi_email.py --no-email
 | **CatBoost 1天模型** | 噪音大，仅供参考 |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
-| **恒指 vs 个股** | 恒指准确率显著高于个股（81% vs 54%），个股预测需谨慎 |
+| **恒指 vs 个股** | 恒指 1d 54.1%（显著优于随机）> 个股 20d 52.3%（不显著），个股预测需谨慎 |
 | **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
 | **网络社区特征一致性** | 训练时保存 `model.community_ids`，预测时使用相同社区 ID 列表 |
 | **分类特征 NaN** | CatBoost 预测时必须处理分类特征 NaN，训练和预测预处理必须一致 |
@@ -344,15 +344,15 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 
 > 三周期模式经 embargo 验证后均接近随机，**不构成可靠交易信号**。
 
-**个股完整模型**（38 folds，59只股票，市场情绪过滤器启用，PIT 口径）⭐：
+**个股完整模型**（38 folds，59只股票，市场情绪过滤器启用，PIT 口径；20d 为 2026-09-25 回测）⭐：
 
-| 指标 | 20d | 5d | 评估 |
+| 指标 | 20d（2026-09-25） | 5d（上一轮） | 评估 |
 |------|-----|----|------|
-| 合并准确率 | **51.6%**（95%CI 49.5–53.7） | **51.8%**（50.8–52.9） | 接近随机；20d p=0.14，5d p=0.0008 |
-| 信号胜率 | 51.2% | 48.6% | 含行情 |
+| 合并准确率 | **52.3%**（95%CI 50.2–54.4） | **51.8%**（50.8–52.9） | 接近随机；20d p=0.036，5d p=0.0008 |
+| 信号胜率 | 51.8% | 48.6% | 含行情 |
 | 基准胜率 | 49.5% | 46.9% | 无条件买入 |
-| **超额 lift** | +1.8pp | +1.6pp | 微弱，20d 不显著 |
-| 平均 IC | 0.052 | 0.067 | 偏低 |
+| **超额 lift** | **+2.3pp**（p=0.157 不显著） | +1.6pp | 微弱，均不显著 |
+| 平均 IC | 0.057 | 0.067 | 偏低 |
 
 > 评估以 `ml_services/backtest_eval.py` 的 **lift / 方向技能** 为准（详见 [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)）。
 
@@ -524,11 +524,17 @@ test_df[col] = test_df[col].apply(
 | 时间 | 工作流 | 功能 | 市场 |
 |------|--------|------|------|
 | **06:00** (工作日) | `hsi-prediction.yml` | 恒生指数预测 | 🇭🇰 |
-| **10:00-15:00** (每小时) | `hourly-stock-monitor.yml` | 交易时段监控 | 🇭🇰 |
-| **15:15 CST** (工作日) | `a-stock-comprehensive-analysis.yml` | A股综合分析 | 🇨🇳 |
+| **06:00** (工作日) | `batch-stock-news-fetcher.yml` | 批量个股新闻抓取 | 🇭🇰 |
+| 每小时 | `hourly-crypto-monitor.yml` | 加密货币监控 | 🌐 |
+| 每小时 | `hourly-gold-monitor.yml` | 黄金监控 | 🌐 |
 | **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
-| 02:00 (每天) | `stock-anomaly-detection.yml` | 异常检测 | 🇭🇰 |
 | **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（港股+A股预测表现） | 🇭🇰🇨🇳 |
+| 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
+| 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
+| 周一 08:00 HKT | `test-llm-api.yml` | LLM API 连通性测试 | - |
+
+> 注：`hourly-stock-monitor`/`stock-anomaly-detection`/`a-stock-comprehensive-analysis`
+> （每日15:15）已随 `78421801`/`5026cf0c` 清理，以 `.github/workflows/` 实际文件为准。
 
 ---
 
