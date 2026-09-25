@@ -8,6 +8,24 @@
 
 ## 最新进展
 
+### 2026-09-25 元标签重启：LightGBM 主模型 edge 增强后 Kelly 增量转显著 ⭐⭐⭐
+
+**背景**：D6 曾因"主模型 edge 不足、增量不显著"暂停元标签。LightGBM 主模型 IC +38% 后重跑
+`meta_labeling_ablation.py`（LightGBM 20d 预测）。
+
+**结果**：
+
+| 子集 | Baseline IR | Meta+Kelly | ΔIR [95%CI] | 元−主增量 |
+|------|-------------|-----------|-------------|-----------|
+| 2025 | 1.36 | 1.57 | **+0.35 [0.19,0.51] P=100%** | +0.33 [0.16,0.48] |
+| 全期(23–26) | 0.65 | 0.80 | **+0.22 [0.05,0.38] P=100%** | 校准后 **+0.25 [0.10,0.40]** |
+
+**结论**：前提（主模型 edge）满足后，**Kelly 仓位增量 bootstrap 显著**；过滤仍无效。
+→ 采用 Kelly 仓位（建议 Isotonic 校准），纳入 20d 信号并月度护栏复核。DECISIONS D6 更新、计划 §5.19。
+
+**文件**：`output/meta_labeling_ablation_lgbm_20d_{2025,all}.md`、
+`docs/DECISIONS.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`（§5.19）。
+
 ### 2026-09-25 VALIDATION_GUIDE 新增「月度护栏（Guardrail）」章节 ⭐
 
 **新增** `docs/VALIDATION_GUIDE.md`「月度护栏」：定义（决策闸门，防虚假 alpha 上线）、
