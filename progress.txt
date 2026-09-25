@@ -8,6 +8,19 @@
 
 ## 最新进展
 
+### 2026-09-25 数据源可靠性：重试 + 备用源 + 缓存兜底 ⭐
+
+**改动** `data_services/tencent_finance.py`：
+- `get_hk_stock_data_tencent`：HTTP 请求 **3 次重试（指数退避）**；腾讯失败 → **yfinance 备用源**（`0700.HK` 格式）
+  → **stock_cache 缓存兜底**（可能过期但保证有数据）；
+- `get_hsi_data_tencent`：同样加重试 + **HSI.pkl 缓存兜底**；
+- 新增 `_request_json_retry` / `_hk_yf_fallback` / `_hk_cache_fallback`。
+
+**验证**：腾讯正常路径 OK；yfinance 备用（00700→90 行）、stock_cache 兜底（0005→1461 行）、HSI 正常均通过。
+**用户价值**：DNS/网络抖动不再导致某天"缺股票/缺数据"，报告每天完整。
+
+**文件**：`data_services/tencent_finance.py`、`progress.txt`。
+
 ### 2026-09-25 每日预测优化：概率校准 + 置信度（用户视角）⭐⭐
 
 **新增** `ml_services/daily_confidence.py`：

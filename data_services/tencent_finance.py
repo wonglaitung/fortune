@@ -2,6 +2,67 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import json
+import os
+import time
+import glob
+import pickle
+
+
+def _request_json_retry(url, headers, timeout=15, attempts=3, base_delay=1.5):
+    """带重试的 GET+JSON 解析（DNS/网络抖动兜底）"""
+    last = None
+    for i in range(attempts):
+        try:
+            r = requests.get(url, headers=headers, timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last = e
+            print(f"  ⚠️ 请求失败({i+1}/{attempts}): {str(e)[:80]}")
+            if i < attempts - 1:
+                time.sleep(base_delay * (i + 1))
+    raise last
+
+
+def _hk_yf_fallback(code, period_days):
+    """备用源：yfinance 港股 .HK"""
+    try:
+        import yfinance as yf
+        tk = f"{int(code):04d}.HK"
+        hist = yf.Ticker(tk).history(period='max')
+        if hist is None or len(hist) < 5:
+            return None
+        df = hist[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+        now = pd.Timestamp.now(tz='UTC')
+        df = df[df.index.tz_convert('UTC') >= (now - pd.Timedelta(days=period_days * 2))].tail(period_days)
+        df.index = df.index.tz_convert('UTC')
+        df.index.name = 'Date'
+        print(f"  [备用源yfinance] 获取 {tk} 成功（{len(df)} 行）")
+        return df
+    except Exception as e:
+        print(f"  [备用源yfinance失败] {code}: {str(e)[:60]}")
+        return None
+
+
+def _hk_cache_fallback(code):
+    """兜底：读本地 stock_cache 最近缓存（可能过期，但保证有数据）"""
+    try:
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        c4 = f"{int(code):04d}"
+        pat = os.path.join(base, 'data', 'stock_cache', f"{c4}_*.pkl")
+        files = sorted(glob.glob(pat))
+        if not files:
+            return None
+        d = pickle.load(open(files[-1], 'rb'))
+        df = d['data'] if isinstance(d, dict) and 'data' in d else d
+        if isinstance(df, pd.DataFrame) and len(df) > 5 \
+                and {'Open', 'Close', 'High', 'Low', 'Volume'} <= set(df.columns):
+            print(f"  [缓存兜底] 使用 {os.path.basename(files[-1])}（{len(df)} 行，可能过期）")
+            return df
+    except Exception as e:
+        print(f"  [缓存兜底失败] {code}: {str(e)[:60]}")
+    return None
+
 
 def get_hk_stock_data_tencent(stock_code, period_days=90):
     """
@@ -33,16 +94,14 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
             'Connection': 'keep-alive',
         }
 
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
+        response = _request_json_retry(url, headers, timeout=15)
 
         # 解析返回的JSON数据
-        data = response.json()
+        data = response
 
         # 检查数据是否有效
         if 'data' not in data or f'hk{formatted_code}' not in data['data']:
-            print(f"无法获取股票 {stock_code} 的数据")
-            return None
+            raise ValueError(f"无数据: {stock_code}")
 
         # 提取K线数据
         # 普通股票数据在 'qfqday' 键下（前复权数据）
@@ -54,8 +113,7 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
             kline_data = stock_data['day']
 
         if kline_data is None or len(kline_data) == 0:
-            print(f"无法获取股票 {stock_code} 的K线数据")
-            return None
+            raise ValueError(f"无K线: {stock_code}")
 
         # 解析数据
         # 数据格式: [日期, 开盘价, 收盘价, 最高价, 最低价, 成交量, 其他信息, ?, 成交额(万元)]
@@ -78,12 +136,16 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
             df.set_index('Date', inplace=True)
             return df
         else:
-            print(f"股票 {stock_code} 数据为空")
-            return None
+            raise ValueError(f"数据为空: {stock_code}")
 
     except Exception as e:
-        print(f"获取股票 {stock_code} 数据失败: {e}")
-        return None
+        print(f"获取股票 {stock_code} 数据失败（腾讯）: {str(e)[:80]}")
+        # 备用源 + 缓存兜底
+        fb = _hk_yf_fallback(formatted_code, period_days)
+        if fb is not None:
+            return fb
+        fb = _hk_cache_fallback(formatted_code)
+        return fb
 
 def get_hk_stock_info_tencent(stock_code):
     """
@@ -156,16 +218,14 @@ def get_hsi_data_tencent(period_days=90):
             'Referer': 'https://stockapp.finance.qq.com/',
         }
 
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
+        response = _request_json_retry(url, headers, timeout=15)
 
         # 解析返回的JSON数据
-        data = response.json()
+        data = response
 
         # 检查数据是否有效
         if 'data' not in data or 'hkHSI' not in data['data']:
-            print("无法获取恒生指数的数据")
-            return None
+            raise ValueError("无恒生指数数据")
 
         # 提取K线数据
         # 恒生指数数据在 'day' 键下（没有 qfqday）
@@ -211,9 +271,20 @@ def get_hsi_data_tencent(period_days=90):
             df = df.tail(period_days)
             return df
         else:
-            print("恒生指数数据为空")
-            return None
+            raise ValueError("恒生指数数据为空")
 
     except Exception as e:
-        print(f"获取恒生指数数据失败: {e}")
+        print(f"获取恒生指数数据失败（腾讯）: {str(e)[:80]}")
+        # HSI 缓存兜底（data/hk_universe_cache/HSI.pkl）
+        try:
+            base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            pkl = os.path.join(base, 'data', 'hk_universe_cache', 'HSI.pkl')
+            if os.path.exists(pkl):
+                hsi = pickle.load(open(pkl, 'rb'))
+                hsi = hsi.tail(period_days)
+                hsi.index = pd.to_datetime(hsi.index).tz_localize('UTC')
+                print(f"  [HSI缓存兜底] 使用 HSI.pkl（{len(hsi)} 行，可能过期）")
+                return hsi
+        except Exception as ee:
+            print(f"  [HSI缓存兜底失败]: {str(ee)[:60]}")
         return None
