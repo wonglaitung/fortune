@@ -8,6 +8,23 @@
 
 ## 最新进展
 
+### 2026-09-25 修复：市场风险横幅 NameError（market_layer 作用域）⭐
+
+**问题**：Actions 运行 `❌ 综合分析失败: name 'market_layer' is not defined`（comprehensive_analysis.py:5413）。
+横幅功能把默认值加在 `extract_ml_predictions()` **局部作用域**（893-897），但横幅代码在
+`run_comprehensive_analysis()` 作用域引用，且内层 return 未带出这三个变量 → 必然 NameError。
+
+**改动** `comprehensive_analysis.py`：
+- `market_layer`/`dynamic_threshold`/`up_ratio` 默认值上提到 `try` 外（异常路径也保证存在，删重复赋值）；
+- `extract_ml_predictions` 两个 return（正常/异常路径）新增这三个字段；
+- `run_comprehensive_analysis` 提取后用 `ml_predictions.get(..., 默认值)` 兜底，供横幅使用。
+
+**验证**：`py_compile` 通过；`ruff check --select F821`（未定义名）全文件通过；
+实际调用 `extract_ml_predictions` 后横幅行正常输出
+`> 🟢 正常市场：常规操作（上涨比例 41.4%，动态阈值 0.50）`。
+
+**文件**：`comprehensive_analysis.py`、`progress.txt`。
+
 ### 2026-09-25 DEPLOYMENT 收口"每日预测优化" ⭐
 
 **改动** `docs/DEPLOYMENT.md`：监控/报告层新增「每日预测优化（用户视角）」表——

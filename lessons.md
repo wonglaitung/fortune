@@ -602,6 +602,25 @@ feature_cols = self.get_feature_columns(df)
 - `Future_Return` 是标签的原始值，绝对不能出现在特征中
 - 准确率达到 100% 是极端数据泄漏信号，必须立即排查
 
+### 跨函数状态必须经返回值传递 ⭐⭐
+
+**问题**：`market_layer` 等默认值只加在 `extract_ml_predictions()` 局部作用域，横幅代码却在 `run_comprehensive_analysis()` 里引用 → `NameError`（2026-09-25 生产事故）
+
+```python
+# ❌ 错误：只在被调函数内部定义/默认，调用方作用域读不到
+def extract(): market_layer = 'normal'; ...   # 局部变量
+caller(): banner(market_layer)                # NameError
+
+# ✅ 正确：随 return 带出 + 调用方兜底
+def extract(): return {..., 'market_layer': market_layer}
+caller(): market_layer = result.get('market_layer', 'normal')
+```
+
+**教训**：
+- Python 函数作用域隔离，`try` 内初始化的变量在 `except` 分支可能未定义 → 默认值放 `try` **外**
+- 给"外层新增功能"取值时，先确认变量在**当前作用域**有定义；跨函数共享一律走返回 dict
+- 静态检查：`ruff check --select F821 <file>` 可提前抓出未定义名，改动后必跑
+
 ### 阈值配置
 
 | 用途 | 阈值 | 说明 |

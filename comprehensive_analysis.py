@@ -876,6 +876,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         'ensemble_email': str, # 包含三周期预测（用于邮件显示）
       }
     """
+    # 市场情绪默认值（在 try 外初始化，保证异常路径下变量一定存在，且可被返回）
+    market_layer = 'normal'
+    dynamic_threshold = 0.50
+    up_ratio = 0.50
+
     try:
         import pandas as pd
         from datetime import datetime
@@ -890,12 +895,6 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
         # ========== 获取所有股票收益率数据用于市场情绪过滤 ==========
         # 参考 walk_forward_validation.py 的方案：使用所有股票的收益率计算上涨比例
-        market_layer = 'normal'
-        dynamic_threshold = 0.50
-        up_ratio = 0.50
-        market_layer = 'normal'
-        dynamic_threshold = 0.5
-
         try:
             from config import TRAINING_STOCKS as STOCK_LIST
             from data_services.tencent_finance import get_hk_stock_data_tencent
@@ -1553,6 +1552,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         return {
             'ensemble': result['ensemble'],
             'ensemble_email': result['ensemble_email'],
+            'market_layer': market_layer,
+            'dynamic_threshold': dynamic_threshold,
+            'up_ratio': up_ratio,
             'three_horizon_results': three_horizon_results,
             'chip_data': chip_data,
             'network_insights': network_insights,
@@ -1567,6 +1569,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         return {
             'ensemble': '',
             'ensemble_email': '',
+            'market_layer': market_layer,
+            'dynamic_threshold': dynamic_threshold,
+            'up_ratio': up_ratio,
             'three_horizon_results': {},
             'chip_data': {},
             'network_insights': {},
@@ -4868,6 +4873,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         network_insights = ml_predictions.get('network_insights', {})
         risk_reward_data = ml_predictions.get('risk_reward_data', {})
         historical_pl_data = ml_predictions.get('historical_pl_data', {})
+
+        # 市场情绪（供邮件顶部市场风险横幅使用，带兜底默认值）
+        market_layer = ml_predictions.get('market_layer', 'normal')
+        dynamic_threshold = ml_predictions.get('dynamic_threshold', 0.50)
+        up_ratio = ml_predictions.get('up_ratio', 0.50)
 
         # 加载模型准确率
         print("📝 加载模型准确率...")
