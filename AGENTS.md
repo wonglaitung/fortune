@@ -44,7 +44,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | - |
+| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 §5.18） |
@@ -66,7 +66,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **A股模型预测** | `python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only` | - |
 | **A股大模型建议** | `python3 a_stock_email.py --force --no-email` | - |
 | **A股综合分析** | `python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_*.txt --use-cached-predictions` | - |
-| **A股Walk-forward验证** | `python3 a_stock_walk_forward.py --horizon 20` | - |
+| **A股Walk-forward验证** | `python3 a_stock_walk_forward.py --horizon 20` | 成功后自动入库 CSV（`--no-commit` 关闭） |
 
 ### 缓存管理
 
@@ -133,6 +133,7 @@ python hsi_email.py --no-email
 | **A股股票代码前导零** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失（002655→2655） |
 | **A股样本权重** | 核心股权重3.0倍，扩展股1.0倍，训练时需传入 `sample_weight` |
 | **A股数据泄漏阈值** | 个股准确率正常范围50-60%，>65%为数据泄漏信号 |
+| **市场门槛禁用绝对阈值** | Isotonic 阶梯使 0.65 与 0.60 通过率完全相同（空转）；熊市/弱震荡门槛用校准概率 **P92/P90 分位**（`GATE_QUANTILES`，PIT），数据源须为 walk-forward 回测分布（`prediction_history` 右尾过窄会失效），见 `docs/DECISIONS.md` D8 |
 
 ---
 
@@ -510,6 +511,9 @@ test_df[col] = test_df[col].apply(
 ### Git 提交规范
 
 - 文件上传：只提交 `.md` 格式，不提交 `.json`/`.csv`
+  - **例外**：回测 `prediction_analysis.csv` 由 `scripts/commit_backtest_result.py` 自动入库
+    （分位门槛数据源，CI/本地须同源；每次入库自动 `git rm --cached` 旧的港股 20d CSV
+    只留最新，防仓库膨胀；快照维护见 `ml_services/market_regime.py` 注释）
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
 - 推送冲突：使用 `git pull --rebase`
 

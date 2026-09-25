@@ -443,6 +443,30 @@ ic = df['probability'].corr(df['actual_return'])
 
 ---
 
+### 5. Isotonic 阶梯下绝对阈值会空转，门槛须用分位 ⭐⭐⭐
+
+**证据**（2026-09-25，43,610 条回测校准概率）：绝对阈值 **0.65 与 0.60 通过率完全相同（均 10.89%）**——Isotonic 校准是阶梯函数，0.585→0.667 台阶间无样本，"正常 0.60 → 弱震荡 0.65 收紧"实际是空转。
+
+**做法**：市场情绪门槛用**分位数**（`GATE_QUANTILES` bear=P92 / weak=P90，PIT 按 as_of 计算），normal 保持 0.50 硬约束绝对值；实测 bear 0.6923 / weak 0.6667（不同台阶、有区分度），与旧绝对值量级一致、行为连续。
+
+**两个坑**：
+1. **分位数据源分布必须选对**：初版用 `prediction_history`（自选股收市批量，右尾过窄）→ 前 8% 分位仅 **0.5406，低于 0.55 买入线**，熊市门槛形同虚设。正确源=walk-forward 回测分布（43k 样本、与评估口径同源）。**分位值必须 > 买入分档线（0.60），否则收紧失效**。
+2. **CI/本地必须同源**：glob `output/*_catboost_20d/` 会命中 `*_a_stock_*` 目录（CI tracked 恰好最新是 A股的）；CI checkout 无本地 untracked 目录 → 会取到 4 个月前旧快照。修法：正则只认 `\d{8}_\d{6}_catboost_20d` 港股目录 + 内嵌 `GATE_SNAPSHOT` 兜底（与 CSV 实算同值）。
+
+**代码**：`ml_services/market_regime.py`；**决策**：`docs/DECISIONS.md` D8
+
+---
+
+### 6. 回测数据源要自动入库，否则静默陈旧 ⭐⭐
+
+**教训**：分位门槛/CI 依赖最新回测 CSV，靠手动提交必忘 → 数据源静默陈旧且无报错。
+
+**做法**：回测成功后自动入库（`scripts/commit_backtest_result.py`，由 `walk_forward_validation.py`/`a_stock_walk_forward.py` 在 try 成功路径调用）：提交 CSV + 同步 `GATE_SNAPSHOT` + `git rm --cached` 旧港股 20d CSV（只留最新防膨胀）；任何失败仅 WARNING、exit 0，**绝不影响回测结果**；`--no-commit` 关闭。推送安全前提：全部 workflow 为 schedule 触发，push 不烧 CI。
+
+**代码**：`scripts/commit_backtest_result.py`；**决策**：`docs/DECISIONS.md` D9
+
+---
+
 ## 四、模型训练
 
 ### 1. CatBoost 分类特征 NaN 处理 ⭐⭐
@@ -703,6 +727,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-09-25 | v10.9 | 新增：Isotonic 阶梯绝对阈值空转须分位（含数据源/CI 同源两坑）、回测数据源自动入库 |
 | 2026-07-30 | v10.8 | 新增：缓存验证需基于API实际能力、防御性代码需与上游逻辑协调 |
 | 2026-07-24 | v10.7 | 新增：系统诊断与维护规范经验 |
 | 2026-07-18 | v10.6 | 新增：截面标签中间变量泄漏经验（Return_Rank 泄漏） |

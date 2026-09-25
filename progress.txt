@@ -39,6 +39,10 @@ walk_forward 目录、5d/1d 目录；`select_csv_to_untrack` 只清旧港股 20d
 **验证**：`pytest tests/test_commit_backtest.py tests/test_market_gates.py
 tests/test_prompt_render.py` → **12 passed**（含临时 git 仓库端到端：20d 入库+清旧+
 快照同步、5d 只提交不改快照、纯函数单测）；py_compile 全过。
+**文档同步**：`AGENTS.md`（命令表自动入库标注、Git 规范 CSV 例外、警告表加"市场门槛
+禁用绝对阈值"）、`docs/DECISIONS.md`（D8 分位门槛 / D9 自动入库 + 否定表加 0.60=0.65
+空转命题）、`lessons.md` 三.5/三.6（分位空转与两坑、自动入库）、
+`docs/VALIDATION_GUIDE.md`（输出文件补 detail 目录、自动入库小节）、`README.md`（命令注释）。
 **文件**：`scripts/commit_backtest_result.py`（新）、`ml_services/walk_forward_validation.py`、
 `a_stock_walk_forward.py`、`tests/test_commit_backtest.py`（新）、`progress.txt`。
 

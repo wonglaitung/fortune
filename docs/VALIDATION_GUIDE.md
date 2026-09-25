@@ -113,9 +113,25 @@ python3 ml_services/walk_forward_validation.py \
 
 ### 输出文件
 
+- `output/{timestamp}_{model_type}_{horizon}d/`：**详细结果目录**
+  - `prediction_analysis.csv`：全部预测明细（回测评估 `backtest_eval.py`、市场门槛分位数据源）
+  - `fold_metrics_detail.json`：每 Fold 指标 + Top 100 特征重要性
+  - `validation_summary.json`：总体验证结果
 - `output/walk_forward_{model_type}_{horizon}d_{timestamp}.json`：JSON格式数据
 - `output/walk_forward_{model_type}_{horizon}d_{timestamp}.csv`：CSV格式数据
 - `output/walk_forward_{model_type}_{horizon}d_{timestamp}.md`：Markdown格式报告
+
+### 回测产物自动入库
+
+验证成功结束后自动执行（`scripts/commit_backtest_result.py`；加 `--no-commit` 关闭）：
+
+1. 提交本目录 `prediction_analysis.csv`（CI/本地分位数据源须同源）
+2. 港股 20d 额外同步 `ml_services/market_regime.py` 的 `GATE_SNAPSHOT` 分位常量
+3. `git rm --cached` 仓库中其它港股 20d CSV（工作树保留，只留最新防膨胀）
+4. `commit [skip ci]` + `push`（所有 workflow 为 schedule 触发，push 不触发流水线）
+
+任何失败仅打印 WARNING、exit 0，**不影响回测结果**。A股 `a_stock_walk_forward.py`
+同样集成（只提交 CSV，不碰 20d 快照）；恒指输出在 `data/`、独立体系，不集成。
 
 ### 报告内容
 

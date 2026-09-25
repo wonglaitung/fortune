@@ -482,7 +482,7 @@ python3 detect_stock_anomalies.py --mode standalone --mode-type deep
 # 模型训练
 python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost
 
-# Walk-forward验证
+# Walk-forward验证（成功后自动入库 CSV+快照，--no-commit 关闭）
 python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
 
 # 风险回报率分析
