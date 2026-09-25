@@ -98,7 +98,7 @@
 
 ### 2.3 港股个股梯度提升模型（1d/5d CatBoost，20d LightGBM）
 
-**核心优势**：使用梯度提升集成算法（1d/5d CatBoost，**20d LightGBM**——管线级 A/B 胜出，见 [docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) §5.18），整合1023个技术指标、基本面数据、市场状态、网络特征和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
+**核心优势**：使用梯度提升集成算法（1d/5d CatBoost，**20d LightGBM**——管线级 A/B 胜出，见 [docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) §5.18；学习器**按周期分别选**，5d 实测 CatBoost 更优见 §5.20 与 [DECISIONS](docs/DECISIONS.md) D10），整合1023个技术指标、基本面数据、市场状态、网络特征和情感指标，对港股进行多周期涨跌预测。相比传统技术分析，机器学习模型能自动发现复杂的市场规律。
 
 **Walk-forward 验证结果**（38 folds，市场情绪过滤器启用，PIT 口径，20d 为 2026-09-25 回测）：
 

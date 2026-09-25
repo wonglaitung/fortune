@@ -47,7 +47,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
-| **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 §5.18） |
+| **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 §5.18）；**1d/5d 维持 CatBoost**（§5.20/D10） |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
@@ -117,6 +117,7 @@ python hsi_email.py --no-email
 | **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致 |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
 | **CatBoost 1天模型** | 噪音大，仅供参考 |
+| **学习器不可全局替换** | LightGBM 并非全面更优：20d LGBM 赢、**5d CatBoost 更优**（lift/IR/PBO/DSR 六项全占优、2026 转负）、1d 两者净IR≤0 双停 → 换学习器必须按周期分别 A/B（§5.20/D10） |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |
 | **恒指 vs 个股** | 恒指 1d 54.1%（显著优于随机）> 个股 20d 52.3%（不显著），个股预测需谨慎 |

@@ -28,6 +28,8 @@
 | D8 | **市场情绪门槛分位化（b 方案）**：熊市/弱震荡阈值 = 校准概率历史 **P92/P90 分位**（前约8%/前约10%，PIT），normal 保持 0.50 绝对值 | Isotonic 阶梯使绝对阈值**空转**：0.65 与 0.60 通过率同为 10.89%（0.585→0.667 台阶无样本）；分位值 bear 0.6923 / weak 0.6667 与旧绝对值量级一致、行为连续，且抗校准器重拟漂移。**数据源必须用 walk-forward 回测分布**（prediction_history 自选股右尾过窄，前8%仅 0.54<0.55 买入线 → 门槛失效，2026-09-25 实测证伪）。机制见 `ml_services/market_regime.py`（`GATE_QUANTILES`/`GATE_SNAPSHOT`/回退链 CSV→快照→绝对值） |
 | D9 | **回测产物自动入库**：回测成功后自动提交 `prediction_analysis.csv` + 同步 `GATE_SNAPSHOT` + 清理旧港股 20d CSV（只留最新） | 分位门槛依赖最新回测 CSV，CI 与本地须同源；手动提交必静默陈旧。`scripts/commit_backtest_result.py`（失败仅 WARNING 不影响回测），`walk_forward_validation.py`/`a_stock_walk_forward.py` 集成，`--no-commit` 可关；恒指不集成（输出在 `data/`、独立体系）。push 失败自动 `pull --rebase --autostash` 重试一次；commit 只能走 index（pathspec 会把 `rm --cached` 的旧 CSV 从工作树重新提交，已实测排除），有其它预 stage 文件仅告警 |
 
+| D10 | **学习器按周期分别选，禁止"全部转 LightGBM"**：20d 用 LightGBM、**5d 维持 CatBoost**、1d 双双停用 | 同折同参数 A/B（38折/36m/59只/每折Top-500，§5.20）：**5d CatBoost 六项全优**——lift +1.6 vs +0.6pp、rank_ic 0.086 vs 0.075、净IR 0.57 vs 0.25、PBO 0.36 vs 0.50、DSR 0.813 vs 0.637、累计 +42.2% vs +10.3%，且 **2026 年 CatBoost +0.8pp / LightGBM −2.1pp**、std 5.9 vs 6.9pp；1d LightGBM 信号更强（rank_ic 0.016→0.034、PBO 0.64→0.31）但**净IR −1.52 仍≤0 → 🔴 双双停用**。**学习器优劣是"分周期"属性**（20d LGBM 赢、5d CatBoost 赢、1d 皆不可用），必须逐周期 A/B |
+
 ---
 
 ## 三、已验证 vs 已否定
@@ -47,6 +49,7 @@
 | 恒指信号 Long/Flat 优于买入持有（1/5/20d） | ❌ 全部不优于（IR 0.11–0.13 vs 基准 0.38–0.49） |
 | 恒指行情感知过滤能"救活"异常抄底（R1/R3 短期强势） | ❌ **短期强势有害**（IR 转负）；R2（恒指>MA200）提升整体 IR 1.55→2.40 但逐年仍依赖 2025 |
 | 绝对阈值 0.60/0.65 能区分正常/弱震荡市场 | ❌ Isotonic 阶梯空转：两者通过率同为 **10.89%**（43,610 条回测）；须改分位门槛（D8） |
+| **"全部转 LightGBM 会更好"**（1d/5d/20d 统一） | ❌ **分周期而异**：20d LightGBM 赢（§5.18）、**5d CatBoost 赢**（lift/IC/IR/PBO/DSR/收益六项全优，2026 年 LGBM 转负）、1d 两者净IR≤0 皆停用（§5.20） |
 
 ---
 

@@ -8,6 +8,41 @@
 
 ## 最新进展
 
+### 2026-09-26 LightGBM A/B（1d/5d）：学习器按周期分选，5d 不转 ⭐⭐⭐
+
+**起因**：用户问"为什么不全部都转为 LightGBM"。
+
+**执行**：`walk_forward_validation.py --learner lightgbm`，与 CatBoost 基线**同折同参数**
+（38折 / 36m / 2020-06-01~2026-07-31 / 59只 / 每折 Top-500 特征选择 / 阈值 0.55）。
+两进程并行约 13 小时（1d 00:27、5d 00:55 完成），日志确认 `learner=lightgbm`（38折×2行）。
+
+**结果**（护栏按 D2 判定）：
+
+| 周期 | 准确率 | 超额 lift | rank_ic | 净IR | PBO | DSR | 判定 |
+|------|--------|-----------|---------|------|-----|-----|------|
+| 1d CB | 50.8% | +1.2pp (p=0.010) | 0.016 | −2.04 | 0.64 | 0.000 | 🔴 停用 |
+| 1d **LGB** | **51.8%** | **+1.3pp (p=0.008)** | **0.034** | −1.52 | **0.31** | 0.000 | 🔴 停用 |
+| 5d **CB** | **51.8%** | **+1.6pp (p=0.076)** | **0.086** | **0.57** | **0.36** | **0.813** | 🟡 低配 |
+| 5d LGB | 51.2% | +0.6pp (p=0.49) | 0.075 | 0.25 | 0.50 | 0.637 | 🟡 低配 |
+
+**5d 逐年 lift**：CB −2.0/−0.6/**+3.4**/**+0.8**（std 5.9pp）；LGB +1.2/−3.5/+3.0/**−2.1**（std 6.9pp）
+→ LightGBM **2026 转负**且更不稳定；累计净收益 CB **+42.2%** vs LGB +10.3%。
+
+**结论（D10）**：20d 用 LightGBM、**5d 维持 CatBoost**、1d 双双停用（IR≤0）。
+**学习器优劣是"分周期"属性，禁止一刀切全转**，必须按周期分别 A/B；
+5d LightGBM 的 IC 更高但组合层更差（IC ≠ 组合 IR 老问题）。
+
+**产物**：
+- `output/validation_report_lightgbm_1d_5d_20260926.md`（A/B 总报告）
+- `output/backtest_eval_lightgbm_{1d,5d}.md`、`output/monthly_guardrail_{lightgbm,catboost}_{1d,5d}.md`
+- 文档：`docs/MODEL_IMPROVEMENT_PLAN.md` §5.20、`docs/DECISIONS.md` D10 + 已否定表、
+  `lessons.md` 四-8（v10.11）、AGENTS.md 核心警告「学习器不可全局替换」、README §2.3
+
+**遗留改进**：walk-forward 报告文件名/md 仍标 `catboost`（沿用 `--model-type` 默认），
+实际学习器只能靠日志 `🔁 学习器: lightgbm` 确认 → 应在报告记录 `learner` 字段。
+
+**文件**：上述 .md、`progress.txt`。
+
 ### 2026-09-25 README/AGENTS 数据全面刷新（以最新回测为准）⭐
 
 **数据源**：`output/20260925_044407_catboost_20d`（backtest_eval 2026-09-26 出数）、
