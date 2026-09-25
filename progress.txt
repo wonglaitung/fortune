@@ -8,6 +8,14 @@
 
 ## 最新进展
 
+### 2026-09-25 DEPLOYMENT T2 增加元标签 Kelly（Isotonic 校准）仓位 ⭐
+
+**改动** `docs/DEPLOYMENT.md` T2：仓位策略加入**元标签 Kelly（Isotonic 校准）**——
+`0.5×clip(2p−1,0,1)` 定仓；实证 ΔIR 2025 +0.35、全期校准 +0.25（bootstrap 显著）；
+过滤弃用；单笔 cap；主模型护栏 🟡/🔴 时同步收缩。
+
+**文件**：`docs/DEPLOYMENT.md`、`progress.txt`。
+
 ### 2026-09-25 元标签重启：LightGBM 主模型 edge 增强后 Kelly 增量转显著 ⭐⭐⭐
 
 **背景**：D6 曾因"主模型 edge 不足、增量不显著"暂停元标签。LightGBM 主模型 IC +38% 后重跑
