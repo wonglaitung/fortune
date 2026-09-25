@@ -893,6 +893,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
         market_layer = 'normal'
         dynamic_threshold = 0.50
         up_ratio = 0.50
+        market_layer = 'normal'
+        dynamic_threshold = 0.5
 
         try:
             from config import TRAINING_STOCKS as STOCK_LIST
@@ -5401,7 +5403,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 
                 # 构建完整的邮件内容（综合买卖建议 + 信息参考）
                 # 注意：不添加标题，因为HTML模板已经有了标题
-                full_content = f"""{response}
+                # 市场风险横幅（置顶）：按市场情绪给出当日操作指引
+                banner_map = {
+                    'extreme_bear': '🔴 极端熊市：暂停买入，等待市场企稳',
+                    'bear': '🟠 熊市：仅考虑高置信（≥0.70）买入，严格止损',
+                    'weak': '🟡 弱震荡：谨慎，优先高置信（≥0.65）信号',
+                    'normal': '🟢 正常市场：常规操作',
+                }
+                banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}，动态阈值 {dynamic_threshold:.2f}）\n\n"
+                full_content = banner_line + f"""{response}
 
 ---
 

@@ -8,6 +8,19 @@
 
 ## 最新进展
 
+### 2026-09-25 动态阈值/市场情绪增强：邮件顶部市场风险横幅 ⭐
+
+**改动** `comprehensive_analysis.py`：
+- 给 `market_layer`/`dynamic_threshold` 设默认值（防市场情绪计算失败时未定义）；
+- 邮件 `full_content` 顶部插入**市场风险横幅**（markdown blockquote，渲染在邮件最前）：
+  按 `market_layer` 给出当日操作指引——🟢正常/🟡弱震荡(≥0.65)/🟠熊市(≥0.70 严格止损)/🔴极端熊市(暂停买入)，
+  并附上涨比例与动态阈值。
+- 与既有逻辑合并：market_adjust 表格阈值、LLM prompt 的 market_layer、极端熊市警告。
+
+**用户价值**：打开邮件第一眼即见"今天该不该买、买多紧"；极端熊市明确提示"暂停买入，等待企稳"。
+
+**文件**：`comprehensive_analysis.py`、`progress.txt`。
+
 ### 2026-09-25 数据源可靠性：重试 + 备用源 + 缓存兜底 ⭐
 
 **改动** `data_services/tencent_finance.py`：
