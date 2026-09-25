@@ -1912,7 +1912,8 @@ def save_a_stock_prediction_history(predictions, horizon, predict_date=None):
         date_str = predict_date if predict_date else now.strftime('%Y-%m-%d')
 
         new_records = []
-        existing_ids = {p.get('prediction_id') for p in history['predictions']}
+        updated_records = 0
+        existing_map = {p.get('prediction_id'): p for p in history['predictions']}
         for pred in predictions:
             if not pred:
                 continue
@@ -1947,19 +1948,26 @@ def save_a_stock_prediction_history(predictions, horizon, predict_date=None):
                 'actual_direction': None,
                 'evaluated_at': None,
             }
-            if record['prediction_id'] not in existing_ids:
+            # 同 prediction_id 已存在时：
+            # - 尚未回测（evaluated_at 为空）→ 用新值覆盖，保证同日重复运行后记录与邮件一致
+            # - 已回测 → 不动，保护性能监控/校准训练样本
+            existing_record = existing_map.get(record['prediction_id'])
+            if existing_record is None:
                 new_records.append(record)
+            elif existing_record.get('evaluated_at') is None:
+                existing_record.update(record)
+                updated_records += 1
 
-        if new_records:
+        if new_records or updated_records:
             history['predictions'].extend(new_records)
             history['metadata']['last_updated'] = timestamp
             history['metadata']['total_predictions'] = len(history['predictions'])
             with open(history_file, 'w', encoding='utf-8') as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
-            logger.info(f"已保存 {len(new_records)} 条A股预测记录到 {history_file}")
+            logger.info(f"已保存 {len(new_records)} 条新A股预测记录, 更新 {updated_records} 条已有记录到 {history_file}")
         else:
             logger.info(f"A股预测历史无新增记录（{history_file}）")
-        return len(new_records)
+        return len(new_records) + updated_records
     except Exception as e:
         logger.error(f"保存A股预测历史失败: {e}")
         import traceback

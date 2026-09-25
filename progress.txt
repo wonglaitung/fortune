@@ -8,6 +8,27 @@
 
 ## 最新进展
 
+### 2026-09-25 修复：预测历史同日重复运行不更新（邮件与 history 不一致）⭐
+
+**根因** `save_prediction_to_history`（港股）/ `save_a_stock_prediction_history`（A股）为 append-only：
+同 `prediction_id` 已存在就整条跳过 → 同日第二次+运行写 `0 条`，历史停在**首次**（可能是盘中）
+的旧值，而邮件用新值。当天实证：14:51 HKT 盘中 run 写入 0.9303，18:29 HKT 收市后 run 日志
+`已保存 0 条`，history 停留 0.9303、邮件却是 0.8279→校准 0.57。
+
+**改动**（港股 `ml_services/ml_trading_model.py` + A股 `a_stock_ml_model.py`，逻辑对称）：
+- `existing_ids` → `existing_map`；同 ID 存在且 `evaluated_at is None`（未回测）→ `update()` 覆盖；
+  **已回测记录绝不覆盖**（保护 daily_confidence/性能监控训练样本）；
+- 写文件条件 `new_records or updated_records`；日志改「已保存 N 条新预测记录, 更新 M 条已有记录」。
+
+**验证**：`py_compile` 两文件通过；临时目录 4 场景测试双市场全过（首次追加 / 同日覆盖 /
+已回测拒绝覆盖 / 新日期追加）。
+
+**范围外（未改）**：CI 盘中手动 dispatch 无守卫（评估后按用户决定只修本项）；
+GitHub schedule 延迟导致日常综合分析邮件晚到数小时（非 bug，观察）；
+CI 每次重训致同日轮次间概率波动（P1+盘中守卫解决后影响收敛）。
+
+**文件**：`ml_services/ml_trading_model.py`、`a_stock_ml_model.py`、`progress.txt`。
+
 ### 2026-09-25 邮件/LLM 文案与口径改造：CatBoost 旧标签 → 机器学习+校准口径 ⭐
 
 **背景**：20d 生产模型已是 LightGBM（`lgbm_20d`=58.33%），`catboost_20d` 被 `ml_trading_model.py`
