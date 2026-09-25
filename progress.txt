@@ -8,6 +8,40 @@
 
 ## 最新进展
 
+### 2026-09-25 回测产物自动入库（分位数据源持续更新链路）⭐
+
+**动机**：分位门槛依赖最新回测 CSV（CI 需与本地同源），此前回测跑完 CSV 留在本地
+untracked，数据源会静默陈旧。用户确认"之后本地回测数据都上 GitHub"。
+
+**机制**（新脚本 `scripts/commit_backtest_result.py`，由回测入口成功后自动调用）：
+1. 读新回测 CSV → `compute_gate_thresholds` 算分位（as_of=CSV 最大 Date）
+2. 同步 `ml_services/market_regime.py` 的 `GATE_SNAPSHOT`/`GATE_SNAPSHOT_AS_OF`
+   （正则替换，纯函数 `update_snapshot_source`）
+3. `git add` 本目录 CSV + market_regime.py；`git rm --cached` **其它**港股 20d CSV
+   （工作树保留——仓库只保留"最新"语义，防 4.3MB/次膨胀）
+4. commit `[skip ci] 回测入库: <目录> + GATE_SNAPSHOT 同步` + push（`--no-push` 可关）
+5. **任何失败只 WARNING、exit 0**，绝不影响回测结果
+
+**集成入口**：
+- 港股 `ml_services/walk_forward_validation.py`：save_report 后调用（1/5/20d 均覆盖；
+  5d/1d 只提交 CSV 不改快照——快照是 20d 语义）；新增 `--no-commit`
+- A股 `a_stock_walk_forward.py`：`_save_report` 返回 detail_dir、validate 存
+  `last_detail_dir`，main 成功后调用（A股目录不匹配 `HK20D_RE`，只提交 CSV
+  不碰快照）；新增 `--no-commit`
+- 恒指 `hsi_walk_forward.py`：**不集成**（输出在 `data/hsi_walk_forward/`、无回测目录
+  结构、独立体系，不进分位源）
+- 所有 workflow 均 schedule 触发，push 不会触发流水线（自动 push 安全）
+
+**边界防护**（测试固化）：`HK20D_RE = ^output/\d{8}_\d{6}_catboost_20d/...` 只认
+港股时间戳目录——排除 `*_a_stock_*`（否则 A股概率会污染 20d 快照）、嵌套
+walk_forward 目录、5d/1d 目录；`select_csv_to_untrack` 只清旧港股 20d。
+
+**验证**：`pytest tests/test_commit_backtest.py tests/test_market_gates.py
+tests/test_prompt_render.py` → **12 passed**（含临时 git 仓库端到端：20d 入库+清旧+
+快照同步、5d 只提交不改快照、纯函数单测）；py_compile 全过。
+**文件**：`scripts/commit_backtest_result.py`（新）、`ml_services/walk_forward_validation.py`、
+`a_stock_walk_forward.py`、`tests/test_commit_backtest.py`（新）、`progress.txt`。
+
 ### 2026-09-25 市场门槛分位化（b 方案）：bear/weak 阈值改动态分位 ⭐
 
 **动机**：Isotonic 阶梯导致旧绝对阈值空转——实测 0.60 与 0.65 通过率完全相同

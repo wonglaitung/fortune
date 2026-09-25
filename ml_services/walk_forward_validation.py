@@ -1567,6 +1567,9 @@ def main():
     parser.add_argument('--learner', type=str, default=None,
                        help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
 
+    parser.add_argument('--no-commit', action='store_true',
+                       help='跳过回测产物自动 git 入库（prediction_analysis.csv + GATE_SNAPSHOT 同步）')
+
     args = parser.parse_args()
 
     # 获取股票列表
@@ -1612,6 +1615,18 @@ def main():
         print(f"  - CSV:  {output_files['csv_file']}")
         print(f"  - MD:   {output_files['md_file']}")
         print(f"{'='*80}\n")
+
+        # 自动入库：prediction_analysis.csv + GATE_SNAPSHOT 同步（失败不影响结果）
+        if not args.no_commit:
+            try:
+                import subprocess
+                tool = os.path.join(os.path.dirname(os.path.dirname(
+                    os.path.abspath(__file__))), 'scripts', 'commit_backtest_result.py')
+                r = subprocess.run([sys.executable, tool, output_files['detail_dir']],
+                                   capture_output=True, text=True, timeout=600)
+                print(r.stdout or r.stderr)
+            except Exception as e:
+                print(f"⚠️ 回测入库失败（不影响结果）: {e}")
 
     except Exception as e:
         logger.error(f"验证失败: {e}")

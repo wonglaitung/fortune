@@ -226,7 +226,7 @@ class AStockWalkForwardValidator:
         self._print_overall_results(overall_result)
 
         # 保存报告
-        self._save_report(report)
+        self.last_detail_dir = self._save_report(report)
 
         return report
 
@@ -844,6 +844,8 @@ class AStockWalkForwardValidator:
         print(f"  - MD: {md_file}")
         print(f"  - 详情目录: {detail_dir}")
 
+        return detail_dir
+
     def _generate_markdown_report(self, report, output_file):
         """生成Markdown格式报告"""
         config = report['validation_config']
@@ -921,6 +923,8 @@ def main():
     # 功能开关
     parser.add_argument('--no-market-filter', action='store_true',
                        help='禁用市场情绪过滤器')
+    parser.add_argument('--no-commit', action='store_true',
+                       help='跳过回测产物自动 git 入库（prediction_analysis.csv）')
 
     args = parser.parse_args()
 
@@ -948,6 +952,19 @@ def main():
         print(f"\n{'='*80}")
         print("✅ 验证完成")
         print(f"{'='*80}\n")
+
+        # 自动入库：prediction_analysis.csv（A股目录不匹配分位源正则，不会改 GATE_SNAPSHOT）
+        detail_dir = getattr(validator, 'last_detail_dir', None)
+        if detail_dir and not args.no_commit:
+            try:
+                import subprocess
+                tool = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    'scripts', 'commit_backtest_result.py')
+                r = subprocess.run([sys.executable, tool, detail_dir],
+                                   capture_output=True, text=True, timeout=600)
+                print(r.stdout or r.stderr)
+            except Exception as e:
+                print(f"⚠️ 回测入库失败（不影响结果）: {e}")
 
     except Exception as e:
         logger.error(f"验证失败: {e}")
