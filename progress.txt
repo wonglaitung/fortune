@@ -8,6 +8,15 @@
 
 ## 最新进展
 
+### 2026-09-25 VALIDATION_GUIDE 新增「月度护栏（Guardrail）」章节 ⭐
+
+**新增** `docs/VALIDATION_GUIDE.md`「月度护栏」：定义（决策闸门，防虚假 alpha 上线）、
+判定规则（D2：净IR≥0.7 且 PBO<0.5 且 DSR≥0.95→🟢）、两层指标表
+（信号层：RankIC/ICIR/lift/方向技能；组合层：净IR/PBO/DSR/P(IR>0.5)/CI/n_eff/换手）、
+为什么不用准确率、应用示例（20d TopK 全期🟡 vs 36m🟢）。
+
+**文件**：`docs/VALIDATION_GUIDE.md`、`progress.txt`。
+
 ### 2026-09-25 删除废弃 LightGBMModel/GBDTModel 旧实现（~1290 行）⭐
 
 **背景**：旧 `LightGBMModel`/`GBDTModel`（3717-5009 行）是泄漏/非 PIT 旧管线
