@@ -4486,9 +4486,12 @@ class CatBoostModel(BaseTradingModel):
             else:
                 existing_data = {}
             
-            # 更新当前模型的准确率
-            key = f'catboost_{horizon}d'
-            existing_data[key] = accuracy_info
+            # 更新当前模型的准确率（无验证分数时不覆盖旧值，避免写入0.0）
+            if catboost_scores:
+                key = f'catboost_{horizon}d'
+                existing_data[key] = accuracy_info
+            else:
+                logger.warning(f"无{horizon}天验证分数，跳过更新 catboost_{horizon}d（保留旧值）")
             
             # 保存回文件
             with open(accuracy_file, 'w', encoding='utf-8') as f:
@@ -5058,6 +5061,45 @@ class CatBoostModel(BaseTradingModel):
             feat_imp.to_csv(out, index=False)
         except Exception as e:
             logger.warning(f"保存 LightGBM 特征重要性失败: {e}")
+
+        # 时间序列交叉验证评估（与 CatBoost 管线同口径），写入 model_accuracy.json 供综合分析展示
+        try:
+            from sklearn.model_selection import TimeSeriesSplit
+            tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
+            lgb_scores, lgb_f1_scores = [], []
+            for fold, (tr_idx, va_idx) in enumerate(tscv.split(X), 1):
+                fold_model = lgb.LGBMClassifier(**lgb_params)
+                fold_model.fit(X[tr_idx], y[tr_idx])
+                y_pred_fold = fold_model.predict(X[va_idx])
+                fold_acc = accuracy_score(y[va_idx], y_pred_fold)
+                fold_f1 = f1_score(y[va_idx], y_pred_fold, zero_division=0)
+                lgb_scores.append(fold_acc)
+                lgb_f1_scores.append(fold_f1)
+                print(f"   Fold {fold} 验证准确率: {fold_acc:.4f}, 验证F1分数: {fold_f1:.4f}")
+
+            accuracy_info = {
+                'model_type': 'lgbm',
+                'horizon': horizon,
+                'accuracy': float(np.mean(lgb_scores)),
+                'std': float(np.std(lgb_scores)),
+                'f1_score': float(np.mean(lgb_f1_scores)),
+                'f1_std': float(np.std(lgb_f1_scores)),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            accuracy_file = 'data/model_accuracy.json'
+            if os.path.exists(accuracy_file):
+                with open(accuracy_file, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+            else:
+                existing_data = {}
+            existing_data[f'lgbm_{horizon}d'] = accuracy_info
+            with open(accuracy_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            logger.info(f"LightGBM {horizon}d 准确率已保存到 {accuracy_file}: "
+                        f"{accuracy_info['accuracy']:.4f} (±{accuracy_info['std']:.4f})")
+        except Exception as e:
+            logger.warning(f"评估/保存 LightGBM 准确率失败（不影响训练）: {e}")
+
         return None
 
     def get_dynamic_threshold(self, market_regime=None, vix_level=None, base_threshold=0.55):

@@ -420,7 +420,7 @@ def compute_hk_stock_dimensions(stock_data=None, three_horizon_entry=None, risk_
 
     Args:
         stock_data: dict from LLM extraction
-            - catboost_prob_20d/5d/1d, price_change, rsi, ma5, ma20
+            - ml_prob_20d/5d/1d（旧名 catboost_prob_* 兜底）, price_change, rsi, ma5, ma20
             - current_price, risk_score, return_score (optional)
         three_horizon_entry: dict from three_horizon_results[code]
             - predictions: {horizon: {probability, direction}}
@@ -441,7 +441,7 @@ def compute_hk_stock_dimensions(stock_data=None, three_horizon_entry=None, risk_
     scores = {}
 
     # ═══ 1. Trend: CatBoost 20d probability ═══
-    prob_20d = stock_data.get('catboost_prob_20d', None)
+    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', None))
     if prob_20d is None:
         preds = three_horizon_entry.get('predictions', {})
         if isinstance(preds.get(20), dict):

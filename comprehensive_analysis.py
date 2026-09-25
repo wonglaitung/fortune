@@ -744,23 +744,40 @@ def load_model_accuracy(horizon=20):
     - horizon: 预测周期（默认20天）
 
     返回:
-    - dict: 包含1天、5天、20天三个周期的CatBoost准确率
+    - dict: 各周期生产模型准确率
       {
-        'catboost': {'accuracy': float, 'std': float},  # 指定horizon的准确率
+        'ml_20d': {'accuracy': float, 'std': float},  # 20天生产模型（优先LightGBM）
+        'learner_20d': str,                          # 20天生产学习器名
+        'catboost': {'accuracy': float, 'std': float},  # 兼容旧字段（指定horizon）
         '1d': {'accuracy': float, 'std': float},
         '5d': {'accuracy': float, 'std': float},
-        '20d': {'accuracy': float, 'std': float}
+        '20d': {'accuracy': float, 'std': float}     # 与 ml_20d 相同（20天生产模型）
       }
     """
     # 默认准确率值（如果文件不存在）
     default_accuracy = {
         'catboost': {'accuracy': 0.6101, 'std': 0.0219},
+        'ml_20d': {'accuracy': 0.5833, 'std': 0.0764},
         '1d': {'accuracy': 0.5100, 'std': 0.0500},
         '5d': {'accuracy': 0.5600, 'std': 0.0400},
-        '20d': {'accuracy': 0.6101, 'std': 0.0219}
+        '20d': {'accuracy': 0.5833, 'std': 0.0764}
     }
 
     accuracy_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'model_accuracy.json')
+
+    def _pick(data, keys, fallback):
+        """按优先级取第一个 accuracy>0 的记录（0值=未评估，视为无效）"""
+        import math
+        for key in keys:
+            entry = data.get(key)
+            if isinstance(entry, dict):
+                acc = entry.get('accuracy')
+                if isinstance(acc, (int, float)) and math.isfinite(acc) and acc > 0:
+                    return {
+                        'accuracy': acc,
+                        'std': entry.get('std', 0.0) or 0.0
+                    }
+        return fallback
 
     try:
         if os.path.exists(accuracy_file):
@@ -770,31 +787,29 @@ def load_model_accuracy(horizon=20):
 
             result = {}
 
-            # 加载指定horizon的准确率
-            catboost_key = f'catboost_{horizon}d'
-            if catboost_key in data:
-                result['catboost'] = {
-                    'accuracy': data[catboost_key].get('accuracy', default_accuracy['catboost']['accuracy']),
-                    'std': data[catboost_key].get('std', default_accuracy['catboost']['std'])
-                }
+            # 20天生产模型：LightGBM（历史CatBoost结果仅作回退）
+            lgbm_entry = data.get('lgbm_20d')
+            if isinstance(lgbm_entry, dict) and lgbm_entry.get('accuracy', 0) > 0:
+                result['learner_20d'] = 'LightGBM'
             else:
-                result['catboost'] = default_accuracy['catboost']
+                result['learner_20d'] = 'CatBoost'
+            result['ml_20d'] = _pick(data, ['lgbm_20d', 'catboost_20d'],
+                                     default_accuracy['ml_20d'])
 
-            # 加载三个周期的准确率
-            for period in ['1d', '5d', '20d']:
-                key = f'catboost_{period}'
-                if key in data:
-                    result[period] = {
-                        'accuracy': data[key].get('accuracy', default_accuracy[period]['accuracy']),
-                        'std': data[key].get('std', default_accuracy[period]['std'])
-                    }
-                else:
-                    result[period] = default_accuracy[period]
+            # 兼容旧字段：指定horizon的CatBoost准确率（0值回退默认）
+            result['catboost'] = _pick(data, [f'catboost_{horizon}d'],
+                                       default_accuracy['catboost'])
+
+            # 加载三个周期的准确率（1/5天生产模型为CatBoost，20天为LightGBM）
+            for period in ['1d', '5d']:
+                result[period] = _pick(data, [f'catboost_{period}'],
+                                       default_accuracy[period])
+            result['20d'] = result['ml_20d']
 
             print(f"✅ 已加载模型准确率: {accuracy_file}")
             print(f"   CatBoost 1天: {result['1d']['accuracy']:.2%} (±{result['1d']['std']:.2%})")
             print(f"   CatBoost 5天: {result['5d']['accuracy']:.2%} (±{result['5d']['std']:.2%})")
-            print(f"   CatBoost 20天: {result['20d']['accuracy']:.2%} (±{result['20d']['std']:.2%})")
+            print(f"   {result['learner_20d']} 20天: {result['20d']['accuracy']:.2%} (±{result['20d']['std']:.2%})")
             return result
         else:
             print(f"⚠️ 准确率文件不存在: {accuracy_file}，使用默认值")
@@ -1096,8 +1111,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     if sector_code:
                         sector_type = get_sector_type(sector_code)
 
-                # 20天预测概率
+                # 20天预测概率（优先用校准值，与邮件表格同口径；无三周期结果时回退CSV原始值）
                 probability = float(row['probability'])
+                confidence_20d = None
+                try:
+                    th_20d = three_horizon_results.get(stock_code, {}).get('predictions', {}).get(20) or {}
+                    if isinstance(th_20d.get('probability'), (int, float)):
+                        probability = float(th_20d['probability'])
+                    if isinstance(th_20d.get('confidence'), (int, float)):
+                        confidence_20d = float(th_20d['confidence'])
+                except (AttributeError, TypeError):
+                    pass
 
                 # 根据市场情绪和概率判断方向
                 if market_layer == 'extreme_bear':
@@ -1166,6 +1190,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         'prediction_20d': direction,
                         'probability_20d': round(probability, 4),
                         'probability_display': probability_display,  # 市场情绪调整后的显示
+                        'ml_conf_20d': round(confidence_20d, 4) if confidence_20d is not None else None,
                         'current_price': float(row['current_price']) if pd.notna(row.get('current_price')) else None,
                         'chip_resistance': resistance_level,
                         'market_layer': market_layer,
@@ -1179,7 +1204,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
-            catboost_text_llm += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `probability_20d`: 20天上涨概率（已Isotonic校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `ml_conf_20d`: 方向判对概率（置信度，0-1），与 probability_20d（上涨概率）含义不同，可一并写进推荐理由\n"
             catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
             catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal）\n"
@@ -1266,6 +1292,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             p1d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_1d:.2f}'  # 亮红色
                         else:
                             p1d_str = f"{direction_1d} {prob_1d:.2f}"
+                        conf_1d = pred_1d.get('confidence')
+                        if isinstance(conf_1d, (int, float)):
+                            p1d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_1d:.0%})</span>'
 
                         # 5天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
                         pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
@@ -1280,6 +1309,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             p5d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_5d:.2f}'  # 亮红色
                         else:
                             p5d_str = f"{direction_5d} {prob_5d:.2f}"
+                        conf_5d = pred_5d.get('confidence')
+                        if isinstance(conf_5d, (int, float)):
+                            p5d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_5d:.0%})</span>'
 
                         # 20天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
@@ -1294,6 +1326,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             p20d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_20d:.2f}'  # 亮红色
                         else:
                             p20d_str = f"{direction_20d} {prob_20d:.2f}"
+                        conf_20d = pred_20d.get('confidence')
+                        if isinstance(conf_20d, (int, float)):
+                            p20d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_20d:.0%})</span>'
 
                         # 模式和交易建议
                         pattern = pred.get('pattern', '-')
@@ -1345,8 +1380,11 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         # 获取网络洞察
                         network_insight_str = network_insights.get(stock_code, {}).get('insight_str', '未知')
 
-                        # 计算市场调整显示
-                        probability_20d = float(row['probability'])
+                        # 计算市场调整显示（与"20天预测"列同口径：优先用校准概率，缺失时回退CSV原始概率）
+                        try:
+                            probability_20d = float(prob_20d)
+                        except (TypeError, ValueError):
+                            probability_20d = float(row['probability'])
                         if market_layer == 'extreme_bear':
                             market_adjust_display = '🔴暂停'
                         elif market_layer == 'bear':
@@ -1387,6 +1425,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
                 catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
                 catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
+                catboost_text_email += "- 概率已经过 Isotonic 校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
+                catboost_text_email += "- <span style=\"color: #9ca3af;\">(置信xx%)</span>：**模型方向判对概率**（由历史预测拟合），与上涨概率是两回事\n"
 
                 # 添加市场调整说明
                 catboost_text_email += f"\n**市场调整说明**：\n"
@@ -3481,9 +3521,9 @@ STOCK_ANALYSIS_PROMPT = """你是一个股票分析专家。请从以下综合�
 1. **stock_name**: 股票名称
 2. **current_price**: 当前价格（数值）
 3. **price_change**: 涨跌幅（百分比数值，如 -2.5）
-4. **catboost_prob_20d**: CatBoost 20天上涨概率（百分比数值，如 37.12）
-5. **catboost_prob_5d**: CatBoost 5天上涨概率
-6. **catboost_prob_1d**: CatBoost 1天上涨概率
+4. **ml_prob_20d**: 机器学习20天上涨概率（已校准，百分比数值，如 54.32）
+5. **ml_prob_5d**: 机器学习5天上涨概率（已校准，百分比数值）
+6. **ml_prob_1d**: 机器学习1天上涨概率（已校准，百分比数值）
 7. **three_period_pattern**: 三周期模式（如"下跌中继⭐(001)"）
 8. **transmission_mode**: 传导模式验证结果（如"✅传导(1天↓✓ 5天↓✓ 20天↑⏳)"）
 9. **chip_resistance**: 筹码阻力（低/中/高）
@@ -3540,7 +3580,7 @@ STOCK_ANALYSIS_PROMPT = """你是一个股票分析专家。请从以下综合�
 {{
     "stock_name": "...",
     "current_price": ...,
-    "catboost_prob_20d": ...,
+    "ml_prob_20d": ...,
     ...
 }}
 
@@ -3562,17 +3602,17 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 请按以下步骤进行综合分析：
 
 ## 第一步：硬约束检查
-- CatBoost 20天上涨概率 ≤ 50% → **禁止买入**
-- CatBoost 20天上涨概率 ≥ 60% → 高置信度，进入下一步
-- CatBoost 20天上涨概率 50-60% → 中等置信度，需其他信号确认
+- ML 20天上涨概率（校准后） ≤ 50% → **禁止买入**
+- ML 20天上涨概率（校准后） ≥ 60% → 高置信度，进入下一步
+- ML 20天上涨概率（校准后） 50-60% → 中等置信度，需其他信号确认
 
 ## 第二步：方向一致性检查（关键）
-- 短期建议 + 中期建议 + CatBoost 三者方向一致 → **可买入**
+- 短期建议 + 中期建议 + ML 三者方向一致 → **可买入**
 - 短期建议"观察" + 中期建议"买入" → **观望**（方向冲突）
 - 短期建议"买入" + 中期建议"观察" → **观望**（方向冲突）
 - 短期建议"卖出" + 中期建议任何 → **禁止买入**
 
-**重要规则**：即使CatBoost概率>60%，如果短期/中期方向不一致，也应归入"观望"，而非"强烈买入"。
+**重要规则**：即使ML概率>60%，如果短期/中期方向不一致，也应归入"观望"，而非"强烈买入"。
 
 ## 第三步：市场环境检查
 - 市场状态为"熊市" → 提高阈值至0.70
@@ -3590,7 +3630,7 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 
 ## 分类标准
 
-| 分类 | CatBoost概率 | 短期建议 | 中期建议 | 说明 |
+| 分类 | ML概率 | 短期建议 | 中期建议 | 说明 |
 |------|-------------|---------|---------|------|
 | ⭐强烈买入 | ≥60% | 买入 | 买入 | 三重确认 |
 | 🟢买入 | 50-60% | 买入 | 买入 | 需其他信号确认 |
@@ -3626,9 +3666,9 @@ HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下
 # 分析框架
 
 ## 第一步：趋势判断
-- CatBoost 20天概率 > 60% 且短中期建议"买入" → 趋势向上，考虑持有或加仓
-- CatBoost 20天概率 50-60% → 趋势不明，谨慎持有
-- CatBoost 20天概率 < 50% → 趋势向下，考虑减仓或止损
+- ML 20天概率（校准后） > 60% 且短中期建议"买入" → 趋势向上，考虑持有或加仓
+- ML 20天概率（校准后） 50-60% → 趋势不明，谨慎持有
+- ML 20天概率（校准后） < 50% → 趋势向下，考虑减仓或止损
 
 ## 第二步：止盈止损判断
 - 当前价格接近目标价 → 考虑分批止盈
@@ -3776,7 +3816,7 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         except (ValueError, TypeError):
             lines.append(f"历史胜率: {win_rate}")
     else:
-        lines.append("CatBoost预测: 数据缺失")
+        lines.append("ML预测: 数据缺失")
 
     lines.append("")
 
@@ -4232,10 +4272,10 @@ def generate_stock_section_html(stock_data: dict) -> str:
         operation_advice = ""
         risk_warnings = []
 
-    # CatBoost 概率
-    prob_20d = stock_data.get('catboost_prob_20d', 0) or 0
-    prob_5d = stock_data.get('catboost_prob_5d', 0) or 0
-    prob_1d = stock_data.get('catboost_prob_1d', 0) or 0
+    # ML 概率
+    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 0)) or 0
+    prob_5d = stock_data.get('ml_prob_5d', stock_data.get('catboost_prob_5d', 0)) or 0
+    prob_1d = stock_data.get('ml_prob_1d', stock_data.get('catboost_prob_1d', 0)) or 0
 
     # 概率样式
     if prob_20d >= 60:
@@ -4423,7 +4463,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
             <h3>一、核心指标</h3>
             <table>
                 <tr><th>指标</th><th>数值</th><th>说明</th></tr>
-                <tr><td>CatBoost 20天上涨概率</td><td class="{prob_class}">{format_value_default(prob_20d, "0")}%</td><td>{prob_desc}</td></tr>
+                <tr><td>ML 20天上涨概率（校准后）</td><td class="{prob_class}">{format_value_default(prob_20d, "0")}%</td><td>{prob_desc}</td></tr>
                 <tr><td>当前价格</td><td>HK${format_value_default(stock_data.get('current_price'), "-")}</td><td>{price_change_display}</td></tr>
                 <tr><td>建议仓位</td><td>{format_value_default(stock_data.get('position_advice', 0), "0")}%</td><td></td></tr>
                 <tr><td>止损位</td><td>{stop_loss}</td><td>最大亏损控制在-8%以内</td></tr>
@@ -4743,8 +4783,8 @@ def run_detailed_stock_analysis(stock_codes: list, report_path: str, date_str: s
             if not stock_data.get('target_price'):
                 stock_data['target_price'] = round(current_p * 1.10, 2)
             if not stock_data.get('position_advice'):
-                # 基于CatBoost概率计算建议仓位
-                prob_20d = stock_data.get('catboost_prob_20d', 50) or 50
+                # 基于ML概率计算建议仓位
+                prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 50)) or 50
                 if prob_20d >= 60:
                     stock_data['position_advice'] = 5  # 高置信度 5%
                 elif prob_20d >= 55:
@@ -4865,7 +4905,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         print("📝 提取ML预测结果...")
         ml_predictions = extract_ml_predictions(ml_filepath, use_cached_predictions)
         print(f"✅ 提取完成\n")
-        print(f"   - CatBoost模型预测长度: {len(ml_predictions['ensemble'])} 字符\n")
+        print(f"   - 机器学习20天预测文本长度: {len(ml_predictions['ensemble'])} 字符\n")
 
         # 提取用于个股分析的额外数据
         three_horizon_results = ml_predictions.get('three_horizon_results', {})
@@ -4901,8 +4941,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_recommendations['medium_term']}
 
-【2. CatBoost模型20天预测结果】
-**重要：probability = 上涨概率（不是下跌概率）**
+【2. 机器学习20天预测结果（生产模型：LightGBM）】
+**重要：probability = 上涨概率（不是下跌概率），且已经过 Isotonic 校准（可直接读作预计上涨胜率）**
 {ml_predictions['ensemble']}
 
 【辅助信息源 - 操作时机参考】
@@ -4912,16 +4952,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 **🔴 核心硬性约束（不可违反）**
 
-⚠️ **CatBoost概率约束（最高优先级，无例外）**：
-- CatBoost概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
-- CatBoost概率 < 0.40 → **绝对禁止推荐持有或观望**
-- CatBoost概率 ≥ 0.50 → 可以考虑买入
-- CatBoost概率 ≥ 0.60 → 可以考虑强烈买入
+⚠️ **ML概率约束（最高优先级，无例外）**：
+- ML概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
+- ML概率 < 0.40 → **绝对禁止推荐持有或观望**
+- ML概率 ≥ 0.50 → 可以考虑买入
+- ML概率 ≥ 0.60 → 可以考虑强烈买入
 - **即使短期和中期方向一致，也绝对不允许违反此约束**
 - **违反此约束的建议将被视为错误**
 
 🔥 **决策顺序（严格遵守）**：
-第一步：检查CatBoost概率 → 不满足则直接排除
+第一步：检查ML概率 → 不满足则直接排除
 第二步：检查短期和中期一致性
 第三步：评估技术面和基本面
 第四步：生成综合建议
@@ -4931,79 +4971,77 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 **规则1：时间维度匹配（业界最佳实践）**
 - **短期信号（触发器）**：负责"何时做"（Timing）
 - **中期信号（确认器）**：负责"是否做"（Direction）
-- **CatBoost模型（验证器）**：负责提升置信度
+- **机器学习模型（验证器）**：负责提升置信度
 - 只有短期和中期方向一致时，才采取行动
 - 短期和中期冲突时，选择观望（避免不确定性）
 
-**决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
-- **第一步：检查CatBoost概率（硬约束）**
+**决策逻辑（短期触发 + 中期确认 + ML验证）**：
+- **第一步：检查ML概率（硬约束）**
   - probability ≤ 0.50 → 排除买入或强烈买入
   - probability ≥ 0.50 → 进入下一步
 - **第二步：检查短期和中期一致性**
   - 短期看好，中期看好 → 进入下一步
   - 方向不一致 → 观望
 - **第三步：生成建议**
-  - 强烈买入：短期看好，中期看好，CatBoost probability ≥ 0.60
-  - 买入：短期看好，中期看好，0.50 < CatBoost probability < 0.60
-  - 持有/观望：CatBoost probability ≤ 0.50 或 方向不一致
+  - 强烈买入：短期看好，中期看好，ML probability ≥ 0.60
+  - 买入：短期看好，中期看好，0.50 < ML probability < 0.60
+  - 持有/观望：ML probability ≤ 0.50 或 方向不一致
   - 卖出：短期看跌，中期看跌
 
 **硬约束检查清单（必须逐项核对）**：
-- [ ] CatBoost probability ≤ 0.50 → 绝对禁止推荐买入或强烈买入
-- [ ] CatBoost probability < 0.40 → 绝对禁止推荐持有或观望
-- [ ] CatBoost probability ≥ 0.50 → 可以考虑买入
-- [ ] CatBoost probability ≥ 0.60 → 可以考虑强烈买入
+- [ ] ML probability ≤ 0.50 → 绝对禁止推荐买入或强烈买入
+- [ ] ML probability < 0.40 → 绝对禁止推荐持有或观望
+- [ ] ML probability ≥ 0.50 → 可以考虑买入
+- [ ] ML probability ≥ 0.60 → 可以考虑强烈买入
 - [ ] 短期和中期方向是否一致？
 - [ ] 三重确认是否全部满足？
 
-**规则2：CatBoost概率评估**
+**规则2：ML概率评估**
 
-**CatBoost概率阈值**：
+**ML概率阈值（均为校准后概率口径）**：
 - **高置信度上涨**：probability > 0.60
 - **中等置信度观望**：0.50 < probability ≤ 0.60
 - **预测下跌**：probability ≤ 0.50
 
-**重要说明 - CatBoost probability 定义**：
-- `probability` = **上涨概率**（模型预测股票上涨的概率）
+**重要说明 - ML probability 定义（校准后）**：
+- `probability` = **上涨概率**（已经过 Isotonic 校准，可直接读作"预计上涨胜率"）
 - 下跌概率 = 1 - probability
-- 例如：probability = 0.35 表示上涨概率35%，下跌概率65%
-- 例如：probability = 0.68 表示上涨概率68%，下跌概率32%
+- 例如：probability = 0.55 表示预计55%概率上涨，45%概率下跌
+- 例如：probability = 0.68 表示预计68%概率上涨，32%概率下跌
 - **切勿将 probability 误解为下跌概率**
+- **不要再用"模型准确率±标准差"换算概率**：校准后的概率本身就是胜率估计，重复换算会得出错误结论
 
-**阈值优化说明**：
-- 当前CatBoost模型20天准确率：约{model_accuracy['catboost']['accuracy']:.2%}（CatBoost 单模型）
-- CatBoost模型准确率：{model_accuracy['catboost']['accuracy']:.2%}（±{model_accuracy['catboost']['std']:.2%}）
-- 强买入阈值0.60略高于CatBoost准确率，确保高置信度
-- 买入阈值0.50接近CatBoost准确率，平衡召回率和精确率
+**阈值说明（校准口径）**：
+- 当前20天生产模型：{model_accuracy['learner_20d']}
+- 强买入阈值0.60 = 要求校准后胜率>60%，高门槛（达标股票较少属正常）
+- 买入阈值0.50 = 要求校准后胜率>50%（优于随机），平衡召回率和精确率
 - 卖出阈值0.50确保下跌概率>50%
 - 观望区间0.45-0.50避免低置信度决策
 
-**重要说明 - CatBoost模型优势**：
-- **单模型策略**：CatBoost 单模型表现最佳（回测收益率 276.74%）
-- **自动分类特征处理**：无需手动编码，使用 LabelEncoder 自动处理
-- **更好的默认参数**：减少调参工作量，开箱即用
-- **稳定性优异**：标准差 ±{model_accuracy['catboost']['std']:.2%}，表现稳定
-- **置信度评估**：通过预测概率评估预测可靠性
+**重要说明 - 模型配置**：
+- 1天/5天：CatBoost；20天：LightGBM（生产学习器）
+- 20天准确率：{model_accuracy['ml_20d']['accuracy']:.2%}（±{model_accuracy['ml_20d']['std']:.2%}）
+- 置信度：`(置信xx)` = P(模型方向判对)，与 probability（上涨概率）含义不同，两者不可混用
 
 **重要说明 - 模型不确定性（风险提示）**：
-- CatBoost模型存在标准差（±{model_accuracy['catboost']['std']:.2%}），实际准确率可能波动
-- 但这**不能**作为降低CatBoost概率标准的理由
+- 20天模型准确率标准差约±{model_accuracy['ml_20d']['std']:.2%}，实际表现可能波动
+- 但这**不能**作为降低ML概率标准的理由
 - 对于probability在0.50-0.60之间的股票，建议观望而非买入
 - 对于probability在0.60-0.70之间的股票，建议降低仓位（2-3%）而非4-6%
 
 **重要说明 - 信号协同（必须同时满足）**：
 - **短期信号（触发器）**：负责"何时做"（Timing）→ 必须100%满足
 - **中期信号（确认器）**：负责"是否做"（Direction）→ 必须100%满足
-- **CatBoost概率（硬性约束）**：负责验证方向性→ 必须100%满足
-- **三重确认：短期、中期、CatBoost三者必须同时满足，缺一不可**
+- **ML概率（硬性约束）**：负责验证方向性→ 必须100%满足
+- **三重确认：短期、中期、ML三者必须同时满足，缺一不可**
 
 **重要说明 - 时间维度标准化**：
 - 短期：1-5个交易日（日内到一周）
 - 中期：10-20个交易日（2-4周）
 - 长期：>20个交易日（超过1个月）
-- 当前映射：大模型短期建议 ↔ CatBoost模型预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
+- 当前映射：大模型短期建议 ↔ 机器学习20天预测（20天），大模型中期建议 ↔ 基本面分析（数周-数月）✅
 
-**规则3：CatBoost概率评估**
+**规则3：ML概率评估**
 - **高置信度上涨（probability > 0.60）**：信号可靠性最高，优先级提升
 - **中等置信度观望（0.50 < probability ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
 - **预测下跌（probability ≤ 0.50）**：信号可靠性低，建议观望，不进行交易
@@ -5011,23 +5049,24 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 如果probability低（≤0.50），降低为中等置信度
 
 **规则4：推荐理由格式**
-- 必须说明：短期建议+中期建议+CatBoost预测（probability）
-- 例如："短期建议买入（触发器），中期建议买入（确认器），CatBoost预测上涨概率0.72（高置信度），综合置信度高。注意CatBoost模型当前准确率约{model_accuracy['catboost']['accuracy']:.2%}（标准差约±{model_accuracy['catboost']['std']:.2%}），probability在0.72附近实际准确率可能在{model_accuracy['catboost']['accuracy']-model_accuracy['catboost']['std']:.2%} ~ {model_accuracy['catboost']['accuracy']+model_accuracy['catboost']['std']:.2%}之间"
+- 必须说明：短期建议+中期建议+机器学习20天预测（probability，已校准）
+- 例如："短期建议买入（触发器），中期建议买入（确认器），机器学习20天预测（校准后）上涨概率0.62（高置信度，置信0.58），综合置信度高"
+- 概率已经过 Isotonic 校准，直接引用即可；**不要**在理由里再做"模型准确率±标准差"换算
 
 请基于上述规则，完成以下任务：
 
-1. **一致性分析**（方案A核心：短期触发 + 中期确认 + CatBoost验证）：
+1. **一致性分析**（方案A核心：短期触发 + 中期确认 + ML验证）：
    - **第一步（核心）**：分析短期建议与中期建议的一致性
-     - 短期买入 + 中期买入 → 方向一致，考虑CatBoost验证
+     - 短期买入 + 中期买入 → 方向一致，考虑ML验证
      - 短期买入 + 中期观望 → 等待中期确认
      - 短期买入 + 中期卖出 → 冲突，观望
-     - 短期卖出 + 中期卖出 → 方向一致，考虑CatBoost验证
+     - 短期卖出 + 中期卖出 → 方向一致，考虑ML验证
      - 短期卖出 + 中期观望 → 等待中期确认
      - 短期卖出 + 中期买入 → 冲突，观望
-   - **第二步（验证）**：对短期中期一致的股票，分析CatBoost预测验证
-     - 如果CatBoost高置信度支持（probability>0.60），提升为强信号
-     - 如果CatBoost中等置信度支持（0.50<probability≤0.60），提升为中等信号
-     - 如果CatBoost低置信度（probability≤0.50），降低为弱信号或观望
+   - **第二步（验证）**：对短期中期一致的股票，分析机器学习20天预测验证
+     - 如果ML高置信度支持（probability>0.60），提升为强信号
+     - 如果ML中等置信度支持（0.50<probability≤0.60），提升为中等信号
+     - 如果ML低置信度（probability≤0.50），降低为弱信号或观望
    - 标注符合"强买入信号"、"买入信号"、"观望信号"、"卖出信号"的股票
 
 2. **个股建议排序**：
@@ -5041,26 +5080,26 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - 持有/观望（如有）：第三优先级
    - 卖出信号（如有）：最低优先级
 
-3.1. **特殊处理（CatBoost probability ≤ 0.50的股票）**：
+3.1. **特殊处理（ML probability ≤ 0.50的股票）**：
    - **绝对禁止**： probability ≤ 0.50 的股票不能出现在"强烈买入信号"或"买入信号"中
    - **正确处理**： probability ≤ 0.50 的股票应该出现在"持有/观望"或"卖出信号"中
-   - **理由说明**：在"推荐理由"中必须明确说明"CatBoost probability ≤ 0.50，违反硬约束，建议观望"
-   - **示例**："短期建议买入，中期建议买入，但CatBoost预测上涨概率0.48（≤0.50），违反硬约束，建议观望"
+   - **理由说明**：在"推荐理由"中必须明确说明"ML probability ≤ 0.50，违反硬约束，建议观望"
+   - **示例**："短期建议买入，中期建议买入，但机器学习20天预测上涨概率0.48（≤0.50），违反硬约束，建议观望"
 
 4. **风险提示**：
    - 分析当前市场整体风险
    - 给出仓位控制建议（建议仓位百分比，总仓位45%-55%）
    - 给出止损位建议（单只股票最大亏损不超过-8%）
    
-   **特别要求 - 考虑CatBoost模型不确定性**：
-   - CatBoost模型20天标准差约±{model_accuracy['catboost']['std']:.2%}
+   **特别要求 - 考虑机器学习模型不确定性**：
+   - 20天生产模型（{model_accuracy['learner_20d']}）准确率约{model_accuracy['ml_20d']['accuracy']:.2%}（标准差约±{model_accuracy['ml_20d']['std']:.2%}）
    - 对于probability在0.55-0.65之间的股票，建议仓位不超过2-3%
-   - 强买入信号（短期/中期一致且CatBoost高置信度）建议仓位4-6%
+   - 强买入信号（短期/中期一致且ML高置信度）建议仓位4-6%
    - 总仓位控制在45%-55%
    - **必须设置止损位，单只股票最大亏损不超过-8%**
-   - **严格遵循"短期触发 + 中期确认 + CatBoost验证"原则**：只有短期和中期方向一致且CatBoost验证时才行动
+   - **严格遵循"短期触发 + 中期确认 + ML验证"原则**：只有短期和中期方向一致且ML验证时才行动
    - 如果短期和中期建议冲突，优先选择观望，不进行交易
-   - 采用"三重确认"策略：短期、中期、CatBoost三者一致时才重仓操作
+   - 采用"三重确认"策略：短期、中期、ML三者一致时才重仓操作
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -5068,7 +5107,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 强烈买入信号（2-3只）
 1. [股票代码] [股票名称] 
-   - 推荐理由：[简短理由，例如：短期买入，中期买入，CatBoost预测上涨概率0.72（高置信度），方向一致]
+   - 推荐理由：[简短理由，例如：短期买入，中期买入，机器学习20天预测上涨概率0.72（高置信度），方向一致]
    - 操作建议：买入/卖出/持有/观望
    - 建议仓位：[X]%
    - 价格指引：
@@ -5433,7 +5472,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 二、机器学习预测结果（20天）
 
-### CatBoost模型（三周期准确率）
+### 机器学习模型（三周期准确率）（1/5天 CatBoost · 20天 LightGBM）
 
 **模型准确率**：
 
@@ -5442,6 +5481,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 | 1天 | **{model_accuracy['1d']['accuracy']:.2%}** | ±{model_accuracy['1d']['std']:.2%} |
 | 5天 | **{model_accuracy['5d']['accuracy']:.2%}** | ±{model_accuracy['5d']['std']:.2%} |
 | 20天 | **{model_accuracy['20d']['accuracy']:.2%}** | ±{model_accuracy['20d']['std']:.2%} |
+
+> 生产学习器：1/5天 CatBoost，20天 {model_accuracy['learner_20d']}（Walk-forward 验证口径）。下表概率均为 Isotonic 校准后概率，`置信xx%` 为模型方向判对概率。
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
@@ -5511,39 +5552,39 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ### ✦ 买入策略
 
-- **CatBoost 概率 ≥ 0.60** + **短期看好** + **中期看好** → 强烈买入
+- **ML 概率 ≥ 0.60** + **短期看好** + **中期看好** → 强烈买入
 
-- **0.50 < CatBoost 概率 < 0.60** + **短期看好** + **中期看好** → 买入
+- **0.50 < ML 概率 < 0.60** + **短期看好** + **中期看好** → 买入
 
-- **CatBoost 概率 ≤ 0.50** → 禁止买入（硬约束）
+- **ML 概率 ≤ 0.50** → 禁止买入（硬约束）
 
 
 
 ### ✦ 持有策略
 
-- **CatBoost 概率 > 0.60** + **大模型建议买入** → 强烈持有
+- **ML 概率 > 0.60** + **大模型建议买入** → 强烈持有
 
-- **0.50 < CatBoost 概率 ≤ 0.60** + **大模型建议买入** → 观望持有
+- **0.50 < ML 概率 ≤ 0.60** + **大模型建议买入** → 观望持有
 
-- **CatBoost 概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
+- **ML 概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
 
 
 
 ### ✦ 卖出策略
 
-- **CatBoost 概率 ≤ 0.50** + **短期看跌** + **中期看跌** → 卖出
+- **ML 概率 ≤ 0.50** + **短期看跌** + **中期看跌** → 卖出
 
-- **CatBoost 概率 < 0.40** → 禁止持有或观望（硬约束）
+- **ML 概率 < 0.40** → 禁止持有或观望（硬约束）
 
 
 
 ### ✦ 决策顺序（严格遵守）
 
-1. **第一步：检查 CatBoost 概率（硬约束）**
+1. **第一步：检查 ML 概率（硬约束）**
 
-   - CatBoost 概率 ≤ 0.50 → 排除买入或强烈买入
+   - ML 概率 ≤ 0.50 → 排除买入或强烈买入
 
-   - CatBoost 概率 ≥ 0.50 → 进入下一步
+   - ML 概率 ≥ 0.50 → 进入下一步
 
 2. **第二步：检查短期和中期一致性**
 
@@ -5553,13 +5594,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 3. **第三步：生成建议**
 
-   - 强烈买入：短期看好 + 中期看好 + CatBoost 概率 ≥ 0.60
+   - 强烈买入：短期看好 + 中期看好 + ML 概率 ≥ 0.60
 
-   - 买入：短期看好 + 中期看好 + 0.50 < CatBoost 概率 < 0.60
+   - 买入：短期看好 + 中期看好 + 0.50 < ML 概率 < 0.60
 
-   - 持有/观望：CatBoost 概率 ≤ 0.50 或 方向不一致
+   - 持有/观望：ML 概率 ≤ 0.50 或 方向不一致
 
-   - 卖出：短期看跌 + 中期看跌 + CatBoost 概率 ≤ 0.50
+   - 卖出：短期看跌 + 中期看跌 + ML 概率 ≤ 0.50
 
 ### ✦ 动态置信度阈值策略（根据市场环境调整）
 
@@ -5584,7 +5625,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ### ✦ 强烈买入信号
 **强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
 - **股票代码和名称**：如"0700.HK 腾讯控股"
-- **推荐理由**：详细的分析，说明短期建议+中期建议+CatBoost预测
+- **推荐理由**：详细的分析，说明短期建议+中期建议+机器学习20天预测（校准后）
 - **操作建议**：明确的买入/持有/卖出建议
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
@@ -5592,7 +5633,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ## 十一、风险提示
 
 1. **模型不确定性**：
-   - ML 20天 CatBoost模型标准差为±{model_accuracy['catboost']['std']:.2%}
+   - 20天生产模型（{model_accuracy['learner_20d']}）准确率{model_accuracy['ml_20d']['accuracy']:.2%}（标准差±{model_accuracy['ml_20d']['std']:.2%}）
    - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
@@ -5604,13 +5645,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 3. **投资原则**：
    - 短期触发 + 中期确认 + ML验证 = 高置信度信号
    - 短期和中期冲突 = 观望（避免不确定性）
-   - CatBoost概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
+   - ML概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
    - 总仓位控制在45%-55%，分散风险
 
 ## 十二、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：CatBoost（单模型）
+- ML预测：1/5天 CatBoost · 20天 LightGBM（概率已Isotonic校准）
 - 特征工程：2991个原始特征，500个精选特征（F-test+互信息混合方法）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
@@ -5621,8 +5662,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
-- 模型策略：CatBoost 单模型
-- 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）
+- 模型策略：1/5天 CatBoost · 20天 LightGBM 单学习器
+- 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）；`(置信xx)` = P(模型方向判对)
 
 """
 
@@ -5678,8 +5719,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                                 if not stock_data.get('target_price'):
                                     stock_data['target_price'] = round(current_p * 1.10, 2)
                                 if not stock_data.get('position_advice'):
-                                    # 基于CatBoost概率计算建议仓位
-                                    prob_20d = stock_data.get('catboost_prob_20d', 50) or 50
+                                    # 基于ML概率计算建议仓位
+                                    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 50)) or 50
                                     if prob_20d >= 60:
                                         stock_data['position_advice'] = 5  # 高置信度 5%
                                     elif prob_20d >= 55:

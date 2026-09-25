@@ -2,11 +2,38 @@
 
 **项目**：港股智能分析系统 + A股智能分析系统
 **状态**：生产就绪（港股）/ 特征增强中（A股）
-**最后更新**：2026-08-18
+**最后更新**：2026-09-25
 
 ---
 
 ## 最新进展
+
+### 2026-09-25 邮件/LLM 文案与口径改造：CatBoost 旧标签 → 机器学习+校准口径 ⭐
+
+**背景**：20d 生产模型已是 LightGBM（`lgbm_20d`=58.33%），`catboost_20d` 被 `ml_trading_model.py`
+写成 0.0，导致邮件"20天准确率 0.00%"；且 `probability` 早已 Isotonic 校准但 prompt 仍按原始口径解释。
+
+**改动 `comprehensive_analysis.py`**：
+- `load_model_accuracy()`：accuracy>0 才取值；20d 优先 `lgbm_20d`（回退 `catboost_20d`/默认），
+  新增 `ml_20d`/`learner_20d`，`result['20d']=ml_20d` → 邮件表格20天行直接正确。
+- 邮件章节标题、买入策略、风险提示、数据来源等**用户可见**"CatBoost" → "机器学习/LightGBM"
+  （1d/5d 仍 CatBoost，文件名/变量名保留不动）。
+- 全部 LLM prompt：`CatBoost概率/预测/置信度` → `ML概率/…`；阈值与 probability 定义改
+  **Isotonic 校准口径**（删除"准确率±标准差换算"句）；引用 `ml_20d`/`learner_20d`。
+- JSON 字段 `catboost_prob_1d/5d/20d` → **`ml_prob_*`**，读取点双名兜底；`scripts/stock_radar.py` 同步。
+- LLM JSON 新增 `ml_conf_20d`（方向判对概率），传给大模型可写进推荐理由。
+- **邮件三周期表格每格追加 `(置信xx%)`**（灰色小字，Isotonic conf_cal），图例补
+  "概率已校准可读作胜率 / 置信=P(方向判对)"。
+- **市场调整列与 LLM JSON 概率改用校准值**（缺失回退 CSV 原始值）——三处口径统一。
+
+**改动 `ml_services/ml_trading_model.py`**：CatBoost scores 为空时**不再写 accuracy=0.0**（改 warn）；
+`_train_lightgbm()` 增加 TimeSeriesSplit CV 评估并写 `lgbm_{h}d`（evaluation-only，不阻塞训练）。
+
+**验证**：`py_compile` 三文件通过；`load_model_accuracy()` 实测
+`1d=68.29% / 5d=67.48% / 20d(LightGBM)=58.33%`；AST 渲染 prompt+邮件 20 个 f-string
+无 `0.00%`、无残留 `catboost_prob`；`grep CatBoost` 仅剩 1d/5d 正当用法。
+
+**文件**：`comprehensive_analysis.py`、`ml_services/ml_trading_model.py`、`scripts/stock_radar.py`、`progress.txt`。
 
 ### 2026-09-25 修复：市场风险横幅 NameError（market_layer 作用域）⭐
 
