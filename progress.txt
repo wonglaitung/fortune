@@ -8,6 +8,34 @@
 
 ## 最新进展
 
+### 2026-09-25 邮件/LLM prompt 多角度评估后修正（A-F 六项）⭐
+
+**背景**：校准口径修复（e4670a95）后对 prompt 做多角度评估，发现并修复：
+- **A 模型身份矛盾（必修）**：CI 流水线实际 `--model-type catboost` 训练+预测，而 prompt/
+  邮件硬编码"20天生产模型：LightGBM"→ 现已**中性化**（"流水线当日训练、训练与预测同源的
+  单一学习器"），并删除 `learner_20d` 的所有 prompt 级引用；个股数据文本
+  `CatBoost/LightGBM N天预测` → `ML N天预测`。
+- **B 准确率陈旧（应修）**：`load_model_accuracy` 20d 改为**取 lgbm_20d/catboost_20d 中
+  timestamp 最新且 accuracy>0 的记录**（CI 每日训练 catboost 后即为当日值）；`_pick` 新增
+  `date` 字段；prompt/邮件引用准确率处均带"数据截至 {date}"；两个 workflow 的 commit 步骤
+  新增 `git add data/model_accuracy.json`（此前 CI 更新永不回流仓库）。
+- **C 阈值/仓位重标定**：校准分布（43,610 条）`>0.60` 仅 10.9%、`0.50-0.60` 占 48.8%。
+  原仓位条款互相打架（0.60-0.65 同时命中"限仓2-3%"与"强买入4-6%"、0.50-0.55 无条款）→
+  改为**唯一口径仓位映射**：≥0.60(前11%)→4-6%；0.55-0.60→2-3%；0.50-0.55→观望≤2%；
+  ≤0.50 禁买（硬约束不变）。阈值说明补校准分位事实；市场层阈值 **保持熊市0.70/弱震荡0.65**
+  （现分别对应前8%/前11%，达标少属正常，已在 prompt 说明；未做策略级改动）。
+- **D 三周期胜率免责**：`历史胜率` 列头改 `历史胜率*` + 表格脚注（embargo 后与随机无显著
+  差异）；给 LLM 的个股数据 `历史胜率:` 行内加"未经显著性验证，不作决策依据"。
+- **F 回归防护**：新增 `tests/test_prompt_render.py`（3 项：渲染无 `0.00%`/旧字段
+  `catboost_prob`、prompt 无硬编码学习器矛盾、STOCK_ANALYSIS_PROMPT 用 `ml_prob_20d`），
+  已并入 pytest。
+
+**A股未改**：无校准器，prompt 阈值 0.55/0.50/0.45 与原始概率口径一致（若日后加校准需同步）。
+**验证**：`py_compile` 通过；`pytest tests/test_prompt_render.py` 3 passed。
+
+**文件**：`comprehensive_analysis.py`、`tests/test_prompt_render.py`（新）、
+`.github/workflows/{comprehensive-analysis,weekly-comprehensive-analysis}.yml`、`progress.txt`。
+
 ### 2026-09-25 修复：预测历史同日重复运行不更新（邮件与 history 不一致）⭐
 
 **根因** `save_prediction_to_history`（港股）/ `save_a_stock_prediction_history`（A股）为 append-only：

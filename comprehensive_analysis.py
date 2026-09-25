@@ -746,7 +746,7 @@ def load_model_accuracy(horizon=20):
     返回:
     - dict: 各周期生产模型准确率
       {
-        'ml_20d': {'accuracy': float, 'std': float},  # 20天生产模型（优先LightGBM）
+        'ml_20d': {'accuracy': float, 'std': float, 'date': str},  # 20d 生产模型（含准确率数据日期）
         'learner_20d': str,                          # 20天生产学习器名
         'catboost': {'accuracy': float, 'std': float},  # 兼容旧字段（指定horizon）
         '1d': {'accuracy': float, 'std': float},
@@ -773,11 +773,13 @@ def load_model_accuracy(horizon=20):
             if isinstance(entry, dict):
                 acc = entry.get('accuracy')
                 if isinstance(acc, (int, float)) and math.isfinite(acc) and acc > 0:
+                    ts = str(entry.get('timestamp', '') or '')
                     return {
                         'accuracy': acc,
-                        'std': entry.get('std', 0.0) or 0.0
+                        'std': entry.get('std', 0.0) or 0.0,
+                        'date': ts[:10] if ts else ''
                     }
-        return fallback
+        return {**fallback, 'date': ''}
 
     try:
         if os.path.exists(accuracy_file):
@@ -787,14 +789,23 @@ def load_model_accuracy(horizon=20):
 
             result = {}
 
-            # 20天生产模型：LightGBM（历史CatBoost结果仅作回退）
-            lgbm_entry = data.get('lgbm_20d')
-            if isinstance(lgbm_entry, dict) and lgbm_entry.get('accuracy', 0) > 0:
-                result['learner_20d'] = 'LightGBM'
+            # 20d 生产模型：在 lgbm_20d / catboost_20d 中取记录时间最新且 accuracy>0 的一条
+            # （CI 流水线每日训练 CatBoost 并回流 model_accuracy.json，避免固定引用陈旧记录）
+            import math as _math
+            cands = [k for k in ('lgbm_20d', 'catboost_20d')
+                     if isinstance(data.get(k), dict)
+                     and isinstance(data[k].get('accuracy'), (int, float))
+                     and _math.isfinite(data[k].get('accuracy'))
+                     and data[k].get('accuracy') > 0]
+            if cands:
+                best_key = max(cands, key=lambda k: str(data[k].get('timestamp') or ''))
+                _mt = str(data[best_key].get('model_type') or '').lower()
+                result['learner_20d'] = ('LightGBM' if _mt == 'lgbm' else 'CatBoost') \
+                    if _mt else ('LightGBM' if best_key == 'lgbm_20d' else 'CatBoost')
+                result['ml_20d'] = _pick(data, [best_key], default_accuracy['ml_20d'])
             else:
-                result['learner_20d'] = 'CatBoost'
-            result['ml_20d'] = _pick(data, ['lgbm_20d', 'catboost_20d'],
-                                     default_accuracy['ml_20d'])
+                result['learner_20d'] = 'LightGBM'
+                result['ml_20d'] = {**default_accuracy['ml_20d'], 'date': ''}
 
             # 兼容旧字段：指定horizon的CatBoost准确率（0值回退默认）
             result['catboost'] = _pick(data, [f'catboost_{horizon}d'],
@@ -1236,7 +1247,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = "【机器学习三周期预测结果】（1/5天 CatBoost · 20天 LightGBM）\n"
+                catboost_text_email = "【机器学习三周期预测结果】（概率已Isotonic校准）\n"
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
@@ -1244,7 +1255,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率 | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
@@ -1419,6 +1430,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pattern_info = THREE_HORIZON_PATTERNS.get(pattern, {})
                     pattern_name = pattern_info.get('name', '未知')
                     catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
+
+                catboost_text_email += "\n> *历史胜率为三周期模式的历史统计（out-of-sample 经 embargo 验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
                 # 添加三色预测说明
                 catboost_text_email += f"\n**三周期预测颜色说明**：\n"
@@ -3789,16 +3802,16 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         prob_5d = pred_5d.get('probability', 0)
         prob_20d = pred_20d.get('probability', 0)
         try:
-            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}"
+            lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}"
                          + (f" (置信{float(pred_1d.get('confidence', 0)):.2f})" if pred_1d.get('confidence') else ""))
-            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}"
+            lines.append(f"ML 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}"
                          + (f" (置信{float(pred_5d.get('confidence', 0)):.2f})" if pred_5d.get('confidence') else ""))
-            lines.append(f"LightGBM 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
+            lines.append(f"ML 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
                          + (f" (置信{float(pred_20d.get('confidence', 0)):.2f})" if pred_20d.get('confidence') else ""))
         except (ValueError, TypeError):
-            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
-            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {prob_5d}")
-            lines.append(f"LightGBM 20天预测: {pred_20d.get('direction', '-')} {prob_20d}")
+            lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
+            lines.append(f"ML 5天预测: {pred_5d.get('direction', '-')} {prob_5d}")
+            lines.append(f"ML 20天预测: {pred_20d.get('direction', '-')} {prob_20d}")
 
         pattern = pred.get('pattern', '-')
         pattern_info = pred.get('pattern_info', {})
@@ -3812,9 +3825,9 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         win_rate = pattern_info.get('win_rate', 0)
         lines.append(f"交易建议: {action}")
         try:
-            lines.append(f"历史胜率: {float(win_rate):.1f}%")
+            lines.append(f"历史胜率: {float(win_rate):.1f}%（三周期模式历史统计，未经显著性验证，仅作背景参考，不作决策依据）")
         except (ValueError, TypeError):
-            lines.append(f"历史胜率: {win_rate}")
+            lines.append(f"历史胜率: {win_rate}（三周期模式历史统计，仅供参考，不作决策依据）")
     else:
         lines.append("ML预测: 数据缺失")
 
@@ -4941,7 +4954,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 【1. 大模型中期买卖建议（数周-数月）】
 {llm_recommendations['medium_term']}
 
-【2. 机器学习20天预测结果（生产模型：LightGBM）】
+【2. 机器学习20天预测结果（生产模型）】
 **重要：probability = 上涨概率（不是下跌概率），且已经过 Isotonic 校准（可直接读作预计上涨胜率）**
 {ml_predictions['ensemble']}
 
@@ -5012,22 +5025,28 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **不要再用"模型准确率±标准差"换算概率**：校准后的概率本身就是胜率估计，重复换算会得出错误结论
 
 **阈值说明（校准口径）**：
-- 当前20天生产模型：{model_accuracy['learner_20d']}
-- 强买入阈值0.60 = 要求校准后胜率>60%，高门槛（达标股票较少属正常）
-- 买入阈值0.50 = 要求校准后胜率>50%（优于随机），平衡召回率和精确率
+- 20天准确率数据截至：{model_accuracy['ml_20d'].get('date') or '未知'}（学习器类型随版本可能为 CatBoost 或 LightGBM，以实际载入模型为准）
+- 强买入阈值0.60 = 要求校准后胜率>60%，位于校准分布前约11%（达标股票较少属正常）
+- 买入阈值0.50 = 要求校准后胜率>50%（优于随机）；其中0.50-0.55区间信号弱（占校准分布近一半），按观望/小仓位处理
 - 卖出阈值0.50确保下跌概率>50%
 - 观望区间0.45-0.50避免低置信度决策
+- 市场调整列分层阈值基于校准概率：熊市≥0.70（校准分布前约8%）、弱震荡≥0.65（前约11%），熊市达标票少属正常
 
 **重要说明 - 模型配置**：
-- 1天/5天：CatBoost；20天：LightGBM（生产学习器）
-- 20天准确率：{model_accuracy['ml_20d']['accuracy']:.2%}（±{model_accuracy['ml_20d']['std']:.2%}）
+- 1天/5天/20天：均为流水线当日训练、训练与预测同源的单一学习器
+- 20天准确率：{model_accuracy['ml_20d']['accuracy']:.2%}（±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
 - 置信度：`(置信xx)` = P(模型方向判对)，与 probability（上涨概率）含义不同，两者不可混用
 
 **重要说明 - 模型不确定性（风险提示）**：
 - 20天模型准确率标准差约±{model_accuracy['ml_20d']['std']:.2%}，实际表现可能波动
 - 但这**不能**作为降低ML概率标准的理由
-- 对于probability在0.50-0.60之间的股票，建议观望而非买入
-- 对于probability在0.60-0.70之间的股票，建议降低仓位（2-3%）而非4-6%
+
+**重要说明 - 仓位映射（按校准概率分位，唯一口径，勿与其它条欢单独冲突使用）**：
+- ML概率 ≥0.60（校准分布前约11%）：强买入信号，建议仓位4-6%
+- 0.55 ≤ ML概率 < 0.60（前约18%内）：买入信号，建议仓位2-3%
+- 0.50 < ML概率 < 0.55（信号弱，占校准分布近一半）：观望为主，最多1-2%
+- ML概率 ≤0.50：禁止买入（硬约束），对应卖出/减仓方向
+- 总仓位控制在45%-55%（与短期/中期信号一致时才加仓，不因单一信号满仓）
 
 **重要说明 - 信号协同（必须同时满足）**：
 - **短期信号（触发器）**：负责"何时做"（Timing）→ 必须100%满足
@@ -5076,7 +5095,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 3. **综合推荐清单**：
    - 强烈买入信号（2-3只）：最高优先级，建议仓位4-6%
-   - 买入信号（3-5只）：次优先级，建议仓位2-4%
+   - 买入信号（3-5只）：次优先级，建议仓位2-3%
    - 持有/观望（如有）：第三优先级
    - 卖出信号（如有）：最低优先级
 
@@ -5092,9 +5111,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - 给出止损位建议（单只股票最大亏损不超过-8%）
    
    **特别要求 - 考虑机器学习模型不确定性**：
-   - 20天生产模型（{model_accuracy['learner_20d']}）准确率约{model_accuracy['ml_20d']['accuracy']:.2%}（标准差约±{model_accuracy['ml_20d']['std']:.2%}）
-   - 对于probability在0.55-0.65之间的股票，建议仓位不超过2-3%
-   - 强买入信号（短期/中期一致且ML高置信度）建议仓位4-6%
+   - 20天生产模型准确率约{model_accuracy['ml_20d']['accuracy']:.2%}（标准差约±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
+   - 仓位按统一映射执行：≥0.60（前约11%）→4-6%；0.55-0.60→2-3%；0.50-0.55→观望或最多1-2%；≤0.50禁止买入
+   - 短期/中期方向一致且ML概率达标才可加至4-6%，不得因单一信号满仓
    - 总仓位控制在45%-55%
    - **必须设置止损位，单只股票最大亏损不超过-8%**
    - **严格遵循"短期触发 + 中期确认 + ML验证"原则**：只有短期和中期方向一致且ML验证时才行动
@@ -5472,7 +5491,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ## 二、机器学习预测结果（20天）
 
-### 机器学习模型（三周期准确率）（1/5天 CatBoost · 20天 LightGBM）
+### 机器学习模型（三周期准确率）
 
 **模型准确率**：
 
@@ -5482,7 +5501,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 | 5天 | **{model_accuracy['5d']['accuracy']:.2%}** | ±{model_accuracy['5d']['std']:.2%} |
 | 20天 | **{model_accuracy['20d']['accuracy']:.2%}** | ±{model_accuracy['20d']['std']:.2%} |
 
-> 生产学习器：1/5天 CatBoost，20天 {model_accuracy['learner_20d']}（Walk-forward 验证口径）。下表概率均为 Isotonic 校准后概率，`置信xx%` 为模型方向判对概率。
+> 三周期均为流水线当日训练、训练与预测同源的生产模型（Walk-forward 验证口径，20天数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）。下表概率均为 Isotonic 校准后概率，`置信xx%` 为模型方向判对概率。
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
@@ -5633,7 +5652,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 ## 十一、风险提示
 
 1. **模型不确定性**：
-   - 20天生产模型（{model_accuracy['learner_20d']}）准确率{model_accuracy['ml_20d']['accuracy']:.2%}（标准差±{model_accuracy['ml_20d']['std']:.2%}）
+   - 20天生产模型准确率{model_accuracy['ml_20d']['accuracy']:.2%}（标准差±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
    - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
@@ -5645,13 +5664,14 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 3. **投资原则**：
    - 短期触发 + 中期确认 + ML验证 = 高置信度信号
    - 短期和中期冲突 = 观望（避免不确定性）
-   - ML概率在0.50-0.60之间 = 中等置信度，建议观望或轻仓
+   - ML概率0.50-0.55 = 信号弱（校准分布占近一半），建议观望或轻仓（≤2%）
+   - ML概率0.55-0.60 = 买入区间（建议2-3%）；≥0.60（前约11%）才对应4-6%强买入仓位
    - 总仓位控制在45%-55%，分散风险
 
 ## 十二、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：1/5天 CatBoost · 20天 LightGBM（概率已Isotonic校准）
+- ML预测：三周期生产模型（概率已Isotonic校准）
 - 特征工程：2991个原始特征，500个精选特征（F-test+互信息混合方法）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
@@ -5662,7 +5682,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
-- 模型策略：1/5天 CatBoost · 20天 LightGBM 单学习器
+- 模型策略：单学习器（训练与预测同源，1/5/20天各一个模型）
 - 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）；`(置信xx)` = P(模型方向判对)
 
 """
