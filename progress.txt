@@ -8,6 +8,84 @@
 
 ## 最新进展
 
+### 2026-09-25 市场门槛分位化（b 方案）：bear/weak 阈值改动态分位 ⭐
+
+**动机**：Isotonic 阶梯导致旧绝对阈值空转——实测 0.60 与 0.65 通过率完全相同
+（均 10.89%，0.585→0.667 台阶间无样本），"正常→弱震荡收紧"无效；且绝对值无出处、
+校准器重拟后会漂移。
+
+**实现**（`ml_services/market_regime.py`）：
+- `GATE_QUANTILES = {'bear': 0.92, 'weak': 0.90}`（前约8%/前约10%），normal 保持
+  绝对 0.50（硬约束语义）；`GATE_FALLBACK = 0.70/0.65`（样本不足回退）。
+- `compute_gate_thresholds(as_of, source_csv, ...)`：PIT 分位，样本<200 回退。
+- `MarketSentimentFilter._prepare_gate_base/_gates_for`：一次性加载基准，per-date
+  `searchsorted` 切片做 PIT 分位（prepare 循环内 4470 天耗时可忽略）；失败回退。
+  `use_quantile_gates=False` 可关闭（回旧行为）。
+
+**⚠️ 数据源踩坑（重要）**：初版用 `data/prediction_history.json`（自选股收市批量
+4470 条）→ 右尾过窄，实测 bear/weak 分位**同为 0.5406**（再次空转）且低于 0.55
+买入线（熊市形同虚设）。**改用最新 `output/*_catboost_20d/prediction_analysis.csv`**
+（walk-forward 43,610 条，含 Date 可 PIT，与评估口径同源）→ 实测
+**bear=0.6923 / weak=0.6667（不同台阶，有区分度）**，与旧绝对值量级一致、行为几乎连续。
+
+**生产点位改同源**（`comprehensive_analysis.py`）：判定处 `>=0.70/0.65` →
+`>= dynamic_threshold`（表格+LLM列表两处）；邮件头/横幅文案注入
+`{dynamic_threshold:.2f}`（+分位说明）；市场调整说明、prompt 阈值说明、邮件动态阈值表
+全部改分位表述（"前约8%/前约10%分位，当日值见动态阈值"）；JSON `dynamic_threshold`
+字段自动跟随。判定/文案/回测三口径经 `dynamic_threshold` 单一来源统一。
+
+**验证**：`pytest tests/test_market_gates.py tests/test_prompt_render.py` 7 passed
+（分位精确断言/as_of PIT/回退/filter 集成/关闭开关/配置防漂移）；真实数据 smoke：
+`as_of=2026-09-25` → bear 0.6923、weak 0.6667 ✓；全文无残留硬编码 0.70/0.65 判定
+（终审补丁后共 8 passed，见下）。
+
+**CI 一致性补丁（同日终审发现）**：
+- 数据源 glob 会命中 `*_a_stock_catboost_20d` 目录（CI 上 tracked 的最新恰是
+  20260722 A股 CSV）→ `_GATE_SOURCE_RE` 正则只认 `\d{8}_\d{6}_catboost_20d`
+  港股目录，排除 A股/嵌套 walk_forward 目录。
+- CI checkout 无本地 untracked 回测目录，会用 4 个月前 20260524 快照（与本地不同值）
+  → 新增 `GATE_SNAPSHOT = {'bear': 0.69230769…, 'weak': 0.6666…}`（as_of=2026-09-25
+  实算值，内嵌代码不违反"不提交 .csv"规范），回退链 **CSV 实时 → 内嵌快照 → 绝对值**，
+  CI 与本地同值。
+- 快照维护：walk-forward 重跑后执行
+  `python3 -c "from ml_services.market_regime import suggest_gate_snapshot; suggest_gate_snapshot()"`
+  打印新值并更新 `GATE_SNAPSHOT`（`suggest_gate_snapshot` 打印可直接粘贴的常量）。
+- 测试增至 8 passed（+快照回退链、+a_stock 目录排除）。
+
+**范围外**：恒指 `hsi_prediction.py:963 interpret_score`（0.65/0.55 恒指得分分档，独立
+体系）未动；walk-forward 回放极早期 fold 时分位偏低（早期回测样本右尾低）属已知限制。
+**文件**：`ml_services/market_regime.py`、`comprehensive_analysis.py`、
+`tests/test_market_gates.py`（新）、`progress.txt`。
+
+### 2026-09-25 提示词语义自洽终审：修复 6 处残留矛盾（①-⑥）⭐
+
+**背景**：A-F 修正后对渲染 prompt 全文做语义交叉审查，发现 6 处矛盾（多数为改动前
+即存在、被新校准口径"照出"），已全部修复：
+
+- **① 买入分档 0.50 vs 0.55 分裂**：硬约束/决策逻辑/检查清单/买入策略/持有策略/
+  extraction prompt/邮件框架段**全部统一**：≥0.55 才可列入买入信号，0.50-0.55 仅限
+  观望/≤2%（硬约束 ≤0.50 禁买不变；<0.40 卖出/减仓，0.40-0.50 观望）。
+- **②「中等置信度观望」改名**：拆为「中等置信度 0.55-0.60」+「弱信号 0.50-0.55」，
+  规则2/规则3/验证步骤/邮件投资原则同步。
+- **③ 卖出/观望边界**：观望区间 0.45-0.50 → **0.40-0.50**（补齐 0.40-0.45 灰区，
+  与"<0.40 禁止持有或观望"对齐）；≤0.50 三处表述统一为"禁买 + 分段观望/卖出"。
+- **④ 市场调整优先级**：prompt 与邮件图例均注明「市场调整列优先级最高——熊市/弱震荡
+  未过门槛（0.70/0.65）→ 无视仓位映射一律观望」；邮件框架段的**动态阈值表**（原
+  牛市0.55/震荡0.65/熊市0.60，与代码不符）改为与实际判定一致（正常0.60/弱震荡0.65/
+  熊市0.70/极端暂停），并删除无代码支持的"恒指20日收益±5%"识别口径。
+- **⑤ 邮件旧统计数字**：删除「010 准确率66.32%」「恒指101 准确率92.73%」（未 embargo
+  旧口径，与 D 项免责脚注直接冲突），改为中性"历史统计，未经显著性验证"表述；
+  传导模式行同样加标注。
+- **⑥ 三周期同源列免责扩展**：表头 `模式* | 交易建议* | 历史胜率*`，脚注统一覆盖三列
+  （均来自被证伪的 pattern 表）。
+- 附带：个股详情分类表 `🟢买入 50-60%` → `55-60%`（+50-55 观望行）；三色图例/HTML
+  `prob_desc` 注明 50-55 弱信号仅观望；**测试盲区**——`_collect_prompt_nodes` 增加
+  函数内 `prompt = f"""` 收集规则。
+
+**验证**：`py_compile` 通过；`pytest tests/test_prompt_render.py` 3 passed；全文 grep
+矛盾句残留为 0；买入门槛全文统一 0.55/0.60。
+**文件**：`comprehensive_analysis.py`（+106/-66 累计）、`tests/test_prompt_render.py`。
+
 ### 2026-09-25 邮件/LLM prompt 多角度评估后修正（A-F 六项）⭐
 
 **背景**：校准口径修复（e4670a95）后对 prompt 做多角度评估，发现并修复：

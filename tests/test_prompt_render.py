@@ -103,7 +103,8 @@ def _collect_prompt_nodes(tree):
         for t in targets:
             if isinstance(t, ast.Name):
                 names.append(t.id)
-        if not any(('PROMPT' in n) or ('text_email' in n) for n in names):
+        if not any(('PROMPT' in n) or ('text_email' in n)
+                   or n.lower() in ('prompt', 'prompt_text') for n in names):
             continue
         value = node.value
         for sub in ast.walk(value):

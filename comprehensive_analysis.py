@@ -1141,8 +1141,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     probability_display = f"{probability:.2f} (暂停)"
                     include_in_llm = False  # 不传给大模型
                 elif market_layer == 'bear':
-                    # 熊市：提高阈值到 0.70
-                    if probability >= 0.70:
+                    # 熊市：门槛=校准概率分位（前约8%，PIT动态计算），与 dynamic_threshold 同源
+                    if probability >= dynamic_threshold:
                         direction = "上涨"
                         probability_display = f"{probability:.2f} (高置信)"
                         include_in_llm = True
@@ -1155,8 +1155,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         probability_display = f"{probability:.2f}"
                         include_in_llm = True
                 elif market_layer == 'weak':
-                    # 弱震荡：提高阈值到 0.65
-                    if probability >= 0.65:
+                    # 弱震荡：门槛=校准概率分位（前约10%，PIT动态计算）
+                    if probability >= dynamic_threshold:
                         direction = "上涨"
                         probability_display = f"{probability:.2f}"
                         include_in_llm = True
@@ -1242,8 +1242,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 在邮件开头显示市场情绪
                 layer_names_email = {
                     'extreme_bear': '🔴 极端熊市 - 暂停交易',
-                    'bear': '🟠 熊市 - 需概率≥0.70',
-                    'weak': '🟡 弱震荡 - 需概率≥0.65',
+                    'bear': f'🟠 熊市 - 需校准概率≥{dynamic_threshold:.2f}（前约8%分位）',
+                    'weak': f'🟡 弱震荡 - 需校准概率≥{dynamic_threshold:.2f}（前约10%分位）',
                     'normal': '🟢 正常市场'
                 }
 
@@ -1255,7 +1255,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式 | 交易建议 | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
@@ -1399,14 +1399,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         if market_layer == 'extreme_bear':
                             market_adjust_display = '🔴暂停'
                         elif market_layer == 'bear':
-                            if probability_20d >= 0.70:
+                            if probability_20d >= dynamic_threshold:
                                 market_adjust_display = '🟠高置信'
                             elif probability_20d >= 0.50:
                                 market_adjust_display = '🟠降级'
                             else:
                                 market_adjust_display = '-'
                         elif market_layer == 'weak':
-                            if probability_20d >= 0.65:
+                            if probability_20d >= dynamic_threshold:
                                 market_adjust_display = '🟡通过'
                             elif probability_20d >= 0.50:
                                 market_adjust_display = '🟡降级'
@@ -1431,29 +1431,30 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pattern_name = pattern_info.get('name', '未知')
                     catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
 
-                catboost_text_email += "\n> *历史胜率为三周期模式的历史统计（out-of-sample 经 embargo 验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
+                catboost_text_email += "\n> *「模式/交易建议/历史胜率」来自三周期模式历史统计（out-of-sample 经 embargo 验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
                 # 添加三色预测说明
                 catboost_text_email += f"\n**三周期预测颜色说明**：\n"
                 catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
-                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，中等置信度看涨\n"
+                catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，方向看涨（50-55%弱信号仅观望/≤2%；55-60%中等置信度可买入）\n"
                 catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
                 catboost_text_email += "- 概率已经过 Isotonic 校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
                 catboost_text_email += "- <span style=\"color: #9ca3af;\">(置信xx%)</span>：**模型方向判对概率**（由历史预测拟合），与上涨概率是两回事\n"
 
                 # 添加市场调整说明
                 catboost_text_email += f"\n**市场调整说明**：\n"
-                catboost_text_email += "- 🟢正常：正常市场环境，使用标准阈值\n"
-                catboost_text_email += "- 🟡通过/降级：弱震荡市场，概率≥65%通过，否则降级为观望\n"
-                catboost_text_email += "- 🟠高置信/降级：熊市环境，概率≥70%通过，否则降级为观望\n"
+                catboost_text_email += "- 🟢正常：正常市场环境，使用标准阈值（≥0.55可买入，≥0.60强买入）\n"
+                catboost_text_email += "- 🟡通过/降级：弱震荡市场，校准概率位于校准分布前约10%分位通过，否则降级为观望（无视买入档位）\n"
+                catboost_text_email += "- 🟠高置信/降级：熊市环境，校准概率位于校准分布前约8%分位通过，否则降级为观望（无视买入档位）\n"
                 catboost_text_email += "- 🔴暂停：极端熊市，暂停所有看涨信号\n"
+                catboost_text_email += "- ⚙️ 优先级：市场调整列最高——未过门槛的股票无论概率落入哪档均按观望处理\n"
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
                 catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
-                catboost_text_email += f"- 个股传导模式：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
-                catboost_text_email += f"- ⚠️ 注意：个股最优模式为\"反弹失败(010)\"，准确率66.32%；\"假突破(101)\"仅50%（随机水平）\n"
-                catboost_text_email += f"- 💡 恒指模式：恒指最优模式为\"假突破(101)\"，准确率92.73%（远高于个股）\n"
+                catboost_text_email += f"- 个股传导模式（历史统计，仅供参考）：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
+                catboost_text_email += "- ⚠️ 注意：三周期模式胜率为历史统计，未经显著性验证——个股曾以\"反弹失败(010)\"最高、\"假突破(101)\"约随机水平\n"
+                catboost_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"
                 catboost_text_email += "- 策略含义：个股预测难度高，建议结合恒指趋势确认\n"
 
                 # 添加筹码分布说明
@@ -3617,7 +3618,8 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 ## 第一步：硬约束检查
 - ML 20天上涨概率（校准后） ≤ 50% → **禁止买入**
 - ML 20天上涨概率（校准后） ≥ 60% → 高置信度，进入下一步
-- ML 20天上涨概率（校准后） 50-60% → 中等置信度，需其他信号确认
+- ML 20天上涨概率（校准后） 55-60% → 中等置信度，需其他信号确认
+- ML 20天上涨概率（校准后） 50-55% → 弱信号，仅限观望/极小仓位（≤2%）
 
 ## 第二步：方向一致性检查（关键）
 - 短期建议 + 中期建议 + ML 三者方向一致 → **可买入**
@@ -3646,7 +3648,8 @@ COMPREHENSIVE_ANALYSIS_PROMPT = """你是一个专业的股票分析师。请基
 | 分类 | ML概率 | 短期建议 | 中期建议 | 说明 |
 |------|-------------|---------|---------|------|
 | ⭐强烈买入 | ≥60% | 买入 | 买入 | 三重确认 |
-| 🟢买入 | 50-60% | 买入 | 买入 | 需其他信号确认 |
+| 🟢买入 | 55-60% | 买入 | 买入 | 需其他信号确认 |
+| 🟡观望 | 50-55% | 买入 | 买入 | 弱信号，仅观望/≤2% |
 | 🟡观望 | ≥50% | 观察 | 买入 | 方向冲突，等待确认 |
 | 🟡观望 | ≥50% | 买入 | 观察 | 方向冲突，等待确认 |
 | 🔴禁止买入 | ≤50% | 任何 | 任何 | 硬约束 |
@@ -3680,7 +3683,8 @@ HOLDER_ADVICE_PROMPT = """你是一个专业的股票分析师。请基于以下
 
 ## 第一步：趋势判断
 - ML 20天概率（校准后） > 60% 且短中期建议"买入" → 趋势向上，考虑持有或加仓
-- ML 20天概率（校准后） 50-60% → 趋势不明，谨慎持有
+- ML 20天概率（校准后） 55-60% → 趋势中性，谨慎持有
+- ML 20天概率（校准后） 50-55% → 信号弱，不加仓，观望
 - ML 20天概率（校准后） < 50% → 趋势向下，考虑减仓或止损
 
 ## 第二步：止盈止损判断
@@ -4296,7 +4300,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
         prob_desc = "高置信度，>60%"
     elif prob_20d >= 50:
         prob_class = "metric-neutral"
-        prob_desc = "中等置信度，50-60%"
+        prob_desc = "中等置信度，50-60%（50-55弱信号仅观望，55-60中等）"
     else:
         prob_class = "metric-bad"
         prob_desc = "看跌，<50%硬约束禁止买入"
@@ -4967,8 +4971,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ⚠️ **ML概率约束（最高优先级，无例外）**：
 - ML概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
-- ML概率 < 0.40 → **绝对禁止推荐持有或观望**
-- ML概率 ≥ 0.50 → 可以考虑买入
+- ML概率 < 0.40 → **绝对禁止推荐持有或观望**（对应卖出/减仓方向）
+- 0.50 < ML概率 < 0.55 → **仅限观望/极小仓位（≤2%），不得列入买入信号**
+- ML概率 ≥ 0.55 → 可以考虑买入
 - ML概率 ≥ 0.60 → 可以考虑强烈买入
 - **即使短期和中期方向一致，也绝对不允许违反此约束**
 - **违反此约束的建议将被视为错误**
@@ -4991,20 +4996,22 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 **决策逻辑（短期触发 + 中期确认 + ML验证）**：
 - **第一步：检查ML概率（硬约束）**
   - probability ≤ 0.50 → 排除买入或强烈买入
-  - probability ≥ 0.50 → 进入下一步
+  - 0.50 < probability < 0.55 → 观望（最多1-2%，不进入买入评估）
+  - probability ≥ 0.55 → 进入下一步
 - **第二步：检查短期和中期一致性**
   - 短期看好，中期看好 → 进入下一步
   - 方向不一致 → 观望
 - **第三步：生成建议**
   - 强烈买入：短期看好，中期看好，ML probability ≥ 0.60
-  - 买入：短期看好，中期看好，0.50 < ML probability < 0.60
-  - 持有/观望：ML probability ≤ 0.50 或 方向不一致
+  - 买入：短期看好，中期看好，0.55 ≤ ML probability < 0.60
+  - 持有/观望：ML probability < 0.55 或 方向不一致
   - 卖出：短期看跌，中期看跌
 
 **硬约束检查清单（必须逐项核对）**：
 - [ ] ML probability ≤ 0.50 → 绝对禁止推荐买入或强烈买入
 - [ ] ML probability < 0.40 → 绝对禁止推荐持有或观望
-- [ ] ML probability ≥ 0.50 → 可以考虑买入
+- [ ] 0.50 < ML probability < 0.55 → 仅限观望/极小仓位，不列入买入信号
+- [ ] ML probability ≥ 0.55 → 可以考虑买入
 - [ ] ML probability ≥ 0.60 → 可以考虑强烈买入
 - [ ] 短期和中期方向是否一致？
 - [ ] 三重确认是否全部满足？
@@ -5013,8 +5020,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 **ML概率阈值（均为校准后概率口径）**：
 - **高置信度上涨**：probability > 0.60
-- **中等置信度观望**：0.50 < probability ≤ 0.60
-- **预测下跌**：probability ≤ 0.50
+- **中等置信度**：0.55 ≤ probability ≤ 0.60
+- **弱信号（观望/极小仓位）**：0.50 < probability < 0.55
+- **预测下跌（禁止买入）**：probability ≤ 0.50（其中 0.40-0.50 观望，< 0.40 卖出/减仓方向）
 
 **重要说明 - ML probability 定义（校准后）**：
 - `probability` = **上涨概率**（已经过 Isotonic 校准，可直接读作"预计上涨胜率"）
@@ -5028,9 +5036,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 20天准确率数据截至：{model_accuracy['ml_20d'].get('date') or '未知'}（学习器类型随版本可能为 CatBoost 或 LightGBM，以实际载入模型为准）
 - 强买入阈值0.60 = 要求校准后胜率>60%，位于校准分布前约11%（达标股票较少属正常）
 - 买入阈值0.50 = 要求校准后胜率>50%（优于随机）；其中0.50-0.55区间信号弱（占校准分布近一半），按观望/小仓位处理
-- 卖出阈值0.50确保下跌概率>50%
-- 观望区间0.45-0.50避免低置信度决策
-- 市场调整列分层阈值基于校准概率：熊市≥0.70（校准分布前约8%）、弱震荡≥0.65（前约11%），熊市达标票少属正常
+- 卖出阈值0.50确保下跌概率>50%（0.40-0.50 观望，<0.40 卖出/减仓方向）
+- 观望区间0.40-0.50避免低置信度决策
+- 市场调整列门槛按校准历史分布分位动态计算（PIT）：熊市=前约8%分位、弱震荡=前约10%分位；当日具体数值以邮件头部"动态阈值"/`dynamic_threshold` 字段为准，熊市达标票少属正常
+- **市场调整列优先级最高**：熊市/弱震荡未过门槛（dynamic_threshold）→ 无论 ML 概率落入哪档，一律按观望处理（压过仓位映射）；极端熊市暂停全部看涨信号
 
 **重要说明 - 模型配置**：
 - 1天/5天/20天：均为流水线当日训练、训练与预测同源的单一学习器
@@ -5062,10 +5071,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 **规则3：ML概率评估**
 - **高置信度上涨（probability > 0.60）**：信号可靠性最高，优先级提升
-- **中等置信度观望（0.50 < probability ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
-- **预测下跌（probability ≤ 0.50）**：信号可靠性低，建议观望，不进行交易
+- **中等置信度（0.55 ≤ probability ≤ 0.60）**：信号可靠性中等，需要短期中期一致支持
+- **弱信号（0.50 < probability < 0.55）**：观望为主，最多1-2%仓位
+- **预测下跌（probability ≤ 0.50）**：禁止买入，不进行交易（0.40-0.50 观望，<0.40 卖出/减仓方向）
 - 如果probability高（>0.60），综合置信度最高
-- 如果probability低（≤0.50），降低为中等置信度
+- 如果probability低（≤0.50），综合置信度低，禁止买入
 
 **规则4：推荐理由格式**
 - 必须说明：短期建议+中期建议+机器学习20天预测（probability，已校准）
@@ -5082,10 +5092,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
      - 短期卖出 + 中期卖出 → 方向一致，考虑ML验证
      - 短期卖出 + 中期观望 → 等待中期确认
      - 短期卖出 + 中期买入 → 冲突，观望
-   - **第二步（验证）**：对短期中期一致的股票，分析机器学习20天预测验证
-     - 如果ML高置信度支持（probability>0.60），提升为强信号
-     - 如果ML中等置信度支持（0.50<probability≤0.60），提升为中等信号
-     - 如果ML低置信度（probability≤0.50），降低为弱信号或观望
+    - **第二步（验证）**：对短期中期一致的股票，分析机器学习20天预测验证
+      - 如果ML高置信度支持（probability>0.60），提升为强信号
+      - 如果ML中等置信度支持（0.55≤probability≤0.60），提升为中等信号
+      - 如果ML弱信号（0.50<probability<0.55），维持观望（最多1-2%）
+      - 如果ML低置信度（probability≤0.50），降低为弱信号或观望
    - 标注符合"强买入信号"、"买入信号"、"观望信号"、"卖出信号"的股票
 
 2. **个股建议排序**：
@@ -5474,8 +5485,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 # 市场风险横幅（置顶）：按市场情绪给出当日操作指引
                 banner_map = {
                     'extreme_bear': '🔴 极端熊市：暂停买入，等待市场企稳',
-                    'bear': '🟠 熊市：仅考虑高置信（≥0.70）买入，严格止损',
-                    'weak': '🟡 弱震荡：谨慎，优先高置信（≥0.65）信号',
+                    'bear': f'🟠 熊市：仅考虑高置信（≥{dynamic_threshold:.2f}，前约8%分位）买入，严格止损',
+                    'weak': f'🟡 弱震荡：谨慎，优先高置信（≥{dynamic_threshold:.2f}，前约10%分位）信号',
                     'normal': '🟢 正常市场：常规操作',
                 }
                 banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}，动态阈值 {dynamic_threshold:.2f}）\n\n"
@@ -5573,7 +5584,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 - **ML 概率 ≥ 0.60** + **短期看好** + **中期看好** → 强烈买入
 
-- **0.50 < ML 概率 < 0.60** + **短期看好** + **中期看好** → 买入
+- **0.55 ≤ ML 概率 < 0.60** + **短期看好** + **中期看好** → 买入
+
+- **0.50 < ML 概率 < 0.55** → 观望（最多1-2%，不列入买入信号）
 
 - **ML 概率 ≤ 0.50** → 禁止买入（硬约束）
 
@@ -5583,7 +5596,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 - **ML 概率 > 0.60** + **大模型建议买入** → 强烈持有
 
-- **0.50 < ML 概率 ≤ 0.60** + **大模型建议买入** → 观望持有
+- **0.55 ≤ ML 概率 ≤ 0.60** + **大模型建议买入** → 观望持有
+
+- **0.50 < ML 概率 < 0.55** + **大模型建议买入** → 不加仓，观望
 
 - **ML 概率 ≤ 0.50** + **大模型建议卖出** → 考虑卖出
 
@@ -5603,7 +5618,9 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
    - ML 概率 ≤ 0.50 → 排除买入或强烈买入
 
-   - ML 概率 ≥ 0.50 → 进入下一步
+   - 0.50 < ML 概率 < 0.55 → 观望（最多1-2%，不进入买入评估）
+
+   - ML 概率 ≥ 0.55 → 进入下一步
 
 2. **第二步：检查短期和中期一致性**
 
@@ -5615,31 +5632,27 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
    - 强烈买入：短期看好 + 中期看好 + ML 概率 ≥ 0.60
 
-   - 买入：短期看好 + 中期看好 + 0.50 < ML 概率 < 0.60
+   - 买入：短期看好 + 中期看好 + 0.55 ≤ ML 概率 < 0.60
 
-   - 持有/观望：ML 概率 ≤ 0.50 或 方向不一致
+   - 持有/观望：ML 概率 < 0.55 或 方向不一致
 
    - 卖出：短期看跌 + 中期看跌 + ML 概率 ≤ 0.50
 
 ### ✦ 动态置信度阈值策略（根据市场环境调整）
 
-根据市场环境动态调整置信度阈值，可显著提升风险调整收益和过滤噪声：
+门槛按校准历史分布**分位动态计算（PIT）**，与邮件"市场调整"列判定完全一致。当日具体数值见邮件头部"动态阈值"：
 
-| 市场环境 | 置信度阈值 | 调整幅度 | 说明 |
-|---------|-----------|---------|------|
-| 牛市 (bull) | 0.55 | -0.05 | 更激进，增加交易机会 |
-| 震荡市 (normal/ranging) | 0.65 | +0.05 | 更严格过滤噪声 |
-| 熊市 (bear) | 0.60 | 基准 | 中等保守 |
-
-**市场环境识别方法**：
-- **牛市**：恒生指数 20 天收益率 > +5%
-- **熊市**：恒生指数 20 天收益率 < -5%
-- **震荡市**：恒生指数 20 天收益率在 -5% 到 +5% 之间
+| 市场环境 | 门槛（校准概率分位） | 说明 |
+|---------|-----------|------|
+| 正常/牛市 | 无市场门槛 | 按买入分档执行：≥0.55可买入（前约18%），≥0.60强买入（前约11%） |
+| 弱震荡 (weak) | 前约10%分位 | 未达门槛 → 市场调整列"降级"，一律观望 |
+| 熊市 (bear) | 前约8%分位 | 未达门槛 → 市场调整列"降级"，一律观望 |
+| 极端熊市 | 暂停 | 暂停全部看涨信号 |
 
 **使用建议**：
-- 震荡市使用阈值 0.65 可显著过滤噪声，减少亏损交易
-- 牛市使用阈值 0.55 可捕捉更多机会，不影响收益率
-- 熊市使用阈值 0.60 保持中等保守策略
+- 市场调整列优先级最高：未过所在市场门槛 → 无视仓位映射，按观望处理
+- 熊市达标票少（校准分布前约8%）属正常，不要自行放宽阈值
+- 门槛为分位数而非固定值：校准器重拟后自动跟随分布，避免绝对阈值漂移
 
 ### ✦ 强烈买入信号
 **强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
@@ -5653,7 +5666,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 1. **模型不确定性**：
    - 20天生产模型准确率{model_accuracy['ml_20d']['accuracy']:.2%}（标准差±{model_accuracy['ml_20d']['std']:.2%}，数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）
-   - 融合预测概率>0.60为高置信度上涨，0.50-0.60为中等置信度观望，≤0.50为预测下跌
+   - 融合预测概率>0.60为高置信度上涨，0.55-0.60为中等置信度，0.50-0.55为弱信号观望，≤0.50为预测下跌
    - 建议：短期和中期一致是主要决策依据，ML预测用于验证和提升置信度
 
 2. **市场风险**：
