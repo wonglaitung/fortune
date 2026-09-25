@@ -1022,6 +1022,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     print("  ⚠️ 无法加载三周期模型，将仅显示20天预测")
 
+            # ========== 每日预测优化：概率校准 + 置信度 ==========
+            # 让用户看到的"上涨概率"变真，并给出"这次预测靠谱程度"（P(主模型判对)）
+            try:
+                from ml_services.daily_confidence import DailyConfidence
+                dc = DailyConfidence()
+                n_cal = dc.apply_to_results(three_horizon_results)
+                if n_cal:
+                    print(f"  ✅ 概率校准+置信度已应用（{n_cal} 项）")
+            except Exception as e:
+                print(f"  ⚠️ 概率校准/置信度失败（不影响预测）: {e}")
+
             # ========== 计算筹码分布（用于邮件表格）==========
             chip_data = {}
             if TECHNICAL_ANALYSIS_AVAILABLE:
@@ -3731,9 +3742,12 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         prob_5d = pred_5d.get('probability', 0)
         prob_20d = pred_20d.get('probability', 0)
         try:
-            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}")
-            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}")
-            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}")
+            lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}"
+                         + (f" (置信{float(pred_1d.get('confidence', 0)):.2f})" if pred_1d.get('confidence') else ""))
+            lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}"
+                         + (f" (置信{float(pred_5d.get('confidence', 0)):.2f})" if pred_5d.get('confidence') else ""))
+            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
+                         + (f" (置信{float(pred_20d.get('confidence', 0)):.2f})" if pred_20d.get('confidence') else ""))
         except (ValueError, TypeError):
             lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
             lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {prob_5d}")

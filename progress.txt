@@ -8,6 +8,20 @@
 
 ## 最新进展
 
+### 2026-09-25 每日预测优化：概率校准 + 置信度（用户视角）⭐⭐
+
+**新增** `ml_services/daily_confidence.py`：
+- 用 `prediction_history.json` 拟合 **Isotonic 校准曲线**（prob→真概率）与**置信曲线**（prob→P(主模型判对)），
+  缓存 `data/calibrators/{prob_cal,conf_cal}_{1,5,20}.pkl`；
+- `apply_to_results()` 兼容 `res['predictions'][h]` / `res[h]` 两种结构。
+
+**接入** `comprehensive_analysis.py`：三周期预测后调用，把报告里的 probability 换成校准值，
+并在邮件文本加 `(置信xx)`。
+**实测**：20d 原始 0.8 → 校准 **0.54**（印证"高概率名不副实"）；0.5→0.51；置信≈0.58。
+
+**文件**：`ml_services/daily_confidence.py`、`comprehensive_analysis.py`、`progress.txt`。
+（校准器 pkl 每次运行自动重拟合，不入库。）
+
 ### 2026-09-25 DEPLOYMENT T2 增加元标签 Kelly（Isotonic 校准）仓位 ⭐
 
 **改动** `docs/DEPLOYMENT.md` T2：仓位策略加入**元标签 Kelly（Isotonic 校准）**——
