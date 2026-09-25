@@ -1174,7 +1174,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     })
 
             # 构建JSON格式文本
-            catboost_text_llm = "【CatBoost模型预测结果（20天）- JSON格式】\n"
+            catboost_text_llm = "【机器学习预测结果（20天）- JSON格式】\n"
             catboost_text_llm += f"预测日期: {date_str}\n\n"
             catboost_text_llm += "```json\n"
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
@@ -1211,7 +1211,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = "【CatBoost模型三周期预测结果】\n"
+                catboost_text_email = "【机器学习三周期预测结果】（1/5天 CatBoost · 20天 LightGBM）\n"
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
@@ -3748,12 +3748,12 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
                          + (f" (置信{float(pred_1d.get('confidence', 0)):.2f})" if pred_1d.get('confidence') else ""))
             lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}"
                          + (f" (置信{float(pred_5d.get('confidence', 0)):.2f})" if pred_5d.get('confidence') else ""))
-            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
+            lines.append(f"LightGBM 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
                          + (f" (置信{float(pred_20d.get('confidence', 0)):.2f})" if pred_20d.get('confidence') else ""))
         except (ValueError, TypeError):
             lines.append(f"CatBoost 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
             lines.append(f"CatBoost 5天预测: {pred_5d.get('direction', '-')} {prob_5d}")
-            lines.append(f"CatBoost 20天预测: {pred_20d.get('direction', '-')} {prob_20d}")
+            lines.append(f"LightGBM 20天预测: {pred_20d.get('direction', '-')} {prob_20d}")
 
         pattern = pred.get('pattern', '-')
         pattern_info = pred.get('pattern_info', {})
