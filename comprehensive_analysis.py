@@ -1256,7 +1256,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
-                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}（市场准入/方向判定基础线；≥0.55买入档、≥0.60+短中期一致=⭐强烈买入档，分层递进非冲突）\n"
+                # 动态阈值说明按市场层分支：bear/weak 门槛优先级最高、压过分档，仅 normal 有完整分档语义
+                if market_layer == 'normal':
+                    threshold_note = "市场准入/方向判定基础线；≥0.55买入档、≥0.60+短中期一致=⭐强烈买入档，分层递进非冲突"
+                elif market_layer in ('bear', 'weak'):
+                    layer_cn = '熊市' if market_layer == 'bear' else '弱震荡'
+                    threshold_note = f"{layer_cn}准入门槛，优先级最高：未过此值一律观望（压过0.55/0.60档位映射）"
+                elif market_layer == 'extreme_bear':
+                    threshold_note = "极端熊市暂停交易，无票通过"
+                else:
+                    threshold_note = "市场准入/方向判定基础线"
+                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}（{threshold_note}）\n"
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
