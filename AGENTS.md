@@ -1,7 +1,7 @@
 # 金融资产智能分析系统 - opencode 规则
 
 > 本文件是 opencode 的规则入口，已通过 `opencode.json` 的 `instructions` 字段自动加载。
-> **📚 详细文档**：特征工程、验证方法等完整指南请查看 [docs/](docs/) 目录
+> **📚 详细文档**：特征工程、验证方法等完整指南请查看 [docs/README.md](docs/README.md)（文档索引，含"该看哪份"导航）
 > **⚠️ 经验教训**：关键警告和最佳实践请参阅 [lessons.md](lessons.md)
 > **🔧 编程规范**：开发流程、系统设计决策请遵守 [docs/programmer_skill.md](docs/programmer_skill.md)
 > **📅 进度跟踪**：[progress.txt](progress.txt) - 项目当前进展

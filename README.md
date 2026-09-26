@@ -869,6 +869,7 @@ python hsi_email.py --no-email
 - **[lessons.md](lessons.md)** - 经验教训
 - **[progress.txt](progress.txt)** - 项目进展
 - **[docs/](docs/)** - 详细文档
+  - [README.md](docs/README.md) - 文档索引（该看哪份）⭐
   - [A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统设计
   - [THREE_HORIZON_ANALYSIS.md](docs/THREE_HORIZON_ANALYSIS.md) - 三周期分析
   - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程
