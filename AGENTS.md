@@ -546,7 +546,6 @@ test_df[col] = test_df[col].apply(
 | 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
 | 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
 | 周一 08:00 HKT | `test-llm-api.yml` | LLM API 连通性测试 | - |
-| 周日 15:00 CST | `tests.yml` | 全量单元测试（防测试腐烂，见 lessons 三.10） | - |
 
 > 注：`hourly-stock-monitor`/`stock-anomaly-detection`/`a-stock-comprehensive-analysis`
 > （每日15:15）已随 `78421801`/`5026cf0c` 清理，以 `.github/workflows/` 实际文件为准。

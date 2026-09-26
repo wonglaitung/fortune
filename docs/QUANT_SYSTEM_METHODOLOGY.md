@@ -431,8 +431,8 @@ python3 ml_services/monthly_guardrail.py --horizon 20
 - `tests/`：`test_calendar_features` / `test_commit_backtest` / `test_eval_stats` /
   `test_market_gates` / `test_performance_report` / `test_pit_network_merge` /
   `test_prompt_render` 等 7 个测试文件，覆盖时区 / 日期错位 / 门槛分位 / 入库行为。
-- CI：`.github/workflows/tests.yml` **每周日 15:00** 跑全量
-  `python3 -m pytest tests/ -v`（定时，不靠人记得）。
+- 执行点：`tests.yml` 周日全量已于 2026-09-27 删除；现为本地每次改码跑
+  `python3 -m py_compile` + 提交前 `python3 -m pytest tests/`（AGENTS 开发规范）。
 - 本地：每次改代码后立即 `python3 -m py_compile <文件>`（AGENTS 开发规范）；
   提交含测试改动时本地先跑一遍相关测试。
 - 三种腐烂分门别类处理：过时断言（数据口径变了，改断言）、"时间旅行"（测试用了固定日期，

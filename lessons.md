@@ -524,7 +524,8 @@ None（宁可不显示，不显示错的）。`performance-monitor.yml` 的 `LAT
 | `test_detect_anomalies_with_training` | fixture 写死 `2026-01-01` 起始日 + `lookback_days=7` 过滤 → 数据随时间变"历史" | 时间旅行测试 |
 | `test_cleanup_expired_entries` | **真 bug**：`add()` 写本地 naive、`cleanup()` 按 UTC 比较，UTC+8 下 age 少算 8h，50h 条目算成 42h < 48h → 清理永不触发 | 功能缺陷 |
 
-**做法**：① `tests.yml` 每周日 schedule + 手动触发（**不设 on:push**，避免烧 CI）；
+**做法**：① `tests.yml` 每周日 schedule + 手动触发（**不设 on:push**，避免烧 CI；
+该工作流已于 2026-09-27 删除，执行点改回本地提交前跑测试）；
 ② fixture 日期锚定 `pd.Timestamp.today()`；③ naive 时间戳比较前 `astimezone()` 按本地
 时区转 aware（与写入方 `datetime.now()` 一致）。
 
