@@ -637,6 +637,24 @@ dsr = deflated_sharpe(sr[best], len(M), M.shape[1], ...)   # N_trials = M.shape[
 **做法**：已更正 `AGENTS.md` / `DECISIONS.md` D2+§四 / `progress.txt`，改为
 "DSR 本身就是选择后校正，非口径缺陷"，并补上真正缺的两道检验（bootstrap CI + 逐年）。
 
+### 16. 数值字段禁止经 LLM 抄写；Isotonic 不幂等禁止二次 transform ⭐⭐⭐⭐
+
+**问题**：3968.HK 邮件"ML 20天概率 0% 看跌"——①数值经 LLM 从文本转写（STOCK_ANALYSIS_PROMPT）
+被抄成 null，展示层 `or 0` 假装零值并套"看跌硬约束"红判；②修复时又对
+`DailyConfidence.apply_to_results` **已校准**的值二次 `transform`——**Isotonic 不幂等**
+（实测 0.5659→0.5124、0.8636→0.5659），引入新错值；③用 raw 构造测试数据恰好掩盖了双重校准
+（测试过 56.59=transform(raw)，真实上游已是 transform(raw)，再 transform 即错）。
+
+**解决方案**：
+- 数值字段代码直填（`fill_calibrated_ml_probs`：three_horizon → stock_data），LLM 只负责文本字段
+- 缺失显示 "-" +"数据缺失（未取得当日预测）"，禁止 `or 0` 假装零值
+- 已校准值透传，禁止二次 transform；测试数据必须模拟真实上游状态（dc 已应用后的值）
+
+**教训**：
+- 数据经 LLM 转手=随机丢字段（null/幻觉），确定性数据一律走代码管道
+- 调 transform 前先问"这个值校准过吗"——校准器管道上下游各有一次校准机会就够
+- 数据链要画全（CSV raw → apply_to_results 校准 → 直填 → 展示），三层错位每层都会单独放大成病值
+
 
 ## 四、模型训练
 
@@ -903,6 +921,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-09-27 | v10.19 | 新增：数值字段禁经 LLM 抄写（null→or 0 误显"0%看跌"）+ Isotonic 不幂等禁二次 transform（0.5659→0.5124）→ 三.16 |
 | 2026-09-26 | v10.18 | 新增：DSR 本身就是选择后校正，别误报成口径缺陷（差点用错误的保留意见误导升配决策）→ 三.15 |
 | 2026-09-26 | v10.17 | 新增：文档验证数值必须可复现 + 准确率必须相对同向基准读（885≠697、旧值不可复现、eval 报告指向旧 CSV）→ 三.14 |
 | 2026-09-26 | v10.16 | 新增：长时后台任务必须 tmux，setsid nohup 仍会被会话杀（3 进程同时被杀损失 3.5h）→ 三.13 |

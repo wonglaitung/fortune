@@ -3534,61 +3534,28 @@ def _send_email_legacy(subject, content, html_content=None):
 # ============================================================================
 
 # ============================================================================
-# ML 概率校准与直填
+# ML 概率直填
 # 数值字段不经 LLM 抄写（LLM 曾把概率抄成 null，展示层 or 0 误显 0% 看跌）：
-# raw → Isotonic 校准 → 百分比直填；无预测 → 不写键 → 展示层显示 "-"
+# three_horizon 值已由 DailyConfidence.apply_to_results 校准 → 直填透传；
+# 无预测 → 不写键 → 展示层显示 "-"。注意 Isotonic 不幂等，禁止二次 transform。
 # ============================================================================
-_prob_calibrator_cache = {}
-
-
-def _load_prob_calibrator(horizon: int):
-    """加载 Isotonic 概率校准器 data/calibrators/prob_cal_{horizon}.pkl，失败返回 None"""
-    if horizon in _prob_calibrator_cache:
-        return _prob_calibrator_cache[horizon]
-    cal = None
-    try:
-        import pickle
-        cal_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'data', 'calibrators', f'prob_cal_{horizon}.pkl')
-        with open(cal_path, 'rb') as f:
-            cal = pickle.load(f)
-    except Exception as e:
-        print(f"⚠️ 概率校准器({horizon}d)加载失败: {e}，回退原始概率")
-    _prob_calibrator_cache[horizon] = cal
-    return cal
-
-
-def calibrated_probability(raw, horizon: int):
-    """raw 模型概率(0-1) → Isotonic 校准后概率(0-1)。
-
-    raw 缺失/非数值返回 None；校准器缺失时回退 raw（并在加载时已告警）。
-    """
-    if raw is None:
-        return None
-    try:
-        raw_f = float(raw)
-    except (TypeError, ValueError):
-        return None
-    cal = _load_prob_calibrator(horizon)
-    if cal is None:
-        return raw_f
-    try:
-        return float(cal.transform([raw_f])[0])
-    except Exception:
-        return raw_f
-
-
 def fill_calibrated_ml_probs(stock_data: dict, three_horizon_results: dict, stock_code: str) -> dict:
-    """概率直填：从三周期结果取 raw、过校准，写入 ml_prob_{1,5,20}d（百分比数值）。
+    """概率直填：从三周期结果取值写入 ml_prob_{1,5,20}d（百分比数值）。
 
-    该股无预测 → 不写键（渲染层显示"-"）。直填在 LLM 提取之后调用，真数据覆盖 LLM 转写。
+    three_horizon_results 的 probability 已由 DailyConfidence.apply_to_results
+    校准（主流程必调），此处**透传不再 transform**——Isotonic 不幂等
+    （0.57 再校准→0.51），二次校准会出错值。该股无预测 → 不写键（渲染层显示"-"）。
+    直填在 LLM 提取之后调用，真数据覆盖 LLM 转写。
     """
     preds = (three_horizon_results.get(stock_code) or {}).get('predictions') or {}
     for horizon, key in ((1, 'ml_prob_1d'), (5, 'ml_prob_5d'), (20, 'ml_prob_20d')):
         raw = (preds.get(horizon) or {}).get('probability')
-        prob = calibrated_probability(raw, horizon)
-        if prob is not None:
-            stock_data[key] = round(prob * 100, 2)
+        if raw is None:
+            continue
+        try:
+            stock_data[key] = round(float(raw) * 100, 2)
+        except (TypeError, ValueError):
+            continue
     return stock_data
 
 
@@ -3876,10 +3843,10 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         pred_5d = preds.get(5, {})
         pred_20d = preds.get(20, {})
 
-        # 概率过 Isotonic 校准（与展示口径一致；raw 直喂 LLM 会把未校准值当校准值用）
-        prob_1d = calibrated_probability(pred_1d.get('probability'), 1)
-        prob_5d = calibrated_probability(pred_5d.get('probability'), 5)
-        prob_20d = calibrated_probability(pred_20d.get('probability'), 20)
+        # 概率：three_horizon 值已由 DailyConfidence 校准，透传（Isotonic 不幂等，勿二次校准）
+        prob_1d = pred_1d.get('probability')
+        prob_5d = pred_5d.get('probability')
+        prob_20d = pred_20d.get('probability')
         try:
             lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {f'{prob_1d:.2f}' if prob_1d is not None else '-'}"
                          + (f" (置信{float(pred_1d.get('confidence', 0)):.2f})" if pred_1d.get('confidence') else ""))

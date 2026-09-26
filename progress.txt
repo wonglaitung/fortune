@@ -2018,3 +2018,17 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **遗留**：①邮件三周期表(csv raw)与"已Isotonic校准"标注口径不符（extract_ml_predictions
   全程无校准调用）②预测 CSV 严重过期（09-25 cron predict 疑未跑）③82% raw 在
   prediction_history 与校准口径混用（performance 监控如用 raw 需核）
+
+### 2026-09-27 遗留三项处置（0% 案例收尾）⭐
+
+- **修正上轮结论**：邮件三周期表"已Isotonic校准"标注**属实**——`extract_ml_predictions`
+  内有 `DailyConfidence.apply_to_results(three_horizon_results)` 校准（我此前 grep 模块内
+  prob_cal/transform 未命中就断言"全程无校准"=错）；混用仅存于 dc 失败与"无三周期结果回退 CSV raw"路径
+- **⚠️ 自纠 bug（双重校准）**：直填/LLM 输入曾对已校准值再 transform——**Isotonic 不幂等**
+  （实测 0.5659→0.5124、0.8636→0.5659）→ 已改**透传**（fill/compact_text 不 transform），
+  删 calibrated_probability helper；教训入 lessons 三.16（v10.19）
+- **#2 本地 CSV 过期**：CI 链路自愈（runner 当日 predict、CSV 不入库）；本地过期仅影响手动跑 →
+  已本地重跑 1d/5d/20d predict 刷新（00:48-50，data_date=09-25；3968 raw=0.592/0.419/0.704）
+- **#3 关闭**：prediction_probability(raw) 消费方仅 daily_confidence 训练校准器（raw 是正确输入）
+  + visualize 脚本展示；监控用 direction/outcome——无口径 bug
+- 测试 83 passed（直填透传 4 + 展示缺失/有值 2 + 原 77）

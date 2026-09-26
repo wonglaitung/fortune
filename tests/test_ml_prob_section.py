@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""ML 概率直填/校准/缺失展示 三件套测试
+"""ML 概率直填/缺失展示 测试
 
 背景：LLM 把概率抄成 null → 展示层 or 0 误显"0% 看跌"（3968.HK 案例）。
-修复：数值不经 LLM，raw→Isotonic 校准→直填；缺失显示"-"。
+修复：数值不经 LLM，三周期值（DailyConfidence 已校准）直填；缺失显示"-"。
+注意：Isotonic 不幂等（0.57 再校准→0.51），直填必须透传、禁止二次 transform。
 """
 import os
 
@@ -10,42 +11,27 @@ import pytest
 
 import comprehensive_analysis as ca
 
-CAL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        'data', 'calibrators', 'prob_cal_20.pkl')
-
-
-# ---------- calibrated_probability ----------
-
-def test_calibrated_probability_none_raw():
-    assert ca.calibrated_probability(None, 20) is None
-    assert ca.calibrated_probability('bad', 20) is None
-
-
-def test_calibrated_probability_fallback_raw(monkeypatch):
-    monkeypatch.setattr(ca, '_load_prob_calibrator', lambda hz: None)
-    ca._prob_calibrator_cache.clear()
-    assert ca.calibrated_probability(0.8212, 20) == pytest.approx(0.8212)
-
-
-@pytest.mark.skipif(not os.path.exists(CAL_PATH), reason='校准器文件不在仓库（data/calibrators 未入库）')
-def test_calibrated_probability_real_calibrator():
-    # 3968.HK 案例：raw 0.8212 → Isotonic 校准后 0.5659
-    v = ca.calibrated_probability(0.8212, 20)
-    assert v == pytest.approx(0.5659, abs=0.005)
-
 
 # ---------- fill_calibrated_ml_probs ----------
 
-def test_fill_calibrated_ml_probs(monkeypatch):
-    monkeypatch.setattr(ca, '_load_prob_calibrator', lambda hz: None)
-    ca._prob_calibrator_cache.clear()
+def test_fill_passes_through_calibrated_value():
+    # three_horizon 值已由 DailyConfidence 校准（如 0.5659），直填=透传×100
     stock_data = {}
     th = {'3968.HK': {'predictions': {
-        1: {'probability': 0.4342}, 5: {'probability': 0.7069}, 20: {'probability': 0.8212}}}}
+        1: {'probability': 0.4102}, 5: {'probability': 0.4324}, 20: {'probability': 0.5659}}}}
     ca.fill_calibrated_ml_probs(stock_data, th, '3968.HK')
-    assert stock_data['ml_prob_20d'] == pytest.approx(82.12, abs=0.01)
-    assert stock_data['ml_prob_1d'] == pytest.approx(43.42, abs=0.01)
-    assert stock_data['ml_prob_5d'] == pytest.approx(70.69, abs=0.01)
+    assert stock_data['ml_prob_20d'] == pytest.approx(56.59, abs=0.01)
+    assert stock_data['ml_prob_1d'] == pytest.approx(41.02, abs=0.01)
+    assert stock_data['ml_prob_5d'] == pytest.approx(43.24, abs=0.01)
+
+
+def test_fill_does_not_recalibrate():
+    # 若二次 transform：0.5659 → 0.5124（Isotonic 不幂等）——断言透传排除
+    stock_data = {}
+    th = {'3968.HK': {'predictions': {20: {'probability': 0.5659}}}}
+    ca.fill_calibrated_ml_probs(stock_data, th, '3968.HK')
+    assert stock_data['ml_prob_20d'] == pytest.approx(56.59, abs=0.01)
+    assert stock_data['ml_prob_20d'] != pytest.approx(51.24, abs=0.01)
 
 
 def test_fill_calibrated_ml_probs_missing_stock():
@@ -55,13 +41,11 @@ def test_fill_calibrated_ml_probs_missing_stock():
     assert stock_data['ml_prob_20d'] == 66.0
 
 
-def test_fill_calibrated_ml_probs_overwrites_llm_value(monkeypatch):
-    monkeypatch.setattr(ca, '_load_prob_calibrator', lambda hz: None)
-    ca._prob_calibrator_cache.clear()
+def test_fill_calibrated_ml_probs_overwrites_llm_value():
     stock_data = {'ml_prob_20d': 0.0}  # LLM 抄成 null→0 的病值
-    th = {'3968.HK': {'predictions': {20: {'probability': 0.8212}}}}
+    th = {'3968.HK': {'predictions': {20: {'probability': 0.5659}}}}
     ca.fill_calibrated_ml_probs(stock_data, th, '3968.HK')
-    assert stock_data['ml_prob_20d'] == pytest.approx(82.12, abs=0.01)
+    assert stock_data['ml_prob_20d'] == pytest.approx(56.59, abs=0.01)
 
 
 # ---------- generate_stock_section_html 展示 ----------
