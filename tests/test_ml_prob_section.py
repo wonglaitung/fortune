@@ -65,3 +65,19 @@ def test_section_with_prob_shows_calibrated_value():
     assert '<td>57%</td>' in html  # 20d 56.6 → 57%
     assert '中等置信度，50-60%' in html
     assert '看跌，<50%硬约束禁止买入' not in html.split('一、核心指标')[1].split('</table>')[0]
+
+
+# ---------- _stock_chart_url（腾讯自选股 K 线链接） ----------
+
+def test_stock_chart_url_hk_left_pads_to_5():
+    assert ca._stock_chart_url('0700.HK') == 'https://gu.qq.com/hk00700'
+    assert ca._stock_chart_url('0005.HK') == 'https://gu.qq.com/hk00005'
+    assert ca._stock_chart_url('2318.HK') == 'https://gu.qq.com/hk02318'
+    assert ca._stock_chart_url('2513.HK') == 'https://gu.qq.com/hk02513'
+
+
+def test_stock_chart_url_non_hk_returns_none():
+    assert ca._stock_chart_url('^HSI') is None
+    assert ca._stock_chart_url('9988') is None
+    assert ca._stock_chart_url(None) is None
+    assert ca._stock_chart_url('0700.HKX') is None

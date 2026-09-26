@@ -34,6 +34,20 @@ from data_services.calendar_features import get_last_trading_day
 STOCK_NAMES = WATCHLIST
 STOCK_LIST = WATCHLIST  # 为兼容 hsi_email 模块添加别名
 
+
+def _stock_chart_url(code):
+    """生成港股在腾讯自选股的 K 线图链接（邮件/报告中可点击）。
+
+    规则：`XXXX.HK` → 去 `.HK` 后缀、左补零至 5 位 → `https://gu.qq.com/hk0XXXX`。
+    非 `.HK` 格式（如恒指 `^HSI` 或未来异常代码）返回 None，调用方保持原样输出。
+    """
+    if not isinstance(code, str) or not code.endswith('.HK'):
+        return None
+    num = code[:-3]
+    if not num.isdigit():
+        return None
+    return f"https://gu.qq.com/hk{num.zfill(5)}"
+
 # 导入必要的模块
 try:
     from data_services.hk_sector_analysis import SectorAnalyzer
@@ -1431,7 +1445,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             market_adjust_display = '🟢正常'
 
                         price_str = f"{row['current_price']:.2f}" if pd.notna(row.get('current_price')) else '-'
-                        catboost_text_email += f"| {stock_code} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        _chart_url = _stock_chart_url(stock_code)
+                        _code_cell = (f"[{stock_code}]({_chart_url})" if _chart_url
+                                      else stock_code)
+                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"
