@@ -3533,6 +3533,65 @@ def _send_email_legacy(subject, content, html_content=None):
 # 详细个股分析模块（从 send_stock_analysis_email.py 合并）
 # ============================================================================
 
+# ============================================================================
+# ML 概率校准与直填
+# 数值字段不经 LLM 抄写（LLM 曾把概率抄成 null，展示层 or 0 误显 0% 看跌）：
+# raw → Isotonic 校准 → 百分比直填；无预测 → 不写键 → 展示层显示 "-"
+# ============================================================================
+_prob_calibrator_cache = {}
+
+
+def _load_prob_calibrator(horizon: int):
+    """加载 Isotonic 概率校准器 data/calibrators/prob_cal_{horizon}.pkl，失败返回 None"""
+    if horizon in _prob_calibrator_cache:
+        return _prob_calibrator_cache[horizon]
+    cal = None
+    try:
+        import pickle
+        cal_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'data', 'calibrators', f'prob_cal_{horizon}.pkl')
+        with open(cal_path, 'rb') as f:
+            cal = pickle.load(f)
+    except Exception as e:
+        print(f"⚠️ 概率校准器({horizon}d)加载失败: {e}，回退原始概率")
+    _prob_calibrator_cache[horizon] = cal
+    return cal
+
+
+def calibrated_probability(raw, horizon: int):
+    """raw 模型概率(0-1) → Isotonic 校准后概率(0-1)。
+
+    raw 缺失/非数值返回 None；校准器缺失时回退 raw（并在加载时已告警）。
+    """
+    if raw is None:
+        return None
+    try:
+        raw_f = float(raw)
+    except (TypeError, ValueError):
+        return None
+    cal = _load_prob_calibrator(horizon)
+    if cal is None:
+        return raw_f
+    try:
+        return float(cal.transform([raw_f])[0])
+    except Exception:
+        return raw_f
+
+
+def fill_calibrated_ml_probs(stock_data: dict, three_horizon_results: dict, stock_code: str) -> dict:
+    """概率直填：从三周期结果取 raw、过校准，写入 ml_prob_{1,5,20}d（百分比数值）。
+
+    该股无预测 → 不写键（渲染层显示"-"）。直填在 LLM 提取之后调用，真数据覆盖 LLM 转写。
+    """
+    preds = (three_horizon_results.get(stock_code) or {}).get('predictions') or {}
+    for horizon, key in ((1, 'ml_prob_1d'), (5, 'ml_prob_5d'), (20, 'ml_prob_20d')):
+        raw = (preds.get(horizon) or {}).get('probability')
+        prob = calibrated_probability(raw, horizon)
+        if prob is not None:
+            stock_data[key] = round(prob * 100, 2)
+    return stock_data
+
+
 # 大模型提取 Prompt 模板
 STOCK_ANALYSIS_PROMPT = """你是一个股票分析专家。请从以下综合分析报告中提取指定股票的分析信息。
 
@@ -3817,15 +3876,16 @@ def build_stock_data_for_llm(stock_code: str, three_horizon_results: dict,
         pred_5d = preds.get(5, {})
         pred_20d = preds.get(20, {})
 
-        prob_1d = pred_1d.get('probability', 0)
-        prob_5d = pred_5d.get('probability', 0)
-        prob_20d = pred_20d.get('probability', 0)
+        # 概率过 Isotonic 校准（与展示口径一致；raw 直喂 LLM 会把未校准值当校准值用）
+        prob_1d = calibrated_probability(pred_1d.get('probability'), 1)
+        prob_5d = calibrated_probability(pred_5d.get('probability'), 5)
+        prob_20d = calibrated_probability(pred_20d.get('probability'), 20)
         try:
-            lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {float(prob_1d):.2f}"
+            lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {f'{prob_1d:.2f}' if prob_1d is not None else '-'}"
                          + (f" (置信{float(pred_1d.get('confidence', 0)):.2f})" if pred_1d.get('confidence') else ""))
-            lines.append(f"ML 5天预测: {pred_5d.get('direction', '-')} {float(prob_5d):.2f}"
+            lines.append(f"ML 5天预测: {pred_5d.get('direction', '-')} {f'{prob_5d:.2f}' if prob_5d is not None else '-'}"
                          + (f" (置信{float(pred_5d.get('confidence', 0)):.2f})" if pred_5d.get('confidence') else ""))
-            lines.append(f"ML 20天预测: {pred_20d.get('direction', '-')} {float(prob_20d):.2f}"
+            lines.append(f"ML 20天预测: {pred_20d.get('direction', '-')} {f'{prob_20d:.2f}' if prob_20d is not None else '-'}"
                          + (f" (置信{float(pred_20d.get('confidence', 0)):.2f})" if pred_20d.get('confidence') else ""))
         except (ValueError, TypeError):
             lines.append(f"ML 1天预测: {pred_1d.get('direction', '-')} {prob_1d}")
@@ -4304,13 +4364,16 @@ def generate_stock_section_html(stock_data: dict) -> str:
         operation_advice = ""
         risk_warnings = []
 
-    # ML 概率
-    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d', 0)) or 0
-    prob_5d = stock_data.get('ml_prob_5d', stock_data.get('catboost_prob_5d', 0)) or 0
-    prob_1d = stock_data.get('ml_prob_1d', stock_data.get('catboost_prob_1d', 0)) or 0
+    # ML 概率（直填后可能为 None=无预测 → 显示"-"，不再 or 0 假装 0%）
+    prob_20d = stock_data.get('ml_prob_20d', stock_data.get('catboost_prob_20d'))
+    prob_5d = stock_data.get('ml_prob_5d', stock_data.get('catboost_prob_5d'))
+    prob_1d = stock_data.get('ml_prob_1d', stock_data.get('catboost_prob_1d'))
 
     # 概率样式
-    if prob_20d >= 60:
+    if prob_20d is None:
+        prob_class = "metric-neutral"
+        prob_desc = "数据缺失（未取得当日预测）"
+    elif prob_20d >= 60:
         prob_class = "metric-good"
         prob_desc = "高置信度，>60%"
     elif prob_20d >= 50:
@@ -4320,13 +4383,21 @@ def generate_stock_section_html(stock_data: dict) -> str:
         prob_class = "metric-bad"
         prob_desc = "看跌，<50%硬约束禁止买入"
 
-    # 方向判断
-    dir_1d = "↑ 上涨" if prob_1d >= 50 else "↓ 下跌"
-    dir_1d_class = "arrow-up" if prob_1d >= 50 else "arrow-down"
-    dir_5d = "↑ 上涨" if prob_5d >= 50 else "↓ 下跌"
-    dir_5d_class = "arrow-up" if prob_5d >= 50 else "arrow-down"
-    dir_20d = "↑ 上涨" if prob_20d >= 50 else "↓ 下跌"
-    dir_20d_class = "arrow-up" if prob_20d >= 50 else "arrow-down"
+    # 概率/方向显示（None → "-"）
+    prob_1d_txt = f"{prob_1d:.0f}%" if prob_1d is not None else "-"
+    prob_5d_txt = f"{prob_5d:.0f}%" if prob_5d is not None else "-"
+    prob_20d_txt = f"{prob_20d:.0f}%" if prob_20d is not None else "-"
+
+    def _dir_text(p):
+        if p is None:
+            return "-", ""
+        if p >= 50:
+            return "↑ 上涨", "arrow-up"
+        return "↓ 下跌", "arrow-down"
+
+    dir_1d, dir_1d_class = _dir_text(prob_1d)
+    dir_5d, dir_5d_class = _dir_text(prob_5d)
+    dir_20d, dir_20d_class = _dir_text(prob_20d)
 
     # 涨跌幅显示
     price_change = stock_data.get('price_change', 0) or 0
@@ -4495,7 +4566,7 @@ def generate_stock_section_html(stock_data: dict) -> str:
             <h3>一、核心指标</h3>
             <table>
                 <tr><th>指标</th><th>数值</th><th>说明</th></tr>
-                <tr><td>ML 20天上涨概率（校准后）</td><td class="{prob_class}">{format_value_default(prob_20d, "0")}%</td><td>{prob_desc}</td></tr>
+                <tr><td>ML 20天上涨概率（校准后）</td><td class="{prob_class}">{prob_20d_txt}</td><td>{prob_desc}</td></tr>
                 <tr><td>当前价格</td><td>HK${format_value_default(stock_data.get('current_price'), "-")}</td><td>{price_change_display}</td></tr>
                 <tr><td>建议仓位</td><td>{format_value_default(stock_data.get('position_advice', 0), "0")}%</td><td></td></tr>
                 <tr><td>止损位</td><td>{stop_loss}</td><td>最大亏损控制在-8%以内</td></tr>
@@ -4505,9 +4576,9 @@ def generate_stock_section_html(stock_data: dict) -> str:
             <h3>二、三周期预测</h3>
             <table>
                 <tr><th>周期</th><th>预测概率</th><th>方向</th></tr>
-                <tr><td>1天</td><td>{format_value_default(prob_1d, "0")}%</td><td class="{dir_1d_class}">{dir_1d}</td></tr>
-                <tr><td>5天</td><td>{format_value_default(prob_5d, "0")}%</td><td class="{dir_5d_class}">{dir_5d}</td></tr>
-                <tr><td>20天</td><td>{format_value_default(prob_20d, "0")}%</td><td class="{dir_20d_class}">{dir_20d}</td></tr>
+                <tr><td>1天</td><td>{prob_1d_txt}</td><td class="{dir_1d_class}">{dir_1d}</td></tr>
+                <tr><td>5天</td><td>{prob_5d_txt}</td><td class="{dir_5d_class}">{dir_5d}</td></tr>
+                <tr><td>20天</td><td>{prob_20d_txt}</td><td class="{dir_20d_class}">{dir_20d}</td></tr>
             </table>
             <p><strong>三周期模式</strong>：{stock_data.get('three_period_pattern') or "-"}</p>
             <p><strong>传导模式</strong>：{stock_data.get('transmission_mode') or "-"}</p>
@@ -5773,6 +5844,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         )
                         stock_data = extract_stock_data_with_llm(stock_code, compact_text)
                         if stock_data:
+                            # 三件套①②：概率直填（raw→校准→%），真数据覆盖 LLM 转写
+                            fill_calibrated_ml_probs(stock_data, three_horizon_results, stock_code)
                             # 兜底：如果LLM未提取到关键字段，用计算值填充
                             current_p = stock_data.get('current_price') or (stock_realtime.get('price') if stock_realtime else None)
                             if current_p and isinstance(current_p, (int, float)) and current_p > 0:

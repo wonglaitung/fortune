@@ -1998,3 +1998,23 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 修复：按 market_layer 分支——normal=准入线+分档说明；bear/weak="XX准入门槛，
   优先级最高：未过此值一律观望（压过0.55/0.60档位映射）"；extreme_bear="暂停交易，无票通过"
 - 77 passed；prompt 内本就有"市场调整列优先级最高"兜底（L5047），无需改
+
+### 2026-09-26 邮件个股"概率0%"修复（3968.HK 案例）⭐
+
+- **症状**：邮件招商银行"ML 20天上涨概率（校准后）0% 看跌，<50%硬约束禁止买入"
+- **三层根因**：①真值 prediction_history 09-26 raw=0.82 看涨（**未校准**，Isotonic 后=
+  0.566/56.6%）②邮件详细段读的 CSV 过期（20d=08-18、1d/5d=07-20，raw=0.354）
+  ③数值经 LLM 抄写（STOCK_ANALYSIS_PROMPT）抄成 null → 展示层 `or 0` 显 0% 看跌
+- **三件套修复（comprehensive_analysis.py）**：
+  1. `_load_prob_calibrator/calibrated_probability/fill_calibrated_ml_probs`：数值
+     不经 LLM——raw 直取 three_horizon_results → data/calibrators/prob_cal_{1,5,20}.pkl
+     校准 → %直填（主流程 extract 后调用，覆盖 LLM 病值；坑：校准器在 calibrators/ 子目录）
+  2. 展示层去 `or 0`：None → 灰色"数据缺失（未取得当日预测）"+"-"，不再假装 0% 看跌；
+     方向 None → "-"
+  3. build_stock_data_for_llm 喂 LLM 的概率同步过校准（与展示口径一致）
+- 3968 修复后：raw 0.8212 → **56.59% 中等置信（55-60 买入档）**（不再是 0% 看跌）
+- 新增 tests/test_ml_prob_section.py 8 项（校准/回退/直填覆盖LLM病值/缺失展示/有值展示）
+  → **85 passed**
+- **遗留**：①邮件三周期表(csv raw)与"已Isotonic校准"标注口径不符（extract_ml_predictions
+  全程无校准调用）②预测 CSV 严重过期（09-25 cron predict 疑未跑）③82% raw 在
+  prediction_history 与校准口径混用（performance 监控如用 raw 需核）
