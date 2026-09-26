@@ -366,7 +366,13 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 > **最终决策（2026-09-24）**：个股横截面 alpha 已穷尽，**停止投入**（见 [docs/DECISIONS.md](docs/DECISIONS.md) D1）。
 > `20d 行业中性 TopK` 每次 Walk-forward 后跑 `ml_services/monthly_guardrail.py` 复核
 > （净IR≥0.7 且 PBO<0.5 且 DSR≥0.95 才可升级，判定见 D2）；**2026-09-26 复核为 🟢 可升级**
-> （但 lift +1.9pp 仍不显著，且 DSR 取最优 top10 口径 → 是否上调仓位需人工决策，非自动）。
+> **2026-09-26 补充证据（`ml_services/portfolio_backtest.py`，同一份 09-26 CSV）**：
+> 超额IR（TopK行业中性净 − 等权基准）**1.24，bootstrap 95%CI [0.18, 2.41] 下界>0**、
+> P(超额IR>0)=**98.9%**、超额均值 +1.08%/期 CI [+0.15%, +2.04%]；逐年超额**四年全正**
+> （2023 +1.75%/期、2024 +0.27%、2025 +1.70%、2026 +0.64%）→ **组合层稳健性成立**。
+> 注：DSR 0.982 用 `deflated_sharpe(sr[best], T, N=6 configs)`，**本身就是选择后校正**，非口径缺陷。
+> 剩余保留意见：信号层 lift +1.9pp 不显著、2024 超额接近打平（IR 0.25、42% 期正）、总样本仅 39 期
+> → **升配幅度（而非是否升配）需人工决策**。
 
 **新增利率特征**（2026-05-23）：
 - 多期限美债收益率：US_2Y_Yield, US_10Y_Yield, US_30Y_Yield
