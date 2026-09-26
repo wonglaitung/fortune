@@ -74,3 +74,36 @@ def test_honest_summary_before_section_one():
     # 护栏段在末尾，且 html 片段包含两块
     assert report.find('## 策略护栏状态') > idx_s1
     assert '方向技能' in extra_html and '策略护栏状态' in extra_html
+
+
+def _fake_guardrail_md(tmp_path, verdict="## 判定：🟢 通过 → 可升级", title="# 月度护栏复核（20d）"):
+    p = tmp_path / "monthly_guardrail_test.md"
+    p.write_text(
+        f"{title}\n\n- 日期: 2026-09-25 04:56:58\n\n"
+        "| 指标 | 值 | 门槛 |\n|------|----|------|\n"
+        "| 净IR | **1.06** [-0.07,2.18] | ≥0.7 |\n"
+        "| **PBO** | **0.47** | <0.5 |\n"
+        "| **DSR**（最优 top5-neutral） | **0.981** | ≥0.95 |\n"
+        f"\n{verdict}\n",
+        encoding="utf-8")
+    return str(p)
+
+
+def test_guardrail_block_renders(monkeypatch, tmp_path):
+    """20d 护栏块：三门槛/判定/日期齐全，🟢 带配比说明。"""
+    from ml_services import performance_monitor as pm
+    p = _fake_guardrail_md(tmp_path)
+    monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: p)
+    b = pm._guardrail_block()
+    assert '20d 辅助策略（行业中性 TopK）护栏' in b
+    assert '🟢 通过 → 可升级' in b and '15–20%' in b
+    assert '1.06' in b and '0.47' in b and '0.981' in b
+    assert '2026-09-25' in b and b.count('✅') == 3
+
+
+def test_guardrail_block_empty_without_20d_file(monkeypatch):
+    """无 20d 护栏文件 → 返回空串（宁缺毋滥，不显示错的）。"""
+    from ml_services import performance_monitor as pm
+    monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: None)
+    assert pm._guardrail_block() == ""
+    assert pm._guardrail_status() is None

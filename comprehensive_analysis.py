@@ -5490,6 +5490,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                     'normal': '🟢 正常市场：常规操作',
                 }
                 banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}，动态阈值 {dynamic_threshold:.2f}）\n\n"
+                # 20d 行业中性 TopK 护栏状态（DECISIONS D2 / DEPLOYMENT T2），
+                # 与三周期准确率同属"预测可信度"语境，插在第二节末尾；无 20d 报告则不显示
+                try:
+                    from ml_services.performance_monitor import _guardrail_block
+                    _grd_block = _guardrail_block()
+                except Exception:
+                    _grd_block = ""
                 full_content = banner_line + f"""{response}
 
 ---
@@ -5516,6 +5523,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
+{_grd_block}
 ## 三、股票异常检测提醒
 
 """

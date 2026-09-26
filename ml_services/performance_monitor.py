@@ -319,11 +319,11 @@ def _yearly_metrics(predictions: List[Dict]) -> List[Dict]:
     return rows
 
 
-def _guardrail_status() -> Optional[str]:
-    """读取最新一次 20d 月度护栏报告，返回一行判定摘要（无则 None）。
+def _guardrail_file_20d() -> Optional[str]:
+    """取最新一次 20d 月度护栏报告路径，无则 None。
 
     只认首行 `# 月度护栏复核（20d）` 的文件：output/ 下还有 1d/5d 专项复核，
-    纯按 mtime 取最新会张冠李戴（2026-09-26 实际发生：1d 停用结论被贴上
+    纯按 mtime 取最新会张冠李戴（2026-09-26 实际发生：1d 停用结论被贴成
     "20d TopK" 标签，误导为 20d 已停用，实为 20d 保留低配/可升级）。
     """
     import glob
@@ -337,7 +337,14 @@ def _guardrail_status() -> Optional[str]:
             continue
     if not cand:
         return None
-    latest = max(cand, key=os.path.getmtime)
+    return max(cand, key=os.path.getmtime)
+
+
+def _guardrail_status() -> Optional[str]:
+    """读取最新一次 20d 月度护栏报告，返回一行判定摘要（无则 None）。"""
+    latest = _guardrail_file_20d()
+    if latest is None:
+        return None
     try:
         with open(latest, encoding='utf-8') as f:
             for line in f:
@@ -346,6 +353,69 @@ def _guardrail_status() -> Optional[str]:
     except Exception:
         return None
     return None
+
+
+def _guardrail_block() -> str:
+    """解析 20d 护栏报告为综合分析报告用的 markdown 块（无 20d 文件返回空串）。
+
+    展示位置：comprehensive_analysis.py 第二节（机器学习预测结果）末尾。
+    判定与配比语义见 DECISIONS D2 / DEPLOYMENT T2：
+    🟢 三门槛全过可放大 15-20%；🟡 保留 ≤10% 低配；🔴 IR≤0 清仓。
+    解析失败的字段显示 '-'，宁可少显示不错显示。
+    """
+    import re
+    path = _guardrail_file_20d()
+    if path is None:
+        return ""
+    try:
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+    except OSError:
+        return ""
+
+    def _find(pattern, default='-'):
+        m = re.search(pattern, text, flags=re.MULTILINE)
+        return (m.group(1).strip() if m else default)
+
+    date = _find(r'- 日期:\s*(\d{4}-\d{2}-\d{2})', '未知日期')
+    verdict = _find(r'^## 判定：(.+)$', '判定未知')
+    ir = _find(r'\|\s*净IR\s*\|\s*\*\*([^*]+)\*\*')
+    ci = _find(r'\|\s*净IR\s*\|\s*\*\*[^*]+\*\*\s*(\[[^\]]*\])', '')
+    pbo = _find(r'\|\s*\*\*PBO\*\*\s*\|\s*\*\*([^*]+)\*\*')
+    dsr = _find(r'\|\s*\*\*DSR\*\*[^|]*\|\s*\*\*([^*]+)\*\*')
+
+    def _ok(val, op):
+        try:
+            v = float(val)
+            return '✅' if op(v) else '❌'
+        except ValueError:
+            return ''
+
+    ir_ok = _ok(ir, lambda v: v >= 0.7)
+    pbo_ok = _ok(pbo, lambda v: v < 0.5)
+    dsr_ok = _ok(dsr, lambda v: v >= 0.95)
+
+    if '🟢' in verdict:
+        alloc = '允许放大至 15–20% 配比'
+    elif '🟡' in verdict:
+        alloc = '维持 ≤10% 低配倾斜'
+    elif '🔴' in verdict:
+        alloc = '清仓，停止使用'
+    else:
+        alloc = ''
+
+    return f"""### 20d 辅助策略（行业中性 TopK）护栏
+
+> **{verdict}**{(' — ' + alloc) if alloc else ''}（复核于 {date}，`{os.path.basename(path)}`）
+>
+> | 门槛 | 要求 | 实测 |
+> |------|------|------|
+> | 净IR | ≥0.7 | **{ir}** {ci} {ir_ok} |
+> | PBO | <0.5 | **{pbo}** {pbo_ok} |
+> | DSR | ≥0.95 | **{dsr}** {dsr_ok} |
+>
+> 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
+> 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（DECISIONS D2 / DEPLOYMENT T2）"""
 
 
 def calculate_metrics(predictions: List[Dict]) -> Dict:

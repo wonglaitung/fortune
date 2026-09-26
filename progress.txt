@@ -1878,3 +1878,14 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **坑**：stash pop 把残留恢复成 staged，`git commit` 未带 pathspec 把 8 个本地残留
   卷进提交 → 已用 `restore --source --staged` 回退（a464becf，工作树内容保留）。
   **教训：提交永远带 pathspec**（`git commit <paths>`），尤其刚 stash pop 过之后
+
+### 2026-09-26 每日综合分析报告展示 20d TopK 护栏状态 ⭐
+
+- **动机**：`20d 行业中性 TopK` 护栏判定（D2：🟢可放大15-20%/🟡≤10%/🔴清仓）只在
+  00:00 性能报告里，16:00 每日综合分析看不到 → 用信号时不知当前配比资格
+- **实现**：performance_monitor 抽 `_guardrail_file_20d()`（首行 `复核（20d）` 过滤复用）+
+  新增 `_guardrail_block()`（解析净IR/PBO/DSR 三门槛+判定+日期 → markdown 块，
+  字段解析失败显示 '-'，无 20d 文件返回空串）；comprehensive_analysis 第二节
+  末尾（三周期准确率后、异常检测前）插入，import 复用不复制逻辑
+- 测试 +2（🟢块三门槛全 ✅ / 无文件返回空）→ **70 passed**；端到端验证被
+  LLM 403 挡住（qianfan key 失效，与本改动无关，待修 key 后确认真实邮件渲染）
