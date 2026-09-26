@@ -372,7 +372,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
 # ════════════════════════════════════════════════════════════
 
 def generate_window_bar_section(window_metrics,
-                                time_windows=((30, '1个月'), (90, '3个月'), (180, '6个月'))):
+                                time_windows=((30, '1个月'), (90, '3个月'), (180, '6个月')),
+                                ci=None, guardrail_html=None):
     """
     生成「各周期时间窗口表现」HTML 区块 + CID 附件：
     上下两张图，结构一致——上图为超额lift、下图为方向技能（D3 双主指标，0 基准虚线），
@@ -381,12 +382,16 @@ def generate_window_bar_section(window_metrics,
     参数:
     - window_metrics: {窗口天数: {周期: metrics}}
     - time_windows: [(天数, 名称), ...]
+    - ci: {(天数, 周期): {'lift_ci': (lo,hi), 'ds_ci': (lo,hi)}} block bootstrap 95%CI，
+      有则绘制误差须（不确定性可视化，D3）；样本不足的格子不画须。
+    - guardrail_html: 组合层护栏摘要 HTML 片段（20d 净IR/PBO/DSR，D2），追加到本节末尾。
 
     返回: (html, {cid: png_bytes})
     """
     windows = list(time_windows)
     x = np.arange(len(windows))
     xlabels = [name for _, name in windows]
+    ci = ci or {}
 
     # (metrics键, 图标题, 纵轴名) —— D3 双主指标：超额lift + 方向技能（pp，可正可负）
     panels = [
@@ -403,20 +408,33 @@ def generate_window_bar_section(window_metrics,
             axes = [axes]
 
         any_data = False
-        all_vals = []
+        ci_key = 'lift_ci' if key == 'lift' else 'ds_ci'
         for ax, h in zip(axes, HORIZONS):
             vals, counts = [], []
+            err_lo, err_hi = [], []
             for days, _ in windows:
                 m = (window_metrics.get(days, {}) or {}).get(h, {}) or {}
                 vals.append(float(m.get(key, 0)) * 100)
                 counts.append(int(m.get('total_predictions', 0)))
+                c = ci.get((days, h))
+                if c and c.get(ci_key):
+                    lo, hi = c[ci_key]
+                    err_lo.append(max(0.0, vals[-1] - lo * 100))
+                    err_hi.append(max(0.0, hi * 100 - vals[-1]))
+                else:
+                    err_lo.append(0.0)
+                    err_hi.append(0.0)
             if any(c > 0 for c in counts):
                 any_data = True
-            all_vals.extend(vals)
 
             color = HORIZON_COLORS[h]
             ax.bar(x, vals, color=color, width=0.62,
                    edgecolor='white', linewidth=0.8, zorder=3)
+            # block bootstrap 95%CI 误差须（点估计不足信，D3 要求给区间）
+            if any(e > 0 for e in err_hi + err_lo):
+                ax.errorbar(x, vals, yerr=[err_lo, err_hi],
+                            fmt='none', ecolor=INK_MUTED, elinewidth=1.2,
+                            capsize=3, zorder=6)
             ax.axhline(0, color=INK_FAINT, linestyle='--', linewidth=0.9,
                        alpha=0.8, zorder=2)  # 0 基准：无技能 / 无超额（基准扣除后）
             ax.set_title(f'{HORIZON_NAMES[h]}周期', fontsize=10.5, color=INK, pad=8)
@@ -434,9 +452,20 @@ def generate_window_bar_section(window_metrics,
                     ax.text(xi, 0, '无样本', ha='center', va='center',
                             fontsize=7.5, color=INK_FAINT, zorder=5)
 
-        # 对称 y 轴（容纳负值，0 为中性），至少 ±5pp
+        # 对称 y 轴（容纳负值 + CI 误差须，0 为中性）
         if any_data:
-            bound = max(5.0, max(abs(v) for v in all_vals) * 1.15)
+            # 汇总各柱点值 + CI 上下界，取最大幅度
+            ext = 0.0
+            for h in HORIZONS:
+                for days, _ in windows:
+                    m = (window_metrics.get(days, {}) or {}).get(h, {}) or {}
+                    v = float(m.get(key, 0)) * 100
+                    ext = max(ext, abs(v))
+                    c = ci.get((days, h))
+                    if c and c.get(ci_key):
+                        lo, hi = c[ci_key]
+                        ext = max(ext, abs(lo * 100), abs(hi * 100))
+            bound = max(5.0, ext * 1.15)
             for ax in axes:
                 ax.set_ylim(-bound, bound)
                 ax.set_yticks([-int(bound), 0, int(bound)])
@@ -458,12 +487,15 @@ def generate_window_bar_section(window_metrics,
     html += _CAPTION.format(
         text='上图=超额lift（信号净胜率 − 无条件买入基准）| 下图=方向技能（准确率 − 永远看涨占比）| '
              '两者均为基准扣除后的百分点，虚线 0 = 无超额 / 无技能 | '
+             '误差须 = block bootstrap 95%CI（按交易日分块，CI 跨 0 视为不显著）| '
              '绝对准确率/胜率不作判定依据（AGENTS D3）| '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
     for cid, suptitle in imgs:
         html += ('    <div style="text-align: center; margin: 6px 0;">'
                  f'<img src="cid:{cid}" style="max-width: 680px; width: 100%; height: auto;" '
                  f'alt="{suptitle}"></div>\n')
+    if guardrail_html:
+        html += '<div style="margin-top: 12px;">' + guardrail_html + '</div>\n'
     return html, attachments
 
 

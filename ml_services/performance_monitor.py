@@ -380,6 +380,32 @@ def _block_bootstrap_ci(predictions: List[Dict], n_boot: int = 1000, seed: int =
     }
 
 
+def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetime] = None) -> Dict:
+    """对每个（窗口×周期）格子算 block bootstrap 95%CI（D3 不确定性可视化）。
+
+    返回 {(窗口天数, 周期): {'lift_ci': (lo,hi), 'ds_ci': (lo,hi)}}；
+    样本不足（<15 日期块或 <60 条）的格子不出现在结果中（图则不画误差须）。
+    """
+    if time_windows is None:
+        time_windows = TIME_WINDOWS
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+    out = {}
+    for days, _ in time_windows:
+        start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+        for h in [1, 5, 20]:
+            preds = _filter_evaluated(history, start_str, end_str, horizon=h)
+            boot = _block_bootstrap_ci(preds)
+            if boot:
+                out[(days, h)] = {
+                    'lift_ci': boot['lift_ci'],
+                    'ds_ci': boot['ds_ci'],
+                    'n_blocks': boot['n_blocks'],
+                }
+    return out
+
+
 def _cross_sectional_ic(predictions: List[Dict], min_names: int = 10) -> Optional[Dict]:
     """横截面 Spearman IC / ICIR（DECISIONS D3 套件）。
 
@@ -523,6 +549,58 @@ def _guardrail_block() -> str:
 > 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
 > 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（DECISIONS D2 / DEPLOYMENT T2）
 > —— PBO/DSR 由 `monthly_guardrail.py` 复核计算，本报告仅转贴不重算（D2）"""
+
+
+def _guardrail_html_summary() -> str:
+    """解析 20d 护栏报告为紧凑 HTML 摘要（供性能报告窗口节展示，D2 组合层护栏）。
+
+    展示：判定 + 净IR(95%CI) / PBO / DSR 三门槛 ✅❌ + 配比语义。
+    无 20d 文件或解析失败返回空串。
+    """
+    import re
+    path = _guardrail_file_20d()
+    if path is None:
+        return ""
+    try:
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+    except OSError:
+        return ""
+
+    def _find(pattern, default='-'):
+        m = re.search(pattern, text, flags=re.MULTILINE)
+        return (m.group(1).strip() if m else default)
+
+    verdict = _find(r'^## 判定：(.+)$', '判定未知')
+    date = _find(r'- 日期:\s*(\d{4}-\d{2}-\d{2})', '未知日期')
+    ir = _find(r'\|\s*净IR\s*\|\s*\*\*([^*]+)\*\*')
+    ir_ci = _find(r'\|\s*净IR\s*\|\s*\*\*[^*]+\*\*\s*(\[[^\]]*\])', '')
+    pbo = _find(r'\|\s*\*\*PBO\*\*\s*\|\s*\*\*([^*]+)\*\*')
+    dsr = _find(r'\|\s*\*\*DSR\*\*[^|]*\|\s*\*\*([^*]+)\*\*')
+
+    def _ok(val, op):
+        try:
+            return '✅' if op(float(val)) else '❌'
+        except (ValueError, TypeError):
+            return ''
+
+    alloc = ('允许放大至 15–20% 配比' if '🟢' in verdict
+             else '维持 ≤10% 低配倾斜' if '🟡' in verdict
+             else '清仓，停止使用' if '🔴' in verdict else '')
+    return (
+        '<div style="background:#fff8e6; border-left:4px solid #e67e22; '
+        'padding:8px 10px; margin-top:4px;">'
+        '<b style="color:#b45309;">20d 组合层护栏</b>（DECISIONS D2，'
+        f'`{os.path.basename(path)}` {date}）：<b>{verdict}</b>'
+        f"{(' — ' + alloc) if alloc else ''}<br>"
+        f'净IR <b>{ir}</b> {ir_ci} '
+        f'{_ok(ir, lambda v: v >= 0.7)} · PBO <b>{pbo}</b> '
+        f'{_ok(pbo, lambda v: v < 0.5)} · DSR <b>{dsr}</b> '
+        f'{_ok(dsr, lambda v: v >= 0.95)}'
+        '<br><span style="color:#999; font-size:11px;">PBO/DSR 由 monthly_guardrail.py '
+        '复核计算，本报告仅转贴不重算（D2）；净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
+        '</div>'
+    )
 
 
 def calculate_metrics(predictions: List[Dict]) -> Dict:
@@ -1206,8 +1284,10 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
     parts.append(html)
     attachments.update(atts)
 
-    # 二、时间窗口柱状图
-    html, atts = generate_window_bar_section(window_metrics)
+    # 二、时间窗口柱状图（D3：block bootstrap CI 误差须 + 组合层护栏块）
+    window_ci = _window_bootstrap_ci(history, TIME_WINDOWS, now=now)
+    html, atts = generate_window_bar_section(
+        window_metrics, ci=window_ci, guardrail_html=_guardrail_html_summary())
     parts.append(html)
     attachments.update(atts)
 

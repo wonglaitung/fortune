@@ -133,15 +133,18 @@ def test_tables_primary_lift_not_accuracy():
     assert not re.search(r'\|\s*\*\*\d+\.\d{2}%\*\*', report)
 
 
-def _big_history(n_days=20, n_stocks=6):
-    """合成 ≥60 条、按日分块的历史（供 bootstrap）。"""
+def _big_history(n_days=20, n_stocks=6, start='2026-08-01'):
+    """合成 ≥60 条、按日分块的历史（供 bootstrap / 窗口CI）。"""
+    from datetime import datetime, timedelta
+    base = datetime.strptime(start, '%Y-%m-%d')
     preds = []
     for i in range(n_days):
-        d = f'2026-08-{i + 1:02d}'
+        d = (base + timedelta(days=i)).strftime('%Y-%m-%d')
         for s in range(n_stocks):
             ret = 0.02 if (i + s) % 3 else -0.01
             preds.append(_pred(
                 data_date=d,
+                target_date=d,
                 stock_code=f'{1000 + s}.HK', horizon=20,
                 predicted_direction='up', actual_return=ret,
                 outcome='correct' if ret > 0 else 'wrong'))
@@ -209,3 +212,58 @@ def test_honest_summary_has_ci_and_ic_lines():
     assert 'block bootstrap 95%CI' in report
     assert '横截面 Spearman IC' in report
     assert 'block bootstrap' in extra_html or '样本不足' in extra_html
+
+
+def _multi_horizon_history(n_days=90, n_stocks=6, start='2026-07-01'):
+    """按日分块、每块含 1/5/20 三个周期的历史（供窗口×周期 CI 测试）。"""
+    from datetime import datetime, timedelta
+    base = datetime.strptime(start, '%Y-%m-%d')
+    preds = []
+    for i in range(n_days):
+        d = (base + timedelta(days=i)).strftime('%Y-%m-%d')
+        for h in (1, 5, 20):
+            for s in range(n_stocks):
+                ret = 0.02 if (i + s) % 3 else -0.01
+                preds.append(_pred(
+                    data_date=d, target_date=d, horizon=h,
+                    stock_code=f'{1000 + s}.HK',
+                    predicted_direction='up', actual_return=ret,
+                    outcome='correct' if ret > 0 else 'wrong'))
+    return {'predictions': preds}
+
+
+def test_window_bootstrap_ci_9_cells():
+    """窗口×周期 9 格均应产出 block bootstrap CI（D3 不确定性可视化）。"""
+    from ml_services.performance_monitor import _window_bootstrap_ci, TIME_WINDOWS
+    ci = _window_bootstrap_ci(_multi_horizon_history(), TIME_WINDOWS)
+    assert len(ci) == 9
+    for (days, h), v in ci.items():
+        assert 'lift_ci' in v and 'ds_ci' in v and v['n_blocks'] >= 15
+        assert v['lift_ci'][0] <= v['lift_ci'][1]
+
+
+def test_window_bar_section_renders_ci_and_guardrail():
+    """窗口柱状图节：CI 误差须 + 组合层护栏块均渲染（D3/D2）。"""
+    from ml_services.performance_monitor import (
+        _window_bootstrap_ci, compute_window_horizon_metrics, TIME_WINDOWS)
+    from scripts.performance_charts import generate_window_bar_section
+    hist = _multi_horizon_history()
+    wm = compute_window_horizon_metrics(hist)
+    ci = _window_bootstrap_ci(hist, TIME_WINDOWS)
+    html, atts = generate_window_bar_section(
+        wm, ci=ci, guardrail_html='<b>20d 组合层护栏</b>')
+    assert '误差须 = block bootstrap 95%CI' in html
+    assert '20d 组合层护栏' in html
+    assert 'perf_window_lift' in atts and 'perf_window_ds' in atts
+
+
+def test_guardrail_html_summary_renders(monkeypatch, tmp_path):
+    """20d 护栏紧凑 HTML：判定/净IR/PBO/DSR/配比齐全，无文件时返回空串。"""
+    from ml_services import performance_monitor as pm
+    p = _fake_guardrail_md(tmp_path)
+    monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: p)
+    s = pm._guardrail_html_summary()
+    assert '20d 组合层护栏' in s and '可升级' in s and '15–20%' in s
+    assert '1.06' in s and '0.47' in s and '0.981' in s
+    monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: None)
+    assert pm._guardrail_html_summary() == ""
