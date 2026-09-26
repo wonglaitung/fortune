@@ -1256,7 +1256,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
-                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}\n"
+                catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}（市场准入/方向判定基础线；≥0.55买入档、≥0.60+短中期一致=⭐强烈买入档，分层递进非冲突）\n"
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
@@ -5045,6 +5045,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 观望区间0.40-0.50避免低置信度决策
 - 市场调整列门槛按校准历史分布分位动态计算（PIT）：熊市=前约8%分位、弱震荡=前约10%分位；当日具体数值以邮件头部"动态阈值"/`dynamic_threshold` 字段为准，熊市达标票少属正常
 - **市场调整列优先级最高**：熊市/弱震荡未过门槛（dynamic_threshold）→ 无论 ML 概率落入哪档，一律按观望处理（压过仓位映射）；极端熊市暂停全部看涨信号
+- **阈值层级（分层递进，互不矛盾，禁止写成冲突）**：动态阈值（normal=0.50）= 市场情绪过滤器准入/方向判定基础线；0.55 = 买入档；0.60 + 短中期方向一致（三重确认）= ⭐强烈买入档——高阈值是低阈值的加严子集
 
 **重要说明 - 模型配置**：
 - 1天/5天/20天：均为流水线当日训练、训练与预测同源的单一学习器
@@ -5135,6 +5136,11 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
    - **严格遵循"短期触发 + 中期确认 + ML验证"原则**：只有短期和中期方向一致且ML验证时才行动
    - 如果短期和中期建议冲突，优先选择观望，不进行交易
    - 采用"三重确认"策略：短期、中期、ML三者一致时才重仓操作
+
+**空节处理与统计断言规则（必须严格遵守）**：
+- 若某信号节无股票满足该档条件，只写："当前无股票同时满足'短期买入+中期买入+ML概率≥X'的三重确认条件，本期不出具该档信号。"
+- **严禁生成可证伪的统计断言**（如"所有ML概率≥0.60的股票不存在"）——"不存在同时满足三重条件的股票"不等于"不存在≥0.60的股票"，两者不可混写
+- 阈值分层是递进关系（动态阈值0.50=准入线，0.60+三重确认=⭐档），不得表述为互相矛盾或冲突
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
