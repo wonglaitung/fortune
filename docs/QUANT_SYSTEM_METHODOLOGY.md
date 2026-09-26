@@ -303,6 +303,15 @@ flowchart LR
 
 **跳步代价**：口径打架 → 后续所有历史数字不可比，改一次口径洗一次库（本项目 30+ 处作废）。
 
+**本项目怎么做**（示意，随轮次更新；完整命令见 [AGENTS.md](../AGENTS.md)）：
+- `docs/DECISIONS.md`：每条一行 = 决策 / 证据 / 重启条件，D1–D10 已固定；
+  评估**口径宪法**由 D3 立宪——绝对准确率/胜率**违宪**，一律看 lift / 方向技能 / ICIR + PBO / DSR。
+- `docs/VALIDATION_GUIDE.md`：报告模板三行指纹（指标定义 / 基准 / 样本区间）+ 术语定义。
+- 仓库规范（见 AGENTS「Git 提交规范」）：只提交 `.md` / `.py`；`.json` / `.csv` / `.pkl` 不入库，
+  回测 `prediction_analysis.csv` 是**唯一例外**，由自动入库脚本单独处理（见阶段 4）。
+- 缓存规范：新增特征后 `rm -rf data/feature_cache/*.pkl`（港股）/ `data/a_stock_feature_cache/*.pkl`（A股），
+  避免"特征配置变了但缓存还是旧的"。
+
 #### 阶段 1 · 立时点（2–3 天）
 
 **做什么**
@@ -320,6 +329,18 @@ flowchart LR
 
 **跳步代价**：整条证据链作废——**这一层错了，后面六层全部白做**，且很难自我发现。
 
+**本项目怎么做**（示意，随轮次更新）：
+- **双模式**：`ml_services/ml_trading_model.py` 的 `mode='production'`（当日数据，收市后预测）/
+  `mode='backtest'`（T-1 数据，walk-forward）；两者**共用同一份特征工程**（`prepare_data`），
+  只是输入时点不同。训练和预测必须同模式，否则特征缓存张冠李戴。
+- **PIT 还原**：网络/情感/主题/基本面这类"最新值可广播"的特征，**按日期存历史版本**，
+  回测时从当时时点取数（`data/network_features/` 按日归档）；
+  机械规则强制 `shift(1)`，未来收益用 `shift(-N)`。
+- **embargo**：`walk_forward_validation.py` 与 `hsi_walk_forward.py` 支持隔离窗口参数，
+  恒指用 12 个月训练窗，个股 36 个月；训练/测试交界留 embargo 防收益重叠渗漏。
+- **泄漏报警线**：个股日线准确率应落 50–60%，**>65% 一律当泄漏信号停手排查**，
+  不准以"模型聪明"带过（本项目教训：恒指 59.1% 是样本不足不是本事，个股 >65% 全是穿越）。
+
 #### 阶段 2 · 最小验证器（1 天）
 
 **做什么**
@@ -333,6 +354,17 @@ flowchart LR
 
 **跳步代价**：只能报绝对准确率 → 原则 1、3 全部失效，自我感动式结论进入文档。
 
+**本项目怎么做**（示意，随轮次更新）：
+```bash
+python3 ml_services/backtest_eval.py --input output/<回测目录>/prediction_analysis.csv --horizon 20
+```
+- 产出 `output/backtest_eval_*.md`：合并准确率 + 95%CI、**信号胜率 vs 无条件买入基准**、
+  **超额 lift 及 p 值**、方向技能（准确率 − 永远看涨）、IC/ICIR、**n_eff**。
+- 判读：lift / 方向技能的 **p 值**才是门槛（本项目 20d lift +1.9pp、p=0.24 → 不显著）；
+  n_eff < 30 自动打"样本不足"，不写进 AGENTS。
+- 输入必须是 D9 **自动入库的 `prediction_analysis.csv`**，不是任意一次本地输出——
+  否则复现不了（教训三.14：报告指向旧 CSV，数字对不上）。
+
 #### 阶段 3 · 组合闸门（2 天）
 
 **做什么**
@@ -345,6 +377,19 @@ flowchart LR
 - 闸门命令一条不落地跑通，输出 md 报告
 
 **跳步代价**：信号层过关、组合层裸奔——"研究上很准，实盘上亏钱"的标准剧本。
+
+**本项目怎么做**（示意，随轮次更新）：
+```bash
+python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
+    --pred output/<回测目录>/prediction_analysis.csv --output output/portfolio_20d_<日期>.md
+python3 ml_services/monthly_guardrail.py --horizon 20
+```
+- `portfolio_backtest`：TopK 行业中性、0.5% 换手成本、**超额 bootstrap CI**（相对等权基准）、
+  **逐年分解**（防单年撑全场）。
+- `monthly_guardrail`：净IR / PBO / DSR + 判定 🟢/🟡/🔴，规则抄自 [D2](DECISIONS.md)。
+- 三道闸门**按顺序跑，一道不过不跑下一道**：① 是假的吗（护栏）→ ② 是真的吗（超额 CI + 逐年）
+  → ③ 值多少（仓位定档）。实测（2026-09-26，20d）：净IR 1.41 / PBO 0.19 / DSR 0.982 🟢 →
+  超额IR 1.24 [0.18, 2.41]、四年全正 → 但 lift 仅 +1.9pp → **人定 15% 不是 20%**。
 
 #### 阶段 4 · 流程自动化（0.5–1 天）
 
@@ -360,6 +405,16 @@ flowchart LR
 
 **跳步代价**：数据静默陈旧、门槛不同源、误报（本项目 mtime 抢占导致误判"停用"）。
 
+**本项目怎么做**（示意，随轮次更新）：
+- **自动入库**：`scripts/commit_backtest_result.py` 在 walk-forward 成功后自动
+  `git commit` 回测 CSV + 同步 `GATE_SNAPSHOT` 分位快照 + **清理旧港股 20d CSV（只留最新）**；
+  失败不影响主流程；push 带自动 rebase 重试。跑长验证时记得 `--no-commit`（若不想入库）。
+- **同源**：门槛的分位计算（`GATE_QUANTILES`）数据源必须是入库的 `prediction_history`，
+  CI / 本地跑同一条命令应得**相同数值**（D8）；文件按**语义**筛选（按路径里的 `*_20d_*`）
+  而非 mtime，杜绝"1d 报告抢占 20d 状态"。
+- **数据源可靠性**：腾讯财经 + AKShare + yfinance 备用 + 缓存兜底（`data/stock_cache` 7 天有效，
+  盘中用实时行情接口为准）。
+
 #### 阶段 5 · 防腐（0.5 天）
 
 **做什么**
@@ -371,6 +426,17 @@ flowchart LR
 - 故意改坏一处，**一周内必被发现**（而不是 5 个月）
 
 **跳步代价**：测试静默腐烂，你以为有防护，其实没有（本项目 3 个测试失败挂了 5 个月）。
+
+**本项目怎么做**（示意，随轮次更新）：
+- `tests/`：`test_calendar_features` / `test_commit_backtest` / `test_eval_stats` /
+  `test_market_gates` / `test_performance_report` / `test_pit_network_merge` /
+  `test_prompt_render` 等 7 个测试文件，覆盖时区 / 日期错位 / 门槛分位 / 入库行为。
+- CI：`.github/workflows/tests.yml` **每周日 15:00** 跑全量
+  `python3 -m pytest tests/ -v`（定时，不靠人记得）。
+- 本地：每次改代码后立即 `python3 -m py_compile <文件>`（AGENTS 开发规范）；
+  提交含测试改动时本地先跑一遍相关测试。
+- 三种腐烂分门别类处理：过时断言（数据口径变了，改断言）、"时间旅行"（测试用了固定日期，
+  挂时区）、时区真 bug（`date` 取价三连坑，教训三.11）。
 
 #### 阶段 6 · 知识沉淀（0.5 天）
 
@@ -392,6 +458,16 @@ flowchart LR
 
 **跳步代价**：写入越多检索越难，知识变成负债（本项目 progress 已 2000 行、lessons 900 行）。
 
+**本项目怎么做**（示意，随轮次更新）：
+- **文档分层地图**见 `docs/README.md`；`AGENTS.md` 是总入口（规则 + 常用命令 + 最新验证数值）。
+- `lessons.md`：每条 = 经过 / 教训 / 做法 三件套，编号（三.12、三.13…）防重复，
+  末尾更新日志 v10.x 登记；新教训当天写，不攒。
+- `progress.txt`：**逐日流水**，按天加 `### 2026-09-26 主题` 小标题，超 2000 行就压缩归档
+  （本项目正涨到这里，需要收敛）。
+- 收敛规则：活文档只追最新数值，历史版本不逐条修补（靠 git 历史），
+  快照报告（2026-04 那批）只整体重跑。
+- "一句话速查"表放正文末尾（§附），让"我想 X → 看 N 节"一步到位。
+
 #### 阶段 7 · 才开始建模型（无限）
 
 **做什么**（每一步都挂在阶段 0–6 的骨架上）
@@ -402,6 +478,28 @@ flowchart LR
 - [ ] 进监控，按月复核，到期复审
 
 **跳步代价**：无（这一步本来就不该在前面）。
+
+**本项目怎么做**（示意，随轮次更新）：
+```bash
+# 特征（单一真相源）：ml_trading_model.py::FeatureEngineer
+python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20
+# 学习器按周期分选（D10）：20d=LightGBM，1d/5d=CatBoost
+python3 scripts/train_lightgbm_20d.py            # 生产 20d
+python3 ml_services/ml_trading_model.py --mode train --horizon 20
+# 全折 walk-forward（每折产出 prediction_analysis.csv，D9 自动入库）
+python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20
+# 三道闸门（必跑）
+python3 ml_services/monthly_guardrail.py --horizon 20
+python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred … --output …
+```
+- 特征：**绝对值特征进排除列表**（`ABSOLUTE_PRICE_FEATURES`），市场级特征必须与网络/社区特征交叉
+  （否则全股票同值无区分度）；单调性设计见 FEATURE_ENGINEERING §5。
+- 学习器 A/B：同折同参数**只换学习器**，结论绑定"周期×市场"（D10 实证：20d LGBM 赢、5d CB 赢、
+  1d 双停）——禁止"全面转 LGBM"一刀切。
+- 并行跑多任务时限线程 `LGBM_N_JOBS=8`（教训三.12）、长任务套 tmux（教训三.13）；
+  收市后预测用 `mode='production'`，walk-forward 用 `mode='backtest'`。
+- 上线前对照 §7 自检清单；上线后按月 `monthly_guardrail` 复核 + 到期复审
+  （详见 [DEPLOYMENT.md](DEPLOYMENT.md)）。
 
 ### 3.3 阶段依赖关系
 
