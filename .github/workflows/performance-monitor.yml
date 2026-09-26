@@ -40,7 +40,8 @@ jobs:
 
       - name: Guardrail status check
         run: |
-          LATEST=$(ls -t output/monthly_guardrail_*.md 2>/dev/null | head -1)
+          # 只认 20d 报告（首行标记），避免 1d/5d 专项复核按 mtime 抢占
+          LATEST=$(grep -l '^# 月度护栏复核（20d）' output/monthly_guardrail_*.md 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1)
           if [ -n "$LATEST" ]; then
             echo "✅ 最近护栏报告: $LATEST"
             grep "## 判定" "$LATEST" || true

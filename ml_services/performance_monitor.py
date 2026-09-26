@@ -313,12 +313,24 @@ def _yearly_metrics(predictions: List[Dict]) -> List[Dict]:
 
 
 def _guardrail_status() -> Optional[str]:
-    """读取最近提交的 monthly_guardrail_*.md，返回一行判定摘要（无则 None）"""
+    """读取最新一次 20d 月度护栏报告，返回一行判定摘要（无则 None）。
+
+    只认首行 `# 月度护栏复核（20d）` 的文件：output/ 下还有 1d/5d 专项复核，
+    纯按 mtime 取最新会张冠李戴（2026-09-26 实际发生：1d 停用结论被贴上
+    "20d TopK" 标签，误导为 20d 已停用，实为 20d 保留低配/可升级）。
+    """
     import glob
-    files = glob.glob(os.path.join('output', 'monthly_guardrail_*.md'))
-    if not files:
+    cand = []
+    for path in glob.glob(os.path.join('output', 'monthly_guardrail_*.md')):
+        try:
+            with open(path, encoding='utf-8') as f:
+                if '复核（20d）' in f.readline():
+                    cand.append(path)
+        except OSError:
+            continue
+    if not cand:
         return None
-    latest = max(files, key=os.path.getmtime)
+    latest = max(cand, key=os.path.getmtime)
     try:
         with open(latest, encoding='utf-8') as f:
             for line in f:
