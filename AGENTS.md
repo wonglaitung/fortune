@@ -574,6 +574,7 @@ test_df[col] = test_df[col].apply(
 - **验证方法**：[docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)
 - **模型改进计划**：[docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) - 业界基准驱动的分阶段计划 ⭐
 - **决策备忘**：[docs/DECISIONS.md](docs/DECISIONS.md) - 个股 alpha 停止投入等关键决策 ⭐
+- **建设方法论**：[docs/QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md) - 五层结构 / 七原则 / 七阶段建设步骤 / 三道闸门 ⭐
 - **实盘部署**：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - 底仓+战术+风控与月度护栏 ⭐
 - **A股设计**：[docs/A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统完整设计文档
 - **SSH认证**：[docs/SSH_SETUP.md](docs/SSH_SETUP.md) - 新电脑配置 GitHub SSH 认证指南
