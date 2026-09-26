@@ -4946,10 +4946,10 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         model_accuracy = load_model_accuracy(horizon=20)
         print(f"✅ 准确率加载完成\n")
 
-        # 生成日期（使用最近交易日，而非当前日期）
-        # 这样周末运行时，文件名会是周五的日期
+        # 生成日期（使用最近港股交易日，而非当前日期）
+        # 港股与A股假期不同（2026-09-25中秋A股休市但港股开市），须锚定港股
         current_date = datetime.now().strftime('%Y-%m-%d')
-        date_str = get_last_trading_day()
+        date_str = get_last_trading_day(market='HK')
         if date_str != current_date:
             print(f"📅 当前日期 {current_date} 非交易日，使用最近交易日: {date_str}\n")
         
@@ -5910,8 +5910,8 @@ def main():
         print("")
 
     # 生成日期
-    # 使用最近交易日作为日期（周末运行时使用周五日期）
-    date_str = get_last_trading_day()
+    # 使用最近港股交易日作为日期（港股与A股假期不同，锚定港股行情）
+    date_str = get_last_trading_day(market='HK')
 
     # 默认文件路径
     if args.llm_file is None:

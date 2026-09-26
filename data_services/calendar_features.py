@@ -304,20 +304,66 @@ class CalendarFeatureCalculator:
         ]
 
 
-def get_last_trading_day(date=None):
+def _get_hk_last_trade_date(date=None):
+    """
+    港股最近交易日：取恒指行情（腾讯 hkfqkline）最后一行日期。
+
+    行情数据天然反映"已收盘的最后交易日"（盘前运行最后一行=昨收、
+    盘中=当日、休市=上一交易日），无需开市时间判断。
+    港股与 A 股假期不同（2026-09-25 中秋 A 股休市但港股开市，
+    上证公告 vs 腾讯实盘），用 A 股日历会让港股报告日期错位一天。
+
+    参数:
+    - date: 参考日期，返回不晚于该日的最后港股交易日；None 返回最新
+
+    返回:
+    - 'YYYY-MM-DD' 或失败时 None
+    """
+    try:
+        from data_services.tencent_finance import get_hsi_data_tencent
+        # 取约 8 个月，保证历史参考日也有覆盖
+        df = get_hsi_data_tencent(period_days=160)
+        if df is None or df.empty:
+            return None
+        # get_hsi_data_tencent 实际格式：Date 为索引（兼容列形式）
+        raw_dates = df['Date'] if 'Date' in df.columns else df.index
+        # 日期转字符串比较：避免 tz/naive 比较异常
+        day_strs = pd.to_datetime(raw_dates, utc=True).strftime('%Y-%m-%d')
+        if date is not None:
+            ref = date if isinstance(date, str) else pd.Timestamp(date).strftime('%Y-%m-%d')
+            day_strs = day_strs[day_strs <= ref]
+            if day_strs.empty:
+                return None
+        # YYYY-MM-DD 字典序即日期序
+        return day_strs.max()
+    except Exception as e:
+        print(f"⚠️ 港股最近交易日获取失败: {e}")
+        return None
+
+
+def get_last_trading_day(date=None, market='A'):
     """
     获取最近交易日（如果当天是交易日且已开市则返回当天，否则返回前一个交易日）
 
     参数:
     - date: 参考日期（datetime 或 'YYYY-MM-DD' 字符串，默认为今天）
+    - market: 'HK' 用港股行情最后交易日（港股与 A 股假期不同，
+      2026-09-25 中秋 A 股休市但港股开市，用 A 股日历会错位一天）；
+      'A'（默认）用新浪 A 股交易日历（原行为）
 
     返回:
     - 最近交易日字符串 (YYYY-MM-DD)
 
     注意:
-    - 港股开市时间为 09:30，在开市前应返回前一个交易日
+    - market='A' 保留 09:30 开市前回退逻辑；'HK' 由行情数据天然决定
     - 这确保报告文件名与实际分析的数据日期一致
     """
+    if market == 'HK':
+        hk_last = _get_hk_last_trade_date(date)
+        if hk_last:
+            return hk_last
+        print("⚠️ 港股行情取最近交易日失败，回退 A 股日历（节假日可能与港股错位）")
+
     if date is None:
         date = datetime.now()
     elif isinstance(date, str):

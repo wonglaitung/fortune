@@ -1949,3 +1949,22 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   末尾（三周期准确率后、异常检测前）插入，import 复用不复制逻辑
 - 测试 +2（🟢块三门槛全 ✅ / 无文件返回空）→ **70 passed**；端到端验证被
   LLM 403 挡住（qianfan key 失效，与本改动无关，待修 key 后确认真实邮件渲染）
+
+### 2026-09-26 港股报告日期锚定修复（A股日历错位）⭐
+
+- **症状**：周度综合分析生成 `2026-09-24.md` 而非 09-25；09-25 每日报告缺失
+- **根因**：`get_last_trading_day()` 用新浪 **A 股**日历，2026 中秋 A 股 09-25~27 休市
+  （上证公告），但**港股 09-25 正常交易**（腾讯 0700=436.6 实盘）→ 锚定日错位一天；
+  且与预测侧（prediction_history 已有 09-25/09-26 data_date）两套日期源不一致
+- **修复（方案 A）**：`get_last_trading_day(date=None, market='A')` 新增 `'HK'` 路径
+  `_get_hk_last_trade_date()`——复用 `tencent_finance.get_hsi_data_tencent` 恒指行情
+  最后一行日期（盘前=昨收/盘中=当日/休市=上一交易日，天然正确，无需 09:30 hack）；
+  失败回退 A 股日历并打警告；`'A'` 默认行为不变。comprehensive_analysis 两处调用
+  （L4952 提示词、L5914 主 date_str）改 `market='HK'`
+- **坑**：`get_hsi_data_tencent` 的 Date 在 **index** 非 columns（首版 `'Date' in df.columns`
+  判断恒 False → 静默走回退）
+- 验收：HK=2026-09-25 / A=2026-09-24 不变 / HK(09-24)=09-24 参考日不超前
+- 新增 `tests/test_calendar_features.py` 7 项（行情锚定/参考日/两级回退/A 默认/开市前回退）
+  → **77 passed**
+- 遗留：①09-25 报告待补跑（LLM 403 挡端到端）②`HK_HOLIDAYS_2026` 列表中秋日期存疑
+  （列 10-06 而实际中秋 09-25），日历效应"长假前后"特征可能算错，待核
