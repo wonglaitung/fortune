@@ -319,6 +319,112 @@ def _yearly_metrics(predictions: List[Dict]) -> List[Dict]:
     return rows
 
 
+def _block_bootstrap_ci(predictions: List[Dict], n_boot: int = 1000, seed: int = 42) -> Optional[Dict]:
+    """block bootstrap 95%CI（DECISIONS D3 套件）：按 data_date 分块重抽。
+
+    同一交易日的股票整块同抽——保住同日截面相关性，不破坏独立性结构（block）。
+    一次重抽同时算两个指标的分布：
+      - lift = 信号净胜率(扣成本) − 无条件买入基准胜率
+      - 方向技能 = 准确率 − 永远看涨占比
+    样本不足（<15 个日期块 或 <60 条已评估）返回 None——宁可不显示也不错显示。
+    """
+    ev = [p for p in predictions
+          if p.get('outcome') is not None and p.get('actual_return') is not None]
+    if not ev:
+        return None
+    blocks: Dict[str, List[Dict]] = {}
+    for p in ev:
+        key = p.get('data_date') or p.get('target_date') or str(p.get('timestamp', ''))[:10]
+        blocks.setdefault(key, []).append(p)
+    keys = sorted(blocks.keys())
+    if len(keys) < 15 or len(ev) < 60:
+        return None
+
+    def _one_sample(rows: List[Dict]):
+        rets = pd.to_numeric(pd.Series([r.get('actual_return') for r in rows]),
+                             errors='coerce').dropna()
+        if len(rets) < 20:
+            return None
+        up = float((rets > 0).mean())
+        base = float((rets > COST).mean())
+        acc = sum(1 for r in rows if r.get('outcome') == 'correct') / len(rows)
+        buys = [r for r in rows if r.get('predicted_direction') == 'up']
+        if not buys:
+            return None
+        bret = pd.to_numeric(pd.Series([b.get('actual_return') for b in buys]),
+                             errors='coerce').dropna()
+        if len(bret) < 5:
+            return None
+        bwr = float((bret > COST).mean())
+        return bwr - base, acc - up
+
+    rng = np.random.default_rng(seed)
+    lift_samples: List[float] = []
+    ds_samples: List[float] = []
+    for _ in range(n_boot):
+        sampled_keys = rng.choice(keys, size=len(keys), replace=True)
+        rows = [p for k in sampled_keys for p in blocks[str(k)]]
+        res = _one_sample(rows)
+        if res is None:
+            continue
+        lift_samples.append(res[0])
+        ds_samples.append(res[1])
+    if len(lift_samples) < n_boot // 2:
+        return None
+    return {
+        'lift_ci': (float(np.percentile(lift_samples, 2.5)),
+                    float(np.percentile(lift_samples, 97.5))),
+        'ds_ci': (float(np.percentile(ds_samples, 2.5)),
+                  float(np.percentile(ds_samples, 97.5))),
+        'n_blocks': len(keys),
+        'n_boot': len(lift_samples),
+    }
+
+
+def _cross_sectional_ic(predictions: List[Dict], min_names: int = 10) -> Optional[Dict]:
+    """横截面 Spearman IC / ICIR（DECISIONS D3 套件）。
+
+    同 data_date 内 corr(prediction_probability, actual_return)：
+    - 用 raw 概率即可——Spearman 是秩相关，对 Isotonic 校准等单调变换不变（IC 不受校准影响）；
+    - 仅统计 ≥min_names 只股票的截面日；有效截面日 <15 返回 None。
+    """
+    by_date: Dict[str, List[tuple]] = {}
+    for p in predictions:
+        if p.get('actual_return') is None:
+            continue
+        prob = p.get('prediction_probability')
+        if prob is None:
+            continue
+        try:
+            prob = float(prob)
+        except (TypeError, ValueError):
+            continue
+        d = p.get('data_date') or p.get('target_date') or str(p.get('timestamp', ''))[:10]
+        by_date.setdefault(d, []).append((prob, p.get('actual_return')))
+
+    ics: List[float] = []
+    for pairs in by_date.values():
+        if len(pairs) < min_names:
+            continue
+        dfp = pd.DataFrame(pairs, columns=['prob', 'ret'])
+        dfp['ret'] = pd.to_numeric(dfp['ret'], errors='coerce')
+        dfp = dfp.dropna()
+        if len(dfp) < min_names:
+            continue
+        ic = dfp['prob'].corr(dfp['ret'], method='spearman')
+        if pd.notna(ic):
+            ics.append(float(ic))
+    if len(ics) < 15:
+        return None
+    mean_ic = float(np.mean(ics))
+    std_ic = float(np.std(ics, ddof=1))
+    return {
+        'mean_ic': mean_ic,
+        'icir': mean_ic / std_ic if std_ic > 0 else 0.0,
+        'n_days': len(ics),
+    }
+
+
 def _guardrail_file_20d() -> Optional[str]:
     """取最新一次 20d 月度护栏报告路径，无则 None。
 
@@ -349,7 +455,8 @@ def _guardrail_status() -> Optional[str]:
         with open(latest, encoding='utf-8') as f:
             for line in f:
                 if line.strip().startswith('## 判定'):
-                    return f"上次 20d TopK 护栏（{os.path.basename(latest)}）: {line.strip()}"
+                    return (f"上次 20d TopK 护栏（{os.path.basename(latest)}）: {line.strip()}"
+                            f"（净IR/PBO/DSR 由 monthly_guardrail.py 复核计算，本报告仅转贴不重算）")
     except Exception:
         return None
     return None
@@ -415,7 +522,8 @@ def _guardrail_block() -> str:
 > | DSR | ≥0.95 | **{dsr}** {dsr_ok} |
 >
 > 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
-> 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（DECISIONS D2 / DEPLOYMENT T2）"""
+> 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（DECISIONS D2 / DEPLOYMENT T2）
+> —— PBO/DSR 由 `monthly_guardrail.py` 复核计算，本报告仅转贴不重算（D2）"""
 
 
 def calculate_metrics(predictions: List[Dict]) -> Dict:
@@ -747,7 +855,8 @@ def assemble_report(history, month=None, guardrail_line=None):
 
     extra_html = ""
     try:
-        hm = calculate_metrics(history.get('predictions', []))
+        preds_all = history.get('predictions', [])
+        hm = calculate_metrics(preds_all)
         if hm:
             honest_md = (
                 "## 诚实监控摘要（含基准扣除，D3 口径）\n\n"
@@ -755,8 +864,63 @@ def assemble_report(history, month=None, guardrail_line=None):
                 f"　**方向技能: {hm['direction_skill']*100:+.1f}pp**\n"
                 f"- 信号净胜率(扣成本): {hm['buy_net_win_rate']*100:.1f}%"
                 f"　无条件买入基准: {hm['base_win_rate']*100:.1f}%"
-                f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n\n---\n\n"
+                f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n"
             )
+            honest_html_items = [
+                f"<li>准确率 {hm['accuracy']*100:.1f}%　上涨占比(永远看涨) {hm['up_ratio']*100:.1f}%　"
+                f"<b>方向技能 {hm['direction_skill']*100:+.1f}pp</b></li>",
+                f"<li>信号净胜率(扣成本) {hm['buy_net_win_rate']*100:.1f}%　无条件买入基准 "
+                f"{hm['base_win_rate']*100:.1f}%　<b>超额 lift {hm['lift']*100:+.1f}pp</b></li>",
+            ]
+
+            # block bootstrap CI（D3：点估计不足信，须给区间）
+            boot = _block_bootstrap_ci(preds_all)
+            if boot:
+                lo, hi = boot['lift_ci']
+                lo_d, hi_d = boot['ds_ci']
+                if lo > 0:
+                    verdict_lift = 'CI 下界>0 → 显著'
+                elif hi < 0:
+                    verdict_lift = 'CI 上界<0 → 显著为负'
+                else:
+                    verdict_lift = 'CI 跨 0 → 不显著'
+                ci_md = (
+                    f"- block bootstrap 95%CI（按交易日分块 ×{boot['n_boot']} 次，"
+                    f"{boot['n_blocks']} 个交易日块）: "
+                    f"lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
+                    f"方向技能 [{lo_d*100:+.1f}, {hi_d*100:+.1f}]pp —— **{verdict_lift}**"
+                )
+                ci_html = (
+                    f"<li>block bootstrap 95%CI（按交易日分块 ×{boot['n_boot']} 次，"
+                    f"{boot['n_blocks']} 个交易日块）: "
+                    f"lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
+                    f"方向技能 [{lo_d*100:+.1f}, {hi_d*100:+.1f}]pp —— <b>{verdict_lift}</b></li>"
+                )
+            else:
+                ci_md = "- block bootstrap 95%CI: 样本不足（需 ≥15 个交易日块且 ≥60 条已评估），暂不给出"
+                ci_html = f"<li>{ci_md}</li>"
+            honest_md += ci_md + "\n"
+            honest_html_items.append(ci_html)
+
+            # 横截面 IC / ICIR（D3：信号层指标，raw 概率秩相关对单调校准不变）
+            ic = _cross_sectional_ic(preds_all)
+            if ic:
+                ic_md = (
+                    f"- 横截面 Spearman IC: **{ic['mean_ic']:+.3f}**"
+                    f"　ICIR: **{ic['icir']:+.2f}**"
+                    f"（{ic['n_days']} 个截面日，raw 概率——秩相关对 Isotonic 单调校准不变）"
+                )
+                ic_html = (
+                    f"<li>横截面 Spearman IC: <b>{ic['mean_ic']:+.3f}</b>"
+                    f"　ICIR: <b>{ic['icir']:+.2f}</b>"
+                    f"（{ic['n_days']} 个截面日，raw 概率——秩相关对 Isotonic 单调校准不变）</li>"
+                )
+            else:
+                ic_md = "- 横截面 Spearman IC: 样本不足（需 ≥15 个含 ≥10 只股票的截面日），暂不给出"
+                ic_html = f"<li>{ic_md}</li>"
+            honest_md += ic_md + "\n\n---\n\n"
+            honest_html_items.append(ic_html)
+
             _anchor = report.find('## 一、')
             if _anchor >= 0:
                 report = report[:_anchor] + honest_md + report[_anchor:]
@@ -766,11 +930,8 @@ def assemble_report(history, month=None, guardrail_line=None):
                 f"<h2 style=\"color:#007bff; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
                 f"诚实监控摘要（含基准扣除）</h2>"
                 f"<ul style=\"color:#333; font-size:13px; line-height:1.8;\">"
-                f"<li>准确率 {hm['accuracy']*100:.1f}%　上涨占比(永远看涨) {hm['up_ratio']*100:.1f}%　"
-                f"<b>方向技能 {hm['direction_skill']*100:+.1f}pp</b></li>"
-                f"<li>信号净胜率(扣成本) {hm['buy_net_win_rate']*100:.1f}%　无条件买入基准 "
-                f"{hm['base_win_rate']*100:.1f}%　<b>超额 lift {hm['lift']*100:+.1f}pp</b></li>"
-                f"</ul>"
+                + "".join(honest_html_items) +
+                "</ul>"
             )
     except Exception:
         pass
@@ -815,26 +976,31 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ## 一、各周期不同时间窗口表现
 
-| 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
-|------|----------|--------|--------|----------|----------|
+| 周期 | 时间窗口 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 | 夏普比率 |
+|------|----------|--------|----------|----------|--------------|----------|----------|
 """
 
-    # 各周期各时间窗口性能表格
+    # 各周期各时间窗口性能表格（D3：lift/方向技能为主判定加粗，绝对准确率仅参考）
     for h in [1, 5, 20]:
         for days, window_name in TIME_WINDOWS:
             m = window_horizon_metrics.get(days, {}).get(h, {})
             if m and m.get('total_predictions', 0) > 0:
-                report += f"| {horizon_names[h]} | {window_name} | {m.get('total_predictions', 0)} | **{m.get('accuracy', 0):.2%}** | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+                report += (f"| {horizon_names[h]} | {window_name} | {m.get('total_predictions', 0)}"
+                           f" | **{m.get('lift', 0)*100:+.1f}pp** | **{m.get('direction_skill', 0)*100:+.1f}pp**"
+                           f" | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%}"
+                           f" | {m.get('sharpe_ratio', 0):.4f} |\n")
             else:
-                report += f"| {horizon_names[h]} | {window_name} | 0 | - | - | - |\n"
+                report += f"| {horizon_names[h]} | {window_name} | 0 | - | - | - | - | - |\n"
 
-    report += f"""
+    report += """
+> 📌 评估以 **超额lift / 方向技能** 为准（DECISIONS D3）；准确率仅为参考列，不作判定依据。
+
 ---
 
 ## 二、市场分布（港股 / A股）
 
-| 市场 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
-|------|--------|--------|----------|----------|
+| 市场 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 | 夏普比率 |
+|------|--------|----------|----------|--------------|----------|----------|
 """
 
     _market_predictions = {}
@@ -846,10 +1012,13 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         _ps = _market_predictions.get(_mk, [])
         if _ps:
             _m = calculate_metrics(_ps)
-            report += f"| {_market_label.get(_mk, _mk)} | {_m.get('total_predictions', 0)} | **{_m.get('accuracy', 0):.2%}** | {_m.get('avg_return', 0):.2%} | {_m.get('sharpe_ratio', 0):.4f} |\n"
+            report += (f"| {_market_label.get(_mk, _mk)} | {_m.get('total_predictions', 0)}"
+                       f" | **{_m.get('lift', 0)*100:+.1f}pp** | **{_m.get('direction_skill', 0)*100:+.1f}pp**"
+                       f" | {_m.get('accuracy', 0):.2%} | {_m.get('avg_return', 0):.2%}"
+                       f" | {_m.get('sharpe_ratio', 0):.4f} |\n")
         else:
             # 显式输出空市场，避免"静默省略"让读者以为 A 股没接入
-            report += f"| {_market_label.get(_mk, _mk)} | 0 | ⚠️ 无已评估预测（数据源故障或预测未到期） | - | - |\n"
+            report += f"| {_market_label.get(_mk, _mk)} | 0 | ⚠️ 无已评估预测（数据源故障或预测未到期） | - | - | - | - |\n"
     report += "\n"
 
     report += f"""
@@ -857,8 +1026,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ## 三、板块表现
 
-| 板块 | 类型 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 | 夏普比率 |
-|------|------|------|----------|--------|--------|----------|----------|
+| 板块 | 类型 | 周期 | 时间窗口 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 | 夏普比率 |
+|------|------|------|----------|--------|----------|----------|--------------|----------|----------|
 """
 
     # 板块表现 - 收集所有数据后统一输出（复用共享 helper）
@@ -885,9 +1054,11 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         sector_name = get_sector_name(item['sector'])
         sector_type = get_sector_type(item['sector'])
         m = item['metrics']
-        # 准确率加粗，便于后续颜色标记
-        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
-        report += f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
+        report += (f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']}"
+                   f" | {m.get('total_predictions', 0)}"
+                   f" | **{m.get('lift', 0)*100:+.1f}pp** | **{m.get('direction_skill', 0)*100:+.1f}pp**"
+                   f" | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%}"
+                   f" | {m.get('sharpe_ratio', 0):.4f} |\n")
 
     report += """
 > 📌 **小样本提示**：样本数 < 30 的单元格准确率波动极大（如 n=9 的 77.8% 无统计意义），
@@ -897,8 +1068,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ## 四、个股表现
 
-| 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 准确率 | 平均收益 |
-|----------|----------|------|------|----------|--------|--------|----------|
+| 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 |
+|----------|----------|------|------|----------|--------|----------|----------|--------------|----------|
 """
 
     # 个股表现 - 收集所有数据后统一输出（复用共享 helper）
@@ -920,13 +1091,14 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         WINDOW_ORDER.get(x['window'], 99)  # 时间窗口
     ))
 
-    # 显示所有股票
+    # 显示所有股票（D3：lift/方向技能加粗主判定，绝对准确率参考列）
     for item in all_stock_data:
         sector_name = get_sector_name(item['sector'])
         m = item['metrics']
-        # 准确率加粗，便于后续颜色标记
-        accuracy_str = f"**{m.get('accuracy', 0):.2%}**"
-        report += f"| {item['stock']} | {item['stock_name']} | {sector_name} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} |\n"
+        report += (f"| {item['stock']} | {item['stock_name']} | {sector_name}"
+                   f" | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)}"
+                   f" | **{m.get('lift', 0)*100:+.1f}pp** | **{m.get('direction_skill', 0)*100:+.1f}pp**"
+                   f" | {m.get('accuracy', 0):.2%} | {m.get('avg_return', 0):.2%} |\n")
 
     # 三周期模式统计（3个月窗口）
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
@@ -950,8 +1122,8 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += "\n---\n\n## 五、三周期模式统计（3个月窗口，⚠️ 未 embargo）\n\n"
 
     if pattern_stats:
-        # 按准确率排序
-        sorted_patterns = sorted(pattern_stats.items(), key=lambda x: x[1]['win_rate'], reverse=True)
+        # 按平均收益排序（禁用绝对胜率排名，DECISIONS D3 / 停止清单）
+        sorted_patterns = sorted(pattern_stats.items(), key=lambda x: x[1]['avg_return'], reverse=True)
 
         report += "| 排名 | 模式 | 名称 | 样本数 | 表面准确率 | 平均收益 |\n"
         report += "|------|------|------|--------|------------|----------|\n"
@@ -1349,7 +1521,7 @@ def main():
                 print(f"   正确: {stats['correct']}")
                 print(f"   错误: {stats['wrong']}")
                 if stats['evaluated'] > 0:
-                    print(f"   准确率: {stats['correct']/stats['evaluated']:.2%}")
+                    print(f"   准确率(参考): {stats['correct']/stats['evaluated']:.2%}")
 
                 total_stats['total'] += stats['total']
                 total_stats['evaluated'] += stats['evaluated']
@@ -1363,7 +1535,7 @@ def main():
             print(f"   正确: {total_stats['correct']}")
             print(f"   错误: {total_stats['wrong']}")
             if total_stats['evaluated'] > 0:
-                print(f"   准确率: {total_stats['correct']/total_stats['evaluated']:.2%}")
+                print(f"   准确率(参考): {total_stats['correct']/total_stats['evaluated']:.2%}")
 
     # 合并两市场历史用于报告生成（只读）
     history = {
