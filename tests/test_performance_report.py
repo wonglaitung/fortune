@@ -267,3 +267,59 @@ def test_guardrail_html_summary_renders(monkeypatch, tmp_path):
     assert '1.06' in s and '0.47' in s and '0.981' in s
     monkeypatch.setattr(pm, "_guardrail_file_20d", lambda: None)
     assert pm._guardrail_html_summary() == ""
+
+
+def test_per_horizon_ci_3_horizons():
+    """整体雷达：1/5/20 三个周期均应产出 bootstrap CI。"""
+    from ml_services.performance_monitor import _per_horizon_ci
+    ci = _per_horizon_ci(_multi_horizon_history(), 90)
+    assert set(ci.keys()) == {1, 5, 20}
+    for h, v in ci.items():
+        assert 'direction_skill' in v and 'lift' in v
+        assert v['direction_skill'][0] <= v['direction_skill'][1]
+
+
+def test_group_bootstrap_ci_per_stock():
+    """分组 CI：按 stock_code 分组，方向技能/lift 区间合法。"""
+    from ml_services.performance_monitor import _group_bootstrap_ci
+    ci = _group_bootstrap_ci(_multi_horizon_history(), 90, 20, 'stock_code')
+    assert ci
+    for code, v in ci.items():
+        assert 'direction_skill' in v and 'lift' in v
+        assert v['direction_skill'][0] <= v['direction_skill'][1]
+
+
+def test_radar_ci_from_raw_skips_extra_keys():
+    """原始 CI → 归一化：仅映射方向技能/超额lift，n_blocks 等被忽略。"""
+    from scripts.performance_charts import _radar_ci_from_raw, _group_bounds
+    ms = [{'direction_skill': 0.05, 'lift': 0.02, 'avg_return': 0.01}]
+    bounds = _group_bounds(ms)
+    out = _radar_ci_from_raw(
+        {'direction_skill': (0.01, 0.09), 'lift': (-0.01, 0.05), 'n_blocks': 20},
+        bounds)
+    assert set(out.keys()) == {'方向技能', '超额lift'}
+    lo, hi = out['方向技能']
+    assert 0 <= lo <= hi <= 100
+
+
+def test_radar_section_shows_ci_and_significance():
+    """板块雷达：传入 CI 后渲染显著/不显著标注 + 护栏块。"""
+    from ml_services.performance_monitor import _group_bootstrap_ci
+    from scripts.performance_charts import generate_sector_radar_section
+    hist = _multi_horizon_history()
+    ci = _group_bootstrap_ci(hist, 90, 20, 'sector')
+    if not ci:
+        import pytest
+        pytest.skip('合成数据样本不足无 CI')
+    bundle = {s: {'name': s, 'metrics': m} for s, m in ci.items()}
+    # 合成每个板块的 metrics（含 direction_skill/lift）
+    for s, v in ci.items():
+        bundle[s]['metrics'] = {
+            'total_predictions': 120, 'direction_skill': 0.05,
+            'lift': 0.02, 'avg_return': 0.01, 'buy_avg_return': 0.01,
+            'sharpe_ratio': 0.3}
+    html, atts = generate_sector_radar_section(
+        bundle, ci=ci, guardrail_html='<b>20d 组合层护栏</b>')
+    assert 'block bootstrap 95%CI' in html
+    assert '20d 组合层护栏' in html
+    assert '显著' in html or '不显著' in html

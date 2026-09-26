@@ -139,6 +139,25 @@ def _group_bounds(metrics_list):
     return {k: _axis_bound(metrics_list, k, floor) for k, floor in DEFAULT_BOUNDS.items()}
 
 
+def _radar_ci_from_raw(ci_raw, bounds):
+    """bootstrap CI（原始小数 {key:(lo,hi)}）→ 归一化 {维度名:(lo,hi)}，复用组内 bounds。
+
+    仅方向技能/超额lift 两维有 bootstrap CI；其他键（如 n_blocks）忽略。
+    """
+    out = {}
+    mapping = {
+        'direction_skill': ('方向技能', normalize_direction_skill),
+        'lift': ('超额lift', normalize_lift),
+    }
+    for k, v in (ci_raw or {}).items():
+        if k in mapping:
+            dim, fn = mapping[k]
+            lo, hi = v
+            b = bounds.get(k)
+            out[dim] = (fn(lo, b), fn(hi, b))
+    return out
+
+
 def normalize_direction_skill(skill, bound=None):
     """方向技能 (pp 小数) → 0-100 居中映射，50 = 与"永远看涨"无差异。
     bound 为空时用 SKILL_FLOOR 下限；雷达调用方应传组内自适应界（_group_bounds）。"""
@@ -210,7 +229,8 @@ def _strip_unsafe_glyphs(text):
 # 基础渲染：单系列雷达图 PNG
 # ════════════════════════════════════════════════════════════
 
-def _render_single_radar_png_bytes(title, dimensions, color, size=220, composite=None):
+def _render_single_radar_png_bytes(title, dimensions, color, size=220, composite=None,
+                                   ci=None):
     """
     渲染单系列多边形雷达图，返回 PNG bytes（轴数 = PERF_DIMENSIONS 维度数）。
 
@@ -221,6 +241,8 @@ def _render_single_radar_png_bytes(title, dimensions, color, size=220, composite
     - size: 图片尺寸（像素，换算为 figsize）
     - composite: 标题"综合 X"用的标量；None 时回退 5 维等权均值（兼容旧调用）。
       调用方应传加权综合分 composite_score(dimensions)，使标题与排名口径一致。
+    - ci: {维度名: (lo, hi)} 归一化后（0-100）的 95%CI；在对应维度轴画径向误差须，
+      提示不确定性（避免把形状当能力，D3）。仅方向技能/超额lift 两维有 bootstrap CI。
     """
     categories = PERF_DIMENSIONS
     n = len(categories)
@@ -250,6 +272,20 @@ def _render_single_radar_png_bytes(title, dimensions, color, size=220, composite
     ax.plot(angles_closed, values_closed, 'o-', linewidth=1.8, color=color,
             markerfacecolor=color, markeredgecolor='white', markeredgewidth=0.6,
             markersize=4, zorder=4)
+
+    # CI 径向误差须（墨色；两端 cap；clip 到 [0,100] 防越界变形）
+    if ci:
+        for i, cat in enumerate(categories):
+            if cat not in ci:
+                continue
+            lo, hi = ci[cat]
+            lo = max(0.0, min(100.0, lo))
+            hi = max(0.0, min(100.0, hi))
+            a = angles[i]
+            ax.plot([a, a], [lo, hi], color=INK_MUTED, linewidth=1.4, zorder=5)
+            for v in (lo, hi):
+                ax.plot([a - 0.05, a + 0.05], [v, v], color=INK_MUTED,
+                        linewidth=1.4, zorder=5)
 
     # 轴标签（墨色）
     ax.set_xticks(angles)
@@ -295,18 +331,23 @@ def _style_bar_axis(ax):
 # 章节 1：三周期整体性能雷达（small multiples）
 # ════════════════════════════════════════════════════════════
 
-def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
+def generate_overall_radar_section(horizon_metrics, window_name='3个月',
+                                   ci=None, guardrail_html=None):
     """
     生成「模型整体性能雷达」HTML 区块 + CID 附件。
 
     参数:
     - horizon_metrics: {周期: calculate_metrics() 结果}（建议传入 3个月窗口）
     - window_name: 统计窗口名称（用于说明文字）
+    - ci: {周期: {'direction_skill':(lo,hi), 'lift':(lo,hi)}} 原始小数 bootstrap CI，
+      绘制方向技能/超额lift 两维的径向误差须（不确定性可视化，D3 防误判）
+    - guardrail_html: 组合层护栏摘要 HTML 片段（20d 净IR/PBO/DSR，D2），追加到节末
 
     返回: (html, {cid: png_bytes})
     """
     cells = []
     attachments = {}
+    ci = ci or {}
 
     # 雷达 5 维按组内自适应尺度（0 恒为中性，仅缩放幅度，提升横向区分度）
     _m_list = [horizon_metrics.get(h) or {} for h in HORIZONS]
@@ -319,9 +360,10 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
         dims = metrics_to_dimensions(m, _bounds)
         color = HORIZON_COLORS[h]
         cid = f'perf_radar_{h}d'
+        radar_ci = _radar_ci_from_raw(ci.get(h), _bounds)
         attachments[cid] = _render_single_radar_png_bytes(
             f'{HORIZON_NAMES[h]}周期', dims, color, size=230,
-            composite=composite_score(dims))
+            composite=composite_score(dims), ci=radar_ci)
 
         # 关键指标（D3 口径：方向技能 / 超额lift 主色标注，不含绝对准确率/胜率）
         ds = m.get('direction_skill', 0)
@@ -357,6 +399,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
              '超额lift=信号净胜率−无条件买入基准（50=无超额）· '
              '平均收益（50=零收益）· 夏普（50=零夏普）· 买入平均收益（50=零收益）| '
              '5 维均按三周期组内自适应尺度缩放（0 恒为雷达中心，仅调幅度，便于横向对比）| '
+             '方向技能/超额lift 两轴的径向短线 = block bootstrap 95%CI（越宽越不可靠，'
+             'CI 跨 0 视为不显著——形状大≠有能力）| '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
              '标题"综合"=加权综合分(方向技能×3·超额lift×3·其余×1，D3 双主指标为主，雷达5轴形状仍等权) | '
              '评估一律以基准扣除后的技能/超额为准（AGENTS D3），绝对准确率/胜率不作判定依据 | '
@@ -364,6 +408,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
     html += '    <table style="border: 0; border-collapse: collapse; width: 100%;">\n        <tr>\n'
     html += ''.join(cells)
     html += '        </tr>\n    </table>\n'
+    if guardrail_html:
+        html += '<div style="margin-top: 12px;">' + guardrail_html + '</div>\n'
     return html, attachments
 
 
@@ -503,7 +549,8 @@ def generate_window_bar_section(window_metrics,
 # 章节 3：板块性能雷达网格
 # ════════════════════════════════════════════════════════════
 
-def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4):
+def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4,
+                                  ci=None, guardrail_html=None):
     """
     生成「板块性能雷达」网格 HTML 区块 + CID 附件（仿 A股个股雷达网格）。
 
@@ -511,6 +558,9 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     - sector_metrics: {板块代码: {'name': 中文名, 'metrics': calculate_metrics() 结果}}
     - min_samples: 最小样本数，低于此值的板块跳过（并打印日志，不做静默截断）
     - items_per_row: 每行几张
+    - ci: {板块代码: {'direction_skill':(lo,hi), 'lift':(lo,hi)}} 原始小数 bootstrap CI，
+      绘制方向技能/超额lift 两维径向误差须（D3 防误判）
+    - guardrail_html: 组合层护栏摘要 HTML 片段（20d 净IR/PBO/DSR，D2），追加到节末
 
     返回: (html, {cid: png_bytes})
     """
@@ -518,6 +568,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     attachments = {}
     dropped = []
     rendered_metrics = []
+    ci = ci or {}
 
     for sector, info in sector_metrics.items():
         m = info.get('metrics') or {}
@@ -542,8 +593,10 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
         avg = composite_score(dims)  # 加权综合分（方向技能/超额lift 为主，D3）
         color = _get_color(avg)  # 状态三色：≥60 绿 / 40-60 橙 / <40 红
         cid = f'perf_sector_{sector}'
+        radar_ci = _radar_ci_from_raw(ci.get(sector), _bounds)
         try:
-            attachments[cid] = _render_single_radar_png_bytes(name, dims, color, size=190, composite=avg)
+            attachments[cid] = _render_single_radar_png_bytes(
+                name, dims, color, size=190, composite=avg, ci=radar_ci)
         except Exception as e:  # 单板块失败不影响整体
             print(f'  [perf-radar] 板块图表生成失败: {name} {e}')
             continue
@@ -556,6 +609,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
             'lift': m.get('lift', 0),
             'avg_return': m.get('avg_return', 0),
             'buy_avg_return': m.get('buy_avg_return', 0),
+            'ds_ci': (ci.get(sector) or {}).get('direction_skill'),
+            'lift_ci': (ci.get(sector) or {}).get('lift'),
             'cid': cid,
         })
 
@@ -572,7 +627,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 仅展示样本数 ≥ {min_samples} 的板块 | '
              '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 5 维均按'
-             '板块组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
+             '板块组内自适应尺度缩放（0=中性，仅调幅度）| 方向技能/超额lift 的径向短线'
+             ' = block bootstrap 95%CI，跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 颜色为综合分状态：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
@@ -591,13 +647,22 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
         ret_color = COLOR_GREEN if it['avg_return'] >= 0 else COLOR_RED
         buy_ret = _safe_float(it.get('buy_avg_return'), 0.0)
         buy_ret_color = COLOR_GREEN if buy_ret >= 0 else COLOR_RED
+
+        def _sig(lo_hi):
+            if not lo_hi:
+                return ''
+            lo, hi = lo_hi
+            return '✅ 显著' if lo > 0 else ('❌ 显著为负' if hi < 0 else '⚠️ 不显著')
+
+        ds_sig = _sig(it.get('ds_ci'))
+        lift_sig = _sig(it.get('lift_ci'))
         html += f"""            <td style="border: none; text-align: center; padding: 5px; vertical-align: top; width: {100.0 / items_per_row:.0f}%;">
                 <div style="background: #fafafa; border-radius: 6px; padding: 5px; margin: 2px;">
                     <img src="cid:{it['cid']}" style="width: 100%; max-width: 190px; height: auto;" alt="{it['name']}">
                     <div style="font-size: 10px; color: #666; margin-top: 2px; line-height: 1.6;">
                         综合 <b style="color: {avg_color};">{it['avg']:.0f}</b>
-                        | 方向技能 <b style="color: {ds_color};">{ds:+.1%}</b><br>
-                        超额lift <b style="color: {lift_color};">{lift:+.1%}</b>
+                        | 方向技能 <b style="color: {ds_color};">{ds:+.1%}</b>{(' <span style="color:#b45309;">' + ds_sig + '</span>') if ds_sig else ''}<br>
+                        超额lift <b style="color: {lift_color};">{lift:+.1%}</b>{(' <span style="color:#b45309;">' + lift_sig + '</span>') if lift_sig else ''}
                         | 收益 <b style="color: {ret_color};">{it['avg_return']:+.1%}</b>
                         | 买入均收 <b style="color: {buy_ret_color};">{buy_ret:+.1%}</b>
                         | n={it['total']}
@@ -613,6 +678,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
             html += f'            <td style="border: none; width: {100.0 / items_per_row:.0f}%;"></td>\n'
 
     html += '        </tr>\n    </table>\n'
+    if guardrail_html:
+        html += '<div style="margin-top: 12px;">' + guardrail_html + '</div>\n'
     return html, attachments
 
 
@@ -742,7 +809,8 @@ def _stock_rank_bar_png_bytes(items):
     return _save_png_bytes(fig)
 
 
-def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=5):
+def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=5,
+                           ci=None, guardrail_html=None):
     """
     生成「个股表现」HTML 区块 + CID 附件：
       - 一张水平条形图：全部个股按综合分排名（紧凑、便于横向对比）
@@ -753,12 +821,16 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     - min_samples: 最小样本数，低于此值的个股跳过（并打印日志，不静默截断）
     - top_n: 雷达网格展示的个股数量
     - items_per_row: 雷达网格每行几张
+    - ci: {代码: {'direction_skill':(lo,hi), 'lift':(lo,hi)}} 原始小数 bootstrap CI，
+      绘制方向技能/超额lift 两维径向误差须（D3 防误判）
+    - guardrail_html: 组合层护栏摘要 HTML 片段（20d 净IR/PBO/DSR，D2），追加到节末
 
     返回: (html, {cid: png_bytes})
     """
     items = []
     dropped = []
     rendered_metrics = []
+    ci = ci or {}
 
     for code, info in stock_bundle.items():
         m = info.get('metrics') or {}
@@ -789,6 +861,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
             'total': total,
             'dims': dims,
             'metrics': m,
+            'ds_ci': (ci.get(code) or {}).get('direction_skill'),
+            'lift_ci': (ci.get(code) or {}).get('lift'),
         })
 
     for name, code, total in dropped:
@@ -808,7 +882,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
              f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
              '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），5 维均按'
-             '个股组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
+             '个股组内自适应尺度缩放（0=中性，仅调幅度）| 方向技能/超额lift 的径向短线'
+             ' = block bootstrap 95%CI，跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 状态三色：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
@@ -825,10 +900,13 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         if i % items_per_row == 0 and i > 0:
             html += '        </tr><tr>\n'
         cid = f"perf_stock_{_sanitize_cid_code(it['code'])}"
+        radar_ci = _radar_ci_from_raw(
+            {'direction_skill': it['ds_ci'], 'lift': it['lift_ci']}
+            if (it['ds_ci'] or it['lift_ci']) else {}, _bounds)
         try:
             attachments[cid] = _render_single_radar_png_bytes(
                 it['name'], it['dims'], _get_color(it['avg']), size=185,
-                composite=it['avg'])
+                composite=it['avg'], ci=radar_ci)
         except Exception as e:  # 单只失败不影响整体
             print(f"  [perf-stock] 个股图表生成失败: {it['name']} {e}")
             continue
@@ -844,14 +922,22 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         buy_ret = _safe_float(it['metrics'].get('buy_avg_return'), 0.0)
         buy_ret_color = COLOR_GREEN if buy_ret >= 0 else COLOR_RED
 
+        def _sig(lo_hi):
+            if not lo_hi:
+                return ''
+            lo, hi = lo_hi
+            return '✅ 显著' if lo > 0 else ('❌ 显著为负' if hi < 0 else '⚠️ 不显著')
+
+        ds_sig = _sig(it.get('ds_ci'))
+        lift_sig = _sig(it.get('lift_ci'))
         html += f"""            <td style="border: none; text-align: center; padding: 4px; vertical-align: top; width: {100.0 / items_per_row:.0f}%;">
                 <div style="background: #fafafa; border-radius: 6px; padding: 4px; margin: 2px;">
                     <img src="cid:{cid}" style="width: 100%; max-width: 185px; height: auto;" alt="{it['name']}">
                     <div style="font-size: 9.5px; color: #666; margin-top: 2px; line-height: 1.55;">
                         <b style="color:#333;">{it['code']}</b><br>
                         综合 <b style="color: {avg_color};">{it['avg']:.0f}</b>
-                        | 方向技能 <b style="color: {ds_color};">{ds:+.1%}</b><br>
-                        超额lift <b style="color: {lift_color};">{lift:+.1%}</b>
+                        | 方向技能 <b style="color: {ds_color};">{ds:+.1%}</b>{(' <span style="color:#b45309;">' + ds_sig + '</span>') if ds_sig else ''}<br>
+                        超额lift <b style="color: {lift_color};">{lift:+.1%}</b>{(' <span style="color:#b45309;">' + lift_sig + '</span>') if lift_sig else ''}
                         | 收益 <b style="color: {ret_color};">{avg_ret:+.1%}</b>
                         | 买入均收 <b style="color: {buy_ret_color};">{buy_ret:+.1%}</b><br>
                         n={it['total']}
@@ -867,4 +953,6 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
             html += f'            <td style="border: none; width: {100.0 / items_per_row:.0f}%;"></td>\n'
 
     html += '        </tr>\n    </table>\n'
+    if guardrail_html:
+        html += '<div style="margin-top: 12px;">' + guardrail_html + '</div>\n'
     return html, attachments

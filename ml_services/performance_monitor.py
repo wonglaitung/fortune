@@ -380,7 +380,8 @@ def _block_bootstrap_ci(predictions: List[Dict], n_boot: int = 1000, seed: int =
     }
 
 
-def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetime] = None) -> Dict:
+def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetime] = None,
+                         n_boot: int = 400) -> Dict:
     """对每个（窗口×周期）格子算 block bootstrap 95%CI（D3 不确定性可视化）。
 
     返回 {(窗口天数, 周期): {'lift_ci': (lo,hi), 'ds_ci': (lo,hi)}}；
@@ -396,13 +397,61 @@ def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetim
         start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
         for h in [1, 5, 20]:
             preds = _filter_evaluated(history, start_str, end_str, horizon=h)
-            boot = _block_bootstrap_ci(preds)
+            boot = _block_bootstrap_ci(preds, n_boot=n_boot)
             if boot:
                 out[(days, h)] = {
                     'lift_ci': boot['lift_ci'],
                     'ds_ci': boot['ds_ci'],
                     'n_blocks': boot['n_blocks'],
                 }
+    return out
+
+
+def _per_horizon_ci(history: Dict, days: int, now: Optional[datetime] = None,
+                    n_boot: int = 400) -> Dict:
+    """整体雷达：按周期 1/5/20 天、3个月窗口内全股票池算 bootstrap 95%CI。
+
+    返回 {周期: {'direction_skill':(lo,hi), 'lift':(lo,hi)}}（原始小数）。
+    """
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+    start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+    out = {}
+    for h in [1, 5, 20]:
+        preds = _filter_evaluated(history, start_str, end_str, horizon=h)
+        boot = _block_bootstrap_ci(preds, n_boot=n_boot)
+        if boot:
+            out[h] = {'direction_skill': boot['ds_ci'], 'lift': boot['lift_ci']}
+    return out
+
+
+def _group_bootstrap_ci(history: Dict, days: int, horizon: int, group_key: str,
+                        now: Optional[datetime] = None, n_boot: int = 400) -> Dict:
+    """按分组（板块/个股/周期）算 3个月窗口 bootstrap 95%CI。
+
+    返回 {group: {'direction_skill':(lo,hi), 'lift':(lo,hi)}}（原始小数）；
+    样本不足的组（<15 日期块或 <60 条）不出现——雷达不画误差须（宁缺毋滥）。
+    """
+    if now is None:
+        now = datetime.now()
+    end_str = now.strftime('%Y-%m-%d')
+    start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+    window_preds = _filter_evaluated(history, start_str, end_str, horizon=horizon)
+
+    groups: Dict[str, List[Dict]] = {}
+    for p in window_preds:
+        groups.setdefault(p.get(group_key, 'unknown'), []).append(p)
+
+    out = {}
+    for g, preds in groups.items():
+        boot = _block_bootstrap_ci(preds, n_boot=n_boot)
+        if boot:
+            out[g] = {
+                'direction_skill': boot['ds_ci'],
+                'lift': boot['lift_ci'],
+                'n_blocks': boot['n_blocks'],
+            }
     return out
 
 
@@ -1267,6 +1316,12 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
     sector_metrics_3m = compute_grouped_metrics(history, detail_days, 20, 'sector', now=now)
     pattern_stats = calculate_three_horizon_pattern_stats(history, start_date_detail_str)
 
+    # D3 防误判：各雷达分组 bootstrap CI + 20d 组合层护栏
+    guardrail_html = _guardrail_html_summary()
+    overall_ci = _per_horizon_ci(history, detail_days, now=now)
+    sector_ci = _group_bootstrap_ci(history, detail_days, 20, 'sector', now=now)
+    stock_ci = _group_bootstrap_ci(history, detail_days, 20, 'stock_code', now=now)
+
     parts = []
     attachments = {}
 
@@ -1279,8 +1334,10 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
     <hr style="border:none; border-top:1px solid #ddd;">
 """)
 
-    # 一、整体性能雷达
-    html, atts = generate_overall_radar_section(horizon_metrics_3m, window_name='3个月')
+    # 一、整体性能雷达（CI 误差须 + 组合层护栏）
+    html, atts = generate_overall_radar_section(
+        horizon_metrics_3m, window_name='3个月',
+        ci=overall_ci, guardrail_html=guardrail_html)
     parts.append(html)
     attachments.update(atts)
 
@@ -1291,12 +1348,13 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
     parts.append(html)
     attachments.update(atts)
 
-    # 三、板块雷达网格
+    # 三、板块雷达网格（CI 误差须 + 组合层护栏）
     sector_bundle = {
         s: {'name': get_sector_name(s), 'metrics': m}
         for s, m in sector_metrics_3m.items()
     }
-    html, atts = generate_sector_radar_section(sector_bundle)
+    html, atts = generate_sector_radar_section(
+        sector_bundle, ci=sector_ci, guardrail_html=guardrail_html)
     parts.append(html)
     attachments.update(atts)
 
@@ -1309,7 +1367,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
     parts.append(html)
     attachments.update(atts)
 
-    # 五、个股表现（全部排名条形图 + Top 10 雷达网格，替换原明细表）
+    # 五、个股表现（全部排名条形图 + Top 10 雷达网格，替换原明细表；CI 误差须 + 组合层护栏）
     # 复用 collect_group_detail 取「20天 / 3个月」口径，组装个股 bundle（含名称/板块）
     stock_bundle = {}
     for row in collect_group_detail(history, 'stock_code', now=now):
@@ -1321,7 +1379,8 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
             'sector': row['sample_pred'].get('sector', 'unknown'),
             'metrics': row['metrics'],
         }
-    html, atts = generate_stock_section(stock_bundle)
+    html, atts = generate_stock_section(
+        stock_bundle, ci=stock_ci, guardrail_html=guardrail_html)
     parts.append(html)
     attachments.update(atts)
 
