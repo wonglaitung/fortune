@@ -1866,3 +1866,15 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   取价零失败；报告四标记全生效（L7 摘要/L537 免责/L204 小样本/A股行）
 - 测试 `tests/test_performance_report.py`（4 项）→ **68 passed**
 - lessons 三.11（v10.14）
+
+### 2026-09-26 性能监控全量复跑验证（P1-P5 落地核对）⭐
+
+- 复跑 exit=0、0 报错/0 取价失败；评估稳定 11395（幂等）；36 张图表
+- **自洽核对 7 项全过**：①节序 摘要(7)<一(14)<…<三周期(537)<护栏(570)
+  ②11263+132=11395 ③加权准确率 54.20%=摘要 54.2% ④54.2−42.5=+11.7pp、42.0−37.6=+4.4pp
+  ⑤风险提示 6939=第一节3月窗 2392+2353+2194 ⑥三周期免责 embargo 数字与 AGENTS 模式表
+  精确一致（011 40.5/101 32.3/010 58.3）⑦护栏选对文件（lightgbm=20d 🟢）
+- 顺手修：护栏行剥离 `##` 前缀（正文嵌标题渲染怪异）
+- **坑**：stash pop 把残留恢复成 staged，`git commit` 未带 pathspec 把 8 个本地残留
+  卷进提交 → 已用 `restore --source --staged` 回退（a464becf，工作树内容保留）。
+  **教训：提交永远带 pathspec**（`git commit <paths>`），尤其刚 stash pop 过之后
