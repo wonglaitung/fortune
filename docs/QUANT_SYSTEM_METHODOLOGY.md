@@ -292,7 +292,7 @@ flowchart LR
 
 **做什么**
 - [ ] 建 `DECISIONS.md`：一条决策一行，含**决策 / 证据 / 重启条件**
-- [ ] 写**评估口径宪法**：指标定义、**基准**、n_eff 规则、**违宪指标清单**（如绝对准确率）
+- [ ] 写**评估口径宪法**：指标定义、**[基准](#t-bench)**、[n_eff](#t-neff) 规则、**[违宪](#t-constitution)指标清单**（如[绝对准确率](#t-acc)）
 - [ ] 定仓库规范：哪些文件入库（`.md`/`.py` 必入，`.csv`/`.pkl` 视规则）
 - [ ] 定缓存规范：改特征/改数据必须 `rm -rf data/*_cache/*.pkl`
 - [ ] 定报告模板：`指标定义 / 基准 / 样本区间` 三行指纹置顶
@@ -301,11 +301,11 @@ flowchart LR
 - 任选一个指标，能说出"定义 / 相对什么 / 错误读法"三件事
 - 违宪指标已列成清单，全库有 grep 手段
 
-**跳步代价**：口径打架 → 后续所有历史数字不可比，改一次口径洗一次库（本项目 30+ 处作废）。
+**跳步代价**：[口径](#t-caliber)打架 → 后续所有历史数字不可比，改一次口径洗一次库（本项目 30+ 处作废）。
 
 **本项目怎么做**（示意，随轮次更新；完整命令见 [AGENTS.md](../AGENTS.md)）：
 - `docs/DECISIONS.md`：每条一行 = 决策 / 证据 / 重启条件，D1–D10 已固定；
-  评估**口径宪法**由 D3 立宪——绝对准确率/胜率**违宪**，一律看 lift / 方向技能 / ICIR + PBO / DSR。
+  评估**口径宪法**由 D3 [立宪](#t-constitution)——[绝对准确率](#t-acc)/胜率**违宪**，一律看 [lift](#t-lift) / [方向技能](#t-skill) / [ICIR](#t-icir) + [PBO](#t-pbo) / [DSR](#t-dsr)。
 - `docs/VALIDATION_GUIDE.md`：报告模板三行指纹（指标定义 / 基准 / 样本区间）+ 术语定义。
 - 仓库规范（见 AGENTS「Git 提交规范」）：只提交 `.md` / `.py`；`.json` / `.csv` / `.pkl` 不入库，
   回测 `prediction_analysis.csv` 是**唯一例外**，由自动入库脚本单独处理（见阶段 4）。
@@ -315,10 +315,10 @@ flowchart LR
 #### 阶段 1 · 立时点（2–3 天）
 
 **做什么**
-- [ ] 回测骨架强制 **PIT + embargo**：训练窗截止于 T-k，特征截止于 T-1
-- [ ] 双模式分离：`production`（当日数据，收市后预测）/ `backtest`（T-1 数据，walk-forward）
+- [ ] 回测骨架强制 **[PIT](#t-pit) + [embargo](#t-embargo)**：训练窗截止于 T-k，特征截止于 T-1
+- [ ] [双模式](#t-dualmode)分离：`production`（当日数据，收市后预测）/ `backtest`（T-1 数据，[walk-forward](#t-walkforward)）
 - [ ] **特征泄漏审计**：逐特征问"这个值在 T-1 收盘时真的存在吗？"
-  - 高危类别：网络/情感/主题/基本面的**静态快照广播**（最新值铺到全部历史行）
+  - 高危类别：网络/情感/主题/基本面的**[静态快照广播](#t-snapshot)**（最新值铺到全部历史行）
   - 机械规则：一切 `.rolling()`、`.shift()`、未来收益标签走检查表
 - [ ] 未来收益标签用 `returns.shift(-N)`，与训练口径一致
 
@@ -335,7 +335,7 @@ flowchart LR
   只是输入时点不同。训练和预测必须同模式，否则特征缓存张冠李戴。
 - **PIT 还原**：网络/情感/主题/基本面这类"最新值可广播"的特征，**按日期存历史版本**，
   回测时从当时时点取数（`data/network_features/` 按日归档）；
-  机械规则强制 `shift(1)`，未来收益用 `shift(-N)`。
+  机械规则强制 [shift(1)](#t-shift)，未来收益用 [shift(-N)](#t-shift)。
 - **embargo**：`walk_forward_validation.py` 与 `hsi_walk_forward.py` 支持隔离窗口参数，
   恒指用 12 个月训练窗，个股 36 个月；训练/测试交界留 embargo 防收益重叠渗漏。
 - **泄漏报警线**：个股日线准确率应落 50–60%，**>65% 一律当泄漏信号停手排查**，
@@ -344,8 +344,8 @@ flowchart LR
 #### 阶段 2 · 最小验证器（1 天）
 
 **做什么**
-- [ ] 实现 `backtest_eval`：**超额 lift、方向技能、n_eff、block bootstrap CI**
-- [ ] 同时输出 IC/ICIR（用实际收益率，非二元标签）
+- [ ] 实现 `backtest_eval`：**[超额 lift](#t-lift)、[方向技能](#t-skill)、[n_eff](#t-neff)、[block bootstrap](#t-blockboot) CI**
+- [ ] 同时输出 [IC](#t-ic)/[ICIR](#t-icir)（用实际收益率，非二元标签）
 - [ ] 报告自动带三行指纹 + 复现命令（指向具体入库 CSV）
 
 **验收 DoD**
@@ -358,7 +358,7 @@ flowchart LR
 ```bash
 python3 ml_services/backtest_eval.py --input output/<回测目录>/prediction_analysis.csv --horizon 20
 ```
-- 产出 `output/backtest_eval_*.md`：合并准确率 + 95%CI、**信号胜率 vs 无条件买入基准**、
+- 产出 `output/backtest_eval_*.md`：合并准确率 + 95%[CI](#t-ci)、**信号胜率 vs 无条件买入[基准](#t-bench)**、
   **超额 lift 及 p 值**、方向技能（准确率 − 永远看涨）、IC/ICIR、**n_eff**。
 - 判读：lift / 方向技能的 **p 值**才是门槛（本项目 20d lift +1.9pp、p=0.24 → 不显著）；
   n_eff < 30 自动打"样本不足"，不写进 AGENTS。
@@ -368,9 +368,9 @@ python3 ml_services/backtest_eval.py --input output/<回测目录>/prediction_an
 #### 阶段 3 · 组合闸门（2 天）
 
 **做什么**
-- [ ] `portfolio_backtest`：行业中性 TopK、扣成本、**超额 bootstrap CI**（相对等权基准）、**逐年分解**
-- [ ] `monthly_guardrail`：净IR / **PBO**（CSCV）/ **DSR**（计入配置族数）+ 判定 🟢/🟡/🔴
-- [ ] 把三道闸门**按顺序固化进 SOP**（见 §3.3）
+- [ ] `portfolio_backtest`：[行业中性](#t-neutral) [TopK](#t-topk)、扣成本、**超额 [bootstrap](#t-blockboot) CI**（相对等权[基准](#t-bench)）、**逐年分解**
+- [ ] `monthly_guardrail`：[净IR](#t-netir) / **[PBO](#t-pbo)**（CSCV）/ **[DSR](#t-dsr)**（计入[配置族](#t-config)数）+ 判定 🟢/🟡/🔴
+- [ ] 把[三道闸门](#t-gates)**按顺序固化进 SOP**（见 §3.3）
 
 **验收 DoD**
 - 三个问题能被**分开**回答：是不是假的 / 是不是真的 / 值多少
@@ -384,10 +384,10 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
     --pred output/<回测目录>/prediction_analysis.csv --output output/portfolio_20d_<日期>.md
 python3 ml_services/monthly_guardrail.py --horizon 20
 ```
-- `portfolio_backtest`：TopK 行业中性、0.5% 换手成本、**超额 bootstrap CI**（相对等权基准）、
+- `portfolio_backtest`：TopK 行业中性、0.5% [换手](#t-cost)成本、**超额 [bootstrap](#t-blockboot) CI**（相对等权[基准](#t-bench)）、
   **逐年分解**（防单年撑全场）。
 - `monthly_guardrail`：净IR / PBO / DSR + 判定 🟢/🟡/🔴，规则抄自 [D2](DECISIONS.md)。
-- 三道闸门**按顺序跑，一道不过不跑下一道**：① 是假的吗（护栏）→ ② 是真的吗（超额 CI + 逐年）
+- 三道闸门**按顺序跑，一道不过不跑下一道**：① 是假的吗（[护栏](#t-guardrail)）→ ② 是真的吗（超额 CI + 逐年）
   → ③ 值多少（仓位定档）。实测（2026-09-26，20d）：净IR 1.41 / PBO 0.19 / DSR 0.982 🟢 →
   超额IR 1.24 [0.18, 2.41]、四年全正 → 但 lift 仅 +1.9pp → **人定 15% 不是 20%**。
 
@@ -472,8 +472,8 @@ python3 ml_services/monthly_guardrail.py --horizon 20
 
 **做什么**（每一步都挂在阶段 0–6 的骨架上）
 - [ ] 特征工程（先绝对值标准化、市场级特征交叉、单调性检查，再谈新增）
-- [ ] 学习器 **[A/B](#t-ab) 按周期/按域分别做**，禁止一刀切（原则 7）
-- [ ] 全折 walk-forward（PIT 口径）
+- [ ] [学习器](#t-learner) **[A/B](#t-ab) 按周期/按域分别做**，禁止一刀切（原则 7）
+- [ ] 全折 [walk-forward](#t-walkforward)（[PIT](#t-pit) 口径）
 - [ ] **三道闸门**依次过：护栏 → 超额 CI + 逐年 → 仓位定档
 - [ ] 进监控，按月复核，到期复审
 
