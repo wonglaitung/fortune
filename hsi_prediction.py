@@ -9,9 +9,9 @@
 
 | 周期 | 准确率 | 95%CI | vs 随机 |
 |------|--------|-------|---------|
-| 1天 | 54.1% | [50.5%, 57.7%] | better (p=0.03) |
-| 5天 | 55.9% | [47.8%, 63.8%] | 不显著 |
-| 20天 | 57.5% | [41.2%, 72.4%] | 不显著 |
+| 1天 | 51.3% | [47.7%, 55.0%] | 不显著 (p=0.50；上轮 p=0.03 未复现) |
+| 5天 | 54.8% | [46.6%, 62.7%] | 不显著 (p=0.29) |
+| 20天 | 59.1% | [42.7%, 73.7%] | 不显著 (p=0.36，n_eff≈35) |
 
 三周期模式（PIT/embargo）：各模式准确率均接近随机（30%–58%），不构成可靠交易信号。
 
@@ -1287,122 +1287,40 @@ class HSI_Predictor:
             # 编码预测模式：1=上涨，0=下跌
             pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
-            # ====== 恒指三周期模式（PIT/embargo 口径）======
-            # 各模式 20天准确率均接近随机（30%–58%），不构成可靠交易信号：
-            # 010: 58.33%  000: 53.70%  001: 50.46%  111: 50.38%
-            # 110: 42.55%  011: 40.45%  101: 32.26%  100: 29.82%
+            # ====== 恒指三周期模式（PIT/embargo 口径，2026-09-26 复测）======
+            # 准确率相对「同向 20d 无条件基准」（UP 60.3% / DOWN 57.8%）的净贡献：
+            # 000 +7.6pp(p=0.034)  111 +7.6pp(p=0.078)  101 -1.6pp  010 -0.7pp
+            # 001 -4.9pp           011 -5.9pp           100 -10.3pp 110 -21.0pp
+            # 8 模式 Bonferroni（α=0.00625）后全部不显著 → 一律不构成交易指令。
+            # （数据：data/hsi_walk_forward/hsi_prediction_analysis_20260926_*.csv，697 合并样本）
+            _HSI_PATTERNS = {
+                '101': ('假突破',  58.70,  -1.6, '短期看涨中期看跌长期看涨'),
+                '010': ('反弹失败', 57.14,  -0.7, '短期看跌中期看涨长期看跌'),
+                '001': ('下跌中继', 55.45,  -4.9, '短期中期看跌但长期看涨'),
+                '011': ('探底回升', 54.41,  -5.9, '短期看跌但中期长期看涨'),
+                '111': ('一致看涨', 67.91,   7.6, '三周期共振上涨（p=0.078 不显著）'),
+                '000': ('一致看跌', 65.45,   7.6, '三周期共振下跌（p=0.034 校正后不显著）'),
+                '100': ('冲高回落', 47.54, -10.3, '短期上涨但中期长期看跌'),
+                '110': ('震荡回调', 36.84, -21.0, '短期中期看涨但长期看跌'),
+            }
 
-            if pattern == '101':  # 假突破（无可靠边缘）
-                consistency_signal = "⭐ 假突破（最优模式）"
+            if pattern in _HSI_PATTERNS:
+                _name, _acc, _net, _desc = _HSI_PATTERNS[pattern]
+                consistency_signal = f"⚠️ {_name}（无交易边缘）"
                 trading_action = {
-                    'rule': '假突破做多',
-                    'pattern': pattern,
-                    'action': '买入',
-                    'holding': '持有20天',
-                    'confidence': '高',
-                    'color': '#166534',
-                    'bg_color': '#dcfce7',
-                    'win_rate': '32.26%',
-                    'avg_return': '+8.5%',
-                    'description': '短期下跌中期上涨长期看涨，准确率32.26%'
-                }
-            elif pattern == '010':  # 反弹失败 - 次优模式
-                consistency_signal = "⭐ 反弹失败（次优模式）"
-                trading_action = {
-                    'rule': '反弹做多',
-                    'pattern': pattern,
-                    'action': '谨慎买入',
-                    'holding': '持有20天',
-                    'confidence': '高',
-                    'color': '#166534',
-                    'bg_color': '#dcfce7',
-                    'win_rate': '58.33%',
-                    'avg_return': '+7.8%',
-                    'description': '短期下跌中期上涨长期下跌，准确率58.33%'
-                }
-            elif pattern == '001':  # 下跌中继
-                consistency_signal = "📈 下跌中继"
-                trading_action = {
-                    'rule': '下跌做多',
-                    'pattern': pattern,
-                    'action': '谨慎买入',
-                    'holding': '持有20天',
-                    'confidence': '中高',
-                    'color': '#0369a1',
-                    'bg_color': '#e0f2fe',
-                    'win_rate': '50.46%',
-                    'avg_return': '+7.6%',
-                    'description': '短期中期下跌但长期看涨，准确率50.46%'
-                }
-            elif pattern == '111':  # 三周期一致看涨
-                consistency_signal = "📈 一致看涨"
-                trading_action = {
-                    'rule': '一致追涨',
-                    'pattern': pattern,
-                    'action': '买入',
-                    'holding': '持有20天',
-                    'confidence': '中高',
-                    'color': '#166534',
-                    'bg_color': '#dcfce7',
-                    'win_rate': '50.38%',
-                    'avg_return': '+7.7%',
-                    'description': '三周期共振上涨，准确率50.38%'
-                }
-            elif pattern == '000':  # 三周期一致看跌
-                consistency_signal = "📉 一致看跌"
-                trading_action = {
-                    'rule': '一致看跌',
-                    'pattern': pattern,
-                    'action': '减仓/做空',
-                    'holding': '观望',
-                    'confidence': '中高',
-                    'color': '#dc2626',
-                    'bg_color': '#fee2e2',
-                    'win_rate': '53.70%',
-                    'avg_return': '-',
-                    'description': '三周期共振下跌，准确率53.70%'
-                }
-            elif pattern == '110':  # 震荡回调
-                consistency_signal = "📊 震荡回调"
-                trading_action = {
-                    'rule': '震荡谨慎',
-                    'pattern': pattern,
-                    'action': '谨慎',
-                    'holding': '轻仓',
-                    'confidence': '中',
-                    'color': '#7c2d12',
-                    'bg_color': '#fed7aa',
-                    'win_rate': '42.55%',
-                    'avg_return': '-',
-                    'description': '短期中期上涨但长期看跌，准确率42.55%'
-                }
-            elif pattern == '011':  # 探底回升
-                consistency_signal = "📈 探底回升"
-                trading_action = {
-                    'rule': '探底买入',
-                    'pattern': pattern,
-                    'action': '分批建仓',
-                    'holding': '逢低买入',
-                    'confidence': '中',
-                    'color': '#0369a1',
-                    'bg_color': '#e0f2fe',
-                    'win_rate': '40.45%',
-                    'avg_return': '+7.9%',
-                    'description': '短期下跌但中期长期看涨，准确率40.45%'
-                }
-            elif pattern == '100':  # 冲高回落
-                consistency_signal = "⏳ 冲高回落"
-                trading_action = {
-                    'rule': '冲高观望',
+                    'rule': '三周期模式不交易',
                     'pattern': pattern,
                     'action': '观望',
-                    'holding': '观察',
-                    'confidence': '中低',
-                    'color': '#92400e',
-                    'bg_color': '#fef3c7',
-                    'win_rate': '29.82%',
+                    'holding': '不建仓',
+                    'confidence': '低',
+                    'color': '#6b7280',
+                    'bg_color': '#f3f4f6',
+                    'win_rate': f"{_acc:.2f}%",
                     'avg_return': '-',
-                    'description': '短期上涨但中期长期看跌，准确率29.82%'
+                    'description': (
+                        f"{_desc}；20天准确率 {_acc:.2f}%，相对同向基准净贡献 "
+                        f"{_net:+.1f}pp，8 模式 Bonferroni 校正后不显著 → 不作为交易依据"
+                    ),
                 }
             else:
                 consistency_signal = "❓ 模式待定"
@@ -1599,7 +1517,7 @@ class HSI_Predictor:
                     {transmission_display}
                 </div>
                 <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
-                    传导律：1天正确→20天准确率58.12%，5天正确→61.87%，两者都正确→64.81%（基准57.53%）
+                    传导律（2026-09-26）：基准59.11%，1天正确→59.50%，5天正确→64.69%，两者都正确→65.32%（传导很弱）
                 </div>
             </div>
 """
@@ -2366,21 +2284,22 @@ class HSI_Predictor:
             pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d and pred_1d.get('outcome') else None
             pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d and pred_5d.get('outcome') else None
 
-            # 根据1天和5天的验证结果，预估20天预测的准确率（PIT/embargo）
-            # - 基准（无条件）：57.53%
-            # - 1天正确 → 20天也正确：58.12%
-            # - 5天正确 → 20天也正确：61.87%
-            # - 1天+5天都正确 → 20天也正确：64.81%
+            # 根据1天和5天的验证结果，预估20天预测的准确率（PIT/embargo，2026-09-26，697样本）
+            # - 基准（无条件）：59.11%
+            # - 1天正确 → 20天也正确：59.50%（+0.4pp，几乎无传导）
+            # - 5天正确 → 20天也正确：64.69%（+5.6pp）
+            # - 1天+5天都正确 → 20天也正确：65.32%（+6.2pp，n=222）
+            # 注意：这些是条件准确率，未做多重比较校正，均不构成可靠交易信号。
             estimated_20d_accuracy = None
             if pred_1d_correct is not None and pred_5d_correct is not None:
                 if pred_1d_correct and pred_5d_correct:
-                    estimated_20d_accuracy = 64.81
+                    estimated_20d_accuracy = 65.32
                 elif pred_1d_correct:
-                    estimated_20d_accuracy = 58.12
+                    estimated_20d_accuracy = 59.50
                 elif pred_5d_correct:
-                    estimated_20d_accuracy = 61.87
+                    estimated_20d_accuracy = 64.69
                 else:
-                    estimated_20d_accuracy = 57.53
+                    estimated_20d_accuracy = 58.68
 
             return {
                 'transmission_mode': pred_1d_correct and pred_5d_correct if pred_1d_correct is not None and pred_5d_correct is not None else False,
@@ -2621,9 +2540,9 @@ class HSI_Predictor:
 
             # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-2025）
             historical_accuracy = {
-                1: 0.541,
-                5: 0.559,
-                20: 0.575
+                1: 0.513,
+                5: 0.548,
+                20: 0.591
             }
 
             historical_auc = {
@@ -2634,14 +2553,14 @@ class HSI_Predictor:
 
             # 八大模式的 20天准确率（embargo 验证，均接近随机，仅供参考）
             pattern_accuracy = {
-                '010': 58.33,  # 反弹失败
-                '000': 53.70,  # 一致看跌
-                '001': 50.46,  # 下跌中继
-                '111': 50.38,  # 一致看涨
-                '110': 42.55,  # 震荡回调
-                '011': 40.45,  # 探底回升
-                '101': 32.26,  # 假突破
-                '100': 29.82   # 冲高回落
+                '010': 57.14,  # 反弹失败（同向基准 57.8%，净 -0.7pp）
+                '000': 65.45,  # 一致看跌（基准 57.8%，净 +7.6pp，p=0.034）
+                '001': 55.45,  # 下跌中继（基准 60.3%，净 -4.9pp）
+                '111': 67.91,  # 一致看涨（基准 60.3%，净 +7.6pp，p=0.078）
+                '110': 36.84,  # 震荡回调（基准 57.8%，净 -21.0pp）
+                '011': 54.41,  # 探底回升（基准 60.3%，净 -5.9pp）
+                '101': 58.70,  # 假突破（基准 60.3%，净 -1.6pp，旧"最优"结论作废）
+                '100': 47.54   # 冲高回落（基准 57.8%，净 -10.3pp）
             }
 
             results = {}
@@ -2751,21 +2670,21 @@ class HSI_Predictor:
 
                 # 综合建议（恒指增强模型验证，2026-04-28更新）
                 if pattern == '111':
-                    suggestion = "📈 一致看涨 - 买入持有20天（胜率50.38%）"
+                    suggestion = "📈 一致看涨 - 观望（20d准确率67.91%，净+7.6pp，p=0.078 不显著）"
                 elif pattern == '000':
-                    suggestion = "📉 一致看跌 - 减仓/止损（胜率53.70%）"
+                    suggestion = "📉 一致看跌 - 观望（20d准确率65.45%，净+7.6pp，校正后不显著）"
                 elif pattern == '110':
-                    suggestion = "📊 震荡回调 - 谨慎操作（胜率42.55%）"
+                    suggestion = "📊 震荡回调 - 观望（20d准确率36.84%，净-21.0pp）"
                 elif pattern == '100':
-                    suggestion = "⏳ 冲高回落 - 观望为主（胜率29.82%）"
+                    suggestion = "⏳ 冲高回落 - 观望（20d准确率47.54%，净-10.3pp）"
                 elif pattern == '011':
-                    suggestion = "📈 探底回升 - 分批建仓（胜率40.45%）"
+                    suggestion = "📈 探底回升 - 观望（20d准确率54.41%，净-5.9pp）"
                 elif pattern == '010':
-                    suggestion = "⭐ 反弹失败 - 谨慎做多（胜率58.33%）"
+                    suggestion = "⏸ 反弹失败 - 观望（20d准确率57.14%，净-0.7pp）"
                 elif pattern == '001':
-                    suggestion = "📈 下跌中继 - 谨慎做多（胜率50.46%）"
+                    suggestion = "📈 下跌中继 - 观望（20d准确率55.45%，净-4.9pp）"
                 elif pattern == '101':
-                    suggestion = "⭐ 假突破 - 买入持有（胜率32.26%，最优）"
+                    suggestion = "⏸ 假突破 - 观望（20d准确率58.70%，净-1.6pp，旧「最优」结论作废）"
                 else:
                     suggestion = "⚠️ 信号不明确，建议观望"
             else:

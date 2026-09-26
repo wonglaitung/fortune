@@ -736,11 +736,12 @@ class HSICatBoostModel:
         results = {}
 
         # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-2025，12月训练窗口）
-        # 5/20天因独立样本少，统计上不显著；详见 output/backtest_eval_hsi_{1,5,20}d.md
+        # 2026-09-26 复测：51.3%/54.8%/59.1%，三项 vs 随机均不显著（p=0.50/0.29/0.36）
+        # 5/20天因独立样本少（n_eff ~143/~35）；详见 output/backtest_eval_hsi_{1,5,20}d.md
         historical_accuracy = {
-            1: 0.541,
-            5: 0.559,
-            20: 0.575
+            1: 0.513,
+            5: 0.548,
+            20: 0.591
         }
 
         historical_auc = {

@@ -2,11 +2,71 @@
 
 **项目**：港股智能分析系统 + A股智能分析系统
 **状态**：生产就绪（港股）/ 特征增强中（A股）
-**最后更新**：2026-09-25
+**最后更新**：2026-09-26
 
 ---
 
 ## 最新进展
+
+### 2026-09-26 六周期 walk-forward 全量复测（S.O.P. 模型验证技能）+ 文档/代码收口 ⭐⭐⭐
+
+**范围**：按 `.opencode/command/model_validation.md` 跑完 **恒指 1/5/20d + 个股 1/5/20d** 六条 walk-forward，
+再走阶段 5（Fold 分析）/ 5.5（backtest_eval）/ 5.6（monthly_guardrail）/ 2（三周期八大模式）/ 3（文档）/ 4（代码）/ 提交。
+个股学习器按 **D10 分周期选型**：20d=LightGBM、1d/5d=CatBoost。
+
+**执行中的两个大坑**（已写入 lessons 三.12 / 三.13）：
+1. LightGBM `n_jobs=-1` 在三进程并行下 **229.9s vs n_jobs=4 的 5.7s（40× 劣化）**，
+   单折 88min → 打 `LGBM_N_JOBS=8` 补丁（`ml_trading_model.py::_train_lightgbm`，默认行为不变）后 **9min**。
+2. `setsid nohup` 启动的三进程 14:07 **同时被会话杀**（已跑 3.5h）→ 改 **tmux**（wf1/wf5/wf20）后顺利跑完。
+
+**结果汇总**：
+
+| 对象 | 周期 | 准确率 [95%CI] | 超额 lift | 月度护栏 | 判定 |
+|------|------|---------------|----------|---------|------|
+| 恒指 | 1d | 51.3% [47.7,55.0] p=0.50 | +1.4pp p=0.64 | — | 上轮"显著"**未复现** |
+| 恒指 | 5d | 54.8% [46.6,62.7] p=0.29 | +5.7pp p=0.45 | — | 样本不足 n_eff≈143 |
+| 恒指 | 20d | 59.1% [42.7,73.7] p=0.36 | +8.5pp p=0.63 | — | 样本不足 n_eff≈35 |
+| 个股 | 1d CB | 51.0% [50.5,51.4] p=0.0001 | +1.5pp **p=0.0003 显著** | 净IR **−1.96** PBO 0.49 DSR 0 | 🔴 停用（D10/D2） |
+| 个股 | 5d CB | 51.7% [50.6,52.7] p=0.0018 | +1.2pp p=0.149 | 净IR 0.74 PBO 0.04 DSR 0.796 | 🟡 保留低配 |
+| 个股 | 20d LGB | 51.8% [49.7,53.9] p=0.105 | +1.9pp p=0.240 | 净IR **1.41 [0.32,2.62]** PBO 0.19 DSR 0.982 | 🟢 三项全过 |
+
+**Fold 分析**（`output/fold_analysis_{1,5,20}d_20260926.md`，38 折 13 列）：
+1d 准确率 50.96% 盈亏比 1.11 / 最大单次亏损 −39.6% / 问题折 37 of 38；
+5d 51.68% / 1.17 / −45.9% / 32；20d 51.76% / **1.39** / −65.0% / 25 → 三者盈亏比均 <1.5、最大亏损均超 −30%。
+
+**三周期八大模式（阶段 2，新口径 = 相对同向 20d 基准的净贡献）**：
+- 恒指 697 样本：基准 UP 60.3% / DOWN 57.8%；000 +7.6pp(p=0.034)、111 +7.6pp(p=0.078)、
+  110 −21.0pp(p=0.013)、其余居中 → **Bonferroni α=0.00625 后全部不显著**。
+- 个股 43,610 样本：基准 UP 52.4% / DOWN 50.9%；**101 +2.7pp(p=0.003)**、**001 −2.3pp(p=0.001)**
+  名义过线但效应 ≤±2.7pp，且 D1 已停投 → **均不交易**。
+- 传导：恒指 1d对→20d 59.50%（基准 59.11%，几乎无传导）、5d对→64.69%、双对→65.32%；
+  个股 51.76%→52.49% / 56.58% / 57.08%。**两端都是 5d 才是主要传导源**。
+
+**发现的文档腐烂**（已全部修复，见 lessons 三.14）：
+`THREE_HORIZON_ANALYSIS.md §4.1` 样本 885≠697 且旧值不可复现；`VALIDATION_GUIDE.md` 旧
+"三周期一致策略 ✅ 通过"用无 embargo + 口径膨胀；`backtest_eval_hsi_*.md` 生成于 12:28 却指向
+09-23 旧 CSV（显示 54.1/55.9/57.5）→ 已用新 CSV 全部重跑。
+
+**产物**：
+- 个股结果：`output/20260926_{202451_catboost_1d,202058_catboost_5d,185701_catboost_20d}/`（D9 已自动入库 `308f7851`/`b06ad57a`/`3fc92899`）
+- 恒指结果：`data/hsi_walk_forward/hsi_prediction_analysis_20260926_{105003,105001,105048}.csv`
+- 评估：`output/backtest_eval_hsi_{1,5,20}d.md`、`backtest_eval_lightgbm_catboost_1d_20260926.md`、
+  `backtest_eval_catboost_5d_20260926.md`、`backtest_eval_20260926_194840.md`
+- 护栏：`output/monthly_guardrail_{1,5,20}d_20260926.md`
+- Fold：`output/fold_analysis_{1,5,20}d_20260926.md`
+- 文档：`AGENTS.md` 三张验证表 + 恒指vs个股警告、`docs/THREE_HORIZON_ANALYSIS.md`（全面重写）、
+  `docs/VALIDATION_GUIDE.md`（新增「最新验证结果」+ 旧三周期章节打废弃标记）、
+  `docs/DECISIONS.md`（D2 护栏复核表 + 停止做事项）、`README.md`、`docs/FEATURE_IMPORTANCE_ANALYSIS.md`、
+  `.opencode/command/model_validation.md`、`lessons.md`（三.12/13/14 + 五.2 + 八）
+- 代码：`hsi_prediction.py`（三周期模式块改为一律"观望"+ 新数值）、`comprehensive_analysis.py`（4 个内嵌表）、
+  `ml_services/hsi_ml_model.py`、`ml_services/analyze_stock_causal_chain.py`、
+  `ml_services/ml_trading_model.py`（`LGBM_N_JOBS` 补丁）
+
+**⚠️ 待人工决策**：20d 护栏 🟢「可升级」，但同一轮 lift 仅 +1.9pp（p=0.24 不显著）且 DSR 取最优 top10 口径
+→ **按 DECISIONS D2 已写明"升配需人工决策、非自动"**。建议维持低配，升配需另附 bootstrap CI + 逐年稳健性。
+
+---
+
 
 ### 2026-09-26 LightGBM A/B（1d/5d）：学习器按周期分选，5d 不转 ⭐⭐⭐
 

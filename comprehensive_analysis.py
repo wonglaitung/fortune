@@ -108,48 +108,53 @@ SECTOR_TYPES = {
 }
 
 # 三周期预测模式配置（基于个股完整模型验证结果）
-# 来源：docs/THREE_HORIZON_ANALYSIS.md 第12章
-# 验证数据：12只港股，Walk-forward 30 folds，Top 500特征（含利率特征）
-# 更新日期：2026-05-23
+# 来源：docs/THREE_HORIZON_ANALYSIS.md 第12.3章
+# 验证数据：59只港股，Walk-forward 38 folds，Top 500特征，43,610条预测（PIT/embargo）
+# 更新日期：2026-09-26
+# win_rate = 该模式20天预测准确率；avg_return = 相对池均值(+1.81%)的20天净超额收益
+# ⚠️ 相对同向20d基准（UP 52.4% / DOWN 50.9%）的净贡献仅 ±2.7pp，
+#    8模式 Bonferroni(α=0.00625) 后 101(+2.7pp)/001(-2.3pp) 名义过线但效应极小，
+#    且 D1 已判定个股横截面 alpha 停止投入 → 一律不作为交易指令。
 THREE_HORIZON_PATTERNS = {
-    '010': {'name': '反弹失败', 'action': '谨慎减仓', 'win_rate': '57.22%', 'avg_return': '-1.65%', 'confidence': '低'},
-    '001': {'name': '下跌中继⭐', 'action': '谨慎做多', 'win_rate': '56.95%', 'avg_return': '+4.86%', 'confidence': '低'},
-    '111': {'name': '一致看涨', 'action': '谨慎持有', 'win_rate': '56.80%', 'avg_return': '+0.14%', 'confidence': '低'},
-    '011': {'name': '探底回升', 'action': '分批建仓', 'win_rate': '56.52%', 'avg_return': '+3.54%', 'confidence': '低'},
-    '000': {'name': '一致看跌', 'action': '止损/减仓', 'win_rate': '56.28%', 'avg_return': '-2.54%', 'confidence': '低'},
-    '100': {'name': '冲高回落', 'action': '获利了结', 'win_rate': '55.37%', 'avg_return': '-2.28%', 'confidence': '低'},
-    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '54.62%', 'avg_return': '+2.34%', 'confidence': '低'},
-    '101': {'name': '假突破', 'action': '持有观望', 'win_rate': '53.63%', 'avg_return': '+2.21%', 'confidence': '低'},
+    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '50.60%', 'avg_return': '-0.35%', 'confidence': '低'},
+    '001': {'name': '下跌中继', 'action': '观望', 'win_rate': '50.00%', 'avg_return': '-0.21%', 'confidence': '低'},
+    '111': {'name': '一致看涨', 'action': '观望', 'win_rate': '53.20%', 'avg_return': '+0.07%', 'confidence': '低'},
+    '011': {'name': '探底回升', 'action': '观望', 'win_rate': '51.70%', 'avg_return': '-0.35%', 'confidence': '低'},
+    '000': {'name': '一致看跌', 'action': '观望', 'win_rate': '51.90%', 'avg_return': '-0.03%', 'confidence': '低'},
+    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '49.20%', 'avg_return': '+0.72%', 'confidence': '低'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '50.10%', 'avg_return': '-0.38%', 'confidence': '低'},
+    '101': {'name': '假突破', 'action': '观望', 'win_rate': '55.00%', 'avg_return': '+0.88%', 'confidence': '低'},
 }
 
 # 恒指三周期预测模式配置（PIT/embargo 口径）
-# 来源：docs/THREE_HORIZON_ANALYSIS.md
-# 验证数据：697个恒指样本，PIT/embargo Walk-forward
-# 注意：各模式准确率均接近随机，不构成可靠交易信号
+# 来源：docs/THREE_HORIZON_ANALYSIS.md 第4.1/8章
+# 验证数据：697个恒指合并样本，PIT/embargo Walk-forward（2026-09-26 复测）
+# win_rate = 该模式20天预测准确率；同向20d基准 = UP 60.3% / DOWN 57.8%
+# ⚠️ 净贡献 8 模式 Bonferroni(α=0.00625) 后全部不显著 → 不构成交易信号
 HSI_THREE_HORIZON_PATTERNS = {
-    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '58.33%', 'avg_return': '—', 'confidence': '低'},
-    '000': {'name': '一致看跌', 'action': '观望', 'win_rate': '53.70%', 'avg_return': '—', 'confidence': '低'},
-    '001': {'name': '下跌中继', 'action': '观望', 'win_rate': '50.46%', 'avg_return': '—', 'confidence': '低'},
-    '111': {'name': '一致看涨', 'action': '观望', 'win_rate': '50.38%', 'avg_return': '—', 'confidence': '低'},
-    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '42.55%', 'avg_return': '—', 'confidence': '低'},
-    '011': {'name': '探底回升', 'action': '观望', 'win_rate': '40.45%', 'avg_return': '—', 'confidence': '低'},
-    '101': {'name': '假突破', 'action': '观望', 'win_rate': '32.26%', 'avg_return': '—', 'confidence': '低'},
-    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '29.82%', 'avg_return': '—', 'confidence': '低'},
+    '010': {'name': '反弹失败', 'action': '观望', 'win_rate': '57.14%', 'avg_return': '净-0.7pp', 'confidence': '低'},
+    '000': {'name': '一致看跌', 'action': '观望', 'win_rate': '65.45%', 'avg_return': '净+7.6pp', 'confidence': '低'},
+    '001': {'name': '下跌中继', 'action': '观望', 'win_rate': '55.45%', 'avg_return': '净-4.9pp', 'confidence': '低'},
+    '111': {'name': '一致看涨', 'action': '观望', 'win_rate': '67.91%', 'avg_return': '净+7.6pp', 'confidence': '低'},
+    '110': {'name': '震荡回调', 'action': '观望', 'win_rate': '36.84%', 'avg_return': '净-21.0pp', 'confidence': '低'},
+    '011': {'name': '探底回升', 'action': '观望', 'win_rate': '54.41%', 'avg_return': '净-5.9pp', 'confidence': '低'},
+    '101': {'name': '假突破', 'action': '观望', 'win_rate': '58.70%', 'avg_return': '净-1.6pp', 'confidence': '低'},
+    '100': {'name': '冲高回落', 'action': '观望', 'win_rate': '47.54%', 'avg_return': '净-10.3pp', 'confidence': '低'},
 }
 
-# 恒指传导律准确率数据（PIT/embargo，697个恒指样本）
+# 恒指传导律准确率数据（PIT/embargo，697个恒指样本，2026-09-26 复测）
 HSI_TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 64.81,      # 1天+5天都正确时，20天准确率
-    'independent_20d_rate': 57.53,   # 独立20天准确率
-    'improvement': 7.28              # 传导效应提升
+    'both_correct_rate': 65.32,      # 1天+5天都正确时，20天准确率（n=222）
+    'independent_20d_rate': 59.11,   # 独立20天准确率
+    'improvement': 6.21              # 传导效应提升（弱）
 }
 
 # 个股传导律准确率数据（来源：docs/THREE_HORIZON_ANALYSIS.md）
-# 更新日期：2026-05-23，12只港股验证（Top 500特征，含利率特征）
+# 更新日期：2026-09-26，59只港股，43,610条预测（PIT/embargo）
 TRANSMISSION_ACCURACY = {
-    'both_correct_rate': 59.12,      # 1天+5天都正确时，20天准确率
-    'independent_20d_rate': 56.91,   # 独立20天准确率
-    'improvement': 2.21              # 提升幅度
+    'both_correct_rate': 57.08,      # 1天+5天都正确时，20天准确率（n=12239）
+    'independent_20d_rate': 51.76,   # 独立20天准确率
+    'improvement': 5.32              # 提升幅度（弱）
 }
 
 
