@@ -1,8 +1,9 @@
-"""性能报告生成测试：三周期免责 / A股显式空行 / 小样本注 / 诚实摘要前置。
+"""性能报告生成测试：三周期免责 / 港股-only契约 / 小样本注 / 诚实摘要前置。
 
 背景（2026-09-26）：性能报告曾给出三周期"分批建仓"类可执行建议，
 其数据为重叠窗口生产历史（未 embargo），与严格验证结论镜像反转，
 违反 DECISIONS D3 与 lessons 0.2 —— 本测试锁定修复后的报告契约。
+2026-09-27 起报告只分析港股（A 股评估与市场分布节停用）。
 """
 import pytest
 
@@ -50,11 +51,14 @@ def test_pattern_section_has_disclaimer_no_actions():
     assert '谨慎减仓' not in report
 
 
-def test_market_section_shows_empty_a_stock():
-    """A 股无评估数据时必须显式输出空行，不得静默省略。"""
-    report = generate_monthly_report({'predictions': [_pred(market='HK')]})
-    assert 'A股' in report
-    assert '无已评估预测' in report
+def test_report_is_hk_only():
+    """报告只分析港股：标题标港股、无市场分布节、混入的 A 股记录被剔除。"""
+    mixed = {'predictions': [_pred(market='HK'), _pred(market='A', stock_code='600000', stock_name='浦发银行')]}
+    report = generate_monthly_report(mixed)
+    assert '# 预测性能报告（港股）' in report
+    assert '市场分布' not in report
+    assert 'A股' not in report
+    assert '600000' not in report
 
 
 def test_small_sample_note_present():
@@ -113,7 +117,13 @@ def test_guardrail_block_empty_without_20d_file(monkeypatch):
 
 def test_tables_primary_lift_not_accuracy():
     """四表主判定列 = 超额lift/方向技能（加粗），绝对准确率降为"(参考)"列。"""
-    report = generate_monthly_report({'predictions': [_pred()]})
+    from datetime import datetime, timedelta
+    td = (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d')
+    report = generate_monthly_report({'predictions': [
+        _pred(target_date=td),
+        _pred(target_date=td, predicted_direction='down',
+               outcome='wrong', actual_return=-0.01),
+    ]})
     assert '| 超额lift | 方向技能 | 准确率(参考) |' in report
     assert '评估以 **超额lift / 方向技能** 为准' in report
     # lift/方向技能加粗（pp 格式）

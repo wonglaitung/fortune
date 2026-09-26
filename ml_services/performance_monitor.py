@@ -24,7 +24,6 @@ COST = 0.005
 
 # 历史文件路径
 HISTORY_FILE = 'data/prediction_history.json'
-A_STOCK_HISTORY_FILE = 'data/a_stock_prediction_history.json'
 REPORT_OUTPUT_DIR = 'output'
 
 
@@ -840,6 +839,13 @@ def calculate_three_horizon_pattern_stats(history: Dict, start_date: Optional[st
     return result
 
 
+def _hk_only(history: Dict) -> Dict:
+    """报告只分析港股（2026-09-27 起 A 股监控停用）：入口统一剔除非港股记录。"""
+    return {**history,
+            'predictions': [p for p in history.get('predictions', [])
+                            if p.get('market', 'HK') == 'HK']}
+
+
 def assemble_report(history, month=None, guardrail_line=None):
     """
     组装完整 Markdown 报告：正文 + 护栏段（末尾）+ 诚实摘要（前置到第一节前）。
@@ -847,6 +853,7 @@ def assemble_report(history, month=None, guardrail_line=None):
     诚实摘要前置是 DECISIONS D3 的落实：先看 lift / 方向技能，再看绝对准确率。
     返回 (report, extra_html)。抽成模块级函数供 main 与单元测试复用。
     """
+    history = _hk_only(history)
     report = generate_monthly_report(history, month)
     if guardrail_line:
         # strip 标题井号：正文里保留"## "会渲染成嵌在句子中的怪异标题
@@ -958,6 +965,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
     now = datetime.now()
     horizon_names = {1: '1天', 5: '5天', 20: '20天'}
+    history = _hk_only(history)
 
     # 各时间窗口 × 各周期指标（与可视化报告共享 helper，单一真相源）
     window_horizon_metrics = compute_window_horizon_metrics(history, now=now)
@@ -968,7 +976,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     detail_horizon_metrics = window_horizon_metrics.get(detail_days, {})
 
     # 生成报告
-    report = f"""# 预测性能报告
+    report = f"""# 预测性能报告（港股）
 
 **生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -997,34 +1005,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ---
 
-## 二、市场分布（港股 / A股）
-
-| 市场 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 | 夏普比率 |
-|------|--------|----------|----------|--------------|----------|----------|
-"""
-
-    _market_predictions = {}
-    for _p in history.get('predictions', []):
-        if _p.get('outcome') is not None:
-            _market_predictions.setdefault(_p.get('market', 'HK'), []).append(_p)
-    _market_label = {'HK': '港股', 'A': 'A股'}
-    for _mk in ['HK', 'A']:
-        _ps = _market_predictions.get(_mk, [])
-        if _ps:
-            _m = calculate_metrics(_ps)
-            report += (f"| {_market_label.get(_mk, _mk)} | {_m.get('total_predictions', 0)}"
-                       f" | **{_m.get('lift', 0)*100:+.1f}pp** | **{_m.get('direction_skill', 0)*100:+.1f}pp**"
-                       f" | {_m.get('accuracy', 0):.2%} | {_m.get('avg_return', 0):.2%}"
-                       f" | {_m.get('sharpe_ratio', 0):.4f} |\n")
-        else:
-            # 显式输出空市场，避免"静默省略"让读者以为 A 股没接入
-            report += f"| {_market_label.get(_mk, _mk)} | 0 | ⚠️ 无已评估预测（数据源故障或预测未到期） | - | - | - | - |\n"
-    report += "\n"
-
-    report += f"""
----
-
-## 三、板块表现
+## 二、板块表现
 
 | 板块 | 类型 | 周期 | 时间窗口 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 | 夏普比率 |
 |------|------|------|----------|--------|----------|----------|--------------|----------|----------|
@@ -1066,7 +1047,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
 ---
 
-## 四、个股表现
+## 三、个股表现
 
 | 股票代码 | 股票名称 | 板块 | 周期 | 时间窗口 | 预测数 | 超额lift | 方向技能 | 准确率(参考) | 平均收益 |
 |----------|----------|------|------|----------|--------|----------|----------|--------------|----------|
@@ -1119,7 +1100,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 与严格验证结论矛盾（AGENTS 模式表：011 实为 40.5%、101 为 32.3%），
     # 可执行建议违反 DECISIONS D3 / lessons 0.2，仅保留统计记录。
 
-    report += "\n---\n\n## 五、三周期模式统计（3个月窗口，⚠️ 未 embargo）\n\n"
+    report += "\n---\n\n## 四、三周期模式统计（3个月窗口，⚠️ 未 embargo）\n\n"
 
     if pattern_stats:
         # 按平均收益排序（禁用绝对胜率排名，DECISIONS D3 / 停止清单）
@@ -1158,7 +1139,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     report += f"""
 ---
 
-## 六、风险提示
+## 五、风险提示
 
 1. **历史表现不代表未来收益**
 2. 模型准确率统计基于 {total_3m_predictions} 个样本（3个月窗口），仅供参考
@@ -1195,6 +1176,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
         generate_stock_section,
     )
 
+    history = _hk_only(history)
     now = datetime.now()
     report_time = now.strftime('%Y-%m-%d %H:%M:%S')
     detail_days = 90
@@ -1211,7 +1193,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
 
     # 标题
     parts.append(f"""
-    <h1 style="color:#333; margin-bottom:5px;">预测性能报告（港股 + A股）</h1>
+    <h1 style="color:#333; margin-bottom:5px;">预测性能报告（港股）</h1>
     <p style="color:#666; font-size:13px; margin-top:0;">
         生成时间: {report_time} | 统计口径: 已到期且已评估的方向预测
     </p>
@@ -1497,36 +1479,33 @@ def main():
     print("📊 预测性能监控系统")
     print("=" * 60)
 
-    # 加载历史数据（港股 + A股，分别标注市场，互不干扰）
+    # 加载历史数据（仅港股：A股评估与报告已停用）
     print("\n📂 加载预测历史数据...")
     hk_history = load_prediction_history(HISTORY_FILE)
     for _p in hk_history.get('predictions', []):
         _p.setdefault('market', 'HK')
-    a_history = load_prediction_history(A_STOCK_HISTORY_FILE)
-    for _p in a_history.get('predictions', []):
-        _p.setdefault('market', 'A')
-    print(f"   港股: {len(hk_history.get('predictions', []))} 条 | A股: {len(a_history.get('predictions', []))} 条")
+    print(f"   港股: {len(hk_history.get('predictions', []))} 条")
 
     if args.mode in ['evaluate', 'all']:
-        # 评估各周期、各市场的预测（分别写回各自历史文件）
+        # 评估各周期的港股预测（写回港股历史文件）
         total_stats = {'total': 0, 'evaluated': 0, 'correct': 0, 'wrong': 0}
 
-        for label, hist, path in [('港股', hk_history, HISTORY_FILE), ('A股', a_history, A_STOCK_HISTORY_FILE)]:
-            for h in horizons:
-                print(f"\n📈 评估 {label} {h} 天周期的预测...")
-                hist, stats = evaluate_predictions(hist, h, args.force, save_path=path)
+        for h in horizons:
+            print(f"\n📈 评估港股 {h} 天周期的预测...")
+            hk_history, stats = evaluate_predictions(
+                hk_history, h, args.force, save_path=HISTORY_FILE)
 
-                print(f"   总预测: {stats['total']}")
-                print(f"   已评估: {stats['evaluated']}")
-                print(f"   正确: {stats['correct']}")
-                print(f"   错误: {stats['wrong']}")
-                if stats['evaluated'] > 0:
-                    print(f"   准确率(参考): {stats['correct']/stats['evaluated']:.2%}")
+            print(f"   总预测: {stats['total']}")
+            print(f"   已评估: {stats['evaluated']}")
+            print(f"   正确: {stats['correct']}")
+            print(f"   错误: {stats['wrong']}")
+            if stats['evaluated'] > 0:
+                print(f"   准确率(参考): {stats['correct']/stats['evaluated']:.2%}")
 
-                total_stats['total'] += stats['total']
-                total_stats['evaluated'] += stats['evaluated']
-                total_stats['correct'] += stats['correct']
-                total_stats['wrong'] += stats['wrong']
+            total_stats['total'] += stats['total']
+            total_stats['evaluated'] += stats['evaluated']
+            total_stats['correct'] += stats['correct']
+            total_stats['wrong'] += stats['wrong']
 
         if len(horizons) > 1:
             print(f"\n📊 所有周期合计:")
@@ -1537,11 +1516,8 @@ def main():
             if total_stats['evaluated'] > 0:
                 print(f"   准确率(参考): {total_stats['correct']/total_stats['evaluated']:.2%}")
 
-    # 合并两市场历史用于报告生成（只读）
-    history = {
-        'predictions': hk_history.get('predictions', []) + a_history.get('predictions', []),
-        'metadata': {**hk_history.get('metadata', {}), **a_history.get('metadata', {})}
-    }
+    # 报告数据源（只读）
+    history = hk_history
 
     if args.mode in ['report', 'all']:
         # 生成 Markdown 报告（正文 + 护栏 + 诚实摘要前置，见 assemble_report）
@@ -1578,7 +1554,7 @@ def main():
 
         # 发送邮件（优先带内嵌图表的可视化版本，失败回退纯表格）
         if not args.no_email:
-            subject = f"[金融资产智能分析] 预测性能报告（港股+A股） - {report_date}"
+            subject = f"[金融资产智能分析] 预测性能报告（港股） - {report_date}"
             if html_content and attachments:
                 try:
                     from message_services.email_sender import send_email_with_images

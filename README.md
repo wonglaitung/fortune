@@ -760,7 +760,7 @@ flowchart LR
 | 每小时 | `hourly-crypto-monitor.yml` | 加密货币监控 | 🌐 |
 | 每小时 | `hourly-gold-monitor.yml` | 黄金监控 | 🌐 |
 | **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
-| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（港股+A股，含 lift/方向技能/护栏状态） | 🇭🇰🇨🇳 |
+| **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（仅港股，含 lift/方向技能/护栏状态） | 🇭🇰 |
 | 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
 | 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
 | 周一 08:00 HKT | `test-llm-api.yml` | LLM API 连通性测试 | - |
