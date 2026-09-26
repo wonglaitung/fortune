@@ -57,7 +57,9 @@
 - 文档：`AGENTS.md` 三张验证表 + 恒指vs个股警告、`docs/THREE_HORIZON_ANALYSIS.md`（全面重写）、
   `docs/VALIDATION_GUIDE.md`（新增「最新验证结果」+ 旧三周期章节打废弃标记）、
   `docs/DECISIONS.md`（D2 护栏复核表 + 停止做事项）、`README.md`、`docs/FEATURE_IMPORTANCE_ANALYSIS.md`、
-  `.opencode/command/model_validation.md`、`lessons.md`（三.12/13/14 + 五.2 + 八）
+  `.opencode/command/model_validation.md`、`lessons.md`（三.12/13/14/15 + 五.2 + 八）、
+  `docs/VALIDATION_GUIDE.md`「升配前的两道额外检验」新章、`docs/DEPLOYMENT.md` T2（🟡→🟢、仓位≤15%）、
+  `docs/MODEL_IMPROVEMENT_PLAN.md` §5.21、`docs/DECISIONS.md` §四 CI+逐年证据表
 - 代码：`hsi_prediction.py`（三周期模式块改为一律"观望"+ 新数值）、`comprehensive_analysis.py`（4 个内嵌表）、
   `ml_services/hsi_ml_model.py`、`ml_services/analyze_stock_causal_chain.py`、
   `ml_services/ml_trading_model.py`（`LGBM_N_JOBS` 补丁）

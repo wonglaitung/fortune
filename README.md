@@ -118,7 +118,9 @@
 > [docs/VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md)。
 
 > **当前定位（2026-09）**：个股横截面 alpha 已科学检验到终点，**停止投入**（[docs/DECISIONS.md](docs/DECISIONS.md) D1）。
-> 保留 `20d 行业中性 TopK` 作**低配辅助信号**（每次 Walk-forward 后跑 `monthly_guardrail.py` 复核），
+> 保留 `20d 行业中性 TopK` 作**辅助信号**（每次 Walk-forward 后跑 `monthly_guardrail.py` 复核；
+> **2026-09-26 复核 🟢**：净IR 1.41 [0.32,2.62] / PBO 0.19 / DSR 0.982，另过超额 bootstrap CI
+> **1.24 [0.18,2.41]** 与**逐年超额全正**两道检验 → 统计上可小幅升配，幅度由人工定），
 > `异常大跌抄底`仅限**大盘上行期**战术使用；价值重心转向恒指/决策报告/风控。
 
 **特征体系（1023个特征）**：
