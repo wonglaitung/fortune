@@ -15,10 +15,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-27_002655_1d",
@@ -35,10 +35,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-27_600800_1d",
@@ -55,10 +55,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-27_300765_1d",
@@ -75,10 +75,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-27_300440_5d",
@@ -95,10 +95,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_002655_5d",
@@ -115,10 +115,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_600800_5d",
@@ -135,10 +135,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_300765_5d",
@@ -155,10 +155,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_300440_20d",
@@ -175,10 +175,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_002655_20d",
@@ -195,10 +195,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_600800_20d",
@@ -215,10 +215,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-27_300765_20d",
@@ -235,10 +235,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_300440_1d",
@@ -255,10 +255,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-28_002655_1d",
@@ -275,10 +275,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-28_600800_1d",
@@ -295,10 +295,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-28_300765_1d",
@@ -315,10 +315,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-28_300440_5d",
@@ -335,10 +335,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_002655_5d",
@@ -355,10 +355,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_600800_5d",
@@ -375,10 +375,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_300765_5d",
@@ -395,10 +395,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_300440_20d",
@@ -415,10 +415,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_002655_20d",
@@ -435,10 +435,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_600800_20d",
@@ -455,10 +455,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-28_300765_20d",
@@ -475,10 +475,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_300440_1d",
@@ -495,10 +495,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-29_002655_1d",
@@ -515,10 +515,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-29_600800_1d",
@@ -535,10 +535,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-29_300765_1d",
@@ -555,10 +555,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-08-29_300440_5d",
@@ -575,10 +575,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_002655_5d",
@@ -595,10 +595,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_600800_5d",
@@ -615,10 +615,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_300765_5d",
@@ -635,10 +635,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_300440_20d",
@@ -655,10 +655,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_002655_20d",
@@ -675,10 +675,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_600800_20d",
@@ -695,10 +695,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-08-29_300765_20d",
@@ -715,10 +715,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_300440_1d",
@@ -735,10 +735,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-01_002655_1d",
@@ -755,10 +755,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-01_600800_1d",
@@ -775,10 +775,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-01_300765_1d",
@@ -795,10 +795,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-01_300440_5d",
@@ -815,10 +815,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_002655_5d",
@@ -835,10 +835,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_600800_5d",
@@ -855,10 +855,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_300765_5d",
@@ -875,10 +875,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_300440_20d",
@@ -895,10 +895,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_002655_20d",
@@ -915,10 +915,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_600800_20d",
@@ -935,10 +935,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-01_300765_20d",
@@ -955,10 +955,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_300440_1d",
@@ -975,10 +975,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-02_002655_1d",
@@ -995,10 +995,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-02_600800_1d",
@@ -1015,10 +1015,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-02_300765_1d",
@@ -1035,10 +1035,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-02_300440_5d",
@@ -1055,10 +1055,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_002655_5d",
@@ -1075,10 +1075,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_600800_5d",
@@ -1095,10 +1095,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_300765_5d",
@@ -1115,10 +1115,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_300440_20d",
@@ -1135,10 +1135,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_002655_20d",
@@ -1155,10 +1155,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_600800_20d",
@@ -1175,10 +1175,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-02_300765_20d",
@@ -1195,10 +1195,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_300440_1d",
@@ -1215,10 +1215,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-03_002655_1d",
@@ -1235,10 +1235,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-03_600800_1d",
@@ -1255,10 +1255,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-03_300765_1d",
@@ -1275,10 +1275,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-03_300440_5d",
@@ -1295,10 +1295,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_002655_5d",
@@ -1315,10 +1315,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_600800_5d",
@@ -1335,10 +1335,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_300765_5d",
@@ -1355,10 +1355,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_300440_20d",
@@ -1375,10 +1375,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_002655_20d",
@@ -1395,10 +1395,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_600800_20d",
@@ -1415,10 +1415,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-03_300765_20d",
@@ -1435,10 +1435,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_300440_1d",
@@ -1455,10 +1455,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-04_002655_1d",
@@ -1475,10 +1475,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-04_600800_1d",
@@ -1495,10 +1495,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-04_300765_1d",
@@ -1515,10 +1515,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-04_300440_5d",
@@ -1535,10 +1535,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_002655_5d",
@@ -1555,10 +1555,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_600800_5d",
@@ -1575,10 +1575,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_300765_5d",
@@ -1595,10 +1595,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_300440_20d",
@@ -1615,10 +1615,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_002655_20d",
@@ -1635,10 +1635,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_600800_20d",
@@ -1655,10 +1655,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-04_300765_20d",
@@ -1675,10 +1675,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_300440_1d",
@@ -1695,10 +1695,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-07_002655_1d",
@@ -1715,10 +1715,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-07_600800_1d",
@@ -1735,10 +1735,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-07_300765_1d",
@@ -1755,10 +1755,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-07_300440_5d",
@@ -1775,10 +1775,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_002655_5d",
@@ -1795,10 +1795,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_600800_5d",
@@ -1815,10 +1815,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_300765_5d",
@@ -1835,10 +1835,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_300440_20d",
@@ -1855,10 +1855,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_002655_20d",
@@ -1875,10 +1875,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_600800_20d",
@@ -1895,10 +1895,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-07_300765_20d",
@@ -1915,10 +1915,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_300440_1d",
@@ -1935,10 +1935,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-08_002655_1d",
@@ -1955,10 +1955,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-08_600800_1d",
@@ -1975,10 +1975,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-08_300765_1d",
@@ -1995,10 +1995,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-08_300440_5d",
@@ -2015,10 +2015,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_002655_5d",
@@ -2035,10 +2035,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_600800_5d",
@@ -2055,10 +2055,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_300765_5d",
@@ -2075,10 +2075,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_300440_20d",
@@ -2095,10 +2095,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_002655_20d",
@@ -2115,10 +2115,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_600800_20d",
@@ -2135,10 +2135,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-08_300765_20d",
@@ -2155,10 +2155,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_300440_1d",
@@ -2175,10 +2175,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-09_002655_1d",
@@ -2195,10 +2195,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-09_600800_1d",
@@ -2215,10 +2215,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-09_300765_1d",
@@ -2235,10 +2235,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-09_300440_5d",
@@ -2255,10 +2255,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_002655_5d",
@@ -2275,10 +2275,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_600800_5d",
@@ -2295,10 +2295,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_300765_5d",
@@ -2315,10 +2315,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_300440_20d",
@@ -2335,10 +2335,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_002655_20d",
@@ -2355,10 +2355,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_600800_20d",
@@ -2375,10 +2375,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-09_300765_20d",
@@ -2395,10 +2395,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_300440_1d",
@@ -2415,10 +2415,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0974,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-10_002655_1d",
@@ -2435,10 +2435,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.1002,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-10_600800_1d",
@@ -2455,10 +2455,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0358,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-10_300765_1d",
@@ -2475,10 +2475,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-07-30",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": -0.0526,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:33"
     },
     {
       "prediction_id": "2026-09-10_300440_5d",
@@ -2495,10 +2495,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2572,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_002655_5d",
@@ -2515,10 +2515,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1441,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_600800_5d",
@@ -2535,10 +2535,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0945,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_300765_5d",
@@ -2555,10 +2555,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-05",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.0,
+      "actual_direction": "down",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_300440_20d",
@@ -2575,10 +2575,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.2814,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_002655_20d",
@@ -2595,10 +2595,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.6006,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_600800_20d",
@@ -2615,10 +2615,10 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "wrong",
+      "actual_return": 0.1205,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     },
     {
       "prediction_id": "2026-09-10_300765_20d",
@@ -2635,14 +2635,14 @@
       "data_date": "2026-07-29",
       "target_date": "2026-08-26",
       "market": "A",
-      "outcome": null,
-      "actual_return": null,
-      "actual_direction": null,
-      "evaluated_at": null
+      "outcome": "correct",
+      "actual_return": 0.1974,
+      "actual_direction": "up",
+      "evaluated_at": "2026-09-26T13:23:34"
     }
   ],
   "metadata": {
-    "last_updated": "2026-09-10T21:09:07",
+    "last_updated": "2026-09-26T13:23:34",
     "total_predictions": 132
   }
 }

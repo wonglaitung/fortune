@@ -1846,3 +1846,23 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **CI 缺口**：无任何测试工作流 → 3败躺 5 个月。新增 `.github/workflows/tests.yml`
   （周日 15:00 CST + 手动；**不设 on:push** 防烧 CI）；README/AGENTS 调度表 +1 行
 - lessons 三.10（v10.12）；`pytest tests/ -q` → **64 passed**
+
+### 2026-09-26 性能报告口径修复 + A股评估恒0根因（P1-P5 全做）⭐
+
+- **P1 三周期**：删"建议"列（分批建仓等）、标题加"⚠️ 未 embargo"、列名改"表面准确率"、
+  镜像反转免责（报告 011=67.3% vs embargo 后 40.5%/101=32.3%/010=58.3%）
+- **P2**：诚实摘要（lift/方向技能）从末尾**前置到第一节前**（D3）；抽 `assemble_report()`
+  供 main 与测试复用
+- **P3/P4**：A股无评估数据时显式故障行（不再静默省略）；板块表下加小样本注（n<30 无统计意义）
+- **P5 A股 0 评估根因三连**（老 bug 一次性暴露）：
+  ① `performance_monitor` 调 `period_days=30 < min_rows=200` + `use_cache=False`
+     → 每次降级撞 AKShare（限流 RemoteDisconnected）+同轮重复请求
+  ② 腾讯/AKShare 的 Date 在 index 不在 columns → 匹配段 `else: return None` 恒 None
+  ③ 港股目标日非交易日（05-25 香港佛诞）`tz-aware <= naive` 抛 Invalid comparison
+     → 29 只同日到期全 pending
+- **修复**：`period_days=260`/`use_cache=True`、index 日期兼容、非交易日用字符串比较、
+  缓存命中校验 `len>=min_rows` 防坏缓存、AKShare 重试 1 次；清 4 个 30 行坏 pkl
+- **验证**：评估 11050→**11395**；A股 0→**44 条（49.24%、+11.75%、夏普 0.61）**；
+  取价零失败；报告四标记全生效（L7 摘要/L537 免责/L204 小样本/A股行）
+- 测试 `tests/test_performance_report.py`（4 项）→ **68 passed**
+- lessons 三.11（v10.14）

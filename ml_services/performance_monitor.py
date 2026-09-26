@@ -112,10 +112,12 @@ def fetch_price(stock_code: str, date: str) -> Optional[float]:
         if target_date in df['date'].values:
             return float(df[df['date'] == target_date]['Close'].iloc[0])
         else:
-            # 返回最接近的交易日收盘价
-            closest_dates = df[df.index <= date_obj]
-            if not closest_dates.empty:
-                return float(closest_dates['Close'].iloc[-1])
+            # 目标日非交易日：取目标日之前最近交易日。
+            # 用日期字符串比较（与 A股路径一致）：yfinance 索引为 tz-aware，
+            # 直接与 naive datetime 比较会抛 Invalid comparison → 恒返回 None
+            before = df[df['date'] <= target_date]
+            if not before.empty:
+                return float(before['Close'].iloc[-1])
             return None
             
     except Exception as e:
@@ -141,17 +143,22 @@ def fetch_a_stock_price(stock_code: str, date: str) -> Optional[float]:
         start = (date_obj - timedelta(days=10)).strftime('%Y-%m-%d')
         end = (date_obj + timedelta(days=10)).strftime('%Y-%m-%d')
 
-        df = get_a_stock_data(stock_code, period_days=30, use_cache=False)
+        # period_days=260：需覆盖 target_date≈今天-70天（3个月窗口预测+20d horizon），
+        # 且 ≥ min_rows=200 才不会每次降级去撞 AKShare（限流 RemoteDisconnected）
+        # use_cache=True：避免同轮评估对同一只股票重复网络请求
+        df = get_a_stock_data(stock_code, period_days=260, use_cache=True)
         if df is None or df.empty:
             return None
 
-        # 统一列名
-        if 'Date' not in df.columns and df.index.name != 'Date':
-            df = df.reset_index()
+        # 统一日期列：腾讯/AKShare 返回的 Date 在 index（name='Date'），不在 columns，
+        # 旧逻辑只认 columns 会落入 else 恒返回 None → A股评估恒为 0
         if 'Date' in df.columns:
             df['date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
         elif 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+        elif df.index.name == 'Date':
+            df = df.copy()
+            df['date'] = pd.to_datetime(df.index).strftime('%Y-%m-%d')
         else:
             return None
 
@@ -655,6 +662,56 @@ def calculate_three_horizon_pattern_stats(history: Dict, start_date: Optional[st
     return result
 
 
+def assemble_report(history, month=None, guardrail_line=None):
+    """
+    组装完整 Markdown 报告：正文 + 护栏段（末尾）+ 诚实摘要（前置到第一节前）。
+
+    诚实摘要前置是 DECISIONS D3 的落实：先看 lift / 方向技能，再看绝对准确率。
+    返回 (report, extra_html)。抽成模块级函数供 main 与单元测试复用。
+    """
+    report = generate_monthly_report(history, month)
+    if guardrail_line:
+        report = report.rstrip() + f"\n\n---\n\n## 策略护栏状态\n\n{guardrail_line}\n"
+
+    extra_html = ""
+    try:
+        hm = calculate_metrics(history.get('predictions', []))
+        if hm:
+            honest_md = (
+                "## 诚实监控摘要（含基准扣除，D3 口径）\n\n"
+                f"- 准确率: {hm['accuracy']*100:.1f}%　上涨占比(永远看涨): {hm['up_ratio']*100:.1f}%"
+                f"　**方向技能: {hm['direction_skill']*100:+.1f}pp**\n"
+                f"- 信号净胜率(扣成本): {hm['buy_net_win_rate']*100:.1f}%"
+                f"　无条件买入基准: {hm['base_win_rate']*100:.1f}%"
+                f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n\n---\n\n"
+            )
+            _anchor = report.find('## 一、')
+            if _anchor >= 0:
+                report = report[:_anchor] + honest_md + report[_anchor:]
+            else:
+                report = report.rstrip() + "\n\n---\n\n" + honest_md
+            extra_html += (
+                f"<h2 style=\"color:#007bff; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
+                f"诚实监控摘要（含基准扣除）</h2>"
+                f"<ul style=\"color:#333; font-size:13px; line-height:1.8;\">"
+                f"<li>准确率 {hm['accuracy']*100:.1f}%　上涨占比(永远看涨) {hm['up_ratio']*100:.1f}%　"
+                f"<b>方向技能 {hm['direction_skill']*100:+.1f}pp</b></li>"
+                f"<li>信号净胜率(扣成本) {hm['buy_net_win_rate']*100:.1f}%　无条件买入基准 "
+                f"{hm['base_win_rate']*100:.1f}%　<b>超额 lift {hm['lift']*100:+.1f}pp</b></li>"
+                f"</ul>"
+            )
+    except Exception:
+        pass
+
+    if guardrail_line:
+        extra_html += (
+            f"<h2 style=\"color:#e67e22; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
+            f"策略护栏状态（20d 中性 TopK，DECISIONS D2）</h2>"
+            f"<p style=\"color:#333; font-size:13px;\">{guardrail_line.replace('## ', '').strip()}</p>"
+        )
+    return report, extra_html
+
+
 def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     """
     生成性能报告
@@ -718,6 +775,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         if _ps:
             _m = calculate_metrics(_ps)
             report += f"| {_market_label.get(_mk, _mk)} | {_m.get('total_predictions', 0)} | **{_m.get('accuracy', 0):.2%}** | {_m.get('avg_return', 0):.2%} | {_m.get('sharpe_ratio', 0):.4f} |\n"
+        else:
+            # 显式输出空市场，避免"静默省略"让读者以为 A 股没接入
+            report += f"| {_market_label.get(_mk, _mk)} | 0 | ⚠️ 无已评估预测（数据源故障或预测未到期） | - | - |\n"
     report += "\n"
 
     report += f"""
@@ -758,6 +818,9 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         report += f"| {sector_name} | {sector_type} | {horizon_names[item['horizon']]} | {item['window']} | {m.get('total_predictions', 0)} | {accuracy_str} | {m.get('avg_return', 0):.2%} | {m.get('sharpe_ratio', 0):.4f} |\n"
 
     report += """
+> 📌 **小样本提示**：样本数 < 30 的单元格准确率波动极大（如 n=9 的 77.8% 无统计意义），
+> 须结合"预测数"列阅读；板块/个股绝对准确率仅供参考，评估以 lift / 方向技能为准（DECISIONS D3）。
+
 ---
 
 ## 四、个股表现
@@ -808,38 +871,37 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
         '111': '一致看涨',
     }
 
-    # 模式建议映射（个股版本）
-    pattern_actions = {
-        '010': '谨慎减仓',
-        '000': '止损/减仓',
-        '100': '获利了结',
-        '001': '谨慎观望',
-        '011': '分批建仓',
-        '101': '持有观望',
-        '110': '观望',
-        '111': '谨慎持有',
-    }
+    # 模式建议映射不再渲染为"建议"列：本表未做 embargo（重叠窗口夸大准确率），
+    # 与严格验证结论矛盾（AGENTS 模式表：011 实为 40.5%、101 为 32.3%），
+    # 可执行建议违反 DECISIONS D3 / lessons 0.2，仅保留统计记录。
 
-    report += "\n---\n\n## 五、三周期模式验证（3个月窗口）\n\n"
+    report += "\n---\n\n## 五、三周期模式统计（3个月窗口，⚠️ 未 embargo）\n\n"
 
     if pattern_stats:
         # 按准确率排序
         sorted_patterns = sorted(pattern_stats.items(), key=lambda x: x[1]['win_rate'], reverse=True)
 
-        report += "| 排名 | 模式 | 名称 | 样本数 | 准确率 | 平均收益 | 建议 |\n"
-        report += "|------|------|------|--------|--------|----------|------|\n"
+        report += "| 排名 | 模式 | 名称 | 样本数 | 表面准确率 | 平均收益 |\n"
+        report += "|------|------|------|--------|------------|----------|\n"
 
         for i, (pattern, stats) in enumerate(sorted_patterns, 1):
             name = pattern_names.get(pattern, '未知')
-            action = pattern_actions.get(pattern, '观望')
             win_rate = stats['win_rate']
             avg_return = stats['avg_return']
             total = stats['total']
 
             ret_str = f"+{avg_return:.2%}" if avg_return >= 0 else f"{avg_return:.2%}"
-            report += f"| {i} | {pattern} | {name} | {total} | {win_rate:.1%} | {ret_str} | {action} |\n"
+            report += f"| {i} | {pattern} | {name} | {total} | {win_rate:.1%} | {ret_str} |\n"
 
-        report += "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 统计时间：3个月窗口\n"
+        report += (
+            "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 统计时间：3个月窗口\n\n"
+            "> ⚠️ **本表不构成交易依据**：数据来自生产预测历史（重叠窗口、无 embargo "
+            "独立性处理），准确率被系统性夸大且与严格验证近似镜像反转\n"
+            "> （embargo 后实测：011 探底回升 40.5%、101 假突破 32.3%、010 反弹失败 58.3%，"
+            "各模式均接近随机，见 AGENTS.md）。\n"
+            "> 仅作预测行为记录；评估一律以 lift / 方向技能为准（DECISIONS D3），"
+            "重叠窗口见 lessons 0.2。\n"
+        )
     else:
         report += "*样本量不足，暂无统计数据（需要同时有1天、5天、20天预测）*\n"
 
@@ -1238,47 +1300,10 @@ def main():
     }
 
     if args.mode in ['report', 'all']:
-        # 生成 Markdown 报告（仍保存，供 CI 提交与纯文本正文使用）
+        # 生成 Markdown 报告（正文 + 护栏 + 诚实摘要前置，见 assemble_report）
         print(f"\n📝 生成性能报告...")
-        report = generate_monthly_report(history, args.month)
-
-        # 追加策略护栏状态（20d 中性 TopK，见 docs/DECISIONS.md D2）
-        gs = _guardrail_status()
-        if gs:
-            report = report.rstrip() + f"\n\n---\n\n## 策略护栏状态\n\n{gs}\n"
-
-        # 追加诚实监控摘要（lift / 方向技能，避免只看绝对准确率，见 DECISIONS D3）
-        extra_html = ""
-        try:
-            hm = calculate_metrics(history.get('predictions', []))
-            if hm:
-                report = report.rstrip() + (
-                    "\n\n---\n\n## 诚实监控摘要（含基准扣除）\n\n"
-                    f"- 准确率: {hm['accuracy']*100:.1f}%　上涨占比(永远看涨): {hm['up_ratio']*100:.1f}%"
-                    f"　**方向技能: {hm['direction_skill']*100:+.1f}pp**\n"
-                    f"- 信号净胜率(扣成本): {hm['buy_net_win_rate']*100:.1f}%"
-                    f"　无条件买入基准: {hm['base_win_rate']*100:.1f}%"
-                    f"　**超额 lift: {hm['lift']*100:+.1f}pp**\n"
-                )
-                extra_html += (
-                    f"<h2 style=\"color:#007bff; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
-                    f"诚实监控摘要（含基准扣除）</h2>"
-                    f"<ul style=\"color:#333; font-size:13px; line-height:1.8;\">"
-                    f"<li>准确率 {hm['accuracy']*100:.1f}%　上涨占比(永远看涨) {hm['up_ratio']*100:.1f}%　"
-                    f"<b>方向技能 {hm['direction_skill']*100:+.1f}pp</b></li>"
-                    f"<li>信号净胜率(扣成本) {hm['buy_net_win_rate']*100:.1f}%　无条件买入基准 "
-                    f"{hm['base_win_rate']*100:.1f}%　<b>超额 lift {hm['lift']*100:+.1f}pp</b></li>"
-                    f"</ul>"
-                )
-        except Exception:
-            pass
-
-        if gs:
-            extra_html += (
-                f"<h2 style=\"color:#e67e22; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
-                f"策略护栏状态（20d 中性 TopK，DECISIONS D2）</h2>"
-                f"<p style=\"color:#333; font-size:13px;\">{gs.replace('## ', '').strip()}</p>"
-            )
+        report, extra_html = assemble_report(
+            history, args.month, guardrail_line=_guardrail_status())
 
         # 保存报告（使用当前日期命名）
         report_date = datetime.now().strftime('%Y-%m-%d')

@@ -127,8 +127,21 @@ def get_a_stock_data_akshare(stock_code, period_days=90):
     try:
         import akshare as ak
 
-        # 获取个股历史数据（前复权）
-        df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", adjust="qfq")
+        # 获取个股历史数据（前复权）；失败重试1次（AKShare 限流常见 RemoteDisconnected）
+        import time as _time
+        df = None
+        for _attempt in range(2):
+            try:
+                df = ak.stock_zh_a_hist(symbol=stock_code, period="daily", adjust="qfq")
+                if df is not None and not df.empty:
+                    break
+            except Exception as e:
+                if _attempt == 0:
+                    print(f"AKShare: 获取 {stock_code} 失败({type(e).__name__})，2秒后重试...")
+                    _time.sleep(2)
+                else:
+                    print(f"AKShare: 获取股票 {stock_code} 数据失败: {e}")
+                    df = None
 
         if df is None or df.empty:
             print(f"AKShare: 无法获取股票 {stock_code} 的数据")
@@ -181,8 +194,12 @@ def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
         if datetime.now() - cache_time < timedelta(days=A_STOCK_CACHE_DAYS):
             try:
                 df = pd.read_pickle(cache_file)
-                print(f"  ✅ 从缓存加载 {stock_code} 数据")
-                return df
+                # 缓存行数不达标则视为坏缓存，跳过并重新拉取
+                # （防：period_days 传小/数据源故障写入的短数据被缓存 7 天）
+                if df is not None and len(df) >= min_rows:
+                    print(f"  ✅ 从缓存加载 {stock_code} 数据")
+                    return df
+                print(f"  ⚠️ 缓存行数不足（{0 if df is None else len(df)} < {min_rows}），重新获取")
             except Exception as e:
                 print(f"  ⚠️ 缓存加载失败: {e}")
 
