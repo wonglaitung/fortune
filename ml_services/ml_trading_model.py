@@ -5049,17 +5049,12 @@ class CatBoostModel(BaseTradingModel):
     def _train_lightgbm(self, df, use_feature_selection, selected_features, horizon, X, y):
         """LightGBM 拟合（复用 CatBoost 管线的 prepare_data/特征选择/编码，仅换学习器）"""
         import lightgbm as lgb
-        # n_jobs 过大（如 -1=32）在高负载下会因线程争用导致 40 倍反向劣化，
-        # 可用 LGBM_N_JOBS 限制线程数（默认 -1 不变）
-        lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))
         lgb_params = dict(
             objective='binary', learning_rate=0.06, num_leaves=2 ** 6,
             max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
             colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
-            random_state=42, n_jobs=lgb_n_jobs, verbose=-1,
+            random_state=42, n_jobs=-1, verbose=-1,
         )
-        if lgb_n_jobs > 0:
-            print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS，避免高负载线程争用）")
         self.model = lgb.LGBMClassifier(**lgb_params)
         self.model.fit(X, y)
         self.actual_n_estimators = self.model.n_estimators
