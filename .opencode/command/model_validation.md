@@ -676,6 +676,10 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
 - [ ] 已运行 `monthly_guardrail.py` 并记录判定（🟢/🟡/🔴）
 - [ ] 判定为 🟡 保留时，确认仍未上核心仓位
 - [ ] 判定为 🔴 时，已按 D2 停用
+- [ ] **已将 `output/monthly_guardrail_*.md` 与 `output/backtest_eval_*.md` git commit/push**
+      （⚠️ 5.6 产物为 CI 性能监控必需：`performance-monitor.yml` 只能读**仓库内**版本，
+      不 push 则每日报告"策略护栏状态"用旧数据或提示缺失；5.5 产物为文档/注释引用锚点。
+      两者均不在 D9 自动入库范围，须手动提交；output/ 只交 .md）
 
 ## 执行检查清单
 
@@ -804,6 +808,8 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
 - [ ] 已运行 `python3 ml_services/monthly_guardrail.py --horizon 20`
 - [ ] 已记录判定（🟢 升级 / 🟡 保留低配 / 🔴 停用），见 `docs/DECISIONS.md` D2
 - [ ] 🟡 保留时确认未上核心仓位；🔴 时已停用
+- [ ] **已 commit/push `output/monthly_guardrail_*.md` + `output/backtest_eval_*.md`**
+      （5.6 产物是 CI `performance-monitor.yml` 护栏段的**唯一数据源**，不 push 下游即断）
 
 ## 数据泄漏警告
 
