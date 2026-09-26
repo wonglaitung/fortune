@@ -671,7 +671,9 @@ def assemble_report(history, month=None, guardrail_line=None):
     """
     report = generate_monthly_report(history, month)
     if guardrail_line:
-        report = report.rstrip() + f"\n\n---\n\n## 策略护栏状态\n\n{guardrail_line}\n"
+        # strip 标题井号：正文里保留"## "会渲染成嵌在句子中的怪异标题
+        report = report.rstrip() + (
+            f"\n\n---\n\n## 策略护栏状态\n\n{guardrail_line.replace('## ', '').strip()}\n")
 
     extra_html = ""
     try:
