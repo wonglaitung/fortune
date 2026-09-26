@@ -766,6 +766,7 @@ flowchart LR
 | 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
 | 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
 | 周一 08:00 HKT | `test-llm-api.yml` | LLM API 连通性测试 | - |
+| 周日 15:00 CST | `tests.yml` | 全量单元测试 | - |
 
 > 说明：`performance-monitor.yml` 报告**带基准扣除的诚实指标**与护栏状态；严格护栏
 > （`monthly_guardrail.py`，需本地 `prediction_analysis.csv`）在**本地每月**执行，见

@@ -115,9 +115,12 @@ class AnomalyCache:
             
             try:
                 timestamp = datetime.fromisoformat(timestamp_str)
-                # 如果时间戳没有时区信息，假设是 UTC
+                # 与 add() 写入方一致：timestamp 来自 datetime.now()（本地 naive），
+                # naive 按本地时区转 aware 再与 UTC now 比较。
+                # （原假设"naive=UTC"在 UTC+8 下使 age 少算 8 小时：
+                #   50h 条目算成 42h < 48h → 清理失效，2026-09-26 测试抓出）
                 if timestamp.tzinfo is None:
-                    timestamp = timestamp.replace(tzinfo=timezone.utc)
+                    timestamp = timestamp.astimezone()
                 age = now - timestamp
                 
                 if age > timedelta(hours=max_age_hours):

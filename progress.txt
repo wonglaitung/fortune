@@ -1836,3 +1836,13 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   `performance-monitor.yml` LATEST 同步 `grep -l` 过滤
 - lessons 三.8（v10.11）：监控取最新文件须按语义过滤，mtime≠目标
 - 验证：实际输出→lightgbm.md 🟢；仅 1d/5d 场景→None；yaml 解析 OK
+### 2026-09-26 测试腐烂修复（3败→64全绿）+ CI执行点 ⭐
+
+- **根因三连**：severity 断言过时（4-08 阈值校准未同步）；detect fixture 写死 2026-01-01
+  +lookback_days=7 时间旅行（数据变历史→检出恒空）；**cache 真bug**（naive local 当 UTC，
+  UTC+8 age 少算 8h → 50h条目 42h<48h 永不清理）
+- **修复**：cache.py `astimezone()` 按本地时区转 aware（与写入方 datetime.now() 一致）；
+  severity 断言对齐 `871ada84` 新阈值（-0.10/-0.02）；fixture 日期锚定 today()
+- **CI 缺口**：无任何测试工作流 → 3败躺 5 个月。新增 `.github/workflows/tests.yml`
+  （周日 15:00 CST + 手动；**不设 on:push** 防烧 CI）；README/AGENTS 调度表 +1 行
+- lessons 三.10（v10.12）；`pytest tests/ -q` → **64 passed**

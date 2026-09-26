@@ -31,7 +31,9 @@ def sample_features():
     all_data = np.vstack([normal_data, anomalies])
     
     feature_names = [f'feature_{i}' for i in range(n_features)]
-    dates = pd.date_range(start='2026-01-01', periods=len(all_data))
+    # 日期锚定到"今天"：写死的绝对日期 + lookback_days 过滤会让检测断言
+    # 随时间流逝变成空集（时间旅行测试，2026-09-26 实际发生）
+    dates = pd.date_range(end=pd.Timestamp.today().normalize(), periods=len(all_data))
     
     df = pd.DataFrame(all_data, columns=feature_names, index=dates)
     
@@ -104,8 +106,8 @@ def test_severity_classification(detector, sample_features):
     # Train model
     detector.train(sample_features)
     
-    # Test different score ranges
+    # 阈值按 2 年港股真实分布校准（871ada84，high < -0.10 / medium < -0.02）
     assert detector._get_severity(-0.9) == 'high'
-    assert detector._get_severity(-0.6) == 'medium'
-    assert detector._get_severity(-0.4) == 'low'
-    assert detector._get_severity(-0.2) == 'low'
+    assert detector._get_severity(-0.2) == 'high'
+    assert detector._get_severity(-0.05) == 'medium'
+    assert detector._get_severity(-0.01) == 'low'
