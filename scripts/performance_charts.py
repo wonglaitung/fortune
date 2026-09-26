@@ -82,9 +82,11 @@ def composite_score(dimensions):
 
 # 归一化常量（在图下方 caption 中向读者说明）
 RETURN_BOUND = 0.15      # 平均收益 / 买入平均收益 ±15% 映射到 [0, 100]（50 = 零收益）
-# 方向技能 / 超额lift 为基准扣除后的百分点（pp），允许为负；居中映射到 [0, 100]（50 = 无技能）
-SKILL_BOUND = 0.30       # 方向技能 ±30pp 居中映射（50 = 与"永远看涨"无差异）
-LIFT_BOUND = 0.10        # 超额 lift ±10pp 居中映射（50 = 与无条件买入基准无差异）
+# 方向技能 / 超额lift 为基准扣除后的百分点（pp），允许为负；居中映射到 [0, 100]（50 = 无技能）。
+# 这两轴在雷达图中按**组内自适应尺度**缩放（bound = max(下限, 组内最大|pp|)），
+# 使各板块/个股间微弱差异在雷达上可分辨；0 始终=雷达中心 50（中性无技能），仅幅度缩放、语义不变。
+SKILL_BOUND = 0.02       # 方向技能轴下限：±2pp（防全零组；实际边界随组内 max|pp| 自适应）
+LIFT_BOUND = 0.02        # 超额 lift 轴下限：±2pp（同上）
 # 单期夏普比率居中映射 [-1, +1] → [0, 100]（50 = 零夏普）。
 # 注：calculate_metrics 的 sharpe 是单持有期信噪比(mean/std)，真实量级 ~±1；
 #     不能年化(滚动样本高度重叠、违反 i.i.d.)，故上限取单期量级 1.0 而非年化的 3.0；
@@ -114,16 +116,31 @@ def _safe_float(val, default=0.0):
     return v
 
 
-def normalize_direction_skill(skill):
-    """方向技能 (pp 小数) ±30pp 居中映射 [0, 100]，50 = 与"永远看涨"无差异"""
-    s = max(-SKILL_BOUND, min(SKILL_BOUND, _safe_float(skill, 0.0)))
-    return (s + SKILL_BOUND) / (2 * SKILL_BOUND) * 100
+def _axis_bound(metrics_list, key, floor):
+    """雷达自适应轴边界：max(下限, 组内最大|指标|)。用于方向技能/超额lift 两轴。
+
+    居中映射 0→50 恒成立，bound 只控制幅度缩放：组内差异小时用窄界放大，
+    差异大时不截断；全零/缺数据回退 floor。
+    """
+    vals = [abs(_safe_float(m.get(key), 0.0)) for m in metrics_list if m]
+    vals = [v for v in vals if v > 0]
+    return max(floor, max(vals)) if vals else floor
 
 
-def normalize_lift(lift):
-    """超额 lift (pp 小数) ±10pp 居中映射 [0, 100]，50 = 与无条件买入基准无差异"""
-    s = max(-LIFT_BOUND, min(LIFT_BOUND, _safe_float(lift, 0.0)))
-    return (s + LIFT_BOUND) / (2 * LIFT_BOUND) * 100
+def normalize_direction_skill(skill, bound=None):
+    """方向技能 (pp 小数) → 0-100 居中映射，50 = 与"永远看涨"无差异。
+    bound 为空时用 SKILL_BOUND 下限；雷达调用方应传组内自适应界（_axis_bound）。"""
+    b = bound if bound else SKILL_BOUND
+    s = max(-b, min(b, _safe_float(skill, 0.0)))
+    return (s + b) / (2 * b) * 100
+
+
+def normalize_lift(lift, bound=None):
+    """超额 lift (pp 小数) → 0-100 居中映射，50 = 与无条件买入基准无差异。
+    bound 为空时用 LIFT_BOUND 下限；雷达调用方应传组内自适应界（_axis_bound）。"""
+    b = bound if bound else LIFT_BOUND
+    s = max(-b, min(b, _safe_float(lift, 0.0)))
+    return (s + b) / (2 * b) * 100
 
 
 def normalize_return(avg_return):
@@ -139,13 +156,15 @@ def normalize_sharpe(sharpe):
     return (s + SHARPE_BOUND) / (2 * SHARPE_BOUND) * 100
 
 
-def metrics_to_dimensions(metrics):
+def metrics_to_dimensions(metrics, skill_bound=None, lift_bound=None):
     """
     将 calculate_metrics() 的指标字典转换为雷达 5 维度分（0-100）。
 
     D3 口径：方向技能 / 超额 lift 为主维度（基准扣除后），不含绝对准确率/胜率。
     参数:
     - metrics: performance_monitor.calculate_metrics() 的返回值
+    - skill_bound / lift_bound: 方向技能/超额lift 轴的自适应边界（_axis_bound 结果）；
+      为空时回退 SKILL_BOUND/LIFT_BOUND 下限。
 
     返回:
     - {维度名: 分数}（仅含 D3/质量维度；样本量 n 不作轴）
@@ -153,8 +172,8 @@ def metrics_to_dimensions(metrics):
     if not metrics:
         metrics = {}
     return {
-        '方向技能': round(normalize_direction_skill(metrics.get('direction_skill')), 1),
-        '超额lift': round(normalize_lift(metrics.get('lift')), 1),
+        '方向技能': round(normalize_direction_skill(metrics.get('direction_skill'), skill_bound), 1),
+        '超额lift': round(normalize_lift(metrics.get('lift'), lift_bound), 1),
         '平均收益': round(normalize_return(metrics.get('avg_return')), 1),
         '夏普比率': round(normalize_sharpe(metrics.get('sharpe_ratio')), 1),
         # 买入平均收益复用 ±15% 映射：衡量"喊涨时平均赚多少"，纯质量、无市场涨跌干扰
@@ -269,11 +288,16 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
     cells = []
     attachments = {}
 
+    # 方向技能/超额lift 两轴按组内自适应尺度（0 恒为中性，仅缩放幅度，提升横向区分度）
+    _m_list = [horizon_metrics.get(h) or {} for h in HORIZONS]
+    _skill_bound = _axis_bound(_m_list, 'direction_skill', SKILL_BOUND)
+    _lift_bound = _axis_bound(_m_list, 'lift', LIFT_BOUND)
+
     for h in HORIZONS:
         m = horizon_metrics.get(h) or {}
         if m.get('total_predictions', 0) == 0:
             continue
-        dims = metrics_to_dimensions(m)
+        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
         color = HORIZON_COLORS[h]
         cid = f'perf_radar_{h}d'
         attachments[cid] = _render_single_radar_png_bytes(
@@ -310,10 +334,11 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
     html = _SECTION_H2.format(title='一、模型整体性能雷达')
     html += _CAPTION.format(
         text=f'统计窗口：{window_name} | 5 维度均为 D3 口径指标，归一化至 0–100：'
-             '方向技能=准确率−永远看涨占比（±30pp 居中映射，50=无技能）· '
-             '超额lift=信号净胜率−无条件买入基准（±10pp 居中映射，50=无超额）· '
+             '方向技能=准确率−永远看涨占比（50=无技能）· '
+             '超额lift=信号净胜率−无条件买入基准（50=无超额）· '
              '平均收益=全样本±15%映射(50为零收益) · 夏普=单期±1居中映射(50为零,负值<50) · '
              '买入平均收益=喊涨样本平均收益(同±15%映射) | '
+             '方向技能/超额lift 两轴按三周期组内自适应尺度缩放（0 恒为雷达中心，仅调幅度，便于横向对比）| '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
              '标题"综合"=加权综合分(方向技能×3·超额lift×3·其余×1，D3 双主指标为主，雷达5轴形状仍等权) | '
              '评估一律以基准扣除后的技能/超额为准（AGENTS D3），绝对准确率/胜率不作判定依据 | '
@@ -442,6 +467,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     items = []
     attachments = {}
     dropped = []
+    rendered_metrics = []
 
     for sector, info in sector_metrics.items():
         m = info.get('metrics') or {}
@@ -450,8 +476,20 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
         if total < min_samples:
             dropped.append((name, total))
             continue
+        rendered_metrics.append(m)
 
-        dims = metrics_to_dimensions(m)
+    # 方向技能/超额lift 两轴按组内（已渲染板块）自适应尺度，提升横向区分度
+    _skill_bound = _axis_bound(rendered_metrics, 'direction_skill', SKILL_BOUND)
+    _lift_bound = _axis_bound(rendered_metrics, 'lift', LIFT_BOUND)
+
+    for sector, info in sector_metrics.items():
+        m = info.get('metrics') or {}
+        total = int(m.get('total_predictions', 0))
+        name = info.get('name', sector)
+        if total < min_samples:
+            continue
+
+        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
         avg = composite_score(dims)  # 加权综合分（方向技能/超额lift 为主，D3）
         color = _get_color(avg)  # 状态三色：≥60 绿 / 40-60 橙 / <40 红
         cid = f'perf_sector_{sector}'
@@ -484,7 +522,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     html = _SECTION_H2.format(title='三、板块表现雷达图')
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 仅展示样本数 ≥ {min_samples} 的板块 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 综合分=加权'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 方向技能/超额lift 两轴'
+             '按板块组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 颜色为综合分状态：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
@@ -670,6 +709,7 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     """
     items = []
     dropped = []
+    rendered_metrics = []
 
     for code, info in stock_bundle.items():
         m = info.get('metrics') or {}
@@ -678,8 +718,20 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         if total < min_samples:
             dropped.append((name, code, total))
             continue
+        rendered_metrics.append(m)
 
-        dims = metrics_to_dimensions(m)
+    # 方向技能/超额lift 两轴按组内（已渲染个股）自适应尺度，提升横向区分度
+    _skill_bound = _axis_bound(rendered_metrics, 'direction_skill', SKILL_BOUND)
+    _lift_bound = _axis_bound(rendered_metrics, 'lift', LIFT_BOUND)
+
+    for code, info in stock_bundle.items():
+        m = info.get('metrics') or {}
+        total = int(m.get('total_predictions', 0))
+        name = info.get('name', code)
+        if total < min_samples:
+            continue
+
+        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
         avg = composite_score(dims)  # 加权综合分（方向技能/超额lift 为主，D3）
         items.append({
             'code': code,
@@ -707,7 +759,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
              f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），综合分=加权'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），方向技能/超额lift 两轴'
+             '按个股组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 状态三色：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
