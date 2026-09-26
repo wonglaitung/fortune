@@ -595,6 +595,7 @@ def calculate_metrics(predictions: List[Dict]) -> Dict:
         'buy_signal_count': len(buy_signals),
         'buy_win_rate': round(buy_win_rate, 4),
         'buy_net_win_rate': round(buy_net_win_rate, 4),
+        'buy_avg_return': round(buy_avg_return, 4),
         'base_win_rate': round(base_win, 4),
         'lift': lift,
         'yearly': yearly,

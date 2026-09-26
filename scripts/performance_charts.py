@@ -81,17 +81,24 @@ def composite_score(dimensions):
     return wsum / wtot if wtot > 0 else 0.0
 
 # 归一化常量（在图下方 caption 中向读者说明）
-RETURN_BOUND = 0.15      # 平均收益 / 买入平均收益 ±15% 映射到 [0, 100]（50 = 零收益）
-# 方向技能 / 超额lift 为基准扣除后的百分点（pp），允许为负；居中映射到 [0, 100]（50 = 无技能）。
-# 这两轴在雷达图中按**组内自适应尺度**缩放（bound = max(下限, 组内最大|pp|)），
-# 使各板块/个股间微弱差异在雷达上可分辨；0 始终=雷达中心 50（中性无技能），仅幅度缩放、语义不变。
-SKILL_BOUND = 0.02       # 方向技能轴下限：±2pp（防全零组；实际边界随组内 max|pp| 自适应）
-LIFT_BOUND = 0.02        # 超额 lift 轴下限：±2pp（同上）
-# 单期夏普比率居中映射 [-1, +1] → [0, 100]（50 = 零夏普）。
+# 雷达 5 维全部采用**组内自适应尺度**：bound = max(下限, 组内最大|值|)。
+# 0 始终=雷达中心 50（中性：无技能/零收益/零夏普），仅幅度缩放、语义不变；
+# 使各板块/个股间微弱差异在雷达上可分辨，差异大时不截断。
+# 下限防止全零/全同组除零或贴中心。
+RETURN_FLOOR = 0.02      # 平均收益 / 买入平均收益 轴下限：±2%
+SKILL_FLOOR = 0.02       # 方向技能 轴下限：±2pp
+LIFT_FLOOR = 0.02        # 超额 lift 轴下限：±2pp
+SHARPE_FLOOR = 0.20      # 单期夏普比率 轴下限：±0.2
 # 注：calculate_metrics 的 sharpe 是单持有期信噪比(mean/std)，真实量级 ~±1；
-#     不能年化(滚动样本高度重叠、违反 i.i.d.)，故上限取单期量级 1.0 而非年化的 3.0；
-#     居中后负值显示为 <50、不再被截断贴底，轴才有区分度。
-SHARPE_BOUND = 1.0
+#     不能年化(滚动样本高度重叠、违反 i.i.d.)，故量级参考 ±1，自适应缩放仍在组内展开。
+
+DEFAULT_BOUNDS = {
+    'direction_skill': SKILL_FLOOR,
+    'lift': LIFT_FLOOR,
+    'avg_return': RETURN_FLOOR,
+    'buy_avg_return': RETURN_FLOOR,
+    'sharpe_ratio': SHARPE_FLOOR,
+}
 
 # 章节标题样式（与 A股邮件一致）
 _SECTION_H2 = ('<h2 style="color: #007bff; margin-top: 30px; '
@@ -117,7 +124,7 @@ def _safe_float(val, default=0.0):
 
 
 def _axis_bound(metrics_list, key, floor):
-    """雷达自适应轴边界：max(下限, 组内最大|指标|)。用于方向技能/超额lift 两轴。
+    """雷达自适应轴边界：max(下限, 组内最大|指标|)。用于全部 5 维。
 
     居中映射 0→50 恒成立，bound 只控制幅度缩放：组内差异小时用窄界放大，
     差异大时不截断；全零/缺数据回退 floor。
@@ -127,57 +134,70 @@ def _axis_bound(metrics_list, key, floor):
     return max(floor, max(vals)) if vals else floor
 
 
+def _group_bounds(metrics_list):
+    """对 5 维分别计算组内自适应边界（_axis_bound），返回 {指标key: bound}。"""
+    return {k: _axis_bound(metrics_list, k, floor) for k, floor in DEFAULT_BOUNDS.items()}
+
+
 def normalize_direction_skill(skill, bound=None):
     """方向技能 (pp 小数) → 0-100 居中映射，50 = 与"永远看涨"无差异。
-    bound 为空时用 SKILL_BOUND 下限；雷达调用方应传组内自适应界（_axis_bound）。"""
-    b = bound if bound else SKILL_BOUND
+    bound 为空时用 SKILL_FLOOR 下限；雷达调用方应传组内自适应界（_group_bounds）。"""
+    b = bound if bound else SKILL_FLOOR
     s = max(-b, min(b, _safe_float(skill, 0.0)))
     return (s + b) / (2 * b) * 100
 
 
 def normalize_lift(lift, bound=None):
     """超额 lift (pp 小数) → 0-100 居中映射，50 = 与无条件买入基准无差异。
-    bound 为空时用 LIFT_BOUND 下限；雷达调用方应传组内自适应界（_axis_bound）。"""
-    b = bound if bound else LIFT_BOUND
+    bound 为空时用 LIFT_FLOOR 下限；雷达调用方应传组内自适应界（_group_bounds）。"""
+    b = bound if bound else LIFT_FLOOR
     s = max(-b, min(b, _safe_float(lift, 0.0)))
     return (s + b) / (2 * b) * 100
 
 
-def normalize_return(avg_return):
-    """平均收益：clamp 到 ±15% 后线性映射 [0, 100]，50 = 零收益（NaN 记中性 50）"""
-    r = max(-RETURN_BOUND, min(RETURN_BOUND, _safe_float(avg_return, 0.0)))
-    return (r + RETURN_BOUND) / (2 * RETURN_BOUND) * 100
+def normalize_return(avg_return, bound=None):
+    """平均收益：居中映射 [0, 100]，50 = 零收益（NaN 记中性 50）。
+    bound 为空时用 RETURN_FLOOR 下限；雷达调用方应传组内自适应界。"""
+    b = bound if bound else RETURN_FLOOR
+    r = max(-b, min(b, _safe_float(avg_return, 0.0)))
+    return (r + b) / (2 * b) * 100
 
 
-def normalize_sharpe(sharpe):
-    """单期夏普比率：居中映射 [-1, +1] → [0, 100]，50 = 零夏普（NaN 记中性 50）。
-    负值显示为 <50、不再贴底；正负两侧对称，轴具备区分度。"""
-    s = max(-SHARPE_BOUND, min(SHARPE_BOUND, _safe_float(sharpe, 0.0)))
-    return (s + SHARPE_BOUND) / (2 * SHARPE_BOUND) * 100
+def normalize_sharpe(sharpe, bound=None):
+    """单期夏普比率：居中映射 [0, 100]，50 = 零夏普（NaN 记中性 50）。
+    bound 为空时用 SHARPE_FLOOR 下限；雷达调用方应传组内自适应界。"""
+    b = bound if bound else SHARPE_FLOOR
+    s = max(-b, min(b, _safe_float(sharpe, 0.0)))
+    return (s + b) / (2 * b) * 100
 
 
-def metrics_to_dimensions(metrics, skill_bound=None, lift_bound=None):
+def metrics_to_dimensions(metrics, bounds=None):
     """
     将 calculate_metrics() 的指标字典转换为雷达 5 维度分（0-100）。
 
     D3 口径：方向技能 / 超额 lift 为主维度（基准扣除后），不含绝对准确率/胜率。
     参数:
     - metrics: performance_monitor.calculate_metrics() 的返回值
-    - skill_bound / lift_bound: 方向技能/超额lift 轴的自适应边界（_axis_bound 结果）；
-      为空时回退 SKILL_BOUND/LIFT_BOUND 下限。
+    - bounds: {指标key: 组内自适应边界}（_group_bounds 结果）；缺省时该维回退 FLOOR 下限。
 
     返回:
     - {维度名: 分数}（仅含 D3/质量维度；样本量 n 不作轴）
     """
     if not metrics:
         metrics = {}
+    bounds = bounds or {}
     return {
-        '方向技能': round(normalize_direction_skill(metrics.get('direction_skill'), skill_bound), 1),
-        '超额lift': round(normalize_lift(metrics.get('lift'), lift_bound), 1),
-        '平均收益': round(normalize_return(metrics.get('avg_return')), 1),
-        '夏普比率': round(normalize_sharpe(metrics.get('sharpe_ratio')), 1),
-        # 买入平均收益复用 ±15% 映射：衡量"喊涨时平均赚多少"，纯质量、无市场涨跌干扰
-        '买入平均收益': round(normalize_return(metrics.get('buy_avg_return')), 1),
+        '方向技能': round(normalize_direction_skill(
+            metrics.get('direction_skill'), bounds.get('direction_skill')), 1),
+        '超额lift': round(normalize_lift(
+            metrics.get('lift'), bounds.get('lift')), 1),
+        '平均收益': round(normalize_return(
+            metrics.get('avg_return'), bounds.get('avg_return')), 1),
+        '夏普比率': round(normalize_sharpe(
+            metrics.get('sharpe_ratio'), bounds.get('sharpe_ratio')), 1),
+        # 买入平均收益复用收益居中映射：衡量"喊涨时平均赚多少"，纯质量、无市场涨跌干扰
+        '买入平均收益': round(normalize_return(
+            metrics.get('buy_avg_return'), bounds.get('buy_avg_return')), 1),
     }
 
 
@@ -288,16 +308,15 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
     cells = []
     attachments = {}
 
-    # 方向技能/超额lift 两轴按组内自适应尺度（0 恒为中性，仅缩放幅度，提升横向区分度）
+    # 雷达 5 维按组内自适应尺度（0 恒为中性，仅缩放幅度，提升横向区分度）
     _m_list = [horizon_metrics.get(h) or {} for h in HORIZONS]
-    _skill_bound = _axis_bound(_m_list, 'direction_skill', SKILL_BOUND)
-    _lift_bound = _axis_bound(_m_list, 'lift', LIFT_BOUND)
+    _bounds = _group_bounds(_m_list)
 
     for h in HORIZONS:
         m = horizon_metrics.get(h) or {}
         if m.get('total_predictions', 0) == 0:
             continue
-        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
+        dims = metrics_to_dimensions(m, _bounds)
         color = HORIZON_COLORS[h]
         cid = f'perf_radar_{h}d'
         attachments[cid] = _render_single_radar_png_bytes(
@@ -336,9 +355,8 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月'):
         text=f'统计窗口：{window_name} | 5 维度均为 D3 口径指标，归一化至 0–100：'
              '方向技能=准确率−永远看涨占比（50=无技能）· '
              '超额lift=信号净胜率−无条件买入基准（50=无超额）· '
-             '平均收益=全样本±15%映射(50为零收益) · 夏普=单期±1居中映射(50为零,负值<50) · '
-             '买入平均收益=喊涨样本平均收益(同±15%映射) | '
-             '方向技能/超额lift 两轴按三周期组内自适应尺度缩放（0 恒为雷达中心，仅调幅度，便于横向对比）| '
+             '平均收益（50=零收益）· 夏普（50=零夏普）· 买入平均收益（50=零收益）| '
+             '5 维均按三周期组内自适应尺度缩放（0 恒为雷达中心，仅调幅度，便于横向对比）| '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
              '标题"综合"=加权综合分(方向技能×3·超额lift×3·其余×1，D3 双主指标为主，雷达5轴形状仍等权) | '
              '评估一律以基准扣除后的技能/超额为准（AGENTS D3），绝对准确率/胜率不作判定依据 | '
@@ -478,9 +496,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
             continue
         rendered_metrics.append(m)
 
-    # 方向技能/超额lift 两轴按组内（已渲染板块）自适应尺度，提升横向区分度
-    _skill_bound = _axis_bound(rendered_metrics, 'direction_skill', SKILL_BOUND)
-    _lift_bound = _axis_bound(rendered_metrics, 'lift', LIFT_BOUND)
+    # 雷达 5 维按组内（已渲染板块）自适应尺度，提升横向区分度
+    _bounds = _group_bounds(rendered_metrics)
 
     for sector, info in sector_metrics.items():
         m = info.get('metrics') or {}
@@ -489,7 +506,7 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
         if total < min_samples:
             continue
 
-        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
+        dims = metrics_to_dimensions(m, _bounds)
         avg = composite_score(dims)  # 加权综合分（方向技能/超额lift 为主，D3）
         color = _get_color(avg)  # 状态三色：≥60 绿 / 40-60 橙 / <40 红
         cid = f'perf_sector_{sector}'
@@ -522,8 +539,8 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     html = _SECTION_H2.format(title='三、板块表现雷达图')
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 仅展示样本数 ≥ {min_samples} 的板块 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 方向技能/超额lift 两轴'
-             '按板块组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 5 维均按'
+             '板块组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 颜色为综合分状态：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
@@ -720,9 +737,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
             continue
         rendered_metrics.append(m)
 
-    # 方向技能/超额lift 两轴按组内（已渲染个股）自适应尺度，提升横向区分度
-    _skill_bound = _axis_bound(rendered_metrics, 'direction_skill', SKILL_BOUND)
-    _lift_bound = _axis_bound(rendered_metrics, 'lift', LIFT_BOUND)
+    # 雷达 5 维按组内（已渲染个股）自适应尺度，提升横向区分度
+    _bounds = _group_bounds(rendered_metrics)
 
     for code, info in stock_bundle.items():
         m = info.get('metrics') or {}
@@ -731,7 +747,7 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
         if total < min_samples:
             continue
 
-        dims = metrics_to_dimensions(m, _skill_bound, _lift_bound)
+        dims = metrics_to_dimensions(m, _bounds)
         avg = composite_score(dims)  # 加权综合分（方向技能/超额lift 为主，D3）
         items.append({
             'code': code,
@@ -759,8 +775,8 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
              f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），方向技能/超额lift 两轴'
-             '按个股组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），5 维均按'
+             '个股组内自适应尺度缩放（0=中性，仅调幅度）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 状态三色：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
