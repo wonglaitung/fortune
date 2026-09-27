@@ -2084,4 +2084,4 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **实测**（本地 06-24 旧 CSV，31 只池）：K=7 → 🎯 9988/9660/1109/1398/0941/1088/2318
 - **口径注**：邮件 TopK 基于当前 31 只自选池（K=7）；回测/护栏基于 59 只池（K=10）——已在图例注明
 - 新增 `tests/test_live_topk_email.py` 8 项（行业内 z 均值≈0 / K 上限 / top-k / raw=prob /
-  跨板块可比性 / 概率列别名 / 缺失报错 / select 读 CSV）→ **116 passed**
+  跨板块可比性 / 概率列别名 / 缺失报错 / select 读 CSV）→ **108 passed**

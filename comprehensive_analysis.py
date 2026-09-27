@@ -1298,7 +1298,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
                 if d2_topk_target:
-                    catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（D2 低配辅助信号，K={d2_topk_k}，"
+                    catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（系统低配辅助信号，K={d2_topk_k}，"
                                             f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
                                             f"与回测/月度护栏同口径。\n\n")
                 catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"

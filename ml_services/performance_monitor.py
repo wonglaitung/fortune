@@ -619,8 +619,8 @@ def _guardrail_block() -> str:
 > | DSR | ≥0.95 | **{dsr}** {dsr_ok} |
 >
 > 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
-> 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（DECISIONS D2 / DEPLOYMENT T2）
-> —— PBO/DSR 由 `monthly_guardrail.py` 复核计算，本报告仅转贴不重算（D2）"""
+> 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（系统低配辅助信号）
+> —— PBO/DSR 由 `monthly_guardrail.py` 复核计算，本报告仅转贴不重算"""
 
 
 def _guardrail_html_summary() -> str:
@@ -662,7 +662,7 @@ def _guardrail_html_summary() -> str:
     return (
         '<div style="background:#fff8e6; border-left:4px solid #e67e22; '
         'padding:8px 10px; margin-top:4px;">'
-        '<b style="color:#b45309;">20d 组合层护栏</b>（DECISIONS D2，'
+        '<b style="color:#b45309;">20d 组合层护栏</b>（系统低配辅助信号，'
         f'`{os.path.basename(path)}` {date}）：<b>{verdict}</b>'
         f"{(' — ' + alloc) if alloc else ''}<br>"
         f'净IR <b>{ir}</b> {ir_ci} '
@@ -670,7 +670,7 @@ def _guardrail_html_summary() -> str:
         f'{_ok(pbo, lambda v: v < 0.5)} · DSR <b>{dsr}</b> '
         f'{_ok(dsr, lambda v: v >= 0.95)}'
         '<br><span style="color:#999; font-size:11px;">PBO/DSR 由 monthly_guardrail.py '
-        '复核计算，本报告仅转贴不重算（D2）；净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
+        '复核计算，本报告仅转贴不重算；净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
         '</div>'
     )
 
@@ -1097,7 +1097,7 @@ def assemble_report(history, month=None, guardrail_line=None):
     if guardrail_line:
         extra_html += (
             f"<h2 style=\"color:#e67e22; margin-top:25px; border-bottom:1px solid #ddd; padding-bottom:5px;\">"
-            f"策略护栏状态（20d 中性 TopK，DECISIONS D2）</h2>"
+            f"策略护栏状态（20d 中性 TopK 低配辅助信号）</h2>"
             f"<p style=\"color:#333; font-size:13px;\">{guardrail_line.replace('## ', '').strip()}</p>"
         )
     return report, extra_html
@@ -1152,7 +1152,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
                 report += f"| {horizon_names[h]} | {window_name} | 0 | - | - | - | - | - |\n"
 
     report += """
-> 📌 评估以 **超额lift / 方向技能** 为准（DECISIONS D3）；准确率仅为参考列，不作判定依据。
+> 📌 评估以 **超额lift / 方向技能** 为准（已剔除市场涨跌影响）；准确率仅为参考列，不作判定依据。
 
 ---
 
@@ -1194,7 +1194,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
     report += """
 > 📌 **小样本提示**：样本数 < 30 的单元格准确率波动极大（如 n=9 的 77.8% 无统计意义），
-> 须结合"预测数"列阅读；板块/个股绝对准确率仅供参考，评估以 lift / 方向技能为准（DECISIONS D3）。
+> 须结合"预测数"列阅读；板块/个股绝对准确率仅供参考，评估以 lift / 方向技能为准（已剔除市场涨跌影响）。
 
 ---
 
@@ -1275,7 +1275,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
             "独立性处理），准确率被系统性夸大且与严格验证近似镜像反转\n"
             "> （embargo 后实测：011 探底回升 40.5%、101 假突破 32.3%、010 反弹失败 58.3%，"
             "各模式均接近随机，见 AGENTS.md）。\n"
-            "> 仅作预测行为记录；评估一律以 lift / 方向技能为准（DECISIONS D3），"
+            "> 仅作预测行为记录；评估一律以 lift / 方向技能为准（已剔除市场涨跌影响），"
             "重叠窗口见 lessons 0.2。\n"
         )
     else:
