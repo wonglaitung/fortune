@@ -15,7 +15,10 @@
   `actual_return = (exit_raw − entry_qfq)/entry_qfq` 在**跨除息日失真**（实测汇丰 0005.HK 2026-03
   除息窗口：真实 +2.02% vs 旧口径 +3.28%，虚高 62%），污染 lift/方向技能/IC/护栏评估。
 - 修复：`fetch_price` 改优先腾讯 qfq（与 entry 同源），yfinance 未复权降为兜底。
-- 记录：lessons 三.17（v10.20）、AGENTS 警告表 + 数据流说明、VALIDATION_GUIDE 性能监控章节。
+- walk-forward 路径确认无此问题：`walk_forward_validation.py` 的 `actual_return` 用 `Future_Return`
+  （qfq Close），`prediction_analysis.csv` → backtest_eval/护栏全 qfq；抽查汇丰 2026-03-09 跨除息
+  20天收益与腾讯 qfq 复算一致（+10.03% = +10.03%）。
+- 记录：lessons 三.17（v10.20）、AGENTS 警告表 + 数据流说明 + walk-forward 行、VALIDATION_GUIDE 性能监控章节。
 - 遗留：历史 `prediction_history.json` 已评估记录为旧口径（CI 管理，需 `--force` 重估才会刷新）。
 
 **主表股票链接化**：`comprehensive_analysis.py` 新增 `_stock_chart_url`，主表股票号码变为可点

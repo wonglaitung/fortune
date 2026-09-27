@@ -675,6 +675,11 @@ ratio(raw/qfq) 跳变（实测汇丰 0005.HK 2026-03-09→03-12 除息：qfq 真
 - 评估链路的 exit/entry 数据源必须追到"同一复权基准"，不能训练用 qfq、评估用 raw
 - 复权一致性验证：对比 qfq 与 raw 的 ratio 序列，除息日是否有跳变（>0.1% 即失真）
 - 文档/AGENTS 应在数据源说明里标注复权口径（本项目：港股=A 股均腾讯 qfq 前复权）
+- **walk-forward 路径已确认 qfq**：`walk_forward_validation.py` 的 `actual_return` 用
+  `Future_Return`（qfq Close）或 `Close.shift(-horizon)/Close-1`（同 qfq），`prediction_analysis.csv`
+  → `backtest_eval`/`monthly_guardrail` 全 qfq；抽查汇丰 2026-03-09 跨除息 20 天收益与腾讯 qfq
+  复算一致（+10.03% = +10.03%）。唯一边界：腾讯接口故障时 `get_hk_stock_data_tencent` 兜底
+  yfinance 未复权（`_hk_yf_fallback`），仅应急路径、罕见
 
 
 ## 四、模型训练

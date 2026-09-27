@@ -197,6 +197,9 @@ flowchart TD
 - A股：`data_services/a_stock_data.py` 的 `get_a_stock_data` 请求 `fqkline/...qfq`（前复权）
 - 标签/特征：`Future_Return`、`Label`、`current_price`(entry) 全部基于 qfq 复权价 → 模型学的是除息调整后真实收益
 - 股息特征：`ml_trading_model.py` `_add_dividend_features`（7/30天内除净日 + 12月分红次数）
+- **Walk-forward 同口径**：`walk_forward_validation.py` 的 `actual_return` 用 `Future_Return`（qfq Close），
+  `prediction_analysis.csv` → `backtest_eval.py`/`monthly_guardrail.py` 全部 qfq；实测与腾讯 qfq 复算一致
+  （汇丰 2026-03-09 跨除息 20天 +10.03% = +10.03%）
 - **性能监控 exit 价必须 qfq 同源**（`fetch_price` 用腾讯 qfq，yfinance 未复权仅兜底）——禁用未复权价当 exit（跨除息日 actual_return 失真，见 lessons 三.17）
 
 **特征模块**（动态构建，自动同步）：
