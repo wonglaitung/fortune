@@ -192,6 +192,13 @@ flowchart TD
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（31只）
 - `message_services/` 统一管理邮件和微信通知
 
+**复权口径**（除权除息处理，全链路统一前复权 qfq）：
+- 港股：`data_services/tencent_finance.py` 的 `get_hk_stock_data_tencent` 请求 `hkfqkline/...qfq`（前复权）
+- A股：`data_services/a_stock_data.py` 的 `get_a_stock_data` 请求 `fqkline/...qfq`（前复权）
+- 标签/特征：`Future_Return`、`Label`、`current_price`(entry) 全部基于 qfq 复权价 → 模型学的是除息调整后真实收益
+- 股息特征：`ml_trading_model.py` `_add_dividend_features`（7/30天内除净日 + 12月分红次数）
+- **性能监控 exit 价必须 qfq 同源**（`fetch_price` 用腾讯 qfq，yfinance 未复权仅兜底）——禁用未复权价当 exit（跨除息日 actual_return 失真，见 lessons 三.17）
+
 **特征模块**（动态构建，自动同步）：
 - `data_services/calendar_features.py` - 日历效应（22个特征）
 - `data_services/volatility_model.py` - GARCH 波动率（4个特征）
