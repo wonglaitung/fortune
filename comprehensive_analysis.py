@@ -1247,7 +1247,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
-            catboost_text_llm += "- `probability_20d`: 20天上涨概率（已Isotonic校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+            catboost_text_llm += "- `probability_20d`: 20天上涨概率（已校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
             catboost_text_llm += "- `ml_conf_20d`: 方向判对概率（置信度，0-1），与 probability_20d（上涨概率）含义不同，可一并写进推荐理由\n"
             catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
@@ -1274,12 +1274,12 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 # 在邮件开头显示市场情绪
                 layer_names_email = {
                     'extreme_bear': '🔴 极端熊市 - 暂停交易',
-                    'bear': f'🟠 熊市 - 需校准概率≥{dynamic_threshold:.2f}（前约8%分位）',
-                    'weak': f'🟡 弱震荡 - 需校准概率≥{dynamic_threshold:.2f}（前约10%分位）',
+                    'bear': f'🟠 熊市 - 需校准概率≥{dynamic_threshold:.2f}（历史前约8%最高值）',
+                    'weak': f'🟡 弱震荡 - 需校准概率≥{dynamic_threshold:.2f}（历史前约10%最高值）',
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = "【机器学习三周期预测结果】（概率已Isotonic校准）\n"
+                catboost_text_email = "【机器学习三周期预测结果】（概率已校准）\n"
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
@@ -1482,21 +1482,21 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pattern_name = pattern_info.get('name', '未知')
                     catboost_text_email += f"- {pattern_name}({pattern}): {count} 只\n"
 
-                catboost_text_email += "\n> *「模式/交易建议/历史胜率」来自三周期模式历史统计（out-of-sample 经 embargo 验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
+                catboost_text_email += "\n> *「模式/交易建议/历史胜率」来自三周期模式历史统计（样本外、去重叠验证后与随机无显著差异），仅作背景参考，不作决策依据。\n"
 
                 # 添加三色预测说明
                 catboost_text_email += f"\n**三周期预测颜色说明**：\n"
                 catboost_text_email += "- <span style=\"color: #16a34a; font-weight: bold;\">↑</span>（亮绿色）：概率 ≥ 60%，高置信度看涨\n"
                 catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，方向看涨（50-55%弱信号仅观望/≤2%；55-60%中等置信度可买入）\n"
                 catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
-                catboost_text_email += "- 概率已经过 Isotonic 校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
+                catboost_text_email += "- 概率已经过校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
                 catboost_text_email += "- <span style=\"color: #9ca3af;\">(置信xx%)</span>：**模型方向判对概率**（由历史预测拟合），与上涨概率是两回事\n"
 
                 # 添加市场调整说明
                 catboost_text_email += f"\n**市场调整说明**：\n"
                 catboost_text_email += "- 🟢正常：正常市场环境，使用标准阈值（≥0.55可买入，≥0.60强买入）\n"
-                catboost_text_email += "- 🟡通过/降级：弱震荡市场，校准概率位于校准分布前约10%分位通过，否则降级为观望（无视买入档位）\n"
-                catboost_text_email += "- 🟠高置信/降级：熊市环境，校准概率位于校准分布前约8%分位通过，否则降级为观望（无视买入档位）\n"
+                catboost_text_email += "- 🟡通过/降级：弱震荡市场，概率位于历史最高前约10%以内才通过，否则降级为观望（无视买入档位）\n"
+                catboost_text_email += "- 🟠高置信/降级：熊市环境，概率位于历史最高前约8%以内才通过，否则降级为观望（无视买入档位）\n"
                 catboost_text_email += "- 🔴暂停：极端熊市，暂停所有看涨信号\n"
                 catboost_text_email += "- ⚙️ 优先级：市场调整列最高——未过门槛的股票无论概率落入哪档均按观望处理\n"
 
@@ -1515,7 +1515,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- 🔴高：上方筹码 > 60%，拉升困难\n"
 
                 # 添加盈亏比说明
-                catboost_text_email += f"\n**历史盈亏比说明**（基于Walk-forward验证）：\n"
+                catboost_text_email += f"\n**历史盈亏比说明**（基于滚动回测验证）：\n"
                 catboost_text_email += "- 盈亏比 = 正确预测平均盈利 / 错误预测平均亏损\n"
                 catboost_text_email += "- 期望收益 = 胜率 × 平均盈利 - (1-胜率) × 平均亏损\n"
                 catboost_text_email += "- ⭐⭐⭐：盈亏比 ≥ 3:1，优秀\n"
@@ -5409,7 +5409,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             sector_text += "- 🛡️ **重仓防御板块**：熊市中防御板块占优比例65.9%\n"
                             sector_text += "- 🛡️ **推荐配置**：保险30%、公用事业25%、银行20%\n"
                             sector_text += "- 🛡️ **总仓位建议**：75%（保留25%现金）\n"
-                            sector_text += "- ⚠️ **注意**：银行股Walk-forward夏普-0.053，不宜重仓\n"
+                            sector_text += "- ⚠️ **注意**：银行股滚动回测夏普-0.053，不宜重仓\n"
                             if defensive_avg > cyclical_avg:
                                 sector_text += f"- 📉 当前防御板块表现优于周期板块，符合熊市规律\n"
                         else:
@@ -5420,7 +5420,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                             sector_text += "- 📊 关注相对强势板块，每5日重新评估\n"
 
                         sector_text += "\n**⚠️ 重要提醒**：\n"
-                        sector_text += "- 领涨频率高≠策略收益高，需以Walk-forward验证结果为准\n"
+                        sector_text += "- 领涨频率高≠策略收益高，需以滚动回测验证结果为准\n"
                         sector_text += "- 动量/反转策略效果有限，不建议单独使用\n"
                         sector_text += "- 板块轮动周期约28天，每2-3周评估轮动时机\n"
 
@@ -5580,8 +5580,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                 # 市场风险横幅（置顶）：按市场情绪给出当日操作指引
                 banner_map = {
                     'extreme_bear': '🔴 极端熊市：暂停买入，等待市场企稳',
-                    'bear': f'🟠 熊市：仅考虑高置信（≥{dynamic_threshold:.2f}，前约8%分位）买入，严格止损',
-                    'weak': f'🟡 弱震荡：谨慎，优先高置信（≥{dynamic_threshold:.2f}，前约10%分位）信号',
+                    'bear': f'🟠 熊市：仅考虑高置信（≥{dynamic_threshold:.2f}，历史前约8%最高值）买入，严格止损',
+                    'weak': f'🟡 弱震荡：谨慎，优先高置信（≥{dynamic_threshold:.2f}，历史前约10%最高值）信号',
                     'normal': '🟢 正常市场：常规操作',
                 }
                 banner_line = f"> {banner_map.get(market_layer, '市场状态未知')}（上涨比例 {up_ratio:.1%}，动态阈值 {dynamic_threshold:.2f}）\n\n"
@@ -5614,7 +5614,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 | 5天 | **{model_accuracy['5d']['accuracy']:.2%}** | ±{model_accuracy['5d']['std']:.2%} |
 | 20天 | **{model_accuracy['20d']['accuracy']:.2%}** | ±{model_accuracy['20d']['std']:.2%} |
 
-> 三周期均为流水线当日训练、训练与预测同源的生产模型（Walk-forward 验证口径，20天数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）。下表概率均为 Isotonic 校准后概率，`置信xx%` 为模型方向判对概率。
+> 三周期均为流水线当日训练、训练与预测同源的生产模型（滚动回测验证口径，20天数据截至 {model_accuracy['ml_20d'].get('date') or '未知'}）。下表概率均为校准后概率，`置信xx%` 为模型方向判对概率。
 
 {ml_predictions.get('ensemble_email', ml_predictions.get('ensemble', ''))}
 
@@ -5743,19 +5743,19 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
 ### ✦ 动态置信度阈值策略（根据市场环境调整）
 
-门槛按校准历史分布**分位动态计算（PIT）**，与邮件"市场调整"列判定完全一致。当日具体数值见邮件头部"动态阈值"：
+门槛按历史表现动态计算，与邮件"市场调整"列判定完全一致。当日具体数值见邮件头部"动态阈值"：
 
-| 市场环境 | 门槛（校准概率分位） | 说明 |
-|---------|-----------|------|
-| 正常/牛市 | 无市场门槛 | 按买入分档执行：≥0.55可买入（前约18%），≥0.60强买入（前约11%） |
-| 弱震荡 (weak) | 前约10%分位 | 未达门槛 → 市场调整列"降级"，一律观望 |
-| 熊市 (bear) | 前约8%分位 | 未达门槛 → 市场调整列"降级"，一律观望 |
+| 市场环境 | 门槛 | 说明 |
+|---------|------|------|
+| 正常/牛市 | 无市场门槛 | 按买入分档执行：≥0.55可买入（历史前约18%），≥0.60强买入（历史前约11%） |
+| 弱震荡 (weak) | 历史前约10%最高值 | 未达门槛 → 市场调整列"降级"，一律观望 |
+| 熊市 (bear) | 历史前约8%最高值 | 未达门槛 → 市场调整列"降级"，一律观望 |
 | 极端熊市 | 暂停 | 暂停全部看涨信号 |
 
 **使用建议**：
 - 市场调整列优先级最高：未过所在市场门槛 → 无视仓位映射，按观望处理
-- 熊市达标票少（校准分布前约8%）属正常，不要自行放宽阈值
-- 门槛为分位数而非固定值：校准器重拟后自动跟随分布，避免绝对阈值漂移
+- 熊市达标票少（历史前约8%）属正常，不要自行放宽阈值
+- 门槛随历史数据自动调整，避免固定值失效
 
 ### ✦ 强烈买入信号
 **强烈买入信号**是在每日综合分析邮件中的第一部分，包含：
@@ -5780,15 +5780,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 3. **投资原则**：
    - 短期触发 + 中期确认 + ML验证 = 高置信度信号
    - 短期和中期冲突 = 观望（避免不确定性）
-   - ML概率0.50-0.55 = 信号弱（校准分布占近一半），建议观望或轻仓（≤2%）
+   - ML概率0.50-0.55 = 信号弱（历史中占近一半），建议观望或轻仓（≤2%）
    - ML概率0.55-0.60 = 买入区间（建议2-3%）；≥0.60（前约11%）才对应4-6%强买入仓位
    - 总仓位控制在45%-55%，分散风险
 
 ## 十二、数据来源
 
 - 大模型分析：Qwen大模型
-- ML预测：三周期生产模型（概率已Isotonic校准）
-- 特征工程：2991个原始特征，500个精选特征（F-test+互信息混合方法）
+- ML预测：三周期生产模型（概率已校准）
+- 特征工程：2991个原始特征，500个精选特征（按相关性+信息量筛选）
 - 技术指标：RSI、MACD、布林带、ATR、均线、成交量等80+个指标
 - 基本面数据：PE、PB、ROE、ROA、股息率等8个指标
 - 美股市场：标普500、纳斯达克、VIX、美国国债收益率等11个指标

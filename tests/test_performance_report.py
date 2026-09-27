@@ -44,7 +44,7 @@ def test_pattern_section_has_disclaimer_no_actions():
     """三周期节：有免责 + 无"建议"列 + 无具体操作词 + 列名降级。"""
     report = generate_monthly_report(_three_horizon_history())
     assert '不构成交易依据' in report
-    assert '未 embargo' in report
+    assert '未做独立性去重' in report
     assert '表面准确率' in report
     assert '| 建议 |' not in report
     assert '分批建仓' not in report
@@ -209,9 +209,9 @@ def test_pattern_ranked_by_avg_return_not_win_rate():
 def test_honest_summary_has_ci_and_ic_lines():
     """诚实摘要必须含 block bootstrap CI 与横截面 IC 行（样本不足时给降级说明）。"""
     report, extra_html = assemble_report(_big_history())
-    assert 'block bootstrap 95%CI' in report
-    assert '横截面 Spearman IC' in report
-    assert 'block bootstrap' in extra_html or '样本不足' in extra_html
+    assert '95%置信区间（重抽样检验' in report
+    assert '横截面排名相关性（IC）' in report
+    assert '95%置信区间' in extra_html or '样本不足' in extra_html
 
 
 def _multi_horizon_history(n_days=90, n_stocks=6, start='2026-07-01'):
@@ -252,7 +252,7 @@ def test_window_bar_section_renders_ci_and_guardrail():
     ci = _window_bootstrap_ci(hist, TIME_WINDOWS)
     html, atts = generate_window_bar_section(
         wm, ci=ci, guardrail_html='<b>20d 组合层护栏</b>')
-    assert '误差须 = block bootstrap 95%CI' in html
+    assert '误差须 = 95%置信区间' in html
     assert '20d 组合层护栏' in html
     assert 'perf_window_lift' in atts and 'perf_window_ds' in atts
 
@@ -320,7 +320,7 @@ def test_radar_section_shows_ci_and_significance():
             'sharpe_ratio': 0.3}
     html, atts = generate_sector_radar_section(
         bundle, ci=ci, guardrail_html='<b>20d 组合层护栏</b>')
-    assert 'block bootstrap 95%CI' in html
+    assert '95%置信区间（重抽样检验' in html
     assert '20d 组合层护栏' in html
     assert '显著' in html or '不显著' in html
 

@@ -553,7 +553,7 @@ def _guardrail_status() -> Optional[str]:
             for line in f:
                 if line.strip().startswith('## 判定'):
                     return (f"上次 20d TopK 护栏（{os.path.basename(latest)}）: {line.strip()}"
-                            f"（净IR/PBO/DSR 由 monthly_guardrail.py 复核计算，本报告仅转贴不重算）")
+                            f"（净IR/PBO/DSR 由系统自动复核，本报告仅转贴不重算）")
     except Exception:
         return None
     return None
@@ -620,7 +620,8 @@ def _guardrail_block() -> str:
 >
 > 规格：TopK=10 行业内 z-score、20 日非重叠调仓、成本 0.5%；
 > 🟡 保留 ≤10%、🟢 可放大 15–20%、🔴（IR≤0）清仓（系统低配辅助信号）
-> —— PBO/DSR 由 `monthly_guardrail.py` 复核计算，本报告仅转贴不重算"""
+> —— 净IR=风险调整后收益（越高越好）；PBO=过拟合概率（越低越好）；DSR=统计显著性（越高越好）。
+> 复核计算由系统自动完成，本报告仅转贴不重算"""
 
 
 def _guardrail_html_summary() -> str:
@@ -669,8 +670,9 @@ def _guardrail_html_summary() -> str:
         f'{_ok(ir, lambda v: v >= 0.7)} · PBO <b>{pbo}</b> '
         f'{_ok(pbo, lambda v: v < 0.5)} · DSR <b>{dsr}</b> '
         f'{_ok(dsr, lambda v: v >= 0.95)}'
-        '<br><span style="color:#999; font-size:11px;">PBO/DSR 由 monthly_guardrail.py '
-        '复核计算，本报告仅转贴不重算；净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
+        '<br><span style="color:#999; font-size:11px;">净IR=风险调整后收益（越高越好）；PBO=过拟合概率'
+        '（越低越好）；DSR=统计显著性（越高越好）。复核计算由系统自动完成，本报告仅转贴不重算；'
+        '净IR≥0.7 且 PBO&lt;0.5 且 DSR≥0.95 → 🟢 可升级。</span>'
         '</div>'
     )
 
@@ -1043,19 +1045,19 @@ def assemble_report(history, month=None, guardrail_line=None):
                 else:
                     verdict_lift = 'CI 跨 0 → 不显著'
                 ci_md = (
-                    f"- block bootstrap 95%CI（按交易日分块 ×{boot['n_boot']} 次，"
-                    f"{boot['n_blocks']} 个交易日块）: "
-                    f"lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
+                    f"- 95%置信区间（重抽样检验 ×{boot['n_boot']} 次，"
+                    f"按 {boot['n_blocks']} 个交易日分块）: "
+                    f"超额lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
                     f"方向技能 [{lo_d*100:+.1f}, {hi_d*100:+.1f}]pp —— **{verdict_lift}**"
                 )
                 ci_html = (
-                    f"<li>block bootstrap 95%CI（按交易日分块 ×{boot['n_boot']} 次，"
-                    f"{boot['n_blocks']} 个交易日块）: "
-                    f"lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
+                    f"<li>95%置信区间（重抽样检验 ×{boot['n_boot']} 次，"
+                    f"按 {boot['n_blocks']} 个交易日分块）: "
+                    f"超额lift [{lo*100:+.1f}, {hi*100:+.1f}]pp；"
                     f"方向技能 [{lo_d*100:+.1f}, {hi_d*100:+.1f}]pp —— <b>{verdict_lift}</b></li>"
                 )
             else:
-                ci_md = "- block bootstrap 95%CI: 样本不足（需 ≥15 个交易日块且 ≥60 条已评估），暂不给出"
+                ci_md = "- 95%置信区间（重抽样检验）: 样本不足（需 ≥15 个交易日块且 ≥60 条已评估），暂不给出"
                 ci_html = f"<li>{ci_md}</li>"
             honest_md += ci_md + "\n"
             honest_html_items.append(ci_html)
@@ -1064,17 +1066,17 @@ def assemble_report(history, month=None, guardrail_line=None):
             ic = _cross_sectional_ic(preds_all)
             if ic:
                 ic_md = (
-                    f"- 横截面 Spearman IC: **{ic['mean_ic']:+.3f}**"
+                    f"- 横截面排名相关性（IC）: **{ic['mean_ic']:+.3f}**"
                     f"　ICIR: **{ic['icir']:+.2f}**"
-                    f"（{ic['n_days']} 个截面日，raw 概率——秩相关对 Isotonic 单调校准不变）"
+                    f"（{ic['n_days']} 个截面日）"
                 )
                 ic_html = (
-                    f"<li>横截面 Spearman IC: <b>{ic['mean_ic']:+.3f}</b>"
+                    f"<li>横截面排名相关性（IC）: <b>{ic['mean_ic']:+.3f}</b>"
                     f"　ICIR: <b>{ic['icir']:+.2f}</b>"
-                    f"（{ic['n_days']} 个截面日，raw 概率——秩相关对 Isotonic 单调校准不变）</li>"
+                    f"（{ic['n_days']} 个截面日）</li>"
                 )
             else:
-                ic_md = "- 横截面 Spearman IC: 样本不足（需 ≥15 个含 ≥10 只股票的截面日），暂不给出"
+                ic_md = "- 横截面排名相关性（IC）: 样本不足（需 ≥15 个含 ≥10 只股票的截面日），暂不给出"
                 ic_html = f"<li>{ic_md}</li>"
             honest_md += ic_md + "\n\n---\n\n"
             honest_html_items.append(ic_html)
@@ -1251,7 +1253,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 与严格验证结论矛盾（AGENTS 模式表：011 实为 40.5%、101 为 32.3%），
     # 可执行建议违反 DECISIONS D3 / lessons 0.2，仅保留统计记录。
 
-    report += "\n---\n\n## 四、三周期模式统计（3个月窗口，⚠️ 未 embargo）\n\n"
+    report += "\n---\n\n## 四、三周期模式统计（3个月窗口，⚠️ 未做独立性去重）\n\n"
 
     if pattern_stats:
         # 按平均收益排序（禁用绝对胜率排名，DECISIONS D3 / 停止清单）
@@ -1271,12 +1273,12 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
         report += (
             "\n**模式编码**：110 = 1天涨、5天涨、20天跌 | 统计时间：3个月窗口\n\n"
-            "> ⚠️ **本表不构成交易依据**：数据来自生产预测历史（重叠窗口、无 embargo "
-            "独立性处理），准确率被系统性夸大且与严格验证近似镜像反转\n"
-            "> （embargo 后实测：011 探底回升 40.5%、101 假突破 32.3%、010 反弹失败 58.3%，"
-            "各模式均接近随机，见 AGENTS.md）。\n"
+            "> ⚠️ **本表不构成交易依据**：数据来自生产预测历史（重叠窗口、未做独立性去重），"
+            "准确率被系统性夸大且与严格验证近似镜像反转\n"
+            "> （去重叠后实测：011 探底回升 40.5%、101 假突破 32.3%、010 反弹失败 58.3%，"
+            "各模式均接近随机）。\n"
             "> 仅作预测行为记录；评估一律以 lift / 方向技能为准（已剔除市场涨跌影响），"
-            "重叠窗口见 lessons 0.2。\n"
+            "重叠窗口会夸大信号可信度。\n"
         )
     else:
         report += "*样本量不足，暂无统计数据（需要同时有1天、5天、20天预测）*\n"

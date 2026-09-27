@@ -2085,3 +2085,20 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **口径注**：邮件 TopK 基于当前 31 只自选池（K=7）；回测/护栏基于 59 只池（K=10）——已在图例注明
 - 新增 `tests/test_live_topk_email.py` 8 项（行业内 z 均值≈0 / K 上限 / top-k / raw=prob /
   跨板块可比性 / 概率列别名 / 缺失报错 / select 读 CSV）→ **108 passed**
+
+### 2026-09-27 邮件内部研发口径改白话（续 D2/D3 清理）⭐
+
+- **背景**：邮件此前仍带内部口径——Isotonic校准、embargo、out-of-sample、block bootstrap、
+  Spearman IC、PIT、分位、校准分布、F-test+互信息、Walk-forward、monthly_guardrail.py、
+  以及"分位""校准器重拟"等研发术语；LLM prompt 内(5051-5147)保留（非读者可见）
+- **清理范围**（仅读者可见渲染字符串，注释/LLM prompt/内部文档编号保留）：
+  - `Isotonic校准`→`已校准`；`Walk-forward`→`滚动回测`；`embargo`→`去重叠/独立性去重`；
+    `out-of-sample`→`样本外`；`block bootstrap 95%CI`→`95%置信区间（重抽样检验）`；
+    `Spearman IC`→`横截面排名相关性（IC）`；`PIT/分位/校准分布`→`历史前约X%最高值`；
+    `F-test+互信息`→`按相关性+信息量筛选`；`monthly_guardrail.py`→`系统自动复核`
+  - 护栏块加一行白话注：净IR=风险调整后收益 / PBO=过拟合概率 / DSR=统计显著性
+  - 涉及：comprehensive_analysis.py（标题/图例/板块/动态阈值节/决策框架/数据来源）、
+    ml_services/performance_monitor.py（护栏块 md+html/诚实摘要/三周期免责/护栏摘要）、
+    scripts/performance_charts.py（四张图caption）
+  - 测试同步断言新文案：tests/test_performance_report.py 6 处（未做独立性去重/
+    95%置信区间/横截面排名相关性）→ **108 passed**

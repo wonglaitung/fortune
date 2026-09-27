@@ -394,16 +394,16 @@ def generate_overall_radar_section(horizon_metrics, window_name='3个月',
 
     html = _SECTION_H2.format(title='一、模型整体性能雷达')
     html += _CAPTION.format(
-        text=f'统计窗口：{window_name} | 5 维度均为 D3 口径指标，归一化至 0–100：'
+        text=f'统计窗口：{window_name} | 5 维度均为基准扣除后的指标，归一化至 0–100：'
              '方向技能=准确率−永远看涨占比（50=无技能）· '
              '超额lift=信号净胜率−无条件买入基准（50=无超额）· '
              '平均收益（50=零收益）· 夏普（50=零夏普）· 买入平均收益（50=零收益）| '
              '5 维均按三周期组内自适应尺度缩放（0 恒为雷达中心，仅调幅度，便于横向对比）| '
-             '方向技能/超额lift 两轴的径向短线 = block bootstrap 95%CI（越宽越不可靠，'
+             '方向技能/超额lift 两轴的径向短线 = 95%置信区间（重抽样检验，越宽越不可靠，'
              'CI 跨 0 视为不显著——形状大≠有能力）| '
              '样本量 n 见各图下方文字（仅作可信度参考，不参与雷达形状）| '
-             '标题"综合"=加权综合分(方向技能×3·超额lift×3·其余×1，D3 双主指标为主，雷达5轴形状仍等权) | '
-             '评估一律以基准扣除后的技能/超额为准（AGENTS D3），绝对准确率/胜率不作判定依据 | '
+             '标题"综合"=加权综合分(方向技能×3·超额lift×3·其余×1，雷达5轴形状仍等权) | '
+             '评估一律以基准扣除后的技能/超额为准，绝对准确率/胜率不作判定依据 | '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
     html += '    <table style="border: 0; border-collapse: collapse; width: 100%;">\n        <tr>\n'
     html += ''.join(cells)
@@ -533,8 +533,8 @@ def generate_window_bar_section(window_metrics,
     html += _CAPTION.format(
         text='上图=超额lift（信号净胜率 − 无条件买入基准）| 下图=方向技能（准确率 − 永远看涨占比）| '
              '两者均为基准扣除后的百分点，虚线 0 = 无超额 / 无技能 | '
-             '误差须 = block bootstrap 95%CI（按交易日分块，CI 跨 0 视为不显著）| '
-             '绝对准确率/胜率不作判定依据（AGENTS D3）| '
+             '误差须 = 95%置信区间（重抽样检验，按交易日分块，CI 跨 0 视为不显著）| '
+             '绝对准确率/胜率不作判定依据| '
              '颜色深浅区分周期（浅=1天 → 深=20天）')
     for cid, suptitle in imgs:
         html += ('    <div style="text-align: center; margin: 6px 0;">'
@@ -626,9 +626,9 @@ def generate_sector_radar_section(sector_metrics, min_samples=5, items_per_row=4
     html = _SECTION_H2.format(title='三、板块表现雷达图')
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 仅展示样本数 ≥ {min_samples} 的板块 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径）| 5 维均按'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主）| 5 维均按'
              '板块组内自适应尺度缩放（0=中性，仅调幅度）| 方向技能/超额lift 的径向短线'
-             ' = block bootstrap 95%CI，跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
+             ' = 95%置信区间（重抽样检验），跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 颜色为综合分状态：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
@@ -746,9 +746,9 @@ def generate_pattern_bar_section(pattern_stats, pattern_names):
 
     html = _SECTION_H2.format(title='四、三周期模式验证')
     html += _CAPTION.format(
-        text='模式编码：110 = 1天涨·5天涨·20天跌 | 主轴 = 该模式 20天平均收益（D3 口径，'
+        text='模式编码：110 = 1天涨·5天涨·20天跌 | 主轴 = 该模式 20天平均收益（已剔除基准，'
              '与报告排序一致），括号内胜率为参考、不作判定依据 | 虚线 0 = 零收益 | '
-             '⚠️ 本表不构成交易依据：生产历史为重叠窗口（未 embargo），见报告正文 | '
+             '⚠️ 本表不构成交易依据：生产历史为重叠窗口（未做独立性去重），见报告正文 | '
              '颜色：'
              '<span style="color:#16a34a;">收益≥+1%</span> / '
              '<span style="color:#ea580c;">0~+1%</span> / '
@@ -881,9 +881,9 @@ def generate_stock_section(stock_bundle, min_samples=5, top_n=10, items_per_row=
     html += _CAPTION.format(
         text=f'统计口径：20天周期 / 3个月窗口 | 排名条覆盖全部 {len(items)} 只个股（样本 ≥ {min_samples}）| '
              f'下方雷达为综合分 Top {min(top_n, len(items))} 的细节 | '
-             '5 维度同整体雷达（方向技能 / 超额lift 为主，D3 口径），5 维均按'
+             '5 维度同整体雷达（方向技能 / 超额lift 为主），5 维均按'
              '个股组内自适应尺度缩放（0=中性，仅调幅度）| 方向技能/超额lift 的径向短线'
-             ' = block bootstrap 95%CI，跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
+             ' = 95%置信区间（重抽样检验），跨 0 标"不显著"（形状大≠有能力）| 综合分=加权'
              '(方向技能×3·超额lift×3·其余×1) | 状态三色：'
              '<span style="color:#16a34a;">≥60</span> / '
              '<span style="color:#ea580c;">40–60</span> / '
