@@ -2,7 +2,7 @@
 
 > **本目录回答"该看哪份文档"。**
 > 项目总入口是根目录 [../AGENTS.md](../AGENTS.md)（规则 + 常用命令）；
-> 本文件是 docs/ 内 18 份文档的**导航地图**，不重复任何文档的内容。
+> 本文件是 docs/ 内 19 份文档的**导航地图**，不重复任何文档的内容。
 
 ---
 
@@ -12,6 +12,7 @@
 |---|---|
 | **决定要不要用 / 加仓 / 停用某个信号** | [DECISIONS.md](DECISIONS.md) → [DEPLOYMENT.md](DEPLOYMENT.md) |
 | **从零建一个量化系统** | [QUANT_SYSTEM_METHODOLOGY.md](QUANT_SYSTEM_METHODOLOGY.md) |
+| **搞懂量化交易常见误区（方法论）** | [量化交易误解-正式文档.md](量化交易误解-正式文档.md)（四道陷阱理论版，与 lessons/DECISIONS 对应） |
 | **验证新模型 / 新特征 / 新周期** | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) ＋ 技能 `.opencode/command/model_validation.md` |
 | **加一个新特征** | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md)（8 步验证清单） |
 | **搞懂 1/5/20 天三周期的结论** | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) |
@@ -53,6 +54,7 @@
 | [SECTOR_ROTATION_TRADING_RULES.md](SECTOR_ROTATION_TRADING_RULES.md) | 板块轮动交易法则 | 规则类 |
 | [ANOMALY_DETECTION_GUIDE.md](ANOMALY_DETECTION_GUIDE.md) | 异常检测的用法与限制 | 规则类 |
 | [CLASSIC_TRADING_THEORIES.md](CLASSIC_TRADING_THEORIES.md) | 股票买卖经典理论（参考） | 静态参考 |
+| [量化交易误解-正式文档.md](量化交易误解-正式文档.md) | 量化交易四大误区（看图确认偏差/除权除息/正态肥尾/回测过拟合）——方法论注脚，与 [../lessons.md](../lessons.md)/[DECISIONS.md](DECISIONS.md) 逐条对应 | 静态参考 |
 
 ### D. 分析报告（**快照，带日期，不追新**）
 
@@ -83,7 +85,7 @@
 | [../README.md](../README.md) | 项目介绍与架构 |
 | [../lessons.md](../lessons.md) | **踩过的坑**（编号 + 版本日志，事件级，会累积） |
 | [../progress.txt](../progress.txt) | 逐日进展流水（过程记录） |
-| `.opencode/command/model_validation.md` | 模型验证 S.O.P.（walk-forward → 5.5 → 5.6 全流程） |
+| `.opencode/command/model_validation.md` | 模型验证 S.O.P.（walk-forward → 5.5 → 5.6 → **5.7 组合层复核** 全流程） |
 
 ---
 

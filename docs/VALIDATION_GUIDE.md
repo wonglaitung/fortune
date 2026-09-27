@@ -39,7 +39,8 @@
 
 **评估铁律**：不看绝对准确率/胜率，只看 **超额 lift** 与 **方向技能**；每次 walk-forward 必跑
 `monthly_guardrail.py`（净IR≥0.7 且 PBO<0.5 且 DSR≥0.95 才可升级）；
-**真正要加仓前**再跑 `portfolio_backtest.py` 补两道检验——**超额 bootstrap CI + 逐年稳健**（见下方"月度护栏"章）。
+**每次 20d walk-forward 后另跑 `portfolio_backtest.py`**（技能阶段 5.7）补两道检验——
+**超额 bootstrap CI + 逐年稳健**（见下方"月度护栏"章；超额CI/逐年由工具直接产出，lessons 三.18）。
 
 ---
 
@@ -355,7 +356,8 @@ if self.horizon > 1:
 
 > **作用**：防止把"过拟合/虚假信号"当成真 alpha 上线。它不是一次性的评估，而是**决策闸门**：
 > 判断策略该 **🟢 升级 / 🟡 保留低配 / 🔴 停用**（依据 `docs/DECISIONS.md` D2）。
-> 命令：`python3 ml_services/monthly_guardrail.py --horizon 20`（每次 Walk-forward 后必跑）。
+> 命令：`python3 ml_services/monthly_guardrail.py --horizon 20`（每次 Walk-forward 后必跑）；
+> 组合层复核：`portfolio_backtest.py`（每次 20d walk-forward 后另跑，技能阶段 5.7）。
 
 ### 判定规则（DECISIONS D2）
 
@@ -375,6 +377,9 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
     --pred output/<最新回测目录>/prediction_analysis.csv \
     --output output/portfolio_20d_<日期>.md
 ```
+
+> 报告现由工具**直接产出**超额IR bootstrap CI / P(超额IR>0) / 逐年超额IR（2026-09-27 工具化，
+> 见 lessons 三.18），无需人工另算；判定与 `DECISIONS.md` §四 口径一致（超额IR 1.24 [0.18,2.41]）。
 
 | 检验 | 用白话说就是 | 做法 | 通过标准 |
 |------|------------|------|---------|
@@ -646,9 +651,9 @@ python3 ml_services/performance_monitor.py --mode all --horizon 20
 
 - **模型/特征变更后**：必跑 walk-forward（产物自动入库）；
 - **每次 walk-forward 后**：必跑 `backtest_eval.py` + `monthly_guardrail.py`；
-  **升配前**再跑 `portfolio_backtest.py` 两道检验（bootstrap CI + 逐年）；
+  20d 另跑 `portfolio_backtest.py`（阶段 5.7，超额CI + 逐年，工具直接产出）；
 - **每月**：`monthly_guardrail.py` 复核（[DEPLOYMENT.md](DEPLOYMENT.md)）；
-- **每天**：`performance_monitor.py`（诚实摘要，D3 口径）。
+- **每天**：`performance_monitor.py`（诚实摘要，基准扣除口径）。
 
 ---
 

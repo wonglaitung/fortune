@@ -2102,3 +2102,8 @@ python3 ml_services/performance_monitor.py --mode all --no-email
     scripts/performance_charts.py（四张图caption）
   - 测试同步断言新文案：tests/test_performance_report.py 6 处（未做独立性去重/
     95%置信区间/横截面排名相关性）→ **108 passed**
+- **文档同步**：docs/README.md 索引 18→19 份（加量化交易误解-正式文档.md + 导航行 +
+  model_validation 注明阶段 5.7）；README.md docs 列表补量化交易误解链接；
+  VALIDATION_GUIDE.md 评估铁律/月度护栏/现行SOP 对齐"每次 20d walk-forward 后另跑
+  portfolio_backtest（阶段5.7）+ 超额CI/逐年由工具直接产出（lessons 三.18）；
+  DEPLOYMENT.md 复核表补阶段 5.7

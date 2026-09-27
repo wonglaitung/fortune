@@ -874,6 +874,7 @@ python hsi_email.py --no-email
   - [FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) - 特征工程
   - [FEATURE_IMPORTANCE_ANALYSIS.md](docs/FEATURE_IMPORTANCE_ANALYSIS.md) - 特征重要性分析
   - [VALIDATION_GUIDE.md](docs/VALIDATION_GUIDE.md) - 验证方法
+  - [量化交易误解-正式文档.md](docs/量化交易误解-正式文档.md) - 量化交易常见误区（方法论注脚）
   - [SECTOR_ROTATION_TRADING_RULES.md](docs/SECTOR_ROTATION_TRADING_RULES.md) - 板块轮动
   - [BANK_AND_ETF_TRADING_GUIDE.md](docs/BANK_AND_ETF_TRADING_GUIDE.md) - 银行股与盈富基金买卖指引
   - [programmer_skill.md](docs/programmer_skill.md) - 开发规范

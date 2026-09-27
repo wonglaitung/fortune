@@ -144,7 +144,7 @@
 
 | 场景 | 做法 |
 |------|------|
-| 模型/特征/数据有改动 | 调用 **模型验证技能 `/model_validation`**（SOP 全流程：walk-forward → 阶段 5.5 严谨评估 → **阶段 5.6 月度护栏判定** → 文档/提交）。⚠️ walk-forward 本身约 3h |
+| 模型/特征/数据有改动 | 调用 **模型验证技能 `/model_validation`**（SOP 全流程：walk-forward → 阶段 5.5 严谨评估 → **阶段 5.6 月度护栏判定** → **阶段 5.7 组合层复核（20d）** → 文档/提交）。⚠️ walk-forward 本身约 3h |
 | 仅需对已有最新预测复核 | 直接 `python3 ml_services/monthly_guardrail.py --horizon 20`，提交 `output/monthly_guardrail_*.md`（秒级，不重训） |
 
 > 日常节奏：有改动 → `/model_validation` 全流程；无改动 → 直接 `monthly_guardrail.py`。
