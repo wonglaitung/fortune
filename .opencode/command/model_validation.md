@@ -681,6 +681,40 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
       不 push 则每日报告"策略护栏状态"用旧数据或提示缺失；5.5 产物为文档/注释引用锚点。
       两者均不在 D9 自动入库范围，须手动提交；output/ 只交 .md）
 
+---
+
+### 阶段 5.7：组合层复核（portfolio_backtest.py，必须执行）⭐
+
+**目的**：对 `20d 行业中性 TopK` 辅助信号做**组合层复核**——超额 bootstrap CI + 逐年稳健，
+与 `docs/DEPLOYMENT.md`"每次 walk-forward 后另跑"对齐（判定参考 `docs/VALIDATION_GUIDE.md` 月度护栏章）。
+
+**⚠️ 适用边界**：仅当本次 walk-forward 为 **20d** 时执行（与 5.6 同边界；1d/5d 无 TopK 辅助信号不跑）。
+
+#### 5.7A. 运行
+
+```bash
+python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
+    --pred output/<最新回测目录>/prediction_analysis.csv \
+    --output output/portfolio_20d_<日期>.md
+```
+
+#### 5.7B. 必看指标（判读）
+
+| 指标 | 判读 |
+|------|------|
+| **超额IR 95%CI**（TopK净 − 等权基准，bootstrap 2000 次） | 下界 **>0** 才稳（基准自身 CI 常跨 0——2026-09-26 基准 0.97 [−0.16, 2.04]，只看绝对净IR 会高估）|
+| **逐年超额** | 多数年为正、**无单年独撑**；看**符号一致性**，不看单年 IR 大小（20d 每年仅 ~12 期）|
+| 绝对净IR 95%CI | 下界 >0（辅助参考，最终以超额口径为准）|
+
+> 判定与 5.5（lift/方向技能）+ 5.6（净IR/PBO/DSR）合并，共同构成 D2 决策证据链。
+
+#### 5.7C. 阶段 5.7 检查清单
+
+- [ ] 已对最新 `prediction_analysis.csv` 运行 `portfolio_backtest.py`
+- [ ] 已记录**超额IR 95%CI**（下界>0）与**逐年超额符号**（多数年为正、无单年独撑）
+- [ ] 组合层稳健后才进入升配决策
+- [ ] 已 commit/push `output/portfolio_20d_*.md`（记录归档；5.7 产物不供 CI 读取，非强制）
+
 ## 执行检查清单
 
 在完成验证流程前，请确认：
@@ -810,6 +844,12 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
 - [ ] 🟡 保留时确认未上核心仓位；🔴 时已停用
 - [ ] **已 commit/push `output/monthly_guardrail_*.md` + `output/backtest_eval_*.md`**
       （5.6 产物是 CI `performance-monitor.yml` 护栏段的**唯一数据源**，不 push 下游即断）
+
+### 阶段 5.7 检查（必须完成，仅 20d walk-forward）⭐
+
+- [ ] 已运行 `python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred <最新CSV>`
+- [ ] 已记录**超额IR 95%CI**（下界>0）与**逐年超额**（多数年为正、无单年独撑）
+- [ ] 组合层稳健后才谈升配（D2 证据链：5.5 lift → 5.6 护栏 → 5.7 超额 CI/逐年）
 
 ## 数据泄漏警告
 
@@ -1053,6 +1093,7 @@ python3 ml_services/monthly_guardrail.py --pred <csv> --output output/mg.md
 | **恒指 Walk-forward** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` |
 | **个股 Walk-forward（推荐）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20 --use-feature-selection` |
 | **个股 Walk-forward（全量特征）** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` |
+| **组合层复核（20d）** | `python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10` |
 
 ### 模型对比
 

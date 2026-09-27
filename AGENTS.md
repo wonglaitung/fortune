@@ -54,6 +54,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **股票网络分析** | `python3 ml_services/stock_network_analysis.py --skip-pmfg` | - |
 | **回测评估（lift/方向技能）** | `python3 ml_services/backtest_eval.py --input output/<dir>/prediction_analysis.csv --horizon 20` | ⭐ 评估必用 |
 | **月度护栏（净IR/PBO/DSR）** | `python3 ml_services/monthly_guardrail.py --horizon 20` | 每次 Walk-forward 后必跑，判定见 `docs/DECISIONS.md` D2 |
+| **组合层复核（超额CI/逐年）** | `python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 --pred output/<dir>/prediction_analysis.csv` | 每次 20d Walk-forward 后另跑（技能阶段 5.7）；超额IR CI 下界>0 且逐年多数为正 |
 | **性能监控** | `python3 ml_services/performance_monitor.py --mode all --no-email` | - |
 | **风险回报率分析** | `python3 ml_services/risk_reward_analyzer.py --stocks watchlist --style moderate` | - |
 
@@ -585,6 +586,7 @@ test_df[col] = test_df[col].apply(
 - **模型改进计划**：[docs/MODEL_IMPROVEMENT_PLAN.md](docs/MODEL_IMPROVEMENT_PLAN.md) - 业界基准驱动的分阶段计划 ⭐
 - **决策备忘**：[docs/DECISIONS.md](docs/DECISIONS.md) - 个股 alpha 停止投入等关键决策 ⭐
 - **建设方法论**：[docs/QUANT_SYSTEM_METHODOLOGY.md](docs/QUANT_SYSTEM_METHODOLOGY.md) - 五层结构 / 七原则 / 七阶段建设步骤 / 三道闸门 ⭐
+- **量化交易误解**：[docs/量化交易误解-正式文档.md](docs/量化交易误解-正式文档.md) - 方法论注脚：四道陷阱（看图确认偏差/除权除息/正态肥尾/回测过拟合）与 lessons/DECISIONS 逐条对应 ⭐
 - **实盘部署**：[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - 底仓+战术+风控与月度护栏 ⭐
 - **A股设计**：[docs/A_STOCK_DESIGN.md](docs/A_STOCK_DESIGN.md) - A股系统完整设计文档
 - **SSH认证**：[docs/SSH_SETUP.md](docs/SSH_SETUP.md) - 新电脑配置 GitHub SSH 认证指南

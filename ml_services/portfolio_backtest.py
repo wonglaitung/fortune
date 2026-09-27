@@ -9,7 +9,8 @@ Phase 3 最小版：把 OOS 预测分数转成组合，评估**扣成本后**的
   - TopK 组合（等权）；可选行业中性（行业内 z-score 后再选）
   - 成本 = 单边换手率 × 双边成本(TOTAL_COST)
   - 多空 Q5-Q1
-输出：净均收益 / 净IR / 胜率 / 换手 / 累计，并与等权基准对比
+输出：净均收益 / 净IR / 胜率 / 换手 / 累计，并与等权基准对比；
+含超额（TopK净 − 等权基准）bootstrap CI 与逐年超额分解
 
 用法：
   python3 ml_services/portfolio_backtest.py --horizon 5 --topk 10
@@ -111,11 +112,12 @@ def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_ta
 
 
 def bootstrap(x, horizon, n=2000, seed=42):
-    """对期收益做 bootstrap，返回 净均收益/净IR 的 95%CI 与 P(IR>0.5)"""
+    """对期收益做 bootstrap，返回 净均收益/净IR 的 95%CI 与 P(IR>0.5)/P(IR>0)"""
     x = np.asarray(x, dtype=float)
     x = x[np.isfinite(x)]
     if len(x) < 5:
-        return dict(mean_lo=np.nan, mean_hi=np.nan, ir_lo=np.nan, ir_hi=np.nan, p_ir=np.nan)
+        return dict(mean_lo=np.nan, mean_hi=np.nan, ir_lo=np.nan, ir_hi=np.nan,
+                    p_ir=np.nan, p_ir_pos=np.nan)
     rng = np.random.RandomState(seed)
     idx = np.arange(len(x))
     means, irs = [], []
@@ -127,7 +129,7 @@ def bootstrap(x, horizon, n=2000, seed=42):
     means = np.array(means); irs = np.array(irs)
     return dict(mean_lo=float(np.percentile(means, 2.5)), mean_hi=float(np.percentile(means, 97.5)),
                 ir_lo=float(np.nanpercentile(irs, 2.5)), ir_hi=float(np.nanpercentile(irs, 97.5)),
-                p_ir=float(np.nanmean(irs > 0.5)))
+                p_ir=float(np.nanmean(irs > 0.5)), p_ir_pos=float(np.nanmean(irs > 0)))
 
 
 def _stats(x, horizon):
@@ -173,6 +175,15 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None):
     series['多空 Q5-Q1（行业中性，净）'] = res["TopK-行业中性"]['ls_net'].values
     ci = {k: bootstrap(v, horizon) for k, v in series.items()}
 
+    # 超额序列（TopK净 − 等权基准，逐期）
+    excess = {
+        'TopK-raw（净）': res["TopK-raw"]['top_net'].values - res["TopK-raw"]['bench'].values,
+        'TopK-行业中性（净）': res["TopK-行业中性"]['top_net'].values - res["TopK-行业中性"]['bench'].values,
+        '多空 Q5-Q1（行业中性，净）': res["TopK-行业中性"]['ls_net'].values - res["TopK-行业中性"]['bench'].values,
+    }
+    ex_stats = {k: _stats(v, horizon) for k, v in excess.items()}
+    ex_ci = {k: bootstrap(v, horizon) for k, v in excess.items()}
+
     L.append("| 组合 | 期数 | 净均收益/期 | 净IR(年化) | 胜率 | 累计净收益 | 平均换手 | 净IR 95%CI | P(IR>0.5) |")
     L.append("|------|------|------------|-----------|------|-----------|---------|-----------|-----------|")
     for name, st, to in rows:
@@ -184,20 +195,38 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None):
                  f"{_p(st['win'])} | {_p(st['cum'])} | {to_s} | {cistr} | {pstr} |")
     L.append("")
     L.append("> P(IR>0.5) = bootstrap 中净IR超过 0.5 的比例（越高越稳健）。\n")
+
+    L.append("## 超额检验（TopK净 − 等权基准，bootstrap 2000 次）\n")
+    L.append("> 基准自身 CI 常跨 0，只看绝对净IR 会高估；超额口径 95%CI 下界 >0 才算组合层稳健。\n")
+    L.append("| 组合 | 超额均收益/期 | 超额IR | 超额IR 95%CI | P(超额IR>0) | 超额>0占比 |")
+    L.append("|------|-------------|--------|--------------|-------------|-----------|")
+    for name, st in ex_stats.items():
+        c = ex_ci[name]
+        cistr = '—' if np.isnan(c['ir_lo']) else f"[{c['ir_lo']:.2f}, {c['ir_hi']:.2f}]"
+        ppos = '—' if np.isnan(c['p_ir_pos']) else f"{c['p_ir_pos']*100:.0f}%"
+        win = '—' if np.isnan(st['win']) else f"{st['win']*100:.0f}%"
+        L.append(f"| {name} | {_p(st['mean'])} | {_f(st['ir'])} | {cistr} | {ppos} | {win} |")
+    L.append("")
+
     L.append("## 结论\n")
     best = "TopK-行业中性（净）" if res["TopK-行业中性"]['top_net'].mean() >= res["TopK-raw"]['top_net'].mean() else "TopK-raw（净）"
     bst = _stats(series[best], horizon)
     c = ci[best]
-    if bst['ir'] > 0.5 and c['ir_lo'] > 0:
-        verd = "✅ 净 IR>0.5 且 CI 下限>0：稳健，进入 Phase 3 完整版"
+    ec = ex_ci[best]
+    est = ex_stats[best]
+    ex_ok = not np.isnan(ec['ir_lo']) and ec['ir_lo'] > 0
+    if bst['ir'] > 0.5 and c['ir_lo'] > 0 and ex_ok:
+        verd = "✅ 净 IR>0.5、CI 下限>0 且超额CI 下限>0：组合层稳健"
     elif bst['ir'] > 0 and c['ir_lo'] > 0:
-        verd = "⚠️ 净 IR 正向且 CI 下限>0，但强度一般"
+        verd = "⚠️ 净 IR 正向且 CI 下限>0，但超额口径未过（可能只是 beta）"
     elif bst['ir'] > 0:
         verd = "⚠️ 点估计正但 CI 跨 0 → 不稳健"
     else:
         verd = "❌ 扣成本后净 IR ≤ 0：当前信号无法覆盖成本"
     L.append(f"- 最佳组合（{best}）：净IR {bst['ir']:.2f} [{c['ir_lo']:.2f},{c['ir_hi']:.2f}]，"
              f"净均收益/期 {bst['mean']*100:+.2f}%，P(IR>0.5)={c['p_ir']*100:.0f}%")
+    L.append(f"- 超额（vs 等权基准）：超额IR {est['ir']:.2f} [{ec['ir_lo']:.2f},{ec['ir_hi']:.2f}]，"
+             f"超额均收益/期 {est['mean']*100:+.2f}%，P(超额IR>0)={ec['p_ir_pos']*100:.0f}%")
     L.append(f"- 对照等权基准：净IR {bench['ir']:.2f}，均收益/期 {bench['mean']*100:+.2f}%")
     L.append(f"- 判定: {verd}")
     L.append("")
@@ -206,12 +235,14 @@ def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None):
     bt = res["TopK-行业中性"].copy()
     bt['year'] = pd.to_datetime(bt['date']).dt.year
     L.append("## 逐年分解（行业中性 TopK vs 等权基准）\n")
-    L.append("| 年份 | 期数 | 基准均收益/期 | TopK净均收益/期 | TopK净IR |")
-    L.append("|------|------|--------------|----------------|---------|")
+    L.append("| 年份 | 期数 | 基准均收益/期 | TopK净均收益/期 | 超额/期 | 超额IR |")
+    L.append("|------|------|--------------|----------------|---------|--------|")
     for y, g in bt.groupby('year'):
         st = _stats(g['top_net'].values, horizon)
         bm = g['bench'].mean()
-        L.append(f"| {int(y)} | {len(g)} | {_p(bm)} | {_p(st['mean'])} | {_f(st['ir'])} |")
+        ex = (g['top_net'] - g['bench']).mean()
+        ex_ir = _stats((g['top_net'] - g['bench']).values, horizon)['ir']
+        L.append(f"| {int(y)} | {len(g)} | {_p(bm)} | {_p(st['mean'])} | {_p(ex)} | {_f(ex_ir)} |")
     L.append("")
     L.append("> ⚠️ 逐年样本少（20d 每年仅 ~12 期）；若收益集中在单一年份，则稳健性存疑。\n")
 

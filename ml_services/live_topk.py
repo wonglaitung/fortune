@@ -54,15 +54,17 @@ def _sector_neutral(g):
     return z.fillna(0.0)
 
 
-def select(pred_csv, topk, sector_neutral=True):
-    """读预测并返回目标持仓（含 score）"""
-    df = pd.read_csv(pred_csv)
-    df = df.rename(columns={'Stock_Code': 'code', 'code': 'code'})
+def select_from_df(df, topk, sector_neutral=True):
+    """从预测 DataFrame 返回目标持仓（含 score）——供 select() 与邮件/综合分析复用"""
+    df = df.copy()
+    df = df.rename(columns={'Stock_Code': 'code'})
     if 'prob' not in df.columns:
         for cand in ('probability', 'Predict_Prob', 'predict_prob'):
             if cand in df.columns:
                 df['prob'] = pd.to_numeric(df[cand], errors='coerce')
                 break
+    if 'prob' not in df.columns:
+        raise ValueError("预测数据缺少概率列（probability/Predict_Prob）")
     df['code'] = df['code'].astype(str)
     df['prob'] = pd.to_numeric(df['prob'], errors='coerce')
     df = df.dropna(subset=['code', 'prob'])
@@ -77,6 +79,12 @@ def select(pred_csv, topk, sector_neutral=True):
     k = min(topk, len(df) // 4)
     target = df.head(k).copy()
     return target, df, k
+
+
+def select(pred_csv, topk, sector_neutral=True):
+    """读预测 CSV 并返回目标持仓（含 score）"""
+    df = pd.read_csv(pred_csv)
+    return select_from_df(df, topk, sector_neutral)
 
 
 def run(pred_csv, topk, horizon, sector_neutral=True, commit=False):

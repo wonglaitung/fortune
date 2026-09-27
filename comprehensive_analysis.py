@@ -1002,6 +1002,19 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             df_catboost = pd.read_csv(catboost_csv)
             df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 
+            # D2 行业中性 TopK 目标集（低配辅助信号，DECISIONS D2 / DEPLOYMENT T2）：
+            # 行业内 z-score 后再取前 K，K = min(topk, n//4) 与回测/护栏口径一致；
+            # 仅用于邮件表格内联 🎯 标记（统计口径，不给指令，lessons 三.11）
+            d2_topk_target = set()
+            d2_topk_k = 0
+            try:
+                from ml_services.live_topk import select_from_df
+                _topk_target, _topk_ranked, d2_topk_k = select_from_df(df_catboost, topk=10, sector_neutral=True)
+                d2_topk_target = set(_topk_target['code'])
+                print(f"  ✅ D2 行业中性 TopK: K={d2_topk_k} -> {sorted(d2_topk_target)}")
+            except Exception as e:
+                print(f"  ⚠️ D2 行业中性 TopK 计算失败（表格不标 🎯）: {e}")
+
             # 三周期预测结果
             three_horizon_results = {}
 
@@ -1284,6 +1297,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
+                if d2_topk_target:
+                    catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（D2 低配辅助信号，K={d2_topk_k}，"
+                                            f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
+                                            f"与回测/月度护栏同口径。\n\n")
                 catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
@@ -1448,6 +1465,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         _chart_url = _stock_chart_url(stock_code)
                         _code_cell = (f"[{stock_code}]({_chart_url})" if _chart_url
                                       else stock_code)
+                        if stock_code in d2_topk_target:
+                            _code_cell = f"🎯 {_code_cell}"
                         catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计

@@ -2054,3 +2054,34 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - **#3 关闭**：prediction_probability(raw) 消费方仅 daily_confidence 训练校准器（raw 是正确输入）
   + visualize 脚本展示；监控用 direction/outcome——无口径 bug
 - 测试 83 passed（直填透传 4 + 展示缺失/有值 2 + 原 77）
+
+### 2026-09-27 分析《量化交易误解-正式文档.md》+ 组合层复核工具化 ⭐
+
+- **分析**：docs/量化交易误解-正式文档.md（职业量化研究员工作方式视频整理稿）四大陷阱——
+  ①肉眼看图+确认偏差 ②除权除息未对齐 ③迷信正态/肥尾 ④回测过拟合"先射箭后画靶"，
+  与本项目 lessons 逐条对应（0.5 beta陷阱/方向技能、三.17 复权口径、D8 分位门槛、
+  0.4+三.14 过拟合/walk-forward、0.10 准确率≠价值）→ 方法论注脚，入 AGENTS.md 快速链接
+- **工具化**：`portfolio_backtest.py` 新增「超额检验」节——超额（TopK净−等权基准）
+  **bootstrap CI / P(超额IR>0) / 逐年超额IR** 由工具直接产出；此前 DECISIONS §四 超额IR
+  1.24 [0.18,2.41] 为手工另算，现工具复现一致（2023 4.66/2024 0.25/2025 2.00/2026 0.69）
+  → lessons 三.14"数值可复现"延伸：文档引用的验证指标必须工具直接产出，禁人工另算
+- **技能补齐**：`/model_validation` 新增**阶段 5.7「组合层复核（必须执行，仅 20d）」**——
+  每次 20d walk-forward 后必跑 `portfolio_backtest.py --horizon 20 --topk 10`，
+  与 DEPLOYMENT.md"每次另跑"对齐（此前技能只要求 5.5 backtest_eval + 5.6 monthly_guardrail）
+
+### 2026-09-27 综合分析邮件内联 D2 行业中性 TopK 标记 ⭐
+
+- **问题**：邮件"全部股票预测结果"表按 raw 20d 概率排序（`sort_values('probability')`），
+  与 DECISIONS D2 保留的"20d 行业中性 TopK"策略口径割裂；行业中性只在孤立的
+  `live_topk.py`（零 CI/邮件引用），用户看到的推荐仍是 raw 口径（可能被热门板块带偏）
+- **方案（内联标记，非独立节）**：
+  1. `live_topk.py`：抽 `select_from_df(df, topk, sector_neutral=True)`（`select()` 读 CSV 后调用），
+     单一真相源；行业中性 z-score、K=min(topk, n//4) 与回测/护栏同口径
+  2. `comprehensive_analysis.py` `extract_ml_predictions`：用 `select_from_df` 算 D2 目标集，
+     表格行股票代码格**内联 🎯 前缀**（D2 目标）；表头下图例说明（K、池大小、口径）；
+     排序保持 raw 概率不变；失败仅跳过标记（宁可不显示，不显示错的）
+  3. 措辞中性：只列目标清单（统计口径），不给指令（遵守 lessons 三.11）
+- **实测**（本地 06-24 旧 CSV，31 只池）：K=7 → 🎯 9988/9660/1109/1398/0941/1088/2318
+- **口径注**：邮件 TopK 基于当前 31 只自选池（K=7）；回测/护栏基于 59 只池（K=10）——已在图例注明
+- 新增 `tests/test_live_topk_email.py` 8 项（行业内 z 均值≈0 / K 上限 / top-k / raw=prob /
+  跨板块可比性 / 概率列别名 / 缺失报错 / select 读 CSV）→ **116 passed**
