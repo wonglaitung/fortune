@@ -323,3 +323,45 @@ def test_radar_section_shows_ci_and_significance():
     assert 'block bootstrap 95%CI' in html
     assert '20d 组合层护栏' in html
     assert '显著' in html or '不显著' in html
+
+
+# ── 复权口径：fetch_price 优先腾讯 qfq（2026-09-27 修复） ──
+
+def _fake_tencent_qfq_df(closes):
+    """构造腾讯 qfq 返回格式（tz-aware UTC 索引 DataFrame）。"""
+    import pandas as pd
+    idx = pd.DatetimeIndex([f'2026-09-0{i}' for i in range(1, len(closes) + 1)],
+                           tz='UTC', name='Date')
+    return pd.DataFrame({'Open': closes, 'Close': closes,
+                         'High': closes, 'Low': closes, 'Volume': 1000}, index=idx)
+
+
+def test_fetch_price_prefers_tencent_qfq(monkeypatch):
+    """fetch_price 优先腾讯 qfq，精确日期命中返回对应 Close。"""
+    import data_services.tencent_finance as tf
+    from ml_services import performance_monitor as pm
+    monkeypatch.setattr(tf, 'get_hk_stock_data_tencent',
+                        lambda code, period_days: _fake_tencent_qfq_df([100.0, 101.5, 102.0]))
+    v = pm.fetch_price('0700.HK', '2026-09-03')
+    assert v == 102.0
+    # 目标日超出现有数据 → 取之前最近交易日
+    v2 = pm.fetch_price('0700.HK', '2026-09-04')
+    assert v2 == 102.0
+
+
+def test_fetch_price_falls_back_to_yfinance(monkeypatch):
+    """腾讯 qfq 失败时回退 yfinance（未复权兜底）。"""
+    import data_services.tencent_finance as tf
+    from ml_services import performance_monitor as pm
+    monkeypatch.setattr(tf, 'get_hk_stock_data_tencent',
+                        lambda code, period_days: None)
+
+    import pandas as pd
+    fake_yf = pd.DataFrame(
+        {'Open': [100.0], 'High': [102.0], 'Low': [99.0], 'Close': [101.0],
+         'Volume': [1000]},
+        index=pd.DatetimeIndex([pd.Timestamp('2026-09-03', tz='Asia/Hong_Kong')]))
+    monkeypatch.setattr(pm.yf, 'Ticker', lambda code: type(
+        'T', (), {'history': lambda self, start=None, end=None: fake_yf})())
+    v = pm.fetch_price('0700.HK', '2026-09-03')
+    assert v == 101.0

@@ -657,6 +657,26 @@ dsr = deflated_sharpe(sr[best], len(M), M.shape[1], ...)   # N_trials = M.shape[
 - 数据链要画全（CSV raw → apply_to_results 校准 → 直填 → 展示），三层错位每层都会单独放大成病值
 
 
+### 17. 复权口径必须训练/监控同源：港股评估 exit 用未复权价 = 跨除息日收益失真 ⭐⭐⭐⭐
+
+**问题**：港股模型训练/预测数据源是**腾讯前复权（qfq）**（`get_hk_stock_data_tencent` 请求
+`hkfqkline/...qfq`），`Future_Return`/`Label`/`entry_price` 全部基于 qfq；但性能监控
+`performance_monitor.fetch_price` 此前用 **yfinance 未复权价**算 exit——`actual_return =
+(exit_raw − entry_qfq)/entry_qfq`。**qfq 与 raw 是不同复权基准**：跨除息/拆股日时
+ratio(raw/qfq) 跳变（实测汇丰 0005.HK 2026-03-09→03-12 除息：qfq 真实收益 +2.02%，
+旧口径算成 +3.28%，虚高 62%），污染 actual_return → lift/方向技能/IC/护栏评估全部失真。
+
+**解决方案**：
+- `fetch_price` 改为优先腾讯 qfq（与 entry_price 同源同口径），yfinance 未复权降为兜底
+- 训练/监控/评估必须共用同一复权口径；单点价格比较（entry vs exit）比区间收益率更敏感，
+  前复权 vs 未复权在基准差下"单日价格不同但比率收益可能相同"，但**跨除息日必失真**
+
+**教训**：
+- 评估链路的 exit/entry 数据源必须追到"同一复权基准"，不能训练用 qfq、评估用 raw
+- 复权一致性验证：对比 qfq 与 raw 的 ratio 序列，除息日是否有跳变（>0.1% 即失真）
+- 文档/AGENTS 应在数据源说明里标注复权口径（本项目：港股=A 股均腾讯 qfq 前复权）
+
+
 ## 四、模型训练
 
 ### 1. CatBoost 分类特征 NaN 处理 ⭐⭐
@@ -922,6 +942,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-09-27 | v10.20 | 新增：复权口径训练/监控必须同源（港股评估 exit 曾用 yfinance 未复权 vs entry 腾讯前复权，跨除息日 actual_return 失真实测虚高 62%）→ 三.17 |
 | 2026-09-27 | v10.19 | 新增：数值字段禁经 LLM 抄写（null→or 0 误显"0%看跌"）+ Isotonic 不幂等禁二次 transform（0.5659→0.5124）→ 三.16 |
 | 2026-09-26 | v10.18 | 新增：DSR 本身就是选择后校正，别误报成口径缺陷（差点用错误的保留意见误导升配决策）→ 三.15 |
 | 2026-09-26 | v10.17 | 新增：文档验证数值必须可复现 + 准确率必须相对同向基准读（885≠697、旧值不可复现、eval 报告指向旧 CSV）→ 三.14 |

@@ -81,33 +81,56 @@ def count_trading_days(start_date: str, end_date: str, stock_code: str) -> int:
 
 def fetch_price(stock_code: str, date: str) -> Optional[float]:
     """
-    获取指定日期的股票收盘价
-    
+    获取港股指定日期的收盘价。
+
+    复权口径：优先腾讯财经 **前复权（qfq）**——与预测时 entry_price 同源同口径，
+    保证 actual_return = exit/entry - 1 不受除权除息干扰（2026-09-27 修复，
+    此前用 yfinance 未复权价导致跨除息日 actual_return 失真）。
+    腾讯失败时回退 yfinance（未复权，标注口径差异兜底）。
+
     参数:
-    - stock_code: 股票代码
+    - stock_code: 股票代码（0700.HK）
     - date: 日期 (YYYY-MM-DD)
-    
+
     返回:
     - 收盘价，如果获取失败返回 None
     """
     try:
-        # 转换股票代码格式: 0700.HK -> 0700.HK (yfinance 格式)
+        from data_services.tencent_finance import get_hk_stock_data_tencent
+
+        # 腾讯 qfq：0700.HK → 00700（接口要求 5 位数字无后缀）
+        code5 = stock_code.replace('.HK', '').zfill(5)
+        df = get_hk_stock_data_tencent(code5, period_days=400)
+        if df is not None and not df.empty and 'Close' in df.columns:
+            df = df.copy()
+            df['date'] = pd.to_datetime(df.index).tz_localize(None).strftime('%Y-%m-%d')
+            exact = df[df['date'] == date]
+            if not exact.empty:
+                return float(exact['Close'].iloc[-1])
+            before = df[df['date'] <= date]
+            if not before.empty:
+                return float(before['Close'].iloc[-1])
+    except Exception as e:
+        print(f"⚠️ 获取港股 {stock_code} 前复权价格失败，回退 yfinance: {e}")
+
+    # 兜底：yfinance 未复权价（口径差异：仅腾讯拉取失败时使用）
+    try:
         ticker = yf.Ticker(stock_code)
-        
+
         # 获取日期前后的数据（处理非交易日）
         date_obj = datetime.strptime(date, '%Y-%m-%d')
         start = (date_obj - timedelta(days=5)).strftime('%Y-%m-%d')
         end = (date_obj + timedelta(days=5)).strftime('%Y-%m-%d')
-        
+
         df = ticker.history(start=start, end=end)
-        
+
         if df.empty:
             return None
-        
+
         # 找到最接近目标日期的交易日
         df['date'] = df.index.strftime('%Y-%m-%d')
         target_date = date
-        
+
         if target_date in df['date'].values:
             return float(df[df['date'] == target_date]['Close'].iloc[0])
         else:
@@ -118,7 +141,7 @@ def fetch_price(stock_code: str, date: str) -> Optional[float]:
             if not before.empty:
                 return float(before['Close'].iloc[-1])
             return None
-            
+
     except Exception as e:
         print(f"⚠️ 获取 {stock_code} 价格失败: {e}")
         return None
