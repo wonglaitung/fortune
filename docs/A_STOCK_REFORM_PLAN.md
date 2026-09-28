@@ -159,7 +159,7 @@
       快照元数据 `a_stock_cal_meta_{20,5}.json` 落盘；
       **1d 校准器已拟出但源 CSV 属降级首跑 → 1d 补跑完成后 `daily_confidence.py --market a` 再拟一次**；
       邮件 A 股概率已走校准链路）
-- [ ] P3.2 门槛分位化 D8（A 股 walk-forward 分布建快照）（前置 P3.1）
+- [x] P3.2 门槛分位化 D8 —— **完成**（`ml_services/a_stock_gates.py`：`A_GATE_QUANTILES{bear:0.92,weak:0.90}`、快照 bear **0.7497** / weak **0.7154**（源 `output/20260928_144833_a_stock_catboost_20d` 19,578 条 + `a_stock_prob_cal_20.pkl`，as_of 2026-07-31）、回退链 CSV→快照→绝对值 0.70/0.65；`a_stock_comprehensive_analysis.py`（`get_market_sentiment` 阈值、layer_names、LLM prompt、`market_adjust` 判定）与 `a_stock_email.py`（sentiment 动态阈值、prompt 文案）全部改分位；3 单测，全量 129 passed；运行时实测 bear 0.7497 / weak 0.7154 / normal 0.50）
 - [ ] P3.3 ~~恢复 history 回写~~ → **不做**（决策点 1：维持停用）
 - [~] P4.1 学习器 A/B 三周期 —— **开关已就绪**（`AStockTradingModel(learner=...)` +
       `--learner lightgbm`：LightGBM 走同口径 TSCV+样本权重、准确率键 `a_stock_lightgbm_{h}d` 分离、

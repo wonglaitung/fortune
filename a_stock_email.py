@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from a_stock_config import A_STOCK_WATCHLIST, A_STOCK_TRAINING_LIST, get_limit_rate
 from data_services.a_stock_data import get_a_stock_data, get_a_stock_info_tencent, get_index_data
 from data_services.main_fund_flow import MainFundFlowService
+from ml_services.a_stock_gates import get_a_gates
 
 # 尝试导入技术分析模块（用于筹码阻力）
 try:
@@ -315,7 +316,7 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
 - 接近跌停（跌幅≥9%）：可能继续下跌，不建议抄底
 
 【第二层：市场环境评估】
-- 市场情绪层级：极端熊市暂停交易，熊市需概率≥0.70，弱震荡需概率≥0.65
+- 市场情绪层级：极端熊市暂停交易，熊市需概率≥{get_a_gates()['bear']:.2f}，弱震荡需概率≥{get_a_gates()['weak']:.2f}（分位门槛，随重跑更新）
 - 主力资金流向：持续流入利好，持续流出需警惕
 - 上证指数MA20：站上MA20为多头，跌破MA20为空头
 
@@ -513,6 +514,7 @@ def generate_ai_report(stocks=None, save_file=True):
     total_count = len(all_stock_changes)
     up_ratio = up_count / total_count if total_count > 0 else 0.5
 
+    _gates = get_a_gates()   # P3.2 分位门槛（bear/weak）
     if up_ratio < 0.20:
         market_sentiment = {
             'layer': 'extreme_bear',
@@ -524,15 +526,15 @@ def generate_ai_report(stocks=None, save_file=True):
         market_sentiment = {
             'layer': 'bear',
             'name': '熊市',
-            'action': '需概率≥0.70',
-            'dynamic_threshold': 0.70,
+            'action': f"需概率≥{_gates['bear']:.2f}",
+            'dynamic_threshold': _gates['bear'],
         }
     elif up_ratio < 0.40:
         market_sentiment = {
             'layer': 'weak',
             'name': '弱震荡',
-            'action': '需概率≥0.65',
-            'dynamic_threshold': 0.65,
+            'action': f"需概率≥{_gates['weak']:.2f}",
+            'dynamic_threshold': _gates['weak'],
         }
     else:
         market_sentiment = {

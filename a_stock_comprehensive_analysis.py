@@ -41,6 +41,7 @@ from scripts.stock_radar import generate_html_radar_section
 
 # 导入LLM服务
 from llm_services.qwen_engine import chat_with_llm
+from ml_services.a_stock_gates import get_a_gates
 
 # 尝试导入技术分析模块（用于筹码阻力）
 try:
@@ -925,10 +926,10 @@ def get_market_sentiment(stock_analyses):
         dynamic_threshold = 1.0  # 暂停交易
     elif up_ratio < 0.30:
         layer = 'bear'
-        dynamic_threshold = 0.70  # 高置信
+        dynamic_threshold = get_a_gates()['bear']  # 校准概率 P92 分位（D8 同款，非绝对 0.70）
     elif up_ratio < 0.40:
         layer = 'weak'
-        dynamic_threshold = 0.65  # 谨慎
+        dynamic_threshold = get_a_gates()['weak']  # 校准概率 P90 分位（D8 同款，非绝对 0.65）
     else:
         layer = 'normal'
         dynamic_threshold = 0.50  # 标准
@@ -1623,8 +1624,8 @@ def generate_comprehensive_recommendations_with_llm(
 
     layer_names = {
         'extreme_bear': '极端熊市-暂停交易',
-        'bear': '熊市-需概率≥0.70',
-        'weak': '弱震荡-需概率≥0.65',
+        'bear': f"熊市-需概率≥{get_a_gates()['bear']:.2f}",
+        'weak': f"弱震荡-需概率≥{get_a_gates()['weak']:.2f}",
         'normal': '正常市场'
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
@@ -1697,6 +1698,7 @@ def generate_comprehensive_recommendations_with_llm(
     date_str = datetime.now().strftime('%Y-%m-%d')
 
     # 构建Prompt（参考港股格式）
+    gates = get_a_gates()   # P3.2 分位门槛（bear/weak），prompt 文案与判定同口径
     prompt = f"""你是一位专业的A股投资分析师。请根据以下四部分信息，进行综合分析，给出实质的买卖建议。
 
 === 信息来源 ===
@@ -1744,7 +1746,7 @@ def generate_comprehensive_recommendations_with_llm(
 
 🔥 **决策顺序（严格遵守）**：
 第一步：检查CatBoost概率 → 不满足则直接排除
-第二步：检查市场情绪 → 极端熊市暂停交易，熊市需概率≥0.70，弱震荡需概率≥0.65
+第二步：检查市场情绪 → 极端熊市暂停交易，熊市需概率≥{gates['bear']:.2f}，弱震荡需概率≥{gates['weak']:.2f}
 第三步：检查短期和中期一致性
 第四步：生成综合建议
 
@@ -1763,8 +1765,8 @@ def generate_comprehensive_recommendations_with_llm(
   - probability ≥ 0.50 → 进入下一步
 - **第二步：检查市场情绪**
   - 极端熊市 → 暂停所有买入
-  - 熊市 → 需probability ≥ 0.70
-  - 弱震荡 → 需probability ≥ 0.65
+  - 熊市 → 需probability ≥ {gates['bear']:.2f}
+  - 弱震荡 → 需probability ≥ {gates['weak']:.2f}
 - **第三步：检查短期和中期一致性**
   - 短期看好，中期看好 → 进入下一步
   - 方向不一致 → 观望
@@ -1785,7 +1787,8 @@ def generate_comprehensive_recommendations_with_llm(
 - 当前CatBoost模型20天历史准确率约{accuracy:.2%}（±{std:.2%}）——**仅作背景参考，不作买入依据**
   （基准本身随行情浮动：牛市人人看涨也能"准确"，要看的是扣除基准后的超额与方向技能）
 - 0.60/0.50 档位是**校准概率的分档**，买入与否以「概率档 + 市场情绪门槛」决定：
-  极端熊市暂停 → 熊市需 ≥0.70 → 弱震荡需 ≥0.65 → 正常 ≥0.50 进入评估
+  极端熊市暂停 → 熊市需 ≥{gates['bear']:.2f} → 弱震荡需 ≥{gates['weak']:.2f} → 正常 ≥0.50 进入评估
+  （熊市/弱震荡门槛 = A股回测校准概率 P92/P90 分位，随重跑更新，非固定绝对值）
 - 高置信度预测错误时损失可达 -73%，必须配合止损（建议 -8%）
 
 请按照以下格式输出（不要添加任何额外说明文字）：
@@ -2398,8 +2401,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     # 市场情绪层级名称
     layer_names = {
         'extreme_bear': ('🔴 极端熊市 - 暂停交易', '#dc2626'),
-        'bear': ('🟠 熊市 - 需概率≥0.70', '#ea580c'),
-        'weak': ('🟡 弱震荡 - 需概率≥0.65', '#eab308'),
+        'bear': (f"🟠 熊市 - 需概率≥{get_a_gates()['bear']:.2f}", '#ea580c'),
+        'weak': (f"🟡 弱震荡 - 需概率≥{get_a_gates()['weak']:.2f}", '#eab308'),
         'normal': ('🟢 正常市场', '#16a34a'),
     }
     sentiment_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
@@ -2701,7 +2704,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             if market_layer == 'extreme_bear':
                 market_adjust = '🔴暂停'
             elif market_layer == 'bear':
-                market_adjust = '🟠高置信' if prob_20d >= 0.70 else '🟡降级'
+                market_adjust = ('🟠高置信' if prob_20d >= get_a_gates()['bear']
+                                 else '🟡降级')
             elif market_layer == 'weak':
                 market_adjust = '🟡谨慎'
             else:
