@@ -167,6 +167,10 @@
       **三周期 LightGBM 链已在 tmux `ablgbm` 串行跑（20d→5d→1d，日志 `/tmp/opencode/awf_lgbm.log`）**，
        同时 tmux `abcb1d` 并行补跑 CatBoost 1d（修 lessons 三.23 特征降级，日志 `/tmp/opencode/awf_cb1d_rerun.log`）；
        六份运行主力资金缓存全部命中、特征集对齐）
-- [ ] P4.2 图表 D3｜ P4.3 仓位口径 C 对齐（决策点 4 已定口径）——待排期
+- [x] P4.3 仓位口径 C 对齐 —— **完成**（`a_stock_recommendation_generator.py`：`position_band()` 概率→区间
+      （≥0.60→4-6% / 0.55-0.60→2-3% / 0.50-0.55→0-2% / ≤0.50→0）+ `clamp_positions_to_band()` 钳 LLM 三档仓位并保序；
+      信号阈值对齐 strong_buy≥0.60、0.50-0.55 降为 hold 不列买入；两份 LLM prompt 写入「仓位唯一口径」硬约束；
+      11 单测，全量 140 passed）
+- [ ] P4.2 图表 D3 —— 待排期
 
 > 执行完一项勾一项；完成后本文档随 `progress.txt` 一并更新。

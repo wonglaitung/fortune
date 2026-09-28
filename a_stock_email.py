@@ -293,6 +293,7 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
 - 情绪层级：{sentiment_name}（{sentiment_action}）
 - 上涨比例：{up_ratio:.1%}（全量{sentiment.get('total_count', len(stock_data_list))}只股票）
 - 动态阈值：买入需概率≥{sentiment.get('dynamic_threshold', 0.5):.0%}
+- **单票仓位唯一口径（按校准后20日概率）**：≥0.60→4-6%；0.55-0.60→2-3%；0.50-0.55→仅观望且≤2%；≤0.50 禁止买入
 
 {main_fund_block}
 """
@@ -346,7 +347,7 @@ def generate_llm_prompt(stock_data_list, market_data, main_fund_data):
 2. **个股分析**：对每只股票给出：
    - 技术面分析（趋势、支撑位、压力位）
    - 买卖建议（买入/持有/卖出）
-   - 建议仓位（三种风险偏好）：
+   - 建议仓位（三种风险偏好，且各档都必须落在上述「概率→仓位」区间内，不得超出）：
      * 保守型仓位：风险厌恶，追求稳健
      * 适度型仓位：平衡风险与收益
      * 激进型仓位：风险偏好，追求高收益

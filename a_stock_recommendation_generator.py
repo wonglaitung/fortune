@@ -19,6 +19,29 @@ from typing import Dict, List, Optional, Tuple
 from a_stock_config import A_STOCK_WATCHLIST, A_STOCK_SECTOR_MAPPING, get_limit_rate
 
 
+def position_band(prob: float):
+    """口径C：校准概率 → 单票仓位区间（%，决策点 4 唯一口径）"""
+    if prob >= 0.60:
+        return 4, 6
+    if prob >= 0.55:
+        return 2, 3
+    if prob > 0.50:
+        return 0, 2
+    return 0, 0
+
+
+def clamp_positions_to_band(cons: int, mod: int, aggr: int, lo: int, hi: int):
+    """把三档 LLM 仓位钳进 [lo, hi]，并保证 保守 ≤ 适度 ≤ 激进"""
+    def _c(v):
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            v = 0.0
+        return int(min(max(v, lo), hi))
+    c, m, a = sorted((_c(cons), _c(mod), _c(aggr)))   # 升序 = 保守 ≤ 适度 ≤ 激进
+    return c, m, a
+
+
 class AStockRecommendationGenerator:
     """A股综合买卖建议生成器"""
 
@@ -196,11 +219,12 @@ class AStockRecommendationGenerator:
         """
         生成单只股票的建议
 
-        决策逻辑：
-        - 强烈买入：短期买入 + 中期买入 + CatBoost概率 ≥ 0.55
-        - 买入：短期买入 + 中期买入 + 0.50 < CatBoost概率 < 0.55
-        - 持有：其他情况
-        - 卖出：短期卖出 + 中期卖出 + CatBoost概率 ≤ 0.45
+        决策逻辑（口径C / 决策点 4，与港股一致）：
+        - 强烈买入：短期买入 + 中期买入 + 校准概率 ≥ 0.60 → 单票 4-6%
+        - 买入：短期买入 + 中期买入 + 0.55 ≤ 概率 < 0.60 → 单票 2-3%
+        - 观望：0.50 < 概率 < 0.55 → 弱信号，最多 2%，不列买入
+        - 持有：其他情况（概率 ≤ 0.50 禁止买入）
+        - 卖出：短期卖出 + 中期卖出 + 概率 ≤ 0.45
         """
         stock_name = self.stock_names.get(stock_code, stock_code)
         current_price = analysis.get('current_price', 0)
@@ -221,15 +245,18 @@ class AStockRecommendationGenerator:
 
         # 短期和中期一致买入
         if '买入' in short_term and '买入' in mid_term:
-            if prob_20d >= 0.55:
+            if prob_20d >= 0.60:
                 signal_type = 'strong_buy'
-                reason = f"短期建议买入，中期建议买入，CatBoost预测上涨概率{prob_20d:.2f}（高置信度），方向一致"
-            elif prob_20d > 0.50:
+                reason = f"短期建议买入，中期建议买入，预测上涨概率{prob_20d:.2f}（≥0.60 高置信档），方向一致，单票4-6%"
+            elif prob_20d >= 0.55:
                 signal_type = 'buy'
-                reason = f"短期建议买入，中期建议买入，CatBoost预测上涨概率{prob_20d:.2f}（中等置信度）"
+                reason = f"短期建议买入，中期建议买入，预测上涨概率{prob_20d:.2f}（0.55-0.60 买入档），单票2-3%"
+            elif prob_20d > 0.50:
+                signal_type = 'hold'
+                reason = f"短期建议买入，中期建议买入，但概率{prob_20d:.2f} 落在 0.50-0.55 弱信号区，仅观望（≤2%），不列买入"
             else:
                 signal_type = 'hold'
-                reason = f"短期建议买入，中期建议买入，但CatBoost预测上涨概率{prob_20d:.2f}（≤0.50），违反硬约束，建议观望"
+                reason = f"短期建议买入，中期建议买入，但预测上涨概率{prob_20d:.2f}（≤0.50），违反硬约束，禁止买入"
 
         # 短期和中期一致卖出
         elif '卖出' in short_term or '卖出' in mid_term:
@@ -251,12 +278,16 @@ class AStockRecommendationGenerator:
         stop_loss = current_price * 0.92  # -8%
         target_price = current_price * 1.10  # +10%
 
-        # 建议仓位（三种风险偏好）
-        position_conservative = llm_rec.get('position_conservative', 0)
-        position_moderate = llm_rec.get('position_moderate', 0)
-        position_aggressive = llm_rec.get('position_aggressive', 0)
+        # 建议仓位（三种风险偏好）—— 钳制到口径C区间（决策点 4 唯一口径）
+        band_lo, band_hi = position_band(prob_20d)
+        position_conservative, position_moderate, position_aggressive = \
+            clamp_positions_to_band(
+                llm_rec.get('position_conservative', 0),
+                llm_rec.get('position_moderate', 0),
+                llm_rec.get('position_aggressive', 0),
+                band_lo, band_hi)
 
-        # 默认使用适度型仓位作为主要建议
+        # 默认使用适度型仓位作为主要建议（已在口径C区间内）
         position_pct = position_moderate
 
         return {
