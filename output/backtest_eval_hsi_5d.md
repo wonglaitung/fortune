@@ -1,8 +1,8 @@
 # 回测评估报告（合并层面）
 
-- 数据源: `data/hsi_walk_forward/hsi_prediction_analysis_20260926_105001.csv`
+- 数据源: `data/hsi_walk_forward/hsi_prediction_analysis_20260927_030123.csv`
 - 预测周期: 5 天
-- 生成时间: 2026-09-26 20:31:50
+- 生成时间: 2026-09-28 17:12:15
 
 ## 一、合并准确率
 
