@@ -139,6 +139,9 @@ class AStockWalkForwardValidator:
         # 市场情绪过滤器（延迟初始化）
         self.market_filter = None
 
+        # 全窗口预准备数据（各 fold 切片复用，避免逐 fold 重复计算特征）
+        self._full_data = None
+
         # 存储所有预测详情（用于生成 prediction_analysis.csv）
         self.all_predictions = []
 
@@ -192,6 +195,13 @@ class AStockWalkForwardValidator:
 
         print(f"\nFold 数量: {num_folds}")
         print("="*80)
+
+        # 预准备全量特征数据（prepare_data 在日期过滤前完成全部计算，
+        # 按 fold 窗口切片与逐 fold 重新 prepare 数学等价，但把 N×2 次重算降为 1 次）
+        full_start_date = pd.to_datetime(all_months[0] + '-01').tz_localize('UTC')
+        print(f"\n🔄 预准备全量特征数据（{full_start_date.strftime('%Y-%m-%d')} 起，仅计算一次）...")
+        full_data = self._prepare_full_data(full_start_date)
+        print(f"  ✅ 全量数据准备完成: {len(full_data)} 条记录, {full_data.shape[1]} 个特征列")
 
         # 存储所有fold结果
         all_fold_results = []
@@ -280,6 +290,33 @@ class AStockWalkForwardValidator:
 
         return report
 
+    def _prepare_full_data(self, start_date):
+        """全窗口特征一次性准备，返回按日期排序的完整 DataFrame。
+
+        特征计算不依赖 start/end（prepare_data 在日期过滤之前完成全部特征与标签计算），
+        因此各 fold 用 [train/test 窗口] 切片此结果与原逻辑逐窗口重新 prepare 完全等价。
+        """
+        if self._full_data is not None:
+            return self._full_data
+
+        model = AStockTradingModel(horizon=self.horizon)
+        self._full_data = model.prepare_data(
+            self.stock_list,
+            start_date=start_date,
+            end_date=None,
+            horizon=self.horizon,
+            mode='backtest'
+        )
+        if self._full_data is None or len(self._full_data) == 0:
+            raise ValueError("全量数据准备失败")
+        return self._full_data
+
+    @staticmethod
+    def _slice_window(full_data, start_date, end_date):
+        """按 tz-aware 日期窗口切片（与 prepare_data 内部的日期过滤规则一致）"""
+        mask = (full_data.index >= start_date) & (full_data.index <= end_date)
+        return full_data.loc[mask].copy()
+
     def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold):
         """
         验证单个fold - 调用 AStockTradingModel.train() 确保一致性
@@ -300,14 +337,10 @@ class AStockWalkForwardValidator:
         # 创建模型实例
         model = AStockTradingModel(horizon=self.horizon)
 
-        # 准备训练数据（调用模型的 prepare_data 方法）
-        train_data = model.prepare_data(
-            stock_list,
-            start_date=train_start_date,
-            end_date=train_end_date,
-            horizon=self.horizon,
-            mode='backtest'  # 使用滞后数据
-        )
+        # 训练数据：从全量预准备数据切片（与 prepare_data(train 窗口) 等价）
+        if self._full_data is None:
+            self._full_data = self._prepare_full_data(train_start_date)
+        train_data = self._slice_window(self._full_data, train_start_date, train_end_date)
 
         # 检查训练样本数量
         if train_data is None or len(train_data) < self.min_train_samples:
@@ -332,7 +365,8 @@ class AStockWalkForwardValidator:
                 end_date=train_end_date,
                 horizon=self.horizon,
                 use_feature_selection=False,
-                use_sample_weights=True
+                use_sample_weights=True,
+                prepared_df=train_data.copy()
             )
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
@@ -340,15 +374,9 @@ class AStockWalkForwardValidator:
 
         print(f"  ✅ 模型训练完成")
 
-        # 准备测试数据
+        # 测试数据：同样从全量数据切片
         print(f"  🔄 准备测试数据...")
-        test_data = model.prepare_data(
-            stock_list,
-            start_date=test_start_date,
-            end_date=test_end_date,
-            horizon=self.horizon,
-            mode='backtest'
-        )
+        test_data = self._slice_window(self._full_data, test_start_date, test_end_date)
 
         if test_data is None or len(test_data) < 10:
             raise ValueError(f"测试数据不足: {len(test_data) if test_data is not None else 0}")

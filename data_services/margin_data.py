@@ -11,6 +11,7 @@
 import os
 import sys
 import pickle
+import threading
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -20,6 +21,40 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 缓存配置
 CACHE_DIR = 'data/margin_cache'
 CACHE_EXPIRE_HOURS = 6
+
+# 网络硬超时（秒）：akshare/SSE/深交所接口偶发无超时挂起
+# （2026-09-28 实测 query.sse.com.cn 阻塞 16 分钟，拖死整个 walk-forward）
+NET_TIMEOUT_SEC = 20
+# 电路闸：某市场接口超时一次后，本进程内不再请求该网络源（直接用缓存/默认值）
+_net_disabled = {}
+
+
+def _fetch_with_timeout(fn, key, *args, **kwargs):
+    """守护线程调用网络接口，超时/禁用时返回 (ok=False, None)。
+
+    超时线程保留在后台（daemon，不阻塞进程退出），结果若晚到会写入缓存供下次使用。
+    """
+    if _net_disabled.get(key):
+        return False, None
+    box = {}
+
+    def _run():
+        try:
+            box['ret'] = fn(*args, **kwargs)
+        except Exception as e:  # noqa: BLE001 —— 原样抛给调用方处理
+            box['err'] = e
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    t.join(NET_TIMEOUT_SEC)
+    if t.is_alive():
+        _net_disabled[key] = True
+        print(f"  ⚠️ 融资融券接口[{key}]超时({NET_TIMEOUT_SEC}s)，"
+              f"本次进程内跳过该网络源（用缓存/默认值）")
+        return False, None
+    if 'err' in box:
+        raise box['err']
+    return True, box.get('ret')
 
 
 class MarginDataService:
@@ -55,7 +90,9 @@ class MarginDataService:
 
         try:
             import akshare as ak
-            df = ak.stock_margin_detail_sse(date=date_str)
+            ok, df = _fetch_with_timeout(ak.stock_margin_detail_sse, 'sse', date=date_str)
+            if not ok:
+                return None
 
             if df is not None and not df.empty:
                 df.to_pickle(cache_file)
@@ -90,7 +127,9 @@ class MarginDataService:
 
         try:
             import akshare as ak
-            df = ak.stock_margin_detail_szse(date=date_str)
+            ok, df = _fetch_with_timeout(ak.stock_margin_detail_szse, 'szse', date=date_str)
+            if not ok:
+                return None
 
             if df is not None and not df.empty:
                 df.to_pickle(cache_file)

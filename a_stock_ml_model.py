@@ -1369,7 +1369,7 @@ class AStockTradingModel(CatBoostModel):
         except Exception as e:
             logger.warning(f"保存准确率失败: {e}")
 
-    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False):
+    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False, prepared_df=None):
         """
         训练A股模型
 
@@ -1382,6 +1382,8 @@ class AStockTradingModel(CatBoostModel):
             min_return_threshold: 最小收益阈值
             use_sample_weights: 是否使用样本权重训练
             use_cross_sectional_label: 是否使用截面标准化标签（业界推荐用于月度预测）
+            prepared_df: 预准备好的训练数据（Walk-forward 复用，跳过重复 prepare_data；
+                数据与 prepare_data(start,end,mode='backtest') 输出完全等价）
         """
         if codes is None:
             codes = self.stock_list
@@ -1395,16 +1397,20 @@ class AStockTradingModel(CatBoostModel):
         logger.info(f"截面标签: {'启用' if use_cross_sectional_label else '禁用'}")
         logger.info("=" * 60)
 
-        # 准备数据
-        df = self.prepare_data(
-            codes=codes,
-            start_date=start_date,
-            end_date=end_date,
-            horizon=horizon,
-            use_feature_cache=True,
-            mode='backtest',
-            use_cross_sectional_label=use_cross_sectional_label
-        )
+        # 准备数据（优先复用外部预准备数据，避免 walk-forward 每个 fold 重复计算特征）
+        if prepared_df is not None:
+            logger.info("使用预准备训练数据（跳过 prepare_data）")
+            df = prepared_df
+        else:
+            df = self.prepare_data(
+                codes=codes,
+                start_date=start_date,
+                end_date=end_date,
+                horizon=horizon,
+                use_feature_cache=True,
+                mode='backtest',
+                use_cross_sectional_label=use_cross_sectional_label
+            )
 
         if df is None or df.empty:
             logger.error("数据准备失败")
