@@ -777,6 +777,10 @@ P(超额IR>0) / 逐年超额IR 由工具直接产出，复现 DECISIONS 数字�
 
 ### 22. Walk-forward 结果运行间不可比特复现；对比只能停在聚合/决策指标层 ⭐⭐⭐⭐
 
+> **2026-09-28 修订（三.25）**：所谓"管线固有噪声"的根因已定位并修复（互信息无种子、
+> 缓存非原子写、模型非确定参数）——**同机同代码双跑现已 bit 级复现**，不复现即 bug。
+> 本条判读基准继续适用于**跨日/跨机**对比（live API 快照、数据修订不在修复范围内）。
+
 **问题**（2026-09-28 复测时发现）：三周期全量重跑与 09-26 基线对比，20d `Predict_Prob`
 r=0.885、方向翻转 14.7%，一度怀疑特征漂移/代码变更。追查发现 09-26 **当天同配置 5d 双跑**
 （00:55 与 20:20 两份，配置区逐字一致、同 38 折同 59 股）之间 r=0.755、翻转 22.3%、
@@ -827,6 +831,40 @@ r=0.885、方向翻转 14.7%，一度怀疑特征漂移/代码变更。追查发
 **正确写法**：模式用 `pkill -f "run_[a]b\.sh"`（正则自指排除），或先 `pgrep` 列 PID 再 `kill`，
 或把 `pkill` 与后续命令拆成独立工具调用。**判据**：`pkill -f` 的 pattern 只要出现在
 本次调用的 command 字符串里，就有自伤风险。
+
+### 25. "不可复现"的三层根因：互信息无种子 + 缓存非原子写 + 模型非确定参数（已修复，同机双跑现 bit 级复现）⭐⭐⭐⭐⭐
+
+**问题**（2026-09-28 A+C1 去噪声验收）：三.22 把双跑噪声当"管线固有"，A 方案第一轮验收
+（模型参数修复后、4 路满载并发）依然 featsel/X_test/pred 指纹全不同、Δprob std≈0.09、
+翻转 16-18%——说明噪声在模型参数之外。
+
+**诊断方法（可复用）**：给 WF 加 fold 三指纹（featsel / X_test / pred 各 sha1 前12位）+
+`WF_X_DETAIL=1` 列级指纹（每列 hash 落 `output/xfp/`，双跑 diff 精确到列）。一轮 1-fold 双跑
+即锁定：**train/test 输入逐列 0 差异、唯 featsel 输出 478/501 不同** → 分歧不在数据，在选择器内部。
+
+**三层根因（按贡献排序）**：
+1. **互信息选择无种子（主因）**：`feature_selection_statistical` 经
+   `SelectKBest(mutual_info_classif)` 打分，其 `random_state=None` 默认用**全局 RNG 注入噪声**
+   → 跨进程选出不同特征集 → 训练全链分叉。修复：`partial(mutual_info_classif, random_state=42)`
+   （`ml_services/feature_selection.py` 两处调用点）。
+2. **特征缓存非原子写（并发放大器）**：`open(path,'wb')` 直写，并发双跑读到
+   `pickle data was truncated` / `Ran out of input` → 读失败方走重算回退 → 数据分叉。
+   修复：写 `*.tmp.<pid>` 后 `os.replace()`（`_save_cache` / `_save_feature_cache`）。
+3. **模型侧非确定性参数**：LGBM 缺 `deterministic=True, force_row_wise=True`、
+   CatBoost `thread_count=-1`、`PYTHONHASHSEED` 与 BLAS/OMP 线程数未固化。修复：
+   代码内参数固定 + `scripts/run_walk_forward.sh` 固化全部进程级 env；组合层排序 `kind='mergesort'`。
+
+**验收（2026-09-28，4 路满载并发、零缓存读失败）**：1-fold 5d 与 5-fold 5d/20d 双跑 →
+三指纹逐折相同、`prediction_analysis.csv` `DataFrame.equals=True`（5974 行逐位）、
+summary JSON 相等；pytest 126 passed。
+
+**教训**：
+- **同机同代码双跑必须 bit 级复现**；不复现 = bug，先跑带 `WF_X_DETAIL=1` 的 1-fold 双跑列指纹定位
+- 跨日/跨机仍会差（live API 当日快照、数据修订）→ 那时才回到三.22 的决策指标判读基准
+- **MI 固定种子会改变历史选的特征集** → 自本轮起旧轮准确率/lift 与新轮不可直接比（断代），
+  下轮全量 Walk-forward 起刷新 D2/护栏判定
+- 教训推广：任何 `random_state=None` 的 sklearn 估计器（mutual_info、KFold shuffle 等）
+  在回测管线里都是隐形骰子——**进管线必须显式给种子**
 
 ## 四、模型训练
 
@@ -1095,6 +1133,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 |------|------|------|
 | 2026-09-28 | v10.27 | 新增：`pkill -f <pattern>` 匹配自身命令行致自杀（用 `[a]` 正则自指排除或先 pgrep）→ 三.24 |
 | 2026-09-28 | v10.26 | 新增：缓存过期+上游失效=特征集静默缺失，破坏 A/B 可比性（跑前验缓存 mtime/接口；touch 日频缓存的窗口内等价论证）→ 三.23 |
+| 2026-09-28 | v10.26 | 新增：双跑不可复现三层根因已修复（互信息无种子/缓存非原子写/模型非确定参数），同机双跑现 bit 级复现，`WF_X_DETAIL` 列指纹诊断法 → 三.25；三.22 加修订注记（判读基准仅限跨日/跨机） |
 | 2026-09-28 | v10.25 | 新增：Walk-forward 结果运行间不可比特复现（聚合噪声带 ≤±0.6pp、预测翻转 15-22% 属正常，对比只看决策指标）→ 三.22 |
 | 2026-09-28 | v10.24 | 新增：akshare 内部请求无超时=静默挂死（守护线程硬超时+按市场电路闸）+ walk-forward 全量预准备等价切片（11h→2h）→ 三.21 |
 | 2026-09-28 | v10.23 | 新增：fold 级异常被吞=残缺结果冒充验证完成（完整性闸门+失败非零退出）→ 三.20 |

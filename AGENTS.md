@@ -44,7 +44,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `python3 ml_services/walk_forward_validation.py --model-type catboost --horizon 20` | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
+| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 §5.18）；**1d/5d 维持 CatBoost**（§5.20/D10） |
@@ -110,7 +110,7 @@ python hsi_email.py --no-email
 |------|------|
 | **数据泄漏** | Walk-forward准确率 >65%（个股）或 >80%（恒指）通常是数据泄漏信号 |
 | **验证产物完整性** | fold 异常被吞会静默产出残缺 CSV（17/38 折仍打印"验证完成"）；跑完必核对**折数/行数**（lessons 三.20，已加完整性闸门缺折即非零退出） |
-| **Walk-forward 不可 bit 级复现** | 同配置重跑聚合差 ≤±0.6pp、预测翻转 15-27% 属正常（同日双跑实测）；对比只看 lift/护栏等**决策指标**，禁逐行 diff CSV（lessons 三.22）；TopK 组合层指标（39 期）单轮判定不可信 |
+| **Walk-forward 复现口径** | **同机同代码双跑现已 bit 级复现**（2026-09-28 修复互信息无种子/缓存非原子写/模型非确定参数，lessons 三.25）——不复现即 bug，用 `WF_X_DETAIL=1` 列指纹定位（`scripts/run_walk_forward.sh` 固化 env）；**跨日/跨机**对比只看 lift/护栏等决策指标，禁逐行 diff CSV（三.22）；TopK 组合层指标（39 期）单轮判定不可信 |
 | **静态快照穿越** | 网络/情感/主题/基本面等"最新值广播到全部历史行"=未来穿越；回测须用 PIT 时点还原 |
 | **绝对准确率/胜率陷阱** | 趋势板块基准本就高；评估看 **lift（胜率−基准）** 与 **方向技能（准确率−永远看涨）**，不看绝对值 |
 | **个股横截面 alpha 已穷尽** | 完整管线 DSR 0.87 不过、扩池不增信号、简单模型 IC 转负（2026-09 全轮实证）→ **停止投入**，见 `docs/DECISIONS.md` D1 |

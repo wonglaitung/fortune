@@ -2175,3 +2175,19 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   fold 表 /tmp/opencode/fold_tables_20260928.md（20d 25/38、5d 32/38、1d 37/38 问题 fold）
 - **待办**：D9 入库新 20d CSV（commit_backtest_result.py）、护栏 20d 旧文件轮换（CI mtime 歧义）、
   pytest 复验、hsi_prediction 冒烟、stash@{0} 待用户处置
+
+[2026-09-28 晚] A+C1 去噪声验收完成（用户批准"先A+C1，后续再议"）
+- A ✅ PASS：双跑不可复现三层根因钉死并修复——(1) 互信息 random_state=None 用全局RNG（主因，
+  featsel 478/501 不同）→ partial(random_state=42)；(2) 特征缓存 open('wb') 非原子写并发读坏
+  （truncated/Ran out of input）→ tmp+os.replace；(3) LGBM deterministic/force_row_wise、
+  CatBoost thread_count=8、PYTHONHASHSEED/BLAS 线程固化（scripts/run_walk_forward.sh）+
+  portfolio mergesort。验收：1-fold 5d + 5-fold 5d/20d 双跑（4路满载并发）指纹逐折相同、
+  prediction_analysis.csv DataFrame.equals=True（5974行）、JSON 相等、pytest 126 passed。
+- 诊断工具：fold 三指纹（featsel/X_test/pred）+ WF_X_DETAIL=1 列指纹（output/xfp/ diff 到列）。
+- C1 部分达标：dropout3 换手 74%→32% ✓、跨轮超额IR差 1.35→1.08（目标<0.6 未达）→
+  dropout 不修排名翻转，保留为成本优化；稳定性由 A 根治。矩阵见报告附录 B。
+- 文档：lessons 三.22 加修订注记 + 新增三.25（v10.26 索引）；AGENTS 复现口径行 +
+  walk-forward 命令行改 wrapper；报告附录 B。
+- 断代提醒：MI 种子改变选特征集 → 09-28 各轮指标为修复前旧代码产物，下轮全量
+  Walk-forward（38 folds）起刷新 D2/护栏判定。
+- 待办（后续阶段，未获批）：全量 38-fold 重跑刷新判定 / B 多种子 / C3C4 / D2 升配规则加种子维度。

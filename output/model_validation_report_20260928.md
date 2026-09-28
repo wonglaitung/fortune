@@ -229,3 +229,45 @@
 CatBoost `thread_count=-1`；HMM（seed 42/123/456 择优）与 louvain（`random_state=RANDOM_SEED`）已固定；
 09-26 同日双跑 5d（CatBoost、逐字同配置）r=0.755、翻转 22.3% 为管线级实证。
 **注**：可复现性（修种子/单线程）只解决"可重复"，不解决 n=39 的统计力；升配判定须两轮同向已入 D2。
+
+## 附录 B：A+C1 去噪声验收（2026-09-28 晚，A=确定性修复 / C1=Dropout 惯性）
+
+### B.1 A 方案：三层根因定位与修复（验收 ✅ PASS）
+
+附录 A 只给出"运行非确定性"线索，本晚验收把根因**钉死到三层**并全部修复：
+
+| # | 根因 | 证据 | 修复 |
+|---|------|------|------|
+| 1 | **互信息选择无种子（主因）**：`SelectKBest(mutual_info_classif)` 的 `random_state=None` 用全局 RNG 注入噪声 | `WF_X_DETAIL=1` 列指纹：train/test 输入逐列 0 差异、唯 featsel 输出 **478/501 不同** | `partial(mutual_info_classif, random_state=42)`（feature_selection.py 两处） |
+| 2 | **特征缓存非原子写**：并发双跑读到半截 pickle | 第一轮双跑日志：A `pickle data was truncated`、B `Ran out of input` → 读失败方重算回退分叉 | `*.tmp.<pid>` + `os.replace()`（`_save_cache`/`_save_feature_cache`） |
+| 3 | **模型非确定参数**：LGBM 无 `deterministic`、CatBoost `thread_count=-1`、`PYTHONHASHSEED`/BLAS 线程未固化 | 模型参数修复后双跑仍 Δprob std≈0.09、翻转 16-18%（不足以单独解决） | LGBM `deterministic=True, force_row_wise=True`；CatBoost `CATBOOST_THREAD_COUNT=8`；`scripts/run_walk_forward.sh` 固化 env；组合层 `kind='mergesort'` |
+
+**诊断工具**（新增，入库）：fold 三指纹（featsel/X_test/pred 各 sha1 前12位）+
+`WF_X_DETAIL=1` 列指纹落 `output/xfp/`（双跑 diff 精确到列）。
+
+**验收矩阵**（全部 4 路满载并发、零缓存读失败）：
+
+| 场景 | 结果 |
+|------|------|
+| 1-fold 5d 双跑（37 月单折） | 三指纹同、列指纹 0 差异、CSV `DataFrame.equals=True`、JSON 相等 |
+| 5-fold 5d 双跑（2023-03→2026-07） | 指纹全同、CSV 5974 行逐位相等、JSON 相等 |
+| 5-fold 20d LGBM 双跑（同窗） | 指纹全同、CSV 5974 行逐位相等、JSON 相等 |
+| pytest | 126 passed |
+
+**边界**：同机同代码 = bit 级复现；**跨日/跨机**仍受 live API 当日快照与数据修订影响，
+对比继续用三.22 决策指标判读基准。**MI 种子改变选特征集 → 旧轮指标与本轮起断代**，
+下轮全量 Walk-forward 后刷新 D2/护栏判定（本报告数值不受影响——均为修复前旧代码产物）。
+
+### B.2 C1：Dropout=3 惯性验证（部分达标，不替代噪声修复）
+
+2×2 矩阵（`portfolio_backtest.py --topk 10`，行业中性超额 IR）：
+
+| CSV | dropout=0 | dropout=3 | 换手(d0→d3) |
+|-----|-----------|-----------|------------|
+| 09-26 轮 | **1.24** [0.18, 2.41] | 0.98 [−0.07, 2.24] | 75%→32% |
+| 09-28 轮 | **−0.11** [−1.44, 0.87] | −0.10 [−1.37, 1.01] | 74%→32% |
+
+- 换手 74%→32% ✅（与 09-23 历史 Dropout 报告一致）
+- 跨轮差 1.35 → 1.08（目标 <0.6 **未达**）→ **dropout 降换手，不修复排名翻转**
+- 结论：dropout 保留为**成本优化工具**；稳定性由 A 方案根治（预测稳定 → Top10 稳定）
+- 产物：`output/portfolio_20d_{20260926,20260928}_drop{0,3}.md`
