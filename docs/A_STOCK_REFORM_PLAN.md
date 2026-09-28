@@ -1,6 +1,6 @@
 # A 股对照港股改造方案（差距分析与分期执行）
 
-> **版本**：v1.1 | **创建日期**：2026-09-28 | **状态**：执行中（P0/P1 完成，P2.2 walk-forward 重跑进行中）
+> **版本**：v1.2 | **创建日期**：2026-09-28 | **状态**：执行中（P0/P1/P2/P3.1 主体完成，P3.2 与 P4.1 A/B 跑数中）
 > **性质**：方案文档 + 执行跟踪（完成项打 ✅，执行后更新本文档）
 > **基线**：港股 2026-09 系列改造（评估 D3 / 组合层 D2 / 概率校准 / 门槛 D8 / 展示同口径等）
 
@@ -139,7 +139,8 @@
       准确率 **58.4%** [55.3,61.5]、超额 lift **+7.1pp**（p=0.0033 显著）、逐年 lift 2025 +7.7pp / 2026 +5.5pp 双正、
       逐折 lift 正 18/19、板块层轨交IT +9.9pp/电子 +9.5pp 方向技能领先、能源 −1.9pp 唯一负、
       校准分桶单调（50-60%→53.0%，80%+→72.5%，可直接作 P3.1 OOF 校准素材）；
-      1d/5d 待 walk-forward 重跑后补）
+      **5d 已补**（`output/backtest_eval_a_stock_5d_20260928.md`：51.5%、lift +1.0pp p=0.497 不显著 → 5d 无边缘）；
+      **1d 首跑因主力资金缓存过期被静默降级（lessons 三.23）已废弃、重跑中** —— 补跑后重出 `backtest_eval_a_stock_1d_20260928.md`）
 - [x] P1.3 入库工具扩 a_stock —— **已具备**（`HK20D_RE` 排除 a_stock，A股目录只提交 CSV 不改 GATE_SNAPSHOT；
       `a_stock_walk_forward.py` 已集成 `--no-commit` 开关）
 - [x] P2.1 guardrail/portfolio/eval_overfit `--market a` + `latest_pred` 默认 glob 排除 `*_a_stock_*`
@@ -149,15 +150,23 @@
       **🟡 保留低配**；组合层超额IR **3.02** [1.96,4.80] 下界>0、逐年双正但仅 20 期 →
       `output/monthly_guardrail_20d_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
       **5d 已补**：净IR 0.52/PBO 0.54/DSR 0.688 → 🟡、组合层超额 CI 跨 0、lift +1.0pp 不显著 → 5d 无边缘；
-      1d 仍在后台跑）
+      **1d 首跑（lift −1.2pp p=0.04、净IR −2.39 → 🔴）特征集缺主力资金列（lessons 三.23），
+       结论待补跑后重判，暂不写入 D11 定稿**）
 - [x] P2.3 A 股 D2 判定记录入 DECISIONS —— **D11 + §四.附**（含复核命令与触发条件）
 - [~] P3.1 OOF 校准扩展 A 股 —— **代码+20d 校准器已就绪**（`DailyConfidence(cal_prefix='a_stock_',
       oof_glob=...)` + `calibrate_probability()` 方向同口径 + 4 单测；`daily_confidence.py --market a --refit`
-      拟合；`data/calibrators/a_stock_prob_cal_20.pkl` 已从 19,578 条 OOF 拟出、快照元数据落盘；
-      **1d/5d 等 walk-forward CSV 产出后补拟合**；邮件 A 股概率已走校准链路）
+      拟合；20d/5d 校准器（`data/calibrators/a_stock_prob_cal_{20,5}.pkl`）已各从 19,578 条 OOF 拟出、
+      快照元数据 `a_stock_cal_meta_{20,5}.json` 落盘；
+      **1d 校准器已拟出但源 CSV 属降级首跑 → 1d 补跑完成后 `daily_confidence.py --market a` 再拟一次**；
+      邮件 A 股概率已走校准链路）
 - [ ] P3.2 门槛分位化 D8（A 股 walk-forward 分布建快照）（前置 P3.1）
 - [ ] P3.3 ~~恢复 history 回写~~ → **不做**（决策点 1：维持停用）
-- [ ] P4.1 学习器 A/B 三周期（决策点 3 已拍板：1d/5d/20d 全做；先加 model_type 开关）
+- [~] P4.1 学习器 A/B 三周期 —— **开关已就绪**（`AStockTradingModel(learner=...)` +
+      `--learner lightgbm`：LightGBM 走同口径 TSCV+样本权重、准确率键 `a_stock_lightgbm_{h}d` 分离、
+      输出目录 `*_a_stock_lightgbm_{h}d` 不覆盖 catboost、guardrail A股 glob 覆盖双学习器；4 单测；
+      **三周期 LightGBM 链已在 tmux `ablgbm` 串行跑（20d→5d→1d，日志 `/tmp/opencode/awf_lgbm.log`）**，
+       同时 tmux `abcb1d` 并行补跑 CatBoost 1d（修 lessons 三.23 特征降级，日志 `/tmp/opencode/awf_cb1d_rerun.log`）；
+       六份运行主力资金缓存全部命中、特征集对齐）
 - [ ] P4.2 图表 D3｜ P4.3 仓位口径 C 对齐（决策点 4 已定口径）——待排期
 
 > 执行完一项勾一项；完成后本文档随 `progress.txt` 一并更新。
