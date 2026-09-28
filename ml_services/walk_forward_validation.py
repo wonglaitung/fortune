@@ -187,6 +187,9 @@ class WalkForwardValidator:
 
         # 存储所有fold的结果
         all_fold_results = []
+        # 完整性追踪：失败/主动跳过的 fold（防止残缺结果冒充"验证完成"）
+        failed_folds = []
+        skipped_folds = 0
 
         # 执行每个fold的验证
         for fold in range(num_folds):
@@ -215,6 +218,7 @@ class WalkForwardValidator:
                 train_end_date = train_end_date - pd.Timedelta(days=int(self.embargo_days))
                 if train_end_date <= train_start_date:
                     print(f"⚠️ Fold {fold + 1} 训练期在 embargo 后过短，跳过")
+                    skipped_folds += 1
                     continue
 
             print(f"训练期间: {train_start_date.strftime('%Y-%m-%d')} 至 {train_end_date.strftime('%Y-%m-%d')}")
@@ -247,7 +251,18 @@ class WalkForwardValidator:
                 logger.error(f"Fold {fold + 1} 验证失败: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
+                failed_folds.append(fold + 1)
                 continue
+
+        # 完整性闸门：任一 fold 失败即非零退出，拒绝生成残缺报告
+        # （2026-09-27 断网期间 17/38 折残缺 CSV 曾通过"验证完成"输出，差点污染对比）
+        expected_folds = num_folds - skipped_folds
+        if failed_folds or len(all_fold_results) < expected_folds:
+            raise RuntimeError(
+                f"Walk-forward 不完整：期望 {expected_folds} 折（{num_folds} - 跳过 {skipped_folds}），"
+                f"成功 {len(all_fold_results)}，失败 folds {failed_folds} —— "
+                f"多为数据源断连，拒绝生成报告"
+            )
 
         # 计算整体指标
         overall_result = self._calculate_overall_metrics(all_fold_results)

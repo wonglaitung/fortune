@@ -728,6 +728,28 @@ P(超额IR>0) / 逐年超额IR 由工具直接产出，复现 DECISIONS 数字�
   校准方向，两者用途不同（评估历史 vs 当日决策展示）。
 - `message_formatter`/`wechat_work_bot` 的 direction 无活跃调用方（未集成），不构成线上风险。
 
+### 20. fold 级异常被吞 = 残缺结果冒充"验证完成"；长跑必须网络健康检查+完整性闸门 ⭐⭐⭐⭐
+
+**问题**（2026-09-27）：三周期 walk-forward 并行过夜跑，14:57 起腾讯接口断连约 18 小时。
+`walk_forward_validation.py` 的 fold 循环 `except: log; continue` 吞掉异常继续跑，
+`prepare_data` 拿不到恒指数据（`hsi_df` 缺 `Close`）在 `calculate_relative_strength` 抛
+`KeyError: 'Close'` → 失败的 fold 无预测产出，但脚本最终仍打印"验证完成"并生成报告/CSV：
+20d 只剩 17/38 折、5d/1d 各剩 15/38 折（43610 → 16952 行），且整体准确率照算不误。
+若不核对 fold 数/行数就与基线对比，整轮验证结论全废。
+
+**解决**（2026-09-28）：
+- `validate()` 加**完整性闸门**：追踪 `failed_folds`/`skipped_folds`（embargo 跳过单独计数，
+  不算失败），任一 fold 失败或成功数 < 期望数 → `RuntimeError` 列出失败折号，
+  `main()` 兜底 `sys.exit(1)`——**拒绝生成残缺报告，失败必须非零退出**
+- 单测验证闸门触发（monkeypatch `_validate_fold` 注入 KeyError → RuntimeError 含失败折号）
+
+**教训**：
+- **"验证完成"字样 ≠ 结果完整**。长跑产物必须核对三件套：fold 数==期望、行数量级对齐、
+  日志 `grep -c Traceback`；任一不符先查数据源再谈对比
+- 长任务开跑前必测数据源连通；断网会让**并行任务差异化幸存**（命中新缓存者活、需刷新者死），
+  同一 session 里三个结果可信度可能完全不同
+- 吞异常的 `continue` 必须配"失败计数+末尾闸门"，否则局部失败静默降级为整体假成功
+
 
 ## 四、模型训练
 
