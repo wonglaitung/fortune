@@ -750,6 +750,30 @@ P(超额IR>0) / 逐年超额IR 由工具直接产出，复现 DECISIONS 数字�
   同一 session 里三个结果可信度可能完全不同
 - 吞异常的 `continue` 必须配"失败计数+末尾闸门"，否则局部失败静默降级为整体假成功
 
+### 21. 第三方库（akshare）内部请求无超时 = 静默挂死；等价预准备可省 10× 重算 ⭐⭐⭐
+
+**问题**（2026-09-28）：A股 walk-forward 起跑 16 分钟后卡死，日志停在"从缓存加载主力资金数据"。
+`ss -tnp` 显示进程挂着 `query.sse.com.cn:443` 的 ESTAB 连接；根因是 `margin_data.py` 调
+`ak.stock_margin_detail_sse/szse`（akshare 内部 `requests.get` 无 timeout）→ 该接口一慢整条
+验证链无限阻塞。同一日还发现**另一个更隐蔽的浪费**：`_validate_fold` 每 fold 调 3 次
+`prepare_data`（train / `train()` 内部 / test），19 folds × 53 股 × 3 ≈ 3000 次全量特征重算 ≈ 11 小时。
+
+**解决**（2026-09-28，commit 54a046dc）：
+- `margin_data._fetch_with_timeout()`：守护线程 + 20s 硬 join + **按市场电路闸**
+  （任一市场超时一次即本进程内不再请求该网络源，走缓存/默认值 0.0；融资融券是增强特征，缺失可容忍）
+- `a_stock_walk_forward.validate()` 起跑前**全量预准备 1 次**，`_validate_fold` 按
+  train/test 窗口切片；`AStockTradingModel.train()` 新增 `prepared_df` 参数跳过重复 prepare。
+  依据：`prepare_data` 在日期过滤**之前**完成全部特征/标签计算，`start/end` 只做过滤 →
+  切片与逐窗口 prepare **数学等价**（3 股实测：数值最大差 0、对象列一致、Label 一致；
+  fold1 准确率 0.5941 vs 原 0.5947，差异来自两融接口超时降级）。19 folds 2 小时跑完（原 ~11h）。
+
+**教训**：
+- 自研代码设了 timeout 不够：**依赖链里任何一环（akshare/requests 库函数）没超时都会拖死全局**。
+  长跑前用 `ss -tnp | grep <pid>` 看挂着哪个域名，比看日志快（日志本身可能因缓冲静默）
+- 网络降级要有**电路闸**：只加重试/超时会在每个 fold/每股上反复付超时成本；失败一次就该全局停用该源
+- 特征计算与窗口无关时，"预计算全量 + 按窗口切片"是**等价提速**，但必须先用小样本
+  对比（数值差/索引/标签）证明等价，再动长跑流程；`train(prepared_df=...)` 之类的
+  复用入口要显式参数化，别靠全局状态
 
 ## 四、模型训练
 
@@ -1016,6 +1040,8 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-09-28 | v10.24 | 新增：akshare 内部请求无超时=静默挂死（守护线程硬超时+按市场电路闸）+ walk-forward 全量预准备等价切片（11h→2h）→ 三.21 |
+| 2026-09-28 | v10.23 | 新增：fold 级异常被吞=残缺结果冒充验证完成（完整性闸门+失败非零退出）→ 三.20 |
 | 2026-09-27 | v10.22 | 新增：校准只改概率不改方向 = 邮件「↑ 0.49」自相矛盾（direction/pattern 须与校准概率同口径）→ 三.19 |
 | 2026-09-27 | v10.21 | 新增：文档引用的验证指标必须工具直接产出（超额IR 手工另算 → portfolio_backtest.py 工具化 + /model_validation 阶段 5.7）→ 三.18 |
 | 2026-09-27 | v10.20 | 新增：复权口径训练/监控必须同源（港股评估 exit 曾用 yfinance 未复权 vs entry 腾讯前复权，跨除息日 actual_return 失真实测虚高 62%）→ 三.17 |

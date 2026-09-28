@@ -502,7 +502,7 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 
 1. **修改完即测试**：每次修改后立即执行 `python3 -m py_compile <文件>`
 2. **避免硬编码路径**：使用 `os.path.dirname(os.path.abspath(__file__))` 获取脚本目录
-3. **HTTP API 超时处理**：调用 API 时必须设置超时时间
+3. **HTTP API 超时处理**：调用 API 时必须设置超时时间——**含依赖链内部请求**（akshare 等库函数常无 timeout，会静默挂死整条流水线，见 lessons 三.21）
 4. **语言规范**：对话和注释使用简体中文，变量名/函数名使用英文
 
 ### 数据泄漏防护
