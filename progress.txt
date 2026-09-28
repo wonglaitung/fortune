@@ -2191,3 +2191,29 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 断代提醒：MI 种子改变选特征集 → 09-28 各轮指标为修复前旧代码产物，下轮全量
   Walk-forward（38 folds）起刷新 D2/护栏判定。
 - 待办（后续阶段，未获批）：全量 38-fold 重跑刷新判定 / B 多种子 / C3C4 / D2 升配规则加种子维度。
+
+[2026-09-28 夜] A股改造收官轮（P1.2/P3.1/P3.2/P4.1/P4.3）+ 特征降级事故修复
+- **特征降级事故（lessons 三.23）**：主力资金缓存 10:59（6h 过期）+ 东财接口 RemoteDisconnected，
+  `_add_main_fund_features` 拿 None **静默跳过** → 同一条三周期链里 20d/5d 有该特征、1d 没有，
+  LightGBM A/B 首跑也没有（三份"同口径"实为两套特征集）。修复：日频缓存 touch mtime
+  （窗口 ≤2026-07-01 内与新拉取逐行等价论证）+ 杀降级 LGBM 首跑重启 + 补跑 CatBoost 1d
+  （`output/20260928_230207_a_stock_catboost_1d/`，旧降级目录改名 *_degraded_mainfund_missing）。
+- **P1.2 三周期 backtest_eval 齐**：20d 准确率 58.4%、lift **+7.1pp**(p=0.0033)；5d 51.5%、
+  +1.0pp(p=0.497 无边缘)；1d 修复后 52.0%、**−0.3pp**(p=0.65 无边缘) → `output/backtest_eval_a_stock_{20,5,1}d_20260928.md`
+- **P2.2 三周期 D2 判定（口径与港股一致）**：20d 净IR 2.75/PBO 0.74/DSR 1.000 → 🟡 低配；
+  5d 0.52/0.54/0.690 → 🟡（无边缘）；**1d −1.92/0.99/0.009 → 🔴 停用** → DECISIONS §四.附 定稿
+- **P3.1 OOF 校准三周期齐**：`daily_confidence.py --market a --refit`（23:07 统一 refit，
+  源 = 特征对齐的三份 CSV；20d 映射 P=0.8→0.641）
+- **P3.2 门槛分位化（D8 同款）**：`ml_services/a_stock_gates.py`，A_GATE_SNAPSHOT
+  bear **0.7497** / weak **0.7154**（P92/P90，源 20d CSV+校准器），邮件/综合分析 0.70/0.65 绝对值全改分位
+- **P4.1 学习器 A/B 三周期**（`ml_services/learner_ab_report.py`，报告 `output/learner_ab_a_stock_{20,5,1}d_20260928.md`）：
+  20d → LightGBM 胜（lift +8.42 vs +7.06pp、净IR 3.28 vs 2.75；PBO 0.96/0.74 双不过 → 均🟡，单轮不换器）；
+  5d → 分歧（CB lift 高、LGBM IR 高）→ 按 D10 保守维持 CatBoost；1d → 双🔴（净IR −1.92/−1.00）。
+  结论：**20d 倾向 LightGBM（待复现）、5d 维持 CatBoost、1d 停用**，生产学习器暂不改
+- **P4.3 仓位口径 C 对齐**：`position_band()` + `clamp_positions_to_band()`（LLM 三档仓位钳进概率区间
+  并保序）、信号阈值 strong_buy≥0.60、0.50-0.55 降 hold 不列买入、两份 prompt 写入「仓位唯一口径」
+- **测试**：140 passed（新增 gates 3 / position_band 11 / learner_ab 4 / oof 4）
+- **提交**（均已 push）：19909a75 P4.1 开关 → d3d5689a lessons 三.23/三.24+计划 v1.2 →
+  2596ce4b P3.2 → e77c4257 A/B 工具 → ab7b12f4 P4.3（+本次文档收尾）
+- **待办**：P4.2 图表 D3（待排期）；20d 是否切 LightGBM 待下轮 walk-forward 复现后定；
+  主力资金上游接口持续 RemoteDisconnected（缓存 6h 内可用，跑长任务前先验）

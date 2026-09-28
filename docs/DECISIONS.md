@@ -141,7 +141,19 @@
 - **5d 复核（同日）**：净IR **0.52** [-1.02,2.20]、PBO 0.54、DSR 0.688 → 三项均未达 → **🟡 保留低配**；
   组合层超额 CI 跨 0（⚠️ 不稳健）；信号层 lift **+1.0pp**（p=0.497 不显著）→ **5d 无可用边缘**
   （`output/monthly_guardrail_5d_20260928_a.md`、`output/portfolio_5d_top10_a.md`、`output/backtest_eval_a_stock_5d_20260928.md`）
-- 遗留：1d 复核待跑完；P4 学习器 A/B 三周期已拍板待做（见 `docs/A_STOCK_REFORM_PLAN.md`）
+- **1d 复核（同日，特征集修复后重跑）**：首跑因主力资金缓存过期被静默降级（lessons 三.23），
+  修复后重跑 `output/20260928_230207_a_stock_catboost_1d/`：准确率 **52.0%** [51.3,52.7]（vs 随机显著），
+  信号超额 lift **−0.3pp**（p=0.65 无边缘）、净IR **−1.92** [−3.35,−0.38]、PBO 0.99、DSR 0.009 →
+  **🔴 停用（IR≤0）**（与降级首跑判定一致，结论稳健）
+  （`output/backtest_eval_a_stock_1d_20260928.md`、`output/monthly_guardrail_1d_20260928_a.md`）
+- **P4.1 学习器 A/B（三周期，D10 口径）**：`output/learner_ab_a_stock_{20,5,1}d_20260928.md`
+  - **20d**：LightGBM lift **+8.42pp**(p=6e-4) / 净IR **3.28** vs CatBoost +7.06pp / 2.75 →
+    **双指标同向 → LightGBM 胜**；但两者 PBO 0.96/0.74 均不过 → 均 🟡，**单轮领先不换器**
+    （lessons 三.22：需下轮复现）
+  - **5d**：CB lift 高 +0.95pp、LGBM 净IR 高 0.30 → **分歧 → 按 D10 保守（维持 CatBoost）**
+  - **1d**：两学习器净IR 均负（−1.92/−1.00）→ **双 🔴 停用**（学什么都没用）
+  - 三周期结论：**20d 倾向 LightGBM（待复现）、5d 维持 CatBoost、1d 停用** —— 与 D10「分周期 A/B、
+    不全局替换」一致，暂不改动生产学习器配置
 
 ---
 

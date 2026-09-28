@@ -140,7 +140,9 @@
       逐折 lift 正 18/19、板块层轨交IT +9.9pp/电子 +9.5pp 方向技能领先、能源 −1.9pp 唯一负、
       校准分桶单调（50-60%→53.0%，80%+→72.5%，可直接作 P3.1 OOF 校准素材）；
       **5d 已补**（`output/backtest_eval_a_stock_5d_20260928.md`：51.5%、lift +1.0pp p=0.497 不显著 → 5d 无边缘）；
-      **1d 首跑因主力资金缓存过期被静默降级（lessons 三.23）已废弃、重跑中** —— 补跑后重出 `backtest_eval_a_stock_1d_20260928.md`）
+      **1d 修复后重跑**（`output/20260928_230207_a_stock_catboost_1d/`，特征集对齐）：
+      准确率 **52.0%** [51.3,52.7]（vs 随机显著）、超额 lift **−0.3pp**（p=0.65 无边缘）→
+      `output/backtest_eval_a_stock_1d_20260928.md`；三周期报告齐 → **P1.2 完成**）
 - [x] P1.3 入库工具扩 a_stock —— **已具备**（`HK20D_RE` 排除 a_stock，A股目录只提交 CSV 不改 GATE_SNAPSHOT；
       `a_stock_walk_forward.py` 已集成 `--no-commit` 开关）
 - [x] P2.1 guardrail/portfolio/eval_overfit `--market a` + `latest_pred` 默认 glob 排除 `*_a_stock_*`
@@ -150,23 +152,28 @@
       **🟡 保留低配**；组合层超额IR **3.02** [1.96,4.80] 下界>0、逐年双正但仅 20 期 →
       `output/monthly_guardrail_20d_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
       **5d 已补**：净IR 0.52/PBO 0.54/DSR 0.688 → 🟡、组合层超额 CI 跨 0、lift +1.0pp 不显著 → 5d 无边缘；
-      **1d 首跑（lift −1.2pp p=0.04、净IR −2.39 → 🔴）特征集缺主力资金列（lessons 三.23），
-       结论待补跑后重判，暂不写入 D11 定稿**）
+      **1d 修复后重跑定稿**：净IR **−1.92** [−3.35,−0.38]、PBO 0.99、DSR 0.009、lift −0.3pp →
+       **🔴 停用（IR≤0）**（与降级首跑同判定）；三周期 D2 判定齐 → 20d 🟡 / 5d 🟡 / 1d 🔴，
+       见 `docs/DECISIONS.md` §四.附）
 - [x] P2.3 A 股 D2 判定记录入 DECISIONS —— **D11 + §四.附**（含复核命令与触发条件）
-- [~] P3.1 OOF 校准扩展 A 股 —— **代码+20d 校准器已就绪**（`DailyConfidence(cal_prefix='a_stock_',
+- [x] P3.1 OOF 校准扩展 A 股 —— **完成**（`DailyConfidence(cal_prefix='a_stock_',
       oof_glob=...)` + `calibrate_probability()` 方向同口径 + 4 单测；`daily_confidence.py --market a --refit`
       拟合；20d/5d 校准器（`data/calibrators/a_stock_prob_cal_{20,5}.pkl`）已各从 19,578 条 OOF 拟出、
       快照元数据 `a_stock_cal_meta_{20,5}.json` 落盘；
-      **1d 校准器已拟出但源 CSV 属降级首跑 → 1d 补跑完成后 `daily_confidence.py --market a` 再拟一次**；
-      邮件 A 股概率已走校准链路）
+      1d 校准器已按修复后 CSV 重拟；三周期校准器 2026-09-28 23:07 统一 refit 完毕
+      （`daily_confidence.py --market a --refit`）；邮件 A 股概率已走校准链路）
 - [x] P3.2 门槛分位化 D8 —— **完成**（`ml_services/a_stock_gates.py`：`A_GATE_QUANTILES{bear:0.92,weak:0.90}`、快照 bear **0.7497** / weak **0.7154**（源 `output/20260928_144833_a_stock_catboost_20d` 19,578 条 + `a_stock_prob_cal_20.pkl`，as_of 2026-07-31）、回退链 CSV→快照→绝对值 0.70/0.65；`a_stock_comprehensive_analysis.py`（`get_market_sentiment` 阈值、layer_names、LLM prompt、`market_adjust` 判定）与 `a_stock_email.py`（sentiment 动态阈值、prompt 文案）全部改分位；3 单测，全量 129 passed；运行时实测 bear 0.7497 / weak 0.7154 / normal 0.50）
 - [ ] P3.3 ~~恢复 history 回写~~ → **不做**（决策点 1：维持停用）
-- [~] P4.1 学习器 A/B 三周期 —— **开关已就绪**（`AStockTradingModel(learner=...)` +
+- [x] P4.1 学习器 A/B 三周期 —— **完成（跑数+对照报告）**，开关已就绪（`AStockTradingModel(learner=...)` +
       `--learner lightgbm`：LightGBM 走同口径 TSCV+样本权重、准确率键 `a_stock_lightgbm_{h}d` 分离、
       输出目录 `*_a_stock_lightgbm_{h}d` 不覆盖 catboost、guardrail A股 glob 覆盖双学习器；4 单测；
       **三周期 LightGBM 链已在 tmux `ablgbm` 串行跑（20d→5d→1d，日志 `/tmp/opencode/awf_lgbm.log`）**，
        同时 tmux `abcb1d` 并行补跑 CatBoost 1d（修 lessons 三.23 特征降级，日志 `/tmp/opencode/awf_cb1d_rerun.log`）；
-       六份运行主力资金缓存全部命中、特征集对齐）
+       六份运行主力资金缓存全部命中、特征集对齐；
+       **A/B 结果** `output/learner_ab_a_stock_{20,5,1}d_20260928.md`：
+       20d → LightGBM 胜（lift +8.42 vs +7.06pp、净IR 3.28 vs 2.75，但 PBO 双不过 → 均🟡，单轮不换器）；
+       5d → 分歧 → 按 D10 保守维持 CatBoost；1d → 双🔴 停用。
+       结论：**20d 倾向 LightGBM（待复现）、5d 维持 CatBoost、1d 停用**）
 - [x] P4.3 仓位口径 C 对齐 —— **完成**（`a_stock_recommendation_generator.py`：`position_band()` 概率→区间
       （≥0.60→4-6% / 0.55-0.60→2-3% / 0.50-0.55→0-2% / ≤0.50→0）+ `clamp_positions_to_band()` 钳 LLM 三档仓位并保序；
       信号阈值对齐 strong_buy≥0.60、0.50-0.55 降为 hold 不列买入；两份 LLM prompt 写入「仓位唯一口径」硬约束；

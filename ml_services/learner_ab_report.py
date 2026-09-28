@@ -165,11 +165,16 @@ def render(horizon, rows):
         a, b = rows['catboost'], rows['lightgbm']
         dl = (a.get('lift') or 0) - (b.get('lift') or 0)   # 已是 pp
         di = (a.get('ir') or 0) - (b.get('ir') or 0)
-        win = 'CatBoost' if (dl > 0 and di > 0) else ('LightGBM' if (dl < 0 and di < 0) else '平手/口径分歧')
+        if dl > 0 and di > 0:
+            concl = "**CatBoost 胜**（双指标同向）"
+        elif dl < 0 and di < 0:
+            concl = "**LightGBM 胜**（双指标同向）"
+        else:
+            concl = "**分歧 → 按 D10 保守**：维持现有学习器，不全局替换"
         L += [f"## A/B 结论（{horizon}d）",
               f"- 超额 lift 差（CB−LGBM）: {dl:+.2f}pp；净IR 差: {di:+.2f}",
-              f"- 双指标同向 → **{win} 胜**；分歧则按 D10「分周期 A/B、不全局替换」保守处理",
-              "- 判定只用决策指标；单轮结果受运行噪声影响（lessons 三.22），需与上轮/另一周期交叉验证"]
+              f"- {concl}",
+              "- 判定只用决策指标；单轮结果受运行噪声影响（lessons 三.22），需另一轮重跑复现后才可换学习器"]
     return "\n".join(L) + "\n"
 
 
