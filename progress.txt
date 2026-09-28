@@ -2142,3 +2142,36 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   VALIDATION_GUIDE.md 评估铁律/月度护栏/现行SOP 对齐"每次 20d walk-forward 后另跑
   portfolio_backtest（阶段5.7）+ 超额CI/逐年由工具直接产出（lessons 三.18）；
   DEPLOYMENT.md 复核表补阶段 5.7
+
+### 2026-09-28 完整验证（技能 model_validation 全流程：断网事故→闸门→六周期重跑→5.5/5.6/5.7）⭐
+
+- **事故**：09-27 14:57→09-28 08:39 腾讯断网，walk-forward fold 异常被吞仍打印"验证完成"，
+  产出残缺 CSV（20d 17/38 折、5d/1d 各 15/38）→ 三份全部判废
+- **修复**：`walk_forward_validation.py` `validate()` 加完整性闸门（failed_folds/skipped_folds
+  → 缺折 RuntimeError、main 兜底 sys.exit(1)）；教训 lessons 三.20（并行会话提交 a0b4f0cf）
+- **重跑（tmux wf27，--no-commit）全部完整**：43610 行/38 折/0 Traceback
+  - 20d LGBM `20260928_143553`：52.07%（+0.31pp vs 09-26）、lift +2.1pp p=0.175
+  - 5d CB `20260928_164552`：51.53%（−0.15pp）、lift +1.1pp p=0.215
+  - 1d CB `20260928_165427`：51.12%（+0.16pp）、lift +1.7pp p=0.0000（仍显著）
+  - 恒指 1/5/20d：三份预测 CSV 与 09-26 **逐位相同**（完全复现）
+- **噪声定论（lessons 三.22）**：09-26 同日同配置 5d 双跑 r=0.755/翻转 22.3%/acc 差 0.55pp
+  → 管线运行间不可 bit 级复现；聚合 ±0.6pp 带内即正常，对比只看决策指标
+- **阶段 5.5/5.6/5.7**：
+  - 5.5 backtest_eval ×3 + HSI ×3：lift 方向全部同向复现 ✓
+  - 5.6 护栏：20d **🟢→🟡**（净IR 1.41→0.84、CI 下界 0.32→−0.36、DSR 0.982→0.940、PBO 0.19→0.46）；
+    5d 🟡、1d 🔴 稳定
+  - 5.7 portfolio：超额IR 1.24 [0.18,2.41]→**−0.11 [−1.44,0.87]**、P(>0) 98.9%→42%、
+    逐年超额 4/4→2/4 正（2026 −1.5%/期）→ **组合层稳健性未复现**
+  - **决策：09-26 轮"可升配"作废，维持 🟡 低配不升配（D2 保守面）**；单轮 🟢 不可信须两轮同向
+- **阶段 2A**：analyze_three_horizon_relationships.py 重跑（20d 自算 80.57%>80% 泄漏红线=全量快照
+  口径，非 PIT，只作机制参考）；阶段 2B analyze_stock_causal_chain.py 12 股跑完（17:14）：
+  1d→5d 模型 51.46% vs 多数类 45.00%（12/12 股胜）、5d→20d 58.53% vs 43.78%（12/12）、
+  传递相关 0.12-0.15——⚠️ SOP 写"--full/59只"但脚本无 argparse、硬编码 12 股（死参数，SOP 文本待修）
+- **文档同步**：AGENTS（三表+核心警告 2 行+恒指逐位复现注记）、DECISIONS（D2 行+§四 09-28 行+
+  补充检验③）、VALIDATION_GUIDE（最新验证结果+两道检验教训）、README（验证表+🟡段）、
+  THREE_HORIZON（9.1 修 903 旧口径→697+去矛盾建议、验证时间/页脚）
+- **产物**：output/backtest_eval_{lightgbm_20d,catboost_5d,catboost_1d}_20260928.md、
+  monthly_guardrail_{20d,5d,1d}_20260928.md、portfolio_20d_20260928.md（CI 数据源，须入库）；
+  fold 表 /tmp/opencode/fold_tables_20260928.md（20d 25/38、5d 32/38、1d 37/38 问题 fold）
+- **待办**：D9 入库新 20d CSV（commit_backtest_result.py）、护栏 20d 旧文件轮换（CI mtime 歧义）、
+  pytest 复验、hsi_prediction 冒烟、stash@{0} 待用户处置
