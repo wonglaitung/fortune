@@ -51,6 +51,56 @@ from ml_services.market_regime import MarketSentimentFilter
 TRADING_DAYS_PER_MONTH = 20
 TRADING_DAYS_PER_YEAR = 240
 
+# prediction_analysis.csv 列顺序（与港股 walk_forward_validation 输出一致，
+# 供 backtest_eval / monthly_guardrail / portfolio_backtest 直接消费）
+PREDICTION_ANALYSIS_COLUMNS = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Predict_Direction',
+                               'Actual_Return', 'Actual_Direction', 'Is_Correct',
+                               'Market_Layer', 'Dynamic_Threshold', 'Market_Up_Ratio']
+
+
+def build_prediction_analysis(all_pred_df):
+    """把 walk-forward 逐 fold 预测明细转成港股同列名的 prediction_analysis DataFrame
+
+    输入列（A股内部命名）：fold/prediction/probability/actual_return/Label/
+    market_layer/dynamic_threshold/market_up_ratio_lag1 + Stock_Code 或 Code + Date
+    输出列（港股命名）：PREDICTION_ANALYSIS_COLUMNS（缺失列跳过）
+    """
+    pred_analysis = all_pred_df.rename(columns={
+        'fold': 'Fold',
+        'prediction': 'Predict_Direction',
+        'probability': 'Predict_Prob',
+        'actual_return': 'Actual_Return',
+        'Label': 'Actual_Direction',
+        'market_layer': 'Market_Layer',
+        'dynamic_threshold': 'Dynamic_Threshold',
+        'market_up_ratio_lag1': 'Market_Up_Ratio',
+    })
+    # 代码列统一为 Stock_Code（test_data 已带 Stock_Code 时避免重复列）
+    if 'Stock_Code' not in pred_analysis.columns and 'Code' in pred_analysis.columns:
+        pred_analysis = pred_analysis.rename(columns={'Code': 'Stock_Code'})
+    elif 'Code' in pred_analysis.columns:
+        pred_analysis = pred_analysis.drop(columns=['Code'])
+
+    # 转换预测方向（仅数值 0/1 才映射，已是 UP/DOWN 字符串则保留）
+    def _to_dir(s):
+        if s.dtype.kind in 'biufc':
+            return s.map({1: 'UP', 0: 'DOWN'})
+        return s
+    if 'Predict_Direction' in pred_analysis.columns:
+        pred_analysis['Predict_Direction'] = _to_dir(pred_analysis['Predict_Direction'])
+    if 'Actual_Direction' in pred_analysis.columns:
+        pred_analysis['Actual_Direction'] = _to_dir(pred_analysis['Actual_Direction'])
+
+    # 计算是否正确
+    pred_analysis['Is_Correct'] = pred_analysis['Predict_Direction'] == pred_analysis['Actual_Direction']
+
+    # 确保股票代码为6位字符串格式（保留前导零）
+    if 'Stock_Code' in pred_analysis.columns:
+        pred_analysis['Stock_Code'] = pred_analysis['Stock_Code'].astype(str).str.zfill(6)
+
+    columns_to_save = [c for c in PREDICTION_ANALYSIS_COLUMNS if c in pred_analysis.columns]
+    return pred_analysis[columns_to_save]
+
 
 class AStockWalkForwardValidator:
     """A股 Walk-forward 验证器 - 与港股架构一致"""
@@ -333,6 +383,9 @@ class AStockWalkForwardValidator:
         # 收集预测详情
         if 'prediction_df' in metrics:
             pred_df = metrics['prediction_df'].copy()
+            # Date 是索引，必须在 concat（ignore_index）前落成列，否则 CSV 丢日期
+            if 'Date' not in pred_df.columns:
+                pred_df['Date'] = pred_df.index
             pred_df['fold'] = fold + 1
             pred_df['train_start'] = train_start_date.strftime('%Y-%m-%d')
             pred_df['train_end'] = train_end_date.strftime('%Y-%m-%d')
@@ -464,6 +517,8 @@ class AStockWalkForwardValidator:
             df['market_layer'] = predictions['market_layer'].values
         if 'dynamic_threshold' in predictions.columns:
             df['dynamic_threshold'] = predictions['dynamic_threshold'].values
+        if 'market_up_ratio_lag1' in predictions.columns:
+            df['market_up_ratio_lag1'] = predictions['market_up_ratio_lag1'].values
         if 'filtered_signal' in predictions.columns:
             df['filtered_signal'] = predictions['filtered_signal'].values
 
@@ -800,41 +855,14 @@ class AStockWalkForwardValidator:
         self._generate_markdown_report(report, md_file)
         logger.info(f"Markdown报告已保存: {md_file}")
 
-        # 6. 保存 prediction_analysis.csv（用于计算个股盈亏比）
+        # 6. 保存 prediction_analysis.csv（列名与港股 walk_forward_validation 一致，
+        #    供 backtest_eval / monthly_guardrail / portfolio_backtest 直接消费）
         if self.all_predictions:
             all_pred_df = pd.concat(self.all_predictions, ignore_index=True)
-
-            # 标准化列名（与港股格式一致）
-            pred_analysis = all_pred_df.rename(columns={
-                'Code': 'code',
-                'prediction': 'Predicted_Direction',
-                'probability': 'Predict_Prob',
-                'actual_return': 'Actual_Return',
-                'Label': 'Actual_Direction',
-            })
-
-            # 转换预测方向
-            pred_analysis['Predicted_Direction'] = pred_analysis['Predicted_Direction'].map({1: 'UP', 0: 'DOWN'})
-            pred_analysis['Actual_Direction'] = pred_analysis['Actual_Direction'].map({1: 'UP', 0: 'DOWN'})
-
-            # 计算是否正确
-            pred_analysis['Is_Correct'] = pred_analysis['Predicted_Direction'] == pred_analysis['Actual_Direction']
-
-            # 确保股票代码为6位字符串格式（保留前导零）
-            if 'code' in pred_analysis.columns:
-                pred_analysis['code'] = pred_analysis['code'].astype(str).str.zfill(6)
-
-            # 选择需要的列
-            columns_to_save = ['code', 'fold', 'Predicted_Direction', 'Predict_Prob',
-                               'Actual_Direction', 'Actual_Return', 'Is_Correct']
-            # 添加日期列（如果存在）
-            if 'Date' in pred_analysis.columns or pred_analysis.index.name == 'Date':
-                if pred_analysis.index.name == 'Date':
-                    pred_analysis['Date'] = pred_analysis.index
-                columns_to_save.insert(0, 'Date')
+            pred_analysis = build_prediction_analysis(all_pred_df)
 
             pred_analysis_file = os.path.join(detail_dir, 'prediction_analysis.csv')
-            pred_analysis[columns_to_save].to_csv(pred_analysis_file, index=False)
+            pred_analysis.to_csv(pred_analysis_file, index=False)
             logger.info(f"预测详情已保存: {pred_analysis_file}")
             print(f"  - 预测详情: {pred_analysis_file}")
 

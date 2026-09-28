@@ -50,9 +50,32 @@ SECTOR_NAME_ZH = {
     'index': '指数基金', 'real_estate': '地产', 'auto': '汽车', 'consumer': '消费',
 }
 
+# A股板块中文名（--market a 时覆盖/并入 SECTOR_NAME_ZH，来源 a_stock_config.A_STOCK_SECTOR_NAME_MAPPING）
+A_SECTOR_NAME_ZH = {
+    'railway_tech': '轨交IT', 'acoustics': '声学电子', 'pharmaceutical': '创新药',
+    'chemical': '化工', 'consumer_electronics': '消费电子',
+    'new_energy': '新能源材料', 'electronics': '电子元器件', 'industrial': '工业装备',
+}
+
+# 市场：hk（默认，config.STOCK_SECTOR_MAPPING）/ a（a_stock_config.A_STOCK_SECTOR_MAPPING）
+# 由 main() 的 --market 切换；板块映射与中文名按此选择（A_STOCK_REFORM_PLAN P1.1）
+_MARKET = 'hk'
+
+
+def set_market(market):
+    """切换市场（hk/a），影响板块映射与股票名称来源"""
+    global _MARKET
+    _MARKET = 'a' if str(market).lower().startswith('a') else 'hk'
+
 
 def _sector_mapping():
-    """加载股票 → 板块映射（HK config）；失败时返回空映射"""
+    """加载股票 → 板块映射；失败时返回空映射"""
+    if _MARKET == 'a':
+        try:
+            from a_stock_config import A_STOCK_SECTOR_MAPPING
+            return A_STOCK_SECTOR_MAPPING
+        except Exception:
+            return {}
     try:
         from config import STOCK_SECTOR_MAPPING
         return STOCK_SECTOR_MAPPING
@@ -61,11 +84,19 @@ def _sector_mapping():
 
 
 def _map_sectors(codes, mapping=None):
-    """股票代码 → 板块名（未知归为 unknown）"""
+    """股票代码 → 板块名（未知归为 unknown）
+
+    A股 CSV 代码经 read_csv 类型推断会丢前导零（002655→2655），
+    因此按原值与左补零6位各查一次（A_STOCK_REFORM_PLAN P1.1）。
+    """
     mapping = mapping if mapping is not None else _sector_mapping()
 
     def _one(code):
-        info = mapping.get(str(code)) or {}
+        c = str(code)
+        info = mapping.get(c)
+        if not info and len(c) <= 6:
+            info = mapping.get(c.zfill(6))
+        info = info or {}
         return info.get('sector') or SECTOR_UNKNOWN
 
     return codes.map(_one)
@@ -74,10 +105,18 @@ def _map_sectors(codes, mapping=None):
 def _sector_label(sector):
     if sector == SECTOR_UNKNOWN:
         return SECTOR_UNKNOWN
-    return f"{SECTOR_NAME_ZH.get(sector, sector)}({sector})"
+    zh = A_SECTOR_NAME_ZH.get(sector) if _MARKET == 'a' else None
+    zh = zh or SECTOR_NAME_ZH.get(sector, sector)
+    return f"{zh}({sector})"
 
 
 def _stock_mapping():
+    if _MARKET == 'a':
+        try:
+            from a_stock_config import A_STOCK_SECTOR_MAPPING
+            return A_STOCK_SECTOR_MAPPING
+        except Exception:
+            return {}
     try:
         from config import STOCK_SECTOR_MAPPING
         return STOCK_SECTOR_MAPPING
@@ -86,10 +125,13 @@ def _stock_mapping():
 
 
 def _stock_label(code, mapping=None):
-    """股票代码 → '代码 名称'（无名称时只显示代码）"""
+    """股票代码 → '代码 名称'（无名称时只显示代码；A股代码补齐前导零）"""
     mapping = mapping if mapping is not None else _stock_mapping()
-    name = (mapping.get(str(code)) or {}).get('name')
-    return f"{code} {name}" if name else str(code)
+    c = str(code)
+    info = mapping.get(c) or (mapping.get(c.zfill(6)) if len(c) <= 6 else None) or {}
+    name = info.get('name')
+    return f"{c.zfill(6) if _MARKET == 'a' else c} {name}" if name else (
+        c.zfill(6) if _MARKET == 'a' else c)
 
 
 # 月份×股票组合的最小样本门槛（过滤噪声）
@@ -642,7 +684,11 @@ def main():
                         help='另一个周期的 prediction_analysis.csv，用于跨周期一致性标注')
     parser.add_argument('--compare-horizon', type=int, default=None,
                         help='对比周期的预测周期（默认与 --horizon 相同）')
+    parser.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
+                        help='市场：hk=港股板块映射（默认），a=A股（A_STOCK_REFORM_PLAN P1.1）')
     args = parser.parse_args()
+
+    set_market(args.market)
 
     df = pd.read_csv(args.input)
     res = evaluate(df, args.horizon, reliability_threshold=args.reliability_threshold,

@@ -76,6 +76,34 @@ except ImportError:
 STOCK_NAMES = A_STOCK_WATCHLIST
 STOCK_LIST = list(A_STOCK_WATCHLIST.keys())
 
+
+def _stock_chart_url(code):
+    """生成A股在腾讯自选股的 K 线图链接（邮件/报告中可点击）。
+
+    规则：6位数字代码 → 6开头 `sh`，0/3开头 `sz`，8/4开头 `bj`，其余返回 None。
+    示例：`000001` → `https://gu.qq.com/sz000001`（A_STOCK_REFORM_PLAN P0.4）
+    """
+    c = str(code).zfill(6)
+    if not c.isdigit() or len(c) != 6:
+        return None
+    if c.startswith('6'):
+        ex = 'sh'
+    elif c.startswith(('0', '3')):
+        ex = 'sz'
+    elif c.startswith(('8', '4')):
+        ex = 'bj'
+    else:
+        return None
+    return f"https://gu.qq.com/{ex}{c}"
+
+
+def _code_link_html(code):
+    """代码单元格 HTML：带腾讯自选股链接，无法生成链接时原样返回。"""
+    url = _stock_chart_url(code)
+    if url:
+        return f'<a href="{url}" style="color:#2563eb; text-decoration:none;">{code}</a>'
+    return str(code)
+
 # 板块分析使用全量股票（53只）
 SECTOR_STOCK_LIST = list(A_STOCK_TRAINING_LIST.keys())
 
@@ -91,16 +119,17 @@ THREE_HORIZON_PATTERNS = {
     'BBB': {'name': '持续下跌', 'action': '回避', 'color': '#dc2626'},
 }
 
-# A股传导模式准确率（参考港股，需要根据A股验证结果更新）
+# A股传导模式胜率（⚠️未验证：参考港股套用，A股未做净贡献/Bonferroni 复核，仅作参考，
+# 展示处均带"未验证"标注 —— A_STOCK_REFORM_PLAN P0.3）
 A_STOCK_TRANSMISSION_ACCURACY = {
-    'AAA': {'win_rate': 58.0, 'description': '一致看涨'},
-    'AAB': {'win_rate': 56.0, 'description': '短期调整'},
-    'ABA': {'win_rate': 55.0, 'description': '震荡上行'},
-    'ABB': {'win_rate': 54.0, 'description': '趋势转弱'},
-    'BAA': {'win_rate': 56.0, 'description': '底部反弹'},
-    'BAB': {'win_rate': 54.0, 'description': '震荡下行'},
-    'BBA': {'win_rate': 53.0, 'description': '下跌反弹'},
-    'BBB': {'win_rate': 52.0, 'description': '持续下跌'},
+    'AAA': {'win_rate': 58.0, 'description': '一致看涨', 'verified': False},
+    'AAB': {'win_rate': 56.0, 'description': '短期调整', 'verified': False},
+    'ABA': {'win_rate': 55.0, 'description': '震荡上行', 'verified': False},
+    'ABB': {'win_rate': 54.0, 'description': '趋势转弱', 'verified': False},
+    'BAA': {'win_rate': 56.0, 'description': '底部反弹', 'verified': False},
+    'BAB': {'win_rate': 54.0, 'description': '震荡下行', 'verified': False},
+    'BBA': {'win_rate': 53.0, 'description': '下跌反弹', 'verified': False},
+    'BBB': {'win_rate': 52.0, 'description': '持续下跌', 'verified': False},
 }
 
 
@@ -491,17 +520,27 @@ def load_historical_profit_loss_ratio_a_stock():
     try:
         df = pd.read_csv(latest_file)
 
+        # 列名兼容：旧A股CSV用 code/Predicted_Direction，新版与港股一致
+        # 用 Stock_Code/Predict_Direction（tools/backtest_eval 同款 normalize）
+        rename_map = {}
+        if 'Stock_Code' not in df.columns and 'code' in df.columns:
+            rename_map['code'] = 'Stock_Code'
+        if 'Predict_Direction' not in df.columns and 'Predicted_Direction' in df.columns:
+            rename_map['Predicted_Direction'] = 'Predict_Direction'
+        if rename_map:
+            df = df.rename(columns=rename_map)
+
         # 只分析预测UP的交易（实际买入场景）
-        df_up = df[df['Predicted_Direction'] == 'UP'].copy()
+        df_up = df[df['Predict_Direction'] == 'UP'].copy()
 
         if df_up.empty:
             return {}
 
         results = {}
-        for stock_code in df_up['code'].unique():
+        for stock_code in df_up['Stock_Code'].unique():
             # 标准化股票代码为6位字符串
             stock_code_str = str(stock_code).zfill(6)
-            stock_df = df_up[df_up['code'] == stock_code]
+            stock_df = df_up[df_up['Stock_Code'] == stock_code]
             n_samples = len(stock_df)
 
             if n_samples >= 3:  # 至少3次交易才计算
@@ -1325,7 +1364,8 @@ def format_ml_predictions_for_llm(three_horizon_results: dict) -> str:
         pattern_name = pattern_info.get('name', '-')
         action = pattern_info.get('action', '-')
 
-        lines.append(f"- {name}({code}): {pred_str}, 模式={pattern}({pattern_name}), 建议={action}, 胜率={win_rate:.0f}%")
+        lines.append(f"- {name}({code}): {pred_str}, 模式={pattern}({pattern_name}), 建议={action}, "
+                     f"胜率={win_rate:.0f}%（未验证，参考港股）")
 
     return '\n'.join(lines)
 
@@ -1704,10 +1744,12 @@ def generate_comprehensive_recommendations_with_llm(
 - **中等置信度观望**：0.50 < probability ≤ 0.60
 - **预测下跌**：probability ≤ 0.50
 
-**阈值优化说明**：
-- 当前CatBoost模型20天准确率：约{accuracy:.2%}（±{std:.2%}）
-- 强买入阈值0.60略高于准确率，确保高置信度
-- 买入阈值0.50接近准确率，平衡召回率和精确率
+**阈值口径说明（D3：不看绝对准确率）**：
+- 当前CatBoost模型20天历史准确率约{accuracy:.2%}（±{std:.2%}）——**仅作背景参考，不作买入依据**
+  （基准本身随行情浮动：牛市人人看涨也能"准确"，要看的是扣除基准后的超额与方向技能）
+- 0.60/0.50 档位是**校准概率的分档**，买入与否以「概率档 + 市场情绪门槛」决定：
+  极端熊市暂停 → 熊市需 ≥0.70 → 弱震荡需 ≥0.65 → 正常 ≥0.50 进入评估
+- 高置信度预测错误时损失可达 -73%，必须配合止损（建议 -8%）
 
 请按照以下格式输出（不要添加任何额外说明文字）：
 
@@ -2159,7 +2201,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
             <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
-            <td>{stock_code}</td>
+            <td>{_code_link_html(stock_code)}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
             <td>{rec.get('position_conservative', 0)}%</td>
@@ -2193,7 +2235,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
             <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
-            <td>{stock_code}</td>
+            <td>{_code_link_html(stock_code)}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
             <td>{rec.get('position_conservative', 0)}%</td>
@@ -2226,7 +2268,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
             <td>{rec.get('stock_name', stock_code)}</td>
-            <td>{stock_code}</td>
+            <td>{_code_link_html(stock_code)}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
             <td>观望</td>
@@ -2255,7 +2297,7 @@ def _format_recommendations_section(recommendations, stock_analyses=None):
             change_class = 'positive' if change_percent >= 0 else 'negative'
             html += f"""        <tr>
             <td><strong>{rec.get('stock_name', stock_code)}</strong></td>
-            <td>{stock_code}</td>
+            <td>{_code_link_html(stock_code)}</td>
             <td>{current_price:.2f}</td>
             <td class="{change_class}">{change_percent:+.2f}%</td>
             <td>{current_price:.2f}</td>
@@ -2543,7 +2585,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
         html += f"""        <tr>
             <td>{name}</td>
-            <td>{code}</td>
+            <td>{_code_link_html(code)}</td>
             <td>{price_str}</td>
             <td class="{change_class}">{change_str}</td>
             <td>{limit_rate:.0f}% {limit_status}</td>
@@ -2660,7 +2702,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
 
             html += f"""        <tr>
             <td><strong>{name}</strong></td>
-            <td>{code}</td>
+            <td>{_code_link_html(code)}</td>
             <td>{price_str}</td>
             <td class="{change_class}">{change_str}</td>
             <td>{sector_name}</td>
@@ -2671,7 +2713,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <td>{market_adjust}</td>
             <td><strong>{pattern_name}</strong><br><small>{pattern}</small></td>
             <td>{action}</td>
-            <td>{win_rate:.0f}%</td>
+            <td>{win_rate:.0f}%<br><small style="color:#999">未验证</small></td>
             <td>{resistance_icon}</td>
             <td>{pl_display}</td>
             <td>{expected_return}</td>
@@ -2687,8 +2729,9 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
         <span style="margin-right: 12px;"><strong>颜色</strong>：<span style="color: #16a34a;">↑≥60%</span> 高置信 | <span style="color: #ea580c;">↑50-60%</span> 中等 | <span style="color: #dc2626;">↓&lt;50%</span> 看跌</span>
         <span style="margin-right: 12px;"><strong>市场</strong>：🟢正常 | 🟡谨慎 | 🟠高置信 | 🔴暂停</span>
         <span><strong>筹码阻力</strong>：✅低 &lt;30% | ⚠️中 30-60% | 🔴高 &gt;60%</span><br>
-        <span style="margin-right: 12px;"><strong>盈亏比</strong>：基于Walk-forward验证历史数据计算，⭐⭐⭐ ≥3.0 | ⭐⭐ ≥2.0 | ⭐ ≥1.5 | ⚠️ &lt;1.5</span>
+        <span style="margin-right: 12px;"><strong>盈亏比</strong>：基于历史回测验证数据计算，⭐⭐⭐ ≥3.0 | ⭐⭐ ≥2.0 | ⭐ ≥1.5 | ⚠️ &lt;1.5</span>
         <span><strong>期望收益</strong>：胜率×平均盈利-(1-胜率)×平均亏损，正值表示正期望</span><br>
+        <span style="margin-right: 12px;"><strong>胜率</strong>：模式历史胜率，<strong style="color:#dc2626">未在A股验证</strong>（参考港股），仅作参考不作依据</span>
         <span style="margin-right: 12px;"><strong>风险得分</strong>：(100-波动率×1000 + 涨跌风险)/2，大涨风险高、大跌有机会</span>
         <span style="margin-right: 12px;"><strong>综合得分</strong>：风险得分×0.5 + 回报得分×0.5（RSI超卖机会大、多头排列回报高）</span>
         <span><strong>风险建议</strong>：⭐优选 ≥75 | 🟢推荐 60-75 | 🟡观察 45-60 | 🔴暂缓 &lt;45</span>

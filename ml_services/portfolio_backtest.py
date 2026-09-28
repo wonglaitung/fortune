@@ -14,6 +14,7 @@ Phase 3 最小版：把 OOS 预测分数转成组合，评估**扣成本后**的
 
 用法：
   python3 ml_services/portfolio_backtest.py --horizon 5 --topk 10
+  python3 ml_services/portfolio_backtest.py --horizon 20 --pred <A股CSV> --market a
   python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10
 """
 
@@ -34,16 +35,28 @@ DEFAULT_PRED = {
 }
 
 
-def load_panel(pred_csv):
+def load_panel(pred_csv, market='hk'):
+    """读 prediction_analysis.csv → 面板（date/code/prob/ret/sector）
+
+    market='a'（A股）：板块映射用 a_stock_config.A_STOCK_SECTOR_MAPPING，
+    代码左补零到6位（read_csv 类型推断会丢前导零）——A_STOCK_REFORM_PLAN P2.1
+    """
     df = pd.read_csv(pred_csv)
     df = df.rename(columns={'Stock_Code': 'code', 'Date': 'date'})
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df['prob'] = pd.to_numeric(df['Predict_Prob'], errors='coerce')
     df['ret'] = pd.to_numeric(df['Actual_Return'], errors='coerce')
     df = df.dropna(subset=['date', 'code', 'prob', 'ret'])
+    df['code'] = df['code'].astype(str)
+    is_a = str(market).lower().startswith('a')
+    if is_a:
+        df['code'] = df['code'].str.zfill(6)
     try:
-        from config import STOCK_SECTOR_MAPPING
-        df['sector'] = df['code'].map(lambda c: (STOCK_SECTOR_MAPPING.get(c) or {}).get('sector', 'unknown'))
+        if is_a:
+            from a_stock_config import A_STOCK_SECTOR_MAPPING as MAPPING
+        else:
+            from config import STOCK_SECTOR_MAPPING as MAPPING
+        df['sector'] = df['code'].map(lambda c: (MAPPING.get(c) or {}).get('sector', 'unknown'))
     except Exception:
         df['sector'] = 'unknown'
     return df
@@ -142,8 +155,8 @@ def _stats(x, horizon):
     return dict(n=len(x), mean=mean, ir=ir, win=float((x > 0).mean()), cum=cum)
 
 
-def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None):
-    df = load_panel(pred_csv)
+def run(horizon, pred_csv, topk, out_md, cost=COST, dropout=0, vol_target=None, market='hk'):
+    df = load_panel(pred_csv, market=market)
     print(f"\n{'='*70}\nPhase3 最小组合回测  horizon={horizon}  TopK={topk}\n{'='*70}")
     print(f"样本: {len(df)}　交易日: {df['date'].nunique()}　股票: {df['code'].nunique()}")
 
@@ -272,10 +285,13 @@ def main():
     ap.add_argument('--vol-target', type=float, default=None, help='年化波动率目标（如 0.15）')
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
+    ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
+                    help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
     args = ap.parse_args()
     pred_csv = args.pred or DEFAULT_PRED[args.horizon]
     out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}.md"
-    run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout, vol_target=args.vol_target)
+    run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout,
+        vol_target=args.vol_target, market=args.market)
 
 
 if __name__ == '__main__':

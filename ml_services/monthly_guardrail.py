@@ -32,10 +32,15 @@ from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _sta
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
 
 
-def latest_pred(horizon):
-    cands = glob.glob(f"output/*_catboost_{horizon}d/prediction_analysis.csv")
-    if not cands:
-        cands = glob.glob(f"output/walk_forward_catboost_{horizon}d_*.csv")
+def latest_pred(horizon, market='hk'):
+    """最新 prediction_analysis.csv；默认港股（排除 A股目录，避免误取）"""
+    if str(market).lower().startswith('a'):
+        cands = glob.glob(f"output/*_a_stock_catboost_{horizon}d/prediction_analysis.csv")
+    else:
+        cands = [f for f in glob.glob(f"output/*_catboost_{horizon}d/prediction_analysis.csv")
+                 if '_a_stock_' not in f]
+        if not cands:
+            cands = glob.glob(f"output/walk_forward_catboost_{horizon}d_*.csv")
     if not cands:
         return None
     return max(cands, key=os.path.getmtime)
@@ -45,7 +50,8 @@ def signal_lift(df):
     """信号胜率 − 无条件买入基准胜率（净收益>0.5%）"""
     df = df.copy()
     for a, b in [('Predict_Prob', 'prob'), ('Actual_Return', 'ret'), ('Dynamic_Threshold', 'dyn')]:
-        df[b] = pd.to_numeric(df[a], errors='coerce')
+        # 旧A股CSV缺 Dynamic_Threshold → 阈值回退 0.5（与 backtest_eval 一致）
+        df[b] = pd.to_numeric(df[a], errors='coerce') if a in df.columns else np.nan
     df['dyn'] = df['dyn'].fillna(0.5)
     df = df.dropna(subset=['ret', 'prob'])
     trade = df['prob'] >= df['dyn']
@@ -55,8 +61,8 @@ def signal_lift(df):
     return wr, base, (wr - base) if wr is not None else np.nan
 
 
-def run(horizon, pred_csv, topk, cost, out_md):
-    df = load_panel(pred_csv)
+def run(horizon, pred_csv, topk, cost, out_md, market='hk'):
+    df = load_panel(pred_csv, market=market)
     bt = backtest(df, horizon, topk, True, cost=cost)  # 行业中性
     st = _stats(bt['top_net'].values, horizon)
     c = bootstrap(bt['top_net'].values, horizon)
@@ -64,7 +70,7 @@ def run(horizon, pred_csv, topk, cost, out_md):
     wr, base, lift = signal_lift(df)
 
     from ml_services.eval_overfit import build_matrix
-    M = build_matrix(horizon, pred_csv)
+    M = build_matrix(horizon, pred_csv, market=market)
     pbo, _ = cscv_pbo(M.values)
     mu = M.mean(); sd = M.std(ddof=1); sr = mu / sd
     best = sr.idxmax()
@@ -119,14 +125,16 @@ def main():
     ap.add_argument('--cost', type=float, default=COST)
     ap.add_argument('--pred', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
+    ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
+                    help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
     args = ap.parse_args()
 
-    pred = args.pred or latest_pred(args.horizon)
+    pred = args.pred or latest_pred(args.horizon, market=args.market)
     if not pred:
         print("❌ 未找到 prediction_analysis.csv，请用 --pred 指定")
         sys.exit(1)
     out = args.output or f"output/monthly_guardrail_{datetime.now():%Y%m%d}.md"
-    run(args.horizon, pred, args.topk, args.cost, out)
+    run(args.horizon, pred, args.topk, args.cost, out, market=args.market)
 
 
 if __name__ == '__main__':
