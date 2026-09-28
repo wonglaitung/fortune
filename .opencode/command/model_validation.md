@@ -159,7 +159,7 @@ python3 ml_services/walk_forward_by_sector.py --sector bank --horizon 20
 
 **目的**：检查各种交易策略的准确度
 
-**⚠️ 重要**：三周期验证必须分别对恒指和个股执行，个股必须使用完整模型（59只股票），禁止使用快速模式。
+**⚠️ 重要**：三周期验证必须分别对恒指和个股执行。个股脚本 `analyze_stock_causal_chain.py` **无命令行参数、硬编码 12 只代表性股票、918 特征**——历史条目中的 `--full`/`--quick` 与「59 只股票」均为笔误（59 只/38 folds 是 Walk-forward 的口径，不适用于本脚本，2026-09-28 实测核实）。
 
 #### 2A. 恒指三周期验证
 
@@ -184,19 +184,22 @@ python3 ml_services/analyze_three_horizon_relationships.py
 
 **输出文件**：`docs/THREE_HORIZON_ANALYSIS.md`
 
-#### 2B. 个股三周期验证（完整模型）
+#### 2B. 个股三周期验证（12 只代表股，918 特征）
 
 ```bash
-# 个股三周期关系分析（完整模型，730特征，59只股票）
-# ⚠️ 禁止使用快速模式（--quick 或 5只代表性股票）
-python3 ml_services/analyze_stock_causal_chain.py --full
+# 个股三周期关系分析（完整特征工程 918 特征，内置 sample_stocks 12 只代表股）
+# ⚠️ 脚本无 argparse：--full/--quick 都是无效参数（会被忽略并直接开跑）；全量约 12 分钟
+python3 ml_services/analyze_stock_causal_chain.py
 ```
 
 **个股验证要求**：
-- ✅ 必须使用完整模型（730特征）
-- ✅ 必须使用59只股票
-- ❌ 禁止使用 `--quick` 参数
-- ❌ 禁止使用5只代表性股票
+- ✅ 完整特征工程（918 特征，复用 `ml_trading_model.FeatureEngineer`）
+- ✅ 脚本源码 `sample_stocks` 内置 12 只代表股
+  （0005/1288/0700/9988/0981/1211/1299/2318/0728/0388/3690/0883）
+- ⚠️ 与 Walk-forward 的 59 只池 / 38 folds 是**不同口径**；扩池须改 `sample_stocks` 源码
+- ℹ️ 输出含每股 `1d_to_5d` / `5d_to_20d` / `three_horizon`（8 模式）；日志中的
+  000=65.45/111=67.91 等是**恒指 697 对照表**，别当个股结果读
+- ℹ️ 全量快照口径、非 PIT → 结果只作机制参考，信号层权威结论以阶段 5.5 的 lift 为准
 
 **个股策略评估标准**：
 
@@ -748,10 +751,10 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 - [ ] 已对比策略效果变化
 
 #### 个股三周期验证
-- [ ] 已执行 `analyze_stock_causal_chain.py --full`（完整模型）
-- [ ] 确认未使用快速模式（无 `--quick`，非5只股票）
-- [ ] 已确认预测概率与实际方向相关性（应为负值 r≈-0.17）
-- [ ] 已记录个股最优策略（反弹失败010）
+- [ ] 已执行 `analyze_stock_causal_chain.py`（无参数；12 只代表股，约 12 分钟）
+- [ ] 已确认输出 JSON 12 股齐全、每股含 `three_horizon` 8 模式
+- [ ] 已确认预测概率与实际方向相关性 **r≈+0.03（弱正向，符合预期）**——勿再写负值（旧值 r≈−0.17 已废弃，2026-09-28 实测 r=+0.0319）
+- [ ] 已记录个股各模式 20d 准确率分布（JSON `three_horizon`），并注意日志恒指对照表勿混淆
 
 ### 阶段 3 检查
 
@@ -915,7 +918,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 
 ## 个股模型验证结果
 
-### Walk-forward 测试（12 folds，59只股票）
+### Walk-forward 测试（38 folds，59只股票）
 
 | 指标 | 更新前 | 更新后 | 变化 | 评估 |
 |------|--------|--------|------|------|
@@ -924,7 +927,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 | 最大回撤 | -X.XX% | -X.XX% | +X.XX% | [良好/需改进] |
 | 综合评分 | XX | XX | +XX | [优秀/良好] |
 
-### 三周期策略验证（完整模型，730特征，59只股票）
+### 三周期策略验证（`analyze_stock_causal_chain.py`，12只代表股 918 特征）
 
 | 策略 | 更新前胜率 | 更新后胜率 | 变化 | 评估 |
 |------|-----------|-----------|------|------|
@@ -1050,11 +1053,11 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 2. **两个模型独立验证**：恒指和个股模型有各自的验证脚本、判断标准、数据泄漏阈值
 3. **三周期验证必须分别执行**：
    - 恒指：`analyze_three_horizon_relationships.py`
-   - 个股：`analyze_stock_causal_chain.py --full`（完整模型，禁止快速模式）
-4. **个股验证禁止快速模式**：
-   - ❌ 禁止使用 `--quick` 参数
-   - ❌ 禁止使用5只代表性股票
-   - ✅ 必须使用完整模型（推荐 Top 500 特征或全量特征 ~1132）
+   - 个股：`analyze_stock_causal_chain.py`（无参数；内置 12 只代表股、918 特征）
+4. **个股三周期脚本口径（2026-09-28 实测修正）**：
+   - ❌ 不存在 `--full`/`--quick` 参数（历史笔误，传了也被忽略直接开跑）
+   - ✅ 扩池须改源码 `sample_stocks`；「59 只」是 Walk-forward 口径，本脚本为 12 只
+   - ✅ 特征为脚本内置 918 特征（WF 的 Top 500/~1132 特征选择属另一阶段，勿混）
 5. **顺序执行**：必须按阶段 0→1→2→3→4→5 顺序执行，前一阶段有效才进入下一阶段
 6. **记录完整**：每个阶段的测试结果必须完整记录
 7. **对比验证**：必须与更新前的指标对比，确认提升幅度
