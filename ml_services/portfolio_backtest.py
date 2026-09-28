@@ -289,7 +289,8 @@ def main():
                     help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
     args = ap.parse_args()
     pred_csv = args.pred or DEFAULT_PRED[args.horizon]
-    out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}.md"
+    suffix = '_a' if args.market == 'a' else ''
+    out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}{suffix}.md"
     run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout,
         vol_target=args.vol_target, market=args.market)
 

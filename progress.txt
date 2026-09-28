@@ -2,11 +2,41 @@
 
 **项目**：港股智能分析系统 + A股智能分析系统
 **状态**：生产就绪（港股）/ 特征增强中（A股）
-**最后更新**：2026-09-27
+**最后更新**：2026-09-28
 
 ---
 
 ## 最新进展
+
+### 2026-09-28 A股对照港股改造：P0-P2 执行 + 四决策点拍板 + 20d 首次 D2 判定 🟡 ⭐⭐⭐
+
+**文档落地**：`docs/A_STOCK_REFORM_PLAN.md`（16 项差距矩阵 + P0-P4 分期 + 关键约束 + 执行跟踪）入 `docs/README.md` 索引。
+
+**P0 快赢（全部完成）**：①CSV 列名对齐港股（`build_prediction_analysis()` + Date/Market_Layer/Dynamic_Threshold +
+5 单测，消费方兼容新旧列名）②LLM prompt 删"传导准确率推阈值"（D3 白话）③传导模式胜率 `verified:false`
++ 表格/文本"未验证（参考港股）"④主表股票号链接化（gu.qq.com sh/sz/bj）⑤邮件可见处术语白话化。
+
+**P1/P2 工具（完成）**：`backtest_eval` / `portfolio_backtest` / `monthly_guardrail` / `eval_overfit`
+全加 `--market a`（A 股板块映射 + 中文名 + 前导零 zfill 兜底、`latest_pred` 默认 glob 排除 `*_a_stock_*`、
+`signal_lift` 缺列回退 0.5）；报告文件名加 `_a` 后缀防与港股互覆。
+
+**性能修复（11h→2h/horizon，commit 54a046dc）**：
+- `margin_data.py` akshare 查上交所两融**无超时挂死 16 分钟**（`ss -tnp` 定位 query.sse.com.cn）→
+  守护线程 20s 硬超时 + 按市场电路闸；lessons 三.21
+- `a_stock_walk_forward` 每 fold 3 次 `prepare_data` 全量重算 → **起跑前全量预准备 1 次 + 窗口切片**
+  （prepare 在日期过滤前算完特征 → 数学等价，3 股对比数值差 0、fold1 0.5941 vs 原 0.5947 落在
+  运行噪声带 ±0.6pp 内）；`train()` 新增 `prepared_df` 参数
+
+**四决策点全部拍板**（写入计划文档 §五）：①history 回写维持停用 ②校准用 walk-forward OOF 立即拟合
+③**P4 学习器 A/B 三周期全做**（用户覆盖 D1"停止投入"默认，需先加 model_type 开关）④A 股 D2 沿用港股三门槛。
+
+**20d 重跑 + 首次 D2 判定**（`output/20260928_144833_a_stock_catboost_20d/`，19 折 19,578 行新格式）：
+- backtest_eval：准确率 58.4% [55.3,61.5]、超额 lift **+7.1pp（p=0.0033 显著）**、逐年双正、
+  逐折 18/19 为正、校准分桶单调（80%+→72.5%）
+- 护栏：净IR **2.75** [1.41,4.63] ✅、DSR **1.000** ✅、**PBO 0.74** ❌ → **🟡 保留低配**
+- 组合层：超额IR **3.02** [1.96,4.80] 下界>0、P=100%、逐年双正但仅 20 期
+- 记入 `docs/DECISIONS.md` **D11 + §四.附**（含复核命令）；报告 `output/backtest_eval_a_stock_20d_20260928.md`
+- 5d/1d 仍在后台跑（`/tmp/opencode/awf.log`），完成后补 P1.2 三周期报告
 
 ### 2026-09-27 港股评估复权口径修复 + 主表链接化 + 性能报告改仅港股 ⭐⭐⭐
 

@@ -61,7 +61,8 @@
    **P2 需用新导出格式重跑 walk-forward**（或只重跑 20d）。
 4. **默认 glob 混入**：`monthly_guardrail.latest_pred` 的 `output/*_catboost_20d` 会匹配
    `*_a_stock_catboost_20d`（港股默认跑时可能误取 A 股 CSV）→ P2 顺手排除。
-5. **D1 张力**：评估重建 ≠ 挖新 alpha；P4 学习器 A/B 需拍板后才做。
+5. **D1 张力**：评估重建 ≠ 挖新 alpha；P4 学习器 A/B 需拍板后才做
+   （**2026-09-28 已拍板：三周期全做**——用户明确覆盖 D1 的"停止投入"默认，见决策点 3）。
 
 ---
 
@@ -112,14 +113,17 @@
 
 ---
 
-## 五、待拍板决策点
+## 五、决策点（**2026-09-28 全部已拍板**）
 
-| # | 决策 | 选项 | 默认（未拍板时） |
+| # | 决策 | 拍板结果 | 影响 |
 |---|---|---|---|
-| 1 | A 股评估历史是否恢复回写？ | 恢复 / 维持停用 | 维持停用（P3.3 挂起） |
-| 2 | 校准数据源 | 等生产 history（~2.5 个月到 200）/ walk-forward OOF 立即拟合 | 待拍板（P3 挂起） |
-| 3 | P4 学习器 A/B 是否做 | 做 / 不做 | 不做（D1 张力，待拍板） |
-| 4 | A 股 D2 护栏档位 | 沿用港股 🟢15-20%/🟡≤10%/🔴 / A 股单独定 | 沿用港股 |
+| 1 | A 股评估历史是否恢复回写？ | **维持停用** | P3.3 不做；监控链路不动 |
+| 2 | 校准数据源 | **walk-forward OOF 立即拟合**（PIT，从 `prediction_analysis.csv`） | P3.1 解锁，不等 history；需约定滚动更新节奏 |
+| 3 | P4 学习器 A/B | **三周期全做**（1d/5d/20d，LightGBM vs CatBoost） | P4.1 解锁（覆盖 D1"停止投入"默认）；需先给 A 股模型加 model_type 开关 |
+| 4 | A 股 D2 护栏档位 | **沿用港股三门槛**（净IR≥0.7 且 PBO<0.5 且 DSR≥0.95 → 🟢15-20%） | P2.3 判定口径确定 |
+
+> 决策 2 与 1 的组合含义：校准概率完全来自回测 OOF 分布（无生产样本回流），
+> 分布随新 walk-forward 重跑更新——P3.1 须写明"快照日期 + 重跑即再拟合"。
 
 ---
 
@@ -131,16 +135,25 @@
 - [x] P0.4 主表链接化（`_stock_chart_url`/`_code_link_html` → gu.qq.com sz/sh/bj）
 - [x] P0.5 邮件术语白话化（邮件可见处已无 Walk-forward/Isotonic/分位等；仅 LLM prompt 内部保留）
 - [x] P1.1 backtest_eval `--market a`（板块映射+中文名+前导零补齐；unknown 归零）
-- [x] P1.2 A 股三周期 backtest_eval 基线报告 —— **20d 已出**（`output/backtest_eval_a_stock_20d_20260928.md`：
-      准确率 57.8% [52.0,63.3]、超额 lift +7.8pp（p=0.052）、轨交IT/化工方向技能最强、创新药 lift≈0；
+- [x] P1.2 A 股三周期 backtest_eval 基线报告 —— **20d 已按新格式 19 折重算**（`output/backtest_eval_a_stock_20d_20260928.md`：
+      准确率 **58.4%** [55.3,61.5]、超额 lift **+7.1pp**（p=0.0033 显著）、逐年 lift 2025 +7.7pp / 2026 +5.5pp 双正、
+      逐折 lift 正 18/19、板块层轨交IT +9.9pp/电子 +9.5pp 方向技能领先、能源 −1.9pp 唯一负、
+      校准分桶单调（50-60%→53.0%，80%+→72.5%，可直接作 P3.1 OOF 校准素材）；
       1d/5d 待 walk-forward 重跑后补）
 - [x] P1.3 入库工具扩 a_stock —— **已具备**（`HK20D_RE` 排除 a_stock，A股目录只提交 CSV 不改 GATE_SNAPSHOT；
       `a_stock_walk_forward.py` 已集成 `--no-commit` 开关）
 - [x] P2.1 guardrail/portfolio/eval_overfit `--market a` + `latest_pred` 默认 glob 排除 `*_a_stock_*`
       + `signal_lift` 缺 `Dynamic_Threshold` 回退 0.5（合成面板连通性验证通过）
-- [ ] P2.2 重跑 20d walk-forward + D2 判定（**进行中**：20d→5d→1d 后台跑，新导出格式）
-- [ ] P2.3 A 股 D2 判定记录入 DECISIONS（待 P2.2 结果）
-- [ ] P3.* （挂起：决策点 1/2）
-- [ ] P4.* （挂起：决策点 3）
+- [x] P2.2 重跑 20d walk-forward + D2 判定 —— **完成**（`output/20260928_144833_a_stock_catboost_20d/`，
+      19 折 19,578 行新格式；护栏 净IR **2.75** [1.41,4.63] ✅ / DSR **1.000** ✅ / **PBO 0.74** ❌ →
+      **🟡 保留低配**；组合层超额IR **3.02** [1.96,4.80] 下界>0、逐年双正但仅 20 期 →
+      `output/monthly_guardrail_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
+      5d/1d 仍在后台跑）
+- [x] P2.3 A 股 D2 判定记录入 DECISIONS —— **D11 + §四.附**（含复核命令与触发条件）
+- [ ] P3.1 OOF 校准扩展 A 股（决策点 2 已解锁；连带方向/模式同口径 lessons 三.19）
+- [ ] P3.2 门槛分位化 D8（A 股 walk-forward 分布建快照）（前置 P3.1）
+- [ ] P3.3 ~~恢复 history 回写~~ → **不做**（决策点 1：维持停用）
+- [ ] P4.1 学习器 A/B 三周期（决策点 3 已拍板：1d/5d/20d 全做；先加 model_type 开关）
+- [ ] P4.2 图表 D3｜ P4.3 仓位口径 C 对齐（决策点 4 已定口径）——待排期
 
 > 执行完一项勾一项；完成后本文档随 `progress.txt` 一并更新。

@@ -133,7 +133,8 @@ def main():
     if not pred:
         print("❌ 未找到 prediction_analysis.csv，请用 --pred 指定")
         sys.exit(1)
-    out = args.output or f"output/monthly_guardrail_{datetime.now():%Y%m%d}.md"
+    suffix = '_a' if args.market == 'a' else ''
+    out = args.output or f"output/monthly_guardrail_{datetime.now():%Y%m%d}{suffix}.md"
     run(args.horizon, pred, args.topk, args.cost, out, market=args.market)
 
 

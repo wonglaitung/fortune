@@ -1,6 +1,6 @@
 # 决策备忘（Decisions）
 
-> **建立**：2026-09-24　**最近复核**：2026-09-26（六周期 walk-forward 全量复测，D1/D3/D10 结论不变，D2 护栏见 §四）
+> **建立**：2026-09-24　**最近复核**：2026-09-28（**A股 20d 首次 D2 判定 → 🟡 低配，D11**；港股六周期 09-26 复测结论不变，护栏见 §四）
 > **性质**：基于 2026-09-22~24 整轮实证（PIT 修正 → 元标签 → Phase 3 组合 → Alpha158 基线 → 扩池）的**最终决策记录**。
 > **详证**：见 [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) §5.1–5.15、[VALIDATION_GUIDE.md](VALIDATION_GUIDE.md)、[lessons.md](../lessons.md)。
 
@@ -29,6 +29,8 @@
 | D9 | **回测产物自动入库**：回测成功后自动提交 `prediction_analysis.csv` + 同步 `GATE_SNAPSHOT` + 清理旧港股 20d CSV（只留最新） | 分位门槛依赖最新回测 CSV，CI 与本地须同源；手动提交必静默陈旧。`scripts/commit_backtest_result.py`（失败仅 WARNING 不影响回测），`walk_forward_validation.py`/`a_stock_walk_forward.py` 集成，`--no-commit` 可关；恒指不集成（输出在 `data/`、独立体系）。push 失败自动 `pull --rebase --autostash` 重试一次；commit 只能走 index（pathspec 会把 `rm --cached` 的旧 CSV 从工作树重新提交，已实测排除），有其它预 stage 文件仅告警 |
 
 | D10 | **学习器按周期分别选，禁止"全部转 LightGBM"**：20d 用 LightGBM、**5d 维持 CatBoost**、1d 双双停用 | 同折同参数 A/B（38折/36m/59只/每折Top-500，§5.20）：**5d CatBoost 六项全优**——lift +1.6 vs +0.6pp、rank_ic 0.086 vs 0.075、净IR 0.57 vs 0.25、PBO 0.36 vs 0.50、DSR 0.813 vs 0.637、累计 +42.2% vs +10.3%，且 **2026 年 CatBoost +0.8pp / LightGBM −2.1pp**、std 5.9 vs 6.9pp；1d LightGBM 信号更强（rank_ic 0.016→0.034、PBO 0.64→0.31）但**净IR −1.52 仍≤0 → 🔴 双双停用**。**学习器优劣是"分周期"属性**（20d LGBM 赢、5d CatBoost 赢、1d 皆不可用），必须逐周期 A/B |
+
+| D11 | **A股 `20d 行业中性 TopK`：🟡 保留低配（不升配）** | **2026-09-28 首次复核**（新导出格式 walk-forward：19 折 / 53 只 / 2025-01–2026-07 / PIT 市场过滤 / 腾讯 qfq）：净IR **2.75** [1.41,4.63]、DSR **1.000** 两项过线，但 **PBO 0.74 ≥ 0.5 不达标** → 按 D2 三门槛判 🟡 保留低配（≤10%）。组合层超额IR **3.02** [1.96,4.80] 下界>0、P(超额IR>0)=100%、逐年超额双正（2025 +3.4%/期、2026 +10.0%/期），但**仅 20 期**；信号层超额 lift **+7.1pp**（p=0.0033）、19 折中 18 折为正。**PBO 高的解释**：逐折 lift 标准差 4.7pp、折间排序不稳（1d/5d 待复核后再看是否系统性）。**口径与港股完全一致**（同三门槛、同 TopK=10 行业中性、成本 0.005），双市场可比 |
 
 ---
 
@@ -108,6 +110,17 @@
 > **判定：统计层面"可升级"成立（护栏 + CI + 逐年三项全过）；是否实际上调仓位 =
 > 风险预算/资源决策，建议小幅升配并保留 2024 式回撤容忍。**
 > 报告：`output/portfolio_20d_20260926.md`
+
+---
+
+### 四.附 A股 `20d 行业中性 TopK`（2026-09-28 首次复核）
+
+- 数据：`output/20260928_144833_a_stock_catboost_20d/prediction_analysis.csv`（19,578 行，19 折）
+- 报告：`output/backtest_eval_a_stock_20d_20260928.md`、`output/monthly_guardrail_20260928_a.md`、`output/portfolio_20d_top10_a.md`
+- 判定：**🟡 保留低配**（净IR 2.75 ✅、DSR 1.000 ✅、**PBO 0.74 ❌** → 未达 🟢 三门槛）
+- 复核触发：每次 A股 walk-forward 重跑后跑 `monthly_guardrail.py --horizon 20 --market a` +
+  `portfolio_backtest.py --horizon 20 --market a --pred <csv>`（与港股 D2 同口径）
+- 遗留：1d/5d 尚未复核；P4 学习器 A/B 三周期已拍板待做（见 `docs/A_STOCK_REFORM_PLAN.md`）
 
 ---
 
