@@ -1,0 +1,142 @@
+# A 股对照港股改造方案（差距分析与分期执行）
+
+> **版本**：v1.0 | **创建日期**：2026-09-28 | **状态**：执行中（P0/P1 进行）
+> **性质**：方案文档 + 执行跟踪（完成项打 ✅，执行后更新本文档）
+> **基线**：港股 2026-09 系列改造（评估 D3 / 组合层 D2 / 概率校准 / 门槛 D8 / 展示同口径等）
+
+---
+
+## 一、背景
+
+港股近期完成一轮系统性改造（评估口径、组合层护栏、概率校准、市场门槛、展示同口径、复权、
+邮件口径白话化等）。A 股系统多数对应能力缺失或停留旧口径，本文档做全量差距分析并分期实施。
+
+**总原则**：
+1. **口径诚实优先于新功能**——先保证 A 股评估/展示不再用绝对准确率误导（D3），再谈升级。
+2. **复用港股工具，不复制代码**——`backtest_eval`/`monthly_guardrail`/`portfolio_backtest`
+   输入均为 `prediction_analysis.csv`（市场中立），仅需列名对齐 + 板块映射分支（`--market a`）。
+3. **受 D1 约束**（个股横截面 alpha 停止投入）——A 股改造聚焦"评估基建/口径诚实"，
+   不新增横截面 alpha 挖掘（行业中性 TopK 目标集等不做）。
+4. **数据不足的项延后**——校准/监控依赖已评估历史（现仅 132 条且停回写），排 P3 并等待拍板。
+
+---
+
+## 二、差距矩阵（港股基线 → A 股现状）
+
+| # | 港股已改造 | A 股现状 | 差距 | 分期 |
+|---|---|---|---|---|
+| 1 | 评估 D3：backtest_eval（lift/方向技能/IC CI/n_eff/逐月/校准分桶） | walk-forward 只报 accuracy/f1/夏普/IC，无基准扣除 | 🔴 | P1 |
+| 2 | 组合层 D2：monthly_guardrail（净IR/PBO/DSR）+ portfolio_backtest（超额CI/逐年） | 完全没有 | 🔴 | P2 |
+| 3 | 概率校准：DailyConfidence Isotonic + 置信度（12,484 条历史） | 无校准；`a_stock_prediction_history` 仅 132 条且已停回写 | 🔴 数据瓶颈 | P3 |
+| 4 | 展示同口径：方向/模式按校准概率重判（lessons 三.19） | raw 自判自洽（暂无矛盾）→ 校准后必须连带 | 🟡 | 随 3 |
+| 5 | 门槛分位 D8：GATE_QUANTILES P92/P90（walk-forward 分布 PIT） | 绝对 0.50/0.65/0.70（`a_stock_comprehensive_analysis.py:850`） | 🔴 | P3 |
+| 6 | 邮件口径 D3 白话 | 「强买入阈值0.60略高于准确率」= 绝对准确率推阈值（D3 反例） | 🟡 | P0 |
+| 7 | 学习器分周期 A/B（D10：20d=LGBM） | 纯 CatBoost，无 A/B | 🟡 成本高 | P4 |
+| 8 | 复权 qfq 全链（监控 exit 修复） | 训练/walk-forward 均 qfq 自洽（`a_stock_walk_forward.py:477`），评估已停无 exit | 🟢 基本无 | — |
+| 9 | 图表 D3（CI 误差须/显著性/护栏块） | 无性能图表（六边形强度图≠评估图表） | 🟡 依赖 1/2 | P4 |
+| 10 | 性能监控报告（D3 诚实摘要） | 09-27 主动停用（history 不回写） | 🟡 需拍板 | P4 |
+| 11 | 主表链接化（gu.qq.com/hkXXXXX） | 无（可用 sh600000/sz000001 格式） | 🟢 | P0 |
+| 12 | 回测产物入库工具 | `scripts/commit_backtest_result.py` 明确排除 a_stock | 🟢 | P1 |
+| 13 | 邮件术语白话化 | 未做 | 🟢 | P0 |
+| 14 | 三周期模式净贡献+Bonferroni 验证 | `A_STOCK_TRANSMISSION_ACCURACY` 注释自认「参考港股，需根据A股验证结果更新」 | 🟡 | P0 诚实化 |
+| 15 | D2 行业中性 TopK 目标集 🎯 | 无 | ⚪ **不做**（D1） | — |
+| 16 | 仓位口径 C（0.60/0.55 档+门槛优先） | LLM 建议仓位（保守/适度/激进%）+ 强买0.60/买0.50 两套体系 | 🟡 | P4 对齐 |
+
+**关键发现（成本利好）**：
+- `backtest_eval._normalize_columns` **已兼容 A 股列命名**（code/predict_prob/fold）；
+- 三工具输入均为 CSV（市场中立），A 股导出注释已写「与港股格式一致」但实际列名不同——
+  **P0 列名对齐后 P1/P2 基本直吃**；
+- A 股 walk-forward 内部已有 `market_layer`/`dynamic_threshold`/IC/夏普，只是没写进 CSV 与报告主口径。
+
+---
+
+## 三、关键约束
+
+1. **A 股历史数据瓶颈**：`data/a_stock_prediction_history.json` 仅 132 条（每周期 44 条），
+   2026-09-27 起停回写 → 校准器（MIN_SAMPLES=200/周期）拟合不了；性能监控无数据。
+2. **双入口**：`a_stock_walk_forward.py`（根目录，AGENTS 指定入口）与
+   `ml_services/a_stock_walk_forward.py` 并存——执行前确认唯一活入口，避免改错文件。
+3. **旧 CSV 缺列**：已有 `output/20260722_182121_a_stock_catboost_20d/prediction_analysis.csv`
+   无 `Date`/`Market_Layer`/`Dynamic_Threshold` → guardrail/portfolio 直跑会 KeyError，
+   **P2 需用新导出格式重跑 walk-forward**（或只重跑 20d）。
+4. **默认 glob 混入**：`monthly_guardrail.latest_pred` 的 `output/*_catboost_20d` 会匹配
+   `*_a_stock_catboost_20d`（港股默认跑时可能误取 A 股 CSV）→ P2 顺手排除。
+5. **D1 张力**：评估重建 ≠ 挖新 alpha；P4 学习器 A/B 需拍板后才做。
+
+---
+
+## 四、分期方案
+
+### P0 快赢（口径/文案/展示，不依赖数据）
+
+| # | 内容 | 文件 | 验证 |
+|---|---|---|---|
+| P0.1 | walk-forward CSV 列名对齐港股（`Stock_Code`/`Fold`/`Predict_Direction`）+ 补 `Date`/`Market_Layer`/`Dynamic_Threshold` 列；更新消费方 | `a_stock_walk_forward.py`、`a_stock_comprehensive_analysis.py:495` | py_compile + 列名断言测试 |
+| P0.2 | 邮件删「绝对准确率推阈值」段 → D3 白话（准确率仅背景、买入依据=市场调整门槛+概率档） | `a_stock_comprehensive_analysis.py` L1707 区 | 文案检查 |
+| P0.3 | 传导模式胜率诚实化：`A_STOCK_TRANSMISSION_ACCURACY` 展示处标注「未验证，参考港股」 | 同上 L94/L787/L3022 | 文案检查 |
+| P0.4 | 主表股票代码链接化（`gu.qq.com/sz000001`/`sh600000`，5位码+沪深前缀） | `a_stock_comprehensive_analysis.py` 表格行 | URL 生成测试 |
+| P0.5 | 邮件术语白话化（Walk-forward→历史回测验证 等，对齐港股 dd2718a7 口径） | 同上 | 文案检查 |
+
+### P1 评估重建（核心价值）
+
+| # | 内容 | 文件 | 验证 |
+|---|---|---|---|
+| P1.1 | `backtest_eval.py` 加 `--market a`：板块映射换 `A_STOCK_SECTOR_MAPPING` + A 股板块中文名 | `ml_services/backtest_eval.py` | `--market a` 跑通 |
+| P1.2 | 跑 A 股 1d/5d/20d 三份 backtest_eval → lift/方向技能/IC 基线报告 | CLI | `output/backtest_eval_a_*` 产出 |
+| P1.3 | 回测产物入库工具扩 a_stock（复用港股每次入库自动清旧机制） | `scripts/commit_backtest_result.py` | dry-run |
+
+### P2 组合层（依赖 P0.1 列名 + 新格式 CSV）
+
+| # | 内容 | 文件 | 验证 |
+|---|---|---|---|
+| P2.1 | `monthly_guardrail`/`portfolio_backtest` 加 `--market a`（板块映射）；`latest_pred` 默认 glob 排除 `*_a_stock_*` | 两工具 + `eval_overfit` | `--market a` 跑通 |
+| P2.2 | 重跑 A 股 walk-forward 20d（新导出格式）→ 净IR/PBO/DSR + 超额 CI/逐年 | `a_stock_walk_forward.py` + 两工具 | D2 判定产出 |
+| P2.3 | A 股 D2 判定记录（档位沿用港股：净IR≥0.7 且 PBO<0.5 且 DSR≥0.95） | `docs/DECISIONS.md`（追加） | 文档 |
+
+### P3 校准+门槛（依赖决策点 1/2）
+
+| # | 内容 | 前置 |
+|---|---|---|
+| P3.1 | DailyConfidence 参数化扩展 A 股（history_file/HORIZONS）+ **方向/模式同口径连带**（lessons 三.19） | 校准数据源拍板 |
+| P3.2 | 门槛分位化（D8 同款，A 股 walk-forward 分布建快照） | P3.1 |
+| P3.3 | 恢复/决定 A 股 history 回写 | 决策点 1 |
+
+### P4 可选增强（全部需拍板）
+
+学习器 A/B（D10）｜ 图表 D3｜ 性能监控恢复 ｜ 仓位口径 C 对齐 ｜ 入库扩展。
+
+### 不做清单
+
+- D2 行业中性 TopK 目标集 🎯（D1：横截面 alpha 停止投入）
+- 恢复性能报告「市场分布节」（09-27 已简化）
+
+---
+
+## 五、待拍板决策点
+
+| # | 决策 | 选项 | 默认（未拍板时） |
+|---|---|---|---|
+| 1 | A 股评估历史是否恢复回写？ | 恢复 / 维持停用 | 维持停用（P3.3 挂起） |
+| 2 | 校准数据源 | 等生产 history（~2.5 个月到 200）/ walk-forward OOF 立即拟合 | 待拍板（P3 挂起） |
+| 3 | P4 学习器 A/B 是否做 | 做 / 不做 | 不做（D1 张力，待拍板） |
+| 4 | A 股 D2 护栏档位 | 沿用港股 🟢15-20%/🟡≤10%/🔴 / A 股单独定 | 沿用港股 |
+
+---
+
+## 六、执行状态跟踪
+
+- [ ] P0.1 CSV 列名对齐 + Date/Market_Layer/Dynamic_Threshold
+- [ ] P0.2 邮件删绝对准确率推阈值
+- [ ] P0.3 传导模式胜率诚实化
+- [ ] P0.4 主表链接化
+- [ ] P0.5 邮件术语白话化
+- [ ] P1.1 backtest_eval `--market a`
+- [ ] P1.2 A 股三周期 backtest_eval 基线报告
+- [ ] P1.3 入库工具扩 a_stock
+- [ ] P2.1 guardrail/portfolio `--market a` + glob 排除
+- [ ] P2.2 重跑 20d walk-forward + D2 判定
+- [ ] P2.3 A 股 D2 判定记录入 DECISIONS
+- [ ] P3.* （挂起：决策点 1/2）
+- [ ] P4.* （挂起：决策点 3）
+
+> 执行完一项勾一项；完成后本文档随 `progress.txt` 一并更新。

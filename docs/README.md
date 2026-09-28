@@ -2,7 +2,7 @@
 
 > **本目录回答"该看哪份文档"。**
 > 项目总入口是根目录 [../AGENTS.md](../AGENTS.md)（规则 + 常用命令）；
-> 本文件是 docs/ 内 19 份文档的**导航地图**，不重复任何文档的内容。
+> 本文件是 docs/ 内 20 份文档的**导航地图**，不重复任何文档的内容。
 
 ---
 
@@ -19,6 +19,7 @@
 | **知道最近做过哪些实验、结论是什么** | [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) §5.1–5.21 |
 | **排查我踩过的坑** | [../lessons.md](../lessons.md) |
 | **A 股系统的完整设计** | [A_STOCK_DESIGN.md](A_STOCK_DESIGN.md) |
+| **A 股对照港股的改造计划/进度** | [A_STOCK_REFORM_PLAN.md](A_STOCK_REFORM_PLAN.md) ⭐ |
 | **每日跑分析、看输出** | [../AGENTS.md](../AGENTS.md) → [../README.md](../README.md) |
 | **新电脑配 SSH** | [SSH_SETUP.md](SSH_SETUP.md) |
 
@@ -43,6 +44,7 @@
 | 文档 | 回答什么 |
 |---|---|
 | [A_STOCK_DESIGN.md](A_STOCK_DESIGN.md) | A 股系统完整设计（53 只池 / 样本权重 / 涨跌停处理） |
+| [A_STOCK_REFORM_PLAN.md](A_STOCK_REFORM_PLAN.md) | A 股对照港股的差距矩阵与分期改造计划（含执行状态） |
 | [programmer_skill.md](programmer_skill.md) | 开发规范（需求分析 / 整体设计 / 公共代码提取 / 改完即测） |
 
 ### C. 交易与操作指引
