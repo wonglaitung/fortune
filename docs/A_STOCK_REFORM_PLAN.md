@@ -147,8 +147,9 @@
 - [x] P2.2 重跑 20d walk-forward + D2 判定 —— **完成**（`output/20260928_144833_a_stock_catboost_20d/`，
       19 折 19,578 行新格式；护栏 净IR **2.75** [1.41,4.63] ✅ / DSR **1.000** ✅ / **PBO 0.74** ❌ →
       **🟡 保留低配**；组合层超额IR **3.02** [1.96,4.80] 下界>0、逐年双正但仅 20 期 →
-      `output/monthly_guardrail_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
-      5d/1d 仍在后台跑）
+      `output/monthly_guardrail_20d_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
+      **5d 已补**：净IR 0.52/PBO 0.54/DSR 0.688 → 🟡、组合层超额 CI 跨 0、lift +1.0pp 不显著 → 5d 无边缘；
+      1d 仍在后台跑）
 - [x] P2.3 A 股 D2 判定记录入 DECISIONS —— **D11 + §四.附**（含复核命令与触发条件）
 - [~] P3.1 OOF 校准扩展 A 股 —— **代码+20d 校准器已就绪**（`DailyConfidence(cal_prefix='a_stock_',
       oof_glob=...)` + `calibrate_probability()` 方向同口径 + 4 单测；`daily_confidence.py --market a --refit`
