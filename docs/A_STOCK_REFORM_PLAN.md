@@ -1,6 +1,6 @@
 # A 股对照港股改造方案（差距分析与分期执行）
 
-> **版本**：v1.0 | **创建日期**：2026-09-28 | **状态**：执行中（P0/P1 进行）
+> **版本**：v1.1 | **创建日期**：2026-09-28 | **状态**：执行中（P0/P1 完成，P2.2 walk-forward 重跑进行中）
 > **性质**：方案文档 + 执行跟踪（完成项打 ✅，执行后更新本文档）
 > **基线**：港股 2026-09 系列改造（评估 D3 / 组合层 D2 / 概率校准 / 门槛 D8 / 展示同口径等）
 
@@ -125,17 +125,21 @@
 
 ## 六、执行状态跟踪
 
-- [ ] P0.1 CSV 列名对齐 + Date/Market_Layer/Dynamic_Threshold
-- [ ] P0.2 邮件删绝对准确率推阈值
-- [ ] P0.3 传导模式胜率诚实化
-- [ ] P0.4 主表链接化
-- [ ] P0.5 邮件术语白话化
-- [ ] P1.1 backtest_eval `--market a`
-- [ ] P1.2 A 股三周期 backtest_eval 基线报告
-- [ ] P1.3 入库工具扩 a_stock
-- [ ] P2.1 guardrail/portfolio `--market a` + glob 排除
-- [ ] P2.2 重跑 20d walk-forward + D2 判定
-- [ ] P2.3 A 股 D2 判定记录入 DECISIONS
+- [x] P0.1 CSV 列名对齐 + Date/Market_Layer/Dynamic_Threshold（`build_prediction_analysis()` + 5 单测；消费方兼容新旧列名）
+- [x] P0.2 邮件删绝对准确率推阈值（LLM prompt 改 D3 白话）
+- [x] P0.3 传导模式胜率诚实化（`verified=False` + 表格/文本"未验证（参考港股）"标注）
+- [x] P0.4 主表链接化（`_stock_chart_url`/`_code_link_html` → gu.qq.com sz/sh/bj）
+- [x] P0.5 邮件术语白话化（邮件可见处已无 Walk-forward/Isotonic/分位等；仅 LLM prompt 内部保留）
+- [x] P1.1 backtest_eval `--market a`（板块映射+中文名+前导零补齐；unknown 归零）
+- [x] P1.2 A 股三周期 backtest_eval 基线报告 —— **20d 已出**（`output/backtest_eval_a_stock_20d_20260928.md`：
+      准确率 57.8% [52.0,63.3]、超额 lift +7.8pp（p=0.052）、轨交IT/化工方向技能最强、创新药 lift≈0；
+      1d/5d 待 walk-forward 重跑后补）
+- [x] P1.3 入库工具扩 a_stock —— **已具备**（`HK20D_RE` 排除 a_stock，A股目录只提交 CSV 不改 GATE_SNAPSHOT；
+      `a_stock_walk_forward.py` 已集成 `--no-commit` 开关）
+- [x] P2.1 guardrail/portfolio/eval_overfit `--market a` + `latest_pred` 默认 glob 排除 `*_a_stock_*`
+      + `signal_lift` 缺 `Dynamic_Threshold` 回退 0.5（合成面板连通性验证通过）
+- [ ] P2.2 重跑 20d walk-forward + D2 判定（**进行中**：20d→5d→1d 后台跑，新导出格式）
+- [ ] P2.3 A 股 D2 判定记录入 DECISIONS（待 P2.2 结果）
 - [ ] P3.* （挂起：决策点 1/2）
 - [ ] P4.* （挂起：决策点 3）
 
