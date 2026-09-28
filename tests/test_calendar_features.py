@@ -58,24 +58,31 @@ def test_hk_date_ref_not_exceed_reference(monkeypatch):
 
 
 def test_hk_quote_failure_falls_back_to_a_calendar(monkeypatch, fake_ak):
+    # 显式锚定 09-26（周六）→ 回退 A 股日历最近交易日 09-24（09-25 中秋休市）
+    from datetime import datetime
     monkeypatch.setattr(
         'data_services.tencent_finance.get_hsi_data_tencent',
         lambda period_days=90: None,
     )
-    assert get_last_trading_day(market='HK') == '2026-09-24'
+    assert get_last_trading_day(datetime(2026, 9, 26, 12, 0), market='HK') == '2026-09-24'
 
 
 def test_hk_quote_exception_falls_back_to_a_calendar(monkeypatch, fake_ak):
+    from datetime import datetime
+
     def _boom(period_days=90):
         raise RuntimeError('network down')
     monkeypatch.setattr(
         'data_services.tencent_finance.get_hsi_data_tencent', _boom)
-    assert get_last_trading_day(market='HK') == '2026-09-24'
+    assert get_last_trading_day(datetime(2026, 9, 26, 12, 0), market='HK') == '2026-09-24'
 
 
 def test_a_market_default_unchanged(fake_ak):
-    assert get_last_trading_day() == '2026-09-24'
-    assert get_last_trading_day(market='A') == '2026-09-24'
+    # 锚定 09-26：默认 market='A' 与显式 'A' 结果一致（不再依赖真实"今天"）
+    from datetime import datetime
+    ref = datetime(2026, 9, 26, 12, 0)
+    assert get_last_trading_day(ref) == '2026-09-24'
+    assert get_last_trading_day(ref, market='A') == '2026-09-24'
 
 
 def test_a_market_before_open_rolls_back_one_day(fake_ak):
