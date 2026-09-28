@@ -2217,3 +2217,16 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   2596ce4b P3.2 → e77c4257 A/B 工具 → ab7b12f4 P4.3（+本次文档收尾）
 - **待办**：P4.2 图表 D3（待排期）；20d 是否切 LightGBM 待下轮 walk-forward 复现后定；
   主力资金上游接口持续 RemoteDisconnected（缓存 6h 内可用，跑长任务前先验）
+
+[2026-09-29] 全量 38-fold 复验刷新 D2（用户选"1 全量重跑"）
+- 三周期港股 walk-forward 全量重跑（2020-06-01→2026-07-31，38 folds，43,610 行/38折/58股），
+  修复后首轮：20d LGBM 51.5%[49.4,53.6] lift+1.9pp(p.253) / 5d CB 51.5%[50.5,52.5] lift+1.3pp(p.186)
+  / 1d CB 51.0%[50.5,51.4] lift+1.5pp(p.001)。护栏：20d净IR1.04[−.05,2.04] PBO0.89 DSR0.963 🟡；
+  5d 0.59/0.74/0.777 🟡；1d −1.89/0.29/0.000 🔴。组合超额IR +0.49[−.71,1.45] P>0=83%。
+- 判定三轮完全同向（20d🟡/5d🟡/1d🔴）→ D2 维持低配，结论经复验成立；⚠️ 断代：MI 种子改选特征集，
+  与09-26/09-28 旧产物不可直接比。恒指未重跑（HSI 管线无互信息选择，已 bit 级复现）。
+- 产物（已入库）：3 份 prediction_analysis.csv + 3 份 eval + 3 份 guardrail + portfolio_20d_top10.md
+  （新 GATE_SNAPSHOT bear=0.6923/weak=0.6667）。
+- 事故：1d 自动入库死于 autostash 冲突（model_accuracy.json 与 CI 提交冲突），已并集解决并补提交 86ebaf58。
+- 文档：AGENTS 个股完整模型表+D2段、VALIDATION_GUIDE 最新验证结果表、DECISIONS D2 复验行、本报告。
+- 后续（未启动）：B 多种子 ensemble / C3 排名缓冲带 / C4 软 TopK / D2 升配规则加种子维度；生产模型 refit（用新特征集）待排期。
