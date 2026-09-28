@@ -83,13 +83,13 @@ def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_ta
             g['score'] = _sector_neutral_score(g)
         else:
             g['score'] = g['prob']
-        g = g.sort_values('score', ascending=False)
+        g = g.sort_values('score', ascending=False, kind='mergesort')  # mergesort：score 并列时顺序稳定（去噪声）
         k = min(topk, len(g) // 4)
         bench = g['ret'].mean()
 
         # TopK-Dropout：保留仍在榜的旧持仓，剔除分数最低的 dropout 只，再补新
         if dropout > 0 and held:
-            hold_score = g[g['code'].isin(held)].sort_values('score', ascending=False)
+            hold_score = g[g['code'].isin(held)].sort_values('score', ascending=False, kind='mergesort')
             keep = list(hold_score['code'].head(max(k - dropout, 1)))
             fill = [c for c in g['code'] if c not in keep and c not in held][:k - len(keep)]
             if len(keep) + len(fill) < k:

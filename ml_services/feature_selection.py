@@ -22,6 +22,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 import numpy as np
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
+from functools import partial
+
+# 互信息打分固定随机种子：mutual_info_classif 的 random_state 默认 None 会用全局 RNG
+# 注入噪声，跨进程/跨轮选择结果不可复现（2026-09-28 去噪声根因之一，A 方案配套修复）
+_MI_SCORE = partial(mutual_info_classif, random_state=42)
 from sklearn.model_selection import cross_val_score
 import lightgbm as lgb
 
@@ -131,7 +136,7 @@ def feature_selection_mutual_info(X, y, k=1000):
     # 处理 NaN 和异常值（sklearn 需要无缺失值）
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
-    selector = SelectKBest(mutual_info_classif, k=k)
+    selector = SelectKBest(_MI_SCORE, k=k)
     X_selected = selector.fit_transform(X, y)
 
     selected_features = selector.get_support(indices=True)
@@ -357,7 +362,7 @@ def feature_selection_cumulative_importance(X, y, feature_names, score_method='f
         scores = selector.scores_
         score_name = 'F_Test_Score'
     else:  # mutual_info
-        selector = SelectKBest(mutual_info_classif, k='all')
+        selector = SelectKBest(_MI_SCORE, k='all')
         X_selected = selector.fit_transform(X, y)
         scores = selector.scores_
         score_name = 'MI_Score'

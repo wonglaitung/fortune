@@ -569,13 +569,15 @@ def _is_cache_valid(cache_file_path, cache_hours):
     return age_hours < cache_hours
 
 def _save_cache(cache_file_path, data):
-    """保存缓存"""
+    """保存缓存（原子写：先写临时文件再 rename，防并发读者读到半截 pickle）"""
     try:
-        with open(cache_file_path, 'wb') as f:
+        tmp_path = f"{cache_file_path}.tmp.{os.getpid()}"
+        with open(tmp_path, 'wb') as f:
             pickle.dump({
                 'data': data,
                 'timestamp': datetime.now().isoformat()
             }, f)
+        os.replace(tmp_path, cache_file_path)
     except Exception as e:
         logger.warning(f"保存缓存失败: {e}")
 
@@ -681,12 +683,14 @@ def _save_feature_cache(cache_file_path, feature_data, use_shift=True):
     - use_shift: 是否使用滞后数据（用于验证缓存一致性）
     """
     try:
-        with open(cache_file_path, 'wb') as f:
+        tmp_path = f"{cache_file_path}.tmp.{os.getpid()}"
+        with open(tmp_path, 'wb') as f:
             pickle.dump({
                 'data': feature_data,
                 'timestamp': datetime.now().isoformat(),
                 'use_shift': use_shift  # 保存 use_shift 信息，用于加载时验证
             }, f)
+        os.replace(tmp_path, cache_file_path)
         logger.debug(f"特征缓存已保存: {cache_file_path}")
     except Exception as e:
         logger.warning(f"保存特征缓存失败: {e}")
@@ -4397,7 +4401,9 @@ class CatBoostModel(BaseTradingModel):
             'random_seed': 2020,
             'verbose': 100,
             'early_stopping_rounds': stopping_rounds,
-            'thread_count': -1,
+            # 去噪声（2026-09-28 A方案）：线程数必须恒定（-1=核数跨机不定，
+            # 且 CatBoost 确定性前提=同 thread_count）；可用 CATBOOST_THREAD_COUNT 覆盖
+            'thread_count': int(os.environ.get('CATBOOST_THREAD_COUNT', '8')),
             'allow_writing_files': False
             # cat_features 不设置，因为分类特征已编码为数值
         }
@@ -5057,6 +5063,9 @@ class CatBoostModel(BaseTradingModel):
             max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
             colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
             random_state=42, n_jobs=lgb_n_jobs, verbose=-1,
+            # 去噪声（2026-09-28 A方案）：LGBM 官方确定性模式——同数据+同线程数→比特级复现；
+            # force_row_wise 必须显式指定，否则 deterministic 不完全生效（LGBM 文档要求二选一）
+            deterministic=True, force_row_wise=True,
         )
         if lgb_n_jobs > 0:
             print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS，避免高负载线程争用）")

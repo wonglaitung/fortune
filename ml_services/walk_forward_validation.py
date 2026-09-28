@@ -42,6 +42,54 @@ from ml_services.logger_config import get_logger
 from ml_services.market_regime import MarketSentimentFilter
 from config import TRAINING_STOCKS as STOCK_LIST
 
+
+def _fingerprint(obj) -> str:
+    """运行指纹（2026-09-28 去噪声 A方案验收用）：sha1 前12位。
+
+    双跑比对三指纹（featsel / X_test / pred）可定位噪声层：
+    X 不同→数据/特征侧；X 同而 pred 不同→模型拟合侧。
+    """
+    import hashlib
+    try:
+        if isinstance(obj, pd.DataFrame):
+            h = pd.util.hash_pandas_object(obj.astype(float).fillna(-9999.0), index=False).values
+            return hashlib.sha1(np.ascontiguousarray(h)).hexdigest()[:12]
+        if isinstance(obj, np.ndarray):
+            return hashlib.sha1(np.ascontiguousarray(obj).tobytes()).hexdigest()[:12]
+        return hashlib.sha1(str(obj).encode('utf-8', 'replace')).hexdigest()[:12]
+    except Exception as e:
+        return f'err:{e}'
+
+
+def _dump_xfp(tag, obj):
+    """列级指纹落盘（WF_X_DETAIL=1 时启用）：双跑后 diff 精确定位分歧特征列。
+
+    tag 含 fold 编号与进程 pid，写入 output/xfp/；DataFrame 落每列 sha1，
+    特征选择列表落每个特征名序号，用于并发双跑归因。
+    """
+    if os.environ.get('WF_X_DETAIL') != '1':
+        return
+    import hashlib
+    outdir = Path('output/xfp')
+    outdir.mkdir(parents=True, exist_ok=True)
+    rows = {}
+    if isinstance(obj, pd.DataFrame):
+        num = obj.select_dtypes(include=[np.number])
+        for c in num.columns:
+            v = pd.util.hash_pandas_object(num[c].fillna(-9999.0), index=True).values
+            rows[c] = hashlib.sha1(np.ascontiguousarray(v)).hexdigest()[:12]
+        rows['__nrows'] = len(obj)
+        rows['__ncols'] = obj.shape[1]
+        rows['__index_sha'] = hashlib.sha1(str(list(obj.index[:5]) + list(obj.index[-5:])).encode()).hexdigest()[:12]
+    elif isinstance(obj, list):
+        rows = {f'{i}': str(x) for i, x in enumerate(obj)}
+        rows['__n'] = len(obj)
+    else:
+        rows['v'] = str(obj)
+    p = outdir / f'{tag}_{os.getpid()}.csv'
+    pd.Series(rows).to_csv(p, header=False)
+    print(f"  🧬 列指纹已写 {p}")
+
 # 获取日志记录器
 logger = get_logger('walk_forward_validation')
 
@@ -363,6 +411,7 @@ class WalkForwardValidator:
             raise ValueError("训练数据中没有 'Label' 列")
 
         print(f"  ✅ 训练数据准备完成: {len(train_data)} 条记录")
+        _dump_xfp(f'fold{fold}_train', train_data)
 
         # 每折独立特征选择（防穿越）：仅使用该折训练数据选 Top-K，
         # 避免使用含未来信息的全局特征文件
@@ -391,6 +440,9 @@ class WalkForwardValidator:
                     print(f"  🔍 每折特征选择: {len(fold_selected_features)} 个特征（防穿越）")
             except Exception as e:
                 logger.warning(f"每折特征选择失败，回退全局文件: {e}")
+
+        print(f"  🧬 指纹 featsel={_fingerprint(fold_selected_features)}")
+        _dump_xfp(f'fold{fold}_featsel', fold_selected_features if isinstance(fold_selected_features, list) else [])
 
         # 训练模型（关键：每个fold重新训练）
         print(f"  🔄 训练模型 (Fold {fold + 1})...")
@@ -425,7 +477,10 @@ class WalkForwardValidator:
         # 生成预测（使用 predict_proba 方法批量预测）
         print(f"  🔄 生成预测...")
         X_test = test_data[model.feature_columns]
+        print(f"  🧬 指纹 X_test={_fingerprint(X_test)}")
         prediction_proba = model.predict_proba(X_test)
+        print(f"  🧬 指纹 pred={_fingerprint(prediction_proba[:, 1])}")
+        _dump_xfp(f'fold{fold}_test', test_data)
 
         # 使用标准阈值 0.5 生成初始预测（与 comprehensive_analysis.py 一致）
         # 市场情绪过滤器会在后续步骤中应用动态阈值
