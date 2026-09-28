@@ -150,7 +150,10 @@
       `output/monthly_guardrail_20260928_a.md`、`output/portfolio_20d_top10_a.md`；
       5d/1d 仍在后台跑）
 - [x] P2.3 A 股 D2 判定记录入 DECISIONS —— **D11 + §四.附**（含复核命令与触发条件）
-- [ ] P3.1 OOF 校准扩展 A 股（决策点 2 已解锁；连带方向/模式同口径 lessons 三.19）
+- [~] P3.1 OOF 校准扩展 A 股 —— **代码+20d 校准器已就绪**（`DailyConfidence(cal_prefix='a_stock_',
+      oof_glob=...)` + `calibrate_probability()` 方向同口径 + 4 单测；`daily_confidence.py --market a --refit`
+      拟合；`data/calibrators/a_stock_prob_cal_20.pkl` 已从 19,578 条 OOF 拟出、快照元数据落盘；
+      **1d/5d 等 walk-forward CSV 产出后补拟合**；邮件 A 股概率已走校准链路）
 - [ ] P3.2 门槛分位化 D8（A 股 walk-forward 分布建快照）（前置 P3.1）
 - [ ] P3.3 ~~恢复 history 回写~~ → **不做**（决策点 1：维持停用）
 - [ ] P4.1 学习器 A/B 三周期（决策点 3 已拍板：1d/5d/20d 全做；先加 model_type 开关）

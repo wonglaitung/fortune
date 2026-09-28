@@ -735,6 +735,37 @@ def analyze_market():
     return result
 
 
+_A_STOCK_CALIBRATOR = None
+
+
+def calibrate_probability(calibrator, prob_raw, horizon):
+    """校准概率并按校准值重判方向（方向/模式/门槛同口径，lessons 三.19）。
+
+    Returns:
+        (probability, direction) —— 无校准器或该周期未拟合时透传原值
+    """
+    prob = calibrator.calibrate(prob_raw, horizon) if calibrator else prob_raw
+    return prob, ('↑' if prob >= 0.5 else '↓')
+
+
+def get_a_stock_calibrator():
+    """A股 概率校准器（P3.1 决策点2：walk-forward OOF 拟合，非生产 history）。
+
+    某周期 CSV 缺失时该周期 Isotonic 为空 → calibrate() 透传原值（未校准）。
+    重跑 walk-forward 后需 `python3 ml_services/daily_confidence.py --market a --refit` 再拟合。
+    """
+    global _A_STOCK_CALIBRATOR
+    if _A_STOCK_CALIBRATOR is None:
+        try:
+            from ml_services.daily_confidence import DailyConfidence, A_STOCK_OOF_GLOB
+            _A_STOCK_CALIBRATOR = DailyConfidence(cal_prefix='a_stock_',
+                                                   oof_glob=A_STOCK_OOF_GLOB)
+        except Exception as e:
+            print(f"⚠️ A股校准器加载失败（按未校准展示）: {e}")
+            _A_STOCK_CALIBRATOR = False
+    return _A_STOCK_CALIBRATOR or None
+
+
 def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     """
     生成三周期预测（1天、5天、20天）- 增强版，包含筹码阻力、风险得分、网络洞察
@@ -765,6 +796,9 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     # 预加载历史盈亏比数据
     historical_pl_data = load_historical_profit_loss_ratio_a_stock()
 
+    # 概率校准（校准后 ≥0.5 才判方向，方向/模式/门槛同一口径，见 lessons 三.19）
+    calibrator = get_a_stock_calibrator()
+
     # 加载三个周期的模型
     for horizon in [1, 5, 20]:
         model_path = f'data/a_stock_models/trading_model_catboost_{horizon}d.pkl'
@@ -792,12 +826,15 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
                         if code not in three_horizon_results:
                             three_horizon_results[code] = {'predictions': {}}
 
-                        prob = result.get('probability', 0.5)
-                        direction = '↑' if prob >= 0.5 else '↓'
+                        prob_raw = result.get('probability', 0.5)
+                        # 校准 + 方向按校准后概率重判（三.19：避免「↑ 0.49」自相矛盾）
+                        prob, direction = calibrate_probability(calibrator, prob_raw, horizon)
 
                         three_horizon_results[code]['predictions'][horizon] = {
                             'direction': direction,
                             'probability': prob,
+                            'probability_raw': prob_raw,
+                            'calibrated': bool(calibrator and prob != prob_raw),
                             'current_price': result.get('current_price'),
                             'date': result.get('date'),
                         }

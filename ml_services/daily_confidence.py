@@ -30,13 +30,30 @@ HISTORY_FILE = 'data/prediction_history.json'
 CAL_DIR = 'data/calibrators'
 HORIZONS = [1, 5, 20]
 MIN_SAMPLES = 200
+# A股（P3.1 决策点2：用 walk-forward OOF 预测拟合，不依赖生产 history）
+A_STOCK_OOF_GLOB = 'output/*_a_stock_catboost_{h}d/prediction_analysis.csv'
 
 
 class DailyConfidence:
-    def __init__(self, history_file=HISTORY_FILE):
+    def __init__(self, history_file=HISTORY_FILE, cal_prefix='', oof_glob=None,
+                 min_samples=MIN_SAMPLES, cal_dir=CAL_DIR):
+        """概率校准 + 置信度拟合。
+
+        Args:
+            history_file: 生产预测历史 JSON（默认数据源）
+            cal_prefix: 校准器文件名前缀（A股用 'a_stock_'，与港股校准器隔离）
+            oof_glob: 若提供则从 walk-forward OOF CSV 拟合（含 {h} 占位符），
+                优先于 history_file —— PIT 口径、样本足（决策点2：OOF 立即拟合）
+            min_samples: 最小样本数（不足则不拟合，calibrate 透传原值）
+        """
         self.history_file = history_file
+        self.cal_prefix = cal_prefix or ''
+        self.oof_glob = oof_glob
+        self.min_samples = min_samples
+        self.cal_dir = cal_dir
         self.prob_cal = {}
         self.conf_cal = {}
+        self.meta = {}   # {horizon: {source, n, fitted_at, file}}
         self._load_or_fit()
 
     # ---------- 拟合 ----------
@@ -59,22 +76,73 @@ class DailyConfidence:
         df['correct'] = (df['outcome'].astype(str).str.lower() == 'correct').astype(int)
         return df.dropna(subset=['prob', 'correct'])
 
+    def _oof(self, horizon):
+        """从最新一份 walk-forward OOF CSV 读 (prob, up, correct)。"""
+        if not self.oof_glob:
+            return pd.DataFrame()
+        files = sorted(glob.glob(self.oof_glob.format(h=horizon)),
+                       key=os.path.getmtime)
+        if not files:
+            return pd.DataFrame()
+        try:
+            df = pd.read_csv(files[-1])
+        except Exception:
+            return pd.DataFrame()
+        prob_col = next((c for c in ('Predict_Prob', 'Predicted_Prob', 'probability')
+                         if c in df.columns), None)
+        if prob_col is None:
+            return pd.DataFrame()
+        out = pd.DataFrame()
+        out['prob'] = pd.to_numeric(df[prob_col], errors='coerce')
+        if 'Actual_Direction' in df.columns:
+            out['up'] = (df['Actual_Direction'].astype(str).str.upper()
+                         .isin(['UP', '1', 'TRUE'])).astype(int)
+        elif 'Actual_Return' in df.columns:
+            out['up'] = pd.to_numeric(df['Actual_Return'], errors='coerce').gt(0).astype(int)
+        else:
+            return pd.DataFrame()
+        if 'Is_Correct' in df.columns:
+            out['correct'] = (df['Is_Correct'].astype(str).str.lower()
+                              .isin(['true', '1'])).astype(int)
+        else:
+            out['correct'] = (out['up'] == (out['prob'] >= 0.5).astype(int)).astype(int)
+        out = out.dropna(subset=['prob'])
+        out.attrs['source_file'] = files[-1]
+        return out
+
     def _fit_one(self, horizon, col, path):
-        df = self._history(horizon)
-        if len(df) < MIN_SAMPLES:
+        if self.oof_glob:
+            df = self._oof(horizon)
+            source = df.attrs.get('source_file', '')
+        else:
+            df = self._history(horizon)
+            source = self.history_file
+        if len(df) < self.min_samples:
             return None
         from sklearn.isotonic import IsotonicRegression
         iso = IsotonicRegression(out_of_bounds='clip')
         iso.fit(df['prob'].values, df[col].values)
-        os.makedirs(CAL_DIR, exist_ok=True)
+        os.makedirs(self.cal_dir, exist_ok=True)
         with open(path, 'wb') as f:
             pickle.dump(iso, f)
+        # 快照元数据：写明数据源与拟合时间（OOF 校准 = 该次 walk-forward 的分布，
+        # 重跑 walk-forward 后须重新拟合）
+        if col == 'up':
+            self.meta[horizon] = {
+                'source_file': source, 'n_samples': int(len(df)),
+                'fitted_at': datetime.now().isoformat(timespec='seconds'),
+                'prob_min': float(df['prob'].min()),
+                'prob_max': float(df['prob'].max()),
+            }
+            meta_path = os.path.join(self.cal_dir, f'{self.cal_prefix}cal_meta_{horizon}.json')
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(self.meta[horizon], f, ensure_ascii=False, indent=2)
         return iso
 
     def _load_or_fit(self):
         for h in HORIZONS:
-            pp = os.path.join(CAL_DIR, f'prob_cal_{h}.pkl')
-            cp = os.path.join(CAL_DIR, f'conf_cal_{h}.pkl')
+            pp = os.path.join(self.cal_dir, f'{self.cal_prefix}prob_cal_{h}.pkl')
+            cp = os.path.join(self.cal_dir, f'{self.cal_prefix}conf_cal_{h}.pkl')
             self.prob_cal[h] = self._load(pp) or self._fit_one(h, 'up', pp)
             self.conf_cal[h] = self._load(cp) or self._fit_one(h, 'correct', cp)
 
@@ -132,19 +200,36 @@ class DailyConfidence:
 
 
 def main():
-    dc = DailyConfidence()
+    import argparse
+    ap = argparse.ArgumentParser(description='概率校准拟合（港股=生产history / A股=walk-forward OOF）')
+    ap.add_argument('--market', choices=['hk', 'a'], default='hk',
+                    help='hk=港股 prediction_history；a=A股 OOF CSV（P3.1 决策点2）')
+    ap.add_argument('--refit', action='store_true', help='忽略已有校准器强制重拟合')
+    args = ap.parse_args()
+
+    if args.market == 'a':
+        dc_kwargs = dict(cal_prefix='a_stock_', oof_glob=A_STOCK_OOF_GLOB)
+    else:
+        dc_kwargs = dict()
+
+    if args.refit:
+        for h in HORIZONS:
+            for name in ('prob_cal', 'conf_cal'):
+                p = os.path.join(CAL_DIR, f"{dc_kwargs.get('cal_prefix', '')}{name}_{h}.pkl")
+                if os.path.exists(p):
+                    os.remove(p)
+
+    dc = DailyConfidence(**dc_kwargs)
     for h in HORIZONS:
-        pp = os.path.join(CAL_DIR, f'prob_cal_{h}.pkl')
-        cp = os.path.join(CAL_DIR, f'conf_cal_{h}.pkl')
         prob_ok = dc.prob_cal.get(h) is not None
         conf_ok = dc.conf_cal.get(h) is not None
-        n = len(dc._history(h))
-        print(f"{h}d: 校准{'✓' if prob_ok else '✗'}  置信{'✓' if conf_ok else '✗'}  样本={n}")
-        if prob_ok and n >= MIN_SAMPLES:
-            df = dc._history(h)
-            # 抽几个概率点看校准效果
+        df = dc._oof(h) if args.market == 'a' else dc._history(h)
+        n = len(df)
+        src = df.attrs.get('source_file', dc.history_file) if n else '-'
+        print(f"{h}d: 校准{'✓' if prob_ok else '✗'}  置信{'✓' if conf_ok else '✗'}  样本={n}  源={src}")
+        if prob_ok:
             for q in (0.3, 0.5, 0.65, 0.8):
-                print(f"   P={q} -> 校准概率 {dc.calibrate(q,h):.3f}, 置信 {dc.confidence(q,h):.3f}")
+                print(f"   P={q} -> 校准概率 {dc.calibrate(q, h):.3f}, 置信 {dc.confidence(q, h):.3f}")
 
 
 if __name__ == '__main__':
