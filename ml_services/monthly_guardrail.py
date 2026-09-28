@@ -35,7 +35,8 @@ from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
 def latest_pred(horizon, market='hk'):
     """最新 prediction_analysis.csv；默认港股（排除 A股目录，避免误取）"""
     if str(market).lower().startswith('a'):
-        cands = glob.glob(f"output/*_a_stock_catboost_{horizon}d/prediction_analysis.csv")
+        # 覆盖 catboost 与 lightgbm（P4.1 A/B）两种目录
+        cands = glob.glob(f"output/*_a_stock_*_{horizon}d/prediction_analysis.csv")
     else:
         cands = [f for f in glob.glob(f"output/*_catboost_{horizon}d/prediction_analysis.csv")
                  if '_a_stock_' not in f]

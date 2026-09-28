@@ -853,13 +853,15 @@ class AStockTradingModel(CatBoostModel):
     4. 标签标准化（除以滚动波动率）
     """
 
-    def __init__(self, horizon=20):
+    def __init__(self, horizon=20, learner='catboost'):
         # 应用 A股数据源替换（延迟执行）
         _apply_a_stock_patch()
 
         # 调用父类初始化
         super().__init__()
         self.horizon = horizon
+        # P4.1 学习器 A/B（决策点3：三周期全做）：'catboost' | 'lightgbm'
+        self.learner = learner
         self.market = 'a_stock'
         self.feature_engineer = AStockFeatureEngineer()
         self.stock_list = list(A_STOCK_TRAINING_LIST.keys())
@@ -1228,6 +1230,8 @@ class AStockTradingModel(CatBoostModel):
         """
         使用样本权重训练模型（带时间序列交叉验证）
 
+        P4.1：learner='lightgbm' 时改走 LightGBM 路径（同 TSCV 口径，仅换拟合器）
+
         注意：特征必须已经编码为数值型（由 train() 方法处理）
 
         Args:
@@ -1240,6 +1244,9 @@ class AStockTradingModel(CatBoostModel):
         from catboost import CatBoostClassifier, Pool
         from sklearn.model_selection import TimeSeriesSplit
         from sklearn.metrics import accuracy_score, f1_score
+
+        if getattr(self, 'learner', 'catboost') == 'lightgbm':
+            return self._train_with_weights_lgbm(X, y, sample_weights, horizon)
 
         # 如果没有提供样本权重，使用默认权重
         if sample_weights is None:
@@ -1340,11 +1347,66 @@ class AStockTradingModel(CatBoostModel):
             'f1_std': std_f1
         }
 
+    def _train_with_weights_lgbm(self, X, y, sample_weights=None, horizon=20):
+        """P4.1 LightGBM 拟合（A股专用）：与 CatBoost 路径同口径（TSCV 5 折 gap=horizon + 全量终拟）。
+
+        与港股 _train_lightgbm 的差异：样本权重进 CV/终拟、准确率写 a_stock_lightgbm_{h}d
+        （不覆盖港股 lgbm_{h}d）、特征重要性写 A股文件名。
+        """
+        import lightgbm as lgb
+        from sklearn.model_selection import TimeSeriesSplit
+        from sklearn.metrics import accuracy_score, f1_score
+
+        if sample_weights is None:
+            sample_weights = np.ones(len(y))
+        # 线程数受 LGBM_N_JOBS 控制（lessons 三.12：-1 满载在高负载下反向劣化）
+        lgb_n_jobs = int(os.environ.get('LGBM_N_JOBS', '-1'))
+        lgb_params = dict(
+            objective='binary', learning_rate=0.06, num_leaves=2 ** 6,
+            max_depth=8, n_estimators=400, subsample=0.75, subsample_freq=1,
+            colsample_bytree=0.8, min_child_samples=50, reg_lambda=2.0,
+            random_state=2020, n_jobs=lgb_n_jobs, verbose=-1,
+        )
+        if lgb_n_jobs > 0:
+            print(f"🧵 LightGBM 线程数限制为 {lgb_n_jobs}（LGBM_N_JOBS）")
+
+        logger.info("开始时间序列交叉验证（LightGBM）...")
+        tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
+        cv_scores, cv_f1_scores = [], []
+        for fold, (tr_idx, va_idx) in enumerate(tscv.split(X), 1):
+            fold_model = lgb.LGBMClassifier(**lgb_params)
+            fold_model.fit(X[tr_idx], y[tr_idx], sample_weight=sample_weights[tr_idx])
+            y_pred_fold = fold_model.predict(X[va_idx])
+            acc = accuracy_score(y[va_idx], y_pred_fold)
+            f1 = f1_score(y[va_idx], y_pred_fold, zero_division=0)
+            cv_scores.append(acc)
+            cv_f1_scores.append(f1)
+            print(f"   Fold {fold} 验证准确率: {acc:.4f}, F1分数: {f1:.4f}")
+
+        mean_accuracy, std_accuracy = float(np.mean(cv_scores)), float(np.std(cv_scores))
+        mean_f1, std_f1 = float(np.mean(cv_f1_scores)), float(np.std(cv_f1_scores))
+
+        self.model = lgb.LGBMClassifier(**lgb_params)
+        self.model.fit(X, y, sample_weight=sample_weights)
+        # 与 CatBoost 路径共用 self.catboost_model 句柄，predict/feature_importance 无需改动
+        self.catboost_model = self.model
+        self.learner = 'lightgbm'
+        self.actual_n_estimators = self.model.n_estimators
+        print(f"✅ LightGBM 训练完成 (n_estimators={self.actual_n_estimators}, "
+              f"CV acc={mean_accuracy:.4f}±{std_accuracy:.4f})")
+
+        self._save_accuracy(mean_accuracy, std_accuracy, mean_f1, std_f1, horizon)
+        return {
+            'accuracy': mean_accuracy, 'accuracy_std': std_accuracy,
+            'f1': mean_f1, 'f1_std': std_f1,
+        }
+
     def _save_accuracy(self, accuracy, std, f1, f1_std, horizon):
         """保存模型准确率到文件"""
         import json
+        learner_tag = 'lightgbm' if getattr(self, 'learner', 'catboost') == 'lightgbm' else 'catboost'
         accuracy_info = {
-            'model_type': 'a_stock_catboost',
+            'model_type': f'a_stock_{learner_tag}',
             'horizon': horizon,
             'accuracy': float(accuracy),
             'std': float(std),
@@ -1360,7 +1422,7 @@ class AStockTradingModel(CatBoostModel):
             else:
                 existing_data = {}
 
-            key = f'a_stock_catboost_{horizon}d'
+            key = f'a_stock_{learner_tag}_{horizon}d'
             existing_data[key] = accuracy_info
 
             with open(accuracy_file, 'w', encoding='utf-8') as f:

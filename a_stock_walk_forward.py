@@ -114,6 +114,7 @@ class AStockWalkForwardValidator:
         confidence_threshold: float = 0.50,
         use_market_filter: bool = True,    # 启用市场情绪过滤器
         min_train_samples: int = 100,
+        learner: str = 'catboost',         # P4.1 学习器 A/B：catboost | lightgbm
     ):
         """
         初始化验证器
@@ -134,6 +135,7 @@ class AStockWalkForwardValidator:
         self.confidence_threshold = confidence_threshold
         self.use_market_filter = use_market_filter
         self.min_train_samples = min_train_samples
+        self.learner = learner
         self.stock_list = list(A_STOCK_TRAINING_LIST.keys())
 
         # 市场情绪过滤器（延迟初始化）
@@ -151,6 +153,7 @@ class AStockWalkForwardValidator:
         logger.info(f"滚动步长: {step_window_months} 个月")
         logger.info(f"预测周期: {horizon} 天")
         logger.info(f"市场情绪过滤: {'启用' if use_market_filter else '禁用'}")
+        logger.info(f"学习器: {learner}")
         logger.info(f"股票数量: {len(self.stock_list)}")
 
     def validate(self, start_date='2024-01-01', end_date='2026-07-01'):
@@ -277,6 +280,7 @@ class AStockWalkForwardValidator:
                 'num_folds': num_folds,
                 'stock_list': self.stock_list,
                 'use_market_filter': self.use_market_filter,
+                'learner': self.learner,
             },
             'fold_results': all_fold_results,
             'overall_metrics': overall_result,
@@ -335,7 +339,7 @@ class AStockWalkForwardValidator:
         print(f"\n  🔄 准备训练数据...")
 
         # 创建模型实例
-        model = AStockTradingModel(horizon=self.horizon)
+        model = AStockTradingModel(horizon=self.horizon, learner=self.learner)
 
         # 训练数据：从全量预准备数据切片（与 prepare_data(train 窗口) 等价）
         if self._full_data is None:
@@ -807,14 +811,14 @@ class AStockWalkForwardValidator:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         horizon = report['validation_config']['horizon']
 
-        # 创建详细结果目录
-        detail_dir = os.path.join('output', f'{timestamp}_a_stock_catboost_{horizon}d')
+        # 创建详细结果目录（目录名含学习器，避免 A/B 结果互相覆盖）
+        detail_dir = os.path.join('output', f'{timestamp}_a_stock_{self.learner}_{horizon}d')
         os.makedirs(detail_dir, exist_ok=True)
 
         # 1. 保存 validation_summary.json
         summary = {
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'model_type': 'a_stock_catboost',
+            'model_type': f'a_stock_{self.learner}',
             'horizon': horizon,
             'num_folds': report['validation_config']['num_folds'],
             'num_stocks': len(report['validation_config']['stock_list']),
@@ -834,7 +838,7 @@ class AStockWalkForwardValidator:
 
         # 2. 保存 fold_metrics_detail.json
         fold_metrics = {
-            'model_type': 'a_stock_catboost',
+            'model_type': f'a_stock_{self.learner}',
             'horizon': horizon,
             'folds': []
         }
@@ -867,19 +871,19 @@ class AStockWalkForwardValidator:
         logger.info(f"Fold详细指标已保存: {metrics_file}")
 
         # 3. 保存完整JSON
-        json_file = os.path.join('output', f'walk_forward_a_stock_catboost_{horizon}d_{timestamp}.json')
+        json_file = os.path.join('output', f'walk_forward_a_stock_{self.learner}_{horizon}d_{timestamp}.json')
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False, default=str)
         logger.info(f"JSON报告已保存: {json_file}")
 
         # 4. 保存CSV
-        csv_file = os.path.join('output', f'walk_forward_a_stock_catboost_{horizon}d_{timestamp}.csv')
+        csv_file = os.path.join('output', f'walk_forward_a_stock_{self.learner}_{horizon}d_{timestamp}.csv')
         fold_df = pd.DataFrame(report['fold_results'])
         fold_df.to_csv(csv_file, index=False)
         logger.info(f"CSV报告已保存: {csv_file}")
 
         # 5. 保存Markdown报告
-        md_file = os.path.join('output', f'walk_forward_a_stock_catboost_{horizon}d_{timestamp}.md')
+        md_file = os.path.join('output', f'walk_forward_a_stock_{self.learner}_{horizon}d_{timestamp}.md')
         self._generate_markdown_report(report, md_file)
         logger.info(f"Markdown报告已保存: {md_file}")
 
@@ -913,7 +917,7 @@ class AStockWalkForwardValidator:
             f.write(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
             f.write("## 📋 验证配置\n\n")
-            f.write(f"- **模型类型**: A股 CatBoost\n")
+            f.write(f"- **模型类型**: A股 {self.learner}\n")
             f.write(f"- **训练窗口**: {config['train_window_months']} 个月\n")
             f.write(f"- **测试窗口**: {config['test_window_months']} 个月\n")
             f.write(f"- **滚动步长**: {config['step_window_months']} 个月\n")
@@ -969,6 +973,9 @@ def main():
                        help='预测周期: 1=次日, 5=一周, 20=一个月（默认）')
     parser.add_argument('--confidence-threshold', type=float, default=0.50,
                        help='置信度阈值（默认: 0.50）')
+    parser.add_argument('--learner', type=str, default='catboost',
+                       choices=['catboost', 'lightgbm'],
+                       help='P4.1 学习器 A/B（默认 catboost）')
 
     # 数据参数
     parser.add_argument('--start-date', type=str, default='2024-01-01',
@@ -996,6 +1003,7 @@ def main():
         step_window_months=args.step_window,
         confidence_threshold=args.confidence_threshold,
         use_market_filter=not args.no_market_filter,
+        learner=args.learner,
     )
 
     # 执行验证
