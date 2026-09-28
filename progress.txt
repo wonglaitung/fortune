@@ -24,6 +24,11 @@
 **主表股票链接化**：`comprehensive_analysis.py` 新增 `_stock_chart_url`，主表股票号码变为可点
 腾讯自选股 K 线链接（`0700.HK` → `gu.qq.com/hk00700`），邮件 markdown 渲染为 `<a>`。
 
+**校准后方向/模式同口径修复**（邮件「↑ 0.49」矛盾）：`DailyConfidence.apply_to_results`
+此前只校准 probability 不同步 direction/prediction → 箭头按原始概率、数字按校准概率自相矛盾，
+模式(111)也按校准前方向拼。修复：校准后按校准概率 ≥0.5 重判方向 + `rebuild_three_horizon_patterns`
+重算模式/交易建议/胜率（2800.HK 案例 111→001 下跌中继）；lessons 三.19（v10.22）+ AGENTS 警告行。
+
 **性能报告改仅港股**：停用 A 股评估、删除市场分布节、标题/主题改「预测性能报告（港股）」；
 图表全面 D3 合规化（雷达 5 维=方向技能/超额lift/收益/夏普/买入均收 + block bootstrap CI 误差须
 + 20d 组合层护栏块，绝对准确率/胜率不作判定依据）。

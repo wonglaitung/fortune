@@ -132,6 +132,7 @@ python hsi_email.py --no-email
 | **双模式预测** | 收市后预测使用 `mode='production'`（当日数据），Walk-forward 使用 `mode='backtest'`（T-1 数据） |
 | **yfinance 盘中数据** | yfinance 日线数据在盘中可能不准确，推荐使用腾讯财经接口获取实时报价 |
 | **复权口径一致性** | 训练/预测/评估统一用**腾讯前复权（qfq）**（港股 `get_hk_stock_data_tencent`、A股 `get_a_stock_data`）；性能监控 exit 价必须 qfq 同源，禁用 yfinance 未复权价当 exit（跨除息日 actual_return 失真，实测虚高 62%，见 lessons 三.17） |
+| **校准概率与方向同口径** | Isotonic 校准后 `direction`/`pattern` 必须按**校准概率 ≥0.5** 重判（`apply_to_results` 已同步 + `rebuild_three_horizon_patterns` 重算模式），否则邮件出现「↑ 0.49」自相矛盾，见 lessons 三.19 |
 | **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练时需标签标准化 |
 | **A股股票代码前导零** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失（002655→2655） |
 | **A股样本权重** | 核心股权重3.0倍，扩展股1.0倍，训练时需传入 `sample_weight` |

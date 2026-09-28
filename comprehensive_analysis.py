@@ -482,6 +482,28 @@ def get_pattern_action(pattern, is_hsi=False):
     return {'name': '未知', 'action': '观望', 'win_rate': '-', 'avg_return': '-', 'confidence': '低'}
 
 
+def rebuild_three_horizon_patterns(three_horizon_results):
+    """概率校准后重算三周期模式/交易建议/胜率（与校准方向同口径）。
+
+    DailyConfidence.apply_to_results 会按校准概率重判 1/5/20d 方向，
+    模式(pattern)必须随之重算，否则模式列(如111)与概率列(如0.49/0.43)矛盾。
+    """
+    rebuilt = 0
+    for res in (three_horizon_results or {}).values():
+        if not isinstance(res, dict):
+            continue
+        preds = res.get('predictions') or {}
+        if not all(isinstance(preds.get(h), dict) and preds[h].get('prediction') is not None
+                   for h in (1, 5, 20)):
+            continue
+        pattern = ''.join('1' if preds[h]['prediction'] == 1 else '0' for h in (1, 5, 20))
+        if pattern != res.get('pattern') or res.get('pattern_info') is None:
+            rebuilt += 1
+        res['pattern'] = pattern
+        res['pattern_info'] = get_pattern_action(pattern)
+    return rebuilt
+
+
 def load_risk_reward_data(json_path='data/risk_reward_results.json'):
     """
     加载风险回报率分析结果
@@ -1092,6 +1114,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             except Exception as e:
                 print(f"  ⚠️ 概率校准/置信度失败（不影响预测）: {e}")
 
+            # 校准后方向已按校准概率重判 → 模式/交易建议/胜率随之重算（同口径）
+            try:
+                n_pat = rebuild_three_horizon_patterns(three_horizon_results)
+                if n_pat:
+                    print(f"  ✅ 三周期模式已按校准方向重算（{n_pat} 只变化）")
+            except Exception as e:
+                print(f"  ⚠️ 三周期模式重算失败（不影响预测）: {e}")
+
             # ========== 计算筹码分布（用于邮件表格）==========
             chip_data = {}
             if TECHNICAL_ANALYSIS_AVAILABLE:
@@ -1490,6 +1520,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 catboost_text_email += "- <span style=\"color: #ea580c; font-weight: bold;\">↑</span>（亮橙色）：概率 50-60%，方向看涨（50-55%弱信号仅观望/≤2%；55-60%中等置信度可买入）\n"
                 catboost_text_email += "- <span style=\"color: #dc2626; font-weight: bold;\">↓</span>（亮红色）：概率 < 50%，看跌\n"
                 catboost_text_email += "- 概率已经过校准，可直接读作**预计上涨胜率**（不再是模型原始输出概率）\n"
+                catboost_text_email += "- 方向箭头/模式标注同样按校准后概率判定（≥0.50 判涨），与概率数字同口径\n"
                 catboost_text_email += "- <span style=\"color: #9ca3af;\">(置信xx%)</span>：**模型方向判对概率**（由历史预测拟合），与上涨概率是两回事\n"
 
                 # 添加市场调整说明
@@ -1502,7 +1533,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
                 # 添加交易规则说明
                 catboost_text_email += f"\n**三周期交易规则说明**：\n"
-                catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌）\n"
+                catboost_text_email += "- 模式标注 = 1天预测 + 5天预测 + 20天预测（1=涨，0=跌，按校准后概率 ≥0.50 判定）\n"
                 catboost_text_email += f"- 个股传导模式（历史统计，仅供参考）：1天+5天都正确时，20天准确率({TRANSMISSION_ACCURACY['both_correct_rate']}%) > 独立20天({TRANSMISSION_ACCURACY['independent_20d_rate']}%)，提升 +{TRANSMISSION_ACCURACY['improvement']}%\n"
                 catboost_text_email += "- ⚠️ 注意：三周期模式胜率为历史统计，未经显著性验证——个股曾以\"反弹失败(010)\"最高、\"假突破(101)\"约随机水平\n"
                 catboost_text_email += "- 💡 恒指模式历史统计与个股不可直接比较，未经显著性验证，仅供参考\n"

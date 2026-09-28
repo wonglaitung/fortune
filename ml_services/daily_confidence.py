@@ -101,7 +101,12 @@ class DailyConfidence:
         return float(iso.predict([prob])[0])
 
     def apply_to_results(self, three_horizon_results):
-        """后处理：把 1/5/20d 的 probability 替换为校准值，并加 confidence 字段"""
+        """后处理：把 1/5/20d 的 probability 替换为校准值，并加 confidence 字段
+
+        同步方向口径：direction/prediction 按校准后概率 ≥0.5 重判
+        （否则出现「↑ 0.49」这种箭头按原始概率、数字按校准概率的矛盾展示）。
+        confidence 含义不变：P(该预测方向判对)，在原始概率空间拟合。
+        """
         changed = 0
         for code, res in three_horizon_results.items():
             # 兼容两种结构：res['predictions'][h] 或 res[h]
@@ -113,10 +118,15 @@ class DailyConfidence:
                     p = preds[h]['probability']
                     if p is None:
                         continue
-                    preds[h]['probability'] = self.calibrate(p, h)
+                    calib_p = self.calibrate(p, h)
+                    preds[h]['probability'] = calib_p
                     conf = self.confidence(p, h)
                     if conf is not None:
                         preds[h]['confidence'] = conf
+                    # 方向与校准概率同口径（≥0.5 判涨，与邮件颜色说明/市场调整列一致）
+                    up = calib_p >= 0.5
+                    preds[h]['prediction'] = 1 if up else 0
+                    preds[h]['direction'] = '↑' if up else '↓'
                     changed += 1
         return changed
 
