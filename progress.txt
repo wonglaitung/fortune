@@ -2241,3 +2241,13 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 产物（已入库）：3 份 prediction_analysis.csv（commit_backtest_result：20d 同步快照+旋转旧 CSV；
   5d/1d 仅 CSV）+ 3 份 guardrail md + portfolio_20d_top10.md + 本报告 2016extend.md。
 - 提交：ed35a9e6(20d+快照) / 5c323b0e(5d) / 7e6d6d55(1d)。09-29 38-fold 数值保留为对照基线，本 86-fold 为更长样本基线。
+
+[2026-09-29 反思: 数据源缺陷] 复盘"延长历史到2016"重跑发现结论被污染（已写入 lessons 三.26）
+- 根因：ml_trading_model.py prepare_data 取市场级特征硬编码 period_days=1460（行3879/3887），
+  只覆盖≈2023起；2016-2022 美债/中债/VIX 全 NaN（按年NaN率实测 2017-2021=100%）。核心跨股区分特征
+  CN_US_10Y_Spread 等 2023 前失效。各股价格缓存可深至2017但宏观块共享且短缺 → 非平稳宇宙 + NaN泄露时代。
+- 后果：86-fold 新增的2016-2019样本宏观盲，"加样本仍无edge"不能据以判D1；GATE_SNAPSHOT(bear0.8636)偏移
+  反映的是宏观盲/齐混合分布。walk-forward 本身 genuine（train/test 无泄漏，已用 fold_metrics_detail 核对）。
+- 已更正 AGENTS/DECISIONS/VALIDATION_GUIDE 中"2016长基线"措辞，标注宏观盲污染。
+- 下一步（待执行）：get_all_us_market_data/VIX/HSI 支持按 start_date 取全历史 → 清特征缓存 → 重跑
+  （真正宏观齐全的长历史，届时方能量 D1/D2）。
