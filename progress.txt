@@ -2230,3 +2230,14 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 事故：1d 自动入库死于 autostash 冲突（model_accuracy.json 与 CI 提交冲突），已并集解决并补提交 86ebaf58。
 - 文档：AGENTS 个股完整模型表+D2段、VALIDATION_GUIDE 最新验证结果表、DECISIONS D2 复验行、本报告。
 - 后续（未启动）：B 多种子 ensemble / C3 排名缓冲带 / C4 软 TopK / D2 升配规则加种子维度；生产模型 refit（用新特征集）待排期。
+
+[2026-09-29 延长历史重跑] 用户选"由2016开始"——start 改 2016-06-01 重跑三周期（86 folds/~77.9k 行/组合期数71）
+- 目的：加样本量检验边缘信号能否显著。结果**未能翻盘、反而稀释**：20d 51.3%[49.7,52.9] lift+1.8pp(p.1496 ns)、
+  护栏净IR 0.60[−.22,1.24] PBO0.80 **DSR0.897 跌破0.95** 🟡；5d 50.5% lift+1.0pp(ns) 净IR0.48 PBO0.50 DSR0.942 🟡；
+  1d 51.2% lift+1.2pp(p.0001) 净IR nan[−1.38,0.18]（伪影，CI 仍负）🔴。组合超额IR 0.44[−.71,.94] CI跨0 P>0=86% n=71。
+- 解读：混入 2016–2020 较弱 regime 把 2020–2025 边缘信号平均得更弱 → 加样本让"无 edge"更可信，非翻盘；
+  D1「alpha 已穷尽」、D2「维持低配/1d 停用」进一步坐实（20d 可酌情降为仅战术/更低配）。
+- 生产影响（已入库）：GATE_SNAPSHOT 按 2016 分布刷新 → bear 0.6923→0.8636（大幅收紧）、weak 0.6667→0.6923（更保守）。
+- 产物（已入库）：3 份 prediction_analysis.csv（commit_backtest_result：20d 同步快照+旋转旧 CSV；
+  5d/1d 仅 CSV）+ 3 份 guardrail md + portfolio_20d_top10.md + 本报告 2016extend.md。
+- 提交：ed35a9e6(20d+快照) / 5c323b0e(5d) / 7e6d6d55(1d)。09-29 38-fold 数值保留为对照基线，本 86-fold 为更长样本基线。
