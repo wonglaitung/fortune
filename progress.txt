@@ -2251,3 +2251,18 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 已更正 AGENTS/DECISIONS/VALIDATION_GUIDE 中"2016长基线"措辞，标注宏观盲污染。
 - 下一步（待执行）：get_all_us_market_data/VIX/HSI 支持按 start_date 取全历史 → 清特征缓存 → 重跑
   （真正宏观齐全的长历史，届时方能量 D1/D2）。
+
+[2026-09-30 修复+重跑完成] lessons 三.26 的修复已执行并验证 D1（宏观齐全长历史确认）
+- 修复：us_market_data 五个取数函数支持 start_date 历史区间（yfinance history(start=)+AKShare 日期区间）；
+  ml_trading_model.prepare_data 把折 start_date 透传给市场取数并按起始日推算 period_days_needed。
+  独立验证：US_2Y_Yield/VIX_Level 2016-2021 NaN 从 100% 降至 ≤6%。
+- 重跑（start 2016-06-01 → 86 folds / ~77.9k 行，宏观齐全）：
+  · 20d LGBM：acc 50.6%[49.0,52.2]、lift+1.8pp(p.21)、净IR 0.63[−0.15,1.28]🟡、PBO 0.94/DSR 0.907
+  · 5d CB：acc 51.2%、lift+0.8pp(p.31)、净IR 0.17[−0.69,1.03]🟡、PBO 0.79/DSR 0.850
+  · 1d CB：acc 51.4%、lift+0.7pp(p.056)、净IR −0.80[−1.80,−0.01]🔴、PBO 0.49/DSR 0.024
+  · 组合层 20d 超额IR 0.45[−0.45,1.00] CI 跨0、P(>0)=87%、n=71 → 不稳健
+- 结论：加样本+修宏观仍无 edge，且 PBO 反而恶化（20d 0.80→0.94、5d 0.50→0.79）→ 过拟合更重；
+  **D1「alpha 已穷尽」在宏观齐全数据上确认**（非污染窗口有限结论）；D2 维持低配/1d 停用。
+- 入库：commit_backtest_result 提交 3 份修正 CSV（20d 同步 GATE_SNAPSHOT bear 0.8636/weak 0.6918，
+  与污染值几乎一致，印证 GATE 未被宏观缺失明显偏移）；代码修复提交 140b81eb。
+- 文档：AGENTS/DECISIONS/VALIDATION_GUIDE 86-fold 段与 D1/D2 措辞已更正为宏观齐全确认值。

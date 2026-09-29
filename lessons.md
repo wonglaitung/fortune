@@ -869,7 +869,7 @@ summary JSON 相等；pytest 126 passed。
 ### 8. 市场级宏观特征整段缺失 → "长历史"验证被污染（2026-09-29）
 
 **问题**：用户要求"延长历史到 2016 重跑看能否显著"，86-fold 跑完结论是"加样本仍无 edge、D1 alpha 穷尽"。
-复盘数据管线发现该结论**被数据源缺陷污染**，不能据此判 alpha 穷尽。
+复盘数据管线发现该结论**被数据源缺陷污染**，不能据此判 alpha 穷尽；**修复后于 2026-09-30 重跑确认 D1（见下"修复结果"）**。
 
 **根因**（`ml_services/ml_trading_model.py`）：`prepare_data` 取市场级特征硬编码 `period_days=1460`
 （`get_all_us_market_data(period_days=1460)` 行 3879、`get_hsi_data_tencent(period_days=1460)` 行 3887），
@@ -901,11 +901,19 @@ summary JSON 相等；pytest 126 passed。
 并核对 `fold_metrics_detail.folds[0]` 的 `train_period`/`sample_counts.train` 确认训练窗真覆盖起始年、
 再按年查 `us_market_df` 合并列缺失率，避免"以为延了历史、其实宏观全缺"。
 
-**修复方向（待执行）**：
-- `get_all_us_market_data`/VIX/HSI 取数支持按 `start_date` 取全历史（yfinance/FRED 美债可溯 2002+，
-  中债受限），消除 2017–2022 NaN；`prepare_data` 用折的 `start_date` 反推取数窗口。
-- 清特征缓存重算后重跑 Walk-forward——**这次才是真正"宏观齐全的长历史"**，届时才能判 D1。
-- 顺带统一各股缓存深度（按 oldest start_date 一次性补齐）。
+**修复结果（已执行，2026-09-30）**：
+- `us_market_data` 的 SP500/NASDAQ/VIX/Treasury 五个取数函数已支持 `start_date` 历史区间取数
+  （yfinance `history(start=)` + AKShare 日期区间），`prepare_data` 把折 `start_date` 透传给市场取数并按起始日
+  推算 `period_days_needed`（HSI 兜底）。独立验证：`US_2Y_Yield`/`VIX_Level` 2016–2021 NaN 从 100% 降至 ≤6%。
+- 清 `data/us_market_cache` + `data/feature_cache` 后重跑三周期 86-fold（start 2016-06-01，宏观齐全）：
+  - 20d LGBM：acc 50.6%[49.0,52.2]、lift+1.8pp(p.21)、净IR 0.63[−0.15,1.28]🟡、PBO **0.94**/DSR 0.907
+  - 5d CB：acc 51.2%、lift+0.8pp(p.31)、净IR 0.17[−0.69,1.03]🟡、PBO **0.79**/DSR 0.850
+  - 1d CB：acc 51.4%、lift+0.7pp(p.056)、净IR −0.80[−1.80,−0.01]🔴、PBO 0.49/DSR 0.024
+  - 组合层 20d 超额IR 0.45[−0.45,1.00] CI 跨0、P(>0)=87% → 不稳健
+- **结论：加样本 + 修宏观仍无 edge，且 PBO 反而恶化（20d 0.80→0.94、5d 0.50→0.79）→ 过拟合更重；**
+  **D1「alpha 已穷尽」在宏观齐全数据上确认**（非污染窗口有限结论）；D2 维持低配/1d 停用。
+- `GATE_SNAPSHOT` 按宏观齐全分布刷新 → bear 0.8636、weak 0.6918（与污染值几乎一致，印证 GATE 未被宏观缺失明显偏移）。
+- 各股缓存深度不一致（2017+~2020+）未顺带统一——属次要宇宙非平稳问题，留待后续；不影响 D1 结论。
 
 **教训**：
 - **长耗时实验前先验数据管线**：确认 `prepare_data` 对**所有**数据源（含市场级特征）都真按
@@ -913,7 +921,7 @@ summary JSON 相等；pytest 126 passed。
   再 Launch 8h 全量，避免白跑且污染结论（本次 8h 早期折即宏观盲）。
 - **"样本量不够" 与 "特征缺一段" 是两件事**：延长历史若只延长了价格、没延长宏观上下文，
   新增样本是异构的，不能简单并入同一结论。
-- **D1「alpha 穷尽」在宏观不全的窗口内成立，但在宏观齐全的长历史上尚未验证**——下结论前先补宏观。
+- **D1「alpha 穷尽」已在宏观齐全的长历史（2016–2026, 86 folds）上确认**：加样本+修宏观仍无 edge，PBO 反而恶化——延长历史若只延长价格、没延长宏观上下文，新增样本是异构的，不能简单并入同一结论。
 
 ## 四、模型训练
 
