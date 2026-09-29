@@ -3874,9 +3874,19 @@ class CatBoostModel(BaseTradingModel):
         use_shift = (mode == 'backtest')
         all_data = []
 
+        # 修复三.26：按 start_date 取全历史市场特征，避免 2016-2022 宏观特征缺失
+        if start_date is not None:
+            try:
+                _sd = pd.Timestamp(start_date)
+                period_days_needed = max(1460, int((pd.Timestamp(datetime.now()) - _sd).days) + 120)
+            except Exception:
+                period_days_needed = 1460
+        else:
+            period_days_needed = 1460
+
         # 获取美股市场数据（只获取一次）
         logger.info("获取美股市场数据...")
-        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=period_days_needed, start_date=start_date)
         if us_market_df is not None:
             logger.info(f"成功获取 {len(us_market_df)} 天的美股市场数据")
         else:
@@ -3884,7 +3894,7 @@ class CatBoostModel(BaseTradingModel):
 
         # 获取恒生指数数据（只获取一次，用于缓存键）
         logger.info("获取恒生指数数据...")
-        hsi_df = get_hsi_data_tencent(period_days=1460)
+        hsi_df = get_hsi_data_tencent(period_days=period_days_needed)
         if hsi_df is None or hsi_df.empty:
             logger.warning("无法获取恒生指数数据")
             hsi_df = None

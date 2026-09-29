@@ -151,11 +151,12 @@ class USMarketData:
     def __init__(self):
         pass
 
-    def get_sp500_data(self, period_days=1460):
+    def get_sp500_data(self, period_days=1460, start_date=None):
         """获取标普500指数数据
 
         Args:
-            period_days: 获取天数（默认730天，约2年）
+            period_days: 获取天数（默认730天，约2年；仅当 start_date 未指定时用于截断）
+            start_date: 起始日期（'YYYY-MM-DD'）；指定后按历史区间取数，支持长历史（修复三.26）
         
         Returns:
             DataFrame: 包含标普500指数数据
@@ -185,8 +186,13 @@ class USMarketData:
                 df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
                 df.set_index('Date', inplace=True)
                 
-                # 只保留最近N天的数据
-                if len(df) > period_days:
+                # 按起始日期截取（若指定），否则保留最近 period_days 天
+                if start_date is not None:
+                    sd = pd.Timestamp(start_date)
+                    if sd.tzinfo is None:
+                        sd = sd.tz_localize('UTC')
+                    df = df[df.index >= sd]
+                elif len(df) > period_days:
                     df = df.tail(period_days)
                 
                 # 计算收益率
@@ -207,7 +213,11 @@ class USMarketData:
             import yfinance as yf
 
             ticker = yf.Ticker('^GSPC')
-            df = ticker.history(period=f'{period_days}d')
+            if start_date is not None:
+                df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
+                                    end=datetime.now(), auto_adjust=True)
+            else:
+                df = ticker.history(period=f'{period_days}d')
 
             if df.empty:
                 print("⚠️ yfinance 也无法获取标普500指数数据")
@@ -232,12 +242,13 @@ class USMarketData:
             print(f"⚠️ yfinance 获取标普500指数数据也失败: {e}")
             return None
 
-    def get_nasdaq_data(self, period_days=1460):
+    def get_nasdaq_data(self, period_days=1460, start_date=None):
         """获取纳斯达克指数数据
 
         Args:
-            period_days: 获取天数（默认730天，约2年）
-
+            period_days: 获取天数（默认730天，约2年；仅当 start_date 未指定时用于截断）
+            start_date: 起始日期（'YYYY-MM-DD'）；指定后按历史区间取数（修复三.26）
+        
         Returns:
             DataFrame: 包含纳斯达克指数数据
         """
@@ -266,10 +277,15 @@ class USMarketData:
                 df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize('UTC')
                 df.set_index('Date', inplace=True)
 
-                # 只保留最近N天的数据
-                if len(df) > period_days:
+                # 按起始日期截取（若指定），否则保留最近 period_days 天
+                if start_date is not None:
+                    sd = pd.Timestamp(start_date)
+                    if sd.tzinfo is None:
+                        sd = sd.tz_localize('UTC')
+                    df = df[df.index >= sd]
+                elif len(df) > period_days:
                     df = df.tail(period_days)
-
+                
                 # 计算收益率
                 df['NASDAQ_Return'] = df['Close'].pct_change()
                 df['NASDAQ_Return_5d'] = df['Close'].pct_change(5)
@@ -288,7 +304,11 @@ class USMarketData:
             import yfinance as yf
 
             ticker = yf.Ticker('^IXIC')
-            df = ticker.history(period=f'{period_days}d')
+            if start_date is not None:
+                df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
+                                    end=datetime.now(), auto_adjust=True)
+            else:
+                df = ticker.history(period=f'{period_days}d')
 
             if df.empty:
                 print("⚠️ yfinance 也无法获取纳斯达克指数数据")
@@ -313,14 +333,15 @@ class USMarketData:
             print(f"⚠️ yfinance 获取纳斯达克指数数据也失败: {e}")
             return None
 
-    def get_vix_data(self, period_days=1460):
+    def get_vix_data(self, period_days=1460, start_date=None):
         """获取VIX恐慌指数数据
 
         注意：AKShare 暂不支持 VIX 恐慌指数，仅使用 yfinance
 
         Args:
             period_days: 获取天数（默认730天，约2年）
-
+            start_date: 起始日期（'YYYY-MM-DD'）；指定后按历史区间取数（修复三.26）
+        
         Returns:
             DataFrame: 包含VIX恐慌指数数据
         """
@@ -334,7 +355,11 @@ class USMarketData:
             import yfinance as yf
 
             ticker = yf.Ticker('^VIX')
-            df = ticker.history(period=f'{period_days}d')
+            if start_date is not None:
+                df = ticker.history(start=pd.Timestamp(start_date).tz_localize(None),
+                                    end=datetime.now(), auto_adjust=True)
+            else:
+                df = ticker.history(period=f'{period_days}d')
 
             if df.empty:
                 print("⚠️ 无法获取VIX恐慌指数数据")
@@ -362,11 +387,12 @@ class USMarketData:
             print(f"⚠️ 获取VIX恐慌指数数据失败: {e}")
             return None
 
-    def get_us_treasury_yield(self, period_days=1460):
+    def get_us_treasury_yield(self, period_days=1460, start_date=None):
         """获取美国多期限国债收益率数据（2Y, 10Y, 30Y）和中国国债收益率
 
         Args:
-            period_days: 获取天数（默认1460天，约4年）
+            period_days: 获取天数（默认1460天，约4年；仅当 start_date 未指定时用于推算起始）
+            start_date: 起始日期（'YYYY-MM-DD'）；指定后按历史区间取数（修复三.26）
 
         Returns:
             DataFrame: 包含美国和中国多期限国债收益率数据，及利差特征
@@ -381,7 +407,10 @@ class USMarketData:
             # 使用超时控制包装器
             @timeout(60)  # 60秒超时，适应 GitHub Actions 网络环境
             def fetch_data():
-                start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
+                if start_date is not None:
+                    start_date_str = pd.Timestamp(start_date).strftime('%Y%m%d')
+                else:
+                    start_date_str = (datetime.now() - timedelta(days=period_days)).strftime('%Y%m%d')
                 return ak.bond_zh_us_rate(start_date=start_date_str)
 
             df = fetch_data()
@@ -440,12 +469,13 @@ class USMarketData:
             print(f"⚠️ 获取国债收益率数据失败: {e}")
             return None
 
-    def get_all_us_market_data(self, period_days=1460):
+    def get_all_us_market_data(self, period_days=1460, start_date=None):
         """获取所有美股市场数据
 
         Args:
-            period_days: 获取天数（默认730天，约2年）
-
+            period_days: 获取天数（默认730天，约2年；仅当 start_date 未指定时用于截断）
+            start_date: 起始日期（'YYYY-MM-DD'）；指定后按历史区间取数（修复三.26）
+        
         Returns:
             DataFrame: 合并后的美股市场数据
         """
@@ -456,28 +486,28 @@ class USMarketData:
         treasury_df = None
 
         try:
-            sp500_df = self.get_sp500_data(period_days)
+            sp500_df = self.get_sp500_data(period_days, start_date)
         except TimeoutError:
             print("⚠️ 获取标普500数据超时，跳过")
         except Exception as e:
             print(f"⚠️ 获取标普500数据失败: {e}")
 
         try:
-            nasdaq_df = self.get_nasdaq_data(period_days)
+            nasdaq_df = self.get_nasdaq_data(period_days, start_date)
         except TimeoutError:
             print("⚠️ 获取纳斯达克数据超时，跳过")
         except Exception as e:
             print(f"⚠️ 获取纳斯达克数据失败: {e}")
 
         try:
-            vix_df = self.get_vix_data(period_days)
+            vix_df = self.get_vix_data(period_days, start_date)
         except TimeoutError:
             print("⚠️ 获取VIX数据超时，跳过")
         except Exception as e:
             print(f"⚠️ 获取VIX数据失败: {e}")
 
         try:
-            treasury_df = self.get_us_treasury_yield(period_days)
+            treasury_df = self.get_us_treasury_yield(period_days, start_date)
         except TimeoutError:
             print("⚠️ 获取国债收益率数据超时，跳过")
         except Exception as e:
