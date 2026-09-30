@@ -2294,3 +2294,20 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   若相对 IC 显著且 PBO 低 → 相对标签 rescued edge。
 - 纪律：单次运行、预注册、禁止再试 sector/rank 等相对变体（多重检验须校正）。
 - 状态：2026-09-30 08:29 启动 j20/j5/j1（output/wf{20d,5d,1d}_rel.log），进行中。
+
+[2026-09-30 系统性对齐 bug 修复 + 相对标签重跑]
+- 相对标签实验首跑 50/50 折全退化（标签恒为 0）→ 根因两层：
+  (1) prepare_data 个股取数硬编码 period_days=1460（早于三.26 漏改）→ 2016-2021 取不到；
+      改为 period_days_needed（get_hk_stock_data_tencent(2640d) 实测返回 2016-01 起）。
+  (2) 更深层【系统性对齐 bug】：HSI/美股外部行情索引为午夜 00:00，港股个股为收盘 16:00，
+      create_label(relative_hsi) 与 calculate_relative_strength / create_market_environment_features /
+      calculate_hsi_regime_features 均按精确时间戳 merge/reindex → 全不中 → HSI_Future_Return 与
+      HSI/美股特征整列 NaN。早年缓存为午夜索引时碰巧正常，清缓存后新鲜数据全失真。
+  - 修复：新增 _align_to_index（按日期归一 tz_convert(None)+normalize 后按位置赋值），四处统一改用；
+      create_label 的 HSI_Future_Return 对齐同样按日期归一。
+  - 验证：单股 Relative_Return NaN 由 100%→31.8%（=HSI 覆盖缺口，真实）；HSI_Return_5d 由 100%→32% NaN；
+      US_10Y_Yield 71.9% NaN 为既有历史限制（非本次引入）。
+- 注：此前提交的绝对标签 86-fold 基线（20260930_020747）当时用 Sep28 午夜索引缓存，对齐碰巧正确，仍有效；
+  本次修复确保新鲜数据路径正确，并重跑绝对基线做公平对照。
+- 当前：清 feature_cache 后重启 6 个运行（相对+绝对 各 1/5/20d，start 2019-06-01，--no-commit），均 0 错误进行中。
+- A股硬编码 1460 见 a_stock_ml_model.py 行 930/937-938/981/1626/1645-1650（并行会话域，未改）。
