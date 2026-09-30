@@ -235,11 +235,26 @@ class WalkForwardValidator:
         print(f"\nFold 数量: {num_folds}")
         print("="*80)
 
+        # 修复取数：一次性取全段（含训练前 lookback）再按折切分，
+        # 避免逐折窄窗对历史区间取数失败（腾讯接口按窗口截断 + 限流）导致折被跳过。
+        full_fetch_start = (pd.to_datetime(start_date) - pd.DateOffset(months=self.train_window_months + 6)).strftime('%Y-%m-%d')
+        m0 = self.model_class()
+        print(f"  🔄 一次性取全段数据: {full_fetch_start} 至 {end_date}（label_mode={self.label_mode}）")
+        full_data = m0.prepare_data(
+            stock_list, start_date=full_fetch_start, end_date=end_date,
+            horizon=self.horizon, for_backtest=False, label_mode=self.label_mode
+        )
+        # 统一索引时区为 UTC，便于按折按日期切分
+        _idx = full_data.index
+        full_data.index = _idx.tz_localize('UTC') if _idx.tz is None else _idx.tz_convert('UTC')
+        print(f"  ✅ 全段数据: {len(full_data)} 条，索引 {full_data.index.min()} ~ {full_data.index.max()}")
+
         # 存储所有fold的结果
         all_fold_results = []
         # 完整性追踪：失败/主动跳过的 fold（防止残缺结果冒充"验证完成"）
         failed_folds = []
         skipped_folds = 0
+        degenerate_skipped_folds = 0  # 标签退化/样本不足的折（相对标签实验常见）
 
         # 执行每个fold的验证
         for fold in range(num_folds):
@@ -283,7 +298,8 @@ class WalkForwardValidator:
                     test_start_date,
                     test_end_date,
                     fold,
-                    label_mode=self.label_mode
+                    label_mode=self.label_mode,
+                    full_df=full_data
                 )
 
                 all_fold_results.append(fold_result)
@@ -299,21 +315,32 @@ class WalkForwardValidator:
                 print(f"  最大回撤: {fold_result['max_drawdown']:.2%}")
 
             except Exception as e:
-                logger.error(f"Fold {fold + 1} 验证失败: {e}")
-                import traceback
-                logger.error(traceback.format_exc())
-                failed_folds.append(fold + 1)
+                _msg = str(e)
+                # 标签退化（强趋势窗全股同号跑赢/输恒指）或样本不足：属结构性无效折，跳过而非判失败
+                if '目标变量多样性不足' in _msg or '训练样本不足' in _msg or '训练数据中没有' in _msg:
+                    skipped_folds += 1
+                    degenerate_skipped_folds += 1
+                    logger.warning(f"Fold {fold + 1} 因标签退化/样本不足跳过（{_msg}）")
+                else:
+                    logger.error(f"Fold {fold + 1} 验证失败: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    failed_folds.append(fold + 1)
                 continue
 
         # 完整性闸门：任一 fold 失败即非零退出，拒绝生成残缺报告
         # （2026-09-27 断网期间 17/38 折残缺 CSV 曾通过"验证完成"输出，差点污染对比）
+        # 注：标签退化/样本不足折已计入 skipped_folds（结构性无效，非故障），不触发闸门
         expected_folds = num_folds - skipped_folds
         if failed_folds or len(all_fold_results) < expected_folds:
             raise RuntimeError(
-                f"Walk-forward 不完整：期望 {expected_folds} 折（{num_folds} - 跳过 {skipped_folds}），"
+                f"Walk-forward 不完整：期望 {expected_folds} 折（{num_folds} - 跳过 {skipped_folds}，"
+                f"其中标签退化/样本不足 {degenerate_skipped_folds}），"
                 f"成功 {len(all_fold_results)}，失败 folds {failed_folds} —— "
                 f"多为数据源断连，拒绝生成报告"
             )
+        if degenerate_skipped_folds:
+            print(f"⚠️ 共 {degenerate_skipped_folds} 个折因标签退化/样本不足被跳过（相对标签在强趋势窗结构无效，已如实剔除）")
 
         # 计算整体指标
         overall_result = self._calculate_overall_metrics(all_fold_results)
@@ -331,6 +358,8 @@ class WalkForwardValidator:
                 'start_date': start_date,
                 'end_date': end_date,
                 'num_folds': num_folds,
+                'skipped_folds': skipped_folds,
+                'degenerate_skipped_folds': degenerate_skipped_folds,
                 'stock_list': stock_list
             },
             'fold_results': all_fold_results,
@@ -358,7 +387,7 @@ class WalkForwardValidator:
 
         return report
 
-    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, label_mode='absolute'):
+    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, label_mode='absolute', full_df=None):
         """
         验证单个fold
 
@@ -369,6 +398,7 @@ class WalkForwardValidator:
             test_start_date: 测试开始日期
             test_end_date: 测试结束日期
             fold: fold编号
+            full_df: 一次性预取的全段数据（按日期切分，避免逐折取数失败）
 
         Returns:
             dict: fold验证结果
@@ -390,17 +420,21 @@ class WalkForwardValidator:
             model.learner = self.learner
             print(f"  🔁 学习器: {self.learner}")
 
-        # 准备训练数据
+        # 准备训练数据：优先用一次性预取全段按日期切分（修复历史区间取数失败）
         train_codes = stock_list
-        train_data = model.prepare_data(
-            train_codes,
-            start_date=train_start_date,
-            end_date=train_end_date,
-            horizon=self.horizon,
-            for_backtest=False,
-            community_ids=self.preloaded_community_ids,  # 使用预加载的社区 ID
-            label_mode=label_mode
-        )
+        if full_df is not None:
+            train_data = full_df[(full_df.index >= train_start_date) & (full_df.index <= train_end_date)]
+            print(f"  ✂️ 切片训练数据（全段切分）: {len(train_data)} 条")
+        else:
+            train_data = model.prepare_data(
+                train_codes,
+                start_date=train_start_date,
+                end_date=train_end_date,
+                horizon=self.horizon,
+                for_backtest=False,
+                community_ids=self.preloaded_community_ids,  # 使用预加载的社区 ID
+                label_mode=label_mode
+            )
 
         # 检查训练样本数量
         if len(train_data) < self.min_train_samples:
@@ -448,7 +482,7 @@ class WalkForwardValidator:
         print(f"  🧬 指纹 featsel={_fingerprint(fold_selected_features)}")
         _dump_xfp(f'fold{fold}_featsel', fold_selected_features if isinstance(fold_selected_features, list) else [])
 
-        # 训练模型（关键：每个fold重新训练）
+        # 训练模型（关键：每个fold重新训练，复用切片避免重复取数）
         print(f"  🔄 训练模型 (Fold {fold + 1})...")
         try:
             model.train(
@@ -457,7 +491,8 @@ class WalkForwardValidator:
                 end_date=train_end_date,
                 horizon=self.horizon,
                 use_feature_selection=self.use_feature_selection,
-                selected_features=fold_selected_features
+                selected_features=fold_selected_features,
+                prepared_df=train_data  # 复用全段切片，避免逐折窄窗取数失败
             )
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
@@ -467,15 +502,19 @@ class WalkForwardValidator:
 
         # 准备测试数据（使用训练时保存的社区 ID，确保特征一致性）
         print(f"  🔄 准备测试数据...")
-        test_data = model.prepare_data(
-            train_codes,
-            start_date=test_start_date,
-            end_date=test_end_date,
-            horizon=self.horizon,
-            for_backtest=False,
-            community_ids=model.community_ids,  # 使用训练时的社区 ID
-            label_mode=label_mode
-        )
+        if full_df is not None:
+            test_data = full_df[(full_df.index >= test_start_date) & (full_df.index <= test_end_date)]
+            print(f"  ✂️ 切片测试数据（全段切分）: {len(test_data)} 条")
+        else:
+            test_data = model.prepare_data(
+                train_codes,
+                start_date=test_start_date,
+                end_date=test_end_date,
+                horizon=self.horizon,
+                for_backtest=False,
+                community_ids=model.community_ids,  # 使用训练时的社区 ID
+                label_mode=label_mode
+            )
 
         print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
 

@@ -636,6 +636,21 @@ def get_hsi_data_with_cache(period_days=1460):
     return hsi_df
 
 
+def _normalize_ohlcv_cols(df):
+    """腾讯接口在 period_days 较大时返回小写 OHLCV 列（open/close/...），统一规范为标题大小写。
+
+    修复：get_hsi_data_tencent(period_days>=~2000) 与部分历史行情分支返回小写列名，
+    导致后续 hsi_df['Close'] / stock_df['Close'] 取数 KeyError。
+    """
+    if df is None or not hasattr(df, 'columns'):
+        return df
+    ren = {c: c.capitalize() for c in df.columns
+           if c.lower() in ('open', 'close', 'high', 'low', 'volume', 'amount') and c != c.capitalize()}
+    if ren:
+        df = df.rename(columns=ren)
+    return df
+
+
 # ========== 特征缓存函数 ==========
 def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     """生成特征缓存键
@@ -3912,6 +3927,8 @@ class CatBoostModel(BaseTradingModel):
         # 获取恒生指数数据（只获取一次，用于缓存键）
         logger.info("获取恒生指数数据...")
         hsi_df = get_hsi_data_tencent(period_days=period_days_needed)
+        if hsi_df is not None and not hsi_df.empty:
+            hsi_df = _normalize_ohlcv_cols(hsi_df)
         if hsi_df is None or hsi_df.empty:
             logger.warning("无法获取恒生指数数据")
             hsi_df = None
@@ -3979,10 +3996,11 @@ class CatBoostModel(BaseTradingModel):
                 # 移除代码中的.HK后缀，腾讯财经接口不需要
                 stock_code = code.replace('.HK', '')
 
-                # 获取股票数据（2年约730天）
-                stock_df = get_hk_stock_data_tencent(stock_code, period_days=1460)
+                # 获取股票数据：按 period_days_needed 取全历史（修复硬编码 1460d 导致 2016-2021 取不到）
+                stock_df = get_hk_stock_data_tencent(stock_code, period_days=period_days_needed)
                 if stock_df is None or stock_df.empty:
                     continue
+                stock_df = _normalize_ohlcv_cols(stock_df)
 
                 # 获取数据最后日期作为缓存键
                 last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
@@ -4207,7 +4225,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -4283,7 +4301,12 @@ class CatBoostModel(BaseTradingModel):
         logger.info("准备训练数据")
         print("="*70)
 
-        df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold, community_ids=preloaded_community_ids)
+        # 复用 Walk-forward 一次性预取的全段切片，避免逐折窄窗重复取数（修复历史区间取数失败）
+        if prepared_df is not None:
+            df = prepared_df
+            logger.info(f"使用预取数据（避免重复取数）: {len(df)} 条记录")
+        else:
+            df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold, community_ids=preloaded_community_ids)
 
         # 提取并保存社区 ID 列表（用于预测时的一致性）
         # 优先使用预加载的社区 ID，如果没有则从数据中提取
