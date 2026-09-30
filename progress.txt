@@ -2266,3 +2266,13 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 入库：commit_backtest_result 提交 3 份修正 CSV（20d 同步 GATE_SNAPSHOT bear 0.8636/weak 0.6918，
   与污染值几乎一致，印证 GATE 未被宏观缺失明显偏移）；代码修复提交 140b81eb。
 - 文档：AGENTS/DECISIONS/VALIDATION_GUIDE 86-fold 段与 D1/D2 措辞已更正为宏观齐全确认值。
+
+[2026-09-30 后续候选方向（记录自讨论：阴性结果符合业界理论 + 若 revisiting D1 的受控实验）]
+- 理论印证已写入 lessons 十：横截面 alpha 衰减(McLean&Pontiff/Harvey)、PBO 框架(Bailey&López de Prado)
+  印证"无 edge + PBO 恶化"是可信阴性结果；验证框架(PIT/embargo/walk-forward/PBO+DSR/lift)本身即业界最佳实践。
+- 若 revisiting D1，仅允许两条**预注册 + 同款闸门(PBO/DSR/lift)** 受控实验，禁多重试造伪 edge：
+  (a) 相对收益标签：标签改 `股票收益 − HSI/行业收益` 残差，剥离 Beta 留 alpha；复用 HSI_Return/行业映射；
+      backtest_eval 基准须改"持有市场"；风险=若 alpha 真死也救不回，仅受控复验。
+  (c) 择时/风控层（优先级更高）：风险比收益更可预测；复用 hsi_ml_model/market_regime/crash_risk/GARCH/HMM；
+      落地=风控预警回撤 + ML 仓位门控；与 D1/D2 兼容、期望最高。
+- 优先级：先做 (c) 再做 (a)。详见 lessons 十。
