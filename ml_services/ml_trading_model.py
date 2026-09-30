@@ -1909,7 +1909,8 @@ class FeatureEngineer:
 
         return stock_df
 
-    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0):
+    def create_label(self, df, horizon, for_backtest=False, min_return_threshold=0.0,
+                     label_mode='absolute', hsi_df=None):
         """创建标签：未来涨跌（考虑交易成本）
 
         根据业界最佳实践，标签定义应考虑交易成本，避免"纸上盈利"变成实际亏损。
@@ -1920,8 +1921,12 @@ class FeatureEngineer:
             horizon: 预测周期
             for_backtest: 是否为回测准备数据（True时不移除最后horizon行）
             min_return_threshold: 最小收益阈值（默认0%），用于过滤小额波动
-                                 推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
-                                 注意：当前设为0%以保持标签分布均衡，后续可调整
+                                  推荐值 = 双边交易成本(约0.5%) + 缓冲(0%)
+                                  注意：当前设为0%以保持标签分布均衡，后续可调整
+            label_mode: 'absolute'（默认，标签=股票未来收益方向）或
+                        'relative_hsi'（标签=股票未来收益 − HSI 未来收益 > 阈值，
+                        剥离市场 Beta、只留特异 alpha；见 lessons 十 (a)）
+            hsi_df: 恒生指数 qfq 数据（label_mode='relative_hsi' 时使用）
         """
         if df.empty or len(df) < horizon + 1:
             return df
@@ -1929,13 +1934,25 @@ class FeatureEngineer:
         # 计算未来收益率（累积收益）
         df['Future_Return'] = df['Close'].shift(-horizon) / df['Close'] - 1
 
-        # 阈值化标签：只有当收益超过阈值时才标记为正例
-        # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
-        # 业界标准：min_return_threshold = 交易成本 + 最小盈利目标
-        df['Label'] = (df['Future_Return'] > min_return_threshold).astype(int)
+        if label_mode == 'relative_hsi' and hsi_df is not None and 'Close' in hsi_df.columns:
+            # 相对收益标签：剥离市场 Beta，只预测"能否跑赢恒指"
+            hsi_close = hsi_df['Close']
+            hsi_fwd = hsi_close.shift(-horizon) / hsi_close - 1
+            # 对齐索引（处理股票缓存与 HSI 源时区差异）：去 tz 后按位置赋值，避免 reindex 全 NaN
+            hsi_fwd.index = pd.to_datetime(hsi_fwd.index).tz_localize(None)
+            df_idx = pd.to_datetime(df.index).tz_localize(None)
+            df['HSI_Future_Return'] = hsi_fwd.reindex(df_idx).values
+            df['Relative_Return'] = df['Future_Return'] - df['HSI_Future_Return']
+            df['Label'] = (df['Relative_Return'] > min_return_threshold).astype(int)
+        else:
+            # 阈值化标签：只有当收益超过阈值时才标记为正例
+            # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
+            # 业界标准：min_return_threshold = 交易成本 + 最小盈利目标
+            df['Label'] = (df['Future_Return'] > min_return_threshold).astype(int)
 
         # 记录使用的阈值（用于后续分析）
         df['Label_Threshold'] = min_return_threshold
+        df['Label_Mode'] = label_mode
 
         # 如果不是回测模式，移除最后horizon行（没有标签的数据）
         if not for_backtest:
@@ -3846,7 +3863,7 @@ class CatBoostModel(BaseTradingModel):
             logger.warning(f"加载特征列表失败: {e}")
             return None
 
-    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None, mode='backtest'):
+    def prepare_data(self, codes, start_date=None, end_date=None, horizon=1, for_backtest=False, min_return_threshold=0.0, use_feature_cache=True, community_ids=None, mode='backtest', label_mode='absolute'):
         """准备训练/验证数据
 
         Args:
@@ -4096,8 +4113,10 @@ class CatBoostModel(BaseTradingModel):
                         print(f"  💾 特征已缓存")
                     logger.debug(f"特征缓存已保存: {cache_key}")
 
-                # 创建标签（使用指定的 horizon 和阈值，不缓存）
-                stock_df = self.feature_engineer.create_label(stock_df, horizon=horizon, for_backtest=for_backtest, min_return_threshold=min_return_threshold)
+                # 创建标签（使用指定的 horizon、阈值与标签口径，不缓存）
+                stock_df = self.feature_engineer.create_label(
+                    stock_df, horizon=horizon, for_backtest=for_backtest,
+                    min_return_threshold=min_return_threshold, label_mode=label_mode, hsi_df=hsi_df)
 
                 # 添加股票代码
                 stock_df['Code'] = code

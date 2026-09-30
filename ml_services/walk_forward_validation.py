@@ -110,8 +110,9 @@ class WalkForwardValidator:
         fp_penalty: float = None,          # False Positive 惩罚系数（非对称损失函数）
         embargo_days: int = None,          # 训练/测试之间的隔离期（默认=horizon，消除标签穿越）
         top_k: int = 500,                  # 每折特征选择保留的特征数
-        loss_function: str = None,         # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
-        learner: str = None               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
+        loss_function: str = None,          # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
+        learner: str = None,               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
+        label_mode: str = 'absolute'       # 标签口径：'absolute' 或 'relative_hsi'（见 lessons 十 (a)）
     ):
         """
         初始化 Walk-forward 验证器
@@ -143,6 +144,7 @@ class WalkForwardValidator:
         self.top_k = top_k
         self.loss_function = loss_function
         self.learner = learner
+        self.label_mode = label_mode
 
         # 模型类映射
         self.model_classes = {
@@ -280,7 +282,8 @@ class WalkForwardValidator:
                     train_end_date,
                     test_start_date,
                     test_end_date,
-                    fold
+                    fold,
+                    label_mode=self.label_mode
                 )
 
                 all_fold_results.append(fold_result)
@@ -355,7 +358,7 @@ class WalkForwardValidator:
 
         return report
 
-    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold):
+    def _validate_fold(self, stock_list, train_start_date, train_end_date, test_start_date, test_end_date, fold, label_mode='absolute'):
         """
         验证单个fold
 
@@ -395,7 +398,8 @@ class WalkForwardValidator:
             end_date=train_end_date,
             horizon=self.horizon,
             for_backtest=False,
-            community_ids=self.preloaded_community_ids  # 使用预加载的社区 ID
+            community_ids=self.preloaded_community_ids,  # 使用预加载的社区 ID
+            label_mode=label_mode
         )
 
         # 检查训练样本数量
@@ -469,7 +473,8 @@ class WalkForwardValidator:
             end_date=test_end_date,
             horizon=self.horizon,
             for_backtest=False,
-            community_ids=model.community_ids  # 使用训练时的社区 ID
+            community_ids=model.community_ids,  # 使用训练时的社区 ID
+            label_mode=label_mode
         )
 
         print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
@@ -1635,7 +1640,10 @@ def main():
     parser.add_argument('--loss-function', type=str, default=None,
                        help='目标函数（默认 Logloss；YetiRank 为管线级排序目标 A/B）')
     parser.add_argument('--learner', type=str, default=None,
-                       help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
+                        help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
+    parser.add_argument('--label-mode', type=str, default='absolute',
+                        choices=['absolute', 'relative_hsi'],
+                        help='标签口径：absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）')
 
     parser.add_argument('--no-commit', action='store_true',
                        help='跳过回测产物自动 git 入库（prediction_analysis.csv + GATE_SNAPSHOT 同步）')
@@ -1667,7 +1675,8 @@ def main():
         fp_penalty=args.fp_penalty,
         embargo_days=args.embargo_days,
         loss_function=args.loss_function,
-        learner=args.learner
+        learner=args.learner,
+        label_mode=args.label_mode
     )
 
     # 执行验证
