@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import json
 from datetime import datetime
@@ -8,6 +9,16 @@ api_key = os.getenv('QWEN_API_KEY', '').strip()
 chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
 chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
 max_tokens = int(os.getenv('MAX_TOKENS', 32768))
+
+# <think>...</think>（含未闭合的截断形式）——部分模型把思考写进 content
+_THINK_BLOCK_RE = re.compile(r'<think>.*?(?:</think>|\Z)', re.DOTALL | re.IGNORECASE)
+
+
+def strip_thinking(text):
+    """剥离模型输出中的 <think> 思考块，只保留正式回答"""
+    if not text:
+        return text
+    return _THINK_BLOCK_RE.sub('', text).strip()
 
 # Embedding API 配置（项目未使用，保留硬编码）
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
@@ -163,6 +174,12 @@ def chat_with_llm(query, enable_thinking=True):
             'seed': 1368,
             'enable_thinking': enable_thinking
         }
+        # 推理模型（deepseek-v4-flash / glm 等）只认 reasoning_effort，
+        # enable_thinking 是 DashScope 专有参数，openai 兼容代理会忽略它。
+        # 不压制时 reasoning 与 content 共享 max_tokens 预算，
+        # 长 prompt 下会把预算全部烧在思考里，content 空 -> 思考过程泄漏到邮件。
+        if not enable_thinking:
+            payload['reasoning_effort'] = 'none'
         
         log_message(f"[DEBUG] chat_with_llm headers: {headers}")  # 调试日志
         log_message(f"[DEBUG] chat_with_llm payload: {payload}")  # 打印完整的输入
@@ -185,16 +202,28 @@ def chat_with_llm(query, enable_thinking=True):
             log_message(f"[ERROR] 原始响应内容: {response.text[:1000]}")
             raise ValueError(f"API 返回非 JSON 格式响应: {response.text[:200]}")
         message = response_data['choices'][0]['message']
-        
-        # 如果 content 为空，尝试使用 reasoning_content 作为备用
-        content = message.get('content', '')
-        reasoning_content = message.get('reasoning_content', '')
-        
+        finish_reason = response_data['choices'][0].get('finish_reason', '')
+
+        content = message.get('content') or ''
+        reasoning_content = message.get('reasoning_content') or ''
+
         if not content and reasoning_content:
-            log_message(f"[WARN] chat_with_llm content is empty, using reasoning_content as fallback")
-            content = reasoning_content
-        
-        result = content  # Return the response text
+            # 思考过程绝不能当作答案返回：调用方会把它写进邮件/报告正文。
+            # 说明模型把 max_tokens 预算全烧在推理上了（reasoning 与 content 共享预算）。
+            log_message(
+                "[WARN] chat_with_llm content 为空且仅有 reasoning_content"
+                f"（reasoning {len(reasoning_content)} 字符, finish_reason={finish_reason}），"
+                "判定为推理预算耗尽，返回空结果而非思考内容"
+            )
+
+        result = strip_thinking(content)
+        if result != content:
+            log_message("[WARN] chat_with_llm 输出含 <think> 标签，已剥离")
+        if finish_reason == 'length' and result:
+            log_message(
+                "[WARN] chat_with_llm finish_reason=length，输出可能被 max_tokens 截断"
+                f"（{len(result)} 字符）"
+            )
         log_message(f"[DEBUG] chat_with_llm success, returning content: {repr(result)}")  # 打印完整的输出
         return result
     except requests.exceptions.HTTPError as http_err:

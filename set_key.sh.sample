@@ -11,6 +11,11 @@ export RECIPIENT_EMAIL=xxx@gmail.com,xxx@ic.com
 export QWEN_API_KEY=sk-ccxxx
 export QWEN_CHAT_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 export QWEN_CHAT_MODEL=qwen-plus-2025-12-01
+# ⚠️ 换供应商时注意：关闭思考模式的参数是供应商专属的，不是通用语义。
+#   DashScope/qwen  -> enable_thinking（qwen_engine 在 enable_thinking=False 时自动附带）
+#   openai 兼容代理 -> reasoning_effort（该参数认 enable_thinking 会静默忽略它，
+#                      思考内容会抢占 max_tokens 预算并泄漏进邮件，见 lessons 三.26）
+# 换 endpoint/model 后请实测一次：确认返回里不再带 reasoning_content。
 
 # WeChat Work Bot Configuration (Optional)
 # Get webhook URL from: 企业微信群设置 -> 群机器人 -> 添加机器人

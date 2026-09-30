@@ -951,6 +951,44 @@ summary JSON 相等；pytest 126 passed。
 - 教训推广：任何 `random_state=None` 的 sklearn 估计器（mutual_info、KFold shuffle 等）
   在回测管线里都是隐形骰子——**进管线必须显式给种子**
 
+### 26. LLM 思考过程泄漏进邮件：`enable_thinking` 跨供应商失效 + reasoning 抢占 max_tokens 预算 ⭐⭐⭐⭐⭐
+
+**问题**（2026-09-30 港股综合分析邮件）：邮件正文开头是英文自问自答
+（"We need answer in Chinese, follow format. Need analyze based on provided info..."），
+`output/comprehensive_reports/2026-09-30.md` 全文 5666 行**全是思考过程**，
+要求的 `# 综合买卖建议` 章节一个都没有，末尾还断在半句话上（被 max_tokens 截断）。
+
+**三层根因**（缺一不可）：
+1. **换供应商后 `enable_thinking` 静默失效**：`set_key.sh` 已从 DashScope 切到
+   `opencode.ai/zen/go` + `deepseek-v4-flash`，但 `enable_thinking` 是 **DashScope 专有参数**，
+   openai 兼容代理直接忽略——代码里明明写了 `enable_thinking=False` 却毫无作用。
+   实测该代理只认 `reasoning_effort: 'none'`（`thinking.type=disabled` 同样无效）。
+2. **reasoning 与 content 共享 `max_tokens` 预算**：长 prompt（本次 ~240 行规则）下
+   模型把 32768 预算全烧在推理上，`content` 变空、`finish_reason=length`。
+   短 prompt 测不出来（`1+1=?` 正常返回 `content`）——**必须用真实长 prompt 复现**。
+3. **代码主动把思考当答案**：`qwen_engine.py` 旧逻辑
+   `if not content and reasoning_content: content = reasoning_content`，
+   把思考内容提升为返回值，再经 `comprehensive_analysis.py` 原样拼进邮件正文。
+   即"宁可发思考也不发空"——这个 fallback 是泄漏进邮件的**直接**原因。
+
+**修复**（`llm_services/qwen_engine.py` 唯一收口，覆盖全部 14 个调用点）：
+- `enable_thinking=False` 时附带 `reasoning_effort='none'`（换供应商后真正生效）
+- **删除 reasoning 兜底**：`content` 空就返回空串并打 WARN，绝不返回思考内容
+- 新增 `strip_thinking()`：剥离 `<think>...</think>`（含 max_tokens 耗尽的**未闭合**形态）
+- `finish_reason=='length'` 时打 WARN（截断信号）
+- 第二道闸门 `comprehensive_analysis.validate_advice_response()`：校验必需章节齐全、
+  开头无 ≥2 个英文 CoT 标记、含当日日期；不合格返回 `''` → **跳过发邮件**（不发错内容）
+- 回归测试 `tests/test_llm_thinking_leak.py`（16 项），已用变异测试确认三道防线各自可被检出
+
+**教训**：
+- **"关闭思考模式"是供应商专属约定，不是通用语义**。换 endpoint / model 时必须实测该参数
+  是否被认（打一次真实请求看 `reasoning_content` 是否还在），别信代码里写了就生效
+- **绝不把 reasoning/fallback 字段提升为面向用户的输出**——宁可返回空让调用方跳过，
+  也不能把中间推理写进邮件/报告。产物末尾半句话截断是"预算被推理吃光"的可靠指纹
+- **LLM 长输出必须做结构校验**（必需章节 + 日期 + 长度），把"格式不符"当失败而非照发；
+  短 prompt 的冒烟测试**测不出**预算竞争，须用真实长 prompt 验证
+- 教训推广：任何"上游给 A 失败就退化用 B"的兜底分支，都要先问"B 是不是也属于用户可见内容"
+
 ### 8. 市场级宏观特征整段缺失 → "长历史"验证被污染（2026-09-29）
 
 **问题**：用户要求"延长历史到 2016 重跑看能否显著"，86-fold 跑完结论是"加样本仍无 edge、D1 alpha 穷尽"。
@@ -1319,6 +1357,7 @@ base_exclude = ['Code', 'Stock_Code', 'Open', 'High', 'Low', 'Close', 'Volume',
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-10-01 | v10.30 | 新增：`enable_thinking` 是 DashScope 专有参数，换 openai 兼容代理后静默失效 → 思考过程泄漏进邮件（5666 行英文 CoT）；改用 `reasoning_effort=none` + 删除 reasoning 兜底 + <think> 剥离 + 结构校验闸门 → 三.26 |
 | 2026-09-28 | v10.29 | 新增：`pkill -f <pattern>` 匹配自身命令行致自杀（用 `[a]` 正则自指排除或先 pgrep）→ 三.24 |
 | 2026-09-28 | v10.28 | 新增：缓存过期+上游失效=特征集静默缺失，破坏 A/B 可比性（跑前验缓存 mtime/接口；touch 日频缓存的窗口内等价论证）→ 三.23 |
 | 2026-09-28 | v10.26 | 新增：双跑不可复现三层根因已修复（互信息无种子/缓存非原子写/模型非确定参数），同机双跑现 bit 级复现，`WF_X_DETAIL` 列指纹诊断法 → 三.25；三.22 加修订注记（判读基准仅限跨日/跨机） |

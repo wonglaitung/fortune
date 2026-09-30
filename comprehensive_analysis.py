@@ -871,6 +871,46 @@ def load_model_accuracy(horizon=20):
         return default_accuracy
 
 
+# 综合建议必须包含的章节（缺一说明模型没按格式输出）
+_REQUIRED_ADVICE_SECTIONS = ('# 综合买卖建议', '## 强烈买入信号', '## 买入信号',
+                             '## 持有/观望', '## 卖出信号', '## 风险控制建议')
+
+# 思考过程特征：CoT 里的自问自答标记
+_REASONING_MARKERS = ('We need', 'Need maybe', 'Let me', "Let's think", 'Need to parse',
+                      'Need consider', 'Need infer', 'Good.', 'Actually,')
+
+
+def validate_advice_response(response, date_str=None):
+    """
+    校验大模型综合建议：过滤思考过程/空结果，避免污染邮件与报告。
+
+    返回清洗后的正文；不可用时返回 ''（调用方应跳过发送）。
+    """
+    if not response or not response.strip():
+        print("⚠️ 大模型返回空内容")
+        return ''
+
+    text = response.strip()
+
+    missing = [s for s in _REQUIRED_ADVICE_SECTIONS if s not in text]
+    if missing:
+        print(f"⚠️ 大模型输出缺少必需章节 {missing}，判定为不可用（疑似思考过程泄漏）")
+        return ''
+
+    # 正文前 500 字若充满英文 CoT 标记，即使章节齐全也判为不可用
+    head = text[:500]
+    hits = [m for m in _REASONING_MARKERS if m in head]
+    if len(hits) >= 2:
+        print(f"⚠️ 大模型输出开头含疑似思考过程标记 {hits}，判定为不可用")
+        return ''
+
+    if date_str and date_str not in text:
+        print(f"⚠️ 大模型输出缺少分析日期 {date_str}，疑似被截断或非本次结果")
+        return ''
+
+    return text
+
+
 def extract_llm_recommendations(filepath):
     """
     从大模型建议文件中提取买卖建议，分别提取短期和中期建议
@@ -2732,9 +2772,9 @@ def analyze_anomalies_with_llm(anomaly_data):
 - 交易启示用表格展示（信号|解读|操作建议）
 - 总字数控制在500字以内"""
 
-    # 调用大模型
+    # 调用大模型（邮件正文内容，关闭思考模式避免思考过程/预算被推理吃掉）
     try:
-        response = chat_with_llm(prompt)
+        response = chat_with_llm(prompt, enable_thinking=False)
         return response
     except Exception as e:
         print(f"⚠️ 大模型分析异常失败: {e}")
@@ -5315,7 +5355,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
         
         # 调用大模型（关闭思考模式，避免输出思考过程）
         response = chat_with_llm(prompt, enable_thinking=False)
-        
+
+        # 闸门：拒绝把「思考过程/空结果」当成建议写进邮件。
+        # 历史故障：推理模型忽略 enable_thinking，max_tokens 预算全烧在
+        # reasoning_content 上，content 为空 -> 整段英文思考被原样发进邮件。
+        response = validate_advice_response(response, date_str)
+        if not response:
+            print("⚠️ 大模型未返回可用建议（空结果或疑似思考内容），跳过邮件发送\n")
+            return None
+
         if response:
             print("✅ 综合分析完成\n")
             print("=" * 80)
