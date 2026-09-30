@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 # Configuration
-api_key = os.getenv('QWEN_API_KEY', '')
+api_key = os.getenv('QWEN_API_KEY', '').strip()
 chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
 chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
 max_tokens = int(os.getenv('MAX_TOKENS', 32768))
@@ -12,6 +12,37 @@ max_tokens = int(os.getenv('MAX_TOKENS', 32768))
 # Embedding API 配置（项目未使用，保留硬编码）
 embedding_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
 embedding_model = "text-embedding-v4"
+
+# 已知鉴权/套餐错误码 -> 中文处置指引（不同供应商 key 与 endpoint 强绑定，配错时报错码很含糊）
+AUTH_ERROR_HINTS = {
+    'coding_plan_api_key_required': '当前 URL 是 Coding Plan 端点，需要 Coding Plan 专用 key',
+    'token_plan_person_api_key_not_allowed': '当前 key 是 Token Plan 个人版 key，不能用于本 endpoint；改用 /v2/tokenplan/personal/chat/completions',
+    'coding_plan_subscription_expired': 'Coding Plan 套餐已过期，需续费或改用其他套餐 key',
+    'token_plan_person_model_not_supported': '该模型不在 Token Plan 个人版套餐范围内，请在控制台查看套餐支持的模型列表',
+    'InvalidApiKey': 'API key 无效或已过期',
+    'AccessDenied': '无权限访问该模型，检查 key 的模型白名单',
+    'Throttling': '触发限流，稍后重试',
+}
+
+
+def diagnose_http_error(status_code, body, url, model):
+    """把 401/403/429 等鉴权与套餐错误翻译成可执行的中文提示"""
+    code = ''
+    try:
+        err = json.loads(body).get('error', {})
+        code = err.get('code') or err.get('type') or ''
+    except Exception:
+        pass
+    hint = AUTH_ERROR_HINTS.get(code)
+    lines = [f'LLM 调用失败: HTTP {status_code}  url={url}  model={model}']
+    if code:
+        lines.append(f'  错误码: {code}')
+    if hint:
+        lines.append(f'  原因: {hint}')
+    else:
+        lines.append('  原因: 鉴权或套餐问题（key 与 endpoint/模型不匹配）')
+    return '\n'.join(lines)
+
 
 def log_message(message, log_file="qwen_engine.log"):
     """
@@ -167,7 +198,12 @@ def chat_with_llm(query, enable_thinking=True):
     except requests.exceptions.HTTPError as http_err:
         log_message(f'HTTP error occurred during chat request: {http_err}')
         log_message(f'Response status code: {response.status_code if "response" in locals() else "No response"}')
-        log_message(f'Response content: {response.text if "response" in locals() else "No response"}')
+        body = response.text if 'response' in locals() else ''
+        log_message(f'Response content: {body}')
+        if 'response' in locals() and response.status_code in (401, 403, 429):
+            diag = diagnose_http_error(response.status_code, body, chat_url, chat_model)
+            log_message(diag)
+            raise RuntimeError(diag) from http_err
         raise http_err
     except requests.exceptions.ConnectionError as conn_err:
         log_message(f'Connection error occurred during chat request: {conn_err}')

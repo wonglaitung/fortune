@@ -7,14 +7,12 @@ on:
   workflow_dispatch:  # 允许手动触发
     inputs:
       test_type:
-        description: '测试类型'
+        description: '测试类型（embedding 已下线：项目未使用，且当前 LLM 供应商无 embedding 权限）'
         required: true
-        default: 'all'
+        default: 'chat'
         type: choice
         options:
-          - all
           - chat
-          - embedding
 
 permissions:
   contents: read
@@ -56,13 +54,38 @@ jobs:
         print(f'测试时间: {datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")}')
 
         # 读取配置
-        api_key = os.getenv('QWEN_API_KEY', '')
+        api_key = os.getenv('QWEN_API_KEY', '').strip()
         chat_url = os.getenv('QWEN_CHAT_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
         chat_model = os.getenv('QWEN_CHAT_MODEL', 'qwen-plus-2025-12-01')
 
+        # 已知鉴权/套餐错误码 -> 中文处置指引（与 llm_services/qwen_engine.py 保持一致）
+        AUTH_ERROR_HINTS = {
+            'coding_plan_api_key_required': '当前 URL 是 Coding Plan 端点，需要 Coding Plan 专用 key；Token Plan 个人版 key 请改用 /v2/tokenplan/personal/chat/completions',
+            'token_plan_person_api_key_not_allowed': '当前 key 是 Token Plan 个人版 key，不能用于本 endpoint；请把 QWEN_CHAT_URL 改为 https://qianfan.baidubce.com/v2/tokenplan/personal/chat/completions',
+            'coding_plan_subscription_expired': 'Coding Plan 套餐已过期，需续费或改用其他套餐 key',
+            'token_plan_person_model_not_supported': '该模型不在 Token Plan 个人版套餐范围内，请在控制台查看套餐支持的模型列表',
+            'InvalidApiKey': 'API key 无效或已过期',
+            'AccessDenied': '无权限访问该模型，检查 key 的模型白名单',
+            'Throttling': '触发限流，稍后重试',
+        }
+
+        def diagnose(status_code, body, url, model):
+            code = ''
+            try:
+                err = json.loads(body).get('error', {})
+                code = err.get('code') or err.get('type') or ''
+            except Exception:
+                pass
+            print(f'  URL: {url}')
+            print(f'  Model: {model}')
+            if code:
+                print(f'  错误码: {code}')
+            print(f'  原因: {AUTH_ERROR_HINTS.get(code, \"鉴权或套餐问题（key 与 endpoint/模型不匹配）\")}')
+            print('  提示: key 与 endpoint 强绑定，网页控制台给出的地址必须与 key 类型对应')
+
         # 检查 API Key 是否配置
         if not api_key:
-            print('❌ QWEN_API_KEY 未配置')
+            print('❌ QWEN_API_KEY 未配置（或仅含空白字符）')
             exit(1)
         else:
             print(f'✅ QWEN_API_KEY 已配置 (长度: {len(api_key)} 字符)')
@@ -77,38 +100,51 @@ jobs:
                 'Content-Type': 'application/json'
             }
 
+            # GLM 系列默认开启 thinking，推理 token 与输出共用 max_tokens 预算；
+            # 预算过小会导致 content 为空（实测 max_tokens=50 必空、200 约 1/3 概率空），
+            # 故给足预算并在 content 为空时重试一次。
             payload = {
                 'model': chat_model,
                 'messages': [{'role': 'user', 'content': '请回复：连通性测试成功'}],
                 'stream': False,
-                'max_tokens': 50
+                'max_tokens': 512
             }
 
-            print('正在发送测试请求...')
-            response = requests.post(chat_url, headers=headers, json=payload, timeout=30)
+            content = ''
+            for attempt in (1, 2):
+                print(f'正在发送测试请求（第 {attempt} 次）...')
+                response = requests.post(chat_url, headers=headers, json=payload, timeout=60)
 
-            print(f'响应状态码: {response.status_code}')
+                print(f'响应状态码: {response.status_code}')
 
-            if response.status_code == 200:
-                data = response.json()
-                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                print(f'✅ Chat API 连通性测试成功')
-                print(f'模型响应: {content[:100]}')
-            elif response.status_code == 401:
-                print('❌ 认证失败：API Key 无效或已过期')
-                print(f'错误信息: {response.text}')
-                exit(1)
-            elif response.status_code == 404:
-                print('❌ URL 无效：请检查 QWEN_CHAT_URL 配置')
-                print(f'错误信息: {response.text}')
-                exit(1)
-            else:
-                print(f'❌ 请求失败：HTTP {response.status_code}')
-                print(f'错误信息: {response.text[:500]}')
-                exit(1)
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    if content.strip():
+                        print('✅ Chat API 连通性测试成功')
+                        print(f'模型响应: {content[:100]}')
+                        break
+                    print(f'⚠️ 返回 200 但 content 为空（第 {attempt} 次）')
+                    if attempt == 2:
+                        print('❌ 连续两次内容为空：请调大 max_tokens，或确认模型有输出权限')
+                        exit(1)
+                elif response.status_code in (401, 403, 429):
+                    print(f'❌ 认证/套餐失败：HTTP {response.status_code}')
+                    diagnose(response.status_code, response.text, chat_url, chat_model)
+                    print(f'原始响应: {response.text[:300]}')
+                    exit(1)
+                elif response.status_code == 404:
+                    print('❌ URL 无效：请检查 QWEN_CHAT_URL 配置')
+                    print(f'  URL: {chat_url}')
+                    print(f'原始响应: {response.text[:300]}')
+                    exit(1)
+                else:
+                    print(f'❌ 请求失败：HTTP {response.status_code}')
+                    print(f'原始响应: {response.text[:500]}')
+                    exit(1)
 
         except requests.exceptions.Timeout:
-            print('❌ 请求超时：API 响应时间超过 30 秒')
+            print('❌ 请求超时：API 响应时间超过 60 秒')
             exit(1)
         except requests.exceptions.ConnectionError as e:
             print(f'❌ 连接失败：无法访问 API URL')
@@ -119,76 +155,9 @@ jobs:
             exit(1)
         "
 
-    - name: 测试 Embedding API
-      if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'embedding' || github.event_name == 'schedule' }}
-      env:
-        QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-      run: |
-        python3 -c "
-        import os
-        import requests
-        from datetime import datetime
-
-        print('=== Embedding API 连通性测试 ===')
-        print(f'测试时间: {datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")}')
-
-        # 读取配置
-        api_key = os.getenv('QWEN_API_KEY', '')
-        embedding_url = 'https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings'
-        embedding_model = 'text-embedding-v4'
-
-        # 检查 API Key 是否配置
-        if not api_key:
-            print('❌ QWEN_API_KEY 未配置')
-            exit(1)
-        else:
-            print(f'✅ QWEN_API_KEY 已配置')
-
-        print(f'Embedding URL: {embedding_url}')
-        print(f'Embedding Model: {embedding_model}')
-
-        # 发送测试请求
-        try:
-            headers = {
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
-            }
-
-            payload = {
-                'model': embedding_model,
-                'input': '测试文本'
-            }
-
-            print('正在发送测试请求...')
-            response = requests.post(embedding_url, headers=headers, json=payload, timeout=30)
-
-            print(f'响应状态码: {response.status_code}')
-
-            if response.status_code == 200:
-                data = response.json()
-                embedding = data.get('data', [{}])[0].get('embedding', [])
-                print(f'✅ Embedding API 连通性测试成功')
-                print(f'向量维度: {len(embedding)}')
-            elif response.status_code == 401:
-                print('❌ 认证失败：API Key 无效或已过期')
-                print(f'错误信息: {response.text}')
-                exit(1)
-            else:
-                print(f'❌ 请求失败：HTTP {response.status_code}')
-                print(f'错误信息: {response.text[:500]}')
-                exit(1)
-
-        except requests.exceptions.Timeout:
-            print('❌ 请求超时')
-            exit(1)
-        except requests.exceptions.ConnectionError as e:
-            print(f'❌ 连接失败：无法访问 Embedding API URL')
-            print(f'错误详情: {str(e)[:200]}')
-            exit(1)
-        except Exception as e:
-            print(f'❌ 测试异常: {str(e)}')
-            exit(1)
-        "
+    # Embedding 测试已下线：项目未使用 embedding API（见 llm_services/qwen_engine.py 注释），
+    # 且当前 LLM 供应商（百度千帆 Token Plan 个人版）对全部 embedding 模型返回
+    # 401 token_plan_person_api_key_not_allowed，保留只会让每周一排程误报失败。
 
     - name: 汇总测试结果
       if: always()
@@ -197,8 +166,19 @@ jobs:
         echo "测试完成时间: $(date '+%Y-%m-%d %H:%M:%S %Z')"
         echo ""
         echo "如测试失败，请检查以下配置："
-        echo "1. QWEN_API_KEY - API 密钥是否正确"
-        echo "2. QWEN_CHAT_URL - Chat API 地址是否正确"
-        echo "3. QWEN_CHAT_MODEL - 模型名称是否正确"
+        echo "1. QWEN_API_KEY - API 密钥是否正确（注意结尾不要带换行/空格）"
+        echo "2. QWEN_CHAT_URL - 必须与 key 类型严格对应，常见配置："
+        echo "     百度千帆 Token Plan 个人版: https://qianfan.baidubce.com/v2/tokenplan/personal/chat/completions"
+        echo "     百度千帆 Coding Plan:       https://qianfan.baidubce.com/v2/coding/chat/completions"
+        echo "     阿里云百炼 DashScope:       https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        echo "3. QWEN_CHAT_MODEL - 模型名称需与供应商当前在售列表一致"
         echo ""
-        echo "文档参考：https://help.aliyun.com/zh/model-studio/"
+        echo "错误码对照："
+        echo "  coding_plan_api_key_required          -> URL 是 Coding Plan 端点但 key 不是其专用 key"
+        echo "  token_plan_person_api_key_not_allowed -> key 是 Token Plan 个人版，URL 用错端点"
+        echo "  coding_plan_subscription_expired       -> 套餐已过期，需续费"
+        echo "  InvalidApiKey / AccessDenied          -> key 无效，或无该模型权限"
+        echo ""
+        echo "本地先跑通再排查 CI：source set_key.sh && python3 -c \"from llm_services.qwen_engine import chat_with_llm; print(chat_with_llm('说ok'))\""
+        echo ""
+        echo "文档参考：千帆 https://cloud.baidu.com/doc/qianfan-api/index.html"
