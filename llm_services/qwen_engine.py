@@ -144,7 +144,9 @@ def chat_with_llm(query, enable_thinking=True):
             raise ValueError("QWEN_API_KEY 环境变量未设置")
         
         headers = {
-            'Authorization': f'Bearer {api_key}'
+            'Authorization': f'Bearer {api_key}',
+            # opencode zen/go 端点要求会话标识才能路由（否则 400 MissingSessionID）
+            'x-opencode-session': f'fortune-{os.getpid()}'
         }
         
         # 确保查询文本是 UTF-8 编码

@@ -97,7 +97,9 @@ jobs:
         try:
             headers = {
                 'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                # opencode zen/go 端点要求会话标识才能路由（否则 400 MissingSessionID）
+                'x-opencode-session': 'llm-api-connectivity-test'
             }
 
             # GLM 系列默认开启 thinking，推理 token 与输出共用 max_tokens 预算；
@@ -174,6 +176,7 @@ jobs:
         echo "3. QWEN_CHAT_MODEL - 模型名称需与供应商当前在售列表一致"
         echo ""
         echo "错误码对照："
+        echo "  MissingSessionID                       -> 请求缺少 x-opencode-session 头（opencode zen/go 端点要求）"
         echo "  coding_plan_api_key_required          -> URL 是 Coding Plan 端点但 key 不是其专用 key"
         echo "  token_plan_person_api_key_not_allowed -> key 是 Token Plan 个人版，URL 用错端点"
         echo "  coding_plan_subscription_expired       -> 套餐已过期，需续费"
