@@ -651,6 +651,24 @@ def _normalize_ohlcv_cols(df):
     return df
 
 
+def _align_to_index(src, target_index):
+    """按日期（忽略时分与时区）将 src 对齐到 target_index 的顺序，返回与 target_index 同序的对象。
+
+    修复系统性对齐 bug：HSI / 美股等外部行情索引为午夜时间戳(00:00)，港股个股为收盘时间戳(16:00)，
+    直接 merge(left_index,right_index) / reindex 因精确时间戳不匹配全返回 NaN，
+    导致相对强度 / HSI 市场状态 / 美股特征整列失真（早年缓存为午夜索引时碰巧正常）。
+    """
+    src_i = pd.to_datetime(src.index)
+    src_i = src_i.tz_convert(None) if src_i.tz is not None else src_i
+    src_i = src_i.normalize()
+    tgt_i = pd.to_datetime(target_index)
+    tgt_i = tgt_i.tz_convert(None) if tgt_i.tz is not None else tgt_i
+    tgt_i = tgt_i.normalize()
+    aligned = src.copy()
+    aligned.index = src_i
+    return aligned.reindex(tgt_i)
+
+
 # ========== 特征缓存函数 ==========
 def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     """生成特征缓存键
@@ -1767,9 +1785,11 @@ class FeatureEngineer:
         hsi_df['HSI_Return_20d'] = hsi_df['Close'].pct_change(20)
         hsi_df['HSI_Return_60d'] = hsi_df['Close'].pct_change(60)
 
-        # 合并恒生指数数据
+        # 合并恒生指数数据（按日期对齐，避免 HSI 午夜时间戳 vs 个股收盘时间戳不匹配）
         hsi_cols = ['HSI_Return_1d', 'HSI_Return_3d', 'HSI_Return_5d', 'HSI_Return_10d', 'HSI_Return_20d', 'HSI_Return_60d']
-        stock_df = stock_df.merge(hsi_df[hsi_cols], left_index=True, right_index=True, how='left')
+        _hsi_align = _align_to_index(hsi_df[hsi_cols], stock_df.index)
+        for _c in hsi_cols:
+            stock_df[_c] = _hsi_align[_c].values
 
         # 计算相对强度（RS_ratio = (1+stock_ret)/(1+hsi_ret)-1）
         periods = [1, 3, 5, 10, 20, 60]
@@ -1812,19 +1832,9 @@ class FeatureEngineer:
         stock_df = stock_df.copy()
 
         try:
-            # 对齐索引：确保两边都是 datetime 类型
-            hsi_regime_aligned = hsi_regime_df.copy()
-            hsi_regime_aligned.index = pd.to_datetime(hsi_regime_aligned.index)
-            stock_idx = pd.to_datetime(stock_df.index)
-
-            # 时区处理：移除时区信息以避免对齐问题
-            if hasattr(hsi_regime_aligned.index, 'tz') and hsi_regime_aligned.index.tz is not None:
-                hsi_regime_aligned.index = hsi_regime_aligned.index.tz_localize(None)
-            if hasattr(stock_idx, 'tz') and stock_idx.tz is not None:
-                stock_idx = stock_idx.tz_localize(None)
-
-            # Reindex HSI regime 到个股日期，forward-fill 填补非交易日
-            hsi_regime_aligned = hsi_regime_aligned.reindex(stock_idx, method='ffill')
+            # 对齐索引：按日期对齐（HSI regime 午夜时间戳 vs 个股收盘时间戳），ffill 填补非交易日
+            hsi_regime_aligned = _align_to_index(hsi_regime_df, stock_df.index)
+            hsi_regime_aligned = hsi_regime_aligned.ffill().bfill()
 
             # 合并到个股 DataFrame
             for col in hsi_regime_aligned.columns:
@@ -1883,7 +1893,9 @@ class FeatureEngineer:
             hsi_df = hsi_df.copy()
             hsi_df['HSI_Return'] = hsi_df['Close'].pct_change()
             hsi_df['HSI_Return_5d'] = hsi_df['Close'].pct_change(5)
-            stock_df = stock_df.merge(hsi_df[['HSI_Return', 'HSI_Return_5d']], left_index=True, right_index=True, how='left')
+            _hsi_align = _align_to_index(hsi_df[['HSI_Return', 'HSI_Return_5d']], stock_df.index)
+            for _c in ['HSI_Return', 'HSI_Return_5d']:
+                stock_df[_c] = _hsi_align[_c].values
 
         # 相对表现（相对于恒生指数）
         # 防御性检查：若数据不足导致 calculate_technical_features 提前返回，Return_5d 可能不存在
@@ -1917,10 +1929,10 @@ class FeatureEngineer:
                 # 只能使用 T 日及之前的美股数据
                 us_market_df_shifted = us_market_df[existing_us_features].shift(shift_val)
 
-                stock_df = stock_df.merge(
-                    us_market_df_shifted,
-                    left_index=True, right_index=True, how='left'
-                )
+                # 按日期对齐（美股午夜时间戳 vs 个股收盘时间戳）
+                _us_align = _align_to_index(us_market_df_shifted, stock_df.index)
+                for _c in existing_us_features:
+                    stock_df[_c] = _us_align[_c].values
 
         return stock_df
 
@@ -1953,9 +1965,14 @@ class FeatureEngineer:
             # 相对收益标签：剥离市场 Beta，只预测"能否跑赢恒指"
             hsi_close = hsi_df['Close']
             hsi_fwd = hsi_close.shift(-horizon) / hsi_close - 1
-            # 对齐索引（处理股票缓存与 HSI 源时区差异）：去 tz 后按位置赋值，避免 reindex 全 NaN
-            hsi_fwd.index = pd.to_datetime(hsi_fwd.index).tz_localize(None)
-            df_idx = pd.to_datetime(df.index).tz_localize(None)
+            # 对齐索引（处理股票缓存与 HSI 源时区/时间戳差异）：
+            # 1) 统一安全去 tz；2) normalize 到当日 00:00（HSI 源为午夜时间戳，
+            #    个股源为收盘 16:00，按精确时间 reindex 会全不中→HSI_Future_Return 全 NaN→Label 恒 0）
+            def _to_naive(idx):
+                idx = pd.to_datetime(idx)
+                return idx.tz_convert(None) if idx.tz is not None else idx
+            hsi_fwd.index = _to_naive(hsi_fwd.index).normalize()
+            df_idx = _to_naive(df.index).normalize()
             df['HSI_Future_Return'] = hsi_fwd.reindex(df_idx).values
             df['Relative_Return'] = df['Future_Return'] - df['HSI_Future_Return']
             df['Label'] = (df['Relative_Return'] > min_return_threshold).astype(int)
