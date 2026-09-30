@@ -1394,7 +1394,9 @@ class WalkForwardValidator:
             # 调整列顺序（新增市场情绪列）
             cols = ['Fold', 'Date', 'Stock_Code', 'Predict_Prob', 'Predict_Direction',
                     'Actual_Return', 'Actual_Direction', 'Is_Correct', 'Prediction_Type', 'Note',
-                    'Market_Layer', 'Dynamic_Threshold', 'Market_Up_Ratio']
+                    'Market_Layer', 'Dynamic_Threshold', 'Market_Up_Ratio',
+                    # 相对标签口径专用列（供 scripts/rel_alpha_check.py 精确校验，避免重算 HSI）
+                    'Label_Relative_Return', 'Label_HSI_Future_Return']
             pred_df = pred_df[[c for c in cols if c in pred_df.columns]]
             pred_file = os.path.join(detail_dir, 'prediction_analysis.csv')
             pred_df.to_csv(pred_file, index=False)

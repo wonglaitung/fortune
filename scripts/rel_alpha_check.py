@@ -53,24 +53,37 @@ def main():
         raise RuntimeError(f"CSV 缺少必要列: 需要 Date/Actual_Return，实际 {list(df.columns)}")
 
     df['Date'] = pd.to_datetime(df['Date'])
-    # 对齐 HSI 未来收益（按日期）
-    hsi_fwd = build_hsi_forward_return(args.horizon)
-    df['HSI_Future_Return'] = df['Date'].dt.tz_convert(None).dt.normalize().map(hsi_fwd)
-    df['Relative_Return'] = df['Actual_Return'] - df['HSI_Future_Return']
+    # 优先用 CSV 已有的相对列（CSV 列白名单未含 Relative_Return，故通常需重算）
+    if 'Relative_Return' in df.columns and df['Relative_Return'].notna().any():
+        rel = df['Relative_Return']
+        align_rate = 1.0
+    else:
+        hsi_fwd = build_hsi_forward_return(args.horizon)
+        _d = df['Date']
+        if getattr(_d.dt, 'tz', None) is not None:
+            _d = _d.dt.tz_convert(None)
+        df['HSI_Future_Return'] = _d.dt.normalize().map(hsi_fwd)
+        align_rate = float(df['HSI_Future_Return'].notna().mean())
+        rel = df['Actual_Return'] - df['HSI_Future_Return']
 
+    n0 = len(df)
+    df = df.assign(Relative_Return=rel)
     df = df.dropna(subset=['Relative_Return', 'Predict_Prob']).copy()
     if df.empty:
-        raise RuntimeError('对齐后无有效样本')
+        raise RuntimeError('对齐后无有效样本（HSI 覆盖不足？）')
+    print(f"HSI 对齐命中率: {align_rate:.1%} | 有效样本: {len(df)}/{n0}（未对齐已丢弃）")
 
     # 基准：实际跑赢恒指的比例
     base_rate = (df['Relative_Return'] > 0).mean()
 
-    # 1) 方向技能
-    if 'Predict_Direction' in df.columns:
-        pred_dir = df['Predict_Direction'].astype(float)
+    # 1) 方向技能（Predict_Direction 可能是 UP/DOWN 字符串或 0/1）
+    if 'Predict_Direction' in df.columns and df['Predict_Direction'].dtype == object:
+        pred_dir = df['Predict_Direction'].astype(str).str.upper().map({'UP': 1.0, 'DOWN': 0.0})
+    elif 'Predict_Direction' in df.columns:
+        pred_dir = pd.to_numeric(df['Predict_Direction'], errors='coerce')
     else:
         pred_dir = (df['Predict_Prob'] > args.gate).astype(float)
-    df['Pred_Rel_Dir'] = pred_dir
+    df['Pred_Rel_Dir'] = pred_dir.fillna((df['Predict_Prob'] > args.gate).astype(float))
     acc = (df['Pred_Rel_Dir'] == (df['Relative_Return'] > 0).astype(float)).mean()
     skill = acc - base_rate
 

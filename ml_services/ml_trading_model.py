@@ -1973,9 +1973,11 @@ class FeatureEngineer:
                 return idx.tz_convert(None) if idx.tz is not None else idx
             hsi_fwd.index = _to_naive(hsi_fwd.index).normalize()
             df_idx = _to_naive(df.index).normalize()
-            df['HSI_Future_Return'] = hsi_fwd.reindex(df_idx).values
-            df['Relative_Return'] = df['Future_Return'] - df['HSI_Future_Return']
-            df['Label'] = (df['Relative_Return'] > min_return_threshold).astype(int)
+            # 列名加 Label_ 前缀，避免覆盖 create_market_environment_features 里
+            # 基于过去收益的合法特征 Relative_Return（否则标签中间量入模=读答案）
+            df['Label_HSI_Future_Return'] = hsi_fwd.reindex(df_idx).values
+            df['Label_Relative_Return'] = df['Future_Return'] - df['Label_HSI_Future_Return']
+            df['Label'] = (df['Label_Relative_Return'] > min_return_threshold).astype(int)
         else:
             # 阈值化标签：只有当收益超过阈值时才标记为正例
             # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
@@ -4203,7 +4205,12 @@ class CatBoostModel(BaseTradingModel):
         # 基础排除列 + 中间计算列
         base_exclude = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                        'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
-                       'Vol_MA20', '+DM', '-DM', '+DI', '-DI']
+                       'Vol_MA20', '+DM', '-DM', '+DI', '-DI',
+                       # 标签构造中间量（相对标签模式）：Label_Relative_Return 是标签的
+                       # 决定性函数（Label = (Label_Relative_Return > 0)），入模即读答案
+                       # → 准确率 100% 的假信号。注意勿排除 'Relative_Return'：
+                       # 那是 create_market_environment_features 里基于过去收益的合法特征。
+                       'Label_Relative_Return', 'Label_HSI_Future_Return', 'HSI_Future_Return']
         # 已删除的冗余特征（保留 DataFrame 列用于中间计算）
         deprecated_features = ['Returns', 'Volatility', 'MA5_Deviation', 'MA10_Deviation',
                               'BB_Breakout', 'High_Position_20d', 'MA_Bullish_Resonance',
