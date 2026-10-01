@@ -62,7 +62,18 @@ _GATE_CALIBRATOR_FILE = os.path.join(_BASE_DIR, 'data', 'calibrators', 'prob_cal
 
 def _latest_gate_source_csv() -> Optional[str]:
     """最新港股回测 CSV。正则排除 *_a_stock_catboost_20d 等非港股目录，
-    保证 CI（无本地 untracked 目录）与本地选择一致。"""
+    保证 CI（无本地 untracked 目录）与本地选择一致。
+
+    可用环境变量 GATE_SOURCE_CSV 显式固定基准 CSV（复现用，lessons 三.29）：
+    分位门槛默认取「磁盘上最新 CSV」，而回测运行期间 output/ 会新增目录，
+    导致同一模型两次运行的 PIT 分位样本不同 → Dynamic_Threshold 不一致
+    （实测 9% 行）。冻结基准后门槛随输入一同确定，回测才真正可复现。
+    """
+    forced = os.environ.get('GATE_SOURCE_CSV')
+    if forced:
+        if os.path.exists(forced):
+            return forced
+        logger.warning("GATE_SOURCE_CSV=%s 不存在，回退到自动选择最新 CSV", forced)
     files = [f for f in glob.glob(_GATE_QUANTILE_GLOB) if _GATE_SOURCE_RE.search(f)]
     return max(files) if files else None
 
