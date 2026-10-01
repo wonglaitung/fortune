@@ -96,8 +96,17 @@ def timeout(seconds):
 
 
 def _get_cache_key(name: str) -> str:
-    """生成缓存文件路径"""
-    return os.path.join(CACHE_DIR, f"{name}.pkl")
+    """生成缓存文件路径
+
+    若设置 US_MARKET_SNAPSHOT_DIR（冻结 PIT 快照，lessons 三.29），则读写快照目录，
+    使宏观特征输入固定 → 跨日回测可复现。快照模式下忽略日期校验、永不自动刷新。
+    """
+    base = os.environ.get('US_MARKET_SNAPSHOT_DIR') or CACHE_DIR
+    return os.path.join(base, f"{name}.pkl")
+
+
+def _snapshot_mode() -> bool:
+    return bool(os.environ.get('US_MARKET_SNAPSHOT_DIR'))
 
 
 def _load_cache(name: str) -> pd.DataFrame:
@@ -115,6 +124,10 @@ def _load_cache(name: str) -> pd.DataFrame:
         with open(cache_file, 'rb') as f:
             cache_data = pickle.load(f)
 
+        # 冻结快照模式：忽略日期，永久有效（可复现性优先）
+        if _snapshot_mode():
+            return cache_data.get('data')
+
         # 检查缓存日期
         cache_date = cache_data.get('date')
         if cache_date:
@@ -131,7 +144,9 @@ def _load_cache(name: str) -> pd.DataFrame:
 
 
 def _save_cache(name: str, data: pd.DataFrame):
-    """保存缓存数据"""
+    """保存缓存数据（冻结快照模式下不写，避免污染 PIT 快照）"""
+    if _snapshot_mode():
+        return
     cache_file = _get_cache_key(name)
 
     try:
