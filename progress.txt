@@ -2377,3 +2377,15 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - ③**未解释的疑点（待查）**：同代码同参数两轮 abs20d 得 净IR 0.34/PBO 0.41 与 0.42/PBO 0.64，
   按 lessons 三.25 应 bit 复现。最可能原因：us_market_cache TTL 刷新导致宏观特征输入变化。
   若成立 → "跨时段回测不可复现"是新限制，且多跑几次总能撞到三门槛全过（多重检验陷阱）。
+
+[2026-10-01 执行 A/B：冻结快照 + 稳健性区间]
+- A（恢复可复现）：us_market_data 支持 US_MARKET_SNAPSHOT_DIR（快照模式忽略日期、永不
+  刷新、写保护）；scripts/pin_macro_snapshot.py 已冻结 data/us_market_snapshot（4 文件）。
+  用法：US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot 前置到 run_walk_forward.sh。
+- B（量化漂移）：scripts/vintage_sensitivity.py 输出跨快照区间。实测 10 个港股 20d 快照：
+  净IR 0.42~1.52(极差1.10) / PBO 0.14~0.77(极差0.63) / DSR 0.745~0.987 / lift −0.7~+2.3pp，
+  **判定 🟡 与 🟢 翻转**。
+  - 若取最好一轮(0922: 净IR 1.52 / PBO 0.14 / DSR 0.987)会被判 🟢 可升核心仓位 → 陷阱。
+  - **趋势（重要）**：修复前 0922~0928 净IR 0.84~1.52、3 次 🟢；
+    修复后 0930~1001 净IR 0.42~0.61、全 🟡 → **数据缺陷修正后 alpha 进一步缩水，强化 D1**。
+- 修脚本 bug：vintage_sensitivity 曾把 A股目录(_a_stock_)混入，抬高区间 → 已排除。
