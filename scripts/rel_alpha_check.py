@@ -87,6 +87,32 @@ def main():
     acc = (df['Pred_Rel_Dir'] == (df['Relative_Return'] > 0).astype(float)).mean()
     skill = acc - base_rate
 
+    # 1b) ⚠️ 聚类修正：行级 z 值是伪显著，必须按 Fold 聚类重算。
+    # 同一折共享同一模型与同一大盘未来收益，跨股票/跨日高度相关，
+    # 有效独立观测数≈折数（~50）而非行数（~4 万）。教训见 lessons 三.28。
+    naive_se = np.sqrt(base_rate * (1 - base_rate) / max(len(df), 1))
+    naive_z = skill / naive_se if naive_se > 0 else float('nan')
+    fold_lift, fold_t, fold_p, n_folds = (float('nan'),) * 4
+    if 'Fold' in df.columns and df['Fold'].nunique() >= 5:
+        per_fold = df.groupby('Fold').apply(
+            lambda x: ((x['Pred_Rel_Dir'] == (x['Relative_Return'] > 0).astype(float)).mean()
+                       - (x['Relative_Return'] > 0).mean()),
+            include_groups=False)
+        n_folds = int(len(per_fold))
+        fold_lift = float(per_fold.mean())
+        fold_se = float(per_fold.std(ddof=1) / np.sqrt(n_folds)) if n_folds > 1 else float('nan')
+        if fold_se > 0:
+            fold_t = fold_lift / fold_se
+            try:
+                from scipy import stats as _st
+                fold_p = float(2 * (1 - _st.t.cdf(abs(fold_t), n_folds - 1)))
+            except Exception:
+                fold_p = float('nan')
+
+    # 1c) 信号对大盘方向的暴露（区分"特异 alpha"与"押大盘 beta"）
+    mkt_corr = (float(df['Predict_Prob'].corr(df['HSI_Future_Return']))
+                if 'HSI_Future_Return' in df.columns else float('nan'))
+
     # 2) Rank IC（信息量）
     rank_ic = df['Predict_Prob'].rank().corr(df['Relative_Return'].rank())
     pearson_ic = df['Predict_Prob'].corr(df['Relative_Return'])
@@ -103,18 +129,29 @@ def main():
         daily = longs.groupby('Date')['Relative_Return'].mean()
         net_ir = daily.mean() / daily.std() * np.sqrt(252 / max(args.horizon, 1)) if daily.std() > 0 else float('nan')
 
-    print("=" * 60)
+    print("=" * 66)
     print("相对 alpha 专用校验（Relative_Return 口径）")
-    print("=" * 60)
+    print("=" * 66)
     print(f"输入: {args.input}")
     print(f"horizon: {args.horizon}d | 有效样本: {len(df)}")
     print(f"基准（跑赢恒指比例）: {base_rate:.2%}")
     print(f"方向准确率: {acc:.2%} | 方向技能(lift): {skill:+.2%}")
+    print("-" * 66)
+    print("⚠️ 显著性（行级 z 是伪显著，必须看聚类结果）")
+    print(f"  行级(伪)  : z={naive_z:.1f}   ← 忽略折间相关，不可用于判读")
+    if n_folds == n_folds:  # 非 NaN
+        verdict = "显著" if (fold_p == fold_p and fold_p < 0.05) else "不显著"
+        print(f"  Fold聚类  : {n_folds} 折  lift={fold_lift:+.4f}  t={fold_t:.2f}  p={fold_p:.3f} → {verdict}")
+    else:
+        print("  Fold聚类  : CSV 无 Fold 列，无法聚类")
+    print(f"  corr(Pred_Prob, HSI未来收益) = {mkt_corr:+.4f}  ← 大盘暴露（≈0 才非押大盘）")
+    print("-" * 66)
     print(f"Rank IC: {rank_ic:.4f} | Pearson IC: {pearson_ic:.4f}")
     print(f"做多信号数: {n_trades} | 中性净胜率: {net_win:.2%} | 中性净 IR(年化): {net_ir:.3f}")
-    print("=" * 60)
-    print("判读：若 Rank IC≈0 且中性净 IR≤0 → 相对口径也无 edge（D1 在相对标签下成立）")
-    print("=" * 60)
+    print("=" * 66)
+    print("判读：聚类 p≥0.05 且 Rank IC≈0 且中性净 IR≤0")
+    print("      → 相对口径亦无可辨识 alpha（D1 成立），且不可归因于'信号存在但被成本吃掉'")
+    print("=" * 66)
 
 
 if __name__ == '__main__':
