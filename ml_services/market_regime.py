@@ -48,7 +48,7 @@ GATE_MIN_SAMPLES = 200
 #    `python3 -c "from ml_services.market_regime import suggest_gate_snapshot; suggest_gate_snapshot()"`
 #    并更新本常量（progress.txt 记录）。
 GATE_SNAPSHOT = {'bear': 0.5658914728682171, 'weak': 0.5658914728682171}
-GATE_SNAPSHOT_AS_OF = '2024-12-30'
+GATE_SNAPSHOT_AS_OF = '2026-07-30'
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 分位数据源：最新一次 walk-forward 回测的 20d 预测分布（43k+ 样本、含 Date 可 PIT、
