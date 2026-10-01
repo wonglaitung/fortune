@@ -2344,3 +2344,21 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 教训沉淀：lessons 三.26/27/28；AGENTS 核心警告表新增「判读顺序不可颠倒」「静默 NaN 特征」
   「取数窗口硬编码」三条；DECISIONS D1 补相对口径确认、D2 补基线作废声明。
 - 运维：6 并发跑 59 股全史特征曾触发 OOM（单进程 8.2GB，62GB 机器）→ 已改错峰串行。
+
+[2026-10-01 生产模型重训 + 基线刷新完成]
+- 生产模型全部用修复后代码重训（修复前：20d 09-25、1d/5d 07-20，均在两个 bug 之前）：
+  20d LightGBM 22:26 / 5d CatBoost 22:34 / 1d CatBoost 22:38（全部 rc=0）
+- 三周期绝对标签 walk-forward 重跑（修复后干净管线，start 2019-06-01 / 50 folds）：
+  abs20d 净IR 0.42[-0.63,1.34] PBO 0.64 DSR 0.837 lift +0.4pp 🟡
+  abs5d  净IR -0.04[-1.00,0.92] PBO 0.19 DSR 0.551 🔴
+  abs1d  净IR -2.64[-3.71,-1.67] PBO 0.34 DSR 0.000 🔴
+  → 与修复前判定方向完全一致（20d 🟡 / 5d 🔴 / 1d 🔴），D1/D2 不变
+- GATE_SNAPSHOT 已刷新（源 output/20261001_000048_catboost_20d，as_of 2026-07-30）：
+  bear 0.8636→**0.5659**、weak 0.6918→**0.5659**
+  ⚠️ 变化显著：修复后模型概率分布右移，旧阈值已失效；两者收敛为同值说明该分布
+  在 P90/P92 分位处几乎无差异（概率分布集中），需留意门控区分度下降。
+- 修复 scripts/eval_watcher.sh 取 CSV 逻辑：原用 tail -1 会被日志中 GATE 快照来源
+  引用（指向旧 CSV）误导，改为一律取 mtime 最新的存在文件。
+- 运维：并行 A股会话在 data/model_accuracy.json 造成 merge 冲突（JSON 被冲突标记
+  污染成非法格式），已用 HEAD 版本恢复；该文件现含 lgbm_20d=0.618（训练内
+  TimeSeriesSplit 准确率，**不可与 walk-forward ~50% 混读**）。
