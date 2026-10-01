@@ -19,9 +19,12 @@ run_eval () {           # $1=tag $2=horizon $3=logfile $4=is_rel
   grep -q "^$key " "$STATE" && return 0
   # 完成判定：验证完成 + 产出 prediction_analysis.csv
   grep -q "✅ 验证完成" "$logf" 2>/dev/null || return 0
+  # 取本次运行实际产出的 CSV。日志里除"预测分析已保存"外还含 GATE 快照来源引用等旧路径，
+  # 故收集所有匹配后按 mtime 取最新存在者（勿用 tail -1，会抓到过期 CSV）
   local csv
-  csv=$(grep -oE "output/[0-9]{8}_[0-9]{6}_catboost_[0-9]+d/prediction_analysis.csv" "$logf" | tail -1)
-  [ -z "$csv" ] && csv=$(ls -t output/${tag%%_*}_*_catboost_${hz}d/prediction_analysis.csv 2>/dev/null | head -1)
+  csv=$(for c in $(grep -oE "output/[0-9]{8}_[0-9]{6}_catboost_[0-9]+d/prediction_analysis.csv" "$logf" | sort -u); do
+          [ -f "$c" ] && stat -c '%Y %n' "$c"
+        done 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
   [ -z "$csv" ] || [ ! -f "$csv" ] && { echo "$key NO_CSV" >> "$SUMMARY"; return 0; }
 
   {
