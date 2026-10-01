@@ -2334,6 +2334,9 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   相对 1d -3.07[-4.11,-2.10]/0.30/0.000/-0.1pp 🔴
   绝对 1d -2.42[-3.47,-1.45]/0.53/0.000/+0.3pp 🔴
   相对专用校验：20d +2.67pp/IC 0.047/净IR 0.548；5d +4.17pp；1d +4.71pp/IC 0.136/净IR 0.354
+  ⚠️ 2026-10-01 对抗性审查：上行"方向技能为正"是**行级伪显著**（忽略折间相关）。
+  按 Fold 聚类重算 20d：lift +1.41pp / t=1.40 / **p=0.167 不显著**；大盘暴露 corr=−0.083。
+  修正表述：相对口径**无可辨识 alpha**，而非"有微弱 alpha 被成本吃掉"。
 - 关键解读：修复前提 bug 后 PBO 普遍改善（20d 0.94→0.41）但净IR/lift 同步下降
   → 旧基线高 PBO 源于数据缺陷而非过拟合；修复后暴露"本来就没 edge"。
 - 全部评估报告留存：output/eval_summary.log（6 项全指标）、
@@ -2362,3 +2365,15 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 运维：并行 A股会话在 data/model_accuracy.json 造成 merge 冲突（JSON 被冲突标记
   污染成非法格式），已用 HEAD 版本恢复；该文件现含 lgbm_20d=0.618（训练内
   TimeSeriesSplit 准确率，**不可与 walk-forward ~50% 混读**）。
+
+[2026-10-01 对抗性审查：撤回过度陈述]
+- 自查 3 项：①方向技能显著性 ②GATE 快照 0.5659 重合之因 ③跨时段可复现性
+- ①**过度陈述已撤回**：行级 lift z=6.3（伪）→ Fold 聚类 t=1.40 p=0.167（不显著）。
+  有效独立观测≈折数(~50)非行数(~4万)。已修 scripts/rel_alpha_check.py（加聚类+大盘暴露输出），
+  并修正 AGENTS.md / DECISIONS.md D1 / progress.txt 三处表述。
+  → D1 结论方向不变，但支撑理由改为"连微弱 alpha 都不显著"，而非"被成本吃掉"。
+- ②GATE 0.5659 重合**非 bug**：分位算的是 Isotonic 校准后概率（127 个唯一取值，阶梯函数），
+  P90/P92 落在同一档。副作用：bear/weak 两门控当前分辨率不足、近似等效一道门 → 已记录。
+- ③**未解释的疑点（待查）**：同代码同参数两轮 abs20d 得 净IR 0.34/PBO 0.41 与 0.42/PBO 0.64，
+  按 lessons 三.25 应 bit 复现。最可能原因：us_market_cache TTL 刷新导致宏观特征输入变化。
+  若成立 → "跨时段回测不可复现"是新限制，且多跑几次总能撞到三门槛全过（多重检验陷阱）。
