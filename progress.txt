@@ -2417,3 +2417,11 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 生产链路验证：comprehensive_analysis.py --no-email 端到端跑通（3 只股），
   市场情绪门控读取正常（normal 层阈值 0.50），报告与建议均正常产出，无异常。
 - 沉淀：lessons 三.30 补「同源≠有经济含义」+「风控参数须做行为回归测试（分层通过率）」。
+
+[2026-10-02 冒烟产物清理]
+- 冒烟测试曾**覆盖**定时工作流生成的正式日报 output/comprehensive_reports/2026-09-30.md
+  （正式版 21,049 字节 / 生成于 10-02 00:28，被覆盖为 16,297 字节的 3 股冒烟版）。
+  已 `git checkout --` 恢复正式版（HEAD 版本未被污染，无需重生成）。
+- 已删除未跟踪的冒烟残留：data/comprehensive_recommendations_2026-09-30.txt、output/ca_smoke.log。
+- 教训：跑 comprehensive_analysis.py 冒烟**必须带 --output 指定临时路径**，
+  否则会按数据日期命名并覆盖正式日报（脚本用数据日期而非当天日期命名）。
