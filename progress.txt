@@ -2459,7 +2459,11 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   ✅ 适用→已同步：缓存窗口、门控退化保护、GATE_SOURCE_CSV 冻结
   ❌ 不适用（已实测确认）：_align_to_index（A股个股与指数时间戳均为 UTC 00:00，无 16:00 错位）、
      _normalize_ohlcv_cols（A股列名已是标准大写）、标签中间量排除（相对标签为港股专属实验）
-  🆕 本次补：ml_services/a_stock_walk_forward.py 硬编码窗口 2024-01-01~2026-07-01 → CLI 可配置
+  🗑️ `ml_services/a_stock_walk_forward.py`（363 行旧副本，无代码引用）**已 git rm 删除**；
+  唯一活入口 = 根目录 `a_stock_walk_forward.py`（AGENTS 指定，1041 行）。
+  删除前核实：其独有 `use_cross_sectional_label`（截面标签，默认 True）与活入口
+  （绝对标签，默认 False）**口径不同**；A股基线 D11 是绝对口径下的结论，截面口径从未作为正式基线，
+  故按用户决定直接删除、未做能力合并。模型层 `a_stock_ml_model.py` 该参数仍保留可用。
 - **审核抓到关键问题**：A股存在两个同名 walk_forward 文件！
   活入口是根目录 `a_stock_walk_forward.py`（AGENTS 指定，**本来就有 CLI 参数**），
   `ml_services/` 那份是**无任何引用的旧副本** → 我改的是死代码（零收益）。
