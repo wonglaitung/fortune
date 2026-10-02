@@ -54,8 +54,11 @@
 
 1. **A 股历史数据瓶颈**：`data/a_stock_prediction_history.json` 仅 132 条（每周期 44 条），
    2026-09-27 起停回写 → 校准器（MIN_SAMPLES=200/周期）拟合不了；性能监控无数据。
-2. **双入口**：`a_stock_walk_forward.py`（根目录，AGENTS 指定入口）与
-   `ml_services/a_stock_walk_forward.py` 并存——执行前确认唯一活入口，避免改错文件。
+2. ~~**双入口**~~ ✅ **已解决**（2026-10-02）：旧副本 `ml_services/a_stock_walk_forward.py`
+   （363 行、无任何代码引用）已删除，唯一活入口为根目录 `a_stock_walk_forward.py`（AGENTS 指定）。
+   如需找回：`git show <commit>^:ml_services/a_stock_walk_forward.py`。
+   注：旧副本独有的 `use_cross_sectional_label`（截面标签）**未合并**，但模型层
+   `a_stock_ml_model.py` 的该参数仍完好，随时可从活入口以 CLI 开关暴露。
 3. **旧 CSV 缺列**：已有 `output/20260722_182121_a_stock_catboost_20d/prediction_analysis.csv`
    无 `Date`/`Market_Layer`/`Dynamic_Threshold` → guardrail/portfolio 直跑会 KeyError，
    **P2 需用新导出格式重跑 walk-forward**（或只重跑 20d）。
