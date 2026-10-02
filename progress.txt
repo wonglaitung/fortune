@@ -2469,3 +2469,13 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   `ml_services/` 那份是**无任何引用的旧副本** → 我改的是死代码（零收益）。
   该风险项目已记录于 A_STOCK_REFORM_PLAN.md:58，但读到的是"要同步"而非"入口是哪个"。
 - 沉淀 lessons 三.33：同步修复前先确认唯一活入口（grep 代码引用 + grep 文档指定，两条须一致）
+
+[2026-10-02 删除旧副本 + 港股→A股同步核对（第二轮)]
+- 🗑️ 已删除 ml_services/a_stock_walk_forward.py（363 行旧副本），唯一入口=根目录版本
+- 第二轮同步核对：**6 项港股机制逐项实测判定**，结论——
+  ✅ 自动继承：US_MARKET_SNAPSHOT_DIR（共用 us_market_data，实测缓存键指向快照目录）
+  ✅ 已同步：A_GATE_SOURCE_CSV、A_GATE_MIN_UNIQUE/SPREAD（上一轮）
+  ❌ 不适用：period_days_needed（腾讯A股上限 640 行）、_align_to_index（实测时间戳本就一致：
+     个股↔指数 640/640、个股↔美股 617/640，归一化前后相同）、标签中间量排除（港股专属）、
+     逐折窄窗取数（A股已是全段取数一次）
+- 沉淀 lessons 三.34：同步判定必须实测举证，"不适用≠遗漏"，避免照搬或误补
