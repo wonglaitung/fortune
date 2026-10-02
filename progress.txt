@@ -2389,3 +2389,18 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   - **趋势（重要）**：修复前 0922~0928 净IR 0.84~1.52、3 次 🟢；
     修复后 0930~1001 净IR 0.42~0.61、全 🟡 → **数据缺陷修正后 alpha 进一步缩水，强化 D1**。
 - 修脚本 bug：vintage_sensitivity 曾把 A股目录(_a_stock_)混入，抬高区间 → 已排除。
+
+[2026-10-02 双冻结基线 + GATE 同源化收尾]
+- 双冻结可复现性验证通过：base_r1 与 base_r2 的 prediction_analysis.csv **md5 完全相同**
+  (f6a065d3d4c97bf7c55d2e515b6abfc3) → 模型层+门槛层均 bit 级复现（三.25 以来首次跨天全链路复现）。
+- 最终可引用基线（双冻结，50 folds/58 只，2026-10-02 02:51 完成）：
+  20d 净IR 0.42[-0.63,1.34]/PBO 0.64/DSR 0.837/lift +0.4pp 🟡
+  5d  净IR -0.04[-1.00,0.92]/PBO 0.19/DSR 0.551/lift +0.0pp 🔴
+  1d  净IR -2.64[-3.71,-1.67]/PBO 0.34/DSR 0.000/lift +0.3pp 🔴
+  → 无一组合三门槛全过；D1/D2 不变。
+- GATE 同源化（用户批准方案甲）：用新基线 OOF 重拟合 prob_cal_20.pkl（此前 09-25 滞后于模型）。
+  Brier 0.3058→0.2498（校准改善），但校准后仅 16 个唯一值、P90=P92=**0.5085**
+  → **概率被压平**，bear/weak 仍重合 → 门控近似不过滤。
+  这不是 bug 而是 D1 的忠实映射：无 edge 时校准把概率压回基准率，分位门槛无从区分。
+- 已入库：output/20261001_202534_catboost_20d + GATE_SNAPSHOT(bear=weak=0.5085, as_of 2026-07-30)
+- 沉淀：lessons 三.30（GATE 同源三依赖 + 先有鸡还是先有蛋 + 逐列验证可复现性）
