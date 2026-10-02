@@ -35,13 +35,13 @@
   "catboost_20d": {
     "model_type": "catboost",
     "horizon": 20,
-    "accuracy": 0.6451696728829105,
-    "std": 0.027352208153098526,
-    "f1_score": 0.6090884025210566,
-    "f1_std": 0.01374909837236355,
-    "timestamp": "2026-10-02 00:03:34",
+    "accuracy": 0.6425951398441081,
+    "std": 0.02235774183031542,
+    "f1_score": 0.610810441990112,
+    "f1_std": 0.023444791341301594,
+    "timestamp": "2026-10-02 23:21:54",
     "_caliber": "train_inside_cv",
-    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
+    "_caliber_note": "训练集内 TimeSeriesSplit CV（乐观，20d 可达 0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift"
   },
   "gbdt_1d": {
     "model_type": "gbdt",
@@ -57,13 +57,13 @@
   "catboost_1d": {
     "model_type": "catboost",
     "horizon": 1,
-    "accuracy": 0.6586843493331325,
-    "std": 0.02478512969191434,
-    "f1_score": 0.63027078095314,
-    "f1_std": 0.02431427975813492,
-    "timestamp": "2026-10-01 23:47:56",
+    "accuracy": 0.6580922242314647,
+    "std": 0.02476267398952987,
+    "f1_score": 0.630336719292939,
+    "f1_std": 0.020445608403833828,
+    "timestamp": "2026-10-02 23:06:41",
     "_caliber": "train_inside_cv",
-    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
+    "_caliber_note": "训练集内 TimeSeriesSplit CV（乐观，20d 可达 0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift"
   },
   "lgbm_5d": {
     "model_type": "lgbm",
@@ -90,13 +90,13 @@
   "catboost_5d": {
     "model_type": "catboost",
     "horizon": 5,
-    "accuracy": 0.652947400241838,
-    "std": 0.01959830831522395,
-    "f1_score": 0.6354033028278367,
-    "f1_std": 0.02008399388261849,
-    "timestamp": "2026-10-01 23:56:53",
+    "accuracy": 0.6539560190433008,
+    "std": 0.021505059866483135,
+    "f1_score": 0.6300306118848513,
+    "f1_std": 0.027223528942908005,
+    "timestamp": "2026-10-02 23:15:18",
     "_caliber": "train_inside_cv",
-    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
+    "_caliber_note": "训练集内 TimeSeriesSplit CV（乐观，20d 可达 0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift"
   },
   "a_stock_catboost_20d": {
     "model_type": "a_stock_catboost",
