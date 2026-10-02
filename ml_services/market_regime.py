@@ -47,7 +47,7 @@ GATE_MIN_SAMPLES = 200
 # ⚠️ walk-forward 重跑后分位会漂移 → 重跑完执行
 #    `python3 -c "from ml_services.market_regime import suggest_gate_snapshot; suggest_gate_snapshot()"`
 #    并更新本常量（progress.txt 记录）。
-GATE_SNAPSHOT = {'bear': 0.5658914728682171, 'weak': 0.5658914728682171}
+GATE_SNAPSHOT = {'bear': 0.5084784601283224, 'weak': 0.5084784601283224}
 GATE_SNAPSHOT_AS_OF = '2026-07-30'
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

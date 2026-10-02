@@ -1,7 +1,7 @@
 # Phase 3 最小组合回测（20d，TopK=10）
 
-- 生成时间: 2026-10-01 00:37:17
-- 数据: `output/20261001_000048_catboost_20d/prediction_analysis.csv`
+- 生成时间: 2026-10-01 22:02:01
+- 数据: `output/20261001_202534_catboost_20d/prediction_analysis.csv`
 - 调仓: 每 20 交易日（非重叠）　成本: 0.005　Dropout=0　波动率目标=None
 
 | 组合 | 期数 | 净均收益/期 | 净IR(年化) | 胜率 | 累计净收益 | 平均换手 | 净IR 95%CI | P(IR>0.5) |
