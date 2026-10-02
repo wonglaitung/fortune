@@ -44,7 +44,10 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
+| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） |
+| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**双冻结，缺一不可**（lessons 三.29/三.30）。验收=同配置连跑两次 CSV md5 相同 |
+| **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） |
+| **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 §5.18）；**1d/5d 维持 CatBoost**（§5.20/D10） |
@@ -429,14 +432,19 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 > |------|-----|----|----|
 > | 合并准确率 | 50.6% [49.0,52.2]（不显著） | 51.2% [50.5,52.0]（不显著） | 51.4% [51.1,51.8] |
 > | 超额 lift | +1.8pp（p=0.21 不显著） | +0.8pp（p=0.31 不显著） | +0.7pp（p=0.056 不显著） |
-> | 月度护栏 净IR [95%CI] | **0.63** [−0.15,1.28] → 🟡 | 0.17 [−0.69,1.03] → 🟡 | −0.80 [−1.80,−0.01] → 🔴 |
-> | PBO / DSR | 0.94 / 0.907 | 0.79 / 0.850 | 0.49 / 0.024 |
-> | 组合层 20d 超额IR [95%CI] | 0.45 [−0.45,1.00]（CI 跨0）, P(>0)=87%, n=71 | | |
-> **解读**：宏观修复后准确率仍跨 50、lift 全不显著；**PBO 反而恶化**（20d 0.80→0.94、5d 0.50→0.79）表明加入宏观特征后过拟合更重；1d 净IR 仍负（🔴）。
-> 更长窗口混入 2016–2020 较弱 regime，把原本边缘的 2020–2025 信号平均得更弱——**加样本 + 修宏观仍无 edge**。
-> → **D1「alpha 已穷尽」在宏观齐全数据上确认**（非污染窗口有限结论）；D2「维持低配 / 1d 停用」继续成立，20d 维持🟡。
-> **生产影响**：`GATE_SNAPSHOT` 按宏观齐全 2016 分布刷新 → bear 0.8636、weak 0.6918（与污染值几乎一致，说明 GATE 未被宏观缺失明显偏移）。
-> 09-29 的 38-fold 数值保留为对照。
+> ~~以上 86-fold 数值已作废~~（个股截断 1460d + HSI/美股特征 NaN）。
+>
+> **⭐ 当前有效基线（2026-10-02，双冻结可复现，start 2019-06-01 / 50 folds / 58 只）**：
+> | 指标 | 20d LightGBM | 5d CatBoost | 1d CatBoost |
+> |------|------|------|------|
+> | 月度护栏 净IR [95%CI] | **0.42** [−0.63,1.34] → 🟡 | **−0.04** [−1.00,0.92] → 🔴 | **−2.64** [−3.71,−1.67] → 🔴 |
+> | PBO / DSR | 0.64 / 0.837 | 0.19 / 0.551 | 0.34 / 0.000 |
+> | 超额 lift | +0.4pp | +0.0pp | +0.3pp |
+> → **无一组合三门槛全过**；D1「alpha 已穷尽」确认、D2「20d 🟡 低配 / 1d 🔴 停用」维持。
+> **可复现性**：双冻结（`US_MARKET_SNAPSHOT_DIR` + `GATE_SOURCE_CSV`）下连跑两次
+> `prediction_analysis.csv` **md5 相同**（f6a065d3…）——全链路 bit 级复现。
+> **现行门槛**：`GATE_SNAPSHOT = {'bear': 0.70, 'weak': 0.65}`（分位退化后回落绝对值，lessons 三.30）。
+> 09-29 的 38-fold、09-30 的 86-fold 数值均保留为历史对照，**不可引用**。
 
 **新增利率特征**（2026-05-23）：
 - 多期限美债收益率：US_2Y_Yield, US_10Y_Yield, US_30Y_Yield
