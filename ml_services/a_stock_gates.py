@@ -42,7 +42,9 @@ A_GATE_MIN_SPREAD = 0.05
 
 # 分位快照：由 output/20260928_144833_a_stock_catboost_20d
 # （19,578 条，as_of=2026-07-31，与 a_stock_prob_cal_20.pkl 同源）算出。
-A_GATE_SNAPSHOT = {'bear': 0.749714, 'weak': 0.715447}
+A_GATE_SNAPSHOT = {'bear': 0.7, 'weak': 0.65}  # 退化保护后实际生效值（绝对阈值）；
+# 原分位值 bear 0.7497/weak 0.7154 已不适用——校准后唯一值 37、极差 0.0343 < GATE_MIN_SPREAD
+# → 分布退化，compute_a_gate_thresholds 判定放弃分位、回落绝对值（lessons 三.30）
 A_GATE_SNAPSHOT_AS_OF = '2026-07-31'
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

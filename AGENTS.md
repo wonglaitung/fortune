@@ -71,7 +71,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **A股模型预测** | `python3 a_stock_ml_model.py --mode predict --horizon 20 --core-only` | - |
 | **A股大模型建议** | `python3 a_stock_email.py --force --no-email` | - |
 | **A股综合分析** | `python3 a_stock_comprehensive_analysis.py --llm-file data/a_stock_llm_*.txt --use-cached-predictions` | - |
-| **A股Walk-forward验证** | `python3 a_stock_walk_forward.py --horizon 20` | 成功后自动入库 CSV（`--no-commit` 关闭） |
+| **A股Walk-forward验证** | `bash scripts/run_a_stock_walk_forward.sh --horizon 20`（固化确定性 env；直接 python3 等价但不固化线程数/哈希种子） | 成功后自动入库 CSV（`--no-commit` 关闭） |
 
 ### 缓存管理
 
