@@ -58,10 +58,10 @@
 > 专用校验（Fold 聚类）：lift +1.41pp、t=1.40、**p=0.167 不显著**、大盘暴露 corr=−0.083
 > → **相对口径亦无可辨识 alpha**（⚠️ 早期"方向技能为正=有微弱 alpha"属行级伪显著，已撤回，见 lessons 三.29）。
 >
-> **跨快照极差（为何禁止取最好一轮）**：10 个历史港股 20d 快照实测
+> **跨快照极差（为何禁止取最好一轮）**：历史港股 20d 快照（10~13 轮）实测
 > **净IR 0.42~1.52（极差 1.10）、PBO 0.14~0.77、lift −0.7~+2.3pp，判定 🟡/🟢 翻转**。
-> 趋势：修复前（0922~0928）净IR 0.84~1.52 有 3 次 🟢；修复后（0930~1001）0.42~0.61 全 🟡
-> → **数据缺陷修正后 alpha 进一步缩水**。
+> 趋势：修复前（0922~0928）净IR 0.84~1.52 有 3 次 🟢；修复后（0930~1001 及后续轮）0.42~0.61 全 🟡
+> → **数据缺陷修正后 alpha 进一步缩水**；修复后各轮已收敛（一次非双冻结重跑亦得 0.42/0.64/0.837）。
 >
 > **已作废的历史基线（勿引用）**：38-fold 轮、09-30「宏观齐全 86-fold」轮。
 > 后者虽有 86 folds/~77.9k 行，但**个股取数仍硬编码 1460d**（早期折 lookback 残缺）+
@@ -193,7 +193,9 @@ python3 ml_services/walk_forward_validation.py \
 验证成功结束后自动执行（`scripts/commit_backtest_result.py`；加 `--no-commit` 关闭）：
 
 1. 提交本目录 `prediction_analysis.csv`（CI/本地分位数据源须同源）
-2. 港股 20d 额外同步 `ml_services/market_regime.py` 的 `GATE_SNAPSHOT` 分位常量
+2. 港股 20d 额外同步 `ml_services/market_regime.py` 的 `GATE_SNAPSHOT` 常量
+   （**注意**：写入的是**实际生效值**——分位法在模型无 edge 时会退化，届时写入的是绝对回退值
+    `bear 0.70 / weak 0.65` 而非分位数；判断依据见提交时 `compute_gate_thresholds` 的日志）
 3. `git rm --cached` 仓库中其它港股 20d CSV（工作树保留，只留最新防膨胀）
 4. `commit [skip ci]` + `push`（所有 workflow 为 schedule 触发，push 不触发流水线）
 

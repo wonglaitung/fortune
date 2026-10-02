@@ -2425,3 +2425,18 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 已删除未跟踪的冒烟残留：data/comprehensive_recommendations_2026-09-30.txt、output/ca_smoke.log。
 - 教训：跑 comprehensive_analysis.py 冒烟**必须带 --output 指定临时路径**，
   否则会按数据日期命名并覆盖正式日报（脚本用数据日期而非当天日期命名）。
+
+[2026-10-02 文档全面同步 + 对抗性审核]
+- 更新：VALIDATION_GUIDE(86-fold段→当前基线)、DECISIONS(D1/D2/D8)、AGENTS(86-fold段+常用命令3条+警告表)、
+  DEPLOYMENT(**危险修正**：T2 原写「🟢已达标→可放大至15%」，该🟢已证伪→改「维持≤5%不得放大」，
+  开仓条件加前置强制项：双冻结+双跑md5一致，禁止单轮升级)、README(准确率口径)。
+- 对抗性审核发现并修正 4 处：
+  ①DECISIONS D8 仍写"分位化已落地、分位值 bear 0.6923"与 AGENTS"禁用绝对阈值"矛盾，
+    而港股实际已回退绝对值 0.70/0.65 → 三处统一为「分位优先、退化回退绝对值」
+  ②VALIDATION_GUIDE 196 行"同步 GATE_SNAPSHOT 分位常量"→ 改为「写入实际生效值（可能是绝对回退值）」
+  ③"10 个快照"不准确（实为 10~13 轮，且新增轮次非双冻结但指标相同）→ 修正表述，
+    并补充「修复后各轮收敛 0.42~0.61 全🟡」这一更有信息量的结论
+  ④发现**A股同款风险**：`a_stock_prob_cal_20` 校准后唯一值仅 37、极差 0.034（已低于退化阈值 30/0.05 的临界），
+    而 `a_stock_gates.py` **无**退化保护 → 标为已知待修风险
+- 审核通过项：跨快照极差数字复算一致（0.42~1.52/极差1.10/PBO 0.14~0.77）；
+  DEPLOYMENT 内部 ≤5% 三处一致；文档数字与代码实际状态（GATE_SNAPSHOT/模型时间戳）一致。
