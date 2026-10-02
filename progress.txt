@@ -2610,3 +2610,34 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   - 缺真正的跨宏观快照验证（局限 1）
   - 样本量小（局限 2）
   取最好一轮（3.08/PBO 0.11 → 🟢）正是 C闸 明令禁止的动作。
+
+[2026-10-03 A股 C闸第1步：❌ 失败 —— 回测不可复现，且噪声足以翻转判定]
+[现象] 同代码、同commit、同 US_MARKET_SNAPSHOT_DIR、A_GATE_SOURCE_CSV，间隔约1小时两轮：
+   PIT轮 23:06  净IR 2.14[-?]/PBO 0.40/DSR 0.998/lift+5.1pp → 🟢
+   c1   00:31  净IR 2.72[1.25,4.99]/PBO 0.61/DSR 1.000/lift+5.0pp → 🟡
+   md5 4cc437ee vs 72dc042c → **不一致**。**同代码双跑判定翻转 🟢→🟡**。
+[差异定位] 逐列比对：Fold/Date/Stock_Code/Actual_Return/Actual_Direction/
+   Market_Layer/Dynamic_Threshold/Market_Up_Ratio 全部 100% 一致；
+   **仅 Predict_Prob 0% 一致**（均值差 0.099、最大 0.62、方向翻转 16%、19折无一幸免）
+   → 纯模型不确定性（输入标签一致）。
+[根因 已确认] 实时取数特征。a_stock_ml_model.py:448 → main_fund_flow.fetch_history()：
+   - main_fund_flow.py `CACHE_EXPIRE_HOURS = 6`（缓存6h过期）
+   - 数据源东方财富，RemoteDisconnected 频发，3次重试
+   - 失败返回 None → 6 个主力资金特征**静默填 0**
+   两轮日志实测：PIT轮「获取完成（120 条记录）2026-04-09~2026-09-30」；
+   c1轮**无任何主力资金记录** → 走 0 填充分支。
+   即 **API 通/不通决定特征值**。港股三.25/三.29 已用 US_MARKET_SNAPSHOT_DIR 冻结修复，
+   **A股从未同步**。
+[⚠️ 自我更正：前述"跨版本区间"解读错误]
+   我先前把「净IR 2.14~3.08 / PBO 0.11~0.74」解读为"代码版本差异"。
+   **实际其中相当部分是 run-to-run 噪声**（噪声幅度 净IR±0.6、PBO±0.2），
+   该幅度**足以覆盖所有版本间差异**，也足以解释 PBO 为何跨越 0.5 门槛。
+   正确表述：**A股当前无法区分"代码版本影响"与"随机噪声"**，因噪声下限已大于版本间差异。
+[C闸 判定] 第1步（双跑 md5 一致）**直接失败** → AGENTS 要求的前置条件不成立
+   → **🟢 升级不成立，维持 🟡**，且理由强度高于此前任何一条。
+[修复优先级]
+   P0 把A股全部实时取数特征纳入冻结（复用 US_MARKET_SNAPSHOT_DIR 模式）；
+      且**失败静默填 0 的分支必须改为报错或显式标记**——静默填 0 是此类 bug 的放大器
+   P1 复查A股其余 akshare/实时特征（北向资金等）是否同样问题
+   P2 修复后才谈重跑与升配
+[进行中] c2 第3个样本（Fold 15/19），用于估计 run-to-run 分布
