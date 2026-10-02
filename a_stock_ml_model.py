@@ -31,7 +31,9 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入港股模型
-from ml_services.ml_trading_model import CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES, logger, get_target_date_trading_days
+from ml_services.ml_trading_model import (CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES,
+                                      logger, get_target_date_trading_days,
+                                      merge_pit_features, DEFAULT_NETWORK_FEATURES)
 
 # 导入A股配置和数据服务
 from a_stock_config import (
@@ -962,6 +964,8 @@ class AStockTradingModel(CatBoostModel):
                 print("  ✅ A股市场状态特征计算完成")
 
         # ========== 2. 加载A股网络特征 ==========
+        # PIT（时点还原）优先：静态快照（每股一个标量广播到全部历史行）构成
+        # 未来穿越，AGENTS.md 明令禁止。回退链与港股 ml_trading_model.py:4145 一致。
         network_features_data = None
         if os.path.exists(self.network_features_file):
             try:
@@ -970,6 +974,33 @@ class AStockTradingModel(CatBoostModel):
                 print(f"  ✅ 网络特征加载完成（{len(network_features_data)} 只股票）")
             except Exception as e:
                 print(f"  ⚠️ 网络特征加载失败: {e}")
+
+        network_features_pit = None
+        pit_network_file = os.path.join(A_STOCK_NETWORK_FEATURES_DIR, 'network_features_pit.json')
+        if os.path.exists(pit_network_file):
+            try:
+                with open(pit_network_file, 'r') as f:
+                    network_features_pit = json.load(f)
+                print(f"  ✅ PIT 网络特征加载完成（{len(network_features_pit)} 只股票）")
+                # 社区集合必须覆盖 PIT 实际取值，否则 net_constraint_* 交叉特征
+                # 会静默丢弃 PIT 独有社区（静态文件比 PIT 少一个社区）。
+                # 遍历列表而非 df.unique() 是为保证训练/预测同源。
+                pit_comm_ids = sorted({int(feats.get('net_community_id', -1))
+                                      for per_stock in network_features_pit.values()
+                                      for feats in per_stock.values()
+                                      if feats.get('net_community_id', -1) != -1})
+                if community_ids is None:
+                    community_ids = pit_comm_ids
+                else:
+                    missing_comm = set(pit_comm_ids) - set(community_ids)
+                    if missing_comm:
+                        print(f"  ⚠️ 传入 community_ids 缺 PIT 社区 {sorted(missing_comm)}，"
+                              f"其交叉特征将缺失 → 改用 PIT 全集")
+                        community_ids = pit_comm_ids
+            except Exception as e:
+                print(f"  ⚠️ PIT 网络特征加载失败: {e}")
+        else:
+            print(f"  ⚠️ PIT 网络特征不存在，回退静态网络特征（存在穿越风险）: {pit_network_file}")
 
         # 使用预加载的社区ID
         if community_ids is None:
@@ -1048,7 +1079,11 @@ class AStockTradingModel(CatBoostModel):
                         stock_df[col] = regime_aligned[col].values
 
                 # ========== 3.5 网络特征（A股路径）==========
-                if network_features_data is not None and code in network_features_data:
+                # PIT 优先（按日期对齐），否则回退静态快照（穿越风险）
+                if network_features_pit is not None and code in network_features_pit:
+                    stock_df = merge_pit_features(
+                        stock_df, network_features_pit[code], DEFAULT_NETWORK_FEATURES)
+                elif network_features_data is not None and code in network_features_data:
                     net_features = network_features_data[code]
                     for key, value in net_features.items():
                         stock_df[key] = value
@@ -1699,6 +1734,23 @@ class AStockTradingModel(CatBoostModel):
             except Exception as e:
                 logger.debug(f"网络特征加载失败: {e}")
 
+        # PIT（时点还原）网络特征：与训练路径保持同源，避免训练/预测口径不一致
+        pit_network_file = os.path.join(A_STOCK_NETWORK_FEATURES_DIR, 'network_features_pit.json')
+        network_features_pit = None
+        if os.path.exists(pit_network_file):
+            try:
+                with open(pit_network_file, 'r') as f:
+                    network_features_pit = json.load(f)
+                logger.info(f"PIT 网络特征加载完成（{len(network_features_pit)} 只股票）")
+                community_ids = sorted({int(feats.get('net_community_id', -1))
+                                        for per_stock in network_features_pit.values()
+                                        for feats in per_stock.values()
+                                        if feats.get('net_community_id', -1) != -1})
+            except Exception as e:
+                logger.warning(f"PIT 网络特征加载失败: {e}")
+        else:
+            logger.warning(f"PIT 网络特征不存在，回退静态网络特征（存在穿越风险）: {pit_network_file}")
+
         # ========== 计算所有特征（与训练时流程一致）==========
         # 技术指标
         stock_df = self.feature_engineer.calculate_technical_features(stock_df, use_shift=use_shift, code=code)
@@ -1749,8 +1801,11 @@ class AStockTradingModel(CatBoostModel):
             for col in regime_aligned.columns:
                 stock_df[col] = regime_aligned[col].values
 
-        # 网络特征
-        if network_features_data is not None and code in network_features_data:
+        # 网络特征（PIT 优先，与训练路径同源）
+        if network_features_pit is not None and code in network_features_pit:
+            stock_df = merge_pit_features(
+                stock_df, network_features_pit[code], DEFAULT_NETWORK_FEATURES)
+        elif network_features_data is not None and code in network_features_data:
             net_features = network_features_data[code]
             for key, value in net_features.items():
                 stock_df[key] = value

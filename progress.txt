@@ -2528,3 +2528,60 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - [6] 计数准确 ✅ 50 折 / 54,892 行实测一致
 - [7] 实盘文档优先 ✅ 纯验证实验，未改生产配置（DEPLOYMENT 的 0.42 🟡 ≤5% 仍有效）
 - [8] 自身副作用 ✅ __init__ 与 CLI 默认 top_k 均为 500，生产基线行为不受影响
+
+[2026-10-02 PIT 网络特征修复（A股静态快照穿越）]
+[背景] A股20d修复后重跑得 净IR 3.08[-?]/PBO 0.11/DSR 1.000/lift+5.5pp → 🟢，
+  但形态与港股泄漏案（净IR2.58/DSR1.000）一致 → 触发 A闸排查，抓到根因。
+[根因] A股网络特征是「每股一个标量」静态快照，广播到全部历史行（构成 AGENTS 明令
+  禁止的静态快照穿越）。港股已有 PIT 链（network_features_pit.json + merge_pit_features，
+  ml_trading_model.py:4145），A股 merge_pit_features 出现 0 次，且**两处**都广播：
+  a_stock_ml_model.py:1051（训练）/ :1753（预测验证）。
+[自我更正] 我一度判断「港股 walk-forward 也用静态特征（:177）」→ **错误**。
+  核实 :177 仅提取 community_ids 标量列表，不广播特征值；特征注入在 prepare_data
+  走 PIT。港股 network_features_pit.json 存在（58只×117时点，2017-04~2026-09）。
+  → 港股现有 🟡 基线无需重跑。
+[修复]
+  1) 新增 scripts/gen_a_stock_pit_network.py（复用港股 export_pit_network_features，
+     window=120/step=20 与港股 CLI 默认一致，避免跨市场口径不可比）
+     产物 data/a_stock_network_features/network_features_pit.json = 53只×26时点
+     （2024-09-02~2026-09-24）。注：A股腾讯接口仅 640 行 → 时点数远少于港股 117。
+  2) a_stock_ml_model.py 两处改为 PIT 优先链（elif 保留静态回退，与港股一致）
+  3) 隐患：create_market_network_interaction_features 遍历传入 community_ids 而非
+     df.unique()，而 PIT 社区集合 {0..7} 比静态 {0..6} 多一个 → 社区7的股票会**静默**
+     丢失 net_constraint_* 交叉特征。已改为两处均从 PIT 提取完整社区集合。
+[验证]
+  - PIT 特征随日期变化：net_degree_centrality 10 个唯一值 / net_community_id 5 个 ✅
+  - 无未来函数：时点 T 仅用 [T-120,T] 收益；ffill 取 <= D 的最近时点，恒有 T<=D ✅
+  - A股 data/a_stock_feature_cache 为空（该机制未落地）→ 无陈旧缓存风险
+  - 重跑中（单变量：仅 PIT 网络特征），门槛源与宏观快照与前轮一致
+[教训雏形] 「PIT 优先链」必须同时修 community_ids 集合来源，否则修了特征值、
+  漏了交叉特征 —— 部分修复比不修复更危险（静默缺失）。
+
+[2026-10-02 A股 PIT 网络特征重跑结果]
+[护栏对比]                 静态轮(修复网络穿越前) → PIT轮(修复后)
+  净IR        3.08 [1.75,4.88]  →  2.14 [0.68,4.05]   ↓0.94，CI下界贴近0
+  PBO         0.11             →  0.40               ↑0.29（仍<0.5）
+  DSR         1.000            →  0.998
+  lift        +5.5pp           →  +5.1pp
+  准确率      0.5756           →  0.5857
+  IC          0.1981           →  0.1924             （几乎不变→网络特征非IC主因）
+[判读] 静态快照穿越**确实是实质污染**（净IR削掉31%、PBO恶化3.6倍），但**不是全部成因**
+  ——PIT化后 🟢 仍在。IC 不变说明真正的驱动来自别处（非网络特征）。
+[A闸全套 通过]
+  - 准确率 58.6%（A股正常 50-60% 区间内，未过65%泄漏线）
+  - 概率无饱和（20212 唯一值，饱和占比 0.00%）
+  - 分桶单调递增 Q1 -1.84% → Q10 +7.23%
+  - 特征集已排除全部标签衍生列（Return_Rank/Label_CS/Label_Threshold +
+    startswith('Label') 通配），无恒等映射
+  - 其余特征通道均 PIT：商品(shift(1)+ffill)、regime(shift+reindex ffill)、
+    融资融券(reindex ffill)
+[稳健性]
+  - 逐折 IC：17/19 为正，均值 +0.210，标准差 0.119（Fold 5/12 为负）
+  - **Fold 聚类检验**（约束1，行级不得用于因果）：折均值 +4.11%, t=5.86, p<0.0001
+    → 仍显著。对照行级 t=11.76（虚高 4 倍），与 lessons 三.29 形态一致
+  - 收益集中度：最强1期仅占总绝对收益 1.5%，最强3期 4.2%，正收益期 278/382=73%
+    → 不靠少数期驱动
+[⚠️ 尚未满足 C闸] 🟢 属"可升级"决策，按 AGENTS C闸必须先做：
+  双冻结 + **连跑两次 md5 一致** + 跨快照稳健性区间。**本轮仅单跑，结论未定。**
+  另注：A股历史仅 2.6 年 / 19 折（港股 50 折），样本量小；D11 原为 🟡，
+  本轮跳到 🟢 属大幅跃升，须警惕（港股教训：10 快照净IR 0.42~1.52 判定翻转）。
