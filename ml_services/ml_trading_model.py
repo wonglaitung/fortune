@@ -591,6 +591,27 @@ def _load_cache(cache_file_path):
         logger.warning(f"加载缓存失败: {e}")
         return None
 
+def _stale_metric_warn(learner: str, horizon: int, field: str, value) -> None:
+    """读取 model_accuracy.json 前校验：对应模型文件不存在时告警。
+
+    背景（lessons 三.36）：gbdt_* 为遗留条目（无 data/*gbdt*.pkl），但仍被 ensemble
+    权重逻辑读取；其 std=0.0493 恰好接近代码默认值 0.05，**无法区分"读到真实遗留值"
+    与"静默回落默认值"**。若将来重启 GBDT 方案，会静默使用旧代码/旧数据训练出的
+    稳定性值参与融合加权——典型静默陈旧数据陷阱。
+    """
+    import os as _os
+    if value is None:
+        return
+    # 键名→模型文件名映射：json 用 lgbm，生产 pkl 用 lightgbm（D10 命名）
+    _name = {'lgbm': 'lightgbm', 'gbdt': 'gbdt', 'catboost': 'catboost'}.get(learner, learner)
+    model_file = _os.path.join('data', f'ml_trading_model_{_name}_{horizon}d.pkl')
+    if not _os.path.exists(model_file):
+        logger.warning(
+            "model_accuracy.json 的 %s_%dd.%s=%s 为遗留值（无模型文件 %s），"
+            "疑似陈旧数据；如需该学习器请重新训练",
+            learner, horizon, field, value, model_file)
+
+
 def get_stock_data_with_cache(stock_code, period_days=1460):
     """获取股票数据（带缓存）"""
     cache_key = _get_cache_key(stock_code, period_days)
@@ -5305,6 +5326,8 @@ class DynamicMarketStrategy:
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
                     'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
                 }
+                for _m in self.model_stds:
+                    _stale_metric_warn(_m, self.horizon, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning(f"未找到准确率文件: {accuracy_file}，使用默认值")
@@ -5531,6 +5554,8 @@ class AdvancedDynamicStrategy:
                     'gbdt': data.get(f'gbdt_20d', {}).get('std', 0.05),
                     'catboost': data.get(f'catboost_20d', {}).get('std', 0.02)
                 }
+                for _m in self.model_stds:
+                    _stale_metric_warn(_m, 20, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning("未找到准确率文件，使用默认值")
@@ -5717,6 +5742,8 @@ class EnsembleModel:
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
                     'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
                 }
+                for _m in self.model_accuracies:
+                    _stale_metric_warn(_m, self.horizon, 'accuracy', self.model_accuracies[_m])
                 logger.info(f"已加载模型准确率: {self.model_accuracies}")
             else:
                 logger.warning(r"未找到准确率文件，使用默认值")
@@ -5738,6 +5765,8 @@ class EnsembleModel:
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('std', 0.05),
                     'catboost': data.get(f'catboost_{self.horizon}d', {}).get('std', 0.02)
                 }
+                for _m in self.model_stds:
+                    _stale_metric_warn(_m, self.horizon, 'std', self.model_stds[_m])
                 logger.info(f"已加载模型稳定性数据: {self.model_stds}")
             else:
                 logger.warning(r"未找到稳定性数据文件，使用默认值")
@@ -5756,6 +5785,8 @@ class EnsembleModel:
                     'gbdt': data.get(f'gbdt_{self.horizon}d', {}).get('accuracy', 0.5),
                     'catboost': data.get(f'catboost_{self.horizon}d', {}).get('accuracy', 0.5)
                 }
+                for _m in self.model_accuracies:
+                    _stale_metric_warn(_m, self.horizon, 'accuracy', self.model_accuracies[_m])
                 logger.info(f"已加载模型准确率: {self.model_accuracies}")
             else:
                 logger.warning(r"未找到准确率文件，使用默认值")

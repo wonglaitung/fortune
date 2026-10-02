@@ -2493,3 +2493,16 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   教训：改数据文件结构前必须先查消费者。
 - 附带：gbdt_* 为遗留数据（无模型文件）但读取方仍读其 std，已标注。
 - 沉淀 lessons 三.35
+
+[2026-10-02 遗留数据读取治理（方案乙）]
+- 问题：gbdt_* 为遗留条目（无模型文件）但仍被 ensemble 权重读取；
+  且 `gbdt.std=0.0493` **恰好接近代码默认值 0.05** → "字段不存在"与"读到陈旧值"
+  结果几乎相同，无法察觉。
+- 追查：整条路径（DynamicMarketStrategy.predict → bull/bear_market_ensemble）
+  已无外部调用者=死代码；但 **EnsembleModel 仍在用**（batch_backtest.py / CLI --model-type ensemble），
+  故不能删 gbdt 键。
+- 修复：新增 `_stale_metric_warn()`，在**全部 5 组读取点**（std 与 accuracy）读取后校验
+  模型 pkl 是否存在，不存在则 WARNING 提示遗留/陈旧。
+- 实现坑：键名映射（json 'lgbm' vs pkl 'lightgbm'）——不映射会误报 lgbm_20d 为遗留，
+  靠逐分支实测发现。
+- 沉淀 lessons 三.36

@@ -837,6 +837,40 @@ walk-forward 口径的合并准确率（约 0.50）**相差 12pp**，但字段�
 **通用原则**：**指标文件里的每个数字都必须能回答"这是什么口径、能不能用于决策"**。
 字段名相同而口径不同，是比缺字段更危险的情况——缺字段会报错，口径混淆只会误导。
 
+### 36. 遗留指标"恰好接近默认值"= 无法察觉的静默陈旧数据 ⭐⭐⭐⭐
+
+**问题**：`model_accuracy.json` 的 `gbdt_*` 条目是**遗留数据**（无
+`data/*gbdt*.pkl`，GBDT 方案 D10 后未纳入生产），但仍被 ensemble 权重逻辑读取。
+更隐蔽的是 **`gbdt.std = 0.0493`，而代码默认值是 `0.05`**——
+即"字段完全不存在"与"读到陈旧遗留值"**产生几乎相同的结果**，肉眼无法区分。
+
+**追查发现整条路径都是死代码**：
+```
+model_stds['gbdt'] → ensemble 融合权重(1/std 归一)
+  → bull/bear_market_ensemble()  → 属 DynamicMarketStrategy.predict()
+    → 生产加载 CatBoostModel/LightGBMModel，从不用 DynamicMarketStrategy
+      → 全库无外部调用者 ❌
+```
+（但 `EnsembleModel` **确实在用**——`batch_backtest.py` 与 CLI `--model-type ensemble`，
+所以不能简单删 `gbdt` 键。）
+
+**修复（不删数据、不动死代码，只加存在性校验）**：
+新增 `_stale_metric_warn(learner, horizon, field, value)`，在**全部 5 组读取点**
+（`DynamicMarketStrategy` / `AdvancedDynamicStrategy` / `EnsembleModel` 的
+std 与 accuracy）读取后调用：若对应模型 pkl 不存在则 WARNING 提示"遗留值，疑似陈旧数据"。
+```python
+# 键名→文件名映射不可省：json 用 'lgbm'，生产 pkl 用 'lightgbm'
+_name = {'lgbm': 'lightgbm', 'gbdt': 'gbdt', 'catboost': 'catboost'}.get(learner, learner)
+```
+（不映射会把 `lgbm_20d` 误报为遗留——**第一次实现就踩了这个坑**，靠实测发现。）
+
+**教训**：
+1. **"缺字段"会报错，"陈旧字段"只会误导**——后者危险得多；
+2. **遗留值接近默认值 = 最坏情况**：故障注入不了、告警不会响、结果看着正常；
+3. 加校验时**必须实测每个分支**（有文件静默 / 无文件告警），
+   否则可能造出比原问题更吵的误报；
+4. 读指标文件时，**先确认消费路径是否还活着**——本次发现整条 ensemble 路径早已废弃。
+
 ### 9. 监控取"最新文件"须按语义过滤，mtime 抢占会张冠李戴 ⭐⭐
 
 **教训**：性能监控的护栏状态按 `mtime` 取最新 `monthly_guardrail_*.md` 却硬编码"20d"标签；
