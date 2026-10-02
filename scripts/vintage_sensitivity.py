@@ -34,8 +34,10 @@ METRIC_RE = {
 def run_guardrail(csv_path: str, horizon: int, topk: int):
     """跑 monthly_guardrail 并解析关键指标"""
     out = os.path.join('/tmp', f'vs_{os.path.basename(os.path.dirname(csv_path))}_{horizon}d.md')
+    # A股 CSV（目录含 _a_stock_）必须传 --market a，否则走港股口径得出错误指标
+    market = 'a' if '_a_stock_' in csv_path else 'hk'
     cmd = [sys.executable, os.path.join(BASE, 'ml_services', 'monthly_guardrail.py'),
-           '--horizon', str(horizon), '--topk', str(topk),
+           '--horizon', str(horizon), '--topk', str(topk), '--market', market,
            '--pred', os.path.relpath(csv_path, BASE), '--output', out]
     subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
     if not os.path.exists(out):
