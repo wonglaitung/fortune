@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 A_GATE_QUANTILES = {'bear': 0.92, 'weak': 0.90}
 A_GATE_FALLBACK = {'bear': 0.70, 'weak': 0.65}   # 快照/CSV 全无时的最终回退（原绝对值）
 A_GATE_MIN_SAMPLES = 200
+# 退化保护（对齐港股 lessons 三.30）：模型无 edge 时 Isotonic 把概率压回基准率 →
+# 分位锚在 0.5 → 门控近乎不过滤（港股实测 bear 通过率 17.2%→98.2%）。故
+# 校准后唯一值过少 / bear·weak 分位重合 → 放弃分位、回落 A_GATE_FALLBACK 绝对值。
+A_GATE_MIN_UNIQUE = 30
+A_GATE_MIN_SPREAD = 0.05
 
 # 分位快照：由 output/20260928_144833_a_stock_catboost_20d
 # （19,578 条，as_of=2026-07-31，与 a_stock_prob_cal_20.pkl 同源）算出。
@@ -48,7 +53,17 @@ _A_GATE_CALIBRATOR_FILE = os.path.join(_BASE_DIR, 'data', 'calibrators',
 
 
 def _latest_a_gate_source_csv() -> Optional[str]:
-    """最新 A股 20d 回测 CSV（生产学习器 catboost；lightgbm A/B 目录不参与门槛）"""
+    """最新 A股 20d 回测 CSV（生产学习器 catboost；lightgbm A/B 目录不参与门槛）
+
+    可用环境变量 A_GATE_SOURCE_CSV 显式固定基准（复现用，对齐港股 GATE_SOURCE_CSV，
+    lessons 三.29）：默认取「磁盘上最新 CSV」，而回测运行期间 output/ 会新增目录，
+    同一模型两次运行会因 PIT 分位样本不同而产生不同的 Dynamic_Threshold。
+    """
+    forced = os.environ.get('A_GATE_SOURCE_CSV')
+    if forced:
+        if os.path.exists(forced):
+            return forced
+        logger.warning("A_GATE_SOURCE_CSV=%s 不存在，回退到自动选择最新 CSV", forced)
     files = glob.glob(_A_GATE_GLOB)
     return max(files) if files else None
 
@@ -99,6 +114,16 @@ def compute_a_gate_thresholds(as_of: Optional[str] = None,
         cal = np.asarray(iso.predict(probs.reshape(-1, 1)), dtype=float)
         gates = {layer: float(np.percentile(cal, q * 100.0))
                  for layer, q in quantiles.items()}
+        # 退化保护：分布被压平 → 分位无经济含义 → 用绝对值（港股教训三.30）
+        n_uniq = int(len(np.unique(cal)))
+        spread = max(gates.values()) - min(gates.values())
+        if n_uniq < A_GATE_MIN_UNIQUE or spread < A_GATE_MIN_SPREAD:
+            _why = []
+            if n_uniq < A_GATE_MIN_UNIQUE:
+                _why.append(f"唯一值 {n_uniq}<{A_GATE_MIN_UNIQUE}")
+            if spread < A_GATE_MIN_SPREAD:
+                _why.append(f"分位极差 {spread:.4f}<{A_GATE_MIN_SPREAD}")
+            return _fb("校准后分布退化（" + "、".join(_why) + "）→ 用绝对阈值")
         logger.info("A股分位门槛（as_of=%s, n=%d, src=%s）: %s",
                     as_of or 'latest', probs.size,
                     os.path.basename(os.path.dirname(source_csv)),

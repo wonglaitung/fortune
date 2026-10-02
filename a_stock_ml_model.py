@@ -887,6 +887,12 @@ class AStockTradingModel(CatBoostModel):
                 logger.warning(f"加载社区ID失败: {e}")
                 self.community_ids = None
 
+    # A股行情历史长度上限：腾讯日线接口对 period_days>~1460 只返回约 640 行
+    # （2026-10-02 实测；港股同期可返 2600 行）。故 A股不做"按 start_date 取全史"
+    # ——那只会让缓存永不命中且拉不到更多数据。需更长历史须走 AKShare 全量 hist。
+    A_STOCK_MAX_PERIOD_DAYS = 1460  # 腾讯 A股/指数日线实测上限（个股约 640 行）
+    A_INDEX_WINDOW_DAYS = 1460     # 指数/美股窗口（实测可返满 1460 行）
+
     def prepare_data(self, codes, start_date=None, end_date=None, horizon=None,
                      for_backtest=False, min_return_threshold=0.0,
                      use_feature_cache=True, community_ids=None, mode='backtest',
@@ -927,15 +933,15 @@ class AStockTradingModel(CatBoostModel):
 
         # 1.1 获取美股市场数据（保留，对A股有参考价值）
         from ml_services.us_market_data import us_market_data
-        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=self.A_INDEX_WINDOW_DAYS)
         if us_market_df is not None:
             print(f"  ✅ 美股市场数据: {len(us_market_df)} 天")
         else:
             print("  ⚠️ 无法获取美股市场数据")
 
         # 1.2 获取A股指数数据（中证1000 + 创业板指）
-        csi1000_df = get_index_data('csi1000', period_days=1460)
-        cyb_df = get_index_data('cyb', period_days=1460)
+        csi1000_df = get_index_data('csi1000', period_days=self.A_INDEX_WINDOW_DAYS)
+        cyb_df = get_index_data('cyb', period_days=self.A_INDEX_WINDOW_DAYS)
 
         if csi1000_df is not None:
             print(f"  ✅ 中证1000: {len(csi1000_df)} 天")
@@ -977,8 +983,8 @@ class AStockTradingModel(CatBoostModel):
             try:
                 print(f"处理股票: {code}")
 
-                # 获取股票数据（4年约1460天）
-                stock_df = get_a_stock_data(code, period_days=1460, use_cache=True)
+                # 获取股票数据（受腾讯接口上限约束，见 A_STOCK_MAX_PERIOD_DAYS）
+                stock_df = get_a_stock_data(code, period_days=self.A_STOCK_MAX_PERIOD_DAYS, use_cache=True)
                 if stock_df is None or stock_df.empty:
                     print(f"  ⚠️ 无法获取股票 {code} 数据")
                     continue
@@ -1623,7 +1629,7 @@ class AStockTradingModel(CatBoostModel):
         use_shift = (mode == 'backtest')
 
         # 获取股票数据
-        stock_df = get_a_stock_data(code, period_days=1460, use_cache=True)
+        stock_df = get_a_stock_data(code, period_days=self.A_STOCK_MAX_PERIOD_DAYS, use_cache=True)
         if stock_df is None or stock_df.empty:
             logger.warning(f"无法获取股票 {code} 数据")
             return None
@@ -1642,12 +1648,12 @@ class AStockTradingModel(CatBoostModel):
         # ========== A股特征计算（与训练时一致）==========
         # 获取中证1000和创业板指数据
         from data_services.a_stock_data import get_index_data
-        csi1000_df = get_index_data('csi1000', period_days=1460)
-        cyb_df = get_index_data('cyb', period_days=1460)
+        csi1000_df = get_index_data('csi1000', period_days=self.A_INDEX_WINDOW_DAYS)
+        cyb_df = get_index_data('cyb', period_days=self.A_INDEX_WINDOW_DAYS)
 
         # 获取美股市场数据
         from ml_services import us_market_data
-        us_market_df = us_market_data.get_all_us_market_data(period_days=1460)
+        us_market_df = us_market_data.get_all_us_market_data(period_days=self.A_INDEX_WINDOW_DAYS)
 
         # 如果指定了预测日期，过滤指数数据
         if predict_date:

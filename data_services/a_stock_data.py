@@ -187,8 +187,21 @@ def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
     Returns:
         pandas.DataFrame: 股票数据
     """
-    # 检查缓存
-    cache_file = os.path.join(A_STOCK_CACHE_DIR, f'{stock_code}.pkl')
+    # 检查缓存。缓存文件名含请求窗口，避免"小窗口写入的短数据被大窗口复用"
+    # （2026-10-02 实测：缓存 641 行、传 1460/2600 均直接返回，
+    #  致个股只有 2.5 年历史，早期折 lookback 残缺——港股对应教训 lessons 三.26/三.31）
+    cache_file = os.path.join(A_STOCK_CACHE_DIR, f'{stock_code}_{int(period_days)}d.pkl')
+    legacy_cache = os.path.join(A_STOCK_CACHE_DIR, f'{stock_code}.pkl')
+    if use_cache and not os.path.exists(cache_file) and os.path.exists(legacy_cache):
+        # 旧版无窗口后缀的缓存：行数不足则视为不覆盖（丢弃），否则沿用避免全量重拉
+        try:
+            _old = pd.read_pickle(legacy_cache)
+            if _old is not None and len(_old) < int(period_days) * 0.9:
+                print(f"  ⚠️ 旧缓存仅 {len(_old)} 行 < 所需 {int(period_days)} 天的 90%，重新获取 {stock_code}")
+            else:
+                cache_file = legacy_cache
+        except Exception:
+            pass
     if use_cache and os.path.exists(cache_file):
         cache_time = datetime.fromtimestamp(os.path.getmtime(cache_file))
         if datetime.now() - cache_time < timedelta(days=A_STOCK_CACHE_DAYS):
@@ -220,6 +233,9 @@ def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
     # 保存缓存
     if df is not None:
         try:
+            # 注意：腾讯 A股日线接口对 period_days>~1460 一律只返回约 640 行
+            # （2026-10-02 实测 pd=1460/1500/2000 均 640 行；港股同期可返 2600 行）。
+            # 故 A股历史长度受**数据源**限制，非调用方参数——需更长历史只能走 AKShare 全量 hist。
             df.to_pickle(cache_file)
             print(f"  ✅ 数据已缓存: {cache_file}（{len(df)}行）")
         except Exception as e:
