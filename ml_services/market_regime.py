@@ -42,12 +42,16 @@ logger = logging.getLogger(__name__)
 GATE_QUANTILES = {'bear': 0.92, 'weak': 0.90}
 GATE_FALLBACK = {'bear': 0.70, 'weak': 0.65}   # 快照/CSV 全无时的最终回退（原绝对值）
 GATE_MIN_SAMPLES = 200
+# 退化保护阈值：校准后概率唯一值过少 / bear·weak 分位几乎重合 → 分位无经济含义，
+# 退回 GATE_FALLBACK 绝对阈值（lessons 三.30）
+GATE_MIN_UNIQUE = 30
+GATE_MIN_SPREAD = 0.05
 # 分位快照：CI checkout 无本地 output/ 时用内嵌快照，保证 CI 与本地同值。
 # 由 output/20260925_044407_catboost_20d（43,610条，as_of=2026-09-25）算出。
 # ⚠️ walk-forward 重跑后分位会漂移 → 重跑完执行
 #    `python3 -c "from ml_services.market_regime import suggest_gate_snapshot; suggest_gate_snapshot()"`
 #    并更新本常量（progress.txt 记录）。
-GATE_SNAPSHOT = {'bear': 0.5084784601283224, 'weak': 0.5084784601283224}
+GATE_SNAPSHOT = {'bear': 0.7, 'weak': 0.65}
 GATE_SNAPSHOT_AS_OF = '2026-07-30'
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -134,8 +138,18 @@ def compute_gate_thresholds(as_of: Optional[str] = None,
         import joblib
         iso = joblib.load(calibrator_file)
         cal = np.asarray(iso.predict(probs.reshape(-1, 1)), dtype=float)
-        gates = {layer: float(np.percentile(cal, q * 100.0))
-                 for layer, q in quantiles.items()}
+        # 退化保护（lessons 三.30）：模型无 edge 时校准会把概率压回基准率附近，
+        # 校准后分布塌缩 → P90≈P92 → bear/weak 门槛重合且≈0.5 → 门控近乎不过滤
+        # （实测 bear 通过率由 17.2% 飙到 98.2%，等于丢掉熊市风控）。
+        # 此时分位已无经济含义，退回绝对阈值 GATE_FALLBACK。
+        n_uniq = int(len(np.unique(cal)))
+        gates_probe = {layer: float(np.percentile(cal, q * 100.0))
+                       for layer, q in quantiles.items()}
+        if n_uniq < GATE_MIN_UNIQUE or (max(gates_probe.values()) - min(gates_probe.values())) < GATE_MIN_SPREAD:
+            return _fb(f"校准后分布退化（唯一值 {n_uniq} < {GATE_MIN_UNIQUE}，"
+                       f"分位极差 {max(gates_probe.values()) - min(gates_probe.values()):.4f}"
+                       f" < {GATE_MIN_SPREAD}）→ 用绝对阈值")
+        gates = gates_probe
         logger.info("分位门槛（as_of=%s, n=%d, src=%s）: %s",
                     as_of or 'latest', probs.size, os.path.basename(os.path.dirname(source_csv)),
                     {k: round(v, 4) for k, v in gates.items()})

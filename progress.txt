@@ -2404,3 +2404,16 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   这不是 bug 而是 D1 的忠实映射：无 edge 时校准把概率压回基准率，分位门槛无从区分。
 - 已入库：output/20261001_202534_catboost_20d + GATE_SNAPSHOT(bear=weak=0.5085, as_of 2026-07-30)
 - 沉淀：lessons 三.30（GATE 同源三依赖 + 先有鸡还是先有蛋 + 逐列验证可复现性）
+
+[2026-10-02 门控退化保护 + 生产链路验证]
+- 发现严重行为退化：校准器同源化后门槛 0.5659→0.5085 且 bear==weak 仍重合，
+  **bear 市场通过率由 17.2% 飙到 98.2%**（熊市风控近乎关闭，且不报错、静默）。
+- 根因：分位门槛是"相对筛选"（放行概率最高的 8~10%），但阈值取自**校准后**分布；
+  模型无 edge 时 Isotonic 把概率压回基准率≈0.5 → 分位锚在 0.5 → 几乎不过滤。
+  **D8 分位法隐含前提"模型有 edge"，前提不成立时门控数学上无法生效。**
+- 修复：compute_gate_thresholds 加退化守卫（GATE_MIN_UNIQUE=30 / GATE_MIN_SPREAD=0.05），
+  分布退化即放弃分位、回落绝对阈值 bear 0.70 / weak 0.65。GATE_SNAPSHOT 同步改为 0.7/0.65。
+  实测恢复：bear 54.7% / weak 64.4% / normal 100% 分层过滤。
+- 生产链路验证：comprehensive_analysis.py --no-email 端到端跑通（3 只股），
+  市场情绪门控读取正常（normal 层阈值 0.50），报告与建议均正常产出，无异常。
+- 沉淀：lessons 三.30 补「同源≠有经济含义」+「风控参数须做行为回归测试（分层通过率）」。
