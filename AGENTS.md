@@ -45,6 +45,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
 | **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） |
+| **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） |
 | **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**双冻结，缺一不可**（lessons 三.29/三.30）。验收=同配置连跑两次 CSV md5 相同 |
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
@@ -119,7 +120,7 @@ python hsi_email.py --no-email
 | **Walk-forward 复现口径** | **同机同代码双跑现已 bit 级复现**（2026-09-28 修复互信息无种子/缓存非原子写/模型非确定参数，lessons 三.25）——不复现即 bug，用 `WF_X_DETAIL=1` 列指纹定位（`scripts/run_walk_forward.sh` 固化 env）；**跨日/跨机**对比只看 lift/护栏等决策指标，禁逐行 diff CSV（三.22）；TopK 组合层指标（39→71 期）单轮判定不可信 |
 | **静态快照穿越** | 网络/情感/主题/基本面等"最新值广播到全部历史行"=未来穿越；回测须用 PIT 时点还原 |
 | **绝对准确率/胜率陷阱** | 趋势板块基准本就高；评估看 **lift（胜率−基准）** 与 **方向技能（准确率−永远看涨）**，不看绝对值 |
-| **降噪救不回信号** | 已实证排除：Top500→Top30 单变量对照（同窗口/折数/学习器/快照/门槛基准），净IR 0.42→0.64 但 **CI 仍跨 0、PBO 0.41→0.54 越过门槛**、lift +0.4→+0.3pp、DSR 仍不过 → 三闸门全不过。**PBO 恶化说明 top_k 本身成了噪声源**，勿再调 Top50/100（等于在噪声里捞信号，违反预注册纪律）。见 lessons 三.37 |
+| **降噪救不回信号** | 已实证排除：Top500→Top30 单变量对照（同窗口/折数/学习器/快照/门槛基准），净IR 0.42→0.64 但 **CI 仍跨 0、PBO 0.41→0.54 越过门槛**、lift +0.4→+0.3pp、DSR 仍不过 → 三闸门全不过。**PBO 恶化与"top_k 成了噪声源"一致（未验证因果）**，但**路径关闭基于纪律而非该假设**——勿再调 Top50/100（等于在噪声里捞信号，违反预注册纪律）。见 lessons 三.37 |
 | **个股横截面 alpha 已穷尽** | 完整管线 DSR 0.87 不过、扩池不增信号、简单模型 IC 转负（2026-09 全轮实证）；**2026-09-30 相对标签（剥离 Beta）受控复验仍未 rescue**：20d 净IR 0.55/PBO 0.66/DSR 0.927/lift −0.7pp、1d 净IR −3.07；相对方向技能仅 +2.7~4.7pp、IC 0.05~0.14 → 幅度不足以覆盖成本 → **停止投入**，见 `docs/DECISIONS.md` D1 |
 | **恒指方向信号不优于持有** | 信号 Long/Flat 1/5/20d IR（−0.68/0.13/0.11）均低于买入持有（0.38/0.39/0.49） |
 | **异常大跌抄底是真信号但强依赖行情** | z≤−3 持 5d 净IR 1.55 显著；但逐年依赖 2025，**仅限大盘上行期（恒指>MA200）战术使用**；短期强势过滤有害 |
