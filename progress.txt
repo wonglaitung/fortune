@@ -2453,3 +2453,15 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 - 生产预测行为不变（常量=1460，与修复前一致）
 - 沉淀：lessons 三.31（缓存不校验窗口）、三.32（数据源上限不可照搬）
 - DECISIONS D8 的「A股待修风险」已关闭
+
+[2026-10-02 A股同步（续）：walk-forward 窗口可配置 + 入口确认]
+- 核对港股本周改动清单，逐项判定是否适用 A股：
+  ✅ 适用→已同步：缓存窗口、门控退化保护、GATE_SOURCE_CSV 冻结
+  ❌ 不适用（已实测确认）：_align_to_index（A股个股与指数时间戳均为 UTC 00:00，无 16:00 错位）、
+     _normalize_ohlcv_cols（A股列名已是标准大写）、标签中间量排除（相对标签为港股专属实验）
+  🆕 本次补：ml_services/a_stock_walk_forward.py 硬编码窗口 2024-01-01~2026-07-01 → CLI 可配置
+- **审核抓到关键问题**：A股存在两个同名 walk_forward 文件！
+  活入口是根目录 `a_stock_walk_forward.py`（AGENTS 指定，**本来就有 CLI 参数**），
+  `ml_services/` 那份是**无任何引用的旧副本** → 我改的是死代码（零收益）。
+  该风险项目已记录于 A_STOCK_REFORM_PLAN.md:58，但读到的是"要同步"而非"入口是哪个"。
+- 沉淀 lessons 三.33：同步修复前先确认唯一活入口（grep 代码引用 + grep 文档指定，两条须一致）

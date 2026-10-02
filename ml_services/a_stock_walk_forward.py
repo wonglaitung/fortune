@@ -43,13 +43,18 @@ class AStockWalkForwardValidator:
         train_window_months: int = 12,
         test_window_months: int = 1,
         use_cross_sectional_label: bool = True,
-        confidence_threshold: float = 0.50
+        confidence_threshold: float = 0.50,
+        start_date: str = '2024-01-01',
+        end_date: str = '2026-07-01'
     ):
         self.horizon = horizon
         self.train_window_months = train_window_months
         self.test_window_months = test_window_months
         self.use_cross_sectional_label = use_cross_sectional_label
         self.confidence_threshold = confidence_threshold
+        # 窗口改为可配置（对齐港股 f00d4f60：不再把 start/end 写死在取数处）
+        self.start_date = start_date
+        self.end_date = end_date
         
     def run_validation(self):
         """运行 Walk-forward 验证"""
@@ -74,8 +79,8 @@ class AStockWalkForwardValidator:
         df = model.prepare_data(
             codes=codes,
             use_cross_sectional_label=self.use_cross_sectional_label,
-            start_date='2024-01-01',
-            end_date='2026-07-01'
+            start_date=self.start_date,
+            end_date=self.end_date
         )
         
         if df is None or df.empty:
@@ -335,6 +340,9 @@ def main():
     parser.add_argument('--test-window', type=int, default=1, help='测试窗口（月）')
     parser.add_argument('--use-cross-sectional-label', action='store_true', default=True, help='使用截面标准化标签')
     parser.add_argument('--confidence-threshold', type=float, default=0.50, help='置信度阈值')
+    parser.add_argument('--start-date', type=str, default='2024-01-01',
+                        help='验证起始日期（A股腾讯日线实测仅约 640 行≈2024-02 起，见 lessons 三.32）')
+    parser.add_argument('--end-date', type=str, default='2026-07-01', help='验证结束日期')
     
     args = parser.parse_args()
     
@@ -343,7 +351,9 @@ def main():
         train_window_months=args.train_window,
         test_window_months=args.test_window,
         use_cross_sectional_label=args.use_cross_sectional_label,
-        confidence_threshold=args.confidence_threshold
+        confidence_threshold=args.confidence_threshold,
+        start_date=args.start_date,
+        end_date=args.end_date
     )
     
     validator.run_validation()
