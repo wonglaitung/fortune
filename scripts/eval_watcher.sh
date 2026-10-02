@@ -63,4 +63,4 @@ run_eval rel5d   5 output/wf5d_rel.log  1
 run_eval rel1d   1 output/wf1d_rel.log  1
 run_eval abs20d 20 output/base_r11d_abs.log 0
 run_eval abs5d   5 output/base_r15d_abs.log  0
-run_eval abs1d   1 output/wf1d_abs.log  0
+run_eval abs1d   1 output/base_r11d_abs.log  0
