@@ -1671,6 +1671,9 @@ def main():
     # 特征选择参数
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（默认: False，使用全量特征）')
+    parser.add_argument('--top-k', type=int, default=500,
+                       help='每折特征选择保留的特征数（默认 500）。调小可提高信噪比，'
+                            '用于检验"信号是否存在但被噪声淹没"（见 lessons 三.37）')
 
     # 非对称损失函数参数
     parser.add_argument('--fp-penalty', type=float, default=None,
@@ -1713,6 +1716,7 @@ def main():
         horizon=args.horizon,
         confidence_threshold=args.confidence_threshold,
         use_feature_selection=args.use_feature_selection,
+        top_k=args.top_k,
         fp_penalty=args.fp_penalty,
         embargo_days=args.embargo_days,
         loss_function=args.loss_function,
