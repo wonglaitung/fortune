@@ -6,7 +6,9 @@
     "std": 0.03198588570758506,
     "f1_score": 0.6282562702844816,
     "f1_std": 0.011235466629489281,
-    "timestamp": "2026-09-30 12:33:26"
+    "timestamp": "2026-09-30 12:33:26",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "gbdt_20d": {
     "model_type": "gbdt",
@@ -15,7 +17,9 @@
     "std": 0.049324245393152395,
     "f1_score": 0.6597106264925156,
     "f1_std": 0.05379455593551668,
-    "timestamp": "2026-03-26 10:23:55"
+    "timestamp": "2026-03-26 10:23:55",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "lgbm_1d": {
     "model_type": "lgbm",
@@ -24,7 +28,9 @@
     "std": 0.010729395120869366,
     "f1_score": 0.4994838099442093,
     "f1_std": 0.19073555510789253,
-    "timestamp": "2026-02-26 14:20:55"
+    "timestamp": "2026-02-26 14:20:55",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "catboost_20d": {
     "model_type": "catboost",
@@ -33,7 +39,9 @@
     "std": 0.027352208153098526,
     "f1_score": 0.6090884025210566,
     "f1_std": 0.01374909837236355,
-    "timestamp": "2026-10-02 00:03:34"
+    "timestamp": "2026-10-02 00:03:34",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "gbdt_1d": {
     "model_type": "gbdt",
@@ -42,7 +50,9 @@
     "std": 0.017977040915316878,
     "f1_score": 0.5151212643616061,
     "f1_std": 0.08144446811421907,
-    "timestamp": "2026-02-26 14:28:04"
+    "timestamp": "2026-02-26 14:28:04",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "catboost_1d": {
     "model_type": "catboost",
@@ -51,7 +61,9 @@
     "std": 0.02478512969191434,
     "f1_score": 0.63027078095314,
     "f1_std": 0.02431427975813492,
-    "timestamp": "2026-10-01 23:47:56"
+    "timestamp": "2026-10-01 23:47:56",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "lgbm_5d": {
     "model_type": "lgbm",
@@ -60,7 +72,9 @@
     "std": 0.021704947363539204,
     "f1_score": 0.6924388055060284,
     "f1_std": 0.04126267136293609,
-    "timestamp": "2026-02-26 14:22:53"
+    "timestamp": "2026-02-26 14:22:53",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "gbdt_5d": {
     "model_type": "gbdt",
@@ -69,7 +83,9 @@
     "std": 0.024464110072069573,
     "f1_score": 0.6942519738109547,
     "f1_std": 0.031582187516763484,
-    "timestamp": "2026-02-26 14:30:18"
+    "timestamp": "2026-02-26 14:30:18",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "catboost_5d": {
     "model_type": "catboost",
@@ -78,7 +94,9 @@
     "std": 0.01959830831522395,
     "f1_score": 0.6354033028278367,
     "f1_std": 0.02008399388261849,
-    "timestamp": "2026-10-01 23:56:53"
+    "timestamp": "2026-10-01 23:56:53",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_catboost_20d": {
     "model_type": "a_stock_catboost",
@@ -87,7 +105,9 @@
     "std": 0.05277025316540465,
     "f1_score": 0.5737884692304297,
     "f1_std": 0.05414643513641268,
-    "timestamp": "2026-09-28 14:48:33"
+    "timestamp": "2026-09-28 14:48:33",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_catboost_1d": {
     "model_type": "a_stock_catboost",
@@ -96,7 +116,9 @@
     "std": 0.0215743916465655,
     "f1_score": 0.48724163442756796,
     "f1_std": 0.057570651406041055,
-    "timestamp": "2026-09-28 23:02:07"
+    "timestamp": "2026-09-28 23:02:07",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_catboost_5d": {
     "model_type": "a_stock_catboost",
@@ -105,7 +127,9 @@
     "std": 0.05182036063364777,
     "f1_score": 0.5901417565551258,
     "f1_std": 0.031986487255697416,
-    "timestamp": "2026-09-28 16:49:12"
+    "timestamp": "2026-09-28 16:49:12",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_lightgbm_20d": {
     "model_type": "a_stock_lightgbm",
@@ -114,7 +138,9 @@
     "std": 0.044579182295208644,
     "f1_score": 0.5816332061315335,
     "f1_std": 0.057023830756042025,
-    "timestamp": "2026-09-28 21:38:50"
+    "timestamp": "2026-09-28 21:38:50",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_lightgbm_5d": {
     "model_type": "a_stock_lightgbm",
@@ -123,7 +149,9 @@
     "std": 0.044443023978729165,
     "f1_score": 0.5730470451365767,
     "f1_std": 0.039090472358559746,
-    "timestamp": "2026-09-28 22:07:25"
+    "timestamp": "2026-09-28 22:07:25",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
   },
   "a_stock_lightgbm_1d": {
     "model_type": "a_stock_lightgbm",
@@ -132,6 +160,15 @@
     "std": 0.01880389842741112,
     "f1_score": 0.4839310733586787,
     "f1_std": 0.05986823114995492,
-    "timestamp": "2026-09-28 22:34:01"
+    "timestamp": "2026-09-28 22:34:01",
+    "_caliber": "train_inside_cv",
+    "_caliber_note": "accuracy/f1 为训练集内CV（乐观，20d可达0.62）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift（docs/DECISIONS.md D1/D2），本字段仅供 std 稳定性参考"
+  },
+  "_meta": {
+    "schema_version": 2,
+    "warning": "本文件 accuracy/f1_score 均为**训练集内 TimeSeriesSplit CV**，乐观且不可用于评估真实交易能力。真实能力只看 walk-forward（净IR/PBO/DSR/lift，见 docs/DECISIONS.md D1/D2 与 ml_services/monthly_guardrail.py），不写入本文件。",
+    "consumed_fields": "生产代码仅消费各条目的 std（模型稳定性），不消费 accuracy。",
+    "caliber_tag": "_caliber=train_inside_cv 表示该条目为训练集内口径",
+    "stale_entries_note": "gbdt_* 条目为**遗留数据**（无对应 data/*gbdt*.pkl 模型文件，GBDT 未纳入生产）；读取方仍会读其 std，仅作兜底默认值参考。"
   }
 }

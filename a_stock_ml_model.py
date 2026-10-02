@@ -1418,7 +1418,9 @@ class AStockTradingModel(CatBoostModel):
             'std': float(std),
             'f1_score': float(f1),
             'f1_std': float(f1_std),
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            '_caliber': 'train_inside_cv',
+            '_caliber_note': '训练集内 TimeSeriesSplit CV（乐观）；真实交易能力只看 walk-forward 的净IR/PBO/DSR/lift'
         }
         accuracy_file = 'data/model_accuracy.json'
         try:
@@ -1429,6 +1431,14 @@ class AStockTradingModel(CatBoostModel):
                 existing_data = {}
 
             key = f'a_stock_{learner_tag}_{horizon}d'
+            # 兜底：确保口径说明常驻（文件损坏重建时不丢失，lessons 三.34）
+            existing_data.setdefault('_meta', {
+                'schema_version': 2,
+                'warning': '本文件 accuracy/f1_score 均为**训练集内 TimeSeriesSplit CV**，乐观且不可用于评估真实交易能力。真实能力只看 walk-forward（净IR/PBO/DSR/lift，见 docs/DECISIONS.md D1/D2）。',
+                'consumed_fields': '生产代码仅消费各条目的 std（模型稳定性），不消费 accuracy。',
+                'caliber_tag': "_caliber=train_inside_cv 表示该条目为训练集内口径",
+                'stale_entries_note': 'gbdt_* 条目为遗留数据（无对应模型文件），读取方仍会读其 std，仅作兜底默认值参考。',
+            })
             existing_data[key] = accuracy_info
 
             with open(accuracy_file, 'w', encoding='utf-8') as f:

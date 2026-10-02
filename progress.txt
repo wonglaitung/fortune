@@ -2479,3 +2479,17 @@ python3 ml_services/performance_monitor.py --mode all --no-email
      个股↔指数 640/640、个股↔美股 617/640，归一化前后相同）、标签中间量排除（港股专属）、
      逐折窄窗取数（A股已是全段取数一次）
 - 沉淀 lessons 三.34：同步判定必须实测举证，"不适用≠遗漏"，避免照搬或误补
+
+[2026-10-02 model_accuracy.json 口径混淆修复]
+- 问题：accuracy 字段（20d=0.618，训练集内 TimeSeriesSplit CV）与 walk-forward 口径
+  （合并准确率约 0.50）**字段同名、相差 12pp**，易误读为"模型准确率 62%"。
+- 修复（保持顶层键不变，读取方零改动）：
+  - 每条目加 `_caliber: train_inside_cv` + 说明
+  - 顶层加 `_meta`：warning / field 语义 / 消费方说明 / stale_entries_note
+  - 港股+A股两处写入方补 `_caliber` 与 `setdefault('_meta')` 兜底
+- **过程中踩坑并回滚**：先试"重构为 schema+entries 子对象"，验证发现
+  `_load_model_stability` 用扁平键 `data.get(f'lgbm_{h}d')` 取值会**静默全部回落默认值**
+  （0.05/0.05/0.02，不报错）→ 回滚，改为"保持键不变 + 加元信息"。
+  教训：改数据文件结构前必须先查消费者。
+- 附带：gbdt_* 为遗留数据（无模型文件）但读取方仍读其 std，已标注。
+- 沉淀 lessons 三.35
