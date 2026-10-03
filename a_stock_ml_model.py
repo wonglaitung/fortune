@@ -42,6 +42,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 生产路径（收市后预测）不受影响。
 A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST = True
 
+# 涨跌停绝对价格特征剔除开关（2026-10-03 实验用，默认关闭=保持现行为）
+# 用途：单变量实验，判定 A股超额是否依赖「涨跌停」这一港股不存在的制度机制。
+# 置1 时剔除 High_Limit/Low_Limit（绝对价格），保留 Limit_Up/Down、
+# Consecutive_*、Space_To_*（相对化，不含价格水平）。
+A_STOCK_DROP_LIMIT_FEATURES = os.environ.get('A_STOCK_DROP_LIMIT_FEATURES', '0') == '1'
+
+
+def _drop_limit_abs() -> bool:
+    return A_STOCK_DROP_LIMIT_FEATURES
+
 from ml_services.ml_trading_model import (CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES,
                                       logger, get_target_date_trading_days,
                                       merge_pit_features, DEFAULT_NETWORK_FEATURES)
@@ -347,7 +357,15 @@ class AStockFeatureEngineer(FeatureEngineer):
         return df
 
     def _add_limit_features(self, df, stock_code):
-        """添加涨跌停特征"""
+        """添加涨跌停特征
+
+        A_STOCK_DROP_LIMIT_FEATURES=1 时**只保留相对化特征**（涨跌停状态/空间），
+        剔除 High_Limit/Low_Limit 两个**绝对价格**列——它们是 A股第一大特征
+        （19/19 折），且港股无涨跌停机制故无对应特征。
+        本开关用于**单变量实验**：判定 A股超额是否依赖涨跌停制度这一独有机制。
+        注意 High_Limit/Low_Limit 目前不在 40 项 ABSOLUTE_PRICE_FEATURES 里
+        （规则不一致，见 progress.txt 2026-10-03），但对分树模型影响等价。
+        """
         limit_rate = get_limit_rate(stock_code)
 
         # 计算涨停价和跌停价
@@ -369,6 +387,10 @@ class AStockFeatureEngineer(FeatureEngineer):
         # 距离涨跌停空间
         df['Space_To_Limit_Up'] = (df['High_Limit'] - df['Close']) / df['Close']
         df['Space_To_Limit_Down'] = (df['Close'] - df['Low_Limit']) / df['Close']
+
+        # 实验开关：剔除涨跌停**绝对价格**两列（保留状态与相对空间）
+        if _drop_limit_abs():
+            df = df.drop(columns=['High_Limit', 'Low_Limit'])
 
         return df
 
