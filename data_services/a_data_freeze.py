@@ -59,8 +59,9 @@ def load_frozen(name: str):
     if not is_frozen():
         return False, None
     path = frozen_path(name)
-    # 失败哨兵优先：冻结「当初抓取失败」这一事实，不再重试网络
-    if os.path.exists(path + '.failed'):
+    # 数据优先于哨兵：若两者并存（先失败后成功），以真实数据为准。
+    # 仅当只有哨兵时，才冻结「当初抓取失败」这一事实并不再重试网络。
+    if not os.path.exists(path) and os.path.exists(path + '.failed'):
         return True, None
     if not os.path.exists(path):
         return False, None
@@ -96,6 +97,11 @@ def save_frozen(name: str, df) -> bool:
         tmp = frozen_path(name) + '.tmp'
         df.to_pickle(tmp)
         os.replace(tmp, frozen_path(name))
+        # 数据已就位，移除可能存在的旧失败哨兵
+        try:
+            os.remove(frozen_path(name) + '.failed')
+        except OSError:
+            pass
         return True
     except Exception:
         return False

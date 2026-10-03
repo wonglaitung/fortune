@@ -13,6 +13,8 @@ import os
 import sys
 import requests
 import pandas as pd
+
+from data_services.a_data_freeze import is_frozen, load_frozen, save_frozen, save_failure
 from datetime import datetime, timedelta
 
 # 添加项目根目录到 Python 路径
@@ -174,7 +176,7 @@ def get_a_stock_data_akshare(stock_code, period_days=90):
         return None
 
 
-def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
+def _get_a_stock_data_impl(stock_code, period_days=90, use_cache=True, min_rows=200):
     """
     获取A股股票数据（优先腾讯财经，失败后使用AKShare）
 
@@ -402,7 +404,7 @@ def get_index_data_akshare(index_type='sh', period_days=90):
         return None
 
 
-def get_index_data(index_type='sh', period_days=90):
+def _get_index_data_impl(index_type='sh', period_days=90):
     """
     获取指数数据（优先腾讯，失败后使用AKShare）
 
@@ -460,3 +462,48 @@ if __name__ == '__main__':
     info = get_a_stock_info_tencent('300440')
     if info:
         print(f"  {info['stock_name']}: {info['current_price']} ({info['change_percent']}%)")
+
+
+def get_a_stock_data(stock_code, period_days=90, use_cache=True, min_rows=200):
+    """获取 A 股日线（冻结优先包装器）
+
+    冻结模式（2026-10-03，A_STOCK_SNAPSHOT_DIR）下跳过 7 天 TTL 与坏缓存重拉，
+    使个股行情输入在跨日/跨运行间保持一致 —— 否则 walk-forward 结果随日期漂移
+    （lessons 三.29：同代码跨日跑结果不同）。
+    未设置该变量时行为与从前完全一致。
+    """
+    if not is_frozen():
+        return _get_a_stock_data_impl(stock_code, period_days, use_cache, min_rows)
+
+    key = f'quote_{stock_code}_{int(period_days)}d'
+    found, fd = load_frozen(key)
+    if found:
+        return fd                      # None 表示已冻结的失败哨兵
+
+    df = _get_a_stock_data_impl(stock_code, period_days, use_cache, min_rows)
+    if df is not None and not getattr(df, 'empty', False):
+        save_frozen(key, df)
+    else:
+        save_failure(key)
+    return df
+
+
+def get_index_data(index_type='sh', period_days=90):
+    """获取指数日线（冻结优先包装器）
+
+    此前 get_index_data **完全无缓存**，每次调用都联网 —— 在 A 股 53 只股票 ×
+    19 折的 walk-forward 中被反复调用，是剩余的不可复现来源之一（2026-10-03）。
+    """
+    if not is_frozen():
+        return _get_index_data_impl(index_type, period_days)
+
+    key = f'index_{index_type}_{int(period_days)}d'
+    found, fd = load_frozen(key)
+    if found:
+        return fd
+    df = _get_index_data_impl(index_type, period_days)
+    if df is not None and not getattr(df, 'empty', False):
+        save_frozen(key, df)
+    else:
+        save_failure(key)
+    return df
