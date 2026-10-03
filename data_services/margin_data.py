@@ -22,6 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CACHE_DIR = 'data/margin_cache'
 CACHE_EXPIRE_HOURS = 6
 
+from data_services.a_data_freeze import is_frozen, load_frozen, save_frozen
+
 # 网络硬超时（秒）：akshare/SSE/深交所接口偶发无超时挂起
 # （2026-09-28 实测 query.sse.com.cn 阻塞 16 分钟，拖死整个 walk-forward）
 NET_TIMEOUT_SEC = 20
@@ -78,8 +80,13 @@ class MarginDataService:
 
         cache_file = os.path.join(CACHE_DIR, f'sse_{date_str}.pkl')
 
-        # 检查缓存
-        if os.path.exists(cache_file):
+        # 冻结模式（2026-10-03）：跳过 6h TTL，保证 walk-forward 可复现。
+        # 此前 6h TTL + _net_disabled 进程级熔断 → 一次超时后本进程全部归 0。
+        if is_frozen():
+            found, fd = load_frozen(f'margin_sse_{date_str}')
+            if found:
+                return fd
+        elif os.path.exists(cache_file):
             cache_time = datetime.fromtimestamp(os.path.getmtime(cache_file))
             if datetime.now() - cache_time < timedelta(hours=CACHE_EXPIRE_HOURS):
                 try:
@@ -116,7 +123,12 @@ class MarginDataService:
 
         cache_file = os.path.join(CACHE_DIR, f'szse_{date_str}.pkl')
 
-        if os.path.exists(cache_file):
+        # 冻结模式（2026-10-03）：同 SSE，跳过 6h TTL
+        if is_frozen():
+            found, fd = load_frozen(f'margin_szse_{date_str}')
+            if found:
+                return fd
+        elif os.path.exists(cache_file):
             cache_time = datetime.fromtimestamp(os.path.getmtime(cache_file))
             if datetime.now() - cache_time < timedelta(hours=CACHE_EXPIRE_HOURS):
                 try:

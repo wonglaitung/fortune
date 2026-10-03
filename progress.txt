@@ -2666,3 +2666,29 @@ python3 ml_services/performance_monitor.py --mode all --no-email
        A_GATE_SOURCE_CSV=output/20261002_230611_a_stock_catboost_20d/...（避免循环依赖）
 [测试] tests/test_market_gates.py 2 例失败为**改动前既有**（stash 验证），
   根因是早前加的分位退化保护使合成数据落 0.70 回退分支，测试未覆盖该分支 —— 过期测试，未修
+
+[2026-10-03 冻结机制 v1：首次验证失败，暴露自身设计缺陷]
+[机制] 新增 data_services/a_data_freeze.py（A_STOCK_SNAPSHOT_DIR），
+  对齐港股 US_MARKET_SNAPSHOT_DIR。已接入：主力资金 / 融资融券(SSE+SZSE) /
+  商品期货(CU0,SC0) / 汇率(CNY_USD)。顺带修 a_stock_market_features.py:96
+  `_cache_ttl=3600 #1小时` 实为 timedelta(hours=3600)=150天 的单位bug → 改 seconds。
+[验证 r1(12:45) vs r2(12:47)] **失败**：前5折训练内指标全不一致
+  Fold1 acc .3472/.3519, Fold2 .5727/.5172, Fold3 .4695/.6203（镜像反转）...
+[根因1 我自己的设计缺陷 — 冻结不完整】
+  只给主力资金写了失败哨兵；商品期货/汇率虽插入「冻结优先」检查，但**取数失败时
+  不写哨兵** → 每次运行都重试，成功/失败随机。实测：r1 商品期货失败 2 次、r2 失败 4 次
+  （r1/r2 成功与失败不一致），而商品期货是 **top 特征**（Copper_Return_20d 17/19折）
+  → 直接改变特征 → 改变预测。
+  **教训：冻结机制必须「成功写数据 + 失败写哨兵」双向落盘，否则等于没冻结。**
+  只做了一半的冻结比不冻结更危险：它给人一种可复现的错觉。
+[根因2 我误读日志] 我一度把 `grep -c` 的输出「86 个特征/90 个特征」当成特征数差异，
+  实际是该字符串在日志中**出现次数**（uniq -c 的计数）。**撤回该判断**——
+  真实差异是上方的商品期货取数成功/失败不同。
+[已修] commodity/fx 补齐失败哨兵；main_fund_flow 哨兵逻辑复查；
+  哨兵读取 bug 修复（load_frozen 原先只查 .pkl、从不读 .failed；
+  修后先崩 UnboundLocalError —— path 在使用后才赋值，已调整顺序）
+[现状] 已为 a_main_fund / commodity_CU0 / commodity_SC0 / fx_cny_usd 全部写入哨兵
+  （当前这些源接口全不可用）。r1/r2 正在跑的是**旧代码**（哨兵补齐前启动），
+  故本轮 md5 预期仍不一致 —— 但它已量化出「商品期货成功/失败随机」这一根因。
+[未冻结残留] 中证1000 指数 get_index_data **完全无缓存**（每次联网）；个股日线 7d TTL。
+  两者仍可能在跨日/跨运行时变化，需下一轮纳入。

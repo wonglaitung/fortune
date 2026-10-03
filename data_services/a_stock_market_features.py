@@ -25,6 +25,8 @@ from functools import wraps
 import pandas as pd
 import numpy as np
 
+from data_services.a_data_freeze import is_frozen, load_frozen, save_frozen, save_failure
+
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -93,7 +95,9 @@ class AStockMarketFeatures:
     def __init__(self):
         self._cache = {}
         self._cache_time = None
-        self._cache_ttl = 3600  # 缓存1小时
+        # 单位 bug 修正：此前写 3600 却按 timedelta(hours=3600) 比较 → 实际150天，
+        # 恰好掩盖了真实过期行为（2026-10-03 普查发现）。改为秒。
+        self._cache_ttl = 3600  # 缓存 3600 秒 = 1 小时
 
     def load_index_data(self, period_days=250):
         """加载双指数数据"""
@@ -239,10 +243,28 @@ class AStockMarketFeatures:
         """获取商品期货数据（带缓存，带超时）"""
         import akshare as ak
 
+        # 冻结优先（walk-forward 可复现用，data_services/a_data_freeze.py）
+        if is_frozen():
+            found, fd = load_frozen(f'commodity_{symbol}')
+            if found:
+                return fd
+            # 无冻结记录：抓一次；成功则冻结，失败则写失败哨兵——
+            # 否则下次运行重试可能成功，导致同一配置两次结果不同（实测发生）。
+            try:
+                df = ak.futures_main_sina(symbol=symbol)
+                if df is not None and not df.empty:
+                    if save_frozen(f'commodity_{symbol}', df):
+                        logger.info(f'[freeze] 已冻结商品期货 {symbol}（{len(df)} 行）')
+                    return df
+            except Exception as e:
+                logger.warning(f'[freeze] 商品期货 {symbol} 抓取失败并写入哨兵: {e}')
+            save_failure(f'commodity_{symbol}')
+            return None
+
         cache_key = f'futures_{symbol}'
         if cache_key in self._cache:
             cache_time, cache_data = self._cache[cache_key]
-            if datetime.now() - cache_time < timedelta(hours=self._cache_ttl):
+            if datetime.now() - cache_time < timedelta(seconds=self._cache_ttl):
                 return cache_data
 
         try:
@@ -267,14 +289,14 @@ class AStockMarketFeatures:
 
         return None
 
-    def _get_cny_usd_rate(self):
+    def _fetch_cny_usd_uncached(self):
         """获取人民币汇率数据（带缓存）"""
         import akshare as ak
 
         cache_key = 'cny_usd_rate'
         if cache_key in self._cache:
             cache_time, cache_data = self._cache[cache_key]
-            if datetime.now() - cache_time < timedelta(hours=self._cache_ttl):
+            if datetime.now() - cache_time < timedelta(seconds=self._cache_ttl):
                 return cache_data
 
         try:
@@ -324,6 +346,25 @@ class AStockMarketFeatures:
             pass
 
         return None
+
+
+        # 冻结优先（walk-forward 可复现用）
+        if is_frozen():
+            found, fd = load_frozen('fx_cny_usd')
+            if found:
+                return fd
+            # 落穿到既有取数逻辑，成功则冻结、失败则写哨兵
+            df = self._fetch_cny_usd_uncached()
+            if df is not None and not getattr(df, 'empty', False):
+                if save_frozen('fx_cny_usd', df):
+                    logger.info(f'[freeze] 已冻结汇率数据（{len(df)} 行）')
+                return df
+            save_failure('fx_cny_usd')
+            return None
+
+
+    def _get_cny_usd_rate(self):
+        return self._fetch_cny_usd_uncached()
 
     def _merge_cross_market_data(self, stock_df, market_df, columns):
         """合并跨市场数据到股票数据"""

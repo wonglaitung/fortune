@@ -15,6 +15,8 @@
 import os
 import sys
 import pickle
+
+from data_services.a_data_freeze import is_frozen, load_frozen, save_frozen
 import time
 import pandas as pd
 import numpy as np
@@ -53,6 +55,15 @@ class MainFundFlowService:
         返回:
         - DataFrame: 主力资金历史数据
         """
+        # 冻结模式（2026-10-03）：walk-forward 可复现用，跳过 TTL 与实时抓取。
+        # 此前 6h TTL + 东财接口频断 + 失败静默填 0，是 C闸 双跑 md5 不一致的根因。
+        if is_frozen():
+            found, fd = load_frozen('a_main_fund')
+            if found:
+                return fd
+            # 冻结目录暂无数据：落穿到既有取数逻辑，成功后写入冻结
+            logger.info('[freeze] 主力资金无冻结文件，执行一次抓取并冻结')
+
         # 检查缓存（API 最多返回约120行，缓存有数据即可使用）
         if use_cache:
             cached_data = self._load_cache(min_rows=1)
@@ -168,6 +179,8 @@ class MainFundFlowService:
             # 保存缓存（仅当请求全量数据时，避免小请求覆盖大缓存）
             if days >= 30:
                 self._save_cache(df)
+                if is_frozen():
+                    save_frozen('a_main_fund', df)
 
             logger.info(f"获取完成（{len(df)} 条记录）")
             logger.info(f"日期范围: {df.index.min().strftime('%Y-%m-%d')} ~ {df.index.max().strftime('%Y-%m-%d')}")
