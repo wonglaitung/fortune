@@ -464,7 +464,7 @@ class AStockWalkForwardValidator:
 
         # 初始化市场过滤器（首次调用时）
         if self.market_filter is None:
-            self.market_filter = MarketSentimentFilter(lookback_days=1)
+            self.market_filter = MarketSentimentFilter(lookback_days=1, market='a')
 
         # 从测试数据中提取收益率
         if 'Return_1d' in test_data.columns:

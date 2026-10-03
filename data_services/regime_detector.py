@@ -50,16 +50,32 @@ class RegimeDetector:
         2: '下跌',   # 负收益、高波动
     }
 
-    def __init__(self, n_states=3, lookback=252):
+    def __init__(self, n_states=3, lookback=252, market=None):
         """
         参数:
         - n_states: 隐状态数量
         - lookback: 用于训练的回看窗口（交易日），默认1年
+        - market: 市场标签（如 'csi1000' / 'hsi'）。**必须传入**——
+          此前港股与 A 股共用同一 hmm_regime_model.pkl，互相覆盖且无 TTL，
+          属跨市场污染（2026-10-03 普查发现）。
         """
         self.n_states = n_states
         self.lookback = lookback
+        self.market = market
         self.model = None
         self._state_mapping = None  # 原始状态到语义状态的映射
+
+    @property
+    def _model_file(self):
+        """按市场隔离的模型缓存路径"""
+        if not self.market:
+            # 未指定市场时沿用旧文件名（保持既有港股调用行为不变）。
+            # ⚠️ 该文件是港股/A股**曾经共用**的产物（2026-10-03 前）。
+            # A股已改用 hmm_regime_model_csi1000.pkl；此文件现仅供港股，
+            # 但其内容可能来自 A股（中证1000）训练 —— **已知待修风险**：
+            # 应删除并让港股重新训练出自己的版本。
+            return MODEL_FILE
+        return os.path.join(CACHE_DIR, f'hmm_regime_model_{self.market}.pkl')
 
     def _prepare_observations(self, df):
         """
@@ -142,7 +158,7 @@ class RegimeDetector:
 
         # 缓存模型
         os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(MODEL_FILE, 'wb') as f:
+        with open(self._model_file, 'wb') as f:
             pickle.dump({
                 'model': self.model,
                 'state_mapping': self._state_mapping,
@@ -288,9 +304,9 @@ class RegimeDetector:
 
     def _load_model(self):
         """从缓存加载模型"""
-        if os.path.exists(MODEL_FILE):
+        if os.path.exists(self._model_file):
             try:
-                with open(MODEL_FILE, 'rb') as f:
+                with open(self._model_file, 'rb') as f:
                     cache = pickle.load(f)
                 self.model = cache['model']
                 self._state_mapping = cache['state_mapping']

@@ -63,8 +63,25 @@ _GATE_QUANTILE_GLOB = os.path.join(_BASE_DIR, 'output', '*_catboost_20d',
 _GATE_SOURCE_RE = re.compile(r'/\d{8}_\d{6}_catboost_20d/prediction_analysis\.csv$')
 _GATE_CALIBRATOR_FILE = os.path.join(_BASE_DIR, 'data', 'calibrators', 'prob_cal_20.pkl')
 
+# A 股专用门槛来源（2026-10-03 普查发现：A股此前误用港股回测 CSV + 港股校准器，
+# 导致每跑一次港股回测，A股的 Dynamic_Threshold 就变一次 —— 跨市场污染 + 不可复现）
+_A_GATE_QUANTILE_GLOB = os.path.join(_BASE_DIR, 'output', '*_a_stock_catboost_20d',
+                                     'prediction_analysis.csv')
+_A_GATE_SOURCE_RE = re.compile(r'/\d{8}_\d{6}_a_stock_catboost_20d/prediction_analysis\.csv$')
+_A_GATE_CALIBRATOR_FILE = os.path.join(_BASE_DIR, 'data', 'calibrators',
+                                       'a_stock_prob_cal_20.pkl')
 
-def _latest_gate_source_csv() -> Optional[str]:
+
+def _gate_paths(market: str):
+    """按市场返回 (glob, 正则, 校准器路径, 强制环境变量)"""
+    if market == 'a':
+        return (_A_GATE_QUANTILE_GLOB, _A_GATE_SOURCE_RE,
+                _A_GATE_CALIBRATOR_FILE, 'A_GATE_SOURCE_CSV')
+    return (_GATE_QUANTILE_GLOB, _GATE_SOURCE_RE,
+            _GATE_CALIBRATOR_FILE, 'GATE_SOURCE_CSV')
+
+
+def _latest_gate_source_csv(market: str = 'hk') -> Optional[str]:
     """最新港股回测 CSV。正则排除 *_a_stock_catboost_20d 等非港股目录，
     保证 CI（无本地 untracked 目录）与本地选择一致。
 
@@ -73,12 +90,13 @@ def _latest_gate_source_csv() -> Optional[str]:
     导致同一模型两次运行的 PIT 分位样本不同 → Dynamic_Threshold 不一致
     （实测 9% 行）。冻结基准后门槛随输入一同确定，回测才真正可复现。
     """
-    forced = os.environ.get('GATE_SOURCE_CSV')
+    glob_pat, regex, _cal, env_name = _gate_paths(market)
+    forced = os.environ.get(env_name)
     if forced:
         if os.path.exists(forced):
             return forced
-        logger.warning("GATE_SOURCE_CSV=%s 不存在，回退到自动选择最新 CSV", forced)
-    files = [f for f in glob.glob(_GATE_QUANTILE_GLOB) if _GATE_SOURCE_RE.search(f)]
+        logger.warning("%s=%s 不存在，回退到自动选择最新 %s CSV", env_name, forced, market)
+    files = [f for f in glob.glob(glob_pat) if regex.search(f)]
     return max(files) if files else None
 
 
@@ -189,7 +207,8 @@ class MarketSentimentFilter:
         threshold_layers: Optional[Dict[str, Tuple[float, float]]] = None,
         lookback_days: int = 1,
         default_threshold: float = 0.50,
-        use_quantile_gates: bool = True
+        use_quantile_gates: bool = True,
+        market: str = 'hk'
     ):
         """
         初始化市场情绪过滤器
@@ -204,6 +223,8 @@ class MarketSentimentFilter:
         self.default_threshold = default_threshold
         self.threshold_layers = threshold_layers or self.DEFAULT_LAYERS
         self.use_quantile_gates = use_quantile_gates
+        # 市场标签：决定分位门槛的基准回测 CSV 与校准器来源（A股须用 A股自己的）
+        self.market = market
 
         # 预计算缓存：{date: (up_ratio, threshold, layer_name)}
         self._daily_cache: Dict[str, Tuple[float, float, str]] = {}
@@ -225,16 +246,17 @@ class MarketSentimentFilter:
         if self._gate_dates is not None:
             return
         try:
-            source_csv = _latest_gate_source_csv()
-            if not (source_csv and os.path.exists(_GATE_CALIBRATOR_FILE)):
-                raise FileNotFoundError("回测 CSV 或 prob_cal_20 缺失")
+            _g, _r, calibrator_file, _e = _gate_paths(self.market)
+            source_csv = _latest_gate_source_csv(self.market)
+            if not (source_csv and os.path.exists(calibrator_file)):
+                raise FileNotFoundError(f"{self.market} 回测 CSV 或校准器缺失")
             df = pd.read_csv(source_csv, usecols=['Date', 'Predict_Prob']).dropna()
             if len(df) < GATE_MIN_SAMPLES:
                 raise ValueError(f"回测记录 {len(df)} < {GATE_MIN_SAMPLES}")
             import joblib
             probs = df['Predict_Prob'].to_numpy(dtype=float)
             dates = df['Date'].astype(str).str[:10].to_numpy()
-            iso = joblib.load(_GATE_CALIBRATOR_FILE)
+            iso = joblib.load(calibrator_file)
             cal = np.asarray(iso.predict(probs.reshape(-1, 1)), dtype=float)
             order = np.argsort(dates, kind='stable')
             self._gate_dates = dates[order]

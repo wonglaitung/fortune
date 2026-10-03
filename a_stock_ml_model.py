@@ -31,6 +31,17 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入港股模型
+# ========== 回测禁穿越开关（2026-10-03）==========
+# 背景：普查发现 A 股 prepare_data 存在多条"标量广播到全部历史行"通道
+# （静态快照穿越，AGENTS 明令禁止）：
+#   S5 个股实时 PE/PB/市值 —— qt.gtimg.cn 实时接口、无缓存、今天的值写满全历史列
+#   N1 HMM regime      —— 港股/A股共用同一 pkl，且全历史 fit 后回贴全部历史行
+#   N4 新闻情感/主题    —— 本地 CSV .iloc[-1] 标量广播全历史
+# 这些特征无历史时点数据源、无法 PIT 化，故回测路径一律禁用并填中性默认值；
+# 保留它们等于让 walk-forward 随当日行情变化（含穿越且不可复现）。
+# 生产路径（收市后预测）不受影响。
+A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST = True
+
 from ml_services.ml_trading_model import (CatBoostModel, FeatureEngineer, ABSOLUTE_PRICE_FEATURES,
                                       logger, get_target_date_trading_days,
                                       merge_pit_features, DEFAULT_NETWORK_FEATURES)
@@ -101,8 +112,15 @@ def _calculate_a_stock_regime_features(csi1000_df, use_shift=True):
 
     from data_services.regime_detector import RegimeDetector
 
+    # 回测禁穿越：HMM 模型是**全历史 fit 后回贴全部历史行**（含未来信息），
+    # 且此前港股/A股共用同一 pkl 互相覆盖。回测下直接跳过 regime 特征。
+    if A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST and use_shift:
+        logger.info("回测模式：已禁用 HMM regime 特征（全历史拟合回贴=穿越）")
+        return None
+
     try:
-        detector = RegimeDetector(n_states=3, lookback=252)
+        # market 标签隔离缓存，避免与港股互相覆盖
+        detector = RegimeDetector(n_states=3, lookback=252, market='csi1000')
         csi1000_with_regime = detector.calculate_features(csi1000_df.copy(), use_shift=use_shift)
 
         # 重命名列（添加 AStock_ 前缀，避免与港股 HSI_ 特征冲突）
@@ -1031,7 +1049,11 @@ class AStockTradingModel(CatBoostModel):
                 stock_df = self.feature_engineer.create_smart_money_features(stock_df, use_shift=use_shift)
 
                 # 基本面特征
-                fundamental_features = self.feature_engineer.create_fundamental_features(code)
+                # S5 基本面：实时快照无 PIT 源，回测下禁用（标量广播=穿越）
+                if A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST and use_shift:
+                    fundamental_features = {}
+                else:
+                    fundamental_features = self.feature_engineer.create_fundamental_features(code)
                 for key, value in fundamental_features.items():
                     stock_df[key] = value
 
@@ -1120,21 +1142,25 @@ class AStockTradingModel(CatBoostModel):
                 # ========== 3.8 异常检测特征 ==========
                 stock_df = self.feature_engineer.create_anomaly_features(stock_df, use_shift=use_shift)
 
-                # ========== 3.9 新闻情感特征 ==========
-                # 情感特征（6个）
-                sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
-                for key, value in sentiment_features.items():
-                    stock_df[key] = value
+                # ========== 3.9 新闻情感/主题特征 ==========
+                # N4 禁穿越：这些特征取自本地新闻 CSV 的最新一条（.iloc[-1]），
+                # 标量广播到全部历史行 → 静态快照穿越，且随 CSV 更新而变。
+                # 无历史时点数据源、无法 PIT 化，回测下一律禁用（生产路径不受影响）。
+                if not (A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST and use_shift):
+                    # 情感特征（6个）
+                    sentiment_features = self.feature_engineer.create_sentiment_features(code, stock_df)
+                    for key, value in sentiment_features.items():
+                        stock_df[key] = value
 
-                # 主题特征（10个）
-                topic_features = self.feature_engineer.create_topic_features(code, stock_df)
-                for key, value in topic_features.items():
-                    stock_df[key] = value
+                    # 主题特征（10个）
+                    topic_features = self.feature_engineer.create_topic_features(code, stock_df)
+                    for key, value in topic_features.items():
+                        stock_df[key] = value
 
-                # 主题情感交互特征（50个）
-                topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
-                for key, value in topic_sentiment_interaction.items():
-                    stock_df[key] = value
+                    # 主题情感交互特征（50个）
+                    topic_sentiment_interaction = self.feature_engineer.create_topic_sentiment_interaction_features(code, stock_df)
+                    for key, value in topic_sentiment_interaction.items():
+                        stock_df[key] = value
 
                 # 预期差距特征（5个）
                 expectation_gap = self.feature_engineer.create_expectation_gap_features(code, stock_df)
@@ -1762,7 +1788,11 @@ class AStockTradingModel(CatBoostModel):
         stock_df = self.feature_engineer.create_smart_money_features(stock_df, use_shift=use_shift)
 
         # 基本面特征
-        fundamental_features = self.feature_engineer.create_fundamental_features(code)
+        # S5 基本面：回测下禁用（与训练路径同口径，避免训练/预测不一致）
+        if A_STOCK_DISABLE_LOOKAHEAD_IN_BACKTEST and use_shift:
+            fundamental_features = {}
+        else:
+            fundamental_features = self.feature_engineer.create_fundamental_features(code)
         for key, value in fundamental_features.items():
             stock_df[key] = value
 

@@ -2641,3 +2641,28 @@ python3 ml_services/performance_monitor.py --mode all --no-email
    P1 复查A股其余 akshare/实时特征（北向资金等）是否同样问题
    P2 修复后才谈重跑与升配
 [进行中] c2 第3个样本（Fold 15/19），用于估计 run-to-run 分布
+
+[2026-10-03 禁穿越特征实验：启动]
+[打法调整] 先前网络 PIT 化是「先修完整基础设施再验证」，结果 IC 几乎没变，白做。
+  本次改为**先用单变量实验量化污染权重**，再决定修复范围（lessons 三.37 的教训）。
+[普查结论] A股 prepare_data 共 10 个实时网络数据源，**7 个无冻结机制**，其中高危：
+  S5 个股实时 PE/PB/市值 —— qt.gtimg.cn 无缓存、标量广播全历史（穿越）→ 本次禁用
+  N1 HMM regime —— 港股/A股共用 hmm_regime_model.pkl（互相覆盖、无TTL），
+     且全历史 fit 后回贴全部历史行（穿越）→ 已按 market 隔离缓存 + 回测下禁用
+  N4 新闻情感/主题 —— 本地 CSV .iloc[-1] 标量广播全历史（穿越）→ 本次禁用
+  N2 A股门槛误用**港股**回测 CSV + **港股**校准器 → 已加 market 感知，
+     _gate_paths('a') 指向 *_a_stock_catboost_20d + a_stock_prob_cal_20.pkl
+  另发现单元 bug：a_stock_market_features.py:96 `_cache_ttl=3600 # 1小时`
+     但按 timedelta(hours=3600) 比较 → 实际 150 天，掩盖真实过期行为（未修，仅记录）
+  另发现：融资融券 _net_disabled 进程级熔断 → 一次超时后本进程全部归 0（未修）
+[⚠️ 实验设计缺陷（必须记录）] 本轮**同时改了 2 个变量**，非同源：
+  变量1 = 禁 S5/N1/N4 穿越特征
+  变量2 = N2 门槛改用 A股自身基准
+  N2 影响实测：港股源退化(唯一值17<30)→0.70/0.65；A股源未退化(唯一值63,极差0.846)
+  → 0.7497/0.7497。**门槛实质变化，会独立影响护栏指标。**
+  故本轮结论只能归因为「污染清除（穿越+跨市场门槛）」合并效应，
+  若结果变动显著需再跑一轮拆分两个变量。
+[冻结] US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot
+       A_GATE_SOURCE_CSV=output/20261002_230611_a_stock_catboost_20d/...（避免循环依赖）
+[测试] tests/test_market_gates.py 2 例失败为**改动前既有**（stash 验证），
+  根因是早前加的分位退化保护使合成数据落 0.70 回退分支，测试未覆盖该分支 —— 过期测试，未修
