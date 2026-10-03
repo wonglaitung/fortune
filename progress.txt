@@ -2727,3 +2727,32 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   [7] 实盘文档优先 ✅ 逐行判读15处命中：L56为🟢条件规则(正确保留)、
      L122 A股🟡≤10%、L129对照表 —— 无与当前判定相反的无条件建议
   [8] 自身副作用 ✅ 未设变量时港股门槛源/校准器/HMM路径全部不变
+
+[2026-10-03 校准器同源 + 分位守卫：并更正两处我自己的错误论断]
+[校准器重拟合] 源从 20260928_144833（D11旧轮，不可复现口径）→ **20261003_163745**
+  （md5 55c20141… = 新基线），样本 19578→20212。同源三依赖修复。
+  注意：新校准器下 A股 bear=0.6827/weak=0.6815（间距仅 0.0012，Isotonic 台阶所致）。
+[守卫补到正确位置 —— 我又犯了「修组件没修调用路径」的错]
+  守卫原先只在 compute_gate_thresholds，而**A股 walk-forward 实际走**
+  market_regime._prepare_gate_base/_gates_for（完全不调 a_stock_gates.py）。
+  → 守卫写在不产生回测决策的地方。已在 _prepare_gate_base 补齐同样判定。
+  实测：a → base_ok=False, {'bear':0.7,'weak':0.65}；hk 同。
+[❌ 错误论断 1：「港股 quantiles 含 normal，spread 变全局极差 0.54，守卫生不出」】
+  实测 `GATE_QUANTILES = {'bear':0.92,'weak':0.90}` —— **不含 normal**。
+  港股 probe = {bear:0.5085, weak:0.4981}，spread=0.0103 < 0.05 → **旧守卫本来就生效**。
+  港股从来不缺守卫。我把 GATE_FALLBACK 的 bear/weak/normal 三层误当成 quantiles 定义。
+  → 已删除该错误注释；GATE_MIN_LAYER_SEP 保留但改述为「显式冗余」。
+[❌ 错误论断 2：守卫消息文案「分位极差」】
+  因 quantiles 只有两层，max-min **就是**层间距，文案称「极差」易被误读为全局极差
+  （我自己就是这么误判的）。已改为「bear-weak 间距」。
+  连带发现：GATE_MIN_SPREAD=0.05 实际是**较严的分层间距要求**，而非分布宽度要求。
+[实测验证守卫未误伤]
+  构造恒等校准器 + 均匀概率(唯一值4000/极差0.96/层间距0.0192)：
+  仍被判退化 —— 因层间距 0.0192 < SPREAD 0.05。说明 SPREAD 判据比 LAYER_SEP 严，
+  两者当前配置下语义重叠（quantiles 仅两层）。
+[堵住快照陷阱] suggest_gate_snapshot 在退化时**显式告警**：
+  退化时它返回的是 GATE_FALLBACK 而非分位，若不加提示，维护者会误以为是
+  「数据驱动的分位」而粘贴进 GATE_SNAPSHOT —— 实为抄一遍硬编码回退值，
+  门控仍空转且**误以为已随数据校准**。现输出「不要快照」+ 正确做法。
+[港股现状定性] 校准后 bear 0.5085/weak 0.4981 均贴 0.5 → **模型无 edge 导致概率压平**
+  （D8 已记录）→ 港股长期走绝对值回退是**正常状态**，非 bug。分位法要生效前提是有 edge。

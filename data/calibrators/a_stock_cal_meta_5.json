@@ -1,0 +1,7 @@
+{
+  "source_file": "output/20260928_164913_a_stock_catboost_5d/prediction_analysis.csv",
+  "n_samples": 19578,
+  "fitted_at": "2026-10-03T17:25:01",
+  "prob_min": 0.0205762028985966,
+  "prob_max": 0.9790340100558472
+}

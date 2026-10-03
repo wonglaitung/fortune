@@ -1,0 +1,7 @@
+{
+  "source_file": "output/20261001_202534_catboost_20d/prediction_analysis.csv",
+  "n_samples": 54892,
+  "fitted_at": "2026-10-02T08:30:54",
+  "prob_min": 0.0042,
+  "prob_max": 0.9938
+}

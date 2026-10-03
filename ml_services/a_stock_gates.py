@@ -39,6 +39,11 @@ A_GATE_MIN_SAMPLES = 200
 # 校准后唯一值过少 / bear·weak 分位重合 → 放弃分位、回落 A_GATE_FALLBACK 绝对值。
 A_GATE_MIN_UNIQUE = 30
 A_GATE_MIN_SPREAD = 0.05
+# 分层区分度下限（与港股 GATE_MIN_LAYER_SEP 同步，2026-10-03）。
+# 与 A_GATE_MIN_SPREAD 语义重叠（A 股 quantiles 仅 bear/weak 两层，spread 即层间极差），
+# 保留为**显式冗余**，防止将来 quantiles 扩层时失去「层间无区分度」判别能力。
+# 实测 2026-10-03：A 股 P90=0.681529、P92=0.682713，间距 0.0012 → 判退化回退绝对值。
+A_GATE_MIN_LAYER_SEP = 0.01
 
 # 分位快照：由 output/20260928_144833_a_stock_catboost_20d
 # （19,578 条，as_of=2026-07-31，与 a_stock_prob_cal_20.pkl 同源）算出。
@@ -119,12 +124,16 @@ def compute_a_gate_thresholds(as_of: Optional[str] = None,
         # 退化保护：分布被压平 → 分位无经济含义 → 用绝对值（港股教训三.30）
         n_uniq = int(len(np.unique(cal)))
         spread = max(gates.values()) - min(gates.values())
-        if n_uniq < A_GATE_MIN_UNIQUE or spread < A_GATE_MIN_SPREAD:
+        layer_sep = abs(gates.get('bear', 0) - gates.get('weak', 0))
+        if n_uniq < A_GATE_MIN_UNIQUE or spread < A_GATE_MIN_SPREAD \
+                or layer_sep < A_GATE_MIN_LAYER_SEP:
             _why = []
             if n_uniq < A_GATE_MIN_UNIQUE:
                 _why.append(f"唯一值 {n_uniq}<{A_GATE_MIN_UNIQUE}")
             if spread < A_GATE_MIN_SPREAD:
-                _why.append(f"分位极差 {spread:.4f}<{A_GATE_MIN_SPREAD}")
+                _why.append(f"bear-weak 间距 {spread:.4f}<{A_GATE_MIN_SPREAD}")
+            if layer_sep < A_GATE_MIN_LAYER_SEP:
+                _why.append(f"分层间距 {layer_sep:.4f}<{A_GATE_MIN_LAYER_SEP}（bear≈weak）")
             return _fb("校准后分布退化（" + "、".join(_why) + "）→ 用绝对阈值")
         logger.info("A股分位门槛（as_of=%s, n=%d, src=%s）: %s",
                     as_of or 'latest', probs.size,

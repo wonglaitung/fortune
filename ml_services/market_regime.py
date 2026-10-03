@@ -46,6 +46,11 @@ GATE_MIN_SAMPLES = 200
 # 退回 GATE_FALLBACK 绝对阈值（lessons 三.30）
 GATE_MIN_UNIQUE = 30
 GATE_MIN_SPREAD = 0.05
+# 分层区分度下限：bear 与 weak 两个分位门槛之间的最小间距。
+# 与 GATE_MIN_SPREAD 语义重叠（GATE_QUANTILES 仅 bear/weak 两层，spread 即层间极差），
+# 保留为**显式冗余**：若将来 GATE_QUANTILES 增加第三层，GATE_MIN_SPREAD 会变成
+# 全局极差而失去「层间无区分度」的判别能力，本条仍能拦住。
+GATE_MIN_LAYER_SEP = 0.01
 # 分位快照：CI checkout 无本地 output/ 时用内嵌快照，保证 CI 与本地同值。
 # 由 output/20260925_044407_catboost_20d（43,610条，as_of=2026-09-25）算出。
 # ⚠️ walk-forward 重跑后分位会漂移 → 重跑完执行
@@ -111,11 +116,27 @@ def _gates_fallback(reason: str) -> Dict[str, float]:
 
 
 def suggest_gate_snapshot(as_of: Optional[str] = None) -> str:
-    """walk-forward 重跑后打印建议的 GATE_SNAPSHOT 字符串（人工粘贴更新）。"""
+    """walk-forward 重跑后打印建议的 GATE_SNAPSHOT 字符串（人工粘贴更新）。
+
+    ⚠️ **退化时不可快照**（2026-10-03 加）：
+    校准后概率被压平时分位无经济含义，守卫会改返回 GATE_FALLBACK 绝对值。
+    若此时不加提示地打印 GATE_SNAPSHOT，维护者会误以为那是「数据驱动的分位」
+    而去粘贴更新 —— 实为把硬编码回退值抄一遍，门控仍空转，且**误以为已随数据校准**。
+    （触发原因：模型无 edge → 校准把概率压回基准率 → 分位锚在 0.5，见 D8）
+    """
     gates = compute_gate_thresholds(as_of=as_of, use_snapshot_fallback=False)
     src = _latest_gate_source_csv()
     print(f"GATE_SNAPSHOT = {gates}")
     print(f"# 源: {src}  as_of={as_of or GATE_SNAPSHOT_AS_OF}")
+    if all(abs(gates.get(k, -1) - v) < 1e-9 for k, v in GATE_FALLBACK.items()):
+        print()
+        print("❌ **校准后分布退化，本次结果是 GATE_FALLBACK 绝对值，不是分位数**")
+        print(f"   （分位守卫：唯一值 >= {GATE_MIN_UNIQUE}、"
+              f"bear-weak 间距 >= {GATE_MIN_SPREAD}、层间间距 >= {GATE_MIN_LAYER_SEP}）")
+        print("   → **不要把这段值作为『快照』更新进 GATE_SNAPSHOT**：它与 GATE_FALLBACK 相同，")
+        print("     粘贴后门控行为不变，却会让人误以为门槛已随回测数据重新校准。")
+        print("   → 正确做法：保持 GATE_SNAPSHOT 不变，并记录本次退化原因。")
+        print("   → 分位法要生效，前提是模型本身有 edge（否则校准必然压平概率）。")
 
 
 def compute_gate_thresholds(as_of: Optional[str] = None,
@@ -165,8 +186,16 @@ def compute_gate_thresholds(as_of: Optional[str] = None,
                        for layer, q in quantiles.items()}
         if n_uniq < GATE_MIN_UNIQUE or (max(gates_probe.values()) - min(gates_probe.values())) < GATE_MIN_SPREAD:
             return _fb(f"校准后分布退化（唯一值 {n_uniq} < {GATE_MIN_UNIQUE}，"
-                       f"分位极差 {max(gates_probe.values()) - min(gates_probe.values()):.4f}"
+                       f"bear-weak 间距 "
+                       f"{abs(gates_probe.get('bear', 0) - gates_probe.get('weak', 0)):.4f}"
                        f" < {GATE_MIN_SPREAD}）→ 用绝对阈值")
+        # 分层区分度守卫：bear 与 weak 门槛重合 ⇒ 分层门控退化为单一门槛
+        if 'bear' in gates_probe and 'weak' in gates_probe:
+            sep = abs(gates_probe['bear'] - gates_probe['weak'])
+            if sep < GATE_MIN_LAYER_SEP:
+                return _fb(f"分层无区分度（bear {gates_probe['bear']:.4f} ≈ "
+                           f"weak {gates_probe['weak']:.4f}，间距 {sep:.4f} < "
+                           f"{GATE_MIN_LAYER_SEP}）→ 用绝对阈值")
         gates = gates_probe
         logger.info("分位门槛（as_of=%s, n=%d, src=%s）: %s",
                     as_of or 'latest', probs.size, os.path.basename(os.path.dirname(source_csv)),
@@ -258,6 +287,22 @@ class MarketSentimentFilter:
             dates = df['Date'].astype(str).str[:10].to_numpy()
             iso = joblib.load(calibrator_file)
             cal = np.asarray(iso.predict(probs.reshape(-1, 1)), dtype=float)
+            # 退化保护（与 compute_gate_thresholds 同源，2026-10-03）：
+            # walk-forward 实际走的是本函数而非 compute_gate_thresholds，
+            # 若此处不判退化，则「唯一值/极差/分层间距」守卫对回测完全失效。
+            n_uniq = int(len(np.unique(cal)))
+            g_probe = {k: float(np.percentile(cal, q * 100.0))
+                       for k, q in GATE_QUANTILES.items()}
+            spread = max(g_probe.values()) - min(g_probe.values())
+            layer_sep = abs(g_probe.get('bear', 0) - g_probe.get('weak', 0))
+            if n_uniq < GATE_MIN_UNIQUE or spread < GATE_MIN_SPREAD:
+                raise ValueError(
+                    f"校准后分布退化（唯一值 {n_uniq}<{GATE_MIN_UNIQUE}，"
+                    f"bear-weak 间距 {spread:.4f}<{GATE_MIN_SPREAD}）")
+            if layer_sep < GATE_MIN_LAYER_SEP:
+                raise ValueError(
+                    f"分层无区分度（bear {g_probe['bear']:.4f} ≈ weak {g_probe['weak']:.4f}，"
+                    f"间距 {layer_sep:.4f}<{GATE_MIN_LAYER_SEP}）")
             order = np.argsort(dates, kind='stable')
             self._gate_dates = dates[order]
             self._gate_cal = cal[order]
