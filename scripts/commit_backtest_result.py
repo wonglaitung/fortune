@@ -29,6 +29,28 @@ AS_OF_RE = re.compile(r"^GATE_SNAPSHOT_AS_OF = '[^']*'", re.M)
 # 仅港股 20d 目录（要求紧邻 output/<时间戳>_catboost_20d/，排除 a_stock 与嵌套层级）
 HK20D_RE = re.compile(r'^output/\d{8}_\d{6}_catboost_20d/prediction_analysis\.csv$')
 
+# 作废目录黑名单（2026-10-03 新增）
+# ------------------------------------------------------------------
+# 事故记录：实验「港股训练窗 36→12」跑完后，其产物目录被本脚本自动入库，
+# 替换掉了可信基线。但该实验已按**预注册判据判为「排除」**（同测试期对齐后
+# 12月窗更差，净IR 0.42→1.06/PBO 0.64→0.09 实为样本混淆，见 lessons 三.40）。
+# 而该 CSV 正是**分位门槛的数据源**（GATE_SOURCE_CSV 默认取最新港股 CSV），
+# 一旦入库，会成为后续所有港股回测的门槛基准 → 污染传递。
+#
+# 本脚本按「目录」自动入库，无法知道某轮是正式基线还是作废实验，
+# 故必须靠显式黑名单。任何实验产物入库前，先把目录名登记到这里。
+VOIDED_DIRS = {
+    '20261003_214205_catboost_20d',   # 实验1 训练窗36→12，已判排除
+    # Top30 降噪实验（--top-k 30）：单变量对照显示 PBO 0.41→0.54 越线，
+    # 路径已关闭（lessons 三.37）。**它不是基线**，勿作门槛源。
+    '20261002_173214_catboost_20d',
+}
+
+
+def is_voided(rel_dir: str) -> bool:
+    d = os.path.basename(os.path.normpath(rel_dir))
+    return d in VOIDED_DIRS or os.path.normpath(rel_dir) in VOIDED_DIRS
+
 
 def update_snapshot_source(source: str, gates: dict, as_of: str) -> str:
     """把 gates/as_of 写入 market_regime.py 源文本的两个常量（纯函数，可单测）。"""
@@ -67,6 +89,12 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        if is_voided(args.detail_dir):
+            print(f"WARNING: 回测入库跳过，**{args.detail_dir} 已在作废黑名单中**")
+            print("         作废原因见 VOIDED_DIRS 注释与 lessons.md；")
+            print("         若该实验已翻案，请先从黑名单移除再入库。")
+            return 0
+
         csv_path = os.path.join(BASE_DIR, args.detail_dir, 'prediction_analysis.csv')
         if not os.path.exists(csv_path):
             print(f"WARNING: 回测入库跳过，未找到 {csv_path}")

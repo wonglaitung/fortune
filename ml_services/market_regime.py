@@ -77,6 +77,24 @@ _A_GATE_CALIBRATOR_FILE = os.path.join(_BASE_DIR, 'data', 'calibrators',
                                        'a_stock_prob_cal_20.pkl')
 
 
+def is_voided_output_dir(path: str) -> bool:
+    """判断某个 output 目录是否已作废（单一真相源= commit_backtest_result.VOIDED_DIRS）
+
+    事故记录（2026-10-03）：实验产物被自动入库并成为「最新港股 CSV」，
+    而门槛数据源默认取本地最新 CSV → 作废实验污染了后续所有回测的门槛。
+    本函数让**选择逻辑**也排除作废目录，与入库防护形成两道闸。
+    """
+    try:
+        from scripts.commit_backtest_result import VOIDED_DIRS
+    except Exception:
+        return False
+    # path 通常是 .../<dir>/prediction_analysis.csv，需取**父目录名**
+    d = os.path.basename(os.path.dirname(os.path.normpath(path)))
+    if d.endswith('.csv'):            # 兜底：若传入的就是目录名
+        d = os.path.basename(os.path.normpath(path))
+    return d in VOIDED_DIRS
+
+
 def _gate_paths(market: str):
     """按市场返回 (glob, 正则, 校准器路径, 强制环境变量)"""
     if market == 'a':
@@ -102,7 +120,28 @@ def _latest_gate_source_csv(market: str = 'hk') -> Optional[str]:
             return forced
         logger.warning("%s=%s 不存在，回退到自动选择最新 %s CSV", env_name, forced, market)
     files = [f for f in glob.glob(glob_pat) if regex.search(f)]
-    return max(files) if files else None
+    files = [f for f in files if not is_voided_output_dir(f)]
+    if not files:
+        return None
+    # 内容去重：md5 相同的多次运行（如双跑 r1/r2）任取其一，取**字典序最小**
+    # 以保证结果稳定（否则「最新」会随重复运行漂移）。若全部 md5 不同则取最新。
+    import hashlib
+    def _md5(fp):
+        h = hashlib.md5()
+        with open(fp, 'rb') as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b''):
+                h.update(chunk)
+        return h.hexdigest()
+    by_hash = {}
+    for f in files:
+        try:
+            by_hash.setdefault(_md5(f), []).append(f)
+        except Exception:
+            by_hash.setdefault('__unreadable__', []).append(f)
+    # 每个 md5 只保留一个代表（取字典序最小，避免「最新」随重复运行漂移），
+    # 然后在代表中取字典序最大（即最新目录）。
+    reps = [sorted(group)[0] for group in by_hash.values()]
+    return max(reps)
 
 
 def _gates_fallback(reason: str) -> Dict[str, float]:
