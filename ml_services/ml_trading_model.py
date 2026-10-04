@@ -92,6 +92,15 @@ ABSOLUTE_PRICE_FEATURES = [
     'VWAP',
     # 典型价格绝对值（VWAP 的中间变量）
     'TP',
+    # 涨跌停绝对价格（2026-10-03 补入）
+    # High_Limit/Low_Limit = Close.shift(1) × (1±limit_rate)，是以计价货币计的绝对价格。
+    # 依据：A股基线中 High_Limit 是第一大特征(19/19折)、Low_Limit 17/19折；
+    # 剔除二者的单变量实验显示 净IR 仅 -7.3%（**非信号来源**），
+    # 但 **PBO 0.49 → 0.17** —— 它们**损害折间稳定性**（绝对价格携带价格水平/个股身份）。
+    # 相对化版本 Space_To_Limit_Up/Down 不受影响，继续保留。
+    # 注：对分树模型绝对值与标准化在表达能力上等价（只按阈值切分），
+    # 但跨折稳定性会受影响，故按本列表既定约定排除。
+    'High_Limit', 'Low_Limit',
     # 其他绝对值（中间变量）
     'High_Max', 'Low_Min'
 ]

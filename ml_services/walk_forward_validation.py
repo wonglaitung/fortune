@@ -560,21 +560,34 @@ class WalkForwardValidator:
         metrics['num_train_samples'] = len(train_data)
         metrics['num_test_samples'] = len(test_data)
 
-        # 获取特征重要性（Top 20）
+        # 获取特征重要性（Top 100）
+        # 2026-10-03 修复：原实现只认 `model.catboost_model`，而 20d 用 LightGBM
+        # 时模型在 `model.model`（LGBMClassifier），导致**港股 50 折的 top_features
+        # 全部为空** —— 即港股模型的特征构成从未被记录，D11「折间排序不稳」的解释
+        # 一直是盲的。改为按学习器取模型对象。
         try:
-            if hasattr(model, 'catboost_model') and model.catboost_model is not None:
+            est = None
+            for attr in ('catboost_model', 'model'):
+                cand = getattr(model, attr, None)
+                if cand is not None and hasattr(cand, 'feature_importances_'):
+                    est = cand
+                    break
+            if est is not None and getattr(model, 'feature_columns', None):
                 feat_imp = pd.DataFrame({
                     'Feature': model.feature_columns,
-                    'Importance': model.catboost_model.feature_importances_
+                    'Importance': est.feature_importances_
                 })
                 feat_imp = feat_imp.sort_values('Importance', ascending=False)
-                # 保存 Top 100 特征重要性
                 top_features = feat_imp.head(100).to_dict('records')
                 metrics['top_features'] = [
                     {'feature': r['Feature'], 'importance': round(r['Importance'], 4)}
                     for r in top_features
                 ]
-                print(f"  ✅ 特征重要性已记录 (Top 100)")
+                print("  ✅ 特征重要性已记录 (Top 100)")
+            else:
+                metrics['top_features'] = []
+                logger.warning(
+                    "未取到模型对象或 feature_columns，特征重要性为空（诊断不可用）")
         except Exception as e:
             logger.warning(f"获取特征重要性失败: {e}")
             metrics['top_features'] = []

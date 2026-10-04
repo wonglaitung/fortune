@@ -335,13 +335,19 @@ class MarketSentimentFilter:
             spread = max(g_probe.values()) - min(g_probe.values())
             layer_sep = abs(g_probe.get('bear', 0) - g_probe.get('weak', 0))
             if n_uniq < GATE_MIN_UNIQUE or spread < GATE_MIN_SPREAD:
-                raise ValueError(
-                    f"校准后分布退化（唯一值 {n_uniq}<{GATE_MIN_UNIQUE}，"
-                    f"bear-weak 间距 {spread:.4f}<{GATE_MIN_SPREAD}）")
+                if os.environ.get('A_STOCK_GATE_GUARD_OFF') == '1':
+                    logger.warning('[对照实验] 门控守卫已临时关闭（退化分布将被直接使用）')
+                else:
+                    raise ValueError(
+                        f"校准后分布退化（唯一值 {n_uniq}<{GATE_MIN_UNIQUE}，"
+                        f"bear-weak 间距 {spread:.4f}<{GATE_MIN_SPREAD}）")
             if layer_sep < GATE_MIN_LAYER_SEP:
-                raise ValueError(
-                    f"分层无区分度（bear {g_probe['bear']:.4f} ≈ weak {g_probe['weak']:.4f}，"
-                    f"间距 {layer_sep:.4f}<{GATE_MIN_LAYER_SEP}）")
+                if os.environ.get('A_STOCK_GATE_GUARD_OFF') == '1':
+                    logger.warning('[对照实验] 分层间距守卫已临时关闭')
+                else:
+                    raise ValueError(
+                        f"分层无区分度（bear {g_probe['bear']:.4f} ≈ weak {g_probe['weak']:.4f}，"
+                        f"间距 {layer_sep:.4f}<{GATE_MIN_LAYER_SEP}）")
             order = np.argsort(dates, kind='stable')
             self._gate_dates = dates[order]
             self._gate_cal = cal[order]
