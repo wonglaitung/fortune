@@ -17,6 +17,13 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
+
+# 数据末日冻结（2026-10-04，消除「末日变→缓存键变→重算→指标漂移」）
+# 配套 ml_services/ml_trading_model.py：_get_feature_cache_key 去末日 +
+# prepare_data 按此变量截断。**两者必须同时生效** —— 只做其一会造成
+# 数据混用（键不区分内容）或假冻结（键固定但内容仍变）。
+# 不设置时行为与从前完全一致（现状）。
+export WALKFORWARD_DATA_END="${WALKFORWARD_DATA_END:-}"
 export OMP_NUM_THREADS="${LGBM_N_JOBS:-8}"
 export OMP_DYNAMIC=FALSE
 export MKL_NUM_THREADS="${LGBM_N_JOBS:-8}"

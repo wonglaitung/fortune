@@ -700,12 +700,27 @@ def _align_to_index(src, target_index):
 
 
 # ========== 特征缓存函数 ==========
+# 冻结模式下的数据截止日（2026-10-04）
+# ------------------------------------------------------------------
+# 背景：缓存键原含 last_date（个股数据末日）→ 末日随取数推移 → 键变 → 强制重算
+# → **同一份代码在不同日期跑出不同指标**（实测 0.42 → 0.83，差异 100% 来自此项）。
+# 这是港股一切指标不可信的根本原因（lessons 三.29 的港股版）。
+#
+# 为何**不能只去掉 last_date**：若键不再区分末日，则「末日不同的两份数据」会共用
+# 同一缓存 → 后写入者覆盖前者 → **数据混用**，比原问题更严重。
+# 故必须**键去末日 + 末日本身被冻结**（WALKFORWARD_DATA_END 环境变量），
+# 两者配套，缺一不可。
+DATA_END_ENV = 'WALKFORWARD_DATA_END'
+
+
 def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     """生成特征缓存键
 
     参数:
     - stock_code: 股票代码（如 '0005'）
-    - last_date: 数据最后日期（如 '20260418'）
+    - last_date: 数据最后日期（如 '20260418'）——
+      冻结模式（WALKFORWARD_DATA_END）下**不参与键**，改由环境变量固定，
+      以消除「末日变→键变→重算→指标漂移」的敏感性。
     - use_shift: 是否使用滞后数据（True=Walk-forward验证，False=生产预测）
 
     返回:
@@ -714,9 +729,11 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     注意:
     - use_shift=True 时特征使用 T-1 数据（避免数据泄漏）
     - use_shift=False 时特征使用当日数据（收市后预测）
-    - 两种模式的缓存必须分开，否则会导致数据泄漏
+    - 两种模式的缓存必须分开，否则会导致数据泄漏（shift 后缀始终保留）
     """
     shift_suffix = "shift" if use_shift else "noshift"
+    if os.environ.get(DATA_END_ENV):
+        return f"{stock_code}_frozen_{shift_suffix}"
     return f"{stock_code}_{last_date}_{shift_suffix}"
 
 
@@ -4051,6 +4068,29 @@ class CatBoostModel(BaseTradingModel):
                     continue
                 stock_df = _normalize_ohlcv_cols(stock_df)
 
+                # 冻结模式：按 WALKFORWARD_DATA_END 截断，固定数据末日。
+                # 与 _get_feature_cache_key 的「键去末日」配套 —— 键固定但内容
+                # 随取数日推移仍变，等于没冻结（方法论①：连带影响必须一起处理）。
+                _frozen_end = os.environ.get(DATA_END_ENV)
+                if _frozen_end:
+                    _end_ts = pd.Timestamp(_frozen_end)
+                    # 时区对齐：港股索引为 tz-aware，直接与 naive 比较会抛
+                    # TypeError（_assert_tzawareness_compat）。按索引时区转换。
+                    _idx_tz = getattr(stock_df.index, 'tz', None)
+                    if _idx_tz is not None:
+                        _end_ts = (_end_ts.tz_localize(_idx_tz)
+                                   if _end_ts.tzinfo is None
+                                   else _end_ts.tz_convert(_idx_tz))
+                    elif _end_ts.tzinfo is not None:
+                        _end_ts = _end_ts.tz_localize(None)
+                    _before = len(stock_df)
+                    stock_df = stock_df[stock_df.index <= _end_ts]
+                    if len(stock_df) == 0:
+                        logger.warning(
+                            f"{stock_code}: 冻结末日 {_frozen_end} 早于数据起点，丢弃")
+                        continue
+                    if len(stock_df) != _before:
+                        logger.info(f"{stock_code}: 按冻结末日截断 {_before}->{len(stock_df)} 行")
                 # 获取数据最后日期作为缓存键
                 last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
