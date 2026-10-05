@@ -700,14 +700,6 @@ def _align_to_index(src, target_index):
 
 
 # ========== 特征缓存函数 ==========
-# 背景：缓存键原含 last_date（个股数据末日）→ 末日随取数推移 → 键变 → 强制重算
-# → **同一份代码在不同日期跑出不同指标**（实测 0.42 → 0.83，差异 100% 来自此项）。
-# 这是港股一切指标不可信的根本原因（lessons 三.29 的港股版）。
-#
-# 为何**不能只去掉 last_date**：若键不再区分末日，则「末日不同的两份数据」会共用
-# 同一缓存 → 后写入者覆盖前者 → **数据混用**，比原问题更严重。
-# 故必须**键去末日 + 末日本身被冻结**（WALKFORWARD_DATA_END 环境变量），
-# 两者配套，缺一不可。
 def _is_usable_feature_cache(cached) -> bool:
     """校验特征缓存是否可用（2026-10-04）
 
@@ -733,9 +725,7 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True):
 
     参数:
     - stock_code: 股票代码（如 '0005'）
-    - last_date: 数据最后日期（如 '20260418'）——
-      冻结模式（WALKFORWARD_DATA_END）下**不参与键**，改由环境变量固定，
-      以消除「末日变→键变→重算→指标漂移」的敏感性。
+    - last_date: 数据最后日期（如 '20260418'）
     - use_shift: 是否使用滞后数据（True=Walk-forward验证，False=生产预测）
 
     返回:
