@@ -2951,7 +2951,8 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 
 [2026-10-05 A股三周期补齐复核（D12）] 目标：D11 只覆盖 20d，补5d/1d
 [口径] 与 20d 基线完全同源：A_STOCK_SNAPSHOT_DIR 冻结 + catboost +
-       默认 train12/test1/step1 月 → 19折/53只/20,212 行（结构一致）
+       默认 train12/test1/step1 月 → 19折/53只
+       行数 20d/5d = 20,212；1d = 19,578（1d 标签只需 T+1，末折多出样本，属必然差异）
 [结果]
   | 周期 | 净IR [95%CI] | PBO | DSR | lift | 判定 |
   | 20d | 2.32 [0.86,4.38] | 0.49 | 0.998 | +6.4pp | 🟡 ≤10% |
