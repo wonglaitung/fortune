@@ -700,8 +700,6 @@ def _align_to_index(src, target_index):
 
 
 # ========== 特征缓存函数 ==========
-# 冻结模式下的数据截止日（2026-10-04）
-# ------------------------------------------------------------------
 # 背景：缓存键原含 last_date（个股数据末日）→ 末日随取数推移 → 键变 → 强制重算
 # → **同一份代码在不同日期跑出不同指标**（实测 0.42 → 0.83，差异 100% 来自此项）。
 # 这是港股一切指标不可信的根本原因（lessons 三.29 的港股版）。
@@ -710,7 +708,24 @@ def _align_to_index(src, target_index):
 # 同一缓存 → 后写入者覆盖前者 → **数据混用**，比原问题更严重。
 # 故必须**键去末日 + 末日本身被冻结**（WALKFORWARD_DATA_END 环境变量），
 # 两者配套，缺一不可。
-DATA_END_ENV = 'WALKFORWARD_DATA_END'
+def _is_usable_feature_cache(cached) -> bool:
+    """校验特征缓存是否可用（2026-10-04）
+
+    背景：一次失败的运行（时区TypeError 崩溃前）写入了 58 个**只有 3 行**的
+    空壳 frozen 缓存。因缓存键已去`last_date`，后续运行全部命中这批坏缓存
+    且**永不重试** → z1/z2 只剩 12 只股票有数据。
+
+    这与 A 股的「失败静默填默认值」是同一类问题的变种：
+    **缓存机制必须有「坏缓存自愈」能力**，否则一次失败会永久污染后续所有运行。
+    判据：行数须达到该股历史长度的合理下限（此处 300 行≈1.2 年），
+    否则视为坏缓存并删除，让下次重新取数。
+    """
+    if cached is None:
+        return False
+    df = cached.get('stock_df') if isinstance(cached, dict) else cached
+    if df is None or not hasattr(df, '__len__'):
+        return False
+    return len(df) >= 300
 
 
 def _get_feature_cache_key(stock_code, last_date, use_shift=True):
@@ -732,8 +747,6 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     - 两种模式的缓存必须分开，否则会导致数据泄漏（shift 后缀始终保留）
     """
     shift_suffix = "shift" if use_shift else "noshift"
-    if os.environ.get(DATA_END_ENV):
-        return f"{stock_code}_frozen_{shift_suffix}"
     return f"{stock_code}_{last_date}_{shift_suffix}"
 
 
@@ -795,7 +808,22 @@ def _load_feature_cache(cache_file_path, use_shift=None):
                 if cached_use_shift != use_shift:
                     logger.warning(f"缓存 use_shift={cached_use_shift} 与期望值 {use_shift} 不匹配，将重新计算")
                     return None
-            return cache['data']
+            data = cache['data']
+            # 坏缓存自愈（2026-10-04）：残缺缓存（行数不足）直接删除并返回 None，
+            # 让本次重新取数。否则一次失败写入的空壳会被后续所有运行永久命中——
+            # 因缓存键已去 last_date，键不再随内容变化，无从自愈。
+            if not _is_usable_feature_cache(data):
+                _n = (len(data.get('stock_df')) if isinstance(data, dict)
+                      and hasattr(data.get('stock_df'), '__len__') else '?')
+                logger.warning(
+                    f"特征缓存残缺（stock_df {_n} 行 < 300），已删除并将重新取数: "
+                    f"{os.path.basename(cache_file_path)}")
+                try:
+                    os.remove(cache_file_path)
+                except OSError as e:
+                    logger.warning(f"删除坏缓存失败: {e}")
+                return None
+            return data
     except Exception as e:
         logger.warning(f"加载特征缓存失败: {e}")
         return None
@@ -4068,29 +4096,6 @@ class CatBoostModel(BaseTradingModel):
                     continue
                 stock_df = _normalize_ohlcv_cols(stock_df)
 
-                # 冻结模式：按 WALKFORWARD_DATA_END 截断，固定数据末日。
-                # 与 _get_feature_cache_key 的「键去末日」配套 —— 键固定但内容
-                # 随取数日推移仍变，等于没冻结（方法论①：连带影响必须一起处理）。
-                _frozen_end = os.environ.get(DATA_END_ENV)
-                if _frozen_end:
-                    _end_ts = pd.Timestamp(_frozen_end)
-                    # 时区对齐：港股索引为 tz-aware，直接与 naive 比较会抛
-                    # TypeError（_assert_tzawareness_compat）。按索引时区转换。
-                    _idx_tz = getattr(stock_df.index, 'tz', None)
-                    if _idx_tz is not None:
-                        _end_ts = (_end_ts.tz_localize(_idx_tz)
-                                   if _end_ts.tzinfo is None
-                                   else _end_ts.tz_convert(_idx_tz))
-                    elif _end_ts.tzinfo is not None:
-                        _end_ts = _end_ts.tz_localize(None)
-                    _before = len(stock_df)
-                    stock_df = stock_df[stock_df.index <= _end_ts]
-                    if len(stock_df) == 0:
-                        logger.warning(
-                            f"{stock_code}: 冻结末日 {_frozen_end} 早于数据起点，丢弃")
-                        continue
-                    if len(stock_df) != _before:
-                        logger.info(f"{stock_code}: 按冻结末日截断 {_before}->{len(stock_df)} 行")
                 # 获取数据最后日期作为缓存键
                 last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
@@ -4224,6 +4229,7 @@ class CatBoostModel(BaseTradingModel):
                 stock_df = self.feature_engineer.create_label(
                     stock_df, horizon=horizon, for_backtest=for_backtest,
                     min_return_threshold=min_return_threshold, label_mode=label_mode, hsi_df=hsi_df)
+
 
                 # 添加股票代码
                 stock_df['Code'] = code
