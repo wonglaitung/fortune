@@ -4022,7 +4022,7 @@ class CatBoostModel(BaseTradingModel):
         if hsi_df is not None and not hsi_df.empty:
             try:
                 print("  计算 HSI 市场状态特征...")
-                regime_detector = RegimeDetector()
+                regime_detector = RegimeDetector(market='hsi')
                 hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                 rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                 hsi_regime_df = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
@@ -4870,7 +4870,7 @@ class CatBoostModel(BaseTradingModel):
                     # 合并 HSI 市场状态特征
                     hsi_regime_df_predict = None
                     try:
-                        regime_detector = RegimeDetector()
+                        regime_detector = RegimeDetector(market='hsi')
                         hsi_with_regime = regime_detector.calculate_features(hsi_df.copy(), use_shift=use_shift)
                         rename_map = {c: f'HSI_{c}' for c in RegimeDetector.get_feature_names()}
                         hsi_regime_df_predict = hsi_with_regime[RegimeDetector.get_feature_names()].rename(columns=rename_map)
