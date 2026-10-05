@@ -103,7 +103,7 @@ def fetch_and_prepare_data():
     df = garch_model.calculate_features(df)
 
     print("  计算市场状态特征...")
-    regime_detector = RegimeDetector()
+    regime_detector = RegimeDetector(market='hsi')
     df = regime_detector.calculate_features(df)
 
     print(f"  ✅ 特征计算完成: {len(df.columns)} 列")

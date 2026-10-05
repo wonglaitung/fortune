@@ -2459,7 +2459,7 @@ def get_current_market_state():
         try:
             from data_services.regime_detector import RegimeDetector
 
-            detector = RegimeDetector()
+            detector = RegimeDetector(market='hsi')
             regime_result = detector.predict(hsi_df)
 
             if regime_result is not None and len(regime_result) > 0:

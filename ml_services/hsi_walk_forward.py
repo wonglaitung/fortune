@@ -307,7 +307,7 @@ class HSIWalkForwardValidator:
         df = garch_model.calculate_features(df)
 
         # ========== 市场状态检测（HMM，2026-04-26 新增，Tier 1 增强后 10 个特征）==========
-        regime_detector = RegimeDetector()
+        regime_detector = RegimeDetector(market='hsi')
         df = regime_detector.calculate_features(df)
 
         # ========== 跨尺度关联特征（Tier 1 新增，2026-04-27）==========

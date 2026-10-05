@@ -283,6 +283,16 @@ def get_hsi_data_tencent(period_days=90):
                 hsi = pickle.load(open(pkl, 'rb'))
                 hsi = hsi.tail(period_days)
                 hsi.index = pd.to_datetime(hsi.index).tz_localize('UTC')
+                # 统一列名为首字母大写（腾讯主路径用Open/Close/High/Low/Volume，
+                # 旧 HSI.pkl 是小写 close/open/...，直接返回会让下游
+                # `df['Close']` / `df['Volume']` 抛 KeyError →
+                # HMM 市场状态特征被except 吞掉 → 6 个 HSI_Regime_* 特征静默缺失）
+                _rename = {c: c.capitalize() for c in hsi.columns if c != c.capitalize()}
+                if _rename:
+                    hsi = hsi.rename(columns=_rename)
+                if 'Volume' not in hsi.columns:
+                    print(f"  ⚠️ [HSI缓存兜底] HSI.pkl 缺 Volume 列（实际列: {list(hsi.columns)}），"
+                          f"HMM 市场状态特征将无法计算")
                 print(f"  [HSI缓存兜底] 使用 HSI.pkl（{len(hsi)} 行，可能过期）")
                 return hsi
         except Exception as ee:

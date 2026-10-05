@@ -69,11 +69,13 @@ class RegimeDetector:
     def _model_file(self):
         """按市场隔离的模型缓存路径"""
         if not self.market:
-            # 未指定市场时沿用旧文件名（保持既有港股调用行为不变）。
-            # ⚠️ 该文件是港股/A股**曾经共用**的产物（2026-10-03 前）。
-            # A股已改用 hmm_regime_model_csi1000.pkl；此文件现仅供港股，
-            # 但其内容可能来自 A股（中证1000）训练 —— **已知待修风险**：
-            # 应删除并让港股重新训练出自己的版本。
+            # 未指定市场时沿用旧文件名。**该文件已于 2026-10-05 归档**
+            # （→ hmm_regime_model_SHARED_LEGACY.pkl.bak）：
+            # 它是港股/A股 2026-10-03 前**共用**的产物，最后写入于 09-23，
+            # 落在 A股 07-18 起启用 RegimeDetector 之后 → **来源不可验证**。
+            # 已实测：新旧模型对 HSI 的语义态一致率 84.0%、各态占比差 ≤4.7pp，
+            # 影响不显著（观测已滚动 z-score，水平/尺度差异被抹掉），
+            # 故**未因此重跑基线**。但仍按市场隔离，消除未来覆盖风险。
             return MODEL_FILE
         return os.path.join(CACHE_DIR, f'hmm_regime_model_{self.market}.pkl')
 
