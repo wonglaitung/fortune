@@ -30,6 +30,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from scipy import stats as sp_stats
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -137,6 +138,59 @@ def _stock_label(code, mapping=None):
 # 月份×股票组合的最小样本门槛（过滤噪声）
 MIN_COMBO_N = 15
 MIN_COMBO_TRADES = 5
+
+# 折聚类显著性的最小门槛（折数过少则 t 检验无意义）
+MIN_FOLD_TRADES = 10
+MIN_FOLD_ROWS = 60
+MIN_FOLDS_FOR_TEST = 5
+
+
+def _fold_clustered_lift(d):
+    """按 Fold 聚类的 lift 显著性（判读以此为准）
+
+    lift_f = 该折信号胜率 − 该折基准胜率，对折级 lift 做单样本 t 检验。
+
+    为什么必须用它：行级 binomial p（p_value_vs_baseline）把每一行当独立观测，
+    但同一折共享同一模型、同一天的多只股票共享同一未来收益 → 折间与横截面均相关，
+    有效独立观测 ≈ 折数而非行数。实测行级 p=0.0044 → 折聚类 p=0.167（伪显著）。
+    见 AGENTS.md「行级显著性=伪显著」与 lessons.md 三.46。
+
+    返回 dict 或 None（折数/交易数不足）。
+    """
+    if 'fold' not in d.columns:
+        return None
+    lifts = []
+    for _, g in d.groupby('fold', dropna=True):
+        nt = int(g['_trade'].sum())
+        if nt < MIN_FOLD_TRADES or len(g) < MIN_FOLD_ROWS:
+            continue
+        wr = float(g.loc[g['_trade'], '_win'].mean())
+        base = float(g['_win'].mean())
+        lifts.append(wr - base)
+    if len(lifts) < MIN_FOLDS_FOR_TEST:
+        return None
+    arr = np.asarray(lifts, dtype=float)
+    mean = float(arr.mean())
+    sd = float(arr.std(ddof=1))
+    if arr.size < 2 or not np.isfinite(sd) or sd == 0.0:
+        return {
+            'lift': mean, 'ci_low': None, 'ci_high': None,
+            't': None, 'p_value': None, 'n_folds': int(arr.size),
+            'fold_lifts': [float(x) for x in arr],
+            'reliability': 'insufficient',
+        }
+    t, p = sp_stats.ttest_1samp(arr, 0.0)
+    half = float(sp_stats.t.ppf(0.975, df=arr.size - 1)) * sd / np.sqrt(arr.size)
+    return {
+        'lift': mean,
+        'ci_low': mean - half,
+        'ci_high': mean + half,
+        't': float(t),
+        'p_value': float(p),
+        'n_folds': int(arr.size),
+        'fold_lifts': [float(x) for x in arr],
+        'reliability': 'reliable',
+    }
 
 
 def _normalize_columns(df):
@@ -344,6 +398,8 @@ def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
             if m:
                 r['months'], r['acc_win_months'], r['lift_pos_months'] = m
 
+    fold_clustered = _fold_clustered_lift(d)
+
     return {
         'n': n,
         'trades': n_trade,
@@ -361,6 +417,7 @@ def evaluate_win_rate(df, horizon, cost=DEFAULT_TRANSACTION_COST,
         'avg_return_trade': float(d.loc[d['_trade'], 'ret'].mean()) if n_trade > 0 else None,
         'avg_return_all': float(d['ret'].mean()),
         'cost': cost,
+        'fold_clustered': fold_clustered,
         'folds': fold_rows,
         'years': year_rows,
         'sectors': sector_rows,
@@ -447,8 +504,21 @@ def _render_win_rate(wr):
     L.append(f"- 基准胜率: {_fmt_pct(wr['baseline'])}")
     L.append(f"- 信号胜率: **{_fmt_pct(wr['win_rate'])}** "
              f"[{_fmt_pct(wr['win_rate_ci_low'])}, {_fmt_pct(wr['win_rate_ci_high'])}] (95%CI)")
+    p_row = wr['p_value_vs_baseline']
+    p_row_txt = f"{p_row:.4f}" if p_row is not None else "n/a"
     L.append(f"- **超额 lift: {_fmt_lift(wr['lift'])}** "
-             f"(vs 基准: {wr['vs_baseline']}, p={wr['p_value_vs_baseline']:.4f})")
+             f"(vs 基准: {wr['vs_baseline']}, p={p_row_txt} "
+             f"← 行级 p 忽略折间相关，**勿据此判定**）")
+
+    fc = wr.get('fold_clustered')
+    if fc and fc.get('p_value') is not None:
+        sig = '显著' if fc['p_value'] < 0.05 else '不显著'
+        L.append(f"- **折聚类 lift: {_fmt_lift(fc['lift'])}** "
+                 f"[{_fmt_lift(fc['ci_low'])}, {_fmt_lift(fc['ci_high'])}] (95%CI) | "
+                 f"t={fc['t']:+.2f} | **p={fc['p_value']:.4f} {sig}** | "
+                 f"n_folds={fc['n_folds']} ← **判读以此为准**")
+    else:
+        L.append("- 折聚类 lift: 无法给出显著性（折数/交易数不足，或折间零方差）")
     L.append(f"- 交易信号平均收益: {_fmt_pct(wr['avg_return_trade'])}　|　"
              f"全样本平均收益: {_fmt_pct(wr['avg_return_all'])}\n")
 

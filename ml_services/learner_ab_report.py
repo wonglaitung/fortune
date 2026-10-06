@@ -61,6 +61,7 @@ def metrics_for(csv, horizon, market='a', with_guardrail=True):
     ev = be.evaluate(df, horizon)
     pooled = ev['pooled']
     wr = ev['win_rate'] or {}
+    fc = wr.get('fold_clustered') or {}
 
     out = {
         'csv': csv,
@@ -74,6 +75,9 @@ def metrics_for(csv, horizon, market='a', with_guardrail=True):
         'acc_p': pooled.get('p_value_vs_random'),
         'lift': (wr['lift'] * 100) if wr.get('lift') is not None else None,   # pp
         'lift_p': wr.get('p_value_vs_baseline'),
+        'lift_fold': (fc['lift'] * 100) if fc.get('lift') is not None else None,
+        'lift_p_fold': fc.get('p_value'),
+        'lift_fold_n': fc.get('n_folds'),
         'trades': wr.get('trades'),
         'win_rate': wr.get('win_rate'),
         'baseline': wr.get('baseline'),
@@ -140,7 +144,10 @@ def render(horizon, rows):
     line('　CI 上界', 'acc_hi', '{:.1%}')
     line('vs 随机 p', 'acc_p', '{:.4f}')
     line('**超额 lift**', 'lift', '{:+.2f}', extra='pp')
-    line('lift p', 'lift_p', '{:.4f}')
+    line('lift p（行级·伪显著）', 'lift_p', '{:.4f}')
+    line('**lift p（折聚类·判读依据）**', 'lift_p_fold', '{:.4f}')
+    line('　折聚类 lift', 'lift_fold', '{:+.2f}', extra='pp')
+    line('　参与折数', 'lift_fold_n', '{:d}')
     if has_g:
         line('信号胜率 / 基准', 'win_rate', '{:.1%}')
         line('**净IR** [95%CI]', 'ir', '{:.2f}')
