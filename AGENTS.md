@@ -12,7 +12,7 @@
 ## 📋 项目概览
 
 **双市场支持**：
-- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（31只自选股）
+- 🇭🇰 **港股** - 恒生指数三周期预测、个股预测、异常检测（32只自选股；2026-10-06 剔除 2 只 ETF 后）
 - 🇨🇳 **A股** - 三周期预测、综合买卖建议、板块分析（53只股票池）
 
 **核心理念**：人机混合智能 - 融合大模型推理能力与机器学习预测精度
@@ -208,7 +208,7 @@ flowchart TD
 - `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
-- `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（31只）
+- `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（32只）
 - `message_services/` 统一管理邮件和微信通知
 
 **复权口径**（除权除息处理，全链路统一前复权 qfq）：
@@ -440,6 +440,12 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 > ~~以上 86-fold 数值已作废~~（个股截断 1460d + HSI/美股特征 NaN）。
 >
 > **⭐ 当前有效基线（2026-10-05，清缓存双跑验收，start 2019-06-01 / 50 folds / 58 只）**：
+>
+> ⚠️ **待重跑（2026-10-06 起）**：本基线是在**含 2800.HK/2828.HK 两只 ETF** 的 59 只池上算出的。
+> 该日已从 `WATCHLIST`/`TRAINING_STOCKS`/`STOCK_SECTOR_MAPPING` 三处剔除 ETF（池 59→57）。
+> **池组成变化 → 折内横截面样本、网络社区、门槛分位基准全部随之变化 → 下表数值已不可复现**，
+> 须以新池重跑（清缓存 + 双冻结 + 连跑两次 md5）后才可再作基线引用。
+> 重跑完成前，**下表仅作上一轮历史记录**，仓位判定仍按 🟡 ≤5%（数值本身不构成升配依据）。
 > | 指标 | 20d LightGBM | 5d CatBoost | 1d CatBoost |
 > |------|------|------|------|
 > | 月度护栏 净IR [95%CI] | **0.44** [−0.59,1.40] → 🟡 | **−0.04** [−1.00,0.92] → 🔴 | **−2.42** [−3.47,−1.45] → 🔴 |

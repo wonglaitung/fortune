@@ -84,9 +84,9 @@ STOCK_SECTOR_MAPPING = {
     '1177.HK': {'sector': 'biotech', 'name': '中国生物制药', 'type': 'biotech', 'defensive': 35, 'growth': 70, 'cyclical': 50, 'liquidity': 70, 'risk': 65},
     '2186.HK': {'sector': 'biotech', 'name': '绿叶制药', 'type': 'biotech', 'defensive': 30, 'growth': 65, 'cyclical': 55, 'liquidity': 60, 'risk': 70},
 
-    # 指数基金 (index)
-    '2800.HK': {'sector': 'index', 'name': '盈富基金', 'type': 'index', 'defensive': 80, 'growth': 40, 'cyclical': 30, 'liquidity': 90, 'risk': 25},
-    '2828.HK': {'sector': 'index', 'name': '恒生中国企业', 'type': 'index', 'defensive': 75, 'growth': 45, 'cyclical': 35, 'liquidity': 85, 'risk': 30},
+    # 指数基金 (index)：2800.HK 盈富基金、2828.HK 恒生中国企业
+    # 2026-10-06 自训练池剔除（ETF 参与个股横截面排序不合理，见 D14）；
+    # 从 WATCHLIST / TRAINING_STOCKS / STOCK_SECTOR_MAPPING 三处同步移除以保持单一股票宇宙
 
     # 房地产股 (real_estate)
     '1109.HK': {'sector': 'real_estate', 'name': '华润置地', 'type': 'real_estate', 'defensive': 30, 'growth': 40, 'cyclical': 85, 'liquidity': 60, 'risk': 75},
@@ -123,7 +123,7 @@ SECTOR_NAME_MAPPING = {
     'gas': '燃气股',
 }
 
-# 自选股列表（核心30只，用于预测和日常监控）
+# 自选股列表（核心32只，用于预测和日常监控；2026-10-06 剔除 ETF 2800.HK 后）
 WATCHLIST = {
     "0005.HK": "汇丰银行",
     "0012.HK": "恒基地产",
@@ -147,7 +147,7 @@ WATCHLIST = {
     "2269.HK": "药明生物",
     "2388.HK": "中银香港",
     "2533.HK": "黑芝麻智能",
-    "2800.HK": "盈富基金",
+    # "2800.HK": "盈富基金" —— 2026-10-06 剔除（ETF，见 D14）
     "3690.HK": "美团-W",
     "3968.HK": "招商银行",
     "6682.HK": "范式智能",
@@ -160,11 +160,11 @@ WATCHLIST = {
     "2318.HK": "中国平安",
 }
 
-# 训练用股票列表（扩展59只，用于模型训练以增加样本量）
-# 包含WATCHLIST全部28只 + 31只额外股票
+# 训练用股票列表（扩展57只，用于模型训练以增加样本量）
+# 包含WATCHLIST全部32只 + 25只额外股票
 TRAINING_STOCKS = {
-    **WATCHLIST,  # 继承核心28只
-    # 额外31只股票（从STOCK_SECTOR_MAPPING补充）
+    **WATCHLIST,  # 继承核心32只
+    # 额外25只股票（从STOCK_SECTOR_MAPPING补充）
     "0002.HK": "中电控股",
     "0006.HK": "电能实业",
     "0151.HK": "中国旺旺",
@@ -180,7 +180,7 @@ TRAINING_STOCKS = {
     "2382.HK": "舜宇光学科技",
     "2866.HK": "中远海运港口",
     "2883.HK": "中海油服",
-    "2828.HK": "恒生中国企业",
+    # "2828.HK": "恒生中国企业" —— 2026-10-06 剔除（ETF，见 D14）
     "0960.HK": "龙源电力",
     "0966.HK": "中国人寿",
     "1024.HK": "快手-W",
