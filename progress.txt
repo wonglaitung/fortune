@@ -3071,3 +3071,35 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 [决策] D1 从 5 个新角度加固；不改任何仓位判定（港股🟡≤5%、A股🟡≤10% 维持）
 [文档] DECISIONS D14 + 头部最近复核行同步（旧 2.32/0.49/0.998 → 2.15/0.17/1.000）
   lessons 三.46；顺带修 lessons 编号冲突（两条三.44 → 三.44/三.45）并同步 progress 引用
+
+[2026-10-06 港股训练池剔除 2 ETF + 新池基线重跑（完成）]
+[背景] D14 复核后按「先提交，再重跑」指令执行。config.py 三处（WATCHLIST/
+  TRAINING_STOCKS/STOCK_SECTOR_MAPPING）同步移除 2800.HK/2828.HK，池 59→57；
+  SECTOR_NAME_MAPPING['index'] 保留（独立显示表）。注释计数同步（30→32/59→57/28+31→32+25）。
+[提交] df6c843d（AGENTS/README/config.py/DEPLOYMENT，+29 −15）
+[变量纯净决策] 网络特征 JSON 保持 09-22 版不重算 —— 重算会连带引入「数据更新 2 周」
+  混淆「剔 ETF」单一变量（实验方法论①）。残留 2 个 ETF 键不被读取，无害。
+[重跑] 清 feature_cache → 双冻结（US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot +
+  GATE_SOURCE_CSV=output/20261005_164759_lightgbm_20d/…，按「指向前一基线避免循环依赖」）
+  → scripts/run_walk_forward.sh --model-type lightgbm --horizon 20
+    --start-date 2019-06-01 --end-date 2026-07-31 --use-feature-selection --no-commit
+  r1 冷 11:47–13:24（96min）/ r2 热 13:34–15:03（89min），顺序执行不并行
+[验收] ✅ 双跑 md5 相同 a1d71cdf9b99c417e3f071eec6c2c17e，DataFrame.equals()==True
+  50 折 / 53,342 行 / 池 57（实出 56，1387.HK 因 sector_features_pit.json 缺键未参与，
+  **既有现象**：旧 59 池同样只出 58）
+[新基线] 20d LightGBM：净IR 0.16 [−0.87,1.15] / PBO 0.14 / DSR 0.736 / lift +0.2pp
+  准确率 49.2% [47.3,51.1] p=0.43 不显著；折聚类 lift +0.3pp [−1.1,+1.8] p=0.652 不显著 (n=50)
+  IC 0.0250 / rankIC 0.0353 / score 65；组合层：等权基准净IR 0.70、
+  TopK-行业中性超额 −1.28 [−2.11,−0.44]、TopK-raw 超额 −0.19 [−1.18,0.74] → CI 跨0/为负不稳健
+  → 判定 **🟡 保留低配不变**（净IR 0.16<0.7、DSR 0.736<0.95，三门槛未全过）
+  对比旧池(59)：净IR 0.44→0.16、PBO 0.90→0.14、DSR 0.812→0.736、lift +0.3→+0.2pp、准确率 49.3→49.2
+[⚠️ 未重跑] 5d/1d 两列仍是含 ETF 旧池产物，已在 AGENTS/VALIDATION_GUIDE 标 ⚠️旧池不可引用；
+  相对标签复验同标旧池
+[文档] AGENTS ⭐块 / VALIDATION_GUIDE ⭐块 / DEPLOYMENT T2·护栏·距升级 / README 最近复核
+  全部回填 0.16/0.14/0.736，「待重跑」提示清零；5d·1d 加 ⚠️旧池 标注
+[B闸] 8 项全过：①md5/行/折可复算 ②池 32/57/57 无 ETF 残留、GATE_SNAPSHOT=0.7/0.65 与文档一致
+  ③跨文档 0.16/0.14/0.736 一致 ④「待重跑」0 处、80ae0994 仅存 2 处且均标「不可引用」
+  ⑤数值均来自实跑产物 ⑥计数池57/实出56/50折/53342行准确 ⑦DEPLOYMENT 逐行判读无「🟡却可放大」残留
+  ⑧测试 5 failed/158 passed 与基线完全一致，无新增失败
+[遗留] ①1387.HK 网络特征缺失（既有，致池57出56）②网络特征整体停在 09-22
+  ③5d/1d 未随新池重跑 ④A股 640 行硬上限仍在（D13 不升配）
