@@ -19,7 +19,7 @@
 | **验证新模型 / 新特征 / 新周期** | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) ＋ 技能 `.opencode/command/model_validation.md` |
 | **加一个新特征** | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md)（8 步验证清单） |
 | **搞懂 1/5/20 天三周期的结论** | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) |
-| **知道最近做过哪些实验、结论是什么** | [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) §5.1–5.21 |
+| **知道最近做过哪些实验、结论是什么** | [DECISIONS.md](DECISIONS.md) D1–D14 |
 | **排查我踩过的坑** | [../lessons.md](../lessons.md) |
 | **A 股系统的完整设计** | [A_STOCK_DESIGN.md](A_STOCK_DESIGN.md) |
 | **A 股对照港股的改造计划/进度** | [A_STOCK_REFORM_PLAN.md](A_STOCK_REFORM_PLAN.md) ⭐ |
@@ -40,7 +40,7 @@
 | [QUANT_SYSTEM_METHODOLOGY.md](QUANT_SYSTEM_METHODOLOGY.md) | **系统该怎么建**（五层 / 七原则 / 七阶段 / 三道闸门） | 低频（方法级，长期有效） |
 | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) | **怎么验**（指标定义 / 月度护栏 / 最新验证结果） | 每轮 walk-forward |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | **实盘怎么用**（底仓 + 战术 + 风控 + 仓位） | 闸门判定变化时 |
-| [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) | **做过哪些实验、结论**（§5.1–5.21 实验日志） | 每个实验后 |
+| [MODEL_IMPROVEMENT_PLAN.md](MODEL_IMPROVEMENT_PLAN.md) | **还能怎么提升、判据是什么**（三层提升假设 + 预注册判据） | 判据变更时 |
 | [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md) | **三周期信号的真实价值**（八模式 / 传导） | 每轮复测 |
 | [FEATURE_ENGINEERING.md](FEATURE_ENGINEERING.md) | **怎么设计与验证特征** | 特征管线变更时 |
 

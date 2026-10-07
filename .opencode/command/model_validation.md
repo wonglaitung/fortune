@@ -24,7 +24,7 @@ description: 模型更新后的标准验证流程 - Walk-forward测试、三周�
 > ⚠️ **评估口径更新（2026-09-23）**：**绝对准确率/胜率不是通过依据**。
 > 应用 `ml_services/backtest_eval.py` 的 **超额 lift（胜率−基准）** 与
 > **方向技能（准确率−永远看涨）** 判断；两者 >0 才算真实能力。
-> 详见 `docs/VALIDATION_GUIDE.md` 与 `docs/MODEL_IMPROVEMENT_PLAN.md`。
+> 详见 `docs/VALIDATION_GUIDE.md` 与 `docs/DECISIONS.md`。
 
 ---
 
@@ -612,7 +612,7 @@ print("\n| 排名 | Fold | 盈利平均 | 亏损平均 | 盈亏比 | 评级 |")
 
 **背景**：绝对准确率≈随机，但这大多是**评估指标用错**——
 本质是横截面排序任务，应看基准扣除后的 lift / 方向技能。
-（详见 `docs/VALIDATION_GUIDE.md`、`docs/MODEL_IMPROVEMENT_PLAN.md`、`lessons.md`）
+（详见 `docs/VALIDATION_GUIDE.md`、`docs/DECISIONS.md`、`lessons.md`）
 
 #### 5.5A. 运行
 

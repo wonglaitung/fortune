@@ -1,7 +1,7 @@
 # 实盘部署指南（Deployment）
 
 > **建立**：2026-09-24
-> **依据**：2026-09 全轮实证（`docs/DECISIONS.md`、`docs/MODEL_IMPROVEMENT_PLAN.md` §5.x）
+> **依据**：2026-09 全轮实证（`docs/DECISIONS.md` D1–D14）
 > **定位**：本系统是**"纪律化的决策 + 风控框架"**，不是高胜率"赚钱策略"。
 > 原则：**拿稳 beta、小仓战术、严格护栏、按月复核**。
 
@@ -73,7 +73,7 @@
 
 **操作**：TopK=10、行业内 z-score、20 交易日非重叠调仓、等权、成本按 0.5%。
 
-**仓位：元标签 Kelly（Isotonic 校准）**（`meta_labeling_ablation.py`，DECISIONS D6，§5.19）
+**仓位：元标签 Kelly（Isotonic 校准）**（`meta_labeling_ablation.py`，DECISIONS D6）
 - 用元模型输出 `P(主模型这笔会赢)`，**Isotonic 校准**后按 `0.5 × clip(2p−1, 0, 1)` 定每笔仓位；
 - 实证（LightGBM 主模型，bootstrap 显著）：2025 ΔIR +0.35 [0.19,0.51]；全期校准后 +0.25 [0.10,0.40]；
 - 过滤（硬阈值）**弃用**——它只会随机砍样本，不提升 precision；
@@ -106,7 +106,7 @@
 | **置信度** | 每只股票加 `P(主模型判对)`（Isotonic 校准曲线），邮件显示 `(置信xx)` | 低置信建议一眼可见，不被不靠谱信号带偏 |
 | **市场风险横幅** | 邮件顶部按 `market_layer` 给当日指引（🟢/🟡≥0.65/🟠≥0.70/🔴暂停买入），附上涨比例与动态阈值 | 开信即见"今天该不该买、买多紧"；极端熊市主动提醒收手 |
 | **数据源可靠性** | `data_services/tencent_finance.py`：3 次重试 + yfinance 备用 + stock_cache/HSI 缓存兜底 | 网络抖动不再缺股票/缺数据，报告每天完整 |
-| **20d 学习器** | LightGBM（§5.18） | 信号更强（RankIC +38%），但**护栏 🟡**（PBO 0.90）→ 不得升配 |
+| **20d 学习器** | LightGBM（D10） | 信号更强（RankIC +38%），但**护栏 🟡**（PBO 0.90）→ 不得升配 |
 
 > 校准器每次运行自动重拟合（`data/calibrators/*.pkl`，不入库）；校准/置信失败不影响原预测（try/except 兜底）。
 
@@ -220,6 +220,6 @@ PBO 稳定 < 0.4 + 多宏观快照目录（当前仅 1 个）+ 突破 640 行历
 ## 八、关联
 
 - 决策：`docs/DECISIONS.md`（D1–D7）
-- 实证：`docs/MODEL_IMPROVEMENT_PLAN.md` §5.x
+- 实证：`docs/DECISIONS.md` D1–D14
 - 工具：`ml_services/{monthly_guardrail,portfolio_backtest,anomaly_dip_backtest,anomaly_regime_backtest,hsi_signal_backtest,backtest_eval}.py`
 - 评估口径：`docs/VALIDATION_GUIDE.md`

@@ -475,7 +475,7 @@ ic = df['probability'].corr(df['actual_return'])
 
 **正确**：实跑学习器以**加载方的文件选择逻辑**为准——
 `comprehensive_analysis.py load_multi_horizon_models()`：`20: lgbm20 if exists else cat20`
-（1d/5d CatBoost、**20d LightGBM 优先**，管线级 A/B 胜出 §5.18；A股三周期全 CatBoost）。
+（1d/5d CatBoost、**20d LightGBM 优先**，管线级 A/B 胜出，见 D10；A股三周期全 CatBoost）。
 
 **关键**：pkl 内嵌标签 / 模型自报 `model_type` ≠ 管线实跑；查"用什么模型"必须读
 加载路径选择代码，文档断言须对照该处。
@@ -483,7 +483,7 @@ ic = df['probability'].corr(df['actual_return'])
 ### 8. 学习器优劣是"分周期"属性，禁止一刀切全转 ⭐⭐⭐
 
 **教训**：20d 换 LightGBM 大胜（RankIC +38%）后，直觉是"1d/5d 也一起换"。
-同折同参数 A/B 实测（§5.20）证明这是错的：
+同折同参数 A/B 实测（D10）证明这是错的：
 
 | 周期 | 赢家 | 关键证据 |
 |------|------|---------|
