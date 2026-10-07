@@ -343,8 +343,8 @@ flowchart LR
 - `docs/DECISIONS.md`：每条一行 = 决策 / 证据 / 重启条件，D1–D10 已固定；
   评估**口径宪法**由 D3 [立宪](#t-constitution)——[绝对准确率](#t-acc)/胜率**违宪**，一律看 [lift](#t-lift) / [方向技能](#t-skill) / [ICIR](#t-icir) + [PBO](#t-pbo) / [DSR](#t-dsr)。
 - `docs/VALIDATION_GUIDE.md`：报告模板三行指纹（指标定义 / 基准 / 样本区间）+ 术语定义。
-- 仓库规范（见 AGENTS「Git 提交规范」）：只提交 `.md` / `.py`；`.json` / `.csv` / `.pkl` 不入库，
-  回测 `prediction_analysis.csv` 是**唯一例外**，由自动入库脚本单独处理（见阶段 4）。
+- 仓库规范 → AGENTS「Git 提交规范」：**数据文件不新增入库**，判据由 `scripts/doc_gate.py` S1
+  在 pre-commit 强制；例外（回测 `prediction_analysis.csv`）与「更新既有跟踪文件不受限」规则一并见 AGENTS。
 - 缓存规范：新增特征后 `rm -rf data/feature_cache/*.pkl`（港股）/ `data/a_stock_feature_cache/*.pkl`（A股），
   避免"特征配置变了但缓存还是旧的"。
 

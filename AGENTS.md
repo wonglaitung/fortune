@@ -353,8 +353,12 @@ test_df[col] = test_df[col].apply(
 
 ### Git 提交规范
 
-- 文件上传：只提交 `.md` 格式，不提交 `.json`/`.csv`
-  - **例外**：回测 `prediction_analysis.csv` 由 `scripts/commit_backtest_result.py` 自动入库
+- **数据文件不新增入库**（可执行判据在 `scripts/doc_gate.py` S1，pre-commit 强制）：
+  - 新增 `.pkl` / `.csv` → 拦；**更新既有跟踪文件不受限**
+    （`data/a_stock_models/*` 等由 CI 定期更新，属既有实践）
+  - 永不入库：`data/model_accuracy.json`（运行时状态）、`data/us_market_cache/`、`*.bak`
+  - **例外**：回测 `prediction_analysis.csv`（仅 `output/*_catboost_20d/` 路径）由
+    `scripts/commit_backtest_result.py` 自动入库
     （分位门槛数据源，CI/本地须同源；每次入库自动 `git rm --cached` 旧的港股 20d CSV
     只留最新，防仓库膨胀；快照维护见 `ml_services/market_regime.py` 注释）
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
