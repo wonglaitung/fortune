@@ -55,14 +55,16 @@ _SHELL_CMD = re.compile(
 )
 
 
-# 提交规范：禁入暂存区的路径/扩展名（AGENTS「Git 提交规范」的可执行版）
+# 提交规范：禁入暂存区的路径（AGENTS「Git 提交规范」的可执行版）
+# 说明：`.pkl`/`.csv` 走「新增才拦」策略 —— `data/a_stock_models/*.pkl` 等
+# 既有资产由 CI 定期更新（`Update A股 prediction results`），拦更新会卡死 CI 提交。
 FORBIDDEN_STAGED = [
-    (r"data/model_accuracy.json", "按规范不提交（运行时状态）"),
-    (r"data/us_market_cache/", "缓存不入库"),
-    (r"^\.bak$", "备份文件不入库"),
+    (r"^data/model_accuracy\.json$", "按规范不提交（运行时状态）"),
+    (r"^data/us_market_cache/", "缓存不入库"),
 ]
 
-EXT_ALLOWED = {".md", ".py", ".sh", ".yml", ".yaml", ".txt", ".json.sample"}
+# 例外：回测入库 CSV（scripts/commit_backtest_result.py 自动提交，AGENTS Git 规范）
+HK20D_CSV = re.compile(r"^output/\d{8}_\d{6}_catboost_20d/prediction_analysis\.csv$")
 
 
 def _files() -> list[Path]:
@@ -196,15 +198,21 @@ def check_staged() -> list[str]:
                        capture_output=True, text=True, cwd=str(ROOT))
     if r.returncode != 0:
         return ["git diff --cached 执行失败：" + r.stderr.strip()]
-    for f in [x for x in r.stdout.splitlines() if x.strip()]:
+    staged = [x for x in r.stdout.splitlines() if x.strip()]
+    # 「新增」必须相对 HEAD 判定：`git ls-files` 读的是索引，
+    # 暂存后的新文件本身就在索引里，用它判定会恒为"已跟踪"而全部放行。
+    ra = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=A"],
+                        capture_output=True, text=True, cwd=str(ROOT))
+    added = set(ra.stdout.splitlines()) if ra.returncode == 0 else set()
+    for f in staged:
         for pat, why in FORBIDDEN_STAGED:
             if re.search(pat, f):
                 fails.append(f"暂存区禁入 {f} —— {why}")
         suf = Path(f).suffix.lower()
-        if suf in {".pkl", ".csv"} and not re.search(r"_catboost_20d$", Path(f).stem):
-            fails.append(f"暂存区禁入 {f} —— {suf} 文件按规范不提交")
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
+        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f):
+            fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 
 
