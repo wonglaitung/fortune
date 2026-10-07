@@ -182,14 +182,26 @@ def feature_selection_statistical(X, y, feature_names, top_k=500):
     logger.info("=" * 50)
 
     # 1. F-test选择
-    f_selected, f_scores = feature_selection_f_test(X, y, k=1000)
+    _, f_scores = feature_selection_f_test(X, y, k=1000)
 
     # 2. 互信息选择
-    mi_selected, mi_scores = feature_selection_mutual_info(X, y, k=1000)
+    _, mi_scores = feature_selection_mutual_info(X, y, k=1000)
+
+    # 2.5 确定性 top-k：按「分数降序、特征名升序」打破平分。
+    #     sklearn SelectKBest 的 mergesort 是稳定排序，平分按**列序**取舍，
+    #     输入列序变化会导致同分特征入选不同 → 双跑不可复现（2026-10-07 实测）。
+    def _topk_deterministic(scores, k):
+        s = np.asarray(scores, dtype=float).copy()
+        s[np.isnan(s)] = -np.inf
+        order = sorted(range(len(s)), key=lambda i: (-s[i], feature_names[i]))
+        return np.array(order[:min(k, len(s))], dtype=int)
+
+    f_selected = _topk_deterministic(f_scores, 1000)
+    mi_selected = _topk_deterministic(mi_scores, 1000)
 
     # 3. 取交集
-    f_set = set(f_selected)
-    mi_set = set(mi_selected)
+    f_set = set(f_selected.tolist())
+    mi_set = set(mi_selected.tolist())
     intersection = f_set.intersection(mi_set)
 
     logger.info(f"选择结果统计")
@@ -199,7 +211,8 @@ def feature_selection_statistical(X, y, feature_names, top_k=500):
     print("")
 
     # 4. 计算综合得分（归一化后平均）
-    all_features = set(range(len(feature_names)))
+    #    用 list 而非 set：set 迭代序依赖 N（表长/插入历史），列集变化即改变行序
+    all_features = list(range(len(feature_names)))
 
     feature_data = []
     for idx in all_features:
@@ -228,7 +241,11 @@ def feature_selection_statistical(X, y, feature_names, top_k=500):
     feature_scores = pd.DataFrame(feature_data)
 
     # 5. 选择top_k特征
-    feature_scores_sorted = feature_scores.sort_values('Combined_Score', ascending=False)
+    #    同分按特征名升序、再按索引升序打破平分（quicksort 不稳定且依赖输入行序）
+    feature_scores_sorted = feature_scores.sort_values(
+        by=['Combined_Score', 'Feature_Name', 'Feature_Index'],
+        ascending=[False, True, True],
+    ).reset_index(drop=True)
     selected_features = feature_scores_sorted.head(top_k)['Feature_Index'].values
 
     logger.info(f"混合选择完成")
