@@ -3167,3 +3167,31 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 [未提交] 本轮全部改动（AGENTS/4 新文档/lessons/progress/.opencode/docs 索引）
   与此前 FS 修复 + presentation_gate.py 均在工作区，**待用户同意后一并提交**
 [遗留] 后台 /tmp/rerun52 四跑（1d×2+5d×2，FS 确定性修复验收）仍在运行，1d r1 进行中
+
+[2026-10-07 AI 协作方法论文档（提问·验证·纠偏）]
+[触发] 用户给了一份通用版「提问→验证→纠偏」框架，要求「分析」后「修改为符合本项目的规则」，
+  经两轮口径调整（不写入文档先审 → 不用提通用版 → 独立文档先审再写 → 定稿后写入）
+[分析结论] 该框架的三级验证只回答「算得对不对」，而本项目最贵的教训是「算得完全正确、结论依然全错」：
+  ① 前置闸缺失（数据非空 / 分母成立 / 无标签中间量入模）
+  ② 三级手段并列无顺序 → 实测 PBO/DSR 查不出泄漏（泄漏版 0.43/1.000 全过）
+  ③ 把随机性只归给 LLM → 本项目非确定性主要在管线（列序/set迭代/缓存/跨日）
+  ④ 「复问取收敛」在回测里=挑结果 → 必须预注册
+  ⑤ 「人工复核兜底」假设了本项目不存在的专家 → 改为可审计流程 + 非零退出脚本
+[产出] 新建 docs/AI_WORKFLOW.md（257 行 / 5 章：提问·验证·纠偏·边界·闭环），
+  **只写框架与判定式，规则一律指针不复述**（lessons 三.47 的直接应用）；
+  docs/README.md 索引 +1 行（B 类 设计与规范）
+[补录] lessons 三.48「稳定排序不等于确定」：FS 同分按列序取舍，列序打乱对称差 22 → 修复后 0；
+  教训：固定 seed 解决不了顺序类非确定性，须显式 tie-break（_topk_deterministic）
+[B闸自审抓到的自身问题] ① §2.1 路径写成 `../scripts/`，与 AGENTS 的 `scripts/` 不一致（已改）
+  ② 硬约束2 命令写进 markdown 表格 → `|` 被转义成 `\|` → **GNU ERE 下不再析取，
+  实测 26 行 → 11 行，恰好漏掉 DEPLOYMENT:125/132/71 那些「🟡 不得升配」关键行**；
+  已移入代码块并把「含 | 的 shell 命令一律不进表格」写进文档本身（AGENTS/REVIEW_GATES 本就正确，无恙）
+[约束2] 三处命令现逐字一致；逐行判读：全部 🟡 ≤5%/≤10%，DEPLOYMENT:66 条件规则未误删，无「🟡却可放大」残留
+[B闸8项] ①数值 19 个全部可追到出处 ②文档↔代码（_topk_deterministic:193、presentation_gate.py 存在）
+  ③跨文档矛盾 1 处已修（路径）④过期残留 0 ⑤断言已验证（下）⑥计数为历史固定值
+  ⑦实盘文档逐行判读见约束2 ⑧副作用：断链 0、表格列数异常 0（新文档+README）
+[测试] **5 failed / 165 passed** = 既定基线（a_stock_gates×2 / llm_thinking_leak×1 /
+  market_gates×2），FS 确定性 3 例单独跑 **3 passed**，**无新增失败**
+[未提交] docs/AI_WORKFLOW.md（新）、lessons.md、docs/README.md、progress.txt
+  —— 待用户同意后提交；data/model_accuracy.json 按规范不提交
+[遗留] 后台 /tmp/rerun52 四跑仍在运行（FS 修复验收）

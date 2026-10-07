@@ -49,6 +49,7 @@
 | 文档 | 回答什么 |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 数据流 / 特征架构 / 环境变量 / 自动化调度（**参考资料，按需查阅**） |
+| [AI_WORKFLOW.md](AI_WORKFLOW.md) | **非专家怎么跟 AI 协作**（前置三问 / 判读顺序 / 纠偏四工具 / 三道闸触发时机） |
 | [A_STOCK_DESIGN.md](A_STOCK_DESIGN.md) | A 股系统完整设计（53 只池 / 样本权重 / 涨跌停处理） |
 | [A_STOCK_REFORM_PLAN.md](A_STOCK_REFORM_PLAN.md) | A 股对照港股的差距矩阵与分期改造计划（含执行状态） |
 | [programmer_skill.md](programmer_skill.md) | 开发规范（需求分析 / 整体设计 / 公共代码提取 / 改完即测） |
