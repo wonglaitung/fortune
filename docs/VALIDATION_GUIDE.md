@@ -32,7 +32,7 @@
 
 > **2026-09-29 全量复验**（去运行噪声根因修复后首轮）：个股 1/5/20d 重跑 38 folds（43,610 行），
 > 恒指**未重跑**（HSI 管线不含互信息选择，已 bit 级复现无需刷新，见 lessons 三.25）。
-> 完整表格见 [AGENTS.md](../AGENTS.md#-机器学习模型) 与 [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md)。
+> 完整表格见 [docs/BASELINES.md](BASELINES.md)（基线唯一真相源，2026-10-07 自 AGENTS 迁出）与 [THREE_HORIZON_ANALYSIS.md](THREE_HORIZON_ANALYSIS.md)。
 > ⚠️ **断代**：互信息固定 `random_state=42` 改变了选特征集 → 本轮数值与 09-26/09-28 旧产物不可直接比。
 
 | 对象 | 周期/学习器 | 准确率 | 超额 lift | 月度护栏 | 结论 |

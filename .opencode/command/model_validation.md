@@ -285,14 +285,14 @@ python3 ml_services/analyze_stock_causal_chain.py
 #### 3C. 文档更新检查清单
 
 **恒指数据更新检查**：
-- [ ] AGENTS.md - 恒指模型可信度表格（1d/5d/20d 准确率）
-- [ ] AGENTS.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] docs/BASELINES.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] docs/BASELINES.md - 可用策略表格（假突破、下跌中继等胜率）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
 
 **个股数据更新检查**：
-- [ ] AGENTS.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] docs/BASELINES.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据
@@ -392,14 +392,14 @@ python3 ml_services/analyze_stock_causal_chain.py
 # 检查 hsi_prediction.py 中的准确率是否与文档一致（PIT/embargo 实测）
 grep -E "54\.1|55\.9|57\.5" hsi_prediction.py
 
-# 检查 AGENTS.md 中的准确率
-grep -E "54\.1|55\.9|57\.5" AGENTS.md
+# 检查 docs/BASELINES.md 中的准确率
+grep -E "54\.1|55\.9|57\.5" docs/BASELINES.md
 
 # 对比两者是否一致
 ```
 
 **如果不一致**：
-1. 以文档（AGENTS.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
+1. 以文档（docs/BASELINES.md 和 docs/THREE_HORIZON_ANALYSIS.md）为准
 2. 更新代码中的硬编码数据
 3. 重新运行语法检查和测试
 
@@ -761,8 +761,8 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 **⚠️ 重要：恒指和个股数据必须分别更新，不能只更新其中一个**
 
 #### 恒指文档（docs/ 目录下相关文档）
-- [ ] 已更新 AGENTS.md 的恒指模型指标（1d/5d/20d 准确率）
-- [ ] 已更新 AGENTS.md 的可用策略表格（假突破、下跌中继等胜率）
+- [ ] 已更新 docs/BASELINES.md 的恒指模型指标（1d/5d/20d 准确率）
+- [ ] 已更新 docs/BASELINES.md 的可用策略表格（假突破、下跌中继等胜率）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第一部分（恒指验证摘要）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 八大模式胜率表格
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录恒指数据
@@ -770,7 +770,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 - [ ] 已更新 progress.txt 恒指部分
 
 #### 个股文档（docs/ 目录下相关文档）
-- [ ] 已更新 AGENTS.md 的个股模型指标（准确率、夏普比率、最大回撤）
+- [ ] 已更新 docs/BASELINES.md 的个股模型指标（准确率、夏普比率、最大回撤）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 第二部分（个股验证概述）
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 个股与恒指核心差异对比表
 - [ ] 已更新 docs/THREE_HORIZON_ANALYSIS.md 附录个股数据
@@ -805,7 +805,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 - [ ] 已更新 ml_services/ml_trading_model.py（如需）
 
 #### 代码与文档一致性验证（新增）
-- [ ] 已对比 hsi_prediction.py 和 AGENTS.md 中的准确率数据
+- [ ] 已对比 hsi_prediction.py 和 docs/BASELINES.md 中的准确率数据
 - [ ] 已对比 hsi_prediction.py 和 docs/THREE_HORIZON_ANALYSIS.md 中的胜率数据
 - [ ] 确认代码中的硬编码数据与文档完全一致
 - [ ] 无遗漏的代码位置
@@ -994,8 +994,8 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 **⚠️ 重要：恒指和个股数据必须分别更新**
 
 ### 恒指文档（docs/ 目录下相关文档）
-- [ ] AGENTS.md - 恒指模型可信度表格（1d/5d/20d 准确率）
-- [ ] AGENTS.md - 可用策略表格（假突破、下跌中继等胜率）
+- [ ] docs/BASELINES.md - 恒指模型可信度表格（1d/5d/20d 准确率）
+- [ ] docs/BASELINES.md - 可用策略表格（假突破、下跌中继等胜率）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第一部分恒指验证摘要
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 八大模式胜率表格
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录恒指数据
@@ -1003,7 +1003,7 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 - [ ] progress.txt - 恒指部分
 
 ### 个股文档（docs/ 目录下相关文档）
-- [ ] AGENTS.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
+- [ ] docs/BASELINES.md - 个股模型可信度表格（准确率、夏普比率、最大回撤）
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 第二部分个股验证概述
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 个股与恒指核心差异对比表
 - [ ] docs/THREE_HORIZON_ANALYSIS.md - 附录个股数据

@@ -3124,3 +3124,46 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 [跨文档] rho=+0.10 全库残留清零（grep 确认）
 [约束2] DEPLOYMENT/README 逐行判读：全部 🟡 ≤5%/≤10%，无「🟡却可放大」残留
 [测试] 5 failed / 158 passed 与基线完全一致（本轮仅改 .md）
+
+[2026-10-07 AGENTS.md 三档拆分（业界基准驱动）]
+[触发] 用户问「AGENTS.md 是否太长，结合业界实践给优化建议」→ 答「是」，随后「全都做」
+[业界基准] Cursor 官方 **<500 行**（超即拆分为可组合规则、引用而非拷贝）；
+  agent-rules SPEC 合计 <1000 行（超出即外迁至 runbook）；
+  指令类规则实践 **well under 100 行/条**，过长则被当文档略读而非执行；
+  Anthropic：动态信息应检索而非硬编码、系统提示取中庸区
+[诊断] 原 799 行 / 53,649 字节 / 约 15.6k token，经 opencode.json instructions 每会话全量加载
+  ① **55% 是参考资料非指令**（机器学习模型 210 + 数据流 113 + 特征架构 75 + 环境 21 + 调度 19 = 438 行）
+  ② **复述而非引用 → 已造成实际失真**：AGENTS:115 是 lessons 三.28 的复述，
+     复述时丢了列名 `Relative_Return`、把「泄漏事故观测值 −1e-05」升格成「必须 <0」的普适规则，
+     实测合法数据该值为 **+0.420866** → 原句在合法数据上必然 FAIL（今日才抓到）
+  ③ **动态数字硬编码**（基线/md5/折数）散在 5+ 文档 → 这正是 B闸③④ 被逼出来的根因
+[改动]
+  + docs/ARCHITECTURE.md  232 行 ← 数据流/特征架构/环境配置/自动化调度（Tier 1）
+  + docs/BASELINES.md     131 行 ← 全部 Walk-forward 实测数字，**唯一真相源**（Tier 1）
+  + docs/REVIEW_GATES.md  121 行 ← 三道闸 8 项清单 + 两硬约束 + 实验方法论正文（Tier 3）
+  + lessons 三.47「复述失真」← 本次事故的因果链与正确规则（Tier 2 的指针落点）
+  ~ AGENTS.md 799 → **389 行 / 53,649 → 26,876 字节（-51% 行 / -50% 字节）**
+      核心警告 9 条长单元格压缩为「规则 + 判定式 + 指针」；A股泄漏阈值并入数据泄漏行
+  ~ .opencode/command/{update-docs,model_validation}.md 18 处基线引用改指 BASELINES.md
+    update-docs 步骤3 整段改写（原列「数据流架构/模型性能数据」已外迁）
+  ~ docs/README.md 索引 +3 文档；docs/VALIDATION_GUIDE.md:35、
+    docs/QUANT_SYSTEM_METHODOLOGY.md:216/495/498 断链与失准修正
+[零丢失验证] 逐行比对：原 642 非空行 → 19 行未命中，其中 10 行为有意替换（导航/锚点/链接缩短），
+  9 行为压缩行 → 对 9 行做「规则 token + 证据数字落点」双检 **全部通过**
+  （0.41→0.54 落 lessons 三.37、0.83/0.19 落 lessons 三.42、A股 IC 落 D13、Copper 落 lessons 38）
+  迁出 3 份文档共 416 非空行 **0 丢失**（脚本逐行断言）
+[顺带修的两个既有缺陷] ① 核心警告表第 157 行 3 个单元格塞进 2 列表（渲染破损）
+  ② 第 153 行缺闭合竖线；均已修正
+[约束2] DEPLOYMENT/README 逐行判读：全部 🟡 ≤5%/≤10%，`DEPLOYMENT:66`
+  「🟢 才可放大至 15–20%」是正确**条件规则**（未误删）；无「🟡却可放大」残留
+[B闸] ①迁出行数逐行断言可复算 ②presentation_gate.py 等 5 个被引用脚本均存在
+  ③跨文档 4 处矛盾已修（README/VALIDATION_GUIDE/QUANT_SYSTEM/update-docs）
+  ④过期残留全库扫描 0 处（output/ 历史快照按规则不追新）
+  ⑤新增断言落点全部存在（三.47/38/D1/D8/D13/三.37/三.42）⑥计数：把写错的「目标≤350」改为
+  不会过期的「业界基准 <500」⑦DEPLOYMENT 逐行判读见约束2 ⑧自身副作用：链接断链全库 0、
+  标题层级无跳级、markdown 内链 0 断链
+[测试] **5 failed / 165 passed** —— 5 个失败均为既有（a_stock_gates×2 / llm_thinking_leak×1 /
+  market_gates×2），165 = 158 既有 + 7 本轮新增测试，**无新增失败**
+[未提交] 本轮全部改动（AGENTS/4 新文档/lessons/progress/.opencode/docs 索引）
+  与此前 FS 修复 + presentation_gate.py 均在工作区，**待用户同意后一并提交**
+[遗留] 后台 /tmp/rerun52 四跑（1d×2+5d×2，FS 确定性修复验收）仍在运行，1d r1 进行中

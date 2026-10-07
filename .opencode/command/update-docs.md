@@ -23,14 +23,18 @@ description: 功能更新后按顺序更新 progress.txt、lessons.md、AGENTS.m
 2. 格式：问题 → 现象 → 解决方案 → 教训
 3. 更新版本号和更新日志
 
-## 步骤 3：更新 AGENTS.md
+## 步骤 3：更新 AGENTS.md 与外迁目标文档
+
+**AGENTS.md 只放「每次会话都要遵守的指令」（约 ≤500 行）；数字与参考资料写到对应文档，AGENTS 只留指针。**
 
 从项目整体角度更新，**不要**强调"最新修改"：
 
-1. **核心警告**：添加新的关键警告（如有）
-2. **数据流架构**：更新架构图（如有重大变更）
-3. **机器学习模型**：更新模型性能数据（使用验证过的最新数据）
-4. **常用命令**：添加新命令（如有）
+1. **核心警告**：新增**一行规则 + 判定式 + lessons 指针**（因果链/案例/历史观测值写进 `lessons.md`，**不要复述**——复述会失真，见 lessons 三.47）
+2. **docs/BASELINES.md**：更新模型性能数据（**唯一真相源**，AGENTS/README/DEPLOYMENT/VALIDATION_GUIDE 一律指回此处）
+3. **docs/ARCHITECTURE.md**：更新架构图 / 环境变量 / 自动化调度（如有重大变更）
+4. **docs/REVIEW_GATES.md**：更新三道闸 8 项清单与实验方法论（如规程变更）
+5. **常用命令**：添加新命令（如有）
+6. 保持当前颗粒度，删除过时内容
 5. 保持当前颗粒度，删除过时内容
 
 ## 步骤 4：更新 README.md
@@ -49,16 +53,16 @@ description: 功能更新后按顺序更新 progress.txt、lessons.md、AGENTS.m
 
 ### 5.1 数据一致性校对
 
-逐项核对以下数据，与验证文件和 AGENTS.md 交叉对比：
+逐项核对以下数据，与验证文件和 docs/BASELINES.md 交叉对比：
 
 | 检查项 | 数据来源 | 核对要点 |
 |--------|----------|----------|
-| 恒指三周期准确率 | AGENTS.md, THREE_HORIZON_ANALYSIS.md | 1d/5d/20d 准确率是否一致 |
+| 恒指三周期准确率 | docs/BASELINES.md, THREE_HORIZON_ANALYSIS.md | 1d/5d/20d 准确率是否一致 |
 | 恒指八大模式胜率 | THREE_HORIZON_ANALYSIS.md | 假突破(101)、一致看涨(111)、下跌中继(001) 等 |
-| 个股 Walk-forward 结果 | validation_summary.json, AGENTS.md | 准确率、IC、Rank IC、夏普比率、最大回撤 |
+| 个股 Walk-forward 结果 | validation_summary.json, docs/BASELINES.md | 准确率、IC、Rank IC、夏普比率、最大回撤 |
 | 特征重要性 Top 10 | fold_metrics_detail.json | 特征名称、重要性数值 |
 | 验证日期 | 各验证文件 | 是否为最新验证日期 |
-| 核心警告数据 | AGENTS.md | 恒指 vs 个股准确率对比 |
+| 核心警告数据 | docs/BASELINES.md | 恒指 vs 个股准确率对比 |
 
 ### 5.2 常见错误检查
 
@@ -89,7 +93,7 @@ python3 -c "import json; d=json.load(open('output/*/fold_metrics_detail.json'));
 
 校对完成后，确认以下各项：
 
-- [ ] 恒指三周期准确率与 AGENTS.md 一致
+- [ ] 恒指三周期准确率与 docs/BASELINES.md 一致
 - [ ] 恒指八大模式胜率与 THREE_HORIZON_ANALYSIS.md 一致
 - [ ] 个股 Walk-forward 结果与 validation_summary.json 一致
 - [ ] 特征重要性 Top 10 与 fold_metrics_detail.json 一致

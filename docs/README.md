@@ -11,6 +11,9 @@
 | 我想做… | 看这一份 |
 |---|---|
 | **决定要不要用 / 加仓 / 停用某个信号** | [DECISIONS.md](DECISIONS.md) → [DEPLOYMENT.md](DEPLOYMENT.md) |
+| **查模型现在到底多少净IR / 准确率 / PBO** | [BASELINES.md](BASELINES.md)（**唯一真相源**，别翻旧报告） |
+| **提交前做审核 / 过三道闸** | [REVIEW_GATES.md](REVIEW_GATES.md)（8 项清单 + 两硬约束 + 实验方法论） |
+| **查环境变量 / 数据流 / 特征架构 / 定时任务** | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **从零建一个量化系统** | [QUANT_SYSTEM_METHODOLOGY.md](QUANT_SYSTEM_METHODOLOGY.md) |
 | **搞懂量化交易常见误区（方法论）** | [量化交易误解-正式文档.md](量化交易误解-正式文档.md)（四道陷阱理论版，与 lessons/DECISIONS 对应） |
 | **验证新模型 / 新特征 / 新周期** | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) ＋ 技能 `.opencode/command/model_validation.md` |
@@ -32,6 +35,8 @@
 | 文档 | 回答什么 | 更新频率 |
 |---|---|---|
 | [DECISIONS.md](DECISIONS.md) | **做了什么决定、为什么**（D1–D10） | 每轮结论后 |
+| [BASELINES.md](BASELINES.md) | ⭐ **全部 Walk-forward 实测数字**（准确率 / 净IR / PBO / DSR / lift / md5），**唯一真相源** | 每次验证后 |
+| [REVIEW_GATES.md](REVIEW_GATES.md) | **三道闸 8 项清单 + 两条硬约束 + 实验方法论**（含失职复盘） | 规程变更时 |
 | [QUANT_SYSTEM_METHODOLOGY.md](QUANT_SYSTEM_METHODOLOGY.md) | **系统该怎么建**（五层 / 七原则 / 七阶段 / 三道闸门） | 低频（方法级，长期有效） |
 | [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) | **怎么验**（指标定义 / 月度护栏 / 最新验证结果） | 每轮 walk-forward |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | **实盘怎么用**（底仓 + 战术 + 风控 + 仓位） | 闸门判定变化时 |
@@ -43,6 +48,7 @@
 
 | 文档 | 回答什么 |
 |---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 数据流 / 特征架构 / 环境变量 / 自动化调度（**参考资料，按需查阅**） |
 | [A_STOCK_DESIGN.md](A_STOCK_DESIGN.md) | A 股系统完整设计（53 只池 / 样本权重 / 涨跌停处理） |
 | [A_STOCK_REFORM_PLAN.md](A_STOCK_REFORM_PLAN.md) | A 股对照港股的差距矩阵与分期改造计划（含执行状态） |
 | [programmer_skill.md](programmer_skill.md) | 开发规范（需求分析 / 整体设计 / 公共代码提取 / 改完即测） |
@@ -83,7 +89,7 @@
 
 | 文档 | 定位 |
 |---|---|
-| [../AGENTS.md](../AGENTS.md) | **总入口**：规则、常用命令、最新验证数值、核心警告 |
+| [../AGENTS.md](../AGENTS.md) | **总入口**：规则、常用命令、核心警告（**实测数字已外迁** → [BASELINES.md](BASELINES.md)） |
 | [../README.md](../README.md) | 项目介绍与架构 |
 | [../lessons.md](../lessons.md) | **踩过的坑**（编号 + 版本日志，事件级，会累积） |
 | [../progress.txt](../progress.txt) | 逐日进展流水（过程记录） |
