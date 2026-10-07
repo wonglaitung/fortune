@@ -1044,6 +1044,25 @@ python3 ml_services/portfolio_backtest.py --horizon 20 --topk 10 \
 - 建议内容...
 ```
 
+## 收尾检查（B 闸，强制）
+
+跑完验证、改完文档后逐项过；任一项不过即不得交付、不得作为结论：
+
+- [ ] `python3 scripts/doc_gate.py` 退出码 0（断链 / 表格列数 / 转义管道 / 过期残留 / A 闸）
+- [ ] A 闸：`python3 scripts/presentation_gate.py --input <csv> --horizon N` 退出码 0
+- [ ] 判读顺序走完且未颠倒（不在此复述，见 [AI_WORKFLOW §3.1](../../docs/AI_WORKFLOW.md)）
+- [ ] 硬约束 2 已执行并逐条读过：
+
+  ```
+  grep -nE "仓位|放大|可升至|≤[0-9]+%|净IR [0-9]" docs/DEPLOYMENT.md README.md
+  ```
+
+- [ ] 全量 `python3 -m pytest tests/ -v`（既有基线 **5 failed / 165 passed**）
+- [ ] 新结论只写进 **docs/BASELINES.md**（唯一真相源），其他文档指回此处
+- [ ] 未跳过 `.githooks/pre-commit`
+
+完整检查表：[docs/AI_WORKFLOW.md](../../docs/AI_WORKFLOW.md) §8
+
 ## 注意事项
 
 1. **特征选择是可选但推荐的**：

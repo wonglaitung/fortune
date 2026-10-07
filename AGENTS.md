@@ -7,6 +7,7 @@
 > |---|---|
 > | ⭐ **全部 Walk-forward 实测数字** | [docs/BASELINES.md](docs/BASELINES.md) — **唯一真相源**，其他文档一律指回此处 |
 > | 三道闸 8 项清单 / 两条硬约束 / 实验方法论正文 | [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) — 含全部案例与失职复盘 |
+> | 非专家怎么跟 AI 协作（命题前置 / 判读顺序 / 纠偏 / 收尾检查表） | [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) |
 > | 数据流 / 特征架构 / 环境变量 / 自动化调度 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 > | 经验教训（因果链与历史观测值的**唯一出处**） | [lessons.md](lessons.md) |
 > | 文档索引（"该看哪份"导航） | [docs/README.md](docs/README.md) |
@@ -50,10 +51,10 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） |
-| **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） |
-| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**双冻结，缺一不可**（lessons 三.29/三.30）。验收=同配置连跑两次 CSV md5 相同 |
-| **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） |
+| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） | - |
+| **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） | - |
+| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**双冻结，缺一不可**（lessons 三.29/三.30）。验收=同配置连跑两次 CSV md5 相同 | - |
+| **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
@@ -164,6 +165,18 @@ python hsi_email.py --no-email
 | **跨日回测不可复现** | `us_market_data` 缓存**仅当天有效**且是宏观特征唯一来源 → 同代码跨天跑结果不同（实测 abs20d 净IR 0.34/0.42、PBO 0.41/0.64）。三.25 的 bit 级复现**仅限同一天**；**多跑几次总能撞到三门槛全过**，禁止取最好的一次当结论 |
 | **冻结必须双向落盘** | 只写成功数据、**失败不写哨兵** = 没冻结（每次重试，成败纯看网络）。**只做一半的冻结比不冻结更危险**——制造「已冻结」的错觉。两个易错点：①`load_frozen` 须**数据优先于哨兵**；②冻结模式下抓取失败写 `.failed` 且**不再重试网络**。见 lessons「38. 冻结机制必须双向落盘」 |
 | **市场门槛优先分位、退化回退绝对值** | 分位法隐含前提「模型有 edge」；**模型无 edge 时校准把概率压回基准率 → 分位锚在 0.5 → 门控静默失效**（实测 bear 通过率 17.2%→98.2%）。已加退化保护（`GATE_MIN_UNIQUE=30`/`GATE_MIN_SPREAD=0.05`），退化即回退 bear 0.70/weak 0.65。**`bear==weak` 是分布退化信号，不是分位算错**。分位口径：熊市/弱震荡用 `GATE_QUANTILES` P92/P90（PIT），数据源须为 walk-forward 回测分布（`prediction_history` 右尾过窄会失效）；见 lessons 三.30、D8 |
+
+---
+
+## 🗣 回答规范（每次答题适用）
+
+1. **措辞**：短句、主动语态、一个概念一个名字（ASD-STE100 八成严格度）。
+2. **因果**：凡「因为 X 所以 Y」必须附复算或聚类检验，否则标注 **仅判断**。
+3. **判定式**：规则写成可判定形式——在合法数据上跑一遍会 FAIL 的，才算规则。
+4. **先图后文**：系统架构、数据流、状态流转、判读顺序，先给 Mermaid 图再给文字。
+5. **只留可 grep 的**：数值与判定写进 Markdown；**HTML / SVG / 视频不入库**。
+6. **含 `|` 的 shell 命令放代码块、不进表格**（表格内转义会改变命令语义）。
+7. **流程与检查表** → [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md)
 
 ---
 
@@ -346,6 +359,15 @@ test_df[col] = test_df[col].apply(
     只留最新，防仓库膨胀；快照维护见 `ml_services/market_regime.py` 注释）
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
 - 推送冲突：使用 `git pull --rebase`
+- **B 闸自动执行点**：`.githooks/pre-commit` 跑 `scripts/doc_gate.py --staged`，
+  不过即拒绝提交。一次性安装（**本地配置，新 clone 需重跑**）：
+
+  ```
+  git config core.hooksPath .githooks && chmod +x .githooks/pre-commit
+  ```
+
+  覆盖断链 / 表格 / 转义管道 / 过期残留 / A 闸 / 禁入文件 / py 语法；
+  **不覆盖全量 pytest**（约 5 分钟，仍是 B 闸人工步骤）。
 
 ---
 
@@ -368,6 +390,10 @@ test_df[col] = test_df[col].apply(
 **模型更新后**：运行 Walk-forward 验证确认性能，使用 `/model_validation` 命令执行标准验证流程
 
 **特征修改后**：清除缓存 `rm -rf data/feature_cache/*.pkl`
+
+**改动收尾时**：跑 `python3 scripts/doc_gate.py`（断链 / 表格完整性 / 转义管道 /
+过期残留 / A 闸可运行），非零退出即阻断；含 `|` 的 shell 命令放代码块不进表格；
+HTML / SVG / 视频不入库。完整检查表见 [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) §8
 
 ---
 

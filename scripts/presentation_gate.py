@@ -210,7 +210,7 @@ def main() -> int:
     ap.add_argument("--input", required=True, help="prediction_analysis.csv 路径")
     ap.add_argument("--horizon", type=int, required=True)
     ap.add_argument("--market", default="stock", choices=["stock", "hsi", "a"],
-                    help="stock=个股(>65%) / hsi=恒指(>80%) / a=A股(>65%)")
+                    help="stock=个股(>65%%) / hsi=恒指(>80%%) / a=A股(>65%%)")
     args = ap.parse_args()
 
     df = pd.read_csv(args.input)

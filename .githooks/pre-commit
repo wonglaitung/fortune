@@ -1,0 +1,15 @@
+#!/bin/sh
+# pre-commit —— 三道闸 B 闸的强制执行点
+#
+# 文本清单靠「记得跑」，本钩子靠**拒绝提交**。
+# 安装（一次性，本地配置，新 clone 需重跑）：
+#     git config core.hooksPath .githooks && chmod +x .githooks/pre-commit
+#
+# 覆盖：文档断链 / 表格完整性 / 转义管道 / 过期残留 / A 闸可运行 /
+#       提交规范（禁入文件）/ 暂存 py 语法。
+# 不覆盖：全量 pytest（约 5 分钟）—— 仍属 B 闸人工步骤，见 AGENTS.md。
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+python3 scripts/doc_gate.py --staged
