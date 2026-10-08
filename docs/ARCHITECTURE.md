@@ -208,6 +208,16 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | `WXPUSHER_TOKEN` | WxPusher Token（可选） |
 | `WXPUSHER_UIDS` | WxPusher 用户 UID（可选） |
 
+### 可复现验收环境变量（回测双跑前必设，生产预测勿设）
+
+| 变量名 | 说明 |
+|--------|------|
+| `HK_MARKET_SNAPSHOT_DIR` | 港股原始行情冻结快照目录（2026-10-08 补，lessons 三.50）；设后 `data_services/tencent_finance.py` 只读快照、**禁止实时取数**，缺股即非零退出（不静默跳股）。先 `python3 scripts/pin_hk_snapshot.py` 建立 |
+| `US_MARKET_SNAPSHOT_DIR` | 宏观特征冻结快照目录（lessons 三.29）；先 `python3 scripts/pin_macro_snapshot.py` 建立 |
+| `GATE_SOURCE_CSV` | 分位门槛基准 CSV（门槛/校准器/快照须同源，否则 bear 误放行）；指向 `output/<基线>/prediction_analysis.csv` |
+
+> 三冻结缺一不可：宏观 + 个股 + 分位。任意一项未冻，双跑输入即可能漂移 → CSV md5 不一致。
+
 ### 主要依赖
 
 `yfinance` `catboost` `akshare` `pandas` `scikit-learn` `lightgbm` `hmmlearn` `arch` `networkx`

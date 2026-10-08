@@ -704,8 +704,8 @@ def _is_usable_feature_cache(cached) -> bool:
     """校验特征缓存是否可用（2026-10-04）
 
     背景：一次失败的运行（时区TypeError 崩溃前）写入了 58 个**只有 3 行**的
-    空壳 frozen 缓存。因缓存键已去`last_date`，后续运行全部命中这批坏缓存
-    且**永不重试** → z1/z2 只剩 12 只股票有数据。
+    空壳 frozen 缓存。缓存键含 `last_date`（见 _get_feature_cache_key），同日内
+    键固定 → 后续运行持续命中这批坏缓存且**永不重试** → z1/z2 只剩 12 只股票有数据。
 
     这与 A 股的「失败静默填默认值」是同一类问题的变种：
     **缓存机制必须有「坏缓存自愈」能力**，否则一次失败会永久污染后续所有运行。
@@ -801,7 +801,7 @@ def _load_feature_cache(cache_file_path, use_shift=None):
             data = cache['data']
             # 坏缓存自愈（2026-10-04）：残缺缓存（行数不足）直接删除并返回 None，
             # 让本次重新取数。否则一次失败写入的空壳会被后续所有运行永久命中——
-            # 因缓存键已去 last_date，键不再随内容变化，无从自愈。
+            # 键含 last_date，同日内不变 → 坏缓存持续命中、无从自愈。
             if not _is_usable_feature_cache(data):
                 _n = (len(data.get('stock_df')) if isinstance(data, dict)
                       and hasattr(data.get('stock_df'), '__len__') else '?')

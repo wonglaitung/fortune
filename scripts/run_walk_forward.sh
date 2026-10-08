@@ -18,12 +18,19 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
 
-# 数据末日冻结（2026-10-04，消除「末日变→缓存键变→重算→指标漂移」）
-# 配套 ml_services/ml_trading_model.py：_get_feature_cache_key 去末日 +
-# prepare_data 按此变量截断。**两者必须同时生效** —— 只做其一会造成
-# 数据混用（键不区分内容）或假冻结（键固定但内容仍变）。
-# 不设置时行为与从前完全一致（现状）。
+# 输入冻结：三者缺一不可，否则双跑输入不同 → md5 必不一致
+#   HK_MARKET_SNAPSHOT_DIR  港股原始行情（2026-10-07 实证：数据源日内更新 →
+#                           stock_df 末日漂移 → 特征缓存键全变 → 全量重算）
+#   US_MARKET_SNAPSHOT_DIR  宏观特征（lessons 三.29）
+#   GATE_SOURCE_CSV         分位门槛基准（否则 output/ 新增目录即改变基准）
+# 设了 HK_MARKET_SNAPSHOT_DIR 就先校验快照完整（缺一股即非零退出，防止运行中
+# 静默跳股产出残缺 CSV，lessons 三.20）。不设置时行为与从前完全一致（现状）。
+if [ -n "${HK_MARKET_SNAPSHOT_DIR:-}" ]; then
+    python3 scripts/pin_hk_snapshot.py --check --snap-dir "$HK_MARKET_SNAPSHOT_DIR"
+fi
+
 export OMP_NUM_THREADS="${LGBM_N_JOBS:-8}"
+
 export OMP_DYNAMIC=FALSE
 export MKL_NUM_THREADS="${LGBM_N_JOBS:-8}"
 export OPENBLAS_NUM_THREADS="${LGBM_N_JOBS:-8}"

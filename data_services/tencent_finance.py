@@ -64,6 +64,48 @@ def _hk_cache_fallback(code):
     return None
 
 
+def _load_hk_snapshot(formatted_code, period_days):
+    """读取港股原始行情快照（冻结输入，保证跨跑可复现）
+
+    背景：个股实时取数的 `stock_df.index[-1]` 直接进入特征缓存键
+    （ml_trading_model._get_feature_cache_key）。两跑间隔若数据源更新，
+    last_date 漂移 → 缓存键全变 → 全量重算 → 共同期 40% 特征列值变
+    → 双跑 md5 不一致。宏观已有 US_MARKET_SNAPSHOT_DIR，个股原本没有。
+
+    设 HK_MARKET_SNAPSHOT_DIR 后：
+      - 命中 → 返回快照并按 period_days 截尾（语义同实时"最近 N 天"）
+      - 未命中 → SystemExit（不返回 None：上层 `except Exception` 会吞成
+        warning + continue，静默跳股 → 残缺 CSV，lessons 三.20；
+        SystemExit 不继承 Exception，能冒泡到顶层非零退出）
+
+    Args:
+        formatted_code: 5 位零填充代码
+        period_days: 需要的天数
+
+    Returns:
+        DataFrame，或 None（未启用快照模式）
+    """
+    snap_dir = os.environ.get('HK_MARKET_SNAPSHOT_DIR')
+    if not snap_dir:
+        return None
+    path = os.path.join(snap_dir, f"{formatted_code}.pkl")
+    if not os.path.exists(path):
+        # .nodata = 冻结过的「该股无数据」结论，与实时路径的 continue 行为一致
+        if os.path.exists(os.path.join(snap_dir, f"{formatted_code}.nodata")):
+            print(f"  [快照] {formatted_code} 无数据（快照冻结的结论），跳过")
+            return None
+        raise SystemExit(
+            f"❌ 个股行情快照缺失: {path}\n"
+            f"   快照模式禁止实时取数（数据源日内更新会破坏双跑复现）。"
+            f"先运行: python3 scripts/pin_hk_snapshot.py"
+        )
+    with open(path, 'rb') as f:
+        df = pickle.load(f)
+    if period_days:
+        df = df.tail(period_days)
+    return df
+
+
 def get_hk_stock_data_tencent(stock_code, period_days=90):
     """
     通过腾讯财经接口获取港股股票数据
@@ -77,6 +119,11 @@ def get_hk_stock_data_tencent(stock_code, period_days=90):
     """
     # 确保股票代码是5位数字格式
     formatted_code = stock_code.zfill(5)
+
+    # 快照模式（HK_MARKET_SNAPSHOT_DIR）：直接返回冻结行情，不走网络
+    _snap_df = _load_hk_snapshot(formatted_code, period_days)
+    if _snap_df is not None:
+        return _snap_df
 
     # 腾讯财经API URL (历史交易数据)
     # 使用 hkfqkline 端点（绕过 WAF）

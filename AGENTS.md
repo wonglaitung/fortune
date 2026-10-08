@@ -53,7 +53,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
 | **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） | - |
 | **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） | - |
-| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**双冻结，缺一不可**（lessons 三.29/三.30）。验收=同配置连跑两次 CSV md5 相同 | - |
+| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结宏观快照，`python3 scripts/pin_hk_snapshot.py` 先冻结个股行情快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**三冻结，缺一不可**（lessons 三.29/三.30/三.50）。验收=同配置连跑两次 CSV md5 相同 | - |
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
@@ -162,7 +162,7 @@ python hsi_email.py --no-email
 | **GATE 同源三依赖** | 门槛/校准器/快照/基准CSV 必须同源：①宏观 `US_MARKET_SNAPSHOT_DIR` ②分位基准 `GATE_SOURCE_CSV` ③Isotonic 校准器须随模型重训**用 OOF 重拟合**（`oof_glob`，别用生产历史——新模型无历史可拟合）。**`bear==weak` 通常是概率被压平（无 edge），不是分位算错**（lessons 三.30） |
 | ~~跨快照数值极差~~ | ❌ **已撤销（2026-10-05）**：曾归因「跨快照漂移」，实为**旧特征缓存内容差异**——清缓存后连跑两次 md5 一致、同配置极差 **0.00**。**教训**：指标分叉时先做「清缓存重跑」判别（最便宜），再谈机制解释；见 lessons 三.42 |
 | ~~港股数据末日敏感性~~ | ❌ **已撤销（2026-10-05）**：`WALKFORWARD_DATA_END` 解决的是**不存在的问题**（数据源当日本就只到 07-30），反引入实截断。**教训**：指标变化先问「基线是否也有此差异」——基线末日同为 07-30 则末日不是变量 |
-| **跨日回测不可复现** | `us_market_data` 缓存**仅当天有效**且是宏观特征唯一来源 → 同代码跨天跑结果不同（实测 abs20d 净IR 0.34/0.42、PBO 0.41/0.64）。三.25 的 bit 级复现**仅限同一天**；**多跑几次总能撞到三门槛全过**，禁止取最好的一次当结论 |
+| **跨日回测不可复现** | `us_market_data` 缓存**仅当天有效**且是宏观特征唯一来源 → 同代码跨天跑结果不同（实测 abs20d 净IR 0.34/0.42、PBO 0.41/0.64）。三.25 的 bit 级复现**仅限同一天**；**多跑几次总能撞到三门槛全过**，禁止取最好的一次当结论。⚠️ **个股同日版更隐蔽**：港股 OHLC 实时取数、特征缓存键含 `last_date` → 数据源在**同一天内的数小时窗口**更新（如 10-06 行情午后到）即令末日漂移、缓存键全变、全量重算、共同期 40% 特征列值变 → 双跑 md5 必不一致。宏观有 `pin_macro_snapshot.py`，**个股原有 `pin_hk_snapshot.py`（2026-10-08 补）**，缺则三冻结不全（lessons 三.50） |
 | **冻结必须双向落盘** | 只写成功数据、**失败不写哨兵** = 没冻结（每次重试，成败纯看网络）。**只做一半的冻结比不冻结更危险**——制造「已冻结」的错觉。两个易错点：①`load_frozen` 须**数据优先于哨兵**；②冻结模式下抓取失败写 `.failed` 且**不再重试网络**。见 lessons「38. 冻结机制必须双向落盘」 |
 | **市场门槛优先分位、退化回退绝对值** | 分位法隐含前提「模型有 edge」；**模型无 edge 时校准把概率压回基准率 → 分位锚在 0.5 → 门控静默失效**（实测 bear 通过率 17.2%→98.2%）。已加退化保护（`GATE_MIN_UNIQUE=30`/`GATE_MIN_SPREAD=0.05`），退化即回退 bear 0.70/weak 0.65。**`bear==weak` 是分布退化信号，不是分位算错**。分位口径：熊市/弱震荡用 `GATE_QUANTILES` P92/P90（PIT），数据源须为 walk-forward 回测分布（`prediction_history` 右尾过窄会失效）；见 lessons 三.30、D8 |
 
@@ -294,7 +294,7 @@ python hsi_email.py --no-email
 |---|---|---|
 | **A 呈现闸** | 任何指标要作为**结论**输出前 | 绝对值异常 → `python3 scripts/presentation_gate.py --input <csv> --horizon N`，**非零退出即阻断** |
 | **B 提交闸** | 任何代码/配置/文档改动后、commit 前 | [8 项清单](docs/REVIEW_GATES.md)逐项过，任一不过即重审 |
-| **C 升级闸** | 任何 🟢/升配/加仓/改阈值 决策前 | 双冻结 + 双跑 md5 一致 + 禁止取最好一轮 |
+| **C 升级闸** | 任何 🟢/升配/加仓/改阈值 决策前 | 三冻结 + 双跑 md5 一致 + 禁止取最好一轮 |
 
 **B 闸首条**：改动完成后，**像攻击对手一样攻击自己的改动**，确认无问题才能提交。
 
@@ -382,7 +382,7 @@ test_df[col] = test_df[col].apply(
 **对抗性审核有三个触发时机（见 [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)）**：
 - **指标呈现前**：任何数字要作为结论汇报时，先查绝对值异常（可能一个字都没改）
 - **改动提交前**：任何代码/配置/文档改动后，攻击自己的改动再 commit
-- **升级决策前**：任何 🟢/升配/加仓/改阈值前，双冻结 + 双跑 md5 一致
+- **升级决策前**：任何 🟢/升配/加仓/改阈值前，三冻结 + 双跑 md5 一致
 
 2026-10-02 实证两次：①**未改任何代码**，仅因汇报 rel20d 结果触发 A 闸，
 抓到 100% 准确率泄漏（PBO 0.43/DSR 1.000 全过却是假信号）；
