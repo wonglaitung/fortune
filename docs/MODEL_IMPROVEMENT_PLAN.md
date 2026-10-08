@@ -132,13 +132,17 @@ best config 的 Sharpe，即真信号。
 
 **仓库缺失的强信号源**（2026-10-08 调研，须新接）：
 
-**① 港股卖空数据 —— 可行性 ★★★（最强信号，H1-E 首选）**
-- 来源：HKEX 官方「Daily Short Selling Data」（主板+GEM，逐股卖空成交额/股数）
-- 免费路径：HKEX 官网网页 + ETNet（ClawHub 已有抓取 skill，免费，历史约 3 月）
-- akshare：✗ 无直接接口（仅 `article_oman_rv_short`，无关）→ 需自写 scraper
-- 字段：short_volume / short_amount / short_pct（卖空占成交%）/ 全市场卖空总额
-- PIT：收市后次日凌晨发布 → 用 T-1，天然时点安全；三冻结按日逐日落盘即可
-- 横截面属性：✅ 逐股 → 直接横截面特征，不必交叉
+**① 港股卖空数据 —— 可行性 ★★★（最强信号，H1-E 首选 · 2026-10-08 实测已解除阻塞）**
+- 来源（免费·官方·逐股·多年）：**SFC「Aggregated reportable short positions of specified shares」周频 CSV**
+  - 页面：`https://www.sfc.hk/en/Regulatory-functions/Market/Short-position-reporting/Aggregated-reportable-short-positions-of-specified-shares`（列 734 份周 CSV，文件名 `Short_Position_Reporting_Aggregated_Data_YYYYMMDD.csv`）
+  - 范围：**2012-08-31 → 2026-09-25（≈14年 / 734周）**；结构 `Date, Stock Code(去前导零), Stock Name, 空头股数, 空头HK$`
+  - 池覆盖：**53/57（93%）**，缺 4 只小盘（1600/1257/1387/1053，非指定证券）
+  - akshare：✗ 无接口（全包 grep 零数据接口）→ 直连 SFC 下载，**无需自写爬虫**
+- 备选/对照：HKEX `mshtmain.htm` 实测**仅市场级聚合**（卖空总额+占成交比），`<tr>=0` 无逐股 → 不用于横截面
+- 字段→特征：空头股数 / 流通股 = 空头比率；或 空头HK$ / 市值。需归一化才跨股可比
+- PIT：周频、发布滞后~1周 → 周频特征 T-1 天然时点安全；三冻结按周落盘
+- 横截面属性：✅ 逐股 → 直接横截面特征
+- 注意：周频（非日频）、仅「可报告」空头（≥0.02%市值或 3000万港元）→ 机构空头信号，接入时对齐到周/降采样
 
 **② 分析师修正 / 盈利惊喜 —— 可行性 ★★（难在 PIT 与免费历史）**
 - 付费金标准：Refinitiv I/B/E/S（LSEG，覆盖港股）、FactSet、Bloomberg → 贵，机构级
@@ -157,12 +161,63 @@ best config 的 Sharpe，即真信号。
 
 | 源 | 横截面直接贡献 | 接入难度 | PIT风险 | 优先级 |
 |----|---------------|---------|---------|--------|
-| 港股卖空 | ✅ 高 | 低（自写 scraper） | 低 | H1-E 首选 |
+| 港股卖空 | ✅ 高 | 低（SFC CSV 直下） | 低 | H1-E 首选（已实测：734周/93%覆盖） |
 | 分析师修正 | ✅ 中 | 高（免费无时序） | 高 | 次选，需 IBES 或 ETNet 谨慎 |
 | CNH/HIBOR | ✗（须交叉） | 低 | 低 | 走交叉特征，非横截面主攻 |
 
 > ⚠️ H1-E 成功判据是「横截面 IC ≥+0.10 且 p<0.05」。CNH/HIBOR 是市场级，单独抬不动横截面 IC；
 > 只有**港股卖空占比**和**分析师修正**是逐股横截面源，才是 H1-E 有效候选；CNH/HIBOR 更适合补现有宏观/regime 交叉特征。
+
+#### 2.1.1 akshare 港股接口对抗审计（2026-10-08 · 源码 host + 实跑双重验证）
+
+> 方法：不轻信 `_em`/`_et` 后缀（曾误判 `stock_hk_profit_forecast_et` 为东财，实为 ETNet）。用 `inspect` 取函数体定位**真实请求行** host + 源码文件级关键词 + 实跑核对，53 个港股函数全部溯源。
+
+**真实源分布（53 个，按真实请求 host，非后缀）**
+
+| 真实源 | 数量 | 代表接口 |
+|--------|------|----------|
+| 东财 eastmoney(emweb/datacenter/push2) | ~33 | stock_financial_hk_\*、stock_hk_hist、stock_hk_hot_rank_em、fund_hk_\*、macro_china_hk_\*、stock_hsgt_sh_hk_spot_em |
+| ETNet(etnet.com.hk) | 1 | stock_hk_profit_forecast_et ⚠️非东财 |
+| 新浪 sina | 4 | stock_hk_daily / spot / index_daily_sina / index_spot_sina |
+| 雪球 xueqiu | 1 | stock_individual_basic_info_hk_xq |
+| 同花顺 THS | 1 | stock_hk_fhpx_detail_ths |
+| 英为财情 eniu | 1 | stock_hk_indicator_eniu |
+| 百度 baidu | 1 | stock_hk_valuation_baidu |
+| 期货源 futures | 9 | get_qhkc_\* / qhkc_tool_\*（港股期货期权，非个股） |
+| 未定位 | 1 | stock_hk_gxl_lg（股息率类，源不明） |
+
+**对 H1-E 候选源的实测结论（证据=实跑）**
+
+| 数据 | 接口 | 实测 | 历史深度 | H1-E 价值 |
+|------|------|------|----------|-----------|
+| **卖空** | 全包 grep `short/沽空/卖空/short_sell` | ✗ **零数据接口**（仅 `article_oman_rv_short` 文章） | — | 🔴 akshare 完全无覆盖，必须直连 HKEX/SFC |
+| **分析师评级/盈利预测** | `stock_hk_profit_forecast_et` | ✅ 50 行，含**评级/目标价/证券商/更新日期** | 2026-05-14~10-07 **仅~5月** | ⚠️ 真·ETNet（非东财）；`stock_analyst_em` grep 无 `hk`=A股专属 |
+| **南向/沪深港通** | `stock_hsgt_hist_em` | ✅ 2764 行 | **2014-11-17~今** | 🟢 市场级可用（南向即时 `hsgt_sh_hk_spot_em` 本次 JSON 错，不稳） |
+| **情绪/热度** | `stock_hk_hot_rank_latest_em` | ✅ 10 行快照；全榜 `hot_rank_em` 25s 超时 | 即时 | 🟡 部分可达 |
+| **基本面** | `stock_financial_hk_analysis_indicator_em` | ✅ 9 行 36 列 | **2017~2025（8年）** | 🟢 已半接入 |
+| **行情K线** | `stock_hk_hist`（东财） | ❌ 本环境连接中断（区域/flaky）；**新浪 `stock_hk_daily` ✅ 2004~今** | 多年 | ⚠️ 东财源不稳，新浪可作备用 |
+| **港股宏观** | `macro_china_hk_*` | 源码确认东财 datacenter | 多年 | 🟢 市场级可用 |
+
+**与 2.1 上文的纠正/补充**
+- ① 卖空「akshare 无直接接口」✅ 复核确认（全包零数据接口）。
+- ② 分析师「ETNet 免费历史约 3 月」→ 实跑 `stock_hk_profit_forecast_et` 显示 **~5 月且含真实评级+目标价+券商**（比"仅共识EPS"更丰富），但**免费仍无多年时序**，回测阻塞不变；并确认**东财不提供港股评级**（`stock_analyst_em` 为 A 股专属）。
+- 新增可用市场级源：`stock_hsgt_hist_em`（沪深港通 2014 起，多年）、`macro_china_hk_*`（港股宏观）、`stock_hk_hot_rank_latest_em`（热度）——东财真·港股源 = 行情/F10/沪深港通/热度，**不含**机构评级/盈利预测。
+
+#### 2.1.2 覆盖度矩阵实测（2026-10-08 · 57 只池逐源，非仅 00700）
+
+> 方法：对 `config.TRAINING_STOCKS`（57 只）逐源实跑，记录返回行数/成败。
+
+| 源 | 池覆盖 | 历史深度 | 说明 |
+|----|--------|----------|------|
+| tencent（主源行情 `get_hk_stock_data_tencent`） | ✓ 全 | 多年 | 管线主源，确认正常 |
+| sina 行情 `stock_hk_daily` | 57/57 | 2004~今 | 全覆盖，可作冗余/备用 |
+| 东财财务 `stock_financial_hk_analysis_indicator_em` | 56/57 | 2017~2025（8年） | 多年，1 只异常 |
+| ETNet 分析师 `stock_hk_profit_forecast_et` | 49/57 | ~5 月 | 缺 8 只含 HSBC/友邦/中芯等大盘；历史短 |
+
+**判读**：
+- 行情/财务类外部源对池**全覆盖**，可直接补冗余或扩展特征。
+- 分析师源覆盖不全 + 仅 ~5 月 → 对 H1-E 横截面贡献弱，维持次选（见 ① 改走 SFC 卖空）。
+- **结论：H1-E 有效横截面源 = SFC 卖空（93% 覆盖 / 14 年）**；分析师修正因免费无多年时序维持次选；CNH/HIBOR 仍走市场级交叉（见 2.1 ③）。
 
 **接入纪律（与 H1-E 绑定）**：
 1. **PIT 时点还原**（lessons 三.0.1）：网络/情感/主题/基本面静态快照=未来穿越，已踩坑；新源须逐日滚动还原。
