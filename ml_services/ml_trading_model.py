@@ -38,6 +38,16 @@ HSI_DATA_CACHE_HOURS = 1   # 恒生指数数据缓存1小时
 
 # 导入项目模块
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
+
+# F1 另类数据特征模块（D20）：SFC 卖空 + 基本面三表，PIT 正确、受 F1_FEATURES 门控
+try:
+    from ml_services.feature_engineering.f1_alternative_features import sfc_feature_frame
+    from ml_services.feature_engineering.f1_fundamental_features import (
+        build_fundamental_features, fundamental_feature_frame)
+except Exception:
+    sfc_feature_frame = None
+    build_fundamental_features = None
+    fundamental_feature_frame = None
 from data_services.technical_analysis import TechnicalAnalyzer
 from data_services.fundamental_data import get_comprehensive_fundamental_data
 from data_services.volatility_model import GARCHVolatilityModel
@@ -737,7 +747,8 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     - 两种模式的缓存必须分开，否则会导致数据泄漏（shift 后缀始终保留）
     """
     shift_suffix = "shift" if use_shift else "noshift"
-    return f"{stock_code}_{last_date}_{shift_suffix}"
+    f1_suffix = "f1" if os.environ.get('F1_FEATURES') == '1' else "base"
+    return f"{stock_code}_{last_date}_{shift_suffix}_{f1_suffix}"
 
 
 def _get_feature_cache_file_path(cache_key):
@@ -1642,6 +1653,40 @@ class FeatureEngineer:
             'Net_Margin': np.nan,
             'Gross_Margin': np.nan,
         }
+
+    def create_f1_alternative_features(self, code, stock_df):
+        """F1 另类数据特征（D20 预注册）：SFC 卖空 + 基本面三表，PIT 正确、时变、尺度无关。
+
+        受环境变量 F1_FEATURES=1 门控；未开启则返 None（基线零改动）。
+        仅取尺度无关列：SFC_short_z（逐股 z，H1-F-2 显著信号）+ 6 个无量纲基本面比率
+        （Net_Margin/ROE/ROA/Debt_Equity/OCF_Quality/Asset_Turnover），避免规模特征需截面 z。
+        """
+        if os.environ.get('F1_FEATURES') != '1':
+            return None
+        if sfc_feature_frame is None or fundamental_feature_frame is None:
+            return None
+        idx = stock_df.index
+        out = pd.DataFrame(index=idx)
+        # SFC 卖空：仅取逐股 trailing z（PIT t-7 前向填充）
+        try:
+            sfc = sfc_feature_frame(code, idx)
+            if 'short_z' in sfc.columns:
+                out['SFC_short_z'] = sfc['short_z']
+        except Exception:
+            pass
+        # 基本面三表：6 个无量纲比率（固定滞后 PIT）
+        try:
+            if not hasattr(self, '_f1_fund') or self._f1_fund is None:
+                import config as _cfg
+                self._f1_fund = build_fundamental_features(list(_cfg.TRAINING_STOCKS))
+            fund = fundamental_feature_frame(code, idx, self._f1_fund)
+            keep = ['Net_Margin', 'ROE', 'ROA', 'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
+            for c in keep:
+                if c in fund.columns:
+                    out[c] = fund[c]
+        except Exception:
+            pass
+        return out if not out.empty else None
 
     def create_smart_money_features(self, df, use_shift=True):
         """创建资金流向特征
@@ -4140,6 +4185,11 @@ class CatBoostModel(BaseTradingModel):
                     for key, value in fundamental_features.items():
                         stock_df[key] = value
 
+                    # F1 另类数据特征（SFC 卖空 + 基本面三表），受 F1_FEATURES 门控叠加
+                    f1_feats = self.feature_engineer.create_f1_alternative_features(code, stock_df)
+                    if f1_feats is not None and not f1_feats.empty:
+                        stock_df = stock_df.join(f1_feats)
+
                     # 添加股票类型特征
                     stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
                     for key, value in stock_type_features.items():
@@ -4890,6 +4940,11 @@ class CatBoostModel(BaseTradingModel):
                 fundamental_features = self.feature_engineer.create_fundamental_features(code)
                 for key, value in fundamental_features.items():
                     stock_df[key] = value
+
+                # F1 另类数据特征（SFC 卖空 + 基本面三表），受 F1_FEATURES 门控叠加
+                f1_feats = self.feature_engineer.create_f1_alternative_features(code, stock_df)
+                if f1_feats is not None and not f1_feats.empty:
+                    stock_df = stock_df.join(f1_feats)
 
                 # 添加股票类型特征
                 stock_type_features = self.feature_engineer.create_stock_type_features(code, stock_df)
