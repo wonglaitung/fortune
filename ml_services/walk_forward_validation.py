@@ -475,6 +475,15 @@ class WalkForwardValidator:
                 if len(feat_cols) > self.top_k and len(X_sel) > 0:
                     sel_idx, _ = feature_selection_statistical(X_sel, y_sel, feat_cols, top_k=self.top_k)
                     fold_selected_features = [feat_cols[int(i)] for i in sel_idx]
+                    # F1_FORCE=1（D20 ①预注册）：强制把 F1 另类特征并入每折选择集。
+                    # 防泄漏：仍只用该折训练数据，仅保证这些列不因方差偏好被Top-K丢弃。
+                    if os.environ.get('F1_FORCE') == '1':
+                        f1_cols = ['SFC_short_z', 'Net_Margin', 'ROE', 'ROA',
+                                   'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
+                        for fc in f1_cols:
+                            if fc in feat_cols and fc not in fold_selected_features:
+                                fold_selected_features.append(fc)
+                        fold_selected_features = list(dict.fromkeys(fold_selected_features))
                     print(f"  🔍 每折特征选择: {len(fold_selected_features)} 个特征（防穿越）")
             except Exception as e:
                 logger.warning(f"每折特征选择失败，回退全局文件: {e}")
