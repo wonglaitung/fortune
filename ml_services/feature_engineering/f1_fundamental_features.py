@@ -15,7 +15,7 @@ try:
 except Exception:
     config = None
 
-FUND_CACHE = '/tmp/opencode/fund_cache'
+FUND_CACHE = 'data/fund_cache'
 STATEMENTS = [('资产负债表', 'BS'), ('利润表', 'IS'), ('现金流量表', 'CF')]
 INDICATORS = [('年度', 120), ('中期', 90)]  # (indicator, 滞后天数)
 
@@ -35,10 +35,15 @@ def fetch_one_statement(cfg_code, symbol, indicator):
     if os.path.exists(cf):
         return pd.read_pickle(cf)
     import akshare as ak
+    import socket as _socket
+    _prev_to = _socket.getdefaulttimeout()
+    _socket.setdefaulttimeout(30)  # akshare 无内置超时，防静默挂死整条流水线（lessons 三.21）
     try:
         df = ak.stock_financial_hk_report_em(stock=_code5(cfg_code), symbol=symbol, indicator=indicator)
     except Exception as e:
         df = pd.DataFrame()
+    finally:
+        _socket.setdefaulttimeout(_prev_to)
     if df is None or df.empty:
         pd.to_pickle(pd.DataFrame(), cf)
         return pd.DataFrame()
@@ -152,11 +157,24 @@ def fundamental_feature_frame(cfg_code, trade_dates, fund_data):
     if rat is None or rat.empty:
         return pd.DataFrame(index=trade_dates, columns=[], dtype=float)
     # 每个 t: 最新 avail <= t
-    td = pd.DataFrame({'t': trade_dates})
+    # 时区对齐：交易索引可能为 UTC，avail/period_end 为 naive，merge_asof 要求同类型
+    td = pd.DataFrame({'t': pd.to_datetime(trade_dates)})
+    if td['t'].dt.tz is None:
+        td['t'] = td['t'].dt.tz_localize('UTC')
     td['key'] = td['t']
     avf = av.reset_index(); avf.columns = ['period_end', 'avail']
+    avf['avail'] = pd.to_datetime(avf['avail'])
+    if avf['avail'].dt.tz is None:
+        avf['avail'] = avf['avail'].dt.tz_localize('UTC')
+    avf['period_end'] = pd.to_datetime(avf['period_end'])
+    if avf['period_end'].dt.tz is None:
+        avf['period_end'] = avf['period_end'].dt.tz_localize('UTC')
+    rat = rat.copy()
+    rat.index = pd.to_datetime(rat.index)
+    if rat.index.tz is None:
+        rat.index = rat.index.tz_localize('UTC')
     merged = pd.merge_asof(td.sort_values('key'), avf.sort_values('avail'),
-                          left_on='key', right_on='avail', direction='backward')
+                           left_on='key', right_on='avail', direction='backward')
     merged = merged.sort_values('t').set_index('t'); merged.index.name = None
     # 映射 period_end -> ratio 行
     rat_idx = rat.index

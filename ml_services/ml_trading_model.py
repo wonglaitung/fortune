@@ -4188,6 +4188,10 @@ class CatBoostModel(BaseTradingModel):
                     # F1 另类数据特征（SFC 卖空 + 基本面三表），受 F1_FEATURES 门控叠加
                     f1_feats = self.feature_engineer.create_f1_alternative_features(code, stock_df)
                     if f1_feats is not None and not f1_feats.empty:
+                        # 与 stub 基本面列（ROE/ROA/Net_Margin 等，恒为 NaN）重名时以 F1 真实值覆盖
+                        overlap = [c for c in f1_feats.columns if c in stock_df.columns]
+                        if overlap:
+                            stock_df = stock_df.drop(columns=overlap)
                         stock_df = stock_df.join(f1_feats)
 
                     # 添加股票类型特征
@@ -4486,6 +4490,14 @@ class CatBoostModel(BaseTradingModel):
                 # 筛选特征列
                 self.feature_columns = [col for col in self.feature_columns if col in _selected]
                 print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
+
+            # F1 强制纳入（D20）：与生产 walk-forward F1_FORCE 一致，避免特征选择把 F1 剔除导致静默不纳入
+            if os.environ.get('F1_FORCE') == '1':
+                _f1_force = ['SFC_short_z', 'Net_Margin', 'ROE', 'ROA', 'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
+                _added = [c for c in _f1_force if c in df.columns and c not in self.feature_columns]
+                if _added:
+                    self.feature_columns.extend(_added)
+                    print(f"🔧 F1_FORCE 强制纳入 {len(_added)} 个 F1 特征: {_added}")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:
@@ -4944,6 +4956,10 @@ class CatBoostModel(BaseTradingModel):
                 # F1 另类数据特征（SFC 卖空 + 基本面三表），受 F1_FEATURES 门控叠加
                 f1_feats = self.feature_engineer.create_f1_alternative_features(code, stock_df)
                 if f1_feats is not None and not f1_feats.empty:
+                    # 与 stub 基本面列（ROE/ROA/Net_Margin 等，恒为 NaN）重名时以 F1 真实值覆盖
+                    overlap = [c for c in f1_feats.columns if c in stock_df.columns]
+                    if overlap:
+                        stock_df = stock_df.drop(columns=overlap)
                     stock_df = stock_df.join(f1_feats)
 
                 # 添加股票类型特征

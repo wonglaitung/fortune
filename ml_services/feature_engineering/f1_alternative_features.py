@@ -70,10 +70,16 @@ def sfc_feature_frame(cfg_code: str, trade_dates: pd.DatetimeIndex) -> pd.DataFr
     weekly = sub.set_index('date')[['short_shares', 'short_hk']].sort_index()
     weekly['short_z'] = _weekly_z(weekly['short_shares'])
     weekly = weekly.reset_index().rename(columns={'date': 'week_end'})
+    weekly['week_end'] = pd.to_datetime(weekly['week_end'])
+    if weekly['week_end'].dt.tz is None:
+        weekly['week_end'] = weekly['week_end'].dt.tz_localize('UTC')
     weekly['log_short_shares'] = np.log1p(weekly['short_shares'].clip(lower=0))
     weekly['log_short_hk'] = np.log1p(weekly['short_hk'].clip(lower=0))
     # merge_asof: 用 t-7 作为查找键，direction=backward -> 最新 week_end <= t-7
-    td = pd.DataFrame({'t': trade_dates})
+    # 时区对齐：交易索引可能为 UTC，特征日期为 naive，merge_asof 要求同类型
+    td = pd.DataFrame({'t': pd.to_datetime(trade_dates)})
+    if td['t'].dt.tz is None:
+        td['t'] = td['t'].dt.tz_localize('UTC')
     td['key'] = td['t'] - pd.Timedelta(days=7)
     weekly_sorted = weekly.sort_values('week_end')
     merged = pd.merge_asof(

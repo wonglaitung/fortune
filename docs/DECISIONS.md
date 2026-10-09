@@ -857,7 +857,7 @@ H1-B 前置满足（⛔纪律①）。H1-B 目标：把训练历史从 2019-06-0
 **实际落地特征（较预注册精简，仅尺度无关列，避截面 z 复杂度）**：`SFC_short_z`（=H1-F-2 同口径 trailing z(52w)，PIT t−7 前向填充；**弃 log(short_shares)/log(short_hk$) 两个规模类特征**）+ 6 个无量纲基本面比率 `Net_Margin/ROE/ROA/Debt_Equity/OCF_Quality/Asset_Turnover`（三表派生，固定滞后 PIT；**弃 log_Revenue/log_NetProfit**）。共 7 列，`F1_FEATURES=1` 门控叠加，关则零改动基线。
 
 **结论与后续**：
-- **F1-null（模型层）维持**：默认 `Top500` 特征选择将 7 个 F1 特征**全丢弃**，部署管线未受益 → D1 的**实务结论（维持低配/关闭、不升配）不变**。但 **「更厚数据面无 edge / 横截面 alpha 已穷尽」之解读被 ② 推翻**：ROE、Asset_Turnover 具显著 standalone 20d rank-IC（见下）。故 H1 线「永久关闭」须重述为「**默认管线未受益，但数据源本身有信号，待 ① 强制纳入重验**」，不得据 F1-null 断言数据源无价值。
+- **（初判已被 ① 修正重跑推翻）**：初判「默认 `Top500` 选择丢弃 F1、部署管线未受益」建立在空特征 bug 之上；修复后 ① 强制纳入显示 F1 特征**确有增量 edge**（DSR 0.927→0.974 跨 0.95、净IR CI 下界 −0.40→+0.08、fold0 重要性 SFC_short_z 第5），见下方 ① 实测。**「更厚数据面无 edge / 横截面 alpha 已穷尽」之解读被 ② 推翻**：ROE、Asset_Turnover 具显著 standalone 20d rank-IC。H1 线「永久关闭」维持（特征工程非 alpha 线）；但 F1 数据源**不再视作无价值**，按 D2 归「保留低配」待 C 闸双跑复核后纳入。
 
 > ⚠️ **对抗复核修正（2026-10-09）**：扩充跑 38 折 `top_features` **均无 7 个 F1 特征** → `Top500` 特征选择将 F1 特征**全丢弃**，故 F1-null 实为「加了列但选择层未纳入」，实务上部署管线未受益（D1 维持成立），但**不构成「SFC/基本面无横截面信号」的证据**。若要真正检验该数据源的 edge，须：①禁用特征选择或强制纳入 F1 特征后重跑对比；或②直测 F1 特征 standalone 折聚类 rank-IC。另：SFC 非「无信号」而是弱信号（H1-F IC≈−0.016 p=0.044、H1-F-2 IC≈−0.03 p<0.001）未达部署门槛；CNH/HIBOR 实际从未接入特征（原记「已用」有误）。详见 MODEL_IMPROVEMENT_PLAN §2.1.4。
 >
@@ -882,11 +882,25 @@ H1-B 前置满足（⛔纪律①）。H1-B 目标：把训练历史从 2019-06-0
   - 否则 **F1-null-full**：7 特征在全特征下仍无增量 edge → 关闭（D1 最彻底版）。
 - **强制预注册检查表**：①数据非空（F1 缓存 57 股已建）②三冻结同源 ③无标签中间量（F1 特征不含收益率成分）④折数/行数完整性闸门，PBO/DSR/净IR 均按《呈现闸/A闸》出具。
 
-**① 实测（2026-10-09，`output/20261009_160009_catboost_20d`，38 折/41153 行，每折 503 特征 = Top500 + 3 强制并入；对照基线 `090405`）**：
-- 准确率 51.1%（基线 50.8%）；折聚类 lift +1.2pp [−0.3,+2.8] p=0.117（基线 +1.2pp p=0.166）→ 持平不显著。
-- **净IR 0.65 [−0.48,1.63]**（基线 0.70 [−0.40,1.94]）→ 下界仍 <0 且更差；**PBO 0.84**（基线 0.89）；**DSR 0.902**（基线 0.927，**Δ−0.025 反降**）。
-- **套 ① 判据**：部署门三项 ✗✗✗；增量门 DSR Δ=−0.025<+0.02 ✗、CI 下界改善 −0.08<+0.15 ✗ → **F1-null-full**。
-- **解读**：②的 standalone rank-IC（ROE+0.061/Asset_Turnover−0.063 显著）**救不进组合层**——level 慢变量与现有特征高度重叠 + Top10 组合/成本/情绪过滤层对 +0.06 增量不敏感 + 多 3 特征略增过拟合（DSR 降）。**D1 最终维持：横截面 alpha 不因 SFC/基本面数据源 rescue**。F1 线就此彻底关闭（=D20 最彻底版 null），SFC 冻结数据与 F1 模块归档为可复用资产。
-- 新增 SFC/基本面特征函数（`ml_services/feature_engineering/f1_alternative_features.py`、`f1_fundamental_features.py`）+ 57 池缓存归档为可复用资产，但**不进生产模型**（维持关闭）。
+> ⚠️ **特征门控内部 bug（2026-10-09 发现并修复，颠覆下方 `160009`/`121818` 两跑结论）**：
+> `create_f1_alternative_features` 实际长期返回 `None`/空——根因二：
+> 1. **时区不匹配**：`prepare_data` 产出的交易索引为 **UTC**，而 SFC/基本面日期列为 **naive**；`sfc_feature_frame`/`fundamental_feature_frame` 内 `merge_asof` 抛 `MergeError`（tz 不一致）被 `except` 吞掉 → 特征列全空。
+> 2. **列名冲突**：`create_fundamental_features` 的 stub 列（ROE/ROA/Net_Margin，恒为 NaN）与 F1 同名列在 `stock_df.join(f1_feats)` 处 `ValueError`（overlap）→ 同样被吞。
+> 修复：`f1_*_features.py` 两处 `merge_asof` 前将日期列 `tz_localize('UTC')`；`ml_trading_model.py` 两处 join 前先 `drop` 同名 stub 列。修复后 F1 7 列**真实入模**（fold0 重要性 SFC_short_z 第5、OCF_Quality 第6、ROE 第10…）。**故 `160009`（①）与 `121818`（扩充）两跑因空特征而无效，「F1-null / F1-null-full」结论作废**，以下为修复后有效重跑。
+
+**① 实测（2026-10-09 修复后重跑，`output/20261009_212920_catboost_20d`，38 折/41153 行/56 股，与基线**同窗口** 2023-06→2026-07；每折 507 特征 = Top500 + 7 强制并入；对照基线 `090405`）**：
+- 准确率 51.1% [48.9%,53.2%]（基线 50.8%）；折聚类 lift +1.2pp [−0.0pp,+2.5pp] **p=0.0507**（基线 +1.2pp p=0.166）→ 方向一致、显著度提升但仍未 <0.05（边界）。
+- **净IR 1.15 [0.08,2.25]**（基线 0.70 [−0.40,1.94]）→ **CI 下界由 −0.40 翻正至 +0.08**；P(IR>0.5)=89%（基线 65%）。
+- **DSR 0.974**（基线 0.927，**Δ+0.047 跨过 ≥0.95**）；**PBO 0.96**（基线 0.89，仍 >>0.5）。
+- **F1 特征确在模型内且重要性高**（fold0 top）：SFC_short_z 第5(2.75)、OCF_Quality 第6(2.55)、Debt_Equity 第9、ROE 第10、Asset_Turnover 第13、ROA 第15、Net_Margin 在列 → 非噪声，与 ② standalone IC 互相印证。
+- **套 ① 判据**：部署门 DSR≥0.95 ✅、净IR CI 下界>0 ✅、lift p<0.05 ❌(0.0507 边界) → 2/3 过；**增量门 DSR Δ≥+0.02 ✅(+0.047)、净IR CI 下界改善 ≥+0.15 ✅(+0.48) → 通过**。
+- **解读（颠覆原 F1-null-full）**：F1 特征**确有增量 edge**——修复空特征 bug 后，强制纳入使 DSR 跨过 0.95、净IR CI 下界翻正；② standalone IC 与模型内高重要性一致，**数据源信号能转化为组合层增益**。
+
+**最终判定（修正，取代原 F1-null-full）**：
+- ① **增量门通过** + DSR/净IR 双越阈 → 证伪「F1-null-full」；F1 数据源**值得以低权重进入生产模型**。
+- 但按 D2 升配判据（净IR≥0.7 且 **PBO<0.5** 且 DSR≥0.95）：净IR 1.15≥0.7 ✅、DSR 0.974≥0.95 ✅、但 **PBO 0.96 不过** → **未达升配，归「IR>0 但未达升级 → 保留低配」**。即不得升配至 15% 级；lift p=0.0507 不显著、净IR CI 下界仅 0.08 边际，亦不支持升配。
+- **C 闸双跑复核（2026-10-09 完成，通过）**：同配置（三冻结 + `F1_FEATURES=1` + `F1_FORCE=1` + `run_walk_forward.sh` 固化 env）重跑 `output/20261009_234941_catboost_20d`，与首跑 `212920` **prediction_analysis.csv md5 完全一致**（`4109016dcc05452dda5a37c5433ccf09`）→ bit 级可复现；两跑闸门一致：DSR 0.974、净IR 1.15 [0.08,2.25]（CI 下界 0.08>0）、PBO 0.96、fold0 重要性 SFC_short_z 第5。**DSR≥0.95 与净IR CI 下界>0 均稳定复现 → C 闸过**。`monthly_guardrail` 自动判定 **🟡 保留低配（未达升级门槛）**，与原判一致。
+- **后续（C 闸过后）**：可按 D2「保留低配」将 F1 特征以 `F1_FEATURES=1` 纳入生产重训——须 OOF 重拟合校准器（`oof_glob`）+ 门槛重校（`GATE_SOURCE_CSV` 指向本双跑产物）+ 三冻结同源；**仍不得升配至 15% 级**（PBO 0.96 不过）。特征工程未重开 H1 alpha 线，仍不主张「独立 alpha」。
+- **✅ 生产纳入已执行（2026-10-10）**：①重训生产 20d 模型 `data/ml_trading_model_catboost_20d.pkl`（`F1_FEATURES=1 F1_FORCE=1 --use-feature-selection`），`feature_columns`=507 含全部 7 F1（验证：实际训练重要性 `OCF_Quality` 3.07 第1、`Asset_Turnover` 2.90 第2、`Debt_Equity` 2.49、`ROE` 2.31、`SFC_short_z` 1.83…）；②环境变量 `F1_FEATURES=1`/`F1_FORCE=1` 注入 `scripts/run_comprehensive_analysis.sh`（每日/每周工作流调用的脚本，非 set_key.sh、非 YAML env），使训练+预测均生成并强制并入 F1；③清 `data/feature_cache/*.pkl` 使预测按 `f1_suffix` 重算；④**安全修复**：基本面缓存由 `/tmp/opencode/fund_cache`（重启即失）迁至持久 `data/fund_cache/`（342 文件，已 gitignore），并对 `ak.stock_financial_hk_report_em` 加 `socket.setdefaulttimeout(30)` 防静默挂死（lessons 三.21）；⑤单股预测冒烟测试 `2318.HK` 通过（probability 0.5266 非饱和，F1 列参与）。**`GATE_SOURCE_CSV` 不硬编码**：门槛/校准器由 `market_regime.GATE_SNAPSHOT`（经 `commit_backtest_result.py` 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，故每次 WF 跑完入库即自动更新、无需改址（lessons 三.29）。**仍存缺口（待补 cron）**：SFC `sfc_short_long.csv` 无下载脚本（当前冻结快照，应周更）；基本面缓存无定期刷新（季报后变陈旧）。
+- 新增 SFC/基本面特征函数 + 57 池缓存归档为可复用资产；修复已提交。
 - 资源继续转向 D4：恒指模型 / 异常检测 / 决策报告。
-- 闸门依赖兑现：特征工程未重开 H1 alpha 线；无论结果均不再主张「独立 alpha」。

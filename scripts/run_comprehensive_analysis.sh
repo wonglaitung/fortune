@@ -21,6 +21,15 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # 切换到项目目录
 cd "$PROJECT_DIR"
 
+# F1 另类数据特征生产纳入（D20，保留低配）：训练/预测均生成并使用 F1
+# F1_FEATURES=1 生成 F1 特征；F1_FORCE=1 训练时强制把 7 个 F1 特征并入模型
+# （否则特征选择会静默丢弃 F1，导致"加了列但模型未受益"）。
+# GATE_SOURCE_CSV 不在此硬编码：门槛/校准器由 market_regime.GATE_SNAPSHOT
+# （commit_backtest_result.py 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，
+# 故每次 WF 跑完经该脚本入库即自动更新，无需手动改址（lessons 三.29）。
+export F1_FEATURES=1
+export F1_FORCE=1
+
 echo "=========================================="
 echo "🚀 综合分析自动化流程（使用 CatBoost 三周期模型）"
 echo "=========================================="

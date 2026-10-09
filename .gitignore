@@ -120,3 +120,5 @@ download_icbc_stock_data.py
 
 # ICBC Stock Data Files (生成的数据文件)
 data/工商银行股票数据_*.xlsx
+
+data/fund_cache/
