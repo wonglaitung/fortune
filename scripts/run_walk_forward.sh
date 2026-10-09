@@ -16,6 +16,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+# F1 另类数据特征（D20 生产纳入）：WF 默认与生产模型一致含 F1（507 特征）；
+# 显式 F1_FEATURES=0 F1_FORCE=0 可跑基线做 A/B（覆盖默认）。
+# 此前未注入 → 直接跑 run_walk_forward.sh 会静默跑成基线（无 F1），产出旧的 F1-null 数字，
+# 与 run_comprehensive_analysis.sh（已注入）行为不一致，属 footgun（lessons 同类空特征陷阱）。
+export F1_FEATURES="${F1_FEATURES:-1}"
+export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
+
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
 
 # 输入冻结：三者缺一不可，否则双跑输入不同 → md5 必不一致
@@ -37,5 +44,5 @@ export OPENBLAS_NUM_THREADS="${LGBM_N_JOBS:-8}"
 export LGBM_N_JOBS="${LGBM_N_JOBS:-8}"
 export CATBOOST_THREAD_COUNT="${CATBOOST_THREAD_COUNT:-8}"
 
-echo "[run_walk_forward] PYTHONHASHSEED=$PYTHONHASHSEED OMP/MKL/OPENBLAS=$OMP_NUM_THREADS LGBM_N_JOBS=$LGBM_N_JOBS CATBOOST_THREAD_COUNT=$CATBOOST_THREAD_COUNT"
+echo "[run_walk_forward] PYTHONHASHSEED=$PYTHONHASHSEED OMP/MKL/OPENBLAS=$OMP_NUM_THREADS LGBM_N_JOBS=$LGBM_N_JOBS CATBOOST_THREAD_COUNT=$CATBOOST_THREAD_COUNT F1_FEATURES=$F1_FEATURES F1_FORCE=$F1_FORCE"
 exec python3 ml_services/walk_forward_validation.py "$@"
