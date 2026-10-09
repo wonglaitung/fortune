@@ -3235,3 +3235,17 @@ python3 ml_services/performance_monitor.py --mode all --no-email
   港股个股横截面 alpha 经 H2/H1-F/H1-F-2/H1-F-3 四道独立检验，确认随 D1 止投
 [落档] DECISIONS D19 加实测结果块；MODEL_IMPROVEMENT_PLAN 2.1/2.1.3 同步"彻底永久关闭"；
   提交 6f68e87d(实测)→ 后续提交。progress.txt 本段待用户同意后并入正式提交
+
+================================================================================
+[2026-10-10 F1 生产纳入收尾：SFC 周更脚本 + gitignore 缺口闭环]
+--------------------------------------------------------------------------------
+[背景] D20 ① C 闸过→「保留低配」已生产纳入（提交 15a61940）；但 SFC `sfc_short_long.csv`
+  一直 gitignore 且从未入库 → 生产端 `load_sfc_long()` 空 → F1 `SFC_short_z` 全 NaN（local-only）
+[交付] scripts/fetch_sfc_short.py：SFC 聚合卖空周报增量刷新（DD/MM/YYYY→YYYYMMDD 归一化、
+  软404/HTML 静默跳过、30s 超时+重试防挂死；--full 回填 / --dry 预览）；实测追加 2026-10-02
+  周（735 周 / 517,070 行），`load_sfc_long` 正确消费（short_z=2.04 @ PIT t-7）
+[接线] run_comprehensive_analysis.sh 前置非致命步骤拉取最新周；comprehensive-analysis.yml
+  commit 步骤写回 data/sfc_short/ 使刷新每周递推
+[缺口闭环] .gitignore 放开 data/sfc_short/ + doc_gate.py 加 SFC_CSV 例外（类比 prediction_analysis.csv）；
+  提交 735 周种子 CSV(20MB) → 生产端 F1 SFC 信号自此真正生效（此前生产纳入实为 local-only）
+[落档] DECISIONS D20 ④「仍存缺口」改「已闭环」并注提交 87dccc74；提交 87dccc74
