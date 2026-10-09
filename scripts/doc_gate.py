@@ -65,6 +65,9 @@ FORBIDDEN_STAGED = [
 
 # 例外：回测入库 CSV（scripts/commit_backtest_result.py 自动提交，AGENTS Git 规范）
 HK20D_CSV = re.compile(r"^output/\d{8}_\d{6}_catboost_20d/prediction_analysis\.csv$")
+# 例外：SFC 聚合卖空周报（模型输入特征，D20 生产纳入；fetch_sfc_short.py 周更，
+# 工作流 commit 步骤写回仓库，类比 HK20D_CSV 例外）
+SFC_CSV = re.compile(r"^data/sfc_short/(sfc_short_long\.csv|manifest\.json)$")
 
 
 def _files() -> list[Path]:
@@ -211,7 +214,7 @@ def check_staged() -> list[str]:
         suf = Path(f).suffix.lower()
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
-        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f):
+        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f):
             fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 

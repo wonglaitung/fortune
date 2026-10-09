@@ -74,6 +74,8 @@ jobs:
           # ml_trading_model.py --mode train 重建，无需跨 run 携带）
           git add data/prediction_history.json
           git add output/comprehensive_reports/*.md
+          # SFC 卖空周报增量刷新结果写回仓库，使刷新每周递推（D20 生产纳入配套）
+          git add data/sfc_short/ 2>/dev/null || true
           # 检查是否有更改需要提交
           if ! git diff --staged --quiet; then
             git commit -m "Update prediction history and daily report [skip ci]"
