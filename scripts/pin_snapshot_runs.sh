@@ -5,8 +5,17 @@ export US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot
 # 门槛基准也须冻结：_latest_gate_source_csv 默认取磁盘上最新回测 CSV，
 # 而回测期间 output/ 会新增目录 → 同一模型两次运行的 PIT 分位不同
 # → Dynamic_Threshold 9% 行不一致（lessons 三.29）。用入库基线固定。
-export GATE_SOURCE_CSV=output/20261001_000048_catboost_20d/prediction_analysis.csv
-[ -f "$GATE_SOURCE_CSV" ] || unset GATE_SOURCE_CSV
+# 2026-10-10 修：勿写死路径（旧值 20261001_000048 已过期）——动态取 git 入库生产基线，
+# 与 comprehensive_analysis.py 取源三道闸之②同口径（排 _a_stock_/_lightgbm_/VOIDED）
+export GATE_SOURCE_CSV=$(git ls-files -- 'output/*_catboost_20d/prediction_analysis.csv' | python3 -c "
+import sys, os
+from scripts.commit_backtest_result import VOIDED_DIRS
+c = [l.strip() for l in sys.stdin
+     if l.strip() and '_a_stock_' not in l and '_lightgbm_' not in l
+     and os.path.basename(os.path.dirname(l.strip())) not in VOIDED_DIRS]
+print(max(c) if c else '')
+")
+[ -n "$GATE_SOURCE_CSV" ] && [ -f "$GATE_SOURCE_CSV" ] || unset GATE_SOURCE_CSV
 echo "[$(date '+%F %T')] 快照=${US_MARKET_SNAPSHOT_DIR} 门槛基准=${GATE_SOURCE_CSV:-自动}"
 L=output/train_retrain
 
