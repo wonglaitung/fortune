@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-训练并保存生产 LightGBM 20d 模型（复用 CatBoost 管线，learner=lightgbm）
+训练并保存 LightGBM 20d 模型（复用 CatBoost 管线，learner=lightgbm）
+（2026-10-10 D20 ⑦ 起生产默认=CatBoost F1-off；本脚本为回退/对照留档用）
 
 产出：data/ml_trading_model_lightgbm_20d.pkl（comprehensive_analysis 优先加载）
 用法：python3 scripts/train_lightgbm_20d.py

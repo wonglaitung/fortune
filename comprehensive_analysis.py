@@ -550,24 +550,50 @@ def load_historical_profit_loss_ratio(output_dir='output'):
     """
     import glob
 
-    # 查找最新的 prediction_analysis.csv 文件
-    search_patterns = [
-        os.path.join(output_dir, '*_catboost_20d/prediction_analysis.csv'),
-        os.path.join(output_dir, 'walk_forward_catboost_20d_*/prediction_analysis.csv'),
-        os.path.join(output_dir, 'walk_forward_catboost_20d_*/*_catboost_20d/prediction_analysis.csv'),
-    ]
-
-    prediction_files = []
-    for pattern in search_patterns:
-        prediction_files.extend(glob.glob(pattern))
-
-    if not prediction_files:
-        print(f"  ⚠️ 未找到 Walk-forward 预测分析文件")
-        return {}
-
-    # 使用最新的文件
-    latest_file = max(prediction_files, key=lambda x: os.path.getmtime(x))
-    print(f"  📁 加载历史盈亏比数据: {os.path.basename(os.path.dirname(latest_file))}")
+    # 取源三道闸（2026-10-10 对抗审计，防 mtime 轮转事故——lessons 三.30 同族）：
+    # ① GATE_SOURCE_CSV 显式强制（复现口径）
+    # ② git 入库的港股 20d CSV（commit_backtest_result 只留最新一份=生产基线；
+    #    实验/作废产物不入库 → 永不胜出；CI 与本地同源）
+    # ③ 磁盘 mtime 兜底（排除 VOIDED 与非港股目录）
+    latest_file = None
+    pick_src = None
+    forced = os.environ.get('GATE_SOURCE_CSV')
+    if forced and os.path.exists(forced):
+        latest_file, pick_src = forced, 'GATE_SOURCE_CSV 强制'
+    if latest_file is None:
+        try:
+            import subprocess
+            from ml_services.market_regime import is_voided_output_dir
+            tracked = subprocess.run(
+                ['git', 'ls-files', '--', 'output/*_catboost_20d/prediction_analysis.csv'],
+                capture_output=True, text=True, timeout=10).stdout.split()
+            cands = [f for f in tracked
+                     if '_a_stock_' not in f and '_lightgbm_' not in f
+                     and not is_voided_output_dir(f)]
+            if cands:
+                latest_file, pick_src = max(cands), 'git 入库生产基线'
+        except Exception:
+            pass
+    if latest_file is None:
+        search_patterns = [
+            os.path.join(output_dir, '*_catboost_20d/prediction_analysis.csv'),
+            os.path.join(output_dir, 'walk_forward_catboost_20d_*/prediction_analysis.csv'),
+            os.path.join(output_dir, 'walk_forward_catboost_20d_*/*_catboost_20d/prediction_analysis.csv'),
+        ]
+        prediction_files = []
+        for pattern in search_patterns:
+            prediction_files.extend(glob.glob(pattern))
+        try:
+            from ml_services.market_regime import is_voided_output_dir
+            prediction_files = [f for f in prediction_files if not is_voided_output_dir(f)]
+        except Exception:
+            pass
+        if not prediction_files:
+            print(f"  ⚠️ 未找到 Walk-forward 预测分析文件")
+            return {}
+        latest_file = max(prediction_files, key=lambda x: os.path.getmtime(x))
+        pick_src = '磁盘 mtime 兜底 ⚠️ 非生产基线风险'
+    print(f"  📁 加载历史盈亏比数据 [{pick_src}]: {latest_file}")
 
     try:
         df = pd.read_csv(latest_file)
@@ -653,29 +679,58 @@ def load_multi_horizon_models():
     data_dir = os.path.join(script_dir, 'data')
 
     models = {}
-    # 20d 优先使用 LightGBM（管线级 A/B 胜出：信号更强+护栏通过，见 docs/MODEL_IMPROVEMENT_PLAN.md §5.18）
+    # 20d 优先使用 CatBoost F1-off（2026-10-10 同条件四格多数判 C1 夺魁，见 docs/DECISIONS.md D20 ⑦；
+    # LightGBM 回退位保留 F1-off pkl）
     lgbm20 = os.path.join(data_dir, 'ml_trading_model_lightgbm_20d.pkl')
     cat20 = os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl')
     model_files = {
         1: os.path.join(data_dir, 'ml_trading_model_catboost_1d.pkl'),
         5: os.path.join(data_dir, 'ml_trading_model_catboost_5d.pkl'),
-        20: lgbm20 if os.path.exists(lgbm20) else cat20,
+        20: cat20 if os.path.exists(cat20) else lgbm20,
     }
 
     missing_models = []
     for horizon, filepath in model_files.items():
-        if os.path.exists(filepath):
+        # 20d 加载失败回退 lightgbm（对抗审计：主文件「存在但加载炸」同样须回退，不能直接缺 20d）
+        candidates = [filepath]
+        if horizon == 20 and filepath == cat20 and os.path.exists(lgbm20):
+            candidates.append(lgbm20)
+        loaded = None
+        last_err = None
+        for cand in candidates:
+            if not os.path.exists(cand):
+                if len(candidates) == 1:
+                    print(f"  ⚠️ {horizon}d 模型文件不存在: {cand}")
+                continue
             try:
-                model = CatBoostModel()
-                model.load_model(filepath)
-                models[horizon] = model
-                print(f"  ✅ 加载 {horizon}d 模型成功")
+                m = CatBoostModel()
+                m.load_model(cand)
+                loaded = m
+                if cand != filepath:
+                    print(f"  ⚠️ {horizon}d 主模型加载失败，已回退: {cand}")
+                break
             except Exception as e:
-                print(f"  ⚠️ 加载 {horizon}d 模型失败: {e}")
-                missing_models.append(horizon)
-        else:
-            print(f"  ⚠️ {horizon}d 模型文件不存在: {filepath}")
+                last_err = e
+                print(f"  ⚠️ 加载 {horizon}d 模型失败({cand}): {e}")
+        if loaded is None:
+            if last_err is not None:
+                print(f"  ⚠️ {horizon}d 主/回退模型均不可用: {last_err}")
             missing_models.append(horizon)
+            continue
+        models[horizon] = loaded
+        print(f"  ✅ 加载 {horizon}d 模型成功")
+        # 特征口径预检（对抗审计加固）：pkl 特征集 vs 当前选择集——漂移会在预测期
+        # 触发 KeyError 且只 console 警告 → 该周期静默缺席邮件（lessons 三.20 同族）
+        try:
+            sel = loaded.load_selected_features()
+            if sel:
+                pkl_set, sel_set = set(loaded.feature_columns), set(sel)
+                if pkl_set != sel_set:
+                    print(f"  ⚠️⚠️ {horizon}d 特征口径漂移: pkl {len(pkl_set)} 列 vs 当前选择集 "
+                          f"{len(sel_set)} 列（pkl-only={len(pkl_set - sel_set)}, "
+                          f"sel-only={len(sel_set - pkl_set)}）——预测期可能缺列跳过，须核对选择文件")
+        except Exception as e:
+            print(f"  ⚠️ {horizon}d 特征口径预检失败: {e}")
 
     if len(models) < 3:
         print(f"⚠️ 缺少模型: {missing_models}，将使用可用的模型进行预测")
@@ -728,9 +783,10 @@ def predict_three_horizons(stock_code, models=None):
                     }
                     success_count += 1
             except KeyError as e:
-                # 特征不匹配，跳过此周期
-                print(f"  ⚠️ {stock_code} {horizon}d 模型特征不匹配，跳过")
+                # 特征不匹配，跳过此周期（对抗审计：打印缺失列并打标，防静默降级）
+                print(f"  ⚠️ {stock_code} {horizon}d 模型特征不匹配（缺列 {e}），跳过")
                 result['predictions'][horizon] = None
+                result['feature_mismatch'] = True
             except Exception as e:
                 print(f"  ⚠️ 预测 {stock_code} {horizon}d 失败: {str(e)[:50]}")
                 result['predictions'][horizon] = None

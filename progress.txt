@@ -3273,3 +3273,22 @@ python3 ml_services/performance_monitor.py --mode all --no-email
    DECISIONS D20 ⑥、ARCHITECTURE（加载优先级/F1 env 例外）、DEPLOYMENT T2、MIP §2.1.4、
    lessons 三.52；遗留：门槛源仍为 234941 catboost 分布（换 A2 分布须单独决策）、WF 期 HSI 实时取数
    失败走 HSI.pkl 兜底致 HMM 特征退化（A2/B2 对称，跨表比较作口径注记）
+
+2026-10-10 (续) D20 ⑦ 学习器终判 + F1 终审关闭 + 生产切换 CatBoost F1-off（用户读法B override）
+1) 补跑 C1（CB F1-off，同窗口三冻结同门槛源）使四格同条件；A2' 双跑 md5 一致（bit 级复现）
+2) 四格两两五项多数（预注册读法B）：C1 全表夺魁（vs234941 4-1 / vsA2 3-2 / vsB2 4-1）→ 生产=CB F1-off
+3) F1 三命题终审：①数据含信息✅ ②进训练有害❌ ③模型外残差信息✅（ROE p=0.011/AT p=0.016）
+4) 做法B 后处理叠加预注册检验：39 期 p=0.178 ❌；62 期扩窗（start 2018-07-01，61 折）p=0.522 ❌
+   → 预注册「不显著但方向同→永久关闭」命中：F1 终审永久关闭（SFC/基本面管线留数据不进生产）
+5) 生产切换执行：comprehensive_analysis 20d 优先加载 catboost（F1-off pkl，500 特征 23:20 重训验证）；
+   run_walk_forward.sh/run_comprehensive_analysis.sh F1 env 默认 1→0；LGBM pkl 降回退留档；1d/5d 不变
+6) 文档同步：DECISIONS D20 ⑦、BASELINES（四格终表+B检验双窗口）、AGENTS×6、ARCHITECTURE×2、
+   DEPLOYMENT T2×2、lessons 三.53、本条；遗留：T2 现行基线为 LGBM 口径待下次周期以 C1 产物复测、
+   门槛源仍 234941、F1 未来复验仅限新月份数据同判据一发
+2026-10-10 (续2) comprehensive_analysis.py 对抗审计三处修复（B 闸自审）
+1) 盈亏比取源加三道闸：GATE_SOURCE_CSV 强制 → git 入库生产基线（排除 _a_stock_/_lightgbm_/VOIDED）
+   → 磁盘 mtime 兜底；修复 mtime 轮转事故（实验产物 5Y 扩窗 CSV 一度成为邮件盈亏比数据源，三.30 同族）
+2) 模型加载加固：20d 主 pkl 加载炸时回退 lightgbm（原仅文件缺失才回退）+ 加载后特征口径预检
+   （pkl vs 当前选择集漂移打大字警告，防预测期 KeyError 静默缺席邮件，三.20 同族）
+3) KeyError 分支打印缺失列并打 feature_mismatch 标，防静默降级
+4) 验证：py_compile ✅ 三模型加载无漂移 ✅ 取源=234941 git 入库 ✅ 2318.HK 三周期预测冒烟 ✅

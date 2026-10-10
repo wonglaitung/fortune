@@ -54,7 +54,7 @@ flowchart TD
 
 **关键依赖关系**：
 - `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
-- **20d 预测加载优先级**：`ml_trading_model_lightgbm_20d.pkl` 优先、缺则回退 `catboost_20d.pkl`（D10 A/B 胜出者优先）。**两 pkl 特征口径不同但各自均为已验证配置**：LGBM 版=F1-off 新选择集（2026-10-10，D20 ⑥ A/B 判 F1 对 LGBM 反向后回退）、catboost 版=F1-on 507（D20 ② 验证，runner 端回退路径实际生效）
+- **20d 预测加载优先级**：`ml_trading_model_catboost_20d.pkl`（**F1-off**）优先、缺则回退 `lightgbm_20d.pkl`（D20 ⑦ 四格多数判，2026-10-10 切换）。**两 pkl 均 F1-off**：catboost 版=生产重训版、LGBM 版=回退留档（D20 ⑥ A/B 判 F1 对 LGBM 反向）
 - F1 另类特征（D20）：SFC 卖空经 `scripts/fetch_sfc_short.py` 周更进 `data/sfc_short/`（入库跟踪，工作流 commit 写回）；基本面比率走 `data/fund_cache/`（gitignore 持久缓存，akshare，30s 超时）；两源均 PIT 正确（SFC `t-7` / 基本面固定滞后）
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
@@ -225,7 +225,7 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 
 | 变量名 | 说明 |
 |--------|------|
-| `F1_FEATURES` | `=1` 时生成 F1 另类特征（SFC 卖空 + 6 个基本面比率）；`run_comprehensive_analysis.sh` 与 `run_walk_forward.sh` **均默认注入 1**（与生产 catboost 模型一致）。复现 F1-off 旧基线须显式 `F1_FEATURES=0`。**例外：生产 LGBM 重训（`train_lightgbm_20d.py` 手动跑）不加 F1 env**（D20 ⑥ A/B：F1 对 LGBM 反向） |
+| `F1_FEATURES` | `=1` 时生成 F1 另类特征（SFC 卖空 + 6 个基本面比率）；`run_comprehensive_analysis.sh` 与 `run_walk_forward.sh` **均默认 0**（D20 ⑦ F1 终审关闭，2026-10-10）。复现 F1-on 旧基线（212920/234941/B2）须显式 `F1_FEATURES=1` |
 | `F1_FORCE` | `=1` 时训练把 7 个 F1 特征**强制并入**选择集（507=Top500+7）；否则特征选择层会静默丢弃慢变量（D20 教训）。默认随 `F1_FEATURES` |
 
 ### 主要依赖

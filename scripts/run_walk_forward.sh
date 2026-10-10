@@ -16,11 +16,10 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-# F1 另类数据特征（D20 生产纳入）：WF 默认与生产模型一致含 F1（507 特征）；
-# 显式 F1_FEATURES=0 F1_FORCE=0 可跑基线做 A/B（覆盖默认）。
-# 此前未注入 → 直接跑 run_walk_forward.sh 会静默跑成基线（无 F1），产出旧的 F1-null 数字，
-# 与 run_comprehensive_analysis.sh（已注入）行为不一致，属 footgun（lessons 同类空特征陷阱）。
-export F1_FEATURES="${F1_FEATURES:-1}"
+# F1 另类数据特征（D20；2026-10-10 D20 ⑦ 终审关闭）：WF 默认与生产一致 F1-off；
+# 显式 F1_FEATURES=1 F1_FORCE=1 仅供复验对照（覆盖默认）。
+# ⚠️ 默认值随 D20 ⑦ 从 1 改为 0——复现 F1-on 旧基线（212920/234941/B2）须显式 =1。
+export F1_FEATURES="${F1_FEATURES:-0}"
 export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
 
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
