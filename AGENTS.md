@@ -51,14 +51,15 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
-| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数） | - |
+| **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数。**2026-10-10 起默认 `F1_FEATURES=1 F1_FORCE=1` 与生产一致**；复现 F1-off 旧基线须显式 `F1_FEATURES=0 F1_FORCE=0`） | - |
+| **SFC 卖空周报周更** | `python3 scripts/fetch_sfc_short.py`（增量抓 SFC 官方每周 CSV 追加 `data/sfc_short/`；`--dry` 预览 / `--full` 回填）；已挂进 `run_comprehensive_analysis.sh` 前置步骤 | 每周（SFC 周五发布后） |
 | **降噪对照实验** | `... run_walk_forward.sh ... --top-k 30`（每折特征数；降噪路径已实证排除，见 lessons 三.37） | - |
-| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结宏观快照，`python3 scripts/pin_hk_snapshot.py` 先冻结个股行情快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**三冻结，缺一不可**（lessons 三.29/三.30/三.50）。验收=同配置连跑两次 CSV md5 相同 | - |
+| **⭐ 可复现跑（推荐）** | `python3 scripts/pin_macro_snapshot.py` 先冻结宏观快照，`python3 scripts/pin_hk_snapshot.py` 先冻结个股行情快照，再 `US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot GATE_SOURCE_CSV=output/<基线>/prediction_analysis.csv scripts/run_walk_forward.sh ...`——**三冻结，缺一不可**（lessons 三.29/三.30/三.50）。验收=同配置连跑两次 CSV md5 相同。注意：runner **默认 F1=1**（复现 F1-off 旧基线须 `F1_FEATURES=0 F1_FORCE=0`）；`data/sfc_short/` 为周更文件不属三冻结——PIT t-7 + WF 窗口止于新周之前 ⇒ 追加不改窗口内特征，跨周复现仍须同版本 CSV；WF `--start-date` 是**全程起点**（测试期起点=start+训练窗），复现测试期 2023-06→2026-07 须 `--start-date 2020-06-01`（lessons 三.52） | - |
 | **跨快照稳健性** | `python3 scripts/vintage_sensitivity.py --horizon 20 --topk 10` —— 扫描全部港股 20d 快照输出 [min,max] 区间（**禁止取最好一轮**） | - |
-| **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 成功后自动入库（见下方 Git 规范；`--no-commit` 关闭） |
+| **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
-| **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 D10）；**1d/5d 维持 CatBoost**（D10） |
+| **生产 LightGBM 20d** | `python3 scripts/train_lightgbm_20d.py` | 20d 信号默认学习器（A/B 胜出，见 D10）；**1d/5d 维持 CatBoost**（D10）；**F1-off 为验证配置**（D20 ⑥：F1 对 LGBM 反向，勿加 F1 env） |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
@@ -133,6 +134,7 @@ python hsi_email.py --no-email
 | **绝对准确率/胜率陷阱** | 趋势板块基准本就高；评估看 **lift（胜率−基准）** 与 **方向技能（准确率−永远看涨）**，不看绝对值 |
 | **降噪救不回信号** | Top500→Top30 单变量对照（同窗口/折数/学习器/快照/门槛基准）：净IR 0.42→0.64 但 **CI 仍跨 0、PBO 越过门槛、DSR 不过** → 三闸门全不过。**路径关闭基于纪律**——勿再调 Top50/100（等于在噪声里捞信号，违反预注册纪律）。见 lessons 三.37 |
 | **个股横截面 alpha 已穷尽** | 完整管线 DSR 0.87 不过、扩池不增信号、简单模型 IC 转负；2026-09-30 相对标签（剥离 Beta）受控复验仍未 rescue → **停止投入**，见 D1 |
+| **F1 特征仅 CatBoost 路径「保留低配」** | D20 CatBoost 双跑 234941：DSR 0.974/净IR 1.15[0.08,2.25] 但 **PBO 0.96 不过 → 🟡 不得升配**；**F1×LightGBM 已 A/B（D20 ⑥，38 折双跑）：F1 对 LGBM 反向**（DSR 0.913→0.795、PBO 0.49→0.61）→ 生产 LGBM 维持 F1-off，F1 归宿=catboost 路径；⚠️ WF `--start-date`=**全程起点**（含 36 月训练窗），复现 D20 测试期 2023-06→2026-07 须 `--start-date 2020-06-01`，传 2023-06 只得 2 折废跑（lessons 三.52） |
 | **恒指方向信号不优于持有** | 信号 Long/Flat 1/5/20d IR（−0.68/0.13/0.11）均低于买入持有（0.38/0.39/0.49） |
 | **异常大跌抄底是真信号但强依赖行情** | z≤−3 持 5d 净IR 1.55 显著；但逐年依赖 2025，**仅限大盘上行期（恒指>MA200）战术使用**；短期强势过滤有害 |
 | **港股个股信号多为"2025 现象"** | 多策略复核收益集中于 2025 反弹年；跨年稳健性普遍不足，须逐年看 |
@@ -193,7 +195,7 @@ python hsi_email.py --no-email
 - 中美利差：CN_US_10Y_Spread（资金流向驱动）, CN_US_Spread_Change_5d, CN_US_Spread_Z_Score
 - 通过网络交叉特征区分个股（如 `net_centrality_CN_US_10Y_Spread`）
 
-**特征选择**：使用 Top 500 特征，特征减少 55.8%，性能优于全量特征
+**特征选择**：使用 Top 500 特征，特征减少 55.8%，性能优于全量特征；**20d 生产现为 Top500+7 个 F1 特征 = 507**（`F1_FORCE=1` 强制并入，否则选择层会静默丢弃慢变量，D20）
 
 **Walk-forward 输出文件**（保存到 `output/YYYYMMDD_HHMMSS_catboost_20d/`）：
 - `fold_metrics_detail.json` - 每个 Fold 的指标 + **Top 100 特征重要性**
@@ -205,7 +207,7 @@ python hsi_email.py --no-email
 | 参数 | 值 | 说明 |
 |------|-----|------|
 | **预测阈值** | 0.5 | 概率 > 0.5 预测上涨 |
-| 特征数量 | ~1450 → 500 | 推荐使用 Top 500 特征选择 |
+| 特征数量 | ~1450 → 500（含 F1 强制并入时 507） | 推荐使用 Top 500 特征选择 |
 | 随机种子 | 42（固定） | 确保可重现性 |
 
 **20天模型参数**（超参数优化后）：
@@ -361,6 +363,9 @@ test_df[col] = test_df[col].apply(
     `scripts/commit_backtest_result.py` 自动入库
     （分位门槛数据源，CI/本地须同源；每次入库自动 `git rm --cached` 旧的港股 20d CSV
     只留最新，防仓库膨胀；快照维护见 `ml_services/market_regime.py` 注释）
+  - **例外**：SFC 卖空周报 `data/sfc_short/sfc_short_long.csv` + `manifest.json`
+    （模型输入特征，D20 生产纳入；`fetch_sfc_short.py` 周更、工作流 commit 写回，
+    类比上条例外；教训见 lessons 三.51——被 gitignore 的生产依赖 = 生产端不存在）
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
 - 推送冲突：使用 `git pull --rebase`
 - **B 闸自动执行点**：`.githooks/pre-commit` 跑 `scripts/doc_gate.py --staged`，

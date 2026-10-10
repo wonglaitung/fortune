@@ -3249,3 +3249,27 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 [缺口闭环] .gitignore 放开 data/sfc_short/ + doc_gate.py 加 SFC_CSV 例外（类比 prediction_analysis.csv）；
   提交 735 周种子 CSV(20MB) → 生产端 F1 SFC 信号自此真正生效（此前生产纳入实为 local-only）
 [落档] DECISIONS D20 ④「仍存缺口」改「已闭环」并注提交 87dccc74；提交 87dccc74
+[补充] run_walk_forward.sh 默认注入 F1_FEATURES=1/F1_FORCE=1（消除 WF 静默基线 footgun，提交 afbe2fdd）
+[对抗复核] 同日 B 闸发现「生产纳入」落地不全：20d 信号优先加载 lightgbm_20d.pkl（9-30 旧、无 F1、
+  无自动化重训）→ 本机综合分析 20d 仍是无 F1 模型；runner 端 pkl 不存在走 catboost 回退（F1 生效）
+  → 两环境行为不一致；且 F1×LightGBM 未做 A/B（D10 纪律）。生产纳入降级为「部分执行」，
+  LGBM 重训+A/B 待用户决策。教训录 lessons 三.51（生产纳入验收须沿真实消费路径）；
+  全文档同步更新（AGENTS/BASELINES/ARCHITECTURE/DEPLOYMENT/MIP/D18 注/lessons）
+
+[2026-10-10 LGBM F1 A/B 闭环（D20 ⑥）]
+1) 重训双臂（train_lightgbm_20d.py，同 Top500 基座=234941 选择集派生）：F1-off 500 特征（对照）、
+   F1-on 507（生产路径暂存）；F1-on 模型层证据：F1 gain 合计 15.00%、TOP10 占 6 席（Asset_Turnover #1）、
+   预测方向翻转 9/32=28.1%、|Δp| 中位 0.135 → 触发 WF（预注册翻转>10% 阈值）
+2) WF 双跑（--learner lightgbm --start-date 2020-06-01 --end-date 2026-07-31，测试期 2023-06→2026-07
+   同 D20 口径，三冻结+同门槛源 234941 CSV，均 38 折/41153 行，A 闸 PASS）：
+   F1-off: 净IR 0.67[−0.46,1.78] PBO 0.49 DSR 0.913 lift +0.8pp → 🟡
+   F1-on:  净IR 0.62[−0.51,1.69] PBO 0.61 DSR 0.795 lift +0.7pp → 🟡
+3) 预注册增量门反向且三项全劣 → 按处置回退：生产 lightgbm_20d.pkl = F1-off 新选择集版（500，已执行）
+4) 两折废跑插曲：--start-date 2023-06-01 按字面窗口只得 2 折（start=全程起点语义），
+   折数完整性预期 38≠2 捕获，改正 2020-06-01 重跑；产物标 INVALID 已清理
+5) 结论：学习器不对称——F1 在 CatBoost 受益（D20 ②）、在 LGBM 反向（D20 ⑥）；生产 20d =
+   LGBM F1-off（优先加载）+ catboost F1-on（回退），两路径均为已验证配置；≤5% 仓位不变
+6) 文档全量同步：AGENTS（F1 警告行/start_date 语义/rel_alpha 修正）、BASELINES（LGBM A/B 基线表）、
+   DECISIONS D20 ⑥、ARCHITECTURE（加载优先级/F1 env 例外）、DEPLOYMENT T2、MIP §2.1.4、
+   lessons 三.52；遗留：门槛源仍为 234941 catboost 分布（换 A2 分布须单独决策）、WF 期 HSI 实时取数
+   失败走 HSI.pkl 兜底致 HMM 特征退化（A2/B2 对称，跨表比较作口径注记）

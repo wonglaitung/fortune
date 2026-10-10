@@ -749,6 +749,7 @@ H1-B 前置满足（⛔纪律①）。H1-B 目标：把训练历史从 2019-06-0
 3. PIT：d+7 起前向收益（与 H1-F 一致）；trailing 窗口截至 d−1（不含 d 当周）
 4. 单变量隔离 + 三冻结承诺（只读冻结 CSV）；双跑 md5 一致性（若动了快照）
 5. **不再建 SFC 周频 pin 脚本**（仅当 H1-F-2 通过并接生产才建，见 D17 前置⑤）
+   - **2026-10-10 注**：本条针对 **H1-F-2 alpha 研究冻结集** 的 pin 脚本；D20（特征工程预注册）另行批准建了 `scripts/fetch_sfc_short.py`（生产输入数据周更下载，非 alpha 冻结 pin），不违反本条。实现偏离 D17 ⑤ 的双轨设计（单文件追加而非研究/生产分轨），安全性依据：**PIT t-7 + WF 窗口止于新周之前 ⇒ 追加不改窗口内特征**；代价：跨周复现须锁同版本 CSV（AGENTS ⭐可复现跑注）。
 
 **闸门依赖**：H1-F-2 是 H1-F-null 后按用户 B 授权的唯一深挖；若 H1-F-2-null → **H1 线彻底永久关闭，无再开口**；若通过 → 才进入次级（建特征 / 归一化 / 接 walk-forward，届时另起次级预注册）。
 
@@ -901,6 +902,32 @@ H1-B 前置满足（⛔纪律①）。H1-B 目标：把训练历史从 2019-06-0
 - 但按 D2 升配判据（净IR≥0.7 且 **PBO<0.5** 且 DSR≥0.95）：净IR 1.15≥0.7 ✅、DSR 0.974≥0.95 ✅、但 **PBO 0.96 不过** → **未达升配，归「IR>0 但未达升级 → 保留低配」**。即不得升配至 15% 级；lift p=0.0507 不显著、净IR CI 下界仅 0.08 边际，亦不支持升配。
 - **C 闸双跑复核（2026-10-09 完成，通过）**：同配置（三冻结 + `F1_FEATURES=1` + `F1_FORCE=1` + `run_walk_forward.sh` 固化 env）重跑 `output/20261009_234941_catboost_20d`，与首跑 `212920` **prediction_analysis.csv md5 完全一致**（`4109016dcc05452dda5a37c5433ccf09`）→ bit 级可复现；两跑闸门一致：DSR 0.974、净IR 1.15 [0.08,2.25]（CI 下界 0.08>0）、PBO 0.96、fold0 重要性 SFC_short_z 第5。**DSR≥0.95 与净IR CI 下界>0 均稳定复现 → C 闸过**。`monthly_guardrail` 自动判定 **🟡 保留低配（未达升级门槛）**，与原判一致。
 - **后续（C 闸过后）**：可按 D2「保留低配」将 F1 特征以 `F1_FEATURES=1` 纳入生产重训——须 OOF 重拟合校准器（`oof_glob`）+ 门槛重校（`GATE_SOURCE_CSV` 指向本双跑产物）+ 三冻结同源；**仍不得升配至 15% 级**（PBO 0.96 不过）。特征工程未重开 H1 alpha 线，仍不主张「独立 alpha」。
-- **✅ 生产纳入已执行（2026-10-10）**：①重训生产 20d 模型 `data/ml_trading_model_catboost_20d.pkl`（`F1_FEATURES=1 F1_FORCE=1 --use-feature-selection`），`feature_columns`=507 含全部 7 F1（验证：实际训练重要性 `OCF_Quality` 3.07 第1、`Asset_Turnover` 2.90 第2、`Debt_Equity` 2.49、`ROE` 2.31、`SFC_short_z` 1.83…）；②环境变量 `F1_FEATURES=1`/`F1_FORCE=1` 注入 `scripts/run_comprehensive_analysis.sh`（每日/每周工作流调用的脚本，非 set_key.sh、非 YAML env），使训练+预测均生成并强制并入 F1；③清 `data/feature_cache/*.pkl` 使预测按 `f1_suffix` 重算；④**安全修复**：基本面缓存由 `/tmp/opencode/fund_cache`（重启即失）迁至持久 `data/fund_cache/`（342 文件，已 gitignore），并对 `ak.stock_financial_hk_report_em` 加 `socket.setdefaulttimeout(30)` 防静默挂死（lessons 三.21）；⑤单股预测冒烟测试 `2318.HK` 通过（probability 0.5266 非饱和，F1 列参与）。**`GATE_SOURCE_CSV` 不硬编码**：门槛/校准器由 `market_regime.GATE_SNAPSHOT`（经 `commit_backtest_result.py` 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，故每次 WF 跑完入库即自动更新、无需改址（lessons 三.29）。**仍存缺口（待补 cron）**：SFC 周更缺口已闭环（提交 87dccc74）：`scripts/fetch_sfc_short.py` 增量刷新（DD/MM/YYYY→YYYYMMDD 归一化、软404/HTML 静默跳过、30s 超时+重试防挂死）；**关键修复**：`data/sfc_short/` 原 gitignore 从未入库 → 生产端 `load_sfc_long()` 空、F1 `SFC_short_z` 全 NaN（此前「生产纳入」实为 local-only）；已放开 `.gitignore`+`doc_gate.py` 例外并入库种子 735 周（至 20261002），`run_comprehensive_analysis.sh` 前置拉取 + 工作流 commit 写回使刷新每周递推 → 生产端 F1 SFC 信号自此真正生效。基本面缓存无定期刷新（季报后变陈旧）仍待补 cron。
+- **✅ 生产纳入（2026-10-10，⚠️ 同日对抗复核后降级为「部分执行」，见下对抗复核块）**：①重训生产 20d 模型 `data/ml_trading_model_catboost_20d.pkl`（`F1_FEATURES=1 F1_FORCE=1 --use-feature-selection`），`feature_columns`=507 含全部 7 F1（验证：实际训练重要性 `OCF_Quality` 3.07 第1、`Asset_Turnover` 2.90 第2、`Debt_Equity` 2.49、`ROE` 2.31、`SFC_short_z` 1.83…）；②环境变量 `F1_FEATURES=1`/`F1_FORCE=1` 注入 `scripts/run_comprehensive_analysis.sh`（每日/每周工作流调用的脚本，非 set_key.sh、非 YAML env），使训练+预测均生成并强制并入 F1；③清 `data/feature_cache/*.pkl` 使预测按 `f1_suffix` 重算；④**安全修复**：基本面缓存由 `/tmp/opencode/fund_cache`（重启即失）迁至持久 `data/fund_cache/`（342 文件，已 gitignore），并对 `ak.stock_financial_hk_report_em` 加 `socket.setdefaulttimeout(30)` 防静默挂死（lessons 三.21）；⑤单股预测冒烟测试 `2318.HK` 通过（probability 0.5266 非饱和，F1 列参与）。**`GATE_SOURCE_CSV` 不硬编码**：门槛/校准器由 `market_regime.GATE_SNAPSHOT`（经 `commit_backtest_result.py` 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，故每次 WF 跑完入库即自动更新、无需改址（lessons 三.29）。**仍存缺口**：①**SFC 周更缺口已闭环（提交 87dccc74）**：`scripts/fetch_sfc_short.py` 增量刷新（DD/MM/YYYY→YYYYMMDD 归一化、软404/HTML 静默跳过、30s 超时+重试防挂死）；**关键修复**：`data/sfc_short/` 原 gitignore 从未入库 → 生产端 `load_sfc_long()` 空、F1 `SFC_short_z` 全 NaN（此前「生产纳入」实为 local-only）；已放开 `.gitignore`+`doc_gate.py` 例外并入库种子 735 周（至 20261002），`run_comprehensive_analysis.sh` 前置拉取 + 工作流 commit 写回使刷新每周递推 → 生产端 F1 SFC 信号自此真正生效（⚠️ 此句经同日对抗复核修正：仅对 runner 回退路径成立，见下）。②基本面缓存无定期刷新（季报后变陈旧）仍待补 cron。
 - 新增 SFC/基本面特征函数 + 57 池缓存归档为可复用资产；修复已提交。
+
+> ⚠️ **对抗复核（2026-10-10，B 闸）——「生产纳入」实际落地不全，三处断点**：
+> 1. **20d 信号加载优先级**：`comprehensive_analysis.py:656-660` 20d **优先加载 `ml_trading_model_lightgbm_20d.pkl`**（缺则回退 `catboost_20d.pkl`）。该 lightgbm pkl 为 **2026-09-30 版、500 特征、0 个 F1 列**，且 `scripts/train_lightgbm_20d.py` **无任何自动化调用**（不在 run_comprehensive_analysis.sh、不在 workflow）→ **本机跑综合分析，20d 信号仍是无 F1 的旧 LightGBM**；F1 重训的 `catboost_20d.pkl` 只在 lightgbm pkl 缺失时才被加载。
+> 2. **两环境行为不一致**：两个 `*_20d.pkl` 均 gitignore 未入库 → GitHub Action runner 每次由步骤 1 新训 catboost（带 F1 env）→ runner 上 20d 实为 **catboost+F1（回退路径）**；而 D10 说「20d 默认学习器 LightGBM」在 runner **从未成立**（pkl 永不存在）——D10 部署声明与 runner 现实长期不一致（既有问题，本次一并暴露）。
+> 3. **F1×LightGBM 未 A/B**：D10 纪律「换学习器必须按周期分别 A/B」；D20 全部实测（①②/C闸）均在 **CatBoost** 上，LightGBM（20d 默认学习器）从未测 F1 → 现状是「F1 只验证并落地于非默认学习器」。**→ 已闭环，见 ⑥（2026-10-10 当日 A/B 结论：F1 对 LGBM 反向，生产 LGBM 维持 F1-off）**。
+> **结论**：D20 的「C 闸过、🟡 保留低配」判定本身有效（特征有 edge，CatBoost 口径）；但**「生产纳入已执行」须降级为「部分执行」**——信号层真正带上 F1 需：跑 `train_lightgbm_20d.py`（F1 env）重训 lightgbm pkl + 重验。**待决事项已按用户指示执行 → ⑥**。
+> **方法论教训**：与 gitignore 缺口同根因——「纳入验收没沿真实消费路径走」。改模型 pkl 前必须先答「谁加载它、加载优先级是什么、验收断言在哪个加载点成立」。已录 lessons 三.51。
+
+- **⑥ LGBM 路径 A/B 与回退（2026-10-10，闭环上条断点 3）**：按用户指示执行「重训→A/B→依判据定 WF→回退」，**预注册判据先于结果写下**（增量门：DSR Δ≥+0.02 或净IR CI 下界改善≥+0.15 且 lift 不降；处置：增量门反向→生产 LGBM 回退 F1-off）。
+  1. **重训双臂**（同 Top500 基座=234941 选择集派生、同日数据、`train_lightgbm_20d.py`）：F1-on 生产版 507 特征，F1 gain 合计 **15.00%**（TOP10 占 6 席：Asset_Turnover #1、OCF_Quality #3、Debt_Equity #5、SFC_short_z #6…）→ LGBM **重度使用** F1；预测层 F1-off→F1-on 方向翻转 **9/32=28.1%**、|Δp| 中位 0.135。
+  2. **38 折 WF 双跑**（`--learner lightgbm --start-date 2020-06-01 --end-date 2026-07-31`，测试期 2023-06→2026-07 同 D20 口径；三冻结 + 同门槛源 234941 CSV；两臂 A 闸 PASS）：
+
+     | 指标 | A2 F1-off | B2 F1-on | Δ |
+     |---|---|---|---|
+     | 净IR | **0.67** [−0.46,1.78] | **0.62** [−0.51,1.69] | −0.05（下界 −0.46→−0.51） |
+     | PBO | **0.49** | **0.61** | +0.12 恶化（越过 0.5 门槛） |
+     | DSR | **0.913** | **0.795** | **−0.118** |
+     | 超额 lift | +0.8pp | +0.7pp | −0.1pp |
+     | Fold 聚类 lift | +1.86% p=0.088 | +1.44% p=0.222 | 恶化 |
+     | Rank IC | 0.0254 | 0.0163 | 恶化 |
+     | 判定 | 🟡 | 🟡 | — |
+
+  3. **增量门反向且三项全劣** → 按预注册处置：**生产 LGBM pkl 回退 F1-off**（当日重训版，500 特征，已执行）。F1 的已验证归宿 = **CatBoost 路径**（D20 ②：DSR 0.927→0.974、CI 下界 −0.40→+0.08）；**学习器不对称**成立——同一特征组 CatBoost 受益、LGBM 反向（D10「不可全局替换」第 3 例，lessons 三.52）。
+  4. **生产 20d 现状（闭环后）**：优先 `lightgbm_20d.pkl`（**F1-off 新选择集版**，2026-10-10）；回退 `catboost_20d.pkl`（**F1-on**，D20 验证）——两路径特征口径不同但各自均为**已验证配置**。
+  5. **方法论记录**：`walk_forward_validation.py` 的 `start_date` 是**全程起点（含 36 月训练窗）**，按字面「窗口 2023-06」传参只得 2 折废跑——折数完整性预期（38≠2）捕获；正确传法 `--start-date 2020-06-01`（lessons 三.52）。
+  6. **遗留（不擅动）**：①门槛源 CSV 仍是 234941（CatBoost F1-on 分布），与生产学习器（LGBM F1-off）不同源——是否换 A2 分布须单独决策；②本次 WF 期间腾讯 HSI 实时取数失败→HSI.pkl 兜底缺 Volume→HMM 状态特征退化为默认值（A2/B2 对称，不影响 A/B 判定，跨表与 234941 比较时作口径注记）。
 - 资源继续转向 D4：恒指模型 / 异常检测 / 决策报告。

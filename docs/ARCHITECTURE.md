@@ -13,7 +13,8 @@ flowchart TD
         direction LR
         S1["腾讯财经"]
         S2["AKShare"]
-        S1 ~~~ S2
+        S3["SFC 卖空周报(周更)"]
+        S1 ~~~ S2 ~~~ S3
     end
 
     subgraph DS["data_services/ 数据处理层"]
@@ -53,6 +54,8 @@ flowchart TD
 
 **关键依赖关系**：
 - `comprehensive_analysis.py` 整合：大模型建议 + CatBoost预测 + 异常检测 + 板块分析
+- **20d 预测加载优先级**：`ml_trading_model_lightgbm_20d.pkl` 优先、缺则回退 `catboost_20d.pkl`（D10 A/B 胜出者优先）。**两 pkl 特征口径不同但各自均为已验证配置**：LGBM 版=F1-off 新选择集（2026-10-10，D20 ⑥ A/B 判 F1 对 LGBM 反向后回退）、catboost 版=F1-on 507（D20 ② 验证，runner 端回退路径实际生效）
+- F1 另类特征（D20）：SFC 卖空经 `scripts/fetch_sfc_short.py` 周更进 `data/sfc_short/`（入库跟踪，工作流 commit 写回）；基本面比率走 `data/fund_cache/`（gitignore 持久缓存，akshare，30s 超时）；两源均 PIT 正确（SFC `t-7` / 基本面固定滞后）
 - `hsi_prediction.py` 调用 `ml_services/hsi_ml_model.py` 进行CatBoost预测
 - `detect_stock_anomalies.py` 使用 `anomaly_detector/` 模块的双层检测（Z-Score + Isolation Forest）
 - `config.py` 定义股票板块映射 `STOCK_SECTOR_MAPPING` 和自选股列表 `WATCHLIST`（32只）
@@ -217,6 +220,13 @@ ABSOLUTE_PRICE_FEATURES = [..., 'New_Value']
 | `GATE_SOURCE_CSV` | 分位门槛基准 CSV（门槛/校准器/快照须同源，否则 bear 误放行）；指向 `output/<基线>/prediction_analysis.csv` |
 
 > 三冻结缺一不可：宏观 + 个股 + 分位。任意一项未冻，双跑输入即可能漂移 → CSV md5 不一致。
+
+### 特征开关环境变量（生产/WF 默认开，可显式关闭）
+
+| 变量名 | 说明 |
+|--------|------|
+| `F1_FEATURES` | `=1` 时生成 F1 另类特征（SFC 卖空 + 6 个基本面比率）；`run_comprehensive_analysis.sh` 与 `run_walk_forward.sh` **均默认注入 1**（与生产 catboost 模型一致）。复现 F1-off 旧基线须显式 `F1_FEATURES=0`。**例外：生产 LGBM 重训（`train_lightgbm_20d.py` 手动跑）不加 F1 env**（D20 ⑥ A/B：F1 对 LGBM 反向） |
+| `F1_FORCE` | `=1` 时训练把 7 个 F1 特征**强制并入**选择集（507=Top500+7）；否则特征选择层会静默丢弃慢变量（D20 教训）。默认随 `F1_FEATURES` |
 
 ### 主要依赖
 
