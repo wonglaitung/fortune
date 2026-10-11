@@ -17,9 +17,9 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 # F1 另类数据特征（D20；2026-10-10 D20 ⑦ 终审关闭）：WF 默认与生产一致 F1-off；
-# 显式 F1_FEATURES=1 F1_FORCE=1 仅供复验对照（覆盖默认）。
-# ⚠️ 默认值随 D20 ⑦ 从 1 改为 0——复现 F1-on 旧基线（212920/234941/B2）须显式 =1。
-export F1_FEATURES="${F1_FEATURES:-0}"
+# F1 默认并入（D23 例外观察采用，F1_FORCE 强制纳入防 Top500 静默丢弃）。
+# 回退/复现 2026-10-11 前基线（含 152157/234941/212920/B2/F1-off 期）须显式 F1_FEATURES=0 F1_FORCE=0。
+export F1_FEATURES="${F1_FEATURES:-1}"
 export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
 # HIBOR 默认并入（D22 例外观察采用）；复现 2026-10-11 前旧基线须显式 HIBOR_FEATURES=0
 export HIBOR_FEATURES="${HIBOR_FEATURES:-1}"

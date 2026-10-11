@@ -21,13 +21,13 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # 切换到项目目录
 cd "$PROJECT_DIR"
 
-# F1 另类数据特征（D20；2026-10-10 D20 ⑦ 终审关闭）：生产默认全关。
-# B 检验 5 年扩窗 p=0.522 不过 → F1 不入训练；F1_FEATURES=1 F1_FORCE=1 仅供复验，勿默认开。
+# F1 另类数据特征（D23 例外观察采用 2026-10-11）：生产默认开 + 强制纳入（防 Top500 静默丢弃）。
+# 杀条件 K1-K4 见 DECISIONS D23；回退：显式 F1_FEATURES=0 F1_FORCE=0。
 # GATE_SOURCE_CSV 不在此硬编码：门槛/校准器由 market_regime.GATE_SNAPSHOT
 # （commit_backtest_result.py 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，
 # 故每次 WF 跑完经该脚本入库即自动更新，无需手动改址（lessons 三.29）。
-export F1_FEATURES=0
-export F1_FORCE=0
+export F1_FEATURES="${F1_FEATURES:-1}"
+export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
 
 echo "=========================================="
 echo "🚀 综合分析自动化流程（使用 CatBoost 三周期模型）"
