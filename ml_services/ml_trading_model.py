@@ -171,6 +171,11 @@ def _build_market_level_features():
         'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
     ])
 
+    # 5.4 HIBOR 短端（HIBOR_FEATURES=1 才有数据，缺列自动过滤）- 手动定义
+    features.extend([
+        'HIBOR_ON_Z', 'HIBOR_1M_Z',
+    ])
+
     # 6. 市场状态 One-Hot（3个）- 手动定义
     features.extend([
         'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
@@ -256,6 +261,10 @@ MARKET_FEATURE_MONOTONICITY = {
     'CN_US_10Y_Spread': 'POSITIVE',
     'CN_US_Spread_Change_5d': 'NEUTRAL',
     'CN_US_Spread_Z_Score': 'NEUTRAL',
+
+    # HIBOR 短端（中性 - 香港流动性紧张通道）
+    'HIBOR_ON_Z': 'NEUTRAL',
+    'HIBOR_1M_Z': 'NEUTRAL',
 
     # 市场状态类
     'HSI_Market_Regime': 'NEUTRAL',
@@ -2029,6 +2038,8 @@ class FeatureEngineer:
                 'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
                 # 中美利差（核心特征）
                 'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
+                # HIBOR 短端（HIBOR_FEATURES=1 时数据才存在，缺列自动过滤）
+                'HIBOR_ON_Z', 'HIBOR_1M_Z',
             ]
 
             # 只合并存在的特征
@@ -3296,6 +3307,8 @@ class FeatureEngineer:
             'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
             # 中美利差（核心特征）
             'CN_US_10Y_Spread', 'CN_US_Spread_Z_Score',
+            # HIBOR 短端（缺列自动过滤）
+            'HIBOR_ON_Z', 'HIBOR_1M_Z',
             'Market_Regime_Ranging', 'Market_Regime_Normal', 'Market_Regime_Trending',
             'GARCH_Conditional_Vol', 'GARCH_Vol_Ratio', 'GARCH_Vol_Change_5d',
             # 已删除 GARCH_Persistence：交叉后与基础版 r=1.0

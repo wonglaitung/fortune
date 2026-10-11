@@ -3439,3 +3439,30 @@ python3 ml_services/performance_monitor.py --mode all --no-email
 7) 跨市场联动 M1 线整体结案：回归（M1 长窗）与动量（M1b 独立窗）两方向在独立证据下皆未站住
 8) 落档：D21 追加 M1b 段 / MIP §4+§6 两行 / 本条
 ```
+
+2026-10-11 (续10) HIBOR 短端特征一发制 → HIBOR-null（PBO 净伤害 + DSR 微降双挂）
+1) 预注册先行（hibor_preregister.txt 四判据冻结）；HIBOR_FEATURES 环境门控（默认关=
+   生产零变化），特征=HIBOR_ON_Z/HIBOR_1M_Z trailing-252d z，T-1 shift 对齐，交叉机制
+   自动并入（net_inter_comm_HIBOR_1M_Z 进 fold1 Top100 重要性0.51）
+2) 双跑 38折×2（17:35→21:28，2h04m/跑）md5 一致 c29c4dab ✓
+3) 判定：②挂（Δ净IR +4.29 方向正但 p=0.052 卡线；DSR 0.979<基线 0.989）
+   ③过（lift p 0.264→0.042 反升）④挂（PBO 0.56→0.83 恶化+0.27≫+0.05，过拟合）
+   → HIBOR-null 关线不复跑；亮点全记档（RankIC/lift/Top100 改善）但不改判定
+4) 数据留仓 data/cnh_hibor/ CI 日更继续；代码门控留档（同 F1 先例）
+5) 本周第五线关闭：southbound/H3-D/H3-E+F/H2-B/HIBOR
+2026-10-11 (续10-补) PBO/DSR 分辨力 bootstrap（只入档不改判定）：39期×6变体矩阵配对重采样
+B=2000（iid+3月块）→ ΔPBO 中位 +0.07/+0.11 方向同点估计但 95%CI 跨0、P(Δ>0)=0.58/0.63；
+ΔDSR 中位≈0 → 两个挂点差异统计不可分辨（39期分辨力不足）；重采样重复行使绝对PBO偏低
+（0.23-0.39 vs 点估计0.56/0.83）只读相对。措辞修正：④「净伤害」→「程序性挂（不可分辨）」，
+null=无证据支持纳入（缺证据≠有害）。判定 HIBOR-null 不变。教训入 MIP §2.1.10：未来以
+PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：HIBOR 节改 2.1.10（隔离会话
+已占 2.1.9 A-H），并复位 2.1.8 纪律边界。
+2026-10-11 (续11) HIBOR 例外观察采用上线（DECISIONS D22，记录先于开关）
+1) 用户三选一批准「例外观察采用，直接上线」——不推翻 HIBOR-null（采用≠平反）
+2) 冻结杀条件：K1 净IR或CI下界≤0 / K2 DSR<0.95 / K3 A闸非零或概率饱和；复核点
+   R1=2026-11-15 前例行 WF（无例行则手动补跑）；PBO 分辨力不足故意不入杀条件
+3) 开关：us_market_data.py 默认 0→1（E2E 验证：默认有 HIBOR_ON_Z/HIBOR_1M_Z 非空2589，
+   HIBOR_FEATURES=0 回退无列）；run_walk_forward.sh 固化 HIBOR_FEATURES=${HIBOR_FEATURES:-1}
+   进指纹；⚠️ 复现 2026-10-11 前一切旧基线必须显式 HIBOR_FEATURES=0
+4) 模型本体不立即重训（不与周一新栈首跑叠变更），例行重训自然纳入
+5) 仓位不变 🟡≤5%（C 闸未过非升配）；GATE_SOURCE_CSV 不换；AGENTS 警告行+生产行已同步

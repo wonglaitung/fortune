@@ -558,7 +558,6 @@ class USMarketData:
                 'US_2Y_10Y_Spread', 'US_10Y_30Y_Spread',
                 'CN_US_10Y_Spread', 'CN_US_Spread_Change_5d', 'CN_US_Spread_Z_Score',
             ]
-            # 只合并存在的列
             existing_cols = [c for c in treasury_cols if c in treasury_df.columns]
             if existing_cols:
                 merged_df = merged_df.merge(
@@ -566,7 +565,49 @@ class USMarketData:
                     left_index=True, right_index=True, how='left'
                 )
 
+        # HIBOR 短端（默认并入=D22 例外观察采用；HIBOR_FEATURES=0 一键回退=复现旧基线必设）
+        # 数据源 data/cnh_hibor/hibor_hkd.csv（git 入库，本地读不走网络/缓存）；
+        # T-1 由下游 us_features shift(shift_val) 统一处理
+        import os as _os
+        if _os.environ.get('HIBOR_FEATURES', '1') == '1':
+            try:
+                hibor_df = self._load_hibor_features()
+                if hibor_df is not None and not hibor_df.empty:
+                    if merged_df.index.tz is not None and hibor_df.index.tz is None:
+                        hibor_df.index = hibor_df.index.tz_localize('UTC')
+                    elif merged_df.index.tz is None and hibor_df.index.tz is not None:
+                        hibor_df.index = hibor_df.index.tz_convert(None)
+                    merged_df = merged_df.merge(
+                        hibor_df, left_index=True, right_index=True, how='left'
+                    )
+            except Exception as e:
+                print(f"⚠️ HIBOR 特征加载失败: {e}")
+
         return merged_df
+
+    @staticmethod
+    def _load_hibor_features():
+        """data/cnh_hibor/hibor_hkd.csv → HIBOR_ON_Z / HIBOR_1M_Z（trailing 252d z-score）"""
+        import os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'data', 'cnh_hibor', 'hibor_hkd.csv'
+        )
+        if not os.path.exists(path):
+            return None
+        df = pd.read_csv(path, parse_dates=['date']).set_index('date').sort_index()
+        out = pd.DataFrame(index=df.index)
+        for src, col in (('hibor_on', 'HIBOR_ON_Z'), ('hibor_1m', 'HIBOR_1M_Z')):
+            if src not in df.columns:
+                continue
+            s = pd.to_numeric(df[src], errors='coerce')
+            mean = s.rolling(252, min_periods=60).mean()
+            std = s.rolling(252, min_periods=60).std()
+            out[col] = (s - mean) / std.replace(0, pd.NA)
+        # 与 merged_df（美股侧 tz-aware 索引）对齐（lessons 三.27）
+        if out.index.tz is None:
+            out.index = out.index.tz_localize('UTC')
+        return out if not out.empty else None
 
     def calculate_systemic_crash_risk(self, indicators):
         """
