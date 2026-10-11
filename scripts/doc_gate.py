@@ -74,6 +74,10 @@ SOUTHBOUND_CSV = re.compile(r"^data/southbound_holdings/(southbound_long\.csv|ma
 # 例外：CNH/HIBOR 利率数据集（2026-10-11 落盘；fetch_cnh_hibor.py 全历史可回拉，
 # 入库供三冻结/交叉特征未来接入）
 CNH_HIBOR_CSV = re.compile(r"^data/cnh_hibor/(hibor_hkd\.csv|usdcny\.csv|manifest\.json)$")
+# 例外：A-H 溢价数据集（2026-10-11 落盘；fetch_ah_premium.py 可全量回拉，但 A 股长窗
+# 历史仅免费源可得、入库供 M1/M1b 复现——不入库=换机不可复现，lessons 三.51 同理）
+AH_PREMIUM_CSV = re.compile(
+    r"^data/ah_premium/(ah_\d{6}_\d{5}\.csv|fx_hkdcny\.csv|manifest\.json)$")
 
 
 def _files() -> list[Path]:
@@ -220,7 +224,7 @@ def check_staged() -> list[str]:
         suf = Path(f).suffix.lower()
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
-        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f):
+        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f) and not AH_PREMIUM_CSV.search(f):
             fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 

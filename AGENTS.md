@@ -366,6 +366,9 @@ test_df[col] = test_df[col].apply(
   - **例外**：SFC 卖空周报 `data/sfc_short/sfc_short_long.csv` + `manifest.json`
     （模型输入特征，D20 生产纳入；`fetch_sfc_short.py` 周更、工作流 commit 写回，
     类比上条例外；教训见 lessons 三.51——被 gitignore 的生产依赖 = 生产端不存在）
+  - **例外**：A-H 溢价数据集 `data/ah_premium/ah_*.csv` + `fx_hkdcny.csv` + `manifest.json`
+    （D21 M1/M1b 复现资产；`ml_services/fetch_ah_premium.py` 可全量回拉，但 A 股长窗历史
+    仅免费源可得，不入库=换机不可复现，同 lessons 三.51）
 - GitHub Actions：排程控制在 cron，不在代码中重复判断
 - 推送冲突：使用 `git pull --rebase`
 - **B 闸自动执行点**：`.githooks/pre-commit` 跑 `scripts/doc_gate.py --staged`，
