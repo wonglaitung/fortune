@@ -68,6 +68,12 @@ HK20D_CSV = re.compile(r"^output/\d{8}_\d{6}_catboost_20d/prediction_analysis\.c
 # 例外：SFC 聚合卖空周报（模型输入特征，D20 生产纳入；fetch_sfc_short.py 周更，
 # 工作流 commit 步骤写回仓库，类比 HK20D_CSV 例外）
 SFC_CSV = re.compile(r"^data/sfc_short/(sfc_short_long\.csv|manifest\.json)$")
+# 例外：南向持仓自采（2026-10-11 起日更入库——保留墙仅 2 年，不入库=未来不存在；
+# fetch_southbound_holdings.py + southbound-holdings-daily.yml）
+SOUTHBOUND_CSV = re.compile(r"^data/southbound_holdings/(southbound_long\.csv|manifest\.json)$")
+# 例外：CNH/HIBOR 利率数据集（2026-10-11 落盘；fetch_cnh_hibor.py 全历史可回拉，
+# 入库供三冻结/交叉特征未来接入）
+CNH_HIBOR_CSV = re.compile(r"^data/cnh_hibor/(hibor_hkd\.csv|usdcny\.csv|manifest\.json)$")
 
 
 def _files() -> list[Path]:
@@ -214,7 +220,7 @@ def check_staged() -> list[str]:
         suf = Path(f).suffix.lower()
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
-        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f):
+        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f):
             fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 

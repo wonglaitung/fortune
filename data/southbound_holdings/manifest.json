@@ -1,0 +1,40 @@
+{
+  "updated_at": "2026-10-11T12:26:39+08:00",
+  "rows": 23481,
+  "stocks": 54,
+  "date_min": "2024-10-14",
+  "date_max": "2026-10-09",
+  "failed": [
+    {
+      "code": "1257.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1257.HK",
+      "error": "empty"
+    },
+    {
+      "code": "1387.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "1387.HK",
+      "error": "empty"
+    },
+    {
+      "code": "9618.HK",
+      "error": "TypeError: 'NoneType' object is not subscriptable"
+    },
+    {
+      "code": "9618.HK",
+      "error": "empty"
+    }
+  ],
+  "source": "eastmoney RPT_MUTUAL_STOCK_HOLDRANKS via akshare stock_hsgt_individual_em",
+  "retention_note": "free tier starts 2024-10-14; older dates empty server-side",
+  "failed_per_stock": {
+    "1257.HK": "server empty",
+    "1387.HK": "server empty",
+    "9618.HK": "server empty"
+  }
+}

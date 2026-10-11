@@ -1,0 +1,44 @@
+name: 南向持仓与利率日更自采
+
+on:
+  # UTC 11:30 = HK 19:30（东财逐股南向持仓收市后更新）
+  schedule:
+    - cron: '30 11 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  fetch-southbound:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Hong_Kong
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install akshare pandas requests
+
+      - name: Fetch southbound holdings
+        run: python scripts/fetch_southbound_holdings.py
+
+      - name: Refresh CNH/HIBOR
+        run: python scripts/fetch_cnh_hibor.py
+
+      - name: Commit updated holdings
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main || true
+          git add data/southbound_holdings/southbound_long.csv data/southbound_holdings/manifest.json \
+                  data/cnh_hibor/hibor_hkd.csv data/cnh_hibor/usdcny.csv data/cnh_hibor/manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update southbound holdings & rates [skip ci]"
+            git push origin main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

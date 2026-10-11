@@ -3367,3 +3367,15 @@ python3 ml_services/performance_monitor.py --mode all --no-email
    全在 2020-04 后 → 无陈旧污染，null 干净
 5) 2026-10 研究线清点：四发四关（southbound-null / H3-D-null / H3-E+F-null / H2-B-null），
    研究预算清零；转入纯运行态：周一新栈首跑监控 + 档位反事实前向记账积累
+
+2026-10-11 (续9) CNH/HIBOR 数据接入 + 南向自采 CI 上线（用户指示，纯数据层）
+1) HIBOR：东财 rate_interbank 香港市场 Hibor港币 7 期限全通，1月及以上 1996-07 起 7456 行
+   / 隔夜1周2周 2006 起 ~5100 行，免费深历史，比原记录"可行"更好
+2) CNH 离岸：yfinance CNH=X 彻底死（仅 1 行）→ 回落在岸 USDCNY=X（2001 起 6334 行），
+   脚本每次尝试复活
+3) scripts/fetch_cnh_hibor.py 落盘 data/cnh_hibor/（原子写+manifest）；特征未接 alpha 未测
+   （接入须 H1-E 式预注册，研究预算零须用户批准）
+4) 南向自采升级：data/southbound_holdings/ 解 gitignore 入库（保留墙 2 年，不入库=未来
+   不存在，lessons 三.51 同理）；southbound-holdings-daily.yml 交易日 19:30 HKT 自采
+   南向+刷新利率并 commit 写回；doc_gate S1 加两例外
+5) 边界：不改任何已关闭判定，不构成研究预算重开；MIP §2.1.4/2.1.7 修订 + 新增 §2.1.8
