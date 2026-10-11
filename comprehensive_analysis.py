@@ -1420,6 +1420,10 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                 else:
                     threshold_note = "市场准入/方向判定基础线"
                 catboost_text_email += f"**动态阈值**: {dynamic_threshold:.2f}（{threshold_note}）\n"
+                # 档位反事实记账（2026-10-11）：制度未上线仅记录，表=H3-F 预注册一维表
+                _cf_m = {'extreme_bear': 0.0, 'bear': 0.70, 'weak': 0.65, 'normal': 1.0}.get(market_layer, 1.0)
+                catboost_text_email += (f"**档位反事实**: 若一维情绪档位制度运行，今日曝光乘数应={_cf_m:.2f}"
+                                        f"（仅记账未执行；H3-F 回放判 null，积累前向样本供未来真 OOS 判定）\n")
                 if transmission_date:
                     catboost_text_email += f"传导模式验证日期: {transmission_date}\n"
                 catboost_text_email += "\n全部股票预测结果（按20天概率排序）:\n\n"
