@@ -127,3 +127,6 @@ download_icbc_stock_data.py
 data/工商银行股票数据_*.xlsx
 
 data/fund_cache/
+
+# 南向持仓（D 筛查 southbound-null 后关闭，数据仅本地资产）
+data/southbound_holdings/

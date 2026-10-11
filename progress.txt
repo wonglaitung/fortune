@@ -3292,3 +3292,30 @@ python3 ml_services/performance_monitor.py --mode all --no-email
    （pkl vs 当前选择集漂移打大字警告，防预测期 KeyError 静默缺席邮件，三.20 同族）
 3) KeyError 分支打印缺失列并打 feature_mismatch 标，防静默降级
 4) 验证：py_compile ✅ 三模型加载无漂移 ✅ 取源=234941 git 入库 ✅ 2318.HK 三周期预测冒烟 ✅
+2026-10-11 (续3) C1 双跑 md5 补验 + IC 排序技能检验 + 南向持仓可行性审计
+1) C 闸欠账清偿：C1(152157) 三冻结下复跑 output/20261011_020641_catboost_20d
+   （--start-date 2020-06-01 --end-date 2026-07-31 --no-commit，38 折/41153 行）
+   prediction_analysis.csv md5 两跑完全一致 41b75418ce8cd5b81223b31031f92957 → C1 可复现性成立
+   （口径=同缓存复跑，与 D13 r2 同口径；首次起跑因缺 --start-date 2020-06-01 得 2024 默认窗 24 月不足报错，lessons 三.52 陷阱再现）
+2) 排序技能检验（/tmp/opencode/ic_skill_check.py，152157 相对收益口径）：
+   折级 IC +0.0077 [−0.034,+0.050] t=0.37 p=0.71 ❌；逐年 3/4 正（2023 −0.066）；
+   十分位倒挂 D1 +1.30% > D10 +0.72%（Top10−Top1=−0.58%）❌ → 排序技能不成立，
+   不建 TopK 组合；绝对收益折级 IC +0.043 ≫ 相对 +0.008 → 模型信息偏大盘 Beta
+   （caveat：周六腾讯 HSI 取数失败走旧缓存，对齐 77%，结论方向稳健性仅判断）
+3) 个股级南向持仓可行性审计（MIP §2.1.5 落档）：东财逐股 RPT_MUTUAL_STOCK_HOLDRANKS
+   仅 471 行/2024-10 起；HKEX 官方按日查询 2017-03 起但仅保留 12 个月；akshare 无第二端点
+   → 免费历史不可得，H1-E 最高优先级候选降级「可行性阻塞」；港股横截面免费可回测另类源清零
+4) 分析师意见补充审计（MIP §2.1.6）：yfinance upgrades_downgrades 对 5 只港股样本全 EMPTY
+   （Yahoo 无港股评级模块 404）→ 免费侧与南向同判阻塞；可行路径仅付费 IBES 或富途类重爬（均未评估）
+
+2026-10-11 (续4) 南向持仓 C/D/F 一发制执行 → southbound-null，源关闭（用户指示「先研究E，再启动C D F」）
+1) E 类比线证死：东财保留墙单日实测=2024-10-14（2024-10-11/2024-06-03/2023-06-01 全空）；北向
+   RPT_MUTUAL_HOLD_DET/NORTHSTA 旧日期同样 EMPTY → 免费深历史类比源不存在；且北向只含 A 股行，
+   结构上无法并入港股池——E 关闭，唯一残留=A股系统候选（未启动，归 A 股侧独立预注册）
+2) C 落盘：scripts/fetch_southbound_holdings.py（逐股整段重取+原子写）→ 本地
+   data/southbound_holdings/southbound_long.csv（gitignore）：54/57 股 23481 行 2024-10-14→2026-10-09
+   （01257/01387/09618 服务端无行，裸 API 复核 EMPTY=源侧事实）
+3) D 筛查（判据跑前预注册：单变量 CHG20Z、月聚类 Spearman、IC≥+0.04 且 p<0.05、一发制）：
+   22 个月簇 mean IC=−0.062（与先验反号）p=0.231 → 双判据全挂；LVL 探索 +0.025 p=0.65 无意义
+   （caveat：HSI 腾讯周末失败→HSI.pkl 兜底，Relative 少 1 簇）→ southbound-null，不复跑第二发
+4) F：采集器保留不挂 cron、不进生产；数据留档。重开条件不变：D17 例外预注册 + H1-E IC≥+0.10
