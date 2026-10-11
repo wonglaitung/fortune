@@ -3354,3 +3354,16 @@ python3 ml_services/performance_monitor.py --mode all --no-email
    单变量改进=滞回带（防档位抖动），须另起预注册，本次不试
 6) A 上线：comprehensive_analysis.py 邮件动态阈值行后新增「档位反事实」（一维表同源，
    仅记账未执行）；py_compile OK。MIP §4 新增 H3-F 行
+
+2026-10-11 (续8) H2-B 回购事件筛查 → H2-B-null，事件线关闭，研究预算清零
+1) 预注册先行（/tmp/opencode/h2b_preregister.txt）：X=NDDR披露日（gap>=10隔离）→ entry=下一
+   收盘 → fwd20 Relative 主；月聚类 Spearman；判据 IC>=+0.04 且 p<0.05；纯度限制提前声明
+2) 数据路径三折腾：prefix.do 全空（词典死）→ 全市场流仅近端（2018-2023 全 null）→ 正解
+   /ncms/script/eds/activestock_sehk_e.json（17505 股 i=stockId，00700->7609 验合）
+   + per-stock 全窗口单发（腾讯 644 行 3.4s）；56 股 -> 5512 事件 47 股有披露
+3) 实测：56 月（2020-04→2026-07）meanIC_rel=-0.0007 t=-0.15 p=0.878，事件行 1152/面板 114140
+   → H2-B-null 不复跑不调参
+4) 数据质量核验：HSI 腾讯接口周末失败走 HSI.pkl 兜底（2020-03 起）；分段诊断显示有效月
+   全在 2020-04 后 → 无陈旧污染，null 干净
+5) 2026-10 研究线清点：四发四关（southbound-null / H3-D-null / H3-E+F-null / H2-B-null），
+   研究预算清零；转入纯运行态：周一新栈首跑监控 + 档位反事实前向记账积累
