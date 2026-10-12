@@ -59,7 +59,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
-| **生产 CatBoost 20d** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **20d 信号默认学习器（D20 ⑦ 四格多数判：C1 夺魁，2026-10-10 切换）**；1d/5d 仍 CatBoost（D10）；LGBM pkl 降级为回退留档；⚠️ F1 与 HIBOR **均例外默认开**（D23/D22，杀条件各管各的 env 回退）；F1 必配 FORCE 防 Top500 静默丢弃（着装检查 K4） |
+| **生产 CatBoost 20d** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **20d 信号默认学习器（D20 ⑦ 四格多数判：C1 夺魁，2026-10-10 切换）**；1d/5d 仍 CatBoost（D10）；LGBM pkl 降级为回退留档；⚠️ F1 与 HIBOR **均例外默认开且均配 FORCE**（D23/D22/D24，各自 env 独立回退）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列，**不是**「统计选择 Top500 保留」） |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
@@ -135,7 +135,7 @@ python hsi_email.py --no-email
 | **降噪救不回信号** | Top500→Top30 单变量对照（同窗口/折数/学习器/快照/门槛基准）：净IR 0.42→0.64 但 **CI 仍跨 0、PBO 越过门槛、DSR 不过** → 三闸门全不过。**路径关闭基于纪律**——勿再调 Top50/100（等于在噪声里捞信号，违反预注册纪律）。见 lessons 三.37 |
 | **个股横截面 alpha 已穷尽** | 完整管线 DSR 0.87 不过、扩池不增信号、简单模型 IC 转负；2026-09-30 相对标签（剥离 Beta）受控复验仍未 rescue → **停止投入**，见 D1 |
 | **F1 例外观察采用（D23；原 D20 ⑦ 关闭）** | 用户批准例外覆盖补记7 再开条件：生产/回测默认 `F1_FEATURES=1 F1_FORCE=1`（FORCE 必配，实测 0/7 会被 Top500 静默丢弃）；**复现 2026-10-11 前一切基线须显式 =0**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零 / K4 着装 0/7 即回退，R1 两跑归因；罪名维持②「进训练差异不可分辨（非有害）」，B 检验 p=0.18/0.52 如实保留；SFC/基本面管线保留数据不进生产；复现 F1-on 旧基线（212920/234941/B2）须显式 `F1_FEATURES=1 F1_FORCE=1`。⚠️ WF `--start-date`=**全程起点**（含 36 月训练窗），复现 D20 测试期 2023-06→2026-07 须 `--start-date 2020-06-01`，传 2023-06 只得 2 折废跑（lessons 三.52） |
-| **HIBOR 特征默认已开（D22 例外采用）** | 生产/回测默认 `HIBOR_FEATURES=1`；**复现 2026-10-11 前一切旧基线（152157/234941/212920/B2/F1-on）须显式 `HIBOR_FEATURES=0`**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零，触发即改回默认 0（预注册见 DECISIONS D22）；判定 HIBOR-null 不因采用而改写 |
+| **HIBOR 特征默认已开（D22 例外采用）+ HIBOR_FORCE 强制纳入（D24）** | 生产/回测默认 `HIBOR_FEATURES=1 HIBOR_FORCE=1`（默认跟随）；**必须配 FORCE**——生产读静态名单（10-10 生成）含 **0 个 HIBOR 列**，统计法按样本内方差系统性淘汰慢变量（族审计：F1 0/7、HIBOR 0/500、网络族富集 1.30x），不强制则「算了不用」空转（2026-10-12 实测纳入 60 列）；回退 `HIBOR_FORCE=0`；**复现 2026-10-11 前一切旧基线（152157/234941/212920/B2/F1-on）须显式 `HIBOR_FEATURES=0 HIBOR_FORCE=0`**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零，触发即改回默认 0（预注册见 DECISIONS D22）；判定 HIBOR-null 不因采用而改写 |
 | **恒指方向信号不优于持有** | 信号 Long/Flat 1/5/20d IR（−0.68/0.13/0.11）均低于买入持有（0.38/0.39/0.49） |
 | **异常大跌抄底是真信号但强依赖行情** | z≤−3 持 5d 净IR 1.55 显著；但逐年依赖 2025，**仅限大盘上行期（恒指>MA200）战术使用**；短期强势过滤有害 |
 | **港股个股信号多为"2025 现象"** | 多策略复核收益集中于 2025 反弹年；跨年稳健性普遍不足，须逐年看 |

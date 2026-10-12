@@ -484,6 +484,14 @@ class WalkForwardValidator:
                             if fc in feat_cols and fc not in fold_selected_features:
                                 fold_selected_features.append(fc)
                         fold_selected_features = list(dict.fromkeys(fold_selected_features))
+                    # HIBOR 强制纳入（D24）：统计法按样本内方差淘汰慢变量，HIBOR 列
+                    # 需显式保底，否则每折选择把它砍掉（与生产侧同规则）
+                    if os.environ.get('HIBOR_FORCE') == '1':
+                        _hib = [c for c in feat_cols if 'HIBOR' in c and c not in fold_selected_features]
+                        if _hib:
+                            fold_selected_features.extend(_hib)
+                            fold_selected_features = list(dict.fromkeys(fold_selected_features))
+                            print(f"  🔧 HIBOR_FORCE 强制纳入 {len(_hib)} 个 HIBOR 特征")
                     print(f"  🔍 每折特征选择: {len(fold_selected_features)} 个特征（防穿越）")
             except Exception as e:
                 logger.warning(f"每折特征选择失败，回退全局文件: {e}")

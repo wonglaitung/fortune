@@ -4511,6 +4511,13 @@ class CatBoostModel(BaseTradingModel):
                 if _added:
                     self.feature_columns.extend(_added)
                     print(f"🔧 F1_FORCE 强制纳入 {len(_added)} 个 F1 特征: {_added}")
+            # HIBOR 强制纳入（D24）：静态名单（10-10 生成）含 0 个 HIBOR 列且统计法按样本内
+            # 方差系统性淘汰慢变量 → 不强制则 HIBOR 算了不用（生产路径空转）。
+            if os.environ.get('HIBOR_FORCE') == '1':
+                _hib = [c for c in df.columns if 'HIBOR' in c and c not in self.feature_columns]
+                if _hib:
+                    self.feature_columns.extend(_hib)
+                    print(f"🔧 HIBOR_FORCE 强制纳入 {len(_hib)} 个 HIBOR 特征: {sorted(_hib)}")
             else:
                 logger.warning(r"未找到特征选择文件，使用全部特征")
         else:

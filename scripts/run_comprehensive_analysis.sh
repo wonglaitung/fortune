@@ -28,6 +28,9 @@ cd "$PROJECT_DIR"
 # 故每次 WF 跑完经该脚本入库即自动更新，无需手动改址（lessons 三.29）。
 export F1_FEATURES="${F1_FEATURES:-1}"
 export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
+# HIBOR_FORCE 强制纳入（D24，默认跟随 HIBOR_FEATURES；回退 HIBOR_FORCE=0）
+export HIBOR_FEATURES="${HIBOR_FEATURES:-1}"
+export HIBOR_FORCE="${HIBOR_FORCE:-${HIBOR_FEATURES}}"
 
 echo "=========================================="
 echo "🚀 综合分析自动化流程（使用 CatBoost 三周期模型）"
