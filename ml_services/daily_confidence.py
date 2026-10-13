@@ -21,8 +21,12 @@ import glob
 import json
 from datetime import datetime
 
+import logging
+
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,6 +34,10 @@ HISTORY_FILE = 'data/prediction_history.json'
 CAL_DIR = 'data/calibrators'
 HORIZONS = [1, 5, 20]
 MIN_SAMPLES = 200
+# D26 退化守卫：某周期 confidence（=P(方向判对)）在当日横截面上的极差 < 该值
+# ⇒ 校准器对今天所有股票给出同一个数（如 20d：p<0.741 全平台 0.4933），
+# 此时 confidence 不携带任何个股信息 → 撤销并告警，**不回退 probability**（已是原始 P(涨)）。
+CONF_DEGENERATE_SPREAD = 0.02
 # A股（P3.1 决策点2：用 walk-forward OOF 预测拟合，不依赖生产 history）
 A_STOCK_OOF_GLOB = 'output/*_a_stock_catboost_{h}d/prediction_analysis.csv'
 
@@ -169,13 +177,21 @@ class DailyConfidence:
         return float(iso.predict([prob])[0])
 
     def apply_to_results(self, three_horizon_results):
-        """后处理：把 1/5/20d 的 probability 替换为校准值，并加 confidence 字段
+        """后处理：**probability 保持原始 P(上涨)**，校准值只写入 confidence。
 
-        同步方向口径：direction/prediction 按校准后概率 ≥0.5 重判
-        （否则出现「↑ 0.49」这种箭头按原始概率、数字按校准概率的矛盾展示）。
-        confidence 含义不变：P(该预测方向判对)，在原始概率空间拟合。
+        D26（2026-10-13，理由见 DECISIONS D26 / lessons 三.61）：
+        旧行为把 `probability`（P(该股上涨)）覆写为 P(该方向判对)，并按校准值 ≥0.5 重判方向。
+        后果：① 20d 校准器在 p<0.741 区间是平台（≈0.4933）→ 32 只邮件全显示「上涨概率 0.49」，
+        原始 0.23~0.74 的排序信息消失，三重确认 0.55/0.60 门槛**结构性不可达**；
+        ② 原始 0.74 的强涨股会被判成「↓」；③ A 闸跑未校准概率、生产阈值跑校准后概率（同一性缺口）。
+
+        现在：probability / prediction / direction 一律用模型原始输出（与 A 闸、Walk-forward 同口径），
+        confidence = P(该方向判对) 单独承载校准信息；若某周期 confidence 当日无区分度
+        （横截面极差 < CONF_DEGENERATE_SPREAD），撤销该周期的 confidence 并告警。
         """
         changed = 0
+        conf_by_h = {h: [] for h in HORIZONS}
+        conf_locs = {h: [] for h in HORIZONS}
         for code, res in three_horizon_results.items():
             # 兼容两种结构：res['predictions'][h] 或 res[h]
             preds = res.get('predictions', res) if isinstance(res, dict) else {}
@@ -186,16 +202,26 @@ class DailyConfidence:
                     p = preds[h]['probability']
                     if p is None:
                         continue
-                    calib_p = self.calibrate(p, h)
-                    preds[h]['probability'] = calib_p
                     conf = self.confidence(p, h)
                     if conf is not None:
                         preds[h]['confidence'] = conf
-                    # 方向与校准概率同口径（≥0.5 判涨，与邮件颜色说明/市场调整列一致）
-                    up = calib_p >= 0.5
-                    preds[h]['prediction'] = 1 if up else 0
-                    preds[h]['direction'] = '↑' if up else '↓'
+                        conf_by_h[h].append(conf)
+                        conf_locs[h].append(preds[h])
                     changed += 1
+        # 退化守卫：校准值当日无区分度 → 该周期的 confidence 不携带个股信息，撤销 + 告警
+        for h in HORIZONS:
+            vals = conf_by_h[h]
+            if len(vals) < 5:
+                continue
+            spread = max(vals) - min(vals)
+            if spread < CONF_DEGENERATE_SPREAD:
+                for d in conf_locs[h]:
+                    d.pop('confidence', None)
+                logger.warning(
+                    '⚠️ 校准退化守卫：%dd confidence 当日横截面极差 %.4f < %.2f'
+                    '（唯一值 %d/%d）→ 已撤销该周期 confidence，'
+                    'probability 仍为模型原始 P(上涨)',
+                    h, spread, CONF_DEGENERATE_SPREAD, len(set(round(v, 4) for v in vals)), len(vals))
         return changed
 
 

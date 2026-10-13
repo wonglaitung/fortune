@@ -6,7 +6,7 @@
 > | 要看什么 | 去哪 |
 > |---|---|
 > | ⭐ **全部 Walk-forward 实测数字** | [docs/BASELINES.md](docs/BASELINES.md) — **唯一真相源**，其他文档一律指回此处 |
-> | 三道闸 8 项清单 / 两条硬约束 / 实验方法论正文 | [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) — 含全部案例与失职复盘 |
+> | ⓪ 同一性闸 + 三道闸 9 项清单 / 两条硬约束 / 实验方法论正文 | [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md) — 含全部案例与失职复盘 |
 > | 非专家怎么跟 AI 协作（命题前置 / 判读顺序 / 纠偏 / 收尾检查表） | [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) |
 > | 数据流 / 特征架构 / 环境变量 / 自动化调度 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 > | 经验教训（因果链与历史观测值的**唯一出处**） | [lessons.md](lessons.md) |
@@ -48,7 +48,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | 任务 | 命令 | 运行时机 |
 |------|------|---------|
 | **恒生指数预测** | `python3 hsi_prediction.py --no-email` | 收市后 |
-| **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（16:00 HKT） |
+| **综合分析** | `./scripts/run_comprehensive_analysis.sh` 或 `python3 comprehensive_analysis.py` | ⚠️ 收市后（**16:30 HKT**；cron 已改 `30 8` UTC，D25） |
 | **个股详细分析** | `python3 comprehensive_analysis.py --stocks 2318.HK` | 收市后 |
 | **港股异常检测** | `python3 detect_stock_anomalies.py --mode standalone --mode-type deep` | 收市后推荐 |
 | **个股Walk-forward验证** | `scripts/run_walk_forward.sh --model-type catboost --horizon 20 --use-feature-selection`（确定性 env 固化，双跑验收/复现必用；直接 python3 等价但不固化 `PYTHONHASHSEED`/线程数。**D23 起默认 `F1_FEATURES=1 F1_FORCE=1`（例外观察采用；D20 ⑦ 期为 =0）**；复现 2026-10-11 前一切基线须显式 `F1_FEATURES=0 F1_FORCE=0`，复现 F1-on 旧基线（212920/234941/B2）同 =1 但另需 `HIBOR_FEATURES=0`） | - |
@@ -120,12 +120,13 @@ python hsi_email.py --no-email
 
 > **一行一条，只写「规则 + 判定式 + 指针」。**
 > 因果链 / 实验过程 / 历史观测值 → [lessons.md](lessons.md)；实测数字 → [docs/BASELINES.md](docs/BASELINES.md)；
-> 三道闸与硬约束正文 → [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)。
+> ⓪ 同一性闸 / 三道闸与硬约束正文 → [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)。
 
 | 警告 | 说明 |
 |------|------|
 | **数据泄漏** | Walk-forward 准确率 **>65%（个股）/ >80%（恒指）** 即泄漏信号（个股正常区间 50–60%）。**三条硬检查**：①`Predict_Prob` 饱和成 0/1；②预测 UP 组 `Relative_Return`（= Actual_Return − HSI未来收益，**CSV 无此列须重建**）**最大值 ≤0 = 符号退化**（合法数据实测 **+0.42**、泄漏版 **−1e-05**，勿把方向抄反）；③分组符号一致性。**可执行：`python3 scripts/presentation_gate.py --input <csv> --horizon N`（非零退出即阻断）**。出处与抄反事故见 lessons 三.28 / 三.47 |
-| **判读顺序不可颠倒** | ①绝对值异常(准确率/IC/概率饱和) → ②PBO<0.5 → ③DSR≥0.95 → ④净IR CI 不跨0+lift>0 → ⑤才谈仓位。**PBO/DSR 检测不出泄漏**（实测泄漏版 PBO 0.43、DSR 1.000 全过，实际是假信号），见 lessons 三.28 |
+| **判读顺序不可颠倒** | **⓪ 同一性**（WF 的函数 = 生产的函数？训练时点 = 推理时点？被评估的概率 = 生产下单用的概率？）→ ①绝对值异常(准确率/IC/概率饱和) → ②PBO<0.5 → ③DSR≥0.95 → ④净IR CI 不跨0+lift>0 → ⑤才谈仓位。**⓪ 不过则后面四闸不必跑**（①~④ 问「这个数可不可信」，⓪ 问「这个数说的是不是我要的东西」）。**PBO/DSR 检测不出泄漏**（实测泄漏版 PBO 0.43、DSR 1.000 全过，实际是假信号），见 lessons 三.28 |
+| **WF ≠ 生产（同一性缺口）** | **2026-10-12 实测 5 条独立不一致**（数字与证据出处见 lessons 三.60；**本行不写可变计数，计数一律查 BASELINES.md**）：①**训练/推理时点差 1 天**——`train()` 不传 mode → `use_shift=1`(T-1)，`predict()` 默认 `mode='production'` → `use_shift=0`(T)，WF 全程 T-1（`ml_trading_model.py:4048/4466/4822`）；②**`net_comm_*` 编码**——WF 每股动态提取（缺列=NaN），生产传静态∪PIT（缺列=0），CatBoost 原生区分二者；③特征列集合（生产 pkl = 静态名单 + FORCE 追加 vs WF 每折 Top-500+FORCE，静态名单含 **0 个 HIBOR/0 个 F1**）；④1d/5d pkl 仍是 09-30 旧模型；⑤**Isotonic 只在生产侧**且港股未传 `oof_glob` ⇒ A 闸跑在未校准概率、生产阈值跑在校准后概率。**②（编码实质不同）单独即阻断外推；①（时点错配）单独即令外推不成立**——方向与幅度均未测，不得假设为同向（见 lessons 三.60）。**根因＝口径挂在调用点的默认参数上，方法本身不保证任何东西**（`mode`/`community_ids`/`selected_features` 三入参 × 三路径 = 三种组合）。**⓪ 尚无自动脚本**（靠人工核对），但**契约测试已建**（`tests/test_pipeline_contract.py` 6 条 strict-xfail 锁定上述 5 条差异）|
 | **静默 NaN 特征** | 外部行情(HSI/美股)为午夜时间戳、个股为收盘 16:00，裸 `merge(left_index,…)` 会整列 NaN 且**不报错**；一律走 `_align_to_index`；修对齐后必须清特征缓存再验证（lessons 三.27） |
 | **取数窗口硬编码** | `period_days=1460` 曾写死在个股取数处，使 2016–2021 永远取不到（宏观修了个股漏修）；改口径须 grep 全部调用点，一律用 `period_days_needed`（lessons 三.26） |
 | **验证产物完整性** | fold 异常被吞会静默产出残缺 CSV（17/38 折仍打印"验证完成"）；跑完必核对**折数/行数**（lessons 三.20，已加完整性闸门缺折即非零退出） |
@@ -134,8 +135,8 @@ python hsi_email.py --no-email
 | **绝对准确率/胜率陷阱** | 趋势板块基准本就高；评估看 **lift（胜率−基准）** 与 **方向技能（准确率−永远看涨）**，不看绝对值 |
 | **降噪救不回信号** | Top500→Top30 单变量对照（同窗口/折数/学习器/快照/门槛基准）：净IR 0.42→0.64 但 **CI 仍跨 0、PBO 越过门槛、DSR 不过** → 三闸门全不过。**路径关闭基于纪律**——勿再调 Top50/100（等于在噪声里捞信号，违反预注册纪律）。见 lessons 三.37 |
 | **个股横截面 alpha 已穷尽** | 完整管线 DSR 0.87 不过、扩池不增信号、简单模型 IC 转负；2026-09-30 相对标签（剥离 Beta）受控复验仍未 rescue → **停止投入**，见 D1 |
-| **F1 例外观察采用（D23；原 D20 ⑦ 关闭）** | 用户批准例外覆盖补记7 再开条件：生产/回测默认 `F1_FEATURES=1 F1_FORCE=1`（FORCE 必配，实测 0/7 会被 Top500 静默丢弃）；**复现 2026-10-11 前一切基线须显式 =0**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零 / K4 着装 0/7 即回退，R1 两跑归因；罪名维持②「进训练差异不可分辨（非有害）」，B 检验 p=0.18/0.52 如实保留；SFC/基本面管线保留数据不进生产；复现 F1-on 旧基线（212920/234941/B2）须显式 `F1_FEATURES=1 F1_FORCE=1`。⚠️ WF `--start-date`=**全程起点**（含 36 月训练窗），复现 D20 测试期 2023-06→2026-07 须 `--start-date 2020-06-01`，传 2023-06 只得 2 折废跑（lessons 三.52） |
-| **HIBOR 特征默认已开（D22 例外采用）+ HIBOR_FORCE 强制纳入（D24）** | 生产/回测默认 `HIBOR_FEATURES=1 HIBOR_FORCE=1`（默认跟随）；**必须配 FORCE**——生产读静态名单（10-10 生成）含 **0 个 HIBOR 列**，统计法按样本内方差系统性淘汰慢变量（族审计：F1 0/7、HIBOR 0/500、网络族富集 1.30x），不强制则「算了不用」空转（2026-10-12 实测纳入 60 列）；回退 `HIBOR_FORCE=0`；**复现 2026-10-11 前一切旧基线（152157/234941/212920/B2/F1-on）须显式 `HIBOR_FEATURES=0 HIBOR_FORCE=0`**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零，触发即改回默认 0（预注册见 DECISIONS D22）；判定 HIBOR-null 不因采用而改写 |
+| **F1 例外观察采用（D23；原 D20 ⑦ 关闭）** | 默认值**只在 `ml_services/run_manifest.py::FLAG_DEFAULTS` 定义一次**（O5/D25），两个 runner 只透传不写 `${X:-1}`；生产/回测默认 `F1_FEATURES=1 F1_FORCE=1`（FORCE 必配，实测 0/7 会被 Top500 静默丢弃）；**复现 2026-10-11 前一切基线须显式 =0**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零 / K4 着装 0/7 即回退，R1 两跑归因；罪名维持②「进训练差异不可分辨（非有害）」，B 检验 p=0.18/0.52 如实保留；SFC/基本面管线保留数据不进生产；复现 F1-on 旧基线（212920/234941/B2）须显式 `F1_FEATURES=1 F1_FORCE=1`。⚠️ WF `--start-date`=**全程起点**（含 36 月训练窗），复现 D20 测试期 2023-06→2026-07 须 `--start-date 2020-06-01`，传 2023-06 只得 2 折废跑（lessons 三.52） |
+| **HIBOR 特征默认已开（D22 例外采用）+ HIBOR_FORCE 强制纳入（D24）** | 默认同 O5 只在 `FLAG_DEFAULTS` 定义；生产/回测默认 `HIBOR_FEATURES=1 HIBOR_FORCE=1`（默认跟随）；**必须配 FORCE**——生产读静态名单（10-10 生成）含 **0 个 HIBOR 列**，统计法按样本内方差系统性淘汰慢变量（族审计：F1 0/7、HIBOR 0/500、网络族富集 1.30x），不强制则「算了不用」空转（2026-10-12 实测纳入 60 列）；回退 `HIBOR_FORCE=0`；**复现 2026-10-11 前一切旧基线（152157/234941/212920/B2/F1-on）须显式 `HIBOR_FEATURES=0 HIBOR_FORCE=0`**；杀条件 K1 净IR 或 CI 下界≤0 / K2 DSR<0.95 / K3 A 闸非零，触发即改回默认 0（预注册见 DECISIONS D22）；判定 HIBOR-null 不因采用而改写 |
 | **恒指方向信号不优于持有** | 信号 Long/Flat 1/5/20d IR（−0.68/0.13/0.11）均低于买入持有（0.38/0.39/0.49） |
 | **异常大跌抄底是真信号但强依赖行情** | z≤−3 持 5d 净IR 1.55 显著；但逐年依赖 2025，**仅限大盘上行期（恒指>MA200）战术使用**；短期强势过滤有害 |
 | **港股个股信号多为"2025 现象"** | 多策略复核收益集中于 2025 反弹年；跨年稳健性普遍不足，须逐年看 |
@@ -153,10 +154,10 @@ python hsi_email.py --no-email
 | **训练时 NaN** | 不要用 `df.dropna()` 删除所有 NaN，只删除标签和关键列 |
 | **绝对值特征** | 跨股票训练时，绝对价格/成交量特征必须标准化或排除 |
 | **市场情绪数据源** | 必须使用所有股票收益率计算上涨比例，与 walk-forward 验证一致 |
-| **双模式预测** | 收市后预测使用 `mode='production'`（当日数据），Walk-forward 使用 `mode='backtest'`（T-1 数据） |
+| **时点口径（D25 已执行）** | **全链路统一 `mode='production'`（T 收盘数据）**：WF 3 处 + 生产 train 1 处均**显式**传 mode（不留默认）。决策时点 16:30 HKT → **T+1 成交** → 标签 = `Close.shift(-(h+lag))/Close.shift(-lag)-1`（T+1→T+1+h），`LABEL_ENTRY_LAG_DAYS` **全项目唯一定义**。港股收盘竞价 16:00–16:10、**16:10 后当天不再成交** ⇒ 按 T 收盘买入物理不可行。⚠️ **2026-10-13 起所有旧基线（`output/*_catboost_20d/` 15 轮）口径已作废**，双跑重验中，见 DECISIONS D25 / lessons 三.60 |
 | **yfinance 盘中数据** | yfinance 日线数据在盘中可能不准确，推荐使用腾讯财经接口获取实时报价 |
 | **复权口径一致性** | 训练/预测/评估统一用**腾讯前复权（qfq）**（港股 `get_hk_stock_data_tencent`、A股 `get_a_stock_data`）；性能监控 exit 价必须 qfq 同源，禁用 yfinance 未复权价当 exit（跨除息日 actual_return 失真，实测虚高 62%，见 lessons 三.17） |
-| **校准概率与方向同口径** | Isotonic 校准后 `direction`/`pattern` 必须按**校准概率 ≥0.5** 重判（`apply_to_results` 已同步 + `rebuild_three_horizon_patterns` 重算模式），否则邮件出现「↑ 0.49」自相矛盾，见 lessons 三.19 |
+| ~~校准概率与方向同口径~~ | ❌ **已撤销（D26）**：旧规则把 `probability`（P(上涨)）覆写为 P(方向判对) 并按其 ≥0.5 重判方向 → 20d 校准器在 p<0.741 为平台 0.4933，32 只邮件全显示「上涨概率 0.49」、三重确认 0.55 门槛结构性不可达、原始 0.74 强涨股被翻成「↓」。**现行**：`probability`/`direction` 一律用模型原始输出（与 A 闸/WF 同源，阈值 ≥0.5），`confidence` 单独承载 P(判对)；某周期 confidence 横截面极差 <0.02 ⇒ 撤销并告警（退化守卫）。见 DECISIONS D26 / lessons 三.61 |
 | **A股数据源 640 行硬上限** | ⚠️ 腾讯 A股接口**无论 `period_days` 给多少恒返回 640 行**（实测 640→641 / 1500→640 / 3000→640），约 2.5 年上限。加 12 个月训练窗后**可用测试期不足 2 年**（实测 2025-01→2026-07，2025 占 63.6%）→ **低 PBO/高 DSR 不可信**，是 A股不予升配的硬限制（D13）。AKShare 备源为备选 |
 | **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练时需标签标准化 |
 | **A股股票代码前导零** | 保存CSV时必须用字符串格式 `zfill(6)`，否则前导零丢失（002655→2655） |
@@ -167,7 +168,7 @@ python hsi_email.py --no-email
 | ~~港股数据末日敏感性~~ | ❌ **已撤销（2026-10-05）**：`WALKFORWARD_DATA_END` 解决的是**不存在的问题**（数据源当日本就只到 07-30），反引入实截断。**教训**：指标变化先问「基线是否也有此差异」——基线末日同为 07-30 则末日不是变量 |
 | **跨日回测不可复现** | `us_market_data` 缓存**仅当天有效**且是宏观特征唯一来源 → 同代码跨天跑结果不同（实测 abs20d 净IR 0.34/0.42、PBO 0.41/0.64）。三.25 的 bit 级复现**仅限同一天**；**多跑几次总能撞到三门槛全过**，禁止取最好的一次当结论。⚠️ **个股同日版更隐蔽**：港股 OHLC 实时取数、特征缓存键含 `last_date` → 数据源在**同一天内的数小时窗口**更新（如 10-06 行情午后到）即令末日漂移、缓存键全变、全量重算、共同期 40% 特征列值变 → 双跑 md5 必不一致。宏观有 `pin_macro_snapshot.py`，**个股原有 `pin_hk_snapshot.py`（2026-10-08 补）**，缺则三冻结不全（lessons 三.50） |
 | **冻结必须双向落盘** | 只写成功数据、**失败不写哨兵** = 没冻结（每次重试，成败纯看网络）。**只做一半的冻结比不冻结更危险**——制造「已冻结」的错觉。两个易错点：①`load_frozen` 须**数据优先于哨兵**；②冻结模式下抓取失败写 `.failed` 且**不再重试网络**。见 lessons「38. 冻结机制必须双向落盘」 |
-| **市场门槛优先分位、退化回退绝对值** | 分位法隐含前提「模型有 edge」；**模型无 edge 时校准把概率压回基准率 → 分位锚在 0.5 → 门控静默失效**（实测 bear 通过率 17.2%→98.2%）。已加退化保护（`GATE_MIN_UNIQUE=30`/`GATE_MIN_SPREAD=0.05`），退化即回退 bear 0.70/weak 0.65。**`bear==weak` 是分布退化信号，不是分位算错**。分位口径：熊市/弱震荡用 `GATE_QUANTILES` P92/P90（PIT），数据源须为 walk-forward 回测分布（`prediction_history` 右尾过窄会失效）；见 lessons 三.30、D8 |
+| **市场门槛优先分位、退化回退绝对值** | 分位法隐含前提「模型有 edge」；**模型无 edge 时校准把概率压回基准率 → 分位锚在 0.5 → 门控静默失效**（实测 bear 通过率 17.2%→98.2%）。已加退化保护（`GATE_MIN_UNIQUE=30`/`GATE_MIN_SPREAD=0.05`），退化即回退 bear 0.70/weak 0.65。**`bear==weak` 是分布退化信号，不是分位算错**。分位口径：熊市/弱震荡用 `GATE_QUANTILES` P92/P90（PIT），数据源须为 walk-forward 回测分布（`prediction_history` 右尾过窄会失效）。**⚠️ 2026-10-12 实测：真实分布上守卫恒触发——港股校准后唯一值 13<30、P92−P90 0.0103<0.05 ⇒ 分位门槛自 10-02 起从未生效，港股与 A 股现行生效门槛都是绝对 0.70/0.65**；以「分位」措辞叙述的历史结论须按绝对阈值理解。见 lessons 三.30、三.61、D8 |
 
 ---
 
@@ -287,18 +288,19 @@ python hsi_email.py --no-email
 3. **HTTP API 超时处理**：调用 API 时必须设置超时时间——**含依赖链内部请求**（akshare 等库函数常无 timeout，会静默挂死整条流水线，见 lessons 三.21）
 4. **语言规范**：对话和注释使用简体中文，变量名/函数名使用英文
 
-### 🚨 对抗性审核：三道闸（强制，不可跳过）
+### 🚨 对抗性审核：⓪ 同一性闸 + 三道闸（强制，不可跳过）
 
-> **8 项审核清单、两条硬约束的失职复盘、实验方法论全文与案例 → [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)**
+> **9 项审核清单、两条硬约束的失职复盘、实验方法论全文与案例 → [docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)**
 > 此处只留**触发时机 + 硬规则**，防止「改了 AGENTS 却没改规程」的双写漂移。
 
-三个触发时机（**其中两个与「有没有改动」无关**）：
+四个触发时机（**其中三个与「有没有改动」无关**）：
 
 | 闸 | 触发时机 | 判据 |
 |---|---|---|
-| **A 呈现闸** | 任何指标要作为**结论**输出前 | 绝对值异常 → `python3 scripts/presentation_gate.py --input <csv> --horizon N`，**非零退出即阻断** |
-| **B 提交闸** | 任何代码/配置/文档改动后、commit 前 | [8 项清单](docs/REVIEW_GATES.md)逐项过，任一不过即重审 |
-| **C 升级闸** | 任何 🟢/升配/加仓/改阈值 决策前 | 三冻结 + 双跑 md5 一致 + 禁止取最好一轮 |
+| **⓪ 同一性闸** | 任何指标要作为**结论**输出前（先于 A 闸） | 四问，任一「否」即止：① **社区集合**严格相等（`community_ids`）② **列集合**：生产 pkl ⊆ WF 可用列集 **且** F1/HIBOR 列两边都在 **且** 选择规则同源（**不要要求两边集合逐字相等**——WF 每折重选，恒不相等）③ **时点**：`train()` 与 `predict()` 的 `use_shift` 相等；④ 概率同源（`oof_glob` 校准 + 门槛基准 CSV）。⚠️ **无自动脚本**（`scripts/parity_check.py` 未实现）→ 靠人工逐项核对；**但已有契约测试兜底**：`python3 -m pytest tests/test_pipeline_contract.py`（2 条回归护栏 + 6 条**已知违约** `xfail(strict=True)`，**修好即 XPASS 失败 = 自动报警**）。见 lessons 三.60 |
+| **A 呈现闸** | 任何指标要作为**结论**输出前 | 绝对值异常 → `python3 scripts/presentation_gate.py --input <csv> --horizon N`，**非零退出即阻断**；结论须标注「适用范围：WF 内部比较 ✓ / 外推生产 ✗」。⚠️ 该标注**无工具强制**（`presentation_gate.py` / `doc_gate.py` / pre-commit 都不查），靠自觉 |
+| **B 提交闸** | 任何代码/配置/文档改动后、commit 前 | [9 项清单](docs/REVIEW_GATES.md)逐项过，任一不过即重审（第 9 项=同一性） |
+| **C 升级闸** | 任何 🟢/升配/加仓/改阈值 决策前 | 三冻结 + 双跑 md5 一致 **∧ ⓪ 通过** + 禁止取最好一轮。⚠️ md5 一致**只证同一路径可复现、不证两路径相同**——2026-10-12 复现的是一个没人部署的函数 |
 
 **B 闸首条**：改动完成后，**像攻击对手一样攻击自己的改动**，确认无问题才能提交。
 
@@ -321,7 +323,9 @@ python hsi_email.py --no-email
 2. **预注册判据 > 让 AI 复述需求** —— 看到结果**之前**，把成功/失败写成数字或区间。
 3. **验证前先校验「数据非空」，再校验语义** —— **空数据不能证伪任何命题**。
 
-**判读顺序不可颠倒**：绝对值异常 → PBO<0.5 → DSR≥0.95 → 净IR CI 不跨0 + lift>0 → 才谈仓位。
+**判读顺序不可颠倒**：**⓪ 同一性**（WF=生产？时点对齐？概率同源？）→ 绝对值异常 → PBO<0.5 → DSR≥0.95 → 净IR CI 不跨0 + lift>0 → 才谈仓位。**⓪ 不过则后面不必跑**。
+
+**「同源」是通用原则，不只针对概率分位**（7 项：特征列集合 / 社区集合 / 时点口径 / 数据窗口 / 快照 / 校准器来源 / 门槛基准）；**每个 flag 的默认值只许一处**（当前违反 4 处，lessons 三.60 O5）。
 
 ---
 
@@ -414,7 +418,7 @@ HTML / SVG / 视频不入库。完整检查表见 [docs/AI_WORKFLOW.md](docs/AI_
 ## 🔗 快速链接
 
 - **⭐ Walk-forward 基线（唯一真相源）**：[docs/BASELINES.md](docs/BASELINES.md)
-- **⭐ 三道闸 / 硬约束 / 实验方法论正文**：[docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)
+- **⭐ ⓪ 同一性闸 / 三道闸 / 硬约束 / 实验方法论正文**：[docs/REVIEW_GATES.md](docs/REVIEW_GATES.md)
 - **架构 / 特征架构 / 环境变量 / 调度**：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **经验教训**：[lessons.md](lessons.md) - 关键警告和最佳实践
 - **进度跟踪**：[progress.txt](progress.txt) - 项目当前进展

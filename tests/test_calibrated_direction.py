@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""校准后方向/模式同口径 测试
+"""概率口径测试（D26：probability 保持原始 P(上涨)，confidence 承载 P(方向判对)）
 
-背景：邮件三周期列表曾出现「↑ 0.49 (置信52%)」矛盾——箭头按原始概率判、
-数字按 Isotonic 校准概率显示（apply_to_results 只改 probability 不改 direction），
-模式(111)也仍按原始方向拼，与概率列矛盾。
-修复：apply_to_results 同步重判 prediction/direction（校准后 ≥0.5 判涨），
-校准后 rebuild_three_horizon_patterns 重算模式/交易建议/胜率。
+历史：曾把 `probability`（P(上涨)）覆写为校准值并按其 ≥0.5 重判方向——
+① 20d 校准器在 p<0.741 为平台（≈0.4933）→ 32 只邮件全显示「上涨概率 0.49」，
+   三重确认 0.55/0.60 门槛结构性不可达；② 原始 0.74 的强涨股被判成「↓」；
+   ③ A 闸跑未校准概率、生产阈值跑校准后概率（同一性缺口）。
+现口径：probability/prediction/direction 一律用模型原始输出；confidence 单独承载校准信息，
+   且当某周期 confidence 当日横截面无区分度时撤销并告警（退化守卫）。
 """
 import pytest
 
@@ -19,39 +20,45 @@ def _dc_with_stubs(calib_map):
     dc.prob_cal = {}
     dc.conf_cal = {}
     dc.calibrate = lambda p, h: calib_map.get(h, {}).get(p, p)
-    dc.confidence = lambda p, h: 0.52
+    # confidence 随原始概率变化（真实校准器是阶梯函数，但不应恒为常数——
+    # 否则会触发 D26 退化守卫，测试就不测「正常路径」了）
+    dc.confidence = lambda p, h: round(min(0.95, max(0.05, 0.30 + 0.5 * p)), 4)
     return dc
 
 
 def _make_results(probs):
-    """probs: {horizon: raw_prob} → 三周期结果（raw 方向按 >0.5 判）"""
+    """probs: {horizon: raw_prob} → 三周期结果。
+
+    方向阈值按生产同源口径 `>= 0.5` 判涨（ml_trading_model.py:5225 `proba[1] >= 0.5`），
+    D26 后 apply_to_results 不再改写方向，故夹具必须与生产者一致。
+    """
     preds = {}
     for h, p in probs.items():
-        preds[h] = {'prediction': 1 if p > 0.5 else 0,
+        preds[h] = {'prediction': 1 if p >= 0.5 else 0,
                     'probability': p,
-                    'direction': '↑' if p > 0.5 else '↓'}
+                    'direction': '↑' if p >= 0.5 else '↓'}
     pattern = ''.join('1' if preds[h]['prediction'] == 1 else '0' for h in (1, 5, 20))
     return {'code': '2800.HK', 'predictions': preds,
             'pattern': pattern, 'pattern_info': ca.get_pattern_action(pattern)}
 
 
-def test_direction_follows_calibrated_probability():
-    # 用户实例：2800.HK raw 全部 >0.5（原始判涨），校准后 0.49/0.43/0.57
+def test_probability_stays_raw_and_confidence_carries_calibration():
+    # 2800.HK raw 0.55/0.56/0.60：probability 保持原值、方向按原始概率、confidence 另有其值
     results = {'2800.HK': _make_results({1: 0.55, 5: 0.56, 20: 0.60})}
     dc = _dc_with_stubs({1: {0.55: 0.49}, 5: {0.56: 0.43}, 20: {0.60: 0.57}})
     dc.apply_to_results(results)
 
     p = results['2800.HK']['predictions']
-    assert p[1]['probability'] == pytest.approx(0.49)
-    assert p[1]['direction'] == '↓'          # 不再出现 ↑ 0.49
-    assert p[1]['prediction'] == 0
-    assert p[5]['direction'] == '↓'
-    assert p[20]['direction'] == '↑'          # 0.57 ≥ 0.5
-    assert p[1]['confidence'] == pytest.approx(0.52)
+    assert p[1]['probability'] == pytest.approx(0.55)   # 不再被覆写为 0.49
+    assert p[5]['probability'] == pytest.approx(0.56)
+    assert p[20]['probability'] == pytest.approx(0.60)
+    assert p[1]['direction'] == '↑' and p[1]['prediction'] == 1
+    assert p[20]['direction'] == '↑'
+    assert p[1]['confidence'] == pytest.approx(0.30 + 0.5 * 0.55)
 
 
-def test_calibrated_pattern_rebuilt():
-    # 重建前 pattern=111（raw 方向），重建后应随校准方向变 001
+def test_pattern_unchanged_since_direction_follows_raw():
+    # D26 后方向不再被校准值改写 → pattern 保持 111，rebuild 计数 0（幂等）
     results = {'2800.HK': _make_results({1: 0.55, 5: 0.56, 20: 0.60})}
     assert results['2800.HK']['pattern'] == '111'
 
@@ -60,9 +67,32 @@ def test_calibrated_pattern_rebuilt():
     n = ca.rebuild_three_horizon_patterns(results)
 
     res = results['2800.HK']
-    assert res['pattern'] == '001'
-    assert n == 1
-    assert res['pattern_info'] == ca.get_pattern_action('001')
+    assert res['pattern'] == '111'
+    assert n == 0
+    assert res['pattern_info'] == ca.get_pattern_action('111')
+
+
+def test_strong_raw_signal_not_flipped_by_calibration():
+    # 原始 0.74（强涨）不得因校准平台值被判成 ↓——这是 20d 邮件全 0.49 的直接教训
+    results = {'0961.HK': _make_results({1: 0.74, 5: 0.74, 20: 0.74})}
+    dc = _dc_with_stubs({})
+    dc.confidence = lambda p, h: 0.4933          # 20d 平台值
+    dc.apply_to_results(results)
+    for h in (1, 5, 20):
+        assert results['0961.HK']['predictions'][h]['direction'] == '↑'
+        assert results['0961.HK']['predictions'][h]['probability'] == pytest.approx(0.74)
+
+
+def test_degenerate_confidence_guard_removes_confidence():
+    # 校准器对所有股票给同一值 → confidence 无区分度 → 撤销并告警，probability 不受影响
+    results = {c: _make_results({1: 0.50, 5: 0.50, 20: 0.50}) for c in ('0005.HK', '0700.HK', '2318.HK', '0001.HK', '0388.HK')}
+    dc = _dc_with_stubs({})
+    dc.confidence = lambda p, h: 0.4933
+    dc.apply_to_results(results)
+    for res in results.values():
+        for h in (1, 5, 20):
+            assert 'confidence' not in res['predictions'][h]
+            assert res['predictions'][h]['probability'] == pytest.approx(0.50)
 
 
 def test_pattern_rebuild_no_change_when_direction_unaffected():
@@ -76,9 +106,9 @@ def test_pattern_rebuild_no_change_when_direction_unaffected():
 
 
 def test_boundary_exactly_half_is_up():
-    # 校准概率恰为 0.50 → 判涨（与邮件颜色说明「↑ 50-60%」及市场调整列 ≥0.50 一致）
-    results = {'0005.HK': _make_results({1: 0.48, 5: 0.48, 20: 0.48})}
-    dc = _dc_with_stubs({1: {0.48: 0.50}, 5: {0.48: 0.50}, 20: {0.48: 0.50}})
+    # 原始概率恰为 0.50 → 判涨（与邮件颜色说明「↑ 50-60%」及市场调整列 ≥0.50 一致）
+    results = {'0005.HK': _make_results({1: 0.50, 5: 0.50, 20: 0.50})}
+    dc = _dc_with_stubs({})
     dc.apply_to_results(results)
     for h in (1, 5, 20):
         assert results['0005.HK']['predictions'][h]['direction'] == '↑'
