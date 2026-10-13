@@ -99,25 +99,45 @@ def win_rate_paired_test(df, cost=COST):
     return {'lift': float(arr.mean()), 't': float(t), 'p': float(p), 'n': int(arr.size)}
 
 
-def equal_weight_baseline(df, horizon=None, market='hk'):
-    """等权买入**全池**的逐期收益 —— 纯 beta，不含任何模型选择。
+def equal_weight_baseline(bt):
+    """等权基准 —— **直接复用 `portfolio_backtest.backtest()` 内部的 `bt['bench']`**。
 
-    为什么必须并列报（D27 E 级）：护栏原本只报模型组合的净收益，读起来像「有微弱正 edge」。
-    D26 实测 top10-raw 净 +1.30%/期 vs 等权全池 +1.61%/期 —— **跑输 beta 19%**。
-    这两个数放在一起才是结论：不加 alpha 是次要的，**加了选择反而更差**才是要点。
-    口径与模型组合一致（同一 panel、同一逐期切分、只取均值不复利，因前瞻窗重叠不可连乘）。
+    ⚠️ 这里曾经写错过（lessons 三.67）：早先版本自己用全部**日频** `Actual_Return` 的横截面均值当基准，
+    而 backtest 的调仓日是 `dates[::horizon]`（**非重叠**）、且其 `bench` 也是在这批调仓日上算的。
+    两套口径混用 ⇒ 与模型组合的对比整体失真。
+    ⇒ **凡是项目里已经有的基准，不许自己再造一个**。
+
+    口径对齐后 D26 实测（39 个非重叠调仓期，top10-neutral）：
+      等权 bench      +1.719%/期
+      组合 毛 gross   +1.516%/期   毛−等权 −0.203pp  95%CI [−1.10%, +0.70%]  p=0.66 **不显著**
+      组合 净 net     +1.163%/期   净−等权 −0.556pp  95%CI [−1.46%, +0.35%]  p=0.24 **不显著**
+      成本拖累        0.353%/期
+    ⇒ 正确表述是「**测不出超额**」，**不是**「打平」（CI 同时容纳差很多与略好，见三.67）。
     """
-    d = df
-    if 'Actual_Return' not in d.columns:
+    if bt is None or 'bench' not in bt.columns:
         return None
-    dc = 'date' if 'date' in d.columns else 'Date'
-    s = pd.to_numeric(d['Actual_Return'], errors='coerce').groupby(d[dc]).mean()
-    s = s.dropna()
-    if len(s) < 20:
+    b = bt['bench'].dropna()
+    if len(b) < 20:
         return None
-    t, p = ttest_1samp(s.values, 0.0)
-    return {'mean': float(s.mean()), 't': float(t), 'p': float(p), 'n': int(len(s)),
-            'cum_simple': float((1 + s).prod() - 1)}
+    t, p = ttest_1samp(b.values, 0.0)
+    return {'mean': float(b.mean()), 't': float(t), 'p': float(p), 'n': int(len(b))}
+
+
+def vs_baseline(series, bench, label):
+    """与等权基准的**配对**差额 + 95%CI。
+
+    必须带 CI：只报「−0.20%/期」会被读成「打平」，
+    而 CI [−1.10%, +0.70%] 的正确读法是「**测不出**」（lessons 三.67）。
+    """
+    d = np.asarray(series, dtype=float) - np.asarray(bench, dtype=float)
+    d = d[np.isfinite(d)]
+    if len(d) < 20:
+        return None
+    m = d.mean()
+    se = d.std(ddof=1) / np.sqrt(len(d))
+    t, p = ttest_1samp(d, 0.0)
+    return {'label': label, 'diff': float(m), 'ci_lo': float(m - 1.96 * se),
+            'ci_hi': float(m + 1.96 * se), 'p': float(p), 'n': int(len(d))}
 
 
 def pbo_null_band(M, n_perm=10, seed=0):
@@ -158,7 +178,9 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     wr, base, lift = signal_lift(df)
     # D27 D 级 + E 级：胜率配对检验 与 等权全池基准 必须与主表并列
     wr_test = win_rate_paired_test(df, cost=cost)
-    ew = equal_weight_baseline(df, horizon=horizon, market=market)
+    ew = equal_weight_baseline(bt)          # 复用 backtest 内部 bench，口径对齐
+    vb_gross = vs_baseline(bt['top_gross'], bt['bench'], '毛 gross') if ew else None
+    vb_net = vs_baseline(bt['top_net'], bt['bench'], '净 net') if ew else None
 
     from ml_services.eval_overfit import build_matrix
     M = build_matrix(horizon, pred_csv, market=market)
@@ -196,32 +218,33 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     else:
         verdict = "🟡 保留低配（未达升级门槛）"
 
-    # D27 E 级：模型组合 vs 等权全池。**必须先做成本归因**再下结论 ——
-    # 只比净收益会把「交易成本」误读成「模型没有 alpha」（lessons 三.65）。
-    # 实测 D26：净 −27.8% vs 等权，但加回成本后毛口径只 −5.9% ⇒ 79% 的差距是手续费，不是选择失败。
+    # D27 E 级：模型组合 vs 等权全池。**强制净+毛双口径 + 配对 CI + 成本占比**
+    # （lessons 三.65 成本归因；lessons 三.67 未检出不等于零，CI 必须随行）
     alpha_verdict = None
     cost_drag = turnover * cost
-    if ew is not None:
-        strat = st['mean']
-        gross = strat + cost_drag
+    if ew is not None and vb_gross is not None and vb_net is not None:
+        strat, gross = st['mean'], st['mean'] + cost_drag
         net_rel = (strat / ew['mean'] - 1) if ew['mean'] else float('nan')
         gross_rel = (gross / ew['mean'] - 1) if ew['mean'] else float('nan')
         share = (cost_drag / (ew['mean'] - strat) * 100) if (ew['mean'] - strat) > 0 else float('nan')
-        alpha_verdict = (
-            f"等权全池（无模型、无再平衡成本）**{ew['mean']*100:+.2f}%/期**\n"
-            f"- 模型组合 **净 {strat*100:+.2f}%/期**（{net_rel*100:+.0f}%）"
-            f"  **毛 {gross*100:+.2f}%/期**（{gross_rel*100:+.0f}%）\n"
-            f"- 交易成本拖累 **{cost_drag*100:.3f}%/期**（换手 {turnover*100:.0f}% × 单边 {cost*100:.1f}%）"
-            + (f"，占总差距的 **{share:.0f}%**" if np.isfinite(share) and share > 0 else "")
-        )
-        if gross_rel < 0 and net_rel < 0:
-            alpha_verdict += ("\n- ⇒ **两端都不及等权**：不只是成本问题，毛口径选择本身也没有超额。")
-        elif gross_rel < 0 <= net_rel:
-            alpha_verdict += ("\n- ⇒ **成本吞噬了毛超额**：选择本身有正超额，但换手太高，净口径被手续费吃光。**这是成本效率问题，不是「模型无 alpha」。**")
-        elif net_rel < 0 <= gross_rel:
-            alpha_verdict += ("\n- ⇒ **无 alpha（净口径跑输 beta）**：毛口径仍有正超额，但不足以覆盖交易成本。")
-        else:
-            alpha_verdict += f"\n- ⇒ 净、毛**双口径**均跑赢等权全池。"
+        lines = [
+            f"等权基准 **bt['bench']**（同 {ew['n']} 个非重叠调仓日）**{ew['mean']*100:+.2f}%/期**",
+            f"模型组合 **净 {strat*100:+.2f}%/期**（{net_rel*100:+.0f}%）　"
+            f"**毛 {gross*100:+.2f}%/期**（{gross_rel*100:+.0f}%）",
+            f"配对差额 vs 等权（同调仓日）：毛 gross {vb_gross['diff']*100:+.3f}%/期　"
+            f"95%CI [{vb_gross['ci_lo']*100:+.3f}%, {vb_gross['ci_hi']*100:+.3f}%]　p={vb_gross['p']:.3f} → "
+            + ('显著' if vb_gross['p'] < 0.05 else '**不显著 ⇒ 读作「测不出超额」，不是「打平」**'),
+            f"　　（同上）净 net　 {vb_net['diff']*100:+.3f}%/期　"
+            f"95%CI [{vb_net['ci_lo']*100:+.3f}%, {vb_net['ci_hi']*100:+.3f}%]　p={vb_net['p']:.3f} → "
+            + ('显著' if vb_net['p'] < 0.05 else '不显著'),
+            f"交易成本拖累 **{cost_drag*100:.3f}%/期**（换手 {turnover*100:.0f}% × 单边 {cost*100:.1f}%）"
+            + (f"，占净-毛总差距 **{share:.0f}%**" if np.isfinite(share) else ''),
+            f"⚠️ **降换手的上限**：即便换手降到 0，差距也只能从 {vb_net['diff']*100:+.3f}% 收窄到 "
+            f"{vb_gross['diff']*100:+.3f}%/期 —— **它救不了策略，主要矛盾是毛口径本身没有可测超额**。",
+            "⚠️ `backtest()` 已内置 `dropout`（TopK-Dropout 降换手），护栏当前传 `dropout=0` "
+            "⇒ 机制已存在只差传参，**属执行动作，不是新主线**。",
+        ]
+        alpha_verdict = "\n".join("- " + x for x in lines)
 
     # D27 D 级：胜率与收益必须同时显著，否则不得声称有 edge
     dual = None
@@ -255,7 +278,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     L.append(f"| **DSR**（最优 {best}） | **{dsr:.3f}** | ≥0.95 |")
     L.append(f"| 信号胜率 / 基准胜率 | {wr*100:.1f}% / {base*100:.1f}% | — |")
     L.append(f"| **超额 lift** | **{lift*100:+.1f}pp** | >0 |")
-    L.append(f"| **等权全池基准**（无模型） | **{ew['mean']*100:+.2f}%/期** | 见下方 alpha 判定 |" if ew is not None else "")
+    L.append(f"| **等权基准**（无模型，同调仓日） | **{ew['mean']*100:+.2f}%/期** | 见下方 alpha 判定（带 CI） |" if ew is not None else "")
     L.append("")
     L.append(f"## 判定：{verdict}")
     L.append("")
@@ -263,7 +286,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     L.append("> （docs/DECISIONS.md D2）\n")
     L.append("### 相对等权全池的判定（D27 E 级，强制）")
     L.append("")
-    L.append(f"- {alpha_verdict}" if alpha_verdict else "- 等权基准不可用（样本不足）")
+    L.append(alpha_verdict if alpha_verdict else '- 等权基准不可用（样本不足）')
     L.append("")
     L.append("### 胜率 vs 收益 双口径（D27 D 级，强制同报）")
     L.append("")
