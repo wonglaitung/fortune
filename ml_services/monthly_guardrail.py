@@ -63,9 +63,22 @@ def signal_lift(df):
     return wr, base, (wr - base) if wr is not None else np.nan
 
 
-def win_rate_paired_test(df, cost=COST):
+def win_rate_paired_test(df, cost=COST, topk=10):
+    """胜率 lift 的**逐日配对**检验，**固定 TopK 口径**。
+
+    ⚠️ 2026-10-13（statistic redesign）：原先按模型 UP/DOWN 分组取「判涨组」，
+    而**每日判涨人数在 5~53 之间剧烈波动** ⇒ 胜率的分母不稳 ⇒ lift 的方差随日而异
+    （实测：判涨人数少的日子 lift sd 0.0999，人多的日子 0.0403，**比值 2.48**）。
+    异方差下任何标准误修正（HAC/块bootstrap）都是在给一个病态统计量打补丁，
+    且它们会把「可预测的方差变化」也算进序列相关去修正 ⇒ se 被放大 2.2 倍。
+
+    **改为固定取每日概率最高的 `topk` 只**：分母固定 ⇒ 方差稳定 ⇒ 统计量良定义。
+    判定链也相应只引用本口径（`top10-raw`），不再引用 UP/DOWN 口径。
+
+    仍并列三种标准误口径（naive / HAC / 块bootstrap），以 HAC 与块bootstrap 为准（三.69）。
+    """
     from ml_services.overlap_stats import hac_t, block_bootstrap_se
-    """胜率 lift 的**逐日配对** t 检验（与 signal_lift 的全局口径不同，必须分开报）。
+    """（docstring 见上）
 
     为什么必须另算（lessons 三.64 规则 1）：全局胜率 lift 会把「哪几天模型偏乐观」与
     「哪几天大盘在涨」混在一起。逐日去均值后才是纯选股口径。
@@ -83,14 +96,13 @@ def win_rate_paired_test(df, cost=COST):
     d['prob'] = pd.to_numeric(d['Predict_Prob'], errors='coerce')
     d = d.dropna(subset=['ret', 'prob'])
     dc = 'date' if 'date' in d.columns else 'Date'
-    # 信号 = 判涨行；基准 = **同日全池**（含判跌行）。
-    # ⚠️ 基准若也过滤成判涨行，差值按构造恒为 0 —— 早期版本踩过这个静默错误。
-    sig = (d[d['Predict_Direction'].astype(str).str.upper() == 'UP']
-           if 'Predict_Direction' in d.columns else d)
+    # 信号 = 每日概率最高的 topk 只（**固定分母**）；基准 = 同日全池。
+    # ⚠️ 基准若也过滤成信号组，差值按构造恒为 0 —— 早期版本踩过这个静默错误。
+    sig = pd.concat([g.nlargest(topk, 'prob') for _, g in d.groupby(dc)])
     per_day = []
     for dt, x in d.groupby(dc):
         sx = sig.loc[sig[dc] == dt]
-        if len(sx) < 5 or len(x) < 10:
+        if len(sx) < 3 or len(x) < 10:
             continue
         per_day.append((sx['ret'] > cost).mean() - (x['ret'] > cost).mean())
     if len(per_day) < 20:
@@ -313,12 +325,14 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     if wr_test is not None:
         sig_corr = (np.isfinite(wr_test.get('t_hac', np.nan))
                     and abs(wr_test['t_hac']) > 1.96)
-        L.append(f"- 胜率 lift（逐日配对）**{wr_test['lift']*100:+.2f}pp**，n={wr_test['n']} 日")
+        L.append(f"- 胜率 lift（逐日配对，**固定 Top{topk} 口径**）**{wr_test['lift']*100:+.2f}pp**，n={wr_test['n']} 日")
         L.append(f"　　朴素 t={wr_test['t']:+.2f}（p={wr_test['p']:.4f}）→ "
                  f"{'显著' if wr_test['p']<0.05 else '不显著'}"
                  f"　|　**HAC(19) t={wr_test['t_hac']:+.2f}**　|　块bootstrap(20) t={wr_test['t_block']:+.2f}"
                  f"　⇒ 以修正口径为准：**{'显著' if sig_corr else '不显著'}**")
-        L.append("　　（标签为「后 20 个交易日」，相邻日前瞻窗重叠 ⇒ 朴素 t 会高估显著性；见 lessons 三.69）")
+        L.append("　　（① 标签为「后 20 个交易日」，相邻日前瞻窗重叠 ⇒ 朴素 t 会高估显著性（三.69）")
+        L.append("　　② **原 UP/DOWN 口径已废弃**：每日判涨人数 5~53 剧烈波动 ⇒ lift 方差随日而异（异方差），"
+                 "标准误修正失效；现固定取 TopK 只，分母固定")
     if 'c' in dir():
         L.append(f"- 收益 lift（折聚类）**{lift*100:+.1f}pp**，CI [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] → "
                  f"{'显著' if c['ir_lo']>0 else '不显著'}")
