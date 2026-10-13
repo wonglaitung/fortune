@@ -62,7 +62,36 @@ def signal_lift(df):
     return wr, base, (wr - base) if wr is not None else np.nan
 
 
-def run(horizon, pred_csv, topk, cost, out_md, market='hk'):
+def pbo_null_band(M, n_perm=10, seed=0):
+    """PBO 的零假设分布：把时间轴整行重排后重算 PBO，得到「完全没有时间可预测性」时的取值范围。
+
+    为什么必须有这个（lessons 三.63）：CSCV 在样本内挑夏普最高的配置、看它样本外排第几。
+    当几个配置彼此不可分时，样本内 argmax 就是抛硬币 ⇒ PBO 必然趋近 1。
+    实测 T=39×6 时零假设带为 0.73–0.94，真实数据 0.871 落在带内 ⇒ 与「无信息」不可区分。
+    单看一个 PBO 数字会把它误读成「过拟合」，故此函数把噪声带一并算出。
+
+    ⚠️ 必须**整行重排**，不能逐列独立打乱：
+    逐列打乱会把「同一期各配置面对同一个市场」这个真实相关性也毁掉，
+    六个配置变成互不相干 ⇒ CSCV 的 IS argmax 更随机 ⇒ PBO 被系统性推到 1，
+    零假设带会假性收窄到 [0.97, 1.00]，反而掩盖真实数据的读数。
+    整行重排保留跨配置相关性、只破坏时间可预测性，才是这里该问的零假设。
+    """
+    rng = np.random.default_rng(seed)
+    vals = []
+    X = M.values
+    for _ in range(n_perm):
+        vals.append(cscv_pbo(X[rng.permutation(X.shape[0]), :])[0])
+    v = np.asarray(vals)
+    return float(np.percentile(v, 5)), float(np.percentile(v, 95)), len(v)
+
+
+def config_spread(M):
+    """各配置全期夏普的极差。极差过小 ⇒ 配置互不可分 ⇒ PBO 必然高（lessons 三.63 准则 2）。"""
+    sr = (M.mean() / M.std(ddof=1))
+    return float(sr.max() - sr.min()), sr
+
+
+def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=10):
     df = load_panel(pred_csv, market=market)
     bt = backtest(df, horizon, topk, True, cost=cost)  # 行业中性
     st = _stats(bt['top_net'].values, horizon)
@@ -79,6 +108,25 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk'):
     dsr = deflated_sharpe(sr[best], len(M), M.shape[1], float(sr.var(ddof=1)),
                           float(skew(M[best].values)), float(kurtosis(M[best].values, fisher=False)))
 
+    spread, _ = config_spread(M)
+    null_lo = null_hi = None
+    if null_perm and null_perm > 0:
+        null_lo, null_hi, _ = pbo_null_band(M, n_perm=null_perm)
+
+    if null_lo is not None:
+        in_band = null_lo <= pbo <= null_hi
+        if in_band:
+            pbo_read = (f"PBO {pbo:.2f} 落在零假设带 [{null_lo:.2f}, {null_hi:.2f}] 内 "
+                        f"⇒ 与「无信息」不可区分，**不可读作过拟合**")
+        elif pbo < null_lo:
+            pbo_read = (f"PBO {pbo:.2f} **低于**零假设带 [{null_lo:.2f}, {null_hi:.2f}] 下界 "
+                        f"⇒ 本窗口的偶然，不可采信（lessons 三.29）")
+        else:
+            pbo_read = (f"PBO {pbo:.2f} **高于**零假设带 [{null_lo:.2f}, {null_hi:.2f}] 上界 "
+                        f"⇒ 该过拟合读数在本尺寸下才站得住")
+    else:
+        pbo_read = f"PBO {pbo:.2f}（未算零假设带，--null-perm=0）"
+
     passed = st['ir'] >= 0.7 and pbo < 0.5 and (dsr is not None and dsr >= 0.95)
     if st['ir'] <= 0:
         verdict = "🔴 停用（IR≤0）"
@@ -94,7 +142,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk'):
     L.append(f"- TopK={topk} 行业中性，成本 {cost:.3f}\n")
     L.append("| 指标 | 值 | 门槛 |")
     L.append("|------|----|------|")
-    L.append(f"| 净IR | **{st['ir']:.2f}** [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | ≥0.7 且 CI 下限>0 更佳 |")
+    L.append(f"| 净IR | **{st['ir']:.2f}** [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | ≥0.7 且 CI 下界>0 更佳 |")
     L.append(f"| P(IR>0.5) | {c['p_ir']*100:.0f}% | — |")
     L.append(f"| 净均收益/期 | {st['mean']*100:+.2f}% | >0 |")
     L.append(f"| 累计净收益 | {st['cum']*100:+.1f}% | — |")
@@ -108,6 +156,13 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk'):
     L.append("")
     L.append("> 判定规则：净IR≥0.7 且 PBO<0.5 且 DSR≥0.95 → 升级；IR>0 但未达 → 保留低配；IR≤0 → 停用。")
     L.append("> （docs/DECISIONS.md D2）\n")
+    L.append(f"### PBO 读法（lessons 三.63，{len(M)} 期 × {M.shape[1]} 配置）")
+    L.append("")
+    L.append(f"- {pbo_read}")
+    L.append(f"- 六个配置全期夏普极差 **{spread:.3f}**"
+             + ("（过小 ⇒ 配置互不可分 ⇒ PBO 必然偏高，先看别的指标）" if spread < 0.2 else ""))
+    L.append("- **PBO 必须与零假设带同报**；单看一个数字会把噪声读成过拟合，"
+             "也会把本窗口的偶然读成改善。")
 
     md = "\n".join(L)
     print(md)
@@ -128,6 +183,8 @@ def main():
     ap.add_argument('--output', type=str, default=None)
     ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
                     help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
+    ap.add_argument('--null-perm', type=int, default=10,
+                    help='PBO 零假设带的重排次数；0=不算（会退回「单看一个 PBO 数字」的坏用法）')
     args = ap.parse_args()
 
     pred = args.pred or latest_pred(args.horizon, market=args.market)
@@ -137,7 +194,8 @@ def main():
     suffix = '_a' if args.market == 'a' else ''
     out = (args.output
            or f"output/monthly_guardrail_{args.horizon}d_{datetime.now():%Y%m%d}{suffix}.md")
-    run(args.horizon, pred, args.topk, args.cost, out, market=args.market)
+    run(args.horizon, pred, args.topk, args.cost, out, market=args.market,
+        null_perm=args.null_perm)
 
 
 if __name__ == '__main__':
