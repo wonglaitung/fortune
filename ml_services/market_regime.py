@@ -52,10 +52,18 @@ GATE_MIN_SPREAD = 0.05
 # 全局极差而失去「层间无区分度」的判别能力，本条仍能拦住。
 GATE_MIN_LAYER_SEP = 0.01
 # 分位快照：CI checkout 无本地 output/ 时用内嵌快照，保证 CI 与本地同值。
-# 由 output/20260925_044407_catboost_20d（43,610条，as_of=2026-09-25）算出。
+#
+# ⚠️ 2026-10-12 修正注释（此前声称「由 output/20260925_044407_catboost_20d 算出分位」，
+#    但该 CSV 已不存在、无法复算，且下面 GATE_SNAPSHOT_AS_OF 与旧注释里的 as_of=2026-09-25 不一致）：
+#    **分位路径自 2026-10-02 的退化保护起，在真实数据上从未生效。**
+#    实测（最新 WF CSV 41153 行 + 实际校准器 prob_cal_20.pkl）：校准后唯一值 **13** < 30、
+#    P92−P90 **0.0103** < 0.05 ⇒ 两个守卫条件都触发 ⇒ 实际生效门槛恒等于 GATE_FALLBACK。
+#    本常量现值 {0.7, 0.65} 与 GATE_FALLBACK 相同，**不是数据驱动的分位数**，不要当成已校准。
+#    A 股同款模块 a_stock_gates.py 的注释已如实写明这一点。
 # ⚠️ walk-forward 重跑后分位会漂移 → 重跑完执行
 #    `python3 -c "from ml_services.market_regime import suggest_gate_snapshot; suggest_gate_snapshot()"`
-#    并更新本常量（progress.txt 记录）。
+#    并更新本常量（progress.txt 记录）。**该函数在退化时会打印明确警告、不要粘贴**。
+#    分位法要生效的前提是模型本身有 edge（否则校准必然把概率压回基准率）。
 GATE_SNAPSHOT = {'bear': 0.7, 'weak': 0.65}
 GATE_SNAPSHOT_AS_OF = '2026-07-30'
 

@@ -9,7 +9,7 @@
   2) Rank IC：Predict_Prob 与 Relative_Return 的秩相关（相对收益上的信息量）
   3) 市场中性 P&L：只对"做多"信号计 Relative_Return 收益 → 净 IR / 胜率（剥离大盘后的可交易性）
 
-HSI 未来收益由本脚本重算（腾讯 qfq 恒指按日期对齐 + shift(-horizon)），
+HSI 未来收益由本脚本重算（腾讯 qfq 恒指按日期对齐 + D25 口径 Close.shift(-(horizon+lag))/Close.shift(-lag)），
 不改数据源/评估链，确保绝对口径基线不被污染。
 
 用法：
@@ -37,7 +37,10 @@ def build_hsi_forward_return(horizon: int) -> pd.Series:
     idx = idx.tz_convert(None) if idx.tz is not None else idx
     hsi.index = idx.normalize()
     close = hsi['Close']
-    fwd = close.shift(-horizon) / close - 1
+    # D25-5：与新标签同口径（T+1 成交 → T+1→T+1+h），滞后天数引用唯一常量，
+    # 否则 A 闸会拿旧窗口的基准（合法值 +0.4209）去判新口径数据 ⇒ 结论不可信。
+    from ml_services.ml_trading_model import LABEL_ENTRY_LAG_DAYS as _lag
+    fwd = close.shift(-(horizon + _lag)) / close.shift(-_lag) - 1
     return fwd
 
 

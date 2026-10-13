@@ -37,7 +37,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 warnings.filterwarnings('ignore')
 
 # 导入项目模块
-from ml_services.ml_trading_model import CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer
+from ml_services.ml_trading_model import (
+    CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer, LABEL_ENTRY_LAG_DAYS,
+)
+from ml_services.run_manifest import resolve_flags
 from ml_services.logger_config import get_logger
 from ml_services.market_regime import MarketSentimentFilter
 from config import TRAINING_STOCKS as STOCK_LIST
@@ -240,9 +243,11 @@ class WalkForwardValidator:
         full_fetch_start = (pd.to_datetime(start_date) - pd.DateOffset(months=self.train_window_months + 6)).strftime('%Y-%m-%d')
         m0 = self.model_class()
         print(f"  🔄 一次性取全段数据: {full_fetch_start} 至 {end_date}（label_mode={self.label_mode}）")
+        # D25-4：显式传 mode='production'（全链路统一 T 收盘数据，不依赖默认）
         full_data = m0.prepare_data(
             stock_list, start_date=full_fetch_start, end_date=end_date,
-            horizon=self.horizon, for_backtest=False, label_mode=self.label_mode
+            horizon=self.horizon, for_backtest=False, label_mode=self.label_mode,
+            mode='production'
         )
         # 统一索引时区为 UTC，便于按折按日期切分
         _idx = full_data.index
@@ -433,7 +438,8 @@ class WalkForwardValidator:
                 horizon=self.horizon,
                 for_backtest=False,
                 community_ids=self.preloaded_community_ids,  # 使用预加载的社区 ID
-                label_mode=label_mode
+                label_mode=label_mode,
+                mode='production',  # D25-4：与生产同口径（T 收盘数据）
             )
 
         # 检查训练样本数量
@@ -477,7 +483,7 @@ class WalkForwardValidator:
                     fold_selected_features = [feat_cols[int(i)] for i in sel_idx]
                     # F1_FORCE=1（D20 ①预注册）：强制把 F1 另类特征并入每折选择集。
                     # 防泄漏：仍只用该折训练数据，仅保证这些列不因方差偏好被Top-K丢弃。
-                    if os.environ.get('F1_FORCE') == '1':
+                    if resolve_flags()['F1_FORCE'] == '1':
                         f1_cols = ['SFC_short_z', 'Net_Margin', 'ROE', 'ROA',
                                    'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
                         for fc in f1_cols:
@@ -486,7 +492,7 @@ class WalkForwardValidator:
                         fold_selected_features = list(dict.fromkeys(fold_selected_features))
                     # HIBOR 强制纳入（D24）：统计法按样本内方差淘汰慢变量，HIBOR 列
                     # 需显式保底，否则每折选择把它砍掉（与生产侧同规则）
-                    if os.environ.get('HIBOR_FORCE') == '1':
+                    if resolve_flags()['HIBOR_FORCE'] == '1':
                         _hib = [c for c in feat_cols if 'HIBOR' in c and c not in fold_selected_features]
                         if _hib:
                             fold_selected_features.extend(_hib)
@@ -530,7 +536,8 @@ class WalkForwardValidator:
                 horizon=self.horizon,
                 for_backtest=False,
                 community_ids=model.community_ids,  # 使用训练时的社区 ID
-                label_mode=label_mode
+                label_mode=label_mode,
+                mode='production',  # D25-4：与训练同口径
             )
 
         print(f"  ✅ 测试数据准备完成: {len(test_data)} 条记录")
@@ -755,12 +762,16 @@ class WalkForwardValidator:
 
         # ========== 计算实际收益率（与训练时一致）==========
         # 优先使用 Future_Return（在过滤前计算，包含正确的未来收益率）
-        # 如果 Future_Return 不存在，则使用 Close.shift(-horizon) 计算
+        # 若 Future_Return 缺失（理论上不该发生：create_label 已算好），
+        # 按同口径重算：D25 起为 Close.shift(-(horizon+lag)) / Close.shift(-lag) - 1
         if 'Future_Return' in df.columns and df['Future_Return'].notna().sum() > 0:
             df['actual_return'] = df['Future_Return']
         else:
-            # 训练时使用累积收益率：Close[t+horizon] / Close[t] - 1
-            df['actual_return'] = df['Close'].shift(-self.horizon) / df['Close'] - 1
+            # D25：与训练同口径——T+1 成交、持有 horizon 天
+            #      （Close[T+1+h] / Close[T+1] - 1），滞后天数只引用唯一常量
+            _lag = LABEL_ENTRY_LAG_DAYS
+            df['actual_return'] = (df['Close'].shift(-(self.horizon + _lag))
+                                   / df['Close'].shift(-_lag) - 1)
 
         # ========== 计算 IC 和 Rank IC ==========
         # IC: 预测概率与实际收益率的相关系数（不是与二元标签）

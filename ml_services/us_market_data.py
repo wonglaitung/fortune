@@ -568,8 +568,8 @@ class USMarketData:
         # HIBOR 短端（默认并入=D22 例外观察采用；HIBOR_FEATURES=0 一键回退=复现旧基线必设）
         # 数据源 data/cnh_hibor/hibor_hkd.csv（git 入库，本地读不走网络/缓存）；
         # T-1 由下游 us_features shift(shift_val) 统一处理
-        import os as _os
-        if _os.environ.get('HIBOR_FEATURES', '1') == '1':
+        from ml_services.run_manifest import resolve_flags
+        if resolve_flags()['HIBOR_FEATURES'] == '1':
             try:
                 hibor_df = self._load_hibor_features()
                 if hibor_df is not None and not hibor_df.empty:

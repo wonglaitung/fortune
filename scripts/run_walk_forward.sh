@@ -19,13 +19,14 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # F1 另类数据特征（D20；2026-10-10 D20 ⑦ 终审关闭）：WF 默认与生产一致 F1-off；
 # F1 默认并入（D23 例外观察采用，F1_FORCE 强制纳入防 Top500 静默丢弃）。
 # 回退/复现 2026-10-11 前基线（含 152157/234941/212920/B2/F1-off 期）须显式 F1_FEATURES=0 F1_FORCE=0。
-export F1_FEATURES="${F1_FEATURES:-1}"
-export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
-# HIBOR 默认并入（D22 例外观察采用）；复现 2026-10-11 前旧基线须显式 HIBOR_FEATURES=0
-export HIBOR_FEATURES="${HIBOR_FEATURES:-1}"
-# HIBOR_FORCE 强制纳入（D24）：默认跟随 HIBOR_FEATURES；回退 HIBOR_FORCE=0
-export HIBOR_FORCE="${HIBOR_FORCE:-${HIBOR_FEATURES}}"
-
+# ⚠️ O5（2026-10-13）：开关默认值**只**在 ml_services/run_manifest.py 的 FLAG_DEFAULTS 定义。
+#    本脚本只做**透传**（不再写 ${X:-1}），否则「默认值两处」的问题原样复发。
+#    要覆盖默认值请显式 export（如复现旧基线时 F1_FEATURES=0）。
+export F1_FEATURES="${F1_FEATURES-}"
+export F1_FORCE="${F1_FORCE-}"
+export HIBOR_FEATURES="${HIBOR_FEATURES-}"
+export HIBOR_FORCE="${HIBOR_FORCE-}"
+# 未设置（空串）时 run_manifest.resolve_flags() 落到 FLAG_DEFAULTS（D22/D23/D24 全 ON）
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
 
 # 输入冻结：三者缺一不可，否则双跑输入不同 → md5 必不一致

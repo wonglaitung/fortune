@@ -36,7 +36,16 @@ STOCK_DATA_CACHE_DAYS = 7  # 股票历史数据缓存7天
 FEATURE_CACHE_DAYS = 7     # 特征缓存7天（与数据缓存一致）
 HSI_DATA_CACHE_HOURS = 1   # 恒生指数数据缓存1小时
 
+# ---- D25（2026-10-13）：入场滞后天数 ----
+# 决策时点 = T 日 16:30 HKT（收市竞价 16:00-16:10，16:10 后当天不再成交）
+# ⇒ 按 T 收盘价买入物理不可行，最早 T+1 成交
+# ⇒ 标签窗口 = [T+LAG, T+LAG+horizon]，而非 [T, T+horizon]
+# ⚠️ 全项目**只此一处**定义；标签、HSI 相对标签、WF 复算、A 闸重建都必须引用它，
+#    不得各自写死数字（lessons 三.48：列序/常量漂移会静默改变结果）
+LABEL_ENTRY_LAG_DAYS = 1
+
 # 导入项目模块
+from ml_services.run_manifest import manifest_fingerprint, resolve_flags, write_manifest
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 
 # F1 另类数据特征模块（D20）：SFC 卖空 + 基本面三表，PIT 正确、受 F1_FEATURES 门控
@@ -739,13 +748,16 @@ def _is_usable_feature_cache(cached) -> bool:
     return len(df) >= 300
 
 
-def _get_feature_cache_key(stock_code, last_date, use_shift=True):
+def _get_feature_cache_key(stock_code, last_date, use_shift=True, manifest_fp=None,
+                           community_ids=None):
     """生成特征缓存键
 
     参数:
     - stock_code: 股票代码（如 '0005'）
     - last_date: 数据最后日期（如 '20260418'）
     - use_shift: 是否使用滞后数据（True=Walk-forward验证，False=生产预测）
+    - manifest_fp: 运行清单短指纹（run_manifest.manifest_fingerprint()）
+    - community_ids: 本次使用的社区 ID 集合（None=每股动态提取）
 
     返回:
     - 缓存键字符串
@@ -754,10 +766,18 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True):
     - use_shift=True 时特征使用 T-1 数据（避免数据泄漏）
     - use_shift=False 时特征使用当日数据（收市后预测）
     - 两种模式的缓存必须分开，否则会导致数据泄漏（shift 后缀始终保留）
+    - **2026-10-13（O4）**：键额外含 `manifest_fp`（开关 + 快照 env + mode + 社区集合）。
+      此前键只含 `{code}_{last_date}_{shift}_{f1}`，**不含 HIBOR / 社区集合 / PIT 版本**
+      ⇒ WF（每股动态社区）与生产（静态∪PIT）写同一个键、互相覆写。
+      D25 把 WF 与生产统一到同一 `use_shift` 后，这一条会**直接毁掉可复现性**，故先做 O4。
+      未传 `manifest_fp` 时保持旧键格式（向后兼容，不影响既有调用方）。
     """
     shift_suffix = "shift" if use_shift else "noshift"
-    f1_suffix = "f1" if os.environ.get('F1_FEATURES') == '1' else "base"
-    return f"{stock_code}_{last_date}_{shift_suffix}_{f1_suffix}"
+    f1_suffix = "f1" if resolve_flags()['F1_FEATURES'] == '1' else "base"
+    base = f"{stock_code}_{last_date}_{shift_suffix}_{f1_suffix}"
+    if manifest_fp:
+        return f"{base}_{manifest_fp}"
+    return base
 
 
 def _get_feature_cache_file_path(cache_key):
@@ -1670,7 +1690,7 @@ class FeatureEngineer:
         仅取尺度无关列：SFC_short_z（逐股 z，H1-F-2 显著信号）+ 6 个无量纲基本面比率
         （Net_Margin/ROE/ROA/Debt_Equity/OCF_Quality/Asset_Turnover），避免规模特征需截面 z。
         """
-        if os.environ.get('F1_FEATURES') != '1':
+        if resolve_flags()['F1_FEATURES'] != '1':
             return None
         if sfc_feature_frame is None or fundamental_feature_frame is None:
             return None
@@ -2076,16 +2096,21 @@ class FeatureEngineer:
                         剥离市场 Beta、只留特异 alpha；见 lessons 十 (a)）
             hsi_df: 恒生指数 qfq 数据（label_mode='relative_hsi' 时使用）
         """
-        if df.empty or len(df) < horizon + 1:
+        if df.empty or len(df) < horizon + LABEL_ENTRY_LAG_DAYS + 1:
             return df
 
         # 计算未来收益率（累积收益）
-        df['Future_Return'] = df['Close'].shift(-horizon) / df['Close'] - 1
+        # D25：入场滞后 LABEL_ENTRY_LAG_DAYS 天（T+1 成交 → 标签 T+1→T+1+h）
+        _lag = LABEL_ENTRY_LAG_DAYS
+        df['Future_Return'] = (df['Close'].shift(-(horizon + _lag))
+                              / df['Close'].shift(-_lag) - 1)
 
         if label_mode == 'relative_hsi' and hsi_df is not None and 'Close' in hsi_df.columns:
             # 相对收益标签：剥离市场 Beta，只预测"能否跑赢恒指"
             hsi_close = hsi_df['Close']
-            hsi_fwd = hsi_close.shift(-horizon) / hsi_close - 1
+            # D25：与个股标签同口径（T+1→T+1+h）
+            hsi_fwd = (hsi_close.shift(-(horizon + _lag))
+                       / hsi_close.shift(-_lag) - 1)
             # 对齐索引（处理股票缓存与 HSI 源时区/时间戳差异）：
             # 1) 统一安全去 tz；2) normalize 到当日 00:00（HSI 源为午夜时间戳，
             #    个股源为收盘 16:00，按精确时间 reindex 会全不中→HSI_Future_Return 全 NaN→Label 恒 0）
@@ -2109,9 +2134,9 @@ class FeatureEngineer:
         df['Label_Threshold'] = min_return_threshold
         df['Label_Mode'] = label_mode
 
-        # 如果不是回测模式，移除最后horizon行（没有标签的数据）
+        # 如果不是回测模式，移除尾部无标签的行（horizon + 入场滞后）
         if not for_backtest:
-            df = df.iloc[:-horizon]
+            df = df.iloc[:-(horizon + _lag)]
 
         return df
 
@@ -4046,6 +4071,14 @@ class CatBoostModel(BaseTradingModel):
 
         # 根据 mode 确定 use_shift
         use_shift = (mode == 'backtest')
+        # O4（2026-10-13）：运行清单 —— 开关/快照/mode/社区集合的单一事实源，
+        # 指纹进特征缓存键（此前键不含这些维度，WF 与生产会互相覆写缓存）。
+        _manifest_fp = manifest_fingerprint(community_ids=community_ids, mode=mode)
+        write_manifest({'mode': mode,
+                        'community_ids': (sorted(community_ids)
+                                          if community_ids is not None else None),
+                        'use_shift': use_shift,
+                        'caller': 'prepare_data'})
         all_data = []
 
         # 修复三.26：按 start_date 取全历史市场特征，避免 2016-2022 宏观特征缺失
@@ -4148,7 +4181,10 @@ class CatBoostModel(BaseTradingModel):
                 last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
                 # 尝试加载特征缓存（使用 use_shift 参数生成缓存键）
-                cache_key = _get_feature_cache_key(stock_code, last_date, use_shift=use_shift)
+                # O4：键含运行清单指纹（开关+快照env+mode+社区集合），隔离 WF 与生产
+                cache_key = _get_feature_cache_key(
+                    stock_code, last_date, use_shift=use_shift,
+                    manifest_fp=_manifest_fp, community_ids=community_ids)
                 cache_file_path = _get_feature_cache_file_path(cache_key)
 
                 use_cache = False
@@ -4463,7 +4499,12 @@ class CatBoostModel(BaseTradingModel):
             df = prepared_df
             logger.info(f"使用预取数据（避免重复取数）: {len(df)} 条记录")
         else:
-            df = self.prepare_data(codes, start_date, end_date, horizon, min_return_threshold=min_return_threshold, community_ids=preloaded_community_ids)
+            # D25-4：显式传 mode='production'（全链路统一 T 收盘数据）。
+            #      不得依赖默认——三.60 根因就是口径挂在调用点默认参数上。
+            df = self.prepare_data(codes, start_date, end_date, horizon,
+                                   min_return_threshold=min_return_threshold,
+                                   community_ids=preloaded_community_ids,
+                                   mode='production')
 
         # 提取并保存社区 ID 列表（用于预测时的一致性）
         # 优先使用预加载的社区 ID，如果没有则从数据中提取
@@ -4505,7 +4546,7 @@ class CatBoostModel(BaseTradingModel):
                 print(f"✅ 特征数量: {len(self.feature_columns)}（特征选择）")
 
             # F1 强制纳入（D20）：与生产 walk-forward F1_FORCE 一致，避免特征选择把 F1 剔除导致静默不纳入
-            if os.environ.get('F1_FORCE') == '1':
+            if resolve_flags()['F1_FORCE'] == '1':
                 _f1_force = ['SFC_short_z', 'Net_Margin', 'ROE', 'ROA', 'Debt_Equity', 'OCF_Quality', 'Asset_Turnover']
                 _added = [c for c in _f1_force if c in df.columns and c not in self.feature_columns]
                 if _added:
@@ -4513,7 +4554,7 @@ class CatBoostModel(BaseTradingModel):
                     print(f"🔧 F1_FORCE 强制纳入 {len(_added)} 个 F1 特征: {_added}")
             # HIBOR 强制纳入（D24）：静态名单（10-10 生成）含 0 个 HIBOR 列且统计法按样本内
             # 方差系统性淘汰慢变量 → 不强制则 HIBOR 算了不用（生产路径空转）。
-            if os.environ.get('HIBOR_FORCE') == '1':
+            if resolve_flags()['HIBOR_FORCE'] == '1':
                 _hib = [c for c in df.columns if 'HIBOR' in c and c not in self.feature_columns]
                 if _hib:
                     self.feature_columns.extend(_hib)
@@ -4820,6 +4861,11 @@ class CatBoostModel(BaseTradingModel):
 
         # 根据 mode 确定 use_shift
         use_shift = (mode == 'backtest')
+        # O4：推理侧也落盘一份（mode 与训练侧不同时指纹自然不同 ⇒ 键不同）
+        write_manifest({'mode': mode,
+                        'community_ids': getattr(self, 'community_ids', None),
+                        'use_shift': use_shift,
+                        'caller': 'predict'})
 
         try:
             # 移除代码中的.HK后缀
@@ -4850,7 +4896,12 @@ class CatBoostModel(BaseTradingModel):
             last_date = stock_df.index[-1].strftime('%Y%m%d') if hasattr(stock_df.index[-1], 'strftime') else str(stock_df.index[-1])[:10].replace('-', '')
 
             # 尝试加载特征缓存（使用 use_shift 参数生成缓存键）
-            cache_key = _get_feature_cache_key(stock_code, last_date, use_shift=use_shift)
+            # O4：键含运行清单指纹；社区集合用 self.community_ids（与训练时保存的一致）
+            cache_key = _get_feature_cache_key(
+                stock_code, last_date, use_shift=use_shift,
+                manifest_fp=manifest_fingerprint(community_ids=getattr(self, 'community_ids', None),
+                                                 mode=mode),
+                community_ids=getattr(self, 'community_ids', None))
             cache_file_path = _get_feature_cache_file_path(cache_key)
 
             use_cache_predict = False

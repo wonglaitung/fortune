@@ -26,11 +26,14 @@ cd "$PROJECT_DIR"
 # GATE_SOURCE_CSV 不在此硬编码：门槛/校准器由 market_regime.GATE_SNAPSHOT
 # （commit_backtest_result.py 每次回测入库自动同步）+ 自动选取最新入库 CSV 驱动，
 # 故每次 WF 跑完经该脚本入库即自动更新，无需手动改址（lessons 三.29）。
-export F1_FEATURES="${F1_FEATURES:-1}"
-export F1_FORCE="${F1_FORCE:-${F1_FEATURES}}"
-# HIBOR_FORCE 强制纳入（D24，默认跟随 HIBOR_FEATURES；回退 HIBOR_FORCE=0）
-export HIBOR_FEATURES="${HIBOR_FEATURES:-1}"
-export HIBOR_FORCE="${HIBOR_FORCE:-${HIBOR_FEATURES}}"
+# ⚠️ O5（2026-10-13）：开关默认值**只**在 ml_services/run_manifest.py 的 FLAG_DEFAULTS 定义。
+#    本脚本只做**透传**（不再写 ${X:-1}），否则「默认值两处」的问题原样复发。
+#    要覆盖默认值请显式 export（如复现旧基线时 F1_FEATURES=0）。
+export F1_FEATURES="${F1_FEATURES-}"
+export F1_FORCE="${F1_FORCE-}"
+export HIBOR_FEATURES="${HIBOR_FEATURES-}"
+export HIBOR_FORCE="${HIBOR_FORCE-}"
+# 未设置（空串）时 run_manifest.resolve_flags() 落到 FLAG_DEFAULTS（D22/D23/D24 全 ON）
 
 echo "=========================================="
 echo "🚀 综合分析自动化流程（使用 CatBoost 三周期模型）"

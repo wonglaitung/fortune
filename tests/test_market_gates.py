@@ -13,16 +13,41 @@ import pandas as pd
 import pytest
 
 from ml_services.market_regime import (
-    GATE_QUANTILES, GATE_FALLBACK, GATE_MIN_SAMPLES, GATE_SNAPSHOT,
-    compute_gate_thresholds, MarketSentimentFilter,
+    GATE_QUANTILES, GATE_FALLBACK, GATE_MIN_SAMPLES, GATE_MIN_SPREAD,
+    GATE_SNAPSHOT, compute_gate_thresholds, MarketSentimentFilter,
 )
 
 
-def _make_walkforward_csv(path: Path, n=400, start="2025-01-01"):
+def _nondegenerate_probs(n=400, seed=0):
+    """构造**非退化**的校准后概率分布：90% 主体 + 10% 宽尾。
+
+    ⚠️ 为什么必须宽尾（2026-10-12 补）：2026-10-02 加的分位退化保护要求
+    `P92 - P90 >= GATE_MIN_SPREAD(0.05)` 且唯一值 ≥ 30，否则回退绝对阈值。
+    早期本测试用的是 `linspace(0.40,0.90)`（均匀），P92−P90 只有 0.01 ⇒
+    必然被守卫挡掉、走回退，测试却仍断言分位值 → 2026-10-12 起持续红灯。
+    **退化分布的行为另由 `test_degenerate_distribution_falls_back` 单独断言**，
+    不混在「分位路径应当生效」的用例里。
+    """
+    rng = np.random.default_rng(seed)
+    nb = int(n * 0.10)
+    p = np.concatenate([rng.uniform(0.45, 0.55, size=n - nb),
+                        rng.uniform(0.60, 1.00, size=nb)])
+    rng.shuffle(p)
+    return p
+
+
+def _degenerate_probs(n=400, seed=1):
+    """退化分布：校准把概率压回基准率附近 ⇒ P92≈P90 ⇒ 触发守卫（真实生产形态）。"""
+    rng = np.random.default_rng(seed)
+    return np.clip(rng.beta(2, 3, n), 0.01, 0.99)
+
+
+def _make_walkforward_csv(path: Path, n=400, start="2025-01-01", probs=None):
     """构造 output/*_catboost_20d/prediction_analysis.csv 结构"""
     path.parent.mkdir(parents=True, exist_ok=True)
     dates = pd.bdate_range(start, periods=n)
-    probs = np.linspace(0.40, 0.90, n)
+    if probs is None:
+        probs = _nondegenerate_probs(n)
     pd.DataFrame({
         "Date": [d.strftime("%Y-%m-%d") for d in dates],
         "Predict_Prob": probs,
@@ -55,17 +80,22 @@ def test_compute_gates_quantile_and_pit(tmp_path):
     dates, probs = _make_walkforward_csv(csv, n=400)
     _make_identity_calibrator(iso_path)
 
-    # 全量：分位值 = 线性概率分布的 P92/P90
+    # 前提自检：合成分布必须是非退化的，否则本用例测的就不是分位路径
+    assert np.percentile(probs, 92) - np.percentile(probs, 90) >= GATE_MIN_SPREAD
+
+    # 全量：分位值 = 概率分布的 P92/P90
     gates = compute_gate_thresholds(as_of=None, source_csv=str(csv),
                                     calibrator_file=str(iso_path))
     assert gates["bear"] == pytest.approx(np.percentile(probs, 92), abs=1e-6)
     assert gates["weak"] == pytest.approx(np.percentile(probs, 90), abs=1e-6)
     assert gates["bear"] > gates["weak"] > 0.50
 
-    # PIT：as_of 中段 → 分位随可用样本收缩
+    # PIT：门槛只由 Date <= as_of 的子集算出（不是"样本变少所以变小"）
+    mask = np.array([d <= dates[199] for d in dates])
     gates_mid = compute_gate_thresholds(as_of=dates[199], source_csv=str(csv),
                                         calibrator_file=str(iso_path))
-    assert gates_mid["bear"] < gates["bear"]
+    assert mask.sum() >= GATE_MIN_SAMPLES
+    assert gates_mid["bear"] == pytest.approx(np.percentile(probs[mask], 92), abs=1e-6)
 
     # PIT：as_of 太早 → 样本不足 → 回退链到内嵌快照（CI 同值）
     gates_early = compute_gate_thresholds(as_of=dates[99], source_csv=str(csv),
@@ -77,6 +107,27 @@ def test_compute_gates_quantile_and_pit(tmp_path):
                                         calibrator_file=str(iso_path),
                                         use_snapshot_fallback=False)
     assert gates_abs == GATE_FALLBACK
+
+
+def test_degenerate_distribution_falls_back(tmp_path):
+    """退化保护：校准后分布塌缩（P92≈P90）⇒ 放弃分位、回退绝对阈值。
+
+    ⚠️ 这就是**当前真实生产形态**（2026-10-12 实测）：用最新 WF CSV(41153 行)
+    + 实际港股校准器 `prob_cal_20.pkl`，校准后唯一值 13<30 且 P92−P90=0.0103<0.05
+    ⇒ 两个守卫条件都触发 ⇒ `compute_gate_thresholds` 返回 {'bear':0.70,'weak':0.65}。
+    换言之**分位门槛自 2026-10-02 起在真实数据上从未生效**，见 lessons 三.61。
+    """
+    csv = _csv_in(tmp_path)
+    iso_path = tmp_path / "iso.pkl"
+    _, probs = _make_walkforward_csv(csv, n=400, probs=_degenerate_probs(400))
+    _make_identity_calibrator(iso_path)
+
+    assert np.percentile(probs, 92) - np.percentile(probs, 90) < GATE_MIN_SPREAD
+
+    gates = compute_gate_thresholds(as_of=None, source_csv=str(csv),
+                                    calibrator_file=str(iso_path),
+                                    use_snapshot_fallback=False)
+    assert gates == GATE_FALLBACK
 
 
 def test_compute_gates_fallback_chain(tmp_path):

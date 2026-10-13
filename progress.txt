@@ -3522,3 +3522,161 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    gain 榜 ≠ 选择名单，不得混用（FEATURE_ENGINEERING 第9步 + AGENTS HIBOR 行同步）
 5) 缺陷 B（统计法系统性稀释慢变量）不在 D24 范围 → 族配额另案预注册（MIP §2.1.11 落证据）
 6) Top300 探针暂缓（口径缺陷先修）；下一次 WF 用 HIBOR_FORCE=1 后再跑，届时结果与 D22/R1b 不同源，需注明
+
+2026-10-12 (续17) ⓪ 同一性闸：WF 与生产特征口径的系统性比对（纯只读调查，未改代码）
+1) 触发：用户追问「WF 和生产的特征口径不一致」→ 逐行读两条路径 + 读特征缓存实证
+2) 确认 5 条独立不一致（lessons 三.60）：①训练/推理时点差 1 天（train use_shift=1 / predict=0，
+   WF 全程 1）②net_comm_* 编码（WF 每股动态=缺列 NaN，生产静态∪PIT[0..13]=缺列 0；实测 201/784 单元）
+   ③特征列集合（生产 pkl 冻结 567 列 vs WF 每折 Top-500+FORCE）④1d/5d pkl 仍是 09-30 旧模型
+   ⑤Isotonic 只在生产侧且港股未传 oof_glob ⇒ A 闸读未校准概率、生产阈值读校准后
+3) 已排除（避免下次重查）：训练池一致（两侧都 TRAINING_STOCKS 57 只）；特征选择产物没丢
+   （save_results 写 data/feature_selection/ 且 glob 恰命中取 mtime 最新；shell 的 cp 到 output/ 是死代码
+   但非陈旧成因，真因是最近训练裸跑 python3 绕过步骤 0.5）；**embargo 生效**（:143 归一化 default=horizon，
+   实测 fold1 训练期止于 2023-05-11）
+4) 自我更正：一度误判「embargo 未生效」，错在只 grep default=None 未追踪 __init__ 归一化
+   → 与被调查对象同病（用局部信号代替端到端追踪）→ 契约测试(O3)优先级最高
+5) 根因：口径挂在调用点默认参数上（mode / community_ids / selected_features 三入参 × 三路径）；
+   三道闸全作用在指标上，无一闸问「描述的是不是要部署的函数」。同一错误第三次复发（三.28 / 三.57 / 本次）
+6) 落档：lessons 三.60（证据+根因+O1~O9）；docs/REVIEW_GATES.md 新增第 0 道闸 + B 闸清单第 9 项；
+   AGENTS 判读顺序插 ⓪、C 闸升格为「md5 一致 ∧ ⓪ 通过」；AI_WORKFLOW / QUANT_SYSTEM_METHODOLOGY /
+   MODEL_IMPROVEMENT_PLAN / docs/README 同步；doc_gate 通过
+7) 明确未决：⓪ 无自动脚本（parity_check.py 未实现）、契约测试 0 条 → 当前靠人工核对；
+   O7 时点口径方案 A/B 待用户拍板（选 B 需按新口径重跑 38 折，历史基线作废）
+
+2026-10-12 (续18) 按新规对抗核查上一轮落档，10 项自查 + 修复 7 项
+1) 阻断 2 项 + 实盘高危 1 项，均为「本次改动自己引入」：
+   - AGENTS.md:293 残留「8 项审核清单」与表格「9 项」自相矛盾（只改了表、漏了指针）
+   - docs/BASELINES.md:82 判读顺序缺 ⓪（唯一真相源反而最常被读却漏改）
+   - docs/DEPLOYMENT.md:69 升级条件仍是旧三条件，未加 ∧⓪ → 照它可在 ⓪ 红灯下升 15–20%
+     （与 D20 对抗复核「DEPLOYMENT.md 写着已证伪的 🟢 可放大」同一文件、同一类错误）
+2) 应修 4 项：⓪ 判据第1问原写 set(WF列)==set(生产列) → 结构上永不相等（WF 每折重选）= 规则空转，
+   改为「口径来源同源」三件套；A 闸「适用范围标注」无工具强制（与 ⓪ 同为待修风险，此前漏标）；
+   AI_WORKFLOW §7/§8 未随 §4 同步；「各自就足以阻断」对①过强 → 改分档（②单独阻断外推 / ①令外推不成立但幅度未测）
+3) 可选 3 项已做：#8 AGENTS 行内可变计数移除（数字唯一出处=BASELINES）、#9 QUANT_SYSTEM_METHODOLOGY
+   加「同名不同义」提醒（三道闸门=策略判定 vs 三道闸=审核）、#10 未做（DECISIONS 条目，见下）
+4) 修完后「攻击自己的修复」又抓到 3 处：AGENTS/REVIEW_GATES/DEPLOYMENT/BASELINES 写成「三问」但列了四项
+   → 统一为四问（①社区集合 ②列集合同源 ③时点 ④概率同源）
+5) 两条复发机制复盘：#1/#2 是「多文档同源表述只改一处」，#3 是「改规程没查实盘文档」——两条都是历史已犯，
+   我用的是手工 grep 清单而非机制 → 再次验证 O3/O4（契约测试 + manifest 单一事实源）是唯一解
+6) 复算通过：567=500+7F1+60HIBOR；名单外 67 列=7+60；纯 one-hot net_comm_x 名单外 0；doc_gate 全绿
+7) 未做（待用户定）：DECISIONS.md 开 D25 规程变更条目；O7 时点口径方案 A/B 拍板
+
+2026-10-12 (续19) O3 落地：tests/test_pipeline_contract.py（⓪ 同一性闸的机器兜底）
+1) 8 条断言 = 2 条回归护栏（绿）+ 6 条已知违约（strict xfail，红但不算失败）
+   护栏：embargo 归一化到 horizon（固化上轮那次更正）、pkl 真着装 F1 7 列 + HIBOR
+   违约：train/predict 时点极性、WF 每次 prepare_data 都传 community_ids、WF 接 Isotonic 校准、
+        runner 查特征文件路径 == feature_selection 实际写出目录、每个 flag 默认值只许一处、
+        「适用范围」标注须有工具强制
+2) 全部只读源码 AST/文本/已落盘产物，不联网、不加载模型、不取数 → 0.54s，可进 CI
+3) strict 的意义：修好即 XPASS → 失败，强制回来删标记并写结论（lessons 三.59「唯一自动报警器」）
+4) 首跑就抓到我自己写松的断言（any → all，漏判另外两处已传 community_ids 的 prepare_data）
+   → 这条就是 strict 机制的第一次实战价值
+5) ⚠️ 既有红灯（非本次引入，已单独复现确认）：pytest tests/ 全量 5 failed
+   （test_a_stock_gates×2 / test_market_gates×2 / test_llm_thinking_leak×1）
+   → 后果：「跑一遍 pytest 绿」不能当 B 闸依据；已写入 REVIEW_GATES 已知待修风险
+6) 同步：AGENTS ⓪ 行与 WF≠生产 行（删「契约测试 0 条」改「已建 6 条 strict-xfail」）、
+   REVIEW_GATES 已知待修风险段重写、AI_WORKFLOW §8 加勾选项、lessons O3 标 ✅ 已落地
+7) 仍未做：O1 parity_check.py（真自动）、O4 run_manifest、O7 方案 A/B 拍板、DECISIONS D25 条目、
+   既有 5 个红灯的归因与修复
+
+2026-10-12 (续20) 归因 5 个既有红灯 → 挖出「分位门槛从未生效」（lessons 三.61）
+1) 红灯归因：4 个 = 测试过期（守卫 10-02 加、测试 09-25 写，git 已证先后），
+   根因是**测试自造的合成分布本身就是退化的**（linspace 均匀 / beta(2,3)，
+   P92−P90 ≈ 0.01 < GATE_MIN_SPREAD 0.05）；1 个 = 脆弱测试（读 output/ 里会被重写的产物）
+2) 🔴 连带挖出：真实分布上守卫恒触发（港股校准后 uniq=13<30、P92−P90=0.0103<0.05）
+   ⇒ compute_gate_thresholds / get_a_gates 均返回 {0.70,0.65} = 绝对回退值
+   ⇒ **分位门槛自 10-02 起从未生效**；这是三.60 同族错误的第 6 例（文档写设计意图，非实况）
+3) 诚实度对照：a_stock_gates.py 注释已如实记录退化；market_regime.py 注释却声称快照
+   来自一个**已不存在的 CSV**且 as_of 与常量矛盾 → 已改注释为如实陈述
+4) suggest_gate_snapshot() 自带「❌ 退化，不要粘贴」警告但没人跑过 ⇒ 写了防护没触发
+5) 测试修复（不改生产逻辑）：
+   - 合成分布改 90%主体+10%宽尾（满足守卫前提）+ 用例开头加「前提自检」断言
+   - 新增 test_degenerate_distribution_falls_back / test_degenerate_falls_back 固化真实退化行为
+   - test_real_leaked_artifact_rejected 改内联事故夹具，不再依赖 output/（消除非确定性）
+   - A 股 test_runtime_gates_shape_and_order 原断言「回退值不能冒充分位」与真实行为矛盾
+     → 改为固化「当前恒等于回退值」+ 若不再相等则提示「分位真生效了，文档需同步」
+6) 顺带发现真实弱点（未修，留待另案）：comprehensive_analysis.py:963 日期守卫是全文子串匹配，
+   挡不住「同一分析日期的历史产物被复用」——正是 09-30 事故形态；已加 test_report_is_not_advice 钉现状
+7) 结果：pytest tests/ → 175 passed / 6 xfailed / 0 failed；doc_gate 通过
+8) 教训入库：三.61（守卫与被守对象要成对测试 + 合成分布须满足守卫前提 + 测试不得依赖可变产物）
+
+2026-10-13 D25 决策记录：特征时点统一 T + 入场 T+1 + 标签后移（记录先于开关，未执行）
+1) 用户拍板两句：「允许使用当天（T）的收盘数据」+「16:30 决策 → T+1 成交 → 捕获 r[T+1, T+1+h]」
+2) 硬约束推导（港股机制非偏好）：收市竞价 16:00–16:10、16:10 后当天不再成交
+   ⇒ 16:30 决策物理上不可能按 T 收盘买入；且现行 cron 8 8 UTC=16:08 正落在撮合窗口，
+   T 收盘价未定→取不到就**静默退化成 T-1 特征**且不报错
+3) 落 DECISIONS D25：含 6 项改动清单 + 15 轮基线作废清单 + O4 硬前置 + 4 条边界
+4) 顺带标出 A 闸的隐藏依赖：rel_alpha_check.build_hsi_forward_return 的窗口须同步后移，
+   否则 A 闸 H3 拿旧基准（合法值 +0.4209，旧窗口）判新口径数据
+5) O3 契约测试联动：test_train_and_predict_use_same_shift 是 strict-xfail，
+   改完会 XPASS → 测试失败 = 强制回来删标记并更新 D25（自动报警按预期工作）
+6) AGENTS 同步两处但**标注「D25 待执行」**，不改 cron / 不动代码（记录先于开关）
+7) **A 股决定不改**（用户 2026-10-13）：标签不动、时点不统一、cron 不动。
+   已核对并记录后果 —— A 股**同样存在时点错配**（a_stock_ml_model.py:1566-1573 train 显式
+   mode='backtest' → T-1；:1666 predict 默认 mode='production' → T；
+   a_stock_comprehensive_analysis.py:825 也显式传 mode='production'）
+   ⇒ **A 股 ⓪ 第 3 问同样保持红灯**；A 股基线（D11/D13）不作废、数字继续有效，
+   但「WF 指标 ≈ 生产会下多少单」同样不成立，须与港股改前一样标注适用范围
+8) 下一步顺序：O4（run_manifest + 缓存键）→ D25 六项改码 → 双跑 2-4h → 基线重评
+
+2026-10-13 O4 落地：run_manifest 单一事实源 + 特征缓存键隔离（D25 的硬前置）
+1) 新增 ml_services/run_manifest.py：resolve_flags（默认值只此一处）/ manifest_fingerprint
+   （开关+快照env+mode+社区集合）/ write_manifest / load_manifest
+2) 缓存键改造：_get_feature_cache_key 增 manifest_fp + community_ids 两个可选参；
+   未传时保持旧格式（向后兼容，不影响既有调用方）
+3) 接入点：prepare_data（:4059 附近）算指纹并落盘；predict（:4836 附近）用
+   self.community_ids + mode 算指纹并落盘
+4) 端到端验证（D25 后情景，两边 use_shift=True）：
+   WF 动态社区 → 0005_20261012_shift_base_2d6cccb2c33cdyn
+   生产静态∪PIT → 0005_20261012_shift_base_cd33ace56634c503a6250  → 不再互相覆写
+5) 清单默认值与 4 个真实门控点逐一核对一致（F1 关/F1_FORCE 关/HIBOR_FEATURES 开/HIBOR_FORCE 关）
+   ——「清单说谎比没有清单更坏」，故写成契约测试 test_run_manifest_defaults_match_actual_gating_sites
+6) 契约测试 +4 条（清单默认与门控一致 / 缓存键隔离社区集合与 mode / 开关变化改键 / 清单往返）
+   → tests/test_pipeline_contract.py 现 6 passed + 6 xfailed
+7) 全量 pytest：179 passed / 6 xfailed / 0 failed；doc_gate 通过
+8) **O5 仍留**：4 个门控点仍裸读 os.environ、shell 仍写 ${X:-1}（默认值仍两处），
+   需改走 resolve_flags()；strict-xfail 的 test_flag_default_defined_only_once 会继续红（正确信号）
+9) 未动：标签定义、mode 传递、cron —— D25 六项一项未改，代码只加了清单与键隔离
+
+2026-10-13 O5 + D25 六项全部落地（代码已改，双跑重验中）
+1) O5 默认值归一：FLAG_DEFAULTS 成为唯一定义处（四开关默认全 ON，与 D22/D23/D24 一致）；
+   4 个门控点改走 resolve_flags()；两个 runner 的 ${X:-1} → ${X-}（空串回落默认）
+2) D25-1/2/3 标签后移：新增 LABEL_ENTRY_LAG_DAYS=1（**全项目唯一定义**），
+   create_label 的绝对标签 / HSI 相对标签 / 尾部裁剪 / 长度门槛 /
+   walk_forward 的 actual_return 兜底 / rel_alpha_check 的 HSI 前向收益 全部引用该常量
+3) D25-4：4 处 prepare_data 显式传 mode='production'
+   （ml_trading_model train 1 处 + walk_forward_validation 3 处）
+4) D25-5：rel_alpha_check.build_hsi_forward_return 同步后移 ⇒ A 闸不再拿旧窗口基准判新数据
+5) D25-6：cron 8 8 → 30 8 UTC（16:08 → 16:30 HKT），yml 已写明原因
+6) 契约测试联动：两条 strict-xfail 修好后 XPASS 失败 → **strict 机制首次实战，两条都按预期触发**；
+   另加 3 条护栏（O4 缓存隔离×3 + D25 标签单一口径）
+7) 契约测试当场抓到 3 处漏改/过期：ml_trading_model:4557 裸读 env、walk_forward 注释过期、
+   rel_alpha_check 注释过期 —— 全部按「改代码/改注释，不放宽断言」处理
+8) 标签行为验证（h=3、lag=1、每日 +1%）：Future_Return = Close[T+4]/Close[T+1]-1 逐行一致 ✅
+9) pytest tests/ → 182 passed / 4 xfailed / 0 failed；doc_gate 通过
+10) ⚠️ 未完成：双跑（2-4h）尚未启动；BASELINES 15 轮旧口径已加作废声明；
+    A 闸基准（合法值 +0.4209）须用新口径重跑后更新
+
+2026-10-13 D25 双跑 + 收尾链已挂起（后台）
+1) scripts/run_d25_doublerun.sh：三冻结齐（us/hk snapshot + GATE_SOURCE_CSV 固定到跑前已存在的
+   output/20261012_234236），--no-commit 防第2轮把第1轮产物当门槛源；跑完比 md5
+2) scripts/d25_postrun.sh：轮询等待双跑退出 → 自动①比对 md5 ②对新/旧基线各跑一次
+   presentation_gate --horizon 20 → ③对新股��跑 monthly_guardrail
+3) 后台 PID：双跑 1703657 / postrun 1704903；日志 logs/d25_{doublerun,run1,run2,postrun}.log
+4) A 闸基准必须重算的理由：H3 用 Relative_Return = Actual_Return − HSI 未来收益，
+   D25 把两段的窗口都从 [T,T+h] 改成 [T+1,T+1+h] ⇒ 旧基准 +0.4209（旧窗口、1d）失效
+5) 遗留命名债（等双跑结束再动）：缓存键后缀 WF 现在也写 `noshift`，语义已从「生产预测」
+   变为「T 收盘数据」；隔离靠 manifest 指纹，功能正确但名字误导
+
+2026-10-13 D26 预登记（判据先于结果）+ 路线甲
+1) 用户选「甲」：D25 双跑先跑完存为 D25 基线 → 再修差异② → 再跑存为 D26 基线。
+   不合并 = 单变量纪律；代价是总算力翻倍（4-6h），收益是能分离「标签/时点」与「社区编码」各自贡献
+2) D26 预登记已写入 DECISIONS：问题复述 / 选定方案（显式化而非 fillna 打补丁）/
+   连带影响清单 / A~E 五级判据
+3) ⚠️ 关键纪律：E 级（净IR/PBO/DSR/lift）**只记录不判定**——
+   这是**对齐类**实验不是效果类实验；「指标变好」不构成采用理由，「变差」也不构成否决理由。
+   唯一支持采用的判据是 A 级：WF 与生产确实在跑同一个函数（同三.58 教训）
+4) 顺带记下第二个病灶：社区集合解析逻辑在 ml_trading_model.py 内**被复制两份**
+   （:3862-3880 与 :4452-4492），D26 须一并抽成唯一入口
+5) D26 联动：test_wf_prefetch_passes_community_ids 是 strict-xfail，改完会 XPASS 失败 = 自动报警
+6) 双跑进度：10:55 Fold 3/38，56 个缓存，进程健在

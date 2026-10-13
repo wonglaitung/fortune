@@ -100,12 +100,34 @@ class TestValidateAdviceResponse(unittest.TestCase):
         self.assertEqual(ca.validate_advice_response(_good_advice('2026-09-29'), '2026-09-30'), '')
 
     def test_real_leaked_artifact_rejected(self):
-        """若故障产物仍在仓库，必须被拒绝"""
-        path = 'output/comprehensive_reports/2026-09-30.md'
-        if not os.path.exists(path):
-            self.skipTest('故障产物已不存在')
-        with open(path, encoding='utf-8') as f:
-            self.assertEqual(ca.validate_advice_response(f.read(), '2026-09-30'), '')
+        """事故形态的产物必须被拒绝（2026-09-30 故障：整段英文 CoT、必需章节一个都没有）。
+
+        ⚠️ 2026-10-12 修正：本用例原先读 `output/comprehensive_reports/2026-09-30.md`。
+        该文件在事故后被**重新生成**成一份合法报告（mtime 2026-10-02 08:50），
+        于是「缺章节」不再成立、校验器放行 → 持续红灯。更糟的是它让同一 commit
+        在不同机器/时间得到不同结果（产物会被重写）。
+
+        改为**内联事故形态**（不再依赖 output/）：正文是英文自问自答、章节全缺。
+        """
+        leaked = (
+            "# 综合分析报告\n\n**生成时间**: 2026-09-30 23:55:26\n"
+            "**分析日期**: 2026-09-30\n\n"
+            "Let me think step by step. First I need to check the user's portfolio...\n"
+            "Wait, I should reconsider. The user said they hold 2318 and 0005, so...\n"
+            "Actually let me reconsider again — the model probability is 0.52 which is\n"
+            "borderline, and the MA200 filter...\n"
+        )
+        self.assertEqual(ca.validate_advice_response(leaked, '2026-09-30'), '')
+
+    def test_report_is_not_advice(self):
+        """完整报告（含全部建议章节）可以自洽，校验器只做「缺章节/CoT/日期」三道闸。
+
+        记录一个**已知弱点**：`validate_advice_response` 的日期检查是全文子串匹配
+        （`date_str not in text`），挡不住「同一分析日期的历史产物被复用」。
+        本用例把该现状钉住，便于将来收紧时看到行为变化。
+        """
+        text = _good_advice('2026-09-30')
+        self.assertNotEqual(ca.validate_advice_response(text, '2026-09-30'), '')
 
 
 class TestChatWithLLMGuards(unittest.TestCase):
