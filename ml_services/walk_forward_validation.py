@@ -41,6 +41,7 @@ from ml_services.ml_trading_model import (
     CatBoostModel, LightGBMModel, GBDTModel, FeatureEngineer, LABEL_ENTRY_LAG_DAYS,
 )
 from ml_services.run_manifest import resolve_flags
+from ml_services.network_ids import resolve_community_ids
 from ml_services.logger_config import get_logger
 from ml_services.market_regime import MarketSentimentFilter
 from config import TRAINING_STOCKS as STOCK_LIST
@@ -175,24 +176,11 @@ class WalkForwardValidator:
         if self.fp_penalty is not None:
             logger.info(f"非对称损失函数: FP惩罚={self.fp_penalty}x")
 
-        # 预加载社区 ID（确保训练/预测一致性）
+        # 社区 ID 集合 —— D26：解析统一走 ml_services.network_ids.resolve_community_ids()
+        # （含 PIT 并入）。此处旧实现只读静态 JSON 且是**死代码**（validate() 内会覆盖），
+        # 但它口径更窄（8 个 vs 14 个），留着迟早被误用 ⇒ 删除。
+        # 真正的解析在 validate() 里做，那里失败会显式报错而非静默退回动态提取。
         self.preloaded_community_ids = None
-        network_features_file = 'data/network_features/network_features_for_ml.json'
-        if os.path.exists(network_features_file):
-            try:
-                with open(network_features_file, 'r') as f:
-                    network_features_data = json.load(f)
-                all_community_ids = set()
-                for stock_code, net_features in network_features_data.items():
-                    if 'net_community_id' in net_features:
-                        comm_id = net_features['net_community_id']
-                        if comm_id >= 0:
-                            all_community_ids.add(int(comm_id))
-                if all_community_ids:
-                    self.preloaded_community_ids = sorted(list(all_community_ids))
-                    logger.info(f"预加载社区 ID: {self.preloaded_community_ids}")
-            except Exception as e:
-                logger.warning(f"预加载网络特征失败: {e}")
 
     def validate(self, stock_list, start_date, end_date):
         """
@@ -244,10 +232,19 @@ class WalkForwardValidator:
         m0 = self.model_class()
         print(f"  🔄 一次性取全段数据: {full_fetch_start} 至 {end_date}（label_mode={self.label_mode}）")
         # D25-4：显式传 mode='production'（全链路统一 T 收盘数据，不依赖默认）
+        # D26-2：显式传 community_ids（此前不传 → 每股动态提取 → 缺列成 NaN，
+        #         而生产是显式 0 ⇒ CatBoost 原生区分二者，WF 与生产不是同一个函数）
+        _comm = resolve_community_ids(logger=logger)
+        if _comm is None:
+            raise RuntimeError(
+                '社区 ID 集合解析失败：不得退回每股动态提取（D26 差异②）。'
+                '请检查 data/network_features/network_features_for_ml.json。')
+        self.preloaded_community_ids = _comm
+        print(f"  🏷️ 社区 ID 集合（静态∪PIT，共 {len(_comm)} 个）: {_comm}")
         full_data = m0.prepare_data(
             stock_list, start_date=full_fetch_start, end_date=end_date,
             horizon=self.horizon, for_backtest=False, label_mode=self.label_mode,
-            mode='production'
+            mode='production', community_ids=_comm
         )
         # 统一索引时区为 UTC，便于按折按日期切分
         _idx = full_data.index
@@ -437,7 +434,8 @@ class WalkForwardValidator:
                 end_date=train_end_date,
                 horizon=self.horizon,
                 for_backtest=False,
-                community_ids=self.preloaded_community_ids,  # 使用预加载的社区 ID
+                # D26-2：与全段预取同一入口解析的集合（禁止每股动态提取）
+                community_ids=self.preloaded_community_ids or resolve_community_ids(logger=logger),
                 label_mode=label_mode,
                 mode='production',  # D25-4：与生产同口径（T 收盘数据）
             )

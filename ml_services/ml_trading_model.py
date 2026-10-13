@@ -46,6 +46,7 @@ LABEL_ENTRY_LAG_DAYS = 1
 
 # 导入项目模块
 from ml_services.run_manifest import manifest_fingerprint, resolve_flags, write_manifest
+from ml_services.network_ids import resolve_community_ids
 from data_services.tencent_finance import get_hk_stock_data_tencent, get_hsi_data_tencent
 
 # F1 另类数据特征模块（D20）：SFC 卖空 + 基本面三表，PIT 正确、受 F1_FEATURES 门控
@@ -3859,24 +3860,14 @@ class BaseTradingModel:
 
         logger.info(f"准备特征选择数据: {len(codes)} 只股票")
 
-        # 预加载网络特征获取社区 ID
-        network_features_file = 'data/network_features/network_features_for_ml.json'
-        preloaded_community_ids = None
-        if os.path.exists(network_features_file):
-            try:
-                with open(network_features_file, 'r') as f:
-                    network_features_data = json.load(f)
-                all_community_ids = set()
-                for stock_code, net_features in network_features_data.items():
-                    if 'net_community_id' in net_features:
-                        comm_id = net_features['net_community_id']
-                        if comm_id >= 0:
-                            all_community_ids.add(int(comm_id))
-                if all_community_ids:
-                    preloaded_community_ids = sorted(list(all_community_ids))
-                    logger.info(f"预加载社区 ID: {preloaded_community_ids}")
-            except Exception as e:
-                logger.warning(f"预加载网络特征失败: {e}")
+        # 社区 ID 集合 —— D26：统一走唯一入口，避免逻辑副本漂移
+        preloaded_community_ids = resolve_community_ids(
+            include_pit=True, logger=logger)
+        if preloaded_community_ids is None:
+            raise RuntimeError(
+                '社区 ID 集合解析失败：不得退回每股动态提取（那会让 WF 与生产编码不同，'
+                '即 D26 要修的差异②）。请检查 data/network_features/ 下的文件。')
+        logger.info(f"社区 ID 集合（静态∪PIT）: {preloaded_community_ids}")
 
         # 调用 prepare_data（子类实现）
         df = self.prepare_data(codes, horizon=horizon, community_ids=preloaded_community_ids)
@@ -4449,45 +4440,17 @@ class CatBoostModel(BaseTradingModel):
         print(f"特征选择: {'是' if use_feature_selection else '否'}")
         print(f"最小收益阈值: {min_return_threshold:.2%}")
 
-        # ========== 预加载网络特征以获取社区 ID ==========
-        # 在准备数据之前，先加载网络特征文件提取社区 ID 列表
-        # 这样可以确保训练时使用正确的社区 ID，避免动态提取导致的不一致
-        network_features_file = 'data/network_features/network_features_for_ml.json'
-        preloaded_community_ids = None
-        if os.path.exists(network_features_file):
-            try:
-                with open(network_features_file, 'r') as f:
-                    network_features_data = json.load(f)
-                # 从所有股票的网络特征中提取唯一的社区 ID
-                all_community_ids = set()
-                for stock_code, net_features in network_features_data.items():
-                    if 'net_community_id' in net_features:
-                        comm_id = net_features['net_community_id']
-                        if comm_id >= 0:  # 只保留有效社区 ID
-                            all_community_ids.add(int(comm_id))
-                if all_community_ids:
-                    preloaded_community_ids = sorted(list(all_community_ids))
-                    logger.info(f"从网络特征文件预加载社区 ID: {preloaded_community_ids}")
-            except Exception as e:
-                logger.warning(f"预加载网络特征失败: {e}")
-
-        # 并入 PIT 网络特征中出现的所有社区 ID（避免 PIT 社区被漏掉）
-        pit_network_file = 'data/network_features/network_features_pit.json'
-        if os.path.exists(pit_network_file):
-            try:
-                with open(pit_network_file, 'r') as f:
-                    pit_network_data = json.load(f)
-                pit_comm_ids = set(preloaded_community_ids or [])
-                for stock_code, by_date in pit_network_data.items():
-                    for date_str, feats in by_date.items():
-                        cid = feats.get('net_community_id')
-                        if cid is not None and cid >= 0:
-                            pit_comm_ids.add(int(cid))
-                if pit_comm_ids:
-                    preloaded_community_ids = sorted(pit_comm_ids)
-                    logger.info(f"并入 PIT 后社区 ID: {preloaded_community_ids}")
-            except Exception as e:
-                logger.warning(f"加载 PIT 网络特征失败: {e}")
+        # ========== 社区 ID 集合（静态 ∪ PIT）==========
+        # D26：这段逻辑此前在文件内**被复制了两份**（此处与特征选择路径），各自独立演进。
+        # 现统一走 ml_services.network_ids.resolve_community_ids()——唯一入口。
+        # 解析失败**必须抛错**，不得退回每股动态提取（那是 D26 要消灭的差异②）。
+        preloaded_community_ids = resolve_community_ids(
+            include_pit=True, logger=logger)
+        if preloaded_community_ids is None:
+            raise RuntimeError(
+                '社区 ID 集合解析失败：不得退回每股动态提取（会让 WF 与生产编码不同，'
+                '缺列 NaN vs 0）。请检查 data/network_features/network_features_for_ml.json。')
+        logger.info(f"社区 ID 集合（静态∪PIT）: {preloaded_community_ids}")
 
         # ========== 准备数据 ==========
         print("\n" + "="*70)

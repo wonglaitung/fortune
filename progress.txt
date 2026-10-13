@@ -3680,3 +3680,65 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    （:3862-3880 与 :4452-4492），D26 须一并抽成唯一入口
 5) D26 联动：test_wf_prefetch_passes_community_ids 是 strict-xfail，改完会 XPASS 失败 = 自动报警
 6) 双跑进度：10:55 Fold 3/38，56 个缓存，进程健在
+
+2026-10-13 D25 收尾 + D26 落地并开跑
+1) ④ A闸 H3 参考基准已更新（lessons 三.62）：消息 `[H3][文档阈值]` → `[H3][方向判定]`，
+   对照值标周期+口径+日期（1d旧+0.42 / 20d旧+2.02 / 20dD25新+1.58）并注明「仅供参照非阈值」；
+   **判定逻辑一行未动**（仍是 up_max ≤ 0）。理由：max 是极值统计量，分周期差 5 倍、
+   分口径旧新不同、单轮还会随样本漂 —— 单轮实测值不能当阈值。
+2) D25 双跑结果（3.6h）：
+   - md5 一致 ✅（ae1d69d705dc1c07e41068a61eadffa0，41,153 行，两轮逐位相同）
+   - A 闸 PASS（新口径 UP组 Relative_Return max=+1.57945；旧口径 +2.02049）
+   - 护栏 🟢：净IR 1.01 [0.03,1.90] / PBO 0.03 / DSR 0.975 / lift +1.3pp
+   ⚠️ 但 **⓪ 第1问仍红**（差异②未修）⇒ 按新 C 闸「md5 ∧ ⓪」**不构成升级依据**；
+   DEPLOYMENT.md 已写「⓪ 不通过 ⇒ 升级动作一律不得执行」，该条正生效
+3) D26 代码落地：
+   - 新增 ml_services/network_ids.py::resolve_community_ids()（静态∪PIT 唯一入口，失败返回 None）
+   - ml_trading_model 两份重复解析逻辑一并替换；WF 预取 + 每折训练改用它；
+     **解析失败显式 RuntimeError**，不再静默退回动态提取
+   - 删除 WF __init__ 里的死代码副本（只读静态 JSON、8 个社区，且被 validate() 覆盖）
+4) 契约测试：test_wf_prefetch_passes_community_ids 由 strict-xfail → **真断言**；
+   新增 test_community_id_resolution_has_single_implementation / test_wf_and_production_share_same_community_set。
+   ⚠️ 测试范围只覆盖港股 —— A股按 D25 决策「不改」，其自带一份解析逻辑属已知遗留项，已在测试里注明
+5) A 级主判据实测通过（0005 单股实证）：
+   缓存内 one-hot 社区 [0..13] 与 resolve_community_ids 一致 ✅；全 NaN one-hot 列 **0** 个（D26 前缺 3 个）✅；
+   生产 pkl 的 net_comm_* 156 列全部 ∈ 本股票可用列（pkl 独有 0）✅；缓存键指纹变更 → 旧缓存自动失效 ✅
+   （另 15 个全 NaN 是 net_comm_*_CN_US_Spread_Z_Score，14 社区全覆盖、NaN 来自母特征，非编码问题）
+6) pytest tests/ → 187 passed / 3 xfailed / 0 failed
+7) D26 双跑已启动（15:26），门槛源指向 D25 基线 output/20261013_141729_catboost_20d
+
+2026-10-13 D26 双跑因 WSL 重启中断 → tmux 重启 + 自动收尾链
+1) 断点：WSL 15:50 重启，d26_run1.log 停在 Fold 8/38，进程全灭，output/ 无 D26 产物。
+   半截日志改名归档为 logs/d26_{run1,doublerun}.partial_wslrestart_1549.log（证据留存，不删）
+2) 重启：tmux session `d26` 跑 scripts/run_d26_doublerun.sh（16:02）。
+   56 个特征缓存全命中（manifest 指纹 0c575948e75ac503a6250 与现存缓存一致）⇒ 无需重算特征
+3) 新增 scripts/d26_postrun.sh + tmux session `d26post`（16:25）自动收尾：
+   守候（心跳 15 分钟/次，16:25 起）→ md5 比对 → A闸新/旧基线各一次 → monthly_guardrail。
+   两处与 d25_postrun.sh 的有意差异：
+   - 守候条件认 `run_d26_doublerun.sh` 本身而非 walk_forward 的 python 进程
+     （两轮之间存在 python 已退、脚本未退的间隙，认 python 会提前误判结束）
+   - **md5 未确认一致则不跑 A闸/护栏**，只打印人工核对命令并 exit 2
+4) 脚本不做任何升级/部署动作 —— DEPLOYMENT.md「⓪ 不通过 ⇒ 升级动作一律不得执行」由人工判定
+5) 15 分钟定期检查：scripts/d26_watch.sh + crontab `*/15 * * * *`（17:15 首次触发已验证）。
+   与 d26post 会话分工：cron 只写一行状态快照到 logs/d26_watch.log（事后可回溯「哪一刻停了」），
+   d26post 仍负责真正的收尾动作；两者不冲突，且 cron 不依赖 tmux 会话存活
+
+2026-10-13 D26 双跑完成 + 收尾链跑通（19:24 双跑结束，19:27 收尾完成）
+1) **⓪ 已转绿**：双跑 md5 一致 = c38ac3063192c3844395a4ba895add61（两轮逐位相同，41,153 行）。
+   配合 D26 落地项（resolve_community_ids 唯一入口 + 生产/WF 同一函数 + 契约测试转真断言）
+   ⇒ D25 遗留的「第1问：WF 与生产跑的不是同一个函数」判定为已修复。
+   ⚠️ 按 D26 预登记：E 级（净IR/PBO/DSR/lift）**只记录不判定**，指标变差不构成否决理由。
+2) A 闸（新基线 20261013_192444）：PASS
+   - H1 合并准确率 0.5164（阈值 65%）PASS / HSI 对齐 76.8%
+   - H3 UP组 Relative_Return max=2.08234（对照 D25 同口径 1.57945；max 是极值统计量，单轮不作阈值）
+   - C1 行级 z=6.67 但 Fold聚类 t=1.25 n=38 ⇒ 伪显著，结论只引折聚类口径（AGENTS:116）
+   - A 闸（旧基线 20261013_141729）同口径复跑：PASS（0.5169 / max=1.57945 / t=1.32）
+3) 月度护栏（新基线）：🟡 保留低配 —— 净IR 0.58 [-0.50,1.67]、PBO **0.87**、DSR **0.847**、lift +1.5pp
+   ⚠️ 记录不作判定，但须留痕：D25 同链为 净IR 1.01 / PBO 0.03 / DSR 0.975 / lift +1.3pp，
+      本轮 IR↓ PBO↑↑ DSR↓。若日后要做效果类结论，这三项须先解释。
+4) pytest tests/ 复验 → 187 passed / 3 xfailed / 0 failed
+5) 🔧 **踩坑记录（tools/守候类通用）**：d26_postrun.sh 原用 `pgrep -f run_d26_doublerun.sh` 判活，
+   但 tmux **server 进程**的 argv 继承自首次 `new-session` 调用，带着该脚本名 ⇒ 双跑结束后仍恒命中
+   ⇒ 守候死等、A闸/护栏永不触发（实际发生在 19:24→19:27，已修复重跑）。
+   已改为认「脚本写下的完成信号」（日志出现 md5 比对段）+ 6h 超时兜底。
+   同族教训见三.59：**靠名字匹配判进程存活会骗人**，要么等可验证的落盘信号，要么收窄到精确进程。

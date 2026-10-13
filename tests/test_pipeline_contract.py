@@ -122,9 +122,9 @@ def test_train_and_predict_use_same_shift():
         'train() 的 prepare_data 调用未显式传 mode=\'production\'（D25-4）'
 
 
-@pytest.mark.xfail(strict=True, reason='lessons 三.60 差异②：WF 一次性预取不传 community_ids，'
-                                        'prepare_data 侧退回每股动态提取')
 def test_wf_prefetch_passes_community_ids():
+    """**D26（2026-10-13）已修复**（原 xfail(strict=True)）：WF 预取与每折训练均显式传
+    社区集合，且走唯一入口 `resolve_community_ids()`。"""
     """WF 的**每一次** prepare_data 调用都必须显式传 community_ids。
 
     漏传的若是全段预取那一处，则后续每折都从 full_df 切片、preloaded 路径永不生效，
@@ -134,6 +134,11 @@ def test_wf_prefetch_passes_community_ids():
     assert calls, '未找到 prepare_data 调用'
     missing = [i for i, kws in enumerate(calls) if 'community_ids' not in kws]
     assert not missing, f'第 {missing} 处 prepare_data 调用未传 community_ids（共 {len(calls)} 处）'
+    txt = _src(WF_SRC)
+    assert 'resolve_community_ids' in txt, 'WF 未走唯一入口 resolve_community_ids()'
+    # 退回动态提取的兜底路径必须显式报错，不得静默
+    assert 'RuntimeError' in txt and '差异②' in txt, \
+        'WF 解析失败时未显式报错（静默退回动态提取 = 差异② 复发）'
 
 
 @pytest.mark.xfail(strict=True, reason='lessons 三.60 差异⑤：walk_forward_validation 无任何校准引用，'
@@ -327,3 +332,44 @@ def test_label_entry_lag_is_single_source_and_applied():
             f'第 {i} 行标签窗口不符 D25：实得 {out["Future_Return"].iloc[i]}，期望 {exp}'
     # 尾部 lag+h 行无标签
     assert out['Future_Return'].tail(h + LABEL_ENTRY_LAG_DAYS).isna().all()
+
+
+def test_community_id_resolution_has_single_implementation():
+    """社区集合解析逻辑**只允许一份**（D26：此前在 ml_trading_model.py 内复制了两份）。"""
+    from ml_services.network_ids import resolve_community_ids, STATIC_NETWORK_FILE
+
+    assert callable(resolve_community_ids)
+    offenders = {}
+    # ⚠️ 只覆盖**港股**路径。A 股按 D25 决策「不改」，其自带一份解析逻辑
+    #    （a_stock_ml_model.py 约 1028 行）**不在本条范围**，属已知遗留项。
+    #    不把 A 股纳入断言，是为了让本测试保持「全绿=港股已对齐」的可读含义；
+    #    若将来给 A 股开决策，须同步把该文件加进来。
+    for f in ('ml_services/ml_trading_model.py', 'ml_services/walk_forward_validation.py'):
+        p = ROOT / f
+        if not p.exists():
+            continue
+        txt = p.read_text(encoding='utf-8')
+        for marker in ('all_community_ids', 'pit_comm_ids'):
+            if marker in txt:
+                offenders.setdefault(f, []).append(marker)
+    assert not offenders, f'以下文件仍自带社区集合解析逻辑副本：{offenders}'
+
+    # 两份来源都要并入（静态 ∪ PIT），漏任一都会让社区集合变窄
+    assert resolve_community_ids(include_pit=False) != resolve_community_ids(include_pit=True), \
+        'include_pit 无效果 → PIT 社区集合没被并入'
+    assert 'network_features_pit.json' in (ROOT / 'ml_services' / 'network_ids.py').read_text(encoding='utf-8')
+
+
+def test_wf_and_production_share_same_community_set():
+    """WF 与生产解析出的社区集合必须相等（D26 的 A 级主判据之一）。"""
+    from ml_services.network_ids import resolve_community_ids
+    comm = resolve_community_ids()
+    assert comm is not None and len(comm) > 1, '社区集合解析异常'
+    # 生产 pkl 内保存的集合须与当前解析一致（否则模型与数据面已漂移）
+    import pickle
+    p = ROOT / 'data' / 'ml_trading_model_catboost_20d.pkl'
+    if not p.exists():
+        pytest.skip('catboost_20d.pkl 未生成（gitignore）')
+    pkl = pickle.load(open(p, 'rb'))
+    saved = pkl.get('community_ids')
+    assert saved == comm, f'生产 pkl 社区集合 {saved} != 现解析 {comm}（模型已漂移，需重训）'

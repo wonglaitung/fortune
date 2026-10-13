@@ -104,8 +104,13 @@ def run_checks(df: pd.DataFrame, horizon: int, market: str) -> tuple[list[str], 
     # ---------- H3 符号退化（AGENTS:115，2026-10-07 修正口径） ----------
     # 原始依据 lessons 三.28：泄漏版预测 UP 组 Relative_Return 最大值 = −1e-05（贴零）。
     # 注意 CSV 无 Relative_Return 列，须重建 = Actual_Return − HSI 未来收益。
-    # 实测对照（2026-10-07）：合法新池1d UP 组 max=+0.4209；泄漏版 max=−1e-05。
-    # 故判定为「max ≤ 0 即符号退化」。此前 AGENTS 误写为「必须 <0」，方向相反。
+    # 实测对照（**分周期、分口径，单轮值不是基准**——三.29）：
+    #   1d  旧口径(T-1 特征/T→T+h)      合法 +0.4209   泄漏版 −1e-05
+    #   20d 旧口径                        合法 +2.02049
+    #   20d D25 新口径(T 特征/T+1→T+1+h) 合法 +1.57945
+    # **判定只看方向**（max ≤ 0 即退化），不拿单轮值当阈值——
+    # 泄露版 −1e-05 贴零是稳定信号；合法值随口径/周期漂移，做阈值反而会误杀。
+    # 故下方消息只报实测值 + 历史对照，不设数值门限。此前 AGENTS 误写为「必须 <0」，方向相反。
     if pred_up.any():
         try:
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -126,13 +131,15 @@ def run_checks(df: pd.DataFrame, horizon: int, market: str) -> tuple[list[str], 
                 up_max = float(np.max(sub))
                 up_rng = float(np.max(sub) - np.min(sub))
                 notes.append(
-                    f"[H3][文档阈值] HSI 对齐 {align:.1%} | 预测UP组 Relative_Return "
-                    f"max={up_max:.6g} 极差={up_rng:.6g}（合法实测约 +0.42 / 0.88）"
+                    f"[H3][方向判定] HSI 对齐 {align:.1%} | 预测UP组 Relative_Return "
+                    f"max={up_max:.6g} 极差={up_rng:.6g}"
+                    f"（对照：泄漏版 −1e-05 贴零＝退化；合法单轮值 1d旧 +0.42 / "
+                    f"20d旧 +2.02 / 20dD25新 +1.58 —— **仅供参照，非阈值**）"
                 )
                 if up_max <= 0:
                     failures.append(
                         f"H3 预测 UP 组 Relative_Return 最大值 {up_max:.6g} ≤ 0 —— "
-                        f"无一只预测上涨股跑赢大盘，符号退化；三.28 泄漏版实测 −1e-05"
+                        f"无一只预测上涨股跑赢大盘，符号退化（三.28 泄漏版实测 −1e-05 贴零）"
                     )
                 elif up_rng < 1e-3:
                     failures.append(
