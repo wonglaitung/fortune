@@ -114,6 +114,20 @@
 - D2 行业中性 TopK 目标集 🎯（D1：横截面 alpha 停止投入）
 - 恢复性能报告「市场分布节」（09-27 已简化）
 
+### 已知遗留：社区 ID 解析未与港股共源（2026-10-13 记录，暂不修）
+
+港股侧已于 D26 把社区集合解析收敛为**唯一入口** `ml_services/network_ids.py::resolve_community_ids()`
+（静态 ∪ PIT，失败显式报错）。**A股侧仍走自己的一份**：
+`ml_services/a_stock_network_analysis.py:457-465` 动态收集 `net_community_id` 去重后落
+`data/a_stock_network_features/community_ids.json`。
+
+- **现状是刻意的**：D25 决策「A股不改」，避免在跨市场对照实验（T1-T4）进行中动被测对象。
+- **后果要说清**：港股的契约测试 `test_wf_and_production_share_same_community_set`
+  **只覆盖港股**；DEPLOYMENT ⓪ 第②问「列集合同源」的实证也只在港股 0005 一只股票上做过。
+  即「A股的社区编码是否与生产同源」目前**无人验证**。
+- **何时修**：等 T1-T4 判读完成、跨市场对照结论落定后再动；届时需同步补 A 股契约测试。
+- **风险**：若日后拿 A股结果与港股互比，须先确认两边社区集合口径，否则结论不可比。
+
 ---
 
 ## 五、决策点（**2026-09-28 全部已拍板**）

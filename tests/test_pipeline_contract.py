@@ -238,7 +238,8 @@ def test_run_manifest_defaults_match_actual_gating_sites():
 def test_cache_key_isolates_community_set_and_mode():
     """特征缓存键必须区分「社区集合」与「mode」——否则 WF 与生产互相覆写。
 
-    ⚠️ D25 把 WF 与生产统一到同一 use_shift 后，仅靠 shift/noshift 后缀**不再能隔离**，
+    ⚠️ D25 把 WF 与生产统一到同一 use_shift 后，时点后缀（`tclose`/`tminus1`，D27 前叫
+    `noshift`/`shift`）**不再能隔离**，
     故社区集合与 mode 必须进键（O4）。
     """
     from ml_services.ml_trading_model import _get_feature_cache_key

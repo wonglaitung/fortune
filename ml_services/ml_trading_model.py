@@ -766,14 +766,20 @@ def _get_feature_cache_key(stock_code, last_date, use_shift=True, manifest_fp=No
     注意:
     - use_shift=True 时特征使用 T-1 数据（避免数据泄漏）
     - use_shift=False 时特征使用当日数据（收市后预测）
-    - 两种模式的缓存必须分开，否则会导致数据泄漏（shift 后缀始终保留）
+    - 两种模式的缓存必须分开，否则会导致数据泄漏（时点后缀始终保留）
     - **2026-10-13（O4）**：键额外含 `manifest_fp`（开关 + 快照 env + mode + 社区集合）。
       此前键只含 `{code}_{last_date}_{shift}_{f1}`，**不含 HIBOR / 社区集合 / PIT 版本**
       ⇒ WF（每股动态社区）与生产（静态∪PIT）写同一个键、互相覆写。
       D25 把 WF 与生产统一到同一 `use_shift` 后，这一条会**直接毁掉可复现性**，故先做 O4。
       未传 `manifest_fp` 时保持旧键格式（向后兼容，不影响既有调用方）。
+    - **2026-10-13（D27）**：时点后缀由 `shift`/`noshift` 改名为 `tminus1`/`tclose`。
+      改名理由：`use_shift = (mode == 'backtest')`，D25 后 WF 与生产**都**落在 `noshift` 一侧，
+      该后缀已不再区分两条路径，读缓存文件名会误以为「这是不做 shift 的那条」，
+      而它其实是唯一在跑的那条。隔离早已由 `manifest_fp` 承担（见 O4），后缀只描述数据时点。
+      ⚠️ **改名会使既有特征缓存全部失效**（键变了）——`data/feature_cache/` 现已 gitignore，
+      可直接删除，下一轮 WF 从零重算（实测 38 折约 100min）。
     """
-    shift_suffix = "shift" if use_shift else "noshift"
+    shift_suffix = "tminus1" if use_shift else "tclose"
     f1_suffix = "f1" if resolve_flags()['F1_FEATURES'] == '1' else "base"
     base = f"{stock_code}_{last_date}_{shift_suffix}_{f1_suffix}"
     if manifest_fp:
