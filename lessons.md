@@ -2402,3 +2402,175 @@ p=0.011、AT −0.058 p=0.016 ✅）。③ 成立引出做法B（后处理叠加
    **预注册时就把它们排除出计票（PBO）或要求显著性（lift）**，否则结果出来后极易被"两个指标更好"带偏。
 3. 单变量纪律使本判干净：两侧仅一个 flag 差异且积分完整性（38 折/41153 行）一致——
    **探针实验的价值在于"跑一次一锤定音关路径"，比反复争论省算力**。
+
+### 三.59 `store_true` 开关漏传＝静默跑成另一配置；md5 相同是唯一的自动报警器（2026-10-12）
+
+**事故**：Top300 探针链脚本漏传 `--use-feature-selection`（argparse `action='store_true'`，默认 False）
+→ 「Top500 对照」实际跑成 2018 全量特征，处理组同样漏传 → 两跑是**同一配置**。
+**发现方式**：A1 的 `prediction_analysis.csv` 与 09:18 全量跑 **md5 完全相同**（3e217017…）——
+「本该不同的两个配置产出逐位相同」= 配置没生效的唯一硬信号。
+**教训三条**：
+1. **store_true 类开关无「默认开启」保护**：漏传=静默换配置，不报错、不警告、指标照常输出（本次
+   mg 照常给出净IR/CI/PBO/DSR 全套数字，只看指标永远发现不了）。
+2. **每次实验必落两条防呆**：①预注册写死「对照组与处理组 CSV md5 必须不同，相同即报废」；
+   ②脚本组装后先 `--dry-run` 打印最终命令行再放跑——本次两处失误（漏 flag、参数放在脚本名之前
+   导致 env 127）都属**组装层**错误，跑 2h 才发现，代价远超 30 秒核对。
+3. **副产品是证据**：同日同配置跨 12 小时重跑 md5 一致 → 强化 AGENTS「跨日不可复现、禁逐行 diff」
+   的边界（**同日可以**）。反过来说，若某日出现同日 md5 不一致，须先查缓存键（如特征缓存键是否含
+   `F1_FEATURES`/`HIBOR_FEATURES`）而非直接归因「数据源日内更新」。
+
+### 三.60 「统计显著性」不等于「结论可信」：三道闸全过，但对象不是生产那个函数（2026-10-12）
+
+**触发**：系统性比对 Walk-forward 回测路径与生产预测路径的特征口径，逐行读代码 + 读特征缓存实证。
+**结论**：确认 **5 条独立不一致**。**阻断力分档（勿笼统说「都阻断」）**：
+② `net_comm_*` 编码（NaN-vs-0）= 编码**实质**不同 → **单独即阻断外推**；
+① 时点错配（训练 T-1 / 推理 T）→ **单独即令外推不成立**，但**方向与幅度均未测**，
+**不得假设与 WF 同向**（硬约束 1：未验证不得写成结论）。
+**判决范围**：D1–D24 等历史判决**维持**（那些是同一 WF 路径内的相对比较，内部自洽），
+但「WF 指标 ≈ 生产会下多少单」的外推**当前不成立**。
+
+#### 5 条确认差异（file:line + 实证）
+
+| # | 项 | WF 路径 | 生产路径 | 证据 |
+|---|---|---|---|---|
+| 1 | **训练/推理时点** | 全程 `use_shift=1`（T-1） | `train()` 不传 mode → `use_shift=1`（T-1）；`predict()` 默认 `mode='production'` → **`use_shift=0`（T）** | `ml_trading_model.py:4048`（`use_shift = (mode=='backtest')`）、`:4466`（train 调用不传 mode）、`:4822`（predict 默认 production）；标签 `Close.shift(-h)/Close`（`:2083`）⇒ 模型学 `f(info≤T-1)→r(T,T+h)`，生产喂 `info≤T` 却读作 `r(T,T+h)` |
+| 2 | **`net_comm_*` 编码** | 全段预取**不传** `community_ids` → 每股动态提取（`ml_trading_model.py:3479-3481`） | train 传 静态∪PIT=`[0..13]`（`:4416-4454`） | 同一只 0005：生产缓存 `0005_20261012_shift_f1` onehot=`[0..13]`（写于 16:06），**WF 缓存** `0005_20261006_shift_f1` onehot=`[0..10]`（写于 22:17）；56 只 WF 缓存 concat 后 **201/(股票×社区)=201/784 单元为 NaN**（0020 只到 `[0..8]`）。CatBoost 原生区分 NaN 与 0 ⇒ WF 学到的分裂点在生产的 0 值上不成立 |
+| 3 | **特征列集合** | 每折统计 Top-500 + `F1_FORCE` 7 + `HIBOR_FORCE` N | pkl 冻结 **567 列**（静态名单 500 + 7 F1 + 60 HIBOR） | 静态名单 `statistical_features_latest.txt`（10-10）**含 0 个 HIBOR、0 个 F1**（grep）→ 全靠 FORCE 兜底；WF 38 折 top_features 3800 条中 HIBOR 命中 201、F1 命中 266 |
+| 4 | **三周期不同代** | — | 1d/5d pkl 是 **09-30** 旧模型（500 列、无 F1/HIBOR），20d 是 10-12（567 列） | pkl mtime + 列清单实测 |
+| 5 | **概率校准** | **0 处** Isotonic（`Predict_Prob` 为未校准原始概率） | `DailyConfidence()` 且港股侧**未传 `oof_glob`** | `comprehensive_analysis.py:1205-1207`；`walk_forward_validation.py` grep `DailyConfidence\|oof_glob` 命中 0 ⇒ A 闸跑在未校准概率上，生产阈值 0.5 跑在校准后概率上，**不同源** |
+
+#### 四条「查过但不是」——记下来省下次重查
+
+- **训练池一致**：WF 与生产训练都是 `TRAINING_STOCKS`（57 只），不是 32/57 之差。
+- **特征选择产物没丢**：`feature_selection.py:619` 默认 `--output-dir data/feature_selection`，`save_results` 同时写 `statistical_features_<ts>.txt` 与 `statistical_features_latest.txt`；`ml_trading_model.py:3961-3980` 的 glob `data/feature_selection/statistical_features_*.txt` 恰好命中并按 mtime 取最新 ⇒ **每日重跑能被读到**。`run_comprehensive_analysis.sh:81` 的 `cp` 到 `output/` 是**死代码**（产物从不在那里），但**不是**名单陈旧的成因。真正成因：latest 停在 10-10 02:25 且文件名带 `_lgbm_ab`（手工痕迹）⇒ 最近训练是裸跑 `python3 ml_services/ml_trading_model.py`，绕过了脚本步骤 0.5。
+- **embargo 生效**：我一度判它失效——错在只 grep 到 `--embargo-days default=None`，没读 `walk_forward_validation.py:143` 的归一化 `embargo_days if embargo_days is not None else horizon`。实测 fold1 训练期止于 **2023-05-11**（5-31 减 20 天）⇒ **embargo=20 对全部 38 折生效**。
+- **特征缓存覆写不是本次成因**：缓存键含 `last_date`，WF 冻结 1006、生产取 1012 ⇒ 不同文件。但缓存键仍**缺** `HIBOR_FEATURES` / 社区集合 / PIT 版本三个维度，是隐患非本次差异来源。
+
+#### 根因（三层）
+
+**直接层 —— 口径挂在「调用点」上，不在「方法契约」上**。全项目只有 `prepare_data`/`train`/`predict`
+被两条路径共用，而三处口径**每处都由调用点的默认参数决定**：
+
+| 入参 | WF 传什么 | 生产传什么 | 结果 |
+|---|---|---|---|
+| `mode` | 不传 → backtest | train 不传 / predict 传 production | 差异 1 |
+| `community_ids` | 不传 → 动态 | 传 `[0..13]` | 差异 2 |
+| `selected_features` | 传每折列表 | 不传 → 读静态名单 | 差异 3 |
+
+三个入参、三条路径、三种组合。**口径是调用点的属性，方法本身不保证任何东西**（仅判断）。
+
+**机制层 —— 三个放大器**：①**开关默认值写了两遍且方向相反**
+（`us_market_data.py:572` `get('HIBOR_FEATURES','1')` 默认 ON vs `ml_trading_model.py:4516`
+`get('HIBOR_FORCE')=='1'` 默认 OFF）；②**一致性靠注释与 lessons 记忆、没有机器断言**
+（`run_comprehensive_analysis.sh:81` 的 `ls` 空 → `if` 不进且不报错；D20 的 pkl 加载优先级要靠一次
+B 闸对抗复核才发现「D10 声明在 runner 上从未成立」；**26 个测试文件（`tests/*.py`）里 0 个断言
+`use_shift` / `community_ids` / `feature_columns` 契约**——唯一命中 `embargo` 的
+`test_performance_report.py:4` 只是文件头一句说明，不是断言）；③**「同源」被局部化**——
+三.30 只对**概率分位**讲同源，本次 5 条差异全在**特征面**。
+
+**唯一根因**：项目建了一整套「统计显著性」验证文化（护栏/DSR/PBO/bootstrap/三道闸），
+**但没有「同一性」验证文化——三道闸全部作用在指标上，没有一道问「这个指标描述的是不是我要部署的那个函数」。**
+
+#### 同一类错误第三次复发（必须记住这条对照）
+
+| 事件 | 统计闸结果 | 真实问题 |
+|---|---|---|
+| 三.28 | PBO 0.43 ✅ DSR 1.000 ✅ | 100% 准确率假信号（**对象错**） |
+| 三.57 | PBO 当闸用 | 秤本身不可分辨（**闸坏**） |
+| 三.60 | 全过 | 描述的不是生产那个函数（**对象错**） |
+
+三次都是把「统计量可信」当「结论可信」。AGENTS.md 判读顺序 ①~⑤ **缺第 0 步**。
+
+#### 自我更正（本次最该记住的一条）
+
+判 embargo 失效时，我**用局部信号（`default=None`）代替了端到端追踪**——正是本条要治的病，
+而我是在做「同一性核对」这件事时犯的。**这证明：靠"更严的文档"抓不到这类错，只有机器断言能抓。**
+⇒ 优化项 O3（契约测试）优先级最高。
+
+#### 优化项 O1–O9（预注册，待排期）
+
+| # | 项 | 判定式 |
+|---|---|---|
+| **O1** ⭐ | **判读顺序插入第 0 步「同一性闸」**（四问）：① 社区 ID 集合严格相等 ② 列集合同源（pkl ⊆ WF 可用列 **且** F1/HIBOR 两边都在 **且** 选择规则同源；**不要求逐字相等**——WF 每折重选恒不等，要求相等＝规则空转，此为初稿已修正的错误判据）③ 训练时点 = 推理时点？④ 概率同源？ | `scripts/parity_check.py` 非零退出即阻断；**当前四问全部不通过** |
+| **O2** | **C 闸升格**：md5 一致 → md5 一致 **∧** parity 通过 | 现 C 闸只证「同一路径可复现」，不证「两路径相同」——**复现了一个没人部署的函数 38 折** |
+| **O3** ⭐⭐ | **契约类测试（lessons → pytest）** ✅ **已落地 2026-10-12**：`tests/test_pipeline_contract.py`
+  —— **2 条回归护栏**（embargo 归一化、pkl 着装 F1/HIBOR）+ **6 条已知违约 `xfail(strict=True)`**
+  （时点极性 / WF 传 community_ids / WF 校准 / runner 路径 vs 写出目录 / flag 默认只许一处 /「适用范围」有工具强制）
+  —— 全部只读**源码 AST / 文本 / 已落盘产物**，不联网、不加载模型、不取数（0.5s）
+  —— **strict 的意义：修好即 XPASS → 失败**，强制回来删标记并写结论（三.59 的「唯一自动报警器」）
+  —— 首跑即抓出**我自己把断言写松**：`any(...)` 漏判 → 改 `all(...)` 后才对；**这就是 strict 的价值** |  执行：`python3 -m pytest tests/test_pipeline_contract.py`（期望 2 passed / 6 xfailed；**出现 XPASS 即须处理**） |
+| **O4** ✅ **已落地 2026-10-13** | **单一事实源 `ml_services/run_manifest.py` + `output/run_manifest.json`**：
+  - `resolve_flags()` —— 开关默认值**只在此处定义一次**，与 4 个真实门控点逐一核对过
+    （F1_FEATURES 关 / F1_FORCE 关 / HIBOR_FEATURES **开** / HIBOR_FORCE 关）
+  - `manifest_fingerprint(community_ids, mode)` —— 指纹 = 开关 + 快照 env + **mode** + **社区集合**
+  - `write_manifest()` —— 每次 `prepare_data` / `predict` 落一份（`mode`/`community_ids`/`use_shift`/`caller`）
+  - **特征缓存键追加指纹**：`_get_feature_cache_key(..., manifest_fp=, community_ids=)`，
+    未传 `manifest_fp` 时保持旧键格式（向后兼容）
+  - 实测：`0005_20261012_shift_base_2d6cccb2c33cdyn`（WF 动态社区）≠
+    `0005_20261012_shift_base_cd33ace56634c503a6250`（生产静态∪PIT）→ **不再互相覆写** |
+  | **两 run 的 manifest 指纹不同 ⇒ 结果不可互比**（写进 A 闸）；**这是 D25 的硬前置**——
+  D25 把 WF 与生产统一到同一 `use_shift` 后，仅靠 shift/noshift 后缀不再能隔离 |
+  仍留 O5：4 个门控点仍裸读 env、shell 仍写 `${X:-1}`，需改走 `resolve_flags()` |
+| **O5** ✅ **已落地 2026-10-13** | **「默认值只许一处」**：`ml_services/run_manifest.py::FLAG_DEFAULTS` 为唯一定义处（四开关默认全 ON，与 D22/D23/D24 一致）；4 个真实门控点（`ml_trading_model.py`×3 / `walk_forward_validation.py`×2 / `us_market_data.py`×1）全部改走 `resolve_flags()`，**不再裸读 os.environ**；两个 runner 只透传不写 `${X:-1}` （`${X-}` 空串也回落到默认） | `test_flag_default_defined_only_once` 已由 **xfail(strict) → 真断言**：grep 门控点不得出现 `environ.get('FLAG')`、shell 不得出现 `${FLAG:-`。**实测当场抓到一处漏改**（`ml_trading_model.py:4557` HIBOR_FORCE 仍裸读）——这就是把规则写成断言的价值 |
+| **O6** | **「同源」上升为通用 7 项清单**：特征列集合/社区集合/时点口径/数据窗口/快照/校准器来源/门槛基准 | 方法论第 1 条「先写连带改变什么」要落到这 7 项上逐项答 |
+| **O7** | **时点口径二选一，须预注册**（需用户拍板）：方案 A 统一 T-1（改动小、WF 基线不重跑，但永久放弃收盘价信息）/ 方案 B 统一 T（语义正确，但 **WF 历史基线全部作废、需重跑 38 折**） | 未决前**禁止**任何 🟢/升配决策 |
+| **O8** | **判决适用范围显式标注（防两极）**：不回头作废 D1–D24，也不当作「没影响」 | 每条基线后加「适用范围：WF 内部比较 ✓；外推生产 ✗（待 O1 修复后重评）」 |
+| **O9** | **对齐探针**（三.58 纪律的延伸）：任何触碰特征/预处理/开关的提交，附一次分钟级 parity 探针（只比列集合/时点/清单，不跑完整 WF） | 与 B 闸并列 |
+
+### 三.61 分位门槛在真实数据上从未生效：文档写的是设计意图，不是运行实况（2026-10-12）
+
+**触发**：B 闸收尾跑 `pytest tests/` 发现 **5 个既有红灯**，归因时挖出一条比红灯本身重要得多的事实。
+
+**实测（最新 WF CSV `output/20261012_234236_catboost_20d` 41,153 行 + 实际港股校准器
+`data/calibrators/prob_cal_20.pkl`）**：
+
+| 项 | 实测 | 守卫门槛 | 触发 |
+|---|---|---|---|
+| 校准后概率唯一值 | **13** | `GATE_MIN_UNIQUE = 30` | ❌ |
+| P92 − P90 | **0.0103** | `GATE_MIN_SPREAD = 0.05` | ❌ |
+
+```python
+compute_gate_thresholds(...)  →  {'bear': 0.70, 'weak': 0.65}   # == GATE_FALLBACK
+get_a_gates()                 →  {'bear': 0.70, 'weak': 0.65}   # A 股同款
+```
+
+⇒ **分位门槛自 2026-10-02 加退化保护起，在真实数据上从未生效**；港股与 A 股现行生效门槛
+**都是绝对 0.70/0.65**。这不是 bug（退化保护是有意加的），**是文档与实况脱节**。
+
+**谁诚实谁不诚实**：
+- ✅ `a_stock_gates.py:44-52` **如实记录**：「实测 2026-10-03：A 股 P90=0.681529、P92=0.682713，
+  间距 0.0012 → 判退化回退绝对值」「原分位值 bear 0.7497/weak 0.7154 已不适用」。
+- ❌ `market_regime.py` 注释声称 `GATE_SNAPSHOT` 是「由 output/20260925_044407_catboost_20d
+  （43,610 条，as_of=2026-09-25）算出」——**该 CSV 已不存在，无法复算**；且
+  `GATE_SNAPSHOT_AS_OF='2026-07-30'` 与注释里的 `as_of=2026-09-25` **自相矛盾**。
+- ⚠️ `suggest_gate_snapshot()` 其实**内置了警告**（「❌ 校准后分布退化…不要粘贴更新」），
+  但没人跑过 ⇒ **写了防护但没触发，等于没有**。
+
+**这是 lessons 三.60 那类错误的第 6 例**：AGENTS/D8/REVIEW_GATES 里「市场门槛优先分位、
+PIT P92/P90」描述的是**设计意图**；所有以「分位」措辞叙述的实验（含三.30 那次
+bear 通过率 17.2%→98.2% 的归因）**测的都是绝对阈值下的行为**。
+
+**连带的方法论教训（两条）**：
+
+1. **守卫（guard）与它守护的对象要有成对测试**。此处 4 个红灯全部是：
+   **守卫先写好、测试后加没同步**——git 已证：
+   `cd135306`(09-25 分位化，含测试) 是 `c4890169`(10-02 加守卫) 的祖先。
+   且失败原因极其朴素：**测试自己造的合成分布就是退化的**（`linspace(0.40,0.90)` 均匀 →
+   P92−P90=0.01；`beta(2,3)` 集中在 0.2~0.7 → 同量级）。
+   ⇒ **合成分布必须满足被测守卫的前提，否则测的根本不是那条路径**（教训三.46
+   「验证前先校验数据非空」的近亲：还要校验**数据符合前提**）。
+2. **测试不得依赖会被重写的产物**。`test_real_leaked_artifact_rejected` 读
+   `output/comprehensive_reports/2026-09-30.md`；事故时（`99482ebe`, 10-01）该文件是
+   5666 行英文 CoT、无 `# 综合买卖建议` → 校验器拒绝 → 绿；**事故后被重新生成成合法报告**
+   （mtime 10-02 08:50）→ 三道检查全过 → 红。**同一 commit 在不同机器/时间会得不同结果。**
+   ⇒ 产物类回归必须**内联夹具**，不能读 `output/`。
+
+**顺带发现的真实弱点（非本次红灯指向）**：`comprehensive_analysis.py:963` 的日期守卫是
+**全文子串匹配**（`date_str not in text`），挡不住「同一分析日期的历史产物被复用」——
+而这正是 2026-09-30 事故的形态。已加 `test_report_is_not_advice` 把现状钉住，
+便于将来收紧时看到行为变化；**收紧本身未做**（属安全增强，另案）。
+
+**处置**：4 个过期测试改为**非退化**合成分布（90% 主体 + 10% 宽尾），**并另加
+`test_degenerate_distribution_falls_back` / `test_degenerate_falls_back` 固化真实退化行为**
+——不是把断言改成"永远成立"的空话；脆弱测试改内联夹具；港股 `GATE_SNAPSHOT` 注释与
+AGENTS 门槛行改为如实陈述。改后 `pytest tests/` → **175 passed, 6 xfailed, 0 failed**。
