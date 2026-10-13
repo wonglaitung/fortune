@@ -149,7 +149,7 @@ def config_spread(M):
     return float(sr.max() - sr.min()), sr
 
 
-def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=10):
+def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     df = load_panel(pred_csv, market=market)
     bt = backtest(df, horizon, topk, True, cost=cost)  # 行业中性
     st = _stats(bt['top_net'].values, horizon)
@@ -196,19 +196,32 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=10):
     else:
         verdict = "🟡 保留低配（未达升级门槛）"
 
-    # D27 E 级：模型组合跑输等权全池 ⇒ 是「无 alpha」而不是「弱 alpha」，必须改判并说清
+    # D27 E 级：模型组合 vs 等权全池。**必须先做成本归因**再下结论 ——
+    # 只比净收益会把「交易成本」误读成「模型没有 alpha」（lessons 三.65）。
+    # 实测 D26：净 −27.8% vs 等权，但加回成本后毛口径只 −5.9% ⇒ 79% 的差距是手续费，不是选择失败。
     alpha_verdict = None
+    cost_drag = turnover * cost
     if ew is not None:
         strat = st['mean']
-        diff = strat - ew['mean']
-        rel = diff / ew['mean'] if ew['mean'] else float('nan')
-        if diff <= 0:
-            alpha_verdict = (f"**无 alpha（跑输 beta）**：模型组合净 {strat*100:+.2f}%/期 "
-                             f"≤ 等权全池 {ew['mean']*100:+.2f}%/期（{rel*100:+.0f}%）。"
-                             f"这不是「edge 太弱」，而是**加了选择反而更差**。")
+        gross = strat + cost_drag
+        net_rel = (strat / ew['mean'] - 1) if ew['mean'] else float('nan')
+        gross_rel = (gross / ew['mean'] - 1) if ew['mean'] else float('nan')
+        share = (cost_drag / (ew['mean'] - strat) * 100) if (ew['mean'] - strat) > 0 else float('nan')
+        alpha_verdict = (
+            f"等权全池（无模型、无再平衡成本）**{ew['mean']*100:+.2f}%/期**\n"
+            f"- 模型组合 **净 {strat*100:+.2f}%/期**（{net_rel*100:+.0f}%）"
+            f"  **毛 {gross*100:+.2f}%/期**（{gross_rel*100:+.0f}%）\n"
+            f"- 交易成本拖累 **{cost_drag*100:.3f}%/期**（换手 {turnover*100:.0f}% × 单边 {cost*100:.1f}%）"
+            + (f"，占总差距的 **{share:.0f}%**" if np.isfinite(share) and share > 0 else "")
+        )
+        if gross_rel < 0 and net_rel < 0:
+            alpha_verdict += ("\n- ⇒ **两端都不及等权**：不只是成本问题，毛口径选择本身也没有超额。")
+        elif gross_rel < 0 <= net_rel:
+            alpha_verdict += ("\n- ⇒ **成本吞噬了毛超额**：选择本身有正超额，但换手太高，净口径被手续费吃光。**这是成本效率问题，不是「模型无 alpha」。**")
+        elif net_rel < 0 <= gross_rel:
+            alpha_verdict += ("\n- ⇒ **无 alpha（净口径跑输 beta）**：毛口径仍有正超额，但不足以覆盖交易成本。")
         else:
-            alpha_verdict = (f"相对等权全池 {ew['mean']*100:+.2f}%/期 有 "
-                             f"{(diff*100):+.2f} 个百分点/期的超额（{rel*100:+.0f}%）。")
+            alpha_verdict += f"\n- ⇒ 净、毛**双口径**均跑赢等权全池。"
 
     # D27 D 级：胜率与收益必须同时显著，否则不得声称有 edge
     dual = None
@@ -266,6 +279,8 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=10):
     L.append(f"### PBO 读法（lessons 三.63，{len(M)} 期 × {M.shape[1]} 配置）")
     L.append("")
     L.append(f"- {pbo_read}")
+    L.append(f"- ⚠️ 零假设带是 **seed=0 的单次抽样**（{null_perm} 次重排）。边界的具体数值不可当精确阈值；"
+             f"稳健的是「在带内 / 带外」这个**分类**（D26 实测跨 seed 与跨 n_perm 均落在带内）。")
     L.append(f"- 六个配置全期夏普极差 **{spread:.3f}**"
              + ("（过小 ⇒ 配置互不可分 ⇒ PBO 必然偏高，先看别的指标）" if spread < 0.2 else ""))
     L.append("- **PBO 必须与零假设带同报**；单看一个数字会把噪声读成过拟合，"
@@ -290,8 +305,10 @@ def main():
     ap.add_argument('--output', type=str, default=None)
     ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
                     help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
-    ap.add_argument('--null-perm', type=int, default=10,
-                    help='PBO 零假设带的重排次数；0=不算（会退回「单看一个 PBO 数字」的坏用法）')
+    ap.add_argument('--null-perm', type=int, default=200,
+                    help='PBO 零假设带的重排次数；0=不算（会退回「单看一个 PBO 数字」的坏用法）。'
+                         '默认 200：5/95 分位由样本顺序统计量决定，10 次时该分位只由第 1 与第 10 个'
+                         '观测决定，边际极不稳定（实测 D26 的下界跨 seed 在 0.71–0.83 间跳）。')
     args = ap.parse_args()
 
     pred = args.pred or latest_pred(args.horizon, market=args.market)
