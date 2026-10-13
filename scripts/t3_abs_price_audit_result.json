@@ -1,0 +1,216 @@
+{
+  "abs_list": [
+    "Channel_High_20d",
+    "Channel_Low_20d",
+    "Price_High_5d",
+    "Price_Low_5d",
+    "Support_120d",
+    "Resistance_120d",
+    "MA5",
+    "MA10",
+    "MA20",
+    "MA50",
+    "MA60",
+    "MA100",
+    "MA120",
+    "MA200",
+    "MA250",
+    "BB_upper",
+    "BB_lower",
+    "BB_middle",
+    "ATR",
+    "ATR_MA",
+    "ATR_MA60",
+    "ATR_MA120",
+    "Turnover",
+    "Turnover_Mean_20",
+    "Turnover_Std_20",
+    "Volume_MA7",
+    "Volume_MA120",
+    "Volume_MA250",
+    "Volume_Mean_30d",
+    "Volume_Std_30d",
+    "Vol_Mean_20",
+    "Vol_Std_20",
+    "MACD",
+    "MACD_signal",
+    "OBV",
+    "OBV_MA5",
+    "VWAP",
+    "TP",
+    "High_Limit",
+    "Low_Limit",
+    "High_Max",
+    "Low_Min"
+  ],
+  "abs_list_size": 42,
+  "experiment": "T3_absolute_price_feature_audit",
+  "leak_candidates_not_in_exclusion_list": [],
+  "n_folds": 50,
+  "name_hits_formula_verified_normalized": [
+    "ATR_Change_10d",
+    "ATR_Change_5d",
+    "ATR_Pct",
+    "ATR_Ratio_120d",
+    "ATR_Risk_Score",
+    "ATR_Stop_Loss_Distance",
+    "Channel_High_Ratio_20d",
+    "Channel_Low_Ratio_20d",
+    "Channel_Width_Ratio_20d",
+    "Distance_Resistance_120d",
+    "Distance_Support_120d",
+    "High_Position_60d",
+    "MA120_Deviation",
+    "MA120_Slope",
+    "MA250_Deviation",
+    "MA250_Slope",
+    "OBV_Change_5d",
+    "Price_Channel_Position_20d",
+    "Price_Pct_20d",
+    "Price_Percentile",
+    "Price_Position_Risk",
+    "Price_Ratio_MA120",
+    "Price_Ratio_MA50",
+    "Price_Return_Mean_30d",
+    "Resistance_Ratio_120d",
+    "Stock_Price_Stability_Score",
+    "Support_Ratio_120d",
+    "Turnover_Change_5d",
+    "Volume_Ratio_20d"
+  ],
+  "name_pattern_hits_in_list_count": 0,
+  "name_pattern_hits_not_in_list": [
+    "ATR_Change_10d",
+    "ATR_Change_5d",
+    "ATR_Pct",
+    "ATR_Ratio_120d",
+    "ATR_Risk_Score",
+    "ATR_Stop_Loss_Distance",
+    "Channel_High_Ratio_20d",
+    "Channel_Low_Ratio_20d",
+    "Channel_Width_Ratio_20d",
+    "Distance_Resistance_120d",
+    "Distance_Support_120d",
+    "High_Position_60d",
+    "MA120_Deviation",
+    "MA120_Slope",
+    "MA250_Deviation",
+    "MA250_Slope",
+    "OBV_Change_5d",
+    "Price_Channel_Position_20d",
+    "Price_Pct_20d",
+    "Price_Percentile",
+    "Price_Position_Risk",
+    "Price_Ratio_MA120",
+    "Price_Ratio_MA50",
+    "Price_Return_Mean_30d",
+    "Resistance_Ratio_120d",
+    "Stock_Price_Stability_Score",
+    "Support_Ratio_120d",
+    "Turnover_Change_5d",
+    "Volume_Ratio_20d"
+  ],
+  "positive_control_MAspearman": {
+    "MA250": [
+      0.989,
+      0.984,
+      0.988,
+      0.988,
+      0.986
+    ],
+    "MA5": [
+      0.999,
+      0.999,
+      1.0,
+      0.998,
+      1.0
+    ]
+  },
+  "positive_control_ok": true,
+  "top15_by_fold_frequency": [
+    [
+      "Volatility_30pct",
+      50
+    ],
+    [
+      "Volatility_70pct",
+      50
+    ],
+    [
+      "net_eigenvector_centrality",
+      50
+    ],
+    [
+      "net_closeness_centrality",
+      50
+    ],
+    [
+      "sector_total_volume",
+      50
+    ],
+    [
+      "Volatility_120d",
+      50
+    ],
+    [
+      "Distance_Support_120d",
+      50
+    ],
+    [
+      "net_cohesion_GARCH_Persistence",
+      50
+    ],
+    [
+      "net_constraint_GARCH_Persistence",
+      50
+    ],
+    [
+      "net_composite_centrality",
+      50
+    ],
+    [
+      "sector_avg_change_20d",
+      50
+    ],
+    [
+      "MACD_High_5d_History",
+      50
+    ],
+    [
+      "net_clustering_GARCH_Persistence",
+      50
+    ],
+    [
+      "High_Position_60d",
+      50
+    ],
+    [
+      "MACD_Low_5d_History",
+      50
+    ]
+  ],
+  "top_union_size": 312,
+  "value_audit_spearman_ge_0.8": {
+    "MA250": {
+      "mean_spearman_vs_close": 0.987,
+      "per_date": [
+        0.989,
+        0.984,
+        0.988,
+        0.988,
+        0.986
+      ]
+    },
+    "MA5": {
+      "mean_spearman_vs_close": 0.999,
+      "per_date": [
+        0.999,
+        0.999,
+        1.0,
+        0.998,
+        1.0
+      ]
+    }
+  },
+  "verdict": "NO_LEAK_FOUND"
+}

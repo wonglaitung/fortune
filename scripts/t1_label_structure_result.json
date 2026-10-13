@@ -1,0 +1,54 @@
+{
+  "A": {
+    "avg_pairwise_corr_daily": 0.23978664746697473,
+    "n_corr_stocks": 47,
+    "n_dates": 382,
+    "n_nonoverlap": 20,
+    "n_stocks_used": 53,
+    "neutral_std_mean": 0.10629245734360998,
+    "neutral_std_median": 0.10037999485311752,
+    "neutral_std_nonoverlap_mean": 0.1088834476882882,
+    "neutral_std_std": 0.02744091576526065,
+    "raw_std_mean": 0.1258723267827347,
+    "raw_std_std": 0.03654658796581825
+  },
+  "A_dropped": [],
+  "A_pool_expected": 53,
+  "A_pool_loaded": 53,
+  "HK": {
+    "avg_pairwise_corr_daily": 0.2875359735860273,
+    "n_corr_stocks": 56,
+    "n_dates": 387,
+    "n_nonoverlap": 20,
+    "n_stocks_used": 59,
+    "neutral_std_mean": 0.09044627321552026,
+    "neutral_std_median": 0.08385416860788625,
+    "neutral_std_nonoverlap_mean": 0.09455212024795162,
+    "neutral_std_std": 0.038161015000927334,
+    "raw_std_mean": 0.11635126364972025,
+    "raw_std_std": 0.0418611407039962
+  },
+  "HK_dropped": [],
+  "HK_pool_expected": 59,
+  "HK_pool_loaded": 59,
+  "avg_pairwise_corr": {
+    "A": 0.23978664746697473,
+    "HK": 0.2875359735860273
+  },
+  "experiment": "T1_label_cross_section_structure",
+  "horizon": 20,
+  "preregistered_criteria": {
+    "R_neutral < 0.60": "SUPPORT_H1",
+    "R_neutral > 1.20": "H1_REJECTED_INVERSE",
+    "R_neutral in (0.60,0.80)": "GRAY_ZONE -> decision left to T2",
+    "R_neutral in [0.80,1.20]": "H1_REJECTED"
+  },
+  "ratios_HK_over_A": {
+    "R_neutral_main": 0.8509190160420884,
+    "R_neutral_nonoverlap": 0.8683791912856733,
+    "R_raw": 0.9243593617725957
+  },
+  "verdict_code": "H1_REJECTED",
+  "verdict_text": "R=0.851 ∈ [0.80,1.20] → H1 出局",
+  "window": "2025-01-01 ~ 2026-07-31"
+}

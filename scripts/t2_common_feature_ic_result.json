@@ -1,0 +1,410 @@
+{
+  "A": {
+    "n_dates": 382,
+    "neutral": {
+      "hl_range_20": {
+        "ic_mean": 0.029798076683028443,
+        "ic_nonoverlap_mean": 0.04395841136509757,
+        "n_dates": 382,
+        "t_nonoverlap": 0.6853048476659737
+      },
+      "ma_dist_20": {
+        "ic_mean": -0.003846836938009493,
+        "ic_nonoverlap_mean": -0.0031866104529391093,
+        "n_dates": 382,
+        "t_nonoverlap": -0.051965566584230925
+      },
+      "ma_dist_60": {
+        "ic_mean": -0.036673599196256595,
+        "ic_nonoverlap_mean": -0.030575370252154305,
+        "n_dates": 382,
+        "t_nonoverlap": -0.46940516697028506
+      },
+      "ret_20": {
+        "ic_mean": -0.012790309404015428,
+        "ic_nonoverlap_mean": -0.017013006742096923,
+        "n_dates": 382,
+        "t_nonoverlap": -0.24700263853431031
+      },
+      "ret_5": {
+        "ic_mean": -0.0012263488021124944,
+        "ic_nonoverlap_mean": 0.00402269629442491,
+        "n_dates": 382,
+        "t_nonoverlap": 0.07527895278683089
+      },
+      "ret_60": {
+        "ic_mean": -0.0338797178467713,
+        "ic_nonoverlap_mean": -0.019523149249680613,
+        "n_dates": 382,
+        "t_nonoverlap": -0.2979745794995724
+      },
+      "up_days_20": {
+        "ic_mean": -0.0018952589947334548,
+        "ic_nonoverlap_mean": -0.012248553716745067,
+        "n_dates": 382,
+        "t_nonoverlap": -0.2519856108527478
+      },
+      "vol_20": {
+        "ic_mean": -0.03186058123189781,
+        "ic_nonoverlap_mean": -0.028462328651301806,
+        "n_dates": 382,
+        "t_nonoverlap": -0.4514857540130564
+      },
+      "vol_60": {
+        "ic_mean": -0.006533866634701241,
+        "ic_nonoverlap_mean": 6.159101658423372e-05,
+        "n_dates": 382,
+        "t_nonoverlap": 0.0009197518479420691
+      },
+      "vol_ratio_20_60": {
+        "ic_mean": -0.056323085727174024,
+        "ic_nonoverlap_mean": -0.05277082173105554,
+        "n_dates": 382,
+        "t_nonoverlap": -1.7917234656222931
+      },
+      "volume_ratio_20": {
+        "ic_mean": 0.005981179003749851,
+        "ic_nonoverlap_mean": 0.0030262002570306972,
+        "n_dates": 382,
+        "t_nonoverlap": 0.07127678552303612
+      },
+      "volume_trend_5_20": {
+        "ic_mean": 0.016859033211758398,
+        "ic_nonoverlap_mean": 0.07017760206707876,
+        "n_dates": 382,
+        "t_nonoverlap": 1.4903557246178376
+      }
+    },
+    "panel_size": 53,
+    "raw": {
+      "hl_range_20": {
+        "ic_mean": 0.01989211595808789,
+        "ic_nonoverlap_mean": 0.042272830757847414,
+        "n_dates": 382,
+        "t_nonoverlap": 0.6525492803831063
+      },
+      "ma_dist_20": {
+        "ic_mean": -0.03868605997864942,
+        "ic_nonoverlap_mean": -0.07015258449775652,
+        "n_dates": 382,
+        "t_nonoverlap": -1.1458620869582186
+      },
+      "ma_dist_60": {
+        "ic_mean": -0.07033658236732636,
+        "ic_nonoverlap_mean": -0.0829835320678828,
+        "n_dates": 382,
+        "t_nonoverlap": -1.4660013998506543
+      },
+      "ret_20": {
+        "ic_mean": -0.053239020217382416,
+        "ic_nonoverlap_mean": -0.07737983437206522,
+        "n_dates": 382,
+        "t_nonoverlap": -1.2510857121793282
+      },
+      "ret_5": {
+        "ic_mean": -0.015847523796962165,
+        "ic_nonoverlap_mean": -0.044846893764762794,
+        "n_dates": 382,
+        "t_nonoverlap": -0.853133821434289
+      },
+      "ret_60": {
+        "ic_mean": -0.03131899091329258,
+        "ic_nonoverlap_mean": -0.018360890558448827,
+        "n_dates": 382,
+        "t_nonoverlap": -0.31823685945378055
+      },
+      "up_days_20": {
+        "ic_mean": -0.017473317609983427,
+        "ic_nonoverlap_mean": -0.029389702362619806,
+        "n_dates": 382,
+        "t_nonoverlap": -0.5529962743200204
+      },
+      "vol_20": {
+        "ic_mean": -0.029580211504362006,
+        "ic_nonoverlap_mean": -0.023749727273589632,
+        "n_dates": 382,
+        "t_nonoverlap": -0.36214805525018634
+      },
+      "vol_60": {
+        "ic_mean": -0.015211382478122232,
+        "ic_nonoverlap_mean": -0.010096331711204077,
+        "n_dates": 382,
+        "t_nonoverlap": -0.13546019743970059
+      },
+      "vol_ratio_20_60": {
+        "ic_mean": -0.04764330649958396,
+        "ic_nonoverlap_mean": -0.008686217592987846,
+        "n_dates": 382,
+        "t_nonoverlap": -0.24908393487640992
+      },
+      "volume_ratio_20": {
+        "ic_mean": -0.007319152954515933,
+        "ic_nonoverlap_mean": -0.06132454917138602,
+        "n_dates": 382,
+        "t_nonoverlap": -1.729292336834864
+      },
+      "volume_trend_5_20": {
+        "ic_mean": 0.0013474730091949268,
+        "ic_nonoverlap_mean": 0.0029819668554407685,
+        "n_dates": 382,
+        "t_nonoverlap": 0.06142200860754054
+      }
+    }
+  },
+  "HK": {
+    "n_dates": 387,
+    "neutral": {
+      "hl_range_20": {
+        "ic_mean": 0.07383471838784297,
+        "ic_nonoverlap_mean": 0.07249933006407834,
+        "n_dates": 387,
+        "t_nonoverlap": 1.4148779216234122
+      },
+      "ma_dist_20": {
+        "ic_mean": 0.02221662600051448,
+        "ic_nonoverlap_mean": 0.04940869500909034,
+        "n_dates": 387,
+        "t_nonoverlap": 0.6638204770101407
+      },
+      "ma_dist_60": {
+        "ic_mean": -0.03340805078793418,
+        "ic_nonoverlap_mean": -0.012935916514884082,
+        "n_dates": 387,
+        "t_nonoverlap": -0.1790463847841779
+      },
+      "ret_20": {
+        "ic_mean": 0.016905432913021722,
+        "ic_nonoverlap_mean": 0.021303988588939858,
+        "n_dates": 387,
+        "t_nonoverlap": 0.33270033543866273
+      },
+      "ret_5": {
+        "ic_mean": 0.03422854971293981,
+        "ic_nonoverlap_mean": 0.05774546847132406,
+        "n_dates": 387,
+        "t_nonoverlap": 0.7669554944003026
+      },
+      "ret_60": {
+        "ic_mean": 0.0015976795422428093,
+        "ic_nonoverlap_mean": -0.0047433732581865975,
+        "n_dates": 387,
+        "t_nonoverlap": -0.059534197701092584
+      },
+      "up_days_20": {
+        "ic_mean": -0.006777528138766435,
+        "ic_nonoverlap_mean": -0.006296725725305002,
+        "n_dates": 387,
+        "t_nonoverlap": -0.16377117321423337
+      },
+      "vol_20": {
+        "ic_mean": 0.07968743062870033,
+        "ic_nonoverlap_mean": 0.055389781978574505,
+        "n_dates": 387,
+        "t_nonoverlap": 0.6956036554137413
+      },
+      "vol_60": {
+        "ic_mean": 0.03276021531429941,
+        "ic_nonoverlap_mean": 0.02746879236353269,
+        "n_dates": 387,
+        "t_nonoverlap": 0.33810944607907967
+      },
+      "vol_ratio_20_60": {
+        "ic_mean": 0.019883200745809147,
+        "ic_nonoverlap_mean": 0.02958826858128232,
+        "n_dates": 387,
+        "t_nonoverlap": 0.8179407453019127
+      },
+      "volume_ratio_20": {
+        "ic_mean": 0.01792951876612588,
+        "ic_nonoverlap_mean": 0.061846485498840344,
+        "n_dates": 384,
+        "t_nonoverlap": 1.9745988111039696
+      },
+      "volume_trend_5_20": {
+        "ic_mean": 0.02392813699339756,
+        "ic_nonoverlap_mean": 0.01767152295774056,
+        "n_dates": 387,
+        "t_nonoverlap": 0.3670389114551472
+      }
+    },
+    "panel_size": 59,
+    "raw": {
+      "hl_range_20": {
+        "ic_mean": -0.07740846527625522,
+        "ic_nonoverlap_mean": -0.060402304177105,
+        "n_dates": 387,
+        "t_nonoverlap": -1.0911294203126687
+      },
+      "ma_dist_20": {
+        "ic_mean": 0.031471321828165,
+        "ic_nonoverlap_mean": 0.06318866244033122,
+        "n_dates": 387,
+        "t_nonoverlap": 1.117317981672188
+      },
+      "ma_dist_60": {
+        "ic_mean": -0.006147618826664149,
+        "ic_nonoverlap_mean": 0.013651996669853264,
+        "n_dates": 387,
+        "t_nonoverlap": 0.291648800429956
+      },
+      "ret_20": {
+        "ic_mean": 0.014344440981710718,
+        "ic_nonoverlap_mean": 0.045644715747007916,
+        "n_dates": 387,
+        "t_nonoverlap": 0.955302573596721
+      },
+      "ret_5": {
+        "ic_mean": 0.01813481936345372,
+        "ic_nonoverlap_mean": 0.05218568190449987,
+        "n_dates": 387,
+        "t_nonoverlap": 0.9339267740463788
+      },
+      "ret_60": {
+        "ic_mean": -0.019575962530618173,
+        "ic_nonoverlap_mean": -0.019772073227631935,
+        "n_dates": 387,
+        "t_nonoverlap": -0.44978114381874906
+      },
+      "up_days_20": {
+        "ic_mean": 0.015493623035007714,
+        "ic_nonoverlap_mean": 0.023013336912734023,
+        "n_dates": 387,
+        "t_nonoverlap": 0.6499490566379547
+      },
+      "vol_20": {
+        "ic_mean": -0.07484465758166642,
+        "ic_nonoverlap_mean": -0.06379616653610011,
+        "n_dates": 387,
+        "t_nonoverlap": -1.0723854138123756
+      },
+      "vol_60": {
+        "ic_mean": -0.10692511821459545,
+        "ic_nonoverlap_mean": -0.101623540414183,
+        "n_dates": 387,
+        "t_nonoverlap": -1.6166533440493516
+      },
+      "vol_ratio_20_60": {
+        "ic_mean": 0.021393787173930732,
+        "ic_nonoverlap_mean": 0.02153254663144232,
+        "n_dates": 387,
+        "t_nonoverlap": 0.4529122086543124
+      },
+      "volume_ratio_20": {
+        "ic_mean": 0.039472049789796175,
+        "ic_nonoverlap_mean": 0.03009442340243042,
+        "n_dates": 384,
+        "t_nonoverlap": 0.8933762753815557
+      },
+      "volume_trend_5_20": {
+        "ic_mean": 0.05226183622843422,
+        "ic_nonoverlap_mean": 0.046317247611350795,
+        "n_dates": 387,
+        "t_nonoverlap": 1.2231053455099645
+      }
+    }
+  },
+  "R_median_abs_ic": 0.6425288741798395,
+  "experiment": "T2_common_feature_IC_hub_test",
+  "features": [
+    "ret_5",
+    "ret_20",
+    "ret_60",
+    "vol_20",
+    "vol_60",
+    "vol_ratio_20_60",
+    "volume_ratio_20",
+    "volume_trend_5_20",
+    "hl_range_20",
+    "ma_dist_20",
+    "ma_dist_60",
+    "up_days_20"
+  ],
+  "horizon": 20,
+  "median_abs_ic": {
+    "A": 0.014824671307886913,
+    "HK": 0.02307238149695602
+  },
+  "per_feature_neutral_ic": {
+    "hl_range_20": {
+      "A": 0.029798076683028443,
+      "HK": 0.07383471838784297,
+      "ratio_abs": 0.4035781179052313,
+      "sign_agree": true
+    },
+    "ma_dist_20": {
+      "A": -0.003846836938009493,
+      "HK": 0.02221662600051448,
+      "ratio_abs": 0.17315126688995935,
+      "sign_agree": false
+    },
+    "ma_dist_60": {
+      "A": -0.036673599196256595,
+      "HK": -0.03340805078793418,
+      "ratio_abs": 1.0977473492557615,
+      "sign_agree": true
+    },
+    "ret_20": {
+      "A": -0.012790309404015428,
+      "HK": 0.016905432913021722,
+      "ratio_abs": 0.7565798208079875,
+      "sign_agree": false
+    },
+    "ret_5": {
+      "A": -0.0012263488021124944,
+      "HK": 0.03422854971293981,
+      "ratio_abs": 0.03582824315950739,
+      "sign_agree": false
+    },
+    "ret_60": {
+      "A": -0.0338797178467713,
+      "HK": 0.0015976795422428093,
+      "ratio_abs": 21.205577808933597,
+      "sign_agree": false
+    },
+    "up_days_20": {
+      "A": -0.0018952589947334548,
+      "HK": -0.006777528138766435,
+      "ratio_abs": 0.2796386759197443,
+      "sign_agree": true
+    },
+    "vol_20": {
+      "A": -0.03186058123189781,
+      "HK": 0.07968743062870033,
+      "ratio_abs": 0.39981940665587057,
+      "sign_agree": false
+    },
+    "vol_60": {
+      "A": -0.006533866634701241,
+      "HK": 0.03276021531429941,
+      "ratio_abs": 0.19944516762224374,
+      "sign_agree": false
+    },
+    "vol_ratio_20_60": {
+      "A": -0.056323085727174024,
+      "HK": 0.019883200745809147,
+      "ratio_abs": 2.8326971319768743,
+      "sign_agree": false
+    },
+    "volume_ratio_20": {
+      "A": 0.005981179003749851,
+      "HK": 0.01792951876612588,
+      "ratio_abs": 0.33359395094585875,
+      "sign_agree": true
+    },
+    "volume_trend_5_20": {
+      "A": 0.016859033211758398,
+      "HK": 0.02392813699339756,
+      "ratio_abs": 0.7045694036443487,
+      "sign_agree": true
+    }
+  },
+  "preregistered_criteria": {
+    "R in [1.5,3.0)": "GRAY (E3 only, no heavy runs)",
+    "R<1.5": "CONTINUE (Phase 2: E1/E3)",
+    "R>=3.0 and sign_agree<=0.60": "STOP_RULE (structural, keep E3 only)"
+  },
+  "sign_agreement": 0.4166666666666667,
+  "verdict_code": "CONTINUE",
+  "verdict_text": "R=0.64<1.5 → 特征响应无显著市场差异 → 继续 Phase 2（E1/E3）",
+  "window": "2025-01-01 ~ 2026-07-31"
+}
