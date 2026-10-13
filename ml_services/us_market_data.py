@@ -109,11 +109,47 @@ def _snapshot_mode() -> bool:
     return bool(os.environ.get('US_MARKET_SNAPSHOT_DIR'))
 
 
-def _load_cache(name: str) -> pd.DataFrame:
+def _required_start(period_days, start_date):
+    """本次请求需要的历史起点（UTC）。
+
+    ⚠️ 2026-10-13（缓存污染修复）：此前 `_load_cache` **完全忽略** period_days / start_date，
+    只要文件存在就返回。多个调用方共用同一份 `name.pkl` 却传不同 period_days
+    （hsi_email.py 传 30、ml_trading_model 传 1460 或 start_date），
+    于是「谁最后跑谁说了算」—— 短历史静默覆盖长历史。
+    实测：nasdaq.pkl 由 1460 行(2020-12→2026-10) 退化为 195 行(2026-01→2026-10)，
+    读取端不做任何校验 ⇒ 2020–2025 的美股特征静默消失，模型照跑、指标照出。
+    """
+    if start_date is not None:
+        sd = pd.Timestamp(start_date)
+        return sd.tz_localize('UTC') if sd.tzinfo is None else sd
+    if period_days:
+        return pd.Timestamp.now(tz='UTC').normalize() - pd.Timedelta(days=int(period_days))
+    return None
+
+
+# 交易日/日历日比值约 0.69；留 10% 余量容忍非交易日与节假日
+_COVER_SLACK = 0.10
+
+
+def _covers_request(df, need_start) -> bool:
+    """缓存的历史是否覆盖本次请求。覆盖不足 ⇒ 返回 False（触发重抓）。"""
+    if need_start is None or df is None or len(df) == 0:
+        return True
+    have = df.index.min()
+    if have.tzinfo is None:
+        have = have.tz_localize('UTC')
+    slack = pd.Timedelta(days=max(int((pd.Timestamp.now(tz="UTC") - need_start).days * _COVER_SLACK), 5))
+    return have <= need_start + slack
+
+
+def _load_cache(name: str, period_days=None, start_date=None) -> pd.DataFrame:
     """加载缓存数据
 
+    ⚠️ 2026-10-13：`period_days` / `start_date` 现在**参与校验**。
+    此前它们被完全忽略 —— 短历史缓存能满足长历史请求（见 `_required_start` 的说明）。
+
     Returns:
-        DataFrame if cache valid, None otherwise
+        DataFrame if cache valid AND covers the requested range, else None
     """
     cache_file = _get_cache_key(name)
 
@@ -125,8 +161,16 @@ def _load_cache(name: str) -> pd.DataFrame:
             cache_data = pickle.load(f)
 
         # 冻结快照模式：忽略日期，永久有效（可复现性优先）
+        # 但**仍校验覆盖**：快照若被写短过，一样会导致特征缺失。
         if _snapshot_mode():
-            return cache_data.get('data')
+            data = cache_data.get('data')
+            need = _required_start(period_days, start_date)
+            if not _covers_request(data, need):
+                print(f"⚠️ 快照 {name} 历史不足（起点 "
+                      f"{data.index.min().date() if len(data) else 'N/A'} vs 需要 "
+                      f"{need.date() if need is not None else 'N/A'}）⇒ 视为无效")
+                return None
+            return data
 
         # 检查缓存日期
         cache_date = cache_data.get('date')
@@ -136,7 +180,14 @@ def _load_cache(name: str) -> pd.DataFrame:
 
             # 缓存有效期：当天有效
             if cache_date.date() >= today.date():
-                return cache_data.get('data')
+                data = cache_data.get('data')
+                need = _required_start(period_days, start_date)
+                if not _covers_request(data, need):
+                    print(f"⚠️ 缓存 {name} 历史不足（起点 "
+                          f"{data.index.min().date() if data is not None and len(data) else 'N/A'} vs 需要 "
+                          f"{need.date() if need is not None else 'N/A'}）⇒ 触发重抓")
+                    return None
+                return data
 
         return None
     except Exception:
@@ -144,10 +195,29 @@ def _load_cache(name: str) -> pd.DataFrame:
 
 
 def _save_cache(name: str, data: pd.DataFrame):
-    """保存缓存数据（冻结快照模式下不写，避免污染 PIT 快照）"""
+    """保存缓存数据（冻结快照模式下不写，避免污染 PIT 快照）
+
+    ⚠️ 2026-10-13：**拒绝用更短的历史覆盖更长的**。
+    此前是无条件覆盖，而缓存文件名不含 period_days，多个调用方传不同参数
+    （hsi_email.py 传 30、ml_trading_model 传 1460）⇒ 短历史静默覆盖长历史。
+    实测 nasdaq.pkl 因此由 1460 行退化为 195 行。
+    """
     if _snapshot_mode():
         return
     cache_file = _get_cache_key(name)
+
+    # 不覆盖更长历史：若磁盘上已有起点更早（或行数更多）的数据，保留它
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'rb') as f:
+                old = pickle.load(f).get('data')
+            if old is not None and len(old) > len(data):
+                print(f"⚠️ 拒绝覆盖：缓存 {name} 已有 {len(old)} 行"
+                      f"（起点 {old.index.min().date()}），本次仅 {len(data)} 行"
+                      f"（起点 {data.index.min().date() if len(data) else 'N/A'}）⇒ 保留原文件")
+                return
+        except Exception:
+            pass  # 读不了就当没有，交给下面的正常写入
 
     try:
         cache_data = {
@@ -177,7 +247,7 @@ class USMarketData:
             DataFrame: 包含标普500指数数据
         """
         # 尝试从缓存加载
-        cached = _load_cache('sp500')
+        cached = _load_cache('sp500', period_days=period_days, start_date=start_date)
         if cached is not None:
             print("✅ 从缓存加载标普500数据")
             return cached
@@ -268,7 +338,7 @@ class USMarketData:
             DataFrame: 包含纳斯达克指数数据
         """
         # 尝试从缓存加载
-        cached = _load_cache('nasdaq')
+        cached = _load_cache('nasdaq', period_days=period_days, start_date=start_date)
         if cached is not None:
             print("✅ 从缓存加载纳斯达克数据")
             return cached
@@ -361,7 +431,7 @@ class USMarketData:
             DataFrame: 包含VIX恐慌指数数据
         """
         # 尝试从缓存加载
-        cached = _load_cache('vix')
+        cached = _load_cache('vix', period_days=period_days, start_date=start_date)
         if cached is not None:
             print("✅ 从缓存加载VIX数据")
             return cached
@@ -413,7 +483,7 @@ class USMarketData:
             DataFrame: 包含美国和中国多期限国债收益率数据，及利差特征
         """
         # 尝试从缓存加载
-        cached = _load_cache('treasury_yield')
+        cached = _load_cache('treasury_yield', period_days=period_days, start_date=start_date)
         if cached is not None:
             print("✅ 从缓存加载国债收益率数据")
             return cached

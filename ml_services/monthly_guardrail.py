@@ -64,6 +64,7 @@ def signal_lift(df):
 
 
 def win_rate_paired_test(df, cost=COST):
+    from ml_services.overlap_stats import hac_t, block_bootstrap_se
     """胜率 lift 的**逐日配对** t 检验（与 signal_lift 的全局口径不同，必须分开报）。
 
     为什么必须另算（lessons 三.64 规则 1）：全局胜率 lift 会把「哪几天模型偏乐观」与
@@ -96,7 +97,16 @@ def win_rate_paired_test(df, cost=COST):
         return None
     arr = np.asarray(per_day, dtype=float)
     t, p = ttest_1samp(arr, 0.0)
-    return {'lift': float(arr.mean()), 't': float(t), 'p': float(p), 'n': int(arr.size)}
+    # ⚠️ 2026-10-13：标签是「后 20 个交易日」，相邻天的前瞻窗重叠 19/20 天 ⇒
+    #    **朴素 t 的标准误被低估约 2.2 倍**，会把不显著读成显著。
+    #    此处并列三种口径，报出的显著性以 HAC/块 bootstrap 为准（lessons 三.69）。
+    m, n_h, se_hac, t_hac = hac_t(arr, lags=19)
+    se_blk = block_bootstrap_se(arr, block=20, n_boot=2000)
+    t_blk = (float(arr.mean() / se_blk)
+             if np.isfinite(se_blk) and se_blk > 0 else np.nan)
+    return {'lift': float(arr.mean()), 't': float(t), 'p': float(p), 'n': int(arr.size),
+            't_hac': float(t_hac), 'se_hac': float(se_hac),
+            't_block': float(t_blk), 'se_block': float(se_blk)}
 
 
 def equal_weight_baseline(bt):
@@ -252,7 +262,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     # D27 D 级：胜率与收益必须同时显著，否则不得声称有 edge
     dual = None
     if wr_test is not None:
-        wr_sig = wr_test['p'] < 0.05
+        wr_sig = (abs(wr_test['t_hac']) > 1.96) if np.isfinite(wr_test['t_hac']) else (wr_test['p'] < 0.05)
         ret_sig = st['ir'] > 0 and c['ir_lo'] > 0
         dual = (wr_sig, ret_sig)
         if wr_sig and not ret_sig:
@@ -301,9 +311,14 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     L.append("### 胜率 vs 收益 双口径（D27 D 级，强制同报）")
     L.append("")
     if wr_test is not None:
-        L.append(f"- 胜率 lift（逐日配对）**{wr_test['lift']*100:+.2f}pp**，"
-                 f"t={wr_test['t']:+.2f}，p={wr_test['p']:.4f}，n={wr_test['n']} 日 "
-                 f"→ {'显著' if wr_test['p']<0.05 else '不显著'}")
+        sig_corr = (np.isfinite(wr_test.get('t_hac', np.nan))
+                    and abs(wr_test['t_hac']) > 1.96)
+        L.append(f"- 胜率 lift（逐日配对）**{wr_test['lift']*100:+.2f}pp**，n={wr_test['n']} 日")
+        L.append(f"　　朴素 t={wr_test['t']:+.2f}（p={wr_test['p']:.4f}）→ "
+                 f"{'显著' if wr_test['p']<0.05 else '不显著'}"
+                 f"　|　**HAC(19) t={wr_test['t_hac']:+.2f}**　|　块bootstrap(20) t={wr_test['t_block']:+.2f}"
+                 f"　⇒ 以修正口径为准：**{'显著' if sig_corr else '不显著'}**")
+        L.append("　　（标签为「后 20 个交易日」，相邻日前瞻窗重叠 ⇒ 朴素 t 会高估显著性；见 lessons 三.69）")
     if 'c' in dir():
         L.append(f"- 收益 lift（折聚类）**{lift*100:+.1f}pp**，CI [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] → "
                  f"{'显著' if c['ir_lo']>0 else '不显著'}")
