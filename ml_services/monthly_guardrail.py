@@ -173,6 +173,9 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     df = load_panel(pred_csv, market=market)
     bt = backtest(df, horizon, topk, True, cost=cost)  # 行业中性
     st = _stats(bt['top_net'].values, horizon)
+    # ⛔ 「净IR」是组合**绝对**收益（含 beta），不是超额。三.68：必须同时报超额口径。
+    st_bench = _stats(bt['bench'].values, horizon)
+    st_excess = _stats(bt['top_net'].values - bt['bench'].values, horizon)
     c = bootstrap(bt['top_net'].values, horizon)
     turnover = float(bt['turnover'].mean())
     wr, base, lift = signal_lift(df)
@@ -269,7 +272,9 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     L.append(f"- TopK={topk} 行业中性，成本 {cost:.3f}\n")
     L.append("| 指标 | 值 | 门槛 |")
     L.append("|------|----|------|")
-    L.append(f"| 净IR | **{st['ir']:.2f}** [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | ≥0.7 且 CI 下界>0 更佳 |")
+    L.append(f"| 净IR（**绝对口径，含 beta**） | {st['ir']:.2f} [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | — 见超额行 |")
+    L.append(f"| **等权基准 IR**（无模型） | {st_bench['ir']:.2f} | 参照系 |")
+    L.append(f"| **超额 IR**（− 基准） | **{st_excess['ir']:.2f}** | ≥0.7 且 CI 下界>0 更佳 |")
     L.append(f"| P(IR>0.5) | {c['p_ir']*100:.0f}% | — |")
     L.append(f"| 净均收益/期 | {st['mean']*100:+.2f}% | >0 |")
     L.append(f"| 累计净收益 | {st['cum']*100:+.1f}% | — |")
@@ -283,7 +288,12 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     L.append(f"## 判定：{verdict}")
     L.append("")
     L.append("> 判定规则：净IR≥0.7 且 PBO<0.5 且 DSR≥0.95 → 升级；IR>0 但未达 → 保留低配；IR≤0 → 停用。")
-    L.append("> （docs/DECISIONS.md D2）\n")
+    L.append("> （docs/DECISIONS.md D2）")
+    L.append(">")
+    L.append("> ⚠️ **该判定式用的是「绝对 IR」，含 beta —— 三.68。** 等权全池不做任何选择也有 "
+             f"IR {st_bench['ir']:.2f}；策略要「赢」必须超过这个数，而不是超过 0。")
+    L.append(f"> 实测 D26：策略绝对 IR {st['ir']:.2f} **低于**基准 {st_bench['ir']:.2f}，"
+             f"超额 IR {st_excess['ir']:.2f}。\n")
     L.append("### 相对等权全池的判定（D27 E 级，强制）")
     L.append("")
     L.append(alpha_verdict if alpha_verdict else '- 等权基准不可用（样本不足）')
