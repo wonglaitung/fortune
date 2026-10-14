@@ -78,13 +78,10 @@ def win_rate_paired_test(df, cost=COST, topk=10):
     仍并列三种标准误口径（naive / HAC / 块bootstrap），以 HAC 与块bootstrap 为准（三.69）。
     """
     from ml_services.overlap_stats import hac_t, block_bootstrap_se
-    """（docstring 见上）
-
-    为什么必须另算（lessons 三.64 规则 1）：全局胜率 lift 会把「哪几天模型偏乐观」与
-    「哪几天大盘在涨」混在一起。逐日去均值后才是纯选股口径。
-    与收益口径必须**同时报**：实测出现过胜率 lift t=+5.08（p<0.0001）而收益 lift t=−0.37（p=0.71），
-    只报前者会把「统计显著」误读成「有 edge」——命中率提升但收益不变是极常见的形态。
-    """
+    # 为什么必须另算（lessons 三.64 规则 1）：全局胜率 lift 会把「哪几天模型偏乐观」与
+    # 「哪几天大盘在涨」混在一起。逐日去均值后才是纯选股口径。
+    # 与收益口径必须**同时报**：实测出现过胜率 lift t=+5.08（p<0.0001）而收益 lift t=−0.37（p=0.71），
+    # 只报前者会把「统计显著」误读成「有 edge」——命中率提升但收益不变是极常见的形态。
     if 'Actual_Return' not in df.columns:
         return None
     d = df.copy()

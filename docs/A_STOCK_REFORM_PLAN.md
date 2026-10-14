@@ -116,7 +116,7 @@
 
 ### 已知遗留：社区 ID 解析未与港股共源（2026-10-13 记录，暂不修）
 
-港股侧已于 D26 把社区集合解析收敛为**唯一入口** `ml_services/network_ids.py::resolve_community_ids()`
+港股侧已于 D30 把社区集合解析收敛为**唯一入口** `ml_services/network_ids.py::resolve_community_ids()`
 （静态 ∪ PIT，失败显式报错）。**A股侧仍走自己的一份**：
 `ml_services/a_stock_network_analysis.py:457-465` 动态收集 `net_community_id` 去重后落
 `data/a_stock_network_features/community_ids.json`。

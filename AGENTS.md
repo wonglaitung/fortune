@@ -126,7 +126,7 @@ python hsi_email.py --no-email
 |------|------|
 | **数据泄漏** | Walk-forward 准确率 **>65%（个股）/ >80%（恒指）** 即泄漏信号（个股正常区间 50–60%）。**三条硬检查**：①`Predict_Prob` 饱和成 0/1；②预测 UP 组 `Relative_Return`（= Actual_Return − HSI未来收益，**CSV 无此列须重建**）**最大值 ≤0 = 符号退化**（泄漏版 **−1e-05** 贴零是稳定信号；合法单轮值 1d旧 **+0.42** / 20d旧 **+2.02** / 20dD25新 **+1.58**——**分周期分口径，仅供参照不是阈值**；勿把方向抄反）；③分组符号一致性。**可执行：`python3 scripts/presentation_gate.py --input <csv> --horizon N`（非零退出即阻断）**。出处与抄反事故见 lessons 三.28 / 三.47 |
 | **判读顺序不可颠倒** | **⓪ 同一性**（WF 的函数 = 生产的函数？训练时点 = 推理时点？被评估的概率 = 生产下单用的概率？）→ ①绝对值异常(准确率/IC/概率饱和) → ②PBO<0.5 → ③DSR≥0.95 → ④净IR CI 不跨0+lift>0 → ⑤才谈仓位。**⓪ 不过则后面四闸不必跑**（①~④ 问「这个数可不可信」，⓪ 问「这个数说的是不是我要的东西」）。**PBO/DSR 检测不出泄漏**（实测泄漏版 PBO 0.43、DSR 1.000 全过，实际是假信号），见 lessons 三.28 |
-| **WF ≠ 生产（同一性缺口）** | **2026-10-12 实测 5 条独立不一致**（数字与证据出处见 lessons 三.60；**本行不写可变计数，计数一律查 BASELINES.md**）：①**训练/推理时点差 1 天**——`train()` 不传 mode → `use_shift=1`(T-1)，`predict()` 默认 `mode='production'` → `use_shift=0`(T)，WF 全程 T-1（`ml_trading_model.py:4048/4466/4822`）；②**`net_comm_*` 编码**——WF 每股动态提取（缺列=NaN），生产传静态∪PIT（缺列=0），CatBoost 原生区分二者；③特征列集合（生产 pkl = 静态名单 + FORCE 追加 vs WF 每折 Top-500+FORCE，静态名单含 **0 个 HIBOR/0 个 F1**）；④1d/5d pkl 仍是 09-30 旧模型；⑤**Isotonic 只在生产侧**且港股未传 `oof_glob` ⇒ A 闸跑在未校准概率、生产阈值跑在校准后概率。**②（编码实质不同）单独即阻断外推；①（时点错配）单独即令外推不成立**——方向与幅度均未测，不得假设为同向（见 lessons 三.60）。**根因＝口径挂在调用点的默认参数上，方法本身不保证任何东西**（`mode`/`community_ids`/`selected_features` 三入参 × 三路径 = 三种组合）。**⓪ 尚无自动脚本**（靠人工核对），但**契约测试已建**（`tests/test_pipeline_contract.py` 6 条 strict-xfail 锁定上述 5 条差异）|
+| **WF ≠ 生产（同一性缺口）** | ⚠️ **已于 D25/D30 逐条修复（⓪ 四问全通）**，本行保留为问题清单存档：①时点差 1 天（D25）②`net_comm_*` 编码（D30）③特征列集合（O4 清单+契约测试）④1d/5d pkl 同代（例行重训）⑤Isotonic 同源（D26 probability/confidence 拆分）。**原 2026-10-12 实测 5 条独立不一致**（数字与证据出处见 lessons 三.60；**本行不写可变计数，计数一律查 BASELINES.md**）：①**训练/推理时点差 1 天**——`train()` 不传 mode → `use_shift=1`(T-1)，`predict()` 默认 `mode='production'` → `use_shift=0`(T)，WF 全程 T-1（`ml_trading_model.py:4048/4466/4822`）；②**`net_comm_*` 编码**——WF 每股动态提取（缺列=NaN），生产传静态∪PIT（缺列=0），CatBoost 原生区分二者；③特征列集合（生产 pkl = 静态名单 + FORCE 追加 vs WF 每折 Top-500+FORCE，静态名单含 **0 个 HIBOR/0 个 F1**）；④1d/5d pkl 仍是 09-30 旧模型；⑤**Isotonic 只在生产侧**且港股未传 `oof_glob` ⇒ A 闸跑在未校准概率、生产阈值跑在校准后概率。**②（编码实质不同）单独即阻断外推；①（时点错配）单独即令外推不成立**——方向与幅度均未测，不得假设为同向（见 lessons 三.60）。**根因＝口径挂在调用点的默认参数上，方法本身不保证任何东西**（`mode`/`community_ids`/`selected_features` 三入参 × 三路径 = 三种组合）。**⓪ 尚无自动脚本**（靠人工核对），但**契约测试已建**（`tests/test_pipeline_contract.py` 6 条 strict-xfail 锁定上述 5 条差异）|
 | **静默 NaN 特征** | 外部行情(HSI/美股)为午夜时间戳、个股为收盘 16:00，裸 `merge(left_index,…)` 会整列 NaN 且**不报错**；一律走 `_align_to_index`；修对齐后必须清特征缓存再验证（lessons 三.27） |
 | **取数窗口硬编码** | `period_days=1460` 曾写死在个股取数处，使 2016–2021 永远取不到（宏观修了个股漏修）；改口径须 grep 全部调用点，一律用 `period_days_needed`（lessons 三.26） |
 | **验证产物完整性** | fold 异常被吞会静默产出残缺 CSV（17/38 折仍打印"验证完成"）；跑完必核对**折数/行数**（lessons 三.20，已加完整性闸门缺折即非零退出） |
@@ -388,6 +388,21 @@ test_df[col] = test_df[col].apply(
   **不覆盖全量 pytest**（约 5 分钟，仍是 B 闸人工步骤）。
 
 ---
+
+## 🔢 决策编号分配（2026-10-14 新增，防再次撞车）
+
+**为什么加这条**：2026-10-13 晚有第二个会话并行写入，**「社区集合显式化」与「probability 口径拆分」
+同时被编成 D26**，导致同一仓库里两个 D26 各指一事（BASELINES/A_STOCK_REFORM_PLAN/lessons 三.63
+一度用「D26」指前者，AGENTS/DECISIONS 用「D26」指后者）。
+
+**规则**：
+1. **编号在 `docs/DECISIONS.md` 里唯一**；写入前先 `grep -c "^## D<下一号>" docs/DECISIONS.md` 确认未被占用
+2. **两个会话同时在写时**：由**后启动的一方**顺延取号，不得复用任何已出现过的编号
+3. **历史条目不重写编号**（progress.txt / lessons 是编年日志）——改号时在**文末**加一条编号映射说明
+4. 改号必须同步：`grep -rn "<旧号>" docs/ AGENTS.md lessons.md`，逐条判断指向后改，不得全局替换
+
+> 已发生的改号：社区集合显式化 **D26 → D30**（编号撞车）。
+> 说「社区集合 / `net_comm_*` 编码」= **D30**；说「probability 与 confidence 口径」= **D26**。
 
 ## 📝 会话工作流
 

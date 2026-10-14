@@ -3971,3 +3971,40 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    「IC 大概率 < 0.02」方向可信、**数值不可信**
 5) **本轮不再继续度量研究** —— 继续下去只会产出第四个错因。
    护栏三层强制输出（等权基准/超额IR/双口径）已稳定，后续只需等待新数据
+
+2026-10-14 编号撞车处理 + 并入另一会话结论（用户决定：另一会话已停，合并到本会话）
+1) 撞车事实：两个会话并行写入，「社区集合显式化」与「probability 口径拆分」同时编成 D26。
+   对方文档（BASELINES「D25/D26 双跑」、A_STOCK_REFORM_PLAN、lessons 三.63）已按「D26=社区集合」
+   写下去 ⇒ 撞车已造成实际引用歧义。
+2) 处置（用户选方案1）：**我那条 D26 改号 D30**；对方那条保持 D26（AGENTS:160 与 DECISIONS:1273
+   指向的是它，改号成本更高）。已在 D30 条首写明编号对照。
+3) 同步替换（12+1 处）：DECISIONS 条内 7 处 / BASELINES 13 处 / A_STOCK_REFORM_PLAN 1 处 /
+   lessons 三.63 整条 10 处。**progress.txt 历史条目不改**（编年日志），改号映射记于本条。
+4) AGENTS 新增「🔢 决策编号分配」小节：编号唯一、后启动方顺延取号、历史不重写、改号须 grep 同步。
+5) 核验：D30 双跑 md5 `c38ac3063192c3844395a4ba895add61`（两轮 41,153 行逐位相同），
+   与对方记录一致；doc_gate 全绿；AGENTS 448 行（<500）。
+6) 另一会话结论已并入认知（详见 DECISIONS D26/D27/D28/D29 与 lessons 三.63~三.71），要点：
+   - 港股 20d **当前权威基线 = D30**（output/20261013_192444）：净IR 0.58 / PBO 0.87 / DSR 0.847 /
+     lift +1.5pp ⇒ **🟡 保留低配 ≤5%，不得升配**
+   - PBO 0.03→0.87 已归因：两数据集零假设带差一个数量级（D25 [0.00,0.12] vs D30 [0.77,0.97]），
+     两者都落在各自带内 ⇒ **都不是过拟合证据，也不得用于 A/B 采用或否决**
+   - 港股侧全部「有信号」证据经重叠修正后**复核失败** ⇒ 结论是「**不是已被证明无效，
+     而是在能测的范围内测不出**」；成本归因显示约 63% 的「跑输」是手续费
+   - ⓪ 同一性闸四问**已全通**（A~D 级全 ✅），但升配仍锁（净IR/PBO/DSR 三门槛不过）
+7) 遗留核对项（对方的，我没验）：commit 389c6020 声称「测试 6 项全过」但未新增任何测试文件；
+   monthly_guardrail.py:81 有重构残留的空字符串 docstring。均未处理。
+
+2026-10-14 补齐合并遗留项（另一会话声明「测试 6 项全过」但未入库）
+1) 新增 tests/test_us_market_cache_coverage.py（13 项）覆盖 us_market_data 缓存覆盖防护：
+   _required_start(3) / _covers_request(4) / _load_cache 拒绝短历史(2) /
+   _save_cache 拒绝短覆盖长 + 允许更长(2) / 快照模式不写(1) / 缓存键不含参数的护栏(1)
+2) **做了变异测试**验证它们能红：把 _load_cache 的覆盖校验改成 need=None 后
+   test_load_cache_rejects_short_history 转红（1 failed, 12 passed），恢复后 13 passed ✅
+   ——不验证「能红」的测试可能在测空气
+3) 三条踩坑入 lessons 三.72：
+   - `from ml_services import us_market_data` 拿到的是**实例不是模块**（__init__.py 同名遮蔽子模块），
+     连 `import ml_services.us_market_data as X` 也中招，只有 importlib 拿得到模块
+   - `_save_cache` 不建目录，干净环境下首次写会静默失败（已记录未修）
+   - 「声称测过」必须能 git show --tests/ 指到文件；指不到就按未测处理
+4) 清理 ml_services/monthly_guardrail.py 重构残留（`"""（docstring 见上）` 空 docstring，成对删除）
+5) pytest tests/ → 200 passed / 3 xfailed / 0 failed；doc_gate 通过
