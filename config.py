@@ -6,10 +6,13 @@
 
 # 股票板块映射（57只股票，覆盖16个板块）
 # ⚠️ 2026-10-14 据腾讯行情逐只核对公司名（lessons 三.74）：修正多只错名 +
-#    0960 龙湖集团（地产，原误标 new_energy）、2282 美高梅中国（消费，原误标 new_energy）；
+#    0960 龙湖集团（地产，原误标 new_energy）、2282 美高梅中国（消费，原误标 new_energy）、
+#    2228 晶泰控股（生物医药，原误标 consumer）、1053 重庆钢铁股份（材料，原误标 auto）；
 #    去掉重复键 2269（原并存 药明生物/药明康德 两条，后者静默覆盖前者）。
-#    待定（未改）：1053 重庆钢铁股份（钢铁，sector 键缺 materials）、
-#    2228 晶泰控股（ai/biotech 待定）、1387（行情源未返回，未核）。
+#    ⚠️ 来源存疑（未改代码，仅记录）：0960 原标「龙源电力」疑为 0916.HK 串位
+#    （0916=龙源电力；数据按 0960 取=龙湖集团，故按 0960 归类）；
+#    1387.HK 腾讯**无此代码**（疑应为 0855.HK 中国水务）——它本就未产出行情/预测，
+#    改代码=改池须重跑，故暂留空条目。
 #    ⚠️ `sector` 进中性化选股；`type`/profile 进 Stock_Type/Stock_*_Score **候选特征**
 #    ⇒ 下次重训须清特征缓存（本次未重训，不影响现行 pkl）。
 # 包含股票名称、板块代码、类型、评分（防御性、成长性、周期性、流动性、风险）
@@ -101,11 +104,11 @@ STOCK_SECTOR_MAPPING = {
 
     # 消费股 (consumer)
     '0151.HK': {'sector': 'consumer', 'name': '中国旺旺', 'type': 'consumer', 'defensive': 50, 'growth': 45, 'cyclical': 45, 'liquidity': 70, 'risk': 45},
-    '2228.HK': {'sector': 'consumer', 'name': '中国飞鹤', 'type': 'consumer', 'defensive': 45, 'growth': 50, 'cyclical': 50, 'liquidity': 65, 'risk': 50},
+    '2228.HK': {'sector': 'biotech', 'name': '晶泰控股', 'type': 'biotech', 'defensive': 25, 'growth': 85, 'cyclical': 50, 'liquidity': 60, 'risk': 85},
 
     # 汽车股 (auto)
     '2333.HK': {'sector': 'auto', 'name': '长城汽车', 'type': 'auto', 'defensive': 25, 'growth': 75, 'cyclical': 70, 'liquidity': 70, 'risk': 75},
-    '1053.HK': {'sector': 'auto', 'name': '重庆长安汽车', 'type': 'auto', 'defensive': 20, 'growth': 80, 'cyclical': 75, 'liquidity': 65, 'risk': 80},
+    '1053.HK': {'sector': 'materials', 'name': '重庆钢铁股份', 'type': 'materials', 'defensive': 15, 'growth': 40, 'cyclical': 95, 'liquidity': 60, 'risk': 90},
 }
 
 # 板块名称映射（统一中文名称）
@@ -127,6 +130,7 @@ SECTOR_NAME_MAPPING = {
     'consumer': '消费股',
     'auto': '汽车股',
     'gas': '燃气股',
+    'materials': '材料股',
 }
 
 # 自选股列表（核心32只，用于预测和日常监控；2026-10-06 剔除 ETF 2800.HK 后）

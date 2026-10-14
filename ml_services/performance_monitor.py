@@ -889,6 +889,8 @@ def get_sector_name(sector_code: str) -> str:
         'real_estate': '房地产股',
         'consumer': '消费股',
         'auto': '汽车股',
+        'gas': '燃气股',
+        'materials': '材料股',
         'unknown': '未知'
     }
     return sector_names.get(sector_code, sector_code)

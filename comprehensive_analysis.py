@@ -112,11 +112,13 @@ SECTOR_TYPES = {
     'auto': {'name': '汽车', 'type': '周期'},
     'new_energy': {'name': '新能源', 'type': '周期'},
     'ai': {'name': '人工智能', 'type': '周期'},
+    'materials': {'name': '材料', 'type': '周期'},
     # 防御性板块
     'bank': {'name': '银行', 'type': '防御'},
     'insurance': {'name': '保险', 'type': '防御'},
     'utility': {'name': '公用事业', 'type': '防御'},
     'environmental': {'name': '环保', 'type': '防御'},
+    'gas': {'name': '燃气', 'type': '防御'},
     'exchange': {'name': '交易所', 'type': '防御'},
     'index': {'name': '指数', 'type': '防御'},
 }
