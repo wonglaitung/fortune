@@ -30,6 +30,12 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 选股打分唯一实现（lessons 三.73/三.74）：生产侧与回测侧共用，禁止各写一份。
+# `_sector_neutral` 是兼容旧名的**同一函数对象**（身份可断言）
+from ml_services.selection import sector_neutral_score  # noqa: E402
+
+_sector_neutral = sector_neutral_score
+
 COST = 0.005  # 双边成本（与 walk_forward / portfolio_backtest 一致）
 STATE_FILE = 'data/live_portfolio/topk_state.json'
 
@@ -46,12 +52,6 @@ def _save_state(st):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     with open(STATE_FILE, 'w', encoding='utf-8') as f:
         json.dump(st, f, ensure_ascii=False, indent=2)
-
-
-def _sector_neutral(g):
-    s = g.groupby('sector')['prob']
-    z = (g['prob'] - s.transform('mean')) / s.transform('std').replace(0, np.nan)
-    return z.fillna(0.0)
 
 
 def select_from_df(df, topk, sector_neutral=True):

@@ -28,6 +28,13 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 选股打分**唯一实现**在 ml_services.selection（lessons 三.73/三.74）。
+# 本模块与 live_topk（生产侧）都从这里导入，禁止各自再写一份。
+from ml_services.selection import (          # noqa: E402
+    sector_neutral_score as _sector_neutral_score,
+    selection_score,
+)
+
 COST = 0.005  # 双边成本（与 walk_forward TOTAL_COST 一致）
 DEFAULT_PRED = {
     5: 'output/20260922_212530_catboost_5d/prediction_analysis.csv',
@@ -62,11 +69,53 @@ def load_panel(pred_csv, market='hk'):
     return df
 
 
-def _sector_neutral_score(g):
-    """行业内 z-score（对 prob），再全局排序"""
-    s = g.groupby('sector')['prob']
-    z = (g['prob'] - s.transform('mean')) / (s.transform('std').replace(0, np.nan))
-    return z.fillna(0.0)
+def selection_ic(df, use_sector_neutral=True, min_per_day=20, min_sector=2):
+    """**部署口径**的选股能力度量（lessons 三.73）。
+
+    口径 = 逐日 Spearman(selection_score, ret) 再取均值/中位。
+    `use_sector_neutral` **必须与 `backtest` 传的是同一个值**，否则量错对象。
+
+    同时返回三个对照（它们**不是同一个量**，报告必须分开写，禁互相替代）：
+      - `ic` / `ic_med` 部署口径（逐日、用部署打分）
+      - `ic_raw`        同一逐日口径，但用**原始 prob**（说明「打分变换」之差）
+      - `ic_pooled`     全表跨日池化 Spearman（WF 报告口径的近亲）。**含日间共同层**
+                        ⇒ 天然偏高（D30：0.0322~0.0442 vs 逐日 0.0136）
+                        ⇒ **不可用于能力评估**（lessons 三.68）。
+      - `ic_rank_vs_lin` 逐日 Pearson 对照：同一「逐日」口径下 rank 与线性可异号
+                        ⇒ 该量在噪声水平时本身就是统计量依赖的（D30：rank +0.0136 / 线性 −0.0145）。
+
+    本函数**不下任何显著性结论**；显著性由调用方用 HAC / 块 bootstrap 判（三.69）。
+    """
+    dc = 'date' if 'date' in df.columns else 'Date'
+    d = df.dropna(subset=['prob', 'ret']).copy()
+    s_ic, r_ic, l_ic = [], [], []
+    for _, g in d.groupby(dc):
+        if len(g) < min_per_day:
+            continue
+        if g['sector'].nunique() >= min_sector:
+            sc = selection_score(g, use_sector_neutral)
+            v = sc.corr(g['ret'], method='spearman')
+            if np.isfinite(v):
+                s_ic.append(v)
+            # 逐日 Pearson（线性）对照：同一「逐日」口径下 rank 与线性可异号
+            w = (sc - sc.mean()).corr(g['ret'] - g['ret'].mean())
+            if np.isfinite(w):
+                l_ic.append(w)
+        v = g['prob'].corr(g['ret'], method='spearman')
+        if np.isfinite(v):
+            r_ic.append(v)
+    s_ic, r_ic, l_ic = np.asarray(s_ic), np.asarray(r_ic), np.asarray(l_ic)
+    out = {
+        'n_days': int(s_ic.size),
+        'ic': float(s_ic.mean()) if s_ic.size else float('nan'),
+        'ic_med': float(np.median(s_ic)) if s_ic.size else float('nan'),
+        'ic_raw': float(r_ic.mean()) if r_ic.size else float('nan'),
+        'ic_lin': float(l_ic.mean()) if l_ic.size else float('nan'),
+        'ic_pooled': float(d['prob'].corr(d['ret'], method='spearman')),
+        'use_sector_neutral': bool(use_sector_neutral),
+        'ic_series': s_ic,
+    }
+    return out
 
 
 def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_target=None):
@@ -79,10 +128,7 @@ def backtest(df, horizon, topk, use_sector_neutral, cost=COST, dropout=0, vol_ta
         g = df[df['date'] == d].copy()
         if len(g) < 20:
             continue
-        if use_sector_neutral:
-            g['score'] = _sector_neutral_score(g)
-        else:
-            g['score'] = g['prob']
+        g['score'] = selection_score(g, use_sector_neutral)
         g = g.sort_values('score', ascending=False, kind='mergesort')  # mergesort：score 并列时顺序稳定（去噪声）
         k = min(topk, len(g) // 4)
         bench = g['ret'].mean()

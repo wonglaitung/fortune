@@ -29,8 +29,12 @@ from scipy.stats import ttest_1samp
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats, COST
+from ml_services.portfolio_backtest import load_panel, backtest, bootstrap, _stats, COST, selection_ic
 from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
+
+# 护栏判定与能力度量**必须同一口径**（⓪ 同一性闸第⑤问 / lessons 三.73）。
+# 唯一定义点：backtest 与 selection_ic 都读这一个常量，禁止在调用点各写一遍。
+SECTOR_NEUTRAL = True
 
 
 def latest_pred(horizon, market='hk'):
@@ -190,7 +194,9 @@ def config_spread(M):
 
 def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
     df = load_panel(pred_csv, market=market)
-    bt = backtest(df, horizon, topk, True, cost=cost)  # 行业中性
+    bt = backtest(df, horizon, topk, SECTOR_NEUTRAL, cost=cost)  # 行业中性
+    # ⓪ 同一性闸第⑤问：能力指标必须用**部署打分口径**（同一 SECTOR_NEUTRAL）
+    cap = selection_ic(df, use_sector_neutral=SECTOR_NEUTRAL)
     st = _stats(bt['top_net'].values, horizon)
     # ⛔ 「净IR」是组合**绝对**收益（含 beta），不是超额。三.68：必须同时报超额口径。
     st_bench = _stats(bt['bench'].values, horizon)
@@ -259,7 +265,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
             f"　　（同上）净 net　 {vb_net['diff']*100:+.3f}%/期　"
             f"95%CI [{vb_net['ci_lo']*100:+.3f}%, {vb_net['ci_hi']*100:+.3f}%]　p={vb_net['p']:.3f} → "
             + ('显著' if vb_net['p'] < 0.05 else '不显著'),
-            f"交易成本拖累 **{cost_drag*100:.3f}%/期**（换手 {turnover*100:.0f}% × 单边 {cost*100:.1f}%）"
+            f"交易成本拖累 **{cost_drag*100:.3f}%/期**（单边换手 {turnover*100:.0f}% × 双边成本 {cost*100:.1f}%）"
             + (f"，占净-毛总差距 **{share:.0f}%**" if np.isfinite(share) else ''),
             f"⚠️ **降换手的上限**：即便换手降到 0，差距也只能从 {vb_net['diff']*100:+.3f}% 收窄到 "
             f"{vb_gross['diff']*100:+.3f}%/期 —— **它救不了策略，主要矛盾是毛口径本身没有可测超额**。",
@@ -334,6 +340,23 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
         L.append(f"- 收益 lift（折聚类）**{lift*100:+.1f}pp**，CI [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] → "
                  f"{'显著' if c['ir_lo']>0 else '不显著'}")
     L.append(f"- {dual_note}" if dual_note else "")
+    L.append("")
+    L.append("### 选股能力（部署口径 IC —— ⓪ 同一性闸第⑤问，lessons 三.73）")
+    L.append("")
+    from ml_services.overlap_stats import hac_t as _hac_t
+    _m, _n, _se, _t = _hac_t(cap['ic_series'], lags=horizon - 1)
+    L.append(f"- 部署打分 = **行业内 z-score**（`selection_score(..., {SECTOR_NEUTRAL})`）；"
+             f"下列 IC 全部用**同一**打分逐日计算")
+    L.append(f"- **部署口径 IC（逐日 Spearman，n={cap['n_days']} 日）**："
+             f"均值 **{cap['ic']:+.4f}** / 中位 {cap['ic_med']:+.4f}　"
+             f"HAC({horizon-1}) t={_t:+.2f} → **{'显著' if abs(_t) > 1.96 else '不显著'}**")
+    L.append(f"- 对照①同一逐日口径、换用**原始 prob**：{cap['ic_raw']:+.4f}（打分变换之差）")
+    L.append(f"- 对照②同一「逐日」、换**线性**相关：{cap['ic_lin']:+.4f}"
+             f"（rank 与线性可**异号** ⇒ 该量在噪声水平时本身就统计量依赖）")
+    L.append(f"- 对照③**全表跨日池化** Spearman：{cap['ic_pooled']:+.4f}"
+             f"（含日间共同层 ⇒ 天然偏高，**禁用于能力评估**，三.68）")
+    L.append("- ⚠️ 这四个数**不是同一个量**；能力评估只能读**部署口径那一行**，"
+             "引用任何 IC 必须标注口径（D29 D 级）。")
     L.append("")
     L.append(f"### PBO 读法（lessons 三.63，{len(M)} 期 × {M.shape[1]} 配置）")
     L.append("")
