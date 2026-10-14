@@ -4,17 +4,18 @@
 全局配置文件
 """
 
-# 股票板块映射（57只股票，覆盖16个板块）
+# 股票板块映射（56只股票，覆盖17个板块）
 # ⚠️ 2026-10-14 据腾讯行情逐只核对公司名（lessons 三.74）：修正多只错名 +
 #    0960 龙湖集团（地产，原误标 new_energy）、2282 美高梅中国（消费，原误标 new_energy）、
 #    2228 晶泰控股（生物医药，原误标 consumer）、1053 重庆钢铁股份（材料，原误标 auto）；
 #    去掉重复键 2269（原并存 药明生物/药明康德 两条，后者静默覆盖前者）。
 #    ⚠️ 来源存疑（未改代码，仅记录）：0960 原标「龙源电力」疑为 0916.HK 串位
-#    （0916=龙源电力；数据按 0960 取=龙湖集团，故按 0960 归类）；
-#    1387.HK 腾讯**无此代码**（疑应为 0855.HK 中国水务）——它本就未产出行情/预测，
-#    改代码=改池须重跑，故暂留空条目。
+#    （0916=龙源电力；数据按 0960 取=龙湖集团，故按 0960 归类）。
 #    ⚠️ `sector` 进中性化选股；`type`/profile 进 Stock_Type/Stock_*_Score **候选特征**
 #    ⇒ 下次重训须清特征缓存（本次未重训，不影响现行 pkl）。
+#    另**删除幽灵条目 1387.HK**：腾讯/新浪/akshare 三源均取不到数据（非上市代码），
+#    且从未进入任何一轮（无特征/无预测；见 lessons 三.74 附）⇒ 池 57 → **56**。
+#    若将来要引入中国水务（0855.HK），属**改池**，须走 D31 式预登记 + 重跑。
 # 包含股票名称、板块代码、类型、评分（防御性、成长性、周期性、流动性、风险）
 STOCK_SECTOR_MAPPING = {
     # 银行股 (bank)
@@ -57,7 +58,6 @@ STOCK_SECTOR_MAPPING = {
     # 环保股 (environmental)
     '1330.HK': {'sector': 'environmental', 'name': '绿色动力环保', 'type': 'environmental', 'defensive': 25, 'growth': 75, 'cyclical': 80, 'liquidity': 60, 'risk': 80},
     '1257.HK': {'sector': 'environmental', 'name': '中国光大绿色环保', 'type': 'environmental', 'defensive': 30, 'growth': 70, 'cyclical': 75, 'liquidity': 65, 'risk': 75},
-    '1387.HK': {'sector': 'environmental', 'name': '中国水务', 'type': 'environmental', 'defensive': 40, 'growth': 65, 'cyclical': 70, 'liquidity': 70, 'risk': 70},
 
     # 能源股 (energy)
     '0883.HK': {'sector': 'energy', 'name': '中国海洋石油', 'type': 'energy', 'defensive': 30, 'growth': 50, 'cyclical': 90, 'liquidity': 75, 'risk': 75},
@@ -171,18 +171,17 @@ WATCHLIST = {
     "2318.HK": "中国平安",
 }
 
-# 训练用股票列表（扩展57只，用于模型训练以增加样本量）
-# 包含WATCHLIST全部32只 + 25只额外股票
+# 训练用股票列表（扩展56只，用于模型训练以增加样本量）
+# 包含WATCHLIST全部32只 + 24只额外股票（2026-10-14 删 1387.HK 幽灵条目）
 TRAINING_STOCKS = {
     **WATCHLIST,  # 继承核心32只
-    # 额外25只股票（从STOCK_SECTOR_MAPPING补充）
+    # 额外24只股票（从STOCK_SECTOR_MAPPING补充）
     "0002.HK": "中电控股",
     "0006.HK": "电能实业",
     "0151.HK": "中国旺旺",
     "0020.HK": "商汤-W",
     "1177.HK": "中国生物制药",
     "1257.HK": "中国光大绿色环保",
-    "1387.HK": "中国水务",
     "1919.HK": "中远海控",
     "2186.HK": "绿叶制药",
     "2228.HK": "晶泰控股",

@@ -139,6 +139,8 @@ best config 的 Sharpe，即真信号。
   - 页面：`https://www.sfc.hk/en/Regulatory-functions/Market/Short-position-reporting/Aggregated-reportable-short-positions-of-specified-shares`（列 734 份周 CSV，文件名 `Short_Position_Reporting_Aggregated_Data_YYYYMMDD.csv`）
   - 范围：**2012-08-31 → 2026-09-25（≈14年 / 734周）**；结构 `Date, Stock Code(去前导零), Stock Name, 空头股数, 空头HK$`
   - 池覆盖：**53/57（93%）**，缺 4 只小盘（1600/1257/1387/1053，非指定证券）
+  ⚠️ 2026-10-14 更新：其中 **1387.HK 已确认是非上市代码并从池中删除**（池 → 56）；
+  余下 3 只（1600/1257/1053）为真小盘、在数据源无覆盖，非代码错误
   - akshare：✗ 无接口（全包 grep 零数据接口）→ 直连 SFC 下载，**无需自写爬虫**
 - 备选/对照：HKEX `mshtmain.htm` 实测**仅市场级聚合**（卖空总额+占成交比），`<tr>=0` 无逐股 → 不用于横截面
 - 字段→特征：空头股数 / 流通股 = 空头比率；或 空头HK$ / 市值。需归一化才跨股可比

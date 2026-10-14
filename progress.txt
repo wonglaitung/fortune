@@ -4092,3 +4092,13 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 4) 全部映射修正后 D30 组合层：净IR 0.60 / 超额 −0.71 / PBO 0.97（带[0.70,0.94] 略高于上界）/
    DSR 0.852 / 部署口径 IC −0.0051；三态净IR 0.51~0.60、PBO 0.77~0.97 ⇒ 分类口径漂移 > edge
 5) BASELINES 该块改为三态对照表；lessons 三.74 补「遗留项已决」
+
+2026-10-14 删除幽灵条目 1387.HK（池 57→56）
+1) 依据（三源交叉）：1387.HK 腾讯 v_pv_none_match / 新浪空串 / akshare 港股通 empty ⇒ 非上市代码；
+   中国水务真实代码 0855.HK（腾讯+新浪一致）
+2) 佐证：sector_features_pit.json 58 键 = 池内 56 只 + 2800/2828 两只 ETF，**从不含 1387**
+   ⇒ 它从未参与任何一轮（无特征/无预测）；MODEL_IMPROVEMENT_PLAN 亦早记「01387 服务端无行」
+3) 处置：config 删 STOCK_SECTOR_MAPPING + TRAINING_STOCKS 两处条目；池 57→56，与「实际出结果 56 只」对齐
+   删除后「池 − PIT = ∅」（此前 1387 是唯一缺口）
+4) 验证：护栏在 D30 CSV 上**数值完全不变**（1387 从未参与）；pytest 全绿；doc_gate 全绿
+5) 文档：BASELINES 两处 / MODEL_IMPROVEMENT_PLAN 加注 / lessons 三.74 附；0960 意图问题仍待用户定
