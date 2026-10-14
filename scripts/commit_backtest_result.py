@@ -129,6 +129,23 @@ def main() -> int:
                     f.write(new_src)
                 print(f"GATE_SNAPSHOT 已同步 -> {SNAPSHOT_FILE}")
 
+        # ⚠️ 2026-10-14（lessons 三.61 + 三.72）：算出的门槛若等于 GATE_FALLBACK，
+        # 说明**分位守卫恒触发的退化分支**，不是「数据驱动算出的分位数」。
+        # 此时 `GATE_SNAPSHOT` 通常与现值相同 ⇒ market_regime.py 一个字节都不会改，
+        # 但若 commit message 仍写「GATE_SNAPSHOT 同步 bear=0.7000 weak=0.6500」，
+        # 后来者会误以为门槛已随本轮数据重新校准 —— **声明与事实不一致**。
+        # 故：退化时在 stdout 与 commit message 里都显式标注「退化/回退值/非分位数」。
+        gates_degenerate = False
+        if is_20d and gates is not None:
+            from ml_services.market_regime import GATE_FALLBACK
+            gates_degenerate = all(
+                abs(gates.get(k, -1) - v) < 1e-9 for k, v in GATE_FALLBACK.items())
+            if gates_degenerate:
+                print(f"⚠️ **门槛退化**：算得 bear={gates['bear']:.4f} weak={gates['weak']:.4f} "
+                      f"== GATE_FALLBACK ⇒ 分位守卫（唯一值/极差）恒触发，"
+                      f"本次结果**不是数据驱动的分位数**，而是绝对回退值（三.61）。"
+                      f"GATE_SNAPSHOT 常量大概率不会变（无实际更新）。")
+
         r = _run(['git', 'ls-files', 'output/'])
         if r.returncode != 0:
             raise RuntimeError(f'git ls-files 失败: {r.stderr}')
@@ -145,7 +162,11 @@ def main() -> int:
             print(f"移出跟踪（工作树保留）: {len(untrack)} 个旧 CSV")
 
         dirname = os.path.basename(os.path.dirname(csv_path))
-        if gates:
+        if gates and gates_degenerate:
+            msg = (f"[skip ci] 回测入库: {dirname} + GATE_SNAPSHOT **退化/未变**"
+                   f"（算得 bear={gates['bear']:.4f} weak={gates['weak']:.4f} "
+                   f"== GATE_FALLBACK，**非分位数**；分位守卫恒触发，lessons 三.61）")
+        elif gates:
             msg = (f"[skip ci] 回测入库: {dirname} "
                    f"+ GATE_SNAPSHOT 同步 bear={gates['bear']:.4f} weak={gates['weak']:.4f}")
         else:
@@ -160,7 +181,11 @@ def main() -> int:
         if others:
             print(f"WARNING: 以下已暂存文件将随本次提交一并入库: {others}")
         r = _run(['git', 'commit', '-m', msg])
-        if r.returncode != 0 and 'nothing to commit' not in (r.stdout + r.stderr):
+        # ⚠️ 2026-10-14：git 的「无改动」措辞不止一种，旧容错只匹配 'nothing to commit'，
+        #    实际此处输出 'no changes added to commit' ⇒ 重跑同一目录必然误报 WARNING。
+        #    两种措辞都算「无改动」，但**不放宽到吞掉真实失败**（仍要求 returncode!=0）。
+        _noop = ('nothing to commit', 'no changes added to commit')
+        if r.returncode != 0 and not any(m in (r.stdout + r.stderr) for m in _noop):
             raise RuntimeError(f'git commit 失败: {r.stderr}')
         print(r.stdout.strip() or r.stderr.strip())
 

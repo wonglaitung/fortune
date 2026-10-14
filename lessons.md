@@ -2945,3 +2945,18 @@ lift 序列的自相关随之消失 —— 而那个自相关正是 HAC 要修�
 
 **规则**：凡提交消息里出现「测试 N 项全过 / 已验证」，**必须能 `git show <sha> -- tests/`
 指到文件**；指不到就把该声明从文档里删掉，并按未测处理。
+
+**同日第二个同族案例（自动化脚本）**：`commit_backtest_result.py` 的 commit message 写
+「+ GATE_SNAPSHOT 同步 bear=0.7000 weak=0.6500」，但三.61 已证分位守卫恒触发 ⇒
+算出的门槛 == `GATE_FALLBACK` ⇒ **`market_regime.py` 一个字节都没改**。
+「同步了」是假的，「门槛已随本轮数据重新校准」会被后来者当成事实。
+**修法**：退化时 stdout 与 commit message 都显式写
+「**退化/未变**（== GATE_FALLBACK，**非分位数**）」。
+
+**顺带修掉的既有 bug**：脚本容错只匹配 git 的 `nothing to commit`，
+而实际此处输出 `no changes added to commit` ⇒ **重跑同一目录必然误报
+`WARNING: 回测入库失败`**。两种措辞都算无改动，已同时匹配（**仍要求 returncode!=0**，
+不放宽到吞掉真实失败）。
+
+> 三条同源教训：**① 文档声明、② 测试声明、③ commit message —— 都是给人当依据用的，
+> 声明与事实不一致时，缺口既不会被补，也不会被记录。**

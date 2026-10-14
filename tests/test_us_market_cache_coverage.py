@@ -22,10 +22,13 @@
 """
 import os
 import pickle
+from pathlib import Path
 from datetime import datetime, timedelta
 
 import pandas as pd
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
 
 # ⚠️ 必须用 importlib 直取**模块对象**：
 # `ml_services/__init__.py:18` 有 `from .us_market_data import us_market_data`
@@ -184,3 +187,35 @@ def test_cache_key_does_not_encode_period_days():
     assert a == b
     assert '1460' not in a and '30' not in a, \
         '缓存键若已编码参数，需同步更新本护栏与 _load_cache/_save_cache 的覆盖逻辑'
+
+# --------------------------------------------------------------------------
+# 回测入库脚本的「声明必须与事实一致」（lessons 三.72 同族）
+# --------------------------------------------------------------------------
+
+def test_backtest_commit_msg_flags_degenerate_gate():
+    """退化时 commit message 必须写明「退化/非分位数」，不得写「GATE_SNAPSHOT 同步」。
+
+    **起因**：三.61 已证真实分布上分位守卫恒触发 ⇒ 算出的门槛 == `GATE_FALLBACK`，
+    `GATE_SNAPSHOT` 一个字节都不会变；但 commit message 仍写
+    「+ GATE_SNAPSHOT 同步 bear=0.7000 weak=0.6500」⇒ 后来者会误以为门槛已重新校准。
+    """
+    import sys
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    import importlib
+    m = importlib.import_module('commit_backtest_result')
+    src = (ROOT / 'scripts' / 'commit_backtest_result.py').read_text(encoding='utf-8')
+    assert 'gates_degenerate' in src, '未实现退化判定'
+    assert '退化/未变' in src, '退化时 commit message 未标注'
+    assert 'GATE_FALLBACK' in src, '退化判定未与 GATE_FALLBACK 比对'
+    assert callable(m.update_snapshot_source)
+
+
+def test_backtest_commit_tolerates_no_change_wording():
+    """重跑已入库目录时不得误报 WARNING。
+
+    git 的「无改动」措辞有两种：`nothing to commit` 与 `no changes added to commit`。
+    旧容错只匹配前者 ⇒ 重跑必然抛 WARNING（**实测复现**）。
+    """
+    src = (ROOT / 'scripts' / 'commit_backtest_result.py').read_text(encoding='utf-8')
+    assert 'no changes added to commit' in src, \
+        '容错未覆盖 git 的第二种「无改动」措辞，重跑同一目录会误报 WARNING'
