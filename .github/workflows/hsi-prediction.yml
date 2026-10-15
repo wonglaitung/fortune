@@ -42,10 +42,15 @@ jobs:
       run: |
         python hsi_prediction.py
 
-    - name: 提交预测历史记录
+    - name: 刹车滚动验证对账（D35 §十一）
+      run: |
+        python3 scripts/hsi_risk_overlay_monitor.py --update --report
+
+    - name: 提交预测历史记录 + 刹车对账本
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add data/hsi_prediction_history.json || echo "无历史记录更新"
-        git diff --quiet && git diff --staged --quiet || git commit -m "更新恒指预测历史记录 [skip ci]"
+        git add data/hsi_risk_overlay_ledger.csv || echo "无对账本更新"
+        git diff --quiet && git diff --staged --quiet || git commit -m "更新恒指预测历史 + 刹车对账本 [skip ci]"
         git push || echo "无变更需要推送"

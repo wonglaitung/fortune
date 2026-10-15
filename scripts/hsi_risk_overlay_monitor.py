@@ -191,6 +191,27 @@ def report():
         print("⚠️ 样本外未复现择时增量 ⇒ 应停用该刹车，或仅作『少投』。")
 
 
+def summary():
+    """紧凑对账摘要（供 HSI 邮件嵌入用）：返回 dict(text=白话一行, status=...)。"""
+    led = _load_ledger()
+    done = led[led['filled'] == True]  # noqa: E712
+    n, m = len(led), len(done)
+    if m < 3:
+        return {'n': n, 'filled': m, 'status': 'insufficient',
+                'text': f'样本外对账：已记 {n} 笔、回填 {m} 笔 —— 样本还太少（不到 3 笔），暂时看不出灵不灵。'}
+    dm = _daily_mark(led)
+    if dm is None:
+        return {'n': n, 'filled': m, 'status': 'nodata',
+                'text': f'样本外对账：已记 {n} 笔、回填 {m} 笔；逐日估值暂不可用。'}
+    dwbar, drows = dm
+    dsig = drows['信号(逐日刹车)']
+    dstatic = drows[f'静态等仓位({dwbar:.2f})']
+    adds = _maxdd(dsig) > _maxdd(dstatic) + 0.005
+    st = '仍灵（真会躲）' if adds else '退化（只是少投，不算会躲）'
+    return {'n': n, 'filled': m, 'status': 'ok' if adds else 'degraded',
+            'text': f'样本外对账（逐日口径）：已记 {n} 笔、回填 {m} 笔 —— {st}。'}
+
+
 def main():
     ap = argparse.ArgumentParser(description='HSI 风险覆盖层滚动验证/监控')
     ap.add_argument('--update', action='store_true', help='追加最新立场 + 回填到期实现收益')

@@ -1,0 +1,2 @@
+signal_date,stance,prob,exposure,horizon,fill_date,hsi_ret,signal_ret,hold_ret,filled
+2026-09-16,CASH,0.3815012030786839,0.0,20,,,,,False

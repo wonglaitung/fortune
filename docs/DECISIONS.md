@@ -2080,6 +2080,15 @@ Calmar 0.22 → 0.7）；**仅 20d + southbound/nasdaq**；**上实盘前须先 
   再调 `monitor --update` 累积 ledger（失败不阻断）。
 - ledger 为**运行时产物**，已加 `.gitignore`。
 - 测试：`tests/test_hsi_risk_overlay_monitor.py`（_maxdd/_ir、回填、幂等、report 4 项）。
+
+**GitHub Actions 集成（2026-10-15）**：
+
+- `hsi-prediction.yml` 增步骤「刹车滚动验证对账」：`python3 scripts/hsi_risk_overlay_monitor.py --update --report`
+  （接在 `hsi_prediction.py` 发信之后；`--report` 输出进 Actions 日志）。
+- **ledger 写回仓库**（`data/hsi_risk_overlay_ledger.csv`；doc_gate S1 例外）：
+  GH Actions 每次 checkout 都是干净副本 ⇒ **不入库 = 每次从零、永远"样本不足"**；
+  故与 `data/hsi_prediction_history.json` 一样写回，**跨次累积**。
+- 邮件「刹车」段增**「样本外对账」一行**（`monitor.summary()`；白话：已记 N 笔 / 回填 M 笔 / 尚灵·退化·样本不足）。
 - **当前**：1 条待回填（2026-09-16），样本 <3 ⇒ **尚不可判**；按月累积后再判。
 
 ### 十二、**更正（2026-10-15）**：§十/§十一 的「✅ 择时增量」是**稀疏采样假象**

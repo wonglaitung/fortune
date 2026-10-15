@@ -1192,6 +1192,11 @@ class HSI_Predictor:
                 d = json.load(f)
         except Exception:
             return ""
+        try:
+            from scripts.hsi_risk_overlay_monitor import summary as _rb_summary
+            _led = _rb_summary()['text']
+        except Exception:
+            _led = ''
         hold = d.get('stance') == 'HOLD'
         color = '#16a34a' if hold else '#dc2626'
         stance_txt = ('🟢 可以持有恒指（不用躲）' if hold else '🔴 建议先离场 / 空仓')
@@ -1206,6 +1211,7 @@ class HSI_Predictor:
                     <span style="color:#6b7280;">（依据 {d.get('as_of','?')} 市场，模型看涨概率约 {prob:.0%}）</span></div>
                 <div>它过去的表现：照它做，最惨时大约亏 <b>{sig_dd:.0f}%</b>；而一直拿着恒指，最惨要亏 <b>{hold_dd:.0f}%</b> —— 大跌时它更能帮你躲开。</div>
                 <div>是不是真会躲：{inc_txt}。</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:4px;">{_led}</div>
                 <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是"保证赚钱"的信号，只是"大跌时少亏"（涨的时候可能也会少赚一点）。目前只在"20 天"这个版本上验证过，还要用以后几个月的数据继续观察，确认它一直灵，才建议真用。</div>
             </div>
         </div>
