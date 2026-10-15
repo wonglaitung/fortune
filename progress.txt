@@ -4153,3 +4153,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    baseline 净IR 0.26 / +southbound 0.78 / +ahpremium 0.66 / +nasdaq 1.04 / +usdcnh 0.62；超额 CI 下界全 <0、折聚类 t 全 <1.96
 5) 副产物：Long/Flat 大幅降回撤（maxDD −24.0% → −8~−14%）⇒ 信号价值在风险非超额（业界"择时≈风控"）
 6) 回退：HSI_ENH 默认空 ⇒ 生产/默认行为不变。产物：D35 §八；未提交
+
+2026-10-15 D35 六周期扩展（用户要求）：5 变体 × 6 周期 = 30 格全 FAIL
+1) 驱动 scripts/hsi_enh_horizons.py（每格跑 WF + hsi_enh_eval）
+2) 矩阵（净IR 信号/持有）：baseline 1d −1.41 → 20d 0.26；各增强在个别周期最优但互不一致
+   （3d/5d ahpremium、10d usdcnh、20d nasdaq）⇒ 抽样噪声
+3) 规律①：周期越长越好、1d 最差（成本尺度效应，同 D33）；1d maxDD 反更差(−48.7% vs −28.0%，whipsaw)
+4) 规律②：无增强跨周期一致占优 ⇒ "最优增强"是噪声
+5) 终判：补死特征+加信号，六周期 30 格全 FAIL；唯一稳健正向是 ≥3d 降回撤（风控非 alpha）
