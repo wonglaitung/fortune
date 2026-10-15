@@ -4119,3 +4119,14 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 7) 产物：output/{1d,3d,5d,10d,15d,20d} fresh、BASELINES 六周期表、DECISIONS D32/D33、lessons 三.76/三.77、
    ml_services/vol_target_timing.py + tests、scripts/pooled_horizon_test.py
    ⚠️ 未提交（待用户）；vol-target 回测用缓存 HSI.pkl（腾讯恒指取数持续失败），结论为结构性
+
+2026-10-15 立项 D34：PIT 恒指成分表（解除 D31 提案A 的 A2 数据阻断）
+1) 背景：D31 提案A（换恒指成分池）被 A 级（先验方向相反）+ A2（无 PIT 成分表）双否；本条目只解决 A2
+2) 诚实前提：本立项 = 扫清数据阻断以便公平检验，**非预期发现 edge**；先验方向仍是更低 IC（恒指最拥挤）
+3) 数据源调研：HSIL 官方公告（免费/逐季，无整表）、Wikipedia/东财变更表（免费/须校验）、
+   Siblis Research（PIT+生效日，History Licence $349 一次性 / $576/年，须先确认含 HSI）、
+   机构供应商（Wind/Bloomberg/CSMAR，需订阅）；akshare/tushare 只有当前成分
+4) 门槛：先免费路径 + 3~5 生效日交叉校验；**不建议付费**（先验更差，边际价值低）
+5) 规格：覆盖 2017-06→今（WF 训练窗回看 ~3 年）；字段=公告日/生效日/纳入/剔除；产物 CSV+manifest
+6) 预登记判据（拿到数据后）：恒指池部署口径 IC HAC t>1.96 且 净IR≥0.7 ∧ PBO<0.5 ∧ DSR≥0.95 ∧ 超额CI>0
+   → 才算"恒指池更好"；预期反向（更差）
