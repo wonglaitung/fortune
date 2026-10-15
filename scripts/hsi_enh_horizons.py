@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from hsi_enh_eval import evaluate  # noqa: E402
+from hsi_signal_static_check import static_check  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VARIANTS = {'baseline': '', 'southbound': 'southbound', 'ahpremium': 'ahpremium',
@@ -53,10 +54,14 @@ def main():
                 print(f"⚠️ H={h} {v}: 无预测 CSV（跳过）", flush=True)
                 continue
             r = evaluate(csv, h)
+            sc = static_check(csv, h)
+            r['adds'] = sc['adds']
+            r['wbar'] = sc['wbar']
             res[(h, v)] = r
             print(f"  H={h:>2} {v:<12} 期数{r['n']:>3} 净IR {r['ir_sig']:>5.2f} "
                   f"超额[{r['ex_lo']*100:>+6.2f}%,{r['ex_hi']*100:>+6.2f}%] "
-                  f"t {r['fold_t']:>5.2f} maxDD {r['maxdd_sig']*100:>5.1f}% -> {verdict(r)}",
+                  f"t {r['fold_t']:>5.2f} maxDD {r['maxdd_sig']*100:>5.1f}% "
+                  f"w̄{sc['wbar']:.2f} 择时{'有' if sc['adds'] else '无'} -> {verdict(r)}",
                   flush=True)
 
     print("\n" + "=" * 100)
@@ -86,6 +91,14 @@ def main():
         for h in HORIZONS:
             r = res.get((h, v))
             line += (f"{r['maxdd_sig']*100:>6.1f}%/{r['maxdd_base']*100:<6.1f}%" if r else f"{'—':>14}")
+        print(line)
+    print("-" * 100)
+    print(f"{'择时有增量(vs静态w̄)':<12}" + "".join(f"{str(h)+'d':>14}" for h in HORIZONS))
+    for v in VARIANTS:
+        line = f"{v:<12}"
+        for h in HORIZONS:
+            r = res.get((h, v))
+            line += f"{('✅有' if r['adds'] else '❌无') if r else '—':>14}"
         print(line)
 
 
