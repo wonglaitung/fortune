@@ -4147,9 +4147,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 1) 侦察：HSI 方向 Long/Flat 基线 净IR 0.26 vs 买入持有 0.49；Southbound_Net_Inflow/Net_Buy 被硬编码为 0
 2) 实现 hsi_walk_forward.py 增 HSI_ENH 环境变量（单变量 A/B）：southbound/ahpremium/nasdaq/usdcnh
    ⚠️ 发现 net_inflow(akshare '当日资金流入') 近年整列 NaN → 未 fillna 会致 fold 静默跳折（已修）
-   usdcnh 数据缺口（yf CNH=X 空）⇒ 本次未测
+   usdcnh: 离岸 CNH 不可得(yf CNH=X 空) ⇒ 用在岸 USDCNY=X 代理(1300 行)已测
 3) 新评估器 scripts/hsi_enh_eval.py（超额 95%CI + 折聚类 t + maxDD）
 4) A/B 判决（20d，35 非重叠期，同网格 697 行）：四变体全 FAIL
-   baseline 净IR 0.26 / +southbound 0.78 / +ahpremium 0.66 / +nasdaq 1.04；超额 CI 下界全 <0、折聚类 t 全 <1.96
+   baseline 净IR 0.26 / +southbound 0.78 / +ahpremium 0.66 / +nasdaq 1.04 / +usdcnh 0.62；超额 CI 下界全 <0、折聚类 t 全 <1.96
 5) 副产物：Long/Flat 大幅降回撤（maxDD −24.0% → −8~−14%）⇒ 信号价值在风险非超额（业界"择时≈风控"）
 6) 回退：HSI_ENH 默认空 ⇒ 生产/默认行为不变。产物：D35 §八；未提交

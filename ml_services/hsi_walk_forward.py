@@ -52,7 +52,7 @@ HSI_ENH = [s.strip() for s in os.environ.get('HSI_ENH', '').split(',') if s.stri
 
 ENH_FEATURES = {
     'ahpremium': ['AH_Premium_Median', 'AH_Premium_ZScore'],
-    'usdcnh': ['USDCNH_Ret5d', 'USDCNH_ZScore'],
+    'usdcnh': ['USDCNY_Ret5d', 'USDCNY_ZScore'],  # 离岸 CNH 不可得(yf CNH=X 空) → 用在岸 USDCNY=X 代理
     'nasdaq': ['Nasdaq_Ret5d'],
 }
 
@@ -182,7 +182,8 @@ class HSIWalkForwardValidator:
         extra = {}
         if 'usdcnh' in HSI_ENH:
             try:
-                extra['cnh'] = yf.Ticker("CNH=X").history(period="5y", interval="1d")
+                # 离岸 CNH(yf CNH=X) 返回空 ⇒ 用在岸 USDCNY=X 代理（2026-10-15 实测 1300 行）
+                extra['cnh'] = yf.Ticker("USDCNY=X").history(period="5y", interval="1d")
             except Exception as e:
                 print(f"  ⚠️ USD/CNH 获取失败: {e}")
                 extra['cnh'] = pd.DataFrame()
@@ -425,14 +426,14 @@ class HSIWalkForwardValidator:
             if cnh is not None and not cnh.empty and 'Close' in cnh.columns:
                 c = _align_external(cnh['Close'], df.index).ffill().bfill().fillna(0.0)
                 if not c.notna().any() or c.nunique() <= 1:
-                    print("  ⚠️ USD/CNH 对齐后为空/常量，该增强无效")
-                df['USDCNH_Ret5d'] = c.pct_change(5)
+                    print("  ⚠️ USD/CNY 对齐后为空/常量，该增强无效")
+                df['USDCNY_Ret5d'] = c.pct_change(5)
                 mu = c.rolling(120, min_periods=20).mean()
                 sd = c.rolling(120, min_periods=20).std()
-                df['USDCNH_ZScore'] = (c - mu) / (sd + 1e-9)
+                df['USDCNY_ZScore'] = (c - mu) / (sd + 1e-9)
             else:
-                df['USDCNH_Ret5d'] = np.nan
-                df['USDCNH_ZScore'] = np.nan
+                df['USDCNY_Ret5d'] = np.nan
+                df['USDCNY_ZScore'] = np.nan
 
         # ========== D35 增强：纳指动量（④b）==========
         if 'nasdaq' in HSI_ENH:
