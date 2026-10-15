@@ -2063,8 +2063,10 @@ Calmar 0.22 → 0.7）；**仅 20d + southbound/nasdaq**；**上实盘前须先 
 
 **邮件集成（2026-10-15）**：
 
-- `hsi_risk_overlay.py` 增 `--save`（默认落 `data/hsi_risk_overlay_latest.json`）。
-- `hsi_prediction.py` 邮件新增 **「🛡 大跌保护（刹车）」section**（读该 JSON；**大白话**：现在的建议 / 它过去的表现（最惨亏多少 vs 一直持有）/ 是不是真会躲 / 免责"不是保证赚钱、只是大跌少亏、只 20 天版、需继续观察"）。
+- `hsi_risk_overlay.py` 增 `--save`（默认落 `data/hsi_risk_overlay_latest_{周期}d.json`，如 `_5d`/`_20d`）。
+- `hsi_prediction.py` 邮件新增 **「🛡 大跌保护（刹车）」section**：**5 天 / 20 天两行表格**
+  （各读 `..._latest_{h}d.json`；`_ensure_risk_overlay` 刷新两周期），列=现在的建议 / 照它做最惨亏 / 一直拿着最惨亏 / 是不是真会躲；
+  **大白话 + 明示"两者可能不一样 —— 别只挑一个听" + 免责"不是保证赚钱、只是大跌少亏、需继续观察"**。
 - `hsi_prediction.run()` 发信前调 `_ensure_risk_overlay()`：JSON 缺失或 **> 2 天**则重跑刷新（失败不阻断邮件，section 显示"未生成"）。
 - 该 JSON 为**运行时产物**，已加入 `.gitignore`（类比 `data/model_accuracy.json`）。
 - 测试：`tests/test_hsi_email_risk_overlay.py`（缺失/空仓/持有 3 项）+ `tests/test_hsi_risk_overlay.py`（3 项）。

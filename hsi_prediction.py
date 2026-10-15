@@ -1176,71 +1176,79 @@ class HSI_Predictor:
         return anomalies
 
     def _risk_overlay_html(self):
-        """HSI 风险覆盖层（刹车）立场 —— 读 data/hsi_risk_overlay_latest.json（D35 §十一）。
+        """HSI 大跌保护（刹车）—— **5 天 / 20 天两行**（读 data/hsi_risk_overlay_latest_{h}d.json，D35 §十一）。"""
+        def _read(h):
+            p = os.path.join(data_dir, f'hsi_risk_overlay_latest_{h}d.json')
+            try:
+                with open(p, encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception:
+                return None
 
-        ⚠️ 不是 alpha：目标=降回撤，期望收益 ≈ 买入持有；仅 20d + southbound/nasdaq 经 D35 验证。
-        数据由 `python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20` 生成。
-        """
-        path = os.path.join(data_dir, 'hsi_risk_overlay_latest.json')
+        data = {h: _read(h) for h in (5, 20)}
         header = '        <div class="section">\n            <div class="section-title">🛡 大跌保护（刹车）</div>\n'
-        if not os.path.exists(path):
+        if not any(data.values()):
             return (header + '            <div style="font-size:13px;color:#6b7280;">暂未生成'
-                    '（先运行 <code>python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20</code> 生成）。</div>\n'
+                    '（先运行 <code>python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20</code>）。</div>\n'
                     '        </div>\n')
-        try:
-            with open(path, encoding='utf-8') as f:
-                d = json.load(f)
-        except Exception:
-            return ""
         try:
             from scripts.hsi_risk_overlay_monitor import summary as _rb_summary
             _led = _rb_summary()['text']
         except Exception:
             _led = ''
-        hold = d.get('stance') == 'HOLD'
-        color = '#16a34a' if hold else '#dc2626'
-        stance_txt = ('🟢 可以持有恒指；若你已空仓，可考虑回到场内（但这不是"最佳买点"）'
-                      if hold else '🔴 建议先离场 / 空仓')
-        prob = float(d.get('prob', 0))
-        sig_dd = abs(float(d.get('maxdd_sig', 0)) * 100)
-        hold_dd = abs(float(d.get('maxdd_hold', 0)) * 100)
-        inc = d.get('timing_increment')
-        inc_txt = ('是真的会挑时候躲（比"固定只拿一半"躲得还好）' if inc
-                   else '好处可能只是"少买了点"，不一定是真会躲')
-        return (header + f'''            <div style="font-size:13px;color:#374151;line-height:1.95;">
-                <div>现在的建议：<span style="color:{color};font-weight:700;">{stance_txt}</span>
-                    <span style="color:#6b7280;">（依据 {d.get('as_of','?')} 市场，模型看涨概率约 {prob:.0%}）</span></div>
-                <div>它过去的表现：照它做，最惨时大约亏 <b>{sig_dd:.0f}%</b>；而一直拿着恒指，最惨要亏 <b>{hold_dd:.0f}%</b> —— 大跌时它更能帮你躲开。</div>
-                <div>是不是真会躲：{inc_txt}。</div>
-                <div style="font-size:12px;color:#6b7280;margin-top:4px;">{_led}</div>
-                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是"保证赚钱"的信号，只是"大跌时少亏"（涨的时候可能也会少赚一点）。目前只在"20 天"这个版本上验证过，还要用以后几个月的数据继续观察，确认它一直灵，才建议真用。</div>
+        rows = ''
+        for h in (5, 20):
+            d = data.get(h)
+            if not d:
+                continue
+            hold = d.get('stance') == 'HOLD'
+            sc = '#16a34a' if hold else '#dc2626'
+            st = '🟢 可以持有' if hold else '🔴 先离场 / 空仓'
+            sig_dd = abs(float(d.get('maxdd_sig', 0)) * 100)
+            hold_dd = abs(float(d.get('maxdd_hold', 0)) * 100)
+            inc = '会挑时候躲' if d.get('timing_increment') else '可能只是少买'
+            rows += (f'<tr><td style="font-weight:600;">{h} 天</td>'
+                     f'<td style="color:{sc};font-weight:600;">{st}</td>'
+                     f'<td>约 {sig_dd:.0f}%</td><td>约 {hold_dd:.0f}%</td>'
+                     f'<td>{inc}</td></tr>')
+        return (header + '''            <div style="font-size:13px;color:#374151;line-height:1.9;">
+                <table style="font-size:12px;">
+                    <thead><tr><th>天数</th><th>现在的建议</th><th>照它做·最惨亏</th><th>一直拿着·最惨亏</th><th>是不是真会躲</th></tr></thead>
+                    <tbody>''' + rows + '''</tbody>
+                </table>
+                <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+                    🟢 可以持有；若你已空仓，可考虑回到场内（但这不是"最佳买点"）。🔴 先离场 / 空仓。<br>
+                    5 天管短期、20 天管中期，<b>两者可能不一样 —— 别只挑一个听</b>。<br>''' + _led + '''</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是"保证赚钱"的信号，只是"大跌时少亏"（涨的时候可能也会少赚一点）。目前只在 5 天 / 20 天版本上验证过，还要用以后几个月的数据继续观察，确认它一直灵，才建议真用。</div>
             </div>
         </div>
 ''')
 
-    def _ensure_risk_overlay(self, max_age_days=2):
-        """若 data/hsi_risk_overlay_latest.json 缺失/过旧，则重跑 hsi_risk_overlay.py 生成（D35）。
+    def _ensure_risk_overlay(self, horizons=(5, 20), max_age_days=2):
+        """若 data/hsi_risk_overlay_latest_{h}d.json 缺失/过旧，则重跑生成（D35）。
 
         保证邮件"刹车"section 有数据；失败不阻断邮件（section 显示"未生成"）。
         """
         import subprocess
-        path = os.path.join(data_dir, 'hsi_risk_overlay_latest.json')
-        try:
-            if os.path.exists(path):
-                with open(path, encoding='utf-8') as f:
-                    d = json.load(f)
-                age = (datetime.now() - datetime.fromisoformat(d['generated_at'])).days
-                if age < max_age_days:
-                    return
-        except Exception:
-            pass
-        print("🛡 刷新 HSI 风险覆盖层 JSON...")
-        try:
-            subprocess.run([sys.executable, 'ml_services/hsi_risk_overlay.py',
-                            '--enh', 'nasdaq', '--horizon', '20'],
-                           cwd=script_dir, timeout=1800, check=False)
-        except Exception as e:
-            print(f"⚠️ 风险覆盖层刷新失败（邮件将显示'未生成'）: {e}")
+        for h in horizons:
+            path = os.path.join(data_dir, f'hsi_risk_overlay_latest_{h}d.json')
+            fresh = False
+            try:
+                if os.path.exists(path):
+                    with open(path, encoding='utf-8') as f:
+                        d = json.load(f)
+                    fresh = (datetime.now() - datetime.fromisoformat(d['generated_at'])).days < max_age_days
+            except Exception:
+                fresh = False
+            if fresh:
+                continue
+            print(f"🛡 刷新 HSI 风险覆盖层 JSON（{h}d）...")
+            try:
+                subprocess.run([sys.executable, 'ml_services/hsi_risk_overlay.py',
+                                '--enh', 'nasdaq', '--horizon', str(h)],
+                               cwd=script_dir, timeout=1800, check=False)
+            except Exception as e:
+                print(f"⚠️ 风险覆盖层刷新失败（{h}d，邮件将显示'未生成'）: {e}")
 
     def generate_email_content(self, score, trend, feature_details, multi_horizon_results=None):
         """生成邮件内容（HTML格式）- 精简版，专注于投资决策参考"""

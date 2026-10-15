@@ -165,8 +165,8 @@ def main():
     ap.add_argument('--asof', action='store_true', help='只报当前立场')
     ap.add_argument('--daily', action='store_true',
                     help='逐日 P&L 视图（更细的净值/回撤；IR 未做 HAC，仅作细粒度观察）')
-    ap.add_argument('--save', type=str, default='data/hsi_risk_overlay_latest.json',
-                    help='聚类立场+统计落 JSON（供 HSI 预测邮件读取）；相对项目根')
+    ap.add_argument('--save', type=str, default=None,
+                    help='立场+统计落 JSON（默认 data/hsi_risk_overlay_latest_{周期}d.json）；相对项目根')
     ap.add_argument('--no-save', action='store_true', help='不落盘')
     a = ap.parse_args()
 
@@ -176,7 +176,8 @@ def main():
     wbar_d, rows_d = daily_overlay(csv, a.horizon, a.exposure_flat)     # 20d 仓·逐日估值（诚实）
 
     if not a.no_save:
-        p = a.save if os.path.isabs(a.save) else os.path.join(ROOT, a.save)
+        save = a.save or f'data/hsi_risk_overlay_latest_{a.horizon}d.json'
+        p = save if os.path.isabs(save) else os.path.join(ROOT, save)
         j = save_latest(p, a.enh, a.horizon, last, wbar_d, rows_d, a.exposure_flat)
         print(f"💾 立场已落盘: {p}（stance={j['stance']} as_of={j['as_of']} basis=daily_mark）")
 

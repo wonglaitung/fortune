@@ -4220,3 +4220,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 四大交易法则→"四个经验规律"；Walk-forward→历史回看；描述去术语
 - 交易建议 description 去 Bonferroni/净贡献；consistency 去"无交易边缘"
 - py_compile OK；12 passed；doc_gate 全绿
+
+2026-10-15 刹车段加 5d（用户"只加5d"）：邮件"5天/20天两行"
+1) hsi_risk_overlay JSON 改按周期命名 data/hsi_risk_overlay_latest_{h}d.json（默认）
+2) 邮件 _risk_overlay_html 改两行表格(5天/20天)：天数/现在的建议/照它做最惨亏/一直拿着最惨亏/是不是真会躲
+   _ensure_risk_overlay 刷新 5d+20d 两份；明示"两者可能不一样，别只挑一个听"
+3) monitor JSON_PATH 改 _20d.json；.gitignore 改 latest*.json
+4) 实测：5d=可以持有、20d=先离场（正好演示会打架）；8 passed；doc_gate 全绿

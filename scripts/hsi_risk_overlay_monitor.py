@@ -28,7 +28,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 LEDGER = os.path.join(ROOT, 'data', 'hsi_risk_overlay_ledger.csv')
-JSON_PATH = os.path.join(ROOT, 'data', 'hsi_risk_overlay_latest.json')
+JSON_PATH = os.path.join(ROOT, 'data', 'hsi_risk_overlay_latest_20d.json')
 COST = 0.005
 COLS = ['signal_date', 'stance', 'prob', 'exposure', 'horizon',
         'fill_date', 'hsi_ret', 'signal_ret', 'hold_ret', 'filled']
