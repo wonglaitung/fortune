@@ -4255,3 +4255,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 3) 新 scripts/style_factor_backtest.py：mom20 0.55/mom60 0.46/mom120 0.96/lowvol 0.14/rev5 -0.30
    全 CI 跨 0 ⇒ 动量 0/3 ⇒ ❌ 风格层无 alpha（价格型）
 4) 三层总账加"④风格层(价格型)也❌；价值/规模/质量无PIT算不了"（DECISIONS + AGENTS）
+
+2026-10-15 D40 调研：港股 PIT 基本面数据源（用户"调研"）
+1) 现状：仓库 akshare stock_hk_financial_indicator_em(最新快照) → create_fundamental_features 已返回 NaN（诚实缺失）
+2) 关键发现：akshare stock_financial_hk_analysis_indicator_em 返回**多期**港股财务（00700 有 9 期，带 REPORT_DATE，
+   含 EPS/BPS/ROE/ROA/毛利率）→ **免费可拿历史**（优于 D34）
+3) 调研表：免费(akshare 多期 / 无公告日；HKEX 披露易有公告日但解析重) vs 付费(Capital IQ/Compustat 真PIT；Wind/Bloomberg/WRDS)
+4) 判断：免费路径可行（REPORT_DATE+报告滞后 近似 PIT）⇒ 值得一次"PIT 近似"价值/质量验证（另立 D41）；不直接付费
