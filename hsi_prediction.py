@@ -1199,7 +1199,8 @@ class HSI_Predictor:
             _led = ''
         hold = d.get('stance') == 'HOLD'
         color = '#16a34a' if hold else '#dc2626'
-        stance_txt = ('🟢 可以持有恒指（不用躲）' if hold else '🔴 建议先离场 / 空仓')
+        stance_txt = ('🟢 可以持有恒指；若你已空仓，可考虑回到场内（但这不是"最佳买点"）'
+                      if hold else '🔴 建议先离场 / 空仓')
         prob = float(d.get('prob', 0))
         sig_dd = abs(float(d.get('maxdd_sig', 0)) * 100)
         hold_dd = abs(float(d.get('maxdd_hold', 0)) * 100)

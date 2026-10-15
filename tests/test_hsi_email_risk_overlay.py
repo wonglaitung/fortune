@@ -36,4 +36,4 @@ def test_section_hold(monkeypatch, tmp_path):
         'calmar_sig': 0.70, 'calmar_hold': 0.22, 'timing_increment': True,
     }, ensure_ascii=False), encoding='utf-8')
     h = _inst()._risk_overlay_html()
-    assert '持有恒指' in h
+    assert '持有恒指' in h and '回到场内' in h
