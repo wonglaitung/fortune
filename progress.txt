@@ -4183,3 +4183,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 3) run() 发信前 _ensure_risk_overlay()：JSON 缺失或 >2 天则重跑刷新(失败不阻断，section 显示"未生成")
 4) JSON 为运行时产物，加入 .gitignore(类比 data/model_accuracy.json)
 5) tests/test_hsi_email_risk_overlay.py(缺失/空仓/持有3项)+test_hsi_risk_overlay.py(3项)；doc_gate 全绿
+
+2026-10-15 风险覆盖层"滚动(样本外)验证"（用户"需要"）
+1) 新 scripts/hsi_risk_overlay_monitor.py：--update 追加立场+到期用真实 HSI 回填实现收益；--report 报实现表现+是否仍灵
+2) 接入 HSI 邮件流程：run() 刷新立场后调 monitor --update 累积 ledger（失败不阻断）
+3) ledger 运行时产物加 .gitignore；tests/test_hsi_risk_overlay_monitor.py 4 项
+4) 当前 1 条待回填(2026-09-16)，样本<3 ⇒ 尚不可判，按月累积

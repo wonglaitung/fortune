@@ -2068,3 +2068,15 @@ Calmar 0.22 → 0.7）；**仅 20d + southbound/nasdaq**；**上实盘前须先 
 - `hsi_prediction.run()` 发信前调 `_ensure_risk_overlay()`：JSON 缺失或 **> 2 天**则重跑刷新（失败不阻断邮件，section 显示"未生成"）。
 - 该 JSON 为**运行时产物**，已加入 `.gitignore`（类比 `data/model_accuracy.json`）。
 - 测试：`tests/test_hsi_email_risk_overlay.py`（缺失/空仓/持有 3 项）+ `tests/test_hsi_risk_overlay.py`（3 项）。
+
+**滚动（样本外）验证（2026-10-15，用户"需要"）**：
+
+- 新增 `scripts/hsi_risk_overlay_monitor.py`：
+  - `--update`：读 JSON 取最新立场 → 追加 `data/hsi_risk_overlay_ledger.csv`；对已到期记录
+    （signal_date + horizon 交易日）用**真实 HSI 行情**回填实现收益。
+  - `--report`：报 信号 vs 买入持有 vs 静态等仓位 的**实现**表现 + 「仍灵 / 退化（仅少投） / 样本不足」。
+- 接入 HSI 邮件流程：`hsi_prediction.run()` 发信前 `_ensure_risk_overlay()` 刷新立场后，
+  再调 `monitor --update` 累积 ledger（失败不阻断）。
+- ledger 为**运行时产物**，已加 `.gitignore`。
+- 测试：`tests/test_hsi_risk_overlay_monitor.py`（_maxdd/_ir、回填、幂等、report 4 项）。
+- **当前**：1 条待回填（2026-09-16），样本 <3 ⇒ **尚不可判**；按月累积后再判。

@@ -2812,6 +2812,13 @@ class HSI_Predictor:
             if send_email_flag:
                 # 8.5 刷新 HSI 风险覆盖层（刹车）JSON（D35 §十一；失败不阻断）
                 self._ensure_risk_overlay()
+                # 8.6 追加到滚动（样本外）验证 ledger（用真实未来数据持续盯；失败不阻断）
+                try:
+                    import subprocess as _sp
+                    _sp.run([sys.executable, 'scripts/hsi_risk_overlay_monitor.py', '--update'],
+                            cwd=script_dir, timeout=300, check=False)
+                except Exception as _e:
+                    print(f"⚠️ 风险覆盖层 ledger 更新失败（不影响邮件）: {_e}")
                 print("\n" + "="*80)
                 print("正在发送预测邮件...".center(80))
                 print("="*80 + "\n")
