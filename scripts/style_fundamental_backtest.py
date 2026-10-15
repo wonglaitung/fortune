@@ -11,6 +11,7 @@
 用法：python3 scripts/style_fundamental_backtest.py
 """
 
+import argparse
 import os
 import pickle
 import sys
@@ -58,7 +59,7 @@ def fetch_fund(codes):
     return out
 
 
-def load_prices():
+def load_prices(start=START, end=None):
     closes = {}
     for code in STOCK_SECTOR_MAPPING:
         fp = os.path.join(SNAP, code.replace('.HK', '').zfill(5) + '.pkl')
@@ -71,7 +72,10 @@ def load_prices():
             s.index = s.index.tz_localize(None)
         closes[code] = s
     panel = pd.DataFrame(closes).sort_index()
-    return panel[panel.index >= START]
+    panel = panel[panel.index >= start]
+    if end:
+        panel = panel[panel.index <= end]
+    return panel
 
 
 def _ci(x, n=2000, seed=42):
@@ -90,6 +94,13 @@ def _ir(x):
 
 
 def main():
+    ap = argparse.ArgumentParser(description='价值/质量风格层（PIT 近似，D41/D42）')
+    ap.add_argument('--start', default=START)
+    ap.add_argument('--end', default=None)
+    ap.add_argument('--lag', type=int, default=LAG, help='报告滞后天数（缓存基于 90d ⇒ 按 lag-90 平移）')
+    ap.add_argument('--styles', default=','.join(STYLES))
+    a = ap.parse_args()
+
     codes = list(STOCK_SECTOR_MAPPING.keys())
     if os.path.exists(CACHE):
         fund = pickle.load(open(CACHE, 'rb'))
@@ -99,12 +110,16 @@ def main():
         fund = fetch_fund(codes)
         pickle.dump(fund, open(CACHE, 'wb'))
     fund = {c: f for c, f in fund.items() if len(f) > 0}
-    print(f"基本面 {len(fund)} 只")
+    # 缓存 avail_date = report_date+90；按 lag-90 平移得到目标滞后
+    shift = pd.Timedelta(days=a.lag - 90)
+    if shift != pd.Timedelta(0):
+        fund = {c: f.set_axis(f.index + shift) for c, f in fund.items()}
+    print(f"基本面 {len(fund)} 只 | LAG={a.lag}d")
 
-    prices = load_prices()
+    prices = load_prices(a.start, a.end)
     fund_pit = {c: f.reindex(prices.index, method='ffill') for c, f in fund.items()}
 
-    print(f"池 {prices.shape[1]} 只 | 窗口 {prices.index.min().date()} ~ {prices.index.max().date()} | top-K={K} H={H} LAG={LAG}d")
+    print(f"池 {prices.shape[1]} 只 | 窗口 {prices.index.min().date()} ~ {prices.index.max().date()} | top-K={K} H={H} LAG={a.lag}d")
 
     def run(style):
         idx = prices.index
@@ -140,7 +155,7 @@ def main():
     print("=" * 88)
     print(f"{'风格':<8}{'期数':>5}{'超额均/期':>10}{'超额IR':>8}{'超额95%CI':>18}{'胜率':>7}{'基准IR':>7}{'判定':>5}")
     vpass = qpass = 0
-    for style in STYLES:
+    for style in a.styles.split(','):
         r = run(style)
         ex = (r['strat'] - r['bench']).values
         lo, hi = _ci(ex)
