@@ -41,6 +41,54 @@ from data_services.info_decay_analyzer import InfoDecayAnalyzer, INFO_DECAY_FEAT
 # ========== 配置 ==========
 HSI_SYMBOL = "^HSI"
 
+# ========== D35 增强（预登记 · 2026-10-15，单变量 A/B）==========
+# 通过环境变量 HSI_ENH 选择启用哪些增强（逗号分隔；默认空=基线）：
+#   southbound 补实南向净买入/净流入真值（基线里被硬编码为 0）
+#   ahpremium  A-H 溢价聚合（中位，长史）
+#   usdcnh     USD/CNH 动量
+#   nasdaq     纳指动量（跨资产风险偏好）
+# 例：HSI_ENH=southbound python3 ml_services/hsi_walk_forward.py --horizon 20
+HSI_ENH = [s.strip() for s in os.environ.get('HSI_ENH', '').split(',') if s.strip()]
+
+ENH_FEATURES = {
+    'ahpremium': ['AH_Premium_Median', 'AH_Premium_ZScore'],
+    'usdcnh': ['USDCNH_Ret5d', 'USDCNH_ZScore'],
+    'nasdaq': ['Nasdaq_Ret5d'],
+}
+
+
+def _strip_norm(idx):
+    i = pd.to_datetime(idx)
+    if getattr(i, 'tz', None) is not None:
+        i = i.tz_convert(None)
+    return i.normalize()
+
+
+def _align_external(ext: pd.Series, idx) -> pd.Series:
+    """把外部序列（日期可能 naive/带时区）按**日期**对齐到 idx，ffill。"""
+    ext = ext.copy()
+    ext.index = _strip_norm(ext.index)
+    tgt = _strip_norm(idx)
+    return ext.reindex(tgt, method='ffill').set_axis(idx)
+
+
+def _load_ah_premium_median():
+    """读 data/ah_premium/ah_*.csv，按日取各配对 premium_pit 的中位数。"""
+    import glob
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    files = sorted(glob.glob(os.path.join(root, 'data', 'ah_premium', 'ah_*.csv')))
+    frames = []
+    for f in files:
+        try:
+            frames.append(pd.read_csv(f, usecols=['date', 'premium_pit']))
+        except Exception:
+            continue
+    if not frames:
+        return None
+    allp = pd.concat(frames, ignore_index=True)
+    allp['date'] = pd.to_datetime(allp['date'])
+    return allp.groupby('date')['premium_pit'].median().sort_index()
+
 # 特征配置（原始73特征集，经过验证效果最佳）
 FEATURE_CONFIG = {
     'macro_features': ['US_10Y_Yield', 'US_10Y_Yield_Change_5d', 'VIX', 'VIX_Change_5d'],
@@ -96,6 +144,9 @@ class HSIWalkForwardValidator:
         self.feature_names = []
         for category, features in FEATURE_CONFIG.items():
             self.feature_names.extend(features)
+        # D35：启用增强项的额外特征
+        for enh in HSI_ENH:
+            self.feature_names.extend(ENH_FEATURES.get(enh, []))
 
         print("=" * 80)
         print("🔬 恒生指数 Walk-forward 验证系统")
@@ -127,12 +178,28 @@ class HSIWalkForwardValidator:
         vix = yf.Ticker("^VIX")
         vix_df = vix.history(period="5y", interval="1d")
 
+        # D35 增强：USD/CNH、纳指（仅启用时取，避免无谓失败）
+        extra = {}
+        if 'usdcnh' in HSI_ENH:
+            try:
+                extra['cnh'] = yf.Ticker("CNH=X").history(period="5y", interval="1d")
+            except Exception as e:
+                print(f"  ⚠️ USD/CNH 获取失败: {e}")
+                extra['cnh'] = pd.DataFrame()
+        if 'nasdaq' in HSI_ENH:
+            try:
+                extra['nasdaq'] = yf.Ticker("^IXIC").history(period="5y", interval="1d")
+            except Exception as e:
+                print(f"  ⚠️ Nasdaq 获取失败: {e}")
+                extra['nasdaq'] = pd.DataFrame()
+
         print(f"  ✅ 数据获取完成（恒指：{len(hsi_df)} 条）")
 
-        return hsi_df, us_df, vix_df
+        return hsi_df, us_df, vix_df, extra
 
-    def calculate_features(self, hsi_df, us_df, vix_df):
+    def calculate_features(self, hsi_df, us_df, vix_df, extra=None):
         """计算特征"""
+        extra = extra or {}
         df = hsi_df.copy()
 
         # ========== 移动平均线 ==========
@@ -294,9 +361,28 @@ class HSIWalkForwardValidator:
             df['VIX'] = vix_aligned['Close']
             df['VIX_Change_5d'] = df['VIX'].pct_change(5)
 
-        # ========== 港股通特征 ==========
-        df['Southbound_Net_Inflow'] = 0
-        df['Southbound_Net_Buy'] = 0
+        # ========== 港股通南向资金（D35：补实真值；未启用时保持 0 = 基线）==========
+        if 'southbound' in HSI_ENH:
+            try:
+                sb = SouthboundDataService().fetch_history()
+                if sb is not None and not sb.empty and 'net_buy' in sb.columns:
+                    # ⚠️ net_inflow（来自 akshare '当日资金流入'）在近年**整列为 NaN**，
+                    # 未 fillna 会被后续 dropna 整段删除 → fold 跳折（2026-10-15 实测）。
+                    df['Southbound_Net_Buy'] = _align_external(sb['net_buy'], df.index).ffill().fillna(0.0)
+                    if 'net_inflow' in sb.columns:
+                        df['Southbound_Net_Inflow'] = _align_external(sb['net_inflow'], df.index).ffill().fillna(0.0)
+                    else:
+                        df['Southbound_Net_Inflow'] = 0.0
+                else:
+                    df['Southbound_Net_Buy'] = 0.0
+                    df['Southbound_Net_Inflow'] = 0.0
+            except Exception as e:
+                print(f"  ⚠️ 南向资金获取失败，回退 0: {e}")
+                df['Southbound_Net_Buy'] = 0.0
+                df['Southbound_Net_Inflow'] = 0.0
+        else:
+            df['Southbound_Net_Inflow'] = 0
+            df['Southbound_Net_Buy'] = 0
 
         # ========== 日历效应特征（2026-04-26 新增）==========
         calendar_calc = CalendarFeatureCalculator()
@@ -320,6 +406,43 @@ class HSIWalkForwardValidator:
         # info_decay_analyzer = InfoDecayAnalyzer()
         # df = info_decay_analyzer.calculate_features(df)
 
+        # ========== D35 增强：A-H 溢价聚合（②）==========
+        if 'ahpremium' in HSI_ENH:
+            prem = _load_ah_premium_median()
+            if prem is not None and len(prem):
+                p = _align_external(prem, df.index).ffill().bfill().fillna(0.0)
+                df['AH_Premium_Median'] = p
+                mu = p.rolling(120, min_periods=20).mean()
+                sd = p.rolling(120, min_periods=20).std()
+                df['AH_Premium_ZScore'] = (p - mu) / (sd + 1e-9)
+            else:
+                df['AH_Premium_Median'] = np.nan
+                df['AH_Premium_ZScore'] = np.nan
+
+        # ========== D35 增强：USD/CNH 动量（④a）==========
+        if 'usdcnh' in HSI_ENH:
+            cnh = extra.get('cnh')
+            if cnh is not None and not cnh.empty and 'Close' in cnh.columns:
+                c = _align_external(cnh['Close'], df.index).ffill().bfill().fillna(0.0)
+                if not c.notna().any() or c.nunique() <= 1:
+                    print("  ⚠️ USD/CNH 对齐后为空/常量，该增强无效")
+                df['USDCNH_Ret5d'] = c.pct_change(5)
+                mu = c.rolling(120, min_periods=20).mean()
+                sd = c.rolling(120, min_periods=20).std()
+                df['USDCNH_ZScore'] = (c - mu) / (sd + 1e-9)
+            else:
+                df['USDCNH_Ret5d'] = np.nan
+                df['USDCNH_ZScore'] = np.nan
+
+        # ========== D35 增强：纳指动量（④b）==========
+        if 'nasdaq' in HSI_ENH:
+            nd = extra.get('nasdaq')
+            if nd is not None and not nd.empty and 'Close' in nd.columns:
+                n = _align_external(nd['Close'], df.index).ffill().bfill().fillna(0.0)
+                df['Nasdaq_Ret5d'] = n.pct_change(5)
+            else:
+                df['Nasdaq_Ret5d'] = np.nan
+
         return df
 
     def create_target(self, df):
@@ -333,11 +456,11 @@ class HSIWalkForwardValidator:
         """执行 Walk-forward 验证"""
 
         # 获取数据
-        hsi_df, us_df, vix_df = self.fetch_data()
+        hsi_df, us_df, vix_df, extra = self.fetch_data()
 
         # 计算特征
         print("🔧 正在计算特征...")
-        df = self.calculate_features(hsi_df, us_df, vix_df)
+        df = self.calculate_features(hsi_df, us_df, vix_df, extra)
         df = self.create_target(df)
 
         # 确保索引无时区信息（日历特征模块会移除时区，需统一）
