@@ -1373,7 +1373,7 @@ class HSI_Predictor:
 
             if pattern in _HSI_PATTERNS:
                 _name, _acc, _net, _desc = _HSI_PATTERNS[pattern]
-                consistency_signal = f"⚠️ {_name}（无交易边缘）"
+                consistency_signal = f"⚠️ {_name}（跟运气差不多，别当依据）"
                 trading_action = {
                     'rule': '三周期模式不交易',
                     'pattern': pattern,
@@ -1385,8 +1385,8 @@ class HSI_Predictor:
                     'win_rate': f"{_acc:.2f}%",
                     'avg_return': '-',
                     'description': (
-                        f"{_desc}；20天准确率 {_acc:.2f}%，相对同向基准净贡献 "
-                        f"{_net:+.1f}pp，8 模式 Bonferroni 校正后不显著 → 不作为交易依据"
+                        f"{_desc}。历史上 20 天猜对约 {_acc:.0f}%，但这跟蒙差不多"
+                        f"（统计上分不出真假）——别当买卖依据。"
                     ),
                 }
             else:
@@ -1502,7 +1502,7 @@ class HSI_Predictor:
             <div class="signal-box {'bullish' if score >= 0.55 else 'bearish' if score < 0.45 else 'neutral'}">
                 <div class="signal-text">{trend}</div>
                 <div style="font-size: 14px; margin-top: 8px;">
-                    得分 {score:.2%} | {'正面因素 ' + str(positive_count) + ' 个' if positive_count > negative_count else '负面因素 ' + str(negative_count) + ' 个'}
+                    综合评分 {score:.2%} | {'看多因素 ' + str(positive_count) + ' 个' if positive_count > negative_count else '看空因素 ' + str(negative_count) + ' 个'}
                 </div>
             </div>
 
@@ -1544,11 +1544,11 @@ class HSI_Predictor:
             <table>
                 <thead>
                     <tr>
-                        <th>预测周期</th>
+                        <th>预测天数</th>
                         <th>方向</th>
                         <th>上涨概率</th>
-                        <th>置信度</th>
-                        <th>历史准确率</th>
+                        <th>把握度</th>
+                        <th>过去猜对率</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1576,15 +1576,15 @@ class HSI_Predictor:
             estimated_accuracy = transmission_info.get('estimated_20d_accuracy')
             content += f"""
             <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if estimated_accuracy and estimated_accuracy > 80 else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if estimated_accuracy and estimated_accuracy > 80 else '#6b7280'};">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 传导模式验证（5个交易日前预测）</h4>
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 回看：5 个交易日前那次预测准不准</h4>
                 <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-                    {prediction_date} 的1天和5天预测验证情况：
+                    {prediction_date} 那天对 1 天、5 天的预测，现在对照结果看看：
                 </div>
                 <div style="font-size: 14px; font-weight: 600; color: {'#166534' if estimated_accuracy and estimated_accuracy > 80 else '#374151'};">
                     {transmission_display}
                 </div>
                 <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
-                    传导律（2026-09-26）：基准59.11%，1天正确→59.50%，5天正确→64.69%，两者都正确→65.32%（传导很弱）
+                    长期统计：就算这次猜对，也几乎没提上去（底子约 59%，猜对 1 天约 60%、猜对 5 天约 65%）——区分度很弱，别太当真。
                 </div>
             </div>
 """
@@ -1607,7 +1607,7 @@ class HSI_Predictor:
                     <div style="color: {price_change_color}; font-size: 14px; margin-top: 4px;">{price_change:+.2f}%</div>
                 </div>
                 <div class="data-card">
-                    <h4>RSI</h4>
+                    <h4>强弱指标 RSI</h4>
                     <div class="value">{rsi_val:.1f}</div>
                     <div style="color: {rsi_color}; font-size: 14px; margin-top: 4px;">{rsi_status}</div>
                 </div>
@@ -1726,9 +1726,9 @@ class HSI_Predictor:
 
         <!-- 三周期模式统计 -->
         <div class="section">
-            <div class="section-title">📊 三周期模式验证（实时统计）</div>
+            <div class="section-title">📊 三种天数一起看（拿历史预测回看）</div>
             <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                基于恒指预测历史数据实时计算
+                把以往每天对 1 天 / 5 天 / 20 天的预测，用现在的结果回看"猜得准不准"
             </div>
 """
 
@@ -1741,11 +1741,11 @@ class HSI_Predictor:
                 <thead>
                     <tr>
                         <th style="width: 8%;">排名</th>
-                        <th style="width: 12%;">模式</th>
+                        <th style="width: 12%;">组合</th>
                         <th style="width: 18%;">名称</th>
-                        <th style="width: 12%;">样本数</th>
-                        <th style="width: 15%;">准确率</th>
-                        <th style="width: 15%;">平均收益</th>
+                        <th style="width: 12%;">出现次数</th>
+                        <th style="width: 15%;">猜对率</th>
+                        <th style="width: 15%;">平均涨跌</th>
                         <th style="width: 20%;">建议</th>
                     </tr>
                 </thead>
@@ -1784,7 +1784,7 @@ class HSI_Predictor:
                 </tbody>
             </table>
             <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
-                <strong>模式编码：</strong>110 = 1天涨、5天涨、20天跌 | 数据来源于恒指预测历史，实时计算
+                <strong>组合怎么读：</strong>如 110 = 1 天涨、5 天涨、20 天跌（短期反弹但长期偏弱）| 数据来自历史预测回看
             </div>
 """
         else:
@@ -1800,9 +1800,9 @@ class HSI_Predictor:
 
         <!-- 交易法则参考 -->
         <div class="section">
-            <div class="section-title">💡 四大交易法则</div>
+            <div class="section-title">💡 四个经验规律</div>
             <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                基于 Walk-forward 回测验证（2020-2024年，938个样本）
+                拿 2020–2024 年的历史数据回看（共 938 次）总结出来
             </div>
             <table>
                 <thead>
@@ -1815,28 +1815,28 @@ class HSI_Predictor:
                 <tbody>
                     <tr>
                         <td style="font-weight: 600; color: #166534;">📈 一致追涨</td>
-                        <td>三周期一致看涨（占比12.3%，准确率92%）</td>
+                        <td>1/5/20 天都看涨时，这种情形占 12.3%、过去猜对率 92%</td>
                         <td style="color: #166534;">买入，持有20天</td>
                     </tr>
                     <tr>
                         <td style="font-weight: 600; color: #92400e;">⚡ 背离逃顶</td>
-                        <td>短涨长跌（模式110：1天↑ 5天↑ 20天↓）</td>
+                        <td>短涨长跌（1 天↑、5 天↑、20 天↓）</td>
                         <td style="color: #92400e;">减仓，回避风险</td>
                     </tr>
                     <tr>
                         <td style="font-weight: 600; color: #1d4ed8;">🔄 阶梯验证</td>
-                        <td>1天→5天→20天逐级确认趋势</td>
-                        <td style="color: #1d4ed8;">前两周期正确则可重仓</td>
+                        <td>1 天 → 5 天 → 20 天，一步步确认趋势</td>
+                        <td style="color: #1d4ed8;">前两个天数都对了，可加仓</td>
                     </tr>
                     <tr>
                         <td style="font-weight: 600; color: #991b1b;">📉 趋势惯性</td>
-                        <td>一致看跌时下跌惯性最强（占比23.4%，准确率93%）</td>
+                        <td>1/5/20 天都看跌时，下跌惯性最强（占 23.4%、过去猜对率 93%）</td>
                         <td style="color: #991b1b;">果断止损，不抄底</td>
                     </tr>
                 </tbody>
             </table>
             <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
-                <strong>模式说明：</strong>110 = 1天涨、5天涨、20天跌，表示短期反弹但长期趋势向下，需警惕
+                <strong>说明：</strong>110 = 1 天涨、5 天涨、20 天跌 —— 短期反弹但长期偏弱，要警惕
             </div>
         </div>
 
