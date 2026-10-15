@@ -4102,3 +4102,20 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    删除后「池 − PIT = ∅」（此前 1387 是唯一缺口）
 4) 验证：护栏在 D30 CSV 上**数值完全不变**（1387 从未参与）；pytest 全绿；doc_gate 全绿
 5) 文档：BASELINES 两处 / MODEL_IMPROVEMENT_PLAN 加注 / lessons 三.74 附；0960 意图问题仍待用户定
+
+2026-10-15 六周期 horizon 扫描 + 波动目标风控层判决（D32/D33）
+1) 六周期（1/3/5/10/15/20d）全跑完（修正 56 池、D25/D30 口径、三冻结、同 GATE_SOURCE_CSV），A 闸全 PASS：
+   超额 IR = 1d −7.86 / 3d −2.16 / 5d −1.05 / 10d −1.24 / 15d −0.68 / 20d +0.39；
+   六周期无一过部署门槛（净IR≥0.7 ∧ PBO<0.5 ∧ DSR≥0.95）——1d/3d 🔴，其余 🟡
+2) 单一联合检验（scripts/pooled_horizon_test.py，非 6 次独立检验）：max 统计量=20d +0.39 CI 跨 0；
+   Stouffer Z=−8.96（反保守仍无正信号）⇒ 无周期可部署
+3) 两观察：①超额随周期上升=成本尺度效应（换手 62–71%×双边 0.5%，长周期毛收益大 ⇒ 成本占比低），非信号；
+   ②20d 超额跨 vintage 翻号（旧 D30 −0.71 → fresh +0.39，两天之隔同配置）⇒ 该量本身是噪声（三.77）
+4) 波动目标风控层（D32，standalone 恒指 ETF）：预登记判据 FAIL —— maxDD 由 −51.5% 降到 −39.7%（看似有效），
+   但**静态等仓位(64%) maxDD −36.4%、Calmar 0.02 反优于 vol-target −0.00** ⇒ "少投"≠"择时"（三.76）
+5) 判决：六周期无可部署正超额（D33）+ vol 目标无择时增量（D32）⇒ 与 D1 一致；"20d 太长想换短"被否（换短更差）
+6) 修复：test_performance_report 的"日期炸弹"（合成历史 2026-07 起 90 天；CI 调用默认 now=datetime.now()
+   ⇒ 真实日期推移后最短窗口失去重叠、静默掉格）。全部 CI 调用 pin now=_ANCHOR；pytest 223 passed / 3 xfailed
+7) 产物：output/{1d,3d,5d,10d,15d,20d} fresh、BASELINES 六周期表、DECISIONS D32/D33、lessons 三.76/三.77、
+   ml_services/vol_target_timing.py + tests、scripts/pooled_horizon_test.py
+   ⚠️ 未提交（待用户）；vol-target 回测用缓存 HSI.pkl（腾讯恒指取数持续失败），结论为结构性

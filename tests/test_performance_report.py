@@ -5,12 +5,19 @@
 违反 DECISIONS D3 与 lessons 0.2 —— 本测试锁定修复后的报告契约。
 2026-09-27 起报告只分析港股（A 股评估与市场分布节停用）。
 """
+from datetime import datetime
+
 import pytest
 
 from ml_services.performance_monitor import (
     assemble_report,
     generate_monthly_report,
 )
+
+# 合成历史的锚点（_multi_horizon_history 从 2026-07-01 起 90 天 ⇒ 止于 2026-09-28）。
+# 所有走 `now` 默认值的 CI 调用必须显式传 ANS _MID，否则随真实日期推移，最短窗口
+# 与合成数据失去重叠 ⇒ 测试变成"日期炸弹"（2026-10-15 实测：30 天窗口落到 14 天 → 掉格）。
+_ANCHOR = datetime(2026, 9, 1)
 
 
 def _pred(**kw):
@@ -235,7 +242,8 @@ def _multi_horizon_history(n_days=90, n_stocks=6, start='2026-07-01'):
 def test_window_bootstrap_ci_9_cells():
     """窗口×周期 9 格均应产出 block bootstrap CI（D3 不确定性可视化）。"""
     from ml_services.performance_monitor import _window_bootstrap_ci, TIME_WINDOWS
-    ci = _window_bootstrap_ci(_multi_horizon_history(), TIME_WINDOWS)
+    # now 固定在合成数据区间内（见 _ANCHOR）：否则最短窗口失去重叠 → 掉格。
+    ci = _window_bootstrap_ci(_multi_horizon_history(), TIME_WINDOWS, now=_ANCHOR)
     assert len(ci) == 9
     for (days, h), v in ci.items():
         assert 'lift_ci' in v and 'ds_ci' in v and v['n_blocks'] >= 15
@@ -249,7 +257,7 @@ def test_window_bar_section_renders_ci_and_guardrail():
     from scripts.performance_charts import generate_window_bar_section
     hist = _multi_horizon_history()
     wm = compute_window_horizon_metrics(hist)
-    ci = _window_bootstrap_ci(hist, TIME_WINDOWS)
+    ci = _window_bootstrap_ci(hist, TIME_WINDOWS, now=_ANCHOR)
     html, atts = generate_window_bar_section(
         wm, ci=ci, guardrail_html='<b>20d 组合层护栏</b>')
     assert '误差须 = 95%置信区间' in html
@@ -272,7 +280,7 @@ def test_guardrail_html_summary_renders(monkeypatch, tmp_path):
 def test_per_horizon_ci_3_horizons():
     """整体雷达：1/5/20 三个周期均应产出 bootstrap CI。"""
     from ml_services.performance_monitor import _per_horizon_ci
-    ci = _per_horizon_ci(_multi_horizon_history(), 90)
+    ci = _per_horizon_ci(_multi_horizon_history(), 90, now=_ANCHOR)
     assert set(ci.keys()) == {1, 5, 20}
     for h, v in ci.items():
         assert 'direction_skill' in v and 'lift' in v
@@ -282,7 +290,7 @@ def test_per_horizon_ci_3_horizons():
 def test_group_bootstrap_ci_per_stock():
     """分组 CI：按 stock_code 分组，方向技能/lift 区间合法。"""
     from ml_services.performance_monitor import _group_bootstrap_ci
-    ci = _group_bootstrap_ci(_multi_horizon_history(), 90, 20, 'stock_code')
+    ci = _group_bootstrap_ci(_multi_horizon_history(), 90, 20, 'stock_code', now=_ANCHOR)
     assert ci
     for code, v in ci.items():
         assert 'direction_skill' in v and 'lift' in v
@@ -307,7 +315,7 @@ def test_radar_section_shows_ci_and_significance():
     from ml_services.performance_monitor import _group_bootstrap_ci
     from scripts.performance_charts import generate_sector_radar_section
     hist = _multi_horizon_history()
-    ci = _group_bootstrap_ci(hist, 90, 20, 'sector')
+    ci = _group_bootstrap_ci(hist, 90, 20, 'sector', now=_ANCHOR)
     if not ci:
         import pytest
         pytest.skip('合成数据样本不足无 CI')

@@ -192,9 +192,9 @@ def config_spread(M):
     return float(sr.max() - sr.min()), sr
 
 
-def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200):
+def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropout=0):
     df = load_panel(pred_csv, market=market)
-    bt = backtest(df, horizon, topk, SECTOR_NEUTRAL, cost=cost)  # 行业中性
+    bt = backtest(df, horizon, topk, SECTOR_NEUTRAL, cost=cost, dropout=dropout)  # 行业中性
     # ⓪ 同一性闸第⑤问：能力指标必须用**部署打分口径**（同一 SECTOR_NEUTRAL）
     cap = selection_ic(df, use_sector_neutral=SECTOR_NEUTRAL)
     st = _stats(bt['top_net'].values, horizon)
@@ -391,6 +391,12 @@ def main():
                     help='PBO 零假设带的重排次数；0=不算（会退回「单看一个 PBO 数字」的坏用法）。'
                          '默认 200：5/95 分位由样本顺序统计量决定，10 次时该分位只由第 1 与第 10 个'
                          '观测决定，边际极不稳定（实测 D26 的下界跨 seed 在 0.71–0.83 间跳）。')
+    ap.add_argument('--dropout', type=int, default=0,
+                    help='TopK-Dropout：每期只剔除分数最低的 N 只、保留其余旧持仓再补新（降换手）。'
+                         '0=全换（默认）。')
+    ap.add_argument('--sweep', action='store_true',
+                    help='换手率扫描：对 dropout∈{0,2,4,6,8} 各跑一次，输出'
+                         '「换手 / 净IR / 毛IR / 超额IR / 成本拖累」对照表，量化降换手的上限。')
     args = ap.parse_args()
 
     pred = args.pred or latest_pred(args.horizon, market=args.market)
@@ -398,10 +404,30 @@ def main():
         print("❌ 未找到 prediction_analysis.csv，请用 --pred 指定")
         sys.exit(1)
     suffix = '_a' if args.market == 'a' else ''
+
+    if args.sweep:
+        from ml_services.portfolio_backtest import load_panel as _load  # 复用同一加载
+        df = _load(pred, market=args.market)
+        print(f"\n# 换手率扫描（horizon={args.horizon}d, topk={args.topk}, cost={args.cost}）")
+        print(f"{'dropout':>7} | {'换手':>6} | {'净IR':>7} | {'毛IR':>7} | {'超额IR':>7} | {'成本拖累/期':>10}")
+        print("-" * 60)
+        for d in (0, 2, 4, 6, 8):
+            bt = backtest(df, args.horizon, args.topk, SECTOR_NEUTRAL,
+                          cost=args.cost, dropout=d)
+            tn = float(bt['turnover'].mean())
+            st_net = _stats(bt['top_net'].values, args.horizon)
+            st_gross = _stats(bt['top_gross'].values, args.horizon)
+            st_exc = _stats(bt['top_net'].values - bt['bench'].values, args.horizon)
+            cd = tn * args.cost
+            print(f"{d:>7} | {tn*100:>5.0f}% | {st_net['ir']:>7.2f} | {st_gross['ir']:>7.2f} "
+                  f"| {st_exc['ir']:>7.2f} | {cd*100:>9.3f}%")
+        print("\n解读：降换手只收复「成本拖累」那一行；若毛IR≈0（无信号），净IR 永为正也救不了 edge。")
+        return
+
     out = (args.output
            or f"output/monthly_guardrail_{args.horizon}d_{datetime.now():%Y%m%d}{suffix}.md")
     run(args.horizon, pred, args.topk, args.cost, out, market=args.market,
-        null_perm=args.null_perm)
+        null_perm=args.null_perm, dropout=args.dropout)
 
 
 if __name__ == '__main__':
