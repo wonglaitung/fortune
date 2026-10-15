@@ -11,6 +11,7 @@
 用法：python3 scripts/sector_rotation_backtest.py
 """
 
+import argparse
 import os
 import pickle
 import sys
@@ -29,7 +30,7 @@ H = 20
 GRID = [(20, 2), (20, 3), (60, 2), (60, 3)]  # (动量窗 L, top-K)
 
 
-def load_sector_returns():
+def load_sector_returns(start=START, end=None):
     closes = {}
     for code in STOCK_SECTOR_MAPPING:
         fp = os.path.join(SNAP, code.replace('.HK', '').zfill(5) + '.pkl')
@@ -42,7 +43,9 @@ def load_sector_returns():
             s.index = s.index.tz_localize(None)
         closes[code] = s
     panel = pd.DataFrame(closes).sort_index()
-    panel = panel[panel.index >= START]
+    panel = panel[panel.index >= start]
+    if end:
+        panel = panel[panel.index <= end]
     rets = panel.pct_change()
     sec = {}
     for code in panel.columns:
@@ -82,7 +85,13 @@ def _ir(x):
 
 
 def main():
-    sret, sizes = load_sector_returns()
+    ap = argparse.ArgumentParser(description='板块动量轮动验证（D36/D37）')
+    ap.add_argument('--start', default=START)
+    ap.add_argument('--end', default=None)
+    ap.add_argument('--cells', default='20:2,20:3,60:2,60:3', help='L:K,L:K…')
+    a = ap.parse_args()
+    GRID = [tuple(int(x) for x in c.split(':')) for c in a.cells.split(',')]
+    sret, sizes = load_sector_returns(a.start, a.end)
     print(f"板块（成员≥3）：{len(sret.columns)} 个 | 窗口 {sret.index.min().date()} ~ {sret.index.max().date()}")
     print("  " + ", ".join(f"{k}({n})" for k, n in sorted(sizes.items(), key=lambda x: -x[1])))
     print("=" * 92)
@@ -100,8 +109,9 @@ def main():
               f"[{lo*100:>+6.2f}%,{hi*100:>+6.2f}%] {wr*100:>6.0f}% {_ir(r['bench'].values):>7.2f} "
               f"{'✅' if ok else '❌':>5}")
     print("-" * 92)
-    print(f"网格通过：{n_pass}/{len(GRID)} 格（判据 ≥3/4）")
-    print(f"判定：{'✅ 板块层有 alpha' if n_pass >= 3 else '❌ 板块层无 alpha（轮动不跑赢全板块等权）'}")
+    need = 3 if len(GRID) >= 4 else max(2, len(GRID) - 1)
+    print(f"网格通过：{n_pass}/{len(GRID)} 格（本判定阈值 ≥{need}/{len(GRID)}）")
+    print("说明：判据阈值按各 D 号预登记解读（D36=≥3/4；D37=≥2/3）。")
 
 
 if __name__ == '__main__':
