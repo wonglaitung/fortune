@@ -162,7 +162,8 @@ def report():
     print(f"记录 {len(led)} 行 | 已到期回填 {len(done)} | 待回填 {len(led)-len(done)}")
     print("=" * 88)
     if len(done) < 3:
-        print("⚠️ 已到期样本不足（<3）⇒ 尚不可判；继续按月 --update 累积。")
+        print(f"⚠️ 已到期样本不足（{len(done)}/3）⇒ 尚不可判；约每月 1 笔，"
+              f"还要 ~{max(3 - len(done), 0)} 个月才出初步结论（约 1 年后才较可信）。")
         return
     h = int(done['horizon'].median())
     sig, hold = done['signal_ret'].values, done['hold_ret'].values
@@ -198,7 +199,9 @@ def summary():
     n, m = len(led), len(done)
     if m < 3:
         return {'n': n, 'filled': m, 'status': 'insufficient',
-                'text': f'样本外对账：已记 {n} 笔、回填 {m} 笔 —— 样本还太少（不到 3 笔），暂时看不出灵不灵。'}
+                'text': (f'样本外对账：已记 {n} 笔、回填 {m} 笔 —— 样本还太少（不到 3 笔），'
+                         f'暂时看不出灵不灵（约每月 1 笔，还要 ~{max(3 - m, 0)} 个月才出初步结论；'
+                         f'约 1 年后才较可信）。')}
     dm = _daily_mark(led)
     if dm is None:
         return {'n': n, 'filled': m, 'status': 'nodata',
