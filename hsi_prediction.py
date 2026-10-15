@@ -1175,6 +1175,33 @@ class HSI_Predictor:
 
         return anomalies
 
+    def _classic_trend_html(self):
+        """经典趋势状态（恒指 vs 200 日线）。
+
+        ⚠️ 经 40 年恒指检验**不稳健**（仅 MA200 单点过、相邻参数即垮，D43）——仅作"牛/熊状态"参考，非买卖依据。
+        """
+        try:
+            close = self.hsi_data['Close'].dropna()
+            if len(close) < 200:
+                return ''
+            ma200 = float(close.rolling(200).mean().iloc[-1])
+            px = float(close.iloc[-1])
+            hold = px > ma200
+        except Exception:
+            return ''
+        color = '#16a34a' if hold else '#dc2626'
+        st = '🟢 价格在年线上方 → 经典规则 = 持有' if hold else '🔴 价格在年线下方 → 经典规则 = 空仓'
+        pos = (px / ma200 - 1) * 100 if ma200 else 0.0
+        return f'''        <div class="section">
+            <div class="section-title">📏 经典趋势（200 日线）</div>
+            <div style="font-size:13px;color:#374151;line-height:1.9;">
+                <div>恒指 {px:.0f}，200 日线 {ma200:.0f}（{'+' if pos >= 0 else ''}{pos:.1f}%）：
+                    <span style="color:{color};font-weight:700;">{st}</span></div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 经典择时经 40 年恒指检验<b>不稳健</b>（仅 MA200 单点过、相邻参数即垮，D43）——仅作"牛/熊状态"参考，<b>不是买卖依据</b>。</div>
+            </div>
+        </div>
+'''
+
     def _risk_overlay_html(self):
         """HSI 大跌保护（刹车）—— **5 天 / 20 天两行**（读 data/hsi_risk_overlay_latest_{h}d.json，D35 §十一）。"""
         def _read(h):
@@ -1867,9 +1894,10 @@ class HSI_Predictor:
 </html>
 """
 
-        # 注入 HSI 风险覆盖层（刹车）section（D35 §十一）
+        # 注入 经典趋势(200日线，D43) + HSI 风险覆盖层(刹车，D35 §十一) section
         content = content.replace('<!-- 第三部分：风险提示 -->',
-                                  self._risk_overlay_html() + '        <!-- 第三部分：风险提示 -->')
+                                  self._classic_trend_html() + self._risk_overlay_html()
+                                  + '        <!-- 第三部分：风险提示 -->')
 
         return content, trading_action
 

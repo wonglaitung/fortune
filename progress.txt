@@ -4286,3 +4286,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    但补 MA150/250（−54.4%/−59.8%）都比静态差 ⇒ 仅 MA200 单点过 ⇒ 参数特异
 4) 判决：❌ **不稳健**（MA200 是"挑出来的参数"，非稳健趋势 alpha）⇒ 修正"判大市难"= ML + 简单规则都难
 5) 总账①更新：ML null + 简单规则不稳健
+
+2026-10-15 lessons 三.79 + 经典趋势(200日线)整合进 HSI 邮件
+1) lessons 三.79：唯一"过三关"者，第一件事查参数敏感性（MA200 单点过⇒邻居 MA150/250 即垮）
+2) hsi_prediction 加 _classic_trend_html()：恒指 vs 200 日线 → 经典规则=持有/空仓 + "不稳健、非买卖依据"免责；
+   注入邮件（刹车 section 之前）；数据用 self.hsi_data（PIT）
+3) 测试 tests/test_hsi_email_risk_overlay.py 加 2 项（渲染/短样本返回空）；5 passed；doc_gate 全绿

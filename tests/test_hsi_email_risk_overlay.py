@@ -37,3 +37,20 @@ def test_section_hold(monkeypatch, tmp_path):
     }, ensure_ascii=False), encoding='utf-8')
     h = _inst()._risk_overlay_html()
     assert '可以持有' in h and '回到场内' in h
+
+
+def test_classic_trend_renders():
+    import numpy as np
+    import pandas as pd
+    p = hp.HSI_Predictor.__new__(hp.HSI_Predictor)
+    idx = pd.bdate_range('2020-01-01', periods=300)
+    p.hsi_data = pd.DataFrame({'Close': np.linspace(20000, 26000, 300)}, index=idx)
+    h = p._classic_trend_html()
+    assert '经典趋势' in h and '不稳健' in h and '持有' in h
+
+
+def test_classic_trend_empty_when_short():
+    import pandas as pd
+    p = hp.HSI_Predictor.__new__(hp.HSI_Predictor)
+    p.hsi_data = pd.DataFrame({'Close': [1.0, 2.0, 3.0]})
+    assert p._classic_trend_html() == ''
