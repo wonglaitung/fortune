@@ -4169,3 +4169,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    ⚠️ 更正：用户设想"≥3d 降回撤"不成立；3/5/10/15d 全是少投；择时降回撤仅在 20d 且仅 2 变体
 3) 用法：southbound-20d/nasdaq-20d 可作风险覆盖层(signal Long 持 HSI/Flat 现金，maxDD 减半、收益≈持有)
    或按 signal 缩放敞口；前提先 OOS/实盘验证(单 vintage/35 期/n=1 危机/excess CI 跨 0)；非 alpha
+
+2026-10-15 D35 "刹车"原型落地（用户"先做"）：ml_services/hsi_risk_overlay.py
+1) 跑 WF → Long/Flat 覆盖层回测 + 当前立场；--asof 只报今天该持/该空；--exposure-flat 设 Flat 敞口
+2) nasdaq-20d: 信号 maxDD -9.9% / Calmar 0.71 / IR 0.65 vs 静态w̄(0.57) -14.0%/0.25/0.33 vs 持有 -24.0%/0.22/0.33 → 择时增量✅
+   southbound-20d: 信号 maxDD -9.7% / Calmar 0.70 / IR 0.54 → 择时增量✅
+3) 当前立场(2026-09-16)：两信号均空仓(prob 0.38/0.41)
+4) 定性：非 alpha(收益≈持有)、只压回撤、仅 20d 且仅 2 信号、上实盘前须 OOS 验证；tests/test_hsi_risk_overlay.py 冒烟
