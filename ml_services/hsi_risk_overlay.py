@@ -64,19 +64,24 @@ def _calmar(r, h):
     return float(cagr / abs(dd))
 
 
-def save_latest(path, enh, horizon, last, wbar, rows, exposure_flat):
-    """把当前立场 + 回测统计落 JSON（供 HSI 预测邮件读取）。"""
-    sig, hold = rows['信号(Long/Flat)'], rows['买入持有']
-    dd_sig = _maxdd(sig)
-    dd_static = _maxdd(rows[f'静态等仓位({wbar:.2f})'])
+def save_latest(path, enh, horizon, last, wbar, daily_rows, exposure_flat):
+    """把当前立场 + **逐日估值**统计落 JSON（供 HSI 预测邮件读取）。
+
+    ⚠️ 用**逐日 mark-to-market**（非 20d 稀疏采样）：20d 非重叠只每 20 天记一次净值，
+    会**低估**中间的日内回撤，从而**虚报**"择时增量"（2026-10-15 实测）。
+    """
+    sig = daily_rows['信号(20d仓·逐日估值)']
+    hold = daily_rows['买入持有']
+    static = daily_rows[f'静态等仓位({wbar:.2f})']
+    dd_sig, dd_static = _maxdd(sig), _maxdd(static)
     obj = {
         'generated_at': datetime.now().isoformat(timespec='seconds'),
         'as_of': str(last['date'])[:10], 'enh': enh or 'none', 'horizon': horizon,
         'prob': float(last['prob']), 'stance': 'HOLD' if int(last['pred']) == 1 else 'CASH',
-        'exposure_flat': exposure_flat, 'avg_exposure': wbar,
-        'ir_sig': _ir(sig, horizon), 'ir_hold': _ir(hold, horizon),
+        'exposure_flat': exposure_flat, 'avg_exposure': wbar, 'basis': 'daily_mark',
+        'ir_sig': _ir(sig, 1), 'ir_hold': _ir(hold, 1),
         'maxdd_sig': dd_sig, 'maxdd_static': dd_static, 'maxdd_hold': _maxdd(hold),
-        'calmar_sig': _calmar(sig, horizon), 'calmar_hold': _calmar(hold, horizon),
+        'calmar_sig': _calmar(sig, 1), 'calmar_hold': _calmar(hold, 1),
         'timing_increment': bool(dd_sig > dd_static + 0.005),
     }
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -106,6 +111,48 @@ def overlay(csv, horizon, exposure_flat=0.0):
     return last, wbar, rows
 
 
+def _hsi_daily_close():
+    import yfinance as yf
+    h = yf.Ticker('^HSI').history(period='5y', interval='1d')
+    if h.empty:
+        return None
+    s = h['Close'].copy()
+    s.index = pd.to_datetime(s.index)
+    if getattr(s.index, 'tz', None) is not None:
+        s.index = s.index.tz_convert(None)
+    return s[~s.index.duplicated(keep='last')].sort_index()
+
+
+def daily_overlay(csv, horizon, exposure_flat=0.0):
+    """**同一刹车、逐日估值**：按 20d 节奏调仓（用 `iloc[::horizon]` 的立场并 ffill 到每日），
+    **逐日 mark-to-market** 算净值/回撤（只在调仓日计换手成本）。
+
+    与 `overlay`（20d 非重叠）的差别：**仅估值更细**——20d 非重叠只每 20 天记一次净值，
+    会**低估夹在中间的日内回撤**。收益序列自相关 ⇒ 显著性须 HAC。
+    """
+    df = pd.read_csv(csv)
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
+    h = _hsi_daily_close()
+    if h is None:
+        raise RuntimeError('无 HSI 日线')
+    dr = h.pct_change()
+    rb = df.iloc[::horizon]                       # 同 overlay：20d 调仓日
+    start, end = rb['date'].min(), rb['date'].max()
+    hi = h.index[(h.index >= start) & (h.index <= end)]
+    stance = rb.set_index('date')['pred'].reindex(hi, method='ffill').fillna(0)
+    pos = pd.Series(np.where(stance.values == 1, 1.0, exposure_flat), index=hi)
+    pos_lag = pos.shift(1).fillna(0.0)
+    turn = (pos - pos_lag).abs()                  # 非零只出现在调仓日
+    d = dr.reindex(hi)
+    sig = (pos_lag * d - turn * COST).dropna()
+    wbar = float(pos.mean())
+    rows = {'信号(20d仓·逐日估值)': sig,
+            f'静态等仓位({wbar:.2f})': wbar * d.reindex(sig.index),
+            '买入持有': d.reindex(sig.index)}
+    return wbar, rows
+
+
 def main():
     ap = argparse.ArgumentParser(description='HSI 方向风险覆盖层（刹车原型）')
     ap.add_argument('--horizon', type=int, default=20)
@@ -116,6 +163,8 @@ def main():
     ap.add_argument('--end-date', type=str, default=date.today().isoformat())
     ap.add_argument('--exposure-flat', type=float, default=0.0, help='Flat 时敞口（0=现金）')
     ap.add_argument('--asof', action='store_true', help='只报当前立场')
+    ap.add_argument('--daily', action='store_true',
+                    help='逐日 P&L 视图（更细的净值/回撤；IR 未做 HAC，仅作细粒度观察）')
     ap.add_argument('--save', type=str, default='data/hsi_risk_overlay_latest.json',
                     help='聚类立场+统计落 JSON（供 HSI 预测邮件读取）；相对项目根')
     ap.add_argument('--no-save', action='store_true', help='不落盘')
@@ -123,32 +172,39 @@ def main():
 
     enh = '' if a.enh == 'none' else a.enh
     csv = run_wf(a.horizon, enh, a.start_date, a.end_date)
-    last, wbar, rows = overlay(csv, a.horizon, a.exposure_flat)
+    last, wbar_s, rows_s = overlay(csv, a.horizon, a.exposure_flat)     # 20d 非重叠（稀疏）
+    wbar_d, rows_d = daily_overlay(csv, a.horizon, a.exposure_flat)     # 20d 仓·逐日估值（诚实）
 
     if not a.no_save:
         p = a.save if os.path.isabs(a.save) else os.path.join(ROOT, a.save)
-        j = save_latest(p, a.enh, a.horizon, last, wbar, rows, a.exposure_flat)
-        print(f"💾 立场已落盘: {p}（stance={j['stance']} as_of={j['as_of']}）")
+        j = save_latest(p, a.enh, a.horizon, last, wbar_d, rows_d, a.exposure_flat)
+        print(f"💾 立场已落盘: {p}（stance={j['stance']} as_of={j['as_of']} basis=daily_mark）")
+
+    wbar, rows, h = (wbar_d, rows_d, 1) if a.daily else (wbar_s, rows_s, a.horizon)
+    sig_key = '信号(20d仓·逐日估值)' if a.daily else '信号(Long/Flat)'
+    static_key = f'静态等仓位({wbar:.2f})'
 
     print("=" * 84)
-    print(f"HSI 方向风险覆盖层（刹车原型）  增强={a.enh}  周期={a.horizon}d  "
-          f"Flat敞口={a.exposure_flat:.0%}")
+    print(f"HSI 大跌保护（刹车）  增强={a.enh}  {a.horizon}d  Flat敞口={a.exposure_flat:.0%}")
     print("⚠️ 不是 alpha：目标=降回撤，期望收益 ≈ 买入持有（D35 §十）")
     print("=" * 84)
 
     if not a.asof:
-        print(f"{'口径':<20}{'均/期':>9}{'年化IR':>9}{'maxDD':>9}{'Calmar':>9}")
-        for name, r in rows.items():
-            print(f"{name:<20}{r.mean()*100:>8.2f}%{_ir(r, a.horizon):>9.2f}"
-                  f"{_maxdd(r)*100:>8.1f}%{_calmar(r, a.horizon):>9.2f}")
-        dd_sig, dd_static = _maxdd(rows['信号(Long/Flat)']), _maxdd(rows[f'静态等仓位({wbar:.2f})'])
-        adds = dd_sig > dd_static + 0.005
+        for label, wb_, rws_, hh in [
+                ('20d 非重叠（稀疏 · 会低估日内回撤）', wbar_s, rows_s, a.horizon),
+                ('20d 仓 · 逐日估值（诚实）', wbar_d, rows_d, 1)]:
+            sk = '信号(Long/Flat)' if hh != 1 else '信号(20d仓·逐日估值)'
+            stk = f'静态等仓位({wb_:.2f})'
+            print(f"-- {label} --")
+            print(f"{'口径':<22}{'均/期':>10}{'年化IR':>9}{'maxDD':>9}{'Calmar':>9}")
+            for name, r in rws_.items():
+                print(f"{name:<22}{r.mean()*100:>9.3f}%{_ir(r, hh):>9.2f}"
+                      f"{_maxdd(r)*100:>8.1f}%{_calmar(r, hh):>9.2f}")
+            dd_s, dd_st = _maxdd(rws_[sk]), _maxdd(rws_[stk])
+            print(f"  择时增量: {'✅ 有（回撤更浅）' if dd_s > dd_st + 0.005 else '❌ 无（只是少投）'}  "
+                  f"(信号 {dd_s*100:.1f}% vs 静态 {dd_st*100:.1f}%)")
         print("-" * 84)
-        print(f"择时增量(vs 静态 w̄)：{'✅ 有' if adds else '❌ 无（只是少投）'}  "
-              f"(信号 maxDD {dd_sig*100:.1f}% vs 静态 {dd_static*100:.1f}%)")
-        if not adds:
-            print("⚠️ 该 (增强, 周期) 组合无真增量 → 直接用『少投』即可，别用信号。")
-        print("-" * 84)
+        print("⭐ 以『逐日估值』为准：20d 非重叠只每 20 天记一次净值，会低估日内回撤、虚报增量。")
 
     stance = '持有恒指(EXPOSURE=100%)' if int(last['pred']) == 1 else f"空仓/现金(EXPOSURE={a.exposure_flat:.0%})"
     print(f"当前立场（{str(last['date'])[:10]}，概率 {last['prob']:.3f}）：{stance}")
