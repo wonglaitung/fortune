@@ -4262,3 +4262,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    含 EPS/BPS/ROE/ROA/毛利率）→ **免费可拿历史**（优于 D34）
 3) 调研表：免费(akshare 多期 / 无公告日；HKEX 披露易有公告日但解析重) vs 付费(Capital IQ/Compustat 真PIT；Wind/Bloomberg/WRDS)
 4) 判断：免费路径可行（REPORT_DATE+报告滞后 近似 PIT）⇒ 值得一次"PIT 近似"价值/质量验证（另立 D41）；不直接付费
+
+2026-10-15 D41：价值/质量风格层（PIT 近似）验证（用户同意）
+1) 先预登记 D41（akshare 多期财务 + REPORT_DATE+90d 近似 PIT；价值 E/P,B/P + 质量 ROE,毛利率 vs 全池等权）
+2) 新 scripts/style_fundamental_backtest.py（抓 56 只多期财务→缓存 data/fundamental_multi_cache.pkl + 回测）
+3) 结果：E/P +0.66% IR0.64 CI[-0.09%,+1.41]❌ / B/P 0.26❌ / ROE -0.07❌ / 毛利率 -0.15❌ ⇒ 价值0/2 质量0/2 ⇒ ❌
+   但 E/P 是**所有测试里最接近的**（仅差 0.09% 跨零）
+4) 总账④更新：价值/质量(PIT近似)也❌；E/P 最接近；规模缺股数史算不了；.gitignore 加 fundamental_multi_cache.pkl
