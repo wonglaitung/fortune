@@ -19,6 +19,7 @@
 """
 
 import os
+import sys
 import json
 import yfinance as yf
 import pandas as pd
@@ -1174,6 +1175,64 @@ class HSI_Predictor:
 
         return anomalies
 
+    def _risk_overlay_html(self):
+        """HSI 风险覆盖层（刹车）立场 —— 读 data/hsi_risk_overlay_latest.json（D35 §十一）。
+
+        ⚠️ 不是 alpha：目标=降回撤，期望收益 ≈ 买入持有；仅 20d + southbound/nasdaq 经 D35 验证。
+        数据由 `python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20` 生成。
+        """
+        path = os.path.join(data_dir, 'hsi_risk_overlay_latest.json')
+        header = '        <div class="section">\n            <div class="section-title">🛡 HSI 风险覆盖层（刹车）</div>\n'
+        if not os.path.exists(path):
+            return (header + '            <div style="font-size:13px;color:#6b7280;">未生成'
+                    '（运行 <code>python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20</code> 生成）。</div>\n'
+                    '        </div>\n')
+        try:
+            with open(path, encoding='utf-8') as f:
+                d = json.load(f)
+        except Exception:
+            return ""
+        hold = d.get('stance') == 'HOLD'
+        color = '#16a34a' if hold else '#dc2626'
+        icon = '🟢' if hold else '🔴'
+        stance_txt = '持有恒指（不刹车）' if hold else '空仓 / 现金（刹车）'
+        inc = d.get('timing_increment')
+        inc_txt = ('✅ 有真择时增量（回撤浅于「固定少投」）' if inc
+                   else '⚠️ 无真增量（≈只是少投，勿单独依赖）')
+        return (header + f'''            <div style="font-size:13px;color:#374151;line-height:1.9;">
+                <div>立场（{d.get('as_of','?')}，增强={d.get('enh','?')}，周期={d.get('horizon','?')}d，概率 {float(d.get('prob',0)):.3f}）：
+                    <span style="color:{color};font-weight:700;">{icon} {stance_txt}</span></div>
+                <div>平均敞口 {float(d.get('avg_exposure',0))*100:.0f}% ｜ 历史：信号 maxDD {float(d.get('maxdd_sig',0))*100:.1f}% vs 买入持有 {float(d.get('maxdd_hold',0))*100:.1f}% ｜ Calmar {float(d.get('calmar_sig',0)):.2f} vs {float(d.get('calmar_hold',0)):.2f}</div>
+                <div>择时增量：{inc_txt}</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是 alpha：目标=降回撤，期望收益 ≈ 买入持有。仅 20d + southbound/nasdaq 经 D35 验证；上实盘前须先 OOS/实盘滚动验证。</div>
+            </div>
+        </div>
+''')
+
+    def _ensure_risk_overlay(self, max_age_days=2):
+        """若 data/hsi_risk_overlay_latest.json 缺失/过旧，则重跑 hsi_risk_overlay.py 生成（D35）。
+
+        保证邮件"刹车"section 有数据；失败不阻断邮件（section 显示"未生成"）。
+        """
+        import subprocess
+        path = os.path.join(data_dir, 'hsi_risk_overlay_latest.json')
+        try:
+            if os.path.exists(path):
+                with open(path, encoding='utf-8') as f:
+                    d = json.load(f)
+                age = (datetime.now() - datetime.fromisoformat(d['generated_at'])).days
+                if age < max_age_days:
+                    return
+        except Exception:
+            pass
+        print("🛡 刷新 HSI 风险覆盖层 JSON...")
+        try:
+            subprocess.run([sys.executable, 'ml_services/hsi_risk_overlay.py',
+                            '--enh', 'nasdaq', '--horizon', '20'],
+                           cwd=script_dir, timeout=1800, check=False)
+        except Exception as e:
+            print(f"⚠️ 风险覆盖层刷新失败（邮件将显示'未生成'）: {e}")
+
     def generate_email_content(self, score, trend, feature_details, multi_horizon_results=None):
         """生成邮件内容（HTML格式）- 精简版，专注于投资决策参考"""
         current_price = self.hsi_data['Close'].iloc[-1]
@@ -1790,6 +1849,10 @@ class HSI_Predictor:
 </body>
 </html>
 """
+
+        # 注入 HSI 风险覆盖层（刹车）section（D35 §十一）
+        content = content.replace('<!-- 第三部分：风险提示 -->',
+                                  self._risk_overlay_html() + '        <!-- 第三部分：风险提示 -->')
 
         return content, trading_action
 
@@ -2747,6 +2810,8 @@ class HSI_Predictor:
 
             # 8. 发送邮件
             if send_email_flag:
+                # 8.5 刷新 HSI 风险覆盖层（刹车）JSON（D35 §十一；失败不阻断）
+                self._ensure_risk_overlay()
                 print("\n" + "="*80)
                 print("正在发送预测邮件...".center(80))
                 print("="*80 + "\n")

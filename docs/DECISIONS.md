@@ -2060,3 +2060,11 @@ H1：> 买入持有（净IR），且折聚类方向技能 t>1.96，且 maxDD 更
 **定性（写死在代码与本文）**：**不是 alpha**（收益 ≈ 持有）；**只压回撤**（maxDD −24% → −10%，
 Calmar 0.22 → 0.7）；**仅 20d + southbound/nasdaq**；**上实盘前须先 OOS / 实盘滚动验证**
 （当前单 vintage、35 期、n=1 危机；excess CI 仍跨 0）。
+
+**邮件集成（2026-10-15）**：
+
+- `hsi_risk_overlay.py` 增 `--save`（默认落 `data/hsi_risk_overlay_latest.json`）。
+- `hsi_prediction.py` 邮件新增 **「🛡 HSI 风险覆盖层（刹车）」section**（读该 JSON，含立场/敞口/历史 maxDD/Calmar/择时增量/免责）。
+- `hsi_prediction.run()` 发信前调 `_ensure_risk_overlay()`：JSON 缺失或 **> 2 天**则重跑刷新（失败不阻断邮件，section 显示"未生成"）。
+- 该 JSON 为**运行时产物**，已加入 `.gitignore`（类比 `data/model_accuracy.json`）。
+- 测试：`tests/test_hsi_email_risk_overlay.py`（缺失/空仓/持有 3 项）+ `tests/test_hsi_risk_overlay.py`（3 项）。

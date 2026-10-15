@@ -4176,3 +4176,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    southbound-20d: 信号 maxDD -9.7% / Calmar 0.70 / IR 0.54 → 择时增量✅
 3) 当前立场(2026-09-16)：两信号均空仓(prob 0.38/0.41)
 4) 定性：非 alpha(收益≈持有)、只压回撤、仅 20d 且仅 2 信号、上实盘前须 OOS 验证；tests/test_hsi_risk_overlay.py 冒烟
+
+2026-10-15 风险覆盖层集成进 HSI 预测邮件（用户要求）
+1) hsi_risk_overlay.py 增 --save(落 data/hsi_risk_overlay_latest.json)
+2) hsi_prediction.py 邮件增「🛡 HSI 风险覆盖层(刹车)」section(读 JSON：立场/敞口/历史maxDD/Calmar/择时增量/免责)
+3) run() 发信前 _ensure_risk_overlay()：JSON 缺失或 >2 天则重跑刷新(失败不阻断，section 显示"未生成")
+4) JSON 为运行时产物，加入 .gitignore(类比 data/model_accuracy.json)
+5) tests/test_hsi_email_risk_overlay.py(缺失/空仓/持有3项)+test_hsi_risk_overlay.py(3项)；doc_gate 全绿

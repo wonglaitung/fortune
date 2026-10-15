@@ -15,11 +15,12 @@
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
-from datetime import date
+from datetime import date, datetime
 
 import numpy as np
 import pandas as pd
@@ -63,6 +64,27 @@ def _calmar(r, h):
     return float(cagr / abs(dd))
 
 
+def save_latest(path, enh, horizon, last, wbar, rows, exposure_flat):
+    """把当前立场 + 回测统计落 JSON（供 HSI 预测邮件读取）。"""
+    sig, hold = rows['信号(Long/Flat)'], rows['买入持有']
+    dd_sig = _maxdd(sig)
+    dd_static = _maxdd(rows[f'静态等仓位({wbar:.2f})'])
+    obj = {
+        'generated_at': datetime.now().isoformat(timespec='seconds'),
+        'as_of': str(last['date'])[:10], 'enh': enh or 'none', 'horizon': horizon,
+        'prob': float(last['prob']), 'stance': 'HOLD' if int(last['pred']) == 1 else 'CASH',
+        'exposure_flat': exposure_flat, 'avg_exposure': wbar,
+        'ir_sig': _ir(sig, horizon), 'ir_hold': _ir(hold, horizon),
+        'maxdd_sig': dd_sig, 'maxdd_static': dd_static, 'maxdd_hold': _maxdd(hold),
+        'calmar_sig': _calmar(sig, horizon), 'calmar_hold': _calmar(hold, horizon),
+        'timing_increment': bool(dd_sig > dd_static + 0.005),
+    }
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+    return obj
+
+
 def overlay(csv, horizon, exposure_flat=0.0):
     """覆盖层回测。exposure_flat: Flat 时敞口（0=全现金，0.5=半仓）。"""
     df = pd.read_csv(csv)
@@ -94,11 +116,19 @@ def main():
     ap.add_argument('--end-date', type=str, default=date.today().isoformat())
     ap.add_argument('--exposure-flat', type=float, default=0.0, help='Flat 时敞口（0=现金）')
     ap.add_argument('--asof', action='store_true', help='只报当前立场')
+    ap.add_argument('--save', type=str, default='data/hsi_risk_overlay_latest.json',
+                    help='聚类立场+统计落 JSON（供 HSI 预测邮件读取）；相对项目根')
+    ap.add_argument('--no-save', action='store_true', help='不落盘')
     a = ap.parse_args()
 
     enh = '' if a.enh == 'none' else a.enh
     csv = run_wf(a.horizon, enh, a.start_date, a.end_date)
     last, wbar, rows = overlay(csv, a.horizon, a.exposure_flat)
+
+    if not a.no_save:
+        p = a.save if os.path.isabs(a.save) else os.path.join(ROOT, a.save)
+        j = save_latest(p, a.enh, a.horizon, last, wbar, rows, a.exposure_flat)
+        print(f"💾 立场已落盘: {p}（stance={j['stance']} as_of={j['as_of']}）")
 
     print("=" * 84)
     print(f"HSI 方向风险覆盖层（刹车原型）  增强={a.enh}  周期={a.horizon}d  "
