@@ -1182,10 +1182,10 @@ class HSI_Predictor:
         数据由 `python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20` 生成。
         """
         path = os.path.join(data_dir, 'hsi_risk_overlay_latest.json')
-        header = '        <div class="section">\n            <div class="section-title">🛡 HSI 风险覆盖层（刹车）</div>\n'
+        header = '        <div class="section">\n            <div class="section-title">🛡 大跌保护（刹车）</div>\n'
         if not os.path.exists(path):
-            return (header + '            <div style="font-size:13px;color:#6b7280;">未生成'
-                    '（运行 <code>python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20</code> 生成）。</div>\n'
+            return (header + '            <div style="font-size:13px;color:#6b7280;">暂未生成'
+                    '（先运行 <code>python3 ml_services/hsi_risk_overlay.py --enh nasdaq --horizon 20</code> 生成）。</div>\n'
                     '        </div>\n')
         try:
             with open(path, encoding='utf-8') as f:
@@ -1194,17 +1194,19 @@ class HSI_Predictor:
             return ""
         hold = d.get('stance') == 'HOLD'
         color = '#16a34a' if hold else '#dc2626'
-        icon = '🟢' if hold else '🔴'
-        stance_txt = '持有恒指（不刹车）' if hold else '空仓 / 现金（刹车）'
+        stance_txt = ('🟢 可以持有恒指（不用躲）' if hold else '🔴 建议先离场 / 空仓')
+        prob = float(d.get('prob', 0))
+        sig_dd = abs(float(d.get('maxdd_sig', 0)) * 100)
+        hold_dd = abs(float(d.get('maxdd_hold', 0)) * 100)
         inc = d.get('timing_increment')
-        inc_txt = ('✅ 有真择时增量（回撤浅于「固定少投」）' if inc
-                   else '⚠️ 无真增量（≈只是少投，勿单独依赖）')
-        return (header + f'''            <div style="font-size:13px;color:#374151;line-height:1.9;">
-                <div>立场（{d.get('as_of','?')}，增强={d.get('enh','?')}，周期={d.get('horizon','?')}d，概率 {float(d.get('prob',0)):.3f}）：
-                    <span style="color:{color};font-weight:700;">{icon} {stance_txt}</span></div>
-                <div>平均敞口 {float(d.get('avg_exposure',0))*100:.0f}% ｜ 历史：信号 maxDD {float(d.get('maxdd_sig',0))*100:.1f}% vs 买入持有 {float(d.get('maxdd_hold',0))*100:.1f}% ｜ Calmar {float(d.get('calmar_sig',0)):.2f} vs {float(d.get('calmar_hold',0)):.2f}</div>
-                <div>择时增量：{inc_txt}</div>
-                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是 alpha：目标=降回撤，期望收益 ≈ 买入持有。仅 20d + southbound/nasdaq 经 D35 验证；上实盘前须先 OOS/实盘滚动验证。</div>
+        inc_txt = ('是真的会挑时候躲（比"固定只拿一半"躲得还好）' if inc
+                   else '好处可能只是"少买了点"，不一定是真会躲')
+        return (header + f'''            <div style="font-size:13px;color:#374151;line-height:1.95;">
+                <div>现在的建议：<span style="color:{color};font-weight:700;">{stance_txt}</span>
+                    <span style="color:#6b7280;">（依据 {d.get('as_of','?')} 市场，模型看涨概率约 {prob:.0%}）</span></div>
+                <div>它过去的表现：照它做，最惨时大约亏 <b>{sig_dd:.0f}%</b>；而一直拿着恒指，最惨要亏 <b>{hold_dd:.0f}%</b> —— 大跌时它更能帮你躲开。</div>
+                <div>是不是真会躲：{inc_txt}。</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:6px;">⚠️ 这不是"保证赚钱"的信号，只是"大跌时少亏"（涨的时候可能也会少赚一点）。目前只在"20 天"这个版本上验证过，还要用以后几个月的数据继续观察，确认它一直灵，才建议真用。</div>
             </div>
         </div>
 ''')

@@ -12,7 +12,7 @@ def _inst():
 def test_section_missing_json(monkeypatch, tmp_path):
     monkeypatch.setattr(hp, 'data_dir', str(tmp_path))
     h = _inst()._risk_overlay_html()
-    assert '风险覆盖层' in h and '未生成' in h
+    assert '大跌保护' in h and '暂未生成' in h
 
 
 def test_section_cash(monkeypatch, tmp_path):
@@ -25,7 +25,7 @@ def test_section_cash(monkeypatch, tmp_path):
     h = _inst()._risk_overlay_html()
     assert '空仓' in h and '刹车' in h
     assert '必须' not in h  # 只读展示，不做指令
-    assert '这不是 alpha' in h  # 免责必须带
+    assert '保证赚钱' in h  # 免责（大白话）必须带
 
 
 def test_section_hold(monkeypatch, tmp_path):
