@@ -7,6 +7,7 @@
   取最新立场 → 追加到 `data/hsi_risk_overlay_ledger.csv`；对已到期记录（signal_date + horizon 交易日）
   用**真实 HSI 行情**回填实现收益。
 - `--report`：读 ledger，报 信号 vs 买入持有 vs 静态等仓位 的**实现**表现 + 是否仍灵。
+  ⚠️ 结论以**逐日 mark-to-market**为准（稀疏按记录期会低估回撤、虚报风控，见 D35 §十二）。
 
 ⚠️ 这不是 alpha：目标=降回撤。
 
@@ -127,11 +128,37 @@ def _ir(r, h):
     return float(r.mean() / s * np.sqrt(252.0 / h)) if s > 0 else float('nan')
 
 
+def _daily_mark(led):
+    """用 ledger 记录的立场 + 真实 HSI 日线做**逐日 mark-to-market**（诚实回撤，D35 §十二）。"""
+    led = led.dropna(subset=['exposure']).copy()
+    if len(led) < 2:
+        return None
+    h = get_hsi_close()
+    if h is None:
+        return None
+    dr = h.pct_change()
+    led['signal_date'] = pd.to_datetime(led['signal_date'])
+    led = led.sort_values('signal_date')
+    hi = h.index[(h.index >= led['signal_date'].min()) & (h.index <= led['signal_date'].max())]
+    if len(hi) < 5:
+        return None
+    st = led.drop_duplicates('signal_date').set_index('signal_date')['exposure'].astype(float)
+    pos = st.reindex(hi, method='ffill').fillna(0.0)
+    pos_lag = pos.shift(1).fillna(0.0)
+    turn = (pos - pos_lag).abs()
+    d = dr.reindex(hi)
+    sig = (pos_lag * d - turn * COST).dropna()
+    wbar = float(pos.mean())
+    return wbar, {'信号(逐日刹车)': sig,
+                  f'静态等仓位({wbar:.2f})': wbar * d.reindex(sig.index),
+                  '买入持有': d.reindex(sig.index)}
+
+
 def report():
     led = _load_ledger()
     done = led[led['filled'] == True]  # noqa: E712
     print("=" * 88)
-    print(f"HSI 风险覆盖层 —— 滚动（样本外）验证  ledger={LEDGER}")
+    print(f"HSI 大跌保护（刹车）—— 滚动（样本外）验证  ledger={LEDGER}")
     print(f"记录 {len(led)} 行 | 已到期回填 {len(done)} | 待回填 {len(led)-len(done)}")
     print("=" * 88)
     if len(done) < 3:
@@ -140,15 +167,26 @@ def report():
     h = int(done['horizon'].median())
     sig, hold = done['signal_ret'].values, done['hold_ret'].values
     wbar = float(done['exposure'].mean())
-    static = wbar * hold
+    print("-- 稀疏（按记录期 · 会低估日内回撤）--")
     print(f"{'口径':<20}{'均/期':>9}{'IR':>8}{'maxDD':>9}")
-    for name, r in [('信号(刹车)', sig), (f'静态等仓位({wbar:.2f})', static), ('买入持有', hold)]:
+    for name, r in [('信号(刹车)', sig), (f'静态等仓位({wbar:.2f})', wbar * hold), ('买入持有', hold)]:
         print(f"{name:<20}{r.mean()*100:>8.2f}%{_ir(r, h):>8.2f}{_maxdd(r)*100:>8.1f}%")
-    dd_sig, dd_static = _maxdd(sig), _maxdd(static)
-    adds = dd_sig > dd_static + 0.005
+
+    dm = _daily_mark(led)
     print("-" * 88)
-    print(f"滚动结论：择时增量 {'✅ 仍灵' if adds else '❌ 退化/仅少投'}  "
-          f"(信号 maxDD {dd_sig*100:.1f}% vs 静态 {dd_static*100:.1f}%)")
+    if dm is None:
+        print("⚠️ 无法逐日估值（HSI 日线不足 / 记录 <2）")
+        return
+    dwbar, drows = dm
+    print("-- 逐日 mark-to-market（诚实，以此为准）--")
+    print(f"{'口径':<22}{'均/日':>9}{'IR':>8}{'maxDD':>9}")
+    for name, r in drows.items():
+        print(f"{name:<22}{r.mean()*100:>8.3f}%{_ir(r, 1):>8.2f}{_maxdd(r)*100:>8.1f}%")
+    dsig, dstatic = drows['信号(逐日刹车)'], drows[f'静态等仓位({dwbar:.2f})']
+    adds = _maxdd(dsig) > _maxdd(dstatic) + 0.005
+    print("-" * 88)
+    print(f"滚动结论（以逐日为准）：择时增量 {'✅ 仍灵' if adds else '❌ 退化 / 仅少投'}  "
+          f"(信号 {_maxdd(dsig)*100:.1f}% vs 静态 {_maxdd(dstatic)*100:.1f}%)")
     if not adds:
         print("⚠️ 样本外未复现择时增量 ⇒ 应停用该刹车，或仅作『少投』。")
 

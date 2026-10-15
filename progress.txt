@@ -4200,3 +4200,7 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 3) 更正：南向/纳指-20d"降回撤"不成立=只是少投；hsi_risk_overlay JSON/邮件改用逐日口径(basis=daily_mark)，控制台两口径并列以逐日为准
 4) lessons 三.78：回撤/Calmar 必须逐日 mark-to-market
 5) tests 加 daily_overlay 1 项；doc_gate 全绿
+
+2026-10-15 滚动 monitor 接入逐日对账（用户同意）
+- scripts/hsi_risk_overlay_monitor.py --report 增 _daily_mark：用 ledger 立场 + 真实 HSI 做逐日 mark；结论以逐日为准
+- 稀疏(按记录期)与逐日并列展示；测试加 _daily_mark 1 项(5 passed)

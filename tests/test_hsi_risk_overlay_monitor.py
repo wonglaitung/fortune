@@ -44,6 +44,20 @@ def test_update_idempotent(tmp_path, monkeypatch):
     assert len(pd.read_csv(mon.LEDGER)) == 1
 
 
+def test_daily_mark(monkeypatch):
+    idx = pd.bdate_range('2026-01-01', periods=60)
+    monkeypatch.setattr(mon, 'get_hsi_close', lambda: pd.Series(np.linspace(100.0, 120.0, 60), index=idx))
+    led = pd.DataFrame([
+        {'signal_date': str(idx[0].date()), 'stance': 'HOLD', 'prob': 0.6, 'exposure': 1.0, 'horizon': 20},
+        {'signal_date': str(idx[25].date()), 'stance': 'CASH', 'prob': 0.4, 'exposure': 0.0, 'horizon': 20},
+    ])
+    dm = mon._daily_mark(led)
+    assert dm is not None
+    wbar, rows = dm
+    assert 0.0 <= wbar <= 1.0
+    assert len(rows) == 3
+
+
 def test_report_runs(tmp_path, monkeypatch, capsys):
     led = pd.DataFrame({
         'signal_date': ['2026-01-02', '2026-02-02', '2026-03-02'],
@@ -54,6 +68,7 @@ def test_report_runs(tmp_path, monkeypatch, capsys):
         'hold_ret': [0.02, -0.03, 0.01], 'filled': [True, True, True],
     })
     monkeypatch.setattr(mon, 'LEDGER', str(tmp_path / 'led.csv'))
+    monkeypatch.setattr(mon, 'get_hsi_close', lambda: None)  # 免网络
     led.to_csv(mon.LEDGER, index=False)
     mon.report()
     assert '滚动' in capsys.readouterr().out

@@ -2075,6 +2075,7 @@ Calmar 0.22 → 0.7）；**仅 20d + southbound/nasdaq**；**上实盘前须先 
   - `--update`：读 JSON 取最新立场 → 追加 `data/hsi_risk_overlay_ledger.csv`；对已到期记录
     （signal_date + horizon 交易日）用**真实 HSI 行情**回填实现收益。
   - `--report`：报 信号 vs 买入持有 vs 静态等仓位 的**实现**表现 + 「仍灵 / 退化（仅少投） / 样本不足」。
+    **结论以逐日 mark-to-market 为准**（稀疏按记录期会低估回撤、虚报风控，见 §十二）。
 - 接入 HSI 邮件流程：`hsi_prediction.run()` 发信前 `_ensure_risk_overlay()` 刷新立场后，
   再调 `monitor --update` 累积 ledger（失败不阻断）。
 - ledger 为**运行时产物**，已加 `.gitignore`。
