@@ -4227,3 +4227,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
    _ensure_risk_overlay 刷新 5d+20d 两份；明示"两者可能不一样，别只挑一个听"
 3) monitor JSON_PATH 改 _20d.json；.gitignore 改 latest*.json
 4) 实测：5d=可以持有、20d=先离场（正好演示会打架）；8 passed；doc_gate 全绿
+
+2026-10-15 板块层验证（D36）+ 三层总账（用户：先完成板块验证，再总体记录）
+1) 先预登记 D36：板块动量轮动能否跑赢"全板块等权"（判据：超额IR CI下界>0；网格≥3/4）
+2) 新 scripts/sector_rotation_backtest.py：11 板块(成员≥3)、2020-01→2026-10、非重叠 20d、块 bootstrap
+   结果：(L20,K2) 超额IR 1.07 CI[+0.46%,+2.93%] ✅；其余 3 格 ❌ ⇒ 网格 1/4 < 3/4 ⇒ 判定 ❌ 无 alpha
+   (L20,K2) 单格显著但存疑(4格只1格显著/衰减不一致/仅11板块) ⇒ 不采用，勿 cherry-pick
+3) 三层总账写入 DECISIONS（D1 口径备忘旁）：①大市 null、②板块 主判据不过、③个股 全 null
+4) doc_gate 全绿
