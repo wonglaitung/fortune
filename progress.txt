@@ -4478,3 +4478,7 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - hsi_prediction: 新增 _risk_panel_html() + 注入 <!-- 第三部分：风险提示 --> 锚点
 - comprehensive_analysis: markdown 埋 <!--RISK_PANEL--> + 转换后 replace 为面板 HTML(已验证markdown保留注释)
 - 端到端验证: 面板注入成功、标记清除; tests(12 passed)
+
+2026-10-16 风险面板滚动校准挂进 CI
+- .github/workflows/hsi-prediction.yml: 加 step "风险面板滚动校准对账(D55/D56)" → risk_panel_monitor --update --report
+- 提交步骤加 data/risk_panel_ledger.csv（跨运行累积）
