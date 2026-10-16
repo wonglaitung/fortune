@@ -4466,3 +4466,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ⭐ 立刻抓到: corr_rise 近窗 AUC 0.96/0.94/0.93/0.85 全 OK; big_move 近窗 0.478/0.491 ⇒ FAIL(波动轴近窗失效)
 - ledger data/risk_panel_ledger.csv 入库(doc_gate S1 例外); tests/test_risk_panel_monitor.py(3 passed)
 - 建议: big_move 近窗≤0.5 ⇒ 考虑从面板下架(待定)
+
+2026-10-16 撤掉波动轴（用户决策，据滚动校准）
+- risk_panel: 只报"同步"一轴(1/5/10/20); 波动轴整体撤出面板; 免责改"仅反映分散效果"
+- risk_panel_monitor: DEPLOYED(同步) vs WATCH(big_move 观察·未部署); 整体判定只看已部署 ⇒ OK
+- D56 §七 记"再更新"; 面板当前读数 同步 P 0.14/0.17/0.21/0.30 全🟢
+- tests/test_risk_panel.py 重写 + monitor test 更新(共10 passed)

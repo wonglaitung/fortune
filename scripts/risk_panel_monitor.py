@@ -32,7 +32,9 @@ from ml_services.risk_horizon_signals import (  # noqa: E402
 
 LEDGER = ROOT / "data" / "risk_panel_ledger.csv"
 RECENT = 250
-SERIES = [("corr_rise", H) for H in HORIZONS] + [("big_move", H) for H in VOL_HORIZONS]
+DEPLOYED = [("corr_rise", H) for H in HORIZONS]   # 已上面板（同步轴）
+WATCH = [("big_move", H) for H in VOL_HORIZONS]   # 已从面板撤下（观察，看会不会回来）
+SERIES = DEPLOYED + WATCH
 FIELDS = ["run_date", "series", "n", "auc", "brier", "skill",
           "recent_auc", "recent_brier", "recent_skill", "verdict"]
 
@@ -120,18 +122,21 @@ def update():
 def report():
     rows = evaluate()
     print("风险面板 —— 滚动（样本外）校准")
-    print("=" * 78)
-    print(f"{'序列':<14}{'n':>6}{'全期AUC':>9}{'全期技能':>9}{'近%d期AUC' % RECENT:>12}{'近窗技能':>9}{'判定':>7}")
+    print("=" * 90)
+    print(f"{'序列':<14}{'n':>6}{'全期AUC':>9}{'全期技能':>9}{'近%d期AUC' % RECENT:>12}{'近窗技能':>9}{'判定':>7}  角色")
     worst = "OK"
     order = {"OK": 0, "WARN": 1, "FAIL": 2, "NODATA": 1}
     for r in rows:
-        if r["verdict"] != "NODATA" and order.get(r["verdict"], 0) > order.get(worst, 0):
+        deployed = r["kind"] == "corr_rise"
+        # ⚠️ 整体判定**只看已部署（同步轴）**；big_move 已撤 ⇒ 仅观察
+        if deployed and r["verdict"] != "NODATA" and order.get(r["verdict"], 0) > order.get(worst, 0):
             worst = r["verdict"]
+        role = "已部署" if deployed else "观察·未部署"
         print(f"{r['series']:<14}{r['n']:>6}{r['auc']:>9.3f}{r['skill']*100:>8.1f}%"
-              f"{r['recent_auc']:>12.3f}{r['recent_skill']*100:>8.1f}%{r['verdict']:>7}")
-    print("-" * 78)
-    print(f"整体判定: {worst}（近窗 AUC>0.55=OK / 0.50–0.55=WARN / ≤0.50=FAIL）")
-    print("⚠️ 信号衰减即应在面板下架；本监控不是 alpha（出口=风控档位）。")
+              f"{r['recent_auc']:>12.3f}{r['recent_skill']*100:>8.1f}%{r['verdict']:>7}  {role}")
+    print("-" * 90)
+    print(f"整体判定（仅已部署）: {worst}（近窗 AUC>0.55=OK / 0.50–0.55=WARN / ≤0.50=FAIL）")
+    print("⚠️ 衰减即下架；观察项若恢复（近窗 AUC>0.55）可考虑重新上线。本监控不是 alpha。")
     return rows, worst
 
 

@@ -14,11 +14,12 @@ def test_verdict_thresholds():
 
 
 def test_fields_and_series_scope():
-    # 波动轴只 1/5D；同步轴 1/5/10/20
+    # 波动轴只 1/5D 且**已撤（观察）**；同步轴 1/5/10/20（已部署）
     series = [f"{k}_{h}" for k, h in m.SERIES]
-    assert "big_move_1" in series and "big_move_5" in series
+    assert [s for k, h in m.DEPLOYED for s in [f"{k}_{h}"]] == \
+        ["corr_rise_1", "corr_rise_5", "corr_rise_10", "corr_rise_20"]
+    assert {f"{k}_{h}" for k, h in m.WATCH} == {"big_move_1", "big_move_5"}
     assert "big_move_10" not in series and "big_move_20" not in series
-    assert {"corr_rise_1", "corr_rise_5", "corr_rise_10", "corr_rise_20"} <= set(series)
     assert "run_date" in m.FIELDS and "verdict" in m.FIELDS
 
 
