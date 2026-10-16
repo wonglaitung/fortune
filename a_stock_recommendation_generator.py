@@ -18,9 +18,13 @@ from typing import Dict, List, Optional, Tuple
 # A股配置
 from a_stock_config import A_STOCK_WATCHLIST, A_STOCK_SECTOR_MAPPING, get_limit_rate
 
+# D59：标签口径与三周期（rank=横截面百分位回归，score 无概率语义）
+RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+HORIZONS = (5, 10, 20)
+
 
 def position_band(prob: float):
-    """口径C：校准概率 → 单票仓位区间（%，决策点 4 唯一口径）"""
+    """口径C：分数 → 单票仓位区间（%，决策点 4 唯一口径）"""
     if prob >= 0.60:
         return 4, 6
     if prob >= 0.55:
@@ -220,20 +224,21 @@ class AStockRecommendationGenerator:
         生成单只股票的建议
 
         决策逻辑（口径C / 决策点 4，与港股一致）：
-        - 强烈买入：短期买入 + 中期买入 + 校准概率 ≥ 0.60 → 单票 4-6%
-        - 买入：短期买入 + 中期买入 + 0.55 ≤ 概率 < 0.60 → 单票 2-3%
-        - 观望：0.50 < 概率 < 0.55 → 弱信号，最多 2%，不列买入
-        - 持有：其他情况（概率 ≤ 0.50 禁止买入）
-        - 卖出：短期卖出 + 中期卖出 + 概率 ≤ 0.45
+        - 强烈买入：短期买入 + 中期买入 + 分数 ≥ 0.60 → 单票 4-6%
+        - 买入：短期买入 + 中期买入 + 0.55 ≤ 分数 < 0.60 → 单票 2-3%
+        - 观望：0.50 < 分数 < 0.55 → 弱信号，最多 2%，不列买入
+        - 持有：其他情况（分数 ≤ 0.50 禁止买入）
+        - 卖出：短期卖出 + 中期卖出 + 分数 ≤ 0.45
         """
         stock_name = self.stock_names.get(stock_code, stock_code)
         current_price = analysis.get('current_price', 0)
 
-        # 获取ML预测概率
+        # 获取ML预测分数（rank 口径=横截面分位；absolute 口径=上涨概率）
         predictions = ml_pred.get('predictions', {})
-        prob_1d = predictions.get(1, {}).get('probability', 0.5)
         prob_5d = predictions.get(5, {}).get('probability', 0.5)
+        prob_10d = predictions.get(10, {}).get('probability', 0.5)
         prob_20d = predictions.get(20, {}).get('probability', 0.5)
+        _noun = "相对强弱分" if RANK_MODE else "上涨概率"
 
         # 获取大模型建议
         short_term = llm_rec.get('short_term', '观望')
@@ -247,25 +252,27 @@ class AStockRecommendationGenerator:
         if '买入' in short_term and '买入' in mid_term:
             if prob_20d >= 0.60:
                 signal_type = 'strong_buy'
-                reason = f"短期建议买入，中期建议买入，预测上涨概率{prob_20d:.2f}（≥0.60 高置信档），方向一致，单票4-6%"
+                reason = f"短期建议买入，中期建议买入，预测{_noun}{prob_20d:.2f}（≥0.60 高置信档），方向一致，单票4-6%"
             elif prob_20d >= 0.55:
                 signal_type = 'buy'
-                reason = f"短期建议买入，中期建议买入，预测上涨概率{prob_20d:.2f}（0.55-0.60 买入档），单票2-3%"
+                reason = f"短期建议买入，中期建议买入，预测{_noun}{prob_20d:.2f}（0.55-0.60 买入档），单票2-3%"
             elif prob_20d > 0.50:
                 signal_type = 'hold'
-                reason = f"短期建议买入，中期建议买入，但概率{prob_20d:.2f} 落在 0.50-0.55 弱信号区，仅观望（≤2%），不列买入"
+                reason = f"短期建议买入，中期建议买入，但{_noun}{prob_20d:.2f} 落在 0.50-0.55 弱信号区，仅观望（≤2%），不列买入"
             else:
                 signal_type = 'hold'
-                reason = f"短期建议买入，中期建议买入，但预测上涨概率{prob_20d:.2f}（≤0.50），违反硬约束，禁止买入"
+                reason = f"短期建议买入，中期建议买入，但预测{_noun}{prob_20d:.2f}（≤0.50），违反硬约束，禁止买入"
 
         # 短期和中期一致卖出
         elif '卖出' in short_term or '卖出' in mid_term:
             if prob_20d <= 0.45:
                 signal_type = 'sell'
-                reason = f"短期建议{short_term}，中期建议{mid_term}，CatBoost预测下跌概率{1-prob_20d:.2f}"
+                reason = (f"短期建议{short_term}，中期建议{mid_term}，CatBoost相对强弱分{prob_20d:.2f}"
+                          if RANK_MODE else
+                          f"短期建议{short_term}，中期建议{mid_term}，CatBoost预测下跌概率{1-prob_20d:.2f}")
             else:
                 signal_type = 'hold'
-                reason = f"短期建议{short_term}，中期建议{mid_term}，但CatBoost概率{prob_20d:.2f}，建议观望"
+                reason = f"短期建议{short_term}，中期建议{mid_term}，但CatBoost分数{prob_20d:.2f}，建议观望"
 
         # 观望
         else:
@@ -304,7 +311,7 @@ class AStockRecommendationGenerator:
             'buy_price': buy_price,
             'stop_loss': stop_loss,
             'target_price': target_price,
-            'probability_1d': prob_1d,
+            'probability_10d': prob_10d,
             'probability_5d': prob_5d,
             'probability_20d': prob_20d,
             'limit_rate': limit_rate,
@@ -362,7 +369,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
+            <th>20天分数</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -390,7 +397,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
+            <th>20天分数</th><th>保守</th><th>适度</th><th>激进</th><th>止损位</th><th>目标价</th>
             <th>推荐理由</th>
         </tr>
 """
@@ -418,7 +425,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议</th><th>推荐理由</th>
+            <th>20天分数</th><th>建议</th><th>推荐理由</th>
         </tr>
 """
             for rec in recommendations['hold']:
@@ -441,7 +448,7 @@ class AStockRecommendationGenerator:
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th>
-            <th>20天概率</th><th>建议卖出价</th><th>推荐理由</th>
+            <th>20天分数</th><th>建议卖出价</th><th>推荐理由</th>
         </tr>
 """
             for rec in recommendations['sell']:

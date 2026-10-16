@@ -18,10 +18,10 @@ def test_fill_passes_through_calibrated_value():
     # three_horizon 值已由 DailyConfidence 校准（如 0.5659），直填=透传×100
     stock_data = {}
     th = {'3968.HK': {'predictions': {
-        1: {'probability': 0.4102}, 5: {'probability': 0.4324}, 20: {'probability': 0.5659}}}}
+        5: {'probability': 0.4324}, 10: {'probability': 0.4102}, 20: {'probability': 0.5659}}}}
     ca.fill_calibrated_ml_probs(stock_data, th, '3968.HK')
     assert stock_data['ml_prob_20d'] == pytest.approx(56.59, abs=0.01)
-    assert stock_data['ml_prob_1d'] == pytest.approx(41.02, abs=0.01)
+    assert stock_data['ml_prob_10d'] == pytest.approx(41.02, abs=0.01)
     assert stock_data['ml_prob_5d'] == pytest.approx(43.24, abs=0.01)
 
 
@@ -61,7 +61,7 @@ def test_section_missing_prob_shows_dash_not_zero():
 
 def test_section_with_prob_shows_calibrated_value():
     html = ca.generate_stock_section_html({
-        'ml_prob_20d': 56.6, 'ml_prob_1d': 41.0, 'ml_prob_5d': 43.2})
+        'ml_prob_20d': 56.6, 'ml_prob_10d': 41.0, 'ml_prob_5d': 43.2})
     assert '<td>57%</td>' in html  # 20d 56.6 → 57%
     assert '中等置信度，50-60%' in html
     assert '看跌，<50%硬约束禁止买入' not in html.split('一、核心指标')[1].split('</table>')[0]

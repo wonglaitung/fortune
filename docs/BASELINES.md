@@ -342,3 +342,24 @@ D25 自己的带 **[0.00, 0.12]**（实测 0.029 落在带内）、D30 自己的
 - 产物：`output/20261015_145547_catboost_1d/`、`20261015_120009_catboost_3d/`、
   `20261014_172016_catboost_5d/`、`20261014_194613_catboost_10d/`、
   `20261015_141859_catboost_15d/`、`20261015_141343_catboost_20d/`。
+
+---
+
+## V4 rank 标签 C 闸基线（2026-10-16 / D59）
+
+> **口径**：个股横截面 **rank 百分位回归**（`Return_Rank`，同池同日截面）· 生产三周期 `{5,10,20}` ·
+> 车 `scripts/v4_pipeline.py` · 同一性 ⓪ 通过（WF=生产函数/时点/概率同源）·
+> 命令 `PYTHONHASHSEED=0 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 python3 scripts/v4_pipeline.py --horizons 5,10,20 --topks 5,10,20`。
+> **双跑 stdout md5 相同** = `3f34207363c948347057b6d627626e0b`；**运行时 ≈4m45s**。
+> **用途**：回答"换 rank 标签能否拿到可部署正超额"——结论 **否**（见 DECISIONS D59）。
+> ⚠️ **适用范围**：本宇宙 / 本管线；**alpha null**（H0 未被拒）。**MDE_IR ≈ 0.68**（"不显著 ≠ 没有"）。
+
+| 周期 | IC | IC t | 净超额 [95%CI] | 净IR | PBO | DSR | 判定 |
+|---|---|---|---|---|---|---|---|
+| 5d | +0.028 | +4.35 | −0.16% [−0.26,−0.06] | −0.75 | 0.51 | 0.866 | 🔴 |
+| 10d | +0.022 | +2.36 | −0.10% [−0.32,+0.11] | −0.23 | 0.69 | 0.986 | 🔴 |
+| 20d | +0.028 | +2.15 | +0.15% [−0.31,+0.60] | +0.15 | 0.26 | 0.998 | 🔴 |
+
+- 三周期 **均不满足** D2 判据（净IR CI 下界 > 0 ∧ PBO < 0.5 ∧ DSR ≥ 0.95 ∧ 超额 CI 下界 > 0）；20d 超额 CI 下界 < 0。
+- 决策点：D59 §十五（预登记，commit `ed346128`）→ §十六（结果，commit `10fcad2d`）。C 闸同源产物见 `output/`。
+- 合同测试：`python3 -m pytest tests/test_v4_contract.py tests/test_v4_pipeline.py tests/test_rank_display.py tests/test_rank_label_model.py -q`（D59 前件 15 通过 / pipeline_contract 15/0）。

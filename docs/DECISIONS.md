@@ -3892,3 +3892,21 @@ WF 内部比较 ✓ / 外推生产 ✗（未跑三冻结双跑正式验收）。
 
 **适用范围**：仅此旁路 rank 管线（11 特征 + LGBM 回归 + 本 HK 快照/HSI 宇宙）本窗口内 **WF 内部比较 ✓**；
 **外推生产 ✗**（不涉及邮件链路/20d 中性 TopK）。**不**改三层总账（alpha 仍 null）。
+
+### 十七、全项目切换 rank + 5/10/20（2026-10-16，收尾）
+
+**背景**：用户令「同步到生产，项目要全改」。范围裁定 = **个股全栈（港股 + A股）**；**恒指（`hsi_prediction.py`/`hsi_ml_model.py`/`hsi_walk_forward.py`）与异常检测（`detect_stock_anomalies.py`）排除**（非横截面任务，仍 1/5/20）。
+
+**已改（代码）**：
+- 触发开关 `LABEL_MODE=rank`（env）与 `--label-mode rank`（CLI）；两个生产 runner（`scripts/run_comprehensive_analysis.sh`、`scripts/run_a_stock_analysis.sh`）设 `for horizon in 5 10 20` + `export LABEL_MODE=rank`。
+- 展示层：`comprehensive_analysis.py` 模块级 `HORIZONS=(5,10,20)` + `RANK_MODE`；`_format_hcell`（rank=裸 0-100 分、无置信）、HTML/邮件/LLM prompt 文案「上涨概率/概率」→「相对强弱分/分数」；`RANK_MODE` 跳过 Isotonic 校准 / 模式重算 / 市场分位调整。
+- A股：`a_stock_comprehensive_analysis.py` / `a_stock_recommendation_generator.py` 同口径（`HORIZONS`、rank 跳过校准、文案替换、`1d→10d`）。
+- 模型侧：`ml_services/ml_trading_model.py`、`a_stock_ml_model.py` rank 路径（`Return_Rank` 标签、predict 输出 `score`；`probability=score`，`prediction=int(score>=0.5)`）。
+- 生产 pkl 已切换：港股 `data/ml_trading_model_catboost_{5,10,20}d.pkl`（**gitignored，仅本机**）、A股 `data/a_stock_models/trading_model_catboost_{5,10,20}d.pkl`（tracked，已入库）。`load_model` 从 pkl 恢复 `label_mode` ⇒ **覆盖生产 pkl = 真正的切换**。回滚 = 还原 pkl + 去掉 `LABEL_MODE=rank`（备份 `/tmp/opencode/deploy_backup/`）。
+- `scripts/doc_gate.py` S1 增 `data/a_stock_models/trading_model_catboost_\d+d\.pkl` 例外（新 10d 槽）。
+
+**未改（有意）**：HSI 三周期、异常检测、`run_walk_forward.sh`（WF 仍绝对口径，rank 用 `scripts/v4_pipeline.py`）。eval 工具（`backtest_eval`/`monthly_guardrail`/`portfolio_backtest`）列名归一化已兼容 `probability=score`，无需改动。
+
+**验证**：`python3 -m pytest tests/ -q` → **330 passed**；`python3 scripts/doc_gate.py` → 全绿（L1–L6）；新增 `tests/test_rank_email_display.py`（HORIZONS=5/10/20、`_format_hcell` rank/absolute、模式重算 5/10/20 键）。
+
+**适用范围**：**本管线 · 港股/A股个股 · 本窗口**；**alpha 仍 null**（§十六 C 闸三周期全不过）——**本次全改是口径/架构变更，不产生可交易正超额**；结论**限 WF 内部比较 ✓ / 外推生产收益 ✗**。**不**改三层总账。

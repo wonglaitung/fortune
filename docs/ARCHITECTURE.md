@@ -105,7 +105,7 @@ flowchart TD
 - `data/analysis_results/` - 分析结果（CSV/JSON）
 
 **A股数据存储**：
-- `data/a_stock_models/` - A股CatBoost模型（1d/5d/20d）和特征重要性
+- `data/a_stock_models/` - A股CatBoost模型（**5d/10d/20d**，D59 rank 标签）和特征重要性
 - `data/a_stock_cache/` - A股原始数据缓存
 - `data/a_stock_feature_cache/` - A股特征缓存
 - `data/a_stock_network_features/` - A股网络特征（JSON）

@@ -8,6 +8,24 @@
 
 ## 最新进展
 
+### 2026-10-16 D59 全项目切换 rank 标签 + 5/10/20 三周期（个股全栈，恒指/异常除外）⭐⭐⭐
+
+**范围**：个股（港股 + A股）标签由「绝对二分类」改 **横截面百分位 rank 回归**，周期 `{1,5,20}→{5,10,20}`，
+输出语义「上涨概率」→「池内相对强弱分位」；**恒指三周期 / 异常检测不变**（非横截面任务）。
+
+**验收（C 闸，预登记 §十五 → 结果 §十六）**：5d/10d/20d **三周期全不过**（净IR −0.75/−0.23/+0.15、
+PBO 0.51/0.69/0.26、DSR 0.866/0.986/0.998、20d 超额 CI 下界 <0）；双跑 md5 一致 `3f34207363c948347057b6d627626e0b`；
+⓪ 同一性 `test_pipeline_contract` 15/0；**MDE_IR≈0.68**。⇒ **口径/架构变更，alpha 仍 null，不是提升**。
+
+**生产切换**：`LABEL_MODE=rank` / `--label-mode rank` 门控（默认 absolute）；生产 pkl 覆盖 = 真切换
+（HK `data/ml_trading_model_catboost_{5,10,20}d.pkl` gitignored 本机；A股 `data/a_stock_models/...` tracked 入库）；
+回滚=还原 `/tmp/opencode/deploy_backup/` + 去 env。全改：`comprehensive_analysis.py`（`HORIZONS`/`RANK_MODE`/
+`_format_hcell`/prompt/HTML）、`a_stock_comprehensive_analysis.py`、`a_stock_recommendation_generator.py`、
+两个 runner、`ml_trading_model.py`/`a_stock_ml_model.py`。
+
+**验证**：`pytest tests/ -q` → **330 passed**；`doc_gate.py` L1–L6 全绿；新增 `tests/test_rank_email_display.py`。
+详见 `docs/DECISIONS.md` D59 §十七、`docs/BASELINES.md`「V4 rank 标签 C 闸基线」。
+
 ### 2026-09-28 A股对照港股改造：P0-P2 执行 + 四决策点拍板 + 20d 首次 D2 判定 🟡 ⭐⭐⭐
 
 **文档落地**：`docs/A_STOCK_REFORM_PLAN.md`（16 项差距矩阵 + P0-P4 分期 + 关键约束 + 执行跟踪）入 `docs/README.md` 索引。

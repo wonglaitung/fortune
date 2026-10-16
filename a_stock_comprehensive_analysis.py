@@ -43,6 +43,10 @@ from scripts.stock_radar import generate_html_radar_section
 from llm_services.qwen_engine import chat_with_llm
 from ml_services.a_stock_gates import get_a_gates
 
+# D59：标签口径与三周期（rank=横截面百分位回归，score 无概率语义）
+RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+HORIZONS = (5, 10, 20)
+
 # 尝试导入技术分析模块（用于筹码阻力）
 try:
     from data_services.technical_analysis import TechnicalAnalyzer
@@ -801,7 +805,7 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     calibrator = get_a_stock_calibrator()
 
     # 加载三个周期的模型
-    for horizon in [1, 5, 20]:
+    for horizon in HORIZONS:
         model_path = f'data/a_stock_models/trading_model_catboost_{horizon}d.pkl'
         if not os.path.exists(model_path):
             print(f"⚠️ 模型文件不存在: {model_path}")
@@ -828,14 +832,20 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
                             three_horizon_results[code] = {'predictions': {}}
 
                         prob_raw = result.get('probability', 0.5)
-                        # 校准 + 方向按校准后概率重判（三.19：避免「↑ 0.49」自相矛盾）
-                        prob, direction = calibrate_probability(calibrator, prob_raw, horizon)
+                        if RANK_MODE:
+                            # rank 口径：score 无概率语义，不做 Isotonic 校准；方向按分位 0.5 重判
+                            prob, direction = prob_raw, ('↑' if prob_raw >= 0.5 else '↓')
+                            _calibrated = False
+                        else:
+                            # 校准 + 方向按校准后概率重判（三.19：避免「↑ 0.49」自相矛盾）
+                            prob, direction = calibrate_probability(calibrator, prob_raw, horizon)
+                            _calibrated = bool(calibrator and prob != prob_raw)
 
                         three_horizon_results[code]['predictions'][horizon] = {
                             'direction': direction,
                             'probability': prob,
                             'probability_raw': prob_raw,
-                            'calibrated': bool(calibrator and prob != prob_raw),
+                            'calibrated': _calibrated,
                             'current_price': result.get('current_price'),
                             'date': result.get('date'),
                         }
@@ -851,7 +861,7 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
         if len(preds) == 3:
             # 模式计算：A=上涨(概率>=0.5)，B=下跌(概率<0.5)
             pattern = ''
-            for h in [1, 5, 20]:
+            for h in HORIZONS:
                 if h in preds:
                     pattern += 'A' if preds[h]['probability'] >= 0.5 else 'B'
                 else:
@@ -1392,13 +1402,13 @@ def format_ml_predictions_for_llm(three_horizon_results: dict) -> str:
         pattern_info = data.get('pattern_info', {})
         win_rate = data.get('win_rate', 0)
 
-        # 获取概率
-        prob_1d = preds.get(1, {}).get('probability', 0.5)
+        # 获取分数（rank 口径=横截面分位；absolute 口径=上涨概率）
         prob_5d = preds.get(5, {}).get('probability', 0.5)
+        prob_10d = preds.get(10, {}).get('probability', 0.5)
         prob_20d = preds.get(20, {}).get('probability', 0.5)
 
         # 格式化预测
-        pred_str = f"1d={prob_1d:.2f}, 5d={prob_5d:.2f}, 20d={prob_20d:.2f}"
+        pred_str = f"5d={prob_5d:.2f}, 10d={prob_10d:.2f}, 20d={prob_20d:.2f}"
         pattern_name = pattern_info.get('name', '-')
         action = pattern_info.get('action', '-')
 
@@ -1598,7 +1608,8 @@ def generate_comprehensive_recommendations_with_llm(
             'code': code,
             'name': A_STOCK_WATCHLIST.get(code, code),
             'probability_20d': round(prob_20d, 4),
-            'prediction_20d': '上涨' if prob_20d >= 0.50 else '下跌',
+            'prediction_20d': (('偏强' if prob_20d >= 0.50 else '偏弱') if RANK_MODE
+                               else ('上涨' if prob_20d >= 0.50 else '下跌')),
             'chip_resistance': resistance_level,
             'risk_score': risk_reward.get('risk_score', '-'),
             'comprehensive_score': risk_reward.get('comprehensive_score', '-'),
@@ -1613,7 +1624,10 @@ def generate_comprehensive_recommendations_with_llm(
     ml_predictions_text += json.dumps(ml_stock_list, ensure_ascii=False, indent=2)
     ml_predictions_text += "\n```\n\n"
     ml_predictions_text += "**字段说明**：\n"
-    ml_predictions_text += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+    if RANK_MODE:
+        ml_predictions_text += "- `probability_20d`: 20天**相对强弱分位**（rank 口径；越高=池内越偏强，非上涨概率）\n"
+    else:
+        ml_predictions_text += "- `probability_20d`: 20天上涨概率（>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
     ml_predictions_text += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
     ml_predictions_text += "- **使用建议**：probability_20d高 + chip_resistance低 = 更可靠信号\n"
 
@@ -1624,8 +1638,8 @@ def generate_comprehensive_recommendations_with_llm(
 
     layer_names = {
         'extreme_bear': '极端熊市-暂停交易',
-        'bear': f"熊市-需概率≥{get_a_gates()['bear']:.2f}",
-        'weak': f"弱震荡-需概率≥{get_a_gates()['weak']:.2f}",
+        'bear': f"熊市-需分数≥{get_a_gates()['bear']:.2f}",
+        'weak': f"弱震荡-需分数≥{get_a_gates()['weak']:.2f}",
         'normal': '正常市场'
     }
     sentiment_name = layer_names.get(sentiment_layer, '正常市场')
@@ -1709,7 +1723,7 @@ def generate_comprehensive_recommendations_with_llm(
 {llm_medium_term}
 
 【2. CatBoost模型20天预测结果】
-**重要：probability = 上涨概率（不是下跌概率）**
+**重要：probability 字段 = 20天相对强弱分（rank 口径=横截面分位；越高=池内越偏强；absolute 口径=校准上涨概率）**
 {ml_predictions_text}
 
 【辅助信息源 - 操作时机参考】
@@ -1720,7 +1734,7 @@ def generate_comprehensive_recommendations_with_llm(
 【4. 市场情绪】
 - 情绪层级：{sentiment_name}
 - 上涨比例：{up_ratio:.1%}
-- 动态阈值：买入需概率≥{dynamic_threshold:.0%}
+- 动态阈值：买入需分数≥{dynamic_threshold:.0%}
 
 【5. 主力资金趋势】
 {main_fund_prompt}
@@ -1736,23 +1750,23 @@ def generate_comprehensive_recommendations_with_llm(
 
 === 核心硬性约束（不可违反）===
 
-⚠️ **CatBoost概率约束（最高优先级，无例外）**：
-- CatBoost概率 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
-- CatBoost概率 < 0.40 → **绝对禁止推荐持有或观望**
-- CatBoost概率 ≥ 0.50 → 可以考虑买入
-- CatBoost概率 ≥ 0.60 → 可以考虑强烈买入
+⚠️ **CatBoost分数约束（最高优先级，无例外）**：
+- CatBoost分数 ≤ 0.50 → **绝对禁止推荐买入或强烈买入**
+- CatBoost分数 < 0.40 → **绝对禁止推荐持有或观望**
+- CatBoost分数 ≥ 0.50 → 可以考虑买入
+- CatBoost分数 ≥ 0.60 → 可以考虑强烈买入
 - **即使短期和中期方向一致，也绝对不允许违反此约束**
 - **违反此约束的建议将被视为错误**
 
-⚠️ **仓位唯一口径（决策点 4 / 口径C，不得自行发明区间）**——按校准后 20 日概率定单票仓位：
+⚠️ **仓位唯一口径（决策点 4 / 口径C，不得自行发明区间）**——按 20 日分数定单票仓位：
 - ≥ 0.60 → 单票 **4-6%**（强烈买入档）
 - 0.55 ≤ p < 0.60 → 单票 **2-3%**（买入档）
 - 0.50 < p < 0.55 → **仅观望、最多 2%**，不得列为买入信号
 - ≤ 0.50 → **禁止买入**
 
 🔥 **决策顺序（严格遵守）**：
-第一步：检查CatBoost概率 → 不满足则直接排除
-第二步：检查市场情绪 → 极端熊市暂停交易，熊市需概率≥{gates['bear']:.2f}，弱震荡需概率≥{gates['weak']:.2f}
+第一步：检查CatBoost分数 → 不满足则直接排除
+第二步：检查市场情绪 → 极端熊市暂停交易，熊市需分数≥{gates['bear']:.2f}，弱震荡需分数≥{gates['weak']:.2f}
 第三步：检查短期和中期一致性
 第四步：生成综合建议
 
@@ -1766,8 +1780,8 @@ def generate_comprehensive_recommendations_with_llm(
 - 短期和中期冲突时，选择观望（避免不确定性）
 
 **决策逻辑（短期触发 + 中期确认 + CatBoost验证）**：
-- **第一步：检查CatBoost概率（硬约束）**
-  - probability ≤ 0.50 → 排除买入或强烈买入
+- **第一步：检查CatBoost分数（硬约束）**
+  - CatBoost分数 ≤ 0.50 → 排除买入或强烈买入
   - probability ≥ 0.50 → 进入下一步
 - **第二步：检查市场情绪**
   - 极端熊市 → 暂停所有买入
@@ -1779,20 +1793,20 @@ def generate_comprehensive_recommendations_with_llm(
 - **第四步：生成建议**
   - 强烈买入：短期看好，中期看好，CatBoost probability ≥ 0.60，市场情绪正常
   - 买入：短期看好，中期看好，0.50 < CatBoost probability < 0.60
-  - 持有/观望：CatBoost probability ≤ 0.50 或 方向不一致
+  - 持有/观望：CatBoost分数 ≤ 0.50 或 方向不一致
   - 卖出：短期看跌，中期看跌
 
-**规则2：CatBoost概率评估**
+**规则2：CatBoost分数评估**
 
-**CatBoost概率阈值**：
-- **高置信度上涨**：probability > 0.60
-- **中等置信度观望**：0.50 < probability ≤ 0.60
-- **预测下跌**：probability ≤ 0.50
+**CatBoost分数阈值（rank 口径=池内分位；absolute 口径=校准上涨概率）**：
+- **偏强/高置信**：分数 > 0.60
+- **中等/观望**：0.50 < 分数 ≤ 0.60
+- **偏弱**：分数 ≤ 0.50
 
 **阈值口径说明（D3：不看绝对准确率）**：
 - 当前CatBoost模型20天历史准确率约{accuracy:.2%}（±{std:.2%}）——**仅作背景参考，不作买入依据**
   （基准本身随行情浮动：牛市人人看涨也能"准确"，要看的是扣除基准后的超额与方向技能）
-- 0.60/0.50 档位是**校准概率的分档**，买入与否以「概率档 + 市场情绪门槛」决定：
+- 0.60/0.50 档位是**分数分档**，买入与否以「分数档 + 市场情绪门槛」决定：
   极端熊市暂停 → 熊市需 ≥{gates['bear']:.2f} → 弱震荡需 ≥{gates['weak']:.2f} → 正常 ≥0.50 进入评估
   （熊市/弱震荡门槛 = A股回测校准概率 P92/P90 分位，随重跑更新，非固定绝对值）
 - 高置信度预测错误时损失可达 -73%，必须配合止损（建议 -8%）
@@ -1803,7 +1817,7 @@ def generate_comprehensive_recommendations_with_llm(
 
 ## 强烈买入信号（如有）
 1. [股票代码] [股票名称]
-   - 推荐理由：[包含短期建议、中期建议、CatBoost概率]
+   - 推荐理由：[包含短期建议、中期建议、CatBoost分数]
    - 操作建议：买入
    - 建议仓位（三档均须落在上方「概率→仓位」口径区间内）：
      * 保守型：[X]%
@@ -2407,8 +2421,8 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     # 市场情绪层级名称
     layer_names = {
         'extreme_bear': ('🔴 极端熊市 - 暂停交易', '#dc2626'),
-        'bear': (f"🟠 熊市 - 需概率≥{get_a_gates()['bear']:.2f}", '#ea580c'),
-        'weak': (f"🟡 弱震荡 - 需概率≥{get_a_gates()['weak']:.2f}", '#eab308'),
+        'bear': (f"🟠 熊市 - 需分数≥{get_a_gates()['bear']:.2f}", '#ea580c'),
+        'weak': (f"🟡 弱震荡 - 需分数≥{get_a_gates()['weak']:.2f}", '#eab308'),
         'normal': ('🟢 正常市场', '#16a34a'),
     }
     sentiment_layer = market_sentiment.get('layer', 'normal') if market_sentiment else 'normal'
@@ -2455,7 +2469,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if recommendations:
         html += """
     <h2>📋 综合买卖建议</h2>
-    <p style="color: #666; font-size: 12px;">综合ML预测概率、技术指标信号、大模型个股分析，由AI给出最终建议，仅供参考</p>
+    <p style="color: #666; font-size: 12px;">综合ML预测分数、技术指标信号、大模型个股分析，由AI给出最终建议，仅供参考</p>
 """
         html += _format_recommendations_section(recommendations, stock_analyses)
 
@@ -2587,7 +2601,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
             <tr>
                 <td>动态置信阈值</td>
                 <td>{dynamic_threshold:.0%}</td>
-                <td>买入信号需达到的概率</td>
+                <td>买入信号需达到的分数</td>
             </tr>
         </table>
     </div>
@@ -2650,7 +2664,7 @@ def generate_html_email(llm_content, ml_predictions_20d, stock_analyses, market_
     if three_horizon_results and len(three_horizon_results) > 0:
         html += """
     <h2>🔮 机器学习分析预测</h2>
-    <p style="color: #666; font-size: 12px;">按股票代码排序 | 三色系统：概率≥60%绿色，50-60%橙色，<50%红色</p>
+    <p style="color: #666; font-size: 12px;">按股票代码排序 | 三色系统：分数≥60%绿色，50-60%橙色，<50%红色</p>
     <table>
         <tr>
             <th>股票</th><th>代码</th><th>现价</th><th>涨跌</th><th>板块</th><th>类型</th>
@@ -3066,7 +3080,7 @@ def main():
         print("  ⚠️ 使用缓存预测，尝试从缓存文件读取三周期数据...")
         # 从缓存文件构建机器学习分析预测
         three_horizon_results = {}
-        for horizon in [1, 5, 20]:
+        for horizon in HORIZONS:
             cache_file = f'data/a_stock_models/ml_predictions_{horizon}d.csv'
             if os.path.exists(cache_file):
                 try:
@@ -3102,7 +3116,7 @@ def main():
                 if len(preds) >= 1:  # 至少有一个周期的预测
                     # 模式计算：A=上涨(概率>=0.5)，B=下跌(概率<0.5)
                     pattern = ''
-                    for h in [1, 5, 20]:
+                    for h in HORIZONS:
                         if h in preds:
                             pattern += 'A' if preds[h]['probability'] >= 0.5 else 'B'
                         else:
