@@ -3815,3 +3815,28 @@ H1：> V0 且在 fold 聚类后显著（Bonferroni over 4）
 故不擅自覆盖。上线前须：**三冻结 + 双跑 + 契约**（C 升级闸）+ 其余邮件“上涨概率”口径。
 
 **适用范围**：重训产物限本机实验（`.pkl` 未入库）；**不**改变三层总账（alpha 仍 null）。
+
+### 十四、生产切换执行（2026-10-16）
+
+**已就地切换（生产 pkl = rank）**：
+
+- 港股 `data/ml_trading_model_catboost_{5,10,20}d.pkl` ← rank 模型（`label_mode=rank` 已验）；
+- A股 `data/a_stock_models/trading_model_catboost_{5,10,20}d.pkl` ← rank 模型。
+
+**备份**：替换前 6 个生产 pkl 备份至 `/tmp/opencode/deploy_backup/`（回滚=拷回 + 取消 `LABEL_MODE=rank`）。
+
+**runner 口径**：`scripts/run_comprehensive_analysis.sh` 与 `scripts/run_a_stock_analysis.sh` 均
+`for horizon in 5 10 20` + `export LABEL_MODE=rank`（原 1/5/20 停用）。
+
+**展示层（`comprehensive_analysis.py`）**：新增 `HORIZONS=(5,10,20)` 单点常量；`RANK_MODE` 分支——
+跳过 isotonic 概率校准与模式重算、市场调整为 `-`、三周期列显示**相对强弱分（0-100）**、
+邮件子标题与 LLM 字段说明条件化（`probability_20d` 释义改为「相对强弱分位」）。
+
+**残留（未改）**：深层 LLM prompt 正文（`comprehensive_analysis.py` L3879+/L5315+）仍用
+「上涨概率」措辞；rank 模式下该措辞为**历史残留**，不影响数值，后续随 prompt 一并重写。
+
+**验证**：`pytest tests/test_{v4_contract,v4_pipeline,rank_display,rank_label_model,pipeline_contract}.py` 30 passed；`doc_gate.py` 全绿。
+
+**适用范围**：本次切换是**口径/架构变更**（标签→横截面分位、周期→5/10/20），
+**不**改变 alpha 结论（D58/D59 P1–P2：净超额≤0、三闸不过）——即"换了个更诚实的量法，不是多赚了钱"。
+WF 内部比较 ✓ / 外推生产 ✗（未跑三冻结双跑正式验收）。

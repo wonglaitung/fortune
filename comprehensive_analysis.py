@@ -484,6 +484,33 @@ def get_pattern_action(pattern, is_hsi=False):
     return {'name': '未知', 'action': '观望', 'win_rate': '-', 'avg_return': '-', 'confidence': '低'}
 
 
+# D59：三周期口径（原 1/5/20 → 5/10/20）；单点定义，勿散落硬编码
+HORIZONS = (5, 10, 20)
+
+
+def _format_hcell(pred, rank_mode):
+    """邮件单周期单元：rank 模式显示**相对强弱分（0-100）**；否则三色概率。"""
+    if not pred:
+        return '-'
+    direction = pred.get('direction', '-')
+    val = pred.get('probability', None)
+    if rank_mode:
+        return f"{val*100:.0f}" if isinstance(val, (int, float)) else '-'
+    if not isinstance(val, (int, float)):
+        return f"{direction}"
+    if direction == '↑':
+        color = '#16a34a' if val >= 0.60 else '#ea580c'
+        out = f'<span style="color: {color}; font-weight: bold;">↑</span> {val:.2f}'
+    elif direction == '↓':
+        out = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {val:.2f}'
+    else:
+        out = f"{direction} {val:.2f}"
+    conf = pred.get('confidence')
+    if isinstance(conf, (int, float)):
+        out += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf:.0%})</span>'
+    return out
+
+
 def rebuild_three_horizon_patterns(three_horizon_results):
     """概率校准后重算三周期模式/交易建议/胜率（与校准方向同口径）。
 
@@ -496,9 +523,9 @@ def rebuild_three_horizon_patterns(three_horizon_results):
             continue
         preds = res.get('predictions') or {}
         if not all(isinstance(preds.get(h), dict) and preds[h].get('prediction') is not None
-                   for h in (1, 5, 20)):
+                   for h in HORIZONS):
             continue
-        pattern = ''.join('1' if preds[h]['prediction'] == 1 else '0' for h in (1, 5, 20))
+        pattern = ''.join('1' if preds[h]['prediction'] == 1 else '0' for h in HORIZONS)
         if pattern != res.get('pattern') or res.get('pattern_info') is None:
             rebuilt += 1
         res['pattern'] = pattern
@@ -686,8 +713,8 @@ def load_multi_horizon_models():
     lgbm20 = os.path.join(data_dir, 'ml_trading_model_lightgbm_20d.pkl')
     cat20 = os.path.join(data_dir, 'ml_trading_model_catboost_20d.pkl')
     model_files = {
-        1: os.path.join(data_dir, 'ml_trading_model_catboost_1d.pkl'),
         5: os.path.join(data_dir, 'ml_trading_model_catboost_5d.pkl'),
+        10: os.path.join(data_dir, 'ml_trading_model_catboost_10d.pkl'),
         20: cat20 if os.path.exists(cat20) else lgbm20,
     }
 
@@ -773,7 +800,7 @@ def predict_three_horizons(stock_code, models=None):
 
     # 对每个周期进行预测
     success_count = 0
-    for horizon in [1, 5, 20]:
+    for horizon in HORIZONS:
         if horizon in models:
             try:
                 pred = models[horizon].predict(stock_code)
@@ -796,12 +823,12 @@ def predict_three_horizons(stock_code, models=None):
             result['predictions'][horizon] = None
 
     # 只有当所有三个周期都成功预测时才计算模式
-    if success_count == 3 and all(result['predictions'].get(h) for h in [1, 5, 20]):
-        pred_1d = result['predictions'][1]['prediction']
+    if success_count == 3 and all(result['predictions'].get(h) for h in HORIZONS):
         pred_5d = result['predictions'][5]['prediction']
+        pred_10d = result['predictions'][10]['prediction']
         pred_20d = result['predictions'][20]['prediction']
 
-        pattern = f"{'1' if pred_1d == 1 else '0'}{'1' if pred_5d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
+        pattern = f"{'1' if pred_5d == 1 else '0'}{'1' if pred_10d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
         result['pattern'] = pattern
         result['pattern_info'] = get_pattern_action(pattern)
         return result
@@ -1148,38 +1175,38 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             three_horizon_results = {}
 
             # 如果指定使用缓存预测，尝试读取已有的三周期预测CSV文件
-            csv_1d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_1d.csv')
             csv_5d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_5d.csv')
+            csv_10d = os.path.join(data_dir, 'ml_trading_model_catboost_predictions_10d.csv')
             csv_20d = catboost_csv  # 20d文件就是主文件
 
-            if use_cached_predictions and all(os.path.exists(f) for f in [csv_1d, csv_5d]):
+            if use_cached_predictions and all(os.path.exists(f) for f in [csv_5d, csv_10d]):
                 print("  📁 读取已缓存的三周期预测文件...")
                 try:
-                    df_1d = pd.read_csv(csv_1d)
                     df_5d = pd.read_csv(csv_5d)
+                    df_10d = pd.read_csv(csv_10d)
 
                     for stock_code in df_catboost['code'].tolist():
                         try:
-                            row_1d = df_1d[df_1d['code'] == stock_code]
                             row_5d = df_5d[df_5d['code'] == stock_code]
+                            row_10d = df_10d[df_10d['code'] == stock_code]
                             row_20d = df_catboost[df_catboost['code'] == stock_code]
 
-                            if len(row_1d) > 0 and len(row_5d) > 0 and len(row_20d) > 0:
-                                pred_1d = int(row_1d.iloc[0]['prediction'])
-                                prob_1d = float(row_1d.iloc[0]['probability'])
+                            if len(row_5d) > 0 and len(row_10d) > 0 and len(row_20d) > 0:
                                 pred_5d = int(row_5d.iloc[0]['prediction'])
                                 prob_5d = float(row_5d.iloc[0]['probability'])
+                                pred_10d = int(row_10d.iloc[0]['prediction'])
+                                prob_10d = float(row_10d.iloc[0]['probability'])
                                 pred_20d = int(row_20d.iloc[0]['prediction'])
                                 prob_20d = float(row_20d.iloc[0]['probability'])
 
-                                pattern = f"{'1' if pred_1d == 1 else '0'}{'1' if pred_5d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
+                                pattern = f"{'1' if pred_5d == 1 else '0'}{'1' if pred_10d == 1 else '0'}{'1' if pred_20d == 1 else '0'}"
                                 pattern_info = get_pattern_action(pattern)
 
                                 three_horizon_results[stock_code] = {
                                     'code': stock_code,
                                     'predictions': {
-                                        1: {'prediction': pred_1d, 'probability': prob_1d, 'direction': '↑' if pred_1d == 1 else '↓'},
                                         5: {'prediction': pred_5d, 'probability': prob_5d, 'direction': '↑' if pred_5d == 1 else '↓'},
+                                        10: {'prediction': pred_10d, 'probability': prob_10d, 'direction': '↑' if pred_10d == 1 else '↓'},
                                         20: {'prediction': pred_20d, 'probability': prob_20d, 'direction': '↑' if pred_20d == 1 else '↓'}
                                     },
                                     'pattern': pattern,
@@ -1212,20 +1239,27 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
 
             # ========== 每日预测优化：概率校准 + 置信度 ==========
             # 让用户看到的"上涨概率"变真，并给出"这次预测靠谱程度"（P(主模型判对)）
+            # D59：rank 模式输出 score（无概率语义）——**不得**做概率校准（会对分数做无效等距变换）
             try:
-                from ml_services.daily_confidence import DailyConfidence
-                dc = DailyConfidence()
-                n_cal = dc.apply_to_results(three_horizon_results)
-                if n_cal:
-                    print(f"  ✅ 概率校准+置信度已应用（{n_cal} 项）")
+                if RANK_MODE:
+                    print("  ⏭️ rank 模式：跳过概率校准/置信度（score 无概率语义）")
+                else:
+                    from ml_services.daily_confidence import DailyConfidence
+                    dc = DailyConfidence()
+                    n_cal = dc.apply_to_results(three_horizon_results)
+                    if n_cal:
+                        print(f"  ✅ 概率校准+置信度已应用（{n_cal} 项）")
             except Exception as e:
                 print(f"  ⚠️ 概率校准/置信度失败（不影响预测）: {e}")
 
             # 校准后方向已按校准概率重判 → 模式/交易建议/胜率随之重算（同口径）
             try:
-                n_pat = rebuild_three_horizon_patterns(three_horizon_results)
-                if n_pat:
-                    print(f"  ✅ 三周期模式已按校准方向重算（{n_pat} 只变化）")
+                if RANK_MODE:
+                    pass  # rank 模式无校准，方向无需重算
+                else:
+                    n_pat = rebuild_three_horizon_patterns(three_horizon_results)
+                    if n_pat:
+                        print(f"  ✅ 三周期模式已按校准方向重算（{n_pat} 只变化）")
             except Exception as e:
                 print(f"  ⚠️ 三周期模式重算失败（不影响预测）: {e}")
 
@@ -1394,13 +1428,18 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             catboost_text_llm += json_module.dumps(llm_stock_list, ensure_ascii=False, indent=2)
             catboost_text_llm += "\n```\n\n"
             catboost_text_llm += "**字段说明**：\n"
-            catboost_text_llm += "- `probability_20d`: 20天上涨概率（已校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
-            catboost_text_llm += "- `ml_conf_20d`: 方向判对概率（置信度，0-1），与 probability_20d（上涨概率）含义不同，可一并写进推荐理由\n"
-            catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
+            if RANK_MODE:
+                catboost_text_llm += "- `probability_20d`: 20天**相对强弱分位**（rank 标签口径，0-1；越高=横截面越偏强，非上涨概率）\n"
+                catboost_text_llm += "- `ml_conf_20d`: rank 模式下无方向判对概率，通常为 null\n"
+                catboost_text_llm += "- `probability_display`: rank 模式下不做市场概率调整（恒 '-'）\n"
+            else:
+                catboost_text_llm += "- `probability_20d`: 20天上涨概率（已校准，可读作预计胜率；>0.60=高置信度，0.50-0.60=中等，≤0.50=低）\n"
+                catboost_text_llm += "- `ml_conf_20d`: 方向判对概率（置信度，0-1），与 probability_20d（上涨概率）含义不同，可一并写进推荐理由\n"
+                catboost_text_llm += "- `probability_display`: 市场情绪调整后的概率显示（含高置信/降级/暂停标注）\n"
             catboost_text_llm += "- `chip_resistance`: 筹码阻力（低=拉升容易，中=注意风险，高=拉升困难）\n"
             catboost_text_llm += "- `market_layer`: 市场情绪层级（extreme_bear/bear/weak/normal）\n"
             catboost_text_llm += "- `dynamic_threshold`: 动态阈值（根据市场情绪调整）\n"
-            catboost_text_llm += "- **使用建议**：probability_20d高 + chip_resistance低 + market_layer=normal = 更可靠信号\n"
+            catboost_text_llm += "- **使用建议**：概率/分位高 + chip_resistance低 + market_layer=normal = 更可靠信号\n"
 
             # ========== 2. 构建邮件表格（保留三周期预测+筹码分布，用于用户查看）==========
             if three_horizon_results and len(three_horizon_results) > 0:
@@ -1426,7 +1465,8 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     'normal': '🟢 正常市场'
                 }
 
-                catboost_text_email = "【机器学习三周期预测结果】（概率已校准）\n"
+                catboost_text_email = ("【机器学习三周期预测结果】（相对强弱分位）\n" if RANK_MODE
+                                       else "【机器学习三周期预测结果】（概率已校准）\n")
                 catboost_text_email += f"数据日期: {date_str}\n"
                 catboost_text_email += f"**市场情绪**: {layer_names_email.get(market_layer, market_layer)}\n"
                 catboost_text_email += f"**今日上涨比例**: {up_ratio:.1%}\n"
@@ -1452,7 +1492,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     catboost_text_email += (f"> 🎯 = 20d 行业中性 TopK（系统低配辅助信号，K={d2_topk_k}，"
                                             f"基于当前 {len(df_catboost)} 只自选池）；行业内 z-score 取前 K，"
                                             f"与回测/月度护栏同口径。\n\n")
-                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 1天预测 | 5天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
+                catboost_text_email += "| 股票代码 | 股票名称 | 现价 | 涨跌幅 | 板块名称 | 类型 | 5天预测 | 10天预测 | 20天预测 | 市场调整 | 模式* | 交易建议* | 历史胜率* | 传导模式 | 筹码阻力 | 盈亏比 | 期望收益 | 风险得分 | 回报得分 | 综合得分 | 风险建议 | 网络洞察 |\n"
                 catboost_text_email += "|----------|----------|------|--------|----------|------|--------|--------|---------|----------|------|---------|------|----------|----------|----------|----------|----------|----------|----------|----------|----------|\n"
 
                 for _, row in df_catboost_sorted.iterrows():
@@ -1487,56 +1527,14 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                         pred = three_horizon_results[stock_code]
                         preds = pred['predictions']
 
-                        # 1天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
-                        pred_1d = preds.get(1, {'direction': '-', 'probability': 0.5})
-                        direction_1d = pred_1d['direction']
-                        prob_1d = pred_1d['probability']
-                        if direction_1d == '↑':
-                            if prob_1d >= 0.60:
-                                p1d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_1d:.2f}'  # 亮绿色
-                            else:
-                                p1d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_1d:.2f}'  # 亮橙色
-                        elif direction_1d == '↓':
-                            p1d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_1d:.2f}'  # 亮红色
-                        else:
-                            p1d_str = f"{direction_1d} {prob_1d:.2f}"
-                        conf_1d = pred_1d.get('confidence')
-                        if isinstance(conf_1d, (int, float)):
-                            p1d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_1d:.0%})</span>'
-
-                        # 5天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
+                        # 三周期单元（rank 模式=相对强弱分；否则三色概率，置信度由 formatter 附带）
                         pred_5d = preds.get(5, {'direction': '-', 'probability': 0.5})
-                        direction_5d = pred_5d['direction']
-                        prob_5d = pred_5d['probability']
-                        if direction_5d == '↑':
-                            if prob_5d >= 0.60:
-                                p5d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_5d:.2f}'  # 亮绿色
-                            else:
-                                p5d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_5d:.2f}'  # 亮橙色
-                        elif direction_5d == '↓':
-                            p5d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_5d:.2f}'  # 亮红色
-                        else:
-                            p5d_str = f"{direction_5d} {prob_5d:.2f}"
-                        conf_5d = pred_5d.get('confidence')
-                        if isinstance(conf_5d, (int, float)):
-                            p5d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_5d:.0%})</span>'
-
-                        # 20天预测（三色系统：概率>=60%绿色，50-60%橙色，<50%红色）
+                        pred_10d = preds.get(10, {'direction': '-', 'probability': 0.5})
                         pred_20d = preds.get(20, {'direction': '-', 'probability': 0.5})
-                        direction_20d = pred_20d['direction']
-                        prob_20d = pred_20d['probability']
-                        if direction_20d == '↑':
-                            if prob_20d >= 0.60:
-                                p20d_str = f'<span style="color: #16a34a; font-weight: bold;">↑</span> {prob_20d:.2f}'  # 亮绿色
-                            else:
-                                p20d_str = f'<span style="color: #ea580c; font-weight: bold;">↑</span> {prob_20d:.2f}'  # 亮橙色
-                        elif direction_20d == '↓':
-                            p20d_str = f'<span style="color: #dc2626; font-weight: bold;">↓</span> {prob_20d:.2f}'  # 亮红色
-                        else:
-                            p20d_str = f"{direction_20d} {prob_20d:.2f}"
-                        conf_20d = pred_20d.get('confidence')
-                        if isinstance(conf_20d, (int, float)):
-                            p20d_str += f' <span style="color: #9ca3af; font-size: 85%;">(置信{conf_20d:.0%})</span>'
+                        prob_20d = pred_20d.get('probability', 0.5)
+                        p5d_str = _format_hcell(pred_5d, RANK_MODE)
+                        p10d_str = _format_hcell(pred_10d, RANK_MODE)
+                        p20d_str = _format_hcell(pred_20d, RANK_MODE)
 
                         # 模式和交易建议
                         pattern = pred.get('pattern', '-')
@@ -1593,7 +1591,9 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                             probability_20d = float(prob_20d)
                         except (TypeError, ValueError):
                             probability_20d = float(row['probability'])
-                        if market_layer == 'extreme_bear':
+                        if RANK_MODE:
+                            market_adjust_display = '-'  # rank 分位无概率门槛语义
+                        elif market_layer == 'extreme_bear':
                             market_adjust_display = '🔴暂停'
                         elif market_layer == 'bear':
                             if probability_20d >= dynamic_threshold:
@@ -1618,7 +1618,7 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                                       else stock_code)
                         if stock_code in d2_topk_target:
                             _code_cell = f"🎯 {_code_cell}"
-                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p1d_str} | {p5d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
+                        catboost_text_email += f"| {_code_cell} | {row['name']} | {price_str} | {change_pct_str} | {sector_name} | {sector_type} | {p5d_str} | {p10d_str} | {p20d_str} | {market_adjust_display} | {pattern_display} | {action} | {win_rate} | {transmission_display} | {resistance_icon} | {pl_display} | {expected_return_str} | {rr_risk} | {rr_return} | {rr_comprehensive} | {rr_suggestion} | {network_insight_str} |\n"
 
                 # 添加三周期模式统计
                 catboost_text_email += f"\n**三周期模式统计**：\n"

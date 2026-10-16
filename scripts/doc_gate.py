@@ -96,6 +96,9 @@ RISK_LEDGER_CSV = re.compile(r"^data/hsi_risk_overlay_ledger\.csv$")
 # 例外：风险面板滚动校准 ledger（D55/D56；由 scripts/risk_panel_monitor.py --update 写回，
 # **必须跨次运行累积**——不入库 = 每次从零 ⇒ 看不出漂移）
 RISK_PANEL_LEDGER_CSV = re.compile(r"^data/risk_panel_ledger\.csv$")
+# 例外：A股生产模型 pkl（`data/a_stock_models/*.pkl`；D59 起 5/10/20 rank 三周期——
+# 既有跟踪资产，CI 定期更新；10d 为新周期槽，与 5d/20d 同类，属既有实践）
+A_STOCK_MODEL_PKL = re.compile(r"^data/a_stock_models/trading_model_catboost_\d+d\.pkl$")
 
 
 def _files() -> list[Path]:
@@ -270,7 +273,7 @@ def check_staged() -> list[str]:
         suf = Path(f).suffix.lower()
         if suf == ".bak":
             fails.append(f"暂存区禁入 {f} —— 备份文件不入库")
-        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f) and not AH_PREMIUM_CSV.search(f) and not RISK_LEDGER_CSV.search(f) and not RISK_PANEL_LEDGER_CSV.search(f):
+        elif suf in {".pkl", ".csv"} and f in added and not HK20D_CSV.search(f) and not SFC_CSV.search(f) and not SOUTHBOUND_CSV.search(f) and not CNH_HIBOR_CSV.search(f) and not AH_PREMIUM_CSV.search(f) and not RISK_LEDGER_CSV.search(f) and not RISK_PANEL_LEDGER_CSV.search(f) and not A_STOCK_MODEL_PKL.search(f):
             fails.append(f"暂存区禁入 {f} —— 新增 {suf} 数据文件（更新既有跟踪文件不受限）")
     return fails
 

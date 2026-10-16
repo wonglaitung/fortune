@@ -4,13 +4,16 @@
 # ⚠️ 建议在A股收市后（15:00 CST）运行
 # 流程顺序（新闻特征必须在训练前获取）：
 # 1. 获取A股新闻（模型训练需要新闻特征）
-# 2. 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 2. 训练 CatBoost 三周期模型（5d, 10d, 20d；D59 rank 标签）
 # 3. 生成 CatBoost 三周期预测
 # 4. 调用 a_stock_email.py 生成大模型建议
 # 5. 调用 a_stock_comprehensive_analysis.py 进行综合分析
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# D59：切换为 rank 标签（横截面百分位回归）
+export LABEL_MODE=rank
 
 # 切换到项目目录
 cd "$PROJECT_DIR"
@@ -53,7 +56,7 @@ echo ""
 
 TRAIN_SUCCESS=0
 TRAIN_FAILED=0
-for horizon in 1 5 20; do
+for horizon in 5 10 20; do
     echo "  🔄 训练 ${horizon}d 模型..."
     python3 a_stock_ml_model.py --mode train --horizon $horizon
     if [ $? -ne 0 ]; then
@@ -88,7 +91,7 @@ echo ""
 
 PREDICT_SUCCESS=0
 PREDICT_FAILED=0
-for horizon in 1 5 20; do
+for horizon in 5 10 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
     # 只预测核心股票（4只），用于邮件展示
     python3 a_stock_ml_model.py --mode predict --horizon $horizon --core-only

@@ -3,7 +3,7 @@
 # 综合分析自动化脚本
 # ⚠️ 建议在港股收市后（16:00 HKT）运行
 # 0. 计算网络特征（供训练和预测使用）
-# 1. 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 1. 训练 CatBoost 三周期模型（5d, 10d, 20d；D59 rank 标签）
 # 2. 生成 CatBoost 三周期预测
 # 3. 调用 hsi_email.py 生成大模型建议（使用force参数）
 # 4. 调用 comprehensive_analysis.py 进行综合分析（含三周期预测）
@@ -17,6 +17,9 @@ STOCK_CODES="${1:-}"
 
 # 获取项目根目录（脚本所在目录的父目录）
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# D59：切换为 rank 标签（横截面百分位回归）；输出 score 而非概率
+export LABEL_MODE=rank
 
 # 切换到项目目录
 cd "$PROJECT_DIR"
@@ -98,7 +101,7 @@ echo ""
 
 TRAIN_SUCCESS=0
 TRAIN_FAILED=0
-for horizon in 1 5 20; do
+for horizon in 5 10 20; do
     echo "  🔄 训练 ${horizon}d 模型..."
     python3 ml_services/ml_trading_model.py --mode train --horizon $horizon --model-type catboost --use-feature-selection
     if [ $? -ne 0 ]; then
@@ -132,7 +135,7 @@ echo ""
 
 PREDICT_SUCCESS=0
 PREDICT_FAILED=0
-for horizon in 1 5 20; do
+for horizon in 5 10 20; do
     echo "  🔄 生成 ${horizon}d 预测..."
     python3 ml_services/ml_trading_model.py --mode predict --horizon $horizon --model-type catboost --use-feature-selection
     if [ $? -ne 0 ]; then
