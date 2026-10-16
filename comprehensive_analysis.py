@@ -5906,6 +5906,8 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - **价格指引**：建议买入价、止损位、目标价
 - **风险提示**：主要风险因素
 
+<!--RISK_PANEL-->
+
 ## 十一、风险提示
 
 1. **模型不确定性**：
@@ -5959,6 +5961,15 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 
                 # 生成HTML格式邮件内容（将完整内容转换为HTML）
                 html_content = generate_html_email(full_content, date_str)
+
+                # 注入风险面板（同步轴，D55）—— 读/重建 data/risk_panel_latest.json
+                try:
+                    from ml_services.risk_panel import load_or_build, risk_panel_html
+                    _panel = risk_panel_html(load_or_build())
+                except Exception as _e:  # noqa: BLE001
+                    print(f"⚠️ 风险面板渲染失败（跳过）: {_e}")
+                    _panel = ''
+                html_content = html_content.replace('<!--RISK_PANEL-->', _panel)
 
                 # 如果指定了股票代码，在邮件最前面插入详细个股分析
                 if _stock_codes_for_detail:

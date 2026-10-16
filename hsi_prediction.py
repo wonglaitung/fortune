@@ -1251,6 +1251,15 @@ class HSI_Predictor:
         </div>
 ''')
 
+    def _risk_panel_html(self):
+        """风险面板（同步轴）—— 读/重建 data/risk_panel_latest.json，渲染邮件区块（D55）。"""
+        try:
+            from ml_services.risk_panel import load_or_build, risk_panel_html
+            return risk_panel_html(load_or_build())
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"风险面板渲染失败: {e}")
+            return ''
+
     def _ensure_risk_overlay(self, horizons=(5, 20), max_age_days=2):
         """若 data/hsi_risk_overlay_latest_{h}d.json 缺失/过旧，则重跑生成（D35）。
 
@@ -1894,9 +1903,10 @@ class HSI_Predictor:
 </html>
 """
 
-        # 注入 经典趋势(200日线，D43) + HSI 风险覆盖层(刹车，D35 §十一) section
+        # 注入 经典趋势(200日线，D43) + HSI 风险覆盖层(刹车，D35 §十一) + 风险面板(同步轴，D55) section
         content = content.replace('<!-- 第三部分：风险提示 -->',
-                                  self._classic_trend_html() + self._risk_overlay_html()
+                                  self._risk_panel_html() + self._classic_trend_html()
+                                  + self._risk_overlay_html()
                                   + '        <!-- 第三部分：风险提示 -->')
 
         return content, trading_action

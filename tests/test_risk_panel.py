@@ -52,3 +52,26 @@ def test_sync_display_covers_all_four_horizons():
 
 def test_html_empty_payload():
     assert "暂未生成" in risk_panel_html({})
+
+
+def test_load_or_build_reuses_fresh(tmp_path, monkeypatch):
+    import json
+    from ml_services import risk_panel as rp
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "risk_panel_latest.json").write_text(
+        json.dumps({"horizons": {"1": {"tier": "green"}}}), encoding="utf-8")
+    monkeypatch.setattr(rp, "ROOT", str(tmp_path))
+
+    def _boom(*a, **k):
+        raise AssertionError("新鲜缓存不应重建")
+
+    monkeypatch.setattr(rp, "latest_panel", _boom)
+    assert rp.load_or_build()["horizons"]["1"]["tier"] == "green"
+
+
+def test_comprehensive_marker_present():
+    """comprehensive_analysis 有 RISK_PANEL 占位标记（注入锚点）。"""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "comprehensive_analysis.py").read_text(encoding="utf-8")
+    assert "<!--RISK_PANEL-->" in src
+

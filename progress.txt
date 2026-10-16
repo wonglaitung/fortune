@@ -4472,3 +4472,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - risk_panel_monitor: DEPLOYED(同步) vs WATCH(big_move 观察·未部署); 整体判定只看已部署 ⇒ OK
 - D56 §七 记"再更新"; 面板当前读数 同步 P 0.14/0.17/0.21/0.30 全🟢
 - tests/test_risk_panel.py 重写 + monitor test 更新(共10 passed)
+
+2026-10-16 风险面板接进邮件（hsi_prediction + comprehensive_analysis）
+- risk_panel.load_or_build(): 读 data/risk_panel_latest.json, 过期(mtime>1d)则重建
+- hsi_prediction: 新增 _risk_panel_html() + 注入 <!-- 第三部分：风险提示 --> 锚点
+- comprehensive_analysis: markdown 埋 <!--RISK_PANEL--> + 转换后 replace 为面板 HTML(已验证markdown保留注释)
+- 端到端验证: 面板注入成功、标记清除; tests(12 passed)

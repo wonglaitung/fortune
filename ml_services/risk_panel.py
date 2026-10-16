@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 
 import numpy as np
 
@@ -132,6 +133,23 @@ def _cli_html(payload):
         lines += ["", h]
     lines += ["", "⚠️ 本提示不含方向判断（涨跌不可预测）；仅反映分散效果。"]
     return "\n".join(lines)
+
+
+def load_or_build(max_age_days=1):
+    """邮件用：读 `data/risk_panel_latest.json`；缺失/过期（按 mtime）则重建并写回。"""
+    from pathlib import Path
+    p = Path(ROOT) / "data" / "risk_panel_latest.json"
+    try:
+        if (time.time() - p.stat().st_mtime) / 86400 <= max_age_days:
+            return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        pass
+    payload = latest_panel()
+    try:
+        p.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    return payload
 
 
 def main():
