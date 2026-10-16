@@ -4409,3 +4409,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 含 SECTOR_MAPPING(行业/类型/5评分) + 权重(种子3.0/扩展1.0) + HK_RELATION_GROUPS(关系组视图, 防漂移校验) + render_network_ascii()
 - 与港股生产池区分: 生产池=行业扁平(计算关联); 本配置=种子关系图(手工软边)=研究宇宙, 不动生产
 - 诚实: 软边无PIT; 不暗示alpha(D51/D52 null); tests/test_hk_universe_config.py(6 passed)
+
+2026-10-16 D53 追加：港股小宇宙建图 + 社区对照（scripts/build_hk_universe_graph.py）
+- 方法学: 社区对照只用经验边(E5/E6); E_CORE(按定义)仅查表(否则循环)
+- --with-correlation: 社区13 纯度1.0 ARI0.60 模块度0.64 ⇒ 四张种子网"有价格实体"
+- 数据自发细分: 汇丰网→内银9 vs 港资5; 腾讯网→平台/AI大簇12; 对照E5-only 纯度0.87 ARI0.014(南向共持≠种子网)
+- 与主题材版(D51 纯度1.0/ARI0.64)同构: 结构真实≠可交易alpha(D51/D52已否)
+- gitignore data/hk_universe/; tests/test_hk_universe_graph.py(3 passed)
