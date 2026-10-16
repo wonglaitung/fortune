@@ -4441,3 +4441,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 当前读数(2026-10-06): 相关齐升 P 0.14/0.17/0.21/0.30 → 全🟢 正常
 - 待 D56: 接"大波动|r|"轴 → 面板才完整
 - + ml_services/risk_panel.py + tests/test_risk_panel.py(5 passed); gitignore data/risk_panel_latest.json
+
+2026-10-16 D56：大波动 |r|（补齐面板"波动轴"）→ 仅短周期弱可测
+- 预登记: 同 D55 特征/模型, 换标签 |fwd_H|≥过去250d 80分位
+- 结果: 1D AUC0.583 技能+1.7% ✅(弱); 5D 0.570 +1.2% ✅(弱); 10D 0.548 ❌; 20D 0.509 ❌
+- 判读: 大波动"弱且只在1/5D"; 远弱于相关齐升(AUC0.78–0.88/技能20–39%) ⇒ 结构比幅度好测
+- 再次验证: 幅度弱可测、方向不可测(D55大跌❌); 重叠窗高估显著性
+- 面板接第二轴: risk_panel 增 p_big_move/vol_tier; _compose 双轴(同步+波动)方向中立渲染
+- + 扩 risk_horizon_signals(big_move_H) + risk_panel; tests 9 passed

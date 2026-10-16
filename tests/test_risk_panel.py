@@ -31,6 +31,13 @@ def test_compose_red_direction_neutral():
     assert any("同涨同跌" in x for x in b)
 
 
+def test_compose_vol_axis():
+    hs = {5: {"tier": "green", "vol_tier": "yellow"}, 20: {"tier": "green", "vol_tier": "green"}}
+    lead, b = _compose(hs)
+    assert "波动" in lead
+    assert any("波动可能放大" in x for x in b)
+
+
 def test_html_has_no_directional_verbs():
     hs = {1: {"tier": "green", "p_corr_rise": 0.2},
           5: {"tier": "yellow", "p_corr_rise": 0.6},

@@ -101,6 +101,11 @@ def build_dataset(rets):
         med = avg_corr_series(df).rolling(LOOKBACK_Q).median()
         df[f"corr_rise_{H}"] = (fwd_corr > med).astype(float)
         df.loc[fwd_corr.isna() | med.isna(), f"corr_rise_{H}"] = np.nan
+
+        # 大波动（|r|，不分方向；D56）：未来 H 日 |累计和| ≥ 过去 250d |H 日和| 的 80 分位
+        thr_abs = pastH.abs().rolling(LOOKBACK_Q).quantile(0.80)
+        df[f"big_move_{H}"] = (fwdH.abs() >= thr_abs).astype(float)
+        df.loc[fwdH.isna() | thr_abs.isna(), f"big_move_{H}"] = np.nan
     return df, mkt
 
 
@@ -158,7 +163,7 @@ def main():
     df, mkt = build_dataset(rets)
     print(f"面板 {rets.shape[1]} 只 | {rets.index.min().date()} ~ {rets.index.max().date()} | 样本 {len(df)}")
     print("=" * 84)
-    for kind in ("big_drop", "corr_rise"):
+    for kind in ("big_move", "big_drop", "corr_rise"):
         print(f"\n### {kind}（AUC>0.55 且 Brier<climatology 为过）")
         print(f"{'H':>3}{'n':>6}{'基率':>8}{'AUC':>7}{'Brier':>8}{'气候Brier':>10}{'技能':>8}{'判':>5}")
         for H in HORIZONS:

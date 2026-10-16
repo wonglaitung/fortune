@@ -40,27 +40,31 @@ def tier_of(p, yellow=0.5, red=0.75):
 
 
 def latest_panel(horizons=HORIZONS):
-    """对每个 H 拟合（全史）并预测最后一行 → P(相关齐升)。返回 payload。"""
+    """对每个 H 拟合（全史）并预测最后一行 → P(相关齐升) + P(大波动)。返回 payload。"""
     from sklearn.linear_model import LogisticRegression
-    import pandas as pd
 
     rets = load_returns()
     df, _ = build_dataset(rets)
     as_of = str(df.index[-1].date())
+
+    def _fit_predict(col):
+        d = df.dropna(subset=FEATURES + [col])
+        if len(d) <= 300:
+            return None
+        X, y = d[FEATURES].values, d[col].values
+        mu, sd = X.mean(axis=0), X.std(axis=0)
+        sd[sd == 0] = 1.0
+        clf = LogisticRegression(max_iter=1000)
+        clf.fit((X - mu) / sd, y)
+        xlast = ((df[FEATURES].iloc[-1].values - mu) / sd).reshape(1, -1)
+        return float(clf.predict_proba(xlast)[0, 1])
+
     out = {}
     for H in horizons:
-        col = f"corr_rise_{H}"
-        d = df.dropna(subset=FEATURES + [col])
-        p = None
-        if len(d) > 300:
-            X, y = d[FEATURES].values, d[col].values
-            mu, sd = X.mean(axis=0), X.std(axis=0)
-            sd[sd == 0] = 1.0
-            clf = LogisticRegression(max_iter=1000)
-            clf.fit((X - mu) / sd, y)
-            xlast = ((df[FEATURES].iloc[-1].values - mu) / sd).reshape(1, -1)
-            p = float(clf.predict_proba(xlast)[0, 1])
-        out[H] = {"p_corr_rise": p, "tier": tier_of(p)}
+        p_sync = _fit_predict(f"corr_rise_{H}")
+        p_vol = _fit_predict(f"big_move_{H}")
+        out[H] = {"p_corr_rise": p_sync, "tier": tier_of(p_sync),
+                  "p_big_move": p_vol, "vol_tier": tier_of(p_vol)}
     return {"as_of": as_of, "horizons": out,
             "tiers_note": "🟢<0.5 / 🟡0.5–0.75 / 🔴≥0.75（暂用，正式须预注册）"}
 
@@ -90,25 +94,31 @@ def risk_panel_html(payload):
 
 
 def _compose(hs):
-    """把各 horizon 档位写成人话（方向中立）。"""
-    def t(h):
+    """把各 horizon 档位写成人话（方向中立）。两轴：同步（相关齐升）+ 波动（大波动）。"""
+    def st(h):
         return (hs.get(h) or {}).get("tier")
 
-    def p(h):
-        return (hs.get(h) or {}).get("p_corr_rise")
+    def vt(h):
+        return (hs.get(h) or {}).get("vol_tier")
 
-    flagged = [(h, t(h)) for h in (5, 20) if t(h) in ("yellow", "red")]
-    if not flagged:
+    sync_flag = [(h, st(h)) for h in (5, 20) if st(h) in ("yellow", "red")]
+    vol_flag = [(h, vt(h)) for h in (1, 5) if vt(h) in ("yellow", "red")]
+    if not sync_flag and not vol_flag:
         return "未来 1 周 / 1 个月：正常。", []
 
-    worst = max((x[1] for x in flagged), key=lambda x: {"yellow": 1, "red": 2}[x])
-    bits = []
-    for h, tier in flagged:
-        bits.append(f"{H_LABEL[h]}：{TIER_WORD[tier]}")
-    lead = "｜".join(bits) + "。"
-    bullets = ["同步 = 同涨同跌，组合分散效果下降",
-               "故账户净值波动大概率放大（涨跌皆可能）"]
-    if worst == "red":
+    parts = [f"{H_LABEL[h]}·同步{TIER_WORD[t]}" for h, t in sync_flag]
+    parts += [f"{H_LABEL[h]}·波动{TIER_WORD[t]}" for h, t in vol_flag]
+    lead = "；".join(parts) + "。"
+
+    bullets = []
+    if sync_flag:
+        bullets += ["同步 = 同涨同跌，组合分散效果下降",
+                    "故账户净值波动大概率放大（涨跌皆可能）"]
+    if vol_flag:
+        bullets.append("波动可能放大（涨跌皆可能）")
+    seen = set()
+    bullets = [b for b in bullets if not (b in seen or seen.add(b))]
+    if any(t == "red" for _, t in sync_flag + vol_flag):
         bullets.append("波动上行阶段，宜控制仓位与杠杆")
     return lead, bullets
 
