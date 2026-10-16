@@ -71,6 +71,8 @@ output/walk_forward_catboost_*.md
 data/hsi_prediction_reports/
 data/hsi_walk_forward/
 data/network_features/
+# 港股题材小宇宙建图产物（scripts/build_hk_themes_graph.py 可重建，D51）
+data/hk_themes/
 data/hyperparams/
 data/analysis_results/
 data/feature_selection/

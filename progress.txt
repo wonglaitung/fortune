@@ -4369,3 +4369,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 诚实结论: 免费宽港股宇宙必带 survivor bias⇒直接跑=虚高; 干净路径只剩付费或手工重建
 - §八 即时评估: 免费路径不满足"宽+PIT+含退市"⇒与D34同构阻断 ⇒ 建议维持不投入(除非先验变/拿到干净宇宙)
 - 写入 DECISIONS D50
+
+2026-10-16 D51：港股题材小宇宙（银行/AI/芯片）关联图建池 + 预登记
+- 方法：A股建池方式(=带类型关联图)搬到港股；港股多 E1 A-H 双重上市 + E5 南向共持 两条强边
+- hk_themes_config.py：种子12 + 扩展，33 只(银行13/AI13/芯片7)；E1 对 13；五类边 E1..E5 + E2 结构边
+- scripts/build_hk_themes_graph.py：类型化图 + Louvain 社区对照(离线优先; --with-correlation 加 E6)；输出 data/hk_themes/(gitignored)
+- 测试 tests/test_hk_themes_config.py + test_hk_themes_graph.py (10 passed)
+- 方法学红线：社区对照只用经验边(E2 按定义跑 Louvain 会循环)；E3/E4 人工软边仅判断；禁事后选题材
+- 即时观测：南向共持社区 vs 题材 ARI 0.03(低) ⇒ 南向共持≠题材切分
+- 先验偏 null(题材内 N_eff 小 + 事后选材)；写入 DECISIONS D51
