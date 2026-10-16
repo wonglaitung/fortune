@@ -38,7 +38,6 @@ MIN_TRAIN_DATES = 600
 FEATS = ["mom_20", "mom_60", "mom_120", "vol_20", "vol_60", "rsi_14",
          "vol_ratio", "ma_ratio_20", "ma_ratio_60", "ret_1", "ret_5"]
 
-
 def _rsi(s, n=14):
     d = s.diff()
     up = d.clip(lower=0).ewm(alpha=1 / n, adjust=False).mean()
@@ -65,7 +64,7 @@ def _stock_features(df):
     return out
 
 
-def load_panel():
+def load_panel(h=H):
     rows = []
     for fp in sorted(os.listdir(SNAP)):
         if not fp.endswith(".pkl"):
@@ -77,7 +76,7 @@ def load_panel():
             df.index = df.index.tz_localize(None)
         f = _stock_features(df)
         c = pd.to_numeric(df["Close"], errors="coerce")
-        f["fwd"] = c.shift(-(H + LAG)) / c.shift(-LAG) - 1
+        f["fwd"] = c.shift(-(h + LAG)) / c.shift(-LAG) - 1
         f["code"] = code
         f.index.name = "date"
         rows.append(f.reset_index())
@@ -90,7 +89,7 @@ def load_panel():
     if getattr(hsi.index, "tz", None) is not None:
         hsi.index = hsi.index.tz_localize(None)
     hsi = hsi[~hsi.index.duplicated()].sort_index()
-    hsi_fwd = (hsi.shift(-(H + LAG)) / hsi.shift(-LAG) - 1)
+    hsi_fwd = (hsi.shift(-(h + LAG)) / hsi.shift(-LAG) - 1)
     hsi_fwd.index = hsi_fwd.index.normalize()
     panel["hsi_fwd"] = panel["date"].map(hsi_fwd)
     return panel
@@ -132,13 +131,13 @@ def _fit_predict(Xtr, ytr, Xte, mode, groups=None):
     return m.predict_proba(Xte)[:, 1]
 
 
-def evaluate(panel, label_col, mode):
+def evaluate(panel, label_col, mode, h=H):
     d = panel.dropna(subset=FEATS + [label_col, "fwd"]).copy()
     dates = sorted(d["date"].unique())
     test_dates = dates[MIN_TRAIN_DATES::STEP]
     ics, excess = [], []
     for t in test_dates:
-        cutoff = np.datetime64(t) - np.timedelta64(H + LAG, "D")
+        cutoff = np.datetime64(t) - np.timedelta64(h + LAG, "D")
         tr = d[d["date"] <= cutoff]
         te = d[d["date"] == t]
         if len(tr) < 500 or len(te) < 20:
@@ -168,11 +167,15 @@ def evaluate(panel, label_col, mode):
 
 
 def main():
-    print("标签口径消融（D58）：固定特征+LightGBM，只换标签")
-    panel = load_panel()
+    import argparse
+    ap = argparse.ArgumentParser(description="标签口径消融（D58）")
+    ap.add_argument("--horizon", type=int, default=20, help="预测周期（交易日）")
+    args = ap.parse_args()
+    h = args.horizon
+    print(f"标签口径消融（D58）：固定特征+LightGBM，只换标签 · H={h}d")
+    panel = load_panel(h)
     print(f"面板: {panel['code'].nunique()} 只 · {panel['date'].nunique()} 日 · "
           f"{panel['date'].min().date()}~{panel['date'].max().date()}")
-    # 生成二分类/回归标签
     # 先生成中间量(excess_*/rank)，再定义各变体标签
     variants = make_labels(panel)
     panel["y_abs"] = (panel["fwd"] > 0).astype(int)
@@ -185,7 +188,7 @@ def main():
     print(f"{'变体':<22}{'块数':>6}{'IC均值':>9}{'t(跨块)':>9}{'p':>8}{'TopK毛超额':>12}")
     res = {}
     for name, (col, mode) in variants.items():
-        r = evaluate(panel, col, mode)
+        r = evaluate(panel, col, mode, h)
         res[name] = r
         if r:
             print(f"{name:<22}{r['n']:>6}{r['ic']:>+9.3f}{r['t']:>+9.2f}{r['p']:>8.3f}{r['excess_pp']:>+11.2f}%")
