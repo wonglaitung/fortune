@@ -22,5 +22,8 @@ def test_make_labels_columns():
                                   "fwd": np.linspace(0.01, 0.02, 30), "hsi_fwd": 0.015}))
     p = pd.concat(rows, ignore_index=True)
     out = make_labels(p)
-    assert "V4 排序回归" in out and out["V4 排序回归"][1] is True
-    assert "excess_ind" in p.columns and "rank" in p.columns
+    assert out["V4 排序回归"] == ("y_rank", "reg")
+    assert out["V5 真·LTR(lambdarank)"][1] == "ltr"
+    assert "excess_ind" in p.columns and "rank" in p.columns and "grade" in p.columns
+    # grade ∈ [0,4]
+    assert p["grade"].dropna().between(0, 4).all()

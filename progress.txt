@@ -4537,3 +4537,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 判: V4名义最高但 Bonferroni(α=0.0125)不过(p=0.033) + 增量仅+0.003 + TopK毛超额<成本 ⇒ 换标签不解锁 alpha
 - 终判: 维持 absolute; 方法论备忘"排序/行业中性更贴部署"; 并入 D1/D33
 - + scripts/label_ablation.py + tests(2 passed)
+
+2026-10-16 D58 §八 追加：真·LTR（lambdarank）
+- V5 标签=当日 fwd 五分位 relevance(0..4); LGBMRanker(objective=lambdarank, group=每日); 其余同
+- 结果: V5 IC +0.003 / t=0.23 / p=0.818 ⇒ **最差**(低于基线 V0 +0.025)
+- 判: 真·LTR 不仅无帮助且最差(每query仅56只/特征弱/噪声大⇒pairwise不迁移); 排序口径彻底否; 维持 absolute
+- labels 保留 float(NaN 由 dropna 处理); tests 更新(2 passed)

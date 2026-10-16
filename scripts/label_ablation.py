@@ -103,29 +103,36 @@ def make_labels(panel):
     p["excess_ind"] = p["fwd"] - ind
     p["excess_hsi"] = p["fwd"] - p["hsi_fwd"]
     p["rank"] = p.groupby("date")["fwd"].rank(pct=True)
+    # LTR 用：当日排名的整档（0..4 五档 relevance）；保留 float（NaN 由 dropna 处理）
+    p["grade"] = np.minimum(p["rank"] * 5, 4)
     return {
-        "V0 绝对二分类": ("y_abs", False),
-        "V1 成本阈值": ("y_cost", False),
-        "V2 HSI相对": ("y_hsi", False),
-        "V3 行业中性": ("y_ind", False),
-        "V4 排序回归": ("y_rank", True),
+        "V0 绝对二分类": ("y_abs", "clf"),
+        "V1 成本阈值": ("y_cost", "clf"),
+        "V2 HSI相对": ("y_hsi", "clf"),
+        "V3 行业中性": ("y_ind", "clf"),
+        "V4 排序回归": ("y_rank", "reg"),
+        "V5 真·LTR(lambdarank)": ("y_grade", "ltr"),
     }
 
 
-def _fit_predict(Xtr, ytr, Xte, regression):
+def _fit_predict(Xtr, ytr, Xte, mode, groups=None):
     import lightgbm as lgb
-    if regression:
-        m = lgb.LGBMRegressor(n_estimators=200, num_leaves=31, learning_rate=0.05,
-                              subsample=0.75, colsample_bytree=0.8, random_state=42, verbose=-1)
+    common = dict(n_estimators=200, num_leaves=31, learning_rate=0.05,
+                  subsample=0.75, colsample_bytree=0.8, random_state=42, verbose=-1)
+    if mode == "ltr":
+        m = lgb.LGBMRanker(objective="lambdarank", **common)
+        m.fit(Xtr, ytr, group=groups)
+        return m.predict(Xte)
+    if mode == "reg":
+        m = lgb.LGBMRegressor(**common)
         m.fit(Xtr, ytr)
         return m.predict(Xte)
-    m = lgb.LGBMClassifier(n_estimators=200, num_leaves=31, learning_rate=0.05,
-                           subsample=0.75, colsample_bytree=0.8, random_state=42, verbose=-1)
+    m = lgb.LGBMClassifier(**common)
     m.fit(Xtr, ytr)
     return m.predict_proba(Xte)[:, 1]
 
 
-def evaluate(panel, label_col, regression):
+def evaluate(panel, label_col, mode):
     d = panel.dropna(subset=FEATS + [label_col, "fwd"]).copy()
     dates = sorted(d["date"].unique())
     test_dates = dates[MIN_TRAIN_DATES::STEP]
@@ -136,10 +143,16 @@ def evaluate(panel, label_col, regression):
         te = d[d["date"] == t]
         if len(tr) < 500 or len(te) < 20:
             continue
-        ytr = tr[label_col].values
-        if not regression and len(set(ytr)) < 2:
-            continue
-        sc = _fit_predict(tr[FEATS].values, ytr, te[FEATS].values, regression)
+        if mode == "ltr":
+            tr = tr.sort_values("date")
+            groups = tr.groupby("date").size().values
+            ytr = tr[label_col].astype(int).values
+            sc = _fit_predict(tr[FEATS].values, ytr, te[FEATS].values, "ltr", groups=groups)
+        else:
+            ytr = tr[label_col].values
+            if mode == "clf" and len(set(ytr)) < 2:
+                continue
+            sc = _fit_predict(tr[FEATS].values, ytr, te[FEATS].values, mode)
         ic = spearmanr(sc, te["fwd"].values).correlation
         if np.isfinite(ic):
             ics.append(ic)
@@ -167,19 +180,20 @@ def main():
     panel["y_hsi"] = (panel["excess_hsi"] > 0).astype(int)
     panel["y_ind"] = (panel["excess_ind"] > 0).astype(int)
     panel["y_rank"] = panel["rank"]
-    print("=" * 74)
-    print(f"{'变体':<16}{'块数':>6}{'IC均值':>9}{'t(跨块)':>9}{'p':>8}{'TopK毛超额':>12}")
+    panel["y_grade"] = panel["grade"]
+    print("=" * 78)
+    print(f"{'变体':<22}{'块数':>6}{'IC均值':>9}{'t(跨块)':>9}{'p':>8}{'TopK毛超额':>12}")
     res = {}
-    for name, (col, reg) in variants.items():
-        r = evaluate(panel, col, reg)
+    for name, (col, mode) in variants.items():
+        r = evaluate(panel, col, mode)
         res[name] = r
         if r:
-            print(f"{name:<16}{r['n']:>6}{r['ic']:>+9.3f}{r['t']:>+9.2f}{r['p']:>8.3f}{r['excess_pp']:>+11.2f}%")
+            print(f"{name:<22}{r['n']:>6}{r['ic']:>+9.3f}{r['t']:>+9.2f}{r['p']:>8.3f}{r['excess_pp']:>+11.2f}%")
         else:
-            print(f"{name:<16}  样本不足")
-    print("-" * 74)
-    print("判据(D58 §四): 变体 IC(fold聚类) > 基线 V0 且显著；Bonferroni over 4")
-    print("⚠️ 先验偏 null；此为'只换标签'的受控比较，非生产口径。")
+            print(f"{name:<22}  样本不足")
+    print("-" * 78)
+    print("判据(D58 §四): 变体 IC(fold聚类) > 基线 V0 且显著；Bonferroni over 5")
+    print("⚠️ 先验偏 null；此为'只换标签/目标函数'的受控比较，非生产口径。")
     return res
 
 
