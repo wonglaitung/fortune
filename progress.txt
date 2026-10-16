@@ -4494,3 +4494,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 方案: hmm_empirical_duration() —— 用解码状态序列的**已结束同类段**估条件剩余(已持续 elapsed 时还能再走均值)
 - email 表格: 模型值标"无记忆"; 加"经验·条件"行(已持续/中位总时长/样本数)
 - get_current_market_state 返回加 regime_emp_duration; tests(5 passed)
+
+2026-10-16 HMM 期望剩余: 半马尔可夫"时长依赖风险率"（选1）
+- 新 hmm_hazard_remaining(): 离散 hazard h(d)=P(第d+1天退出|已坚持d) (Laplace平滑+尾部外推) → S(d) → 期望剩余=Σ_{d≥d0}S/S(d0)
+- 抽出 _completed_run_lengths(); 经验均值版保留为回退
+- email 表格行改"经验·时长依赖"(含当前风险率 %/天); 回退"经验·条件"
+- 效果: elapsed=9(同类段都=10)风险率≈0.93(即将退出); elapsed=0时"剩余"="总"; tests(7 passed)

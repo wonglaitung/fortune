@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from comprehensive_analysis import hmm_empirical_duration, hmm_stability_desc
+from comprehensive_analysis import (
+    hmm_empirical_duration, hmm_hazard_remaining, hmm_stability_desc)
 
 
 def test_desc_none():
@@ -41,4 +42,23 @@ def test_empirical_duration_uses_elapsed_and_excludes_ongoing():
 
 def test_empirical_duration_none_when_no_completed_same_state():
     assert hmm_empirical_duration([1] * 20, current_state=1, elapsed=20) is None
+
+
+def test_hazard_remaining_basic():
+    # 状态 1 的已结束段都=10（6 次）+ 末段进行中 ⇒ 恒定风险率 ≈ 1/10
+    seq = [2] * 3 + ([1] * 10 + [0] * 3) * 6 + [1] * 4
+    r0 = hmm_hazard_remaining(seq, current_state=1, elapsed=0)
+    assert r0["n"] == 6
+    assert 0 < r0["hazard_now"] < 1
+    assert r0["exp_remaining"] == r0["exp_total"]           # elapsed=0 时"剩余"="总"
+    r5 = hmm_hazard_remaining(seq, current_state=1, elapsed=5)
+    assert r5["exp_remaining"] < r0["exp_remaining"]        # 已走更久 ⇒ 剩余更少
+    # 到第 9 天时同类段几乎都在这天退出 ⇒ 风险率接近 1
+    r9 = hmm_hazard_remaining(seq, current_state=1, elapsed=9)
+    assert r9["hazard_now"] > 0.8
+
+
+def test_hazard_remaining_none_when_no_completed():
+    assert hmm_hazard_remaining([1] * 20, current_state=1, elapsed=5) is None
+
 

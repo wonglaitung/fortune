@@ -2443,14 +2443,9 @@ def get_hsi_analysis():
         return None
 
 
-def hmm_empirical_duration(regime_states, current_state, elapsed):
-    """用解码出的状态序列估计**条件剩余时长**（非无记忆）—— 改善 `1/(1−p)`。
-
-    - 只用**已结束**的同类状态段（最后一段未结束 ⇒ 排除）；
-    - 条件剩余 = 已持续 `elapsed` 天时，历史同类段中"还能再走"的平均天数。
-    返回 {n, median_total, exp_remaining, elapsed}；同类样本为空 → None。
-    """
-    runs = []          # [(state, length), ...] 依次的连续同态段
+def _completed_run_lengths(regime_states, current_state):
+    """解码状态序列里，**已结束**的同类状态段长度（升序）。末段=进行中 ⇒ 排除。"""
+    runs = []
     cur, length = None, 0
     for s in regime_states:
         if s == cur:
@@ -2461,8 +2456,13 @@ def hmm_empirical_duration(regime_states, current_state, elapsed):
             cur, length = s, 1
     if cur is not None:
         runs.append((cur, length))
-    completed = runs[:-1] if runs else []          # 最后一段 = 当前进行中 ⇒ 只在"已结束"里统计
-    same = sorted(L for (s, L) in completed if s == current_state)
+    completed = runs[:-1] if runs else []
+    return sorted(L for (s, L) in completed if s == current_state)
+
+
+def hmm_empirical_duration(regime_states, current_state, elapsed):
+    """经验**条件剩余**（非无记忆）—— 已持续 `elapsed` 天时，同类段"还能再走"的均值。"""
+    same = _completed_run_lengths(regime_states, current_state)
     if not same:
         return None
     rem = [L - elapsed for L in same if L > elapsed]
@@ -2470,6 +2470,47 @@ def hmm_empirical_duration(regime_states, current_state, elapsed):
         "n": len(same),
         "median_total": same[len(same) // 2],
         "exp_remaining": round(sum(rem) / len(rem), 1) if rem else 0.0,
+        "elapsed": int(elapsed),
+    }
+
+
+def hmm_hazard_remaining(regime_states, current_state, elapsed, alpha=0.5, tail=80):
+    """**时长依赖风险率**（半马尔可夫）—— 用离散 hazard 推期望剩余（比经验均值更平滑、可外推）。
+
+    定义（d = 已持续天数, 0-indexed）：
+      h(d) = P(第 d+1 天退出 | 已坚持 d 天)   （Laplace 平滑；超出观测尾部用尾部均值外推）
+      S(d) = P(T > d) = Π(1−h)                （生存函数）
+      E[剩余 | 已持续 d0] = Σ_{d≥d0} S(d) / S(d0)
+    返回 {n, hazard_now, exp_remaining, exp_total, median_total, elapsed}；无样本 → None。
+    """
+    import numpy as np
+    same = _completed_run_lengths(regime_states, current_state)
+    if not same:
+        return None
+    lmax = max(same)
+    horizon = max(lmax, int(elapsed)) + tail
+    h = np.zeros(horizon)
+    for d in range(horizon):
+        n_risk = sum(1 for x in same if x > d)
+        exits = sum(1 for x in same if x == d + 1)
+        h[d] = (exits + alpha) / (n_risk + 2 * alpha) if n_risk > 0 else np.nan
+    # 尾部外推：观测外的 h 用"最后若干已观测 h"的均值（避免 n_risk=0 造成的伪高）
+    obs = h[:lmax]
+    h_tail = float(np.mean(obs[-5:])) if lmax >= 1 else 0.05
+    h_tail = min(max(h_tail, 0.01), 0.5)
+    h[lmax:] = h_tail
+    h = np.nan_to_num(h, nan=h_tail)
+    S = np.ones(horizon + 1)
+    for d in range(horizon):
+        S[d + 1] = S[d] * (1 - h[d])
+    d0 = int(min(max(elapsed, 0), horizon - 1))
+    exp_remaining = float(np.sum(S[d0:horizon]) / S[d0]) if S[d0] > 0 else 0.0
+    return {
+        "n": len(same),
+        "hazard_now": round(float(h[d0]), 4),
+        "exp_remaining": round(exp_remaining, 1),
+        "exp_total": round(float(np.sum(S[:horizon])), 1),
+        "median_total": same[len(same) // 2],
         "elapsed": int(elapsed),
     }
 
@@ -2566,6 +2607,7 @@ def get_current_market_state():
         regime_switch_prob_5d = None
         regime_switch_prob_5d_pct = None
         regime_emp = None
+        regime_hazard = None
         regime_expected_duration = None
 
         try:
@@ -2600,6 +2642,14 @@ def get_current_market_state():
                         list(regime_result['Market_Regime'].values), regime_state, regime_duration)
                 except Exception:
                     regime_emp = None
+
+                # 时长依赖风险率（半马尔可夫；进一步改善经验均值）—— 同序列
+                regime_hazard = None
+                try:
+                    regime_hazard = hmm_hazard_remaining(
+                        list(regime_result['Market_Regime'].values), regime_state, regime_duration)
+                except Exception:
+                    regime_hazard = None
 
                 # 状态名称映射
                 regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
@@ -2643,6 +2693,7 @@ def get_current_market_state():
             'regime_switch_prob_5d': regime_switch_prob_5d,
             'regime_switch_prob_5d_pct': regime_switch_prob_5d_pct,
             'regime_emp_duration': regime_emp,
+            'regime_hazard': regime_hazard,
             'regime_expected_duration': regime_expected_duration,
         }
     except Exception as e:
@@ -5721,10 +5772,16 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
                         hsi_text += (f"| 期望剩余持续时间（模型·无记忆）| {expected_duration:.1f} 天 "
                                      f"| = 1/(1−转换概率)；**不看已持续多久** |\n")
-                        if regime_emp:
-                            hsi_text += (f"| 期望剩余持续时间（经验·条件）| {regime_emp['exp_remaining']:.1f} 天 "
-                                         f"| 已持续 {regime_emp['elapsed']} 天；同类状态历史中位总时长 "
-                                         f"{regime_emp['median_total']} 天（样本 {regime_emp['n']} 次）|\n")
+                        _haz = current_market.get('regime_hazard')
+                        _emp = current_market.get('regime_emp_duration')
+                        if _haz:
+                            hsi_text += (f"| 期望剩余持续时间（经验·时长依赖）| {_haz['exp_remaining']:.1f} 天 "
+                                         f"| 已持续 {_haz['elapsed']} 天；**当前退出风险率 {_haz['hazard_now']:.1%}/天**；"
+                                         f"同类中位总时长 {_haz['median_total']} 天（样本 {_haz['n']} 次）|\n")
+                        elif _emp:
+                            hsi_text += (f"| 期望剩余持续时间（经验·条件）| {_emp['exp_remaining']:.1f} 天 "
+                                         f"| 已持续 {_emp['elapsed']} 天；同类状态历史中位总时长 "
+                                         f"{_emp['median_total']} 天（样本 {_emp['n']} 次）|\n")
                         hsi_text += "\n"
 
                     # 添加市场状态说明表格
