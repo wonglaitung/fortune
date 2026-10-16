@@ -37,6 +37,14 @@ from ml_services.eval_overfit import cscv_pbo, deflated_sharpe
 SECTOR_NEUTRAL = True
 
 
+def min_detectable_ir(n, horizon):
+    """本窗口（n 个非重叠期）最小可探测「超额 IR」(α=0.05, 功率80% ⇒ z≈2.8)。
+
+    MDE_IR = 2.8·√(252/(h·n))（std 在 IR 里约掉）；低于它的真效应**测不出**（lessons 三.75）。
+    """
+    return 2.8 * np.sqrt(252.0 / (horizon * n)) if n else float('nan')
+
+
 def latest_pred(horizon, market='hk'):
     """最新 prediction_analysis.csv；默认港股（排除 A股目录，避免误取）"""
     if str(market).lower().startswith('a'):
@@ -201,6 +209,8 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropo
     # ⛔ 「净IR」是组合**绝对**收益（含 beta），不是超额。三.68：必须同时报超额口径。
     st_bench = _stats(bt['bench'].values, horizon)
     st_excess = _stats(bt['top_net'].values - bt['bench'].values, horizon)
+    # 功效：本窗口（n 个非重叠期）最小可探测「超额 IR」
+    mde_ir = min_detectable_ir(st_excess['n'], horizon)
     c = bootstrap(bt['top_net'].values, horizon)
     turnover = float(bt['turnover'].mean())
     wr, base, lift = signal_lift(df)
@@ -300,6 +310,7 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropo
     L.append(f"| 净IR（**绝对口径，含 beta**） | {st['ir']:.2f} [{c['ir_lo']:.2f},{c['ir_hi']:.2f}] | — 见超额行 |")
     L.append(f"| **等权基准 IR**（无模型） | {st_bench['ir']:.2f} | 参照系 |")
     L.append(f"| **超额 IR**（− 基准） | **{st_excess['ir']:.2f}** | ≥0.7 且 CI 下界>0 更佳 |")
+    L.append(f"| **功效/MDE**（α=.05 功率80%） | 超额 IR 最小可探测 **{mde_ir:.2f}** | n={st_excess['n']} 期 |")
     L.append(f"| P(IR>0.5) | {c['p_ir']*100:.0f}% | — |")
     L.append(f"| 净均收益/期 | {st['mean']*100:+.2f}% | >0 |")
     L.append(f"| 累计净收益 | {st['cum']*100:+.1f}% | — |")
@@ -319,6 +330,8 @@ def run(horizon, pred_csv, topk, cost, out_md, market='hk', null_perm=200, dropo
              f"IR {st_bench['ir']:.2f}；策略要「赢」必须超过这个数，而不是超过 0。")
     L.append(f"> 实测 D26：策略绝对 IR {st['ir']:.2f} **低于**基准 {st_bench['ir']:.2f}，"
              f"超额 IR {st_excess['ir']:.2f}。\n")
+    L.append(f"> ⚠️ **功效门槛**：本窗口 n={st_excess['n']} 期 ⇒ 最小可探测超额 IR ≈ **{mde_ir:.2f}**；"
+             f"**低于它的真 edge 测不出** ⇒ **「不显著」≠「没有」**（lessons 三.75）。\n")
     L.append("### 相对等权全池的判定（D27 E 级，强制）")
     L.append("")
     L.append(alpha_verdict if alpha_verdict else '- 等权基准不可用（样本不足）')
@@ -397,6 +410,9 @@ def main():
     ap.add_argument('--sweep', action='store_true',
                     help='换手率扫描：对 dropout∈{0,2,4,6,8} 各跑一次，输出'
                          '「换手 / 净IR / 毛IR / 超额IR / 成本拖累」对照表，量化降换手的上限。')
+    ap.add_argument('--sensitivity', action='store_true',
+                    help='相邻参数敏感性（默认应跑）：topk∈{-5,0,+5} × dropout∈{0,2}，报净/超额 IR，'
+                         '看**超额 IR 符号是否跨参一致**；翻转=不稳健（lessons 三.79）。')
     args = ap.parse_args()
 
     pred = args.pred or latest_pred(args.horizon, market=args.market)
@@ -422,6 +438,26 @@ def main():
             print(f"{d:>7} | {tn*100:>5.0f}% | {st_net['ir']:>7.2f} | {st_gross['ir']:>7.2f} "
                   f"| {st_exc['ir']:>7.2f} | {cd*100:>9.3f}%")
         print("\n解读：降换手只收复「成本拖累」那一行；若毛IR≈0（无信号），净IR 永为正也救不了 edge。")
+        return
+
+    if args.sensitivity:
+        from ml_services.portfolio_backtest import load_panel as _load  # 复用同一加载
+        df = _load(pred, market=args.market)
+        print(f"\n# 相邻参数敏感性（horizon={args.horizon}d, cost={args.cost}）")
+        print(f"{'topk':>5}{'dropout':>9} | {'净IR':>7}{'超额IR':>9}{'换手':>7}")
+        print("-" * 44)
+        signs = []
+        for tk in sorted({max(3, args.topk - 5), args.topk, args.topk + 5}):
+            for dp in (0, 2):
+                bt = backtest(df, args.horizon, tk, SECTOR_NEUTRAL, cost=args.cost, dropout=dp)
+                st_net = _stats(bt['top_net'].values, args.horizon)
+                st_exc = _stats(bt['top_net'].values - bt['bench'].values, args.horizon)
+                signs.append(np.sign(st_exc['ir']))
+                print(f"{tk:>5}{dp:>9} | {st_net['ir']:>7.2f}{st_exc['ir']:>9.2f}{bt['turnover'].mean()*100:>6.0f}%")
+        consistent = len(set(signs)) == 1
+        print("-" * 44)
+        print(f"判读：超额 IR 符号 **{'一致（较稳）' if consistent else '跨参翻转 ⇒ 不稳健'}**"
+              f"（出现 {sorted({int(s) for s in signs})}）—— 符号翻转 = 「取最好一轮」陷阱（lessons 三.79）。")
         return
 
     out = (args.output
