@@ -159,3 +159,7 @@ data/hsi_prediction_features_*.csv
 # 南向持仓（2026-10-11 起自采入库——保留墙仅 2 年，不入库=未来不存在；
 # southbound-holdings-daily.yml 日更；D 筛查 southbound-null 不变）
 # data/southbound_holdings/  ← 已放开（csv+manifest 入库）
+
+# D59 rank 模型实验产物（独立目录，不替换生产 pkl）
+data/rank_models/
+data/a_stock_rank_models/
