@@ -4432,3 +4432,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 用法: 相关齐升→风控(分散失效⇒降杠杆), 非alpha
 - 限定: 市场代理=池等权(非HSI); "相关齐升"由corr持续性主导(平凡可预测); "大波动|r|"未测(留D56)
 - + ml_services/risk_horizon_signals.py + tests(3 passed)
+
+2026-10-16 风险面板邮件区块原型（ml_services/risk_panel.py）
+- 定位: 只报"波动/同步"(风险), 不含方向(D55大跌不可测); 出口=仓位/杠杆(非alpha)
+- 档位阈值(暂用): 🟢P<0.5 / 🟡0.5–0.75 / 🔴≥0.75
+- risk_panel_html(): 方向中立、书面但通俗 register; 每段必带"不含方向判断"
+- 措辞硬规则: 禁方向词(加仓/减仓/抄底/逃顶); 测试断言锁定
+- 当前读数(2026-10-06): 相关齐升 P 0.14/0.17/0.21/0.30 → 全🟢 正常
+- 待 D56: 接"大波动|r|"轴 → 面板才完整
+- + ml_services/risk_panel.py + tests/test_risk_panel.py(5 passed); gitignore data/risk_panel_latest.json
