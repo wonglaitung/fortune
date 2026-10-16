@@ -4416,3 +4416,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 数据自发细分: 汇丰网→内银9 vs 港资5; 腾讯网→平台/AI大簇12; 对照E5-only 纯度0.87 ARI0.014(南向共持≠种子网)
 - 与主题材版(D51 纯度1.0/ARI0.64)同构: 结构真实≠可交易alpha(D51/D52已否)
 - gitignore data/hk_universe/; tests/test_hk_universe_graph.py(3 passed)
+
+2026-10-16 D54：换宇宙再测风格因子（56 池 PIT vs 125 宽池）→ ❌ 宽池阳性=伪影
+- 发现 ml_services/fetch_hk_universe.py + data/hk_universe_cache/(125只,2020-10→); 复用 D39 的 5 风格脚本
+- 56 池 PIT: 全 null（复现 D39）; 宽池: mom_60/120 +7.5/9.8% 期、rev_5 +4.25% "显著"——但幅度荒谬(≈250%/年)
+- 对抗: 裁剪 |r|>50% 脏数据 → mom 减半(+2.9/3.5%,仍≈45%/年不可信); rev_5 崩为 +0.96% 不显著 ⇒ 纯数据伪影
+- 判读: 宽池=当前名单(幸存者偏差)+数据毛刺 ⇒ D50"免费宽宇宙=虚高"的实证
+- 终判: 宽池阳性不可信 ⇒ 不支持"换宇宙解锁 alpha"; 56 池仍 null(D39 复现); 并入 D1/D33/D39/D49/D50
+- + scripts/style_factor_broad.py + tests(4 passed)
