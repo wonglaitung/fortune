@@ -2652,7 +2652,7 @@ def get_current_market_state():
                     regime_hazard = None
 
                 # 状态名称映射
-                regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
+                regime_labels = {0: '震荡（低波）', 1: '上涨', 2: '高波动（偏弱）'}
                 regime_state_cn = regime_labels.get(regime_state, '未知')
 
                 # 判断状态稳定性
@@ -5770,18 +5770,18 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += "|------|------|------|\n"
                         hsi_text += f"| 明天就换 | {transition_prob:.2%} | 明天就换到别的状态的把握 |\n"
                         hsi_text += f"| 5 天内会换 | {switch_prob_5d:.2%} | 未来 5 天内换出去的可能 |\n"
-                        hsi_text += (f"| 这轮还能持续多久（模型估）| {expected_duration:.1f} 天 "
-                                     f"| 按历史「平均」估的，**不看已经持续了多久** |\n")
                         _haz = current_market.get('regime_hazard')
                         _emp = current_market.get('regime_emp_duration')
                         if _haz:
-                            hsi_text += (f"| 这轮还能持续多久（按经验）| {_haz['exp_remaining']:.1f} 天 "
+                            hsi_text += (f"| **这轮还能持续多久** | {_haz['exp_remaining']:.1f} 天 "
                                          f"| **结合「已经持续了 {_haz['elapsed']} 天」**、照历史同类状态估；"
                                          f"现在每天换的概率约 {_haz['hazard_now']:.0%}（历史同类中位能持续 {_haz['median_total']} 天，共 {_haz['n']} 次）|\n")
                         elif _emp:
-                            hsi_text += (f"| 这轮还能持续多久（按经验）| {_emp['exp_remaining']:.1f} 天 "
+                            hsi_text += (f"| **这轮还能持续多久** | {_emp['exp_remaining']:.1f} 天 "
                                          f"| 结合「已经持续了 {_emp['elapsed']} 天」、照历史同类状态估（历史同类中位能持续 "
                                          f"{_emp['median_total']} 天，共 {_emp['n']} 次）|\n")
+                        hsi_text += (f"| （参考）纯模型估算 | {expected_duration:.1f} 天 "
+                                     f"| **不看已经持续了多久**；实测偏乐观，仅供参考 |\n")
                         hsi_text += "\n"
 
                     # 添加市场状态说明表格

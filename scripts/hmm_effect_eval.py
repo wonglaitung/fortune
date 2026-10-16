@@ -26,7 +26,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-LBL = {0: "震荡", 1: "上涨", 2: "下跌"}
+LBL = {0: "低波震荡", 1: "上涨", 2: "高波偏弱"}
 
 
 def _load_hsi(period):

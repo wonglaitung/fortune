@@ -328,18 +328,26 @@ def get_hsi_data_tencent(period_days=90):
             pkl = os.path.join(base, 'data', 'hk_universe_cache', 'HSI.pkl')
             if os.path.exists(pkl):
                 hsi = pickle.load(open(pkl, 'rb'))
-                hsi = hsi.tail(period_days)
-                hsi.index = pd.to_datetime(hsi.index).tz_localize('UTC')
-                # 统一列名为首字母大写（腾讯主路径用Open/Close/High/Low/Volume，
-                # 旧 HSI.pkl 是小写 close/open/...，直接返回会让下游
-                # `df['Close']` / `df['Volume']` 抛 KeyError →
-                # HMM 市场状态特征被except 吞掉 → 6 个 HSI_Regime_* 特征静默缺失）
+                hsi.index = pd.to_datetime(hsi.index)
+                if getattr(hsi.index, 'tz', None) is None:
+                    hsi.index = hsi.index.tz_localize('UTC')
+                # 统一列名为首字母大写（旧 HSI.pkl 是小写 open/close/...）
                 _rename = {c: c.capitalize() for c in hsi.columns if c != c.capitalize()}
                 if _rename:
                     hsi = hsi.rename(columns=_rename)
-                if 'Volume' not in hsi.columns:
-                    print(f"  ⚠️ [HSI缓存兜底] HSI.pkl 缺 Volume 列（实际列: {list(hsi.columns)}），"
-                          f"HMM 市场状态特征将无法计算")
+                # 校验：必须含 Volume，且 OHLC 合理（防"缺列/列错位"的坏缓存**静默**流入 HMM）
+                need = {'Open', 'Close', 'High', 'Low', 'Volume'}
+                ok_cols = need <= set(hsi.columns)
+                ok_px = False
+                if ok_cols:
+                    _px = hsi[['Open', 'Close', 'High', 'Low']].apply(pd.to_numeric, errors='coerce')
+                    ok_px = bool(_px.max().max() < 1e6 and _px.min().min() > 0
+                                 and (_px['High'] >= _px['Low']).mean() > 0.99)
+                if not (ok_cols and ok_px):
+                    print(f"  ⚠️ [HSI缓存兜底] HSI.pkl 校验不通过（列={list(hsi.columns)}；"
+                          f"缺 Volume 或价格异常/列错位）⇒ **弃用该缓存**，交上层回退 yfinance")
+                    return None
+                hsi = hsi.tail(period_days)
                 print(f"  [HSI缓存兜底] 使用 HSI.pkl（{len(hsi)} 行，可能过期）")
                 return hsi
         except Exception as ee:

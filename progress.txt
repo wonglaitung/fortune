@@ -4513,3 +4513,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ③时长: 模型自转0.956–0.972 vs 经验0.863–0.916 ⇒ 高估~2–3×; 模型22–36天 vs 实测中位5–8天 ⇒ "24.3天"是乐观值
 - 数据隐患: 本地 HSI.pkl 损坏(列错位low≈2.5e11 + 缺Volume)会被兜底 ⇒ HMM特征静默退化(仅本地)
 - + scripts/hmm_effect_eval.py + tests(2 passed); 写入 DECISIONS D57
+
+2026-10-16 D57 §四 三项修复
+- #1 HSI兜底加固(tencent_finance): 校验须含Volume且0<OHLC<1e6且High>=Low; 不合格弃用; 本地 HSI.pkl 用yf重建(2461行正确OHLCV)
+- #2 邮件弱化模型值: 主行改"这轮还能持续多久"(经验·时长依赖); 纯模型值降为"(参考)纯模型估算"并标偏乐观
+- #3 状态标签vol感知: 显示 0/1/2=低波震荡/上涨/高波动(偏弱); _determine_state_mapping 改收益+波动规则(不动特征口径)
+- tests 9 passed; HSI.pkl 已修（本地）

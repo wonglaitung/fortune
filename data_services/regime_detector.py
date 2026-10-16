@@ -45,9 +45,9 @@ class RegimeDetector:
 
     # 状态标签（训练后根据特征均值排序确定）
     REGIME_LABELS = {
-        0: '震荡',   # 低波动、收益率接近 0
-        1: '上涨',   # 正收益、中等波动
-        2: '下跌',   # 负收益、高波动
+        0: '震荡（低波）',        # 低波动、收益率接近 0
+        1: '上涨',               # 正收益、中等波动
+        2: '高波动（偏弱）',      # 高波动、收益略负（**非**"大跌"；D57）
     }
 
     def __init__(self, n_states=3, lookback=252, market=None):
@@ -175,31 +175,27 @@ class RegimeDetector:
         根据 HMM 状态的均值特征，确定每个状态的语义含义
 
         约定：
-        - 收益率最高 + 波动率中等 → 上涨（1）
-        - 收益率最低 + 波动率偏高 → 下跌（2）
-        - 收益率接近0 + 波动率低 → 震荡（0）
+        - 收益率最高 → 上涨（1）
+        - 其余两态里**波动率更高**者 → 高波动/偏弱（2）；更低者 → 震荡（0）
+          （不再**只看收益**排序——实测"最低收益"态其实是"高波动、收益略负"，
+           纯收益排序会把它误标成"大跌"。D57）
         """
         means = self.model.means_  # shape: (n_states, n_features)
         # 第0列 = return_20d 均值，第1列 = vol_20d 均值
 
-        # 按收益率均值排序
-        sorted_by_return = np.argsort(means[:, 0])
-
-        # 最低收益 → 下跌(2)
         # 最高收益 → 上涨(1)
-        # 中间 → 震荡(0)
-        self._state_mapping = {}
-        self._state_mapping[sorted_by_return[0]] = 2  # 最低收益 → 下跌
-        self._state_mapping[sorted_by_return[-1]] = 1  # 最高收益 → 上涨
+        top = int(np.argmax(means[:, 0]))
+        self._state_mapping = {top: 1}
 
-        # 中间状态
-        if self.n_states == 3:
-            self._state_mapping[sorted_by_return[1]] = 0  # 中间 → 震荡
-        else:
-            # 多于3个状态时，按波动率分
-            remaining = [s for s in range(self.n_states) if s not in self._state_mapping]
-            for s in remaining:
-                self._state_mapping[s] = 0  # 统一归为震荡
+        # 其余：按波动率分（低波→震荡(0)，高波→高波动/偏弱(2)）
+        rest = [s for s in range(self.n_states) if s != top]
+        rest_by_vol = sorted(rest, key=lambda s: means[s, 1])
+        if rest_by_vol:
+            self._state_mapping[rest_by_vol[0]] = 0        # 最低波 → 震荡
+        if len(rest_by_vol) > 1:
+            self._state_mapping[rest_by_vol[-1]] = 2       # 最高波 → 高波动/偏弱
+        for s in rest_by_vol[1:-1]:                        # 中间多余 → 震荡
+            self._state_mapping[s] = 0
 
     def predict(self, df):
         """

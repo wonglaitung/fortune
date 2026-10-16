@@ -11,4 +11,4 @@ def test_runs_basic():
 
 def test_labels():
     assert set(LBL) == {0, 1, 2}
-    assert LBL[1] == "上涨" and LBL[2] == "下跌"
+    assert LBL[1] == "上涨" and LBL[2] == "高波偏弱"
