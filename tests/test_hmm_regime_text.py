@@ -19,6 +19,15 @@ def test_desc_by_historical_percentile():
     assert "历史高位" in hmm_stability_desc(0.75)
 
 
+def test_no_action_implication_in_hmm_text():
+    """HMM 无 alpha（D57）⇒ 其叙事不得夹带买卖/行动暗示。"""
+    src = (Path(__file__).resolve().parent.parent / "comprehensive_analysis.py").read_text(encoding="utf-8")
+    for w in ("趋势明确", "可正常交易"):
+        assert w not in src, w
+    # 必须显式声明"只描述、不预测、不是买卖信号"
+    assert "不预测涨跌" in src and "不是买卖信号" in src
+
+
 def test_no_hardcoded_range_wording_in_source():
     """回归护栏：不得再用'实际范围'（暗示分位却实为硬编码阈值）。"""
     src = (Path(__file__).resolve().parent.parent / "comprehensive_analysis.py").read_text(encoding="utf-8")
