@@ -4582,3 +4582,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 接入 v4_pipeline.py --show-latest
 - 未改生产 comprehensive_analysis 概率链路（P3完整版=P4后）
 - tests 8 passed(rank_display+v4_pipeline)
+
+2026-10-16 D59 P4/收尾：同一性契约 + 重写收尾
+- tests/test_v4_contract.py: 锁定 rank标签=横截面百分位 / 回归出score非概率 / 重复拟合确定性
+- ⓪同一性四问(V4旁路): 列集合单源/时点单源/无概率
+- 三冻结/双跑不适用(旁路未部署); 切生产须重做
+- 收尾: P0-P4完成; 验收全不过 ⇒ V4不产alpha ⇒ 不建议切生产; 生产与总账未改
