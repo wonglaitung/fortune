@@ -4488,3 +4488,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ②点明"回看 vs 前瞻"两概念: 「已持续天数=回看」vs「转换概率/期望时长=前瞻」可能不一致, 别互相替代
 - comprehensive_analysis: get_current_market_state 返回加 regime_switch_prob_5d_pct; 渲染块改用它
 - tests/test_hmm_regime_text.py(3 passed, 含"无'实际范围'残留"回归护栏)
+
+2026-10-16 改善"期望剩余持续时间"（无记忆→经验条件剩余）
+- 问题: 1/(1−p) 是几何/无记忆 ⇒ 不看"已持续多久"(24.3天与已持续无关)
+- 方案: hmm_empirical_duration() —— 用解码状态序列的**已结束同类段**估条件剩余(已持续 elapsed 时还能再走均值)
+- email 表格: 模型值标"无记忆"; 加"经验·条件"行(已持续/中位总时长/样本数)
+- get_current_market_state 返回加 regime_emp_duration; tests(5 passed)

@@ -2443,6 +2443,37 @@ def get_hsi_analysis():
         return None
 
 
+def hmm_empirical_duration(regime_states, current_state, elapsed):
+    """用解码出的状态序列估计**条件剩余时长**（非无记忆）—— 改善 `1/(1−p)`。
+
+    - 只用**已结束**的同类状态段（最后一段未结束 ⇒ 排除）；
+    - 条件剩余 = 已持续 `elapsed` 天时，历史同类段中"还能再走"的平均天数。
+    返回 {n, median_total, exp_remaining, elapsed}；同类样本为空 → None。
+    """
+    runs = []          # [(state, length), ...] 依次的连续同态段
+    cur, length = None, 0
+    for s in regime_states:
+        if s == cur:
+            length += 1
+        else:
+            if cur is not None:
+                runs.append((cur, length))
+            cur, length = s, 1
+    if cur is not None:
+        runs.append((cur, length))
+    completed = runs[:-1] if runs else []          # 最后一段 = 当前进行中 ⇒ 只在"已结束"里统计
+    same = sorted(L for (s, L) in completed if s == current_state)
+    if not same:
+        return None
+    rem = [L - elapsed for L in same if L > elapsed]
+    return {
+        "n": len(same),
+        "median_total": same[len(same) // 2],
+        "exp_remaining": round(sum(rem) / len(rem), 1) if rem else 0.0,
+        "elapsed": int(elapsed),
+    }
+
+
 def hmm_stability_desc(switch_pct):
     """按**历史分位**描述 HMM 5 日转换概率（诚实口径；None ⇒ 不可用）。
 
@@ -2534,6 +2565,7 @@ def get_current_market_state():
         regime_transition_prob = None
         regime_switch_prob_5d = None
         regime_switch_prob_5d_pct = None
+        regime_emp = None
         regime_expected_duration = None
 
         try:
@@ -2560,6 +2592,14 @@ def get_current_market_state():
                         regime_switch_prob_5d_pct = float((_hist < regime_switch_prob_5d).mean())
                 except Exception:
                     regime_switch_prob_5d_pct = None
+
+                # 经验条件剩余时长（非无记忆；改善 1/(1−p)）—— 用解码出的状态序列
+                regime_emp = None
+                try:
+                    regime_emp = hmm_empirical_duration(
+                        list(regime_result['Market_Regime'].values), regime_state, regime_duration)
+                except Exception:
+                    regime_emp = None
 
                 # 状态名称映射
                 regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
@@ -2602,6 +2642,7 @@ def get_current_market_state():
             'regime_transition_prob': regime_transition_prob,
             'regime_switch_prob_5d': regime_switch_prob_5d,
             'regime_switch_prob_5d_pct': regime_switch_prob_5d_pct,
+            'regime_emp_duration': regime_emp,
             'regime_expected_duration': regime_expected_duration,
         }
     except Exception as e:
@@ -5678,7 +5719,13 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         hsi_text += "|------|------|------|\n"
                         hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
                         hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
-                        hsi_text += f"| 期望剩余持续时间 | {expected_duration:.1f} 天 | 当前状态平均还能持续多久 |\n\n"
+                        hsi_text += (f"| 期望剩余持续时间（模型·无记忆）| {expected_duration:.1f} 天 "
+                                     f"| = 1/(1−转换概率)；**不看已持续多久** |\n")
+                        if regime_emp:
+                            hsi_text += (f"| 期望剩余持续时间（经验·条件）| {regime_emp['exp_remaining']:.1f} 天 "
+                                         f"| 已持续 {regime_emp['elapsed']} 天；同类状态历史中位总时长 "
+                                         f"{regime_emp['median_total']} 天（样本 {regime_emp['n']} 次）|\n")
+                        hsi_text += "\n"
 
                     # 添加市场状态说明表格
                     hsi_text += "**市场状态说明**:\n\n"
