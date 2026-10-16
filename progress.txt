@@ -4403,3 +4403,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 诚实边界: Q3/Q4 运行时相等仍须人工; 不假装 ⓪ 全自动; 非零退出=可判定 FAIL(net_comm_* 却 community_ids=None)
 - 实测: 20d pkl 567 特征(HIBOR=60 net_*=356) 2 PASS/0 FAIL/4 INFO
 - REVIEW_GATES 更新"已知待修风险"→部分落地; AGENTS ⓪ 行同步; tests/test_parity_check.py(4 passed)
+
+2026-10-16 D53：hk_universe_config.py（按 A股方式建港股小宇宙：种子 + 关系网络）
+- 对标 a_stock_config.py 结构: 4 种子(0700腾讯/0981中芯/0005汇丰/1211比亚迪) + 43 扩展(平台AI14/半导体6/银行金融14/新能源车9) = 47 只
+- 含 SECTOR_MAPPING(行业/类型/5评分) + 权重(种子3.0/扩展1.0) + HK_RELATION_GROUPS(关系组视图, 防漂移校验) + render_network_ascii()
+- 与港股生产池区分: 生产池=行业扁平(计算关联); 本配置=种子关系图(手工软边)=研究宇宙, 不动生产
+- 诚实: 软边无PIT; 不暗示alpha(D51/D52 null); tests/test_hk_universe_config.py(6 passed)
