@@ -97,6 +97,25 @@ def evaluate(period="10y"):
             "emp_median_dur": int(np.median(Ls)) if Ls else None,
             "emp_mean_dur": round(float(np.mean(Ls)), 1) if Ls else None,
         }
+
+    # ④ 门控策略 vs 买入持有（成本 0.5%/边，T+1 生效）
+    from ml_services.strategy_eval import daily_mark, metrics_daily
+    r = h["Close"].pct_change().fillna(0.0)
+    st = res["Market_Regime"].reindex(h.index)
+
+    def _strat(w, name):
+        net = daily_mark(r, w, cost_per_turnover=0.005, lag=1)
+        m = metrics_daily(net, horizon=1)
+        return {"name": name, "sharpe": round(float(m["sharpe"]), 2),
+                "cagr_pct": round(float(m["cagr"]) * 100, 1),
+                "maxdd_pct": round(float(m["maxdd"]) * 100, 1),
+                "turnover": int(w.diff().abs().fillna(0).sum())}
+
+    out["gating"] = [
+        _strat(pd.Series(1.0, index=h.index), "买入持有"),
+        _strat((st != 2).astype(float).fillna(1.0), "避开高波偏弱(2)"),
+        _strat((st == 1).astype(float).fillna(0.0), "只在上涨(1)"),
+    ]
     return out
 
 
@@ -118,6 +137,10 @@ def _print(o):
     for k, v in o["persistence"].items():
         print(f"  {k:<6}{v['model_self_trans']:>9}{v['emp_self_trans']:>9}"
               f"{v['model_exp_dur']:>9}{str(v['emp_median_dur']):>9}{str(v['emp_mean_dur']):>9}")
+    print("\n[④ 门控策略 vs 买入持有（成本 0.5%/边，T+1）]")
+    print(f"  {'策略':<16}{'夏普':>8}{'年化':>9}{'maxDD':>9}{'换手':>7}")
+    for v in o["gating"]:
+        print(f"  {v['name']:<16}{v['sharpe']:>+8.2f}{v['cagr_pct']:>+8.1f}%{v['maxdd_pct']:>+8.1f}%{v['turnover']:>7}")
 
 
 def main():
