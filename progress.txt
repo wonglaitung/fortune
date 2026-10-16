@@ -4575,3 +4575,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 闸门: 无任何周期全过(净IR 5d-0.75/10d-0.23/20d+0.15; 超额CI下界三个全不过)
 - 终判: 三道闸全不过 ⇒ 重写不产alpha(同P1/D58/D1)
 - tests 4 passed
+
+2026-10-16 D59 P3：展示层（分数→分位→方向）
+- ml_services/rank_display.py: score→当日横截面分位→偏强/中性/偏弱 + 邮件区块
+- 口径: "上涨概率 X%" → "相对强弱分位 X%"（无概率语义）
+- 接入 v4_pipeline.py --show-latest
+- 未改生产 comprehensive_analysis 概率链路（P3完整版=P4后）
+- tests 8 passed(rank_display+v4_pipeline)

@@ -100,11 +100,26 @@ def gates(pred, h, topks):
     return {"pbo": float(pbo), "dsr": float(dsr), "n_periods": len(M), "n_configs": M.shape[1], "best": best}
 
 
+def latest_scores(panel, h):
+    """训练到 (最新日 − (h+lag)) → 对最新日横截面打分（供展示层）。"""
+    panel = panel.dropna(subset=FEATS + ["rank", "fwd"]).copy()
+    dates = sorted(panel["date"].unique())
+    last = dates[-1]
+    cutoff = np.datetime64(last) - np.timedelta64(h + LAG, "D")
+    tr = panel[panel["date"] <= cutoff]
+    te = panel[panel["date"] == last]
+    if len(tr) < 500 or len(te) < 20:
+        return None
+    sc = _fit_predict(tr[FEATS].values, tr["rank"].values, te[FEATS].values, "reg")
+    return pd.DataFrame({"code": te["code"].values, "score": sc})
+
+
 def main():
     ap = argparse.ArgumentParser(description="V4 排序标签·三周期管线（D59 P1+P2）")
     ap.add_argument("--horizons", default="5,10,20")
     ap.add_argument("--topks", default="5,10,20")
     ap.add_argument("--topk", type=int, default=10, help="主口径 TopK（报指标用）")
+    ap.add_argument("--show-latest", action="store_true", help="额外打印最新横截面的相对强弱（展示层预览）")
     args = ap.parse_args()
     hs = [int(x) for x in args.horizons.split(",")]
     topks = [int(x) for x in args.topks.split(",")]
@@ -127,6 +142,19 @@ def main():
     print("-" * 96)
     print("判据(D59 §三): 净IR / PBO<0.5 / DSR≥0.95 / 超额CI下界>0（同 D2）；先验偏 null。")
     print("⚠️ 旁路结果**不**改生产/总账。")
+    if args.show_latest:
+        from ml_services.rank_display import render_text
+        h0 = hs[0]
+        panel = load_panel(h0)
+        panel["rank"] = panel.groupby("date")["fwd"].rank(pct=True)
+        sl = latest_scores(panel, h0)
+        print("=" * 96)
+        if sl is None:
+            print(f"最新横截面样本不足（H={h0}）")
+        else:
+            from ml_services.rank_display import build_rows
+            rows = build_rows(sl["score"].values, sl["code"].values)
+            print(render_text(rows, h0, top=12))
     return 0
 
 
