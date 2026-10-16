@@ -4328,3 +4328,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 改写 test_wf_probability_is_calibrated → test_wf_and_production_same_prob_caliber（校验真实同源条件）
 - 契约测试 **15 passed / 0 xfailed**（原 14/1xfail）；AGENTS ⓪ 行 + D45 同步
 - ⇒ **两个待办（WF 校准 + hsi_risk_overlay 迁移）均已清**
+
+2026-10-16 D46：把"交易理念"做成特征 → 不立项（用户同意）
+- 关键区分：理念（编码，∈现有价格→同信息，D44 同族）vs 新信息源（数据，∉现有→另一条题）
+- 四形式（硬规则/特征/正则/混合）逐一否决；顶级交易员 edge 来源=信息/风控/执行，非可编码预测函数
+- 我们其实已大规模做过（RSI/MACD/形态/regime/网络/情感…）=全 null
+- 唯一逻辑入口=加独立新数据源（订单流/期权/事件…），须预登记+Bonferroni+独立窗+静态；先验偏 null
+- 写入 DECISIONS D46
