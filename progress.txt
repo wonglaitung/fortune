@@ -4386,3 +4386,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ⭐ 关键结构性发现: 题材内相关高(银行≈0.83/AI≈0.53) ⇒ N_eff≈1.2–1.7 ⇒ 题材内挑股≈一个赌注 ⇒ 结构性测不出(D49 更极端)
 - 终判: 题材小宇宙作研究对象成立(E6有价格实体)，作 alpha 来源 ✗; 结案并入 D1/D33/D49
 - 新增 scripts/hk_themes_alpha.py + tests/test_hk_themes_alpha.py(4 passed)
+
+2026-10-16 D52：关联网络"传播"检验（补 D51 未测的"边"）→ ② 执行
+- 澄清: D51 只用了"题材归属(分区)"，没用边；边只在 E6 结构对照出现；"关联当特征"网络族已进模型仍 null
+- D52 预登记: ① 邻域动量 ② E1 A-H lead-lag ③ 中心性; 判据聚类+Bonferroni; 方向须"能预测 H"
+- ② 执行(scripts/ah_leadlag_test.py, 13 对, pair 聚类): 同期 0.593(t=20.7, sanity✓); ① A→H(可交易) +0.012 t=1.54 p=0.149 ❌null; ② H→A +0.033 t=3.92 ✅显著但非我们方向; ③ H动量 +0.012 t=1.82 null; ④ 溢价→H +0.028 t=8.24 ✅但幅度极小+需A腿+疑机械
+- 终判: E1 边日频领先滞后在可交易方向(预测 H)=null ⇒ 并入 D1/D33/D51; ①③未跑(③已进模型仍null)
+- 新增 scripts/ah_leadlag_test.py + tests/test_ah_leadlag.py(2 passed)
