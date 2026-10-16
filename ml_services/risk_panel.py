@@ -22,7 +22,8 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from ml_services.risk_horizon_signals import FEATURES, HORIZONS, build_dataset, load_returns  # noqa: E402
+from ml_services.risk_horizon_signals import (  # noqa: E402
+    FEATURES, HORIZONS, VOL_HORIZONS, build_dataset, load_returns)
 
 H_LABEL = {1: "未来 1 天", 5: "未来 1 周", 10: "未来 2 周", 20: "未来 1 个月"}
 TIER_ICON = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
@@ -62,10 +63,13 @@ def latest_panel(horizons=HORIZONS):
     out = {}
     for H in horizons:
         p_sync = _fit_predict(f"corr_rise_{H}")
-        p_vol = _fit_predict(f"big_move_{H}")
-        out[H] = {"p_corr_rise": p_sync, "tier": tier_of(p_sync),
-                  "p_big_move": p_vol, "vol_tier": tier_of(p_vol)}
+        out[H] = {"p_corr_rise": p_sync, "tier": tier_of(p_sync)}
+        # 波动轴（大波动 |r|）**只采用 1/5D**（10/20D 未通过，D56 §七）
+        if H in VOL_HORIZONS:
+            p_vol = _fit_predict(f"big_move_{H}")
+            out[H].update({"p_big_move": p_vol, "vol_tier": tier_of(p_vol)})
     return {"as_of": as_of, "horizons": out,
+            "vol_axis_horizons": list(VOL_HORIZONS),
             "tiers_note": "🟢<0.5 / 🟡0.5–0.75 / 🔴≥0.75（暂用，正式须预注册）"}
 
 
@@ -86,7 +90,8 @@ def risk_panel_html(payload):
         body += '                <div style="margin-top:4px;">· ' + '<br>· '.join(bullets) + '</div>\n'
     body += (
         '                <div style="font-size:11px;color:#6b7280;margin-top:6px;">'
-        '⚠️ 本提示<b>不含方向判断</b>（涨跌不可预测）；仅反映波动水平：波动上行时，宜控制仓位与杠杆。</div>\n'
+        '⚠️ 本提示<b>不含方向判断</b>（涨跌不可预测）；仅反映波动水平：波动上行时，宜控制仓位与杠杆。'
+        '（波动项只看短期 1 天 / 1 周；长周期只报"同步"。）</div>\n'
         '            </div>\n')
     return ('        <div class="section">\n'
             '            <div class="section-title">📌 波动提示（未来 1 周 / 1 个月）</div>\n'
@@ -144,7 +149,11 @@ def main():
     for h in HORIZONS:
         d = payload["horizons"][h]
         pv = d["p_corr_rise"]
-        print(f"  {H_LABEL[h]:10s} 相关齐升 P={pv if pv is None else round(pv,3)}  档位={d['tier']}")
+        line = f"  {H_LABEL[h]:10s} 同步(相关齐升) P={pv if pv is None else round(pv,3)}  档位={d['tier']}"
+        if "p_big_move" in d:
+            pm = d["p_big_move"]
+            line += f" | 波动(|r|) P={pm if pm is None else round(pm,3)}  档位={d.get('vol_tier')}"
+        print(line)
 
 
 if __name__ == "__main__":

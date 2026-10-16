@@ -28,6 +28,8 @@ sys.path.insert(0, ROOT)
 
 SNAP = os.path.join(ROOT, "data", "hk_market_snapshot")
 HORIZONS = [1, 5, 10, 20]
+# 波动轴（大波动 |r|）**只采用 1/5D** —— 10/20D 未通过（AUC≤0.55，D56 §七）⇒ 不展示、不采用
+VOL_HORIZONS = [1, 5]
 FEATURES = ["rv_1", "rv_5", "rv_22", "corr_22"]
 LOOKBACK_Q = 250          # 标签分位窗口（只用过去）
 CORR_WIN = 22
@@ -163,10 +165,13 @@ def main():
     df, mkt = build_dataset(rets)
     print(f"面板 {rets.shape[1]} 只 | {rets.index.min().date()} ~ {rets.index.max().date()} | 样本 {len(df)}")
     print("=" * 84)
+    # 波动轴只报 1/5D（10/20D 未通过，不采用）；同步/大跌报全 4 周期
+    kind_h = {"big_move": VOL_HORIZONS, "big_drop": HORIZONS, "corr_rise": HORIZONS}
     for kind in ("big_move", "big_drop", "corr_rise"):
-        print(f"\n### {kind}（AUC>0.55 且 Brier<climatology 为过）")
+        extra = "（只采用 1/5D；10/20D 未通过 ⇒ 已撤）" if kind == "big_move" else ""
+        print(f"\n### {kind}{extra}")
         print(f"{'H':>3}{'n':>6}{'基率':>8}{'AUC':>7}{'Brier':>8}{'气候Brier':>10}{'技能':>8}{'判':>5}")
-        for H in HORIZONS:
+        for H in kind_h[kind]:
             r = walk_forward(df, f"{kind}_{H}")
             if not r:
                 print(f"{H:>3}  样本不足")

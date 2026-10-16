@@ -4449,3 +4449,8 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 再次验证: 幅度弱可测、方向不可测(D55大跌❌); 重叠窗高估显著性
 - 面板接第二轴: risk_panel 增 p_big_move/vol_tier; _compose 双轴(同步+波动)方向中立渲染
 - + 扩 risk_horizon_signals(big_move_H) + risk_panel; tests 9 passed
+
+2026-10-16 面板调整（用户）：波动轴只采用 1D/5D，撤掉 10D/20D
+- risk_horizon_signals: VOL_HORIZONS=(1,5); big_move 表只报 1/5D（10/20D 未通过⇒不展示）
+- risk_panel: 波动轴只算 1/5D(p_big_move/vol_tier); 同步轴仍 1/5/10/20; 免责加"波动只看短期"
+- D56 §七 记决策; 当前读数: 同步 P 0.14/0.17/0.21/0.30 + 波动 0.19/0.18(仅1/5D) 全🟢
