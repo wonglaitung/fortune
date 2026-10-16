@@ -4603,3 +4603,13 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - A股 cutover: 复用 Return_Rank 连续标签 + CatBoostRegressor(RMSE) + _train_with_weights_rank
 - 验证: 两市场 load→predict 通过, score 分布合理(港20d 0.40-0.71/A股20d 0.44-0.58), label_mode 持久化
 - 未部署(生产 pkl 未替换: load_model 恢复 label_mode ⇒ 覆盖即真切换); 上线前须三冻结/双跑/契约
+
+2026-10-16 D59 十四：生产切换执行（rank 标签 + 5/10/20 三周期，部分 flag-gated）
+- 生产 pkl 就地换为 rank：港股 data/ml_trading_model_catboost_{5,10,20}d.pkl（本地/Git忽略），A股 data/a_stock_models/trading_model_catboost_{5,10,20}d.pkl（入库）
+- 备份 /tmp/opencode/deploy_backup/（6 pkl，回滚=拷回 + 取消 LABEL_MODE=rank）
+- runner: run_comprehensive_analysis.sh + run_a_stock_analysis.sh → for horizon in 5 10 20 + export LABEL_MODE=rank
+- comprehensive_analysis.py: HORIZONS=(5,10,20) 单点常量; RANK_MODE 跳 isotonic校准/模式重算/市场调整; 三周期列显示相对强弱分; 邮件子标题+LLM字段说明条件化
+- doc_gate.py S1: 新增 A股模型 pkl 例外（10d 为新周期槽）
+- 残留: 深层 LLM prompt 正文(comprehensive_analysis L3879+/L5315+)仍写"上涨概率"（rank 模式为历史残留，不影响数值）
+- 验证: 30 契约测试 + 全量 325 passed; doc_gate 全绿; commit e81146bb 已 push
+- ⚠️ 诚实定性: 口径/架构变更，非 alpha 改善（D58/D59 P1-P2: 净超额≤0, 三闸不过; 未跑三冻结双跑正式验收 ⇒ 外推生产 ✗）
