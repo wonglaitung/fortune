@@ -1,10 +1,9 @@
-"""风险面板（ml_services/risk_panel.py）—— D55 邮件区块原型。"""
+"""风险面板（ml_services/risk_panel.py）—— D55/D56 邮件区块。"""
 
-import re
+from ml_services.risk_panel import (
+    SYNC_DISPLAY, VOL_DISPLAY, _axis_line, _hint, risk_panel_html, tier_of)
 
-from ml_services.risk_panel import _compose, risk_panel_html, tier_of
-
-FORBIDDEN = ("加仓", "减仓", "抄底", "逃顶", "买", "卖", "看涨", "看跌", "涨跌")
+FORBIDDEN = ("加仓", "减仓", "抄底", "逃顶", "看涨", "看跌")
 
 
 def test_tier_thresholds():
@@ -16,41 +15,38 @@ def test_tier_thresholds():
     assert tier_of(None) is None
 
 
-def test_compose_green_mentions_normal():
-    hs = {5: {"tier": "green", "p_corr_rise": 0.3}, 20: {"tier": "green", "p_corr_rise": 0.4}}
-    lead, b = _compose(hs)
-    assert "正常" in lead
-    assert b == []
+def test_axis_line_labels_tiers():
+    hs = {1: {"vol_tier": "green"}, 5: {"vol_tier": "yellow"}}
+    line = _axis_line(hs, VOL_DISPLAY, "vol_tier")
+    assert "未来 1 天：正常" in line and "未来 1 周：留意" in line
 
 
-def test_compose_red_direction_neutral():
-    hs = {5: {"tier": "green"}, 20: {"tier": "red", "p_corr_rise": 0.9}}
-    lead, b = _compose(hs)
-    assert "当心" in lead
-    # 「同步」解释里必须显式"同涨同跌"以示双向
-    assert any("同涨同跌" in x for x in b)
+def test_hint_levels():
+    assert _hint({1: {"vol_tier": "green"}, 5: {"tier": "green"}}) == ""
+    assert "留意" in _hint({5: {"tier": "yellow"}})
+    assert "控制仓位" in _hint({20: {"tier": "red"}})
 
 
-def test_compose_vol_axis():
-    hs = {5: {"tier": "green", "vol_tier": "yellow"}, 20: {"tier": "green", "vol_tier": "green"}}
-    lead, b = _compose(hs)
-    assert "波动" in lead
-    assert any("波动可能放大" in x for x in b)
-
-
-def test_html_has_no_directional_verbs():
-    hs = {1: {"tier": "green", "p_corr_rise": 0.2},
-          5: {"tier": "yellow", "p_corr_rise": 0.6},
-          10: {"tier": "yellow", "p_corr_rise": 0.65},
-          20: {"tier": "red", "p_corr_rise": 0.8}}
+def test_html_vol_before_sync_and_two_axes():
+    hs = {1: {"tier": "green", "vol_tier": "green"},
+          5: {"tier": "green", "vol_tier": "yellow"},
+          10: {"tier": "green"},
+          20: {"tier": "red"}}
     html = risk_panel_html({"as_of": "2026-10-06", "horizons": hs})
-    assert "波动提示" in html
+    assert html.index("波动") < html.index("同步")          # 波动在前
     assert "不含方向判断" in html
-    # 正文不得出现方向性动词（"涨跌"仅在"（涨跌皆可能）"与免责里，允许）
-    for w in ("加仓", "减仓", "抄底", "逃顶", "看涨", "看跌"):
+    assert "未来 1 个月：当心" in html
+
+
+def test_html_accepts_string_keys_and_has_no_directional_verbs():
+    # JSON 往返后键为字符串
+    hs = {"1": {"tier": "green", "vol_tier": "green"},
+          "5": {"tier": "yellow", "vol_tier": "green"},
+          "10": {"tier": "green"}, "20": {"tier": "red"}}
+    html = risk_panel_html({"as_of": "x", "horizons": hs})
+    assert "未来 1 周：留意" in html
+    for w in FORBIDDEN:
         assert w not in html, w
-    # "同涨同跌"用于说明双向 —— 允许
-    assert "同涨同跌" in html
 
 
 def test_html_empty_payload():

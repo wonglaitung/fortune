@@ -26,6 +26,9 @@ from ml_services.risk_horizon_signals import (  # noqa: E402
     FEATURES, HORIZONS, VOL_HORIZONS, build_dataset, load_returns)
 
 H_LABEL = {1: "未来 1 天", 5: "未来 1 周", 10: "未来 2 周", 20: "未来 1 个月"}
+# 展示周期：波动轴只 1/5D；同步轴 1/5/10/20（均通过判据）
+VOL_DISPLAY = [1, 5]
+SYNC_DISPLAY = [1, 5, 10, 20]
 TIER_ICON = {"green": "🟢", "yellow": "🟡", "red": "🔴"}
 TIER_WORD = {"green": "正常", "yellow": "留意", "red": "当心"}
 
@@ -74,66 +77,78 @@ def latest_panel(horizons=HORIZONS):
 
 
 def risk_panel_html(payload):
-    """邮件区块（**方向中立**、书面但通俗）。只用到"同步"轴（相关齐升）；
-    "波动"轴（大波动 |r|）待 D56 接入。"""
+    """邮件区块：**两轴分开列，波动在前**（方向中立、书面通俗）。"""
     if not payload or not payload.get("horizons"):
         return ('        <div class="section">\n'
-                '            <div class="section-title">📌 波动提示</div>\n'
+                '            <div class="section-title">📌 风险提示</div>\n'
                 '            <div style="font-size:13px;color:#6b7280;">暂未生成。</div>\n'
                 '        </div>\n')
 
-    hs = payload["horizons"]
-    lead, bullets = _compose(hs)
-    body = (f'            <div style="font-size:13px;color:#374151;line-height:1.9;">\n'
-            f'                {lead}\n')
-    if bullets:
-        body += '                <div style="margin-top:4px;">· ' + '<br>· '.join(bullets) + '</div>\n'
-    body += (
-        '                <div style="font-size:11px;color:#6b7280;margin-top:6px;">'
-        '⚠️ 本提示<b>不含方向判断</b>（涨跌不可预测）；仅反映波动水平：波动上行时，宜控制仓位与杠杆。'
+    hs = _norm_hs(payload)
+    vol_line = _axis_line(hs, VOL_DISPLAY, "vol_tier")
+    sync_line = _axis_line(hs, SYNC_DISPLAY, "tier")
+    hint = _hint(hs)
+
+    body = (
+        '            <div style="font-size:13px;color:#374151;line-height:1.9;">\n'
+        f'                <div><b>波动</b>（大起大落，涨跌都算）<br>{vol_line}</div>\n'
+        f'                <div style="margin-top:4px;"><b>同步</b>（一起涨、一起跌，分散效果下降）<br>{sync_line}</div>\n'
+        + (f'                <div style="margin-top:4px;">{hint}</div>\n' if hint else '')
+        + '                <div style="font-size:11px;color:#6b7280;margin-top:6px;">'
+        '⚠️ 本提示<b>不含方向判断</b>（涨跌不可预测）；仅反映波动水平。'
         '（波动项只看短期 1 天 / 1 周；长周期只报"同步"。）</div>\n'
         '            </div>\n')
     return ('        <div class="section">\n'
-            '            <div class="section-title">📌 波动提示（未来 1 周 / 1 个月）</div>\n'
+            '            <div class="section-title">📌 风险提示</div>\n'
             + body + '        </div>\n')
 
 
-def _compose(hs):
-    """把各 horizon 档位写成人话（方向中立）。两轴：同步（相关齐升）+ 波动（大波动）。"""
-    def st(h):
-        return (hs.get(h) or {}).get("tier")
+def _norm_hs(payload):
+    """JSON 往返后键变字符串（"1"）⇒ 归一化为 int。"""
+    return {int(k): (v or {}) for k, v in (payload.get("horizons") or {}).items()}
 
-    def vt(h):
-        return (hs.get(h) or {}).get("vol_tier")
 
-    sync_flag = [(h, st(h)) for h in (5, 20) if st(h) in ("yellow", "red")]
-    vol_flag = [(h, vt(h)) for h in (1, 5) if vt(h) in ("yellow", "red")]
-    if not sync_flag and not vol_flag:
-        return "未来 1 周 / 1 个月：正常。", []
+def _axis_line(hs, horizons, key):
+    """某轴一行：`未来 1 天：正常 ｜ 未来 1 周：留意`。"""
+    parts = []
+    for h in horizons:
+        tier = (hs.get(h) or {}).get(key)
+        if tier in TIER_WORD:
+            parts.append(f"{H_LABEL[h]}：{TIER_WORD[tier]}")
+    return " ｜ ".join(parts) if parts else "—"
 
-    parts = [f"{H_LABEL[h]}·同步{TIER_WORD[t]}" for h, t in sync_flag]
-    parts += [f"{H_LABEL[h]}·波动{TIER_WORD[t]}" for h, t in vol_flag]
-    lead = "；".join(parts) + "。"
 
-    bullets = []
-    if sync_flag:
-        bullets += ["同步 = 同涨同跌，组合分散效果下降",
-                    "故账户净值波动大概率放大（涨跌皆可能）"]
-    if vol_flag:
-        bullets.append("波动可能放大（涨跌皆可能）")
-    seen = set()
-    bullets = [b for b in bullets if not (b in seen or seen.add(b))]
-    if any(t == "red" for _, t in sync_flag + vol_flag):
-        bullets.append("波动上行阶段，宜控制仓位与杠杆")
-    return lead, bullets
+def _hint(hs):
+    """只在高档位给一句（方向中立）。"""
+    order = {"green": 0, "yellow": 1, "red": 2}
+    worst = "green"
+    for h in SYNC_DISPLAY:
+        t = (hs.get(h) or {}).get("tier")
+        if t in order and order[t] > order[worst]:
+            worst = t
+    for h in VOL_DISPLAY:
+        t = (hs.get(h) or {}).get("vol_tier")
+        if t in order and order[t] > order[worst]:
+            worst = t
+    if worst == "red":
+        return "波动 / 同步偏高时，宜控制仓位与杠杆。"
+    if worst == "yellow":
+        return "波动 / 同步略高，留意仓位与杠杆。"
+    return ""
 
 
 def _cli_html(payload):
-    """CLI 友好的纯文本预览。"""
-    lead, bullets = _compose(payload["horizons"])
-    lines = [f"📌 波动提示（截至 {payload['as_of']}）", "", lead]
-    for b in bullets:
-        lines.append("  · " + b)
+    """CLI 纯文本预览。"""
+    hs = _norm_hs(payload)
+    lines = [f"📌 风险提示（截至 {payload['as_of']}）", ""]
+    lines.append("波动（大起大落，涨跌都算）")
+    lines.append("  " + _axis_line(hs, VOL_DISPLAY, "vol_tier"))
+    lines.append("同步（一起涨、一起跌，分散效果下降）")
+    lines.append("  " + _axis_line(hs, SYNC_DISPLAY, "tier"))
+    h = _hint(hs)
+    if h:
+        lines.append("")
+        lines.append(h)
     lines.append("")
     lines.append("⚠️ 本提示不含方向判断（涨跌不可预测）；仅反映波动水平。")
     return "\n".join(lines)

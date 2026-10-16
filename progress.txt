@@ -4454,3 +4454,8 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - risk_horizon_signals: VOL_HORIZONS=(1,5); big_move 表只报 1/5D（10/20D 未通过⇒不展示）
 - risk_panel: 波动轴只算 1/5D(p_big_move/vol_tier); 同步轴仍 1/5/10/20; 免责加"波动只看短期"
 - D56 §七 记决策; 当前读数: 同步 P 0.14/0.17/0.21/0.30 + 波动 0.19/0.18(仅1/5D) 全🟢
+
+2026-10-16 邮件区块重排（用户）：两轴分开列，波动在前
+- risk_panel_html: 波动(1/5D)一行 + 同步(1/5/10/20)一行; 波动在前; 高档位加一句 hint
+- 归一化 JSON 字符串键("1"→1); _compose→_axis_line/_hint
+- 标题改"📌 风险提示"; tests/test_risk_panel.py 重写(6 passed)
