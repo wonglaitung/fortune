@@ -5,15 +5,15 @@
 
 基于模型特征重要性，使用加权评分模型预测恒生指数短期走势
 
-多周期预测验证结果（PIT/embargo Walk-forward）：
+多周期预测验证结果（PIT/embargo Walk-forward，2026-10-17 重跑，34 folds / 697 合并样本）：
 
-| 周期 | 准确率 | 95%CI | vs 随机 |
-|------|--------|-------|---------|
-| 1天 | 51.3% | [47.7%, 55.0%] | 不显著 (p=0.50；上轮 p=0.03 未复现) |
-| 5天 | 54.8% | [46.6%, 62.7%] | 不显著 (p=0.29) |
-| 20天 | 59.1% | [42.7%, 73.7%] | 不显著 (p=0.36，n_eff≈35) |
+| 周期 | 准确率 | 方向技能(vs 永远看涨) | AUC | vs 随机 |
+|------|--------|----------------------|-----|---------|
+| 5天 | 57.3% | +3.9pp | 0.592 | 不显著（n_eff≈折数） |
+| 10天 | 58.5% | +7.6pp | 0.551 | 不显著 |
+| 20天 | 52.4% | +0.9pp | 0.551 | 不显著（n_eff≈折数） |
 
-三周期模式（PIT/embargo）：各模式准确率均接近随机（30%–58%），不构成可靠交易信号。
+三周期模式（PIT/embargo，5/10/20）：各模式 20 天条件准确率 14%–65%，均不显著（折聚类后），不构成可靠交易信号。
 
 详细分析报告：docs/THREE_HORIZON_ANALYSIS.md
 """
@@ -36,6 +36,10 @@ output_dir = os.path.join(script_dir, 'output')
 # 确保目录存在
 os.makedirs(data_dir, exist_ok=True)
 os.makedirs(output_dir, exist_ok=True)
+
+# 恒指三周期：由 1/5/20 改为 5/10/20（2026-10-17）。
+# 标签仍为绝对二分类（涨/跌）——恒指是单标的，无横截面，不适用 rank 标签。
+HORIZONS = (5, 10, 20)
 
 
 class HSI_Predictor:
@@ -1294,7 +1298,7 @@ class HSI_Predictor:
         current_date = self.hsi_data.index[-1].strftime('%Y-%m-%d')
         current_time = self.hsi_data.index[-1].strftime('%H:%M:%S')
 
-        # 检查传导模式（5个交易日前的预测验证情况）
+        # 检查传导模式（10个交易日前的预测验证情况）
         transmission_info = self._check_hsi_transmission_mode(current_date)
         transmission_display = self._format_transmission_display(transmission_info)
 
@@ -1385,35 +1389,35 @@ class HSI_Predictor:
         if if_anomaly:
             anomaly_list.append("多维特征异常")
 
-        # 多周期预测一致性判断 + 交易法则匹配
-        # 基于完整模型Walk-forward验证（26只港股，平均20天准确率56.75%）
-        # 详细分析：docs/THREE_HORIZON_ANALYSIS.md 第10节
+        # 多周期预测一致性判断 + 三周期模式匹配
+        # 基于恒指 PIT/embargo Walk-forward（2026-10-17 重跑，周期 5/10/20，697 样本）
+        # 详细分析：docs/BASELINES.md（恒指三周期模式）
         consistency_signal = ""
         trading_action = None  # 交易建议
 
-        if multi_horizon_results and all(h in multi_horizon_results for h in [1, 5, 20]):
-            pred_1d = multi_horizon_results[1]['prediction']
+        if multi_horizon_results and all(h in multi_horizon_results for h in HORIZONS):
             pred_5d = multi_horizon_results[5]['prediction']
+            pred_10d = multi_horizon_results[10]['prediction']
             pred_20d = multi_horizon_results[20]['prediction']
 
-            # 编码预测模式：1=上涨，0=下跌
-            pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
+            # 编码预测模式：1=上涨，0=下跌（顺序 = 5d/10d/20d）
+            pattern = f"{'1' if pred_5d == '上涨' else '0'}{'1' if pred_10d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
-            # ====== 恒指三周期模式（PIT/embargo 口径，2026-09-26 复测）======
-            # 准确率相对「同向 20d 无条件基准」（UP 60.3% / DOWN 57.8%）的净贡献：
-            # 000 +7.6pp(p=0.034)  111 +7.6pp(p=0.078)  101 -1.6pp  010 -0.7pp
-            # 001 -4.9pp           011 -5.9pp           100 -10.3pp 110 -21.0pp
-            # 8 模式 Bonferroni（α=0.00625）后全部不显著 → 一律不构成交易指令。
-            # （数据：data/hsi_walk_forward/hsi_prediction_analysis_20260926_*.csv，697 合并样本）
+            # ====== 恒指三周期模式（PIT/embargo，2026-10-17 重跑，周期 5/10/20）======
+            # 条件准确率 = 该模式下 20 天猜对比例；基准（无条件 20d）= 52.4%（697 合并样本）
+            # 000 +1.3pp  111 +13.0pp  100 +6.0pp  其余为负
+            # ⚠️ 111 行级 binomial p=0.0003，但**折聚类 p=0.211**（行级伪显著，lessons 三.29）
+            # → 8 模式折聚类后均不显著，一律不构成交易指令。
+            # （数据：data/hsi_walk_forward/hsi_prediction_analysis_20261017_*.csv）
             _HSI_PATTERNS = {
-                '101': ('假突破',  58.70,  -1.6, '短期看涨中期看跌长期看涨'),
-                '010': ('反弹失败', 57.14,  -0.7, '短期看跌中期看涨长期看跌'),
-                '001': ('下跌中继', 55.45,  -4.9, '短期中期看跌但长期看涨'),
-                '011': ('探底回升', 54.41,  -5.9, '短期看跌但中期长期看涨'),
-                '111': ('一致看涨', 67.91,   7.6, '三周期共振上涨（p=0.078 不显著）'),
-                '000': ('一致看跌', 65.45,   7.6, '三周期共振下跌（p=0.034 校正后不显著）'),
-                '100': ('冲高回落', 47.54, -10.3, '短期上涨但中期长期看跌'),
-                '110': ('震荡回调', 36.84, -21.0, '短期中期看涨但长期看跌'),
+                '101': ('假突破',  49.30,  -3.1, '短期看涨中期看跌长期看涨'),
+                '010': ('反弹失败', 31.82, -20.6, '短期看跌中期看涨长期看跌'),
+                '001': ('下跌中继', 32.84, -19.5, '短期中期看跌但长期看涨'),
+                '011': ('探底回升', 47.17,  -5.2, '短期看跌但中期长期看涨'),
+                '111': ('一致看涨', 65.34,  13.0, '三周期共振上涨（折聚类后不显著）'),
+                '000': ('一致看跌', 53.69,   1.3, '三周期共振下跌（折聚类后不显著）'),
+                '100': ('冲高回落', 58.33,   6.0, '短期上涨但中期长期看跌'),
+                '110': ('震荡回调', 14.29, -38.1, '短期中期看涨但长期看跌'),
             }
 
             if pattern in _HSI_PATTERNS:
@@ -1450,7 +1454,7 @@ class HSI_Predictor:
                 }
         elif multi_horizon_results:
             # 部分周期数据
-            predictions = [multi_horizon_results[h]['prediction'] for h in [1, 5, 20] if h in multi_horizon_results]
+            predictions = [multi_horizon_results[h]['prediction'] for h in HORIZONS if h in multi_horizon_results]
             all_up = all(p == '上涨' for p in predictions)
             all_down = all(p == '下跌' for p in predictions)
             if all_up:
@@ -1598,7 +1602,7 @@ class HSI_Predictor:
                 </thead>
                 <tbody>
 """
-            for horizon in [1, 5, 20]:
+            for horizon in HORIZONS:
                 if horizon in multi_horizon_results:
                     r = multi_horizon_results[horizon]
                     pred_color = '#22c55e' if r['prediction'] == '上涨' else '#dc2626'
@@ -1621,15 +1625,15 @@ class HSI_Predictor:
             estimated_accuracy = transmission_info.get('estimated_20d_accuracy')
             content += f"""
             <div style="margin-top: 20px; padding: 15px; background: {'#f0fdf4' if estimated_accuracy and estimated_accuracy > 80 else '#f8fafc'}; border-radius: 8px; border-left: 4px solid {'#22c55e' if estimated_accuracy and estimated_accuracy > 80 else '#6b7280'};">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 回看：5 个交易日前那次预测准不准</h4>
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #374151;">🔄 回看：10 个交易日前那次预测准不准</h4>
                 <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-                    {prediction_date} 那天对 1 天、5 天的预测，现在对照结果看看：
+                    {prediction_date} 那天对 5 天、10 天的预测，现在对照结果看看：
                 </div>
                 <div style="font-size: 14px; font-weight: 600; color: {'#166534' if estimated_accuracy and estimated_accuracy > 80 else '#374151'};">
                     {transmission_display}
                 </div>
                 <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">
-                    长期统计：就算这次猜对，也几乎没提上去（底子约 59%，猜对 1 天约 60%、猜对 5 天约 65%）——区分度很弱，别太当真。
+                    长期统计：就算这次猜对，也几乎没提上去（底子约 52%，猜对 5 天约 58%、猜对 10 天约 63%）——区分度很弱，别太当真。
                 </div>
             </div>
 """
@@ -1744,7 +1748,7 @@ class HSI_Predictor:
 
         # 模式名称映射
         pattern_names = {
-            '010': '反弹失败⭐',
+            '010': '反弹失败',
             '000': '一致看跌',
             '100': '冲高回落',
             '001': '下跌中继',
@@ -1773,7 +1777,7 @@ class HSI_Predictor:
         <div class="section">
             <div class="section-title">📊 三种天数一起看（拿历史预测回看）</div>
             <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                把以往每天对 1 天 / 5 天 / 20 天的预测，用现在的结果回看"猜得准不准"
+                把以往每天对 5 天 / 10 天 / 20 天的预测，用现在的结果回看"猜得准不准"
             </div>
 """
 
@@ -1829,7 +1833,8 @@ class HSI_Predictor:
                 </tbody>
             </table>
             <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
-                <strong>组合怎么读：</strong>如 110 = 1 天涨、5 天涨、20 天跌（短期反弹但长期偏弱）| 数据来自历史预测回看
+                <strong>组合怎么读：</strong>如 110 = 5 天涨、10 天涨、20 天跌（短中期偏强但长期偏弱）| 数据来自历史预测回看
+                <br><strong>重要：</strong>各模式经折聚类检验后均不显著（不显著 ≠ 有 edge）⇒ 上表「建议」仅为模式描述，<strong>不构成买卖依据</strong>。
             </div>
 """
         else:
@@ -1845,43 +1850,43 @@ class HSI_Predictor:
 
         <!-- 交易法则参考 -->
         <div class="section">
-            <div class="section-title">💡 四个经验规律</div>
+            <div class="section-title">💡 三周期模式（5/10/20）参考</div>
             <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-                拿 2020–2024 年的历史数据回看（共 938 次）总结出来
+                用 2020–2025 恒指数据回看（697 个样本，Walk-forward PIT/embargo）
             </div>
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 20%;">法则</th>
-                        <th style="width: 40%;">描述</th>
-                        <th style="width: 40%;">操作建议</th>
+                        <th style="width: 26%;">模式</th>
+                        <th style="width: 30%;">含义</th>
+                        <th style="width: 44%;">20 天猜对率（条件）</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight: 600; color: #166534;">📈 一致追涨</td>
-                        <td>1/5/20 天都看涨时，这种情形占 12.3%、过去猜对率 92%</td>
-                        <td style="color: #166534;">买入，持有20天</td>
+                        <td style="font-weight: 600; color: #166534;">111 一致看涨</td>
+                        <td>5/10/20 天都看涨</td>
+                        <td style="color: #166534;">65.3%（净 +13.0pp，折聚类后不显著）</td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600; color: #92400e;">⚡ 背离逃顶</td>
-                        <td>短涨长跌（1 天↑、5 天↑、20 天↓）</td>
-                        <td style="color: #92400e;">减仓，回避风险</td>
+                        <td style="font-weight: 600; color: #991b1b;">000 一致看跌</td>
+                        <td>5/10/20 天都看跌</td>
+                        <td style="color: #991b1b;">53.7%（净 +1.3pp，不显著）</td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600; color: #1d4ed8;">🔄 阶梯验证</td>
-                        <td>1 天 → 5 天 → 20 天，一步步确认趋势</td>
-                        <td style="color: #1d4ed8;">前两个天数都对了，可加仓</td>
+                        <td style="font-weight: 600; color: #92400e;">100 / 110 冲高回落</td>
+                        <td>短中期偏强、长期偏弱</td>
+                        <td style="color: #92400e;">58.3% / 14.3%（样本少，噪声大）</td>
                     </tr>
                     <tr>
-                        <td style="font-weight: 600; color: #991b1b;">📉 趋势惯性</td>
-                        <td>1/5/20 天都看跌时，下跌惯性最强（占 23.4%、过去猜对率 93%）</td>
-                        <td style="color: #991b1b;">果断止损，不抄底</td>
+                        <td style="font-weight: 600; color: #1d4ed8;">其余模式</td>
+                        <td>三周期方向分歧</td>
+                        <td style="color: #1d4ed8;">多低于基准 52.4%</td>
                     </tr>
                 </tbody>
             </table>
             <div style="font-size: 11px; color: #9ca3af; margin-top: 10px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
-                <strong>说明：</strong>110 = 1 天涨、5 天涨、20 天跌 —— 短期反弹但长期偏弱，要警惕
+                <strong>说明：</strong>模式准确率是「该模式下 20 天判断的对错比例」。折聚类检验后各模式均不显著（如 111 行级 p=0.0003 但折聚类 p=0.211）——<strong>不构成买卖依据</strong>。
             </div>
         </div>
 
@@ -2173,7 +2178,7 @@ class HSI_Predictor:
 
         # 保存多周期预测
         if multi_horizon_results:
-            for horizon in [1, 5, 20]:
+            for horizon in HORIZONS:
                 if horizon in multi_horizon_results:
                     r = multi_horizon_results[horizon]
 
@@ -2248,17 +2253,17 @@ class HSI_Predictor:
         pattern_stats = defaultdict(lambda: {'total': 0, 'correct': 0, 'returns': []})
 
         for data_date, horizons in grouped.items():
-            if 1 in horizons and 5 in horizons and 20 in horizons:
-                p1 = horizons[1]
+            if 5 in horizons and 10 in horizons and 20 in horizons:
                 p5 = horizons[5]
+                p10 = horizons[10]
                 p20 = horizons[20]
 
                 # 只统计 20天已评估的
                 if p20.get('outcome') is None:
                     continue
 
-                # 编码模式：up=1, down=0
-                pattern = f"{'1' if p1.get('predicted_direction') == 'up' else '0'}{'1' if p5.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
+                # 编码模式：up=1, down=0（顺序 = 5d/10d/20d）
+                pattern = f"{'1' if p5.get('predicted_direction') == 'up' else '0'}{'1' if p10.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
 
                 pattern_stats[pattern]['total'] += 1
                 if p20.get('outcome') == 'correct':
@@ -2323,13 +2328,13 @@ class HSI_Predictor:
 
     def _check_hsi_transmission_mode(self, data_date):
         """
-        检查恒指传导模式：查看5个交易日前的1天和5天预测验证情况
+        检查恒指传导模式：查看10个交易日前的5天和10天预测验证情况
         用于预估20天预测的准确率
 
         验证逻辑：
-        - 1天预测：5个交易日前做的1天预测，现在可以验证
-        - 5天预测：5个交易日前做的5天预测，现在可以验证
-        - 20天预测：不显示验证结果（还没到验证时间），但根据1天和5天的验证结果预估准确率
+        - 5天预测：10个交易日前做的5天预测，现在可以验证
+        - 10天预测：10个交易日前做的10天预测，现在可以验证
+        - 20天预测：不显示验证结果（还没到验证时间），但根据5天和10天的验证结果预估准确率
 
         参数:
         - data_date: 当前报告日期
@@ -2341,7 +2346,7 @@ class HSI_Predictor:
 
         history_file = os.path.join(data_dir, 'hsi_prediction_history.json')
 
-        # 计算5个交易日前的日期（使用香港交易日历）
+        # 计算10个交易日前的日期（使用香港交易日历）
         current_date_str = data_date if isinstance(data_date, str) else data_date.strftime('%Y-%m-%d')
 
         try:
@@ -2361,7 +2366,7 @@ class HSI_Predictor:
                     else:
                         break
 
-            target_idx = max(0, current_idx - 5)
+            target_idx = max(0, current_idx - 10)
             prediction_date = trading_dates[target_idx]
         except Exception as e:
             print(f"⚠️ 获取香港交易日历失败: {e}，使用备用方案")
@@ -2369,11 +2374,11 @@ class HSI_Predictor:
                 data_date_obj = datetime.strptime(data_date, '%Y-%m-%d')
             else:
                 data_date_obj = data_date
-            prediction_date = (data_date_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+            prediction_date = (data_date_obj - timedelta(days=14)).strftime('%Y-%m-%d')
 
         if not os.path.exists(history_file):
-            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                    'pred_1d_direction': None, 'pred_5d_direction': None,
+            return {'transmission_mode': False, 'pred_5d_correct': None, 'pred_10d_correct': None,
+                    'pred_5d_direction': None, 'pred_10d_direction': None,
                     'pred_20d_direction': None, 'prediction_date': prediction_date,
                     'estimated_20d_accuracy': None}
 
@@ -2383,48 +2388,48 @@ class HSI_Predictor:
 
             predictions = history.get('predictions', [])
 
-            # 查找5个交易日前的预测
-            pred_1d = None
+            # 查找10个交易日前的预测
             pred_5d = None
+            pred_10d = None
             pred_20d = None
 
             for pred in predictions:
                 if pred.get('data_date') == prediction_date:
                     h = pred.get('horizon')
-                    if h == 1:
-                        pred_1d = pred
-                    elif h == 5:
+                    if h == 5:
                         pred_5d = pred
+                    elif h == 10:
+                        pred_10d = pred
                     elif h == 20:
                         pred_20d = pred
 
             # 检查outcome字段（验证结果）
-            pred_1d_correct = pred_1d.get('outcome') == 'correct' if pred_1d and pred_1d.get('outcome') else None
             pred_5d_correct = pred_5d.get('outcome') == 'correct' if pred_5d and pred_5d.get('outcome') else None
+            pred_10d_correct = pred_10d.get('outcome') == 'correct' if pred_10d and pred_10d.get('outcome') else None
 
-            # 根据1天和5天的验证结果，预估20天预测的准确率（PIT/embargo，2026-09-26，697样本）
-            # - 基准（无条件）：59.11%
-            # - 1天正确 → 20天也正确：59.50%（+0.4pp，几乎无传导）
-            # - 5天正确 → 20天也正确：64.69%（+5.6pp）
-            # - 1天+5天都正确 → 20天也正确：65.32%（+6.2pp，n=222）
+            # 根据5天和10天的验证结果，预估20天预测的准确率（PIT/embargo，2026-10-17，697样本）
+            # - 基准（无条件 20d）：52.4%
+            # - 5天正确 → 20天也正确：58.40%（+6.0pp）
+            # - 10天正确 → 20天也正确：63.24%（+10.9pp）
+            # - 5天+10天都正确 → 20天也正确：67.58%（+15.2pp，n=256）
             # 注意：这些是条件准确率，未做多重比较校正，均不构成可靠交易信号。
             estimated_20d_accuracy = None
-            if pred_1d_correct is not None and pred_5d_correct is not None:
-                if pred_1d_correct and pred_5d_correct:
-                    estimated_20d_accuracy = 65.32
-                elif pred_1d_correct:
-                    estimated_20d_accuracy = 59.50
+            if pred_5d_correct is not None and pred_10d_correct is not None:
+                if pred_5d_correct and pred_10d_correct:
+                    estimated_20d_accuracy = 67.58
                 elif pred_5d_correct:
-                    estimated_20d_accuracy = 64.69
+                    estimated_20d_accuracy = 58.40
+                elif pred_10d_correct:
+                    estimated_20d_accuracy = 63.24
                 else:
-                    estimated_20d_accuracy = 58.68
+                    estimated_20d_accuracy = 43.54
 
             return {
-                'transmission_mode': pred_1d_correct and pred_5d_correct if pred_1d_correct is not None and pred_5d_correct is not None else False,
-                'pred_1d_correct': pred_1d_correct,
+                'transmission_mode': pred_5d_correct and pred_10d_correct if pred_5d_correct is not None and pred_10d_correct is not None else False,
                 'pred_5d_correct': pred_5d_correct,
-                'pred_1d_direction': pred_1d.get('predicted_direction') if pred_1d else None,
+                'pred_10d_correct': pred_10d_correct,
                 'pred_5d_direction': pred_5d.get('predicted_direction') if pred_5d else None,
+                'pred_10d_direction': pred_10d.get('predicted_direction') if pred_10d else None,
                 'pred_20d_direction': pred_20d.get('predicted_direction') if pred_20d else None,
                 'prediction_date': prediction_date,
                 'estimated_20d_accuracy': estimated_20d_accuracy
@@ -2432,8 +2437,8 @@ class HSI_Predictor:
 
         except Exception as e:
             print(f"⚠️ 检查传导模式失败: {e}")
-            return {'transmission_mode': False, 'pred_1d_correct': None, 'pred_5d_correct': None,
-                    'pred_1d_direction': None, 'pred_5d_direction': None,
+            return {'transmission_mode': False, 'pred_5d_correct': None, 'pred_10d_correct': None,
+                    'pred_5d_direction': None, 'pred_10d_direction': None,
                     'pred_20d_direction': None, 'prediction_date': prediction_date,
                     'estimated_20d_accuracy': None}
 
@@ -2442,7 +2447,7 @@ class HSI_Predictor:
         格式化传导模式显示字符串
 
         显示逻辑：
-        - 显示5个交易日前的1天和5天预测验证结果
+        - 显示10个交易日前的5天和10天预测验证结果
         - 不显示20天验证结果（还没到验证时间）
         - 显示预估的20天准确率
 
@@ -2452,16 +2457,16 @@ class HSI_Predictor:
         返回:
         - str: 格式化的显示字符串
         """
-        pred_1d_dir = transmission_info.get('pred_1d_direction')
         pred_5d_dir = transmission_info.get('pred_5d_direction')
+        pred_10d_dir = transmission_info.get('pred_10d_direction')
         pred_20d_dir = transmission_info.get('pred_20d_direction')
-        pred_1d_correct = transmission_info.get('pred_1d_correct')
         pred_5d_correct = transmission_info.get('pred_5d_correct')
+        pred_10d_correct = transmission_info.get('pred_10d_correct')
         estimated_20d_accuracy = transmission_info.get('estimated_20d_accuracy')
         prediction_date = transmission_info.get('prediction_date')
 
         # 如果没有预测数据
-        if pred_1d_dir is None and pred_5d_dir is None:
+        if pred_5d_dir is None and pred_10d_dir is None:
             return "暂无历史预测数据"
 
         # 方向符号
@@ -2473,8 +2478,8 @@ class HSI_Predictor:
             else:
                 return "?"
 
-        dir_1d_symbol = get_dir_symbol(pred_1d_dir)
         dir_5d_symbol = get_dir_symbol(pred_5d_dir)
+        dir_10d_symbol = get_dir_symbol(pred_10d_dir)
         dir_20d_symbol = get_dir_symbol(pred_20d_dir)
 
         # 结果符号
@@ -2486,15 +2491,15 @@ class HSI_Predictor:
             else:
                 return "✗"   # 错误
 
-        result_1d = get_result_symbol(pred_1d_correct)
         result_5d = get_result_symbol(pred_5d_correct)
+        result_10d = get_result_symbol(pred_10d_correct)
 
-        # 构建显示字符串（只显示1天和5天的验证结果）
+        # 构建显示字符串（只显示5天和10天的验证结果）
         parts = []
-        if pred_1d_dir is not None:
-            parts.append(f"1天{dir_1d_symbol}{result_1d}")
         if pred_5d_dir is not None:
             parts.append(f"5天{dir_5d_symbol}{result_5d}")
+        if pred_10d_dir is not None:
+            parts.append(f"10天{dir_10d_symbol}{result_10d}")
 
         display = " ".join(parts)
 
@@ -2644,7 +2649,7 @@ class HSI_Predictor:
 
     def _run_multi_horizon_prediction(self):
         """
-        运行多周期预测（1天、5天、20天）
+        运行多周期预测（5天、10天、20天）
 
         返回:
         - dict: 各周期的预测结果
@@ -2656,29 +2661,31 @@ class HSI_Predictor:
         try:
             from catboost import CatBoostClassifier
 
-            # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-2025）
+            # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-01-01→2025-12-31，
+            # 34 folds / 697 样本，2026-10-17 重跑；池化口径）
             historical_accuracy = {
-                1: 0.513,
-                5: 0.548,
-                20: 0.591
+                5: 0.573,
+                10: 0.585,
+                20: 0.524
             }
 
             historical_auc = {
-                1: 0.50,
-                5: 0.50,
-                20: 0.50
+                5: 0.592,
+                10: 0.551,
+                20: 0.551
             }
 
-            # 八大模式的 20天准确率（embargo 验证，均接近随机，仅供参考）
+            # 八大模式的 20天条件准确率（5/10/20，embargo 验证；基准 52.4%；
+            # 折聚类后均不显著，仅供参考）
             pattern_accuracy = {
-                '010': 57.14,  # 反弹失败（同向基准 57.8%，净 -0.7pp）
-                '000': 65.45,  # 一致看跌（基准 57.8%，净 +7.6pp，p=0.034）
-                '001': 55.45,  # 下跌中继（基准 60.3%，净 -4.9pp）
-                '111': 67.91,  # 一致看涨（基准 60.3%，净 +7.6pp，p=0.078）
-                '110': 36.84,  # 震荡回调（基准 57.8%，净 -21.0pp）
-                '011': 54.41,  # 探底回升（基准 60.3%，净 -5.9pp）
-                '101': 58.70,  # 假突破（基准 60.3%，净 -1.6pp，旧"最优"结论作废）
-                '100': 47.54   # 冲高回落（基准 57.8%，净 -10.3pp）
+                '010': 31.82,  # 反弹失败（净 -20.6pp）
+                '000': 53.69,  # 一致看跌（净 +1.3pp）
+                '001': 32.84,  # 下跌中继（净 -19.5pp）
+                '111': 65.34,  # 一致看涨（净 +13.0pp；行级 p=0.0003，折聚类 p=0.211 不显著）
+                '110': 14.29,  # 震荡回调（净 -38.1pp）
+                '011': 47.17,  # 探底回升（净 -5.2pp）
+                '101': 49.30,  # 假突破（净 -3.1pp）
+                '100': 58.33   # 冲高回落（净 +6.0pp）
             }
 
             results = {}
@@ -2709,7 +2716,7 @@ class HSI_Predictor:
             features = ['MA20', 'MA60', 'MA120', 'MA250', 'Return_1d', 'Return_5d', 'Return_20d',
                        'Volatility_20d', 'Volatility_60d', 'Volatility_120d', 'RSI']
 
-            for horizon in [1, 5, 20]:
+            for horizon in HORIZONS:
                 # 创建目标
                 df[f'Target_{horizon}d'] = (df['Close'].pct_change(horizon).shift(-horizon) > 0).astype(float)
 
@@ -2761,18 +2768,18 @@ class HSI_Predictor:
             # 打印汇总表格
             print(f"\n{'周期':<8} {'方向':<6} {'概率':<8} {'置信度':<6} {'历史准确率':<10} {'历史AUC':<8}")
             print("-" * 60)
-            for h in [1, 5, 20]:
+            for h in HORIZONS:
                 if h in results:
                     r = results[h]
                     print(f"{h}天{' '*4} {r['prediction']:<6} {r['probability']:.2%}{' '*2} {r['confidence']:<6} {r['historical_accuracy']:.2%}{' '*4} {r['historical_auc']:.4f}")
             print("-" * 60)
 
             # 模式分析
-            if all(h in results for h in [1, 5, 20]):
-                pred_1d = results[1]['prediction']
+            if all(h in results for h in HORIZONS):
                 pred_5d = results[5]['prediction']
+                pred_10d = results[10]['prediction']
                 pred_20d = results[20]['prediction']
-                pattern = f"{'1' if pred_1d == '上涨' else '0'}{'1' if pred_5d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
+                pattern = f"{'1' if pred_5d == '上涨' else '0'}{'1' if pred_10d == '上涨' else '0'}{'1' if pred_20d == '上涨' else '0'}"
 
                 # 市场环境判断
                 current_price = df['Close'].iloc[-1]
@@ -2786,23 +2793,23 @@ class HSI_Predictor:
                 if pattern in pattern_accuracy:
                     print(f"🎯 历史准确率: {pattern_accuracy[pattern]:.2f}%")
 
-                # 综合建议（恒指增强模型验证，2026-04-28更新）
+                # 综合建议（恒指 5/10/20 模式验证，2026-10-17 重跑，折聚类后均不显著）
                 if pattern == '111':
-                    suggestion = "📈 一致看涨 - 观望（20d准确率67.91%，净+7.6pp，p=0.078 不显著）"
+                    suggestion = "📈 一致看涨 - 观望（20d准确率65.34%，净+13.0pp，折聚类后不显著）"
                 elif pattern == '000':
-                    suggestion = "📉 一致看跌 - 观望（20d准确率65.45%，净+7.6pp，校正后不显著）"
+                    suggestion = "📉 一致看跌 - 观望（20d准确率53.69%，净+1.3pp，折聚类后不显著）"
                 elif pattern == '110':
-                    suggestion = "📊 震荡回调 - 观望（20d准确率36.84%，净-21.0pp）"
+                    suggestion = "📊 震荡回调 - 观望（20d准确率14.29%，净-38.1pp）"
                 elif pattern == '100':
-                    suggestion = "⏳ 冲高回落 - 观望（20d准确率47.54%，净-10.3pp）"
+                    suggestion = "⏳ 冲高回落 - 观望（20d准确率58.33%，净+6.0pp）"
                 elif pattern == '011':
-                    suggestion = "📈 探底回升 - 观望（20d准确率54.41%，净-5.9pp）"
+                    suggestion = "📈 探底回升 - 观望（20d准确率47.17%，净-5.2pp）"
                 elif pattern == '010':
-                    suggestion = "⏸ 反弹失败 - 观望（20d准确率57.14%，净-0.7pp）"
+                    suggestion = "⏸ 反弹失败 - 观望（20d准确率31.82%，净-20.6pp）"
                 elif pattern == '001':
-                    suggestion = "📈 下跌中继 - 观望（20d准确率55.45%，净-4.9pp）"
+                    suggestion = "📈 下跌中继 - 观望（20d准确率32.84%，净-19.5pp）"
                 elif pattern == '101':
-                    suggestion = "⏸ 假突破 - 观望（20d准确率58.70%，净-1.6pp，旧「最优」结论作废）"
+                    suggestion = "⏸ 假突破 - 观望（20d准确率49.30%，净-3.1pp）"
                 else:
                     suggestion = "⚠️ 信号不明确，建议观望"
             else:
@@ -2854,7 +2861,7 @@ class HSI_Predictor:
             if run_catboost:
                 catboost_result = self._run_catboost_comparison(score, trend)
 
-            # 6. 多周期预测（1天、5天、20天）
+            # 6. 多周期预测（5天、10天、20天）
             multi_horizon_results = self._run_multi_horizon_prediction()
 
             # 7. 保存报告

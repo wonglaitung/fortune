@@ -709,9 +709,9 @@ class HSICatBoostModel:
 
         return result
 
-    def predict_multi_horizon(self, horizons=[1, 5, 20]):
+    def predict_multi_horizon(self, horizons=[5, 10, 20]):
         """
-        多周期预测：同时预测1天、5天、20天的涨跌
+        多周期预测：同时预测5天、10天、20天的涨跌
 
         参数:
         - horizons: 预测周期列表
@@ -735,19 +735,18 @@ class HSICatBoostModel:
 
         results = {}
 
-        # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-2025，12月训练窗口）
-        # 2026-09-26 复测：51.3%/54.8%/59.1%，三项 vs 随机均不显著（p=0.50/0.29/0.36）
-        # 5/20天因独立样本少（n_eff ~143/~35）；详见 output/backtest_eval_hsi_{1,5,20}d.md
+        # 历史准确率（PIT/embargo Walk-forward 实测，恒指 2020-01-01→2025-12-31，34 folds / 697 样本，2026-10-17 重跑）
+        # 5/10/20d：57.3%/58.5%/52.4%，三项 vs 随机均不显著；详见 data/hsi_walk_forward/hsi_prediction_analysis_20261017_*.csv
         historical_accuracy = {
-            1: 0.513,
-            5: 0.548,
-            20: 0.591
+            5: 0.573,
+            10: 0.585,
+            20: 0.524
         }
 
         historical_auc = {
-            1: 0.50,
-            5: 0.50,
-            20: 0.50   # 未单独测 AUC，置中性值避免误导
+            5: 0.592,
+            10: 0.551,
+            20: 0.551
         }
 
         for horizon in horizons:
@@ -1111,8 +1110,8 @@ def main():
     elif args.mode == 'predict':
         model.predict()
     elif args.mode == 'multi':
-        # 多周期预测（1天、5天、20天）
-        model.predict_multi_horizon(horizons=[1, 5, 20])
+        # 多周期预测（5天、10天、20天）
+        model.predict_multi_horizon(horizons=[5, 10, 20])
     elif args.mode == 'validate':
         model.walk_forward_validation(start_date=args.start_date, end_date=args.end_date,
                                        test_window=args.test_window)

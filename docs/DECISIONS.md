@@ -190,7 +190,7 @@
 | "Alpha158 因子 + 简单模型能学出 alpha" | ❌ IC 转负 |
 | 银行高准确率=能力 | ❌ beta 陷阱（方向技能 −4.2pp） |
 | **"异常大跌抄底"是真信号**（z≤−3 持 5 日，净IR 1.55，CI>0） | ✅ 显著，但**强依赖行情**（2021/2025 正、2023/24/26 负） |
-| 恒指信号 Long/Flat 优于买入持有（1/5/20d） | ❌ 全部不优于（IR 0.11–0.13 vs 基准 0.38–0.49） |
+| 恒指信号 Long/Flat 优于买入持有（5/10/20d） | ❌ 全部不优于（Long/Flat IR 0.24/0.07/0.20 vs 基准 0.50/0.47/0.49） |
 | 恒指行情感知过滤能"救活"异常抄底（R1/R3 短期强势） | ❌ **短期强势有害**（IR 转负）；R2（恒指>MA200）提升整体 IR 1.55→2.40 但逐年仍依赖 2025 |
 | 绝对阈值 0.60/0.65 能区分正常/弱震荡市场 | ❌ Isotonic 阶梯空转：两者通过率同为 **10.89%**（43,610 条回测）；须改分位门槛（D8） |
 | **"全部转 LightGBM 会更好"**（1d/5d/20d 统一） | ❌ **分周期而异**：20d LightGBM 赢、**5d CatBoost 赢**（lift/IC/IR/PBO/DSR/收益六项全优，2026 年 LGBM 转负）、1d 两者净IR≤0 皆停用 |
@@ -3910,3 +3910,26 @@ WF 内部比较 ✓ / 外推生产 ✗（未跑三冻结双跑正式验收）。
 **验证**：`python3 -m pytest tests/ -q` → **330 passed**；`python3 scripts/doc_gate.py` → 全绿（L1–L6）；新增 `tests/test_rank_email_display.py`（HORIZONS=5/10/20、`_format_hcell` rank/absolute、模式重算 5/10/20 键）。
 
 **适用范围**：**本管线 · 港股/A股个股 · 本窗口**；**alpha 仍 null**（§十六 C 闸三周期全不过）——**本次全改是口径/架构变更，不产生可交易正超额**；结论**限 WF 内部比较 ✓ / 外推生产收益 ✗**。**不**改三层总账。
+
+### 十八、恒指 + 异常检测周期改 5/10/20（2026-10-17，用户令撤销 §十七 排除）
+
+**背景**：用户令「HSI 三周期（`hsi_*`）和异常检测都改为 5/10/20」——**撤销 §十七 的排除裁定**。范围判定（与用户确认）：
+- **HSI 三周期** = `hsi_prediction.py`（生产主入口，内联 CatBoost）/ `ml_services/hsi_ml_model.py` / `ml_services/hsi_signal_backtest.py`。**标签仍为绝对二分类**（单资产，无横截面 ⇒ **不用 rank**）。
+- **异常检测** = `ml_services/anomaly_dip_backtest.py`（`HORIZON=5` → **5/10/20 三档**，新增 `--horizons`）。`detect_stock_anomalies.py` **无多周期预测**（仅 `change_1d/5d` 价格列）⇒ 不涉及周期。
+
+**已改（代码）**：
+- `hsi_prediction.py`：模块 `HORIZONS=(5,10,20)`；`_HSI_PATTERNS`/`pattern_accuracy`/邮件「三周期模式」表 → 新数字；`_check_hsi_transmission_mode` 回看 lag `5 → 10` 交易日、键 `pred_1d/5d → pred_5d/10d`；`_format_transmission_display` 同步；`_run_multi_horizon_prediction` `[1,5,20]→HORIZONS` + 新 `historical_accuracy`/`historical_auc`/模式建议；`_calculate_three_horizon_pattern_stats` 键 5/10/20；删除旧「四个经验规律」营销表（92%/93% 无出处）→ 换为「三周期模式（5/10/20）参考」+ 不显著注脚。
+- `ml_services/hsi_ml_model.py`：`predict_multi_horizon(horizons=[5,10,20])` + `historical_accuracy/auc` 更新 + `--mode multi` 调用。
+- `ml_services/hsi_signal_backtest.py`：`choices=[5,10,20]` + `DEFAULT_CSV {5,10,20}` 指向 10-17 CSV。
+- `ml_services/anomaly_dip_backtest.py`：`HORIZONS=[5,10,20]` + `--horizons` CLI；输出按周期分节。`hsi_email.py`/`hsi_walk_forward.py` 无需改（`--horizon` 通用）。
+
+**HSI 新实测**（PIT/embargo WF，恒指 2020-01-01→2025-12-31，34 folds / 697 样本，2026-10-17）：
+- 池化准确率 5d **57.3%** / 10d **58.5%** / 20d **52.4%**；AUC 0.592/0.551/0.551。
+- **折聚类后三周期均不显著**（t=0.80/1.01/0.11，p=0.429/0.319/0.909）——池化二项 p<0.001 是**伪显著**（lessons 三.29）。
+- 三周期模式八种：14.3%–65.3%，折聚类后均不显著（`111` 行级 p=0.001 → 折聚类 p=0.353）。
+- 信号 Long/Flat 净IR 0.24/0.07/0.20 **均低于买入持有** 0.50/0.47/0.49（`hsi_signal_backtest.py`，非重叠）。
+- 旧基线（09-26：51.3/54.8/59.1）因快照漂移作废。数字详见 [BASELINES.md](BASELINES.md)。
+
+**未验证（诚实标注）**：`anomaly_dip_backtest.py` 的 10d/20d 数值**待重建特征缓存**后补跑（`data/feature_cache/*_shift.pkl` 当前为空）；5d 结论沿用旧值（z≤−3 净IR 1.55，强依赖 2025）。
+
+**适用范围**：**本管线 · 恒指/异常检测 · 本窗口**；**alpha 仍 null**——改周期**不产生正超额**；结论**限 WF 内部比较 ✓ / 外推生产收益 ✗**。

@@ -60,8 +60,8 @@ COLORS = {
 }
 
 HORIZON_COLORS = {
-    1: '#d62728',   # 1天 - 红色
-    5: '#ff7f0e',   # 5天 - 橙色
+    5: '#1f77b4',   # 5天 - 蓝色
+    10: '#ff7f0e',  # 10天 - 橙色
     20: '#2ca02c',  # 20天 - 绿色
 }
 
@@ -122,7 +122,7 @@ def plot_price_with_predictions(hsi_df, pred_df, horizon, output_path):
     参数:
     - hsi_df: 恒指价格 DataFrame
     - pred_df: 预测数据 DataFrame
-    - horizon: 预测周期 (1, 5, 20)
+    - horizon: 预测周期 (5, 10, 20)
     - output_path: 输出文件路径
     """
     fig, ax = plt.subplots(figsize=(16, 8))
@@ -218,7 +218,7 @@ def plot_cumulative_returns(pred_df, output_path):
     """
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
 
-    for idx, horizon in enumerate([1, 5, 20]):
+    for idx, horizon in enumerate([5, 10, 20]):
         ax = axes[idx]
 
         # 筛选已验证的预测
@@ -299,7 +299,7 @@ def plot_accuracy_statistics(pred_df, output_path):
 
     # 1. 按周期统计准确率
     ax1 = axes[0]
-    horizons = [1, 5, 20]
+    horizons = [5, 10, 20]
     accuracies = []
     for h in horizons:
         h_pred = verified[verified['horizon'] == h]
@@ -473,7 +473,7 @@ def generate_summary_report(pred_df, output_path):
         f"\n## 按周期统计",
     ]
 
-    for h in [1, 5, 20]:
+    for h in [5, 10, 20]:
         h_pred = verified[verified['horizon'] == h]
         if len(h_pred) > 0:
             correct = (h_pred['outcome'] == 'correct').sum()
@@ -544,7 +544,7 @@ def main():
 
     # 1. 价格走势 + 预测标记图
     if hsi_df is not None:
-        for horizon in [1, 5, 20]:
+        for horizon in [5, 10, 20]:
             output_path = os.path.join(OUTPUT_DIR, f'hsi_predictions_{horizon}d.png')
             plot_price_with_predictions(hsi_df, pred_df, horizon, output_path)
 

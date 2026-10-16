@@ -24,9 +24,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 COST = 0.005
 DEFAULT_CSV = {
-    1: 'data/hsi_walk_forward/hsi_prediction_analysis_20260923_134140.csv',
-    5: 'data/hsi_walk_forward/hsi_prediction_analysis_20260923_134145.csv',
-    20: 'data/hsi_walk_forward/hsi_prediction_analysis_20260923_134150.csv',
+    5: 'data/hsi_walk_forward/hsi_prediction_analysis_20261017_003740.csv',
+    10: 'data/hsi_walk_forward/hsi_prediction_analysis_20261017_003752.csv',
+    20: 'data/hsi_walk_forward/hsi_prediction_analysis_20261017_003807.csv',
 }
 
 
@@ -88,7 +88,7 @@ def run(horizon, csv, out_md):
 
 def main():
     ap = argparse.ArgumentParser(description='恒指信号交易复核')
-    ap.add_argument('--horizon', type=int, choices=[1, 5, 20], default=20)
+    ap.add_argument('--horizon', type=int, choices=[5, 10, 20], default=20)
     ap.add_argument('--csv', type=str, default=None)
     ap.add_argument('--output', type=str, default=None)
     args = ap.parse_args()

@@ -4638,3 +4638,17 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 结果逐字复现 D59 P1/P2: 5d 净超额-0.16%[-0.26,-0.06] PBO0.51 DSR0.866 / 10d -0.10% PBO0.69 DSR0.986 / 20d +0.15%[-0.31,+0.60] PBO0.26 DSR0.998
 - MDE_IR≈0.68(三周期); 5d -0.75 可探测负, 10d/20d 落"说不准"区
 - 判决: 无周期全过三闸 ⇒ 🔴 维持 null; 适用范围 WF内部比较✓/外推生产✗
+
+2026-10-17 D59 十八：恒指 + 异常检测周期改 5/10/20（撤销 §十七 排除）
+- 用户令: HSI 三周期(hsi_*) + 异常检测 都改 5/10/20; 范围与用户确认
+- HSI 标签仍绝对二分类(单资产无横截面 ⇒ 不用 rank)
+- hsi_prediction.py: HORIZONS=(5,10,20) 单点常量; 传导回看 lag 5→10 交易日(键 pred_1d/5d→pred_5d/10d); 三周期模式表/建议/多周期历史准确率全换新值; 删旧「四个经验规律」营销表(92/93% 无出处)→「三周期模式(5/10/20)参考」+不显著注脚
+- hsi_ml_model.py: predict_multi_horizon 默认 5/10/20 + historical_accuracy/auc 更新; hsi_signal_backtest.py: choices/DEFAULT_CSV→5/10/20(指向 10-17 CSV)
+- anomaly_dip_backtest.py: HORIZON=5 → HORIZONS=[5,10,20] + --horizons CLI(按周期分节)
+- hsi_email.py / hsi_walk_forward.py: 无需改(--horizon 通用)
+- HSI 新实测(WF 2020-01-01→2025-12-31, 34 folds/697): 池化 57.3/58.5/52.4%, 折聚类 t=0.80/1.01/0.11 p=0.429/0.319/0.909 ⇒ 均不显著(池化二项 p<0.001 是伪显著)
+- HSI 信号 Long/Flat 净IR 0.24/0.07/0.20 均<买入持有 0.50/0.47/0.49
+- 旧基线(09-26: 51.3/54.8/59.1)因快照漂移作废
+- anomaly 10d/20d 数值待重建特征缓存后补跑(feature_cache 当前空)
+- 文档: BASELINES(恒指新表)/VALIDATION_GUIDE/THREE_HORIZON_ANALYSIS/README/AGENTS/DECISIONS §十八
+- ⚠️ 诚实定性: 改周期是口径变更, alpha 仍 null, 不产生正超额; 适用 WF 内部比较✓/外推生产✗
