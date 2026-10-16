@@ -80,11 +80,12 @@ python3 ml_services/feature_selection.py --method statistical --top-k 500 --hori
 if [ $? -ne 0 ]; then
     echo "⚠️ 特征选择失败，使用已有特征文件"
 else
-    # 将生成的特征文件复制为 latest
-    LATEST_FEATURE_FILE=$(ls -t output/selected_features_statistical_*.txt 2>/dev/null | head -1)
+    # 将生成的特征文件复制为 latest（⚠️ 查目录须与 feature_selection.py 的 --output-dir 一致，
+    # 否则 cp 是死代码；D45 同一性闸修复）
+    LATEST_FEATURE_FILE=$(ls -t data/feature_selection/statistical_features_*.txt 2>/dev/null | head -1)
     if [ -n "$LATEST_FEATURE_FILE" ]; then
-        cp "$LATEST_FEATURE_FILE" output/selected_features_latest.txt
-        echo "✅ 特征选择完成: output/selected_features_latest.txt"
+        cp "$LATEST_FEATURE_FILE" data/feature_selection/statistical_features_latest.txt
+        echo "✅ 特征选择完成: data/feature_selection/statistical_features_latest.txt"
     fi
 fi
 echo ""

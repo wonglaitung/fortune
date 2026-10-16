@@ -4307,3 +4307,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   判读=超额 IR 符号是否跨参一致，翻转=「取最好一轮」陷阱（lessons 三.79）
   实测本 20d：符号 +,−,+,−,+,− ⇒ 跨参翻转 ⇒ 不稳健
 - 测试 tests/test_guardrail_utils.py（3 项）
+
+2026-10-15 补"验证框架 4 件"之 ①③（用户"先补4件"）
+- 第①件(ⓠ同一性自动核，部分)：修 run_comprehensive_analysis.sh 特征查找目录 output/→data/feature_selection/；
+  presentation_gate 输出带「适用范围：WF 内部比较✓/外推生产✗」；契约测试 2 条 xfail(strict)→真跑通过
+  （test_pipeline_contract 14 passed / 1 xfailed；剩 WF校准 差异⑤ = 大改暂缓）
+- 第③件(静态+逐日mark 默认)：新 ml_services/strategy_eval.py（唯一实现 daily_mark/static_matched/metrics_daily/
+  mde_ir/has_timing_increment）；classic_timing_backtest 改为 import 它（复现 1/5、MA200✅）；hsi_risk_overlay 待迁
+- D45 记录 4 件；AGENTS 对抗审核表更新 + 「尺子边界」三须同报（适用范围/功效MDE/相邻参数）
+- 测试：strategy_eval 5 + guardrail_utils 3 + contract 14/1xfail；doc_gate 全绿

@@ -150,11 +150,12 @@ def test_wf_probability_is_calibrated():
         'WF 路径未接入 Isotonic 校准 → A 闸跑未校准概率、生产阈值跑校准后概率，不同源'
 
 
-@pytest.mark.xfail(strict=True, reason='run_comprehensive_analysis.sh 从 output/ 取特征文件，'
-                                        '而 feature_selection.py 写到 data/feature_selection/ → cp 静默跳过')
 def test_runner_lookup_path_matches_feature_selection_output():
-    """runner 查特征文件的位置必须与 feature_selection 实际写出位置一致（否则 cp 是死代码）。"""
-    m_out = re.search(r"--output-dir'[^']*'[^']*'([^']+)'", _src(FS_SRC))
+    """runner 查特征文件的目录必须与 feature_selection.py 的 --output-dir 一致（否则 cp 是死代码）。
+
+    **D45（2026-10-15）已修复**：runner 原查 `output/` 而 feature_selection 写 `data/feature_selection/`。
+    """
+    m_out = re.search(r"--output-dir'[^\n]*default='([^']+)'", _src(FS_SRC))
     assert m_out, '未解析到 feature_selection 的 --output-dir 默认值'
     out_dir = m_out.group(1)
 
@@ -192,10 +193,11 @@ def test_flag_default_defined_only_once():
     assert not offenders, f'以下 flag 的默认值/读取点违规：{offenders}'
 
 
-@pytest.mark.xfail(strict=True, reason='A 闸要求的「适用范围」标注无任何工具强制'
-                                        '（presentation_gate / doc_gate / pre-commit 均不查）')
 def test_scope_label_is_tool_enforced():
-    """「适用范围：WF 内部比较 ✓ / 外推生产 ✗」须由闸门强制，而非靠自觉。"""
+    """「适用范围：WF 内部比较 ✓ / 外推生产 ✗」须由闸门强制输出，而非靠自觉。
+
+    **D45（2026-10-15）已修复**：presentation_gate 现在每次输出都带该标注。
+    """
     targets = [ROOT / 'scripts' / 'presentation_gate.py', ROOT / 'scripts' / 'doc_gate.py',
                ROOT / '.githooks' / 'pre-commit']
     hit = [t.name for t in targets if t.exists() and '适用范围' in t.read_text(encoding='utf-8')]

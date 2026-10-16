@@ -2621,3 +2621,33 @@ yf `^HSI`（**1986-12 → 2026-10，9820 日**）；每日 mark；单边成本 0
 ### 六、回退
 
 纯登记，无代码改动。
+
+---
+
+## D45（2026-10-15，用户"先补4件"）：验证框架补强 —— 把"靠人自觉"改成"默认执行"
+
+**背景**：对"本项目工程化验证可当尺子"的对抗审核指出其四限：**①非自动 ②非通用 ③会误报 ④功效低**。
+本条把 ②④①③ 四处关键检查**默认化**（"非自动"缓解；"非通用/会误报/低功效"是本质限制，用尺时须声明）。
+
+### 逐件
+
+1. **④ 功效/MDE** ✅：`monthly_guardrail.min_detectable_ir(n,horizon)=2.8·√(252/(h·n))`；
+   报告增「功效/MDE」行 + 「低于它测不出 ⇒ **不显著≠没有**」（lessons 三.75）。测试 `test_guardrail_utils.py`。
+2. **② 相邻参数敏感性** ✅：`monthly_guardrail --sensitivity`（topk{-5,0,+5}×dropout{0,2}）报净/超额 IR，
+   判读 = **超额 IR 符号是否跨参一致**，翻转 = 「取最好一轮」陷阱（lessons 三.79）。实测本 20d **翻转 ⇒ 不稳健**。
+3. **① ⓪ 同一性自动核** —— **部分** ✅：
+   - 修 `run_comprehensive_analysis.sh` 特征文件查找目录 `output/` → `data/feature_selection/`
+     （与 `feature_selection.py --output-dir` 一致，否则 cp 是死代码）；
+   - `presentation_gate.py` 每次输出带 **「适用范围：WF 内部比较 ✓ / 外推生产 ✗」**；
+   - 契约测试 2 条 `xfail(strict)` → **真跑通过**（`test_pipeline_contract.py` 14 passed，原 12）。
+   - ⚠️ **仍剩 1 条 xfail**：`test_wf_probability_is_calibrated`（WF 用**未校准**概率 vs 生产用**校准后**，
+     差异⑤）⇒ 需把 Isotonic OOF 校准接进 WF —— **大改，暂缓**，列为待办。
+4. **③ 静态 + 逐日 mark 默认** ✅：新增 `ml_services/strategy_eval.py`（**唯一实现**）：
+   `daily_mark`（逐日 mark + T+1 + 换手成本）/ `static_matched`（等仓位对照）/ `metrics_daily` /
+   `mde_ir` / `has_timing_increment`；`classic_timing_backtest.py` 已改为 import 它（结果复现：1/5，MA200 单点 ✅）。
+   ⚠️ `hsi_risk_overlay.py` 仍自带一份，**待迁**（列待办）。测试 `test_strategy_eval.py`。
+
+### 结果
+
+契约测试 **14 passed / 1 xfailed**；`strategy_eval` 5 + `guardrail_utils` 3 passed；`doc_gate` 全绿。
+**尺子边界声明**：此后用本框架量新策略时，须同报 —— **适用范围（本宇宙/本管线）** + **功效/MDE** + **相邻参数一致性**。

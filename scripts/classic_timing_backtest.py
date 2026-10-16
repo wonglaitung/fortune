@@ -17,6 +17,10 @@ import numpy as np
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+from ml_services.strategy_eval import (  # noqa: E402
+    daily_mark, static_matched, metrics_daily, has_timing_increment)
+
 COST = 0.001
 RULES = ['faber10m', 'ma150', 'ma200', 'ma250', 'mom12']
 
@@ -50,38 +54,29 @@ def position(close, rule):
     return pd.Series(sig_next.reindex(key).to_numpy(), index=close.index).fillna(0.0)
 
 
-def stats(r):
-    r = np.asarray(r, float)
-    cum = np.cumprod(1 + r)
-    cagr = cum[-1] ** (252.0 / len(r)) - 1
-    vol = r.std(ddof=1) * np.sqrt(252)
-    sharpe = r.mean() * 252 / vol if vol > 0 else float('nan')
-    dd = float((cum / np.maximum.accumulate(cum) - 1).min())
-    return cagr, vol, sharpe, dd, (cagr / abs(dd) if dd else float('nan'))
-
-
 def main():
     close = load_hsi()
     dr = close.pct_change().fillna(0.0)
     print(f"恒指 {close.index.min().date()} ~ {close.index.max().date()}（{len(close)} 日）")
-    bc, bv, bs, bdd, bc2 = stats(dr.values)
+    # 评估口径统一走 ml_services.strategy_eval（逐日 mark + 静态对照，D45）
+    bh = metrics_daily(dr)
     print(f"{'口径':<12}{'CAGR':>8}{'波动':>7}{'Sharpe':>8}{'maxDD':>8}{'Calmar':>8}{'在场':>6}")
-    print(f"{'买入持有':<12}{bc*100:>7.1f}%{bv*100:>6.1f}%{bs:>8.2f}{bdd*100:>7.1f}%{bc2:>8.2f}{100:>5.0f}%")
+    print(f"{'买入持有':<12}{bh['cagr']*100:>7.1f}%{bh['vol']*100:>6.1f}%{bh['sharpe']:>8.2f}"
+          f"{bh['maxdd']*100:>7.1f}%{bh['calmar']:>8.2f}{100:>5.0f}%")
     print("=" * 72)
     n_pass = 0
     for rule in RULES:
-        pos = position(close, rule)
-        pos_lag = pos.shift(1).fillna(0.0)
-        turn = (pos - pos_lag).abs()
-        r = (pos_lag * dr - turn * COST).values
-        c, v, s, dd, c2 = stats(r)
+        pos = position(close, rule).reindex(dr.index).fillna(0.0)
         wbar = float(pos.mean())
-        r_static = (wbar * dr).values
-        _, _, _, dd_static, _ = stats(r_static)
-        ok = (dd > bdd) and (dd > dd_static) and (s >= bs - 0.05)
+        net = daily_mark(dr, pos, cost_per_turnover=COST)     # 逐日 mark（含 T+1 + 换手成本）
+        st = static_matched(dr, wbar)                          # 静态等仓位对照
+        m, ms = metrics_daily(net), metrics_daily(st)
+        ok = (m['maxdd'] > bh['maxdd']) and (m['maxdd'] > ms['maxdd']) and (m['sharpe'] >= bh['sharpe'] - 0.05)
         n_pass += int(ok)
-        print(f"{rule:<12}{c*100:>7.1f}%{v*100:>6.1f}%{s:>8.2f}{dd*100:>7.1f}%{c2:>8.2f}{wbar*100:>5.0f}%"
-              f"  [持有 maxDD {bdd*100:.0f}% | 静态w̄ maxDD {dd_static*100:.0f}%] {'✅' if ok else '❌'}")
+        print(f"{rule:<12}{m['cagr']*100:>7.1f}%{m['vol']*100:>6.1f}%{m['sharpe']:>8.2f}"
+              f"{m['maxdd']*100:>7.1f}%{m['calmar']:>8.2f}{wbar*100:>5.0f}%"
+              f"  [持有 maxDD {bh['maxdd']*100:.0f}% | 静态w̄ maxDD {ms['maxdd']*100:.0f}%]"
+              f" {'✅' if ok else '❌'}")
     print("=" * 72)
     print(f"通过 {n_pass}/{len(RULES)}（判据：①少亏 且 ②真会躲[浅于静态w̄] 且 ③不劣于持有）")
     print(f"判定：{'✅ 简单择时有用' if n_pass >= 1 else '❌ 简单择时也不管用（至多少投）'}")

@@ -240,8 +240,10 @@ def main() -> int:
         for f in failures:
             print("   ✗ " + f)
         print("   处理：定位泄漏/异常根因后重跑，或改以折聚类口径重述。")
+        print("   适用范围：⛔ 不得作为任何结论输出。")
         return 1
     print("✅ A 闸 PASS —— 可作为结论呈现（仍须按判读顺序走 PBO/DSR/CI）")
+    print("   ⚠️ 适用范围：**WF 内部比较 ✓ / 外推生产 ✗**（ⓠ 同一性闸未自动脚本，靠人工核对）")
     print("   注意：AGENTS:116 —— PBO/DSR 检测不出泄漏，本闸不可被其替代。")
     return 0
 
