@@ -64,8 +64,11 @@
 | 6 | 校准器 | 随模型重训，OOF 重拟合 |
 | 7 | 门槛基准 | `GATE_SOURCE_CSV` 同源 |
 
-**已知待修风险（2026-10-12 记录）**：⓪ 的可执行版 `scripts/parity_check.py` **尚未实现**
-（**仍然没有**，别因为契约测试存在就当 ⓪ 已自动化）。
+**⓪ 可执行版（2026-10-16 部分落地）**：`scripts/parity_check.py` —— **只覆盖离线可读项**
+（产物层：生产 pkl 的 `feature_columns`（F1/HIBOR/net_* 计数）+ `community_ids` **自洽性**；
+静态层：`mode=` 时点启发式、校准器配置；env：快照/门槛基准）。
+**明确边界**：**Q3/Q4 的运行时相等仍须人工**，**不能**因有这个脚本就当 ⓪ 已自动化（见脚本头"覆盖边界"）。
+非零退出 = 存在**可判定** FAIL（如含 `net_comm_*` 却 `community_ids=None`）。
 **已落地（O3，2026-10-12）**：`tests/test_pipeline_contract.py` —— **2 条回归护栏**
 （embargo 归一化、pkl 着装 F1/HIBOR）+ **6 条已知违约 `xfail(strict=True)`**
 （时点极性、WF 传 community_ids、WF 校准、runner 路径 vs 写出目录、flag 默认只许一处、

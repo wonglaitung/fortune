@@ -4393,3 +4393,13 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ② 执行(scripts/ah_leadlag_test.py, 13 对, pair 聚类): 同期 0.593(t=20.7, sanity✓); ① A→H(可交易) +0.012 t=1.54 p=0.149 ❌null; ② H→A +0.033 t=3.92 ✅显著但非我们方向; ③ H动量 +0.012 t=1.82 null; ④ 溢价→H +0.028 t=8.24 ✅但幅度极小+需A腿+疑机械
 - 终判: E1 边日频领先滞后在可交易方向(预测 H)=null ⇒ 并入 D1/D33/D51; ①③未跑(③已进模型仍null)
 - 新增 scripts/ah_leadlag_test.py + tests/test_ah_leadlag.py(2 passed)
+
+2026-10-16 收口①：三层总账纳入 D46-D52（关联/题材传播层）
+- AGENTS 三层总账: 加 ④风格 行 + ⑤关联/题材(分区D51+传播D52) 行; 加"理念/形态编码类❌(D44/D46)"; 口径"未发现≠已证明没有"
+- DECISIONS 总账同步; README 诚实结论: "三层+y交叉+风格+关联题材传播" + D1/D33–D52
+
+2026-10-16 收口②：⓪ 同一性闸可执行版 scripts/parity_check.py（部分落地）
+- 覆盖: 产物层(生产 pkl feature_columns F1/HIBOR/net_* 计数 + community_ids 自洽) + 静态(mode= 时点启发式/校准器配置) + env(快照/门槛基准)
+- 诚实边界: Q3/Q4 运行时相等仍须人工; 不假装 ⓪ 全自动; 非零退出=可判定 FAIL(net_comm_* 却 community_ids=None)
+- 实测: 20d pkl 567 特征(HIBOR=60 net_*=356) 2 PASS/0 FAIL/4 INFO
+- REVIEW_GATES 更新"已知待修风险"→部分落地; AGENTS ⓪ 行同步; tests/test_parity_check.py(4 passed)
