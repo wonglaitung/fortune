@@ -5752,36 +5752,36 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         # 用**历史分位**描述当前 5 日转换概率（诚实口径；不再用硬编码 0.23/0.67）
                         stability_desc = hmm_stability_desc(switch_pct)
 
-                        hsi_text += f"- 市场状态持续时间（**回看**·已持续天数）: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
-                        hsi_text += f"- HMM 状态转换概率（**前瞻**·未来是否转换）: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n"
-                        hsi_text += ("> ⚠️ 上面**两个是不同概念**："
-                                     "**「已持续天数」= 回看过去**（数值大 = 这一状态已经走了很久）；"
-                                     "**「转换概率 / 期望时长」= 前瞻未来**（数值低 = 接下来大概率还这样）。"
-                                     "**二者可能不一致，别互相替代。**\n")
+                        hsi_text += f"- 当前市场状态: {regime_state_cn}（已经持续 **{regime_duration}** 天，{regime_stability}）\n"
+                        hsi_text += f"- 接下来会不会变: **未来 5 天内有 {switch_prob_5d:.0%} 的可能**换到别的状态——{stability_desc}。\n"
+                        hsi_text += ("> ⚠️ 分清两件事："
+                                     "**「已经持续了多久」看的是过去**（数字大 = 这轮已经走了很久）；"
+                                     "**「接下来会不会变」看的是未来**（数字小 = 大概率还会继续）。"
+                                     "**两者可能对不上，别互相替代。**\n")
 
-                        # 添加状态稳定性说明
-                        hsi_text += "\n**状态持续性说明**（看的是「已持续天数·回看」）:\n"
-                        hsi_text += "- ⚠️ 不稳定（<5天）：市场状态频繁转换，建议降低仓位\n"
-                        hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
-                        hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
+                        # 状态稳定性说明（看"已持续多久"，人话）
+                        hsi_text += "\n**怎么看「已经持续了多久」**:\n"
+                        hsi_text += "- ⚠️ 不到 5 天：状态来回变，建议降低仓位\n"
+                        hsi_text += "- 🟡 5–15 天：中等稳定，可正常交易\n"
+                        hsi_text += "- ✅ 超过 15 天：状态稳、趋势明确\n\n"
 
-                        hsi_text += "**HMM 状态转换概率说明**:\n\n"
-                        hsi_text += "| 指标 | 数值 | 含义 |\n"
+                        hsi_text += "**接下来会不会变（换句话说的三个数）**:\n\n"
+                        hsi_text += "| 指标 | 数值 | 什么意思 |\n"
                         hsi_text += "|------|------|------|\n"
-                        hsi_text += f"| 转换概率 | {transition_prob:.2%} | 从当前状态转换到其他状态的概率 |\n"
-                        hsi_text += f"| 5日转换概率 | {switch_prob_5d:.2%} | 5天内离开当前状态的概率 |\n"
-                        hsi_text += (f"| 期望剩余持续时间（模型·无记忆）| {expected_duration:.1f} 天 "
-                                     f"| = 1/(1−转换概率)；**不看已持续多久** |\n")
+                        hsi_text += f"| 明天就换 | {transition_prob:.2%} | 明天就换到别的状态的把握 |\n"
+                        hsi_text += f"| 5 天内会换 | {switch_prob_5d:.2%} | 未来 5 天内换出去的可能 |\n"
+                        hsi_text += (f"| 这轮还能持续多久（模型估）| {expected_duration:.1f} 天 "
+                                     f"| 按历史「平均」估的，**不看已经持续了多久** |\n")
                         _haz = current_market.get('regime_hazard')
                         _emp = current_market.get('regime_emp_duration')
                         if _haz:
-                            hsi_text += (f"| 期望剩余持续时间（经验·时长依赖）| {_haz['exp_remaining']:.1f} 天 "
-                                         f"| 已持续 {_haz['elapsed']} 天；**当前退出风险率 {_haz['hazard_now']:.1%}/天**；"
-                                         f"同类中位总时长 {_haz['median_total']} 天（样本 {_haz['n']} 次）|\n")
+                            hsi_text += (f"| 这轮还能持续多久（按经验）| {_haz['exp_remaining']:.1f} 天 "
+                                         f"| **结合「已经持续了 {_haz['elapsed']} 天」**、照历史同类状态估；"
+                                         f"现在每天换的概率约 {_haz['hazard_now']:.0%}（历史同类中位能持续 {_haz['median_total']} 天，共 {_haz['n']} 次）|\n")
                         elif _emp:
-                            hsi_text += (f"| 期望剩余持续时间（经验·条件）| {_emp['exp_remaining']:.1f} 天 "
-                                         f"| 已持续 {_emp['elapsed']} 天；同类状态历史中位总时长 "
-                                         f"{_emp['median_total']} 天（样本 {_emp['n']} 次）|\n")
+                            hsi_text += (f"| 这轮还能持续多久（按经验）| {_emp['exp_remaining']:.1f} 天 "
+                                         f"| 结合「已经持续了 {_emp['elapsed']} 天」、照历史同类状态估（历史同类中位能持续 "
+                                         f"{_emp['median_total']} 天，共 {_emp['n']} 次）|\n")
                         hsi_text += "\n"
 
                     # 添加市场状态说明表格

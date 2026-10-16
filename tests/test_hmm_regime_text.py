@@ -23,8 +23,9 @@ def test_no_hardcoded_range_wording_in_source():
     """回归护栏：不得再用'实际范围'（暗示分位却实为硬编码阈值）。"""
     src = (Path(__file__).resolve().parent.parent / "comprehensive_analysis.py").read_text(encoding="utf-8")
     assert "实际范围" not in src
-    # 必须点明"回看 vs 前瞻"两个概念的差异
-    assert "回看" in src and "前瞻" in src
+    # 必须以人话点明"看过去 vs 看未来"两个概念，且提示二者可能不一致
+    assert "过去" in src and "未来" in src
+    assert "别互相替代" in src
 
 
 def test_empirical_duration_uses_elapsed_and_excludes_ongoing():
