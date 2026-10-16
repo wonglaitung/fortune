@@ -4482,3 +4482,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 2026-10-16 风险面板滚动校准挂进 CI
 - .github/workflows/hsi-prediction.yml: 加 step "风险面板滚动校准对账(D55/D56)" → risk_panel_monitor --update --report
 - 提交步骤加 data/risk_panel_ledger.csv（跨运行累积）
+
+2026-10-16 修 HMM 邮件文案两处（诚实化）
+- ①"处于实际范围"（像分位，实为硬编码阈值 0.23/0.67）→ 改为**真历史分位**：hmm_stability_desc(switch_pct)；分位(current) 在历史 Regime_Switch_Prob_5d 分布中的位置
+- ②点明"回看 vs 前瞻"两概念: 「已持续天数=回看」vs「转换概率/期望时长=前瞻」可能不一致, 别互相替代
+- comprehensive_analysis: get_current_market_state 返回加 regime_switch_prob_5d_pct; 渲染块改用它
+- tests/test_hmm_regime_text.py(3 passed, 含"无'实际范围'残留"回归护栏)

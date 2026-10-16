@@ -2443,6 +2443,20 @@ def get_hsi_analysis():
         return None
 
 
+def hmm_stability_desc(switch_pct):
+    """按**历史分位**描述 HMM 5 日转换概率（诚实口径；None ⇒ 不可用）。
+
+    分位 = 当前值在历史 Regime_Switch_Prob_5d 分布中的位置（越低 = 越稳定）。
+    """
+    if switch_pct is None:
+        return "（历史分位不可用）"
+    if switch_pct < 0.25:
+        return f"处于**历史低位（{switch_pct:.0%} 分位）**，状态高度稳定，短期转换概率偏低"
+    if switch_pct < 0.75:
+        return f"处于**历史中位区间（{switch_pct:.0%} 分位）**，状态相对稳定"
+    return f"处于**历史高位（{switch_pct:.0%} 分位）**，转换相对频繁，需留意"
+
+
 def get_current_market_state():
     """
     获取当前市场状态（实时）- 使用腾讯财经API
@@ -2517,6 +2531,10 @@ def get_current_market_state():
         regime_state = None
         regime_state_cn = None
         regime_stability = None
+        regime_transition_prob = None
+        regime_switch_prob_5d = None
+        regime_switch_prob_5d_pct = None
+        regime_expected_duration = None
 
         try:
             from data_services.regime_detector import RegimeDetector
@@ -2533,6 +2551,15 @@ def get_current_market_state():
                 regime_transition_prob = float(regime_result['Regime_Transition_Prob'].iloc[-1])
                 regime_switch_prob_5d = float(regime_result['Regime_Switch_Prob_5d'].iloc[-1])
                 regime_expected_duration = float(regime_result['Regime_Expected_Duration'].iloc[-1])
+
+                # 当前 5 日转换概率在**历史分布**中的分位（诚实口径，替代硬编码阈值 0.23/0.67）
+                regime_switch_prob_5d_pct = None
+                try:
+                    _hist = regime_result['Regime_Switch_Prob_5d'].dropna()
+                    if len(_hist) >= 60:
+                        regime_switch_prob_5d_pct = float((_hist < regime_switch_prob_5d).mean())
+                except Exception:
+                    regime_switch_prob_5d_pct = None
 
                 # 状态名称映射
                 regime_labels = {0: '震荡', 1: '上涨', 2: '下跌'}
@@ -2574,6 +2601,7 @@ def get_current_market_state():
             'regime_stability': regime_stability,
             'regime_transition_prob': regime_transition_prob,
             'regime_switch_prob_5d': regime_switch_prob_5d,
+            'regime_switch_prob_5d_pct': regime_switch_prob_5d_pct,
             'regime_expected_duration': regime_expected_duration,
         }
     except Exception as e:
@@ -5627,20 +5655,20 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
                         transition_prob = current_market['regime_transition_prob']
                         switch_prob_5d = current_market['regime_switch_prob_5d']
                         expected_duration = current_market['regime_expected_duration']
+                        switch_pct = current_market.get('regime_switch_prob_5d_pct')
 
-                        # 动态判断当前状态稳定性
-                        if switch_prob_5d < 0.23:
-                            stability_desc = "处于实际范围的最低端，状态高度稳定，短期内几乎不会转换"
-                        elif switch_prob_5d < 0.67:
-                            stability_desc = "处于中等范围，状态有一定稳定性"
-                        else:
-                            stability_desc = "处于较高范围，状态不稳定，可能即将转换"
+                        # 用**历史分位**描述当前 5 日转换概率（诚实口径；不再用硬编码 0.23/0.67）
+                        stability_desc = hmm_stability_desc(switch_pct)
 
-                        hsi_text += f"- 市场状态持续时间: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
-                        hsi_text += f"- HMM 状态转换概率: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n"
+                        hsi_text += f"- 市场状态持续时间（**回看**·已持续天数）: {regime_state_cn} 持续 **{regime_duration}** 天 ({regime_stability})\n"
+                        hsi_text += f"- HMM 状态转换概率（**前瞻**·未来是否转换）: 当前5日转换概率为 {switch_prob_5d:.2%}，{stability_desc}。\n"
+                        hsi_text += ("> ⚠️ 上面**两个是不同概念**："
+                                     "**「已持续天数」= 回看过去**（数值大 = 这一状态已经走了很久）；"
+                                     "**「转换概率 / 期望时长」= 前瞻未来**（数值低 = 接下来大概率还这样）。"
+                                     "**二者可能不一致，别互相替代。**\n")
 
                         # 添加状态稳定性说明
-                        hsi_text += "\n**状态持续性说明**:\n"
+                        hsi_text += "\n**状态持续性说明**（看的是「已持续天数·回看」）:\n"
                         hsi_text += "- ⚠️ 不稳定（<5天）：市场状态频繁转换，建议降低仓位\n"
                         hsi_text += "- 🟡 中等（5-15天）：市场状态中等稳定，可正常交易\n"
                         hsi_text += "- ✅ 稳定（>15天）：市场状态稳定，趋势明确\n\n"
