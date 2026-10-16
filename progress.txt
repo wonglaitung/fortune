@@ -4322,3 +4322,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - hsi_risk_overlay 的 _ir/_maxdd/_calmar 委托 metrics_daily；daily_overlay 改用 daily_mark+static_matched；
   择时增量判定改用 has_timing_increment
 - 22 passed；daily_overlay 直跑行为一致（信号 maxDD 仍深于静态 ⇒ 仅少投）
+
+2026-10-15 待办1 结清：WF 概率校准（差异⑤）—— 经核实由 D26 解决
+- 核实：D26 后生产**方向用原始 prob、校准只进 confidence** ⇒ 与 WF(prediction_proba[:,1]) **同源**；差异⑤ 前提已过时
+- 改写 test_wf_probability_is_calibrated → test_wf_and_production_same_prob_caliber（校验真实同源条件）
+- 契约测试 **15 passed / 0 xfailed**（原 14/1xfail）；AGENTS ⓪ 行 + D45 同步
+- ⇒ **两个待办（WF 校准 + hsi_risk_overlay 迁移）均已清**

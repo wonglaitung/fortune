@@ -141,13 +141,19 @@ def test_wf_prefetch_passes_community_ids():
         'WF 解析失败时未显式报错（静默退回动态提取 = 差异② 复发）'
 
 
-@pytest.mark.xfail(strict=True, reason='lessons 三.60 差异⑤：walk_forward_validation 无任何校准引用，'
-                                        'CSV 的 Predict_Prob 是未校准原始概率')
-def test_wf_probability_is_calibrated():
-    """WF 评估用的概率必须与生产下单用的概率同源（Isotonic + OOF）。"""
-    text = _src(WF_SRC)
-    assert ('DailyConfidence' in text) or ('oof_glob' in text), \
-        'WF 路径未接入 Isotonic 校准 → A 闸跑未校准概率、生产阈值跑校准后概率，不同源'
+def test_wf_and_production_same_prob_caliber():
+    """WF 与生产**方向判定**必须用同一概率口径（D26 后：均为**模型原始 prob**，不校准确方向）。
+
+    历史：差异⑤ 原为「WF 跑未校准、生产跑校准后」。**D26 已解决**：生产 `apply_to_results`
+    把 `probability` 保持原始 P(上涨)、校准只写 `confidence` ⇒ 与 WF（`prediction_proba[:,1]`）**同源**。
+    本测试固化该口径（原 `xfail(strict)`，D45 转正）。
+    """
+    wf = _src(WF_SRC)
+    assert "prediction_proba[:, 1]" in wf, 'WF 未用原始 predict_proba[:,1] 概率'
+    dc = (ROOT / 'ml_services' / 'daily_confidence.py').read_text(encoding='utf-8')
+    assert 'probability 保持原始' in dc, 'daily_confidence 未保留原始 probability（D26）'
+    assert "preds[h]['probability'] =" not in dc, 'daily_confidence 覆写了 probability（D26 缺口复发）'
+    assert "preds[h]['confidence'] = conf" in dc, '校准值未只写 confidence（D26）'
 
 
 def test_runner_lookup_path_matches_feature_selection_output():

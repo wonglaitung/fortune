@@ -2640,12 +2640,15 @@ yf `^HSI`（**1986-12 → 2026-10，9820 日**）；每日 mark；单边成本 0
      （与 `feature_selection.py --output-dir` 一致，否则 cp 是死代码）；
    - `presentation_gate.py` 每次输出带 **「适用范围：WF 内部比较 ✓ / 外推生产 ✗」**；
    - 契约测试 2 条 `xfail(strict)` → **真跑通过**（`test_pipeline_contract.py` 14 passed，原 12）。
-   - ⚠️ **仍剩 1 条 xfail**：`test_wf_probability_is_calibrated`（WF 用**未校准**概率 vs 生产用**校准后**，
-     差异⑤）⇒ 需把 Isotonic OOF 校准接进 WF —— **大改，暂缓**，列为待办。
+   - ✅ **差异⑤ 已结清**：经核实 **D26** 已把生产改成"**方向用原始 prob、校准只进 `confidence`**"
+     ⇒ 与 WF（`prediction_proba[:,1]`）**本就同源**；原 `xfail` 测试前提已过时，
+     已**改写为校验真实同源条件**（`test_wf_and_production_same_prob_caliber`）。
+     ⇒ `test_pipeline_contract.py` **15 passed / 0 xfailed**。
 4. **③ 静态 + 逐日 mark 默认** ✅：新增 `ml_services/strategy_eval.py`（**唯一实现**）：
    `daily_mark`（逐日 mark + T+1 + 换手成本）/ `static_matched`（等仓位对照）/ `metrics_daily` /
-   `mde_ir` / `has_timing_increment`；`classic_timing_backtest.py` 已改为 import 它（结果复现：1/5，MA200 单点 ✅）。
-   ⚠️ `hsi_risk_overlay.py` 仍自带一份，**待迁**（列待办）。测试 `test_strategy_eval.py`。
+   `mde_ir` / `has_timing_increment`；`classic_timing_backtest.py` 与 **`hsi_risk_overlay.py`** 均已改为 import 它
+   （`_ir/_maxdd/_calmar` 委托 `metrics_daily`、`daily_overlay` 用 `daily_mark`+`static_matched`、增量判定用 `has_timing_increment`；
+   结果复现：classic 1/5、MA200 单点 ✅）。测试 `test_strategy_eval.py`。
 
 ### 结果
 
