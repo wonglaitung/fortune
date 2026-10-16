@@ -162,8 +162,10 @@ def evaluate(panel, label_col, mode, h=H):
     if len(ics) < 5:
         return None
     t_, p_ = ttest_1samp(ics, 0.0)
+    h2 = len(ics) // 2
     return {"n": len(ics), "ic": float(ics.mean()), "t": float(t_), "p": float(p_),
-            "excess_pp": float(np.mean(excess) * 100)}
+            "excess_pp": float(np.mean(excess) * 100),
+            "ic_h1": float(ics[:h2].mean()), "ic_h2": float(ics[h2:].mean())}
 
 
 def main():
@@ -184,14 +186,15 @@ def main():
     panel["y_ind"] = (panel["excess_ind"] > 0).astype(int)
     panel["y_rank"] = panel["rank"]
     panel["y_grade"] = panel["grade"]
-    print("=" * 78)
-    print(f"{'变体':<22}{'块数':>6}{'IC均值':>9}{'t(跨块)':>9}{'p':>8}{'TopK毛超额':>12}")
+    print("=" * 92)
+    print(f"{'变体':<22}{'块数':>6}{'IC均值':>9}{'t':>7}{'p':>8}{'前1/2':>9}{'后1/2':>9}{'TopK毛超额':>11}")
     res = {}
     for name, (col, mode) in variants.items():
         r = evaluate(panel, col, mode, h)
         res[name] = r
         if r:
-            print(f"{name:<22}{r['n']:>6}{r['ic']:>+9.3f}{r['t']:>+9.2f}{r['p']:>8.3f}{r['excess_pp']:>+11.2f}%")
+            print(f"{name:<22}{r['n']:>6}{r['ic']:>+9.3f}{r['t']:>+7.2f}{r['p']:>8.3f}"
+                  f"{r['ic_h1']:>+9.3f}{r['ic_h2']:>+9.3f}{r['excess_pp']:>+10.2f}%")
         else:
             print(f"{name:<22}  样本不足")
     print("-" * 78)
