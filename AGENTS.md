@@ -332,7 +332,7 @@ python hsi_email.py --no-email
 | 闸 | 触发时机 | 判据 |
 |---|---|---|
 | **⓪ 同一性闸** | 任何指标要作为**结论**输出前（先于 A 闸） | 四问，任一「否」即止：① **社区集合**严格相等（`community_ids`）② **列集合**：生产 pkl ⊆ WF 可用列集 **且** F1/HIBOR 列两边都在 **且** 选择规则同源（**不要要求两边集合逐字相等**——WF 每折重选，恒不相等）③ **时点**：`train()` 与 `predict()` 的 `use_shift` 相等；④ 概率同源（`oof_glob` 校准 + 门槛基准 CSV）。⚠️ 无独立 `parity_check.py`；靠**契约测试**兜底：`python3 -m pytest tests/test_pipeline_contract.py`（**D45 后 15 passed / 0 xfailed**，原 12；差异⑤ 经核实由 **D26** 解决——生产方向用原始 prob、校准只进 confidence ⇒ 与 WF 同源；原 `xfail` 测试已更新）。见 lessons 三.60 |
-| **A 呈现闸** | 任何指标要作为**结论**输出前 | 绝对值异常 → `python3 scripts/presentation_gate.py --input <csv> --horizon N`，**非零退出即阻断**；结论须标注「适用范围：WF 内部比较 ✓ / 外推生产 ✗」。✅ **D45 起每次输出自动带该标注**（原无工具强制） |
+| **A 呈现闸** | 任何指标要作为**结论**输出前 | 绝对值异常 → `python3 scripts/presentation_gate.py --input <csv> --horizon N`，**非零退出即阻断**；结论须标注「适用范围：WF 内部比较 ✓ / 外推生产 ✗」。✅ **D45 起每次输出自动带该标注**（原无工具强制）；**结论必须条件化**：任何「不立项/无 edge/升配」等结论须带**适用范围**，`doc_gate.py L6` 对 DECISIONS 结论段强制（既有冻结/新增强制）——起源 D46→D47 |
 | **B 提交闸** | 任何代码/配置/文档改动后、commit 前 | [9 项清单](docs/REVIEW_GATES.md)逐项过，任一不过即重审（第 9 项=同一性） |
 | **C 升级闸** | 任何 🟢/升配/加仓/改阈值 决策前 | 三冻结 + 双跑 md5 一致 **∧ ⓪ 通过** + 禁止取最好一轮。⚠️ md5 一致**只证同一路径可复现、不证两路径相同**——2026-10-12 复现的是一个没人部署的函数 |
 
@@ -463,7 +463,7 @@ test_df[col] = test_df[col].apply(
 **特征修改后**：清除缓存 `rm -rf data/feature_cache/*.pkl`
 
 **改动收尾时**：跑 `python3 scripts/doc_gate.py`（断链 / 表格完整性 / 转义管道 /
-过期残留 / A 闸可运行），非零退出即阻断；含 `|` 的 shell 命令放代码块不进表格；
+过期残留 / A 闸可运行 / **结论条件化 L6**），非零退出即阻断；含 `|` 的 shell 命令放代码块不进表格；
 HTML / SVG / 视频不入库。完整检查表见 [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) §8
 
 ---

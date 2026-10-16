@@ -10,6 +10,7 @@
   L3  表格单元内被转义的 shell 管道 必须 0（`\\|` 会改变命令语义）
   L4  已撤销/已外迁内容残留        必须 0
   L5  A 闸可运行（--help 不得崩溃）
+  L6  结论必须条件化               DECISIONS 段含结论词须带「适用范围」
 
 检查项（--tests 追加）：
   T1  全量 pytest
@@ -48,6 +49,17 @@ BANNED_PATTERNS = [
 
 # 行内出现这些标记 = 该行是「记录撤销本身」的条目，不算残留
 WITHDRAWN_MARKERS = ("已撤销", "~~", "不可引用", "已被证伪", "已证伪")
+
+# L6「结论必须条件化」（2026-10-16 新增，D46 之失：把本宇宙 null 写成普适"不可能"）。
+# 判据：docs/DECISIONS.md 中任一 `## D<n>` 段含结论词 ⇒ 段内必须出现「适用范围」。
+# 例外：规则生效前的既有条目（冻结，勿增；新增条目必须自带适用范围）。
+CONCLUSION_KEYWORDS = re.compile(r"不立项|无 edge|无 alpha|升配|可交易|结案|止于")
+SCOPE_MARKER = "适用范围"
+SCOPE_GRANDFATHERED = {
+    "D12", "D13", "D14", "D16", "D17", "D18", "D19", "D20", "D21", "D22",
+    "D26", "D27", "D29", "D30", "D31", "D33", "D34", "D35", "D36", "D37",
+    "D38", "D39", "D41", "D42", "D44",
+}
 
 # 用于区分「shell 命令里的管道」与「数学/正则里的竖线」
 _SHELL_CMD = re.compile(
@@ -195,6 +207,34 @@ def check_gate_runnable() -> list[str]:
     return []
 
 
+# ------------------------------------------------------- L6 结论条件化
+def check_conclusion_scope() -> list[str]:
+    """"结论必须条件化"（QUANT_SYSTEM_METHODOLOGY 七原则之一，可判定版）。
+
+    凡 DECISIONS 段含结论词（不立项/无 edge/升配/可交易/结案/止于）却未带
+    「适用范围」，即判 FAIL —— 防 D46 式「本宇宙 null 被写成普适不可能」。
+    """
+    p = ROOT / "docs" / "DECISIONS.md"
+    if not p.exists():
+        return []
+    txt = p.read_text(encoding="utf-8")
+    hdr = re.compile(r"^## (D\d+)\b", re.M)
+    ms = list(hdr.finditer(txt))
+    fails = []
+    for i, m in enumerate(ms):
+        did = m.group(1)
+        end = ms[i + 1].start() if i + 1 < len(ms) else len(txt)
+        body = txt[m.start():end]
+        if not CONCLUSION_KEYWORDS.search(body):
+            continue
+        if SCOPE_MARKER in body:
+            continue
+        if did in SCOPE_GRANDFATHERED:
+            continue
+        fails.append(f"docs/DECISIONS.md {did} 含结论词但缺「{SCOPE_MARKER}」——结论必须条件化")
+    return fails
+
+
 # ------------------------------------------------------- T1 测试
 def check_tests() -> list[str]:
     r = subprocess.run(
@@ -274,6 +314,7 @@ def main() -> int:
     rc |= _run("L3 表格内转义管道 |", check_pipe_escaped_in_table)
     rc |= _run("L4 过期残留", check_banned)
     rc |= _run("L5 A 闸可运行", check_gate_runnable)
+    rc |= _run("L6 结论条件化", check_conclusion_scope)
     if args.staged:
         rc |= _run("S1 提交规范", check_staged)
         rc |= _run("S2 py_compile", check_py_compile)
