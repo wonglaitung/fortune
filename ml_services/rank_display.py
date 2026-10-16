@@ -54,6 +54,14 @@ def build_rows(scores, codes, names=None) -> list[RankRow]:
     return sorted(out, key=lambda r: -r.pct)
 
 
+def rows_from_predictions(preds: list[dict]) -> list[RankRow]:
+    """从模型 `predict()` 的返回列表构造展示行（吃 `score`，回退 `probability`）。"""
+    scores = [p.get("score", p.get("probability", 0.5)) for p in preds]
+    codes = [p.get("code", "") for p in preds]
+    names = [p.get("name", "") for p in preds]
+    return build_rows(scores, codes, names)
+
+
 def render_html(rows: list[RankRow], horizon: int, top: int | None = None) -> str:
     """渲染邮件区块。显示"相对强弱分位"，**不**显示"上涨概率"。"""
     shown = rows if top is None else rows[:top]

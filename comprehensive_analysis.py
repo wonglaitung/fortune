@@ -1122,6 +1122,15 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
             df_catboost = pd.read_csv(catboost_csv)
             df_catboost_sorted = df_catboost.sort_values('probability', ascending=False)
 
+            # D59：rank 模式——模型输出 score（≈横截面百分位目标），**无概率语义**。
+            # 预先算好当池横截面分位供展示层用；市场分位门槛（P(up) 口径）对 score 无意义，
+            # 故展示层切到"相对强弱分位"，不参与 bear/weak 概率门槛。
+            RANK_MODE = os.environ.get('LABEL_MODE', 'absolute') == 'rank'
+            rank_pct_map = {}
+            if RANK_MODE and 'probability' in df_catboost.columns:
+                rank_pct_map = dict(zip(df_catboost['code'], df_catboost['probability'].rank(pct=True)))
+                print(f"  🔢 rank 模式：展示层用横截面分位（{len(rank_pct_map)} 只），不走概率门槛")
+
             # D2 行业中性 TopK 目标集（低配辅助信号，DECISIONS D2 / DEPLOYMENT T2）：
             # 行业内 z-score 后再取前 K，K = min(topk, n//4) 与回测/护栏口径一致；
             # 仅用于邮件表格内联 🎯 标记（统计口径，不给指令，lessons 三.11）
@@ -1295,7 +1304,17 @@ def extract_ml_predictions(filepath, use_cached_predictions=False):
                     pass
 
                 # 根据市场情绪和概率判断方向
-                if market_layer == 'extreme_bear':
+                if RANK_MODE:
+                    # D59：rank 模式——无概率语义，用**当池横截面分位**给相对强弱标签
+                    _pct = float(rank_pct_map.get(stock_code, 0.5))
+                    if _pct >= 0.70:
+                        direction, probability_display = "偏强", f"{_pct*100:.0f}%分位"
+                    elif _pct <= 0.30:
+                        direction, probability_display = "偏弱", f"{_pct*100:.0f}%分位"
+                    else:
+                        direction, probability_display = "中性", f"{_pct*100:.0f}%分位"
+                    include_in_llm = True
+                elif market_layer == 'extreme_bear':
                     # 极端熊市：暂停所有看涨信号
                     direction = "暂停"
                     probability_display = f"{probability:.2f} (暂停)"

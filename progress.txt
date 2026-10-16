@@ -4588,3 +4588,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ⓪同一性四问(V4旁路): 列集合单源/时点单源/无概率
 - 三冻结/双跑不适用(旁路未部署); 切生产须重做
 - 收尾: P0-P4完成; 验收全不过 ⇒ V4不产alpha ⇒ 不建议切生产; 生产与总账未改
+
+2026-10-16 D59 P3-完整版：生产切换（flag-gated，默认关）
+- ml_trading_model.py: --label-mode rank / LABEL_MODE=rank → rank占位 + 全池横截面百分位 + CatBoostRegressor(RMSE) + predict出score + save/load持久化 label_mode + horizon增10
+- comprehensive_analysis.py: LABEL_MODE=rank 时展示层切"相对强弱分位"(rank_pct_map), 不走概率门槛
+- smoke已验证: 5股小池 rank训练→predict score=0.7047→save/load保留
+- 顺带修bug: get_feature_columns 未排除 Label_Mode(全量训练会KeyError)
+- 未做: 真实重训5/10/20 + 三冻结/双跑/契约 + 其余邮件"上涨概率"出处
+- 回退: 不设 LABEL_MODE=rank 即恢复

@@ -3773,3 +3773,27 @@ H1：> V0 且在 fold 聚类后显著（Bonferroni over 4）
 
 **适用范围**：本重写（旁路）限 56 池 / 价格型特征 / LGBM / 2006–2026；
 **不外推**"排序标签通论无用"；**不改**生产与总账。
+
+### 十二、生产切换（P3-完整版，2026-10-16）
+
+**已做（flag-gated，默认关 ⇒ 零生产影响，可回退）**：
+
+- `ml_services/ml_trading_model.py`：`--label-mode rank`（或 env `LABEL_MODE=rank`）⇒
+  ① `create_label` 出 **rank 占位**；② `prepare_data` **全池合并后**算**当日横截面百分位**；
+  ③ `train` 用 **CatBoostRegressor(RMSE)**；④ `predict` 出 **`score`**（`label_mode='rank'`）；
+  ⑤ `save/load` 持久化 `label_mode`；⑥ horizon 增 **`10`**。
+- `comprehensive_analysis.py`：`LABEL_MODE=rank` 时展示层切 **"相对强弱分位"**（`rank_pct_map`），
+  **不走** bear/weak **概率门槛**（分位门槛对 score 无意义）。
+- **端到端 smoke 已验证**：5 股小池 rank 训练 → `predict` score=0.7047 → save/load 保留 `label_mode`。
+- **顺带修潜在 bug**：`get_feature_columns` **未排除 `Label_Mode`**（全量特征训练会把它当特征 → predict KeyError；
+  生产仅因 Top500 选择覆盖而侥幸未爆）。
+
+**未做（操作步骤，需长算力 / 全链路）**：
+
+- **真实重训** 5/10/20 pkl（全池 + F1/HIBOR 特征）；
+- **三冻结 + 双跑 + 契约**重验（⓪ 同一性）；
+- **邮件模板**其余"上涨概率"出处（`ml_trading_model.py:333/415`、`hsi_prediction.py:1594` 等）逐一改口径。
+
+**⚠️ 回退**：不设 `LABEL_MODE=rank` 即恢复现行为（默认 `absolute`）。
+
+**适用范围**：本次切换为**架构/口径**变更；**不**改变"未发现 alpha"的总账（alpha 仍 null，见 §七/§八）。

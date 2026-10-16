@@ -2131,6 +2131,10 @@ class FeatureEngineer:
             df['Label_HSI_Future_Return'] = hsi_fwd.reindex(df_idx).values
             df['Label_Relative_Return'] = df['Future_Return'] - df['Label_HSI_Future_Return']
             df['Label'] = (df['Label_Relative_Return'] > min_return_threshold).astype(int)
+        elif label_mode == 'rank':
+            # D59：V4 排序标签 = 当日 `Future_Return` 的**横截面百分位**（需全池同日）。
+            # 此处只留占位；真正的 rank 在 prepare_data 合并全池后计算。
+            df['Label'] = np.nan
         else:
             # 阈值化标签：只有当收益超过阈值时才标记为正例
             # 原因：小幅波动（如0.5%）扣除交易成本后可能变成亏损
@@ -4345,6 +4349,12 @@ class CatBoostModel(BaseTradingModel):
         # 转换索引为 datetime（统一为UTC时区）
         df.index = pd.to_datetime(df.index, utc=True)
 
+        # D59：V4 排序标签——当日横截面百分位（必须全池合并后计算，不能逐股算）
+        if label_mode == 'rank' and 'Future_Return' in df.columns:
+            _day = df.index.normalize()
+            df['Label'] = df.groupby(_day)['Future_Return'].rank(pct=True)
+            logger.info(f"rank 标签已计算（横截面百分位，{int(df['Label'].notna().sum())} 条）")
+
         # 过滤日期范围（如果指定）
         if start_date:
             start_date = pd.to_datetime(start_date, utc=True)
@@ -4371,6 +4381,7 @@ class CatBoostModel(BaseTradingModel):
         # 基础排除列 + 中间计算列
         base_exclude = ['Code', 'Open', 'High', 'Low', 'Close', 'Volume',
                        'Future_Return', 'Label', 'Prev_Close', 'Label_Threshold',
+                       'Label_Mode',
                        'Vol_MA20', '+DM', '-DM', '+DI', '-DI',
                        # 标签构造中间量（相对标签模式）：Label_Relative_Return 是标签的
                        # 决定性函数（Label = (Label_Relative_Return > 0)），入模即读答案
@@ -4415,7 +4426,7 @@ class CatBoostModel(BaseTradingModel):
 
         return feature_columns
 
-    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None):
+    def train(self, codes, start_date=None, end_date=None, horizon=1, use_feature_selection=False, min_return_threshold=0.0, selected_features=None, loss_function=None, prepared_df=None, label_mode='absolute'):
         """训练 CatBoost 模型（默认使用全量特征892个）
 
         Args:
@@ -4445,6 +4456,10 @@ class CatBoostModel(BaseTradingModel):
         print(f"股票数量: {len(codes)}")
         print(f"特征选择: {'是' if use_feature_selection else '否'}")
         print(f"最小收益阈值: {min_return_threshold:.2%}")
+        # D59：标签/学习器口径（rank → 横截面百分位 + 回归目标）
+        self.label_mode = label_mode
+        if label_mode == 'rank':
+            print("标签口径: rank（当日横截面百分位，回归目标）")
 
         # ========== 社区 ID 集合（静态 ∪ PIT）==========
         # D26：这段逻辑此前在文件内**被复制了两份**（此处与特征选择路径），各自独立演进。
@@ -4473,7 +4488,7 @@ class CatBoostModel(BaseTradingModel):
             df = self.prepare_data(codes, start_date, end_date, horizon,
                                    min_return_threshold=min_return_threshold,
                                    community_ids=preloaded_community_ids,
-                                   mode='production')
+                                   mode='production', label_mode=label_mode)
 
         # 提取并保存社区 ID 列表（用于预测时的一致性）
         # 优先使用预加载的社区 ID，如果没有则从数据中提取
@@ -4614,18 +4629,20 @@ class CatBoostModel(BaseTradingModel):
             subsample = 0.75  # 行采样
             colsample_bylevel = 0.8  # 列采样（增加特征多样性）
 
-        from catboost import CatBoostClassifier, CatBoostRanker, Pool
+        from catboost import CatBoostClassifier, CatBoostRanker, CatBoostRegressor, Pool
 
         if loss_function is None:
             loss_function = getattr(self, 'loss_function', 'Logloss')
         ranking = str(loss_function).lower() == 'yetirank'
+        # D59：rank 标签 → 回归目标（预测横截面百分位），不是分类也不是 LTR
+        regression = (getattr(self, 'label_mode', 'absolute') == 'rank')
         self._ranking = ranking
 
         # 准备类别权重参数
         # 注意：分类特征已用LabelEncoder编码为数值，不使用cat_features参数
         catboost_params = {
-            'loss_function': 'YetiRank' if ranking else 'Logloss',
-            'eval_metric': 'NDCG' if ranking else 'Accuracy',
+            'loss_function': 'RMSE' if regression else ('YetiRank' if ranking else 'Logloss'),
+            'eval_metric': 'RMSE' if regression else ('NDCG' if ranking else 'Accuracy'),
             'depth': depth,
             'learning_rate': learning_rate,
             'n_estimators': n_estimators,
@@ -4644,29 +4661,33 @@ class CatBoostModel(BaseTradingModel):
         if ranking:
             catboost_params.pop('early_stopping_rounds', None)
         
-        # 添加类别权重（温和调整）—— 排序目标不使用类别权重
-        if not ranking and self.class_weight == 'balanced':
+        # 添加类别权重（温和调整）—— 排序/回归目标不使用类别权重
+        if not ranking and not regression and self.class_weight == 'balanced':
             # 自动平衡类别权重（温和）
             catboost_params['auto_class_weights'] = 'Balanced'
             logger.info("使用自动平衡类别权重 (Balanced)")
-        elif not ranking and self.class_weight == 'balanced_subsample':
+        elif not ranking and not regression and self.class_weight == 'balanced_subsample':
             catboost_params['auto_class_weights'] = 'Balanced'
             logger.info("使用子样本平衡类别权重 (Balanced)")
-        elif not ranking and isinstance(self.class_weight, dict):
+        elif not ranking and not regression and isinstance(self.class_weight, dict):
             # 手动指定权重
             catboost_params['class_weights'] = [self.class_weight.get(0, 1.0), self.class_weight.get(1, 1.0)]
             logger.info(f"使用手动类别权重: {self.class_weight}")
         else:
             logger.info("不使用类别权重")
 
-        self.catboost_model = (CatBoostRanker(**catboost_params) if ranking
-                           else CatBoostClassifier(**catboost_params))
+        if regression:
+            self.catboost_model = CatBoostRegressor(**catboost_params)
+        elif ranking:
+            self.catboost_model = CatBoostRanker(**catboost_params)
+        else:
+            self.catboost_model = CatBoostClassifier(**catboost_params)
 
-        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）—— 排序目标跳过分类 CV
+        # 使用时间序列交叉验证（添加 gap 参数避免短期依赖）—— 排序/回归目标跳过分类 CV
         tscv = TimeSeriesSplit(n_splits=5, gap=horizon)
         catboost_scores = []
         catboost_f1_scores = []
-        folds_iter = [] if ranking else tscv.split(X)
+        folds_iter = [] if (ranking or regression) else tscv.split(X)
 
         for fold, (train_idx, val_idx) in enumerate(folds_iter, 1):
             X_train_fold, X_val_fold = X[train_idx], X[val_idx]
@@ -5187,7 +5208,21 @@ class CatBoostModel(BaseTradingModel):
             # 转换回 numpy 数组
             X = df_temp.values
 
-            if getattr(self, 'learner', 'catboost') == 'lightgbm':
+            if getattr(self, 'label_mode', 'absolute') == 'rank':
+                # D59：回归 score（≈横截面百分位）；无概率语义
+                from catboost import Pool
+                score = float(self.catboost_model.predict(Pool(data=X))[0])
+                return {
+                    'code': code,
+                    'name': STOCK_NAMES.get(code, code),
+                    'prediction': int(score >= 0.5),
+                    'probability': float(score),
+                    'score': float(score),
+                    'label_mode': 'rank',
+                    'current_price': float(latest_data['Close'].values[0]),
+                    'date': latest_data.index[0]
+                }
+            elif getattr(self, 'learner', 'catboost') == 'lightgbm':
                 # LightGBM 直接预测（复用同一特征管线）
                 import numpy as _np
                 proba = self.model.predict_proba(X)[0]
@@ -5231,6 +5266,7 @@ class CatBoostModel(BaseTradingModel):
             'categorical_encoders': self.categorical_encoders,
             'community_ids': self.community_ids,  # 保存社区 ID 列表
             'learner': learner,
+            'label_mode': getattr(self, 'label_mode', 'absolute'),  # D59
         }
         with open(filepath, 'wb') as f:
             pickle.dump(model_data, f)
@@ -5251,8 +5287,10 @@ class CatBoostModel(BaseTradingModel):
         self.model_type = model_data.get('model_type', 'catboost')
         self.categorical_encoders = model_data.get('categorical_encoders', {})
         self.community_ids = model_data.get('community_ids', None)  # 恢复社区 ID 列表
+        self.label_mode = model_data.get('label_mode', 'absolute')  # D59
         print(f"{learner} 模型已从 {filepath} 加载"
-              + (f"（社区 ID: {self.community_ids}）" if self.community_ids else ""))
+              + (f"（社区 ID: {self.community_ids}）" if self.community_ids else "")
+              + (f"（标签: {self.label_mode}）" if self.label_mode != 'absolute' else ""))
 
     def predict_proba(self, X):
         """
@@ -6318,8 +6356,12 @@ def main():
                        help='训练结束日期 (YYYY-MM-DD)')
     parser.add_argument('--predict-date', type=str, default=None,
                        help='预测日期：基于该日期的数据预测下一个交易日 (YYYY-MM-DD)，默认使用最新交易日')
-    parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 20],
-                       help='预测周期: 1=次日（默认）, 5=一周, 20=一个月')
+    parser.add_argument('--horizon', type=int, default=1, choices=[1, 5, 10, 20],
+                       help='预测周期: 1=次日（默认）, 5=一周, 10=两周, 20=一个月')
+    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'absolute'),
+                       choices=['absolute', 'relative_hsi', 'rank'],
+                       help='标签口径: absolute=涨跌二分类（默认）, relative_hsi=相对恒指, '
+                            'rank=V4 横截面百分位（回归，D59）')
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择（只使用500个选择的特征，而不是全部2426个）')
     parser.add_argument('--skip-feature-selection', action='store_true',
@@ -6457,7 +6499,7 @@ def main():
                     logger.info(f"CatBoost 模型已从 {catboost_model_path} 加载")
                 else:
                     print(f"  ⚠️ CatBoost 模型不存在，开始训练")
-                    catboost_feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+                    catboost_feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
                     catboost_model.save_model(catboost_model_path)
                     catboost_importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
                     catboost_feature_importance.to_csv(catboost_importance_path, index=False)
@@ -6475,7 +6517,7 @@ def main():
             feature_importance.to_csv(importance_path, index=False)
             print(f"\n特征重要性已保存到 {importance_path}")
         elif catboost_model:
-            feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection)
+            feature_importance = catboost_model.train(TRAINING_LIST, args.start_date, args.end_date, horizon=args.horizon, use_feature_selection=apply_feature_selection, label_mode=args.label_mode)
             catboost_model_path = args.model_path.replace('.pkl', f'_catboost{horizon_suffix}.pkl')
             catboost_model.save_model(catboost_model_path)
             importance_path = catboost_model_path.replace('.pkl', '_importance.csv')
