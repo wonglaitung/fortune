@@ -27,6 +27,9 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ml_services.strategy_eval import (  # noqa: E402
+    daily_mark, static_matched, metrics_daily, has_timing_increment)
+
 COST = 0.005  # 单边换手成本（进出各计一次）
 CSV_RE = re.compile(r'hsi_prediction_analysis_[0-9_]+\.csv')
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,23 +48,17 @@ def run_wf(horizon, enh, start, end):
     return os.path.join(ROOT, 'data', 'hsi_walk_forward', m[-1])
 
 
+# 评估口径统一委托 `ml_services.strategy_eval`（唯一实现，D45）
 def _ir(r, h):
-    r = np.asarray(r, float)
-    s = r.std(ddof=1)
-    return float(r.mean() / s * np.sqrt(252.0 / h)) if s > 0 else float('nan')
+    return metrics_daily(pd.Series(np.asarray(r, float)), horizon=h)['sharpe']
 
 
 def _maxdd(r):
-    c = (1 + np.asarray(r, float)).cumprod()
-    return float((c / np.maximum.accumulate(c) - 1).min())
+    return metrics_daily(pd.Series(np.asarray(r, float)), horizon=1)['maxdd']
 
 
 def _calmar(r, h):
-    dd = _maxdd(r)
-    if dd == 0:
-        return float('nan')
-    cagr = (1 + np.asarray(r, float)).prod() ** (252.0 / h / len(r)) - 1
-    return float(cagr / abs(dd))
+    return metrics_daily(pd.Series(np.asarray(r, float)), horizon=h)['calmar']
 
 
 def save_latest(path, enh, horizon, last, wbar, daily_rows, exposure_flat):
@@ -142,13 +139,11 @@ def daily_overlay(csv, horizon, exposure_flat=0.0):
     hi = h.index[(h.index >= start) & (h.index <= end)]
     stance = rb.set_index('date')['pred'].reindex(hi, method='ffill').fillna(0)
     pos = pd.Series(np.where(stance.values == 1, 1.0, exposure_flat), index=hi)
-    pos_lag = pos.shift(1).fillna(0.0)
-    turn = (pos - pos_lag).abs()                  # 非零只出现在调仓日
     d = dr.reindex(hi)
-    sig = (pos_lag * d - turn * COST).dropna()
+    sig = daily_mark(d, pos, cost_per_turnover=COST, lag=1).dropna()   # 唯一实现
     wbar = float(pos.mean())
     rows = {'信号(20d仓·逐日估值)': sig,
-            f'静态等仓位({wbar:.2f})': wbar * d.reindex(sig.index),
+            f'静态等仓位({wbar:.2f})': static_matched(d, wbar).reindex(sig.index),
             '买入持有': d.reindex(sig.index)}
     return wbar, rows
 
@@ -202,7 +197,8 @@ def main():
                 print(f"{name:<22}{r.mean()*100:>9.3f}%{_ir(r, hh):>9.2f}"
                       f"{_maxdd(r)*100:>8.1f}%{_calmar(r, hh):>9.2f}")
             dd_s, dd_st = _maxdd(rws_[sk]), _maxdd(rws_[stk])
-            print(f"  择时增量: {'✅ 有（回撤更浅）' if dd_s > dd_st + 0.005 else '❌ 无（只是少投）'}  "
+            inc = has_timing_increment(pd.Series(rws_[sk]), pd.Series(rws_[stk]))
+            print(f"  择时增量: {'✅ 有（回撤更浅）' if inc else '❌ 无（只是少投）'}  "
                   f"(信号 {dd_s*100:.1f}% vs 静态 {dd_st*100:.1f}%)")
         print("-" * 84)
         print("⭐ 以『逐日估值』为准：20d 非重叠只每 20 天记一次净值，会低估日内回撤、虚报增量。")

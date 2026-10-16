@@ -4316,3 +4316,9 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
   mde_ir/has_timing_increment）；classic_timing_backtest 改为 import 它（复现 1/5、MA200✅）；hsi_risk_overlay 待迁
 - D45 记录 4 件；AGENTS 对抗审核表更新 + 「尺子边界」三须同报（适用范围/功效MDE/相邻参数）
 - 测试：strategy_eval 5 + guardrail_utils 3 + contract 14/1xfail；doc_gate 全绿
+
+2026-10-15 待办2：hsi_risk_overlay 迁移到 strategy_eval（单一实现）
+- strategy_eval.metrics_daily 加 horizon 参数（兼容"非重叠期"口径）
+- hsi_risk_overlay 的 _ir/_maxdd/_calmar 委托 metrics_daily；daily_overlay 改用 daily_mark+static_matched；
+  择时增量判定改用 has_timing_increment
+- 22 passed；daily_overlay 直跑行为一致（信号 maxDD 仍深于静态 ⇒ 仅少投）

@@ -41,16 +41,21 @@ def static_matched(asset_returns: pd.Series, exposure: float) -> pd.Series:
     return float(exposure) * asset_returns
 
 
-def metrics_daily(net: pd.Series) -> dict:
-    """逐日净值指标（CAGR/波动/夏普/maxDD/Calmar）。maxDD 为负。"""
+def metrics_daily(net: pd.Series, horizon: int = 1) -> dict:
+    """净值指标（CAGR/波动/夏普/maxDD/Calmar）。maxDD 为负。
+
+    - `horizon=1`：`net` 为**逐日**收益（默认）；
+    - `horizon=h>1`：`net` 为**非重叠 h 日**收益 ⇒ 年化因子 sqrt(252/h)（兼容旧 `_ir(r,h)` 口径）。
+    """
     net = pd.Series(net).dropna()
     if len(net) == 0 or float(net.std()) == 0.0:
         nan = float('nan')
         return dict(n=len(net), cagr=nan, vol=nan, sharpe=nan, maxdd=nan, calmar=nan)
+    factor = TRADING_DAYS / horizon
     cum = (1.0 + net).cumprod()
-    cagr = float(cum.iloc[-1] ** (TRADING_DAYS / len(net)) - 1.0)
-    vol = float(net.std(ddof=1) * np.sqrt(TRADING_DAYS))
-    sharpe = float(net.mean() * TRADING_DAYS / vol) if vol else float('nan')
+    cagr = float(cum.iloc[-1] ** (factor / len(net)) - 1.0)
+    vol = float(net.std(ddof=1) * np.sqrt(factor))
+    sharpe = float(net.mean() / net.std(ddof=1) * np.sqrt(factor)) if vol else float('nan')
     dd = cum / cum.cummax() - 1.0
     maxdd = float(dd.min())
     calmar = cagr / abs(maxdd) if maxdd else float('nan')
