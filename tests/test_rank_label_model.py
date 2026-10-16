@@ -45,3 +45,14 @@ def test_save_load_preserves_label_mode():
     m2 = CatBoostModel()
     m2.load_model(p)
     assert m2.label_mode == "rank"
+
+
+def test_a_stock_rank_trainer_smoke():
+    from a_stock_ml_model import AStockTradingModel
+    m = AStockTradingModel(horizon=5)
+    rng = np.random.default_rng(0)
+    X = rng.normal(0, 1, (200, 5))
+    y = rng.random(200)
+    r = m._train_with_weights_rank(X, y, None, 5)
+    assert m.catboost_model is not None
+    assert r["accuracy"] == 0.0

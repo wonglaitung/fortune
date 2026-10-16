@@ -4596,3 +4596,10 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 顺带修bug: get_feature_columns 未排除 Label_Mode(全量训练会KeyError)
 - 未做: 真实重训5/10/20 + 三冻结/双跑/契约 + 其余邮件"上涨概率"出处
 - 回退: 不设 LABEL_MODE=rank 即恢复
+
+2026-10-16 D59 真实重训：两市场 rank 5/10/20（独立目录，生产 pkl 未动）
+- 港股: data/rank_models/ml_trading_model_catboost_{5,10,20}d.pkl
+- A股: data/a_stock_rank_models/trading_model_catboost_{5,10,20}d.pkl
+- A股 cutover: 复用 Return_Rank 连续标签 + CatBoostRegressor(RMSE) + _train_with_weights_rank
+- 验证: 两市场 load→predict 通过, score 分布合理(港20d 0.40-0.71/A股20d 0.44-0.58), label_mode 持久化
+- 未部署(生产 pkl 未替换: load_model 恢复 label_mode ⇒ 覆盖即真切换); 上线前须三冻结/双跑/契约

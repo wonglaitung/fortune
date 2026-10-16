@@ -3797,3 +3797,21 @@ H1：> V0 且在 fold 聚类后显著（Bonferroni over 4）
 **⚠️ 回退**：不设 `LABEL_MODE=rank` 即恢复现行为（默认 `absolute`）。
 
 **适用范围**：本次切换为**架构/口径**变更；**不**改变"未发现 alpha"的总账（alpha 仍 null，见 §七/§八）。
+
+### 十三、真实重训结果（2026-10-16）
+
+**已训成（独立目录，生产 pkl 未动）**：
+
+- 港股 5/10/20 rank：`data/rank_models/ml_trading_model_catboost_{5,10,20}d.pkl`；
+- A股 5/10/20 rank：`data/a_stock_rank_models/trading_model_catboost_{5,10,20}d.pkl`。
+
+**验证**：两市场均 `load_model → predict` 通过；`score` 分布合理
+（港 20d 0.40–0.71；A股 20d 0.44–0.58）；`label_mode=rank` 正确持久化。
+
+**A股 cutover**（同源）：复用**已有** `Return_Rank`（横截面百分位，原本被二值化）作**连续**标签
+＋ `CatBoostRegressor(RMSE)`（新增 `_train_with_weights_rank`）；`--label-mode rank --model-dir <dir>`。
+
+**⚠️ 仍未部署**：生产 pkl **未替换**——`load_model` 会恢复 `label_mode`，**就地覆盖即等于真切换**，
+故不擅自覆盖。上线前须：**三冻结 + 双跑 + 契约**（C 升级闸）+ 其余邮件“上涨概率”口径。
+
+**适用范围**：重训产物限本机实验（`.pkl` 未入库）；**不**改变三层总账（alpha 仍 null）。

@@ -1234,7 +1234,13 @@ class AStockTradingModel(CatBoostModel):
         # ========== 6. 截面标准化标签（业界推荐用于月度预测）==========
         # 每个交易日对所有股票排名，排名前50%为正例
         # 优点：避免主板10%和创业板20%涨跌停的非对称问题
-        if use_cross_sectional_label and 'Future_Return' in df.columns:
+        if getattr(self, 'label_mode', 'absolute') == 'rank' and 'Future_Return' in df.columns:
+            # D59：V4 排序标签——当日横截面百分位（连续回归目标）
+            logger.info("使用 rank 标签（横截面百分位，回归目标）...")
+            df['Return_Rank'] = df.groupby(df.index)['Future_Return'].rank(pct=True)
+            df['Label'] = df['Return_Rank']
+            logger.info(f"rank 标签范围: [{df['Label'].min():.3f}, {df['Label'].max():.3f}]")
+        elif use_cross_sectional_label and 'Future_Return' in df.columns:
             logger.info("使用截面标准化标签...")
             # 每个交易日对所有股票的未来收益排名
             df['Return_Rank'] = df.groupby(df.index)['Future_Return'].rank(pct=True)
@@ -1337,6 +1343,10 @@ class AStockTradingModel(CatBoostModel):
         if getattr(self, 'learner', 'catboost') == 'lightgbm':
             return self._train_with_weights_lgbm(X, y, sample_weights, horizon)
 
+        # D59：rank 标签 → 回归目标（横截面百分位），不是分类
+        if getattr(self, 'label_mode', 'absolute') == 'rank':
+            return self._train_with_weights_rank(X, y, sample_weights, horizon)
+
         # 如果没有提供样本权重，使用默认权重
         if sample_weights is None:
             sample_weights = np.ones(len(y))
@@ -1436,6 +1446,24 @@ class AStockTradingModel(CatBoostModel):
             'f1_std': std_f1
         }
 
+    def _train_with_weights_rank(self, X, y, sample_weights=None, horizon=20):
+        """D59：rank 标签（横截面百分位）→ CatBoostRegressor(RMSE)。"""
+        from catboost import CatBoostRegressor, Pool
+        if sample_weights is None:
+            sample_weights = np.ones(len(y))
+        params = dict(loss_function='RMSE', eval_metric='RMSE', depth=8, learning_rate=0.06,
+                      n_estimators=400, l2_leaf_reg=2, subsample=0.75, colsample_bylevel=0.8,
+                      random_seed=2020, verbose=100,
+                      thread_count=int(os.environ.get('CATBOOST_THREAD_COUNT', '8')),
+                      allow_writing_files=False)
+        if X.dtype == object:
+            X = X.astype(np.float64)
+        self.catboost_model = CatBoostRegressor(**params)
+        self.catboost_model.fit(Pool(data=X, label=y, weight=sample_weights), verbose=100)
+        self.actual_n_estimators = self.catboost_model.tree_count_
+        logger.info(f"✅ rank 回归模型训练完成（RMSE），树数={self.actual_n_estimators}")
+        return {'accuracy': 0.0, 'std': 0.0, 'f1': 0.0, 'f1_std': 0.0}
+
     def _train_with_weights_lgbm(self, X, y, sample_weights=None, horizon=20):
         """P4.1 LightGBM 拟合（A股专用）：与 CatBoost 路径同口径（TSCV 5 折 gap=horizon + 全量终拟）。
 
@@ -1530,7 +1558,7 @@ class AStockTradingModel(CatBoostModel):
         except Exception as e:
             logger.warning(f"保存准确率失败: {e}")
 
-    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False, prepared_df=None):
+    def train(self, codes=None, start_date=None, end_date=None, horizon=None, use_feature_selection=False, min_return_threshold=0.0, use_sample_weights=True, use_cross_sectional_label=False, prepared_df=None, label_mode=None):
         """
         训练A股模型
 
@@ -1550,6 +1578,10 @@ class AStockTradingModel(CatBoostModel):
             codes = self.stock_list
         if horizon is None:
             horizon = self.horizon
+        # D59：标签/学习器口径（rank → 横截面百分位 + 回归）
+        if label_mode is not None:
+            self.label_mode = label_mode
+        logger.info(f"标签口径: {getattr(self, 'label_mode', 'absolute')}")
 
         logger.info("=" * 60)
         logger.info(f"开始训练A股模型（预测周期: {horizon}天）")
@@ -1929,6 +1961,19 @@ class AStockTradingModel(CatBoostModel):
                 )
 
         # 预测
+        if getattr(self, 'label_mode', 'absolute') == 'rank':
+            # D59：回归 score（≈横截面百分位）；无概率语义
+            score = float(self.catboost_model.predict(X)[0])
+            current_price = latest_data['Close'].iloc[-1] if 'Close' in latest_data.columns else None
+            return {
+                'code': code,
+                'date': latest_data.index[-1],
+                'prediction': int(score >= 0.5),
+                'probability': score,
+                'score': score,
+                'label_mode': 'rank',
+                'current_price': float(current_price) if current_price is not None else None,
+            }
         prediction = self.catboost_model.predict(X)[0]
         probability = self.catboost_model.predict_proba(X)[0][1]
 
@@ -1961,8 +2006,13 @@ def main():
     parser = argparse.ArgumentParser(description='A股机器学习交易模型')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'predict'],
                        help='运行模式: train=训练, predict=预测')
-    parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
-                       help='预测周期: 1=次日, 5=一周, 20=一个月（默认）')
+    parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 10, 20],
+                       help='预测周期: 1=次日, 5=一周, 10=两周, 20=一个月（默认）')
+    parser.add_argument('--label-mode', type=str, default=os.environ.get('LABEL_MODE', 'absolute'),
+                       choices=['absolute', 'rank'],
+                       help='标签口径: absolute=涨跌二分类（默认）, rank=V4 横截面百分位（回归，D59）')
+    parser.add_argument('--model-dir', type=str, default=A_STOCK_MODEL_DIR,
+                       help='模型输出目录（默认 data/a_stock_models；切换重训可用独立目录）')
     parser.add_argument('--use-feature-selection', action='store_true',
                        help='使用特征选择')
     parser.add_argument('--start-date', type=str, default=None,
@@ -1989,8 +2039,8 @@ def main():
     model = AStockTradingModel(horizon=args.horizon)
 
     # 模型保存路径
-    os.makedirs(A_STOCK_MODEL_DIR, exist_ok=True)
-    model_path = os.path.join(A_STOCK_MODEL_DIR, f'trading_model_catboost_{args.horizon}d.pkl')
+    os.makedirs(args.model_dir, exist_ok=True)
+    model_path = os.path.join(args.model_dir, f'trading_model_catboost_{args.horizon}d.pkl')
 
     if args.mode == 'train':
         # 训练模型
@@ -1999,7 +2049,8 @@ def main():
             start_date=args.start_date,
             end_date=args.end_date,
             use_feature_selection=args.use_feature_selection,
-            use_cross_sectional_label=args.use_cross_sectional_label
+            use_cross_sectional_label=args.use_cross_sectional_label,
+            label_mode=args.label_mode
         )
         # 保存模型
         model.save_model(model_path)
