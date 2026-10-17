@@ -367,3 +367,27 @@ D25 自己的带 **[0.00, 0.12]**（实测 0.029 落在带内）、D30 自己的
 - 三周期 **均不满足** D2 判据（净IR CI 下界 > 0 ∧ PBO < 0.5 ∧ DSR ≥ 0.95 ∧ 超额 CI 下界 > 0）；20d 超额 CI 下界 < 0。
 - 决策点：D59 §十五（预登记，commit `ed346128`）→ §十六（结果，commit `10fcad2d`）。C 闸同源产物见 `output/`。
 - 合同测试：`python3 -m pytest tests/test_v4_contract.py tests/test_v4_pipeline.py tests/test_rank_display.py tests/test_rank_label_model.py -q`（D59 前件 15 通过 / pipeline_contract 15/0）。
+
+---
+
+## 生产 rank 管线 C 闸基线（2026-10-17 / D60）
+
+> **口径**：个股横截面 **rank 百分位回归**（`label_mode=rank`）· **生产口径** = 全特征 + **CatBoostRegressor(RMSE)** + 每折 Top-500 + F1/HIBOR 按 flag · 三周期 `{5,10,20}` ·
+> 车 `scripts/run_walk_forward.sh`（**非旁路**；`--label-mode rank`）· 同一性 ⓪ 四问人工核对全「是」·
+> 窗口 `--start-date 2020-06-01 --end-date 2026-07-31 --train-window 36`（38 折）。
+> **冻结**：`US_MARKET_SNAPSHOT_DIR` + `HK_MARKET_SNAPSHOT_DIR`（rank 无分位门槛 ⇒ **无 `GATE_SOURCE_CSV`，非三冻结**）。
+> **双跑 md5（HK 收市后跑）**：5d `44f9f6ca7278dac321036c9492330aa7` / 10d `8604dcf48394a92c370fe0337ac08976` / 20d `249d324bab72ef0927d1d27cf1cbe485` —— **三周期均一致**。
+> **用途**：回答"生产 rank 管线有没有可部署正超额"——结论 **否**（见 DECISIONS D60 §六）。
+> ⚠️ **适用范围**：本宇宙 / 本管线 / 本窗口；**alpha null**（H0 未被拒）。**MDE_IR ≈ 1.60**（"不显著 ≠ 没有"）。
+> ⚠️ **跑窗口硬约束**：本管线**只在 HK 收市后（>16:10 HKT）可 bit 级复现**；盘中跑（首次 h5 双跑 11:52/13:21）md5 **必漂**（folds 33–38，2026-02..07 日期），原因是未冻结的实时输入盘中更新。见 D60 §六。
+
+| 周期 | 合并准确率 | rank IC | 净IR(绝对,含β) | **超额IR [95%CI]** | PBO | DSR | 超额 lift | 判定 |
+|---|---|---|---|---|---|---|---|---|
+| 5d | 0.5238 | 0.048 | 0.73 [−0.39,1.83] | **−0.24 [−1.45,0.92]** | 0.17 | 0.700 | +1.7pp | 🔴 |
+| 10d | 0.5337 | 0.073 | 0.72 [−0.48,1.75] | **−0.49** | 0.31 | 0.989 | +2.6pp | 🔴 |
+| 20d | 0.5276 | 0.062 | 1.42 [0.27,2.86] | **1.03 [−0.05,2.28]** | 0.10 | 0.917 | +2.2pp | 🔴 |
+
+- **三周期均不满足** C 闸判据（净超额 IR 95%CI 下界 > 0 ∧ PBO < 0.5 ∧ DSR ≥ 0.95 ∧ 超额 lift > 0）：5d/10d 超额点估计为负，20d 超额 CI 下界 ≤ 0；DSR 5d/20d 不过。
+- **A 呈现闸**三周期 PASS；rank IC 为正且 Fold 聚类显著（t=3.82/5.09/3.44）——横截面有信息但不转化为超额。
+- 决策点：D60（预登记，2026-10-17）→ §六（结果，2026-10-17）。
+- 合同测试：`python3 -m pytest tests/test_rank_label_model.py tests/test_pipeline_contract.py -q`。

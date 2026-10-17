@@ -4637,6 +4637,7 @@ class CatBoostModel(BaseTradingModel):
         # D59：rank 标签 → 回归目标（预测横截面百分位），不是分类也不是 LTR
         regression = (getattr(self, 'label_mode', 'absolute') == 'rank')
         self._ranking = ranking
+        self._regression = regression
 
         # 准备类别权重参数
         # 注意：分类特征已用LabelEncoder编码为数值，不使用cat_features参数
@@ -5350,6 +5351,13 @@ class CatBoostModel(BaseTradingModel):
             import numpy as _np
             scores = np.asarray(self.catboost_model.predict(test_pool)).ravel()
             p = 1.0 / (1.0 + _np.exp(-_np.clip(scores, -30, 30)))
+            return _np.column_stack([1 - p, p])
+        if getattr(self, '_regression', False) or getattr(self, 'label_mode', 'absolute') == 'rank':
+            # D59/D60：rank 标签 → 回归分数即横截面百分位预测值（∈[0,1]）。
+            # 直接作为伪概率 [:,1] = score，供 WF 回测 / comprehensive_analysis / 三闸 取用。
+            import numpy as _np
+            scores = _np.asarray(self.catboost_model.predict(test_pool)).ravel()
+            p = _np.clip(scores, 0.0, 1.0)
             return _np.column_stack([1 - p, p])
         return self.catboost_model.predict_proba(test_pool)
 

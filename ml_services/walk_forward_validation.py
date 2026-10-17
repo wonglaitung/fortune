@@ -116,7 +116,7 @@ class WalkForwardValidator:
         top_k: int = 500,                  # 每折特征选择保留的特征数
         loss_function: str = None,          # 目标函数（如 'YetiRank'，管线级排序目标 A/B）
         learner: str = None,               # 学习器（如 'lightgbm'，复用 CatBoost 管线只换拟合器）
-        label_mode: str = 'absolute'       # 标签口径：'absolute' 或 'relative_hsi'（见 lessons 十 (a)）
+        label_mode: str = 'absolute'       # 标签口径：'absolute' / 'relative_hsi' / 'rank'（V4 横截面百分位，D60）
     ):
         """
         初始化 Walk-forward 验证器
@@ -477,7 +477,9 @@ class WalkForwardValidator:
                     X_sel = X_sel[idx]
                     y_sel = y_sel[idx]
                 if len(feat_cols) > self.top_k and len(X_sel) > 0:
-                    sel_idx, _ = feature_selection_statistical(X_sel, y_sel, feat_cols, top_k=self.top_k)
+                    sel_idx, _ = feature_selection_statistical(
+                        X_sel, y_sel, feat_cols, top_k=self.top_k,
+                        regression=(self.label_mode == 'rank'))  # D60：rank y 连续 → 回归评分
                     fold_selected_features = [feat_cols[int(i)] for i in sel_idx]
                     # F1_FORCE=1（D20 ①预注册）：强制把 F1 另类特征并入每折选择集。
                     # 防泄漏：仍只用该折训练数据，仅保证这些列不因方差偏好被Top-K丢弃。
@@ -513,7 +515,8 @@ class WalkForwardValidator:
                 horizon=self.horizon,
                 use_feature_selection=self.use_feature_selection,
                 selected_features=fold_selected_features,
-                prepared_df=train_data  # 复用全段切片，避免逐折窄窗取数失败
+                prepared_df=train_data,  # 复用全段切片，避免逐折窄窗取数失败
+                label_mode=label_mode,   # D60：rank 口径下必须显式传（否则默认 absolute → 分类目标，同一性断裂）
             )
         except Exception as e:
             logger.error(f"模型训练失败: {e}")
@@ -566,8 +569,12 @@ class WalkForwardValidator:
         print(f"  ✅ 预测生成完成 ({len(predictions)} 条预测)")
 
         # ========== 应用市场情绪过滤器 ==========
-        if self.use_market_filter:
+        # D60：rank 口径下 score 是横截面百分位，无「概率阈值」语义 ⇒ 跳过市场情绪门控
+        # （与 comprehensive_analysis.py rank 模式跳过校准/阈值/模式一致，D59）
+        if self.use_market_filter and self.label_mode != 'rank':
             predictions = self._apply_market_filter(test_data, predictions, fold)
+        elif self.label_mode == 'rank':
+            print("  ⏭️ rank 口径：跳过市场情绪门控（score 无阈值语义）")
 
         # 计算评估指标
         print(f"  🔄 计算评估指标...")
@@ -851,7 +858,11 @@ class WalkForwardValidator:
             return_std_net = 0.0
 
         # 准确率：使用全部样本（因为预测是针对所有样本的）
-        accuracy = (df['prediction'] == df['Label']).sum() / len(df)
+        if self.label_mode == 'rank':
+            # D60：rank 口径下 Label 是连续百分位，与 0/1 预测不可比 ⇒ 用方向准确率
+            accuracy = ((df['prediction'] == 1) == (df['actual_return'] > 0)).mean()
+        else:
+            accuracy = (df['prediction'] == df['Label']).sum() / len(df)
         num_samples = len(df)
         num_trades = len(trades)
 
@@ -1725,8 +1736,8 @@ def main():
     parser.add_argument('--learner', type=str, default=None,
                         help='学习器（如 lightgbm；复用 CatBoost 管线只换拟合器）')
     parser.add_argument('--label-mode', type=str, default='absolute',
-                        choices=['absolute', 'relative_hsi'],
-                        help='标签口径：absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）')
+                        choices=['absolute', 'relative_hsi', 'rank'],
+                        help='标签口径：absolute=股票未来收益方向；relative_hsi=股票未来收益−HSI未来收益（剥离Beta，见 lessons 十 (a)）；rank=当日横截面百分位回归（V4，D59/D60）')
 
     parser.add_argument('--no-commit', action='store_true',
                        help='跳过回测产物自动 git 入库（prediction_analysis.csv + GATE_SNAPSHOT 同步）')

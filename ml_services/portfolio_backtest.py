@@ -324,7 +324,7 @@ def _f(x):
 
 def main():
     ap = argparse.ArgumentParser(description='Phase3 最小 TopK 组合回测')
-    ap.add_argument('--horizon', type=int, required=True, choices=[5, 20])
+    ap.add_argument('--horizon', type=int, required=True, choices=[5, 10, 20])
     ap.add_argument('--topk', type=int, default=10)
     ap.add_argument('--cost', type=float, default=COST, help='双边成本（默认0.005）')
     ap.add_argument('--dropout', type=int, default=0, help='TopK-Dropout 每期剔除只数')
@@ -334,7 +334,9 @@ def main():
     ap.add_argument('--market', type=str, default='hk', choices=['hk', 'a'],
                     help='市场：hk=港股（默认），a=A股（A_STOCK_REFORM_PLAN P2.1）')
     args = ap.parse_args()
-    pred_csv = args.pred or DEFAULT_PRED[args.horizon]
+    pred_csv = args.pred or DEFAULT_PRED.get(args.horizon)
+    if not pred_csv:
+        raise SystemExit(f"未提供 --pred，且 horizon={args.horizon} 无默认 CSV（D60：10d 需显式 --pred）")
     suffix = '_a' if args.market == 'a' else ''
     out = args.output or f"output/portfolio_{args.horizon}d_top{args.topk}{suffix}.md"
     run(args.horizon, pred_csv, args.topk, out, cost=args.cost, dropout=args.dropout,

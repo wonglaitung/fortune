@@ -56,3 +56,36 @@ def test_a_stock_rank_trainer_smoke():
     r = m._train_with_weights_rank(X, y, None, 5)
     assert m.catboost_model is not None
     assert r["accuracy"] == 0.0
+
+
+def test_walk_forward_accepts_rank_label_mode():
+    """D60：WF 引擎必须接受 rank 口径（此前 choices 只有 absolute/relative_hsi，
+    导致生产 rank 管线无 WF 跑法、无法过 C 闸）。"""
+    from ml_services.walk_forward_validation import WalkForwardValidator
+    v = WalkForwardValidator(horizon=5, label_mode="rank")
+    assert v.label_mode == "rank"
+    # CLI 契约：choices 必须含 rank
+    import inspect
+    src = inspect.getsource(
+        __import__("ml_services.walk_forward_validation", fromlist=["x"]))
+    assert "choices=['absolute', 'relative_hsi', 'rank']" in src
+
+
+def test_predict_proba_rank_returns_clipped_score():
+    """rank 口径下 predict_proba 必须返回 [:,1]=clip(score,0,1)（回归器无 predict_proba）。"""
+    from catboost import CatBoostRegressor
+    m = CatBoostModel()
+    m.label_mode = "rank"
+    m.feature_columns = ["a", "b"]
+    m.categorical_encoders = {}
+    rng = np.random.default_rng(0)
+    X = rng.normal(0, 1, (60, 2))
+    y = rng.random(60)
+    m.catboost_model = CatBoostRegressor(n_estimators=5, verbose=False, allow_writing_files=False)
+    m.catboost_model.fit(X, y)
+    df = pd.DataFrame(X, columns=["a", "b"])
+    p = m.predict_proba(df)
+    assert p.shape == (60, 2)
+    assert np.allclose(p[:, 0] + p[:, 1], 1.0)
+    assert p[:, 1].min() >= 0.0 and p[:, 1].max() <= 1.0
+

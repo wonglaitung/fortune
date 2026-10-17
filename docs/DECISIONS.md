@@ -3933,3 +3933,96 @@ WF 内部比较 ✓ / 外推生产 ✗（未跑三冻结双跑正式验收）。
 **未验证（诚实标注）**：`anomaly_dip_backtest.py` 的 10d/20d 数值**待重建特征缓存**后补跑（`data/feature_cache/*_shift.pkl` 当前为空）；5d 结论沿用旧值（z≤−3 净IR 1.55，强依赖 2025）。
 
 **适用范围**：**本管线 · 恒指/异常检测 · 本窗口**；**alpha 仍 null**——改周期**不产生正超额**；结论**限 WF 内部比较 ✓ / 外推生产收益 ✗**。
+
+---
+
+## D60（预登记 · 2026-10-17）：**生产 rank 管线补 C 升级闸**（全特征 WF + rank，**跑前写死**）
+
+### 一、缺口（为何要补）
+
+- §十四 把生产 pkl 切成 rank（`label_mode=rank`），但 **§十六 C 闸验的是旁路** `scripts/v4_pipeline.py`（**11 价格特征 + LightGBM**），**≠ 生产**（全特征 + CatBoostRegressor）。
+- 根因：`ml_services/walk_forward_validation.py` 的 `--label-mode` **只支持 `absolute`/`relative_hsi`**（无 rank）⇒ **生产 rank 管线从无 WF 跑法 ⇒ 从未过 ⓪ 同一性 / C 闸**。
+- ⇒ 本决策：给 WF 引擎**加 rank 支持**，在生产口径（全特征 + CatBoostRegressor + 每折 Top-500 + F1/HIBOR 按 flag）上补跑 C 升级闸。
+
+### 二、变更（代码，先于本闸合入）
+
+- `ml_services/walk_forward_validation.py`：`--label-mode` choices 增 `rank`；`_validate_fold` 向 `model.train(...)` **显式传 `label_mode`**（此前不传 → 默认 absolute → 分类目标，同一性断裂）；rank 口径**跳过市场情绪门控**（score 无阈值语义）；`accuracy` 改方向口径。
+- `ml_services/ml_trading_model.py`：`CatBoostModel.predict_proba` 增回归分支（rank → `[:,1]=clip(score,0,1)`；回归器无 `predict_proba`）。
+- 测试：`tests/test_rank_label_model.py` 增 3 条（WF 接受 rank / CLI choices / predict_proba 回归分支）。
+
+### 三、预注册判据（**跑前写死**；任一不满足即"不过"）
+
+**⓪ 同一性闸（先于三闸）**——四问任一「否」即止：
+1. **社区集合**严格相等（WF 与生产同走 `resolve_community_ids()`，静态∪PIT）；
+2. **列集合**：生产 rank pkl 的特征列 ⊆ WF 可用列 **且** F1/HIBOR 列两边都在 **且** 选择规则同源（每折 Top-500 + FORCE，**不要求逐字相等**）；
+3. **时点**：`train()` 与 `predict()` 均 `mode='production'`（T 收盘）；
+4. **概率同源**：rank **无 Isotonic 校准** ⇒ 生产与 WF 均直接用原始 `score`（此问自动成立，如实标注）。
+
+**C 升级闸**（每 horizon ∈ {5,10,20} × TopK ∈ {5,10,20}）：
+- 冻结：`US_MARKET_SNAPSHOT_DIR` + `HK_MARKET_SNAPSHOT_DIR` 两件既成（rank **无分位门槛** ⇒ `GATE_SOURCE_CSV` **不适用**，如实标注，不假装三冻结）；
+- **双跑 md5 一致**：同配置连跑两次 `prediction_analysis.csv` md5 相同；
+- **禁止取最好一轮**：任一轮不过即不过；
+- **三闸**：① 净超额 IR 95%CI **下界 > 0**；② lift **> 0**；③ **PBO < 0.5**；④ **DSR ≥ 0.95**（`monthly_guardrail` + `portfolio_backtest`）。
+
+**预期（先验）**：**null**——D58（V4 IC 0.024–0.031、Bonferroni 不过）、D59 §十六（旁路 rank 净超额 ≤0、PBO/DSR 不过）⇒ 生产口径**预期三周期全不过**。
+
+**决策规则**：
+- **全不过** ⇒ 判决「**生产 rank 管线 C 闸不过 ⇒ alpha null**；重写 = 口径/架构变更，非收益」；三层总账**不动**。
+- **某周期全过** ⇒ 只报「**本宇宙·本管线·本窗口内通过**」+ 适用范围 + MDE + 相邻参数一致性；**须独立窗口复核后**才谈仓位；**不得**据此直接升配。
+
+### 四、执行
+
+```bash
+# 前置：冻结宏观/个股快照（rank 无分位门槛 ⇒ GATE_SOURCE_CSV 不适用）
+python3 scripts/pin_macro_snapshot.py
+python3 scripts/pin_hk_snapshot.py
+# 逐周期跑（--no-commit 防污染分位门槛数据源 CSV；同配置连跑两次验 md5）
+US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
+  bash scripts/run_walk_forward.sh --model-type catboost --horizon <5|10|20> \
+  --use-feature-selection --label-mode rank --no-commit
+```
+
+### 五、诚实前提
+
+标签口径/周期/学习器**全部改动**；本闸**只回答"生产口径下有没有可交易超额"**，**不**回答"重写值不值"。alpha null **不因采用而改写**。**适用范围：本宇宙 · 本管线 · 本窗口；WF 内部比较 ✓ / 外推生产收益 ✗**。
+
+### 六、结论（2026-10-17，判决）
+
+**判决：三周期全部不过 C 闸 ⇒ 生产 rank 管线 alpha null；重写 = 口径/架构变更，非收益。三层总账不动。**
+
+**⓪ 同一性闸（人工四问，全「是」）**：① 社区集合 = 两侧同走 `resolve_community_ids()`（静态∪PIT）✓；② 列集合 = 生产 rank pkl 特征 ⊆ WF 每折可用列、F1/HIBOR 两侧都在、选择规则同源（每折 Top-500 + FORCE，不要求逐字相等）✓；③ 时点 = `train()`/`predict()` 均 `mode='production'`（T 收盘）✓；④ 概率同源 = rank 无 Isotonic，两侧直接用原始 `score` ✓。
+
+**冻结**：`US_MARKET_SNAPSHOT_DIR` + `HK_MARKET_SNAPSHOT_DIR` 两件（rank 无分位门槛 ⇒ `GATE_SOURCE_CSV` 不适用，**如实标注，非三冻结**）。
+
+**双跑 md5（同配置连跑两次 `prediction_analysis.csv`）**：5d `44f9f6ca7278dac321036c9492330aa7` = 一致；10d `8604dcf48394a92c370fe0337ac08976` = 一致；20d `249d324bab72ef0927d1d27cf1cbe485` = 一致。⇒ **三周期双跑一致（在 HK 收市后跑）**。
+> ⚠️ **关键教训（已在跑中亲自撞上）**：**首次** h5 双跑（11:52 起 / 13:21 起，**都在 HK 交易时段内**）md5 **不一致**——folds 33/35/36/37/38 的 `featsel` 与 `X_test` 均有差异、`Actual_Return` 全同、差异日期 2026-02-01..2026-07-30（每股各 96 行）。排查：CatBoostRegressor 判定确定性（MVS+Bernoulli max diff **0.0**）、跨进程 `feature_selection_statistical(regression=True)` 指纹一致 ⇒ **非代码、非模型，是未冻结的实时输入在盘中漂移**（lessons 三.50/三.45 同型）。**收市后同配置重跑即 bit 级复现**（新 h5 与首跑 h5 的 run1 值同为 `44f9f6ca…`）。⇒ **结论：本管线可复现，但只在 HK 收市后；盘中跑必漂。补 C 闸须避开 09:30–16:10 HKT。**
+
+**三闸（`monthly_guardrail` 超额口径 + `portfolio_backtest`；TopK=10）**：
+
+| h | 净IR(绝对,含β) | **超额IR [95%CI]** | PBO | DSR | 超额 lift | 等权基准 | A 闸 rank IC | 判 |
+|---|---|---|---|---|---|---|---|---|
+| 5d | 0.73 [−0.39,1.83] | **−0.24 [−1.45,0.92]** P(>0)=32% | 0.17 | **0.700** | +1.7pp | +0.41%/期 | 0.048 | ❌ 超额<0 且 DSR<0.95 |
+| 10d | 0.72 [−0.48,1.75] | **−0.49**（portfolio raw −0.01 [−1.12,1.14] P(>0)=50%） | 0.31 | 0.989 | +2.6pp | +0.93%/期 | 0.073 | ❌ 超额<0 |
+| 20d | 1.42 [0.27,2.86] | **1.03 [−0.05,2.28]** P(>0)=97% | 0.10 | **0.917** | +2.2pp | +1.72%/期 | 0.062 | ❌ 超额CI下界≤0 且 DSR<0.95 |
+
+- 判据 ① 净超额 IR 95%CI **下界 > 0**：5d/10d 点估计已为负；20d 点估计 +1.03 但 CI 下界 **−0.05 ≤ 0** ⇒ 三周期全不过。
+- 判据 ② lift>0：三周期过（+1.7/+2.6/+2.2pp）。
+- 判据 ③ PBO<0.5：三周期过（0.17/0.31/0.10，均落在零假设带内 ⇒ 「不可区分」，非「过拟合」）。
+- 判据 ④ DSR≥0.95：10d 过（0.989），5d/20d **不过**（0.700/0.917）。
+- **MDE 全不足**：5d 1.61（n=153）/10d 1.60（n=77）/20d 1.59（n=39）——实测超额 IR 均 < MDE ⇒ **「不显著」≠「没有」**（功效有限）。
+- **A 呈现闸**：三周期全 **PASS**（准确率 52.4/53.4/52.8% 远低于 65% 泄漏线；`Predict_Prob` 无 0/1 饱和 0.00/0.00/0.24%；UP 组 `Relative_Return` max 均为正且大 ⇒ 无符号退化）。**rank IC 为正且 Fold 聚类显著**（t=3.82/5.09/3.44）——即**横截面确有一点信息，但不转化为扣除基准/成本后的超额收益**（与 D58「TopK 毛超额 ≤0.46% < 成本」一致）。
+- ⚠️ **判读陷阱（须写入文档）**：`monthly_guardrail` 的自动判定式用**绝对 IR**（含 β）⇒ 10d 会印「🟢 通过 → 可升级」，而**同一行的超额 IR 是 −0.49**。**C 闸用超额口径**，**不得**据该自动判定宣布升级。
+
+**与 §十六 关系**：§十六旁路（11 价格特征 + LightGBM）三周期不过；§六生产口径（全特征 + CatBoostRegressor）三周期也不过 ⇒ **旁路与生产一致：rank 无 edge**。
+
+```bash
+# 复核命令（收市后跑；--no-commit；两次验 md5）
+US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
+  bash scripts/run_walk_forward.sh --model-type catboost --horizon <5|10|20> \
+  --start-date 2020-06-01 --end-date 2026-07-31 --train-window 36 \
+  --label-mode rank --use-feature-selection --no-commit --output-dir <out>
+python3 ml_services/monthly_guardrail.py --pred <out>/*/prediction_analysis.csv --horizon <h> --topk 10
+python3 ml_services/portfolio_backtest.py --pred <out>/*/prediction_analysis.csv --horizon <h> --topk 10
+python3 scripts/presentation_gate.py --input <out>/*/prediction_analysis.csv --horizon <h>
+```
+

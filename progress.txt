@@ -4652,3 +4652,15 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - anomaly 10d/20d 数值待重建特征缓存后补跑(feature_cache 当前空)
 - 文档: BASELINES(恒指新表)/VALIDATION_GUIDE/THREE_HORIZON_ANALYSIS/README/AGENTS/DECISIONS §十八
 - ⚠️ 诚实定性: 改周期是口径变更, alpha 仍 null, 不产生正超额; 适用 WF 内部比较✓/外推生产✗
+
+2026-10-17 D60：生产 rank 管线补 C 升级闸（全特征 WF + rank）
+- 动因: §十四把生产 pkl 切 rank, 但 §十六 C 闸验的是旁路 v4_pipeline(11 价格特征+LightGBM) ≠ 生产
+- 代码: walk_forward_validation.py --label-mode 增 rank(显式传 model.train(label_mode), rank 跳过市场门控, accuracy 方向口径); ml_trading_model.py predict_proba 增回归分支(clip(score,0,1)); feature_selection.py f_test/mutual_info/statistical 增 regression 分支(修 rank 折静默退全局特征的 bug); portfolio_backtest.py horizon 增 5/10; tests/test_rank_label_model.py +3
+- 预登记 D60(跑前写死); 冻结 US_MARKET_SNAPSHOT_DIR + HK_MARKET_SNAPSHOT_DIR(rank 无分位门槛 ⇒ 无 GATE_SOURCE_CSV, 非三冻结)
+- ⚠️ 首次 h5 双跑(11:52/13:21, HK 盘中) md5 不一致: folds 33-38 featsel+X_test 差异, Actual_Return 全同, 日期 2026-02..07 ⇒ 排查证明 CatBoost 确定(0.0) + featsel 跨进程确定 ⇒ 未冻结实时输入盘中漂移(三.50 同型)
+- 收市后(>16:10)重跑: 双跑 md5 三周期均一致 5d 44f9f6ca.. / 10d 8604dcf4.. / 20d 249d324b..(新 h5 run1 与首跑 run1 同值)
+- 三闸(超额口径, TopK10): 5d 超额IR -0.24[-1.45,0.92] PBO0.17 DSR0.700 / 10d -0.49 PBO0.31 DSR0.989 / 20d 1.03[-0.05,2.28] PBO0.10 DSR0.917; MDE≈1.60
+- A 闸三周期 PASS(准确率 52.4/53.4/52.8%, 无泄漏); rank IC 0.048/0.073/0.062 且 Fold 聚类显著(t=3.82/5.09/3.44) 但不转化为超额
+- 判决: 三周期全不过 ⇒ 生产 rank 管线 alpha null; 重写=口径/架构变更, 非收益; 三层总账不动
+- ⚠️ 判读陷阱: monthly_guardrail 自动判定用绝对 IR(含β) ⇒ 10d 会印🟢, 但同行超额 IR -0.49; C 闸用超额口径
+- 文档: DECISIONS D60 §六 / BASELINES(生产 rank 基线节)

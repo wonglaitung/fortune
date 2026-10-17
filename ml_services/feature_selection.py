@@ -21,12 +21,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import numpy as np
-from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
+from sklearn.feature_selection import SelectKBest, f_classif, f_regression, mutual_info_classif, mutual_info_regression
 from functools import partial
 
 # 互信息打分固定随机种子：mutual_info_classif 的 random_state 默认 None 会用全局 RNG
 # 注入噪声，跨进程/跨轮选择结果不可复现（2026-09-28 去噪声根因之一，A 方案配套修复）
 _MI_SCORE = partial(mutual_info_classif, random_state=42)
+# D60：rank 口径 y 连续（横截面百分位）⇒ 必须用回归版 F-test / 互信息，
+# 否则 sklearn 抛 "Unknown label type: continuous"（分类器目标不接受连续 y）。
+_MI_SCORE_REG = partial(mutual_info_regression, random_state=42)
 from sklearn.model_selection import cross_val_score
 import lightgbm as lgb
 
@@ -72,7 +75,7 @@ def load_training_data(horizon=20):
 
 # ==================== 统计方法：F-test + 互信息 ====================
 
-def feature_selection_f_test(X, y, k=1000):
+def feature_selection_f_test(X, y, k=1000, regression=False):
     """
     使用F-test选择特征
 
@@ -80,6 +83,7 @@ def feature_selection_f_test(X, y, k=1000):
     - X: 特征矩阵
     - y: 目标变量
     - k: 选择的特征数量
+    - regression: True 用 f_regression（连续 y，如 rank 百分位）；False 用 f_classif
 
     返回:
     - selected_features: 选择的特征索引
@@ -92,7 +96,7 @@ def feature_selection_f_test(X, y, k=1000):
     # 处理 NaN 和异常值（sklearn 需要无缺失值）
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
-    selector = SelectKBest(f_classif, k=k)
+    selector = SelectKBest(f_regression if regression else f_classif, k=k)
     X_selected = selector.fit_transform(X, y)
 
     selected_features = selector.get_support(indices=True)
@@ -116,7 +120,7 @@ def feature_selection_f_test(X, y, k=1000):
     return selected_features, scores
 
 
-def feature_selection_mutual_info(X, y, k=1000):
+def feature_selection_mutual_info(X, y, k=1000, regression=False):
     """
     使用互信息选择特征
 
@@ -124,6 +128,7 @@ def feature_selection_mutual_info(X, y, k=1000):
     - X: 特征矩阵
     - y: 目标变量
     - k: 选择的特征数量
+    - regression: True 用 mutual_info_regression（连续 y）；False 用 mutual_info_classif
 
     返回:
     - selected_features: 选择的特征索引
@@ -136,7 +141,7 @@ def feature_selection_mutual_info(X, y, k=1000):
     # 处理 NaN 和异常值（sklearn 需要无缺失值）
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
 
-    selector = SelectKBest(_MI_SCORE, k=k)
+    selector = SelectKBest(_MI_SCORE_REG if regression else _MI_SCORE, k=k)
     X_selected = selector.fit_transform(X, y)
 
     selected_features = selector.get_support(indices=True)
@@ -158,7 +163,7 @@ def feature_selection_mutual_info(X, y, k=1000):
     return selected_features, scores
 
 
-def feature_selection_statistical(X, y, feature_names, top_k=500):
+def feature_selection_statistical(X, y, feature_names, top_k=500, regression=None):
     """
     使用F-test + 互信息混合方法选择特征
 
@@ -172,6 +177,8 @@ def feature_selection_statistical(X, y, feature_names, top_k=500):
     - y: 目标变量
     - feature_names: 特征名称列表
     - top_k: 最终选择的特征数量
+    - regression: None=自动判别（唯一值>10 视为连续回归目标，如 rank 百分位）；
+                  True/False 强制指定（分类 vs 回归评分函数）
 
     返回:
     - selected_features: 选择的特征索引
@@ -181,11 +188,18 @@ def feature_selection_statistical(X, y, feature_names, top_k=500):
     print("🔬 F-test + 互信息混合特征选择（统计方法）")
     logger.info("=" * 50)
 
+    # D60：自动判别回归/分类目标（rank y 连续 ⇒ 必须走回归版，否则 sklearn 报错）
+    if regression is None:
+        _y = np.asarray(y)
+        _finite = _y[np.isfinite(_y)]
+        regression = bool(np.unique(_finite).size > 10)
+    print(f"   特征选择目标类型: {'回归（连续 y）' if regression else '分类（离散标签）'}")
+
     # 1. F-test选择
-    _, f_scores = feature_selection_f_test(X, y, k=1000)
+    _, f_scores = feature_selection_f_test(X, y, k=1000, regression=regression)
 
     # 2. 互信息选择
-    _, mi_scores = feature_selection_mutual_info(X, y, k=1000)
+    _, mi_scores = feature_selection_mutual_info(X, y, k=1000, regression=regression)
 
     # 2.5 确定性 top-k：按「分数降序、特征名升序」打破平分。
     #     sklearn SelectKBest 的 mergesort 是稳定排序，平分按**列序**取舍，
