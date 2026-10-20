@@ -2148,13 +2148,15 @@ A股综合分析报告
             code = str(row.get('Stock_Code', '')).zfill(6)  # 标准化为6位代码
             name = A_STOCK_WATCHLIST.get(code, code)
             pred_proba = row.get('Prediction_Proba', 0.5)
-            pred_label = '上涨' if pred_proba >= 0.5 else '下跌'
+            pred_label = (('偏强' if pred_proba >= 0.5 else '偏弱') if RANK_MODE
+                          else ('上涨' if pred_proba >= 0.5 else '下跌'))
             confidence = pred_proba if pred_proba >= 0.5 else 1 - pred_proba
+            conf_line = (f"- 相对强弱分位: {pred_proba:.1%}\n" if RANK_MODE
+                         else f"- 置信度: {confidence:.1%}\n")
 
             report += f"""### {name} ({code})
 - 预测方向: **{pred_label}**
-- 置信度: {confidence:.1%}
-
+{conf_line}
 """
     else:
         report += "⚠️ 未找到ML预测结果\n\n"
