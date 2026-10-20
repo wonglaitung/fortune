@@ -4708,3 +4708,14 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 接入: anomaly_dip_backtest / rank_model / meta_labeling_prototype / alpha158_baseline /
   scripts/common_feature_ic / abs_price_feature_audit / cs_label_structure
 - 动机: O4/D27 缓存键重构后这些脚本 glob('*_shift.pkl') 静默取空集(异常检测已实证); 修后 116 股可取
+
+2026-10-20 D62 结果：F1/HIBOR flag 在 rank 20d 下复核 —— 维持默认（臂间差异 < MDE）
+- 4 臂并发 12:56–14:44 HKT（同场次/同冻结/同窗，38 折 41153 行），相对比较有效
+- K4 着装: F1 38/38 折 7/7 列；HIBOR FORCE 每折≈35 列；B/D 的 F1=0/38 证明开关真生效 ⇒ 无假上线
+- 三闸(超额, MDE 1.59): A(F1+HIB) 超额0.81[-0.30,1.82] PBO0.30 DSR0.934
+  B(F1off) 1.12[0.06,2.11] PBO0.61 DSR0.980 | C(HIBoff) 0.52[-0.62,1.61] PBO0.70 | D(both off) 0.34[-0.87,1.43] PBO0.74
+- 预注册执行: 关 F1 虽 CI下界>0+DSR0.980 但 PBO0.61≥0.5 ⇒ 三条件未同时满足 ⇒ 不改; HIBOR-off 三项全不满足
+- 判决: 维持 F1/HIBOR 全 ON；D20⑦/D22/D23/D24 在 rank 下既未推翻也未证实（功效不足）
+- ⚠️ Arm A 未复现 D60 20d（1.18 vs 1.42）⇒ 非冻结实时输入跨日漂移；禁跨日互比，D62 只做同场相对比较
+- 未覆盖 5d/10d；未双跑（预注册声明）
+- 文档: DECISIONS D62 §七 / AGENTS 两条 flag 警告行补 D62
