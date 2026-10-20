@@ -21,7 +21,6 @@
 | 20d 中性 TopK 低配升配复核 | **不升配**（三周期均未达门槛） | [D61](docs/DECISIONS.md) |
 | F1 / HIBOR 特征开关复核 | **维持默认全 ON**；四臂超额 IR 极差 0.78 < MDE 1.59 ⇒ 统计不可区分 | [D62](docs/DECISIONS.md) |
 | 异常大跌抄底（补 10d/20d） | 净IR **5d 1.73 / 10d 1.60 / 20d 1.23**（CI>0），但 2025 独大、2024/2026 转负 ⇒ **仅上行期战术** | D59 §十八 |
-| 运行态 | 港股日更曾因 LLM 密钥过期（401 `api_key_expired`）失败；**密钥已轮换，待下次 run 验证** | [progress.txt](progress.txt) |
 
 > 结论不变：**alpha null**。以上均为 **Walk-forward 内部比较**，不外推为生产收益。
 
