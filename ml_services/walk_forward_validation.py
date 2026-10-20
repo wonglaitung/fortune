@@ -779,8 +779,9 @@ class WalkForwardValidator:
                                    / df['Close'].shift(-_lag) - 1)
 
         # ========== 计算 IC 和 Rank IC ==========
-        # IC: 预测概率与实际收益率的相关系数（不是与二元标签）
-        # 这是业界标准定义：IC = Corr(Prediction, Actual_Return)
+        # ⚠️ 下面两个是**全表跨日池化**口径（含日间共同层 ⇒ 天然偏高，lessons 三.68）。
+        #    **禁用于能力评估**；能力口径 = 行业中性 + 逐日（见 ic_deploy，复用
+        #    `portfolio_backtest.selection_ic`，唯一实现）。保留是为了向后兼容。
         if 'actual_return' in df.columns:
             valid_mask = df['actual_return'].notna() & df['probability'].notna()
             if valid_mask.sum() > 1:
@@ -792,6 +793,30 @@ class WalkForwardValidator:
         else:
             ic = 0.0
             rank_ic = 0.0
+
+        # ========== 能力 IC（部署口径：行业中性 + 逐日）==========
+        # D64：池化 IC 不能当能力；这里直接复用 guardrail 的同一实现，避免双实现。
+        ic_deploy = float('nan')
+        ic_raw_daily = float('nan')
+        ic_deploy_days = 0
+        try:
+            from ml_services.portfolio_backtest import selection_ic
+            from config import STOCK_SECTOR_MAPPING
+            if 'Code' in df.columns and 'actual_return' in df.columns:
+                _panel = pd.DataFrame({
+                    'date': pd.DatetimeIndex(df.index).normalize(),
+                    'code': df['Code'].astype(str).values,
+                    'prob': df['probability'].values,
+                    'ret': df['actual_return'].values,
+                })
+                _panel['sector'] = _panel['code'].map(
+                    lambda c: (STOCK_SECTOR_MAPPING.get(c) or {}).get('sector', 'unknown'))
+                _cap = selection_ic(_panel, use_sector_neutral=True)
+                ic_deploy = _cap['ic']
+                ic_raw_daily = _cap['ic_raw']
+                ic_deploy_days = _cap['n_days']
+        except Exception as _e:
+            logger.warning(f"部署口径 IC 计算失败（不影响主流程）：{type(_e).__name__}: {_e}")
 
         # 预测分布统计
         prediction_std = df['probability'].std()
@@ -1001,8 +1026,15 @@ class WalkForwardValidator:
             'benchmark_return': benchmark_return,
             'transaction_cost': TOTAL_COST,  # 记录使用的交易成本
             # 新增指标
+            # ⚠️ ic / rank_ic = **池化口径**（向后兼容名，**禁用于能力评估**，D64）
             'ic': ic if not np.isnan(ic) else 0.0,
             'rank_ic': rank_ic if not np.isnan(rank_ic) else 0.0,
+            'ic_pooled': ic if not np.isnan(ic) else 0.0,
+            'rank_ic_pooled': rank_ic if not np.isnan(rank_ic) else 0.0,
+            # 能力口径（行业中性 + 逐日）——唯一可信的能力度量
+            'ic_deploy': ic_deploy if not np.isnan(ic_deploy) else 0.0,
+            'ic_raw_daily': ic_raw_daily if not np.isnan(ic_raw_daily) else 0.0,
+            'ic_deploy_days': ic_deploy_days,
             'prediction_std': prediction_std,
             'confidence_breakdown': confidence_bins,
             'error_analysis': error_analysis,
@@ -1255,6 +1287,9 @@ class WalkForwardValidator:
         # 2. IC指标评分（25分）：IC >0.05 表示有效预测能力
         avg_ic = np.mean([r.get('ic', 0) for r in fold_results])
         avg_rank_ic = np.mean([r.get('rank_ic', 0) for r in fold_results])
+        # 能力口径（D64）：行业中性 + 逐日；非零折才平均
+        _d = [r.get('ic_deploy') for r in fold_results if r.get('ic_deploy_days')]
+        avg_ic_deploy = float(np.mean(_d)) if _d else 0.0
         if avg_ic >= 0.20:
             score += 25
         elif avg_ic >= 0.15:
@@ -1326,7 +1361,8 @@ class WalkForwardValidator:
             'recommendation': recommendation,
             # 新增指标
             'avg_ic': avg_ic,
-            'avg_rank_ic': avg_rank_ic
+            'avg_rank_ic': avg_rank_ic,
+            'avg_ic_deploy': avg_ic_deploy  # D64：能力口径
         }
 
     def save_report(self, report, output_dir='output'):
@@ -1362,7 +1398,9 @@ class WalkForwardValidator:
                 'recommendation': report['overall_metrics'].get('recommendation', 'N/A'),
                 'avg_sharpe': report['overall_metrics'].get('avg_sharpe_ratio', 0),
                 'avg_ic': report['overall_metrics'].get('avg_ic', 0),
-                'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0)
+                'avg_rank_ic': report['overall_metrics'].get('avg_rank_ic', 0),
+                'avg_ic_deploy': report['overall_metrics'].get('avg_ic_deploy', 0),
+                '_ic_caliber': 'ic/rank_ic = 全表池化（禁用于能力评估）；能力读 avg_ic_deploy（行业中性+逐日，D64）'
             },
             'saved_files': ['prediction_distribution', 'fold_metrics_detail', 'prediction_analysis', 'confidence_return_breakdown', 'percentile_performance']
         }
@@ -1385,6 +1423,8 @@ class WalkForwardValidator:
                 'metrics': {
                     'ic': fold.get('ic', 0),
                     'rank_ic': fold.get('rank_ic', 0),
+                    'ic_deploy': fold.get('ic_deploy', 0),
+                    'ic_raw_daily': fold.get('ic_raw_daily', 0),
                     'accuracy': fold.get('accuracy', 0),
                     'sharpe': fold.get('sharpe_ratio', 0),
                     'max_drawdown': fold.get('max_drawdown', 0),
@@ -1602,8 +1642,9 @@ class WalkForwardValidator:
                 f.write(f"- **平均索提诺比率**: {overall['avg_sortino_ratio']:.4f}\n")
                 f.write(f"- **平均信息比率**: {overall['avg_information_ratio']:.4f}\n")
                 # 新增 IC 和 Rank IC
-                f.write(f"- **平均 IC**: {overall.get('avg_ic', 0):.4f}\n")
-                f.write(f"- **平均 Rank IC**: {overall.get('avg_rank_ic', 0):.4f}\n\n")
+                f.write(f"- **能力 IC（部署口径：行业中性+逐日）**: {overall.get('avg_ic_deploy', 0):+.4f}\n")
+                f.write(f"- **池化 IC（含日间共同层，禁用于能力评估，D64）**: "
+                        f"{overall.get('avg_ic', 0):+.4f}（rank {overall.get('avg_rank_ic', 0):+.4f}）\n\n")
 
             # 稳定性分析
             f.write("## 🔬 稳定性分析\n\n")
@@ -1618,7 +1659,7 @@ class WalkForwardValidator:
 
             # Fold详细结果
             f.write("## 📈 Fold 详细结果\n\n")
-            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | IC | Rank IC |\n")
+            f.write("| Fold | 训练期间 | 测试期间 | 样本数 | 交易次数 | 收益率 | 胜率 | 准确率 | 夏普比率 | 最大回撤 | IC(池化) | RankIC(池化) |\n")
             f.write("|------|---------|---------|-------|---------|-------|------|-------|---------|--------|------|--------|\n")
 
             for fold in folds:

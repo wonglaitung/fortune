@@ -19,6 +19,8 @@
   H4 IC 异常             A闸判据「IC」（无文档数字阈值，仅在完美时判定）
   H5 分组符号一致性       A闸判据「分组符号一致性」（同上）
   C1 行级 vs Fold 聚类    约束 1  行级统计不得用于因果推断
+                                  ⚠️ C1 的「t」是**阈值命中率**的折聚类 t，
+                                     不是 IC、也不是技能（D64）；能力读 guardrail 部署口径 IC
 
 用法：
   python3 scripts/presentation_gate.py --input <csv> --horizon 20
@@ -197,8 +199,10 @@ def run_checks(df: pd.DataFrame, horizon: int, market: str) -> tuple[list[str], 
         fold_se = float(np.std(fvals, ddof=1) / np.sqrt(len(fvals))) if len(fvals) > 1 else float("nan")
         fold_t = (float(fvals.mean()) - 0.5) / fold_se if fold_se and fold_se > 0 else float("nan")
         notes.append(
-            f"[C1][约束1] 行级 z={_fmt(row_z, 2)}（**伪显著，禁止用于因果推断**）  "
-            f"|  Fold聚类 t={_fmt(fold_t, 2)} n={len(fvals)}（判读依据）"
+            f"[C1][约束1] 阈值命中率 {_fmt(acc, 4)}（score≥0.5 vs 收益>0；"
+            f"**非技能指标**，见 D64）  "
+            f"|  行级 z={_fmt(row_z, 2)}（伪显著）  "
+            f"|  Fold聚类 t={_fmt(fold_t, 2)} n={len(fvals)}（判读依据：仅作泄漏指纹）"
         )
         if abs(row_z) >= 3.0 and not (abs(fold_t) >= 2.0):
             notes.append(
