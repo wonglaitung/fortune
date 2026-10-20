@@ -3936,7 +3936,9 @@ WF 内部比较 ✓ / 外推生产 ✗（未跑三冻结双跑正式验收）。
 - 信号 Long/Flat 净IR 0.24/0.07/0.20 **均低于买入持有** 0.50/0.47/0.49（`hsi_signal_backtest.py`，非重叠）。
 - 旧基线（09-26：51.3/54.8/59.1）因快照漂移作废。数字详见 [BASELINES.md](BASELINES.md)。
 
-**未验证（诚实标注）**：`anomaly_dip_backtest.py` 的 10d/20d 数值**待重建特征缓存**后补跑（`data/feature_cache/*_shift.pkl` 当前为空）；5d 结论沿用旧值（z≤−3 净IR 1.55，强依赖 2025）。
+**异常检测 10d/20d 补跑（2026-10-20）**：`anomaly_dip_backtest.py` 的数据源 `glob('*_shift.pkl')` 因 **O4/D27 缓存键重构**（`_shift` → `_tminus1`/`_tclose`）**早已失配**（`*_shift.pkl` 为遗留命名，`data/feature_cache/` 实为空）⇒ 脚本静默产出空/旧结果。已修：改为兼容旧 `*_shift.pkl` + 新 `*_tclose_*.pkl`/`*_tminus1_*.pkl`（按 mtime 取每股最新）。
+- **新实测（z≤−3，2021-10→2026-08，375 信号；`tclose` 口径）**：净IR **5d 1.73** / **10d 1.60** / **20d 1.23**（CI 均 >0）。逐年**三周期同型：2025 独大（73.6%/81.1%/81.8% 胜率），2024/2026 转负**（5d −2.54%/−2.00%）⇒ **10d/20d 不改变结论：真信号但强依赖行情，仅限大盘上行期战术使用**。
+- ⚠️ **口径说明**：5d 旧值净IR **1.55**（D4，`_shift` 时点）；本次 **1.73**（`tclose` 时点）——差异来自**时点口径**（`_shift`=T-1 vs `tclose`=T 收盘），**非**数据修订。两者信号数同（375），**结论不变**。未逐行聚类检验（脚本仅行级；诚实标注）。
 
 **适用范围**：**本管线 · 恒指/异常检测 · 本窗口**；**alpha 仍 null**——改周期**不产生正超额**；结论**限 WF 内部比较 ✓ / 外推生产收益 ✗**。
 
@@ -4064,3 +4066,65 @@ python3 scripts/presentation_gate.py --input <out>/*/prediction_analysis.csv --h
 ### 四、诚实前提
 
 **适用范围：本宇宙 · 本管线 · 本窗口（2020-06→2026-07，38 折）；WF 内部比较 ✓ / 外推生产收益 ✗。** 未做独立窗口复核，不得据此升配。MDE 见上表。
+
+---
+
+## D62（预登记 · 2026-10-20）：**F1 / HIBOR flag 在 rank 口径下复核**（D20⑦ / D22 / D23 / D24，**跑前写死**）
+
+### 一、命题
+
+D20⑦（F1 特征开关）、D23（F1 例外采用 + `F1_FORCE`）、D22（HIBOR 例外采用）、D24（`HIBOR_FORCE`）的结论**全部立于 absolute 标签口径**（`label=涨跌二分类` + Isotonic 概率）。生产 pkl 已切 **rank**（D59 §十四）⇒ **这些 flag 在 rank 口径下是否仍成立**（该开、该强制纳入、还是该回退）？
+
+### 二、范围与理由
+
+- **只做 20d**：D20⑦ / D22 / D23 / D24 的判定均针对 **20d 生产信号**（`monthly_guardrail` 的净IR/DSR 亦按 20d 定义）；5d/10d 不另跑，如实标注为该复核的**未覆盖范围**。
+- **为何要重跑**：D60 产的 rank CSV 位于 `/tmp/opencode/wf_rank_gate/`，**已随临时目录清理而丢失** ⇒ 无现成 rank 基线，须重跑；重跑 Arm A 同时**再锚定 D60 的 20d 数字**（一致性交叉校验）。
+
+### 三、设计（2×2 因子，4 臂，同窗口）
+
+窗口 `2020-06-01 → 2026-07-31`（全程起点，38 折）、学习器 CatBoost、`--use-feature-selection`（每折 Top-500）、`--label-mode rank`、`--no-commit`、**双冻结**（`US_MARKET_SNAPSHOT_DIR` + `HK_MARKET_SNAPSHOT_DIR`；rank 无分位门槛 ⇒ `GATE_SOURCE_CSV` 不适用，**如实标注，非三冻结**）、**HK 收市后跑**（D60 教训）。
+
+| 臂 | `F1_FEATURES`/`F1_FORCE` | `HIBOR_FEATURES`/`HIBOR_FORCE` |
+|---|---|---|
+| A（生产默认，锚） | 1 / 1 | 1 / 1 |
+| B（F1 off） | 0 / 0 | 1 / 1 |
+| C（HIBOR off） | 1 / 1 | 0 / 0 |
+| D（双 off） | 0 / 0 | 0 / 0 |
+
+计量：`monthly_guardrail`（**超额口径**）+ `portfolio_backtest`（TopK=10）+ `presentation_gate`（A 闸）+ **K4 着装**（stdout 中 `FORCE 强制纳入` 行计数 + 折内选择集含 F1/HIBOR 列的折数）。
+
+### 四、预注册判据（**跑前写死**；任一命中即按对应动作，否则维持现状）
+
+1. **K4 着装（先于收益比较）**：统计 38 折中 **进入选择集的 F1 列（7 个）与 HIBOR 列**的折数。
+   - 若某 flag 的特征在**全部折**均为 **0 进入** ⇒ **假上线**（`算了不用`）⇒ **该 flag 回退为默认 0**（对应 D23/D24 的 K4 杀条）。
+2. **净效应（A vs B / A vs C，超额口径）**：
+   - 若「**关掉**某 flag ⇒ 超额IR 95%CI 下界 > 0 ∧ PBO < 0.5 ∧ DSR ≥ 0.95」且「**开着** ⇒ 不同时满足」⇒ 判该 flag **在 rank 下有害** ⇒ **改默认为 OFF**。
+   - 否则（含所有臂均不过）⇒ **维持现行默认（全 ON）**，并记「rank 下无可辨识净效应」。
+3. **禁止取最好一轮**；**禁止跨口径/跨窗口互比数字**（D20 ④）。
+4. 冻结/双跑：**不做双跑**（本复核只比**相对**净效应，非「宣称通过」，故不比 md5；如实标注该边界）。
+
+### 五、诚实前提与先验
+
+- **先验预期：alpha null，四臂统计上不可区分**（D58/D59/D60：rank 无可交易超额；MDE≈1.6 > 臂间真实差异）⇒ 预期**结论=维持默认**，且**「不显著 ≠ 没有」**（功效有限，lessons 三.75）。
+- 本复核**只**回答「flag 在 rank 下是否仍该开」，**不**回答「重写值不值」；alpha null **不因采用而改写**。
+- **适用范围：本宇宙 · 本管线 · 本窗口 · 20d；WF 内部比较 ✓ / 外推生产收益 ✗。**
+
+### 六、执行（收市后）
+
+```bash
+for arm in A B C D; do
+  case $arm in
+    A) export F1_FEATURES=1 F1_FORCE=1 HIBOR_FEATURES=1 HIBOR_FORCE=1;;
+    B) export F1_FEATURES=0 F1_FORCE=0 HIBOR_FEATURES=1 HIBOR_FORCE=1;;
+    C) export F1_FEATURES=1 F1_FORCE=1 HIBOR_FEATURES=0 HIBOR_FORCE=0;;
+    D) export F1_FEATURES=0 F1_FORCE=0 HIBOR_FEATURES=0 HIBOR_FORCE=0;;
+  esac
+  US_MARKET_SNAPSHOT_DIR=data/us_market_snapshot HK_MARKET_SNAPSHOT_DIR=data/hk_market_snapshot \
+    bash scripts/run_walk_forward.sh --model-type catboost --horizon 20 \
+    --start-date 2020-06-01 --end-date 2026-07-31 --train-window 36 \
+    --label-mode rank --use-feature-selection --no-commit \
+    --output-dir /tmp/opencode/d62_$arm
+done
+```
+
+### 七、结论（跑后填写）

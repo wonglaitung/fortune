@@ -4686,3 +4686,20 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 文档: DECISIONS D26 补 rank 条款 / DEPLOYMENT 禁用清单+前置条件 / A_STOCK_DESIGN 数据目录树 / AGENTS+README 1d 模型标识停用
 - 验收: pytest 335 passed; doc_gate L1-L6 ✅
 - ⚠️ 诚实定性: 全部为口径/架构统一, alpha 仍 null, 不产生可部署超额
+
+2026-10-20 D62：F1/HIBOR flag 在 rank 口径下复核（预登记 → 跑中）
+- 命题: D20⑦(F1开关)/D23(F1例外+FORCE)/D22(HIBOR例外)/D24(HIBOR_FORCE) 均立于 absolute 口径; 生产已切 rank ⇒ 是否仍成立
+- 范围 20d; 设计 2x2 因子 4 臂 (A:1/1 B:0/1 C:1/0 D:0/0) 并发跑同窗 (漂移对四臂等同 ⇒ 相对比较有效)
+- 判据(跑前写死): K4 着装(全折 0 进入 ⇒ 假上线 ⇒ 回退); A vs B / A vs C 超额口径净效应; 全不过 ⇒ 维持默认
+- 先验: alpha null, 四臂不可区分(MDE≈1.6) ⇒ 预期维持默认
+- ⚠️ 偏离「收市后跑」纪律: 4 臂并发共享时间窗, 且不宣称 md5/不宣称通过 ⇒ 仅相对比较(如实标注)
+- D60 的 rank CSV 位于 /tmp 已丢失 ⇒ 须重跑; Arm A 同时再锚定 D60 20d 数字
+- 落盘: DECISIONS D62 §一~§六 (预登记); §七 待跑完填
+
+2026-10-20 异常检测 10d/20d 补跑 (D59 §十八 收尾)
+- 发现真 bug: anomaly_dip_backtest.py glob('*_shift.pkl') 因 O4/D27 缓存键重构(_shift→_tminus1/_tclose)早已失配 ⇒ 静默空结果
+- 修: 兼容旧 *_shift.pkl + 新 *_tclose_*/*_tminus1_*(按 mtime 取每股最新)
+- 新测(z≤-3, 375 信号, tclose 口径): 净IR 5d/10d/20d = 1.73/1.60/1.23 (CI 均>0); 逐年三周期同型 2025 独大, 2024/2026 转负
+- 结论不变: 真信号但强依赖行情, 仅大盘上行期战术; 5d 旧值 1.55 为 _shift 时点, 非数据修订
+- 文档: DECISIONS §十八 补结果 / BASELINES 新增异常基线节 / AGENTS+  DEPLOYMENT T1 数字更新
+- ⚠️ 同类失配待修(未改, 记录): rank_model/alpha158_baseline/meta_labeling_prototype/common_feature_ic/abs_price_feature_audit/cs_label_structure 仍 glob '*_shift.pkl'

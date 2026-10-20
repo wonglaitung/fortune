@@ -30,12 +30,29 @@ HORIZONS = [5, 10, 20]
 THRESHOLDS = [-2.5, -3.0, -4.0]
 
 
+def _latest_cache_files(cache_dir):
+    """每股最新特征缓存路径（按 mtime 取最新）。
+
+    兼容两种命名：旧 `{code}_{YYYYMMDD}_shift.pkl`；新
+    `{code}_{YYYYMMDD}_{tminus1|tclose}_{f1|base}_{manifest_fp}.pkl`（O4/D27 缓存键重构）。
+    仅取 OHLC，故不同 manifest 指纹/口径均可（取最新即可）。
+    """
+    best = {}
+    for pat in ('*_shift.pkl', '*_tclose_*.pkl', '*_tminus1_*.pkl'):
+        for p in glob.glob(os.path.join(cache_dir, pat)):
+            code = os.path.basename(p).split('_')[0]
+            try:
+                mtime = os.path.getmtime(p)
+            except OSError:
+                continue
+            prev = best.get(code)
+            if prev is None or mtime > prev[0]:
+                best[code] = (mtime, p)
+    return {c: v[1] for c, v in best.items()}
+
+
 def load():
-    files = {}
-    for p in glob.glob(os.path.join(CACHE_DIR, '*_shift.pkl')):
-        code = os.path.basename(p).split('_')[0]
-        if code not in files or p > files[code]:
-            files[code] = p
+    files = _latest_cache_files(CACHE_DIR)
     frames = []
     for code, p in files.items():
         try:
