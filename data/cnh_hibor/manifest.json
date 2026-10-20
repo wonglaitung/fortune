@@ -12,5 +12,5 @@
   "fx_source": "yfinance USDCNY=X (inshore fallback)",
   "source_hibor": "eastmoney datacenter via akshare rate_interbank (market=香港银行同业拆借市场, symbol=Hibor港币)",
   "pit_note": "T-day fixing; feature integration must use T-1; NOT wired into production model",
-  "updated": "2026-10-20 22:05"
+  "updated": "2026-10-20 23:58"
 }

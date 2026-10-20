@@ -1,7 +1,7 @@
 {
-  "updated_at": "2026-10-20T22:01:20+08:00",
-  "rows": 23025,
-  "stocks": 53,
+  "updated_at": "2026-10-20T23:54:54+08:00",
+  "rows": 23496,
+  "stocks": 54,
   "date_min": "2024-10-21",
   "date_max": "2026-10-16",
   "failed": [
@@ -11,14 +11,6 @@
     },
     {
       "code": "1257.HK",
-      "error": "empty"
-    },
-    {
-      "code": "2333.HK",
-      "error": "ChunkedEncodingError: Response ended prematurely"
-    },
-    {
-      "code": "2333.HK",
       "error": "empty"
     },
     {
