@@ -13,6 +13,20 @@
 > 系统的价值在 **① 工程化  ② 展示 / 报告  ③ 风控 / 研究框架**；其中**最可信的资产是"假设验证框架（尺子 + 技能）"**——
 > 它才是本项目"经得起检验"的部分。
 
+### 📌 最新验证状态（2026-10-20）
+
+| 项 | 最新结论 | 出处 |
+|---|---|---|
+| 个股 rank 三周期（生产口径） | **C 闸全不过**：超额 IR 5d **−0.24** / 10d **−0.49** / 20d **+1.03（95%CI 跨 0）**；DSR 0.700 / 0.989 / 0.917 | [D60](docs/DECISIONS.md) |
+| 20d 中性 TopK 低配升配复核 | **不升配**（三周期均未达门槛） | [D61](docs/DECISIONS.md) |
+| F1 / HIBOR 特征开关复核 | **维持默认全 ON**；四臂超额 IR 极差 0.78 < MDE 1.59 ⇒ 统计不可区分 | [D62](docs/DECISIONS.md) |
+| 异常大跌抄底（补 10d/20d） | 净IR **5d 1.73 / 10d 1.60 / 20d 1.23**（CI>0），但 2025 独大、2024/2026 转负 ⇒ **仅上行期战术** | D59 §十八 |
+| 运行态 | 港股日更曾因 LLM 密钥过期（401 `api_key_expired`）失败；**密钥已轮换，待下次 run 验证** | [progress.txt](progress.txt) |
+
+> 结论不变：**alpha null**。以上均为 **Walk-forward 内部比较**，不外推为生产收益。
+
+---
+
 ## 🧩 三大功能
 
 | # | 功能 | 是什么 | 诚实定性 |
@@ -44,7 +58,7 @@
 
 **工程化验证（本项目核心价值）**：所有信号均经 **Walk-forward（PIT/embargo）+ 三道闸（A 泄漏 / B 过拟合 / C 净IR）+ 折聚类显著性 + 逐日 mark + 静态对照**；评估以 lift / 方向技能 / 超额为准。**至今未发现任何可交易 edge**，负结果已制度化记录（[DECISIONS](docs/DECISIONS.md) D1 / D33–D44）。
 
-**全流程自动化**：从数据采集、特征计算、模型预测到邮件推送，全流程自动化运行。GitHub Actions定时调度，无需人工干预，确保不错过任何交易机会。
+**全流程自动化**：从数据采集、特征计算、模型预测到邮件推送，全流程自动化运行。GitHub Actions 定时调度，无需人工干预，确保报告按时产出（不对交易时点作承诺）。
 
 **双市场**：港股（南向资金）/ A股（北向资金、涨跌停）各自优化数据与特征。
 
@@ -60,8 +74,8 @@
 |---|---|---|
 | 股票池 | 32 只自选股 | 53 只（4 核心 + 49 扩展） |
 | 指数预测 | ✅ 恒指三周期 5/10/20d（57.3%/58.5%/52.4%，**折聚类后均不显著**） | ❌ |
-| 自动化时间 | 工作日 16:00 HKT | 本地 15:15 CST；CI 周日 11:00 |
-| 模型准确率 | 20d ~50%（**接近随机**） | 20d ~59%（**样本不足**） |
+| 自动化时间 | 工作日 **16:30 HKT** | 本地 15:15 CST；CI 周日 11:00 |
+| 模型准确率 | 20d **52.8%** / 5d 52.4% / 10d 53.4%（**接近随机**） | 方向技能不显著（**640 行硬顶 ⇒ 样本不足**） |
 
 > 模型 / 特征 / 字段细节 → 见 [二、系统构成（简）](#二系统构成简) 与各专项文档。
 
@@ -82,8 +96,8 @@
 | 数据硬限 | — | **腾讯源恒返回 640 行（≈2.5 年）⇒ 测试期不足 2 年** |
 | **诚实定性** | **alpha 未发现**（不显著；[三层总账](AGENTS.md)） | **alpha 未发现 + 样本不足 ⇒ 不予升配**（[D13](docs/DECISIONS.md)） |
 
-> **标签口径（D59，2026-10-16）**：个股（港股 + A股）标签由「绝对二分类（涨/跌）」改为 **横截面百分位 rank 回归**，周期 `{1,5,20} → {5,10,20}`；输出语义由「上涨概率」改为「**池内相对强弱分位**」（0–100）。**恒指 / 异常检测未变**（非横截面任务）。
-> ⚠️ 该改动是**口径 / 架构变更，不是alpha提升**——C 闸（净IR/PBO/DSR/超额CI）三周期**全部不过**（D59 §十六）。
+> **标签口径（D59，2026-10-16）**：个股（港股 + A股）标签由「绝对二分类（涨/跌）」改为 **横截面百分位 rank 回归**，周期 `{1,5,20} → {5,10,20}`（**1d 已停用**）；输出语义由「上涨概率」改为「**池内相对强弱分位**」（0–100），展示层不再给「置信度」。**恒指 / 异常检测未变**（非横截面任务）。
+> ⚠️ 该改动是**口径 / 架构变更，不是 alpha 提升**——生产口径 C 闸三周期**全部不过**（D60：超额 IR 5d −0.24 / 10d −0.49 / 20d +1.03，20d 的 95%CI 下界 ≤0；DSR 0.700/0.989/0.917）。
 
 ### 2.2 双市场共同机制（简）
 
@@ -93,8 +107,8 @@
 
 ### 2.3 其它模块（简）
 
-- **异常检测**：Z-Score + Isolation Forest 双层；"异常 + 当日下跌 → 抄底"**仅限大盘上行期（恒指 > MA200）战术**，逐年依赖 2025，**非稳健 edge**。
-- **大模型分析**：通义千问做"**解释 / 上下文**"，**不作 alpha**（见 [DECISIONS](docs/DECISIONS.md)）。
+- **异常检测**：Z-Score + Isolation Forest 双层；"异常 + 当日下跌 → 抄底"（z≤−3，375 信号）净IR **5d 1.73 / 10d 1.60 / 20d 1.23**（CI>0），但**仅限大盘上行期（恒指 > MA200）战术**——逐年 2025 独大、2024/2026 转负，**非稳健 edge**（2026-10-20 重跑）。
+- **大模型分析**：经 OpenAI 兼容端点（opencode zen，`deepseek-v4-flash`）做"**解释 / 上下文**"，**不作 alpha**；长 prompt 需 `x-opencode-session` 头（见 [DECISIONS](docs/DECISIONS.md)）。
 - **风险回报 / 模拟交易**：辅助工具（仓位 / 止损 / 日志），**非预测信号**。
 
 > ⚠️ 以上所有"预测 / 信号"经严格验证**均未发现可交易 edge**——请按"**研究 / 展示 / 风控**"使用，**勿当买卖依据**。
@@ -206,7 +220,7 @@ flowchart TD
 | 核心模型 | `ml_trading_model.py` | `a_stock_ml_model.py` |
 | 综合分析 | `comprehensive_analysis.py` | `a_stock_comprehensive_analysis.py` |
 | 大模型建议 | `comprehensive_analysis.py` 集成 | `a_stock_email.py` |
-| 运行时间 | 16:00 HKT | 15:15 CST |
+| 运行时间 | 16:30 HKT | 15:15 CST |
 
 ### 9.2 数据流图
 
@@ -243,13 +257,13 @@ flowchart TD
 
     subgraph L4["机器学习层（ml_services/）"]
         direction LR
-        D1["模型预测<br/>1d/5d CatBoost · 20d LightGBM"]
+        D1["模型预测<br/>5/10/20d CatBoost（rank 回归）"]
         D2["Walk-forward 验证"]
         D3["性能监控"]
         D1 ~~~ D2 ~~~ D3
     end
 
-    subgraph L5["大模型决策层（llm_services/ 通义千问）"]
+    subgraph L5["大模型决策层（llm_services/ opencode zen）"]
         direction LR
         E1["风险控制"]
         E2["市场环境"]
@@ -346,7 +360,7 @@ flowchart LR
     ROOT --> LS
     subgraph LS["llm_services/ 大模型服务"]
         direction LR
-        LS1["通义千问"]
+        LS1["opencode zen<br/>deepseek-v4-flash"]
     end
     ROOT --> MS
     subgraph MS["message_services/ 通知服务"]
@@ -386,7 +400,7 @@ flowchart LR
 | **06:00** (工作日) | `batch-stock-news-fetcher.yml` | 批量个股新闻抓取 | 🇭🇰 |
 | 每小时 | `hourly-crypto-monitor.yml` | 加密货币监控 | 🌐 |
 | 每小时 | `hourly-gold-monitor.yml` | 黄金监控 | 🌐 |
-| **16:00 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
+| **16:30 HKT** (工作日) | `comprehensive-analysis.yml` | 港股综合分析 | 🇭🇰 |
 | **00:00 HKT** (工作日) | `performance-monitor.yml` | 性能报告（仅港股，含 lift/方向技能/护栏状态） | 🇭🇰 |
 | 周日 09:00 HKT | `weekly-comprehensive-analysis.yml` | 港股周度综合分析 | 🇭🇰 |
 | 周日 11:00 CST | `weekly-a-stock-comprehensive-analysis.yml` | A股周度综合分析 | 🇨🇳 |
@@ -455,7 +469,7 @@ python hsi_email.py --no-email
 | `EMAIL_SENDER` | 发件人邮箱 |
 | `EMAIL_PASSWORD` | 邮箱授权码 |
 | `RECIPIENT_EMAIL` | 收件人邮箱 |
-| `QWEN_API_KEY` | 通义千问API密钥 |
+| `QWEN_API_KEY` | LLM 密钥（opencode zen；配合 `QWEN_CHAT_URL` / `QWEN_CHAT_MODEL`） |
 
 ---
 
@@ -468,9 +482,9 @@ python hsi_email.py --no-email
 | ~~CatBoost 1天模型~~ | ❌ **已停用（D59 重写）**：周期改为 5/10/20，1d 不再生产 |
 | **深度学习** | LSTM/Transformer F1≈0，不推荐 |
 | **加密货币** | 股票策略不适用 |
-| **恒指 vs 个股** | 恒指 5/10/20d 57.3%/58.5%/52.4%（折聚类后均不显著）vs 个股 20d 52.1%（lift 不显著）；三周期八大模式折聚类后均不显著，**均不可交易** |
+| **恒指 vs 个股** | 恒指 5/10/20d 57.3%/58.5%/52.4%（折聚类后均不显著）vs 个股 20d 52.8%（rank 口径；超额 IR 0 附近，不显著）；三周期八大模式折聚类后均不显著，**均不可交易** |
 | **高置信度风险** | 高置信度预测错误时损失可达 -73%，必须设置止损 |
-| **双模式预测** | 收市后预测用当日数据(production)，Walk-forward 用 T-1 数据(backtest) |
+| **时点口径** | 全链路统一 `mode='production'`（**T 收盘**，T+1 成交）；WF 与生产同一 mode，不再有 T-1/T 双口径（D25） |
 | **特征缓存版本** | 缓存失效时需清除（`rm -rf data/*feature_cache/*.pkl`） |
 | **分类特征 NaN** | CatBoost 训练和预测时需一致处理分类特征 NaN |
 | **A股涨跌停差异** | 主板10%涨跌停，创业板20%涨跌停，混合训练需标签标准化 |
