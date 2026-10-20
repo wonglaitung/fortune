@@ -93,9 +93,9 @@ else
 fi
 echo ""
 
-# 步骤1: 训练 CatBoost 三周期模型（1d, 5d, 20d）
+# 步骤1: 训练 CatBoost 三周期模型（5d, 10d, 20d）
 echo "=========================================="
-echo "📊 步骤 1/6: 训练 CatBoost 三周期模型（1d, 5d, 20d）"
+echo "📊 步骤 1/6: 训练 CatBoost 三周期模型（5d, 10d, 20d）"
 echo "=========================================="
 echo ""
 
@@ -217,8 +217,8 @@ echo "📊 生成的文件:"
 echo "  - 大模型建议: $(ls -t data/llm_recommendations_*.txt 2>/dev/null | head -1)"
 echo "  - 风险回报率分析: data/risk_reward_results.json"
 echo "  - ML预测结果:"
-echo "    - 1d: $(ls -t data/ml_trading_model_catboost_predictions_1d.csv 2>/dev/null | head -1)"
 echo "    - 5d: $(ls -t data/ml_trading_model_catboost_predictions_5d.csv 2>/dev/null | head -1)"
+echo "    - 10d: $(ls -t data/ml_trading_model_catboost_predictions_10d.csv 2>/dev/null | head -1)"
 echo "    - 20d: $(ls -t data/ml_trading_model_catboost_predictions_20d.csv 2>/dev/null | head -1)"
 echo "  - 综合买卖建议: $(ls -t data/comprehensive_recommendations_*.txt 2>/dev/null | head -1)"
 echo ""

@@ -4719,3 +4719,12 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - ⚠️ Arm A 未复现 D60 20d（1.18 vs 1.42）⇒ 非冻结实时输入跨日漂移；禁跨日互比，D62 只做同场相对比较
 - 未覆盖 5d/10d；未双跑（预注册声明）
 - 文档: DECISIONS D62 §七 / AGENTS 两条 flag 警告行补 D62
+
+2026-10-20 生产状态核查（rank 切换是否已生效）
+- 代码/模型: 5/10/20 pkl 均 label_mode=rank（本地 10-16 23:43）；两只 runner 均 export LABEL_MODE=rank；已 push 至 c67d6664
+- ⚠️ 港股日更实际未切成功: 最后一次成功 run = 10-16 13:23Z (7e250c52, 切换前)；10-19 15:46Z run (2a09a71a) 在 step5「Run comprehensive analysis script」失败（63 分钟后），因此「Commit prediction history」被跳过
+- 10-20 的 cron(08:30Z) 截至 09:18Z 尚未触发（GitHub schedule 延迟，前一日迟 7h）
+- A股 weekly 10-18 07:42Z 在 rank 下成功（d0a3ab56），但早于 6b5a26bc 展示层修复 ⇒ 该期报告把 score 当「置信度」显示
+- CI 日志需 admin 权限，无法读取失败堆栈 ⇒ 失败原因未确认；今日 91158296/6b5a26bc 修的正是周期/展示层，属最可能原因但未验证
+- 本地 prediction CSV 仍 09-27（本机不跑日更）；production pkl 在 .gitignore ⇒ CI 每次重训
+- 顺带修: 两只 runner 的步骤文案与产物清单残留 1d/5d/20d → 5d/10d/20d
