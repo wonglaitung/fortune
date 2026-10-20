@@ -96,7 +96,7 @@ python3 -m pytest tests/test_anomaly_integrator.py -v
 | **相对 alpha 专用校验** | `python3 scripts/rel_alpha_check.py --input <csv> --horizon 20` —— 重算 Relative_Return，**含 Fold 聚类显著性**（行级 z 是伪显著） | 本地校验工具（不改库；入库由 `commit_backtest_result.py` 负责） |
 | **恒指Walk-forward验证** | `python3 ml_services/hsi_walk_forward.py --train-window 12 --horizon 20` | - |
 | **模型训练** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection` | - |
-| **生产 CatBoost 20d** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **20d 信号默认学习器（D20 ⑦ 四格多数判：C1 夺魁，2026-10-10 切换）**；1d/5d 仍 CatBoost（D10）；LGBM pkl 降级为回退留档；⚠️ F1 与 HIBOR **均例外默认开且均配 FORCE**（D23/D22/D24，各自 env 独立回退）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列，**不是**「统计选择 Top500 保留」） |
+| **生产 CatBoost 20d** | `python3 ml_services/ml_trading_model.py --mode train --horizon 20 --model-type catboost --use-feature-selection`（F1/HIBOR 默认开，D23/D22） | **20d 信号默认学习器（D20 ⑦ 四格多数判：C1 夺魁，2026-10-10 切换）**；5d/10d 仍 CatBoost（D10；1d 已停用 D59）；LGBM pkl 降级为回退留档；⚠️ F1 与 HIBOR **均例外默认开且均配 FORCE**（D23/D22/D24，各自 env 独立回退）；FORCE 防慢变量被统计选择静默丢弃（着装检查 K4：判据=不得静默丢弃，验证=训练日志 FORCE 纳入行 + gain 榜含该列，**不是**「统计选择 Top500 保留」） |
 | **模型预测** | `python3 ml_services/ml_trading_model.py --mode predict --horizon 20 --model-type catboost --use-feature-selection` | - |
 | **特征选择** | `python3 ml_services/feature_selection.py --method statistical --top-k 300 --horizon 20` | - |
 | **超参数调优** | `python3 ml_services/hyperparameter_tuner.py --horizon 20 --n-iter 30` | - |
@@ -179,7 +179,7 @@ python hsi_email.py --no-email
 | **港股个股信号多为"2025 现象"** | 多策略复核收益集中于 2025 反弹年；跨年稳健性普遍不足，须逐年看 |
 | **IC 计算** | IC 必须用实际收益率，不能用二元标签；收益率计算必须与训练一致 |
 | **预测阈值** | 方向判断用 **0.5**，不是 0.65 |
-| **CatBoost 1天模型** | 噪音大，仅供参考 |
+| ~~CatBoost 1天模型~~ | ❌ **已停用（D59）**：周期改 5/10/20，1d 不再生产 |
 | **学习器不可全局替换** | LightGBM 并非全面更优：20d LGBM 赢、**5d CatBoost 更优**（lift/IR/PBO/DSR 六项全占优、2026 转负）、1d 两者净IR≤0 双停 → 换学习器必须按周期分别 A/B（D10） |
 | **深度学习模型** | LSTM/Transformer F1≈0，**不推荐** |
 | **加密货币策略** | 股票异常策略**不适用于**加密货币 |

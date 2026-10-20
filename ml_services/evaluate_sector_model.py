@@ -143,8 +143,8 @@ def main():
     parser = argparse.ArgumentParser(description='评估特定板块模型的买入胜率')
     parser.add_argument('--sector', type=str, required=True,
                        help='板块类型: bank, tech, semiconductor, ai, consumer, index, exchange 等')
-    parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
-                       help='预测周期: 1=次日, 5=一周, 20=一个月')
+    parser.add_argument('--horizon', type=int, default=20, choices=[5, 10, 20],
+                       help='预测周期: 5=一周, 10=两周, 20=一个月')
     parser.add_argument('--confidence-threshold', type=float, default=0.55,
                        help='置信度阈值')
 

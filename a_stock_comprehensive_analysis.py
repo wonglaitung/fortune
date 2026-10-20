@@ -802,7 +802,8 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
     historical_pl_data = load_historical_profit_loss_ratio_a_stock()
 
     # 概率校准（校准后 ≥0.5 才判方向，方向/模式/门槛同一口径，见 lessons 三.19）
-    calibrator = get_a_stock_calibrator()
+    # D26：rank 口径 probability=score（分位），不做校准、不拟合
+    calibrator = None if RANK_MODE else get_a_stock_calibrator()
 
     # 加载三个周期的模型
     for horizon in HORIZONS:
@@ -817,9 +818,13 @@ def generate_three_horizon_predictions(stock_list, stock_analyses=None):
             with open(model_path, 'rb') as f:
                 model_data = pickle.load(f)
             model.catboost_model = model_data['catboost_model']
+            model.model = model_data.get('model') or model_data['catboost_model']
             model.feature_columns = model_data['feature_columns']
             model.categorical_encoders = model_data.get('categorical_encoders', {})
             model.community_ids = model_data.get('community_ids', [0, 1, 2, 3, 4, 5, 6])
+            # D59/D26：必须恢复标签口径，否则 rank 回归器会被当分类器调 predict_proba
+            model.label_mode = model_data.get('label_mode', 'absolute')
+            model.learner = model_data.get('learner', 'catboost')
 
             print(f"  ✅ 加载 {horizon}d 模型")
 

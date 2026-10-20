@@ -1330,6 +1330,12 @@ D30 自己的带是 [0.77, 0.97]，实测 0.871 落在带内。** 两个带差�
 不在本条）；不因此调整买卖门槛数值（0.55/0.60 仍是业务规则，不是概率分布的补偿）。
 **回退**：本条为代码语义修正，回退 = 恢复旧 `apply_to_results`（git revert 即可，无数据迁移）。
 
+**D26 补充（rank 口径，2026-10-17，D59 后）**：生产已切 `label_mode=rank` ⇒ **`probability` 不再是 P(上涨)，而是横截面分位 `score` ∈[0,1]（无概率语义）**。
+- ⇒ `DailyConfidence` 在 rank 下**整类停用**（不拟合 P(上涨) 校准器、不写 confidence）：对分位做 Isotonic = 给它强加不存在的概率语义。实现：`DailyConfidence.__init__(label_mode=...)` 与 `apply_to_results` 均在 rank 时早退（`comprehensive_analysis.py` / `a_stock_comprehensive_analysis.py` 亦在 `RANK_MODE` 下跳过）。
+- ⇒ **`confidence` 在 rank 下不存在**（邮件/展示层不得显示「置信 x%」）；方向仍按 `score >= 0.5`（=中位数分位）。
+- ⇒ **HORIZONS 由 1/5/20 改 5/10/20**（唯一来源 `config.PREDICTION_HORIZONS`）。
+- ⇒ **A股综合分析的真实 bug 一并修**：其手工 `pickle.load` pkl 时未恢复 `label_mode`，会把 rank 的 `CatBoostRegressor` 当分类器调 `predict_proba`（已补 `model.label_mode/learner/model`）。
+
 ---
 
 ## D27（预登记 · **尚未运行**）：Q1 反向信号 —— 概率最低档的**收益**显著更高

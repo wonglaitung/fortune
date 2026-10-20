@@ -1027,15 +1027,16 @@ def get_stock_price_info(stock_code):
 data/
 ├── a_stock_cache/                    # 原始数据缓存（已清理）
 ├── a_stock_models/                   # CatBoost模型
-│   ├── trading_model_catboost_1d.pkl # 1天模型（1.78MB）
-│   ├── trading_model_catboost_5d.pkl # 5天模型（1.78MB）
-│   ├── trading_model_catboost_20d.pkl # 20天模型（1.78MB）
-│   ├── trading_model_catboost_1d_importance.csv   # 1天特征重要性
+│   ├── trading_model_catboost_5d.pkl  # 5天模型（rank 口径，CatBoostRegressor）
+│   ├── trading_model_catboost_10d.pkl # 10天模型
+│   ├── trading_model_catboost_20d.pkl # 20天模型
 │   ├── trading_model_catboost_5d_importance.csv   # 5天特征重要性
-│   ├── trading_model_catboost_20d_importance.csv  # 20天特征重要性（51特征）
-│   ├── ml_predictions_1d.csv         # 1天预测结果
-│   ├── ml_predictions_5d.csv         # 5天预测结果
-│   └── ml_predictions_20d.csv        # 20天预测结果
+│   ├── trading_model_catboost_10d_importance.csv  # 10天特征重要性
+│   ├── trading_model_catboost_20d_importance.csv  # 20天特征重要性
+│   ├── ml_predictions_5d.csv          # 5天预测结果
+│   ├── ml_predictions_10d.csv         # 10天预测结果
+│   └── ml_predictions_20d.csv         # 20天预测结果
+（⚠️ 1d 模型已随 D59 重写停用，旧 pkl 若仍在为历史遗留）
 ├── a_stock_network_features/         # 网络特征
 │   └── network_features_for_ml.json
 ├── a_stock_walk_forward/             # Walk-forward验证结果

@@ -30,9 +30,11 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from config import PREDICTION_HORIZONS
+
 HISTORY_FILE = 'data/prediction_history.json'
 CAL_DIR = 'data/calibrators'
-HORIZONS = [1, 5, 20]
+HORIZONS = list(PREDICTION_HORIZONS)   # D59：5/10/20（单一来源 config.PREDICTION_HORIZONS）
 MIN_SAMPLES = 200
 # D26 退化守卫：某周期 confidence（=P(方向判对)）在当日横截面上的极差 < 该值
 # ⇒ 校准器对今天所有股票给出同一个数（如 20d：p<0.741 全平台 0.4933），
@@ -44,7 +46,7 @@ A_STOCK_OOF_GLOB = 'output/*_a_stock_catboost_{h}d/prediction_analysis.csv'
 
 class DailyConfidence:
     def __init__(self, history_file=HISTORY_FILE, cal_prefix='', oof_glob=None,
-                 min_samples=MIN_SAMPLES, cal_dir=CAL_DIR):
+                 min_samples=MIN_SAMPLES, cal_dir=CAL_DIR, label_mode=None):
         """概率校准 + 置信度拟合。
 
         Args:
@@ -53,15 +55,22 @@ class DailyConfidence:
             oof_glob: 若提供则从 walk-forward OOF CSV 拟合（含 {h} 占位符），
                 优先于 history_file —— PIT 口径、样本足（决策点2：OOF 立即拟合）
             min_samples: 最小样本数（不足则不拟合，calibrate 透传原值）
+            label_mode: 'absolute'（默认，probability=P(上涨)）或 'rank'。
+                **D26 补充：rank 下 probability 是横截面分位（score），无概率语义**
+                ⇒ 不得拟合 P(上涨) 校准器；本类在 rank 下直接停用（返回 0 项改动）。
         """
         self.history_file = history_file
         self.cal_prefix = cal_prefix or ''
         self.oof_glob = oof_glob
         self.min_samples = min_samples
         self.cal_dir = cal_dir
+        self.label_mode = label_mode or os.environ.get('LABEL_MODE', 'absolute')
         self.prob_cal = {}
         self.conf_cal = {}
         self.meta = {}   # {horizon: {source, n, fitted_at, file}}
+        if self.label_mode == 'rank':
+            logger.info('rank 口径：probability=横截面分位（score），跳过概率/置信度校准')
+            return
         self._load_or_fit()
 
     # ---------- 拟合 ----------
@@ -190,6 +199,10 @@ class DailyConfidence:
         （横截面极差 < CONF_DEGENERATE_SPREAD），撤销该周期的 confidence 并告警。
         """
         changed = 0
+        if getattr(self, 'label_mode', 'absolute') == 'rank':
+            # D26 补充：rank 的 score 是横截面分位，不是 P(上涨)；
+            # 任何等距变换（Isotonic）都会给它强加不存在的概率语义 → 不改动。
+            return 0
         conf_by_h = {h: [] for h in HORIZONS}
         conf_locs = {h: [] for h in HORIZONS}
         for code, res in three_horizon_results.items():

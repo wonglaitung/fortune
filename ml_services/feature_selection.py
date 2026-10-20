@@ -628,7 +628,7 @@ def main():
     parser.add_argument('--top-k', type=int, default=500,
                        help='最终选择的特征数量 (默认: 500, 仅用于statistical和model方法)')
     parser.add_argument('--horizon', type=int, default=20,
-                       choices=[1, 5, 20],
+                       choices=[5, 10, 20],
                        help='预测周期 (默认: 20)')
     parser.add_argument('--output-dir', type=str, default='data/feature_selection',
                        help='输出目录 (默认: data/feature_selection)')

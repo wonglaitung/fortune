@@ -17,7 +17,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from config import STOCK_SECTOR_MAPPING
+from config import STOCK_SECTOR_MAPPING, PREDICTION_HORIZONS
+
+HORIZONS = list(PREDICTION_HORIZONS)  # D59：5/10/20（单一来源）
 
 # 双边交易成本（与 walk_forward TOTAL_COST 一致）
 COST = 0.005
@@ -418,7 +420,7 @@ def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetim
     out = {}
     for days, _ in time_windows:
         start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
-        for h in [1, 5, 20]:
+        for h in HORIZONS:
             preds = _filter_evaluated(history, start_str, end_str, horizon=h)
             boot = _block_bootstrap_ci(preds, n_boot=n_boot)
             if boot:
@@ -432,7 +434,7 @@ def _window_bootstrap_ci(history: Dict, time_windows=None, now: Optional[datetim
 
 def _per_horizon_ci(history: Dict, days: int, now: Optional[datetime] = None,
                     n_boot: int = 400) -> Dict:
-    """整体雷达：按周期 1/5/20 天、3个月窗口内全股票池算 bootstrap 95%CI。
+    """整体雷达：按周期 5/10/20 天、3个月窗口内全股票池算 bootstrap 95%CI。
 
     返回 {周期: {'direction_skill':(lo,hi), 'lift':(lo,hi)}}（原始小数）。
     """
@@ -441,7 +443,7 @@ def _per_horizon_ci(history: Dict, days: int, now: Optional[datetime] = None,
     end_str = now.strftime('%Y-%m-%d')
     start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
     out = {}
-    for h in [1, 5, 20]:
+    for h in HORIZONS:
         preds = _filter_evaluated(history, start_str, end_str, horizon=h)
         boot = _block_bootstrap_ci(preds, n_boot=n_boot)
         if boot:
@@ -801,7 +803,7 @@ def compute_window_horizon_metrics(history: Dict, time_windows: Optional[List] =
         start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
         preds = _filter_evaluated(history, start_str, end_str)
 
-        by_horizon = {1: [], 5: [], 20: []}
+        by_horizon = {h: [] for h in HORIZONS}
         for p in preds:
             h = p.get('horizon', 20)
             if h in by_horizon:
@@ -847,7 +849,7 @@ def collect_group_detail(history: Dict, group_key: str,
     end_str = now.strftime('%Y-%m-%d')
 
     rows = []
-    for h in [1, 5, 20]:
+    for h in HORIZONS:
         for days, window_name in time_windows:
             start_str = (now - timedelta(days=days)).strftime('%Y-%m-%d')
             preds = _filter_evaluated(history, start_str, end_str, horizon=h)
@@ -957,17 +959,17 @@ def calculate_three_horizon_pattern_stats(history: Dict, start_date: Optional[st
     pattern_stats = defaultdict(lambda: {'total': 0, 'correct': 0, 'returns': []})
 
     for key, horizons in grouped.items():
-        if 1 in horizons and 5 in horizons and 20 in horizons:
-            p1 = horizons[1]
-            p5 = horizons[5]
-            p20 = horizons[20]
+        if all(h in horizons for h in HORIZONS):
+            p_short = horizons[HORIZONS[0]]
+            p_mid = horizons[HORIZONS[1]]
+            p20 = horizons[HORIZONS[2]]
 
             # 只统计 20天已评估的
             if p20.get('outcome') is None:
                 continue
 
             # 编码模式：up=1, down=0
-            pattern = f"{'1' if p1.get('predicted_direction') == 'up' else '0'}{'1' if p5.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
+            pattern = f"{'1' if p_short.get('predicted_direction') == 'up' else '0'}{'1' if p_mid.get('predicted_direction') == 'up' else '0'}{'1' if p20.get('predicted_direction') == 'up' else '0'}"
 
             pattern_stats[pattern]['total'] += 1
             if p20.get('outcome') == 'correct':
@@ -1119,7 +1121,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     - Markdown 格式的报告
     """
     now = datetime.now()
-    horizon_names = {1: '1天', 5: '5天', 20: '20天'}
+    horizon_names = {h: f'{h}天' for h in HORIZONS}
     history = _hk_only(history)
 
     # 各时间窗口 × 各周期指标（与可视化报告共享 helper，单一真相源）
@@ -1144,7 +1146,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 """
 
     # 各周期各时间窗口性能表格（D3：lift/方向技能为主判定加粗，绝对准确率仅参考）
-    for h in [1, 5, 20]:
+    for h in HORIZONS:
         for days, window_name in TIME_WINDOWS:
             m = window_horizon_metrics.get(days, {}).get(h, {})
             if m and m.get('total_predictions', 0) > 0:
@@ -1168,7 +1170,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
 
     # 板块表现 - 收集所有数据后统一输出（复用共享 helper）
     all_sector_data = []
-    for h in [1, 5, 20]:
+    for h in HORIZONS:
         for days, window_name in TIME_WINDOWS:
             sector_metrics = compute_grouped_metrics(history, days, h, 'sector', now=now)
             for sector, metrics in sector_metrics.items():
@@ -1182,7 +1184,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 按板块、周期、时间窗口排序
     all_sector_data.sort(key=lambda x: (
         get_sector_name(x['sector']),  # 板块名称
-        x['horizon'],                   # 周期 (1, 5, 20)
+        x['horizon'],                   # 周期 (5, 10, 20)
         WINDOW_ORDER.get(x['window'], 99)  # 时间窗口
     ))
 
@@ -1223,7 +1225,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 按股票代码、周期、时间窗口排序
     all_stock_data.sort(key=lambda x: (
         x['stock'],                     # 股票代码
-        x['horizon'],                   # 周期 (1, 5, 20)
+        x['horizon'],                   # 周期 (5, 10, 20)
         WINDOW_ORDER.get(x['window'], 99)  # 时间窗口
     ))
 
@@ -1288,7 +1290,7 @@ def generate_monthly_report(history: Dict, month: Optional[str] = None) -> str:
     # 计算3个月窗口的总预测数（用于风险提示）
     total_3m_predictions = sum(
         detail_horizon_metrics.get(h, {}).get('total_predictions', 0)
-        for h in [1, 5, 20]
+        for h in HORIZONS
     )
 
     report += f"""
@@ -1413,7 +1415,7 @@ def generate_visual_html_report(history: Dict, plain_text: Optional[str] = None,
 
     # 六、风险提示
     total_3m = sum(
-        horizon_metrics_3m.get(h, {}).get('total_predictions', 0) for h in [1, 5, 20]
+        horizon_metrics_3m.get(h, {}).get('total_predictions', 0) for h in HORIZONS
     )
 
     # 额外 HTML（诚实监控摘要 / 护栏状态），插入风险提示之前
@@ -1638,7 +1640,7 @@ def main():
 
     # 解析 horizon 参数
     if args.horizon == 'all':
-        horizons = [1, 5, 20]
+        horizons = HORIZONS
     else:
         horizons = [int(args.horizon)]
 

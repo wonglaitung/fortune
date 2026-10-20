@@ -189,8 +189,8 @@ def main():
     parser = argparse.ArgumentParser(description='A股预测脚本')
     parser.add_argument('--stocks', type=str, default=None,
                        help='股票代码列表，逗号分隔，如 300440,002655')
-    parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
-                       help='预测周期: 1=次日, 5=一周, 20=一个月（默认）')
+    parser.add_argument('--horizon', type=int, default=20, choices=[5, 10, 20],
+                       help='预测周期: 5=一周, 10=两周, 20=一个月（默认）')
     parser.add_argument('--email', action='store_true',
                        help='发送邮件通知')
     parser.add_argument('--no-email', action='store_true',

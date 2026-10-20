@@ -43,8 +43,8 @@ def main():
     parser = argparse.ArgumentParser(description='训练特定板块的 CatBoost 模型')
     parser.add_argument('--sector', type=str, required=True,
                        help='板块类型: bank, tech, semiconductor, ai, consumer, index, exchange 等')
-    parser.add_argument('--horizon', type=int, default=20, choices=[1, 5, 20],
-                       help='预测周期: 1=次日, 5=一周, 20=一个月')
+    parser.add_argument('--horizon', type=int, default=20, choices=[5, 10, 20],
+                       help='预测周期: 5=一周, 10=两周, 20=一个月')
 
     args = parser.parse_args()
 

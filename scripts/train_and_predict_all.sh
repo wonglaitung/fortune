@@ -85,13 +85,13 @@ echo "=========================================="
 echo ""
 
 # 训练次日涨跌模型（预测1天后）
-echo "🌳 训练次日涨跌模型 (horizon=1)..."
-python3 ml_services/ml_trading_model.py --mode train --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
+echo "🌳 训练两周涨跌模型 (horizon=10)..."
+python3 ml_services/ml_trading_model.py --mode train --horizon 10 --model-type both --model-path data/ml_trading_model.pkl $TRAIN_PARAMS
 if [ $? -ne 0 ]; then
-    echo "❌ 训练次日涨跌模型失败"
+    echo "❌ 训练两周涨跌模型失败"
     exit 1
 fi
-echo "✅ 次日涨跌模型训练完成"
+echo "✅ 两周涨跌模型训练完成"
 echo ""
 
 # 训练一周涨跌模型（预测5天后）
@@ -120,13 +120,13 @@ echo "=========================================="
 echo ""
 
 # 预测次日涨跌（基于指定日期或今天的数据预测1天后）
-echo "📈 预测次日涨跌 (horizon=1)..."
-python3 ml_services/ml_trading_model.py --mode predict --horizon 1 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
+echo "📈 预测两周涨跌 (horizon=10)..."
+python3 ml_services/ml_trading_model.py --mode predict --horizon 10 --model-type both --model-path data/ml_trading_model.pkl $PREDICT_PARAMS
 if [ $? -ne 0 ]; then
-    echo "❌ 预测次日涨跌失败"
+    echo "❌ 预测两周涨跌失败"
     exit 1
 fi
-echo "✅ 次日涨跌预测完成"
+echo "✅ 两周涨跌预测完成"
 echo ""
 
 # 预测一周涨跌（基于指定日期或今天的数据预测5天后）
@@ -155,11 +155,11 @@ echo "=========================================="
 echo "📅 结束时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "📊 生成的文件:"
-echo "  - 模型文件: data/ml_trading_model_*_1d.pkl, *_5d.pkl, *_20d.pkl"
-echo "  - 特征重要性: data/ml_trading_model_*_1d_importance.csv, *_5d_importance.csv, *_20d_importance.csv"
-echo "  - 预测结果: data/ml_trading_model_*_1d_predictions_*.csv, *_5d_predictions_*.csv, *_20d_predictions_*.csv"
+echo "  - 模型文件: data/ml_trading_model_*_5d.pkl, *_10d.pkl, *_20d.pkl"
+echo "  - 特征重要性: data/ml_trading_model_*_5d_importance.csv, *_10d_importance.csv, *_20d_importance.csv"
+echo "  - 预测结果: data/ml_trading_model_*_5d_predictions_*.csv, *_10d_predictions_*.csv, *_20d_predictions_*.csv"
 echo "  - 模型对比: data/ml_trading_model_comparison.csv"
-echo "  - 预测结果文本: data/ml_predictions_1d_YYYY-MM-DD.txt, ml_predictions_5d_YYYY-MM-DD.txt, ml_predictions_20d_YYYY-MM-DD.txt"
+echo "  - 预测结果文本: data/ml_predictions_5d_YYYY-MM-DD.txt, ml_predictions_10d_YYYY-MM-DD.txt, ml_predictions_20d_YYYY-MM-DD.txt"
 echo "  - 可解释性报告: output/ml_trading_model_gbdt_20d_importance.csv, output/ml_trading_model_catboost_20d_importance.csv"
 echo "  - LR系数: output/lr_leaf_coefficients.csv"
 echo "  - ROC曲线: output/roc_curve.png"

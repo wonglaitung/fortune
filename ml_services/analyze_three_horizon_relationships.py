@@ -5,12 +5,15 @@
 
 集成新增特征：日历效应、GARCH波动率、市场状态检测
 
-分析1天、5天、20天三个预测周期之间的：
+分析5天、10天、20天三个预测周期之间的：
 1. 时间序列关系（先后顺序）
 2. 因果关系（一个周期预测如何影响其他周期）
 3. 规律模式（一致性、传导性、均值回归等）
 
 更新时间：2026-04-26
+
+⚠️ 口径：本脚本为**方向诊断**，标签用**绝对涨跌二分类**（Logloss），
+   不是生产 rank 模型（D59）。周期=5/10/20。
 """
 
 import warnings
@@ -130,7 +133,7 @@ def run_walkforward_predictions(df):
     """运行Walk-forward获取三周期预测"""
     print("\n🔬 运行Walk-forward预测...")
 
-    horizons = [1, 5, 20]
+    horizons = [5, 10, 20]
 
     # 基础特征 + 新增特征
     base_features = get_feature_list()
@@ -224,28 +227,28 @@ def analyze_and_save_results(all_predictions):
     print("\n📊 分析结果...")
 
     # 构建DataFrame
-    df_1d = pd.DataFrame(all_predictions[1])
     df_5d = pd.DataFrame(all_predictions[5])
+    df_10d = pd.DataFrame(all_predictions[10])
     df_20d = pd.DataFrame(all_predictions[20])
 
-    if len(df_1d) == 0 or len(df_5d) == 0 or len(df_20d) == 0:
+    if len(df_5d) == 0 or len(df_10d) == 0 or len(df_20d) == 0:
         print("❌ 数据不足，无法分析")
         return None
 
-    df_1d.set_index('date', inplace=True)
     df_5d.set_index('date', inplace=True)
+    df_10d.set_index('date', inplace=True)
     df_20d.set_index('date', inplace=True)
 
     # 对齐数据
-    common_dates = df_1d.index.intersection(df_5d.index).intersection(df_20d.index)
+    common_dates = df_5d.index.intersection(df_10d.index).intersection(df_20d.index)
     print(f"  共同样本数: {len(common_dates)}")
 
-    pred_1d = df_1d.loc[common_dates, 'prediction']
     pred_5d = df_5d.loc[common_dates, 'prediction']
+    pred_10d = df_10d.loc[common_dates, 'prediction']
     pred_20d = df_20d.loc[common_dates, 'prediction']
 
-    actual_1d = df_1d.loc[common_dates, 'actual_direction']
     actual_5d = df_5d.loc[common_dates, 'actual_direction']
+    actual_10d = df_10d.loc[common_dates, 'actual_direction']
     actual_20d = df_20d.loc[common_dates, 'actual_direction']
 
     # ========== 1. 独立准确率 ==========
@@ -254,12 +257,12 @@ def analyze_and_save_results(all_predictions):
         'model_type': 'enhanced (with calendar/GARCH/regime features)',
         'total_samples': len(common_dates),
         'independent_accuracy': {
-            '1d': {
-                'accuracy': float((pred_1d == actual_1d).mean()),
-                'samples': len(common_dates)
-            },
             '5d': {
                 'accuracy': float((pred_5d == actual_5d).mean()),
+                'samples': len(common_dates)
+            },
+            '10d': {
+                'accuracy': float((pred_10d == actual_10d).mean()),
                 'samples': len(common_dates)
             },
             '20d': {
@@ -270,26 +273,26 @@ def analyze_and_save_results(all_predictions):
     }
 
     # ========== 2. 因果分析 ==========
-    correct_1d = actual_1d == pred_1d
     correct_5d = actual_5d == pred_5d
+    correct_10d = actual_10d == pred_10d
 
     results['causal_analysis'] = {
-        '1d_correct_then_20d_accuracy': float((pred_20d[correct_1d] == actual_20d[correct_1d]).mean()) if correct_1d.sum() > 0 else 0,
-        '1d_wrong_then_20d_accuracy': float((pred_20d[~correct_1d] == actual_20d[~correct_1d]).mean()) if (~correct_1d).sum() > 0 else 0,
         '5d_correct_then_20d_accuracy': float((pred_20d[correct_5d] == actual_20d[correct_5d]).mean()) if correct_5d.sum() > 0 else 0,
-        '1d_5d_correct_then_20d_accuracy': float((pred_20d[correct_1d & correct_5d] == actual_20d[correct_1d & correct_5d]).mean()) if (correct_1d & correct_5d).sum() > 0 else 0,
+        '5d_wrong_then_20d_accuracy': float((pred_20d[~correct_5d] == actual_20d[~correct_5d]).mean()) if (~correct_5d).sum() > 0 else 0,
+        '10d_correct_then_20d_accuracy': float((pred_20d[correct_10d] == actual_20d[correct_10d]).mean()) if correct_10d.sum() > 0 else 0,
+        '5d_10d_correct_then_20d_accuracy': float((pred_20d[correct_5d & correct_10d] == actual_20d[correct_5d & correct_10d]).mean()) if (correct_5d & correct_10d).sum() > 0 else 0,
     }
 
     # ========== 3. 八大模式分析 ==========
     patterns = {
-        '111': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 1)),
-        '110': ((pred_1d == 1) & (pred_5d == 1) & (pred_20d == 0)),
-        '101': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 1)),
-        '100': ((pred_1d == 1) & (pred_5d == 0) & (pred_20d == 0)),
-        '011': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 1)),
-        '010': ((pred_1d == 0) & (pred_5d == 1) & (pred_20d == 0)),
-        '001': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 1)),
-        '000': ((pred_1d == 0) & (pred_5d == 0) & (pred_20d == 0)),
+        '111': ((pred_5d == 1) & (pred_10d == 1) & (pred_20d == 1)),
+        '110': ((pred_5d == 1) & (pred_10d == 1) & (pred_20d == 0)),
+        '101': ((pred_5d == 1) & (pred_10d == 0) & (pred_20d == 1)),
+        '100': ((pred_5d == 1) & (pred_10d == 0) & (pred_20d == 0)),
+        '011': ((pred_5d == 0) & (pred_10d == 1) & (pred_20d == 1)),
+        '010': ((pred_5d == 0) & (pred_10d == 1) & (pred_20d == 0)),
+        '001': ((pred_5d == 0) & (pred_10d == 0) & (pred_20d == 1)),
+        '000': ((pred_5d == 0) & (pred_10d == 0) & (pred_20d == 0)),
     }
 
     results['patterns'] = {}
@@ -300,8 +303,8 @@ def analyze_and_save_results(all_predictions):
                 'count': int(count),
                 'pct': float(count / len(common_dates) * 100),
                 '20d_accuracy': float((pred_20d[mask] == actual_20d[mask]).mean() * 100),
-                '1d_accuracy': float((pred_1d[mask] == actual_1d[mask]).mean() * 100),
                 '5d_accuracy': float((pred_5d[mask] == actual_5d[mask]).mean() * 100),
+                '10d_accuracy': float((pred_10d[mask] == actual_10d[mask]).mean() * 100),
             }
 
     # ========== 4. 一致信号分析 ==========
@@ -311,32 +314,32 @@ def analyze_and_save_results(all_predictions):
     results['consensus_analysis'] = {
         'bull': {
             'count': int(consensus_bull.sum()),
-            '1d_actual_up_rate': float(actual_1d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
             '5d_actual_up_rate': float(actual_5d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
+            '10d_actual_up_rate': float(actual_10d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
             '20d_actual_up_rate': float(actual_20d[consensus_bull].mean() * 100) if consensus_bull.sum() > 0 else 0,
         },
         'bear': {
             'count': int(consensus_bear.sum()),
-            '1d_actual_down_rate': float((1 - actual_1d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
             '5d_actual_down_rate': float((1 - actual_5d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
+            '10d_actual_down_rate': float((1 - actual_10d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
             '20d_actual_down_rate': float((1 - actual_20d[consensus_bear]).mean() * 100) if consensus_bear.sum() > 0 else 0,
         }
     }
 
     # ========== 5. 概率相关性 ==========
-    prob_1d = df_1d.loc[common_dates, 'probability']
     prob_5d = df_5d.loc[common_dates, 'probability']
+    prob_10d = df_10d.loc[common_dates, 'probability']
     prob_20d = df_20d.loc[common_dates, 'probability']
 
     results['probability_correlation'] = {
-        '1d_vs_5d': float(prob_1d.corr(prob_5d)),
-        '1d_vs_20d': float(prob_1d.corr(prob_20d)),
+        '5d_vs_10d': float(prob_5d.corr(prob_10d)),
         '5d_vs_20d': float(prob_5d.corr(prob_20d)),
+        '10d_vs_20d': float(prob_10d.corr(prob_20d)),
     }
 
     # ========== 6. 序列分析 ==========
-    all_correct = (pred_1d == actual_1d) & (pred_5d == actual_5d) & (pred_20d == actual_20d)
-    at_least_one = (pred_1d == actual_1d) | (pred_5d == actual_5d) | (pred_20d == actual_20d)
+    all_correct = (pred_5d == actual_5d) & (pred_10d == actual_10d) & (pred_20d == actual_20d)
+    at_least_one = (pred_5d == actual_5d) | (pred_10d == actual_10d) | (pred_20d == actual_20d)
 
     results['sequence_analysis'] = {
         'all_correct_count': int(all_correct.sum()),
@@ -364,15 +367,15 @@ def print_summary(results):
 
     # 独立准确率
     print("\n【独立准确率】")
-    for h in ['1d', '5d', '20d']:
+    for h in ['5d', '10d', '20d']:
         acc = results['independent_accuracy'][h]['accuracy'] * 100
         print(f"  {h}: {acc:.2f}%")
 
     # 因果分析
     print("\n【因果分析】")
-    print(f"  1天正确 → 20天准确率: {results['causal_analysis']['1d_correct_then_20d_accuracy']*100:.2f}%")
-    print(f"  1天错误 → 20天准确率: {results['causal_analysis']['1d_wrong_then_20d_accuracy']*100:.2f}%")
-    print(f"  1+5天正确 → 20天准确率: {results['causal_analysis']['1d_5d_correct_then_20d_accuracy']*100:.2f}%")
+    print(f"  5天正确 → 20天准确率: {results['causal_analysis']['5d_correct_then_20d_accuracy']*100:.2f}%")
+    print(f"  5天错误 → 20天准确率: {results['causal_analysis']['5d_wrong_then_20d_accuracy']*100:.2f}%")
+    print(f"  1+10天正确 → 20天准确率: {results['causal_analysis']['5d_10d_correct_then_20d_accuracy']*100:.2f}%")
 
     # 八大模式
     print("\n【八大模式（按20天准确率排序）】")

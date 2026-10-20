@@ -24,6 +24,9 @@
 
   # 全量验证
   python3 ml_services/stock_three_horizon.py --all --model full
+
+⚠️ 口径：本脚本为**方向诊断**，标签用**绝对涨跌二分类**（Logloss），
+   不是生产 rank 模型（D59）。周期=5/10/20。
 """
 
 import warnings
@@ -117,6 +120,18 @@ def get_full_catboost_params(horizon):
             'depth': 4,
             'l2_leaf_reg': 3,
             'subsample': 0.7,
+            'random_seed': RANDOM_SEED,
+            'loss_function': 'Logloss',
+            'auto_class_weights': 'Balanced',
+            'verbose': 0
+        }
+    elif horizon == 10:
+        return {
+            'iterations': 100,
+            'learning_rate': 0.15,
+            'depth': 4,
+            'l2_leaf_reg': 3,
+            'subsample': 0.75,
             'random_seed': RANDOM_SEED,
             'loss_function': 'Logloss',
             'auto_class_weights': 'Balanced',
@@ -342,7 +357,7 @@ class StockThreeHorizonAnalyzer:
             print(f"  ⚠️ 获取 {stock_code} 数据失败: {e}")
             return None
 
-    def run_walkforward(self, df, stock_code, horizons=[1, 5, 20]):
+    def run_walkforward(self, df, stock_code, horizons=[5, 10, 20]):
         """
         Walk-forward 验证
 
@@ -476,31 +491,31 @@ class StockThreeHorizonAnalyzer:
         返回:
         - dict: 模式分析结果
         """
-        if not predictions or not predictions.get(1) or not predictions.get(5) or not predictions.get(20):
+        if not predictions or not predictions.get(5) or not predictions.get(10) or not predictions.get(20):
             return None
 
         # 构建 DataFrame
-        df_1d = pd.DataFrame(predictions[1])
         df_5d = pd.DataFrame(predictions[5])
+        df_10d = pd.DataFrame(predictions[10])
         df_20d = pd.DataFrame(predictions[20])
 
-        if len(df_1d) < 50 or len(df_5d) < 50 or len(df_20d) < 50:
+        if len(df_5d) < 50 or len(df_10d) < 50 or len(df_20d) < 50:
             return None
 
-        df_1d.set_index('date', inplace=True)
         df_5d.set_index('date', inplace=True)
+        df_10d.set_index('date', inplace=True)
         df_20d.set_index('date', inplace=True)
 
         # 合并数据
         merged = pd.DataFrame({
-            'pred_1d': df_1d['prediction'],
-            'prob_1d': df_1d['probability'],
-            'actual_1d': df_1d['actual_direction'],
-            'return_1d': df_1d['actual_return'],
             'pred_5d': df_5d['prediction'],
             'prob_5d': df_5d['probability'],
             'actual_5d': df_5d['actual_direction'],
-            'return_5d': df_5d['actual_return'],
+            'return_1d': df_5d['actual_return'],
+            'pred_10d': df_10d['prediction'],
+            'prob_10d': df_10d['probability'],
+            'actual_10d': df_10d['actual_direction'],
+            'return_5d': df_10d['actual_return'],
             'pred_20d': df_20d['prediction'],
             'prob_20d': df_20d['probability'],
             'actual_20d': df_20d['actual_direction'],
@@ -521,7 +536,7 @@ class StockThreeHorizonAnalyzer:
         }
 
         # 1. 各周期独立准确率
-        for horizon, col_prefix in [(1, '1d'), (5, '5d'), (20, '20d')]:
+        for horizon, col_prefix in [(1, '5d'), (5, '10d'), (20, '20d')]:
             actual_col = f'actual_{col_prefix}'
             pred_col = f'pred_{col_prefix}'
             results['horizon_accuracy'][horizon] = {
@@ -530,8 +545,8 @@ class StockThreeHorizonAnalyzer:
             }
 
         # 2. 八大模式分析
-        merged['pattern'] = merged['pred_1d'].astype(str) + '-' + \
-                            merged['pred_5d'].astype(str) + '-' + \
+        merged['pattern'] = merged['pred_5d'].astype(str) + '-' + \
+                            merged['pred_10d'].astype(str) + '-' + \
                             merged['pred_20d'].astype(str)
 
         pattern_names = {
@@ -558,13 +573,6 @@ class StockThreeHorizonAnalyzer:
                 }
 
         # 3. 传导效应分析
-        correct_1d = merged[merged['pred_1d'] == merged['actual_1d']]
-        if len(correct_1d) >= 5:
-            results['transmission_effect']['1d_correct_to_20d'] = {
-                'accuracy': (correct_1d['pred_20d'] == correct_1d['actual_20d']).mean(),
-                'sample_count': len(correct_1d)
-            }
-
         correct_5d = merged[merged['pred_5d'] == merged['actual_5d']]
         if len(correct_5d) >= 5:
             results['transmission_effect']['5d_correct_to_20d'] = {
@@ -572,8 +580,15 @@ class StockThreeHorizonAnalyzer:
                 'sample_count': len(correct_5d)
             }
 
-        correct_both = merged[(merged['pred_1d'] == merged['actual_1d']) &
-                              (merged['pred_5d'] == merged['actual_5d'])]
+        correct_10d = merged[merged['pred_10d'] == merged['actual_10d']]
+        if len(correct_10d) >= 5:
+            results['transmission_effect']['10d_correct_to_20d'] = {
+                'accuracy': (correct_10d['pred_20d'] == correct_10d['actual_20d']).mean(),
+                'sample_count': len(correct_10d)
+            }
+
+        correct_both = merged[(merged['pred_5d'] == merged['actual_5d']) &
+                              (merged['pred_10d'] == merged['actual_10d'])]
         if len(correct_both) >= 5:
             results['transmission_effect']['both_correct_to_20d'] = {
                 'accuracy': (correct_both['pred_20d'] == correct_both['actual_20d']).mean(),
@@ -684,28 +699,28 @@ class StockThreeHorizonAnalyzer:
         print(f"{'='*80}")
 
         # 汇总准确率
-        all_1d = []
         all_5d = []
+        all_10d = []
         all_20d = []
 
         for stock_code, result in self.results.items():
             if result.get('horizon_accuracy'):
                 if 1 in result['horizon_accuracy']:
-                    all_1d.append(result['horizon_accuracy'][1]['accuracy'])
-                if 5 in result['horizon_accuracy']:
                     all_5d.append(result['horizon_accuracy'][5]['accuracy'])
+                if 5 in result['horizon_accuracy']:
+                    all_10d.append(result['horizon_accuracy'][10]['accuracy'])
                 if 20 in result['horizon_accuracy']:
                     all_20d.append(result['horizon_accuracy'][20]['accuracy'])
 
         print(f"\n📈 各周期平均准确率:")
-        print(f"  1天: {np.mean(all_1d):.2%} (范围: {np.min(all_1d):.2%} ~ {np.max(all_1d):.2%})")
         print(f"  5天: {np.mean(all_5d):.2%} (范围: {np.min(all_5d):.2%} ~ {np.max(all_5d):.2%})")
+        print(f"  10天: {np.mean(all_10d):.2%} (范围: {np.min(all_10d):.2%} ~ {np.max(all_10d):.2%})")
         print(f"  20天: {np.mean(all_20d):.2%} (范围: {np.min(all_20d):.2%} ~ {np.max(all_20d):.2%})")
 
         # 与恒指对比
         print(f"\n📊 与恒生指数对比:")
         hsi_benchmark = {1: 0.5131, 5: 0.5717, 20: 0.8073}
-        for h, avg in [(1, np.mean(all_1d)), (5, np.mean(all_5d)), (20, np.mean(all_20d))]:
+        for h, avg in [(1, np.mean(all_5d)), (5, np.mean(all_10d)), (20, np.mean(all_20d))]:
             diff = avg - hsi_benchmark[h]
             print(f"  {h}天: 个股 {avg:.2%} vs 恒指 {hsi_benchmark[h]:.2%} ({'+' if diff > 0 else ''}{diff:.2%})")
 
@@ -745,39 +760,39 @@ class StockThreeHorizonAnalyzer:
                 print(f"{pattern_names.get(pattern, pattern):<12} {data['count']:>8} {accuracy:>10.2%} {avg_return:>10.2%}")
 
         # 传导效应汇总
-        transmission_1d = []
         transmission_5d = []
+        transmission_10d = []
         transmission_both = []
 
         for stock_code, result in self.results.items():
             if result.get('transmission_effect'):
-                if '1d_correct_to_20d' in result['transmission_effect']:
-                    transmission_1d.append(result['transmission_effect']['1d_correct_to_20d']['accuracy'])
                 if '5d_correct_to_20d' in result['transmission_effect']:
                     transmission_5d.append(result['transmission_effect']['5d_correct_to_20d']['accuracy'])
+                if '10d_correct_to_20d' in result['transmission_effect']:
+                    transmission_10d.append(result['transmission_effect']['10d_correct_to_20d']['accuracy'])
                 if 'both_correct_to_20d' in result['transmission_effect']:
                     transmission_both.append(result['transmission_effect']['both_correct_to_20d']['accuracy'])
 
         print(f"\n🔗 传导效应汇总:")
-        if transmission_1d:
-            print(f"  1天正确→20天: {np.mean(transmission_1d):.2%}")
         if transmission_5d:
             print(f"  5天正确→20天: {np.mean(transmission_5d):.2%}")
+        if transmission_10d:
+            print(f"  10天正确→20天: {np.mean(transmission_10d):.2%}")
         if transmission_both:
-            print(f"  1+5天正确→20天: {np.mean(transmission_both):.2%} ⭐")
+            print(f"  1+10天正确→20天: {np.mean(transmission_both):.2%} ⭐")
 
         # 关键发现
         print(f"\n💡 关键发现:")
 
         # 发现1：过滤律验证
-        if np.mean(all_20d) > np.mean(all_1d):
-            print(f"  ✅ 过滤律成立: 20天准确率({np.mean(all_20d):.2%}) > 1天({np.mean(all_1d):.2%})")
+        if np.mean(all_20d) > np.mean(all_5d):
+            print(f"  ✅ 过滤律成立: 20天准确率({np.mean(all_20d):.2%}) > 5天({np.mean(all_5d):.2%})")
         else:
-            print(f"  ⚠️ 过滤律不成立: 20天准确率({np.mean(all_20d):.2%}) <= 1天({np.mean(all_1d):.2%})")
+            print(f"  ⚠️ 过滤律不成立: 20天准确率({np.mean(all_20d):.2%}) <= 5天({np.mean(all_5d):.2%})")
 
         # 发现2：传导律验证
         if transmission_both and np.mean(transmission_both) > np.mean(all_20d):
-            print(f"  ✅ 传导律成立: 1+5天正确后20天准确率({np.mean(transmission_both):.2%}) > 独立20天({np.mean(all_20d):.2%})")
+            print(f"  ✅ 传导律成立: 1+10天正确后20天准确率({np.mean(transmission_both):.2%}) > 独立20天({np.mean(all_20d):.2%})")
 
         # 发现3：震荡回调模式（110）
         if '1-1-0' in pattern_summary and pattern_summary['1-1-0']['count'] > 0:
@@ -796,8 +811,8 @@ class StockThreeHorizonAnalyzer:
             'model_type': self.model_type,
             'stock_count': len(self.results),
             'summary': {
-                'avg_accuracy_1d': float(np.mean(all_1d)),
                 'avg_accuracy_5d': float(np.mean(all_5d)),
+                'avg_accuracy_10d': float(np.mean(all_10d)),
                 'avg_accuracy_20d': float(np.mean(all_20d)),
                 'hsi_benchmark': hsi_benchmark,
             },

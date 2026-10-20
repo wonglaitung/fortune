@@ -457,7 +457,7 @@ def main():
                        default='data/ml_trading_model_lightgbm_20d.pkl',
                        help='模型文件路径')
     parser.add_argument('--horizon', type=int, default=20,
-                       choices=[1, 5, 20],
+                       choices=[5, 10, 20],
                        help='预测周期')
     parser.add_argument('--top_k', type=int, default=50,
                        help='显示前 k 个特征')

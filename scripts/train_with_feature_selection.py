@@ -390,7 +390,7 @@ def main():
                        choices=['lightgbm', 'gbdt', 'catboost'],
                        help='模型类型')
     parser.add_argument('--horizon', type=int, default=5,
-                       choices=[1, 5, 20],
+                       choices=[5, 10, 20],
                        help='预测周期')
     parser.add_argument('--num_stocks', type=int, default=10,
                        help='训练股票数量')

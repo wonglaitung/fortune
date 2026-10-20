@@ -969,8 +969,8 @@ def main():
 
     # 模型参数
     parser.add_argument('--horizon', type=int, default=20,
-                       choices=[1, 5, 20],
-                       help='预测周期: 1=次日, 5=一周, 20=一个月（默认）')
+                       choices=[5, 10, 20],
+                       help='预测周期: 5=一周, 10=两周, 20=一个月（默认）')
     parser.add_argument('--confidence-threshold', type=float, default=0.50,
                        help='置信度阈值（默认: 0.50）')
     parser.add_argument('--learner', type=str, default='catboost',

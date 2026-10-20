@@ -538,7 +538,7 @@ def main():
     parser.add_argument('--n-iter', type=int, default=30,
                         help='迭代次数 (默认: 30)')
     parser.add_argument('--horizon', type=int, default=20,
-                        choices=[1, 5, 20],
+                        choices=[5, 10, 20],
                         help='预测周期 (默认: 20)')
     parser.add_argument('--quick', action='store_true',
                         help='快速模式（更少股票和fold）')

@@ -4672,3 +4672,17 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 结果: 5d 净IR0.73/超额-0.24/DSR0.700 ✗; 10d 0.72/-0.49/0.989 三门槛过但超额<0 ✗; 20d 1.42/1.03[-0.05,2.28]/DSR0.917 ✗
 - 判定: 三周期均不得升配 ⇒ D2 结论不变(20d 🟡 ≤5%, 1d 🔴 停用); rank 重写未带来可部署超额
 - 文档: DECISIONS D61 / DEPLOYMENT T2 三处更新(现行为 rank 口径, 旧 LGBM 0.16 归历史对照) / BASELINES 已有生产 rank 基线节
+
+2026-10-20 残留清理: 1/5/20 → 5/10/20 全库统一 + D26 rank 条款
+- 单一来源: config.PREDICTION_HORIZONS=(5,10,20); daily_confidence/performance_monitor 引用之
+- a_stock_comprehensive_analysis.py 真 bug 修复: 手工 pickle 载入 A 股 rank pkl 未恢复 label_mode/learner/model ⇒ 会把 CatBoostRegressor 当分类器调 predict_proba; 已补; 且 RANK_MODE 下 calibrator=None
+- daily_confidence: __init__(label_mode) + apply_to_results rank 早退(分位不做 Isotonic); 用 getattr 兼容 __new__ 测试夹具
+- CLI choices [1,5,20]→[5,10,20]: a_stock_prediction/a_stock_walk_forward/hyperparameter_tuner/feature_selection/train_sector_model/evaluate_sector_model/feature_evaluation/train_with_feature_selection
+- performance_monitor: HORIZONS 常量替换全部 [1,5,20]; 三周期模式统计硬编码 1/5/20 → HORIZONS[0/1/2]; horizon_names/by_horizon 由 HORIZONS 生成
+- performance_charts: HORIZON_COLORS/NAMES/HORIZONS → 5/10/20
+- 4 诊断脚本(analyze_*causal*/three_horizon_relationships/stock_three_horizon) 重写为 5/10/20(保护特征名 Return_1d/5d、interval="1d"; 增 10d catboost 参数分支; docstring 注「方向诊断≠生产 rank」); train_and_predict_all.sh 1d→10d
+- 有意保留(特征/数据周期, 非预测周期): ml_trading_model.py sector features [1,5,20]、stock_network_analysis.py export_pit_sector_features、hk_sector_analysis.py --period、risk_horizon_signals.py(风险研究)、prob_autocorr.py(lag)
+- tests: test_calibrated_direction / test_performance_report 键与索引 1/5/20→5/10/20
+- 文档: DECISIONS D26 补 rank 条款 / DEPLOYMENT 禁用清单+前置条件 / A_STOCK_DESIGN 数据目录树 / AGENTS+README 1d 模型标识停用
+- 验收: pytest 335 passed; doc_gate L1-L6 ✅
+- ⚠️ 诚实定性: 全部为口径/架构统一, alpha 仍 null, 不产生可部署超额

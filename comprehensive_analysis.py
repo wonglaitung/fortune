@@ -517,8 +517,9 @@ def _format_hcell(pred, rank_mode):
 def rebuild_three_horizon_patterns(three_horizon_results):
     """概率校准后重算三周期模式/交易建议/胜率（与校准方向同口径）。
 
-    DailyConfidence.apply_to_results 会按校准概率重判 1/5/20d 方向，
+    DailyConfidence.apply_to_results 会按校准概率重判 5/10/20d 方向（absolute 口径），
     模式(pattern)必须随之重算，否则模式列(如111)与概率列(如0.49/0.43)矛盾。
+    rank 口径（D59/D26）：无校准、方向按 score≥0.5 ⇒ 无需重算。
     """
     rebuilt = 0
     for res in (three_horizon_results or {}).values():
@@ -6104,7 +6105,7 @@ def run_comprehensive_analysis(llm_filepath, ml_filepath, output_filepath=None,
 - 主题建模：LDA主题建模（10个主题）
 - 主题情感交互：10个主题 × 5个情感指标 = 50个交互特征
 - 预期差距：新闻情感相对于市场预期的差距（5个特征）
-- 模型策略：单学习器（训练与预测同源，1/5/20天各一个模型）
+- 模型策略：单学习器（训练与预测同源，5/10/20天各一个模型；D59 起 rank 口径）
 - 置信度评估：高（>0.60）、中（0.50-0.60）、低（≤0.50）；`(置信xx)` = P(模型方向判对)
 
 """

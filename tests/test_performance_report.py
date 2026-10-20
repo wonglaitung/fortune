@@ -41,9 +41,9 @@ def _three_horizon_history():
     """两条三周期齐全的记录（111 模式）+ 一条未到期记录。"""
     preds = []
     for d in ['2026-09-01', '2026-09-05']:
-        for h in (1, 5, 20):
+        for h in (5, 10, 20):
             preds.append(_pred(data_date=d, horizon=h, predicted_direction='up'))
-    preds.append(_pred(data_date='2026-09-25', horizon=1, outcome=None))
+    preds.append(_pred(data_date='2026-09-25', horizon=5, outcome=None))
     return {'predictions': preds}
 
 
@@ -200,7 +200,7 @@ def test_cross_sectional_ic():
 def test_pattern_ranked_by_avg_return_not_win_rate():
     """模式排名按平均收益（D3 禁绝对胜率排名）：收益高的 111 排第一。"""
     preds = []
-    for h in (1, 5, 20):
+    for h in (5, 10, 20):
         preds.append(_pred(data_date='2026-09-01', horizon=h,
                            predicted_direction='up', outcome='correct',
                            actual_return=0.03))     # 111 模式，收益高
@@ -222,13 +222,13 @@ def test_honest_summary_has_ci_and_ic_lines():
 
 
 def _multi_horizon_history(n_days=90, n_stocks=6, start='2026-07-01'):
-    """按日分块、每块含 1/5/20 三个周期的历史（供窗口×周期 CI 测试）。"""
+    """按日分块、每块含 5/10/20 三个周期的历史（供窗口×周期 CI 测试）。"""
     from datetime import datetime, timedelta
     base = datetime.strptime(start, '%Y-%m-%d')
     preds = []
     for i in range(n_days):
         d = (base + timedelta(days=i)).strftime('%Y-%m-%d')
-        for h in (1, 5, 20):
+        for h in (5, 10, 20):
             for s in range(n_stocks):
                 ret = 0.02 if (i + s) % 3 else -0.01
                 preds.append(_pred(
@@ -278,10 +278,10 @@ def test_guardrail_html_summary_renders(monkeypatch, tmp_path):
 
 
 def test_per_horizon_ci_3_horizons():
-    """整体雷达：1/5/20 三个周期均应产出 bootstrap CI。"""
+    """整体雷达：5/10/20 三个周期均应产出 bootstrap CI。"""
     from ml_services.performance_monitor import _per_horizon_ci
     ci = _per_horizon_ci(_multi_horizon_history(), 90, now=_ANCHOR)
-    assert set(ci.keys()) == {1, 5, 20}
+    assert set(ci.keys()) == {5, 10, 20}
     for h, v in ci.items():
         assert 'direction_skill' in v and 'lift' in v
         assert v['direction_skill'][0] <= v['direction_skill'][1]
