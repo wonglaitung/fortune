@@ -4728,3 +4728,11 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - CI 日志需 admin 权限，无法读取失败堆栈 ⇒ 失败原因未确认；今日 91158296/6b5a26bc 修的正是周期/展示层，属最可能原因但未验证
 - 本地 prediction CSV 仍 09-27（本机不跑日更）；production pkl 在 .gitignore ⇒ CI 每次重训
 - 顺带修: 两只 runner 的步骤文案与产物清单残留 1d/5d/20d → 5d/10d/20d
+
+2026-10-20 港股日更失败根因确认 + 密钥轮换（CI 日志）
+- 根因: LLM 调用 HTTP 401 `code=api_key_expired`（hsi_email.py 步骤4 / comprehensive_analysis 步骤5 同因）
+  ⇒ 与 rank 切换无关：同一次 run 内 5d/10d/20d 训练、三周期预测、32 只读入、「rank 跳过概率校准」全部成功
+- 代码侧已具备 opencode zen 所需 `x-opencode-session` 头（863e95a5），换 key 即可，无需改代码
+- 已轮换 GitHub secrets: QWEN_API_KEY / QWEN_CHAT_URL / QWEN_CHAT_MODEL（值不入库）
+- 18:28 手动 dispatch 的 run 已按用户要求 cancel；密钥有效性另行本地实测通过（qwen_engine 返回正常）
+- 待办: 下次调度/手动 dispatch 验证端到端转绿后再恢复日更结论
