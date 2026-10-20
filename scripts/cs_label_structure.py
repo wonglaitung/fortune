@@ -43,11 +43,9 @@ def load_hk_close():
     from config import TRAINING_STOCKS, STOCK_SECTOR_MAPPING
     codes = [c.replace('.HK', '') for c in TRAINING_STOCKS]
     latest = {}
-    for f in glob.glob(os.path.join(ROOT, 'data', 'feature_cache', '*_shift.pkl')):
-        b = os.path.basename(f)
-        code, date = b.split('_')[0], b.split('_')[1]
-        if code not in latest or date > latest[code][0]:
-            latest[code] = (date, f)
+    from ml_services.feature_cache_utils import latest_feature_cache_files
+    _files = latest_feature_cache_files(os.path.join(ROOT, 'data', 'feature_cache'))
+    latest = {c: (os.path.basename(p).split('_')[1], p) for c, p in _files.items()}
     closes, sector, dropped = {}, {}, []
     for code in codes:
         if code not in latest:

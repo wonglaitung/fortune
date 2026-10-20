@@ -27,6 +27,8 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ml_services.feature_cache_utils import latest_feature_cache_files
+
 COST = 0.005            # 双边成本（与 walk_forward TOTAL_COST 一致）
 PT = 1.0                # 上障碍倍数（× 波动率）
 SL = 1.0                # 下障碍倍数
@@ -45,13 +47,8 @@ META_COLS = [
 # ----------------------------- 数据加载 -----------------------------
 
 def _latest_cache_map(cache_dir='data/feature_cache'):
-    """{code: 最新 _shift.pkl 路径}"""
-    m = {}
-    for p in glob.glob(os.path.join(cache_dir, '*_shift.pkl')):
-        code = os.path.basename(p).split('_')[0]
-        if code not in m or p > m[code]:
-            m[code] = p
-    return m
+    """{code: 最新缓存文件路径}（兼容新旧命名，见 feature_cache_utils）。"""
+    return latest_feature_cache_files(cache_dir)
 
 
 def load_prices_and_features(codes, cache_dir='data/feature_cache'):

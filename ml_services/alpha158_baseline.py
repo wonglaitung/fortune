@@ -26,6 +26,8 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ml_services.feature_cache_utils import latest_feature_cache_files
+
 CACHE_DIR = 'data/feature_cache'
 TEST_START = '2021-10-01'
 TEST_END = '2026-08-01'
@@ -123,11 +125,7 @@ def alpha_factors(d):
 
 
 def load_ohlcv():
-    files = {}
-    for p in glob.glob(os.path.join(CACHE_DIR, '*_shift.pkl')):
-        code = os.path.basename(p).split('_')[0]
-        if code not in files or p > files[code]:
-            files[code] = p
+    files = latest_feature_cache_files(CACHE_DIR)
     out = {}
     for code, p in files.items():
         try:

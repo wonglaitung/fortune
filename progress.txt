@@ -4703,3 +4703,8 @@ PBO 差异为主判据的预注册须先给矩阵分辨率。MIP 编号修复：
 - 结论不变: 真信号但强依赖行情, 仅大盘上行期战术; 5d 旧值 1.55 为 _shift 时点, 非数据修订
 - 文档: DECISIONS §十八 补结果 / BASELINES 新增异常基线节 / AGENTS+  DEPLOYMENT T1 数字更新
 - ⚠️ 同类失配待修(未改, 记录): rank_model/alpha158_baseline/meta_labeling_prototype/common_feature_ic/abs_price_feature_audit/cs_label_structure 仍 glob '*_shift.pkl'
+2026-10-20 缓存失配集中修复: 新增 ml_services/feature_cache_utils.py
+- 单一入口 latest_feature_cache_files() 兼容 旧 *_shift.pkl + 新 *_tclose_*/*_tminus1_*(按 mtime 取每股最新)
+- 接入: anomaly_dip_backtest / rank_model / meta_labeling_prototype / alpha158_baseline /
+  scripts/common_feature_ic / abs_price_feature_audit / cs_label_structure
+- 动机: O4/D27 缓存键重构后这些脚本 glob('*_shift.pkl') 静默取空集(异常检测已实证); 修后 116 股可取

@@ -27,6 +27,8 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from ml_services.feature_cache_utils import latest_feature_cache_files
+
 FEAT_FILE = 'data/feature_selection/statistical_features_latest.txt'
 CACHE_DIR = 'data/feature_cache'
 TEST_START = '2023-06-01'
@@ -43,11 +45,7 @@ def load_features():
 
 def load_panel(horizon, feats):
     """拼接 panel：index=(date,code)，columns=特征 + fwd_ret"""
-    files = {}
-    for p in glob.glob(os.path.join(CACHE_DIR, '*_shift.pkl')):
-        code = os.path.basename(p).split('_')[0]
-        if code not in files or p > files[code]:
-            files[code] = p
+    files = latest_feature_cache_files(CACHE_DIR)
     frames = []
     for code, p in files.items():
         try:
