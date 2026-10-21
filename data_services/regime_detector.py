@@ -29,6 +29,7 @@ import warnings
 import pickle
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,7 +51,7 @@ class RegimeDetector:
         2: '高波动（偏弱）',      # 高波动、收益略负（**非**"大跌"；D57）
     }
 
-    def __init__(self, n_states=3, lookback=252, market=None):
+    def __init__(self, n_states=3, lookback=252, market=None, ttl_days=None):
         """
         参数:
         - n_states: 隐状态数量
@@ -58,12 +59,19 @@ class RegimeDetector:
         - market: 市场标签（如 'csi1000' / 'hsi'）。**必须传入**——
           此前港股与 A 股共用同一 hmm_regime_model.pkl，互相覆盖且无 TTL，
           属跨市场污染（2026-10-03 普查发现）。
+        - ttl_days: 缓存模型的最长有效期（日历天），超过则在**预测路径**重训。
+          默认取环境变量 `REGIME_TTL_DAYS`，缺省 60。
+          ⚠️ **回测路径（use_shift=True）永不重训**——否则中途换参数会破坏复现。
         """
         self.n_states = n_states
         self.lookback = lookback
         self.market = market
         self.model = None
         self._state_mapping = None  # 原始状态到语义状态的映射
+        if ttl_days is None:
+            ttl_days = int(os.environ.get('REGIME_TTL_DAYS', '60'))
+        self.ttl_days = int(ttl_days)
+        self._trained_at = None     # 缓存模型的写入时间（naive UTC ISO 字符串）
 
     @property
     def _model_file(self):
@@ -160,10 +168,13 @@ class RegimeDetector:
 
         # 缓存模型
         os.makedirs(CACHE_DIR, exist_ok=True)
+        self._trained_at = datetime.utcnow().replace(tzinfo=None).isoformat(timespec='seconds')
         with open(self._model_file, 'wb') as f:
             pickle.dump({
                 'model': self.model,
                 'state_mapping': self._state_mapping,
+                'trained_at': self._trained_at,
+                'trained_until': str(obs_clean.index[-1]) if len(obs_clean.index) else None,
             }, f)
 
         print(f"  ✅ HMM 模型训练完成（log-likelihood={best_score:.2f}）")
@@ -197,12 +208,14 @@ class RegimeDetector:
         for s in rest_by_vol[1:-1]:                        # 中间多余 → 震荡
             self._state_mapping[s] = 0
 
-    def predict(self, df):
+    def predict(self, df, refresh_if_stale=True):
         """
         预测市场状态
 
         参数:
         - df: 包含 Close 和 Volume 列的 DataFrame
+        - refresh_if_stale: 缓存超过 ttl_days 时是否重训。
+          回测/Walk-forward 必须传 False（中途换参数会破坏复现）。
 
         返回:
         - DataFrame: 包含状态预测结果
@@ -210,8 +223,14 @@ class RegimeDetector:
         if self.model is None:
             # 尝试加载缓存模型
             self._load_model()
-            if self.model is None:
-                raise ValueError("模型未训练且无缓存")
+        if refresh_if_stale and self.model is not None and self._is_stale():
+            try:
+                print(f"  ♻️ HMM 缓存过期（>{self.ttl_days} 天，写入于 {self._trained_at}），重训…")
+                self.fit(df)
+            except Exception as e:
+                print(f"  ⚠️ HMM 重训失败（沿用旧模型）：{e}")
+        if self.model is None:
+            raise ValueError("模型未训练且无缓存")
 
         obs = self._prepare_observations(df)
         obs_clean = obs.dropna()
@@ -308,10 +327,24 @@ class RegimeDetector:
                     cache = pickle.load(f)
                 self.model = cache['model']
                 self._state_mapping = cache['state_mapping']
+                self._trained_at = cache.get('trained_at')
                 return True
             except Exception:
                 return False
         return False
+
+    def _is_stale(self):
+        """缓存模型是否已超过 ttl_days（无写入时间戳视为过期）。"""
+        if not self._trained_at:
+            return True
+        try:
+            ts = datetime.fromisoformat(str(self._trained_at))
+        except Exception:
+            return True
+        if ts.tzinfo is not None:
+            ts = ts.replace(tzinfo=None)
+        age = (datetime.utcnow() - ts).days
+        return age >= self.ttl_days
 
     def calculate_features(self, df, use_shift=True):
         """
@@ -340,8 +373,8 @@ class RegimeDetector:
                 print("  📊 训练 HMM 模型...")
                 self.fit(df)
 
-            # 预测状态
-            regime_df = self.predict(df)
+            # 预测状态（回测路径不重训，保持复现）
+            regime_df = self.predict(df, refresh_if_stale=not use_shift)
 
             # 合并到主 DataFrame
             for col in self.get_feature_names():
