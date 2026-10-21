@@ -1,0 +1,11 @@
+{
+  "source": "yfiua/index-constituents (Bloomberg-based)",
+  "url": "https://raw.githubusercontent.com/yfiua/index-constituents/main/docs",
+  "coverage_first": "2023-07",
+  "coverage_last": "2026-10",
+  "n_months": 40,
+  "n_rows": 3359,
+  "n_unique_symbols": 91,
+  "fetched_at": "2026-10-15",
+  "note": "HSI PIT 仅自 2023-07 起；不足 36 个月训练窗，不能直接跑标准 WF（D34）"
+}
